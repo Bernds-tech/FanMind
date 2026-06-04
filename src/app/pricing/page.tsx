@@ -1,51 +1,58 @@
-const plans = [
-  {
-    name: "Free Fan",
-    price: "0 EUR",
-    description: "Öffentliche Beiträge, einfache Updates und Einstieg in die Community."
-  },
-  {
-    name: "Club Member",
-    price: "9,90 EUR",
-    description: "Exklusive Beiträge, Challenges, Behind-the-Scenes und Mitglieder-Updates."
-  },
-  {
-    name: "Premium Fan",
-    price: "29,90 EUR",
-    description: "Persönliche Q&A Sessions, priorisierte Antworten und besondere Fan-Erlebnisse."
-  }
-];
+import SiteNav from "@/components/SiteNav";
+import { creatorPackages, fanMemberships } from "@/data/pricing";
 
 export default function PricingPage() {
   return (
     <main>
       <div className="page-shell">
-        <nav className="nav">
-          <a className="logo" href="/">FanMind</a>
-          <div className="nav-links">
-            <a href="/register">Registrieren</a>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/creator/demo">Creator Demo</a>
-          </div>
-        </nav>
+        <SiteNav active="Pricing" />
 
         <section>
-          <div className="badge">Mitgliedschaften Demo</div>
-          <h1>Fan-Stufen für wiederkehrende Einnahmen.</h1>
+          <div className="badge">FanMind Paket- und Preislogik</div>
+          <h1>Pakete fuer Anbieter und Mitgliedschaften fuer Fans.</h1>
           <p className="lead">
-            FanMind soll Creatorn ermöglichen, eigene Mitgliedschaftsstufen und exklusive Vorteile pro Fanclub festzulegen.
+            FanMind trennt klar zwischen Anbieter-Paketen und Fan-Mitgliedschaften. Die Preise sind Demo-Richtwerte fuer den MVP.
           </p>
         </section>
 
-        <section className="grid">
-          {plans.map((plan) => (
-            <article className="card" key={plan.name}>
-              <div className="badge">{plan.name}</div>
-              <h2>{plan.price}</h2>
-              <p>{plan.description}</p>
-              <a className="button" href="/register">Demo auswählen</a>
-            </article>
-          ))}
+        <section className="section">
+          <h2>Anbieter-Pakete</h2>
+          <p className="lead">Diese Pakete beschreiben, was ein Anbieter auf FanMind nutzen kann.</p>
+          <div className="grid">
+            {creatorPackages.map((plan) => (
+              <article className="card" key={plan.name}>
+                <div className="badge">{plan.name}</div>
+                <h2>{plan.price}</h2>
+                <p>{plan.subtitle}</p>
+                <ul>
+                  {plan.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+                <a className="button" href="/register">Demo starten</a>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section">
+          <h2>Fan-Mitgliedschaften</h2>
+          <p className="lead">Diese Mitgliedschaften koennen Fans spaeter bei einem Anbieter kaufen.</p>
+          <div className="grid">
+            {fanMemberships.map((plan) => (
+              <article className="card" key={plan.name}>
+                <div className="badge">{plan.name}</div>
+                <h2>{plan.price}</h2>
+                <p>{plan.subtitle}</p>
+                <ul>
+                  {plan.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+                <a className="button" href="/creator/demo">Demo ansehen</a>
+              </article>
+            ))}
+          </div>
         </section>
       </div>
     </main>
