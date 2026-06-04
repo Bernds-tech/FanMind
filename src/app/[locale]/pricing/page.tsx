@@ -1,8 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
-import { getPageContent } from "@/i18n/pageContent";
-import { creatorPackages, fanMemberships } from "@/data/pricing";
+import { creatorPackages, fanMemberships, pricingNotice } from "@/data/pricing";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -11,7 +10,6 @@ function resolveLocale(value: string): Locale {
 export default async function LocalizedPricingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
-  const content = getPageContent(locale);
   const prefix = locale === "de" ? "" : `/${locale}`;
 
   return (
@@ -21,14 +19,22 @@ export default async function LocalizedPricingPage({ params }: { params: Promise
         <LanguageSwitcher current={locale} />
 
         <section>
-          <div className="badge">FanMind Pricing</div>
-          <h1>{content.pricingTitle}</h1>
-          <p className="lead">{content.pricingText}</p>
+          <div className="badge">FanMind Agency Pricing</div>
+          <h1>Packages for managed profiles, fan memory and better follow-up work.</h1>
+          <p className="lead">
+            FanMind starts as an assistant for agencies and teams that manage multiple profiles and want to structure fan conversations more professionally.
+          </p>
+        </section>
+
+        <section className="section hero-card">
+          <div className="badge">Human-in-control principle</div>
+          <h2>The human remains the decision maker.</h2>
+          <p className="lead">{pricingNotice}</p>
         </section>
 
         <section className="section">
-          <h2>Creator packages</h2>
-          <p className="lead">Packages for people, clubs and brands that want to run a fan club on FanMind.</p>
+          <h2>FanMind packages</h2>
+          <p className="lead">These packages are designed for agencies, teams and organizations with managed profiles.</p>
           <div className="grid">
             {creatorPackages.map((plan) => (
               <article className="card" key={plan.name}>
@@ -40,19 +46,20 @@ export default async function LocalizedPricingPage({ params }: { params: Promise
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <a className="button" href={`${prefix}/register`}>{content.selectDemo}</a>
+                <a className="button" href={`${prefix}/register`}>Request pilot</a>
               </article>
             ))}
           </div>
         </section>
 
         <section className="section">
-          <h2>Fan memberships</h2>
-          <p className="lead">Memberships that fans can buy from a creator, club or brand.</p>
+          <h2>How FanMind works</h2>
+          <p className="lead">At launch, FanMind focuses on preparation, overview and control instead of automatic sending.</p>
           <div className="grid">
             {fanMemberships.map((plan) => (
               <article className="card" key={plan.name}>
-                <div className="badge">{plan.name}</div>
+                <div className="badge">Principle</div>
+                <h3>{plan.name}</h3>
                 <h2>{plan.price}</h2>
                 <p>{plan.subtitle}</p>
                 <ul>
@@ -60,7 +67,7 @@ export default async function LocalizedPricingPage({ params }: { params: Promise
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <a className="button" href={`${prefix}/creator/demo`}>{content.open}</a>
+                <a className="button" href={`${prefix}/demo`}>Open demo</a>
               </article>
             ))}
           </div>
