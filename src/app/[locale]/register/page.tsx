@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -9,6 +10,7 @@ function resolveLocale(value: string): Locale {
 export default async function LocalizedRegisterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
   const prefix = locale === "de" ? "" : `/${locale}`;
 
   return (
@@ -20,8 +22,8 @@ export default async function LocalizedRegisterPage({ params }: { params: Promis
         <section className="hero">
           <div>
             <div className="badge">Register Demo</div>
-            <h1>Start your FanMind club.</h1>
-            <p className="lead">Creators will use this flow to create a profile, define fan tiers and launch their club.</p>
+            <h1>{content.registerTitle}</h1>
+            <p className="lead">{content.registerText}</p>
           </div>
 
           <aside className="hero-card">
@@ -34,7 +36,7 @@ export default async function LocalizedRegisterPage({ params }: { params: Promis
               <small>PROFILE</small>
               <p>Name, email, category and short description</p>
             </div>
-            <a className="button primary" href={`${prefix}/creator/onboarding`}>Continue onboarding</a>
+            <a className="button primary" href={`${prefix}/creator/onboarding`}>{content.continueOnboarding}</a>
           </aside>
         </section>
       </div>
