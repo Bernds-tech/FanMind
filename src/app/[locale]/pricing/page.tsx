@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -15,6 +16,7 @@ const plans = [
 export default async function LocalizedPricingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
   const prefix = locale === "de" ? "" : `/${locale}`;
 
   return (
@@ -25,8 +27,8 @@ export default async function LocalizedPricingPage({ params }: { params: Promise
 
         <section>
           <div className="badge">FanMind Pricing</div>
-          <h1>Membership tiers for recurring revenue.</h1>
-          <p className="lead">FanMind lets creators define fan tiers and exclusive benefits for their own fan club.</p>
+          <h1>{content.pricingTitle}</h1>
+          <p className="lead">{content.pricingText}</p>
         </section>
 
         <section className="grid">
@@ -35,7 +37,7 @@ export default async function LocalizedPricingPage({ params }: { params: Promise
               <div className="badge">{plan.name}</div>
               <h2>{plan.price}</h2>
               <p>{plan.text}</p>
-              <a className="button" href={`${prefix}/register`}>Select demo</a>
+              <a className="button" href={`${prefix}/register`}>{content.selectDemo}</a>
             </article>
           ))}
         </section>
