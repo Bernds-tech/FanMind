@@ -8,7 +8,13 @@ Ziel: Creator sollen eigene digitale Fanclubs aufbauen, exklusive Inhalte teilen
 
 FanMind ist keine reine OnlyFans-Kopie und startet bewusst nicht als Erotikplattform.
 
-FanMind positioniert sich als seriöse, internationale Fan-Community- und Monetarisierungsplattform mit österreichischem Ursprung.
+FanMind positioniert sich als seriöse, internationale Fan-Community- und Monetarisierungsplattform mit europäischem Ursprung.
+
+## Domain-Entscheidung
+
+Hauptdomain: **FanMind.ch**
+
+FanMind.ch wird als primäre öffentliche Domain für die Plattform verwendet. Die Domain passt zur internationalen und hochwertigen Positionierung, bleibt aber klar europäisch.
 
 ## Startziel
 
@@ -26,7 +32,7 @@ Erste sichtbare Demo in 7 bis 10 Tagen mit:
 
 Owner: Bernds-tech  
 Projekt: FanMind  
-Startdomain geplant: fanmind.at
+Hauptdomain geplant: FanMind.ch
 
 ## Technischer Ansatz
 
