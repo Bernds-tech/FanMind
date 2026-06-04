@@ -268,5 +268,43 @@ export const demoReplySuggestions = [
     ],
     suggestedMemory: "Lukas ist zeitlich unsicher und braucht niedrige Einstiegshuerde.",
     suggestedFollowup: "In 2 Tagen nachfragen, ob der 3-Tage-Einstieg passt."
+  },
+  {
+    fanId: "fan_sandra_02",
+    options: [
+      {
+        label: "Premium",
+        text: "Das freut mich sehr. Fuer dich koennte eine persoenlichere Begleitung passen, bei der wir Ziele und Check-ins enger abstimmen."
+      },
+      {
+        label: "Vorsichtig",
+        text: "Wenn du magst, kann ich dir erst kurz zeigen, was bei der Premium-Begleitung anders waere. Dann entscheidest du in Ruhe."
+      },
+      {
+        label: "Follow-up",
+        text: "Ich fasse dir die naechsten Schritte zusammen und melde mich diese Woche nochmal, falls Fragen offen bleiben."
+      }
+    ],
+    suggestedMemory: "Sandra ist nach einem Kauf offen fuer Premium-Begleitung, sollte aber ohne Druck angesprochen werden.",
+    suggestedFollowup: "Diese Woche mit konkretem Premium-Ueberblick nachfassen."
+  },
+  {
+    fanId: "fan_alex_04",
+    options: [
+      {
+        label: "VIP",
+        text: "Yes, I can put you on the early-info list for the next VIP event and send details as soon as they are confirmed."
+      },
+      {
+        label: "Short",
+        text: "Absolutely — I can keep you posted about early VIP access once the next event details are confirmed."
+      },
+      {
+        label: "Boundary",
+        text: "I do not want to promise dates before they are official, but I can make sure you get the update early."
+      }
+    ],
+    suggestedMemory: "Alex wants early VIP event information and values fast, confident updates.",
+    suggestedFollowup: "Today: answer VIP interest and offer early-info list."
   }
 ];

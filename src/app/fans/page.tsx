@@ -45,7 +45,7 @@ export default function FansPage() {
                 <p><strong>Tags:</strong> {fan.tags.join(", ")}</p>
                 <p><strong>Memories:</strong> {getMemoryCount(fan.id)}</p>
                 <p><strong>Offene Follow-ups:</strong> {getFollowupCount(fan.id)}</p>
-                <a className="button" href="/fans/demo">Kontakt oeffnen</a>
+                <a className="button" href={`/fans/${fan.id}`}>Kontakt oeffnen</a>
               </article>
             ))}
           </div>
@@ -53,9 +53,9 @@ export default function FansPage() {
 
         <section className="section hero-card">
           <div className="badge">Demo-Hinweis</div>
-          <h2>Aktuell oeffnet jeder Kontakt denselben Detail-Demo-Fall.</h2>
+          <h2>Jeder Kontakt oeffnet jetzt seine eigene Detailseite.</h2>
           <p className="lead">
-            Die Liste ist bereits wie echte Produktdaten strukturiert. Im naechsten Schritt werden dynamische Detailseiten je Kontakt ergaenzt.
+            Die Liste ist wie echte Produktdaten strukturiert: Jeder Fan fuehrt zu einer dynamischen Detailseite mit Nachrichten, Memories, Vorschlaegen und Follow-ups.
           </p>
         </section>
       </div>
