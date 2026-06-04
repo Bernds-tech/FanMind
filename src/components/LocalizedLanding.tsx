@@ -34,6 +34,7 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
 
         <section className="hero">
           <div>
+            <div className="badge">FanMind MVP Demo 0.2</div>
             <div className="badge">{t.productBadge}</div>
             <h1>{t.heroTitle}</h1>
             <p className="lead">{t.heroText}</p>
