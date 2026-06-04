@@ -1,14 +1,10 @@
+import SiteNav from "@/components/SiteNav";
+
 export default function LoginPage() {
   return (
     <main>
       <div className="page-shell">
-        <nav className="nav">
-          <a className="logo" href="/">FanMind</a>
-          <div className="nav-links">
-            <a href="/register">Registrieren</a>
-            <a href="/creator/demo">Creator Demo</a>
-          </div>
-        </nav>
+        <SiteNav active="Login" />
 
         <section className="hero">
           <div>
