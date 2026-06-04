@@ -49,7 +49,7 @@ Erledigt:
 
 ### Tag 3: Pakete und Preislogik
 
-Status: fachlich aktualisiert / in Arbeit
+Status: weitgehend erledigt
 
 Erledigt:
 
@@ -65,13 +65,14 @@ Erledigt:
   - FanMind arbeitet als unterstuetzender Assistent
   - finale Nachricht wird immer vom Menschen geprueft und gesendet
 - alte Fanclub-Mitgliedschaftslogik als Startpakete fachlich abgeloest
+- /pricing an Agentur-/Assistenzmodell angepasst
+- /de/pricing, /en/pricing, /ro/pricing, /es/pricing fachlich angepasst
 
 Noch offen:
 
-- Pricing-Seite textlich an Agentur-Modell angleichen
-- Landingpage-Paketsektion an neue Paketlogik angleichen
-- mehrsprachige Pricing-Texte fuer neues Agenturmodell pruefen
+- Landingpage-Paketsektion auf neue Agenturpakete pruefen
 - Pilotkunden-Sondermodell final bestaetigen
+- spaetere Zahlungsanbieter-/Rechnungslogik klaeren
 
 ## In Arbeit / Naechster Schritt
 
