@@ -2,9 +2,9 @@ import { Locale } from "./config";
 
 export const dictionaries: Record<Locale, Record<string, string>> = {
   de: {
-    productBadge: "Europäische Direct-to-Fan Plattform",
+    productBadge: "FanMind.ch | Europäische Direct-to-Fan Plattform",
     heroTitle: "Baue deinen eigenen digitalen Fanclub.",
-    heroText: "FanMind hilft Creatorn, Sportlern, Musikern, Coaches und Vereinen dabei, exklusive Inhalte zu teilen, echte Fanbindung aufzubauen und direkt mit der eigenen Community Geld zu verdienen.",
+    heroText: "FanMind.ch hilft Inhaltserstellern, Sportlern, Musikern, Trainern und Vereinen dabei, exklusive Inhalte zu teilen, echte Fanbindung aufzubauen und direkt mit der eigenen Fangemeinschaft Geld zu verdienen.",
     ctaPrimary: "Demo Dashboard ansehen",
     ctaSecondary: "Creator Profil ansehen",
     navDemo: "Demo",
@@ -15,9 +15,9 @@ export const dictionaries: Record<Locale, Record<string, string>> = {
     navRegister: "Registrieren"
   },
   en: {
-    productBadge: "European direct-to-fan platform",
+    productBadge: "FanMind.ch | European direct-to-fan platform",
     heroTitle: "Build your own digital fan club.",
-    heroText: "FanMind helps creators, athletes, musicians, coaches and clubs share exclusive content, build real fan relationships and earn directly from their community.",
+    heroText: "FanMind.ch helps creators, athletes, musicians, coaches and clubs share exclusive content, build real fan relationships and earn directly from their community.",
     ctaPrimary: "View demo dashboard",
     ctaSecondary: "View creator profile",
     navDemo: "Demo",
@@ -28,9 +28,9 @@ export const dictionaries: Record<Locale, Record<string, string>> = {
     navRegister: "Sign up"
   },
   ro: {
-    productBadge: "Platforma europeana direct-to-fan",
+    productBadge: "FanMind.ch | Platforma europeana direct-to-fan",
     heroTitle: "Construieste-ti propriul fan club digital.",
-    heroText: "FanMind ajuta creatorii, sportivii, muzicienii, coachii si cluburile sa distribuie continut exclusiv, sa construiasca relatii reale cu fanii si sa castige direct din comunitatea lor.",
+    heroText: "FanMind.ch ajuta creatorii, sportivii, muzicienii, coachii si cluburile sa distribuie continut exclusiv, sa construiasca relatii reale cu fanii si sa castige direct din comunitatea lor.",
     ctaPrimary: "Vezi dashboard demo",
     ctaSecondary: "Vezi profil creator",
     navDemo: "Demo",
@@ -41,9 +41,9 @@ export const dictionaries: Record<Locale, Record<string, string>> = {
     navRegister: "Inregistrare"
   },
   es: {
-    productBadge: "Plataforma europea direct-to-fan",
+    productBadge: "FanMind.ch | Plataforma europea direct-to-fan",
     heroTitle: "Crea tu propio club de fans digital.",
-    heroText: "FanMind ayuda a creadores, deportistas, musicos, coaches y clubes a compartir contenido exclusivo, crear relaciones reales con sus fans y ganar directamente con su comunidad.",
+    heroText: "FanMind.ch ayuda a creadores, deportistas, musicos, coaches y clubes a compartir contenido exclusivo, crear relaciones reales con sus fans y ganar directamente con su comunidad.",
     ctaPrimary: "Ver dashboard demo",
     ctaSecondary: "Ver perfil de creator",
     navDemo: "Demo",
