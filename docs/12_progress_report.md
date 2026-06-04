@@ -49,46 +49,50 @@ Erledigt:
 
 ### Tag 3: Pakete und Preislogik
 
-Status: weitgehend erledigt
+Status: fachlich aktualisiert / in Arbeit
 
 Erledigt:
 
-- Anbieter-Pakete definiert:
-  - Starter
-  - Pro
-  - Business / Verein
-- Fan-Mitgliedschaften definiert:
-  - Kostenloser Fan
-  - Club-Mitglied
-  - Premium-Fan
-- Paketlogik dokumentiert
-- Paketdaten in src/data/pricing.ts zentralisiert
-- Pricing-Seite mit Paketlogik verbunden
-- Landingpage zeigt Pakete und Mitgliedschaften
+- Paketlogik aus der ersten Analyse uebernommen
+- Agentur-Modell in src/data/pricing.ts eingetragen
+- Anbieter-Pakete angepasst:
+  - FanMind Pilot: 990 EUR einmalig
+  - FanMind Starter: 299 EUR pro Monat
+  - FanMind Growth: 499 EUR pro Monat
+  - FanMind Agency: ab 990 EUR pro Monat
+- Assistenten-Hinweis ergaenzt:
+  - Keine automatische Plattform-Integration zum Start
+  - FanMind arbeitet als unterstuetzender Assistent
+  - finale Nachricht wird immer vom Menschen geprueft und gesendet
+- alte Fanclub-Mitgliedschaftslogik als Startpakete fachlich abgeloest
 
 Noch offen:
 
-- finale Preise bestaetigen
-- Pilotkunden-Sondermodell finalisieren
-- spaetere Zahlungsanbieter-Logik pruefen
+- Pricing-Seite textlich an Agentur-Modell angleichen
+- Landingpage-Paketsektion an neue Paketlogik angleichen
+- mehrsprachige Pricing-Texte fuer neues Agenturmodell pruefen
+- Pilotkunden-Sondermodell final bestaetigen
 
 ## In Arbeit / Naechster Schritt
 
 ### Tag 4: Creator-Profil professionalisieren
 
-Status: naechster aktiver Arbeitspunkt
+Status: begonnen
 
-Ziel:
+Erledigt:
 
-Das Creator-Profil soll wie ein echtes FanMind-Profil wirken und fuer Pilotkunden sofort verstaendlich sein.
+- /creator/demo professioneller aufgebaut
+- Mia Active Club klarer positioniert
+- Fanclub-Mitgliedschaft besser dargestellt
+- Demo-Kennzahlen ergaenzt
+- freie Inhalte, Club-Inhalte und Premium-Inhalte klarer getrennt
+- CTA fuer Anbieter / Pilotkunden ergaenzt
 
-Geplante Aufgaben:
+Noch offen:
 
-- Creator-Profil uebersichtlicher strukturieren
-- Fanclub-Mitgliedschaft besser darstellen
-- freie Inhalte, Club-Inhalte und Premium-Inhalte klarer anzeigen
-- Buttons und Wege zu Registrierung, Pricing und Dashboard verbessern
-- Beispielprofil Mia Active Club professioneller machen
+- fachliche Anpassung pruefen: Creator-Profil vs. Agentur-/betreute Profile-Modell
+- mehrsprachige Creator-Profil-Seiten nachziehen
+- Profil ggf. in betreutes Profil / Agenturansicht umbauen
 
 ## Noch offen
 
