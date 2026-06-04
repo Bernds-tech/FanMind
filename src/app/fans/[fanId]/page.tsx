@@ -48,8 +48,9 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
               Dynamische Kontaktseite fuer {selectedFan.handle}: FanMind buendelt Kontext, Nachrichten, Memories, Antwortvorschlaege und Follow-ups fuer die menschliche Bearbeitung.
             </p>
             <div className="actions">
-              <a className="button primary" href="/fans">Zurueck zur Kontaktliste</a>
-              <a className="button" href="/creator/demo">Betreutes Profil</a>
+              <a className="button primary" href="/copilot">Antwortvorschlaege oeffnen</a>
+              <a className="button" href="/fans">Zurueck zur Kontaktliste</a>
+              <a className="button" href="/followups">Follow-up Queue</a>
               <a className="button" href="/dashboard">Dashboard</a>
             </div>
           </div>
@@ -145,6 +146,9 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
               </article>
             )}
           </div>
+          <div className="actions">
+            <a className="button primary" href="/copilot">Im Copilot bearbeiten</a>
+          </div>
           {replySuggestion ? (
             <div className="grid">
               <article className="card">
@@ -186,8 +190,9 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
             FanMind macht Vorschlaege, der Mensch prueft Kontext, Tonalitaet und Grenzen und sendet die finale Antwort bewusst selbst.
           </p>
           <div className="actions">
-            <a className="button primary" href="/fans">Weitere Kontakte ansehen</a>
-            <a className="button" href="/fans/demo">Alte Demo-Detailseite</a>
+            <a className="button primary" href="/copilot">Antwortvorschlaege oeffnen</a>
+            <a className="button" href="/fans">Weitere Kontakte ansehen</a>
+            <a className="button" href="/followups">Follow-up Queue</a>
           </div>
         </section>
       </div>
