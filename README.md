@@ -66,7 +66,7 @@ Der OpenAI API-Key wird nur serverseitig aus `process.env.OPENAI_API_KEY` gelese
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
 # optional
-OPENAI_MODEL=gpt-5.4-mini
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Wenn `OPENAI_API_KEY` fehlt, die Fan-Nachricht leer/zu lang ist oder die OpenAI API einen Fehler liefert, gibt der Endpunkt eine saubere JSON-Fehlermeldung zurueck und die UI zeigt diese verstaendlich an. Der Request laeuft serverseitig gegen die OpenAI Responses API und nutzt standardmaessig `gpt-5.4-mini`; ueber `OPENAI_MODEL` kann ein anderes kompatibles Modell gesetzt werden. FanMind sendet keine Nachrichten automatisch; alle Vorschlaege muessen vom Menschen geprueft und manuell versendet werden.
+Wenn `OPENAI_API_KEY` fehlt, die Fan-Nachricht leer/zu lang ist oder die OpenAI API einen Fehler liefert, gibt der Endpunkt eine saubere JSON-Fehlermeldung zurueck und die UI zeigt diese verstaendlich an. Der Request laeuft serverseitig gegen die OpenAI Responses API und nutzt standardmaessig `gpt-4.1-mini`; ueber `OPENAI_MODEL` kann ein anderes kompatibles Modell gesetzt werden. FanMind sendet keine Nachrichten automatisch; alle Vorschlaege muessen vom Menschen geprueft und manuell versendet werden.

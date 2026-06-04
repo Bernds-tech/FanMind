@@ -30,7 +30,7 @@ type OpenAIResponse = {
   };
 };
 
-const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+const DEFAULT_OPENAI_MODEL = "gpt-4.1-mini";
 const MAX_MESSAGE_LENGTH = 2000;
 const OPENAI_TIMEOUT_MS = 30000;
 
