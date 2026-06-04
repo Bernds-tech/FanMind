@@ -56,3 +56,17 @@ Webseite / Hauptdomain: FanMind.ch
 ## Arbeitsprinzip
 
 Zuerst Demo bauen, dann Pilotkunden ansprechen.
+
+## KI-Copilot API
+
+Der Demo-Workflow unter `/copilot` nutzt den serverseitigen Endpunkt `POST /api/copilot/reply`, um aus Fan-Kontext, betreutem Profil, Memories, Nachrichten und Follow-ups strukturierte Antwortvorschlaege zu erzeugen.
+
+Der OpenAI API-Key wird nur serverseitig aus `process.env.OPENAI_API_KEY` gelesen und darf nicht im Browser verwendet werden. Lege lokal eine nicht versionierte `.env.local` an:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+# optional
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+Wenn `OPENAI_API_KEY` fehlt oder die OpenAI API einen Fehler liefert, gibt der Endpunkt eine saubere JSON-Fehlermeldung zurueck und die UI zeigt diese verstaendlich an. FanMind sendet keine Nachrichten automatisch; alle Vorschlaege muessen vom Menschen geprueft und manuell versendet werden.
