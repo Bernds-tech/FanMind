@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -9,6 +10,7 @@ function resolveLocale(value: string): Locale {
 export default async function LocalizedLoginPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
   const prefix = locale === "de" ? "" : `/${locale}`;
 
   return (
@@ -20,8 +22,8 @@ export default async function LocalizedLoginPage({ params }: { params: Promise<{
         <section className="hero">
           <div>
             <div className="badge">Login Demo</div>
-            <h1>Welcome back to FanMind.</h1>
-            <p className="lead">This screen is the first login mockup for creators, fans and admins.</p>
+            <h1>{content.loginTitle}</h1>
+            <p className="lead">{content.loginText}</p>
           </div>
 
           <aside className="hero-card">
@@ -34,7 +36,7 @@ export default async function LocalizedLoginPage({ params }: { params: Promise<{
               <small>PASSWORD</small>
               <p>************</p>
             </div>
-            <a className="button primary" href={`${prefix}/dashboard`}>Demo login</a>
+            <a className="button primary" href={`${prefix}/dashboard`}>{content.demoLogin}</a>
           </aside>
         </section>
       </div>
