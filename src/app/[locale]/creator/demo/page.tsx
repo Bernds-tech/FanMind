@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -15,6 +16,7 @@ const posts = [
 export default async function LocalizedCreatorDemoPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
   const prefix = locale === "de" ? "" : `/${locale}`;
 
   return (
@@ -26,8 +28,8 @@ export default async function LocalizedCreatorDemoPage({ params }: { params: Pro
         <section className="hero">
           <div>
             <div className="badge">Creator Profile</div>
-            <h1>Mia Active Club</h1>
-            <p className="lead">A demo creator profile with public, member-only and premium content.</p>
+            <h1>{content.creatorTitle}</h1>
+            <p className="lead">{content.creatorText}</p>
             <div className="actions">
               <a className="button primary" href={`${prefix}/pricing`}>View membership</a>
               <a className="button" href={`${prefix}/dashboard`}>Open dashboard</a>
