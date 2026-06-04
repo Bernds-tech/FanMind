@@ -1,5 +1,5 @@
 import SiteNav from "@/components/SiteNav";
-import { creatorPackages, fanMemberships } from "@/data/pricing";
+import { creatorPackages, fanMemberships, pricingNotice } from "@/data/pricing";
 
 export default function PricingPage() {
   return (
@@ -8,16 +8,22 @@ export default function PricingPage() {
         <SiteNav active="Pricing" />
 
         <section>
-          <div className="badge">FanMind Paket- und Preislogik</div>
-          <h1>Pakete fuer Anbieter und Mitgliedschaften fuer Fans.</h1>
+          <div className="badge">FanMind Preise fuer Agenturen</div>
+          <h1>Pakete fuer betreute Profile, Fan-Gedaechtnis und bessere Nachfass-Arbeit.</h1>
           <p className="lead">
-            FanMind trennt klar zwischen Anbieter-Paketen und Fan-Mitgliedschaften. Die Preise sind Demo-Richtwerte fuer den MVP.
+            FanMind startet als unterstuetzender Assistent fuer Agenturen und Teams, die mehrere Profile betreuen und Fan-Gespraeche strukturierter verwalten wollen.
           </p>
         </section>
 
+        <section className="section hero-card">
+          <div className="badge">Wichtiger Hinweis</div>
+          <h2>Mensch bleibt Entscheider.</h2>
+          <p className="lead">{pricingNotice}</p>
+        </section>
+
         <section className="section">
-          <h2>Anbieter-Pakete</h2>
-          <p className="lead">Diese Pakete beschreiben, was ein Anbieter auf FanMind nutzen kann.</p>
+          <h2>FanMind Pakete</h2>
+          <p className="lead">Diese Pakete richten sich an Agenturen, Teams und Organisationen mit betreuten Profilen.</p>
           <div className="grid">
             {creatorPackages.map((plan) => (
               <article className="card" key={plan.name}>
@@ -29,19 +35,20 @@ export default function PricingPage() {
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <a className="button" href="/register">Demo starten</a>
+                <a className="button" href="/register">Pilot anfragen</a>
               </article>
             ))}
           </div>
         </section>
 
         <section className="section">
-          <h2>Fan-Mitgliedschaften</h2>
-          <p className="lead">Diese Mitgliedschaften koennen Fans spaeter bei einem Anbieter kaufen.</p>
+          <h2>Wie FanMind arbeitet</h2>
+          <p className="lead">Zum Start geht es nicht um automatisches Senden, sondern um bessere Vorbereitung, Uebersicht und Kontrolle.</p>
           <div className="grid">
             {fanMemberships.map((plan) => (
               <article className="card" key={plan.name}>
-                <div className="badge">{plan.name}</div>
+                <div className="badge">Prinzip</div>
+                <h3>{plan.name}</h3>
                 <h2>{plan.price}</h2>
                 <p>{plan.subtitle}</p>
                 <ul>
@@ -49,7 +56,7 @@ export default function PricingPage() {
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <a className="button" href="/creator/demo">Demo ansehen</a>
+                <a className="button" href="/demo">Demo ansehen</a>
               </article>
             ))}
           </div>
