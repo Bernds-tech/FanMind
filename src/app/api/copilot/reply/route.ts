@@ -30,6 +30,17 @@ type OpenAIResponse = {
   };
 };
 
+const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+const MAX_MESSAGE_LENGTH = 2000;
+const OPENAI_TIMEOUT_MS = 30000;
+
+const copilotInstructions = [
+  "Du bist ein sicherer, hilfreicher Copilot fuer FanMind.",
+  "FanMind ist ein Human-in-the-loop-Assistent: Du erstellst nur Vorschlaege; die finale Nachricht wird immer von einem Menschen geprueft und manuell gesendet.",
+  "Gib ausschliesslich strukturiertes JSON gemaess Schema zurueck.",
+  "Keine automatische Sendefunktion, keine aggressiven Verkaufsformulierungen, keine falschen Versprechen und keine medizinischen Versprechen."
+].join(" ");
+
 const copilotReplySchema = {
   type: "object",
   additionalProperties: false,
@@ -80,10 +91,10 @@ function buildCopilotPrompt(fanId: string, message: string) {
     creator,
     prompt: [
       "Du bist CreatorChat/FanMemory Copilot fuer ein Chatter-Team.",
-      "FanMind ist ein Human-in-the-loop-Assistent: Du erstellst nur Vorschlaege; die finale Nachricht wird immer von einem Menschen geprueft und manuell gesendet.",
       "Antworte in der Sprache des Fans und passend zur betreuten Creator-Persona.",
       "Erstelle 2 bis 3 kurze, passende Antwortvarianten. Sei nicht aggressiv, mache keine falschen Versprechen, keine medizinischen Versprechen und keinen Druck.",
       "Gib ausserdem genau einen Memory-Kandidaten und eine Follow-up-Empfehlung zurueck.",
+      "Wenn der Kontext nicht ausreicht, formuliere vorsichtig und frage freundlich nach, statt Details zu erfinden.",
       "",
       "Betreutes Profil:",
       JSON.stringify(
@@ -151,11 +162,24 @@ function isCopilotReply(value: unknown): value is CopilotReply {
 
   return Array.isArray(candidate.reply_options) &&
     candidate.reply_options.length >= 2 &&
+    candidate.reply_options.length <= 3 &&
     candidate.reply_options.every((option) => typeof option.label === "string" && typeof option.text === "string") &&
     typeof candidate.suggested_memory === "string" &&
     typeof candidate.suggested_followup?.needed === "boolean" &&
-    typeof candidate.suggested_followup.due_in_days === "number" &&
+    Number.isInteger(candidate.suggested_followup.due_in_days) &&
+    candidate.suggested_followup.due_in_days >= 0 &&
+    candidate.suggested_followup.due_in_days <= 30 &&
     typeof candidate.suggested_followup.reason === "string";
+}
+
+async function readOpenAIJson(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/json")) {
+    return { error: { message: "OpenAI API lieferte keine JSON-Antwort." } } satisfies OpenAIResponse;
+  }
+
+  return (await response.json()) as OpenAIResponse;
 }
 
 export async function POST(request: NextRequest) {
@@ -168,9 +192,18 @@ export async function POST(request: NextRequest) {
   }
 
   const { fanId, message } = body as { fanId?: unknown; message?: unknown };
+  const normalizedFanId = typeof fanId === "string" ? fanId.trim() : "";
+  const normalizedMessage = typeof message === "string" ? message.trim() : "";
 
-  if (typeof fanId !== "string" || typeof message !== "string" || message.trim().length === 0) {
+  if (!normalizedFanId || !normalizedMessage) {
     return NextResponse.json({ error: "fanId und message sind erforderlich." }, { status: 400 });
+  }
+
+  if (normalizedMessage.length > MAX_MESSAGE_LENGTH) {
+    return NextResponse.json(
+      { error: `message darf maximal ${MAX_MESSAGE_LENGTH} Zeichen lang sein.` },
+      { status: 400 }
+    );
   }
 
   const openAiApiKey = process.env.OPENAI_API_KEY;
@@ -182,42 +215,49 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const promptContext = buildCopilotPrompt(fanId, message.trim());
+  const promptContext = buildCopilotPrompt(normalizedFanId, normalizedMessage);
 
   if (!promptContext) {
     return NextResponse.json({ error: "Fan/Kontakt wurde in den Demo-Daten nicht gefunden." }, { status: 404 });
   }
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${openAiApiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
-      input: [
-        {
-          role: "system",
-          content: "Du bist ein sicherer, hilfreicher Copilot fuer FanMind. Gib ausschliesslich strukturiertes JSON gemaess Schema zurueck. Keine automatische Sendefunktion."
-        },
-        {
-          role: "user",
-          content: promptContext.prompt
-        }
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "fanmind_copilot_reply",
-          strict: true,
-          schema: copilotReplySchema
-        }
-      }
-    })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+  let response: Response;
 
-  const data = (await response.json()) as OpenAIResponse;
+  try {
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openAiApiKey}`,
+        "Content-Type": "application/json"
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL,
+        instructions: copilotInstructions,
+        input: promptContext.prompt,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "fanmind_copilot_reply",
+            strict: true,
+            schema: copilotReplySchema
+          }
+        }
+      })
+    });
+  } catch (error) {
+    const message = error instanceof Error && error.name === "AbortError"
+      ? "OpenAI API-Request hat das Zeitlimit ueberschritten."
+      : "OpenAI API konnte nicht erreicht werden.";
+
+    return NextResponse.json({ error: message }, { status: 502 });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const data = await readOpenAIJson(response);
 
   if (!response.ok) {
     return NextResponse.json(
