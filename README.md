@@ -4,6 +4,14 @@ FanMind ist eine europäische Direct-to-Fan-Plattform für Creator, Sportler, Mu
 
 Ziel: Creator sollen eigene digitale Fanclubs aufbauen, exklusive Inhalte teilen, Mitgliedschaften verkaufen und unabhängiger von klassischen Social-Media-Algorithmen werden.
 
+## Markenlogik
+
+Unternehmen / Marke: **FanMind**
+
+Webseitenname / Hauptdomain: **FanMind.ch**
+
+FanMind ist der Name des Unternehmens beziehungsweise der Plattformmarke. FanMind.ch ist der öffentliche Webseitenname und die Hauptdomain.
+
 ## Positionierung
 
 FanMind ist keine reine OnlyFans-Kopie und startet bewusst nicht als Erotikplattform.
@@ -32,7 +40,8 @@ Erste sichtbare Demo in 7 bis 10 Tagen mit:
 
 Owner: Bernds-tech  
 Projekt: FanMind  
-Hauptdomain geplant: FanMind.ch
+Marke / Unternehmen: FanMind  
+Webseite / Hauptdomain: FanMind.ch
 
 ## Technischer Ansatz
 
