@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -16,6 +17,7 @@ const rows = [
 export default async function LocalizedAdminPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
 
   return (
     <main>
@@ -25,8 +27,8 @@ export default async function LocalizedAdminPage({ params }: { params: Promise<{
 
         <section>
           <div className="badge">Admin Demo</div>
-          <h1>Platform overview.</h1>
-          <p className="lead">A first admin view for users, creators, content status and platform control.</p>
+          <h1>{content.adminTitle}</h1>
+          <p className="lead">{content.adminText}</p>
         </section>
 
         <section className="grid">
