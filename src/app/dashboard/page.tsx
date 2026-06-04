@@ -74,6 +74,7 @@ export default function DashboardPage() {
                   <h3>{fan?.displayName ?? "Fan"}</h3>
                   <p>{followup.reason}</p>
                   <p><strong>Prioritaet:</strong> {followup.priority}</p>
+                  <a className="button" href="/fans/demo">Fan/Kontakt oeffnen</a>
                 </article>
               );
             })}
@@ -88,6 +89,7 @@ export default function DashboardPage() {
           </p>
           <div className="actions">
             <a className="button primary" href="/creator/demo">Betreutes Profil ansehen</a>
+            <a className="button" href="/fans/demo">Fan/Kontakt oeffnen</a>
             <a className="button" href="/pricing">Pakete pruefen</a>
           </div>
         </section>
