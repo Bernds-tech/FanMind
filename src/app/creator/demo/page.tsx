@@ -1,35 +1,5 @@
 import SiteNav from "@/components/SiteNav";
-
-const posts = [
-  {
-    type: "FREI",
-    title: "Willkommen im Mia Active Club",
-    text: "Oeffentliche Motivation, Alltagseinblicke und kleine Impulse fuer neue Fans."
-  },
-  {
-    type: "CLUB-MITGLIED",
-    title: "7-Tage-Fitness-Challenge",
-    text: "Exklusiver Wochenplan mit taeglichen Aufgaben, Videos und Checkliste."
-  },
-  {
-    type: "PREMIUM-FAN",
-    title: "Persoenlicher Trainingsimpuls",
-    text: "Monatliche Q&A Session mit individuellen Antworten fuer besonders aktive Fans."
-  }
-];
-
-const benefits = [
-  "Exklusive Challenges und Wochenplaene",
-  "Mitglieder-Updates und Hintergrundinhalte",
-  "Premium-Fragen und persoenlichere Einblicke",
-  "Community-Vorteile fuer aktive Fans"
-];
-
-const stats = [
-  { label: "Fans", value: "1.248" },
-  { label: "Club-Mitglieder", value: "186" },
-  { label: "Demo-Umsatz", value: "3.420 EUR" }
-];
+import { agencyStats, assistantBenefits, fanMemoryItems, managedProfiles } from "@/data/agencyDemo";
 
 export default function CreatorDemoPage() {
   return (
@@ -39,31 +9,29 @@ export default function CreatorDemoPage() {
 
         <section className="hero">
           <div>
-            <div className="badge">Creator-Profil Demo</div>
-            <h1>Mia Active Club</h1>
+            <div className="badge">Agentur-Ansicht Demo</div>
+            <h1>Betreute Profile besser verwalten.</h1>
             <p className="lead">
-              Ein Beispiel-Fanclub fuer Fitness, Motivation und persoenliche Challenges. So koennte ein Anbieterprofil auf FanMind aussehen.
+              FanMind hilft Agenturen und Teams, Fan-Gespraeche ueber mehrere Profile hinweg strukturierter zu betreuen: mit Fan-Gedaechtnis, Antwortvorschlaegen und Nachfass-Aufgaben.
             </p>
             <div className="actions">
-              <a className="button primary" href="/register">Mitglied werden</a>
+              <a className="button primary" href="/register">Pilot anfragen</a>
               <a className="button" href="/pricing">Pakete ansehen</a>
               <a className="button" href="/dashboard">Dashboard oeffnen</a>
             </div>
           </div>
 
-          <aside className="hero-card" id="membership">
+          <aside className="hero-card">
             <div className="profile-head">
               <div className="avatar" />
               <div>
-                <div className="profile-title">Fanclub-Mitgliedschaft</div>
-                <div className="profile-subtitle">ab 9,90 EUR pro Monat Demo-Preis</div>
+                <div className="profile-title">Mia Active Club</div>
+                <div className="profile-subtitle">betreutes Profil einer Agentur</div>
               </div>
             </div>
-            <p className="lead">
-              Zugang zu exklusiven Beitraegen, Challenges, persoenlichen Updates und Premium-Momenten.
-            </p>
+            <p className="lead">FanMind zeigt dem Team, was im Gespraech wichtig ist und welcher Kontakt als naechstes nachgefasst werden sollte.</p>
             <ul>
-              {benefits.map((benefit) => (
+              {assistantBenefits.map((benefit) => (
                 <li key={benefit}>{benefit}</li>
               ))}
             </ul>
@@ -71,10 +39,10 @@ export default function CreatorDemoPage() {
         </section>
 
         <section className="section">
-          <h2>Fanclub auf einen Blick</h2>
-          <p className="lead">Diese Demo-Zahlen zeigen, welche Kennzahlen ein Anbieter spaeter im Blick behalten kann.</p>
+          <h2>Agentur-Ueberblick</h2>
+          <p className="lead">Diese Demo-Zahlen zeigen, wie FanMind mehrere betreute Profile und Fan-Gespraeche strukturiert.</p>
           <div className="grid">
-            {stats.map((stat) => (
+            {agencyStats.map((stat) => (
               <article className="card" key={stat.label}>
                 <p>{stat.label}</p>
                 <h2>{stat.value}</h2>
@@ -84,28 +52,29 @@ export default function CreatorDemoPage() {
         </section>
 
         <section className="section">
-          <h2>Beitraege und Freischaltungen</h2>
-          <p className="lead">FanMind unterscheidet klar zwischen freien Inhalten, Club-Inhalten und Premium-Inhalten.</p>
+          <h2>Betreute Profile</h2>
+          <p className="lead">Agenturen koennen mehrere Personen, Marken oder Vereine betreuen und pro Profil den Kommunikationskontext behalten.</p>
           <div className="grid">
-            {posts.map((post) => (
-              <article className="card" key={post.title}>
-                <div className="badge">{post.type}</div>
-                <h3>{post.title}</h3>
-                <p>{post.text}</p>
+            {managedProfiles.map((profile) => (
+              <article className="card" key={profile.title}>
+                <div className="badge">{profile.type}</div>
+                <h3>{profile.title}</h3>
+                <p>{profile.text}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="section hero-card">
-          <div className="badge">Pilotprofil</div>
-          <h2>Dieses Profil kann fuer erste Pilotkunden angepasst werden.</h2>
-          <p className="lead">
-            Fuer Trainer, Musiker, Vereine oder Experten kann FanMind ein eigenes Profil mit Mitgliedschaften, Premium-Inhalten und direkter Fanbindung zeigen.
-          </p>
-          <div className="actions">
-            <a className="button primary" href="/register">Als Anbieter starten</a>
-            <a className="button" href="/demo">Alle Demo-Seiten</a>
+        <section className="section">
+          <h2>Fan-Gedaechtnis und Nachfass-Aufgaben</h2>
+          <p className="lead">FanMind ersetzt nicht den Menschen, sondern bereitet wichtige Informationen so auf, dass Teams schneller und besser reagieren koennen.</p>
+          <div className="grid">
+            {fanMemoryItems.map((item) => (
+              <article className="card" key={item.title}>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </article>
+            ))}
           </div>
         </section>
       </div>
