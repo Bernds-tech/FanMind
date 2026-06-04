@@ -15,9 +15,9 @@ export default function CreatorDemoPage() {
               FanMind hilft Agenturen und Teams, Fan-Gespraeche ueber mehrere Profile hinweg strukturierter zu betreuen: mit Fan-Gedaechtnis, Antwortvorschlaegen und Nachfass-Aufgaben.
             </p>
             <div className="actions">
-              <a className="button primary" href="/register">Pilot anfragen</a>
-              <a className="button" href="/pricing">Pakete ansehen</a>
+              <a className="button primary" href="/fans/demo">Fan/Kontakt zeigen</a>
               <a className="button" href="/dashboard">Dashboard oeffnen</a>
+              <a className="button" href="/pricing">Pakete ansehen</a>
             </div>
           </div>
 
@@ -35,6 +35,7 @@ export default function CreatorDemoPage() {
                 <li key={benefit}>{benefit}</li>
               ))}
             </ul>
+            <a className="button primary" href="/fans/demo">Kontakt-Detail oeffnen</a>
           </aside>
         </section>
 
@@ -60,6 +61,7 @@ export default function CreatorDemoPage() {
                 <div className="badge">{profile.type}</div>
                 <h3>{profile.title}</h3>
                 <p>{profile.text}</p>
+                <a className="button" href="/fans/demo">Beispielkontakt oeffnen</a>
               </article>
             ))}
           </div>
@@ -73,6 +75,7 @@ export default function CreatorDemoPage() {
               <article className="card" key={item.title}>
                 <h3>{item.title}</h3>
                 <p>{item.text}</p>
+                <a className="button" href="/fans/demo">Im Fan-Profil zeigen</a>
               </article>
             ))}
           </div>
