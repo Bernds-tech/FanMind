@@ -1,27 +1,38 @@
+import SiteNav from "@/components/SiteNav";
+import {
+  demoAgency,
+  demoCreators,
+  demoFans,
+  demoFollowups,
+  demoMemories,
+  demoUsers
+} from "@/data/demoAgency";
+
+const openFollowups = demoFollowups.filter((followup) => followup.status === "open");
+const warmContacts = demoFans.filter((fan) => ["warm", "buyer", "vip"].includes(fan.status));
+
 const stats = [
-  { label: "Fans", value: "1.248" },
-  { label: "Mitglieder", value: "186" },
-  { label: "Monatsumsatz", value: "3.420 EUR" },
-  { label: "Neue Nachrichten", value: "27" }
+  { label: "Agentur", value: demoAgency.name },
+  { label: "Betreute Profile", value: String(demoCreators.length) },
+  { label: "Fans / Kontakte", value: String(demoFans.length) },
+  { label: "Offene Follow-ups", value: String(openFollowups.length) },
+  { label: "Warme Kontakte", value: String(warmContacts.length) },
+  { label: "Memories", value: String(demoMemories.length) }
 ];
 
 export default function DashboardPage() {
+  const demoUser = demoUsers[0];
+
   return (
     <main>
       <div className="page-shell">
-        <nav className="nav">
-          <a className="logo" href="/">FanMind</a>
-          <div className="nav-links">
-            <a href="/creator/demo">Creator Profil</a>
-            <a href="/admin">Admin</a>
-          </div>
-        </nav>
+        <SiteNav active="Dashboard" />
 
         <section>
-          <div className="badge">Creator Dashboard Demo</div>
-          <h1>Willkommen zurueck.</h1>
+          <div className="badge">FanMind Agentur-Dashboard</div>
+          <h1>Willkommen, {demoUser.name}.</h1>
           <p className="lead">
-            Hier sieht ein Creator spaeter Fans, Mitgliedschaften, Einnahmen, Inhalte und Community-Aktivitaet.
+            Dieses Dashboard zeigt den echten Demo-Account mit Testdaten: Agentur, betreute Profile, Fans, Memories und Follow-ups.
           </p>
         </section>
 
@@ -35,20 +46,49 @@ export default function DashboardPage() {
         </section>
 
         <section className="section">
-          <h2>Naechste Schritte</h2>
+          <h2>Betreute Profile</h2>
+          <p className="lead">Diese Profile gehoeren zur Demo-Agentur und zeigen spaeter den Einstieg in den Workflow.</p>
           <div className="grid">
-            <article className="card">
-              <h3>Beitrag erstellen</h3>
-              <p>Text, Bild oder Video fuer freie Fans, Mitglieder oder Premium-Fans vorbereiten.</p>
-            </article>
-            <article className="card">
-              <h3>Mitgliedschaft pruefen</h3>
-              <p>Preis, Vorteile und Fanclub-Beschreibung fuer zahlende Mitglieder definieren.</p>
-            </article>
-            <article className="card">
-              <h3>Fans aktivieren</h3>
-              <p>Community-Fragen, exklusive Updates und persoenliche Inhalte planen.</p>
-            </article>
+            {demoCreators.map((creator) => (
+              <article className="card" key={creator.id}>
+                <div className="badge">{creator.platform}</div>
+                <h3>{creator.displayName}</h3>
+                <p>{creator.personaNotes}</p>
+                <p><strong>Sprache:</strong> {creator.language}</p>
+                <p><strong>Tonalitaet:</strong> {creator.tone}</p>
+                <a className="button" href="/creator/demo">Profil oeffnen</a>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="section">
+          <h2>Offene Follow-ups</h2>
+          <p className="lead">Gerhard kann hier zeigen, wie FanMind offene Nachfass-Aufgaben priorisiert.</p>
+          <div className="grid">
+            {openFollowups.map((followup) => {
+              const fan = demoFans.find((item) => item.id === followup.fanId);
+              return (
+                <article className="card" key={followup.id}>
+                  <div className="badge">{followup.dueLabel}</div>
+                  <h3>{fan?.displayName ?? "Fan"}</h3>
+                  <p>{followup.reason}</p>
+                  <p><strong>Prioritaet:</strong> {followup.priority}</p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="section hero-card">
+          <div className="badge">Demo-Flow</div>
+          <h2>Naechster Schritt: Fan-/Kontakt-Detailseite.</h2>
+          <p className="lead">
+            Der naechste Baustein ist die Seite, auf der Gerhard einen Fan oeffnet und Memory, Nachrichten, Antwortvorschlaege und Follow-ups zeigt.
+          </p>
+          <div className="actions">
+            <a className="button primary" href="/creator/demo">Betreutes Profil ansehen</a>
+            <a className="button" href="/pricing">Pakete pruefen</a>
           </div>
         </section>
       </div>
