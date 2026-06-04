@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -17,6 +18,7 @@ const steps = [
 export default async function LocalizedCreatorOnboardingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
 
   return (
     <main>
@@ -26,8 +28,8 @@ export default async function LocalizedCreatorOnboardingPage({ params }: { param
 
         <section>
           <div className="badge">Creator Onboarding</div>
-          <h1>Launch your fan club in five steps.</h1>
-          <p className="lead">A guided setup from profile creation to the first published fan club link.</p>
+          <h1>{content.onboardingTitle}</h1>
+          <p className="lead">{content.onboardingText}</p>
         </section>
 
         <section className="grid">
