@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -16,6 +17,7 @@ const stats = [
 export default async function LocalizedDashboardPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
 
   return (
     <main>
@@ -25,8 +27,8 @@ export default async function LocalizedDashboardPage({ params }: { params: Promi
 
         <section>
           <div className="badge">Creator Dashboard</div>
-          <h1>Manage your fan club.</h1>
-          <p className="lead">A first dashboard view for fans, members, revenue, content and community activity.</p>
+          <h1>{content.dashboardTitle}</h1>
+          <p className="lead">{content.dashboardText}</p>
         </section>
 
         <section className="grid">
