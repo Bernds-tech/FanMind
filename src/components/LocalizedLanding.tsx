@@ -1,7 +1,6 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { landingModules, whyFanMind } from "@/data/landing";
-import { creatorPackages, fanMemberships } from "@/data/pricing";
+import { getLandingContent } from "@/i18n/landingContent";
 import { getDictionary } from "@/i18n/dictionaries";
 import { type Locale } from "@/i18n/config";
 
@@ -9,27 +8,13 @@ type LocalizedLandingProps = {
   locale: Locale;
 };
 
-const miaClubAreas = [
-  {
-    label: "Kostenlos / Free",
-    text: "Öffentliche Updates, Einblicke und Community-Teaser für neue Fans."
-  },
-  {
-    label: "Club-Mitglied / Member",
-    text: "Exklusive Challenges, Beiträge und Vorteile für aktive Unterstützer."
-  },
-  {
-    label: "Premium-Fan / Premium",
-    text: "Persönlichere Q&A-Formate, Premium-Momente und besondere Aktionen."
-  }
-];
-
 function localizedPath(locale: Locale, path: `/${string}`) {
   return locale === "de" ? path : `/${locale}${path}`;
 }
 
 export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
   const t = getDictionary(locale);
+  const landing = getLandingContent(locale);
 
   return (
     <main>
@@ -39,7 +24,7 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
 
         <section className="hero">
           <div>
-            <div className="badge">FanMind MVP Demo 0.2</div>
+            <div className="badge">{landing.mvpBadge}</div>
             <div className="badge">{t.productBadge}</div>
             <h1>{t.heroTitle}</h1>
             <p className="lead">{t.heroText}</p>
@@ -50,15 +35,15 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
             </div>
           </div>
 
-          <aside className="hero-card" aria-label="Mia Active Club Beispielprofil">
+          <aside className="hero-card" aria-label={landing.exampleProfileAria}>
             <div className="profile-head">
               <div className="avatar" />
               <div>
-                <div className="profile-title">Mia Active Club</div>
-                <div className="profile-subtitle">Fitness, Motivation, Community</div>
+                <div className="profile-title">{landing.exampleProfileName}</div>
+                <div className="profile-subtitle">{landing.exampleProfileSubtitle}</div>
               </div>
             </div>
-            {miaClubAreas.map((area) => (
+            {landing.clubAreas.map((area) => (
               <div className="post" key={area.label}>
                 <small>{area.label}</small>
                 <p>{area.text}</p>
@@ -68,12 +53,10 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
         </section>
 
         <section className="section">
-          <h2>Warum FanMind?</h2>
-          <p className="lead">
-            FanMind ist eine seriöse europäische Direct-to-Fan-Plattform für Menschen, Clubs und Marken mit echter Community.
-          </p>
+          <h2>{landing.whyTitle}</h2>
+          <p className="lead">{landing.whyText}</p>
           <div className="grid">
-            {whyFanMind.map((reason) => (
+            {landing.whyCards.map((reason) => (
               <article className="card" key={reason.title}>
                 <h3>{reason.title}</h3>
                 <p>{reason.text}</p>
@@ -83,12 +66,10 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
         </section>
 
         <section className="section">
-          <h2>FanMind Produktmodule</h2>
-          <p className="lead">
-            Die MVP Demo 0.2 zeigt die wichtigsten Bausteine für Profile, Mitgliedschaften und Steuerung an einem Ort.
-          </p>
+          <h2>{landing.modulesTitle}</h2>
+          <p className="lead">{landing.modulesText}</p>
           <div className="grid">
-            {landingModules.map((module) => (
+            {landing.moduleCards.map((module) => (
               <article className="card" key={module.title}>
                 <h3>{module.title}</h3>
                 <p>{module.text}</p>
@@ -98,14 +79,12 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
         </section>
 
         <section className="section">
-          <h2>Pakete und Mitgliedschaften</h2>
-          <p className="lead">
-            FanMind trennt Anbieter-Pakete klar von Fan-Mitgliedschaften. Die Preise sind Demo-Richtwerte für den MVP.
-          </p>
+          <h2>{landing.packagesTitle}</h2>
+          <p className="lead">{landing.packagesText}</p>
           <div className="grid">
-            {creatorPackages.map((plan) => (
+            {landing.creatorPackages.map((plan) => (
               <article className="card" key={plan.name}>
-                <div className="badge">Anbieter-Paket</div>
+                <div className="badge">{landing.creatorPackageBadge}</div>
                 <h3>{plan.name}</h3>
                 <h2>{plan.price}</h2>
                 <p>{plan.subtitle}</p>
@@ -119,9 +98,9 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
           </div>
 
           <div className="grid">
-            {fanMemberships.map((plan) => (
+            {landing.fanMemberships.map((plan) => (
               <article className="card" key={plan.name}>
-                <div className="badge">Fan-Mitgliedschaft</div>
+                <div className="badge">{landing.fanMembershipBadge}</div>
                 <h3>{plan.name}</h3>
                 <h2>{plan.price}</h2>
                 <p>{plan.subtitle}</p>
@@ -136,11 +115,9 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
         </section>
 
         <section className="section hero-card">
-          <div className="badge">Pilotkunden gesucht</div>
-          <h2>FanMind wird aktuell als MVP aufgebaut.</h2>
-          <p className="lead">
-            Erste Anbieter können als Pilotkunden Feedback geben und die Plattform aktiv mitgestalten.
-          </p>
+          <div className="badge">{landing.pilotBadge}</div>
+          <h2>{landing.pilotTitle}</h2>
+          <p className="lead">{landing.pilotText}</p>
           <div className="actions">
             <a className="button primary" href={localizedPath(locale, "/register")}>{t.navRegister}</a>
             <a className="button" href={localizedPath(locale, "/demo")}>{t.navDemo}</a>
