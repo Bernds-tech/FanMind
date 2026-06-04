@@ -1,6 +1,7 @@
 import SiteNav from "@/components/SiteNav";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { isLocale, type Locale } from "@/i18n/config";
+import { getPageContent } from "@/i18n/pageContent";
 
 function resolveLocale(value: string): Locale {
   return isLocale(value) ? value : "de";
@@ -9,6 +10,7 @@ function resolveLocale(value: string): Locale {
 export default async function LocalizedDemoPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: localeParam } = await params;
   const locale = resolveLocale(localeParam);
+  const content = getPageContent(locale);
   const prefix = locale === "de" ? "" : `/${locale}`;
 
   const links = [
@@ -28,16 +30,16 @@ export default async function LocalizedDemoPage({ params }: { params: Promise<{ 
 
         <section>
           <div className="badge">FanMind Demo</div>
-          <h1>FanMind demo pages.</h1>
-          <p className="lead">This page connects the current localized FanMind prototype screens.</p>
+          <h1>{content.demoTitle}</h1>
+          <p className="lead">{content.demoText}</p>
         </section>
 
         <section className="grid">
           {links.map((item) => (
             <article className="card" key={item.href}>
               <h3>{item.title}</h3>
-              <p>Open this FanMind demo module.</p>
-              <a className="button" href={item.href}>Open</a>
+              <p>FanMind module</p>
+              <a className="button" href={item.href}>{content.open}</a>
             </article>
           ))}
         </section>
