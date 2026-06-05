@@ -1,3 +1,6 @@
+import { AppShell } from "@/components/AppShell";
+import { AppTopbar } from "@/components/AppTopbar";
+import { KpiStrip } from "@/components/KpiStrip";
 import { demoCreators, demoFans, demoFollowups, demoMemories, demoMessages } from "@/data/demoAgency";
 import { readSupabaseTable } from "@/lib/supabaseServer";
 
@@ -215,8 +218,15 @@ export default async function FansPage() {
   const reactivationCount = fans.filter((fan) => fan.status === "inactive").length;
   const followupsToday = fans.filter((fan) => fan.nextFollowup === "Heute").length;
   const overdueCount = fans.filter((fan) => fan.nextFollowup === "Ueberfaellig").length;
+  const kpiItems = [
+    { label: "Gesamtfans", value: fans.length, icon: "◌" },
+    { label: "Aktive", value: activeCount, icon: "✓" },
+    { label: "VIP", value: vipCount, icon: "★" },
+    { label: "Reaktivierung", value: reactivationCount, icon: "↻" },
+    { label: "Follow-ups heute", value: followupsToday, icon: "◷" },
+    { label: "Ueberfaellig", value: overdueCount, icon: "!" }
+  ];
   const segments = ["Alle", "VIP", "Warm", "Buyer", "Inactive", "Do not push", "Heute faellig", "Deutsch", "English", "Hoher Fan Score"];
-  const savedViews = ["Top Fans", "Reaktivierung", "Event-Interessenten", "Premium-Kaeufer", "Neue Kontakte", "Heute faellige Follow-ups"];
   const detailTabs = ["Ueberblick", "Verlauf", "Notizen", "Dateien"];
   const aiSuggestions = [
     `Rueckfrage zu ${selectedFan?.creatorName ?? "dem Profil"} beantworten`,
@@ -225,59 +235,16 @@ export default async function FansPage() {
   ];
 
   return (
-    <main className="workspace-app">
-      <aside className="workspace-sidebar" aria-label="Workspace Navigation">
-        <a className="sidebar-brand" href="/">
-          <span className="brand-mark">FM</span>
-          <span>
-            <strong>FanMind</strong>
-            <small>Agency Console</small>
-          </span>
-        </a>
-        <nav className="sidebar-nav" aria-label="Workspace Navigation">
-          <a href="/dashboard">Dashboard</a>
-          <a className="active" href="/fans">Kontakte</a>
-          <a href="/fans">Segmente</a>
-          <a href="/followups">Follow-ups</a>
-          <a href="/copilot">Kampagnen</a>
-          <a href="/dashboard">Analytics</a>
-          <a href="/pricing">Settings</a>
-        </nav>
-        <div className="saved-views">
-          <span>Gespeicherte Ansichten</span>
-          {savedViews.map((view) => (
-            <a href="/fans" key={view}>{view}</a>
-          ))}
-        </div>
-      </aside>
-
+    <AppShell>
       <section className="workspace-console" aria-label="Kontaktverwaltung">
-        <header className="workspace-topbar">
-          <div>
-            <p className="eyebrow">Agentur-Kontaktzentrale</p>
-            <h1>Kontakte</h1>
-            <p>{fans.length} Demo-Kontakte · Quelle: {sourceLabel}</p>
-          </div>
-          <label className="search-field topbar-search" htmlFor="contact-search">
-            <span>Suche</span>
-            <input id="contact-search" type="search" placeholder="Name, Handle, Tag, Profil oder Sprache suchen" />
-          </label>
-          <div className="toolbar-actions" aria-label="Kontaktaktionen">
-            <button type="button" className="button compact">Filter</button>
-            <button type="button" className="button compact">Sortierung</button>
-            <button type="button" className="button compact">Ansichten</button>
-            <button type="button" className="button compact primary">Neuer Kontakt</button>
-          </div>
-        </header>
+        <AppTopbar
+          title="Kontakte"
+          subtitle={`${fans.length} Demo-Kontakte · Quelle: ${sourceLabel}`}
+          searchId="contact-search"
+          searchPlaceholder="Name, Handle, Tag, Profil oder Sprache suchen"
+        />
 
-        <section className="kpi-strip" aria-label="Kontakt-Kennzahlen">
-          <article><span>Gesamtfans</span><strong>{fans.length}</strong></article>
-          <article><span>Aktive</span><strong>{activeCount}</strong></article>
-          <article><span>VIP</span><strong>{vipCount}</strong></article>
-          <article><span>Reaktivierung</span><strong>{reactivationCount}</strong></article>
-          <article><span>Follow-ups heute</span><strong>{followupsToday}</strong></article>
-          <article><span>Ueberfaellig</span><strong>{overdueCount}</strong></article>
-        </section>
+        <KpiStrip items={kpiItems} />
 
         <div className="segment-tabs" aria-label="Kontaktsegmente">
           {segments.map((segment) => (
@@ -401,6 +368,6 @@ export default async function FansPage() {
           )}
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }

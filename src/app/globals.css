@@ -909,3 +909,239 @@ button.button {
     width: 100%;
   }
 }
+
+/* Shared app shell refinements for agency-style workspaces. */
+.workspace-app {
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+
+.workspace-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 14px;
+}
+
+.sidebar-brand {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 18px;
+  margin-bottom: 2px;
+  padding: 10px;
+}
+
+.brand-mark {
+  border-radius: 15px;
+  height: 42px;
+  width: 42px;
+}
+
+.sidebar-nav,
+.saved-views {
+  gap: 5px;
+}
+
+.sidebar-nav a,
+.saved-views a {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 8px 9px;
+}
+
+.sidebar-link-main {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-icon {
+  color: #7dd3fc;
+  flex: 0 0 auto;
+  height: 18px;
+  opacity: 0.88;
+  width: 18px;
+}
+
+.sidebar-nav a.active .app-icon,
+.sidebar-nav a:hover .app-icon,
+.saved-views a:hover .app-icon {
+  color: #86efac;
+  opacity: 1;
+}
+
+.sidebar-badge {
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.34);
+  border-radius: 999px;
+  color: #bae6fd;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 4px 7px;
+}
+
+.saved-views {
+  margin-top: 0;
+}
+
+.sidebar-section-title {
+  padding: 0 2px 3px;
+}
+
+.sidebar-team-card {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.13), rgba(34, 197, 94, 0.1));
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding: 10px;
+}
+
+.sidebar-team-card strong,
+.sidebar-team-card small {
+  display: block;
+}
+
+.sidebar-team-card strong {
+  font-size: 13px;
+}
+
+.sidebar-team-card small {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.team-avatar {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  color: #e0f2fe;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.workspace-topbar {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  grid-template-columns: minmax(180px, 0.55fr) minmax(260px, 0.9fr) auto;
+  margin-bottom: 9px;
+  padding: 10px 12px;
+}
+
+.topbar-title-block h1 {
+  font-size: 24px;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  margin: 0 0 3px;
+}
+
+.topbar-title-block p {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.search-field input {
+  border-radius: 12px;
+  min-height: 34px;
+}
+
+.toolbar-actions {
+  align-items: center;
+}
+
+.button.compact {
+  align-items: center;
+  min-height: 34px;
+}
+
+.kpi-strip {
+  background: rgba(2, 6, 23, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.11);
+  border-radius: 18px;
+  gap: 0;
+  margin-bottom: 9px;
+  overflow: hidden;
+}
+
+.kpi-strip article {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 0;
+  display: flex;
+  gap: 10px;
+  min-height: 58px;
+  padding: 9px 11px;
+}
+
+.kpi-strip article:last-child {
+  border-right: 0;
+}
+
+.kpi-icon {
+  align-items: center;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 11px;
+  color: #bae6fd !important;
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  font-size: 14px !important;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.kpi-strip strong {
+  font-size: 20px;
+  line-height: 1;
+}
+
+@media (max-width: 1240px) {
+  .workspace-app {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar-team-card {
+    margin-top: 8px;
+  }
+
+  .sidebar-nav a,
+  .saved-views a {
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace-topbar {
+    padding: 12px;
+  }
+
+  .kpi-strip {
+    gap: 0;
+  }
+
+  .kpi-strip article:nth-child(2n) {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .kpi-strip article {
+    border-right: 0;
+  }
+}
