@@ -161,6 +161,92 @@ const menuItems = [
   "Einstellungen",
 ];
 
+const showcaseNavItems = [
+  "Dashboard",
+  "Kontakte",
+  "Segmente",
+  "Follow-ups",
+  "Kampagnen",
+  "Analytics",
+  "Einstellungen",
+];
+
+const showcaseLeftCards = [
+  {
+    icon: "🧠",
+    title: "Fan-Gedächtnis",
+    detail: "Sandra M.",
+    status: "Buyer",
+    text: "Mia Active Club · Kontakt seit 12.03.2025",
+    tags: ["buyer", "premium_interessiert", "event"],
+  },
+  {
+    icon: "✦",
+    title: "KI-Antwortvorschläge",
+    detail: "Sandra M. · 09:35",
+    status: "Entwurf",
+    text: "Ja! Als Mia Active Member erhältst du 10 % Rabatt in den ersten 48 Stunden.",
+    tags: ["Mensch prüft", "Freigabe nötig"],
+  },
+  {
+    icon: "📣",
+    title: "Kampagnen",
+    detail: "Sommer-Event Early Bird",
+    status: "Läuft",
+    text: "Öffnungsrate 38 % · Klickrate 14 % · Conversion 9,4 %",
+    tags: ["Jetzt pausieren", "Alle Kampagnen"],
+  },
+];
+
+const showcaseRightCards = [
+  {
+    icon: "✦",
+    title: "Follow-ups",
+    rows: ["Sandra M. · 10:00 · Hoch", "Lukas · 11:00 · Mittel", "Ella · 14:00 · Hoch", "Tom · 14:00 · Mittel"],
+  },
+  {
+    icon: "✣",
+    title: "Segmente",
+    rows: ["VIP 1.824", "Warm 2.150", "Buyer 1.920", "Inactive 2.048", "New 1.736"],
+  },
+  {
+    icon: "⌁",
+    title: "Analytics",
+    rows: ["Fan-Wachstum +12 %", "Aktive Fans 4.892", "Conversion 9,4 %", "Antwortquote 34,8 %"],
+  },
+];
+
+const showcaseMetrics = [
+  { label: "Gesamtfans", value: "10.248", change: "+12 %", color: "#0b8cff" },
+  { label: "Aktive", value: "4.892", change: "+7,8 %", color: "#00e178" },
+  { label: "VIP", value: "182", change: "+1,8 %", color: "#9b55ff" },
+  { label: "Follow-ups heute", value: "128", change: "24 überfällig", color: "#00c9ff" },
+];
+
+const showcaseContacts = [
+  ["SM", "Sandra M.", "Buyer", "Mia Active Club", "buyer, premium_interest", "92", "Heute, 09:42", "Morgen, 10:00"],
+  ["A", "Alex", "VIP", "DJ Nova", "vip, event_interest", "88", "Gestern, 18:21", "Heute, 14:00"],
+  ["E", "Ella", "Inactive", "Team Arena", "inactive, reactivation", "45", "12.05.2025", "Überfällig"],
+  ["L", "Lukas", "Warm", "Mia Active Club", "fitness, challenge", "76", "Heute, 07:15", "Heute, 16:00"],
+  ["M", "Mario", "New", "Mia Active Club", "new, beginner", "30", "Gestern, 11:03", "18.05.2025"],
+  ["N", "Nina", "Warm", "DJ Nova", "music, warm", "68", "10.05.2025", "19.05.2025"],
+  ["R", "Rene", "Do not push", "Team Arena", "careful, do_not_push", "20", "09.05.2025", "—"],
+];
+
+const showcaseBenefits = [
+  { icon: "♙", title: "Persönlicher Fan-Kontext", text: "Alle Interaktionen, Tags und Notizen an einem Ort – für echte Fan-Beziehungen." },
+  { icon: "☆", title: "Nächste beste Aktion", text: "Intelligente Empfehlungen zeigen deinem Team den wirkungsvollsten Schritt." },
+  { icon: "♙", title: "Automatische Segmentierung", text: "KI erkennt Muster und bildet dynamische Segmente für präzise Kommunikation." },
+  { icon: "↗", title: "Messbare Conversion", text: "Jede Kampagne, Nachricht und jeder Schritt wird transparent auswertbar." },
+];
+
+const showcaseFeatureStrip = [
+  { icon: "🧠", title: "Fan-Gedächtnis", text: "Erfasse, was wichtig ist – und nutze es für persönliche, relevante Kommunikation." },
+  { icon: "✦", title: "KI-Antwortvorschläge", text: "Smarte Vorschläge für jede Nachricht – passend zum Kontext, zum Fan und zum Ziel." },
+  { icon: "☑", title: "Follow-up Queue", text: "Behalte alles im Blick, priorisiere richtig und handle zum perfekten Zeitpunkt." },
+  { icon: "📣", title: "Kampagnen & Analytics", text: "Plane, sende, analysiere – und optimiere ständig für maximale Wirkung." },
+];
+
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <a className={styles.logo} href="#top" aria-label="FanMind Start">
@@ -438,6 +524,139 @@ export default function LandingV2() {
         <div className={styles.problemCtas}>
           <a className={styles.demoButton} href="#demo"><span>▶</span> Demo ansehen</a>
           <a className={styles.outlineButton} href="#early-access"><span>♙</span> Early Access anfragen</a>
+        </div>
+      </section>
+
+      <section className={styles.productShowcase} aria-labelledby="product-showcase-title">
+        <div className={styles.showcaseGridGlow} aria-hidden="true" />
+        <div className={styles.showcaseHeader}>
+          <h2 id="product-showcase-title">
+            Ein Workspace für dein gesamtes <span>Fan-Management.</span>
+          </h2>
+          <p>
+            Vom ersten Kontakt bis zur Conversion zeigt FanMind deinem Team, wer wichtig ist,
+            welche Nachricht passt und welcher nächste Schritt die größte Wirkung hat.
+          </p>
+        </div>
+
+        <div className={styles.showcaseStage}>
+          <div className={styles.showcaseSideColumn}>
+            {showcaseLeftCards.map((card, index) => (
+              <article className={styles.showcaseMiniCard} data-variant={index} key={card.title}>
+                <div className={styles.showcaseMiniTitle}><span>{card.icon}</span><strong>{card.title}</strong></div>
+                <div className={styles.miniContactLine}>
+                  <b>{card.detail}</b>
+                  <em>{card.status}</em>
+                </div>
+                <p>{card.text}</p>
+                <div className={styles.showcaseTags}>
+                  {card.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className={styles.showcaseDashboardWrap} aria-label="FanMind Kontakte Workspace Mockup">
+            <div className={styles.showcaseDashboard}>
+              <aside className={styles.showcaseSidebar}>
+                <Logo compact />
+                <strong>FanMind</strong>
+                <nav aria-label="Produktnavigation im Mockup">
+                  {showcaseNavItems.map((item, index) => (
+                    <span className={index === 1 ? styles.showcaseActiveNav : ""} key={item}>
+                      <i>{["⌂", "♙", "◌", "◷", "📣", "⌁", "⚙"][index]}</i>{item}
+                    </span>
+                  ))}
+                </nav>
+                <div className={styles.savedViews}>
+                  <small>Gespeicherte Ansichten</small>
+                  <span>★ Top Fans <b>182</b></span>
+                  <span>✦ Reaktivierung <b>739</b></span>
+                  <span>★ Premium-Käufer <b>312</b></span>
+                </div>
+              </aside>
+
+              <div className={styles.showcaseMainPanel}>
+                <div className={styles.showcaseTopbar}>
+                  <div>
+                    <h3>Kontakte</h3>
+                    <p>Verwalte alle Kontakte und Interaktionen mit deinen Fans.</p>
+                  </div>
+                  <div className={styles.showcaseSearch}>Suche nach Name, Tag, Profil, Sprache … <span>⌕</span></div>
+                  <button type="button">+ Neuer Kontakt</button>
+                </div>
+
+                <div className={styles.showcaseMetricRow}>
+                  {showcaseMetrics.map((metric) => (
+                    <div className={styles.showcaseMetric} style={{ "--accent": metric.color } as React.CSSProperties} key={metric.label}>
+                      <span>{metric.label}</span>
+                      <strong>{metric.value}</strong>
+                      <small>{metric.change}</small>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.segmentTabs}>
+                  {['Alle', 'VIP 182', 'Warm 2.150', 'Buyer 912', 'Inactive 1.876', 'Do not push 60', 'Heute fällig 128'].map((tab, index) => (
+                    <span className={index === 0 ? styles.activeSegmentTab : ""} key={tab}>{tab}</span>
+                  ))}
+                </div>
+
+                <div className={styles.contactTable}>
+                  <div className={styles.tableHead}>
+                    <span>Name</span><span>Status</span><span>Profil</span><span>Tags</span><span>Fan Score</span><span>Letzter Kontakt</span><span>Nächster Follow-up</span>
+                  </div>
+                  {showcaseContacts.map((row) => (
+                    <div className={styles.tableRow} key={row[1]}>
+                      <span><i>{row[0]}</i>{row[1]}</span>
+                      <span><b>{row[2]}</b></span>
+                      <span>{row[3]}</span>
+                      <span>{row[4]}</span>
+                      <span className={styles.scoreCell}>{row[5]}</span>
+                      <span>{row[6]}</span>
+                      <span className={row[7] === "Überfällig" ? styles.overdueCell : ""}>{row[7]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.showcaseSideColumn}>
+            {showcaseRightCards.map((card, index) => (
+              <article className={styles.showcaseInsightCard} data-variant={index} key={card.title}>
+                <div className={styles.showcaseMiniTitle}><span>{card.icon}</span><strong>{card.title}</strong></div>
+                <div className={index === 1 ? styles.segmentDonut : styles.insightRows}>
+                  {card.rows.map((row) => <span key={row}>{row}</span>)}
+                </div>
+                <a href="#early-access">Alle anzeigen →</a>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.showcaseBenefitGrid}>
+          {showcaseBenefits.map((benefit) => (
+            <article key={benefit.title}>
+              <span>{benefit.icon}</span>
+              <div>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.text}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.showcaseFeatureStrip}>
+          {showcaseFeatureStrip.map((feature) => (
+            <article key={feature.title}>
+              <span>{feature.icon}</span>
+              <div>
+                <h3>{feature.title}</h3>
+                <p>{feature.text}</p>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
