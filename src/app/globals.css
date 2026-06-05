@@ -1275,6 +1275,7 @@ button.button {
 }
 
 .trust-strip span,
+.trust-logo,
 .feature-ribbon span,
 .audience-grid span,
 .social-row span {
@@ -1282,6 +1283,19 @@ button.button {
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.72);
   padding: 9px 12px;
+}
+
+.trust-logo {
+  color: #e0f2fe;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  position: relative;
+}
+
+.trust-logo::before {
+  color: #22d3ee;
+  content: "✦";
+  margin-right: 7px;
 }
 
 .dashboard-mockup,
@@ -1709,10 +1723,17 @@ button.button {
   padding: 30px;
 }
 
-.landing-footer a {
+.landing-footer a,
+.landing-footer small {
   color: #cbd5e1;
   display: block;
   margin-top: 10px;
+}
+
+.landing-footer small {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .footer-cta {
