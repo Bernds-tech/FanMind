@@ -2,13 +2,13 @@
 
 ## Grundregel
 
-Wenn fuer FanMind fachliche Entscheidungen getroffen werden, wird zuerst die bisherige Projektbesprechung herangezogen.
+Wenn für FanMind fachliche Entscheidungen getroffen werden, wird zuerst die bisherige Projektbesprechung herangezogen.
 
 Wichtige Grundlage:
 
-- Gespraech: Erste Analyse und Besprechung
+- Gespräch: Erste Analyse und Besprechung
 
-## Gilt besonders fuer
+## Gilt besonders für
 
 - Sprachen
 - Preisstruktur
@@ -19,31 +19,31 @@ Wichtige Grundlage:
 - Positionierung
 - Verkaufsargumente
 - Demo-Aufbau
-- MVP-Prioritaeten
+- MVP-Prioritäten
 
 ## Aktueller Projektstand aus der Besprechung
 
-FanMind soll international gedacht werden, aber mit europaeischem beziehungsweise oesterreichischem Ursprung starten.
+FanMind soll international gedacht werden, aber mit europäischem beziehungsweise oesterreichischem Ursprung starten.
 
 Die Plattform soll nicht als reine Erotikplattform und nicht als reine OnlyFans-Kopie positioniert werden.
 
-FanMind soll als serioese Direct-to-Fan-Plattform fuer Creator, Fans, digitale Fanclubs und Mitgliedschaften aufgebaut werden.
+FanMind soll als seriöse Direct-to-Fan-Plattform für Creator, Fans, digitale Fanclubs und Mitgliedschaften aufgebaut werden.
 
-## Arbeitsregel fuer neue Features
+## Arbeitsregel für neue Features
 
 Bevor neue Funktionen, Preise oder Pakete umgesetzt werden:
 
-1. Bestehende Analyse pruefen
+1. Bestehende Analyse prüfen
 2. Bisherige FanMind-Besprechung beruecksichtigen
 3. Entscheidung dokumentieren
 4. Erst danach Code oder UI bauen
 
 ## Offene fachliche Bereiche
 
-Folgende Bereiche muessen noch aus der Besprechung beziehungsweise aus weiteren Entscheidungen heraus sauber definiert werden:
+Folgende Bereiche müssen noch aus der Besprechung beziehungsweise aus weiteren Entscheidungen heraus sauber definiert werden:
 
-- finale Pakete fuer Creator
-- finale Pakete fuer Fans
+- finale Pakete für Creator
+- finale Pakete für Fans
 - Plattformgebuehr
 - Zahlungsgebuehren
 - kostenlose Testphase

@@ -38,7 +38,7 @@ Erste sichtbare Demo in 7 bis 10 Tagen mit:
 
 ## Repository
 
-Owner: Bernds-tech  
+Verantwortlich: Bernds-tech  
 Projekt: FanMind  
 Marke / Unternehmen: FanMind  
 Webseite / Hauptdomain: FanMind.ch
@@ -59,7 +59,7 @@ Zuerst Demo bauen, dann Pilotkunden ansprechen.
 
 ## KI-Copilot API
 
-Der Demo-Workflow unter `/copilot` nutzt den serverseitigen Endpunkt `POST /api/copilot/reply`, um aus Fan-Kontext, betreutem Profil, Memories, Nachrichten und Follow-ups strukturierte Antwortvorschlaege zu erzeugen.
+Der Demo-Workflow unter `/copilot` nutzt den serverseitigen Endpunkt `POST /api/copilot/reply`, um aus Fan-Kontext, betreutem Profil, Memories, Nachrichten und Follow-ups strukturierte Antwortvorschläge zu erzeugen.
 
 Der OpenAI API-Key wird nur serverseitig aus `process.env.OPENAI_API_KEY` gelesen und darf nicht im Browser verwendet werden. Lege lokal eine nicht versionierte `.env.local` an:
 
@@ -69,4 +69,4 @@ OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Wenn `OPENAI_API_KEY` fehlt, die Fan-Nachricht leer/zu lang ist oder die OpenAI API einen Fehler liefert, gibt der Endpunkt eine saubere JSON-Fehlermeldung zurueck und die UI zeigt diese verstaendlich an. Der Request laeuft serverseitig gegen die OpenAI Responses API und nutzt standardmaessig `gpt-4.1-mini`; ueber `OPENAI_MODEL` kann ein anderes kompatibles Modell gesetzt werden. FanMind sendet keine Nachrichten automatisch; alle Vorschlaege muessen vom Menschen geprueft und manuell versendet werden.
+Wenn `OPENAI_API_KEY` fehlt, die Fan-Nachricht leer/zu lang ist oder die OpenAI API einen Fehler liefert, gibt der Endpunkt eine saubere JSON-Fehlermeldung zurück und die UI zeigt diese verständlich an. Der Request läuft serverseitig gegen die OpenAI Responses API und nutzt standardmäßig `gpt-4.1-mini`; über `OPENAI_MODEL` kann ein anderes kompatibles Modell gesetzt werden. FanMind sendet keine Nachrichten automatisch; alle Vorschläge müssen vom Menschen geprüft und manuell versendet werden.

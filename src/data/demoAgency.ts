@@ -23,7 +23,7 @@ export const demoCreators = [
     platform: "manual_demo",
     language: "de",
     tone: "motivierend, warm, direkt",
-    personaNotes: "Fitness-Coach mit Fokus auf Motivation, Routinen und persoenliche Challenges.",
+    personaNotes: "Fitness-Coach mit Fokus auf Motivation, Routinen und persönliche Challenges.",
     boundaries: "Nicht zu aggressiv verkaufen. Keine medizinischen Versprechen. Keine automatischen Nachrichten."
   },
   {
@@ -43,7 +43,7 @@ export const demoCreators = [
     platform: "manual_demo",
     language: "de",
     tone: "professionell, sportlich, nahbar",
-    personaNotes: "Sportnahes Profil fuer Fanbindung, Events, Ticketinteresse und Community-Aktionen.",
+    personaNotes: "Sportnahes Profil für Fanbindung, Events, Ticketinteresse und Community-Aktionen.",
     boundaries: "Keine falschen Ticketzusagen. Keine aggressiven Sales-Nachrichten."
   }
 ];
@@ -57,7 +57,7 @@ export const demoFans = [
     displayName: "Lukas",
     status: "warm",
     language: "de",
-    summary: "Interessiert an Trainingsplaenen und reagiert gut auf persoenliche Motivation.",
+    summary: "Interessiert an Trainingsplänen und reagiert gut auf persönliche Motivation.",
     tags: ["fitness", "challenge", "warm"],
     valueLevel: "medium"
   },
@@ -117,7 +117,7 @@ export const demoFans = [
     displayName: "Tom",
     status: "warm",
     language: "de",
-    summary: "Fragt nach Fanclub-Aktionen und moechte Freunde zu einem Event mitnehmen.",
+    summary: "Fragt nach Fanclub-Aktionen und möchte Freunde zu einem Event mitnehmen.",
     tags: ["event", "group_interest"],
     valueLevel: "medium"
   },
@@ -129,7 +129,7 @@ export const demoFans = [
     displayName: "Ella",
     status: "inactive",
     language: "de",
-    summary: "War frueher sehr aktiv, hat seit mehreren Wochen nicht mehr reagiert.",
+    summary: "War früher sehr aktiv, hat seit mehreren Wochen nicht mehr reagiert.",
     tags: ["inactive", "reactivation"],
     valueLevel: "medium"
   },
@@ -153,7 +153,7 @@ export const demoMessages = [
     fanId: "fan_lukas_01",
     creatorId: "creator_mia_active",
     direction: "inbound",
-    content: "Ich wuerde gern starten, aber ich weiss nicht, ob ich das zeitlich schaffe.",
+    content: "Ich würde gern starten, aber ich weiß nicht, ob ich das zeitlich schaffe.",
     source: "manual_demo"
   },
   {
@@ -161,7 +161,7 @@ export const demoMessages = [
     fanId: "fan_sandra_02",
     creatorId: "creator_mia_active",
     direction: "inbound",
-    content: "Die Challenge war super. Gibt es etwas Persoenlicheres fuer mich?",
+    content: "Die Challenge war super. Gibt es etwas Persönlicheres für mich?",
     source: "manual_demo"
   },
   {
@@ -180,7 +180,7 @@ export const demoMemories = [
     fanId: "fan_lukas_01",
     creatorId: "creator_mia_active",
     memoryType: "preference",
-    content: "Lukas mag kurze, motivierende Antworten und moechte realistische Wochenziele.",
+    content: "Lukas mag kurze, motivierende Antworten und möchte realistische Wochenziele.",
     importance: "medium"
   },
   {
@@ -196,7 +196,7 @@ export const demoMemories = [
     fanId: "fan_rene_08",
     creatorId: "creator_team_arena",
     memoryType: "boundary",
-    content: "Rene nicht draengen. Kurz, sachlich und ohne Verkaufsdruck antworten.",
+    content: "Rene nicht drängen. Kurz, sachlich und ohne Verkaufsdruck antworten.",
     importance: "high"
   }
 ];
@@ -207,7 +207,7 @@ export const demoFollowups = [
     fanId: "fan_lukas_01",
     creatorId: "creator_mia_active",
     dueLabel: "Heute",
-    reason: "Nachfragen, ob ein 3-Tage-Einstieg fuer ihn machbar waere.",
+    reason: "Nachfragen, ob ein 3-Tage-Einstieg für ihn machbar wäre.",
     priority: "medium",
     status: "open"
   },
@@ -216,7 +216,7 @@ export const demoFollowups = [
     fanId: "fan_sandra_02",
     creatorId: "creator_mia_active",
     dueLabel: "Diese Woche",
-    reason: "Premium-Angebot mit persoenlicher Begleitung vorsichtig vorstellen.",
+    reason: "Premium-Angebot mit persönlicher Begleitung vorsichtig vorstellen.",
     priority: "high",
     status: "open"
   },
@@ -233,7 +233,7 @@ export const demoFollowups = [
     id: "followup_004",
     fanId: "fan_ella_07",
     creatorId: "creator_team_arena",
-    dueLabel: "Ueberfaellig",
+    dueLabel: "Überfällig",
     reason: "Reaktivierung mit freundlichem Update versuchen.",
     priority: "medium",
     status: "open"
@@ -255,18 +255,18 @@ export const demoReplySuggestions = [
     options: [
       {
         label: "Warm",
-        text: "Verstehe ich total. Wir koennen es klein starten: 3 kurze Einheiten pro Woche, ohne Druck. Soll ich dir einen einfachen Einstieg vorschlagen?"
+        text: "Verstehe ich total. Wir können es klein starten: 3 kurze Einheiten pro Woche, ohne Druck. Soll ich dir einen einfachen Einstieg vorschlagen?"
       },
       {
         label: "Kurz",
-        text: "Klar, dann starten wir klein. 3 kurze Einheiten pro Woche reichen fuer den Anfang."
+        text: "Klar, dann starten wir klein. 3 kurze Einheiten pro Woche reichen für den Anfang."
       },
       {
         label: "Follow-up",
-        text: "Ich schicke dir einen einfachen Startplan und frage in zwei Tagen nach, wie es sich anfuehlt."
+        text: "Ich schicke dir einen einfachen Startplan und frage in zwei Tagen nach, wie es sich anfühlt."
       }
     ],
-    suggestedMemory: "Lukas ist zeitlich unsicher und braucht niedrige Einstiegshuerde.",
+    suggestedMemory: "Lukas ist zeitlich unsicher und braucht niedrige Einstiegshürde.",
     suggestedFollowup: "In 2 Tagen nachfragen, ob der 3-Tage-Einstieg passt."
   },
   {
@@ -274,19 +274,19 @@ export const demoReplySuggestions = [
     options: [
       {
         label: "Premium",
-        text: "Das freut mich sehr. Fuer dich koennte eine persoenlichere Begleitung passen, bei der wir Ziele und Check-ins enger abstimmen."
+        text: "Das freut mich sehr. Für dich könnte eine persönlichere Begleitung passen, bei der wir Ziele und Check-ins enger abstimmen."
       },
       {
         label: "Vorsichtig",
-        text: "Wenn du magst, kann ich dir erst kurz zeigen, was bei der Premium-Begleitung anders waere. Dann entscheidest du in Ruhe."
+        text: "Wenn du magst, kann ich dir erst kurz zeigen, was bei der Premium-Begleitung anders wäre. Dann entscheidest du in Ruhe."
       },
       {
         label: "Follow-up",
-        text: "Ich fasse dir die naechsten Schritte zusammen und melde mich diese Woche nochmal, falls Fragen offen bleiben."
+        text: "Ich fasse dir die nächsten Schritte zusammen und melde mich diese Woche nochmal, falls Fragen offen bleiben."
       }
     ],
-    suggestedMemory: "Sandra ist nach einem Kauf offen fuer Premium-Begleitung, sollte aber ohne Druck angesprochen werden.",
-    suggestedFollowup: "Diese Woche mit konkretem Premium-Ueberblick nachfassen."
+    suggestedMemory: "Sandra ist nach einem Kauf offen für Premium-Begleitung, sollte aber ohne Druck angesprochen werden.",
+    suggestedFollowup: "Diese Woche mit konkretem Premium-Überblick nachfassen."
   },
   {
     fanId: "fan_alex_04",

@@ -31,17 +31,17 @@ const mainNavItems: NavItem[] = [
   { label: "Segmente", href: "/fans", icon: "target" },
   { label: "Follow-ups", href: "/followups", icon: "clock", badge: "128" },
   { label: "Kampagnen", href: "/copilot", icon: "megaphone" },
-  { label: "Analytics", href: "/dashboard", icon: "chart" },
-  { label: "Settings", href: "/pricing", icon: "gear" }
+  { label: "Auswertungen", href: "/dashboard", icon: "chart" },
+  { label: "Einstellungen", href: "/pricing", icon: "gear" }
 ];
 
 const savedViewItems: NavItem[] = [
   { label: "Top Fans", href: "/fans", icon: "star" },
   { label: "Reaktivierung", href: "/fans", icon: "refresh" },
   { label: "Event-Interessenten", href: "/fans", icon: "activity" },
-  { label: "Premium-Kaeufer", href: "/fans", icon: "crown" },
+  { label: "Premium-Käufer", href: "/fans", icon: "crown" },
   { label: "Neue Kontakte", href: "/fans", icon: "spark" },
-  { label: "Heute faellige Follow-ups", href: "/fans", icon: "calendar" },
+  { label: "Heute fällige Follow-ups", href: "/fans", icon: "calendar" },
   { label: "Meine Kontakte", href: "/fans", icon: "user" },
   { label: "Team Arena", href: "/fans", icon: "team" },
   { label: "Ansicht speichern", href: "/fans", icon: "plus" }
@@ -91,12 +91,12 @@ function SidebarLink({ item }: { item: NavItem }) {
 
 export function AppSidebar() {
   return (
-    <aside className="workspace-sidebar" aria-label="Workspace Navigation">
+    <aside className="workspace-sidebar" aria-label="Arbeitsbereich Navigation">
       <a className="sidebar-brand" href="/">
         <span className="brand-mark">FM</span>
         <span>
           <strong>FanMind</strong>
-          <small>Agency Console</small>
+          <small>Agentur-Konsole</small>
         </span>
       </a>
 
@@ -109,7 +109,7 @@ export function AppSidebar() {
         {savedViewItems.map((item) => <SidebarLink item={item} key={item.label} />)}
       </div>
 
-      <div className="sidebar-team-card" aria-label="Aktueller Workspace">
+      <div className="sidebar-team-card" aria-label="Aktueller Arbeitsbereich">
         <span className="team-avatar">ND</span>
         <span>
           <strong>Nina D.</strong>

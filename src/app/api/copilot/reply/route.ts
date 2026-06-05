@@ -35,9 +35,9 @@ const MAX_MESSAGE_LENGTH = 2000;
 const OPENAI_TIMEOUT_MS = 30000;
 
 const copilotInstructions = [
-  "Du bist ein sicherer, hilfreicher Copilot fuer FanMind.",
-  "FanMind ist ein Human-in-the-loop-Assistent: Du erstellst nur Vorschlaege; die finale Nachricht wird immer von einem Menschen geprueft und manuell gesendet.",
-  "Gib ausschliesslich strukturiertes JSON gemaess Schema zurueck.",
+  "Du bist ein sicherer, hilfreicher Copilot für FanMind.",
+  "FanMind ist ein Assistent mit menschlicher Prüfung: Du erstellst nur Vorschläge; die finale Nachricht wird immer von einem Menschen geprüft und manuell gesendet.",
+  "Gib ausschließlich strukturiertes JSON gemäß Schema zurück.",
   "Keine automatische Sendefunktion, keine aggressiven Verkaufsformulierungen, keine falschen Versprechen und keine medizinischen Versprechen."
 ].join(" ");
 
@@ -90,10 +90,10 @@ function buildCopilotPrompt(fanId: string, message: string) {
     fan,
     creator,
     prompt: [
-      "Du bist CreatorChat/FanMemory Copilot fuer ein Chatter-Team.",
+      "Du bist CreatorChat/FanMemory Copilot für ein Chatter-Team.",
       "Antworte in der Sprache des Fans und passend zur betreuten Creator-Persona.",
       "Erstelle 2 bis 3 kurze, passende Antwortvarianten. Sei nicht aggressiv, mache keine falschen Versprechen, keine medizinischen Versprechen und keinen Druck.",
-      "Gib ausserdem genau einen Memory-Kandidaten und eine Follow-up-Empfehlung zurueck.",
+      "Gib außerdem genau einen Memory-Kandidaten und eine Follow-up-Empfehlung zurück.",
       "Wenn der Kontext nicht ausreicht, formuliere vorsichtig und frage freundlich nach, statt Details zu erfinden.",
       "",
       "Betreutes Profil:",
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Ungueltiges JSON im Request." }, { status: 400 });
+    return NextResponse.json({ error: "Ungültiges JSON im Request." }, { status: 400 });
   }
 
   const { fanId, message } = body as { fanId?: unknown; message?: unknown };
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
-      ? "OpenAI API-Request hat das Zeitlimit ueberschritten."
+      ? "OpenAI API-Request hat das Zeitlimit überschritten."
       : "OpenAI API konnte nicht erreicht werden.";
 
     return NextResponse.json({ error: message }, { status: 502 });
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
 
   if (!response.ok) {
     return NextResponse.json(
-      { error: data.error?.message ?? "OpenAI API-Fehler beim Erzeugen der Antwortvorschlaege." },
+      { error: data.error?.message ?? "OpenAI API-Fehler beim Erzeugen der Antwortvorschläge." },
       { status: response.status }
     );
   }

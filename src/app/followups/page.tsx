@@ -4,7 +4,7 @@ import { demoCreators, demoFans, demoFollowups } from "@/data/demoAgency";
 const followupSections = [
   {
     title: "Überfällig",
-    dueLabel: "Ueberfaellig",
+    dueLabel: "Überfällig",
     description: "Diese Kontakte sollten zuerst bearbeitet werden, damit warme Chancen nicht liegen bleiben."
   },
   {
@@ -18,6 +18,21 @@ const followupSections = [
     description: "Geplante Nachfass-Aufgaben für die laufende Woche."
   }
 ];
+
+
+const priorityLabels: Record<string, string> = {
+  high: "Hoch",
+  low: "Niedrig",
+  medium: "Mittel"
+};
+
+const statusLabels: Record<string, string> = {
+  open: "Offen"
+};
+
+function getLocalizedLabel(labels: Record<string, string>, value: string) {
+  return labels[value] ?? value;
+}
 
 const priorityRank: Record<string, number> = {
   high: 0,
@@ -53,10 +68,10 @@ export default function FollowupsPage() {
         <SiteNav active="Dashboard" />
 
         <section>
-          <div className="badge">Follow-up Queue</div>
+          <div className="badge">Nachfass-Warteschlange</div>
           <h1>Alle Nachfass-Aufgaben priorisiert im Blick.</h1>
           <p className="lead">
-            Die Queue bündelt offene Follow-ups aus den Demo-Daten nach Dringlichkeit. So sieht das Team sofort, welche Kontakte überfällig sind, heute Aufmerksamkeit brauchen oder noch diese Woche geplant sind.
+            Die Warteschlange bündelt offene Follow-ups aus den Demo-Daten nach Dringlichkeit. So sieht das Team sofort, welche Kontakte überfällig sind, heute Aufmerksamkeit brauchen oder noch diese Woche geplant sind.
           </p>
           <div className="actions">
             <a className="button primary" href="/fans">Kontakte ansehen</a>
@@ -66,7 +81,7 @@ export default function FollowupsPage() {
 
         <section className="section hero-card">
           <div className="badge">{openFollowupCount} offene Aufgaben</div>
-          <h2>Queue für den manuellen Human-in-the-loop Workflow.</h2>
+          <h2>Warteschlange für den manuellen Workflow mit menschlicher Prüfung.</h2>
           <p className="lead">
             Jeder Eintrag zeigt Kontaktname, betreutes Profil, Grund, Priorität und Status. Der Button führt direkt zur passenden Kontaktseite, auf der Nachrichten, Memories und Antwortvorschläge geprüft werden können.
           </p>
@@ -91,8 +106,8 @@ export default function FollowupsPage() {
                       <h3>{fan?.displayName ?? "Unbekannter Kontakt"}</h3>
                       <p><strong>Betreutes Profil:</strong> {creatorName}</p>
                       <p><strong>Grund:</strong> {followup.reason}</p>
-                      <p><strong>Priorität:</strong> {followup.priority}</p>
-                      <p><strong>Status:</strong> {followup.status}</p>
+                      <p><strong>Priorität:</strong> {getLocalizedLabel(priorityLabels, followup.priority)}</p>
+                      <p><strong>Status:</strong> {getLocalizedLabel(statusLabels, followup.status)}</p>
                       <a className="button" href={`/fans/${followup.fanId}`}>Kontakt öffnen</a>
                     </article>
                   );

@@ -471,7 +471,7 @@ export const landingContent: Record<Locale, LandingContent> = {
       },
       {
         title: "Tu propia fuente de ingresos",
-        text: "Las membresias y el contenido premium generan ingresos recurrentes fuera de los modelos publicitarios clasicos."
+        text: "Las membresias y el contenido premium generan ingresos recurrentes füra de los modelos publicitarios clasicos."
       },
       {
         title: "Mas cercania con los fans",

@@ -8,10 +8,10 @@ export default function PricingPage() {
         <SiteNav active="Pricing" />
 
         <section>
-          <div className="badge">FanMind Preise fuer Agenturen</div>
-          <h1>Pakete fuer betreute Profile, Fan-Gedaechtnis und bessere Nachfass-Arbeit.</h1>
+          <div className="badge">FanMind Preise für Agenturen</div>
+          <h1>Pakete für betreute Profile, Fan-Gedächtnis und bessere Nachfass-Arbeit.</h1>
           <p className="lead">
-            FanMind startet als unterstuetzender Assistent fuer Agenturen und Teams, die mehrere Profile betreuen und Fan-Gespraeche strukturierter verwalten wollen.
+            FanMind startet als unterstützender Assistent für Agenturen und Teams, die mehrere Profile betreuen und Fan-Gespräche strukturierter verwalten wollen.
           </p>
         </section>
 
@@ -43,7 +43,7 @@ export default function PricingPage() {
 
         <section className="section">
           <h2>Wie FanMind arbeitet</h2>
-          <p className="lead">Zum Start geht es nicht um automatisches Senden, sondern um bessere Vorbereitung, Uebersicht und Kontrolle.</p>
+          <p className="lead">Zum Start geht es nicht um automatisches Senden, sondern um bessere Vorbereitung, Übersicht und Kontrolle.</p>
           <div className="grid">
             {fanMemberships.map((plan) => (
               <article className="card" key={plan.name}>

@@ -15,6 +15,44 @@ type FanDetailPageProps = {
   }>;
 };
 
+
+const statusLabels: Record<string, string> = {
+  buyer: "Käufer",
+  do_not_push: "Kein Druck",
+  inactive: "Inaktiv",
+  new: "Neu",
+  open: "Offen",
+  vip: "VIP",
+  warm: "Warm"
+};
+
+const valueLevelLabels: Record<string, string> = {
+  high: "Hoch",
+  low: "Niedrig",
+  medium: "Mittel"
+};
+
+const priorityLabels: Record<string, string> = {
+  high: "Hoch",
+  low: "Niedrig",
+  medium: "Mittel"
+};
+
+const memoryTypeLabels: Record<string, string> = {
+  boundary: "Grenze",
+  preference: "Vorliebe",
+  purchase_signal: "Kaufsignal"
+};
+
+const directionLabels: Record<string, string> = {
+  inbound: "Eingehend",
+  outbound: "Ausgehend"
+};
+
+function getLocalizedLabel(labels: Record<string, string>, value: string) {
+  return labels[value] ?? value;
+}
+
 export function generateStaticParams() {
   return demoFans.map((fan) => ({
     fanId: fan.id
@@ -45,12 +83,12 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
             <div className="badge">Fan-/Kontakt-Detail</div>
             <h1>{selectedFan.displayName}</h1>
             <p className="lead">
-              Dynamische Kontaktseite fuer {selectedFan.handle}: FanMind buendelt Kontext, Nachrichten, Memories, Antwortvorschlaege und Follow-ups fuer die menschliche Bearbeitung.
+              Dynamische Kontaktseite für {selectedFan.handle}: FanMind bündelt Kontext, Nachrichten, Memories, Antwortvorschläge und Follow-ups für die menschliche Bearbeitung.
             </p>
             <div className="actions">
-              <a className="button primary" href="/copilot">Antwortvorschlaege oeffnen</a>
-              <a className="button" href="/fans">Zurueck zur Kontaktliste</a>
-              <a className="button" href="/followups">Follow-up Queue</a>
+              <a className="button primary" href="/copilot">Antwortvorschläge öffnen</a>
+              <a className="button" href="/fans">Zurück zur Kontaktliste</a>
+              <a className="button" href="/followups">Nachfass-Warteschlange</a>
               <a className="button" href="/dashboard">Dashboard</a>
             </div>
           </div>
@@ -66,7 +104,7 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
             <p className="lead">{selectedFan.summary}</p>
             <div className="post">
               <small>STATUS</small>
-              <p>{selectedFan.status}</p>
+              <p>{getLocalizedLabel(statusLabels, selectedFan.status)}</p>
             </div>
             <div className="post">
               <small>TAGS</small>
@@ -74,19 +112,19 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
             </div>
             <div className="post">
               <small>WERTIGKEIT</small>
-              <p>{selectedFan.valueLevel}</p>
+              <p>{getLocalizedLabel(valueLevelLabels, selectedFan.valueLevel)}</p>
             </div>
           </aside>
         </section>
 
         <section className="section">
           <h2>Betreutes Profil</h2>
-          <p className="lead">Dieses Profil gibt Tonalitaet, Sprache und Grenzen fuer die Vorschlaege vor.</p>
+          <p className="lead">Dieses Profil gibt Tonalität, Sprache und Grenzen für die Vorschläge vor.</p>
           <article className="card">
             <div className="badge">{selectedCreator?.platform ?? "manual_demo"}</div>
             <h3>{selectedCreator?.displayName ?? "Unbekanntes Profil"}</h3>
             <p><strong>Sprache:</strong> {selectedCreator?.language ?? selectedFan.language}</p>
-            <p><strong>Tonalitaet:</strong> {selectedCreator?.tone ?? "Nicht hinterlegt"}</p>
+            <p><strong>Tonalität:</strong> {selectedCreator?.tone ?? "Nicht hinterlegt"}</p>
             <p><strong>Persona:</strong> {selectedCreator?.personaNotes ?? "Nicht hinterlegt"}</p>
             <p><strong>Grenzen:</strong> {selectedCreator?.boundaries ?? "Nicht hinterlegt"}</p>
           </article>
@@ -98,14 +136,14 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
           <div className="grid">
             {messages.length > 0 ? messages.map((message) => (
               <article className="card" key={message.id}>
-                <div className="badge">{message.direction}</div>
-                <h3>{message.source}</h3>
+                <div className="badge">{getLocalizedLabel(directionLabels, message.direction)}</div>
+                <h3>Manuelle Demo</h3>
                 <p>{message.content}</p>
               </article>
             )) : (
               <article className="card">
                 <div className="badge">Keine Nachrichten</div>
-                <p>Fuer diesen Kontakt ist in den Demo-Daten noch kein Nachrichtenverlauf hinterlegt.</p>
+                <p>Für diesen Kontakt ist in den Demo-Daten noch kein Nachrichtenverlauf hinterlegt.</p>
               </article>
             )}
           </div>
@@ -117,22 +155,22 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
           <div className="grid">
             {memories.length > 0 ? memories.map((memory) => (
               <article className="card" key={memory.id}>
-                <div className="badge">{memory.memoryType}</div>
-                <h3>Wichtigkeit: {memory.importance}</h3>
+                <div className="badge">{getLocalizedLabel(memoryTypeLabels, memory.memoryType)}</div>
+                <h3>Wichtigkeit: {getLocalizedLabel(priorityLabels, memory.importance)}</h3>
                 <p>{memory.content}</p>
               </article>
             )) : (
               <article className="card">
                 <div className="badge">Keine Memories</div>
-                <p>Fuer diesen Kontakt wurden noch keine dauerhaften Fan-Memories gespeichert.</p>
+                <p>Für diesen Kontakt wurden noch keine dauerhaften Fan-Memories gespeichert.</p>
               </article>
             )}
           </div>
         </section>
 
         <section className="section">
-          <h2>KI-Antwortvorschlaege</h2>
-          <p className="lead">FanMind macht Vorschlaege, der Mensch prueft und sendet final.</p>
+          <h2>KI-Antwortvorschläge</h2>
+          <p className="lead">FanMind macht Vorschläge, der Mensch prüft und sendet final.</p>
           <div className="grid">
             {replySuggestion ? replySuggestion.options.map((option) => (
               <article className="card" key={option.label}>
@@ -142,7 +180,7 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
             )) : (
               <article className="card">
                 <div className="badge">Kein Vorschlag</div>
-                <p>Fuer diesen Kontakt liegt aktuell kein KI-Antwortvorschlag in den Demo-Daten vor.</p>
+                <p>Für diesen Kontakt liegt aktuell kein KI-Antwortvorschlag in den Demo-Daten vor.</p>
               </article>
             )}
           </div>
@@ -170,29 +208,29 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
             {followups.length > 0 ? followups.map((followup) => (
               <article className="card" key={followup.id}>
                 <div className="badge">{followup.dueLabel}</div>
-                <h3>Prioritaet: {followup.priority}</h3>
+                <h3>Priorität: {getLocalizedLabel(priorityLabels, followup.priority)}</h3>
                 <p>{followup.reason}</p>
-                <p>Status: {followup.status}</p>
+                <p>Status: {getLocalizedLabel(statusLabels, followup.status)}</p>
               </article>
             )) : (
               <article className="card">
                 <div className="badge">Keine Follow-ups</div>
-                <p>Fuer diesen Kontakt sind aktuell keine Follow-ups geplant.</p>
+                <p>Für diesen Kontakt sind aktuell keine Follow-ups geplant.</p>
               </article>
             )}
           </div>
         </section>
 
         <section className="section hero-card">
-          <div className="badge">Human-in-the-loop</div>
+          <div className="badge">Menschliche Prüfung</div>
           <h2>FanMind ist kein Bot.</h2>
           <p className="lead">
-            FanMind macht Vorschlaege, der Mensch prueft Kontext, Tonalitaet und Grenzen und sendet die finale Antwort bewusst selbst.
+            FanMind macht Vorschläge, der Mensch prüft Kontext, Tonalität und Grenzen und sendet die finale Antwort bewusst selbst.
           </p>
           <div className="actions">
-            <a className="button primary" href="/copilot">Antwortvorschlaege oeffnen</a>
+            <a className="button primary" href="/copilot">Antwortvorschläge öffnen</a>
             <a className="button" href="/fans">Weitere Kontakte ansehen</a>
-            <a className="button" href="/followups">Follow-up Queue</a>
+            <a className="button" href="/followups">Nachfass-Warteschlange</a>
           </div>
         </section>
       </div>

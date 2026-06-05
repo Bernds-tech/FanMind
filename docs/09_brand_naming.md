@@ -10,11 +10,11 @@ Webseitenname / Hauptdomain: **FanMind.ch**
 
 FanMind ist der Name des Unternehmens beziehungsweise der Plattformmarke.
 
-FanMind.ch ist der oeffentliche Webseitenname und die Hauptdomain.
+FanMind.ch ist der öffentliche Webseitenname und die Hauptdomain.
 
 ## Wichtige Regel
 
-Das Unternehmen heisst nicht FanMind.ch.
+Das Unternehmen heißt nicht FanMind.ch.
 
 Das Unternehmen und die Marke heissen FanMind.
 
@@ -42,4 +42,4 @@ In Unternehmens-, Investoren-, Produkt- und Markentexten:
 
 Beispiel:
 
-FanMind ist eine europaeische Direct-to-Fan-Plattform. Die Plattform ist ueber FanMind.ch erreichbar.
+FanMind ist eine europäische Direct-to-Fan-Plattform. Die Plattform ist über FanMind.ch erreichbar.

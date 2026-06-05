@@ -2,13 +2,13 @@
 
 ## Ziel
 
-FanMind soll lokal und spaeter im Deployment aus Supabase lesen koennen.
+FanMind soll lokal und später im Deployment aus Supabase lesen können.
 
 Die Tabellen und Seed-Daten sind bereits in Supabase angelegt.
 
 ## Benötigte Variablen
 
-In `.env.local` werden ergaenzt:
+In `.env.local` werden ergänzt:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_REF.supabase.co
@@ -24,7 +24,7 @@ Supabase Dashboard -> oben `Connect` -> Project URL
 
 ### SUPABASE_SERVICE_ROLE_KEY
 
-Supabase Dashboard -> Project Settings -> API -> service_role key
+Supabase Dashboard -> Project Einstellungen -> API -> service_role key
 
 Wichtig:
 
@@ -40,7 +40,7 @@ Supabase Dashboard -> oben `Connect` -> Direct connection string oder URI
 
 1. `.env.local` öffnen oder neu schreiben.
 2. OpenAI-Variablen behalten.
-3. Supabase-Variablen ergaenzen.
+3. Supabase-Variablen ergänzen.
 4. Next.js Server neu starten.
 
 Beispiel:

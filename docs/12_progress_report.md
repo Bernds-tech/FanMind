@@ -27,7 +27,7 @@ Status: erledigt
 
 Erledigt:
 
-- Sprachstruktur fuer Deutsch, Englisch, Rumaenisch und Spanisch vorbereitet
+- Sprachstruktur für Deutsch, Englisch, Rumänisch und Spanisch vorbereitet
 - Locale-Routen erstellt
 - Sprachumschalter erstellt
 - zentrale i18n-Dateien angelegt
@@ -53,28 +53,28 @@ Status: weitgehend erledigt
 
 Erledigt:
 
-- Paketlogik aus der ersten Analyse uebernommen
+- Paketlogik aus der ersten Analyse übernommen
 - Agentur-Modell in src/data/pricing.ts eingetragen
 - Anbieter-Pakete angepasst:
   - FanMind Pilot: 990 EUR einmalig
   - FanMind Starter: 299 EUR pro Monat
   - FanMind Growth: 499 EUR pro Monat
   - FanMind Agency: ab 990 EUR pro Monat
-- Assistenten-Hinweis ergaenzt:
+- Assistenten-Hinweis ergänzt:
   - Keine automatische Plattform-Integration zum Start
-  - FanMind arbeitet als unterstuetzender Assistent
-  - finale Nachricht wird immer vom Menschen geprueft und gesendet
+  - FanMind arbeitet als unterstützender Assistent
+  - finale Nachricht wird immer vom Menschen geprüft und gesendet
 - alte Fanclub-Mitgliedschaftslogik als Startpakete fachlich abgeloest
 - /pricing an Agentur-/Assistenzmodell angepasst
 - /de/pricing, /en/pricing, /ro/pricing, /es/pricing fachlich angepasst
 
 Noch offen:
 
-- Landingpage-Paketsektion auf neue Agenturpakete pruefen
+- Landingpage-Paketsektion auf neue Agenturpakete prüfen
 - Pilotkunden-Sondermodell final bestaetigen
-- spaetere Zahlungsanbieter-/Rechnungslogik klaeren
+- spätere Zahlungsanbieter-/Rechnungslogik klaeren
 
-## In Arbeit / Naechster Schritt
+## In Arbeit / Nächster Schritt
 
 ### Tag 4: Creator-Profil professionalisieren
 
@@ -85,13 +85,13 @@ Erledigt:
 - /creator/demo professioneller aufgebaut
 - Mia Active Club klarer positioniert
 - Fanclub-Mitgliedschaft besser dargestellt
-- Demo-Kennzahlen ergaenzt
+- Demo-Kennzahlen ergänzt
 - freie Inhalte, Club-Inhalte und Premium-Inhalte klarer getrennt
-- CTA fuer Anbieter / Pilotkunden ergaenzt
+- CTA für Anbieter / Pilotkunden ergänzt
 
 Noch offen:
 
-- fachliche Anpassung pruefen: Creator-Profil vs. Agentur-/betreute Profile-Modell
+- fachliche Anpassung prüfen: Creator-Profil vs. Agentur-/betreute Profile-Modell
 - mehrsprachige Creator-Profil-Seiten nachziehen
 - Profil ggf. in betreutes Profil / Agenturansicht umbauen
 
@@ -100,8 +100,8 @@ Noch offen:
 ### Tag 5: Dashboard professionalisieren
 
 - Dashboard-Kacheln verbessern
-- Aktivitaetsbereich anzeigen
-- Inhalte und naechste Schritte klarer darstellen
+- Aktivitätsbereich anzeigen
+- Inhalte und nächste Schritte klarer darstellen
 
 ### Tag 6: Registrierung und Onboarding
 
@@ -112,12 +112,12 @@ Noch offen:
 ### Tag 7: Pilotkunden- und Verkaufsmodus
 
 - Pilotkunden-CTA verbessern
-- Ansprachetexte fuer Gerhard vorbereiten
+- Ansprachetexte für Gerhard vorbereiten
 - Feedbackfragen erstellen
 
 ### Tag 8: Qualitaet und Tests
 
-- npm run build regelmaessig pruefen
+- npm run build regelmaessig prüfen
 - Routen testen
 - Navigation testen
 - Sprachseiten testen
@@ -130,6 +130,6 @@ Noch offen:
 
 ### Tag 10: Demo-Abnahme und Pilotstart
 
-- Demo final pruefen
+- Demo final prüfen
 - Pilotkundenliste vorbereiten
 - Startentscheidung treffen
