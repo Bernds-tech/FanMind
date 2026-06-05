@@ -47,7 +47,7 @@ export default function CopilotForm({ fanId, initialMessage }: CopilotFormProps)
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Antwortvorschlaege konnten nicht erzeugt werden.");
+        throw new Error(data.error ?? "Antwortvorschläge konnten nicht erzeugt werden.");
       }
 
       setResult(data);
@@ -61,7 +61,7 @@ export default function CopilotForm({ fanId, initialMessage }: CopilotFormProps)
 
   async function copyReply(option: ReplyOption) {
     if (!navigator.clipboard) {
-      setError("Kopieren ist in diesem Browser nicht verfuegbar.");
+      setError("Kopieren ist in diesem Browser nicht verfügbar.");
       return;
     }
 
@@ -74,32 +74,32 @@ export default function CopilotForm({ fanId, initialMessage }: CopilotFormProps)
       <div>
         <h2>Neue Nachricht auswerten</h2>
         <p className="lead">
-          Neue Nachricht des Fans/Kontakts einfuegen, Copilot starten und Vorschlaege manuell pruefen. FanMind sendet nichts automatisch.
+          Neue Nachricht des Fans/Kontakts einfügen, Copilot starten und Vorschläge manuell prüfen. FanMind sendet nichts automatisch.
         </p>
       </div>
 
       <form className="card copilot-form" onSubmit={handleSubmit}>
-        <label htmlFor="fan-message">Neue Nachricht des Fans/Kontakts einfuegen</label>
+        <label htmlFor="fan-message">Neue Nachricht des Fans/Kontakts einfügen</label>
         <textarea
           id="fan-message"
           value={message}
           rows={6}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder="Fan-Nachricht hier einfuegen..."
+          placeholder="Fan-Nachricht hier einfügen..."
           required
         />
         <button className="button primary" type="submit" disabled={isLoading || message.trim().length === 0}>
-          {isLoading ? "Copilot laeuft..." : "Antwortvorschlaege erzeugen"}
+          {isLoading ? "Copilot läuft..." : "Antwortvorschläge erzeugen"}
         </button>
         <p className="form-note">
-          FanMind erstellt Vorschlaege. Die finale Nachricht wird immer vom Menschen geprueft und manuell gesendet.
+          FanMind erstellt Vorschläge. Die finale Nachricht wird immer vom Menschen geprüft und manuell gesendet.
         </p>
       </form>
 
       {isLoading ? (
         <article className="card status-card">
           <div className="badge">Ladezustand</div>
-          <p>Fan-Kontext wird serverseitig geladen und die KI erzeugt Vorschlaege...</p>
+          <p>Fan-Kontext wird serverseitig geladen und die KI erstellt Vorschläge...</p>
         </article>
       ) : null}
 
@@ -114,8 +114,8 @@ export default function CopilotForm({ fanId, initialMessage }: CopilotFormProps)
       {result ? (
         <div className="copilot-results">
           <section className="section nested-section">
-            <h2>2 bis 3 Antwortvorschlaege</h2>
-            <p className="lead">Diese KI-Vorschlaege sind vorbereitet. Sie werden nicht automatisch gesendet.</p>
+            <h2>2 bis 3 Antwortvorschläge</h2>
+            <p className="lead">Diese KI-Vorschläge sind vorbereitet. Sie werden nicht automatisch gesendet.</p>
             <div className="grid">
               {result.reply_options.map((option) => (
                 <article className="card" key={option.label}>
@@ -141,7 +141,7 @@ export default function CopilotForm({ fanId, initialMessage }: CopilotFormProps)
                 <p>
                   {result.suggested_followup.needed
                     ? `In ${result.suggested_followup.due_in_days} Tagen nachfassen: ${result.suggested_followup.reason}`
-                    : `Kein Follow-up noetig: ${result.suggested_followup.reason}`}
+                    : `Kein Follow-up nötig: ${result.suggested_followup.reason}`}
                 </p>
               </article>
             </div>

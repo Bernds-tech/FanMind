@@ -14,7 +14,7 @@ Die erste Demo ist lauffaehig und enthaelt:
 - Pricing Demo
 - Demo Navigation Hub
 
-## Naechster Sprint
+## Nächster Sprint
 
 ### 1. Navigation vereinheitlichen
 
@@ -27,7 +27,7 @@ Alle Seiten sollen dieselbe Navigation nutzen:
 - Login
 - Registrieren
 
-### 2. Startseite ueberarbeiten
+### 2. Startseite überarbeiten
 
 Die Startseite soll erweitert werden um:
 
@@ -48,14 +48,14 @@ Die Startseite soll erweitert werden um:
 - Umsatz-Kacheln
 - Fans-Kacheln
 - Content-Kacheln
-- Aktivitaetsliste
+- Aktivitätsliste
 
 ### 5. Pilotkunden-Modus
 
 - Demo-Link-Struktur vorbereiten
-- Beispieltexte fuer Gerhard vorbereiten
-- Fragen fuer Pilotkunden-Feedback definieren
+- Beispieltexte für Gerhard vorbereiten
+- Fragen für Pilotkunden-Feedback definieren
 
 ## Ziel
 
-FanMind soll als erste vorzeigbare Demo fuer Pilotkunden nutzbar werden.
+FanMind soll als erste vorzeigbare Demo für Pilotkunden nutzbar werden.

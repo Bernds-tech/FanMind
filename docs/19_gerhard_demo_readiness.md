@@ -1,16 +1,16 @@
-# FanMind Demo-Abnahme fuer Gerhard
+# FanMind Demo-Abnahme für Gerhard
 
 ## Ziel
 
-Gerhard soll FanMind in einem Gespraech in 3 bis 5 Minuten vorzeigen koennen.
+Gerhard soll FanMind in einem Gespräch in 3 bis 5 Minuten vorzeigen können.
 
 Die Demo zeigt nicht ein separates Fake-System, sondern das echte Produkt mit Demo-Account und Testdaten.
 
 ## Demo-Kernsatz
 
-FanMind ist ein KI-Copilot fuer Creator-Agenturen und Chatter-Teams.
+FanMind ist ein KI-Copilot für Creator-Agenturen und Chatter-Teams.
 
-FanMind hilft, Fan-Kontext zu behalten, bessere Antwortvorschlaege zu erzeugen und Follow-ups nicht zu vergessen.
+FanMind hilft, Fan-Kontext zu behalten, bessere Antwortvorschläge zu erzeugen und Follow-ups nicht zu vergessen.
 
 Kein Bot. Kein automatisches Senden. Der Mensch bleibt Entscheider.
 
@@ -42,7 +42,7 @@ Geplanter Demo-Account:
 
 Hinweis:
 
-Der Login ist aktuell noch nicht produktiv abgesichert. Fuer den Demo-Stand reicht der sichtbare Demo-Flow.
+Der Login ist aktuell noch nicht produktiv abgesichert. Für den Demo-Stand reicht der sichtbare Demo-Flow.
 
 ## 3-Minuten-Demo-Ablauf
 
@@ -52,9 +52,9 @@ Route:
 
 - /
 
-Satz fuer Gerhard:
+Satz für Gerhard:
 
-"FanMind ist ein KI-Copilot fuer Creator-Agenturen. Es geht nicht um automatisches Senden, sondern darum, Fan-Kontext, Antwortvorschlaege und Follow-ups sauber zu verwalten."
+"FanMind ist ein KI-Copilot für Creator-Agenturen. Es geht nicht um automatisches Senden, sondern darum, Fan-Kontext, Antwortvorschläge und Follow-ups sauber zu verwalten."
 
 ### 2. Dashboard zeigen
 
@@ -71,7 +71,7 @@ Zeigen:
 - warme Kontakte
 - Memories
 
-Satz fuer Gerhard:
+Satz für Gerhard:
 
 "Hier sieht die Agentur sofort, welche Profile betreut werden, welche Kontakte warm sind und welche Follow-ups offen sind."
 
@@ -89,9 +89,9 @@ Zeigen:
 - Memory-Anzahl
 - offene Follow-ups
 
-Satz fuer Gerhard:
+Satz für Gerhard:
 
-"Jeder Fan/Kontakt hat Kontext. Das Team muss nicht jedes Gespraech neu verstehen."
+"Jeder Fan/Kontakt hat Kontext. Das Team muss nicht jedes Gespräch neu verstehen."
 
 ### 4. Fan-Detail zeigen
 
@@ -106,12 +106,12 @@ Zeigen:
 - Tags
 - Nachrichten
 - Memories
-- Antwortvorschlaege
+- Antwortvorschläge
 - Follow-ups
 
-Satz fuer Gerhard:
+Satz für Gerhard:
 
-"Hier sieht man, was FanMind ueber den Kontakt weiss und warum der naechste Schritt sinnvoll ist."
+"Hier sieht man, was FanMind über den Kontakt weiß und warum der nächste Schritt sinnvoll ist."
 
 ### 5. Copilot zeigen
 
@@ -122,15 +122,15 @@ Route:
 Zeigen:
 
 - neue Nachricht eingeben
-- Antwortvorschlaege erzeugen
+- Antwortvorschläge erzeugen
 - Memory-Vorschlag
 - Follow-up-Vorschlag
 
-Satz fuer Gerhard:
+Satz für Gerhard:
 
-"FanMind erstellt Vorschlaege. Die finale Nachricht wird immer vom Menschen geprueft und manuell gesendet."
+"FanMind erstellt Vorschläge. Die finale Nachricht wird immer vom Menschen geprüft und manuell gesendet."
 
-### 6. Follow-up Queue zeigen
+### 6. Nachfass-Warteschlange zeigen
 
 Route:
 
@@ -139,32 +139,32 @@ Route:
 Zeigen:
 
 - Heute
-- Ueberfaellig
+- Überfällig
 - Diese Woche
-- Prioritaet
+- Priorität
 - Kontaktlink
 
-Satz fuer Gerhard:
+Satz für Gerhard:
 
 "So verliert das Team keine warmen Kontakte und keine Umsatzchancen."
 
 ## 5-Minuten-Demo-Ablauf
 
-1. Landingpage oeffnen
-2. Kurz Positionierung erklaeren
-3. Dashboard oeffnen
+1. Landingpage öffnen
+2. Kurz Positionierung erklären
+3. Dashboard öffnen
 4. Betreute Profile zeigen
-5. Kontaktliste oeffnen
-6. Lukas als Beispielkontakt oeffnen
-7. Nachrichten und Memories erklaeren
-8. Copilot oeffnen
-9. Fan-Nachricht einfuegen
-10. Antwortvorschlaege erzeugen
-11. Memory- und Follow-up-Vorschlag erklaeren
-12. Follow-up Queue oeffnen
+5. Kontaktliste öffnen
+6. Lukas als Beispielkontakt öffnen
+7. Nachrichten und Memories erklären
+8. Copilot öffnen
+9. Fan-Nachricht einfügen
+10. Antwortvorschläge erzeugen
+11. Memory- und Follow-up-Vorschlag erklären
+12. Nachfass-Warteschlange öffnen
 13. Abschlussfrage stellen:
 
-"Waere so ein Workflow fuer eure Agentur hilfreich, wenn mehrere Personen viele Fan-Gespraeche betreuen?"
+"Waere so ein Workflow für eure Agentur hilfreich, wenn mehrere Personen viele Fan-Gespräche betreuen?"
 
 ## Was aktuell funktioniert
 
@@ -178,11 +178,11 @@ Satz fuer Gerhard:
 - dynamische Fan-Detailseiten
 - Fan-Memory sichtbar
 - Follow-ups sichtbar
-- Follow-up Queue
+- Nachfass-Warteschlange
 - Copilot-Seite
-- API-Endpunkt fuer KI-Antwortvorschlaege
+- API-Endpunkt für KI-Antwortvorschläge
 - .env.local wird lokal erkannt
-- Build laeuft erfolgreich
+- Build läuft erfolgreich
 
 ## Was bewusst noch nicht fertig ist
 
@@ -191,7 +191,7 @@ Satz fuer Gerhard:
 - echte Nutzer-/Rollenverwaltung
 - echtes Speichern neuer Memories
 - echtes Speichern neuer Follow-ups
-- echte Persistenz fuer neue Chat-Eingaben
+- echte Persistenz für neue Chat-Eingaben
 - Deployment auf FanMind.ch
 - produktive Datenschutz-/Impressumsseiten
 - Billing / Zahlungslogik
@@ -210,10 +210,10 @@ Satz fuer Gerhard:
 
 ## Demo-Abnahme-Checkliste
 
-Vor einem Gerhard-Termin pruefen:
+Vor einem Gerhard-Termin prüfen:
 
-- [ ] npm run build laeuft erfolgreich
-- [ ] npm run dev laeuft auf richtigem Port
+- [ ] npm run build läuft erfolgreich
+- [ ] npm run dev läuft auf richtigem Port
 - [ ] / laedt
 - [ ] /dashboard laedt
 - [ ] /fans laedt
@@ -221,12 +221,12 @@ Vor einem Gerhard-Termin pruefen:
 - [ ] /copilot laedt
 - [ ] /followups laedt
 - [ ] OPENAI_API_KEY ist in .env.local gesetzt
-- [ ] Copilot erzeugt Antwortvorschlaege
+- [ ] Copilot erzeugt Antwortvorschläge
 - [ ] Keine API-Keys im Repository
 - [ ] Gerhard kennt den 3-Minuten-Ablauf
 - [ ] Gerhard kennt die Grenzen: kein Bot, kein automatisches Senden
 
-## Naechste Produkt-Aufgaben nach Demo-Abnahme
+## Nächste Produkt-Aufgaben nach Demo-Abnahme
 
 1. echte Datenbankstruktur planen
 2. Authentifizierung einbauen

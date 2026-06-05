@@ -64,12 +64,12 @@ type WorkspaceFan = {
 
 const ownerRotation = ["Gerhard", "Mia-Team", "Nova-Team", "Arena-Team"];
 const lastContactRotation = ["Heute 09:40", "Gestern 18:15", "Mo, 14:20", "Vor 5 Tagen", "Vor 3 Wochen"];
-const locationRotation = ["Zuerich", "Basel", "Berlin", "Hamburg", "Wien", "Remote"];
+const locationRotation = ["Zürich", "Basel", "Berlin", "Hamburg", "Wien", "Remote"];
 
 const statusLabels: Record<string, string> = {
-  buyer: "Buyer",
-  do_not_push: "Do not push",
-  inactive: "Inactive",
+  buyer: "Käufer",
+  do_not_push: "Kein Druck",
+  inactive: "Inaktiv",
   new: "Neu",
   vip: "VIP",
   warm: "Warm"
@@ -217,22 +217,22 @@ export default async function FansPage() {
   const vipCount = fans.filter((fan) => fan.status === "vip").length;
   const reactivationCount = fans.filter((fan) => fan.status === "inactive").length;
   const followupsToday = fans.filter((fan) => fan.nextFollowup === "Heute").length;
-  const overdueCount = fans.filter((fan) => fan.nextFollowup === "Ueberfaellig").length;
+  const overdueCount = fans.filter((fan) => fan.nextFollowup === "Überfällig").length;
   const activeShare = fans.length ? Math.round((activeCount / fans.length) * 1000) / 10 : 0;
   const kpiItems = [
     { label: "Gesamtfans", value: fans.length, icon: "fans" as const, tone: "blue" as const, subtext: "+12% vs. letzten Monat" },
     { label: "Aktive", value: activeCount, icon: "active" as const, tone: "green" as const, subtext: `${activeShare.toString().replace(".", ",")}% der Gesamtfans` },
-    { label: "VIP", value: vipCount, icon: "vip" as const, tone: "violet" as const, subtext: "Prioritaet hoch" },
-    { label: "Reaktivierung", value: reactivationCount, icon: "reactivation" as const, tone: "orange" as const, subtext: "Ueberfaellig: 24" },
-    { label: "Follow-ups heute", value: followupsToday, icon: "followups" as const, tone: "blue" as const, subtext: "Heute faellig" },
-    { label: "Ueberfaellig", value: overdueCount, icon: "overdue" as const, tone: "orange" as const, subtext: "Menschlich pruefen" }
+    { label: "VIP", value: vipCount, icon: "vip" as const, tone: "violet" as const, subtext: "Priorität hoch" },
+    { label: "Reaktivierung", value: reactivationCount, icon: "reactivation" as const, tone: "orange" as const, subtext: "Überfällig: 24" },
+    { label: "Follow-ups heute", value: followupsToday, icon: "followups" as const, tone: "blue" as const, subtext: "Heute fällig" },
+    { label: "Überfällig", value: overdueCount, icon: "overdue" as const, tone: "orange" as const, subtext: "Menschlich prüfen" }
   ];
-  const segments = ["Alle", "VIP", "Warm", "Buyer", "Inactive", "Do not push", "Heute faellig", "Deutsch", "English", "Hoher Fan Score"];
-  const detailTabs = ["Ueberblick", "Verlauf", "Notizen", "Dateien"];
+  const segments = ["Alle", "VIP", "Warm", "Käufer", "Inaktiv", "Kein Druck", "Heute fällig", "Deutsch", "Englisch", "Hoher Fan-Score"];
+  const detailTabs = ["Überblick", "Verlauf", "Notizen", "Dateien"];
   const aiSuggestions = [
-    `Rueckfrage zu ${selectedFan?.creatorName ?? "dem Profil"} beantworten`,
-    "Premium-Interesse menschlich pruefen lassen",
-    "Naechstes Follow-up mit Kontext vorbereiten"
+    `Rückfrage zu ${selectedFan?.creatorName ?? "dem Profil"} beantworten`,
+    "Premium-Interesse menschlich prüfen lassen",
+    "Nächstes Follow-up mit Kontext vorbereiten"
   ];
 
   return (
@@ -274,10 +274,10 @@ export default async function FansPage() {
                   <th>Status</th>
                   <th>Profil</th>
                   <th>Tags</th>
-                  <th>Fan Score</th>
+                  <th>Fan-Score</th>
                   <th>Letzter Kontakt</th>
-                  <th>Naechster Follow-up</th>
-                  <th>Owner</th>
+                  <th>Nächster Follow-up</th>
+                  <th>Verantwortlich</th>
                 </tr>
               </thead>
               <tbody>
@@ -320,7 +320,7 @@ export default async function FansPage() {
 
               <div className="detail-tabs" aria-label="Detailbereiche">
                 {detailTabs.map((tab) => (
-                  <button className={tab === "Ueberblick" ? "active" : ""} type="button" key={tab}>{tab}</button>
+                  <button className={tab === "Überblick" ? "active" : ""} type="button" key={tab}>{tab}</button>
                 ))}
               </div>
 
@@ -331,7 +331,7 @@ export default async function FansPage() {
               </div>
 
               <div className="detail-metrics">
-                <article><span>Fan Score</span><strong>{selectedFan.fanScore}</strong></article>
+                <article><span>Fan-Score</span><strong>{selectedFan.fanScore}</strong></article>
                 <article><span>Interaktionen</span><strong>{selectedFan.interactions}</strong></article>
                 <article><span>Follow-ups</span><strong>{selectedFan.followupCount}</strong></article>
                 <article><span>Sprache</span><strong>{selectedFan.language}</strong></article>
@@ -339,30 +339,30 @@ export default async function FansPage() {
 
               <div className="detail-list">
                 <p><span>Letzter Kontakt</span>{selectedFan.lastContact}</p>
-                <p><span>Naechster Follow-up</span>{selectedFan.nextFollowup}</p>
+                <p><span>Nächster Follow-up</span>{selectedFan.nextFollowup}</p>
                 <p><span>Kontaktinfos</span>{selectedFan.email} · {selectedFan.phone}</p>
-                <p><span>Owner</span>{selectedFan.owner}</p>
+                <p><span>Verantwortlich</span>{selectedFan.owner}</p>
                 <p><span>Letzte Notiz</span>{selectedFan.lastNote}</p>
                 <p><span>Letzte Nachricht</span>{selectedFan.lastMessage}</p>
-                <p><span>Naechste Aktion</span>{selectedFan.nextAction}</p>
+                <p><span>Nächste Aktion</span>{selectedFan.nextAction}</p>
               </div>
 
               <div className="ai-panel">
-                <span>KI-Antwortvorschlaege</span>
+                <span>KI-Antwortvorschläge</span>
                 {aiSuggestions.map((suggestion) => (
                   <p key={suggestion}>{suggestion}</p>
                 ))}
               </div>
 
               <div className="workspace-note compact-note">
-                <strong>Human-in-the-loop</strong>
-                <span>FanMind bereitet vor. Ein Mensch prueft und sendet manuell.</span>
+                <strong>Menschliche Prüfung</strong>
+                <span>FanMind bereitet vor. Ein Mensch prüft und sendet manuell.</span>
               </div>
 
               <div className="detail-actions">
                 <a className="button primary" href={`/copilot?fan=${selectedFan.id}`}>Nachricht vorbereiten</a>
                 <button type="button" className="button">Follow-up planen</button>
-                <button type="button" className="button">Notiz hinzufuegen</button>
+                <button type="button" className="button">Notiz hinzufügen</button>
                 <button type="button" className="button">Mehr</button>
               </div>
             </aside>

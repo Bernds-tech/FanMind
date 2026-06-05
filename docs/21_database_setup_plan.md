@@ -4,7 +4,7 @@
 
 FanMind soll nicht nur als Demo laufen, sondern als echtes Produkt mit echter Datenstruktur.
 
-Die Demo nutzt aktuell Seed-Daten im Code. Diese Daten sollen schrittweise in eine echte Datenbank ueberfuehrt werden.
+Die Demo nutzt aktuell Seed-Daten im Code. Diese Daten sollen schrittweise in eine echte Datenbank überfuehrt werden.
 
 ## Wichtig
 
@@ -12,7 +12,7 @@ Es wird keine separate Demo-Datenbanklogik gebaut.
 
 Demo-Account, Demo-Agentur und Demo-Follower sind echte Testdaten im echten Datenmodell.
 
-## Empfohlene Datenbank fuer den aktuellen MVP
+## Empfohlene Datenbank für den aktuellen MVP
 
 Primaere Empfehlung:
 
@@ -21,8 +21,8 @@ Primaere Empfehlung:
 Warum:
 
 - Relationen zwischen Agentur, Nutzer, betreuten Profilen, Fans, Nachrichten, Memories, Follow-ups und KI-Ausgaben sind klar abbildbar.
-- Spaeter einfach fuer Suche, Filter, Prioritaet und Auswertungen.
-- Gute Basis fuer echte Produktlogik.
+- Spaeter einfach für Suche, Filter, Priorität und Auswertungen.
+- Gute Basis für echte Produktlogik.
 
 Alternative:
 
@@ -30,7 +30,7 @@ Alternative:
 
 Nur sinnvoll, wenn bereits ein bestehendes Firebase-Projekt genutzt werden soll und schnelle Echtzeit-Synchronisierung wichtiger ist als relationale Auswertung.
 
-## Tabellen fuer MVP
+## Tabellen für MVP
 
 ### agencies
 
@@ -174,7 +174,7 @@ Felder:
 
 ## Demo-Seed-Daten
 
-Die aktuellen Seed-Daten aus `src/data/demoAgency.ts` sollen in echte Seed-Scripts ueberfuehrt werden:
+Die aktuellen Seed-Daten aus `src/data/demoAgency.ts` sollen in echte Seed-Scripts überfuehrt werden:
 
 - 1 Demo-Agentur
 - 1 Demo-Nutzer
@@ -183,11 +183,11 @@ Die aktuellen Seed-Daten aus `src/data/demoAgency.ts` sollen in echte Seed-Scrip
 - Nachrichten
 - Memories
 - Follow-ups
-- Antwortvorschlaege
+- Antwortvorschläge
 
 ## Environment Variables
 
-Spaeter benoetigt:
+Spaeter benötigt:
 
 - DATABASE_URL
 - OPENAI_API_KEY
@@ -195,7 +195,7 @@ Spaeter benoetigt:
 - APP_URL
 - AUTH_SECRET
 
-## Naechste Schritte
+## Nächste Schritte
 
 1. SQL-Schema im Repository anlegen.
 2. .env.example um DATABASE_URL erweitern.
@@ -212,4 +212,4 @@ Vor Umsetzung der echten Datenbank muss entschieden werden:
 - Supabase/PostgreSQL nutzen
 - bestehendes Firebase/Firestore nutzen
 
-Empfehlung fuer FanMind MVP: Supabase/PostgreSQL.
+Empfehlung für FanMind MVP: Supabase/PostgreSQL.

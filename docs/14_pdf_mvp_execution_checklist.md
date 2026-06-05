@@ -6,7 +6,7 @@ Bernd_Aufgabenplan_CreatorChat_Copilot_MVP_FanMind.pdf
 
 ## Fachlicher Fokus
 
-Produkt fuer MVP:
+Produkt für MVP:
 
 - CreatorChat Copilot / FanMemory Copilot
 - Marke: FanMind
@@ -33,14 +33,14 @@ Kein Megaprojekt.
 - [ ] Demo-Agentur sichtbar machen
 - [ ] Demo-Creator sichtbar machen
 - [ ] Demo-Fans sichtbar machen
-- [ ] Creator-Profil mit Sprache, Tonalitaet, Persona-Regeln und Grenzen
+- [ ] Creator-Profil mit Sprache, Tonalität, Persona-Regeln und Grenzen
 - [ ] Fan-Profil mit Status, Notizen, Interessen, Kauf-/Interaktionshinweisen, Memory und Follow-up
-- [ ] Chat-Eingabe fuer manuell eingefuegte Fan-Nachricht
-- [ ] KI-Antwortgenerator mit 2 bis 3 Antwortvorschlaegen
+- [ ] Chat-Eingabe für manuell eingefuegte Fan-Nachricht
+- [ ] KI-Antwortgenerator mit 2 bis 3 Antwortvorschlägen
 - [ ] Memory speichern
 - [ ] Follow-up setzen
-- [ ] Follow-up-Liste Heute / Diese Woche / Ueberfaellig
-- [ ] Saubere Demo-Daten fuer Gerhards Verkaufsgespraech
+- [ ] Follow-up-Liste Heute / Diese Woche / Überfällig
+- [ ] Saubere Demo-Daten für Gerhards Verkaufsgespraech
 
 ### Bewusste Nicht-Ziele v1
 
@@ -58,7 +58,7 @@ Kein Megaprojekt.
 
 Deutsch:
 
-Der KI-Copilot fuer Creator-Agenturen: Fan-Memory, Antwortvorschlaege und Follow-ups an einem Ort.
+Der KI-Copilot für Creator-Agenturen: Fan-Memory, Antwortvorschläge und Follow-ups an einem Ort.
 
 Englisch:
 
@@ -66,7 +66,7 @@ The AI copilot for creator agencies: fan memory, reply suggestions and follow-up
 
 Positionierung:
 
-Kein Bot. Kein automatisches Senden. Ein Human-in-the-loop Copilot fuer Agenturen.
+Kein Bot. Kein automatisches Senden. Ein Menschliche Prüfung Copilot für Agenturen.
 
 ## 10-Tage-Plan nach PDF
 
@@ -79,7 +79,7 @@ Status: weitgehend erledigt
 - [x] Layout erstellt
 - [x] Routing erstellt
 - [x] i18n-Struktur vorbereitet
-- [ ] .env.example ergaenzen
+- [ ] .env.example ergänzen
 
 ### Tag 2: Landingpage
 
@@ -97,14 +97,14 @@ Status: weitgehend erledigt
 
 Status: noch offen
 
-- [ ] Schema fuer agencies
-- [ ] Schema fuer users
-- [ ] Schema fuer creators
-- [ ] Schema fuer fans
-- [ ] Schema fuer messages
-- [ ] Schema fuer memories
-- [ ] Schema fuer followups
-- [ ] Schema fuer ai_generations
+- [ ] Schema für agencies
+- [ ] Schema für users
+- [ ] Schema für creators
+- [ ] Schema für fans
+- [ ] Schema für messages
+- [ ] Schema für memories
+- [ ] Schema für followups
+- [ ] Schema für ai_generations
 - [ ] Seed-Daten
 
 ### Tag 4: Dashboard + Creator
@@ -118,7 +118,7 @@ Status: in Arbeit
 - [ ] Creator-Liste bauen
 - [ ] Creator-Detail bauen
 - [ ] Persona-Felder anzeigen
-- [ ] Tonalitaet anzeigen
+- [ ] Tonalität anzeigen
 - [ ] Regeln und Grenzen anzeigen
 
 ### Tag 5: Fan-Profil
@@ -149,18 +149,18 @@ Status: offen
 
 - [ ] Prompt-Service
 - [ ] API-Anbindung oder Demo-Simulation
-- [ ] 2 bis 3 Antwortvorschlaege
+- [ ] 2 bis 3 Antwortvorschläge
 - [ ] Speicherung in ai_generations vorbereiten
-- [ ] Antwortvorschlaege klar als Vorschlaege markieren
+- [ ] Antwortvorschläge klar als Vorschläge markieren
 
 ### Tag 8: Follow-ups
 
 Status: offen
 
 - [ ] Follow-up setzen
-- [ ] Queue Heute
-- [ ] Queue Ueberfaellig
-- [ ] Queue Diese Woche
+- [ ] Warteschlange Heute
+- [ ] Warteschlange Überfällig
+- [ ] Warteschlange Diese Woche
 - [ ] Status anzeigen
 
 ### Tag 9: Polishing
@@ -168,7 +168,7 @@ Status: offen
 Status: offen
 
 - [ ] Design verbessern
-- [ ] Demo-Daten pruefen
+- [ ] Demo-Daten prüfen
 - [ ] Fehler beseitigen
 - [ ] Leere States
 - [ ] Ladezustand
@@ -180,12 +180,12 @@ Status: offen
 - [ ] Deployment / Demo-URL
 - [ ] Testlauf
 - [ ] README aktualisieren
-- [ ] 3-Minuten-Demo-Ablauf fuer Gerhard
-- [ ] 5-Minuten-Demo-Ablauf fuer Gerhard
+- [ ] 3-Minuten-Demo-Ablauf für Gerhard
+- [ ] 5-Minuten-Demo-Ablauf für Gerhard
 - [ ] Liste fertiger Funktionen
 - [ ] Liste bewusster Nicht-Funktionen
 
-## Naechster Arbeitsschritt
+## Nächster Arbeitsschritt
 
 Tag 4 fortsetzen:
 
@@ -193,4 +193,4 @@ Dashboard + Creator gemaess PDF:
 
 - Dashboard-Kacheln verbessern
 - Creator-Liste bauen
-- Creator-Detail mit Sprache, Tonalitaet, Persona-Regeln und Grenzen bauen
+- Creator-Detail mit Sprache, Tonalität, Persona-Regeln und Grenzen bauen

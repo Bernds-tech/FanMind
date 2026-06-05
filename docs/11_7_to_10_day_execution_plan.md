@@ -16,10 +16,10 @@ Gerhard soll erst mit einer sichtbaren Demo aktiv nach aussen gehen.
 
 - Unternehmen / Marke: FanMind
 - Webseitenname / Hauptdomain: FanMind.ch
-- Positionierung: serioese europaeische Direct-to-Fan-Plattform
+- Positionierung: seriöse europäische Direct-to-Fan-Plattform
 - Keine OnlyFans-Kopie
 - Keine Erotikpositionierung
-- Startsprachen: Deutsch, Englisch, Rumaenisch, Spanisch
+- Startsprachen: Deutsch, Englisch, Rumänisch, Spanisch
 - GitHub Repository: Bernds-tech/FanMind
 
 ## Tag 1: Fundament und Landingpage
@@ -84,9 +84,9 @@ Fan-Mitgliedschaften:
 - Club-Mitglied
 - Premium-Fan
 
-Naechster Schritt:
+Nächster Schritt:
 
-- Pricing-Seite optisch und inhaltlich fuer Pilotkunden verbessern
+- Pricing-Seite optisch und inhaltlich für Pilotkunden verbessern
 
 ## Tag 4: Creator-Profil professionalisieren
 
@@ -100,7 +100,7 @@ Aufgaben:
 
 Ergebnisziel:
 
-Eine Person soll sofort verstehen, wie ein Fanclub auf FanMind spaeter aussieht.
+Eine Person soll sofort verstehen, wie ein Fanclub auf FanMind später aussieht.
 
 ## Tag 5: Dashboard professionalisieren
 
@@ -108,7 +108,7 @@ Aufgaben:
 
 - Dashboard-Kacheln verbessern
 - Einnahmen, Fans, Mitglieder, Nachrichten und Inhalte klar anzeigen
-- naechste Schritte fuer Anbieter zeigen
+- nächste Schritte für Anbieter zeigen
 - Demo-Zahlen sauber beschriften
 
 Ergebnisziel:
@@ -139,7 +139,7 @@ Aufgaben:
 
 - Pilotkunden-CTA verbessern
 - einfache Pilotkunden-Landingpage oder Demo-Hub erstellen
-- Fragen fuer Pilotkundenfeedback dokumentieren
+- Fragen für Pilotkundenfeedback dokumentieren
 - Gerhard-Verkaufstext vorbereiten
 - WhatsApp-/E-Mail-Kurztext vorbereiten
 
@@ -151,11 +151,11 @@ Gerhard kann erste Interessenten strukturiert ansprechen.
 
 Aufgaben:
 
-- npm run build ausfuehren
-- Seiten manuell pruefen
+- npm run build ausführen
+- Seiten manuell prüfen
 - kaputte Links suchen
-- Navigation pruefen
-- Sprachseiten pruefen
+- Navigation prüfen
+- Sprachseiten prüfen
 - Dokumentation aktualisieren
 
 Pflichtseiten:
@@ -179,7 +179,7 @@ Aufgaben:
 
 - Zielhosting entscheiden
 - FanMind.ch DNS-Plan vorbereiten
-- app.fanmind.ch Struktur pruefen
+- app.fanmind.ch Struktur prüfen
 - Build- und Startbefehle dokumentieren
 - Environment-Dateien vorbereiten
 
@@ -189,7 +189,7 @@ Noch keine echte Zahlungslogik notwendig.
 
 Aufgaben:
 
-- finalen Demo-Stand pruefen
+- finalen Demo-Stand prüfen
 - Liste erster Pilotkunden erstellen
 - Ansprache vorbereiten
 - Feedbackformular oder Feedbackfragen erstellen
@@ -205,7 +205,7 @@ Grosse UI- oder Refactor-Aenderungen:
 
 - Codex-Task / Pull Request verwenden
 
-Nach jedem groesseren Merge:
+Nach jedem größeren Merge:
 
 - git pull
 - rm -rf .next falls Fehler auftreten

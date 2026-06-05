@@ -8,9 +8,9 @@ Er kann zeigen:
 
 - vorhandene Follower / Kontakte
 - neuen Follower anlegen
-- letzte Kommunikation einfuegen
+- letzte Kommunikation einfügen
 - FanMind nutzt diese Kommunikation als Kontext
-- Antwortvorschlaege werden besser an Ton und Stil angepasst
+- Antwortvorschläge werden besser an Ton und Stil angepasst
 - Memory-Vorschlag entsteht
 - Follow-up-Vorschlag entsteht
 
@@ -18,7 +18,7 @@ Er kann zeigen:
 
 FanMind ist kein Bot und sendet nichts automatisch.
 
-Der Mensch prueft und sendet final selbst.
+Der Mensch prüft und sendet final selbst.
 
 ## Neuer Kontakt
 
@@ -37,7 +37,7 @@ Ein neuer Kontakt braucht mindestens:
 Je mehr sinnvolle Kommunikation eingefuegt wird, desto besser kann FanMind erkennen:
 
 - Schreibstil
-- Tonalitaet
+- Tonalität
 - Interessen
 - Grenzen
 - Kaufhinweise
@@ -45,30 +45,30 @@ Je mehr sinnvolle Kommunikation eingefuegt wird, desto besser kann FanMind erken
 
 ## Skalierbare Verwaltung
 
-FanMind muss auch bei vielen Followern uebersichtlich bleiben.
+FanMind muss auch bei vielen Followern übersichtlich bleiben.
 
-Zielgroessen:
+Zielgrößen:
 
-- 120 Follower fuer Demo
-- 2.000 bis 3.000 Follower fuer kleinere Agenturen
-- 20.000 bis 30.000 Follower fuer groessere Betreiber
+- 120 Follower für Demo
+- 2.000 bis 3.000 Follower für kleinere Agenturen
+- 20.000 bis 30.000 Follower für größere Betreiber
 
-Dafuer braucht FanMind:
+Dafür braucht FanMind:
 
 - Suche
 - Filter
 - Sortierung
 - Status-Badges
 - Tags
-- Prioritaeten
-- letzte Aktivitaet
+- Prioritäten
+- letzte Aktivität
 - offene Follow-ups
 - VIP / warm / buyer Status
 
-## Naechste Aufgaben
+## Nächste Aufgaben
 
-- /fans uebersichtlicher machen
+- /fans übersichtlicher machen
 - Filter und Suche vorbereiten
 - Kontakt anlegen Seite bauen
-- Kommunikation einfuegen UI bauen
+- Kommunikation einfügen UI bauen
 - KI-Stilkontext aus Beispielkommunikation nutzen

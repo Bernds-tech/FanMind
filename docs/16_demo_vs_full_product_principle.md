@@ -10,19 +10,19 @@ Das echte FanMind-System muss danach vollstaendig funktionieren.
 
 Die Demo dient Gerhard als Verkaufs- und Erklaerwerkzeug.
 
-Gerhard soll damit zu Influencern, Creator-Agenturen, Chatter-Teams, Vereinen oder potenziellen Partnern gehen und zeigen koennen:
+Gerhard soll damit zu Influencern, Creator-Agenturen, Chatter-Teams, Vereinen oder potenziellen Partnern gehen und zeigen können:
 
 - was FanMind kann
 - wie der Ablauf funktioniert
 - welchen Nutzen FanMind bringt
-- wie Fan-Gedaechtnis, Antwortvorschlaege und Follow-ups aussehen
+- wie Fan-Gedächtnis, Antwortvorschläge und Follow-ups aussehen
 - warum FanMind kein Bot und keine automatische Plattformintegration ist
 
 ## Demo-Ziel
 
-Die Demo muss in 3 bis 5 Minuten erklaerbar sein.
+Die Demo muss in 3 bis 5 Minuten erklärbar sein.
 
-Sie muss optisch professionell wirken und den Ablauf verstaendlich zeigen:
+Sie muss optisch professionell wirken und den Ablauf verständlich zeigen:
 
 Dashboard -> betreutes Profil -> Fan/Kontakt -> Memory -> Antwortvorschlag -> Follow-up
 
@@ -30,13 +30,13 @@ Dashboard -> betreutes Profil -> Fan/Kontakt -> Memory -> Antwortvorschlag -> Fo
 
 Die Demo darf mit Mockdaten arbeiten.
 
-Die Demo darf Antwortvorschlaege zunaechst simulieren.
+Die Demo darf Antwortvorschläge zunaechst simulieren.
 
 Die Demo darf ohne echte Datenbank starten, wenn dadurch schneller ein sichtbarer Ablauf entsteht.
 
 Aber:
 
-Das spaetere System muss echte Funktionen enthalten:
+Das spätere System muss echte Funktionen enthalten:
 
 - echte Nutzerverwaltung
 - echte Agenturen / Teams
@@ -45,16 +45,16 @@ Das spaetere System muss echte Funktionen enthalten:
 - echte Nachrichtenhistorie
 - echte Memories
 - echte Follow-ups
-- echte Antwortvorschlaege
+- echte Antwortvorschläge
 - echtes Speichern und Laden
 - echte Rechte- und Rollenlogik
 - stabile Demo-/Produkt-URL
 
-## Demo-Use-Case fuer Gerhard
+## Demo-Use-Case für Gerhard
 
 Gerhard zeigt die Demo nicht als fertiges Endsystem, sondern als greifbare Vision und als ersten MVP-Prototyp.
 
-Erklaerung im Gespraech:
+Erklärung im Gespräch:
 
 "Das ist die Demo, damit man den Ablauf sofort versteht. Die produktive Version wird danach mit echten Daten, echten Nutzerkonten und funktionierender Speicherung aufgebaut."
 
@@ -66,13 +66,13 @@ Gerhard soll sagen:
 
 - Das ist der sichtbare MVP-Prototyp.
 - Der Ablauf ist bereits klar.
-- Die Funktionen werden Schritt fuer Schritt produktiv gemacht.
+- Die Funktionen werden Schritt für Schritt produktiv gemacht.
 - Kein automatisches Senden.
-- Mensch prueft und sendet final.
+- Mensch prüft und sendet final.
 
-## Konsequenz fuer die Umsetzung
+## Konsequenz für die Umsetzung
 
-Kurzfristig bauen wir zuerst die Demo-Seiten fuer Gerhards Verkaufsgespraeche.
+Kurzfristig bauen wir zuerst die Demo-Seiten für Gerhards Verkaufsgespraeche.
 
 Danach werden dieselben Module produktiv gemacht:
 
@@ -83,12 +83,12 @@ Danach werden dieselben Module produktiv gemacht:
 5. Demo-Login wird echte Authentifizierung
 6. Demo-Dashboard wird echte Steuerzentrale
 
-## Prioritaet
+## Priorität
 
-1. Demo sichtbar und verstaendlich machen
-2. Demo-Flow fuer Gerhard perfektionieren
-3. Danach echte Funktionalitaet Schritt fuer Schritt produktiv bauen
+1. Demo sichtbar und verständlich machen
+2. Demo-Flow für Gerhard perfektionieren
+3. Danach echte Funktionalitaet Schritt für Schritt produktiv bauen
 
 ## Leitentscheidung
 
-FanMind darf in der Demo groesser wirken, aber im Produkt muss jede gezeigte Kernfunktion spaeter wirklich funktionieren.
+FanMind darf in der Demo größer wirken, aber im Produkt muss jede gezeigte Kernfunktion später wirklich funktionieren.

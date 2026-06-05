@@ -4,13 +4,13 @@
 
 FanMind wird nicht als reine Erwachsenenplattform und nicht als OnlyFans-Kopie positioniert.
 
-FanMind ist eine serioese Direct-to-Fan-Plattform fuer Menschen, Vereine, Kuenstler, Sportler, Trainer, Musiker, Experten und Persoenlichkeiten, die eine eigene zahlende Fangemeinschaft aufbauen wollen.
+FanMind ist eine seriöse Direct-to-Fan-Plattform für Menschen, Vereine, Künstler, Sportler, Trainer, Musiker, Experten und Persönlichkeiten, die eine eigene zahlende Fangemeinschaft aufbauen wollen.
 
-## Sprachregel fuer deutsche Texte
+## Sprachregel für deutsche Texte
 
 In deutschen Texten soll FanMind moeglichst klar deutsch formuliert werden.
 
-Statt unnoetig gemischter Begriffe sollen deutsch verstaendliche Begriffe verwendet werden.
+Statt unnötig gemischter Begriffe sollen deutsch verständliche Begriffe verwendet werden.
 
 Beispiele:
 
@@ -18,16 +18,16 @@ Beispiele:
 - Fanclub = Fanclub oder Fangemeinschaft
 - Membership = Mitgliedschaft
 - Premium Content = Premium-Inhalte
-- Dashboard = Uebersicht oder Steuerzentrale
+- Dashboard = Übersicht oder Steuerzentrale
 
 ## Zwei Paketlogiken
 
 FanMind braucht zwei getrennte Paketlogiken:
 
-1. Pakete fuer Anbieter
-2. Mitgliedschaften fuer Fans
+1. Pakete für Anbieter
+2. Mitgliedschaften für Fans
 
-## 1. Pakete fuer Anbieter
+## 1. Pakete für Anbieter
 
 Diese Pakete beschreiben, was ein Anbieter auf FanMind nutzen kann.
 
@@ -43,7 +43,7 @@ Zielgruppe:
 Moegliche Inhalte:
 
 - eigenes Profil
-- freie Beitraege
+- freie Beiträge
 - einfache Mitgliederbeitraege
 - eine Mitgliedschaftsstufe
 - einfache Statistik
@@ -65,8 +65,8 @@ Moegliche Inhalte:
 - Mitgliederinhalte
 - Premium-Inhalte
 - bessere Statistik
-- einfache Nachrichtenfunktion spaeter
-- priorisierte Sichtbarkeit spaeter
+- einfache Nachrichtenfunktion später
+- priorisierte Sichtbarkeit später
 
 ### Business / Verein
 
@@ -87,17 +87,17 @@ Moegliche Inhalte:
 - gemeinsame Fangemeinschaft
 - erweiterte Statistik
 - Aktionen und Kampagnen
-- spaeter eigene Integrationen
+- später eigene Integrationen
 
-## 2. Mitgliedschaften fuer Fans
+## 2. Mitgliedschaften für Fans
 
-Diese Pakete beschreiben, was Fans bei einem Anbieter kaufen koennen.
+Diese Pakete beschreiben, was Fans bei einem Anbieter kaufen können.
 
 ### Kostenloser Fan
 
 Moegliche Inhalte:
 
-- oeffentliche Beitraege
+- öffentliche Beiträge
 - Basis-Updates
 - Vorschau auf exklusive Inhalte
 - Zugang zum freien Bereich
@@ -106,7 +106,7 @@ Moegliche Inhalte:
 
 Moegliche Inhalte:
 
-- exklusive Beitraege
+- exklusive Beiträge
 - Mitglieder-Updates
 - Challenges
 - Hintergrundinhalte
@@ -117,14 +117,14 @@ Moegliche Inhalte:
 Moegliche Inhalte:
 
 - Premium-Inhalte
-- persoenlichere Einblicke
+- persönlichere Einblicke
 - priorisierte Fragen
 - besondere Aktionen
 - exklusive Formate
 
-## Preislogik fuer die Demo
+## Preislogik für die Demo
 
-Die Demo darf Beispielpreise zeigen, aber diese muessen klar als Demo-Preise erkennbar sein.
+Die Demo darf Beispielpreise zeigen, aber diese müssen klar als Demo-Preise erkennbar sein.
 
 Vorschlag Fan-Mitgliedschaften:
 
@@ -140,26 +140,26 @@ Vorschlag Anbieterpakete:
 
 ## Plattformgebuehr
 
-FanMind sollte spaeter eine prozentuale Plattformgebuehr auf Einnahmen pruefen.
+FanMind sollte später eine prozentuale Plattformgebuehr auf Einnahmen prüfen.
 
 Moeglicher Bereich:
 
 - 10 Prozent bis 15 Prozent Plattformgebuehr
 
-Zahlungsgebuehren koennen separat weitergegeben oder eingerechnet werden.
+Zahlungsgebuehren können separat weitergegeben oder eingerechnet werden.
 
 ## Pilotkundenmodell
 
-Fuer erste Pilotkunden ist ein Sondermodell sinnvoll:
+Für erste Pilotkunden ist ein Sondermodell sinnvoll:
 
-- 0 EUR Grundgebuehr fuer die Pilotphase
+- 0 EUR Grundgebuehr für die Pilotphase
 - reduzierte Plattformgebuehr oder keine Plattformgebuehr waehrend der Testphase
-- dafuer Feedback, Testprofil und Referenzmoeglichkeit
+- dafür Feedback, Testprofil und Referenzmoeglichkeit
 
 ## Noch offen
 
 - finale Plattformgebuehr
 - finale Anbieterpreise
-- rechtliche Zahlungsanbieter-Pruefung
+- rechtliche Zahlungsanbieter-Prüfung
 - Steuer- und Rechnungslogik
 - ob FanMind in der ersten Version sofort echte Zahlungen braucht oder zuerst nur simulierte Mitgliedschaften zeigt

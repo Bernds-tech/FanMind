@@ -2,13 +2,13 @@
 
 ## Hauptdomain
 
-Die Hauptdomain fuer FanMind ist:
+Die Hauptdomain für FanMind ist:
 
 **FanMind.ch**
 
-## Begruendung
+## Begründung
 
-FanMind soll international skalierbar sein, aber mit europaeischem Charakter auftreten.
+FanMind soll international skalierbar sein, aber mit europäischem Charakter auftreten.
 
 Eine .ch-Domain wirkt:
 
@@ -20,9 +20,9 @@ Eine .ch-Domain wirkt:
 
 ## Nicht primaer
 
-FanMind.at kann spaeter optional als Weiterleitung genutzt werden, ist aber nicht die Hauptdomain.
+FanMind.at kann später optional als Weiterleitung genutzt werden, ist aber nicht die Hauptdomain.
 
-FanMind.com wird aktuell nicht gekauft, solange der Preis zu hoch ist und das Budget besser fuer Produkt, Infrastruktur, Recht, Zahlungsanbieter und Pilotkunden genutzt wird.
+FanMind.com wird aktuell nicht gekauft, solange der Preis zu hoch ist und das Budget besser für Produkt, Infrastruktur, Recht, Zahlungsanbieter und Pilotkunden genutzt wird.
 
 ## Markenlogik
 
@@ -30,14 +30,14 @@ In Texten und Designs wird die Marke immer als **FanMind** geschrieben.
 
 Die Domain wird als **FanMind.ch** kommuniziert.
 
-## Spaetere technische Nutzung
+## Spätere technische Nutzung
 
 Moegliche Struktur:
 
 - fanmind.ch = Hauptseite
-- app.fanmind.ch = spaetere App / Plattform
-- api.fanmind.ch = spaetere API
-- admin.fanmind.ch = spaeterer Adminbereich
+- app.fanmind.ch = spätere App / Plattform
+- api.fanmind.ch = spätere API
+- admin.fanmind.ch = späterer Adminbereich
 
 ## Sprachstruktur auf der Domain
 
@@ -50,7 +50,7 @@ Englisch:
 
 - fanmind.ch/en
 
-Rumaenisch:
+Rumänisch:
 
 - fanmind.ch/ro
 

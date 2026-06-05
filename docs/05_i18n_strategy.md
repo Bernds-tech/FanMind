@@ -8,12 +8,12 @@ FanMind wird von Beginn an mehrsprachig vorbereitet.
 
 1. Deutsch
 2. Englisch
-3. Rumaenisch
+3. Rumänisch
 4. Spanisch
 
 ## Warum jetzt vorbereiten?
 
-Eine nachtraegliche Internationalisierung wuerde spaeter mehr Umbau verursachen:
+Eine nachtraegliche Internationalisierung würde später mehr Umbau verursachen:
 
 - Navigation
 - URLs
@@ -27,22 +27,22 @@ Eine nachtraegliche Internationalisierung wuerde spaeter mehr Umbau verursachen:
 
 Deutsch bleibt die Hauptsprache:
 
-- / fuer Deutsch
-- /de fuer Deutsch als explizite Sprachversion
-- /en fuer Englisch
-- /ro fuer Rumaenisch
-- /es fuer Spanisch
+- / für Deutsch
+- /de für Deutsch als explizite Sprachversion
+- /en für Englisch
+- /ro für Rumänisch
+- /es für Spanisch
 
 ## Technischer Ansatz
 
 - zentrale Locale-Konfiguration in src/i18n/config.ts
 - zentrale Text-Dictionaries in src/i18n/dictionaries.ts
 - LanguageSwitcher-Komponente
-- SiteNav ist fuer Locales vorbereitet
+- SiteNav ist für Locales vorbereitet
 
-## Naechste Schritte
+## Nächste Schritte
 
 - alle wichtigen Seiten in die Locale-Struktur bringen
-- saubere Uebersetzungen fuer Landingpage, Login, Registrierung, Pricing und Creator-Profil
-- spaeter SEO-Metadaten pro Sprache
-- spaeter hreflang-Struktur fuer Suchmaschinen
+- saubere Übersetzungen für Landingpage, Login, Registrierung, Pricing und Creator-Profil
+- später SEO-Metadaten pro Sprache
+- später hreflang-Struktur für Suchmaschinen

@@ -8,14 +8,14 @@ Datei: FanMind_Source_of_Truth_Stand_0_2.pdf
 
 FanMind ist aktuell auf Demo / MVP 0.2.
 
-Das Repository ist bereits weiter als der urspruengliche PDF-Plan, aber fachlich nicht mehr voll deckungsgleich. Deshalb gilt dieses Dokument ab sofort als aktuelle Projektquelle.
+Das Repository ist bereits weiter als der ursprüngliche PDF-Plan, aber fachlich nicht mehr voll deckungsgleich. Deshalb gilt dieses Dokument ab sofort als aktuelle Projektquelle.
 
 ## Marken- und Rollenentscheidung
 
 - Marke / Arbeitsname: FanMind
 - Hauptdomain: FanMind.ch
-- Technischer Owner: Bernd
-- Verkaufs-Owner: Gerhard
+- Technischer Verantwortlich: Bernd
+- Verkaufs-Verantwortlich: Gerhard
 - Gerhard startet aktiv erst nach sichtbarer Demo
 
 ## Grundentscheidung
@@ -35,29 +35,29 @@ Aktuell gibt es zwei verwandte, aber nicht identische Linien:
 1. Agentur-Chat-Copilot / FanMemory Copilot
 2. Breitere Direct-to-Fan-Plattform
 
-Fuer die naechsten Tage gilt:
+Für die nächsten Tage gilt:
 
 Die Landingpage darf breiter bleiben, aber die Verkaufsdemo muss den Agentur-Use-Case zeigen.
 
-## Prioritaet fuer die naechsten 7 Tage
+## Priorität für die nächsten 7 Tage
 
-### Prioritaet 1: Positionierung in der UI klarziehen
+### Priorität 1: Positionierung in der UI klarziehen
 
 FanMind darf kurzfristig nicht als reiner Fanclub-Baukasten wirken.
 
 Stattdessen:
 
 - Agentur-Assistent
-- Fan-Gedaechtnis
-- Antwortvorschlaege
+- Fan-Gedächtnis
+- Antwortvorschläge
 - Follow-ups
-- Human-in-the-loop
+- Menschliche Prüfung
 
 Definition of Done:
 
-Landingpage und Demo beschreiben in 20 Sekunden den Nutzen fuer Agenturen.
+Landingpage und Demo beschreiben in 20 Sekunden den Nutzen für Agenturen.
 
-### Prioritaet 2: Demo-Flow bauen
+### Priorität 2: Demo-Flow bauen
 
 Ziel-Flow:
 
@@ -67,9 +67,9 @@ Definition of Done:
 
 Gerhard kann diesen Ablauf in 5 Minuten zeigen.
 
-### Prioritaet 3: Mockdaten erstellen
+### Priorität 3: Mockdaten erstellen
 
-Mockdaten fuer:
+Mockdaten für:
 
 - 1 Agentur
 - 3 betreute Profile
@@ -78,11 +78,11 @@ Mockdaten fuer:
 
 Definition of Done:
 
-Demo wirkt echt, aber nicht technisch ueberladen.
+Demo wirkt echt, aber nicht technisch überladen.
 
-### Prioritaet 4: Pricing-Konsistenz
+### Priorität 4: Pricing-Konsistenz
 
-Alle Pricing-Seiten muessen konsistent auf diese Pakete ausgerichtet sein:
+Alle Pricing-Seiten müssen konsistent auf diese Pakete ausgerichtet sein:
 
 - FanMind Pilot
 - FanMind Starter
@@ -93,7 +93,7 @@ Definition of Done:
 
 Pakete entsprechen der Verkaufslogik.
 
-### Prioritaet 5: Demo-Abnahme fuer Gerhard
+### Priorität 5: Demo-Abnahme für Gerhard
 
 Vor Sales-Start muss klar sein:
 
@@ -105,35 +105,35 @@ Vor Sales-Start muss klar sein:
 
 ### Echte Datenbank
 
-Noch keine produktive PostgreSQL/Supabase/Prisma-Struktur bestaetigt.
+Noch keine produktive PostgreSQL/Supabase/Prisma-Struktur bestätigt.
 
 MVP-Entscheidung:
 
-Fuer Demo noch nicht zwingend; danach erstes Schema bauen.
+Für Demo noch nicht zwingend; danach erstes Schema bauen.
 
 ### KI-Antwortgenerator
 
-Noch keine echte OpenAI/API-Service-Logik bestaetigt.
+Noch keine echte OpenAI/API-Service-Logik bestätigt.
 
 MVP-Entscheidung:
 
-Fuer Verkaufsdemo wichtig. Notfalls zuerst Mock, dann echte API.
+Für Verkaufsdemo wichtig. Notfalls zuerst Mock, dann echte API.
 
 ### Fan-/Kontakt-Detailseite
 
-Noch nicht als echter Workflow bestaetigt.
+Noch nicht als echter Workflow bestätigt.
 
 MVP-Entscheidung:
 
-Muss in naechster Version sichtbar werden.
+Muss in nächster Version sichtbar werden.
 
-### Follow-up Queue
+### Nachfass-Warteschlange
 
-Konzept vorhanden, echte Seite/Funktion noch nicht bestaetigt.
+Konzept vorhanden, echte Seite/Funktion noch nicht bestätigt.
 
 MVP-Entscheidung:
 
-Muss fuer Gerhards Demo sichtbar werden.
+Muss für Gerhards Demo sichtbar werden.
 
 ### Demo-Zugang
 
@@ -153,7 +153,7 @@ Demo-URL muss vor Gerhard-Calls stabil sein.
 
 ### Rechtstexte
 
-Platzhalter reichen fuer Demo.
+Platzhalter reichen für Demo.
 
 MVP-Entscheidung:
 
@@ -166,11 +166,11 @@ Nicht vertiefen, solange kein Verkauf/live Betrieb.
 - Keine OnlyFans-API
 - Kein Scraping
 - Kein automatisches Senden
-- Keine Diskussion ueber weitere Sprachen, solange DE/EN nicht sauber genug sind
+- Keine Diskussion über weitere Sprachen, solange DE/EN nicht sauber genug sind
 - RO/ES duerfen im Code bleiben, aber nicht die Demo verzerren
 - Jede neue Idee kommt in docs/backlog.md oder Issues, nicht direkt in die Demo
 
-## Konkrete naechste Aufgaben
+## Konkrete nächste Aufgaben
 
 ### Aufgabe 1: Demo-Flow Agentur-Assistent
 
@@ -195,17 +195,17 @@ Spaeter OpenAI API anbinden.
 
 Ausgabe:
 
-- 2 bis 3 Vorschlaege
+- 2 bis 3 Vorschläge
 - Memory-Empfehlung
 - Follow-up-Empfehlung
 
 ### Aufgabe 4: Pricing-Konsistenz
 
-Alle Pricing-Seiten auf Pilot / Starter / Growth / Agency pruefen.
+Alle Pricing-Seiten auf Pilot / Starter / Growth / Agency prüfen.
 
 Alte Fanclub-Logik entfernen.
 
-### Aufgabe 5: Demo-Abnahme fuer Gerhard
+### Aufgabe 5: Demo-Abnahme für Gerhard
 
 Kurze Seite oder README:
 

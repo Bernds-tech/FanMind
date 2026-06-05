@@ -24,7 +24,7 @@ FanMind befindet sich im Demo-Stand 0.2.
 
 - Deutsch
 - Englisch
-- Rumaenisch
+- Rumänisch
 - Spanisch
 
 ## Vorhandene Demo-Seiten
@@ -57,6 +57,6 @@ Fan-Mitgliedschaften:
 - Club-Mitglied
 - Premium-Fan
 
-## Naechster Schritt
+## Nächster Schritt
 
 Die sichtbare Oberflaeche soll deutlicher als Demo-Stand 0.2 erkennbar werden. Danach werden Pricing, Startseite und Anbieterprofil weiter professionalisiert.

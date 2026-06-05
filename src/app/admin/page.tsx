@@ -1,7 +1,7 @@
 const rows = [
   { area: "Creator", status: "3 Demo-Profile vorbereitet" },
   { area: "Fans", status: "1.248 Demo-Fans" },
-  { area: "Content", status: "12 Demo-Beitraege" },
+  { area: "Content", status: "12 Demo-Beiträge" },
   { area: "Zahlung", status: "Noch nicht aktiv" }
 ];
 
@@ -19,9 +19,9 @@ export default function AdminPage() {
 
         <section>
           <div className="badge">Admin Demo</div>
-          <h1>Plattformuebersicht.</h1>
+          <h1>Plattformübersicht.</h1>
           <p className="lead">
-            Dieser Bereich wird spaeter fuer Nutzer, Creator, Inhalte, Meldungen und Plattformstatus genutzt.
+            Dieser Bereich wird später für Nutzer, Creator, Inhalte, Meldungen und Plattformstatus genutzt.
           </p>
         </section>
 

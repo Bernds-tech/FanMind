@@ -1,14 +1,14 @@
 export const whyFanMind = [
   {
-    title: "Weniger Algorithmus-Abhaengigkeit",
+    title: "Weniger Algorithmus-Abhängigkeit",
     text: "Anbieter sollen ihre Fangemeinschaft direkter erreichen und nicht nur von Social-Media-Reichweite leben."
   },
   {
     title: "Eigene Einnahmequelle",
-    text: "Mitgliedschaften und Premium-Inhalte schaffen wiederkehrende Einnahmen ausserhalb klassischer Werbemodelle."
+    text: "Mitgliedschaften und Premium-Inhalte schaffen wiederkehrende Einnahmen außerhalb klassischer Werbemodelle."
   },
   {
-    title: "Mehr Naehe zu Fans",
+    title: "Mehr Nähe zu Fans",
     text: "FanMind stellt die Beziehung zwischen Anbieter und Fan in den Mittelpunkt."
   }
 ];
@@ -16,7 +16,7 @@ export const whyFanMind = [
 export const landingModules = [
   {
     title: "Anbieterprofile",
-    text: "Eigene Fanclub-Seiten mit Positionierung, Beitraegen und Mitgliedschaftsangebot."
+    text: "Eigene Fanclub-Seiten mit Positionierung, Beiträgen und Mitgliedschaftsangebot."
   },
   {
     title: "Mitgliedschaften",
@@ -24,6 +24,6 @@ export const landingModules = [
   },
   {
     title: "Steuerzentrale",
-    text: "Eine erste Uebersicht fuer Fans, Einnahmen, Inhalte und Community-Aktivitaet."
+    text: "Eine erste Übersicht für Fans, Einnahmen, Inhalte und Community-Aktivität."
   }
 ];

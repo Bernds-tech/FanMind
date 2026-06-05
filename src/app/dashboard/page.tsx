@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
         <section className="section">
           <h2>Betreute Profile</h2>
-          <p className="lead">Diese Profile gehoeren zur Demo-Agentur und zeigen spaeter den Einstieg in den Workflow.</p>
+          <p className="lead">Diese Profile gehören zur Demo-Agentur und zeigen später den Einstieg in den Workflow.</p>
           <div className="grid">
             {demoCreators.map((creator) => (
               <article className="card" key={creator.id}>
@@ -55,8 +55,8 @@ export default function DashboardPage() {
                 <h3>{creator.displayName}</h3>
                 <p>{creator.personaNotes}</p>
                 <p><strong>Sprache:</strong> {creator.language}</p>
-                <p><strong>Tonalitaet:</strong> {creator.tone}</p>
-                <a className="button" href="/creator/demo">Profil oeffnen</a>
+                <p><strong>Tonalität:</strong> {creator.tone}</p>
+                <a className="button" href="/creator/demo">Profil öffnen</a>
               </article>
             ))}
           </div>
@@ -73,8 +73,8 @@ export default function DashboardPage() {
                   <div className="badge">{followup.dueLabel}</div>
                   <h3>{fan?.displayName ?? "Fan"}</h3>
                   <p>{followup.reason}</p>
-                  <p><strong>Prioritaet:</strong> {followup.priority}</p>
-                  <a className="button" href="/fans/demo">Fan/Kontakt oeffnen</a>
+                  <p><strong>Priorität:</strong> {followup.priority}</p>
+                  <a className="button" href="/fans/demo">Fan/Kontakt öffnen</a>
                 </article>
               );
             })}
@@ -83,14 +83,14 @@ export default function DashboardPage() {
 
         <section className="section hero-card">
           <div className="badge">Demo-Flow</div>
-          <h2>Naechster Schritt: Fan-/Kontakt-Detailseite.</h2>
+          <h2>Nächster Schritt: Fan-/Kontakt-Detailseite.</h2>
           <p className="lead">
-            Der naechste Baustein ist die Seite, auf der Gerhard einen Fan oeffnet und Memory, Nachrichten, Antwortvorschlaege und Follow-ups zeigt.
+            Der nächste Baustein ist die Seite, auf der Gerhard einen Fan öffnet und Memory, Nachrichten, Antwortvorschläge und Follow-ups zeigt.
           </p>
           <div className="actions">
             <a className="button primary" href="/creator/demo">Betreutes Profil ansehen</a>
-            <a className="button" href="/fans/demo">Fan/Kontakt oeffnen</a>
-            <a className="button" href="/pricing">Pakete pruefen</a>
+            <a className="button" href="/fans/demo">Fan/Kontakt öffnen</a>
+            <a className="button" href="/pricing">Pakete prüfen</a>
           </div>
         </section>
       </div>

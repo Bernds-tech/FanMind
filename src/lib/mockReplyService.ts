@@ -10,7 +10,7 @@ export function getDefaultReplySuggestion() {
     options: [
       {
         label: "Warm",
-        text: "Danke fuer deine Nachricht. Ich schaue mir das kurz an und gebe dir eine passende Antwort ohne Druck."
+        text: "Danke für deine Nachricht. Ich schaue mir das kurz an und gebe dir eine passende Antwort ohne Druck."
       },
       {
         label: "Kurz",
@@ -18,10 +18,10 @@ export function getDefaultReplySuggestion() {
       },
       {
         label: "Follow-up",
-        text: "Ich nehme das als offenen Punkt mit und fasse spaeter nochmal passend nach."
+        text: "Ich nehme das als offenen Punkt mit und fasse später nochmal passend nach."
       }
     ],
-    suggestedMemory: "Kontakt hat ein neues Interesse oder eine offene Frage geaeussert.",
+    suggestedMemory: "Kontakt hat ein neues Interesse oder eine offene Frage geäußert.",
     suggestedFollowup: "In 2 Tagen nachfassen, falls keine Reaktion kommt."
   };
 }

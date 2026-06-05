@@ -6,7 +6,7 @@ Datei: Bernd_Aufgabenplan_CreatorChat_Copilot_MVP_FanMind.pdf
 
 ## Wichtige Korrektur
 
-FanMind wird fuer den MVP fachlich als CreatorChat Copilot / FanMemory Copilot verstanden.
+FanMind wird für den MVP fachlich als CreatorChat Copilot / FanMemory Copilot verstanden.
 
 Das bedeutet:
 
@@ -14,7 +14,7 @@ Das bedeutet:
 - FanMind ist keine OnlyFans-Automation.
 - FanMind ist kein Bot.
 - FanMind sendet keine Nachrichten automatisch.
-- FanMind ist ein Sidecar-Copilot fuer Creator-Agenturen und Chatter-Teams.
+- FanMind ist ein Sidecar-Copilot für Creator-Agenturen und Chatter-Teams.
 
 ## MVP-Ziel
 
@@ -29,14 +29,14 @@ Bernd baut zuerst nur das, was Gerhard nach 7 bis 10 Tagen in einem Verkaufsgesp
 - Landingpage mit DE/EN Sprachumschalter
 - Demo-Login oder geschuetzter Demo-Zugang
 - Dashboard mit Demo-Agentur, Demo-Creator und Demo-Fans
-- Creator-Profil mit Sprache, Tonalitaet, Persona-Regeln und Grenzen
+- Creator-Profil mit Sprache, Tonalität, Persona-Regeln und Grenzen
 - Fan-Profil mit Status, Notizen, Interessen, Kauf-/Interaktionshinweisen, Memory und Follow-up
-- Chat-Eingabe fuer manuell eingefuegte Fan-Nachricht
-- KI-Antwortgenerator mit 2 bis 3 Antwortvorschlaegen
+- Chat-Eingabe für manuell eingefuegte Fan-Nachricht
+- KI-Antwortgenerator mit 2 bis 3 Antwortvorschlägen
 - Memory speichern
 - Follow-up setzen
-- Follow-up-Liste Heute / Diese Woche / Ueberfaellig
-- Saubere Demo-Daten fuer Gerhards Verkaufsgespraech
+- Follow-up-Liste Heute / Diese Woche / Überfällig
+- Saubere Demo-Daten für Gerhards Verkaufsgespraech
 
 ## Bewusste Nicht-Ziele
 
@@ -54,7 +54,7 @@ Bernd baut zuerst nur das, was Gerhard nach 7 bis 10 Tagen in einem Verkaufsgesp
 
 Deutsch:
 
-Der KI-Copilot fuer Creator-Agenturen: Fan-Memory, Antwortvorschlaege und Follow-ups an einem Ort.
+Der KI-Copilot für Creator-Agenturen: Fan-Memory, Antwortvorschläge und Follow-ups an einem Ort.
 
 Englisch:
 
@@ -62,18 +62,18 @@ The AI copilot for creator agencies: fan memory, reply suggestions and follow-up
 
 Positionierung:
 
-Kein Bot. Kein automatisches Senden. Ein Human-in-the-loop Copilot fuer Agenturen.
+Kein Bot. Kein automatisches Senden. Ein Menschliche Prüfung Copilot für Agenturen.
 
 ## Sprachen
 
-Pflicht fuer MVP:
+Pflicht für MVP:
 
 - Deutsch
 - Englisch
 
-Weitere Sprachen koennen technisch vorbereitet bleiben, sind aber nicht Pflicht fuer v1.
+Weitere Sprachen können technisch vorbereitet bleiben, sind aber nicht Pflicht für v1.
 
-## Neue Prioritaet
+## Neue Priorität
 
 Ab jetzt priorisieren wir die Demo-App-Funktionen:
 
@@ -82,6 +82,6 @@ Ab jetzt priorisieren wir die Demo-App-Funktionen:
 3. Fan-Profil
 4. Chat Copilot UI
 5. Memory speichern
-6. Follow-up Queue
-7. KI-Antwortvorschlaege
+6. Nachfass-Warteschlange
+7. KI-Antwortvorschläge
 8. Demo-Polishing
