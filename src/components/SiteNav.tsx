@@ -12,8 +12,11 @@ export default function SiteNav({ active, locale = "de" }: SiteNavProps) {
   const links = [
     { href: `${prefix}/demo`, label: t.navDemo, key: "Demo" },
     { href: `${prefix}/pricing`, label: t.navPricing, key: "Pricing" },
-    { href: `${prefix}/creator/demo`, label: t.navCreator, key: "Creator" },
     { href: `${prefix}/dashboard`, label: t.navDashboard, key: "Dashboard" },
+    { href: "/fans", label: "Fans", key: "Fans" },
+    { href: "/copilot", label: "Copilot", key: "Copilot" },
+    { href: "/followups", label: "Follow-ups", key: "Followups" },
+    { href: `${prefix}/creator/demo`, label: t.navCreator, key: "Creator" },
     { href: `${prefix}/login`, label: t.navLogin, key: "Login" },
     { href: `${prefix}/register`, label: t.navRegister, key: "Registrieren" }
   ];
