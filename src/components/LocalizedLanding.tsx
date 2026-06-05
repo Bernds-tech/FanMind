@@ -171,8 +171,11 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
               <a className="button" href={registerHref}>Early Access anfragen</a>
             </div>
             <div className="trust-strip" aria-label="Vorbereitete Vertrauensleiste">
-              <span>Für Verkaufsgespräche</span>
-              <span>Early Access</span>
+              <span className="trust-logo">Creator Ops</span>
+              <span className="trust-logo">Club CRM</span>
+              <span className="trust-logo">Event Teams</span>
+              <span>Für Verkaufsgespräche vorbereitet</span>
+              <span>Early-Access-Demo</span>
               <span>Investor-ready</span>
             </div>
           </div>
@@ -304,12 +307,12 @@ export default function LocalizedLanding({ locale }: LocalizedLandingProps) {
           <div className="actions centered"><a className="button primary" href={registerHref}>Kontakt aufnehmen</a><a className="button" href={demoHref}>Demo anfragen</a><a className="button" href={pricingHref}>Mehr erfahren</a></div>
         </section>
 
-        <footer className="landing-footer">
+        <footer className="landing-footer" id="footer">
           <div><div className="logo">FanMind</div><p>Das KI-CRM für Creator, Clubs, Events und Fan-Communities – mit Fan-Gedächtnis, Follow-ups, Kampagnen und Analytics.</p><div className="social-row"><span>in</span><span>ig</span><span>x</span></div></div>
           <div><h3>Produkt</h3><a href="#produkt">Showcase</a><a href="#funktioniert">So funktioniert es</a><a href="#integrationen">Integrationen</a></div>
           <div><h3>Unternehmen</h3><a href={registerHref}>Early Access</a><a href={demoHref}>Demo</a><a href="#sandra">Use Case</a></div>
           <div><h3>Ressourcen</h3><a href="#faq">FAQ</a><a href={pricingHref}>Preise</a><a href="/fans">Workspace</a></div>
-          <div><h3>Rechtliches</h3><a href="#datenschutz">Datenschutz</a><a href="#footer">Impressum</a><a href="#footer">Cookies</a><a href="#footer">AGB</a></div>
+          <div><h3 id="rechtliches">Rechtliches</h3><a href="#datenschutz">Datenschutz</a><a href="#impressum">Impressum</a><a href="#cookies">Cookies</a><a href="#agb">AGB</a><small id="impressum">Impressum folgt zum Launch.</small><small id="cookies">Cookie-Hinweise folgen zum Launch.</small><small id="agb">AGB folgen zum Launch.</small></div>
           <div className="footer-cta"><h3>Newsletter / Early Access</h3><p>Erhalte Produktupdates und Demo-Slots für FanMind.</p><a className="button primary" href={registerHref}>Early Access anfragen</a></div>
         </footer>
       </div>
