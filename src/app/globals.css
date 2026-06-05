@@ -1803,3 +1803,197 @@ button.button {
     margin-top: 12px;
   }
 }
+
+/* Premium public landing page refinements */
+.anchor-offset {
+  height: 0;
+  position: relative;
+  top: -110px;
+}
+
+.landing-nav {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.landing-logo {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
+}
+
+.landing-logo span {
+  align-items: center;
+  background: linear-gradient(135deg, #22d3ee, #a855f7 52%, #22c55e);
+  border-radius: 14px;
+  box-shadow: 0 0 34px rgba(34, 211, 238, 0.26), 0 0 58px rgba(168, 85, 247, 0.16);
+  color: #020617;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 950;
+  height: 38px;
+  justify-content: center;
+  letter-spacing: -0.04em;
+  width: 38px;
+}
+
+.landing-nav-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.landing-nav-actions > a:not(.button) {
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.landing-site .button,
+.landing-site .badge,
+.landing-site .trust-strip span,
+.landing-site .feature-ribbon span,
+.landing-site .audience-grid article,
+.landing-site .social-row span {
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.landing-site .button:hover,
+.landing-site .trust-strip span:hover,
+.landing-site .feature-ribbon span:hover,
+.landing-site .audience-grid article:hover {
+  border-color: rgba(34, 211, 238, 0.42);
+  box-shadow: 0 0 34px rgba(34, 211, 238, 0.12);
+  transform: translateY(-2px);
+}
+
+.dashboard-mockup::before,
+.product-screen::before,
+.fanmind-core::before {
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.32), transparent 62%);
+  content: "";
+  filter: blur(18px);
+  inset: -30%;
+  opacity: 0.42;
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+.dashboard-mockup,
+.product-screen,
+.fanmind-core {
+  position: relative;
+}
+
+.mockup-topbar strong {
+  color: #cbd5e1;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.workspace-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 8px;
+}
+
+.workspace-tabs span {
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.16);
+  border-radius: 999px;
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  padding: 8px 10px;
+  text-transform: none;
+}
+
+.danger-card > span,
+.solution-card > span {
+  color: #67e8f9;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.audience-grid article {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.82), rgba(2, 6, 23, 0.58));
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.audience-grid article strong {
+  color: #e0f2fe;
+  display: block;
+  font-size: 17px;
+  font-weight: 950;
+  margin-bottom: 8px;
+}
+
+.audience-grid article p {
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.privacy-grid .glass-card:nth-child(5) {
+  border-color: rgba(34, 197, 94, 0.36);
+  box-shadow: 0 28px 90px rgba(34, 197, 94, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.device::before {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.9), rgba(168, 85, 247, 0.9), rgba(34, 197, 94, 0.9));
+  border-radius: 999px;
+  content: "";
+  height: 6px;
+  left: 18px;
+  position: absolute;
+  right: 18px;
+  top: 18px;
+}
+
+.device span {
+  background: rgba(2, 6, 23, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 9px 12px;
+}
+
+.footer-cta .button + .button {
+  margin-top: 10px;
+}
+
+@media (max-width: 1180px) {
+  .landing-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-site .nav-links,
+  .landing-nav-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .audience-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-nav-actions,
+  .landing-site .nav-links {
+    width: 100%;
+  }
+}
