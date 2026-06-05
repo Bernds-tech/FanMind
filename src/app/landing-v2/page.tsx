@@ -40,7 +40,7 @@ const features = [
   {
     icon: "🧠",
     title: "KI versteht deine Fans",
-    text: "Intelligente Vorschläge, automatische Antworten und smarte Insights für bessere Beziehungen.",
+    text: "Intelligente Vorschläge, geprüfte Antwortentwürfe und smarte Insights für bessere Beziehungen.",
     tone: "purple",
   },
   {
@@ -66,6 +66,86 @@ const features = [
     title: "Sicher & DSGVO-konform",
     text: "Deine Daten sind sicher, verschlüsselt und in europäischen Rechenzentren gehostet.",
     tone: "violet",
+  },
+];
+
+
+const problemCards = [
+  {
+    icon: "⌘",
+    title: "Zu viele Kanäle",
+    text: "E-Mails, Chats, Socials, WhatsApp und Formulare laufen parallel – aber nichts ist wirklich zentralisiert.",
+    detail: "Informationen gehen verloren und Doppelarbeit entsteht.",
+  },
+  {
+    icon: "🧠",
+    title: "Zu wenig Gedächtnis",
+    text: "Wichtige Details, Vorlieben und bisherige Interaktionen gehen unter. Jeder Kontakt fühlt sich wieder wie der erste an.",
+    detail: "Keine persönliche Ansprache, weniger Bindung.",
+  },
+  {
+    icon: "◷",
+    title: "Zu wenig Timing",
+    text: "Kein Überblick über Follow-ups und Kampagnen. Chancen werden verpasst, Antworten kommen zu spät – oder gar nicht.",
+    detail: "Verpasste Gelegenheiten kosten Umsatz und Fans.",
+  },
+];
+
+const solutionBenefits = [
+  { icon: "♙", title: "Alle Kontakte", text: "an einem Ort." },
+  { icon: "🧠", title: "Kontext & Historie", text: "für jede Interaktion." },
+  { icon: "✦", title: "KI & Automationen", text: "arbeiten für dich." },
+  { icon: "⌁", title: "Messbare Ergebnisse", text: "und Wachstum." },
+];
+
+const functionCards = [
+  {
+    icon: "♙",
+    title: "1. Kontakte",
+    text: "Alle Fans und Interaktionen an einem Ort.",
+    body: "Sandra M. 92 · Alex 88 · Mia 85",
+    cta: "Alle Kontakte ansehen",
+    tone: "blue",
+  },
+  {
+    icon: "🧠",
+    title: "2. Fan-Gedächtnis",
+    text: "Wichtige Details, Interessen und Historie automatisch speichern.",
+    body: "VIP · premium_interessiert · Letzter Kontakt: Heute, 09:42",
+    cta: "Details ansehen",
+    tone: "green",
+  },
+  {
+    icon: "✦",
+    title: "3. KI-Antworten",
+    text: "KI liefert passende Vorschläge. Du prüfst und gibst frei.",
+    body: "Vorschlag: Early-Bird Zugang und 10 % Rabatt sind noch verfügbar.",
+    cta: "KI entdecken",
+    tone: "purple",
+  },
+  {
+    icon: "▣",
+    title: "4. Follow-ups",
+    text: "Nächste Aktionen, Erinnerungen und Aufgaben im Blick.",
+    body: "VIP-Upgrade Infos · Heute, 10:00 · Feedback abfragen",
+    cta: "Alle Follow-ups",
+    tone: "cyan",
+  },
+  {
+    icon: "📣",
+    title: "5. Kampagnen",
+    text: "Gezielte Kampagnen mit Segmenten und Automationen.",
+    body: "Sommer-Event Early Bird · Läuft · Öffnungsrate 38 %",
+    cta: "Kampagnen ansehen",
+    tone: "violet",
+  },
+  {
+    icon: "⌁",
+    title: "6. Analytics",
+    text: "Messbare Ergebnisse und Wachstum im Überblick.",
+    body: "Conversion Rate 8,7 % · +1,3 %",
+    cta: "Analytics öffnen",
+    tone: "green",
   },
 ];
 
@@ -287,6 +367,77 @@ export default function LandingV2() {
             </div>
             <a href="#features">und viele mehr</a>
           </aside>
+        </div>
+      </section>
+
+
+      <section className={styles.problemSolution} aria-labelledby="problem-solution-title">
+        <div className={styles.problemOrbit} aria-hidden="true" />
+        <div className={styles.problemHeader}>
+          <div className={styles.problemBadge}><span>!</span> DAS PROBLEM HEUTE</div>
+          <h2 id="problem-solution-title">
+            Fan-Kommunikation ist heute <span>verstreut, unübersichtlich</span> und <em>schwer messbar.</em>
+          </h2>
+          <p>
+            Viele Kanäle, wenig Kontext und manuelle Prozesse verhindern echte Fan-Nähe,
+            schnelle Antworten und nachhaltiges Wachstum.
+          </p>
+        </div>
+
+        <div className={styles.problemSolutionGrid}>
+          <div className={styles.problemCards}>
+            {problemCards.map((card) => (
+              <article className={styles.problemCard} key={card.title}>
+                <div className={styles.problemIcon}>{card.icon}</div>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+                <div className={styles.problemMiniAlert}><span>△</span>{card.detail}</div>
+              </article>
+            ))}
+          </div>
+
+          <article className={styles.solutionCard}>
+            <div className={styles.solutionBadge}><span>✓</span> DIE LÖSUNG</div>
+            <h3>
+              <span>FanMind</span> verbindet Kontakte, Fan-Gedächtnis, KI, Follow-ups und
+              Kampagnen in <em>einem System.</em>
+            </h3>
+            <p>
+              Alle Informationen, Interaktionen und Automationen laufen zusammen – für echte
+              Fan-Beziehungen, die skalieren. KI-Vorschläge bleiben Vorschläge: Der Mensch prüft
+              und gibt frei.
+            </p>
+            <div className={styles.solutionBenefits}>
+              {solutionBenefits.map((benefit) => (
+                <div key={benefit.title}>
+                  <span>{benefit.icon}</span>
+                  <strong>{benefit.title}</strong>
+                  <small>{benefit.text}</small>
+                </div>
+              ))}
+            </div>
+          </article>
+        </div>
+
+        <div className={styles.solutionFlow}>
+          {functionCards.map((card) => (
+            <article className={styles.solutionFunctionCard} data-tone={card.tone} key={card.title}>
+              <div className={styles.functionTitle}>
+                <span>{card.icon}</span>
+                <div>
+                  <h3>{card.title}</h3>
+                  <p>{card.text}</p>
+                </div>
+              </div>
+              <div className={styles.functionPreview}>{card.body}</div>
+              <a href="#early-access">{card.cta} <span>→</span></a>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.problemCtas}>
+          <a className={styles.demoButton} href="#demo"><span>▶</span> Demo ansehen</a>
+          <a className={styles.outlineButton} href="#early-access"><span>♙</span> Early Access anfragen</a>
         </div>
       </section>
 
