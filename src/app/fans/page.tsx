@@ -288,6 +288,17 @@ export default async function FansPage() {
         <div className="workspace-grid">
           <div className="contacts-table-wrap">
             <table className="contacts-table">
+              <colgroup>
+                <col className="select-col" />
+                <col className="name-col" />
+                <col className="status-col" />
+                <col className="profile-col" />
+                <col className="tags-col" />
+                <col className="score-col" />
+                <col className="last-contact-col" />
+                <col className="followup-col" />
+                <col className="owner-col" />
+              </colgroup>
               <thead>
                 <tr>
                   <th aria-label="Auswahl"><input type="checkbox" /></th>
