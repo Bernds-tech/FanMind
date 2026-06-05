@@ -218,13 +218,14 @@ export default async function FansPage() {
   const reactivationCount = fans.filter((fan) => fan.status === "inactive").length;
   const followupsToday = fans.filter((fan) => fan.nextFollowup === "Heute").length;
   const overdueCount = fans.filter((fan) => fan.nextFollowup === "Ueberfaellig").length;
+  const activeShare = fans.length ? Math.round((activeCount / fans.length) * 1000) / 10 : 0;
   const kpiItems = [
-    { label: "Gesamtfans", value: fans.length, icon: "◌" },
-    { label: "Aktive", value: activeCount, icon: "✓" },
-    { label: "VIP", value: vipCount, icon: "★" },
-    { label: "Reaktivierung", value: reactivationCount, icon: "↻" },
-    { label: "Follow-ups heute", value: followupsToday, icon: "◷" },
-    { label: "Ueberfaellig", value: overdueCount, icon: "!" }
+    { label: "Gesamtfans", value: fans.length, icon: "fans" as const, tone: "blue" as const, subtext: "+12% vs. letzten Monat" },
+    { label: "Aktive", value: activeCount, icon: "active" as const, tone: "green" as const, subtext: `${activeShare.toString().replace(".", ",")}% der Gesamtfans` },
+    { label: "VIP", value: vipCount, icon: "vip" as const, tone: "violet" as const, subtext: "Prioritaet hoch" },
+    { label: "Reaktivierung", value: reactivationCount, icon: "reactivation" as const, tone: "orange" as const, subtext: "Ueberfaellig: 24" },
+    { label: "Follow-ups heute", value: followupsToday, icon: "followups" as const, tone: "blue" as const, subtext: "Heute faellig" },
+    { label: "Ueberfaellig", value: overdueCount, icon: "overdue" as const, tone: "orange" as const, subtext: "Menschlich pruefen" }
   ];
   const segments = ["Alle", "VIP", "Warm", "Buyer", "Inactive", "Do not push", "Heute faellig", "Deutsch", "English", "Hoher Fan Score"];
   const detailTabs = ["Ueberblick", "Verlauf", "Notizen", "Dateien"];
