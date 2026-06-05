@@ -1,4 +1,3 @@
-import SiteNav from "@/components/SiteNav";
 import { demoCreators, demoFans, demoFollowups, demoMemories, demoMessages } from "@/data/demoAgency";
 import { readSupabaseTable } from "@/lib/supabaseServer";
 
@@ -217,180 +216,168 @@ export default async function FansPage() {
   const followupsToday = fans.filter((fan) => fan.nextFollowup === "Heute").length;
   const overdueCount = fans.filter((fan) => fan.nextFollowup === "Ueberfaellig").length;
   const segments = ["Alle", "VIP", "Warm", "Buyer", "Inactive", "Do not push", "Heute faellig", "Deutsch", "English", "Hoher Fan Score"];
+  const savedViews = ["Top Fans", "Reaktivierung", "Event-Interessenten", "Premium-Kaeufer", "Neue Kontakte", "Heute faellige Follow-ups"];
+  const detailTabs = ["Ueberblick", "Verlauf", "Notizen", "Dateien"];
+  const aiSuggestions = [
+    `Rueckfrage zu ${selectedFan?.creatorName ?? "dem Profil"} beantworten`,
+    "Premium-Interesse menschlich pruefen lassen",
+    "Naechstes Follow-up mit Kontext vorbereiten"
+  ];
 
   return (
-    <main>
-      <div className="page-shell workspace-shell">
-        <SiteNav />
+    <main className="workspace-app">
+      <aside className="workspace-sidebar" aria-label="Workspace Navigation">
+        <a className="sidebar-brand" href="/">
+          <span className="brand-mark">FM</span>
+          <span>
+            <strong>FanMind</strong>
+            <small>Agency Console</small>
+          </span>
+        </a>
+        <nav className="sidebar-nav" aria-label="Workspace Navigation">
+          <a href="/dashboard">Dashboard</a>
+          <a className="active" href="/fans">Kontakte</a>
+          <a href="/fans">Segmente</a>
+          <a href="/followups">Follow-ups</a>
+          <a href="/copilot">Kampagnen</a>
+          <a href="/dashboard">Analytics</a>
+          <a href="/pricing">Settings</a>
+        </nav>
+        <div className="saved-views">
+          <span>Gespeicherte Ansichten</span>
+          {savedViews.map((view) => (
+            <a href="/fans" key={view}>{view}</a>
+          ))}
+        </div>
+      </aside>
 
-        <section className="workspace-hero">
+      <section className="workspace-console" aria-label="Kontaktverwaltung">
+        <header className="workspace-topbar">
           <div>
-            <div className="badge">Agentur-Kontaktzentrale</div>
-            <div className="badge">Quelle: {sourceLabel}</div>
-            <h1>Fans als skalierbarer Workspace.</h1>
-            <p className="lead">
-              Eine tabellarische Arbeitsansicht fuer Agenturen: Kontakte suchen, Segmente pruefen, Follow-ups priorisieren und Kontext rechts im Detail behalten.
-            </p>
+            <p className="eyebrow">Agentur-Kontaktzentrale</p>
+            <h1>Kontakte</h1>
+            <p>{fans.length} Demo-Kontakte · Quelle: {sourceLabel}</p>
           </div>
-          <div className="workspace-note">
-            <strong>Human-in-the-loop</strong>
-            <span>FanMind bereitet Nachrichten nur vor. Der Mensch prueft den Kontext und sendet die finale Antwort manuell.</span>
+          <label className="search-field topbar-search" htmlFor="contact-search">
+            <span>Suche</span>
+            <input id="contact-search" type="search" placeholder="Name, Handle, Tag, Profil oder Sprache suchen" />
+          </label>
+          <div className="toolbar-actions" aria-label="Kontaktaktionen">
+            <button type="button" className="button compact">Filter</button>
+            <button type="button" className="button compact">Sortierung</button>
+            <button type="button" className="button compact">Ansichten</button>
+            <button type="button" className="button compact primary">Neuer Kontakt</button>
           </div>
-        </section>
+        </header>
 
         <section className="kpi-strip" aria-label="Kontakt-Kennzahlen">
-          <article>
-            <span>Gesamtfans</span>
-            <strong>{fans.length}</strong>
-          </article>
-          <article>
-            <span>Aktive</span>
-            <strong>{activeCount}</strong>
-          </article>
-          <article>
-            <span>VIP</span>
-            <strong>{vipCount}</strong>
-          </article>
-          <article>
-            <span>Reaktivierung</span>
-            <strong>{reactivationCount}</strong>
-          </article>
-          <article>
-            <span>Follow-ups heute</span>
-            <strong>{followupsToday}</strong>
-          </article>
-          <article>
-            <span>Ueberfaellig</span>
-            <strong>{overdueCount}</strong>
-          </article>
+          <article><span>Gesamtfans</span><strong>{fans.length}</strong></article>
+          <article><span>Aktive</span><strong>{activeCount}</strong></article>
+          <article><span>VIP</span><strong>{vipCount}</strong></article>
+          <article><span>Reaktivierung</span><strong>{reactivationCount}</strong></article>
+          <article><span>Follow-ups heute</span><strong>{followupsToday}</strong></article>
+          <article><span>Ueberfaellig</span><strong>{overdueCount}</strong></article>
         </section>
 
-        <section className="contacts-workspace" aria-label="Kontaktverwaltung">
-          <aside className="workspace-sidebar">
-            <div className="sidebar-title">FanMind Agency</div>
-            <nav className="sidebar-nav" aria-label="Workspace Navigation">
-              <a href="/dashboard">Dashboard</a>
-              <a className="active" href="/fans">Kontakte</a>
-              <a href="/fans">Segmente</a>
-              <a href="/followups">Follow-ups</a>
-              <a href="/copilot">Kampagnen</a>
-              <a href="/dashboard">Analytics</a>
-              <a href="/pricing">Settings</a>
-            </nav>
-            <div className="saved-views">
-              <span>Gespeicherte Ansichten</span>
-              <a href="/fans">Top Fans</a>
-              <a href="/fans">Reaktivierung</a>
-              <a href="/fans">Event-Interessenten</a>
-              <a href="/fans">Premium-Kaeufer</a>
-            </div>
-          </aside>
+        <div className="segment-tabs" aria-label="Kontaktsegmente">
+          {segments.map((segment) => (
+            <button className={segment === "Alle" ? "active" : ""} type="button" key={segment}>{segment}</button>
+          ))}
+        </div>
 
-          <div className="contacts-main">
-            <div className="toolbar-card">
-              <label className="search-field" htmlFor="contact-search">
-                <span>Suche</span>
-                <input id="contact-search" type="search" placeholder="Name, Handle, Tag, Profil oder Sprache suchen" />
-              </label>
-              <div className="toolbar-actions">
-                <button type="button" className="button">Filter</button>
-                <button type="button" className="button">Sortierung</button>
-                <button type="button" className="button">Ansichten</button>
-                <button type="button" className="button primary">Neuer Kontakt</button>
-              </div>
-            </div>
-
-            <div className="segment-tabs" aria-label="Kontaktsegmente">
-              {segments.map((segment) => (
-                <button className={segment === "Alle" ? "active" : ""} type="button" key={segment}>{segment}</button>
-              ))}
-            </div>
-
-            <div className="contacts-table-wrap">
-              <table className="contacts-table">
-                <thead>
-                  <tr>
-                    <th aria-label="Auswahl"><input type="checkbox" /></th>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Profil</th>
-                    <th>Tags</th>
-                    <th>Fan Score</th>
-                    <th>Letzter Kontakt</th>
-                    <th>Naechster Follow-up</th>
-                    <th>Owner</th>
+        <div className="workspace-grid">
+          <div className="contacts-table-wrap">
+            <table className="contacts-table">
+              <thead>
+                <tr>
+                  <th aria-label="Auswahl"><input type="checkbox" /></th>
+                  <th>Name + Handle</th>
+                  <th>Status</th>
+                  <th>Profil</th>
+                  <th>Tags</th>
+                  <th>Fan Score</th>
+                  <th>Letzter Kontakt</th>
+                  <th>Naechster Follow-up</th>
+                  <th>Owner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fans.map((fan) => (
+                  <tr className={fan.id === selectedFan?.id ? "selected" : ""} key={fan.id}>
+                    <td><input type="checkbox" /></td>
+                    <td>
+                      <a className="contact-name" href={`/fans/${fan.id}`}>
+                        <strong>{fan.displayName}</strong>
+                        <span>@{fan.handle}</span>
+                      </a>
+                    </td>
+                    <td><span className={`status-pill status-${fan.status}`}>{getStatusLabel(fan.status)}</span></td>
+                    <td>{fan.creatorName}</td>
+                    <td>
+                      <div className="tag-list">
+                        {fan.tags.slice(0, 2).map((tag) => <span key={tag}>{tag}</span>)}
+                      </div>
+                    </td>
+                    <td><strong>{fan.fanScore}</strong></td>
+                    <td>{fan.lastContact}</td>
+                    <td>{fan.nextFollowup}</td>
+                    <td>{fan.owner}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {fans.map((fan) => (
-                    <tr className={fan.id === selectedFan?.id ? "selected" : ""} key={fan.id}>
-                      <td><input type="checkbox" /></td>
-                      <td>
-                        <a className="contact-name" href={`/fans/${fan.id}`}>
-                          <strong>{fan.displayName}</strong>
-                          <span>@{fan.handle}</span>
-                        </a>
-                      </td>
-                      <td><span className={`status-pill status-${fan.status}`}>{getStatusLabel(fan.status)}</span></td>
-                      <td>{fan.creatorName}</td>
-                      <td>
-                        <div className="tag-list">
-                          {fan.tags.slice(0, 2).map((tag) => <span key={tag}>{tag}</span>)}
-                        </div>
-                      </td>
-                      <td><strong>{fan.fanScore}</strong></td>
-                      <td>{fan.lastContact}</td>
-                      <td>{fan.nextFollowup}</td>
-                      <td>{fan.owner}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {selectedFan && (
             <aside className="detail-panel" aria-label="Kontakt-Detailansicht">
-              <div className="profile-head">
-                <div className="avatar" />
+              <div className="detail-head">
+                <div className="avatar">{selectedFan.displayName.slice(0, 1)}</div>
                 <div>
                   <div className="profile-title">{selectedFan.displayName}</div>
                   <div className="profile-subtitle">@{selectedFan.handle} · {selectedFan.creatorName}</div>
                 </div>
+                <span className={`status-pill status-${selectedFan.status}`}>{getStatusLabel(selectedFan.status)}</span>
               </div>
 
-              <p>{selectedFan.summary}</p>
+              <div className="detail-tabs" aria-label="Detailbereiche">
+                {detailTabs.map((tab) => (
+                  <button className={tab === "Ueberblick" ? "active" : ""} type="button" key={tab}>{tab}</button>
+                ))}
+              </div>
+
+              <p className="detail-summary">{selectedFan.summary}</p>
+
+              <div className="tag-list detail-tags">
+                {selectedFan.tags.map((tag) => <span key={tag}>{tag}</span>)}
+              </div>
 
               <div className="detail-metrics">
-                <article>
-                  <span>Status</span>
-                  <strong>{getStatusLabel(selectedFan.status)}</strong>
-                </article>
-                <article>
-                  <span>Fan Score</span>
-                  <strong>{selectedFan.fanScore}</strong>
-                </article>
-                <article>
-                  <span>Interaktionen</span>
-                  <strong>{selectedFan.interactions}</strong>
-                </article>
-                <article>
-                  <span>Follow-ups</span>
-                  <strong>{selectedFan.followupCount}</strong>
-                </article>
+                <article><span>Fan Score</span><strong>{selectedFan.fanScore}</strong></article>
+                <article><span>Interaktionen</span><strong>{selectedFan.interactions}</strong></article>
+                <article><span>Follow-ups</span><strong>{selectedFan.followupCount}</strong></article>
+                <article><span>Sprache</span><strong>{selectedFan.language}</strong></article>
               </div>
 
               <div className="detail-list">
-                <p><span>Tags</span>{selectedFan.tags.join(", ")}</p>
                 <p><span>Letzter Kontakt</span>{selectedFan.lastContact}</p>
-                <p><span>Sprache</span>{selectedFan.language}</p>
-                <p><span>E-Mail</span>{selectedFan.email}</p>
-                <p><span>Telefon</span>{selectedFan.phone}</p>
-                <p><span>Ort</span>{selectedFan.location}</p>
+                <p><span>Naechster Follow-up</span>{selectedFan.nextFollowup}</p>
+                <p><span>Kontaktinfos</span>{selectedFan.email} · {selectedFan.phone}</p>
                 <p><span>Owner</span>{selectedFan.owner}</p>
                 <p><span>Letzte Notiz</span>{selectedFan.lastNote}</p>
                 <p><span>Letzte Nachricht</span>{selectedFan.lastMessage}</p>
                 <p><span>Naechste Aktion</span>{selectedFan.nextAction}</p>
+              </div>
+
+              <div className="ai-panel">
+                <span>KI-Antwortvorschlaege</span>
+                {aiSuggestions.map((suggestion) => (
+                  <p key={suggestion}>{suggestion}</p>
+                ))}
+              </div>
+
+              <div className="workspace-note compact-note">
+                <strong>Human-in-the-loop</strong>
+                <span>FanMind bereitet vor. Ein Mensch prueft und sendet manuell.</span>
               </div>
 
               <div className="detail-actions">
@@ -401,16 +388,8 @@ export default async function FansPage() {
               </div>
             </aside>
           )}
-        </section>
-
-        <section className="section hero-card">
-          <div className="badge">Keine automatische Nachricht</div>
-          <h2>Kontaktarbeit bleibt bewusst manuell.</h2>
-          <p className="lead">
-            Die Aktionen bereiten Arbeitsschritte vor: Nachricht entwerfen, Follow-up planen oder Notiz ergaenzen. FanMind sendet im MVP keine Nachrichten automatisch und integriert keine externen Plattformen.
-          </p>
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }
