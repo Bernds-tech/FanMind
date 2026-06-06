@@ -293,6 +293,127 @@ const sixStepBenefits = [
   },
 ];
 
+
+const integrationChannels = [
+  {
+    icon: "✉",
+    title: "E-Mail",
+    text: "Anfragen, Antworten und wichtige Kontaktpunkte aus dem Postfach zentral nachvollziehen.",
+    status: "Im MVP",
+    tone: "blue",
+  },
+  {
+    icon: "☏",
+    title: "WhatsApp",
+    text: "Direkte Chats und Updates als Kanal-Kontext für spätere Workflows vormerken.",
+    status: "Roadmap",
+    tone: "green",
+  },
+  {
+    icon: "◖",
+    title: "Discord",
+    text: "Community-Signale, Server-Kontext und Events strukturiert für Fans erfassen.",
+    status: "Roadmap",
+    tone: "violet",
+  },
+  {
+    icon: "f",
+    title: "Facebook",
+    text: "Kommentare, Nachrichten und Beiträge als zusätzliche Reichweitenquelle einordnen.",
+    status: "Roadmap",
+    tone: "blue",
+  },
+  {
+    icon: "𝕏",
+    title: "X",
+    text: "Erwähnungen, DMs und Reaktionen später gezielt erfassen und beantworten.",
+    status: "Roadmap",
+    tone: "white",
+  },
+  {
+    icon: "♪",
+    title: "TikTok",
+    text: "Kommentare und DMs als Vorschau-Kanal für Creator-Communities abbilden.",
+    status: "Roadmap",
+    tone: "purple",
+  },
+  {
+    icon: "◎",
+    title: "Instagram",
+    text: "DMs, Kommentare und Story-Antworten perspektivisch in einem Kontext verwalten.",
+    status: "Roadmap",
+    tone: "pink",
+  },
+  {
+    icon: "▤",
+    title: "Webformulare",
+    text: "Anfragen, Bewerbungen und Feedback über individuelle Formulare vorbereiten.",
+    status: "Bereit",
+    tone: "cyan",
+  },
+];
+
+const integrationSources = [
+  "E-Mail",
+  "Discord",
+  "WhatsApp",
+  "TikTok",
+  "Instagram",
+  "X",
+  "Facebook",
+  "Webformulare",
+];
+
+const integrationActions = [
+  {
+    icon: "♙",
+    title: "Segmente",
+    text: "Fans und Communities intelligent gruppieren.",
+  },
+  {
+    icon: "☑",
+    title: "Follow-ups",
+    text: "Nachfassaktionen zur richtigen Zeit vorbereiten.",
+  },
+  {
+    icon: "📣",
+    title: "Kampagnen",
+    text: "Gezielte Nachrichten als geprüfte Entwürfe planen.",
+  },
+  {
+    icon: "⌁",
+    title: "Analytics",
+    text: "Roadmap-Auswertungen für Wachstum und Engagement.",
+  },
+];
+
+const integrationBenefits = [
+  {
+    icon: "ϟ",
+    title: "Schneller verbunden",
+    text: "Alle Kanäle an einem Ort zusammenführen und sofort reagieren.",
+    tone: "blue",
+  },
+  {
+    icon: "◷",
+    title: "Weniger manuelle Arbeit",
+    text: "Routinen vorbereiten und täglich wertvolle Zeit sparen.",
+    tone: "purple",
+  },
+  {
+    icon: "▣",
+    title: "Zentrale Datenbasis",
+    text: "Interaktionen und Fans an einem Ort – stets aktuell.",
+    tone: "green",
+  },
+  {
+    icon: "◇",
+    title: "Sicher & zuverlässig",
+    text: "DSGVO-bewusst, nachvollziehbar und für europäische Teams gedacht.",
+    tone: "cyan",
+  },
+];
+
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <a className={styles.logo} href="#top" aria-label="FanMind Start">
@@ -1101,6 +1222,112 @@ export default function LandingV2() {
               Nächste Kontakte werden geplant, priorisiert und manuell freigegeben.
             </p>
           </article>
+        </div>
+      </section>
+
+
+      <section
+        id="integrationen"
+        className={styles.integrationsSection}
+        aria-labelledby="integrations-title"
+      >
+        <div className={styles.integrationsConstellationLeft} aria-hidden="true" />
+        <div className={styles.integrationsConstellationRight} aria-hidden="true" />
+
+        <div className={styles.integrationsHeader}>
+          <div className={styles.integrationsBadge}>
+            <span>⌬</span> INTEGRATIONEN
+          </div>
+          <h2 id="integrations-title">
+            Verbinde deine wichtigsten <span>Kanäle.</span>
+          </h2>
+          <p>
+            FanMind bündelt Fan-Kommunikation, Community-Kanäle und Interaktionen
+            in einem Workflow. Alle Nachrichten, Reaktionen und Daten laufen
+            zusammen – für stärkere Communities und mehr Impact.
+          </p>
+        </div>
+
+        <div className={styles.integrationChannelGrid}>
+          {integrationChannels.map((channel) => (
+            <article
+              className={styles.integrationChannelCard}
+              data-tone={channel.tone}
+              key={channel.title}
+            >
+              <div className={styles.integrationChannelIcon}>{channel.icon}</div>
+              <h3>{channel.title}</h3>
+              <p>{channel.text}</p>
+              <span>{channel.status}</span>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.integrationFlowPanel}>
+          <div className={styles.integrationSourcePanel}>
+            <strong>DATENQUELLEN</strong>
+            <div>
+              {integrationSources.map((source) => (
+                <span key={source}>
+                  <i aria-hidden="true" />
+                  {source}
+                  <em aria-hidden="true" />
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.integrationFlowLinesLeft} aria-hidden="true" />
+
+          <div className={styles.integrationBrainCard}>
+            <div>🧠</div>
+            <strong>FanMind</strong>
+            <span>Vereint • Angereichert • Versteht</span>
+          </div>
+
+          <div className={styles.integrationFlowLinesRight} aria-hidden="true" />
+
+          <div className={styles.integrationActionPanel}>
+            <strong>AKTIONEN & ERGEBNISSE</strong>
+            <div>
+              {integrationActions.map((action) => (
+                <article key={action.title}>
+                  <span>{action.icon}</span>
+                  <h3>{action.title}</h3>
+                  <p>{action.text}</p>
+                  <i aria-hidden="true">✓</i>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.integrationBenefits}>
+          {integrationBenefits.map((benefit) => (
+            <article data-tone={benefit.tone} key={benefit.title}>
+              <span>{benefit.icon}</span>
+              <div>
+                <strong>{benefit.title}</strong>
+                <p>{benefit.text}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.integrationCtaBox}>
+          <div>
+            <a className={styles.demoButton} href="#demo">
+              <span>▶</span> Demo ansehen
+            </a>
+            <a className={styles.outlineButton} href="#early-access">
+              Early Access anfragen
+            </a>
+          </div>
+          <p>
+            <span>✓ Keine Kreditkarte erforderlich</span>
+            <span>✓ Setup in 2 Minuten</span>
+            <span>✓ Jederzeit kündbar</span>
+          </p>
         </div>
       </section>
 
