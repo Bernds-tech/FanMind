@@ -414,6 +414,92 @@ const integrationBenefits = [
   },
 ];
 
+const roadmapPhases = [
+  {
+    number: "01",
+    phase: "Phase 1",
+    icon: "🚀",
+    title: "MVP-Kern",
+    status: "Verfügbar",
+    statusIcon: "●",
+    tone: "blue",
+    items: [
+      "Login & Registrierung",
+      "Dashboard & Kontakte",
+      "Fan-Gedächtnis",
+      "KI-Antwortvorschläge",
+      "Follow-ups",
+    ],
+  },
+  {
+    number: "02",
+    phase: "Phase 2",
+    icon: "☁",
+    title: "Kontakt-Import",
+    status: "In Arbeit",
+    statusIcon: "✣",
+    tone: "green",
+    items: [
+      "CSV-Import",
+      "Feld-Zuordnung",
+      "Kontakt-Mapping",
+      "Import-Validierung",
+    ],
+  },
+  {
+    number: "03",
+    phase: "Phase 3",
+    icon: "📣",
+    title: "Segmente & Kampagnen",
+    status: "Coming Soon",
+    statusIcon: "◷",
+    tone: "purple",
+    items: ["Segmente", "Kampagnen", "Vorlagen", "A/B-Tests"],
+  },
+  {
+    number: "04",
+    phase: "Phase 4",
+    icon: "▥",
+    title: "Analytics & Team",
+    status: "Coming Soon",
+    statusIcon: "◷",
+    tone: "violet",
+    items: ["Analytics", "Team & Rollen", "Performance-Übersicht", "Workspaces"],
+  },
+  {
+    number: "05",
+    phase: "Phase 5",
+    icon: "⌬",
+    title: "Integrationen",
+    status: "Coming Soon",
+    statusIcon: "◷",
+    tone: "gold",
+    items: ["Instagram", "TikTok", "WhatsApp", "Facebook", "X & Discord"],
+  },
+];
+
+const roadmapNotes = [
+  {
+    icon: "♢",
+    title: "Mensch prüft vor Versand",
+    text: "Qualität und Vertrauen stehen an erster Stelle.",
+    tone: "blue",
+  },
+  {
+    icon: "▣",
+    title: "Keine automatischen Nachrichten",
+    text: "Keine Bots. Keine Massenmails. Kein Spam.",
+    tone: "purple",
+  },
+  {
+    icon: "ϟ",
+    title: "Roadmap wird laufend erweitert",
+    text: "Deine Wünsche und Feedback fließen ein.",
+    tone: "cyan",
+  },
+];
+
+
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <a className={styles.logo} href="#top" aria-label="FanMind Start">
@@ -1394,6 +1480,65 @@ export default function LandingV2() {
             <span>✓ MVP klar gekennzeichnet</span>
             <span>✓ Kein automatischer Versand</span>
           </p>
+        </div>
+      </section>
+
+
+      <section
+        id="roadmap"
+        className={styles.roadmapSection}
+        aria-labelledby="roadmap-title"
+      >
+        <div className={styles.roadmapConstellationLeft} aria-hidden="true" />
+        <div className={styles.roadmapConstellationRight} aria-hidden="true" />
+
+        <div className={styles.roadmapHeader}>
+          <div className={styles.roadmapBadge}>
+            <span>♙</span> ROADMAP & NÄCHSTE SCHRITTE
+          </div>
+          <h2 id="roadmap-title">
+            FanMind <span>Roadmap</span>
+          </h2>
+          <p>Was heute verfügbar ist – und was als Nächstes kommt.</p>
+        </div>
+
+        <div className={styles.roadmapTimeline} aria-hidden="true">
+          {roadmapPhases.map((phase) => (
+            <div className={styles.roadmapTimelineNode} data-tone={phase.tone} key={phase.number}>
+              <strong>{phase.number}</strong>
+              <i />
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.roadmapGrid}>
+          {roadmapPhases.map((phase) => (
+            <article className={styles.roadmapCard} data-tone={phase.tone} key={phase.phase}>
+              <div className={styles.roadmapPhasePill}>{phase.phase}</div>
+              <div className={styles.roadmapIcon}>{phase.icon}</div>
+              <h3>{phase.title}</h3>
+              <div className={styles.roadmapStatus}>
+                <span>{phase.statusIcon}</span> {phase.status}
+              </div>
+              <ul>
+                {phase.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.roadmapNotes}>
+          {roadmapNotes.map((note) => (
+            <article data-tone={note.tone} key={note.title}>
+              <span>{note.icon}</span>
+              <div>
+                <strong>{note.title}</strong>
+                <p>{note.text}</p>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
