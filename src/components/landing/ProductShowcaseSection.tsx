@@ -1,15 +1,21 @@
 import type { CSSProperties } from "react";
+import type { FeatureKey } from "@/config/plans";
+import { shouldShowFeature } from "@/lib/plans";
 import styles from "./ProductShowcaseSection.module.css";
 
-const navItems = [
-  ["⌂", "Dashboard"],
-  ["♙", "Kontakte"],
-  ["◌", "Segmente"],
-  ["◷", "Follow-ups"],
-  ["📣", "Kampagnen"],
-  ["⌁", "Analytics"],
-  ["⚙", "Einstellungen"],
+const navItems: Array<{ icon: string; label: string; featureKey: FeatureKey }> = [
+  { icon: "⌂", label: "Dashboard", featureKey: "dashboard" },
+  { icon: "♙", label: "Kontakte", featureKey: "contacts" },
+  { icon: "◌", label: "Segmente", featureKey: "basic_segments" },
+  { icon: "◷", label: "Follow-ups", featureKey: "followups" },
+  { icon: "📣", label: "Kampagnen (Roadmap)", featureKey: "campaigns" },
+  { icon: "⌁", label: "Analytics (Roadmap)", featureKey: "analytics" },
+  { icon: "⚙", label: "Einstellungen", featureKey: "dashboard" },
 ];
+
+const visibleLandingNavItems = navItems.filter((item) =>
+  shouldShowFeature("growth", item.featureKey, "landing"),
+);
 
 const metrics = [
   { label: "Gesamtfans", value: "10.248", change: "+12 %", accent: "#0b8cff" },
@@ -33,14 +39,14 @@ const benefits = [
   ["♙", "Persönlicher Fan-Kontext", "Interaktionen, Tags und Notizen bleiben sichtbar, bevor dein Team antwortet."],
   ["☆", "Nächste beste Aktion", "Priorisierte Aufgaben zeigen, welcher geprüfte Schritt jetzt Wirkung hat."],
   ["◌", "KI-gestützte Segmentierung", "KI erkennt Muster und schlägt Segmente vor; dein Team prüft und nutzt sie gezielt."],
-  ["↗", "Messbare Conversion", "Kampagnen, Nachrichten und Follow-ups werden transparent auswertbar."],
+  ["↗", "Geprüfte nächste Schritte", "Follow-ups und vorbereitete Entwürfe bleiben transparent nachvollziehbar."],
 ];
 
 const featureCards = [
   ["🧠", "Fan-Gedächtnis", "Merkt sich Kaufhistorie, Interessen, Notizen und Kontaktverlauf pro Fan."],
   ["✦", "KI-Antwortvorschläge", "Liefert passende Entwürfe – Mensch prüft, editiert und gibt frei."],
   ["☑", "Follow-up Queue", "Bündelt fällige Aktionen nach Priorität, Owner und nächstem Schritt."],
-  ["📣", "Kampagnen & Analytics", "Plant Segmente, prüft Inhalte und zeigt Ergebnisse in Reports."],
+  ["📣", "Kampagnen & Analytics", "Als Vorschau sichtbar: Inhalte planen und Roadmap-Auswertungen prüfen."],
 ];
 
 function BrandMark() {
@@ -75,11 +81,11 @@ export default function ProductShowcaseSection() {
         <header className={styles.header}>
           <span className={styles.eyebrow}>03 · Produkt-Showcase</span>
           <h2 id="product-showcase-title">Ein Premium-Workspace für dein gesamtes <span>Fan-Management.</span></h2>
-          <p>FanMind verbindet Kontakte, Fan-Gedächtnis, KI-Vorschläge, Follow-ups, Kampagnen und Analytics in einer kontrollierten Arbeitsfläche.</p>
+          <p>FanMind verbindet Kontakte, Fan-Gedächtnis, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind im MVP als Vorschau markiert.</p>
         </header>
 
         <div className={styles.stage}>
-          <aside className={styles.leftColumn} aria-label="Fan-Gedächtnis, KI-Vorschläge und Kampagnen">
+          <aside className={styles.leftColumn} aria-label="Fan-Gedächtnis, KI-Vorschläge und Kampagnenvorschau">
             <article className={`${styles.card} ${styles.memoryCard}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>🧠</span><strong>Fan-Gedächtnis</strong><em>Buyer</em></div>
               <div className={styles.profileRow}><span className={styles.avatar}>SM</span><div><b>Sandra M.</b><small>Kontakt seit 12.03.2025</small></div></div>
@@ -90,14 +96,14 @@ export default function ProductShowcaseSection() {
             <article className={`${styles.card} ${styles.aiCard}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>✦</span><strong>KI-Antwortvorschläge</strong><em>Entwurf</em></div>
               <p className={styles.question}>Sandra M.: „Gibt es noch Early-Bird Plätze für Member?“</p>
-              <div className={styles.answerBubble}>Ja! Als Mia Active Member erhältst du 10 % Rabatt in den ersten 48 Stunden. Bitte vor Versand prüfen.</div>
+              <div className={styles.answerBubble}>Ja! Als Mia Active Member erhältst du 10 % Rabatt in den ersten 48 Stunden. Bitte vor manueller Nutzung prüfen.</div>
               <div className={styles.approvalRow}><span>Freigabe nötig</span><button type="button">Vorschlag prüfen</button></div>
             </article>
 
             <article className={`${styles.card} ${styles.campaignCard}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>📣</span><strong>Sommer-Event Early Bird</strong><em>Läuft</em></div>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>📣</span><strong>Sommer-Event Early Bird</strong><em>Vorschau</em></div>
               <div className={styles.campaignStatus}><span>Geplant: VIP + Buyer</span><b>1.824 Fans</b></div>
-              <div className={styles.rateGrid}><span>Öffnungsrate<b>38 %</b></span><span>Klickrate<b>14 %</b></span><span>Conversion<b>9,4 %</b></span></div>
+              <div className={styles.rateGrid}><span>Roadmap<b>Soon</b></span><span>Freigabe<b>Manuell</b></span><span>Versand<b>Inaktiv</b></span></div>
               <SparkLine tone="green" />
             </article>
           </aside>
@@ -107,7 +113,7 @@ export default function ProductShowcaseSection() {
               <aside className={styles.sidebar}>
                 <div className={styles.brand}><BrandMark /><b>FanMind</b></div>
                 <nav>
-                  {navItems.map(([icon, item], index) => <span className={index === 1 ? styles.activeNav : undefined} key={item}><i>{icon}</i>{item}</span>)}
+                  {visibleLandingNavItems.map((item) => <span className={item.featureKey === "contacts" ? styles.activeNav : undefined} key={item.label}><i>{item.icon}</i>{item.label}</span>)}
                 </nav>
                 <div className={styles.savedViews}><small>Gespeicherte Ansichten</small><span>★ Top Fans <b>182</b></span><span>✦ Reaktivierung <b>739</b></span><span>◆ Premium-Käufer <b>312</b></span></div>
               </aside>
@@ -131,7 +137,7 @@ export default function ProductShowcaseSection() {
             <div className={styles.benefitGrid}>{benefits.map(([icon, title, text]) => <article key={title}><span>{icon}</span><div><h3>{title}</h3><p>{text}</p></div></article>)}</div>
           </div>
 
-          <aside className={styles.rightColumn} aria-label="Follow-ups, Segmente und Analytics">
+          <aside className={styles.rightColumn} aria-label="Follow-ups, Segmente und Roadmap">
             <article className={`${styles.card} ${styles.followupCard}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>☑</span><strong>Follow-ups</strong><em>Heute</em></div>
               {["Sandra M. · 10:00 · Hoch", "Lukas S. · 11:00 · Mittel", "Ella L. · überfällig", "Tara J. · Freitag"].map((item) => <div className={styles.followupRow} key={item}><span />{item}</div>)}
@@ -143,11 +149,11 @@ export default function ProductShowcaseSection() {
             </article>
 
             <article className={`${styles.card} ${styles.analyticsCard}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>Analytics</strong><em>Report</em></div>
-              <div className={styles.analyticsTooltip}>13. Mai · Conversion 9,4 %</div>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>Analytics</strong><em>Coming Soon</em></div>
+              <div className={styles.analyticsTooltip}>Roadmap · keine Vollsuite im MVP</div>
               <SparkLine tone="purple" />
               <div className={styles.analyticsLegend}><span><i />Conversion</span><span><i />Antwortquote</span></div>
-              <a href="#early-access">Alle Reports anzeigen →</a>
+              <a href="#early-access">Roadmap anzeigen →</a>
             </article>
           </aside>
         </div>

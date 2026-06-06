@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import type { FeatureKey } from "@/config/plans";
+import { shouldShowFeature } from "@/lib/plans";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
 import styles from "./landing-v2.module.css";
 
 export const metadata: Metadata = {
   title: "FanMind | KI-CRM für Creator, Clubs und Events",
   description:
-    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Segmente, Follow-ups, Kampagnen und Analytics für smarte Fan-Beziehungen.",
+    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Follow-ups, CSV-Import und Roadmap für smarte Fan-Beziehungen; Kampagnen, Analytics und Integrationen bleiben im MVP klar markierte Vorschau.",
 };
 
 const navItems = [
@@ -52,14 +54,14 @@ const features = [
   },
   {
     icon: "📣",
-    title: "Kampagnen, die wirken",
-    text: "Plane Kampagnen, bereite Inhalte vor und analysiere Ergebnisse – einfach, nachvollziehbar und mit Freigabe.",
+    title: "Kampagnen vorbereiten",
+    text: "Plane Kampagnenentwürfe als Vorschau – ohne automatischen Versand und ohne vollständige Versandfunktion.",
     tone: "orange",
   },
   {
     icon: "▥",
-    title: "Analytics & Performance",
-    text: "Verstehe, was funktioniert: Conversion, Engagement und Wachstum im Blick.",
+    title: "Analytics auf der Roadmap",
+    text: "Roadmap-Reports zeigen, welche Auswertungen später folgen; keine vollständige Analytics-Suite im MVP.",
     tone: "cyan",
   },
   {
@@ -134,32 +136,36 @@ const functionCards = [
   {
     icon: "📣",
     title: "5. Kampagnen",
-    text: "Gezielte Kampagnen mit Segmenten und geprüften Entwürfen.",
-    body: "Sommer-Event Early Bird · In Prüfung · Öffnungsrate 38 %",
-    cta: "Kampagnen ansehen",
+    text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt Coming Soon.",
+    body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
+    cta: "Roadmap ansehen",
     tone: "violet",
   },
   {
     icon: "⌁",
     title: "6. Analytics",
-    text: "Messbare Ergebnisse und Wachstum im Überblick.",
-    body: "Conversion Rate 8,7 % · +1,3 %",
-    cta: "Analytics öffnen",
+    text: "Roadmap-Ausblick für spätere Auswertungen und Wachstumssignale.",
+    body: "Roadmap-Auswertung · Coming Soon",
+    cta: "Roadmap öffnen",
     tone: "green",
   },
 ];
 
-const menuItems = [
-  "Dashboard",
-  "Kontakte",
-  "Kanäle",
-  "Segmente",
-  "Follow-ups",
-  "Kampagnen",
-  "Analytics",
-  "KI Insights",
-  "Einstellungen",
+const menuItems: Array<{ label: string; icon: string; featureKey: FeatureKey }> = [
+  { label: "Dashboard", icon: "⌂", featureKey: "dashboard" },
+  { label: "Kontakte", icon: "♙", featureKey: "contacts" },
+  { label: "Kanäle", icon: "▣", featureKey: "contacts" },
+  { label: "Segmente", icon: "◌", featureKey: "basic_segments" },
+  { label: "Follow-ups", icon: "◴", featureKey: "followups" },
+  { label: "Kampagnen (Roadmap)", icon: "☆", featureKey: "campaigns" },
+  { label: "Analytics (Roadmap)", icon: "▥", featureKey: "analytics" },
+  { label: "KI Insights", icon: "✧", featureKey: "ai_replies" },
+  { label: "Einstellungen", icon: "⚙", featureKey: "dashboard" },
 ];
+
+const visibleLandingMenuItems = menuItems.filter((item) =>
+  shouldShowFeature("growth", item.featureKey, "landing"),
+);
 
 const sixStepCards = [
   {
@@ -214,8 +220,8 @@ const sixStepCards = [
     tone: "blue",
     rows: [
       "Nächster Schritt: VIP-Infos + Friend-Ticket",
-      "Versand: Heute, 10:00",
-      "Kanäle: E-Mail · WhatsApp · Chat",
+      "Manuelle Prüfung: Heute, 10:00",
+      "Kanäle: E-Mail · Formular · Notiz",
       "Priorität: Hoch · Owner: Nina D.",
     ],
   },
@@ -230,7 +236,7 @@ const sixStepCards = [
     rows: [
       "Zielgruppe: 1.260 · Öffnungsziel: 38 %",
       "Conversion-Ziel: 9,4 %",
-      "Kanäle vorbereitet: E-Mail · WhatsApp · Chat",
+      "Kanäle vorbereitet: E-Mail · Formular · Notiz",
       "Status: Entwurf geprüft",
     ],
   },
@@ -244,7 +250,7 @@ const sixStepCards = [
     rows: [
       "Fan-Wachstum: +12,4 %",
       "Conversion Rate: 8,7 %",
-      "Antwortquote: 34,8 %",
+      "Follow-up Quote: 34,8 %",
       "Insights für Optimierung vorbereitet",
     ],
   },
@@ -353,7 +359,7 @@ export default function LandingV2() {
             </h1>
             <p>
               FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Segmente,
-              Follow-ups, Kampagnen und Analytics in einer intelligenten
+              Follow-ups, CSV-Import und Roadmap in einer intelligenten
               Plattform – damit aus Fans echte Beziehungen und messbare
               Conversions werden.
             </p>
@@ -398,17 +404,15 @@ export default function LandingV2() {
                 <Logo compact />
                 <span className={styles.sidebarBrand}>FanMind</span>
                 <div className={styles.sidebarMenu}>
-                  {menuItems.map((item, index) => (
+                  {visibleLandingMenuItems.map((item, index) => (
                     <a
                       className={index === 0 ? styles.activeMenu : ""}
                       href={index === 0 ? "#screens" : "#produkt"}
-                      key={item}
+                      key={item.label}
                     >
-                      <span>
-                        {["⌂", "♙", "▣", "◌", "◴", "☆", "▥", "✧", "⚙"][index]}
-                      </span>
-                      {item}
-                      {item === "Follow-ups" && <b>128</b>}
+                      <span>{item.icon}</span>
+                      {item.label}
+                      {item.featureKey === "followups" && <b>128</b>}
                     </a>
                   ))}
                 </div>
@@ -537,12 +541,12 @@ export default function LandingV2() {
                     <strong>Interaktionen nach Kanal</strong>
                     <span>Interaktionen pro Kanal</span>
                     {[
-                      "WhatsApp",
-                      "Instagram",
-                      "Discord",
-                      "X (Twitter)",
-                      "TikTok",
-                      "Facebook",
+                      "E-Mail",
+                      "Formular",
+                      "Chat-Notiz",
+                      "CSV-Import",
+                      "Demo-Daten",
+                      "Roadmap",
                     ].map((channel, index) => (
                       <div className={styles.channelRow} key={channel}>
                         <b>{channel}</b>
@@ -585,21 +589,21 @@ export default function LandingV2() {
                 <span>→ Hohe Priorität</span>
               </div>
               <div className={styles.conversionCard}>
-                <span>Conversion Verlauf</span>
-                <strong>9,4 %</strong>
-                <small>+1,2 % vs. letzter Zeitraum</small>
+                <span>Roadmap-Ausblick</span>
+                <strong>Soon</strong>
+                <small>keine Vollsuite im MVP</small>
                 <svg viewBox="0 0 230 70" aria-hidden="true">
                   <path d="M4 56 C28 58 34 42 49 45 S76 43 85 38 S108 44 120 30 S141 35 151 22 S176 31 184 15 S206 20 226 7" />
                 </svg>
               </div>
               <div className={styles.miniStats}>
                 <div>
-                  <span>Öffnungsrate</span>
+                  <span>Review-Quote</span>
                   <strong>38 %</strong>
                   <small>+4,2 %</small>
                 </div>
                 <div>
-                  <span>Antwortquote</span>
+                  <span>Follow-up Quote</span>
                   <strong>34,8 %</strong>
                   <small>+2,1 %</small>
                 </div>
@@ -700,7 +704,7 @@ export default function LandingV2() {
             </div>
             <h3>
               <span>FanMind</span> verbindet Kontakte, Fan-Gedächtnis, KI,
-              Follow-ups und Kampagnen in <em>einem System.</em>
+              Follow-ups und Roadmap in <em>einem System.</em>
             </h3>
             <p>
               Alle Informationen, Interaktionen und Abläufe laufen zusammen – für echte
@@ -766,12 +770,12 @@ export default function LandingV2() {
             <span>FanMind in 6 Schritten</span>
           </div>
           <h2 id="six-steps-title">
-            Von der ersten Anfrage bis zur messbaren <span>Conversion.</span>
+            Von der ersten Anfrage bis zum geprüften <span>Follow-up.</span>
           </h2>
           <p>
             FanMind verbindet Kontakte, KI und Aktionen in einem System – damit
-            du Beziehungen aufbaust, rechtzeitig reagierst und Ergebnisse
-            messbar machst.
+            du Beziehungen aufbaust, rechtzeitig reagierst und nächste Schritte
+            nachvollziehbar vorbereitest.
           </p>
         </div>
 
@@ -809,7 +813,7 @@ export default function LandingV2() {
                   ))}
                 </div>
                 <a href="#early-access">
-                  {index === 5 ? "Alle Analytics anzeigen" : "Details anzeigen"}
+                  {index === 5 ? "Roadmap anzeigen" : "Details anzeigen"}
                   <span>→</span>
                 </a>
               </div>
