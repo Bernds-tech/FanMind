@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./landing-v2-showcase-fix.css";
 
 export const metadata: Metadata = {
   title: "FanMind",
