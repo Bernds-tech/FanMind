@@ -1,6 +1,7 @@
 /*
   Scoped refinements for the 04 six-steps process cards.
-  Keep this file small and specific: no global grid hacks, no pseudo card content.
+  This intentionally keeps the cards simple and stable: full-width detail rows,
+  no narrow icon columns and no global grid hacks that can squeeze text vertically.
 */
 
 #six-steps [class*="processTrack"] {
@@ -15,7 +16,7 @@
 }
 
 #six-steps [class*="stepExampleCard"] {
-  min-height: 338px !important;
+  min-height: 318px !important;
   padding: 14px !important;
   overflow: hidden !important;
 }
@@ -32,44 +33,45 @@
 
 #six-steps [class*="stepRows"] {
   display: grid !important;
+  grid-template-columns: 1fr !important;
   gap: 8px !important;
   margin-top: 11px !important;
 }
 
 #six-steps [class*="stepRow"] {
-  display: grid !important;
-  grid-template-columns: 18px minmax(0, 1fr) !important;
-  align-items: center !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
   min-height: 38px !important;
-  gap: 8px !important;
-  padding: 8px 9px !important;
-  text-align: left !important;
+  padding: 9px 11px !important;
+  text-align: center !important;
   font-size: clamp(11.2px, 0.66vw, 12.4px) !important;
   line-height: 1.22 !important;
+  white-space: normal !important;
 }
 
 #six-steps [class*="stepRow"] i {
-  display: grid !important;
-  place-items: center !important;
-  width: 18px !important;
-  min-width: 18px !important;
-  height: 18px !important;
-  color: #20f0a3 !important;
+  display: none !important;
 }
 
 #six-steps [class*="stepRow"] span {
   display: block !important;
+  width: 100% !important;
   min-width: 0 !important;
   max-width: 100% !important;
   white-space: normal !important;
-  overflow-wrap: break-word !important;
+  overflow-wrap: normal !important;
   word-break: normal !important;
   hyphens: manual !important;
 }
 
 #six-steps [class*="stepRow"] button {
-  min-width: 64px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 66px !important;
   height: 24px !important;
+  margin-top: 7px !important;
   padding: 0 7px !important;
   font-size: 10px !important;
   white-space: nowrap !important;
@@ -83,32 +85,29 @@
   text-align: center !important;
 }
 
-/* AI suggestion card: text + button, not icon + text + button. */
+/* AI suggestion card needs more vertical room because it has three selectable answers. */
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepExampleCard"] {
-  min-height: 382px !important;
+  min-height: 380px !important;
 }
 
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"] {
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  min-height: 58px !important;
-  padding: 8px 8px !important;
-  font-size: clamp(10.8px, 0.62vw, 11.8px) !important;
+  min-height: 62px !important;
+  text-align: left !important;
 }
 
-#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"] i {
-  display: none !important;
+#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"] span {
+  text-align: left !important;
 }
 
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"]:last-child {
-  grid-template-columns: 18px minmax(0, 1fr) !important;
   min-height: 42px !important;
+  text-align: center !important;
 }
 
-#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"]:last-child i {
-  display: grid !important;
+#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"]:last-child span {
+  text-align: center !important;
 }
 
-/* Keep follow-up and campaign cards balanced like the reference. */
 #six-steps [class*="processStep"]:nth-child(4) [class*="stepRow"],
 #six-steps [class*="processStep"]:nth-child(5) [class*="stepRow"],
 #six-steps [class*="processStep"]:nth-child(6) [class*="stepRow"] {
