@@ -1,0 +1,159 @@
+import type { CSSProperties } from "react";
+import styles from "./ProductShowcaseSection.module.css";
+
+const navItems = [
+  ["⌂", "Dashboard"],
+  ["♙", "Kontakte"],
+  ["◌", "Segmente"],
+  ["◷", "Follow-ups"],
+  ["📣", "Kampagnen"],
+  ["⌁", "Analytics"],
+  ["⚙", "Einstellungen"],
+];
+
+const metrics = [
+  { label: "Gesamtfans", value: "10.248", change: "+12 %", accent: "#0b8cff" },
+  { label: "Aktive", value: "4.892", change: "+7,8 %", accent: "#00e178" },
+  { label: "VIP", value: "182", change: "+1,8 %", accent: "#9b55ff" },
+  { label: "Follow-ups heute", value: "128", change: "24 hoch", accent: "#00c9ff" },
+];
+
+const contacts = [
+  ["SM", "Sandra M.", "Buyer", "Mia Active Club", "buyer · premium", "92", "Heute, 09:42", "Morgen, 10:00", "ND"],
+  ["AK", "Alex K.", "VIP", "DJ Nova", "vip · event", "88", "Gestern, 18:21", "Heute, 14:00", "MK"],
+  ["EL", "Ella L.", "Inactive", "Team Arena", "reactivation", "45", "12.05.2025", "Überfällig", "ND"],
+  ["LS", "Lukas S.", "Warm", "Mia Active Club", "fitness · warm", "76", "Heute, 07:15", "Heute, 16:00", "MK"],
+  ["MR", "Mario R.", "New", "Mia Active Club", "new · beginner", "30", "Gestern, 11:03", "18.05.2025", "SD"],
+  ["NW", "Nina W.", "Warm", "DJ Nova", "music · merch", "68", "10.05.2025", "19.05.2025", "ND"],
+  ["RG", "Rene G.", "Do not push", "Team Arena", "careful", "20", "09.05.2025", "—", "SD"],
+  ["TJ", "Tara J.", "Buyer", "Festival Hub", "early bird", "81", "Heute, 08:12", "Freitag, 12:00", "MK"],
+];
+
+const benefits = [
+  ["♙", "Persönlicher Fan-Kontext", "Interaktionen, Tags und Notizen bleiben sichtbar, bevor dein Team antwortet."],
+  ["☆", "Nächste beste Aktion", "Priorisierte Aufgaben zeigen, welcher geprüfte Schritt jetzt Wirkung hat."],
+  ["◌", "KI-gestützte Segmentierung", "KI erkennt Muster und schlägt Segmente vor; dein Team prüft und nutzt sie gezielt."],
+  ["↗", "Messbare Conversion", "Kampagnen, Nachrichten und Follow-ups werden transparent auswertbar."],
+];
+
+const featureCards = [
+  ["🧠", "Fan-Gedächtnis", "Merkt sich Kaufhistorie, Interessen, Notizen und Kontaktverlauf pro Fan."],
+  ["✦", "KI-Antwortvorschläge", "Liefert passende Entwürfe – Mensch prüft, editiert und gibt frei."],
+  ["☑", "Follow-up Queue", "Bündelt fällige Aktionen nach Priorität, Owner und nächstem Schritt."],
+  ["📣", "Kampagnen & Analytics", "Plant Segmente, prüft Inhalte und zeigt Ergebnisse in Reports."],
+];
+
+function BrandMark() {
+  return (
+    <svg className={styles.brandMark} viewBox="0 0 52 52" aria-hidden="true">
+      <path d="M25.7 17.2C22.7 7.8 13.5 4.6 9.2 9.7c-4.4 5.1.4 13.1 10.1 12.2-8.8 4.9-8.6 15.4-1.7 17.1 6.8 1.6 10.2-7.4 8.4-16.4 1.8 9 6.8 16.7 13.1 13.7 6.4-3 4.6-13.3-5-16.1 9.7-.3 12.7-9.4 7.1-13.2-5.6-3.9-13.5 1.5-15.5 10.2Z" />
+      <circle cx="17.1" cy="17.5" r="3.4" />
+      <circle cx="34.9" cy="17.5" r="3.4" />
+      <circle cx="25.9" cy="31.5" r="3.4" />
+    </svg>
+  );
+}
+
+function SparkLine({ tone = "blue" }: { tone?: "blue" | "green" | "purple" }) {
+  return (
+    <svg className={styles.sparkLine} data-tone={tone} viewBox="0 0 180 54" aria-hidden="true">
+      <path d="M6 39 C28 36 33 21 53 26 C73 31 76 15 96 18 C119 21 121 38 143 30 C158 24 165 13 176 15" />
+      <circle cx="96" cy="18" r="3.5" />
+      <circle cx="176" cy="15" r="3.5" />
+    </svg>
+  );
+}
+
+export default function ProductShowcaseSection() {
+  return (
+    <section id="showcase" className={styles.section} aria-labelledby="product-showcase-title">
+      <div className={styles.artboard}>
+        <div className={styles.glowOne} aria-hidden="true" />
+        <div className={styles.glowTwo} aria-hidden="true" />
+        <div className={styles.gridVeil} aria-hidden="true" />
+
+        <header className={styles.header}>
+          <span className={styles.eyebrow}>03 · Produkt-Showcase</span>
+          <h2 id="product-showcase-title">Ein Premium-Workspace für dein gesamtes <span>Fan-Management.</span></h2>
+          <p>FanMind verbindet Kontakte, Fan-Gedächtnis, KI-Vorschläge, Follow-ups, Kampagnen und Analytics in einer kontrollierten Arbeitsfläche.</p>
+        </header>
+
+        <div className={styles.stage}>
+          <aside className={styles.leftColumn} aria-label="Fan-Gedächtnis, KI-Vorschläge und Kampagnen">
+            <article className={`${styles.card} ${styles.memoryCard}`}>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>🧠</span><strong>Fan-Gedächtnis</strong><em>Buyer</em></div>
+              <div className={styles.profileRow}><span className={styles.avatar}>SM</span><div><b>Sandra M.</b><small>Kontakt seit 12.03.2025</small></div></div>
+              <div className={styles.tabRow}><span className={styles.activeTab}>Kontext</span><span>Käufe</span><span>Notizen</span></div>
+              <div className={styles.tagCloud}><span>buyer</span><span>premium_interessiert</span><span>event</span><span>Mia Active Club</span></div>
+            </article>
+
+            <article className={`${styles.card} ${styles.aiCard}`}>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>✦</span><strong>KI-Antwortvorschläge</strong><em>Entwurf</em></div>
+              <p className={styles.question}>Sandra M.: „Gibt es noch Early-Bird Plätze für Member?“</p>
+              <div className={styles.answerBubble}>Ja! Als Mia Active Member erhältst du 10 % Rabatt in den ersten 48 Stunden. Bitte vor Versand prüfen.</div>
+              <div className={styles.approvalRow}><span>Freigabe nötig</span><button type="button">Vorschlag prüfen</button></div>
+            </article>
+
+            <article className={`${styles.card} ${styles.campaignCard}`}>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>📣</span><strong>Sommer-Event Early Bird</strong><em>Läuft</em></div>
+              <div className={styles.campaignStatus}><span>Geplant: VIP + Buyer</span><b>1.824 Fans</b></div>
+              <div className={styles.rateGrid}><span>Öffnungsrate<b>38 %</b></span><span>Klickrate<b>14 %</b></span><span>Conversion<b>9,4 %</b></span></div>
+              <SparkLine tone="green" />
+            </article>
+          </aside>
+
+          <div className={styles.centerColumn}>
+            <div className={styles.dashboardShell} aria-label="FanMind Kontakte-Dashboard">
+              <aside className={styles.sidebar}>
+                <div className={styles.brand}><BrandMark /><b>FanMind</b></div>
+                <nav>
+                  {navItems.map(([icon, item], index) => <span className={index === 1 ? styles.activeNav : undefined} key={item}><i>{icon}</i>{item}</span>)}
+                </nav>
+                <div className={styles.savedViews}><small>Gespeicherte Ansichten</small><span>★ Top Fans <b>182</b></span><span>✦ Reaktivierung <b>739</b></span><span>◆ Premium-Käufer <b>312</b></span></div>
+              </aside>
+
+              <main className={styles.mainPanel}>
+                <div className={styles.topbar}>
+                  <div><h3>Kontakte</h3><p>Verwalte alle Fan-Profile, Segmente und Interaktionen.</p></div>
+                  <button type="button">+ Neuer Kontakt</button>
+                </div>
+                <div className={styles.metricRow}>{metrics.map((metric) => <div className={styles.metric} style={{ "--accent": metric.accent } as CSSProperties} key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.change}</small></div>)}</div>
+                <div className={styles.toolbar}><div className={styles.search}>⌕ Suche nach Name, Tag oder Profil …</div><span>Filter: Segment</span><span>Sortierung: Fan Score</span></div>
+                <div className={styles.segmentChips}>{["Alle", "VIP 182", "Warm 2.150", "Buyer 912", "Inactive 1.876", "Do not push 60", "Heute fällig 128"].map((chip, index) => <span className={index === 0 ? styles.activeChip : undefined} key={chip}>{chip}</span>)}</div>
+                <div className={styles.table}>
+                  <div className={styles.tableHead}><span>Name</span><span>Status</span><span>Profil</span><span>Tags</span><span>Score</span><span>Letzter Kontakt</span><span>Nächster Follow-up</span><span>Owner</span></div>
+                  {contacts.map((row) => <div className={styles.tableRow} key={`${row[1]}-${row[6]}`}><span><i>{row[0]}</i>{row[1]}</span><span><b>{row[2]}</b></span><span>{row[3]}</span><span>{row[4]}</span><span className={styles.score}>{row[5]}</span><span>{row[6]}</span><span className={row[7] === "Überfällig" ? styles.overdue : undefined}>{row[7]}</span><span><i>{row[8]}</i></span></div>)}
+                </div>
+                <div className={styles.pagination}><span>1–8 von 10.248 Kontakten</span><div><button type="button">←</button><button type="button">→</button></div></div>
+              </main>
+            </div>
+
+            <div className={styles.benefitGrid}>{benefits.map(([icon, title, text]) => <article key={title}><span>{icon}</span><div><h3>{title}</h3><p>{text}</p></div></article>)}</div>
+          </div>
+
+          <aside className={styles.rightColumn} aria-label="Follow-ups, Segmente und Analytics">
+            <article className={`${styles.card} ${styles.followupCard}`}>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>☑</span><strong>Follow-ups</strong><em>Heute</em></div>
+              {["Sandra M. · 10:00 · Hoch", "Lukas S. · 11:00 · Mittel", "Ella L. · überfällig", "Tara J. · Freitag"].map((item) => <div className={styles.followupRow} key={item}><span />{item}</div>)}
+            </article>
+
+            <article className={`${styles.card} ${styles.segmentCard}`}>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>◌</span><strong>Segmente</strong><em>Live</em></div>
+              <div className={styles.donutWrap}><div className={styles.donut}><span>10.248<small>Fans</small></span></div><div className={styles.segmentLegend}><span><i />VIP 1.824</span><span><i />Warm 2.150</span><span><i />Buyer 1.920</span><span><i />Inactive 2.048</span></div></div>
+            </article>
+
+            <article className={`${styles.card} ${styles.analyticsCard}`}>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>Analytics</strong><em>Report</em></div>
+              <div className={styles.analyticsTooltip}>13. Mai · Conversion 9,4 %</div>
+              <SparkLine tone="purple" />
+              <div className={styles.analyticsLegend}><span><i />Conversion</span><span><i />Antwortquote</span></div>
+              <a href="#early-access">Alle Reports anzeigen →</a>
+            </article>
+          </aside>
+        </div>
+
+        <div className={styles.featureStrip}>{featureCards.map(([icon, title, text]) => <article key={title}><span>{icon}</span><h3>{title}</h3><p>{text}</p></article>)}</div>
+      </div>
+    </section>
+  );
+}
