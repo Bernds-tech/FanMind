@@ -339,6 +339,123 @@ const showcaseBenefits = [
   },
 ];
 
+
+const sixStepCards = [
+  {
+    step: "1",
+    title: "Kontakt erfassen",
+    copy: "Neue Kontakte aus Formularen, E-Mail, Chat oder Import sauber erfassen und zentral ablegen.",
+    cardTitle: "Neuer Kontakt",
+    icon: "♙",
+    tone: "blue",
+    rows: [
+      "Sandra M. · sandra@mania-club.com",
+      "+43 660 123 45 67 · VIP interessiert",
+      "Quelle: Website-Formular · E-Mail-Postfach",
+      "Kontakt gespeichert",
+    ],
+  },
+  {
+    step: "2",
+    title: "Fan-Gedächtnis aufbauen",
+    copy: "Relevante Infos, Interessen und Interaktionen zentral speichern und sinnvoll verknüpfen.",
+    cardTitle: "Fan-Gedächtnis",
+    icon: "🧠",
+    tone: "cyan",
+    rows: [
+      "Interessen: Sommer-Event · VIP-Angebote",
+      "Kaufhistorie: 2 Upsells gekauft",
+      "Tonalität: freundlich, wertschätzend",
+      "Letzter Kontakt: Heute, 09:42",
+    ],
+  },
+  {
+    step: "3",
+    title: "KI-Antwort erhalten",
+    copy: "Die KI liefert passende Antwortvorschläge zum Kontext – dein Team prüft und gibt frei.",
+    cardTitle: "KI-Antwortvorschläge",
+    icon: "✦",
+    tone: "purple",
+    badge: "BETA",
+    rows: [
+      "Hi Sandra! Der Vorverkauf startet am 18. Mai um 10:00 Uhr.",
+      "Als Member erhältst du 10 % Rabatt in den ersten 48 Stunden.",
+      "Danke für dein Interesse! Melde dich gerne bei weiteren Fragen.",
+      "Freigabe durch Mensch erforderlich",
+    ],
+  },
+  {
+    step: "4",
+    title: "Follow-up planen",
+    copy: "Zur richtigen Zeit mit der passenden Botschaft – vorbereitet, priorisiert und manuell steuerbar.",
+    cardTitle: "Follow-up planen",
+    icon: "☑",
+    tone: "blue",
+    rows: [
+      "Nächster Schritt: VIP-Infos + Friend-Ticket",
+      "Versand: Heute, 10:00",
+      "Kanäle: E-Mail · WhatsApp · Chat",
+      "Priorität: Hoch · Owner: Nina D.",
+    ],
+  },
+  {
+    step: "5",
+    title: "Kampagne starten",
+    copy: "Segmentierte Kampagnen vorbereiten, prüfen und mit klaren Freigaben geplant ausspielen.",
+    cardTitle: "Sommer-Event Early Bird",
+    icon: "📣",
+    tone: "green",
+    badge: "Geplant",
+    rows: [
+      "Zielgruppe: 1.260 · Öffnungsziel: 38 %",
+      "Conversion-Ziel: 9,4 %",
+      "Kanäle vorbereitet: E-Mail · WhatsApp · Chat",
+      "Status: Entwurf geprüft",
+    ],
+  },
+  {
+    step: "6",
+    title: "Analytics messen",
+    copy: "Wachstum, Engagement und Conversion transparent auswerten und nächste Aktionen ableiten.",
+    cardTitle: "Performance-Überblick",
+    icon: "⌁",
+    tone: "green",
+    rows: [
+      "Fan-Wachstum: +12,4 %",
+      "Conversion Rate: 8,7 %",
+      "Antwortquote: 34,8 %",
+      "Insights für Optimierung vorbereitet",
+    ],
+  },
+];
+
+const sixStepBenefits = [
+  {
+    icon: "♙",
+    title: "Stärkere Beziehungen",
+    text: "Mehr Kontext. Mehr Relevanz. Mehr Vertrauen.",
+    tone: "blue",
+  },
+  {
+    icon: "◎",
+    title: "Weniger Aufwand",
+    text: "Bereite Routinen vor und fokussiere dich auf das Wesentliche.",
+    tone: "green",
+  },
+  {
+    icon: "↗",
+    title: "Höhere Conversion",
+    text: "Die richtige Nachricht, zum richtigen Zeitpunkt.",
+    tone: "purple",
+  },
+  {
+    icon: "◇",
+    title: "Volle Kontrolle",
+    text: "Transparente Daten, smarte Regeln und maximale Sicherheit.",
+    tone: "cyan",
+  },
+];
+
 const showcaseFeatureStrip = [
   {
     icon: "🧠",
@@ -1050,6 +1167,88 @@ export default function LandingV2() {
               <div>
                 <h3>{feature.title}</h3>
                 <p>{feature.text}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section
+        id="six-steps"
+        className={styles.sixStepsSection}
+        aria-labelledby="six-steps-title"
+      >
+        <div className={styles.sixStepsConstellationLeft} aria-hidden="true" />
+        <div className={styles.sixStepsConstellationRight} aria-hidden="true" />
+        <div className={styles.sixStepsHeader}>
+          <div className={styles.sixStepsBadge}>
+            <Logo compact />
+            <span>FanMind in 6 Schritten</span>
+          </div>
+          <h2 id="six-steps-title">
+            Von der ersten Anfrage bis zur messbaren <span>Conversion.</span>
+          </h2>
+          <p>
+            FanMind verbindet Kontakte, KI und Aktionen in einem System – damit
+            du Beziehungen aufbaust, rechtzeitig reagierst und Ergebnisse
+            messbar machst.
+          </p>
+        </div>
+
+        <div className={styles.processTrack} aria-label="FanMind Prozesslinie">
+          {sixStepCards.map((step, index) => (
+            <article
+              className={styles.processStep}
+              data-tone={step.tone}
+              key={step.title}
+            >
+              <div className={styles.stepNodeWrap}>
+                <span className={styles.stepNode}>{step.step}</span>
+              </div>
+              <h3>
+                {step.step}. {step.title}
+              </h3>
+              <p>{step.copy}</p>
+              <div className={styles.stepExampleCard}>
+                <div className={styles.stepCardTitle}>
+                  <span>{step.icon}</span>
+                  <strong>{step.cardTitle}</strong>
+                  {step.badge && <em>{step.badge}</em>}
+                </div>
+                <div className={styles.stepRows}>
+                  {step.rows.map((row, rowIndex) => (
+                    <div className={styles.stepRow} key={row}>
+                      <i aria-hidden="true">
+                        {rowIndex === step.rows.length - 1 ? "✓" : ""}
+                      </i>
+                      <span>{row}</span>
+                      {index === 2 && rowIndex < 3 && (
+                        <button type="button">Auswählen</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <a href="#early-access">
+                  {index === 5 ? "Alle Analytics anzeigen" : "Details anzeigen"}
+                  <span>→</span>
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.sixStepsStatement}>
+          <span>★</span>
+          <strong>Ein System für Beziehungen, Aktionen und Ergebnisse.</strong>
+        </div>
+
+        <div className={styles.sixStepsBenefits}>
+          {sixStepBenefits.map((benefit) => (
+            <article data-tone={benefit.tone} key={benefit.title}>
+              <span>{benefit.icon}</span>
+              <div>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.text}</p>
               </div>
             </article>
           ))}
