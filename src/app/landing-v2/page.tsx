@@ -191,9 +191,9 @@ const showcaseLeftCards = [
     icon: "📣",
     title: "Kampagnen",
     detail: "Sommer-Event Early Bird",
-    status: "Läuft",
-    text: "Öffnungsrate 38 % · Klickrate 14 % · Conversion 9,4 %",
-    tags: ["Jetzt pausieren", "Alle Kampagnen"],
+    status: "Geplant",
+    text: "Zielgruppe 1.824 Fans · Entwurf geprüft · erwartete Conversion 9,4 %",
+    tags: ["Freigabe prüfen", "Auswertung Demo"],
   },
 ];
 
@@ -217,16 +217,6 @@ const showcaseRightCards = [
       "Buyer 1.920",
       "Inactive 2.048",
       "New 1.736",
-    ],
-  },
-  {
-    icon: "⌁",
-    title: "Analytics",
-    rows: [
-      "Fan-Wachstum +12 %",
-      "Aktive Fans 4.892",
-      "Conversion 9,4 %",
-      "Antwortquote 34,8 %",
     ],
   },
 ];
@@ -465,7 +455,7 @@ const showcaseFeatureStrip = [
   {
     icon: "✦",
     title: "KI-Antwortvorschläge",
-    text: "Smarte Vorschläge für jede Nachricht – passend zum Kontext, zum Fan und zum Ziel.",
+    text: "Smarte Vorschläge für jede Nachricht – dein Team prüft und gibt final frei.",
   },
   {
     icon: "☑",
@@ -475,7 +465,7 @@ const showcaseFeatureStrip = [
   {
     icon: "📣",
     title: "Kampagnen & Analytics",
-    text: "Plane, prüfe, analysiere – und optimiere ständig für maximale Wirkung.",
+    text: "Plane Kampagnen, prüfe Inhalte und analysiere Demo-Ergebnisse für bessere Entscheidungen.",
   },
 ];
 
@@ -1136,7 +1126,9 @@ export default function LandingV2() {
             </div>
           </div>
 
-          <div className={styles.showcaseSideColumn}>
+          <div
+            className={`${styles.showcaseSideColumn} ${styles.showcaseRightColumn}`}
+          >
             {showcaseRightCards.map((card, index) => (
               <article
                 className={styles.showcaseInsightCard}
