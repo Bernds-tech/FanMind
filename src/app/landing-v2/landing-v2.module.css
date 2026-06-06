@@ -4472,22 +4472,40 @@
 
 .integrationFlowLinesLeft,
 .integrationFlowLinesRight {
-  height: 68px;
-  opacity: 0.52;
-  background:
-    linear-gradient(18deg, transparent 0 42%, rgba(0, 205, 255, 0.62) 43% 44.6%, transparent 45.6% 100%),
-    linear-gradient(0deg, transparent 0 49%, rgba(0, 205, 255, 0.62) 50% 51.6%, transparent 52.6% 100%),
-    linear-gradient(-18deg, transparent 0 42%, rgba(0, 205, 255, 0.62) 43% 44.6%, transparent 45.6% 100%);
-  filter: drop-shadow(0 0 7px rgba(0, 205, 255, 0.36));
+  display: block;
+  width: 100%;
+  height: 124px;
+  overflow: visible;
+  opacity: 0.82;
 }
 
-.integrationFlowLinesRight {
-  transform: scaleX(-1);
-  background:
-    linear-gradient(18deg, transparent 0 42%, rgba(207, 79, 255, 0.58) 43% 44.6%, transparent 45.6% 100%),
-    linear-gradient(0deg, transparent 0 49%, rgba(207, 79, 255, 0.58) 50% 51.6%, transparent 52.6% 100%),
-    linear-gradient(-18deg, transparent 0 42%, rgba(207, 79, 255, 0.58) 43% 44.6%, transparent 45.6% 100%);
-  filter: drop-shadow(0 0 7px rgba(207, 79, 255, 0.34));
+.integrationFlowLinesLeft g > path,
+.integrationFlowLinesRight g > path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.85;
+  vector-effect: non-scaling-stroke;
+}
+
+.integrationFlowLinesLeft g > path {
+  stroke: rgba(21, 220, 255, 0.78);
+  marker-end: url("#integration-flow-arrow-cyan");
+}
+
+.integrationFlowLinesLeft marker path {
+  fill: rgba(21, 220, 255, 0.88);
+  stroke: none;
+}
+
+.integrationFlowLinesRight g > path {
+  stroke: rgba(210, 82, 255, 0.76);
+  marker-end: url("#integration-flow-arrow-magenta");
+}
+
+.integrationFlowLinesRight marker path {
+  fill: rgba(210, 82, 255, 0.88);
+  stroke: none;
 }
 
 .integrationBrainCard {
