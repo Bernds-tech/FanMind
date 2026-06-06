@@ -53,11 +53,432 @@
 .heroSection,
 .problemSolutionSection,
 .productShowcaseSection,
+.sixStepsSection,
 .siteFooter {
   position: relative;
   z-index: 1;
   width: min(1804px, 100%);
   margin-inline: auto;
+}
+
+.sixStepsSection {
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+  padding: 30px 0 34px;
+  isolation: isolate;
+}
+
+.sixStepsSection::before {
+  content: "";
+  position: absolute;
+  inset: -28px -48px -18px;
+  z-index: -3;
+  background:
+    radial-gradient(circle at 8% 20%, rgba(0, 132, 255, 0.24), transparent 18%),
+    radial-gradient(circle at 84% 14%, rgba(151, 70, 255, 0.22), transparent 20%),
+    radial-gradient(circle at 53% 58%, rgba(0, 212, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(2, 8, 19, 0.98), rgba(2, 12, 28, 0.96));
+}
+
+.sixStepsSection::after {
+  content: "";
+  position: absolute;
+  inset: 8px -48px auto;
+  z-index: -2;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(24, 140, 255, 0.44), rgba(168, 76, 255, 0.36), transparent);
+  box-shadow: 0 0 52px rgba(0, 153, 255, 0.22);
+}
+
+.sixStepsConstellationLeft,
+.sixStepsConstellationRight {
+  position: absolute;
+  z-index: -1;
+  width: 360px;
+  height: 180px;
+  opacity: 0.72;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, rgba(101, 178, 255, 0.95) 0 4px, transparent 5px) 20px 42px / 100% 100%,
+    radial-gradient(circle, rgba(101, 178, 255, 0.95) 0 5px, transparent 6px) 112px 2px / 100% 100%,
+    radial-gradient(circle, rgba(90, 158, 255, 0.9) 0 4px, transparent 5px) 214px 96px / 100% 100%,
+    radial-gradient(circle, rgba(92, 169, 255, 0.75) 0 2px, transparent 3px) 300px 134px / 100% 100%,
+    linear-gradient(158deg, transparent 0 16%, rgba(22, 119, 255, 0.76) 16.2% 16.7%, transparent 17% 100%),
+    linear-gradient(20deg, transparent 0 17%, rgba(22, 119, 255, 0.62) 17.2% 17.7%, transparent 18% 100%),
+    linear-gradient(112deg, transparent 0 32%, rgba(22, 119, 255, 0.42) 32.2% 32.8%, transparent 33% 100%);
+  filter: drop-shadow(0 0 16px rgba(42, 143, 255, 0.65));
+}
+
+.sixStepsConstellationLeft {
+  top: 24px;
+  left: -92px;
+}
+
+.sixStepsConstellationRight {
+  top: 16px;
+  right: -90px;
+  transform: scaleX(-1);
+  filter: drop-shadow(0 0 17px rgba(148, 78, 255, 0.72));
+}
+
+.sixStepsHeader {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  margin-bottom: 34px;
+}
+
+.sixStepsBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 50px;
+  padding: 0 28px;
+  border: 1px solid rgba(27, 139, 255, 0.56);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(5, 22, 48, 0.8), rgba(3, 14, 32, 0.88));
+  box-shadow: inset 0 0 28px rgba(0, 128, 255, 0.16), 0 0 38px rgba(0, 119, 255, 0.22);
+  color: #f5fbff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.35px;
+}
+
+.sixStepsBadge .logo {
+  gap: 0;
+}
+
+.sixStepsBadge .logoMark {
+  width: 30px;
+  height: 30px;
+}
+
+.sixStepsHeader h2 {
+  max-width: 860px;
+  margin-top: 16px;
+  font-size: clamp(48px, 4.2vw, 82px);
+  line-height: 1.02;
+  letter-spacing: -3.4px;
+  text-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+}
+
+.sixStepsHeader h2 span,
+.sixStepsStatement strong {
+  color: transparent;
+  background: linear-gradient(95deg, #5da4ff 0%, #25d5ff 45%, #22e89c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.sixStepsHeader p {
+  max-width: 800px;
+  margin-top: 14px;
+  color: #c7cfdd;
+  font-size: 21px;
+  line-height: 1.45;
+}
+
+.processTrack {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 26px;
+  margin-top: 10px;
+}
+
+.processTrack::before {
+  content: "";
+  position: absolute;
+  top: 32px;
+  left: 7.5%;
+  right: 7.5%;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4d7dff, #4ac9ff 25%, #8e58ff 45%, #358eff 66%, #32d6ff 82%, #00e178);
+  box-shadow: 0 0 18px rgba(70, 146, 255, 0.84), 0 0 42px rgba(113, 75, 255, 0.36);
+}
+
+.processStep {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.processStep:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  top: 18px;
+  right: -21px;
+  color: #78adff;
+  font-size: 28px;
+  text-shadow: 0 0 18px rgba(80, 164, 255, 0.92);
+}
+
+.stepNodeWrap {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 66px;
+}
+
+.stepNode {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(139, 195, 255, 0.92);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, rgba(91, 157, 255, 0.95), rgba(16, 63, 183, 0.9) 56%, rgba(4, 20, 62, 0.98));
+  box-shadow: 0 0 0 7px rgba(32, 108, 255, 0.18), inset 0 0 16px rgba(255, 255, 255, 0.24), 0 0 30px rgba(50, 134, 255, 0.82);
+  color: #fff;
+  font-size: 31px;
+  font-weight: 800;
+}
+
+.processStep[data-tone="purple"] .stepNode {
+  border-color: rgba(202, 128, 255, 0.95);
+  background: radial-gradient(circle at 35% 28%, rgba(168, 88, 255, 0.95), rgba(75, 35, 153, 0.96));
+  box-shadow: 0 0 0 7px rgba(140, 67, 255, 0.2), inset 0 0 18px rgba(255,255,255,0.2), 0 0 34px rgba(159, 78, 255, 0.82);
+}
+
+.processStep[data-tone="green"] .stepNode {
+  border-color: rgba(78, 255, 190, 0.95);
+  background: radial-gradient(circle at 35% 28%, rgba(33, 229, 162, 0.95), rgba(3, 103, 89, 0.96));
+  box-shadow: 0 0 0 7px rgba(0, 225, 120, 0.18), inset 0 0 18px rgba(255,255,255,0.2), 0 0 34px rgba(0, 225, 120, 0.64);
+}
+
+.processStep h3 {
+  margin-top: 18px;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1.18;
+  letter-spacing: -0.55px;
+}
+
+.processStep > p {
+  min-height: 76px;
+  margin-top: 10px;
+  color: #c7cfdd;
+  font-size: 16px;
+  line-height: 1.38;
+}
+
+.stepExampleCard {
+  position: relative;
+  display: grid;
+  align-content: start;
+  width: 100%;
+  min-height: 344px;
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px solid rgba(55, 134, 235, 0.5);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(5, 22, 48, 0.82), rgba(2, 12, 29, 0.9));
+  box-shadow: inset 0 0 32px rgba(16, 117, 255, 0.13), 0 18px 54px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+
+.stepExampleCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 14% 0%, rgba(0, 180, 255, 0.18), transparent 38%), linear-gradient(180deg, rgba(255,255,255,0.04), transparent 42%);
+  pointer-events: none;
+}
+
+.processStep[data-tone="purple"] .stepExampleCard { border-color: rgba(153, 82, 255, 0.55); }
+.processStep[data-tone="green"] .stepExampleCard { border-color: rgba(0, 225, 142, 0.48); }
+.processStep[data-tone="cyan"] .stepExampleCard { border-color: rgba(0, 207, 255, 0.5); }
+
+.stepCardTitle,
+.stepRows,
+.stepExampleCard > a {
+  position: relative;
+  z-index: 1;
+}
+
+.stepCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 25px;
+  color: #fff;
+  text-align: left;
+}
+
+.stepCardTitle span {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  color: #23b7ff;
+  font-size: 20px;
+  text-shadow: 0 0 16px rgba(0, 190, 255, 0.75);
+}
+
+.stepCardTitle strong {
+  flex: 1;
+  font-size: 16px;
+}
+
+.stepCardTitle em {
+  padding: 4px 8px;
+  border: 1px solid rgba(85, 146, 255, 0.42);
+  border-radius: 7px;
+  background: rgba(24, 79, 183, 0.48);
+  color: #9dc7ff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.stepRows {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.stepRow {
+  display: grid;
+  grid-template-columns: 23px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid rgba(59, 105, 170, 0.38);
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(9, 29, 61, 0.72), rgba(4, 17, 39, 0.78));
+  color: #dce7f6;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.22;
+}
+
+.stepRow i {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  color: #2ff0a7;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.stepRow button {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid rgba(126, 155, 212, 0.34);
+  border-radius: 7px;
+  color: #dbe7ff;
+  background: rgba(34, 49, 86, 0.82);
+  font-size: 11px;
+}
+
+.stepExampleCard > a {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+  color: #18a8ff;
+  font-size: 16px;
+}
+
+.sixStepsStatement {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: min(880px, 92%);
+  min-height: 70px;
+  margin: 26px auto 0;
+  border: 1px solid rgba(48, 121, 255, 0.56);
+  border-radius: 17px;
+  background: linear-gradient(90deg, rgba(6, 26, 60, 0.88), rgba(9, 18, 47, 0.9));
+  box-shadow: inset 0 0 32px rgba(35, 112, 255, 0.16), 0 0 44px rgba(56, 113, 255, 0.18);
+}
+
+.sixStepsStatement span {
+  color: #5b9dff;
+  font-size: 34px;
+  text-shadow: 0 0 28px rgba(91, 157, 255, 0.92);
+}
+
+.sixStepsStatement strong {
+  font-size: clamp(27px, 2vw, 38px);
+  letter-spacing: -1.2px;
+}
+
+.sixStepsBenefits {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-top: 30px;
+  padding-inline: 80px;
+}
+
+.sixStepsBenefits article {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  align-items: center;
+  gap: 16px;
+  min-height: 92px;
+  padding: 0 28px;
+  border-right: 1px solid rgba(55, 119, 208, 0.28);
+}
+
+.sixStepsBenefits article:last-child {
+  border-right: 0;
+}
+
+.sixStepsBenefits article > span {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border: 1px solid rgba(36, 142, 255, 0.44);
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 30%, rgba(18, 130, 255, 0.22), rgba(6, 22, 52, 0.86));
+  color: #2e9cff;
+  font-size: 32px;
+  box-shadow: inset 0 0 24px rgba(0, 132, 255, 0.18), 0 0 26px rgba(0, 132, 255, 0.18);
+}
+
+.sixStepsBenefits article[data-tone="green"] > span {
+  border-color: rgba(0, 225, 142, 0.44);
+  color: #00e178;
+  box-shadow: inset 0 0 24px rgba(0, 225, 142, 0.16), 0 0 26px rgba(0, 225, 142, 0.18);
+}
+
+.sixStepsBenefits article[data-tone="purple"] > span {
+  border-color: rgba(143, 83, 255, 0.5);
+  color: #a96bff;
+  box-shadow: inset 0 0 24px rgba(143, 83, 255, 0.18), 0 0 26px rgba(143, 83, 255, 0.18);
+}
+
+.sixStepsBenefits article[data-tone="cyan"] > span {
+  border-color: rgba(0, 207, 255, 0.5);
+  color: #22d7ff;
+  box-shadow: inset 0 0 24px rgba(0, 207, 255, 0.16), 0 0 26px rgba(0, 207, 255, 0.18);
+}
+
+.sixStepsBenefits h3 {
+  color: #fff;
+  font-size: 19px;
+  letter-spacing: -0.45px;
+}
+
+.sixStepsBenefits p {
+  margin-top: 7px;
+  color: #c3cbd8;
+  font-size: 15px;
+  line-height: 1.36;
 }
 
 .header,
@@ -2467,6 +2888,21 @@
   .showcaseBenefitGrid {
     padding-inline: clamp(120px, 14vw, 235px);
   }
+  .processTrack {
+    gap: 16px;
+  }
+  .processStep h3 {
+    font-size: 18px;
+  }
+  .processStep > p {
+    font-size: 14px;
+  }
+  .stepExampleCard {
+    padding: 14px;
+  }
+  .sixStepsBenefits {
+    padding-inline: 20px;
+  }
 }
 
 @media (max-width: 1500px) {
@@ -2503,6 +2939,24 @@
   }
   .solutionFlow {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .processTrack {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 34px;
+  }
+  .processTrack::before,
+  .processStep:not(:last-child)::after {
+    display: none;
+  }
+  .processStep > p {
+    min-height: auto;
+  }
+  .sixStepsBenefits {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px 0;
+  }
+  .sixStepsBenefits article:nth-child(2n) {
+    border-right: 0;
   }
   .solutionFunctionCard:nth-child(3)::after {
     display: none;
@@ -2594,6 +3048,19 @@
   }
   .solutionFlow {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .processTrack {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sixStepsHeader h2 {
+    font-size: 48px;
+    letter-spacing: -2.1px;
+  }
+  .sixStepsHeader p {
+    font-size: 18px;
+  }
+  .sixStepsBenefits {
+    padding-inline: 0;
   }
   .solutionFunctionCard:nth-child(3)::after {
     display: block;
@@ -2689,6 +3156,36 @@
   .showcaseFeatureStrip article,
   .showcaseBenefitGrid article {
     grid-template-columns: 1fr;
+  }
+  .processTrack,
+  .sixStepsBenefits {
+    grid-template-columns: 1fr;
+  }
+  .sixStepsBadge {
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 17px;
+  }
+  .sixStepsHeader h2 {
+    font-size: 40px;
+    letter-spacing: -1.6px;
+  }
+  .stepExampleCard {
+    min-height: auto;
+  }
+  .sixStepsStatement {
+    align-items: flex-start;
+    padding: 18px;
+    text-align: left;
+  }
+  .sixStepsStatement strong {
+    font-size: 25px;
+  }
+  .sixStepsBenefits article,
+  .sixStepsBenefits article:nth-child(2n) {
+    grid-template-columns: 68px 1fr;
+    border-right: 0;
+    padding: 10px 0;
   }
   .dashboardTopbar,
   .dashboardControls {
