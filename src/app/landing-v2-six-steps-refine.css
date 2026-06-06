@@ -1,0 +1,356 @@
+/* Targeted correction for 04: FanMind in 6 Schritten.
+   Scoped to #six-steps so the existing Hero, Problem/Solution and 03 Showcase remain untouched. */
+
+#six-steps {
+  position: relative;
+  width: min(1804px, 100%);
+  margin: 36px auto 0 !important;
+  padding: 36px 0 28px !important;
+  overflow: hidden;
+}
+
+#six-steps::before {
+  content: "";
+  position: absolute;
+  inset: 0 -80px auto;
+  height: 560px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 10% 34%, rgba(0, 132, 255, 0.22), transparent 22%),
+    radial-gradient(circle at 85% 30%, rgba(127, 65, 255, 0.22), transparent 26%),
+    radial-gradient(circle at 58% 38%, rgba(0, 220, 190, 0.12), transparent 28%);
+  opacity: 0.9;
+}
+
+#six-steps [class*="sixStepsHeader"] {
+  position: relative;
+  z-index: 2;
+  display: grid !important;
+  justify-items: center;
+  text-align: center;
+  margin-bottom: 34px !important;
+}
+
+#six-steps [class*="sixStepsBadge"] {
+  min-height: 43px !important;
+  padding: 0 26px !important;
+  border-radius: 999px !important;
+  font-size: 21px !important;
+  letter-spacing: -0.2px;
+  background: rgba(4, 28, 59, 0.82) !important;
+  border-color: rgba(0, 168, 255, 0.54) !important;
+  box-shadow: inset 0 0 22px rgba(0, 130, 255, 0.18), 0 0 24px rgba(0, 130, 255, 0.12) !important;
+}
+
+#six-steps [class*="sixStepsBadge"] [class*="logoMark"] {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+#six-steps [class*="sixStepsHeader"] h2 {
+  max-width: 1040px !important;
+  margin-top: 18px !important;
+  font-size: clamp(58px, 4.4vw, 82px) !important;
+  line-height: 0.96 !important;
+  letter-spacing: -3.9px !important;
+}
+
+#six-steps [class*="sixStepsHeader"] p {
+  max-width: 900px !important;
+  margin-top: 16px !important;
+  color: #c2ccda !important;
+  font-size: 22px !important;
+  line-height: 1.32 !important;
+}
+
+#six-steps [class*="processTrack"] {
+  position: relative !important;
+  z-index: 2;
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  margin-top: 26px !important;
+  align-items: start !important;
+}
+
+#six-steps [class*="processTrack"]::before {
+  content: "";
+  position: absolute;
+  left: 76px;
+  right: 76px;
+  top: 38px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #477dff, #49a0ff 36%, #a25dff 48%, #21cfff 70%, #15e39f);
+  box-shadow: 0 0 20px rgba(0, 145, 255, 0.65);
+  pointer-events: none;
+}
+
+#six-steps [class*="processStep"] {
+  position: relative !important;
+  z-index: 3;
+  display: grid !important;
+  justify-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+#six-steps [class*="processStep"]::after {
+  content: "→";
+  position: absolute;
+  top: 26px;
+  right: -18px;
+  color: rgba(158, 213, 255, 0.78);
+  font-size: 22px;
+  text-shadow: 0 0 14px rgba(0, 157, 255, 0.7);
+}
+
+#six-steps [class*="processStep"]:last-child::after {
+  display: none;
+}
+
+#six-steps [class*="stepNodeWrap"] {
+  display: grid !important;
+  place-items: center;
+  width: 76px !important;
+  height: 76px !important;
+  margin-bottom: 22px !important;
+}
+
+#six-steps [class*="stepNode"] {
+  display: grid !important;
+  place-items: center;
+  width: 62px !important;
+  height: 62px !important;
+  border-radius: 50%;
+  color: #fff !important;
+  background: radial-gradient(circle at 36% 26%, rgba(255,255,255,0.38), rgba(27, 95, 255, 0.9) 46%, rgba(18, 46, 120, 0.94)) !important;
+  border: 1px solid rgba(122, 176, 255, 0.75) !important;
+  box-shadow: 0 0 28px rgba(54, 126, 255, 0.75), inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
+  font-size: 30px !important;
+  font-weight: 900;
+}
+
+#six-steps [class*="processStep"][data-tone="purple"] [class*="stepNode"] {
+  background: radial-gradient(circle at 36% 26%, rgba(255,255,255,0.35), rgba(145, 72, 255, 0.96) 46%, rgba(64, 32, 134, 0.94)) !important;
+  box-shadow: 0 0 32px rgba(151, 80, 255, 0.78), inset 0 0 20px rgba(255,255,255,0.1) !important;
+}
+
+#six-steps [class*="processStep"][data-tone="green"] [class*="stepNode"] {
+  background: radial-gradient(circle at 36% 26%, rgba(255,255,255,0.35), rgba(20, 202, 135, 0.96) 46%, rgba(13, 89, 68, 0.94)) !important;
+  box-shadow: 0 0 32px rgba(24, 222, 149, 0.72), inset 0 0 20px rgba(255,255,255,0.1) !important;
+}
+
+#six-steps [class*="processStep"] h3 {
+  min-height: 54px !important;
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 21px !important;
+  line-height: 1.1 !important;
+  letter-spacing: -0.55px !important;
+}
+
+#six-steps [class*="processStep"] > p {
+  min-height: 86px !important;
+  margin-top: 10px !important;
+  color: #c8d1df !important;
+  font-size: 16px !important;
+  line-height: 1.34 !important;
+}
+
+#six-steps [class*="stepExampleCard"] {
+  width: 100% !important;
+  min-height: 244px !important;
+  margin-top: 20px !important;
+  padding: 16px 17px !important;
+  border: 1px solid rgba(55, 125, 210, 0.48) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, rgba(7, 34, 72, 0.78), rgba(2, 13, 31, 0.88)) !important;
+  box-shadow: inset 0 0 30px rgba(18, 119, 255, 0.12), 0 14px 36px rgba(0,0,0,0.22) !important;
+}
+
+#six-steps [class*="processStep"][data-tone="purple"] [class*="stepExampleCard"] {
+  border-color: rgba(156, 80, 255, 0.62) !important;
+  box-shadow: inset 0 0 30px rgba(150, 80, 255, 0.13), 0 14px 36px rgba(0,0,0,0.22) !important;
+}
+
+#six-steps [class*="processStep"][data-tone="green"] [class*="stepExampleCard"] {
+  border-color: rgba(0, 210, 150, 0.56) !important;
+}
+
+#six-steps [class*="stepCardTitle"] {
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+  text-align: left !important;
+}
+
+#six-steps [class*="stepCardTitle"] span {
+  color: #18bfff !important;
+  font-size: 20px !important;
+}
+
+#six-steps [class*="stepCardTitle"] strong {
+  color: #fff !important;
+  font-size: 18px !important;
+  line-height: 1.05 !important;
+}
+
+#six-steps [class*="stepCardTitle"] em {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 7px;
+  color: #bfd8ff;
+  background: rgba(64, 117, 218, 0.38);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+#six-steps [class*="stepRows"] {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+#six-steps [class*="stepRow"] {
+  min-height: 42px !important;
+  padding: 8px 10px !important;
+  border: 1px solid rgba(83, 135, 206, 0.24) !important;
+  border-radius: 10px !important;
+  background: rgba(3, 18, 42, 0.7) !important;
+  color: #e6edf8 !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  text-align: center;
+}
+
+#six-steps [class*="stepRow"] button {
+  min-width: 76px;
+  min-height: 26px;
+  margin-left: 8px;
+  border: 1px solid rgba(120, 160, 232, 0.42);
+  border-radius: 7px;
+  color: #eaf3ff;
+  background: rgba(84, 111, 178, 0.44);
+  font-size: 11px;
+}
+
+#six-steps [class*="stepExampleCard"] > a {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px !important;
+  color: #10baff !important;
+  font-size: 16px !important;
+}
+
+#six-steps [class*="sixStepsStatement"] {
+  width: min(1080px, 70%) !important;
+  min-height: 72px !important;
+  margin: 30px auto 0 !important;
+  padding: 0 32px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(55, 125, 255, 0.5) !important;
+  background: linear-gradient(90deg, rgba(12, 47, 106, 0.78), rgba(11, 28, 68, 0.88), rgba(6, 55, 84, 0.64)) !important;
+  box-shadow: inset 0 0 30px rgba(38, 126, 255, 0.14), 0 0 32px rgba(20, 92, 255, 0.12) !important;
+}
+
+#six-steps [class*="sixStepsStatement"] span {
+  color: #62a8ff !important;
+  font-size: 28px !important;
+}
+
+#six-steps [class*="sixStepsStatement"] strong {
+  font-size: 33px !important;
+  letter-spacing: -1.1px !important;
+  background: linear-gradient(95deg, #62a8ff, #20cfff 50%, #3de6a6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+
+#six-steps [class*="sixStepsBenefits"] {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  width: min(1600px, 94%) !important;
+  margin: 34px auto 0 !important;
+  padding: 0 !important;
+}
+
+#six-steps [class*="sixStepsBenefits"] article {
+  display: grid !important;
+  grid-template-columns: 84px 1fr !important;
+  gap: 18px !important;
+  align-items: center !important;
+  min-height: 110px !important;
+  padding: 0 34px !important;
+  border-right: 1px solid rgba(100, 150, 215, 0.2) !important;
+}
+
+#six-steps [class*="sixStepsBenefits"] article:last-child {
+  border-right: 0 !important;
+}
+
+#six-steps [class*="sixStepsBenefits"] article > span {
+  display: grid !important;
+  place-items: center;
+  width: 70px !important;
+  height: 70px !important;
+  border-radius: 50%;
+  color: #21b6ff !important;
+  background: radial-gradient(circle at 50% 50%, rgba(21, 157, 255, 0.28), rgba(5, 30, 68, 0.9)) !important;
+  border: 1px solid rgba(39, 139, 255, 0.48) !important;
+  box-shadow: 0 0 24px rgba(0, 147, 255, 0.18) !important;
+  font-size: 32px !important;
+}
+
+#six-steps [class*="sixStepsBenefits"] h3 {
+  color: #fff !important;
+  font-size: 23px !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.6px !important;
+}
+
+#six-steps [class*="sixStepsBenefits"] p {
+  margin-top: 8px !important;
+  color: #c8d1df !important;
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+}
+
+@media (max-width: 1500px) {
+  #six-steps [class*="processTrack"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    row-gap: 34px !important;
+  }
+
+  #six-steps [class*="processTrack"]::before,
+  #six-steps [class*="processStep"]::after {
+    display: none !important;
+  }
+
+  #six-steps [class*="sixStepsBenefits"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #six-steps [class*="sixStepsBenefits"] article:nth-child(2n) {
+    border-right: 0 !important;
+  }
+}
+
+@media (max-width: 720px) {
+  #six-steps [class*="processTrack"],
+  #six-steps [class*="sixStepsBenefits"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  #six-steps [class*="sixStepsHeader"] h2 {
+    font-size: 40px !important;
+    letter-spacing: -1.6px !important;
+  }
+
+  #six-steps [class*="sixStepsStatement"] {
+    width: 100% !important;
+  }
+}
