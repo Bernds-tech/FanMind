@@ -95,19 +95,6 @@
   min-width: 0;
 }
 
-#six-steps [class*="processStep"]::after {
-  content: "→";
-  position: absolute;
-  top: 26px;
-  right: -18px;
-  color: rgba(158, 213, 255, 0.78);
-  font-size: 22px;
-  text-shadow: 0 0 14px rgba(0, 157, 255, 0.7);
-}
-
-#six-steps [class*="processStep"]:last-child::after {
-  display: none;
-}
 
 #six-steps [class*="stepNodeWrap"] {
   display: grid !important;
@@ -160,13 +147,14 @@
 
 #six-steps [class*="stepExampleCard"] {
   width: 100% !important;
-  min-height: 244px !important;
+  min-height: 330px !important;
   margin-top: 20px !important;
   padding: 16px 17px !important;
   border: 1px solid rgba(55, 125, 210, 0.48) !important;
   border-radius: 16px !important;
   background: linear-gradient(180deg, rgba(7, 34, 72, 0.78), rgba(2, 13, 31, 0.88)) !important;
   box-shadow: inset 0 0 30px rgba(18, 119, 255, 0.12), 0 14px 36px rgba(0,0,0,0.22) !important;
+  overflow: visible !important;
 }
 
 #six-steps [class*="processStep"][data-tone="purple"] [class*="stepExampleCard"] {
@@ -221,7 +209,20 @@
   color: #e6edf8 !important;
   font-size: 13px !important;
   line-height: 1.2 !important;
-  text-align: center;
+  text-align: left !important;
+}
+
+#six-steps [class*="stepRow"] span,
+#six-steps [class*="stepAiSuggestion"] span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+#six-steps [class*="stepAiSuggestion"] {
+  grid-template-columns: minmax(0, 1fr) auto !important;
 }
 
 #six-steps [class*="stepRow"] button {
@@ -320,22 +321,23 @@
 }
 
 @media (max-width: 1500px) {
-  #six-steps [class*="processTrack"] {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    row-gap: 34px !important;
-  }
-
-  #six-steps [class*="processTrack"]::before,
-  #six-steps [class*="processStep"]::after {
-    display: none !important;
-  }
-
   #six-steps [class*="sixStepsBenefits"] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   #six-steps [class*="sixStepsBenefits"] article:nth-child(2n) {
     border-right: 0 !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  #six-steps [class*="processTrack"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    row-gap: 34px !important;
+  }
+
+  #six-steps [class*="processTrack"]::before {
+    display: none !important;
   }
 }
 

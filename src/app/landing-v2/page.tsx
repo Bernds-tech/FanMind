@@ -169,10 +169,16 @@ const sixStepCards = [
     cardTitle: "Neuer Kontakt",
     icon: "♙",
     tone: "blue",
+    cta: "Details anzeigen",
+    profile: {
+      initials: "SM",
+      name: "Sandra M.",
+      email: "sandra@mania-club.com",
+      phone: "+43 660 123 45 67",
+      tag: "VIP interessiert",
+    },
     rows: [
-      "Sandra M. · sandra@mania-club.com",
-      "+43 660 123 45 67 · VIP interessiert",
-      "Quelle: Website-Formular · E-Mail-Postfach",
+      "Quelle: Website-Formular, E-Mail-Postfach, WhatsApp Chat",
       "Kontakt gespeichert",
     ],
   },
@@ -183,8 +189,9 @@ const sixStepCards = [
     cardTitle: "Fan-Gedächtnis",
     icon: "🧠",
     tone: "cyan",
+    cta: "Details anzeigen",
     rows: [
-      "Interessen: Sommer-Event · VIP-Angebote",
+      "Interessen: Sommer-Event, VIP-Angebote",
       "Kaufhistorie: 2 Upsells gekauft",
       "Tonalität: freundlich, wertschätzend",
       "Letzter Kontakt: Heute, 09:42",
@@ -198,12 +205,13 @@ const sixStepCards = [
     icon: "✦",
     tone: "purple",
     badge: "BETA",
-    rows: [
+    cta: "Mehr Vorschläge anzeigen",
+    suggestions: [
       "Hi Sandra! Der Vorverkauf startet am 18. Mai um 10:00 Uhr.",
       "Als Member erhältst du 10 % Rabatt in den ersten 48 Stunden.",
       "Danke für dein Interesse! Melde dich gerne bei weiteren Fragen.",
-      "Freigabe durch Mensch erforderlich",
     ],
+    rows: ["Freigabe durch Mensch erforderlich"],
   },
   {
     step: "4",
@@ -212,11 +220,13 @@ const sixStepCards = [
     cardTitle: "Follow-up planen",
     icon: "☑",
     tone: "blue",
+    cta: "Alle Follow-ups anzeigen",
     rows: [
       "Nächster Schritt: VIP-Infos + Friend-Ticket",
       "Versand: Heute, 10:00",
-      "Kanäle: E-Mail · WhatsApp · Chat",
-      "Priorität: Hoch · Owner: Nina D.",
+      "Kanäle: E-Mail, WhatsApp, Chat",
+      "Priorität: Hoch",
+      "Owner: Nina D.",
     ],
   },
   {
@@ -226,11 +236,15 @@ const sixStepCards = [
     cardTitle: "Sommer-Event Early Bird",
     icon: "📣",
     tone: "green",
-    badge: "Geplant",
+    badge: "Läuft",
+    cta: "Kampagnen-Übersicht",
+    metrics: [
+      ["Zielgruppe", "1.260"],
+      ["Öffnungsrate", "38 %"],
+      ["Conversion", "9,4 %"],
+    ],
     rows: [
-      "Zielgruppe: 1.260 · Öffnungsziel: 38 %",
-      "Conversion-Ziel: 9,4 %",
-      "Kanäle vorbereitet: E-Mail · WhatsApp · Chat",
+      "Kanäle: E-Mail, WhatsApp, Chat",
       "Status: Entwurf geprüft",
     ],
   },
@@ -241,6 +255,7 @@ const sixStepCards = [
     cardTitle: "Performance-Überblick",
     icon: "⌁",
     tone: "green",
+    cta: "Alle Analytics anzeigen",
     rows: [
       "Fan-Wachstum: +12,4 %",
       "Conversion Rate: 8,7 %",
@@ -795,6 +810,41 @@ export default function LandingV2() {
                   <strong>{step.cardTitle}</strong>
                   {step.badge && <em>{step.badge}</em>}
                 </div>
+
+                {step.profile && (
+                  <div className={styles.stepContactProfile}>
+                    <span aria-hidden="true">{step.profile.initials}</span>
+                    <div>
+                      <strong>{step.profile.name}</strong>
+                      <small>{step.profile.email}</small>
+                      <small>{step.profile.phone}</small>
+                      <em>{step.profile.tag}</em>
+                    </div>
+                  </div>
+                )}
+
+                {step.metrics && (
+                  <div className={styles.stepMetricGrid}>
+                    {step.metrics.map(([label, value]) => (
+                      <div key={label}>
+                        <span>{label}</span>
+                        <strong>{value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {step.suggestions && (
+                  <div className={styles.stepAiSuggestions}>
+                    {step.suggestions.map((suggestion) => (
+                      <div className={styles.stepAiSuggestion} key={suggestion}>
+                        <span>{suggestion}</span>
+                        <button type="button">Auswählen</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className={styles.stepRows}>
                   {step.rows.map((row, rowIndex) => (
                     <div className={styles.stepRow} key={row}>
@@ -802,14 +852,11 @@ export default function LandingV2() {
                         {rowIndex === step.rows.length - 1 ? "✓" : ""}
                       </i>
                       <span>{row}</span>
-                      {index === 2 && rowIndex < 3 && (
-                        <button type="button">Auswählen</button>
-                      )}
                     </div>
                   ))}
                 </div>
                 <a href="#early-access">
-                  {index === 5 ? "Alle Analytics anzeigen" : "Details anzeigen"}
+                  {step.cta}
                   <span>→</span>
                 </a>
               </div>
