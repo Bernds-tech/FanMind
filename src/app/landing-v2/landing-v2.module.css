@@ -64,15 +64,15 @@
 .sixStepsSection {
   position: relative;
   z-index: 1;
-  margin-top: 20px;
-  padding: 30px 0 34px;
+  margin-top: 12px;
+  padding: 34px 0 34px;
   isolation: isolate;
 }
 
 .sixStepsSection::before {
   content: "";
   position: absolute;
-  inset: -28px -48px -18px;
+  inset: -36px -48px -18px;
   z-index: -3;
   background:
     radial-gradient(circle at 8% 20%, rgba(0, 132, 255, 0.24), transparent 18%),
@@ -84,7 +84,7 @@
 .sixStepsSection::after {
   content: "";
   position: absolute;
-  inset: 8px -48px auto;
+  inset: 0 -48px auto;
   z-index: -2;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(24, 140, 255, 0.44), rgba(168, 76, 255, 0.36), transparent);
@@ -1899,7 +1899,7 @@
   position: relative;
   z-index: 1;
   margin-top: 22px;
-  padding: 22px 0 22px;
+  padding: 22px 0 14px;
   isolation: isolate;
 }
 
@@ -1920,7 +1920,7 @@
       transparent 26%
     ),
     radial-gradient(circle at 88% 7%, rgba(0, 120, 255, 0.16), transparent 20%),
-    linear-gradient(180deg, rgba(1, 8, 21, 0.02), rgba(3, 13, 31, 0.9));
+    linear-gradient(180deg, rgba(1, 8, 21, 0.02) 0%, rgba(3, 13, 31, 0.88) 72%, rgba(2, 10, 24, 0.72) 100%);
 }
 
 .showcaseGridGlow {
@@ -1992,8 +1992,8 @@
     minmax(260px, 0.26fr)
     minmax(760px, 1fr)
     minmax(260px, 0.26fr);
-  gap: clamp(16px, 1.4vw, 24px);
-  align-items: center;
+  gap: clamp(14px, 1.25vw, 22px);
+  align-items: start;
 }
 
 .showcaseStage > * {
@@ -2002,7 +2002,8 @@
 
 .showcaseSideColumn {
   display: grid;
-  gap: 10px;
+  gap: 9px;
+  padding-top: 8px;
 }
 
 .showcaseMiniCard,
@@ -2475,8 +2476,8 @@
 .showcaseInsightCard {
   display: grid;
   align-content: start;
-  min-height: 142px;
-  padding: 12px 13px;
+  min-height: 138px;
+  padding: 12px 15px;
   border-radius: 15px;
 }
 
@@ -2608,8 +2609,9 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 12px;
-  padding-inline: clamp(180px, 18vw, 300px);
+  width: min(1120px, 100%);
+  margin: 8px auto 0;
+  padding-inline: clamp(18px, 2.6vw, 42px);
 }
 
 .showcaseBenefitGrid article {
@@ -2617,8 +2619,8 @@
   grid-template-columns: 34px 1fr;
   align-items: center;
   gap: 11px;
-  min-height: 78px;
-  padding: 13px 16px;
+  min-height: 74px;
+  padding: 12px 16px;
   border-radius: 14px;
 }
 
@@ -2667,7 +2669,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .showcaseFeatureStrip article {
@@ -2675,8 +2677,8 @@
   grid-template-columns: 58px 1fr;
   align-items: center;
   gap: 15px;
-  min-height: 92px;
-  padding: 16px 22px;
+  min-height: 86px;
+  padding: 14px 22px;
   border-radius: 14px;
 }
 
@@ -2891,7 +2893,8 @@
   }
 
   .showcaseBenefitGrid {
-    padding-inline: clamp(120px, 14vw, 235px);
+    width: min(1080px, 100%);
+    padding-inline: clamp(16px, 2vw, 34px);
   }
   .processTrack {
     gap: 16px;
