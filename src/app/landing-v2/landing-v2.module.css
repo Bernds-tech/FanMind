@@ -52,7 +52,8 @@
 
 .heroSection,
 .problemSolutionSection,
-.productShowcaseSection {
+.productShowcaseSection,
+.siteFooter {
   position: relative;
   z-index: 1;
   width: min(1804px, 100%);
@@ -63,8 +64,7 @@
 .hero,
 .heroTrustBar,
 .heroFeatureGrid,
-.heroBottomCta,
-.heroMiniFooter {
+.heroBottomCta {
   position: relative;
   z-index: 1;
   width: 100%;
@@ -129,7 +129,7 @@
 .headerActions a,
 .heroCtas a,
 .heroBottomCta a,
-.heroMiniFooter a {
+.siteFooter a {
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -138,7 +138,7 @@
 }
 
 .nav a:hover,
-.heroMiniFooter a:hover {
+.siteFooter a:hover {
   color: #fff;
   transform: translateY(-1px);
 }
@@ -2406,30 +2406,33 @@
   font-size: 14px;
 }
 
-.heroMiniFooter {
+.siteFooter {
   display: grid;
   grid-template-columns: 154px 1fr auto 260px 44px;
   align-items: center;
   gap: 22px;
-  min-height: 43px;
+  min-height: 58px;
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(50, 144, 255, 0.26);
   color: #b8c2cf;
 }
 
-.heroMiniFooter .logo {
+.siteFooter .logo {
   font-size: 23px;
 }
 
-.heroMiniFooter .logoMark {
+.siteFooter .logoMark {
   width: 30px;
   height: 30px;
 }
 
-.heroMiniFooter p,
-.heroMiniFooter nav a {
+.siteFooter p,
+.siteFooter nav a {
   font-size: 10px;
 }
 
-.heroMiniFooter nav {
+.siteFooter nav {
   display: flex;
   gap: 42px;
 }
@@ -2521,7 +2524,7 @@
   .demoSecondary {
     width: 100%;
   }
-  .heroMiniFooter {
+  .siteFooter {
     grid-template-columns: 1fr;
     justify-items: center;
     padding-block: 20px;
@@ -2692,7 +2695,7 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  .heroMiniFooter nav,
+  .siteFooter nav,
   .socials {
     flex-wrap: wrap;
     gap: 18px;
