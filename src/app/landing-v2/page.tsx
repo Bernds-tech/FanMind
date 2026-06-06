@@ -604,10 +604,10 @@ export default function LandingV2() {
 
                 <div className={styles.contactTable}>
                   <div className={styles.tableHead}>
-                    <span>Name</span><span>Status</span><span>Profil</span><span>Tags</span><span>Fan Score</span><span>Letzter Kontakt</span><span>Nächster Follow-up</span>
+                    <span>Name</span><span>Status</span><span>Profil</span><span>Tags</span><span>Fan Score</span><span>Letzter Kontakt</span><span>Nächster Follow-up</span><span>Owner</span>
                   </div>
                   {showcaseContacts.map((row) => (
-                    <div className={styles.tableRow} key={row[1]}>
+                    <div className={styles.tableRow} key={`${row[1]}-${row[6]}-${row[7]}`}>
                       <span><i>{row[0]}</i>{row[1]}</span>
                       <span><b>{row[2]}</b></span>
                       <span>{row[3]}</span>
@@ -615,6 +615,7 @@ export default function LandingV2() {
                       <span className={styles.scoreCell}>{row[5]}</span>
                       <span>{row[6]}</span>
                       <span className={row[7] === "Überfällig" ? styles.overdueCell : ""}>{row[7]}</span>
+                      <span><i>{row[0]}</i></span>
                     </div>
                   ))}
                 </div>
