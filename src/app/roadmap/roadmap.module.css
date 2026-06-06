@@ -1,0 +1,141 @@
+.page {
+  background: #08111f;
+  color: #e5edf7;
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 auto 38px;
+  max-width: 1360px;
+}
+
+.header > a {
+  color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.header nav {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.header nav a {
+  border: 1px solid rgba(226, 232, 240, 0.18);
+  border-radius: 999px;
+  color: #cbd5e1;
+  padding: 0.55rem 0.85rem;
+}
+
+.hero,
+.grid,
+.integrationNotice {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1360px;
+}
+
+.hero {
+  margin-bottom: 28px;
+}
+
+.hero p {
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  color: #ffffff;
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  letter-spacing: -0.06em;
+  line-height: 0.96;
+  margin: 0.5rem 0 0.8rem;
+}
+
+.hero span {
+  color: #cbd5e1;
+  display: block;
+  font-size: 1.1rem;
+  max-width: 760px;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.column,
+.integrationNotice {
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 28px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+  padding: 1.1rem;
+}
+
+.column h2,
+.integrationNotice h2 {
+  color: #ffffff;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.items {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.item {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.item h3 {
+  color: #ffffff;
+  font-size: 0.98rem;
+  margin-bottom: 0.28rem;
+}
+
+.item p,
+.integrationNotice p {
+  color: #a8b3c7;
+  line-height: 1.55;
+}
+
+.integrationNotice {
+  margin-top: 1rem;
+}
+
+@media (max-width: 1160px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: 18px;
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
