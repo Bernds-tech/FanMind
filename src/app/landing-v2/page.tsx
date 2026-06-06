@@ -1346,10 +1346,10 @@ export default function LandingV2() {
               </marker>
             </defs>
             <g filter="url(#integration-flow-glow-magenta)">
-              <path d="M 14 48 C 47 30 82 25 119 30" />
-              <path d="M 13 58 C 48 50 84 50 119 54" />
-              <path d="M 13 68 C 49 76 84 76 119 72" />
-              <path d="M 14 78 C 48 92 82 96 118 92" />
+              <path d="M 119 30 C 82 25 47 30 14 48" />
+              <path d="M 119 54 C 84 50 48 50 13 58" />
+              <path d="M 119 72 C 84 76 49 76 13 68" />
+              <path d="M 118 92 C 82 96 48 92 14 78" />
             </g>
           </svg>
 
