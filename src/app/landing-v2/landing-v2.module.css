@@ -1988,12 +1988,16 @@
 
 .showcaseStage {
   display: grid;
-  grid-template-columns: minmax(300px, 0.31fr) minmax(1080px, 1fr) minmax(
-      300px,
-      0.3fr
-    );
-  gap: 18px;
+  grid-template-columns:
+    minmax(260px, 0.26fr)
+    minmax(760px, 1fr)
+    minmax(260px, 0.26fr);
+  gap: clamp(16px, 1.4vw, 24px);
   align-items: center;
+}
+
+.showcaseStage > * {
+  min-width: 0;
 }
 
 .showcaseSideColumn {
@@ -2149,6 +2153,7 @@
 
 .showcaseDashboardWrap {
   position: relative;
+  min-width: 0;
   padding: 1px;
   border-radius: 23px;
   background: linear-gradient(
@@ -2194,7 +2199,7 @@
 
 .showcaseDashboard {
   display: grid;
-  grid-template-columns: 168px 1fr;
+  grid-template-columns: minmax(144px, 168px) minmax(0, 1fr);
   min-height: 506px;
   border-radius: 22px;
   background: rgba(2, 10, 25, 0.95);
@@ -2878,11 +2883,11 @@
 
 @media (max-width: 1700px) {
   .showcaseStage {
-    grid-template-columns: minmax(270px, 0.31fr) minmax(980px, 1fr) minmax(
-        270px,
-        0.3fr
-      );
-    gap: 18px;
+    grid-template-columns:
+      minmax(240px, 0.25fr)
+      minmax(720px, 1fr)
+      minmax(240px, 0.25fr);
+    gap: clamp(14px, 1.25vw, 20px);
   }
 
   .showcaseBenefitGrid {
