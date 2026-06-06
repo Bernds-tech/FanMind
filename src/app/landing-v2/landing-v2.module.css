@@ -4196,16 +4196,16 @@
 .integrationsSection {
   position: relative;
   z-index: 1;
-  width: min(1680px, calc(100% - 56px));
-  margin: 10px auto 0;
-  padding: 18px 0 10px;
+  width: min(1500px, calc(100% - 96px));
+  margin: 8px auto 0;
+  padding: 14px 0 4px;
   isolation: isolate;
 }
 
 .integrationsSection::before {
   content: "";
   position: absolute;
-  inset: -34px -44px -22px;
+  inset: -30px -34px -12px;
   z-index: -3;
   background:
     radial-gradient(circle at 10% 15%, rgba(0, 151, 255, 0.18), transparent 15%),
@@ -4217,7 +4217,7 @@
 .integrationsSection::after {
   content: "";
   position: absolute;
-  inset: 255px -28px auto;
+  inset: 238px 18px auto;
   z-index: -2;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(0, 204, 255, 0.28), rgba(198, 72, 255, 0.24), transparent);
@@ -4264,12 +4264,12 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  min-height: 36px;
-  padding: 0 26px;
+  min-height: 34px;
+  padding: 0 22px;
   border: 1px solid rgba(0, 149, 255, 0.58);
   border-radius: 999px;
   background: rgba(2, 16, 35, 0.78);
-  box-shadow: inset 0 0 18px rgba(0, 166, 255, 0.12), 0 0 20px rgba(0, 143, 255, 0.16);
+  box-shadow: inset 0 0 16px rgba(0, 166, 255, 0.1), 0 0 16px rgba(0, 143, 255, 0.12);
   color: #00f0ff;
   font-size: 14px;
   font-weight: 900;
@@ -4279,17 +4279,17 @@
 .integrationsBadge span {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 1px solid rgba(0, 221, 255, 0.72);
   border-radius: 50%;
   color: #00d5ff;
 }
 
 .integrationsHeader h2 {
-  max-width: 910px;
-  margin-top: 10px;
-  font-size: clamp(44px, 4vw, 66px);
+  max-width: 850px;
+  margin-top: 8px;
+  font-size: clamp(42px, 3.75vw, 62px);
   line-height: 1.01;
   letter-spacing: -3px;
   text-shadow: 0 16px 42px rgba(0, 0, 0, 0.5);
@@ -4303,31 +4303,31 @@
 }
 
 .integrationsHeader p {
-  max-width: 930px;
-  margin-top: 12px;
+  max-width: 780px;
+  margin-top: 8px;
   color: #d8dde8;
-  font-size: 19px;
-  line-height: 1.38;
+  font-size: 18px;
+  line-height: 1.34;
 }
 
 .integrationChannelGrid {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .integrationChannelCard {
   display: grid;
   justify-items: center;
-  min-height: 172px;
-  padding: 16px 12px 12px;
+  min-height: 138px;
+  padding: 13px 10px 10px;
   border: 1px solid rgba(16, 134, 255, 0.54);
-  border-radius: 12px;
+  border-radius: 11px;
   background:
-    radial-gradient(circle at 50% 6%, rgba(8, 111, 255, 0.14), transparent 39%),
+    radial-gradient(circle at 50% 6%, rgba(8, 111, 255, 0.1), transparent 38%),
     linear-gradient(180deg, rgba(5, 18, 43, 0.72), rgba(4, 13, 31, 0.9));
-  box-shadow: inset 0 0 22px rgba(0, 126, 255, 0.08), 0 0 20px rgba(0, 110, 255, 0.06);
+  box-shadow: inset 0 0 18px rgba(0, 126, 255, 0.06), 0 0 14px rgba(0, 110, 255, 0.04);
   text-align: center;
 }
 
@@ -4341,13 +4341,13 @@
 .integrationChannelIcon {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   color: #0b9dff;
-  font-size: 34px;
+  font-size: 27px;
   font-weight: 900;
   line-height: 1;
-  text-shadow: 0 0 15px currentColor;
+  text-shadow: 0 0 10px currentColor;
 }
 
 .integrationChannelCard[data-tone="green"] .integrationChannelIcon { color: #13e695; }
@@ -4358,27 +4358,27 @@
 .integrationChannelCard[data-tone="white"] .integrationChannelIcon { color: #ffffff; }
 
 .integrationChannelCard h3 {
-  margin-top: 9px;
+  margin-top: 7px;
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: -0.35px;
 }
 
 .integrationChannelCard p {
-  margin-top: 7px;
-  color: #d2d8e5;
-  font-size: 12.5px;
-  line-height: 1.32;
+  margin-top: 5px;
+  color: #cbd3e1;
+  font-size: 11.6px;
+  line-height: 1.25;
 }
 
 .integrationChannelCard > span {
   align-self: end;
-  margin-top: 10px;
-  padding: 4px 11px;
+  margin-top: 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   background: rgba(0, 224, 132, 0.1);
   color: #13e695;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 900;
 }
 
@@ -4397,24 +4397,24 @@
 
 .integrationFlowPanel {
   display: grid;
-  grid-template-columns: minmax(300px, 410px) 98px 212px 98px minmax(410px, 1fr);
+  grid-template-columns: minmax(280px, 380px) 72px 204px 72px minmax(390px, 1fr);
   align-items: center;
-  gap: 14px;
-  min-height: 224px;
-  margin-top: 12px;
-  padding: 18px 22px;
+  gap: 12px;
+  min-height: 210px;
+  margin-top: 10px;
+  padding: 16px 18px;
   border: 1px solid rgba(59, 116, 184, 0.36);
   border-radius: 12px;
   background: rgba(4, 15, 34, 0.68);
-  box-shadow: inset 0 0 42px rgba(0, 132, 255, 0.065);
+  box-shadow: inset 0 0 34px rgba(0, 132, 255, 0.05);
 }
 
 .integrationSourcePanel > strong,
 .integrationActionPanel > strong {
   display: block;
-  margin-bottom: 9px;
+  margin-bottom: 8px;
   color: #00b8ff;
-  font-size: 13px;
+  font-size: 12px;
   text-align: center;
   letter-spacing: 0.15px;
 }
@@ -4426,8 +4426,8 @@
 .integrationSourcePanel > div {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 7px 10px;
-  padding: 9px;
+  gap: 6px 8px;
+  padding: 8px;
   border: 1px solid rgba(0, 139, 255, 0.3);
   border-radius: 11px;
   background: rgba(2, 18, 39, 0.66);
@@ -4438,21 +4438,21 @@
   grid-template-columns: 22px 1fr 9px;
   align-items: center;
   gap: 9px;
-  min-height: 36px;
-  padding: 0 11px;
+  min-height: 34px;
+  padding: 0 10px;
   border: 1px solid rgba(34, 122, 190, 0.34);
   border-radius: 8px;
   background: rgba(5, 28, 55, 0.72);
   color: #f8fbff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .integrationSourcePanel i {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 1px solid rgba(4, 216, 255, 0.82);
   border-radius: 5px;
   color: #04d8ff;
@@ -4472,46 +4472,46 @@
 
 .integrationFlowLinesLeft,
 .integrationFlowLinesRight {
-  height: 78px;
-  opacity: 0.82;
+  height: 68px;
+  opacity: 0.52;
   background:
-    linear-gradient(18deg, transparent 0 42%, rgba(0, 205, 255, 0.9) 43% 44.6%, transparent 45.6% 100%),
-    linear-gradient(0deg, transparent 0 49%, rgba(0, 205, 255, 0.9) 50% 51.6%, transparent 52.6% 100%),
-    linear-gradient(-18deg, transparent 0 42%, rgba(0, 205, 255, 0.9) 43% 44.6%, transparent 45.6% 100%);
-  filter: drop-shadow(0 0 10px rgba(0, 205, 255, 0.7));
+    linear-gradient(18deg, transparent 0 42%, rgba(0, 205, 255, 0.62) 43% 44.6%, transparent 45.6% 100%),
+    linear-gradient(0deg, transparent 0 49%, rgba(0, 205, 255, 0.62) 50% 51.6%, transparent 52.6% 100%),
+    linear-gradient(-18deg, transparent 0 42%, rgba(0, 205, 255, 0.62) 43% 44.6%, transparent 45.6% 100%);
+  filter: drop-shadow(0 0 7px rgba(0, 205, 255, 0.36));
 }
 
 .integrationFlowLinesRight {
   transform: scaleX(-1);
   background:
-    linear-gradient(18deg, transparent 0 42%, rgba(207, 79, 255, 0.88) 43% 44.6%, transparent 45.6% 100%),
-    linear-gradient(0deg, transparent 0 49%, rgba(207, 79, 255, 0.88) 50% 51.6%, transparent 52.6% 100%),
-    linear-gradient(-18deg, transparent 0 42%, rgba(207, 79, 255, 0.88) 43% 44.6%, transparent 45.6% 100%);
-  filter: drop-shadow(0 0 10px rgba(207, 79, 255, 0.62));
+    linear-gradient(18deg, transparent 0 42%, rgba(207, 79, 255, 0.58) 43% 44.6%, transparent 45.6% 100%),
+    linear-gradient(0deg, transparent 0 49%, rgba(207, 79, 255, 0.58) 50% 51.6%, transparent 52.6% 100%),
+    linear-gradient(-18deg, transparent 0 42%, rgba(207, 79, 255, 0.58) 43% 44.6%, transparent 45.6% 100%);
+  filter: drop-shadow(0 0 7px rgba(207, 79, 255, 0.34));
 }
 
 .integrationBrainCard {
   display: grid;
   justify-items: center;
-  min-height: 176px;
-  padding: 18px 16px;
+  min-height: 168px;
+  padding: 17px 16px;
   border: 1px solid rgba(0, 135, 255, 0.68);
   border-radius: 14px;
   background: radial-gradient(circle at 50% 15%, rgba(0, 120, 255, 0.36), rgba(5, 18, 43, 0.94) 58%);
-  box-shadow: inset 0 0 32px rgba(0, 132, 255, 0.14), 0 0 30px rgba(0, 123, 255, 0.16);
+  box-shadow: inset 0 0 28px rgba(0, 132, 255, 0.12), 0 0 24px rgba(0, 123, 255, 0.13);
   text-align: center;
 }
 
 .integrationBrainCard div {
-  font-size: 58px;
+  font-size: 52px;
   line-height: 1;
-  filter: drop-shadow(0 0 18px rgba(0, 133, 255, 0.88));
+  filter: drop-shadow(0 0 14px rgba(0, 133, 255, 0.72));
 }
 
 .integrationBrainCard strong {
-  margin-top: 9px;
+  margin-top: 8px;
   color: #fff;
-  font-size: 29px;
+  font-size: 27px;
   letter-spacing: -1px;
 }
 
@@ -4524,14 +4524,14 @@
 .integrationActionPanel > div {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 10px;
 }
 
 .integrationActionPanel article {
   display: grid;
   justify-items: center;
-  min-height: 174px;
-  padding: 15px 11px 10px;
+  min-height: 156px;
+  padding: 14px 10px 10px;
   border: 1px solid rgba(99, 73, 188, 0.5);
   border-radius: 11px;
   background: linear-gradient(180deg, rgba(14, 20, 50, 0.78), rgba(5, 14, 32, 0.92));
@@ -4540,19 +4540,19 @@
 
 .integrationActionPanel article > span {
   color: #bf4fff;
-  font-size: 32px;
-  text-shadow: 0 0 16px rgba(197, 84, 255, 0.7);
+  font-size: 27px;
+  text-shadow: 0 0 11px rgba(197, 84, 255, 0.5);
 }
 
 .integrationActionPanel h3 {
-  margin-top: 8px;
+  margin-top: 7px;
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: -0.4px;
 }
 
 .integrationActionPanel p {
-  margin-top: 7px;
+  margin-top: 6px;
   color: #d2d7e4;
   font-size: 12.5px;
   line-height: 1.32;
@@ -4562,9 +4562,9 @@
   display: grid;
   place-items: center;
   align-self: end;
-  width: 27px;
-  height: 27px;
-  margin-top: 9px;
+  width: 24px;
+  height: 24px;
+  margin-top: 8px;
   border: 1px solid rgba(0, 157, 255, 0.46);
   border-radius: 50%;
   background: rgba(0, 121, 255, 0.16);
@@ -4578,9 +4578,9 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
-  width: min(1460px, 91%);
-  margin: 14px auto 0;
-  padding: 10px 22px;
+  width: min(1280px, 88%);
+  margin: 10px auto 0;
+  padding: 8px 18px;
   border: 1px solid rgba(58, 113, 181, 0.34);
   border-radius: 12px;
   background: rgba(5, 17, 38, 0.7);
@@ -4589,11 +4589,11 @@
 
 .integrationBenefits article {
   display: grid;
-  grid-template-columns: 62px 1fr;
+  grid-template-columns: 50px 1fr;
   align-items: center;
   gap: 12px;
-  min-height: 72px;
-  padding: 0 18px;
+  min-height: 60px;
+  padding: 0 14px;
   border-right: 1px solid rgba(59, 113, 178, 0.24);
 }
 
@@ -4604,13 +4604,13 @@
 .integrationBenefits article > span {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(0, 135, 255, 0.58);
   border-radius: 50%;
   color: #0b9dff;
-  font-size: 30px;
-  box-shadow: inset 0 0 18px rgba(0, 132, 255, 0.15), 0 0 18px rgba(0, 132, 255, 0.12);
+  font-size: 22px;
+  box-shadow: inset 0 0 12px rgba(0, 132, 255, 0.1), 0 0 12px rgba(0, 132, 255, 0.08);
 }
 
 .integrationBenefits article[data-tone="purple"] > span {
@@ -4630,23 +4630,23 @@
 
 .integrationBenefits strong {
   color: #fff;
-  font-size: 18px;
-  letter-spacing: -0.4px;
+  font-size: 15.5px;
+  letter-spacing: -0.25px;
 }
 
 .integrationBenefits p {
-  margin-top: 5px;
-  color: #d1d7e2;
-  font-size: 13.2px;
+  margin-top: 3px;
+  color: #c9d1de;
+  font-size: 11.8px;
   line-height: 1.32;
 }
 
 .integrationCtaBox {
   display: grid;
   justify-items: center;
-  width: min(670px, 92%);
-  margin: 10px auto 0;
-  padding: 7px 12px 12px;
+  width: min(650px, 88%);
+  margin: 8px auto 0;
+  padding: 6px 10px 10px;
   border: 1px solid rgba(40, 100, 170, 0.24);
   border-radius: 12px;
   background: rgba(4, 16, 36, 0.66);
@@ -4654,25 +4654,25 @@
 
 .integrationCtaBox > div {
   display: grid;
-  grid-template-columns: 275px 275px;
-  gap: 28px;
+  grid-template-columns: 260px 260px;
+  gap: 22px;
 }
 
 .integrationCtaBox .demoButton,
 .integrationCtaBox .outlineButton {
   width: 100%;
-  height: 50px;
-  font-size: 17px;
+  height: 46px;
+  font-size: 16px;
 }
 
 .integrationCtaBox p {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 22px;
-  margin-top: 10px;
+  gap: 18px;
+  margin-top: 8px;
   color: #d8dee9;
-  font-size: 13.5px;
+  font-size: 12.8px;
 }
 
 .integrationCtaBox p span::first-letter {
