@@ -1,8 +1,7 @@
 /*
   Scoped refinements for the 04 six-steps process cards.
-  The process cards use an Excel-like area grid: fixed column spans outside,
-  simple full-width rows inside. This avoids narrow inner columns and prevents
-  vertical letter wrapping.
+  The important part: never target [class*="stepRow"] globally, because it also
+  matches the container class stepRows. Always target rows via stepRows > stepRow.
 */
 
 #six-steps [class*="processTrack"] {
@@ -51,7 +50,7 @@
   margin-top: 11px !important;
 }
 
-#six-steps [class*="stepRow"] {
+#six-steps [class*="stepRows"] > [class*="stepRow"] {
   display: flex !important;
   width: 100% !important;
   min-width: 0 !important;
@@ -65,12 +64,13 @@
   white-space: normal !important;
 }
 
-#six-steps [class*="stepRow"] i {
+#six-steps [class*="stepRows"] > [class*="stepRow"] > i {
   display: none !important;
 }
 
-#six-steps [class*="stepRow"] span {
+#six-steps [class*="stepRows"] > [class*="stepRow"] > span {
   display: block !important;
+  flex: 1 1 auto !important;
   width: auto !important;
   min-width: 0 !important;
   max-width: 100% !important;
@@ -80,7 +80,7 @@
   hyphens: none !important;
 }
 
-#six-steps [class*="stepRow"] button {
+#six-steps [class*="stepRows"] > [class*="stepRow"] > button {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -107,29 +107,29 @@
   min-height: 390px !important;
 }
 
-#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"] {
+#six-steps [class*="processStep"]:nth-child(3) [class*="stepRows"] > [class*="stepRow"] {
   min-height: 62px !important;
   justify-content: space-between !important;
   text-align: left !important;
 }
 
-#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"] span {
+#six-steps [class*="processStep"]:nth-child(3) [class*="stepRows"] > [class*="stepRow"] > span {
   text-align: left !important;
 }
 
-#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"]:last-child {
+#six-steps [class*="processStep"]:nth-child(3) [class*="stepRows"] > [class*="stepRow"]:last-child {
   min-height: 42px !important;
   justify-content: center !important;
   text-align: center !important;
 }
 
-#six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"]:last-child span {
+#six-steps [class*="processStep"]:nth-child(3) [class*="stepRows"] > [class*="stepRow"]:last-child > span {
   text-align: center !important;
 }
 
-#six-steps [class*="processStep"]:nth-child(4) [class*="stepRow"],
-#six-steps [class*="processStep"]:nth-child(5) [class*="stepRow"],
-#six-steps [class*="processStep"]:nth-child(6) [class*="stepRow"] {
+#six-steps [class*="processStep"]:nth-child(4) [class*="stepRows"] > [class*="stepRow"],
+#six-steps [class*="processStep"]:nth-child(5) [class*="stepRows"] > [class*="stepRow"],
+#six-steps [class*="processStep"]:nth-child(6) [class*="stepRows"] > [class*="stepRow"] {
   min-height: 41px !important;
 }
 
