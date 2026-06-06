@@ -1,5 +1,5 @@
 /* Final tune for 04 after visual review.
-   Fixes: step 3 clipping, step 4 sizing, and overall card balance. */
+   Fixes: step card row overflow and keeps the 6-step section compact. */
 
 #six-steps [class*="processTrack"] {
   align-items: start !important;
@@ -25,7 +25,7 @@
 }
 
 #six-steps [class*="stepExampleCard"] {
-  min-height: 214px !important;
+  min-height: 224px !important;
   margin-top: 15px !important;
   padding: 13px 13px !important;
   overflow: hidden !important;
@@ -40,39 +40,48 @@
 }
 
 #six-steps [class*="stepRows"] {
-  gap: 7px !important;
+  display: grid !important;
+  gap: 8px !important;
 }
 
+/* Important: the original JSX has optional buttons only on step 3.
+   A global 3-column grid caused all other cards to collapse/overlap.
+   Use a safe 2-column layout by default and only use 3 columns for step 3. */
 #six-steps [class*="stepRow"] {
   display: grid !important;
-  grid-template-columns: 18px minmax(0, 1fr) auto !important;
+  grid-template-columns: 18px minmax(0, 1fr) !important;
   align-items: center !important;
-  gap: 7px !important;
-  min-height: 36px !important;
-  padding: 7px 8px !important;
-  font-size: 12.2px !important;
-  line-height: 1.16 !important;
+  gap: 8px !important;
+  min-height: 42px !important;
+  padding: 8px 10px !important;
+  font-size: 12.6px !important;
+  line-height: 1.18 !important;
   text-align: center !important;
 }
 
 #six-steps [class*="stepRow"] i {
+  display: grid !important;
+  place-items: center !important;
   width: 18px !important;
   min-width: 18px !important;
+  min-height: 18px !important;
   color: #20f0a3 !important;
   font-style: normal !important;
 }
 
 #six-steps [class*="stepRow"] span {
+  display: block !important;
   min-width: 0 !important;
-  overflow: visible !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
 }
 
 #six-steps [class*="stepRow"] button {
-  min-width: 54px !important;
-  max-width: 58px !important;
-  min-height: 23px !important;
+  min-width: 58px !important;
+  max-width: 64px !important;
+  min-height: 24px !important;
   margin-left: 0 !important;
-  padding: 0 5px !important;
+  padding: 0 6px !important;
   overflow: hidden !important;
   border-radius: 7px !important;
   font-size: 9.5px !important;
@@ -80,38 +89,39 @@
 }
 
 #six-steps [class*="stepExampleCard"] > a {
-  margin-top: 10px !important;
+  margin-top: 12px !important;
   font-size: 14px !important;
 }
 
-/* Step 3 needs more vertical room because it has selectable AI answers. */
+/* Step 3 needs a real third column for selectable AI answers. */
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepExampleCard"] {
-  min-height: 272px !important;
+  min-height: 292px !important;
   padding-inline: 12px !important;
 }
 
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepRow"] {
-  grid-template-columns: 16px minmax(0, 1fr) 54px !important;
-  min-height: 51px !important;
+  grid-template-columns: 16px minmax(0, 1fr) 60px !important;
+  min-height: 54px !important;
   padding-inline: 7px !important;
-  font-size: 11.5px !important;
+  font-size: 11.4px !important;
+  text-align: left !important;
 }
 
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepCardTitle"] strong {
   font-size: 16px !important;
 }
 
-/* Step 4 should stay clean and compact, not visually oversized. */
+/* Step 4 is a clean follow-up card: keep it balanced but readable. */
 #six-steps [class*="processStep"]:nth-child(4) [class*="stepExampleCard"] {
-  min-height: 220px !important;
+  min-height: 232px !important;
 }
 
 #six-steps [class*="processStep"]:nth-child(4) [class*="stepRow"] {
-  min-height: 39px !important;
+  min-height: 43px !important;
 }
 
 #six-steps [class*="sixStepsStatement"] {
-  margin-top: 26px !important;
+  margin-top: 28px !important;
 }
 
 #six-steps [class*="sixStepsBenefits"] {
@@ -120,12 +130,12 @@
 
 @media (max-width: 1700px) {
   #six-steps [class*="stepExampleCard"] {
-    min-height: 204px !important;
+    min-height: 216px !important;
     padding: 12px !important;
   }
 
   #six-steps [class*="processStep"]:nth-child(3) [class*="stepExampleCard"] {
-    min-height: 266px !important;
+    min-height: 282px !important;
   }
 
   #six-steps [class*="processStep"] > p {
