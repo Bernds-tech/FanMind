@@ -1,7 +1,7 @@
 /*
   Scoped refinements for the 04 six-steps process cards.
-  The important part: never target [class*="stepRow"] globally, because it also
-  matches the container class stepRows. Always target rows via stepRows > stepRow.
+  The process cards use a stable Excel-like outer grid and full-width inner rows.
+  Important: direct-child selectors only, so stepRows is never styled as stepRow.
 */
 
 #six-steps [class*="processTrack"] {
@@ -27,19 +27,27 @@
 #six-steps [class*="stepExampleCard"] {
   display: grid !important;
   grid-template-rows: auto 1fr auto !important;
-  min-height: 334px !important;
-  padding: 14px !important;
+  min-height: 355px !important;
+  padding: 15px !important;
   overflow: hidden !important;
 }
 
 #six-steps [class*="stepCardTitle"] {
-  min-height: 36px !important;
-  gap: 9px !important;
+  min-height: 38px !important;
+  gap: 10px !important;
 }
 
 #six-steps [class*="stepCardTitle"] strong {
-  font-size: clamp(14px, 0.85vw, 16px) !important;
+  font-size: clamp(14px, 0.88vw, 17px) !important;
   line-height: 1.08 !important;
+}
+
+#six-steps [class*="stepCardTitle"] span {
+  width: 28px !important;
+  height: 28px !important;
+  border: 1px solid rgba(35, 183, 255, 0.32) !important;
+  border-radius: 10px !important;
+  background: rgba(11, 140, 255, 0.14) !important;
 }
 
 #six-steps [class*="stepRows"] {
@@ -47,14 +55,15 @@
   grid-template-columns: 1fr !important;
   align-content: start !important;
   gap: 8px !important;
-  margin-top: 11px !important;
+  margin-top: 12px !important;
 }
 
 #six-steps [class*="stepRows"] > [class*="stepRow"] {
+  position: relative !important;
   display: flex !important;
   width: 100% !important;
   min-width: 0 !important;
-  min-height: 39px !important;
+  min-height: 40px !important;
   align-items: center !important;
   justify-content: center !important;
   padding: 8px 10px !important;
@@ -62,6 +71,8 @@
   font-size: clamp(11.2px, 0.64vw, 12.2px) !important;
   line-height: 1.22 !important;
   white-space: normal !important;
+  border-color: rgba(60, 116, 188, 0.45) !important;
+  background: linear-gradient(180deg, rgba(9, 31, 66, 0.82), rgba(5, 18, 42, 0.86)) !important;
 }
 
 #six-steps [class*="stepRows"] > [class*="stepRow"] > i {
@@ -95,14 +106,56 @@
 
 #six-steps [class*="stepExampleCard"] > a {
   align-self: end !important;
-  margin-top: 10px !important;
+  margin-top: 12px !important;
   padding-top: 8px !important;
   min-height: 30px !important;
   justify-content: center !important;
   text-align: center !important;
 }
 
-/* AI suggestion card has the most content; give it a little more room. */
+/* Card 1: contact profile feel. */
+#six-steps [class*="processStep"]:nth-child(1) [class*="stepRows"] > [class*="stepRow"]:first-child {
+  min-height: 54px !important;
+  justify-content: flex-start !important;
+  padding-left: 54px !important;
+  text-align: left !important;
+}
+
+#six-steps [class*="processStep"]:nth-child(1) [class*="stepRows"] > [class*="stepRow"]:first-child::before {
+  content: "SM";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #15b56f, #6a5cff);
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 0 18px rgba(0, 225, 142, 0.22);
+  transform: translateY(-50%);
+}
+
+/* Card 2: detail table feel. */
+#six-steps [class*="processStep"]:nth-child(2) [class*="stepRows"] > [class*="stepRow"] {
+  justify-content: flex-start !important;
+  padding-left: 34px !important;
+  text-align: left !important;
+}
+
+#six-steps [class*="processStep"]:nth-child(2) [class*="stepRows"] > [class*="stepRow"]::before,
+#six-steps [class*="processStep"]:nth-child(4) [class*="stepRows"] > [class*="stepRow"]::before,
+#six-steps [class*="processStep"]:nth-child(6) [class*="stepRows"] > [class*="stepRow"]::before {
+  content: "✓";
+  position: absolute;
+  left: 12px;
+  color: #20f0a3;
+  font-weight: 900;
+}
+
+/* AI suggestion card has the most content; make it bubble-like and roomy. */
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepExampleCard"] {
   min-height: 390px !important;
 }
@@ -111,6 +164,7 @@
   min-height: 62px !important;
   justify-content: space-between !important;
   text-align: left !important;
+  background: linear-gradient(180deg, rgba(28, 25, 80, 0.76), rgba(9, 24, 56, 0.82)) !important;
 }
 
 #six-steps [class*="processStep"]:nth-child(3) [class*="stepRows"] > [class*="stepRow"] > span {
@@ -127,10 +181,45 @@
   text-align: center !important;
 }
 
+/* Card 4 and 5: channel/plan blocks. */
 #six-steps [class*="processStep"]:nth-child(4) [class*="stepRows"] > [class*="stepRow"],
 #six-steps [class*="processStep"]:nth-child(5) [class*="stepRows"] > [class*="stepRow"],
 #six-steps [class*="processStep"]:nth-child(6) [class*="stepRows"] > [class*="stepRow"] {
   min-height: 41px !important;
+}
+
+#six-steps [class*="processStep"]:nth-child(4) [class*="stepRows"] > [class*="stepRow"] {
+  justify-content: flex-start !important;
+  padding-left: 34px !important;
+  text-align: left !important;
+}
+
+#six-steps [class*="processStep"]:nth-child(5) [class*="stepRows"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+#six-steps [class*="processStep"]:nth-child(5) [class*="stepRows"] > [class*="stepRow"] {
+  min-height: 54px !important;
+  padding: 8px 6px !important;
+  font-weight: 700 !important;
+}
+
+#six-steps [class*="processStep"]:nth-child(5) [class*="stepRows"] > [class*="stepRow"]:nth-child(n+4) {
+  grid-column: span 3 !important;
+  min-height: 40px !important;
+}
+
+/* Card 6: analytics blocks with line accents. */
+#six-steps [class*="processStep"]:nth-child(6) [class*="stepRows"] > [class*="stepRow"]:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
+  width: 54px;
+  height: 14px;
+  border-bottom: 2px solid #21a8ff;
+  border-radius: 50%;
+  opacity: 0.75;
 }
 
 @media (max-width: 1500px) {
