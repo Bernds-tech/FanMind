@@ -95,6 +95,26 @@
   overflow: hidden !important;
 }
 
+/* Visual replacement for the compact Analytics card from the reference. */
+#showcase > div:nth-of-type(3) > div:last-child::after {
+  content: "⌁  Analytics\A\A    Fan-Wachstum  +12 %\A    Aktive Fans  4.892\A    Conversion  9,4 %\A    Antwortquote  34,8 %\A\AAlle anzeigen →";
+  display: block;
+  min-height: 126px;
+  padding: 13px 14px;
+  border: 1px solid rgba(0, 181, 255, 0.45);
+  border-radius: 14px;
+  color: #eaf4ff;
+  white-space: pre-line;
+  font-size: 12px;
+  line-height: 1.28;
+  background:
+    linear-gradient(160deg, rgba(7, 61, 105, 0.78), rgba(4, 18, 43, 0.92)),
+    radial-gradient(circle at 80% 25%, rgba(0, 160, 255, 0.24), transparent 38%);
+  box-shadow:
+    inset 0 0 24px rgba(0, 155, 255, 0.08),
+    0 0 28px rgba(0, 145, 255, 0.08);
+}
+
 /* Feature strip becomes a visible product row again, not a flat footer bar. */
 #showcase > div:nth-of-type(4) {
   position: relative !important;
