@@ -103,23 +103,57 @@
   border-top: 1px solid rgba(130, 185, 255, 0.07);
 }
 
+/* Left side cards: order and density now closer to the reference modules. */
 #showcase [class*="showcaseMiniCard"] {
   position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#showcase [class*="showcaseMiniCard"] [class*="showcaseMiniTitle"] {
+  order: 1;
+}
+
+#showcase [class*="showcaseMiniCard"] [class*="miniContactLine"] {
+  order: 2;
+}
+
+#showcase [class*="showcaseMiniCard"] p {
+  order: 3;
+}
+
+#showcase [class*="showcaseMiniCard"] [class*="showcaseTags"] {
+  order: 5;
+}
+
+#showcase [class*="showcaseMiniCard"][data-variant="0"] {
+  min-height: 150px !important;
+}
+
+#showcase [class*="showcaseMiniCard"][data-variant="1"] {
+  min-height: 156px !important;
+}
+
+#showcase [class*="showcaseMiniCard"][data-variant="2"] {
+  min-height: 166px !important;
 }
 
 #showcase [class*="showcaseMiniCard"][data-variant="0"]::after {
-  content: "Übersicht   Verlauf   Notizen   Dateien";
-  display: block;
-  margin-top: 9px;
-  padding-top: 7px;
+  order: 4;
+  content: "Übersicht    Verlauf    Notizen    Dateien";
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 7px 0 0;
   border-top: 1px solid rgba(140, 190, 255, 0.12);
   color: #21a7ff;
   font-size: 10px;
-  word-spacing: 7px;
+  line-height: 1;
 }
 
 #showcase [class*="showcaseMiniCard"][data-variant="1"]::after {
-  content: "Team 09:37  ·  Antwort geprüft  ·  Auswählen";
+  order: 4;
+  content: "Team 09:37   ·   Antwort geprüft   ·   Auswählen";
   display: block;
   margin-top: 8px;
   padding: 7px 9px;
@@ -131,17 +165,18 @@
 }
 
 #showcase [class*="showcaseMiniCard"][data-variant="2"]::after {
+  order: 4;
   content: "Öffnungsrate 38 %  ·  Klickrate 14 %  ·  Conversion 9,4 %";
   display: block;
-  margin-top: 8px;
-  padding-top: 15px;
+  margin-top: 9px;
+  padding-top: 17px;
   color: rgba(235, 245, 255, 0.78);
   font-size: 9.5px;
   background:
     linear-gradient(92deg, #00c8ff 0 18%, transparent 18% 22%, #00e178 22% 38%, transparent 38% 43%, #ff9f1c 43% 55%, transparent 55%);
   background-size: 100% 3px;
   background-repeat: no-repeat;
-  background-position: left 5px;
+  background-position: left 6px;
 }
 
 #showcase > div:nth-of-type(3) > div:nth-child(2) > div:first-child > div > div > div:nth-child(2),
@@ -220,6 +255,17 @@
     0 0 28px rgba(0, 145, 255, 0.1);
 }
 
+/* Balance the row under the left cards: no accidental empty visual hole. */
+#showcase > div:nth-of-type(3) > div:first-child::after {
+  content: "";
+  display: block;
+  min-height: 44px;
+  border-radius: 15px;
+  border: 1px solid rgba(0, 180, 255, 0.1);
+  background: linear-gradient(180deg, rgba(0, 120, 255, 0.05), transparent);
+  opacity: 0.75;
+}
+
 #showcase > div:nth-of-type(4) {
   position: relative !important;
   z-index: 5 !important;
@@ -255,6 +301,10 @@
 @media (max-width: 1200px) {
   #showcase {
     padding-bottom: 54px !important;
+  }
+
+  #showcase > div:nth-of-type(3) > div:first-child::after {
+    display: none;
   }
 
   #showcase > div:nth-of-type(3) > div:nth-child(2) > div:nth-child(2),
