@@ -176,11 +176,14 @@ const sixStepCards = [
     icon: "♙",
     tone: "blue",
     rows: [
-      "Sandra M. · sandra@mania-club.com",
-      "+43 660 123 45 67 · VIP interessiert",
-      "Quelle: Website-Formular · E-Mail-Postfach",
+      "Avatar SM · Sandra M.",
+      "sandra@mania-club.com",
+      "+43 660 123 45 67",
+      "VIP interessiert",
+      "Quelle: Website-Formular, E-Mail-Postfach, WhatsApp Chat",
       "Kontakt gespeichert",
     ],
+    cta: "Details anzeigen",
   },
   {
     step: "2",
@@ -190,11 +193,12 @@ const sixStepCards = [
     icon: "🧠",
     tone: "cyan",
     rows: [
-      "Interessen: Sommer-Event · VIP-Angebote",
+      "Interessen: Sommer-Event, VIP-Angebote",
       "Kaufhistorie: 2 Upsells gekauft",
       "Tonalität: freundlich, wertschätzend",
       "Letzter Kontakt: Heute, 09:42",
     ],
+    cta: "Details anzeigen",
   },
   {
     step: "3",
@@ -210,6 +214,7 @@ const sixStepCards = [
       "Danke für dein Interesse! Melde dich gerne bei weiteren Fragen.",
       "Freigabe durch Mensch erforderlich",
     ],
+    cta: "Mehr Vorschläge anzeigen",
   },
   {
     step: "4",
@@ -220,10 +225,12 @@ const sixStepCards = [
     tone: "blue",
     rows: [
       "Nächster Schritt: VIP-Infos + Friend-Ticket",
-      "Manuelle Prüfung: Heute, 10:00",
-      "Kanäle: E-Mail · Formular · Notiz",
-      "Priorität: Hoch · Owner: Nina D.",
+      "Versand: Heute, 10:00",
+      "Kanäle: E-Mail, WhatsApp, Chat",
+      "Priorität: Hoch",
+      "Owner: Nina D.",
     ],
+    cta: "Alle Follow-ups anzeigen",
   },
   {
     step: "5",
@@ -234,11 +241,13 @@ const sixStepCards = [
     tone: "green",
     badge: "Geplant",
     rows: [
-      "Zielgruppe: 1.260 · Öffnungsziel: 38 %",
-      "Conversion-Ziel: 9,4 %",
-      "Kanäle vorbereitet: E-Mail · Formular · Notiz",
+      "Zielgruppe: 1.260",
+      "Öffnungsrate: 38 %",
+      "Conversion: 9,4 %",
+      "Kanäle: E-Mail, WhatsApp, Chat",
       "Status: Entwurf geprüft",
     ],
+    cta: "Kampagnen-Übersicht",
   },
   {
     step: "6",
@@ -250,9 +259,10 @@ const sixStepCards = [
     rows: [
       "Fan-Wachstum: +12,4 %",
       "Conversion Rate: 8,7 %",
-      "Follow-up Quote: 34,8 %",
+      "Antwortquote: 34,8 %",
       "Insights für Optimierung vorbereitet",
     ],
+    cta: "Alle Analytics anzeigen",
   },
 ];
 
@@ -813,7 +823,7 @@ export default function LandingV2() {
                   ))}
                 </div>
                 <a href="#early-access">
-                  {index === 5 ? "Roadmap anzeigen" : "Details anzeigen"}
+                  {step.cta}
                   <span>→</span>
                 </a>
               </div>
