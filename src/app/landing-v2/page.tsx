@@ -996,129 +996,143 @@ export default function LandingV2() {
             ))}
           </div>
 
-          <div
-            className={styles.showcaseDashboardWrap}
-            aria-label="FanMind Kontakte Workspace Mockup"
-          >
-            <div className={styles.showcaseDashboard}>
-              <aside className={styles.showcaseSidebar}>
-                <Logo compact />
-                <strong>FanMind</strong>
-                <nav aria-label="Produktnavigation im Mockup">
-                  {showcaseNavItems.map((item, index) => (
-                    <span
-                      className={index === 1 ? styles.showcaseActiveNav : ""}
-                      key={item}
-                    >
-                      <i>{["⌂", "♙", "◌", "◷", "📣", "⌁", "⚙"][index]}</i>
-                      {item}
-                    </span>
-                  ))}
-                </nav>
-                <div className={styles.savedViews}>
-                  <small>Gespeicherte Ansichten</small>
-                  <span>
-                    ★ Top Fans <b>182</b>
-                  </span>
-                  <span>
-                    ✦ Reaktivierung <b>739</b>
-                  </span>
-                  <span>
-                    ★ Premium-Käufer <b>312</b>
-                  </span>
-                </div>
-              </aside>
-
-              <div className={styles.showcaseMainPanel}>
-                <div className={styles.showcaseTopbar}>
-                  <div>
-                    <h3>Kontakte</h3>
-                    <p>
-                      Verwalte alle Kontakte und Interaktionen mit deinen Fans.
-                    </p>
-                  </div>
-                  <div className={styles.showcaseSearch}>
-                    Suche nach Name, Tag, Profil, Sprache … <span>⌕</span>
-                  </div>
-                  <button type="button">+ Neuer Kontakt</button>
-                </div>
-
-                <div className={styles.showcaseMetricRow}>
-                  {showcaseMetrics.map((metric) => (
-                    <div
-                      className={styles.showcaseMetric}
-                      style={
-                        { "--accent": metric.color } as React.CSSProperties
-                      }
-                      key={metric.label}
-                    >
-                      <span>{metric.label}</span>
-                      <strong>{metric.value}</strong>
-                      <small>{metric.change}</small>
-                    </div>
-                  ))}
-                </div>
-
-                <div className={styles.segmentTabs}>
-                  {[
-                    "Alle",
-                    "VIP 182",
-                    "Warm 2.150",
-                    "Buyer 912",
-                    "Inactive 1.876",
-                    "Do not push 60",
-                    "Heute fällig 128",
-                  ].map((tab, index) => (
-                    <span
-                      className={index === 0 ? styles.activeSegmentTab : ""}
-                      key={tab}
-                    >
-                      {tab}
-                    </span>
-                  ))}
-                </div>
-
-                <div className={styles.contactTable}>
-                  <div className={styles.tableHead}>
-                    <span>Name</span>
-                    <span>Status</span>
-                    <span>Profil</span>
-                    <span>Tags</span>
-                    <span>Fan Score</span>
-                    <span>Letzter Kontakt</span>
-                    <span>Nächster Follow-up</span>
-                    <span>Owner</span>
-                  </div>
-                  {showcaseContacts.map((row) => (
-                    <div
-                      className={styles.tableRow}
-                      key={`${row[1]}-${row[6]}-${row[7]}`}
-                    >
-                      <span>
-                        <i>{row[0]}</i>
-                        {row[1]}
-                      </span>
-                      <span>
-                        <b>{row[2]}</b>
-                      </span>
-                      <span>{row[3]}</span>
-                      <span>{row[4]}</span>
-                      <span className={styles.scoreCell}>{row[5]}</span>
-                      <span>{row[6]}</span>
+          <div className={styles.showcaseCenterColumn}>
+            <div
+              className={styles.showcaseDashboardWrap}
+              aria-label="FanMind Kontakte Workspace Mockup"
+            >
+              <div className={styles.showcaseDashboard}>
+                <aside className={styles.showcaseSidebar}>
+                  <Logo compact />
+                  <strong>FanMind</strong>
+                  <nav aria-label="Produktnavigation im Mockup">
+                    {showcaseNavItems.map((item, index) => (
                       <span
-                        className={
-                          row[7] === "Überfällig" ? styles.overdueCell : ""
-                        }
+                        className={index === 1 ? styles.showcaseActiveNav : ""}
+                        key={item}
                       >
-                        {row[7]}
+                        <i>{["⌂", "♙", "◌", "◷", "📣", "⌁", "⚙"][index]}</i>
+                        {item}
                       </span>
-                      <span>
-                        <i>{row[0]}</i>
-                      </span>
+                    ))}
+                  </nav>
+                  <div className={styles.savedViews}>
+                    <small>Gespeicherte Ansichten</small>
+                    <span>
+                      ★ Top Fans <b>182</b>
+                    </span>
+                    <span>
+                      ✦ Reaktivierung <b>739</b>
+                    </span>
+                    <span>
+                      ★ Premium-Käufer <b>312</b>
+                    </span>
+                  </div>
+                </aside>
+
+                <div className={styles.showcaseMainPanel}>
+                  <div className={styles.showcaseTopbar}>
+                    <div>
+                      <h3>Kontakte</h3>
+                      <p>
+                        Verwalte alle Kontakte und Interaktionen mit deinen Fans.
+                      </p>
                     </div>
-                  ))}
+                    <div className={styles.showcaseSearch}>
+                      Suche nach Name, Tag, Profil, Sprache … <span>⌕</span>
+                    </div>
+                    <button type="button">+ Neuer Kontakt</button>
+                  </div>
+
+                  <div className={styles.showcaseMetricRow}>
+                    {showcaseMetrics.map((metric) => (
+                      <div
+                        className={styles.showcaseMetric}
+                        style={
+                          { "--accent": metric.color } as React.CSSProperties
+                        }
+                        key={metric.label}
+                      >
+                        <span>{metric.label}</span>
+                        <strong>{metric.value}</strong>
+                        <small>{metric.change}</small>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className={styles.segmentTabs}>
+                    {[
+                      "Alle",
+                      "VIP 182",
+                      "Warm 2.150",
+                      "Buyer 912",
+                      "Inactive 1.876",
+                      "Do not push 60",
+                      "Heute fällig 128",
+                    ].map((tab, index) => (
+                      <span
+                        className={index === 0 ? styles.activeSegmentTab : ""}
+                        key={tab}
+                      >
+                        {tab}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className={styles.contactTable}>
+                    <div className={styles.tableHead}>
+                      <span>Name</span>
+                      <span>Status</span>
+                      <span>Profil</span>
+                      <span>Tags</span>
+                      <span>Fan Score</span>
+                      <span>Letzter Kontakt</span>
+                      <span>Nächster Follow-up</span>
+                      <span>Owner</span>
+                    </div>
+                    {showcaseContacts.map((row) => (
+                      <div
+                        className={styles.tableRow}
+                        key={`${row[1]}-${row[6]}-${row[7]}`}
+                      >
+                        <span>
+                          <i>{row[0]}</i>
+                          {row[1]}
+                        </span>
+                        <span>
+                          <b>{row[2]}</b>
+                        </span>
+                        <span>{row[3]}</span>
+                        <span>{row[4]}</span>
+                        <span className={styles.scoreCell}>{row[5]}</span>
+                        <span>{row[6]}</span>
+                        <span
+                          className={
+                            row[7] === "Überfällig" ? styles.overdueCell : ""
+                          }
+                        >
+                          {row[7]}
+                        </span>
+                        <span>
+                          <i>{row[0]}</i>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div className={styles.showcaseBenefitGrid}>
+              {showcaseBenefits.map((benefit) => (
+                <article key={benefit.title}>
+                  <span>{benefit.icon}</span>
+                  <div>
+                    <h3>{benefit.title}</h3>
+                    <p>{benefit.text}</p>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
 
@@ -1146,18 +1160,6 @@ export default function LandingV2() {
               </article>
             ))}
           </div>
-        </div>
-
-        <div className={styles.showcaseBenefitGrid}>
-          {showcaseBenefits.map((benefit) => (
-            <article key={benefit.title}>
-              <span>{benefit.icon}</span>
-              <div>
-                <h3>{benefit.title}</h3>
-                <p>{benefit.text}</p>
-              </div>
-            </article>
-          ))}
         </div>
 
         <div className={styles.showcaseFeatureStrip}>

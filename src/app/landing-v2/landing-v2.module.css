@@ -1899,7 +1899,7 @@
   position: relative;
   z-index: 1;
   margin-top: 22px;
-  padding: 18px 0 10px;
+  padding: 18px 0 6px;
   isolation: isolate;
 }
 
@@ -1961,13 +1961,13 @@
   grid-template-columns: minmax(500px, 0.82fr) minmax(420px, 0.55fr);
   justify-content: space-between;
   gap: 72px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .showcaseHeader h2 {
   max-width: 810px;
-  font-size: clamp(48px, 3.05vw, 68px);
-  line-height: 1.04;
+  font-size: clamp(46px, 2.85vw, 64px);
+  line-height: 1.02;
   letter-spacing: -2.7px;
 }
 
@@ -1980,20 +1980,20 @@
 
 .showcaseHeader p {
   max-width: 570px;
-  padding-top: 6px;
+  padding-top: 4px;
   color: #c2cada;
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .showcaseStage {
   display: grid;
   grid-template-columns:
-    minmax(260px, 0.26fr)
-    minmax(760px, 1fr)
-    minmax(260px, 0.26fr);
+    minmax(260px, 300px)
+    minmax(0, 1fr)
+    minmax(250px, 290px);
   gap: clamp(12px, 1.05vw, 18px);
-  align-items: stretch;
+  align-items: start;
 }
 
 .showcaseStage > * {
@@ -2002,8 +2002,16 @@
 
 .showcaseSideColumn {
   display: grid;
+  align-content: start;
   gap: 8px;
-  padding-top: 2px;
+  padding-top: 0;
+}
+
+.showcaseCenterColumn {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
 }
 
 .showcaseMiniCard,
@@ -2200,8 +2208,8 @@
 
 .showcaseDashboard {
   display: grid;
-  grid-template-columns: minmax(144px, 168px) minmax(0, 1fr);
-  min-height: 458px;
+  grid-template-columns: minmax(134px, 158px) minmax(0, 1fr);
+  min-height: clamp(388px, 25vw, 430px);
   border-radius: 22px;
   background: rgba(2, 10, 25, 0.95);
 }
@@ -2609,9 +2617,9 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  width: min(1120px, 100%);
-  margin: -2px auto 0;
-  padding-inline: clamp(18px, 2.6vw, 42px);
+  width: 100%;
+  margin: 0;
+  padding-inline: 0;
 }
 
 .showcaseBenefitGrid article {
@@ -2669,7 +2677,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .showcaseFeatureStrip article {
@@ -2886,15 +2894,10 @@
 @media (max-width: 1700px) {
   .showcaseStage {
     grid-template-columns:
-      minmax(240px, 0.25fr)
-      minmax(720px, 1fr)
-      minmax(240px, 0.25fr);
-    gap: clamp(14px, 1.25vw, 20px);
-  }
-
-  .showcaseBenefitGrid {
-    width: min(1080px, 100%);
-    padding-inline: clamp(16px, 2vw, 34px);
+      minmax(250px, 285px)
+      minmax(0, 1fr)
+      minmax(240px, 275px);
+    gap: clamp(12px, 1vw, 16px);
   }
   .processTrack {
     gap: 16px;
@@ -2934,13 +2937,13 @@
     grid-template-columns: repeat(3, 1fr);
   }
   .showcaseStage {
-    grid-template-columns: 1fr;
-  }
-  .showcaseSideColumn {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns:
+      minmax(240px, 270px)
+      minmax(0, 1fr)
+      minmax(230px, 260px);
   }
   .showcaseBenefitGrid {
-    padding-inline: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .problemSolutionGrid {
     grid-template-columns: 1fr;
@@ -3031,6 +3034,9 @@
   .showcaseHeader {
     grid-template-columns: 1fr;
     gap: 18px;
+  }
+  .showcaseStage {
+    grid-template-columns: 1fr;
   }
   .showcaseDashboard {
     grid-template-columns: 1fr;
