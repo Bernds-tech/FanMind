@@ -854,65 +854,96 @@ export default function LandingV2() {
         className={styles.sandraUseCaseSection}
         aria-labelledby="sandra-use-case-title"
       >
-        <div className={styles.sandraUseCaseHeader}>
-          <span className={styles.sandraUseCaseBadge}>Live Use Case</span>
-          <h2 id="sandra-use-case-title">
-            Aus einem neuen Fan wird ein geführter Verkaufsprozess.
-          </h2>
-          <p>
-            FanMind zeigt deinem Team, was Sandra interessiert, welche Antwort
-            passt und wann der nächste Kontakt sinnvoll ist – ohne automatisch
-            zu senden.
-          </p>
-        </div>
+        <div className={styles.sandraUseCaseHero}>
+          <div className={styles.sandraUseCaseHeader}>
+            <span className={styles.sandraUseCaseBadge}>Use Case Sandra M.</span>
+            <h2 id="sandra-use-case-title">
+              Aus Interesse wird <span>Conversion.</span>
+            </h2>
+            <p>
+              FanMind verwandelt eine einfache Fan-Frage in den richtigen
+              nächsten Schritt – kontextbasiert, persönlich und messbar
+              erfolgreich.
+            </p>
+          </div>
 
-        <div
-          className={styles.sandraUseCaseMockup}
-          aria-label="FanMind Demo-Fläche für Sandra M. mit Fan-Gedächtnis, KI-Antwortvorschlägen und Follow-up-Planung"
-        >
-          <div className={styles.sandraDemoTopbar}>
-            <div className={styles.sandraProfileCluster}>
+          <aside
+            className={styles.sandraProfileSummary}
+            aria-label="Sandra M. Profil und zentrale FanMind Vorteile"
+          >
+            <div className={styles.sandraProfileIntro}>
               <span className={styles.sandraAvatar}>SM</span>
               <div>
                 <strong>Sandra M.</strong>
+                <div className={styles.sandraSignalStrip}>
+                  <span>Käuferin</span>
+                  <span>VIP interessiert</span>
+                </div>
                 <p>
-                  Mia Active Club · <span>Fan Score 92</span>
+                  Mia Active Club <i aria-hidden="true">•</i> Fan Score 92
                 </p>
               </div>
             </div>
-            <div className={styles.sandraSignalStrip}>
-              <span>Käuferin</span>
-              <span>VIP interessiert</span>
-              <span>Hohe Priorität</span>
+            <div className={styles.sandraSummaryPillars}>
+              <article>
+                <span>🧠</span>
+                <strong>KI versteht Kontext</strong>
+                <p>Relevante Insights in Echtzeit.</p>
+              </article>
+              <article>
+                <span>✧</span>
+                <strong>Next-Best-Action</strong>
+                <p>Die passende Aktion zur richtigen Zeit.</p>
+              </article>
+              <article>
+                <span>↗</span>
+                <strong>Mehr Conversion</strong>
+                <p>Bessere Erlebnisse, stärkere Bindung.</p>
+              </article>
             </div>
-          </div>
+          </aside>
+        </div>
 
-          <div className={styles.sandraDemoGrid}>
-            <article className={styles.sandraDemoCard}>
-              <div className={styles.sandraCardTitle}>
-                <span>01</span>
-                <div>
-                  <strong>Neue Fan-Frage</strong>
-                  <p>Sandra fragt nach dem Sommer-Event.</p>
-                </div>
+        <div
+          className={styles.sandraUseCaseFlow}
+          aria-label="FanMind Demo-Fläche für Sandra M. mit Fan-Gedächtnis, KI-Antwortvorschlägen und Follow-up-Planung"
+        >
+          <article className={styles.sandraFlowStep}>
+            <div className={styles.sandraStepNode}>1</div>
+            <h3>Sandra fragt nach dem Sommer-Event</h3>
+            <div className={styles.sandraFlowCard}>
+              <div className={styles.sandraMiniProfile}>
+                <span>SM</span>
+                <strong>Sandra M.</strong>
+                <em>09:21</em>
               </div>
               <div className={styles.sandraChatWindow}>
                 <div className={styles.sandraMessageInbound}>
-                  Wann startet der Vorverkauf für das Sommer-Event?
+                  Hi liebes Team! Wann startet der Vorverkauf für das Sommer-Event?
                 </div>
                 <div className={styles.sandraMessageOutbound}>
-                  FanMind bündelt Anfrage, Kanal und Zeit im zentralen Kontext.
+                  Hallo Sandra! Der Vorverkauf beginnt am 18. Mai um 10:00 Uhr. 🙂
                 </div>
               </div>
-            </article>
+              <div className={styles.sandraCardMeta}>
+                <span>▱ Kanal: Chat</span>
+                <span>◷ Heute, 09:21</span>
+              </div>
+            </div>
+            <p>
+              Sandra zeigt Interesse am Sommer-Event. Die Nachricht landet im
+              zentralen Posteingang.
+            </p>
+          </article>
 
-            <article className={styles.sandraDemoCard}>
-              <div className={styles.sandraCardTitle}>
-                <span>02</span>
-                <div>
-                  <strong>Fan-Gedächtnis</strong>
-                  <p>Profil, Historie und Interessen bleiben sichtbar.</p>
-                </div>
+          <article className={styles.sandraFlowStep}>
+            <div className={styles.sandraStepNode}>2</div>
+            <h3>FanMind erkennt den Kontext</h3>
+            <div className={styles.sandraFlowCard}>
+              <div className={styles.sandraMiniProfile}>
+                <span>SM</span>
+                <strong>Sandra M.</strong>
+                <em>Mia Active Club</em>
               </div>
               <div className={styles.sandraMemoryList}>
                 <div>
@@ -921,7 +952,11 @@ export default function LandingV2() {
                 </div>
                 <div>
                   <span>Interesse</span>
-                  <strong>VIP Upgrade</strong>
+                  <strong>VIP interessiert</strong>
+                </div>
+                <div>
+                  <span>Fan Score</span>
+                  <strong>92</strong>
                 </div>
                 <div>
                   <span>Historie</span>
@@ -931,18 +966,28 @@ export default function LandingV2() {
                   <span>Letzter Kontakt</span>
                   <strong>Heute, 09:21</strong>
                 </div>
-              </div>
-            </article>
-
-            <article className={styles.sandraDemoCard}>
-              <div className={styles.sandraCardTitle}>
-                <span>03</span>
                 <div>
-                  <strong>KI-Antwortvorschläge</strong>
-                  <p>Antworten werden vorbereitet, aber nicht automatisch gesendet.</p>
+                  <span>Positive Signale</span>
+                  <strong>hohes Interesse</strong>
                 </div>
               </div>
+            </div>
+            <p>
+              FanMind vereint Profil, Historie und Verhalten zu einem klaren
+              Bild – in Sekunden.
+            </p>
+          </article>
+
+          <article className={styles.sandraFlowStep}>
+            <div className={styles.sandraStepNode}>3</div>
+            <h3>KI schlägt die passende Antwort vor</h3>
+            <div className={styles.sandraFlowCard}>
               <div className={styles.sandraAiBox}>
+                <div className={styles.sandraAiHeader}>
+                  <span>✧</span>
+                  <strong>KI-Antwortvorschlag</strong>
+                  <em>Beta</em>
+                </div>
                 <p>
                   Ja, als Mitglied bekommst du Early-Bird-Zugang und 10 % Rabatt.
                   Wenn du möchtest, sende ich dir gleich alle Details zum Start.
@@ -953,16 +998,23 @@ export default function LandingV2() {
                   <button type="button">mit Memory</button>
                 </div>
               </div>
-            </article>
-
-            <article className={styles.sandraDemoCard}>
-              <div className={styles.sandraCardTitle}>
-                <span>04</span>
-                <div>
-                  <strong>Follow-up-Planung</strong>
-                  <p>Der nächste sinnvolle Kontakt wird als Aufgabe geplant.</p>
-                </div>
+              <div className={styles.sandraReasonList}>
+                <strong>Gründe</strong>
+                <span>hohes Kaufinteresse</span>
+                <span>Early-Bird relevant</span>
+                <span>Mitglied & VIP-Potenzial</span>
               </div>
+            </div>
+            <p>
+              Unsere KI formuliert die beste Antwort – persönlich, relevant und
+              auf Sandra abgestimmt.
+            </p>
+          </article>
+
+          <article className={styles.sandraFlowStep}>
+            <div className={styles.sandraStepNode}>4</div>
+            <h3>Nächste beste Aktion vorgeschlagen</h3>
+            <div className={styles.sandraFlowCard}>
               <div className={styles.sandraActionPanel}>
                 <div>
                   <strong>VIP-Infos + Friend-Ticket senden</strong>
@@ -970,33 +1022,81 @@ export default function LandingV2() {
                 </div>
                 <ul>
                   <li>hohes Kaufinteresse</li>
-                  <li>VIP-Potenzial erkannt</li>
-                  <li>Reminder morgen, 09:00</li>
+                  <li>positiver Verlauf</li>
+                  <li>Early-Bird relevant</li>
+                  <li>hohe Conversion-Chance</li>
                 </ul>
               </div>
-            </article>
-          </div>
+              <div className={styles.sandraFollowUpBox}>
+                <strong>Follow-up planen</strong>
+                <span>Erinnerung senden <em>Morgen, 09:00</em></span>
+                <span>Segmentzuweisung prüfen <em>Morgen, 12:00</em></span>
+              </div>
+            </div>
+            <p>
+              FanMind empfiehlt die optimale Aktion und plant ein Follow-up –
+              zur manuellen Freigabe.
+            </p>
+          </article>
+
+          <article className={styles.sandraFlowStep}>
+            <div className={styles.sandraStepNode}>5</div>
+            <h3>Ergebnis: mehr Conversion, besseres Timing, mehr Impact</h3>
+            <div className={`${styles.sandraFlowCard} ${styles.sandraResultCard}`}>
+              <div className={styles.sandraConversionPanel}>
+                <strong>Conversion</strong>
+                <span>9,4 %</span>
+                <em>↑ +1,2 % vs. letzter Zeitraum</em>
+                <div aria-hidden="true" />
+              </div>
+              <div className={styles.sandraMetricPair}>
+                <div>
+                  <strong>Öffnungsrate</strong>
+                  <span>38 %</span>
+                  <em>↑ +4,2 %</em>
+                </div>
+                <div>
+                  <strong>Antwortquote</strong>
+                  <span>34,8 %</span>
+                  <em>↑ +2,1 %</em>
+                </div>
+              </div>
+            </div>
+            <p>
+              Sandra kauft ihr Ticket. Der richtige Zeitpunkt, die richtige
+              Aktion – messbar mehr Erfolg.
+            </p>
+          </article>
         </div>
 
         <div className={styles.sandraUseCaseBenefits}>
+          <div className={styles.sandraBenefitLead}>
+            <span>🧠</span>
+            <div>
+              <strong>
+                Mit Memory, KI und Follow-ups zum richtigen nächsten Schritt.
+              </strong>
+              <p>
+                FanMind denkt mit. Für echte Verbindungen und messbare Ergebnisse.
+              </p>
+            </div>
+          </div>
           <article>
-            <span>01</span>
-            <strong>Kontext behalten</strong>
-            <p>
-              Interessen, Historie und Signale bleiben für dein Team sichtbar.
-            </p>
+            <span>◎</span>
+            <strong>Mehr Relevanz</strong>
+            <p>Jede Antwort nutzt Sandras Kontext und Fan-Gedächtnis.</p>
           </article>
           <article>
-            <span>02</span>
-            <strong>Antworten schneller vorbereiten</strong>
+            <span>↗</span>
+            <strong>Mehr Conversion</strong>
             <p>
               Passende Vorschläge entstehen aus Sandras Verlauf und aktuellem
               Bedarf.
             </p>
           </article>
           <article>
-            <span>03</span>
-            <strong>Follow-ups nicht verlieren</strong>
+            <span>♡</span>
+            <strong>Mehr Loyalität</strong>
             <p>
               Nächste Kontakte werden geplant, priorisiert und manuell freigegeben.
             </p>
