@@ -1,112 +1,91 @@
 /* Landing v2 targeted visual polish overrides.
-   This file intentionally uses high-specificity selectors because the base page uses CSS modules. */
+   This file intentionally uses DOM-based selectors because landing-v2 uses CSS modules. */
 
 /* 03 Produkt-Showcase: close the large empty zone under the workspace mockup. */
-main[class*="page"] [class*="productShowcaseSection"] {
+#showcase {
   padding-bottom: 0 !important;
 }
 
-main[class*="page"] [class*="productShowcaseSection"]::before {
-  background:
-    radial-gradient(circle at 16% 28%, rgba(0, 146, 255, 0.2), transparent 22%),
-    radial-gradient(circle at 72% 34%, rgba(127, 65, 255, 0.17), transparent 24%),
-    radial-gradient(circle at 88% 7%, rgba(0, 120, 255, 0.13), transparent 18%),
-    linear-gradient(180deg, rgba(1, 8, 21, 0.02) 0%, rgba(3, 13, 31, 0.78) 68%, rgba(2, 10, 24, 0.58) 100%) !important;
-}
-
-main[class*="page"] [class*="showcaseHeader"] {
+#showcase > div:nth-of-type(2) {
   margin-bottom: -12px !important;
 }
 
-main[class*="page"] [class*="showcaseHeader"] h2 {
+#showcase > div:nth-of-type(2) h2 {
   font-size: clamp(42px, 2.65vw, 58px) !important;
   line-height: 1 !important;
 }
 
-main[class*="page"] [class*="showcaseHeader"] p {
+#showcase > div:nth-of-type(2) p {
   padding-top: 0 !important;
   font-size: 15px !important;
   line-height: 1.42 !important;
 }
 
-main[class*="page"] [class*="showcaseStage"] {
+#showcase > div:nth-of-type(3) {
   align-items: start !important;
   gap: clamp(8px, 0.75vw, 14px) !important;
 }
 
-main[class*="page"] [class*="showcaseSideColumn"] {
+#showcase > div:nth-of-type(3) > div:first-child,
+#showcase > div:nth-of-type(3) > div:last-child {
   padding-top: 0 !important;
   gap: 7px !important;
 }
 
-main[class*="page"] [class*="showcaseDashboard"] {
+#showcase > div:nth-of-type(3) > div:nth-child(2) > div {
   min-height: 430px !important;
 }
 
-main[class*="page"] [class*="showcaseMiniCard"] {
-  min-height: 118px !important;
-  padding: 9px 11px !important;
-}
-
-main[class*="page"] [class*="showcaseInsightCard"] {
+#showcase > div:nth-of-type(3) article {
   min-height: 112px !important;
-  padding: 10px 11px !important;
 }
 
-main[class*="page"] [class*="showcaseBenefitGrid"] {
-  margin-top: -190px !important;
-  margin-bottom: -170px !important;
+#showcase > div:nth-of-type(4) {
+  margin-top: -205px !important;
+  margin-bottom: -185px !important;
+  transform: translateY(-8px);
   width: min(1030px, 100%) !important;
   padding-inline: clamp(8px, 1.4vw, 24px) !important;
   gap: 10px !important;
   position: relative !important;
-  z-index: 6 !important;
+  z-index: 20 !important;
 }
 
-main[class*="page"] [class*="showcaseBenefitGrid"] article {
+#showcase > div:nth-of-type(4) article {
   min-height: 56px !important;
   padding: 8px 13px !important;
 }
 
-main[class*="page"] [class*="showcaseFeatureStrip"] {
-  margin-top: 182px !important;
+#showcase > div:nth-of-type(5) {
+  margin-top: 190px !important;
   gap: 10px !important;
   position: relative !important;
-  z-index: 5 !important;
+  z-index: 19 !important;
 }
 
-main[class*="page"] [class*="showcaseFeatureStrip"] article {
+#showcase > div:nth-of-type(5) article {
   min-height: 68px !important;
   padding: 10px 18px !important;
 }
 
 /* 04 Six-Steps: fit closer to the reference and reduce total scroll height. */
-main[class*="page"] [class*="sixStepsSection"] {
+#six-steps {
   margin-top: -14px !important;
   padding-top: 12px !important;
   padding-bottom: 16px !important;
 }
 
-main[class*="page"] [class*="sixStepsSection"]::before {
-  inset: -8px -48px -16px !important;
-}
-
-main[class*="page"] [class*="sixStepsHeader"] {
+#six-steps > div:nth-of-type(3) {
   margin-bottom: 10px !important;
 }
 
-main[class*="page"] [class*="sixStepsBadge"] {
+#six-steps > div:nth-of-type(3) > div:first-child {
   min-height: 34px !important;
   padding-inline: 18px !important;
   font-size: 15px !important;
 }
 
-main[class*="page"] [class*="sixStepsBadge"] [class*="logoMark"] {
-  width: 21px !important;
-  height: 21px !important;
-}
-
-main[class*="page"] [class*="sixStepsHeader"] h2 {
+#six-steps > div:nth-of-type(3) h2 {
   max-width: 700px !important;
   margin-top: 7px !important;
   font-size: clamp(34px, 2.85vw, 54px) !important;
@@ -114,70 +93,70 @@ main[class*="page"] [class*="sixStepsHeader"] h2 {
   letter-spacing: -2.2px !important;
 }
 
-main[class*="page"] [class*="sixStepsHeader"] p {
+#six-steps > div:nth-of-type(3) p {
   max-width: 700px !important;
   margin-top: 6px !important;
   font-size: 15px !important;
   line-height: 1.28 !important;
 }
 
-main[class*="page"] [class*="processTrack"] {
+#six-steps > div:nth-of-type(4) {
   margin-top: -2px !important;
   gap: 12px !important;
 }
 
-main[class*="page"] [class*="processTrack"]::before {
+#six-steps > div:nth-of-type(4)::before {
   top: 21px !important;
 }
 
-main[class*="page"] [class*="processStep"]:not(:last-child)::after {
+#six-steps > div:nth-of-type(4) > article:not(:last-child)::after {
   top: 8px !important;
   right: -13px !important;
   font-size: 20px !important;
 }
 
-main[class*="page"] [class*="stepNodeWrap"] {
+#six-steps > div:nth-of-type(4) > article > div:first-child {
   height: 44px !important;
 }
 
-main[class*="page"] [class*="stepNode"] {
+#six-steps > div:nth-of-type(4) > article > div:first-child span {
   width: 42px !important;
   height: 42px !important;
   font-size: 22px !important;
 }
 
-main[class*="page"] [class*="processStep"] h3 {
+#six-steps > div:nth-of-type(4) > article h3 {
   margin-top: 7px !important;
   font-size: 15px !important;
   line-height: 1.1 !important;
 }
 
-main[class*="page"] [class*="processStep"] > p {
+#six-steps > div:nth-of-type(4) > article > p {
   min-height: 38px !important;
   margin-top: 4px !important;
   font-size: 11.5px !important;
   line-height: 1.22 !important;
 }
 
-main[class*="page"] [class*="stepExampleCard"] {
+#six-steps > div:nth-of-type(4) > article > div:last-child {
   min-height: 206px !important;
   margin-top: 5px !important;
   padding: 10px !important;
 }
 
-main[class*="page"] [class*="sixStepsStatement"] {
+#six-steps > div:nth-of-type(5) {
   margin-top: 10px !important;
   min-height: 50px !important;
 }
 
-main[class*="page"] [class*="sixStepsStatement"] strong {
+#six-steps > div:nth-of-type(5) strong {
   font-size: clamp(22px, 1.85vw, 31px) !important;
 }
 
-main[class*="page"] [class*="sixStepsBenefits"] {
+#six-steps > div:nth-of-type(6) {
   margin-top: 12px !important;
 }
 
-main[class*="page"] [class*="sixStepsBenefits"] article {
+#six-steps > div:nth-of-type(6) article {
   min-height: 66px !important;
 }
