@@ -418,7 +418,7 @@ const roadmapPhases = [
   {
     number: "01",
     phase: "Phase 1",
-    icon: "🚀",
+    icon: "rocket",
     title: "MVP-Kern",
     status: "Verfügbar",
     statusIcon: "●",
@@ -434,7 +434,7 @@ const roadmapPhases = [
   {
     number: "02",
     phase: "Phase 2",
-    icon: "☁",
+    icon: "upload",
     title: "Kontakt-Import",
     status: "In Arbeit",
     statusIcon: "✣",
@@ -449,7 +449,7 @@ const roadmapPhases = [
   {
     number: "03",
     phase: "Phase 3",
-    icon: "📣",
+    icon: "campaign",
     title: "Segmente & Kampagnen",
     status: "Coming Soon",
     statusIcon: "◷",
@@ -459,7 +459,7 @@ const roadmapPhases = [
   {
     number: "04",
     phase: "Phase 4",
-    icon: "▥",
+    icon: "analytics",
     title: "Analytics & Team",
     status: "Coming Soon",
     statusIcon: "◷",
@@ -469,7 +469,7 @@ const roadmapPhases = [
   {
     number: "05",
     phase: "Phase 5",
-    icon: "⌬",
+    icon: "integrations",
     title: "Integrationen",
     status: "Coming Soon",
     statusIcon: "◷",
@@ -499,6 +499,70 @@ const roadmapNotes = [
   },
 ];
 
+
+function RoadmapLineIcon({ icon }: { icon: string }) {
+  const common = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 2.4,
+  };
+
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      {icon === "rocket" && (
+        <>
+          <path {...common} d="M14 46c6-1 12-5 16-10" />
+          <path {...common} d="M24 42 14 54l12-4" />
+          <path {...common} d="M23 31 13 29l8-8 10 2" />
+          <path {...common} d="M33 41l2 10 8-8-2-10" />
+          <path {...common} d="M24 40c-4-4-4-12 0-16 7-7 20-11 32-10-1 12-5 25-12 32-4 4-12 4-16 0Z" />
+          <circle {...common} cx="42" cy="28" r="5" />
+        </>
+      )}
+      {icon === "upload" && (
+        <>
+          <path {...common} d="M20 43h-3a10 10 0 0 1 0-20 15 15 0 0 1 28-3 11 11 0 0 1 3 22h-4" />
+          <path {...common} d="M32 50V28" />
+          <path {...common} d="M22 38 32 28l10 10" />
+        </>
+      )}
+      {icon === "campaign" && (
+        <>
+          <path {...common} d="M35 22 52 14v30l-17-8Z" />
+          <path {...common} d="M18 26h17v12H18a6 6 0 0 1 0-12Z" />
+          <path {...common} d="M24 38l5 12h9l-6-12" />
+          <circle {...common} cx="14" cy="18" r="4" />
+          <circle {...common} cx="25" cy="15" r="3" />
+        </>
+      )}
+      {icon === "analytics" && (
+        <>
+          <path {...common} d="M14 46h38" />
+          <path {...common} d="M18 38V26h8v12" />
+          <path {...common} d="M30 38V18h8v20" />
+          <path {...common} d="M42 38V12h8v26" />
+          <path {...common} d="M18 52c2-5 8-8 14-8s12 3 14 8" />
+          <circle {...common} cx="22" cy="44" r="4" />
+          <circle {...common} cx="32" cy="43" r="4" />
+          <circle {...common} cx="42" cy="44" r="4" />
+        </>
+      )}
+      {icon === "integrations" && (
+        <>
+          <circle {...common} cx="32" cy="32" r="5" />
+          <circle {...common} cx="32" cy="12" r="5" />
+          <circle {...common} cx="49" cy="42" r="5" />
+          <circle {...common} cx="15" cy="42" r="5" />
+          <circle {...common} cx="16" cy="22" r="3" />
+          <circle {...common} cx="48" cy="22" r="3" />
+          <path {...common} d="M32 17v10M36 35l9 5M28 35l-9 5M19 23l8 6M45 23l-8 6" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
@@ -1494,7 +1558,7 @@ export default function LandingV2() {
 
         <div className={styles.roadmapHeader}>
           <div className={styles.roadmapBadge}>
-            <span>♙</span> ROADMAP & NÄCHSTE SCHRITTE
+            <span>♢</span> ROADMAP & NÄCHSTE SCHRITTE
           </div>
           <h2 id="roadmap-title">
             FanMind <span>Roadmap</span>
@@ -1515,7 +1579,9 @@ export default function LandingV2() {
           {roadmapPhases.map((phase) => (
             <article className={styles.roadmapCard} data-tone={phase.tone} key={phase.phase}>
               <div className={styles.roadmapPhasePill}>{phase.phase}</div>
-              <div className={styles.roadmapIcon}>{phase.icon}</div>
+              <div className={styles.roadmapIcon}>
+                <RoadmapLineIcon icon={phase.icon} />
+              </div>
               <h3>{phase.title}</h3>
               <div className={styles.roadmapStatus}>
                 <span>{phase.statusIcon}</span> {phase.status}
