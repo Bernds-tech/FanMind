@@ -1,182 +1,183 @@
 /* Landing v2 targeted visual polish overrides.
-   Keep this file small: it corrects spacing after PR #46 without touching the main module. */
+   This file intentionally uses high-specificity selectors because the base page uses CSS modules. */
 
-/* 03 Produkt-Showcase: reduce the empty lower area and keep the right column integrated. */
-[class*="productShowcaseSection"] {
+/* 03 Produkt-Showcase: close the large empty zone under the workspace mockup. */
+main[class*="page"] [class*="productShowcaseSection"] {
   padding-bottom: 0 !important;
 }
 
-[class*="productShowcaseSection"]::before {
+main[class*="page"] [class*="productShowcaseSection"]::before {
   background:
     radial-gradient(circle at 16% 28%, rgba(0, 146, 255, 0.2), transparent 22%),
     radial-gradient(circle at 72% 34%, rgba(127, 65, 255, 0.17), transparent 24%),
     radial-gradient(circle at 88% 7%, rgba(0, 120, 255, 0.13), transparent 18%),
-    linear-gradient(180deg, rgba(1, 8, 21, 0.02) 0%, rgba(3, 13, 31, 0.82) 68%, rgba(2, 10, 24, 0.62) 100%) !important;
+    linear-gradient(180deg, rgba(1, 8, 21, 0.02) 0%, rgba(3, 13, 31, 0.78) 68%, rgba(2, 10, 24, 0.58) 100%) !important;
 }
 
-[class*="showcaseHeader"] {
-  margin-bottom: -8px !important;
+main[class*="page"] [class*="showcaseHeader"] {
+  margin-bottom: -12px !important;
 }
 
-[class*="showcaseHeader"] h2 {
+main[class*="page"] [class*="showcaseHeader"] h2 {
   font-size: clamp(42px, 2.65vw, 58px) !important;
   line-height: 1 !important;
 }
 
-[class*="showcaseHeader"] p {
+main[class*="page"] [class*="showcaseHeader"] p {
   padding-top: 0 !important;
   font-size: 15px !important;
   line-height: 1.42 !important;
 }
 
-[class*="showcaseStage"] {
+main[class*="page"] [class*="showcaseStage"] {
   align-items: start !important;
   gap: clamp(8px, 0.75vw, 14px) !important;
 }
 
-[class*="showcaseSideColumn"] {
+main[class*="page"] [class*="showcaseSideColumn"] {
   padding-top: 0 !important;
   gap: 7px !important;
 }
 
-[class*="showcaseDashboard"] {
-  min-height: 450px !important;
+main[class*="page"] [class*="showcaseDashboard"] {
+  min-height: 430px !important;
 }
 
-[class*="showcaseMiniCard"] {
-  min-height: 122px !important;
-  padding: 10px 12px !important;
-}
-
-[class*="showcaseInsightCard"] {
+main[class*="page"] [class*="showcaseMiniCard"] {
   min-height: 118px !important;
-  padding: 11px !important;
+  padding: 9px 11px !important;
 }
 
-[class*="showcaseBenefitGrid"] {
-  margin-top: -34px !important;
+main[class*="page"] [class*="showcaseInsightCard"] {
+  min-height: 112px !important;
+  padding: 10px 11px !important;
+}
+
+main[class*="page"] [class*="showcaseBenefitGrid"] {
+  margin-top: -190px !important;
+  margin-bottom: -170px !important;
   width: min(1030px, 100%) !important;
   padding-inline: clamp(8px, 1.4vw, 24px) !important;
   gap: 10px !important;
   position: relative !important;
-  z-index: 3 !important;
+  z-index: 6 !important;
 }
 
-[class*="showcaseBenefitGrid"] article {
-  min-height: 58px !important;
+main[class*="page"] [class*="showcaseBenefitGrid"] article {
+  min-height: 56px !important;
   padding: 8px 13px !important;
 }
 
-[class*="showcaseFeatureStrip"] {
-  margin-top: 6px !important;
+main[class*="page"] [class*="showcaseFeatureStrip"] {
+  margin-top: 182px !important;
   gap: 10px !important;
   position: relative !important;
-  z-index: 3 !important;
+  z-index: 5 !important;
 }
 
-[class*="showcaseFeatureStrip"] article {
+main[class*="page"] [class*="showcaseFeatureStrip"] article {
   min-height: 68px !important;
   padding: 10px 18px !important;
 }
 
-/* 04 Six-Steps: make the section fit closer to the reference and reduce scroll height. */
-[class*="sixStepsSection"] {
-  margin-top: -10px !important;
-  padding-top: 14px !important;
-  padding-bottom: 18px !important;
+/* 04 Six-Steps: fit closer to the reference and reduce total scroll height. */
+main[class*="page"] [class*="sixStepsSection"] {
+  margin-top: -14px !important;
+  padding-top: 12px !important;
+  padding-bottom: 16px !important;
 }
 
-[class*="sixStepsSection"]::before {
-  inset: -10px -48px -16px !important;
+main[class*="page"] [class*="sixStepsSection"]::before {
+  inset: -8px -48px -16px !important;
 }
 
-[class*="sixStepsHeader"] {
-  margin-bottom: 12px !important;
+main[class*="page"] [class*="sixStepsHeader"] {
+  margin-bottom: 10px !important;
 }
 
-[class*="sixStepsBadge"] {
-  min-height: 36px !important;
-  padding-inline: 20px !important;
-  font-size: 16px !important;
+main[class*="page"] [class*="sixStepsBadge"] {
+  min-height: 34px !important;
+  padding-inline: 18px !important;
+  font-size: 15px !important;
 }
 
-[class*="sixStepsBadge"] [class*="logoMark"] {
-  width: 22px !important;
-  height: 22px !important;
+main[class*="page"] [class*="sixStepsBadge"] [class*="logoMark"] {
+  width: 21px !important;
+  height: 21px !important;
 }
 
-[class*="sixStepsHeader"] h2 {
-  max-width: 735px !important;
-  margin-top: 8px !important;
-  font-size: clamp(36px, 3.1vw, 58px) !important;
-  line-height: 0.98 !important;
-  letter-spacing: -2.45px !important;
-}
-
-[class*="sixStepsHeader"] p {
-  max-width: 720px !important;
+main[class*="page"] [class*="sixStepsHeader"] h2 {
+  max-width: 700px !important;
   margin-top: 7px !important;
-  font-size: 16px !important;
-  line-height: 1.3 !important;
+  font-size: clamp(34px, 2.85vw, 54px) !important;
+  line-height: 0.98 !important;
+  letter-spacing: -2.2px !important;
 }
 
-[class*="processTrack"] {
-  margin-top: 0 !important;
-  gap: 14px !important;
-}
-
-[class*="processTrack"]::before {
-  top: 23px !important;
-}
-
-[class*="processStep"]:not(:last-child)::after {
-  top: 9px !important;
-  right: -14px !important;
-  font-size: 21px !important;
-}
-
-[class*="stepNodeWrap"] {
-  height: 48px !important;
-}
-
-[class*="stepNode"] {
-  width: 44px !important;
-  height: 44px !important;
-  font-size: 23px !important;
-}
-
-[class*="processStep"] h3 {
-  margin-top: 8px !important;
-  font-size: 16px !important;
-  line-height: 1.12 !important;
-}
-
-[class*="processStep"] > p {
-  min-height: 46px !important;
-  margin-top: 5px !important;
-  font-size: 12.5px !important;
-  line-height: 1.25 !important;
-}
-
-[class*="stepExampleCard"] {
-  min-height: 226px !important;
+main[class*="page"] [class*="sixStepsHeader"] p {
+  max-width: 700px !important;
   margin-top: 6px !important;
-  padding: 11px !important;
+  font-size: 15px !important;
+  line-height: 1.28 !important;
 }
 
-[class*="sixStepsStatement"] {
+main[class*="page"] [class*="processTrack"] {
+  margin-top: -2px !important;
+  gap: 12px !important;
+}
+
+main[class*="page"] [class*="processTrack"]::before {
+  top: 21px !important;
+}
+
+main[class*="page"] [class*="processStep"]:not(:last-child)::after {
+  top: 8px !important;
+  right: -13px !important;
+  font-size: 20px !important;
+}
+
+main[class*="page"] [class*="stepNodeWrap"] {
+  height: 44px !important;
+}
+
+main[class*="page"] [class*="stepNode"] {
+  width: 42px !important;
+  height: 42px !important;
+  font-size: 22px !important;
+}
+
+main[class*="page"] [class*="processStep"] h3 {
+  margin-top: 7px !important;
+  font-size: 15px !important;
+  line-height: 1.1 !important;
+}
+
+main[class*="page"] [class*="processStep"] > p {
+  min-height: 38px !important;
+  margin-top: 4px !important;
+  font-size: 11.5px !important;
+  line-height: 1.22 !important;
+}
+
+main[class*="page"] [class*="stepExampleCard"] {
+  min-height: 206px !important;
+  margin-top: 5px !important;
+  padding: 10px !important;
+}
+
+main[class*="page"] [class*="sixStepsStatement"] {
+  margin-top: 10px !important;
+  min-height: 50px !important;
+}
+
+main[class*="page"] [class*="sixStepsStatement"] strong {
+  font-size: clamp(22px, 1.85vw, 31px) !important;
+}
+
+main[class*="page"] [class*="sixStepsBenefits"] {
   margin-top: 12px !important;
-  min-height: 54px !important;
 }
 
-[class*="sixStepsStatement"] strong {
-  font-size: clamp(24px, 2vw, 34px) !important;
-}
-
-[class*="sixStepsBenefits"] {
-  margin-top: 14px !important;
-}
-
-[class*="sixStepsBenefits"] article {
-  min-height: 72px !important;
+main[class*="page"] [class*="sixStepsBenefits"] article {
+  min-height: 66px !important;
 }
