@@ -1286,7 +1286,7 @@ export default function LandingV2() {
           >
             <defs>
               <filter id="integration-flow-glow-cyan" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="2.4" result="blur" />
+                <feGaussianBlur stdDeviation="2.05" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
@@ -1294,21 +1294,21 @@ export default function LandingV2() {
               </filter>
               <marker
                 id="integration-flow-arrow-cyan"
-                markerWidth="8"
-                markerHeight="8"
-                refX="6.5"
-                refY="4"
+                markerWidth="6.6"
+                markerHeight="6.6"
+                refX="5.4"
+                refY="3.3"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
-                <path d="M 0 0 L 8 4 L 0 8 z" />
+                <path d="M 0.2 0.4 L 6.2 3.3 L 0.2 6.2 Q 1.4 3.3 0.2 0.4 z" />
               </marker>
             </defs>
             <g filter="url(#integration-flow-glow-cyan)">
-              <path d="M 5 20 C 42 11 70 23 111 45" />
-              <path d="M 4 50 C 38 45 72 49 111 61" />
-              <path d="M 5 78 C 43 85 72 78 111 68" />
-              <path d="M 8 104 C 48 104 74 91 111 78" />
+              <path d="M 0 23 C 28 15 52 22 91 47" />
+              <path d="M 0 50 C 31 45 57 50 92 59" />
+              <path d="M 0 76 C 32 84 58 77 92 68" />
+              <path d="M 1 100 C 32 101 60 89 91 77" />
             </g>
           </svg>
 
@@ -1327,7 +1327,7 @@ export default function LandingV2() {
           >
             <defs>
               <filter id="integration-flow-glow-magenta" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="2.4" result="blur" />
+                <feGaussianBlur stdDeviation="2.05" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
@@ -1335,21 +1335,21 @@ export default function LandingV2() {
               </filter>
               <marker
                 id="integration-flow-arrow-magenta"
-                markerWidth="8"
-                markerHeight="8"
-                refX="6.5"
-                refY="4"
+                markerWidth="6.6"
+                markerHeight="6.6"
+                refX="5.4"
+                refY="3.3"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
-                <path d="M 0 0 L 8 4 L 0 8 z" />
+                <path d="M 0.2 0.4 L 6.2 3.3 L 0.2 6.2 Q 1.4 3.3 0.2 0.4 z" />
               </marker>
             </defs>
             <g filter="url(#integration-flow-glow-magenta)">
-              <path d="M 9 45 C 47 22 76 10 115 20" />
-              <path d="M 9 59 C 47 48 82 45 116 50" />
-              <path d="M 9 69 C 47 80 78 84 115 78" />
-              <path d="M 9 80 C 48 92 74 105 112 104" />
+              <path d="M 14 48 C 47 30 82 25 119 30" />
+              <path d="M 13 58 C 48 50 84 50 119 54" />
+              <path d="M 13 68 C 49 76 84 76 119 72" />
+              <path d="M 14 78 C 48 92 82 96 118 92" />
             </g>
           </svg>
 
