@@ -298,92 +298,92 @@ const integrationChannels = [
   {
     icon: "✉",
     title: "E-Mail",
-    text: "Anfragen, Antworten und wichtige Kontaktpunkte aus dem Postfach zentral nachvollziehen.",
+    text: "Postfach-Anfragen zentral sammeln und zuordnen.",
     status: "Im MVP",
     tone: "blue",
   },
   {
     icon: "☏",
     title: "WhatsApp",
-    text: "Direkte Chats und Updates als Kanal-Kontext für spätere Workflows vormerken.",
+    text: "Chats als Roadmap-Kanal für Kontext vormerken.",
     status: "Roadmap",
     tone: "green",
   },
   {
     icon: "◖",
     title: "Discord",
-    text: "Community-Signale, Server-Kontext und Events strukturiert für Fans erfassen.",
+    text: "Community-Signale perspektivisch strukturieren.",
     status: "Roadmap",
     tone: "violet",
   },
   {
     icon: "f",
     title: "Facebook",
-    text: "Kommentare, Nachrichten und Beiträge als zusätzliche Reichweitenquelle einordnen.",
+    text: "Kommentare und Nachrichten später einordnen.",
     status: "Roadmap",
     tone: "blue",
   },
   {
     icon: "𝕏",
     title: "X",
-    text: "Erwähnungen, DMs und Reaktionen später gezielt erfassen und beantworten.",
+    text: "Erwähnungen und DMs als Roadmap-Quelle.",
     status: "Roadmap",
     tone: "white",
   },
   {
     icon: "♪",
     title: "TikTok",
-    text: "Kommentare und DMs als Vorschau-Kanal für Creator-Communities abbilden.",
+    text: "Kommentare und DMs perspektivisch abbilden.",
     status: "Roadmap",
     tone: "purple",
   },
   {
     icon: "◎",
     title: "Instagram",
-    text: "DMs, Kommentare und Story-Antworten perspektivisch in einem Kontext verwalten.",
+    text: "DMs und Story-Antworten später bündeln.",
     status: "Roadmap",
     tone: "pink",
   },
   {
     icon: "▤",
     title: "Webformulare",
-    text: "Anfragen, Bewerbungen und Feedback über individuelle Formulare vorbereiten.",
+    text: "Formular-Anfragen bereit zur Erfassung.",
     status: "Bereit",
     tone: "cyan",
   },
 ];
 
 const integrationSources = [
-  "E-Mail",
-  "Discord",
-  "WhatsApp",
-  "TikTok",
-  "Instagram",
-  "X",
-  "Facebook",
-  "Webformulare",
+  { icon: "✉", label: "E-Mail" },
+  { icon: "◖", label: "Discord" },
+  { icon: "☏", label: "WhatsApp" },
+  { icon: "♪", label: "TikTok" },
+  { icon: "◎", label: "Instagram" },
+  { icon: "𝕏", label: "X" },
+  { icon: "f", label: "Facebook" },
+  { icon: "▤", label: "Webformulare" },
 ];
 
 const integrationActions = [
   {
     icon: "♙",
     title: "Segmente",
-    text: "Fans und Communities intelligent gruppieren.",
+    text: "Fans sinnvoll gruppieren.",
   },
   {
     icon: "☑",
     title: "Follow-ups",
-    text: "Nachfassaktionen zur richtigen Zeit vorbereiten.",
+    text: "Nachfassaktionen vorbereiten.",
   },
   {
     icon: "📣",
     title: "Kampagnen",
-    text: "Gezielte Nachrichten als geprüfte Entwürfe planen.",
+    text: "Geprüfte Entwürfe planen.",
   },
   {
     icon: "⌁",
     title: "Analytics",
-    text: "Roadmap-Auswertungen für Wachstum und Engagement.",
+    text: "Roadmap-Signale einordnen.",
   },
 ];
 
@@ -391,25 +391,25 @@ const integrationBenefits = [
   {
     icon: "ϟ",
     title: "Schneller verbunden",
-    text: "Alle Kanäle an einem Ort zusammenführen und sofort reagieren.",
+    text: "Kanäle an einem Ort bündeln und schneller bearbeiten.",
     tone: "blue",
   },
   {
     icon: "◷",
     title: "Weniger manuelle Arbeit",
-    text: "Routinen vorbereiten und täglich wertvolle Zeit sparen.",
+    text: "Routinen vorbereiten und Aufwand reduzieren.",
     tone: "purple",
   },
   {
     icon: "▣",
     title: "Zentrale Datenbasis",
-    text: "Interaktionen und Fans an einem Ort – stets aktuell.",
+    text: "Kontakte und Kontext sauber an einem Ort halten.",
     tone: "green",
   },
   {
     icon: "◇",
     title: "Sicher & zuverlässig",
-    text: "DSGVO-bewusst, nachvollziehbar und für europäische Teams gedacht.",
+    text: "Nachvollziehbar, sicher und für europäische Teams gedacht.",
     tone: "cyan",
   },
 ];
@@ -1242,9 +1242,9 @@ export default function LandingV2() {
             Verbinde deine wichtigsten <span>Kanäle.</span>
           </h2>
           <p>
-            FanMind bündelt Fan-Kommunikation, Community-Kanäle und Interaktionen
-            in einem Workflow. Alle Nachrichten, Reaktionen und Daten laufen
-            zusammen – für stärkere Communities und mehr Impact.
+            FanMind bündelt E-Mail, Formulare und Roadmap-Kanäle in einem klaren
+            Workflow. Kontext wird vorbereitet, geprüft und bleibt jederzeit
+            unter deiner Kontrolle.
           </p>
         </div>
 
@@ -1268,9 +1268,9 @@ export default function LandingV2() {
             <strong>DATENQUELLEN</strong>
             <div>
               {integrationSources.map((source) => (
-                <span key={source}>
-                  <i aria-hidden="true" />
-                  {source}
+                <span key={source.label}>
+                  <i aria-hidden="true">{source.icon}</i>
+                  {source.label}
                   <em aria-hidden="true" />
                 </span>
               ))}
@@ -1282,7 +1282,7 @@ export default function LandingV2() {
           <div className={styles.integrationBrainCard}>
             <div>🧠</div>
             <strong>FanMind</strong>
-            <span>Vereint • Angereichert • Versteht</span>
+            <span>Bündelt • Ordnet • Bereitet vor</span>
           </div>
 
           <div className={styles.integrationFlowLinesRight} aria-hidden="true" />
@@ -1325,8 +1325,8 @@ export default function LandingV2() {
           </div>
           <p>
             <span>✓ Keine Kreditkarte erforderlich</span>
-            <span>✓ Setup in 2 Minuten</span>
-            <span>✓ Jederzeit kündbar</span>
+            <span>✓ MVP klar gekennzeichnet</span>
+            <span>✓ Kein automatischer Versand</span>
           </p>
         </div>
       </section>
