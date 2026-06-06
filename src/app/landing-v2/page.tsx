@@ -14,7 +14,7 @@ const navItems = [
   { label: "Screens", href: "#screens" },
   { label: "Preise", href: "#preise" },
   { label: "Ressourcen", href: "#ressourcen", caret: true },
-  { label: "Kontakt", href: "mailto:kontakt@fanmind.de" },
+  { label: "Kontakt", href: "#kontakt" },
 ];
 
 const trustLogos = [
@@ -33,8 +33,8 @@ const trustLogos = [
 const features = [
   {
     icon: "✉",
-    title: "Alle Kanäle verbinden",
-    text: "WhatsApp, Instagram, Discord, X, TikTok, Facebook und E-Mail – alles an einem Ort.",
+    title: "Alle Kanäle im Blick",
+    text: "Kontaktpunkte, Gesprächsnotizen und Kanal-Kontext werden zentral dokumentiert – dein Team behält alles nachvollziehbar im Blick.",
     tone: "blue",
   },
   {
@@ -46,13 +46,13 @@ const features = [
   {
     icon: "♙",
     title: "Segmentieren & personalisieren",
-    text: "Erstelle präzise Segmente und sende die richtige Nachricht zur richtigen Zeit.",
+    text: "Erstelle präzise Segmente und bereite die richtige Botschaft zur richtigen Zeit vor.",
     tone: "green",
   },
   {
     icon: "📣",
     title: "Kampagnen, die wirken",
-    text: "Plane, sende und analysiere Kampagnen über alle Kanäle – einfach und effektiv.",
+    text: "Plane Kampagnen, bereite Inhalte vor und analysiere Ergebnisse – einfach, nachvollziehbar und mit Freigabe.",
     tone: "orange",
   },
   {
@@ -93,7 +93,7 @@ const problemCards = [
 const solutionBenefits = [
   { icon: "♙", title: "Alle Kontakte", text: "an einem Ort." },
   { icon: "🧠", title: "Kontext & Historie", text: "für jede Interaktion." },
-  { icon: "✦", title: "KI & Automationen", text: "arbeiten für dich." },
+  { icon: "✦", title: "KI-Vorschläge & Abläufe", text: "unterstützen dich." },
   { icon: "⌁", title: "Messbare Ergebnisse", text: "und Wachstum." },
 ];
 
@@ -109,7 +109,7 @@ const functionCards = [
   {
     icon: "🧠",
     title: "2. Fan-Gedächtnis",
-    text: "Wichtige Details, Interessen und Historie automatisch speichern.",
+    text: "Wichtige Details, Interessen und Historie übersichtlich festhalten.",
     body: "VIP · premium_interessiert · Letzter Kontakt: Heute, 09:42",
     cta: "Details ansehen",
     tone: "green",
@@ -133,8 +133,8 @@ const functionCards = [
   {
     icon: "📣",
     title: "5. Kampagnen",
-    text: "Gezielte Kampagnen mit Segmenten und Automationen.",
-    body: "Sommer-Event Early Bird · Läuft · Öffnungsrate 38 %",
+    text: "Gezielte Kampagnen mit Segmenten und geprüften Entwürfen.",
+    body: "Sommer-Event Early Bird · In Prüfung · Öffnungsrate 38 %",
     cta: "Kampagnen ansehen",
     tone: "violet",
   },
@@ -329,8 +329,8 @@ const showcaseBenefits = [
   },
   {
     icon: "♙",
-    title: "Automatische Segmentierung",
-    text: "KI erkennt Muster und bildet dynamische Segmente für präzise Kommunikation.",
+    title: "KI-gestützte Segmentierung",
+    text: "KI kann Muster erkennen und Segmente vorschlagen; dein Team prüft und nutzt sie gezielt.",
   },
   {
     icon: "↗",
@@ -358,7 +358,7 @@ const showcaseFeatureStrip = [
   {
     icon: "📣",
     title: "Kampagnen & Analytics",
-    text: "Plane, sende, analysiere – und optimiere ständig für maximale Wirkung.",
+    text: "Plane, prüfe, analysiere – und optimiere ständig für maximale Wirkung.",
   },
 ];
 
@@ -665,7 +665,7 @@ export default function LandingV2() {
                 <b>✦ Nächste beste Aktion</b>
                 <div>
                   VIP-Infos +<br />
-                  Friend-Ticket senden
+                  Friend-Ticket vorbereiten
                 </div>
                 <span>→ Hohe Priorität</span>
               </div>
@@ -743,44 +743,6 @@ export default function LandingV2() {
           </a>
         </section>
 
-        <footer id="ressourcen" className={styles.heroMiniFooter}>
-          <Logo />
-          <p>© 2025 FanMind. Alle Rechte vorbehalten.</p>
-          <nav aria-label="Footer Navigation">
-            <a id="datenschutz" href="#datenschutz">
-              Datenschutz
-            </a>
-            <a id="impressum" href="#impressum">
-              Impressum
-            </a>
-            <a id="agb" href="#agb">
-              AGB
-            </a>
-            <a id="cookies" href="#cookies">
-              Cookies
-            </a>
-          </nav>
-          <div id="kontakt" className={styles.socials}>
-            <a href="https://www.instagram.com/" aria-label="Instagram">
-              ◎
-            </a>
-            <a href="https://discord.com/" aria-label="Discord">
-              ◖
-            </a>
-            <a href="https://x.com/" aria-label="X">
-              𝕏
-            </a>
-            <a href="https://www.linkedin.com/" aria-label="LinkedIn">
-              in
-            </a>
-            <a href="https://www.youtube.com/" aria-label="YouTube">
-              ▶
-            </a>
-          </div>
-          <a className={styles.backTop} href="#top" aria-label="Nach oben">
-            ↑
-          </a>
-        </footer>
       </section>
 
       <section
@@ -826,9 +788,9 @@ export default function LandingV2() {
               Follow-ups und Kampagnen in <em>einem System.</em>
             </h3>
             <p>
-              Alle Informationen, Interaktionen und Automationen laufen zusammen
-              – für echte Fan-Beziehungen, die skalieren. KI-Vorschläge bleiben
-              Vorschläge: Der Mensch prüft und gibt frei.
+              Alle Informationen, Interaktionen und Abläufe laufen zusammen – für echte
+              Fan-Beziehungen, die skalieren. KI-Vorschläge bleiben Vorschläge:
+              Der Mensch prüft und gibt frei.
             </p>
             <div className={styles.solutionBenefits}>
               {solutionBenefits.map((benefit) => (
@@ -1093,6 +1055,45 @@ export default function LandingV2() {
           ))}
         </div>
       </section>
+
+      <footer id="ressourcen" className={styles.siteFooter}>
+        <Logo />
+        <p>© 2025 FanMind. Alle Rechte vorbehalten.</p>
+        <nav aria-label="Footer Navigation">
+          <a id="datenschutz" href="#datenschutz">
+            Datenschutz
+          </a>
+          <a id="impressum" href="#impressum">
+            Impressum
+          </a>
+          <a id="agb" href="#agb">
+            AGB
+          </a>
+          <a id="cookies" href="#cookies">
+            Cookies
+          </a>
+        </nav>
+        <div id="kontakt" className={styles.socials}>
+          <a href="https://www.instagram.com/" aria-label="Instagram">
+            ◎
+          </a>
+          <a href="https://discord.com/" aria-label="Discord">
+            ◖
+          </a>
+          <a href="https://x.com/" aria-label="X">
+            𝕏
+          </a>
+          <a href="https://www.linkedin.com/" aria-label="LinkedIn">
+            in
+          </a>
+          <a href="https://www.youtube.com/" aria-label="YouTube">
+            ▶
+          </a>
+        </div>
+        <a className={styles.backTop} href="#top" aria-label="Nach oben">
+          ↑
+        </a>
+      </footer>
     </main>
   );
 }
