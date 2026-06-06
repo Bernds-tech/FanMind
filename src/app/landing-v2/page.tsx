@@ -298,56 +298,56 @@ const integrationChannels = [
   {
     icon: "✉",
     title: "E-Mail",
-    text: "Postfach-Anfragen zentral sammeln und zuordnen.",
+    text: "Anfragen zentral bündeln.",
     status: "Im MVP",
     tone: "blue",
   },
   {
     icon: "☏",
     title: "WhatsApp",
-    text: "Chats als Roadmap-Kanal für Kontext vormerken.",
+    text: "Chats als Roadmap-Kontext.",
     status: "Roadmap",
     tone: "green",
   },
   {
     icon: "◖",
     title: "Discord",
-    text: "Community-Signale perspektivisch strukturieren.",
+    text: "Community-Signale strukturieren.",
     status: "Roadmap",
     tone: "violet",
   },
   {
     icon: "f",
     title: "Facebook",
-    text: "Kommentare und Nachrichten später einordnen.",
+    text: "Nachrichten später einordnen.",
     status: "Roadmap",
     tone: "blue",
   },
   {
     icon: "𝕏",
     title: "X",
-    text: "Erwähnungen und DMs als Roadmap-Quelle.",
+    text: "DMs als Roadmap-Quelle.",
     status: "Roadmap",
     tone: "white",
   },
   {
     icon: "♪",
     title: "TikTok",
-    text: "Kommentare und DMs perspektivisch abbilden.",
+    text: "Kommentare später abbilden.",
     status: "Roadmap",
     tone: "purple",
   },
   {
     icon: "◎",
     title: "Instagram",
-    text: "DMs und Story-Antworten später bündeln.",
+    text: "DMs und Storys bündeln.",
     status: "Roadmap",
     tone: "pink",
   },
   {
     icon: "▤",
     title: "Webformulare",
-    text: "Formular-Anfragen bereit zur Erfassung.",
+    text: "Formulare sauber erfassen.",
     status: "Bereit",
     tone: "cyan",
   },
@@ -391,25 +391,25 @@ const integrationBenefits = [
   {
     icon: "ϟ",
     title: "Schneller verbunden",
-    text: "Kanäle an einem Ort bündeln und schneller bearbeiten.",
+    text: "Kanäle zentral bündeln.",
     tone: "blue",
   },
   {
     icon: "◷",
     title: "Weniger manuelle Arbeit",
-    text: "Routinen vorbereiten und Aufwand reduzieren.",
+    text: "Routinen schlank vorbereiten.",
     tone: "purple",
   },
   {
     icon: "▣",
     title: "Zentrale Datenbasis",
-    text: "Kontakte und Kontext sauber an einem Ort halten.",
+    text: "Kontext sauber zusammenführen.",
     tone: "green",
   },
   {
     icon: "◇",
     title: "Sicher & zuverlässig",
-    text: "Nachvollziehbar, sicher und für europäische Teams gedacht.",
+    text: "Nachvollziehbar für EU-Teams.",
     tone: "cyan",
   },
 ];
@@ -1243,8 +1243,8 @@ export default function LandingV2() {
           </h2>
           <p>
             FanMind bündelt E-Mail, Formulare und Roadmap-Kanäle in einem klaren
-            Workflow. Kontext wird vorbereitet, geprüft und bleibt jederzeit
-            unter deiner Kontrolle.
+            Workflow. Kontext wird vorbereitet, geprüft und bleibt unter
+            deiner Kontrolle.
           </p>
         </div>
 
