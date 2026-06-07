@@ -258,8 +258,8 @@ const sixStepCards = [
     tone: "blue",
     rows: [
       "Nächster Schritt: VIP-Infos + Friend-Ticket",
-      "Versand: Heute, 10:00",
-      "Kanäle: E-Mail, WhatsApp, Chat",
+      "Manuelle Erinnerung: Heute, 10:00",
+      "Kanäle notieren: E-Mail aktiv, weitere Kanäle Roadmap",
       "Priorität: Hoch",
       "Owner: Nina D.",
     ],
