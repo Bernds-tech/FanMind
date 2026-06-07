@@ -23,10 +23,10 @@
 .shell {
   position: relative;
   z-index: 1;
-  width: min(1380px, calc(100% - 28px));
-  min-height: calc(100vh - 28px);
-  margin: 14px auto;
-  padding: clamp(24px, 3vw, 38px);
+  width: min(1120px, calc(100% - 32px));
+  min-height: auto;
+  margin: 10px auto;
+  padding: clamp(18px, 2.2vw, 28px);
   border: 1px solid rgba(19, 128, 255, 0.3);
   border-radius: 18px;
   background: rgba(0, 5, 16, 0.36);
@@ -48,15 +48,15 @@
 .logo {
   gap: 14px;
   color: #ffffff;
-  font-size: clamp(24px, 3vw, 32px);
+  font-size: clamp(21px, 2vw, 27px);
   font-weight: 800;
   letter-spacing: -1.4px;
   text-decoration: none;
 }
 
 .logoMark {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   fill: none;
   stroke: #02e7ff;
   stroke-width: 3.1;
@@ -64,9 +64,38 @@
 }
 
 .topLinks {
-  gap: 16px;
+  gap: 10px;
   color: #c7c1ce;
-  font-size: 18px;
+  font-size: 14px;
+}
+
+
+.languageSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(72, 147, 255, 0.34);
+  border-radius: 999px;
+  color: #8ea8cb;
+  background: rgba(4, 14, 34, 0.58);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.languageSwitch a {
+  color: inherit;
+}
+
+.languageSwitch span {
+  color: rgba(180, 200, 230, 0.42);
+}
+
+.languageSwitch .languageActive {
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(0, 200, 255, 0.72);
 }
 
 .topLinks a,
@@ -79,20 +108,20 @@
 
 .authGrid {
   display: grid;
-  grid-template-columns: minmax(360px, 0.88fr) minmax(520px, 1.32fr);
-  gap: clamp(36px, 6vw, 72px);
+  grid-template-columns: minmax(260px, 0.75fr) minmax(430px, 1.25fr);
+  gap: clamp(22px, 3.6vw, 42px);
   align-items: center;
-  margin-top: clamp(44px, 7vw, 88px);
+  margin-top: clamp(20px, 3vw, 34px);
 }
 
 .visualPanel {
   display: grid;
-  gap: clamp(34px, 4vw, 52px);
+  gap: clamp(18px, 2vw, 26px);
 }
 
 .orbit {
   position: relative;
-  width: min(430px, 78vw);
+  width: min(270px, 58vw);
   aspect-ratio: 1;
   margin-inline: auto;
 }
@@ -162,11 +191,11 @@
 
 .lockShield {
   position: absolute;
-  inset: 26%;
+  inset: 27%;
   display: grid;
   place-items: center;
   color: #00dfff;
-  font-size: clamp(84px, 13vw, 138px);
+  font-size: clamp(58px, 8vw, 92px);
   border: 6px solid transparent;
   border-radius: 35% 35% 44% 44%;
   background: linear-gradient(#06142e, #06142e) padding-box,
@@ -177,17 +206,17 @@
 
 .benefitList {
   display: grid;
-  gap: 26px;
-  max-width: 520px;
+  gap: 14px;
+  max-width: 360px;
   margin-inline: auto;
 }
 
 .benefitList article {
   display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 22px;
+  grid-template-columns: 54px 1fr;
+  gap: 14px;
   align-items: center;
-  padding-bottom: 26px;
+  padding-bottom: 14px;
   border-bottom: 1px solid rgba(149, 173, 213, 0.16);
 }
 
@@ -198,11 +227,11 @@
 .benefitList span:first-child {
   display: grid;
   place-items: center;
-  width: 86px;
-  height: 86px;
+  width: 52px;
+  height: 52px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font-size: 42px;
+  font-size: 18px;
   background: rgba(4, 14, 34, 0.72);
   box-shadow: 0 0 26px color-mix(in srgb, currentColor 28%, transparent);
 }
@@ -222,14 +251,14 @@
 .benefitList h2 {
   margin: 0 0 8px;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 18px;
   letter-spacing: -0.5px;
 }
 
 .benefitList p {
   margin: 0;
   color: #c4c6d4;
-  font-size: 18px;
+  font-size: 14px;
   line-height: 1.38;
 }
 
@@ -286,24 +315,24 @@
 .formHeader h1 {
   margin: 0;
   color: #ffffff;
-  font-size: clamp(38px, 5vw, 50px);
+  font-size: clamp(28px, 3.4vw, 38px);
   line-height: 1.05;
   letter-spacing: -1.9px;
 }
 
 .formHeader p {
-  margin: 16px 0 0;
+  margin: 10px 0 0;
   color: #c9c4d0;
-  font-size: clamp(17px, 2vw, 21px);
+  font-size: clamp(14px, 1.6vw, 17px);
   line-height: 1.42;
 }
 
 .field {
   display: grid;
-  gap: 10px;
-  margin-top: 30px;
+  gap: 7px;
+  margin-top: 20px;
   color: #c9c5d2;
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -312,11 +341,11 @@
 .inputWrap {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 68px;
+  gap: 10px;
+  min-height: 52px;
   border: 1px solid rgba(48, 141, 255, 0.58);
   border-radius: 10px;
-  padding: 0 24px;
+  padding: 0 16px;
   background: rgba(2, 9, 26, 0.78);
   box-shadow: inset 0 0 26px rgba(0, 105, 255, 0.08);
 }
@@ -328,7 +357,7 @@
 
 .inputWrap span {
   color: #d6d0d6;
-  font-size: 26px;
+  font-size: 16px;
 }
 
 .inputWrap input {
@@ -336,7 +365,7 @@
   border: 0;
   color: #ffffff;
   background: transparent;
-  font-size: 20px;
+  font-size: 16px;
   outline: 0;
 }
 
@@ -347,21 +376,21 @@
 .inlineOptions {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 26px;
+  gap: 10px;
+  margin-top: 10px;
   color: #c9c5d2;
-  font-size: 17px;
+  font-size: 13px;
 }
 
 .inlineOptions label {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
 }
 
 .inlineOptions input {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   accent-color: #1977ff;
 }
 
@@ -371,16 +400,16 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 70px;
+  min-height: 54px;
   border-radius: 10px;
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 800;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .primaryButton {
-  margin-top: 30px;
+  margin-top: 20px;
   border: 0;
   color: #ffffff;
   background: linear-gradient(100deg, #0875ff 0%, #2755ff 45%, #8f25ff 100%);
@@ -388,7 +417,7 @@
 }
 
 .secondaryButton {
-  margin-top: 16px;
+  margin-top: 10px;
   border: 1px solid rgba(95, 129, 181, 0.48);
   color: #ffffff;
   background: rgba(3, 10, 25, 0.74);
@@ -407,31 +436,31 @@
 }
 
 .notice {
-  margin: 22px 0 0;
-  padding: 16px;
+  margin: 14px 0 0;
+  padding: 12px;
   color: #d7e4f5;
   line-height: 1.48;
 }
 
 .safetyCard {
   display: grid;
-  grid-template-columns: 70px 1fr;
+  grid-template-columns: 46px 1fr;
   gap: 18px;
   align-items: center;
-  margin-top: 18px;
-  padding: 18px;
+  margin-top: 12px;
+  padding: 12px;
 }
 
 .safetyCard > span {
   color: #1689ff;
-  font-size: 48px;
+  font-size: 32px;
   filter: drop-shadow(0 0 15px rgba(0, 119, 255, 0.55));
 }
 
 .safetyCard strong {
   display: block;
   color: #ffffff;
-  font-size: 20px;
+  font-size: 16px;
   margin-bottom: 6px;
 }
 
@@ -446,7 +475,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 14px;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
 .footerLinks a:last-child {
@@ -471,7 +500,7 @@
   .shell {
     width: min(100% - 16px, 560px);
     margin: 8px auto;
-    padding: 18px;
+    padding: 12px;
   }
 
   .header,
@@ -501,7 +530,7 @@
   }
 
   .inputWrap input {
-    font-size: 17px;
+    font-size: 13px;
   }
 
   .primaryButton,

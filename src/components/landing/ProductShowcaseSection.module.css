@@ -4,6 +4,7 @@
   width: min(1804px, 100%);
   margin: 0 auto;
   padding: 18px 0 20px;
+  scroll-margin-top: 86px;
   color: #f8fbff;
   isolation: isolate;
 }
