@@ -617,6 +617,57 @@ const faqContacts = [
   },
 ];
 
+
+const landingFooterColumns = [
+  {
+    icon: "✦",
+    title: "Produkt",
+    links: [
+      { label: "Features", href: "#features" },
+      { label: "Integrationen", href: "#integrationen" },
+      { label: "Preise", href: "#preise" },
+      { label: "Demo", href: "#demo" },
+    ],
+  },
+  {
+    icon: "👥",
+    title: "Unternehmen",
+    links: [
+      { label: "Über FanMind", href: "#produkt" },
+      { label: "Kontakt", href: "#kontakt" },
+      { label: "Partner", href: "#zielgruppen" },
+      { label: "Karriere", href: "#kontakt" },
+    ],
+  },
+  {
+    icon: "▤",
+    title: "Ressourcen",
+    links: [
+      { label: "FAQ", href: "#faq" },
+      { label: "Datenschutz", href: "#datenschutz-kontrolle" },
+      { label: "Impressum", href: "#impressum" },
+      { label: "AGB", href: "#agb" },
+    ],
+  },
+  {
+    icon: "🛡",
+    title: "Rechtliches",
+    links: [
+      { label: "DSGVO", href: "#datenschutz-kontrolle" },
+      { label: "Cookies", href: "#cookies" },
+      { label: "Sicherheit", href: "#datenschutz-kontrolle" },
+    ],
+  },
+];
+
+const landingFooterSocials = [
+  { label: "Instagram", href: "https://www.instagram.com/", icon: "◎" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/", icon: "in" },
+  { label: "X", href: "https://x.com/", icon: "𝕏" },
+  { label: "YouTube", href: "https://www.youtube.com/", icon: "▶" },
+  { label: "Discord", href: "https://discord.com/", icon: "◖" },
+];
+
 const pricingPlans = [
   {
     icon: "🚀",
@@ -2264,6 +2315,69 @@ export default function LandingV2() {
               </div>
             </article>
           ))}
+        </div>
+      </section>
+
+
+      <section
+        className={styles.landingFooterSection}
+        aria-labelledby="landing-footer-title"
+      >
+        <div className={styles.landingFooterPanel}>
+          <div className={styles.landingFooterBrand}>
+            <Logo />
+            <h2 id="landing-footer-title">
+              Das <span>KI-CRM für Creator, Clubs, Events und Fan-Communities.</span>
+            </h2>
+            <p>
+              FanMind verbindet Kontakte, KI und Aktionen in einem System – für
+              echte Fan-Beziehungen, mehr Conversion und nachhaltiges Wachstum.
+            </p>
+
+            <div className={styles.landingFooterDivider} aria-hidden="true" />
+
+            <strong>Folge uns</strong>
+            <div className={styles.landingFooterSocials} aria-label="FanMind Social Media">
+              {landingFooterSocials.map((social) => (
+                <a href={social.href} aria-label={social.label} key={social.label}>
+                  {social.icon}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.landingFooterNav}>
+            {landingFooterColumns.map((column) => (
+              <nav aria-label={column.title} key={column.title}>
+                <h3>
+                  <span>{column.icon}</span> {column.title}
+                </h3>
+                {column.links.map((link) => (
+                  <a href={link.href} key={link.label}>
+                    {link.label} <span>›</span>
+                  </a>
+                ))}
+              </nav>
+            ))}
+          </div>
+
+          <div className={styles.landingFooterNewsletter}>
+            <div className={styles.landingFooterMailIcon}>✉</div>
+            <div>
+              <h3>
+                Bleib <span>einen Schritt voraus.</span>
+              </h3>
+              <p>
+                Für Updates, Early-Access-Hinweise und Insights kannst du eine
+                persönliche Anfrage an unser Team senden.
+              </p>
+            </div>
+            <div className={styles.landingFooterSignup} aria-label="Early Access Anfrage">
+              <span>E-Mail-Adresse eingeben</span>
+              <a href="#early-access">Early Access <span>→</span></a>
+              <small>🛡 Persönliche Anfrage statt automatischem Newsletter.</small>
+            </div>
+          </div>
         </div>
       </section>
 
