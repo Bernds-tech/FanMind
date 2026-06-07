@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
+import { createFanMindTranslator, fanmindCopy, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
 import styles from "./landing-v2.module.css";
 
@@ -143,7 +144,7 @@ const functionCards = [
   {
     icon: "📣",
     title: "5. Kampagnen",
-    text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt Coming Soon.",
+    text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt In Kürze.",
     body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
     cta: "Roadmap ansehen",
     href: LANDING_ROADMAP_HREF,
@@ -153,7 +154,7 @@ const functionCards = [
     icon: "⌁",
     title: "6. Analytics",
     text: "Roadmap-Ausblick für spätere Auswertungen und Wachstumssignale.",
-    body: "Roadmap-Auswertung · Coming Soon",
+    body: "Roadmap-Auswertung · In Kürze",
     cta: "Roadmap öffnen",
     href: LANDING_ROADMAP_HREF,
     tone: "green",
@@ -276,7 +277,7 @@ const sixStepCards = [
     rows: [
       "Zielgruppe: 1.260",
       "Roadmap: Segment- und Kampagnenplanung",
-      "Versand: inaktiv / Coming Soon",
+      "Versand: inaktiv / In Kürze",
       "Kanäle: E-Mail im MVP, weitere Kanäle Roadmap",
       "Status: Vorschau geprüft",
     ],
@@ -291,7 +292,7 @@ const sixStepCards = [
     icon: "⌁",
     tone: "green",
     rows: [
-      "Roadmap-Auswertung: Coming Soon",
+      "Roadmap-Auswertung: In Kürze",
       "Wachstumssignale: Vorschau",
       "Antwortquote: Demo-Signal",
       "Insights für spätere Optimierung vorbereitet",
@@ -618,9 +619,9 @@ const faqs = [
   },
   {
     number: "7",
-    question: "Gibt es Early Access oder eine Demo?",
+    question: "Gibt es Zugang oder eine Demo?",
     answer:
-      "Ja. Du kannst eine Demo oder Early Access anfragen, damit wir FanMind mit deinem konkreten Use Case und deinen Fan-Prozessen einordnen.",
+      "Ja. Du kannst eine Demo oder Zugang anfragen, damit wir FanMind mit deinem konkreten Use Case und deinen Fan-Prozessen einordnen.",
   },
 ];
 
@@ -785,7 +786,7 @@ const pricingPlans = [
       "Große Kontaktmengen",
       "Erweiterte Workflow-Steuerung",
       "Persönliches Onboarding",
-      "Analytics, Rollen & Integrationen als Roadmap / Coming Soon",
+      "Analytics, Rollen & Integrationen als Roadmap / In Kürze",
     ],
   },
 ];
@@ -860,7 +861,7 @@ const roadmapPhases = [
     phase: "Phase 3",
     icon: "campaign",
     title: "Segmente & Kampagnen",
-    status: "Coming Soon",
+    status: "In Kürze",
     statusIcon: "◷",
     tone: "purple",
     items: ["Segmente", "Kampagnen", "Vorlagen", "A/B-Tests"],
@@ -870,7 +871,7 @@ const roadmapPhases = [
     phase: "Phase 4",
     icon: "analytics",
     title: "Analytics & Team",
-    status: "Coming Soon",
+    status: "In Kürze",
     statusIcon: "◷",
     tone: "violet",
     items: ["Analytics", "Team & Rollen", "Performance-Übersicht", "Workspaces"],
@@ -880,7 +881,7 @@ const roadmapPhases = [
     phase: "Phase 5",
     icon: "integrations",
     title: "Integrationen",
-    status: "Coming Soon",
+    status: "In Kürze",
     statusIcon: "◷",
     tone: "gold",
     items: ["Instagram", "TikTok", "WhatsApp", "Facebook", "X & Discord"],
@@ -973,9 +974,9 @@ function RoadmapLineIcon({ icon }: { icon: string }) {
   );
 }
 
-function Logo({ compact = false }: { compact?: boolean }) {
+function Logo({ compact = false, language = "de" }: { compact?: boolean; language?: FanMindLanguage }) {
   return (
-    <a className={styles.logo} href="/landing-v2" aria-label="FanMind Start">
+    <a className={styles.logo} href={landingPath(language)} aria-label="FanMind Start">
       <svg viewBox="0 0 52 52" aria-hidden="true" className={styles.logoMark}>
         <path d="M25.7 17.2C22.7 7.8 13.5 4.6 9.2 9.7c-4.4 5.1.4 13.1 10.1 12.2-8.8 4.9-8.6 15.4-1.7 17.1 6.8 1.6 10.2-7.4 8.4-16.4 1.8 9 6.8 16.7 13.1 13.7 6.4-3 4.6-13.3-5-16.1 9.7-.3 12.7-9.4 7.1-13.2-5.6-3.9-13.5 1.5-15.5 10.2Z" />
         <circle cx="17.1" cy="17.5" r="3.4" />
@@ -1013,15 +1014,52 @@ function MetricCard({
   );
 }
 
-export default function LandingV2() {
+type LandingV2Props = {
+  searchParams?: Promise<{ lang?: string | string[] }>;
+};
+
+export default async function LandingV2({ searchParams }: LandingV2Props) {
+  const params = await searchParams;
+  const language = getFanMindLanguage(params?.lang);
+  const t = createFanMindTranslator(language);
+  const navCopy = fanmindCopy[language].nav;
+  const loginHref = localizedPath("/login", language);
+  const registerHref = localizedPath("/register", language);
+  const landingHref = landingPath(language);
+  const roadmapHref = landingPath(language, "#roadmap");
+  const switchBase = "/landing-v2";
+  const localizedNavItems = navItems.map((item) => ({ ...item, label: t(item.label), href: item.href === LANDING_ROADMAP_HREF ? roadmapHref : item.href }));
+  const localizedFeatures = localizeFanMindValue(features, t);
+  const localizedProblemCards = localizeFanMindValue(problemCards, t);
+  const localizedSolutionBenefits = localizeFanMindValue(solutionBenefits, t);
+  const localizedFunctionCards = localizeFanMindValue(functionCards, t).map((card) => ({ ...card, href: card.href === LANDING_ROADMAP_HREF ? roadmapHref : card.href }));
+  const localizedMenuItems = localizeFanMindValue(visibleLandingMenuItems, t);
+  const localizedSixStepCards = localizeFanMindValue(sixStepCards, t).map((card) => ({ ...card, href: card.href === LANDING_ROADMAP_HREF ? roadmapHref : card.href }));
+  const localizedSixStepBenefits = localizeFanMindValue(sixStepBenefits, t);
+  const localizedIntegrationChannels = localizeFanMindValue(integrationChannels, t);
+  const localizedIntegrationSources = localizeFanMindValue(integrationSources, t);
+  const localizedIntegrationActions = localizeFanMindValue(integrationActions, t);
+  const localizedIntegrationBenefits = localizeFanMindValue(integrationBenefits, t);
+  const localizedResponsiveBenefits = localizeFanMindValue(responsiveBenefits, t);
+  const localizedPrivacyControlCards = localizeFanMindValue(privacyControlCards, t);
+  const localizedPrivacyControlBenefits = localizeFanMindValue(privacyControlBenefits, t);
+  const localizedFaqHighlights = localizeFanMindValue(faqHighlights, t);
+  const localizedFaqs = localizeFanMindValue(faqs, t);
+  const localizedFaqContacts = localizeFanMindValue(faqContacts, t).map((contact) => ({ ...contact, href: contact.href === "/register" ? registerHref : contact.href }));
+  const localizedLandingFooterColumns = localizeFanMindValue(landingFooterColumns, t).map((column) => ({ ...column, links: column.links.map((link) => ({ ...link, href: link.href === LANDING_ROADMAP_HREF ? roadmapHref : link.href })) }));
+  const localizedPricingPlans = localizeFanMindValue(pricingPlans, t).map((plan) => ({ ...plan, href: plan.href.startsWith("/register") ? localizedPath("/register", language, plan.href.includes("?") ? plan.href.slice(plan.href.indexOf("?")) : "") : plan.href }));
+  const localizedPricingProofs = localizeFanMindValue(pricingProofs, t);
+  const localizedRoadmapPhases = localizeFanMindValue(roadmapPhases, t);
+  const localizedRoadmapNotes = localizeFanMindValue(roadmapNotes, t);
+
   return (
     <main id="top" className={styles.page}>
       <div className={styles.backgroundGlow} aria-hidden="true" />
       <section className={styles.heroSection} aria-label="Startbereich FanMind">
         <header className={styles.header}>
-          <Logo />
+          <Logo language={language} />
           <nav className={styles.nav} aria-label="Hauptnavigation">
-            {navItems.map((item) => (
+            {localizedNavItems.map((item) => (
               <a key={item.label} href={item.href}>
                 {item.label}
                 {item.caret && <span>⌄</span>}
@@ -1029,16 +1067,16 @@ export default function LandingV2() {
             ))}
           </nav>
           <div className={styles.headerActions}>
-            <div className={styles.languageSwitch} aria-label="Sprachauswahl">
-              <a className={styles.languageActive} href="/landing-v2" aria-current="true">DE</a>
+            <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
+              <a className={language === "de" ? styles.languageActive : undefined} href={switchBase} aria-current={language === "de" ? "true" : undefined}>DE</a>
               <span>|</span>
-              <a href="/landing-v2?lang=en">EN</a>
+              <a className={language === "en" ? styles.languageActive : undefined} href={`${switchBase}?lang=en`} aria-current={language === "en" ? "true" : undefined}>EN</a>
             </div>
-            <a className={styles.loginButton} href="/login">
+            <a className={styles.loginButton} href={loginHref}>
               Login
             </a>
-            <a className={styles.accessButton} href="/register">
-              Registrieren <span>→</span>
+            <a className={styles.accessButton} href={registerHref}>
+              {navCopy.register} <span>→</span>
             </a>
           </div>
         </header>
@@ -1046,24 +1084,19 @@ export default function LandingV2() {
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
             <a className={styles.badge} href="#produkt-showcase">
-              <span>NEU</span> Die intelligente Fan-Management Plattform
+              <span>NEU</span> {t("Die intelligente Fan-Management Plattform")}
             </a>
             <h1>
-              Das KI-CRM für <span>Creator, Clubs, Events</span> und{" "}
+              {t("Das KI-CRM für")} <span>Creator, Clubs, Events</span> {t("und")}{" "}
               <span>Fan-Communities.</span>
             </h1>
-            <p>
-              FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Segmente,
-              Follow-ups, CSV-Import und Roadmap in einer intelligenten
-              Plattform – damit aus Fans echte Beziehungen und messbare
-              Conversions werden.
-            </p>
+            <p>{t("FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Segmente, Follow-ups, CSV-Import und Roadmap in einer intelligenten Plattform – damit aus Fans echte Beziehungen und messbare Conversions werden.")}</p>
             <div className={styles.heroCtas}>
               <a className={styles.demoButton} href="#produkt-showcase">
-                <span>▶</span> Demo ansehen
+                <span>▶</span> {t("Demo ansehen")}
               </a>
-              <a className={styles.outlineButton} href="/register">
-                <span>♙</span> Early Access anfragen
+              <a className={styles.outlineButton} href={registerHref}>
+                <span>♙</span> {t("Zugang anfragen")}
               </a>
             </div>
             <div id="zielgruppen" className={styles.socialProof}>
@@ -1081,10 +1114,10 @@ export default function LandingV2() {
                   </span>
                 ))}
               </div>
-              <p>Über 10.000 Creator, Clubs & Veranstalter vertrauen FanMind</p>
+              <p>{t("Über 10.000 Creator, Clubs & Veranstalter vertrauen FanMind")}</p>
               <div className={styles.rating}>
                 <strong>★★★★★</strong>
-                <span>4,9/5 auf G2</span>
+                <span>{t("4,9/5 auf G2")}</span>
               </div>
             </div>
           </div>
@@ -1096,10 +1129,10 @@ export default function LandingV2() {
           >
             <div className={styles.dashboardShell}>
               <aside className={styles.sidebar}>
-                <Logo compact />
+                <Logo compact language={language} />
                 <span className={styles.sidebarBrand}>FanMind</span>
                 <div className={styles.sidebarMenu}>
-                  {visibleLandingMenuItems.map((item, index) => (
+                  {localizedMenuItems.map((item, index) => (
                     <a
                       className={index === 0 ? styles.activeMenu : ""}
                       href={getLandingMenuHref(item.featureKey, index)}
@@ -1125,15 +1158,15 @@ export default function LandingV2() {
                 <div className={styles.dashboardTopbar}>
                   <div>
                     <h2>Dashboard</h2>
-                    <p>Willkommen zurück, Nina 👋</p>
+                    <p>{t("Willkommen zurück, Nina 👋")}</p>
                     <small>
-                      Heute ist Mittwoch, der 21. Mai 2025 · 09:42 Uhr
+                      {t("Heute ist Mittwoch, der 21. Mai 2025 · 09:42 Uhr")}
                     </small>
                   </div>
                   <div className={styles.dashboardControls}>
-                    <span>● Alle Systeme aktiv</span>
-                    <button>Letzte 30 Tage⌄</button>
-                    <a href="#kontakte">+ Neuer Kontakt</a>
+                    <span>{t("● Alle Systeme aktiv")}</span>
+                    <button>{t("Letzte 30 Tage⌄")}</button>
+                    <a href="#kontakte">{t("+ Neuer Kontakt")}</a>
                   </div>
                 </div>
 
@@ -1167,10 +1200,10 @@ export default function LandingV2() {
                 <div className={styles.analyticsGrid}>
                   <div className={styles.chartCard}>
                     <div className={styles.cardTitle}>
-                      <strong>Fan-Wachstum</strong>
-                      <button>Letzte 30 Tage⌄</button>
+                      <strong>{t("Fan-Wachstum")}</strong>
+                      <button>{t("Letzte 30 Tage⌄")}</button>
                     </div>
-                    <span>Entwicklung der Gesamtfans</span>
+                    <span>{t("Entwicklung der Gesamtfans")}</span>
                     <div className={styles.lineChart}>
                       <svg viewBox="0 0 430 170" aria-hidden="true">
                         <defs>
@@ -1227,14 +1260,14 @@ export default function LandingV2() {
                         Aktive Fans: 4.892
                       </div>
                       <div className={styles.legend}>
-                        <span /> Gesamtfans <i /> Aktive Fans
+                        <span /> {t("Gesamtfans")} <i /> {t("Aktive Fans")}
                       </div>
                     </div>
                   </div>
 
                   <div className={styles.channelCard}>
-                    <strong>Interaktionen nach Kanal</strong>
-                    <span>Interaktionen pro Kanal</span>
+                    <strong>{t("Interaktionen nach Kanal")}</strong>
+                    <span>{t("Interaktionen pro Kanal")}</span>
                     {[
                       "E-Mail",
                       "Formular",
@@ -1261,7 +1294,7 @@ export default function LandingV2() {
                       <span>100%</span>
                     </div>
                     <div className={styles.channelLegend}>
-                      Nachrichten · Replies · Klicks · Sonstige
+                      {t("Nachrichten · Replies · Klicks · Sonstige")}
                     </div>
                   </div>
                 </div>
@@ -1273,37 +1306,37 @@ export default function LandingV2() {
                 <span>♡</span>
                 <small>Fan Score</small>
                 <strong>92 ◆</strong>
-                <p>Sehr starkes Potenzial</p>
+                <p>{t("Sehr starkes Potenzial")}</p>
               </div>
               <div className={styles.nextAction}>
-                <b>✦ Nächste beste Aktion</b>
+                <b>{t("✦ Nächste beste Aktion")}</b>
                 <div>
                   VIP-Infos +<br />
-                  Friend-Ticket vorbereiten
+                  {t("Friend-Ticket vorbereiten")}
                 </div>
-                <span>→ Hohe Priorität</span>
+                <span>{t("→ Hohe Priorität")}</span>
               </div>
               <div className={styles.conversionCard}>
-                <span>Roadmap-Ausblick</span>
-                <strong>Soon</strong>
-                <small>keine Vollsuite im MVP</small>
+                <span>{t("Roadmap-Ausblick")}</span>
+                <strong>{t("In Kürze")}</strong>
+                <small>{t("keine Vollsuite im MVP")}</small>
                 <svg viewBox="0 0 230 70" aria-hidden="true">
                   <path d="M4 56 C28 58 34 42 49 45 S76 43 85 38 S108 44 120 30 S141 35 151 22 S176 31 184 15 S206 20 226 7" />
                 </svg>
               </div>
               <div className={styles.miniStats}>
                 <div>
-                  <span>Review-Quote</span>
+                  <span>{t("Review-Quote")}</span>
                   <strong>38 %</strong>
                   <small>+4,2 %</small>
                 </div>
                 <div>
-                  <span>Follow-up Quote</span>
+                  <span>{t("Follow-up Quote")}</span>
                   <strong>34,8 %</strong>
                   <small>+2,1 %</small>
                 </div>
               </div>
-              <a href="#produkt-showcase">und viele mehr</a>
+              <a href="#produkt-showcase">{t("und viele mehr")}</a>
             </aside>
           </div>
         </section>
@@ -1312,14 +1345,14 @@ export default function LandingV2() {
           className={styles.heroTrustBar}
           aria-label="Vertrauen von Top Creator, Clubs und Brands"
         >
-          <strong>Vertraut von Top Creator, Clubs & Brands</strong>
+          <strong>{t("Vertraut von Top Creator, Clubs & Brands")}</strong>
           {trustLogos.map((logo) => (
             <span key={logo}>{logo}</span>
           ))}
         </section>
 
         <section id="features" className={styles.heroFeatureGrid}>
-          {features.map((feature) => (
+          {localizedFeatures.map((feature) => (
             <article
               className={styles.heroFeatureCard}
               key={feature.title}
@@ -1335,23 +1368,23 @@ export default function LandingV2() {
         <section id="early-access" className={styles.heroBottomCta}>
           <div className={styles.gift}>▣</div>
           <div>
-            <h2>Starte jetzt smartere Fan-Beziehungen.</h2>
+            <h2>{t("Starte jetzt smartere Fan-Beziehungen.")}</h2>
             <p>
-              Keine Kreditkarte erforderlich <span>•</span> Setup in 2 Minuten{" "}
-              <span>•</span> Jederzeit kündbar
+              {t("Keine Kreditkarte erforderlich")} <span>•</span> Setup in 2 Minuten{" "}
+              <span>•</span> {t("Jederzeit kündbar")}
             </p>
           </div>
           <a
             className={styles.accessButton}
-            href="/register"
+            href={registerHref}
           >
-            Early Access sichern <span>→</span>
+            {t("Zugang vormerken")} <span>→</span>
           </a>
           <a
             className={styles.demoSecondary}
             href="#produkt-showcase"
           >
-            <span>▶</span> Demo ansehen
+            <span>▶</span> {t("Demo ansehen")}
           </a>
         </section>
 
@@ -1365,21 +1398,18 @@ export default function LandingV2() {
         <div className={styles.problemOrbit} aria-hidden="true" />
         <div className={styles.problemHeader}>
           <div className={styles.problemBadge}>
-            <span>!</span> DAS PROBLEM HEUTE
+            <span>!</span> {t("DAS PROBLEM HEUTE")}
           </div>
           <h2 id="problem-solution-title">
-            Fan-Kommunikation ist heute <span>verstreut, unübersichtlich</span>{" "}
-            und <em>schwer messbar.</em>
+            {t("Fan-Kommunikation ist heute")} <span>{t("verstreut, unübersichtlich")}</span>{" "}
+            {t("und")} <em>{t("schwer messbar.")}</em>
           </h2>
-          <p>
-            Viele Kanäle, wenig Kontext und manuelle Prozesse verhindern echte
-            Fan-Nähe, schnelle Antworten und nachhaltiges Wachstum.
-          </p>
+          <p>{t("Viele Kanäle, wenig Kontext und manuelle Prozesse verhindern echte Fan-Nähe, schnelle Antworten und nachhaltiges Wachstum.")}</p>
         </div>
 
         <div className={styles.problemSolutionGrid}>
           <div className={styles.problemCards}>
-            {problemCards.map((card) => (
+            {localizedProblemCards.map((card) => (
               <article className={styles.problemCard} key={card.title}>
                 <div className={styles.problemIcon}>{card.icon}</div>
                 <h3>{card.title}</h3>
@@ -1394,19 +1424,14 @@ export default function LandingV2() {
 
           <article className={styles.solutionCard}>
             <div className={styles.solutionBadge}>
-              <span>✓</span> DIE LÖSUNG
+              <span>✓</span> {t("DIE LÖSUNG")}
             </div>
             <h3>
-              <span>FanMind</span> verbindet Kontakte, Fan-Gedächtnis, KI,
-              Follow-ups und Roadmap in <em>einem System.</em>
+              <span>FanMind</span> {t("verbindet Kontakte, Fan-Gedächtnis, KI, Follow-ups und Roadmap in")} <em>{t("einem System.")}</em>
             </h3>
-            <p>
-              Alle Informationen, Interaktionen und Abläufe laufen zusammen – für echte
-              Fan-Beziehungen, die skalieren. KI-Vorschläge bleiben Vorschläge:
-              Der Mensch prüft und gibt frei.
-            </p>
+            <p>{t("Alle Informationen, Interaktionen und Abläufe laufen zusammen – für echte Fan-Beziehungen, die skalieren. KI-Vorschläge bleiben Vorschläge: Der Mensch prüft und gibt frei.")}</p>
             <div className={styles.solutionBenefits}>
-              {solutionBenefits.map((benefit) => (
+              {localizedSolutionBenefits.map((benefit) => (
                 <div key={benefit.title}>
                   <span>{benefit.icon}</span>
                   <strong>{benefit.title}</strong>
@@ -1418,7 +1443,7 @@ export default function LandingV2() {
         </div>
 
         <div className={styles.solutionFlow}>
-          {functionCards.map((card) => (
+          {localizedFunctionCards.map((card) => (
             <article
               className={styles.solutionFunctionCard}
               data-tone={card.tone}
@@ -1441,15 +1466,15 @@ export default function LandingV2() {
 
         <div className={styles.problemCtas}>
           <a className={styles.demoButton} href="#produkt-showcase">
-            <span>▶</span> Demo ansehen
+            <span>▶</span> {t("Demo ansehen")}
           </a>
-          <a className={styles.outlineButton} href="/register">
-            <span>♙</span> Early Access anfragen
+          <a className={styles.outlineButton} href={registerHref}>
+            <span>♙</span> {t("Zugang anfragen")}
           </a>
         </div>
       </section>
 
-      <ProductShowcaseSection />
+      <ProductShowcaseSection language={language} />
 
       <section
         id="six-steps"
@@ -1460,21 +1485,17 @@ export default function LandingV2() {
         <div className={styles.sixStepsConstellationRight} aria-hidden="true" />
         <div className={styles.sixStepsHeader}>
           <div className={styles.sixStepsBadge}>
-            <Logo compact />
-            <span>FanMind in 6 Schritten</span>
+            <Logo compact language={language} />
+            <span>{t("FanMind in 6 Schritten")}</span>
           </div>
           <h2 id="six-steps-title">
-            Von der ersten Anfrage bis zum geprüften <span>Follow-up.</span>
+            {t("Von der ersten Anfrage bis zum geprüften")} <span>Follow-up.</span>
           </h2>
-          <p>
-            FanMind verbindet Kontakte, KI und Aktionen in einem System – damit
-            du Beziehungen aufbaust, rechtzeitig reagierst und nächste Schritte
-            nachvollziehbar vorbereitest.
-          </p>
+          <p>{t("FanMind verbindet Kontakte, KI und Aktionen in einem System – damit du Beziehungen aufbaust, rechtzeitig reagierst und nächste Schritte nachvollziehbar vorbereitest.")}</p>
         </div>
 
         <div className={styles.processTrack} aria-label="FanMind Prozesslinie">
-          {sixStepCards.map((step, index) => (
+          {localizedSixStepCards.map((step, index) => (
             <article
               className={styles.processStep}
               data-tone={step.tone}
@@ -1501,7 +1522,7 @@ export default function LandingV2() {
                       </i>
                       <span>{row}</span>
                       {index === 2 && rowIndex < 3 && (
-                        <button type="button">Auswählen</button>
+                        <button type="button">{t("Auswählen")}</button>
                       )}
                     </div>
                   ))}
@@ -1517,11 +1538,11 @@ export default function LandingV2() {
 
         <div className={styles.sixStepsStatement}>
           <span>★</span>
-          <strong>Ein System für Beziehungen, Aktionen und Ergebnisse.</strong>
+          <strong>{t("Ein System für Beziehungen, Aktionen und Ergebnisse.")}</strong>
         </div>
 
         <div className={styles.sixStepsBenefits}>
-          {sixStepBenefits.map((benefit) => (
+          {localizedSixStepBenefits.map((benefit) => (
             <article data-tone={benefit.tone} key={benefit.title}>
               <span>{benefit.icon}</span>
               <div>
@@ -1540,15 +1561,11 @@ export default function LandingV2() {
       >
         <div className={styles.sandraUseCaseHero}>
           <div className={styles.sandraUseCaseHeader}>
-            <span className={styles.sandraUseCaseBadge}>Use Case Sandra M.</span>
+            <span className={styles.sandraUseCaseBadge}>{t("Use Case Sandra M.")}</span>
             <h2 id="sandra-use-case-title">
-              Aus Interesse wird <span>Conversion.</span>
+              {t("Aus Interesse wird")} <span>Conversion.</span>
             </h2>
-            <p>
-              FanMind verwandelt eine einfache Fan-Frage in den richtigen
-              nächsten Schritt – kontextbasiert, persönlich und messbar
-              erfolgreich.
-            </p>
+            <p>{t("FanMind verwandelt eine einfache Fan-Frage in den richtigen nächsten Schritt – kontextbasiert, persönlich und messbar erfolgreich.")}</p>
           </div>
 
           <aside
@@ -1560,8 +1577,8 @@ export default function LandingV2() {
               <div>
                 <strong>Sandra M.</strong>
                 <div className={styles.sandraSignalStrip}>
-                  <span>Käuferin</span>
-                  <span>VIP interessiert</span>
+                  <span>{t("Käuferin")}</span>
+                  <span>{t("VIP interessiert")}</span>
                 </div>
                 <p>
                   Mia Active Club <i aria-hidden="true">•</i> Fan Score 92
@@ -1571,18 +1588,18 @@ export default function LandingV2() {
             <div className={styles.sandraSummaryPillars}>
               <article>
                 <span>🧠</span>
-                <strong>KI versteht Kontext</strong>
-                <p>Relevante Insights in Echtzeit.</p>
+                <strong>{t("KI versteht Kontext")}</strong>
+                <p>{t("Relevante Insights in Echtzeit.")}</p>
               </article>
               <article>
                 <span>✧</span>
-                <strong>Next-Best-Action</strong>
-                <p>Die passende Aktion zur richtigen Zeit.</p>
+                <strong>{t("Next-Best-Action")}</strong>
+                <p>{t("Die passende Aktion zur richtigen Zeit.")}</p>
               </article>
               <article>
                 <span>↗</span>
-                <strong>Mehr Conversion</strong>
-                <p>Bessere Erlebnisse, stärkere Bindung.</p>
+                <strong>{t("Mehr Conversion")}</strong>
+                <p>{t("Bessere Erlebnisse, stärkere Bindung.")}</p>
               </article>
             </div>
           </aside>
@@ -1594,7 +1611,7 @@ export default function LandingV2() {
         >
           <article className={styles.sandraFlowStep}>
             <div className={styles.sandraStepNode}>1</div>
-            <h3>Sandra fragt nach dem Sommer-Event</h3>
+            <h3>{t("Sandra fragt nach dem Sommer-Event")}</h3>
             <div className={styles.sandraFlowCard}>
               <div className={styles.sandraMiniProfile}>
                 <span>SM</span>
@@ -1603,26 +1620,23 @@ export default function LandingV2() {
               </div>
               <div className={styles.sandraChatWindow}>
                 <div className={styles.sandraMessageInbound}>
-                  Hi liebes Team! Wann startet der Vorverkauf für das Sommer-Event?
+                  {t("Hi liebes Team! Wann startet der Vorverkauf für das Sommer-Event?")}
                 </div>
                 <div className={styles.sandraMessageOutbound}>
-                  Hallo Sandra! Der Vorverkauf beginnt am 18. Mai um 10:00 Uhr. 🙂
+                  {t("Hallo Sandra! Der Vorverkauf beginnt am 18. Mai um 10:00 Uhr. 🙂")}
                 </div>
               </div>
               <div className={styles.sandraCardMeta}>
-                <span>▱ Kanal: Chat</span>
-                <span>◷ Heute, 09:21</span>
+                <span>{t("▱ Kanal: Chat")}</span>
+                <span>{t("◷ Heute, 09:21")}</span>
               </div>
             </div>
-            <p>
-              Sandra zeigt Interesse am Sommer-Event. Die Nachricht landet im
-              zentralen Posteingang.
-            </p>
+            <p>{t("Sandra zeigt Interesse am Sommer-Event. Die Nachricht landet im zentralen Posteingang.")}</p>
           </article>
 
           <article className={styles.sandraFlowStep}>
             <div className={styles.sandraStepNode}>2</div>
-            <h3>FanMind erkennt den Kontext</h3>
+            <h3>{t("FanMind erkennt den Kontext")}</h3>
             <div className={styles.sandraFlowCard}>
               <div className={styles.sandraMiniProfile}>
                 <span>SM</span>
@@ -1631,116 +1645,104 @@ export default function LandingV2() {
               </div>
               <div className={styles.sandraMemoryList}>
                 <div>
-                  <span>Status</span>
-                  <strong>Käuferin</strong>
+                  <span>{t("Status")}</span>
+                  <strong>{t("Käuferin")}</strong>
                 </div>
                 <div>
-                  <span>Interesse</span>
-                  <strong>VIP interessiert</strong>
+                  <span>{t("Interesse")}</span>
+                  <strong>{t("VIP interessiert")}</strong>
                 </div>
                 <div>
                   <span>Fan Score</span>
                   <strong>92</strong>
                 </div>
                 <div>
-                  <span>Historie</span>
-                  <strong>48 Interaktionen</strong>
+                  <span>{t("Historie")}</span>
+                  <strong>{t("48 Interaktionen")}</strong>
                 </div>
                 <div>
-                  <span>Letzter Kontakt</span>
-                  <strong>Heute, 09:21</strong>
+                  <span>{t("Letzter Kontakt")}</span>
+                  <strong>{t("Heute, 09:21")}</strong>
                 </div>
                 <div>
-                  <span>Positive Signale</span>
-                  <strong>hohes Interesse</strong>
+                  <span>{t("Positive Signale")}</span>
+                  <strong>{t("hohes Interesse")}</strong>
                 </div>
               </div>
             </div>
-            <p>
-              FanMind vereint Profil, Historie und Verhalten zu einem klaren
-              Bild – in Sekunden.
-            </p>
+            <p>{t("FanMind vereint Profil, Historie und Verhalten zu einem klaren Bild – in Sekunden.")}</p>
           </article>
 
           <article className={styles.sandraFlowStep}>
             <div className={styles.sandraStepNode}>3</div>
-            <h3>KI schlägt die passende Antwort vor</h3>
+            <h3>{t("KI schlägt die passende Antwort vor")}</h3>
             <div className={styles.sandraFlowCard}>
               <div className={styles.sandraAiBox}>
                 <div className={styles.sandraAiHeader}>
                   <span>✧</span>
-                  <strong>KI-Antwortvorschlag</strong>
-                  <em>Beta</em>
+                  <strong>{t("KI-Antwortvorschlag")}</strong>
+                  <em>{t("Beta")}</em>
                 </div>
-                <p>
-                  Ja, als Mitglied bekommst du Early-Bird-Zugang und 10 % Rabatt.
-                  Wenn du möchtest, sende ich dir gleich alle Details zum Start.
-                </p>
+                <p>{t("Ja, als Mitglied bekommst du Early-Bird-Zugang und 10 % Rabatt. Wenn du möchtest, sende ich dir gleich alle Details zum Start.")}</p>
                 <div>
-                  <button type="button">kurzer</button>
-                  <button type="button">freundlicher</button>
-                  <button type="button">mit Memory</button>
+                  <button type="button">{t("kurzer")}</button>
+                  <button type="button">{t("freundlicher")}</button>
+                  <button type="button">{t("mit Memory")}</button>
                 </div>
               </div>
               <div className={styles.sandraReasonList}>
-                <strong>Gründe</strong>
-                <span>hohes Kaufinteresse</span>
-                <span>Early-Bird relevant</span>
-                <span>Mitglied & VIP-Potenzial</span>
+                <strong>{t("Gründe")}</strong>
+                <span>{t("hohes Kaufinteresse")}</span>
+                <span>{t("Early-Bird relevant")}</span>
+                <span>{t("Mitglied & VIP-Potenzial")}</span>
               </div>
             </div>
-            <p>
-              Unsere KI formuliert die beste Antwort – persönlich, relevant und
-              auf Sandra abgestimmt.
-            </p>
+            <p>{t("Unsere KI formuliert die beste Antwort – persönlich, relevant und auf Sandra abgestimmt.")}</p>
           </article>
 
           <article className={styles.sandraFlowStep}>
             <div className={styles.sandraStepNode}>4</div>
-            <h3>Nächste beste Aktion vorgeschlagen</h3>
+            <h3>{t("Nächste beste Aktion vorgeschlagen")}</h3>
             <div className={styles.sandraFlowCard}>
               <div className={styles.sandraActionPanel}>
                 <div>
-                  <strong>VIP-Infos + Friend-Ticket senden</strong>
-                  <span>Empfohlen</span>
+                  <strong>{t("VIP-Infos + Friend-Ticket senden")}</strong>
+                  <span>{t("Empfohlen")}</span>
                 </div>
                 <ul>
                   <li>hohes Kaufinteresse</li>
-                  <li>positiver Verlauf</li>
-                  <li>Early-Bird relevant</li>
-                  <li>hohe Conversion-Chance</li>
+                  <li>{t("positiver Verlauf")}</li>
+                  <li>{t("Early-Bird relevant")}</li>
+                  <li>{t("hohe Conversion-Chance")}</li>
                 </ul>
               </div>
               <div className={styles.sandraFollowUpBox}>
-                <strong>Follow-up planen</strong>
-                <span>Erinnerung senden <em>Morgen, 09:00</em></span>
-                <span>Segmentzuweisung prüfen <em>Morgen, 12:00</em></span>
+                <strong>{t("Follow-up planen")}</strong>
+                <span>{t("Erinnerung senden")} <em>{t("Morgen, 09:00")}</em></span>
+                <span>{t("Segmentzuweisung prüfen")} <em>{t("Morgen, 12:00")}</em></span>
               </div>
             </div>
-            <p>
-              FanMind empfiehlt die optimale Aktion und plant ein Follow-up –
-              zur manuellen Freigabe.
-            </p>
+            <p>{t("FanMind empfiehlt die optimale Aktion und plant ein Follow-up – zur manuellen Freigabe.")}</p>
           </article>
 
           <article className={styles.sandraFlowStep}>
             <div className={styles.sandraStepNode}>5</div>
-            <h3>Ergebnis: mehr Conversion, besseres Timing, mehr Impact</h3>
+            <h3>{t("Ergebnis: mehr Conversion, besseres Timing, mehr Impact")}</h3>
             <div className={`${styles.sandraFlowCard} ${styles.sandraResultCard}`}>
               <div className={styles.sandraConversionPanel}>
                 <strong>Conversion</strong>
                 <span>9,4 %</span>
-                <em>↑ +1,2 % vs. letzter Zeitraum</em>
+                <em>{t("↑ +1,2 % vs. letzter Zeitraum")}</em>
                 <div aria-hidden="true" />
               </div>
               <div className={styles.sandraMetricPair}>
                 <div>
-                  <strong>Öffnungsrate</strong>
+                  <strong>{t("Öffnungsrate")}</strong>
                   <span>38 %</span>
                   <em>↑ +4,2 %</em>
                 </div>
                 <div>
-                  <strong>Antwortquote</strong>
+                  <strong>{t("Antwortquote")}</strong>
                   <span>34,8 %</span>
                   <em>↑ +2,1 %</em>
                 </div>
@@ -1758,31 +1760,28 @@ export default function LandingV2() {
             <span>🧠</span>
             <div>
               <strong>
-                Mit Memory, KI und Follow-ups zum richtigen nächsten Schritt.
+                {t("Mit Memory, KI und Follow-ups zum richtigen nächsten Schritt.")}
               </strong>
               <p>
-                FanMind denkt mit. Für echte Verbindungen und messbare Ergebnisse.
+                {t("FanMind denkt mit. Für echte Verbindungen und messbare Ergebnisse.")}
               </p>
             </div>
           </div>
           <article>
             <span>◎</span>
-            <strong>Mehr Relevanz</strong>
-            <p>Jede Antwort nutzt Sandras Kontext und Fan-Gedächtnis.</p>
+            <strong>{t("Mehr Relevanz")}</strong>
+            <p>{t("Jede Antwort nutzt Sandras Kontext und Fan-Gedächtnis.")}</p>
           </article>
           <article>
             <span>↗</span>
-            <strong>Mehr Conversion</strong>
-            <p>
-              Passende Vorschläge entstehen aus Sandras Verlauf und aktuellem
-              Bedarf.
-            </p>
+            <strong>{t("Mehr Conversion")}</strong>
+            <p>{t("Passende Vorschläge entstehen aus Sandras Verlauf und aktuellem Bedarf.")}</p>
           </article>
           <article>
             <span>♡</span>
-            <strong>Mehr Loyalität</strong>
+            <strong>{t("Mehr Loyalität")}</strong>
             <p>
-              Nächste Kontakte werden geplant, priorisiert und manuell freigegeben.
+              {t("Nächste Kontakte werden geplant, priorisiert und manuell freigegeben.")}
             </p>
           </article>
         </div>
@@ -1799,20 +1798,16 @@ export default function LandingV2() {
 
         <div className={styles.integrationsHeader}>
           <div className={styles.integrationsBadge}>
-            <span>⌬</span> INTEGRATIONEN
+            <span>⌬</span> {t("INTEGRATIONEN")}
           </div>
           <h2 id="integrations-title">
-            Verbinde deine wichtigsten <span>Kanäle.</span>
+            {t("Verbinde deine wichtigsten")} <span>{t("Kanäle.")}</span>
           </h2>
-          <p>
-            FanMind bündelt E-Mail, Formulare und Roadmap-Kanäle in einem klaren
-            Workflow. Kontext wird vorbereitet, geprüft und bleibt unter
-            deiner Kontrolle.
-          </p>
+          <p>{t("FanMind bündelt E-Mail, Formulare und Roadmap-Kanäle in einem klaren Workflow. Kontext wird vorbereitet, geprüft und bleibt unter deiner Kontrolle.")}</p>
         </div>
 
         <div className={styles.integrationChannelGrid}>
-          {integrationChannels.map((channel) => (
+          {localizedIntegrationChannels.map((channel) => (
             <article
               className={styles.integrationChannelCard}
               data-tone={channel.tone}
@@ -1828,9 +1823,9 @@ export default function LandingV2() {
 
         <div className={styles.integrationFlowPanel}>
           <div className={styles.integrationSourcePanel}>
-            <strong>DATENQUELLEN</strong>
+            <strong>{t("DATENQUELLEN")}</strong>
             <div>
-              {integrationSources.map((source) => (
+              {localizedIntegrationSources.map((source) => (
                 <span key={source.label}>
                   <i aria-hidden="true">{source.icon}</i>
                   {source.label}
@@ -1878,7 +1873,7 @@ export default function LandingV2() {
           <div className={styles.integrationBrainCard}>
             <div>🧠</div>
             <strong>FanMind</strong>
-            <span>Bündelt • Ordnet • Bereitet vor</span>
+            <span>{t("Bündelt • Ordnet • Bereitet vor")}</span>
           </div>
 
           <svg
@@ -1917,9 +1912,9 @@ export default function LandingV2() {
           </svg>
 
           <div className={styles.integrationActionPanel}>
-            <strong>AKTIONEN & ERGEBNISSE</strong>
+            <strong>{t("AKTIONEN & ERGEBNISSE")}</strong>
             <div>
-              {integrationActions.map((action) => (
+              {localizedIntegrationActions.map((action) => (
                 <article key={action.title}>
                   <span>{action.icon}</span>
                   <h3>{action.title}</h3>
@@ -1932,7 +1927,7 @@ export default function LandingV2() {
         </div>
 
         <div className={styles.integrationBenefits}>
-          {integrationBenefits.map((benefit) => (
+          {localizedIntegrationBenefits.map((benefit) => (
             <article data-tone={benefit.tone} key={benefit.title}>
               <span>{benefit.icon}</span>
               <div>
@@ -1946,16 +1941,16 @@ export default function LandingV2() {
         <div className={styles.integrationCtaBox}>
           <div>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▶</span> Demo ansehen
+              <span>▶</span> {t("Demo ansehen")}
             </a>
-            <a className={styles.outlineButton} href="/register">
-              Early Access anfragen
+            <a className={styles.outlineButton} href={registerHref}>
+              {t("Zugang anfragen")}
             </a>
           </div>
           <p>
-            <span>✓ Keine Kreditkarte erforderlich</span>
-            <span>✓ MVP klar gekennzeichnet</span>
-            <span>✓ Kein automatischer Versand</span>
+            <span>{t("✓ Keine Kreditkarte erforderlich")}</span>
+            <span>{t("✓ MVP klar gekennzeichnet")}</span>
+            <span>{t("✓ Kein automatischer Versand")}</span>
           </p>
         </div>
       </section>
@@ -1971,16 +1966,16 @@ export default function LandingV2() {
 
         <div className={styles.roadmapHeader}>
           <div className={styles.roadmapBadge}>
-            <span>♢</span> ROADMAP & NÄCHSTE SCHRITTE
+            <span>♢</span> {t("ROADMAP & NÄCHSTE SCHRITTE")}
           </div>
           <h2 id="roadmap-title">
             FanMind <span>Roadmap</span>
           </h2>
-          <p>Was heute verfügbar ist – und was als Nächstes kommt.</p>
+          <p>{t("Was heute verfügbar ist – und was als Nächstes kommt.")}</p>
         </div>
 
         <div className={styles.roadmapTimeline} aria-hidden="true">
-          {roadmapPhases.map((phase) => (
+          {localizedRoadmapPhases.map((phase) => (
             <div className={styles.roadmapTimelineNode} data-tone={phase.tone} key={phase.number}>
               <strong>{phase.number}</strong>
               <i />
@@ -1989,7 +1984,7 @@ export default function LandingV2() {
         </div>
 
         <div className={styles.roadmapGrid}>
-          {roadmapPhases.map((phase) => (
+          {localizedRoadmapPhases.map((phase) => (
             <article className={styles.roadmapCard} data-tone={phase.tone} key={phase.phase}>
               <div className={styles.roadmapPhasePill}>{phase.phase}</div>
               <div className={styles.roadmapIcon}>
@@ -2009,7 +2004,7 @@ export default function LandingV2() {
         </div>
 
         <div className={styles.roadmapNotes}>
-          {roadmapNotes.map((note) => (
+          {localizedRoadmapNotes.map((note) => (
             <article data-tone={note.tone} key={note.title}>
               <span>{note.icon}</span>
               <div>
@@ -2032,19 +2027,15 @@ export default function LandingV2() {
 
         <div className={styles.responsiveCopy}>
           <div className={styles.responsiveBadge}>
-            <span>▯</span> RESPONSIVE EXPERIENCE
+            <span>▯</span> {t("RESPONSIVE EXPERIENCE")}
           </div>
           <h2 id="responsive-title">
-            Desktop, Tablet und Mobile – <span>überall klar.</span>
+            {t("Desktop, Tablet und Mobile –")} <span>{t("überall klar.")}</span>
           </h2>
-          <p>
-            FanMind ist für alle Bildschirmgrößen gestaltet: volle Übersicht am
-            Desktop, schnelle Aktionen unterwegs und konsistente Fan-Daten für
-            dein Team.
-          </p>
+          <p>{t("FanMind ist für alle Bildschirmgrößen gestaltet: volle Übersicht am Desktop, schnelle Aktionen unterwegs und konsistente Fan-Daten für dein Team.")}</p>
 
           <div className={styles.responsiveBenefitList}>
-            {responsiveBenefits.map((benefit) => (
+            {localizedResponsiveBenefits.map((benefit) => (
               <article data-tone={benefit.tone} key={benefit.title}>
                 <span>{benefit.icon}</span>
                 <div>
@@ -2073,23 +2064,23 @@ export default function LandingV2() {
           <div className={styles.responsiveCtaLead}>
             <span>🧠</span>
             <div>
-              <strong>FanMind auf jedem Screen.</strong>
-              <p>Volle Power, egal welches Gerät du nutzt.</p>
+              <strong>{t("FanMind auf jedem Screen.")}</strong>
+              <p>{t("Volle Power, egal welches Gerät du nutzt.")}</p>
             </div>
           </div>
           <div className={styles.responsiveCtaActions}>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▶</span> Demo ansehen
+              <span>▶</span> {t("Demo ansehen")}
             </a>
-            <a className={styles.outlineButton} href="/register">
-              Early Access anfragen
+            <a className={styles.outlineButton} href={registerHref}>
+              {t("Zugang anfragen")}
             </a>
           </div>
           <p>
-            <span>✓ MVP klar gekennzeichnet</span>
-            <span>✓ Keine Kreditkarte erforderlich</span>
-            <span>✓ Kein automatischer Versand</span>
-            <span>✓ Manuelle Freigabe</span>
+            <span>{t("✓ MVP klar gekennzeichnet")}</span>
+            <span>{t("✓ Keine Kreditkarte erforderlich")}</span>
+            <span>{t("✓ Kein automatischer Versand")}</span>
+            <span>{t("✓ Manuelle Freigabe")}</span>
           </p>
         </div>
       </section>
@@ -2104,20 +2095,16 @@ export default function LandingV2() {
 
         <div className={styles.pricingHeader}>
           <div className={styles.pricingBadge}>
-            Für Agenturen, Creator-Teams & Communities
+            {t("Für Agenturen, Creator-Teams & Communities")}
           </div>
           <h2 id="pricing-title">
-            Wähle das passende <span>FanMind-Paket</span> für deinen Einstieg.
+            {t("Wähle das passende")} <span>{t("FanMind-Paket")}</span> {t("für deinen Einstieg.")}
           </h2>
-          <p>
-            FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für
-            Teams. Dieses MVP konzentriert sich auf Kontakte,
-            KI-Antwortvorschläge, Memory, Follow-ups und CSV-Import.
-          </p>
+          <p>{t("FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Teams. Dieses MVP konzentriert sich auf Kontakte, KI-Antwortvorschläge, Memory, Follow-ups und CSV-Import.")}</p>
         </div>
 
         <div className={styles.pricingGrid} aria-label="FanMind Pakete">
-          {pricingPlans.map((plan) => (
+          {localizedPricingPlans.map((plan) => (
             <article
               className={styles.pricingPlanCard}
               data-featured={plan.featured ? "true" : undefined}
@@ -2146,7 +2133,7 @@ export default function LandingV2() {
         </div>
 
         <div className={styles.pricingProofBar}>
-          {pricingProofs.map((proof) => (
+          {localizedPricingProofs.map((proof) => (
             <article data-tone={proof.tone} key={proof.title}>
               <span>{proof.icon}</span>
               <div>
@@ -2160,24 +2147,23 @@ export default function LandingV2() {
         <div className={styles.pricingCtaPanel}>
           <div>
             <h3>
-              Baue <span>stärkere Fan-Beziehungen</span> – mit weniger Chaos
-              und besseren Antworten.
+              {t("Baue")} <span>{t("stärkere Fan-Beziehungen")}</span> {t("– mit weniger Chaos und besseren Antworten.")}
             </h3>
             <p>
-              FanMind bündelt Kontakte, KI, Memory und Follow-ups an einem Ort.
+              {t("FanMind bündelt Kontakte, KI, Memory und Follow-ups an einem Ort.")}
             </p>
           </div>
           <div className={styles.pricingCtaActions}>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▷</span> Demo ansehen
+              <span>▷</span> {t("Demo ansehen")}
             </a>
-            <a className={styles.outlineButton} href="/register">
-              <span>🚀</span> Pilot anfragen
+            <a className={styles.outlineButton} href={registerHref}>
+              <span>🚀</span> {t("Pilot anfragen")}
             </a>
             <p>
-              <span>✓ Keine Kreditkarte erforderlich</span>
-              <span>✓ Schneller Einstieg</span>
-              <span>✓ Upgrade später möglich</span>
+              <span>{t("✓ Keine Kreditkarte erforderlich")}</span>
+              <span>{t("✓ Schneller Einstieg")}</span>
+              <span>{t("✓ Upgrade später möglich")}</span>
             </p>
           </div>
         </div>
@@ -2193,16 +2179,12 @@ export default function LandingV2() {
         <div className={styles.privacyControlHero}>
           <div className={styles.privacyControlCopy}>
             <div className={styles.privacyControlBadge}>
-              <span>🛡</span> DATENSCHUTZ & KONTROLLE
+              <span>🛡</span> {t("DATENSCHUTZ & KONTROLLE")}
             </div>
             <h2 id="privacy-control-title">
-              KI-Unterstützung mit <span>Kontrolle.</span>
+              {t("KI-Unterstützung mit")} <span>{t("Kontrolle.")}</span>
             </h2>
-            <p>
-              FanMind unterstützt dein Team mit KI – während du die Kontrolle
-              über Versand, Berechtigungen und Compliance jederzeit bewusst
-              behältst.
-            </p>
+            <p>{t("FanMind unterstützt dein Team mit KI – während du die Kontrolle über Versand, Berechtigungen und Compliance jederzeit bewusst behältst.")}</p>
 
             <div className={styles.privacyOrbit} aria-label="Kontrollprinzipien rund um FanMind">
               <div className={styles.privacyOrbitCore}>
@@ -2210,28 +2192,28 @@ export default function LandingV2() {
                 <strong>FanMind</strong>
               </div>
               <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitData}`}>
-                <i>▣</i> Sichere Daten
+                <i>▣</i> {t("Sichere Daten")}
               </span>
               <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitRoles}`}>
-                <i>👥</i> Rollen & Rechte
+                <i>👥</i> {t("Rollen & Rechte")}
               </span>
               <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitAudit}`}>
                 <i>▤</i> Audit-Log
               </span>
               <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitRules}`}>
-                <i>⚠</i> Regeln & Kontrollen
+                <i>⚠</i> {t("Regeln & Kontrollen")}
               </span>
               <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitEu}`}>
-                <i>☁</i> EU-Fokus
+                <i>☁</i> {t("EU-Fokus")}
               </span>
               <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitApproval}`}>
-                <i>☑</i> Freigabe & Zustimmung
+                <i>☑</i> {t("Freigabe & Zustimmung")}
               </span>
             </div>
           </div>
 
           <div className={styles.privacyControlGrid}>
-            {privacyControlCards.map((card) => (
+            {localizedPrivacyControlCards.map((card) => (
               <article className={styles.privacyControlCard} data-tone={card.tone} key={card.title}>
                 <span className={styles.privacyControlNumber}>{card.number}</span>
                 <div className={styles.privacyControlIcon}>{card.icon}</div>
@@ -2248,17 +2230,14 @@ export default function LandingV2() {
         <div className={styles.privacyControlStatement}>
           <div className={styles.privacyStatementIcon}>🛡</div>
           <h3>
-            Smarte KI. <span>Volle Kontrolle.</span> <strong>Sichere Daten.</strong>
+            {t("Smarte KI.")} <span>{t("Volle Kontrolle.")}</span> <strong>{t("Sichere Daten.")}</strong>
           </h3>
-          <p>
-            FanMind kombiniert KI-Unterstützung mit klaren Regeln, Transparenz
-            und Datenschutz – für nachhaltiges Fan-Management.
-          </p>
+          <p>{t("FanMind kombiniert KI-Unterstützung mit klaren Regeln, Transparenz und Datenschutz – für nachhaltiges Fan-Management.")}</p>
         </div>
 
         <div className={styles.privacyControlBottom}>
           <div className={styles.privacyBenefitList}>
-            {privacyControlBenefits.map((benefit) => (
+            {localizedPrivacyControlBenefits.map((benefit) => (
               <article data-tone={benefit.tone} key={benefit.title}>
                 <span>{benefit.icon}</span>
                 <div>
@@ -2270,14 +2249,13 @@ export default function LandingV2() {
           </div>
           <div className={styles.privacyControlActions}>
             <a className={styles.demoButton} href="#datenschutz-kontrolle">
-              <span>🔒</span> Datenschutz ansehen
+              <span>🔒</span> {t("Datenschutz ansehen")}
             </a>
             <a className={styles.outlineButton} href="#produkt-showcase">
-              Demo buchen <span>→</span>
+              {t("Demo buchen")} <span>→</span>
             </a>
             <p>
-              <span>🛡</span> Vertrauen entsteht durch Sicherheit. FanMind liefert
-              klare KI-Unterstützung mit bewusster Kontrolle.
+              <span>🛡</span> {t("Vertrauen entsteht durch Sicherheit. FanMind liefert klare KI-Unterstützung mit bewusster Kontrolle.")}
             </p>
           </div>
         </div>
@@ -2294,18 +2272,15 @@ export default function LandingV2() {
         <div className={styles.faqMainGrid}>
           <div className={styles.faqIntro}>
             <div className={styles.faqBadge}>
-              <span>?</span> FAQ
+              <span>?</span> {t("FAQ")}
             </div>
             <h2 id="faq-title">
-              Häufige Fragen zu <span>FanMind</span>
+              {t("Häufige Fragen zu")} <span>FanMind</span>
             </h2>
-            <p>
-              Antworten auf die häufigsten Fragen von Creator, Clubs,
-              Agenturen und Brands – klar, ehrlich und auf den Punkt.
-            </p>
+            <p>{t("Antworten auf die häufigsten Fragen von Creator, Clubs, Agenturen und Brands – klar, ehrlich und auf den Punkt.")}</p>
 
             <div className={styles.faqHighlightGrid}>
-              {faqHighlights.map((item) => (
+              {localizedFaqHighlights.map((item) => (
                 <article className={styles.faqHighlightCard} data-tone={item.tone} key={item.title}>
                   <div className={styles.faqHighlightIcon}>{item.icon}</div>
                   <h3>{item.title}</h3>
@@ -2318,14 +2293,14 @@ export default function LandingV2() {
             <div className={styles.faqAudienceCard}>
               <span>👥</span>
               <div>
-                <strong>Für Creator, Clubs, Agenturen und Brands.</strong>
-                <p>Antworten für Teams mit wachsenden Communities.</p>
+                <strong>{t("Für Creator, Clubs, Agenturen und Brands.")}</strong>
+                <p>{t("Antworten für Teams mit wachsenden Communities.")}</p>
               </div>
             </div>
           </div>
 
           <div className={styles.faqList} aria-label="Häufige Fragen">
-            {faqs.map((faq) => (
+            {localizedFaqs.map((faq) => (
               <details className={styles.faqItem} key={faq.number} open={faq.open}>
                 <summary>
                   <span>{faq.number}</span>
@@ -2342,13 +2317,13 @@ export default function LandingV2() {
           <div className={styles.faqContactLead}>
             <span>🎧</span>
             <div>
-              <h3>Noch Fragen?</h3>
+              <h3>{t("Noch Fragen?")}</h3>
               <p>
-                Unser Team ist für dich da – persönlich, schnell und zuverlässig.
+                {t("Unser Team ist für dich da – persönlich, schnell und zuverlässig.")}
               </p>
             </div>
           </div>
-          {faqContacts.map((contact) => (
+          {localizedFaqContacts.map((contact) => (
             <article className={styles.faqContactItem} data-tone={contact.tone} key={contact.title}>
               <span>{contact.icon}</span>
               <div>
@@ -2368,18 +2343,15 @@ export default function LandingV2() {
       >
         <div className={styles.landingFooterPanel}>
           <div className={styles.landingFooterBrand}>
-            <Logo />
+            <Logo language={language} />
             <h2 id="landing-footer-title">
-              Das <span>KI-CRM für Creator, Clubs, Events und Fan-Communities.</span>
+              {t("Das")} <span>{t("KI-CRM für Creator, Clubs, Events und Fan-Communities.")}</span>
             </h2>
-            <p>
-              FanMind verbindet Kontakte, KI und Aktionen in einem System – für
-              echte Fan-Beziehungen, mehr Conversion und nachhaltiges Wachstum.
-            </p>
+            <p>{t("FanMind verbindet Kontakte, KI und Aktionen in einem System – für echte Fan-Beziehungen, mehr Conversion und nachhaltiges Wachstum.")}</p>
 
             <div className={styles.landingFooterDivider} aria-hidden="true" />
 
-            <strong>Folge uns</strong>
+            <strong>{t("Folge uns")}</strong>
             <div className={styles.landingFooterSocials} aria-label="FanMind Social Media">
               {landingFooterSocials.map((social) => (
                 <a href={social.href} aria-label={social.label} key={social.label}>
@@ -2390,7 +2362,7 @@ export default function LandingV2() {
           </div>
 
           <div className={styles.landingFooterNav}>
-            {landingFooterColumns.map((column) => (
+            {localizedLandingFooterColumns.map((column) => (
               <nav aria-label={column.title} key={column.title}>
                 <h3>
                   <span>{column.icon}</span> {column.title}
@@ -2408,17 +2380,14 @@ export default function LandingV2() {
             <div className={styles.landingFooterMailIcon}>✉</div>
             <div>
               <h3>
-                Bleib <span>einen Schritt voraus.</span>
+                {t("Bleib")} <span>{t("einen Schritt voraus.")}</span>
               </h3>
-              <p>
-                Für Updates, Early-Access-Hinweise und Insights kannst du eine
-                persönliche Anfrage an unser Team senden.
-              </p>
+              <p>{t("Für Updates, Early-Access-Hinweise und Insights kannst du eine persönliche Anfrage an unser Team senden.")}</p>
             </div>
-            <div className={styles.landingFooterSignup} aria-label="Early Access Anfrage">
-              <span>E-Mail-Adresse eingeben</span>
-              <a href="/register">Early Access <span>→</span></a>
-              <small>🛡 Persönliche Anfrage statt automatischem Newsletter.</small>
+            <div className={styles.landingFooterSignup} aria-label="Zugangsanfrage">
+              <span>{t("E-Mail-Adresse eingeben")}</span>
+              <a href={registerHref}>{t("Zugang anfragen")} <span>→</span></a>
+              <small>{t("🛡 Persönliche Anfrage statt automatischem Newsletter.")}</small>
             </div>
           </div>
         </div>
@@ -2426,17 +2395,17 @@ export default function LandingV2() {
 
 
       <footer id="ressourcen" className={styles.siteFooter}>
-        <Logo />
-        <p>© 2025 FanMind. Alle Rechte vorbehalten.</p>
+        <Logo language={language} />
+        <p>{t("© 2025 FanMind. Alle Rechte vorbehalten.")}</p>
         <nav aria-label="Footer Navigation">
           <a id="datenschutz" href="#datenschutz">
-            Datenschutz
+            {t("Datenschutz")}
           </a>
           <a id="impressum" href="#impressum">
-            Impressum
+            {t("Impressum")}
           </a>
           <a id="agb" href="#agb">
-            AGB
+            {t("AGB")}
           </a>
           <a id="cookies" href="#cookies">
             Cookies
