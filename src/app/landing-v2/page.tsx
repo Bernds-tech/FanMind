@@ -512,6 +512,111 @@ const privacyControlBenefits = [
   },
 ];
 
+
+const faqHighlights = [
+  {
+    icon: "▣",
+    title: "Alles an einem Ort",
+    text: "E-Mails, Formulare und Gesprächsnotizen werden zentral gebündelt.",
+    accent: "Weniger Chaos, mehr Überblick",
+    tone: "purple",
+  },
+  {
+    icon: "🧠",
+    title: "KI, die versteht",
+    text: "FanMind bereitet passende Vorschläge vor – dein Team prüft und entscheidet.",
+    accent: "Intelligent & kontextbasiert",
+    tone: "green",
+  },
+  {
+    icon: "🛡",
+    title: "Sicher & DSGVO-orientiert",
+    text: "Datenschutz, Transparenz und bewusste Freigaben stehen im Fokus.",
+    accent: "Vertrauen & Transparenz",
+    tone: "blue",
+  },
+  {
+    icon: "▥",
+    title: "Messbar mehr Wirkung",
+    text: "Kontakte, Follow-ups und Roadmap-Signale helfen dir, Wirkung besser einzuordnen.",
+    accent: "Mehr Impact, weniger Aufwand",
+    tone: "violet",
+  },
+];
+
+const faqs = [
+  {
+    number: "1",
+    question: "Für wen ist FanMind gedacht?",
+    answer:
+      "FanMind ist für Creator, Clubs, Agenturen und Brands gedacht, die Fan-Kommunikation professionell verwalten und strukturieren wollen – vom ersten Pilot bis zum wachsenden Team.",
+    open: true,
+  },
+  {
+    number: "2",
+    question: "Kann FanMind E-Mail, WhatsApp und Chat verbinden?",
+    answer:
+      "E-Mail, Kontakte, CSV-Import und zentrale Gesprächsnotizen stehen im MVP im Fokus. Weitere Kanäle wie WhatsApp, Social DMs und Community-Chats sind als Roadmap transparent markiert.",
+  },
+  {
+    number: "3",
+    question: "Sendet die KI automatisch Nachrichten?",
+    answer:
+      "Nein. FanMind bereitet KI-Vorschläge vor, aber dein Team prüft Inhalte bewusst und gibt Kommunikation selbst frei. Es gibt keinen ungeprüften automatischen Versand.",
+  },
+  {
+    number: "4",
+    question: "Sind meine Daten DSGVO-konform geschützt?",
+    answer:
+      "FanMind ist mit Datenschutz-Fokus, klaren Freigaben und EU-orientierten Produktprinzipien konzipiert. Sensible Workflows werden bewusst transparent gehalten.",
+  },
+  {
+    number: "5",
+    question: "Kann ich mehrere Profile oder Kunden verwalten?",
+    answer:
+      "Mehrere Profile und Kunden sind vor allem für Growth- und Agency-Workflows vorgesehen. Im Pilot klären wir gemeinsam, welche Struktur für dein Team sinnvoll ist.",
+  },
+  {
+    number: "6",
+    question: "Kann ich bestehende Kontakte importieren?",
+    answer:
+      "Ja, Kontakt-Import per CSV ist Teil des Produktfokus. Feld-Zuordnung, Validierung und größere Import-Workflows werden schrittweise ausgebaut.",
+  },
+  {
+    number: "7",
+    question: "Gibt es Early Access oder eine Demo?",
+    answer:
+      "Ja. Du kannst eine Demo oder Early Access anfragen, damit wir FanMind mit deinem konkreten Use Case und deinen Fan-Prozessen einordnen.",
+  },
+];
+
+const faqContacts = [
+  {
+    icon: "✉",
+    title: "Kontakt aufnehmen",
+    text: "Schreib uns eine Nachricht oder buche ein persönliches Gespräch.",
+    cta: "Jetzt schreiben",
+    href: "mailto:kontakt@fanmind.de?subject=Frage%20zu%20FanMind",
+    tone: "blue",
+  },
+  {
+    icon: "▶",
+    title: "Demo anfragen",
+    text: "Erlebe FanMind live und sieh, wie es für dich funktioniert.",
+    cta: "Demo anfragen",
+    href: "#demo",
+    tone: "purple",
+  },
+  {
+    icon: "ϟ",
+    title: "Antwort in unter 24 Stunden",
+    text: "Wir antworten schnell – persönlich und auf den Punkt.",
+    cta: "Mehr erfahren",
+    href: "#early-access",
+    tone: "green",
+  },
+];
+
 const pricingPlans = [
   {
     icon: "🚀",
@@ -2081,6 +2186,84 @@ export default function LandingV2() {
               klare KI-Unterstützung mit bewusster Kontrolle.
             </p>
           </div>
+        </div>
+      </section>
+
+
+      <section
+        id="faq"
+        className={styles.faqSection}
+        aria-labelledby="faq-title"
+      >
+        <div className={styles.faqAura} aria-hidden="true" />
+
+        <div className={styles.faqMainGrid}>
+          <div className={styles.faqIntro}>
+            <div className={styles.faqBadge}>
+              <span>?</span> FAQ
+            </div>
+            <h2 id="faq-title">
+              Häufige Fragen zu <span>FanMind</span>
+            </h2>
+            <p>
+              Antworten auf die häufigsten Fragen von Creator, Clubs,
+              Agenturen und Brands – klar, ehrlich und auf den Punkt.
+            </p>
+
+            <div className={styles.faqHighlightGrid}>
+              {faqHighlights.map((item) => (
+                <article className={styles.faqHighlightCard} data-tone={item.tone} key={item.title}>
+                  <div className={styles.faqHighlightIcon}>{item.icon}</div>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                  <strong>{item.accent}</strong>
+                </article>
+              ))}
+            </div>
+
+            <div className={styles.faqAudienceCard}>
+              <span>👥</span>
+              <div>
+                <strong>Für Creator, Clubs, Agenturen und Brands.</strong>
+                <p>Antworten für Teams mit wachsenden Communities.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.faqList} aria-label="Häufige Fragen">
+            {faqs.map((faq) => (
+              <details className={styles.faqItem} key={faq.number} open={faq.open}>
+                <summary>
+                  <span>{faq.number}</span>
+                  <strong>{faq.question}</strong>
+                  <i aria-hidden="true" />
+                </summary>
+                <p>{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.faqContactPanel}>
+          <div className={styles.faqContactLead}>
+            <span>🎧</span>
+            <div>
+              <h3>Noch Fragen?</h3>
+              <p>
+                Unser Team ist für dich da – persönlich, schnell und zuverlässig.
+              </p>
+            </div>
+          </div>
+          {faqContacts.map((contact) => (
+            <article className={styles.faqContactItem} data-tone={contact.tone} key={contact.title}>
+              <span>{contact.icon}</span>
+              <div>
+                <strong>{contact.title}</strong>
+                <p>{contact.text}</p>
+                <a href={contact.href}>{contact.cta} <span>→</span></a>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
