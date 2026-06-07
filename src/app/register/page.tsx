@@ -1,18 +1,19 @@
 "use client";
 
 import { FormEvent, use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
 import { resolvePlanId } from "@/lib/plans";
 import type { PlanId } from "@/config/plans";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./register.module.css";
 
-function LanguageSwitch({ language }: { language: FanMindLanguage }) {
+function LanguageSwitch({ language, planId }: { language: FanMindLanguage; planId: PlanId }) {
   return (
     <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
-      <a className={language === "de" ? styles.languageActive : undefined} href="/register" aria-current={language === "de" ? "true" : undefined}>DE</a>
+      <a className={language === "de" ? styles.languageActive : undefined} href={`/register?plan=${planId}`} aria-current={language === "de" ? "true" : undefined}>DE</a>
       <span>|</span>
-      <a className={language === "en" ? styles.languageActive : undefined} href="/register?lang=en" aria-current={language === "en" ? "true" : undefined}>EN</a>
+      <a className={language === "en" ? styles.languageActive : undefined} href={`/register?plan=${planId}&lang=en`} aria-current={language === "en" ? "true" : undefined}>EN</a>
     </div>
   );
 }
@@ -83,17 +84,20 @@ async function prepareUserWorkspace(
 export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const params = use(searchParams);
   const language = getFanMindLanguage(params.lang);
-  const selectedPlanId = resolvePlanId(params.plan, "pilot");
+  const selectedPlanId = resolvePlanId(params.plan, "starter");
   const copy = fanmindCopy[language].register;
   const loginHref = localizedPath("/login", language);
   const onboardingHref = language === "en" ? `/onboarding?plan=${selectedPlanId}&lang=en` : `/onboarding?plan=${selectedPlanId}`;
   const [success, setSuccess] = useState(false);
+  const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSuccess(false);
+    setAwaitingEmailConfirmation(false);
     setError(null);
     setIsSubmitting(true);
 
@@ -146,6 +150,12 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
       }
 
       setSuccess(true);
+      setAwaitingEmailConfirmation(!data.session);
+
+      if (data.session?.user) {
+        router.push(onboardingHref);
+        router.refresh();
+      }
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : "Unbekannter Supabase-Fehler.");
     } finally {
@@ -160,7 +170,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
         <header className={styles.header}>
           <FanMindLogo language={language} />
           <nav className={styles.topLinks} aria-label="Registrierung Navigation">
-            <LanguageSwitch language={language} />
+            <LanguageSwitch language={language} planId={selectedPlanId} />
             <span>{copy.loginPrompt}</span>
             <a href={loginHref}>{copy.loginLink}</a>
           </nav>
@@ -277,7 +287,9 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
 
             {success && (
               <p className={styles.success} role="status">
-                {copy.success} {language === "en" ? "If your Supabase project returns an active session, profile, workspace and plan are prepared via RLS-safe anon access. With email confirmation enabled this happens after the first login." : "Wenn dein Supabase-Projekt direkt eine aktive Session liefert, werden Profil, Workspace und Plan per RLS-sicherem Anon-Zugriff vorbereitet. Bei aktivierter E-Mail-Bestätigung passiert das nach dem ersten Login."} <a href={onboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
+                {copy.success} {awaitingEmailConfirmation
+                  ? (language === "en" ? "Please confirm your email address and log in afterwards." : "Bitte bestätige deine E-Mail-Adresse und logge dich danach ein.")
+                  : (language === "en" ? "Profile, workspace and plan are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Plan werden vorbereitet. Du wirst ins Onboarding weitergeleitet.")} <a href={onboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
               </p>
             )}
 

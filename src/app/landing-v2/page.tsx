@@ -1025,7 +1025,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const navCopy = fanmindCopy[language].nav;
   const loginHref = localizedPath("/login", language);
   const registerHref = localizedPath("/register", language);
-  const landingHref = landingPath(language);
   const roadmapHref = landingPath(language, "#roadmap");
   const switchBase = "/landing-v2";
   const localizedNavItems = navItems.map((item) => ({ ...item, label: t(item.label), href: item.href === LANDING_ROADMAP_HREF ? roadmapHref : item.href }));

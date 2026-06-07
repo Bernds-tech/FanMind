@@ -16,6 +16,7 @@ import styles from "./OnboardingMaster.module.css";
 
 type OnboardingMasterProps = {
   planId: PlanId;
+  isDemoMode?: boolean;
 };
 
 const coreFeatureKeys: FeatureKey[] = [
@@ -117,7 +118,7 @@ function FeatureCard({ featureKey, planId }: { featureKey: FeatureKey; planId: P
   );
 }
 
-export default function OnboardingMaster({ planId }: OnboardingMasterProps) {
+export default function OnboardingMaster({ planId, isDemoMode = false }: OnboardingMasterProps) {
   const plan = getPlan(planId);
   const focus = planFocus(planId);
   const steps = getOnboardingSteps(planId);
@@ -145,6 +146,11 @@ export default function OnboardingMaster({ planId }: OnboardingMasterProps) {
 
       <section className={styles.hero}>
         <p className={styles.breadcrumb}>Onboarding / {plan.name}</p>
+        {isDemoMode && (
+          <p className={styles.demoBadge} role="status">
+            Demo-Modus aktiv · kein produktiver Workspace, keine echte Automatisierung und keine Social-Media-Integration.
+          </p>
+        )}
         <div className={styles.heroTitleRow}>
           <div>
             <h1>{focus.title}</h1>
