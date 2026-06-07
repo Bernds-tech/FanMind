@@ -5242,12 +5242,12 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(340px, 0.76fr) minmax(700px, 1.38fr);
-  gap: clamp(24px, 3.2vw, 58px);
+  grid-template-columns: minmax(320px, 0.72fr) minmax(720px, 1.42fr);
+  gap: clamp(22px, 2.7vw, 46px);
   width: min(1780px, 100%);
-  min-height: 875px;
+  min-height: 850px;
   margin: 12px auto 0;
-  padding: 42px 4px 22px;
+  padding: 42px 4px 26px;
   isolation: isolate;
   overflow: hidden;
 }
@@ -5324,7 +5324,7 @@
 .responsiveCopy {
   position: relative;
   z-index: 2;
-  max-width: 540px;
+  max-width: 510px;
   padding-top: 0;
 }
 
@@ -5368,7 +5368,7 @@
 }
 
 .responsiveCopy > p {
-  max-width: 535px;
+  max-width: 500px;
   margin-top: 16px;
   color: #d1d7e2;
   font-size: 19px;
@@ -5377,18 +5377,18 @@
 
 .responsiveBenefitList {
   display: grid;
-  gap: 12px;
-  margin-top: 24px;
+  gap: 10px;
+  margin-top: 22px;
 }
 
 .responsiveBenefitList article {
   --accent: #168cff;
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 62px 1fr;
   align-items: center;
-  gap: 18px;
-  min-height: 112px;
-  padding: 16px 22px 16px 18px;
+  gap: 14px;
+  min-height: 94px;
+  padding: 13px 18px 13px 15px;
   border: 1px solid rgba(63, 126, 205, 0.36);
   border-radius: 13px;
   background: linear-gradient(180deg, rgba(5, 20, 45, 0.66), rgba(3, 14, 33, 0.73));
@@ -5402,13 +5402,13 @@
 .responsiveBenefitList article > span {
   display: grid;
   place-items: center;
-  width: 62px;
-  height: 62px;
+  width: 54px;
+  height: 54px;
   border: 1px solid color-mix(in srgb, var(--accent) 66%, rgba(255,255,255,0.15));
   border-radius: 50%;
   background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--accent) 28%, transparent), rgba(5, 23, 55, 0.9));
   color: var(--accent);
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
   box-shadow: inset 0 0 22px color-mix(in srgb, var(--accent) 16%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 26%, transparent);
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 74%, transparent);
@@ -5416,40 +5416,79 @@
 
 .responsiveBenefitList h3 {
   color: #fff;
-  font-size: 21px;
+  font-size: 19px;
   line-height: 1.1;
   letter-spacing: -0.55px;
 }
 
 .responsiveBenefitList p {
-  margin-top: 6px;
+  margin-top: 5px;
   color: #cbd3df;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.34;
 }
 
 .responsiveShowcase {
   position: relative;
-  min-height: 674px;
+  min-height: 650px;
+  perspective: 1300px;
 }
 
 .desktopDevice,
 .tabletDevice,
 .phoneDevice {
   position: absolute;
-  filter: drop-shadow(0 26px 45px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 32px 48px rgba(0, 0, 0, 0.58));
 }
 
 .desktopDevice {
-  top: 4px;
-  right: -2px;
-  width: min(860px, 70vw);
-  aspect-ratio: 1.45;
-  padding: 10px;
-  border: 1px solid rgba(145, 193, 255, 0.82);
-  border-radius: 26px;
-  background: linear-gradient(145deg, rgba(188, 157, 104, 0.38), rgba(24, 31, 45, 0.98) 20%, rgba(5, 12, 27, 0.98));
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.07), 0 0 28px rgba(77, 142, 255, 0.45);
+  top: 24px;
+  right: -42px;
+  z-index: 1;
+  width: min(900px, 72vw);
+  aspect-ratio: 1.62;
+  padding: 12px;
+  border: 1px solid rgba(175, 211, 255, 0.86);
+  border-radius: 30px;
+  background:
+    linear-gradient(145deg, rgba(255, 213, 145, 0.22), transparent 17%),
+    linear-gradient(145deg, rgba(30, 42, 61, 0.98), rgba(5, 12, 28, 0.99) 34%, rgba(2, 7, 18, 0.99));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08),
+    inset 0 -28px 60px rgba(0, 0, 0, 0.32),
+    0 0 34px rgba(74, 139, 255, 0.48),
+    0 34px 72px rgba(0, 0, 0, 0.58);
+  transform: rotateY(-4deg) rotateX(1deg);
+}
+
+.desktopDevice::before,
+.desktopDevice::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.desktopDevice::before {
+  bottom: -58px;
+  width: 112px;
+  height: 58px;
+  border: 1px solid rgba(112, 164, 233, 0.36);
+  border-top: 0;
+  background: linear-gradient(180deg, rgba(16, 27, 43, 0.92), rgba(4, 10, 22, 0.18));
+  clip-path: polygon(24% 0, 76% 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 24px 22px rgba(0, 0, 0, 0.42));
+}
+
+.desktopDevice::after {
+  bottom: -70px;
+  width: 250px;
+  height: 18px;
+  border: 1px solid rgba(100, 151, 220, 0.3);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(5, 13, 29, 0.1), rgba(23, 39, 62, 0.88), rgba(5, 13, 29, 0.1));
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.5), 0 0 22px rgba(58, 130, 255, 0.2);
 }
 
 .deviceChrome {
@@ -5458,14 +5497,14 @@
   height: 100%;
   overflow: hidden;
   border: 1px solid rgba(39, 98, 159, 0.42);
-  border-radius: 19px;
-  background: #020b18;
+  border-radius: 21px;
+  background: linear-gradient(180deg, #031025, #020814);
 }
 
 .deviceSidebar,
 .tabletSidebar {
-  flex: 0 0 172px;
-  padding: 28px 17px 18px;
+  flex: 0 0 160px;
+  padding: 24px 15px 16px;
   border-right: 1px solid rgba(50, 112, 178, 0.25);
   background: linear-gradient(180deg, rgba(4, 18, 39, 0.9), rgba(2, 10, 24, 0.94));
 }
@@ -5487,8 +5526,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 34px;
-  margin-bottom: 7px;
+  height: 31px;
+  margin-bottom: 6px;
   padding: 0 12px;
   border-radius: 8px;
   color: #d8e4f3;
@@ -5522,7 +5561,7 @@
 .deviceDashboard {
   min-width: 0;
   flex: 1;
-  padding: 46px 24px 22px;
+  padding: 34px 22px 18px;
 }
 
 .deviceTopbar,
@@ -5537,7 +5576,7 @@
 .tabletHeader strong {
   display: block;
   color: #fff;
-  font-size: 26px;
+  font-size: 24px;
   letter-spacing: -0.9px;
 }
 
@@ -5550,7 +5589,7 @@
 
 .deviceTopbar button,
 .tabletHeader button {
-  height: 36px;
+  height: 34px;
   padding: 0 16px;
   border: 1px solid rgba(70, 124, 255, 0.5);
   border-radius: 7px;
@@ -5564,13 +5603,13 @@
 .responsiveMetricGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-top: 22px;
+  gap: 9px;
+  margin-top: 18px;
 }
 
 .responsiveMetricGrid article {
-  min-height: 74px;
-  padding: 13px;
+  min-height: 66px;
+  padding: 11px;
   border: 1px solid rgba(54, 116, 181, 0.4);
   border-radius: 8px;
   background: rgba(5, 20, 45, 0.62);
@@ -5591,7 +5630,7 @@
   display: block;
   margin-top: 3px;
   color: #fff;
-  font-size: 23px;
+  font-size: 21px;
   letter-spacing: -0.7px;
 }
 
@@ -5604,8 +5643,8 @@
 .responsiveDesktopPanels {
   display: grid;
   grid-template-columns: 1fr 1.04fr 1.35fr;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 9px;
+  margin-top: 14px;
 }
 
 .responsiveDesktopPanels article {
@@ -5618,8 +5657,8 @@
 .aiRecommendationCard,
 .responsiveFollowCard,
 .responsiveChartCard {
-  min-height: 158px;
-  padding: 15px;
+  min-height: 136px;
+  padding: 13px;
 }
 
 .aiRecommendationCard strong,
@@ -5634,7 +5673,7 @@
 }
 
 .aiRecommendationCard p {
-  margin-top: 16px;
+  margin-top: 12px;
   color: #d5dce8;
   font-size: 12px;
   line-height: 1.48;
@@ -5654,7 +5693,7 @@
   grid-template-columns: 1fr auto auto;
   gap: 10px;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 8px;
   color: #d8e4f3;
   font-size: 12px;
 }
@@ -5689,7 +5728,7 @@
 }
 
 .responsiveChartCard svg {
-  height: 74px;
+  height: 58px;
   margin-top: 4px;
 }
 
@@ -5704,8 +5743,8 @@
 
 .responsivePerformanceCard,
 .responsiveSourcesCard {
-  min-height: 124px;
-  padding: 14px 16px;
+  min-height: 104px;
+  padding: 12px 14px;
 }
 
 .responsivePerformanceCard {
@@ -5716,7 +5755,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .responsivePerformanceCard span {
@@ -5750,19 +5789,26 @@
 }
 
 .tabletDevice {
-  left: -126px;
-  bottom: 86px;
-  width: 500px;
+  left: -26px;
+  bottom: 88px;
+  z-index: 3;
+  width: 430px;
   aspect-ratio: 1.36;
   padding: 9px;
   border: 1px solid rgba(203, 177, 138, 0.7);
-  border-radius: 25px;
-  background: linear-gradient(145deg, rgba(191, 153, 100, 0.34), rgba(17, 25, 38, 0.98) 24%, rgba(4, 11, 25, 0.98));
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.05), 0 0 26px rgba(56, 126, 255, 0.36);
+  border-radius: 27px;
+  background:
+    linear-gradient(145deg, rgba(255, 214, 149, 0.25), transparent 21%),
+    linear-gradient(145deg, rgba(24, 34, 50, 0.99), rgba(4, 11, 25, 0.99));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
+    0 0 28px rgba(56, 126, 255, 0.4),
+    0 28px 58px rgba(0, 0, 0, 0.56);
+  transform: rotateZ(-4deg) rotateY(7deg);
 }
 
 .tabletSidebar {
-  flex-basis: 135px;
+  flex-basis: 112px;
   padding-top: 23px;
 }
 
@@ -5775,11 +5821,11 @@
 .tabletContent {
   flex: 1;
   min-width: 0;
-  padding: 44px 21px 18px;
+  padding: 32px 16px 14px;
 }
 
 .tabletHeader strong {
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .tabletHeader button {
@@ -5791,7 +5837,7 @@
 .tabletFilters {
   display: flex;
   gap: 9px;
-  margin-top: 21px;
+  margin-top: 16px;
 }
 
 .tabletFilters span {
@@ -5809,13 +5855,13 @@
 
 .tabletRows {
   display: grid;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 9px;
+  margin-top: 14px;
 }
 
 .tabletRows div {
   display: grid;
-  grid-template-columns: 1fr 48px 1.2fr 72px 28px;
+  grid-template-columns: 1fr 42px 1fr 54px 24px;
   gap: 10px;
   align-items: center;
   color: #d9e4f2;
@@ -5829,15 +5875,22 @@
 .tabletRows b { color: #ffc43a; }
 
 .phoneDevice {
-  right: 270px;
-  bottom: 78px;
-  width: 158px;
-  height: 338px;
+  right: 92px;
+  bottom: 64px;
+  z-index: 4;
+  width: 168px;
+  height: 356px;
   padding: 8px;
   border: 1px solid rgba(190, 161, 122, 0.7);
-  border-radius: 29px;
-  background: linear-gradient(145deg, rgba(190, 151, 92, 0.35), #111721 22%, #040a14);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.05), 0 0 24px rgba(53, 128, 255, 0.36);
+  border-radius: 34px;
+  background:
+    linear-gradient(145deg, rgba(255, 217, 154, 0.28), transparent 20%),
+    linear-gradient(145deg, #172131, #050b16 44%, #02050d);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.07),
+    0 0 28px rgba(53, 128, 255, 0.42),
+    0 30px 58px rgba(0, 0, 0, 0.62);
+  transform: rotateZ(3deg) rotateY(-8deg);
 }
 
 .phoneScreen {
@@ -5845,7 +5898,7 @@
   overflow: hidden;
   padding: 26px 12px 10px;
   border: 1px solid rgba(50, 106, 164, 0.42);
-  border-radius: 23px;
+  border-radius: 27px;
   background: linear-gradient(180deg, rgba(5, 22, 50, 0.98), rgba(2, 10, 25, 0.98));
 }
 
@@ -5925,71 +5978,73 @@
 
 .responsiveCtaPanel {
   position: absolute;
-  left: 0;
-  right: 470px;
-  bottom: 24px;
-  z-index: 3;
+  left: 18px;
+  right: auto;
+  bottom: 18px;
+  z-index: 2;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 118px;
-  padding: 18px 28px 16px 54px;
+  width: min(690px, 42vw);
+  min-height: 92px;
+  padding: 14px 18px 12px 22px;
   border: 1px solid rgba(56, 118, 190, 0.38);
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(4, 18, 40, 0.74), rgba(3, 13, 31, 0.82));
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(4, 18, 40, 0.68), rgba(3, 13, 31, 0.78));
   box-shadow: inset 0 0 34px rgba(0, 132, 255, 0.08), 0 16px 48px rgba(0, 0, 0, 0.24);
   backdrop-filter: blur(18px);
 }
 
 .responsiveCtaLead {
   display: grid;
-  grid-template-columns: 78px 1fr;
-  gap: 16px;
+  grid-template-columns: 46px 1fr;
+  gap: 12px;
   align-items: center;
 }
 
 .responsiveCtaLead > span {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 42px;
+  height: 42px;
   color: #177fff;
-  font-size: 40px;
+  font-size: 28px;
   text-shadow: 0 0 22px rgba(16, 124, 255, 0.78);
 }
 
 .responsiveCtaLead strong {
-  font-size: 25px;
+  font-size: 20px;
   line-height: 1.08;
   letter-spacing: -0.85px;
 }
 
 .responsiveCtaLead p {
-  margin-top: 6px;
+  margin-top: 3px;
   color: #cbd2df;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .responsiveCtaActions {
   display: flex;
-  gap: 22px;
+  gap: 10px;
   align-items: center;
 }
 
 .responsiveCtaActions .demoButton,
 .responsiveCtaActions .outlineButton {
-  min-width: 214px;
+  min-width: 162px;
   justify-content: center;
 }
 
 .responsiveCtaPanel > p {
   grid-column: 1 / -1;
   display: flex;
-  justify-content: flex-end;
-  gap: 26px;
-  margin-top: 12px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 10px;
   color: #cbd2df;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .responsiveCtaPanel > p span::first-letter {
@@ -6003,21 +6058,21 @@
   }
 
   .desktopDevice {
-    right: -70px;
-    width: 790px;
+    right: -84px;
+    width: 820px;
   }
 
   .tabletDevice {
-    left: -88px;
-    width: 470px;
+    left: -8px;
+    width: 405px;
   }
 
   .phoneDevice {
-    right: 160px;
+    right: 70px;
   }
 
   .responsiveCtaPanel {
-    right: 270px;
+    width: min(640px, 45vw);
   }
 }
 
@@ -6052,8 +6107,10 @@
 
   .responsiveCtaPanel {
     position: relative;
+    left: auto;
     right: auto;
     bottom: auto;
+    width: 100%;
     margin-top: -10px;
   }
 }
@@ -6074,14 +6131,14 @@
   }
 
   .responsiveBenefitList article {
-    grid-template-columns: 70px 1fr;
+    grid-template-columns: 62px 1fr;
     min-height: auto;
   }
 
   .responsiveBenefitList article > span {
-    width: 62px;
-    height: 62px;
-    font-size: 31px;
+    width: 54px;
+    height: 54px;
+    font-size: 28px;
   }
 
   .responsiveShowcase {
@@ -6091,6 +6148,7 @@
   .desktopDevice {
     left: 0;
     width: 100%;
+    transform: rotateY(-3deg) rotateX(1deg);
   }
 
   .deviceSidebar {
@@ -6123,7 +6181,7 @@
 
   .responsiveCtaPanel {
     grid-template-columns: 1fr;
-    padding: 24px;
+    padding: 20px;
   }
 
   .responsiveCtaActions,
@@ -6158,7 +6216,7 @@
     width: 720px;
     max-width: none;
     left: 50%;
-    transform: translateX(-50%) scale(0.58);
+    transform: translateX(-50%) scale(0.58) rotateY(-3deg) rotateX(1deg);
     transform-origin: top center;
   }
 
