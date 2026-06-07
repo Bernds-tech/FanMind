@@ -129,7 +129,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
         await syncSupabaseSessionForServer(data.session);
       }
 
-      if (!authError && data.session?.user) {
+      if (!authError && data.session?.user && selectedPlanId !== "pilot") {
         const workspaceError = await prepareUserWorkspace(
           supabase,
           data.session.user.id,
@@ -141,6 +141,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
 
         if (workspaceError) {
           setError(`Registrierung erfolgreich, aber Workspace/Plan konnte noch nicht angelegt werden: ${workspaceError}. Bitte prüfe die RLS-Policies aus docs/database/fanmind_mvp_schema.sql.`);
+          return;
         }
       }
 
@@ -289,7 +290,9 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <p className={styles.success} role="status">
                 {copy.success} {awaitingEmailConfirmation
                   ? (language === "en" ? "Please confirm your email address and log in afterwards." : "Bitte bestätige deine E-Mail-Adresse und logge dich danach ein.")
-                  : (language === "en" ? "Profile, workspace and plan are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Plan werden vorbereitet. Du wirst ins Onboarding weitergeleitet.")} <a href={onboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
+                  : selectedPlanId === "pilot"
+                    ? (language === "en" ? "Pilot stays a demo/test mode without a productive workspace. You will be forwarded to onboarding." : "Pilot bleibt Demo-/Testmodus ohne produktiven Workspace. Du wirst ins Onboarding weitergeleitet.")
+                    : (language === "en" ? "Profile, workspace and plan are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Plan werden vorbereitet. Du wirst ins Onboarding weitergeleitet.")} <a href={onboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
               </p>
             )}
 

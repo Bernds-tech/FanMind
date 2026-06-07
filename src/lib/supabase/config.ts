@@ -20,11 +20,18 @@ export function getSupabasePublicConfig(): SupabasePublicConfig | null {
   };
 }
 
+export const SUPABASE_CONFIG_ERROR_MESSAGE =
+  "Supabase ist noch nicht konfiguriert. Bitte NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY setzen.";
+
+export function isSupabaseConfigured(): boolean {
+  return getSupabasePublicConfig() !== null;
+}
+
 export function requireSupabasePublicConfig(): SupabasePublicConfig {
   const config = getSupabasePublicConfig();
 
   if (!config) {
-    throw new Error("Supabase ist noch nicht konfiguriert. Bitte NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY setzen.");
+    throw new Error(SUPABASE_CONFIG_ERROR_MESSAGE);
   }
 
   return config;
