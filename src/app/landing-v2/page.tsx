@@ -1666,29 +1666,6 @@ export default function LandingV2() {
             ))}
           </div>
 
-          <div className={styles.responsiveCtaPanel}>
-            <div className={styles.responsiveCtaLead}>
-              <span>🧠</span>
-              <div>
-                <strong>FanMind auf jedem Screen.</strong>
-                <p>Volle Power, egal welches Gerät du nutzt.</p>
-              </div>
-            </div>
-            <div className={styles.responsiveCtaActions}>
-              <a className={styles.demoButton} href="#demo">
-                <span>▶</span> Demo ansehen
-              </a>
-              <a className={styles.outlineButton} href="#early-access">
-                Early Access anfragen
-              </a>
-            </div>
-            <p>
-              <span>✓ MVP klar gekennzeichnet</span>
-              <span>✓ Keine Kreditkarte erforderlich</span>
-              <span>✓ Kein automatischer Versand</span>
-              <span>✓ Manuelle Freigabe</span>
-            </p>
-          </div>
         </div>
 
         <div className={styles.responsiveShowcase} aria-label="FanMind Geräteansichten">
@@ -1701,6 +1678,30 @@ export default function LandingV2() {
             sizes="(max-width: 1180px) 100vw, 60vw"
             priority={false}
           />
+        </div>
+
+        <div className={styles.responsiveCtaPanel}>
+          <div className={styles.responsiveCtaLead}>
+            <span>🧠</span>
+            <div>
+              <strong>FanMind auf jedem Screen.</strong>
+              <p>Volle Power, egal welches Gerät du nutzt.</p>
+            </div>
+          </div>
+          <div className={styles.responsiveCtaActions}>
+            <a className={styles.demoButton} href="#demo">
+              <span>▶</span> Demo ansehen
+            </a>
+            <a className={styles.outlineButton} href="#early-access">
+              Early Access anfragen
+            </a>
+          </div>
+          <p>
+            <span>✓ MVP klar gekennzeichnet</span>
+            <span>✓ Keine Kreditkarte erforderlich</span>
+            <span>✓ Kein automatischer Versand</span>
+            <span>✓ Manuelle Freigabe</span>
+          </p>
         </div>
       </section>
 
