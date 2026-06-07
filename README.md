@@ -64,6 +64,20 @@ Optional kann für spätere serverseitige Admin-/Migrationsaufgaben ein `SUPABAS
 - `/login` ruft `supabase.auth.signInWithPassword` auf und leitet nach erfolgreichem Login zum minimal geschützten `/dashboard` weiter.
 - Demo bleibt ohne echte Auth erreichbar, z. B. über `/onboarding?plan=pilot&demo=1` oder über den Demo-Button im Login.
 
+
+### FanMind-Pakete im MVP
+
+Die zentrale fachliche Quelle für Paket- und Feature-Logik bleibt `src/config/plans.ts` zusammen mit `src/lib/plans.ts`. Die Datenbank speichert im MVP nur den `plan_id` am Workspace; es gibt keine Zahlungslogik, keine Stripe-/Payment-Integration und keine echte Subscription-Abrechnung.
+
+| plan_id | Name | Preis | Zweck im MVP |
+| --- | --- | --- | --- |
+| `pilot` | Pilot | 990 € einmalig | Demo/Testmodus ohne produktiven Workspace |
+| `starter` | Starter | 299 €/Monat | echter Einstieg mit 1 betreutem Profil |
+| `growth` | Growth | 499 €/Monat | für wachsende Teams mit 3–5 betreuten Profilen |
+| `agency` | Agency | ab 990 €/Monat | für Agenturen bzw. mehrere Kunden/Profile |
+
+Technisch akzeptiert die Registrierung `/register?plan=pilot`, `/register?plan=starter`, `/register?plan=growth` und `/register?plan=agency`. Ohne `plan` fällt die Registrierung auf `starter` zurück; ungültige Werte werden durch die zentrale Plan-Resolver-Logik auf den übergebenen Fallback normalisiert und sollen nicht crashen. Das Onboarding nutzt den aufgelösten `planId`, damit pro Paket passende Inhalte angezeigt werden. Später soll `plan_id` aus Session → Workspace-Membership → Workspace gelesen werden, nicht mehr primär aus der URL.
+
 ### Datenbank-Schema
 
 Das vorgeschlagene MVP-Schema liegt unter `docs/database/fanmind_mvp_schema.sql`. Es enthält nur:
