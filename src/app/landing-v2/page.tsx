@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 const navItems = [
-  { label: "Produkt", href: "#produkt", caret: true },
+  { label: "Produkt", href: "#produkt-showcase", caret: true },
   { label: "Features", href: "#features" },
   { label: "Zielgruppen", href: "#zielgruppen", caret: true },
   { label: "Screens", href: "#screens" },
@@ -108,6 +108,7 @@ const functionCards = [
     text: "Alle Fans und Interaktionen an einem Ort.",
     body: "Sandra M. 92 · Alex 88 · Mia 85",
     cta: "Alle Kontakte ansehen",
+    href: "#produkt-showcase",
     tone: "blue",
   },
   {
@@ -116,6 +117,7 @@ const functionCards = [
     text: "Wichtige Details, Interessen und Historie übersichtlich festhalten.",
     body: "VIP · premium_interessiert · Letzter Kontakt: Heute, 09:42",
     cta: "Details ansehen",
+    href: "#fan-gedaechtnis",
     tone: "green",
   },
   {
@@ -124,6 +126,7 @@ const functionCards = [
     text: "KI liefert passende Vorschläge. Du prüfst und gibst frei.",
     body: "Vorschlag: Early-Bird Zugang und 10 % Rabatt sind noch verfügbar.",
     cta: "KI entdecken",
+    href: "#ki",
     tone: "purple",
   },
   {
@@ -132,6 +135,7 @@ const functionCards = [
     text: "Nächste Aktionen, Erinnerungen und Aufgaben im Blick.",
     body: "VIP-Upgrade Infos · Heute, 10:00 · Feedback abfragen",
     cta: "Alle Follow-ups",
+    href: "#follow-ups",
     tone: "cyan",
   },
   {
@@ -140,6 +144,7 @@ const functionCards = [
     text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt Coming Soon.",
     body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
     cta: "Roadmap ansehen",
+    href: "/roadmap",
     tone: "violet",
   },
   {
@@ -148,6 +153,7 @@ const functionCards = [
     text: "Roadmap-Ausblick für spätere Auswertungen und Wachstumssignale.",
     body: "Roadmap-Auswertung · Coming Soon",
     cta: "Roadmap öffnen",
+    href: "/roadmap",
     tone: "green",
   },
 ];
@@ -168,6 +174,26 @@ const visibleLandingMenuItems = menuItems.filter((item) =>
   shouldShowFeature("growth", item.featureKey, "landing"),
 );
 
+function getLandingMenuHref(featureKey: FeatureKey, index: number) {
+  if (featureKey === "campaigns" || featureKey === "analytics") {
+    return "/roadmap";
+  }
+
+  if (featureKey === "contacts") {
+    return "#kontakte";
+  }
+
+  if (featureKey === "followups") {
+    return "#follow-ups";
+  }
+
+  if (featureKey === "ai_replies") {
+    return "#ki";
+  }
+
+  return index === 0 ? "#screens" : "#produkt-showcase";
+}
+
 const sixStepCards = [
   {
     step: "1",
@@ -185,6 +211,7 @@ const sixStepCards = [
       "Kontakt gespeichert",
     ],
     cta: "Details anzeigen",
+    href: "#kontakte",
   },
   {
     step: "2",
@@ -200,6 +227,7 @@ const sixStepCards = [
       "Letzter Kontakt: Heute, 09:42",
     ],
     cta: "Details anzeigen",
+    href: "#fan-gedaechtnis",
   },
   {
     step: "3",
@@ -216,6 +244,7 @@ const sixStepCards = [
       "Freigabe durch Mensch erforderlich",
     ],
     cta: "Mehr Vorschläge anzeigen",
+    href: "#ki",
   },
   {
     step: "4",
@@ -232,38 +261,41 @@ const sixStepCards = [
       "Owner: Nina D.",
     ],
     cta: "Alle Follow-ups anzeigen",
+    href: "#follow-ups",
   },
   {
     step: "5",
-    title: "Kampagne starten",
-    copy: "Segmentierte Kampagnen vorbereiten, prüfen und mit klaren Freigaben geplant ausspielen.",
+    title: "Kampagne vorbereiten",
+    copy: "Segmentierte Kampagnen als Roadmap-Vorschau vorbereiten, prüfen und ohne aktiven Versand einordnen.",
     cardTitle: "Sommer-Event Early Bird",
     icon: "📣",
     tone: "green",
     badge: "Geplant",
     rows: [
       "Zielgruppe: 1.260",
-      "Öffnungsrate: 38 %",
-      "Conversion: 9,4 %",
-      "Kanäle: E-Mail, WhatsApp, Chat",
-      "Status: Entwurf geprüft",
+      "Roadmap: Segment- und Kampagnenplanung",
+      "Versand: inaktiv / Coming Soon",
+      "Kanäle: E-Mail im MVP, weitere Kanäle Roadmap",
+      "Status: Vorschau geprüft",
     ],
-    cta: "Kampagnen-Übersicht",
+    cta: "Roadmap ansehen",
+    href: "/roadmap",
   },
   {
     step: "6",
-    title: "Analytics messen",
-    copy: "Wachstum, Engagement und Conversion transparent auswerten und nächste Aktionen ableiten.",
+    title: "Analytics einordnen",
+    copy: "Roadmap-Auswertungen und Wachstumssignale transparent einordnen, ohne eine Vollsuite zu versprechen.",
     cardTitle: "Performance-Überblick",
     icon: "⌁",
     tone: "green",
     rows: [
-      "Fan-Wachstum: +12,4 %",
-      "Conversion Rate: 8,7 %",
-      "Antwortquote: 34,8 %",
-      "Insights für Optimierung vorbereitet",
+      "Roadmap-Auswertung: Coming Soon",
+      "Wachstumssignale: Vorschau",
+      "Antwortquote: Demo-Signal",
+      "Insights für spätere Optimierung vorbereitet",
     ],
-    cta: "Alle Analytics anzeigen",
+    cta: "Roadmap öffnen",
+    href: "/roadmap",
   },
 ];
 
@@ -604,7 +636,7 @@ const faqContacts = [
     title: "Demo anfragen",
     text: "Erlebe FanMind live und sieh, wie es für dich funktioniert.",
     cta: "Demo anfragen",
-    href: "#demo",
+    href: "/login?demo=1",
     tone: "purple",
   },
   {
@@ -612,7 +644,7 @@ const faqContacts = [
     title: "Antwort in unter 24 Stunden",
     text: "Wir antworten schnell – persönlich und auf den Punkt.",
     cta: "Mehr erfahren",
-    href: "#early-access",
+    href: "/register",
     tone: "green",
   },
 ];
@@ -626,14 +658,14 @@ const landingFooterColumns = [
       { label: "Features", href: "#features" },
       { label: "Integrationen", href: "#integrationen" },
       { label: "Preise", href: "#preise" },
-      { label: "Demo", href: "#demo" },
+      { label: "Demo", href: "/login?demo=1" },
     ],
   },
   {
     icon: "👥",
     title: "Unternehmen",
     links: [
-      { label: "Über FanMind", href: "#produkt" },
+      { label: "Über FanMind", href: "#produkt-showcase" },
       { label: "Kontakt", href: "#kontakt" },
       { label: "Partner", href: "#zielgruppen" },
       { label: "Karriere", href: "#kontakt" },
@@ -936,7 +968,7 @@ function RoadmapLineIcon({ icon }: { icon: string }) {
 
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
-    <a className={styles.logo} href="#top" aria-label="FanMind Start">
+    <a className={styles.logo} href="/landing-v2" aria-label="FanMind Start">
       <svg viewBox="0 0 52 52" aria-hidden="true" className={styles.logoMark}>
         <path d="M25.7 17.2C22.7 7.8 13.5 4.6 9.2 9.7c-4.4 5.1.4 13.1 10.1 12.2-8.8 4.9-8.6 15.4-1.7 17.1 6.8 1.6 10.2-7.4 8.4-16.4 1.8 9 6.8 16.7 13.1 13.7 6.4-3 4.6-13.3-5-16.1 9.7-.3 12.7-9.4 7.1-13.2-5.6-3.9-13.5 1.5-15.5 10.2Z" />
         <circle cx="17.1" cy="17.5" r="3.4" />
@@ -990,16 +1022,16 @@ export default function LandingV2() {
             ))}
           </nav>
           <div className={styles.headerActions}>
-            <a id="login" className={styles.loginButton} href="#top">
+            <a className={styles.loginButton} href="/login">
               Login
             </a>
-            <a className={styles.accessButton} href="#early-access">
+            <a className={styles.accessButton} href="/register">
               Early Access <span>→</span>
             </a>
           </div>
         </header>
 
-        <section id="produkt" className={styles.hero}>
+        <section className={styles.hero}>
           <div className={styles.heroCopy}>
             <a className={styles.badge} href="#features">
               <span>NEU</span> Die intelligente Fan-Management Plattform
@@ -1015,10 +1047,10 @@ export default function LandingV2() {
               Conversions werden.
             </p>
             <div className={styles.heroCtas}>
-              <a className={styles.demoButton} href="#demo">
+              <a className={styles.demoButton} href="/login?demo=1">
                 <span>▶</span> Demo ansehen
               </a>
-              <a className={styles.outlineButton} href="#early-access">
+              <a className={styles.outlineButton} href="/register">
                 <span>♙</span> Early Access anfragen
               </a>
             </div>
@@ -1058,7 +1090,7 @@ export default function LandingV2() {
                   {visibleLandingMenuItems.map((item, index) => (
                     <a
                       className={index === 0 ? styles.activeMenu : ""}
-                      href={index === 0 ? "#screens" : "#produkt"}
+                      href={getLandingMenuHref(item.featureKey, index)}
                       key={item.label}
                     >
                       <span>{item.icon}</span>
@@ -1089,7 +1121,7 @@ export default function LandingV2() {
                   <div className={styles.dashboardControls}>
                     <span>● Alle Systeme aktiv</span>
                     <button>Letzte 30 Tage⌄</button>
-                    <a href="#kontakt">+ Neuer Kontakt</a>
+                    <a href="#kontakte">+ Neuer Kontakt</a>
                   </div>
                 </div>
 
@@ -1298,16 +1330,14 @@ export default function LandingV2() {
             </p>
           </div>
           <a
-            id="preise"
             className={styles.accessButton}
-            href="mailto:kontakt@fanmind.de?subject=Early%20Access%20FanMind"
+            href="/register"
           >
             Early Access sichern <span>→</span>
           </a>
           <a
-            id="demo"
             className={styles.demoSecondary}
-            href="mailto:kontakt@fanmind.de?subject=FanMind%20Demo%20ansehen"
+            href="/login?demo=1"
           >
             <span>▶</span> Demo ansehen
           </a>
@@ -1389,7 +1419,7 @@ export default function LandingV2() {
                 </div>
               </div>
               <div className={styles.functionPreview}>{card.body}</div>
-              <a href="#early-access">
+              <a href={card.href}>
                 {card.cta} <span>→</span>
               </a>
             </article>
@@ -1397,10 +1427,10 @@ export default function LandingV2() {
         </div>
 
         <div className={styles.problemCtas}>
-          <a className={styles.demoButton} href="#demo">
+          <a className={styles.demoButton} href="/login?demo=1">
             <span>▶</span> Demo ansehen
           </a>
-          <a className={styles.outlineButton} href="#early-access">
+          <a className={styles.outlineButton} href="/register">
             <span>♙</span> Early Access anfragen
           </a>
         </div>
@@ -1463,7 +1493,7 @@ export default function LandingV2() {
                     </div>
                   ))}
                 </div>
-                <a href="#early-access">
+                <a href={step.href}>
                   {step.cta}
                   <span>→</span>
                 </a>
@@ -1902,10 +1932,10 @@ export default function LandingV2() {
 
         <div className={styles.integrationCtaBox}>
           <div>
-            <a className={styles.demoButton} href="#demo">
+            <a className={styles.demoButton} href="/login?demo=1">
               <span>▶</span> Demo ansehen
             </a>
-            <a className={styles.outlineButton} href="#early-access">
+            <a className={styles.outlineButton} href="/register">
               Early Access anfragen
             </a>
           </div>
@@ -2035,10 +2065,10 @@ export default function LandingV2() {
             </div>
           </div>
           <div className={styles.responsiveCtaActions}>
-            <a className={styles.demoButton} href="#demo">
+            <a className={styles.demoButton} href="/login?demo=1">
               <span>▶</span> Demo ansehen
             </a>
-            <a className={styles.outlineButton} href="#early-access">
+            <a className={styles.outlineButton} href="/register">
               Early Access anfragen
             </a>
           </div>
@@ -2095,7 +2125,7 @@ export default function LandingV2() {
                   <li key={feature}>{feature}</li>
                 ))}
               </ul>
-              <a href={plan.name === "Agency" ? "#demo" : "#early-access"}>
+              <a href={plan.name === "Agency" ? "/login?demo=1" : "/register"}>
                 {plan.cta} <span>→</span>
               </a>
             </article>
@@ -2125,10 +2155,10 @@ export default function LandingV2() {
             </p>
           </div>
           <div className={styles.pricingCtaActions}>
-            <a className={styles.demoButton} href="#demo">
+            <a className={styles.demoButton} href="/login?demo=1">
               <span>▷</span> Demo ansehen
             </a>
-            <a className={styles.outlineButton} href="#early-access">
+            <a className={styles.outlineButton} href="/register">
               <span>🚀</span> Pilot anfragen
             </a>
             <p>
@@ -2229,7 +2259,7 @@ export default function LandingV2() {
             <a className={styles.demoButton} href="#datenschutz-kontrolle">
               <span>🔒</span> Datenschutz ansehen
             </a>
-            <a className={styles.outlineButton} href="#demo">
+            <a className={styles.outlineButton} href="/login?demo=1">
               Demo buchen <span>→</span>
             </a>
             <p>
@@ -2374,7 +2404,7 @@ export default function LandingV2() {
             </div>
             <div className={styles.landingFooterSignup} aria-label="Early Access Anfrage">
               <span>E-Mail-Adresse eingeben</span>
-              <a href="#early-access">Early Access <span>→</span></a>
+              <a href="/register">Early Access <span>→</span></a>
               <small>🛡 Persönliche Anfrage statt automatischem Newsletter.</small>
             </div>
           </div>

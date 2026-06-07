@@ -72,7 +72,7 @@ function SparkLine({ tone = "blue" }: { tone?: "blue" | "green" | "purple" }) {
 
 export default function ProductShowcaseSection() {
   return (
-    <section id="showcase" className={styles.section} aria-labelledby="product-showcase-title">
+    <section id="produkt-showcase" className={styles.section} aria-labelledby="product-showcase-title">
       <div className={styles.artboard}>
         <div className={styles.glowOne} aria-hidden="true" />
         <div className={styles.glowTwo} aria-hidden="true" />
@@ -86,14 +86,14 @@ export default function ProductShowcaseSection() {
 
         <div className={styles.stage}>
           <aside className={styles.leftColumn} aria-label="Fan-Gedächtnis, KI-Vorschläge und Kampagnenvorschau">
-            <article className={`${styles.card} ${styles.memoryCard}`}>
+            <article id="fan-gedaechtnis" className={`${styles.card} ${styles.memoryCard}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>🧠</span><strong>Fan-Gedächtnis</strong><em>Buyer</em></div>
               <div className={styles.profileRow}><span className={styles.avatar}>SM</span><div><b>Sandra M.</b><small>Kontakt seit 12.03.2025</small></div></div>
               <div className={styles.tabRow}><span className={styles.activeTab}>Kontext</span><span>Käufe</span><span>Notizen</span></div>
               <div className={styles.tagCloud}><span>buyer</span><span>premium_interessiert</span><span>event</span><span>Mia Active Club</span></div>
             </article>
 
-            <article className={`${styles.card} ${styles.aiCard}`}>
+            <article id="ki" className={`${styles.card} ${styles.aiCard}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>✦</span><strong>KI-Antwortvorschläge</strong><em>Entwurf</em></div>
               <p className={styles.question}>Sandra M.: „Gibt es noch Early-Bird Plätze für Member?“</p>
               <div className={styles.answerBubble}>Ja! Als Mia Active Member erhältst du 10 % Rabatt in den ersten 48 Stunden. Bitte vor manueller Nutzung prüfen.</div>
@@ -118,7 +118,7 @@ export default function ProductShowcaseSection() {
                 <div className={styles.savedViews}><small>Gespeicherte Ansichten</small><span>★ Top Fans <b>182</b></span><span>✦ Reaktivierung <b>739</b></span><span>◆ Premium-Käufer <b>312</b></span></div>
               </aside>
 
-              <main className={styles.mainPanel}>
+              <main id="kontakte" className={styles.mainPanel}>
                 <div className={styles.topbar}>
                   <div><h3>Kontakte</h3><p>Verwalte alle Fan-Profile, Segmente und Interaktionen.</p></div>
                   <button type="button">+ Neuer Kontakt</button>
@@ -138,7 +138,7 @@ export default function ProductShowcaseSection() {
           </div>
 
           <aside className={styles.rightColumn} aria-label="Follow-ups, Segmente und Roadmap">
-            <article className={`${styles.card} ${styles.followupCard}`}>
+            <article id="follow-ups" className={`${styles.card} ${styles.followupCard}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>☑</span><strong>Follow-ups</strong><em>Heute</em></div>
               {["Sandra M. · 10:00 · Hoch", "Lukas S. · 11:00 · Mittel", "Ella L. · überfällig", "Tara J. · Freitag"].map((item) => <div className={styles.followupRow} key={item}><span />{item}</div>)}
             </article>
@@ -153,7 +153,7 @@ export default function ProductShowcaseSection() {
               <div className={styles.analyticsTooltip}>Roadmap · keine Vollsuite im MVP</div>
               <SparkLine tone="purple" />
               <div className={styles.analyticsLegend}><span><i />Conversion</span><span><i />Antwortquote</span></div>
-              <a href="#early-access">Roadmap anzeigen →</a>
+              <a href="/roadmap">Roadmap anzeigen →</a>
             </article>
           </aside>
         </div>
