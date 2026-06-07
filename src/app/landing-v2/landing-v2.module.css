@@ -5245,9 +5245,9 @@
   grid-template-columns: minmax(320px, 0.72fr) minmax(720px, 1.42fr);
   gap: clamp(22px, 2.7vw, 46px);
   width: min(1780px, 100%);
-  min-height: 850px;
+  min-height: 780px;
   margin: 12px auto 0;
-  padding: 42px 4px 26px;
+  padding: 42px 4px 52px;
   isolation: isolate;
   overflow: hidden;
 }
@@ -5324,7 +5324,7 @@
 .responsiveCopy {
   position: relative;
   z-index: 2;
-  max-width: 510px;
+  max-width: 540px;
   padding-top: 0;
 }
 
@@ -5430,8 +5430,17 @@
 
 .responsiveShowcase {
   position: relative;
+  display: grid;
+  align-items: center;
   min-height: 650px;
-  perspective: 1300px;
+}
+
+.responsiveDeviceVisual {
+  display: block;
+  width: min(980px, 100%);
+  height: auto;
+  margin: 0 auto;
+  filter: drop-shadow(0 34px 62px rgba(0, 0, 0, 0.58));
 }
 
 .desktopDevice,
@@ -5977,17 +5986,15 @@
 }
 
 .responsiveCtaPanel {
-  position: absolute;
-  left: 18px;
-  right: auto;
-  bottom: 18px;
+  position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 1fr;
   align-items: center;
-  width: min(690px, 42vw);
+  width: 100%;
+  margin-top: 18px;
   min-height: 92px;
-  padding: 14px 18px 12px 22px;
+  padding: 18px 20px;
   border: 1px solid rgba(56, 118, 190, 0.38);
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(4, 18, 40, 0.68), rgba(3, 13, 31, 0.78));
@@ -6053,8 +6060,8 @@
 
 @media (max-width: 1440px) {
   .responsiveSection {
-    grid-template-columns: 0.78fr 1.22fr;
-    min-height: 830px;
+    grid-template-columns: 0.82fr 1.18fr;
+    min-height: 760px;
   }
 
   .desktopDevice {
@@ -6071,8 +6078,8 @@
     right: 70px;
   }
 
-  .responsiveCtaPanel {
-    width: min(640px, 45vw);
+  .responsiveDeviceVisual {
+    width: min(900px, 100%);
   }
 }
 
@@ -6088,7 +6095,11 @@
   }
 
   .responsiveShowcase {
-    min-height: 670px;
+    min-height: auto;
+  }
+
+  .responsiveDeviceVisual {
+    width: min(900px, 100%);
   }
 
   .desktopDevice {
@@ -6106,12 +6117,7 @@
   }
 
   .responsiveCtaPanel {
-    position: relative;
-    left: auto;
-    right: auto;
-    bottom: auto;
     width: 100%;
-    margin-top: -10px;
   }
 }
 
@@ -6142,7 +6148,11 @@
   }
 
   .responsiveShowcase {
-    min-height: 590px;
+    min-height: auto;
+  }
+
+  .responsiveDeviceVisual {
+    width: min(760px, 100%);
   }
 
   .desktopDevice {
@@ -6209,7 +6219,14 @@
   }
 
   .responsiveShowcase {
-    min-height: 720px;
+    min-height: auto;
+  }
+
+  .responsiveDeviceVisual {
+    width: min(620px, 112%);
+    max-width: none;
+    margin-left: 50%;
+    transform: translateX(-50%);
   }
 
   .desktopDevice {
