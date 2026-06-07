@@ -1,7 +1,11 @@
 .page {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: clamp(42px, 7vh, 72px) 0 clamp(24px, 4vh, 42px);
   color: #f7fbff;
   background:
     radial-gradient(circle at 22% 30%, rgba(0, 118, 255, 0.18), transparent 30%),
@@ -25,8 +29,8 @@
   z-index: 1;
   width: min(1120px, calc(100% - 32px));
   min-height: auto;
-  margin: 10px auto;
-  padding: clamp(18px, 2.2vw, 28px);
+  margin: 0 auto;
+  padding: clamp(16px, 2vw, 24px);
   border: 1px solid rgba(19, 128, 255, 0.3);
   border-radius: 18px;
   background: rgba(0, 5, 16, 0.36);
@@ -109,19 +113,19 @@
 .authGrid {
   display: grid;
   grid-template-columns: minmax(260px, 0.75fr) minmax(430px, 1.25fr);
-  gap: clamp(22px, 3.6vw, 42px);
+  gap: clamp(18px, 3vw, 34px);
   align-items: center;
-  margin-top: clamp(20px, 3vw, 34px);
+  margin-top: clamp(16px, 2.4vw, 26px);
 }
 
 .visualPanel {
   display: grid;
-  gap: clamp(18px, 2vw, 26px);
+  gap: clamp(14px, 1.8vw, 22px);
 }
 
 .orbit {
   position: relative;
-  width: min(270px, 58vw);
+  width: min(248px, 58vw);
   aspect-ratio: 1;
   margin-inline: auto;
 }
@@ -206,17 +210,17 @@
 
 .benefitList {
   display: grid;
-  gap: 14px;
-  max-width: 360px;
+  gap: 10px;
+  max-width: 350px;
   margin-inline: auto;
 }
 
 .benefitList article {
   display: grid;
-  grid-template-columns: 54px 1fr;
-  gap: 14px;
+  grid-template-columns: 50px 1fr;
+  gap: 10px;
   align-items: center;
-  padding-bottom: 14px;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgba(149, 173, 213, 0.16);
 }
 
@@ -227,8 +231,8 @@
 .benefitList span:first-child {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border: 1px solid currentColor;
   border-radius: 50%;
   font-size: 18px;
@@ -249,23 +253,23 @@
 }
 
 .benefitList h2 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: #ffffff;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: -0.5px;
 }
 
 .benefitList p {
   margin: 0;
   color: #c4c6d4;
-  font-size: 14px;
-  line-height: 1.38;
+  font-size: 13px;
+  line-height: 1.34;
 }
 
 .formCard {
   position: relative;
   overflow: hidden;
-  padding: clamp(30px, 4.6vw, 50px);
+  padding: clamp(24px, 3.2vw, 36px);
   border: 1px solid transparent;
   border-radius: 24px;
   background: linear-gradient(#050b1d, #050b1d) padding-box,
@@ -297,13 +301,13 @@
 .demoBadge {
   width: max-content;
   max-width: 100%;
-  margin: 0 auto 18px;
-  padding: 8px 14px;
+  margin: 0 auto 12px;
+  padding: 7px 12px;
   border: 1px solid rgba(0, 232, 255, 0.42);
   border-radius: 999px;
   color: #bdf8ff;
   background: rgba(0, 91, 129, 0.28);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -321,16 +325,16 @@
 }
 
 .formHeader p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: #c9c4d0;
-  font-size: clamp(14px, 1.6vw, 17px);
+  font-size: clamp(14px, 1.5vw, 16px);
   line-height: 1.42;
 }
 
 .field {
   display: grid;
-  gap: 7px;
-  margin-top: 20px;
+  gap: 6px;
+  margin-top: 15px;
   color: #c9c5d2;
   font-size: 13px;
   font-weight: 800;
@@ -342,10 +346,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 52px;
+  min-height: 48px;
   border: 1px solid rgba(48, 141, 255, 0.58);
   border-radius: 10px;
-  padding: 0 16px;
+  padding: 0 14px;
   background: rgba(2, 9, 26, 0.78);
   box-shadow: inset 0 0 26px rgba(0, 105, 255, 0.08);
 }
@@ -377,7 +381,7 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 8px;
   color: #c9c5d2;
   font-size: 13px;
 }
@@ -400,16 +404,16 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 54px;
+  min-height: 50px;
   border-radius: 10px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .primaryButton {
-  margin-top: 20px;
+  margin-top: 12px;
   border: 0;
   color: #ffffff;
   background: linear-gradient(100deg, #0875ff 0%, #2755ff 45%, #8f25ff 100%);
@@ -417,7 +421,7 @@
 }
 
 .secondaryButton {
-  margin-top: 10px;
+  margin-top: 8px;
   border: 1px solid rgba(95, 129, 181, 0.48);
   color: #ffffff;
   background: rgba(3, 10, 25, 0.74);
@@ -436,8 +440,8 @@
 }
 
 .notice {
-  margin: 14px 0 0;
-  padding: 12px;
+  margin: 10px 0 0;
+  padding: 10px;
   color: #d7e4f5;
   line-height: 1.48;
 }
@@ -445,15 +449,15 @@
 .safetyCard {
   display: grid;
   grid-template-columns: 46px 1fr;
-  gap: 18px;
+  gap: 14px;
   align-items: center;
-  margin-top: 12px;
-  padding: 12px;
+  margin-top: 10px;
+  padding: 10px;
 }
 
 .safetyCard > span {
   color: #1689ff;
-  font-size: 32px;
+  font-size: 28px;
   filter: drop-shadow(0 0 15px rgba(0, 119, 255, 0.55));
 }
 
@@ -475,7 +479,7 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 14px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .footerLinks a:last-child {
@@ -497,9 +501,13 @@
 }
 
 @media (max-width: 640px) {
+  .page {
+    padding: 16px 0 24px;
+  }
+
   .shell {
     width: min(100% - 16px, 560px);
-    margin: 8px auto;
+    margin: 0 auto;
     padding: 12px;
   }
 
