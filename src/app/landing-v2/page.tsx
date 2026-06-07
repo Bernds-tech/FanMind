@@ -438,6 +438,123 @@ const responsiveBenefits = [
 ];
 
 
+
+const pricingPlans = [
+  {
+    icon: "🚀",
+    name: "Pilot",
+    eyebrow: "Zum Einstieg",
+    audience: "Für Teams, die FanMind real testen möchten.",
+    pricePrefix: "",
+    price: "990 €",
+    cadence: "einmalig",
+    cta: "Pilot anfragen",
+    tone: "purple",
+    featured: false,
+    features: [
+      "Geführter Setup- & Demo-Start",
+      "1 Demo-Workspace",
+      "Beispielkontakte & Demo-Daten",
+      "KI-Antwortvorschläge testen",
+      "Memory & Follow-ups erleben",
+      "Ideal für Erstgespräch / Pilotphase",
+    ],
+  },
+  {
+    icon: "♙",
+    name: "Starter",
+    eyebrow: "",
+    audience: "Für kleine Teams mit einem ersten echten Workspace.",
+    pricePrefix: "",
+    price: "299 €",
+    cadence: "/ Monat",
+    cta: "Starter wählen",
+    tone: "blue",
+    featured: false,
+    features: [
+      "1 betreutes Profil",
+      "Kontakte & CSV-Import",
+      "KI-Antwortvorschläge",
+      "Fan-Gedächtnis / Memory",
+      "Follow-ups & Aufgaben",
+      "Roadmap-Zugang",
+    ],
+  },
+  {
+    icon: "▥",
+    name: "Growth",
+    eyebrow: "Beliebtester Plan",
+    audience: "Für wachsende Teams mit mehreren Profilen und mehr Struktur.",
+    pricePrefix: "",
+    price: "499 €",
+    cadence: "/ Monat",
+    cta: "Growth wählen",
+    tone: "blue",
+    featured: true,
+    features: [
+      "Bis zu 3–5 betreute Profile",
+      "Mehr Kontakte & mehr KI-Nutzung",
+      "Erweiterte Follow-ups",
+      "Basis-Segmente",
+      "Priority Support",
+      "Skalierbarer Workspace",
+    ],
+  },
+  {
+    icon: "♧",
+    name: "Agency",
+    eyebrow: "",
+    audience: "Für Agenturen mit mehreren Kunden und professionellem Team-Workflow.",
+    pricePrefix: "ab",
+    price: "990 €",
+    cadence: "/ Monat",
+    cta: "Demo buchen",
+    tone: "purple",
+    featured: false,
+    features: [
+      "Mehrere betreute Profile / Kunden",
+      "Team-Workspace",
+      "Große Kontaktmengen",
+      "Erweiterte Workflow-Steuerung",
+      "Persönliches Onboarding",
+      "Analytics, Rollen & Integrationen als Roadmap / Coming Soon",
+    ],
+  },
+];
+
+const pricingProofs = [
+  {
+    icon: "♙",
+    title: "Mensch prüft & sendet selbst",
+    text: "Du behältst die Kontrolle – FanMind unterstützt dich.",
+    tone: "blue",
+  },
+  {
+    icon: "✈",
+    title: "Keine automatische Sendefunktion",
+    text: "FanMind sendet nicht automatisch. Du entscheidest, wann und wie.",
+    tone: "purple",
+  },
+  {
+    icon: "◇",
+    title: "DSGVO-konform gedacht",
+    text: "Datenschutz steht im Fokus – Privacy by Design.",
+    tone: "cyan",
+  },
+  {
+    icon: "⚑",
+    title: "Roadmap klar gekennzeichnet",
+    text: "Geplante Funktionen sind transparent markiert.",
+    tone: "blue",
+  },
+  {
+    icon: "▣",
+    title: "Sicherer KI-Einsatz",
+    text: "Prompts & Daten werden verantwortungsvoll verarbeitet.",
+    tone: "green",
+  },
+];
+
 const roadmapPhases = [
   {
     number: "01",
@@ -1702,6 +1819,95 @@ export default function LandingV2() {
             <span>✓ Kein automatischer Versand</span>
             <span>✓ Manuelle Freigabe</span>
           </p>
+        </div>
+      </section>
+
+
+      <section
+        id="preise"
+        className={styles.pricingSection}
+        aria-labelledby="pricing-title"
+      >
+        <div className={styles.pricingConstellation} aria-hidden="true" />
+
+        <div className={styles.pricingHeader}>
+          <div className={styles.pricingBadge}>
+            Für Agenturen, Creator-Teams & Communities
+          </div>
+          <h2 id="pricing-title">
+            Wähle das passende <span>FanMind-Paket</span> für deinen Einstieg.
+          </h2>
+          <p>
+            FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für
+            Teams. Dieses MVP konzentriert sich auf Kontakte,
+            KI-Antwortvorschläge, Memory, Follow-ups und CSV-Import.
+          </p>
+        </div>
+
+        <div className={styles.pricingGrid} aria-label="FanMind Pakete">
+          {pricingPlans.map((plan) => (
+            <article
+              className={styles.pricingPlanCard}
+              data-featured={plan.featured ? "true" : undefined}
+              data-tone={plan.tone}
+              key={plan.name}
+            >
+              {plan.eyebrow && <div className={styles.pricingPlanPill}>{plan.eyebrow}</div>}
+              <div className={styles.pricingPlanIcon}>{plan.icon}</div>
+              <h3>{plan.name}</h3>
+              <p>{plan.audience}</p>
+              <div className={styles.pricingAmount}>
+                {plan.pricePrefix && <span>{plan.pricePrefix}</span>}
+                <strong>{plan.price}</strong>
+                <small>{plan.cadence}</small>
+              </div>
+              <ul>
+                {plan.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+              <a href={plan.name === "Agency" ? "#demo" : "#early-access"}>
+                {plan.cta} <span>→</span>
+              </a>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.pricingProofBar}>
+          {pricingProofs.map((proof) => (
+            <article data-tone={proof.tone} key={proof.title}>
+              <span>{proof.icon}</span>
+              <div>
+                <strong>{proof.title}</strong>
+                <p>{proof.text}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.pricingCtaPanel}>
+          <div>
+            <h3>
+              Baue <span>stärkere Fan-Beziehungen</span> – mit weniger Chaos
+              und besseren Antworten.
+            </h3>
+            <p>
+              FanMind bündelt Kontakte, KI, Memory und Follow-ups an einem Ort.
+            </p>
+          </div>
+          <div className={styles.pricingCtaActions}>
+            <a className={styles.demoButton} href="#demo">
+              <span>▷</span> Demo ansehen
+            </a>
+            <a className={styles.outlineButton} href="#early-access">
+              <span>🚀</span> Pilot anfragen
+            </a>
+            <p>
+              <span>✓ Keine Kreditkarte erforderlich</span>
+              <span>✓ Schneller Einstieg</span>
+              <span>✓ Upgrade später möglich</span>
+            </p>
+          </div>
         </div>
       </section>
 
