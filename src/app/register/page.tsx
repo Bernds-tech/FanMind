@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, use, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./register.module.css";
 
@@ -38,10 +39,43 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const copy = fanmindCopy[language].register;
   const loginHref = localizedPath("/login", language);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleRegister(event: FormEvent<HTMLFormElement>) {
+  async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Demo-Modus: Die Anfrage wird nur lokal bestätigt und nicht an ein Backend gesendet.
+    setSuccess(false);
+    setError(null);
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const organization = String(formData.get("organisation") ?? "").trim();
+    const role = String(formData.get("rolle") ?? "").trim();
+    const message = String(formData.get("nachricht") ?? "").trim();
+    const supabase = createSupabaseBrowserClient();
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name || undefined,
+          organization: organization || undefined,
+          role: role || undefined,
+          message: message || undefined,
+        },
+      },
+    });
+
+    setIsSubmitting(false);
+
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+
     setSuccess(true);
   }
 
@@ -106,7 +140,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 <span>{copy.name}</span>
                 <div className={styles.inputWrap}>
                   <span aria-hidden="true">♙</span>
-                  <input type="text" name="name" placeholder={language === "en" ? "Your name" : "Dein Name"} autoComplete="name" required />
+                  <input type="text" name="name" placeholder={language === "en" ? "Your name" : "Dein Name"} autoComplete="name" />
                 </div>
               </label>
 
@@ -118,6 +152,14 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 </div>
               </label>
             </div>
+
+            <label className={styles.field}>
+              <span>{copy.password}</span>
+              <div className={styles.inputWrap}>
+                <span aria-hidden="true">▣</span>
+                <input type="password" name="password" placeholder={language === "en" ? "Choose a secure password" : "Wähle ein sicheres Passwort"} autoComplete="new-password" minLength={6} required />
+              </div>
+            </label>
 
             <label className={styles.field}>
               <span>{copy.organization}</span>
@@ -149,13 +191,19 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               </div>
             </label>
 
-            <button className={styles.primaryButton} type="submit">
-              {copy.submit} <span>→</span>
+            <button className={styles.primaryButton} type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (language === "en" ? "Creating account…" : "Konto wird erstellt…") : copy.submit} <span>→</span>
             </button>
+
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
 
             {success && (
               <p className={styles.success} role="status">
-                {copy.success}
+                {copy.success} {language === "en" ? "You can now continue to login if no email confirmation is required." : "Du kannst nun zum Login wechseln, sofern keine E-Mail-Bestätigung erforderlich ist."}
               </p>
             )}
 

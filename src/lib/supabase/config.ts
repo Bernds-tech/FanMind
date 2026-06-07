@@ -1,0 +1,45 @@
+export type SupabasePublicConfig = {
+  url: string;
+  anonKey: string;
+};
+
+export const SUPABASE_ACCESS_TOKEN_COOKIE = "fanmind_sb_access_token";
+export const SUPABASE_REFRESH_TOKEN_COOKIE = "fanmind_sb_refresh_token";
+
+export function getSupabasePublicConfig(): SupabasePublicConfig | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return {
+    url: url.replace(/\/$/, ""),
+    anonKey,
+  };
+}
+
+export function getSupabaseAuthUrl(path: string): string {
+  const config = getSupabasePublicConfig();
+
+  if (!config) {
+    throw new Error("Supabase ist noch nicht konfiguriert. Bitte NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY setzen.");
+  }
+
+  return `${config.url}/auth/v1${path}`;
+}
+
+export function getSupabaseHeaders(accessToken?: string): HeadersInit {
+  const config = getSupabasePublicConfig();
+
+  if (!config) {
+    throw new Error("Supabase ist noch nicht konfiguriert. Bitte NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY setzen.");
+  }
+
+  return {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${accessToken ?? config.anonKey}`,
+    "Content-Type": "application/json",
+  };
+}
