@@ -5242,12 +5242,12 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(360px, 0.78fr) minmax(720px, 1.42fr);
-  gap: clamp(28px, 3.6vw, 70px);
-  width: min(1804px, 100%);
-  min-height: 940px;
-  margin: 18px auto 0;
-  padding: 54px 4px 34px;
+  grid-template-columns: minmax(340px, 0.76fr) minmax(700px, 1.38fr);
+  gap: clamp(24px, 3.2vw, 58px);
+  width: min(1780px, 100%);
+  min-height: 875px;
+  margin: 12px auto 0;
+  padding: 42px 4px 22px;
   isolation: isolate;
   overflow: hidden;
 }
@@ -5287,18 +5287,18 @@
 }
 
 .responsiveOrbitOne {
-  top: 78px;
-  right: -70px;
-  width: 1000px;
-  height: 470px;
+  top: 52px;
+  right: -58px;
+  width: 940px;
+  height: 430px;
   transform: rotate(25deg);
 }
 
 .responsiveOrbitTwo {
-  right: -110px;
-  bottom: 160px;
-  width: 500px;
-  height: 190px;
+  right: -92px;
+  bottom: 128px;
+  width: 470px;
+  height: 178px;
   border-color: rgba(128, 71, 255, 0.44);
   transform: rotate(14deg);
 }
@@ -5324,7 +5324,7 @@
 .responsiveCopy {
   position: relative;
   z-index: 2;
-  max-width: 560px;
+  max-width: 540px;
   padding-top: 0;
 }
 
@@ -5351,11 +5351,11 @@
 }
 
 .responsiveCopy h2 {
-  margin-top: 22px;
-  max-width: 690px;
-  font-size: clamp(54px, 5vw, 84px);
-  line-height: 1.08;
-  letter-spacing: -3.6px;
+  margin-top: 18px;
+  max-width: 650px;
+  font-size: clamp(50px, 4.55vw, 76px);
+  line-height: 1.04;
+  letter-spacing: -3.15px;
   text-shadow: 0 17px 48px rgba(0, 0, 0, 0.56);
 }
 
@@ -5368,27 +5368,27 @@
 }
 
 .responsiveCopy > p {
-  max-width: 560px;
-  margin-top: 18px;
+  max-width: 535px;
+  margin-top: 16px;
   color: #d1d7e2;
-  font-size: 20px;
-  line-height: 1.42;
+  font-size: 19px;
+  line-height: 1.4;
 }
 
 .responsiveBenefitList {
   display: grid;
-  gap: 14px;
-  margin-top: 28px;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .responsiveBenefitList article {
   --accent: #168cff;
   display: grid;
-  grid-template-columns: 86px 1fr;
+  grid-template-columns: 72px 1fr;
   align-items: center;
-  gap: 25px;
-  min-height: 134px;
-  padding: 20px 25px 20px 21px;
+  gap: 18px;
+  min-height: 112px;
+  padding: 16px 22px 16px 18px;
   border: 1px solid rgba(63, 126, 205, 0.36);
   border-radius: 13px;
   background: linear-gradient(180deg, rgba(5, 20, 45, 0.66), rgba(3, 14, 33, 0.73));
@@ -5402,13 +5402,13 @@
 .responsiveBenefitList article > span {
   display: grid;
   place-items: center;
-  width: 74px;
-  height: 74px;
+  width: 62px;
+  height: 62px;
   border: 1px solid color-mix(in srgb, var(--accent) 66%, rgba(255,255,255,0.15));
   border-radius: 50%;
   background: radial-gradient(circle at 35% 28%, color-mix(in srgb, var(--accent) 28%, transparent), rgba(5, 23, 55, 0.9));
   color: var(--accent);
-  font-size: 38px;
+  font-size: 32px;
   line-height: 1;
   box-shadow: inset 0 0 22px color-mix(in srgb, var(--accent) 16%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 26%, transparent);
   text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 74%, transparent);
@@ -5416,21 +5416,21 @@
 
 .responsiveBenefitList h3 {
   color: #fff;
-  font-size: 23px;
-  line-height: 1.12;
+  font-size: 21px;
+  line-height: 1.1;
   letter-spacing: -0.55px;
 }
 
 .responsiveBenefitList p {
-  margin-top: 8px;
+  margin-top: 6px;
   color: #cbd3df;
-  font-size: 16px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.34;
 }
 
 .responsiveShowcase {
   position: relative;
-  min-height: 735px;
+  min-height: 674px;
 }
 
 .desktopDevice,
@@ -5441,9 +5441,9 @@
 }
 
 .desktopDevice {
-  top: 16px;
-  right: 8px;
-  width: min(900px, 73vw);
+  top: 4px;
+  right: -2px;
+  width: min(860px, 70vw);
   aspect-ratio: 1.45;
   padding: 10px;
   border: 1px solid rgba(145, 193, 255, 0.82);
@@ -5522,7 +5522,7 @@
 .deviceDashboard {
   min-width: 0;
   flex: 1;
-  padding: 58px 28px 26px;
+  padding: 46px 24px 22px;
 }
 
 .deviceTopbar,
@@ -5564,13 +5564,13 @@
 .responsiveMetricGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 26px;
+  gap: 10px;
+  margin-top: 22px;
 }
 
 .responsiveMetricGrid article {
-  min-height: 82px;
-  padding: 15px;
+  min-height: 74px;
+  padding: 13px;
   border: 1px solid rgba(54, 116, 181, 0.4);
   border-radius: 8px;
   background: rgba(5, 20, 45, 0.62);
@@ -5589,9 +5589,9 @@
 
 .responsiveMetricGrid strong {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: #fff;
-  font-size: 25px;
+  font-size: 23px;
   letter-spacing: -0.7px;
 }
 
@@ -5604,8 +5604,8 @@
 .responsiveDesktopPanels {
   display: grid;
   grid-template-columns: 1fr 1.04fr 1.35fr;
-  gap: 12px;
-  margin-top: 19px;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .responsiveDesktopPanels article {
@@ -5618,8 +5618,8 @@
 .aiRecommendationCard,
 .responsiveFollowCard,
 .responsiveChartCard {
-  min-height: 178px;
-  padding: 18px;
+  min-height: 158px;
+  padding: 15px;
 }
 
 .aiRecommendationCard strong,
@@ -5634,7 +5634,7 @@
 }
 
 .aiRecommendationCard p {
-  margin-top: 21px;
+  margin-top: 16px;
   color: #d5dce8;
   font-size: 12px;
   line-height: 1.48;
@@ -5643,7 +5643,7 @@
 .aiRecommendationCard span,
 .responsiveFollowCard a {
   display: inline-flex;
-  margin-top: 15px;
+  margin-top: 12px;
   color: #0da4ff;
   font-size: 12px;
   text-decoration: none;
@@ -5654,7 +5654,7 @@
   grid-template-columns: 1fr auto auto;
   gap: 10px;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 10px;
   color: #d8e4f3;
   font-size: 12px;
 }
@@ -5689,7 +5689,7 @@
 }
 
 .responsiveChartCard svg {
-  height: 86px;
+  height: 74px;
   margin-top: 4px;
 }
 
@@ -5704,8 +5704,8 @@
 
 .responsivePerformanceCard,
 .responsiveSourcesCard {
-  min-height: 140px;
-  padding: 16px 18px;
+  min-height: 124px;
+  padding: 14px 16px;
 }
 
 .responsivePerformanceCard {
@@ -5715,8 +5715,8 @@
 .responsivePerformanceCard div {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-  margin-top: 22px;
+  gap: 14px;
+  margin-top: 18px;
 }
 
 .responsivePerformanceCard span {
@@ -5728,8 +5728,8 @@
 
 .responsivePerformanceCard b {
   color: #fff;
-  font-size: 23px;
-  letter-spacing: -0.6px;
+  font-size: 21px;
+  letter-spacing: -0.55px;
 }
 
 .responsiveSourcesCard div {
@@ -5750,9 +5750,9 @@
 }
 
 .tabletDevice {
-  left: -170px;
-  bottom: 22px;
-  width: 540px;
+  left: -126px;
+  bottom: 86px;
+  width: 500px;
   aspect-ratio: 1.36;
   padding: 9px;
   border: 1px solid rgba(203, 177, 138, 0.7);
@@ -5829,10 +5829,10 @@
 .tabletRows b { color: #ffc43a; }
 
 .phoneDevice {
-  right: 300px;
-  bottom: -25px;
-  width: 170px;
-  height: 364px;
+  right: 270px;
+  bottom: 78px;
+  width: 158px;
+  height: 338px;
   padding: 8px;
   border: 1px solid rgba(190, 161, 122, 0.7);
   border-radius: 29px;
@@ -5926,14 +5926,14 @@
 .responsiveCtaPanel {
   position: absolute;
   left: 0;
-  right: 370px;
-  bottom: 34px;
+  right: 470px;
+  bottom: 24px;
   z-index: 3;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  min-height: 150px;
-  padding: 24px 34px 20px 68px;
+  min-height: 118px;
+  padding: 18px 28px 16px 54px;
   border: 1px solid rgba(56, 118, 190, 0.38);
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(4, 18, 40, 0.74), rgba(3, 13, 31, 0.82));
@@ -5943,42 +5943,42 @@
 
 .responsiveCtaLead {
   display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 22px;
+  grid-template-columns: 78px 1fr;
+  gap: 16px;
   align-items: center;
 }
 
 .responsiveCtaLead > span {
   display: grid;
   place-items: center;
-  width: 78px;
-  height: 78px;
+  width: 58px;
+  height: 58px;
   color: #177fff;
-  font-size: 52px;
+  font-size: 40px;
   text-shadow: 0 0 22px rgba(16, 124, 255, 0.78);
 }
 
 .responsiveCtaLead strong {
-  font-size: 30px;
-  line-height: 1.12;
+  font-size: 25px;
+  line-height: 1.08;
   letter-spacing: -0.85px;
 }
 
 .responsiveCtaLead p {
-  margin-top: 9px;
+  margin-top: 6px;
   color: #cbd2df;
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .responsiveCtaActions {
   display: flex;
-  gap: 32px;
+  gap: 22px;
   align-items: center;
 }
 
 .responsiveCtaActions .demoButton,
 .responsiveCtaActions .outlineButton {
-  min-width: 244px;
+  min-width: 214px;
   justify-content: center;
 }
 
@@ -5986,10 +5986,10 @@
   grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
-  gap: 42px;
-  margin-top: 20px;
+  gap: 26px;
+  margin-top: 12px;
   color: #cbd2df;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .responsiveCtaPanel > p span::first-letter {
@@ -5999,25 +5999,25 @@
 @media (max-width: 1440px) {
   .responsiveSection {
     grid-template-columns: 0.78fr 1.22fr;
-    min-height: 900px;
+    min-height: 830px;
   }
 
   .desktopDevice {
-    right: -86px;
-    width: 820px;
+    right: -70px;
+    width: 790px;
   }
 
   .tabletDevice {
-    left: -118px;
-    width: 500px;
+    left: -88px;
+    width: 470px;
   }
 
   .phoneDevice {
-    right: 170px;
+    right: 160px;
   }
 
   .responsiveCtaPanel {
-    right: 210px;
+    right: 270px;
   }
 }
 
@@ -6033,7 +6033,7 @@
   }
 
   .responsiveShowcase {
-    min-height: 720px;
+    min-height: 670px;
   }
 
   .desktopDevice {
@@ -6085,7 +6085,7 @@
   }
 
   .responsiveShowcase {
-    min-height: 620px;
+    min-height: 590px;
   }
 
   .desktopDevice {
@@ -6112,13 +6112,13 @@
 
   .tabletDevice {
     width: 440px;
-    left: -32px;
-    bottom: 38px;
+    left: -24px;
+    bottom: 74px;
   }
 
   .phoneDevice {
     right: 12px;
-    bottom: 0;
+    bottom: 42px;
   }
 
   .responsiveCtaPanel {
@@ -6151,7 +6151,7 @@
   }
 
   .responsiveShowcase {
-    min-height: 760px;
+    min-height: 720px;
   }
 
   .desktopDevice {
@@ -6164,14 +6164,14 @@
 
   .tabletDevice {
     left: 50%;
-    bottom: 200px;
+    bottom: 220px;
     width: 430px;
     transform: translateX(-50%) scale(0.78);
   }
 
   .phoneDevice {
     right: 50%;
-    bottom: 4px;
+    bottom: 32px;
     transform: translateX(50%) scale(0.96);
   }
 
