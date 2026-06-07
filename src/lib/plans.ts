@@ -45,11 +45,10 @@ export function resolveCurrentPlanId({
   sessionPlanId,
   fallback = "pilot",
 }: PlanResolutionInput): PlanId {
-  // Heute liest der interne Demo-/Onboarding-Flow den Plan bewusst nur aus der URL
-  // (`/onboarding?plan=pilot|starter|growth|agency`) oder nutzt den Fallback.
-  // Sobald echte Workspace-, User- oder Session-Daten angebunden werden, können diese
-  // vorbereiteten Quellen statt der Query priorisiert werden – ohne die UI erneut
-  // anfassen zu müssen. In diesem PR wird keine Datenbank und keine neue Auth gebaut.
+  // Heute priorisiert der MVP-Flow weiterhin die URL (`/onboarding?plan=...`),
+  // damit Landingpage, Demo und Registrierung denselben Einstieg nutzen.
+  // Sobald Workspaces produktiv aus Supabase gelesen werden, kann workspacePlanId
+  // vor queryPlan priorisiert werden, ohne die UI erneut anzufassen.
   return resolvePlanId(
     queryPlan ?? workspacePlanId ?? userPlanId ?? sessionPlanId,
     fallback,

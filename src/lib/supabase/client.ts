@@ -55,7 +55,7 @@ async function parseSupabaseError(response: Response): Promise<Error> {
   return new Error(message);
 }
 
-async function persistServerSession(session: SupabaseAuthSession | null): Promise<void> {
+export async function syncSupabaseSessionForServer(session: SupabaseAuthSession | null): Promise<void> {
   if (!session?.access_token) {
     return;
   }
@@ -94,7 +94,7 @@ async function postAuth(path: string, body: Record<string, unknown>, rememberSes
     const payload = (await response.json()) as SupabaseAuthSession & { session?: SupabaseAuthSession; user?: SupabaseAuthUser };
     const authResponse = normalizeAuthPayload(payload);
     rememberSession(authResponse.data.session);
-    await persistServerSession(authResponse.data.session);
+    await syncSupabaseSessionForServer(authResponse.data.session);
 
     return authResponse;
   } catch (error) {
@@ -187,8 +187,4 @@ export function createSupabaseBrowserClient() {
       };
     },
   };
-}
-
-export async function syncSupabaseSessionForServer(session: SupabaseAuthSession | null): Promise<void> {
-  await persistServerSession(session);
 }

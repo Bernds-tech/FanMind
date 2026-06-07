@@ -11,7 +11,7 @@ type LoginPageProps = {
 };
 
 const LOGIN_TARGET = "/dashboard";
-const DEMO_TARGET = "/onboarding?plan=pilot";
+const DEMO_TARGET = "/onboarding?plan=pilot&demo=1";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
   return (

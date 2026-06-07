@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 type OnboardingPageProps = {
-  searchParams: Promise<{ plan?: string | string[]; demo?: string | string[] }>;
+  searchParams: Promise<{ plan?: string | string[]; demo?: string | string[]; lang?: string | string[] }>;
 };
 
 function hasQueryValue(value: string | string[] | undefined): boolean {
@@ -23,17 +23,15 @@ function hasQueryValue(value: string | string[] | undefined): boolean {
 
 export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
   const { plan, demo } = await searchParams;
-  const isDemoMode = (Array.isArray(demo) ? demo.includes("1") : demo === "1") || hasQueryValue(plan);
+  const explicitDemoMode = Array.isArray(demo) ? demo.includes("1") : demo === "1";
+  const { data } = await getSupabaseServerUser();
+  const isDemoMode = explicitDemoMode || (!data.user && hasQueryValue(plan));
 
-  if (!isDemoMode) {
-    const { data } = await getSupabaseServerUser();
-
-    if (!data.user) {
-      redirect("/login");
-    }
+  if (!isDemoMode && !data.user) {
+    redirect("/login");
   }
 
-  const planId = resolveCurrentPlanId({ queryPlan: plan, fallback: "pilot" });
+  const planId = resolveCurrentPlanId({ queryPlan: plan, fallback: "starter" });
 
-  return <OnboardingMaster planId={planId} />;
+  return <OnboardingMaster planId={planId} isDemoMode={isDemoMode} />;
 }

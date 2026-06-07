@@ -46,9 +46,17 @@ create policy "profiles_update_own"
   using (id = auth.uid())
   with check (id = auth.uid());
 
-create policy "workspaces_select_owner"
+create policy "workspaces_select_owner_or_member"
   on public.workspaces for select
-  using (owner_user_id = auth.uid());
+  using (
+    owner_user_id = auth.uid()
+    or exists (
+      select 1
+      from public.workspace_members wm
+      where wm.workspace_id = workspaces.id
+        and wm.user_id = auth.uid()
+    )
+  );
 
 create policy "workspaces_insert_owner"
   on public.workspaces for insert
@@ -59,9 +67,17 @@ create policy "workspaces_update_owner"
   using (owner_user_id = auth.uid())
   with check (owner_user_id = auth.uid());
 
-create policy "workspace_members_select_self"
+create policy "workspace_members_select_own_workspace"
   on public.workspace_members for select
-  using (user_id = auth.uid());
+  using (
+    user_id = auth.uid()
+    or exists (
+      select 1
+      from public.workspaces w
+      where w.id = workspace_members.workspace_id
+        and w.owner_user_id = auth.uid()
+    )
+  );
 
 create policy "workspace_members_insert_workspace_owner"
   on public.workspace_members for insert
