@@ -2,6 +2,7 @@
 
 import { FormEvent, use, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { resolvePlanId } from "@/lib/plans";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./register.module.css";
 
@@ -30,14 +31,16 @@ function FanMindLogo({ language }: { language: FanMindLanguage }) {
 }
 
 type RegisterPageProps = {
-  searchParams: Promise<{ lang?: string | string[] }>;
+  searchParams: Promise<{ lang?: string | string[]; plan?: string | string[] }>;
 };
 
 export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const params = use(searchParams);
   const language = getFanMindLanguage(params.lang);
+  const selectedPlanId = resolvePlanId(params.plan, "pilot");
   const copy = fanmindCopy[language].register;
   const loginHref = localizedPath("/login", language);
+  const onboardingHref = language === "en" ? `/onboarding?plan=${selectedPlanId}&lang=en` : `/onboarding?plan=${selectedPlanId}`;
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -203,7 +206,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
 
             {success && (
               <p className={styles.success} role="status">
-                {copy.success} {language === "en" ? "You can now continue to login if no email confirmation is required." : "Du kannst nun zum Login wechseln, sofern keine E-Mail-Bestätigung erforderlich ist."}
+                {copy.success} {language === "en" ? "You can now continue to the internal onboarding flow if no email confirmation is required." : "Du kannst nun in den internen Onboarding-Flow wechseln, sofern keine E-Mail-Bestätigung erforderlich ist."} <a href={onboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
               </p>
             )}
 

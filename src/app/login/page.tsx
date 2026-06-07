@@ -10,8 +10,8 @@ type LoginPageProps = {
   searchParams: Promise<{ demo?: string | string[]; lang?: string | string[] }>;
 };
 
-const LOGIN_TARGET = "/dashboard";
-const DEMO_TARGET = "/dashboard?demo=1";
+const LOGIN_TARGET = "/onboarding?plan=starter";
+const DEMO_TARGET = "/onboarding?plan=pilot";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
   return (
@@ -178,7 +178,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span aria-hidden="true">🛡</span>
               <div>
                 <strong>{language === "en" ? "Safe MVP scope" : "Sicherer MVP-Rahmen"}</strong>
-                <p>{language === "en" ? "Supabase Auth handles real sessions; the demo flow remains available without login." : "Supabase Auth verwaltet echte Sessions; der Demo-Flow bleibt ohne Login verfügbar."}</p>
+                <p>{language === "en" ? "Login leitet in das interne Onboarding; der Demo-Flow bleibt ohne Login verfügbar." : "Login leitet in das interne Onboarding; der Demo-Flow bleibt ohne Login verfügbar."}</p>
               </div>
             </div>
 

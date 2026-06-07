@@ -30,6 +30,32 @@ export function resolvePlanId(value: unknown, fallback: PlanId = "pilot"): PlanI
   return isPlanId(value) ? value : fallback;
 }
 
+export type PlanResolutionInput = {
+  queryPlan?: unknown;
+  workspacePlanId?: unknown;
+  userPlanId?: unknown;
+  sessionPlanId?: unknown;
+  fallback?: PlanId;
+};
+
+export function resolveCurrentPlanId({
+  queryPlan,
+  workspacePlanId,
+  userPlanId,
+  sessionPlanId,
+  fallback = "pilot",
+}: PlanResolutionInput): PlanId {
+  // Heute liest der interne Demo-/Onboarding-Flow den Plan bewusst nur aus der URL
+  // (`/onboarding?plan=pilot|starter|growth|agency`) oder nutzt den Fallback.
+  // Sobald echte Workspace-, User- oder Session-Daten angebunden werden, können diese
+  // vorbereiteten Quellen statt der Query priorisiert werden – ohne die UI erneut
+  // anfassen zu müssen. In diesem PR wird keine Datenbank und keine neue Auth gebaut.
+  return resolvePlanId(
+    queryPlan ?? workspacePlanId ?? userPlanId ?? sessionPlanId,
+    fallback,
+  );
+}
+
 export function getPlan(planId: PlanId): PlanConfig {
   return PLANS[planId];
 }
