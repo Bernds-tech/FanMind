@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
@@ -436,35 +437,6 @@ const responsiveBenefits = [
   },
 ];
 
-const responsiveStats = [
-  { label: "Gesamtfans", value: "10.248", change: "+12,1 %" },
-  { label: "Aktive", value: "4.892", change: "+8,8 %" },
-  { label: "VIP", value: "182", change: "1,8 %" },
-  { label: "Conversion", value: "9,4 %", change: "+1,2 %" },
-];
-
-const responsiveFollowUps = [
-  { name: "Sandra M.", time: "Heute, 10:00", tag: "VIP" },
-  { name: "Lukas", time: "Heute, 11:00", tag: "Warm" },
-  { name: "Ella", time: "Heute, 14:00", tag: "VIP" },
-  { name: "Tom", time: "Heute, 15:30", tag: "Mittel" },
-];
-
-const responsiveContacts = [
-  { name: "Sandra M.", status: "VIP", tag: "buyer_premium", time: "Heute, 10:00", score: "92" },
-  { name: "Alex", status: "VIP", tag: "vip_event", time: "Heute, 11:00", score: "88" },
-  { name: "Ella", status: "Inaktiv", tag: "reactivation", time: "Heute, 14:00", score: "45" },
-  { name: "Lukas", status: "Warm", tag: "challenge", time: "Heute, 16:00", score: "76" },
-  { name: "Maria", status: "Neu", tag: "beginner", time: "Gestern", score: "30" },
-  { name: "Nina", status: "Warm", tag: "music", time: "Heute", score: "68" },
-];
-
-const responsiveSources = [
-  { label: "Instagram", value: "2.648", change: "+18 %" },
-  { label: "Event", value: "1.876", change: "+14 %" },
-  { label: "Website", value: "1.394", change: "+9 %" },
-  { label: "Referral", value: "892", change: "+6 %" },
-];
 
 const roadmapPhases = [
   {
@@ -1693,198 +1665,42 @@ export default function LandingV2() {
               </article>
             ))}
           </div>
+
+          <div className={styles.responsiveCtaPanel}>
+            <div className={styles.responsiveCtaLead}>
+              <span>🧠</span>
+              <div>
+                <strong>FanMind auf jedem Screen.</strong>
+                <p>Volle Power, egal welches Gerät du nutzt.</p>
+              </div>
+            </div>
+            <div className={styles.responsiveCtaActions}>
+              <a className={styles.demoButton} href="#demo">
+                <span>▶</span> Demo ansehen
+              </a>
+              <a className={styles.outlineButton} href="#early-access">
+                Early Access anfragen
+              </a>
+            </div>
+            <p>
+              <span>✓ MVP klar gekennzeichnet</span>
+              <span>✓ Keine Kreditkarte erforderlich</span>
+              <span>✓ Kein automatischer Versand</span>
+              <span>✓ Manuelle Freigabe</span>
+            </p>
+          </div>
         </div>
 
         <div className={styles.responsiveShowcase} aria-label="FanMind Geräteansichten">
-          <div className={styles.desktopDevice}>
-            <div className={styles.deviceChrome}>
-              <div className={styles.deviceSidebar}>
-                <Logo />
-                {[
-                  "Dashboard",
-                  "Kontakte",
-                  "Segmente",
-                  "Follow-ups",
-                  "Kampagnen",
-                  "Analytics",
-                  "KI Insights",
-                ].map((item, index) => (
-                  <span className={index === 0 ? styles.activeDeviceNav : undefined} key={item}>
-                    <i aria-hidden="true">{index === 3 ? "126" : ""}</i>
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className={styles.deviceDashboard}>
-                <div className={styles.deviceTopbar}>
-                  <div>
-                    <strong>Dashboard</strong>
-                    <span>Dein Überblick über Kontakte, Aktionen und Ergebnisse.</span>
-                  </div>
-                  <button type="button">+ Neuer Kontakt</button>
-                </div>
-                <div className={styles.responsiveMetricGrid}>
-                  {responsiveStats.map((stat) => (
-                    <article key={stat.label}>
-                      <span>{stat.label}</span>
-                      <strong>{stat.value}</strong>
-                      <em>{stat.change} vs. letzter Monat</em>
-                    </article>
-                  ))}
-                </div>
-                <div className={styles.responsiveDesktopPanels}>
-                  <article className={styles.aiRecommendationCard}>
-                    <strong>✧ KI-Empfehlung</strong>
-                    <p>
-                      Deine Early-Bird Kampagne performt überdurchschnittlich.
-                      Prüfe Follow-ups im Segment „VIP Interesse“.
-                    </p>
-                    <span>Empfehlungen anzeigen</span>
-                  </article>
-                  <article className={styles.responsiveFollowCard}>
-                    <strong>Nächste Follow-ups</strong>
-                    {responsiveFollowUps.map((item) => (
-                      <div key={item.name}>
-                        <span>{item.name}</span>
-                        <em>{item.time}</em>
-                        <i>{item.tag}</i>
-                      </div>
-                    ))}
-                    <a href="#early-access">Alle Follow-ups anzeigen →</a>
-                  </article>
-                  <article className={styles.responsiveChartCard}>
-                    <strong>Conversion Verlauf</strong>
-                    <span>9,4 %</span>
-                    <em>+1,2 % vs. letzter Zeitraum</em>
-                    <svg viewBox="0 0 240 98" aria-hidden="true" focusable="false">
-                      <path d="M7 74 C24 68 31 76 43 70 S62 72 75 59 S96 64 109 49 S132 57 145 38 S166 51 178 27 S199 43 211 18 S226 31 235 11" />
-                    </svg>
-                  </article>
-                  <article className={styles.responsivePerformanceCard}>
-                    <strong>Kampagnen Performance</strong>
-                    <div>
-                      <span>Early-Bird Launch <b>8,7 %</b></span>
-                      <span>VIP-Infos Kampagne <b>12,4 %</b></span>
-                    </div>
-                  </article>
-                  <article className={styles.responsiveSourcesCard}>
-                    <strong>Top Quellen</strong>
-                    {responsiveSources.map((source, index) => (
-                      <div key={source.label}>
-                        <span>{source.label}</span>
-                        <i style={{ width: `${68 - index * 10}%` }} />
-                        <em>{source.value}</em>
-                        <b>{source.change}</b>
-                      </div>
-                    ))}
-                  </article>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.tabletDevice}>
-            <div className={styles.deviceChrome}>
-              <div className={styles.tabletSidebar}>
-                <Logo />
-                {[
-                  "Dashboard",
-                  "Kontakte",
-                  "Segmente",
-                  "Follow-ups",
-                  "Kampagnen",
-                  "Analytics",
-                ].map((item, index) => (
-                  <span className={index === 1 ? styles.activeDeviceNav : undefined} key={item}>
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <div className={styles.tabletContent}>
-                <div className={styles.tabletHeader}>
-                  <strong>Kontakte</strong>
-                  <button type="button">+ Neuer Kontakt</button>
-                </div>
-                <div className={styles.tabletFilters}>
-                  <span>Alle</span>
-                  <span>VIP</span>
-                  <span>Warm</span>
-                  <span>Kalt</span>
-                </div>
-                <div className={styles.tabletRows}>
-                  {responsiveContacts.map((contact) => (
-                    <div key={contact.name}>
-                      <strong>{contact.name}</strong>
-                      <span>{contact.status}</span>
-                      <em>{contact.tag}</em>
-                      <i>{contact.time}</i>
-                      <b>{contact.score}</b>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.phoneDevice}>
-            <div className={styles.phoneScreen}>
-              <Logo />
-              <strong>Heute</strong>
-              <span>Deine wichtigsten Updates</span>
-              <article>
-                <b>Nächste Follow-ups</b>
-                <em>5</em>
-                <i>Anzeigen →</i>
-              </article>
-              <article>
-                <b>Conversion</b>
-                <em>9,4 %</em>
-                <svg viewBox="0 0 128 42" aria-hidden="true" focusable="false">
-                  <path d="M4 34 C18 29 22 35 34 27 S52 30 64 20 S83 24 94 12 S112 18 124 6" />
-                </svg>
-              </article>
-              <article>
-                <b>KI-Empfehlung</b>
-                <small>Follow-ups im VIP-Segment prüfen.</small>
-              </article>
-              <article>
-                <b>Neue Kontakte</b>
-                <em>+24</em>
-                <i>Anzeigen →</i>
-              </article>
-              <div className={styles.phoneNav}>
-                <span>⌂</span>
-                <span>♙</span>
-                <span>＋</span>
-                <span>◇</span>
-                <span>☰</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.responsiveCtaPanel}>
-          <div className={styles.responsiveCtaLead}>
-            <span>🧠</span>
-            <div>
-              <strong>FanMind auf jedem Screen.</strong>
-              <p>Volle Power, egal welches Gerät du nutzt.</p>
-            </div>
-          </div>
-          <div className={styles.responsiveCtaActions}>
-            <a className={styles.demoButton} href="#demo">
-              <span>▶</span> Demo ansehen
-            </a>
-            <a className={styles.outlineButton} href="#early-access">
-              Early Access anfragen
-            </a>
-          </div>
-          <p>
-            <span>✓ MVP klar gekennzeichnet</span>
-            <span>✓ Keine Kreditkarte erforderlich</span>
-            <span>✓ Kein automatischer Versand</span>
-            <span>✓ Manuelle Freigabe</span>
-          </p>
+          <Image
+            className={styles.responsiveDeviceVisual}
+            src="/landing/08-responsive-devices.png"
+            alt="FanMind Dashboard auf Desktop, Tablet und Smartphone"
+            width={1536}
+            height={1024}
+            sizes="(max-width: 1180px) 100vw, 60vw"
+            priority={false}
+          />
         </div>
       </section>
 
