@@ -23,10 +23,10 @@
 .shell {
   position: relative;
   z-index: 1;
-  width: min(1380px, calc(100% - 28px));
-  min-height: calc(100vh - 28px);
-  margin: 14px auto;
-  padding: clamp(24px, 3vw, 38px);
+  width: min(1120px, calc(100% - 32px));
+  min-height: auto;
+  margin: 10px auto;
+  padding: clamp(18px, 2.2vw, 28px);
   border: 1px solid rgba(19, 128, 255, 0.3);
   border-radius: 18px;
   background: rgba(0, 5, 16, 0.36);
@@ -46,17 +46,17 @@
 }
 
 .logo {
-  gap: 14px;
+  gap: 10px;
   color: #ffffff;
-  font-size: clamp(24px, 3vw, 32px);
+  font-size: clamp(21px, 2vw, 27px);
   font-weight: 800;
   letter-spacing: -1.4px;
   text-decoration: none;
 }
 
 .logoMark {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   fill: none;
   stroke: #02e7ff;
   stroke-width: 3.1;
@@ -66,7 +66,36 @@
 .topLinks {
   gap: 16px;
   color: #c7c1ce;
-  font-size: 18px;
+  font-size: 12px;
+}
+
+
+.languageSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(72, 147, 255, 0.34);
+  border-radius: 999px;
+  color: #8ea8cb;
+  background: rgba(4, 14, 34, 0.58);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.languageSwitch a {
+  color: inherit;
+}
+
+.languageSwitch span {
+  color: rgba(180, 200, 230, 0.42);
+}
+
+.languageSwitch .languageActive {
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(0, 200, 255, 0.72);
 }
 
 .topLinks a,
@@ -78,20 +107,20 @@
 
 .authGrid {
   display: grid;
-  grid-template-columns: minmax(360px, 0.82fr) minmax(560px, 1.38fr);
-  gap: clamp(36px, 6vw, 72px);
+  grid-template-columns: minmax(260px, 0.72fr) minmax(470px, 1.28fr);
+  gap: clamp(22px, 3.6vw, 42px);
   align-items: center;
-  margin-top: clamp(38px, 5vw, 58px);
+  margin-top: clamp(20px, 3vw, 34px);
 }
 
 .visualPanel {
   display: grid;
-  gap: clamp(30px, 4vw, 48px);
+  gap: clamp(18px, 2vw, 26px);
 }
 
 .orbit {
   position: relative;
-  width: min(430px, 78vw);
+  width: min(270px, 58vw);
   aspect-ratio: 1;
   margin-inline: auto;
 }
@@ -165,7 +194,7 @@
   display: grid;
   place-items: center;
   color: #00dfff;
-  font-size: clamp(98px, 14vw, 152px);
+  font-size: clamp(64px, 8vw, 96px);
   border: 6px solid transparent;
   border-radius: 50%;
   background: linear-gradient(#06142e, #06142e) padding-box,
@@ -176,17 +205,17 @@
 
 .benefitList {
   display: grid;
-  gap: 24px;
-  max-width: 520px;
+  gap: 10px;
+  max-width: 360px;
   margin-inline: auto;
 }
 
 .benefitList article {
   display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 22px;
+  grid-template-columns: 54px 1fr;
+  gap: 10px;
   align-items: center;
-  padding-bottom: 24px;
+  padding-bottom: 14px;
   border-bottom: 1px solid rgba(149, 173, 213, 0.16);
 }
 
@@ -197,11 +226,11 @@
 .benefitList span:first-child {
   display: grid;
   place-items: center;
-  width: 86px;
-  height: 86px;
+  width: 52px;
+  height: 52px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font-size: 38px;
+  font-size: 19px;
   background: rgba(4, 14, 34, 0.72);
   box-shadow: 0 0 26px color-mix(in srgb, currentColor 28%, transparent);
 }
@@ -221,21 +250,21 @@
 .benefitList h2 {
   margin: 0 0 8px;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 19px;
   letter-spacing: -0.5px;
 }
 
 .benefitList p {
   margin: 0;
   color: #c4c6d4;
-  font-size: 18px;
+  font-size: 13px;
   line-height: 1.38;
 }
 
 .formCard {
   position: relative;
   overflow: hidden;
-  padding: clamp(28px, 4vw, 44px);
+  padding: clamp(20px, 2.6vw, 30px);
   border: 1px solid transparent;
   border-radius: 24px;
   background: linear-gradient(#050b1d, #050b1d) padding-box,
@@ -278,7 +307,7 @@
 .formHeader h1 {
   margin: 0;
   color: #ffffff;
-  font-size: clamp(36px, 4.7vw, 50px);
+  font-size: clamp(27px, 3.2vw, 36px);
   line-height: 1.05;
   letter-spacing: -1.9px;
 }
@@ -288,25 +317,25 @@
 }
 
 .formHeader p:last-child {
-  margin: 14px auto 0;
+  margin: 8px auto 0;
   max-width: 720px;
   color: #c9c4d0;
-  font-size: clamp(17px, 2vw, 20px);
+  font-size: clamp(14px, 1.6vw, 16px);
   line-height: 1.42;
 }
 
 .formGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 10px;
 }
 
 .field {
   display: grid;
-  gap: 9px;
-  margin-top: 22px;
+  gap: 7px;
+  margin-top: 14px;
   color: #c9c5d2;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -316,7 +345,7 @@
 .textareaWrap {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   border: 1px solid rgba(48, 141, 255, 0.48);
   border-radius: 10px;
   background: rgba(2, 9, 26, 0.78);
@@ -324,12 +353,12 @@
 }
 
 .inputWrap {
-  min-height: 62px;
-  padding: 0 20px;
+  min-height: 48px;
+  padding: 0 14px;
 }
 
 .textareaWrap {
-  padding: 16px 20px;
+  padding: 12px 14px;
 }
 
 .inputWrap:focus-within,
@@ -340,7 +369,7 @@
 
 .inputWrap span {
   color: #d6d0d6;
-  font-size: 24px;
+  font-size: 19px;
 }
 
 .inputWrap input,
@@ -350,7 +379,7 @@
   border: 0;
   color: #ffffff;
   background: transparent;
-  font-size: 18px;
+  font-size: 15px;
   outline: 0;
 }
 
@@ -369,7 +398,7 @@
 }
 
 .textareaWrap textarea {
-  min-height: 104px;
+  min-height: 76px;
   resize: vertical;
 }
 
@@ -378,14 +407,14 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 68px;
-  margin-top: 24px;
+  min-height: 52px;
+  margin-top: 16px;
   border: 0;
   border-radius: 10px;
   color: #ffffff;
   background: linear-gradient(100deg, #0875ff 0%, #2755ff 45%, #8f25ff 100%);
   box-shadow: 0 14px 34px rgba(79, 55, 255, 0.42);
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 800;
   cursor: pointer;
   transition: transform 160ms ease, box-shadow 160ms ease;
@@ -397,9 +426,9 @@
 
 .success,
 .notice {
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   line-height: 1.48;
 }
 
@@ -419,8 +448,8 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 14px;
-  margin-top: 22px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .footerLinks a:last-child {
@@ -485,7 +514,7 @@
   }
 
   .primaryButton {
-    min-height: 62px;
+    min-height: 48px;
     font-size: 19px;
   }
 

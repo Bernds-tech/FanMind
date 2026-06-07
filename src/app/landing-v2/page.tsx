@@ -13,11 +13,11 @@ export const metadata: Metadata = {
 
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase", caret: true },
-  { label: "Features", href: "#features" },
-  { label: "Zielgruppen", href: "#zielgruppen", caret: true },
-  { label: "Screens", href: "#screens" },
+  { label: "Probleme", href: "#problem" },
+  { label: "Conversion", href: "#conversion", caret: true },
+  { label: "Integrationen", href: "#integrationen" },
   { label: "Preise", href: "#preise" },
-  { label: "Ressourcen", href: "#ressourcen", caret: true },
+  { label: "Roadmap", href: "/roadmap", caret: true },
   { label: "Kontakt", href: "#kontakt" },
 ];
 
@@ -636,7 +636,7 @@ const faqContacts = [
     title: "Demo anfragen",
     text: "Erlebe FanMind live und sieh, wie es für dich funktioniert.",
     cta: "Demo anfragen",
-    href: "/login?demo=1",
+    href: "#produkt-showcase",
     tone: "purple",
   },
   {
@@ -655,10 +655,10 @@ const landingFooterColumns = [
     icon: "✦",
     title: "Produkt",
     links: [
-      { label: "Features", href: "#features" },
+      { label: "Produkt", href: "#produkt-showcase" },
       { label: "Integrationen", href: "#integrationen" },
       { label: "Preise", href: "#preise" },
-      { label: "Demo", href: "/login?demo=1" },
+      { label: "Demo", href: "#produkt-showcase" },
     ],
   },
   {
@@ -710,6 +710,7 @@ const pricingPlans = [
     price: "990 €",
     cadence: "einmalig",
     cta: "Pilot anfragen",
+    href: "/register?plan=pilot",
     tone: "purple",
     featured: false,
     features: [
@@ -730,6 +731,7 @@ const pricingPlans = [
     price: "299 €",
     cadence: "/ Monat",
     cta: "Starter wählen",
+    href: "/register?plan=starter",
     tone: "blue",
     featured: false,
     features: [
@@ -750,6 +752,7 @@ const pricingPlans = [
     price: "499 €",
     cadence: "/ Monat",
     cta: "Growth wählen",
+    href: "/register?plan=growth",
     tone: "blue",
     featured: true,
     features: [
@@ -770,6 +773,7 @@ const pricingPlans = [
     price: "990 €",
     cadence: "/ Monat",
     cta: "Demo buchen",
+    href: "/register?plan=agency",
     tone: "purple",
     featured: false,
     features: [
@@ -1022,18 +1026,23 @@ export default function LandingV2() {
             ))}
           </nav>
           <div className={styles.headerActions}>
+            <div className={styles.languageSwitch} aria-label="Sprachauswahl">
+              <a className={styles.languageActive} href="/landing-v2" aria-current="true">DE</a>
+              <span>|</span>
+              <a href="/landing-v2?lang=en">EN</a>
+            </div>
             <a className={styles.loginButton} href="/login">
               Login
             </a>
             <a className={styles.accessButton} href="/register">
-              Early Access <span>→</span>
+              Registrieren <span>→</span>
             </a>
           </div>
         </header>
 
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
-            <a className={styles.badge} href="#features">
+            <a className={styles.badge} href="#produkt-showcase">
               <span>NEU</span> Die intelligente Fan-Management Plattform
             </a>
             <h1>
@@ -1047,7 +1056,7 @@ export default function LandingV2() {
               Conversions werden.
             </p>
             <div className={styles.heroCtas}>
-              <a className={styles.demoButton} href="/login?demo=1">
+              <a className={styles.demoButton} href="#produkt-showcase">
                 <span>▶</span> Demo ansehen
               </a>
               <a className={styles.outlineButton} href="/register">
@@ -1291,7 +1300,7 @@ export default function LandingV2() {
                   <small>+2,1 %</small>
                 </div>
               </div>
-              <a href="#features">und viele mehr</a>
+              <a href="#produkt-showcase">und viele mehr</a>
             </aside>
           </div>
         </section>
@@ -1337,7 +1346,7 @@ export default function LandingV2() {
           </a>
           <a
             className={styles.demoSecondary}
-            href="/login?demo=1"
+            href="#produkt-showcase"
           >
             <span>▶</span> Demo ansehen
           </a>
@@ -1346,6 +1355,7 @@ export default function LandingV2() {
       </section>
 
       <section
+        id="problem"
         className={styles.problemSolutionSection}
         aria-labelledby="problem-solution-title"
       >
@@ -1427,7 +1437,7 @@ export default function LandingV2() {
         </div>
 
         <div className={styles.problemCtas}>
-          <a className={styles.demoButton} href="/login?demo=1">
+          <a className={styles.demoButton} href="#produkt-showcase">
             <span>▶</span> Demo ansehen
           </a>
           <a className={styles.outlineButton} href="/register">
@@ -1521,7 +1531,7 @@ export default function LandingV2() {
       </section>
 
       <section
-        id="sandra-use-case"
+        id="conversion"
         className={styles.sandraUseCaseSection}
         aria-labelledby="sandra-use-case-title"
       >
@@ -1932,7 +1942,7 @@ export default function LandingV2() {
 
         <div className={styles.integrationCtaBox}>
           <div>
-            <a className={styles.demoButton} href="/login?demo=1">
+            <a className={styles.demoButton} href="#produkt-showcase">
               <span>▶</span> Demo ansehen
             </a>
             <a className={styles.outlineButton} href="/register">
@@ -2065,7 +2075,7 @@ export default function LandingV2() {
             </div>
           </div>
           <div className={styles.responsiveCtaActions}>
-            <a className={styles.demoButton} href="/login?demo=1">
+            <a className={styles.demoButton} href="#produkt-showcase">
               <span>▶</span> Demo ansehen
             </a>
             <a className={styles.outlineButton} href="/register">
@@ -2125,7 +2135,7 @@ export default function LandingV2() {
                   <li key={feature}>{feature}</li>
                 ))}
               </ul>
-              <a href={plan.name === "Agency" ? "/login?demo=1" : "/register"}>
+              <a href={plan.href}>
                 {plan.cta} <span>→</span>
               </a>
             </article>
@@ -2155,7 +2165,7 @@ export default function LandingV2() {
             </p>
           </div>
           <div className={styles.pricingCtaActions}>
-            <a className={styles.demoButton} href="/login?demo=1">
+            <a className={styles.demoButton} href="#produkt-showcase">
               <span>▷</span> Demo ansehen
             </a>
             <a className={styles.outlineButton} href="/register">
@@ -2259,7 +2269,7 @@ export default function LandingV2() {
             <a className={styles.demoButton} href="#datenschutz-kontrolle">
               <span>🔒</span> Datenschutz ansehen
             </a>
-            <a className={styles.outlineButton} href="/login?demo=1">
+            <a className={styles.outlineButton} href="#produkt-showcase">
               Demo buchen <span>→</span>
             </a>
             <p>

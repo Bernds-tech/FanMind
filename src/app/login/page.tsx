@@ -13,6 +13,16 @@ type LoginPageProps = {
 const LOGIN_TARGET = "/roadmap";
 const DEMO_TARGET = "/roadmap?demo=1";
 
+function LanguageSwitch() {
+  return (
+    <div className={styles.languageSwitch} aria-label="Sprachauswahl">
+      <a className={styles.languageActive} href="/login" aria-current="true">DE</a>
+      <span>|</span>
+      <a href="?lang=en">EN</a>
+    </div>
+  );
+}
+
 function FanMindLogo() {
   return (
     <a className={styles.logo} href="/landing-v2" aria-label="FanMind Landingpage öffnen">
@@ -48,6 +58,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         <header className={styles.header}>
           <FanMindLogo />
           <nav className={styles.topLinks} aria-label="Login Navigation">
+            <LanguageSwitch />
             <span>Noch keinen Zugang?</span>
             <a href="/register">Early Access anfragen</a>
           </nav>
