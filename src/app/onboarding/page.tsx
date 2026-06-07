@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import OnboardingMaster from "@/components/onboarding/OnboardingMaster";
 import { resolveCurrentPlanId } from "@/lib/plans";
+import { getSupabaseServerUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "FanMind | Workspace einrichten",
@@ -8,11 +10,29 @@ export const metadata: Metadata = {
 };
 
 type OnboardingPageProps = {
-  searchParams: Promise<{ plan?: string | string[] }>;
+  searchParams: Promise<{ plan?: string | string[]; demo?: string | string[] }>;
 };
 
+function hasQueryValue(value: string | string[] | undefined): boolean {
+  if (Array.isArray(value)) {
+    return value.some(Boolean);
+  }
+
+  return Boolean(value);
+}
+
 export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
-  const { plan } = await searchParams;
+  const { plan, demo } = await searchParams;
+  const isDemoMode = (Array.isArray(demo) ? demo.includes("1") : demo === "1") || hasQueryValue(plan);
+
+  if (!isDemoMode) {
+    const { data } = await getSupabaseServerUser();
+
+    if (!data.user) {
+      redirect("/login");
+    }
+  }
+
   const planId = resolveCurrentPlanId({ queryPlan: plan, fallback: "pilot" });
 
   return <OnboardingMaster planId={planId} />;

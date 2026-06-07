@@ -2,7 +2,7 @@
 
 import { FormEvent, use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./login.module.css";
 
@@ -10,7 +10,7 @@ type LoginPageProps = {
   searchParams: Promise<{ demo?: string | string[]; lang?: string | string[] }>;
 };
 
-const LOGIN_TARGET = "/onboarding?plan=starter";
+const LOGIN_TARGET = "/dashboard";
 const DEMO_TARGET = "/onboarding?plan=pilot";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
@@ -56,21 +56,36 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    const supabase = createSupabaseBrowserClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
-    setIsSubmitting(false);
+      if (!authError) {
+        await syncSupabaseSessionForServer(data.session);
+      }
 
-    if (authError) {
-      setError(authError.message);
-      return;
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      router.push(LOGIN_TARGET);
+      router.refresh();
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : "Unbekannter Supabase-Fehler.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    router.push(LOGIN_TARGET);
-    router.refresh();
   }
 
-  function handleDemoStart() {
+  async function handleDemoStart() {
+    try {
+      await createSupabaseBrowserClient().auth.signOut();
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Demo muss auch ohne gesetzte Supabase-ENV möglich bleiben.
+    }
+
     router.push(DEMO_TARGET);
   }
 
