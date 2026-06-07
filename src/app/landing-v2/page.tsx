@@ -439,6 +439,79 @@ const responsiveBenefits = [
 
 
 
+
+const privacyControlCards = [
+  {
+    number: "1",
+    icon: "🛡",
+    title: "DSGVO-orientierte Einwilligungen",
+    text: "Einwilligungen und Opt-outs sollen transparent dokumentiert und für dein Team nachvollziehbar bleiben.",
+    label: "Rechtssicher gedacht",
+    tone: "blue",
+  },
+  {
+    number: "2",
+    icon: "👥",
+    title: "Rollen & Rechte",
+    text: "Team-Zugriffe werden bewusst geplant – mit klaren Zuständigkeiten statt ungeprüfter Vollzugriffe.",
+    label: "Roadmap: Team-Rechte",
+    tone: "purple",
+  },
+  {
+    number: "3",
+    icon: "▤",
+    title: "Audit-Log",
+    text: "Änderungen, Freigaben und sensible Aktionen sind als nachvollziehbare Protokollierung vorgesehen.",
+    label: "Roadmap: Protokolle",
+    tone: "green",
+  },
+  {
+    number: "4",
+    icon: "⚠",
+    title: "Do-not-push-Regeln",
+    text: "Präferenzen und Sperrlisten werden respektiert – für vertrauensvolle, bewusste Kommunikation.",
+    label: "Automatisch geschützt gedacht",
+    tone: "amber",
+  },
+  {
+    number: "5",
+    icon: "☑",
+    title: "Manuelle Freigabe vor Versand",
+    text: "KI-Vorschläge bleiben Vorschläge. Dein Team prüft bewusst, bevor etwas an Fans geht.",
+    label: "Kontrolle vor Versand",
+    tone: "violet",
+  },
+  {
+    number: "6",
+    icon: "✦",
+    title: "EU-Datenfokus",
+    text: "Datenschutz, Transparenz und europäische Anforderungen werden als Produktprinzip mitgedacht.",
+    label: "Sicherheitsfokus EU",
+    tone: "blue",
+  },
+];
+
+const privacyControlBenefits = [
+  {
+    icon: "☑",
+    title: "Keine automatischen Nachrichten ohne Freigabe",
+    text: "Jede KI-Antwort bleibt ein geprüfter Entwurf.",
+    tone: "blue",
+  },
+  {
+    icon: "▤",
+    title: "Transparente Nachvollziehbarkeit",
+    text: "Wichtige Schritte werden klar sichtbar eingeordnet.",
+    tone: "purple",
+  },
+  {
+    icon: "♙",
+    title: "Sichere Workflows für Teams",
+    text: "Klare Prozesse, definierte Regeln und bewusste Zuständigkeiten.",
+    tone: "green",
+  },
+];
+
 const pricingPlans = [
   {
     icon: "🚀",
@@ -1910,6 +1983,107 @@ export default function LandingV2() {
           </div>
         </div>
       </section>
+
+      <section
+        id="datenschutz-kontrolle"
+        className={styles.privacyControlSection}
+        aria-labelledby="privacy-control-title"
+      >
+        <div className={styles.privacyControlAura} aria-hidden="true" />
+
+        <div className={styles.privacyControlHero}>
+          <div className={styles.privacyControlCopy}>
+            <div className={styles.privacyControlBadge}>
+              <span>🛡</span> DATENSCHUTZ & KONTROLLE
+            </div>
+            <h2 id="privacy-control-title">
+              KI-Unterstützung mit <span>Kontrolle.</span>
+            </h2>
+            <p>
+              FanMind unterstützt dein Team mit KI – während du die Kontrolle
+              über Versand, Berechtigungen und Compliance jederzeit bewusst
+              behältst.
+            </p>
+
+            <div className={styles.privacyOrbit} aria-label="Kontrollprinzipien rund um FanMind">
+              <div className={styles.privacyOrbitCore}>
+                <span>🧠</span>
+                <strong>FanMind</strong>
+              </div>
+              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitData}`}>
+                <i>▣</i> Sichere Daten
+              </span>
+              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitRoles}`}>
+                <i>👥</i> Rollen & Rechte
+              </span>
+              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitAudit}`}>
+                <i>▤</i> Audit-Log
+              </span>
+              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitRules}`}>
+                <i>⚠</i> Regeln & Kontrollen
+              </span>
+              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitEu}`}>
+                <i>☁</i> EU-Fokus
+              </span>
+              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitApproval}`}>
+                <i>☑</i> Freigabe & Zustimmung
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.privacyControlGrid}>
+            {privacyControlCards.map((card) => (
+              <article className={styles.privacyControlCard} data-tone={card.tone} key={card.title}>
+                <span className={styles.privacyControlNumber}>{card.number}</span>
+                <div className={styles.privacyControlIcon}>{card.icon}</div>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+                <div className={styles.privacyControlStatus}>
+                  <span>✓</span> {card.label}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.privacyControlStatement}>
+          <div className={styles.privacyStatementIcon}>🛡</div>
+          <h3>
+            Smarte KI. <span>Volle Kontrolle.</span> <strong>Sichere Daten.</strong>
+          </h3>
+          <p>
+            FanMind kombiniert KI-Unterstützung mit klaren Regeln, Transparenz
+            und Datenschutz – für nachhaltiges Fan-Management.
+          </p>
+        </div>
+
+        <div className={styles.privacyControlBottom}>
+          <div className={styles.privacyBenefitList}>
+            {privacyControlBenefits.map((benefit) => (
+              <article data-tone={benefit.tone} key={benefit.title}>
+                <span>{benefit.icon}</span>
+                <div>
+                  <strong>{benefit.title}</strong>
+                  <p>{benefit.text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className={styles.privacyControlActions}>
+            <a className={styles.demoButton} href="#datenschutz-kontrolle">
+              <span>🔒</span> Datenschutz ansehen
+            </a>
+            <a className={styles.outlineButton} href="#demo">
+              Demo buchen <span>→</span>
+            </a>
+            <p>
+              <span>🛡</span> Vertrauen entsteht durch Sicherheit. FanMind liefert
+              klare KI-Unterstützung mit bewusster Kontrolle.
+            </p>
+          </div>
+        </div>
+      </section>
+
 
       <footer id="ressourcen" className={styles.siteFooter}>
         <Logo />
