@@ -24,6 +24,12 @@ type SupabaseAuthResponse = {
   error: Error | null;
 };
 
+type SupabaseAuthPayload = Partial<SupabaseAuthSession> &
+  Partial<SupabaseAuthUser> & {
+    session?: SupabaseAuthSession | null;
+    user?: SupabaseAuthUser | null;
+  };
+
 type SignUpInput = {
   email: string;
   password: string;
@@ -72,9 +78,20 @@ export async function syncSupabaseSessionForServer(session: SupabaseAuthSession 
   });
 }
 
-function normalizeAuthPayload(payload: SupabaseAuthSession & { session?: SupabaseAuthSession; user?: SupabaseAuthUser }): SupabaseAuthResponse {
-  const session = payload.session ?? (payload.access_token ? payload : null);
-  const user = session?.user ?? payload.user ?? null;
+function normalizeAuthPayload(payload: SupabaseAuthPayload): SupabaseAuthResponse {
+  const topLevelUser = payload.id
+    ? {
+        id: payload.id,
+        email: payload.email,
+        user_metadata: payload.user_metadata,
+      }
+    : null;
+  const session = payload.session ?? (payload.access_token ? (payload as SupabaseAuthSession) : null);
+  const user = session?.user ?? payload.user ?? topLevelUser;
+
+  if (session && user && !session.user) {
+    session.user = user;
+  }
 
   return { data: { session, user }, error: null };
 }
@@ -91,10 +108,9 @@ async function postAuth(path: string, body: Record<string, unknown>, rememberSes
       return { data: { session: null, user: null }, error: await parseSupabaseError(response) };
     }
 
-    const payload = (await response.json()) as SupabaseAuthSession & { session?: SupabaseAuthSession; user?: SupabaseAuthUser };
+    const payload = (await response.json()) as SupabaseAuthPayload;
     const authResponse = normalizeAuthPayload(payload);
     rememberSession(authResponse.data.session);
-    await syncSupabaseSessionForServer(authResponse.data.session);
 
     return authResponse;
   } catch (error) {

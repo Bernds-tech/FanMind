@@ -61,10 +61,14 @@ export async function signOutSupabaseServerSession(): Promise<void> {
   const accessToken = cookieStore.get(SUPABASE_ACCESS_TOKEN_COOKIE)?.value;
 
   if (accessToken) {
-    await fetch(getSupabaseAuthUrl("/logout"), {
-      method: "POST",
-      headers: getSupabaseHeaders(accessToken),
-    }).catch(() => undefined);
+    try {
+      await fetch(getSupabaseAuthUrl("/logout"), {
+        method: "POST",
+        headers: getSupabaseHeaders(accessToken),
+      });
+    } catch {
+      // Logout darf auch dann Cookies entfernen, wenn Supabase-ENV lokal fehlt oder die Session abgelaufen ist.
+    }
   }
 
   cookieStore.delete(SUPABASE_ACCESS_TOKEN_COOKIE);
