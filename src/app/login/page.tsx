@@ -11,7 +11,7 @@ type LoginPageProps = {
 };
 
 const LOGIN_TARGET = "/dashboard";
-const DEMO_TARGET = "/onboarding?plan=pilot&demo=1";
+const DEMO_TARGET_BASE = "/onboarding?plan=pilot&demo=1";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
   return (
@@ -86,7 +86,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       // Demo muss auch ohne gesetzte Supabase-ENV möglich bleiben.
     }
 
-    router.push(DEMO_TARGET);
+    router.push(language === "en" ? `${DEMO_TARGET_BASE}&lang=en` : DEMO_TARGET_BASE);
   }
 
   return (
