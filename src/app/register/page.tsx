@@ -129,7 +129,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
         await syncSupabaseSessionForServer(data.session);
       }
 
-      if (!authError && data.session?.user && selectedPlanId !== "pilot") {
+      if (!authError && data.session?.user) {
         const workspaceError = await prepareUserWorkspace(
           supabase,
           data.session.user.id,
