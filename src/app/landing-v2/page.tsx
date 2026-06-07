@@ -11,13 +11,15 @@ export const metadata: Metadata = {
     "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Follow-ups, CSV-Import und Roadmap für smarte Fan-Beziehungen; Kampagnen, Analytics und Integrationen bleiben im MVP klar markierte Vorschau.",
 };
 
+const LANDING_ROADMAP_HREF = "/landing-v2#roadmap";
+
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase", caret: true },
   { label: "Probleme", href: "#problem" },
   { label: "Conversion", href: "#conversion", caret: true },
   { label: "Integrationen", href: "#integrationen" },
   { label: "Preise", href: "#preise" },
-  { label: "Roadmap", href: "/roadmap", caret: true },
+  { label: "Roadmap", href: LANDING_ROADMAP_HREF, caret: true },
   { label: "Kontakt", href: "#kontakt" },
 ];
 
@@ -144,7 +146,7 @@ const functionCards = [
     text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt Coming Soon.",
     body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
     cta: "Roadmap ansehen",
-    href: "/roadmap",
+    href: LANDING_ROADMAP_HREF,
     tone: "violet",
   },
   {
@@ -153,7 +155,7 @@ const functionCards = [
     text: "Roadmap-Ausblick für spätere Auswertungen und Wachstumssignale.",
     body: "Roadmap-Auswertung · Coming Soon",
     cta: "Roadmap öffnen",
-    href: "/roadmap",
+    href: LANDING_ROADMAP_HREF,
     tone: "green",
   },
 ];
@@ -176,7 +178,7 @@ const visibleLandingMenuItems = menuItems.filter((item) =>
 
 function getLandingMenuHref(featureKey: FeatureKey, index: number) {
   if (featureKey === "campaigns" || featureKey === "analytics") {
-    return "/roadmap";
+    return LANDING_ROADMAP_HREF;
   }
 
   if (featureKey === "contacts") {
@@ -279,7 +281,7 @@ const sixStepCards = [
       "Status: Vorschau geprüft",
     ],
     cta: "Roadmap ansehen",
-    href: "/roadmap",
+    href: LANDING_ROADMAP_HREF,
   },
   {
     step: "6",
@@ -295,7 +297,7 @@ const sixStepCards = [
       "Insights für spätere Optimierung vorbereitet",
     ],
     cta: "Roadmap öffnen",
-    href: "/roadmap",
+    href: LANDING_ROADMAP_HREF,
   },
 ];
 
@@ -658,6 +660,7 @@ const landingFooterColumns = [
       { label: "Produkt", href: "#produkt-showcase" },
       { label: "Integrationen", href: "#integrationen" },
       { label: "Preise", href: "#preise" },
+      { label: "Roadmap", href: LANDING_ROADMAP_HREF },
       { label: "Demo", href: "#produkt-showcase" },
     ],
   },

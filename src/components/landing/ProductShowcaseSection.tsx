@@ -153,7 +153,7 @@ export default function ProductShowcaseSection() {
               <div className={styles.analyticsTooltip}>Roadmap · keine Vollsuite im MVP</div>
               <SparkLine tone="purple" />
               <div className={styles.analyticsLegend}><span><i />Conversion</span><span><i />Antwortquote</span></div>
-              <a href="/roadmap">Roadmap anzeigen →</a>
+              <a href="/landing-v2#roadmap">Roadmap anzeigen →</a>
             </article>
           </aside>
         </div>
