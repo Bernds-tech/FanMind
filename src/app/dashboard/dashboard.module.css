@@ -1,0 +1,88 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  color: #f7f8ff;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(38, 98, 255, 0.28), transparent 32%),
+    radial-gradient(circle at 80% 12%, rgba(159, 47, 255, 0.24), transparent 28%),
+    #06101f;
+}
+
+.card {
+  width: min(100%, 720px);
+  border: 1px solid rgba(111, 151, 255, 0.34);
+  border-radius: 28px;
+  padding: clamp(28px, 5vw, 52px);
+  background: rgba(7, 16, 34, 0.88);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.35);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #78d9ff;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.card h1 {
+  margin: 0;
+  font-size: clamp(34px, 7vw, 58px);
+  line-height: 0.98;
+}
+
+.status,
+.demoBadge,
+.meta,
+.notice {
+  border-radius: 14px;
+  padding: 12px 14px;
+  line-height: 1.5;
+}
+
+.status {
+  border: 1px solid rgba(0, 240, 173, 0.42);
+  color: #c2ffeb;
+  background: rgba(0, 95, 69, 0.24);
+}
+
+.demoBadge {
+  border: 1px solid rgba(255, 214, 102, 0.48);
+  color: #ffe9ac;
+  background: rgba(121, 83, 0, 0.22);
+}
+
+.meta,
+.notice {
+  border: 1px solid rgba(39, 132, 255, 0.34);
+  color: #d7e4f5;
+  background: rgba(4, 17, 41, 0.72);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.actions a,
+.actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 20px;
+  color: #ffffff;
+  background: linear-gradient(100deg, #0875ff 0%, #2755ff 45%, #8f25ff 100%);
+  box-shadow: 0 14px 34px rgba(79, 55, 255, 0.34);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}

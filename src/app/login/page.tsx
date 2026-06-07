@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, use } from "react";
+import { FormEvent, use, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./login.module.css";
 
@@ -9,10 +10,8 @@ type LoginPageProps = {
   searchParams: Promise<{ demo?: string | string[]; lang?: string | string[] }>;
 };
 
-// Aktuell existiert noch kein /dashboard in diesem Repository.
-// TODO: Sobald das echte Dashboard bereitsteht, LOGIN_TARGET und DEMO_TARGET auf /dashboard umstellen.
-const LOGIN_TARGET = "/roadmap";
-const DEMO_TARGET = "/roadmap?demo=1";
+const LOGIN_TARGET = "/dashboard";
+const DEMO_TARGET = "/dashboard?demo=1";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
   return (
@@ -46,10 +45,29 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const registerHref = localizedPath("/register", language);
   const loginHref = localizedPath("/login", language);
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const supabase = createSupabaseBrowserClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+    setIsSubmitting(false);
+
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+
     router.push(LOGIN_TARGET);
+    router.refresh();
   }
 
   function handleDemoStart() {
@@ -141,9 +159,15 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <a href={loginHref}>{language === "en" ? "Forgot password?" : "Passwort vergessen?"}</a>
             </div>
 
-            <button className={styles.primaryButton} type="submit">
-              {copy.submit} <span>→</span>
+            <button className={styles.primaryButton} type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (language === "en" ? "Signing in…" : "Login läuft…") : copy.submit} <span>→</span>
             </button>
+
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
             <button className={styles.secondaryButton} type="button" onClick={handleDemoStart}>
               {copy.demo}
             </button>
@@ -154,7 +178,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span aria-hidden="true">🛡</span>
               <div>
                 <strong>{language === "en" ? "Safe MVP scope" : "Sicherer MVP-Rahmen"}</strong>
-                <p>{language === "en" ? "No API, no database and no real authentication in this demo flow." : "Keine API, keine Datenbank und keine echte Authentifizierung in diesem Demo-Flow."}</p>
+                <p>{language === "en" ? "Supabase Auth handles real sessions; the demo flow remains available without login." : "Supabase Auth verwaltet echte Sessions; der Demo-Flow bleibt ohne Login verfügbar."}</p>
               </div>
             </div>
 
