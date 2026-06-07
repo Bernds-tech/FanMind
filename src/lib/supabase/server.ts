@@ -22,43 +22,58 @@ export function createSupabaseServerClient() {
   return {
     auth: {
       async getUser(): Promise<SupabaseServerUserResponse> {
-        const accessToken = await getAccessToken();
-
-        if (!accessToken) {
-          return { data: { user: null }, error: null };
-        }
-
-        try {
-          const response = await fetch(getSupabaseAuthUrl("/user"), {
-            headers: getSupabaseHeaders(accessToken),
-            cache: "no-store",
-          });
-
-          if (!response.ok) {
-            return { data: { user: null }, error: new Error("Die Supabase-Session ist ungültig oder abgelaufen.") };
-          }
-
-          const user = (await response.json()) as SupabaseServerUser;
-
-          return { data: { user }, error: null };
-        } catch (error) {
-          return { data: { user: null }, error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler.") };
-        }
+        return getSupabaseServerUser();
       },
       async signOut(): Promise<void> {
-        const cookieStore = await cookies();
-        const accessToken = cookieStore.get(SUPABASE_ACCESS_TOKEN_COOKIE)?.value;
-
-        if (accessToken) {
-          await fetch(getSupabaseAuthUrl("/logout"), {
-            method: "POST",
-            headers: getSupabaseHeaders(accessToken),
-          }).catch(() => undefined);
-        }
-
-        cookieStore.delete(SUPABASE_ACCESS_TOKEN_COOKIE);
-        cookieStore.delete(SUPABASE_REFRESH_TOKEN_COOKIE);
+        await signOutSupabaseServerSession();
       },
     },
   };
+}
+
+export async function getSupabaseServerUser(): Promise<SupabaseServerUserResponse> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return { data: { user: null }, error: null };
+  }
+
+  try {
+    const response = await fetch(getSupabaseAuthUrl("/user"), {
+      headers: getSupabaseHeaders(accessToken),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { data: { user: null }, error: await parseSupabaseServerError(response) };
+    }
+
+    const user = (await response.json()) as SupabaseServerUser;
+
+    return { data: { user }, error: null };
+  } catch (error) {
+    return { data: { user: null }, error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler.") };
+  }
+}
+
+export async function signOutSupabaseServerSession(): Promise<void> {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(SUPABASE_ACCESS_TOKEN_COOKIE)?.value;
+
+  if (accessToken) {
+    await fetch(getSupabaseAuthUrl("/logout"), {
+      method: "POST",
+      headers: getSupabaseHeaders(accessToken),
+    }).catch(() => undefined);
+  }
+
+  cookieStore.delete(SUPABASE_ACCESS_TOKEN_COOKIE);
+  cookieStore.delete(SUPABASE_REFRESH_TOKEN_COOKIE);
+}
+
+async function parseSupabaseServerError(response: Response): Promise<Error> {
+  const payload = (await response.json().catch(() => null)) as { msg?: string; message?: string; error_description?: string; error?: string } | null;
+  const message = payload?.msg ?? payload?.message ?? payload?.error_description ?? payload?.error ?? "Die Supabase-Session ist ungültig oder abgelaufen.";
+
+  return new Error(message);
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, use, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
 import { resolvePlanId } from "@/lib/plans";
+import type { PlanId } from "@/config/plans";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./register.module.css";
 
@@ -34,6 +35,51 @@ type RegisterPageProps = {
   searchParams: Promise<{ lang?: string | string[]; plan?: string | string[] }>;
 };
 
+async function prepareUserWorkspace(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  userId: string,
+  email: string,
+  displayName: string,
+  workspaceName: string,
+  planId: PlanId,
+): Promise<string | null> {
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: userId,
+    email,
+    display_name: displayName || null,
+  });
+
+  if (profileError) {
+    return profileError.message;
+  }
+
+  const { data: workspace, error: workspaceError } = await supabase
+    .from("workspaces")
+    .insert({
+      name: workspaceName || displayName || "FanMind Workspace",
+      owner_user_id: userId,
+      plan_id: planId,
+    })
+    .select("id")
+    .single();
+
+  if (workspaceError) {
+    return workspaceError.message;
+  }
+
+  if (!workspace?.id) {
+    return "Workspace wurde erstellt, aber keine Workspace-ID zurückgegeben.";
+  }
+
+  const { error: memberError } = await supabase.from("workspace_members").insert({
+    workspace_id: workspace.id,
+    user_id: userId,
+    role: "owner",
+  });
+
+  return memberError?.message ?? null;
+}
+
 export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const params = use(searchParams);
   const language = getFanMindLanguage(params.lang);
@@ -58,28 +104,53 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
     const organization = String(formData.get("organisation") ?? "").trim();
     const role = String(formData.get("rolle") ?? "").trim();
     const message = String(formData.get("nachricht") ?? "").trim();
-    const supabase = createSupabaseBrowserClient();
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name || undefined,
-          organization: organization || undefined,
-          role: role || undefined,
-          message: message || undefined,
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name || undefined,
+            display_name: name || undefined,
+            organization: organization || undefined,
+            role: role || undefined,
+            message: message || undefined,
+            plan_id: selectedPlanId,
+          },
         },
-      },
-    });
+      });
 
-    setIsSubmitting(false);
+      if (!authError) {
+        await syncSupabaseSessionForServer(data.session);
+      }
 
-    if (authError) {
-      setError(authError.message);
-      return;
+      if (!authError && data.session?.user) {
+        const workspaceError = await prepareUserWorkspace(
+          supabase,
+          data.session.user.id,
+          data.session.user.email ?? email,
+          name,
+          organization,
+          selectedPlanId,
+        );
+
+        if (workspaceError) {
+          setError(`Registrierung erfolgreich, aber Workspace/Plan konnte noch nicht angelegt werden: ${workspaceError}. Bitte prüfe die RLS-Policies aus docs/database/fanmind_mvp_schema.sql.`);
+        }
+      }
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      setSuccess(true);
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : "Unbekannter Supabase-Fehler.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setSuccess(true);
   }
 
   return (
@@ -206,7 +277,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
 
             {success && (
               <p className={styles.success} role="status">
-                {copy.success} {language === "en" ? "You can now continue to the internal onboarding flow if no email confirmation is required." : "Du kannst nun in den internen Onboarding-Flow wechseln, sofern keine E-Mail-Bestätigung erforderlich ist."} <a href={onboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
+                {copy.success} {language === "en" ? "If your Supabase project returns an active session, profile, workspace and plan are prepared via RLS-safe anon access. With email confirmation enabled this happens after the first login." : "Wenn dein Supabase-Projekt direkt eine aktive Session liefert, werden Profil, Workspace und Plan per RLS-sicherem Anon-Zugriff vorbereitet. Bei aktivierter E-Mail-Bestätigung passiert das nach dem ersten Login."} <a href={onboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
               </p>
             )}
 

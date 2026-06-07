@@ -20,26 +20,34 @@ export function getSupabasePublicConfig(): SupabasePublicConfig | null {
   };
 }
 
-export function getSupabaseAuthUrl(path: string): string {
+export function requireSupabasePublicConfig(): SupabasePublicConfig {
   const config = getSupabasePublicConfig();
 
   if (!config) {
     throw new Error("Supabase ist noch nicht konfiguriert. Bitte NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY setzen.");
   }
 
-  return `${config.url}/auth/v1${path}`;
+  return config;
+}
+
+export function getSupabaseAuthUrl(path: string): string {
+  const { url } = requireSupabasePublicConfig();
+
+  return `${url}/auth/v1${path}`;
 }
 
 export function getSupabaseHeaders(accessToken?: string): HeadersInit {
-  const config = getSupabasePublicConfig();
-
-  if (!config) {
-    throw new Error("Supabase ist noch nicht konfiguriert. Bitte NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY setzen.");
-  }
+  const { anonKey } = requireSupabasePublicConfig();
 
   return {
-    apikey: config.anonKey,
-    Authorization: `Bearer ${accessToken ?? config.anonKey}`,
+    apikey: anonKey,
+    Authorization: `Bearer ${accessToken ?? anonKey}`,
     "Content-Type": "application/json",
   };
+}
+
+export function getSupabaseRestUrl(table: string): string {
+  const { url } = requireSupabasePublicConfig();
+
+  return `${url}/rest/v1/${table}`;
 }

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseServerUser, signOutSupabaseServerSession } from "@/lib/supabase/server";
 import styles from "./dashboard.module.css";
 
 type DashboardPageProps = {
@@ -9,16 +9,14 @@ type DashboardPageProps = {
 async function logout() {
   "use server";
 
-  const supabase = createSupabaseServerClient();
-  await supabase.auth.signOut();
+  await signOutSupabaseServerSession();
   redirect("/login");
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
   const isDemoMode = Array.isArray(params.demo) ? params.demo.includes("1") : params.demo === "1";
-  const supabase = createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
+  const { data } = await getSupabaseServerUser();
 
   if (!isDemoMode && !data.user) {
     redirect("/login");
