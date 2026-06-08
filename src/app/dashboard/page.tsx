@@ -72,8 +72,7 @@ type SidebarLink = {
   label: string;
   href: string;
   active?: boolean;
-  featureKey?: string;
-  fallback: string;
+  disabled?: boolean;
 };
 
 const euroFormatter = new Intl.NumberFormat("de-DE", {
@@ -448,11 +447,38 @@ function getChannelStatuses(
   ];
 }
 
-function getFeatureMeta(
-  feature?: ResolvedDashboardFeature,
-  fallback = "Roadmap",
-): string {
-  return feature ? getDashboardStatusLabel(feature.status) : fallback;
+function getInitials(nameOrEmail?: string): string {
+  const fallback = "FM";
+
+  if (!nameOrEmail) {
+    return fallback;
+  }
+
+  const parts = nameOrEmail
+    .replace(/@.*/, "")
+    .split(/[.\s_-]+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return fallback;
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || fallback;
+}
+
+function getPlanStatus(workspace: WorkspaceDashboardRow): "Aktiv" | "Demo" | "Vorschau" {
+  if (workspace.plan_id === "pilot") {
+    return "Demo";
+  }
+
+  if (workspace.plan_id === "starter") {
+    return "Aktiv";
+  }
+
+  return "Vorschau";
 }
 
 function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
@@ -471,19 +497,17 @@ function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
 
 function SidebarItem({
   label,
-  meta,
   active = false,
+  disabled = false,
   href,
-}: {
-  label: string;
-  meta?: string;
-  active?: boolean;
-  href: string;
-}) {
+}: SidebarLink) {
   return (
-    <a className={active ? styles.navItemActive : styles.navItem} href={href}>
+    <a
+      aria-disabled={disabled || undefined}
+      className={active ? styles.navItemActive : styles.navItem}
+      href={href}
+    >
       <span>{label}</span>
-      {meta ? <small>{meta}</small> : null}
     </a>
   );
 }
@@ -507,60 +531,23 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
     )
     .slice(0, 6);
   const contactsFeature = featureByKey("contacts");
-  const sidebarLinks: SidebarLink[] = [
-    { label: "Dashboard", href: "/dashboard", active: true, fallback: "Aktiv" },
-    {
-      label: "Kontakte",
-      href: "#contacts",
-      featureKey: "contacts",
-      fallback: "Vorschau",
-    },
-    {
-      label: "Kanäle",
-      href: "#channels",
-      fallback: "Roadmap/Vorschau",
-    },
-    {
-      label: "Segmente",
-      href: "#roadmap",
-      featureKey: "segments",
-      fallback: "Upgrade",
-    },
-    {
-      label: "Follow-ups",
-      href: "#followups",
-      featureKey: "followups",
-      fallback: "Vorschau",
-    },
-    {
-      label: "KI-Vorschläge",
-      href: "#ai-suggestions",
-      featureKey: "ai_suggestions",
-      fallback: "Vorschau",
-    },
-    {
-      label: "Kampagnen",
-      href: "#roadmap",
-      fallback: "Roadmap/Vorschau",
-    },
-    {
-      label: "Analytics",
-      href: "#roadmap",
-      fallback: "Roadmap/Vorschau",
-    },
-    {
-      label: "Import",
-      href: "#csv-import",
-      featureKey: "csv_import",
-      fallback: "Vorschau",
-    },
-    {
-      label: "Roadmap",
-      href: "#roadmap",
-      featureKey: "roadmap",
-      fallback: "Roadmap",
-    },
-    { label: "Einstellungen", href: "#contract", fallback: "Workspace" },
+  const pageTitle = "Dashboard";
+  const pageSubtitle = "Willkommen zurück. Hier ist dein FanMind Überblick.";
+  const primaryActionLabel = "+ Neuer Kontakt";
+  const planStatus = getPlanStatus(workspace);
+  const userLabel = email ?? workspace.name;
+  const workspaceSummary = `Workspace geladen · ${display.packageName} · Mensch prüft und sendet selbst.`;
+  const mainNavigation: SidebarLink[] = [
+    { label: "Dashboard", href: "/dashboard", active: true },
+    { label: "Fans", href: "#contacts" },
+    { label: "Kanäle", href: "#channels" },
+  ];
+  const settingsNavigation: SidebarLink[] = [
+    { label: "Einstellungen", href: "#contract", disabled: true },
+  ];
+  const savedViews: SidebarLink[] = [
+    { label: "Top Fans", href: "#contacts" },
+    { label: "Reaktivierung", href: "#followups" },
   ];
   const contactRows = getContactRows(workspace);
   const followUps = getFollowUps(workspace);
@@ -579,55 +566,54 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
           </div>
         </div>
 
-        <nav className={styles.navList}>
-          {sidebarLinks.map((item) => (
-            <SidebarItem
-              key={item.label}
-              label={item.label}
-              href={item.href}
-              active={item.active}
-              meta={
-                item.active
-                  ? item.fallback
-                  : getFeatureMeta(
-                      item.featureKey
-                        ? featureByKey(item.featureKey)
-                        : undefined,
-                      item.fallback,
-                    )
-              }
-            />
+        <nav className={styles.navList} aria-label="Hauptnavigation">
+          <span className={styles.navSectionLabel}>Navigation</span>
+          {mainNavigation.map((item) => (
+            <SidebarItem key={item.label} {...item} />
           ))}
         </nav>
 
-        <section
-          className={styles.savedViews}
-          aria-label="Gespeicherte Ansichten Demo"
-        >
-          <span>Gespeicherte Ansichten · Demo</span>
-          <a href="#contacts">Top Fans</a>
-          <a href="#followups">Reaktivierung</a>
-          <a href="#contacts">Premium-Käufer</a>
-          <a href="#followups">Heute fällige Follow-ups</a>
+        <nav className={styles.navList} aria-label="Workspace Navigation">
+          <span className={styles.navSectionLabel}>Workspace</span>
+          {settingsNavigation.map((item) => (
+            <SidebarItem key={item.label} {...item} />
+          ))}
+        </nav>
+
+        <section className={styles.savedViews} aria-label="Gespeicherte Ansichten">
+          <span>Gespeicherte Ansichten</span>
+          {savedViews.map((item) => (
+            <a key={item.label} href={item.href}>
+              {item.label}
+            </a>
+          ))}
         </section>
 
         <div className={styles.sidebarFooter}>
           <section
-            className={styles.workspaceMiniCard}
-            aria-label="Workspace und User"
+            className={styles.userMiniCard}
+            aria-label="Nutzer"
           >
-            <span>Workspace</span>
-            <strong>{workspace.name}</strong>
-            <p>
-              {workspace.role} · {email ?? "Supabase User"}
-            </p>
+            <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
+            <div>
+              <span>Nutzer</span>
+              <strong>{userLabel}</strong>
+              <p>{workspace.name}</p>
+            </div>
           </section>
-          <section className={styles.planMiniCard} aria-label="Paket Überblick">
-            <span>Paket</span>
-            <strong>{display.packageName}</strong>
-            <p>{display.commercialOptionName}</p>
-            <a href="#contract">Paket & Vertrag</a>
+          <section className={styles.planMiniCard} aria-label="Paket">
+            <div>
+              <span>Paket</span>
+              <strong>{display.packageName}</strong>
+              <p>{display.commercialOptionName}</p>
+            </div>
+            <small>{planStatus}</small>
           </section>
+          <form action={logout}>
+            <button type="submit" className={styles.logoutButton}>
+              Logout
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -635,7 +621,9 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
         <header className={styles.topbar}>
           <div className={styles.titleCluster}>
             <p className={styles.eyebrow}>Multi-Channel CRM Workspace</p>
-            <h1>Dashboard</h1>
+            <h1>{pageTitle}</h1>
+            <p>{pageSubtitle}</p>
+            <span>{workspaceSummary}</span>
           </div>
           <div className={styles.topbarActions}>
             <label className={styles.searchBox}>
@@ -653,14 +641,9 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             </button>
             {canShowContactAction(contactsFeature) ? (
               <a className={styles.primaryButton} href="#contacts">
-                + Neuer Kontakt
+                {primaryActionLabel}
               </a>
             ) : null}
-            <form action={logout}>
-              <button type="submit" className={styles.secondaryButton}>
-                Abmelden
-              </button>
-            </form>
           </div>
           <p className={styles.topbarNote}>
             Kein automatisches Senden – Mensch prüft und sendet selbst
