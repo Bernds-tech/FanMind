@@ -43,8 +43,9 @@ type KpiCard = {
   value: string;
   helper: string;
   icon: KpiIconName;
-  status: string;
-  tone: "blue" | "cyan" | "violet" | "green" | "amber";
+  tone: "blue" | "cyan" | "violet" | "violetBlue" | "green" | "amber";
+  sparklinePoints: string;
+  infoLabel: string;
 };
 
 type ContactPreviewRow = {
@@ -225,62 +226,61 @@ function getWorkspaceDisplay(
   };
 }
 
-function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
-  const isPilot = workspace.plan_id === "pilot";
-  const isStarter = workspace.plan_id === "starter";
-
+function getKpiCards(): KpiCard[] {
   return [
     {
       label: "Demo-Kontakte",
       value: "3",
-      helper: isStarter
-        ? "Starter-Vorbereitung"
-        : "Sandra M., Alex K., Ella L.",
+      helper: "Sandra M., Alex K., Ella L.",
       icon: "contacts",
-      status: "Demo",
       tone: "blue",
+      sparklinePoints: "2,28 18,21 34,24 52,13 70,17 88,7 106,11 124,4",
+      infoLabel: "Demo-Kontakte sind vorbereitete Beispieldaten.",
     },
     {
       label: "Kanäle verbunden",
       value: "0",
       helper: "0 Social-Kanäle aktiv",
       icon: "channels",
-      status: "Manuell",
       tone: "cyan",
+      sparklinePoints: "2,25 18,24 34,26 52,22 70,23 88,20 106,21 124,18",
+      infoLabel: "Social-Kanäle sind noch nicht verbunden.",
     },
     {
       label: "Offene Follow-ups",
       value: "3",
-      helper: isPilot ? "Demo-Aufgaben" : "Manuell vorbereitet",
+      helper: "Demo-Aufgaben",
       icon: "followups",
-      status: "Offen",
-      tone: "cyan",
+      tone: "violet",
+      sparklinePoints: "2,24 18,18 34,20 52,10 70,14 88,8 106,13 124,6",
+      infoLabel: "Follow-ups sind Demo-Aufgaben zur manuellen Prüfung.",
     },
     {
       label: "KI-Vorschläge",
       value: "Vorbereitet",
       helper: "Mensch prüft und sendet selbst",
       icon: "ai",
-      status: "Sicher",
-      tone: "violet",
+      tone: "violetBlue",
+      sparklinePoints: "2,27 18,16 34,22 52,12 70,19 88,9 106,15 124,5",
+      infoLabel: "KI-Vorschläge bleiben vorbereitet und werden manuell gesendet.",
     },
     {
       label: "Import",
       value: "CSV Vorschau",
-      helper: isStarter
-        ? "CSV-Import im MVP nutzbar"
-        : "Paketabhängig vorbereitet",
+      helper: "Paketabhängig vorbereitet",
       icon: "import",
-      status: isStarter ? "Aktiv" : "Vorschau",
-      tone: isStarter ? "green" : "amber",
+      tone: "amber",
+      sparklinePoints: "2,29 18,23 34,25 52,18 70,21 88,12 106,15 124,8",
+      infoLabel: "CSV-Import ist als paketabhängige Vorschau vorbereitet.",
     },
     {
       label: "MVP-Kern aktiv",
       value: "Ja",
       helper: "Kontakte, Follow-ups, Roadmap",
       icon: "mvp",
-      status: "MVP",
       tone: "green",
+      sparklinePoints: "2,26 18,21 34,17 52,19 70,12 88,14 106,8 124,5",
+      infoLabel: "Der sichtbare MVP-Kern umfasst Kontakte, Follow-ups und Roadmap-Hinweise.",
     },
   ];
 }
@@ -639,7 +639,7 @@ function WorkspaceDetails({
   const contactRows = getContactRows(workspace);
   const followUps = getFollowUps(workspace);
   const recommendations = getRecommendations(workspace);
-  const kpiCards = getKpiCards(workspace);
+  const kpiCards = getKpiCards();
   const channelStatuses = getChannelStatuses(workspace);
 
   return (
@@ -741,19 +741,20 @@ function WorkspaceDetails({
                   <KpiIcon icon={card.icon} />
                 </span>
                 <span className={styles.kpiLabel}>{card.label}</span>
+                <span className={styles.kpiInfo} title={card.infoLabel}>
+                  i
+                </span>
               </div>
-              <div className={styles.kpiValueRow}>
-                <strong>{card.value}</strong>
-                <small className={styles.kpiBadge}>{card.status}</small>
-              </div>
+              <strong className={styles.kpiValue}>{card.value}</strong>
               <p>{card.helper}</p>
-              <div className={styles.kpiSparkline} aria-hidden="true">
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
+              <svg
+                className={styles.kpiSparkline}
+                aria-hidden="true"
+                viewBox="0 0 126 34"
+                preserveAspectRatio="none"
+              >
+                <polyline points={card.sparklinePoints} />
+              </svg>
             </article>
           ))}
         </section>
