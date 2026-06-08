@@ -783,6 +783,11 @@
   padding-bottom: 48px;
 }
 
+.kpiCard.cardWithComingSoon {
+  min-height: 132px;
+  max-height: none;
+}
+
 .comingSoonBadge {
   display: block;
   position: absolute;
