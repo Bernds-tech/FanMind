@@ -39,9 +39,12 @@ type KpiCard = {
 
 type ContactPreviewRow = {
   name: string;
-  context: string;
-  nextStep: string;
   status: string;
+  profile: string;
+  tags: string[];
+  score: number | string;
+  lastContact: string;
+  nextFollowUp: string;
 };
 
 type TaskPreview = {
@@ -87,72 +90,109 @@ function formatEuro(cents: number): string {
   return `${euroFormatter.format(cents / 100)} €`;
 }
 
-function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay {
+function getWorkspaceDisplay(
+  workspace: WorkspaceDashboardRow,
+): WorkspaceDisplay {
   const setupFee = formatEuro(workspace.setup_fee_cents);
   const monthlyFee = formatEuro(workspace.monthly_fee_cents);
 
-  if (workspace.plan_id === "pilot" && workspace.commercial_option === "pilot_only") {
+  if (
+    workspace.plan_id === "pilot" &&
+    workspace.commercial_option === "pilot_only"
+  ) {
     return {
       packageName: "Pilot / Setup",
-      commercialOptionName: getCommercialOptionLabel(workspace.commercial_option),
+      commercialOptionName: getCommercialOptionLabel(
+        workspace.commercial_option,
+      ),
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: "keine",
       planHint: "Pilot / Setup · Demo-/Setupmonat",
-      packageSummary: "Demo-Arbeitsplatz mit sicheren Testdaten, Sandra M. und manuell geprüften KI-Vorschlägen.",
-      contractNote: "Du arbeitest im sicheren Demo-/Setupmodus. Sandra M., KI-Demo, Memory-Demo und Follow-up-Demo sind vorbereitet; produktive Daten und Versand bleiben getrennt.",
+      packageSummary:
+        "Demo-Arbeitsplatz mit sicheren Testdaten, Sandra M. und manuell geprüften KI-Vorschlägen.",
+      contractNote:
+        "Du arbeitest im sicheren Demo-/Setupmodus. Sandra M., KI-Demo, Memory-Demo und Follow-up-Demo sind vorbereitet; produktive Daten und Versand bleiben getrennt.",
     };
   }
 
-  if (workspace.plan_id === "starter" && workspace.commercial_option === "starter_12m_setup_waived") {
+  if (
+    workspace.plan_id === "starter" &&
+    workspace.commercial_option === "starter_12m_setup_waived"
+  ) {
     return {
       packageName: "Starter",
-      commercialOptionName: getCommercialOptionLabel(workspace.commercial_option),
+      commercialOptionName: getCommercialOptionLabel(
+        workspace.commercial_option,
+      ),
       setupFeeLabel: `${setupFee} statt ${formatEuro(99000)}`,
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: "12 Monate",
       planHint: "Starter · produktiver MVP-Kern",
-      packageSummary: "Produktiver MVP-Kern für Kontakte, CSV-Vorbereitung, Memory und manuelle Follow-ups.",
-      contractNote: "Der produktive MVP-Kern ist aktiv: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups. KI-Vorschläge bleiben bewusst limitiert und werden manuell geprüft.",
+      packageSummary:
+        "Produktiver MVP-Kern für Kontakte, CSV-Vorbereitung, Memory und manuelle Follow-ups.",
+      contractNote:
+        "Der produktive MVP-Kern ist aktiv: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups. KI-Vorschläge bleiben bewusst limitiert und werden manuell geprüft.",
     };
   }
 
-  if (workspace.plan_id === "starter" && workspace.commercial_option === "starter_paid_setup") {
+  if (
+    workspace.plan_id === "starter" &&
+    workspace.commercial_option === "starter_paid_setup"
+  ) {
     return {
       packageName: "Starter",
-      commercialOptionName: getCommercialOptionLabel(workspace.commercial_option),
+      commercialOptionName: getCommercialOptionLabel(
+        workspace.commercial_option,
+      ),
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: "keine 12-Monatsbindung",
       planHint: "Starter · produktiver MVP-Kern",
-      packageSummary: "Produktiver MVP-Kern für Kontakte, CSV-Vorbereitung, Memory und manuelle Follow-ups.",
-      contractNote: "Produktiver Starter-Einstieg ohne feste Bindung: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups sind aktiv; KI-Vorschläge bleiben limitiert.",
+      packageSummary:
+        "Produktiver MVP-Kern für Kontakte, CSV-Vorbereitung, Memory und manuelle Follow-ups.",
+      contractNote:
+        "Produktiver Starter-Einstieg ohne feste Bindung: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups sind aktiv; KI-Vorschläge bleiben limitiert.",
     };
   }
 
   if (workspace.plan_id === "growth") {
     return {
       packageName: "Growth",
-      commercialOptionName: getCommercialOptionLabel(workspace.commercial_option),
+      commercialOptionName: getCommercialOptionLabel(
+        workspace.commercial_option,
+      ),
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel: workspace.commitment_months > 0 ? `${workspace.commitment_months} Monate` : "noch nicht produktiv gebucht",
+      commitmentLabel:
+        workspace.commitment_months > 0
+          ? `${workspace.commitment_months} Monate`
+          : "noch nicht produktiv gebucht",
       planHint: "Growth · Vorschau",
-      packageSummary: "Growth-Funktionen bleiben Vorschau und werden nicht als aktive Vollversion angezeigt.",
-      contractNote: "Growth wird im Dashboard als Vorschau gezeigt. Erweiterte Profile, Segmente und höhere Nutzung werden vorbereitet, aber nicht als produktive Vollversion verkauft.",
+      packageSummary:
+        "Growth-Funktionen bleiben Vorschau und werden nicht als aktive Vollversion angezeigt.",
+      contractNote:
+        "Growth wird im Dashboard als Vorschau gezeigt. Erweiterte Profile, Segmente und höhere Nutzung werden vorbereitet, aber nicht als produktive Vollversion verkauft.",
     };
   }
 
   if (workspace.plan_id === "agency") {
     return {
       packageName: "Agency",
-      commercialOptionName: getCommercialOptionLabel(workspace.commercial_option),
+      commercialOptionName: getCommercialOptionLabel(
+        workspace.commercial_option,
+      ),
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel: workspace.commitment_months > 0 ? `${workspace.commitment_months} Monate` : "Demo / Erstgespräch",
+      commitmentLabel:
+        workspace.commitment_months > 0
+          ? `${workspace.commitment_months} Monate`
+          : "Demo / Erstgespräch",
       planHint: "Agency · Demo/Erstgespräch/Vorschau",
-      packageSummary: "Agency-Funktionen bleiben Demo-/Erstgesprächsmodus und sind nicht produktiv freigeschaltet.",
-      contractNote: "Agency ist als Demo- und Erstgesprächsmodus markiert. Multi-Client, Teamstruktur und Agentur-Workflow sind Vorschau und nicht produktiv freigeschaltet.",
+      packageSummary:
+        "Agency-Funktionen bleiben Demo-/Erstgesprächsmodus und sind nicht produktiv freigeschaltet.",
+      contractNote:
+        "Agency ist als Demo- und Erstgesprächsmodus markiert. Multi-Client, Teamstruktur und Agentur-Workflow sind Vorschau und nicht produktiv freigeschaltet.",
     };
   }
 
@@ -161,57 +201,178 @@ function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay
     commercialOptionName: getCommercialOptionLabel(workspace.commercial_option),
     setupFeeLabel: setupFee,
     monthlyFeeLabel: monthlyFee,
-    commitmentLabel: workspace.commitment_months > 0 ? `${workspace.commitment_months} Monate` : "keine",
+    commitmentLabel:
+      workspace.commitment_months > 0
+        ? `${workspace.commitment_months} Monate`
+        : "keine",
     planHint: "Workspace geladen · Paket geprüft",
-    packageSummary: "Workspace geladen; sichtbare Module richten sich nach Paket und Vertrag.",
-    contractNote: "Workspace-Daten wurden geladen. Die sichtbaren Dashboard-Module werden aus plan_id und commercial_option abgeleitet.",
+    packageSummary:
+      "Workspace geladen; sichtbare Module richten sich nach Paket und Vertrag.",
+    contractNote:
+      "Workspace-Daten wurden geladen. Die sichtbaren Dashboard-Module werden aus plan_id und commercial_option abgeleitet.",
   };
 }
 
-function findFeature(features: ResolvedDashboardFeature[], key: string): ResolvedDashboardFeature | undefined {
+function findFeature(
+  features: ResolvedDashboardFeature[],
+  key: string,
+): ResolvedDashboardFeature | undefined {
   return features.find((feature) => feature.key === key);
 }
 
 function canShowContactAction(feature?: ResolvedDashboardFeature): boolean {
-  return feature ? ["active", "demo", "limited"].includes(feature.status) : false;
+  return feature
+    ? ["active", "demo", "limited"].includes(feature.status)
+    : false;
 }
 
 function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
   if (workspace.plan_id === "pilot") {
     return [
-      { label: "Demo-Kontakte", value: "3", helper: "Sandra M., Alex K., Ella L. · Demo", tone: "blue" },
-      { label: "Offene Follow-ups", value: "3", helper: "Demo-Aufgaben für manuelle Prüfung", tone: "cyan" },
-      { label: "KI-Vorschläge", value: "Demo", helper: "Vorbereitet · kein automatisches Senden", tone: "violet" },
-      { label: "CSV-Import", value: "Vorschau", helper: "Importfluss noch nicht produktiv", tone: "amber" },
-      { label: "Status", value: "MVP-Kern aktiv", helper: "Setupdaten statt Live-Analytics", tone: "green" },
+      {
+        label: "Demo-Kontakte",
+        value: "3",
+        helper: "Sandra M., Alex K., Ella L. · Demo",
+        tone: "blue",
+      },
+      {
+        label: "Offene Follow-ups",
+        value: "3",
+        helper: "Demo-Aufgaben für manuelle Prüfung",
+        tone: "cyan",
+      },
+      {
+        label: "KI-Vorschläge",
+        value: "Demo",
+        helper: "Vorbereitet · kein automatisches Senden",
+        tone: "violet",
+      },
+      {
+        label: "CSV-Import",
+        value: "Vorschau",
+        helper: "Importfluss noch nicht produktiv",
+        tone: "amber",
+      },
+      {
+        label: "Status",
+        value: "MVP-Kern aktiv",
+        helper: "Setupdaten statt Live-Analytics",
+        tone: "green",
+      },
+      {
+        label: "Paket",
+        value: "Pilot / Setup",
+        helper: "990 € einmalig · keine Bindung",
+        tone: "amber",
+      },
     ];
   }
 
   if (workspace.plan_id === "starter") {
     return [
-      { label: "Kontakte", value: "Bereit", helper: "Produktiver Einstieg · noch kein Live-Zähler", tone: "blue" },
-      { label: "Offene Follow-ups", value: "0", helper: "Bereit für manuelle Aufgaben", tone: "cyan" },
-      { label: "KI-Vorschläge", value: "Limitiert", helper: "Mensch prüft und sendet selbst", tone: "violet" },
-      { label: "CSV-Import", value: "Aktiv", helper: "MVP-Import vorbereitet", tone: "green" },
-      { label: "Status", value: "MVP-Kern aktiv", helper: "Kontakt anlegen oder CSV importieren", tone: "amber" },
+      {
+        label: "Kontakte",
+        value: "Bereit",
+        helper: "Produktiver Einstieg · noch kein Live-Zähler",
+        tone: "blue",
+      },
+      {
+        label: "Offene Follow-ups",
+        value: "0",
+        helper: "Bereit für manuelle Aufgaben",
+        tone: "cyan",
+      },
+      {
+        label: "KI-Vorschläge",
+        value: "Limitiert",
+        helper: "Mensch prüft und sendet selbst",
+        tone: "violet",
+      },
+      {
+        label: "CSV-Import",
+        value: "Aktiv",
+        helper: "MVP-Import vorbereitet",
+        tone: "green",
+      },
+      {
+        label: "Status",
+        value: "MVP-Kern aktiv",
+        helper: "Kontakt anlegen oder CSV importieren",
+        tone: "amber",
+      },
+      {
+        label: "Paket",
+        value: "Starter",
+        helper: "299 €/Monat · Setup je Option",
+        tone: "blue",
+      },
     ];
   }
 
   return [
-    { label: "Paket", value: workspace.plan_id === "growth" ? "Growth" : "Agency", helper: "Vorschau · nicht als Vollversion aktiv", tone: "blue" },
-    { label: "Kontakte", value: "Vorschau", helper: "Noch keine produktive Engine", tone: "cyan" },
-    { label: "KI-Vorschläge", value: "Vorschau", helper: "Keine automatische Aktion", tone: "violet" },
-    { label: "CSV-Import", value: "Roadmap", helper: "Scope vor Produktivstart klären", tone: "amber" },
-    { label: "Status", value: "Demo/Preview", helper: "Erstgespräch und Roadmap getrennt", tone: "green" },
+    {
+      label: "Kontakte",
+      value: "Vorschau",
+      helper: "Noch keine produktive Engine",
+      tone: "cyan",
+    },
+    {
+      label: "KI-Vorschläge",
+      value: "Vorschau",
+      helper: "Keine automatische Aktion",
+      tone: "violet",
+    },
+    {
+      label: "CSV-Import",
+      value: "Roadmap",
+      helper: "Scope vor Produktivstart klären",
+      tone: "amber",
+    },
+    {
+      label: "Status",
+      value: "Demo/Preview",
+      helper: "Erstgespräch und Roadmap getrennt",
+      tone: "green",
+    },
+    {
+      label: "Paket",
+      value: workspace.plan_id === "growth" ? "Growth" : "Agency",
+      helper: "Vorschau · nicht produktiv aktiviert",
+      tone: "amber",
+    },
   ];
 }
 
 function getContactRows(workspace: WorkspaceDashboardRow): ContactPreviewRow[] {
   if (workspace.plan_id === "pilot") {
     return [
-      { name: "Sandra M.", context: "VIP-Fan · Demo", nextStep: "KI-Vorschlag testen", status: "Demo" },
-      { name: "Alex K.", context: "Newsletter · Demo", nextStep: "Follow-up vormerken", status: "Demo" },
-      { name: "Ella L.", context: "Event-Lead · Demo", nextStep: "Memory prüfen", status: "Demo" },
+      {
+        name: "Sandra M.",
+        status: "Buyer",
+        profile: "Mia Active Club",
+        tags: ["buyer", "premium_interest"],
+        score: 92,
+        lastContact: "Heute, 09:42",
+        nextFollowUp: "Morgen, 10:00",
+      },
+      {
+        name: "Alex K.",
+        status: "VIP",
+        profile: "DJ Nova",
+        tags: ["vip", "event_interest"],
+        score: 88,
+        lastContact: "Gestern, 18:21",
+        nextFollowUp: "Heute, 14:00",
+      },
+      {
+        name: "Ella L.",
+        status: "Inactive",
+        profile: "Team Arena",
+        tags: ["reactivation"],
+        score: 45,
+        lastContact: "12.05.2025",
+        nextFollowUp: "Überfällig",
+      },
     ];
   }
 
@@ -220,79 +381,174 @@ function getContactRows(workspace: WorkspaceDashboardRow): ContactPreviewRow[] {
   }
 
   return [
-    { name: "Kontaktvorschau", context: "Preview-Datensatz", nextStep: "Scope klären", status: "Vorschau" },
-    { name: "Segmentvorschau", context: "Nicht produktiv", nextStep: "Upgrade/Roadmap prüfen", status: "Vorschau" },
+    {
+      name: "Kontaktvorschau",
+      status: "Preview",
+      profile: "Roadmap",
+      tags: ["scope"],
+      score: "—",
+      lastContact: "Vorschau",
+      nextFollowUp: "Scope klären",
+    },
+    {
+      name: "Segmentvorschau",
+      status: "Preview",
+      profile: "Nicht produktiv",
+      tags: ["roadmap"],
+      score: "—",
+      lastContact: "Vorschau",
+      nextFollowUp: "Upgrade prüfen",
+    },
   ];
 }
 
 function getFollowUps(workspace: WorkspaceDashboardRow): TaskPreview[] {
   if (workspace.plan_id === "pilot") {
     return [
-      { title: "Antwortidee für Sandra M. prüfen", person: "Sandra M.", due: "Heute", status: "Demo" },
-      { title: "Event-Rückfrage vorbereiten", person: "Ella L.", due: "Morgen", status: "Demo" },
-      { title: "Newsletter-Interesse markieren", person: "Alex K.", due: "Diese Woche", status: "Demo" },
+      {
+        title: "Antwortidee für Sandra M. prüfen",
+        person: "Sandra M.",
+        due: "Heute",
+        status: "Demo",
+      },
+      {
+        title: "Event-Rückfrage vorbereiten",
+        person: "Ella L.",
+        due: "Morgen",
+        status: "Demo",
+      },
+      {
+        title: "Newsletter-Interesse markieren",
+        person: "Alex K.",
+        due: "Diese Woche",
+        status: "Demo",
+      },
     ];
   }
 
   if (workspace.plan_id === "starter") {
     return [
-      { title: "Erstes Follow-up anlegen", person: "Noch kein Kontakt", due: "Bereit", status: "MVP" },
-      { title: "CSV-Liste prüfen", person: "Import vorbereiten", due: "Optional", status: "MVP" },
+      {
+        title: "Erstes Follow-up anlegen",
+        person: "Noch kein Kontakt",
+        due: "Bereit",
+        status: "MVP",
+      },
+      {
+        title: "CSV-Liste prüfen",
+        person: "Import vorbereiten",
+        due: "Optional",
+        status: "MVP",
+      },
     ];
   }
 
   return [
-    { title: "Roadmap-Follow-ups abstimmen", person: "Workspace", due: "Vorschau", status: "Preview" },
+    {
+      title: "Roadmap-Follow-ups abstimmen",
+      person: "Workspace",
+      due: "Vorschau",
+      status: "Preview",
+    },
   ];
 }
 
-function getConversations(workspace: WorkspaceDashboardRow): ConversationPreview[] {
+function getConversations(
+  workspace: WorkspaceDashboardRow,
+): ConversationPreview[] {
   if (workspace.plan_id === "pilot") {
     return [
-      { person: "Sandra M.", message: "Fragt nach dem nächsten Meet & Greet.", context: "Demo-Kontext für manuelle Antwort" },
-      { person: "Alex K.", message: "Reagiert auf Newsletter-Thema.", context: "Demo-Memory: Newsletter" },
-      { person: "Ella L.", message: "Möchte Eventinfos speichern.", context: "Demo-Follow-up vorbereitet" },
+      {
+        person: "Sandra M.",
+        message: "Fragt nach dem nächsten Meet & Greet.",
+        context: "Demo-Kontext für manuelle Antwort",
+      },
+      {
+        person: "Alex K.",
+        message: "Reagiert auf Newsletter-Thema.",
+        context: "Demo-Memory: Newsletter",
+      },
+      {
+        person: "Ella L.",
+        message: "Möchte Eventinfos speichern.",
+        context: "Demo-Follow-up vorbereitet",
+      },
     ];
   }
 
   if (workspace.plan_id === "starter") {
     return [
-      { person: "Noch keine Gespräche", message: "Lege Kontakte an oder bereite einen CSV-Import vor.", context: "Placeholder bis echte Kontakte/Nachrichten existieren" },
+      {
+        person: "Noch keine Gespräche",
+        message: "Lege Kontakte an oder bereite einen CSV-Import vor.",
+        context: "Placeholder bis echte Kontakte/Nachrichten existieren",
+      },
     ];
   }
 
   return [
-    { person: "Preview", message: "Gesprächskontext wird im MVP-Scope vorbereitet.", context: "Nicht produktiv freigeschaltet" },
+    {
+      person: "Preview",
+      message: "Gesprächskontext wird im MVP-Scope vorbereitet.",
+      context: "Nicht produktiv freigeschaltet",
+    },
   ];
 }
 
-function getRecommendations(workspace: WorkspaceDashboardRow): RecommendationPreview[] {
+function getRecommendations(
+  workspace: WorkspaceDashboardRow,
+): RecommendationPreview[] {
   if (workspace.plan_id === "pilot") {
     return [
-      { title: "Sandra persönlich antworten", text: "Kurzen Vorschlag prüfen, Meet-&-Greet-Kontext erwähnen und selbst senden.", status: "Demo" },
-      { title: "Follow-up vormerken", text: "Ella L. nächste Woche manuell erinnern; FanMind erstellt nur die Aufgabe.", status: "Demo" },
+      {
+        title: "Sandra persönlich antworten",
+        text: "Kurzen Vorschlag prüfen, Meet-&-Greet-Kontext erwähnen und selbst senden.",
+        status: "Demo",
+      },
+      {
+        title: "Follow-up vormerken",
+        text: "Ella L. nächste Woche manuell erinnern; FanMind erstellt nur die Aufgabe.",
+        status: "Demo",
+      },
     ];
   }
 
   if (workspace.plan_id === "starter") {
     return [
-      { title: "Kontaktbasis aufbauen", text: "Ersten Kontakt anlegen oder CSV-Import vorbereiten, danach Vorschläge manuell prüfen.", status: "Limitiert" },
-      { title: "Keine Auto-Aktionen", text: "KI dient als Arbeitsvorbereitung; jede Nachricht bleibt eine menschliche Entscheidung.", status: "Sicher" },
+      {
+        title: "Kontaktbasis aufbauen",
+        text: "Ersten Kontakt anlegen oder CSV-Import vorbereiten, danach Vorschläge manuell prüfen.",
+        status: "Limitiert",
+      },
+      {
+        title: "Keine Auto-Aktionen",
+        text: "KI dient als Arbeitsvorbereitung; jede Nachricht bleibt eine menschliche Entscheidung.",
+        status: "Sicher",
+      },
     ];
   }
 
   return [
-    { title: "Preview sauber trennen", text: "Segmente, Kampagnen und Analytics bleiben Roadmap beziehungsweise Upgrade-Hinweis.", status: "Vorschau" },
+    {
+      title: "Preview sauber trennen",
+      text: "Segmente, Kampagnen und Analytics bleiben Roadmap beziehungsweise Upgrade-Hinweis.",
+      status: "Vorschau",
+    },
   ];
 }
 
-function getFeatureMeta(feature?: ResolvedDashboardFeature, fallback = "Roadmap"): string {
+function getFeatureMeta(
+  feature?: ResolvedDashboardFeature,
+  fallback = "Roadmap",
+): string {
   return feature ? getDashboardStatusLabel(feature.status) : fallback;
 }
 
 function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
   return (
-    <article className={`${styles.featurePill} ${styles[`status-${feature.status}`]}`}>
+    <article
+      className={`${styles.featurePill} ${styles[`status-${feature.status}`]}`}
+    >
       <div>
         <h3>{feature.label}</h3>
         <p>{getDashboardStatusText(feature.status, feature.minPlan)}</p>
@@ -302,7 +558,17 @@ function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
   );
 }
 
-function SidebarItem({ label, meta, active = false, href }: { label: string; meta?: string; active?: boolean; href: string }) {
+function SidebarItem({
+  label,
+  meta,
+  active = false,
+  href,
+}: {
+  label: string;
+  meta?: string;
+  active?: boolean;
+  href: string;
+}) {
   return (
     <a className={active ? styles.navItemActive : styles.navItem} href={href}>
       <span>{label}</span>
@@ -313,7 +579,10 @@ function SidebarItem({ label, meta, active = false, href }: { label: string; met
 
 function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
   const display = getWorkspaceDisplay(workspace);
-  const featureGroups = getDashboardFeatureGroups(workspace.plan_id, workspace.commercial_option);
+  const featureGroups = getDashboardFeatureGroups(
+    workspace.plan_id,
+    workspace.commercial_option,
+  );
   const allVisibleFeatures = [
     ...featureGroups.active,
     ...featureGroups.demoLimited,
@@ -322,16 +591,43 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
   ].filter((feature) => feature.key !== "automatic_sending");
   const featureByKey = (key: string) => findFeature(allVisibleFeatures, key);
   const compactFeatures = allVisibleFeatures
-    .filter((feature) => !["roadmap", "automatic_sending"].includes(feature.key))
+    .filter(
+      (feature) => !["roadmap", "automatic_sending"].includes(feature.key),
+    )
     .slice(0, 6);
   const contactsFeature = featureByKey("contacts");
   const sidebarLinks: SidebarLink[] = [
     { label: "Dashboard", href: "/dashboard", active: true, fallback: "Aktiv" },
-    { label: "Kontakte", href: "#contacts", featureKey: "contacts", fallback: "Vorschau" },
-    { label: "Segmente", href: "#roadmap", featureKey: "segments", fallback: "Roadmap" },
-    { label: "Follow-ups", href: "#followups", featureKey: "followups", fallback: "Vorschau" },
-    { label: "Kampagnen", href: "#roadmap", featureKey: "campaigns", fallback: "Roadmap" },
-    { label: "Analytics", href: "#roadmap", featureKey: "analytics", fallback: "Roadmap" },
+    {
+      label: "Kontakte",
+      href: "#contacts",
+      featureKey: "contacts",
+      fallback: "Vorschau",
+    },
+    {
+      label: "Segmente",
+      href: "#roadmap",
+      featureKey: "segments",
+      fallback: "Roadmap",
+    },
+    {
+      label: "Follow-ups",
+      href: "#followups",
+      featureKey: "followups",
+      fallback: "Vorschau",
+    },
+    {
+      label: "Kampagnen",
+      href: "#roadmap",
+      featureKey: "campaigns",
+      fallback: "Roadmap",
+    },
+    {
+      label: "Analytics",
+      href: "#roadmap",
+      featureKey: "analytics",
+      fallback: "Roadmap",
+    },
     { label: "Einstellungen", href: "#contract", fallback: "Workspace" },
   ];
   const contactRows = getContactRows(workspace);
@@ -358,16 +654,41 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               label={item.label}
               href={item.href}
               active={item.active}
-              meta={item.active ? item.fallback : getFeatureMeta(item.featureKey ? featureByKey(item.featureKey) : undefined, item.fallback)}
+              meta={
+                item.active
+                  ? item.fallback
+                  : getFeatureMeta(
+                      item.featureKey
+                        ? featureByKey(item.featureKey)
+                        : undefined,
+                      item.fallback,
+                    )
+              }
             />
           ))}
         </nav>
 
+        <section
+          className={styles.savedViews}
+          aria-label="Gespeicherte Ansichten Demo"
+        >
+          <span>Gespeicherte Ansichten · Demo</span>
+          <a href="#contacts">Top Fans</a>
+          <a href="#followups">Reaktivierung</a>
+          <a href="#contacts">Premium-Käufer</a>
+          <a href="#followups">Heute fällige Follow-ups</a>
+        </section>
+
         <div className={styles.sidebarFooter}>
-          <section className={styles.workspaceMiniCard} aria-label="Workspace und User">
+          <section
+            className={styles.workspaceMiniCard}
+            aria-label="Workspace und User"
+          >
             <span>Workspace</span>
             <strong>{workspace.name}</strong>
-            <p>{workspace.role} · {email ?? "Supabase User"}</p>
+            <p>
+              {workspace.role} · {email ?? "Supabase User"}
+            </p>
           </section>
           <section className={styles.planMiniCard} aria-label="Paket Überblick">
             <span>Paket</span>
@@ -381,41 +702,56 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
       <div className={styles.dashboardContent}>
         <header className={styles.topbar}>
           <div className={styles.titleCluster}>
-            <p className={styles.eyebrow}>Willkommen zurück</p>
+            <p className={styles.eyebrow}>CRM Übersicht</p>
             <h1>Dashboard</h1>
-            <p className={styles.topbarStatus}>Kein automatisches Senden – Mensch prüft und sendet selbst.</p>
           </div>
           <div className={styles.topbarActions}>
             <label className={styles.searchBox}>
               <span>Suche</span>
-              <input type="search" placeholder="Kontakte, Follow-ups, Kontext" />
+              <input type="search" placeholder="Kontakte, Tags, Follow-ups" />
             </label>
-            <button type="button" className={styles.filterChip}>Letzte 30 Tage</button>
-            <button type="button" className={styles.filterChip}>Filter</button>
+            <button type="button" className={styles.filterChip}>
+              Letzte 30 Tage
+            </button>
+            <button type="button" className={styles.filterChip}>
+              Filter
+            </button>
             {canShowContactAction(contactsFeature) ? (
-              <a className={styles.primaryButton} href="#contacts">+ Neuer Kontakt</a>
+              <a className={styles.primaryButton} href="#contacts">
+                + Neuer Kontakt
+              </a>
             ) : null}
             <form action={logout}>
-              <button type="submit" className={styles.secondaryButton}>Abmelden</button>
+              <button type="submit" className={styles.secondaryButton}>
+                Abmelden
+              </button>
             </form>
           </div>
         </header>
 
-        <section className={styles.workspaceStrip} aria-label="Workspace Status">
+        <section
+          className={styles.workspaceStrip}
+          aria-label="Workspace Status"
+        >
           <div>
-            <p className={styles.eyebrow}>FanMind Arbeitsplatz</p>
-            <h2>{workspace.name}</h2>
-            <p>{display.packageSummary}</p>
+            <strong>{workspace.name}</strong>
+            <span>{display.planHint}</span>
           </div>
+          <p>{display.packageSummary}</p>
           <div className={styles.badgeRow}>
-            <span className={styles.safeBadge}>Human-in-the-loop</span>
-            <span className={styles.planBadge}>{display.planHint}</span>
+            <span className={styles.safeBadge}>Kein automatisches Senden</span>
+            <span className={styles.planBadge}>
+              Mensch prüft und sendet selbst
+            </span>
           </div>
         </section>
 
         <section className={styles.kpiGrid} aria-label="KPI-Karten">
           {kpiCards.map((card) => (
-            <article key={card.label} className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}>
+            <article
+              key={card.label}
+              className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}
+            >
               <span>{card.label}</span>
               <strong>{card.value}</strong>
               <p>{card.helper}</p>
@@ -423,14 +759,60 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
           ))}
         </section>
 
-        <div className={styles.mainGrid}>
-          <section className={`${styles.moduleCard} ${styles.contactCard}`} id="contacts" aria-labelledby="contacts-title">
+        <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
+          <article
+            className={`${styles.moduleCard} ${styles.activityCard}`}
+            aria-labelledby="activity-title"
+          >
+            <div className={styles.moduleHeader}>
+              <div>
+                <p className={styles.eyebrow}>Aktivitätsverlauf</p>
+                <h2 id="activity-title">Fan-/Kontakt-Wachstum</h2>
+              </div>
+              <span>
+                {workspace.plan_id === "pilot" ? "Demo" : "MVP/Vorschau"}
+              </span>
+            </div>
+            <div
+              className={styles.chartPlaceholder}
+              aria-label="Demo Chart Placeholder"
+            >
+              <div className={styles.chartBars}>
+                {[42, 58, 51, 72, 66, 84, 78, 91].map((height, index) => (
+                  <span key={height + index} style={{ height: `${height}%` }} />
+                ))}
+              </div>
+              <div className={styles.chartSummary}>
+                <strong>
+                  {workspace.plan_id === "pilot"
+                    ? "+3 Demo-Kontakte"
+                    : "Bereit für erste Kontakte"}
+                </strong>
+                <p>
+                  Placeholder ohne Live-Analytics: zeigt nur Demo-/MVP-Struktur,
+                  keine echten Umsatz- oder Kampagnendaten.
+                </p>
+              </div>
+            </div>
+          </article>
+
+          <section
+            className={`${styles.moduleCard} ${styles.contactCard}`}
+            id="contacts"
+            aria-labelledby="contacts-title"
+          >
             <div className={styles.moduleHeader}>
               <div>
                 <p className={styles.eyebrow}>Kontakte / Follower</p>
                 <h2 id="contacts-title">Kontaktpipeline</h2>
               </div>
-              <span>{workspace.plan_id === "starter" ? "Produktiver Einstieg" : workspace.plan_id === "pilot" ? "Demo-Daten" : "Vorschau"}</span>
+              <span>
+                {workspace.plan_id === "starter"
+                  ? "Produktiver Einstieg"
+                  : workspace.plan_id === "pilot"
+                    ? "Demo-Daten"
+                    : "Vorschau"}
+              </span>
             </div>
             {contactRows.length > 0 ? (
               <div className={styles.tableWrap}>
@@ -438,18 +820,42 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Kontext</th>
-                      <th>Nächster Schritt</th>
                       <th>Status</th>
+                      <th>Profil</th>
+                      <th>Tags</th>
+                      <th>Score</th>
+                      <th>Letzter Kontakt</th>
+                      <th>Nächster Follow-up</th>
                     </tr>
                   </thead>
                   <tbody>
                     {contactRows.map((row) => (
                       <tr key={row.name}>
-                        <td>{row.name}</td>
-                        <td>{row.context}</td>
-                        <td>{row.nextStep}</td>
-                        <td><span className={styles.tableBadge}>{row.status}</span></td>
+                        <td>
+                          <strong className={styles.contactName}>
+                            {row.name}
+                          </strong>
+                        </td>
+                        <td>
+                          <span className={styles.tableBadge}>
+                            {row.status}
+                          </span>
+                        </td>
+                        <td>{row.profile}</td>
+                        <td>
+                          <div className={styles.tagList}>
+                            {row.tags.map((tag) => (
+                              <span key={`${row.name}-${tag}`}>{tag}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>
+                          <strong className={styles.scoreValue}>
+                            {row.score}
+                          </strong>
+                        </td>
+                        <td>{row.lastContact}</td>
+                        <td>{row.nextFollowUp}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -458,44 +864,61 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             ) : (
               <div className={styles.emptyState}>
                 <strong>Bereit für produktive Kontakte</strong>
-                <p>Starter ist vorbereitet. Lege den ersten Kontakt an oder starte später den CSV-Import, sobald echte Daten vorhanden sind.</p>
+                <p>
+                  Starter ist vorbereitet. Lege den ersten Kontakt an oder
+                  starte später den CSV-Import, sobald echte Daten vorhanden
+                  sind.
+                </p>
                 <div className={styles.emptyActions}>
-                  <a className={styles.inlineButton} href="#contacts">Kontakt anlegen</a>
-                  <a className={styles.ghostButton} href="#csv-import">CSV-Import starten</a>
+                  <a className={styles.inlineButton} href="#contacts">
+                    Kontakt anlegen
+                  </a>
+                  <a className={styles.ghostButton} href="#csv-import">
+                    CSV-Import starten
+                  </a>
                 </div>
               </div>
             )}
           </section>
 
-          <aside className={styles.sideStack} aria-label="Schnellaktionen und Vertrag">
-            <section className={styles.quickActions} aria-labelledby="quick-actions-title">
+          <aside className={styles.rightRail} aria-label="Status und Paket">
+            <section
+              className={styles.contextCard}
+              aria-labelledby="segments-title"
+            >
               <div className={styles.moduleHeader}>
                 <div>
-                  <p className={styles.eyebrow}>Schnellaktionen</p>
-                  <h2 id="quick-actions-title">Heute starten</h2>
+                  <p className={styles.eyebrow}>Segmentstatus</p>
+                  <h2 id="segments-title">Verteilung</h2>
                 </div>
+                <span>
+                  {workspace.plan_id === "pilot" ? "Demo" : "Kompakt"}
+                </span>
               </div>
-              <div className={styles.actionList}>
-                <a href="#contacts">Kontakt anlegen</a>
-                <a href="#csv-import">CSV-Import starten</a>
-                <a href="#followups">Follow-up erstellen</a>
-                <a href="#contacts">Sandra M. öffnen</a>
-                <a href="#roadmap">Roadmap öffnen</a>
+              <div className={styles.segmentList}>
+                <div>
+                  <span>Buyer / Premium</span>
+                  <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
+                </div>
+                <div>
+                  <span>VIP / Event</span>
+                  <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
+                </div>
+                <div>
+                  <span>Reaktivierung</span>
+                  <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
+                </div>
               </div>
             </section>
 
-            <section className={styles.contextCard} id="contract" aria-labelledby="contract-title">
+            <section
+              className={styles.contextCard}
+              id="contract"
+              aria-labelledby="contract-title"
+            >
               <p className={styles.eyebrow}>Paket & Vertrag</p>
               <h2 id="contract-title">{display.packageName}</h2>
               <dl className={styles.details}>
-                <div>
-                  <dt>plan_id</dt>
-                  <dd>{workspace.plan_id}</dd>
-                </div>
-                <div>
-                  <dt>commercial_option</dt>
-                  <dd>{workspace.commercial_option}</dd>
-                </div>
                 <div>
                   <dt>Einrichtung</dt>
                   <dd>{display.setupFeeLabel}</dd>
@@ -508,11 +931,19 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
                   <dt>Bindung</dt>
                   <dd>{display.commitmentLabel}</dd>
                 </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>
+                    {workspace.plan_id === "pilot"
+                      ? "Demo aktiv"
+                      : display.commercialOptionName}
+                  </dd>
+                </div>
               </dl>
               <p>{display.contractNote}</p>
             </section>
           </aside>
-        </div>
+        </section>
 
         <section className={styles.panelGrid} aria-label="Arbeitsbereiche">
           <article className={styles.moduleCard} id="followups">
@@ -521,16 +952,23 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
                 <p className={styles.eyebrow}>Fällige Follow-ups</p>
                 <h2>Manuelle nächste Schritte</h2>
               </div>
-              <span>{workspace.plan_id === "starter" ? "MVP" : "Demo/Vorschau"}</span>
+              <span>
+                {workspace.plan_id === "starter" ? "MVP" : "Demo/Vorschau"}
+              </span>
             </div>
             <div className={styles.taskList}>
               {followUps.map((task) => (
-                <div key={`${task.title}-${task.person}`} className={styles.taskItem}>
+                <div
+                  key={`${task.title}-${task.person}`}
+                  className={styles.taskItem}
+                >
                   <div>
                     <strong>{task.title}</strong>
                     <p>{task.person}</p>
                   </div>
-                  <span>{task.due} · {task.status}</span>
+                  <span>
+                    {task.due} · {task.status}
+                  </span>
                 </div>
               ))}
             </div>
@@ -574,6 +1012,58 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             </div>
           </article>
 
+          <article
+            className={`${styles.quickActions} ${styles.compactActions}`}
+            aria-labelledby="quick-actions-title"
+          >
+            <div className={styles.moduleHeader}>
+              <div>
+                <p className={styles.eyebrow}>Schnellaktionen</p>
+                <h2 id="quick-actions-title">Kompakt</h2>
+              </div>
+              <span>
+                {workspace.plan_id === "pilot"
+                  ? "Demo/Vorschau"
+                  : "Aktiv/Limitiert"}
+              </span>
+            </div>
+            <div className={styles.actionList}>
+              <a href="#contacts">
+                Kontakt anlegen{" "}
+                <small>
+                  {workspace.plan_id === "pilot" ? "Demo" : "Aktiv"}
+                </small>
+              </a>
+              <a href="#csv-import">
+                CSV-Import starten{" "}
+                <small>
+                  {workspace.plan_id === "starter" ? "Aktiv" : "Vorschau"}
+                </small>
+              </a>
+              <a href="#followups">
+                Follow-up erstellen{" "}
+                <small>
+                  {workspace.plan_id === "pilot" ? "Demo" : "Aktiv"}
+                </small>
+              </a>
+              <a href="#contacts">
+                Sandra M. öffnen{" "}
+                <small>
+                  {workspace.plan_id === "pilot" ? "Demo" : "Limitiert"}
+                </small>
+              </a>
+              <a href="#ai-suggestions">
+                KI-Vorschlag testen{" "}
+                <small>
+                  {workspace.plan_id === "pilot" ? "Demo" : "Limitiert"}
+                </small>
+              </a>
+              <a href="#roadmap">
+                Roadmap öffnen <small>Vorschau</small>
+              </a>
+            </div>
+          </article>
+
           <article className={styles.moduleCard} id="csv-import">
             <div className={styles.moduleHeader}>
               <div>
@@ -582,15 +1072,27 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               </div>
               <span>Roadmap</span>
             </div>
-            <p className={styles.moduleText}>CSV ist im Starter-MVP vorbereitet. Kampagnen, Analytics und Integrationen werden nur als Vorschau gezeigt und nicht als aktive Vollversion verkauft.</p>
+            <p className={styles.moduleText}>
+              CSV ist im Starter-MVP vorbereitet. Kampagnen, Analytics und
+              Integrationen werden nur als Vorschau gezeigt und nicht als aktive
+              Vollversion verkauft.
+            </p>
           </article>
         </section>
 
-        <section className={styles.featureSection} id="roadmap" aria-labelledby="features-title">
+        <section
+          className={styles.featureSection}
+          id="roadmap"
+          aria-labelledby="features-title"
+        >
           <div>
             <p className={styles.eyebrow}>Paketabhängige Funktionen</p>
             <h2 id="features-title">Dezente Statuslogik</h2>
-            <p>Feature-Gating nutzt weiterhin plan_id und commercial_option; aktive, Demo-, limitierte und Roadmap-Funktionen bleiben kompakt getrennt.</p>
+            <p>
+              Feature-Gating nutzt weiterhin plan_id und commercial_option;
+              aktive, Demo-, limitierte und Roadmap-Funktionen bleiben kompakt
+              getrennt.
+            </p>
           </div>
           <div className={styles.featurePillGrid}>
             {compactFeatures.map((feature) => (
@@ -598,8 +1100,22 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             ))}
           </div>
           <div className={styles.featureSplit}>
-            <span>Upgrade: {featureGroups.later.filter((feature) => feature.key !== "automatic_sending").length}</span>
-            <span>Roadmap/Vorschau: {featureGroups.roadmap.filter((feature) => feature.key !== "automatic_sending").length}</span>
+            <span>
+              Upgrade:{" "}
+              {
+                featureGroups.later.filter(
+                  (feature) => feature.key !== "automatic_sending",
+                ).length
+              }
+            </span>
+            <span>
+              Roadmap/Vorschau:{" "}
+              {
+                featureGroups.roadmap.filter(
+                  (feature) => feature.key !== "automatic_sending",
+                ).length
+              }
+            </span>
           </div>
         </section>
       </div>
@@ -619,16 +1135,23 @@ export default async function DashboardPage() {
 
   return (
     <main className={styles.page}>
-      {workspace ? <WorkspaceDetails workspace={workspace} email={data.user.email} /> : (
+      {workspace ? (
+        <WorkspaceDetails workspace={workspace} email={data.user.email} />
+      ) : (
         <section className={styles.fallbackCard} aria-label="FanMind Workspace">
           <div>
             <p className={styles.eyebrow}>FanMind Dashboard</p>
             <h1>Workspace-Status</h1>
-            <p>Dashboard geschützt: Supabase Auth ist aktiv. Für deinen Account wurde noch kein Workspace gefunden.</p>
+            <p>
+              Dashboard geschützt: Supabase Auth ist aktiv. Für deinen Account
+              wurde noch kein Workspace gefunden.
+            </p>
           </div>
           {userError ? (
             <p className={styles.error}>
-              <strong>Supabase-Session konnte nicht vollständig geprüft werden.</strong>
+              <strong>
+                Supabase-Session konnte nicht vollständig geprüft werden.
+              </strong>
               <span>{userError.message}</span>
             </p>
           ) : null}
@@ -639,7 +1162,9 @@ export default async function DashboardPage() {
             </p>
           ) : null}
           <form action={logout}>
-            <button type="submit" className={styles.secondaryButton}>Abmelden</button>
+            <button type="submit" className={styles.secondaryButton}>
+              Abmelden
+            </button>
           </form>
         </section>
       )}
