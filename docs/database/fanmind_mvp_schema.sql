@@ -14,6 +14,10 @@
 -- - Später wird plan_id produktiv aus Session -> Workspace-Membership -> workspaces.plan_id
 --   gelesen; die URL bleibt dann nur Landingpage-/Demo-Einstieg.
 -- - Keine Payment-, Stripe- oder Subscription-Logik in diesem Schema.
+-- - MVP-Commercial-Werte werden als Workspace-Grunddaten gespeichert:
+--   pilot_only = 99000 Setup-Cents, 0 Monats-Cents, 0 Monate Bindung.
+--   starter_paid_setup = 99000 Setup-Cents, 29900 Monats-Cents, 0 Monate Bindung.
+--   starter_12m_setup_waived = 0 Setup-Cents, 29900 Monats-Cents, 12 Monate Bindung.
 
 create extension if not exists pgcrypto;
 
@@ -29,8 +33,23 @@ create table if not exists public.workspaces (
   name text not null,
   owner_user_id uuid not null references auth.users(id) on delete cascade,
   plan_id text not null default 'starter' check (plan_id in ('pilot', 'starter', 'growth', 'agency')),
+  commercial_option text not null default 'starter_12m_setup_waived' check (commercial_option in ('pilot_only', 'starter_paid_setup', 'starter_12m_setup_waived')),
+  setup_fee_cents integer not null default 0 check (setup_fee_cents >= 0),
+  monthly_fee_cents integer not null default 29900 check (monthly_fee_cents >= 0),
+  commitment_months integer not null default 12 check (commitment_months in (0, 12)),
   created_at timestamptz not null default now()
 );
+
+-- Migration für bereits bestehende Supabase-Tabellen:
+-- alter table public.workspaces add column if not exists commercial_option text not null default 'starter_12m_setup_waived';
+-- alter table public.workspaces add column if not exists setup_fee_cents integer not null default 0;
+-- alter table public.workspaces add column if not exists monthly_fee_cents integer not null default 29900;
+-- alter table public.workspaces add column if not exists commitment_months integer not null default 12;
+-- alter table public.workspaces add constraint workspaces_plan_id_check check (plan_id in ('pilot', 'starter', 'growth', 'agency'));
+-- alter table public.workspaces add constraint workspaces_commercial_option_check check (commercial_option in ('pilot_only', 'starter_paid_setup', 'starter_12m_setup_waived'));
+-- alter table public.workspaces add constraint workspaces_commitment_months_check check (commitment_months in (0, 12));
+-- alter table public.workspaces add constraint workspaces_setup_fee_cents_check check (setup_fee_cents >= 0);
+-- alter table public.workspaces add constraint workspaces_monthly_fee_cents_check check (monthly_fee_cents >= 0);
 
 create table if not exists public.workspace_members (
   id uuid primary key default gen_random_uuid(),

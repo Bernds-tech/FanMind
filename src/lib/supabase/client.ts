@@ -48,9 +48,17 @@ type SupabaseMutationResponse<T = unknown> = {
   error: Error | null;
 };
 
+type SupabaseFilterValue = string | number | boolean;
+
+type SelectQuery<T = Record<string, unknown>> = {
+  eq(column: string, value: SupabaseFilterValue): SelectQuery<T>;
+  limit(count: number): SelectQuery<T>;
+  maybeSingle(): Promise<SupabaseMutationResponse<T>>;
+};
+
 type InsertResult = PromiseLike<SupabaseMutationResponse> & {
-  select(columns: string): {
-    single<T = Record<string, unknown>>(): Promise<SupabaseMutationResponse<T>>;
+  select<T = Record<string, unknown>>(columns: string): {
+    single(): Promise<SupabaseMutationResponse<T>>;
   };
 };
 
@@ -155,6 +163,56 @@ async function postgrestRequest<T>(table: string, method: "POST" | "PATCH", valu
   }
 }
 
+async function postgrestSelect<T>(table: string, accessToken: string | undefined, columns: string, filters: [string, SupabaseFilterValue][], limitCount?: number, single?: boolean): Promise<SupabaseMutationResponse<T>> {
+  try {
+    const url = new URL(getSupabaseRestUrl(table));
+    url.searchParams.set("select", columns);
+
+    for (const [column, value] of filters) {
+      url.searchParams.set(column, `eq.${String(value)}`);
+    }
+
+    if (limitCount) {
+      url.searchParams.set("limit", String(limitCount));
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: getSupabaseHeaders(accessToken),
+    });
+
+    if (!response.ok) {
+      return { data: null, error: await parseSupabaseError(response) };
+    }
+
+    const payload = (await response.json()) as T[];
+
+    return { data: single ? payload[0] ?? null : (payload as T), error: null };
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler.") };
+  }
+}
+
+function createSelectQuery<T>(table: string, columns: string, getAccessToken: () => string | undefined): SelectQuery<T> {
+  const filters: [string, SupabaseFilterValue][] = [];
+  let limitCount: number | undefined;
+
+  const query: SelectQuery<T> = {
+    eq(column, value) {
+      filters.push([column, value]);
+      return query;
+    },
+    limit(count) {
+      limitCount = count;
+      return query;
+    },
+    maybeSingle() {
+      return postgrestSelect<T>(table, getAccessToken(), columns, filters, limitCount ?? 1, true);
+    },
+  };
+
+  return query;
+}
+
 function createInsertResult(table: string, values: unknown, getAccessToken: () => string | undefined): InsertResult {
   const execute = () => postgrestRequest(table, "POST", values, getAccessToken());
 
@@ -162,9 +220,9 @@ function createInsertResult(table: string, values: unknown, getAccessToken: () =
     then(resolve, reject) {
       return execute().then(resolve, reject);
     },
-    select(columns: string) {
+    select<T = Record<string, unknown>>(columns: string) {
       return {
-        single<T = Record<string, unknown>>() {
+        single() {
           return postgrestRequest<T>(table, "POST", values, getAccessToken(), columns, true);
         },
       };
@@ -194,6 +252,9 @@ export function createSupabaseBrowserClient() {
     },
     from(table: string) {
       return {
+        select<T = Record<string, unknown>>(columns: string) {
+          return createSelectQuery<T>(table, columns, getAccessToken);
+        },
         upsert(values: unknown) {
           return postgrestRequest(table, "POST", values, getAccessToken(), undefined, false, true);
         },
