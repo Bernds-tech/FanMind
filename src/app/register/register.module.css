@@ -5,7 +5,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: clamp(14px, 2.4vh, 24px) 0 clamp(10px, 1.8vh, 18px);
+  padding: clamp(8px, 1.4vh, 14px) 0 clamp(8px, 1.2vh, 14px);
   color: #f7fbff;
   background:
     radial-gradient(circle at 22% 30%, rgba(0, 118, 255, 0.18), transparent 30%),
@@ -27,12 +27,12 @@
 .shell {
   position: relative;
   z-index: 1;
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 24px));
   min-height: auto;
   margin: 0 auto;
-  padding: clamp(10px, 1.3vw, 16px);
+  padding: clamp(8px, 1vw, 12px);
   border: 1px solid rgba(19, 128, 255, 0.3);
-  border-radius: 18px;
+  border-radius: 13px;
   background: rgba(0, 5, 16, 0.36);
   box-shadow: inset 0 0 64px rgba(0, 118, 255, 0.08);
 }
@@ -52,15 +52,15 @@
 .logo {
   gap: 8px;
   color: #ffffff;
-  font-size: clamp(20px, 1.7vw, 24px);
+  font-size: clamp(18px, 1.45vw, 22px);
   font-weight: 800;
   letter-spacing: -1.4px;
   text-decoration: none;
 }
 
 .logoMark {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   fill: none;
   stroke: #02e7ff;
   stroke-width: 3.1;
@@ -78,8 +78,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 24px;
-  padding: 0 8px;
+  min-height: 22px;
+  padding: 0 7px;
   border: 1px solid rgba(72, 147, 255, 0.34);
   border-radius: 999px;
   color: #8ea8cb;
@@ -111,15 +111,15 @@
 
 .authGrid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.72fr) minmax(470px, 1.28fr);
-  gap: clamp(12px, 2vw, 22px);
-  align-items: center;
-  margin-top: clamp(8px, 1.3vw, 14px);
+  grid-template-columns: minmax(250px, 0.68fr) minmax(520px, 1.32fr);
+  gap: clamp(10px, 1.5vw, 18px);
+  align-items: start;
+  margin-top: clamp(6px, 1vw, 10px);
 }
 
 .visualPanel {
   display: grid;
-  gap: clamp(8px, 1vw, 12px);
+  gap: clamp(6px, 0.8vw, 9px);
 }
 
 .orbit {
@@ -254,7 +254,7 @@
 .benefitList h2 {
   margin: 0 0 3px;
   color: #ffffff;
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: -0.5px;
 }
 
@@ -268,9 +268,9 @@
 .formCard {
   position: relative;
   overflow: hidden;
-  padding: clamp(14px, 1.7vw, 20px);
+  padding: clamp(12px, 1.25vw, 16px);
   border: 1px solid transparent;
-  border-radius: 24px;
+  border-radius: 18px;
   background: linear-gradient(#050b1d, #050b1d) padding-box,
     linear-gradient(115deg, #00c8ff 0%, rgba(29, 101, 255, 0.7) 45%, #ba37ff 100%) border-box;
   box-shadow: 0 0 44px rgba(0, 116, 255, 0.35), inset 0 0 70px rgba(0, 102, 255, 0.1);
@@ -311,7 +311,7 @@
 .formHeader h1 {
   margin: 0;
   color: #ffffff;
-  font-size: clamp(24px, 2.6vw, 30px);
+  font-size: clamp(21px, 2.1vw, 26px);
   line-height: 1.05;
   letter-spacing: -1.9px;
 }
@@ -324,8 +324,8 @@
   margin: 4px auto 0;
   max-width: 720px;
   color: #c9c4d0;
-  font-size: clamp(12px, 1.25vw, 14px);
-  line-height: 1.3;
+  font-size: clamp(11.5px, 1.05vw, 13px);
+  line-height: 1.24;
 }
 
 .formGrid {
@@ -336,7 +336,7 @@
 
 .field {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   margin-top: 7px;
   color: #c9c5d2;
   font-size: 11px;
@@ -357,12 +357,12 @@
 }
 
 .inputWrap {
-  min-height: 38px;
-  padding: 0 10px;
+  min-height: 34px;
+  padding: 0 9px;
 }
 
 .textareaWrap {
-  padding: 7px 10px;
+  padding: 5px 9px;
 }
 
 .inputWrap:focus-within,
@@ -383,7 +383,7 @@
   border: 0;
   color: #ffffff;
   background: transparent;
-  font-size: 14px;
+  font-size: 12px;
   outline: 0;
 }
 
@@ -402,7 +402,7 @@
 }
 
 .textareaWrap textarea {
-  min-height: 46px;
+  min-height: 34px;
   resize: vertical;
 }
 
@@ -411,8 +411,8 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 42px;
-  margin-top: 8px;
+  min-height: 38px;
+  margin-top: 7px;
   border: 0;
   border-radius: 10px;
   color: #ffffff;
@@ -430,10 +430,11 @@
 
 .success,
 .notice {
-  margin: 7px 0 0;
-  border-radius: 10px;
-  padding: 7px 9px;
-  line-height: 1.32;
+  margin: 6px 0 0;
+  border-radius: 9px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.25;
 }
 
 .success {
@@ -452,8 +453,8 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 7px;
+  margin-top: 6px;
 }
 
 .footerLinks a:last-child {
@@ -550,29 +551,29 @@
 .planIntro h1 {
   margin: 0;
   color: #ffffff;
-  font-size: clamp(24px, 2.5vw, 34px);
+  font-size: clamp(20px, 2vw, 28px);
   line-height: 1.05;
   letter-spacing: -1.7px;
 }
 
 .planIntro p:last-child {
-  margin: 8px 0 0;
+  margin: 5px 0 0;
   color: #c9d6e8;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.32;
 }
 
 .planSelection {
   display: grid;
-  gap: 9px;
+  gap: 6px;
   max-width: 520px;
   margin-inline: auto;
 }
 
 .planCard {
   display: grid;
-  gap: 6px;
-  padding: 12px;
+  gap: 4px;
+  padding: 8px 9px;
   border: 1px solid rgba(91, 150, 255, 0.28);
   border-radius: 16px;
   color: #dce9ff;
@@ -624,7 +625,7 @@
 
 .planBadge,
 .optionTitleRow em {
-  padding: 5px 8px;
+  padding: 3px 7px;
   color: #ffffff;
   background: rgba(139, 61, 255, 0.45);
 }
@@ -633,7 +634,7 @@
 .previewCard h1 {
   margin: 0;
   color: #ffffff;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: -0.6px;
 }
 
@@ -646,36 +647,38 @@
 .previewCard p {
   margin: 0;
   color: #c8d4e7;
-  font-size: 12.5px;
-  line-height: 1.35;
+  font-size: 11.5px;
+  line-height: 1.26;
 }
 
 .planCard ul,
 .optionCard ul {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 15px;
   color: #b8c6dc;
-  font-size: 11.5px;
-  line-height: 1.35;
+  font-size: 10.75px;
+  line-height: 1.22;
 }
 
 .planCta {
   color: #ff72ff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
 }
 
 .commercialOptions {
   position: relative;
   display: grid;
-  gap: 8px;
-  margin: 12px 0 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 9px 0 2px;
   padding: 0;
   border: 0;
 }
 
 .commercialOptions legend {
-  margin-bottom: 2px;
+  grid-column: 1 / -1;
+  margin-bottom: 0;
   color: #73dfff;
   font-size: 11px;
   font-weight: 900;
@@ -685,9 +688,9 @@
 
 .optionCard {
   display: grid;
-  grid-template-columns: 18px 1fr;
-  gap: 10px;
-  padding: 10px;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  padding: 8px;
   border: 1px solid rgba(48, 141, 255, 0.36);
   border-radius: 14px;
   color: #dce9ff;
@@ -705,9 +708,9 @@
   accent-color: #00d8ff;
 }
 
-.optionCard span {
+.optionCard > span {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .optionTitleRow strong {
@@ -722,16 +725,16 @@
 
 .optionCard small {
   color: #c8d4e7;
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.24;
 }
 
 .previewCard {
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 12px;
-  padding: clamp(18px, 2.2vw, 28px);
+  gap: 9px;
+  padding: clamp(14px, 1.6vw, 20px);
   border: 1px solid transparent;
   border-radius: 24px;
   background: linear-gradient(#050b1d, #050b1d) padding-box,
@@ -742,8 +745,9 @@
 .previewNotice,
 .warning {
   border-radius: 12px;
-  padding: 10px 12px;
-  line-height: 1.42;
+  padding: 7px 9px;
+  font-size: 12px;
+  line-height: 1.3;
 }
 
 .previewNotice {
@@ -765,8 +769,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 0 16px;
+  min-height: 38px;
+  padding: 0 14px;
   border-radius: 10px;
   font-weight: 900;
   text-decoration: none;
@@ -794,5 +798,38 @@
   .previewActions {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (min-width: 1051px) {
+  .planCard {
+    grid-template-columns: 1fr auto;
+  }
+
+  .planCardHeader,
+  .planCard p,
+  .planCard ul,
+  .planCta {
+    grid-column: 1 / -1;
+  }
+
+  .planCard h2 {
+    align-self: end;
+  }
+
+  .planCard strong {
+    align-self: end;
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1050px) {
+  .commercialOptions {
+    grid-template-columns: 1fr;
+  }
+
+  .commercialOptions legend {
+    grid-column: auto;
   }
 }
