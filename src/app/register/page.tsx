@@ -215,6 +215,25 @@ type WorkspaceRow = {
   id: string;
 };
 
+type WorkspaceSetupError = {
+  message: string;
+};
+
+const EMAIL_CONFIRMATION_WORKSPACE_MESSAGES: Record<FanMindLanguage, string> = {
+  de: "Bitte bestätige deine E-Mail-Adresse. Dein Workspace wird danach beim ersten Login eingerichtet.",
+  en: "Please confirm your email address. Your workspace will be set up after your first login.",
+};
+
+function workspaceSetupError(message: string): WorkspaceSetupError {
+  return { message };
+}
+
+function invalidWorkspaceTermsMessage(language: FanMindLanguage): string {
+  return language === "en"
+    ? "The selected package/commercial option is not enabled for productive workspace setup."
+    : "Die gewählte Paket-/Commercial-Option ist für produktive Workspace-Erstellung nicht freigegeben.";
+}
+
 async function prepareUserWorkspace(
   supabase: ReturnType<typeof createSupabaseBrowserClient>,
   userId: string,
@@ -223,11 +242,12 @@ async function prepareUserWorkspace(
   workspaceName: string,
   planId: Extract<RegisterPlanId, "pilot" | "starter">,
   commercialOption: ProductiveCommercialOption,
-): Promise<string | null> {
+  language: FanMindLanguage,
+): Promise<WorkspaceSetupError | null> {
   const commercialTerms = getRegistrationCommercialTerms(planId, commercialOption === "pilot_only" ? "starter_12m_setup_waived" : commercialOption);
 
   if (!commercialTerms || commercialTerms.commercialOption !== commercialOption) {
-    return "Die gewählte Paket-/Commercial-Option ist für produktive Workspace-Erstellung nicht freigegeben.";
+    return workspaceSetupError(invalidWorkspaceTermsMessage(language));
   }
 
   const { error: profileError } = await supabase.from("profiles").upsert({
@@ -237,7 +257,7 @@ async function prepareUserWorkspace(
   });
 
   if (profileError) {
-    return profileError.message;
+    return workspaceSetupError(profileError.message);
   }
 
   const { data: existingWorkspace, error: existingWorkspaceError } = await supabase
@@ -248,7 +268,7 @@ async function prepareUserWorkspace(
     .maybeSingle();
 
   if (existingWorkspaceError) {
-    return existingWorkspaceError.message;
+    return workspaceSetupError(existingWorkspaceError.message);
   }
 
   let workspace = existingWorkspace;
@@ -269,14 +289,14 @@ async function prepareUserWorkspace(
       .single();
 
     if (workspaceError) {
-      return workspaceError.message;
+      return workspaceSetupError(workspaceError.message);
     }
 
     workspace = insertedWorkspace;
   }
 
   if (!workspace?.id) {
-    return "Workspace konnte nicht erstellt oder geladen werden.";
+    return workspaceSetupError(language === "en" ? "Workspace could not be created or loaded." : "Workspace konnte nicht erstellt oder geladen werden.");
   }
 
   const { data: existingMember, error: existingMemberError } = await supabase
@@ -288,7 +308,7 @@ async function prepareUserWorkspace(
     .maybeSingle();
 
   if (existingMemberError) {
-    return existingMemberError.message;
+    return workspaceSetupError(existingMemberError.message);
   }
 
   if (existingMember) {
@@ -301,7 +321,7 @@ async function prepareUserWorkspace(
     role: "owner",
   });
 
-  return memberError?.message ?? null;
+  return memberError ? workspaceSetupError(memberError.message) : null;
 }
 
 export default function RegisterPage({ searchParams }: RegisterPageProps) {
@@ -380,12 +400,13 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
           organization,
           selectedPlanId,
           selectedCommercialOption,
+          language,
         );
 
         if (workspaceError) {
           setError(language === "en"
-            ? `Registration succeeded, but profile/workspace setup failed: ${workspaceError}. Please check the RLS policies from docs/database/fanmind_mvp_schema.sql.`
-            : `Registrierung erfolgreich, aber Profil/Workspace konnte noch nicht angelegt werden: ${workspaceError}. Bitte prüfe die RLS-Policies aus docs/database/fanmind_mvp_schema.sql.`);
+            ? `Registration succeeded, but profile/workspace setup failed: ${workspaceError.message}. Please check the RLS policies from docs/database/fanmind_mvp_schema.sql.`
+            : `Registrierung erfolgreich, aber Profil/Workspace konnte noch nicht angelegt werden: ${workspaceError.message}. Bitte prüfe die RLS-Policies aus docs/database/fanmind_mvp_schema.sql.`);
           return;
         }
       }
@@ -566,7 +587,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               {success && (
                 <p className={styles.success} role="status">
                   {copy.success} {awaitingEmailConfirmation
-                    ? (language === "en" ? "Please confirm your email address. Your workspace will be set up after your first login." : "Bitte bestätige deine E-Mail-Adresse. Dein Workspace wird danach beim ersten Login eingerichtet.")
+                    ? (EMAIL_CONFIRMATION_WORKSPACE_MESSAGES[language])
                     : selectedPlanId === "pilot"
                       ? (language === "en" ? "Pilot / Setup stays a demo/setup month without commitment. You will be forwarded to onboarding." : "Pilot / Setup bleibt ein Demo-/Setupmonat ohne Bindung. Du wirst ins Onboarding weitergeleitet.")
                       : (language === "en" ? "Profile, workspace and Starter option are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Starter-Option werden vorbereitet. Du wirst ins Onboarding weitergeleitet.")} <a href={selectedOnboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>

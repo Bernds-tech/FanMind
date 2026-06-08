@@ -41,10 +41,14 @@ create table if not exists public.workspaces (
 );
 
 -- Migration für bereits bestehende Supabase-Tabellen:
+-- 1) Neue Commercial-Spalten ergänzen. Defaults entsprechen der empfohlenen Starter-Option.
 -- alter table public.workspaces add column if not exists commercial_option text not null default 'starter_12m_setup_waived';
 -- alter table public.workspaces add column if not exists setup_fee_cents integer not null default 0;
 -- alter table public.workspaces add column if not exists monthly_fee_cents integer not null default 29900;
 -- alter table public.workspaces add column if not exists commitment_months integer not null default 12;
+--
+-- 2) Check Constraints ergänzen. Falls ein Constraint-Name in der bestehenden Tabelle schon
+--    existiert, die jeweilige add-constraint-Zeile überspringen oder zuerst gezielt droppen.
 -- alter table public.workspaces add constraint workspaces_plan_id_check check (plan_id in ('pilot', 'starter', 'growth', 'agency'));
 -- alter table public.workspaces add constraint workspaces_commercial_option_check check (commercial_option in ('pilot_only', 'starter_paid_setup', 'starter_12m_setup_waived'));
 -- alter table public.workspaces add constraint workspaces_commitment_months_check check (commitment_months in (0, 12));
