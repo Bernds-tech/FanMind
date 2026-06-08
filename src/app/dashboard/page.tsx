@@ -44,7 +44,7 @@ type KpiCard = {
   helper: string;
   icon: KpiIconName;
   tone: "blue" | "cyan" | "violet" | "violetBlue" | "green" | "amber";
-  sparklinePoints: string;
+  sparklinePath: string;
   infoLabel: string;
 };
 
@@ -234,7 +234,8 @@ function getKpiCards(): KpiCard[] {
       helper: "Sandra M., Alex K., Ella L.",
       icon: "contacts",
       tone: "blue",
-      sparklinePoints: "2,28 18,21 34,24 52,13 70,17 88,7 106,11 124,4",
+      sparklinePath:
+        "M2 19 C14 18 17 14 28 14 S42 18 52 12 S66 12 74 10 S87 8 96 10 S112 10 124 6",
       infoLabel: "Demo-Kontakte sind vorbereitete Beispieldaten.",
     },
     {
@@ -243,7 +244,8 @@ function getKpiCards(): KpiCard[] {
       helper: "0 Social-Kanäle aktiv",
       icon: "channels",
       tone: "cyan",
-      sparklinePoints: "2,25 18,24 34,26 52,22 70,23 88,20 106,21 124,18",
+      sparklinePath:
+        "M2 16 C15 15 21 15 30 15.5 S43 17 54 14.5 S72 14.5 84 13 S101 14 124 10",
       infoLabel: "Social-Kanäle sind noch nicht verbunden.",
     },
     {
@@ -252,7 +254,8 @@ function getKpiCards(): KpiCard[] {
       helper: "Demo-Aufgaben",
       icon: "followups",
       tone: "violet",
-      sparklinePoints: "2,24 18,18 34,20 52,10 70,14 88,8 106,13 124,6",
+      sparklinePath:
+        "M2 17 C14 16 18 12 29 12 S43 15 52 10 S67 8 76 10 S90 12 99 9 S112 11 124 7",
       infoLabel: "Follow-ups sind Demo-Aufgaben zur manuellen Prüfung.",
     },
     {
@@ -261,7 +264,8 @@ function getKpiCards(): KpiCard[] {
       helper: "Mensch prüft und sendet selbst",
       icon: "ai",
       tone: "violetBlue",
-      sparklinePoints: "2,27 18,16 34,22 52,12 70,19 88,9 106,15 124,5",
+      sparklinePath:
+        "M2 18 C14 15 19 10 30 12 S43 17 54 11 S69 11 80 13 S91 9 102 9 S114 12 124 6",
       infoLabel: "KI-Vorschläge bleiben vorbereitet und werden manuell gesendet.",
     },
     {
@@ -270,7 +274,8 @@ function getKpiCards(): KpiCard[] {
       helper: "Paketabhängig vorbereitet",
       icon: "import",
       tone: "amber",
-      sparklinePoints: "2,29 18,23 34,25 52,18 70,21 88,12 106,15 124,8",
+      sparklinePath:
+        "M2 19 C14 16 20 14 30 15 S44 17 54 13 S68 13 78 14 S91 8 102 10 S114 10 124 6",
       infoLabel: "CSV-Import ist als paketabhängige Vorschau vorbereitet.",
     },
     {
@@ -279,7 +284,8 @@ function getKpiCards(): KpiCard[] {
       helper: "Kontakte, Follow-ups, Roadmap",
       icon: "mvp",
       tone: "green",
-      sparklinePoints: "2,26 18,21 34,17 52,19 70,12 88,14 106,8 124,5",
+      sparklinePath:
+        "M2 17 C16 15 25 13 36 12 S52 15 64 10 S80 11 91 10 S106 7 124 6",
       infoLabel: "Der sichtbare MVP-Kern umfasst Kontakte, Follow-ups und Roadmap-Hinweise.",
     },
   ];
@@ -745,15 +751,21 @@ function WorkspaceDetails({
                   i
                 </span>
               </div>
-              <strong className={styles.kpiValue}>{card.value}</strong>
-              <p>{card.helper}</p>
+              <strong
+                className={`${styles.kpiValue} ${
+                  card.value.length > 3 ? styles.kpiValueText : ""
+                }`}
+              >
+                {card.value}
+              </strong>
+              <p className={styles.kpiMeta}>{card.helper}</p>
               <svg
                 className={styles.kpiSparkline}
                 aria-hidden="true"
-                viewBox="0 0 126 34"
+                viewBox="0 0 126 24"
                 preserveAspectRatio="none"
               >
-                <polyline points={card.sparklinePoints} />
+                <path d={card.sparklinePath} />
               </svg>
             </article>
           ))}
