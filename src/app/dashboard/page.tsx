@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
@@ -269,6 +268,7 @@ function getKpiCards(): KpiCard[] {
       sparklinePath:
         "M2 17 C13 16 20 14 30 15 S44 17 54 13 S68 13 78 14 S91 8 102 10 S114 10 124 6",
       infoLabel: "Produktive Kampagnen sind noch nicht freigeschaltet.",
+      isComingSoon: true,
     },
     {
       label: "Reaktivierung",
@@ -289,6 +289,7 @@ function getKpiCards(): KpiCard[] {
       sparklinePath:
         "M2 16 C15 15 21 15 30 15.5 S43 17 54 14.5 S72 14.5 84 13 S101 14 124 10",
       infoLabel: "Conversion-Tracking ist noch nicht produktiv umgesetzt.",
+      isComingSoon: true,
     },
   ];
 }
@@ -527,7 +528,7 @@ function getPlanStatus(
 
 function ComingSoonBadge() {
   return (
-    <Image
+    <img
       src="/assets/coming-soon-badge.png"
       alt="Coming Soon"
       width={90}
@@ -1043,10 +1044,7 @@ function WorkspaceDetails({
             </div>
           </article>
 
-          <article
-            className={`${styles.moduleCard} ${styles.cardWithComingSoon}`}
-            id="ai-suggestions"
-          >
+          <article className={styles.moduleCard} id="ai-suggestions">
             <div className={styles.moduleHeader}>
               <div>
                 <p className={styles.eyebrow}>KI-Empfehlungen</p>
@@ -1063,7 +1061,6 @@ function WorkspaceDetails({
                 </div>
               ))}
             </div>
-            <ComingSoonBadge />
           </article>
 
           <article
@@ -1145,7 +1142,7 @@ function WorkspaceDetails({
         </section>
 
         <section
-          className={`${styles.featureSection} ${styles.cardWithComingSoon}`}
+          className={styles.featureSection}
           id="roadmap"
           aria-labelledby="features-title"
         >
@@ -1181,7 +1178,6 @@ function WorkspaceDetails({
               }
             </span>
           </div>
-          <ComingSoonBadge />
         </section>
 
         <div className={styles.safetyNote} role="note">
