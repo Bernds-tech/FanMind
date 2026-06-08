@@ -62,12 +62,6 @@ type TaskPreview = {
   status: string;
 };
 
-type ConversationPreview = {
-  person: string;
-  message: string;
-  context: string;
-};
-
 type RecommendationPreview = {
   title: string;
   text: string;
@@ -235,275 +229,112 @@ function canShowContactAction(feature?: ResolvedDashboardFeature): boolean {
 }
 
 function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
-  if (workspace.plan_id === "pilot") {
-    return [
-      {
-        label: "Demo-Kontakte",
-        value: "3",
-        helper: "Sandra M., Alex K., Ella L. · Demo",
-        tone: "blue",
-      },
-      {
-        label: "Kanäle verbunden",
-        value: "0",
-        helper: "Integrationen auf Roadmap",
-        tone: "cyan",
-      },
-      {
-        label: "Offene Follow-ups",
-        value: "3",
-        helper: "Demo-Aufgaben für manuelle Prüfung",
-        tone: "cyan",
-      },
-      {
-        label: "KI-Vorschläge",
-        value: "Demo",
-        helper: "Vorbereitet · kein automatisches Senden",
-        tone: "violet",
-      },
-      {
-        label: "CSV-Import",
-        value: "Vorschau",
-        helper: "Importfluss noch nicht produktiv",
-        tone: "amber",
-      },
-      {
-        label: "Status",
-        value: "MVP-Kern aktiv",
-        helper: "Setupdaten statt Live-Analytics",
-        tone: "green",
-      },
-    ];
-  }
-
-  if (workspace.plan_id === "starter") {
-    return [
-      {
-        label: "Kontakte",
-        value: "Bereit",
-        helper: "Produktiver Einstieg · noch kein Live-Zähler",
-        tone: "blue",
-      },
-      {
-        label: "Kanäle verbunden",
-        value: "0",
-        helper: "Integrationen auf Roadmap",
-        tone: "cyan",
-      },
-      {
-        label: "Offene Follow-ups",
-        value: "0",
-        helper: "Bereit für manuelle Aufgaben",
-        tone: "cyan",
-      },
-      {
-        label: "KI-Vorschläge",
-        value: "Limitiert",
-        helper: "Mensch prüft und sendet selbst",
-        tone: "violet",
-      },
-      {
-        label: "CSV-Import",
-        value: "Aktiv",
-        helper: "MVP-Import vorbereitet",
-        tone: "green",
-      },
-      {
-        label: "Status",
-        value: "MVP-Kern aktiv",
-        helper: "Kontakt anlegen oder CSV importieren",
-        tone: "amber",
-      },
-    ];
-  }
+  const isPilot = workspace.plan_id === "pilot";
+  const isStarter = workspace.plan_id === "starter";
 
   return [
     {
-      label: "Kontakte",
-      value: "Vorschau",
-      helper: "Noch keine produktive Engine",
+      label: "Demo-Kontakte",
+      value: "3",
+      helper: isStarter
+        ? "Starter-Vorbereitung mit Sandra M., Alex K. und Ella L."
+        : "Sandra M., Alex K., Ella L. · Demo/Preview",
+      tone: "blue",
+    },
+    {
+      label: "Kanäle verbunden",
+      value: "0",
+      helper: "Keine Social-Media-Integration verbunden",
+      tone: "cyan",
+    },
+    {
+      label: "Offene Follow-ups",
+      value: "3",
+      helper: isPilot ? "Demo-Aufgaben" : "Manuelle Aufgaben vorbereitet",
       tone: "cyan",
     },
     {
       label: "KI-Vorschläge",
-      value: "Vorschau",
-      helper: "Keine automatische Aktion",
+      value: isStarter ? "Limitiert" : "Vorbereitet",
+      helper: "Mensch prüft und sendet selbst",
       tone: "violet",
     },
     {
-      label: "CSV-Import",
-      value: "Roadmap",
-      helper: "Scope vor Produktivstart klären",
-      tone: "amber",
+      label: "Import",
+      value: isStarter ? "CSV aktiv" : "CSV Vorschau",
+      helper: isStarter
+        ? "CSV-Import im MVP nutzbar"
+        : "CSV-Import paketabhängig vorbereitet",
+      tone: isStarter ? "green" : "amber",
     },
     {
-      label: "Status",
-      value: "Demo/Preview",
-      helper: "Erstgespräch und Roadmap getrennt",
+      label: "MVP-Kern aktiv",
+      value: isPilot || isStarter ? "Ja" : "Vorschau",
+      helper: "Login/Workspace, Kontakte, Follow-ups und Roadmap sichtbar",
       tone: "green",
-    },
-    {
-      label: "Paket",
-      value: workspace.plan_id === "growth" ? "Growth" : "Agency",
-      helper: "Vorschau · nicht produktiv aktiviert",
-      tone: "amber",
     },
   ];
 }
 
 function getContactRows(workspace: WorkspaceDashboardRow): ContactPreviewRow[] {
-  if (workspace.plan_id === "pilot") {
-    return [
-      {
-        name: "Sandra M.",
-        status: "Buyer",
-        profile: "Mia Active Club",
-        source: "Demo/Manuell",
-        tags: ["buyer", "premium_interest"],
-        score: 92,
-        lastContact: "Heute, 09:42",
-        nextFollowUp: "Morgen, 10:00",
-      },
-      {
-        name: "Alex K.",
-        status: "VIP",
-        profile: "DJ Nova",
-        source: "Demo/Manuell",
-        tags: ["vip", "event_interest"],
-        score: 88,
-        lastContact: "Gestern, 18:21",
-        nextFollowUp: "Heute, 14:00",
-      },
-      {
-        name: "Ella L.",
-        status: "Inactive",
-        profile: "Team Arena",
-        source: "Demo/Manuell",
-        tags: ["reactivation"],
-        score: 45,
-        lastContact: "12.05.2025",
-        nextFollowUp: "Überfällig",
-      },
-    ];
-  }
-
-  if (workspace.plan_id === "starter") {
-    return [];
-  }
+  const suffix =
+    workspace.plan_id === "starter" ? "Starter-Vorbereitung" : "Demo/Manuell";
 
   return [
     {
-      name: "Kontaktvorschau",
-      status: "Preview",
-      profile: "Roadmap",
-      source: "Vorschau/Manuell",
-      tags: ["scope"],
-      score: "—",
-      lastContact: "Vorschau",
-      nextFollowUp: "Scope klären",
+      name: "Sandra M.",
+      status: workspace.plan_id === "starter" ? "Starter-Demo" : "Buyer",
+      profile: "Mia Active Club",
+      source: suffix,
+      tags: ["buyer", "premium_interest"],
+      score: 92,
+      lastContact: "Heute, 09:42",
+      nextFollowUp: "Morgen, 10:00",
     },
     {
-      name: "Segmentvorschau",
-      status: "Preview",
-      profile: "Nicht produktiv",
-      source: "Vorschau/Manuell",
-      tags: ["roadmap"],
-      score: "—",
-      lastContact: "Vorschau",
-      nextFollowUp: "Upgrade prüfen",
+      name: "Alex K.",
+      status: workspace.plan_id === "starter" ? "Starter-Demo" : "VIP",
+      profile: "DJ Nova",
+      source: suffix,
+      tags: ["vip", "event_interest"],
+      score: 88,
+      lastContact: "Gestern, 18:21",
+      nextFollowUp: "Heute, 14:00",
+    },
+    {
+      name: "Ella L.",
+      status: workspace.plan_id === "starter" ? "Starter-Demo" : "Inactive",
+      profile: "Team Arena",
+      source: suffix,
+      tags: ["reactivation"],
+      score: 45,
+      lastContact: "12.05.2025",
+      nextFollowUp: "Überfällig",
     },
   ];
 }
 
 function getFollowUps(workspace: WorkspaceDashboardRow): TaskPreview[] {
-  if (workspace.plan_id === "pilot") {
-    return [
-      {
-        title: "KI-Vorschlag prüfen",
-        person: "Sandra M.",
-        due: "Morgen 10:00",
-        status: "Demo",
-      },
-      {
-        title: "VIP-Info nachfassen",
-        person: "Alex K.",
-        due: "Heute 14:00",
-        status: "Demo",
-      },
-      {
-        title: "Reaktivierung prüfen",
-        person: "Ella L.",
-        due: "Überfällig",
-        status: "Demo",
-      },
-    ];
-  }
-
-  if (workspace.plan_id === "starter") {
-    return [
-      {
-        title: "Erstes Follow-up anlegen",
-        person: "Noch kein Kontakt",
-        due: "Bereit",
-        status: "MVP",
-      },
-      {
-        title: "CSV-Liste prüfen",
-        person: "Import vorbereiten",
-        due: "Optional",
-        status: "MVP",
-      },
-    ];
-  }
+  const status = workspace.plan_id === "starter" ? "MVP" : "Demo";
 
   return [
     {
-      title: "Roadmap-Follow-ups abstimmen",
-      person: "Workspace",
-      due: "Vorschau",
-      status: "Preview",
+      title: "KI-Vorschlag prüfen",
+      person: "Sandra M.",
+      due: "Morgen 10:00",
+      status,
     },
-  ];
-}
-
-function getConversations(
-  workspace: WorkspaceDashboardRow,
-): ConversationPreview[] {
-  if (workspace.plan_id === "pilot") {
-    return [
-      {
-        person: "Sandra M.",
-        message: "Fragt nach dem nächsten Meet & Greet.",
-        context: "Demo-Kontext für manuelle Antwort",
-      },
-      {
-        person: "Alex K.",
-        message: "Reagiert auf Newsletter-Thema.",
-        context: "Demo-Memory: Newsletter",
-      },
-      {
-        person: "Ella L.",
-        message: "Möchte Eventinfos speichern.",
-        context: "Demo-Follow-up vorbereitet",
-      },
-    ];
-  }
-
-  if (workspace.plan_id === "starter") {
-    return [
-      {
-        person: "Noch keine Gespräche",
-        message: "Lege Kontakte an oder bereite einen CSV-Import vor.",
-        context: "Placeholder bis echte Kontakte/Nachrichten existieren",
-      },
-    ];
-  }
-
-  return [
     {
-      person: "Preview",
-      message: "Gesprächskontext wird im MVP-Scope vorbereitet.",
-      context: "Nicht produktiv freigeschaltet",
+      title: "VIP-Info nachfassen",
+      person: "Alex K.",
+      due: "Heute 14:00",
+      status,
+    },
+    {
+      title: "Reaktivierung prüfen",
+      person: "Ella L.",
+      due: "Überfällig",
+      status,
     },
   ];
 }
@@ -597,6 +428,18 @@ function getChannelStatuses(
       tone: "roadmap",
     },
     {
+      channel: "Facebook",
+      status: "Roadmap",
+      note: "0 verbunden · Integration auf Roadmap",
+      tone: "roadmap",
+    },
+    {
+      channel: "X/Twitter",
+      status: "Roadmap",
+      note: "0 verbunden · Integration auf Roadmap",
+      tone: "roadmap",
+    },
+    {
       channel: "Discord",
       status: "Roadmap",
       note: "0 verbunden · Integration auf Roadmap",
@@ -675,8 +518,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
     {
       label: "Kanäle",
       href: "#channels",
-      featureKey: "integrations",
-      fallback: "Roadmap",
+      fallback: "Roadmap/Vorschau",
     },
     {
       label: "Segmente",
@@ -699,14 +541,12 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
     {
       label: "Kampagnen",
       href: "#roadmap",
-      featureKey: "campaigns",
-      fallback: "Roadmap",
+      fallback: "Roadmap/Vorschau",
     },
     {
       label: "Analytics",
       href: "#roadmap",
-      featureKey: "analytics",
-      fallback: "Roadmap",
+      fallback: "Roadmap/Vorschau",
     },
     {
       label: "Import",
@@ -724,7 +564,6 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
   ];
   const contactRows = getContactRows(workspace);
   const followUps = getFollowUps(workspace);
-  const conversations = getConversations(workspace);
   const recommendations = getRecommendations(workspace);
   const kpiCards = getKpiCards(workspace);
   const channelStatuses = getChannelStatuses(workspace);
@@ -903,79 +742,63 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               </div>
               <span>
                 {workspace.plan_id === "starter"
-                  ? "Produktiver Einstieg"
+                  ? "Starter-Vorbereitung"
                   : workspace.plan_id === "pilot"
                     ? "Demo-Daten"
                     : "Vorschau"}
               </span>
             </div>
-            {contactRows.length > 0 ? (
-              <div className={styles.tableWrap}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Status</th>
-                      <th>Profil</th>
-                      <th>Kanal/Quelle</th>
-                      <th>Tags</th>
-                      <th>Score</th>
-                      <th>Letzter Kontakt</th>
-                      <th>Nächster Follow-up</th>
+            <p className={styles.moduleText}>
+              Demo-/Starter-Daten zeigen die spätere Kontaktlogik. Es sind keine
+              echten Social-Media-Kanäle verbunden und keine Nachrichten werden
+              automatisch versendet.
+            </p>
+            <div className={styles.tableWrap}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Profil</th>
+                    <th>Kanal/Quelle</th>
+                    <th>Tags</th>
+                    <th>Score</th>
+                    <th>Letzter Kontakt</th>
+                    <th>Nächster Follow-up</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contactRows.map((row) => (
+                    <tr key={row.name}>
+                      <td>
+                        <strong className={styles.contactName}>
+                          {row.name}
+                        </strong>
+                      </td>
+                      <td>
+                        <span className={styles.tableBadge}>{row.status}</span>
+                      </td>
+                      <td>{row.profile}</td>
+                      <td>{row.source}</td>
+                      <td>
+                        <div className={styles.tagList}>
+                          {row.tags.map((tag) => (
+                            <span key={`${row.name}-${tag}`}>{tag}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td>
+                        <strong className={styles.scoreValue}>
+                          {row.score}
+                        </strong>
+                      </td>
+                      <td>{row.lastContact}</td>
+                      <td>{row.nextFollowUp}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {contactRows.map((row) => (
-                      <tr key={row.name}>
-                        <td>
-                          <strong className={styles.contactName}>
-                            {row.name}
-                          </strong>
-                        </td>
-                        <td>
-                          <span className={styles.tableBadge}>
-                            {row.status}
-                          </span>
-                        </td>
-                        <td>{row.profile}</td>
-                        <td>{row.source}</td>
-                        <td>
-                          <div className={styles.tagList}>
-                            {row.tags.map((tag) => (
-                              <span key={`${row.name}-${tag}`}>{tag}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td>
-                          <strong className={styles.scoreValue}>
-                            {row.score}
-                          </strong>
-                        </td>
-                        <td>{row.lastContact}</td>
-                        <td>{row.nextFollowUp}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className={styles.emptyState}>
-                <strong>Bereit für produktive Kontakte</strong>
-                <p>
-                  Starter ist vorbereitet. Lege den ersten Kontakt an oder
-                  starte später den CSV-Import, sobald echte Daten vorhanden
-                  sind.
-                </p>
-                <div className={styles.emptyActions}>
-                  <a className={styles.inlineButton} href="#contacts">
-                    Kontakt anlegen
-                  </a>
-                  <a className={styles.ghostButton} href="#csv-import">
-                    CSV-Import starten
-                  </a>
-                </div>
-              </div>
-            )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <aside className={styles.rightRail} aria-label="Status und Paket">
@@ -1016,6 +839,10 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               <p className={styles.eyebrow}>Paket & Vertrag</p>
               <h2 id="contract-title">{display.packageName}</h2>
               <dl className={styles.details}>
+                <div>
+                  <dt>plan_id</dt>
+                  <dd>{workspace.plan_id}</dd>
+                </div>
                 <div>
                   <dt>commercial_option</dt>
                   <dd>{display.commercialOptionName}</dd>
@@ -1075,23 +902,20 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             </div>
           </article>
 
-          <article className={styles.moduleCard}>
+          <article className={`${styles.moduleCard} ${styles.guardrailCard}`}>
             <div className={styles.moduleHeader}>
               <div>
-                <p className={styles.eyebrow}>Neueste Gespräche</p>
-                <h2>Nachrichtenkontext</h2>
+                <p className={styles.eyebrow}>Kein automatisches Senden</p>
+                <h2>Versand bleibt menschlich</h2>
               </div>
-              <span>Kein Versand</span>
+              <span>Immer sichtbar</span>
             </div>
-            <div className={styles.conversationList}>
-              {conversations.map((conversation) => (
-                <div key={`${conversation.person}-${conversation.message}`}>
-                  <strong>{conversation.person}</strong>
-                  <p>{conversation.message}</p>
-                  <small>{conversation.context}</small>
-                </div>
-              ))}
-            </div>
+            <p className={styles.moduleText}>
+              FanMind bereitet Kontaktkontext, Follow-ups und KI-Vorschläge vor.
+              Der Workspace sendet keine Nachrichten automatisch; jede Antwort,
+              Kampagne oder Kanalaktion muss manuell geprüft und selbst
+              ausgelöst werden.
+            </p>
           </article>
 
           <article className={styles.moduleCard} id="ai-suggestions">
@@ -1172,10 +996,18 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             </div>
             <p className={styles.moduleText}>
               CSV ist im Starter-MVP aktiv und im Pilot als Vorschau markiert.
-              Kampagnen, Analytics, Scraping und Social-Media-Integrationen
-              werden nur als Roadmap gezeigt und nicht als aktive Vollversion
-              verkauft.
+              Kampagnen, Analytics, echte Social-Media-Integrationen und
+              automatisches Senden sind nicht aktiv.
             </p>
+            <div className={styles.roadmapStack}>
+              <span>Instagram · Roadmap</span>
+              <span>TikTok · Roadmap</span>
+              <span>WhatsApp · Roadmap</span>
+              <span>Facebook · Roadmap</span>
+              <span>X/Twitter · Roadmap</span>
+              <span>Discord · Roadmap</span>
+              <span>Echte Kampagnen & Analytics · Roadmap</span>
+            </div>
           </article>
         </section>
 
