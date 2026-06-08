@@ -86,3 +86,45 @@
   text-decoration: none;
   cursor: pointer;
 }
+
+.error {
+  border: 1px solid rgba(255, 98, 117, 0.54);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: #ffd8df;
+  background: rgba(126, 18, 39, 0.28);
+  line-height: 1.5;
+}
+
+.details {
+  display: grid;
+  gap: 10px;
+  margin: 24px 0 0;
+}
+
+.details div {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.55fr) 1fr;
+  gap: 12px;
+  border: 1px solid rgba(39, 132, 255, 0.28);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(4, 17, 41, 0.58);
+}
+
+.details dt {
+  color: #9bb4d4;
+  font-weight: 800;
+}
+
+.details dd {
+  margin: 0;
+  color: #f7f8ff;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .details div {
+    grid-template-columns: 1fr;
+  }
+}
