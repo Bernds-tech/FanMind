@@ -25,15 +25,25 @@ export type WorkspaceBackfillRow = {
   commitment_months: 0 | 12;
 };
 
+export type WorkspaceDashboardRow = WorkspaceBackfillRow & {
+  role: string;
+};
+
 type WorkspaceMemberRow = {
   id: string;
   workspace_id: string;
+  role: string;
 };
 
 type WorkspaceBackfillResult = {
   workspace: WorkspaceBackfillRow | null;
   error: Error | null;
   created: boolean;
+};
+
+type WorkspaceDashboardResult = {
+  workspace: WorkspaceDashboardRow | null;
+  error: Error | null;
 };
 
 type PostgrestResult<T> = {
@@ -108,6 +118,77 @@ export async function signOutSupabaseServerSession(): Promise<void> {
 
   cookieStore.delete(SUPABASE_ACCESS_TOKEN_COOKIE);
   cookieStore.delete(SUPABASE_REFRESH_TOKEN_COOKIE);
+}
+
+export async function getUserWorkspaceDashboard(user: SupabaseServerUser): Promise<WorkspaceDashboardResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return workspaceDashboardError("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.");
+  }
+
+  const memberResult = await postgrestSelect<WorkspaceMemberRow>(
+    "workspace_members",
+    accessToken,
+    "id,workspace_id,role",
+    [["user_id", user.id]],
+    1,
+    true,
+  );
+
+  if (memberResult.error) {
+    return workspaceDashboardError(`Workspace-Mitgliedschaft konnte nicht gelesen werden: ${memberResult.error.message}`);
+  }
+
+  if (memberResult.data?.workspace_id) {
+    const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
+      "workspaces",
+      accessToken,
+      WORKSPACE_COLUMNS,
+      [["id", memberResult.data.workspace_id]],
+      1,
+      true,
+    );
+
+    if (workspaceResult.error) {
+      return workspaceDashboardError(`Workspace konnte nicht gelesen werden: ${workspaceResult.error.message}`);
+    }
+
+    if (workspaceResult.data) {
+      return {
+        workspace: {
+          ...workspaceResult.data,
+          role: memberResult.data.role,
+        },
+        error: null,
+      };
+    }
+  }
+
+  const ownerWorkspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
+    "workspaces",
+    accessToken,
+    WORKSPACE_COLUMNS,
+    [["owner_user_id", user.id]],
+    1,
+    true,
+  );
+
+  if (ownerWorkspaceResult.error) {
+    return workspaceDashboardError(`Workspace konnte nicht gesucht werden: ${ownerWorkspaceResult.error.message}`);
+  }
+
+  if (ownerWorkspaceResult.data) {
+    return {
+      workspace: {
+        ...ownerWorkspaceResult.data,
+        role: "owner",
+      },
+      error: null,
+    };
+  }
+
+  return workspaceDashboardError("Workspace konnte noch nicht geladen werden.");
 }
 
 export async function ensureUserWorkspace(user: SupabaseServerUser): Promise<WorkspaceBackfillResult> {
@@ -321,6 +402,10 @@ async function postgrestSelect<T>(
 
 function workspaceBackfillError(message: string): WorkspaceBackfillResult {
   return { workspace: null, error: new Error(message), created: false };
+}
+
+function workspaceDashboardError(message: string): WorkspaceDashboardResult {
+  return { workspace: null, error: new Error(message) };
 }
 
 function stringMetadataValue(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
