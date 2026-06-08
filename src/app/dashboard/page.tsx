@@ -16,7 +16,7 @@ import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
   workspace: WorkspaceDashboardRow;
-  email?: string;
+  userDisplayName?: string;
 };
 
 type WorkspaceDisplay = {
@@ -34,6 +34,8 @@ type KpiCard = {
   label: string;
   value: string;
   helper: string;
+  icon: string;
+  status: string;
   tone: "blue" | "cyan" | "violet" | "green" | "amber";
 };
 
@@ -224,40 +226,52 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
       label: "Demo-Kontakte",
       value: "3",
       helper: isStarter
-        ? "Starter-Vorbereitung mit Sandra M., Alex K. und Ella L."
-        : "Sandra M., Alex K., Ella L. · Demo/Preview",
+        ? "Starter-Vorbereitung"
+        : "Sandra M., Alex K., Ella L.",
+      icon: "👥",
+      status: "Demo",
       tone: "blue",
     },
     {
       label: "Kanäle verbunden",
       value: "0",
-      helper: "Keine Social-Media-Integration verbunden",
+      helper: "0 Social-Kanäle aktiv",
+      icon: "◎",
+      status: "Manuell",
       tone: "cyan",
     },
     {
       label: "Offene Follow-ups",
       value: "3",
-      helper: isPilot ? "Demo-Aufgaben" : "Manuelle Aufgaben vorbereitet",
+      helper: isPilot ? "Demo-Aufgaben" : "Manuell vorbereitet",
+      icon: "↗",
+      status: "Offen",
       tone: "cyan",
     },
     {
       label: "KI-Vorschläge",
-      value: isStarter ? "Limitiert" : "Vorbereitet",
+      value: "Vorbereitet",
       helper: "Mensch prüft und sendet selbst",
+      icon: "✦",
+      status: "Sicher",
       tone: "violet",
     },
     {
       label: "Import",
-      value: isStarter ? "CSV aktiv" : "CSV Vorschau",
+      value: "CSV Vorschau",
       helper: isStarter
         ? "CSV-Import im MVP nutzbar"
-        : "CSV-Import paketabhängig vorbereitet",
+        : "Paketabhängig vorbereitet",
+      icon: "⇩",
+      status: isStarter ? "Aktiv" : "Vorschau",
       tone: isStarter ? "green" : "amber",
     },
     {
       label: "MVP-Kern aktiv",
-      value: isPilot || isStarter ? "Ja" : "Vorschau",
-      helper: "Login/Workspace, Kontakte, Follow-ups und Roadmap sichtbar",
+      value: "Ja",
+      helper: "Kontakte, Follow-ups, Roadmap",
+      icon: "✓",
+      status: "MVP",
       tone: "green",
     },
   ];
@@ -435,6 +449,30 @@ function getChannelStatuses(
   ];
 }
 
+function stringMetadataValue(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = metadata?.[key];
+
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function getUserDisplayName(
+  metadata: Record<string, unknown> | undefined,
+  workspaceName: string,
+): string {
+  return (
+    stringMetadataValue(metadata, "display_name") ??
+    stringMetadataValue(metadata, "name") ??
+    stringMetadataValue(metadata, "full_name") ??
+    workspaceName ??
+    "Nutzer"
+  );
+}
+
 function getInitials(nameOrEmail?: string): string {
   const fallback = "FM";
 
@@ -504,7 +542,10 @@ function SidebarItem({
   );
 }
 
-function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
+function WorkspaceDetails({
+  workspace,
+  userDisplayName,
+}: WorkspaceDetailsProps) {
   const display = getWorkspaceDisplay(workspace);
   const featureGroups = getDashboardFeatureGroups(
     workspace.plan_id,
@@ -522,10 +563,11 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
     )
     .slice(0, 6);
   const pageTitle = "Dashboard";
-  const pageSubtitle = "Willkommen zurück. Hier ist dein FanMind Überblick.";
+  const displayName = userDisplayName ?? workspace.name ?? "Nutzer";
+  const pageSubtitle = `Willkommen zurück, ${displayName} 👋`;
   const primaryActionLabel = "+ Neuer Kontakt";
   const planStatus = getPlanStatus(workspace);
-  const userLabel = email ?? workspace.name;
+  const userLabel = displayName;
   const mainNavigation: SidebarLink[] = [
     { label: "Dashboard", href: "/dashboard", active: true },
     { label: "Fans", href: "#contacts" },
@@ -609,10 +651,16 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
       <div className={styles.dashboardContent}>
         <header className={styles.topbar}>
           <div className={styles.titleCluster}>
-            <p className={styles.eyebrow}>Multi-Channel CRM Workspace</p>
+            <p className={styles.eyebrow}>
+              {workspace.name} · {display.packageName} · {planStatus}
+            </p>
             <h1>{pageTitle}</h1>
             <p>{pageSubtitle}</p>
-            <span>Kein automatisches Senden – Mensch prüft und sendet selbst.</span>
+            <div className={styles.statusPills}>
+              <span>Workspace geladen</span>
+              <span>0 Kanäle verbunden</span>
+              <span>Kein automatisches Senden</span>
+            </div>
           </div>
           <div className={styles.topbarActions}>
             <label className={styles.searchBox}>
@@ -640,9 +688,15 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               key={card.label}
               className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}
             >
-              <span>{card.label}</span>
+              <div className={styles.kpiMeta}>
+                <span className={styles.kpiIcon} aria-hidden="true">
+                  {card.icon}
+                </span>
+                <span>{card.label}</span>
+              </div>
               <strong>{card.value}</strong>
               <p>{card.helper}</p>
+              <small>{card.status}</small>
             </article>
           ))}
         </section>
@@ -1016,7 +1070,13 @@ export default async function DashboardPage() {
   return (
     <main className={styles.page}>
       {workspace ? (
-        <WorkspaceDetails workspace={workspace} email={data.user.email} />
+        <WorkspaceDetails
+          workspace={workspace}
+          userDisplayName={getUserDisplayName(
+            data.user.user_metadata,
+            workspace.name,
+          )}
+        />
       ) : (
         <section className={styles.fallbackCard} aria-label="FanMind Workspace">
           <div>
