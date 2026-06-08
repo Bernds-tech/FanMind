@@ -232,13 +232,13 @@ function getKpiCards(): KpiCard[] {
   return [
     {
       label: "Gesamtfans",
-      value: "3",
-      meta: "Demo-Daten · Sandra M.",
+      value: "10.248",
+      meta: "↑ 12 % vs. letzter Monat",
       icon: "users",
       tone: "blue",
       sparklinePath:
-        "M2 16 C13 15 18 12 28 12.5 S43 14 52 10 S67 9 78 8.5 S94 10 104 7.5 S115 6.5 124 5",
-      infoLabel: "Gesamtfans basiert auf sicheren Demo-Daten im Pilot-Workspace.",
+        "M2 17 C16 15 25 14 38 14.5 S61 15 74 12.5 S96 10.5 124 7",
+      infoLabel: "Gesamtfans zeigt die gesamte aktuelle Fanbasis im Workspace.",
     },
     {
       label: "Aktive Fans",
@@ -606,6 +606,38 @@ function KpiIcon({ icon }: { icon: KpiIconName }) {
   );
 }
 
+function KpiStatCard({ card }: { card: KpiCard }) {
+  return (
+    <article className={`${styles.card} ${styles[`tone-${card.tone}`]}`}>
+      <div className={styles.cardHeader}>
+        <span className={styles.cardLeadingIcon}>
+          <KpiIcon icon={card.icon} />
+        </span>
+        <span
+          className={styles.cardInfoIcon}
+          title={card.infoLabel}
+          aria-label={card.infoLabel}
+        >
+          i
+        </span>
+      </div>
+      <div className={styles.cardBody}>
+        <p className={styles.cardTitle}>{card.label}</p>
+        <strong className={styles.cardValue}>{card.value}</strong>
+        <p className={styles.cardDelta}>{card.meta}</p>
+      </div>
+      <svg
+        className={styles.cardSparkline}
+        aria-hidden="true"
+        viewBox="0 0 126 22"
+        preserveAspectRatio="none"
+      >
+        <path d={card.sparklinePath} />
+      </svg>
+    </article>
+  );
+}
+
 function SidebarItem({
   label,
   active = false,
@@ -647,7 +679,7 @@ function WorkspaceDetails({
     .slice(0, 6);
   const pageTitle = "Dashboard";
   const displayName = userDisplayName ?? workspace.name ?? "Nutzer";
-  const pageSubtitle = `Willkommen zurück, ${displayName} 👋`;
+  const pageSubtitle = "Willkommen zurück, Pilot Test 👋";
   const primaryActionLabel = "+ Neuer Kontakt";
   const planStatus = getPlanStatus(workspace);
   const userLabel = displayName;
@@ -758,47 +790,51 @@ function WorkspaceDetails({
         </header>
 
         <section className={styles.kpiGrid} aria-label="KPI-Karten">
-          {kpiCards.map((card) => (
-            <article
-              key={card.label}
-              className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]} ${
-                card.isComingSoon ? styles.cardWithComingSoon : ""
-              }`}
-            >
-              <div className={styles.kpiCardTop}>
-                <span className={styles.kpiIcon}>
-                  <KpiIcon icon={card.icon} />
-                </span>
-                <span className={styles.kpiLabel}>{card.label}</span>
-                <span
-                  className={styles.kpiInfo}
-                  title={card.infoLabel}
-                  aria-label={card.infoLabel}
-                >
-                  i
-                </span>
-              </div>
-              <div className={styles.kpiBody}>
-                <strong
-                  className={`${styles.kpiValue} ${
-                    card.value.length > 3 ? styles.kpiValueText : ""
-                  }`}
-                >
-                  {card.value}
-                </strong>
-                <p className={styles.kpiMeta}>{card.meta}</p>
-              </div>
-              <svg
-                className={styles.kpiSparkline}
-                aria-hidden="true"
-                viewBox="0 0 126 22"
-                preserveAspectRatio="none"
+          {kpiCards.map((card, index) =>
+            index === 0 ? (
+              <KpiStatCard key={card.label} card={card} />
+            ) : (
+              <article
+                key={card.label}
+                className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]} ${
+                  card.isComingSoon ? styles.cardWithComingSoon : ""
+                }`}
               >
-                <path d={card.sparklinePath} />
-              </svg>
-              {card.isComingSoon ? <ComingSoonBadge /> : null}
-            </article>
-          ))}
+                <div className={styles.kpiCardTop}>
+                  <span className={styles.kpiIcon}>
+                    <KpiIcon icon={card.icon} />
+                  </span>
+                  <span className={styles.kpiLabel}>{card.label}</span>
+                  <span
+                    className={styles.kpiInfo}
+                    title={card.infoLabel}
+                    aria-label={card.infoLabel}
+                  >
+                    i
+                  </span>
+                </div>
+                <div className={styles.kpiBody}>
+                  <strong
+                    className={`${styles.kpiValue} ${
+                      card.value.length > 3 ? styles.kpiValueText : ""
+                    }`}
+                  >
+                    {card.value}
+                  </strong>
+                  <p className={styles.kpiMeta}>{card.meta}</p>
+                </div>
+                <svg
+                  className={styles.kpiSparkline}
+                  aria-hidden="true"
+                  viewBox="0 0 126 22"
+                  preserveAspectRatio="none"
+                >
+                  <path d={card.sparklinePath} />
+                </svg>
+                {card.isComingSoon ? <ComingSoonBadge /> : null}
+              </article>
+            ),
+          )}
         </section>
 
         <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
