@@ -3,13 +3,13 @@
 import { FormEvent, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
-import { isPlanId, resolvePlanId, type CommercialOption } from "@/lib/plans";
+import { getRegistrationCommercialTerms, isPlanId, resolvePlanId, type CommercialOption, type ProductiveCommercialOption } from "@/lib/plans";
 import type { PlanId } from "@/config/plans";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./register.module.css";
 
 type RegisterPlanId = PlanId;
-type StarterCommercialOption = Extract<CommercialOption, "starter_paid_setup" | "starter_12m_setup_waived">;
+type StarterCommercialOption = Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_12m_setup_waived">;
 
 type RegisterPageProps = {
   searchParams: Promise<{ lang?: string | string[]; plan?: string | string[] }>;
@@ -211,6 +211,10 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
   ];
 }
 
+type WorkspaceRow = {
+  id: string;
+};
+
 async function prepareUserWorkspace(
   supabase: ReturnType<typeof createSupabaseBrowserClient>,
   userId: string,
@@ -218,7 +222,14 @@ async function prepareUserWorkspace(
   displayName: string,
   workspaceName: string,
   planId: Extract<RegisterPlanId, "pilot" | "starter">,
+  commercialOption: ProductiveCommercialOption,
 ): Promise<string | null> {
+  const commercialTerms = getRegistrationCommercialTerms(planId, commercialOption === "pilot_only" ? "starter_12m_setup_waived" : commercialOption);
+
+  if (!commercialTerms || commercialTerms.commercialOption !== commercialOption) {
+    return "Die gewählte Paket-/Commercial-Option ist für produktive Workspace-Erstellung nicht freigegeben.";
+  }
+
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: userId,
     email,
@@ -229,22 +240,59 @@ async function prepareUserWorkspace(
     return profileError.message;
   }
 
-  const { data: workspace, error: workspaceError } = await supabase
+  const { data: existingWorkspace, error: existingWorkspaceError } = await supabase
     .from("workspaces")
-    .insert({
-      name: workspaceName || displayName || "FanMind Workspace",
-      owner_user_id: userId,
-      plan_id: planId,
-    })
-    .select("id")
-    .single();
+    .select<WorkspaceRow>("id")
+    .eq("owner_user_id", userId)
+    .limit(1)
+    .maybeSingle();
 
-  if (workspaceError) {
-    return workspaceError.message;
+  if (existingWorkspaceError) {
+    return existingWorkspaceError.message;
+  }
+
+  let workspace = existingWorkspace;
+
+  if (!workspace) {
+    const { data: insertedWorkspace, error: workspaceError } = await supabase
+      .from("workspaces")
+      .insert({
+        name: workspaceName || displayName || "FanMind Workspace",
+        owner_user_id: userId,
+        plan_id: planId,
+        commercial_option: commercialTerms.commercialOption,
+        setup_fee_cents: commercialTerms.setupFeeCents,
+        monthly_fee_cents: commercialTerms.monthlyFeeCents,
+        commitment_months: commercialTerms.commitmentMonths,
+      })
+      .select<WorkspaceRow>("id")
+      .single();
+
+    if (workspaceError) {
+      return workspaceError.message;
+    }
+
+    workspace = insertedWorkspace;
   }
 
   if (!workspace?.id) {
-    return "Workspace wurde erstellt, aber keine Workspace-ID zurückgegeben.";
+    return "Workspace konnte nicht erstellt oder geladen werden.";
+  }
+
+  const { data: existingMember, error: existingMemberError } = await supabase
+    .from("workspace_members")
+    .select<{ id: string }>("id")
+    .eq("workspace_id", workspace.id)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingMemberError) {
+    return existingMemberError.message;
+  }
+
+  if (existingMember) {
+    return null;
   }
 
   const { error: memberError } = await supabase.from("workspace_members").insert({
@@ -296,7 +344,10 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
     const organization = String(formData.get("organisation") ?? "").trim();
     const role = String(formData.get("rolle") ?? "").trim();
     const message = String(formData.get("nachricht") ?? "").trim();
-    const selectedCommercialOption = selectedPlanId === "starter" ? String(formData.get("commercialOption") ?? starterOption) as StarterCommercialOption : "pilot_only";
+    const commercialOptionValue = String(formData.get("commercialOption") ?? starterOption);
+    const selectedCommercialOption: ProductiveCommercialOption = selectedPlanId === "starter" && (commercialOptionValue === "starter_paid_setup" || commercialOptionValue === "starter_12m_setup_waived")
+      ? commercialOptionValue
+      : "pilot_only";
 
     try {
       const supabase = createSupabaseBrowserClient();
@@ -328,10 +379,13 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
           name,
           organization,
           selectedPlanId,
+          selectedCommercialOption,
         );
 
         if (workspaceError) {
-          setError(`Registrierung erfolgreich, aber Workspace/Plan konnte noch nicht angelegt werden: ${workspaceError}. Bitte prüfe die RLS-Policies aus docs/database/fanmind_mvp_schema.sql.`);
+          setError(language === "en"
+            ? `Registration succeeded, but profile/workspace setup failed: ${workspaceError}. Please check the RLS policies from docs/database/fanmind_mvp_schema.sql.`
+            : `Registrierung erfolgreich, aber Profil/Workspace konnte noch nicht angelegt werden: ${workspaceError}. Bitte prüfe die RLS-Policies aus docs/database/fanmind_mvp_schema.sql.`);
           return;
         }
       }
@@ -512,7 +566,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               {success && (
                 <p className={styles.success} role="status">
                   {copy.success} {awaitingEmailConfirmation
-                    ? (language === "en" ? "Please confirm your email address and log in afterwards." : "Bitte bestätige deine E-Mail-Adresse und logge dich danach ein.")
+                    ? (language === "en" ? "Please confirm your email address. Your workspace will be set up after your first login." : "Bitte bestätige deine E-Mail-Adresse. Dein Workspace wird danach beim ersten Login eingerichtet.")
                     : selectedPlanId === "pilot"
                       ? (language === "en" ? "Pilot / Setup stays a demo/setup month without commitment. You will be forwarded to onboarding." : "Pilot / Setup bleibt ein Demo-/Setupmonat ohne Bindung. Du wirst ins Onboarding weitergeleitet.")
                       : (language === "en" ? "Profile, workspace and Starter option are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Starter-Option werden vorbereitet. Du wirst ins Onboarding weitergeleitet.")} <a href={selectedOnboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>

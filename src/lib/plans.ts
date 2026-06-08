@@ -11,12 +11,58 @@ import {
 } from "@/config/plans";
 
 
-export type CommercialOption =
+export type ProductiveCommercialOption =
   | "pilot_only"
   | "starter_paid_setup"
-  | "starter_12m_setup_waived"
+  | "starter_12m_setup_waived";
+
+export type CommercialOption =
+  | ProductiveCommercialOption
   | "growth_preview"
   | "agency_preview";
+
+export type CommercialTerms = {
+  commercialOption: ProductiveCommercialOption;
+  setupFeeCents: number;
+  monthlyFeeCents: number;
+  commitmentMonths: 0 | 12;
+};
+
+export function getCommercialTerms(commercialOption: ProductiveCommercialOption): CommercialTerms {
+  switch (commercialOption) {
+    case "pilot_only":
+      return {
+        commercialOption,
+        setupFeeCents: 99000,
+        monthlyFeeCents: 0,
+        commitmentMonths: 0,
+      };
+    case "starter_paid_setup":
+      return {
+        commercialOption,
+        setupFeeCents: 99000,
+        monthlyFeeCents: 29900,
+        commitmentMonths: 0,
+      };
+    case "starter_12m_setup_waived":
+      return {
+        commercialOption,
+        setupFeeCents: 0,
+        monthlyFeeCents: 29900,
+        commitmentMonths: 12,
+      };
+  }
+}
+
+export function getRegistrationCommercialTerms(
+  planId: PlanId,
+  starterOption: Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_12m_setup_waived"> = "starter_12m_setup_waived",
+): CommercialTerms | null {
+  if (planId === "pilot") return getCommercialTerms("pilot_only");
+  if (planId === "starter") return getCommercialTerms(starterOption);
+
+  return null;
+}
 
 export type OnboardingStep = {
   title: string;
