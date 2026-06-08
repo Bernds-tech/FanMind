@@ -30,11 +30,19 @@ type WorkspaceDisplay = {
   contractNote: string;
 };
 
+type KpiIconName =
+  | "contacts"
+  | "channels"
+  | "followups"
+  | "ai"
+  | "import"
+  | "mvp";
+
 type KpiCard = {
   label: string;
   value: string;
   helper: string;
-  icon: string;
+  icon: KpiIconName;
   status: string;
   tone: "blue" | "cyan" | "violet" | "green" | "amber";
 };
@@ -228,7 +236,7 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
       helper: isStarter
         ? "Starter-Vorbereitung"
         : "Sandra M., Alex K., Ella L.",
-      icon: "👥",
+      icon: "contacts",
       status: "Demo",
       tone: "blue",
     },
@@ -236,7 +244,7 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
       label: "Kanäle verbunden",
       value: "0",
       helper: "0 Social-Kanäle aktiv",
-      icon: "◎",
+      icon: "channels",
       status: "Manuell",
       tone: "cyan",
     },
@@ -244,7 +252,7 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
       label: "Offene Follow-ups",
       value: "3",
       helper: isPilot ? "Demo-Aufgaben" : "Manuell vorbereitet",
-      icon: "↗",
+      icon: "followups",
       status: "Offen",
       tone: "cyan",
     },
@@ -252,7 +260,7 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
       label: "KI-Vorschläge",
       value: "Vorbereitet",
       helper: "Mensch prüft und sendet selbst",
-      icon: "✦",
+      icon: "ai",
       status: "Sicher",
       tone: "violet",
     },
@@ -262,7 +270,7 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
       helper: isStarter
         ? "CSV-Import im MVP nutzbar"
         : "Paketabhängig vorbereitet",
-      icon: "⇩",
+      icon: "import",
       status: isStarter ? "Aktiv" : "Vorschau",
       tone: isStarter ? "green" : "amber",
     },
@@ -270,7 +278,7 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
       label: "MVP-Kern aktiv",
       value: "Ja",
       helper: "Kontakte, Follow-ups, Roadmap",
-      icon: "✓",
+      icon: "mvp",
       status: "MVP",
       tone: "green",
     },
@@ -523,6 +531,54 @@ function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
   );
 }
 
+function KpiIcon({ icon }: { icon: KpiIconName }) {
+  const iconPaths: Record<KpiIconName, string[]> = {
+    contacts: [
+      "M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
+      "M3.75 19.25a5.25 5.25 0 0 1 10.5 0",
+      "M16.5 10.5a2.75 2.75 0 1 0 0-5.5",
+      "M15.75 14.25a4.75 4.75 0 0 1 4.5 4.75",
+    ],
+    channels: [
+      "M12 12m-3.25 0a3.25 3.25 0 1 0 6.5 0 3.25 3.25 0 1 0-6.5 0",
+      "M4.75 6.75a9.8 9.8 0 0 1 14.5 0",
+      "M6.75 17.25a9.8 9.8 0 0 0 10.5 0",
+    ],
+    followups: [
+      "M5 17.5 17.5 5",
+      "M9 5h8.5v8.5",
+      "M5.5 7.5h5",
+      "M5.5 12h3",
+    ],
+    ai: [
+      "M12 3.75 13.55 8.8 18.25 10.5 13.55 12.2 12 17.25 10.45 12.2 5.75 10.5 10.45 8.8 12 3.75Z",
+      "M18.25 4.75v3.5",
+      "M20 6.5h-3.5",
+      "M4.75 15.75v2.5",
+      "M6 17h-2.5",
+    ],
+    import: [
+      "M12 4.5v9",
+      "m8.5 10 3.5 3.5 3.5-3.5",
+      "M5 17.75h14",
+      "M6.5 6.5h4",
+      "M14.5 6.5h1",
+    ],
+    mvp: [
+      "M5 12.5 9.25 16.75 19 7.25",
+      "M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z",
+    ],
+  };
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      {iconPaths[icon].map((path) => (
+        <path key={path} d={path} />
+      ))}
+    </svg>
+  );
+}
+
 function SidebarItem({
   label,
   active = false,
@@ -680,15 +736,24 @@ function WorkspaceDetails({
               key={card.label}
               className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}
             >
-              <div className={styles.kpiMeta}>
-                <span className={styles.kpiIcon} aria-hidden="true">
-                  {card.icon}
+              <div className={styles.kpiHeader}>
+                <span className={styles.kpiIcon}>
+                  <KpiIcon icon={card.icon} />
                 </span>
-                <span>{card.label}</span>
+                <span className={styles.kpiLabel}>{card.label}</span>
               </div>
-              <strong>{card.value}</strong>
+              <div className={styles.kpiValueRow}>
+                <strong>{card.value}</strong>
+                <small className={styles.kpiBadge}>{card.status}</small>
+              </div>
               <p>{card.helper}</p>
-              <small>{card.status}</small>
+              <div className={styles.kpiSparkline} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
             </article>
           ))}
         </section>
