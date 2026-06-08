@@ -72,6 +72,7 @@ type SidebarLink = {
   label: string;
   href: string;
   active?: boolean;
+  badge?: string;
   disabled?: boolean;
 };
 
@@ -212,19 +213,6 @@ function getWorkspaceDisplay(
     contractNote:
       "Workspace-Daten wurden geladen. Die sichtbaren Dashboard-Module werden aus plan_id und commercial_option abgeleitet.",
   };
-}
-
-function findFeature(
-  features: ResolvedDashboardFeature[],
-  key: string,
-): ResolvedDashboardFeature | undefined {
-  return features.find((feature) => feature.key === key);
-}
-
-function canShowContactAction(feature?: ResolvedDashboardFeature): boolean {
-  return feature
-    ? ["active", "demo", "limited"].includes(feature.status)
-    : false;
 }
 
 function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
@@ -469,7 +457,9 @@ function getInitials(nameOrEmail?: string): string {
     .join("") || fallback;
 }
 
-function getPlanStatus(workspace: WorkspaceDashboardRow): "Aktiv" | "Demo" | "Vorschau" {
+function getPlanStatus(
+  workspace: WorkspaceDashboardRow,
+): "Aktiv" | "Demo" | "Vorschau" {
   if (workspace.plan_id === "pilot") {
     return "Demo";
   }
@@ -498,6 +488,7 @@ function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
 function SidebarItem({
   label,
   active = false,
+  badge,
   disabled = false,
   href,
 }: SidebarLink) {
@@ -508,6 +499,7 @@ function SidebarItem({
       href={href}
     >
       <span>{label}</span>
+      {badge ? <small>{badge}</small> : null}
     </a>
   );
 }
@@ -524,23 +516,20 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
     ...featureGroups.later,
     ...featureGroups.roadmap,
   ].filter((feature) => feature.key !== "automatic_sending");
-  const featureByKey = (key: string) => findFeature(allVisibleFeatures, key);
   const compactFeatures = allVisibleFeatures
     .filter(
       (feature) => !["roadmap", "automatic_sending"].includes(feature.key),
     )
     .slice(0, 6);
-  const contactsFeature = featureByKey("contacts");
   const pageTitle = "Dashboard";
   const pageSubtitle = "Willkommen zurück. Hier ist dein FanMind Überblick.";
   const primaryActionLabel = "+ Neuer Kontakt";
   const planStatus = getPlanStatus(workspace);
   const userLabel = email ?? workspace.name;
-  const workspaceSummary = `Workspace geladen · ${display.packageName} · Mensch prüft und sendet selbst.`;
   const mainNavigation: SidebarLink[] = [
     { label: "Dashboard", href: "/dashboard", active: true },
     { label: "Fans", href: "#contacts" },
-    { label: "Kanäle", href: "#channels" },
+    { label: "Kanäle", href: "#channels", badge: "Roadmap" },
   ];
   const settingsNavigation: SidebarLink[] = [
     { label: "Einstellungen", href: "#contract", disabled: true },
@@ -611,7 +600,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
           </section>
           <form action={logout}>
             <button type="submit" className={styles.logoutButton}>
-              Logout
+              Abmelden
             </button>
           </form>
         </div>
@@ -623,7 +612,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             <p className={styles.eyebrow}>Multi-Channel CRM Workspace</p>
             <h1>{pageTitle}</h1>
             <p>{pageSubtitle}</p>
-            <span>{workspaceSummary}</span>
+            <span>Kein automatisches Senden – Mensch prüft und sendet selbst.</span>
           </div>
           <div className={styles.topbarActions}>
             <label className={styles.searchBox}>
@@ -639,34 +628,11 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             <button type="button" className={styles.filterChip}>
               Filter
             </button>
-            {canShowContactAction(contactsFeature) ? (
-              <a className={styles.primaryButton} href="#contacts">
-                {primaryActionLabel}
-              </a>
-            ) : null}
+            <a className={styles.primaryButton} href="#contacts">
+              {primaryActionLabel}
+            </a>
           </div>
-          <p className={styles.topbarNote}>
-            Kein automatisches Senden – Mensch prüft und sendet selbst
-          </p>
         </header>
-
-        <section
-          className={styles.workspaceStrip}
-          aria-label="Workspace Status"
-        >
-          <div>
-            <strong>{workspace.name}</strong>
-            <span>{display.planHint}</span>
-          </div>
-          <p>{display.packageSummary}</p>
-          <div className={styles.badgeRow}>
-            <span className={styles.safeBadge}>0 Kanäle verbunden</span>
-            <span className={styles.planBadge}>Integrationen auf Roadmap</span>
-            <span className={styles.safeBadge}>
-              Keine automatische Sendefunktion
-            </span>
-          </div>
-        </section>
 
         <section className={styles.kpiGrid} aria-label="KPI-Karten">
           {kpiCards.map((card) => (
