@@ -143,6 +143,7 @@
 .heroPanel,
 .moduleCard,
 .contextCard,
+.featureSection,
 .bottomCards article,
 .kpiCard,
 .fallbackCard {
@@ -314,7 +315,7 @@
 
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
 }
 
@@ -363,11 +364,10 @@
 
 .mainGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-columns: minmax(250px, 0.75fr) minmax(420px, 1.35fr) minmax(320px, 0.9fr);
   gap: 18px;
 }
 
-.primaryColumn,
 .contextColumn {
   display: grid;
   gap: 18px;
@@ -375,7 +375,8 @@
 }
 
 .moduleCard,
-.contextCard {
+.contextCard,
+.featureSection {
   border-radius: 26px;
   padding: 22px;
 }
@@ -518,6 +519,54 @@
   overflow-wrap: anywhere;
 }
 
+
+.actionCard {
+  min-height: 100%;
+}
+
+.contactCard {
+  min-width: 0;
+}
+
+.planSummary {
+  margin-top: 14px !important;
+  max-width: 720px;
+  color: #e0f2fe;
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.featureSection {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.6fr) minmax(0, 1.4fr);
+  gap: 18px;
+  border-radius: 26px;
+}
+
+.featureSection h2 {
+  margin-top: 8px;
+  color: #ffffff;
+  font-size: clamp(22px, 3vw, 32px);
+  letter-spacing: -0.04em;
+}
+
+.featureSection p {
+  margin-top: 10px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+.featureSection .featurePillGrid {
+  margin-top: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.featureSection .featureSplit {
+  grid-column: 2;
+  margin-top: 0;
+}
+
 .featurePillGrid {
   display: grid;
   gap: 10px;
@@ -607,7 +656,8 @@
 @media (max-width: 1180px) {
   .dashboardShell,
   .mainGrid,
-  .heroPanel {
+  .heroPanel,
+  .featureSection {
     grid-template-columns: 1fr;
   }
 
@@ -620,8 +670,13 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .kpiGrid {
+  .kpiGrid,
+  .featureSection .featurePillGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .featureSection .featureSplit {
+    grid-column: 1;
   }
 }
 
@@ -639,6 +694,7 @@
   .navList,
   .kpiGrid,
   .bottomCards,
+  .featureSection .featurePillGrid,
   .details div,
   .featurePill {
     grid-template-columns: 1fr;

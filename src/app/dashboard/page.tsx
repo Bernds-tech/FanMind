@@ -26,6 +26,7 @@ type WorkspaceDisplay = {
   monthlyFeeLabel: string;
   commitmentLabel: string;
   planHint: string;
+  packageSummary: string;
   contractNote: string;
 };
 
@@ -71,6 +72,7 @@ function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: "keine",
       planHint: "Pilot / Setup · Demo-/Setupmonat",
+      packageSummary: "Demo-/Setupmonat mit Sandra M. und sicheren Testdaten.",
       contractNote: "Du arbeitest im sicheren Demo-/Setupmodus. Sandra M., KI-Demo, Memory-Demo und Follow-up-Demo sind vorbereitet; produktive Daten und Versand bleiben getrennt.",
     };
   }
@@ -83,6 +85,7 @@ function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: "12 Monate",
       planHint: "Starter · produktiver MVP-Kern",
+      packageSummary: "Produktiver MVP-Kern mit Kontakten, CSV-Import, Memory und Follow-ups.",
       contractNote: "Der produktive MVP-Kern ist aktiv: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups. KI-Vorschläge bleiben bewusst limitiert und werden manuell geprüft.",
     };
   }
@@ -95,6 +98,7 @@ function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: "keine 12-Monatsbindung",
       planHint: "Starter · produktiver MVP-Kern",
+      packageSummary: "Produktiver MVP-Kern mit Kontakten, CSV-Import, Memory und Follow-ups.",
       contractNote: "Produktiver Starter-Einstieg ohne feste Bindung: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups sind aktiv; KI-Vorschläge bleiben limitiert.",
     };
   }
@@ -107,6 +111,7 @@ function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: workspace.commitment_months > 0 ? `${workspace.commitment_months} Monate` : "noch nicht produktiv gebucht",
       planHint: "Growth · Vorschau",
+      packageSummary: "Growth-Funktionen bleiben Vorschau und werden nicht als aktive Vollversion angezeigt.",
       contractNote: "Growth wird im Dashboard als Vorschau gezeigt. Erweiterte Profile, Segmente und höhere Nutzung werden vorbereitet, aber nicht als produktive Vollversion verkauft.",
     };
   }
@@ -119,6 +124,7 @@ function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay
       monthlyFeeLabel: monthlyFee,
       commitmentLabel: workspace.commitment_months > 0 ? `${workspace.commitment_months} Monate` : "Demo / Erstgespräch",
       planHint: "Agency · Demo/Erstgespräch/Vorschau",
+      packageSummary: "Agency-Funktionen bleiben Demo-/Erstgesprächsmodus und sind nicht produktiv freigeschaltet.",
       contractNote: "Agency ist als Demo- und Erstgesprächsmodus markiert. Multi-Client, Teamstruktur und Agentur-Workflow sind Vorschau und nicht produktiv freigeschaltet.",
     };
   }
@@ -130,6 +136,7 @@ function getWorkspaceDisplay(workspace: WorkspaceDashboardRow): WorkspaceDisplay
     monthlyFeeLabel: monthlyFee,
     commitmentLabel: workspace.commitment_months > 0 ? `${workspace.commitment_months} Monate` : "keine",
     planHint: "Workspace geladen · Paket geprüft",
+    packageSummary: "Workspace geladen; sichtbare Module richten sich nach Paket und Vertrag.",
     contractNote: "Workspace-Daten wurden geladen. Die sichtbaren Dashboard-Module werden aus plan_id und commercial_option abgeleitet.",
   };
 }
@@ -146,7 +153,7 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
   if (workspace.plan_id === "pilot") {
     return [
       { label: "Paket", value: "Pilot / Setup", helper: "Demo · Setupmodus", tone: "blue" },
-      { label: "Demo-Kontakte", value: "Sandra M.", helper: "Demo · 3 Beispielkontakte", tone: "cyan" },
+      { label: "Demo-Kontakte", value: "3", helper: "Sandra M., Alex K., Ella L.", tone: "cyan" },
       { label: "Nächster Schritt", value: "KI-Demo testen", helper: "Mensch prüft vor Versand", tone: "violet" },
       { label: "Status", value: "MVP-Kern aktiv", helper: "Demo · Noch keine echten Kontaktdaten", tone: "green" },
     ];
@@ -154,11 +161,11 @@ function getKpiCards(workspace: WorkspaceDashboardRow): KpiCard[] {
 
   if (workspace.plan_id === "starter") {
     return [
-      { label: "Kontakte", value: "0", helper: "Noch keine echten Daten", tone: "blue" },
+      { label: "Kontakte", value: "Noch keine", helper: "Produktiv bereit · Demo leer", tone: "blue" },
       { label: "Offene Follow-ups", value: "0", helper: "Bereit für manuelle Aufgaben", tone: "cyan" },
       { label: "KI-Vorschläge", value: "Limitiert", helper: "Mensch prüft und sendet selbst", tone: "violet" },
       { label: "CSV-Import", value: "Aktiv", helper: "Produktiver MVP-Einstieg", tone: "green" },
-      { label: "Status", value: "Startbereit", helper: "Kontakt anlegen oder CSV importieren", tone: "amber" },
+      { label: "Status", value: "MVP-Kern aktiv", helper: "Kontakt anlegen oder CSV importieren", tone: "amber" },
     ];
   }
 
@@ -268,7 +275,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
           <SidebarItem label="Kontakte" meta={contactsFeature ? getDashboardStatusLabel(contactsFeature.status) : "Vorschau"} href="#contacts" />
           <SidebarItem label="Follow-ups" href="#followups" />
           <SidebarItem label="KI-Vorschläge" href="#next-action" />
-          <SidebarItem label="CSV-Import" meta={csvFeature ? getDashboardStatusLabel(csvFeature.status) : "Vorschau"} href="#contacts" />
+          <SidebarItem label="CSV-Import" meta={csvFeature ? getDashboardStatusLabel(csvFeature.status) : "Vorschau"} href="#csv-import" />
           <SidebarItem label="Roadmap" href="#roadmap" />
           <SidebarItem label="Einstellungen" href="#contract" />
         </nav>
@@ -295,7 +302,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
             </div>
             {canShowContactAction(contactsFeature) ? <a className={styles.primaryButton} href="#contacts">+ Neuer Kontakt</a> : null}
             <form action={logout}>
-              <button type="submit" className={styles.secondaryButton}>Logout</button>
+              <button type="submit" className={styles.secondaryButton}>Abmelden</button>
             </form>
           </div>
         </header>
@@ -309,6 +316,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               <span className={styles.safeBadge}>Kein automatisches Senden</span>
               <span className={styles.planBadge}>{display.planHint}</span>
             </div>
+            <p className={styles.planSummary}>{display.packageSummary}</p>
           </div>
           <div className={styles.securityCard}>
             <strong>Human-in-the-loop</strong>
@@ -327,8 +335,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
         </section>
 
         <div className={styles.mainGrid}>
-          <div className={styles.primaryColumn}>
-            <section className={styles.moduleCard} id="next-action" aria-labelledby="next-action-title">
+          <section className={`${styles.moduleCard} ${styles.actionCard}`} id="next-action" aria-labelledby="next-action-title">
               <div className={styles.moduleHeader}>
                 <p className={styles.eyebrow}>Nächste beste Aktion</p>
                 <span>Manuell</span>
@@ -337,9 +344,9 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               <p>{nextBestAction.text}</p>
               <a className={styles.inlineButton} href="#contacts">{nextBestAction.cta}</a>
               <p className={styles.safeText}>Nichts wird automatisch versendet.</p>
-            </section>
+          </section>
 
-            <section className={styles.moduleCard} id="contacts" aria-labelledby="contacts-title">
+          <section className={`${styles.moduleCard} ${styles.contactCard}`} id="contacts" aria-labelledby="contacts-title">
               <div className={styles.moduleHeader}>
                 <p className={styles.eyebrow}>Kontakte / Follower Vorschau</p>
                 <span>{workspace.plan_id === "starter" ? "Produktiv leer" : workspace.plan_id === "pilot" ? "Demo" : "Vorschau"}</span>
@@ -378,28 +385,9 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
                   </div>
                 </div>
               )}
-            </section>
+          </section>
 
-            <section className={styles.bottomCards} aria-label="Kompakte Arbeitsmodule">
-              <article id="memory">
-                <span>Fan-Gedächtnis</span>
-                <strong>{workspace.plan_id === "pilot" ? "Memory-Demo aktiv" : "Kontext bereit"}</strong>
-                <p>{workspace.plan_id === "starter" ? "Merkt relevante Kontaktinfos, sobald echte Kontakte entstehen." : "Zeigt, wie Kontext für manuelle Antworten genutzt wird."}</p>
-              </article>
-              <article id="followups">
-                <span>Follow-ups</span>
-                <strong>{workspace.plan_id === "starter" ? "Produktiver Einstieg" : "Demo/Vorschau"}</strong>
-                <p>Manuelle nächste Schritte und Erinnerungen, ohne automatische Nachrichten.</p>
-              </article>
-              <article id="roadmap">
-                <span>Roadmap</span>
-                <strong>Upgrade klar getrennt</strong>
-                <p>Analytics, Kampagnen und Integrationen bleiben Vorschau oder Roadmap.</p>
-              </article>
-            </section>
-          </div>
-
-          <aside className={styles.contextColumn} aria-label="Paket und Kontext">
+          <aside className={styles.contextColumn} aria-label="Paket und Vertrag">
             <section className={styles.contextCard} id="contract" aria-labelledby="contract-title">
               <p className={styles.eyebrow}>Paket & Vertrag</p>
               <h2 id="contract-title">{display.packageName}</h2>
@@ -427,22 +415,43 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
               </dl>
               <p>{display.contractNote}</p>
             </section>
-
-            <section className={styles.contextCard} aria-labelledby="features-title">
-              <p className={styles.eyebrow}>Paketabhängige Funktionen</p>
-              <h2 id="features-title">Kompakt</h2>
-              <div className={styles.featurePillGrid}>
-                {compactFeatures.map((feature) => (
-                  <FeaturePill key={feature.key} feature={feature} />
-                ))}
-              </div>
-              <div className={styles.featureSplit}>
-                <span>Upgrade: {featureGroups.later.filter((feature) => feature.key !== "automatic_sending").length}</span>
-                <span>Roadmap/Vorschau: {featureGroups.roadmap.filter((feature) => feature.key !== "automatic_sending").length}</span>
-              </div>
-            </section>
           </aside>
         </div>
+
+        <section className={styles.bottomCards} aria-label="Kompakte Arbeitsmodule">
+          <article id="memory">
+            <span>Fan-Gedächtnis</span>
+            <strong>{workspace.plan_id === "pilot" ? "Memory-Demo aktiv" : "Kontext bereit"}</strong>
+            <p>{workspace.plan_id === "starter" ? "Merkt relevante Kontaktinfos, sobald echte Kontakte entstehen." : "Zeigt, wie Kontext für manuelle Antworten genutzt wird."}</p>
+          </article>
+          <article id="followups">
+            <span>Follow-ups</span>
+            <strong>{workspace.plan_id === "starter" ? "Produktiver Einstieg" : "Demo/Vorschau"}</strong>
+            <p>Manuelle nächste Schritte und Erinnerungen, ohne automatische Nachrichten.</p>
+          </article>
+          <article id="roadmap">
+            <span>Roadmap</span>
+            <strong>Upgrade klar getrennt</strong>
+            <p>Analytics, Kampagnen und Integrationen bleiben Vorschau oder Roadmap.</p>
+          </article>
+        </section>
+
+        <section className={styles.featureSection} aria-labelledby="features-title">
+          <div>
+            <p className={styles.eyebrow}>Paketabhängige Funktionen</p>
+            <h2 id="features-title">Kompakt statt Statusseite</h2>
+            <p>Feature-Gating nutzt weiterhin plan_id und commercial_option; Upgrade- und Roadmap-Funktionen bleiben getrennt.</p>
+          </div>
+          <div className={styles.featurePillGrid}>
+            {compactFeatures.map((feature) => (
+              <FeaturePill key={feature.key} feature={feature} />
+            ))}
+          </div>
+          <div className={styles.featureSplit}>
+            <span>Upgrade: {featureGroups.later.filter((feature) => feature.key !== "automatic_sending").length}</span>
+            <span>Roadmap/Vorschau: {featureGroups.roadmap.filter((feature) => feature.key !== "automatic_sending").length}</span>
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -480,7 +489,7 @@ export default async function DashboardPage() {
             </p>
           ) : null}
           <form action={logout}>
-            <button type="submit" className={styles.secondaryButton}>Logout</button>
+            <button type="submit" className={styles.secondaryButton}>Abmelden</button>
           </form>
         </section>
       )}
