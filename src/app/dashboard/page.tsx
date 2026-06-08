@@ -651,16 +651,8 @@ function WorkspaceDetails({
       <div className={styles.dashboardContent}>
         <header className={styles.topbar}>
           <div className={styles.titleCluster}>
-            <p className={styles.eyebrow}>
-              {workspace.name} · {display.packageName} · {planStatus}
-            </p>
             <h1>{pageTitle}</h1>
             <p>{pageSubtitle}</p>
-            <div className={styles.statusPills}>
-              <span>Workspace geladen</span>
-              <span>0 Kanäle verbunden</span>
-              <span>Kein automatisches Senden</span>
-            </div>
           </div>
           <div className={styles.topbarActions}>
             <label className={styles.searchBox}>
@@ -905,22 +897,6 @@ function WorkspaceDetails({
             </div>
           </article>
 
-          <article className={`${styles.moduleCard} ${styles.guardrailCard}`}>
-            <div className={styles.moduleHeader}>
-              <div>
-                <p className={styles.eyebrow}>Kein automatisches Senden</p>
-                <h2>Versand bleibt menschlich</h2>
-              </div>
-              <span>Immer sichtbar</span>
-            </div>
-            <p className={styles.moduleText}>
-              FanMind bereitet Kontaktkontext, Follow-ups und KI-Vorschläge vor.
-              Der Workspace sendet keine Nachrichten automatisch; jede Antwort,
-              Kampagne oder Kanalaktion muss manuell geprüft und selbst
-              ausgelöst werden.
-            </p>
-          </article>
-
           <article className={styles.moduleCard} id="ai-suggestions">
             <div className={styles.moduleHeader}>
               <div>
@@ -1052,6 +1028,14 @@ function WorkspaceDetails({
             </span>
           </div>
         </section>
+
+        <div className={styles.safetyNote} role="note">
+          <strong>Kein automatisches Senden</strong>
+          <span>
+            FanMind bereitet Kontext und KI-Vorschläge vor; jede Antwort,
+            Kampagne oder Kanalaktion wird manuell geprüft und selbst ausgelöst.
+          </span>
+        </div>
       </div>
     </div>
   );
