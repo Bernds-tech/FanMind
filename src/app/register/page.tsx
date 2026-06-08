@@ -495,7 +495,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <label className={styles.field}>
                 <span>{copy.message}</span>
                 <div className={styles.textareaWrap}>
-                  <textarea name="nachricht" placeholder={language === "en" ? "What would you like to improve first with FanMind?" : "Was möchtest du mit FanMind zuerst verbessern?"} rows={3} />
+                  <textarea name="nachricht" placeholder={language === "en" ? "What would you like to improve first with FanMind?" : "Was möchtest du mit FanMind zuerst verbessern?"} rows={2} />
                 </div>
               </label>
 
