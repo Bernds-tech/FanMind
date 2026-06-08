@@ -742,27 +742,33 @@ function WorkspaceDetails({
               key={card.label}
               className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}
             >
-              <div className={styles.kpiHeader}>
+              <div className={styles.kpiTop}>
                 <span className={styles.kpiIcon}>
                   <KpiIcon icon={card.icon} />
                 </span>
                 <span className={styles.kpiLabel}>{card.label}</span>
-                <span className={styles.kpiInfo} title={card.infoLabel}>
+                <span
+                  className={styles.kpiInfo}
+                  title={card.infoLabel}
+                  aria-label={card.infoLabel}
+                >
                   i
                 </span>
               </div>
-              <strong
-                className={`${styles.kpiValue} ${
-                  card.value.length > 3 ? styles.kpiValueText : ""
-                }`}
-              >
-                {card.value}
-              </strong>
-              <p className={styles.kpiMeta}>{card.helper}</p>
+              <div className={styles.kpiBody}>
+                <strong
+                  className={`${styles.kpiValue} ${
+                    card.value.length > 3 ? styles.kpiValueText : ""
+                  }`}
+                >
+                  {card.value}
+                </strong>
+                <p className={styles.kpiMeta}>{card.helper}</p>
+              </div>
               <svg
                 className={styles.kpiSparkline}
                 aria-hidden="true"
-                viewBox="0 0 126 24"
+                viewBox="0 0 126 22"
                 preserveAspectRatio="none"
               >
                 <path d={card.sparklinePath} />
