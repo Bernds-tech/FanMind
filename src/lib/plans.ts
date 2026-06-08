@@ -10,6 +10,14 @@ import {
   type PlanId,
 } from "@/config/plans";
 
+
+export type CommercialOption =
+  | "pilot_only"
+  | "starter_paid_setup"
+  | "starter_12m_setup_waived"
+  | "growth_preview"
+  | "agency_preview";
+
 export type OnboardingStep = {
   title: string;
   description: string;

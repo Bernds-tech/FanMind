@@ -161,15 +161,15 @@ export const PLANS: Record<PlanId, PlanConfig> = {
   pilot: {
     id: "pilot",
     name: "Pilot",
-    badge: "Demo/Testmodus",
+    badge: "Pilot / Setup",
     priceLabel: "990 € einmalig",
     mode: "demo",
     maxProfiles: 0,
     maxContacts: null,
     contactsLabel: "Demo-Daten",
     description:
-      "Demo-Workspace mit Sandra M., Beispieldaten und geführtem MVP-Kern ohne produktive Kanäle.",
-    primaryAction: "Demo starten",
+      "Pflicht-Einstieg als Demo-/Setupmonat mit Sandra M., Beispieldaten, keiner Bindung und ohne produktive Kanäle.",
+    primaryAction: "Pilot / Setup starten",
     upgradePlan: "starter",
     featureConfig: featureConfig({
       login: "active",
@@ -205,8 +205,8 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     maxContacts: 1000,
     contactsLabel: "bis 1.000 Kontakte",
     description:
-      "Ein produktives Profil mit Kontakten, Memory, Follow-ups, CSV-Import und limitierten KI-Antwortvorschlägen.",
-    primaryAction: "Workspace einrichten",
+      "Ein produktives Profil mit Kontakten, Memory, Follow-ups, CSV-Import und limitierten KI-Antwortvorschlägen; mit Einrichtungsgebühr oder 12 Monaten Bindung.",
+    primaryAction: "Starter wählen",
     upgradePlan: "growth",
     featureConfig: featureConfig({
       login: "active",
@@ -235,15 +235,15 @@ export const PLANS: Record<PlanId, PlanConfig> = {
   growth: {
     id: "growth",
     name: "Growth",
-    badge: "Skalierender MVP-Workspace",
+    badge: "Vorschau/Warteliste",
     priceLabel: "499 €/Monat",
     mode: "production",
     maxProfiles: 5,
     maxContacts: 10000,
     contactsLabel: "bis 10.000 Kontakte",
     description:
-      "Mehrere Profile, aktive Basis-Segmente und voller MVP-Kern für wachsende Teams.",
-    primaryAction: "Growth einrichten",
+      "Vorschau für mehrere Profile, Basis-Segmente und wachsende Teams; später nach Pilot / Setup oder mit Bindungsmodell verfügbar.",
+    primaryAction: "Growth Vorschau",
     upgradePlan: "agency",
     featureConfig: featureConfig({
       login: "active",
@@ -272,15 +272,15 @@ export const PLANS: Record<PlanId, PlanConfig> = {
   agency: {
     id: "agency",
     name: "Agency",
-    badge: "Agency-Vorschau",
+    badge: "Demo/Erstgespräch",
     priceLabel: "ab 990 €/Monat",
     mode: "agency",
     maxProfiles: null,
     maxContacts: null,
     contactsLabel: "nach Vereinbarung",
     description:
-      "Mehrere Profile oder Kunden-Workspaces mit sichtbarer Owner-Struktur. Erweiterte Rollen, Analytics und Kampagnen bleiben im MVP als Coming Soon markiert.",
-    primaryAction: "Agency einrichten",
+      "Demo/Erstgespräch für mehrere Profile oder Kunden-Workspaces. Erweiterte Rollen, Analytics und Kampagnen bleiben im MVP als Vorschau markiert.",
+    primaryAction: "Demo anfragen",
     featureConfig: featureConfig({
       login: "active",
       dashboard: "active",
