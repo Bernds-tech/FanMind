@@ -1,7 +1,5 @@
 .page {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
   padding: 32px 16px;
   color: #f7f8ff;
   background:
@@ -11,12 +9,20 @@
 }
 
 .card {
-  width: min(100%, 720px);
+  width: min(100%, 1180px);
+  margin: 0 auto;
   border: 1px solid rgba(111, 151, 255, 0.34);
   border-radius: 28px;
-  padding: clamp(28px, 5vw, 52px);
-  background: rgba(7, 16, 34, 0.88);
+  padding: clamp(24px, 4vw, 44px);
+  background: rgba(7, 16, 34, 0.9);
   box-shadow: 0 32px 90px rgba(0, 0, 0, 0.35);
+}
+
+.heroHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
 }
 
 .eyebrow {
@@ -28,28 +34,41 @@
   text-transform: uppercase;
 }
 
-.card h1 {
+.card h1,
+.card h2,
+.card h3 {
   margin: 0;
+}
+
+.card h1 {
   font-size: clamp(34px, 7vw, 58px);
   line-height: 0.98;
+}
+
+.card h2 {
+  font-size: clamp(24px, 4vw, 36px);
+  line-height: 1.05;
 }
 
 .status,
 .demoBadge,
 .meta,
-.notice {
+.notice,
+.noSendingNotice {
   border-radius: 14px;
   padding: 12px 14px;
   line-height: 1.5;
 }
 
 .status {
+  margin: 24px 0 0;
   border: 1px solid rgba(0, 240, 173, 0.42);
   color: #c2ffeb;
   background: rgba(0, 95, 69, 0.24);
 }
 
 .demoBadge {
+  margin: 24px 0 0;
   border: 1px solid rgba(255, 214, 102, 0.48);
   color: #ffe9ac;
   background: rgba(121, 83, 0, 0.22);
@@ -62,6 +81,14 @@
   background: rgba(4, 17, 41, 0.72);
 }
 
+.noSendingNotice {
+  margin: 0;
+  border: 1px solid rgba(255, 214, 102, 0.48);
+  color: #ffe9ac;
+  background: linear-gradient(135deg, rgba(121, 83, 0, 0.26), rgba(80, 25, 94, 0.24));
+  font-weight: 800;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -70,7 +97,8 @@
 }
 
 .actions a,
-.actions button {
+.actions button,
+.secondaryButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -87,7 +115,15 @@
   cursor: pointer;
 }
 
+.secondaryButton {
+  min-height: 42px;
+  border: 1px solid rgba(120, 217, 255, 0.28);
+  background: rgba(4, 17, 41, 0.72);
+  box-shadow: none;
+}
+
 .error {
+  margin: 16px 0 0;
   border: 1px solid rgba(255, 98, 117, 0.54);
   border-radius: 14px;
   padding: 12px 14px;
@@ -96,43 +132,78 @@
   line-height: 1.5;
 }
 
-.details {
+.error strong,
+.error span {
+  display: block;
+}
+
+.error span {
+  margin-top: 6px;
+}
+
+.dashboardShell {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) 1fr;
+  gap: 22px;
+  margin-top: 24px;
+}
+
+.sidebar {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(120, 217, 255, 0.24);
+  border-radius: 22px;
+  padding: 18px;
+  background: rgba(4, 17, 41, 0.62);
+}
+
+.sidebar > strong {
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.sidebar nav {
   display: grid;
   gap: 10px;
-  margin: 24px 0 0;
 }
 
-.details div {
+.sidebar a {
   display: grid;
-  grid-template-columns: minmax(140px, 0.55fr) 1fr;
-  gap: 12px;
-  border: 1px solid rgba(39, 132, 255, 0.28);
+  gap: 4px;
+  border: 1px solid rgba(111, 151, 255, 0.22);
   border-radius: 14px;
-  padding: 12px 14px;
-  background: rgba(4, 17, 41, 0.58);
+  padding: 12px;
+  color: #ffffff;
+  background: rgba(8, 30, 68, 0.56);
+  text-decoration: none;
 }
 
-.details dt {
+.sidebar small {
   color: #9bb4d4;
   font-weight: 800;
-}
-
-.details dd {
-  margin: 0;
-  color: #f7f8ff;
-  overflow-wrap: anywhere;
-}
-
-@media (max-width: 620px) {
-  .details div {
-    grid-template-columns: 1fr;
-  }
 }
 
 .workspacePanel {
   display: grid;
   gap: 18px;
-  margin-top: 24px;
+}
+
+.statusPanel {
+  display: grid;
+  gap: 18px;
+  border: 1px solid rgba(39, 132, 255, 0.3);
+  border-radius: 24px;
+  padding: clamp(18px, 3vw, 26px);
+  background: rgba(4, 17, 41, 0.58);
+}
+
+.statusPanel p {
+  margin: 12px 0 0;
+  color: #d7e4f5;
+  line-height: 1.6;
 }
 
 .summaryGrid {
@@ -164,17 +235,175 @@
   overflow-wrap: anywhere;
 }
 
-.error strong,
-.error span {
-  display: block;
+.details {
+  display: grid;
+  gap: 10px;
+  margin: 0;
 }
 
-.error span {
-  margin-top: 6px;
+.details div {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.42fr) 1fr;
+  gap: 12px;
+  border: 1px solid rgba(39, 132, 255, 0.28);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(4, 17, 41, 0.58);
+}
+
+.details dt {
+  color: #9bb4d4;
+  font-weight: 800;
+}
+
+.details dd {
+  margin: 0;
+  color: #f7f8ff;
+  overflow-wrap: anywhere;
+}
+
+.featureSection {
+  display: grid;
+  gap: 14px;
+}
+
+.sectionHeader {
+  display: grid;
+  gap: 2px;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.featureCard,
+.compactFeatureCard {
+  border: 1px solid rgba(111, 151, 255, 0.26);
+  border-radius: 20px;
+  background: rgba(4, 17, 41, 0.68);
+}
+
+.featureCard {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.featureCard p,
+.compactFeatureCard p {
+  margin: 0;
+  color: #d7e4f5;
+  line-height: 1.55;
+}
+
+.featureCard small {
+  color: #b7c9e4;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.featureHeader,
+.compactFeatureCard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.featureHeader span,
+.compactFeatureCard span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #06101f;
+  background: #78d9ff;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.featureCta {
+  color: #ffffff;
+}
+
+.compactGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.compactFeatureCard {
+  padding: 14px;
+}
+
+.status-active {
+  border-color: rgba(0, 240, 173, 0.38);
+}
+
+.status-demo {
+  border-color: rgba(255, 214, 102, 0.45);
+}
+
+.status-limited {
+  border-color: rgba(120, 217, 255, 0.5);
+}
+
+.status-upgrade {
+  border-color: rgba(159, 47, 255, 0.44);
+}
+
+.status-preview,
+.status-roadmap_only {
+  border-color: rgba(111, 151, 255, 0.36);
+}
+
+.status-upgrade .featureHeader span,
+.status-upgrade > span {
+  color: #ffffff;
+  background: #8f25ff;
+}
+
+.status-preview .featureHeader span,
+.status-preview > span,
+.status-roadmap_only .featureHeader span,
+.status-roadmap_only > span {
+  color: #ffffff;
+  background: #2755ff;
+}
+
+.status-demo .featureHeader span,
+.status-demo > span {
+  color: #1f1600;
+  background: #ffd666;
+}
+
+.status-limited .featureHeader span,
+.status-limited > span {
+  color: #06101f;
+  background: #78d9ff;
+}
+
+@media (max-width: 900px) {
+  .dashboardShell,
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
 }
 
 @media (max-width: 620px) {
-  .summaryGrid {
+  .heroHeader,
+  .featureHeader,
+  .compactFeatureCard {
+    flex-direction: column;
+  }
+
+  .summaryGrid,
+  .details div {
     grid-template-columns: 1fr;
   }
 }
