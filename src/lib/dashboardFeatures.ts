@@ -47,18 +47,19 @@ export type DashboardFeatureDefinition = {
   key: DashboardFeatureKey;
   label: string;
   description: string;
-  status: Record<PlanId, DashboardFeatureStatus>;
-  visibility: Record<PlanId, DashboardFeatureVisibility>;
+  statusByPlan: Record<PlanId, DashboardFeatureStatus>;
+  visibilityByPlan: Record<PlanId, DashboardFeatureVisibility>;
   minPlan?: Exclude<PlanId, "pilot">;
   route?: string;
   ctaLabel?: string;
 };
 
-export type ResolvedDashboardFeature = Omit<DashboardFeatureDefinition, "status" | "visibility" | "minPlan"> & DashboardFeaturePlanAccess;
+export type ResolvedDashboardFeature = Omit<DashboardFeatureDefinition, "statusByPlan" | "visibilityByPlan" | "minPlan"> & DashboardFeaturePlanAccess;
 
 export type DashboardFeatureGroups = {
   sidebar: ResolvedDashboardFeature[];
   active: ResolvedDashboardFeature[];
+  demoLimited: ResolvedDashboardFeature[];
   later: ResolvedDashboardFeature[];
   roadmap: ResolvedDashboardFeature[];
 };
@@ -71,20 +72,20 @@ const access = (
   growth: DashboardFeaturePlanAccess,
   agency: DashboardFeaturePlanAccess,
 ): {
-  status: Record<PlanId, DashboardFeatureStatus>;
-  visibility: Record<PlanId, DashboardFeatureVisibility>;
+  statusByPlan: Record<PlanId, DashboardFeatureStatus>;
+  visibilityByPlan: Record<PlanId, DashboardFeatureVisibility>;
   minPlan?: Exclude<PlanId, "pilot">;
 } => {
   const minPlan = [pilot, starter, growth, agency].find((entry) => entry.minPlan)?.minPlan;
 
   return {
-    status: {
+    statusByPlan: {
       pilot: pilot.status,
       starter: starter.status,
       growth: growth.status,
       agency: agency.status,
     },
-    visibility: {
+    visibilityByPlan: {
       pilot: pilot.visibility,
       starter: starter.visibility,
       growth: growth.visibility,
@@ -97,7 +98,11 @@ const access = (
 const active = (visibility: DashboardFeatureVisibility = "sidebar"): DashboardFeaturePlanAccess => ({ status: "active", visibility });
 const demo = (visibility: DashboardFeatureVisibility = "sidebar"): DashboardFeaturePlanAccess => ({ status: "demo", visibility });
 const limited = (visibility: DashboardFeatureVisibility = "sidebar"): DashboardFeaturePlanAccess => ({ status: "limited", visibility });
-const preview = (minPlan?: Exclude<PlanId, "pilot">): DashboardFeaturePlanAccess => ({ status: "preview", visibility: "main", ...(minPlan ? { minPlan } : {}) });
+const preview = (minPlan?: Exclude<PlanId, "pilot">, visibility: DashboardFeatureVisibility = "main"): DashboardFeaturePlanAccess => ({
+  status: "preview",
+  visibility,
+  ...(minPlan ? { minPlan } : {}),
+});
 const upgrade = (minPlan: Exclude<PlanId, "pilot">): DashboardFeaturePlanAccess => ({ status: "upgrade", visibility: "upgrade", minPlan });
 const roadmapOnly = (): DashboardFeaturePlanAccess => ({ status: "roadmap_only", visibility: "roadmap" });
 const hidden = (): DashboardFeaturePlanAccess => ({ status: "hidden", visibility: "hidden" });
@@ -108,7 +113,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     label: "Dashboard-Überblick",
     description: "Gemeinsamer Workspace-Startpunkt mit Paketstatus, Setup-Hinweisen und nächsten Schritten.",
     route: "/dashboard",
-    ...access(active(), active(), preview("growth"), demo()),
+    ...access(demo(), active(), preview("growth", "sidebar"), demo()),
   },
   {
     key: "contacts",
@@ -123,7 +128,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     label: "Kontaktdetail",
     description: "Detailansicht für einen Kontakt mit Kontext, Memory und Follow-up-Vorbereitung.",
     route: "/dashboard#contact-detail",
-    ...access(demo(), active(), active(), demo()),
+    ...access(demo("main"), active("main"), active("main"), demo("main")),
   },
   {
     key: "sandra_demo",
@@ -131,7 +136,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     description: "Sicherer Demo-Fan für Pilot, KI-Demo, Memory-Demo und Follow-up-Demo.",
     route: "/dashboard#sandra-demo",
     ctaLabel: "Demo öffnen",
-    ...access(demo(), hidden(), hidden(), demo("main")),
+    ...access(active("main"), hidden(), hidden(), demo("main")),
   },
   {
     key: "ai_suggestions",
@@ -145,7 +150,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     label: "Memory / Fan-Gedächtnis",
     description: "Merkt relevante Kontaktinformationen für bessere manuelle Antworten und Follow-ups.",
     route: "/dashboard#memory",
-    ...access(demo(), active(), active(), demo()),
+    ...access(demo("main"), active("main"), active("main"), demo("main")),
   },
   {
     key: "followups",
@@ -167,7 +172,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     label: "Ein Profil",
     description: "Ein aktives Profil als produktiver Starter-Arbeitsbereich.",
     route: "/dashboard#profile",
-    ...access(upgrade("starter"), active(), active(), demo()),
+    ...access(upgrade("starter"), active("main"), active("main"), demo("main")),
   },
   {
     key: "multiple_profiles",
@@ -191,7 +196,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     key: "analytics",
     label: "Analytics",
     description: "Auswertungen bleiben im aktuellen Dashboard als klar getrennte Vorschau beziehungsweise Upgrade-Hinweis.",
-    ...access(upgrade("growth"), upgrade("growth"), preview("agency"), preview("agency")),
+    ...access(roadmapOnly(), roadmapOnly(), preview("growth"), preview("agency")),
   },
   {
     key: "campaigns",
@@ -216,7 +221,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     label: "Roadmap",
     description: "Transparenter Hinweisbereich für kommende Funktionen, Vorschauen und Paket-Upgrades.",
     route: "/dashboard#roadmap",
-    ...access(active("main"), active("main"), active("main"), active("main")),
+    ...access(active(), active(), active(), active()),
   },
 ];
 
@@ -246,12 +251,12 @@ export function resolveDashboardFeatures(
   const isPreviewCommercialOption = commercialOption === "growth_preview" || commercialOption === "agency_preview";
 
   return DASHBOARD_FEATURES.map((feature) => {
-    const status = feature.status[normalizedPlanId];
-    const visibility = feature.visibility[normalizedPlanId];
+    const status = feature.statusByPlan[normalizedPlanId];
+    const visibility = feature.visibilityByPlan[normalizedPlanId];
     const minPlan = feature.minPlan ?? plan.upgradePlan;
 
     if (isPreviewCommercialOption && (normalizedPlanId === "growth" || normalizedPlanId === "agency") && status === "active") {
-      return { ...feature, status: "preview", visibility: visibility === "sidebar" ? "main" : visibility, minPlan };
+      return { ...feature, status: "preview", visibility, minPlan };
     }
 
     return { ...feature, status, visibility, minPlan };
@@ -268,13 +273,18 @@ export function getDashboardFeatureGroups(
 
   return {
     sidebar: features.filter(
-      (feature) => feature.visibility === "sidebar" && ["active", "demo", "limited"].includes(feature.status),
+      (feature) => feature.visibility === "sidebar" && ["active", "demo", "limited", "preview"].includes(feature.status),
     ),
     active: features.filter(
-      (feature) => feature.key !== "roadmap" && feature.visibility !== "roadmap" && ["active", "demo", "limited"].includes(feature.status),
+      (feature) => feature.key !== "roadmap" && feature.visibility !== "roadmap" && feature.status === "active",
     ),
-    later: features.filter((feature) => feature.status === "upgrade" || feature.status === "preview"),
-    roadmap: features.filter((feature) => feature.key === "roadmap" || feature.status === "roadmap_only" || feature.visibility === "roadmap"),
+    demoLimited: features.filter(
+      (feature) => feature.key !== "roadmap" && feature.visibility !== "roadmap" && ["demo", "limited"].includes(feature.status),
+    ),
+    later: features.filter((feature) => feature.status === "upgrade"),
+    roadmap: features.filter(
+      (feature) => feature.key === "roadmap" || feature.status === "preview" || feature.status === "roadmap_only" || feature.visibility === "roadmap",
+    ),
   };
 }
 

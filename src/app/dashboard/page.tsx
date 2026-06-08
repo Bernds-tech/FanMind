@@ -221,6 +221,18 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
           </div>
         </section>
 
+        <section className={styles.featureSection} aria-labelledby="demo-limited-features">
+          <div className={styles.sectionHeader}>
+            <p className={styles.eyebrow}>Setupmodus</p>
+            <h2 id="demo-limited-features">Demo / Limitiert</h2>
+          </div>
+          <div className={styles.featureGrid}>
+            {featureGroups.demoLimited.map((feature) => (
+              <FeatureCard key={feature.key} feature={feature} />
+            ))}
+          </div>
+        </section>
+
         <section className={styles.featureSection} aria-labelledby="later-features">
           <div className={styles.sectionHeader}>
             <p className={styles.eyebrow}>Klar getrennt</p>
@@ -236,7 +248,7 @@ function WorkspaceDetails({ workspace, email }: WorkspaceDetailsProps) {
         <section className={styles.featureSection} id="roadmap" aria-labelledby="roadmap-features">
           <div className={styles.sectionHeader}>
             <p className={styles.eyebrow}>Roadmap</p>
-            <h2 id="roadmap-features">Roadmap / Hinweise</h2>
+            <h2 id="roadmap-features">Roadmap / Vorschau</h2>
           </div>
           <div className={styles.compactGrid}>
             {featureGroups.roadmap.map((feature) => (
