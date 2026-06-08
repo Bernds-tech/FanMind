@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
@@ -34,9 +35,9 @@ type KpiIconName =
   | "users"
   | "activity"
   | "checkCircle"
-  | "ai"
-  | "import"
-  | "signal";
+  | "megaphone"
+  | "refresh"
+  | "percent";
 
 type KpiCard = {
   label: string;
@@ -46,6 +47,7 @@ type KpiCard = {
   tone: "blue" | "cyan" | "violet" | "violetBlue" | "green" | "amber";
   sparklinePath: string;
   infoLabel: string;
+  isComingSoon?: boolean;
 };
 
 type ContactPreviewRow = {
@@ -259,34 +261,34 @@ function getKpiCards(): KpiCard[] {
       infoLabel: "Follow-ups sind Demo-Aufgaben zur manuellen Prüfung.",
     },
     {
-      label: "KI-Vorschläge",
-      value: "3",
-      meta: "vorbereitet · manuell geprüft",
-      icon: "ai",
-      tone: "violetBlue",
-      sparklinePath:
-        "M2 18 C12 16 19 10 30 12 S43 17 54 11 S69 11 80 13 S91 9 102 9 S114 12 124 6",
-      infoLabel: "KI-Vorschläge bleiben vorbereitet und werden manuell geprüft.",
-    },
-    {
-      label: "Importstatus",
-      value: "CSV",
-      meta: "Vorschau vorbereitet",
-      icon: "import",
+      label: "Laufende Kampagnen",
+      value: "0",
+      meta: "Kampagnen-Modul in Vorbereitung",
+      icon: "megaphone",
       tone: "amber",
       sparklinePath:
         "M2 17 C13 16 20 14 30 15 S44 17 54 13 S68 13 78 14 S91 8 102 10 S114 10 124 6",
-      infoLabel: "CSV-Import ist als Vorschau vorbereitet.",
+      infoLabel: "Produktive Kampagnen sind noch nicht freigeschaltet.",
     },
     {
-      label: "Kanäle verbunden",
-      value: "0",
-      meta: "Integrationen Roadmap",
-      icon: "signal",
+      label: "Reaktivierung",
+      value: "1",
+      meta: "Fan zur manuellen Prüfung",
+      icon: "refresh",
+      tone: "violetBlue",
+      sparklinePath:
+        "M2 18 C12 16 19 10 30 12 S43 17 54 11 S69 11 80 13 S91 9 102 9 S114 12 124 6",
+      infoLabel: "Reaktivierung basiert auf manuell geprüften Demo-/MVP-Signalen.",
+    },
+    {
+      label: "Conversion Rate",
+      value: "—",
+      meta: "Tracking in Vorbereitung",
+      icon: "percent",
       tone: "cyan",
       sparklinePath:
         "M2 16 C15 15 21 15 30 15.5 S43 17 54 14.5 S72 14.5 84 13 S101 14 124 10",
-      infoLabel: "Social-Media-Kanäle sind noch nicht verbunden und bleiben Roadmap.",
+      infoLabel: "Conversion-Tracking ist noch nicht produktiv umgesetzt.",
     },
   ];
 }
@@ -523,16 +525,39 @@ function getPlanStatus(
   return "Vorschau";
 }
 
+function ComingSoonBadge() {
+  return (
+    <Image
+      src="/assets/coming-soon-badge.png"
+      alt="Coming Soon"
+      width={90}
+      height={30}
+      className={styles.comingSoonBadge}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+function isFeatureComingSoon(feature: ResolvedDashboardFeature): boolean {
+  return ["preview", "roadmap_only", "upgrade"].includes(feature.status);
+}
+
 function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
+  const isComingSoon = isFeatureComingSoon(feature);
+
   return (
     <article
-      className={`${styles.featurePill} ${styles[`status-${feature.status}`]}`}
+      className={`${styles.featurePill} ${styles[`status-${feature.status}`]} ${
+        isComingSoon ? styles.cardWithComingSoon : ""
+      }`}
     >
       <div>
         <h3>{feature.label}</h3>
         <p>{getDashboardStatusText(feature.status, feature.minPlan)}</p>
       </div>
       <span>{getDashboardStatusLabel(feature.status)}</span>
+      {isComingSoon ? <ComingSoonBadge /> : null}
     </article>
   );
 }
@@ -553,28 +578,22 @@ function KpiIcon({ icon }: { icon: KpiIconName }) {
       "M8 12.25 10.65 15 16.25 8.75",
       "M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z",
     ],
-    ai: [
-      "M12 3.75 13.55 8.8 18.25 10.5 13.55 12.2 12 17.25 10.45 12.2 5.75 10.5 10.45 8.8 12 3.75Z",
-      "M18.25 4.75v3.5",
-      "M20 6.5h-3.5",
-      "M4.75 15.75v2.5",
-      "M6 17h-2.5",
+    megaphone: [
+      "M4.25 13.25h3l8.25 4.5V6.25l-8.25 4.5h-3v2.5Z",
+      "M7.25 13.25 8.75 19",
+      "M17.5 9.25a3.25 3.25 0 0 1 0 5.5",
+      "M19.5 6.75a6.75 6.75 0 0 1 0 10.5",
     ],
-    import: [
-      "M12 4.5v9",
-      "m8.5 10 3.5 3.5 3.5-3.5",
-      "M5 17.75h14",
-      "M6.5 6.5h4",
-      "M14.5 6.5h1",
+    refresh: [
+      "M5.5 8.5A7 7 0 0 1 17.75 6L20 8.25",
+      "M18.5 15.5A7 7 0 0 1 6.25 18L4 15.75",
+      "M17.75 6v4.25H13.5",
+      "M6.25 18v-4.25H10.5",
     ],
-    signal: [
-      "M4 16.75h3",
-      "M10.5 16.75h3",
-      "M17 16.75h3",
-      "M5.5 16.75v-4.5",
-      "M12 16.75V8",
-      "M18.5 16.75V5.25",
-      "M4.5 7.75a11.25 11.25 0 0 1 15 0",
+    percent: [
+      "M6.75 17.25 17.25 6.75",
+      "M7.75 9.25a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5Z",
+      "M16.25 18.25a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5Z",
     ],
   };
 
@@ -742,7 +761,9 @@ function WorkspaceDetails({
           {kpiCards.map((card) => (
             <article
               key={card.label}
-              className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}
+              className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]} ${
+                card.isComingSoon ? styles.cardWithComingSoon : ""
+              }`}
             >
               <div className={styles.kpiCardTop}>
                 <span className={styles.kpiIcon}>
@@ -775,13 +796,14 @@ function WorkspaceDetails({
               >
                 <path d={card.sparklinePath} />
               </svg>
+              {card.isComingSoon ? <ComingSoonBadge /> : null}
             </article>
           ))}
         </section>
 
         <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
           <article
-            className={`${styles.moduleCard} ${styles.activityCard}`}
+            className={`${styles.moduleCard} ${styles.activityCard} ${styles.cardWithComingSoon}`}
             id="channels"
             aria-labelledby="channels-title"
           >
@@ -809,6 +831,7 @@ function WorkspaceDetails({
               bilden den MVP-Workspace; Instagram, TikTok, WhatsApp und Discord
               bleiben Roadmap.
             </p>
+            <ComingSoonBadge />
           </article>
 
           <section
@@ -884,7 +907,7 @@ function WorkspaceDetails({
 
           <aside className={styles.rightRail} aria-label="Status und Paket">
             <section
-              className={styles.contextCard}
+              className={`${styles.contextCard} ${styles.cardWithComingSoon}`}
               aria-labelledby="segments-title"
             >
               <div className={styles.moduleHeader}>
@@ -910,6 +933,7 @@ function WorkspaceDetails({
                   <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
                 </div>
               </div>
+              <ComingSoonBadge />
             </section>
 
             <section
@@ -983,7 +1007,10 @@ function WorkspaceDetails({
             </div>
           </article>
 
-          <article className={styles.moduleCard} id="ai-suggestions">
+          <article
+            className={`${styles.moduleCard} ${styles.cardWithComingSoon}`}
+            id="ai-suggestions"
+          >
             <div className={styles.moduleHeader}>
               <div>
                 <p className={styles.eyebrow}>KI-Empfehlungen</p>
@@ -1000,6 +1027,7 @@ function WorkspaceDetails({
                 </div>
               ))}
             </div>
+            <ComingSoonBadge />
           </article>
 
           <article
@@ -1051,7 +1079,10 @@ function WorkspaceDetails({
             </div>
           </article>
 
-          <article className={styles.moduleCard} id="csv-import">
+          <article
+            className={`${styles.moduleCard} ${styles.cardWithComingSoon}`}
+            id="csv-import"
+          >
             <div className={styles.moduleHeader}>
               <div>
                 <p className={styles.eyebrow}>Import & Roadmap</p>
@@ -1073,11 +1104,12 @@ function WorkspaceDetails({
               <span>Discord · Roadmap</span>
               <span>Echte Kampagnen & Analytics · Roadmap</span>
             </div>
+            <ComingSoonBadge />
           </article>
         </section>
 
         <section
-          className={styles.featureSection}
+          className={`${styles.featureSection} ${styles.cardWithComingSoon}`}
           id="roadmap"
           aria-labelledby="features-title"
         >
@@ -1113,6 +1145,7 @@ function WorkspaceDetails({
               }
             </span>
           </div>
+          <ComingSoonBadge />
         </section>
 
         <div className={styles.safetyNote} role="note">

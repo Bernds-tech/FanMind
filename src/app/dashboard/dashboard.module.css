@@ -473,8 +473,8 @@
 
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(180px, 1fr));
-  gap: 11px;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  gap: 10px;
   align-items: stretch;
 }
 
@@ -483,8 +483,8 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) 18px;
   gap: 3px;
-  min-height: 96px;
-  max-height: 108px;
+  min-height: 94px;
+  max-height: 106px;
   overflow: hidden;
   border: 1px solid rgba(125, 167, 218, 0.18);
   border-radius: 13px;
@@ -511,7 +511,7 @@
   min-width: 0;
   padding-top: 2px;
   color: #98a9c0;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 650;
   line-height: 1.05;
   letter-spacing: 0.01em;
@@ -650,8 +650,25 @@
 .contextCard,
 .quickActions,
 .featureSection {
+  position: relative;
   border-radius: 20px;
   padding: 14px;
+}
+
+.cardWithComingSoon {
+  padding-bottom: 48px;
+}
+
+.comingSoonBadge {
+  display: block;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 90px;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
 }
 
 .moduleHeader {
@@ -935,6 +952,7 @@
 }
 
 .featurePill {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 9px;
@@ -1116,6 +1134,10 @@
 
   .kpiGrid {
     grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
+  .cardWithComingSoon {
+    padding-bottom: 54px;
   }
 
   .topbarActions,
