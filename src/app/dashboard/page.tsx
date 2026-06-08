@@ -31,17 +31,17 @@ type WorkspaceDisplay = {
 };
 
 type KpiIconName =
-  | "contacts"
-  | "channels"
-  | "followups"
+  | "users"
+  | "activity"
+  | "checkCircle"
   | "ai"
   | "import"
-  | "mvp";
+  | "signal";
 
 type KpiCard = {
   label: string;
   value: string;
-  helper: string;
+  meta: string;
   icon: KpiIconName;
   tone: "blue" | "cyan" | "violet" | "violetBlue" | "green" | "amber";
   sparklinePath: string;
@@ -229,64 +229,64 @@ function getWorkspaceDisplay(
 function getKpiCards(): KpiCard[] {
   return [
     {
-      label: "Demo-Kontakte",
+      label: "Gesamtfans",
       value: "3",
-      helper: "Sandra M., Alex K., Ella L.",
-      icon: "contacts",
+      meta: "Demo-Daten · Sandra M.",
+      icon: "users",
       tone: "blue",
       sparklinePath:
-        "M2 19 C14 18 17 14 28 14 S42 18 52 12 S66 12 74 10 S87 8 96 10 S112 10 124 6",
-      infoLabel: "Demo-Kontakte sind vorbereitete Beispieldaten.",
+        "M2 16 C13 15 18 12 28 12.5 S43 14 52 10 S67 9 78 8.5 S94 10 104 7.5 S115 6.5 124 5",
+      infoLabel: "Gesamtfans basiert auf sicheren Demo-Daten im Pilot-Workspace.",
     },
     {
-      label: "Kanäle verbunden",
-      value: "0",
-      helper: "0 Social-Kanäle aktiv",
-      icon: "channels",
-      tone: "cyan",
+      label: "Aktive Fans",
+      value: "3",
+      meta: "Pilot-Workspace",
+      icon: "activity",
+      tone: "green",
       sparklinePath:
-        "M2 16 C15 15 21 15 30 15.5 S43 17 54 14.5 S72 14.5 84 13 S101 14 124 10",
-      infoLabel: "Social-Kanäle sind noch nicht verbunden.",
+        "M2 15 C12 15 18 14 25 14 L32 8 L39 17 L48 9 C57 11 63 12 72 10 S88 8 97 8.5 S113 7.5 124 5.5",
+      infoLabel: "Aktive Fans sind Demo-Kontakte im Pilot-Workspace.",
     },
     {
       label: "Offene Follow-ups",
       value: "3",
-      helper: "Demo-Aufgaben",
-      icon: "followups",
+      meta: "Demo-Aufgaben",
+      icon: "checkCircle",
       tone: "violet",
       sparklinePath:
-        "M2 17 C14 16 18 12 29 12 S43 15 52 10 S67 8 76 10 S90 12 99 9 S112 11 124 7",
+        "M2 17 C12 16 18 13 28 14 S43 16 53 11 S68 8 78 10 S92 13 102 9 S114 8 124 6",
       infoLabel: "Follow-ups sind Demo-Aufgaben zur manuellen Prüfung.",
     },
     {
       label: "KI-Vorschläge",
-      value: "Vorbereitet",
-      helper: "Mensch prüft und sendet selbst",
+      value: "3",
+      meta: "vorbereitet · manuell geprüft",
       icon: "ai",
       tone: "violetBlue",
       sparklinePath:
-        "M2 18 C14 15 19 10 30 12 S43 17 54 11 S69 11 80 13 S91 9 102 9 S114 12 124 6",
-      infoLabel: "KI-Vorschläge bleiben vorbereitet und werden manuell gesendet.",
+        "M2 18 C12 16 19 10 30 12 S43 17 54 11 S69 11 80 13 S91 9 102 9 S114 12 124 6",
+      infoLabel: "KI-Vorschläge bleiben vorbereitet und werden manuell geprüft.",
     },
     {
-      label: "Import",
-      value: "CSV Vorschau",
-      helper: "Paketabhängig vorbereitet",
+      label: "Importstatus",
+      value: "CSV",
+      meta: "Vorschau vorbereitet",
       icon: "import",
       tone: "amber",
       sparklinePath:
-        "M2 19 C14 16 20 14 30 15 S44 17 54 13 S68 13 78 14 S91 8 102 10 S114 10 124 6",
-      infoLabel: "CSV-Import ist als paketabhängige Vorschau vorbereitet.",
+        "M2 17 C13 16 20 14 30 15 S44 17 54 13 S68 13 78 14 S91 8 102 10 S114 10 124 6",
+      infoLabel: "CSV-Import ist als Vorschau vorbereitet.",
     },
     {
-      label: "MVP-Kern aktiv",
-      value: "Ja",
-      helper: "Kontakte, Follow-ups, Roadmap",
-      icon: "mvp",
-      tone: "green",
+      label: "Kanäle verbunden",
+      value: "0",
+      meta: "Integrationen Roadmap",
+      icon: "signal",
+      tone: "cyan",
       sparklinePath:
-        "M2 17 C16 15 25 13 36 12 S52 15 64 10 S80 11 91 10 S106 7 124 6",
-      infoLabel: "Der sichtbare MVP-Kern umfasst Kontakte, Follow-ups und Roadmap-Hinweise.",
+        "M2 16 C15 15 21 15 30 15.5 S43 17 54 14.5 S72 14.5 84 13 S101 14 124 10",
+      infoLabel: "Social-Media-Kanäle sind noch nicht verbunden und bleiben Roadmap.",
     },
   ];
 }
@@ -539,22 +539,19 @@ function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
 
 function KpiIcon({ icon }: { icon: KpiIconName }) {
   const iconPaths: Record<KpiIconName, string[]> = {
-    contacts: [
-      "M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
-      "M3.75 19.25a5.25 5.25 0 0 1 10.5 0",
-      "M16.5 10.5a2.75 2.75 0 1 0 0-5.5",
-      "M15.75 14.25a4.75 4.75 0 0 1 4.5 4.75",
+    users: [
+      "M8.5 11.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z",
+      "M3.5 19a5 5 0 0 1 10 0",
+      "M16.25 10.5a2.75 2.75 0 1 0 0-5.5",
+      "M15.25 14.25A4.5 4.5 0 0 1 20.5 19",
     ],
-    channels: [
-      "M12 12m-3.25 0a3.25 3.25 0 1 0 6.5 0 3.25 3.25 0 1 0-6.5 0",
-      "M4.75 6.75a9.8 9.8 0 0 1 14.5 0",
-      "M6.75 17.25a9.8 9.8 0 0 0 10.5 0",
+    activity: [
+      "M3.5 12h3.25l2-5.5 4.25 11 2.25-7H20.5",
+      "M4.75 18.75a9 9 0 1 1 14.5-10.5",
     ],
-    followups: [
-      "M5 17.5 17.5 5",
-      "M9 5h8.5v8.5",
-      "M5.5 7.5h5",
-      "M5.5 12h3",
+    checkCircle: [
+      "M8 12.25 10.65 15 16.25 8.75",
+      "M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z",
     ],
     ai: [
       "M12 3.75 13.55 8.8 18.25 10.5 13.55 12.2 12 17.25 10.45 12.2 5.75 10.5 10.45 8.8 12 3.75Z",
@@ -570,9 +567,14 @@ function KpiIcon({ icon }: { icon: KpiIconName }) {
       "M6.5 6.5h4",
       "M14.5 6.5h1",
     ],
-    mvp: [
-      "M5 12.5 9.25 16.75 19 7.25",
-      "M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z",
+    signal: [
+      "M4 16.75h3",
+      "M10.5 16.75h3",
+      "M17 16.75h3",
+      "M5.5 16.75v-4.5",
+      "M12 16.75V8",
+      "M18.5 16.75V5.25",
+      "M4.5 7.75a11.25 11.25 0 0 1 15 0",
     ],
   };
 
@@ -742,7 +744,7 @@ function WorkspaceDetails({
               key={card.label}
               className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}
             >
-              <div className={styles.kpiTop}>
+              <div className={styles.kpiCardTop}>
                 <span className={styles.kpiIcon}>
                   <KpiIcon icon={card.icon} />
                 </span>
@@ -763,7 +765,7 @@ function WorkspaceDetails({
                 >
                   {card.value}
                 </strong>
-                <p className={styles.kpiMeta}>{card.helper}</p>
+                <p className={styles.kpiMeta}>{card.meta}</p>
               </div>
               <svg
                 className={styles.kpiSparkline}
