@@ -6,14 +6,7 @@ import {
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import {
-  getCommercialOptionLabel,
-  getDashboardFeatureGroups,
-  getDashboardStatusLabel,
-  getDashboardStatusText,
-  type ResolvedDashboardFeature,
-} from "@/lib/dashboardFeatures";
-import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
+import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
@@ -64,31 +57,10 @@ type ContactPreviewRow = {
   nextFollowUp: string;
 };
 
-type FeatureCornerBadgeVariant =
-  | "comingSoon"
-  | "roadmap"
-  | "preview"
-  | "planned";
-
-type ChannelStatusCard = {
-  channel: string;
-  status: string;
-  note: string;
-  tone: "active" | "preview" | "roadmap";
-  statusVariant: FeatureStatusLabelVariant;
-  cornerBadge?: FeatureCornerBadgeVariant;
-};
-
 type TaskPreview = {
   title: string;
   person: string;
   due: string;
-  status: string;
-};
-
-type RecommendationPreview = {
-  title: string;
-  text: string;
   status: string;
 };
 
@@ -368,131 +340,6 @@ function getFollowUps(workspace: WorkspaceDashboardRow): TaskPreview[] {
   ];
 }
 
-function getRecommendations(
-  workspace: WorkspaceDashboardRow,
-): RecommendationPreview[] {
-  if (workspace.plan_id === "pilot") {
-    return [
-      {
-        title: "Sandra M. Early-Bird Antwort vorbereiten",
-        text: "Vorschlag vorbereiten, Early-Bird-Kontext prüfen und anschließend selbst senden.",
-        status: "Demo",
-      },
-      {
-        title: "Ella L. Reaktivierungsansprache prüfen",
-        text: "Reaktivierungsansprache vorbereiten; FanMind erstellt keinen automatischen Versand.",
-        status: "Demo",
-      },
-    ];
-  }
-
-  if (workspace.plan_id === "starter") {
-    return [
-      {
-        title: "Kontaktbasis aufbauen",
-        text: "Ersten Kontakt anlegen oder CSV-Import vorbereiten, danach Vorschläge manuell prüfen.",
-        status: "Limitiert",
-      },
-      {
-        title: "Keine Auto-Aktionen",
-        text: "KI dient als Arbeitsvorbereitung; jede Nachricht bleibt eine menschliche Entscheidung.",
-        status: "Sicher",
-      },
-    ];
-  }
-
-  return [
-    {
-      title: "Preview sauber trennen",
-      text: "Segmente, Kampagnen und Analytics bleiben Roadmap beziehungsweise Upgrade-Hinweis.",
-      status: "Vorschau",
-    },
-  ];
-}
-
-function getChannelStatuses(
-  workspace: WorkspaceDashboardRow,
-): ChannelStatusCard[] {
-  const csvStatus = workspace.plan_id === "starter" ? "Aktiv" : "Vorschau";
-  const csvNote =
-    workspace.plan_id === "starter"
-      ? "CSV-Import im MVP aktiv"
-      : "CSV-Import als Paketvorschau";
-
-  return [
-    {
-      channel: "Manuell",
-      status: "Aktiv",
-      note: "Kontakte und Follow-ups werden manuell gepflegt",
-      tone: "active",
-      statusVariant: "active",
-    },
-    {
-      channel: "CSV",
-      status: csvStatus,
-      note: csvNote,
-      tone: workspace.plan_id === "starter" ? "active" : "preview",
-      statusVariant: workspace.plan_id === "starter" ? "active" : "preview",
-    },
-    {
-      channel: "E-Mail",
-      status: "Geplant",
-      note: "Noch keine Versandfunktion",
-      tone: "roadmap",
-      statusVariant: "planned",
-      cornerBadge: "planned",
-    },
-    {
-      channel: "Instagram",
-      status: "Roadmap",
-      note: "0 verbunden · Integration auf Roadmap",
-      tone: "roadmap",
-      statusVariant: "roadmap",
-      cornerBadge: "roadmap",
-    },
-    {
-      channel: "TikTok",
-      status: "Roadmap",
-      note: "0 verbunden · Integration auf Roadmap",
-      tone: "roadmap",
-      statusVariant: "roadmap",
-      cornerBadge: "roadmap",
-    },
-    {
-      channel: "WhatsApp",
-      status: "Roadmap",
-      note: "0 verbunden · Integration auf Roadmap",
-      tone: "roadmap",
-      statusVariant: "roadmap",
-      cornerBadge: "roadmap",
-    },
-    {
-      channel: "Facebook",
-      status: "Roadmap",
-      note: "0 verbunden · Integration auf Roadmap",
-      tone: "roadmap",
-      statusVariant: "roadmap",
-      cornerBadge: "roadmap",
-    },
-    {
-      channel: "X/Twitter",
-      status: "Roadmap",
-      note: "0 verbunden · Integration auf Roadmap",
-      tone: "roadmap",
-      statusVariant: "roadmap",
-      cornerBadge: "roadmap",
-    },
-    {
-      channel: "Discord",
-      status: "Roadmap",
-      note: "0 verbunden · Integration auf Roadmap",
-      tone: "roadmap",
-      statusVariant: "roadmap",
-      cornerBadge: "roadmap",
-    },
-  ];
-}
-
 function stringMetadataValue(
   metadata: Record<string, unknown> | undefined,
   key: string,
@@ -562,61 +409,6 @@ function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" | "lar
       height={1024}
       className={`${styles.comingSoonImage} ${styles[`comingSoon-${size}`]}`}
     />
-  );
-}
-
-function FeatureCornerBadge({
-  variant,
-}: {
-  variant: FeatureCornerBadgeVariant;
-}) {
-  const size = variant === "preview" ? "medium" : "small";
-
-  return <ComingSoonImage size={size} />;
-}
-
-function isFeatureComingSoon(feature: ResolvedDashboardFeature): boolean {
-  return ["preview", "roadmap_only", "upgrade"].includes(feature.status);
-}
-
-
-function featureStatusVariant(status: ResolvedDashboardFeature["status"]): FeatureStatusLabelVariant {
-  if (status === "roadmap_only") return "roadmap";
-  if (status === "preview") return "preview";
-  if (status === "upgrade") return "planned";
-  if (status === "demo") return "demo";
-  if (status === "limited") return "limited";
-  return "active";
-}
-
-function featureCornerBadgeVariant(
-  status: ResolvedDashboardFeature["status"],
-): FeatureCornerBadgeVariant {
-  if (status === "roadmap_only") return "roadmap";
-  if (status === "preview") return "preview";
-  return "planned";
-}
-
-function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
-  const isComingSoon = isFeatureComingSoon(feature);
-
-  return (
-    <article
-      className={`${styles.featurePill} ${styles[`status-${feature.status}`]} ${
-        isComingSoon ? styles.cardWithBadge : ""
-      }`}
-    >
-      <div>
-        <h3>{feature.label}</h3>
-        <p>{getDashboardStatusText(feature.status, feature.minPlan)}</p>
-      </div>
-      <FeatureStatusLabel variant={featureStatusVariant(feature.status)}>
-        {getDashboardStatusLabel(feature.status)}
-      </FeatureStatusLabel>
-      {isComingSoon ? (
-        <FeatureCornerBadge variant={featureCornerBadgeVariant(feature.status)} />
-      ) : null}
-    </article>
   );
 }
 
@@ -726,21 +518,6 @@ function WorkspaceDetails({
   userDisplayName,
 }: WorkspaceDetailsProps) {
   const display = getWorkspaceDisplay(workspace);
-  const featureGroups = getDashboardFeatureGroups(
-    workspace.plan_id,
-    workspace.commercial_option,
-  );
-  const allVisibleFeatures = [
-    ...featureGroups.active,
-    ...featureGroups.demoLimited,
-    ...featureGroups.later,
-    ...featureGroups.roadmap,
-  ].filter((feature) => feature.key !== "automatic_sending");
-  const compactFeatures = allVisibleFeatures
-    .filter(
-      (feature) => !["roadmap", "automatic_sending"].includes(feature.key),
-    )
-    .slice(0, 6);
   const pageTitle = "Dashboard";
   const displayName = userDisplayName ?? workspace.name ?? "Nutzer";
   const pageSubtitle = "Willkommen zurück, Pilot Test 👋";
@@ -761,8 +538,6 @@ function WorkspaceDetails({
   ];
   const contactRows = getContactRows(workspace);
   const followUps = getFollowUps(workspace);
-  const recommendations = getRecommendations(workspace);
-  const channelStatuses = getChannelStatuses(workspace);
 
   return (
     <div className={styles.dashboardShell}>
@@ -859,43 +634,6 @@ function WorkspaceDetails({
         </section>
 
         <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
-          <article
-            className={`${styles.moduleCard} ${styles.activityCard} ${styles.cardWithBadge}`}
-            id="channels"
-            aria-labelledby="channels-title"
-          >
-            <div className={styles.moduleHeader}>
-              <div>
-                <p className={styles.eyebrow}>Kanalstatus / Channel Hub</p>
-                <h2 id="channels-title">0 Kanäle verbunden</h2>
-              </div>
-              <span>Integrationen auf Roadmap</span>
-            </div>
-            <div className={styles.channelGrid}>
-              {channelStatuses.map((channel) => (
-                <div
-                  key={channel.channel}
-                  className={`${styles.channelCard} ${styles[`channel-${channel.tone}`]} ${
-                    channel.cornerBadge ? styles.cardWithBadge : ""
-                  }`}
-                >
-                  <strong>{channel.channel}</strong>
-                  <FeatureStatusLabel variant={channel.statusVariant}>{channel.status}</FeatureStatusLabel>
-                  <p>{channel.note}</p>
-                  {channel.cornerBadge ? (
-                    <FeatureCornerBadge variant={channel.cornerBadge} />
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            <p className={styles.moduleText}>
-              Social-Media-Kanäle sind noch nicht verbunden. Manuell und CSV
-              bilden den MVP-Workspace; Instagram, TikTok, WhatsApp, Facebook,
-              X/Twitter und Discord bleiben Roadmap.
-            </p>
-            <FeatureCornerBadge variant="roadmap" />
-          </article>
-
           <section
             className={`${styles.moduleCard} ${styles.contactCard}`}
             id="contacts"
@@ -966,78 +704,6 @@ function WorkspaceDetails({
               </table>
             </div>
           </section>
-
-          <aside className={styles.rightRail} aria-label="Status und Paket">
-            <section
-              className={`${styles.contextCard} ${styles.cardWithBadge}`}
-              aria-labelledby="segments-title"
-            >
-              <div className={styles.moduleHeader}>
-                <div>
-                  <p className={styles.eyebrow}>Segmentstatus</p>
-                  <h2 id="segments-title">Verteilung</h2>
-                </div>
-                <span>
-                  {workspace.plan_id === "pilot" ? "Demo" : "Kompakt"}
-                </span>
-              </div>
-              <div className={styles.segmentList}>
-                <div>
-                  <span>Buyer / Premium</span>
-                  <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
-                </div>
-                <div>
-                  <span>VIP / Event</span>
-                  <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
-                </div>
-                <div>
-                  <span>Reaktivierung</span>
-                  <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
-                </div>
-              </div>
-              <FeatureCornerBadge variant="preview" />
-            </section>
-
-            <section
-              className={styles.contextCard}
-              id="contract"
-              aria-labelledby="contract-title"
-            >
-              <p className={styles.eyebrow}>Paket & Vertrag</p>
-              <h2 id="contract-title">{display.packageName}</h2>
-              <dl className={styles.details}>
-                <div>
-                  <dt>plan_id</dt>
-                  <dd>{workspace.plan_id}</dd>
-                </div>
-                <div>
-                  <dt>commercial_option</dt>
-                  <dd>{display.commercialOptionName}</dd>
-                </div>
-                <div>
-                  <dt>Einrichtung</dt>
-                  <dd>{display.setupFeeLabel}</dd>
-                </div>
-                <div>
-                  <dt>Monatlich</dt>
-                  <dd>{display.monthlyFeeLabel}</dd>
-                </div>
-                <div>
-                  <dt>Bindung</dt>
-                  <dd>{display.commitmentLabel}</dd>
-                </div>
-                <div>
-                  <dt>Status</dt>
-                  <dd>
-                    {workspace.plan_id === "pilot"
-                      ? "Demo aktiv"
-                      : display.commercialOptionName}
-                  </dd>
-                </div>
-              </dl>
-              <p>{display.contractNote}</p>
-            </section>
-          </aside>
         </section>
 
         <section className={styles.panelGrid} aria-label="Arbeitsbereiche">
@@ -1069,25 +735,6 @@ function WorkspaceDetails({
             </div>
           </article>
 
-          <article className={styles.moduleCard} id="ai-suggestions">
-            <div className={styles.moduleHeader}>
-              <div>
-                <p className={styles.eyebrow}>KI-Empfehlungen</p>
-                <h2>Vorbereitet, nicht gesendet</h2>
-              </div>
-              <span>Manuell</span>
-            </div>
-            <div className={styles.recommendationList}>
-              {recommendations.map((recommendation) => (
-                <div key={recommendation.title}>
-                  <span>{recommendation.status}</span>
-                  <strong>{recommendation.title}</strong>
-                  <p>{recommendation.text}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-
           <article
             className={`${styles.quickActions} ${styles.compactActions}`}
             aria-labelledby="quick-actions-title"
@@ -1110,12 +757,6 @@ function WorkspaceDetails({
                   {workspace.plan_id === "pilot" ? "Demo" : "Aktiv"}
                 </small>
               </a>
-              <a href="#csv-import">
-                CSV-Import starten{" "}
-                <small>
-                  {workspace.plan_id === "starter" ? "Aktiv" : "Vorschau"}
-                </small>
-              </a>
               <a href="#followups">
                 Follow-up erstellen{" "}
                 <small>
@@ -1128,82 +769,12 @@ function WorkspaceDetails({
                   {workspace.plan_id === "pilot" ? "Demo" : "Limitiert"}
                 </small>
               </a>
-              <a href="#roadmap">
-                Roadmap öffnen <small>Vorschau</small>
-              </a>
-              <a href="#channels">
-                Kanal-Roadmap ansehen <small>Roadmap</small>
+              <a href="#followups">
+                Überfällige prüfen <small>Heute</small>
               </a>
             </div>
           </article>
 
-          <article
-            className={`${styles.moduleCard} ${styles.cardWithBadge}`}
-            id="csv-import"
-          >
-            <div className={styles.moduleHeader}>
-              <div>
-                <p className={styles.eyebrow}>Import & Roadmap</p>
-                <h2>CSV, Kampagnen, Analytics</h2>
-              </div>
-              <span>Roadmap</span>
-            </div>
-            <p className={styles.moduleText}>
-              CSV ist im Starter-MVP aktiv und im Pilot als Vorschau markiert.
-              Kampagnen, Analytics und echte Social-Media-Integrationen bleiben
-              Roadmap; automatisches Senden bleibt als Sicherheitsgrenze dauerhaft
-              deaktiviert.
-            </p>
-            <div className={styles.roadmapStack}>
-              <span>Instagram <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
-              <span>TikTok <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
-              <span>WhatsApp <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
-              <span>Facebook <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
-              <span>X/Twitter <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
-              <span>Discord <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
-              <span>Echte Kampagnen & Analytics <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
-            </div>
-            <FeatureCornerBadge variant="comingSoon" />
-          </article>
-        </section>
-
-        <section
-          className={styles.featureSection}
-          id="roadmap"
-          aria-labelledby="features-title"
-        >
-          <div>
-            <p className={styles.eyebrow}>Paketabhängige Funktionen</p>
-            <h2 id="features-title">Dezente Statuslogik</h2>
-            <p>
-              Feature-Gating nutzt weiterhin plan_id und commercial_option;
-              aktive, Demo-, limitierte und Roadmap-Funktionen bleiben kompakt
-              getrennt.
-            </p>
-          </div>
-          <div className={styles.featurePillGrid}>
-            {compactFeatures.map((feature) => (
-              <FeaturePill key={feature.key} feature={feature} />
-            ))}
-          </div>
-          <div className={styles.featureSplit}>
-            <span>
-              Upgrade:{" "}
-              {
-                featureGroups.later.filter(
-                  (feature) => feature.key !== "automatic_sending",
-                ).length
-              }
-            </span>
-            <span>
-              Roadmap/Vorschau:{" "}
-              {
-                featureGroups.roadmap.filter(
-                  (feature) => feature.key !== "automatic_sending",
-                ).length
-              }
-            </span>
-          </div>
         </section>
 
         <div className={styles.safetyNote} role="note">
