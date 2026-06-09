@@ -630,9 +630,9 @@ function KpiStatCard({ card }: { card: KpiCard }) {
           </span>
         </div>
         <svg
-          className={styles.kpiSparkline}
+          className={`${styles.kpiSparkline} ${styles.kpiTotalFansSparkline}`}
           aria-hidden="true"
-          viewBox="0 0 126 16"
+          viewBox="0 0 126 14"
           preserveAspectRatio="none"
         >
           <path d={card.sparklinePath} />
