@@ -433,7 +433,7 @@ const englishCopy: Record<string, string> = {
   "Beliebtester Plan": "Most popular plan",
   "Mensch prüft & sendet selbst": "Humans review & send themselves",
   "Du behältst die Kontrolle – FanMind unterstützt dich.": "You stay in control – FanMind supports you.",
-  "Keine automatische Sendefunktion": "No automatic sending feature",
+  "Sicherheitsgrenze: kein automatisches Senden": "Safety boundary: no automatic sending",
   "FanMind sendet nicht automatisch. Du entscheidest, wann und wie.": "FanMind does not send automatically. You decide when and how.",
   "DSGVO-konform gedacht": "Designed with GDPR in mind",
   "Datenschutz steht im Fokus – Privacy by Design.": "Privacy is central – privacy by design.",

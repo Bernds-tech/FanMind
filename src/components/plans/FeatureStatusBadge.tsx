@@ -1,5 +1,5 @@
 import type { FeatureStatus } from "@/config/plans";
-import styles from "./FeatureStatusBadge.module.css";
+import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 
 const statusLabels: Record<Exclude<FeatureStatus, "hidden">, string> = {
   active: "Aktiv",
@@ -8,6 +8,15 @@ const statusLabels: Record<Exclude<FeatureStatus, "hidden">, string> = {
   upgrade: "Upgrade",
   coming_soon: "Coming Soon",
   preview: "Vorschau",
+};
+
+const statusVariants: Record<Exclude<FeatureStatus, "hidden">, FeatureStatusLabelVariant> = {
+  active: "active",
+  demo: "demo",
+  limited: "limited",
+  upgrade: "upgrade",
+  coming_soon: "coming-soon",
+  preview: "preview",
 };
 
 type FeatureStatusBadgeProps = {
@@ -19,5 +28,5 @@ export default function FeatureStatusBadge({ status }: FeatureStatusBadgeProps) 
     return null;
   }
 
-  return <span className={styles.badge} data-status={status}>{statusLabels[status]}</span>;
+  return <FeatureStatusLabel variant={statusVariants[status]}>{statusLabels[status]}</FeatureStatusLabel>;
 }

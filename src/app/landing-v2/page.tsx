@@ -4,6 +4,7 @@ import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
 import { createFanMindTranslator, fanmindCopy, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
+import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import styles from "./landing-v2.module.css";
 
 export const metadata: Metadata = {
@@ -13,6 +14,17 @@ export const metadata: Metadata = {
 };
 
 const LANDING_ROADMAP_HREF = "/landing-v2#roadmap";
+
+function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | undefined {
+  if (!status) return undefined;
+  if (["Roadmap", "In Kürze"].includes(status)) return "roadmap";
+  if (["Vorschau", "Preview", "BETA"].includes(status)) return "preview";
+  if (["Geplant", "Planned"].includes(status)) return "planned";
+  if (["Im MVP", "Bereit", "Verfügbar", "Aktiv", "Active"].includes(status)) return "active";
+  return undefined;
+}
+
+const roadmapIntegrationLabels = new Set(["Discord", "WhatsApp", "TikTok", "Instagram", "X", "Facebook"]);
 
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase", caret: true },
@@ -53,18 +65,21 @@ const features = [
   {
     icon: "♙",
     title: "Segmentieren & personalisieren",
+    status: "Vorschau",
     text: "Erstelle präzise Segmente und bereite die richtige Botschaft zur richtigen Zeit vor.",
     tone: "green",
   },
   {
     icon: "📣",
     title: "Kampagnen vorbereiten",
+    status: "Roadmap",
     text: "Plane Kampagnenentwürfe als Vorschau – ohne automatischen Versand und ohne vollständige Versandfunktion.",
     tone: "orange",
   },
   {
     icon: "▥",
     title: "Analytics auf der Roadmap",
+    status: "Roadmap",
     text: "Roadmap-Reports zeigen, welche Auswertungen später folgen; keine vollständige Analytics-Suite im MVP.",
     tone: "cyan",
   },
@@ -144,6 +159,7 @@ const functionCards = [
   {
     icon: "📣",
     title: "5. Kampagnen",
+    status: "Roadmap",
     text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt In Kürze.",
     body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
     cta: "Roadmap ansehen",
@@ -153,6 +169,7 @@ const functionCards = [
   {
     icon: "⌁",
     title: "6. Analytics",
+    status: "Roadmap",
     text: "Roadmap-Ausblick für spätere Auswertungen und Wachstumssignale.",
     body: "Roadmap-Auswertung · In Kürze",
     cta: "Roadmap öffnen",
@@ -404,6 +421,7 @@ const integrationActions = [
   {
     icon: "♙",
     title: "Segmente",
+    status: "Vorschau",
     text: "Fans sinnvoll gruppieren.",
   },
   {
@@ -414,11 +432,13 @@ const integrationActions = [
   {
     icon: "📣",
     title: "Kampagnen",
+    status: "Roadmap",
     text: "Geprüfte Entwürfe planen.",
   },
   {
     icon: "⌁",
     title: "Analytics",
+    status: "Roadmap",
     text: "Roadmap-Signale einordnen.",
   },
 ];
@@ -717,6 +737,7 @@ const pricingPlans = [
     href: "/register?plan=pilot",
     tone: "purple",
     featured: false,
+    status: "Aktiv",
     features: [
       "Geführter Setup- & Demo-Start",
       "1 Demo-Workspace",
@@ -738,6 +759,7 @@ const pricingPlans = [
     href: "/register?plan=starter",
     tone: "blue",
     featured: false,
+    status: "Aktiv",
     features: [
       "1 betreutes Profil",
       "Kontakte & CSV-Import",
@@ -755,10 +777,11 @@ const pricingPlans = [
     pricePrefix: "",
     price: "499 €",
     cadence: "/ Monat",
-    cta: "Growth wählen",
+    cta: "Growth Vorschau",
     href: "/register?plan=growth",
     tone: "blue",
     featured: true,
+    status: "Vorschau",
     features: [
       "Bis zu 3–5 betreute Profile",
       "Mehr Kontakte & mehr KI-Nutzung",
@@ -780,6 +803,7 @@ const pricingPlans = [
     href: "/register?plan=agency",
     tone: "purple",
     featured: false,
+    status: "Roadmap",
     features: [
       "Mehrere betreute Profile / Kunden",
       "Team-Workspace",
@@ -800,7 +824,7 @@ const pricingProofs = [
   },
   {
     icon: "✈",
-    title: "Keine automatische Sendefunktion",
+    title: "Sicherheitsgrenze: kein automatisches Senden",
     text: "FanMind sendet nicht automatisch. Du entscheidest, wann und wie.",
     tone: "purple",
   },
@@ -1359,6 +1383,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             >
               <div>{feature.icon}</div>
               <h3>{feature.title}</h3>
+              {statusVariantFromLabel(feature.status) ? (
+                <FeatureStatusLabel variant={statusVariantFromLabel(feature.status)!}>{feature.status}</FeatureStatusLabel>
+              ) : null}
               <p>{feature.text}</p>
             </article>
           ))}
@@ -1452,6 +1479,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <span>{card.icon}</span>
                 <div>
                   <h3>{card.title}</h3>
+                  {statusVariantFromLabel(card.status) ? (
+                    <FeatureStatusLabel variant={statusVariantFromLabel(card.status)!}>{card.status}</FeatureStatusLabel>
+                  ) : null}
                   <p>{card.text}</p>
                 </div>
               </div>
@@ -1511,7 +1541,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <div className={styles.stepCardTitle}>
                   <span>{step.icon}</span>
                   <strong>{step.cardTitle}</strong>
-                  {step.badge && <em>{step.badge}</em>}
+                  {step.badge && (
+                    <FeatureStatusLabel variant={statusVariantFromLabel(step.badge) ?? "preview"}>{step.badge}</FeatureStatusLabel>
+                  )}
                 </div>
                 <div className={styles.stepRows}>
                   {step.rows.map((row, rowIndex) => (
@@ -1815,7 +1847,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <div className={styles.integrationChannelIcon}>{channel.icon}</div>
               <h3>{channel.title}</h3>
               <p>{channel.text}</p>
-              <span>{channel.status}</span>
+              <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
             </article>
           ))}
         </div>
@@ -1828,6 +1860,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <span key={source.label}>
                   <i aria-hidden="true">{source.icon}</i>
                   {source.label}
+                  {roadmapIntegrationLabels.has(source.label) ? (
+                    <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel>
+                  ) : null}
                   <em aria-hidden="true" />
                 </span>
               ))}
@@ -1917,8 +1952,11 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <article key={action.title}>
                   <span>{action.icon}</span>
                   <h3>{action.title}</h3>
+                  {statusVariantFromLabel(action.status) ? (
+                    <FeatureStatusLabel variant={statusVariantFromLabel(action.status)!}>{action.status}</FeatureStatusLabel>
+                  ) : null}
                   <p>{action.text}</p>
-                  <i aria-hidden="true">✓</i>
+                  <i aria-hidden="true">{action.status ? "·" : "✓"}</i>
                 </article>
               ))}
             </div>
@@ -2113,6 +2151,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               {plan.eyebrow && <div className={styles.pricingPlanPill}>{plan.eyebrow}</div>}
               <div className={styles.pricingPlanIcon}>{plan.icon}</div>
               <h3>{plan.name}</h3>
+              {statusVariantFromLabel(plan.status) ? (
+                <FeatureStatusLabel variant={statusVariantFromLabel(plan.status)!}>{plan.status}</FeatureStatusLabel>
+              ) : null}
               <p>{plan.audience}</p>
               <div className={styles.pricingAmount}>
                 {plan.pricePrefix && <span>{plan.pricePrefix}</span>}
@@ -2219,7 +2260,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
                 <div className={styles.privacyControlStatus}>
-                  <span>✓</span> {card.label}
+                  <FeatureStatusLabel variant={card.label.includes("Roadmap") ? "roadmap" : "planned"}>
+                    {card.label.includes("Roadmap") ? "Roadmap" : "Geplant"}
+                  </FeatureStatusLabel>
+                  <span>{card.label}</span>
                 </div>
               </article>
             ))}
