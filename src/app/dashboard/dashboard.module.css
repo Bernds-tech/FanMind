@@ -690,11 +690,55 @@
   padding: 14px;
 }
 
-.cardWithComingSoon {
+.cardWithBadge {
+  position: relative;
   padding-bottom: 48px;
 }
 
+.cornerBadge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 10px 24px rgba(0, 0, 0, 0.22);
+}
 
+.cornerBadge[data-variant="comingSoon"] {
+  border-color: rgba(251, 146, 60, 0.52);
+  color: #fed7aa;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.28), rgba(250, 204, 21, 0.18));
+}
+
+.cornerBadge[data-variant="roadmap"] {
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #bfdbfe;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.28), rgba(14, 165, 233, 0.18));
+}
+
+.cornerBadge[data-variant="preview"] {
+  border-color: rgba(125, 211, 252, 0.46);
+  color: #e9d5ff;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.26), rgba(34, 211, 238, 0.16));
+}
+
+.cornerBadge[data-variant="planned"] {
+  border-color: rgba(129, 140, 248, 0.44);
+  color: #c7d2fe;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.24), rgba(20, 184, 166, 0.16));
+}
 
 .moduleHeader {
   display: flex;
@@ -1165,7 +1209,7 @@
     grid-template-columns: repeat(2, minmax(150px, 1fr));
   }
 
-  .cardWithComingSoon {
+  .cardWithBadge {
     padding-bottom: 54px;
   }
 
@@ -1232,6 +1276,36 @@
   color: #cbd5e1;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.channelCard .cornerBadge,
+.featurePill .cornerBadge {
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.92);
+}
+
+.channelCard .cornerBadge[data-variant="roadmap"],
+.featurePill .cornerBadge[data-variant="roadmap"] {
+  color: #bfdbfe;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.28), rgba(14, 165, 233, 0.18));
+}
+
+.channelCard .cornerBadge[data-variant="preview"],
+.featurePill .cornerBadge[data-variant="preview"] {
+  color: #e9d5ff;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.26), rgba(34, 211, 238, 0.16));
+}
+
+.channelCard .cornerBadge[data-variant="planned"],
+.featurePill .cornerBadge[data-variant="planned"] {
+  color: #c7d2fe;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.24), rgba(20, 184, 166, 0.16));
+}
+
+.channelCard .cornerBadge[data-variant="comingSoon"],
+.featurePill .cornerBadge[data-variant="comingSoon"] {
+  color: #fed7aa;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.28), rgba(250, 204, 21, 0.18));
 }
 
 .channel-active {
