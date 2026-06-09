@@ -663,22 +663,15 @@
 
 .crmGrid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.95fr) minmax(420px, 1.55fr) minmax(
-      260px,
-      0.8fr
-    );
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: start;
 }
 
 .panelGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-}
-
-.panelGrid .moduleCard:last-child {
-  grid-column: span 2;
 }
 
 .moduleCard,
@@ -1126,11 +1119,10 @@
 
   .panelGrid,
   .featurePillGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .featureSplit,
-  .panelGrid .moduleCard:last-child {
+  .featureSplit {
     grid-column: 1 / -1;
   }
 }
