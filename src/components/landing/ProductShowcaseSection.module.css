@@ -458,3 +458,31 @@
   .benefitGrid,
   .featureStrip { grid-template-columns: repeat(2, 1fr); }
 }
+
+.cardWithComingSoon {
+  position: relative;
+  padding-bottom: 58px;
+}
+
+.comingSoonImage {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 5;
+  width: 92px;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+  transform: rotate(-4deg);
+  filter: drop-shadow(0 9px 16px rgba(0, 0, 0, 0.36));
+}
+
+.comingSoon-small {
+  right: 8px;
+  bottom: 7px;
+  width: 74px;
+}
+
+.comingSoon-medium {
+  width: 94px;
+}

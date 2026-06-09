@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
@@ -49,6 +50,7 @@ type KpiCardData = {
   tone: KpiTone;
   sparklinePoints: string;
   infoLabel: string;
+  comingSoon?: boolean;
 };
 
 type ContactPreviewRow = {
@@ -277,6 +279,7 @@ const kpiCards: KpiCardData[] = [
     sparklinePoints:
       "M2 13 C14 12.5 22 10.5 32 11 S48 12.5 58 9.5 S73 7.5 83 9 S98 10.5 108 7 S119 5 124 4.5",
     infoLabel: "Laufende Kampagnen ist eine vorbereitete Kampagnen-KPI; produktiver Versand ist im MVP nicht aktiv.",
+    comingSoon: true,
   },
   {
     label: "Reaktivierung",
@@ -287,6 +290,7 @@ const kpiCards: KpiCardData[] = [
     sparklinePoints:
       "M2 13.5 C12 12.5 20 8 31 9 S47 13 57 8.5 S72 6 82 8 S97 11.5 107 7 S118 5.5 124 4.25",
     infoLabel: "Reaktivierung zeigt Fans mit vorbereitetem manuellem Reaktivierungsbedarf.",
+    comingSoon: true,
   },
   {
     label: "Conversion Rate",
@@ -297,6 +301,7 @@ const kpiCards: KpiCardData[] = [
     sparklinePoints:
       "M2 12.5 C14 12 22 11.5 32 12 S48 13 58 11 S73 9 83 9.5 S98 10 108 7.5 S119 6 124 4.75",
     infoLabel: "Conversion Rate ist eine Analytics-Vorschau; vollständige Live-Analytics sind im MVP nicht aktiv.",
+    comingSoon: true,
   },
 ];
 
@@ -548,23 +553,26 @@ function getPlanStatus(
   return "Vorschau";
 }
 
-const cornerBadgeLabels: Record<FeatureCornerBadgeVariant, string> = {
-  comingSoon: "Coming Soon",
-  roadmap: "Roadmap",
-  preview: "Vorschau",
-  planned: "Geplant",
-};
+function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" | "large" }) {
+  return (
+    <Image
+      src="/assets/coming-soon-badge.png"
+      alt="Coming Soon"
+      width={1536}
+      height={1024}
+      className={`${styles.comingSoonImage} ${styles[`comingSoon-${size}`]}`}
+    />
+  );
+}
 
 function FeatureCornerBadge({
   variant,
 }: {
   variant: FeatureCornerBadgeVariant;
 }) {
-  return (
-    <span className={styles.cornerBadge} data-variant={variant}>
-      {cornerBadgeLabels[variant]}
-    </span>
-  );
+  const size = variant === "preview" ? "medium" : "small";
+
+  return <ComingSoonImage size={size} />;
 }
 
 function isFeatureComingSoon(feature: ResolvedDashboardFeature): boolean {
@@ -664,6 +672,7 @@ function KpiCard({
   icon,
   sparklinePoints,
   infoLabel,
+  comingSoon = false,
 }: KpiCardData) {
   const toneClass = `tone-${tone}`;
 
@@ -688,6 +697,7 @@ function KpiCard({
       >
         <path d={sparklinePoints} />
       </svg>
+      {comingSoon ? <ComingSoonImage size="small" /> : null}
     </article>
   );
 }

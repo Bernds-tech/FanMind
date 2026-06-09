@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { CSSProperties } from "react";
 import type { FeatureKey } from "@/config/plans";
 import FeatureStatusLabel from "@/components/FeatureStatusLabel";
@@ -51,6 +52,18 @@ const featureCards = [
   ["📣", "Kampagnen & Analytics", "Als Vorschau sichtbar: Inhalte planen und Roadmap-Auswertungen prüfen."],
 ];
 
+
+function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" }) {
+  return (
+    <Image
+      src="/assets/coming-soon-badge.png"
+      alt="Coming Soon"
+      width={1536}
+      height={1024}
+      className={`${styles.comingSoonImage} ${styles[`comingSoon-${size}`]}`}
+    />
+  );
+}
 function BrandMark() {
   return (
     <svg className={styles.brandMark} viewBox="0 0 52 52" aria-hidden="true">
@@ -111,11 +124,12 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
               <div className={styles.approvalRow}><span>{t("Freigabe nötig")}</span><button type="button">{t("Vorschlag prüfen")}</button></div>
             </article>
 
-            <article className={`${styles.card} ${styles.campaignCard}`}>
+            <article className={`${styles.card} ${styles.campaignCard} ${styles.cardWithComingSoon}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>📣</span><strong>{t("Sommer-Event Early Bird")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
               <div className={styles.campaignStatus}><span>{t("Geplant: VIP + Buyer")}</span><b>1.824 Fans</b></div>
               <div className={styles.rateGrid}><span>{t("Roadmap")}<b>{t("In Kürze")}</b></span><span>{t("Freigabe")}<b>{t("Manuell")}</b></span><span>{t("Versand")}<b>{t("Inaktiv")}</b></span></div>
               <SparkLine tone="green" />
+              <ComingSoonImage size="medium" />
             </article>
           </aside>
 
@@ -154,22 +168,35 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
               {followupItems.map((item) => <div className={styles.followupRow} key={item}><span />{item}</div>)}
             </article>
 
-            <article className={`${styles.card} ${styles.segmentCard}`}>
+            <article className={`${styles.card} ${styles.segmentCard} ${styles.cardWithComingSoon}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>◌</span><strong>{t("Segmente")}</strong><FeatureStatusLabel variant="preview">{t("Vorschau")}</FeatureStatusLabel></div>
               <div className={styles.donutWrap}><div className={styles.donut}><span>10.248<small>{t("Fans")}</small></span></div><div className={styles.segmentLegend}><span><i />VIP 1.824</span><span><i />Warm 2.150</span><span><i />Buyer 1.920</span><span><i />Inactive 2.048</span></div></div>
+              <ComingSoonImage size="medium" />
             </article>
 
-            <article className={`${styles.card} ${styles.analyticsCard}`}>
+            <article className={`${styles.card} ${styles.analyticsCard} ${styles.cardWithComingSoon}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>{t("Analytics")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
               <div className={styles.analyticsTooltip}>{t("Roadmap · keine Vollsuite im MVP")}</div>
               <SparkLine tone="purple" />
               <div className={styles.analyticsLegend}><span><i />{t("Conversion")}</span><span><i />{t("Antwortquote")}</span></div>
               <a href={landingPath(language, "#roadmap")}>{t("Roadmap anzeigen →")}</a>
+              <ComingSoonImage size="medium" />
             </article>
           </aside>
         </div>
 
-        <div className={styles.featureStrip}>{localizedFeatureCards.map(([icon, title, text]) => <article key={title}><span>{icon}</span><h3>{title}</h3><p>{text}</p></article>)}</div>
+        <div className={styles.featureStrip}>{localizedFeatureCards.map(([icon, title, text]) => {
+          const hasComingSoon = title.includes("Kampagnen") || title.includes("Analytics");
+
+          return (
+            <article className={hasComingSoon ? styles.cardWithComingSoon : undefined} key={title}>
+              <span>{icon}</span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+              {hasComingSoon ? <ComingSoonImage size="small" /> : null}
+            </article>
+          );
+        })}</div>
       </div>
     </section>
   );

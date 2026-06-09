@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
@@ -74,6 +75,22 @@ function LanguageSwitch({ language, planId }: { language: FanMindLanguage; planI
   );
 }
 
+
+function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" }) {
+  return (
+    <Image
+      src="/assets/coming-soon-badge.png"
+      alt="Coming Soon"
+      width={1536}
+      height={1024}
+      className={`${styles.comingSoonImage} ${styles[`comingSoon-${size}`]}`}
+    />
+  );
+}
+
+function isPreviewPlan(planId: RegisterPlanId) {
+  return planId === "growth" || planId === "agency";
+}
 function FanMindLogo({ language }: { language: FanMindLanguage }) {
   return (
     <a className={styles.logo} href={landingPath(language)} aria-label={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"}>
@@ -469,7 +486,12 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 const planId = plan.href.match(/plan=([^&]+)/)?.[1] as RegisterPlanId;
                 const isSelected = planId === selectedPlanId;
                 return (
-                  <a key={plan.title} className={`${styles.planCard} ${isSelected ? styles.planCardSelected : ""}`} href={plan.href} aria-current={isSelected ? "page" : undefined}>
+                  <a
+                    key={plan.title}
+                    className={`${styles.planCard} ${isSelected ? styles.planCardSelected : ""} ${isPreviewPlan(planId) ? styles.cardWithComingSoon : ""}`}
+                    href={plan.href}
+                    aria-current={isSelected ? "page" : undefined}
+                  >
                     <div className={styles.planCardHeader}>
                       <span className={styles.planNumber}>{plan.label}</span>
                       <FeatureStatusLabel variant={planStatusVariant(planId)}>{plan.badge}</FeatureStatusLabel>
@@ -481,6 +503,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                       {plan.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
                     </ul>
                     <span className={styles.planCta}>{plan.cta} →</span>
+                    {isPreviewPlan(planId) ? <ComingSoonImage size="small" /> : null}
                   </a>
                 );
               })}
@@ -609,7 +632,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               </div>
             </form>
           ) : (
-            <section className={styles.previewCard} aria-label={selectedPlanId === "growth" ? "Growth Vorschau" : "Agency Demo"}>
+            <section className={`${styles.previewCard} ${styles.cardWithComingSoon}`} aria-label={selectedPlanId === "growth" ? "Growth Vorschau" : "Agency Demo"}>
               <p className={styles.eyebrow}>{selectedPlanId === "growth" ? (language === "en" ? "Growth preview" : "Growth Vorschau") : (language === "en" ? "Agency demo" : "Agency Demo/Erstgespräch")}</p>
               <h1>{selectedPlanId === "growth" ? "Growth" : "Agency"}</h1>
               <p>{selectedPlanId === "growth" ? (language === "en" ? "Growth is visible for planning, but it is not directly available as a productive registration in the MVP start." : "Growth ist für die Planung sichtbar, aber zum MVP-Start noch nicht direkt produktiv registrierbar.") : (language === "en" ? "Agency starts with a demo/intro call. It is not directly available as a productive registration in the MVP start." : "Agency startet mit Demo/Erstgespräch. Zum MVP-Start ist es noch nicht direkt produktiv registrierbar.")}</p>
@@ -625,6 +648,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               </div>
               {error && <p className={styles.error} role="alert">{error}</p>}
               <p className={styles.notice}>{language === "en" ? "No productive Growth/Agency activation, no payment and no subscription billing are created here." : "Hier wird keine produktive Growth-/Agency-Freischaltung, keine Zahlung und keine Subscription-Abrechnung erstellt."}</p>
+              <ComingSoonImage size="medium" />
               <div className={styles.footerLinks}>
                 <a href={loginHref}>{copy.loginPrompt} {copy.loginLink}</a>
                 <a href={landingPath(language)}>{copy.landing}</a>

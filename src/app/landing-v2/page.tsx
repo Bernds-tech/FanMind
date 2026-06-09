@@ -160,7 +160,7 @@ const functionCards = [
     icon: "📣",
     title: "5. Kampagnen",
     status: "Roadmap",
-    text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt In Kürze.",
+    text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt im MVP inaktiv und manuell abgegrenzt.",
     body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
     cta: "Roadmap ansehen",
     href: LANDING_ROADMAP_HREF,
@@ -294,8 +294,8 @@ const sixStepCards = [
     rows: [
       "Zielgruppe: 1.260",
       "Roadmap: Segment- und Kampagnenplanung",
-      "Versand: inaktiv / In Kürze",
-      "Kanäle: E-Mail im MVP, weitere Kanäle Roadmap",
+      "Versand: inaktiv / manuell abgegrenzt",
+      "Kanäle: E-Mail-Kontext im MVP, weitere Kanäle Roadmap",
       "Status: Vorschau geprüft",
     ],
     cta: "Roadmap ansehen",
@@ -1012,6 +1012,22 @@ function Logo({ compact = false, language = "de" }: { compact?: boolean; languag
   );
 }
 
+
+function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" | "large" }) {
+  return (
+    <Image
+      src="/assets/coming-soon-badge.png"
+      alt="Coming Soon"
+      width={1536}
+      height={1024}
+      className={`${styles.comingSoonImage} ${styles[`comingSoon-${size}`]}`}
+    />
+  );
+}
+
+function isComingSoonStatus(status?: string) {
+  return Boolean(status && ["Roadmap", "In Kürze", "Coming Soon", "Vorschau", "Preview", "Geplant", "Planned"].includes(status));
+}
 function MetricCard({
   label,
   value,
@@ -1377,7 +1393,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <section id="features" className={styles.heroFeatureGrid}>
           {localizedFeatures.map((feature) => (
             <article
-              className={styles.heroFeatureCard}
+              className={`${styles.heroFeatureCard} ${isComingSoonStatus(feature.status) ? styles.cardWithComingSoon : ""}`}
               key={feature.title}
               data-tone={feature.tone}
             >
@@ -1387,6 +1403,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <FeatureStatusLabel variant={statusVariantFromLabel(feature.status)!}>{feature.status}</FeatureStatusLabel>
               ) : null}
               <p>{feature.text}</p>
+              {isComingSoonStatus(feature.status) ? <ComingSoonImage size="small" /> : null}
             </article>
           ))}
         </section>
@@ -1471,7 +1488,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.solutionFlow}>
           {localizedFunctionCards.map((card) => (
             <article
-              className={styles.solutionFunctionCard}
+              className={`${styles.solutionFunctionCard} ${isComingSoonStatus(card.status) ? styles.cardWithComingSoon : ""}`}
               data-tone={card.tone}
               key={card.title}
             >
@@ -1489,6 +1506,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <a href={card.href}>
                 {card.cta} <span>→</span>
               </a>
+              {isComingSoonStatus(card.status) ? <ComingSoonImage size="medium" /> : null}
             </article>
           ))}
         </div>
@@ -1526,7 +1544,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.processTrack} aria-label="FanMind Prozesslinie">
           {localizedSixStepCards.map((step, index) => (
             <article
-              className={styles.processStep}
+              className={`${styles.processStep} ${isComingSoonStatus(step.badge) ? styles.cardWithComingSoon : ""}`}
               data-tone={step.tone}
               key={step.title}
             >
@@ -1563,6 +1581,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <span>→</span>
                 </a>
               </div>
+              {isComingSoonStatus(step.badge) ? <ComingSoonImage size="medium" /> : null}
             </article>
           ))}
         </div>
@@ -1840,7 +1859,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.integrationChannelGrid}>
           {localizedIntegrationChannels.map((channel) => (
             <article
-              className={styles.integrationChannelCard}
+              className={`${styles.integrationChannelCard} ${isComingSoonStatus(channel.status) ? styles.cardWithComingSoon : ""}`}
               data-tone={channel.tone}
               key={channel.title}
             >
@@ -1848,6 +1867,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <h3>{channel.title}</h3>
               <p>{channel.text}</p>
               <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
+              {isComingSoonStatus(channel.status) ? <ComingSoonImage size="small" /> : null}
             </article>
           ))}
         </div>
@@ -1949,7 +1969,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <strong>{t("AKTIONEN & ERGEBNISSE")}</strong>
             <div>
               {localizedIntegrationActions.map((action) => (
-                <article key={action.title}>
+                <article
+                  className={isComingSoonStatus(action.status) ? styles.cardWithComingSoon : undefined}
+                  key={action.title}
+                >
                   <span>{action.icon}</span>
                   <h3>{action.title}</h3>
                   {statusVariantFromLabel(action.status) ? (
@@ -1957,6 +1980,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   ) : null}
                   <p>{action.text}</p>
                   <i aria-hidden="true">{action.status ? "·" : "✓"}</i>
+                  {isComingSoonStatus(action.status) ? <ComingSoonImage size="small" /> : null}
                 </article>
               ))}
             </div>
@@ -2022,7 +2046,11 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <div className={styles.roadmapGrid}>
           {localizedRoadmapPhases.map((phase) => (
-            <article className={styles.roadmapCard} data-tone={phase.tone} key={phase.phase}>
+            <article
+              className={`${styles.roadmapCard} ${phase.number === "01" ? "" : styles.cardWithComingSoon}`}
+              data-tone={phase.tone}
+              key={phase.phase}
+            >
               <div className={styles.roadmapPhasePill}>{phase.phase}</div>
               <div className={styles.roadmapIcon}>
                 <RoadmapLineIcon icon={phase.icon} />
@@ -2036,6 +2064,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <li key={item}>{item}</li>
                 ))}
               </ul>
+              {phase.number === "01" ? null : <ComingSoonImage size="medium" />}
             </article>
           ))}
         </div>
@@ -2143,7 +2172,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.pricingGrid} aria-label="FanMind Pakete">
           {localizedPricingPlans.map((plan) => (
             <article
-              className={styles.pricingPlanCard}
+              className={`${styles.pricingPlanCard} ${isComingSoonStatus(plan.status) ? styles.cardWithComingSoon : ""}`}
               data-featured={plan.featured ? "true" : undefined}
               data-tone={plan.tone}
               key={plan.name}
@@ -2168,6 +2197,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <a href={plan.href}>
                 {plan.cta} <span>→</span>
               </a>
+              {isComingSoonStatus(plan.status) ? <ComingSoonImage size="medium" /> : null}
             </article>
           ))}
         </div>
@@ -2254,7 +2284,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
           <div className={styles.privacyControlGrid}>
             {localizedPrivacyControlCards.map((card) => (
-              <article className={styles.privacyControlCard} data-tone={card.tone} key={card.title}>
+              <article className={`${styles.privacyControlCard} ${styles.cardWithComingSoon}`} data-tone={card.tone} key={card.title}>
                 <span className={styles.privacyControlNumber}>{card.number}</span>
                 <div className={styles.privacyControlIcon}>{card.icon}</div>
                 <h3>{card.title}</h3>
@@ -2265,6 +2295,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   </FeatureStatusLabel>
                   <span>{card.label}</span>
                 </div>
+                <ComingSoonImage size="small" />
               </article>
             ))}
           </div>
