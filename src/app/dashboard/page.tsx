@@ -605,67 +605,29 @@ function KpiIcon({ icon }: { icon: KpiIconName }) {
 }
 
 function KpiStatCard({ card }: { card: KpiCard }) {
-  const isTotalFansCard = card.label === "Gesamtfans";
-
-  if (isTotalFansCard) {
-    return (
-      <article
-        className={`${styles.kpiCard} ${styles.kpiTotalFansCard} ${styles[`tone-${card.tone}`]}`}
-      >
-        <div className={styles.kpiTotalFansTop}>
-          <span className={styles.kpiTotalFansIcon}>
-            <KpiIcon icon={card.icon} />
-          </span>
-          <div className={styles.kpiTotalFansText}>
-            <span className={styles.kpiLabel}>{card.label}</span>
-            <strong className={styles.kpiValue}>{card.value}</strong>
-            <p className={styles.kpiMeta}>{card.meta}</p>
-          </div>
-          <span
-            className={styles.kpiInfoIcon}
-            title={card.infoLabel}
-            aria-label={card.infoLabel}
-          >
-            i
-          </span>
-        </div>
-        <svg
-          className={`${styles.kpiSparkline} ${styles.kpiTotalFansSparkline}`}
-          aria-hidden="true"
-          viewBox="0 0 126 14"
-          preserveAspectRatio="none"
-        >
-          <path d={card.sparklinePath} />
-        </svg>
-      </article>
-    );
-  }
-
   return (
     <article className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}>
       <div className={styles.kpiCardTop}>
-        <span className={styles.kpiTitleGroup}>
-          <span className={styles.kpiLeadingIcon}>
-            <KpiIcon icon={card.icon} />
-          </span>
-          <span className={styles.kpiLabel}>{card.label}</span>
+        <span className={styles.kpiIcon}>
+          <KpiIcon icon={card.icon} />
         </span>
+        <div className={styles.kpiText}>
+          <span className={styles.kpiLabel}>{card.label}</span>
+          <strong className={styles.kpiValue}>{card.value}</strong>
+          <p className={styles.kpiMeta}>{card.meta}</p>
+        </div>
         <span
-          className={styles.kpiInfoIcon}
+          className={styles.kpiInfo}
           title={card.infoLabel}
           aria-label={card.infoLabel}
         >
           i
         </span>
       </div>
-      <div className={styles.kpiBody}>
-        <strong className={styles.kpiValue}>{card.value}</strong>
-        <p className={styles.kpiMeta}>{card.meta}</p>
-      </div>
       <svg
         className={styles.kpiSparkline}
         aria-hidden="true"
-        viewBox="0 0 126 16"
+        viewBox="0 0 126 14"
         preserveAspectRatio="none"
       >
         <path d={card.sparklinePath} />
