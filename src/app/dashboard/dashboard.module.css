@@ -695,17 +695,6 @@
 }
 
 
-.comingSoonBadge {
-  display: block;
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 2;
-  width: 90px;
-  height: auto;
-  pointer-events: none;
-  user-select: none;
-}
 
 .moduleHeader {
   display: flex;
@@ -1301,7 +1290,7 @@
   margin-top: 12px;
 }
 
-.roadmapStack span {
+.roadmapStack > span {
   border: 1px solid rgba(96, 165, 250, 0.22);
   border-radius: 999px;
   padding: 6px 9px;

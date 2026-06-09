@@ -12,6 +12,7 @@ import {
   getDashboardStatusText,
   type ResolvedDashboardFeature,
 } from "@/lib/dashboardFeatures";
+import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
@@ -66,6 +67,7 @@ type ChannelStatusCard = {
   status: string;
   note: string;
   tone: "active" | "preview" | "roadmap";
+  statusVariant: FeatureStatusLabelVariant;
 };
 
 type TaskPreview = {
@@ -411,54 +413,63 @@ function getChannelStatuses(
       status: "Aktiv",
       note: "Kontakte und Follow-ups werden manuell gepflegt",
       tone: "active",
+      statusVariant: "active",
     },
     {
       channel: "CSV",
       status: csvStatus,
       note: csvNote,
       tone: workspace.plan_id === "starter" ? "active" : "preview",
+      statusVariant: workspace.plan_id === "starter" ? "active" : "preview",
     },
     {
       channel: "E-Mail",
       status: "Geplant",
       note: "Noch keine Versandfunktion",
       tone: "roadmap",
+      statusVariant: "planned",
     },
     {
       channel: "Instagram",
       status: "Roadmap",
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
+      statusVariant: "roadmap",
     },
     {
       channel: "TikTok",
       status: "Roadmap",
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
+      statusVariant: "roadmap",
     },
     {
       channel: "WhatsApp",
       status: "Roadmap",
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
+      statusVariant: "roadmap",
     },
     {
       channel: "Facebook",
       status: "Roadmap",
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
+      statusVariant: "roadmap",
     },
     {
       channel: "X/Twitter",
       status: "Roadmap",
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
+      statusVariant: "roadmap",
     },
     {
       channel: "Discord",
       status: "Roadmap",
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
+      statusVariant: "roadmap",
     },
   ];
 }
@@ -523,22 +534,26 @@ function getPlanStatus(
   return "Vorschau";
 }
 
-function ComingSoonBadge() {
+function CardStatusLabel({ variant, children }: { variant: FeatureStatusLabelVariant; children?: string }) {
   return (
-    <img
-      src="/assets/coming-soon-badge.png"
-      alt="Coming Soon"
-      width={90}
-      height={30}
-      className={styles.comingSoonBadge}
-      loading="lazy"
-      decoding="async"
-    />
+    <FeatureStatusLabel placement="card-corner" variant={variant}>
+      {children}
+    </FeatureStatusLabel>
   );
 }
 
 function isFeatureComingSoon(feature: ResolvedDashboardFeature): boolean {
   return ["preview", "roadmap_only", "upgrade"].includes(feature.status);
+}
+
+
+function featureStatusVariant(status: ResolvedDashboardFeature["status"]): FeatureStatusLabelVariant {
+  if (status === "roadmap_only") return "roadmap";
+  if (status === "preview") return "preview";
+  if (status === "upgrade") return "planned";
+  if (status === "demo") return "demo";
+  if (status === "limited") return "limited";
+  return "active";
 }
 
 function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
@@ -554,8 +569,14 @@ function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
         <h3>{feature.label}</h3>
         <p>{getDashboardStatusText(feature.status, feature.minPlan)}</p>
       </div>
-      <span>{getDashboardStatusLabel(feature.status)}</span>
-      {isComingSoon ? <ComingSoonBadge /> : null}
+      <FeatureStatusLabel variant={featureStatusVariant(feature.status)}>
+        {getDashboardStatusLabel(feature.status)}
+      </FeatureStatusLabel>
+      {isComingSoon ? (
+        <CardStatusLabel variant={featureStatusVariant(feature.status)}>
+          {getDashboardStatusLabel(feature.status)}
+        </CardStatusLabel>
+      ) : null}
     </article>
   );
 }
@@ -816,7 +837,7 @@ function WorkspaceDetails({
                   className={`${styles.channelCard} ${styles[`channel-${channel.tone}`]}`}
                 >
                   <strong>{channel.channel}</strong>
-                  <span>{channel.status}</span>
+                  <FeatureStatusLabel variant={channel.statusVariant}>{channel.status}</FeatureStatusLabel>
                   <p>{channel.note}</p>
                 </div>
               ))}
@@ -826,7 +847,7 @@ function WorkspaceDetails({
               bilden den MVP-Workspace; Instagram, TikTok, WhatsApp und Discord
               bleiben Roadmap.
             </p>
-            <ComingSoonBadge />
+            <CardStatusLabel variant="roadmap" />
           </article>
 
           <section
@@ -928,7 +949,7 @@ function WorkspaceDetails({
                   <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
                 </div>
               </div>
-              <ComingSoonBadge />
+              <CardStatusLabel variant="roadmap" />
             </section>
 
             <section
@@ -1087,15 +1108,15 @@ function WorkspaceDetails({
               automatisches Senden sind nicht aktiv.
             </p>
             <div className={styles.roadmapStack}>
-              <span>Instagram · Roadmap</span>
-              <span>TikTok · Roadmap</span>
-              <span>WhatsApp · Roadmap</span>
-              <span>Facebook · Roadmap</span>
-              <span>X/Twitter · Roadmap</span>
-              <span>Discord · Roadmap</span>
-              <span>Echte Kampagnen & Analytics · Roadmap</span>
+              <span>Instagram <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
+              <span>TikTok <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
+              <span>WhatsApp <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
+              <span>Facebook <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
+              <span>X/Twitter <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
+              <span>Discord <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
+              <span>Echte Kampagnen & Analytics <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
             </div>
-            <ComingSoonBadge />
+            <CardStatusLabel variant="roadmap" />
           </article>
         </section>
 

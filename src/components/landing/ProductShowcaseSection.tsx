@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { FeatureKey } from "@/config/plans";
+import FeatureStatusLabel from "@/components/FeatureStatusLabel";
 import { shouldShowFeature } from "@/lib/plans";
 import { createFanMindTranslator, type FanMindLanguage, landingPath, localizeFanMindValue } from "@/lib/fanmindCopy";
 import styles from "./ProductShowcaseSection.module.css";
@@ -111,7 +112,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
             </article>
 
             <article className={`${styles.card} ${styles.campaignCard}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>📣</span><strong>{t("Sommer-Event Early Bird")}</strong><em>{t("Vorschau")}</em></div>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>📣</span><strong>{t("Sommer-Event Early Bird")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
               <div className={styles.campaignStatus}><span>{t("Geplant: VIP + Buyer")}</span><b>1.824 Fans</b></div>
               <div className={styles.rateGrid}><span>{t("Roadmap")}<b>{t("In Kürze")}</b></span><span>{t("Freigabe")}<b>{t("Manuell")}</b></span><span>{t("Versand")}<b>{t("Inaktiv")}</b></span></div>
               <SparkLine tone="green" />
@@ -154,12 +155,12 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
             </article>
 
             <article className={`${styles.card} ${styles.segmentCard}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>◌</span><strong>{t("Segmente")}</strong><em>{t("Live")}</em></div>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>◌</span><strong>{t("Segmente")}</strong><FeatureStatusLabel variant="preview">{t("Vorschau")}</FeatureStatusLabel></div>
               <div className={styles.donutWrap}><div className={styles.donut}><span>10.248<small>{t("Fans")}</small></span></div><div className={styles.segmentLegend}><span><i />VIP 1.824</span><span><i />Warm 2.150</span><span><i />Buyer 1.920</span><span><i />Inactive 2.048</span></div></div>
             </article>
 
             <article className={`${styles.card} ${styles.analyticsCard}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>{t("Analytics")}</strong><em>{t("In Kürze")}</em></div>
+              <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>{t("Analytics")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
               <div className={styles.analyticsTooltip}>{t("Roadmap · keine Vollsuite im MVP")}</div>
               <SparkLine tone="purple" />
               <div className={styles.analyticsLegend}><span><i />{t("Conversion")}</span><span><i />{t("Antwortquote")}</span></div>

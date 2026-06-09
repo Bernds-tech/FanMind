@@ -751,6 +751,9 @@
 }
 
 .previewNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   border: 1px solid rgba(39, 132, 255, 0.38);
   color: #d7e4f5;
   background: rgba(4, 17, 41, 0.78);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
 import { getRegistrationCommercialTerms, isPlanId, resolvePlanId, type CommercialOption, type ProductiveCommercialOption } from "@/lib/plans";
 import type { PlanId } from "@/config/plans";
+import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./register.module.css";
 
@@ -25,6 +26,12 @@ type PlanSelectionCopy = {
   href: string;
   cta: string;
 };
+
+function planStatusVariant(planId: RegisterPlanId): FeatureStatusLabelVariant {
+  if (planId === "growth") return "preview";
+  if (planId === "agency") return "roadmap";
+  return "active";
+}
 
 type StarterOptionCopy = {
   id: StarterCommercialOption;
@@ -465,7 +472,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                   <a key={plan.title} className={`${styles.planCard} ${isSelected ? styles.planCardSelected : ""}`} href={plan.href} aria-current={isSelected ? "page" : undefined}>
                     <div className={styles.planCardHeader}>
                       <span className={styles.planNumber}>{plan.label}</span>
-                      <span className={styles.planBadge}>{plan.badge}</span>
+                      <FeatureStatusLabel variant={planStatusVariant(planId)}>{plan.badge}</FeatureStatusLabel>
                     </div>
                     <h2>{plan.title}</h2>
                     <strong>{plan.price}</strong>
@@ -503,7 +510,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                       <span>
                         <span className={styles.optionTitleRow}>
                           <strong>{option.title}</strong>
-                          {option.badge && <em>{option.badge}</em>}
+                          {option.badge && <FeatureStatusLabel variant="active">{option.badge}</FeatureStatusLabel>}
                         </span>
                         <b>{option.price}</b>
                         <small>{option.description}</small>
@@ -607,7 +614,10 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <h1>{selectedPlanId === "growth" ? "Growth" : "Agency"}</h1>
               <p>{selectedPlanId === "growth" ? (language === "en" ? "Growth is visible for planning, but it is not directly available as a productive registration in the MVP start." : "Growth ist für die Planung sichtbar, aber zum MVP-Start noch nicht direkt produktiv registrierbar.") : (language === "en" ? "Agency starts with a demo/intro call. It is not directly available as a productive registration in the MVP start." : "Agency startet mit Demo/Erstgespräch. Zum MVP-Start ist es noch nicht direkt produktiv registrierbar.")}</p>
               <div className={styles.previewNotice}>
-                {language === "en" ? "Later available after Pilot / Setup or with a 12-month commitment model. Pilot remains the required setup entry unless the setup fee is waived through the commitment model." : "Später verfügbar nach Pilot / Setup oder mit 12-Monatsbindung. Pilot bleibt der Pflicht-Einstieg, sofern die Einrichtungsgebühr nicht über das Bindungsmodell entfällt."}
+                <FeatureStatusLabel variant={selectedPlanId === "growth" ? "preview" : "roadmap"}>
+                  {selectedPlanId === "growth" ? (language === "en" ? "Preview" : "Vorschau") : "Roadmap"}
+                </FeatureStatusLabel>
+                <span>{language === "en" ? "Later available after Pilot / Setup or with a 12-month commitment model. Pilot remains the required setup entry unless the setup fee is waived through the commitment model." : "Später verfügbar nach Pilot / Setup oder mit 12-Monatsbindung. Pilot bleibt der Pflicht-Einstieg, sofern die Einrichtungsgebühr nicht über das Bindungsmodell entfällt."}</span>
               </div>
               <div className={styles.previewActions}>
                 <a className={styles.primaryLink} href={registerPlanHref("starter", language)}>{language === "en" ? "Start with Starter" : "Mit Starter starten"}</a>
