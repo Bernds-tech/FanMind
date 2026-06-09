@@ -62,12 +62,19 @@ type ContactPreviewRow = {
   nextFollowUp: string;
 };
 
+type FeatureCornerBadgeVariant =
+  | "comingSoon"
+  | "roadmap"
+  | "preview"
+  | "planned";
+
 type ChannelStatusCard = {
   channel: string;
   status: string;
   note: string;
   tone: "active" | "preview" | "roadmap";
   statusVariant: FeatureStatusLabelVariant;
+  cornerBadge?: FeatureCornerBadgeVariant;
 };
 
 type TaskPreview = {
@@ -428,6 +435,7 @@ function getChannelStatuses(
       note: "Noch keine Versandfunktion",
       tone: "roadmap",
       statusVariant: "planned",
+      cornerBadge: "planned",
     },
     {
       channel: "Instagram",
@@ -435,6 +443,7 @@ function getChannelStatuses(
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
       statusVariant: "roadmap",
+      cornerBadge: "roadmap",
     },
     {
       channel: "TikTok",
@@ -442,6 +451,7 @@ function getChannelStatuses(
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
       statusVariant: "roadmap",
+      cornerBadge: "roadmap",
     },
     {
       channel: "WhatsApp",
@@ -449,6 +459,7 @@ function getChannelStatuses(
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
       statusVariant: "roadmap",
+      cornerBadge: "roadmap",
     },
     {
       channel: "Facebook",
@@ -456,6 +467,7 @@ function getChannelStatuses(
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
       statusVariant: "roadmap",
+      cornerBadge: "roadmap",
     },
     {
       channel: "X/Twitter",
@@ -463,6 +475,7 @@ function getChannelStatuses(
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
       statusVariant: "roadmap",
+      cornerBadge: "roadmap",
     },
     {
       channel: "Discord",
@@ -470,6 +483,7 @@ function getChannelStatuses(
       note: "0 verbunden · Integration auf Roadmap",
       tone: "roadmap",
       statusVariant: "roadmap",
+      cornerBadge: "roadmap",
     },
   ];
 }
@@ -534,11 +548,22 @@ function getPlanStatus(
   return "Vorschau";
 }
 
-function CardStatusLabel({ variant, children }: { variant: FeatureStatusLabelVariant; children?: string }) {
+const cornerBadgeLabels: Record<FeatureCornerBadgeVariant, string> = {
+  comingSoon: "Coming Soon",
+  roadmap: "Roadmap",
+  preview: "Vorschau",
+  planned: "Geplant",
+};
+
+function FeatureCornerBadge({
+  variant,
+}: {
+  variant: FeatureCornerBadgeVariant;
+}) {
   return (
-    <FeatureStatusLabel placement="card-corner" variant={variant}>
-      {children}
-    </FeatureStatusLabel>
+    <span className={styles.cornerBadge} data-variant={variant}>
+      {cornerBadgeLabels[variant]}
+    </span>
   );
 }
 
@@ -556,13 +581,21 @@ function featureStatusVariant(status: ResolvedDashboardFeature["status"]): Featu
   return "active";
 }
 
+function featureCornerBadgeVariant(
+  status: ResolvedDashboardFeature["status"],
+): FeatureCornerBadgeVariant {
+  if (status === "roadmap_only") return "roadmap";
+  if (status === "preview") return "preview";
+  return "planned";
+}
+
 function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
   const isComingSoon = isFeatureComingSoon(feature);
 
   return (
     <article
       className={`${styles.featurePill} ${styles[`status-${feature.status}`]} ${
-        isComingSoon ? styles.cardWithComingSoon : ""
+        isComingSoon ? styles.cardWithBadge : ""
       }`}
     >
       <div>
@@ -573,9 +606,7 @@ function FeaturePill({ feature }: { feature: ResolvedDashboardFeature }) {
         {getDashboardStatusLabel(feature.status)}
       </FeatureStatusLabel>
       {isComingSoon ? (
-        <CardStatusLabel variant={featureStatusVariant(feature.status)}>
-          {getDashboardStatusLabel(feature.status)}
-        </CardStatusLabel>
+        <FeatureCornerBadge variant={featureCornerBadgeVariant(feature.status)} />
       ) : null}
     </article>
   );
@@ -819,7 +850,7 @@ function WorkspaceDetails({
 
         <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
           <article
-            className={`${styles.moduleCard} ${styles.activityCard} ${styles.cardWithComingSoon}`}
+            className={`${styles.moduleCard} ${styles.activityCard} ${styles.cardWithBadge}`}
             id="channels"
             aria-labelledby="channels-title"
           >
@@ -834,20 +865,25 @@ function WorkspaceDetails({
               {channelStatuses.map((channel) => (
                 <div
                   key={channel.channel}
-                  className={`${styles.channelCard} ${styles[`channel-${channel.tone}`]}`}
+                  className={`${styles.channelCard} ${styles[`channel-${channel.tone}`]} ${
+                    channel.cornerBadge ? styles.cardWithBadge : ""
+                  }`}
                 >
                   <strong>{channel.channel}</strong>
                   <FeatureStatusLabel variant={channel.statusVariant}>{channel.status}</FeatureStatusLabel>
                   <p>{channel.note}</p>
+                  {channel.cornerBadge ? (
+                    <FeatureCornerBadge variant={channel.cornerBadge} />
+                  ) : null}
                 </div>
               ))}
             </div>
             <p className={styles.moduleText}>
               Social-Media-Kanäle sind noch nicht verbunden. Manuell und CSV
-              bilden den MVP-Workspace; Instagram, TikTok, WhatsApp und Discord
-              bleiben Roadmap.
+              bilden den MVP-Workspace; Instagram, TikTok, WhatsApp, Facebook,
+              X/Twitter und Discord bleiben Roadmap.
             </p>
-            <CardStatusLabel variant="roadmap" />
+            <FeatureCornerBadge variant="roadmap" />
           </article>
 
           <section
@@ -923,7 +959,7 @@ function WorkspaceDetails({
 
           <aside className={styles.rightRail} aria-label="Status und Paket">
             <section
-              className={`${styles.contextCard} ${styles.cardWithComingSoon}`}
+              className={`${styles.contextCard} ${styles.cardWithBadge}`}
               aria-labelledby="segments-title"
             >
               <div className={styles.moduleHeader}>
@@ -949,7 +985,7 @@ function WorkspaceDetails({
                   <strong>{workspace.plan_id === "pilot" ? "1" : "—"}</strong>
                 </div>
               </div>
-              <CardStatusLabel variant="roadmap" />
+              <FeatureCornerBadge variant="preview" />
             </section>
 
             <section
@@ -1092,7 +1128,7 @@ function WorkspaceDetails({
           </article>
 
           <article
-            className={`${styles.moduleCard} ${styles.cardWithComingSoon}`}
+            className={`${styles.moduleCard} ${styles.cardWithBadge}`}
             id="csv-import"
           >
             <div className={styles.moduleHeader}>
@@ -1104,8 +1140,9 @@ function WorkspaceDetails({
             </div>
             <p className={styles.moduleText}>
               CSV ist im Starter-MVP aktiv und im Pilot als Vorschau markiert.
-              Kampagnen, Analytics, echte Social-Media-Integrationen und
-              automatisches Senden sind nicht aktiv.
+              Kampagnen, Analytics und echte Social-Media-Integrationen bleiben
+              Roadmap; automatisches Senden bleibt als Sicherheitsgrenze dauerhaft
+              deaktiviert.
             </p>
             <div className={styles.roadmapStack}>
               <span>Instagram <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
@@ -1116,7 +1153,7 @@ function WorkspaceDetails({
               <span>Discord <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
               <span>Echte Kampagnen & Analytics <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel></span>
             </div>
-            <CardStatusLabel variant="roadmap" />
+            <FeatureCornerBadge variant="comingSoon" />
           </article>
         </section>
 
