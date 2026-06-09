@@ -574,70 +574,82 @@
 }
 
 .kpiTotalFansCard {
-  grid-template-rows: minmax(52px, 1fr) 13px;
+  grid-template-rows: minmax(48px, 1fr) 12px;
 }
 
 .kpiTotalFansTop {
   position: relative;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
-  column-gap: 9px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  column-gap: 8px;
   align-items: center;
   min-width: 0;
 }
 
 .kpiTotalFansIcon {
   display: inline-grid;
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   place-items: center;
-  align-self: end;
-  margin-left: 2px;
-  margin-bottom: 1px;
+  align-self: center;
+  margin-left: 1px;
   color: var(--kpi-accent, #3b82f6);
-  opacity: 0.94;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--kpi-accent, #3b82f6) 32%, transparent));
+  opacity: 0.88;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--kpi-accent, #3b82f6) 24%, transparent));
 }
 
 .kpiTotalFansIcon svg {
-  width: 38px;
-  height: 38px;
+  width: 31px;
+  height: 31px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.55;
+  stroke-width: 1.45;
 }
 
 .kpiTotalFansText {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   align-content: center;
   min-width: 0;
 }
 
 .kpiTotalFansCard .kpiLabel {
-  font-size: clamp(12px, 0.92vw, 14px);
+  color: #9fb3cc;
+  font-size: clamp(11px, 0.76vw, 12.5px);
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1;
 }
 
 .kpiTotalFansCard .kpiValue {
-  font-size: clamp(27px, 1.9vw, 32px);
-  font-weight: 800;
-  line-height: 0.94;
+  font-size: clamp(24px, 1.65vw, 28px);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .kpiTotalFansCard .kpiMeta {
-  font-size: clamp(11px, 0.82vw, 13px);
-  font-weight: 700;
-  line-height: 1.05;
+  font-size: clamp(10px, 0.68vw, 11.5px);
+  font-weight: 600;
+  line-height: 1.1;
+  opacity: 0.9;
 }
 
 .kpiTotalFansCard .kpiInfoIcon {
   position: absolute;
   top: 0;
   right: 0;
+  opacity: 0.82;
+}
+
+.kpiTotalFansSparkline {
+  height: 12px;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--kpi-accent, #3b82f6) 18%, transparent));
+}
+
+.kpiTotalFansSparkline path {
+  stroke-width: 1.5;
 }
 
 .kpiBody {
