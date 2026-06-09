@@ -235,7 +235,7 @@ function getKpiCards(): KpiCard[] {
       icon: "users",
       tone: "blue",
       sparklinePath:
-        "M2 17 C16 15 25 14 38 14.5 S61 15 74 12.5 S96 10.5 124 7",
+        "M2 13 C16 12 25 11 38 11.5 S61 12 74 10 S96 8.5 124 5",
       infoLabel: "Gesamtfans zeigt die gesamte aktuelle Fanbasis im Workspace.",
     },
     {
@@ -245,7 +245,7 @@ function getKpiCards(): KpiCard[] {
       icon: "activity",
       tone: "green",
       sparklinePath:
-        "M2 17 C13 16.5 21 14 31 14.5 S47 16 56 12 S72 8.5 82 10 S97 13 107 8.5 S118 6.5 124 5",
+        "M2 13 C13 12.5 21 11 31 11.5 S47 12.5 56 9.5 S72 6.5 82 7.5 S97 10.5 107 6.5 S118 5 124 4",
       infoLabel: "Aktive Fans zeigt den aktiven Anteil der Fanbasis als KPI-Vorschau.",
     },
     {
@@ -255,7 +255,7 @@ function getKpiCards(): KpiCard[] {
       icon: "checkCircle",
       tone: "violet",
       sparklinePath:
-        "M2 16 C13 14 21 15 31 12.5 S47 9 57 11.5 S72 16 83 12 S98 7 108 8.5 S118 10 124 6",
+        "M2 12.5 C13 11 21 11.5 31 9.5 S47 7 57 9 S72 12.5 83 9.5 S98 5.5 108 6.5 S118 7.5 124 4.5",
       infoLabel: "Offene Follow-ups zeigt aktuell nachzufassende Kontakte.",
     },
     {
@@ -265,7 +265,7 @@ function getKpiCards(): KpiCard[] {
       icon: "megaphone",
       tone: "blue",
       sparklinePath:
-        "M2 17 C14 16 22 13.5 32 14 S48 16 58 12.5 S73 10 83 11.5 S98 13.5 108 9 S119 6.5 124 6",
+        "M2 13 C14 12.5 22 10.5 32 11 S48 12.5 58 9.5 S73 7.5 83 9 S98 10.5 108 7 S119 5 124 4.5",
       infoLabel: "Laufende Kampagnen ist eine vorbereitete Kampagnen-KPI; produktiver Versand ist im MVP nicht aktiv.",
     },
     {
@@ -275,7 +275,7 @@ function getKpiCards(): KpiCard[] {
       icon: "refresh",
       tone: "orange",
       sparklinePath:
-        "M2 18 C12 16 20 10.5 31 12 S47 17 57 11 S72 8 82 10.5 S97 15 107 9.5 S118 7.5 124 5.5",
+        "M2 13.5 C12 12.5 20 8 31 9 S47 13 57 8.5 S72 6 82 8 S97 11.5 107 7 S118 5.5 124 4.25",
       infoLabel: "Reaktivierung zeigt Fans mit vorbereitetem manuellem Reaktivierungsbedarf.",
     },
     {
@@ -285,7 +285,7 @@ function getKpiCards(): KpiCard[] {
       icon: "percent",
       tone: "cyan",
       sparklinePath:
-        "M2 16.5 C14 16 22 15 32 15.5 S48 17 58 14 S73 11.5 83 12 S98 13 108 10 S119 8 124 6.5",
+        "M2 12.5 C14 12 22 11.5 32 12 S48 13 58 11 S73 9 83 9.5 S98 10 108 7.5 S119 6 124 4.75",
       infoLabel: "Conversion Rate ist eine Analytics-Vorschau; vollständige Live-Analytics sind im MVP nicht aktiv.",
     },
   ];
@@ -608,8 +608,11 @@ function KpiStatCard({ card }: { card: KpiCard }) {
   return (
     <article className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}>
       <div className={styles.kpiCardTop}>
-        <span className={styles.kpiLeadingIcon}>
-          <KpiIcon icon={card.icon} />
+        <span className={styles.kpiTitleGroup}>
+          <span className={styles.kpiLeadingIcon}>
+            <KpiIcon icon={card.icon} />
+          </span>
+          <span className={styles.kpiLabel}>{card.label}</span>
         </span>
         <span
           className={styles.kpiInfoIcon}
@@ -620,14 +623,13 @@ function KpiStatCard({ card }: { card: KpiCard }) {
         </span>
       </div>
       <div className={styles.kpiBody}>
-        <p className={styles.kpiLabel}>{card.label}</p>
         <strong className={styles.kpiValue}>{card.value}</strong>
         <p className={styles.kpiMeta}>{card.meta}</p>
       </div>
       <svg
         className={styles.kpiSparkline}
         aria-hidden="true"
-        viewBox="0 0 126 22"
+        viewBox="0 0 126 16"
         preserveAspectRatio="none"
       >
         <path d={card.sparklinePath} />
