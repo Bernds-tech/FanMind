@@ -91,6 +91,11 @@ function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" }) {
 function isPreviewPlan(planId: RegisterPlanId) {
   return planId === "growth" || planId === "agency";
 }
+
+function showPlanStatusBadge(planId: RegisterPlanId) {
+  return !isPreviewPlan(planId);
+}
+
 function FanMindLogo({ language }: { language: FanMindLanguage }) {
   return (
     <a className={styles.logo} href={landingPath(language)} aria-label={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"}>
@@ -132,21 +137,21 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         label: "3",
         badge: "Preview",
         title: "Growth",
-        price: "Preview",
+        price: "Available soon",
         description: "Not directly available yet.",
         bullets: ["later available after Pilot / Setup", "or with a 12-month commitment model", "start with Starter for the MVP"],
         href: registerPlanHref("growth", language),
-        cta: "Open preview",
+        cta: "Learn more",
       },
       {
         label: "4",
         badge: "Demo",
         title: "Agency",
-        price: "Request demo",
-        description: "Demo/intro call; not productively available yet.",
+        price: "Available soon",
+        description: "Intro call; not productively available yet.",
         bullets: ["later available after Pilot / Setup", "or with a 12-month commitment model", "scope agency needs first"],
         href: registerPlanHref("agency", language),
-        cta: "Request demo",
+        cta: "Learn more",
       },
     ];
   }
@@ -176,21 +181,21 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       label: "3",
       badge: "Vorschau",
       title: "Growth",
-      price: "Vorschau",
+      price: "Bald verfügbar",
       description: "Noch nicht direkt verfügbar.",
       bullets: ["später nach Pilot / Setup verfügbar", "oder mit 12-Monatsbindung möglich", "für den MVP mit Starter starten"],
       href: registerPlanHref("growth", language),
-      cta: "Vorschau öffnen",
+      cta: "Mehr erfahren",
     },
     {
       label: "4",
       badge: "Demo",
       title: "Agency",
-      price: "Demo anfragen",
-      description: "Demo/Erstgespräch; noch nicht direkt produktiv verfügbar.",
+      price: "Bald verfügbar",
+      description: "Erstgespräch; noch nicht direkt produktiv verfügbar.",
       bullets: ["später nach Pilot / Setup verfügbar", "oder mit 12-Monatsbindung möglich", "Agenturbedarf zuerst besprechen"],
       href: registerPlanHref("agency", language),
-      cta: "Demo anfragen",
+      cta: "Mehr erfahren",
     },
   ];
 }
@@ -494,7 +499,9 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                   >
                     <div className={styles.planCardHeader}>
                       <span className={styles.planNumber}>{plan.label}</span>
-                      <FeatureStatusLabel variant={planStatusVariant(planId)}>{plan.badge}</FeatureStatusLabel>
+                      {showPlanStatusBadge(planId) ? (
+                        <FeatureStatusLabel variant={planStatusVariant(planId)}>{plan.badge}</FeatureStatusLabel>
+                      ) : null}
                     </div>
                     <h2>{plan.title}</h2>
                     <strong>{plan.price}</strong>
