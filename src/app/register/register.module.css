@@ -842,6 +842,10 @@
   padding-bottom: 58px;
 }
 
+.cardWithComingSoon .planCardHeader {
+  justify-content: flex-start;
+}
+
 .comingSoonImage {
   position: absolute;
   right: 10px;
