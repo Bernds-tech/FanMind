@@ -28,7 +28,6 @@ type FansWorkspaceProps = {
 
 const sourceLabels: Record<string, string> = {
   manual: "Manuell",
-  csv: "CSV (nicht importiert)",
   instagram: "Instagram (manuell)",
   tiktok: "TikTok (manuell)",
 };
@@ -235,7 +234,6 @@ function FansWorkspace({
                 <label htmlFor="source_platform">Quelle/Kanal</label>
                 <select id="source_platform" name="source_platform" defaultValue="manual">
                   <option value="manual">Manuell</option>
-                  <option value="csv">CSV (manuell)</option>
                   <option value="instagram">Instagram (manuell)</option>
                   <option value="tiktok">TikTok (manuell)</option>
                 </select>
