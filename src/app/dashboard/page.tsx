@@ -43,10 +43,9 @@ type KpiCard = {
   value: string;
   meta: string;
   icon: KpiIconName;
-  tone: "blue" | "cyan" | "violet" | "violetBlue" | "green" | "amber";
+  tone: "blue" | "green" | "violet" | "orange" | "cyan";
   sparklinePath: string;
   infoLabel: string;
-  isComingSoon?: boolean;
 };
 
 type ContactPreviewRow = {
@@ -241,55 +240,53 @@ function getKpiCards(): KpiCard[] {
     },
     {
       label: "Aktive Fans",
-      value: "3",
-      meta: "Pilot-Workspace",
+      value: "4.892",
+      meta: "↑ 47,8 % der Gesamtfans",
       icon: "activity",
       tone: "green",
       sparklinePath:
-        "M2 15 C12 15 18 14 25 14 L32 8 L39 17 L48 9 C57 11 63 12 72 10 S88 8 97 8.5 S113 7.5 124 5.5",
-      infoLabel: "Aktive Fans sind Demo-Kontakte im Pilot-Workspace.",
+        "M2 17 C13 16.5 21 14 31 14.5 S47 16 56 12 S72 8.5 82 10 S97 13 107 8.5 S118 6.5 124 5",
+      infoLabel: "Aktive Fans zeigt den aktiven Anteil der Fanbasis als KPI-Vorschau.",
     },
     {
       label: "Offene Follow-ups",
-      value: "3",
-      meta: "Demo-Aufgaben",
+      value: "136",
+      meta: "12 fällig heute",
       icon: "checkCircle",
       tone: "violet",
       sparklinePath:
-        "M2 17 C12 16 18 13 28 14 S43 16 53 11 S68 8 78 10 S92 13 102 9 S114 8 124 6",
-      infoLabel: "Follow-ups sind Demo-Aufgaben zur manuellen Prüfung.",
+        "M2 16 C13 14 21 15 31 12.5 S47 9 57 11.5 S72 16 83 12 S98 7 108 8.5 S118 10 124 6",
+      infoLabel: "Offene Follow-ups zeigt aktuell nachzufassende Kontakte.",
     },
     {
       label: "Laufende Kampagnen",
-      value: "0",
-      meta: "Kampagnen-Modul in Vorbereitung",
+      value: "5",
+      meta: "2 gestartet heute",
       icon: "megaphone",
-      tone: "amber",
+      tone: "blue",
       sparklinePath:
-        "M2 17 C13 16 20 14 30 15 S44 17 54 13 S68 13 78 14 S91 8 102 10 S114 10 124 6",
-      infoLabel: "Produktive Kampagnen sind noch nicht freigeschaltet.",
-      isComingSoon: true,
+        "M2 17 C14 16 22 13.5 32 14 S48 16 58 12.5 S73 10 83 11.5 S98 13.5 108 9 S119 6.5 124 6",
+      infoLabel: "Laufende Kampagnen ist eine vorbereitete Kampagnen-KPI; produktiver Versand ist im MVP nicht aktiv.",
     },
     {
       label: "Reaktivierung",
-      value: "1",
-      meta: "Fan zur manuellen Prüfung",
+      value: "736",
+      meta: "↑ 22 % vs. letzter Monat",
       icon: "refresh",
-      tone: "violetBlue",
+      tone: "orange",
       sparklinePath:
-        "M2 18 C12 16 19 10 30 12 S43 17 54 11 S69 11 80 13 S91 9 102 9 S114 12 124 6",
-      infoLabel: "Reaktivierung basiert auf manuell geprüften Demo-/MVP-Signalen.",
+        "M2 18 C12 16 20 10.5 31 12 S47 17 57 11 S72 8 82 10.5 S97 15 107 9.5 S118 7.5 124 5.5",
+      infoLabel: "Reaktivierung zeigt Fans mit vorbereitetem manuellem Reaktivierungsbedarf.",
     },
     {
       label: "Conversion Rate",
-      value: "—",
-      meta: "Tracking in Vorbereitung",
+      value: "8,7 %",
+      meta: "↑ 1,3 % vs. letzter Monat",
       icon: "percent",
       tone: "cyan",
       sparklinePath:
-        "M2 16 C15 15 21 15 30 15.5 S43 17 54 14.5 S72 14.5 84 13 S101 14 124 10",
-      infoLabel: "Conversion-Tracking ist noch nicht produktiv umgesetzt.",
-      isComingSoon: true,
+        "M2 16.5 C14 16 22 15 32 15.5 S48 17 58 14 S73 11.5 83 12 S98 13 108 10 S119 8 124 6.5",
+      infoLabel: "Conversion Rate ist eine Analytics-Vorschau; vollständige Live-Analytics sind im MVP nicht aktiv.",
     },
   ];
 }
@@ -609,26 +606,26 @@ function KpiIcon({ icon }: { icon: KpiIconName }) {
 
 function KpiStatCard({ card }: { card: KpiCard }) {
   return (
-    <article className={`${styles.card} ${styles[`tone-${card.tone}`]}`}>
-      <div className={styles.cardHeader}>
-        <span className={styles.cardLeadingIcon}>
+    <article className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]}`}>
+      <div className={styles.kpiCardTop}>
+        <span className={styles.kpiLeadingIcon}>
           <KpiIcon icon={card.icon} />
         </span>
         <span
-          className={styles.cardInfoIcon}
+          className={styles.kpiInfoIcon}
           title={card.infoLabel}
           aria-label={card.infoLabel}
         >
           i
         </span>
       </div>
-      <div className={styles.cardBody}>
-        <p className={styles.cardTitle}>{card.label}</p>
-        <strong className={styles.cardValue}>{card.value}</strong>
-        <p className={styles.cardDelta}>{card.meta}</p>
+      <div className={styles.kpiBody}>
+        <p className={styles.kpiLabel}>{card.label}</p>
+        <strong className={styles.kpiValue}>{card.value}</strong>
+        <p className={styles.kpiMeta}>{card.meta}</p>
       </div>
       <svg
-        className={styles.cardSparkline}
+        className={styles.kpiSparkline}
         aria-hidden="true"
         viewBox="0 0 126 22"
         preserveAspectRatio="none"
@@ -791,51 +788,9 @@ function WorkspaceDetails({
         </header>
 
         <section className={styles.kpiGrid} aria-label="KPI-Karten">
-          {kpiCards.map((card, index) =>
-            index === 0 ? (
-              <KpiStatCard key={card.label} card={card} />
-            ) : (
-              <article
-                key={card.label}
-                className={`${styles.kpiCard} ${styles[`tone-${card.tone}`]} ${
-                  card.isComingSoon ? styles.cardWithComingSoon : ""
-                }`}
-              >
-                <div className={styles.kpiCardTop}>
-                  <span className={styles.kpiIcon}>
-                    <KpiIcon icon={card.icon} />
-                  </span>
-                  <span className={styles.kpiLabel}>{card.label}</span>
-                  <span
-                    className={styles.kpiInfo}
-                    title={card.infoLabel}
-                    aria-label={card.infoLabel}
-                  >
-                    i
-                  </span>
-                </div>
-                <div className={styles.kpiBody}>
-                  <strong
-                    className={`${styles.kpiValue} ${
-                      card.value.length > 3 ? styles.kpiValueText : ""
-                    }`}
-                  >
-                    {card.value}
-                  </strong>
-                  <p className={styles.kpiMeta}>{card.meta}</p>
-                </div>
-                <svg
-                  className={styles.kpiSparkline}
-                  aria-hidden="true"
-                  viewBox="0 0 126 22"
-                  preserveAspectRatio="none"
-                >
-                  <path d={card.sparklinePath} />
-                </svg>
-                {card.isComingSoon ? <ComingSoonBadge /> : null}
-              </article>
-            ),
-          )}
+          {kpiCards.map((card) => (
+            <KpiStatCard key={card.label} card={card} />
+          ))}
         </section>
 
         <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
