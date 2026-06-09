@@ -8301,3 +8301,35 @@
     height: 54px;
   }
 }
+
+.cardWithComingSoon {
+  position: relative;
+  padding-bottom: clamp(54px, 4vw, 72px);
+}
+
+.comingSoonImage {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  z-index: 5;
+  width: 92px;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+  transform: rotate(-4deg);
+  filter: drop-shadow(0 9px 16px rgba(0, 0, 0, 0.36));
+}
+
+.comingSoon-small {
+  right: 8px;
+  bottom: 7px;
+  width: 74px;
+}
+
+.comingSoon-medium {
+  width: 96px;
+}
+
+.comingSoon-large {
+  width: 110px;
+}
