@@ -264,7 +264,14 @@ function FansWorkspace({
               </div>
               <div className={styles.fieldFull}>
                 <label htmlFor="summary">Summary</label>
-                <textarea id="summary" name="summary" placeholder="Kurze manuelle Notiz zum Fan – keine KI-Zusammenfassung." />
+                <textarea
+                  id="summary"
+                  name="summary"
+                  placeholder="Kurze manuelle Notiz zum Fan – keine KI-Zusammenfassung."
+                />
+                <p className={styles.fieldHint}>
+                  Wird nur im aktuellen Workspace gespeichert und löst keinen Versand aus.
+                </p>
               </div>
               <div className={styles.formActions}>
                 <button type="submit" className={dashboardStyles.primaryButton}>
