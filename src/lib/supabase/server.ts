@@ -3,7 +3,7 @@ import { getRegistrationCommercialTerms, isPlanId, type ProductiveCommercialOpti
 import type { PlanId } from "@/config/plans";
 import { getSupabaseAuthUrl, getSupabaseHeaders, getSupabaseRestUrl, SUPABASE_ACCESS_TOKEN_COOKIE, SUPABASE_REFRESH_TOKEN_COOKIE } from "./config";
 
-type SupabaseServerUser = {
+export type SupabaseServerUser = {
   id: string;
   email?: string;
   user_metadata?: Record<string, unknown>;
@@ -35,6 +35,41 @@ type WorkspaceMemberRow = {
   role: string;
 };
 
+export type ContactRow = {
+  id: string;
+  workspace_id: string;
+  display_name: string;
+  handle: string | null;
+  source_platform: string | null;
+  language: string | null;
+  status: string | null;
+  tags: string[] | null;
+  summary: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+type CreateContactInput = {
+  workspaceId: string;
+  displayName: string;
+  handle?: string | null;
+  sourcePlatform?: string | null;
+  language?: string | null;
+  status?: string | null;
+  tags?: string[];
+  summary?: string | null;
+};
+
+type ContactsResult = {
+  contacts: ContactRow[];
+  error: Error | null;
+};
+
+type ContactCreateResult = {
+  contact: ContactRow | null;
+  error: Error | null;
+};
+
 type WorkspaceBackfillResult = {
   workspace: WorkspaceBackfillRow | null;
   error: Error | null;
@@ -54,6 +89,7 @@ type PostgrestResult<T> = {
 type SupabaseFilterValue = string | number | boolean;
 
 const WORKSPACE_COLUMNS = "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months";
+const CONTACT_COLUMNS = "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,created_at,updated_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
 const STARTER_COMMERCIAL_OPTIONS: ProductiveCommercialOption[] = ["starter_paid_setup", "starter_12m_setup_waived"];
 
@@ -189,6 +225,61 @@ export async function getUserWorkspaceDashboard(user: SupabaseServerUser): Promi
   }
 
   return workspaceDashboardError("Workspace konnte noch nicht geladen werden.");
+}
+
+export async function getWorkspaceContacts(workspaceId: string): Promise<ContactsResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return contactsError("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.");
+  }
+
+  const contactsResult = await postgrestSelect<ContactRow[]>(
+    "contacts",
+    accessToken,
+    CONTACT_COLUMNS,
+    [["workspace_id", workspaceId]],
+    undefined,
+    false,
+    "created_at.desc",
+  );
+
+  if (contactsResult.error) {
+    return contactsError(`Kontakte konnten nicht geladen werden: ${contactsResult.error.message}`);
+  }
+
+  return { contacts: contactsResult.data ?? [], error: null };
+}
+
+export async function createWorkspaceContact(input: CreateContactInput): Promise<ContactCreateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return contactCreateError("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.");
+  }
+
+  const displayName = input.displayName.trim();
+
+  if (!displayName) {
+    return contactCreateError("Name ist erforderlich.");
+  }
+
+  const contactResult = await postgrestRequest<ContactRow>("contacts", "POST", {
+    workspace_id: input.workspaceId,
+    display_name: displayName,
+    handle: normalizeOptionalText(input.handle),
+    source_platform: normalizeOptionalText(input.sourcePlatform) ?? "manual",
+    language: normalizeOptionalText(input.language) ?? "de",
+    status: normalizeOptionalText(input.status) ?? "new",
+    tags: input.tags ?? [],
+    summary: normalizeOptionalText(input.summary),
+  }, accessToken, { select: CONTACT_COLUMNS, single: true });
+
+  if (contactResult.error) {
+    return contactCreateError(`Kontakt konnte nicht gespeichert werden: ${contactResult.error.message}`);
+  }
+
+  return { contact: contactResult.data, error: null };
 }
 
 export async function ensureUserWorkspace(user: SupabaseServerUser): Promise<WorkspaceBackfillResult> {
@@ -370,6 +461,7 @@ async function postgrestSelect<T>(
   filters: [string, SupabaseFilterValue][],
   limitCount?: number,
   single?: boolean,
+  order?: string,
 ): Promise<PostgrestResult<T>> {
   try {
     const url = new URL(getSupabaseRestUrl(table));
@@ -381,6 +473,10 @@ async function postgrestSelect<T>(
 
     if (limitCount) {
       url.searchParams.set("limit", String(limitCount));
+    }
+
+    if (order) {
+      url.searchParams.set("order", order);
     }
 
     const response = await fetch(url.toString(), {
@@ -406,6 +502,20 @@ function workspaceBackfillError(message: string): WorkspaceBackfillResult {
 
 function workspaceDashboardError(message: string): WorkspaceDashboardResult {
   return { workspace: null, error: new Error(message) };
+}
+
+function contactsError(message: string): ContactsResult {
+  return { contacts: [], error: new Error(message) };
+}
+
+function contactCreateError(message: string): ContactCreateResult {
+  return { contact: null, error: new Error(message) };
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+
+  return normalized ? normalized : null;
 }
 
 function stringMetadataValue(metadata: Record<string, unknown> | undefined, key: string): string | undefined {

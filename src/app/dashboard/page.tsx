@@ -526,7 +526,7 @@ function WorkspaceDetails({
   const userLabel = displayName;
   const mainNavigation: SidebarLink[] = [
     { label: "Dashboard", href: "/dashboard", active: true },
-    { label: "Fans", href: "#contacts" },
+    { label: "Fans", href: "/fans" },
     { label: "Kanäle", href: "#channels", badge: "Roadmap" },
   ];
   const settingsNavigation: SidebarLink[] = [
