@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
@@ -469,15 +470,15 @@ function WorkspaceDetails({
               </span>
             </div>
             <div className={styles.actionList}>
-              <a href="/fans#new-fan-modal">
+              <Link href="/fans#new-fan-modal">
                 Kontakt anlegen <small>Aktiv</small>
-              </a>
+              </Link>
               <a href="#followups">
                 Follow-ups noch nicht aktiv <small>Noch 0</small>
               </a>
-              <a href="/fans#fans-list">
+              <Link href="/fans#fans-list">
                 Fanliste öffnen <small>Echte Daten</small>
-              </a>
+              </Link>
               <a href="#followups">
                 Follow-ups prüfen <small>Noch 0</small>
               </a>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
@@ -224,7 +225,9 @@ function FansTable({ contacts }: { contacts: ContactRow[] }) {
             <tr key={contact.id}>
               <td>
                 <span className={styles.nameCell}>
-                  <strong>{contact.display_name}</strong>
+                  <Link className={styles.fanDetailLink} href={`/fans/${contact.id}`}>
+                    {contact.display_name}
+                  </Link>
                   {contact.handle ? <span>{contact.handle}</span> : null}
                 </span>
               </td>
