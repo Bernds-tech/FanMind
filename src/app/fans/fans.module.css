@@ -789,7 +789,7 @@
 
 .crmTable {
   width: 100%;
-  min-width: 1060px;
+  min-width: 1210px;
   border-collapse: collapse;
 }
 
@@ -826,7 +826,9 @@
 }
 
 .statusBadge,
-.replyChannel {
+.replyChannel,
+.scoreCell,
+.ownerCell {
   display: inline-flex;
   width: fit-content;
   align-items: center;
@@ -858,6 +860,17 @@
   font-size: 10px;
   font-weight: 850;
   background: rgba(8, 47, 73, 0.28);
+}
+
+.scoreCell {
+  justify-content: center;
+  min-width: 46px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  padding: 5px 8px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 950;
+  background: rgba(15, 23, 42, 0.5);
 }
 
 .followupCell {
@@ -894,6 +907,36 @@
   font-size: 11px;
   font-weight: 900;
   background: rgba(15, 23, 42, 0.62);
+}
+
+.ownerCell {
+  gap: 7px;
+  max-width: 132px;
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  padding: 4px 8px 4px 5px;
+  color: #e0f2fe;
+  font-size: 11px;
+  font-weight: 900;
+  background: rgba(8, 47, 73, 0.28);
+}
+
+.ownerAvatar {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  color: #ecfeff;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #0e7490, #1d4ed8);
+}
+
+.ownerName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tableFooter {
