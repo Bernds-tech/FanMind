@@ -28,7 +28,7 @@ type OnboardingAction = {
 type OnboardingStep = {
   title: string;
   description: string;
-  status: "done" | "open";
+  status: "done" | "next" | "recommended";
   statusLabel: string;
   actions?: OnboardingAction[];
 };
@@ -107,52 +107,46 @@ function getOnboardingSteps({
   const workspaceDone = Boolean(workspace.id);
   const packageDone = Boolean(workspace.plan_id || workspace.commercial_option);
   const hasContact = contacts.length > 0;
-  const hasImportData = contacts.some(
-    (contact) =>
-      contact.source_platform !== null && contact.source_platform !== "manual",
-  );
-
   return [
     {
       title: "Workspace eingerichtet",
       description:
         "Dein geschützter FanMind-Workspace ist geladen und kann im begleiteten Setup genutzt werden.",
-      status: workspaceDone ? "done" : "open",
-      statusLabel: workspaceDone ? "Erledigt" : "Offen",
+      status: workspaceDone ? "done" : "next",
+      statusLabel: workspaceDone ? "Erledigt" : "Nächster Schritt",
     },
     {
       title: "Paket bestätigt",
       description:
-        "Pilot / Setup wird persönlich begleitet. Keine Online-Zahlung im MVP.",
-      status: packageDone ? "done" : "open",
-      statusLabel: packageDone ? "Erledigt" : "Offen",
+        "Das bestätigte Paket steuert den begleiteten Setup-Rahmen. Es gibt keine Online-Zahlung im MVP.",
+      status: packageDone ? "done" : "next",
+      statusLabel: packageDone ? "Erledigt" : "Nächster Schritt",
     },
     {
       title: "Ersten Fan anlegen",
       description:
         "Lege mindestens einen echten Kontakt an, damit Fanliste und Kontaktdetails mit Workspace-Daten arbeiten.",
-      status: hasContact ? "done" : "open",
-      statusLabel: hasContact ? "Erledigt" : "Offen",
+      status: hasContact ? "done" : "next",
+      statusLabel: hasContact ? "Erledigt" : "Nächster Schritt",
       actions: [
         { label: "Zur Fanliste", href: "/fans#fans-list" },
         { label: "Neuen Fan anlegen", href: "/fans#new-fan-modal" },
       ],
     },
     {
-      title: "Kontakte importieren",
-      description: hasImportData
-        ? "Importierte Kontaktquellen sind in deinen Workspace-Daten vorhanden."
-        : "Offen, solange CSV-Import nicht genutzt wurde oder keine Importdaten existieren.",
-      status: hasImportData ? "done" : "open",
-      statusLabel: hasImportData ? "Erledigt" : "Offen",
-      actions: [{ label: "CSV-Import öffnen", href: "/fans/import" }],
+      title: "CSV-Import vorbereiten",
+      description:
+        "Bereite eine echte CSV-Datei vor oder öffne den Importbereich. Ohne Datei werden keine Kontakte erzeugt.",
+      status: "recommended",
+      statusLabel: "Empfohlen",
+      actions: [{ label: "CSV-Import vorbereiten", href: "/fans/import" }],
     },
     {
-      title: "Chatverlauf einfügen",
+      title: "Chatverlauf manuell einfügen",
       description:
         "Füge manuell einen WhatsApp- oder Chatverlauf auf der Kontaktdetailseite ein. FanMind synchronisiert aktuell keine externen Plattformen.",
-      status: "open",
-      statusLabel: hasContact ? "Manuell prüfen" : "Fan fehlt noch",
+      status: hasContact ? "next" : "recommended",
+      statusLabel: hasContact ? "Nächster Schritt" : "Nach erstem Fan",
       actions: [
         {
           label: hasContact ? "Fan öffnen" : "Zur Fanliste",
@@ -164,8 +158,8 @@ function getOnboardingSteps({
       title: "KI-Vorschläge testen",
       description:
         "FanMind erzeugt Antwortvorschläge. Der Mensch prüft und sendet final selbst.",
-      status: "open",
-      statusLabel: hasContact ? "Bereit zum Test" : "Fan fehlt noch",
+      status: "recommended",
+      statusLabel: hasContact ? "Empfohlen" : "Nach erstem Fan",
       actions: [
         {
           label: hasContact ? "KI im Fan testen" : "Zur Fanliste",
@@ -177,8 +171,8 @@ function getOnboardingSteps({
       title: "Dashboard prüfen",
       description:
         "Dashboard zeigt echte Workspace-Daten, offene Follow-ups und keine Fake-Kampagnen.",
-      status: "open",
-      statusLabel: "Prüfen",
+      status: "recommended",
+      statusLabel: "Empfohlen",
       actions: [{ label: "Zum Dashboard", href: "/dashboard" }],
     },
   ];
@@ -240,7 +234,7 @@ function OnboardingWorkspace({
           <strong>
             {completedCount}/{steps.length}
           </strong>
-          <span>aus echten Daten erledigt</span>
+          <span>aus Workspace-Daten erledigt</span>
         </div>
       </section>
 
