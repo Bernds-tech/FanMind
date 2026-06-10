@@ -110,7 +110,7 @@ function FansWorkspace({
     >
       <div className={styles.fansStack}>
         <section
-          className={dashboardStyles.moduleCard}
+          className={`${dashboardStyles.moduleCard} ${styles.fansListCard}`}
           id="fans-list"
           aria-labelledby="fans-list-title"
         >
@@ -119,14 +119,13 @@ function FansWorkspace({
               <p className={dashboardStyles.eyebrow}>Workspace-Liste</p>
               <h2 id="fans-list-title">Fans</h2>
             </div>
-            <div className={dashboardStyles.emptyActions}>
-              <Link
-                className={dashboardStyles.secondaryButton}
-                href="/fans/import"
-              >
+            <div className={styles.listActions}>
+              <Link className={styles.importLink} href="/fans/import">
                 CSV importieren
               </Link>
-              <span>{fanGroups.length ? "Echte Daten" : "Empty State"}</span>
+              <span>
+                {fanGroups.length ? `${fanGroups.length} echte Fans` : "Keine Fans"}
+              </span>
             </div>
           </div>
           {contactsError ? (
@@ -145,7 +144,10 @@ function FansWorkspace({
             <>
               <ChannelFilters activeChannel={activeChannel} />
               {visibleFanGroups.length ? (
-                <FansTable fanGroups={visibleFanGroups} />
+                <FansTable
+                  fanGroups={visibleFanGroups}
+                  totalFans={fanGroups.length}
+                />
               ) : (
                 <div className={dashboardStyles.emptyState}>
                   <strong>Keine Fans für diesen Kanal</strong>
@@ -296,13 +298,19 @@ function ChannelFilters({
   );
 }
 
-function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
+function FansTable({
+  fanGroups,
+  totalFans,
+}: {
+  fanGroups: FanGroup[];
+  totalFans: number;
+}) {
   return (
-    <div className={dashboardStyles.tableWrap}>
-      <table>
+    <div className={styles.crmTableWrap}>
+      <table className={styles.crmTable}>
         <thead>
           <tr>
-            <th>Auswahl</th>
+            <th className={styles.selectColumn}>Auswahl</th>
             <th>Name</th>
             <th>Status</th>
             <th>Kanäle</th>
@@ -337,7 +345,11 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
                   )}
                 </span>
               </td>
-              <td>{formatStatus(group.primaryContact.status)}</td>
+              <td>
+                <span className={styles.statusBadge}>
+                  {formatStatus(group.primaryContact.status)}
+                </span>
+              </td>
               <td>
                 <span className={styles.platformBadgeList}>
                   {group.platforms.map((platform) => (
@@ -350,11 +362,11 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
               </td>
               <td>
                 {group.tags.length ? (
-                  <span className={dashboardStyles.tagList}>
-                    {group.tags.slice(0, 4).map((tag) => (
+                  <span className={styles.compactTagList}>
+                    {group.tags.slice(0, 3).map((tag) => (
                       <span key={tag}>{tag}</span>
                     ))}
-                    {group.tags.length > 4 ? <span>+ weitere</span> : null}
+                    {group.tags.length > 3 ? <span>+ weitere</span> : null}
                   </span>
                 ) : (
                   <span className={styles.mutedText}>Keine Tags</span>
@@ -370,12 +382,19 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
                   "—"
                 )}
               </td>
-              <td>{formatNextFollowup(group.nextFollowup)}</td>
-              <td>{formatReplyChannel(group.platforms)}</td>
+              <td>{renderNextFollowup(group.nextFollowup)}</td>
+              <td>
+                <span className={styles.replyChannel}>
+                  {formatReplyChannel(group.platforms)}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <div className={styles.tableFooter}>
+        {fanGroups.length} von {totalFans} {totalFans === 1 ? "Fan" : "Fans"}
+      </div>
     </div>
   );
 }
@@ -564,18 +583,19 @@ function formatReplyChannel(platforms: PlatformValue[]): string {
   return "Kanal wählen";
 }
 
-function formatNextFollowup(followup: FollowupRow | null): string {
+function renderNextFollowup(followup: FollowupRow | null) {
   if (!followup) {
-    return "—";
+    return <span className={styles.mutedText}>—</span>;
   }
 
-  if (!followup.due_date) {
-    return followup.reason;
-  }
-
-  return `${new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-  }).format(new Date(`${followup.due_date}T00:00:00Z`))}: ${followup.reason}`;
+  return (
+    <span className={styles.followupCell}>
+      {followup.due_date ? (
+        <span>{formatDateOnly(followup.due_date)}</span>
+      ) : null}
+      {followup.reason}
+    </span>
+  );
 }
 
 function getTime(value: string | null): number {
@@ -590,6 +610,16 @@ function getDateOnlyTime(value: string | null): number {
 
 function formatStatus(value: string | null): string {
   return statusLabels[value ?? ""] ?? value ?? "Neu";
+}
+
+function formatDateOnly(value: string | null): string {
+  if (!value) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00Z`));
 }
 
 function formatDate(value: string | null): string {
