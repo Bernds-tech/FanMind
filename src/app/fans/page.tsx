@@ -7,7 +7,7 @@ import {
   type ContactRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import { AppHeader } from "../dashboard/AppHeader";
+import { AppHeader } from "@/components/AppHeader";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan } from "./actions";
 import styles from "./fans.module.css";
