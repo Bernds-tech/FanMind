@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveSuggestedFollowup, saveSuggestedMemory } from "../actions";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
+import { formatPlatformLabel } from "../import/csv";
 import styles from "../fans.module.css";
 
 type ContactAiContext = {
@@ -56,6 +57,7 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
   const [copiedTone, setCopiedTone] = useState("");
   const [isSavingMemory, startMemorySave] = useTransition();
   const [isSavingFollowup, startFollowupSave] = useTransition();
+  const responseChannel = formatPlatformLabel(contact.sourcePlatform);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -207,8 +209,9 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
           />
         </label>
         <p className={styles.fieldHint}>
-          Füge hier bei Bedarf den bisherigen WhatsApp- oder Chatverlauf ein.
-          FanMind synchronisiert aktuell keine externen Plattformen.
+          Füge hier bei Bedarf den bisherigen Chatverlauf aus dem ursprünglichen
+          Kanal ein. Antwort bitte manuell in {responseChannel} senden. FanMind
+          synchronisiert aktuell keine externen Plattformen.
         </p>
 
         <label htmlFor="incoming_message">

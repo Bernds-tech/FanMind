@@ -39,6 +39,7 @@
 .fieldWide input,
 .fieldWide select,
 .fieldFull input,
+.fieldFull select,
 .fieldFull textarea {
   width: 100%;
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -634,4 +635,93 @@
   font-size: 13px;
   font-weight: 850;
   background: rgba(20, 83, 45, 0.22);
+}
+
+.channelFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.channelChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  background: rgba(15, 23, 42, 0.72);
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.channelChip:hover,
+.channelChip:focus-visible,
+.channelChipActive {
+  border-color: rgba(103, 232, 249, 0.5);
+  color: #ecfeff;
+  background: rgba(14, 116, 144, 0.3);
+}
+
+.rowCheckbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #06b6d4;
+}
+
+.platformBadgeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.platformBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: #dbeafe;
+  font-size: 11px;
+  font-weight: 900;
+  background:
+    linear-gradient(135deg, rgba(8, 47, 73, 0.74), rgba(15, 23, 42, 0.78)),
+    rgba(2, 6, 23, 0.6);
+  white-space: nowrap;
+}
+
+.platformBadge strong {
+  display: inline-grid;
+  min-width: 22px;
+  min-height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  color: #ecfeff;
+  font-size: 10px;
+  background: rgba(6, 182, 212, 0.26);
+}
+
+.dateCell {
+  display: grid;
+  gap: 3px;
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dateCell span {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
