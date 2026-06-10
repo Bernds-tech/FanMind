@@ -176,7 +176,7 @@ function normalizeDefault(
 
 function parseTags(value: string): string[] {
   return value
-    .split(/[|,]/)
+    .split(";")
     .map((tag) => tag.trim())
     .filter(Boolean)
     .slice(0, 12);

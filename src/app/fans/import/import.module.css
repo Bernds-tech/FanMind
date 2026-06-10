@@ -52,3 +52,10 @@
 .success span {
   display: block;
 }
+
+.resultList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
