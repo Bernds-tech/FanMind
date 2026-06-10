@@ -7,10 +7,8 @@ import {
   type ContactRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import {
-  WorkspaceShell,
-  type WorkspaceNavLink,
-} from "@/components/WorkspaceShell";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan } from "./actions";
 import styles from "./fans.module.css";
@@ -49,18 +47,8 @@ function FansWorkspace({
   contacts,
   contactsError,
 }: FansWorkspaceProps) {
-  const mainNavigation: WorkspaceNavLink[] = [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Fans", href: "/fans", active: true },
-    { label: "Kanäle", href: "/channels", badge: "Roadmap" },
-  ];
-  const settingsNavigation: WorkspaceNavLink[] = [
-    { label: "Einstellungen", href: "#workspace", disabled: true },
-  ];
-  const savedViews: WorkspaceNavLink[] = [
-    { label: "Top Fans", href: "#fans-list" },
-    { label: "Reaktivierung", href: "#fans-list" },
-  ];
+  const { mainNavigation, settingsNavigation, savedViews } =
+    getWorkspaceNavigation("fans");
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (

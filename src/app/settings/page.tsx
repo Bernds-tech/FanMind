@@ -10,7 +10,7 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
-type ChannelsWorkspaceProps = {
+type SettingsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
@@ -21,65 +21,6 @@ async function logout() {
 
   await signOutSupabaseServerSession();
   redirect("/login");
-}
-
-function ChannelsWorkspace({
-  workspace,
-  userDisplayName,
-  contactCount,
-}: ChannelsWorkspaceProps) {
-  const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("channels");
-  const userLabel = userDisplayName || workspace.name || "Nutzer";
-
-  return (
-    <WorkspaceShell
-      workspaceName={workspace.name}
-      userLabel={userLabel}
-      planLabel={workspace.plan_id}
-      planMeta={workspace.role}
-      planStatus="Roadmap"
-      mainNavigation={mainNavigation}
-      settingsNavigation={settingsNavigation}
-      savedViews={savedViews}
-      header={{
-        title: "Kanäle",
-        subtitle: "Willkommen zurück, Pilot Test 👋",
-        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
-        primaryActionLabel: "Kanal vormerken",
-        primaryActionHref: "#channels-preview",
-      }}
-      contactCount={contactCount}
-      logoutAction={logout}
-    >
-      <section
-        className={dashboardStyles.moduleCard}
-        id="channels-preview"
-        aria-labelledby="channels-title"
-      >
-        <div className={dashboardStyles.moduleHeader}>
-          <div>
-            <p className={dashboardStyles.eyebrow}>Coming Soon</p>
-            <h2 id="channels-title">Kanäle vormerken</h2>
-          </div>
-          <span>Keine Integration aktiv</span>
-        </div>
-        <p className={dashboardStyles.moduleText}>
-          Diese Seite ist eine MVP-Vorschau. FanMind startet hier keine echte
-          Social-Media-Integration, synchronisiert keine Plattformdaten und
-          sendet nichts automatisch.
-        </p>
-        <div className={dashboardStyles.emptyState}>
-          <strong>Noch keine Kanäle verbunden.</strong>
-          <p>
-            Kanäle können aktuell nur als Produktbereich vorgemerkt werden.
-            Kontakte auf der Fans-Seite bleiben manuell gepflegte
-            Workspace-Daten.
-          </p>
-        </div>
-      </section>
-    </WorkspaceShell>
-  );
 }
 
 function getUserDisplayName(
@@ -93,7 +34,66 @@ function getUserDisplayName(
     : fallback;
 }
 
-export default async function ChannelsPage() {
+function SettingsWorkspace({
+  workspace,
+  userDisplayName,
+  contactCount,
+}: SettingsWorkspaceProps) {
+  const { mainNavigation, settingsNavigation, savedViews } =
+    getWorkspaceNavigation("settings");
+  const userLabel = userDisplayName || workspace.name || "Nutzer";
+
+  return (
+    <WorkspaceShell
+      workspaceName={workspace.name}
+      userLabel={userLabel}
+      planLabel={workspace.plan_id}
+      planMeta={workspace.role}
+      planStatus="MVP"
+      mainNavigation={mainNavigation}
+      settingsNavigation={settingsNavigation}
+      savedViews={savedViews}
+      header={{
+        title: "Einstellungen",
+        subtitle: "Willkommen zurück, Pilot Test 👋",
+        searchPlaceholder: "Suche nach Workspace, Profil, Paket ...",
+        primaryActionLabel: "Speichern vorbereiten",
+        primaryActionHref: "#workspace-settings",
+      }}
+      contactCount={contactCount}
+      logoutAction={logout}
+    >
+      <section
+        className={dashboardStyles.moduleCard}
+        id="workspace-settings"
+        aria-labelledby="workspace-settings-title"
+      >
+        <div className={dashboardStyles.moduleHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>MVP-Vorschau</p>
+            <h2 id="workspace-settings-title">Workspace-Einstellungen</h2>
+          </div>
+          <span>MVP-Vorschau</span>
+        </div>
+        <p className={dashboardStyles.moduleText}>
+          Einstellungen für Workspace, Nutzerprofil und Paketlogik werden hier
+          vorbereitet. Im aktuellen MVP werden noch keine komplexen
+          Rollen/Rechte oder Zahlungsfunktionen gebaut.
+        </p>
+        <div className={dashboardStyles.emptyState}>
+          <strong>Noch keine bearbeitbaren Einstellungen aktiv.</strong>
+          <p>
+            Diese Seite hält den geschützten Workspace-Rahmen bereit, ohne echte
+            Rollenverwaltung, Zahlungslogik oder Datenbankänderungen
+            einzuführen.
+          </p>
+        </div>
+      </section>
+    </WorkspaceShell>
+  );
+}
+
+export default async function SettingsPage() {
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -109,7 +109,7 @@ export default async function ChannelsPage() {
   return (
     <main className={dashboardStyles.page}>
       {workspace ? (
-        <ChannelsWorkspace
+        <SettingsWorkspace
           workspace={workspace}
           userDisplayName={getUserDisplayName(
             data.user.user_metadata,
@@ -120,14 +120,14 @@ export default async function ChannelsPage() {
       ) : (
         <section
           className={dashboardStyles.fallbackCard}
-          aria-label="FanMind Kanäle"
+          aria-label="FanMind Einstellungen"
         >
           <div>
-            <p className={dashboardStyles.eyebrow}>FanMind Kanäle</p>
+            <p className={dashboardStyles.eyebrow}>FanMind Einstellungen</p>
             <h1>Workspace-Status</h1>
             <p>
-              Kanäle ist geschützt: Supabase Auth ist aktiv. Für deinen Account
-              wurde noch kein Workspace gefunden.
+              Einstellungen ist geschützt: Supabase Auth ist aktiv. Für deinen
+              Account wurde noch kein Workspace gefunden.
             </p>
           </div>
           {userError ? (
