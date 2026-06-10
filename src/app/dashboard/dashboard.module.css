@@ -1458,6 +1458,15 @@
   border-color: rgba(34, 197, 94, 0.34) !important;
 }
 
+.onboarding-next {
+  border-color: rgba(103, 232, 249, 0.3) !important;
+  background: rgba(8, 47, 73, 0.28) !important;
+}
+
+.onboarding-recommended {
+  border-color: rgba(251, 191, 36, 0.24) !important;
+}
+
 .onboardingStepIndex {
   display: grid;
   width: 34px;
@@ -1472,6 +1481,14 @@
 
 .onboarding-done .onboardingStepIndex {
   background: #86efac;
+}
+
+.onboarding-next .onboardingStepIndex {
+  background: #67e8f9;
+}
+
+.onboarding-recommended .onboardingStepIndex {
+  background: #fbbf24;
 }
 
 .onboardingStepHeader {
@@ -1499,6 +1516,16 @@
 .onboarding-done .onboardingStepHeader span {
   color: #052e16;
   background: #86efac;
+}
+
+.onboarding-next .onboardingStepHeader span {
+  color: #cffafe;
+  background: rgba(8, 145, 178, 0.24);
+}
+
+.onboarding-recommended .onboardingStepHeader span {
+  color: #fef3c7;
+  background: rgba(245, 158, 11, 0.16);
 }
 
 .onboardingChecklist p {
