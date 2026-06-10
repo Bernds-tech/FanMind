@@ -11,7 +11,7 @@ import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMi
 import styles from "./register.module.css";
 
 type RegisterPlanId = PlanId;
-type StarterCommercialOption = Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_12m_setup_waived">;
+type StarterCommercialOption = Extract<ProductiveCommercialOption, "starter_paid_setup">;
 
 type RegisterPageProps = {
   searchParams: Promise<{ lang?: string | string[]; plan?: string | string[] }>;
@@ -117,9 +117,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         label: "1",
         badge: "Active",
         title: "Start Pilot / Setup",
-        price: "€990 one-time",
-        description: "Required setup entry with a demo/setup workspace and sample data.",
-        bullets: ["no commitment", "cancel after the pilot month", "no running subscription required"],
+        price: "€990 one-time · test for 1 month · no commitment",
+        description: "Demo/setup access for 1 month. No automatic renewal; if you do not continue, the pilot ends.",
+        bullets: ["no commitment", "no automatic renewal", "paid setup fee is credited if you continue with Starter"],
         href: registerPlanHref("pilot", language),
         cta: "Start Pilot / Setup",
       },
@@ -127,9 +127,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         label: "2",
         badge: "Active",
         title: "Start Starter",
-        price: "€299 / month",
-        description: "Starter subscription with two commercial setup options.",
-        bullets: ["€990 one-time setup fee without 12-month commitment", "or setup fee waived with 12-month commitment", "one productive MVP workspace"],
+        price: "€990 setup + €299 / month",
+        description: "Starter for ongoing use after setup; cancellable monthly.",
+        bullets: ["€990 one-time setup fee", "€299 per month", "monthly cancellable", "paid Pilot setup is credited if you continue"],
         href: registerPlanHref("starter", language),
         cta: "Choose Starter",
       },
@@ -139,7 +139,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         title: "Growth",
         price: "Available soon",
         description: "Not directly available yet.",
-        bullets: ["later available after Pilot / Setup", "or with a 12-month commitment model", "start with Starter for the MVP"],
+        bullets: ["Coming Soon / roadmap preview", "not productively bookable yet", "start with Pilot / Setup or Starter for the MVP"],
         href: registerPlanHref("growth", language),
         cta: "Learn more",
       },
@@ -149,7 +149,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         title: "Agency",
         price: "Available soon",
         description: "Intro call; not productively available yet.",
-        bullets: ["later available after Pilot / Setup", "or with a 12-month commitment model", "scope agency needs first"],
+        bullets: ["Coming Soon / roadmap preview", "not productively bookable yet", "scope agency needs first"],
         href: registerPlanHref("agency", language),
         cta: "Learn more",
       },
@@ -161,9 +161,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       label: "1",
       badge: "Aktiv",
       title: "Pilot / Setup starten",
-      price: "990 € einmalig",
-      description: "Pflicht-Einstieg mit Demo-/Setup-Workspace und Beispieldaten.",
-      bullets: ["keine Bindung", "nach dem Pilotmonat jederzeit beendbar", "kein laufendes Monatsabo nötig"],
+      price: "990 € einmalig · 1 Monat testen · keine Bindung",
+      description: "Demo-/Setup-Zugang für 1 Monat. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.",
+      bullets: ["keine Bindung", "keine automatische Verlängerung", "bezahlte Setup-Gebühr wird beim Starter angerechnet"],
       href: registerPlanHref("pilot", language),
       cta: "Pilot / Setup starten",
     },
@@ -171,9 +171,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       label: "2",
       badge: "Aktiv",
       title: "Starter starten",
-      price: "299 € / Monat",
-      description: "Starter-Abo mit zwei kommerziellen Setup-Optionen.",
-      bullets: ["990 € Einrichtungsgebühr ohne 12-Monatsbindung", "oder Einrichtungsgebühr entfällt bei 12 Monaten Bindung", "ein produktiver MVP-Workspace"],
+      price: "990 € Einrichtung + 299 €/Monat",
+      description: "Starter für laufende Nutzung nach dem Setup; monatlich kündbar.",
+      bullets: ["990 € einmalige Einrichtung", "299 € pro Monat", "monatlich kündbar", "bezahlter Pilot wird als Setup-Gebühr angerechnet"],
       href: registerPlanHref("starter", language),
       cta: "Starter wählen",
     },
@@ -183,7 +183,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       title: "Growth",
       price: "Bald verfügbar",
       description: "Noch nicht direkt verfügbar.",
-      bullets: ["später nach Pilot / Setup verfügbar", "oder mit 12-Monatsbindung möglich", "für den MVP mit Starter starten"],
+      bullets: ["Coming Soon / Roadmap-Vorschau", "noch nicht produktiv buchbar", "für den MVP mit Pilot / Setup oder Starter starten"],
       href: registerPlanHref("growth", language),
       cta: "Mehr erfahren",
     },
@@ -193,7 +193,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       title: "Agency",
       price: "Bald verfügbar",
       description: "Erstgespräch; noch nicht direkt produktiv verfügbar.",
-      bullets: ["später nach Pilot / Setup verfügbar", "oder mit 12-Monatsbindung möglich", "Agenturbedarf zuerst besprechen"],
+      bullets: ["Coming Soon / Roadmap-Vorschau", "noch nicht produktiv buchbar", "Agenturbedarf zuerst besprechen"],
       href: registerPlanHref("agency", language),
       cta: "Mehr erfahren",
     },
@@ -204,38 +204,24 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
   if (language === "en") {
     return [
       {
-        id: "starter_12m_setup_waived",
-        title: "Starter with 12 months",
-        price: "€0 setup fee + €299 / month",
-        description: "Setup fee waived instead of €990 when you accept a 12-month commitment.",
-        bullets: ["12-month commitment", "Starter subscription", "best fit when you want to continue directly after setup"],
-        badge: "Recommended",
-      },
-      {
         id: "starter_paid_setup",
-        title: "Starter without commitment",
-        price: "€990 setup fee + €299 / month",
-        description: "Regular setup fee plus Starter subscription without a 12-month commitment.",
-        bullets: ["no 12-month commitment", "one-time setup fee", "monthly Starter subscription afterwards"],
+        title: "Starter",
+        price: "€990 setup + €299 / month",
+        description: "For ongoing use after setup. Cancellable monthly; no fixed annual commitment.",
+        bullets: ["one-time setup fee", "€299 per month", "monthly cancellable", "paid Pilot setup fee is credited"],
+        badge: "Active",
       },
     ];
   }
 
   return [
     {
-      id: "starter_12m_setup_waived",
-      title: "Starter mit 12 Monaten",
-      price: "0 € Einrichtungsgebühr + 299 € / Monat",
-      description: "Die Einrichtungsgebühr entfällt statt 990 €, wenn du 12 Monate Bindung akzeptierst.",
-      bullets: ["12 Monate Bindung", "Starter-Abo", "ideal, wenn du direkt nach dem Setup weitermachen willst"],
-      badge: "Empfohlen",
-    },
-    {
       id: "starter_paid_setup",
-      title: "Starter ohne Bindung",
-      price: "990 € Einrichtungsgebühr + 299 € / Monat",
-      description: "Reguläre Einrichtungsgebühr plus Starter-Abo ohne 12-Monatsbindung.",
-      bullets: ["keine 12-Monatsbindung", "einmalige Einrichtungsgebühr", "danach monatliches Starter-Abo"],
+      title: "Starter",
+      price: "990 € Einrichtung + 299 €/Monat",
+      description: "Für laufende Nutzung nach dem Setup. Monatlich kündbar; keine feste Jahresbindung.",
+      bullets: ["einmalige Einrichtungsgebühr", "299 € pro Monat", "monatlich kündbar", "Pilot-/Setup-Gebühr wird angerechnet"],
+      badge: "Aktiv",
     },
   ];
 }
@@ -273,7 +259,7 @@ async function prepareUserWorkspace(
   commercialOption: ProductiveCommercialOption,
   language: FanMindLanguage,
 ): Promise<WorkspaceSetupError | null> {
-  const commercialTerms = getRegistrationCommercialTerms(planId, commercialOption === "pilot_only" ? "starter_12m_setup_waived" : commercialOption);
+  const commercialTerms = getRegistrationCommercialTerms(planId, commercialOption === "pilot_only" ? "starter_paid_setup" : commercialOption);
 
   if (!commercialTerms || commercialTerms.commercialOption !== commercialOption) {
     return workspaceSetupError(invalidWorkspaceTermsMessage(language));
@@ -365,7 +351,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const selectedOnboardingHref = selectedPlanId === "pilot" || selectedPlanId === "starter" ? onboardingHref(selectedPlanId, language) : onboardingHref("starter", language);
   const planSelectionCopy = getPlanSelectionCopy(language);
   const starterOptionsCopy = getStarterOptionsCopy(language);
-  const [starterOption, setStarterOption] = useState<StarterCommercialOption>("starter_12m_setup_waived");
+  const [starterOption, setStarterOption] = useState<StarterCommercialOption>("starter_paid_setup");
   const [success, setSuccess] = useState(false);
   const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -394,7 +380,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
     const role = String(formData.get("rolle") ?? "").trim();
     const message = String(formData.get("nachricht") ?? "").trim();
     const commercialOptionValue = String(formData.get("commercialOption") ?? starterOption);
-    const selectedCommercialOption: ProductiveCommercialOption = selectedPlanId === "starter" && (commercialOptionValue === "starter_paid_setup" || commercialOptionValue === "starter_12m_setup_waived")
+    const selectedCommercialOption: ProductiveCommercialOption = selectedPlanId === "starter" && (commercialOptionValue === "starter_paid_setup")
       ? commercialOptionValue
       : "pilot_only";
 
@@ -477,7 +463,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             <div className={styles.planIntro}>
               <p className={styles.eyebrow}>{language === "en" ? "Setup first" : "Setup zuerst"}</p>
               <h1>{language === "en" ? "Choose your FanMind entry" : "Wähle deinen FanMind-Einstieg"}</h1>
-              <p>{language === "en" ? "Every customer starts with Pilot / Setup or uses a Starter option where the setup fee is waived for a 12-month commitment." : "Jeder Kunde startet grundsätzlich mit Pilot / Setup oder nutzt beim Starter die Option, bei der die Einrichtungsgebühr für 12 Monate Bindung entfällt."}</p>
+              <p>{language === "en" ? "Choose Pilot / Setup for a 1-month test, or Starter for ongoing use with €990 setup + €299/month." : "Wähle Pilot / Setup für 1 Monat Test oder Starter für laufende Nutzung mit 990 € Einrichtung + 299 €/Monat."}</p>
             </div>
 
             {hasInvalidPlan && (
@@ -522,12 +508,12 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.formHeader}>
                 <p className={styles.eyebrow}>{selectedPlanId === "pilot" ? "Pilot / Setup" : "Starter-Abo"}</p>
                 <h1>{selectedPlanId === "pilot" ? (language === "en" ? "Start Pilot / Setup" : "Pilot / Setup starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
-                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, no commitment, cancel after the pilot month. You start in a demo/setup workspace with sample data." : "990 € einmalig, keine Bindung, nach dem Pilotmonat jederzeit beendbar. Du startest im Demo-/Setup-Workspace mit Beispieldaten.") : (language === "en" ? "Choose whether you pay the one-time setup fee or waive it with a 12-month commitment. No payment is collected here." : "Wähle, ob du die Einrichtungsgebühr zahlst oder sie mit 12 Monaten Bindung entfällt. Hier wird keine Zahlung ausgelöst.")}</p>
+                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, test for 1 month, no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Monat testen · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "€990 setup + €299/month, monthly cancellable. No payment is collected here." : "990 € Einrichtung + 299 €/Monat, monatlich kündbar. Hier wird keine Zahlung ausgelöst.")}</p>
               </div>
 
               {selectedPlanId === "starter" && (
                 <fieldset className={styles.commercialOptions}>
-                  <legend>{language === "en" ? "Commercial Starter option" : "Kommerzielle Starter-Option"}</legend>
+                  <legend>{language === "en" ? "Starter package" : "Starter-Paket"}</legend>
                   {starterOptionsCopy.map((option) => (
                     <label key={option.id} className={`${styles.optionCard} ${starterOption === option.id ? styles.optionCardSelected : ""}`}>
                       <input
@@ -647,7 +633,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 <FeatureStatusLabel variant={selectedPlanId === "growth" ? "preview" : "roadmap"}>
                   {selectedPlanId === "growth" ? (language === "en" ? "Preview" : "Vorschau") : "Roadmap"}
                 </FeatureStatusLabel>
-                <span>{language === "en" ? "Later available after Pilot / Setup or with a 12-month commitment model. Pilot remains the required setup entry unless the setup fee is waived through the commitment model." : "Später verfügbar nach Pilot / Setup oder mit 12-Monatsbindung. Pilot bleibt der Pflicht-Einstieg, sofern die Einrichtungsgebühr nicht über das Bindungsmodell entfällt."}</span>
+                <span>{language === "en" ? "Growth and Agency remain Coming Soon / roadmap previews and are not productively activated here." : "Growth und Agency bleiben Coming Soon / Roadmap-Vorschau und werden hier nicht produktiv freigeschaltet."}</span>
               </div>
               <div className={styles.previewActions}>
                 <a className={styles.primaryLink} href={registerPlanHref("starter", language)}>{language === "en" ? "Start with Starter" : "Mit Starter starten"}</a>
