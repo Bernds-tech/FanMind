@@ -297,6 +297,10 @@
   padding: 0 16px 16px;
 }
 
+.dashboardContentStart {
+  align-content: start;
+}
+
 .topbar,
 .workspaceStrip,
 .moduleCard,
