@@ -83,7 +83,15 @@ function FansWorkspace({
                 <p className={dashboardStyles.eyebrow}>Workspace-Liste</p>
                 <h2 id="fans-list-title">Fans</h2>
               </div>
-              <span>{contacts.length ? "Echte Daten" : "Empty State"}</span>
+              <div className={dashboardStyles.emptyActions}>
+                <Link
+                  className={dashboardStyles.secondaryButton}
+                  href="/fans/import"
+                >
+                  CSV importieren
+                </Link>
+                <span>{contacts.length ? "Echte Daten" : "Empty State"}</span>
+              </div>
             </div>
             {contactsError ? (
               <p className={dashboardStyles.error}>
@@ -264,9 +272,18 @@ function FansEmptyState() {
     <div className={dashboardStyles.emptyState}>
       <strong>Noch keine echten Fans gespeichert</strong>
       <p>
-        Lege den ersten Fan manuell an. FanMind behauptet hier keine aktive
-        Instagram-, TikTok- oder CSV-Synchronisation.
+        Lege den ersten Fan manuell an oder importiere eine vorbereitete
+        Kontaktliste per CSV. FanMind behauptet hier keine aktive Instagram-,
+        TikTok- oder Plattform-Synchronisation.
       </p>
+      <div className={dashboardStyles.emptyActions}>
+        <Link className={dashboardStyles.primaryButton} href="/fans#new-fan-modal">
+          Ersten Fan anlegen
+        </Link>
+        <Link className={dashboardStyles.secondaryButton} href="/fans/import">
+          CSV importieren
+        </Link>
+      </div>
     </div>
   );
 }

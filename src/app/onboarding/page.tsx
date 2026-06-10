@@ -126,8 +126,8 @@ function getOnboardingSteps({
         "Lege mindestens einen echten Kontakt an, damit Fanliste und Details mit Workspace-Daten arbeiten.",
       status: hasContact ? "done" : "open",
       statusLabel: hasContact ? "Erledigt" : "Offen",
-      actionLabel: hasContact ? "Fanliste öffnen" : "Zur Fanliste",
-      actionHref: hasContact ? "/fans#fans-list" : "/fans#new-fan-modal",
+      actionLabel: hasContact ? "Fanliste öffnen" : "CSV importieren oder Fan anlegen",
+      actionHref: hasContact ? "/fans#fans-list" : "/fans/import",
     },
     {
       title: "Chatverlauf einfügen",
@@ -276,6 +276,9 @@ function OnboardingWorkspace({
           <div className={styles.emptyActions}>
             <Link className={styles.primaryButton} href="/fans#fans-list">
               Zur Fanliste
+            </Link>
+            <Link className={styles.secondaryButton} href="/fans/import">
+              CSV importieren
             </Link>
             <Link className={styles.secondaryButton} href="/dashboard">
               Zum Dashboard
