@@ -164,6 +164,11 @@ type PostgrestResult<T> = {
   error: Error | null;
 };
 
+type PostgrestCountResult = {
+  count: number;
+  error: Error | null;
+};
+
 type SupabaseFilterValue = string | number | boolean;
 
 const WORKSPACE_COLUMNS =
@@ -590,13 +595,32 @@ export async function createContactFollowup(
 export async function getOpenFollowupCount(
   workspaceId: string,
 ): Promise<FollowupCountResult> {
-  const followupsResult = await getWorkspaceOpenFollowups(workspaceId);
+  const accessToken = await getAccessToken();
 
-  if (followupsResult.error) {
-    return { count: 0, error: followupsResult.error };
+  if (!accessToken) {
+    return {
+      count: 0,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
   }
 
-  return { count: followupsResult.followups.length, error: null };
+  const countResult = await postgrestCount("followups", accessToken, [
+    ["workspace_id", workspaceId],
+    ["status", "open"],
+  ]);
+
+  if (countResult.error) {
+    return {
+      count: 0,
+      error: new Error(
+        `Offene Follow-ups konnten nicht gezählt werden: ${withOptionalSchemaHint(countResult.error.message, "followups")}`,
+      ),
+    };
+  }
+
+  return { count: countResult.count, error: null };
 }
 
 export async function getWorkspaceOpenFollowups(
@@ -870,6 +894,50 @@ async function postgrestRequest<T = unknown>(
   } catch (error) {
     return {
       data: null,
+      error:
+        error instanceof Error
+          ? error
+          : new Error("Unbekannter Supabase-Fehler."),
+    };
+  }
+}
+
+async function postgrestCount(
+  table: string,
+  accessToken: string,
+  filters: [string, SupabaseFilterValue][],
+): Promise<PostgrestCountResult> {
+  try {
+    const url = new URL(getSupabaseRestUrl(table));
+    url.searchParams.set("select", "id");
+
+    for (const [column, value] of filters) {
+      url.searchParams.set(column, `eq.${String(value)}`);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "HEAD",
+      headers: {
+        ...getSupabaseHeaders(accessToken),
+        Prefer: "count=exact",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { count: 0, error: await parseSupabaseServerError(response) };
+    }
+
+    const contentRange = response.headers.get("content-range");
+    const count = contentRange ? Number(contentRange.split("/").at(-1)) : 0;
+
+    return {
+      count: Number.isFinite(count) ? count : 0,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      count: 0,
       error:
         error instanceof Error
           ? error
