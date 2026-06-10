@@ -114,18 +114,14 @@ function FansWorkspace({
           id="fans-list"
           aria-labelledby="fans-list-title"
         >
-          <div className={dashboardStyles.moduleHeader}>
-            <div>
-              <p className={dashboardStyles.eyebrow}>Workspace-Liste</p>
-              <h2 id="fans-list-title">Fans</h2>
-            </div>
+          <div
+            className={`${dashboardStyles.moduleHeader} ${styles.fansListHeader}`}
+          >
+            <h2 id="fans-list-title">Fans</h2>
             <div className={styles.listActions}>
               <Link className={styles.importLink} href="/fans/import">
                 CSV importieren
               </Link>
-              <span>
-                {fanGroups.length ? `${fanGroups.length} echte Fans` : "Keine Fans"}
-              </span>
             </div>
           </div>
           {contactsError ? (
@@ -591,9 +587,11 @@ function renderNextFollowup(followup: FollowupRow | null) {
   return (
     <span className={styles.followupCell}>
       {followup.due_date ? (
-        <span>{formatDateOnly(followup.due_date)}</span>
+        <span className={styles.followupDate}>
+          {formatDateOnly(followup.due_date)}
+        </span>
       ) : null}
-      {followup.reason}
+      <span className={styles.followupReason}>{followup.reason}</span>
     </span>
   );
 }
