@@ -100,14 +100,14 @@ function getWorkspaceDisplay(
       commercialOptionName: getCommercialOptionLabel(
         workspace.commercial_option,
       ),
-      setupFeeLabel: formatEuro(99000),
+      setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel: "monatlich kündbar",
+      commitmentLabel: "12 Monate",
       planHint: "Starter · produktiver MVP-Kern",
       packageSummary:
         "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
       contractNote:
-        "Starter läuft mit 990 € Einrichtung + 299 €/Monat und ist monatlich kündbar. Wurde der Pilot bezahlt, wird die Setup-Gebühr angerechnet; danach fallen im Starter nur 299 €/Monat an.",
+        "Starter läuft in dieser Alt-Option ohne Einrichtungsgebühr für 299 €/Monat mit 12 Monaten Laufzeit. Der monatlich kündbare MVP-Verkauf nutzt Starter mit 990 € Einrichtung + 299 €/Monat.",
     };
   }
 
