@@ -205,7 +205,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     maxContacts: 1000,
     contactsLabel: "bis 1.000 Kontakte",
     description:
-      "Ein produktives Profil für laufende Nutzung nach dem Setup: 990 € Einrichtung plus 299 €/Monat, monatlich kündbar und ohne feste Jahresbindung.",
+      "Ein produktives Profil für laufende Nutzung nach dem Setup: 990 € Einrichtung plus 299 €/Monat und monatlich kündbar.",
     primaryAction: "Starter wählen",
     upgradePlan: "growth",
     featureConfig: featureConfig({

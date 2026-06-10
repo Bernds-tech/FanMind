@@ -7,6 +7,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
@@ -42,14 +43,15 @@ function SettingsWorkspace({
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("settings");
   const userLabel = userDisplayName || workspace.name || "Nutzer";
+  const planLabel = workspace.plan_id === "pilot" ? "Pilot / Setup" : workspace.plan_id === "starter" ? "Starter" : workspace.plan_id === "growth" ? "Growth" : "Agency";
 
   return (
     <WorkspaceShell
       workspaceName={workspace.name}
       userLabel={userLabel}
-      planLabel={workspace.plan_id}
-      planMeta={workspace.role}
-      planStatus="MVP"
+      planLabel={planLabel}
+      planMeta={getCommercialOptionLabel(workspace.commercial_option)}
+      planStatus={workspace.plan_id === "starter" ? "Aktiv" : workspace.plan_id === "pilot" ? "Demo" : "Vorschau"}
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
