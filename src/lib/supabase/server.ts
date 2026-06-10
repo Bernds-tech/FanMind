@@ -70,6 +70,11 @@ type ContactCreateResult = {
   error: Error | null;
 };
 
+type ContactDetailResult = {
+  contact: ContactRow | null;
+  error: Error | null;
+};
+
 type WorkspaceBackfillResult = {
   workspace: WorkspaceBackfillRow | null;
   error: Error | null;
@@ -249,6 +254,29 @@ export async function getWorkspaceContacts(workspaceId: string): Promise<Contact
   }
 
   return { contacts: contactsResult.data ?? [], error: null };
+}
+
+export async function getWorkspaceContact(workspaceId: string, contactId: string): Promise<ContactDetailResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return contactDetailError("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.");
+  }
+
+  const contactResult = await postgrestSelect<ContactRow>(
+    "contacts",
+    accessToken,
+    CONTACT_COLUMNS,
+    [["workspace_id", workspaceId], ["id", contactId]],
+    1,
+    true,
+  );
+
+  if (contactResult.error) {
+    return contactDetailError(`Kontakt konnte nicht geladen werden: ${contactResult.error.message}`);
+  }
+
+  return { contact: contactResult.data, error: null };
 }
 
 export async function createWorkspaceContact(input: CreateContactInput): Promise<ContactCreateResult> {
@@ -509,6 +537,10 @@ function contactsError(message: string): ContactsResult {
 }
 
 function contactCreateError(message: string): ContactCreateResult {
+  return { contact: null, error: new Error(message) };
+}
+
+function contactDetailError(message: string): ContactDetailResult {
   return { contact: null, error: new Error(message) };
 }
 
