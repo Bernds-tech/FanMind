@@ -109,7 +109,9 @@ function FanDetailContent({ contact }: { contact: ContactRow }) {
             <div>
               <p className={dashboardStyles.eyebrow}>Profilkarte</p>
               <h2 id="fan-profile-title">{contact.display_name}</h2>
-              <p className={styles.profileHandle}>{contact.handle || "Kein Handle hinterlegt"}</p>
+              <p className={styles.profileHandle}>
+                {contact.handle || "Kein Handle hinterlegt"}
+              </p>
             </div>
           </div>
 
@@ -161,7 +163,7 @@ function FanDetailContent({ contact }: { contact: ContactRow }) {
             <p className={styles.longText}>{contact.summary}</p>
           ) : (
             <EmptyState
-              title="Keine Summary vorhanden"
+              title="Noch keine Zusammenfassung hinterlegt."
               body="Für diesen Kontakt wurde noch keine manuelle Summary gespeichert."
             />
           )}
@@ -260,12 +262,12 @@ function FanNotFound() {
       <div className={dashboardStyles.moduleHeader}>
         <div>
           <p className={dashboardStyles.eyebrow}>Kontakt</p>
-          <h2>Nicht gefunden</h2>
+          <h2>Fan nicht gefunden</h2>
         </div>
         <span>Empty State</span>
       </div>
       <EmptyState
-        title="Kein Kontakt gefunden"
+        title="Fan nicht gefunden"
         body="Für diese ID wurde im aktuellen Workspace kein Kontakt gefunden."
       />
     </section>
@@ -273,14 +275,18 @@ function FanNotFound() {
 }
 
 function formatSource(value: string | null): string {
-  return sourceLabels[value ?? ""] ?? value ?? "Manuell";
+  return sourceLabels[value ?? ""] ?? value ?? "Nicht hinterlegt";
 }
 
 function formatStatus(value: string | null): string {
-  return statusLabels[value ?? ""] ?? value ?? "Neu";
+  return statusLabels[value ?? ""] ?? value ?? "Nicht hinterlegt";
 }
 
 function formatLanguage(value: string | null): string {
+  if (value === "de") {
+    return "Deutsch";
+  }
+
   if (value === "en") {
     return "Englisch";
   }
@@ -289,7 +295,7 @@ function formatLanguage(value: string | null): string {
     return "Französisch";
   }
 
-  return "Deutsch";
+  return value ?? "Nicht hinterlegt";
 }
 
 function formatDate(value: string | null): string {
