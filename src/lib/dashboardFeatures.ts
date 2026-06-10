@@ -119,7 +119,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
     key: "contacts",
     label: "Kontakte",
     description: "Pilot nutzt Demo-Kontakte; Starter arbeitet produktiv mit dem Kontaktbestand.",
-    route: "/dashboard#contacts",
+    route: "/fans",
     ctaLabel: "Kontakte ansehen",
     ...access(demo(), active(), active(), demo()),
   },
