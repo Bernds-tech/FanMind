@@ -13,7 +13,7 @@ import {
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
-import { createFan } from "./actions";
+import { createFan, updateFan } from "./actions";
 import {
   PLATFORM_OPTIONS,
   formatPlatformLabel,
@@ -112,21 +112,12 @@ function FansWorkspace({
         <section
           className={`${dashboardStyles.moduleCard} ${styles.fansListCard}`}
           id="fans-list"
-          aria-labelledby="fans-list-title"
+          aria-label="Fans-Liste"
         >
-          <div className={dashboardStyles.moduleHeader}>
-            <div>
-              <p className={dashboardStyles.eyebrow}>Workspace-Liste</p>
-              <h2 id="fans-list-title">Fans</h2>
-            </div>
-            <div className={styles.listActions}>
-              <Link className={styles.importLink} href="/fans/import">
-                CSV importieren
-              </Link>
-              <span>
-                {fanGroups.length ? `${fanGroups.length} echte Fans` : "Keine Fans"}
-              </span>
-            </div>
+          <div className={styles.listToolbar}>
+            <Link className={styles.importLink} href="/fans/import">
+              CSV importieren
+            </Link>
           </div>
           {contactsError ? (
             <p className={dashboardStyles.error}>
@@ -144,10 +135,7 @@ function FansWorkspace({
             <>
               <ChannelFilters activeChannel={activeChannel} />
               {visibleFanGroups.length ? (
-                <FansTable
-                  fanGroups={visibleFanGroups}
-                  totalFans={fanGroups.length}
-                />
+                <FansTable fanGroups={visibleFanGroups} />
               ) : (
                 <div className={dashboardStyles.emptyState}>
                   <strong>Keine Fans für diesen Kanal</strong>
@@ -198,19 +186,13 @@ function FansWorkspace({
                 <label htmlFor="handle">Handle optional</label>
                 <input id="handle" name="handle" placeholder="@gerhard" />
               </div>
-              <div className={styles.field}>
-                <label htmlFor="source_platform">Plattform/Quelle</label>
-                <select
-                  id="source_platform"
-                  name="source_platform"
-                  defaultValue="manual"
-                >
-                  {PLATFORM_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+              <div className={styles.fieldFull}>
+                <span className={styles.groupLabel}>Plattformen/Quellen</span>
+                <PlatformCheckboxes selectedPlatforms={["manual"]} />
+                <p className={styles.fieldHint}>
+                  Mindestens ein Kanal ist Pflicht. Mehrere Kanäle erzeugen im
+                  MVP je einen Kontakt-Datensatz.
+                </p>
               </div>
               <div className={styles.field}>
                 <label htmlFor="language">Sprache</label>
@@ -264,6 +246,10 @@ function FansWorkspace({
             </form>
           </div>
         </section>
+
+        {fanGroups.map((group) => (
+          <EditFanModal group={group} key={group.key} />
+        ))}
       </div>
     </WorkspaceShell>
   );
@@ -298,13 +284,7 @@ function ChannelFilters({
   );
 }
 
-function FansTable({
-  fanGroups,
-  totalFans,
-}: {
-  fanGroups: FanGroup[];
-  totalFans: number;
-}) {
+function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
   return (
     <div className={styles.crmTableWrap}>
       <table className={styles.crmTable}>
@@ -318,6 +298,7 @@ function FansTable({
             <th>Letzter Kontakt</th>
             <th>Nächster Follow-up</th>
             <th>Antwortkanal / Empfehlung</th>
+            <th>Aktion</th>
           </tr>
         </thead>
         <tbody>
@@ -375,8 +356,7 @@ function FansTable({
               <td>
                 {group.latestCreatedAt ? (
                   <span className={styles.dateCell}>
-                    <span>Angelegt</span>
-                    {formatDate(group.latestCreatedAt)}
+                    {formatDateOnlyFromTimestamp(group.latestCreatedAt)}
                   </span>
                 ) : (
                   "—"
@@ -388,13 +368,190 @@ function FansTable({
                   {formatReplyChannel(group.platforms)}
                 </span>
               </td>
+              <td>
+                <a
+                  className={styles.editButton}
+                  href={`#${getEditModalId(group)}`}
+                >
+                  Bearbeiten
+                </a>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className={styles.tableFooter}>
-        {fanGroups.length} von {totalFans} {totalFans === 1 ? "Fan" : "Fans"}
+    </div>
+  );
+}
+
+function EditFanModal({ group }: { group: FanGroup }) {
+  const primaryContact = group.primaryContact;
+
+  return (
+    <section
+      className={styles.modalOverlay}
+      id={getEditModalId(group)}
+      aria-labelledby={`${getEditModalId(group)}-title`}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className={styles.modalCard}>
+        <div className={styles.modalHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Fan bearbeiten</p>
+            <h2 id={`${getEditModalId(group)}-title`}>{group.displayName}</h2>
+          </div>
+          <a
+            className={styles.modalClose}
+            href="#fans-list"
+            aria-label="Modal schließen"
+          >
+            ×
+          </a>
+        </div>
+        <form className={styles.formGrid} action={updateFan}>
+          {group.contacts.map((contact) => (
+            <input
+              key={contact.id}
+              name="contact_ids"
+              type="hidden"
+              value={contact.id}
+            />
+          ))}
+          <div className={styles.fieldWide}>
+            <label htmlFor={`${getEditModalId(group)}-display-name`}>
+              Name
+            </label>
+            <input
+              id={`${getEditModalId(group)}-display-name`}
+              name="display_name"
+              required
+              defaultValue={group.displayName}
+            />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor={`${getEditModalId(group)}-handle`}>Handle</label>
+            <input
+              id={`${getEditModalId(group)}-handle`}
+              name="handle"
+              defaultValue={group.handles[0] ?? ""}
+              placeholder="@handle"
+            />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor={`${getEditModalId(group)}-language`}>Sprache</label>
+            <select
+              id={`${getEditModalId(group)}-language`}
+              name="language"
+              defaultValue={primaryContact.language ?? "de"}
+            >
+              <option value="de">Deutsch</option>
+              <option value="en">Englisch</option>
+              <option value="fr">Französisch</option>
+            </select>
+          </div>
+          <div className={styles.field}>
+            <label htmlFor={`${getEditModalId(group)}-status`}>Status</label>
+            <select
+              id={`${getEditModalId(group)}-status`}
+              name="status"
+              defaultValue={primaryContact.status ?? "new"}
+            >
+              <option value="new">Neu</option>
+              <option value="active">Aktiv</option>
+              <option value="warm">Warm</option>
+              <option value="follow_up">Follow-up</option>
+              <option value="paused">Pausiert</option>
+              <option value="vip">VIP</option>
+              <option value="buyer">Käufer</option>
+              <option value="inactive">Inaktiv</option>
+              <option value="do_not_push">Nicht drängen</option>
+            </select>
+          </div>
+          <div className={styles.fieldFull}>
+            <label htmlFor={`${getEditModalId(group)}-tags`}>Tags</label>
+            <input
+              id={`${getEditModalId(group)}-tags`}
+              name="tags"
+              defaultValue={group.tags.join(", ")}
+              placeholder="Kommagetrennt"
+            />
+          </div>
+          <div className={styles.fieldFull}>
+            <label htmlFor={`${getEditModalId(group)}-summary`}>
+              Summary/Notiz
+            </label>
+            <textarea
+              id={`${getEditModalId(group)}-summary`}
+              name="summary"
+              defaultValue={primaryContact.summary ?? ""}
+              placeholder="Kurze manuelle Notiz zum Fan."
+            />
+          </div>
+          <div className={styles.fieldFull}>
+            <span className={styles.groupLabel}>Plattformen/Kanäle</span>
+            <PlatformCheckboxes
+              selectedPlatforms={group.platforms}
+              lockedPlatforms={group.platforms}
+            />
+            <p className={styles.fieldHint}>
+              Kanäle werden im MVP nicht gelöscht, damit keine Chat-/
+              Kontaktinformationen verloren gehen. Du kannst zusätzliche Kanäle
+              ergänzen.
+            </p>
+          </div>
+          <div className={styles.formActions}>
+            <a className={dashboardStyles.secondaryButton} href="#fans-list">
+              Abbrechen
+            </a>
+            <button type="submit" className={dashboardStyles.primaryButton}>
+              Änderungen speichern
+            </button>
+          </div>
+        </form>
       </div>
+    </section>
+  );
+}
+
+function PlatformCheckboxes({
+  selectedPlatforms,
+  lockedPlatforms = [],
+}: {
+  selectedPlatforms: PlatformValue[];
+  lockedPlatforms?: PlatformValue[];
+}) {
+  return (
+    <div className={styles.platformPicker}>
+      {PLATFORM_OPTIONS.map((option) => {
+        const isSelected = selectedPlatforms.includes(option.value);
+        const isLocked = lockedPlatforms.includes(option.value);
+
+        return (
+          <label className={styles.platformOption} key={option.value}>
+            {isLocked ? (
+              <input
+                name="source_platforms"
+                type="hidden"
+                value={option.value}
+              />
+            ) : null}
+            <input
+              name="source_platforms"
+              type="checkbox"
+              value={option.value}
+              defaultChecked={isSelected}
+              disabled={isLocked}
+            />
+            <span>
+              <strong>{option.shortLabel}</strong>
+              {option.label === "Manuell"
+                ? "Manuell / Sonstiges"
+                : option.label}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -622,15 +779,18 @@ function formatDateOnly(value: string | null): string {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function formatDate(value: string | null): string {
+function formatDateOnlyFromTimestamp(value: string | null): string {
   if (!value) {
     return "—";
   }
 
   return new Intl.DateTimeFormat("de-DE", {
     dateStyle: "medium",
-    timeStyle: "short",
   }).format(new Date(value));
+}
+
+function getEditModalId(group: FanGroup): string {
+  return `edit-fan-${group.primaryContact.id}`;
 }
 
 function getActiveChannel(value: string | undefined): PlatformValue | "all" {

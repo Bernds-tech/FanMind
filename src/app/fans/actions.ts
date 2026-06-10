@@ -10,8 +10,13 @@ import {
   getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
+  updateWorkspaceContact,
 } from "@/lib/supabase/server";
-import { getDuplicateKey, parseCsvContacts } from "./import/csv";
+import {
+  getDuplicateKey,
+  normalizePlatform,
+  parseCsvContacts,
+} from "./import/csv";
 
 type SuggestedSaveResult = {
   ok: boolean;
@@ -37,7 +42,8 @@ export async function importCsvContacts(
   if (!parsed.contacts.length) {
     return {
       ok: false,
-      message: parsed.errors.join(" ") || "Keine importierbaren Kontakte erkannt.",
+      message:
+        parsed.errors.join(" ") || "Keine importierbaren Kontakte erkannt.",
       importedCount: 0,
       skippedDuplicates: 0,
       skippedInvalid: parsed.errors.length,
@@ -112,7 +118,9 @@ export async function importCsvContacts(
   return {
     ok: true,
     message: `${importedCount} Kontakte importiert, ${skippedDuplicates} Duplikate übersprungen${
-      parsed.errors.length ? `, ${parsed.errors.length} ungültige Zeilen übersprungen` : ""
+      parsed.errors.length
+        ? `, ${parsed.errors.length} ungültige Zeilen übersprungen`
+        : ""
     }.`,
     importedCount,
     skippedDuplicates,
@@ -174,38 +182,96 @@ export async function saveSuggestedFollowup(input: {
 }
 
 export async function createFan(formData: FormData) {
-  const { data } = await getSupabaseServerUser();
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const platforms = formPlatforms(formData, "source_platforms");
+  const baseContact = getContactFormValues(formData);
 
-  if (!data.user) {
-    redirect("/login");
-  }
+  for (const platform of platforms) {
+    const result = await createWorkspaceContact({
+      ...baseContact,
+      workspaceId: workspace.id,
+      sourcePlatform: platform,
+    });
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  const workspace = workspaceResult.workspace;
-
-  if (!workspace) {
-    throw new Error(
-      workspaceResult.error?.message ??
-        "Workspace konnte nicht geladen werden.",
-    );
-  }
-
-  const result = await createWorkspaceContact({
-    workspaceId: workspace.id,
-    displayName: formValue(formData, "display_name"),
-    handle: formValue(formData, "handle"),
-    sourcePlatform: formValue(formData, "source_platform"),
-    language: formValue(formData, "language"),
-    status: formValue(formData, "status"),
-    tags: parseTags(formValue(formData, "tags")),
-    summary: formValue(formData, "summary"),
-  });
-
-  if (result.error) {
-    throw new Error(result.error.message);
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
   }
 
   revalidatePath("/fans");
+  revalidatePath("/dashboard");
+  redirect("/fans");
+}
+
+export async function updateFan(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactIds = formData
+    .getAll("contact_ids")
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const platforms = formPlatforms(formData, "source_platforms");
+  const baseContact = getContactFormValues(formData);
+
+  if (!contactIds.length) {
+    throw new Error("Mindestens ein Kontakt muss zur Fan-Gruppe gehören.");
+  }
+
+  const contactsResult = await getWorkspaceContacts(workspace.id);
+
+  if (contactsResult.error) {
+    throw new Error(contactsResult.error.message);
+  }
+
+  const contactsById = new Map(
+    contactsResult.contacts.map((contact) => [contact.id, contact]),
+  );
+  const editableContacts = contactIds.map((contactId) => {
+    const contact = contactsById.get(contactId);
+
+    if (!contact) {
+      throw new Error("Kontakt wurde im aktuellen Workspace nicht gefunden.");
+    }
+
+    return contact;
+  });
+  const existingPlatforms = new Set(
+    editableContacts.map((contact) =>
+      normalizePlatform(contact.source_platform),
+    ),
+  );
+
+  for (const contact of editableContacts) {
+    const result = await updateWorkspaceContact({
+      ...baseContact,
+      workspaceId: workspace.id,
+      contactId: contact.id,
+      sourcePlatform: normalizePlatform(contact.source_platform),
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+  }
+
+  for (const platform of platforms) {
+    if (existingPlatforms.has(platform)) {
+      continue;
+    }
+
+    const result = await createWorkspaceContact({
+      ...baseContact,
+      workspaceId: workspace.id,
+      sourcePlatform: platform,
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+  }
+
+  revalidatePath("/fans");
+  revalidatePath("/dashboard");
   redirect("/fans");
 }
 
@@ -213,6 +279,28 @@ function formValue(formData: FormData, key: string): string {
   const value = formData.get(key);
 
   return typeof value === "string" ? value.trim() : "";
+}
+
+function formPlatforms(formData: FormData, key: string) {
+  const platforms = formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => normalizePlatform(value));
+
+  return Array.from(new Set(platforms)).slice(0, 9).length
+    ? Array.from(new Set(platforms)).slice(0, 9)
+    : ["manual" as const];
+}
+
+function getContactFormValues(formData: FormData) {
+  return {
+    displayName: formValue(formData, "display_name"),
+    handle: formValue(formData, "handle"),
+    language: formValue(formData, "language"),
+    status: formValue(formData, "status"),
+    tags: parseTags(formValue(formData, "tags")),
+    summary: formValue(formData, "summary"),
+  };
 }
 
 function parseTags(value: string): string[] {
