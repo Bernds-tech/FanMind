@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import {
-  createWorkspaceContact,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -9,6 +8,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import dashboardStyles from "../dashboard/dashboard.module.css";
+import { createFan } from "./actions";
 import styles from "./fans.module.css";
 
 type SidebarLink = {
@@ -45,40 +45,6 @@ async function logout() {
 
   await signOutSupabaseServerSession();
   redirect("/login");
-}
-
-async function createFan(formData: FormData) {
-  "use server";
-
-  const { data } = await getSupabaseServerUser();
-
-  if (!data.user) {
-    redirect("/login");
-  }
-
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  const workspace = workspaceResult.workspace;
-
-  if (!workspace) {
-    throw new Error(workspaceResult.error?.message ?? "Workspace konnte nicht geladen werden.");
-  }
-
-  const result = await createWorkspaceContact({
-    workspaceId: workspace.id,
-    displayName: formValue(formData, "display_name"),
-    handle: formValue(formData, "handle"),
-    sourcePlatform: formValue(formData, "source_platform"),
-    language: formValue(formData, "language"),
-    status: formValue(formData, "status"),
-    tags: parseTags(formValue(formData, "tags")),
-    summary: formValue(formData, "summary"),
-  });
-
-  if (result.error) {
-    throw new Error(result.error.message);
-  }
-
-  redirect("/fans");
 }
 
 function SidebarItem({
@@ -359,20 +325,6 @@ function FansEmptyState() {
       </div>
     </div>
   );
-}
-
-function formValue(formData: FormData, key: string): string {
-  const value = formData.get(key);
-
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function parseTags(value: string): string[] {
-  return value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 12);
 }
 
 function formatSource(value: string | null): string {
