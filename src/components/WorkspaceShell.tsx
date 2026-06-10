@@ -52,6 +52,20 @@ function getInitials(nameOrEmail?: string): string {
   );
 }
 
+function isHiddenProductNavigationItem(item: WorkspaceNavLink): boolean {
+  const normalizedLabel = item.label.toLowerCase();
+  const normalizedHref = item.href.toLowerCase();
+
+  return (
+    normalizedLabel.includes("onboarding") ||
+    normalizedHref.includes("/onboarding") ||
+    normalizedLabel.includes("admin") ||
+    normalizedHref.includes("/admin") ||
+    normalizedLabel.includes("agent") ||
+    normalizedHref.includes("/agent")
+  );
+}
+
 function SidebarItem({
   label,
   active = false,
@@ -88,6 +102,16 @@ export function WorkspaceShell({
   profileHref = "/settings/profile",
   children,
 }: WorkspaceShellProps) {
+  const visibleMainNavigation = mainNavigation.filter(
+    (item) => !isHiddenProductNavigationItem(item),
+  );
+  const visibleSettingsNavigation = settingsNavigation.filter(
+    (item) => !isHiddenProductNavigationItem(item),
+  );
+  const visibleSavedViews = savedViews.filter(
+    (item) => !isHiddenProductNavigationItem(item),
+  );
+
   return (
     <div className={styles.dashboardShell}>
       <aside className={styles.sidebar} aria-label="FanMind Navigation">
@@ -101,14 +125,14 @@ export function WorkspaceShell({
 
         <nav className={styles.navList} aria-label="Hauptnavigation">
           <span className={styles.navSectionLabel}>Navigation</span>
-          {mainNavigation.map((item) => (
+          {visibleMainNavigation.map((item) => (
             <SidebarItem key={item.label} {...item} />
           ))}
         </nav>
 
         <nav className={styles.navList} aria-label="Workspace Navigation">
           <span className={styles.navSectionLabel}>Workspace</span>
-          {settingsNavigation.map((item) => (
+          {visibleSettingsNavigation.map((item) => (
             <SidebarItem key={item.label} {...item} />
           ))}
         </nav>
@@ -118,7 +142,7 @@ export function WorkspaceShell({
           aria-label="Gespeicherte Ansichten"
         >
           <span>Gespeicherte Ansichten</span>
-          {savedViews.map((item) => (
+          {visibleSavedViews.map((item) => (
             <a key={item.label} href={item.href}>
               {item.label}
             </a>
@@ -133,7 +157,7 @@ export function WorkspaceShell({
           >
             <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
             <div>
-              <span>Nutzer</span>
+              <span>Nutzerkarte</span>
               <strong>{userLabel}</strong>
               <p>{workspaceName}</p>
             </div>
