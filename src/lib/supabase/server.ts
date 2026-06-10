@@ -91,6 +91,10 @@ type CreateContactInput = {
   summary?: string | null;
 };
 
+type UpdateContactInput = CreateContactInput & {
+  contactId: string;
+};
+
 type CreateMemoryInput = {
   workspaceId: string;
   contactId: string;
@@ -114,6 +118,11 @@ type ContactsResult = {
 };
 
 type ContactCreateResult = {
+  contact: ContactRow | null;
+  error: Error | null;
+};
+
+type ContactUpdateResult = {
   contact: ContactRow | null;
   error: Error | null;
 };
@@ -437,6 +446,51 @@ export async function createWorkspaceContact(
   if (contactResult.error) {
     return contactCreateError(
       `Kontakt konnte nicht gespeichert werden: ${contactResult.error.message}`,
+    );
+  }
+
+  return { contact: contactResult.data, error: null };
+}
+
+export async function updateWorkspaceContact(
+  input: UpdateContactInput,
+): Promise<ContactUpdateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return contactUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const displayName = input.displayName.trim();
+
+  if (!displayName) {
+    return contactUpdateError("Name ist erforderlich.");
+  }
+
+  const contactResult = await postgrestUpdate<ContactRow>(
+    "contacts",
+    {
+      display_name: displayName,
+      handle: normalizeOptionalText(input.handle),
+      source_platform: normalizeOptionalText(input.sourcePlatform) ?? "manual",
+      language: normalizeOptionalText(input.language) ?? "de",
+      status: normalizeOptionalText(input.status) ?? "new",
+      tags: input.tags ?? [],
+      summary: normalizeOptionalText(input.summary),
+    },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.contactId],
+    ],
+    { select: CONTACT_COLUMNS, single: true },
+  );
+
+  if (contactResult.error) {
+    return contactUpdateError(
+      `Kontakt konnte nicht aktualisiert werden: ${contactResult.error.message}`,
     );
   }
 
@@ -902,6 +956,59 @@ async function postgrestRequest<T = unknown>(
   }
 }
 
+async function postgrestUpdate<T = unknown>(
+  table: string,
+  values: unknown,
+  accessToken: string,
+  filters: [string, SupabaseFilterValue][],
+  options: { select?: string; single?: boolean } = {},
+): Promise<PostgrestResult<T>> {
+  try {
+    const url = new URL(getSupabaseRestUrl(table));
+
+    if (options.select) {
+      url.searchParams.set("select", options.select);
+    }
+
+    for (const [column, value] of filters) {
+      url.searchParams.set(column, `eq.${String(value)}`);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "PATCH",
+      headers: {
+        ...getSupabaseHeaders(accessToken),
+        Prefer: options.select ? "return=representation" : "return=minimal",
+      },
+      body: JSON.stringify(values),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { data: null, error: await parseSupabaseServerError(response) };
+    }
+
+    if (!options.select) {
+      return { data: null, error: null };
+    }
+
+    const payload = (await response.json()) as T[];
+
+    return {
+      data: options.single ? (payload[0] ?? null) : (payload as T),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error:
+        error instanceof Error
+          ? error
+          : new Error("Unbekannter Supabase-Fehler."),
+    };
+  }
+}
+
 async function postgrestCount(
   table: string,
   accessToken: string,
@@ -1010,6 +1117,10 @@ function contactsError(message: string): ContactsResult {
 }
 
 function contactCreateError(message: string): ContactCreateResult {
+  return { contact: null, error: new Error(message) };
+}
+
+function contactUpdateError(message: string): ContactUpdateResult {
   return { contact: null, error: new Error(message) };
 }
 
