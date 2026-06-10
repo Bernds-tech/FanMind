@@ -205,6 +205,23 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
   align-items: center;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.userMiniCard:hover,
+.userMiniCard:focus-visible {
+  border-color: rgba(103, 232, 249, 0.32);
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.userMiniCard:focus-visible {
+  outline: 2px solid rgba(103, 232, 249, 0.54);
+  outline-offset: 2px;
 }
 
 .avatarMark {
@@ -843,6 +860,36 @@
   background: rgba(8, 47, 73, 0.3);
 }
 
+.profileDetails {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+.profileDetails div {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2, 6, 23, 0.32);
+}
+
+.profileDetails dt {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profileDetails dd {
+  margin: 6px 0 0;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
 .emptyState {
   display: grid;
   gap: 10px;
@@ -1181,6 +1228,7 @@
 
   .workspaceStrip,
   .panelGrid,
+  .profileDetails,
   .featurePillGrid {
     grid-template-columns: 1fr;
   }
