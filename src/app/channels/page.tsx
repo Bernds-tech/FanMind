@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
+  getWorkspaceContacts,
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/AppHeader";
+import { WorkspaceKpiStrip } from "@/components/WorkspaceKpiStrip";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
 type SidebarLink = {
@@ -19,6 +21,7 @@ type SidebarLink = {
 type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
+  contactCount: number;
 };
 
 async function logout() {
@@ -37,7 +40,9 @@ function SidebarItem({
 }: SidebarLink) {
   return (
     <a
-      className={active ? dashboardStyles.navItemActive : dashboardStyles.navItem}
+      className={
+        active ? dashboardStyles.navItemActive : dashboardStyles.navItem
+      }
       href={href}
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? -1 : undefined}
@@ -48,7 +53,11 @@ function SidebarItem({
   );
 }
 
-function ChannelsWorkspace({ workspace, userDisplayName }: ChannelsWorkspaceProps) {
+function ChannelsWorkspace({
+  workspace,
+  userDisplayName,
+  contactCount,
+}: ChannelsWorkspaceProps) {
   const mainNavigation: SidebarLink[] = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Fans", href: "/fans" },
@@ -65,7 +74,10 @@ function ChannelsWorkspace({ workspace, userDisplayName }: ChannelsWorkspaceProp
 
   return (
     <div className={dashboardStyles.dashboardShell}>
-      <aside className={dashboardStyles.sidebar} aria-label="FanMind Navigation">
+      <aside
+        className={dashboardStyles.sidebar}
+        aria-label="FanMind Navigation"
+      >
         <div className={dashboardStyles.logoBlock}>
           <div className={dashboardStyles.logoMark}>FM</div>
           <div>
@@ -81,14 +93,20 @@ function ChannelsWorkspace({ workspace, userDisplayName }: ChannelsWorkspaceProp
           ))}
         </nav>
 
-        <nav className={dashboardStyles.navList} aria-label="Workspace Navigation">
+        <nav
+          className={dashboardStyles.navList}
+          aria-label="Workspace Navigation"
+        >
           <span className={dashboardStyles.navSectionLabel}>Workspace</span>
           {settingsNavigation.map((item) => (
             <SidebarItem key={item.label} {...item} />
           ))}
         </nav>
 
-        <section className={dashboardStyles.savedViews} aria-label="Gespeicherte Ansichten">
+        <section
+          className={dashboardStyles.savedViews}
+          aria-label="Gespeicherte Ansichten"
+        >
           <span>Gespeicherte Ansichten</span>
           {savedViews.map((item) => (
             <a key={item.label} href={item.href}>
@@ -99,7 +117,9 @@ function ChannelsWorkspace({ workspace, userDisplayName }: ChannelsWorkspaceProp
 
         <div className={dashboardStyles.sidebarFooter}>
           <section className={dashboardStyles.userMiniCard} aria-label="Nutzer">
-            <div className={dashboardStyles.avatarMark}>{getInitials(userLabel)}</div>
+            <div className={dashboardStyles.avatarMark}>
+              {getInitials(userLabel)}
+            </div>
             <div>
               <span>Nutzer</span>
               <strong>{userLabel}</strong>
@@ -131,7 +151,13 @@ function ChannelsWorkspace({ workspace, userDisplayName }: ChannelsWorkspaceProp
           primaryActionHref="#channels-preview"
         />
 
-        <section className={dashboardStyles.moduleCard} id="channels-preview" aria-labelledby="channels-title">
+        <WorkspaceKpiStrip contactCount={contactCount} />
+
+        <section
+          className={dashboardStyles.moduleCard}
+          id="channels-preview"
+          aria-labelledby="channels-title"
+        >
           <div className={dashboardStyles.moduleHeader}>
             <div>
               <p className={dashboardStyles.eyebrow}>Coming Soon</p>
@@ -140,12 +166,16 @@ function ChannelsWorkspace({ workspace, userDisplayName }: ChannelsWorkspaceProp
             <span>Keine Integration aktiv</span>
           </div>
           <p className={dashboardStyles.moduleText}>
-            Diese Seite ist eine MVP-Vorschau. FanMind startet hier keine echte Social-Media-Integration, synchronisiert keine Plattformdaten und sendet nichts automatisch.
+            Diese Seite ist eine MVP-Vorschau. FanMind startet hier keine echte
+            Social-Media-Integration, synchronisiert keine Plattformdaten und
+            sendet nichts automatisch.
           </p>
           <div className={dashboardStyles.emptyState}>
             <strong>Noch keine Kanäle verbunden.</strong>
             <p>
-              Kanäle können aktuell nur als Produktbereich vorgemerkt werden. Kontakte auf der Fans-Seite bleiben manuell gepflegte Workspace-Daten.
+              Kanäle können aktuell nur als Produktbereich vorgemerkt werden.
+              Kontakte auf der Fans-Seite bleiben manuell gepflegte
+              Workspace-Daten.
             </p>
           </div>
         </section>
@@ -160,10 +190,15 @@ function getInitials(value: string): string {
   return `${first[0] ?? "F"}${second[0] ?? "M"}`.toUpperCase();
 }
 
-function getUserDisplayName(metadata: Record<string, unknown> | undefined, fallback: string): string {
+function getUserDisplayName(
+  metadata: Record<string, unknown> | undefined,
+  fallback: string,
+): string {
   const displayName = metadata?.display_name ?? metadata?.full_name;
 
-  return typeof displayName === "string" && displayName.trim() ? displayName.trim() : fallback;
+  return typeof displayName === "string" && displayName.trim()
+    ? displayName.trim()
+    : fallback;
 }
 
 export default async function ChannelsPage() {
@@ -175,26 +210,39 @@ export default async function ChannelsPage() {
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
+  const contactsResult = workspace
+    ? await getWorkspaceContacts(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
       {workspace ? (
         <ChannelsWorkspace
           workspace={workspace}
-          userDisplayName={getUserDisplayName(data.user.user_metadata, workspace.name)}
+          userDisplayName={getUserDisplayName(
+            data.user.user_metadata,
+            workspace.name,
+          )}
+          contactCount={contactsResult?.contacts.length ?? 0}
         />
       ) : (
-        <section className={dashboardStyles.fallbackCard} aria-label="FanMind Kanäle">
+        <section
+          className={dashboardStyles.fallbackCard}
+          aria-label="FanMind Kanäle"
+        >
           <div>
             <p className={dashboardStyles.eyebrow}>FanMind Kanäle</p>
             <h1>Workspace-Status</h1>
             <p>
-              Kanäle ist geschützt: Supabase Auth ist aktiv. Für deinen Account wurde noch kein Workspace gefunden.
+              Kanäle ist geschützt: Supabase Auth ist aktiv. Für deinen Account
+              wurde noch kein Workspace gefunden.
             </p>
           </div>
           {userError ? (
             <p className={dashboardStyles.error}>
-              <strong>Supabase-Session konnte nicht vollständig geprüft werden.</strong>
+              <strong>
+                Supabase-Session konnte nicht vollständig geprüft werden.
+              </strong>
               <span>{userError.message}</span>
             </p>
           ) : null}

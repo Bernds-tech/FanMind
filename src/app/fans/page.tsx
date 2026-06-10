@@ -8,6 +8,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/AppHeader";
+import { WorkspaceKpiStrip } from "@/components/WorkspaceKpiStrip";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan } from "./actions";
 import styles from "./fans.module.css";
@@ -57,7 +58,9 @@ function SidebarItem({
 }: SidebarLink) {
   return (
     <a
-      className={active ? dashboardStyles.navItemActive : dashboardStyles.navItem}
+      className={
+        active ? dashboardStyles.navItemActive : dashboardStyles.navItem
+      }
       href={href}
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? -1 : undefined}
@@ -90,7 +93,10 @@ function FansWorkspace({
 
   return (
     <div className={dashboardStyles.dashboardShell}>
-      <aside className={dashboardStyles.sidebar} aria-label="FanMind Navigation">
+      <aside
+        className={dashboardStyles.sidebar}
+        aria-label="FanMind Navigation"
+      >
         <div className={dashboardStyles.logoBlock}>
           <div className={dashboardStyles.logoMark}>FM</div>
           <div>
@@ -106,14 +112,20 @@ function FansWorkspace({
           ))}
         </nav>
 
-        <nav className={dashboardStyles.navList} aria-label="Workspace Navigation">
+        <nav
+          className={dashboardStyles.navList}
+          aria-label="Workspace Navigation"
+        >
           <span className={dashboardStyles.navSectionLabel}>Workspace</span>
           {settingsNavigation.map((item) => (
             <SidebarItem key={item.label} {...item} />
           ))}
         </nav>
 
-        <section className={dashboardStyles.savedViews} aria-label="Gespeicherte Ansichten">
+        <section
+          className={dashboardStyles.savedViews}
+          aria-label="Gespeicherte Ansichten"
+        >
           <span>Gespeicherte Ansichten</span>
           {savedViews.map((item) => (
             <a key={item.label} href={item.href}>
@@ -124,7 +136,9 @@ function FansWorkspace({
 
         <div className={dashboardStyles.sidebarFooter}>
           <section className={dashboardStyles.userMiniCard} aria-label="Nutzer">
-            <div className={dashboardStyles.avatarMark}>{getInitials(userLabel)}</div>
+            <div className={dashboardStyles.avatarMark}>
+              {getInitials(userLabel)}
+            </div>
             <div>
               <span>Nutzer</span>
               <strong>{userLabel}</strong>
@@ -156,8 +170,14 @@ function FansWorkspace({
           primaryActionHref="#new-fan-modal"
         />
 
+        <WorkspaceKpiStrip contactCount={contacts.length} />
+
         <div className={styles.fansStack}>
-          <section className={dashboardStyles.moduleCard} id="fans-list" aria-labelledby="fans-list-title">
+          <section
+            className={dashboardStyles.moduleCard}
+            id="fans-list"
+            aria-labelledby="fans-list-title"
+          >
             <div className={dashboardStyles.moduleHeader}>
               <div>
                 <p className={dashboardStyles.eyebrow}>Workspace-Liste</p>
@@ -171,7 +191,11 @@ function FansWorkspace({
                 <span>{contactsError}</span>
               </p>
             ) : null}
-            {contacts.length ? <FansTable contacts={contacts} /> : <FansEmptyState />}
+            {contacts.length ? (
+              <FansTable contacts={contacts} />
+            ) : (
+              <FansEmptyState />
+            )}
           </section>
 
           <section
@@ -187,14 +211,23 @@ function FansWorkspace({
                   <p className={dashboardStyles.eyebrow}>Manuell anlegen</p>
                   <h2 id="new-fan-title">+ Neuer Fan</h2>
                 </div>
-                <a className={styles.modalClose} href="#fans-list" aria-label="Modal schließen">
+                <a
+                  className={styles.modalClose}
+                  href="#fans-list"
+                  aria-label="Modal schließen"
+                >
                   ×
                 </a>
               </div>
               <form className={styles.formGrid} action={createFan}>
                 <div className={styles.fieldWide}>
                   <label htmlFor="display_name">Name</label>
-                  <input id="display_name" name="display_name" required placeholder="z. B. Gerhard Müller" />
+                  <input
+                    id="display_name"
+                    name="display_name"
+                    required
+                    placeholder="z. B. Gerhard Müller"
+                  />
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="handle">Handle optional</label>
@@ -202,7 +235,11 @@ function FansWorkspace({
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="source_platform">Plattform/Quelle</label>
-                  <select id="source_platform" name="source_platform" defaultValue="manual">
+                  <select
+                    id="source_platform"
+                    name="source_platform"
+                    defaultValue="manual"
+                  >
                     <option value="manual">Manuell</option>
                     <option value="instagram">Instagram (manuell)</option>
                     <option value="tiktok">TikTok (manuell)</option>
@@ -228,7 +265,11 @@ function FansWorkspace({
                 </div>
                 <div className={styles.fieldFull}>
                   <label htmlFor="tags">Tags</label>
-                  <input id="tags" name="tags" placeholder="Kommagetrennt, z. B. VIP, Newsletter, Berlin" />
+                  <input
+                    id="tags"
+                    name="tags"
+                    placeholder="Kommagetrennt, z. B. VIP, Newsletter, Berlin"
+                  />
                 </div>
                 <div className={styles.fieldFull}>
                   <label htmlFor="summary">Summary/Notiz</label>
@@ -238,14 +279,21 @@ function FansWorkspace({
                     placeholder="Kurze manuelle Notiz zum Fan."
                   />
                   <p className={styles.fieldHint}>
-                    Wird nur im aktuellen Workspace gespeichert und löst keinen Versand aus.
+                    Wird nur im aktuellen Workspace gespeichert und löst keinen
+                    Versand aus.
                   </p>
                 </div>
                 <div className={styles.formActions}>
-                  <a className={dashboardStyles.secondaryButton} href="#fans-list">
+                  <a
+                    className={dashboardStyles.secondaryButton}
+                    href="#fans-list"
+                  >
                     Abbrechen
                   </a>
-                  <button type="submit" className={dashboardStyles.primaryButton}>
+                  <button
+                    type="submit"
+                    className={dashboardStyles.primaryButton}
+                  >
                     Kontakt speichern
                   </button>
                 </div>
@@ -297,7 +345,9 @@ function FansTable({ contacts }: { contacts: ContactRow[] }) {
                 )}
               </td>
               <td>
-                <span className={styles.summaryCell}>{contact.summary || "Keine Summary"}</span>
+                <span className={styles.summaryCell}>
+                  {contact.summary || "Keine Summary"}
+                </span>
               </td>
               <td>{formatDate(contact.created_at)}</td>
             </tr>
@@ -313,7 +363,8 @@ function FansEmptyState() {
     <div className={dashboardStyles.emptyState}>
       <strong>Noch keine echten Fans gespeichert</strong>
       <p>
-        Lege den ersten Fan manuell an. FanMind behauptet hier keine aktive Instagram-, TikTok- oder CSV-Synchronisation.
+        Lege den ersten Fan manuell an. FanMind behauptet hier keine aktive
+        Instagram-, TikTok- oder CSV-Synchronisation.
       </p>
     </div>
   );
@@ -356,10 +407,15 @@ function getInitials(value: string): string {
   return `${first[0] ?? "F"}${second[0] ?? "M"}`.toUpperCase();
 }
 
-function getUserDisplayName(metadata: Record<string, unknown> | undefined, fallback: string): string {
+function getUserDisplayName(
+  metadata: Record<string, unknown> | undefined,
+  fallback: string,
+): string {
   const displayName = metadata?.display_name ?? metadata?.full_name;
 
-  return typeof displayName === "string" && displayName.trim() ? displayName.trim() : fallback;
+  return typeof displayName === "string" && displayName.trim()
+    ? displayName.trim()
+    : fallback;
 }
 
 export default async function FansPage() {
@@ -371,29 +427,40 @@ export default async function FansPage() {
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
-  const contactsResult = workspace ? await getWorkspaceContacts(workspace.id) : null;
+  const contactsResult = workspace
+    ? await getWorkspaceContacts(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
       {workspace ? (
         <FansWorkspace
           workspace={workspace}
-          userDisplayName={getUserDisplayName(data.user.user_metadata, workspace.name)}
+          userDisplayName={getUserDisplayName(
+            data.user.user_metadata,
+            workspace.name,
+          )}
           contacts={contactsResult?.contacts ?? []}
           contactsError={contactsResult?.error?.message}
         />
       ) : (
-        <section className={dashboardStyles.fallbackCard} aria-label="FanMind Workspace">
+        <section
+          className={dashboardStyles.fallbackCard}
+          aria-label="FanMind Workspace"
+        >
           <div>
             <p className={dashboardStyles.eyebrow}>FanMind Fans</p>
             <h1>Workspace-Status</h1>
             <p>
-              Fans ist geschützt: Supabase Auth ist aktiv. Für deinen Account wurde noch kein Workspace gefunden.
+              Fans ist geschützt: Supabase Auth ist aktiv. Für deinen Account
+              wurde noch kein Workspace gefunden.
             </p>
           </div>
           {userError ? (
             <p className={dashboardStyles.error}>
-              <strong>Supabase-Session konnte nicht vollständig geprüft werden.</strong>
+              <strong>
+                Supabase-Session konnte nicht vollständig geprüft werden.
+              </strong>
               <span>{userError.message}</span>
             </p>
           ) : null}
