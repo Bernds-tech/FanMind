@@ -485,7 +485,7 @@ function WorkspaceDetails({
               Fanliste öffnen <small>Echte Daten</small>
             </Link>
             <Link href="/fans/import">
-              CSV-Import öffnen <small>Setup</small>
+              CSV-Import öffnen <small>CSV</small>
             </Link>
             <a href="#followups">
               Offene Follow-ups <small>{openFollowupCount}</small>
