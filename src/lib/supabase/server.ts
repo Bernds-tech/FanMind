@@ -560,7 +560,7 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
   const rawPlanId = stringMetadataValue(metadata, "plan") ?? stringMetadataValue(metadata, "plan_id");
   const rawCommercialOption = stringMetadataValue(metadata, "commercialOption") ?? stringMetadataValue(metadata, "commercial_option");
   const planId = isPlanId(rawPlanId) && (rawPlanId === "pilot" || rawPlanId === "starter") ? rawPlanId : "starter";
-  const commercialOption = isProductiveCommercialOption(rawCommercialOption) ? rawCommercialOption : "starter_12m_setup_waived";
+  const commercialOption = isProductiveCommercialOption(rawCommercialOption) ? rawCommercialOption : "starter_paid_setup";
 
   if (planId === "pilot" && commercialOption === "pilot_only") {
     return { planId, ...getRegistrationCommercialTerms("pilot")! };
@@ -570,7 +570,7 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
     return { planId, ...getRegistrationCommercialTerms("starter", commercialOption)! };
   }
 
-  return { planId: "starter" as PlanId, ...getRegistrationCommercialTerms("starter", "starter_12m_setup_waived")! };
+  return { planId: "starter" as PlanId, ...getRegistrationCommercialTerms("starter", "starter_paid_setup")! };
 }
 
 function isStarterCommercialOption(value: ProductiveCommercialOption): value is Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_12m_setup_waived"> {
