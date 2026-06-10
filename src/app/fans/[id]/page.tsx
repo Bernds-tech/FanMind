@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  getContactFollowups,
+  getContactMemories,
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
   signOutSupabaseServerSession,
   type ContactRow,
+  type FollowupRow,
+  type MemoryRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
@@ -25,6 +30,11 @@ type FanDetailWorkspaceProps = {
   contact: ContactRow | null;
   contactCount: number;
   contactError?: string;
+  memories: MemoryRow[];
+  memoriesError?: string;
+  followups: FollowupRow[];
+  followupsError?: string;
+  openFollowupCount: number;
 };
 
 const sourceLabels: Record<string, string> = {
@@ -54,6 +64,11 @@ function FanDetailWorkspace({
   contact,
   contactCount,
   contactError,
+  memories,
+  memoriesError,
+  followups,
+  followupsError,
+  openFollowupCount,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -78,6 +93,7 @@ function FanDetailWorkspace({
         primaryActionHref: "/fans#fans-list",
       }}
       contactCount={contactCount}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <div className={styles.detailStack}>
@@ -92,16 +108,41 @@ function FanDetailWorkspace({
           </p>
         ) : null}
 
-        {contact ? <FanDetailContent contact={contact} /> : <FanNotFound />}
+        {contact ? (
+          <FanDetailContent
+            contact={contact}
+            followups={followups}
+            followupsError={followupsError}
+            memories={memories}
+            memoriesError={memoriesError}
+          />
+        ) : (
+          <FanNotFound />
+        )}
       </div>
     </WorkspaceShell>
   );
 }
 
-function FanDetailContent({ contact }: { contact: ContactRow }) {
+function FanDetailContent({
+  contact,
+  memories,
+  memoriesError,
+  followups,
+  followupsError,
+}: {
+  contact: ContactRow;
+  memories: MemoryRow[];
+  memoriesError?: string;
+  followups: FollowupRow[];
+  followupsError?: string;
+}) {
   return (
     <>
-      <section className={styles.profileHero} aria-labelledby="fan-profile-title">
+      <section
+        className={styles.profileHero}
+        aria-labelledby="fan-profile-title"
+      >
         <article className={styles.profileCard}>
           <div className={styles.profileHeader}>
             <div className={styles.profileAvatar} aria-hidden="true">
@@ -170,12 +211,9 @@ function FanDetailContent({ contact }: { contact: ContactRow }) {
           )}
         </article>
 
-        <PlaceholderCard
-          eyebrow="Fan-Gedächtnis"
-          title="Noch keine Memories"
-          badge="Platzhalter"
-          body="Es gibt noch keine Memory-Daten für diesen Fan. Eine Memory-Tabelle wird in diesem Schritt nicht angelegt."
-        />
+        <MemoryCard memories={memories} memoriesError={memoriesError} />
+
+        <FollowupCard followups={followups} followupsError={followupsError} />
 
         <PlaceholderCard
           eyebrow="Nachrichten / Kontext"
@@ -198,6 +236,96 @@ function FanDetailContent({ contact }: { contact: ContactRow }) {
         />
       </section>
     </>
+  );
+}
+
+function MemoryCard({
+  memories,
+  memoriesError,
+}: {
+  memories: MemoryRow[];
+  memoriesError?: string;
+}) {
+  return (
+    <article className={dashboardStyles.moduleCard}>
+      <div className={dashboardStyles.moduleHeader}>
+        <div>
+          <p className={dashboardStyles.eyebrow}>Fan-Gedächtnis</p>
+          <h2>Gespeicherte Memories</h2>
+        </div>
+        <span>Echte Daten</span>
+      </div>
+      {memoriesError ? (
+        <p className={dashboardStyles.error}>
+          <strong>Memories konnten nicht geladen werden.</strong>
+          <span>{memoriesError}</span>
+        </p>
+      ) : null}
+      {memories.length ? (
+        <div className={styles.contextList}>
+          {memories.map((memory) => (
+            <article className={styles.contextItem} key={memory.id}>
+              <p>{memory.content}</p>
+              <small>
+                {formatMemoryType(memory.type)} · Wichtigkeit:{" "}
+                {memory.importance ?? "normal"} ·{" "}
+                {formatDate(memory.created_at)}
+              </small>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="Noch keine Memories gespeichert."
+          body="Sobald du einen KI-vorgeschlagenen Memory speicherst, erscheint er hier."
+        />
+      )}
+    </article>
+  );
+}
+
+function FollowupCard({
+  followups,
+  followupsError,
+}: {
+  followups: FollowupRow[];
+  followupsError?: string;
+}) {
+  return (
+    <article className={dashboardStyles.moduleCard}>
+      <div className={dashboardStyles.moduleHeader}>
+        <div>
+          <p className={dashboardStyles.eyebrow}>Follow-ups</p>
+          <h2>Gespeicherte nächste Schritte</h2>
+        </div>
+        <span>Manuell</span>
+      </div>
+      {followupsError ? (
+        <p className={dashboardStyles.error}>
+          <strong>Follow-ups konnten nicht geladen werden.</strong>
+          <span>{followupsError}</span>
+        </p>
+      ) : null}
+      {followups.length ? (
+        <div className={styles.contextList}>
+          {followups.map((followup) => (
+            <article className={styles.contextItem} key={followup.id}>
+              <p>{followup.reason}</p>
+              <small>
+                {formatFollowupDueDate(followup.due_date)} · Priorität:{" "}
+                {followup.priority ?? "normal"} · Status:{" "}
+                {followup.status ?? "open"}
+              </small>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          title="Noch keine Follow-ups gespeichert."
+          body="Sobald du einen KI-vorgeschlagenen Follow-up speicherst, erscheint er hier. Es wird nichts automatisch versendet."
+        />
+      )}
+    </article>
   );
 }
 
@@ -251,6 +379,24 @@ function FanNotFound() {
       />
     </section>
   );
+}
+
+function formatMemoryType(value: string | null): string {
+  if (value === "note") {
+    return "Notiz";
+  }
+
+  return value ?? "Notiz";
+}
+
+function formatFollowupDueDate(value: string | null): string {
+  if (!value) {
+    return "Kein Fälligkeitsdatum";
+  }
+
+  return `Fällig am ${new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00Z`))}`;
 }
 
 function formatSource(value: string | null): string {
@@ -326,6 +472,17 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
   const contactResult = workspace
     ? await getWorkspaceContact(workspace.id, id)
     : null;
+  const memoriesResult =
+    workspace && contactResult?.contact
+      ? await getContactMemories(workspace.id, contactResult.contact.id)
+      : null;
+  const followupsResult =
+    workspace && contactResult?.contact
+      ? await getContactFollowups(workspace.id, contactResult.contact.id)
+      : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -339,6 +496,11 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
           contact={contactResult?.contact ?? null}
           contactCount={contactsResult?.contacts.length ?? 0}
           contactError={contactResult?.error?.message}
+          followups={followupsResult?.followups ?? []}
+          followupsError={followupsResult?.error?.message}
+          memories={memoriesResult?.memories ?? []}
+          memoriesError={memoriesResult?.error?.message}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
         />
       ) : (
         <section

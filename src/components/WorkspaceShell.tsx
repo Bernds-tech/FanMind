@@ -1,9 +1,6 @@
 import { type ReactNode } from "react";
 import styles from "../app/dashboard/dashboard.module.css";
-import {
-  WorkspaceHeader,
-  type WorkspaceHeaderProps,
-} from "./WorkspaceHeader";
+import { WorkspaceHeader, type WorkspaceHeaderProps } from "./WorkspaceHeader";
 import { WorkspaceKpiStrip } from "./WorkspaceKpiStrip";
 
 export type WorkspaceNavLink = {
@@ -25,6 +22,7 @@ type WorkspaceShellProps = {
   savedViews: WorkspaceNavLink[];
   header: WorkspaceHeaderProps;
   contactCount: number;
+  openFollowupCount?: number;
   logoutAction: () => Promise<void>;
   profileHref?: string;
   children: ReactNode;
@@ -85,6 +83,7 @@ export function WorkspaceShell({
   savedViews,
   header,
   contactCount,
+  openFollowupCount = 0,
   logoutAction,
   profileHref = "/settings/profile",
   children,
@@ -159,7 +158,10 @@ export function WorkspaceShell({
         className={`${styles.dashboardContent} ${styles.dashboardContentStart}`}
       >
         <WorkspaceHeader {...header} />
-        <WorkspaceKpiStrip contactCount={contactCount} />
+        <WorkspaceKpiStrip
+          contactCount={contactCount}
+          openFollowupCount={openFollowupCount}
+        />
         {children}
       </div>
     </div>

@@ -270,7 +270,11 @@
   font-size: 19px;
   font-weight: 950;
   background:
-    radial-gradient(circle at 30% 20%, rgba(103, 232, 249, 0.26), transparent 42%),
+    radial-gradient(
+      circle at 30% 20%,
+      rgba(103, 232, 249, 0.26),
+      transparent 42%
+    ),
     rgba(8, 47, 73, 0.72);
 }
 
@@ -412,7 +416,11 @@
   border-radius: 20px;
   padding: 18px;
   background:
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.18), transparent 34%),
+    radial-gradient(
+      circle at top right,
+      rgba(14, 165, 233, 0.18),
+      transparent 34%
+    ),
     rgba(15, 23, 42, 0.78);
   box-shadow: 0 20px 58px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(18px);
@@ -586,4 +594,44 @@
     align-items: stretch;
     flex-direction: column;
   }
+}
+
+.contextList {
+  display: grid;
+  gap: 10px;
+}
+
+.contextItem {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2, 6, 23, 0.38);
+}
+
+.contextItem p {
+  margin: 0;
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.contextItem small {
+  color: #bae6fd;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+.aiSaveMessage {
+  margin: 0;
+  border: 1px solid rgba(34, 197, 94, 0.24);
+  border-radius: 14px;
+  padding: 12px;
+  color: #bbf7d0;
+  font-size: 13px;
+  font-weight: 850;
+  background: rgba(20, 83, 45, 0.22);
 }
