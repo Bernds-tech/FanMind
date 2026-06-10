@@ -254,8 +254,8 @@ export function getOnboardingSteps(planId: PlanId): OnboardingStep[] {
         featureKey: "multiple_profiles",
       },
       {
-        title: "Basis-Segmente aktivieren",
-        description: "Einfache Segmente für Follow-ups und manuelle Kampagnenvorbereitung nutzen.",
+        title: "Basis-Segmente als Vorschau prüfen",
+        description: "Einfache Segmente für Follow-ups und manuelle Kampagnenvorbereitung nur als Roadmap-Vorschau einordnen.",
         featureKey: "basic_segments",
       },
       ...commonSteps,
@@ -264,8 +264,8 @@ export function getOnboardingSteps(planId: PlanId): OnboardingStep[] {
 
   const agencySteps: OnboardingStep[] = [
     {
-      title: "Kundenstruktur anlegen",
-      description: "Mehrere Profile oder Kunden als Agency-Vorschau strukturieren.",
+      title: "Kundenstruktur als Vorschau prüfen",
+      description: "Mehrere Profile oder Kunden als Agency-Roadmap einordnen, ohne produktive Freischaltung.",
       featureKey: "multi_client_workspace",
     },
     {

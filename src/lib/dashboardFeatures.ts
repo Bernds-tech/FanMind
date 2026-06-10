@@ -254,8 +254,16 @@ export function resolveDashboardFeatures(
     const visibility = feature.visibilityByPlan[normalizedPlanId];
     const minPlan = feature.minPlan ?? plan.upgradePlan;
 
-    if (isPreviewCommercialOption && (normalizedPlanId === "growth" || normalizedPlanId === "agency") && status === "active") {
-      return { ...feature, status: "preview", visibility, minPlan };
+    if (
+      normalizedPlanId === "growth" ||
+      normalizedPlanId === "agency" ||
+      isPreviewCommercialOption
+    ) {
+      const previewOnlyStatus = ["active", "demo", "limited"].includes(status)
+        ? "preview"
+        : status;
+
+      return { ...feature, status: previewOnlyStatus, visibility, minPlan };
     }
 
     return { ...feature, status, visibility, minPlan };

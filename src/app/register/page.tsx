@@ -207,7 +207,7 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
         id: "starter_paid_setup",
         title: "Starter",
         price: "€990 setup + €299 / month",
-        description: "For ongoing use after setup. Cancellable monthly; no fixed annual commitment.",
+        description: "For ongoing use after setup. Cancellable monthly; no long-term commitment.",
         bullets: ["one-time setup fee", "€299 per month", "monthly cancellable", "paid Pilot setup fee is credited"],
         badge: "Active",
       },

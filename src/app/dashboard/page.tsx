@@ -87,7 +87,7 @@ function getWorkspaceDisplay(
       packageSummary:
         "1 Monat Test-/Setup-Zugang mit sicheren Workspace-Daten und manuell gepflegten Kontakten.",
       contractNote:
-        "Du arbeitest im sicheren Demo-/Setupmodus für 990 € einmalig. Es gibt keine automatische Verlängerung und keine Bindung; wenn du nicht weitermachst, endet der Pilot.",
+        "990 € einmalig · 1 Monat testen · keine Bindung. Du arbeitest im sicheren Demo-/Setupmodus; es gibt keine automatische Verlängerung und wenn du nicht weitermachst, endet der Pilot.",
     };
   }
 
