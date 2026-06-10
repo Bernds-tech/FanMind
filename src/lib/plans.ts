@@ -56,7 +56,7 @@ export function getCommercialTerms(commercialOption: ProductiveCommercialOption)
 
 export function getRegistrationCommercialTerms(
   planId: PlanId,
-  starterOption: Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_12m_setup_waived"> = "starter_12m_setup_waived",
+  starterOption: Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_12m_setup_waived"> = "starter_paid_setup",
 ): CommercialTerms | null {
   if (planId === "pilot") return getCommercialTerms("pilot_only");
   if (planId === "starter") return getCommercialTerms(starterOption);

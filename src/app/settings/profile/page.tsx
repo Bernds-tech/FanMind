@@ -122,9 +122,9 @@ function ProfileWorkspace({
     <WorkspaceShell
       workspaceName={workspace.name}
       userLabel={userLabel}
-      planLabel={workspace.plan_id}
-      planMeta={workspace.role}
-      planStatus="MVP"
+      planLabel={getPlanLabel(workspace)}
+      planMeta={getCommercialOptionLabel(workspace.commercial_option)}
+      planStatus={workspace.plan_id === "starter" ? "Aktiv" : workspace.plan_id === "pilot" ? "Demo" : "Vorschau"}
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}

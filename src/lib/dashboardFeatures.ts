@@ -228,11 +228,11 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
 export function getCommercialOptionLabel(commercialOption: CommercialOption | ProductiveCommercialOption | string): string {
   switch (commercialOption) {
     case "pilot_only":
-      return "Pilot / Setupmonat";
+      return "Pilot / Setup · 990 € einmalig · 1 Monat testen";
     case "starter_12m_setup_waived":
-      return "Starter mit 12 Monaten Bindung";
+      return "Starter · 990 € Einrichtung + 299 €/Monat · monatlich kündbar";
     case "starter_paid_setup":
-      return "Starter mit bezahlter Einrichtung";
+      return "Starter · 990 € Einrichtung + 299 €/Monat";
     case "growth_preview":
       return "Growth Vorschau";
     case "agency_preview":

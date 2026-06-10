@@ -85,9 +85,9 @@ function getWorkspaceDisplay(
       commitmentLabel: "keine",
       planHint: "Pilot / Setup · Demo-/Setupmonat",
       packageSummary:
-        "Demo-Arbeitsplatz mit sicheren Workspace-Daten und manuell gepflegten Kontakten.",
+        "1 Monat Test-/Setup-Zugang mit sicheren Workspace-Daten und manuell gepflegten Kontakten.",
       contractNote:
-        "Du arbeitest im sicheren Demo-/Setupmodus. Kontakte werden manuell gepflegt; produktive Kanalaktionen und Versand bleiben getrennt.",
+        "Du arbeitest im sicheren Demo-/Setupmodus für 990 € einmalig. Es gibt keine automatische Verlängerung und keine Bindung; wenn du nicht weitermachst, endet der Pilot.",
     };
   }
 
@@ -100,14 +100,14 @@ function getWorkspaceDisplay(
       commercialOptionName: getCommercialOptionLabel(
         workspace.commercial_option,
       ),
-      setupFeeLabel: `${setupFee} statt ${formatEuro(99000)}`,
+      setupFeeLabel: formatEuro(99000),
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel: "12 Monate",
+      commitmentLabel: "monatlich kündbar",
       planHint: "Starter · produktiver MVP-Kern",
       packageSummary:
         "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
       contractNote:
-        "Der produktive MVP-Kern ist aktiv: Kontakte und manuelle Kontaktpflege. Kampagnen, Follow-ups und Kanalaktionen sind nicht als aktive Automationen freigeschaltet.",
+        "Starter läuft mit 990 € Einrichtung + 299 €/Monat und ist monatlich kündbar. Wurde der Pilot bezahlt, wird die Setup-Gebühr angerechnet; danach fallen im Starter nur 299 €/Monat an.",
     };
   }
 
@@ -122,12 +122,12 @@ function getWorkspaceDisplay(
       ),
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel: "keine 12-Monatsbindung",
+      commitmentLabel: "monatlich kündbar",
       planHint: "Starter · produktiver MVP-Kern",
       packageSummary:
         "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
       contractNote:
-        "Produktiver Starter-Einstieg ohne feste Bindung: Kontakte und manuelle Kontaktpflege sind aktiv; Kampagnen, Follow-ups und Kanalaktionen sind nicht als aktive Automationen freigeschaltet.",
+        "Starter läuft mit 990 € Einrichtung + 299 €/Monat und ist monatlich kündbar. Wurde der Pilot bezahlt, wird die Setup-Gebühr angerechnet; danach fallen im Starter nur 299 €/Monat an.",
     };
   }
 

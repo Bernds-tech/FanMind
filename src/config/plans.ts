@@ -162,13 +162,13 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "pilot",
     name: "Pilot",
     badge: "Pilot / Setup",
-    priceLabel: "990 € einmalig",
+    priceLabel: "990 € einmalig · 1 Monat testen · keine Bindung",
     mode: "demo",
     maxProfiles: 0,
     maxContacts: null,
     contactsLabel: "Demo-Daten",
     description:
-      "Pflicht-Einstieg als Demo-/Setupmonat mit Sandra M., Beispieldaten, keiner Bindung und ohne produktive Kanäle.",
+      "Einmaliger Pilot-/Setup-Zugang für 1 Monat zum Reinschnuppern und Testen; keine automatische Verlängerung, keine Bindung und ohne produktive Kanäle.",
     primaryAction: "Pilot / Setup starten",
     upgradePlan: "starter",
     featureConfig: featureConfig({
@@ -199,13 +199,13 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "starter",
     name: "Starter",
     badge: "Produktiver MVP-Workspace",
-    priceLabel: "299 €/Monat",
+    priceLabel: "990 € Einrichtung + 299 €/Monat · monatlich kündbar",
     mode: "production",
     maxProfiles: 1,
     maxContacts: 1000,
     contactsLabel: "bis 1.000 Kontakte",
     description:
-      "Ein produktives Profil mit Kontakten, Memory, Follow-ups, CSV-Import und limitierten KI-Antwortvorschlägen; mit Einrichtungsgebühr oder 12 Monaten Bindung.",
+      "Ein produktives Profil für laufende Nutzung nach dem Setup: 990 € Einrichtung plus 299 €/Monat, monatlich kündbar und ohne feste Jahresbindung.",
     primaryAction: "Starter wählen",
     upgradePlan: "growth",
     featureConfig: featureConfig({
@@ -236,13 +236,13 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "growth",
     name: "Growth",
     badge: "Vorschau/Warteliste",
-    priceLabel: "499 €/Monat",
+    priceLabel: "Coming Soon · Vorschau",
     mode: "production",
     maxProfiles: 5,
     maxContacts: 10000,
     contactsLabel: "bis 10.000 Kontakte",
     description:
-      "Vorschau für mehrere Profile, Basis-Segmente und wachsende Teams; später nach Pilot / Setup oder mit Bindungsmodell verfügbar.",
+      "Coming Soon / Roadmap-Vorschau für mehrere Profile, Basis-Segmente und wachsende Teams; noch nicht produktiv buchbar.",
     primaryAction: "Growth Vorschau",
     upgradePlan: "agency",
     featureConfig: featureConfig({
@@ -273,13 +273,13 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "agency",
     name: "Agency",
     badge: "Demo/Erstgespräch",
-    priceLabel: "ab 990 €/Monat",
+    priceLabel: "Coming Soon · Roadmap",
     mode: "agency",
     maxProfiles: null,
     maxContacts: null,
     contactsLabel: "nach Vereinbarung",
     description:
-      "Demo/Erstgespräch für mehrere Profile oder Kunden-Workspaces. Erweiterte Rollen, Analytics und Kampagnen bleiben im MVP als Vorschau markiert.",
+      "Roadmap-Vorschau für mehrere Profile oder Kunden-Workspaces. Erweiterte Rollen, Analytics und Kampagnen bleiben im MVP als Vorschau markiert.",
     primaryAction: "Demo anfragen",
     featureConfig: featureConfig({
       login: "active",
