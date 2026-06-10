@@ -315,9 +315,11 @@
   top: 0;
   z-index: 60;
   display: flex;
+  align-self: start;
   justify-content: space-between;
   gap: 14px;
   align-items: center;
+  height: auto;
   border-radius: 0 0 16px 16px;
   padding: 10px 14px;
   min-height: 62px;
