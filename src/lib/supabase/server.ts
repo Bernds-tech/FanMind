@@ -96,7 +96,7 @@ type SupabaseFilterValue = string | number | boolean;
 const WORKSPACE_COLUMNS = "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months";
 const CONTACT_COLUMNS = "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,created_at,updated_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
-const STARTER_COMMERCIAL_OPTIONS: ProductiveCommercialOption[] = ["starter_paid_setup", "starter_12m_setup_waived"];
+const STARTER_COMMERCIAL_OPTIONS: ProductiveCommercialOption[] = ["starter_paid_setup"];
 
 async function getAccessToken(): Promise<string | undefined> {
   const cookieStore = await cookies();
@@ -573,10 +573,10 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
   return { planId: "starter" as PlanId, ...getRegistrationCommercialTerms("starter", "starter_paid_setup")! };
 }
 
-function isStarterCommercialOption(value: ProductiveCommercialOption): value is Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_12m_setup_waived"> {
+function isStarterCommercialOption(value: ProductiveCommercialOption): value is Extract<ProductiveCommercialOption, "starter_paid_setup"> {
   return STARTER_COMMERCIAL_OPTIONS.includes(value);
 }
 
 function isProductiveCommercialOption(value: unknown): value is ProductiveCommercialOption {
-  return value === "pilot_only" || value === "starter_paid_setup" || value === "starter_12m_setup_waived";
+  return value === "pilot_only" || value === "starter_paid_setup";
 }

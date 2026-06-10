@@ -45,6 +45,10 @@ const appNavigation: Array<{ featureKey: FeatureKey; label: string; href: string
   { featureKey: "analytics", label: "Analytics", href: "/roadmap#analytics" },
 ];
 
+function isPreviewPackage(planId: PlanId): boolean {
+  return planId === "growth" || planId === "agency";
+}
+
 function planFocus(planId: PlanId) {
   if (planId === "pilot") {
     return {
@@ -68,25 +72,26 @@ function planFocus(planId: PlanId) {
 
   if (planId === "growth") {
     return {
-      title: "Workspace einrichten",
-      profile: "3–5 Profile",
-      copy: "Plane mehrere Profile, aktiviere Basis-Segmente und nutze volle KI-Antwortvorschläge im MVP-Kern.",
-      next: "Profile strukturieren",
-      hint: "Upgrade auf Agency sichtbar für Multi-Client-Workspace und Agentur-Strukturen.",
+      title: "Growth Vorschau prüfen",
+      profile: "Coming Soon / Vorschau",
+      copy: "Growth bleibt im MVP eine Roadmap-Vorschau. Mehrere Profile, Segmente und höhere Nutzung werden nicht als produktive Funktionen freigeschaltet.",
+      next: "Mit Pilot / Setup oder Starter starten",
+      hint: "Growth ist Coming Soon und wird nicht als aktive Vollversion verkauft.",
     };
   }
 
   return {
-    title: "Workspace einrichten",
-    profile: "Mehrere Profile/Kunden",
-    copy: "Strukturiere Kunden, Profile und Owner sichtbar. Kampagnen, Analytics und Enterprise-Rollen sind Vorschau oder Coming Soon, nicht aktiv.",
-    next: "Kundenstruktur planen",
+    title: "Agency Roadmap prüfen",
+    profile: "Coming Soon / Roadmap",
+    copy: "Agency bleibt im MVP eine Demo-/Roadmap-Vorschau. Multi-Client, Teamstruktur, Analytics und Kampagnen werden nicht produktiv freigeschaltet.",
+    next: "Demo anfragen oder mit Starter starten",
     hint: "Agency zeigt Roadmap-Funktionen transparent, ohne sie als aktive MVP-Funktionen zu behaupten.",
   };
 }
 
 function FeatureCard({ featureKey, planId }: { featureKey: FeatureKey; planId: PlanId }) {
   const status = getFeatureStatus(planId, featureKey);
+  const displayStatus = isPreviewPackage(planId) && status === "active" ? "preview" : status;
 
   if (status === "hidden") {
     return null;
@@ -103,8 +108,8 @@ function FeatureCard({ featureKey, planId }: { featureKey: FeatureKey; planId: P
           <p>Zielpaket: {upgradeTarget.name}</p>
         ) : isComingSoon(planId, featureKey) ? (
           <p>Auf der Roadmap, aktuell nicht produktiv nutzbar.</p>
-        ) : status === "preview" ? (
-          <p>Als Vorschau sichtbar, noch nicht vollständig produktiv.</p>
+        ) : displayStatus === "preview" ? (
+          <p>Als Vorschau sichtbar, noch nicht produktiv freigeschaltet.</p>
         ) : status === "limited" ? (
           <p>Mit Paketlimit nutzbar.</p>
         ) : status === "demo" ? (
@@ -113,7 +118,7 @@ function FeatureCard({ featureKey, planId }: { featureKey: FeatureKey; planId: P
           <p>Heute in deinem Paket freigeschaltet.</p>
         )}
       </div>
-      <FeatureStatusBadge status={status} />
+      <FeatureStatusBadge status={displayStatus} />
     </article>
   );
 }
@@ -122,9 +127,9 @@ export default function OnboardingMaster({ planId, isDemoMode = false }: Onboard
   const plan = getPlan(planId);
   const focus = planFocus(planId);
   const steps = getOnboardingSteps(planId);
-  const enabledFeatures = coreFeatureKeys.filter((featureKey) =>
-    canUseFeature(planId, featureKey),
-  );
+  const enabledFeatures = isPreviewPackage(planId)
+    ? []
+    : coreFeatureKeys.filter((featureKey) => canUseFeature(planId, featureKey));
   const navigationItems = appNavigation.filter((item) =>
     shouldShowFeature(planId, item.featureKey, "app"),
   );
@@ -157,14 +162,14 @@ export default function OnboardingMaster({ planId, isDemoMode = false }: Onboard
             <p>{focus.copy}</p>
           </div>
           <div className={styles.planPill}>
-            <span>Aktives Paket: {plan.name}</span>
+            <span>{isPreviewPackage(planId) ? "Vorschau-Paket" : "Aktives Paket"}: {plan.name}</span>
             <strong>{getPlanBadge(planId)}</strong>
           </div>
         </div>
       </section>
 
       <section className={styles.infoStrip}>
-        <strong>Aktives Paket: {plan.name}</strong>
+        <strong>{isPreviewPackage(planId) ? "Vorschau-Paket" : "Aktives Paket"}: {plan.name}</strong>
         <span>{plan.priceLabel}</span>
         <span>{focus.profile}</span>
         <span>{plan.contactsLabel}</span>
@@ -214,11 +219,15 @@ export default function OnboardingMaster({ planId, isDemoMode = false }: Onboard
             <p><strong>Kontakte:</strong> {plan.contactsLabel}</p>
           </div>
 
-          <h3>Heute freigeschaltet</h3>
+          <h3>{isPreviewPackage(planId) ? "Nicht produktiv freigeschaltet" : "Heute freigeschaltet"}</h3>
           <ul className={styles.compactList}>
-            {enabledFeatures.map((featureKey) => (
-              <li key={featureKey}>✓ {getFeatureLabel(featureKey)}</li>
-            ))}
+            {enabledFeatures.length ? (
+              enabledFeatures.map((featureKey) => (
+                <li key={featureKey}>✓ {getFeatureLabel(featureKey)}</li>
+              ))
+            ) : (
+              <li>Growth und Agency bleiben Coming Soon / Roadmap-Vorschau.</li>
+            )}
           </ul>
 
           <h3>Später / Upgrade</h3>

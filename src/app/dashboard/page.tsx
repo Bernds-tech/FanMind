@@ -91,30 +91,7 @@ function getWorkspaceDisplay(
     };
   }
 
-  if (
-    workspace.plan_id === "starter" &&
-    workspace.commercial_option === "starter_12m_setup_waived"
-  ) {
-    return {
-      packageName: "Starter",
-      commercialOptionName: getCommercialOptionLabel(
-        workspace.commercial_option,
-      ),
-      setupFeeLabel: setupFee,
-      monthlyFeeLabel: monthlyFee,
-      commitmentLabel: "12 Monate",
-      planHint: "Starter · produktiver MVP-Kern",
-      packageSummary:
-        "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
-      contractNote:
-        "Starter läuft in dieser Alt-Option ohne Einrichtungsgebühr für 299 €/Monat mit 12 Monaten Laufzeit. Der monatlich kündbare MVP-Verkauf nutzt Starter mit 990 € Einrichtung + 299 €/Monat.",
-    };
-  }
-
-  if (
-    workspace.plan_id === "starter" &&
-    workspace.commercial_option === "starter_paid_setup"
-  ) {
+  if (workspace.plan_id === "starter") {
     return {
       packageName: "Starter",
       commercialOptionName: getCommercialOptionLabel(
@@ -127,7 +104,7 @@ function getWorkspaceDisplay(
       packageSummary:
         "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
       contractNote:
-        "Starter läuft mit 990 € Einrichtung + 299 €/Monat und ist monatlich kündbar. Wurde der Pilot bezahlt, wird die Setup-Gebühr angerechnet; danach fallen im Starter nur 299 €/Monat an.",
+        "990 € Einrichtung + 299 €/Monat · monatlich kündbar. Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat.",
     };
   }
 
@@ -139,10 +116,7 @@ function getWorkspaceDisplay(
       ),
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel:
-        workspace.commitment_months > 0
-          ? `${workspace.commitment_months} Monate`
-          : "noch nicht produktiv gebucht",
+      commitmentLabel: "noch nicht produktiv gebucht",
       planHint: "Growth · Vorschau",
       packageSummary:
         "Growth-Funktionen bleiben Vorschau und werden nicht als aktive Vollversion angezeigt.",
@@ -159,10 +133,7 @@ function getWorkspaceDisplay(
       ),
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel:
-        workspace.commitment_months > 0
-          ? `${workspace.commitment_months} Monate`
-          : "Demo / Erstgespräch",
+      commitmentLabel: "Demo / Erstgespräch",
       planHint: "Agency · Demo/Erstgespräch/Vorschau",
       packageSummary:
         "Agency-Funktionen bleiben Demo-/Erstgesprächsmodus und sind nicht produktiv freigeschaltet.",
@@ -176,10 +147,7 @@ function getWorkspaceDisplay(
     commercialOptionName: getCommercialOptionLabel(workspace.commercial_option),
     setupFeeLabel: setupFee,
     monthlyFeeLabel: monthlyFee,
-    commitmentLabel:
-      workspace.commitment_months > 0
-        ? `${workspace.commitment_months} Monate`
-        : "keine",
+    commitmentLabel: "keine",
     planHint: "Workspace geladen · Paket geprüft",
     packageSummary:
       "Workspace geladen; sichtbare Module richten sich nach Paket und Vertrag.",

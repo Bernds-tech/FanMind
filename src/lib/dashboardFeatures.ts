@@ -230,7 +230,6 @@ export function getCommercialOptionLabel(commercialOption: CommercialOption | Pr
     case "pilot_only":
       return "Pilot / Setup · 990 € einmalig · 1 Monat testen · keine Bindung";
     case "starter_12m_setup_waived":
-      return "Starter · 0 € Einrichtung + 299 €/Monat · 12 Monate Laufzeit";
     case "starter_paid_setup":
       return "Starter · 990 € Einrichtung + 299 €/Monat · monatlich kündbar";
     case "growth_preview":
