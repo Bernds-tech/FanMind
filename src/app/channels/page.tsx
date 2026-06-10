@@ -142,7 +142,9 @@ function ChannelsWorkspace({
         </div>
       </aside>
 
-      <div className={dashboardStyles.dashboardContent}>
+      <div
+        className={`${dashboardStyles.dashboardContent} ${dashboardStyles.dashboardContentStart}`}
+      >
         <AppHeader
           title="Kanäle"
           subtitle="Willkommen zurück, Pilot Test 👋"

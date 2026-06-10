@@ -161,7 +161,9 @@ function FansWorkspace({
         </div>
       </aside>
 
-      <div className={dashboardStyles.dashboardContent}>
+      <div
+        className={`${dashboardStyles.dashboardContent} ${dashboardStyles.dashboardContentStart}`}
+      >
         <AppHeader
           title="Fans"
           subtitle="Willkommen zurück, Pilot Test 👋"
