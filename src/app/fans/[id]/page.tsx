@@ -13,6 +13,7 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "../fans.module.css";
+import { AiReplySuggestions } from "./AiReplySuggestions";
 
 type FanDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -183,39 +184,17 @@ function FanDetailContent({ contact }: { contact: ContactRow }) {
           body="Es wurden keine echten Nachrichten importiert oder verknüpft. FanMind zeigt deshalb keine erfundenen Unterhaltungen an."
         />
 
-        <article className={dashboardStyles.moduleCard}>
-          <div className={dashboardStyles.moduleHeader}>
-            <div>
-              <p className={dashboardStyles.eyebrow}>Neue Nachricht</p>
-              <h2>Entwurfsfeld</h2>
-            </div>
-            <span>Manuell</span>
-          </div>
-          <label className={styles.messageComposer} htmlFor="manual_message">
-            <span>Nachricht vorbereiten</span>
-            <textarea
-              id="manual_message"
-              name="manual_message"
-              placeholder="Schreibe hier einen manuellen Nachrichtenentwurf. Es wird nichts automatisch gesendet."
-            />
-          </label>
-          <p className={styles.fieldHint}>
-            Dieses Textfeld speichert nichts, ruft keine KI auf und sendet keine Nachricht.
-          </p>
-        </article>
-
-        <PlaceholderCard
-          eyebrow="KI-Antwortvorschläge"
-          title="Coming Soon / MVP-Vorschau"
-          badge="Coming Soon"
-          body="Antwortvorschläge sind nur als Produktbereich sichtbar. In diesem Schritt gibt es keine KI-Anbindung und keine automatische Generierung."
-        />
-
-        <PlaceholderCard
-          eyebrow="Follow-up"
-          title="Coming Soon / MVP-Vorschau"
-          badge="Coming Soon"
-          body="Follow-ups sind noch nicht gebaut. Es gibt keine Follow-up-Tabelle, keine Fälligkeiten und keine automatische Aktion."
+        <AiReplySuggestions
+          contact={{
+            contactId: contact.id,
+            displayName: contact.display_name,
+            handle: contact.handle,
+            sourcePlatform: contact.source_platform,
+            language: contact.language,
+            status: contact.status,
+            tags: contact.tags,
+            summary: contact.summary,
+          }}
         />
       </section>
     </>
