@@ -50,8 +50,8 @@ export function CsvImportClient() {
           </Link>
         </div>
         <p className={styles.explainer}>
-          Importiere manuell exportierte oder vorbereitete Kontaktlisten. FanMind
-          synchronisiert aktuell keine externen Plattformen.
+          Importiere manuell vorbereitete Kontaktlisten. FanMind synchronisiert
+          aktuell keine externen Plattformen.
         </p>
 
         <form className={styles.importForm} action={formAction}>
@@ -63,12 +63,12 @@ export function CsvImportClient() {
               value={csvText}
               onChange={(event) => setCsvText(event.target.value)}
               placeholder={
-                "display_name,handle,source_platform,language,status,tags,summary\nGerhard Müller,@gerhard,manual,de,new,VIP|Berlin,Interessiert an Sommer-Event"
+                "display_name,handle,source_platform,language,status,tags,summary\nGerhard Müller,@gerhard,manual,de,new,newsletter;vip;warm,Interessiert an Sommer-Event"
               }
             />
             <p className={fansStyles.fieldHint}>
               Unterstützte Spalten: name/display_name, handle, platform/source_platform,
-              language, status, tags, summary. Komma oder Semikolon wird automatisch erkannt.
+              language, status, tags, summary. Komma oder Semikolon wird automatisch erkannt; Tags können per Semikolon getrennt werden.
             </p>
           </div>
 
@@ -109,10 +109,15 @@ export function CsvImportClient() {
         </form>
 
         {state.message ? (
-          <p className={state.ok ? styles.success : dashboardStyles.error} role="status">
+          <div className={state.ok ? styles.success : dashboardStyles.error} role="status">
             <strong>{state.ok ? "Import abgeschlossen" : "Import-Hinweis"}</strong>
             <span>{state.message}</span>
-          </p>
+            <ul className={styles.resultList}>
+              <li>{state.importedCount} Kontakte importiert</li>
+              <li>{state.skippedDuplicates} Duplikate übersprungen</li>
+              <li>{state.skippedInvalid} Zeilen mit Fehlern</li>
+            </ul>
+          </div>
         ) : null}
       </section>
 

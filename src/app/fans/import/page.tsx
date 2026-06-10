@@ -60,8 +60,7 @@ function CsvImportWorkspace({
       savedViews={savedViews}
       header={{
         title: "CSV-Import",
-        subtitle:
-          "Importiere vorbereitete Kontaktlisten ohne externe Plattform-Synchronisierung.",
+        subtitle: "Importiere vorbereitete Fan-/Kontaktlisten.",
         searchPlaceholder: "CSV-Spalten, Fans oder Tags suchen ...",
         primaryActionLabel: "Zur Fanliste",
         primaryActionHref: "/fans#fans-list",
