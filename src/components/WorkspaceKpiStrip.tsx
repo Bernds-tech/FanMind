@@ -41,58 +41,59 @@ function getKpiCards(contactCount: number): KpiCardData[] {
     {
       label: "Aktive Fans",
       value: "0",
-      meta: "Aktivitätslogik noch nicht gebaut",
+      meta: "Aktivitätslogik noch nicht aktiv",
       icon: "pulse",
       tone: "green",
       sparklinePoints:
         "M2 13 C13 12.5 21 11 31 11.5 S47 12.5 56 9.5 S72 6.5 82 7.5 S97 10.5 107 6.5 S118 5 124 4",
-      infoLabel: "Aktive Fans bleibt 0, bis echte Aktivitätslogik existiert.",
+      infoLabel:
+        "Aktive Fans bleibt 0, weil die Aktivitätslogik im MVP noch nicht aktiv ist.",
     },
     {
       label: "Offene Follow-ups",
       value: "0",
-      meta: "Follow-ups noch nicht gebaut",
+      meta: "Follow-ups noch nicht aktiv",
       icon: "check",
       tone: "violet",
       sparklinePoints:
         "M2 12.5 C13 11 21 11.5 31 9.5 S47 7 57 9 S72 12.5 83 9.5 S98 5.5 108 6.5 S118 7.5 124 4.5",
       infoLabel:
-        "Offene Follow-ups bleibt 0, solange keine Follow-up-Logik gebaut ist.",
+        "Offene Follow-ups bleibt 0, weil Follow-ups im MVP noch nicht aktiv sind.",
     },
     {
       label: "Laufende Kampagnen",
       value: "0",
-      meta: "Kampagnen noch nicht gebaut",
+      meta: "Kampagnen nicht aktiv",
       icon: "megaphone",
       tone: "blue",
       sparklinePoints:
         "M2 13 C14 12.5 22 10.5 32 11 S48 12.5 58 9.5 S73 7.5 83 9 S98 10.5 108 7 S119 5 124 4.5",
       infoLabel:
-        "Laufende Kampagnen bleibt 0; produktiver Versand ist im MVP nicht aktiv.",
+        "Laufende Kampagnen bleibt 0; Kampagnen sind im MVP nicht aktiv.",
       comingSoon: true,
     },
     {
       label: "Reaktivierung",
       value: "0",
-      meta: "Reaktivierung noch nicht gebaut",
+      meta: "Reaktivierung noch nicht aktiv",
       icon: "refresh",
       tone: "orange",
       sparklinePoints:
         "M2 13.5 C12 12.5 20 8 31 9 S47 13 57 8.5 S72 6 82 8 S97 11.5 107 7 S118 5.5 124 4.25",
       infoLabel:
-        "Reaktivierung bleibt 0, solange keine Reaktivierungslogik gebaut ist.",
+        "Reaktivierung bleibt 0, weil die Reaktivierungslogik im MVP noch nicht aktiv ist.",
       comingSoon: true,
     },
     {
       label: "Conversion Rate",
       value: "0 %",
-      meta: "Conversion-Logik noch nicht gebaut",
+      meta: "Conversion-Logik noch nicht aktiv",
       icon: "percent",
       tone: "cyan",
       sparklinePoints:
         "M2 12.5 C14 12 22 11.5 32 12 S48 13 58 11 S73 9 83 9.5 S98 10 108 7.5 S119 6 124 4.75",
       infoLabel:
-        "Conversion Rate bleibt 0 %, bis echte Conversion-/Analytics-Logik existiert.",
+        "Conversion Rate bleibt 0 %, weil die Conversion-Logik im MVP noch nicht aktiv ist.",
       comingSoon: true,
     },
   ];
