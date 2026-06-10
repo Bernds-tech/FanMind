@@ -5,7 +5,7 @@ import {
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import { AppHeader } from "../dashboard/AppHeader";
+import { AppHeader } from "@/components/AppHeader";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
 type SidebarLink = {

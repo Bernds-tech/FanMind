@@ -9,7 +9,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
-import { AppHeader } from "./AppHeader";
+import { AppHeader } from "@/components/AppHeader";
 import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
