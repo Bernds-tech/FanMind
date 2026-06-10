@@ -1,3 +1,93 @@
+export type PlatformValue =
+  | "whatsapp"
+  | "instagram"
+  | "tiktok"
+  | "facebook"
+  | "x"
+  | "discord"
+  | "email"
+  | "onlyfans"
+  | "manual";
+
+export const PLATFORM_OPTIONS: Array<{
+  value: PlatformValue;
+  label: string;
+  shortLabel: string;
+}> = [
+  { value: "whatsapp", label: "WhatsApp", shortLabel: "WA" },
+  { value: "instagram", label: "Instagram", shortLabel: "IG" },
+  { value: "tiktok", label: "TikTok", shortLabel: "TT" },
+  { value: "facebook", label: "Facebook", shortLabel: "FB" },
+  { value: "x", label: "X / Twitter", shortLabel: "X" },
+  { value: "discord", label: "Discord", shortLabel: "DC" },
+  { value: "email", label: "E-Mail", shortLabel: "@" },
+  { value: "onlyfans", label: "OnlyFans", shortLabel: "OF" },
+  { value: "manual", label: "Manuell", shortLabel: "M" },
+];
+
+const PLATFORM_ALIAS_MAP: Record<string, PlatformValue> = {
+  whatsapp: "whatsapp",
+  whats_app: "whatsapp",
+  instagram: "instagram",
+  insta: "instagram",
+  ig: "instagram",
+  tiktok: "tiktok",
+  tik_tok: "tiktok",
+  facebook: "facebook",
+  fb: "facebook",
+  twitter: "x",
+  x: "x",
+  x_com: "x",
+  discord: "discord",
+  mail: "email",
+  e_mail: "email",
+  email: "email",
+  onlyfans: "onlyfans",
+  only_fans: "onlyfans",
+  manual: "manual",
+  manuell: "manual",
+  other: "manual",
+  sonstiges: "manual",
+};
+
+export function normalizePlatform(
+  value: string | null | undefined,
+): PlatformValue {
+  const key = value
+    ?.trim()
+    .toLowerCase()
+    .replace(/@/g, "email")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  if (!key) {
+    return "manual";
+  }
+
+  return PLATFORM_ALIAS_MAP[key] ?? "manual";
+}
+
+export function formatPlatformLabel(value: string | null | undefined): string {
+  const platform = normalizePlatform(value);
+
+  return (
+    PLATFORM_OPTIONS.find((option) => option.value === platform)?.label ??
+    "Manuell"
+  );
+}
+
+export function getPlatformShortLabel(
+  value: string | null | undefined,
+): string {
+  const platform = normalizePlatform(value);
+
+  return (
+    PLATFORM_OPTIONS.find((option) => option.value === platform)?.shortLabel ??
+    "M"
+  );
+}
+
 export type CsvContactDraft = {
   displayName: string;
   handle: string;
@@ -26,7 +116,10 @@ const HEADER_ALIASES: Record<string, keyof CsvContactDraft> = {
   summary: "summary",
 };
 
-export function parseCsvContacts(csvText: string): CsvParseResult {
+export function parseCsvContacts(
+  csvText: string,
+  defaultSourcePlatform: string = "manual",
+): CsvParseResult {
   const normalizedText = csvText.replace(/^\uFEFF/, "").trim();
   const delimiter = detectDelimiter(normalizedText);
 
@@ -82,7 +175,9 @@ export function parseCsvContacts(csvText: string): CsvParseResult {
       {
         displayName,
         handle: (raw.handle ?? "").trim(),
-        sourcePlatform: normalizeDefault(raw.sourcePlatform, "manual"),
+        sourcePlatform: normalizePlatform(
+          raw.sourcePlatform || defaultSourcePlatform,
+        ),
         language: normalizeDefault(raw.language, "de"),
         status: normalizeDefault(raw.status, "new"),
         tags: raw.tags ?? [],
@@ -104,7 +199,7 @@ export function getDuplicateKey(
     return null;
   }
 
-  return `${normalizedHandle}::${normalizeDefault(sourcePlatform, "manual").toLowerCase()}`;
+  return `${normalizePlatform(sourcePlatform)}::${normalizedHandle}`;
 }
 
 function detectDelimiter(csvText: string): "," | ";" {
@@ -162,7 +257,10 @@ function parseRows(csvText: string, delimiter: "," | ";"): string[][] {
 }
 
 function normalizeHeader(value: string): string {
-  return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 function normalizeDefault(
@@ -205,4 +303,52 @@ function countOutsideQuotes(value: string, needle: "," | ";"): number {
   }
 
   return count;
+}
+
+export function csvHasPlatformColumn(csvText: string): boolean {
+  const normalizedText = csvText.replace(/^\uFEFF/, "").trim();
+
+  if (!normalizedText) {
+    return false;
+  }
+
+  const delimiter = detectDelimiter(normalizedText);
+  const [headerRow] = parseRows(normalizedText, delimiter);
+
+  return headerRow
+    .map((header) => normalizeHeader(header))
+    .some((header) => header === "platform" || header === "source_platform");
+}
+
+export function withDefaultSourcePlatform(
+  csvText: string,
+  defaultSourcePlatform: string,
+): string {
+  const normalizedText = csvText.replace(/^\uFEFF/, "").trim();
+
+  if (!normalizedText || csvHasPlatformColumn(normalizedText)) {
+    return csvText;
+  }
+
+  const delimiter = detectDelimiter(normalizedText);
+  const rows = parseRows(normalizedText, delimiter);
+  const normalizedPlatform = normalizePlatform(defaultSourcePlatform);
+  const serializedRows = rows.map((row, index) => [
+    ...row,
+    index === 0 ? "source_platform" : normalizedPlatform,
+  ]);
+
+  return serializedRows
+    .map((row) =>
+      row.map((cell) => serializeCell(cell, delimiter)).join(delimiter),
+    )
+    .join("\n");
+}
+
+function serializeCell(value: string, delimiter: "," | ";"): string {
+  if (!value.includes(delimiter) && !/["\r\n]/.test(value)) {
+    return value;
+  }
+
+  return `"${value.replace(/"/g, '""')}"`;
 }

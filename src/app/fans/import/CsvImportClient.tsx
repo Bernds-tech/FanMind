@@ -5,7 +5,12 @@ import { useActionState, useMemo, useState, type ChangeEvent } from "react";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import fansStyles from "../fans.module.css";
 import { importCsvContacts, type CsvImportActionState } from "../actions";
-import { parseCsvContacts } from "./csv";
+import {
+  PLATFORM_OPTIONS,
+  formatPlatformLabel,
+  parseCsvContacts,
+  withDefaultSourcePlatform,
+} from "./csv";
 import styles from "./import.module.css";
 
 const initialState: CsvImportActionState = {
@@ -19,11 +24,19 @@ const initialState: CsvImportActionState = {
 export function CsvImportClient() {
   const [csvText, setCsvText] = useState("");
   const [previewRequested, setPreviewRequested] = useState(false);
+  const [defaultSourcePlatform, setDefaultSourcePlatform] = useState("manual");
   const [state, formAction, isPending] = useActionState(
     importCsvContacts,
     initialState,
   );
-  const preview = useMemo(() => parseCsvContacts(csvText), [csvText]);
+  const preview = useMemo(
+    () => parseCsvContacts(csvText, defaultSourcePlatform),
+    [csvText, defaultSourcePlatform],
+  );
+  const importCsvText = useMemo(
+    () => withDefaultSourcePlatform(csvText, defaultSourcePlatform),
+    [csvText, defaultSourcePlatform],
+  );
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -39,13 +52,19 @@ export function CsvImportClient() {
 
   return (
     <div className={styles.importStack}>
-      <section className={dashboardStyles.moduleCard} aria-labelledby="csv-import-title">
+      <section
+        className={dashboardStyles.moduleCard}
+        aria-labelledby="csv-import-title"
+      >
         <div className={dashboardStyles.moduleHeader}>
           <div>
             <p className={dashboardStyles.eyebrow}>Manueller Kontaktimport</p>
             <h2 id="csv-import-title">CSV-Import</h2>
           </div>
-          <Link className={dashboardStyles.secondaryButton} href="/fans#fans-list">
+          <Link
+            className={dashboardStyles.secondaryButton}
+            href="/fans#fans-list"
+          >
             Zur Fanliste
           </Link>
         </div>
@@ -55,11 +74,33 @@ export function CsvImportClient() {
         </p>
 
         <form className={styles.importForm} action={formAction}>
+          <input name="csv_text" type="hidden" value={importCsvText} />
+          <div className={fansStyles.fieldFull}>
+            <label htmlFor="default_source_platform">
+              Quelle/Kanal für diesen Import
+            </label>
+            <select
+              id="default_source_platform"
+              value={defaultSourcePlatform}
+              onChange={(event) => setDefaultSourcePlatform(event.target.value)}
+            >
+              {PLATFORM_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className={fansStyles.fieldHint}>
+              Diese Quelle wird verwendet, wenn die CSV keine platform- oder
+              source_platform-Spalte enthält. Werte aus der CSV haben pro Zeile
+              Vorrang.
+            </p>
+          </div>
+
           <div className={fansStyles.fieldFull}>
             <label htmlFor="csv_text">CSV-Text</label>
             <textarea
               id="csv_text"
-              name="csv_text"
               value={csvText}
               onChange={(event) => setCsvText(event.target.value)}
               placeholder={
@@ -67,9 +108,13 @@ export function CsvImportClient() {
               }
             />
             <p className={fansStyles.fieldHint}>
-              Unterstützte Spalten: name/display_name, handle, platform/source_platform,
-              language, status, tags, summary. Komma oder Semikolon wird automatisch erkannt; Tags können per Semikolon getrennt werden.
-              Duplikate mit gleichem Handle und gleicher Quelle werden beim Import im aktuellen Workspace übersprungen; Kontakte ohne Handle werden nicht aggressiv dedupliziert.
+              Unterstützte Spalten: name/display_name, handle,
+              platform/source_platform, language, status, tags, summary. Komma
+              oder Semikolon wird automatisch erkannt; Tags können per Semikolon
+              getrennt werden. Duplikate mit gleichem Workspace, gleichem Handle
+              und gleicher normalisierter Quelle werden übersprungen; dieselbe
+              Person auf einem anderen Kanal wird importiert. Kontakte ohne
+              Handle werden nicht aggressiv dedupliziert.
             </p>
           </div>
 
@@ -83,7 +128,8 @@ export function CsvImportClient() {
                 onChange={handleFileChange}
               />
               <p className={fansStyles.fieldHint}>
-                Die Datei wird nur im Browser ausgelesen und nicht hochgeladen oder in Storage gespeichert.
+                Die Datei wird nur im Browser ausgelesen und nicht hochgeladen
+                oder in Storage gespeichert.
               </p>
             </div>
           </div>
@@ -103,15 +149,23 @@ export function CsvImportClient() {
             >
               {isPending ? "Import läuft ..." : "Kontakte importieren"}
             </button>
-            <Link className={dashboardStyles.secondaryButton} href="/fans#fans-list">
+            <Link
+              className={dashboardStyles.secondaryButton}
+              href="/fans#fans-list"
+            >
               Zur Fanliste
             </Link>
           </div>
         </form>
 
         {state.message ? (
-          <div className={state.ok ? styles.success : dashboardStyles.error} role="status">
-            <strong>{state.ok ? "Import abgeschlossen" : "Import-Hinweis"}</strong>
+          <div
+            className={state.ok ? styles.success : dashboardStyles.error}
+            role="status"
+          >
+            <strong>
+              {state.ok ? "Import abgeschlossen" : "Import-Hinweis"}
+            </strong>
             <span>{state.message}</span>
             <ul className={styles.resultList}>
               <li>{state.importedCount} Kontakte importiert</li>
@@ -123,14 +177,18 @@ export function CsvImportClient() {
       </section>
 
       {previewRequested ? (
-        <section className={dashboardStyles.moduleCard} aria-labelledby="csv-preview-title">
+        <section
+          className={dashboardStyles.moduleCard}
+          aria-labelledby="csv-preview-title"
+        >
           <div className={dashboardStyles.moduleHeader}>
             <div>
               <p className={dashboardStyles.eyebrow}>Vorschau</p>
               <h2 id="csv-preview-title">Erkannte Kontakte</h2>
             </div>
             <span>
-              {preview.contacts.length.toLocaleString("de-DE")} erkannt · Trennzeichen {preview.delimiter}
+              {preview.contacts.length.toLocaleString("de-DE")} erkannt ·
+              Trennzeichen {preview.delimiter}
             </span>
           </div>
 
@@ -150,7 +208,7 @@ export function CsvImportClient() {
                   <tr>
                     <th>Name</th>
                     <th>Handle</th>
-                    <th>Quelle</th>
+                    <th>Quelle/Kanal</th>
                     <th>Sprache</th>
                     <th>Status</th>
                     <th>Tags</th>
@@ -159,10 +217,12 @@ export function CsvImportClient() {
                 </thead>
                 <tbody>
                   {preview.contacts.map((contact, index) => (
-                    <tr key={`${contact.displayName}-${contact.handle}-${index}`}>
+                    <tr
+                      key={`${contact.displayName}-${contact.handle}-${index}`}
+                    >
                       <td>{contact.displayName}</td>
                       <td>{contact.handle || "—"}</td>
-                      <td>{contact.sourcePlatform}</td>
+                      <td>{formatPlatformLabel(contact.sourcePlatform)}</td>
                       <td>{contact.language}</td>
                       <td>{contact.status}</td>
                       <td>

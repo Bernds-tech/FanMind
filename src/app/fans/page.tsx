@@ -4,14 +4,23 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
+  getWorkspaceOpenFollowups,
   signOutSupabaseServerSession,
   type ContactRow,
+  type FollowupRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan } from "./actions";
+import {
+  PLATFORM_OPTIONS,
+  formatPlatformLabel,
+  getPlatformShortLabel,
+  normalizePlatform,
+  type PlatformValue,
+} from "./import/csv";
 import styles from "./fans.module.css";
 
 type FansWorkspaceProps = {
@@ -19,21 +28,43 @@ type FansWorkspaceProps = {
   userDisplayName: string;
   contacts: ContactRow[];
   contactsError?: string;
+  followups: FollowupRow[];
+  followupsError?: string;
+  activeChannel: PlatformValue | "all";
 };
 
-const sourceLabels: Record<string, string> = {
-  manual: "Manuell",
-  instagram: "Instagram (manuell)",
-  tiktok: "TikTok (manuell)",
+type FansPageProps = {
+  searchParams?: Promise<{ channel?: string | string[] }>;
+};
+
+type FanGroup = {
+  key: string;
+  displayName: string;
+  primaryContact: ContactRow;
+  contacts: ContactRow[];
+  handles: string[];
+  platforms: PlatformValue[];
+  tags: string[];
+  latestCreatedAt: string | null;
+  nextFollowup: FollowupRow | null;
 };
 
 const statusLabels: Record<string, string> = {
   new: "Neu",
-  active: "Aktiv",
   warm: "Warm",
+  vip: "VIP",
+  buyer: "Käufer",
+  inactive: "Inaktiv",
+  do_not_push: "Nicht drängen",
+  active: "Aktiv",
   follow_up: "Follow-up",
   paused: "Pausiert",
 };
+
+const channelFilters = [
+  { value: "all", label: "Alle" },
+  ...PLATFORM_OPTIONS.filter((option) => option.value !== "manual"),
+] as const;
 
 async function logout() {
   "use server";
@@ -47,10 +78,15 @@ function FansWorkspace({
   userDisplayName,
   contacts,
   contactsError,
+  followups,
+  followupsError,
+  activeChannel,
 }: FansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
   const userLabel = userDisplayName || workspace.name || "Nutzer";
+  const fanGroups = groupContactsByFan(contacts, followups);
+  const visibleFanGroups = filterFanGroupsByChannel(fanGroups, activeChannel);
 
   return (
     <WorkspaceShell
@@ -69,196 +105,273 @@ function FansWorkspace({
         primaryActionLabel: "+ Neuer Fan",
         primaryActionHref: "#new-fan-modal",
       }}
-      contactCount={contacts.length}
+      contactCount={fanGroups.length}
       logoutAction={logout}
     >
       <div className={styles.fansStack}>
-          <section
-            className={dashboardStyles.moduleCard}
-            id="fans-list"
-            aria-labelledby="fans-list-title"
-          >
-            <div className={dashboardStyles.moduleHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Workspace-Liste</p>
-                <h2 id="fans-list-title">Fans</h2>
-              </div>
-              <div className={dashboardStyles.emptyActions}>
-                <Link
-                  className={dashboardStyles.secondaryButton}
-                  href="/fans/import"
-                >
-                  CSV importieren
-                </Link>
-                <span>{contacts.length ? "Echte Daten" : "Empty State"}</span>
-              </div>
+        <section
+          className={dashboardStyles.moduleCard}
+          id="fans-list"
+          aria-labelledby="fans-list-title"
+        >
+          <div className={dashboardStyles.moduleHeader}>
+            <div>
+              <p className={dashboardStyles.eyebrow}>Workspace-Liste</p>
+              <h2 id="fans-list-title">Fans</h2>
             </div>
-            {contactsError ? (
-              <p className={dashboardStyles.error}>
-                <strong>Kontakte konnten nicht geladen werden.</strong>
-                <span>{contactsError}</span>
-              </p>
-            ) : null}
-            {contacts.length ? (
-              <FansTable contacts={contacts} />
-            ) : (
-              <FansEmptyState />
-            )}
-          </section>
-
-          <section
-            className={styles.modalOverlay}
-            id="new-fan-modal"
-            aria-labelledby="new-fan-title"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className={styles.modalCard}>
-              <div className={styles.modalHeader}>
-                <div>
-                  <p className={dashboardStyles.eyebrow}>Manuell anlegen</p>
-                  <h2 id="new-fan-title">+ Neuer Fan</h2>
-                </div>
-                <a
-                  className={styles.modalClose}
-                  href="#fans-list"
-                  aria-label="Modal schließen"
-                >
-                  ×
-                </a>
-              </div>
-              <form className={styles.formGrid} action={createFan}>
-                <div className={styles.fieldWide}>
-                  <label htmlFor="display_name">Name</label>
-                  <input
-                    id="display_name"
-                    name="display_name"
-                    required
-                    placeholder="z. B. Gerhard Müller"
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="handle">Handle optional</label>
-                  <input id="handle" name="handle" placeholder="@gerhard" />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="source_platform">Plattform/Quelle</label>
-                  <select
-                    id="source_platform"
-                    name="source_platform"
-                    defaultValue="manual"
-                  >
-                    <option value="manual">Manuell</option>
-                    <option value="instagram">Instagram (manuell)</option>
-                    <option value="tiktok">TikTok (manuell)</option>
-                  </select>
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="language">Sprache</label>
-                  <select id="language" name="language" defaultValue="de">
-                    <option value="de">Deutsch</option>
-                    <option value="en">Englisch</option>
-                    <option value="fr">Französisch</option>
-                  </select>
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="status">Status</label>
-                  <select id="status" name="status" defaultValue="new">
-                    <option value="new">Neu</option>
-                    <option value="active">Aktiv</option>
-                    <option value="warm">Warm</option>
-                    <option value="follow_up">Follow-up</option>
-                    <option value="paused">Pausiert</option>
-                  </select>
-                </div>
-                <div className={styles.fieldFull}>
-                  <label htmlFor="tags">Tags</label>
-                  <input
-                    id="tags"
-                    name="tags"
-                    placeholder="Kommagetrennt, z. B. VIP, Newsletter, Berlin"
-                  />
-                </div>
-                <div className={styles.fieldFull}>
-                  <label htmlFor="summary">Summary/Notiz</label>
-                  <textarea
-                    id="summary"
-                    name="summary"
-                    placeholder="Kurze manuelle Notiz zum Fan."
-                  />
-                  <p className={styles.fieldHint}>
-                    Wird nur im aktuellen Workspace gespeichert und löst keinen
-                    Versand aus.
+            <div className={dashboardStyles.emptyActions}>
+              <Link
+                className={dashboardStyles.secondaryButton}
+                href="/fans/import"
+              >
+                CSV importieren
+              </Link>
+              <span>{fanGroups.length ? "Echte Daten" : "Empty State"}</span>
+            </div>
+          </div>
+          {contactsError ? (
+            <p className={dashboardStyles.error}>
+              <strong>Kontakte konnten nicht geladen werden.</strong>
+              <span>{contactsError}</span>
+            </p>
+          ) : null}
+          {followupsError ? (
+            <p className={dashboardStyles.error}>
+              <strong>Follow-ups konnten nicht geladen werden.</strong>
+              <span>{followupsError}</span>
+            </p>
+          ) : null}
+          {fanGroups.length ? (
+            <>
+              <ChannelFilters activeChannel={activeChannel} />
+              {visibleFanGroups.length ? (
+                <FansTable fanGroups={visibleFanGroups} />
+              ) : (
+                <div className={dashboardStyles.emptyState}>
+                  <strong>Keine Fans für diesen Kanal</strong>
+                  <p>
+                    Für den gewählten Kanal gibt es aktuell keine echten
+                    Kontakte im Workspace.
                   </p>
                 </div>
-                <div className={styles.formActions}>
-                  <a
-                    className={dashboardStyles.secondaryButton}
-                    href="#fans-list"
-                  >
-                    Abbrechen
-                  </a>
-                  <button
-                    type="submit"
-                    className={dashboardStyles.primaryButton}
-                  >
-                    Kontakt speichern
-                  </button>
-                </div>
-              </form>
+              )}
+            </>
+          ) : (
+            <FansEmptyState />
+          )}
+        </section>
+
+        <section
+          className={styles.modalOverlay}
+          id="new-fan-modal"
+          aria-labelledby="new-fan-title"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>Manuell anlegen</p>
+                <h2 id="new-fan-title">+ Neuer Fan</h2>
+              </div>
+              <a
+                className={styles.modalClose}
+                href="#fans-list"
+                aria-label="Modal schließen"
+              >
+                ×
+              </a>
             </div>
-          </section>
-        </div>
+            <form className={styles.formGrid} action={createFan}>
+              <div className={styles.fieldWide}>
+                <label htmlFor="display_name">Name</label>
+                <input
+                  id="display_name"
+                  name="display_name"
+                  required
+                  placeholder="z. B. Gerhard Müller"
+                />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="handle">Handle optional</label>
+                <input id="handle" name="handle" placeholder="@gerhard" />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="source_platform">Plattform/Quelle</label>
+                <select
+                  id="source_platform"
+                  name="source_platform"
+                  defaultValue="manual"
+                >
+                  {PLATFORM_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="language">Sprache</label>
+                <select id="language" name="language" defaultValue="de">
+                  <option value="de">Deutsch</option>
+                  <option value="en">Englisch</option>
+                  <option value="fr">Französisch</option>
+                </select>
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="status">Status</label>
+                <select id="status" name="status" defaultValue="new">
+                  <option value="new">Neu</option>
+                  <option value="active">Aktiv</option>
+                  <option value="warm">Warm</option>
+                  <option value="follow_up">Follow-up</option>
+                  <option value="paused">Pausiert</option>
+                </select>
+              </div>
+              <div className={styles.fieldFull}>
+                <label htmlFor="tags">Tags</label>
+                <input
+                  id="tags"
+                  name="tags"
+                  placeholder="Kommagetrennt, z. B. VIP, Newsletter, Berlin"
+                />
+              </div>
+              <div className={styles.fieldFull}>
+                <label htmlFor="summary">Summary/Notiz</label>
+                <textarea
+                  id="summary"
+                  name="summary"
+                  placeholder="Kurze manuelle Notiz zum Fan."
+                />
+                <p className={styles.fieldHint}>
+                  Wird nur im aktuellen Workspace gespeichert und löst keinen
+                  Versand aus.
+                </p>
+              </div>
+              <div className={styles.formActions}>
+                <a
+                  className={dashboardStyles.secondaryButton}
+                  href="#fans-list"
+                >
+                  Abbrechen
+                </a>
+                <button type="submit" className={dashboardStyles.primaryButton}>
+                  Kontakt speichern
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
     </WorkspaceShell>
   );
 }
 
-function FansTable({ contacts }: { contacts: ContactRow[] }) {
+function ChannelFilters({
+  activeChannel,
+}: {
+  activeChannel: PlatformValue | "all";
+}) {
+  return (
+    <nav className={styles.channelFilters} aria-label="Kanalfilter">
+      {channelFilters.map((filter) => {
+        const isActive = filter.value === activeChannel;
+        const href =
+          filter.value === "all"
+            ? "/fans#fans-list"
+            : `/fans?channel=${filter.value}#fans-list`;
+
+        return (
+          <Link
+            aria-current={isActive ? "page" : undefined}
+            className={`${styles.channelChip} ${isActive ? styles.channelChipActive : ""}`}
+            href={href}
+            key={filter.value}
+          >
+            {filter.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
   return (
     <div className={dashboardStyles.tableWrap}>
       <table>
         <thead>
           <tr>
+            <th>Auswahl</th>
             <th>Name</th>
             <th>Status</th>
-            <th>Quelle/Kanal</th>
-            <th>Sprache</th>
+            <th>Kanäle</th>
             <th>Tags</th>
-            <th>Summary</th>
-            <th>Erstellt am</th>
+            <th>Letzter Kontakt</th>
+            <th>Nächster Follow-up</th>
+            <th>Antwortkanal / Empfehlung</th>
           </tr>
         </thead>
         <tbody>
-          {contacts.map((contact) => (
-            <tr key={contact.id}>
+          {fanGroups.map((group) => (
+            <tr key={group.key}>
+              <td>
+                <input
+                  aria-label={`${group.displayName} auswählen`}
+                  className={styles.rowCheckbox}
+                  type="checkbox"
+                />
+              </td>
               <td>
                 <span className={styles.nameCell}>
-                  <Link className={styles.fanDetailLink} href={`/fans/${contact.id}`}>
-                    {contact.display_name}
+                  <Link
+                    className={styles.fanDetailLink}
+                    href={`/fans/${group.primaryContact.id}`}
+                  >
+                    {group.displayName}
                   </Link>
-                  {contact.handle ? <span>{contact.handle}</span> : null}
+                  {group.handles.length ? (
+                    <span>{formatLimitedList(group.handles, 2)}</span>
+                  ) : (
+                    <span>Kein Handle hinterlegt</span>
+                  )}
                 </span>
               </td>
-              <td>{formatStatus(contact.status)}</td>
-              <td>{formatSource(contact.source_platform)}</td>
-              <td>{formatLanguage(contact.language)}</td>
+              <td>{formatStatus(group.primaryContact.status)}</td>
               <td>
-                {contact.tags?.length ? (
+                <span className={styles.platformBadgeList}>
+                  {group.platforms.map((platform) => (
+                    <span className={styles.platformBadge} key={platform}>
+                      <strong>{getPlatformShortLabel(platform)}</strong>
+                      {formatPlatformLabel(platform)}
+                    </span>
+                  ))}
+                </span>
+              </td>
+              <td>
+                {group.tags.length ? (
                   <span className={dashboardStyles.tagList}>
-                    {contact.tags.map((tag) => (
+                    {group.tags.slice(0, 4).map((tag) => (
                       <span key={tag}>{tag}</span>
                     ))}
+                    {group.tags.length > 4 ? <span>+ weitere</span> : null}
                   </span>
                 ) : (
                   <span className={styles.mutedText}>Keine Tags</span>
                 )}
               </td>
               <td>
-                <span className={styles.summaryCell}>
-                  {contact.summary || "Keine Summary"}
-                </span>
+                {group.latestCreatedAt ? (
+                  <span className={styles.dateCell}>
+                    <span>Angelegt</span>
+                    {formatDate(group.latestCreatedAt)}
+                  </span>
+                ) : (
+                  "—"
+                )}
               </td>
-              <td>{formatDate(contact.created_at)}</td>
+              <td>{formatNextFollowup(group.nextFollowup)}</td>
+              <td>{formatReplyChannel(group.platforms)}</td>
             </tr>
           ))}
         </tbody>
@@ -277,7 +390,10 @@ function FansEmptyState() {
         TikTok- oder Plattform-Synchronisation.
       </p>
       <div className={dashboardStyles.emptyActions}>
-        <Link className={dashboardStyles.primaryButton} href="/fans#new-fan-modal">
+        <Link
+          className={dashboardStyles.primaryButton}
+          href="/fans#new-fan-modal"
+        >
           Ersten Fan anlegen
         </Link>
         <Link className={dashboardStyles.secondaryButton} href="/fans/import">
@@ -288,24 +404,192 @@ function FansEmptyState() {
   );
 }
 
-function formatSource(value: string | null): string {
-  return sourceLabels[value ?? ""] ?? value ?? "Manuell";
+function groupContactsByFan(
+  contacts: ContactRow[],
+  followups: FollowupRow[],
+): FanGroup[] {
+  const followupsByContact = new Map<string, FollowupRow[]>();
+
+  for (const followup of followups) {
+    if (followup.status && followup.status !== "open") {
+      continue;
+    }
+
+    followupsByContact.set(followup.contact_id, [
+      ...(followupsByContact.get(followup.contact_id) ?? []),
+      followup,
+    ]);
+  }
+
+  const groups = new Map<string, ContactRow[]>();
+
+  for (const contact of contacts) {
+    const groupKey = getFanGroupKey(contact);
+    groups.set(groupKey, [...(groups.get(groupKey) ?? []), contact]);
+  }
+
+  return Array.from(groups.entries()).map(([key, groupedContacts]) => {
+    const sortedContacts = [...groupedContacts].sort(
+      compareContactsByCreatedAt,
+    );
+    const primaryContact = sortedContacts[0];
+    const groupFollowups = sortedContacts.flatMap(
+      (contact) => followupsByContact.get(contact.id) ?? [],
+    );
+
+    return {
+      key,
+      displayName:
+        primaryContact.display_name ||
+        primaryContact.handle ||
+        "Unbenannter Fan",
+      primaryContact,
+      contacts: sortedContacts,
+      handles: uniqueValues(sortedContacts.map((contact) => contact.handle)),
+      platforms: uniquePlatforms(sortedContacts),
+      tags: uniqueValues(
+        sortedContacts.flatMap((contact) => contact.tags ?? []),
+      ),
+      latestCreatedAt:
+        sortedContacts.find((contact) => contact.created_at)?.created_at ??
+        null,
+      nextFollowup: getNextFollowup(groupFollowups),
+    };
+  });
+}
+
+function filterFanGroupsByChannel(
+  groups: FanGroup[],
+  activeChannel: PlatformValue | "all",
+): FanGroup[] {
+  if (activeChannel === "all") {
+    return groups;
+  }
+
+  return groups.filter((group) => group.platforms.includes(activeChannel));
+}
+
+function getFanGroupKey(contact: ContactRow): string {
+  const nameKey = normalizeFanIdentity(contact.display_name);
+
+  if (nameKey) {
+    return `name:${nameKey}`;
+  }
+
+  const handleKey = normalizeFanIdentity(contact.handle ?? "");
+
+  return handleKey ? `handle:${handleKey}` : `contact:${contact.id}`;
+}
+
+function normalizeFanIdentity(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function compareContactsByCreatedAt(
+  left: ContactRow,
+  right: ContactRow,
+): number {
+  return getTime(right.created_at) - getTime(left.created_at);
+}
+
+function uniqueValues(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+
+  return values.flatMap((value) => {
+    const trimmed = value?.trim();
+
+    if (!trimmed) {
+      return [];
+    }
+
+    const key = trimmed.toLowerCase();
+
+    if (seen.has(key)) {
+      return [];
+    }
+
+    seen.add(key);
+    return [trimmed];
+  });
+}
+
+function uniquePlatforms(contacts: ContactRow[]): PlatformValue[] {
+  const seen = new Set<PlatformValue>();
+
+  return contacts.flatMap((contact) => {
+    const platform = normalizePlatform(contact.source_platform);
+
+    if (seen.has(platform)) {
+      return [];
+    }
+
+    seen.add(platform);
+    return [platform];
+  });
+}
+
+function getNextFollowup(followups: FollowupRow[]): FollowupRow | null {
+  return (
+    [...followups].sort((left, right) => {
+      const dueDiff =
+        getDateOnlyTime(left.due_date) - getDateOnlyTime(right.due_date);
+
+      if (dueDiff !== 0) {
+        return dueDiff;
+      }
+
+      return getTime(right.created_at) - getTime(left.created_at);
+    })[0] ?? null
+  );
+}
+
+function formatLimitedList(values: string[], limit: number): string {
+  const visible = values.slice(0, limit).join(", ");
+  const hiddenCount = values.length - limit;
+
+  return hiddenCount > 0 ? `${visible} + weitere` : visible;
+}
+
+function formatReplyChannel(platforms: PlatformValue[]): string {
+  if (platforms.length === 1) {
+    return `Antwort in ${formatPlatformLabel(platforms[0])}`;
+  }
+
+  return "Kanal wählen";
+}
+
+function formatNextFollowup(followup: FollowupRow | null): string {
+  if (!followup) {
+    return "—";
+  }
+
+  if (!followup.due_date) {
+    return followup.reason;
+  }
+
+  return `${new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+  }).format(new Date(`${followup.due_date}T00:00:00Z`))}: ${followup.reason}`;
+}
+
+function getTime(value: string | null): number {
+  return value ? new Date(value).getTime() : 0;
+}
+
+function getDateOnlyTime(value: string | null): number {
+  return value
+    ? new Date(`${value}T00:00:00Z`).getTime()
+    : Number.POSITIVE_INFINITY;
 }
 
 function formatStatus(value: string | null): string {
   return statusLabels[value ?? ""] ?? value ?? "Neu";
-}
-
-function formatLanguage(value: string | null): string {
-  if (value === "en") {
-    return "Englisch";
-  }
-
-  if (value === "fr") {
-    return "Französisch";
-  }
-
-  return "Deutsch";
 }
 
 function formatDate(value: string | null): string {
@@ -319,6 +603,16 @@ function formatDate(value: string | null): string {
   }).format(new Date(value));
 }
 
+function getActiveChannel(value: string | undefined): PlatformValue | "all" {
+  if (!value || value === "all") {
+    return "all";
+  }
+
+  const normalized = normalizePlatform(value);
+
+  return normalized === "manual" && value !== "manual" ? "all" : normalized;
+}
+
 function getUserDisplayName(
   metadata: Record<string, unknown> | undefined,
   fallback: string,
@@ -330,7 +624,12 @@ function getUserDisplayName(
     : fallback;
 }
 
-export default async function FansPage() {
+export default async function FansPage({ searchParams }: FansPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const channelParam = Array.isArray(resolvedSearchParams?.channel)
+    ? resolvedSearchParams?.channel[0]
+    : resolvedSearchParams?.channel;
+  const activeChannel = getActiveChannel(channelParam);
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -341,6 +640,9 @@ export default async function FansPage() {
   const workspace = workspaceResult.workspace;
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
+    : null;
+  const followupsResult = workspace
+    ? await getWorkspaceOpenFollowups(workspace.id)
     : null;
 
   return (
@@ -354,6 +656,9 @@ export default async function FansPage() {
           )}
           contacts={contactsResult?.contacts ?? []}
           contactsError={contactsResult?.error?.message}
+          followups={followupsResult?.followups ?? []}
+          followupsError={followupsResult?.error?.message}
+          activeChannel={activeChannel}
         />
       ) : (
         <section

@@ -17,6 +17,7 @@ import {
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
+import { formatPlatformLabel } from "../import/csv";
 import styles from "../fans.module.css";
 import { AiReplySuggestions } from "./AiReplySuggestions";
 
@@ -35,12 +36,6 @@ type FanDetailWorkspaceProps = {
   followups: FollowupRow[];
   followupsError?: string;
   openFollowupCount: number;
-};
-
-const sourceLabels: Record<string, string> = {
-  manual: "Manuell",
-  instagram: "Instagram (manuell)",
-  tiktok: "TikTok (manuell)",
 };
 
 const statusLabels: Record<string, string> = {
@@ -186,9 +181,12 @@ function FanDetailContent({
         </article>
 
         <article className={styles.noticeCard} role="note">
-          <p className={dashboardStyles.eyebrow}>Sicherer MVP-Modus</p>
-          <strong>Keine automatische Sendefunktion.</strong>
-          <span>Mensch prüft und sendet final selbst.</span>
+          <p className={dashboardStyles.eyebrow}>Antwortkanal</p>
+          <strong>
+            Antwort bitte manuell im ursprünglichen Kanal senden:{" "}
+            {formatSource(contact.source_platform)}.
+          </strong>
+          <span>Keine automatische Sendefunktion.</span>
         </article>
       </section>
 
@@ -400,7 +398,7 @@ function formatFollowupDueDate(value: string | null): string {
 }
 
 function formatSource(value: string | null): string {
-  return sourceLabels[value ?? ""] ?? value ?? "Nicht hinterlegt";
+  return formatPlatformLabel(value);
 }
 
 function formatStatus(value: string | null): string {
