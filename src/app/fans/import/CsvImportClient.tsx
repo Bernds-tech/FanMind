@@ -69,6 +69,7 @@ export function CsvImportClient() {
             <p className={fansStyles.fieldHint}>
               Unterstützte Spalten: name/display_name, handle, platform/source_platform,
               language, status, tags, summary. Komma oder Semikolon wird automatisch erkannt; Tags können per Semikolon getrennt werden.
+              Duplikate mit gleichem Handle und gleicher Quelle werden beim Import im aktuellen Workspace übersprungen; Kontakte ohne Handle werden nicht aggressiv dedupliziert.
             </p>
           </div>
 
