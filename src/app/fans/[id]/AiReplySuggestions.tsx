@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { saveSuggestedFollowup, saveSuggestedMemory } from "../actions";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "../fans.module.css";
 
@@ -44,14 +46,21 @@ const genericError = "Antwortvorschläge konnten gerade nicht erzeugt werden.";
 export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
   const [pastedChatContext, setPastedChatContext] = useState("");
   const [incomingMessage, setIncomingMessage] = useState("");
-  const [suggestions, setSuggestions] = useState<AiSuggestionsResult | null>(null);
+  const [suggestions, setSuggestions] = useState<AiSuggestionsResult | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
   const [error, setError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
   const [copiedTone, setCopiedTone] = useState("");
+  const [isSavingMemory, startMemorySave] = useTransition();
+  const [isSavingFollowup, startFollowupSave] = useTransition();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setSaveMessage("");
     setCopiedTone("");
     setSuggestions(null);
 
@@ -98,6 +107,69 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function handleSaveMemory() {
+    if (!suggestions?.suggested_memory.content.trim()) {
+      setSaveMessage("Keine Memory-Notiz zum Speichern vorhanden.");
+      return;
+    }
+
+    setSaveMessage("");
+    startMemorySave(async () => {
+      try {
+        const result = await saveSuggestedMemory({
+          contactId: contact.contactId,
+          content: suggestions.suggested_memory.content,
+          importance: suggestions.suggested_memory.importance,
+        });
+        setSaveMessage(result.message);
+
+        if (result.ok) {
+          router.refresh();
+        }
+      } catch (saveError) {
+        setSaveMessage(
+          saveError instanceof Error
+            ? saveError.message
+            : "Memory konnte nicht gespeichert werden.",
+        );
+      }
+    });
+  }
+
+  function handleSaveFollowup() {
+    if (!suggestions?.suggested_followup.recommended) {
+      setSaveMessage("Kein Follow-up zum Speichern empfohlen.");
+      return;
+    }
+
+    if (!suggestions.suggested_followup.reason.trim()) {
+      setSaveMessage("Kein Follow-up-Grund zum Speichern vorhanden.");
+      return;
+    }
+
+    setSaveMessage("");
+    startFollowupSave(async () => {
+      try {
+        const result = await saveSuggestedFollowup({
+          contactId: contact.contactId,
+          reason: suggestions.suggested_followup.reason,
+          inDays: suggestions.suggested_followup.in_days,
+        });
+        setSaveMessage(result.message);
+
+        if (result.ok) {
+          router.refresh();
+        }
+      } catch (saveError) {
+        setSaveMessage(
+          saveError instanceof Error
+            ? saveError.message
+            : "Follow-up konnte nicht gespeichert werden.",
+        );
+      }
+    });
   }
 
   async function copySuggestion(option: ReplySuggestion) {
@@ -158,7 +230,9 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
             disabled={isLoading}
             type="submit"
           >
-            {isLoading ? "FanMind erzeugt Vorschläge…" : "KI-Vorschläge erzeugen"}
+            {isLoading
+              ? "FanMind erzeugt Vorschläge…"
+              : "KI-Vorschläge erzeugen"}
           </button>
           <span>Keine automatische Sendefunktion.</span>
         </div>
@@ -167,6 +241,12 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
       {error ? (
         <p className={styles.aiError} role="alert">
           {error}
+        </p>
+      ) : null}
+
+      {saveMessage ? (
+        <p className={styles.aiSaveMessage} role="status">
+          {saveMessage}
         </p>
       ) : null}
 
@@ -194,8 +274,23 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
             <article>
               <span>Suggested Memory</span>
               <strong>Noch nicht gespeichert</strong>
-              <p>{suggestions.suggested_memory.content || "Keine Memory-Notiz empfohlen."}</p>
-              <small>Wichtigkeit: {suggestions.suggested_memory.importance}</small>
+              <p>
+                {suggestions.suggested_memory.content ||
+                  "Keine Memory-Notiz empfohlen."}
+              </p>
+              <small>
+                Wichtigkeit: {suggestions.suggested_memory.importance}
+              </small>
+              <button
+                className={dashboardStyles.secondaryButton}
+                disabled={
+                  isSavingMemory || !suggestions.suggested_memory.content.trim()
+                }
+                onClick={handleSaveMemory}
+                type="button"
+              >
+                {isSavingMemory ? "Speichert…" : "Memory speichern"}
+              </button>
             </article>
             <article>
               <span>Suggested Follow-up</span>
@@ -206,6 +301,18 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
                   ? `Empfohlen in ${suggestions.suggested_followup.in_days ?? "?"} Tagen`
                   : "Kein Follow-up empfohlen"}
               </small>
+              <button
+                className={dashboardStyles.secondaryButton}
+                disabled={
+                  isSavingFollowup ||
+                  !suggestions.suggested_followup.recommended ||
+                  !suggestions.suggested_followup.reason.trim()
+                }
+                onClick={handleSaveFollowup}
+                type="button"
+              >
+                {isSavingFollowup ? "Speichert…" : "Follow-up speichern"}
+              </button>
             </article>
           </div>
 

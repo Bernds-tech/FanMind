@@ -24,9 +24,13 @@ type KpiCardData = {
 
 type WorkspaceKpiStripProps = {
   contactCount: number;
+  openFollowupCount?: number;
 };
 
-function getKpiCards(contactCount: number): KpiCardData[] {
+function getKpiCards(
+  contactCount: number,
+  openFollowupCount: number,
+): KpiCardData[] {
   return [
     {
       label: "Gesamtfans",
@@ -51,14 +55,14 @@ function getKpiCards(contactCount: number): KpiCardData[] {
     },
     {
       label: "Offene Follow-ups",
-      value: "0",
-      meta: "Follow-ups noch nicht aktiv",
+      value: openFollowupCount.toLocaleString("de-DE"),
+      meta: "Echte offene Follow-ups",
       icon: "check",
       tone: "violet",
       sparklinePoints:
         "M2 12.5 C13 11 21 11.5 31 9.5 S47 7 57 9 S72 12.5 83 9.5 S98 5.5 108 6.5 S118 7.5 124 4.5",
       infoLabel:
-        "Offene Follow-ups bleibt 0, weil Follow-ups im MVP noch nicht aktiv sind.",
+        "Offene Follow-ups zeigt die echte Anzahl gespeicherter Follow-ups mit Status open im aktuellen Workspace. Ohne eingespielte Follow-up-Tabelle bleibt der Wert tolerant bei 0.",
     },
     {
       label: "Laufende Kampagnen",
@@ -197,8 +201,11 @@ function KpiCard({
   );
 }
 
-export function WorkspaceKpiStrip({ contactCount }: WorkspaceKpiStripProps) {
-  const kpiCards = getKpiCards(contactCount);
+export function WorkspaceKpiStrip({
+  contactCount,
+  openFollowupCount = 0,
+}: WorkspaceKpiStripProps) {
+  const kpiCards = getKpiCards(contactCount, openFollowupCount);
 
   return (
     <section className={styles.kpiGrid} aria-label="KPI-Karten">

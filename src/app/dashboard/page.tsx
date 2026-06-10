@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
+  getWorkspaceOpenFollowups,
   signOutSupabaseServerSession,
   type ContactRow,
+  type FollowupRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
@@ -18,6 +21,9 @@ type WorkspaceDetailsProps = {
   userDisplayName?: string;
   contacts: ContactRow[];
   contactsError?: string;
+  followups: FollowupRow[];
+  followupsError?: string;
+  openFollowupCount: number;
 };
 
 type WorkspaceDisplay = {
@@ -171,8 +177,30 @@ function getContactRows(contacts: ContactRow[]): ContactPreviewRow[] {
   }));
 }
 
-function getFollowUps(): TaskPreview[] {
-  return [];
+function getFollowUps(
+  followups: FollowupRow[],
+  contacts: ContactRow[],
+): TaskPreview[] {
+  const contactNames = new Map(
+    contacts.map((contact) => [contact.id, contact.display_name]),
+  );
+
+  return followups.slice(0, 6).map((followup) => ({
+    title: followup.reason,
+    person: contactNames.get(followup.contact_id) ?? "Unbekannter Kontakt",
+    due: formatDueDate(followup.due_date),
+    status: followup.status ?? "open",
+  }));
+}
+
+function formatDueDate(value: string | null): string {
+  if (!value) {
+    return "Ohne Fälligkeitsdatum";
+  }
+
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00Z`));
 }
 
 function formatSource(value: string | null): string {
@@ -259,6 +287,9 @@ function WorkspaceDetails({
   userDisplayName,
   contacts,
   contactsError,
+  followups,
+  followupsError,
+  openFollowupCount,
 }: WorkspaceDetailsProps) {
   const display = getWorkspaceDisplay(workspace);
   const pageTitle = "Dashboard";
@@ -270,7 +301,7 @@ function WorkspaceDetails({
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("dashboard");
   const contactRows = getContactRows(contacts);
-  const followUps = getFollowUps();
+  const followUps = getFollowUps(followups, contacts);
 
   return (
     <WorkspaceShell
@@ -290,176 +321,182 @@ function WorkspaceDetails({
         primaryActionHref: "/fans",
       }}
       contactCount={contacts.length}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
-          <section
-            className={`${styles.moduleCard} ${styles.contactCard}`}
-            id="contacts"
-            aria-labelledby="contacts-title"
-          >
-            <div className={styles.moduleHeader}>
-              <div>
-                <p className={styles.eyebrow}>Kontakte / Follower</p>
-                <h2 id="contacts-title">Kontaktpipeline</h2>
-              </div>
-              <span>
-                {workspace.plan_id === "starter"
-                  ? "Echte Daten"
-                  : workspace.plan_id === "pilot"
-                    ? "Echte Daten"
-                    : "Vorschau"}
-              </span>
+        <section
+          className={`${styles.moduleCard} ${styles.contactCard}`}
+          id="contacts"
+          aria-labelledby="contacts-title"
+        >
+          <div className={styles.moduleHeader}>
+            <div>
+              <p className={styles.eyebrow}>Kontakte / Follower</p>
+              <h2 id="contacts-title">Kontaktpipeline</h2>
             </div>
-            <p className={styles.moduleText}>
-              Diese Pipeline zeigt echte gespeicherte Kontakte aus dem aktuellen
-              Workspace. Es sind keine Social-Media-Kanäle verbunden und keine
-              Aktivitäten werden automatisch behauptet.
+            <span>
+              {workspace.plan_id === "starter"
+                ? "Echte Daten"
+                : workspace.plan_id === "pilot"
+                  ? "Echte Daten"
+                  : "Vorschau"}
+            </span>
+          </div>
+          <p className={styles.moduleText}>
+            Diese Pipeline zeigt echte gespeicherte Kontakte aus dem aktuellen
+            Workspace. Es sind keine Social-Media-Kanäle verbunden und keine
+            Aktivitäten werden automatisch behauptet.
+          </p>
+          {contactsError ? (
+            <p className={styles.error}>
+              <strong>Kontakte konnten nicht geladen werden.</strong>
+              <span>{contactsError}</span>
             </p>
-            {contactsError ? (
-              <p className={styles.error}>
-                <strong>Kontakte konnten nicht geladen werden.</strong>
-                <span>{contactsError}</span>
-              </p>
-            ) : null}
-            {contactRows.length ? (
-              <div className={styles.tableWrap}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Status</th>
-                      <th>Handle</th>
-                      <th>Kanal/Quelle</th>
-                      <th>Tags</th>
-                      <th>Sprache</th>
-                      <th>Angelegt</th>
-                      <th>Nächster Follow-up</th>
+          ) : null}
+          {contactRows.length ? (
+            <div className={styles.tableWrap}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Handle</th>
+                    <th>Kanal/Quelle</th>
+                    <th>Tags</th>
+                    <th>Sprache</th>
+                    <th>Angelegt</th>
+                    <th>Nächster Follow-up</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contactRows.map((row) => (
+                    <tr key={row.name}>
+                      <td>
+                        <strong className={styles.contactName}>
+                          {row.name}
+                        </strong>
+                      </td>
+                      <td>
+                        <span className={styles.tableBadge}>{row.status}</span>
+                      </td>
+                      <td>{row.profile}</td>
+                      <td>{row.source}</td>
+                      <td>
+                        <div className={styles.tagList}>
+                          {row.tags.map((tag) => (
+                            <span key={`${row.name}-${tag}`}>{tag}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td>
+                        <strong className={styles.scoreValue}>
+                          {row.score}
+                        </strong>
+                      </td>
+                      <td>{row.lastContact}</td>
+                      <td>{row.nextFollowUp}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {contactRows.map((row) => (
-                      <tr key={row.name}>
-                        <td>
-                          <strong className={styles.contactName}>
-                            {row.name}
-                          </strong>
-                        </td>
-                        <td>
-                          <span className={styles.tableBadge}>
-                            {row.status}
-                          </span>
-                        </td>
-                        <td>{row.profile}</td>
-                        <td>{row.source}</td>
-                        <td>
-                          <div className={styles.tagList}>
-                            {row.tags.map((tag) => (
-                              <span key={`${row.name}-${tag}`}>{tag}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td>
-                          <strong className={styles.scoreValue}>
-                            {row.score}
-                          </strong>
-                        </td>
-                        <td>{row.lastContact}</td>
-                        <td>{row.nextFollowUp}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <strong>Noch keine Fans angelegt.</strong>
+              <p>
+                Lege auf der Fans-Seite den ersten Kontakt an; hier erscheinen
+                nur echte Kontakte aus dem Workspace.
+              </p>
+            </div>
+          )}
+        </section>
+      </section>
+
+      <section className={styles.panelGrid} aria-label="Arbeitsbereiche">
+        <article className={styles.moduleCard} id="followups">
+          <div className={styles.moduleHeader}>
+            <div>
+              <p className={styles.eyebrow}>Fällige Follow-ups</p>
+              <h2>Manuelle nächste Schritte</h2>
+            </div>
+            <span>
+              {workspace.plan_id === "starter" ? "MVP" : "Demo/Vorschau"}
+            </span>
+          </div>
+          {followupsError ? (
+            <p className={styles.error}>
+              <strong>Follow-ups konnten nicht geladen werden.</strong>
+              <span>{followupsError}</span>
+            </p>
+          ) : null}
+          <div className={styles.taskList}>
+            {followUps.length ? (
+              followUps.map((task) => (
+                <div
+                  key={`${task.title}-${task.person}`}
+                  className={styles.taskItem}
+                >
+                  <div>
+                    <strong>{task.title}</strong>
+                    <p>{task.person}</p>
+                  </div>
+                  <span>
+                    {task.due} · {task.status}
+                  </span>
+                </div>
+              ))
             ) : (
               <div className={styles.emptyState}>
-                <strong>Noch keine Fans angelegt.</strong>
+                <strong>Noch keine Follow-ups angelegt.</strong>
                 <p>
-                  Lege auf der Fans-Seite den ersten Kontakt an; hier erscheinen
-                  nur echte Kontakte aus dem Workspace.
+                  Speichere einen KI-vorgeschlagenen Follow-up auf einer
+                  Kontaktdetailseite; hier erscheinen nur echte offene
+                  Follow-ups.
                 </p>
               </div>
             )}
-          </section>
-        </section>
+          </div>
+        </article>
 
-        <section className={styles.panelGrid} aria-label="Arbeitsbereiche">
-          <article className={styles.moduleCard} id="followups">
-            <div className={styles.moduleHeader}>
-              <div>
-                <p className={styles.eyebrow}>Fällige Follow-ups</p>
-                <h2>Manuelle nächste Schritte</h2>
-              </div>
-              <span>
-                {workspace.plan_id === "starter" ? "MVP" : "Demo/Vorschau"}
-              </span>
+        <article
+          className={`${styles.quickActions} ${styles.compactActions}`}
+          aria-labelledby="quick-actions-title"
+        >
+          <div className={styles.moduleHeader}>
+            <div>
+              <p className={styles.eyebrow}>Schnellaktionen</p>
+              <h2 id="quick-actions-title">Kompakt</h2>
             </div>
-            <div className={styles.taskList}>
-              {followUps.length ? (
-                followUps.map((task) => (
-                  <div
-                    key={`${task.title}-${task.person}`}
-                    className={styles.taskItem}
-                  >
-                    <div>
-                      <strong>{task.title}</strong>
-                      <p>{task.person}</p>
-                    </div>
-                    <span>
-                      {task.due} · {task.status}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className={styles.emptyState}>
-                  <strong>Noch keine Follow-ups angelegt.</strong>
-                  <p>
-                    Follow-up-Logik ist im MVP noch nicht gebaut; daher werden
-                    hier keine Fake-Aufgaben angezeigt.
-                  </p>
-                </div>
-              )}
-            </div>
-          </article>
+            <span>
+              {workspace.plan_id === "pilot"
+                ? "Demo/Vorschau"
+                : "Aktiv/Limitiert"}
+            </span>
+          </div>
+          <div className={styles.actionList}>
+            <Link href="/fans#new-fan-modal">
+              Kontakt anlegen <small>Aktiv</small>
+            </Link>
+            <a href="#followups">
+              Follow-ups prüfen <small>{openFollowupCount}</small>
+            </a>
+            <Link href="/fans#fans-list">
+              Fanliste öffnen <small>Echte Daten</small>
+            </Link>
+            <a href="#followups">
+              Offene Follow-ups <small>{openFollowupCount}</small>
+            </a>
+          </div>
+        </article>
+      </section>
 
-          <article
-            className={`${styles.quickActions} ${styles.compactActions}`}
-            aria-labelledby="quick-actions-title"
-          >
-            <div className={styles.moduleHeader}>
-              <div>
-                <p className={styles.eyebrow}>Schnellaktionen</p>
-                <h2 id="quick-actions-title">Kompakt</h2>
-              </div>
-              <span>
-                {workspace.plan_id === "pilot"
-                  ? "Demo/Vorschau"
-                  : "Aktiv/Limitiert"}
-              </span>
-            </div>
-            <div className={styles.actionList}>
-              <Link href="/fans#new-fan-modal">
-                Kontakt anlegen <small>Aktiv</small>
-              </Link>
-              <a href="#followups">
-                Follow-ups noch nicht aktiv <small>Noch 0</small>
-              </a>
-              <Link href="/fans#fans-list">
-                Fanliste öffnen <small>Echte Daten</small>
-              </Link>
-              <a href="#followups">
-                Follow-ups prüfen <small>Noch 0</small>
-              </a>
-            </div>
-          </article>
-        </section>
-
-        <div className={styles.safetyNote} role="note">
-          <strong>Kein automatisches Senden</strong>
-          <span>
-            FanMind zeigt aktuell Kontakte aus deinem Workspace; Kampagnen,
-            Kanalaktionen und automatisches Senden sind im MVP nicht aktiv.
-          </span>
+      <div className={styles.safetyNote} role="note">
+        <strong>Kein automatisches Senden</strong>
+        <span>
+          FanMind zeigt aktuell Kontakte aus deinem Workspace; Kampagnen,
+          Kanalaktionen und automatisches Senden sind im MVP nicht aktiv.
+        </span>
       </div>
     </WorkspaceShell>
   );
@@ -477,6 +514,12 @@ export default async function DashboardPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const followupsResult = workspace
+    ? await getWorkspaceOpenFollowups(workspace.id)
+    : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
 
   return (
     <main className={styles.page}>
@@ -489,6 +532,9 @@ export default async function DashboardPage() {
           )}
           contacts={contactsResult?.contacts ?? []}
           contactsError={contactsResult?.error?.message}
+          followups={followupsResult?.followups ?? []}
+          followupsError={followupsResult?.error?.message}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
         />
       ) : (
         <section className={styles.fallbackCard} aria-label="FanMind Workspace">
