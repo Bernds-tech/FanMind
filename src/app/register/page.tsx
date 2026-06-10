@@ -171,9 +171,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       label: "2",
       badge: "Aktiv",
       title: "Starter starten",
-      price: "990 € Einrichtung + 299 €/Monat",
+      price: "990 € Einrichtung + 299 €/Monat · monatlich kündbar",
       description: "Starter für laufende Nutzung nach dem Setup; monatlich kündbar.",
-      bullets: ["990 € einmalige Einrichtung", "299 € pro Monat", "monatlich kündbar", "bezahlter Pilot wird als Setup-Gebühr angerechnet"],
+      bullets: ["990 € einmalige Einrichtung", "299 € pro Monat", "monatlich kündbar", "Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat."],
       href: registerPlanHref("starter", language),
       cta: "Starter wählen",
     },
@@ -218,9 +218,9 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
     {
       id: "starter_paid_setup",
       title: "Starter",
-      price: "990 € Einrichtung + 299 €/Monat",
-      description: "Für laufende Nutzung nach dem Setup. Monatlich kündbar; keine feste Jahresbindung.",
-      bullets: ["einmalige Einrichtungsgebühr", "299 € pro Monat", "monatlich kündbar", "Pilot-/Setup-Gebühr wird angerechnet"],
+      price: "990 € Einrichtung + 299 €/Monat · monatlich kündbar",
+      description: "Für laufende Nutzung nach dem Setup. Monatlich kündbar.",
+      bullets: ["einmalige Einrichtungsgebühr", "299 € pro Monat", "monatlich kündbar", "Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat."],
       badge: "Aktiv",
     },
   ];
@@ -463,7 +463,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             <div className={styles.planIntro}>
               <p className={styles.eyebrow}>{language === "en" ? "Setup first" : "Setup zuerst"}</p>
               <h1>{language === "en" ? "Choose your FanMind entry" : "Wähle deinen FanMind-Einstieg"}</h1>
-              <p>{language === "en" ? "Choose Pilot / Setup for a 1-month test, or Starter for ongoing use with €990 setup + €299/month." : "Wähle Pilot / Setup für 1 Monat Test oder Starter für laufende Nutzung mit 990 € Einrichtung + 299 €/Monat."}</p>
+              <p>{language === "en" ? "Choose Pilot / Setup for a 1-month test, or Starter for ongoing use with €990 setup + €299/month." : "Wähle Pilot / Setup für 1 Monat Test oder Starter für laufende Nutzung mit 990 € Einrichtung + 299 €/Monat · monatlich kündbar."}</p>
             </div>
 
             {hasInvalidPlan && (
@@ -508,7 +508,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.formHeader}>
                 <p className={styles.eyebrow}>{selectedPlanId === "pilot" ? "Pilot / Setup" : "Starter-Abo"}</p>
                 <h1>{selectedPlanId === "pilot" ? (language === "en" ? "Start Pilot / Setup" : "Pilot / Setup starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
-                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, test for 1 month, no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Monat testen · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "€990 setup + €299/month, monthly cancellable. No payment is collected here." : "990 € Einrichtung + 299 €/Monat, monatlich kündbar. Hier wird keine Zahlung ausgelöst.")}</p>
+                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, test for 1 month, no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Monat testen · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "€990 setup + €299/month, monthly cancellable. No payment is collected here." : "990 € Einrichtung + 299 €/Monat · monatlich kündbar. Hier wird keine Zahlung ausgelöst.")}</p>
               </div>
 
               {selectedPlanId === "starter" && (
