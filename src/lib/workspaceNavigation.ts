@@ -4,6 +4,7 @@ export type WorkspaceRouteKey =
   | "dashboard"
   | "fans"
   | "channels"
+  | "onboarding"
   | "settings"
   | "top-fans"
   | "reactivation";
@@ -21,6 +22,11 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey): {
         active: activeRoute === "dashboard",
       },
       { label: "Fans", href: "/fans", active: activeRoute === "fans" },
+      {
+        label: "Onboarding",
+        href: "/onboarding",
+        active: activeRoute === "onboarding",
+      },
       {
         label: "Kanäle",
         href: "/channels",

@@ -484,6 +484,9 @@ function WorkspaceDetails({
             <Link href="/fans#fans-list">
               Fanliste öffnen <small>Echte Daten</small>
             </Link>
+            <Link href="/onboarding">
+              Setup prüfen <small>MVP</small>
+            </Link>
             <a href="#followups">
               Offene Follow-ups <small>{openFollowupCount}</small>
             </a>
