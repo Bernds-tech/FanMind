@@ -39,10 +39,12 @@ function CsvImportWorkspace({
   workspace,
   userDisplayName,
   contactCount,
+  contactsError,
 }: {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
+  contactsError?: string;
 }) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -68,6 +70,12 @@ function CsvImportWorkspace({
       contactCount={contactCount}
       logoutAction={logout}
     >
+      {contactsError ? (
+        <p className={dashboardStyles.error}>
+          <strong>Kontaktbestand konnte nicht geladen werden.</strong>
+          <span>{contactsError}</span>
+        </p>
+      ) : null}
       <CsvImportClient />
     </WorkspaceShell>
   );
@@ -96,6 +104,7 @@ export default async function CsvImportPage() {
             workspace.name,
           )}
           contactCount={contactsResult?.contacts.length ?? 0}
+          contactsError={contactsResult?.error?.message}
         />
       ) : (
         <section
