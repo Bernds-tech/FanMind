@@ -114,11 +114,6 @@ function FansWorkspace({
           id="fans-list"
           aria-label="Fans-Liste"
         >
-          <div className={styles.listToolbar}>
-            <Link className={styles.importLink} href="/fans/import">
-              CSV importieren
-            </Link>
-          </div>
           {contactsError ? (
             <p className={dashboardStyles.error}>
               <strong>Kontakte konnten nicht geladen werden.</strong>
@@ -133,7 +128,12 @@ function FansWorkspace({
           ) : null}
           {fanGroups.length ? (
             <>
-              <ChannelFilters activeChannel={activeChannel} />
+              <div className={styles.listToolbar}>
+                <ChannelFilters activeChannel={activeChannel} />
+                <Link className={styles.importLink} href="/fans/import">
+                  CSV importieren
+                </Link>
+              </div>
               {visibleFanGroups.length ? (
                 <FansTable fanGroups={visibleFanGroups} />
               ) : (
@@ -748,9 +748,11 @@ function renderNextFollowup(followup: FollowupRow | null) {
   return (
     <span className={styles.followupCell}>
       {followup.due_date ? (
-        <span>{formatDateOnly(followup.due_date)}</span>
+        <span className={styles.followupDate}>
+          {formatDateOnly(followup.due_date)}
+        </span>
       ) : null}
-      {followup.reason}
+      <span className={styles.followupReason}>{followup.reason}</span>
     </span>
   );
 }
