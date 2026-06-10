@@ -9,6 +9,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
+import { AppHeader } from "./AppHeader";
 import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
@@ -606,30 +607,13 @@ function WorkspaceDetails({
       </aside>
 
       <div className={styles.dashboardContent}>
-        <header className={styles.topbar}>
-          <div className={styles.titleCluster}>
-            <h1>{pageTitle}</h1>
-            <p>{pageSubtitle}</p>
-          </div>
-          <div className={styles.topbarActions}>
-            <label className={styles.searchBox}>
-              <span>Suche</span>
-              <input
-                type="search"
-                placeholder="Suche nach Name, Tag, Kanal, Sprache ..."
-              />
-            </label>
-            <button type="button" className={styles.filterChip}>
-              Letzte 30 Tage
-            </button>
-            <button type="button" className={styles.filterChip}>
-              Filter
-            </button>
-            <a className={styles.primaryButton} href="/fans">
-              {primaryActionLabel}
-            </a>
-          </div>
-        </header>
+        <AppHeader
+          title={pageTitle}
+          subtitle={pageSubtitle}
+          searchPlaceholder="Suche nach Name, Tag, Kanal, Sprache ..."
+          primaryActionLabel={primaryActionLabel}
+          primaryActionHref="/fans"
+        />
 
         <section className={styles.kpiGrid} aria-label="KPI-Karten">
           {kpiCards.map((card) => (

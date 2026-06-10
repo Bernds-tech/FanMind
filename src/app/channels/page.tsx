@@ -5,6 +5,7 @@ import {
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { AppHeader } from "../dashboard/AppHeader";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
 type SidebarLink = {
@@ -122,30 +123,13 @@ function ChannelsWorkspace({ workspace, userDisplayName }: ChannelsWorkspaceProp
       </aside>
 
       <div className={dashboardStyles.dashboardContent}>
-        <header className={dashboardStyles.topbar}>
-          <div className={dashboardStyles.titleCluster}>
-            <h1>Kanäle</h1>
-            <p>Manuelle Kanalübersicht für {workspace.name}; echte Integrationen sind noch nicht aktiv.</p>
-          </div>
-          <div className={dashboardStyles.topbarActions}>
-            <label className={dashboardStyles.searchBox}>
-              <span>Suche</span>
-              <input
-                type="search"
-                placeholder="Suche nach Kanal, Quelle, Status ..."
-              />
-            </label>
-            <button type="button" className={dashboardStyles.filterChip}>
-              Letzte 30 Tage
-            </button>
-            <button type="button" className={dashboardStyles.filterChip}>
-              Filter
-            </button>
-            <a className={dashboardStyles.primaryButton} href="#channels-preview">
-              Kanal vormerken
-            </a>
-          </div>
-        </header>
+        <AppHeader
+          title="Kanäle"
+          subtitle="Willkommen zurück, Pilot Test 👋"
+          searchPlaceholder="Suche nach Name, Tag, Kanal, Sprache ..."
+          primaryActionLabel="Kanal vormerken"
+          primaryActionHref="#channels-preview"
+        />
 
         <section className={dashboardStyles.moduleCard} id="channels-preview" aria-labelledby="channels-title">
           <div className={dashboardStyles.moduleHeader}>

@@ -7,6 +7,7 @@ import {
   type ContactRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { AppHeader } from "../dashboard/AppHeader";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan } from "./actions";
 import styles from "./fans.module.css";
@@ -147,30 +148,13 @@ function FansWorkspace({
       </aside>
 
       <div className={dashboardStyles.dashboardContent}>
-        <header className={dashboardStyles.topbar}>
-          <div className={dashboardStyles.titleCluster}>
-            <h1>Fans</h1>
-            <p>Workspace-bezogene Kontakte für {workspace.name}</p>
-          </div>
-          <div className={dashboardStyles.topbarActions}>
-            <label className={dashboardStyles.searchBox}>
-              <span>Suche</span>
-              <input
-                type="search"
-                placeholder="Suche nach Name, Tag, Quelle, Sprache ..."
-              />
-            </label>
-            <button type="button" className={dashboardStyles.filterChip}>
-              Letzte 30 Tage
-            </button>
-            <button type="button" className={dashboardStyles.filterChip}>
-              Filter
-            </button>
-            <a className={dashboardStyles.primaryButton} href="#new-fan-modal">
-              + Neuer Fan
-            </a>
-          </div>
-        </header>
+        <AppHeader
+          title="Fans"
+          subtitle="Willkommen zurück, Pilot Test 👋"
+          searchPlaceholder="Suche nach Name, Tag, Kanal, Sprache ..."
+          primaryActionLabel="+ Neuer Fan"
+          primaryActionHref="#new-fan-modal"
+        />
 
         <div className={styles.fansStack}>
           <section className={dashboardStyles.moduleCard} id="fans-list" aria-labelledby="fans-list-title">
@@ -188,19 +172,6 @@ function FansWorkspace({
               </p>
             ) : null}
             {contacts.length ? <FansTable contacts={contacts} /> : <FansEmptyState />}
-          </section>
-
-          <section className={`${dashboardStyles.moduleCard} ${styles.workspaceNote}`} id="workspace" aria-labelledby="workspace-title">
-            <div className={dashboardStyles.moduleHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Fans / Kontakte</p>
-                <h2 id="workspace-title">Kontakt-CRM</h2>
-              </div>
-              <span>{contacts.length} echte Kontakte</span>
-            </div>
-            <p className={dashboardStyles.moduleText}>
-              Fans werden ausschließlich für den aktuell geladenen Workspace gespeichert. Quellen sind manuelle Kontaktwerte; es gibt keinen Kanal-Sync und keinen automatischen Versand.
-            </p>
           </section>
 
           <section
@@ -344,11 +315,6 @@ function FansEmptyState() {
       <p>
         Lege den ersten Fan manuell an. FanMind behauptet hier keine aktive Instagram-, TikTok- oder CSV-Synchronisation.
       </p>
-      <div className={dashboardStyles.emptyActions}>
-        <a className={dashboardStyles.primaryButton} href="#new-fan-modal">
-          + Neuer Fan
-        </a>
-      </div>
     </div>
   );
 }
