@@ -38,7 +38,7 @@ const coreFeatureKeys: FeatureKey[] = [
 
 const appNavigation: Array<{ featureKey: FeatureKey; label: string; href: string }> = [
   { featureKey: "dashboard", label: "Dashboard", href: "/onboarding" },
-  { featureKey: "contacts", label: "Kontakte", href: "/onboarding#contacts" },
+  { featureKey: "contacts", label: "Kontakte", href: "/fans" },
   { featureKey: "followups", label: "Follow-ups", href: "/onboarding#followups" },
   { featureKey: "roadmap", label: "Roadmap", href: "/roadmap" },
   { featureKey: "campaigns", label: "Kampagnen", href: "/roadmap#campaigns" },
