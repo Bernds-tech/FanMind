@@ -302,6 +302,7 @@ function WorkspaceDetails({
     getWorkspaceNavigation("dashboard");
   const contactRows = getContactRows(contacts);
   const followUps = getFollowUps(followups, contacts);
+  const firstContact = contacts[0];
 
   return (
     <WorkspaceShell
@@ -345,8 +346,8 @@ function WorkspaceDetails({
           </div>
           <p className={styles.moduleText}>
             Diese Pipeline zeigt echte gespeicherte Kontakte aus dem aktuellen
-            Workspace. Es sind keine Social-Media-Kanäle verbunden und keine
-            Aktivitäten werden automatisch behauptet.
+            Workspace. FanMind synchronisiert aktuell keine externen
+            Plattformen.
           </p>
           {contactsError ? (
             <p className={styles.error}>
@@ -478,27 +479,28 @@ function WorkspaceDetails({
             <Link href="/fans#new-fan-modal">
               Kontakt anlegen <small>Aktiv</small>
             </Link>
-            <a href="#followups">
-              Follow-ups prüfen <small>{openFollowupCount}</small>
-            </a>
+            {firstContact ? (
+              <Link href={`/fans/${firstContact.id}`}>
+                Fan öffnen <small>Detail</small>
+              </Link>
+            ) : null}
             <Link href="/fans#fans-list">
               Fanliste öffnen <small>Echte Daten</small>
             </Link>
-            <Link href="/fans/import">
-              CSV-Import öffnen <small>CSV</small>
-            </Link>
-            <a href="#followups">
-              Offene Follow-ups <small>{openFollowupCount}</small>
-            </a>
+            {openFollowupCount > 0 ? (
+              <a href="#followups">
+                Offene Follow-ups <small>{openFollowupCount}</small>
+              </a>
+            ) : null}
           </div>
         </article>
       </section>
 
       <div className={styles.safetyNote} role="note">
-        <strong>Kein automatisches Senden</strong>
+        <strong>Keine automatische Sendefunktion.</strong>
         <span>
-          FanMind zeigt aktuell Kontakte aus deinem Workspace; Kampagnen,
-          Kanalaktionen und automatisches Senden sind im MVP nicht aktiv.
+          FanMind synchronisiert aktuell keine externen Plattformen. Mensch
+          prüft und sendet final selbst.
         </span>
       </div>
     </WorkspaceShell>

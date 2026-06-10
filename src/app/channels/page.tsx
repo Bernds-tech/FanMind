@@ -65,9 +65,9 @@ function ChannelsWorkspace({
           <span>Keine Integration aktiv</span>
         </div>
         <p className={dashboardStyles.moduleText}>
-          Diese Seite ist eine MVP-Vorschau. FanMind startet hier keine echte
-          Social-Media-Integration, synchronisiert keine Plattformdaten und
-          sendet nichts automatisch.
+          Diese Seite ist eine MVP-Vorschau. FanMind synchronisiert aktuell
+          keine externen Plattformen. Keine automatische Sendefunktion. Mensch
+          prüft und sendet final selbst.
         </p>
         <div className={dashboardStyles.emptyState}>
           <strong>Noch keine Kanäle verbunden.</strong>
