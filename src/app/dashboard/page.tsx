@@ -533,7 +533,7 @@ function WorkspaceDetails({
     { label: "Einstellungen", href: "#contract", disabled: true },
   ];
   const savedViews: SidebarLink[] = [
-    { label: "Top Fans", href: "#contacts" },
+    { label: "Top Fans", href: "/fans" },
     { label: "Reaktivierung", href: "#followups" },
   ];
   const contactRows = getContactRows(workspace);
@@ -621,7 +621,7 @@ function WorkspaceDetails({
             <button type="button" className={styles.filterChip}>
               Filter
             </button>
-            <a className={styles.primaryButton} href="#contacts">
+            <a className={styles.primaryButton} href="/fans">
               {primaryActionLabel}
             </a>
           </div>
@@ -751,7 +751,7 @@ function WorkspaceDetails({
               </span>
             </div>
             <div className={styles.actionList}>
-              <a href="#contacts">
+              <a href="/fans">
                 Kontakt anlegen{" "}
                 <small>
                   {workspace.plan_id === "pilot" ? "Demo" : "Aktiv"}
@@ -763,7 +763,7 @@ function WorkspaceDetails({
                   {workspace.plan_id === "pilot" ? "Demo" : "Aktiv"}
                 </small>
               </a>
-              <a href="#contacts">
+              <a href="/fans">
                 Sandra M. öffnen{" "}
                 <small>
                   {workspace.plan_id === "pilot" ? "Demo" : "Limitiert"}
