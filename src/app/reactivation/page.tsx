@@ -10,7 +10,7 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
-type ChannelsWorkspaceProps = {
+type ReactivationWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
@@ -21,65 +21,6 @@ async function logout() {
 
   await signOutSupabaseServerSession();
   redirect("/login");
-}
-
-function ChannelsWorkspace({
-  workspace,
-  userDisplayName,
-  contactCount,
-}: ChannelsWorkspaceProps) {
-  const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("channels");
-  const userLabel = userDisplayName || workspace.name || "Nutzer";
-
-  return (
-    <WorkspaceShell
-      workspaceName={workspace.name}
-      userLabel={userLabel}
-      planLabel={workspace.plan_id}
-      planMeta={workspace.role}
-      planStatus="Roadmap"
-      mainNavigation={mainNavigation}
-      settingsNavigation={settingsNavigation}
-      savedViews={savedViews}
-      header={{
-        title: "Kanäle",
-        subtitle: "Willkommen zurück, Pilot Test 👋",
-        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
-        primaryActionLabel: "Kanal vormerken",
-        primaryActionHref: "#channels-preview",
-      }}
-      contactCount={contactCount}
-      logoutAction={logout}
-    >
-      <section
-        className={dashboardStyles.moduleCard}
-        id="channels-preview"
-        aria-labelledby="channels-title"
-      >
-        <div className={dashboardStyles.moduleHeader}>
-          <div>
-            <p className={dashboardStyles.eyebrow}>Coming Soon</p>
-            <h2 id="channels-title">Kanäle vormerken</h2>
-          </div>
-          <span>Keine Integration aktiv</span>
-        </div>
-        <p className={dashboardStyles.moduleText}>
-          Diese Seite ist eine MVP-Vorschau. FanMind startet hier keine echte
-          Social-Media-Integration, synchronisiert keine Plattformdaten und
-          sendet nichts automatisch.
-        </p>
-        <div className={dashboardStyles.emptyState}>
-          <strong>Noch keine Kanäle verbunden.</strong>
-          <p>
-            Kanäle können aktuell nur als Produktbereich vorgemerkt werden.
-            Kontakte auf der Fans-Seite bleiben manuell gepflegte
-            Workspace-Daten.
-          </p>
-        </div>
-      </section>
-    </WorkspaceShell>
-  );
 }
 
 function getUserDisplayName(
@@ -93,7 +34,65 @@ function getUserDisplayName(
     : fallback;
 }
 
-export default async function ChannelsPage() {
+function ReactivationWorkspace({
+  workspace,
+  userDisplayName,
+  contactCount,
+}: ReactivationWorkspaceProps) {
+  const { mainNavigation, settingsNavigation, savedViews } =
+    getWorkspaceNavigation("reactivation");
+  const userLabel = userDisplayName || workspace.name || "Nutzer";
+
+  return (
+    <WorkspaceShell
+      workspaceName={workspace.name}
+      userLabel={userLabel}
+      planLabel={workspace.plan_id}
+      planMeta={workspace.role}
+      planStatus="Coming Soon"
+      mainNavigation={mainNavigation}
+      settingsNavigation={settingsNavigation}
+      savedViews={savedViews}
+      header={{
+        title: "Reaktivierung",
+        subtitle: "Willkommen zurück, Pilot Test 👋",
+        searchPlaceholder: "Suche nach Name, Tag, Status ...",
+        primaryActionLabel: "Coming Soon",
+        primaryActionHref: "#reactivation-preview",
+      }}
+      contactCount={contactCount}
+      logoutAction={logout}
+    >
+      <section
+        className={dashboardStyles.moduleCard}
+        id="reactivation-preview"
+        aria-labelledby="reactivation-title"
+      >
+        <div className={dashboardStyles.moduleHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Coming Soon</p>
+            <h2 id="reactivation-title">Reaktivierung vorbereiten</h2>
+          </div>
+          <span>Coming Soon</span>
+        </div>
+        <p className={dashboardStyles.moduleText}>
+          Reaktivierungslogik ist im MVP noch nicht aktiv. Später werden hier
+          inaktive Fans, manuelle nächste Schritte und sichere
+          Kontaktvorschläge vorbereitet.
+        </p>
+        <div className={dashboardStyles.emptyState}>
+          <strong>Noch keine Reaktivierungslogik aktiv.</strong>
+          <p>
+            FanMind startet hier keine automatische Kontaktaufnahme und zeigt
+            keine erfundenen Reaktivierungsfälle.
+          </p>
+        </div>
+      </section>
+    </WorkspaceShell>
+  );
+}
+
+export default async function ReactivationPage() {
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -109,7 +108,7 @@ export default async function ChannelsPage() {
   return (
     <main className={dashboardStyles.page}>
       {workspace ? (
-        <ChannelsWorkspace
+        <ReactivationWorkspace
           workspace={workspace}
           userDisplayName={getUserDisplayName(
             data.user.user_metadata,
@@ -120,14 +119,14 @@ export default async function ChannelsPage() {
       ) : (
         <section
           className={dashboardStyles.fallbackCard}
-          aria-label="FanMind Kanäle"
+          aria-label="FanMind Reaktivierung"
         >
           <div>
-            <p className={dashboardStyles.eyebrow}>FanMind Kanäle</p>
+            <p className={dashboardStyles.eyebrow}>FanMind Reaktivierung</p>
             <h1>Workspace-Status</h1>
             <p>
-              Kanäle ist geschützt: Supabase Auth ist aktiv. Für deinen Account
-              wurde noch kein Workspace gefunden.
+              Reaktivierung ist geschützt: Supabase Auth ist aktiv. Für deinen
+              Account wurde noch kein Workspace gefunden.
             </p>
           </div>
           {userError ? (

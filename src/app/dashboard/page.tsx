@@ -8,10 +8,8 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
-import {
-  WorkspaceShell,
-  type WorkspaceNavLink,
-} from "@/components/WorkspaceShell";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
@@ -300,18 +298,8 @@ function WorkspaceDetails({
   const primaryActionLabel = "+ Neuer Kontakt";
   const planStatus = getPlanStatus(workspace);
   const userLabel = displayName;
-  const mainNavigation: WorkspaceNavLink[] = [
-    { label: "Dashboard", href: "/dashboard", active: true },
-    { label: "Fans", href: "/fans" },
-    { label: "Kanäle", href: "/channels", badge: "Roadmap" },
-  ];
-  const settingsNavigation: WorkspaceNavLink[] = [
-    { label: "Einstellungen", href: "#contract", disabled: true },
-  ];
-  const savedViews: WorkspaceNavLink[] = [
-    { label: "Top Fans", href: "/fans" },
-    { label: "Reaktivierung", href: "#followups" },
-  ];
+  const { mainNavigation, settingsNavigation, savedViews } =
+    getWorkspaceNavigation("dashboard");
   const contactRows = getContactRows(contacts);
   const followUps = getFollowUps();
 
