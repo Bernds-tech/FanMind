@@ -26,6 +26,7 @@ type WorkspaceShellProps = {
   header: WorkspaceHeaderProps;
   contactCount: number;
   logoutAction: () => Promise<void>;
+  profileHref?: string;
   children: ReactNode;
 };
 
@@ -85,6 +86,7 @@ export function WorkspaceShell({
   header,
   contactCount,
   logoutAction,
+  profileHref = "/settings/profile",
   children,
 }: WorkspaceShellProps) {
   return (
@@ -125,14 +127,18 @@ export function WorkspaceShell({
         </section>
 
         <div className={styles.sidebarFooter}>
-          <section className={styles.userMiniCard} aria-label="Nutzer">
+          <a
+            className={styles.userMiniCard}
+            aria-label="Nutzerprofil öffnen"
+            href={profileHref}
+          >
             <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
             <div>
               <span>Nutzer</span>
               <strong>{userLabel}</strong>
               <p>{workspaceName}</p>
             </div>
-          </section>
+          </a>
           <section className={styles.planMiniCard} aria-label="Paket">
             <div>
               <span>Paket</span>
