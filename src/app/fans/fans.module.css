@@ -104,3 +104,80 @@
     grid-column: auto;
   }
 }
+
+.workspaceNote {
+  padding: 14px 16px;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.modalOverlay:target {
+  display: grid;
+}
+
+.modalCard {
+  width: min(760px, 100%);
+  max-height: min(88vh, 820px);
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 22px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98)),
+    #020617;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.46);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.modalHeader h2 {
+  margin: 4px 0 0;
+  color: #ffffff;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.modalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  color: #dbeafe;
+  font-size: 24px;
+  line-height: 1;
+  text-decoration: none;
+  background: rgba(15, 23, 42, 0.74);
+}
+
+.formActions {
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .modalOverlay {
+    align-items: start;
+    padding: 12px;
+  }
+
+  .modalCard {
+    padding: 14px;
+  }
+}

@@ -76,7 +76,7 @@ function FansWorkspace({
   const mainNavigation: SidebarLink[] = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Fans", href: "/fans", active: true },
-    { label: "Kanäle", href: "#channels", badge: "Roadmap" },
+    { label: "Kanäle", href: "/channels", badge: "Roadmap" },
   ];
   const settingsNavigation: SidebarLink[] = [
     { label: "Einstellungen", href: "#workspace", disabled: true },
@@ -153,98 +153,26 @@ function FansWorkspace({
             <p>Workspace-bezogene Kontakte für {workspace.name}</p>
           </div>
           <div className={dashboardStyles.topbarActions}>
-            <a className={dashboardStyles.primaryButton} href="#new-fan">
+            <label className={dashboardStyles.searchBox}>
+              <span>Suche</span>
+              <input
+                type="search"
+                placeholder="Suche nach Name, Tag, Quelle, Sprache ..."
+              />
+            </label>
+            <button type="button" className={dashboardStyles.filterChip}>
+              Letzte 30 Tage
+            </button>
+            <button type="button" className={dashboardStyles.filterChip}>
+              Filter
+            </button>
+            <a className={dashboardStyles.primaryButton} href="#new-fan-modal">
               + Neuer Fan
             </a>
           </div>
         </header>
 
         <div className={styles.fansStack}>
-          <section className={dashboardStyles.moduleCard} id="workspace" aria-labelledby="workspace-title">
-            <div className={dashboardStyles.moduleHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Fans / Kontakte</p>
-                <h2 id="workspace-title">Kontakt-CRM</h2>
-              </div>
-              <span>{contacts.length} echte Kontakte</span>
-            </div>
-            <p className={dashboardStyles.moduleText}>
-              Diese Seite liest und speichert Fans ausschließlich für den aktuell geladenen Workspace. Social-Media-Kanäle sind nicht synchronisiert; Kanalwerte sind manuelle Kontaktquellen.
-            </p>
-            {contactsError ? (
-              <p className={dashboardStyles.error}>
-                <strong>Kontakte konnten nicht geladen werden.</strong>
-                <span>{contactsError}</span>
-              </p>
-            ) : null}
-          </section>
-
-          <section className={dashboardStyles.moduleCard} id="new-fan" aria-labelledby="new-fan-title">
-            <div className={dashboardStyles.moduleHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Manuell anlegen</p>
-                <h2 id="new-fan-title">+ Neuer Fan</h2>
-              </div>
-              <span>Kein Auto-Sync</span>
-            </div>
-            <form className={styles.formGrid} action={createFan}>
-              <div className={styles.fieldWide}>
-                <label htmlFor="display_name">Name</label>
-                <input id="display_name" name="display_name" required placeholder="z. B. Sandra Müller" />
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="handle">Handle</label>
-                <input id="handle" name="handle" placeholder="@sandra" />
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="source_platform">Quelle/Kanal</label>
-                <select id="source_platform" name="source_platform" defaultValue="manual">
-                  <option value="manual">Manuell</option>
-                  <option value="instagram">Instagram (manuell)</option>
-                  <option value="tiktok">TikTok (manuell)</option>
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="language">Sprache</label>
-                <select id="language" name="language" defaultValue="de">
-                  <option value="de">Deutsch</option>
-                  <option value="en">Englisch</option>
-                  <option value="fr">Französisch</option>
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label htmlFor="status">Status</label>
-                <select id="status" name="status" defaultValue="new">
-                  <option value="new">Neu</option>
-                  <option value="active">Aktiv</option>
-                  <option value="warm">Warm</option>
-                  <option value="follow_up">Follow-up</option>
-                  <option value="paused">Pausiert</option>
-                </select>
-              </div>
-              <div className={styles.fieldFull}>
-                <label htmlFor="tags">Tags</label>
-                <input id="tags" name="tags" placeholder="Kommagetrennt, z. B. VIP, Newsletter, Berlin" />
-              </div>
-              <div className={styles.fieldFull}>
-                <label htmlFor="summary">Summary</label>
-                <textarea
-                  id="summary"
-                  name="summary"
-                  placeholder="Kurze manuelle Notiz zum Fan – keine KI-Zusammenfassung."
-                />
-                <p className={styles.fieldHint}>
-                  Wird nur im aktuellen Workspace gespeichert und löst keinen Versand aus.
-                </p>
-              </div>
-              <div className={styles.formActions}>
-                <button type="submit" className={dashboardStyles.primaryButton}>
-                  Kontakt speichern
-                </button>
-              </div>
-            </form>
-          </section>
-
           <section className={dashboardStyles.moduleCard} id="fans-list" aria-labelledby="fans-list-title">
             <div className={dashboardStyles.moduleHeader}>
               <div>
@@ -253,7 +181,105 @@ function FansWorkspace({
               </div>
               <span>{contacts.length ? "Echte Daten" : "Empty State"}</span>
             </div>
+            {contactsError ? (
+              <p className={dashboardStyles.error}>
+                <strong>Kontakte konnten nicht geladen werden.</strong>
+                <span>{contactsError}</span>
+              </p>
+            ) : null}
             {contacts.length ? <FansTable contacts={contacts} /> : <FansEmptyState />}
+          </section>
+
+          <section className={`${dashboardStyles.moduleCard} ${styles.workspaceNote}`} id="workspace" aria-labelledby="workspace-title">
+            <div className={dashboardStyles.moduleHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>Fans / Kontakte</p>
+                <h2 id="workspace-title">Kontakt-CRM</h2>
+              </div>
+              <span>{contacts.length} echte Kontakte</span>
+            </div>
+            <p className={dashboardStyles.moduleText}>
+              Fans werden ausschließlich für den aktuell geladenen Workspace gespeichert. Quellen sind manuelle Kontaktwerte; es gibt keinen Kanal-Sync und keinen automatischen Versand.
+            </p>
+          </section>
+
+          <section
+            className={styles.modalOverlay}
+            id="new-fan-modal"
+            aria-labelledby="new-fan-title"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className={styles.modalCard}>
+              <div className={styles.modalHeader}>
+                <div>
+                  <p className={dashboardStyles.eyebrow}>Manuell anlegen</p>
+                  <h2 id="new-fan-title">+ Neuer Fan</h2>
+                </div>
+                <a className={styles.modalClose} href="#fans-list" aria-label="Modal schließen">
+                  ×
+                </a>
+              </div>
+              <form className={styles.formGrid} action={createFan}>
+                <div className={styles.fieldWide}>
+                  <label htmlFor="display_name">Name</label>
+                  <input id="display_name" name="display_name" required placeholder="z. B. Gerhard Müller" />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="handle">Handle optional</label>
+                  <input id="handle" name="handle" placeholder="@gerhard" />
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="source_platform">Plattform/Quelle</label>
+                  <select id="source_platform" name="source_platform" defaultValue="manual">
+                    <option value="manual">Manuell</option>
+                    <option value="instagram">Instagram (manuell)</option>
+                    <option value="tiktok">TikTok (manuell)</option>
+                  </select>
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="language">Sprache</label>
+                  <select id="language" name="language" defaultValue="de">
+                    <option value="de">Deutsch</option>
+                    <option value="en">Englisch</option>
+                    <option value="fr">Französisch</option>
+                  </select>
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="status">Status</label>
+                  <select id="status" name="status" defaultValue="new">
+                    <option value="new">Neu</option>
+                    <option value="active">Aktiv</option>
+                    <option value="warm">Warm</option>
+                    <option value="follow_up">Follow-up</option>
+                    <option value="paused">Pausiert</option>
+                  </select>
+                </div>
+                <div className={styles.fieldFull}>
+                  <label htmlFor="tags">Tags</label>
+                  <input id="tags" name="tags" placeholder="Kommagetrennt, z. B. VIP, Newsletter, Berlin" />
+                </div>
+                <div className={styles.fieldFull}>
+                  <label htmlFor="summary">Summary/Notiz</label>
+                  <textarea
+                    id="summary"
+                    name="summary"
+                    placeholder="Kurze manuelle Notiz zum Fan."
+                  />
+                  <p className={styles.fieldHint}>
+                    Wird nur im aktuellen Workspace gespeichert und löst keinen Versand aus.
+                  </p>
+                </div>
+                <div className={styles.formActions}>
+                  <a className={dashboardStyles.secondaryButton} href="#fans-list">
+                    Abbrechen
+                  </a>
+                  <button type="submit" className={dashboardStyles.primaryButton}>
+                    Kontakt speichern
+                  </button>
+                </div>
+              </form>
+            </div>
           </section>
         </div>
       </div>
@@ -319,7 +345,7 @@ function FansEmptyState() {
         Lege den ersten Fan manuell an. FanMind behauptet hier keine aktive Instagram-, TikTok- oder CSV-Synchronisation.
       </p>
       <div className={dashboardStyles.emptyActions}>
-        <a className={dashboardStyles.primaryButton} href="#new-fan">
+        <a className={dashboardStyles.primaryButton} href="#new-fan-modal">
           + Neuer Fan
         </a>
       </div>

@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
+  getWorkspaceContacts,
   signOutSupabaseServerSession,
+  type ContactRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
@@ -12,6 +14,8 @@ import styles from "./dashboard.module.css";
 type WorkspaceDetailsProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName?: string;
+  contacts: ContactRow[];
+  contactsError?: string;
 };
 
 type WorkspaceDisplay = {
@@ -108,9 +112,9 @@ function getWorkspaceDisplay(
       commitmentLabel: "keine",
       planHint: "Pilot / Setup · Demo-/Setupmonat",
       packageSummary:
-        "Demo-Arbeitsplatz mit sicheren Testdaten, Sandra M. und manuell geprüften KI-Vorschlägen.",
+        "Demo-Arbeitsplatz mit sicheren Workspace-Daten und manuell gepflegten Kontakten.",
       contractNote:
-        "Du arbeitest im sicheren Demo-/Setupmodus. Sandra M., KI-Demo, Memory-Demo und Follow-up-Demo sind vorbereitet; produktive Daten und Versand bleiben getrennt.",
+        "Du arbeitest im sicheren Demo-/Setupmodus. Kontakte werden manuell gepflegt; produktive Kanalaktionen und Versand bleiben getrennt.",
     };
   }
 
@@ -128,9 +132,9 @@ function getWorkspaceDisplay(
       commitmentLabel: "12 Monate",
       planHint: "Starter · produktiver MVP-Kern",
       packageSummary:
-        "Produktiver MVP-Kern für Kontakte, CSV-Vorbereitung, Memory und manuelle Follow-ups.",
+        "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
       contractNote:
-        "Der produktive MVP-Kern ist aktiv: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups. KI-Vorschläge bleiben bewusst limitiert und werden manuell geprüft.",
+        "Der produktive MVP-Kern ist aktiv: Kontakte und manuelle Kontaktpflege. Kampagnen, Follow-ups und Kanalaktionen sind nicht als aktive Automationen freigeschaltet.",
     };
   }
 
@@ -148,9 +152,9 @@ function getWorkspaceDisplay(
       commitmentLabel: "keine 12-Monatsbindung",
       planHint: "Starter · produktiver MVP-Kern",
       packageSummary:
-        "Produktiver MVP-Kern für Kontakte, CSV-Vorbereitung, Memory und manuelle Follow-ups.",
+        "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
       contractNote:
-        "Produktiver Starter-Einstieg ohne feste Bindung: Kontakte, CSV-Import, ein Profil, Memory und Follow-ups sind aktiv; KI-Vorschläge bleiben limitiert.",
+        "Produktiver Starter-Einstieg ohne feste Bindung: Kontakte und manuelle Kontaktpflege sind aktiv; Kampagnen, Follow-ups und Kanalaktionen sind nicht als aktive Automationen freigeschaltet.",
     };
   }
 
@@ -211,133 +215,130 @@ function getWorkspaceDisplay(
   };
 }
 
-const kpiCards: KpiCardData[] = [
-  {
-    label: "Gesamtfans",
-    value: "10.248",
-    meta: "↑ 12 % vs. letzter Monat",
-    icon: "users",
-    tone: "blue",
-    sparklinePoints:
-      "M2 13 C16 12 25 11 38 11.5 S61 12 74 10 S96 8.5 124 5",
-    infoLabel: "Gesamtfans zeigt die gesamte aktuelle Fanbasis im Workspace.",
-  },
-  {
-    label: "Aktive Fans",
-    value: "4.892",
-    meta: "↑ 47,8 % der Gesamtfans",
-    icon: "pulse",
-    tone: "green",
-    sparklinePoints:
-      "M2 13 C13 12.5 21 11 31 11.5 S47 12.5 56 9.5 S72 6.5 82 7.5 S97 10.5 107 6.5 S118 5 124 4",
-    infoLabel: "Aktive Fans zeigt den aktiven Anteil der Fanbasis als KPI-Vorschau.",
-  },
-  {
-    label: "Offene Follow-ups",
-    value: "136",
-    meta: "12 fällig heute",
-    icon: "check",
-    tone: "violet",
-    sparklinePoints:
-      "M2 12.5 C13 11 21 11.5 31 9.5 S47 7 57 9 S72 12.5 83 9.5 S98 5.5 108 6.5 S118 7.5 124 4.5",
-    infoLabel: "Offene Follow-ups zeigt aktuell nachzufassende Kontakte.",
-  },
-  {
-    label: "Laufende Kampagnen",
-    value: "5",
-    meta: "2 gestartet heute",
-    icon: "megaphone",
-    tone: "blue",
-    sparklinePoints:
-      "M2 13 C14 12.5 22 10.5 32 11 S48 12.5 58 9.5 S73 7.5 83 9 S98 10.5 108 7 S119 5 124 4.5",
-    infoLabel: "Laufende Kampagnen ist eine vorbereitete Kampagnen-KPI; produktiver Versand ist im MVP nicht aktiv.",
-    comingSoon: true,
-  },
-  {
-    label: "Reaktivierung",
-    value: "736",
-    meta: "↑ 22 % vs. letzter Monat",
-    icon: "refresh",
-    tone: "orange",
-    sparklinePoints:
-      "M2 13.5 C12 12.5 20 8 31 9 S47 13 57 8.5 S72 6 82 8 S97 11.5 107 7 S118 5.5 124 4.25",
-    infoLabel: "Reaktivierung zeigt Fans mit vorbereitetem manuellem Reaktivierungsbedarf.",
-    comingSoon: true,
-  },
-  {
-    label: "Conversion Rate",
-    value: "8,7 %",
-    meta: "↑ 1,3 % vs. letzter Monat",
-    icon: "percent",
-    tone: "cyan",
-    sparklinePoints:
-      "M2 12.5 C14 12 22 11.5 32 12 S48 13 58 11 S73 9 83 9.5 S98 10 108 7.5 S119 6 124 4.75",
-    infoLabel: "Conversion Rate ist eine Analytics-Vorschau; vollständige Live-Analytics sind im MVP nicht aktiv.",
-    comingSoon: true,
-  },
-];
-
-function getContactRows(workspace: WorkspaceDashboardRow): ContactPreviewRow[] {
-  const suffix =
-    workspace.plan_id === "starter" ? "Starter-Vorbereitung" : "Demo/Manuell";
-
+function getKpiCards(contactCount: number): KpiCardData[] {
   return [
     {
-      name: "Sandra M.",
-      status: workspace.plan_id === "starter" ? "Starter-Demo" : "Buyer",
-      profile: "Mia Active Club",
-      source: suffix,
-      tags: ["buyer", "premium_interest"],
-      score: 92,
-      lastContact: "Heute, 09:42",
-      nextFollowUp: "Morgen, 10:00",
+      label: "Gesamtfans",
+      value: contactCount.toLocaleString("de-DE"),
+      meta: "Echte Kontakte im Workspace",
+      icon: "users",
+      tone: "blue",
+      sparklinePoints:
+        "M2 13 C16 12 25 11 38 11.5 S61 12 74 10 S96 8.5 124 5",
+      infoLabel: "Gesamtfans zeigt die echte Anzahl der gespeicherten Kontakte im aktuellen Workspace.",
     },
     {
-      name: "Alex K.",
-      status: workspace.plan_id === "starter" ? "Starter-Demo" : "VIP",
-      profile: "DJ Nova",
-      source: suffix,
-      tags: ["vip", "event_interest"],
-      score: 88,
-      lastContact: "Gestern, 18:21",
-      nextFollowUp: "Heute, 14:00",
+      label: "Aktive Fans",
+      value: "0",
+      meta: "Aktivitätslogik noch nicht gebaut",
+      icon: "pulse",
+      tone: "green",
+      sparklinePoints:
+        "M2 13 C13 12.5 21 11 31 11.5 S47 12.5 56 9.5 S72 6.5 82 7.5 S97 10.5 107 6.5 S118 5 124 4",
+      infoLabel: "Aktive Fans bleibt 0, bis echte Aktivitätslogik existiert.",
     },
     {
-      name: "Ella L.",
-      status: workspace.plan_id === "starter" ? "Starter-Demo" : "Inactive",
-      profile: "Team Arena",
-      source: suffix,
-      tags: ["reactivation"],
-      score: 45,
-      lastContact: "12.05.2025",
-      nextFollowUp: "Überfällig",
+      label: "Offene Follow-ups",
+      value: "0",
+      meta: "Follow-ups noch nicht gebaut",
+      icon: "check",
+      tone: "violet",
+      sparklinePoints:
+        "M2 12.5 C13 11 21 11.5 31 9.5 S47 7 57 9 S72 12.5 83 9.5 S98 5.5 108 6.5 S118 7.5 124 4.5",
+      infoLabel: "Offene Follow-ups bleibt 0, solange keine Follow-up-Logik gebaut ist.",
+    },
+    {
+      label: "Laufende Kampagnen",
+      value: "0",
+      meta: "Kampagnen noch nicht gebaut",
+      icon: "megaphone",
+      tone: "blue",
+      sparklinePoints:
+        "M2 13 C14 12.5 22 10.5 32 11 S48 12.5 58 9.5 S73 7.5 83 9 S98 10.5 108 7 S119 5 124 4.5",
+      infoLabel: "Laufende Kampagnen bleibt 0; produktiver Versand ist im MVP nicht aktiv.",
+      comingSoon: true,
+    },
+    {
+      label: "Reaktivierung",
+      value: "0",
+      meta: "Reaktivierung noch nicht gebaut",
+      icon: "refresh",
+      tone: "orange",
+      sparklinePoints:
+        "M2 13.5 C12 12.5 20 8 31 9 S47 13 57 8.5 S72 6 82 8 S97 11.5 107 7 S118 5.5 124 4.25",
+      infoLabel: "Reaktivierung bleibt 0, solange keine Reaktivierungslogik gebaut ist.",
+      comingSoon: true,
+    },
+    {
+      label: "Conversion Rate",
+      value: "0 %",
+      meta: "Conversion-Logik noch nicht gebaut",
+      icon: "percent",
+      tone: "cyan",
+      sparklinePoints:
+        "M2 12.5 C14 12 22 11.5 32 12 S48 13 58 11 S73 9 83 9.5 S98 10 108 7.5 S119 6 124 4.75",
+      infoLabel: "Conversion Rate bleibt 0 %, bis echte Conversion-/Analytics-Logik existiert.",
+      comingSoon: true,
     },
   ];
 }
 
-function getFollowUps(workspace: WorkspaceDashboardRow): TaskPreview[] {
-  const status = workspace.plan_id === "starter" ? "MVP" : "Demo";
+function getContactRows(contacts: ContactRow[]): ContactPreviewRow[] {
+  return contacts.map((contact) => ({
+    name: contact.display_name,
+    status: formatStatus(contact.status),
+    profile: contact.handle ?? "—",
+    source: formatSource(contact.source_platform),
+    tags: contact.tags?.length ? contact.tags : [],
+    score: formatLanguage(contact.language),
+    lastContact: contact.created_at ? `Neu angelegt · ${formatDate(contact.created_at)}` : "Neu angelegt",
+    nextFollowUp: "—",
+  }));
+}
 
-  return [
-    {
-      title: "KI-Vorschlag prüfen",
-      person: "Sandra M.",
-      due: "Morgen 10:00",
-      status,
-    },
-    {
-      title: "VIP-Info nachfassen",
-      person: "Alex K.",
-      due: "Heute 14:00",
-      status,
-    },
-    {
-      title: "Reaktivierung prüfen",
-      person: "Ella L.",
-      due: "Überfällig",
-      status,
-    },
-  ];
+function getFollowUps(): TaskPreview[] {
+  return [];
+}
+
+function formatSource(value: string | null): string {
+  const sourceLabels: Record<string, string> = {
+    manual: "Manuell",
+    instagram: "Instagram (manuell)",
+    tiktok: "TikTok (manuell)",
+  };
+
+  return sourceLabels[value ?? ""] ?? value ?? "Manuell";
+}
+
+function formatStatus(value: string | null): string {
+  const statusLabels: Record<string, string> = {
+    new: "Neu",
+    active: "Aktiv",
+    warm: "Warm",
+    follow_up: "Follow-up",
+    paused: "Pausiert",
+  };
+
+  return statusLabels[value ?? ""] ?? value ?? "Neu";
+}
+
+function formatLanguage(value: string | null): string {
+  if (value === "en") {
+    return "Englisch";
+  }
+
+  if (value === "fr") {
+    return "Französisch";
+  }
+
+  return "Deutsch";
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 function stringMetadataValue(
@@ -516,6 +517,8 @@ function SidebarItem({
 function WorkspaceDetails({
   workspace,
   userDisplayName,
+  contacts,
+  contactsError,
 }: WorkspaceDetailsProps) {
   const display = getWorkspaceDisplay(workspace);
   const pageTitle = "Dashboard";
@@ -527,7 +530,7 @@ function WorkspaceDetails({
   const mainNavigation: SidebarLink[] = [
     { label: "Dashboard", href: "/dashboard", active: true },
     { label: "Fans", href: "/fans" },
-    { label: "Kanäle", href: "#channels", badge: "Roadmap" },
+    { label: "Kanäle", href: "/channels", badge: "Roadmap" },
   ];
   const settingsNavigation: SidebarLink[] = [
     { label: "Einstellungen", href: "#contract", disabled: true },
@@ -536,8 +539,9 @@ function WorkspaceDetails({
     { label: "Top Fans", href: "/fans" },
     { label: "Reaktivierung", href: "#followups" },
   ];
-  const contactRows = getContactRows(workspace);
-  const followUps = getFollowUps(workspace);
+  const contactRows = getContactRows(contacts);
+  const followUps = getFollowUps();
+  const kpiCards = getKpiCards(contacts.length);
 
   return (
     <div className={styles.dashboardShell}>
@@ -646,28 +650,35 @@ function WorkspaceDetails({
               </div>
               <span>
                 {workspace.plan_id === "starter"
-                  ? "Starter-Vorbereitung"
+                  ? "Echte Daten"
                   : workspace.plan_id === "pilot"
-                    ? "Demo-Daten"
+                    ? "Echte Daten"
                     : "Vorschau"}
               </span>
             </div>
             <p className={styles.moduleText}>
-              Demo-/Starter-Daten zeigen die spätere Kontaktlogik. Es sind keine
-              echten Social-Media-Kanäle verbunden und keine Nachrichten werden
-              automatisch versendet.
+              Diese Pipeline zeigt echte gespeicherte Kontakte aus dem aktuellen Workspace.
+              Es sind keine Social-Media-Kanäle verbunden und keine Aktivitäten werden
+              automatisch behauptet.
             </p>
+            {contactsError ? (
+              <p className={styles.error}>
+                <strong>Kontakte konnten nicht geladen werden.</strong>
+                <span>{contactsError}</span>
+              </p>
+            ) : null}
+            {contactRows.length ? (
             <div className={styles.tableWrap}>
               <table>
                 <thead>
                   <tr>
                     <th>Name</th>
                     <th>Status</th>
-                    <th>Profil</th>
+                    <th>Handle</th>
                     <th>Kanal/Quelle</th>
                     <th>Tags</th>
-                    <th>Score</th>
-                    <th>Letzter Kontakt</th>
+                    <th>Sprache</th>
+                    <th>Angelegt</th>
                     <th>Nächster Follow-up</th>
                   </tr>
                 </thead>
@@ -703,6 +714,12 @@ function WorkspaceDetails({
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <strong>Noch keine Fans angelegt.</strong>
+                <p>Lege auf der Fans-Seite den ersten Kontakt an; hier erscheinen nur echte Kontakte aus dem Workspace.</p>
+              </div>
+            )}
           </section>
         </section>
 
@@ -718,20 +735,27 @@ function WorkspaceDetails({
               </span>
             </div>
             <div className={styles.taskList}>
-              {followUps.map((task) => (
-                <div
-                  key={`${task.title}-${task.person}`}
-                  className={styles.taskItem}
-                >
-                  <div>
-                    <strong>{task.title}</strong>
-                    <p>{task.person}</p>
+              {followUps.length ? (
+                followUps.map((task) => (
+                  <div
+                    key={`${task.title}-${task.person}`}
+                    className={styles.taskItem}
+                  >
+                    <div>
+                      <strong>{task.title}</strong>
+                      <p>{task.person}</p>
+                    </div>
+                    <span>
+                      {task.due} · {task.status}
+                    </span>
                   </div>
-                  <span>
-                    {task.due} · {task.status}
-                  </span>
+                ))
+              ) : (
+                <div className={styles.emptyState}>
+                  <strong>Noch keine Follow-ups angelegt.</strong>
+                  <p>Follow-up-Logik ist im MVP noch nicht gebaut; daher werden hier keine Fake-Aufgaben angezeigt.</p>
                 </div>
-              ))}
+              )}
             </div>
           </article>
 
@@ -751,26 +775,17 @@ function WorkspaceDetails({
               </span>
             </div>
             <div className={styles.actionList}>
-              <a href="/fans">
-                Kontakt anlegen{" "}
-                <small>
-                  {workspace.plan_id === "pilot" ? "Demo" : "Aktiv"}
-                </small>
+              <a href="/fans#new-fan-modal">
+                Kontakt anlegen <small>Aktiv</small>
               </a>
               <a href="#followups">
-                Follow-up erstellen{" "}
-                <small>
-                  {workspace.plan_id === "pilot" ? "Demo" : "Aktiv"}
-                </small>
+                Follow-ups noch nicht aktiv <small>Noch 0</small>
               </a>
-              <a href="/fans">
-                Sandra M. öffnen{" "}
-                <small>
-                  {workspace.plan_id === "pilot" ? "Demo" : "Limitiert"}
-                </small>
+              <a href="/fans#fans-list">
+                Fanliste öffnen <small>Echte Daten</small>
               </a>
               <a href="#followups">
-                Überfällige prüfen <small>Heute</small>
+                Follow-ups prüfen <small>Noch 0</small>
               </a>
             </div>
           </article>
@@ -780,8 +795,8 @@ function WorkspaceDetails({
         <div className={styles.safetyNote} role="note">
           <strong>Kein automatisches Senden</strong>
           <span>
-            FanMind bereitet Kontext und KI-Vorschläge vor; jede Antwort,
-            Kampagne oder Kanalaktion wird manuell geprüft und selbst ausgelöst.
+            FanMind zeigt aktuell Kontakte aus deinem Workspace; Kampagnen,
+            Kanalaktionen und automatisches Senden sind im MVP nicht aktiv.
           </span>
         </div>
       </div>
@@ -798,6 +813,7 @@ export default async function DashboardPage() {
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
+  const contactsResult = workspace ? await getWorkspaceContacts(workspace.id) : null;
 
   return (
     <main className={styles.page}>
@@ -808,6 +824,8 @@ export default async function DashboardPage() {
             data.user.user_metadata,
             workspace.name,
           )}
+          contacts={contactsResult?.contacts ?? []}
+          contactsError={contactsResult?.error?.message}
         />
       ) : (
         <section className={styles.fallbackCard} aria-label="FanMind Workspace">
