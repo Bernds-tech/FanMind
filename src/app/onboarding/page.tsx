@@ -20,13 +20,17 @@ export const metadata: Metadata = {
   description: "Geschützter Onboarding-Grundablauf für den FanMind MVP.",
 };
 
+type OnboardingAction = {
+  label: string;
+  href: string;
+};
+
 type OnboardingStep = {
   title: string;
   description: string;
   status: "done" | "open";
   statusLabel: string;
-  actionLabel?: string;
-  actionHref?: string;
+  actions?: OnboardingAction[];
 };
 
 type OnboardingWorkspaceProps = {
@@ -101,60 +105,81 @@ function getOnboardingSteps({
   contacts: ContactRow[];
 }): OnboardingStep[] {
   const workspaceDone = Boolean(workspace.id);
-  const packageDone = Boolean(workspace.plan_id && workspace.commercial_option);
+  const packageDone = Boolean(workspace.plan_id || workspace.commercial_option);
   const hasContact = contacts.length > 0;
-  const firstContactHref = hasContact ? `/fans/${contacts[0].id}` : "/fans";
+  const hasImportData = contacts.some(
+    (contact) =>
+      contact.source_platform !== null && contact.source_platform !== "manual",
+  );
 
   return [
     {
-      title: "Workspace prüfen",
+      title: "Workspace eingerichtet",
       description:
-        "Workspace, Rolle und Basiseinstellungen sind geladen und geschützt sichtbar.",
+        "Dein geschützter FanMind-Workspace ist geladen und kann im begleiteten Setup genutzt werden.",
       status: workspaceDone ? "done" : "open",
       statusLabel: workspaceDone ? "Erledigt" : "Offen",
     },
     {
-      title: "Paket bestätigen",
+      title: "Paket bestätigt",
       description:
-        "Paket und Commercial Option werden aus dem Workspace gelesen.",
+        "Pilot / Setup wird persönlich begleitet. Keine Online-Zahlung im MVP.",
       status: packageDone ? "done" : "open",
       statusLabel: packageDone ? "Erledigt" : "Offen",
     },
     {
       title: "Ersten Fan anlegen",
       description:
-        "Lege mindestens einen echten Kontakt an, damit Fanliste und Details mit Workspace-Daten arbeiten.",
+        "Lege mindestens einen echten Kontakt an, damit Fanliste und Kontaktdetails mit Workspace-Daten arbeiten.",
       status: hasContact ? "done" : "open",
       statusLabel: hasContact ? "Erledigt" : "Offen",
-      actionLabel: hasContact ? "Fanliste öffnen" : "CSV importieren oder Fan anlegen",
-      actionHref: hasContact ? "/fans#fans-list" : "/fans/import",
+      actions: [
+        { label: "Zur Fanliste", href: "/fans#fans-list" },
+        { label: "Neuen Fan anlegen", href: "/fans#new-fan-modal" },
+      ],
+    },
+    {
+      title: "Kontakte importieren",
+      description: hasImportData
+        ? "Importierte Kontaktquellen sind in deinen Workspace-Daten vorhanden."
+        : "Offen, solange CSV-Import nicht genutzt wurde oder keine Importdaten existieren.",
+      status: hasImportData ? "done" : "open",
+      statusLabel: hasImportData ? "Erledigt" : "Offen",
+      actions: [{ label: "CSV-Import öffnen", href: "/fans/import" }],
     },
     {
       title: "Chatverlauf einfügen",
       description:
-        "Öffne einen Fan und füge vorhandenen Gesprächskontext manuell in der Detailseite ein.",
+        "Füge manuell einen WhatsApp- oder Chatverlauf auf der Kontaktdetailseite ein. FanMind synchronisiert aktuell keine externen Plattformen.",
       status: "open",
       statusLabel: hasContact ? "Manuell prüfen" : "Fan fehlt noch",
-      actionLabel: hasContact ? "Fan öffnen" : "Zur Fanliste",
-      actionHref: firstContactHref,
+      actions: [
+        {
+          label: hasContact ? "Fan öffnen" : "Zur Fanliste",
+          href: hasContact ? `/fans/${contacts[0].id}` : "/fans#fans-list",
+        },
+      ],
     },
     {
       title: "KI-Vorschläge testen",
       description:
-        "Teste Antwortvorschläge auf einer Fan-Detailseite. Es wird nichts automatisch versendet.",
+        "FanMind erzeugt Antwortvorschläge. Der Mensch prüft und sendet final selbst.",
       status: "open",
       statusLabel: hasContact ? "Bereit zum Test" : "Fan fehlt noch",
-      actionLabel: hasContact ? "KI im Fan testen" : "Zur Fanliste",
-      actionHref: firstContactHref,
+      actions: [
+        {
+          label: hasContact ? "KI im Fan testen" : "Zur Fanliste",
+          href: hasContact ? `/fans/${contacts[0].id}` : "/fans#fans-list",
+        },
+      ],
     },
     {
       title: "Dashboard prüfen",
       description:
-        "Prüfe KPIs, Kontaktpipeline und offene Follow-ups im Dashboard mit echten Workspace-Daten.",
+        "Dashboard zeigt echte Workspace-Daten, offene Follow-ups und keine Fake-Kampagnen.",
       status: "open",
       statusLabel: "Prüfen",
-      actionLabel: "Zum Dashboard",
-      actionHref: "/dashboard",
+      actions: [{ label: "Zum Dashboard", href: "/dashboard" }],
     },
   ];
 }
@@ -185,8 +210,9 @@ function OnboardingWorkspace({
       savedViews={savedViews}
       header={{
         title: "Onboarding",
-        subtitle: "Prüfe deinen FanMind-MVP-Grundablauf Schritt für Schritt.",
-        searchPlaceholder: "Onboarding-Schritte, Fans oder Workspace suchen ...",
+        subtitle: "Richte deinen FanMind-Workspace Schritt für Schritt ein.",
+        searchPlaceholder:
+          "Onboarding-Schritte, Fans oder Workspace suchen ...",
         primaryActionLabel: "Zum Dashboard",
         primaryActionHref: "/dashboard",
       }}
@@ -194,16 +220,23 @@ function OnboardingWorkspace({
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
-      <section className={styles.onboardingHero} aria-labelledby="onboarding-title">
+      <section
+        className={styles.onboardingHero}
+        aria-labelledby="onboarding-title"
+      >
         <div>
-          <p className={styles.eyebrow}>MVP Setup</p>
-          <h2 id="onboarding-title">Grundablauf für den Verkauf prüfen</h2>
+          <p className={styles.eyebrow}>Begleitetes Setup</p>
+          <h2 id="onboarding-title">Dein nächster sinnvoller Schritt</h2>
           <p>
-            Diese Checkliste nutzt echte Workspace-Daten, Kontakte und Paketinformationen.
-            Nicht aktive MVP-Bereiche bleiben als manuelle Prüfschritte markiert.
+            Diese zentrale Setup-Seite zeigt, was bereits eingerichtet ist, was
+            noch fehlt und welche Aktion als nächstes im begleiteten Pilot- oder
+            Starter-Start sinnvoll ist.
           </p>
         </div>
-        <div className={styles.onboardingProgress} aria-label="Onboarding Fortschritt">
+        <div
+          className={styles.onboardingProgress}
+          aria-label="Onboarding Fortschritt"
+        >
           <strong>
             {completedCount}/{steps.length}
           </strong>
@@ -211,7 +244,10 @@ function OnboardingWorkspace({
         </div>
       </section>
 
-      <section className={styles.onboardingGrid} aria-label="Onboarding Checkliste">
+      <section
+        className={styles.onboardingGrid}
+        aria-label="Onboarding Checkliste"
+      >
         <article className={styles.moduleCard}>
           <div className={styles.moduleHeader}>
             <div>
@@ -228,7 +264,10 @@ function OnboardingWorkspace({
           ) : null}
           <ol className={styles.onboardingChecklist}>
             {steps.map((step, index) => (
-              <li key={step.title} className={styles[`onboarding-${step.status}`]}>
+              <li
+                key={step.title}
+                className={styles[`onboarding-${step.status}`]}
+              >
                 <div className={styles.onboardingStepIndex}>{index + 1}</div>
                 <div>
                   <div className={styles.onboardingStepHeader}>
@@ -236,10 +275,18 @@ function OnboardingWorkspace({
                     <span>{step.statusLabel}</span>
                   </div>
                   <p>{step.description}</p>
-                  {step.actionHref && step.actionLabel ? (
-                    <Link className={styles.secondaryButton} href={step.actionHref}>
-                      {step.actionLabel}
-                    </Link>
+                  {step.actions?.length ? (
+                    <div className={styles.emptyActions}>
+                      {step.actions.map((action) => (
+                        <Link
+                          className={styles.secondaryButton}
+                          href={action.href}
+                          key={action.label}
+                        >
+                          {action.label}
+                        </Link>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
               </li>
@@ -273,6 +320,16 @@ function OnboardingWorkspace({
               <dd>{contacts.length.toLocaleString("de-DE")}</dd>
             </div>
           </dl>
+          <div className={styles.emptyState}>
+            <strong>Pilot / Setup</strong>
+            <p>990 € einmalig · 1 Monat testen · persönlich begleitet</p>
+            <strong>Starter</strong>
+            <p>990 € Einrichtung + 299 €/Monat · monatlich kündbar</p>
+            <p>
+              Wenn du nach dem Pilot weitermachst, wird die Setup-Gebühr
+              angerechnet.
+            </p>
+          </div>
           <div className={styles.emptyActions}>
             <Link className={styles.primaryButton} href="/fans#fans-list">
               Zur Fanliste
@@ -288,9 +345,11 @@ function OnboardingWorkspace({
       </section>
 
       <div className={styles.safetyNote} role="note">
-        <strong>MVP-Sicherheit</strong>
+        <strong>Begleiteter Start ohne Checkout</strong>
         <span>
-          Keine Fake-Daten, keine Zahlungslogik, keine Social-Media-Integration und kein automatisches Senden.
+          Keine Verkaufsseite, keine Kaufbuttons, keine Zahlungslogik und kein
+          automatisches Senden. FanMind bleibt im MVP ein persönlich begleiteter
+          Setup- und Starter-Ablauf.
         </span>
       </div>
     </WorkspaceShell>
@@ -327,12 +386,16 @@ export default async function OnboardingPage() {
           )}
         />
       ) : (
-        <section className={styles.fallbackCard} aria-label="FanMind Onboarding">
+        <section
+          className={styles.fallbackCard}
+          aria-label="FanMind Onboarding"
+        >
           <div>
             <p className={styles.eyebrow}>FanMind Onboarding</p>
             <h1>Workspace-Status</h1>
             <p>
-              Onboarding ist geschützt. Für deinen Account wurde noch kein Workspace gefunden.
+              Onboarding ist geschützt. Für deinen Account wurde noch kein
+              Workspace gefunden.
             </p>
           </div>
           {workspaceResult.error ? (
