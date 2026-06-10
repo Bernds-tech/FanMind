@@ -7,19 +7,13 @@ import {
   type ContactRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import { AppHeader } from "@/components/AppHeader";
-import { WorkspaceKpiStrip } from "@/components/WorkspaceKpiStrip";
+import {
+  WorkspaceShell,
+  type WorkspaceNavLink,
+} from "@/components/WorkspaceShell";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan } from "./actions";
 import styles from "./fans.module.css";
-
-type SidebarLink = {
-  label: string;
-  href: string;
-  active?: boolean;
-  badge?: string;
-  disabled?: boolean;
-};
 
 type FansWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -49,132 +43,47 @@ async function logout() {
   redirect("/login");
 }
 
-function SidebarItem({
-  label,
-  href,
-  active = false,
-  badge,
-  disabled = false,
-}: SidebarLink) {
-  return (
-    <a
-      className={
-        active ? dashboardStyles.navItemActive : dashboardStyles.navItem
-      }
-      href={href}
-      aria-disabled={disabled || undefined}
-      tabIndex={disabled ? -1 : undefined}
-    >
-      <span>{label}</span>
-      {badge ? <small>{badge}</small> : null}
-    </a>
-  );
-}
-
 function FansWorkspace({
   workspace,
   userDisplayName,
   contacts,
   contactsError,
 }: FansWorkspaceProps) {
-  const mainNavigation: SidebarLink[] = [
+  const mainNavigation: WorkspaceNavLink[] = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Fans", href: "/fans", active: true },
     { label: "Kanäle", href: "/channels", badge: "Roadmap" },
   ];
-  const settingsNavigation: SidebarLink[] = [
+  const settingsNavigation: WorkspaceNavLink[] = [
     { label: "Einstellungen", href: "#workspace", disabled: true },
   ];
-  const savedViews: SidebarLink[] = [
+  const savedViews: WorkspaceNavLink[] = [
     { label: "Top Fans", href: "#fans-list" },
     { label: "Reaktivierung", href: "#fans-list" },
   ];
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (
-    <div className={dashboardStyles.dashboardShell}>
-      <aside
-        className={dashboardStyles.sidebar}
-        aria-label="FanMind Navigation"
-      >
-        <div className={dashboardStyles.logoBlock}>
-          <div className={dashboardStyles.logoMark}>FM</div>
-          <div>
-            <strong>FanMind</strong>
-            <small>Multi-Channel CRM</small>
-          </div>
-        </div>
-
-        <nav className={dashboardStyles.navList} aria-label="Hauptnavigation">
-          <span className={dashboardStyles.navSectionLabel}>Navigation</span>
-          {mainNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
-          ))}
-        </nav>
-
-        <nav
-          className={dashboardStyles.navList}
-          aria-label="Workspace Navigation"
-        >
-          <span className={dashboardStyles.navSectionLabel}>Workspace</span>
-          {settingsNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
-          ))}
-        </nav>
-
-        <section
-          className={dashboardStyles.savedViews}
-          aria-label="Gespeicherte Ansichten"
-        >
-          <span>Gespeicherte Ansichten</span>
-          {savedViews.map((item) => (
-            <a key={item.label} href={item.href}>
-              {item.label}
-            </a>
-          ))}
-        </section>
-
-        <div className={dashboardStyles.sidebarFooter}>
-          <section className={dashboardStyles.userMiniCard} aria-label="Nutzer">
-            <div className={dashboardStyles.avatarMark}>
-              {getInitials(userLabel)}
-            </div>
-            <div>
-              <span>Nutzer</span>
-              <strong>{userLabel}</strong>
-              <p>{workspace.name}</p>
-            </div>
-          </section>
-          <section className={dashboardStyles.planMiniCard} aria-label="Paket">
-            <div>
-              <span>Paket</span>
-              <strong>{workspace.plan_id}</strong>
-              <p>{workspace.role}</p>
-            </div>
-            <small>Aktiv</small>
-          </section>
-          <form action={logout}>
-            <button type="submit" className={dashboardStyles.logoutButton}>
-              Abmelden
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      <div
-        className={`${dashboardStyles.dashboardContent} ${dashboardStyles.dashboardContentStart}`}
-      >
-        <AppHeader
-          title="Fans"
-          subtitle="Willkommen zurück, Pilot Test 👋"
-          searchPlaceholder="Suche nach Name, Tag, Kanal, Sprache ..."
-          primaryActionLabel="+ Neuer Fan"
-          primaryActionHref="#new-fan-modal"
-        />
-
-        <WorkspaceKpiStrip contactCount={contacts.length} />
-
-        <div className={styles.fansStack}>
+    <WorkspaceShell
+      workspaceName={workspace.name}
+      userLabel={userLabel}
+      planLabel={workspace.plan_id}
+      planMeta={workspace.role}
+      planStatus="Aktiv"
+      mainNavigation={mainNavigation}
+      settingsNavigation={settingsNavigation}
+      savedViews={savedViews}
+      header={{
+        title: "Fans",
+        subtitle: "Willkommen zurück, Pilot Test 👋",
+        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
+        primaryActionLabel: "+ Neuer Fan",
+        primaryActionHref: "#new-fan-modal",
+      }}
+      contactCount={contacts.length}
+      logoutAction={logout}
+    >
+      <div className={styles.fansStack}>
           <section
             className={dashboardStyles.moduleCard}
             id="fans-list"
@@ -303,8 +212,7 @@ function FansWorkspace({
             </div>
           </section>
         </div>
-      </div>
-    </div>
+    </WorkspaceShell>
   );
 }
 
@@ -401,12 +309,6 @@ function formatDate(value: string | null): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function getInitials(value: string): string {
-  const [first = "F", second = "M"] = value.trim().split(/\s+/);
-
-  return `${first[0] ?? "F"}${second[0] ?? "M"}`.toUpperCase();
 }
 
 function getUserDisplayName(

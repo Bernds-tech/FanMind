@@ -6,17 +6,11 @@ import {
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import { AppHeader } from "@/components/AppHeader";
-import { WorkspaceKpiStrip } from "@/components/WorkspaceKpiStrip";
+import {
+  WorkspaceShell,
+  type WorkspaceNavLink,
+} from "@/components/WorkspaceShell";
 import dashboardStyles from "../dashboard/dashboard.module.css";
-
-type SidebarLink = {
-  label: string;
-  href: string;
-  active?: boolean;
-  badge?: string;
-  disabled?: boolean;
-};
 
 type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -31,165 +25,73 @@ async function logout() {
   redirect("/login");
 }
 
-function SidebarItem({
-  label,
-  href,
-  active = false,
-  badge,
-  disabled = false,
-}: SidebarLink) {
-  return (
-    <a
-      className={
-        active ? dashboardStyles.navItemActive : dashboardStyles.navItem
-      }
-      href={href}
-      aria-disabled={disabled || undefined}
-      tabIndex={disabled ? -1 : undefined}
-    >
-      <span>{label}</span>
-      {badge ? <small>{badge}</small> : null}
-    </a>
-  );
-}
-
 function ChannelsWorkspace({
   workspace,
   userDisplayName,
   contactCount,
 }: ChannelsWorkspaceProps) {
-  const mainNavigation: SidebarLink[] = [
+  const mainNavigation: WorkspaceNavLink[] = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Fans", href: "/fans" },
     { label: "Kanäle", href: "/channels", active: true, badge: "Roadmap" },
   ];
-  const settingsNavigation: SidebarLink[] = [
+  const settingsNavigation: WorkspaceNavLink[] = [
     { label: "Einstellungen", href: "#workspace", disabled: true },
   ];
-  const savedViews: SidebarLink[] = [
+  const savedViews: WorkspaceNavLink[] = [
     { label: "Top Fans", href: "/fans#fans-list" },
     { label: "Reaktivierung", href: "/dashboard#followups" },
   ];
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (
-    <div className={dashboardStyles.dashboardShell}>
-      <aside
-        className={dashboardStyles.sidebar}
-        aria-label="FanMind Navigation"
+    <WorkspaceShell
+      workspaceName={workspace.name}
+      userLabel={userLabel}
+      planLabel={workspace.plan_id}
+      planMeta={workspace.role}
+      planStatus="Roadmap"
+      mainNavigation={mainNavigation}
+      settingsNavigation={settingsNavigation}
+      savedViews={savedViews}
+      header={{
+        title: "Kanäle",
+        subtitle: "Willkommen zurück, Pilot Test 👋",
+        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
+        primaryActionLabel: "Kanal vormerken",
+        primaryActionHref: "#channels-preview",
+      }}
+      contactCount={contactCount}
+      logoutAction={logout}
+    >
+      <section
+        className={dashboardStyles.moduleCard}
+        id="channels-preview"
+        aria-labelledby="channels-title"
       >
-        <div className={dashboardStyles.logoBlock}>
-          <div className={dashboardStyles.logoMark}>FM</div>
+        <div className={dashboardStyles.moduleHeader}>
           <div>
-            <strong>FanMind</strong>
-            <small>Multi-Channel CRM</small>
+            <p className={dashboardStyles.eyebrow}>Coming Soon</p>
+            <h2 id="channels-title">Kanäle vormerken</h2>
           </div>
+          <span>Keine Integration aktiv</span>
         </div>
-
-        <nav className={dashboardStyles.navList} aria-label="Hauptnavigation">
-          <span className={dashboardStyles.navSectionLabel}>Navigation</span>
-          {mainNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
-          ))}
-        </nav>
-
-        <nav
-          className={dashboardStyles.navList}
-          aria-label="Workspace Navigation"
-        >
-          <span className={dashboardStyles.navSectionLabel}>Workspace</span>
-          {settingsNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
-          ))}
-        </nav>
-
-        <section
-          className={dashboardStyles.savedViews}
-          aria-label="Gespeicherte Ansichten"
-        >
-          <span>Gespeicherte Ansichten</span>
-          {savedViews.map((item) => (
-            <a key={item.label} href={item.href}>
-              {item.label}
-            </a>
-          ))}
-        </section>
-
-        <div className={dashboardStyles.sidebarFooter}>
-          <section className={dashboardStyles.userMiniCard} aria-label="Nutzer">
-            <div className={dashboardStyles.avatarMark}>
-              {getInitials(userLabel)}
-            </div>
-            <div>
-              <span>Nutzer</span>
-              <strong>{userLabel}</strong>
-              <p>{workspace.name}</p>
-            </div>
-          </section>
-          <section className={dashboardStyles.planMiniCard} aria-label="Paket">
-            <div>
-              <span>Paket</span>
-              <strong>{workspace.plan_id}</strong>
-              <p>{workspace.role}</p>
-            </div>
-            <small>Roadmap</small>
-          </section>
-          <form action={logout}>
-            <button type="submit" className={dashboardStyles.logoutButton}>
-              Abmelden
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      <div
-        className={`${dashboardStyles.dashboardContent} ${dashboardStyles.dashboardContentStart}`}
-      >
-        <AppHeader
-          title="Kanäle"
-          subtitle="Willkommen zurück, Pilot Test 👋"
-          searchPlaceholder="Suche nach Name, Tag, Kanal, Sprache ..."
-          primaryActionLabel="Kanal vormerken"
-          primaryActionHref="#channels-preview"
-        />
-
-        <WorkspaceKpiStrip contactCount={contactCount} />
-
-        <section
-          className={dashboardStyles.moduleCard}
-          id="channels-preview"
-          aria-labelledby="channels-title"
-        >
-          <div className={dashboardStyles.moduleHeader}>
-            <div>
-              <p className={dashboardStyles.eyebrow}>Coming Soon</p>
-              <h2 id="channels-title">Kanäle vormerken</h2>
-            </div>
-            <span>Keine Integration aktiv</span>
-          </div>
-          <p className={dashboardStyles.moduleText}>
-            Diese Seite ist eine MVP-Vorschau. FanMind startet hier keine echte
-            Social-Media-Integration, synchronisiert keine Plattformdaten und
-            sendet nichts automatisch.
+        <p className={dashboardStyles.moduleText}>
+          Diese Seite ist eine MVP-Vorschau. FanMind startet hier keine echte
+          Social-Media-Integration, synchronisiert keine Plattformdaten und
+          sendet nichts automatisch.
+        </p>
+        <div className={dashboardStyles.emptyState}>
+          <strong>Noch keine Kanäle verbunden.</strong>
+          <p>
+            Kanäle können aktuell nur als Produktbereich vorgemerkt werden.
+            Kontakte auf der Fans-Seite bleiben manuell gepflegte
+            Workspace-Daten.
           </p>
-          <div className={dashboardStyles.emptyState}>
-            <strong>Noch keine Kanäle verbunden.</strong>
-            <p>
-              Kanäle können aktuell nur als Produktbereich vorgemerkt werden.
-              Kontakte auf der Fans-Seite bleiben manuell gepflegte
-              Workspace-Daten.
-            </p>
-          </div>
-        </section>
-      </div>
-    </div>
+        </div>
+      </section>
+    </WorkspaceShell>
   );
-}
-
-function getInitials(value: string): string {
-  const [first = "F", second = "M"] = value.trim().split(/\s+/);
-
-  return `${first[0] ?? "F"}${second[0] ?? "M"}`.toUpperCase();
 }
 
 function getUserDisplayName(

@@ -8,8 +8,10 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
-import { AppHeader } from "@/components/AppHeader";
-import { WorkspaceKpiStrip } from "@/components/WorkspaceKpiStrip";
+import {
+  WorkspaceShell,
+  type WorkspaceNavLink,
+} from "@/components/WorkspaceShell";
 import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
@@ -46,14 +48,6 @@ type TaskPreview = {
   person: string;
   due: string;
   status: string;
-};
-
-type SidebarLink = {
-  label: string;
-  href: string;
-  active?: boolean;
-  badge?: string;
-  disabled?: boolean;
 };
 
 const euroFormatter = new Intl.NumberFormat("de-DE", {
@@ -279,30 +273,6 @@ function getUserDisplayName(
   );
 }
 
-function getInitials(nameOrEmail?: string): string {
-  const fallback = "FM";
-
-  if (!nameOrEmail) {
-    return fallback;
-  }
-
-  const parts = nameOrEmail
-    .replace(/@.*/, "")
-    .split(/[.\s_-]+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return fallback;
-  }
-
-  return (
-    parts
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || fallback
-  );
-}
-
 function getPlanStatus(
   workspace: WorkspaceDashboardRow,
 ): "Aktiv" | "Demo" | "Vorschau" {
@@ -315,25 +285,6 @@ function getPlanStatus(
   }
 
   return "Vorschau";
-}
-
-function SidebarItem({
-  label,
-  active = false,
-  badge,
-  disabled = false,
-  href,
-}: SidebarLink) {
-  return (
-    <a
-      aria-disabled={disabled || undefined}
-      className={active ? styles.navItemActive : styles.navItem}
-      href={href}
-    >
-      <span>{label}</span>
-      {badge ? <small>{badge}</small> : null}
-    </a>
-  );
 }
 
 function WorkspaceDetails({
@@ -349,15 +300,15 @@ function WorkspaceDetails({
   const primaryActionLabel = "+ Neuer Kontakt";
   const planStatus = getPlanStatus(workspace);
   const userLabel = displayName;
-  const mainNavigation: SidebarLink[] = [
+  const mainNavigation: WorkspaceNavLink[] = [
     { label: "Dashboard", href: "/dashboard", active: true },
     { label: "Fans", href: "/fans" },
     { label: "Kanäle", href: "/channels", badge: "Roadmap" },
   ];
-  const settingsNavigation: SidebarLink[] = [
+  const settingsNavigation: WorkspaceNavLink[] = [
     { label: "Einstellungen", href: "#contract", disabled: true },
   ];
-  const savedViews: SidebarLink[] = [
+  const savedViews: WorkspaceNavLink[] = [
     { label: "Top Fans", href: "/fans" },
     { label: "Reaktivierung", href: "#followups" },
   ];
@@ -365,79 +316,26 @@ function WorkspaceDetails({
   const followUps = getFollowUps();
 
   return (
-    <div className={styles.dashboardShell}>
-      <aside className={styles.sidebar} aria-label="FanMind Navigation">
-        <div className={styles.logoBlock}>
-          <div className={styles.logoMark}>FM</div>
-          <div>
-            <strong>FanMind</strong>
-            <small>Multi-Channel CRM</small>
-          </div>
-        </div>
-
-        <nav className={styles.navList} aria-label="Hauptnavigation">
-          <span className={styles.navSectionLabel}>Navigation</span>
-          {mainNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
-          ))}
-        </nav>
-
-        <nav className={styles.navList} aria-label="Workspace Navigation">
-          <span className={styles.navSectionLabel}>Workspace</span>
-          {settingsNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
-          ))}
-        </nav>
-
-        <section
-          className={styles.savedViews}
-          aria-label="Gespeicherte Ansichten"
-        >
-          <span>Gespeicherte Ansichten</span>
-          {savedViews.map((item) => (
-            <a key={item.label} href={item.href}>
-              {item.label}
-            </a>
-          ))}
-        </section>
-
-        <div className={styles.sidebarFooter}>
-          <section className={styles.userMiniCard} aria-label="Nutzer">
-            <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
-            <div>
-              <span>Nutzer</span>
-              <strong>{userLabel}</strong>
-              <p>{workspace.name}</p>
-            </div>
-          </section>
-          <section className={styles.planMiniCard} aria-label="Paket">
-            <div>
-              <span>Paket</span>
-              <strong>{display.packageName}</strong>
-              <p>{display.commercialOptionName}</p>
-            </div>
-            <small>{planStatus}</small>
-          </section>
-          <form action={logout}>
-            <button type="submit" className={styles.logoutButton}>
-              Abmelden
-            </button>
-          </form>
-        </div>
-      </aside>
-
-      <div className={styles.dashboardContent}>
-        <AppHeader
-          title={pageTitle}
-          subtitle={pageSubtitle}
-          searchPlaceholder="Suche nach Name, Tag, Kanal, Sprache ..."
-          primaryActionLabel={primaryActionLabel}
-          primaryActionHref="/fans"
-        />
-
-        <WorkspaceKpiStrip contactCount={contacts.length} />
-
-        <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
+    <WorkspaceShell
+      workspaceName={workspace.name}
+      userLabel={userLabel}
+      planLabel={display.packageName}
+      planMeta={display.commercialOptionName}
+      planStatus={planStatus}
+      mainNavigation={mainNavigation}
+      settingsNavigation={settingsNavigation}
+      savedViews={savedViews}
+      header={{
+        title: pageTitle,
+        subtitle: pageSubtitle,
+        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
+        primaryActionLabel,
+        primaryActionHref: "/fans",
+      }}
+      contactCount={contacts.length}
+      logoutAction={logout}
+    >
+      <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
           <section
             className={`${styles.moduleCard} ${styles.contactCard}`}
             id="contacts"
@@ -605,9 +503,8 @@ function WorkspaceDetails({
             FanMind zeigt aktuell Kontakte aus deinem Workspace; Kampagnen,
             Kanalaktionen und automatisches Senden sind im MVP nicht aktiv.
           </span>
-        </div>
       </div>
-    </div>
+    </WorkspaceShell>
   );
 }
 
