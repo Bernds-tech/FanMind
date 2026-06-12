@@ -340,16 +340,7 @@ function FansTable({
                   {formatStatus(group.primaryContact.status)}
                 </span>
               </td>
-              <td>
-                <span className={styles.platformBadgeList}>
-                  {group.platforms.map((platform) => (
-                    <span className={styles.platformBadge} key={platform}>
-                      <strong>{getPlatformShortLabel(platform)}</strong>
-                      {formatPlatformLabel(platform)}
-                    </span>
-                  ))}
-                </span>
-              </td>
+              <td>{renderPlatformBadges(group.platforms)}</td>
               <td>
                 {group.tags.length ? (
                   <span className={styles.compactTagList}>
@@ -394,6 +385,42 @@ function FansTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+
+const maxVisiblePlatformBadges = 5;
+
+function renderPlatformBadges(platforms: PlatformValue[]) {
+  const visiblePlatforms = platforms.slice(0, maxVisiblePlatformBadges);
+  const hiddenCount = platforms.length - visiblePlatforms.length;
+
+  return (
+    <span
+      className={styles.platformBadgeList}
+      aria-label={platforms.map(formatPlatformLabel).join(", ")}
+    >
+      {visiblePlatforms.map((platform) => (
+        <span
+          className={styles.platformBadge}
+          key={platform}
+          title={formatPlatformLabel(platform)}
+        >
+          {getPlatformShortLabel(platform)}
+        </span>
+      ))}
+      {hiddenCount > 0 ? (
+        <span
+          className={`${styles.platformBadge} ${styles.platformBadgeMore}`}
+          title={platforms
+            .slice(maxVisiblePlatformBadges)
+            .map(formatPlatformLabel)
+            .join(", ")}
+        >
+          + weitere
+        </span>
+      ) : null}
+    </span>
   );
 }
 
