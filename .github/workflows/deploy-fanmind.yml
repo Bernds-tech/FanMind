@@ -1,0 +1,42 @@
+name: Deploy FanMind
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to FanMind server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare SSH
+        env:
+          SSH_HOST: ${{ secrets.FANMIND_SSH_HOST }}
+          SSH_PORT: ${{ secrets.FANMIND_SSH_PORT }}
+          SSH_KEY: ${{ secrets.FANMIND_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/fanmind_deploy_key
+          chmod 600 ~/.ssh/fanmind_deploy_key
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        env:
+          SSH_HOST: ${{ secrets.FANMIND_SSH_HOST }}
+          SSH_PORT: ${{ secrets.FANMIND_SSH_PORT }}
+          SSH_USER: ${{ secrets.FANMIND_SSH_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/fanmind_deploy_key -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" << 'EOF_SERVER'
+            set -euo pipefail
+            cd /srv/www/fanmind
+            git pull --ff-only
+            npm ci --no-audit --no-fund
+            npm run build
+            systemctl restart fanmind
+            systemctl status fanmind --no-pager
+          EOF_SERVER
