@@ -98,19 +98,25 @@ function getWorkspaceDisplay(
   }
 
   if (workspace.plan_id === "starter") {
+    const commercialOption = String(workspace.commercial_option);
+    const isCommitmentOption = commercialOption === "starter_no_setup_commitment";
+
     return {
-      packageName: "Starter",
-      commercialOptionName: getCommercialOptionLabel(
-        workspace.commercial_option,
-      ),
+      packageName: isCommitmentOption ? "Starter Option B" : "Starter Option A",
+      commercialOptionName: isCommitmentOption
+        ? "299 €/Monat · 12 Monate"
+        : "990 € Setup + 299 €/Monat",
       setupFeeLabel: setupFee,
       monthlyFeeLabel: monthlyFee,
-      commitmentLabel: "monatlich kündbar",
-      planHint: "Starter · produktiver MVP-Kern",
+      commitmentLabel: isCommitmentOption ? "12 Monate" : "monatlich kündbar",
+      planHint: isCommitmentOption
+        ? "Starter · ohne Einrichtung · 12 Monate"
+        : "Starter · Setup + monatlich kündbar",
       packageSummary:
         "Produktiver MVP-Kern für Kontakte und manuelle Kontaktpflege.",
-      contractNote:
-        "990 € Einrichtung + 299 €/Monat · monatlich kündbar. Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat.",
+      contractNote: isCommitmentOption
+        ? "299 €/Monat · ohne Einrichtung · 12 Monate Bindung. Hier wird keine Zahlungs- oder Subscription-Logik ausgelöst."
+        : "990 € Einrichtung + 299 €/Monat · monatlich kündbar. Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat.",
     };
   }
 

@@ -4437,13 +4437,14 @@
 
 .integrationFlowPanel {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) minmax(32px, 54px) minmax(160px, 182px) minmax(32px, 54px) minmax(320px, 1fr);
+  grid-template-columns: minmax(220px, 300px) minmax(24px, 44px) minmax(150px, 180px) minmax(24px, 44px) minmax(0, 1fr);
   align-items: center;
   gap: clamp(6px, 0.65vw, 10px);
   min-height: 210px;
   margin-top: 10px;
   padding: 14px;
   overflow: hidden;
+  min-width: 0;
   border: 1px solid rgba(59, 116, 184, 0.36);
   border-radius: 12px;
   background: rgba(4, 15, 34, 0.68);
@@ -4587,8 +4588,9 @@
 
 .integrationActionPanel > div {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(112px, 1fr));
   gap: 6px;
+  min-width: 0;
 }
 
 .integrationActionPanel article {
@@ -8345,27 +8347,34 @@
 }
 
 .integrationSourcePanel .comingSoonImage {
-  right: 6px;
-  bottom: 2px;
-  width: 42px;
+  right: 18px;
+  bottom: 3px;
+  width: 34px;
 }
 
 .integrationSourcePanel .cardWithComingSoon {
-  padding-bottom: 22px;
+  padding-right: 44px;
+  padding-bottom: 4px;
 }
 
 .integrationActionPanel .comingSoonImage,
 .integrationChannelCard .comingSoonImage {
-  width: 58px;
+  right: 8px;
+  bottom: 7px;
+  width: 52px;
+}
+
+.integrationChannelCard.cardWithComingSoon {
+  padding-bottom: 52px;
 }
 
 .integrationActionPanel .cardWithComingSoon {
-  padding-bottom: 46px;
+  padding-bottom: 44px;
 }
 
 @media (max-width: 1500px) and (min-width: 1281px) {
   .integrationFlowPanel {
-    grid-template-columns: minmax(220px, 290px) minmax(28px, 44px) minmax(150px, 170px) minmax(28px, 44px) minmax(300px, 1fr);
+    grid-template-columns: minmax(210px, 280px) minmax(22px, 38px) minmax(145px, 165px) minmax(22px, 38px) minmax(0, 1fr);
   }
 
   .integrationActionPanel > div {
