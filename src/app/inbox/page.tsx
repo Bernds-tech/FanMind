@@ -1,0 +1,689 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import {
+  getSupabaseServerUser,
+  getUserWorkspaceDashboard,
+  getWorkspaceContacts,
+  getWorkspaceOpenFollowups,
+  signOutSupabaseServerSession,
+  type ContactRow,
+  type FollowupRow,
+  type WorkspaceDashboardRow,
+} from "@/lib/supabase/server";
+import { countUniqueFans, getFanGroupKey } from "@/lib/fanIdentity";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import dashboardStyles from "../dashboard/dashboard.module.css";
+import styles from "./inbox.module.css";
+
+type InboxPageProps = {
+  searchParams?: Promise<{ filter?: string | string[]; q?: string | string[] }>;
+};
+
+type InboxWorkspaceProps = {
+  workspace: WorkspaceDashboardRow;
+  userDisplayName: string;
+  contacts: ContactRow[];
+  contactsError?: string;
+  followups: FollowupRow[];
+  followupsError?: string;
+  activeFilter: InboxFilter;
+  searchQuery: string;
+};
+
+type InboxFilter =
+  | "all"
+  | "unread"
+  | "due"
+  | "high"
+  | "vip"
+  | "buyer"
+  | "ai"
+  | "mine";
+
+type InboxQueueItem = {
+  key: string;
+  contactId: string;
+  fanName: string;
+  handle: string;
+  initials: string;
+  tags: string[];
+  channel: string;
+  channelClass: string;
+  messagePreview: string;
+  conversationType: string;
+  segment: string;
+  priority: "Hoch" | "Mittel" | "Warm" | "Normal" | "Niedrig";
+  priorityScore: number;
+  waitingSince: string;
+  waitingMinutes: number;
+  owner: string;
+  aiStatus: "KI-ready" | "Teilweise" | "Nicht bereit";
+  nextStep: string;
+  unread: boolean;
+  dueToday: boolean;
+};
+
+const filterChips: { label: string; value: InboxFilter }[] = [
+  { label: "Alle", value: "all" },
+  { label: "Ungelesen", value: "unread" },
+  { label: "Antwort fällig", value: "due" },
+  { label: "Hohe Priorität", value: "high" },
+  { label: "VIP", value: "vip" },
+  { label: "Käufer", value: "buyer" },
+  { label: "Mit KI vorbereitet", value: "ai" },
+  { label: "Wartet auf mich", value: "mine" },
+];
+
+async function logout() {
+  "use server";
+
+  await signOutSupabaseServerSession();
+  redirect("/login");
+}
+
+function InboxWorkspace({
+  workspace,
+  userDisplayName,
+  contacts,
+  contactsError,
+  followups,
+  followupsError,
+  activeFilter,
+  searchQuery,
+}: InboxWorkspaceProps) {
+  const { mainNavigation, settingsNavigation, savedViews } =
+    getWorkspaceNavigation("inbox");
+  const queueItems = buildInboxQueue(contacts, followups);
+  const visibleItems = filterQueueItems(queueItems, activeFilter, searchQuery);
+  const kpis = getInboxKpis(queueItems);
+
+  return (
+    <WorkspaceShell
+      workspaceName={workspace.name}
+      userLabel={userDisplayName || workspace.name || "Nutzer"}
+      planLabel={workspace.plan_id}
+      planMeta={workspace.role}
+      planStatus={workspace.plan_id === "starter" ? "Aktiv" : "Demo"}
+      mainNavigation={mainNavigation}
+      settingsNavigation={settingsNavigation}
+      savedViews={savedViews}
+      header={{
+        title: "Inbox",
+        subtitle:
+          "Priorisierte Arbeitsliste für eingehende Nachrichten, Follow-ups und KI-vorbereitete Antworten.",
+        searchPlaceholder: "Suche nach Fan, Kanal, Nachricht, Segment …",
+        primaryActionLabel: "Zur Fanliste",
+        primaryActionHref: "/fans#fans-list",
+      }}
+      contactCount={countUniqueFans(contacts)}
+      openFollowupCount={followups.length}
+      logoutAction={logout}
+    >
+      <div className={styles.inboxStack}>
+        <section className={styles.introBar} aria-label="Inbox Suche">
+          <div>
+            <p className={dashboardStyles.eyebrow}>Lokale MVP-Arbeitsliste</p>
+            <h2>Workspace-Daten statt Social-Sync</h2>
+            <p>
+              Die Queue entsteht aus vorhandenen Kontakten und offenen
+              Follow-ups. Externe Instagram-, WhatsApp- oder E-Mail-Eingänge
+              werden in diesem PR nicht synchronisiert.
+            </p>
+          </div>
+          <form className={styles.searchForm} action="/inbox">
+            <input type="hidden" name="filter" value={activeFilter} />
+            <label className={styles.searchLabel} htmlFor="inbox-search">
+              Suche
+            </label>
+            <input
+              id="inbox-search"
+              name="q"
+              defaultValue={searchQuery}
+              placeholder="Suche nach Fan, Kanal, Nachricht, Segment …"
+            />
+          </form>
+        </section>
+
+        <section className={styles.kpiGrid} aria-label="Inbox Kennzahlen">
+          {kpis.map((kpi) => (
+            <article className={styles.kpiCard} key={kpi.label}>
+              <span>{kpi.label}</span>
+              <strong>{kpi.value}</strong>
+              <small>{kpi.meta}</small>
+            </article>
+          ))}
+        </section>
+
+        <div className={styles.contentGrid}>
+          <section className={styles.queueCard} aria-labelledby="queue-title">
+            <div className={styles.queueHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>Conversation Queue</p>
+                <h2 id="queue-title">Offene Konversationen</h2>
+              </div>
+              <Link className={styles.secondaryLink} href="/fans#fans-list">
+                Zur Fanliste
+              </Link>
+            </div>
+
+            {contactsError ? (
+              <ErrorBox
+                title="Kontakte konnten nicht geladen werden."
+                message={contactsError}
+              />
+            ) : null}
+            {followupsError ? (
+              <ErrorBox
+                title="Follow-ups konnten nicht geladen werden."
+                message={followupsError}
+              />
+            ) : null}
+
+            <nav className={styles.filterBar} aria-label="Inbox Filter">
+              {filterChips.map((chip) => (
+                <Link
+                  className={
+                    chip.value === activeFilter
+                      ? styles.filterChipActive
+                      : styles.filterChip
+                  }
+                  href={`/inbox?filter=${chip.value}${
+                    searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""
+                  }`}
+                  key={chip.value}
+                >
+                  {chip.label}
+                </Link>
+              ))}
+            </nav>
+
+            {visibleItems.length ? (
+              <QueueList items={visibleItems} />
+            ) : (
+              <EmptyState />
+            )}
+          </section>
+
+          <aside className={styles.sideRail} aria-label="Inbox Regeln">
+            <InfoCard
+              title="Queue-Regeln"
+              items={[
+                "VIP zuerst",
+                "Käufer priorisieren",
+                "Negative Stimmung markieren",
+                "Antworten nie automatisch senden",
+              ]}
+            />
+            <div className={styles.noticeCard}>
+              <h3>Hinweis</h3>
+              <p>
+                FanMind zentralisiert Eingänge. Antworten werden manuell geprüft
+                und erst nach Freigabe gesendet.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </WorkspaceShell>
+  );
+}
+
+function ErrorBox({ title, message }: { title: string; message: string }) {
+  return (
+    <p className={dashboardStyles.error}>
+      <strong>{title}</strong>
+      <span>{message}</span>
+    </p>
+  );
+}
+
+function QueueList({ items }: { items: InboxQueueItem[] }) {
+  return (
+    <div
+      className={styles.queueTable}
+      role="table"
+      aria-label="Lokale Conversation Queue"
+    >
+      <div className={`${styles.queueRow} ${styles.queueHead}`} role="row">
+        <span>Auswahl</span>
+        <span>Fan</span>
+        <span>Kanal</span>
+        <span>Letzte Nachricht</span>
+        <span>Typ</span>
+        <span>Segment</span>
+        <span>Priorität</span>
+        <span>Wartet seit</span>
+        <span>Owner</span>
+        <span>KI-Status</span>
+        <span>Nächster Schritt</span>
+      </div>
+      {items.map((item) => (
+        <div className={styles.queueRowWrap} key={item.key}>
+          <div className={styles.selectCell}>
+            <input aria-label={`${item.fanName} auswählen`} type="checkbox" />
+          </div>
+          <Link className={styles.queueRowLink} href={`/fans/${item.contactId}`}>
+            <span className={styles.fanCell}>
+              <span className={styles.avatar}>{item.initials}</span>
+              <span>
+                <strong>{item.fanName}</strong>
+                <small>{item.handle}</small>
+                <em>{item.tags.slice(0, 2).join(" · ") || "Workspace-Daten"}</em>
+              </span>
+            </span>
+            <span>
+              <b className={`${styles.channelBadge} ${styles[item.channelClass]}`}>
+                {item.channel}
+              </b>
+            </span>
+            <span className={styles.messageCell}>{item.messagePreview}</span>
+            <span>{item.conversationType}</span>
+            <span>{item.segment}</span>
+            <span>
+              <b
+                className={`${styles.priorityBadge} ${
+                  styles[`priority${item.priority}`]
+                }`}
+              >
+                {item.priority}
+              </b>
+            </span>
+            <span>{item.waitingSince}</span>
+            <span>{item.owner}</span>
+            <span>
+              <b className={styles.aiBadge}>{item.aiStatus}</b>
+            </span>
+            <span className={styles.nextStep}>{item.nextStep}</span>
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className={dashboardStyles.emptyState}>
+      <strong>Keine Queue-Einträge für diesen Filter.</strong>
+      <p>
+        Lege Fans oder offene Follow-ups an, um die lokale MVP-Arbeitsliste zu
+        füllen. Ohne echte Social-Synchronisierung wird keine externe
+        Eingangsnachricht behauptet.
+      </p>
+    </div>
+  );
+}
+
+function InfoCard({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className={styles.rulesCard}>
+      <h3>{title}</h3>
+      <ul>
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function buildInboxQueue(
+  contacts: ContactRow[],
+  followups: FollowupRow[],
+): InboxQueueItem[] {
+  const followupsByContact = new Map<string, FollowupRow[]>();
+
+  for (const followup of followups) {
+    if (followup.status && followup.status !== "open") {
+      continue;
+    }
+
+    followupsByContact.set(followup.contact_id, [
+      ...(followupsByContact.get(followup.contact_id) ?? []),
+      followup,
+    ]);
+  }
+
+  const itemsByFan = new Map<string, InboxQueueItem>();
+
+  for (const contact of contacts) {
+    const contactFollowups = followupsByContact.get(contact.id) ?? [];
+    const item = createQueueItem(contact, contactFollowups);
+    const existing = itemsByFan.get(item.key);
+
+    if (
+      !existing ||
+      item.priorityScore > existing.priorityScore ||
+      item.waitingMinutes > existing.waitingMinutes
+    ) {
+      itemsByFan.set(item.key, item);
+    }
+  }
+
+  return Array.from(itemsByFan.values()).sort(
+    (a, b) =>
+      b.priorityScore - a.priorityScore || b.waitingMinutes - a.waitingMinutes,
+  );
+}
+
+function createQueueItem(
+  contact: ContactRow,
+  followups: FollowupRow[],
+): InboxQueueItem {
+  const tags = contact.tags ?? [];
+  const latestFollowup = followups[0];
+  const priority = getPriority(contact, latestFollowup);
+  const waitingMinutes = getWaitingMinutes(
+    latestFollowup?.due_date,
+    contact.updated_at ?? contact.created_at,
+  );
+  const hasContext = Boolean(contact.summary?.trim() || latestFollowup?.reason?.trim());
+  const hasTags = tags.length > 0;
+
+  return {
+    key: getFanGroupKey(contact),
+    contactId: contact.id,
+    fanName: contact.display_name || contact.handle || "Unbenannter Fan",
+    handle: contact.handle || "Kein Handle hinterlegt",
+    initials: getInitials(contact.display_name || contact.handle),
+    tags,
+    channel: getChannelLabel(contact.source_platform),
+    channelClass: getChannelClass(contact.source_platform),
+    messagePreview:
+      latestFollowup?.reason ||
+      "Noch keine gespeicherte Eingangsnachricht. Kontext manuell einfügen.",
+    conversationType: getConversationType(contact.source_platform, latestFollowup),
+    segment: getSegment(contact),
+    priority,
+    priorityScore: getPriorityScore(priority) + (latestFollowup ? 20 : 0),
+    waitingSince: formatWaitingSince(waitingMinutes),
+    waitingMinutes,
+    owner: "Team Inbox",
+    aiStatus: hasContext && hasTags ? "KI-ready" : hasContext ? "Teilweise" : "Nicht bereit",
+    nextStep: latestFollowup
+      ? "Antwort vorbereiten"
+      : hasContext
+        ? "Vorschlag laden"
+        : "Info bereitstellen",
+    unread: Boolean(latestFollowup),
+    dueToday: isDueToday(latestFollowup?.due_date),
+  };
+}
+
+function getPriority(
+  contact: ContactRow,
+  followup?: FollowupRow,
+): InboxQueueItem["priority"] {
+  const raw = `${followup?.priority ?? ""} ${contact.status ?? ""} ${(
+    contact.tags ?? []
+  ).join(" ")}`.toLowerCase();
+
+  if (/high|hoch|urgent|vip|kritisch/.test(raw)) return "Hoch";
+  if (/buyer|käufer|kaeufer|kunde/.test(raw)) return "Mittel";
+  if (/warm|follow/.test(raw)) return "Warm";
+  if (/low|niedrig|paused|inactive/.test(raw)) return "Niedrig";
+
+  return "Normal";
+}
+
+function getPriorityScore(priority: InboxQueueItem["priority"]): number {
+  return { Hoch: 100, Mittel: 75, Warm: 60, Normal: 40, Niedrig: 10 }[priority];
+}
+
+function getSegment(contact: ContactRow): string {
+  const raw = `${contact.status ?? ""} ${(contact.tags ?? []).join(" ")}`.toLowerCase();
+
+  if (raw.includes("vip")) return "VIP";
+  if (/buyer|käufer|kaeufer|kunde/.test(raw)) return "Käufer";
+  if (/event|show|meet/.test(raw)) return "Event";
+  if (raw.includes("warm")) return "Warm";
+
+  return "Fan";
+}
+
+function getChannelLabel(value: string | null): string {
+  const labels: Record<string, string> = {
+    instagram: "Instagram",
+    whatsapp: "WhatsApp",
+    email: "E-Mail",
+    form: "Webformular",
+    webform: "Webformular",
+    manual: "Manuell",
+    tiktok: "TikTok",
+  };
+
+  return labels[(value ?? "manual").toLowerCase()] ?? "Manuell";
+}
+
+function getChannelClass(value: string | null): string {
+  const channel = (value ?? "manual").toLowerCase();
+
+  if (channel.includes("instagram")) return "channelInstagram";
+  if (channel.includes("whatsapp")) return "channelWhatsapp";
+  if (channel.includes("email")) return "channelEmail";
+  if (channel.includes("form")) return "channelForm";
+
+  return "channelManual";
+}
+
+function getConversationType(source: string | null, followup?: FollowupRow): string {
+  if (!followup) return "Manuell";
+
+  const value = (source ?? "").toLowerCase();
+
+  if (value.includes("email")) return "E-Mail";
+  if (value.includes("form")) return "Formular";
+  if (
+    value.includes("instagram") ||
+    value.includes("whatsapp") ||
+    value.includes("tiktok")
+  ) {
+    return "DM";
+  }
+
+  return "Notiz";
+}
+
+function getWaitingMinutes(
+  dueDate?: string | null,
+  fallbackDate?: string | null,
+): number {
+  const value = dueDate ? `${dueDate}T00:00:00Z` : fallbackDate;
+
+  if (!value) return 0;
+
+  return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+}
+
+function formatWaitingSince(minutes: number): string {
+  if (minutes <= 0) return "—";
+  if (minutes < 60) return `${minutes} Min.`;
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 48) return `${hours} Std.`;
+
+  return `${Math.floor(hours / 24)} Tage`;
+}
+
+function isDueToday(value?: string | null): boolean {
+  if (!value) return false;
+
+  return value <= new Date().toISOString().slice(0, 10);
+}
+
+function getInitials(value?: string | null): string {
+  const parts = (value ?? "FM")
+    .replace(/^@/, "")
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+
+  return (
+    parts
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "FM"
+  );
+}
+
+function filterQueueItems(
+  items: InboxQueueItem[],
+  filter: InboxFilter,
+  query: string,
+): InboxQueueItem[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return items.filter((item) => {
+    const matchesFilter =
+      filter === "all" ||
+      (filter === "unread" && item.unread) ||
+      (filter === "due" && item.dueToday) ||
+      (filter === "high" && item.priority === "Hoch") ||
+      (filter === "vip" && item.segment === "VIP") ||
+      (filter === "buyer" && item.segment === "Käufer") ||
+      (filter === "ai" && item.aiStatus === "KI-ready") ||
+      (filter === "mine" && item.owner === "Team Inbox");
+
+    if (!matchesFilter) return false;
+    if (!normalizedQuery) return true;
+
+    return [
+      item.fanName,
+      item.handle,
+      item.channel,
+      item.messagePreview,
+      item.segment,
+      ...item.tags,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedQuery);
+  });
+}
+
+function getInboxKpis(items: InboxQueueItem[]) {
+  const responseReady = items.filter((item) => item.aiStatus === "KI-ready").length;
+  const averageMinutes = items.length
+    ? Math.round(
+        items.reduce((sum, item) => sum + item.waitingMinutes, 0) / items.length,
+      )
+    : 0;
+
+  return [
+    {
+      label: "Offene Konversationen",
+      value: String(items.length),
+      meta: "pro Fan dedupliziert",
+    },
+    {
+      label: "Ungelesen",
+      value: String(items.filter((item) => item.unread).length),
+      meta: "offene Follow-ups",
+    },
+    {
+      label: "Antwort fällig heute",
+      value: String(items.filter((item) => item.dueToday).length),
+      meta: "aus Fälligkeitsdatum",
+    },
+    {
+      label: "Hohe Priorität",
+      value: String(items.filter((item) => item.priority === "Hoch").length),
+      meta: "Status, Tags, Follow-ups",
+    },
+    {
+      label: "Mit KI vorbereitet",
+      value: String(responseReady),
+      meta: "Kontext + Tags vorhanden",
+    },
+    {
+      label: "Ø Antwortzeit",
+      value:
+        averageMinutes >= 1440
+          ? `${Math.round(averageMinutes / 1440)} Tage`
+          : `${Math.round(averageMinutes / 60)} Std.`,
+      meta: "lokal abgeleitet",
+    },
+  ];
+}
+
+function stringMetadataValue(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = metadata?.[key];
+
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function getUserDisplayName(
+  metadata: Record<string, unknown> | undefined,
+  workspaceName: string,
+): string {
+  return (
+    stringMetadataValue(metadata, "display_name") ??
+    stringMetadataValue(metadata, "name") ??
+    stringMetadataValue(metadata, "full_name") ??
+    workspaceName ??
+    "Nutzer"
+  );
+}
+
+function normalizeParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function normalizeFilter(value: string): InboxFilter {
+  return filterChips.some((chip) => chip.value === value)
+    ? (value as InboxFilter)
+    : "all";
+}
+
+export default async function InboxPage({ searchParams }: InboxPageProps) {
+  const params = await searchParams;
+  const { data } = await getSupabaseServerUser();
+
+  if (!data.user) {
+    redirect("/login");
+  }
+
+  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspace = workspaceResult.workspace;
+  const contactsResult = workspace ? await getWorkspaceContacts(workspace.id) : null;
+  const followupsResult = workspace
+    ? await getWorkspaceOpenFollowups(workspace.id)
+    : null;
+
+  return (
+    <main className={dashboardStyles.page}>
+      {workspace ? (
+        <InboxWorkspace
+          workspace={workspace}
+          userDisplayName={getUserDisplayName(
+            data.user.user_metadata,
+            workspace.name,
+          )}
+          contacts={contactsResult?.contacts ?? []}
+          contactsError={contactsResult?.error?.message}
+          followups={followupsResult?.followups ?? []}
+          followupsError={followupsResult?.error?.message}
+          activeFilter={normalizeFilter(normalizeParam(params?.filter))}
+          searchQuery={normalizeParam(params?.q)}
+        />
+      ) : (
+        <section className={dashboardStyles.fallbackCard} aria-label="FanMind Inbox">
+          <h1>Inbox</h1>
+          <p>Workspace konnte noch nicht geladen werden.</p>
+          {workspaceResult.error ? (
+            <p className={dashboardStyles.error}>
+              <strong>Workspace-Daten konnten nicht geladen werden.</strong>
+              <span>{workspaceResult.error.message}</span>
+            </p>
+          ) : null}
+        </section>
+      )}
+    </main>
+  );
+}
