@@ -149,37 +149,18 @@ function FanDetailContent({
 
   return (
     <>
-      <section
-        className={styles.contactHeader}
-        aria-labelledby="fan-profile-title"
-      >
-        <div className={styles.headerMain}>
-          <div className={styles.identity}>
-            <div className={styles.avatar} aria-hidden="true">
-              {getInitials(contact.display_name)}
-            </div>
-            <div>
-              <p className={dashboardStyles.eyebrow}>Conversation Workbench</p>
-              <h2 id="fan-profile-title">{contact.display_name}</h2>
-              <p className={styles.handle}>
-                {contact.handle || "Kein Handle hinterlegt"}
-              </p>
-              <div className={styles.pillRow} aria-label="Status und Segmente">
-                <span className={styles.statusBadge}>
-                  {formatStatus(contact.status)}
-                </span>
-                {tags.slice(0, 5).map((tag) => (
-                  <span className={styles.tag} key={tag}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className={styles.pillRow} aria-label="Verbundene Kanäle">
-            {buildChannelBadges(contact.source_platform).map((channel) => (
-              <span className={styles.channelBadge} key={channel}>
-                {channel}
+      <section className={styles.contactHeader} aria-label="Fan-Workbench">
+        <div className={styles.headerMeta}>
+          <p className={styles.handle}>
+            {contact.handle || "Kein Handle hinterlegt"}
+          </p>
+          <div className={styles.pillRow} aria-label="Status und Segmente">
+            <span className={styles.statusBadge}>
+              {formatStatus(contact.status)}
+            </span>
+            {tags.slice(0, 5).map((tag) => (
+              <span className={styles.tag} key={tag}>
+                {tag}
               </span>
             ))}
           </div>
@@ -723,13 +704,6 @@ function FanNotFound() {
   );
 }
 
-function buildChannelBadges(sourcePlatform: string | null): string[] {
-  const primary = formatSource(sourcePlatform);
-  const preparedChannels = [primary, "E-Mail bereit", "Webformular bereit"];
-
-  return Array.from(new Set(preparedChannels));
-}
-
 function calculateFanScore(
   contact: ContactRow,
   memoryCount: number,
@@ -847,17 +821,6 @@ function formatDate(value: string | null): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
-}
-
-function getInitials(displayName: string): string {
-  const initials = displayName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
-  return initials || "FM";
 }
 
 function getUserDisplayName(

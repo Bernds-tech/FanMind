@@ -206,15 +206,6 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
         <span>Serverseitig</span>
       </div>
 
-      <div className={styles.workflowHint} role="note">
-        <strong>Gerhards Demo-Ablauf:</strong>
-        <span>
-          Kontext prüfen → neue Nachricht einfügen → Vorschläge erzeugen → Text
-          kopieren → Memory oder Follow-up bewusst speichern. FanMind sendet
-          niemals automatisch.
-        </span>
-      </div>
-
       <form className={styles.aiComposer} onSubmit={handleSubmit}>
         <label htmlFor="pasted_chat_context">
           <span>Chatverlauf einfügen</span>
