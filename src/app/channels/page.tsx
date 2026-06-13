@@ -10,7 +10,6 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
-import styles from "./channels.module.css";
 
 type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -55,23 +54,6 @@ function ChannelsWorkspace({
       contactCount={contactCount}
       logoutAction={logout}
     >
-      <section className={styles.introCard} aria-labelledby="channels-title">
-        <div>
-          <p className={styles.eyebrow}>Pflichtbereich · Social-Media-Synchronisation</p>
-          <h2 id="channels-title">Kanäle verbinden und Eingänge kontrollieren</h2>
-          <p>
-            Verbinde Quellen für eingehende Nachrichten, Kommentare, Leads und
-            Support-Anfragen. FanMind importiert und ordnet Eingänge dem
-            Arbeits-Eingang zu; Antworten werden nie automatisch gesendet.
-          </p>
-        </div>
-        <div className={styles.safetyPills} aria-label="Freigabe-Regeln">
-          <span>Manuelle Prüfung vor Antwort</span>
-          <span>Kein Kampagnenversand</span>
-          <span>Automatisches Senden: deaktiviert</span>
-        </div>
-      </section>
-
       <ChannelsGrid />
     </WorkspaceShell>
   );

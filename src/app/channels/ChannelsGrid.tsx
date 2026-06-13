@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./channels.module.css";
 
 type ChannelStatus =
@@ -12,75 +12,91 @@ type ChannelStatus =
 
 type Channel = {
   key: string;
-  initials: string;
   name: string;
   description: string;
   status: ChannelStatus;
   technology: string;
-  buttonLabel: string;
-  signal?: boolean;
   intakeTypes: string;
+  logo: string;
+  signal?: boolean;
 };
 
+const logoPath = (name: string) => `/channel-logos/${name}.svg`;
+
 const channels: Channel[] = [
-  { key: "instagram", initials: "IG", name: "Instagram", description: "Direktnachrichten und Anfragen importieren", status: "In Arbeit", technology: "OAuth · Webhook", buttonLabel: "Vorschau", intakeTypes: "DMs · Anfragen", signal: true },
-  { key: "tiktok", initials: "TT", name: "TikTok", description: "Direktnachrichten und Kommentare abrufen", status: "In Arbeit", technology: "OAuth · Webhook", buttonLabel: "Vorschau", intakeTypes: "DMs · Kommentare", signal: true },
-  { key: "facebook", initials: "FB", name: "Facebook", description: "Kommentare und Nachrichten importieren", status: "Coming Soon", technology: "Graph API", buttonLabel: "Benachrichtigen", intakeTypes: "Kommentare · Nachrichten" },
-  { key: "twitter", initials: "X", name: "X / Twitter", description: "Mentions und Direktnachrichten empfangen", status: "Coming Soon", technology: "API v2", buttonLabel: "Benachrichtigen", intakeTypes: "Mentions · DMs" },
-  { key: "whatsapp", initials: "WA", name: "WhatsApp", description: "Nachrichten empfangen und importieren", status: "In Arbeit", technology: "Cloud API · Webhook", buttonLabel: "Vorschau", intakeTypes: "Nachrichten", signal: true },
-  { key: "discord", initials: "DC", name: "Discord", description: "DMs und Server-Nachrichten importieren", status: "Coming Soon", technology: "Bot API · Webhook", buttonLabel: "Benachrichtigen", intakeTypes: "DMs · Server" },
-  { key: "telegram", initials: "TG", name: "Telegram", description: "Nachrichten und Gruppen-Eingänge abrufen", status: "Coming Soon", technology: "Bot API · Webhook", buttonLabel: "Benachrichtigen", intakeTypes: "Nachrichten · Gruppen" },
-  { key: "youtube", initials: "YT", name: "YouTube", description: "Kommentare und Live-Chat-Nachrichten importieren", status: "Coming Soon", technology: "YouTube API", buttonLabel: "Benachrichtigen", intakeTypes: "Kommentare · Live-Chat" },
-  { key: "twitch", initials: "TW", name: "Twitch", description: "Chat-Nachrichten und Whispers importieren", status: "Coming Soon", technology: "EventSub · API", buttonLabel: "Benachrichtigen", intakeTypes: "Chat · Whispers" },
-  { key: "onlyfans", initials: "OF", name: "OnlyFans", description: "Nachrichten und Sub-Anfragen importieren", status: "Vorschau", technology: "API (Beta)", buttonLabel: "Vorschau", intakeTypes: "Nachrichten · Sub-Anfragen" },
-  { key: "patreon", initials: "PT", name: "Patreon", description: "Nachrichten und Support-Anfragen abrufen", status: "Vorschau", technology: "API (Beta)", buttonLabel: "Vorschau", intakeTypes: "Nachrichten · Support" },
-  { key: "email", initials: "@", name: "E-Mail / Postfach", description: "E-Mails automatisch inboxen", status: "Verfügbar", technology: "IMAP · OAuth", buttonLabel: "Verbinden", intakeTypes: "E-Mails", signal: true },
-  { key: "webform", initials: "WF", name: "Webformular / Website-Lead", description: "Leads und Anfragen aus Formularen empfangen", status: "Verfügbar", technology: "Webhook · Form-API", buttonLabel: "Verbinden", intakeTypes: "Leads · Anfragen", signal: true },
-  { key: "shopify", initials: "SH", name: "Shopify / Shop-Bestellungen", description: "Bestellungen und Kunden-Anfragen importieren", status: "Verfügbar", technology: "API · Webhook", buttonLabel: "Verbinden", intakeTypes: "Bestellungen · Kundenfragen", signal: true },
-  { key: "eventbrite", initials: "EV", name: "Eventbrite / Event-Anfragen", description: "Event-Anmeldungen und Anfragen importieren", status: "Verfügbar", technology: "API · Webhook", buttonLabel: "Verbinden", intakeTypes: "Anmeldungen · Anfragen", signal: true },
-  { key: "csv", initials: "CSV", name: "CSV-Import", description: "Kontakte & Nachrichten per CSV hochladen", status: "Verbunden", technology: "CSV · Datei-Upload", buttonLabel: "Verwalten", intakeTypes: "Kontakte · Nachrichten", signal: true },
-  { key: "manual", initials: "+", name: "Manueller Eingang", description: "Manuelle Kontakte & Nachrichten erfassen", status: "Verfügbar", technology: "Manuell", buttonLabel: "Öffnen", intakeTypes: "Kontakte · Notizen", signal: true },
-  { key: "api", initials: "API", name: "API / Custom Connector", description: "Eigene Systeme und Plattformen anbinden", status: "Verfügbar", technology: "API · Webhook", buttonLabel: "Dokumentation", intakeTypes: "Eigene Events", signal: true },
-  { key: "linkedin", initials: "IN", name: "LinkedIn", description: "Nachrichten und Lead-Kommentare vormerken", status: "Coming Soon", technology: "API · Webhook", buttonLabel: "Benachrichtigen", intakeTypes: "Nachrichten · Leads" },
-  { key: "threads", initials: "TH", name: "Threads", description: "Mentions und Antworten als Eingang planen", status: "Vorschau", technology: "API (Beta)", buttonLabel: "Vorschau", intakeTypes: "Mentions · Antworten" },
-  { key: "snapchat", initials: "SC", name: "Snapchat", description: "Creator-Nachrichten und Story-Antworten prüfen", status: "Coming Soon", technology: "API", buttonLabel: "Benachrichtigen", intakeTypes: "Nachrichten · Story-Antworten" },
-  { key: "reddit", initials: "RD", name: "Reddit", description: "Kommentare, Modmail und Erwähnungen sammeln", status: "Coming Soon", technology: "API · Webhook", buttonLabel: "Benachrichtigen", intakeTypes: "Kommentare · Modmail" },
-  { key: "pinterest", initials: "PI", name: "Pinterest", description: "Kommentare und Produkt-Anfragen aufnehmen", status: "Coming Soon", technology: "API", buttonLabel: "Benachrichtigen", intakeTypes: "Kommentare · Anfragen" },
-  { key: "fediverse", initials: "BS", name: "Bluesky / Mastodon", description: "Mentions und Community-Antworten importieren", status: "Vorschau", technology: "ATProto · ActivityPub", buttonLabel: "Vorschau", intakeTypes: "Mentions · Antworten" },
-  { key: "woocommerce", initials: "WC", name: "WooCommerce", description: "Shop-Anfragen und Bestellungen übernehmen", status: "Verfügbar", technology: "REST API · Webhook", buttonLabel: "Verbinden", intakeTypes: "Bestellungen · Support", signal: true },
-  { key: "ticketing", initials: "TK", name: "Ticketing / Events", description: "Event-Tickets und Supportfälle zentral sammeln", status: "Coming Soon", technology: "API · Webhook", buttonLabel: "Benachrichtigen", intakeTypes: "Tickets · Events" },
+  { key: "instagram", name: "Instagram", description: "Direktnachrichten und Anfragen importieren", status: "In Arbeit", technology: "OAuth · Webhook", intakeTypes: "DMs · Anfragen", logo: logoPath("instagram"), signal: true },
+  { key: "tiktok", name: "TikTok", description: "Direktnachrichten und Kommentare abrufen", status: "In Arbeit", technology: "OAuth · Webhook", intakeTypes: "DMs · Kommentare", logo: logoPath("tiktok"), signal: true },
+  { key: "facebook", name: "Facebook", description: "Kommentare und Nachrichten importieren", status: "Coming Soon", technology: "Graph API", intakeTypes: "Kommentare · Nachrichten", logo: logoPath("facebook") },
+  { key: "twitter", name: "X / Twitter", description: "Mentions und Direktnachrichten empfangen", status: "Coming Soon", technology: "API v2", intakeTypes: "Mentions · DMs", logo: logoPath("twitter") },
+  { key: "whatsapp", name: "WhatsApp", description: "Nachrichten empfangen und importieren", status: "In Arbeit", technology: "Cloud API · Webhook", intakeTypes: "Nachrichten", logo: logoPath("whatsapp"), signal: true },
+  { key: "discord", name: "Discord", description: "DMs und Server-Nachrichten importieren", status: "Coming Soon", technology: "Bot API · Webhook", intakeTypes: "DMs · Server", logo: logoPath("discord") },
+  { key: "telegram", name: "Telegram", description: "Nachrichten und Gruppen-Eingänge abrufen", status: "Coming Soon", technology: "Bot API · Webhook", intakeTypes: "Nachrichten · Gruppen", logo: logoPath("telegram") },
+  { key: "youtube", name: "YouTube", description: "Kommentare und Live-Chat-Nachrichten importieren", status: "Coming Soon", technology: "YouTube API", intakeTypes: "Kommentare · Live-Chat", logo: logoPath("youtube") },
+  { key: "twitch", name: "Twitch", description: "Chat-Nachrichten und Whispers importieren", status: "Coming Soon", technology: "EventSub · API", intakeTypes: "Chat · Whispers", logo: logoPath("twitch") },
+  { key: "onlyfans", name: "OnlyFans", description: "Nachrichten und Sub-Anfragen importieren", status: "Vorschau", technology: "API (Beta)", intakeTypes: "Nachrichten · Sub-Anfragen", logo: logoPath("onlyfans") },
+  { key: "patreon", name: "Patreon", description: "Nachrichten und Support-Anfragen abrufen", status: "Vorschau", technology: "API (Beta)", intakeTypes: "Nachrichten · Support", logo: logoPath("patreon") },
+  { key: "email", name: "E-Mail / Postfach", description: "E-Mails automatisch inboxen", status: "Verfügbar", technology: "IMAP · OAuth", intakeTypes: "E-Mails", logo: logoPath("email"), signal: true },
+  { key: "webform", name: "Webformular / Website-Lead", description: "Leads und Anfragen aus Formularen empfangen", status: "Verfügbar", technology: "Webhook · Form-API", intakeTypes: "Leads · Anfragen", logo: logoPath("webform"), signal: true },
+  { key: "shopify", name: "Shopify / Shop-Bestellungen", description: "Bestellungen und Kunden-Anfragen importieren", status: "Verfügbar", technology: "API · Webhook", intakeTypes: "Bestellungen · Kundenfragen", logo: logoPath("shopify"), signal: true },
+  { key: "eventbrite", name: "Eventbrite / Event-Anfragen", description: "Event-Anmeldungen und Anfragen importieren", status: "Verfügbar", technology: "API · Webhook", intakeTypes: "Anmeldungen · Anfragen", logo: logoPath("eventbrite"), signal: true },
+  { key: "csv", name: "CSV-Import", description: "Kontakte & Nachrichten per CSV hochladen", status: "Verbunden", technology: "CSV · Datei-Upload", intakeTypes: "Kontakte · Nachrichten", logo: logoPath("csv"), signal: true },
+  { key: "manual", name: "Manueller Eingang", description: "Manuelle Kontakte & Nachrichten erfassen", status: "Verfügbar", technology: "Manuell", intakeTypes: "Kontakte · Notizen", logo: logoPath("manual"), signal: true },
+  { key: "api", name: "API / Custom Connector", description: "Eigene Systeme und Plattformen anbinden", status: "Verfügbar", technology: "API · Webhook", intakeTypes: "Eigene Events", logo: logoPath("api"), signal: true },
+  { key: "linkedin", name: "LinkedIn", description: "Nachrichten und Lead-Kommentare vormerken", status: "Coming Soon", technology: "API · Webhook", intakeTypes: "Nachrichten · Leads", logo: logoPath("linkedin") },
+  { key: "threads", name: "Threads", description: "Mentions und Antworten als Eingang planen", status: "Vorschau", technology: "API (Beta)", intakeTypes: "Mentions · Antworten", logo: logoPath("threads") },
+  { key: "snapchat", name: "Snapchat", description: "Creator-Nachrichten und Story-Antworten prüfen", status: "Coming Soon", technology: "API", intakeTypes: "Nachrichten · Story-Antworten", logo: logoPath("snapchat") },
+  { key: "reddit", name: "Reddit", description: "Kommentare, Modmail und Erwähnungen sammeln", status: "Coming Soon", technology: "API · Webhook", intakeTypes: "Kommentare · Modmail", logo: logoPath("reddit") },
+  { key: "pinterest", name: "Pinterest", description: "Kommentare und Produkt-Anfragen aufnehmen", status: "Coming Soon", technology: "API", intakeTypes: "Kommentare · Anfragen", logo: logoPath("pinterest") },
+  { key: "fediverse", name: "Bluesky / Mastodon", description: "Mentions und Community-Antworten importieren", status: "Vorschau", technology: "ATProto · ActivityPub", intakeTypes: "Mentions · Antworten", logo: logoPath("fediverse") },
+  { key: "woocommerce", name: "WooCommerce", description: "Shop-Anfragen und Bestellungen übernehmen", status: "Verfügbar", technology: "REST API · Webhook", intakeTypes: "Bestellungen · Support", logo: logoPath("woocommerce"), signal: true },
+  { key: "ticketing", name: "Ticketing / Events", description: "Event-Tickets und Supportfälle zentral sammeln", status: "Coming Soon", technology: "API · Webhook", intakeTypes: "Tickets · Events", logo: logoPath("ticketing") },
 ];
 
-const statusClassName: Record<ChannelStatus, string> = {
+const statusClassName: Record<Exclude<ChannelStatus, "Coming Soon">, string> = {
   Verbunden: styles.statusConnected,
   Verfügbar: styles.statusAvailable,
   "In Arbeit": styles.statusProgress,
   Vorschau: styles.statusPreview,
-  "Coming Soon": styles.statusSoon,
 };
 
+function isBookable(status: ChannelStatus) {
+  return status === "Coming Soon" || status === "In Arbeit" || status === "Vorschau";
+}
+
 export function ChannelsGrid() {
-  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    if (!activeChannel) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveChannel(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [activeChannel]);
+
+  const openModal = (channel: Channel) => {
+    setNotice("");
+    setActiveChannel(channel);
+  };
 
   return (
     <section className={styles.gridSection} aria-labelledby="channel-grid-title">
       <div className={styles.sectionHeader}>
         <div>
-          <p className={styles.eyebrow}>Social Sync Center</p>
-          <h2 id="channel-grid-title">Plattformen & Eingänge</h2>
+          <h2 id="channel-grid-title">Kanäle verbinden</h2>
+          <p>Wähle einen Kanal, um Verbindung und Nachrichtenfreigabe zu verwalten.</p>
         </div>
-        <p>Verbindungen werden hier vorbereitet. Externe OAuth/API-Flows starten in diesem PR nicht.</p>
       </div>
 
       <div className={styles.channelGrid}>
-        {channels.map((channel) => {
-          const isActive = activeKey === channel.key;
-
-          return (
-            <article className={styles.channelCard} key={channel.key}>
+        {channels.map((channel) => (
+          <article className={styles.channelCard} key={channel.key}>
+            <button type="button" className={styles.cardButton} onClick={() => openModal(channel)}>
               <div className={styles.cardTopline}>
                 <div className={styles.identityGroup}>
-                  <span className={styles.logoTile} aria-hidden="true">{channel.initials}</span>
+                  <img className={styles.logoTile} src={channel.logo} alt="" aria-hidden="true" />
                   <div>
                     <h3>{channel.name}</h3>
                     <p>{channel.description}</p>
@@ -89,44 +105,65 @@ export function ChannelsGrid() {
                 <span className={styles.infoIcon} title="Keine automatische Sendefunktion" aria-label="Info">i</span>
               </div>
 
-              <div className={styles.metaRow}>
-                <span className={`${styles.statusBadge} ${statusClassName[channel.status]}`}>
-                  {channel.signal ? <span className={styles.signalDot} aria-hidden="true" /> : null}
-                  {channel.status}
-                </span>
+              <span className={styles.metaRow}>
+                {channel.status === "Coming Soon" ? (
+                  <img className={styles.soonBadgeImage} src="/assets/coming-soon-badge.png" alt="Verbindung in Vorbereitung" />
+                ) : (
+                  <span className={`${styles.statusBadge} ${statusClassName[channel.status]}`}>
+                    {channel.signal ? <span className={styles.signalDot} aria-hidden="true" /> : null}
+                    {channel.status}
+                  </span>
+                )}
                 <span className={styles.techBadge}>{channel.technology}</span>
-              </div>
+              </span>
 
-              <div className={styles.releaseBox} aria-label={`Nachrichtenfreigabe für ${channel.name}`}>
-                <strong>Nachrichtenfreigabe</strong>
-                <ul>
-                  <li>Eingänge in Arbeits-Eingang übernehmen</li>
-                  <li>{channel.intakeTypes} je nach Kanal</li>
-                  <li>Manuelle Prüfung vor Antwort</li>
-                  <li>Automatisches Senden: deaktiviert</li>
-                </ul>
-              </div>
-
-              {isActive ? (
-                <p className={styles.inlineNotice} role="status">
-                  Verbindung wird vorbereitet. Kein automatisches Senden.
-                </p>
-              ) : null}
-
-              <div className={styles.cardActions}>
-                <button type="button" onClick={() => setActiveKey(channel.key)}>
-                  {channel.buttonLabel}
-                </button>
-                {channel.status === "Verbunden" ? (
-                  <button type="button" className={styles.disconnectButton} onClick={() => setActiveKey(channel.key)}>
-                    Trennen
-                  </button>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
+              <span className={styles.cardSpacer} />
+              <span className={styles.cardActions}>
+                <span className={styles.primaryCardAction}>
+                  {isBookable(channel.status) ? "Verbindung vormerken" : `Mit ${channel.name} verbinden`}
+                </span>
+              </span>
+            </button>
+          </article>
+        ))}
       </div>
+
+      {activeChannel ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setActiveChannel(null)}>
+          <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="channel-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <img className={styles.modalLogo} src={activeChannel.logo} alt="" aria-hidden="true" />
+              <div>
+                <p className={styles.modalEyebrow}>Kanal verbinden</p>
+                <h2 id="channel-modal-title">{activeChannel.name}</h2>
+                <div className={styles.metaRow}>
+                  {activeChannel.status === "Coming Soon" ? (
+                    <img className={styles.soonBadgeImage} src="/assets/coming-soon-badge.png" alt="Verbindung in Vorbereitung" />
+                  ) : (
+                    <span className={`${styles.statusBadge} ${statusClassName[activeChannel.status]}`}>{activeChannel.status}</span>
+                  )}
+                  <span className={styles.techBadge}>{activeChannel.technology}</span>
+                </div>
+              </div>
+            </div>
+            <p className={styles.modalText}>Melde dich an, um diesen Kanal zu verbinden und eingehende Nachrichten für FanMind freizugeben.</p>
+            <div className={styles.releaseBox} aria-label={`Nachrichtenfreigabe für ${activeChannel.name}`}>
+              <strong>Nachrichtenfreigabe</strong>
+              <ul>
+                <li>Eingänge in Arbeits-Eingang übernehmen</li>
+                <li>{activeChannel.intakeTypes} je nach Kanal</li>
+                <li>Manuelle Prüfung vor Antwort</li>
+                <li>Automatisches Senden deaktiviert</li>
+              </ul>
+            </div>
+            {notice ? <p className={styles.modalNotice} role="status">{notice}</p> : null}
+            <div className={styles.modalActions}>
+              <button type="button" onClick={() => setNotice("Verbindung wird vorbereitet. Externe Anmeldung/OAuth ist noch nicht aktiv.")}>{isBookable(activeChannel.status) ? "Verbindung vormerken" : `Mit ${activeChannel.name} verbinden`}</button>
+              <button type="button" className={styles.secondaryModalButton} onClick={() => setActiveChannel(null)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
