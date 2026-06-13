@@ -1587,3 +1587,39 @@
     place-items: start;
   }
 }
+
+.sidebarFooter {
+  gap: 5px;
+  padding-top: 6px;
+}
+
+.userMiniCard,
+.planMiniCard,
+.workspaceMiniCard {
+  padding: 7px;
+}
+
+.userMiniCard {
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+}
+
+.avatarMark {
+  width: 28px;
+  height: 28px;
+}
+
+.planMiniCard {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+
+.planMiniCard small {
+  justify-self: start;
+  padding: 3px 7px;
+}
+
+.logoutButton {
+  min-height: 34px;
+  padding: 7px 10px;
+}

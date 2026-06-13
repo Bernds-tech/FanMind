@@ -545,9 +545,10 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                       <span>
                         <span className={styles.optionTitleRow}>
                           <strong>{option.title}</strong>
-                          {option.badge && <FeatureStatusLabel variant={option.id === "starter_paid_setup" ? "active" : "preview"}>{option.badge}</FeatureStatusLabel>}
+                          {option.badge && <FeatureStatusLabel variant="active">{option.badge}</FeatureStatusLabel>}
                         </span>
                         <b>{option.price}</b>
+                        {option.id === starterOption ? <em className={styles.selectedOptionLabel}>{language === "en" ? "Selected" : "Ausgewählt"}</em> : null}
                         <small>{option.description}</small>
                         <ul>
                           {option.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
