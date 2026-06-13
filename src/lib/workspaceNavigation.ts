@@ -3,6 +3,7 @@ import { type WorkspaceNavLink } from "@/components/WorkspaceShell";
 export type WorkspaceRouteKey =
   | "dashboard"
   | "fans"
+  | "inbox"
   | "channels"
   | "onboarding"
   | "settings"
@@ -22,6 +23,7 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey): {
         active: activeRoute === "dashboard",
       },
       { label: "Fans", href: "/fans", active: activeRoute === "fans" },
+      { label: "Inbox", href: "/inbox", active: activeRoute === "inbox" },
       {
         label: "Onboarding",
         href: "/onboarding",
