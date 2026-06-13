@@ -2,11 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
+  getWorkspaceConversations,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceOpenFollowups,
   signOutSupabaseServerSession,
   type ContactRow,
+  type ConversationRow,
   type FollowupRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
@@ -27,6 +29,8 @@ type InboxWorkspaceProps = {
   contactsError?: string;
   followups: FollowupRow[];
   followupsError?: string;
+  conversations: ConversationRow[];
+  conversationsError?: string;
   activeFilter: InboxFilter;
   searchQuery: string;
 };
@@ -92,12 +96,16 @@ function InboxWorkspace({
   contactsError,
   followups,
   followupsError,
+  conversations,
+  conversationsError,
   activeFilter,
   searchQuery,
 }: InboxWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("inbox");
-  const queueItems = buildInboxQueue(contacts, followups);
+  const queueItems = conversations.length
+    ? buildConversationInboxQueue(conversations, contacts)
+    : buildInboxQueue(contacts, followups);
   const visibleItems = filterQueueItems(queueItems, activeFilter, searchQuery);
   const kpis = getInboxKpis(queueItems);
 
@@ -129,9 +137,9 @@ function InboxWorkspace({
             <p className={dashboardStyles.eyebrow}>Lokale MVP-Arbeitsliste</p>
             <h2>Workspace-Daten statt Social-Sync</h2>
             <p>
-              Die Queue entsteht aus vorhandenen Kontakten und offenen
-              Follow-ups. Externe Instagram-, WhatsApp- oder E-Mail-Eingänge
-              werden in diesem PR nicht synchronisiert.
+              Die Queue nutzt echte gespeicherte Conversations. Wenn noch keine
+              Conversation existiert, bleibt der vorhandene
+              Kontakte-/Follow-up-Fallback aktiv.
             </p>
           </div>
           <form className={styles.searchForm} action="/inbox">
@@ -180,6 +188,12 @@ function InboxWorkspace({
               <ErrorBox
                 title="Follow-ups konnten nicht geladen werden."
                 message={followupsError}
+              />
+            ) : null}
+            {conversationsError ? (
+              <ErrorBox
+                title="Conversations konnten nicht geladen werden."
+                message={conversationsError}
               />
             ) : null}
 
@@ -267,17 +281,24 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
           <div className={styles.selectCell}>
             <input aria-label={`${item.fanName} auswählen`} type="checkbox" />
           </div>
-          <Link className={styles.queueRowLink} href={`/fans/${item.contactId}`}>
+          <Link
+            className={styles.queueRowLink}
+            href={`/fans/${item.contactId}`}
+          >
             <span className={styles.fanCell}>
               <span className={styles.avatar}>{item.initials}</span>
               <span>
                 <strong>{item.fanName}</strong>
                 <small>{item.handle}</small>
-                <em>{item.tags.slice(0, 2).join(" · ") || "Workspace-Daten"}</em>
+                <em>
+                  {item.tags.slice(0, 2).join(" · ") || "Workspace-Daten"}
+                </em>
               </span>
             </span>
             <span>
-              <b className={`${styles.channelBadge} ${styles[item.channelClass]}`}>
+              <b
+                className={`${styles.channelBadge} ${styles[item.channelClass]}`}
+              >
                 {item.channel}
               </b>
             </span>
@@ -321,8 +342,18 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
               </button>
             )}
             {!item.replyTargetUrl ? (
-              <small>Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert.</small>
+              <small>
+                Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert.
+              </small>
             ) : null}
+            <div className={styles.rowActions}>
+              <Link href={`/fans/${item.contactId}?focus=reply`}>
+                Antwort vorbereiten
+              </Link>
+              <Link href={`/fans/${item.contactId}?focus=followup`}>
+                Follow-up planen
+              </Link>
+            </div>
           </div>
         </div>
       ))}
@@ -354,6 +385,71 @@ function InfoCard({ title, items }: { title: string; items: string[] }) {
       </ul>
     </div>
   );
+}
+
+function buildConversationInboxQueue(
+  conversations: ConversationRow[],
+  contacts: ContactRow[],
+): InboxQueueItem[] {
+  const contactsById = new Map(
+    contacts.map((contact) => [contact.id, contact]),
+  );
+
+  return conversations
+    .map<InboxQueueItem | null>((conversation) => {
+      const contact = contactsById.get(conversation.contact_id);
+      if (!contact) return null;
+
+      const tags = contact.tags ?? [];
+      const priority = getConversationPriority(conversation.priority);
+      const waitingMinutes = getWaitingMinutes(
+        null,
+        conversation.last_inbound_at ??
+          conversation.updated_at ??
+          conversation.created_at,
+      );
+      const channel = getChannelLabel(
+        conversation.source_platform ?? contact.source_platform,
+      );
+      const replyTargetUrl =
+        conversation.reply_target_url || conversation.source_url || undefined;
+
+      return {
+        key: conversation.id,
+        contactId: contact.id,
+        fanName: contact.display_name || contact.handle || "Unbenannter Fan",
+        handle: contact.handle || "Kein Handle hinterlegt",
+        initials: getInitials(contact.display_name || contact.handle),
+        tags,
+        channel,
+        channelClass: getChannelClass(
+          conversation.source_platform ?? contact.source_platform,
+        ),
+        messagePreview:
+          conversation.last_message_preview ||
+          "Conversation ohne gespeicherte Vorschau.",
+        conversationType: formatConversationType(conversation.source_type),
+        segment: getSegment(contact),
+        priority,
+        priorityScore: getPriorityScore(priority),
+        waitingSince: formatWaitingSince(waitingMinutes),
+        waitingMinutes,
+        owner: conversation.assigned_owner || "Team Inbox",
+        aiStatus: formatAiStatus(conversation.ai_status),
+        nextStep: conversation.next_step || "Antwort vorbereiten",
+        replyTargetUrl,
+        sourceType: getSourceType(conversation.source_type),
+        sourcePlatformLabel: channel,
+        unread: Boolean(conversation.last_inbound_at),
+        dueToday: false,
+      } satisfies InboxQueueItem;
+    })
+    .filter((item): item is InboxQueueItem => Boolean(item))
+    .sort(
+      (a, b) =>
+        b.priorityScore - a.priorityScore ||
+        b.waitingMinutes - a.waitingMinutes,
+    );
 }
 
 function buildInboxQueue(
@@ -406,7 +502,9 @@ function createQueueItem(
     latestFollowup?.due_date,
     contact.updated_at ?? contact.created_at,
   );
-  const hasContext = Boolean(contact.summary?.trim() || latestFollowup?.reason?.trim());
+  const hasContext = Boolean(
+    contact.summary?.trim() || latestFollowup?.reason?.trim(),
+  );
   const hasTags = tags.length > 0;
   const replyTargetUrl = getReplyTargetUrl(contact);
   const sourcePlatformLabel = getChannelLabel(contact.source_platform);
@@ -423,14 +521,22 @@ function createQueueItem(
     messagePreview:
       latestFollowup?.reason ||
       "Noch keine gespeicherte Eingangsnachricht. Kontext manuell einfügen.",
-    conversationType: getConversationType(contact.source_platform, latestFollowup),
+    conversationType: getConversationType(
+      contact.source_platform,
+      latestFollowup,
+    ),
     segment: getSegment(contact),
     priority,
     priorityScore: getPriorityScore(priority) + (latestFollowup ? 20 : 0),
     waitingSince: formatWaitingSince(waitingMinutes),
     waitingMinutes,
     owner: "Team Inbox",
-    aiStatus: hasContext && hasTags ? "KI-ready" : hasContext ? "Teilweise" : "Nicht bereit",
+    aiStatus:
+      hasContext && hasTags
+        ? "KI-ready"
+        : hasContext
+          ? "Teilweise"
+          : "Nicht bereit",
     nextStep: latestFollowup
       ? "Antwort vorbereiten"
       : hasContext
@@ -442,6 +548,34 @@ function createQueueItem(
     unread: Boolean(latestFollowup),
     dueToday: isDueToday(latestFollowup?.due_date),
   };
+}
+
+function getConversationPriority(
+  value: string | null,
+): InboxQueueItem["priority"] {
+  if (value === "high") return "Hoch";
+  if (value === "medium") return "Mittel";
+  if (value === "low") return "Niedrig";
+  return "Normal";
+}
+
+function formatAiStatus(value: string | null): InboxQueueItem["aiStatus"] {
+  if (value === "ready") return "KI-ready";
+  if (value === "partial") return "Teilweise";
+  return "Nicht bereit";
+}
+
+function formatConversationType(value: string | null): string {
+  const labels: Record<string, string> = {
+    dm: "DM",
+    comment: "Kommentar",
+    post: "Post",
+    email: "E-Mail",
+    form: "Formular",
+    note: "Notiz",
+    manual: "Manuell",
+  };
+  return labels[value ?? ""] ?? "DM";
 }
 
 function getPriority(
@@ -465,7 +599,8 @@ function getPriorityScore(priority: InboxQueueItem["priority"]): number {
 }
 
 function getSegment(contact: ContactRow): string {
-  const raw = `${contact.status ?? ""} ${(contact.tags ?? []).join(" ")}`.toLowerCase();
+  const raw =
+    `${contact.status ?? ""} ${(contact.tags ?? []).join(" ")}`.toLowerCase();
 
   if (raw.includes("vip")) return "VIP";
   if (/buyer|käufer|kaeufer|kunde/.test(raw)) return "Käufer";
@@ -517,7 +652,8 @@ function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
 
   if (value.includes("mail")) return "email";
   if (value.includes("form") || value.includes("web")) return "form";
-  if (value.includes("comment") || value.includes("kommentar")) return "comment";
+  if (value.includes("comment") || value.includes("kommentar"))
+    return "comment";
   if (value.includes("post")) return "post";
   if (value.includes("manual") || !value) return "manual";
 
@@ -540,7 +676,8 @@ function getChannelClass(value: string | null): string {
   const channel = (value ?? "manual").toLowerCase();
 
   if (channel.includes("instagram")) return "channelInstagram";
-  if (channel.includes("facebook") || channel.includes("messenger")) return "channelInstagram";
+  if (channel.includes("facebook") || channel.includes("messenger"))
+    return "channelInstagram";
   if (channel.includes("whatsapp")) return "channelWhatsapp";
   if (channel.includes("email")) return "channelEmail";
   if (channel.includes("form")) return "channelForm";
@@ -548,7 +685,10 @@ function getChannelClass(value: string | null): string {
   return "channelManual";
 }
 
-function getConversationType(source: string | null, followup?: FollowupRow): string {
+function getConversationType(
+  source: string | null,
+  followup?: FollowupRow,
+): string {
   if (!followup) return "Manuell";
 
   const value = (source ?? "").toLowerCase();
@@ -574,7 +714,10 @@ function getWaitingMinutes(
 
   if (!value) return 0;
 
-  return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  return Math.max(
+    0,
+    Math.floor((Date.now() - new Date(value).getTime()) / 60000),
+  );
 }
 
 function formatWaitingSince(minutes: number): string {
@@ -644,10 +787,13 @@ function filterQueueItems(
 }
 
 function getInboxKpis(items: InboxQueueItem[]) {
-  const responseReady = items.filter((item) => item.aiStatus === "KI-ready").length;
+  const responseReady = items.filter(
+    (item) => item.aiStatus === "KI-ready",
+  ).length;
   const averageMinutes = items.length
     ? Math.round(
-        items.reduce((sum, item) => sum + item.waitingMinutes, 0) / items.length,
+        items.reduce((sum, item) => sum + item.waitingMinutes, 0) /
+          items.length,
       )
     : 0;
 
@@ -713,7 +859,7 @@ function getUserDisplayName(
 }
 
 function normalizeParam(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }
 
 function normalizeFilter(value: string): InboxFilter {
@@ -732,9 +878,14 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
-  const contactsResult = workspace ? await getWorkspaceContacts(workspace.id) : null;
+  const contactsResult = workspace
+    ? await getWorkspaceContacts(workspace.id)
+    : null;
   const followupsResult = workspace
     ? await getWorkspaceOpenFollowups(workspace.id)
+    : null;
+  const conversationsResult = workspace
+    ? await getWorkspaceConversations(workspace.id)
     : null;
 
   return (
@@ -750,11 +901,16 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           contactsError={contactsResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           followupsError={followupsResult?.error?.message}
+          conversations={conversationsResult?.conversations ?? []}
+          conversationsError={conversationsResult?.error?.message}
           activeFilter={normalizeFilter(normalizeParam(params?.filter))}
           searchQuery={normalizeParam(params?.q)}
         />
       ) : (
-        <section className={dashboardStyles.fallbackCard} aria-label="FanMind Inbox">
+        <section
+          className={dashboardStyles.fallbackCard}
+          aria-label="FanMind Inbox"
+        >
           <h1>Inbox</h1>
           <p>Workspace konnte noch nicht geladen werden.</p>
           {workspaceResult.error ? (

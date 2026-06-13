@@ -157,7 +157,10 @@
 .queueRow,
 .queueRowLink {
   display: grid;
-  grid-template-columns: 64px 180px 112px minmax(210px, 1.5fr) 84px 88px 96px 86px 104px 112px 132px 126px;
+  grid-template-columns: 64px 180px 112px minmax(
+      210px,
+      1.5fr
+    ) 84px 88px 96px 86px 104px 112px 132px 126px;
   gap: 10px;
   align-items: center;
 }
@@ -202,13 +205,15 @@
 }
 
 .queueRowLink {
-  grid-template-columns: 180px 112px minmax(210px, 1.5fr) 84px 88px 96px 86px 104px 112px 132px;
+  grid-template-columns: 180px 112px minmax(
+      210px,
+      1.5fr
+    ) 84px 88px 96px 86px 104px 112px 132px;
   padding: 10px 10px 10px 0;
   color: #dbeafe;
   font-size: 12px;
   text-decoration: none;
 }
-
 
 .originalCell {
   display: grid;
@@ -439,7 +444,6 @@
     gap: 12px;
   }
 
-
   .originalCell {
     grid-column: 2;
     padding: 0 10px 10px 0;
@@ -449,4 +453,18 @@
     display: grid !important;
     justify-content: start !important;
   }
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.rowActions a {
+  color: var(--accent-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: none;
 }

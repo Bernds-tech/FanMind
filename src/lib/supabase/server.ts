@@ -24,7 +24,9 @@ type SupabaseServerUserResponse = {
   error: Error | null;
 };
 
-type WorkspaceCommercialOption = ProductiveCommercialOption | "starter_no_setup_commitment";
+type WorkspaceCommercialOption =
+  | ProductiveCommercialOption
+  | "starter_no_setup_commitment";
 
 export type WorkspaceBackfillRow = {
   id: string;
@@ -71,6 +73,44 @@ export type MemoryRow = {
   created_at: string | null;
 };
 
+export type ConversationRow = {
+  id: string;
+  workspace_id: string;
+  contact_id: string;
+  status: string;
+  priority: string;
+  source_platform: string | null;
+  source_type: string | null;
+  source_url: string | null;
+  reply_target_url: string | null;
+  external_thread_id: string | null;
+  external_message_id: string | null;
+  last_inbound_at: string | null;
+  last_outbound_at: string | null;
+  last_message_preview: string | null;
+  assigned_owner: string | null;
+  ai_status: string;
+  next_step: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type ConversationMessageRow = {
+  id: string;
+  workspace_id: string;
+  conversation_id: string;
+  contact_id: string;
+  direction: string;
+  message_type: string;
+  source_platform: string | null;
+  source_url: string | null;
+  reply_target_url: string | null;
+  external_message_id: string | null;
+  author_label: string | null;
+  content: string;
+  created_at: string | null;
+};
+
 export type FollowupRow = {
   id: string;
   workspace_id: string;
@@ -103,6 +143,19 @@ type CreateMemoryInput = {
   type?: string | null;
   content: string;
   importance?: string | null;
+};
+
+type CreateManualConversationMessageInput = {
+  workspaceId: string;
+  contactId: string;
+  direction?: "inbound" | "outbound" | "note";
+  messageType?: string | null;
+  sourcePlatform?: string | null;
+  sourceUrl?: string | null;
+  replyTargetUrl?: string | null;
+  externalMessageId?: string | null;
+  authorLabel?: string | null;
+  content: string;
 };
 
 type CreateFollowupInput = {
@@ -141,6 +194,27 @@ type MemoriesResult = {
 
 type MemoryCreateResult = {
   memory: MemoryRow | null;
+  error: Error | null;
+};
+
+type ConversationsResult = {
+  conversations: ConversationRow[];
+  error: Error | null;
+};
+
+type ConversationMessagesResult = {
+  messages: ConversationMessageRow[];
+  error: Error | null;
+};
+
+type ConversationResult = {
+  conversation: ConversationRow | null;
+  error: Error | null;
+};
+
+type ConversationMessageCreateResult = {
+  message: ConversationMessageRow | null;
+  conversation: ConversationRow | null;
   error: Error | null;
 };
 
@@ -188,6 +262,10 @@ const CONTACT_COLUMNS =
   "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,created_at,updated_at";
 const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
+const CONVERSATION_COLUMNS =
+  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
+const CONVERSATION_MESSAGE_COLUMNS =
+  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_url,reply_target_url,external_message_id,author_label,content,created_at";
 const FOLLOWUP_COLUMNS =
   "id,workspace_id,contact_id,due_date,priority,reason,status,created_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
@@ -572,6 +650,252 @@ export async function createContactMemory(
   }
 
   return { memory: memoryResult.data, error: null };
+}
+
+export async function getWorkspaceConversations(
+  workspaceId: string,
+): Promise<ConversationsResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationsError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const result = await postgrestSelect<ConversationRow[]>(
+    "conversations",
+    accessToken,
+    CONVERSATION_COLUMNS,
+    [["workspace_id", workspaceId]],
+    undefined,
+    false,
+    "updated_at.desc",
+  );
+
+  if (result.error) {
+    return conversationsError(
+      `Conversations konnten nicht geladen werden: ${withOptionalSchemaHint(result.error.message, "conversations")}`,
+    );
+  }
+
+  return {
+    conversations: (result.data ?? []).filter(
+      (conversation) =>
+        conversation.status !== "archived" && conversation.status !== "done",
+    ),
+    error: null,
+  };
+}
+
+export async function getContactConversationMessages(
+  workspaceId: string,
+  contactId: string,
+): Promise<ConversationMessagesResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationMessagesError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const result = await postgrestSelect<ConversationMessageRow[]>(
+    "conversation_messages",
+    accessToken,
+    CONVERSATION_MESSAGE_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contactId],
+    ],
+    undefined,
+    false,
+    "created_at.asc",
+  );
+
+  if (result.error) {
+    return conversationMessagesError(
+      `Nachrichten konnten nicht geladen werden: ${withOptionalSchemaHint(result.error.message, "conversation_messages")}`,
+    );
+  }
+
+  return { messages: result.data ?? [], error: null };
+}
+
+export async function ensureConversationForContact(input: {
+  workspaceId: string;
+  contactId: string;
+  sourcePlatform?: string | null;
+  sourceType?: string | null;
+  sourceUrl?: string | null;
+  replyTargetUrl?: string | null;
+}): Promise<ConversationResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const existing = await postgrestSelect<ConversationRow[]>(
+    "conversations",
+    accessToken,
+    CONVERSATION_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+    ],
+    undefined,
+    false,
+    "updated_at.desc",
+  );
+
+  if (existing.error) {
+    return conversationError(
+      `Conversation konnte nicht geprüft werden: ${withOptionalSchemaHint(existing.error.message, "conversations")}`,
+    );
+  }
+
+  const openConversation = (existing.data ?? []).find((conversation) =>
+    ["open", "waiting"].includes(conversation.status),
+  );
+
+  if (openConversation) {
+    return { conversation: openConversation, error: null };
+  }
+
+  const created = await postgrestRequest<ConversationRow>(
+    "conversations",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      contact_id: input.contactId,
+      status: "open",
+      priority: "normal",
+      source_platform: normalizeOptionalText(input.sourcePlatform),
+      source_type: normalizeMessageType(input.sourceType),
+      source_url: normalizeUrl(input.sourceUrl),
+      reply_target_url:
+        normalizeUrl(input.replyTargetUrl) ?? normalizeUrl(input.sourceUrl),
+      ai_status: "not_ready",
+      next_step: "Antwort vorbereiten",
+    },
+    accessToken,
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  if (created.error) {
+    return conversationError(
+      `Conversation konnte nicht erstellt werden: ${withOptionalSchemaHint(created.error.message, "conversations")}`,
+    );
+  }
+
+  return { conversation: created.data, error: null };
+}
+
+export async function createManualConversationMessage(
+  input: CreateManualConversationMessageInput,
+): Promise<ConversationMessageCreateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationMessageCreateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const content = input.content.trim();
+
+  if (!content) {
+    return conversationMessageCreateError("Nachrichtentext ist erforderlich.");
+  }
+
+  const sourceUrl = normalizeUrl(input.sourceUrl);
+  const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
+  const messageType = normalizeMessageType(input.messageType);
+  const direction = input.direction ?? "inbound";
+  const conversationResult = await ensureConversationForContact({
+    workspaceId: input.workspaceId,
+    contactId: input.contactId,
+    sourcePlatform: input.sourcePlatform,
+    sourceType: messageType,
+    sourceUrl,
+    replyTargetUrl,
+  });
+
+  if (conversationResult.error || !conversationResult.conversation) {
+    return {
+      message: null,
+      conversation: null,
+      error:
+        conversationResult.error ??
+        new Error("Conversation konnte nicht erstellt werden."),
+    };
+  }
+
+  const messageResult = await postgrestRequest<ConversationMessageRow>(
+    "conversation_messages",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      conversation_id: conversationResult.conversation.id,
+      contact_id: input.contactId,
+      direction,
+      message_type: messageType,
+      source_platform: normalizeOptionalText(input.sourcePlatform) ?? "manual",
+      source_url: sourceUrl,
+      reply_target_url: replyTargetUrl,
+      external_message_id: normalizeOptionalText(input.externalMessageId),
+      author_label:
+        normalizeOptionalText(input.authorLabel) ??
+        (direction === "inbound" ? "Fan" : "Team"),
+      content,
+    },
+    accessToken,
+    { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
+  );
+
+  if (messageResult.error) {
+    return conversationMessageCreateError(
+      `Nachricht konnte nicht gespeichert werden: ${withOptionalSchemaHint(messageResult.error.message, "conversation_messages")}`,
+    );
+  }
+
+  const updateValues: Record<string, string | null> = {
+    last_message_preview: content.slice(0, 240),
+    source_platform:
+      normalizeOptionalText(input.sourcePlatform) ??
+      conversationResult.conversation.source_platform,
+    source_type: messageType,
+    source_url: sourceUrl ?? conversationResult.conversation.source_url,
+    reply_target_url:
+      replyTargetUrl ?? conversationResult.conversation.reply_target_url,
+    ai_status: "partial",
+    next_step: "Antwort vorbereiten",
+  };
+
+  if (direction === "inbound")
+    updateValues.last_inbound_at = new Date().toISOString();
+  if (direction === "outbound")
+    updateValues.last_outbound_at = new Date().toISOString();
+
+  const updatedConversation = await postgrestUpdate<ConversationRow>(
+    "conversations",
+    updateValues,
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", conversationResult.conversation.id],
+    ],
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  return {
+    message: messageResult.data,
+    conversation: updatedConversation.data ?? conversationResult.conversation,
+    error: updatedConversation.error,
+  };
 }
 
 export async function getContactFollowups(
@@ -1139,6 +1463,26 @@ function memoryCreateError(message: string): MemoryCreateResult {
   return { memory: null, error: new Error(message) };
 }
 
+function conversationsError(message: string): ConversationsResult {
+  return { conversations: [], error: new Error(message) };
+}
+
+function conversationMessagesError(
+  message: string,
+): ConversationMessagesResult {
+  return { messages: [], error: new Error(message) };
+}
+
+function conversationError(message: string): ConversationResult {
+  return { conversation: null, error: new Error(message) };
+}
+
+function conversationMessageCreateError(
+  message: string,
+): ConversationMessageCreateResult {
+  return { message: null, conversation: null, error: new Error(message) };
+}
+
 function followupsError(message: string): FollowupsResult {
   return { followups: [], error: new Error(message) };
 }
@@ -1149,7 +1493,11 @@ function followupCreateError(message: string): FollowupCreateResult {
 
 function withOptionalSchemaHint(
   message: string,
-  tableName: "memories" | "followups",
+  tableName:
+    | "memories"
+    | "followups"
+    | "conversations"
+    | "conversation_messages",
 ): string {
   const lowerMessage = message.toLowerCase();
 
@@ -1162,6 +1510,20 @@ function withOptionalSchemaHint(
   }
 
   return message;
+}
+
+function normalizeMessageType(value: string | null | undefined): string {
+  const normalized = normalizeOptionalText(value)?.toLowerCase();
+  return ["dm", "comment", "post", "email", "form", "note", "manual"].includes(
+    normalized ?? "",
+  )
+    ? normalized!
+    : "dm";
+}
+
+function normalizeUrl(value: string | null | undefined): string | null {
+  const normalized = normalizeOptionalText(value);
+  return normalized && /^https?:\/\//i.test(normalized) ? normalized : null;
 }
 
 function normalizeOptionalText(
@@ -1228,7 +1590,10 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
 
 function isStarterCommercialOption(
   value: WorkspaceCommercialOption,
-): value is Extract<WorkspaceCommercialOption, "starter_paid_setup" | "starter_no_setup_commitment"> {
+): value is Extract<
+  WorkspaceCommercialOption,
+  "starter_paid_setup" | "starter_no_setup_commitment"
+> {
   return STARTER_COMMERCIAL_OPTIONS.includes(value);
 }
 
