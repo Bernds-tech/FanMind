@@ -60,6 +60,9 @@ type InboxQueueItem = {
   owner: string;
   aiStatus: "KI-ready" | "Teilweise" | "Nicht bereit";
   nextStep: string;
+  replyTargetUrl?: string;
+  sourceType?: "dm" | "comment" | "post" | "email" | "form" | "manual";
+  sourcePlatformLabel?: string;
   unread: boolean;
   dueToday: boolean;
 };
@@ -257,6 +260,7 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
         <span>Owner</span>
         <span>KI-Status</span>
         <span>Nächster Schritt</span>
+        <span>Original</span>
       </div>
       {items.map((item) => (
         <div className={styles.queueRowWrap} key={item.key}>
@@ -296,6 +300,30 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
             </span>
             <span className={styles.nextStep}>{item.nextStep}</span>
           </Link>
+          <div className={styles.originalCell}>
+            {item.replyTargetUrl ? (
+              <a
+                className={styles.originalLink}
+                href={item.replyTargetUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {getOriginalActionLabel(item.sourcePlatformLabel)}
+              </a>
+            ) : (
+              <button
+                className={styles.originalLinkDisabled}
+                title="Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert."
+                type="button"
+                disabled
+              >
+                Original öffnen
+              </button>
+            )}
+            {!item.replyTargetUrl ? (
+              <small>Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert.</small>
+            ) : null}
+          </div>
         </div>
       ))}
     </div>
@@ -380,6 +408,8 @@ function createQueueItem(
   );
   const hasContext = Boolean(contact.summary?.trim() || latestFollowup?.reason?.trim());
   const hasTags = tags.length > 0;
+  const replyTargetUrl = getReplyTargetUrl(contact);
+  const sourcePlatformLabel = getChannelLabel(contact.source_platform);
 
   return {
     key: getFanGroupKey(contact),
@@ -406,6 +436,9 @@ function createQueueItem(
       : hasContext
         ? "Vorschlag laden"
         : "Info bereitstellen",
+    replyTargetUrl,
+    sourceType: getSourceType(contact.source_platform),
+    sourcePlatformLabel,
     unread: Boolean(latestFollowup),
     dueToday: isDueToday(latestFollowup?.due_date),
   };
@@ -444,6 +477,9 @@ function getSegment(contact: ContactRow): string {
 
 function getChannelLabel(value: string | null): string {
   const labels: Record<string, string> = {
+    facebook: "Facebook",
+    messenger: "Messenger",
+    facebook_messenger: "Messenger",
     instagram: "Instagram",
     whatsapp: "WhatsApp",
     email: "E-Mail",
@@ -456,10 +492,55 @@ function getChannelLabel(value: string | null): string {
   return labels[(value ?? "manual").toLowerCase()] ?? "Manuell";
 }
 
+function getReplyTargetUrl(contact: ContactRow): string | undefined {
+  const metadata = contact as ContactRow & Record<string, unknown>;
+
+  for (const key of [
+    "source_url",
+    "reply_target_url",
+    "external_thread_url",
+    "external_message_url",
+    "replyTargetUrl",
+  ]) {
+    const value = metadata[key];
+
+    if (typeof value === "string" && /^https?:\/\//i.test(value.trim())) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
+  const value = (source ?? "").toLowerCase();
+
+  if (value.includes("mail")) return "email";
+  if (value.includes("form") || value.includes("web")) return "form";
+  if (value.includes("comment") || value.includes("kommentar")) return "comment";
+  if (value.includes("post")) return "post";
+  if (value.includes("manual") || !value) return "manual";
+
+  return "dm";
+}
+
+function getOriginalActionLabel(platform?: string): string {
+  const normalized = platform?.toLowerCase() ?? "";
+
+  if (normalized.includes("facebook")) return "Facebook öffnen";
+  if (normalized.includes("messenger")) return "Messenger öffnen";
+  if (normalized.includes("instagram")) return "Instagram öffnen";
+  if (normalized.includes("whatsapp")) return "WhatsApp öffnen";
+  if (normalized.includes("mail")) return "E-Mail öffnen";
+
+  return "Original öffnen";
+}
+
 function getChannelClass(value: string | null): string {
   const channel = (value ?? "manual").toLowerCase();
 
   if (channel.includes("instagram")) return "channelInstagram";
+  if (channel.includes("facebook") || channel.includes("messenger")) return "channelInstagram";
   if (channel.includes("whatsapp")) return "channelWhatsapp";
   if (channel.includes("email")) return "channelEmail";
   if (channel.includes("form")) return "channelForm";

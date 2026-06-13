@@ -323,3 +323,22 @@
     grid-template-columns: 1fr;
   }
 }
+
+.originalChatPanel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.originalChatMissing {
+  margin: 0;
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  border-radius: 999px;
+  padding: 8px 11px;
+  color: #fef3c7;
+  font-size: 12px;
+  font-weight: 900;
+  background: rgba(113, 63, 18, 0.18);
+}
