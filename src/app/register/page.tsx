@@ -280,9 +280,9 @@ async function prepareUserWorkspace(
         commercialOption,
         setupFeeCents: 0,
         monthlyFeeCents: 29900,
-        commitmentMonths: 12,
+        commitmentMonths: 12 as const,
       }
-    : getRegistrationCommercialTerms(planId, commercialOption === "pilot_only" ? "starter_paid_setup" : "starter_paid_setup");
+    : getRegistrationCommercialTerms(planId);
 
   if (!commercialTerms || commercialTerms.commercialOption !== commercialOption) {
     return workspaceSetupError(invalidWorkspaceTermsMessage(language));
