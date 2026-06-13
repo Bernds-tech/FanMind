@@ -1885,12 +1885,13 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <strong>{t("DATENQUELLEN")}</strong>
             <div>
               {localizedIntegrationSources.map((source) => (
-                <span key={source.label}>
+                <span
+                  className={roadmapIntegrationLabels.has(source.label) ? styles.cardWithComingSoon : undefined}
+                  key={source.label}
+                >
                   <i aria-hidden="true">{source.icon}</i>
                   {source.label}
-                  {roadmapIntegrationLabels.has(source.label) ? (
-                    <FeatureStatusLabel variant="roadmap">Roadmap</FeatureStatusLabel>
-                  ) : null}
+                  {roadmapIntegrationLabels.has(source.label) ? <ComingSoonImage size="small" /> : null}
                   <em aria-hidden="true" />
                 </span>
               ))}

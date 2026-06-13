@@ -397,7 +397,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
     const role = String(formData.get("rolle") ?? "").trim();
     const message = String(formData.get("nachricht") ?? "").trim();
     const commercialOptionValue = String(formData.get("commercialOption") ?? starterOption);
-    const selectedCommercialOption: ProductiveCommercialOption = selectedPlanId === "starter" && (commercialOptionValue === "starter_paid_setup")
+    const selectedCommercialOption: ProductiveCommercialOption = selectedPlanId === "starter" && commercialOptionValue === "starter_paid_setup"
       ? commercialOptionValue
       : "pilot_only";
 

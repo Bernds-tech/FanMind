@@ -112,7 +112,7 @@
 .authGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(350px, 410px);
-  gap: clamp(22px, 3vw, 42px);
+  gap: clamp(18px, 2.2vw, 30px);
   align-items: start;
   margin-top: clamp(12px, 1.6vw, 20px);
 }
@@ -571,15 +571,16 @@
 
 .planSelection {
   display: grid;
-  gap: 7px;
-  max-width: 660px;
+  gap: 9px;
+  max-width: 700px;
   margin-inline: 0;
 }
 
 .planCard {
   display: grid;
-  gap: 4px;
-  padding: 9px 12px;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 12px;
   border: 1px solid rgba(91, 150, 255, 0.28);
   border-radius: 16px;
   color: #dce9ff;
@@ -662,8 +663,8 @@
   margin: 0;
   padding-left: 15px;
   color: #b8c6dc;
-  font-size: 10.75px;
-  line-height: 1.22;
+  font-size: 11px;
+  line-height: 1.28;
 }
 
 .planCta {
@@ -676,7 +677,7 @@
   position: relative;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 7px;
+  gap: 6px;
   margin: 7px 0 1px;
   padding: 0;
   border: 0;
@@ -694,7 +695,7 @@
 
 .optionCard {
   display: grid;
-  grid-template-columns: 16px 1fr;
+  grid-template-columns: 18px minmax(0, 1fr);
   gap: 8px;
   padding: 7px 9px;
   border: 1px solid rgba(48, 141, 255, 0.36);
@@ -820,7 +821,7 @@
 
 @media (min-width: 1051px) {
   .planSelection {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .planCard {
@@ -881,4 +882,25 @@
 
 .comingSoon-medium {
   width: 96px;
+}
+
+@media (min-width: 1200px) {
+  .authGrid {
+    grid-template-columns: minmax(620px, 1fr) minmax(350px, 410px);
+  }
+
+  .planSelection {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 1199px) and (min-width: 1051px) {
+  .planCard {
+    grid-template-columns: 1fr;
+  }
+
+  .planCard strong {
+    text-align: left;
+    white-space: normal;
+  }
 }
