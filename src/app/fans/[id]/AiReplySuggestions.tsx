@@ -12,6 +12,8 @@ type ContactAiContext = {
   displayName: string;
   handle: string | null;
   sourcePlatform: string | null;
+  originalChatUrl?: string;
+  originalActionLabel?: string;
   language: string | null;
   status: string | null;
   tags: string[] | null;
@@ -270,13 +272,25 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
               <article className={styles.replyCard} key={option.tone}>
                 <div className={styles.replyCardHeader}>
                   <strong>{option.label}</strong>
-                  <button
-                    className={dashboardStyles.secondaryButton}
-                    onClick={() => copySuggestion(option)}
-                    type="button"
-                  >
-                    {copiedTone === option.tone ? "Kopiert" : "Kopieren"}
-                  </button>
+                  <div className={styles.replyCardActions}>
+                    <button
+                      className={dashboardStyles.secondaryButton}
+                      onClick={() => copySuggestion(option)}
+                      type="button"
+                    >
+                      {copiedTone === option.tone ? "Kopiert" : "Antwort kopieren"}
+                    </button>
+                    {contact.originalChatUrl ? (
+                      <a
+                        className={dashboardStyles.secondaryButton}
+                        href={contact.originalChatUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Original-Chat öffnen
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
                 <p>{option.text}</p>
               </article>
@@ -328,6 +342,12 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
               </button>
             </article>
           </div>
+
+          {!contact.originalChatUrl ? (
+            <p className={styles.aiSafetyNote}>
+              Original-Chat-Link noch nicht verbunden.
+            </p>
+          ) : null}
 
           <p className={styles.aiSafetyNote}>
             {suggestions.safety_note} Kopierte Antwortentwürfe müssen extern

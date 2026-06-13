@@ -143,6 +143,8 @@ function FanDetailContent({
     followups.length,
   );
   const timeline = buildConversationPreview(contact, followups);
+  const originalChatUrl = getOriginalChatUrl(contact);
+  const originalActionLabel = getOriginalActionLabel(primaryChannel);
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
   );
@@ -357,6 +359,11 @@ function FanDetailContent({
               </div>
               <span className={styles.pill}>Lokale MVP-Struktur</span>
             </div>
+            <OriginalChatAction
+              actionLabel={originalActionLabel}
+              className={styles.originalChatPanel}
+              url={originalChatUrl}
+            />
             <div className={styles.filterChips} aria-label="Verlaufsfilter">
               <span>Alle</span>
               <span>Instagram</span>
@@ -403,6 +410,20 @@ function FanDetailContent({
                 <button className={dashboardStyles.primaryButton} type="button">
                   Nachricht vorbereiten
                 </button>
+                {originalChatUrl ? (
+                  <a
+                    className={dashboardStyles.secondaryButton}
+                    href={originalChatUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Original-Chat öffnen
+                  </a>
+                ) : (
+                  <span className={styles.originalChatMissing}>
+                    Original-Chat-Link noch nicht verbunden.
+                  </span>
+                )}
                 <span className={styles.safeBadge}>
                   Nur Vorschlag – manuelle Freigabe
                 </span>
@@ -454,6 +475,8 @@ function FanDetailContent({
               displayName: contact.display_name,
               handle: contact.handle,
               sourcePlatform: contact.source_platform,
+              originalChatUrl,
+              originalActionLabel,
               language: contact.language,
               status: contact.status,
               tags: contact.tags,
@@ -491,6 +514,35 @@ function FanDetailContent({
         </aside>
       </section>
     </>
+  );
+}
+
+function OriginalChatAction({
+  actionLabel,
+  className,
+  url,
+}: {
+  actionLabel: string;
+  className?: string;
+  url?: string;
+}) {
+  return (
+    <div className={className}>
+      {url ? (
+        <a
+          className={dashboardStyles.secondaryButton}
+          href={url}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {actionLabel}
+        </a>
+      ) : (
+        <p className={styles.originalChatMissing}>
+          Original-Chat-Link noch nicht verbunden.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -755,6 +807,38 @@ function buildConversationPreview(
         "Arbeitsnotiz: Antwort vorbereiten, Kontext prüfen und final im Originalkanal manuell senden.",
     },
   ];
+}
+
+function getOriginalChatUrl(contact: ContactRow): string | undefined {
+  const metadata = contact as ContactRow & Record<string, unknown>;
+
+  for (const key of [
+    "source_url",
+    "reply_target_url",
+    "external_thread_url",
+    "external_message_url",
+    "replyTargetUrl",
+  ]) {
+    const value = metadata[key];
+
+    if (typeof value === "string" && /^https?:\/\//i.test(value.trim())) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function getOriginalActionLabel(platform: string): string {
+  const normalized = platform.toLowerCase();
+
+  if (normalized.includes("facebook")) return "Facebook öffnen";
+  if (normalized.includes("messenger")) return "Messenger öffnen";
+  if (normalized.includes("instagram")) return "Instagram öffnen";
+  if (normalized.includes("whatsapp")) return "WhatsApp öffnen";
+  if (normalized.includes("mail")) return "E-Mail öffnen";
+
+  return "Original-Chat öffnen";
 }
 
 function inferMessageType(sourcePlatform: string | null): string {
