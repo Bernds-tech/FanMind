@@ -44,6 +44,16 @@ type AiReplySuggestionsProps = {
 
 const genericError = "Antwortvorschläge konnten gerade nicht erzeugt werden.";
 
+function getApiErrorMessage(
+  data: AiSuggestionsResult | { error?: string } | null,
+) {
+  if (data && "error" in data && data.error) {
+    return data.error;
+  }
+
+  return genericError;
+}
+
 export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
   const [pastedChatContext, setPastedChatContext] = useState("");
   const [incomingMessage, setIncomingMessage] = useState("");
@@ -67,7 +77,7 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
     setSuggestions(null);
 
     if (!incomingMessage.trim()) {
-      setError(genericError);
+      setError("Bitte füge zuerst die neue eingegangene Nachricht ein.");
       return;
     }
 
@@ -99,7 +109,7 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
         | null;
 
       if (!response.ok || !data || !("reply_options" in data)) {
-        setError(genericError);
+        setError(getApiErrorMessage(data));
         return;
       }
 
@@ -194,6 +204,15 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
           <h2 id="fanmind-ai-title">FanMind-Assistent</h2>
         </div>
         <span>Serverseitig</span>
+      </div>
+
+      <div className={styles.workflowHint} role="note">
+        <strong>Gerhards Demo-Ablauf:</strong>
+        <span>
+          Kontext prüfen → neue Nachricht einfügen → Vorschläge erzeugen → Text
+          kopieren → Memory oder Follow-up bewusst speichern. FanMind sendet
+          niemals automatisch.
+        </span>
       </div>
 
       <form className={styles.aiComposer} onSubmit={handleSubmit}>
@@ -319,7 +338,10 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
             </article>
           </div>
 
-          <p className={styles.aiSafetyNote}>{suggestions.safety_note}</p>
+          <p className={styles.aiSafetyNote}>
+            {suggestions.safety_note} Kopierte Antwortentwürfe müssen extern
+            manuell geprüft und versendet werden.
+          </p>
         </div>
       ) : null}
     </section>
