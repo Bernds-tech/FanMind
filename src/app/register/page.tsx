@@ -12,6 +12,7 @@ import styles from "./register.module.css";
 
 type RegisterPlanId = PlanId;
 type StarterCommercialOption = Extract<ProductiveCommercialOption, "starter_paid_setup">;
+type StarterOfferOptionId = "starter_paid_setup" | "starter_no_setup_commitment";
 
 type RegisterPageProps = {
   searchParams: Promise<{ lang?: string | string[]; plan?: string | string[] }>;
@@ -35,7 +36,7 @@ function planStatusVariant(planId: RegisterPlanId): FeatureStatusLabelVariant {
 }
 
 type StarterOptionCopy = {
-  id: StarterCommercialOption;
+  id: StarterOfferOptionId;
   title: string;
   price: string;
   description: string;
@@ -127,9 +128,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         label: "2",
         badge: "Active",
         title: "Start Starter",
-        price: "€990 setup + €299 / month",
-        description: "Starter for ongoing use after setup; cancellable monthly.",
-        bullets: ["€990 one-time setup fee", "€299 per month", "monthly cancellable", "paid Pilot setup is credited if you continue"],
+        price: "Option A: €990 setup + €299 / month",
+        description: "Monthly cancellable after setup; no long commitment.",
+        bullets: ["setup fee applies", "monthly cancellable", "no long-term commitment"],
         href: registerPlanHref("starter", language),
         cta: "Choose Starter",
       },
@@ -171,9 +172,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       label: "2",
       badge: "Aktiv",
       title: "Starter starten",
-      price: "990 € Einrichtung + 299 €/Monat · monatlich kündbar",
-      description: "Starter für laufende Nutzung nach dem Setup; monatlich kündbar.",
-      bullets: ["990 € einmalige Einrichtung", "299 € pro Monat", "monatlich kündbar", "Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat."],
+      price: "Option A: 990 € Einrichtung + 299 €/Monat",
+      description: "Monatlich kündbar nach Einrichtung; keine lange Bindung.",
+      bullets: ["Setup-/Einrichtungsgebühr fällt an", "monatlich kündbar", "Option B: 299 €/Monat ohne Einrichtung, 12 Monate Bindung"],
       href: registerPlanHref("starter", language),
       cta: "Starter wählen",
     },
@@ -205,11 +206,19 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
     return [
       {
         id: "starter_paid_setup",
-        title: "Starter",
+        title: "Option A",
         price: "€990 setup + €299 / month",
-        description: "For ongoing use after setup. Cancellable monthly; no long-term commitment.",
-        bullets: ["one-time setup fee", "€299 per month", "monthly cancellable", "paid Pilot setup fee is credited"],
-        badge: "Active",
+        description: "Setup fee applies; cancellable monthly.",
+        bullets: ["setup/onboarding fee applies", "no long commitment"],
+        badge: "MVP access",
+      },
+      {
+        id: "starter_no_setup_commitment",
+        title: "Option B",
+        price: "€299 / month",
+        description: "No setup fee; 12-month commitment.",
+        bullets: ["without setup fee", "12-month commitment"],
+        badge: "Alternative",
       },
     ];
   }
@@ -217,11 +226,19 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
   return [
     {
       id: "starter_paid_setup",
-      title: "Starter",
-      price: "990 € Einrichtung + 299 €/Monat · monatlich kündbar",
-      description: "Für laufende Nutzung nach dem Setup. Monatlich kündbar.",
-      bullets: ["einmalige Einrichtungsgebühr", "299 € pro Monat", "monatlich kündbar", "Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat."],
-      badge: "Aktiv",
+      title: "Option A",
+      price: "990 € Einrichtung + 299 €/Monat",
+      description: "Einrichtungsgebühr fällt an; monatlich kündbar.",
+      bullets: ["Setup-/Einrichtungsgebühr fällt an", "keine lange Bindung"],
+      badge: "MVP-Zugang",
+    },
+    {
+      id: "starter_no_setup_commitment",
+      title: "Option B",
+      price: "299 €/Monat",
+      description: "Ohne Einrichtung; 12 Monate Bindung.",
+      bullets: ["ohne Einrichtungsgebühr", "12 Monate Bindung"],
+      badge: "Alternative",
     },
   ];
 }
@@ -351,7 +368,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const selectedOnboardingHref = selectedPlanId === "pilot" || selectedPlanId === "starter" ? onboardingHref(selectedPlanId, language) : onboardingHref("starter", language);
   const planSelectionCopy = getPlanSelectionCopy(language);
   const starterOptionsCopy = getStarterOptionsCopy(language);
-  const [starterOption, setStarterOption] = useState<StarterCommercialOption>("starter_paid_setup");
+  const starterOption: StarterCommercialOption = "starter_paid_setup";
   const [success, setSuccess] = useState(false);
   const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -463,7 +480,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             <div className={styles.planIntro}>
               <p className={styles.eyebrow}>{language === "en" ? "Setup first" : "Setup zuerst"}</p>
               <h1>{language === "en" ? "Choose your FanMind entry" : "Wähle deinen FanMind-Einstieg"}</h1>
-              <p>{language === "en" ? "Choose Pilot / Setup for a 1-month test, or Starter for ongoing use with €990 setup + €299/month." : "Wähle Pilot / Setup für 1 Monat Test oder Starter für laufende Nutzung mit 990 € Einrichtung + 299 €/Monat · monatlich kündbar."}</p>
+              <p>{language === "en" ? "Starter shows two MVP entry options: setup fee plus monthly cancellation, or no setup fee with a 12-month commitment." : "Starter zeigt zwei MVP-Einstiege: Einrichtung plus monatliche Kündbarkeit oder ohne Einrichtung mit 12 Monaten Bindung."}</p>
             </div>
 
             {hasInvalidPlan && (
@@ -508,25 +525,19 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.formHeader}>
                 <p className={styles.eyebrow}>{selectedPlanId === "pilot" ? "Pilot / Setup" : "Starter-Abo"}</p>
                 <h1>{selectedPlanId === "pilot" ? (language === "en" ? "Start Pilot / Setup" : "Pilot / Setup starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
-                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, test for 1 month, no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Monat testen · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "€990 setup + €299/month, monthly cancellable. No payment is collected here." : "990 € Einrichtung + 299 €/Monat · monatlich kündbar. Hier wird keine Zahlung ausgelöst.")}</p>
+                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, test for 1 month, no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Monat testen · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Pick the MVP setup access; no payment is collected here." : "Wähle deinen MVP-Setup-Zugang; hier wird keine Zahlung ausgelöst.")}</p>
               </div>
 
               {selectedPlanId === "starter" && (
                 <fieldset className={styles.commercialOptions}>
                   <legend>{language === "en" ? "Starter package" : "Starter-Paket"}</legend>
                   {starterOptionsCopy.map((option) => (
-                    <label key={option.id} className={`${styles.optionCard} ${starterOption === option.id ? styles.optionCardSelected : ""}`}>
-                      <input
-                        type="radio"
-                        name="commercialOption"
-                        value={option.id}
-                        checked={starterOption === option.id}
-                        onChange={() => setStarterOption(option.id)}
-                      />
+                    <article key={option.id} className={`${styles.optionCard} ${option.id === "starter_paid_setup" ? styles.optionCardSelected : ""}`}>
+                      <span className={styles.optionMarker} aria-hidden="true">{option.id === "starter_paid_setup" ? "A" : "B"}</span>
                       <span>
                         <span className={styles.optionTitleRow}>
                           <strong>{option.title}</strong>
-                          {option.badge && <FeatureStatusLabel variant="active">{option.badge}</FeatureStatusLabel>}
+                          {option.badge && <FeatureStatusLabel variant={option.id === "starter_paid_setup" ? "active" : "preview"}>{option.badge}</FeatureStatusLabel>}
                         </span>
                         <b>{option.price}</b>
                         <small>{option.description}</small>
@@ -534,7 +545,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                           {option.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
                         </ul>
                       </span>
-                    </label>
+                    </article>
                   ))}
                 </fieldset>
               )}

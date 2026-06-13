@@ -27,10 +27,10 @@
 .shell {
   position: relative;
   z-index: 1;
-  width: min(1240px, calc(100% - 32px));
+  width: min(1260px, calc(100% - 24px));
   min-height: auto;
   margin: 0 auto;
-  padding: clamp(14px, 1.6vw, 22px);
+  padding: clamp(12px, 1.25vw, 18px);
   border: 1px solid rgba(19, 128, 255, 0.3);
   border-radius: 13px;
   background: rgba(0, 5, 16, 0.36);
@@ -111,10 +111,10 @@
 
 .authGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
-  gap: clamp(32px, 4.5vw, 64px);
+  grid-template-columns: minmax(0, 1fr) minmax(350px, 410px);
+  gap: clamp(22px, 3vw, 42px);
   align-items: start;
-  margin-top: clamp(18px, 2.5vw, 30px);
+  margin-top: clamp(12px, 1.6vw, 20px);
 }
 
 .visualPanel {
@@ -234,7 +234,7 @@
   height: 36px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 15px;
   background: rgba(4, 14, 34, 0.72);
   box-shadow: 0 0 26px color-mix(in srgb, currentColor 28%, transparent);
 }
@@ -270,8 +270,8 @@
   overflow: hidden;
   justify-self: end;
   width: 100%;
-  max-width: 440px;
-  padding: clamp(16px, 1.45vw, 20px);
+  max-width: 410px;
+  padding: clamp(12px, 1.05vw, 16px);
   border: 1px solid transparent;
   border-radius: 18px;
   background: linear-gradient(#050b1d, #050b1d) padding-box,
@@ -334,13 +334,13 @@
 .formGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .field {
   display: grid;
-  gap: 3px;
-  margin-top: 7px;
+  gap: 2px;
+  margin-top: 5px;
   color: #c9c5d2;
   font-size: 11px;
   font-weight: 800;
@@ -360,12 +360,12 @@
 }
 
 .inputWrap {
-  min-height: 40px;
-  padding: 0 11px;
+  min-height: 36px;
+  padding: 0 10px;
 }
 
 .textareaWrap {
-  padding: 7px 11px;
+  padding: 5px 10px;
 }
 
 .inputWrap:focus-within,
@@ -376,7 +376,7 @@
 
 .inputWrap span {
   color: #d6d0d6;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .inputWrap input,
@@ -405,7 +405,7 @@
 }
 
 .textareaWrap textarea {
-  min-height: 42px;
+  min-height: 34px;
   resize: vertical;
 }
 
@@ -414,8 +414,8 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 42px;
-  margin-top: 10px;
+  min-height: 38px;
+  margin-top: 8px;
   border: 0;
   border-radius: 10px;
   color: #ffffff;
@@ -500,7 +500,7 @@
 
   .topLinks {
     gap: 6px;
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .authGrid {
@@ -525,7 +525,7 @@
   .inputWrap input,
   .inputWrap select,
   .textareaWrap textarea {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .primaryButton {
@@ -571,7 +571,7 @@
 
 .planSelection {
   display: grid;
-  gap: 10px;
+  gap: 7px;
   max-width: 660px;
   margin-inline: 0;
 }
@@ -579,7 +579,7 @@
 .planCard {
   display: grid;
   gap: 4px;
-  padding: 12px 14px;
+  padding: 9px 12px;
   border: 1px solid rgba(91, 150, 255, 0.28);
   border-radius: 16px;
   color: #dce9ff;
@@ -640,7 +640,7 @@
 .previewCard h1 {
   margin: 0;
   color: #ffffff;
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: -0.6px;
 }
 
@@ -677,7 +677,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 7px;
-  margin: 9px 0 2px;
+  margin: 7px 0 1px;
   padding: 0;
   border: 0;
 }
@@ -696,12 +696,12 @@
   display: grid;
   grid-template-columns: 16px 1fr;
   gap: 8px;
-  padding: 9px 10px;
+  padding: 7px 9px;
   border: 1px solid rgba(48, 141, 255, 0.36);
   border-radius: 14px;
   color: #dce9ff;
   background: rgba(2, 9, 26, 0.7);
-  cursor: pointer;
+  cursor: default;
 }
 
 .optionCardSelected {
@@ -709,14 +709,22 @@
   box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.1), inset 0 0 28px rgba(0, 105, 255, 0.12);
 }
 
-.optionCard input {
-  margin-top: 4px;
-  accent-color: #00d8ff;
+.optionMarker {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border-radius: 999px;
+  color: #00111c;
+  background: #75e8ff;
+  font-size: 10px;
+  font-weight: 900;
 }
 
-.optionCard > span {
+.optionCard > span:last-child {
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
 .optionTitleRow strong {
@@ -811,6 +819,10 @@
 }
 
 @media (min-width: 1051px) {
+  .planSelection {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .planCard {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -841,7 +853,7 @@
 
 .cardWithComingSoon {
   position: relative;
-  padding-bottom: 58px;
+  padding-bottom: 44px;
 }
 
 .cardWithComingSoon .planCardHeader {
@@ -864,7 +876,7 @@
 .comingSoon-small {
   right: 8px;
   bottom: 7px;
-  width: 72px;
+  width: 58px;
 }
 
 .comingSoon-medium {
