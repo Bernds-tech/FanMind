@@ -23,6 +23,7 @@ type WorkspaceShellProps = {
   header: WorkspaceHeaderProps;
   contactCount: number;
   openFollowupCount?: number;
+  showStats?: boolean;
   logoutAction: () => Promise<void>;
   profileHref?: string;
   children: ReactNode;
@@ -98,6 +99,7 @@ export function WorkspaceShell({
   header,
   contactCount,
   openFollowupCount = 0,
+  showStats = true,
   logoutAction,
   profileHref = "/settings/profile",
   children,
@@ -182,10 +184,12 @@ export function WorkspaceShell({
         className={`${styles.dashboardContent} ${styles.dashboardContentStart}`}
       >
         <WorkspaceHeader {...header} />
-        <WorkspaceKpiStrip
-          contactCount={contactCount}
-          openFollowupCount={openFollowupCount}
-        />
+        {showStats ? (
+          <WorkspaceKpiStrip
+            contactCount={contactCount}
+            openFollowupCount={openFollowupCount}
+          />
+        ) : null}
         {children}
       </div>
     </div>
