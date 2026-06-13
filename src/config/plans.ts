@@ -111,7 +111,7 @@ const DEFAULT_VISIBILITY: Record<FeatureKey, FeatureVisibility> = {
   campaigns: "roadmap_only",
   analytics: "roadmap_only",
   team_roles: "roadmap_only",
-  integrations: "roadmap_only",
+  integrations: "visible",
   payments: "hidden",
   automatic_sending: "hidden",
 };

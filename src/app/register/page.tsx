@@ -227,8 +227,8 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
       id: "starter_paid_setup",
       title: "Option A",
       price: "990 € Einrichtung + 299 €/Monat",
-      description: "Einrichtungsgebühr fällt an; monatlich kündbar.",
-      bullets: ["Setup-/Einrichtungsgebühr fällt an", "keine lange Bindung"],
+      description: "Setup-/Einrichtungsgebühr fällt an; monatlich kündbar.",
+      bullets: ["Setup-/Einrichtungsgebühr fällt an", "monatlich kündbar", "keine lange Bindung"],
       badge: "MVP-Zugang",
     },
     {
@@ -275,13 +275,8 @@ async function prepareUserWorkspace(
   commercialOption: ProductiveCommercialOption | StarterOfferOptionId,
   language: FanMindLanguage,
 ): Promise<WorkspaceSetupError | null> {
-  const commercialTerms = commercialOption === "starter_no_setup_commitment"
-    ? {
-        commercialOption,
-        setupFeeCents: 0,
-        monthlyFeeCents: 29900,
-        commitmentMonths: 12 as const,
-      }
+  const commercialTerms = planId === "starter"
+    ? getRegistrationCommercialTerms(planId, commercialOption === "starter_no_setup_commitment" ? "starter_no_setup_commitment" : "starter_paid_setup")
     : getRegistrationCommercialTerms(planId);
 
   if (!commercialTerms || commercialTerms.commercialOption !== commercialOption) {
