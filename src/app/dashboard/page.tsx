@@ -39,6 +39,7 @@ type WorkspaceDisplay = {
 };
 
 type ContactPreviewRow = {
+  id: string;
   name: string;
   status: string;
   profile: string;
@@ -171,6 +172,7 @@ function getWorkspaceDisplay(
 
 function getContactRows(contacts: ContactRow[]): ContactPreviewRow[] {
   return contacts.map((contact) => ({
+    id: contact.id,
     name: contact.display_name,
     status: formatStatus(contact.status),
     profile: contact.handle ?? "—",
@@ -332,6 +334,37 @@ function WorkspaceDetails({
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
+      <section className={styles.workflowCard} aria-labelledby="workflow-title">
+        <div>
+          <p className={styles.eyebrow}>Produktiver Arbeitsflow</p>
+          <h2 id="workflow-title">
+            Dashboard → Fans → Detail → KI → Memory → Follow-up
+          </h2>
+          <p>
+            Öffne einen Kontakt, prüfe den Kontext, füge eine neue Nachricht ein
+            und erzeuge KI-Antwortvorschläge. Speichern ist bewusst getrennt:
+            Memory und Follow-up werden manuell übernommen; Antworten werden nie
+            automatisch gesendet.
+          </p>
+        </div>
+        <div className={styles.workflowActions}>
+          <Link className={styles.primaryButton} href="/fans#fans-list">
+            Fans/Kontakte öffnen
+          </Link>
+          {firstContact ? (
+            <Link
+              className={styles.secondaryButton}
+              href={`/fans/${firstContact.id}`}
+            >
+              Ersten Kontakt öffnen
+            </Link>
+          ) : null}
+          <a className={styles.secondaryButton} href="#followups">
+            Follow-ups prüfen ({openFollowupCount})
+          </a>
+        </div>
+      </section>
+
       <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
         <section
           className={`${styles.moduleCard} ${styles.contactCard}`}
@@ -382,9 +415,12 @@ function WorkspaceDetails({
                   {contactRows.map((row) => (
                     <tr key={row.name}>
                       <td>
-                        <strong className={styles.contactName}>
+                        <Link
+                          className={styles.contactNameLink}
+                          href={`/fans/${row.id}`}
+                        >
                           {row.name}
-                        </strong>
+                        </Link>
                       </td>
                       <td>
                         <span className={styles.tableBadge}>{row.status}</span>
@@ -484,6 +520,9 @@ function WorkspaceDetails({
             </span>
           </div>
           <div className={styles.actionList}>
+            <Link href="/fans#fans-list">
+              Fans/Kontakte öffnen <small>Start</small>
+            </Link>
             <Link href="/fans#new-fan-modal">
               Kontakt anlegen <small>Aktiv</small>
             </Link>

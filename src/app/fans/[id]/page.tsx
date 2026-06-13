@@ -215,9 +215,9 @@ function FanDetailContent({
 
         <PlaceholderCard
           eyebrow="Nachrichten / Kontext"
-          title="Noch kein Nachrichtenkontext"
-          badge="Platzhalter"
-          body="Es wurden keine echten Nachrichten importiert oder verknüpft. FanMind zeigt deshalb keine erfundenen Unterhaltungen an."
+          title="Manueller Nachrichtenkontext"
+          badge="Bereit"
+          body="Es wurden keine echten Nachrichten importiert oder verknüpft. Füge den aktuellen Chatverlauf und die neue eingehende Nachricht direkt im FanMind-Assistenten unten ein; FanMind erfindet keinen Verlauf."
         />
 
         <AiReplySuggestions
