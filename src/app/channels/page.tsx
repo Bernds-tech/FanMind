@@ -9,6 +9,8 @@ import {
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
+import { ChannelsGrid } from "./ChannelsGrid";
+import styles from "./channels.module.css";
 
 type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -38,46 +40,39 @@ function ChannelsWorkspace({
       userLabel={userLabel}
       planLabel={workspace.plan_id}
       planMeta={workspace.role}
-      planStatus="Roadmap"
+      planStatus="Sync"
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
         title: "Kanäle",
-        subtitle: "Willkommen zurück, Pilot Test 👋",
-        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
-        primaryActionLabel: "Kanal vormerken",
-        primaryActionHref: "#channels-preview",
+        subtitle:
+          "Verbinde Quellen für Nachrichten, Kommentare, Leads und Support-Anfragen.",
+        searchPlaceholder: "Suche nach Plattform, Status oder Anschlussart ...",
+        primaryActionLabel: "Sync vorbereiten",
+        primaryActionHref: "#channel-grid-title",
       }}
       contactCount={contactCount}
       logoutAction={logout}
     >
-      <section
-        className={dashboardStyles.moduleCard}
-        id="channels-preview"
-        aria-labelledby="channels-title"
-      >
-        <div className={dashboardStyles.moduleHeader}>
-          <div>
-            <p className={dashboardStyles.eyebrow}>Coming Soon</p>
-            <h2 id="channels-title">Kanäle vormerken</h2>
-          </div>
-          <span>Keine Integration aktiv</span>
-        </div>
-        <p className={dashboardStyles.moduleText}>
-          Diese Seite ist eine MVP-Vorschau. FanMind synchronisiert aktuell
-          keine externen Plattformen. Keine automatische Sendefunktion. Mensch
-          prüft und sendet final selbst.
-        </p>
-        <div className={dashboardStyles.emptyState}>
-          <strong>Noch keine Kanäle verbunden.</strong>
+      <section className={styles.introCard} aria-labelledby="channels-title">
+        <div>
+          <p className={styles.eyebrow}>Pflichtbereich · Social-Media-Synchronisation</p>
+          <h2 id="channels-title">Kanäle verbinden und Eingänge kontrollieren</h2>
           <p>
-            Kanäle können aktuell nur als Produktbereich vorgemerkt werden.
-            Kontakte auf der Fans-Seite bleiben manuell gepflegte
-            Workspace-Daten.
+            Verbinde Quellen für eingehende Nachrichten, Kommentare, Leads und
+            Support-Anfragen. FanMind importiert und ordnet Eingänge dem
+            Arbeits-Eingang zu; Antworten werden nie automatisch gesendet.
           </p>
         </div>
+        <div className={styles.safetyPills} aria-label="Freigabe-Regeln">
+          <span>Manuelle Prüfung vor Antwort</span>
+          <span>Kein Kampagnenversand</span>
+          <span>Automatisches Senden: deaktiviert</span>
+        </div>
       </section>
+
+      <ChannelsGrid />
     </WorkspaceShell>
   );
 }
