@@ -301,8 +301,6 @@ function WorkspaceDetails({
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("dashboard");
   const workInboxItems = getWorkInboxItems(contacts, followups);
-  const firstContact = contacts[0];
-
   return (
     <WorkspaceShell
       workspaceName={workspace.name}
@@ -324,37 +322,6 @@ function WorkspaceDetails({
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
-      <section className={styles.workflowCard} aria-labelledby="workflow-title">
-        <div>
-          <p className={styles.eyebrow}>Produktiver Arbeitsflow</p>
-          <h2 id="workflow-title">
-            Dashboard → Fans → Detail → KI → Memory → Follow-up
-          </h2>
-          <p>
-            Öffne einen Kontakt, prüfe den Kontext, füge eine neue Nachricht ein
-            und erzeuge KI-Antwortvorschläge. Speichern ist bewusst getrennt:
-            Memory und Follow-up werden manuell übernommen; Antworten werden nie
-            automatisch gesendet.
-          </p>
-        </div>
-        <div className={styles.workflowActions}>
-          <Link className={styles.primaryButton} href="/fans#fans-list">
-            Fans/Kontakte öffnen
-          </Link>
-          {firstContact ? (
-            <Link
-              className={styles.secondaryButton}
-              href={`/fans/${firstContact.id}`}
-            >
-              Ersten Kontakt öffnen
-            </Link>
-          ) : null}
-          <a className={styles.secondaryButton} href="#work-inbox">
-            Arbeits-Eingang prüfen ({openFollowupCount})
-          </a>
-        </div>
-      </section>
-
       <section className={styles.crmGrid} aria-label="Arbeits-Eingang">
         <section
           className={`${styles.moduleCard} ${styles.contactCard}`}
@@ -429,46 +396,6 @@ function WorkspaceDetails({
             </div>
           )}
         </section>
-      </section>
-
-      <section className={styles.panelGrid} aria-label="Arbeitsbereiche">
-        <article
-          className={`${styles.quickActions} ${styles.compactActions}`}
-          aria-labelledby="quick-actions-title"
-        >
-          <div className={styles.moduleHeader}>
-            <div>
-              <p className={styles.eyebrow}>Schnellaktionen</p>
-              <h2 id="quick-actions-title">Kompakt</h2>
-            </div>
-            <span>
-              {workspace.plan_id === "pilot"
-                ? "Demo/Vorschau"
-                : "Aktiv/Limitiert"}
-            </span>
-          </div>
-          <div className={styles.actionList}>
-            <Link href="/fans#fans-list">
-              Fans/Kontakte öffnen <small>Start</small>
-            </Link>
-            <Link href="/fans#new-fan-modal">
-              Kontakt anlegen <small>Aktiv</small>
-            </Link>
-            {firstContact ? (
-              <Link href={`/fans/${firstContact.id}`}>
-                Fan öffnen <small>Detail</small>
-              </Link>
-            ) : null}
-            <Link href="/fans#fans-list">
-              Fanliste öffnen <small>Echte Daten</small>
-            </Link>
-            {openFollowupCount > 0 ? (
-              <a href="#work-inbox">
-                Offene Follow-ups <small>{openFollowupCount}</small>
-              </a>
-            ) : null}
-          </div>
-        </article>
       </section>
 
       <div className={styles.safetyNote} role="note">

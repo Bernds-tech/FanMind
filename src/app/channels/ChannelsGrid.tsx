@@ -82,14 +82,7 @@ export function ChannelsGrid() {
   };
 
   return (
-    <section className={styles.gridSection} aria-labelledby="channel-grid-title">
-      <div className={styles.sectionHeader}>
-        <div>
-          <h2 id="channel-grid-title">Kanäle verbinden</h2>
-          <p>Wähle einen Kanal, um Verbindung und Nachrichtenfreigabe zu verwalten.</p>
-        </div>
-      </div>
-
+    <section className={styles.gridSection} aria-label="Kanalkarten">
       <div className={styles.channelGrid}>
         {channels.map((channel) => (
           <article className={styles.channelCard} key={channel.key}>
