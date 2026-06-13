@@ -11,7 +11,6 @@ import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMi
 import styles from "./register.module.css";
 
 type RegisterPlanId = PlanId;
-type StarterCommercialOption = Extract<ProductiveCommercialOption, "starter_paid_setup">;
 type StarterOfferOptionId = "starter_paid_setup" | "starter_no_setup_commitment";
 
 type RegisterPageProps = {
@@ -59,7 +58,7 @@ function onboardingHref(planId: Extract<RegisterPlanId, "pilot" | "starter">, la
   return language === "en" ? `${base}&lang=en` : base;
 }
 
-function planCommercialOption(planId: RegisterPlanId, starterOption: StarterCommercialOption): CommercialOption {
+function planCommercialOption(planId: RegisterPlanId, starterOption: StarterOfferOptionId): CommercialOption | StarterOfferOptionId {
   if (planId === "pilot") return "pilot_only";
   if (planId === "starter") return starterOption;
   if (planId === "growth") return "growth_preview";
@@ -273,10 +272,17 @@ async function prepareUserWorkspace(
   displayName: string,
   workspaceName: string,
   planId: Extract<RegisterPlanId, "pilot" | "starter">,
-  commercialOption: ProductiveCommercialOption,
+  commercialOption: ProductiveCommercialOption | StarterOfferOptionId,
   language: FanMindLanguage,
 ): Promise<WorkspaceSetupError | null> {
-  const commercialTerms = getRegistrationCommercialTerms(planId, commercialOption === "pilot_only" ? "starter_paid_setup" : commercialOption);
+  const commercialTerms = commercialOption === "starter_no_setup_commitment"
+    ? {
+        commercialOption,
+        setupFeeCents: 0,
+        monthlyFeeCents: 29900,
+        commitmentMonths: 12,
+      }
+    : getRegistrationCommercialTerms(planId, commercialOption === "pilot_only" ? "starter_paid_setup" : "starter_paid_setup");
 
   if (!commercialTerms || commercialTerms.commercialOption !== commercialOption) {
     return workspaceSetupError(invalidWorkspaceTermsMessage(language));
@@ -368,7 +374,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const selectedOnboardingHref = selectedPlanId === "pilot" || selectedPlanId === "starter" ? onboardingHref(selectedPlanId, language) : onboardingHref("starter", language);
   const planSelectionCopy = getPlanSelectionCopy(language);
   const starterOptionsCopy = getStarterOptionsCopy(language);
-  const starterOption: StarterCommercialOption = "starter_paid_setup";
+  const [starterOption, setStarterOption] = useState<StarterOfferOptionId>("starter_paid_setup");
   const [success, setSuccess] = useState(false);
   const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -397,7 +403,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
     const role = String(formData.get("rolle") ?? "").trim();
     const message = String(formData.get("nachricht") ?? "").trim();
     const commercialOptionValue = String(formData.get("commercialOption") ?? starterOption);
-    const selectedCommercialOption: ProductiveCommercialOption = selectedPlanId === "starter" && commercialOptionValue === "starter_paid_setup"
+    const selectedCommercialOption: ProductiveCommercialOption | StarterOfferOptionId = selectedPlanId === "starter" && (commercialOptionValue === "starter_paid_setup" || commercialOptionValue === "starter_no_setup_commitment")
       ? commercialOptionValue
       : "pilot_only";
 
@@ -532,7 +538,14 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 <fieldset className={styles.commercialOptions}>
                   <legend>{language === "en" ? "Starter package" : "Starter-Paket"}</legend>
                   {starterOptionsCopy.map((option) => (
-                    <article key={option.id} className={`${styles.optionCard} ${option.id === "starter_paid_setup" ? styles.optionCardSelected : ""}`}>
+                    <label key={option.id} className={`${styles.optionCard} ${option.id === starterOption ? styles.optionCardSelected : ""}`}>
+                      <input
+                        type="radio"
+                        name="commercialOption"
+                        value={option.id}
+                        checked={starterOption === option.id}
+                        onChange={() => setStarterOption(option.id)}
+                      />
                       <span className={styles.optionMarker} aria-hidden="true">{option.id === "starter_paid_setup" ? "A" : "B"}</span>
                       <span>
                         <span className={styles.optionTitleRow}>
@@ -545,12 +558,12 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                           {option.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
                         </ul>
                       </span>
-                    </article>
+                    </label>
                   ))}
                 </fieldset>
               )}
 
-              <input type="hidden" name="commercialOption" value={commercialOption} />
+              {selectedPlanId !== "starter" ? <input type="hidden" name="commercialOption" value={commercialOption} /> : null}
 
               <div className={styles.formGrid}>
                 <label className={styles.field}>

@@ -358,7 +358,7 @@ const integrationChannels = [
   {
     icon: "☏",
     title: "WhatsApp",
-    text: "Chats als Roadmap-Kontext.",
+    text: "Chats sauber vorbereiten.",
     status: "Roadmap",
     tone: "green",
   },
@@ -379,7 +379,7 @@ const integrationChannels = [
   {
     icon: "𝕏",
     title: "X",
-    text: "DMs als Roadmap-Quelle.",
+    text: "DMs später bündeln.",
     status: "Roadmap",
     tone: "white",
   },
@@ -439,7 +439,7 @@ const integrationActions = [
     icon: "⌁",
     title: "Analytics",
     status: "Roadmap",
-    text: "Roadmap-Signale einordnen.",
+    text: "Wachstumssignale einordnen.",
   },
 ];
 
@@ -1861,7 +1861,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <h2 id="integrations-title">
             {t("Verbinde deine wichtigsten")} <span>{t("Kanäle.")}</span>
           </h2>
-          <p>{t("FanMind bündelt E-Mail, Formulare und Roadmap-Kanäle in einem klaren Workflow. Kontext wird vorbereitet, geprüft und bleibt unter deiner Kontrolle.")}</p>
+          <p>{t("FanMind bündelt E-Mail, Formulare und weitere Kanäle in einem klaren Workflow. Kontext wird vorbereitet, geprüft und bleibt unter deiner Kontrolle.")}</p>
         </div>
 
         <div className={styles.integrationChannelGrid}>
