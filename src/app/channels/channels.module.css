@@ -27,17 +27,6 @@
   letter-spacing: -0.04em;
 }
 
-.sectionHeader {
-  margin-bottom: 16px;
-}
-
-.sectionHeader p {
-  margin: 8px 0 0;
-  max-width: 640px;
-  color: #cbd5e1;
-  font-size: 14px;
-  line-height: 1.6;
-}
 
 .channelGrid {
   display: grid;
