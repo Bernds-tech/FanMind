@@ -31,7 +31,7 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey): {
         label: "Kanäle",
         href: "/channels",
         active: activeRoute === "channels",
-        badge: "Roadmap",
+        badge: "Sync",
       },
     ],
     settingsNavigation: [
