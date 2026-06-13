@@ -111,7 +111,7 @@
 
 .authGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(350px, 410px);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
   gap: clamp(18px, 2.2vw, 30px);
   align-items: start;
   margin-top: clamp(12px, 1.6vw, 20px);
@@ -270,7 +270,7 @@
   overflow: hidden;
   justify-self: end;
   width: 100%;
-  max-width: 410px;
+  max-width: 430px;
   padding: clamp(12px, 1.05vw, 16px);
   border: 1px solid transparent;
   border-radius: 18px;
@@ -542,7 +542,7 @@
   margin: 7px 0 0;
   border: 1px solid rgba(255, 92, 122, 0.5);
   border-radius: 12px;
-  padding: 7px 9px;
+  padding: 8px 10px;
   color: #ffd2dc;
   background: rgba(109, 16, 39, 0.28);
   line-height: 1.48;
@@ -572,7 +572,7 @@
 .planSelection {
   display: grid;
   gap: 9px;
-  max-width: 700px;
+  max-width: 760px;
   margin-inline: 0;
 }
 
@@ -580,7 +580,7 @@
   display: grid;
   gap: 5px;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 11px 12px;
   border: 1px solid rgba(91, 150, 255, 0.28);
   border-radius: 16px;
   color: #dce9ff;
@@ -608,6 +608,11 @@
 .planCardHeader,
 .optionTitleRow {
   justify-content: space-between;
+}
+
+.optionTitleRow {
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .planNumber,
@@ -642,12 +647,14 @@
   margin: 0;
   color: #ffffff;
   font-size: 15px;
+  line-height: 1.15;
   letter-spacing: -0.6px;
 }
 
 .planCard strong {
   color: #79e8ff;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .planCard p,
@@ -697,7 +704,7 @@
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 8px;
-  padding: 7px 9px;
+  padding: 8px 10px;
   border: 1px solid rgba(48, 141, 255, 0.36);
   border-radius: 14px;
   color: #dce9ff;
@@ -735,7 +742,8 @@
 
 .optionCard b {
   color: #79e8ff;
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.28;
 }
 
 .optionCard small {
@@ -760,7 +768,7 @@
 .previewNotice,
 .warning {
   border-radius: 12px;
-  padding: 7px 9px;
+  padding: 8px 10px;
   font-size: 12px;
   line-height: 1.3;
 }
@@ -842,7 +850,7 @@
   .planCard strong {
     align-self: end;
     text-align: right;
-    white-space: nowrap;
+    max-width: 270px;
   }
 }
 
@@ -886,11 +894,21 @@
 
 @media (min-width: 1200px) {
   .authGrid {
-    grid-template-columns: minmax(620px, 1fr) minmax(350px, 410px);
+    grid-template-columns: minmax(640px, 1fr) minmax(360px, 430px);
   }
 
   .planSelection {
-    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 1280px) and (min-width: 1200px) {
+  .planSelection {
+    grid-template-columns: 1fr;
+  }
+
+  .planCard strong {
+    max-width: none;
   }
 }
 
