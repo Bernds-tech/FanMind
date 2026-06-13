@@ -359,42 +359,42 @@ const integrationChannels = [
     icon: "☏",
     title: "WhatsApp",
     text: "Chats sauber vorbereiten.",
-    status: "Roadmap",
+    status: "Coming Soon",
     tone: "green",
   },
   {
     icon: "◖",
     title: "Discord",
     text: "Community-Signale strukturieren.",
-    status: "Roadmap",
+    status: "Coming Soon",
     tone: "violet",
   },
   {
     icon: "f",
     title: "Facebook",
     text: "Nachrichten später einordnen.",
-    status: "Roadmap",
+    status: "Coming Soon",
     tone: "blue",
   },
   {
     icon: "𝕏",
     title: "X",
     text: "DMs später bündeln.",
-    status: "Roadmap",
+    status: "Coming Soon",
     tone: "white",
   },
   {
     icon: "♪",
     title: "TikTok",
     text: "Kommentare später abbilden.",
-    status: "Roadmap",
+    status: "Coming Soon",
     tone: "purple",
   },
   {
     icon: "◎",
     title: "Instagram",
     text: "DMs und Storys bündeln.",
-    status: "Roadmap",
+    status: "Coming Soon",
     tone: "pink",
   },
   {
@@ -421,7 +421,7 @@ const integrationActions = [
   {
     icon: "♙",
     title: "Segmente",
-    status: "Vorschau",
+    status: "Coming Soon",
     text: "Fans sinnvoll gruppieren.",
   },
   {
@@ -432,13 +432,13 @@ const integrationActions = [
   {
     icon: "📣",
     title: "Kampagnen",
-    status: "Roadmap",
+    status: "Coming Soon",
     text: "Geprüfte Entwürfe planen.",
   },
   {
     icon: "⌁",
     title: "Analytics",
-    status: "Roadmap",
+    status: "Coming Soon",
     text: "Wachstumssignale einordnen.",
   },
 ];

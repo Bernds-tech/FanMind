@@ -11,7 +11,7 @@ import {
 } from "@/config/plans";
 
 
-export type ProductiveCommercialOption = "pilot_only" | "starter_paid_setup";
+export type ProductiveCommercialOption = "pilot_only" | "starter_paid_setup" | "starter_no_setup_commitment";
 
 export type CommercialOption =
   | ProductiveCommercialOption
@@ -22,7 +22,7 @@ export type CommercialTerms = {
   commercialOption: ProductiveCommercialOption;
   setupFeeCents: number;
   monthlyFeeCents: number;
-  commitmentMonths: 0;
+  commitmentMonths: 0 | 12;
 };
 
 export function getCommercialTerms(commercialOption: ProductiveCommercialOption): CommercialTerms {
@@ -41,12 +41,19 @@ export function getCommercialTerms(commercialOption: ProductiveCommercialOption)
         monthlyFeeCents: 29900,
         commitmentMonths: 0,
       };
+    case "starter_no_setup_commitment":
+      return {
+        commercialOption,
+        setupFeeCents: 0,
+        monthlyFeeCents: 29900,
+        commitmentMonths: 12,
+      };
   }
 }
 
 export function getRegistrationCommercialTerms(
   planId: PlanId,
-  starterOption: Extract<ProductiveCommercialOption, "starter_paid_setup"> = "starter_paid_setup",
+  starterOption: Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_no_setup_commitment"> = "starter_paid_setup",
 ): CommercialTerms | null {
   if (planId === "pilot") return getCommercialTerms("pilot_only");
   if (planId === "starter") return getCommercialTerms(starterOption);
