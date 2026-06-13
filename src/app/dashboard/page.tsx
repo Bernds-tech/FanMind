@@ -38,23 +38,16 @@ type WorkspaceDisplay = {
   contractNote: string;
 };
 
-type ContactPreviewRow = {
-  id: string;
+type WorkInboxItem = {
+  key: string;
+  contactId: string;
   name: string;
-  status: string;
-  profile: string;
+  handle: string;
   source: string;
-  tags: string[];
-  score: number | string;
-  lastContact: string;
-  nextFollowUp: string;
-};
-
-type TaskPreview = {
-  title: string;
-  person: string;
+  reason: string;
   due: string;
   status: string;
+  dueTime: number;
 };
 
 const euroFormatter = new Intl.NumberFormat("de-DE", {
@@ -101,7 +94,8 @@ function getWorkspaceDisplay(
 
   if (workspace.plan_id === "starter") {
     const commercialOption = String(workspace.commercial_option);
-    const isCommitmentOption = commercialOption === "starter_no_setup_commitment";
+    const isCommitmentOption =
+      commercialOption === "starter_no_setup_commitment";
 
     return {
       packageName: isCommitmentOption ? "Starter Option B" : "Starter Option A",
@@ -170,36 +164,64 @@ function getWorkspaceDisplay(
   };
 }
 
-function getContactRows(contacts: ContactRow[]): ContactPreviewRow[] {
-  return contacts.map((contact) => ({
-    id: contact.id,
-    name: contact.display_name,
-    status: formatStatus(contact.status),
-    profile: contact.handle ?? "—",
-    source: formatSource(contact.source_platform),
-    tags: contact.tags?.length ? contact.tags : [],
-    score: formatLanguage(contact.language),
-    lastContact: contact.created_at
-      ? `Neu angelegt · ${formatDate(contact.created_at)}`
-      : "Neu angelegt",
-    nextFollowUp: "—",
-  }));
+function getWorkInboxItems(
+  contacts: ContactRow[],
+  followups: FollowupRow[],
+): WorkInboxItem[] {
+  const contactsById = new Map(
+    contacts.map((contact) => [contact.id, contact]),
+  );
+  const itemsByFan = new Map<string, WorkInboxItem>();
+
+  for (const followup of followups) {
+    if (followup.status && followup.status !== "open") {
+      continue;
+    }
+
+    const contact = contactsById.get(followup.contact_id);
+
+    if (!contact) {
+      continue;
+    }
+
+    const key = getFanGroupKey(contact);
+    const existingItem = itemsByFan.get(key);
+    const candidate: WorkInboxItem = {
+      key,
+      contactId: contact.id,
+      name: contact.display_name || contact.handle || "Unbenannter Kontakt",
+      handle: contact.handle ?? "Kein Handle hinterlegt",
+      source: formatSource(contact.source_platform),
+      reason: followup.reason,
+      due: formatDueDate(followup.due_date),
+      status: followup.status ?? "open",
+      dueTime: getFollowupDueTime(followup.due_date),
+    };
+
+    if (!existingItem || candidate.dueTime < existingItem.dueTime) {
+      itemsByFan.set(key, candidate);
+    }
+  }
+
+  return Array.from(itemsByFan.values()).slice(0, 8);
 }
 
-function getFollowUps(
-  followups: FollowupRow[],
-  contacts: ContactRow[],
-): TaskPreview[] {
-  const contactNames = new Map(
-    contacts.map((contact) => [contact.id, contact.display_name]),
-  );
+function getFollowupDueTime(value: string | null): number {
+  return value
+    ? new Date(`${value}T00:00:00Z`).getTime()
+    : Number.POSITIVE_INFINITY;
+}
 
-  return followups.slice(0, 6).map((followup) => ({
-    title: followup.reason,
-    person: contactNames.get(followup.contact_id) ?? "Unbekannter Kontakt",
-    due: formatDueDate(followup.due_date),
-    status: followup.status ?? "open",
-  }));
+function getFanGroupKey(contact: ContactRow): string {
+  const identity = (contact.display_name || contact.handle || contact.id)
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+  return identity ? `fan:${identity}` : `contact:${contact.id}`;
 }
 
 function formatDueDate(value: string | null): string {
@@ -220,37 +242,6 @@ function formatSource(value: string | null): string {
   };
 
   return sourceLabels[value ?? ""] ?? value ?? "Manuell";
-}
-
-function formatStatus(value: string | null): string {
-  const statusLabels: Record<string, string> = {
-    new: "Neu",
-    active: "Aktiv",
-    warm: "Warm",
-    follow_up: "Follow-up",
-    paused: "Pausiert",
-  };
-
-  return statusLabels[value ?? ""] ?? value ?? "Neu";
-}
-
-function formatLanguage(value: string | null): string {
-  if (value === "en") {
-    return "Englisch";
-  }
-
-  if (value === "fr") {
-    return "Französisch";
-  }
-
-  return "Deutsch";
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
 
 function stringMetadataValue(
@@ -309,8 +300,7 @@ function WorkspaceDetails({
   const userLabel = displayName;
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("dashboard");
-  const contactRows = getContactRows(contacts);
-  const followUps = getFollowUps(followups, contacts);
+  const workInboxItems = getWorkInboxItems(contacts, followups);
   const firstContact = contacts[0];
 
   return (
@@ -359,36 +349,31 @@ function WorkspaceDetails({
               Ersten Kontakt öffnen
             </Link>
           ) : null}
-          <a className={styles.secondaryButton} href="#followups">
-            Follow-ups prüfen ({openFollowupCount})
+          <a className={styles.secondaryButton} href="#work-inbox">
+            Arbeits-Eingang prüfen ({openFollowupCount})
           </a>
         </div>
       </section>
 
-      <section className={styles.crmGrid} aria-label="CRM Arbeitsbereich">
+      <section className={styles.crmGrid} aria-label="Arbeits-Eingang">
         <section
           className={`${styles.moduleCard} ${styles.contactCard}`}
-          id="contacts"
-          aria-labelledby="contacts-title"
+          id="work-inbox"
+          aria-labelledby="work-inbox-title"
         >
           <div className={styles.moduleHeader}>
             <div>
-              <p className={styles.eyebrow}>Kontakte / Follower</p>
-              <h2 id="contacts-title">Kontaktpipeline</h2>
+              <p className={styles.eyebrow}>Arbeits-Eingang</p>
+              <h2 id="work-inbox-title">Heute zu bearbeiten</h2>
             </div>
-            <span>
-              {workspace.plan_id === "starter"
-                ? "Echte Daten"
-                : workspace.plan_id === "pilot"
-                  ? "Echte Daten"
-                  : "Vorschau"}
-            </span>
+            <Link className={styles.moduleHeaderLink} href="/fans#fans-list">
+              Alle Fans öffnen
+            </Link>
           </div>
           <p className={styles.moduleText}>
-            Diese Pipeline zeigt echte gespeicherte Kontakte aus dem aktuellen
-            Workspace. Vollautomatische Social-Media-Synchronisation ist
-            verpflichtender Produktbereich; einzelne Plattformen werden erst
-            nach fertiger Anbindung ohne Statushinweis produktiv angezeigt.
+            Hier erscheinen nur Arbeitsfälle: neue eingegangene Nachrichten oder
+            offene/fällige Follow-ups. Normale Kontakte ohne Aufgabe bleiben in
+            der vollständigen Fanliste. Pro Fan wird nur ein Eintrag angezeigt.
           </p>
           {contactsError ? (
             <p className={styles.error}>
@@ -396,114 +381,57 @@ function WorkspaceDetails({
               <span>{contactsError}</span>
             </p>
           ) : null}
-          {contactRows.length ? (
-            <div className={styles.tableWrap}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Handle</th>
-                    <th>Kanal/Quelle</th>
-                    <th>Tags</th>
-                    <th>Sprache</th>
-                    <th>Angelegt</th>
-                    <th>Nächster Follow-up</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contactRows.map((row) => (
-                    <tr key={row.name}>
-                      <td>
-                        <Link
-                          className={styles.contactNameLink}
-                          href={`/fans/${row.id}`}
-                        >
-                          {row.name}
-                        </Link>
-                      </td>
-                      <td>
-                        <span className={styles.tableBadge}>{row.status}</span>
-                      </td>
-                      <td>{row.profile}</td>
-                      <td>{row.source}</td>
-                      <td>
-                        <div className={styles.tagList}>
-                          {row.tags.map((tag) => (
-                            <span key={`${row.name}-${tag}`}>{tag}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td>
-                        <strong className={styles.scoreValue}>
-                          {row.score}
-                        </strong>
-                      </td>
-                      <td>{row.lastContact}</td>
-                      <td>{row.nextFollowUp}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <strong>Noch keine Fans angelegt.</strong>
-              <p>
-                Lege auf der Fans-Seite den ersten Kontakt an; hier erscheinen
-                nur echte Kontakte aus dem Workspace.
-              </p>
-            </div>
-          )}
-        </section>
-      </section>
-
-      <section className={styles.panelGrid} aria-label="Arbeitsbereiche">
-        <article className={styles.moduleCard} id="followups">
-          <div className={styles.moduleHeader}>
-            <div>
-              <p className={styles.eyebrow}>Fällige Follow-ups</p>
-              <h2>Manuelle nächste Schritte</h2>
-            </div>
-            <span>
-              {workspace.plan_id === "starter" ? "MVP" : "Demo/Vorschau"}
-            </span>
-          </div>
           {followupsError ? (
             <p className={styles.error}>
               <strong>Follow-ups konnten nicht geladen werden.</strong>
               <span>{followupsError}</span>
             </p>
           ) : null}
-          <div className={styles.taskList}>
-            {followUps.length ? (
-              followUps.map((task) => (
-                <div
-                  key={`${task.title}-${task.person}`}
-                  className={styles.taskItem}
-                >
+          {workInboxItems.length ? (
+            <div className={styles.workInboxList}>
+              {workInboxItems.map((item) => (
+                <article className={styles.workInboxItem} key={item.key}>
                   <div>
-                    <strong>{task.title}</strong>
-                    <p>{task.person}</p>
+                    <span className={styles.tableBadge}>Follow-up</span>
+                    <h3>
+                      <Link
+                        className={styles.contactNameLink}
+                        href={`/fans/${item.contactId}`}
+                      >
+                        {item.name}
+                      </Link>
+                    </h3>
+                    <p>{item.reason}</p>
+                    <small>
+                      {item.handle} · {item.source}
+                    </small>
                   </div>
-                  <span>
-                    {task.due} · {task.status}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className={styles.emptyState}>
-                <strong>Noch keine Follow-ups angelegt.</strong>
-                <p>
-                  Speichere einen KI-vorgeschlagenen Follow-up auf einer
-                  Kontaktdetailseite; hier erscheinen nur echte offene
-                  Follow-ups.
-                </p>
+                  <div className={styles.workInboxMeta}>
+                    <strong>{item.due}</strong>
+                    <span>{item.status}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <strong>Keine offenen Nachrichten oder Aufgaben.</strong>
+              <p>
+                Sobald eine neue Nachricht vorliegt oder ein Follow-up offen
+                ist, erscheint der Kontakt hier. Die vollständige Kontaktliste
+                bleibt unter /fans.
+              </p>
+              <div className={styles.emptyActions}>
+                <Link className={styles.secondaryButton} href="/fans#fans-list">
+                  Vollständige Fanliste öffnen
+                </Link>
               </div>
-            )}
-          </div>
-        </article>
+            </div>
+          )}
+        </section>
+      </section>
 
+      <section className={styles.panelGrid} aria-label="Arbeitsbereiche">
         <article
           className={`${styles.quickActions} ${styles.compactActions}`}
           aria-labelledby="quick-actions-title"
@@ -535,7 +463,7 @@ function WorkspaceDetails({
               Fanliste öffnen <small>Echte Daten</small>
             </Link>
             {openFollowupCount > 0 ? (
-              <a href="#followups">
+              <a href="#work-inbox">
                 Offene Follow-ups <small>{openFollowupCount}</small>
               </a>
             ) : null}

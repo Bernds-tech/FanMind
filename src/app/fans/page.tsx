@@ -85,7 +85,6 @@ function FansWorkspace({
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
   const userLabel = userDisplayName || workspace.name || "Nutzer";
-  const ownerLabel = getOwnerLabel(userDisplayName, workspace.name);
   const fanGroups = groupContactsByFan(contacts, followups);
   const visibleFanGroups = filterFanGroupsByChannel(fanGroups, activeChannel);
 
@@ -136,7 +135,7 @@ function FansWorkspace({
                 </Link>
               </div>
               {visibleFanGroups.length ? (
-                <FansTable fanGroups={visibleFanGroups} ownerLabel={ownerLabel} />
+                <FansTable fanGroups={visibleFanGroups} />
               ) : (
                 <div className={dashboardStyles.emptyState}>
                   <strong>Keine Fans für diesen Kanal</strong>
@@ -285,41 +284,25 @@ function ChannelFilters({
   );
 }
 
-function FansTable({
-  fanGroups,
-  ownerLabel,
-}: {
-  fanGroups: FanGroup[];
-  ownerLabel: string;
-}) {
+function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
   return (
     <div className={styles.crmTableWrap}>
       <table className={styles.crmTable}>
         <thead>
           <tr>
-            <th className={styles.selectColumn}>Auswahl</th>
             <th>Name</th>
             <th>Status</th>
             <th>Kanäle</th>
             <th>Tags</th>
-            <th>Fan Score</th>
-            <th>Letzter Kontakt</th>
+            <th>Angelegt</th>
             <th>Nächster Follow-up</th>
-            <th>Antwortkanal / Empfehlung</th>
-            <th>Owner</th>
+            <th>Antwortkanal</th>
             <th>Aktion</th>
           </tr>
         </thead>
         <tbody>
           {fanGroups.map((group) => (
             <tr key={group.key}>
-              <td>
-                <input
-                  aria-label={`${group.displayName} auswählen`}
-                  className={styles.rowCheckbox}
-                  type="checkbox"
-                />
-              </td>
               <td>
                 <span className={styles.nameCell}>
                   <Link
@@ -354,9 +337,6 @@ function FansTable({
                 )}
               </td>
               <td>
-                <span className={styles.scoreCell}>—</span>
-              </td>
-              <td>
                 {group.latestCreatedAt ? (
                   <span className={styles.dateCell}>
                     {formatDateOnlyFromTimestamp(group.latestCreatedAt)}
@@ -371,7 +351,6 @@ function FansTable({
                   {formatReplyChannel(group.platforms)}
                 </span>
               </td>
-              <td>{renderOwner(ownerLabel)}</td>
               <td>
                 <a
                   className={styles.editButton}
@@ -387,7 +366,6 @@ function FansTable({
     </div>
   );
 }
-
 
 const maxVisiblePlatformBadges = 5;
 
@@ -770,40 +748,6 @@ function formatLimitedList(values: string[], limit: number): string {
   const hiddenCount = values.length - limit;
 
   return hiddenCount > 0 ? `${visible} + weitere` : visible;
-}
-
-function getOwnerLabel(userDisplayName: string, workspaceName: string): string {
-  return userDisplayName || workspaceName || "—";
-}
-
-function getOwnerInitials(ownerLabel: string): string {
-  if (ownerLabel === "—") {
-    return "";
-  }
-
-  return ownerLabel
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-function renderOwner(ownerLabel: string) {
-  if (ownerLabel === "—") {
-    return <span className={styles.mutedText}>—</span>;
-  }
-
-  const initials = getOwnerInitials(ownerLabel);
-
-  return (
-    <span className={styles.ownerCell} title={ownerLabel}>
-      <span className={styles.ownerAvatar} aria-hidden="true">
-        {initials}
-      </span>
-      <span className={styles.ownerName}>{ownerLabel}</span>
-    </span>
-  );
 }
 
 function formatReplyChannel(platforms: PlatformValue[]): string {
