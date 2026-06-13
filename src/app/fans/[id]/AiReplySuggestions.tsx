@@ -18,6 +18,7 @@ type ContactAiContext = {
   status: string | null;
   tags: string[] | null;
   summary: string | null;
+  storedConversationContext?: string;
 };
 
 type ReplySuggestion = {
@@ -78,7 +79,18 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
     setCopiedTone("");
     setSuggestions(null);
 
-    if (!incomingMessage.trim()) {
+    const effectiveIncomingMessage =
+      incomingMessage.trim() ||
+      contact.storedConversationContext?.trim().split("\n").at(-1) ||
+      "";
+    const effectiveChatContext = [
+      contact.storedConversationContext,
+      pastedChatContext,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    if (!effectiveIncomingMessage) {
       setError("Bitte füge zuerst die neue eingegangene Nachricht ein.");
       return;
     }
@@ -100,8 +112,8 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
           status: contact.status,
           tags: contact.tags ?? [],
           summary: contact.summary,
-          pastedChatContext,
-          incomingMessage,
+          pastedChatContext: effectiveChatContext,
+          incomingMessage: effectiveIncomingMessage,
         }),
       });
 
@@ -221,8 +233,9 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
           />
         </label>
         <p className={styles.fieldHint}>
-          Füge hier bei Bedarf den bisherigen Chatverlauf aus dem ursprünglichen
-          Kanal ein. Antwort bitte manuell in {responseChannel} senden. FanMind
+          Gespeicherter FanMind-Verlauf wird automatisch als Kontext genutzt.
+          Füge hier bei Bedarf weiteren Chatverlauf aus dem ursprünglichen Kanal
+          ein. Antwort bitte manuell in {responseChannel} senden. FanMind
           synchronisiert aktuell keine externen Plattformen.
         </p>
 
@@ -234,7 +247,6 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
             name="incoming_message"
             onChange={(event) => setIncomingMessage(event.target.value)}
             placeholder="Füge hier die letzte eingegangene Nachricht ein, auf die du antworten möchtest."
-            required
             value={incomingMessage}
           />
         </label>
@@ -278,7 +290,9 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
                       onClick={() => copySuggestion(option)}
                       type="button"
                     >
-                      {copiedTone === option.tone ? "Kopiert" : "Antwort kopieren"}
+                      {copiedTone === option.tone
+                        ? "Kopiert"
+                        : "Antwort kopieren"}
                     </button>
                     {contact.originalChatUrl ? (
                       <a

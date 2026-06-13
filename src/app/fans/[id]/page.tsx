@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  getContactConversationMessages,
   getContactFollowups,
   getContactMemories,
   getOpenFollowupCount,
@@ -10,6 +11,7 @@ import {
   getWorkspaceContacts,
   signOutSupabaseServerSession,
   type ContactRow,
+  type ConversationMessageRow,
   type FollowupRow,
   type MemoryRow,
   type WorkspaceDashboardRow,
@@ -20,6 +22,7 @@ import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
 import styles from "./fan-detail.module.css";
 import { AiReplySuggestions } from "./AiReplySuggestions";
+import { saveInboundMessage } from "../actions";
 
 type FanDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -35,6 +38,8 @@ type FanDetailWorkspaceProps = {
   memoriesError?: string;
   followups: FollowupRow[];
   followupsError?: string;
+  messages: ConversationMessageRow[];
+  messagesError?: string;
   openFollowupCount: number;
 };
 
@@ -63,6 +68,8 @@ function FanDetailWorkspace({
   memoriesError,
   followups,
   followupsError,
+  messages,
+  messagesError,
   openFollowupCount,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
@@ -111,6 +118,8 @@ function FanDetailWorkspace({
             followupsError={followupsError}
             memories={memories}
             memoriesError={memoriesError}
+            messages={messages}
+            messagesError={messagesError}
           />
         ) : (
           <FanNotFound />
@@ -126,12 +135,16 @@ function FanDetailContent({
   memoriesError,
   followups,
   followupsError,
+  messages,
+  messagesError,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
   memoriesError?: string;
   followups: FollowupRow[];
   followupsError?: string;
+  messages: ConversationMessageRow[];
+  messagesError?: string;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const tags = contact.tags?.length
@@ -142,8 +155,8 @@ function FanDetailContent({
     memories.length,
     followups.length,
   );
-  const timeline = buildConversationPreview(contact, followups);
-  const originalChatUrl = getOriginalChatUrl(contact);
+  const timeline = messages.length ? buildMessageTimeline(messages) : [];
+  const originalChatUrl = getOriginalChatUrl(contact, messages);
   const originalActionLabel = getOriginalActionLabel(primaryChannel);
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
@@ -199,7 +212,7 @@ function FanDetailContent({
             <dt>Interaktionen</dt>
             <dd>
               <strong>
-                {timeline.length + memories.length + followups.length}
+                {messages.length + memories.length + followups.length}
               </strong>
             </dd>
           </div>
@@ -359,6 +372,7 @@ function FanDetailContent({
               </div>
               <span className={styles.pill}>Lokale MVP-Struktur</span>
             </div>
+            <InboundMessageForm contactId={contact.id} />
             <OriginalChatAction
               actionLabel={originalActionLabel}
               className={styles.originalChatPanel}
@@ -372,23 +386,40 @@ function FanDetailContent({
               <span>Webformular</span>
               <span>Notizen</span>
             </div>
+            {messagesError ? (
+              <p className={dashboardStyles.error}>
+                <strong>Nachrichten konnten nicht geladen werden.</strong>
+                <span>{messagesError}</span>
+              </p>
+            ) : null}
             <div className={styles.timeline}>
-              {timeline.map((item) => (
-                <article
-                  className={`${styles.message} ${item.direction === "Fan" ? styles.messageFan : styles.messageTeam}`}
-                  key={item.id}
-                >
-                  <div className={styles.messageMeta}>
-                    <span>
-                      {item.direction} · {item.type}
-                    </span>
-                    <span>
-                      {item.channel} · {item.time}
-                    </span>
-                  </div>
-                  <p>{item.text}</p>
-                </article>
-              ))}
+              {timeline.length ? (
+                timeline.map((item) => (
+                  <article
+                    className={`${styles.message} ${item.direction === "Fan" ? styles.messageFan : styles.messageTeam}`}
+                    key={item.id}
+                  >
+                    <div className={styles.messageMeta}>
+                      <span>
+                        {item.direction} · {item.type}
+                      </span>
+                      <span>
+                        {item.channel} · {item.time}
+                      </span>
+                    </div>
+                    <p>{item.text}</p>
+                    <OriginalChatAction
+                      actionLabel="Original öffnen"
+                      url={item.url}
+                    />
+                  </article>
+                ))
+              ) : (
+                <EmptyState
+                  title="Noch kein gespeicherter Nachrichtenverlauf."
+                  body="Erfasse eine Eingangsnachricht, um KI-Vorschläge und Verlauf aufzubauen."
+                />
+              )}
             </div>
           </article>
           <article className={styles.card}>
@@ -476,6 +507,7 @@ function FanDetailContent({
               handle: contact.handle,
               sourcePlatform: contact.source_platform,
               originalChatUrl,
+              storedConversationContext: buildAiMessageContext(messages),
               originalActionLabel,
               language: contact.language,
               status: contact.status,
@@ -514,6 +546,53 @@ function FanDetailContent({
         </aside>
       </section>
     </>
+  );
+}
+
+function InboundMessageForm({ contactId }: { contactId: string }) {
+  return (
+    <details className={styles.inboundCapture} open>
+      <summary>Eingangsnachricht erfassen</summary>
+      <form action={saveInboundMessage} className={styles.inboundForm}>
+        <input name="contact_id" type="hidden" value={contactId} />
+        <label>
+          <span>Kanal/Plattform</span>
+          <select name="source_platform" defaultValue="manual">
+            <option value="manual">Manuell</option>
+            <option value="instagram">Instagram</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="facebook">Facebook</option>
+            <option value="x_twitter">X / Twitter</option>
+            <option value="tiktok">TikTok</option>
+            <option value="email">E-Mail</option>
+            <option value="form">Webformular</option>
+            <option value="other">Sonstiges</option>
+          </select>
+        </label>
+        <label>
+          <span>Typ</span>
+          <select name="message_type" defaultValue="dm">
+            <option value="dm">DM</option>
+            <option value="comment">Kommentar</option>
+            <option value="post">Post</option>
+            <option value="email">E-Mail</option>
+            <option value="form">Formular</option>
+            <option value="note">Notiz</option>
+          </select>
+        </label>
+        <label className={styles.inboundWide}>
+          <span>Nachrichtentext</span>
+          <textarea name="content" required maxLength={4000} />
+        </label>
+        <label className={styles.inboundWide}>
+          <span>Original-Link / Chat-Link optional</span>
+          <input name="source_url" placeholder="https://…" type="url" />
+        </label>
+        <button className={dashboardStyles.primaryButton} type="submit">
+          Eingang speichern
+        </button>
+      </form>
+    </details>
   );
 }
 
@@ -662,9 +741,13 @@ function MemoryCard({
 function FollowupCard({
   followups,
   followupsError,
+  messages,
+  messagesError,
 }: {
   followups: FollowupRow[];
   followupsError?: string;
+  messages: ConversationMessageRow[];
+  messagesError?: string;
 }) {
   return (
     <article className={dashboardStyles.moduleCard}>
@@ -774,42 +857,38 @@ function calculateFanScore(
   );
 }
 
-function buildConversationPreview(
-  contact: ContactRow,
-  followups: FollowupRow[],
-) {
-  const channel = formatSource(contact.source_platform);
-  const baseTime = formatDate(contact.updated_at || contact.created_at);
-  const summaryText = contact.summary?.trim();
-  const latestFollowup = followups[0];
-
-  return [
-    {
-      id: "profile-context",
-      direction: "Fan",
-      type: inferMessageType(contact.source_platform),
-      channel,
-      time: baseTime,
-      text:
-        summaryText ||
-        "Noch kein echter Nachrichtenverlauf in FanMind gespeichert. Die letzte eingehende Nachricht muss für KI-Vorschläge manuell eingefügt werden.",
-    },
-    {
-      id: "team-note",
-      direction: "Team / Owner",
-      type: "Notiz",
-      channel: "FanMind",
-      time: latestFollowup
-        ? formatFollowupDueDate(latestFollowup.due_date)
-        : "Noch nicht geplant",
-      text:
-        latestFollowup?.reason ||
-        "Arbeitsnotiz: Antwort vorbereiten, Kontext prüfen und final im Originalkanal manuell senden.",
-    },
-  ];
+function buildMessageTimeline(messages: ConversationMessageRow[]) {
+  return messages.map((message) => ({
+    id: message.id,
+    direction: formatDirection(message.direction),
+    type: formatMessageType(message.message_type),
+    channel: formatSource(message.source_platform),
+    time: formatDate(message.created_at),
+    text: message.content,
+    url: message.reply_target_url || message.source_url || undefined,
+  }));
 }
 
-function getOriginalChatUrl(contact: ContactRow): string | undefined {
+function buildAiMessageContext(messages: ConversationMessageRow[]): string {
+  return messages
+    .slice(-8)
+    .map(
+      (message) =>
+        `${formatDate(message.created_at)} · ${formatDirection(message.direction)} · ${formatSource(message.source_platform)} · ${formatMessageType(message.message_type)}: ${message.content}`,
+    )
+    .join("\n");
+}
+
+function getOriginalChatUrl(
+  contact: ContactRow,
+  messages: ConversationMessageRow[] = [],
+): string | undefined {
+  const latestMessageUrl = [...messages]
+    .reverse()
+    .map((message) => message.reply_target_url || message.source_url)
+    .find((value) => value && /^https?:\/\//i.test(value));
+
+  if (latestMessageUrl) return latestMessageUrl;
   const metadata = contact as ContactRow & Record<string, unknown>;
 
   for (const key of [
@@ -839,6 +918,25 @@ function getOriginalActionLabel(platform: string): string {
   if (normalized.includes("mail")) return "E-Mail öffnen";
 
   return "Original-Chat öffnen";
+}
+
+function formatDirection(value: string): string {
+  if (value === "outbound") return "Team / Owner";
+  if (value === "note") return "Notiz";
+  return "Fan";
+}
+
+function formatMessageType(value: string | null): string {
+  const labels: Record<string, string> = {
+    dm: "DM",
+    comment: "Kommentar",
+    post: "Post",
+    email: "E-Mail",
+    form: "Formular",
+    note: "Notiz",
+    manual: "Manuell",
+  };
+  return labels[value ?? ""] ?? "DM";
 }
 
 function inferMessageType(sourcePlatform: string | null): string {
@@ -942,6 +1040,13 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
     workspace && contactResult?.contact
       ? await getContactFollowups(workspace.id, contactResult.contact.id)
       : null;
+  const messagesResult =
+    workspace && contactResult?.contact
+      ? await getContactConversationMessages(
+          workspace.id,
+          contactResult.contact.id,
+        )
+      : null;
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
@@ -960,6 +1065,8 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
           contactError={contactResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           followupsError={followupsResult?.error?.message}
+          messages={messagesResult?.messages ?? []}
+          messagesError={messagesResult?.error?.message}
           memories={memoriesResult?.memories ?? []}
           memoriesError={memoriesResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}

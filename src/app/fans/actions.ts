@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   createContactFollowup,
   createContactMemory,
+  createManualConversationMessage,
   createWorkspaceContact,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
@@ -179,6 +180,32 @@ export async function saveSuggestedFollowup(input: {
   revalidatePath("/dashboard");
 
   return { ok: true, message: "Follow-up gespeichert." };
+}
+
+export async function saveInboundMessage(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+
+  const result = await createManualConversationMessage({
+    workspaceId: workspace.id,
+    contactId,
+    direction: "inbound",
+    sourcePlatform: formValue(formData, "source_platform") || "manual",
+    messageType: formValue(formData, "message_type") || "dm",
+    sourceUrl: formValue(formData, "source_url"),
+    replyTargetUrl: formValue(formData, "source_url"),
+    authorLabel: "Fan",
+    content: formValue(formData, "content"),
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/inbox");
+  redirect(`/fans/${contactId}`);
 }
 
 export async function createFan(formData: FormData) {
