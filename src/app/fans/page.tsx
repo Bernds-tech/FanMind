@@ -12,6 +12,7 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan, updateFan } from "./actions";
 import {
@@ -661,28 +662,6 @@ function filterFanGroupsByChannel(
   }
 
   return groups.filter((group) => group.platforms.includes(activeChannel));
-}
-
-function getFanGroupKey(contact: ContactRow): string {
-  const nameKey = normalizeFanIdentity(contact.display_name);
-
-  if (nameKey) {
-    return `name:${nameKey}`;
-  }
-
-  const handleKey = normalizeFanIdentity(contact.handle ?? "");
-
-  return handleKey ? `handle:${handleKey}` : `contact:${contact.id}`;
-}
-
-function normalizeFanIdentity(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
 }
 
 function compareContactsByCreatedAt(

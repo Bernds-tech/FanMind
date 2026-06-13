@@ -15,6 +15,7 @@ import {
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { countUniqueFans, getFanGroupKey } from "@/lib/fanIdentity";
 import styles from "./dashboard.module.css";
 
 type WorkspaceDetailsProps = {
@@ -212,18 +213,6 @@ function getFollowupDueTime(value: string | null): number {
     : Number.POSITIVE_INFINITY;
 }
 
-function getFanGroupKey(contact: ContactRow): string {
-  const identity = (contact.display_name || contact.handle || contact.id)
-    .trim()
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-
-  return identity ? `fan:${identity}` : `contact:${contact.id}`;
-}
-
 function formatDueDate(value: string | null): string {
   if (!value) {
     return "Ohne Fälligkeitsdatum";
@@ -301,6 +290,7 @@ function WorkspaceDetails({
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("dashboard");
   const workInboxItems = getWorkInboxItems(contacts, followups);
+  const uniqueFanCount = countUniqueFans(contacts);
   return (
     <WorkspaceShell
       workspaceName={workspace.name}
@@ -318,7 +308,7 @@ function WorkspaceDetails({
         primaryActionLabel,
         primaryActionHref: "/fans",
       }}
-      contactCount={contacts.length}
+      contactCount={uniqueFanCount}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >

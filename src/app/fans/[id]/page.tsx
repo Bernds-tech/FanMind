@@ -89,6 +89,7 @@ function FanDetailWorkspace({
       }}
       contactCount={contactCount}
       openFollowupCount={openFollowupCount}
+      showStats={false}
       logoutAction={logout}
     >
       <div className={styles.detailStack}>
@@ -133,14 +134,25 @@ function FanDetailContent({
   followupsError?: string;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
-  const tags = contact.tags?.length ? contact.tags : [formatStatus(contact.status)];
-  const fanScore = calculateFanScore(contact, memories.length, followups.length);
+  const tags = contact.tags?.length
+    ? contact.tags
+    : [formatStatus(contact.status)];
+  const fanScore = calculateFanScore(
+    contact,
+    memories.length,
+    followups.length,
+  );
   const timeline = buildConversationPreview(contact, followups);
-  const openFollowups = followups.filter((followup) => followup.status !== "done");
+  const openFollowups = followups.filter(
+    (followup) => followup.status !== "done",
+  );
 
   return (
     <>
-      <section className={styles.contactHeader} aria-labelledby="fan-profile-title">
+      <section
+        className={styles.contactHeader}
+        aria-labelledby="fan-profile-title"
+      >
         <div className={styles.headerMain}>
           <div className={styles.identity}>
             <div className={styles.avatar} aria-hidden="true">
@@ -149,31 +161,105 @@ function FanDetailContent({
             <div>
               <p className={dashboardStyles.eyebrow}>Conversation Workbench</p>
               <h2 id="fan-profile-title">{contact.display_name}</h2>
-              <p className={styles.handle}>{contact.handle || "Kein Handle hinterlegt"}</p>
+              <p className={styles.handle}>
+                {contact.handle || "Kein Handle hinterlegt"}
+              </p>
               <div className={styles.pillRow} aria-label="Status und Segmente">
-                <span className={styles.statusBadge}>{formatStatus(contact.status)}</span>
-                {tags.slice(0, 5).map((tag) => <span className={styles.tag} key={tag}>{tag}</span>)}
+                <span className={styles.statusBadge}>
+                  {formatStatus(contact.status)}
+                </span>
+                {tags.slice(0, 5).map((tag) => (
+                  <span className={styles.tag} key={tag}>
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
           <div className={styles.pillRow} aria-label="Verbundene Kanäle">
             {buildChannelBadges(contact.source_platform).map((channel) => (
-              <span className={styles.channelBadge} key={channel}>{channel}</span>
+              <span className={styles.channelBadge} key={channel}>
+                {channel}
+              </span>
             ))}
           </div>
         </div>
 
         <dl className={styles.headerMetrics}>
-          <div className={styles.metric}><dt>Owner</dt><dd><strong>Team Inbox</strong></dd></div>
-          <div className={styles.metric}><dt>Fan Score</dt><dd><strong>{fanScore}/100</strong></dd></div>
-          <div className={styles.metric}><dt>Letzter Kontakt</dt><dd><strong>{formatDate(contact.updated_at || contact.created_at)}</strong></dd></div>
-          <div className={styles.metric}><dt>Kontakt seit</dt><dd><strong>{formatDate(contact.created_at)}</strong></dd></div>
-          <div className={styles.metric}><dt>Interaktionen</dt><dd><strong>{timeline.length + memories.length + followups.length}</strong></dd></div>
-          <div className={styles.metric}><dt>Käufe</dt><dd><strong>{contact.tags?.some((tag) => tag.toLowerCase().includes("käufer")) ? "Hinweis in Tags" : "Nicht hinterlegt"}</strong></dd></div>
-          <div className={styles.metric}><dt>Antwortstil-Match</dt><dd><strong>{contact.language === "de" ? "Hoch · DE" : "Zu prüfen"}</strong></dd></div>
-          <div className={styles.metric}><dt>Reaktionschance</dt><dd><strong>{fanScore > 70 ? "Hoch" : fanScore > 48 ? "Mittel" : "Unklar"}</strong></dd></div>
-          <div className={styles.metric}><dt>Primärkanal</dt><dd><strong>{primaryChannel}</strong></dd></div>
-          <div className={styles.metric}><dt>Offene Follow-ups</dt><dd><strong>{openFollowups.length}</strong></dd></div>
+          <div className={styles.metric}>
+            <dt>Owner</dt>
+            <dd>
+              <strong>Team Inbox</strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Fan Score</dt>
+            <dd>
+              <strong>{fanScore}/100</strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Letzter Kontakt</dt>
+            <dd>
+              <strong>
+                {formatDate(contact.updated_at || contact.created_at)}
+              </strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Kontakt seit</dt>
+            <dd>
+              <strong>{formatDate(contact.created_at)}</strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Interaktionen</dt>
+            <dd>
+              <strong>
+                {timeline.length + memories.length + followups.length}
+              </strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Käufe</dt>
+            <dd>
+              <strong>
+                {contact.tags?.some((tag) =>
+                  tag.toLowerCase().includes("käufer"),
+                )
+                  ? "Hinweis in Tags"
+                  : "Nicht hinterlegt"}
+              </strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Antwortstil-Match</dt>
+            <dd>
+              <strong>
+                {contact.language === "de" ? "Hoch · DE" : "Zu prüfen"}
+              </strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Reaktionschance</dt>
+            <dd>
+              <strong>
+                {fanScore > 70 ? "Hoch" : fanScore > 48 ? "Mittel" : "Unklar"}
+              </strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Primärkanal</dt>
+            <dd>
+              <strong>{primaryChannel}</strong>
+            </dd>
+          </div>
+          <div className={styles.metric}>
+            <dt>Offene Follow-ups</dt>
+            <dd>
+              <strong>{openFollowups.length}</strong>
+            </dd>
+          </div>
         </dl>
 
         <nav className={styles.tabs} aria-label="Fan-Detail Tabs">
@@ -186,39 +272,241 @@ function FanDetailContent({
         </nav>
       </section>
 
-      <section className={styles.workbenchGrid} aria-label="Conversation Workbench">
+      <section
+        className={styles.workbenchGrid}
+        aria-label="Conversation Workbench"
+      >
         <aside className={styles.rail} aria-label="Fan-Kontext">
-          <ContextCard title="Fan-Gedächtnis" eyebrow="Echte Daten" items={memories.map((memory) => ({ title: formatMemoryType(memory.type), body: memory.content, meta: `Wichtigkeit: ${memory.importance ?? "normal"} · ${formatDate(memory.created_at)}` }))} emptyTitle="Noch keine Memories gespeichert." emptyBody="Gespeicherte KI- oder Team-Memories erscheinen hier." error={memoriesError} />
+          <ContextCard
+            title="Fan-Gedächtnis"
+            eyebrow="Echte Daten"
+            items={memories.map((memory) => ({
+              title: formatMemoryType(memory.type),
+              body: memory.content,
+              meta: `Wichtigkeit: ${memory.importance ?? "normal"} · ${formatDate(memory.created_at)}`,
+            }))}
+            emptyTitle="Noch keine Memories gespeichert."
+            emptyBody="Gespeicherte KI- oder Team-Memories erscheinen hier."
+            error={memoriesError}
+          />
           <article className={styles.card}>
-            <div className={styles.cardHeader}><div><p className={dashboardStyles.eyebrow}>Kontext</p><h3>Interessen, Tonalität & Grenzen</h3></div><span className={styles.pill}>MVP</span></div>
+            <div className={styles.cardHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>Kontext</p>
+                <h3>Interessen, Tonalität & Grenzen</h3>
+              </div>
+              <span className={styles.pill}>MVP</span>
+            </div>
             <div className={styles.compactList}>
-              <InfoBlock title="Interessen" body={contact.summary || tags.join(", ") || "Noch nicht sauber erkannt."} />
-              <InfoBlock title="Kaufhistorie" body={contact.tags?.some((tag) => tag.toLowerCase().includes("käufer")) ? "Kauf-/Kundensignal aus Tags vorhanden." : "Keine Kaufhistorie in FanMind hinterlegt."} />
-              <InfoBlock title="Tonalität" body={contact.language === "de" ? "Deutsch, direkt, hilfreich; Emojis sparsam einsetzen." : "Sprache und Stil vor Versand manuell prüfen."} />
-              <InfoBlock title="Grenzen / No-Gos" body="Keine automatische Sendung, keine extern synchronisierten Plattformdaten behaupten." />
-              <InfoBlock title="Gute Trigger" body="Auf letzte Nachricht eingehen, Memory nutzen, nächsten manuellen Schritt klar machen." />
+              <InfoBlock
+                title="Interessen"
+                body={
+                  contact.summary ||
+                  tags.join(", ") ||
+                  "Noch nicht sauber erkannt."
+                }
+              />
+              <InfoBlock
+                title="Kaufhistorie"
+                body={
+                  contact.tags?.some((tag) =>
+                    tag.toLowerCase().includes("käufer"),
+                  )
+                    ? "Kauf-/Kundensignal aus Tags vorhanden."
+                    : "Keine Kaufhistorie in FanMind hinterlegt."
+                }
+              />
+              <InfoBlock
+                title="Tonalität"
+                body={
+                  contact.language === "de"
+                    ? "Deutsch, direkt, hilfreich; Emojis sparsam einsetzen."
+                    : "Sprache und Stil vor Versand manuell prüfen."
+                }
+              />
+              <InfoBlock
+                title="Grenzen / No-Gos"
+                body="Keine automatische Sendung, keine extern synchronisierten Plattformdaten behaupten."
+              />
+              <InfoBlock
+                title="Gute Trigger"
+                body="Auf letzte Nachricht eingehen, Memory nutzen, nächsten manuellen Schritt klar machen."
+              />
             </div>
           </article>
-          <ContextCard title="Offene Follow-ups" eyebrow="Echte Daten" items={openFollowups.map((followup) => ({ title: formatFollowupDueDate(followup.due_date), body: followup.reason, meta: `Priorität: ${followup.priority ?? "normal"} · Status: ${followup.status ?? "open"}` }))} emptyTitle="Keine offenen Follow-ups." emptyBody="KI-Empfehlungen können über sichere Server Actions gespeichert werden." error={followupsError} />
-          <article className={styles.card}><div className={styles.cardHeader}><div><p className={dashboardStyles.eyebrow}>Dateien & Historie</p><h3>Arbeitsnotizen</h3></div><span className={styles.pill}>Empty</span></div><p className={styles.muted}>Keine Dateien oder externen Plattform-Historien verknüpft. Diese Workbench zeigt nur Workspace-Kontakt, Memories und Follow-ups als echte Daten.</p></article>
+          <ContextCard
+            title="Offene Follow-ups"
+            eyebrow="Echte Daten"
+            items={openFollowups.map((followup) => ({
+              title: formatFollowupDueDate(followup.due_date),
+              body: followup.reason,
+              meta: `Priorität: ${followup.priority ?? "normal"} · Status: ${followup.status ?? "open"}`,
+            }))}
+            emptyTitle="Keine offenen Follow-ups."
+            emptyBody="KI-Empfehlungen können über sichere Server Actions gespeichert werden."
+            error={followupsError}
+          />
+          <article className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>Dateien & Historie</p>
+                <h3>Arbeitsnotizen</h3>
+              </div>
+              <span className={styles.pill}>Empty</span>
+            </div>
+            <p className={styles.muted}>
+              Keine Dateien oder externen Plattform-Historien verknüpft. Diese
+              Workbench zeigt nur Workspace-Kontakt, Memories und Follow-ups als
+              echte Daten.
+            </p>
+          </article>
         </aside>
 
-        <main className={styles.conversation} aria-label="Kanalübergreifender Verlauf">
+        <main
+          className={styles.conversation}
+          aria-label="Kanalübergreifender Verlauf"
+        >
           <article className={styles.card}>
-            <div className={styles.cardHeader}><div><p className={dashboardStyles.eyebrow}>Unified Inbox Timeline</p><h3>Kanalübergreifender Verlauf</h3></div><span className={styles.pill}>Lokale MVP-Struktur</span></div>
-            <div className={styles.filterChips} aria-label="Verlaufsfilter"><span>Alle</span><span>Instagram</span><span>WhatsApp</span><span>E-Mail</span><span>Webformular</span><span>Notizen</span></div>
-            <div className={styles.timeline}>{timeline.map((item) => <article className={`${styles.message} ${item.direction === "Fan" ? styles.messageFan : styles.messageTeam}`} key={item.id}><div className={styles.messageMeta}><span>{item.direction} · {item.type}</span><span>{item.channel} · {item.time}</span></div><p>{item.text}</p></article>)}</div>
+            <div className={styles.cardHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>
+                  Unified Inbox Timeline
+                </p>
+                <h3>Kanalübergreifender Verlauf</h3>
+              </div>
+              <span className={styles.pill}>Lokale MVP-Struktur</span>
+            </div>
+            <div className={styles.filterChips} aria-label="Verlaufsfilter">
+              <span>Alle</span>
+              <span>Instagram</span>
+              <span>WhatsApp</span>
+              <span>E-Mail</span>
+              <span>Webformular</span>
+              <span>Notizen</span>
+            </div>
+            <div className={styles.timeline}>
+              {timeline.map((item) => (
+                <article
+                  className={`${styles.message} ${item.direction === "Fan" ? styles.messageFan : styles.messageTeam}`}
+                  key={item.id}
+                >
+                  <div className={styles.messageMeta}>
+                    <span>
+                      {item.direction} · {item.type}
+                    </span>
+                    <span>
+                      {item.channel} · {item.time}
+                    </span>
+                  </div>
+                  <p>{item.text}</p>
+                </article>
+              ))}
+            </div>
           </article>
           <article className={styles.card}>
-            <div className={styles.cardHeader}><div><p className={dashboardStyles.eyebrow}>Antwortvorbereitung</p><h3>Manuelle Freigabe erforderlich</h3></div><span className={styles.statusBadge}>Automatisches Senden deaktiviert</span></div>
-            <div className={styles.replyBox}><textarea placeholder={`Antwort an ${contact.display_name} vorbereiten …`} aria-label={`Antwort an ${contact.display_name} vorbereiten`} /><div className={styles.replyFooter}><button className={dashboardStyles.primaryButton} type="button">Nachricht vorbereiten</button><span className={styles.safeBadge}>Nur Vorschlag – manuelle Freigabe</span></div></div>
+            <div className={styles.cardHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>Antwortvorbereitung</p>
+                <h3>Manuelle Freigabe erforderlich</h3>
+              </div>
+              <span className={styles.statusBadge}>
+                Automatisches Senden deaktiviert
+              </span>
+            </div>
+            <div className={styles.replyBox}>
+              <textarea
+                placeholder={`Antwort an ${contact.display_name} vorbereiten …`}
+                aria-label={`Antwort an ${contact.display_name} vorbereiten`}
+              />
+              <div className={styles.replyFooter}>
+                <button className={dashboardStyles.primaryButton} type="button">
+                  Nachricht vorbereiten
+                </button>
+                <span className={styles.safeBadge}>
+                  Nur Vorschlag – manuelle Freigabe
+                </span>
+              </div>
+            </div>
           </article>
         </main>
 
         <aside className={styles.copilot} aria-label="KI-CoPilot">
-          <article className={styles.card}><div className={styles.cardHeader}><div><p className={dashboardStyles.eyebrow}>KI-CoPilot</p><h3>Analyse</h3></div><span className={styles.pill}>Keine Sendung</span></div><div className={styles.analysisGrid}><InfoMetric label="Stimmung" value={contact.status === "warm" ? "Warm" : "Neutral"} /><InfoMetric label="Kaufinteresse" value={tags.join(", ").toLowerCase().includes("vip") ? "Hoch" : "Zu prüfen"} /><InfoMetric label="Reaktionswahrscheinlichkeit" value={fanScore > 70 ? "Hoch" : "Mittel"} /><InfoMetric label="Beste Zeit" value="Manuell aus Verlauf ableiten" /><InfoMetric label="Risiko" value="Niedrig, solange geprüft" /><InfoMetric label="Stil-Match" value={contact.language === "de" ? "Deutsch" : "Unklar"} /></div></article>
-          <AiReplySuggestions contact={{ contactId: contact.id, displayName: contact.display_name, handle: contact.handle, sourcePlatform: contact.source_platform, language: contact.language, status: contact.status, tags: contact.tags, summary: contact.summary }} />
-          <article className={styles.card}><div className={styles.cardHeader}><div><p className={dashboardStyles.eyebrow}>Nächste beste Aktion</p><h3>Priorisierte Empfehlung</h3></div><span className={styles.statusBadge}>Priorität {openFollowups.length ? "hoch" : "mittel"}</span></div><div className={styles.nextAction}><strong>{openFollowups[0]?.reason ?? "Letzte Nachricht prüfen und Antwortentwurf vorbereiten."}</strong><p className={styles.muted}>Begründung: FanMind hat {memories.length} Memories und {openFollowups.length} offene Follow-ups für diesen Kontakt geladen. Versand bleibt manuell.</p></div><div className={styles.quickActions}><button type="button">Notiz speichern</button><button type="button">Segment zuweisen</button><button type="button">Follow-up planen</button><button type="button">Profil öffnen</button></div></article>
+          <article className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>KI-CoPilot</p>
+                <h3>Analyse</h3>
+              </div>
+              <span className={styles.pill}>Keine Sendung</span>
+            </div>
+            <div className={styles.analysisGrid}>
+              <InfoMetric
+                label="Stimmung"
+                value={contact.status === "warm" ? "Warm" : "Neutral"}
+              />
+              <InfoMetric
+                label="Kaufinteresse"
+                value={
+                  tags.join(", ").toLowerCase().includes("vip")
+                    ? "Hoch"
+                    : "Zu prüfen"
+                }
+              />
+              <InfoMetric
+                label="Reaktionswahrscheinlichkeit"
+                value={fanScore > 70 ? "Hoch" : "Mittel"}
+              />
+              <InfoMetric
+                label="Beste Zeit"
+                value="Manuell aus Verlauf ableiten"
+              />
+              <InfoMetric label="Risiko" value="Niedrig, solange geprüft" />
+              <InfoMetric
+                label="Stil-Match"
+                value={contact.language === "de" ? "Deutsch" : "Unklar"}
+              />
+            </div>
+          </article>
+          <AiReplySuggestions
+            contact={{
+              contactId: contact.id,
+              displayName: contact.display_name,
+              handle: contact.handle,
+              sourcePlatform: contact.source_platform,
+              language: contact.language,
+              status: contact.status,
+              tags: contact.tags,
+              summary: contact.summary,
+            }}
+          />
+          <article className={styles.card}>
+            <div className={styles.cardHeader}>
+              <div>
+                <p className={dashboardStyles.eyebrow}>Nächste beste Aktion</p>
+                <h3>Priorisierte Empfehlung</h3>
+              </div>
+              <span className={styles.statusBadge}>
+                Priorität {openFollowups.length ? "hoch" : "mittel"}
+              </span>
+            </div>
+            <div className={styles.nextAction}>
+              <strong>
+                {openFollowups[0]?.reason ??
+                  "Letzte Nachricht prüfen und Antwortentwurf vorbereiten."}
+              </strong>
+              <p className={styles.muted}>
+                Begründung: FanMind hat {memories.length} Memories und{" "}
+                {openFollowups.length} offene Follow-ups für diesen Kontakt
+                geladen. Versand bleibt manuell.
+              </p>
+            </div>
+            <div className={styles.quickActions}>
+              <button type="button">Notiz speichern</button>
+              <button type="button">Segment zuweisen</button>
+              <button type="button">Follow-up planen</button>
+              <button type="button">Profil öffnen</button>
+            </div>
+          </article>
         </aside>
       </section>
     </>
@@ -258,7 +546,10 @@ function ContextCard({
       {items.length ? (
         <div className={styles.compactList}>
           {items.map((item) => (
-            <article className={styles.compactItem} key={`${item.title}-${item.body}`}>
+            <article
+              className={styles.compactItem}
+              key={`${item.title}-${item.body}`}
+            >
               <strong>{item.title}</strong>
               <p>{item.body}</p>
               <p className={styles.muted}>{item.meta}</p>
@@ -445,15 +736,22 @@ function calculateFanScore(
   followupCount: number,
 ): number {
   const tagScore = Math.min(contact.tags?.length ?? 0, 6) * 6;
-  const statusScore = contact.status === "warm" ? 22 : contact.status === "active" ? 18 : 10;
+  const statusScore =
+    contact.status === "warm" ? 22 : contact.status === "active" ? 18 : 10;
   const contextScore = contact.summary ? 14 : 0;
   const memoryScore = Math.min(memoryCount, 4) * 5;
   const followupScore = followupCount ? 8 : 0;
 
-  return Math.min(100, 32 + tagScore + statusScore + contextScore + memoryScore + followupScore);
+  return Math.min(
+    100,
+    32 + tagScore + statusScore + contextScore + memoryScore + followupScore,
+  );
 }
 
-function buildConversationPreview(contact: ContactRow, followups: FollowupRow[]) {
+function buildConversationPreview(
+  contact: ContactRow,
+  followups: FollowupRow[],
+) {
   const channel = formatSource(contact.source_platform);
   const baseTime = formatDate(contact.updated_at || contact.created_at);
   const summaryText = contact.summary?.trim();
@@ -475,8 +773,12 @@ function buildConversationPreview(contact: ContactRow, followups: FollowupRow[])
       direction: "Team / Owner",
       type: "Notiz",
       channel: "FanMind",
-      time: latestFollowup ? formatFollowupDueDate(latestFollowup.due_date) : "Noch nicht geplant",
-      text: latestFollowup?.reason || "Arbeitsnotiz: Antwort vorbereiten, Kontext prüfen und final im Originalkanal manuell senden.",
+      time: latestFollowup
+        ? formatFollowupDueDate(latestFollowup.due_date)
+        : "Noch nicht geplant",
+      text:
+        latestFollowup?.reason ||
+        "Arbeitsnotiz: Antwort vorbereiten, Kontext prüfen und final im Originalkanal manuell senden.",
     },
   ];
 }
@@ -485,8 +787,10 @@ function inferMessageType(sourcePlatform: string | null): string {
   const normalized = sourcePlatform?.toLowerCase() ?? "";
 
   if (normalized.includes("mail")) return "E-Mail";
-  if (normalized.includes("form") || normalized.includes("web")) return "Formular";
-  if (normalized.includes("comment") || normalized.includes("kommentar")) return "Kommentar";
+  if (normalized.includes("form") || normalized.includes("web"))
+    return "Formular";
+  if (normalized.includes("comment") || normalized.includes("kommentar"))
+    return "Kommentar";
   if (normalized.includes("post")) return "Post";
 
   return "DM";
