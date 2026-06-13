@@ -353,8 +353,9 @@ function WorkspaceDetails({
           </div>
           <p className={styles.moduleText}>
             Diese Pipeline zeigt echte gespeicherte Kontakte aus dem aktuellen
-            Workspace. FanMind synchronisiert aktuell keine externen
-            Plattformen.
+            Workspace. Vollautomatische Social-Media-Synchronisation ist
+            verpflichtender Produktbereich; einzelne Plattformen werden erst
+            nach fertiger Anbindung ohne Statushinweis produktiv angezeigt.
           </p>
           {contactsError ? (
             <p className={styles.error}>
@@ -506,8 +507,9 @@ function WorkspaceDetails({
       <div className={styles.safetyNote} role="note">
         <strong>Keine automatische Sendefunktion.</strong>
         <span>
-          FanMind synchronisiert aktuell keine externen Plattformen. Mensch
-          prüft und sendet final selbst.
+          Social-Media-Synchronisation wird als Pflichtbereich ausgebaut, soweit
+          Plattformen es technisch und rechtlich zulassen. Mensch prüft und
+          sendet final selbst.
         </span>
       </div>
     </WorkspaceShell>

@@ -168,7 +168,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     maxContacts: null,
     contactsLabel: "Demo-Daten",
     description:
-      "Einmaliger Pilot-/Setup-Zugang für 1 Monat zum Reinschnuppern und Testen; keine automatische Verlängerung, keine Bindung und ohne produktive Kanäle.",
+      "Einmaliger Pilot-/Setup-Zugang für 1 Monat zum Reinschnuppern und Testen; keine automatische Verlängerung, keine Bindung, mit vorbereiteter Pflicht-Social-Synchronisation, aber ohne produktiv fertige Social-Plattformen.",
     primaryAction: "Pilot / Setup starten",
     upgradePlan: "starter",
     featureConfig: featureConfig({
@@ -189,7 +189,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       campaigns: "coming_soon",
       analytics: "upgrade",
       team_roles: "hidden",
-      integrations: "coming_soon",
+      integrations: "demo",
       payments: "hidden",
       automatic_sending: "hidden",
     }),
@@ -205,7 +205,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     maxContacts: 1000,
     contactsLabel: "bis 1.000 Kontakte",
     description:
-      "Ein produktives Profil für laufende Nutzung nach dem Setup: 990 € Einrichtung plus 299 €/Monat und monatlich kündbar.",
+      "Ein produktives Profil für laufende Nutzung nach dem Setup: 990 € Einrichtung plus 299 €/Monat, monatlich kündbar und mit verpflichtender Social-Media-Synchronisation, soweit Plattformen technisch und rechtlich angebunden sind.",
     primaryAction: "Starter wählen",
     upgradePlan: "growth",
     featureConfig: featureConfig({
@@ -226,7 +226,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       campaigns: "coming_soon",
       analytics: "upgrade",
       team_roles: "upgrade",
-      integrations: "coming_soon",
+      integrations: "active",
       payments: "hidden",
       automatic_sending: "hidden",
     }),

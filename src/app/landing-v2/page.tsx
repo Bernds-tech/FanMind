@@ -10,7 +10,7 @@ import styles from "./landing-v2.module.css";
 export const metadata: Metadata = {
   title: "FanMind | KI-CRM für Creator, Clubs und Events",
   description:
-    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Follow-ups, CSV-Import und Roadmap für smarte Fan-Beziehungen; Kampagnen, Analytics und Integrationen bleiben im MVP klar markierte Vorschau.",
+    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Follow-ups und verpflichtende Social-Media-Synchronisation für smarte Fan-Beziehungen; unfertige Plattformen bleiben klar als Coming Soon oder In Arbeit markiert.",
 };
 
 const LANDING_ROADMAP_HREF = "/landing-v2#roadmap";
@@ -24,7 +24,7 @@ function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | un
   return undefined;
 }
 
-const roadmapIntegrationLabels = new Set(["Discord", "WhatsApp", "TikTok", "Instagram", "X", "Facebook"]);
+const inProgressIntegrationLabels = new Set(["Discord", "WhatsApp", "TikTok", "Instagram", "X", "Facebook"]);
 
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase", caret: true },
@@ -351,56 +351,56 @@ const integrationChannels = [
   {
     icon: "✉",
     title: "E-Mail",
-    text: "Anfragen zentral bündeln.",
-    status: "Im MVP",
+    text: "Anfragen automatisch synchronisieren und zentral bündeln.",
+    status: "Bereit",
     tone: "blue",
   },
   {
     icon: "☏",
     title: "WhatsApp",
-    text: "Chats sauber vorbereiten.",
-    status: "Coming Soon",
+    text: "Kontakte, Handles und Chat-Kontext automatisch synchronisieren, soweit verfügbar.",
+    status: "In Arbeit",
     tone: "green",
   },
   {
     icon: "◖",
     title: "Discord",
-    text: "Community-Signale strukturieren.",
-    status: "Coming Soon",
+    text: "Server-, Profil- und Interaktionskontext automatisch abgleichen, soweit verfügbar.",
+    status: "In Arbeit",
     tone: "violet",
   },
   {
     icon: "f",
     title: "Facebook",
-    text: "Nachrichten später einordnen.",
+    text: "Profil- und Seitenkontakte automatisch synchronisieren, soweit verfügbar.",
     status: "Coming Soon",
     tone: "blue",
   },
   {
     icon: "𝕏",
     title: "X",
-    text: "DMs später bündeln.",
+    text: "Handles, Profile und Aktivität automatisch abgleichen, soweit verfügbar.",
     status: "Coming Soon",
     tone: "white",
   },
   {
     icon: "♪",
     title: "TikTok",
-    text: "Kommentare später abbilden.",
-    status: "Coming Soon",
+    text: "Kommentare, Handles und Aktivitätsstände automatisch synchronisieren, soweit verfügbar.",
+    status: "In Arbeit",
     tone: "purple",
   },
   {
     icon: "◎",
     title: "Instagram",
-    text: "DMs und Storys bündeln.",
-    status: "Coming Soon",
+    text: "DM-Kontext, Profile und relevante Aktivität automatisch synchronisieren, soweit verfügbar.",
+    status: "In Arbeit",
     tone: "pink",
   },
   {
     icon: "▤",
     title: "Webformulare",
-    text: "Formulare sauber erfassen.",
+    text: "Formularanfragen automatisch erfassen und Kontaktprofilen zuordnen.",
     status: "Bereit",
     tone: "cyan",
   },
@@ -1861,7 +1861,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <h2 id="integrations-title">
             {t("Verbinde deine wichtigsten")} <span>{t("Kanäle.")}</span>
           </h2>
-          <p>{t("FanMind bündelt E-Mail, Formulare und weitere Kanäle in einem klaren Workflow. Kontext wird vorbereitet, geprüft und bleibt unter deiner Kontrolle.")}</p>
+          <p>{t("FanMind macht vollautomatische Social-Media-Synchronisation zum Pflichtbereich: Kontakte, Handles, Plattformen, Profil-/Kanalinformationen, Nachrichten-/Interaktionskontext und relevante Aktivitätsstände werden automatisch synchronisiert, soweit die jeweilige Plattform es technisch und rechtlich zulässt. Unfertige Plattformen bleiben klar markiert.")}</p>
         </div>
 
         <div className={styles.integrationChannelGrid}>
@@ -1875,7 +1875,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <h3>{channel.title}</h3>
               <p>{channel.text}</p>
               {isComingSoonStatus(channel.status) ? (
-                <ComingSoonImage size="small" />
+                <span className={styles.integrationStatusBadge}>{channel.status}</span>
               ) : (
                 <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
               )}
@@ -1889,12 +1889,12 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <div>
               {localizedIntegrationSources.map((source) => (
                 <span
-                  className={roadmapIntegrationLabels.has(source.label) ? styles.cardWithComingSoon : undefined}
+                  className={inProgressIntegrationLabels.has(source.label) ? styles.cardWithComingSoon : undefined}
                   key={source.label}
                 >
                   <i aria-hidden="true">{source.icon}</i>
                   {source.label}
-                  {roadmapIntegrationLabels.has(source.label) ? <ComingSoonImage size="small" /> : null}
+                  {inProgressIntegrationLabels.has(source.label) ? <span className={styles.sourceStatusBadge}>{t("In Arbeit")}</span> : null}
                   <em aria-hidden="true" />
                 </span>
               ))}
@@ -1992,7 +1992,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   ) : null}
                   <p>{action.text}</p>
                   <i aria-hidden="true">{action.status ? "·" : "✓"}</i>
-                  {isComingSoonStatus(action.status) ? <ComingSoonImage size="small" /> : null}
+                  {isComingSoonStatus(action.status) ? <span className={styles.integrationStatusBadge}>{action.status}</span> : null}
                 </article>
               ))}
             </div>
@@ -2022,7 +2022,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </div>
           <p>
             <span>{t("✓ Keine Kreditkarte erforderlich")}</span>
-            <span>{t("✓ MVP klar gekennzeichnet")}</span>
+            <span>{t("✓ Social-Sync als Pflichtbereich")}</span>
             <span>{t("✓ Kein automatischer Versand")}</span>
           </p>
         </div>
