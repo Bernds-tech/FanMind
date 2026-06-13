@@ -1874,8 +1874,11 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <div className={styles.integrationChannelIcon}>{channel.icon}</div>
               <h3>{channel.title}</h3>
               <p>{channel.text}</p>
-              <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
-              {isComingSoonStatus(channel.status) ? <ComingSoonImage size="small" /> : null}
+              {isComingSoonStatus(channel.status) ? (
+                <ComingSoonImage size="small" />
+              ) : (
+                <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
+              )}
             </article>
           ))}
         </div>
@@ -1984,7 +1987,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 >
                   <span>{action.icon}</span>
                   <h3>{action.title}</h3>
-                  {statusVariantFromLabel(action.status) ? (
+                  {statusVariantFromLabel(action.status) && !isComingSoonStatus(action.status) ? (
                     <FeatureStatusLabel variant={statusVariantFromLabel(action.status)!}>{action.status}</FeatureStatusLabel>
                   ) : null}
                   <p>{action.text}</p>
