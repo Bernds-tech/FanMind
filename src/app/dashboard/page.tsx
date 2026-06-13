@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   getOpenFollowupCount,
+  ensureUserWorkspace,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -520,7 +521,10 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const backfillResult = await ensureUserWorkspace(data.user);
+  const workspaceResult = backfillResult.workspace
+    ? await getUserWorkspaceDashboard(data.user)
+    : { workspace: null, error: backfillResult.error };
   const workspace = workspaceResult.workspace;
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)

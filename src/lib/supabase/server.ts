@@ -24,12 +24,14 @@ type SupabaseServerUserResponse = {
   error: Error | null;
 };
 
+type WorkspaceCommercialOption = ProductiveCommercialOption | "starter_no_setup_commitment";
+
 export type WorkspaceBackfillRow = {
   id: string;
   name: string;
   owner_user_id: string;
   plan_id: PlanId;
-  commercial_option: ProductiveCommercialOption;
+  commercial_option: WorkspaceCommercialOption;
   setup_fee_cents: number;
   monthly_fee_cents: number;
   commitment_months: 0 | 12;
@@ -189,8 +191,9 @@ const MEMORY_COLUMNS =
 const FOLLOWUP_COLUMNS =
   "id,workspace_id,contact_id,due_date,priority,reason,status,created_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
-const STARTER_COMMERCIAL_OPTIONS: ProductiveCommercialOption[] = [
+const STARTER_COMMERCIAL_OPTIONS: WorkspaceCommercialOption[] = [
   "starter_paid_setup",
+  "starter_no_setup_commitment",
 ];
 
 async function getAccessToken(): Promise<string | undefined> {
@@ -1197,10 +1200,23 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
     return { planId, ...getRegistrationCommercialTerms("pilot")! };
   }
 
+  if (
+    planId === "starter" &&
+    commercialOption === "starter_no_setup_commitment"
+  ) {
+    return {
+      planId,
+      commercialOption,
+      setupFeeCents: 0,
+      monthlyFeeCents: 29900,
+      commitmentMonths: 12 as const,
+    };
+  }
+
   if (planId === "starter" && isStarterCommercialOption(commercialOption)) {
     return {
       planId,
-      ...getRegistrationCommercialTerms("starter", commercialOption)!,
+      ...getRegistrationCommercialTerms("starter", "starter_paid_setup")!,
     };
   }
 
@@ -1211,13 +1227,17 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
 }
 
 function isStarterCommercialOption(
-  value: ProductiveCommercialOption,
-): value is Extract<ProductiveCommercialOption, "starter_paid_setup"> {
+  value: WorkspaceCommercialOption,
+): value is Extract<WorkspaceCommercialOption, "starter_paid_setup" | "starter_no_setup_commitment"> {
   return STARTER_COMMERCIAL_OPTIONS.includes(value);
 }
 
 function isProductiveCommercialOption(
   value: unknown,
-): value is ProductiveCommercialOption {
-  return value === "pilot_only" || value === "starter_paid_setup";
+): value is WorkspaceCommercialOption {
+  return (
+    value === "pilot_only" ||
+    value === "starter_paid_setup" ||
+    value === "starter_no_setup_commitment"
+  );
 }
