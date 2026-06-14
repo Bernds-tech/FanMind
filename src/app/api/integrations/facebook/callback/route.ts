@@ -4,7 +4,9 @@ import {
   encryptToken,
   exchangeFacebookCode,
   isTokenEncryptionConfigured,
+  fetchFacebookGrantedPermissions,
   fetchFacebookPages,
+  hasRequiredFacebookPagePermissions,
   subscribeFacebookPage,
   tokenLastFour,
   verifyFacebookOAuthState,
@@ -39,6 +41,12 @@ export async function GET(request: Request) {
 
   try {
     const userToken = await exchangeFacebookCode(code);
+    const permissions = await fetchFacebookGrantedPermissions(userToken);
+    if (!hasRequiredFacebookPagePermissions(permissions)) {
+      console.warn("Facebook callback missing required page permissions");
+      return redirectToChannels(appOrigin, "facebook_error=page_permissions");
+    }
+
     const pages = await fetchFacebookPages(userToken);
     const page = pages[0];
     if (!page) {
