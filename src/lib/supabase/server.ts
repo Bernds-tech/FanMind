@@ -1100,6 +1100,7 @@ export async function createFacebookWebhookConversationMessage(input: {
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
+  externalThreadId?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const handle = normalizeOptionalText(input.senderId);
   let contact: ContactRow | null = null;
@@ -1153,6 +1154,7 @@ export async function createFacebookWebhookConversationMessage(input: {
     sourceUrl: input.sourceUrl,
     replyTargetUrl: input.replyTargetUrl,
     externalMessageId: input.externalMessageId,
+    externalThreadId: input.externalThreadId,
     authorLabel: input.authorLabel,
   });
 
@@ -1178,6 +1180,7 @@ export async function createMetaTestConversationMessage(input: {
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
+  externalThreadId?: string | null;
   authorLabel?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const content = input.content.trim();
@@ -1195,6 +1198,7 @@ export async function createMetaTestConversationMessage(input: {
     sourceUrl,
     replyTargetUrl,
     externalMessageId: input.externalMessageId,
+    externalThreadId: input.externalThreadId,
   });
 
   if (conversationResult.error || !conversationResult.conversation) {
@@ -1244,9 +1248,13 @@ export async function createMetaTestConversationMessage(input: {
       source_url: sourceUrl ?? conversationResult.conversation.source_url,
       reply_target_url:
         replyTargetUrl ?? conversationResult.conversation.reply_target_url,
+      external_thread_id:
+        normalizeOptionalText(input.externalThreadId) ??
+        conversationResult.conversation.external_thread_id,
       external_message_id:
         normalizeOptionalText(input.externalMessageId) ??
         conversationResult.conversation.external_message_id,
+      status: "open",
       ai_status: "partial",
       next_step: "Antwort vorbereiten",
     },
@@ -1272,7 +1280,37 @@ async function ensureMetaTestConversation(input: {
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
+  externalThreadId?: string | null;
 }): Promise<ConversationResult> {
+  const externalThreadId = normalizeOptionalText(input.externalThreadId);
+  const sourceUrl = normalizeUrl(input.sourceUrl);
+  const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
+
+  if (externalThreadId) {
+    const threaded = await postgrestSelect<ConversationRow>(
+      "conversations",
+      getServiceAccessToken(),
+      CONVERSATION_COLUMNS,
+      [
+        ["workspace_id", input.workspaceId],
+        ["contact_id", input.contactId],
+        ["source_platform", "facebook"],
+        ["external_thread_id", externalThreadId],
+      ],
+      1,
+      true,
+      "updated_at.desc",
+    );
+
+    if (threaded.error) {
+      return conversationError(
+        `Conversation konnte nicht geprüft werden: ${withOptionalSchemaHint(threaded.error.message, "conversations")}`,
+      );
+    }
+
+    if (threaded.data) return { conversation: threaded.data, error: null };
+  }
+
   const existing = await postgrestSelect<ConversationRow[]>(
     "conversations",
     getServiceAccessToken(),
@@ -1280,6 +1318,7 @@ async function ensureMetaTestConversation(input: {
     [
       ["workspace_id", input.workspaceId],
       ["contact_id", input.contactId],
+      ["source_platform", "facebook"],
     ],
     undefined,
     false,
@@ -1292,8 +1331,22 @@ async function ensureMetaTestConversation(input: {
     );
   }
 
-  const openConversation = (existing.data ?? []).find((conversation) =>
-    ["open", "waiting"].includes(conversation.status),
+  const urlConversation = (existing.data ?? []).find(
+    (conversation) =>
+      ["open", "waiting"].includes(conversation.status) &&
+      Boolean(sourceUrl || replyTargetUrl) &&
+      (conversation.source_url === sourceUrl ||
+        conversation.reply_target_url === replyTargetUrl ||
+        conversation.source_url === replyTargetUrl ||
+        conversation.reply_target_url === sourceUrl),
+  );
+
+  if (urlConversation) return { conversation: urlConversation, error: null };
+
+  const openConversation = (existing.data ?? []).find(
+    (conversation) =>
+      ["open", "waiting"].includes(conversation.status) &&
+      !conversation.external_thread_id,
   );
 
   if (openConversation) return { conversation: openConversation, error: null };
@@ -1308,9 +1361,9 @@ async function ensureMetaTestConversation(input: {
       priority: "normal",
       source_platform: "facebook",
       source_type: normalizeMessageType(input.sourceType),
-      source_url: normalizeUrl(input.sourceUrl),
-      reply_target_url:
-        normalizeUrl(input.replyTargetUrl) ?? normalizeUrl(input.sourceUrl),
+      source_url: sourceUrl,
+      reply_target_url: replyTargetUrl,
+      external_thread_id: externalThreadId,
       external_message_id: normalizeOptionalText(input.externalMessageId),
       ai_status: "partial",
       next_step: "Antwort vorbereiten",

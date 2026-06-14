@@ -460,7 +460,7 @@ export function ChannelsGrid({
             ) : null}
             {activeChannel.key === "facebook" && facebookError ? (
               <p className={styles.modalNotice} role="alert">
-                Facebook-Verbindung konnte nicht abgeschlossen werden.
+                Facebook-Verbindung kann nicht gespeichert werden: Verschlüsselung nicht konfiguriert. Facebook-Verbindung ist serverseitig noch nicht vollständig konfiguriert.
               </p>
             ) : null}
             <div
