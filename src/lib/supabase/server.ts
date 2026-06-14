@@ -583,38 +583,62 @@ export async function upsertFacebookSocialConnection(
   if (!accessToken)
     return socialConnectionError("Keine aktive Supabase-Session gefunden.");
 
-  const result = await postgrestRequest<SocialConnectionRow>(
+  const values = {
+    workspace_id: input.workspaceId,
+    platform: "facebook",
+    provider: "meta",
+    status: "connected",
+    external_account_id:
+      normalizeOptionalText(input.externalAccountId) ?? input.pageId,
+    external_account_name:
+      normalizeOptionalText(input.externalAccountName) ?? input.pageName,
+    page_id: input.pageId,
+    page_name: input.pageName,
+    page_access_token_encrypted: normalizeOptionalText(
+      input.pageAccessTokenEncrypted,
+    ),
+    token_last_four: normalizeOptionalText(input.tokenLastFour),
+    scopes: input.scopes ?? [],
+    webhook_subscribed: input.webhookSubscribed ?? false,
+    connected_by: input.connectedBy,
+    connected_at: new Date().toISOString(),
+    disconnected_at: null,
+  };
+
+  const existingResult = await postgrestSelect<SocialConnectionRow>(
     "social_connections",
-    "POST",
-    {
-      workspace_id: input.workspaceId,
-      platform: "facebook",
-      provider: "meta",
-      status: "connected",
-      external_account_id:
-        normalizeOptionalText(input.externalAccountId) ?? input.pageId,
-      external_account_name:
-        normalizeOptionalText(input.externalAccountName) ?? input.pageName,
-      page_id: input.pageId,
-      page_name: input.pageName,
-      page_access_token_encrypted: normalizeOptionalText(
-        input.pageAccessTokenEncrypted,
-      ),
-      token_last_four: normalizeOptionalText(input.tokenLastFour),
-      scopes: input.scopes ?? [],
-      webhook_subscribed: input.webhookSubscribed ?? false,
-      connected_by: input.connectedBy,
-      connected_at: new Date().toISOString(),
-      disconnected_at: null,
-    },
     accessToken,
-    {
-      select: SOCIAL_CONNECTION_COLUMNS,
-      single: true,
-      upsert: true,
-      onConflict: "workspace_id,platform,page_id",
-    },
+    SOCIAL_CONNECTION_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["platform", "facebook"],
+      ["page_id", input.pageId],
+    ],
+    1,
+    true,
   );
+
+  if (existingResult.error) {
+    return socialConnectionError(
+      `Facebook-Verbindung konnte nicht geprüft werden: ${existingResult.error.message}`,
+    );
+  }
+
+  const result = existingResult.data
+    ? await postgrestUpdate<SocialConnectionRow>(
+        "social_connections",
+        values,
+        accessToken,
+        [["id", existingResult.data.id]],
+        { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+      )
+    : await postgrestRequest<SocialConnectionRow>(
+        "social_connections",
+        "POST",
+        values,
+        accessToken,
+        { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+      );
 
   if (result.error)
     return socialConnectionError(
