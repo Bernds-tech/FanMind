@@ -111,6 +111,59 @@ export type ConversationMessageRow = {
   created_at: string | null;
 };
 
+export type ConversationSummaryRow = {
+  id: string;
+  workspace_id: string;
+  conversation_id: string;
+  contact_id: string;
+  summary: string | null;
+  key_points: string[] | null;
+  open_questions: string[] | null;
+  last_summarized_message_at: string | null;
+  message_count_seen: number;
+  updated_at: string | null;
+  created_at: string | null;
+};
+
+export type ContactAiProfileRow = {
+  id: string;
+  workspace_id: string;
+  contact_id: string;
+  language: string | null;
+  tone: string | null;
+  sentiment: string | null;
+  interests: string[] | null;
+  buying_signals: string[] | null;
+  no_gos: string[] | null;
+  preferred_style: string | null;
+  response_triggers: string[] | null;
+  risk_notes: string[] | null;
+  confidence_score: number | null;
+  source_message_count: number | null;
+  updated_at: string | null;
+  created_at: string | null;
+};
+
+export type WorkspaceVoiceProfileRow = {
+  id: string;
+  workspace_id: string;
+  user_id: string | null;
+  owner_label: string | null;
+  language: string | null;
+  tone: string | null;
+  sentence_length: string | null;
+  emoji_style: string | null;
+  greeting_style: string | null;
+  closing_style: string | null;
+  common_phrases: string[] | null;
+  avoided_phrases: string[] | null;
+  sales_style: string | null;
+  examples_count: number | null;
+  confidence_score: number | null;
+  updated_at: string | null;
+  created_at: string | null;
+};
+
 export type SocialConnectionRow = {
   id: string;
   workspace_id: string;
@@ -180,6 +233,7 @@ type CreateManualConversationMessageInput = {
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
   authorLabel?: string | null;
+  userId?: string | null;
   content: string;
 };
 
@@ -319,6 +373,12 @@ const CONVERSATION_COLUMNS =
   "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_url,reply_target_url,external_message_id,author_label,content,created_at";
+const CONVERSATION_SUMMARY_COLUMNS =
+  "id,workspace_id,conversation_id,contact_id,summary,key_points,open_questions,last_summarized_message_at,message_count_seen,updated_at,created_at";
+const CONTACT_AI_PROFILE_COLUMNS =
+  "id,workspace_id,contact_id,language,tone,sentiment,interests,buying_signals,no_gos,preferred_style,response_triggers,risk_notes,confidence_score,source_message_count,updated_at,created_at";
+const WORKSPACE_VOICE_PROFILE_COLUMNS =
+  "id,workspace_id,user_id,owner_label,language,tone,sentence_length,emoji_style,greeting_style,closing_style,common_phrases,avoided_phrases,sales_style,examples_count,confidence_score,updated_at,created_at";
 const SOCIAL_CONNECTION_COLUMNS =
   "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,created_at,updated_at";
 const FOLLOWUP_COLUMNS =
@@ -1073,6 +1133,23 @@ export async function createManualConversationMessage(
   if (direction === "outbound")
     updateValues.last_outbound_at = new Date().toISOString();
 
+  if (direction === "inbound") {
+    await updateContactProfileFromInboundMessage({
+      workspaceId: input.workspaceId,
+      contactId: input.contactId,
+      content,
+    });
+  }
+
+  if (direction === "outbound" && messageType === "manual") {
+    await updateWorkspaceVoiceProfileFromManualOutbound({
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      ownerLabel: input.authorLabel,
+      content,
+    });
+  }
+
   const updatedConversation = await postgrestUpdate<ConversationRow>(
     "conversations",
     updateValues,
@@ -1089,6 +1166,139 @@ export async function createManualConversationMessage(
     conversation: updatedConversation.data ?? conversationResult.conversation,
     error: updatedConversation.error,
   };
+}
+
+export async function getConversationSummary(input: {
+  workspaceId: string;
+  conversationId: string;
+}): Promise<{ summary: ConversationSummaryRow | null; error: Error | null }> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { summary: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const result = await postgrestSelect<ConversationSummaryRow>(
+    "conversation_summaries",
+    accessToken,
+    CONVERSATION_SUMMARY_COLUMNS,
+    [["workspace_id", input.workspaceId], ["conversation_id", input.conversationId]],
+    1,
+    true,
+  );
+  return { summary: result.data, error: result.error };
+}
+
+export async function upsertConversationSummary(input: {
+  workspaceId: string;
+  conversationId: string;
+  contactId: string;
+  summary?: string | null;
+  keyPoints?: string[];
+  openQuestions?: string[];
+  lastSummarizedMessageAt?: string | null;
+  messageCountSeen?: number;
+}): Promise<{ summary: ConversationSummaryRow | null; error: Error | null }> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { summary: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const result = await postgrestRequest<ConversationSummaryRow>(
+    "conversation_summaries",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      conversation_id: input.conversationId,
+      contact_id: input.contactId,
+      summary: normalizeOptionalText(input.summary),
+      key_points: input.keyPoints ?? [],
+      open_questions: input.openQuestions ?? [],
+      last_summarized_message_at: input.lastSummarizedMessageAt ?? null,
+      message_count_seen: input.messageCountSeen ?? 0,
+      updated_at: new Date().toISOString(),
+    },
+    accessToken,
+    { select: CONVERSATION_SUMMARY_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,conversation_id" },
+  );
+  return { summary: result.data, error: result.error };
+}
+
+export async function getContactAiProfile(workspaceId: string, contactId: string): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const result = await postgrestSelect<ContactAiProfileRow>("contact_ai_profiles", accessToken, CONTACT_AI_PROFILE_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contactId]], 1, true);
+  return { profile: result.data, error: result.error };
+}
+
+export async function upsertContactAiProfile(input: Partial<ContactAiProfileRow> & { workspace_id: string; contact_id: string }): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const result = await postgrestRequest<ContactAiProfileRow>("contact_ai_profiles", "POST", { ...input, updated_at: new Date().toISOString() }, accessToken, { select: CONTACT_AI_PROFILE_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,contact_id" });
+  return { profile: result.data, error: result.error };
+}
+
+export async function getWorkspaceVoiceProfile(workspaceId: string, userId?: string | null): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const filters: [string, SupabaseFilterValue][] = [["workspace_id", workspaceId]];
+  if (userId) filters.push(["user_id", userId]);
+  const result = await postgrestSelect<WorkspaceVoiceProfileRow>("workspace_voice_profiles", accessToken, WORKSPACE_VOICE_PROFILE_COLUMNS, filters, 1, true, "updated_at.desc");
+  return { profile: result.data, error: result.error };
+}
+
+export async function upsertWorkspaceVoiceProfile(input: Partial<WorkspaceVoiceProfileRow> & { workspace_id: string; user_id?: string | null }): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const result = await postgrestRequest<WorkspaceVoiceProfileRow>("workspace_voice_profiles", "POST", { ...input, updated_at: new Date().toISOString() }, accessToken, { select: WORKSPACE_VOICE_PROFILE_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,user_id" });
+  return { profile: result.data, error: result.error };
+}
+
+export async function updateContactProfileFromInboundMessage(input: { workspaceId: string; contactId: string; content: string; language?: string | null }): Promise<void> {
+  const existing = await getContactAiProfile(input.workspaceId, input.contactId);
+  const count = (existing.profile?.source_message_count ?? 0) + 1;
+  await upsertContactAiProfile({
+    workspace_id: input.workspaceId,
+    contact_id: input.contactId,
+    language: existing.profile?.language ?? input.language ?? detectLanguage(input.content),
+    tone: existing.profile?.tone ?? detectTone(input.content),
+    sentiment: existing.profile?.sentiment ?? "im Aufbau",
+    confidence_score: Math.min(30, count * 5),
+    source_message_count: count,
+  });
+}
+
+export async function updateWorkspaceVoiceProfileFromManualOutbound(input: { workspaceId: string; userId?: string | null; ownerLabel?: string | null; content: string }): Promise<void> {
+  const existing = await getWorkspaceVoiceProfile(input.workspaceId, input.userId);
+  const count = (existing.profile?.examples_count ?? 0) + 1;
+  await upsertWorkspaceVoiceProfile({
+    workspace_id: input.workspaceId,
+    user_id: input.userId ?? null,
+    owner_label: normalizeOptionalText(input.ownerLabel) ?? existing.profile?.owner_label ?? "Team",
+    language: existing.profile?.language ?? detectLanguage(input.content),
+    tone: existing.profile?.tone ?? detectTone(input.content),
+    sentence_length: existing.profile?.sentence_length ?? detectSentenceLength(input.content),
+    emoji_style: existing.profile?.emoji_style ?? detectEmojiStyle(input.content),
+    common_phrases: existing.profile?.common_phrases ?? extractCommonPhrases(input.content),
+    examples_count: count,
+    confidence_score: Math.min(35, count * 5),
+  });
+}
+
+function detectLanguage(content: string): string {
+  return /\b(und|oder|danke|bitte|ich|du|sie|wir)\b/i.test(content) ? "de" : "unbekannt";
+}
+
+function detectTone(content: string): string {
+  if (/[!😊🙂😉]/u.test(content)) return "freundlich";
+  return content.length < 180 ? "kurz und sachlich" : "ausführlich";
+}
+
+function detectSentenceLength(content: string): string {
+  const sentences = content.split(/[.!?]+/).filter((part) => part.trim());
+  const average = sentences.length ? content.split(/\s+/).length / sentences.length : 0;
+  return average > 18 ? "eher lang" : "eher kurz";
+}
+
+function detectEmojiStyle(content: string): string {
+  return /[\p{Extended_Pictographic}]/u.test(content) ? "nutzt Emojis" : "kaum Emojis";
+}
+
+function extractCommonPhrases(content: string): string[] {
+  return ["Danke", "Liebe Grüße", "Viele Grüße"].filter((phrase) => content.toLowerCase().includes(phrase.toLowerCase()));
 }
 
 export async function createFacebookWebhookConversationMessage(input: {
