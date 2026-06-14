@@ -111,6 +111,28 @@ export type ConversationMessageRow = {
   created_at: string | null;
 };
 
+export type SocialConnectionRow = {
+  id: string;
+  workspace_id: string;
+  platform: string;
+  provider: string;
+  status: string;
+  external_account_id: string | null;
+  external_account_name: string | null;
+  page_id: string | null;
+  page_name: string | null;
+  page_access_token_encrypted: string | null;
+  token_last_four: string | null;
+  scopes: string[] | null;
+  webhook_subscribed: boolean;
+  connected_by: string | null;
+  connected_at: string;
+  disconnected_at: string | null;
+  last_event_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type FollowupRow = {
   id: string;
   workspace_id: string;
@@ -159,6 +181,19 @@ type CreateManualConversationMessageInput = {
   externalMessageId?: string | null;
   authorLabel?: string | null;
   content: string;
+};
+
+type UpsertFacebookSocialConnectionInput = {
+  workspaceId: string;
+  connectedBy: string;
+  externalAccountId?: string | null;
+  externalAccountName?: string | null;
+  pageId: string;
+  pageName: string;
+  pageAccessTokenEncrypted?: string | null;
+  tokenLastFour?: string | null;
+  scopes?: string[];
+  webhookSubscribed?: boolean;
 };
 
 type CreateFollowupInput = {
@@ -226,6 +261,16 @@ type ConversationUpdateResult = {
   error: Error | null;
 };
 
+type SocialConnectionResult = {
+  connection: SocialConnectionRow | null;
+  error: Error | null;
+};
+
+type SocialConnectionsResult = {
+  connections: SocialConnectionRow[];
+  error: Error | null;
+};
+
 type FollowupsResult = {
   followups: FollowupRow[];
   error: Error | null;
@@ -274,9 +319,15 @@ const CONVERSATION_COLUMNS =
   "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_url,reply_target_url,external_message_id,author_label,content,created_at";
+const SOCIAL_CONNECTION_COLUMNS =
+  "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,created_at,updated_at";
 const FOLLOWUP_COLUMNS =
   "id,workspace_id,contact_id,due_date,priority,reason,status,created_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
+
+function getServiceAccessToken(): string | undefined {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
 const STARTER_COMMERCIAL_OPTIONS: WorkspaceCommercialOption[] = [
   "starter_paid_setup",
   "starter_no_setup_commitment",
@@ -433,6 +484,141 @@ export async function getUserWorkspaceDashboard(
   }
 
   return workspaceDashboardError("Workspace konnte noch nicht geladen werden.");
+}
+
+export async function getWorkspaceSocialConnections(
+  workspaceId: string,
+): Promise<SocialConnectionsResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return socialConnectionsError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const result = await postgrestSelect<SocialConnectionRow[]>(
+    "social_connections",
+    accessToken,
+    SOCIAL_CONNECTION_COLUMNS,
+    [["workspace_id", workspaceId]],
+    undefined,
+    false,
+    "updated_at.desc",
+  );
+
+  if (result.error) {
+    return socialConnectionsError(
+      `Social Connections konnten nicht geladen werden: ${result.error.message}`,
+    );
+  }
+
+  return { connections: result.data ?? [], error: null };
+}
+
+export async function upsertFacebookSocialConnection(
+  input: UpsertFacebookSocialConnectionInput,
+): Promise<SocialConnectionResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken)
+    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+
+  const result = await postgrestRequest<SocialConnectionRow>(
+    "social_connections",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      platform: "facebook",
+      provider: "meta",
+      status: "connected",
+      external_account_id:
+        normalizeOptionalText(input.externalAccountId) ?? input.pageId,
+      external_account_name:
+        normalizeOptionalText(input.externalAccountName) ?? input.pageName,
+      page_id: input.pageId,
+      page_name: input.pageName,
+      page_access_token_encrypted: normalizeOptionalText(
+        input.pageAccessTokenEncrypted,
+      ),
+      token_last_four: normalizeOptionalText(input.tokenLastFour),
+      scopes: input.scopes ?? [],
+      webhook_subscribed: input.webhookSubscribed ?? false,
+      connected_by: input.connectedBy,
+      connected_at: new Date().toISOString(),
+      disconnected_at: null,
+    },
+    accessToken,
+    {
+      select: SOCIAL_CONNECTION_COLUMNS,
+      single: true,
+      upsert: true,
+      onConflict: "workspace_id,platform,page_id",
+    },
+  );
+
+  if (result.error)
+    return socialConnectionError(
+      `Facebook-Verbindung konnte nicht gespeichert werden: ${result.error.message}`,
+    );
+  return { connection: result.data, error: null };
+}
+
+export async function disconnectFacebookSocialConnection(
+  workspaceId: string,
+): Promise<SocialConnectionResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken)
+    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+
+  const result = await postgrestUpdate<SocialConnectionRow>(
+    "social_connections",
+    {
+      status: "disconnected",
+      disconnected_at: new Date().toISOString(),
+      page_access_token_encrypted: null,
+      token_last_four: null,
+      webhook_subscribed: false,
+    },
+    accessToken,
+    [
+      ["workspace_id", workspaceId],
+      ["platform", "facebook"],
+      ["status", "connected"],
+    ],
+    { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+  );
+
+  if (result.error)
+    return socialConnectionError(
+      `Facebook-Verbindung konnte nicht getrennt werden: ${result.error.message}`,
+    );
+  return { connection: result.data, error: null };
+}
+
+export async function findFacebookSocialConnectionByPageId(
+  pageId: string,
+): Promise<SocialConnectionResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return socialConnectionError(
+      "SUPABASE_SERVICE_ROLE_KEY ist für Webhook-Zuordnung nicht konfiguriert.",
+    );
+  }
+
+  const result = await postgrestSelect<SocialConnectionRow>(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_COLUMNS,
+    [
+      ["platform", "facebook"],
+      ["status", "connected"],
+      ["page_id", pageId],
+    ],
+    1,
+    true,
+  );
+  if (result.error) return socialConnectionError(result.error.message);
+  return { connection: result.data, error: null };
 }
 
 export async function getWorkspaceContacts(
@@ -905,6 +1091,85 @@ export async function createManualConversationMessage(
   };
 }
 
+export async function createFacebookWebhookConversationMessage(input: {
+  workspaceId: string;
+  senderId?: string | null;
+  authorLabel: string;
+  content: string;
+  messageType: "dm" | "comment";
+  sourceUrl?: string | null;
+  replyTargetUrl?: string | null;
+  externalMessageId?: string | null;
+}): Promise<ConversationMessageCreateResult> {
+  const handle = normalizeOptionalText(input.senderId);
+  let contact: ContactRow | null = null;
+
+  if (handle) {
+    const existing = await postgrestSelect<ContactRow>(
+      "contacts",
+      getServiceAccessToken(),
+      CONTACT_COLUMNS,
+      [
+        ["workspace_id", input.workspaceId],
+        ["handle", handle],
+      ],
+      1,
+      true,
+    );
+    if (existing.error)
+      return conversationMessageCreateError(existing.error.message);
+    contact = existing.data;
+  }
+
+  if (!contact) {
+    const created = await postgrestRequest<ContactRow>(
+      "contacts",
+      "POST",
+      {
+        workspace_id: input.workspaceId,
+        display_name: input.authorLabel || "Facebook Nutzer",
+        handle,
+        source_platform: "facebook",
+        language: "de",
+        status: "new",
+        tags: ["facebook"],
+        summary: "Automatisch aus einem eingehenden Facebook-Webhook angelegt.",
+      },
+      getServiceAccessToken(),
+      { select: CONTACT_COLUMNS, single: true },
+    );
+    if (created.error || !created.data)
+      return conversationMessageCreateError(
+        created.error?.message ?? "Kontakt konnte nicht angelegt werden.",
+      );
+    contact = created.data;
+  }
+
+  const result = await createMetaTestConversationMessage({
+    workspaceId: input.workspaceId,
+    contactId: contact.id,
+    content: input.content,
+    messageType: input.messageType,
+    sourceUrl: input.sourceUrl,
+    replyTargetUrl: input.replyTargetUrl,
+    externalMessageId: input.externalMessageId,
+    authorLabel: input.authorLabel,
+  });
+
+  await postgrestUpdate(
+    "social_connections",
+    { last_event_at: new Date().toISOString() },
+    getServiceAccessToken(),
+    [
+      ["workspace_id", input.workspaceId],
+      ["platform", "facebook"],
+      ["status", "connected"],
+    ],
+  );
+
+  return result;
+}
+
 export async function createMetaTestConversationMessage(input: {
   workspaceId: string;
   contactId: string;
@@ -959,7 +1224,7 @@ export async function createMetaTestConversationMessage(input: {
         normalizeOptionalText(input.authorLabel) ?? "Facebook Nutzer",
       content,
     },
-    undefined,
+    getServiceAccessToken(),
     { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
   );
 
@@ -985,7 +1250,7 @@ export async function createMetaTestConversationMessage(input: {
       ai_status: "partial",
       next_step: "Antwort vorbereiten",
     },
-    undefined,
+    getServiceAccessToken(),
     [
       ["workspace_id", input.workspaceId],
       ["id", conversationResult.conversation.id],
@@ -1010,7 +1275,7 @@ async function ensureMetaTestConversation(input: {
 }): Promise<ConversationResult> {
   const existing = await postgrestSelect<ConversationRow[]>(
     "conversations",
-    undefined,
+    getServiceAccessToken(),
     CONVERSATION_COLUMNS,
     [
       ["workspace_id", input.workspaceId],
@@ -1050,7 +1315,7 @@ async function ensureMetaTestConversation(input: {
       ai_status: "partial",
       next_step: "Antwort vorbereiten",
     },
-    undefined,
+    getServiceAccessToken(),
     { select: CONVERSATION_COLUMNS, single: true },
   );
 
@@ -1539,7 +1804,12 @@ async function postgrestRequest<T = unknown>(
   method: "POST" | "PATCH",
   values: unknown,
   accessToken: string | undefined,
-  options: { select?: string; single?: boolean; upsert?: boolean } = {},
+  options: {
+    select?: string;
+    single?: boolean;
+    upsert?: boolean;
+    onConflict?: string;
+  } = {},
 ): Promise<PostgrestResult<T>> {
   try {
     const url = new URL(getSupabaseRestUrl(table));
@@ -1548,13 +1818,8 @@ async function postgrestRequest<T = unknown>(
       url.searchParams.set("select", options.select);
     }
 
-    if (
-      options.upsert &&
-      typeof values === "object" &&
-      values &&
-      "id" in values
-    ) {
-      url.searchParams.set("on_conflict", "id");
+    if (options.upsert) {
+      url.searchParams.set("on_conflict", options.onConflict ?? "id");
     }
 
     const response = await fetch(url.toString(), {
@@ -1794,6 +2059,14 @@ function conversationMessageCreateError(
 
 function conversationUpdateError(message: string): ConversationUpdateResult {
   return { conversation: null, error: new Error(message) };
+}
+
+function socialConnectionError(message: string): SocialConnectionResult {
+  return { connection: null, error: new Error(message) };
+}
+
+function socialConnectionsError(message: string): SocialConnectionsResult {
+  return { connections: [], error: new Error(message) };
 }
 
 function followupsError(message: string): FollowupsResult {

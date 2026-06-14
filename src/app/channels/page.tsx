@@ -3,7 +3,9 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
+  getWorkspaceSocialConnections,
   signOutSupabaseServerSession,
+  type SocialConnectionRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
@@ -15,6 +17,8 @@ type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
+  facebookConnection: SocialConnectionRow | null;
+  facebookError?: boolean;
 };
 
 async function logout() {
@@ -28,6 +32,8 @@ function ChannelsWorkspace({
   workspace,
   userDisplayName,
   contactCount,
+  facebookConnection,
+  facebookError,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -54,7 +60,10 @@ function ChannelsWorkspace({
       contactCount={contactCount}
       logoutAction={logout}
     >
-      <ChannelsGrid />
+      <ChannelsGrid
+        facebookConnection={facebookConnection}
+        facebookError={facebookError}
+      />
     </WorkspaceShell>
   );
 }
@@ -70,7 +79,12 @@ function getUserDisplayName(
     : fallback;
 }
 
-export default async function ChannelsPage() {
+export default async function ChannelsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = (await searchParams) ?? {};
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -82,6 +96,14 @@ export default async function ChannelsPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const socialConnectionsResult = workspace
+    ? await getWorkspaceSocialConnections(workspace.id)
+    : null;
+  const facebookConnection =
+    socialConnectionsResult?.connections.find(
+      (connection) =>
+        connection.platform === "facebook" && connection.status === "connected",
+    ) ?? null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -93,6 +115,8 @@ export default async function ChannelsPage() {
             workspace.name,
           )}
           contactCount={contactsResult?.contacts.length ?? 0}
+          facebookConnection={facebookConnection}
+          facebookError={Boolean(params.facebook_error)}
         />
       ) : (
         <section

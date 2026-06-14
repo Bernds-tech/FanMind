@@ -13,8 +13,16 @@
   padding: 18px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 8% 0%, rgba(103, 232, 249, 0.12), transparent 28%),
-    radial-gradient(circle at 96% 8%, rgba(167, 139, 250, 0.14), transparent 30%),
+    radial-gradient(
+      circle at 8% 0%,
+      rgba(103, 232, 249, 0.12),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 96% 8%,
+      rgba(167, 139, 250, 0.14),
+      transparent 30%
+    ),
     rgba(15, 23, 42, 0.76);
   box-shadow: 0 20px 58px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(18px);
@@ -26,7 +34,6 @@
   font-size: clamp(22px, 2vw, 30px);
   letter-spacing: -0.04em;
 }
-
 
 .channelGrid {
   display: grid;
@@ -148,10 +155,22 @@
   line-height: 1;
 }
 
-.statusConnected { color: #052e16; background: #86efac; }
-.statusAvailable { color: #042f2e; background: #5eead4; }
-.statusProgress { color: #dbeafe; background: rgba(59, 130, 246, 0.28); }
-.statusPreview { color: #cffafe; background: rgba(8, 145, 178, 0.26); }
+.statusConnected {
+  color: #052e16;
+  background: #86efac;
+}
+.statusAvailable {
+  color: #042f2e;
+  background: #5eead4;
+}
+.statusProgress {
+  color: #dbeafe;
+  background: rgba(59, 130, 246, 0.28);
+}
+.statusPreview {
+  color: #cffafe;
+  background: rgba(8, 145, 178, 0.26);
+}
 
 .soonBadgeImage {
   display: block;
@@ -221,7 +240,11 @@
   border-radius: 24px;
   padding: 22px;
   background:
-    radial-gradient(circle at 12% 0%, rgba(103, 232, 249, 0.16), transparent 34%),
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(103, 232, 249, 0.16),
+      transparent 34%
+    ),
     linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(3, 7, 18, 0.98));
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.44);
 }
@@ -334,4 +357,34 @@
   .modal {
     padding: 18px;
   }
+}
+
+.connectionHint {
+  display: block;
+  margin-top: 10px;
+  color: #c7d2fe;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.modalLinkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 10px 14px;
+  color: #06111f;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+  text-decoration: none;
+  background: linear-gradient(135deg, #67e8f9, #a7f3d0);
+}
+
+.dangerModalButton {
+  color: #fee2e2 !important;
+  border: 1px solid rgba(248, 113, 113, 0.45) !important;
+  background: rgba(127, 29, 29, 0.42) !important;
 }

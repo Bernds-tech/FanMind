@@ -1,4 +1,8 @@
-import { createMetaTestConversationMessage } from "@/lib/supabase/server";
+import {
+  createFacebookWebhookConversationMessage,
+  createMetaTestConversationMessage,
+  findFacebookSocialConnectionByPageId,
+} from "@/lib/supabase/server";
 
 export type MetaWebhookEvent = {
   messageType: "dm" | "comment";
@@ -7,6 +11,8 @@ export type MetaWebhookEvent = {
   sourceUrl: string | null;
   replyTargetUrl: string | null;
   authorLabel: string;
+  pageId: string | null;
+  senderId: string | null;
 };
 
 export type MetaWebhookProcessResult = {
@@ -31,7 +37,9 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       const message = isRecord(item.message) ? item.message : undefined;
       const text = stringValue(message?.text);
       const mid = stringValue(message?.mid);
-      const senderId = isRecord(item.sender) ? stringValue(item.sender.id) : null;
+      const senderId = isRecord(item.sender)
+        ? stringValue(item.sender.id)
+        : null;
       const pageId = isRecord(item.recipient)
         ? stringValue(item.recipient.id)
         : stringValue(entry.id);
@@ -42,7 +50,11 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         externalMessageId: mid,
         sourceUrl: pageId ? `https://www.facebook.com/${pageId}` : null,
         replyTargetUrl: pageId ? `https://www.facebook.com/${pageId}` : null,
-        authorLabel: senderId ? `Facebook Nutzer ${senderId}` : "Facebook Nutzer",
+        authorLabel: senderId
+          ? `Facebook Nutzer ${senderId}`
+          : "Facebook Nutzer",
+        pageId,
+        senderId,
       });
     }
 
@@ -61,9 +73,14 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         stringValue(value?.message) ??
         stringValue(value?.verb) ??
         "Facebook Page Kommentar-Event ohne Nachrichtentext";
-      const commentId = stringValue(value?.comment_id) ?? stringValue(value?.id);
+      const commentId =
+        stringValue(value?.comment_id) ?? stringValue(value?.id);
       const permalink = stringValue(value?.permalink_url);
       const postId = stringValue(value?.post_id);
+
+      const pageId = stringValue(entry.id);
+      const senderId =
+        stringValue(value?.from_id) ?? stringValue(value?.sender_id);
 
       events.push({
         messageType: "comment",
@@ -75,11 +92,15 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
           stringValue(value?.from_name) ??
           stringValue(value?.sender_name) ??
           "Facebook Nutzer",
+        pageId,
+        senderId,
       });
 
       if (!permalink && postId) {
-        events[events.length - 1].sourceUrl = `https://www.facebook.com/${postId}`;
-        events[events.length - 1].replyTargetUrl = `https://www.facebook.com/${postId}`;
+        events[events.length - 1].sourceUrl =
+          `https://www.facebook.com/${postId}`;
+        events[events.length - 1].replyTargetUrl =
+          `https://www.facebook.com/${postId}`;
       }
     }
   }
@@ -90,25 +111,43 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
 export async function processMetaWebhookPayload(
   payload: unknown,
 ): Promise<MetaWebhookProcessResult> {
-  const workspaceId = process.env.FANMIND_DEFAULT_WORKSPACE_ID_FOR_META_TEST;
-  const contactId = process.env.FANMIND_DEFAULT_CONTACT_ID_FOR_META_TEST;
   const events = extractMetaWebhookEvents(payload);
 
-  if (!workspaceId || !contactId || events.length === 0) {
-    return {
-      received: true,
-      saved: false,
-      skipped: true,
-      eventCount: events.length,
-    };
+  if (events.length === 0) {
+    return { received: true, saved: false, skipped: true, eventCount: 0 };
   }
 
   let saved = 0;
+  let skipped = 0;
 
   for (const event of events) {
-    const result = await createMetaTestConversationMessage({
-      workspaceId,
-      contactId,
+    const connection = event.pageId
+      ? await findFacebookSocialConnectionByPageId(event.pageId)
+      : { connection: null, error: null };
+
+    if (connection.error) {
+      return {
+        received: true,
+        saved: saved > 0,
+        skipped: skipped > 0,
+        eventCount: events.length,
+        error: connection.error.message,
+      };
+    }
+
+    if (!connection.connection) {
+      const fallbackResult = await tryLocalDevFallback(event);
+      if (fallbackResult === "saved") {
+        saved += 1;
+      } else {
+        skipped += 1;
+      }
+      continue;
+    }
+
+    const result = await createFacebookWebhookConversationMessage({
+      workspaceId: connection.connection.workspace_id,
+      senderId: event.senderId,
       content: event.content,
       messageType: event.messageType,
       sourceUrl: event.sourceUrl,
@@ -121,7 +160,7 @@ export async function processMetaWebhookPayload(
       return {
         received: true,
         saved: saved > 0,
-        skipped: false,
+        skipped: skipped > 0,
         eventCount: events.length,
         error: result.error.message,
       };
@@ -133,9 +172,32 @@ export async function processMetaWebhookPayload(
   return {
     received: true,
     saved: saved > 0,
-    skipped: false,
+    skipped: skipped > 0,
     eventCount: events.length,
   };
+}
+
+async function tryLocalDevFallback(
+  event: MetaWebhookEvent,
+): Promise<"saved" | "skipped"> {
+  if (process.env.NODE_ENV === "production") return "skipped";
+
+  const workspaceId = process.env.FANMIND_DEFAULT_WORKSPACE_ID_FOR_META_TEST;
+  const contactId = process.env.FANMIND_DEFAULT_CONTACT_ID_FOR_META_TEST;
+  if (!workspaceId || !contactId) return "skipped";
+
+  const result = await createMetaTestConversationMessage({
+    workspaceId,
+    contactId,
+    content: event.content,
+    messageType: event.messageType,
+    sourceUrl: event.sourceUrl,
+    replyTargetUrl: event.replyTargetUrl,
+    externalMessageId: event.externalMessageId,
+    authorLabel: event.authorLabel,
+  });
+
+  return result.error ? "skipped" : "saved";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
