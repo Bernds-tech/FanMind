@@ -547,10 +547,18 @@ export function ChannelsGrid({
 
 function getFacebookErrorMessage(errorCode: string | null): string {
   if (errorCode === "no_page") {
-    return "Facebook hat keine verwaltbare Seite zurückgegeben. Bitte prüfe, ob du im Facebook-Dialog eine Seite ausgewählt hast und ob die App die Page-Berechtigungen pages_show_list, pages_read_engagement und pages_manage_metadata im Testmodus hat.";
+    return "Facebook hat keine verwaltbare Seite an FanMind zurückgegeben. Bitte prüfe, ob du eine Seite ausgewählt hast, ob du vollständigen Seitenzugriff besitzt und ob die Page-Rechte im Meta-Testmodus aktiv sind.";
   }
 
-  if (errorCode === "oauth" || errorCode === "callback") {
+  if (errorCode === "page_permissions") {
+    return "Facebook hat nicht alle benötigten Seitenrechte freigegeben. Bitte bestätige beim Verbinden alle angefragten Page-Berechtigungen.";
+  }
+
+  if (errorCode === "callback") {
+    return "Facebook-Verbindung konnte nicht abgeschlossen werden. Bitte erneut verbinden oder Serverlog prüfen.";
+  }
+
+  if (errorCode === "oauth") {
     return "Facebook-Verbindung konnte nicht abgeschlossen werden. Bitte starte die Verbindung erneut und prüfe, ob der Facebook-Dialog vollständig bestätigt wurde.";
   }
 

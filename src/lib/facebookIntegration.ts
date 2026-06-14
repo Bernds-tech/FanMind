@@ -9,6 +9,17 @@ import {
 const OAUTH_VERSION = "v20.0";
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
+export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS = [
+  "pages_show_list",
+  "pages_read_engagement",
+  "pages_manage_metadata",
+] as const;
+
+export type FacebookPermissionStatus = {
+  permission: string;
+  status: string;
+};
+
 export type FacebookOAuthState = {
   workspaceId: string;
   userId: string;
@@ -31,11 +42,10 @@ export function getFacebookOAuthUrl(state: string): string {
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
+  url.searchParams.set("auth_type", "rerequest");
   url.searchParams.set(
     "scope",
-    ["pages_show_list", "pages_read_engagement", "pages_manage_metadata"].join(
-      ",",
-    ),
+    REQUIRED_FACEBOOK_PAGE_PERMISSIONS.join(","),
   );
   return url.toString();
 }
@@ -103,9 +113,123 @@ export async function exchangeFacebookCode(code: string): Promise<string> {
   return payload.access_token;
 }
 
+export async function fetchFacebookGrantedPermissions(
+  userAccessToken: string,
+): Promise<FacebookPermissionStatus[] | null> {
+  const url = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/me/permissions`,
+  );
+  url.searchParams.set("access_token", userAccessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as {
+    data?: FacebookPermissionStatus[];
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
+
+  if (!response.ok) {
+    logFacebookApiError("Facebook permissions fetch failed", payload?.error);
+    return null;
+  }
+
+  const permissions = payload?.data ?? [];
+  const requiredPermissionDiagnostics = REQUIRED_FACEBOOK_PAGE_PERMISSIONS.map(
+    (requiredPermission) => {
+      const permission = permissions.find(
+        (entry) => entry.permission === requiredPermission,
+      );
+      return {
+        permission: requiredPermission,
+        status: permission?.status ?? "missing",
+      };
+    },
+  );
+
+  console.info("Facebook permissions diagnostics", {
+    permissions: requiredPermissionDiagnostics,
+  });
+
+  return permissions;
+}
+
+export function hasRequiredFacebookPagePermissions(
+  permissions: FacebookPermissionStatus[] | null,
+): boolean {
+  if (!permissions) return true;
+
+  return REQUIRED_FACEBOOK_PAGE_PERMISSIONS.every((requiredPermission) =>
+    permissions.some(
+      (entry) =>
+        entry.permission === requiredPermission && entry.status === "granted",
+    ),
+  );
+}
+
 export async function fetchFacebookPages(
   userAccessToken: string,
 ): Promise<FacebookPage[]> {
+  const primary = await fetchFacebookPagesFromAccountsEdge(userAccessToken);
+  if (primary.pages.length > 0) return primary.pages;
+
+  console.warn("Facebook /me/accounts returned no usable pages", {
+    httpStatus: primary.httpStatus,
+    pageCount: primary.pages.length,
+    pagesMissingAccessToken: primary.pagesMissingAccessToken,
+    hasMetaError: Boolean(primary.error),
+    errorCode: primary.error?.code,
+    errorType: primary.error?.type,
+    errorMessage: primary.error?.message,
+  });
+
+  const fallback = await fetchFacebookPagesFromMeAccountsField(userAccessToken);
+  if (fallback.pages.length > 0) {
+    console.info("Facebook pages recovered through /me accounts field", {
+      pageCount: fallback.pages.length,
+      pagesMissingAccessToken: fallback.pagesMissingAccessToken,
+    });
+    return fallback.pages;
+  }
+
+  console.warn("Facebook pages fetch returned 0 pages after fallback", {
+    primaryHttpStatus: primary.httpStatus,
+    fallbackHttpStatus: fallback.httpStatus,
+    primaryMetaError: primary.error
+      ? {
+          code: primary.error.code,
+          type: primary.error.type,
+          message: primary.error.message,
+        }
+      : null,
+    fallbackMetaError: fallback.error
+      ? {
+          code: fallback.error.code,
+          type: fallback.error.type,
+          message: fallback.error.message,
+        }
+      : null,
+  });
+
+  return [];
+}
+
+type FacebookRawPage = {
+  id?: string;
+  name?: string;
+  access_token?: string;
+  perms?: string[];
+  tasks?: string[];
+};
+
+type FacebookPagesFetchResult = {
+  pages: FacebookPage[];
+  httpStatus: number;
+  pagesMissingAccessToken: number;
+  error?: { message?: string; code?: number; type?: string };
+};
+
+async function fetchFacebookPagesFromAccountsEdge(
+  userAccessToken: string,
+): Promise<FacebookPagesFetchResult> {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/me/accounts`,
   );
@@ -114,24 +238,78 @@ export async function fetchFacebookPages(
 
   const response = await fetch(url, { cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as {
-    data?: Array<{
-      id?: string;
-      name?: string;
-      access_token?: string;
-      perms?: string[];
-      tasks?: string[];
-    }>;
+    data?: FacebookRawPage[];
     error?: { message?: string; code?: number; type?: string };
   } | null;
 
+  const result = buildFacebookPagesFetchResult(
+    response.status,
+    payload?.data ?? [],
+    payload?.error,
+  );
+
+  console.info("Facebook /me/accounts pages diagnostics", {
+    httpStatus: result.httpStatus,
+    pageCount: result.pages.length,
+    pagesMissingAccessToken: result.pagesMissingAccessToken,
+    errorCode: result.error?.code,
+    errorType: result.error?.type,
+    errorMessage: result.error?.message,
+  });
+
   if (!response.ok) {
-    logFacebookApiError("Facebook pages fetch failed", payload?.error);
     throw new Error(
       payload?.error?.message ?? "Facebook Pages konnten nicht geladen werden.",
     );
   }
 
-  const pages = (payload?.data ?? [])
+  return result;
+}
+
+async function fetchFacebookPagesFromMeAccountsField(
+  userAccessToken: string,
+): Promise<FacebookPagesFetchResult> {
+  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/me`);
+  url.searchParams.set("fields", "accounts{id,name,access_token,perms,tasks}");
+  url.searchParams.set("access_token", userAccessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as {
+    accounts?: { data?: FacebookRawPage[] };
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
+
+  const result = buildFacebookPagesFetchResult(
+    response.status,
+    payload?.accounts?.data ?? [],
+    payload?.error,
+  );
+
+  console.info("Facebook /me accounts field pages diagnostics", {
+    httpStatus: result.httpStatus,
+    pageCount: result.pages.length,
+    pagesMissingAccessToken: result.pagesMissingAccessToken,
+    errorCode: result.error?.code,
+    errorType: result.error?.type,
+    errorMessage: result.error?.message,
+  });
+
+  if (!response.ok) {
+    logFacebookApiError(
+      "Facebook /me accounts field fetch failed",
+      payload?.error,
+    );
+  }
+
+  return result;
+}
+
+function buildFacebookPagesFetchResult(
+  httpStatus: number,
+  rawPages: FacebookRawPage[],
+  error?: { message?: string; code?: number; type?: string },
+): FacebookPagesFetchResult {
+  const pages = rawPages
     .filter((page) => page.id && page.name)
     .map((page) => ({
       id: page.id!,
@@ -140,21 +318,12 @@ export async function fetchFacebookPages(
       scopes: page.tasks ?? page.perms ?? [],
     }));
 
-  if (pages.length === 0) {
-    console.warn("Facebook pages fetch returned 0 pages");
-  }
-
-  const pagesMissingAccessToken = pages.filter(
-    (page) => !page.accessToken,
-  ).length;
-  if (pagesMissingAccessToken > 0) {
-    console.warn("Facebook pages fetch returned pages without access tokens", {
-      pagesMissingAccessToken,
-      pageCount: pages.length,
-    });
-  }
-
-  return pages;
+  return {
+    pages,
+    httpStatus,
+    pagesMissingAccessToken: pages.filter((page) => !page.accessToken).length,
+    error,
+  };
 }
 
 export async function subscribeFacebookPage(
