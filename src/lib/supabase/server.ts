@@ -344,7 +344,7 @@ type SocialConnectionsResult = {
   error: Error | null;
 };
 
-type MetaWebhookEventsResult = {
+export type MetaWebhookEventsResult = {
   events: MetaWebhookEventRow[];
   error: Error | null;
 };
@@ -736,6 +736,59 @@ export async function findFacebookSocialConnectionByPageId(
   return { connection: result.data, error: null };
 }
 
+
+export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
+  workspaceId: string | null;
+  error: Error | null;
+}> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      workspaceId: null,
+      error: new Error(
+        "SUPABASE_SERVICE_ROLE_KEY ist für Webhook-Diagnose nicht konfiguriert.",
+      ),
+    };
+  }
+
+  const connectionResult = await postgrestSelect<SocialConnectionRow>(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_COLUMNS,
+    [
+      ["platform", "facebook"],
+      ["status", "connected"],
+    ],
+    1,
+    true,
+    "connected_at.desc",
+  );
+
+  if (connectionResult.error) {
+    return { workspaceId: null, error: connectionResult.error };
+  }
+
+  if (connectionResult.data?.workspace_id) {
+    return { workspaceId: connectionResult.data.workspace_id, error: null };
+  }
+
+  const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
+    "workspaces",
+    serviceAccessToken,
+    WORKSPACE_COLUMNS,
+    [],
+    1,
+    true,
+    "created_at.desc",
+  );
+
+  if (workspaceResult.error) {
+    return { workspaceId: null, error: workspaceResult.error };
+  }
+
+  return { workspaceId: workspaceResult.data?.id ?? null, error: null };
+}
+
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
   socialConnectionId?: string | null;
@@ -771,7 +824,18 @@ export async function createMetaWebhookDebugEvent(input: {
     { select: META_WEBHOOK_EVENT_COLUMNS, single: true },
   );
 
-  if (result.error) return { event: null, error: result.error };
+  if (result.error) {
+    console.error("Meta webhook debug event insert failed", {
+      table: "meta_webhook_events",
+      workspaceId: input.workspaceId ?? null,
+      socialConnectionId: input.socialConnectionId ?? null,
+      eventType: input.eventType,
+      pageId: input.pageId ?? null,
+      status: input.status,
+      error: result.error.message,
+    });
+    return { event: null, error: result.error };
+  }
   return { event: result.data, error: null };
 }
 

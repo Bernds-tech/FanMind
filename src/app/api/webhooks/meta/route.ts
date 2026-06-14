@@ -49,6 +49,7 @@ export async function POST(request: Request) {
   if (result.error) {
     console.error("Meta webhook could not save minimized event", {
       eventCount: result.eventCount,
+      error: result.error,
     });
   } else {
     console.info("Meta webhook processed", {

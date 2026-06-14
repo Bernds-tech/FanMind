@@ -308,10 +308,12 @@ export function ChannelsGrid({
   facebookConnection,
   facebookError,
   metaWebhookEvents,
+  metaWebhookError,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEvent[];
+  metaWebhookError?: string | null;
 }) {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [notice, setNotice] = useState("");
@@ -485,6 +487,11 @@ export function ChannelsGrid({
                 Letztes Webhook-Event: <strong>{lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}</strong>
                 <br />
                 Letzte Nachricht: <strong>{lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</strong>
+              </p>
+            ) : null}
+            {activeChannel.key === "facebook" && facebookConnection && metaWebhookError ? (
+              <p className={styles.modalNotice} role="alert">
+                Meta-Webhook-Events konnten nicht gelesen werden: {metaWebhookError}
               </p>
             ) : null}
             {activeChannel.key === "facebook" && facebookConnection ? (
