@@ -323,7 +323,7 @@ async function fetchFacebookPagesFromGranularTargets(
     if (!page) continue;
 
     console.info("Facebook page recovered from granular scope target", {
-      hasPageAccessToken: Boolean(page.accessToken),
+      hasAccessToken: Boolean(page.accessToken),
     });
     pages.push(page);
   }
@@ -335,8 +335,42 @@ async function fetchFacebookPageById(
   userAccessToken: string,
   pageId: string,
 ): Promise<FacebookPage | null> {
+  const withToken = await fetchFacebookPageByIdWithFields(
+    userAccessToken,
+    pageId,
+    "id,name,access_token",
+  );
+
+  if (withToken.page || !isFacebookFieldError(withToken.error)) {
+    return withToken.page;
+  }
+
+  console.warn("Facebook direct page fetch without access_token fallback", {
+    errorCode: withToken.error?.code,
+    errorType: withToken.error?.type,
+    errorMessage: withToken.error?.message,
+  });
+
+  const withoutToken = await fetchFacebookPageByIdWithFields(
+    userAccessToken,
+    pageId,
+    "id,name",
+  );
+  return withoutToken.page;
+}
+
+type FacebookDirectPageFetchResult = {
+  page: FacebookPage | null;
+  error?: { message?: string; code?: number; type?: string };
+};
+
+async function fetchFacebookPageByIdWithFields(
+  userAccessToken: string,
+  pageId: string,
+  fields: "id,name,access_token" | "id,name",
+): Promise<FacebookDirectPageFetchResult> {
   const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}`);
-  url.searchParams.set("fields", "id,name,access_token,tasks,perms");
+  url.searchParams.set("fields", fields);
   url.searchParams.set("access_token", userAccessToken);
 
   const response = await fetch(url, { cache: "no-store" });
@@ -348,8 +382,9 @@ async function fetchFacebookPageById(
 
   console.info("Facebook direct page fetch diagnostics", {
     httpStatus: response.status,
+    fields,
     hasPage: Boolean(payload?.id && payload?.name),
-    hasPageAccessToken: Boolean(payload?.access_token),
+    hasAccessToken: Boolean(payload?.access_token),
     errorCode: payload?.error?.code,
     errorType: payload?.error?.type,
     errorMessage: payload?.error?.message,
@@ -357,17 +392,28 @@ async function fetchFacebookPageById(
 
   if (!response.ok) {
     logFacebookApiError("Facebook direct page fetch failed", payload?.error);
-    return null;
+    return { page: null, error: payload?.error };
   }
 
-  if (!payload?.id || !payload.name) return null;
+  if (!payload?.id || !payload.name) {
+    return { page: null, error: payload?.error };
+  }
 
   return {
-    id: payload.id,
-    name: payload.name,
-    accessToken: payload.access_token ?? null,
-    scopes: payload.tasks ?? payload.perms ?? [],
+    page: {
+      id: payload.id,
+      name: payload.name,
+      accessToken: payload.access_token ?? null,
+      scopes: [],
+    },
+    error: payload.error,
   };
+}
+
+function isFacebookFieldError(
+  error: { message?: string; code?: number; type?: string } | undefined,
+): boolean {
+  return error?.code === 100;
 }
 
 type FacebookPagesFetchResult = {
