@@ -16,6 +16,7 @@ export type MetaWebhookEvent = {
   authorLabel: string;
   pageId: string | null;
   senderId: string | null;
+  recipientId: string | null;
   rawEvent: unknown;
 };
 
@@ -58,6 +59,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         authorLabel: senderId ? `Facebook Nutzer ${senderId}` : "Facebook Nutzer",
         pageId,
         senderId,
+        recipientId: pageId,
         rawEvent: item,
       });
     }
@@ -88,6 +90,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
           stringValue(value?.from_name) ?? stringValue(value?.sender_name) ?? "Facebook Nutzer",
         pageId: entryPageId,
         senderId,
+        recipientId: entryPageId,
         rawEvent: change,
       });
     }
@@ -121,6 +124,7 @@ export async function processMetaWebhookPayload(
         eventType: event.eventType,
         pageId: event.pageId,
         senderId: event.senderId,
+        recipientId: event.recipientId,
         messageText: event.content,
         rawPayload: event.rawEvent,
         status: event.pageId ? "ignored_unmapped_page" : "ignored",
@@ -179,6 +183,7 @@ export async function processMetaWebhookPayload(
       eventType: event.eventType,
       pageId: event.pageId,
       senderId: event.senderId,
+      recipientId: event.recipientId,
       messageText: event.content,
       rawPayload: event.rawEvent,
       status,
@@ -193,7 +198,7 @@ export async function processMetaWebhookPayload(
 }
 
 function unknownEvent(pageId: string | null, senderId: string | null, rawEvent: unknown): MetaWebhookEvent {
-  return { eventType: "unknown", messageType: "comment", content: null, externalMessageId: null, externalThreadId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, rawEvent };
+  return { eventType: "unknown", messageType: "comment", content: null, externalMessageId: null, externalThreadId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

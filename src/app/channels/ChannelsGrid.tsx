@@ -40,6 +40,7 @@ type MetaWebhookEvent = {
   event_type: string;
   page_id: string | null;
   sender_id: string | null;
+  text: string | null;
   message_text: string | null;
   status: string;
   error_reason: string | null;
@@ -389,7 +390,12 @@ export function ChannelsGrid({
   }
 
   const lastWebhookEvent = metaWebhookEvents[0] ?? null;
-  const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && event.message_text);
+  const selfTestDisabledReason = !metaWebhookStorageHealth.serviceRoleConfigured
+    ? "Service-Role-Key fehlt"
+    : !metaWebhookStorageHealth.tableReadable
+      ? "Meta-Webhook-Tabelle fehlt oder ist nicht lesbar"
+      : null;
+  const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && (event.text ?? event.message_text));
 
   const activeDisplayStatus =
     activeChannel?.key === "facebook" && facebookConnection
@@ -550,16 +556,20 @@ export function ChannelsGrid({
               <div className={styles.releaseBox} aria-label="Meta Webhook Diagnose">
                 <strong>Meta Webhook Diagnose (letzte 20 Events)</strong>
                 <p>
-                  Service-Role-Key: <strong>{metaWebhookStorageHealth.serviceRoleConfigured ? "verfügbar" : "fehlt"}</strong> · Tabelle lesbar: <strong>{metaWebhookStorageHealth.tableReadable ? "ja" : "nein"}</strong>
+                  Service-Role-Key: <strong>{metaWebhookStorageHealth.serviceRoleConfigured ? "verfügbar" : "fehlt"}</strong> · Tabelle public.meta_webhook_events: <strong>{metaWebhookStorageHealth.tableReadable ? "lesbar" : "fehlt/nicht lesbar"}</strong>
                   {metaWebhookStorageHealth.error ? ` · Fehler: ${metaWebhookStorageHealth.error}` : ""}
                 </p>
+                {selfTestDisabledReason ? (
+                  <p role="alert">Selbsttest blockiert: {selfTestDisabledReason}.</p>
+                ) : null}
                 <button
                   type="button"
                   className={styles.secondaryModalButton}
                   onClick={runMetaWebhookSelfTest}
-                  disabled={selfTestPending}
+                  disabled={selfTestPending || Boolean(selfTestDisabledReason)}
+                  title={selfTestDisabledReason ?? "Speichert ein Testevent in public.meta_webhook_events"}
                 >
-                  {selfTestPending ? "Webhook-Selbsttest läuft ..." : "Webhook-Selbsttest"}
+                  {selfTestPending ? "Webhook-Selbsttest läuft ..." : "Webhook-Selbsttest starten"}
                 </button>
                 {selfTestResult ? (
                   <p role="status">
@@ -573,7 +583,7 @@ export function ChannelsGrid({
                     {metaWebhookEvents.map((event) => (
                       <li key={event.id}>
                         {formatDateTime(event.received_at)} · {event.event_type} · Page {event.page_id ?? "unbekannt"} · Sender {event.sender_id ?? "unbekannt"} · Status {event.status}
-                        {event.message_text ? ` · Text: ${event.message_text}` : ""}
+                        {event.text ?? event.message_text ? ` · Text: ${event.text ?? event.message_text}` : ""}
                         {event.error_reason ? ` · Grund: ${event.error_reason}` : ""}
                       </li>
                     ))}

@@ -4,17 +4,41 @@ create table if not exists public.meta_webhook_events (
   social_connection_id uuid references public.social_connections(id) on delete set null,
   platform text not null default 'facebook',
   source text not null default 'meta_webhook',
-  event_type text not null default 'unknown',
   page_id text,
   sender_id text,
+  recipient_id text,
+  event_type text not null default 'unknown',
+  status text not null default 'received',
+  text text,
   message_text text,
   raw_payload jsonb not null default '{}'::jsonb,
-  status text not null default 'received',
   error_reason text,
   message_id uuid references public.conversation_messages(id) on delete set null,
   received_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+alter table public.meta_webhook_events
+  add column if not exists workspace_id uuid references public.workspaces(id) on delete cascade,
+  add column if not exists social_connection_id uuid references public.social_connections(id) on delete set null,
+  add column if not exists platform text not null default 'facebook',
+  add column if not exists source text not null default 'meta_webhook',
+  add column if not exists page_id text,
+  add column if not exists sender_id text,
+  add column if not exists recipient_id text,
+  add column if not exists event_type text not null default 'unknown',
+  add column if not exists status text not null default 'received',
+  add column if not exists text text,
+  add column if not exists message_text text,
+  add column if not exists raw_payload jsonb not null default '{}'::jsonb,
+  add column if not exists error_reason text,
+  add column if not exists message_id uuid references public.conversation_messages(id) on delete set null,
+  add column if not exists received_at timestamptz not null default now(),
+  add column if not exists created_at timestamptz not null default now();
+
+update public.meta_webhook_events
+set text = coalesce(text, message_text)
+where text is null and message_text is not null;
 
 create index if not exists meta_webhook_events_workspace_received_idx
   on public.meta_webhook_events (workspace_id, received_at desc);
