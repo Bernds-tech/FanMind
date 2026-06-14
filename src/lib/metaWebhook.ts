@@ -2,6 +2,7 @@ import {
   createFacebookWebhookConversationMessage,
   createMetaWebhookDebugEvent,
   findFacebookSocialConnectionByPageId,
+  findMetaWebhookFallbackWorkspaceId,
 } from "@/lib/supabase/server";
 
 export type MetaWebhookEvent = {
@@ -112,7 +113,11 @@ export async function processMetaWebhookPayload(
     if (connection.error) firstError ??= connection.error.message;
 
     if (!connection.connection) {
-      await createMetaWebhookDebugEvent({
+      const fallbackWorkspace = await findMetaWebhookFallbackWorkspaceId();
+      if (fallbackWorkspace.error) firstError ??= fallbackWorkspace.error.message;
+
+      const debugResult = await createMetaWebhookDebugEvent({
+        workspaceId: fallbackWorkspace.workspaceId,
         eventType: event.eventType,
         pageId: event.pageId,
         senderId: event.senderId,
@@ -124,6 +129,7 @@ export async function processMetaWebhookPayload(
           : "Keine Page-ID im Meta-Event erkannt.",
         receivedAt,
       });
+      if (debugResult.error) firstError ??= debugResult.error.message;
       skipped += 1;
       continue;
     }

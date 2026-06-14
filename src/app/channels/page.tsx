@@ -22,6 +22,7 @@ type ChannelsWorkspaceProps = {
   facebookConnection: SocialConnectionRow | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEventRow[];
+  metaWebhookError?: string | null;
 };
 
 async function logout() {
@@ -38,6 +39,7 @@ function ChannelsWorkspace({
   facebookConnection,
   facebookError,
   metaWebhookEvents,
+  metaWebhookError,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -68,6 +70,7 @@ function ChannelsWorkspace({
         facebookConnection={facebookConnection}
         facebookError={facebookError}
         metaWebhookEvents={metaWebhookEvents}
+        metaWebhookError={metaWebhookError}
       />
     </WorkspaceShell>
   );
@@ -126,6 +129,7 @@ export default async function ChannelsPage({
           facebookConnection={facebookConnection}
           facebookError={Boolean(params.facebook_error)}
           metaWebhookEvents={metaWebhookEventsResult?.events ?? []}
+          metaWebhookError={metaWebhookEventsResult?.error?.message ?? null}
         />
       ) : (
         <section
