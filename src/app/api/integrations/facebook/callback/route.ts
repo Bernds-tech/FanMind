@@ -94,8 +94,18 @@ export async function GET(request: Request) {
       webhookSubscribed,
     });
 
-    if (result.error)
+    if (result.error) {
+      console.error("Facebook social connection save failed", {
+        message: result.error.message,
+        name: result.error.name,
+        workspaceIdPresent: Boolean(state.workspaceId),
+        pageIdPresent: Boolean(page.id),
+        pageNamePresent: Boolean(page.name),
+        hasEncryptedToken: Boolean(encryptedToken),
+        webhookSubscribed,
+      });
       return redirectToChannels(appOrigin, "facebook_error=save");
+    }
     revalidatePath("/channels");
     return redirectToChannels(appOrigin, "connected=facebook");
   } catch (error) {
