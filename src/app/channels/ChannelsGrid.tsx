@@ -301,6 +301,15 @@ export function ChannelsGrid({
 }) {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [notice, setNotice] = useState("");
+  const [facebookErrorCode, setFacebookErrorCode] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!facebookError) return;
+    const params = new URLSearchParams(window.location.search);
+    setFacebookErrorCode(params.get("facebook_error"));
+  }, [facebookError]);
 
   useEffect(() => {
     if (!activeChannel) return;
@@ -460,7 +469,7 @@ export function ChannelsGrid({
             ) : null}
             {activeChannel.key === "facebook" && facebookError ? (
               <p className={styles.modalNotice} role="alert">
-                Facebook-Verbindung kann nicht gespeichert werden: Verschlüsselung nicht konfiguriert. Facebook-Verbindung ist serverseitig noch nicht vollständig konfiguriert.
+                {getFacebookErrorMessage(facebookErrorCode)}
               </p>
             ) : null}
             <div
@@ -534,4 +543,20 @@ export function ChannelsGrid({
       ) : null}
     </section>
   );
+}
+
+function getFacebookErrorMessage(errorCode: string | null): string {
+  if (errorCode === "no_page") {
+    return "Facebook hat keine verwaltbare Seite zurückgegeben. Bitte prüfe, ob du im Facebook-Dialog eine Seite ausgewählt hast und ob die App die Page-Berechtigungen pages_show_list, pages_read_engagement und pages_manage_metadata im Testmodus hat.";
+  }
+
+  if (errorCode === "oauth" || errorCode === "callback") {
+    return "Facebook-Verbindung konnte nicht abgeschlossen werden. Bitte starte die Verbindung erneut und prüfe, ob der Facebook-Dialog vollständig bestätigt wurde.";
+  }
+
+  if (errorCode === "encryption") {
+    return "Facebook-Verbindung kann nicht gespeichert werden: Verschlüsselung nicht konfiguriert. Facebook-Verbindung ist serverseitig noch nicht vollständig konfiguriert.";
+  }
+
+  return "Facebook-Verbindung konnte nicht gespeichert werden. Bitte prüfe die Facebook-Konfiguration und starte die Verbindung erneut.";
 }
