@@ -6,11 +6,16 @@ import {
   createContactFollowup,
   createContactMemory,
   createManualConversationMessage,
+  ensureConversationForContact,
+  saveReplyDraftAsNote,
+  updateConversationPriority,
+  updateConversationStatus,
   createWorkspaceContact,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
+  getWorkspaceConversations,
   updateWorkspaceContact,
 } from "@/lib/supabase/server";
 import {
@@ -208,6 +213,89 @@ export async function saveInboundMessage(formData: FormData) {
   redirect(`/fans/${contactId}`);
 }
 
+export async function saveReplyDraft(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+  const conversation = await getExistingOrNewConversation(
+    workspace.id,
+    contactId,
+    formValue(formData, "conversation_id"),
+  );
+
+  const result = await saveReplyDraftAsNote({
+    workspaceId: workspace.id,
+    conversationId: conversation.id,
+    contactId,
+    content: formValue(formData, "content"),
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/inbox");
+  redirect(`/fans/${contactId}?focus=reply&notice=draft_saved`);
+}
+
+export async function markConversationDone(formData: FormData) {
+  await updateConversationStatusAction(
+    formData,
+    "done",
+    "Konversation erledigt",
+    "done",
+  );
+}
+
+export async function markConversationWaiting(formData: FormData) {
+  await updateConversationStatusAction(
+    formData,
+    "waiting",
+    "Wartet auf Antwort im Originalkanal",
+    "waiting",
+  );
+}
+
+export async function reopenConversation(formData: FormData) {
+  await updateConversationStatusAction(
+    formData,
+    "open",
+    "Antwort vorbereiten",
+    "open",
+  );
+}
+
+export async function setConversationPriority(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+  const conversation = await getExistingOrNewConversation(
+    workspace.id,
+    contactId,
+    formValue(formData, "conversation_id"),
+  );
+  const priority = formValue(formData, "priority");
+
+  if (!["low", "normal", "medium", "high"].includes(priority)) {
+    throw new Error("Ungültige Priorität.");
+  }
+
+  const result = await updateConversationPriority({
+    workspaceId: workspace.id,
+    conversationId: conversation.id,
+    priority: priority as "low" | "normal" | "medium" | "high",
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/inbox");
+  redirect(`/fans/${contactId}?focus=reply&notice=priority_saved`);
+}
+
 export async function createFan(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
   const platforms = formPlatforms(formData, "source_platforms");
@@ -300,6 +388,73 @@ export async function updateFan(formData: FormData) {
   revalidatePath("/fans");
   revalidatePath("/dashboard");
   redirect("/fans");
+}
+
+async function getExistingOrNewConversation(
+  workspaceId: string,
+  contactId: string,
+  conversationId: string,
+) {
+  if (conversationId) {
+    const conversations = await getWorkspaceConversations(workspaceId);
+
+    if (conversations.error) {
+      throw new Error(conversations.error.message);
+    }
+
+    const existing = conversations.conversations.find(
+      (conversation) =>
+        conversation.id === conversationId && conversation.contact_id === contactId,
+    );
+
+    if (!existing) {
+      throw new Error("Conversation gehört nicht zum aktuellen Kontakt.");
+    }
+
+    return existing;
+  }
+
+  const ensured = await ensureConversationForContact({ workspaceId, contactId });
+
+  if (ensured.error || !ensured.conversation) {
+    throw new Error(
+      ensured.error?.message ?? "Conversation konnte nicht geladen werden.",
+    );
+  }
+
+  return ensured.conversation;
+}
+
+async function updateConversationStatusAction(
+  formData: FormData,
+  status: "open" | "waiting" | "done" | "archived",
+  nextStep: string,
+  notice: string,
+) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+  const conversation = await getExistingOrNewConversation(
+    workspace.id,
+    contactId,
+    formValue(formData, "conversation_id"),
+  );
+  const result = await updateConversationStatus({
+    workspaceId: workspace.id,
+    conversationId: conversation.id,
+    status,
+    nextStep,
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/inbox");
+
+  const returnTo = formValue(formData, "return_to");
+  redirect(returnTo === "inbox" ? `/inbox?notice=${notice}` : `/fans/${contactId}?focus=reply&notice=${notice}`);
 }
 
 function formValue(formData: FormData, key: string): string {
