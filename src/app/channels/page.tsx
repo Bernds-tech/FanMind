@@ -3,8 +3,10 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
+  getWorkspaceMetaWebhookEvents,
   getWorkspaceSocialConnections,
   signOutSupabaseServerSession,
+  type MetaWebhookEventRow,
   type SocialConnectionRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
@@ -19,6 +21,7 @@ type ChannelsWorkspaceProps = {
   contactCount: number;
   facebookConnection: SocialConnectionRow | null;
   facebookError?: boolean;
+  metaWebhookEvents: MetaWebhookEventRow[];
 };
 
 async function logout() {
@@ -34,6 +37,7 @@ function ChannelsWorkspace({
   contactCount,
   facebookConnection,
   facebookError,
+  metaWebhookEvents,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -63,6 +67,7 @@ function ChannelsWorkspace({
       <ChannelsGrid
         facebookConnection={facebookConnection}
         facebookError={facebookError}
+        metaWebhookEvents={metaWebhookEvents}
       />
     </WorkspaceShell>
   );
@@ -99,6 +104,9 @@ export default async function ChannelsPage({
   const socialConnectionsResult = workspace
     ? await getWorkspaceSocialConnections(workspace.id)
     : null;
+  const metaWebhookEventsResult = workspace
+    ? await getWorkspaceMetaWebhookEvents(workspace.id, 20)
+    : null;
   const facebookConnection =
     socialConnectionsResult?.connections.find(
       (connection) =>
@@ -117,6 +125,7 @@ export default async function ChannelsPage({
           contactCount={contactsResult?.contacts.length ?? 0}
           facebookConnection={facebookConnection}
           facebookError={Boolean(params.facebook_error)}
+          metaWebhookEvents={metaWebhookEventsResult?.events ?? []}
         />
       ) : (
         <section
