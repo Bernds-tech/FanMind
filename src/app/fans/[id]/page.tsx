@@ -9,9 +9,11 @@ import {
   getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
+  getWorkspaceConversations,
   signOutSupabaseServerSession,
   type ContactRow,
   type ConversationMessageRow,
+  type ConversationRow,
   type FollowupRow,
   type MemoryRow,
   type WorkspaceDashboardRow,
@@ -22,10 +24,18 @@ import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
 import styles from "./fan-detail.module.css";
 import { AiReplySuggestions } from "./AiReplySuggestions";
-import { saveInboundMessage } from "../actions";
+import {
+  markConversationDone,
+  markConversationWaiting,
+  reopenConversation,
+  saveInboundMessage,
+  saveReplyDraft,
+  setConversationPriority,
+} from "../actions";
 
 type FanDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ notice?: string | string[] }>;
 };
 
 type FanDetailWorkspaceProps = {
@@ -40,7 +50,10 @@ type FanDetailWorkspaceProps = {
   followupsError?: string;
   messages: ConversationMessageRow[];
   messagesError?: string;
+  conversation: ConversationRow | null;
+  conversationsError?: string;
   openFollowupCount: number;
+  notice?: string;
 };
 
 const statusLabels: Record<string, string> = {
@@ -70,7 +83,10 @@ function FanDetailWorkspace({
   followupsError,
   messages,
   messagesError,
+  conversation,
+  conversationsError,
   openFollowupCount,
+  notice,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -104,6 +120,12 @@ function FanDetailWorkspace({
           ← Zurück zur Fanliste
         </Link>
 
+        {notice ? (
+          <p className={styles.safeNotice}>
+            <strong>{formatNotice(notice)}</strong>
+          </p>
+        ) : null}
+
         {contactError ? (
           <p className={dashboardStyles.error}>
             <strong>Kontakt konnte nicht geladen werden.</strong>
@@ -120,6 +142,8 @@ function FanDetailWorkspace({
             memoriesError={memoriesError}
             messages={messages}
             messagesError={messagesError}
+            conversation={conversation}
+            conversationsError={conversationsError}
           />
         ) : (
           <FanNotFound />
@@ -137,6 +161,8 @@ function FanDetailContent({
   followupsError,
   messages,
   messagesError,
+  conversation,
+  conversationsError,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -145,6 +171,8 @@ function FanDetailContent({
   followupsError?: string;
   messages: ConversationMessageRow[];
   messagesError?: string;
+  conversation: ConversationRow | null;
+  conversationsError?: string;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const tags = contact.tags?.length
@@ -156,7 +184,7 @@ function FanDetailContent({
     followups.length,
   );
   const timeline = messages.length ? buildMessageTimeline(messages) : [];
-  const originalChatUrl = getOriginalChatUrl(contact, messages);
+  const originalChatUrl = getOriginalChatUrl(contact, messages, conversation);
   const originalActionLabel = getOriginalActionLabel(primaryChannel);
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
@@ -386,6 +414,12 @@ function FanDetailContent({
               <span>Webformular</span>
               <span>Notizen</span>
             </div>
+            {conversationsError ? (
+              <p className={dashboardStyles.error}>
+                <strong>Conversation-Daten konnten gerade nicht geladen werden.</strong>
+                <span>{conversationsError}</span>
+              </p>
+            ) : null}
             {messagesError ? (
               <p className={dashboardStyles.error}>
                 <strong>Nachrichten konnten nicht geladen werden.</strong>
@@ -432,34 +466,33 @@ function FanDetailContent({
                 Automatisches Senden deaktiviert
               </span>
             </div>
-            <div className={styles.replyBox}>
+            <ConversationStatusPanel conversation={conversation} />
+            <form action={saveReplyDraft} className={styles.replyBox}>
+              <input name="contact_id" type="hidden" value={contact.id} />
+              {conversation ? (
+                <input name="conversation_id" type="hidden" value={conversation.id} />
+              ) : null}
               <textarea
+                name="content"
+                required
+                maxLength={4000}
                 placeholder={`Antwort an ${contact.display_name} vorbereiten …`}
                 aria-label={`Antwort an ${contact.display_name} vorbereiten`}
               />
               <div className={styles.replyFooter}>
-                <button className={dashboardStyles.primaryButton} type="button">
-                  Nachricht vorbereiten
+                <button className={dashboardStyles.primaryButton} type="submit">
+                  Entwurf speichern
                 </button>
-                {originalChatUrl ? (
-                  <a
-                    className={dashboardStyles.secondaryButton}
-                    href={originalChatUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Original-Chat öffnen
-                  </a>
-                ) : (
-                  <span className={styles.originalChatMissing}>
-                    Original-Chat-Link noch nicht verbunden.
-                  </span>
-                )}
+                <OriginalChatAction actionLabel={originalActionLabel} url={originalChatUrl} />
+                <Link className={dashboardStyles.secondaryButton} href="/inbox">
+                  Zur Inbox
+                </Link>
                 <span className={styles.safeBadge}>
-                  Nur Vorschlag – manuelle Freigabe
+                  Entwurf gespeichert – noch nicht gesendet. Keine automatische Sendefunktion.
                 </span>
               </div>
-            </div>
+            </form>
+            <ConversationActionForms contactId={contact.id} conversation={conversation} />
           </article>
         </main>
 
@@ -546,6 +579,75 @@ function FanDetailContent({
         </aside>
       </section>
     </>
+  );
+}
+
+function ConversationStatusPanel({
+  conversation,
+}: {
+  conversation: ConversationRow | null;
+}) {
+  if (!conversation) {
+    return (
+      <div className={styles.conversationState}>
+        <span>Status: Offen</span>
+        <span>Priorität: Normal</span>
+        <span>Nächster Schritt: Antwort vorbereiten</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.conversationState}>
+      <span>Status: {formatConversationStatus(conversation.status)}</span>
+      <span>Priorität: {formatConversationPriority(conversation.priority)}</span>
+      <span>Nächster Schritt: {conversation.next_step || "Antwort vorbereiten"}</span>
+    </div>
+  );
+}
+
+function ConversationActionForms({
+  contactId,
+  conversation,
+}: {
+  contactId: string;
+  conversation: ConversationRow | null;
+}) {
+  return (
+    <div className={styles.conversationActions}>
+      {[markConversationDone, markConversationWaiting, reopenConversation].map(
+        (action, index) => (
+          <form action={action} key={index}>
+            <input name="contact_id" type="hidden" value={contactId} />
+            {conversation ? (
+              <input name="conversation_id" type="hidden" value={conversation.id} />
+            ) : null}
+            <button className={dashboardStyles.secondaryButton} type="submit">
+              {index === 0
+                ? "Als erledigt markieren"
+                : index === 1
+                  ? "Wartet auf Fan"
+                  : "Wieder öffnen"}
+            </button>
+          </form>
+        ),
+      )}
+      <form action={setConversationPriority} className={styles.priorityForm}>
+        <input name="contact_id" type="hidden" value={contactId} />
+        {conversation ? (
+          <input name="conversation_id" type="hidden" value={conversation.id} />
+        ) : null}
+        <select name="priority" defaultValue={conversation?.priority ?? "normal"}>
+          <option value="low">Niedrig</option>
+          <option value="normal">Normal</option>
+          <option value="medium">Mittel</option>
+          <option value="high">Hoch</option>
+        </select>
+        <button className={dashboardStyles.secondaryButton} type="submit">
+          Priorität ändern
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -743,11 +845,15 @@ function FollowupCard({
   followupsError,
   messages,
   messagesError,
+  conversation,
+  conversationsError,
 }: {
   followups: FollowupRow[];
   followupsError?: string;
   messages: ConversationMessageRow[];
   messagesError?: string;
+  conversation: ConversationRow | null;
+  conversationsError?: string;
 }) {
   return (
     <article className={dashboardStyles.moduleCard}>
@@ -861,7 +967,9 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
   return messages.map((message) => ({
     id: message.id,
     direction: formatDirection(message.direction),
-    type: formatMessageType(message.message_type),
+    type: message.direction === "note" && message.author_label === "Antwortentwurf"
+      ? "Antwortentwurf · nicht gesendet"
+      : formatMessageType(message.message_type),
     channel: formatSource(message.source_platform),
     time: formatDate(message.created_at),
     text: message.content,
@@ -882,6 +990,7 @@ function buildAiMessageContext(messages: ConversationMessageRow[]): string {
 function getOriginalChatUrl(
   contact: ContactRow,
   messages: ConversationMessageRow[] = [],
+  conversation?: ConversationRow | null,
 ): string | undefined {
   const latestMessageUrl = [...messages]
     .reverse()
@@ -889,6 +998,8 @@ function getOriginalChatUrl(
     .find((value) => value && /^https?:\/\//i.test(value));
 
   if (latestMessageUrl) return latestMessageUrl;
+  const conversationUrl = conversation?.reply_target_url || conversation?.source_url;
+  if (conversationUrl && /^https?:\/\//i.test(conversationUrl)) return conversationUrl;
   const metadata = contact as ContactRow & Record<string, unknown>;
 
   for (const key of [
@@ -918,6 +1029,14 @@ function getOriginalActionLabel(platform: string): string {
   if (normalized.includes("mail")) return "E-Mail öffnen";
 
   return "Original-Chat öffnen";
+}
+
+function formatConversationStatus(value: string): string {
+  return { open: "Offen", waiting: "Wartet", done: "Erledigt", archived: "Archiviert" }[value] ?? value;
+}
+
+function formatConversationPriority(value: string): string {
+  return { low: "Niedrig", normal: "Normal", medium: "Mittel", high: "Hoch" }[value] ?? value;
 }
 
 function formatDirection(value: string): string {
@@ -1005,6 +1124,19 @@ function formatDate(value: string | null): string {
   }).format(new Date(value));
 }
 
+function normalizeParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+}
+
+function formatNotice(value: string): string {
+  if (value === "draft_saved") return "Entwurf gespeichert – noch nicht gesendet.";
+  if (value === "done") return "Konversation als erledigt markiert. Es wurde nichts extern gesendet.";
+  if (value === "waiting") return "Konversation wartet auf Antwort im Originalkanal.";
+  if (value === "open") return "Konversation wieder geöffnet.";
+  if (value === "priority_saved") return "Priorität gespeichert.";
+  return value;
+}
+
 function getUserDisplayName(
   metadata: Record<string, unknown> | undefined,
   fallback: string,
@@ -1016,8 +1148,12 @@ function getUserDisplayName(
     : fallback;
 }
 
-export default async function FanDetailPage({ params }: FanDetailPageProps) {
+export default async function FanDetailPage({
+  params,
+  searchParams,
+}: FanDetailPageProps) {
   const { id } = await params;
+  const pageSearchParams = await searchParams;
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -1047,6 +1183,12 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
           contactResult.contact.id,
         )
       : null;
+  const conversationsResult = workspace
+    ? await getWorkspaceConversations(workspace.id)
+    : null;
+  const conversation =
+    conversationsResult?.conversations.find((item) => item.contact_id === id) ??
+    null;
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
@@ -1067,9 +1209,12 @@ export default async function FanDetailPage({ params }: FanDetailPageProps) {
           followupsError={followupsResult?.error?.message}
           messages={messagesResult?.messages ?? []}
           messagesError={messagesResult?.error?.message}
+          conversation={conversation}
+          conversationsError={conversationsResult?.error?.message}
           memories={memoriesResult?.memories ?? []}
           memoriesError={memoriesResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          notice={normalizeParam(pageSearchParams?.notice)}
         />
       ) : (
         <section

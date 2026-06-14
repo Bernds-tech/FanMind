@@ -16,6 +16,7 @@ import { countUniqueFans, getFanGroupKey } from "@/lib/fanIdentity";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
+import { markConversationDone, markConversationWaiting } from "../fans/actions";
 import styles from "./inbox.module.css";
 
 type InboxPageProps = {
@@ -37,13 +38,12 @@ type InboxWorkspaceProps = {
 
 type InboxFilter =
   | "all"
-  | "unread"
+  | "open"
+  | "waiting"
   | "due"
   | "high"
-  | "vip"
-  | "buyer"
   | "ai"
-  | "mine";
+  | "done";
 
 type InboxQueueItem = {
   key: string;
@@ -57,6 +57,9 @@ type InboxQueueItem = {
   messagePreview: string;
   conversationType: string;
   segment: string;
+  status: "Offen" | "Wartet" | "Erledigt" | "Archiviert";
+  statusValue: string;
+  conversationId?: string;
   priority: "Hoch" | "Mittel" | "Warm" | "Normal" | "Niedrig";
   priorityScore: number;
   waitingSince: string;
@@ -73,13 +76,12 @@ type InboxQueueItem = {
 
 const filterChips: { label: string; value: InboxFilter }[] = [
   { label: "Alle", value: "all" },
-  { label: "Ungelesen", value: "unread" },
+  { label: "Offen", value: "open" },
+  { label: "Wartet", value: "waiting" },
   { label: "Antwort fällig", value: "due" },
   { label: "Hohe Priorität", value: "high" },
-  { label: "VIP", value: "vip" },
-  { label: "Käufer", value: "buyer" },
   { label: "Mit KI vorbereitet", value: "ai" },
-  { label: "Wartet auf mich", value: "mine" },
+  { label: "Erledigt", value: "done" },
 ];
 
 async function logout() {
@@ -115,7 +117,7 @@ function InboxWorkspace({
       userLabel={userDisplayName || workspace.name || "Nutzer"}
       planLabel={workspace.plan_id}
       planMeta={workspace.role}
-      planStatus={workspace.plan_id === "starter" ? "Aktiv" : "Demo"}
+      planStatus="Aktiv"
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
@@ -268,7 +270,7 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
         <span>Kanal</span>
         <span>Letzte Nachricht</span>
         <span>Typ</span>
-        <span>Segment</span>
+        <span>Status</span>
         <span>Priorität</span>
         <span>Wartet seit</span>
         <span>Owner</span>
@@ -304,7 +306,7 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
             </span>
             <span className={styles.messageCell}>{item.messagePreview}</span>
             <span>{item.conversationType}</span>
-            <span>{item.segment}</span>
+            <span>{item.status}</span>
             <span>
               <b
                 className={`${styles.priorityBadge} ${
@@ -353,6 +355,22 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
               <Link href={`/fans/${item.contactId}?focus=followup`}>
                 Follow-up planen
               </Link>
+              {item.conversationId ? (
+                <>
+                  <form action={markConversationDone}>
+                    <input name="contact_id" type="hidden" value={item.contactId} />
+                    <input name="conversation_id" type="hidden" value={item.conversationId} />
+                    <input name="return_to" type="hidden" value="inbox" />
+                    <button type="submit">Als erledigt</button>
+                  </form>
+                  <form action={markConversationWaiting}>
+                    <input name="contact_id" type="hidden" value={item.contactId} />
+                    <input name="conversation_id" type="hidden" value={item.conversationId} />
+                    <input name="return_to" type="hidden" value="inbox" />
+                    <button type="submit">Wartet</button>
+                  </form>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -416,6 +434,7 @@ function buildConversationInboxQueue(
 
       return {
         key: conversation.id,
+        conversationId: conversation.id,
         contactId: contact.id,
         fanName: contact.display_name || contact.handle || "Unbenannter Fan",
         handle: contact.handle || "Kein Handle hinterlegt",
@@ -430,6 +449,8 @@ function buildConversationInboxQueue(
           "Conversation ohne gespeicherte Vorschau.",
         conversationType: formatConversationType(conversation.source_type),
         segment: getSegment(contact),
+        status: formatConversationStatus(conversation.status),
+        statusValue: conversation.status,
         priority,
         priorityScore: getPriorityScore(priority),
         waitingSince: formatWaitingSince(waitingMinutes),
@@ -526,6 +547,8 @@ function createQueueItem(
       latestFollowup,
     ),
     segment: getSegment(contact),
+    status: "Offen",
+    statusValue: "open",
     priority,
     priorityScore: getPriorityScore(priority) + (latestFollowup ? 20 : 0),
     waitingSince: formatWaitingSince(waitingMinutes),
@@ -557,6 +580,13 @@ function getConversationPriority(
   if (value === "medium") return "Mittel";
   if (value === "low") return "Niedrig";
   return "Normal";
+}
+
+function formatConversationStatus(value: string): InboxQueueItem["status"] {
+  if (value === "waiting") return "Wartet";
+  if (value === "done") return "Erledigt";
+  if (value === "archived") return "Archiviert";
+  return "Offen";
 }
 
 function formatAiStatus(value: string | null): InboxQueueItem["aiStatus"] {
@@ -760,14 +790,13 @@ function filterQueueItems(
 
   return items.filter((item) => {
     const matchesFilter =
-      filter === "all" ||
-      (filter === "unread" && item.unread) ||
+      (filter === "all" && item.statusValue !== "done") ||
+      (filter === "open" && item.statusValue === "open") ||
+      (filter === "waiting" && item.statusValue === "waiting") ||
       (filter === "due" && item.dueToday) ||
       (filter === "high" && item.priority === "Hoch") ||
-      (filter === "vip" && item.segment === "VIP") ||
-      (filter === "buyer" && item.segment === "Käufer") ||
       (filter === "ai" && item.aiStatus === "KI-ready") ||
-      (filter === "mine" && item.owner === "Team Inbox");
+      (filter === "done" && item.statusValue === "done");
 
     if (!matchesFilter) return false;
     if (!normalizedQuery) return true;
@@ -804,9 +833,9 @@ function getInboxKpis(items: InboxQueueItem[]) {
       meta: "pro Fan dedupliziert",
     },
     {
-      label: "Ungelesen",
-      value: String(items.filter((item) => item.unread).length),
-      meta: "offene Follow-ups",
+      label: "Wartet",
+      value: String(items.filter((item) => item.statusValue === "waiting").length),
+      meta: "auf Fan-Antwort",
     },
     {
       label: "Antwort fällig heute",

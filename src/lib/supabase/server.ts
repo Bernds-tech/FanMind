@@ -145,6 +145,9 @@ type CreateMemoryInput = {
   importance?: string | null;
 };
 
+type ConversationStatus = "open" | "waiting" | "done" | "archived";
+type ConversationPriority = "low" | "normal" | "medium" | "high";
+
 type CreateManualConversationMessageInput = {
   workspaceId: string;
   contactId: string;
@@ -214,6 +217,11 @@ type ConversationResult = {
 
 type ConversationMessageCreateResult = {
   message: ConversationMessageRow | null;
+  conversation: ConversationRow | null;
+  error: Error | null;
+};
+
+type ConversationUpdateResult = {
   conversation: ConversationRow | null;
   error: Error | null;
 };
@@ -681,8 +689,7 @@ export async function getWorkspaceConversations(
 
   return {
     conversations: (result.data ?? []).filter(
-      (conversation) =>
-        conversation.status !== "archived" && conversation.status !== "done",
+      (conversation) => conversation.status !== "archived",
     ),
     error: null,
   };
@@ -894,6 +901,150 @@ export async function createManualConversationMessage(
   return {
     message: messageResult.data,
     conversation: updatedConversation.data ?? conversationResult.conversation,
+    error: updatedConversation.error,
+  };
+}
+
+export async function updateConversationStatus(input: {
+  workspaceId: string;
+  conversationId: string;
+  status: ConversationStatus;
+  nextStep?: string | null;
+}): Promise<ConversationUpdateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const now = new Date().toISOString();
+  const values: Record<string, string | null> = {
+    status: input.status,
+    updated_at: now,
+  };
+
+  if (input.nextStep !== undefined) {
+    values.next_step = normalizeOptionalText(input.nextStep);
+  }
+
+  const result = await postgrestUpdate<ConversationRow>(
+    "conversations",
+    values,
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.conversationId],
+    ],
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return conversationUpdateError(
+      `Conversation-Status konnte nicht gespeichert werden: ${withOptionalSchemaHint(result.error.message, "conversations")}`,
+    );
+  }
+
+  return { conversation: result.data, error: null };
+}
+
+export async function updateConversationPriority(input: {
+  workspaceId: string;
+  conversationId: string;
+  priority: ConversationPriority;
+}): Promise<ConversationUpdateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const result = await postgrestUpdate<ConversationRow>(
+    "conversations",
+    { priority: input.priority, updated_at: new Date().toISOString() },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.conversationId],
+    ],
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return conversationUpdateError(
+      `Conversation-Priorität konnte nicht gespeichert werden: ${withOptionalSchemaHint(result.error.message, "conversations")}`,
+    );
+  }
+
+  return { conversation: result.data, error: null };
+}
+
+export async function saveReplyDraftAsNote(input: {
+  workspaceId: string;
+  conversationId: string;
+  contactId: string;
+  content: string;
+}): Promise<ConversationMessageCreateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationMessageCreateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const content = input.content.trim();
+
+  if (!content) {
+    return conversationMessageCreateError("Antwortentwurf ist erforderlich.");
+  }
+
+  const messageResult = await postgrestRequest<ConversationMessageRow>(
+    "conversation_messages",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      conversation_id: input.conversationId,
+      contact_id: input.contactId,
+      direction: "note",
+      message_type: "note",
+      source_platform: "manual",
+      author_label: "Antwortentwurf",
+      content,
+    },
+    accessToken,
+    { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
+  );
+
+  if (messageResult.error) {
+    return conversationMessageCreateError(
+      `Antwortentwurf konnte nicht gespeichert werden: ${withOptionalSchemaHint(messageResult.error.message, "conversation_messages")}`,
+    );
+  }
+
+  const updatedConversation = await postgrestUpdate<ConversationRow>(
+    "conversations",
+    {
+      last_message_preview: "Antwortentwurf gespeichert",
+      ai_status: content.length > 20 ? "ready" : "partial",
+      next_step: "Im Originalkanal manuell senden",
+      updated_at: new Date().toISOString(),
+    },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.conversationId],
+      ["contact_id", input.contactId],
+    ],
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  return {
+    message: messageResult.data,
+    conversation: updatedConversation.data,
     error: updatedConversation.error,
   };
 }
@@ -1481,6 +1632,10 @@ function conversationMessageCreateError(
   message: string,
 ): ConversationMessageCreateResult {
   return { message: null, conversation: null, error: new Error(message) };
+}
+
+function conversationUpdateError(message: string): ConversationUpdateResult {
+  return { conversation: null, error: new Error(message) };
 }
 
 function followupsError(message: string): FollowupsResult {
