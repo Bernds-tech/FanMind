@@ -196,6 +196,8 @@ export type MetaWebhookEventRow = {
   event_type: string;
   page_id: string | null;
   sender_id: string | null;
+  recipient_id: string | null;
+  text: string | null;
   message_text: string | null;
   raw_payload: unknown;
   status: string;
@@ -411,7 +413,7 @@ const WORKSPACE_VOICE_PROFILE_COLUMNS =
 const SOCIAL_CONNECTION_COLUMNS =
   "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,created_at,updated_at";
 const META_WEBHOOK_EVENT_COLUMNS =
-  "id,workspace_id,social_connection_id,platform,source,event_type,page_id,sender_id,message_text,raw_payload,status,error_reason,message_id,received_at,created_at";
+  "id,workspace_id,social_connection_id,platform,source,event_type,page_id,sender_id,recipient_id,text,message_text,raw_payload,status,error_reason,message_id,received_at,created_at";
 const FOLLOWUP_COLUMNS =
   "id,workspace_id,contact_id,due_date,priority,reason,status,created_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
@@ -796,6 +798,7 @@ export async function createMetaWebhookDebugEvent(input: {
   eventType: "feed" | "messages" | "unknown";
   pageId?: string | null;
   senderId?: string | null;
+  recipientId?: string | null;
   messageText?: string | null;
   rawPayload: unknown;
   status: string;
@@ -825,6 +828,8 @@ export async function createMetaWebhookDebugEvent(input: {
       event_type: input.eventType,
       page_id: normalizeOptionalText(input.pageId),
       sender_id: normalizeOptionalText(input.senderId),
+      recipient_id: normalizeOptionalText(input.recipientId),
+      text: normalizeOptionalText(input.messageText),
       message_text: normalizeOptionalText(input.messageText),
       raw_payload: input.rawPayload ?? {},
       status: input.status,

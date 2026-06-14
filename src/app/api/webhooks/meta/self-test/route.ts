@@ -1,5 +1,10 @@
 import { revalidatePath } from "next/cache";
-import { getSupabaseServerUser, getUserWorkspaceDashboard, getWorkspaceSocialConnections } from "@/lib/supabase/server";
+import {
+  checkMetaWebhookStorageHealth,
+  getSupabaseServerUser,
+  getUserWorkspaceDashboard,
+  getWorkspaceSocialConnections,
+} from "@/lib/supabase/server";
 import { processMetaWebhookPayload } from "@/lib/metaWebhook";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +16,20 @@ export async function POST() {
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
   if (!workspace) return Response.json({ ok: false, error: "Kein Workspace gefunden." }, { status: 403 });
+
+  const storageHealth = await checkMetaWebhookStorageHealth();
+  if (!storageHealth.serviceRoleConfigured) {
+    return Response.json(
+      { ok: false, error: "Service-Role-Key fehlt: SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert." },
+      { status: 503 },
+    );
+  }
+  if (!storageHealth.tableReadable) {
+    return Response.json(
+      { ok: false, error: `Meta-Webhook-Tabelle fehlt oder ist nicht lesbar: ${storageHealth.error?.message ?? "public.meta_webhook_events konnte nicht gelesen werden."}` },
+      { status: 503 },
+    );
+  }
 
   const connectionsResult = await getWorkspaceSocialConnections(workspace.id);
   const facebookConnection = connectionsResult.connections.find(
