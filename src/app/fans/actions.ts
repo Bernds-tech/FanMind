@@ -213,6 +213,39 @@ export async function saveInboundMessage(formData: FormData) {
   redirect(`/fans/${contactId}`);
 }
 
+export async function saveManualSentReply(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const user = await getSupabaseServerUser();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+  const conversation = await getExistingOrNewConversation(
+    workspace.id,
+    contactId,
+    formValue(formData, "conversation_id"),
+  );
+
+  const result = await createManualConversationMessage({
+    workspaceId: workspace.id,
+    contactId,
+    direction: "outbound",
+    messageType: "manual",
+    sourcePlatform: conversation.source_platform || formValue(formData, "source_platform") || "manual",
+    sourceUrl: conversation.source_url,
+    replyTargetUrl: conversation.reply_target_url,
+    authorLabel: getActionUserLabel(user.data.user, workspace.name),
+    userId: user.data.user?.id,
+    content: formValue(formData, "content"),
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/inbox");
+  redirect(`/fans/${contactId}?focus=reply&notice=manual_sent_saved`);
+}
+
 export async function saveReplyDraft(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
   const contactId = formValue(formData, "contact_id");
@@ -455,6 +488,14 @@ async function updateConversationStatusAction(
 
   const returnTo = formValue(formData, "return_to");
   redirect(returnTo === "inbox" ? `/inbox?notice=${notice}` : `/fans/${contactId}?focus=reply&notice=${notice}`);
+}
+
+function getActionUserLabel(user: { email?: string; user_metadata?: Record<string, unknown> } | null, fallback: string): string {
+  const label = user?.user_metadata?.display_name ?? user?.user_metadata?.full_name;
+
+  if (typeof label === "string" && label.trim()) return label.trim();
+  if (user?.email) return user.email;
+  return fallback || "Team";
 }
 
 function formValue(formData: FormData, key: string): string {

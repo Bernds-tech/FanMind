@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  getContactAiProfile,
   getContactConversationMessages,
+  getConversationSummary,
   getContactFollowups,
   getContactMemories,
   getOpenFollowupCount,
@@ -10,13 +12,17 @@ import {
   getWorkspaceContact,
   getWorkspaceContacts,
   getWorkspaceConversations,
+  getWorkspaceVoiceProfile,
   signOutSupabaseServerSession,
+  type ContactAiProfileRow,
   type ContactRow,
+  type ConversationSummaryRow,
   type ConversationMessageRow,
   type ConversationRow,
   type FollowupRow,
   type MemoryRow,
   type WorkspaceDashboardRow,
+  type WorkspaceVoiceProfileRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
@@ -29,6 +35,7 @@ import {
   markConversationWaiting,
   reopenConversation,
   saveInboundMessage,
+  saveManualSentReply,
   saveReplyDraft,
   setConversationPriority,
 } from "../actions";
@@ -54,6 +61,9 @@ type FanDetailWorkspaceProps = {
   conversationsError?: string;
   openFollowupCount: number;
   notice?: string;
+  conversationSummary: ConversationSummaryRow | null;
+  contactAiProfile: ContactAiProfileRow | null;
+  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -87,6 +97,9 @@ function FanDetailWorkspace({
   conversationsError,
   openFollowupCount,
   notice,
+  conversationSummary,
+  contactAiProfile,
+  workspaceVoiceProfile,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -144,6 +157,9 @@ function FanDetailWorkspace({
             messagesError={messagesError}
             conversation={conversation}
             conversationsError={conversationsError}
+            conversationSummary={conversationSummary}
+            contactAiProfile={contactAiProfile}
+            workspaceVoiceProfile={workspaceVoiceProfile}
           />
         ) : (
           <FanNotFound />
@@ -163,6 +179,9 @@ function FanDetailContent({
   messagesError,
   conversation,
   conversationsError,
+  conversationSummary,
+  contactAiProfile,
+  workspaceVoiceProfile,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -173,6 +192,9 @@ function FanDetailContent({
   messagesError?: string;
   conversation: ConversationRow | null;
   conversationsError?: string;
+  conversationSummary: ConversationSummaryRow | null;
+  contactAiProfile: ContactAiProfileRow | null;
+  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const tags = contact.tags?.length
@@ -370,6 +392,11 @@ function FanDetailContent({
             emptyBody="KI-Empfehlungen können über sichere Server Actions gespeichert werden."
             error={followupsError}
           />
+          <ProfileStatusCard
+            conversationSummary={conversationSummary}
+            contactAiProfile={contactAiProfile}
+            workspaceVoiceProfile={workspaceVoiceProfile}
+          />
           <article className={styles.card}>
             <div className={styles.cardHeader}>
               <div>
@@ -467,7 +494,7 @@ function FanDetailContent({
               </span>
             </div>
             <ConversationStatusPanel conversation={conversation} />
-            <form action={saveReplyDraft} className={styles.replyBox}>
+            <form className={styles.replyBox}>
               <input name="contact_id" type="hidden" value={contact.id} />
               {conversation ? (
                 <input name="conversation_id" type="hidden" value={conversation.id} />
@@ -480,15 +507,18 @@ function FanDetailContent({
                 aria-label={`Antwort an ${contact.display_name} vorbereiten`}
               />
               <div className={styles.replyFooter}>
-                <button className={dashboardStyles.primaryButton} type="submit">
+                <button className={dashboardStyles.primaryButton} formAction={saveReplyDraft} type="submit">
                   Entwurf speichern
+                </button>
+                <button className={dashboardStyles.secondaryButton} formAction={saveManualSentReply} type="submit">
+                  Als manuell gesendet speichern
                 </button>
                 <OriginalChatAction actionLabel={originalActionLabel} url={originalChatUrl} />
                 <Link className={dashboardStyles.secondaryButton} href="/inbox">
                   Zur Inbox
                 </Link>
                 <span className={styles.safeBadge}>
-                  Entwurf gespeichert – noch nicht gesendet. Keine automatische Sendefunktion.
+                  Es wird nichts automatisch gesendet. Manuell gesendet im Originalkanal.
                 </span>
               </div>
             </form>
@@ -540,7 +570,7 @@ function FanDetailContent({
               handle: contact.handle,
               sourcePlatform: contact.source_platform,
               originalChatUrl,
-              storedConversationContext: buildAiMessageContext(messages),
+              storedConversationContext: buildAiMessageContext(messages, conversationSummary, contactAiProfile, workspaceVoiceProfile),
               originalActionLabel,
               language: contact.language,
               status: contact.status,
@@ -579,6 +609,44 @@ function FanDetailContent({
         </aside>
       </section>
     </>
+  );
+}
+
+function ProfileStatusCard({
+  conversationSummary,
+  contactAiProfile,
+  workspaceVoiceProfile,
+}: {
+  conversationSummary: ConversationSummaryRow | null;
+  contactAiProfile: ContactAiProfileRow | null;
+  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
+}) {
+  return (
+    <article className={styles.card}>
+      <div className={styles.cardHeader}>
+        <div>
+          <p className={dashboardStyles.eyebrow}>Memory & Stilprofile</p>
+          <h3>Profile im Aufbau</h3>
+        </div>
+        <span className={styles.pill}>MVP</span>
+      </div>
+      <InfoBlock
+        title="Fan-Profil im Aufbau"
+        body={contactAiProfile
+          ? `Sprache: ${contactAiProfile.language ?? "unbekannt"} · Ton: ${contactAiProfile.tone ?? "im Aufbau"} · Quellen: ${contactAiProfile.source_message_count ?? 0} inbound Nachrichten.`
+          : "Noch keine echten Fan-Erkenntnisse gespeichert. Fan-Profil lernt nur aus inbound Nachrichten."}
+      />
+      <InfoBlock
+        title="Workspace-Schreibstil im Aufbau"
+        body={workspaceVoiceProfile
+          ? `Ton: ${workspaceVoiceProfile.tone ?? "im Aufbau"} · Beispiele: ${workspaceVoiceProfile.examples_count ?? 0} manuell bestätigte Antworten.`
+          : "Noch kein Schreibstilprofil gespeichert. Nur bestätigte manuell gesendete Antworten verbessern den Workspace-Schreibstil."}
+      />
+      <InfoBlock
+        title="Conversation Summary"
+        body={conversationSummary?.summary || "Noch keine Langzeit-Zusammenfassung vorhanden."}
+      />
+    </article>
   );
 }
 
@@ -977,14 +1045,27 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
   }));
 }
 
-function buildAiMessageContext(messages: ConversationMessageRow[]): string {
-  return messages
-    .slice(-8)
+function buildAiMessageContext(
+  messages: ConversationMessageRow[],
+  conversationSummary: ConversationSummaryRow | null,
+  contactAiProfile: ContactAiProfileRow | null,
+  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null,
+): string {
+  const profileContext = [
+    conversationSummary?.summary ? `Conversation Summary: ${conversationSummary.summary}` : "",
+    contactAiProfile ? `Fan-Profil: Sprache ${contactAiProfile.language ?? "unbekannt"}, Ton ${contactAiProfile.tone ?? "im Aufbau"}, Quellen ${contactAiProfile.source_message_count ?? 0}.` : "",
+    workspaceVoiceProfile ? `Workspace-Schreibstil: Ton ${workspaceVoiceProfile.tone ?? "im Aufbau"}, Beispiele ${workspaceVoiceProfile.examples_count ?? 0}.` : "",
+    "Sicherheitsgrenze: nichts automatisch senden; Antwort nur als Entwurf oder manuell gesendet dokumentieren.",
+  ].filter(Boolean).join("\n");
+  const recentMessages = messages
+    .slice(-50)
     .map(
       (message) =>
         `${formatDate(message.created_at)} · ${formatDirection(message.direction)} · ${formatSource(message.source_platform)} · ${formatMessageType(message.message_type)}: ${message.content}`,
     )
     .join("\n");
+
+  return [profileContext, recentMessages].filter(Boolean).join("\n\n");
 }
 
 function getOriginalChatUrl(
@@ -1192,6 +1273,15 @@ export default async function FanDetailPage({
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
+  const conversationSummaryResult = workspace && conversation
+    ? await getConversationSummary({ workspaceId: workspace.id, conversationId: conversation.id })
+    : null;
+  const contactAiProfileResult = workspace && contactResult?.contact
+    ? await getContactAiProfile(workspace.id, contactResult.contact.id)
+    : null;
+  const workspaceVoiceProfileResult = workspace
+    ? await getWorkspaceVoiceProfile(workspace.id, data.user.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -1215,6 +1305,9 @@ export default async function FanDetailPage({
           memoriesError={memoriesResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
           notice={normalizeParam(pageSearchParams?.notice)}
+          conversationSummary={conversationSummaryResult?.summary ?? null}
+          contactAiProfile={contactAiProfileResult?.profile ?? null}
+          workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
         />
       ) : (
         <section
