@@ -34,6 +34,18 @@ export type FacebookPage = {
   scopes: string[];
 };
 
+export type FacebookTokenDiagnostics = {
+  app_id?: string;
+  is_valid?: boolean;
+  user_id?: string;
+  scopes?: string[];
+  granular_scopes?: Array<{
+    scope?: string;
+    target_ids?: string[];
+  }>;
+  error?: { message?: string; code?: number; type?: string };
+};
+
 export function getFacebookOAuthUrl(state: string): string {
   const appId = requireEnv("META_APP_ID");
   const redirectUri = requireEnv("META_REDIRECT_URI");
@@ -43,10 +55,7 @@ export function getFacebookOAuthUrl(state: string): string {
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("auth_type", "rerequest");
-  url.searchParams.set(
-    "scope",
-    REQUIRED_FACEBOOK_PAGE_PERMISSIONS.join(","),
-  );
+  url.searchParams.set("scope", REQUIRED_FACEBOOK_PAGE_PERMISSIONS.join(","));
   return url.toString();
 }
 
@@ -209,6 +218,16 @@ export async function fetchFacebookPages(
       : null,
   });
 
+  const diagnostics = await fetchFacebookTokenDiagnostics(userAccessToken);
+  const targetIds = getFacebookGranularPageTargetIds(diagnostics);
+  if (targetIds.length === 0) return [];
+
+  const recoveredPages = await fetchFacebookPagesFromGranularTargets(
+    userAccessToken,
+    targetIds,
+  );
+  if (recoveredPages.length > 0) return recoveredPages;
+
   return [];
 }
 
@@ -219,6 +238,137 @@ type FacebookRawPage = {
   perms?: string[];
   tasks?: string[];
 };
+
+export async function fetchFacebookTokenDiagnostics(
+  userAccessToken: string,
+): Promise<FacebookTokenDiagnostics | null> {
+  const url = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/debug_token`,
+  );
+  url.searchParams.set("input_token", userAccessToken);
+  url.searchParams.set(
+    "access_token",
+    `${requireEnv("META_APP_ID")}|${requireEnv("META_APP_SECRET")}`,
+  );
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as {
+    data?: FacebookTokenDiagnostics;
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
+  const diagnostics = payload?.data ?? null;
+  const error = payload?.error ?? diagnostics?.error;
+
+  console.info("Facebook token diagnostics", {
+    httpStatus: response.status,
+    appId: diagnostics?.app_id,
+    isValid: diagnostics?.is_valid,
+    userIdPresent: Boolean(diagnostics?.user_id),
+    scopes: diagnostics?.scopes ?? [],
+    granularScopes: (diagnostics?.granular_scopes ?? []).map((entry) => ({
+      scope: entry.scope,
+      targetCount: entry.target_ids?.length ?? 0,
+    })),
+    errorCode: error?.code,
+    errorType: error?.type,
+    errorMessage: error?.message,
+  });
+
+  if (!response.ok) {
+    logFacebookApiError("Facebook debug_token fetch failed", error);
+    return null;
+  }
+
+  return diagnostics;
+}
+
+function getFacebookGranularPageTargetIds(
+  diagnostics: FacebookTokenDiagnostics | null,
+): string[] {
+  const relevantScopes = new Set<string>(REQUIRED_FACEBOOK_PAGE_PERMISSIONS);
+  const targetCounts = new Map<string, number>();
+
+  for (const granularScope of diagnostics?.granular_scopes ?? []) {
+    if (!granularScope.scope || !relevantScopes.has(granularScope.scope)) {
+      continue;
+    }
+
+    for (const targetId of granularScope.target_ids ?? []) {
+      if (!targetId) continue;
+      targetCounts.set(targetId, (targetCounts.get(targetId) ?? 0) + 1);
+    }
+  }
+
+  const preferredTargets = [...targetCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([targetId]) => targetId);
+  const targetIds =
+    preferredTargets.length > 0 ? preferredTargets : [...targetCounts.keys()];
+
+  console.info("Facebook granular page targets detected", {
+    targetCount: targetIds.length,
+  });
+
+  return targetIds;
+}
+
+async function fetchFacebookPagesFromGranularTargets(
+  userAccessToken: string,
+  targetIds: string[],
+): Promise<FacebookPage[]> {
+  const pages: FacebookPage[] = [];
+
+  for (const targetId of targetIds) {
+    const page = await fetchFacebookPageById(userAccessToken, targetId);
+    if (!page) continue;
+
+    console.info("Facebook page recovered from granular scope target", {
+      hasPageAccessToken: Boolean(page.accessToken),
+    });
+    pages.push(page);
+  }
+
+  return pages;
+}
+
+async function fetchFacebookPageById(
+  userAccessToken: string,
+  pageId: string,
+): Promise<FacebookPage | null> {
+  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}`);
+  url.searchParams.set("fields", "id,name,access_token,tasks,perms");
+  url.searchParams.set("access_token", userAccessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as
+    | (FacebookRawPage & {
+        error?: { message?: string; code?: number; type?: string };
+      })
+    | null;
+
+  console.info("Facebook direct page fetch diagnostics", {
+    httpStatus: response.status,
+    hasPage: Boolean(payload?.id && payload?.name),
+    hasPageAccessToken: Boolean(payload?.access_token),
+    errorCode: payload?.error?.code,
+    errorType: payload?.error?.type,
+    errorMessage: payload?.error?.message,
+  });
+
+  if (!response.ok) {
+    logFacebookApiError("Facebook direct page fetch failed", payload?.error);
+    return null;
+  }
+
+  if (!payload?.id || !payload.name) return null;
+
+  return {
+    id: payload.id,
+    name: payload.name,
+    accessToken: payload.access_token ?? null,
+    scopes: payload.tasks ?? payload.perms ?? [],
+  };
+}
 
 type FacebookPagesFetchResult = {
   pages: FacebookPage[];
