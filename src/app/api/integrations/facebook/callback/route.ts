@@ -19,13 +19,14 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const appOrigin = getCanonicalAppOrigin(url);
   const code = url.searchParams.get("code");
   const state = verifyFacebookOAuthState(url.searchParams.get("state"));
 
   const { data } = await getSupabaseServerUser();
   if (!data.user) redirect("/login");
   if (!code || !state || state.userId !== data.user.id) {
-    redirect("/channels?facebook_error=oauth");
+    return redirectToChannels(appOrigin, "facebook_error=oauth");
   }
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
@@ -33,24 +34,22 @@ export async function GET(request: Request) {
     !workspaceResult.workspace ||
     workspaceResult.workspace.id !== state.workspaceId
   ) {
-    redirect("/channels?facebook_error=workspace");
+    return redirectToChannels(appOrigin, "facebook_error=workspace");
   }
 
   try {
     const userToken = await exchangeFacebookCode(code);
     const pages = await fetchFacebookPages(userToken);
     const page = pages[0];
-    if (!page)
-      return Response.redirect(
-        new URL("/channels?facebook_error=no_page", url),
-        302,
-      );
+    if (!page) {
+      console.warn("Facebook callback did not receive a manageable page", {
+        pageCount: pages.length,
+      });
+      return redirectToChannels(appOrigin, "facebook_error=no_page");
+    }
 
     if (page.accessToken && !isTokenEncryptionConfigured()) {
-      return Response.redirect(
-        new URL("/channels?facebook_error=encryption", url),
-        302,
-      );
+      return redirectToChannels(appOrigin, "facebook_error=encryption");
     }
 
     const encryptedToken = page.accessToken
@@ -58,10 +57,7 @@ export async function GET(request: Request) {
       : null;
 
     if (page.accessToken && !encryptedToken) {
-      return Response.redirect(
-        new URL("/channels?facebook_error=encryption", url),
-        302,
-      );
+      return redirectToChannels(appOrigin, "facebook_error=encryption");
     }
 
     const webhookSubscribed = page.accessToken
@@ -84,16 +80,40 @@ export async function GET(request: Request) {
     });
 
     if (result.error)
-      return Response.redirect(
-        new URL("/channels?facebook_error=save", url),
-        302,
-      );
+      return redirectToChannels(appOrigin, "facebook_error=save");
     revalidatePath("/channels");
-    return Response.redirect(new URL("/channels?connected=facebook", url), 302);
+    return redirectToChannels(appOrigin, "connected=facebook");
+  } catch (error) {
+    console.error("Facebook OAuth callback failed", {
+      message:
+        error instanceof Error ? error.message : "Unknown callback error",
+    });
+    return redirectToChannels(appOrigin, "facebook_error=callback");
+  }
+}
+
+function redirectToChannels(appOrigin: string, query: string): Response {
+  return Response.redirect(new URL(`/channels?${query}`, appOrigin), 302);
+}
+
+function getCanonicalAppOrigin(requestUrl: URL): string {
+  const configuredAppUrl = parseOrigin(process.env.FANMIND_APP_URL);
+  if (configuredAppUrl) return configuredAppUrl;
+
+  const metaRedirectOrigin = parseOrigin(process.env.META_REDIRECT_URI);
+  if (metaRedirectOrigin) return metaRedirectOrigin;
+
+  return requestUrl.origin;
+}
+
+function parseOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.origin;
   } catch {
-    return Response.redirect(
-      new URL("/channels?facebook_error=callback", url),
-      302,
-    );
+    return null;
   }
 }

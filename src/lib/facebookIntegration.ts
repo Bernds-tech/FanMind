@@ -91,13 +91,15 @@ export async function exchangeFacebookCode(code: string): Promise<string> {
   const response = await fetch(url, { cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as {
     access_token?: string;
-    error?: { message?: string };
+    error?: { message?: string; code?: number; type?: string };
   } | null;
-  if (!response.ok || !payload?.access_token)
+  if (!response.ok || !payload?.access_token) {
+    logFacebookApiError("Facebook OAuth code exchange failed", payload?.error);
     throw new Error(
       payload?.error?.message ??
         "Facebook OAuth-Code konnte nicht getauscht werden.",
     );
+  }
   return payload.access_token;
 }
 
@@ -119,13 +121,17 @@ export async function fetchFacebookPages(
       perms?: string[];
       tasks?: string[];
     }>;
-    error?: { message?: string };
+    error?: { message?: string; code?: number; type?: string };
   } | null;
-  if (!response.ok)
+
+  if (!response.ok) {
+    logFacebookApiError("Facebook pages fetch failed", payload?.error);
     throw new Error(
       payload?.error?.message ?? "Facebook Pages konnten nicht geladen werden.",
     );
-  return (payload?.data ?? [])
+  }
+
+  const pages = (payload?.data ?? [])
     .filter((page) => page.id && page.name)
     .map((page) => ({
       id: page.id!,
@@ -133,6 +139,22 @@ export async function fetchFacebookPages(
       accessToken: page.access_token ?? null,
       scopes: page.tasks ?? page.perms ?? [],
     }));
+
+  if (pages.length === 0) {
+    console.warn("Facebook pages fetch returned 0 pages");
+  }
+
+  const pagesMissingAccessToken = pages.filter(
+    (page) => !page.accessToken,
+  ).length;
+  if (pagesMissingAccessToken > 0) {
+    console.warn("Facebook pages fetch returned pages without access tokens", {
+      pagesMissingAccessToken,
+      pageCount: pages.length,
+    });
+  }
+
+  return pages;
 }
 
 export async function subscribeFacebookPage(
@@ -209,6 +231,17 @@ function getEncryptionKey(): Buffer | null {
     raw.length === 64 && /^[a-f0-9]+$/i.test(raw) ? "hex" : "base64",
   );
   return decoded.length === 32 ? decoded : null;
+}
+
+function logFacebookApiError(
+  message: string,
+  error: { message?: string; code?: number; type?: string } | undefined,
+) {
+  console.error(message, {
+    code: error?.code,
+    type: error?.type,
+    message: error?.message,
+  });
 }
 
 function requireEnv(name: string): string {
