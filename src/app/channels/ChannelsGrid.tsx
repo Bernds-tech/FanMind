@@ -550,6 +550,10 @@ function getFacebookErrorMessage(errorCode: string | null): string {
     return "Facebook hat keine verwaltbare Seite an FanMind zurückgegeben. Bitte prüfe, ob du eine Seite ausgewählt hast, ob du vollständigen Seitenzugriff besitzt und ob die Page-Rechte im Meta-Testmodus aktiv sind.";
   }
 
+  if (errorCode === "no_page_token") {
+    return "Facebook hat die Seite erkannt, aber kein Page-Access-Token geliefert. Bitte prüfe, ob du vollständigen Seitenzugriff besitzt und die App im Testmodus Zugriff auf diese Seite hat.";
+  }
+
   if (errorCode === "page_permissions") {
     return "Facebook hat nicht alle benötigten Seitenrechte freigegeben. Bitte bestätige beim Verbinden alle angefragten Page-Berechtigungen.";
   }

@@ -56,6 +56,13 @@ export async function GET(request: Request) {
       return redirectToChannels(appOrigin, "facebook_error=no_page");
     }
 
+    if (!page.accessToken) {
+      console.warn(
+        "Facebook callback received a page without page access token",
+      );
+      return redirectToChannels(appOrigin, "facebook_error=no_page_token");
+    }
+
     if (page.accessToken && !isTokenEncryptionConfigured()) {
       return redirectToChannels(appOrigin, "facebook_error=encryption");
     }
