@@ -148,6 +148,10 @@ export async function subscribeFacebookPage(
   return response.ok;
 }
 
+export function isTokenEncryptionConfigured(): boolean {
+  return Boolean(getEncryptionKey());
+}
+
 export function encryptToken(token: string): string | null {
   const key = getEncryptionKey();
   if (!key) return null;

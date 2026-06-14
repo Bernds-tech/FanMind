@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
   encryptToken,
   exchangeFacebookCode,
+  isTokenEncryptionConfigured,
   fetchFacebookPages,
   subscribeFacebookPage,
   tokenLastFour,
@@ -45,9 +46,24 @@ export async function GET(request: Request) {
         302,
       );
 
+    if (page.accessToken && !isTokenEncryptionConfigured()) {
+      return Response.redirect(
+        new URL("/channels?facebook_error=encryption", url),
+        302,
+      );
+    }
+
     const encryptedToken = page.accessToken
       ? encryptToken(page.accessToken)
       : null;
+
+    if (page.accessToken && !encryptedToken) {
+      return Response.redirect(
+        new URL("/channels?facebook_error=encryption", url),
+        302,
+      );
+    }
+
     const webhookSubscribed = page.accessToken
       ? await subscribeFacebookPage(page.id, page.accessToken).catch(
           () => false,

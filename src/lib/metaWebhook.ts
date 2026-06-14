@@ -8,6 +8,7 @@ export type MetaWebhookEvent = {
   messageType: "dm" | "comment";
   content: string;
   externalMessageId: string | null;
+  externalThreadId: string | null;
   sourceUrl: string | null;
   replyTargetUrl: string | null;
   authorLabel: string;
@@ -48,6 +49,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         messageType: "dm",
         content: text ?? "Facebook Messenger Event ohne Nachrichtentext",
         externalMessageId: mid,
+        externalThreadId: senderId,
         sourceUrl: pageId ? `https://www.facebook.com/${pageId}` : null,
         replyTargetUrl: pageId ? `https://www.facebook.com/${pageId}` : null,
         authorLabel: senderId
@@ -86,6 +88,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         messageType: "comment",
         content,
         externalMessageId: commentId,
+        externalThreadId: postId ?? permalink ?? commentId,
         sourceUrl: permalink,
         replyTargetUrl: permalink,
         authorLabel:
@@ -153,6 +156,7 @@ export async function processMetaWebhookPayload(
       sourceUrl: event.sourceUrl,
       replyTargetUrl: event.replyTargetUrl,
       externalMessageId: event.externalMessageId,
+      externalThreadId: event.externalThreadId,
       authorLabel: event.authorLabel,
     });
 
@@ -194,6 +198,7 @@ async function tryLocalDevFallback(
     sourceUrl: event.sourceUrl,
     replyTargetUrl: event.replyTargetUrl,
     externalMessageId: event.externalMessageId,
+    externalThreadId: event.externalThreadId,
     authorLabel: event.authorLabel,
   });
 
