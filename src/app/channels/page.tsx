@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  checkMetaWebhookStorageHealth,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -23,6 +24,11 @@ type ChannelsWorkspaceProps = {
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEventRow[];
   metaWebhookError?: string | null;
+  metaWebhookStorageHealth: {
+    serviceRoleConfigured: boolean;
+    tableReadable: boolean;
+    error: string | null;
+  };
 };
 
 async function logout() {
@@ -40,6 +46,7 @@ function ChannelsWorkspace({
   facebookError,
   metaWebhookEvents,
   metaWebhookError,
+  metaWebhookStorageHealth,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -71,6 +78,7 @@ function ChannelsWorkspace({
         facebookError={facebookError}
         metaWebhookEvents={metaWebhookEvents}
         metaWebhookError={metaWebhookError}
+        metaWebhookStorageHealth={metaWebhookStorageHealth}
       />
     </WorkspaceShell>
   );
@@ -110,6 +118,9 @@ export default async function ChannelsPage({
   const metaWebhookEventsResult = workspace
     ? await getWorkspaceMetaWebhookEvents(workspace.id, 20)
     : null;
+  const metaWebhookStorageHealthResult = workspace
+    ? await checkMetaWebhookStorageHealth()
+    : null;
   const facebookConnection =
     socialConnectionsResult?.connections.find(
       (connection) =>
@@ -130,6 +141,12 @@ export default async function ChannelsPage({
           facebookError={Boolean(params.facebook_error)}
           metaWebhookEvents={metaWebhookEventsResult?.events ?? []}
           metaWebhookError={metaWebhookEventsResult?.error?.message ?? null}
+          metaWebhookStorageHealth={{
+            serviceRoleConfigured:
+              metaWebhookStorageHealthResult?.serviceRoleConfigured ?? false,
+            tableReadable: metaWebhookStorageHealthResult?.tableReadable ?? false,
+            error: metaWebhookStorageHealthResult?.error?.message ?? null,
+          }}
         />
       ) : (
         <section

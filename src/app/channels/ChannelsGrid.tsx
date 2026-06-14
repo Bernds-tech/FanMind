@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./channels.module.css";
 
@@ -15,6 +16,23 @@ type FacebookConnection = {
   page_id: string | null;
   webhook_subscribed: boolean;
   last_event_at: string | null;
+};
+
+type MetaWebhookStorageHealth = {
+  serviceRoleConfigured: boolean;
+  tableReadable: boolean;
+  error: string | null;
+};
+
+type MetaWebhookSelfTestResult = {
+  ok: boolean;
+  workspace_id: string;
+  page_id: string;
+  event_type: string;
+  status: string;
+  error: string | null;
+  saved: boolean;
+  skipped: boolean;
 };
 
 type MetaWebhookEvent = {
@@ -309,14 +327,20 @@ export function ChannelsGrid({
   facebookError,
   metaWebhookEvents,
   metaWebhookError,
+  metaWebhookStorageHealth,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEvent[];
   metaWebhookError?: string | null;
+  metaWebhookStorageHealth: MetaWebhookStorageHealth;
 }) {
+  const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [notice, setNotice] = useState("");
+  const [selfTestPending, setSelfTestPending] = useState(false);
+  const [selfTestResult, setSelfTestResult] = useState<MetaWebhookSelfTestResult | null>(null);
+  const [selfTestError, setSelfTestError] = useState<string | null>(null);
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -333,8 +357,36 @@ export function ChannelsGrid({
 
   const openModal = (channel: Channel) => {
     setNotice("");
+    setSelfTestError(null);
+    setSelfTestResult(null);
     setActiveChannel(channel);
   };
+
+  async function runMetaWebhookSelfTest() {
+    setSelfTestPending(true);
+    setSelfTestError(null);
+    setSelfTestResult(null);
+
+    try {
+      const response = await fetch("/api/webhooks/meta/self-test", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as MetaWebhookSelfTestResult | { error?: string };
+
+      if (!response.ok) {
+        if ("workspace_id" in payload) setSelfTestResult(payload as MetaWebhookSelfTestResult);
+        setSelfTestError(payload.error ?? "Webhook-Selbsttest fehlgeschlagen.");
+      } else {
+        setSelfTestResult(payload as MetaWebhookSelfTestResult);
+        router.refresh();
+      }
+    } catch (error) {
+      setSelfTestError(error instanceof Error ? error.message : "Webhook-Selbsttest fehlgeschlagen.");
+    } finally {
+      setSelfTestPending(false);
+    }
+  }
 
   const lastWebhookEvent = metaWebhookEvents[0] ?? null;
   const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && event.message_text);
@@ -497,6 +549,25 @@ export function ChannelsGrid({
             {activeChannel.key === "facebook" && facebookConnection ? (
               <div className={styles.releaseBox} aria-label="Meta Webhook Diagnose">
                 <strong>Meta Webhook Diagnose (letzte 20 Events)</strong>
+                <p>
+                  Service-Role-Key: <strong>{metaWebhookStorageHealth.serviceRoleConfigured ? "verfügbar" : "fehlt"}</strong> · Tabelle lesbar: <strong>{metaWebhookStorageHealth.tableReadable ? "ja" : "nein"}</strong>
+                  {metaWebhookStorageHealth.error ? ` · Fehler: ${metaWebhookStorageHealth.error}` : ""}
+                </p>
+                <button
+                  type="button"
+                  className={styles.secondaryModalButton}
+                  onClick={runMetaWebhookSelfTest}
+                  disabled={selfTestPending}
+                >
+                  {selfTestPending ? "Webhook-Selbsttest läuft ..." : "Webhook-Selbsttest"}
+                </button>
+                {selfTestResult ? (
+                  <p role="status">
+                    Selbsttest: {selfTestResult.ok ? "Insert erfolgreich" : "Insert fehlgeschlagen"} · workspace_id {selfTestResult.workspace_id} · event_type {selfTestResult.event_type} · status {selfTestResult.status}
+                    {selfTestResult.error ? ` · Fehler: ${selfTestResult.error}` : ""}
+                  </p>
+                ) : null}
+                {selfTestError ? <p role="alert">Selbsttest fehlgeschlagen: {selfTestError}</p> : null}
                 {metaWebhookEvents.length ? (
                   <ul>
                     {metaWebhookEvents.map((event) => (

@@ -789,6 +789,7 @@ export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
   return { workspaceId: workspaceResult.data?.id ?? null, error: null };
 }
 
+
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
   socialConnectionId?: string | null;
@@ -802,6 +803,17 @@ export async function createMetaWebhookDebugEvent(input: {
   messageId?: string | null;
   receivedAt?: string;
 }): Promise<MetaWebhookEventCreateResult> {
+  const serviceAccessToken = getServiceAccessToken();
+
+  if (!serviceAccessToken) {
+    return {
+      event: null,
+      error: new Error(
+        "SUPABASE_SERVICE_ROLE_KEY ist für Meta-Webhook-Inserts nicht konfiguriert.",
+      ),
+    };
+  }
+
   const result = await postgrestRequest<MetaWebhookEventRow>(
     "meta_webhook_events",
     "POST",
@@ -820,7 +832,7 @@ export async function createMetaWebhookDebugEvent(input: {
       message_id: input.messageId ?? null,
       received_at: input.receivedAt ?? new Date().toISOString(),
     },
-    getServiceAccessToken(),
+    serviceAccessToken,
     { select: META_WEBHOOK_EVENT_COLUMNS, single: true },
   );
 
@@ -837,6 +849,39 @@ export async function createMetaWebhookDebugEvent(input: {
     return { event: null, error: result.error };
   }
   return { event: result.data, error: null };
+}
+
+
+export async function checkMetaWebhookStorageHealth(): Promise<{
+  serviceRoleConfigured: boolean;
+  tableReadable: boolean;
+  error: Error | null;
+}> {
+  const serviceAccessToken = getServiceAccessToken();
+
+  if (!serviceAccessToken) {
+    return {
+      serviceRoleConfigured: false,
+      tableReadable: false,
+      error: new Error("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert."),
+    };
+  }
+
+  const result = await postgrestSelect<MetaWebhookEventRow[]>(
+    "meta_webhook_events",
+    serviceAccessToken,
+    META_WEBHOOK_EVENT_COLUMNS,
+    [],
+    1,
+    false,
+    "received_at.desc",
+  );
+
+  return {
+    serviceRoleConfigured: true,
+    tableReadable: !result.error,
+    error: result.error,
+  };
 }
 
 export async function getWorkspaceMetaWebhookEvents(

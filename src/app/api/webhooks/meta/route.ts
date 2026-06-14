@@ -59,11 +59,15 @@ export async function POST(request: Request) {
     });
   }
 
-  return Response.json({
-    received: true,
-    saved: result.saved,
-    skipped: result.skipped,
-  });
+  return Response.json(
+    {
+      received: !result.error,
+      saved: result.saved,
+      skipped: result.skipped,
+      error: result.error ?? null,
+    },
+    { status: result.error ? 500 : 200 },
+  );
 }
 
 function isValidMetaSignature(
