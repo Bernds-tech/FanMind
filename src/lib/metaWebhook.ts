@@ -1,12 +1,13 @@
 import {
   createFacebookWebhookConversationMessage,
-  createMetaTestConversationMessage,
+  createMetaWebhookDebugEvent,
   findFacebookSocialConnectionByPageId,
 } from "@/lib/supabase/server";
 
 export type MetaWebhookEvent = {
+  eventType: "feed" | "messages" | "unknown";
   messageType: "dm" | "comment";
-  content: string;
+  content: string | null;
   externalMessageId: string | null;
   externalThreadId: string | null;
   sourceUrl: string | null;
@@ -14,6 +15,7 @@ export type MetaWebhookEvent = {
   authorLabel: string;
   pageId: string | null;
   senderId: string | null;
+  rawEvent: unknown;
 };
 
 export type MetaWebhookProcessResult = {
@@ -25,12 +27,13 @@ export type MetaWebhookProcessResult = {
 };
 
 export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
-  if (!isRecord(payload)) return [];
+  if (!isRecord(payload)) return [unknownEvent(null, null, payload)];
   const entries = Array.isArray(payload.entry) ? payload.entry : [];
   const events: MetaWebhookEvent[] = [];
 
   for (const entry of entries) {
     if (!isRecord(entry)) continue;
+    const entryPageId = stringValue(entry.id);
     const messaging = Array.isArray(entry.messaging) ? entry.messaging : [];
 
     for (const item of messaging) {
@@ -38,25 +41,23 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       const message = isRecord(item.message) ? item.message : undefined;
       const text = stringValue(message?.text);
       const mid = stringValue(message?.mid);
-      const senderId = isRecord(item.sender)
-        ? stringValue(item.sender.id)
-        : null;
+      const senderId = isRecord(item.sender) ? stringValue(item.sender.id) : null;
       const pageId = isRecord(item.recipient)
         ? stringValue(item.recipient.id)
-        : stringValue(entry.id);
+        : entryPageId;
 
       events.push({
+        eventType: "messages",
         messageType: "dm",
-        content: text ?? "Facebook Messenger Event ohne Nachrichtentext",
+        content: text,
         externalMessageId: mid,
         externalThreadId: senderId,
         sourceUrl: pageId ? `https://www.facebook.com/${pageId}` : null,
         replyTargetUrl: pageId ? `https://www.facebook.com/${pageId}` : null,
-        authorLabel: senderId
-          ? `Facebook Nutzer ${senderId}`
-          : "Facebook Nutzer",
+        authorLabel: senderId ? `Facebook Nutzer ${senderId}` : "Facebook Nutzer",
         pageId,
         senderId,
+        rawEvent: item,
       });
     }
 
@@ -65,144 +66,128 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
     for (const change of changes) {
       if (!isRecord(change)) continue;
       const value = isRecord(change.value) ? change.value : undefined;
-      const item = stringValue(value?.item) ?? stringValue(change.field);
-      const isComment =
-        item === "comment" || stringValue(change.field) === "comments";
-
-      if (!isComment) continue;
-
-      const content =
-        stringValue(value?.message) ??
-        stringValue(value?.verb) ??
-        "Facebook Page Kommentar-Event ohne Nachrichtentext";
-      const commentId =
-        stringValue(value?.comment_id) ?? stringValue(value?.id);
+      const field = stringValue(change.field);
+      const item = stringValue(value?.item) ?? field;
+      const content = stringValue(value?.message) ?? stringValue(value?.verb);
+      const commentId = stringValue(value?.comment_id) ?? stringValue(value?.id);
       const permalink = stringValue(value?.permalink_url);
       const postId = stringValue(value?.post_id);
-
-      const pageId = stringValue(entry.id);
-      const senderId =
-        stringValue(value?.from_id) ?? stringValue(value?.sender_id);
+      const senderId = stringValue(value?.from_id) ?? stringValue(value?.sender_id);
+      const eventType = field === "feed" || field === "comments" ? "feed" : "unknown";
 
       events.push({
-        messageType: "comment",
+        eventType,
+        messageType: item === "comment" || field === "comments" ? "comment" : "comment",
         content,
         externalMessageId: commentId,
         externalThreadId: postId ?? permalink ?? commentId,
-        sourceUrl: permalink,
-        replyTargetUrl: permalink,
+        sourceUrl: permalink ?? (postId ? `https://www.facebook.com/${postId}` : null),
+        replyTargetUrl: permalink ?? (postId ? `https://www.facebook.com/${postId}` : null),
         authorLabel:
-          stringValue(value?.from_name) ??
-          stringValue(value?.sender_name) ??
-          "Facebook Nutzer",
-        pageId,
+          stringValue(value?.from_name) ?? stringValue(value?.sender_name) ?? "Facebook Nutzer",
+        pageId: entryPageId,
         senderId,
+        rawEvent: change,
       });
-
-      if (!permalink && postId) {
-        events[events.length - 1].sourceUrl =
-          `https://www.facebook.com/${postId}`;
-        events[events.length - 1].replyTargetUrl =
-          `https://www.facebook.com/${postId}`;
-      }
     }
   }
 
-  return events;
+  return events.length ? events : [unknownEvent(null, null, payload)];
 }
 
 export async function processMetaWebhookPayload(
   payload: unknown,
 ): Promise<MetaWebhookProcessResult> {
   const events = extractMetaWebhookEvents(payload);
-
-  if (events.length === 0) {
-    return { received: true, saved: false, skipped: true, eventCount: 0 };
-  }
-
   let saved = 0;
   let skipped = 0;
+  let firstError: string | undefined;
 
   for (const event of events) {
+    const receivedAt = new Date().toISOString();
     const connection = event.pageId
       ? await findFacebookSocialConnectionByPageId(event.pageId)
       : { connection: null, error: null };
 
-    if (connection.error) {
-      return {
-        received: true,
-        saved: saved > 0,
-        skipped: skipped > 0,
-        eventCount: events.length,
-        error: connection.error.message,
-      };
-    }
+    if (connection.error) firstError ??= connection.error.message;
 
     if (!connection.connection) {
-      const fallbackResult = await tryLocalDevFallback(event);
-      if (fallbackResult === "saved") {
-        saved += 1;
-      } else {
-        skipped += 1;
-      }
+      await createMetaWebhookDebugEvent({
+        eventType: event.eventType,
+        pageId: event.pageId,
+        senderId: event.senderId,
+        messageText: event.content,
+        rawPayload: event.rawEvent,
+        status: event.pageId ? "ignored_unmapped_page" : "ignored",
+        errorReason: event.pageId
+          ? "Page-ID konnte keiner Facebook-Verbindung zugeordnet werden."
+          : "Keine Page-ID im Meta-Event erkannt.",
+        receivedAt,
+      });
+      skipped += 1;
       continue;
     }
 
-    const result = await createFacebookWebhookConversationMessage({
-      workspaceId: connection.connection.workspace_id,
-      senderId: event.senderId,
-      content: event.content,
-      messageType: event.messageType,
-      sourceUrl: event.sourceUrl,
-      replyTargetUrl: event.replyTargetUrl,
-      externalMessageId: event.externalMessageId,
-      externalThreadId: event.externalThreadId,
-      authorLabel: event.authorLabel,
-    });
+    let status = event.eventType === "feed" ? "stored" : "received";
+    let errorReason: string | null = null;
+    let messageId: string | null = null;
 
-    if (result.error) {
-      return {
-        received: true,
-        saved: saved > 0,
-        skipped: skipped > 0,
-        eventCount: events.length,
-        error: result.error.message,
-      };
+    if (event.eventType === "messages") {
+      if (event.content) {
+        const result = await createFacebookWebhookConversationMessage({
+          workspaceId: connection.connection.workspace_id,
+          senderId: event.senderId,
+          content: event.content,
+          messageType: event.messageType,
+          sourceUrl: event.sourceUrl,
+          replyTargetUrl: event.replyTargetUrl,
+          externalMessageId: event.externalMessageId,
+          externalThreadId: event.externalThreadId,
+          authorLabel: event.authorLabel,
+        });
+        if (result.error) {
+          status = "error";
+          errorReason = result.error.message;
+          firstError ??= result.error.message;
+        } else {
+          status = "stored";
+          messageId = result.message?.id ?? null;
+          saved += 1;
+        }
+      } else {
+        status = "ignored";
+        errorReason = "Message-Event ohne Nachrichtentext.";
+        skipped += 1;
+      }
+    } else if (event.eventType === "feed") {
+      saved += 1;
+    } else {
+      status = "ignored";
+      errorReason = "Unbekannter Meta-Event-Typ.";
+      skipped += 1;
     }
 
-    saved += 1;
+    const debugResult = await createMetaWebhookDebugEvent({
+      workspaceId: connection.connection.workspace_id,
+      socialConnectionId: connection.connection.id,
+      eventType: event.eventType,
+      pageId: event.pageId,
+      senderId: event.senderId,
+      messageText: event.content,
+      rawPayload: event.rawEvent,
+      status,
+      errorReason,
+      messageId,
+      receivedAt,
+    });
+    if (debugResult.error) firstError ??= debugResult.error.message;
   }
 
-  return {
-    received: true,
-    saved: saved > 0,
-    skipped: skipped > 0,
-    eventCount: events.length,
-  };
+  return { received: true, saved: saved > 0, skipped: skipped > 0, eventCount: events.length, error: firstError };
 }
 
-async function tryLocalDevFallback(
-  event: MetaWebhookEvent,
-): Promise<"saved" | "skipped"> {
-  if (process.env.NODE_ENV === "production") return "skipped";
-
-  const workspaceId = process.env.FANMIND_DEFAULT_WORKSPACE_ID_FOR_META_TEST;
-  const contactId = process.env.FANMIND_DEFAULT_CONTACT_ID_FOR_META_TEST;
-  if (!workspaceId || !contactId) return "skipped";
-
-  const result = await createMetaTestConversationMessage({
-    workspaceId,
-    contactId,
-    content: event.content,
-    messageType: event.messageType,
-    sourceUrl: event.sourceUrl,
-    replyTargetUrl: event.replyTargetUrl,
-    externalMessageId: event.externalMessageId,
-    externalThreadId: event.externalThreadId,
-    authorLabel: event.authorLabel,
-  });
-
-  return result.error ? "skipped" : "saved";
+function unknownEvent(pageId: string | null, senderId: string | null, rawEvent: unknown): MetaWebhookEvent {
+  return { eventType: "unknown", messageType: "comment", content: null, externalMessageId: null, externalThreadId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, rawEvent };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

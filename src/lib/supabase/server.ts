@@ -186,6 +186,25 @@ export type SocialConnectionRow = {
   updated_at: string;
 };
 
+
+export type MetaWebhookEventRow = {
+  id: string;
+  workspace_id: string | null;
+  social_connection_id: string | null;
+  platform: string;
+  source: string;
+  event_type: string;
+  page_id: string | null;
+  sender_id: string | null;
+  message_text: string | null;
+  raw_payload: unknown;
+  status: string;
+  error_reason: string | null;
+  message_id: string | null;
+  received_at: string;
+  created_at: string;
+};
+
 export type FollowupRow = {
   id: string;
   workspace_id: string;
@@ -325,6 +344,16 @@ type SocialConnectionsResult = {
   error: Error | null;
 };
 
+type MetaWebhookEventsResult = {
+  events: MetaWebhookEventRow[];
+  error: Error | null;
+};
+
+type MetaWebhookEventCreateResult = {
+  event: MetaWebhookEventRow | null;
+  error: Error | null;
+};
+
 type FollowupsResult = {
   followups: FollowupRow[];
   error: Error | null;
@@ -381,6 +410,8 @@ const WORKSPACE_VOICE_PROFILE_COLUMNS =
   "id,workspace_id,user_id,owner_label,language,tone,sentence_length,emoji_style,greeting_style,closing_style,common_phrases,avoided_phrases,sales_style,examples_count,confidence_score,updated_at,created_at";
 const SOCIAL_CONNECTION_COLUMNS =
   "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,created_at,updated_at";
+const META_WEBHOOK_EVENT_COLUMNS =
+  "id,workspace_id,social_connection_id,platform,source,event_type,page_id,sender_id,message_text,raw_payload,status,error_reason,message_id,received_at,created_at";
 const FOLLOWUP_COLUMNS =
   "id,workspace_id,contact_id,due_date,priority,reason,status,created_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
@@ -703,6 +734,66 @@ export async function findFacebookSocialConnectionByPageId(
   );
   if (result.error) return socialConnectionError(result.error.message);
   return { connection: result.data, error: null };
+}
+
+export async function createMetaWebhookDebugEvent(input: {
+  workspaceId?: string | null;
+  socialConnectionId?: string | null;
+  eventType: "feed" | "messages" | "unknown";
+  pageId?: string | null;
+  senderId?: string | null;
+  messageText?: string | null;
+  rawPayload: unknown;
+  status: string;
+  errorReason?: string | null;
+  messageId?: string | null;
+  receivedAt?: string;
+}): Promise<MetaWebhookEventCreateResult> {
+  const result = await postgrestRequest<MetaWebhookEventRow>(
+    "meta_webhook_events",
+    "POST",
+    {
+      workspace_id: input.workspaceId ?? null,
+      social_connection_id: input.socialConnectionId ?? null,
+      platform: "facebook",
+      source: "meta_webhook",
+      event_type: input.eventType,
+      page_id: normalizeOptionalText(input.pageId),
+      sender_id: normalizeOptionalText(input.senderId),
+      message_text: normalizeOptionalText(input.messageText),
+      raw_payload: input.rawPayload ?? {},
+      status: input.status,
+      error_reason: normalizeOptionalText(input.errorReason),
+      message_id: input.messageId ?? null,
+      received_at: input.receivedAt ?? new Date().toISOString(),
+    },
+    getServiceAccessToken(),
+    { select: META_WEBHOOK_EVENT_COLUMNS, single: true },
+  );
+
+  if (result.error) return { event: null, error: result.error };
+  return { event: result.data, error: null };
+}
+
+export async function getWorkspaceMetaWebhookEvents(
+  workspaceId: string,
+  limit = 20,
+): Promise<MetaWebhookEventsResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { events: [], error: new Error("Keine aktive Supabase-Session gefunden.") };
+
+  const result = await postgrestSelect<MetaWebhookEventRow[]>(
+    "meta_webhook_events",
+    accessToken,
+    META_WEBHOOK_EVENT_COLUMNS,
+    [["workspace_id", workspaceId]],
+    limit,
+    false,
+    "received_at.desc",
+  );
+
+  if (result.error) return { events: [], error: result.error };
+  return { events: result.data ?? [], error: null };
 }
 
 export async function getWorkspaceContacts(

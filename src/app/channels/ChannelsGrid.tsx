@@ -14,6 +14,18 @@ type FacebookConnection = {
   page_name: string | null;
   page_id: string | null;
   webhook_subscribed: boolean;
+  last_event_at: string | null;
+};
+
+type MetaWebhookEvent = {
+  id: string;
+  event_type: string;
+  page_id: string | null;
+  sender_id: string | null;
+  message_text: string | null;
+  status: string;
+  error_reason: string | null;
+  received_at: string;
 };
 
 type Channel = {
@@ -295,21 +307,18 @@ function isBookable(status: ChannelStatus) {
 export function ChannelsGrid({
   facebookConnection,
   facebookError,
+  metaWebhookEvents,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
+  metaWebhookEvents: MetaWebhookEvent[];
 }) {
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [notice, setNotice] = useState("");
-  const [facebookErrorCode, setFacebookErrorCode] = useState<string | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (!facebookError) return;
-    const params = new URLSearchParams(window.location.search);
-    setFacebookErrorCode(params.get("facebook_error"));
-  }, [facebookError]);
+  const [facebookErrorCode] = useState<string | null>(() => {
+    if (!facebookError || typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("facebook_error");
+  });
 
   useEffect(() => {
     if (!activeChannel) return;
@@ -324,6 +333,9 @@ export function ChannelsGrid({
     setNotice("");
     setActiveChannel(channel);
   };
+
+  const lastWebhookEvent = metaWebhookEvents[0] ?? null;
+  const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && event.message_text);
 
   const activeDisplayStatus =
     activeChannel?.key === "facebook" && facebookConnection
@@ -405,6 +417,11 @@ export function ChannelsGrid({
                     Page: {pageName}
                   </span>
                 ) : null}
+                {isFacebook && facebookConnection ? (
+                  <span className={styles.connectionHint}>
+                    Letzter Webhook: {lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}
+                  </span>
+                ) : null}
               </button>
             </article>
           );
@@ -461,11 +478,32 @@ export function ChannelsGrid({
             </p>
             {activeChannel.key === "facebook" && facebookConnection ? (
               <p className={styles.modalNotice}>
-                Verbundene Page:{" "}
-                <strong>
-                  {facebookConnection.page_name ?? facebookConnection.page_id}
-                </strong>
+                OAuth verbunden · Page: <strong>{facebookConnection.page_name ?? facebookConnection.page_id}</strong>
+                <br />
+                Webhook feed/messages: <strong>{facebookConnection.webhook_subscribed ? "verbunden" : "unbekannt"}</strong>
+                <br />
+                Letztes Webhook-Event: <strong>{lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}</strong>
+                <br />
+                Letzte Nachricht: <strong>{lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</strong>
               </p>
+            ) : null}
+            {activeChannel.key === "facebook" && facebookConnection ? (
+              <div className={styles.releaseBox} aria-label="Meta Webhook Diagnose">
+                <strong>Meta Webhook Diagnose (letzte 20 Events)</strong>
+                {metaWebhookEvents.length ? (
+                  <ul>
+                    {metaWebhookEvents.map((event) => (
+                      <li key={event.id}>
+                        {formatDateTime(event.received_at)} · {event.event_type} · Page {event.page_id ?? "unbekannt"} · Sender {event.sender_id ?? "unbekannt"} · Status {event.status}
+                        {event.message_text ? ` · Text: ${event.message_text}` : ""}
+                        {event.error_reason ? ` · Grund: ${event.error_reason}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>Noch keine Meta-Webhook-Events empfangen.</p>
+                )}
+              </div>
             ) : null}
             {activeChannel.key === "facebook" && facebookError ? (
               <p className={styles.modalNotice} role="alert">
@@ -575,4 +613,9 @@ function getFacebookErrorMessage(errorCode: string | null): string {
   }
 
   return "Facebook-Verbindung konnte nicht gespeichert werden. Bitte prüfe die Facebook-Konfiguration und starte die Verbindung erneut.";
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) return "unbekannt";
+  return new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
