@@ -905,6 +905,164 @@ export async function createManualConversationMessage(
   };
 }
 
+export async function createMetaTestConversationMessage(input: {
+  workspaceId: string;
+  contactId: string;
+  content: string;
+  messageType: "dm" | "comment";
+  sourceUrl?: string | null;
+  replyTargetUrl?: string | null;
+  externalMessageId?: string | null;
+  authorLabel?: string | null;
+}): Promise<ConversationMessageCreateResult> {
+  const content = input.content.trim();
+
+  if (!content) {
+    return conversationMessageCreateError("Nachrichtentext ist erforderlich.");
+  }
+
+  const sourceUrl = normalizeUrl(input.sourceUrl);
+  const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
+  const conversationResult = await ensureMetaTestConversation({
+    workspaceId: input.workspaceId,
+    contactId: input.contactId,
+    sourceType: input.messageType,
+    sourceUrl,
+    replyTargetUrl,
+    externalMessageId: input.externalMessageId,
+  });
+
+  if (conversationResult.error || !conversationResult.conversation) {
+    return {
+      message: null,
+      conversation: null,
+      error:
+        conversationResult.error ??
+        new Error("Conversation konnte nicht erstellt werden."),
+    };
+  }
+
+  const messageResult = await postgrestRequest<ConversationMessageRow>(
+    "conversation_messages",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      conversation_id: conversationResult.conversation.id,
+      contact_id: input.contactId,
+      direction: "inbound",
+      message_type: input.messageType,
+      source_platform: "facebook",
+      source_url: sourceUrl,
+      reply_target_url: replyTargetUrl,
+      external_message_id: normalizeOptionalText(input.externalMessageId),
+      author_label:
+        normalizeOptionalText(input.authorLabel) ?? "Facebook Nutzer",
+      content,
+    },
+    undefined,
+    { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
+  );
+
+  if (messageResult.error) {
+    return conversationMessageCreateError(
+      `Nachricht konnte nicht gespeichert werden: ${withOptionalSchemaHint(messageResult.error.message, "conversation_messages")}`,
+    );
+  }
+
+  const updatedConversation = await postgrestUpdate<ConversationRow>(
+    "conversations",
+    {
+      last_message_preview: content.slice(0, 240),
+      last_inbound_at: new Date().toISOString(),
+      source_platform: "facebook",
+      source_type: input.messageType,
+      source_url: sourceUrl ?? conversationResult.conversation.source_url,
+      reply_target_url:
+        replyTargetUrl ?? conversationResult.conversation.reply_target_url,
+      external_message_id:
+        normalizeOptionalText(input.externalMessageId) ??
+        conversationResult.conversation.external_message_id,
+      ai_status: "partial",
+      next_step: "Antwort vorbereiten",
+    },
+    undefined,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", conversationResult.conversation.id],
+    ],
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  return {
+    message: messageResult.data,
+    conversation: updatedConversation.data ?? conversationResult.conversation,
+    error: updatedConversation.error,
+  };
+}
+
+async function ensureMetaTestConversation(input: {
+  workspaceId: string;
+  contactId: string;
+  sourceType: string;
+  sourceUrl?: string | null;
+  replyTargetUrl?: string | null;
+  externalMessageId?: string | null;
+}): Promise<ConversationResult> {
+  const existing = await postgrestSelect<ConversationRow[]>(
+    "conversations",
+    undefined,
+    CONVERSATION_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+    ],
+    undefined,
+    false,
+    "updated_at.desc",
+  );
+
+  if (existing.error) {
+    return conversationError(
+      `Conversation konnte nicht geprüft werden: ${withOptionalSchemaHint(existing.error.message, "conversations")}`,
+    );
+  }
+
+  const openConversation = (existing.data ?? []).find((conversation) =>
+    ["open", "waiting"].includes(conversation.status),
+  );
+
+  if (openConversation) return { conversation: openConversation, error: null };
+
+  const created = await postgrestRequest<ConversationRow>(
+    "conversations",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      contact_id: input.contactId,
+      status: "open",
+      priority: "normal",
+      source_platform: "facebook",
+      source_type: normalizeMessageType(input.sourceType),
+      source_url: normalizeUrl(input.sourceUrl),
+      reply_target_url:
+        normalizeUrl(input.replyTargetUrl) ?? normalizeUrl(input.sourceUrl),
+      external_message_id: normalizeOptionalText(input.externalMessageId),
+      ai_status: "partial",
+      next_step: "Antwort vorbereiten",
+    },
+    undefined,
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  if (created.error) {
+    return conversationError(
+      `Conversation konnte nicht erstellt werden: ${withOptionalSchemaHint(created.error.message, "conversations")}`,
+    );
+  }
+
+  return { conversation: created.data, error: null };
+}
+
 export async function updateConversationStatus(input: {
   workspaceId: string;
   conversationId: string;
@@ -1380,7 +1538,7 @@ async function postgrestRequest<T = unknown>(
   table: string,
   method: "POST" | "PATCH",
   values: unknown,
-  accessToken: string,
+  accessToken: string | undefined,
   options: { select?: string; single?: boolean; upsert?: boolean } = {},
 ): Promise<PostgrestResult<T>> {
   try {
@@ -1437,7 +1595,7 @@ async function postgrestRequest<T = unknown>(
 async function postgrestUpdate<T = unknown>(
   table: string,
   values: unknown,
-  accessToken: string,
+  accessToken: string | undefined,
   filters: [string, SupabaseFilterValue][],
   options: { select?: string; single?: boolean } = {},
 ): Promise<PostgrestResult<T>> {
@@ -1533,7 +1691,7 @@ async function postgrestCount(
 
 async function postgrestSelect<T>(
   table: string,
-  accessToken: string,
+  accessToken: string | undefined,
   columns: string,
   filters: [string, SupabaseFilterValue][],
   limitCount?: number,
