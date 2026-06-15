@@ -708,6 +708,8 @@ export function ChannelsGrid({
                   <p className={styles.modalNotice} role={commentFetchResult.ok ? "status" : "alert"}>
                     Kommentar-Abruf: {commentFetchResult.ok ? "erfolgreich" : "fehlgeschlagen"} · Posts geprüft: {commentFetchResult.postsChecked} · Kommentare geprüft: {commentFetchResult.commentsChecked} · Neu importiert: {commentFetchResult.importedCount}
                     {commentFetchResult.error ? ` · Fehler: ${commentFetchResult.error}` : ""}
+                    <br />
+                    Endpoint-Typ: <strong>{commentFetchResult.endpointType ?? "nicht ermittelt"}</strong> · Page Token genutzt: <strong>{commentFetchResult.usedPageAccessToken ? "ja" : "nein"}</strong> · Erkannte Scopes: <strong>{formatScopeList(commentFetchResult.tokenScopes)}</strong>
                   </p>
                 ) : null}
               </>

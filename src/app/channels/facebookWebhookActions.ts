@@ -5,6 +5,7 @@ import {
   decryptToken,
   getFacebookGrantedScopeNames,
   fetchFacebookPagePostsWithComments,
+  FacebookCommentFetchError,
   fetchFacebookPageWebhookStatus,
   fetchFacebookTokenDiagnostics,
   hasFacebookCommentFeedScopes,
@@ -30,6 +31,9 @@ export type FacebookCommentFetchResult = {
   commentsChecked: number;
   importedCount: number;
   error?: string | null;
+  endpointType?: string | null;
+  usedPageAccessToken?: boolean;
+  tokenScopes?: string[];
 };
 
 export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
@@ -60,7 +64,8 @@ export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchRe
   }
 
   try {
-    const { posts, comments } = await fetchFacebookPagePostsWithComments(connection.page_id, token);
+    const tokenScopes = await getSafeTokenScopeNames(token);
+    const { posts, comments, diagnostics } = await fetchFacebookPagePostsWithComments(connection.page_id, token);
     let importedCount = 0;
 
     for (const comment of comments) {
@@ -83,12 +88,33 @@ export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchRe
     await updateFacebookCommentFetchStatus(connection.id, { fetchedAt, importedCount, error: null });
     revalidatePath("/channels");
     revalidatePath("/inbox");
-    return { ok: true, fetchedAt, postsChecked: posts.length, commentsChecked: comments.length, importedCount, error: null };
+    return {
+      ok: true,
+      fetchedAt,
+      postsChecked: posts.length,
+      commentsChecked: comments.length,
+      importedCount,
+      error: null,
+      endpointType: diagnostics.endpointType,
+      usedPageAccessToken: diagnostics.usedPageAccessToken,
+      tokenScopes,
+    };
   } catch (fetchError) {
+    const tokenScopes = await getSafeTokenScopeNames(token);
     const message = fetchError instanceof Error ? fetchError.message : "Facebook-Kommentarabruf fehlgeschlagen.";
     await updateFacebookCommentFetchStatus(connection.id, { fetchedAt, importedCount: 0, error: message });
     revalidatePath("/channels");
-    return { ok: false, fetchedAt, postsChecked: 0, commentsChecked: 0, importedCount: 0, error: message };
+    return {
+      ok: false,
+      fetchedAt,
+      postsChecked: 0,
+      commentsChecked: 0,
+      importedCount: 0,
+      error: message,
+      endpointType: fetchError instanceof FacebookCommentFetchError ? fetchError.endpointType : null,
+      usedPageAccessToken: fetchError instanceof FacebookCommentFetchError ? fetchError.usedPageAccessToken : true,
+      tokenScopes,
+    };
   }
 }
 
@@ -128,9 +154,7 @@ export async function activateFacebookPageWebhooks(): Promise<FacebookPageWebhoo
 }
 
 async function getTokenScopeDiagnostics(token: string | null) {
-  const tokenScopes = token
-    ? getFacebookGrantedScopeNames(await fetchFacebookTokenDiagnostics(token))
-    : [];
+  const tokenScopes = await getSafeTokenScopeNames(token);
   return {
     tokenScopes,
     pagesMessagingGranted: hasFacebookPagesMessagingScope(tokenScopes),
@@ -138,6 +162,18 @@ async function getTokenScopeDiagnostics(token: string | null) {
     pagesReadUserContentGranted: hasFacebookPagesReadUserContentScope(tokenScopes),
     pagesManageEngagementGranted: hasFacebookPagesManageEngagementScope(tokenScopes),
   };
+}
+
+async function getSafeTokenScopeNames(token: string | null): Promise<string[]> {
+  if (!token) return [];
+  try {
+    return getFacebookGrantedScopeNames(await fetchFacebookTokenDiagnostics(token));
+  } catch (error) {
+    console.error("Facebook token scope diagnostics failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return [];
+  }
 }
 
 async function getCurrentFacebookConnection() {
