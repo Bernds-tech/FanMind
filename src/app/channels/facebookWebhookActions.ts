@@ -6,7 +6,10 @@ import {
   getFacebookGrantedScopeNames,
   fetchFacebookPageWebhookStatus,
   fetchFacebookTokenDiagnostics,
+  hasFacebookCommentFeedScopes,
+  hasFacebookPagesManageEngagementScope,
   hasFacebookPagesMessagingScope,
+  hasFacebookPagesReadUserContentScope,
   subscribeFacebookPage,
   type FacebookPageWebhookStatus,
 } from "@/lib/facebookIntegration";
@@ -21,6 +24,9 @@ export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
   updatedConnection: boolean;
   tokenScopes?: string[];
   pagesMessagingGranted?: boolean;
+  commentFeedScopesGranted?: boolean;
+  pagesReadUserContentGranted?: boolean;
+  pagesManageEngagementGranted?: boolean;
 };
 
 export async function checkFacebookPageWebhooks(): Promise<FacebookPageWebhookActionResult> {
@@ -65,6 +71,9 @@ async function getTokenScopeDiagnostics(token: string | null) {
   return {
     tokenScopes,
     pagesMessagingGranted: hasFacebookPagesMessagingScope(tokenScopes),
+    commentFeedScopesGranted: hasFacebookCommentFeedScopes(tokenScopes),
+    pagesReadUserContentGranted: hasFacebookPagesReadUserContentScope(tokenScopes),
+    pagesManageEngagementGranted: hasFacebookPagesManageEngagementScope(tokenScopes),
   };
 }
 

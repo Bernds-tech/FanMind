@@ -819,7 +819,7 @@ export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
   socialConnectionId?: string | null;
-  eventType: "feed" | "messages" | "unknown";
+  eventType: "feed" | "feed_comment" | "messages" | "unknown";
   pageId?: string | null;
   senderId?: string | null;
   recipientId?: string | null;

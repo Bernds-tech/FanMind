@@ -1,6 +1,9 @@
 import {
+  FACEBOOK_COMMENT_FEED_SCOPES,
   FACEBOOK_OAUTH_SCOPES,
+  FACEBOOK_PAGES_MANAGE_ENGAGEMENT_SCOPE,
   FACEBOOK_PAGES_MESSAGING_SCOPE,
+  FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE,
 } from "@/lib/facebookScopes";
 import {
   createCipheriv,
@@ -184,6 +187,18 @@ export function getFacebookGrantedScopeNames(
 
 export function hasFacebookPagesMessagingScope(scopes: string[] | null | undefined): boolean {
   return Boolean(scopes?.includes(FACEBOOK_PAGES_MESSAGING_SCOPE));
+}
+
+export function hasFacebookPagesReadUserContentScope(scopes: string[] | null | undefined): boolean {
+  return Boolean(scopes?.includes(FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE));
+}
+
+export function hasFacebookPagesManageEngagementScope(scopes: string[] | null | undefined): boolean {
+  return Boolean(scopes?.includes(FACEBOOK_PAGES_MANAGE_ENGAGEMENT_SCOPE));
+}
+
+export function hasFacebookCommentFeedScopes(scopes: string[] | null | undefined): boolean {
+  return FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => scopes?.includes(scope));
 }
 
 export function hasRequiredFacebookPagePermissions(

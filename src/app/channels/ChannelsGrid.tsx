@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./channels.module.css";
+import { FACEBOOK_COMMENT_FEED_SCOPES } from "@/lib/facebookScopes";
 import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
@@ -433,8 +434,13 @@ export function ChannelsGrid({
       ? "Meta-Webhook-Tabelle fehlt oder ist nicht lesbar"
       : null;
   const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && (event.text ?? event.message_text));
+  const lastFeedCommentEvent = metaWebhookEvents.find((event) => (event.event_type === "feed" || event.event_type === "feed_comment") && (event.text ?? event.message_text));
   const detectedFacebookScopes = pageWebhookResult?.tokenScopes ?? facebookConnection?.scopes ?? [];
   const pagesMessagingGranted = pageWebhookResult?.pagesMessagingGranted ?? detectedFacebookScopes.includes("pages_messaging");
+  const commentFeedScopesRequested = FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => requestedFacebookOauthScopes.includes(scope));
+  const pagesReadUserContentGranted = pageWebhookResult?.pagesReadUserContentGranted ?? detectedFacebookScopes.includes("pages_read_user_content");
+  const pagesManageEngagementGranted = pageWebhookResult?.pagesManageEngagementGranted ?? detectedFacebookScopes.includes("pages_manage_engagement");
+  const commentFeedScopesGranted = pageWebhookResult?.commentFeedScopesGranted ?? FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => detectedFacebookScopes.includes(scope));
   const displayedWebhookStatus = pageWebhookResult ?? (facebookConnection ? {
     ok: facebookConnection.webhook_subscribed,
     pageId: facebookConnection.page_id,
@@ -598,23 +604,39 @@ export function ChannelsGrid({
                 <br />
                 Letzte Nachricht: <strong>{lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</strong>
                 <br />
+                Letztes echtes feed/comment Event: <strong>{lastFeedCommentEvent ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}` : "noch kein echter Kommentar empfangen"}</strong>
+                <br />
                 Page-ID: <strong>{displayedWebhookStatus?.pageId ?? facebookConnection.page_id ?? "unbekannt"}</strong>
                 <br />
                 Page Access Token vorhanden: <strong>{displayedWebhookStatus?.hasPageAccessToken ? "ja" : "nein"}</strong>
                 <br />
                 Angeforderte OAuth-Scopes: <strong>{formatScopeList(requestedFacebookOauthScopes)}</strong>
                 <br />
-                Vom Token erkannte Berechtigungen: <strong>{formatScopeList(detectedFacebookScopes)}</strong>
+                comment/feed-relevante Scopes angefordert: <strong>{commentFeedScopesRequested ? "ja" : "nein"}</strong>
+                <br />
+                Vom Token erkannte Scopes: <strong>{formatScopeList(detectedFacebookScopes)}</strong>
                 <br />
                 pages_messaging vorhanden: <strong>{pagesMessagingGranted ? "ja" : "nein"}</strong>
                 <br />
+                pages_read_user_content vorhanden: <strong>{pagesReadUserContentGranted ? "ja" : "nein"}</strong>
+                <br />
+                pages_manage_engagement vorhanden: <strong>{pagesManageEngagementGranted ? "ja" : "nein"}</strong>
+                <br />
+                comment/feed-relevante Token-Scopes vollständig: <strong>{commentFeedScopesGranted ? "ja" : "nein"}</strong>
+                <br />
                 Page subscribed_apps: <strong>{formatWebhookStatus(displayedWebhookStatus?.subscribedAppsStatus)}</strong>
                 <br />
-                feed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.feed)}</strong> · messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
+                feed subscribed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.feed)}</strong> · messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
                 {displayedWebhookStatus?.error ? (
                   <>
                     <br />
                     Meta-Fehler: <strong>{displayedWebhookStatus.error}</strong>
+                  </>
+                ) : null}
+                {!lastFeedCommentEvent && (!commentFeedScopesGranted || displayedWebhookStatus?.fields.feed !== "active") ? (
+                  <>
+                    <br />
+                    Kommentar-Empfang blockiert: <strong>{getFacebookCommentBlockingReason(commentFeedScopesGranted, displayedWebhookStatus?.fields.feed)}</strong>
                   </>
                 ) : null}
               </p>
@@ -808,4 +830,17 @@ function formatWebhookStatus(status: "active" | "missing" | "error" | "unknown" 
 
 function formatScopeList(scopes: string[] | null | undefined): string {
   return scopes && scopes.length > 0 ? scopes.join(", ") : "keine erkannt";
+}
+
+function getFacebookCommentBlockingReason(
+  scopesGranted: boolean,
+  feedStatus: "active" | "missing" | "error" | "unknown" | undefined,
+): string {
+  if (!scopesGranted) {
+    return "comment/feed-relevante Token-Scopes fehlen. Bitte Facebook neu verbinden und alle Page-Kommentar-Rechte bestätigen.";
+  }
+  if (feedStatus !== "active") {
+    return "Page-Webhook-Feld feed ist nicht aktiv. Bitte Page-Webhooks prüfen oder aktivieren.";
+  }
+  return "noch kein echtes feed/comment Event von Meta empfangen.";
 }
