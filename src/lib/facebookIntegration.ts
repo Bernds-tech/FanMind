@@ -745,3 +745,72 @@ function requireEnv(name: string): string {
   if (!value) throw new Error(`${name} ist nicht konfiguriert.`);
   return value;
 }
+
+export type FacebookPagePost = {
+  id: string;
+  message?: string;
+  created_time?: string;
+  permalink_url?: string;
+};
+
+export type FacebookPageComment = {
+  id: string;
+  message?: string;
+  created_time?: string;
+  permalink_url?: string;
+  from?: { id?: string; name?: string };
+  postId: string;
+  postPermalinkUrl?: string;
+};
+
+export async function fetchFacebookPagePostsWithComments(
+  pageId: string,
+  pageAccessToken: string,
+): Promise<{ posts: FacebookPagePost[]; comments: FacebookPageComment[] }> {
+  const postsUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/posts`);
+  postsUrl.searchParams.set("fields", "id,message,created_time,permalink_url");
+  postsUrl.searchParams.set("limit", "25");
+  postsUrl.searchParams.set("access_token", pageAccessToken);
+
+  const posts = await fetchGraphCollection<FacebookPagePost>(postsUrl, "Facebook Page-Posts konnten nicht geladen werden.");
+  const comments: FacebookPageComment[] = [];
+
+  for (const post of posts) {
+    const commentsUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${post.id}/comments`);
+    commentsUrl.searchParams.set("fields", "id,message,created_time,from,permalink_url");
+    commentsUrl.searchParams.set("filter", "stream");
+    commentsUrl.searchParams.set("limit", "100");
+    commentsUrl.searchParams.set("access_token", pageAccessToken);
+    const postComments = await fetchGraphCollection<Omit<FacebookPageComment, "postId" | "postPermalinkUrl">>(
+      commentsUrl,
+      `Facebook-Kommentare für Post ${post.id} konnten nicht geladen werden.`,
+    );
+    comments.push(...postComments.map((comment) => ({ ...comment, postId: post.id, postPermalinkUrl: post.permalink_url })));
+  }
+
+  return { posts, comments };
+}
+
+async function fetchGraphCollection<T extends { id?: string }>(url: URL, errorFallback: string): Promise<T[]> {
+  const items: T[] = [];
+  let nextUrl: string | null = url.toString();
+
+  while (nextUrl && items.length < 500) {
+    const response = await fetch(nextUrl, { cache: "no-store" });
+    const payload = (await response.json().catch(() => null)) as {
+      data?: T[];
+      paging?: { next?: string };
+      error?: { message?: string; code?: number; type?: string };
+    } | null;
+
+    if (!response.ok) {
+      logFacebookApiError(errorFallback, payload?.error);
+      throw new Error(payload?.error?.message ?? errorFallback);
+    }
+
+    items.push(...(payload?.data ?? []).filter((item) => Boolean(item.id)));
+    nextUrl = payload?.paging?.next ?? null;
+  }
+
+  return items;
+}

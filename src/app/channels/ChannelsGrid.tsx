@@ -7,6 +7,8 @@ import { FACEBOOK_COMMENT_FEED_SCOPES } from "@/lib/facebookScopes";
 import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
+  fetchFacebookCommentsNow,
+  type FacebookCommentFetchResult,
   type FacebookPageWebhookActionResult,
 } from "./facebookWebhookActions";
 
@@ -24,6 +26,9 @@ type FacebookConnection = {
   last_event_at: string | null;
   has_page_access_token: boolean;
   scopes: string[] | null;
+  last_comment_fetch_at: string | null;
+  last_comment_fetch_count: number | null;
+  last_comment_fetch_error: string | null;
 };
 
 type MetaWebhookStorageHealth = {
@@ -354,6 +359,8 @@ export function ChannelsGrid({
   const [selfTestError, setSelfTestError] = useState<string | null>(null);
   const [pageWebhookPending, setPageWebhookPending] = useState<"check" | "activate" | null>(null);
   const [pageWebhookResult, setPageWebhookResult] = useState<FacebookPageWebhookActionResult | null>(null);
+  const [commentFetchPending, setCommentFetchPending] = useState(false);
+  const [commentFetchResult, setCommentFetchResult] = useState<FacebookCommentFetchResult | null>(null);
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -373,6 +380,7 @@ export function ChannelsGrid({
     setSelfTestError(null);
     setSelfTestResult(null);
     setPageWebhookResult(null);
+    setCommentFetchResult(null);
     setActiveChannel(channel);
   };
 
@@ -424,6 +432,28 @@ export function ChannelsGrid({
       });
     } finally {
       setPageWebhookPending(null);
+    }
+  }
+
+  async function runCommentFetch() {
+    setCommentFetchPending(true);
+    setCommentFetchResult(null);
+
+    try {
+      const result = await fetchFacebookCommentsNow();
+      setCommentFetchResult(result);
+      router.refresh();
+    } catch (error) {
+      setCommentFetchResult({
+        ok: false,
+        fetchedAt: new Date().toISOString(),
+        postsChecked: 0,
+        commentsChecked: 0,
+        importedCount: 0,
+        error: error instanceof Error ? error.message : "Facebook-Kommentare konnten nicht abgerufen werden.",
+      });
+    } finally {
+      setCommentFetchPending(false);
     }
   }
 
@@ -606,6 +636,14 @@ export function ChannelsGrid({
                 <br />
                 Letztes echtes feed/comment Event: <strong>{lastFeedCommentEvent ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}` : "noch kein echter Kommentar empfangen"}</strong>
                 <br />
+                Letzter Kommentar-Abruf: <strong>{commentFetchResult ? `${formatDateTime(commentFetchResult.fetchedAt)} · ${commentFetchResult.importedCount} neu importiert` : facebookConnection.last_comment_fetch_at ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert` : "noch nicht ausgeführt"}</strong>
+                {(commentFetchResult?.error ?? facebookConnection.last_comment_fetch_error) ? (
+                  <>
+                    <br />
+                    Kommentar-Abruf Fehler: <strong>{commentFetchResult?.error ?? facebookConnection.last_comment_fetch_error}</strong>
+                  </>
+                ) : null}
+                <br />
                 Page-ID: <strong>{displayedWebhookStatus?.pageId ?? facebookConnection.page_id ?? "unbekannt"}</strong>
                 <br />
                 Page Access Token vorhanden: <strong>{displayedWebhookStatus?.hasPageAccessToken ? "ja" : "nein"}</strong>
@@ -657,7 +695,21 @@ export function ChannelsGrid({
                   >
                     {pageWebhookPending === "activate" ? "Page-Webhooks aktivieren ..." : "Page-Webhooks aktivieren"}
                   </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryModalButton}
+                    onClick={runCommentFetch}
+                    disabled={commentFetchPending}
+                  >
+                    {commentFetchPending ? "Kommentare werden abgerufen ..." : "Kommentare jetzt abrufen"}
+                  </button>
                 </div>
+                {commentFetchResult ? (
+                  <p className={styles.modalNotice} role={commentFetchResult.ok ? "status" : "alert"}>
+                    Kommentar-Abruf: {commentFetchResult.ok ? "erfolgreich" : "fehlgeschlagen"} · Posts geprüft: {commentFetchResult.postsChecked} · Kommentare geprüft: {commentFetchResult.commentsChecked} · Neu importiert: {commentFetchResult.importedCount}
+                    {commentFetchResult.error ? ` · Fehler: ${commentFetchResult.error}` : ""}
+                  </p>
+                ) : null}
               </>
             ) : null}
             {activeChannel.key === "facebook" && facebookConnection && metaWebhookError ? (

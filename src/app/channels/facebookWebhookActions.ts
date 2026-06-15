@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   decryptToken,
   getFacebookGrantedScopeNames,
+  fetchFacebookPagePostsWithComments,
   fetchFacebookPageWebhookStatus,
   fetchFacebookTokenDiagnostics,
   hasFacebookCommentFeedScopes,
@@ -17,8 +18,19 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceSocialConnections,
+  createFacebookWebhookConversationMessage,
+  updateFacebookCommentFetchStatus,
   updateFacebookWebhookSubscribed,
 } from "@/lib/supabase/server";
+
+export type FacebookCommentFetchResult = {
+  ok: boolean;
+  fetchedAt: string;
+  postsChecked: number;
+  commentsChecked: number;
+  importedCount: number;
+  error?: string | null;
+};
 
 export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
   updatedConnection: boolean;
@@ -28,6 +40,57 @@ export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
   pagesReadUserContentGranted?: boolean;
   pagesManageEngagementGranted?: boolean;
 };
+
+export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchResult> {
+  const fetchedAt = new Date().toISOString();
+  const { connection, error } = await getCurrentFacebookConnection();
+  if (error || !connection) {
+    return { ok: false, fetchedAt, postsChecked: 0, commentsChecked: 0, importedCount: 0, error: error ?? "Facebook-Verbindung fehlt." };
+  }
+
+  const token = connection.page_access_token_encrypted
+    ? decryptToken(connection.page_access_token_encrypted)
+    : null;
+
+  if (!connection.page_id || !token) {
+    const message = "Page Access Token fehlt oder konnte nicht entschlüsselt werden.";
+    await updateFacebookCommentFetchStatus(connection.id, { fetchedAt, importedCount: 0, error: message });
+    revalidatePath("/channels");
+    return { ok: false, fetchedAt, postsChecked: 0, commentsChecked: 0, importedCount: 0, error: message };
+  }
+
+  try {
+    const { posts, comments } = await fetchFacebookPagePostsWithComments(connection.page_id, token);
+    let importedCount = 0;
+
+    for (const comment of comments) {
+      if (!comment.message?.trim()) continue;
+      const result = await createFacebookWebhookConversationMessage({
+        workspaceId: connection.workspace_id,
+        senderId: comment.from?.id ?? null,
+        authorLabel: comment.from?.name ?? "Facebook Nutzer",
+        content: comment.message,
+        messageType: "comment",
+        sourceUrl: comment.permalink_url ?? comment.postPermalinkUrl ?? `https://www.facebook.com/${comment.postId}`,
+        replyTargetUrl: comment.permalink_url ?? comment.postPermalinkUrl ?? `https://www.facebook.com/${comment.postId}`,
+        externalMessageId: comment.id,
+        externalThreadId: comment.postId,
+      });
+      if (result.error) throw result.error;
+      if (result.conversation) importedCount += 1;
+    }
+
+    await updateFacebookCommentFetchStatus(connection.id, { fetchedAt, importedCount, error: null });
+    revalidatePath("/channels");
+    revalidatePath("/inbox");
+    return { ok: true, fetchedAt, postsChecked: posts.length, commentsChecked: comments.length, importedCount, error: null };
+  } catch (fetchError) {
+    const message = fetchError instanceof Error ? fetchError.message : "Facebook-Kommentarabruf fehlgeschlagen.";
+    await updateFacebookCommentFetchStatus(connection.id, { fetchedAt, importedCount: 0, error: message });
+    revalidatePath("/channels");
+    return { ok: false, fetchedAt, postsChecked: 0, commentsChecked: 0, importedCount: 0, error: message };
+  }
+}
 
 export async function checkFacebookPageWebhooks(): Promise<FacebookPageWebhookActionResult> {
   const { connection, error } = await getCurrentFacebookConnection();
