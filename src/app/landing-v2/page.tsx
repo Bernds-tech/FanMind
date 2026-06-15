@@ -2484,7 +2484,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <Logo language={language} />
         <p>{t("© 2025 FanMind. Alle Rechte vorbehalten.")}</p>
         <nav aria-label="Footer Navigation">
-          <a id="datenschutz" href="#datenschutz">
+          <a id="datenschutz" href="/datenschutz">
             {t("Datenschutz")}
           </a>
           <a id="impressum" href="#impressum">
