@@ -522,17 +522,108 @@ function buildFacebookPagesFetchResult(
   };
 }
 
+export type FacebookPageWebhookFieldStatus = "active" | "missing" | "unknown";
+
+export type FacebookPageWebhookStatus = {
+  ok: boolean;
+  pageId: string | null;
+  hasPageAccessToken: boolean;
+  subscribedAppsStatus: "active" | "missing" | "error" | "unknown";
+  fields: Record<"feed" | "messages", FacebookPageWebhookFieldStatus>;
+  error: string | null;
+  metaError?: { message?: string; code?: number; type?: string };
+};
+
+type FacebookSubscribedApp = {
+  id?: string;
+  name?: string;
+  subscribed_fields?: string[];
+};
+
+export async function fetchFacebookPageWebhookStatus(
+  pageId: string | null,
+  pageAccessToken: string | null,
+): Promise<FacebookPageWebhookStatus> {
+  if (!pageId) return buildWebhookStatus(pageId, Boolean(pageAccessToken), "unknown", [], "Facebook Page-ID fehlt.");
+  if (!pageAccessToken) return buildWebhookStatus(pageId, false, "unknown", [], "Page Access Token fehlt serverseitig.");
+
+  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`);
+  url.searchParams.set("fields", "id,name,subscribed_fields");
+  url.searchParams.set("access_token", pageAccessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as {
+    data?: FacebookSubscribedApp[];
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
+
+  if (!response.ok) {
+    logFacebookApiError("Facebook Page subscribed_apps check failed", payload?.error);
+    return {
+      ...buildWebhookStatus(pageId, true, "error", [], payload?.error?.message ?? "Meta subscribed_apps konnte nicht geprüft werden."),
+      metaError: payload?.error,
+    };
+  }
+
+  const appId = process.env.META_APP_ID;
+  const appSubscription = (payload?.data ?? []).find((entry) => !appId || entry.id === appId) ?? null;
+  const subscribedFields = appSubscription?.subscribed_fields ?? [];
+  return buildWebhookStatus(
+    pageId,
+    true,
+    appSubscription ? "active" : "missing",
+    subscribedFields,
+    null,
+  );
+}
+
 export async function subscribeFacebookPage(
   pageId: string,
   pageAccessToken: string,
-): Promise<boolean> {
+): Promise<FacebookPageWebhookStatus> {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`,
   );
-  url.searchParams.set("subscribed_fields", "messages,feed");
+  url.searchParams.set("subscribed_fields", "feed,messages");
   url.searchParams.set("access_token", pageAccessToken);
   const response = await fetch(url, { method: "POST", cache: "no-store" });
-  return response.ok;
+  const payload = (await response.json().catch(() => null)) as {
+    success?: boolean;
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
+
+  if (!response.ok || payload?.success === false) {
+    logFacebookApiError("Facebook Page subscribe failed", payload?.error);
+    return {
+      ...buildWebhookStatus(pageId, true, "error", [], payload?.error?.message ?? "Meta hat die Page-Webhook-Aktivierung abgelehnt."),
+      metaError: payload?.error,
+    };
+  }
+
+  return fetchFacebookPageWebhookStatus(pageId, pageAccessToken);
+}
+
+function buildWebhookStatus(
+  pageId: string | null,
+  hasPageAccessToken: boolean,
+  subscribedAppsStatus: FacebookPageWebhookStatus["subscribedAppsStatus"],
+  subscribedFields: string[],
+  error: string | null,
+): FacebookPageWebhookStatus {
+  const fieldSet = new Set(subscribedFields);
+  const fieldStatus = (field: "feed" | "messages"): FacebookPageWebhookFieldStatus => {
+    if (subscribedAppsStatus === "error" || subscribedAppsStatus === "unknown") return "unknown";
+    return fieldSet.has(field) ? "active" : "missing";
+  };
+
+  return {
+    ok: subscribedAppsStatus === "active" && fieldSet.has("feed") && fieldSet.has("messages"),
+    pageId,
+    hasPageAccessToken,
+    subscribedAppsStatus,
+    fields: { feed: fieldStatus("feed"), messages: fieldStatus("messages") },
+    error,
+  };
 }
 
 export function isTokenEncryptionConfigured(): boolean {

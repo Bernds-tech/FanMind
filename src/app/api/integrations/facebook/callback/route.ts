@@ -75,11 +75,12 @@ export async function GET(request: Request) {
       return redirectToChannels(appOrigin, "facebook_error=encryption");
     }
 
-    const webhookSubscribed = page.accessToken
+    const webhookStatus = page.accessToken
       ? await subscribeFacebookPage(page.id, page.accessToken).catch(
-          () => false,
+          () => null,
         )
-      : false;
+      : null;
+    const webhookSubscribed = Boolean(webhookStatus?.ok);
 
     const result = await upsertFacebookSocialConnection({
       workspaceId: state.workspaceId,

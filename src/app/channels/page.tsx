@@ -16,11 +16,16 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
 
+type SafeFacebookConnection = Pick<
+  SocialConnectionRow,
+  "page_name" | "page_id" | "webhook_subscribed" | "last_event_at"
+> & { has_page_access_token: boolean };
+
 type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
-  facebookConnection: SocialConnectionRow | null;
+  facebookConnection: SafeFacebookConnection | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEventRow[];
   metaWebhookError?: string | null;
@@ -137,7 +142,13 @@ export default async function ChannelsPage({
             workspace.name,
           )}
           contactCount={contactsResult?.contacts.length ?? 0}
-          facebookConnection={facebookConnection}
+          facebookConnection={facebookConnection ? {
+            page_name: facebookConnection.page_name,
+            page_id: facebookConnection.page_id,
+            webhook_subscribed: facebookConnection.webhook_subscribed,
+            last_event_at: facebookConnection.last_event_at,
+            has_page_access_token: Boolean(facebookConnection.page_access_token_encrypted),
+          } : null}
           facebookError={Boolean(params.facebook_error)}
           metaWebhookEvents={metaWebhookEventsResult?.events ?? []}
           metaWebhookError={metaWebhookEventsResult?.error?.message ?? null}

@@ -3,6 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./channels.module.css";
+import {
+  activateFacebookPageWebhooks,
+  checkFacebookPageWebhooks,
+  type FacebookPageWebhookActionResult,
+} from "./facebookWebhookActions";
 
 type ChannelStatus =
   | "Verbunden"
@@ -16,6 +21,7 @@ type FacebookConnection = {
   page_id: string | null;
   webhook_subscribed: boolean;
   last_event_at: string | null;
+  has_page_access_token: boolean;
 };
 
 type MetaWebhookStorageHealth = {
@@ -342,6 +348,8 @@ export function ChannelsGrid({
   const [selfTestPending, setSelfTestPending] = useState(false);
   const [selfTestResult, setSelfTestResult] = useState<MetaWebhookSelfTestResult | null>(null);
   const [selfTestError, setSelfTestError] = useState<string | null>(null);
+  const [pageWebhookPending, setPageWebhookPending] = useState<"check" | "activate" | null>(null);
+  const [pageWebhookResult, setPageWebhookResult] = useState<FacebookPageWebhookActionResult | null>(null);
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -360,6 +368,7 @@ export function ChannelsGrid({
     setNotice("");
     setSelfTestError(null);
     setSelfTestResult(null);
+    setPageWebhookResult(null);
     setActiveChannel(channel);
   };
 
@@ -389,6 +398,31 @@ export function ChannelsGrid({
     }
   }
 
+  async function runPageWebhookAction(action: "check" | "activate") {
+    setPageWebhookPending(action);
+    setPageWebhookResult(null);
+
+    try {
+      const result = action === "check"
+        ? await checkFacebookPageWebhooks()
+        : await activateFacebookPageWebhooks();
+      setPageWebhookResult(result);
+      router.refresh();
+    } catch (error) {
+      setPageWebhookResult({
+        ok: false,
+        pageId: facebookConnection?.page_id ?? null,
+        hasPageAccessToken: Boolean(facebookConnection?.has_page_access_token),
+        subscribedAppsStatus: "error",
+        fields: { feed: "unknown", messages: "unknown" },
+        error: error instanceof Error ? error.message : "Page-Webhooks konnten nicht verarbeitet werden.",
+        updatedConnection: false,
+      });
+    } finally {
+      setPageWebhookPending(null);
+    }
+  }
+
   const lastWebhookEvent = metaWebhookEvents[0] ?? null;
   const selfTestDisabledReason = !metaWebhookStorageHealth.serviceRoleConfigured
     ? "Service-Role-Key fehlt"
@@ -396,6 +430,18 @@ export function ChannelsGrid({
       ? "Meta-Webhook-Tabelle fehlt oder ist nicht lesbar"
       : null;
   const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && (event.text ?? event.message_text));
+  const displayedWebhookStatus = pageWebhookResult ?? (facebookConnection ? {
+    ok: facebookConnection.webhook_subscribed,
+    pageId: facebookConnection.page_id,
+    hasPageAccessToken: facebookConnection.has_page_access_token,
+    subscribedAppsStatus: facebookConnection.webhook_subscribed ? "active" : "unknown",
+    fields: {
+      feed: facebookConnection.webhook_subscribed ? "active" : "unknown",
+      messages: facebookConnection.webhook_subscribed ? "active" : "unknown",
+    },
+    error: null,
+    updatedConnection: false,
+  } satisfies FacebookPageWebhookActionResult : null);
 
   const activeDisplayStatus =
     activeChannel?.key === "facebook" && facebookConnection
@@ -537,15 +583,49 @@ export function ChannelsGrid({
                 : "Melde dich an, um diesen Kanal zu verbinden und eingehende Nachrichten für FanMind freizugeben."}
             </p>
             {activeChannel.key === "facebook" && facebookConnection ? (
+              <>
               <p className={styles.modalNotice}>
                 OAuth verbunden · Page: <strong>{facebookConnection.page_name ?? facebookConnection.page_id}</strong>
                 <br />
-                Webhook feed/messages: <strong>{facebookConnection.webhook_subscribed ? "verbunden" : "unbekannt"}</strong>
+                Webhook feed/messages: <strong>{displayedWebhookStatus?.ok ? "aktiv" : "unbekannt"}</strong>
                 <br />
                 Letztes Webhook-Event: <strong>{lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}</strong>
                 <br />
                 Letzte Nachricht: <strong>{lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</strong>
+                <br />
+                Page-ID: <strong>{displayedWebhookStatus?.pageId ?? facebookConnection.page_id ?? "unbekannt"}</strong>
+                <br />
+                Page Access Token vorhanden: <strong>{displayedWebhookStatus?.hasPageAccessToken ? "ja" : "nein"}</strong>
+                <br />
+                Page subscribed_apps: <strong>{formatWebhookStatus(displayedWebhookStatus?.subscribedAppsStatus)}</strong>
+                <br />
+                feed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.feed)}</strong> · messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
+                {displayedWebhookStatus?.error ? (
+                  <>
+                    <br />
+                    Meta-Fehler: <strong>{displayedWebhookStatus.error}</strong>
+                  </>
+                ) : null}
               </p>
+                <div className={styles.modalActions}>
+                  <button
+                    type="button"
+                    className={styles.secondaryModalButton}
+                    onClick={() => runPageWebhookAction("check")}
+                    disabled={Boolean(pageWebhookPending)}
+                  >
+                    {pageWebhookPending === "check" ? "Page-Webhooks prüfen ..." : "Page-Webhooks prüfen"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryModalButton}
+                    onClick={() => runPageWebhookAction("activate")}
+                    disabled={Boolean(pageWebhookPending)}
+                  >
+                    {pageWebhookPending === "activate" ? "Page-Webhooks aktivieren ..." : "Page-Webhooks aktivieren"}
+                  </button>
+                </div>
+              </>
             ) : null}
             {activeChannel.key === "facebook" && facebookConnection && metaWebhookError ? (
               <p className={styles.modalNotice} role="alert">
@@ -706,4 +786,11 @@ function getFacebookErrorMessage(errorCode: string | null): string {
 function formatDateTime(value: string | null): string {
   if (!value) return "unbekannt";
   return new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
+
+function formatWebhookStatus(status: "active" | "missing" | "error" | "unknown" | undefined): string {
+  if (status === "active") return "aktiv";
+  if (status === "missing") return "fehlt";
+  if (status === "error") return "Fehler";
+  return "unbekannt";
 }
