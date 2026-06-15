@@ -1,4 +1,8 @@
 import {
+  FACEBOOK_OAUTH_SCOPES,
+  FACEBOOK_PAGES_MESSAGING_SCOPE,
+} from "@/lib/facebookScopes";
+import {
   createCipheriv,
   createDecipheriv,
   createHmac,
@@ -9,11 +13,7 @@ import {
 const OAUTH_VERSION = "v20.0";
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
-export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS = [
-  "pages_show_list",
-  "pages_read_engagement",
-  "pages_manage_metadata",
-] as const;
+export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS = FACEBOOK_OAUTH_SCOPES;
 
 export type FacebookPermissionStatus = {
   permission: string;
@@ -55,7 +55,7 @@ export function getFacebookOAuthUrl(state: string): string {
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("auth_type", "rerequest");
-  url.searchParams.set("scope", REQUIRED_FACEBOOK_PAGE_PERMISSIONS.join(","));
+  url.searchParams.set("scope", FACEBOOK_OAUTH_SCOPES.join(","));
   return url.toString();
 }
 
@@ -159,6 +159,31 @@ export async function fetchFacebookGrantedPermissions(
   });
 
   return permissions;
+}
+
+export function getGrantedFacebookPermissionNames(
+  permissions: FacebookPermissionStatus[] | null,
+): string[] {
+  return (permissions ?? [])
+    .filter((entry) => entry.status === "granted")
+    .map((entry) => entry.permission);
+}
+
+export function getFacebookGrantedScopeNames(
+  diagnostics: FacebookTokenDiagnostics | null,
+): string[] {
+  const scopes = new Set<string>();
+  for (const scope of diagnostics?.scopes ?? []) {
+    if (scope) scopes.add(scope);
+  }
+  for (const granularScope of diagnostics?.granular_scopes ?? []) {
+    if (granularScope.scope) scopes.add(granularScope.scope);
+  }
+  return [...scopes].sort();
+}
+
+export function hasFacebookPagesMessagingScope(scopes: string[] | null | undefined): boolean {
+  return Boolean(scopes?.includes(FACEBOOK_PAGES_MESSAGING_SCOPE));
 }
 
 export function hasRequiredFacebookPagePermissions(

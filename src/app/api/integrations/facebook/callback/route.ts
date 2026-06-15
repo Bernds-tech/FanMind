@@ -5,9 +5,12 @@ import {
   exchangeFacebookCode,
   isTokenEncryptionConfigured,
   fetchFacebookGrantedPermissions,
+  getFacebookGrantedScopeNames,
   fetchFacebookPages,
+  getGrantedFacebookPermissionNames,
   hasRequiredFacebookPagePermissions,
   subscribeFacebookPage,
+  fetchFacebookTokenDiagnostics,
   tokenLastFour,
   verifyFacebookOAuthState,
 } from "@/lib/facebookIntegration";
@@ -42,6 +45,7 @@ export async function GET(request: Request) {
   try {
     const userToken = await exchangeFacebookCode(code);
     const permissions = await fetchFacebookGrantedPermissions(userToken);
+    const userTokenDiagnostics = await fetchFacebookTokenDiagnostics(userToken);
     if (!hasRequiredFacebookPagePermissions(permissions)) {
       console.warn("Facebook callback missing required page permissions");
       return redirectToChannels(appOrigin, "facebook_error=page_permissions");
@@ -75,6 +79,16 @@ export async function GET(request: Request) {
       return redirectToChannels(appOrigin, "facebook_error=encryption");
     }
 
+    const pageTokenDiagnostics = page.accessToken
+      ? await fetchFacebookTokenDiagnostics(page.accessToken)
+      : null;
+    const grantedScopes = mergeScopes(
+      getGrantedFacebookPermissionNames(permissions),
+      getFacebookGrantedScopeNames(userTokenDiagnostics),
+      getFacebookGrantedScopeNames(pageTokenDiagnostics),
+      page.scopes,
+    );
+
     const webhookStatus = page.accessToken
       ? await subscribeFacebookPage(page.id, page.accessToken).catch(
           () => null,
@@ -91,7 +105,7 @@ export async function GET(request: Request) {
       pageName: page.name,
       pageAccessTokenEncrypted: encryptedToken,
       tokenLastFour: encryptedToken ? tokenLastFour(page.accessToken) : null,
-      scopes: page.scopes,
+      scopes: grantedScopes,
       webhookSubscribed,
     });
 
@@ -116,6 +130,10 @@ export async function GET(request: Request) {
     });
     return redirectToChannels(appOrigin, "facebook_error=callback");
   }
+}
+
+function mergeScopes(...scopeGroups: Array<string[] | null | undefined>): string[] {
+  return [...new Set(scopeGroups.flatMap((scopes) => scopes ?? []))].sort();
 }
 
 function redirectToChannels(appOrigin: string, query: string): Response {
