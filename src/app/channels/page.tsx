@@ -12,13 +12,14 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { FACEBOOK_OAUTH_SCOPES } from "@/lib/facebookScopes";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
 
 type SafeFacebookConnection = Pick<
   SocialConnectionRow,
-  "page_name" | "page_id" | "webhook_subscribed" | "last_event_at"
+  "page_name" | "page_id" | "webhook_subscribed" | "last_event_at" | "scopes"
 > & { has_page_access_token: boolean };
 
 type ChannelsWorkspaceProps = {
@@ -84,6 +85,7 @@ function ChannelsWorkspace({
         metaWebhookEvents={metaWebhookEvents}
         metaWebhookError={metaWebhookError}
         metaWebhookStorageHealth={metaWebhookStorageHealth}
+        requestedFacebookOauthScopes={[...FACEBOOK_OAUTH_SCOPES]}
       />
     </WorkspaceShell>
   );
@@ -148,6 +150,7 @@ export default async function ChannelsPage({
             webhook_subscribed: facebookConnection.webhook_subscribed,
             last_event_at: facebookConnection.last_event_at,
             has_page_access_token: Boolean(facebookConnection.page_access_token_encrypted),
+            scopes: facebookConnection.scopes ?? [],
           } : null}
           facebookError={Boolean(params.facebook_error)}
           metaWebhookEvents={metaWebhookEventsResult?.events ?? []}

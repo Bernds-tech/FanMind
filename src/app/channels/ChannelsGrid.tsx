@@ -22,6 +22,7 @@ type FacebookConnection = {
   webhook_subscribed: boolean;
   last_event_at: string | null;
   has_page_access_token: boolean;
+  scopes: string[] | null;
 };
 
 type MetaWebhookStorageHealth = {
@@ -335,12 +336,14 @@ export function ChannelsGrid({
   metaWebhookEvents,
   metaWebhookError,
   metaWebhookStorageHealth,
+  requestedFacebookOauthScopes,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEvent[];
   metaWebhookError?: string | null;
   metaWebhookStorageHealth: MetaWebhookStorageHealth;
+  requestedFacebookOauthScopes: string[];
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -430,6 +433,8 @@ export function ChannelsGrid({
       ? "Meta-Webhook-Tabelle fehlt oder ist nicht lesbar"
       : null;
   const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && (event.text ?? event.message_text));
+  const detectedFacebookScopes = pageWebhookResult?.tokenScopes ?? facebookConnection?.scopes ?? [];
+  const pagesMessagingGranted = pageWebhookResult?.pagesMessagingGranted ?? detectedFacebookScopes.includes("pages_messaging");
   const displayedWebhookStatus = pageWebhookResult ?? (facebookConnection ? {
     ok: facebookConnection.webhook_subscribed,
     pageId: facebookConnection.page_id,
@@ -597,6 +602,12 @@ export function ChannelsGrid({
                 <br />
                 Page Access Token vorhanden: <strong>{displayedWebhookStatus?.hasPageAccessToken ? "ja" : "nein"}</strong>
                 <br />
+                Angeforderte OAuth-Scopes: <strong>{formatScopeList(requestedFacebookOauthScopes)}</strong>
+                <br />
+                Vom Token erkannte Berechtigungen: <strong>{formatScopeList(detectedFacebookScopes)}</strong>
+                <br />
+                pages_messaging vorhanden: <strong>{pagesMessagingGranted ? "ja" : "nein"}</strong>
+                <br />
                 Page subscribed_apps: <strong>{formatWebhookStatus(displayedWebhookStatus?.subscribedAppsStatus)}</strong>
                 <br />
                 feed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.feed)}</strong> · messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
@@ -761,7 +772,7 @@ function getFacebookErrorMessage(errorCode: string | null): string {
   }
 
   if (errorCode === "page_permissions") {
-    return "Facebook hat nicht alle benötigten Seitenrechte freigegeben. Bitte bestätige beim Verbinden alle angefragten Page-Berechtigungen.";
+    return "Facebook hat nicht alle benötigten Seitenrechte freigegeben. pages_messaging fehlt im Token oder wurde von Meta nicht gewährt. Bitte erneut verbinden und alle angefragten Page-Berechtigungen bestätigen.";
   }
 
   if (errorCode === "callback") {
@@ -793,4 +804,8 @@ function formatWebhookStatus(status: "active" | "missing" | "error" | "unknown" 
   if (status === "missing") return "fehlt";
   if (status === "error") return "Fehler";
   return "unbekannt";
+}
+
+function formatScopeList(scopes: string[] | null | undefined): string {
+  return scopes && scopes.length > 0 ? scopes.join(", ") : "keine erkannt";
 }

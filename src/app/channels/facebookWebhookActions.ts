@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import {
   decryptToken,
+  getFacebookGrantedScopeNames,
   fetchFacebookPageWebhookStatus,
+  fetchFacebookTokenDiagnostics,
+  hasFacebookPagesMessagingScope,
   subscribeFacebookPage,
   type FacebookPageWebhookStatus,
 } from "@/lib/facebookIntegration";
@@ -16,6 +19,8 @@ import {
 
 export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
   updatedConnection: boolean;
+  tokenScopes?: string[];
+  pagesMessagingGranted?: boolean;
 };
 
 export async function checkFacebookPageWebhooks(): Promise<FacebookPageWebhookActionResult> {
@@ -25,10 +30,11 @@ export async function checkFacebookPageWebhooks(): Promise<FacebookPageWebhookAc
   const token = connection.page_access_token_encrypted
     ? decryptToken(connection.page_access_token_encrypted)
     : null;
+  const tokenDiagnostics = await getTokenScopeDiagnostics(token);
   const status = await fetchFacebookPageWebhookStatus(connection.page_id, token);
   await updateFacebookWebhookSubscribed(connection.id, status.ok);
   revalidatePath("/channels");
-  return { ...status, updatedConnection: true };
+  return { ...status, ...tokenDiagnostics, updatedConnection: true };
 }
 
 export async function activateFacebookPageWebhooks(): Promise<FacebookPageWebhookActionResult> {
@@ -38,17 +44,28 @@ export async function activateFacebookPageWebhooks(): Promise<FacebookPageWebhoo
   const token = connection.page_access_token_encrypted
     ? decryptToken(connection.page_access_token_encrypted)
     : null;
+  const tokenDiagnostics = await getTokenScopeDiagnostics(token);
   if (!connection.page_id || !token) {
     const status = await fetchFacebookPageWebhookStatus(connection.page_id, token);
     await updateFacebookWebhookSubscribed(connection.id, false);
     revalidatePath("/channels");
-    return { ...status, updatedConnection: true };
+    return { ...status, ...tokenDiagnostics, updatedConnection: true };
   }
 
   const status = await subscribeFacebookPage(connection.page_id, token);
   await updateFacebookWebhookSubscribed(connection.id, status.ok);
   revalidatePath("/channels");
-  return { ...status, updatedConnection: true };
+  return { ...status, ...tokenDiagnostics, updatedConnection: true };
+}
+
+async function getTokenScopeDiagnostics(token: string | null) {
+  const tokenScopes = token
+    ? getFacebookGrantedScopeNames(await fetchFacebookTokenDiagnostics(token))
+    : [];
+  return {
+    tokenScopes,
+    pagesMessagingGranted: hasFacebookPagesMessagingScope(tokenScopes),
+  };
 }
 
 async function getCurrentFacebookConnection() {
