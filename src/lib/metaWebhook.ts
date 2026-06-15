@@ -6,7 +6,7 @@ import {
 } from "@/lib/supabase/server";
 
 export type MetaWebhookEvent = {
-  eventType: "feed" | "messages" | "unknown";
+  eventType: "feed" | "feed_comment" | "messages" | "unknown";
   messageType: "dm" | "comment";
   content: string | null;
   externalMessageId: string | null;
@@ -71,23 +71,26 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       const value = isRecord(change.value) ? change.value : undefined;
       const field = stringValue(change.field);
       const item = stringValue(value?.item) ?? field;
-      const content = stringValue(value?.message) ?? stringValue(value?.verb);
+      const content = stringValue(value?.message) ?? stringValue(value?.comment_message) ?? stringValue(value?.text);
       const commentId = stringValue(value?.comment_id) ?? stringValue(value?.id);
-      const permalink = stringValue(value?.permalink_url);
-      const postId = stringValue(value?.post_id);
-      const senderId = stringValue(value?.from_id) ?? stringValue(value?.sender_id);
-      const eventType = field === "feed" || field === "comments" ? "feed" : "unknown";
+      const permalink = stringValue(value?.permalink_url) ?? stringValue(value?.link);
+      const postId = stringValue(value?.post_id) ?? stringValue(value?.parent_id);
+      const from = isRecord(value?.from) ? value.from : undefined;
+      const senderId = stringValue(value?.from_id) ?? stringValue(value?.sender_id) ?? stringValue(from?.id);
+      const senderName = stringValue(value?.from_name) ?? stringValue(value?.sender_name) ?? stringValue(from?.name);
+      const isFeedField = field === "feed" || field === "comments";
+      const isCommentItem = item === "comment" || Boolean(commentId) || field === "comments";
+      const eventType = isFeedField ? (isCommentItem ? "feed_comment" : "feed") : "unknown";
 
       events.push({
         eventType,
-        messageType: item === "comment" || field === "comments" ? "comment" : "comment",
+        messageType: isCommentItem ? "comment" : "comment",
         content,
         externalMessageId: commentId,
         externalThreadId: postId ?? permalink ?? commentId,
         sourceUrl: permalink ?? (postId ? `https://www.facebook.com/${postId}` : null),
         replyTargetUrl: permalink ?? (postId ? `https://www.facebook.com/${postId}` : null),
-        authorLabel:
-          stringValue(value?.from_name) ?? stringValue(value?.sender_name) ?? "Facebook Nutzer",
+        authorLabel: senderName ?? "Facebook Nutzer",
         pageId: entryPageId,
         senderId,
         recipientId: entryPageId,
@@ -138,17 +141,17 @@ export async function processMetaWebhookPayload(
       continue;
     }
 
-    let status = event.eventType === "feed" ? "stored" : "received";
+    let status = event.eventType === "feed" || event.eventType === "feed_comment" ? "stored" : "received";
     let errorReason: string | null = null;
     let messageId: string | null = null;
 
-    if (event.eventType === "messages") {
+    if (event.eventType === "messages" || event.eventType === "feed" || event.eventType === "feed_comment") {
       if (event.content) {
         const result = await createFacebookWebhookConversationMessage({
           workspaceId: connection.connection.workspace_id,
           senderId: event.senderId,
           content: event.content,
-          messageType: event.messageType,
+          messageType: event.eventType === "feed" || event.eventType === "feed_comment" ? "comment" : event.messageType,
           sourceUrl: event.sourceUrl,
           replyTargetUrl: event.replyTargetUrl,
           externalMessageId: event.externalMessageId,
@@ -160,17 +163,15 @@ export async function processMetaWebhookPayload(
           errorReason = result.error.message;
           firstError ??= result.error.message;
         } else {
-          status = "stored";
+          status = event.eventType === "feed" || event.eventType === "feed_comment" ? "feed_comment_stored" : "stored";
           messageId = result.message?.id ?? null;
           saved += 1;
         }
       } else {
         status = "ignored";
-        errorReason = "Message-Event ohne Nachrichtentext.";
+        errorReason = event.eventType === "feed" || event.eventType === "feed_comment" ? "Feed/comment-Event ohne Kommentartext." : "Message-Event ohne Nachrichtentext.";
         skipped += 1;
       }
-    } else if (event.eventType === "feed") {
-      saved += 1;
     } else {
       status = "ignored";
       errorReason = "Unbekannter Meta-Event-Typ.";
