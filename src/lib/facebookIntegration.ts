@@ -1,6 +1,6 @@
 import {
   FACEBOOK_COMMENT_FEED_SCOPES,
-  FACEBOOK_OAUTH_SCOPES,
+  FACEBOOK_MESSAGES_OAUTH_SCOPES,
   FACEBOOK_PAGES_MANAGE_ENGAGEMENT_SCOPE,
   FACEBOOK_PAGES_MESSAGING_SCOPE,
   FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE,
@@ -16,7 +16,7 @@ import {
 const OAUTH_VERSION = "v20.0";
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
-export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS = FACEBOOK_OAUTH_SCOPES;
+export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS = FACEBOOK_MESSAGES_OAUTH_SCOPES;
 
 export type FacebookPermissionStatus = {
   permission: string;
@@ -28,6 +28,7 @@ export type FacebookOAuthState = {
   userId: string;
   nonce: string;
   issuedAt: number;
+  connectionType?: "facebook_messages" | "facebook_comments";
 };
 
 export type FacebookPage = {
@@ -49,7 +50,7 @@ export type FacebookTokenDiagnostics = {
   error?: { message?: string; code?: number; type?: string };
 };
 
-export function getFacebookOAuthUrl(state: string): string {
+export function getFacebookOAuthUrl(state: string, scopes: readonly string[] = FACEBOOK_MESSAGES_OAUTH_SCOPES): string {
   const appId = requireEnv("META_APP_ID");
   const redirectUri = requireEnv("META_REDIRECT_URI");
   const url = new URL(`https://www.facebook.com/${OAUTH_VERSION}/dialog/oauth`);
@@ -58,7 +59,7 @@ export function getFacebookOAuthUrl(state: string): string {
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("auth_type", "rerequest");
-  url.searchParams.set("scope", FACEBOOK_OAUTH_SCOPES.join(","));
+  url.searchParams.set("scope", scopes.join(","));
   return url.toString();
 }
 
@@ -753,11 +754,20 @@ export type FacebookPagePost = {
   permalink_url?: string;
 };
 
+export type FacebookPageCommentAttachment = {
+  media?: { image?: { src?: string } };
+  target?: { url?: string };
+  type?: string;
+  url?: string;
+};
+
 export type FacebookPageComment = {
   id: string;
   message?: string;
   created_time?: string;
   permalink_url?: string;
+  attachment?: FacebookPageCommentAttachment;
+  attachments?: { data?: FacebookPageCommentAttachment[] };
   from?: { id?: string; name?: string };
   postId: string;
   postPermalinkUrl?: string;
@@ -798,7 +808,7 @@ export async function fetchFacebookPagePostsWithComments(
   pageAccessToken: string,
 ): Promise<{ posts: FacebookPagePost[]; comments: FacebookPageComment[]; diagnostics: FacebookCommentFetchDiagnostics }> {
   const feedUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/feed`);
-  feedUrl.searchParams.set("fields", "id,message,created_time,permalink_url,comments.limit(50){id,message,created_time,from,permalink_url}");
+  feedUrl.searchParams.set("fields", "id,message,created_time,permalink_url,comments.limit(50){id,message,created_time,from,permalink_url,attachment,attachments{media,target,type,url}}");
   feedUrl.searchParams.set("limit", "25");
   feedUrl.searchParams.set("access_token", pageAccessToken);
 
@@ -807,7 +817,12 @@ export async function fetchFacebookPagePostsWithComments(
       feedUrl,
       "Facebook Page-Feed mit Kommentaren konnte nicht geladen werden.",
     );
-    const posts = feedPosts.map(({ comments: _comments, ...post }) => post);
+    const posts = feedPosts.map((post) => ({
+      id: post.id,
+      message: post.message,
+      created_time: post.created_time,
+      permalink_url: post.permalink_url,
+    }));
     const comments = feedPosts.flatMap((post) =>
       (post.comments?.data ?? [])
         .filter((comment) => Boolean(comment.id))
@@ -833,7 +848,7 @@ export async function fetchFacebookPagePostsWithComments(
 
   for (const post of posts) {
     const commentsUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${post.id}/comments`);
-    commentsUrl.searchParams.set("fields", "id,message,created_time,from,permalink_url");
+    commentsUrl.searchParams.set("fields", "id,message,created_time,from,permalink_url,attachment,attachments{media,target,type,url}");
     commentsUrl.searchParams.set("filter", "stream");
     commentsUrl.searchParams.set("limit", "100");
     commentsUrl.searchParams.set("access_token", pageAccessToken);
