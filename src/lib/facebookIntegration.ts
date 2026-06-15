@@ -763,16 +763,72 @@ export type FacebookPageComment = {
   postPermalinkUrl?: string;
 };
 
+export type FacebookCommentFetchEndpointType = "page-feed-with-comments" | "post-comments-fallback";
+
+export type FacebookCommentFetchDiagnostics = {
+  endpointType: FacebookCommentFetchEndpointType;
+  usedPageAccessToken: boolean;
+};
+
+export class FacebookCommentFetchError extends Error {
+  readonly endpointType: FacebookCommentFetchEndpointType;
+  readonly usedPageAccessToken: boolean;
+  readonly graphErrorCode?: number;
+
+  constructor(
+    message: string,
+    input: { endpointType: FacebookCommentFetchEndpointType; usedPageAccessToken: boolean; graphErrorCode?: number },
+  ) {
+    super(message);
+    this.name = "FacebookCommentFetchError";
+    this.endpointType = input.endpointType;
+    this.usedPageAccessToken = input.usedPageAccessToken;
+    this.graphErrorCode = input.graphErrorCode;
+  }
+}
+
+type FacebookPagePostWithInlineComments = FacebookPagePost & {
+  comments?: {
+    data?: Array<Omit<FacebookPageComment, "postId" | "postPermalinkUrl">>;
+  };
+};
+
 export async function fetchFacebookPagePostsWithComments(
   pageId: string,
   pageAccessToken: string,
-): Promise<{ posts: FacebookPagePost[]; comments: FacebookPageComment[] }> {
-  const postsUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/posts`);
+): Promise<{ posts: FacebookPagePost[]; comments: FacebookPageComment[]; diagnostics: FacebookCommentFetchDiagnostics }> {
+  const feedUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/feed`);
+  feedUrl.searchParams.set("fields", "id,message,created_time,permalink_url,comments.limit(50){id,message,created_time,from,permalink_url}");
+  feedUrl.searchParams.set("limit", "25");
+  feedUrl.searchParams.set("access_token", pageAccessToken);
+
+  try {
+    const feedPosts = await fetchGraphCollection<FacebookPagePostWithInlineComments>(
+      feedUrl,
+      "Facebook Page-Feed mit Kommentaren konnte nicht geladen werden.",
+    );
+    const posts = feedPosts.map(({ comments: _comments, ...post }) => post);
+    const comments = feedPosts.flatMap((post) =>
+      (post.comments?.data ?? [])
+        .filter((comment) => Boolean(comment.id))
+        .map((comment) => ({ ...comment, postId: post.id, postPermalinkUrl: post.permalink_url })),
+    );
+    return { posts, comments, diagnostics: { endpointType: "page-feed-with-comments", usedPageAccessToken: true } };
+  } catch (error) {
+    if (!isMetaPermissionError(error)) throw withCommentFetchEndpoint(error, "page-feed-with-comments");
+  }
+
+  const postsUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/feed`);
   postsUrl.searchParams.set("fields", "id,message,created_time,permalink_url");
   postsUrl.searchParams.set("limit", "25");
   postsUrl.searchParams.set("access_token", pageAccessToken);
 
-  const posts = await fetchGraphCollection<FacebookPagePost>(postsUrl, "Facebook Page-Posts konnten nicht geladen werden.");
+  const posts = await fetchGraphCollection<FacebookPagePost>(
+    postsUrl,
+    "Facebook Page-Feed konnte nicht geladen werden.",
+  ).catch((error) => {
+    throw withCommentFetchEndpoint(error, "post-comments-fallback");
+  });
   const comments: FacebookPageComment[] = [];
 
   for (const post of posts) {
@@ -784,11 +840,38 @@ export async function fetchFacebookPagePostsWithComments(
     const postComments = await fetchGraphCollection<Omit<FacebookPageComment, "postId" | "postPermalinkUrl">>(
       commentsUrl,
       `Facebook-Kommentare für Post ${post.id} konnten nicht geladen werden.`,
-    );
+    ).catch((error) => {
+      throw withCommentFetchEndpoint(error, "post-comments-fallback");
+    });
     comments.push(...postComments.map((comment) => ({ ...comment, postId: post.id, postPermalinkUrl: post.permalink_url })));
   }
 
-  return { posts, comments };
+  return { posts, comments, diagnostics: { endpointType: "post-comments-fallback", usedPageAccessToken: true } };
+}
+
+function isMetaPermissionError(error: unknown): boolean {
+  return error instanceof GraphApiError && error.code === 10;
+}
+
+function withCommentFetchEndpoint(error: unknown, endpointType: FacebookCommentFetchEndpointType): Error {
+  if (error instanceof FacebookCommentFetchError) return error;
+  if (error instanceof GraphApiError) {
+    return new FacebookCommentFetchError(error.message, { endpointType, usedPageAccessToken: true, graphErrorCode: error.code });
+  }
+  if (error instanceof Error) {
+    return new FacebookCommentFetchError(error.message, { endpointType, usedPageAccessToken: true });
+  }
+  return new FacebookCommentFetchError("Facebook-Kommentarabruf fehlgeschlagen.", { endpointType, usedPageAccessToken: true });
+}
+
+class GraphApiError extends Error {
+  readonly code?: number;
+
+  constructor(message: string, code?: number) {
+    super(message);
+    this.name = "GraphApiError";
+    this.code = code;
+  }
 }
 
 async function fetchGraphCollection<T extends { id?: string }>(url: URL, errorFallback: string): Promise<T[]> {
@@ -805,7 +888,7 @@ async function fetchGraphCollection<T extends { id?: string }>(url: URL, errorFa
 
     if (!response.ok) {
       logFacebookApiError(errorFallback, payload?.error);
-      throw new Error(payload?.error?.message ?? errorFallback);
+      throw new GraphApiError(payload?.error?.message ?? errorFallback, payload?.error?.code);
     }
 
     items.push(...(payload?.data ?? []).filter((item) => Boolean(item.id)));
