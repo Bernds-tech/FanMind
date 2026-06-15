@@ -9,6 +9,7 @@ import {
   fetchFacebookPages,
   getGrantedFacebookPermissionNames,
   hasRequiredFacebookPagePermissions,
+  hasFacebookCommentFeedScopes,
   subscribeFacebookPage,
   fetchFacebookTokenDiagnostics,
   tokenLastFour,
@@ -46,9 +47,15 @@ export async function GET(request: Request) {
     const userToken = await exchangeFacebookCode(code);
     const permissions = await fetchFacebookGrantedPermissions(userToken);
     const userTokenDiagnostics = await fetchFacebookTokenDiagnostics(userToken);
-    if (!hasRequiredFacebookPagePermissions(permissions)) {
-      console.warn("Facebook callback missing required page permissions");
-      return redirectToChannels(appOrigin, "facebook_error=page_permissions");
+    const grantedPermissionNames = getGrantedFacebookPermissionNames(permissions);
+    const isCommentConnection = state.connectionType === "facebook_comments";
+    if (!isCommentConnection && !hasRequiredFacebookPagePermissions(permissions)) {
+      console.warn("Facebook callback missing required Messenger page permissions");
+      return redirectToChannels(appOrigin, "facebook_error=page_permissions&type=facebook_messages");
+    }
+    if (isCommentConnection && !hasFacebookCommentFeedScopes(grantedPermissionNames)) {
+      console.warn("Facebook callback missing required comment page permissions");
+      return redirectToChannels(appOrigin, "facebook_error=comment_review&type=facebook_comments");
     }
 
     const pages = await fetchFacebookPages(userToken);
@@ -83,7 +90,7 @@ export async function GET(request: Request) {
       ? await fetchFacebookTokenDiagnostics(page.accessToken)
       : null;
     const grantedScopes = mergeScopes(
-      getGrantedFacebookPermissionNames(permissions),
+      grantedPermissionNames,
       getFacebookGrantedScopeNames(userTokenDiagnostics),
       getFacebookGrantedScopeNames(pageTokenDiagnostics),
       page.scopes,
@@ -122,7 +129,7 @@ export async function GET(request: Request) {
       return redirectToChannels(appOrigin, "facebook_error=save");
     }
     revalidatePath("/channels");
-    return redirectToChannels(appOrigin, "connected=facebook");
+    return redirectToChannels(appOrigin, `connected=${isCommentConnection ? "facebook_comments" : "facebook_messages"}`);
   } catch (error) {
     console.error("Facebook OAuth callback failed", {
       message:

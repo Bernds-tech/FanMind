@@ -12,7 +12,6 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { FACEBOOK_OAUTH_SCOPES } from "@/lib/facebookScopes";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
@@ -85,7 +84,6 @@ function ChannelsWorkspace({
         metaWebhookEvents={metaWebhookEvents}
         metaWebhookError={metaWebhookError}
         metaWebhookStorageHealth={metaWebhookStorageHealth}
-        requestedFacebookOauthScopes={[...FACEBOOK_OAUTH_SCOPES]}
       />
     </WorkspaceShell>
   );

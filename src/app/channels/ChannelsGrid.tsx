@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./channels.module.css";
-import { FACEBOOK_COMMENT_FEED_SCOPES } from "@/lib/facebookScopes";
+import { FACEBOOK_COMMENT_FEED_SCOPES, FACEBOOK_MESSAGES_OAUTH_SCOPES } from "@/lib/facebookScopes";
 import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
@@ -95,12 +95,22 @@ const channels: Channel[] = [
     signal: true,
   },
   {
-    key: "facebook",
-    name: "Facebook",
-    description: "Kommentare und Nachrichten importieren",
+    key: "facebook_messages",
+    name: "Facebook Nachrichten",
+    description: "Messenger-DMs empfangen und in den FanMind-Arbeits-Eingang übernehmen.",
     status: "Verfügbar",
-    technology: "Graph API · OAuth",
-    intakeTypes: "Kommentare · Nachrichten",
+    technology: "facebook_messages · Graph API · OAuth",
+    intakeTypes: "DM",
+    logo: logoPath("facebook"),
+    signal: true,
+  },
+  {
+    key: "facebook_comments",
+    name: "Facebook Kommentare",
+    description: "Kommentare unter Facebook-Page-Posts importieren.",
+    status: "Verfügbar",
+    technology: "facebook_comments · Graph API · OAuth",
+    intakeTypes: "Kommentar · Post-Kommentar",
     logo: logoPath("facebook"),
     signal: true,
   },
@@ -342,14 +352,12 @@ export function ChannelsGrid({
   metaWebhookEvents,
   metaWebhookError,
   metaWebhookStorageHealth,
-  requestedFacebookOauthScopes,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEvent[];
   metaWebhookError?: string | null;
   metaWebhookStorageHealth: MetaWebhookStorageHealth;
-  requestedFacebookOauthScopes: string[];
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -467,7 +475,9 @@ export function ChannelsGrid({
   const lastFeedCommentEvent = metaWebhookEvents.find((event) => (event.event_type === "feed" || event.event_type === "feed_comment") && (event.text ?? event.message_text));
   const detectedFacebookScopes = pageWebhookResult?.tokenScopes ?? facebookConnection?.scopes ?? [];
   const pagesMessagingGranted = pageWebhookResult?.pagesMessagingGranted ?? detectedFacebookScopes.includes("pages_messaging");
-  const commentFeedScopesRequested = FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => requestedFacebookOauthScopes.includes(scope));
+  const requestedMessagesOauthScopes = [...FACEBOOK_MESSAGES_OAUTH_SCOPES];
+  const requestedCommentOauthScopes = [...FACEBOOK_COMMENT_FEED_SCOPES];
+  const commentFeedScopesRequested = FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => requestedCommentOauthScopes.includes(scope));
   const pagesReadUserContentGranted = pageWebhookResult?.pagesReadUserContentGranted ?? detectedFacebookScopes.includes("pages_read_user_content");
   const pagesManageEngagementGranted = pageWebhookResult?.pagesManageEngagementGranted ?? detectedFacebookScopes.includes("pages_manage_engagement");
   const commentFeedScopesGranted = pageWebhookResult?.commentFeedScopesGranted ?? FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => detectedFacebookScopes.includes(scope));
@@ -484,19 +494,33 @@ export function ChannelsGrid({
     updatedConnection: false,
   } satisfies FacebookPageWebhookActionResult : null);
 
+  const facebookCommentsReady = Boolean(facebookConnection && commentFeedScopesGranted && !facebookConnection.last_comment_fetch_error);
   const activeDisplayStatus =
-    activeChannel?.key === "facebook" && facebookConnection
+    activeChannel?.key === "facebook_messages" && facebookConnection
       ? "Verbunden"
-      : activeChannel?.status;
+      : activeChannel?.key === "facebook_comments" && facebookCommentsReady
+        ? "Verbunden"
+        : activeChannel?.key === "facebook_comments" && facebookConnection?.last_comment_fetch_error
+          ? "In Arbeit"
+          : activeChannel?.status;
 
   return (
     <section className={styles.gridSection} aria-label="Kanalkarten">
       <div className={styles.channelGrid}>
         {channels.map((channel) => {
-          const isFacebook = channel.key === "facebook";
-          const displayStatus =
-            isFacebook && facebookConnection ? "Verbunden" : channel.status;
+          const isFacebookMessages = channel.key === "facebook_messages";
+          const isFacebookComments = channel.key === "facebook_comments";
+          const isFacebook = isFacebookMessages || isFacebookComments;
+          const commentsReady = facebookCommentsReady;
+          const displayStatus = isFacebookMessages && facebookConnection
+            ? "Verbunden"
+            : isFacebookComments && commentsReady
+              ? "Verbunden"
+              : isFacebookComments && facebookConnection?.last_comment_fetch_error
+                ? "In Arbeit"
+                : channel.status;
           const pageName = isFacebook ? facebookConnection?.page_name : null;
+          const showComingSoonBadge = isBookable(displayStatus) && !isFacebookMessages && !(isFacebookComments && commentsReady);
 
           return (
             <article className={styles.channelCard} key={channel.key}>
@@ -528,32 +552,28 @@ export function ChannelsGrid({
                 </div>
 
                 <span className={styles.metaRow}>
-                  {displayStatus === "Coming Soon" ? (
-                    <img
-                      className={styles.soonBadgeImage}
-                      src="/assets/coming-soon-badge.png"
-                      alt="Verbindung in Vorbereitung"
-                    />
-                  ) : (
-                    <span
-                      className={`${styles.statusBadge} ${statusClassName[displayStatus]}`}
-                    >
-                      {channel.signal ? (
-                        <span className={styles.signalDot} aria-hidden="true" />
-                      ) : null}
-                      {displayStatus}
-                    </span>
-                  )}
+                  <span
+                    className={`${styles.statusBadge} ${statusClassName[displayStatus]}`}
+                  >
+                    {channel.signal ? (
+                      <span className={styles.signalDot} aria-hidden="true" />
+                    ) : null}
+                    {displayStatus}
+                  </span>
                   <span className={styles.techBadge}>{channel.technology}</span>
                 </span>
 
                 <span className={styles.cardSpacer} />
                 <span className={styles.cardActions}>
                   <span className={styles.primaryCardAction}>
-                    {isFacebook
+                    {isFacebookMessages
                       ? facebookConnection
-                        ? "Verwalten"
-                        : "Facebook verbinden"
+                        ? "Nachrichten verwalten"
+                        : "Nachrichten verbinden"
+                      : isFacebookComments
+                        ? facebookConnection
+                          ? "Kommentare importieren"
+                          : "Kommentare verbinden"
                       : isBookable(displayStatus)
                         ? "Verbindung vormerken"
                         : `Mit ${channel.name} verbinden`}
@@ -564,10 +584,16 @@ export function ChannelsGrid({
                     Page: {pageName}
                   </span>
                 ) : null}
-                {isFacebook && facebookConnection ? (
+                {isFacebookMessages && facebookConnection ? (
                   <span className={styles.connectionHint}>
-                    Letzter Webhook: {lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}
+                    Letzter Messenger-Webhook: {lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}
                   </span>
+                ) : null}
+                {isFacebookComments && facebookConnection && !commentsReady ? (
+                  <span className={styles.connectionHint}>Kommentarimport benötigt zusätzliche Meta-Freigaben/App-Review. Nachrichten können trotzdem separat verbunden werden.</span>
+                ) : null}
+                {showComingSoonBadge ? (
+                  <img className={styles.soonCornerBadge} src="/assets/coming-soon-badge.png" alt="Coming Soon" />
                 ) : null}
               </button>
             </article>
@@ -619,11 +645,11 @@ export function ChannelsGrid({
               </div>
             </div>
             <p className={styles.modalText}>
-              {activeChannel.key === "facebook" && facebookConnection
+              {activeChannel.key === "facebook_messages" && facebookConnection
                 ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
                 : "Melde dich an, um diesen Kanal zu verbinden und eingehende Nachrichten für FanMind freizugeben."}
             </p>
-            {activeChannel.key === "facebook" && facebookConnection ? (
+            {activeChannel.key === "facebook_messages" && facebookConnection ? (
               <>
               <p className={styles.modalNotice}>
                 OAuth verbunden · Page: <strong>{facebookConnection.page_name ?? facebookConnection.page_id}</strong>
@@ -648,7 +674,7 @@ export function ChannelsGrid({
                 <br />
                 Page Access Token vorhanden: <strong>{displayedWebhookStatus?.hasPageAccessToken ? "ja" : "nein"}</strong>
                 <br />
-                Angeforderte OAuth-Scopes: <strong>{formatScopeList(requestedFacebookOauthScopes)}</strong>
+                Angeforderte Messenger-OAuth-Scopes: <strong>{formatScopeList(requestedMessagesOauthScopes)}</strong>
                 <br />
                 comment/feed-relevante Scopes angefordert: <strong>{commentFeedScopesRequested ? "ja" : "nein"}</strong>
                 <br />
@@ -714,12 +740,12 @@ export function ChannelsGrid({
                 ) : null}
               </>
             ) : null}
-            {activeChannel.key === "facebook" && facebookConnection && metaWebhookError ? (
+            {activeChannel.key === "facebook_messages" && facebookConnection && metaWebhookError ? (
               <p className={styles.modalNotice} role="alert">
                 Meta-Webhook-Events konnten nicht gelesen werden: {metaWebhookError}
               </p>
             ) : null}
-            {activeChannel.key === "facebook" && facebookConnection ? (
+            {activeChannel.key === "facebook_messages" && facebookConnection ? (
               <div className={styles.releaseBox} aria-label="Meta Webhook Diagnose">
                 <strong>Meta Webhook Diagnose (letzte 20 Events)</strong>
                 <p>
@@ -760,7 +786,27 @@ export function ChannelsGrid({
                 )}
               </div>
             ) : null}
-            {activeChannel.key === "facebook" && facebookError ? (
+
+            {activeChannel.key === "facebook_comments" ? (
+              <p className={styles.modalNotice} role={facebookConnection?.last_comment_fetch_error || facebookErrorCode === "comment_review" ? "alert" : "status"}>
+                Kommentarimport benötigt zusätzliche Meta-Freigaben/App-Review. Nachrichten können trotzdem separat verbunden werden.
+                <br />
+                Technischer Typ: <strong>facebook_comments</strong>
+                <br />
+                Angeforderte Kommentar-OAuth-Scopes: <strong>{formatScopeList(requestedCommentOauthScopes)}</strong>
+                <br />
+                Optionale Scopes werden nur vorbereitet, wenn Meta/App-Review sie erlaubt: <strong>pages_read_user_content, pages_manage_engagement</strong>
+                <br />
+                Status: <strong>{facebookCommentsReady ? "verbunden" : facebookConnection?.last_comment_fetch_error ? "fehlerhaft" : "verfügbar"}</strong>
+                {facebookConnection?.last_comment_fetch_error ? (
+                  <>
+                    <br />
+                    Letzter Kommentarimport-Fehler: <strong>{facebookConnection.last_comment_fetch_error}</strong>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+            {(activeChannel.key === "facebook_messages" || activeChannel.key === "facebook_comments") && facebookError ? (
               <p className={styles.modalNotice} role="alert">
                 {getFacebookErrorMessage(facebookErrorCode)}
               </p>
@@ -783,12 +829,16 @@ export function ChannelsGrid({
               </p>
             ) : null}
             <div className={styles.modalActions}>
-              {activeChannel.key === "facebook" ? (
+              {activeChannel.key === "facebook_messages" || activeChannel.key === "facebook_comments" ? (
                 facebookConnection ? (
                   <>
-                    <a className={styles.modalLinkButton} href="/channels">
-                      Verwalten
-                    </a>
+                    {activeChannel.key === "facebook_comments" ? (
+                      <button type="button" className={styles.secondaryModalButton} onClick={runCommentFetch} disabled={commentFetchPending}>
+                        {commentFetchPending ? "Kommentare werden abgerufen ..." : "Kommentare importieren"}
+                      </button>
+                    ) : (
+                      <a className={styles.modalLinkButton} href="/channels">Nachrichten verwalten</a>
+                    )}
                     <form
                       method="post"
                       action="/api/integrations/facebook/disconnect"
@@ -804,9 +854,9 @@ export function ChannelsGrid({
                 ) : (
                   <a
                     className={styles.modalLinkButton}
-                    href="/api/integrations/facebook/start"
+                    href={activeChannel.key === "facebook_comments" ? "/api/integrations/facebook/start?type=facebook_comments" : "/api/integrations/facebook/start?type=facebook_messages"}
                   >
-                    Facebook verbinden
+                    {activeChannel.key === "facebook_messages" ? "Nachrichten verbinden" : "Kommentare verbinden"}
                   </a>
                 )
               ) : (

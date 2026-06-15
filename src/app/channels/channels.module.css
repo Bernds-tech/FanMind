@@ -55,6 +55,7 @@
 }
 
 .cardButton {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -403,4 +404,17 @@
   color: #fee2e2 !important;
   border: 1px solid rgba(248, 113, 113, 0.45) !important;
   background: rgba(127, 29, 29, 0.42) !important;
+}
+
+
+.soonCornerBadge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 82px;
+  max-width: 34%;
+  height: auto;
+  border-radius: 10px;
+  object-fit: contain;
+  pointer-events: none;
 }

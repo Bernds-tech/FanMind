@@ -599,6 +599,7 @@ function formatConversationType(value: string | null): string {
   const labels: Record<string, string> = {
     dm: "DM",
     comment: "Kommentar",
+    post_comment: "Post-Kommentar",
     post: "Post",
     email: "E-Mail",
     form: "Formular",
@@ -682,6 +683,7 @@ function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
 
   if (value.includes("mail")) return "email";
   if (value.includes("form") || value.includes("web")) return "form";
+  if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "post";
   if (value.includes("comment") || value.includes("kommentar"))
     return "comment";
   if (value.includes("post")) return "post";
@@ -725,6 +727,8 @@ function getConversationType(
 
   if (value.includes("email")) return "E-Mail";
   if (value.includes("form")) return "Formular";
+  if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "Post-Kommentar";
+  if (value.includes("comment") || value.includes("kommentar")) return "Kommentar";
   if (
     value.includes("instagram") ||
     value.includes("whatsapp") ||
