@@ -680,6 +680,30 @@ export async function upsertFacebookSocialConnection(
   return { connection: result.data, error: null };
 }
 
+
+export async function updateFacebookWebhookSubscribed(
+  connectionId: string,
+  webhookSubscribed: boolean,
+): Promise<SocialConnectionResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken)
+    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+
+  const result = await postgrestUpdate<SocialConnectionRow>(
+    "social_connections",
+    { webhook_subscribed: webhookSubscribed },
+    accessToken,
+    [["id", connectionId], ["platform", "facebook"]],
+    { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+  );
+
+  if (result.error)
+    return socialConnectionError(
+      `Facebook-Webhook-Status konnte nicht gespeichert werden: ${result.error.message}`,
+    );
+  return { connection: result.data, error: null };
+}
+
 export async function disconnectFacebookSocialConnection(
   workspaceId: string,
 ): Promise<SocialConnectionResult> {
