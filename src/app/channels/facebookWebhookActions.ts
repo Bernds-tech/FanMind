@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  buildAttachmentFallbackText,
+  getMessageKindFromAttachments,
+} from "@/lib/messageAttachments";
+import { createEmptySocialSyncResult, type SocialSyncResult } from "@/lib/socialSync";
+import {
   decryptToken,
   getFacebookGrantedScopeNames,
   fetchFacebookPagePostsWithComments,
@@ -45,13 +50,9 @@ export type FacebookCommentFetchResult = {
 const FACEBOOK_MESSENGER_SYNC_MESSAGE_LIMIT = 50;
 const FACEBOOK_MESSENGER_SYNC_CONVERSATION_LIMIT = 10;
 
-export type FacebookMessengerSyncResult = {
-  ok: boolean;
+export type FacebookMessengerSyncResult = SocialSyncResult & {
   syncedAt: string;
   conversationsChecked: number;
-  importedInbound: number;
-  importedOutbound: number;
-  skippedDuplicates: number;
   error?: string | null;
 };
 
@@ -257,6 +258,8 @@ async function syncFacebookMessengerHistoryForConnection(
     let importedInbound = 0;
     let importedOutbound = 0;
     let skippedDuplicates = 0;
+    let checkedMessages = 0;
+    let importedMedia = 0;
     let lastOutboundAt: string | null = null;
 
     for (const conversation of conversations) {
@@ -278,6 +281,7 @@ async function syncFacebookMessengerHistoryForConnection(
           (Date.parse(b.createdTime ?? "") || 0),
       );
       for (const message of chronologicalMessages) {
+        checkedMessages += 1;
         const senderId = message.from?.id ?? fanParticipant?.id ?? null;
         const direction =
           senderId === connection.page_id ? "outbound" : "inbound";
@@ -287,7 +291,7 @@ async function syncFacebookMessengerHistoryForConnection(
             : senderId;
         const content =
           message.message ??
-          getSyncAttachmentFallbackText(message.attachments, direction);
+          buildAttachmentFallbackText(message.attachments, direction);
         if (!content) continue;
 
         const result = await createMetaWebhookConversationMessage({
@@ -308,7 +312,7 @@ async function syncFacebookMessengerHistoryForConnection(
           originalTextExcerpt: content,
           direction,
           attachments: message.attachments,
-          messageKind: getSyncMessageKind(message.message, message.attachments),
+          messageKind: getMessageKindFromAttachments(message.message, message.attachments),
           receivedAt: message.createdTime,
         });
         if (result.error) throw result.error;
@@ -319,6 +323,7 @@ async function syncFacebookMessengerHistoryForConnection(
           } else {
             importedInbound += 1;
           }
+          if (message.attachments?.length) importedMedia += message.attachments.length;
         } else {
           skippedDuplicates += 1;
         }
@@ -331,6 +336,7 @@ async function syncFacebookMessengerHistoryForConnection(
       importedInbound,
       importedOutbound,
       skippedDuplicates,
+      importedMedia,
       error: null,
       lastOutboundAt,
     });
@@ -346,9 +352,15 @@ async function syncFacebookMessengerHistoryForConnection(
       ok: true,
       syncedAt,
       conversationsChecked,
+      checkedConversations: conversationsChecked,
+      checkedMessages,
       importedInbound,
       importedOutbound,
+      importedMedia,
       skippedDuplicates,
+      errors: [],
+      syncLimit: FACEBOOK_MESSENGER_SYNC_MESSAGE_LIMIT,
+      lastSyncAt: syncedAt,
       error: null,
     };
   } catch (syncErrorValue) {
@@ -374,48 +386,16 @@ function syncError(
   error: string,
 ): FacebookMessengerSyncResult {
   return {
-    ok: false,
+    ...createEmptySocialSyncResult({
+      ok: false,
+      lastSyncAt: syncedAt,
+      syncLimit: FACEBOOK_MESSENGER_SYNC_MESSAGE_LIMIT,
+      error,
+    }),
     syncedAt,
     conversationsChecked: 0,
-    importedInbound: 0,
-    importedOutbound: 0,
-    skippedDuplicates: 0,
     error,
   };
-}
-
-function getSyncAttachmentFallbackText(
-  attachments: FacebookMessengerSyncAttachment[] | null,
-  direction: "inbound" | "outbound",
-): string | null {
-  const type = attachments?.[0]?.type;
-  if (!type) return null;
-  const suffix = direction === "outbound" ? "gesendet" : "empfangen";
-  return {
-    image: `Bild ${suffix}`,
-    video: `Video ${suffix}`,
-    audio: `Audio ${suffix}`,
-    file: `Datei ${suffix}`,
-    unknown: `Anhang ${suffix}`,
-  }[type];
-}
-
-type FacebookMessengerSyncAttachment = NonNullable<
-  Awaited<
-    ReturnType<typeof fetchFacebookMessengerConversationMessages>
-  >[number]["attachments"]
->[number];
-
-function getSyncMessageKind(
-  text: string | null,
-  attachments: FacebookMessengerSyncAttachment[] | null,
-): string {
-  if (text && attachments?.length) return "mixed";
-  if (!attachments?.length) return "text";
-  const types = Array.from(
-    new Set(attachments.map((attachment) => attachment.type)),
-  );
-  return types.length === 1 ? types[0] : "mixed";
 }
 
 export async function checkFacebookPageWebhooks(): Promise<FacebookPageWebhookActionResult> {
