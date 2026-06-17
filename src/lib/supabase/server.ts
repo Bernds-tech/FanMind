@@ -1875,6 +1875,7 @@ async function ensureMetaTestConversation(input: {
         ["contact_id", input.contactId],
         ["source_platform", "facebook"],
         ["external_thread_id", externalThreadId],
+        ["source_type", normalizeMessageType(input.sourceType)],
       ],
       1,
       true,
@@ -1925,7 +1926,8 @@ async function ensureMetaTestConversation(input: {
   const openConversation = (existing.data ?? []).find(
     (conversation) =>
       ["open", "waiting"].includes(conversation.status) &&
-      !conversation.external_thread_id,
+      !conversation.external_thread_id &&
+      conversation.source_type === normalizeMessageType(input.sourceType),
   );
 
   if (openConversation) return { conversation: openConversation, error: null };
@@ -1944,6 +1946,8 @@ async function ensureMetaTestConversation(input: {
       reply_target_url: replyTargetUrl,
       external_thread_id: externalThreadId,
       external_message_id: normalizeOptionalText(input.externalMessageId),
+      original_author_label: null,
+      original_text_excerpt: null,
       ai_status: "partial",
       next_step: "Antwort vorbereiten",
     },
