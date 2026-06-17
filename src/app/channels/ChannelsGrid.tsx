@@ -453,7 +453,7 @@ export function ChannelsGrid({
         pageId: facebookConnection?.page_id ?? null,
         hasPageAccessToken: Boolean(facebookConnection?.has_page_access_token),
         subscribedAppsStatus: "error",
-        fields: { feed: "unknown", messages: "unknown" },
+        fields: { feed: "unknown", messages: "unknown", message_echoes: "unknown" },
         error: error instanceof Error ? error.message : "Page-Webhooks konnten nicht verarbeitet werden.",
         updatedConnection: false,
       });
@@ -487,6 +487,7 @@ export function ChannelsGrid({
     fields: {
       feed: facebookConnection.webhook_subscribed ? "active" : "unknown",
       messages: facebookConnection.webhook_subscribed ? "active" : "unknown",
+      message_echoes: facebookConnection.webhook_subscribed ? "unknown" : "unknown",
     },
     error: null,
     updatedConnection: false,
@@ -500,6 +501,7 @@ export function ChannelsGrid({
     !metaWebhookStorageHealth.serviceRoleConfigured ? "SUPABASE_SERVICE_ROLE_KEY fehlt" : null,
   ].filter(Boolean);
   const messengerWebhookReady = displayedWebhookStatus?.fields.messages === "active";
+  const messageEchoesReady = displayedWebhookStatus?.fields.message_echoes === "active";
   const facebookCommentsReady = false;
   const activeDisplayStatus =
     activeChannel?.key === "facebook_messages" && facebookConnection
@@ -681,6 +683,8 @@ export function ChannelsGrid({
                 <br />
                 Webhook messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
                 <br />
+                Webhook message_echoes: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</strong>
+                <br />
                 Letztes Webhook-Event: <strong>{lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}</strong>
                 <br />
                 Letzte Nachricht: <strong>{lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</strong>
@@ -715,7 +719,13 @@ export function ChannelsGrid({
                 <br />
                 Page subscribed_apps: <strong>{formatWebhookStatus(displayedWebhookStatus?.subscribedAppsStatus)}</strong>
                 <br />
-                messages subscribed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong> · feed/Kommentare: <strong>geparkt, nicht automatisch aktiviert</strong>
+                messages subscribed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong> · message_echoes: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</strong> · feed/Kommentare: <strong>geparkt, nicht automatisch aktiviert</strong>
+                {!messageEchoesReady ? (
+                  <>
+                    <br />
+                    <strong>Ausgehende Page-Nachrichten werden erst angezeigt, wenn message_echoes abonniert ist.</strong>
+                  </>
+                ) : null}
                 {displayedWebhookStatus?.error ? (
                   <>
                     <br />

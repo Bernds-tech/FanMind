@@ -16,6 +16,7 @@ export type MetaWebhookEvent = {
   content: string | null;
   attachments: ConversationMessageAttachment[] | null;
   messageKind: "text" | "image" | "video" | "audio" | "file" | "mixed" | "unknown";
+  direction: "inbound" | "outbound";
   externalMessageId: string | null;
   externalThreadId: string | null;
   externalPostId: string | null;
@@ -51,13 +52,14 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       if (!isRecord(item)) continue;
       const message = isRecord(item.message) ? item.message : undefined;
       const text = stringValue(message?.text);
+      const isEcho = Boolean(message?.is_echo) || Boolean(item.message_echoes);
       const attachments = extractMessengerAttachments(message);
       const content = text ?? getAttachmentFallbackText(attachments);
       const mid = stringValue(message?.mid);
-      const senderId = isRecord(item.sender) ? stringValue(item.sender.id) : null;
-      const pageId = isRecord(item.recipient)
-        ? stringValue(item.recipient.id)
-        : entryPageId;
+      const rawSenderId = isRecord(item.sender) ? stringValue(item.sender.id) : null;
+      const rawRecipientId = isRecord(item.recipient) ? stringValue(item.recipient.id) : null;
+      const pageId = isEcho ? (rawSenderId ?? entryPageId) : (rawRecipientId ?? entryPageId);
+      const senderId = isEcho ? rawRecipientId : rawSenderId;
 
       const isInstagram = isInstagramMessagingItem(item, payload);
       events.push({
@@ -68,16 +70,17 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         content,
         attachments,
         messageKind: getMessageKind(text, attachments),
+        direction: isEcho ? "outbound" : "inbound",
         externalMessageId: mid,
         externalThreadId: senderId && pageId ? `${pageId}:${senderId}` : senderId,
         externalPostId: null,
         externalCommentId: null,
         sourceUrl: validUrl(stringValue(message?.link) ?? stringValue(message?.url)),
         replyTargetUrl: validUrl(stringValue(message?.link) ?? stringValue(message?.url)),
-        authorLabel: (isRecord(item.sender) ? stringValue(item.sender.username) : null) ?? (senderId ? `${isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"} ${senderId}` : (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer")),
+        authorLabel: isEcho ? "Page" : ((isRecord(item.sender) ? stringValue(item.sender.username) : null) ?? (senderId ? `${isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"} ${senderId}` : (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"))),
         pageId,
         senderId,
-        recipientId: pageId,
+        recipientId: isEcho ? rawSenderId : pageId,
         rawEvent: item,
       });
     }
@@ -109,6 +112,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         content,
         attachments: null,
         messageKind: "text",
+        direction: "inbound",
         externalMessageId: commentId,
         externalThreadId: postId ?? permalink ?? commentId,
         externalPostId: postId,
@@ -167,7 +171,7 @@ export async function processMetaWebhookPayload(
       continue;
     }
 
-    if (connection.connection && event.eventType === "messages" && event.sourcePlatform === "facebook" && event.senderId) {
+    if (connection.connection && event.eventType === "messages" && event.sourcePlatform === "facebook" && event.direction === "inbound" && event.senderId) {
       const profile = await fetchFacebookMessengerProfile(
         event.senderId,
         connection.connection,
@@ -195,7 +199,8 @@ export async function processMetaWebhookPayload(
           externalPostId: event.externalPostId,
           externalCommentId: event.externalCommentId,
           originalTextExcerpt: event.content,
-          authorLabel: event.authorLabel,
+          authorLabel: event.direction === "outbound" ? (connection.connection.page_name ?? event.authorLabel) : event.authorLabel,
+          direction: event.direction,
           attachments: event.attachments,
           messageKind: event.messageKind,
         });
@@ -241,7 +246,7 @@ export async function processMetaWebhookPayload(
 }
 
 function unknownEvent(pageId: string | null, senderId: string | null, rawEvent: unknown): MetaWebhookEvent {
-  return { eventType: "unknown", messageType: "comment", channelType: "facebook_comments", sourcePlatform: "facebook", content: null, attachments: null, messageKind: "text", externalMessageId: null, externalThreadId: null, externalPostId: null, externalCommentId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent };
+  return { eventType: "unknown", messageType: "comment", channelType: "facebook_comments", sourcePlatform: "facebook", content: null, attachments: null, messageKind: "text", externalMessageId: null, externalThreadId: null, externalPostId: null, externalCommentId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent, direction: "inbound" };
 }
 
 function isInstagramMessagingItem(item: Record<string, unknown>, payload: Record<string, unknown>): boolean {

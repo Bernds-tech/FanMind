@@ -884,7 +884,7 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
         : message.direction === "note"
           ? "N"
           : "T",
-    direction: formatDirection(message.direction),
+    direction: formatDirection(message.direction, message.author_label),
     type:
       message.direction === "note" && message.author_label === "Antwortentwurf"
         ? "Antwortentwurf · nicht gesendet"
@@ -987,7 +987,7 @@ function buildAiMessageContext(
     .slice(-50)
     .map(
       (message) =>
-        `${formatDate(message.created_at)} · ${formatDirection(message.direction)} · ${formatSource(message.source_platform)} · ${formatMessageType(message.message_type)}: ${formatAiMessageText(message)}`,
+        `${formatDate(message.created_at)} · ${formatDirection(message.direction, message.author_label)} · ${formatSource(message.source_platform)} · ${formatMessageType(message.message_type)}: ${formatAiMessageText(message)}`,
     )
     .join("\n");
 
@@ -1051,8 +1051,8 @@ function formatConversationPriority(value: string): string {
   );
 }
 
-function formatDirection(value: string): string {
-  if (value === "outbound") return "Team / Owner";
+function formatDirection(value: string, authorLabel?: string | null): string {
+  if (value === "outbound") return authorLabel?.trim() || "Team";
   if (value === "note") return "Notiz";
   return "Fan";
 }
