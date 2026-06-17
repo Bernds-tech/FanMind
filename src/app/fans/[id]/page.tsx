@@ -30,7 +30,6 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
 import {
-  ORIGINAL_LINK_FALLBACK,
   getChannelSourceActionLabel,
   getChannelSourceConfig,
   getChannelSourceLabel,
@@ -39,7 +38,6 @@ import {
 import styles from "./fan-detail.module.css";
 import { AiReplySuggestions } from "./AiReplySuggestions";
 import {
-  saveInboundMessage,
   saveManualSentReply,
   saveReplyDraft,
   setConversationPriority,
@@ -115,13 +113,6 @@ const channelSourceTypes: Record<
   notes: ["note", "notes", "manual_note", "internal_note"],
 };
 
-const statusLabels: Record<string, string> = {
-  new: "Neu",
-  active: "Aktiv",
-  warm: "Warm",
-  follow_up: "Follow-up",
-  paused: "Pausiert",
-};
 
 async function logout() {
   "use server";
@@ -246,9 +237,6 @@ function FanDetailContent({
   activeChannel: ConversationChannelKey;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
-  const tags = contact.tags?.length
-    ? contact.tags
-    : [formatStatus(contact.status)];
   const channelTabs = buildConversationChannelTabs(
     messages,
     contact.id,
@@ -258,11 +246,6 @@ function FanDetailContent({
   const timeline = filteredMessages.length
     ? buildMessageTimeline(filteredMessages)
     : [];
-  const originalChatUrl = getOriginalChatUrl(contact, messages, conversation);
-  const originalActionLabel = getOriginalActionLabel(
-    primaryChannel,
-    originalChatUrl,
-  );
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
   );
@@ -270,22 +253,6 @@ function FanDetailContent({
   return (
     <>
       <section className={styles.contactHeader} aria-label="Fan-Workbench">
-        <div className={styles.headerMeta}>
-          <p className={styles.handle}>
-            {contact.handle || "Kein Handle hinterlegt"}
-          </p>
-          <div className={styles.pillRow} aria-label="Status und Segmente">
-            <span className={styles.statusBadge}>
-              {formatStatus(contact.status)}
-            </span>
-            {tags.slice(0, 5).map((tag) => (
-              <span className={styles.tag} key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
         <dl className={styles.headerMetrics}>
           <div className={styles.metric}>
             <dt>Owner</dt>
@@ -339,12 +306,6 @@ function FanDetailContent({
                 <h3>Kanalübergreifender Verlauf</h3>
               </div>
             </div>
-            <InboundMessageForm contactId={contact.id} />
-            <OriginalChatAction
-              actionLabel={originalActionLabel}
-              className={styles.originalChatPanel}
-              url={originalChatUrl}
-            />
             <nav
               className={styles.channelTabs}
               aria-label="Verlauf nach Kanal filtern"
@@ -427,7 +388,7 @@ function FanDetailContent({
                   title="Noch kein gespeicherter Nachrichtenverlauf."
                   body={
                     activeChannel === "all"
-                      ? "Erfasse eine Eingangsnachricht, um KI-Vorschläge und Verlauf aufzubauen."
+                      ? "Sobald echte Nachrichten eingehen, erscheinen sie hier chronologisch."
                       : "Für diesen Kanal gibt es noch keine gespeicherten Nachrichten."
                   }
                 />
@@ -476,10 +437,6 @@ function FanDetailContent({
                 >
                   Als manuell gesendet speichern
                 </button>
-                <OriginalChatAction
-                  actionLabel={originalActionLabel}
-                  url={originalChatUrl}
-                />
                 <Link className={dashboardStyles.secondaryButton} href="/inbox">
                   Zur Inbox
                 </Link>
@@ -507,14 +464,12 @@ function FanDetailContent({
               displayName: contact.display_name,
               handle: contact.handle,
               sourcePlatform: contact.source_platform,
-              originalChatUrl,
               storedConversationContext: buildAiMessageContext(
                 messages,
                 conversationSummary,
                 contactAiProfile,
                 workspaceVoiceProfile,
               ),
-              originalActionLabel,
               language: contact.language,
               status: contact.status,
               tags: contact.tags,
@@ -650,80 +605,28 @@ function ConversationActionForms({
   );
 }
 
-function InboundMessageForm({ contactId }: { contactId: string }) {
-  return (
-    <details className={styles.inboundCapture} open>
-      <summary>Eingangsnachricht erfassen</summary>
-      <form action={saveInboundMessage} className={styles.inboundForm}>
-        <input name="contact_id" type="hidden" value={contactId} />
-        <label>
-          <span>Kanal/Plattform</span>
-          <select name="source_platform" defaultValue="manual">
-            <option value="manual">Manuell</option>
-            <option value="instagram">Instagram</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="facebook">Facebook</option>
-            <option value="x_twitter">X / Twitter</option>
-            <option value="tiktok">TikTok</option>
-            <option value="email">E-Mail</option>
-            <option value="form">Webformular</option>
-            <option value="other">Sonstiges</option>
-          </select>
-        </label>
-        <label>
-          <span>Typ</span>
-          <select name="message_type" defaultValue="dm">
-            <option value="dm">DM</option>
-            <option value="comment">Kommentar</option>
-            <option value="post">Post</option>
-            <option value="email">E-Mail</option>
-            <option value="form">Formular</option>
-            <option value="note">Notiz</option>
-          </select>
-        </label>
-        <label className={styles.inboundWide}>
-          <span>Nachrichtentext</span>
-          <textarea name="content" required maxLength={4000} />
-        </label>
-        <label className={styles.inboundWide}>
-          <span>Original-Link / Chat-Link optional</span>
-          <input name="source_url" placeholder="https://…" type="url" />
-        </label>
-        <button className={dashboardStyles.primaryButton} type="submit">
-          Eingang speichern
-        </button>
-      </form>
-    </details>
-  );
-}
-
 function OriginalChatAction({
   actionLabel,
   className,
   url,
-  compact = false,
 }: {
   actionLabel: string;
   className?: string;
   compact?: boolean;
   url?: string;
 }) {
-  if (!url && compact) return null;
+  if (!url) return null;
 
   return (
     <div className={className}>
-      {url ? (
-        <a
-          className={dashboardStyles.secondaryButton}
-          href={url}
-          rel="noreferrer"
-          target="_blank"
-        >
-          {actionLabel}
-        </a>
-      ) : (
-        <p className={styles.originalChatMissing}>{ORIGINAL_LINK_FALLBACK}.</p>
-      )}
+      <a
+        className={dashboardStyles.secondaryButton}
+        href={url}
+        rel="noreferrer"
+        target="_blank"
+      >
+        {actionLabel}
+      </a>
     </div>
   );
 }
@@ -853,49 +756,12 @@ function buildAiMessageContext(
   return [profileContext, recentMessages].filter(Boolean).join("\n\n");
 }
 
-function getOriginalChatUrl(
-  contact: ContactRow,
-  messages: ConversationMessageRow[] = [],
-  conversation?: ConversationRow | null,
-): string | undefined {
-  const latestMessageUrl = [...messages]
-    .reverse()
-    .map(
-      (message) =>
-        normalizeHttpUrl(message.reply_target_url) ??
-        normalizeHttpUrl(message.source_url),
-    )
-    .find(Boolean);
-
-  if (latestMessageUrl) return latestMessageUrl;
-  const conversationUrl =
-    normalizeHttpUrl(conversation?.reply_target_url) ??
-    normalizeHttpUrl(conversation?.source_url);
-  if (conversationUrl) return conversationUrl;
-  const metadata = contact as ContactRow & Record<string, unknown>;
-
-  for (const key of [
-    "source_url",
-    "reply_target_url",
-    "external_thread_url",
-    "external_message_url",
-    "replyTargetUrl",
-  ]) {
-    const value = metadata[key];
-
-    const url = normalizeHttpUrl(typeof value === "string" ? value : undefined);
-    if (url) return url;
-  }
-
-  return undefined;
-}
-
 function getOriginalActionLabel(platform: string, url?: string): string {
   const prepared = getChannelSourceConfig(platform);
   if (prepared)
     return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
 
-  if (!url) return ORIGINAL_LINK_FALLBACK;
+  if (!url) return "Original öffnen";
   const normalized = platform.toLowerCase();
 
   if (normalized.includes("comment") || normalized.includes("kommentar"))
@@ -976,10 +842,6 @@ function formatMemoryType(value: string | null): string {
 
 function formatSource(value: string | null): string {
   return getChannelSourceLabel(value, formatPlatformLabel(value));
-}
-
-function formatStatus(value: string | null): string {
-  return statusLabels[value ?? ""] ?? value ?? "Nicht hinterlegt";
 }
 
 function formatDate(value: string | null): string {
