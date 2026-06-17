@@ -199,7 +199,7 @@ function actionError(error: string): FacebookPageWebhookActionResult {
     pageId: null,
     hasPageAccessToken: false,
     subscribedAppsStatus: "error",
-    fields: { feed: "unknown", messages: "unknown" },
+    fields: { feed: "unknown", messages: "unknown", message_echoes: "unknown" },
     error,
     updatedConnection: false,
   };

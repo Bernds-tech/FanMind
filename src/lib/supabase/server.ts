@@ -276,6 +276,7 @@ type CreateManualConversationMessageInput = {
   direction?: "inbound" | "outbound" | "note";
   messageType?: string | null;
   sourcePlatform?: string | null;
+  sourceType?: string | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1453,12 +1454,13 @@ export async function createManualConversationMessage(
   const sourceUrl = normalizeUrl(input.sourceUrl);
   const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
   const messageType = normalizeMessageType(input.messageType);
+  const sourceType = normalizeMessageType(input.sourceType ?? input.messageType);
   const direction = input.direction ?? "inbound";
   const conversationResult = await ensureConversationForContact({
     workspaceId: input.workspaceId,
     contactId: input.contactId,
     sourcePlatform: input.sourcePlatform,
-    sourceType: messageType,
+    sourceType,
     sourceUrl,
     replyTargetUrl,
   });
@@ -1485,7 +1487,7 @@ export async function createManualConversationMessage(
       source_platform: normalizeOptionalText(input.sourcePlatform) ?? "manual",
       source_url: sourceUrl,
       reply_target_url: replyTargetUrl,
-      source_type: messageType,
+      source_type: sourceType,
       external_thread_id: normalizeOptionalText(input.externalThreadId),
       external_message_id: normalizeOptionalText(input.externalMessageId),
       external_post_id: normalizeOptionalText(input.externalPostId),
@@ -1496,6 +1498,8 @@ export async function createManualConversationMessage(
         normalizeOptionalText(input.authorLabel) ??
         (direction === "inbound" ? "Fan" : "Team"),
       content,
+      attachments: normalizeMessageAttachments(input.attachments),
+      message_kind: normalizeMessageKind(input.messageKind, input.attachments, content),
     },
     accessToken,
     { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
@@ -1512,7 +1516,7 @@ export async function createManualConversationMessage(
     source_platform:
       normalizeOptionalText(input.sourcePlatform) ??
       conversationResult.conversation.source_platform,
-    source_type: messageType,
+    source_type: sourceType,
     source_url: sourceUrl ?? conversationResult.conversation.source_url,
     reply_target_url:
       replyTargetUrl ?? conversationResult.conversation.reply_target_url,
@@ -1723,6 +1727,7 @@ export async function createMetaWebhookConversationMessage(input: {
   attachments?: ConversationMessageAttachment[] | null;
   messageKind?: string | null;
   receivedAt?: string | null;
+  direction?: "inbound" | "outbound";
 }): Promise<ConversationMessageCreateResult> {
   const handle = normalizeOptionalText(input.senderId);
   let contact: ContactRow | null = null;
@@ -1801,6 +1806,7 @@ export async function createMetaWebhookConversationMessage(input: {
     content: input.content,
     messageType: input.messageType,
     sourcePlatform: input.sourcePlatform,
+    direction: input.direction,
     sourceType: input.sourceType ?? getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
     sourceUrl: input.sourceUrl,
     replyTargetUrl: input.replyTargetUrl,
@@ -1847,6 +1853,7 @@ export async function createMetaTestConversationMessage(input: {
   attachments?: ConversationMessageAttachment[] | null;
   messageKind?: string | null;
   receivedAt?: string | null;
+  direction?: "inbound" | "outbound";
 }): Promise<ConversationMessageCreateResult> {
   const content = input.content.trim();
 
@@ -1933,7 +1940,7 @@ export async function createMetaTestConversationMessage(input: {
       workspace_id: input.workspaceId,
       conversation_id: conversationResult.conversation.id,
       contact_id: input.contactId,
-      direction: "inbound",
+      direction: input.direction ?? "inbound",
       message_type: input.messageType,
       source_platform: input.sourcePlatform ?? "facebook",
       source_url: sourceUrl,
@@ -1951,7 +1958,7 @@ export async function createMetaTestConversationMessage(input: {
       attachments: normalizeMessageAttachments(input.attachments),
       message_kind: normalizeMessageKind(input.messageKind, input.attachments, content),
       created_at: receivedAt,
-      seen_at: null,
+      seen_at: (input.direction ?? "inbound") === "outbound" ? receivedAt : null,
     },
     getServiceAccessToken(),
     { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
@@ -1967,7 +1974,7 @@ export async function createMetaTestConversationMessage(input: {
     "conversations",
     {
       last_message_preview: content.slice(0, 240),
-      last_inbound_at: receivedAt,
+      ...((input.direction ?? "inbound") === "inbound" ? { last_inbound_at: receivedAt } : { last_outbound_at: receivedAt }),
       source_platform: input.sourcePlatform ?? "facebook",
       source_type: normalizeMessageType(input.sourceType ?? input.messageType),
       source_url: sourceUrl ?? conversationResult.conversation.source_url,

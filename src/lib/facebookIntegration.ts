@@ -570,7 +570,7 @@ export type FacebookPageWebhookStatus = {
   pageId: string | null;
   hasPageAccessToken: boolean;
   subscribedAppsStatus: "active" | "missing" | "error" | "unknown";
-  fields: Record<"feed" | "messages", FacebookPageWebhookFieldStatus>;
+  fields: Record<"feed" | "messages" | "message_echoes", FacebookPageWebhookFieldStatus>;
   error: string | null;
   metaError?: { message?: string; code?: number; type?: string };
 };
@@ -625,7 +625,7 @@ export async function subscribeFacebookPage(
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`,
   );
-  url.searchParams.set("subscribed_fields", "messages");
+  url.searchParams.set("subscribed_fields", "messages,message_echoes");
   url.searchParams.set("access_token", pageAccessToken);
   const response = await fetch(url, { method: "POST", cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as {
@@ -652,17 +652,17 @@ function buildWebhookStatus(
   error: string | null,
 ): FacebookPageWebhookStatus {
   const fieldSet = new Set(subscribedFields);
-  const fieldStatus = (field: "feed" | "messages"): FacebookPageWebhookFieldStatus => {
+  const fieldStatus = (field: "feed" | "messages" | "message_echoes"): FacebookPageWebhookFieldStatus => {
     if (subscribedAppsStatus === "error" || subscribedAppsStatus === "unknown") return "unknown";
     return fieldSet.has(field) ? "active" : "missing";
   };
 
   return {
-    ok: subscribedAppsStatus === "active" && fieldSet.has("feed") && fieldSet.has("messages"),
+    ok: subscribedAppsStatus === "active" && fieldSet.has("messages") && fieldSet.has("message_echoes"),
     pageId,
     hasPageAccessToken,
     subscribedAppsStatus,
-    fields: { feed: fieldStatus("feed"), messages: fieldStatus("messages") },
+    fields: { feed: fieldStatus("feed"), messages: fieldStatus("messages"), message_echoes: fieldStatus("message_echoes") },
     error,
   };
 }
