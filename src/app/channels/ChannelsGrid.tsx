@@ -75,12 +75,22 @@ const logoPath = (name: string) => `/channel-logos/${name}.svg`;
 
 const channels: Channel[] = [
   {
-    key: "instagram",
-    name: "Instagram",
-    description: "Direktnachrichten und Anfragen importieren",
+    key: "instagram_messages",
+    name: "Instagram Nachrichten",
+    description: "Direktnachrichten sind als Meta-Kanaltyp vorbereitet; Live-Events werden später gesammelt getestet.",
     status: "In Arbeit",
-    technology: "OAuth · Webhook",
-    intakeTypes: "DMs · Anfragen",
+    technology: "instagram_messages · Meta Webhook · vorbereitet",
+    intakeTypes: "DM · Copy-&-Open",
+    logo: logoPath("instagram"),
+    signal: true,
+  },
+  {
+    key: "instagram_comments",
+    name: "Instagram Kommentare",
+    description: "Kommentare sind als eigener Kanaltyp vorbereitet; kein automatisches Antworten und noch kein Live-Test.",
+    status: "In Arbeit",
+    technology: "instagram_comments · Meta Webhook · vorbereitet",
+    intakeTypes: "Kommentar · Beitrag · Copy-&-Open",
     logo: logoPath("instagram"),
     signal: true,
   },

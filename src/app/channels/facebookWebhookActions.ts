@@ -19,7 +19,7 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceSocialConnections,
-  createFacebookWebhookConversationMessage,
+  createMetaWebhookConversationMessage,
   updateFacebookCommentFetchStatus,
   updateFacebookWebhookSubscribed,
 } from "@/lib/supabase/server";
@@ -70,8 +70,9 @@ export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchRe
 
     for (const comment of comments) {
       if (!comment.message?.trim()) continue;
-      const result = await createFacebookWebhookConversationMessage({
+      const result = await createMetaWebhookConversationMessage({
         workspaceId: connection.workspace_id,
+        sourcePlatform: "facebook",
         senderId: comment.from?.id ?? null,
         authorLabel: comment.from?.name ?? "Facebook Nutzer",
         content: comment.message,

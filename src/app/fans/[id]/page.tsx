@@ -1107,6 +1107,8 @@ function getOriginalActionLabel(platform: string): string {
   if (normalized.includes("post") || normalized.includes("beitrag")) return "Beitrag öffnen";
   if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger") || normalized.includes("chat")) return "Chat öffnen";
   if (normalized.includes("facebook")) return "Original öffnen";
+  if (normalized.includes("instagram") && (normalized.includes("nachrichten") || normalized.includes("messages"))) return "Chat öffnen";
+  if (normalized.includes("instagram") && (normalized.includes("kommentare") || normalized.includes("comments"))) return "Kommentar öffnen";
   if (normalized.includes("instagram")) return "Original öffnen";
   if (normalized.includes("whatsapp")) return "Chat öffnen";
   if (normalized.includes("mail")) return "E-Mail öffnen";
@@ -1118,6 +1120,8 @@ function formatDetailedSource(platform: string | null, sourceType: string | null
   const source = (sourceType ?? "").toLowerCase();
   if (source.includes("facebook_comments")) return "Facebook Kommentare";
   if (source.includes("facebook_messages")) return "Facebook Nachrichten";
+  if (source.includes("instagram_comments")) return "Instagram Kommentare";
+  if (source.includes("instagram_messages")) return "Instagram Nachrichten";
   const base = formatSource(platform);
   if (source.includes("comment")) return `${base} Kommentare`;
   if (source.includes("dm") || source.includes("message")) return `${base} Nachrichten`;
@@ -1142,6 +1146,8 @@ function formatMessageType(value: string | null): string {
   const labels: Record<string, string> = {
     facebook_messages: "Facebook Nachrichten",
     facebook_comments: "Facebook Kommentare",
+    instagram_messages: "Instagram Nachrichten",
+    instagram_comments: "Instagram Kommentare",
     dm: "DM",
     comment: "Kommentar",
     post: "Post",
@@ -1161,6 +1167,8 @@ function inferMessageType(sourcePlatform: string | null): string {
     return "Formular";
   if (normalized.includes("facebook_messages")) return "Facebook Nachrichten";
   if (normalized.includes("facebook_comments")) return "Facebook Kommentare";
+  if (normalized.includes("instagram_messages")) return "Instagram Nachrichten";
+  if (normalized.includes("instagram_comments")) return "Instagram Kommentare";
   if (normalized.includes("comment") || normalized.includes("kommentar"))
     return "Kommentar";
   if (normalized.includes("post")) return "Post";

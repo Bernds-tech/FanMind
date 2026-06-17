@@ -29,6 +29,8 @@ const PLATFORM_ALIAS_MAP: Record<string, PlatformValue> = {
   whatsapp: "whatsapp",
   whats_app: "whatsapp",
   instagram: "instagram",
+  instagram_messages: "instagram",
+  instagram_comments: "instagram",
   insta: "instagram",
   ig: "instagram",
   tiktok: "tiktok",
