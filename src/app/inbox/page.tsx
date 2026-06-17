@@ -17,6 +17,14 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { markConversationDone, markConversationWaiting } from "../fans/actions";
+import {
+  ORIGINAL_LINK_FALLBACK,
+  getChannelSourceActionLabel,
+  getChannelSourceConfig,
+  getChannelSourceInteractionType,
+  getChannelSourceLabel,
+  normalizeHttpUrl,
+} from "@/lib/channelSources";
 import styles from "./inbox.module.css";
 
 type InboxPageProps = {
@@ -344,12 +352,12 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
                 type="button"
                 disabled
               >
-                Original-Link noch nicht verfügbar
+                {ORIGINAL_LINK_FALLBACK}
               </button>
             )}
             {!item.replyTargetUrl ? (
               <small>
-                Original-Link noch nicht verfügbar. Spätere Echt-Events können hier den Kommentar- oder Chat-Link liefern.
+                {ORIGINAL_LINK_FALLBACK}. Spätere Echt-Events können hier den Kommentar- oder Chat-Link liefern.
               </small>
             ) : null}
             <div className={styles.rowActions}>
@@ -434,12 +442,10 @@ function buildConversationInboxQueue(
         conversation.source_type ?? conversation.source_platform ?? contact.source_platform,
       );
       const replyTargetUrl =
-        conversation.source_url || conversation.reply_target_url || undefined;
+        normalizeHttpUrl(conversation.reply_target_url) ??
+        normalizeHttpUrl(conversation.source_url);
       const sourceType = getSourceType(conversation.source_type);
-      const originalSourceType =
-        conversation.source_type === "tiktok_comments" && !conversation.source_url && conversation.reply_target_url
-          ? "post"
-          : sourceType;
+      const originalSourceType = sourceType;
 
       return {
         key: conversation.id,
@@ -607,13 +613,6 @@ function formatAiStatus(value: string | null): InboxQueueItem["aiStatus"] {
 
 function formatConversationType(value: string | null): string {
   const labels: Record<string, string> = {
-    facebook_messages: "Facebook Nachrichten",
-    facebook_comments: "Facebook Kommentare",
-    instagram_messages: "Instagram Nachrichten",
-    instagram_comments: "Instagram Kommentare",
-    whatsapp_messages: "WhatsApp Nachrichten",
-    tiktok_comments: "TikTok Kommentare",
-    tiktok_messages: "TikTok Nachrichten",
     dm: "DM",
     comment: "Kommentar",
     post_comment: "Post-Kommentar",
@@ -623,7 +622,7 @@ function formatConversationType(value: string | null): string {
     note: "Notiz",
     manual: "Manuell",
   };
-  return labels[value ?? ""] ?? "DM";
+  return getChannelSourceLabel(value, labels[value ?? ""] ?? "DM");
 }
 
 function getPriority(
@@ -659,24 +658,20 @@ function getSegment(contact: ContactRow): string {
 }
 
 function getChannelLabel(value: string | null): string {
+  const preparedLabel = getChannelSourceLabel(value, "");
+  if (preparedLabel) return preparedLabel;
+
   const labels: Record<string, string> = {
     facebook: "Facebook",
-    facebook_messages: "Facebook Nachrichten",
-    facebook_comments: "Facebook Kommentare",
     messenger: "Messenger",
     facebook_messenger: "Messenger",
     instagram: "Instagram",
-    instagram_messages: "Instagram Nachrichten",
-    instagram_comments: "Instagram Kommentare",
     whatsapp: "WhatsApp",
-    whatsapp_messages: "WhatsApp Nachrichten",
     email: "E-Mail",
     form: "Webformular",
     webform: "Webformular",
     manual: "Manuell",
     tiktok: "TikTok",
-    tiktok_comments: "TikTok Kommentare",
-    tiktok_messages: "TikTok Nachrichten",
   };
 
   return labels[(value ?? "manual").toLowerCase()] ?? "Manuell";
@@ -694,9 +689,8 @@ function getReplyTargetUrl(contact: ContactRow): string | undefined {
   ]) {
     const value = metadata[key];
 
-    if (typeof value === "string" && /^https?:\/\//i.test(value.trim())) {
-      return value.trim();
-    }
+    const url = normalizeHttpUrl(typeof value === "string" ? value : undefined);
+    if (url) return url;
   }
 
   return undefined;
@@ -705,8 +699,9 @@ function getReplyTargetUrl(contact: ContactRow): string | undefined {
 function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
   const value = (source ?? "").toLowerCase();
 
-  if (value.includes("facebook_comments") || value.includes("tiktok_comments")) return "comment";
-  if (value.includes("facebook_messages") || value.includes("instagram_messages") || value.includes("whatsapp_messages") || value.includes("tiktok_messages")) return "dm";
+  const preparedType = getChannelSourceInteractionType(value);
+  if (preparedType === "comment") return "comment";
+  if (preparedType === "message") return "dm";
   if (value.includes("mail")) return "email";
   if (value.includes("form") || value.includes("web")) return "form";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "post";
@@ -723,18 +718,17 @@ function getOriginalActionLabel(
   url?: string,
   platform?: string,
 ): string {
+  const prepared = getChannelSourceConfig(platform);
+  if (prepared) return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
+
   const normalized = `${sourceType ?? ""} ${platform ?? ""}`.toLowerCase();
 
-  if (normalized.includes("comment") || normalized.includes("kommentar")) {
-    return url ? "Kommentar öffnen" : "Original-Link noch nicht verfügbar";
-  }
-
+  if (!url) return ORIGINAL_LINK_FALLBACK;
+  if (normalized.includes("comment") || normalized.includes("kommentar")) return "Kommentar öffnen";
   if (normalized.includes("post")) return "Beitrag öffnen";
-  if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger")) {
-    return url ? "Chat öffnen" : "Original-Link noch nicht verfügbar";
-  }
+  if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger")) return "Chat öffnen";
 
-  return url ? "Original öffnen" : "Original-Link noch nicht verfügbar";
+  return "Original öffnen";
 }
 
 function getChannelClass(value: string | null): string {
@@ -759,13 +753,8 @@ function getConversationType(
 
   const value = (source ?? "").toLowerCase();
 
-  if (value.includes("facebook_comments")) return "Facebook Kommentare";
-  if (value.includes("facebook_messages")) return "Facebook Nachrichten";
-  if (value.includes("instagram_comments")) return "Instagram Kommentare";
-  if (value.includes("instagram_messages")) return "Instagram Nachrichten";
-  if (value.includes("whatsapp_messages")) return "WhatsApp Nachrichten";
-  if (value.includes("tiktok_comments")) return "TikTok Kommentare";
-  if (value.includes("tiktok_messages")) return "TikTok Nachrichten";
+  const preparedLabel = getChannelSourceLabel(value, "");
+  if (preparedLabel) return preparedLabel;
   if (value.includes("email")) return "E-Mail";
   if (value.includes("form")) return "Formular";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "Post-Kommentar";

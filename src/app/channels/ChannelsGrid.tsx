@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./channels.module.css";
 import { FACEBOOK_COMMENT_FEED_SCOPES, FACEBOOK_MESSAGES_OAUTH_SCOPES } from "@/lib/facebookScopes";
+import { CHANNEL_SOURCE_CONFIGS, type PreparedSourceType } from "@/lib/channelSources";
 import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
@@ -73,68 +74,62 @@ type Channel = {
 
 const logoPath = (name: string) => `/channel-logos/${name}.svg`;
 
+const preparedChannel = (sourceType: PreparedSourceType, overrides: Omit<Channel, "key" | "name">): Channel => ({
+  key: sourceType,
+  name: CHANNEL_SOURCE_CONFIGS[sourceType].label,
+  ...overrides,
+});
+
 const channels: Channel[] = [
-  {
-    key: "instagram_messages",
-    name: "Instagram Nachrichten",
-    description: "Direktnachrichten sind als Meta-Kanaltyp vorbereitet; Live-Events werden später gesammelt getestet.",
+  preparedChannel("instagram_messages", {
+    description: `${CHANNEL_SOURCE_CONFIGS.instagram_messages.statusHint} FanMind bleibt Copy-&-Open-Assistent.`,
     status: "In Arbeit",
     technology: "instagram_messages · Meta Webhook · vorbereitet",
     intakeTypes: "DM · Copy-&-Open",
     logo: logoPath("instagram"),
     signal: true,
-  },
-  {
-    key: "instagram_comments",
-    name: "Instagram Kommentare",
-    description: "Kommentare sind als eigener Kanaltyp vorbereitet; kein automatisches Antworten und noch kein Live-Test.",
+  }),
+  preparedChannel("instagram_comments", {
+    description: `${CHANNEL_SOURCE_CONFIGS.instagram_comments.statusHint} FanMind öffnet nur das Original und kopiert Vorschläge.`,
     status: "In Arbeit",
     technology: "instagram_comments · Meta Webhook · vorbereitet",
     intakeTypes: "Kommentar · Beitrag · Copy-&-Open",
     logo: logoPath("instagram"),
     signal: true,
-  },
-  {
-    key: "tiktok_comments",
-    name: "TikTok Kommentare",
-    description: "Kommentare sind als eigener Kanaltyp vorbereitet; Live-Zugriff hängt von TikTok API-Zugang/Freigabe ab. Keine TikTok-DMs, kein Scraping, kein automatisches Antworten.",
+  }),
+  preparedChannel("tiktok_comments", {
+    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_comments.statusHint} Keine automatische Antwort und kein automatisches Senden.`,
     status: "In Arbeit",
-    technology: "tiktok_comments · vorbereitet · API-Freigabe erforderlich",
+    technology: "tiktok_comments · vorbereitet · offizielle Freigabe erforderlich",
     intakeTypes: "Kommentare · Copy-&-Open",
     logo: logoPath("tiktok"),
     signal: true,
-  },
+  }),
 
-  {
-    key: "tiktok_messages",
-    name: "TikTok Nachrichten",
-    description: "TikTok DMs sind als vorbereiteter Importpfad für Data-Portability-/Export-Daten modelliert; Data-Portability/API-Freigabe erforderlich, kein Live-Chat-Test, kein Scraping und kein automatisches Senden.",
+  preparedChannel("tiktok_messages", {
+    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_messages.statusHint} Antwortvorschläge werden nur kopiert und extern manuell eingefügt.`,
     status: "In Arbeit",
-    technology: "tiktok_messages · vorbereitet · Data-Portability/API-Freigabe erforderlich",
+    technology: "tiktok_messages · nicht-live · Export/Data-Portability-Import",
     intakeTypes: "Nachrichten · Export-Import · Copy-&-Open",
     logo: logoPath("tiktok"),
     signal: true,
-  },
-  {
-    key: "facebook_messages",
-    name: "Facebook Nachrichten",
-    description: "Messenger-DMs empfangen und in den FanMind-Arbeits-Eingang übernehmen.",
+  }),
+  preparedChannel("facebook_messages", {
+    description: `${CHANNEL_SOURCE_CONFIGS.facebook_messages.statusHint} Antwort bleibt Copy-&-Open, kein automatischer Versand.`,
     status: "Verfügbar",
     technology: "facebook_messages · Graph API · OAuth",
-    intakeTypes: "DM",
+    intakeTypes: "DM · Copy-&-Open",
     logo: logoPath("facebook"),
     signal: true,
-  },
-  {
-    key: "facebook_comments",
-    name: "Facebook Kommentare",
-    description: "Kommentare unter Facebook-Page-Posts importieren.",
+  }),
+  preparedChannel("facebook_comments", {
+    description: CHANNEL_SOURCE_CONFIGS.facebook_comments.statusHint,
     status: "In Arbeit",
-    technology: "facebook_comments · vorbereitet · Live-Test später",
-    intakeTypes: "Kommentar · Post-Kommentar",
+    technology: "facebook_comments · geparkt/vorbereitet · Live später",
+    intakeTypes: "Kommentar · Post-Kommentar · Copy-&-Open",
     logo: logoPath("facebook"),
     signal: true,
-  },
+  }),
   {
     key: "twitter",
     name: "X / Twitter",
@@ -144,16 +139,14 @@ const channels: Channel[] = [
     intakeTypes: "Mentions · DMs",
     logo: logoPath("twitter"),
   },
-  {
-    key: "whatsapp_messages",
-    name: "WhatsApp Nachrichten",
-    description: "WhatsApp Cloud API Payloads sind als Intake-Kanal vorbereitet; Live-Events werden später gesammelt getestet, ohne automatisches Senden.",
+  preparedChannel("whatsapp_messages", {
+    description: CHANNEL_SOURCE_CONFIGS.whatsapp_messages.statusHint,
     status: "In Arbeit",
     technology: "whatsapp_messages · Cloud API · vorbereitet",
     intakeTypes: "Nachrichten · Copy-&-Open",
     logo: logoPath("whatsapp"),
     signal: true,
-  },
+  }),
   {
     key: "discord",
     name: "Discord",

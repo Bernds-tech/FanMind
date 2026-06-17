@@ -28,6 +28,13 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
+import {
+  ORIGINAL_LINK_FALLBACK,
+  getChannelSourceActionLabel,
+  getChannelSourceConfig,
+  getChannelSourceLabel,
+  normalizeHttpUrl,
+} from "@/lib/channelSources";
 import styles from "./fan-detail.module.css";
 import { AiReplySuggestions } from "./AiReplySuggestions";
 import {
@@ -207,7 +214,7 @@ function FanDetailContent({
   );
   const timeline = messages.length ? buildMessageTimeline(messages) : [];
   const originalChatUrl = getOriginalChatUrl(contact, messages, conversation);
-  const originalActionLabel = getOriginalActionLabel(primaryChannel);
+  const originalActionLabel = getOriginalActionLabel(primaryChannel, originalChatUrl);
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
   );
@@ -470,7 +477,7 @@ function FanDetailContent({
                     </div>
                     <p>{item.text}</p>
                     <OriginalChatAction
-                      actionLabel={getOriginalActionLabel(item.channel + " " + item.type)}
+                      actionLabel={getOriginalActionLabel(item.channel + " " + item.type, item.url)}
                       url={item.url}
                     />
                   </article>
@@ -788,7 +795,7 @@ function OriginalChatAction({
         </a>
       ) : (
         <p className={styles.originalChatMissing}>
-          Original-Link noch nicht verfügbar.
+          {ORIGINAL_LINK_FALLBACK}.
         </p>
       )}
     </div>
@@ -1041,7 +1048,7 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
     channel: formatDetailedSource(message.source_platform, message.source_type ?? message.message_type),
     time: formatDate(message.created_at),
     text: message.original_text_excerpt || message.content,
-    url: message.reply_target_url || message.source_url || undefined,
+    url: normalizeHttpUrl(message.reply_target_url) ?? normalizeHttpUrl(message.source_url),
   }));
 }
 
@@ -1075,12 +1082,12 @@ function getOriginalChatUrl(
 ): string | undefined {
   const latestMessageUrl = [...messages]
     .reverse()
-    .map((message) => message.reply_target_url || message.source_url)
-    .find((value) => value && /^https?:\/\//i.test(value));
+    .map((message) => normalizeHttpUrl(message.reply_target_url) ?? normalizeHttpUrl(message.source_url))
+    .find(Boolean);
 
   if (latestMessageUrl) return latestMessageUrl;
-  const conversationUrl = conversation?.reply_target_url || conversation?.source_url;
-  if (conversationUrl && /^https?:\/\//i.test(conversationUrl)) return conversationUrl;
+  const conversationUrl = normalizeHttpUrl(conversation?.reply_target_url) ?? normalizeHttpUrl(conversation?.source_url);
+  if (conversationUrl) return conversationUrl;
   const metadata = contact as ContactRow & Record<string, unknown>;
 
   for (const key of [
@@ -1092,41 +1099,32 @@ function getOriginalChatUrl(
   ]) {
     const value = metadata[key];
 
-    if (typeof value === "string" && /^https?:\/\//i.test(value.trim())) {
-      return value.trim();
-    }
+    const url = normalizeHttpUrl(typeof value === "string" ? value : undefined);
+    if (url) return url;
   }
 
   return undefined;
 }
 
-function getOriginalActionLabel(platform: string): string {
+function getOriginalActionLabel(platform: string, url?: string): string {
+  const prepared = getChannelSourceConfig(platform);
+  if (prepared) return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
+
+  if (!url) return ORIGINAL_LINK_FALLBACK;
   const normalized = platform.toLowerCase();
 
   if (normalized.includes("comment") || normalized.includes("kommentar")) return "Kommentar öffnen";
   if (normalized.includes("post") || normalized.includes("beitrag")) return "Beitrag öffnen";
   if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger") || normalized.includes("chat")) return "Chat öffnen";
-  if (normalized.includes("facebook")) return "Original öffnen";
-  if (normalized.includes("instagram") && (normalized.includes("nachrichten") || normalized.includes("messages"))) return "Chat öffnen";
-  if (normalized.includes("instagram") && (normalized.includes("kommentare") || normalized.includes("comments"))) return "Kommentar öffnen";
-  if (normalized.includes("instagram")) return "Original öffnen";
-  if (normalized.includes("whatsapp")) return "Chat öffnen";
-  if (normalized.includes("tiktok") && (normalized.includes("nachrichten") || normalized.includes("messages") || normalized.includes("dm"))) return "Chat öffnen";
-  if (normalized.includes("tiktok") && (normalized.includes("kommentare") || normalized.includes("comments") || normalized.includes("comment"))) return "Kommentar öffnen";
   if (normalized.includes("mail")) return "E-Mail öffnen";
 
   return "Original öffnen";
 }
 
 function formatDetailedSource(platform: string | null, sourceType: string | null): string {
+  const preparedLabel = getChannelSourceLabel(sourceType, "");
+  if (preparedLabel) return preparedLabel;
   const source = (sourceType ?? "").toLowerCase();
-  if (source.includes("facebook_comments")) return "Facebook Kommentare";
-  if (source.includes("facebook_messages")) return "Facebook Nachrichten";
-  if (source.includes("instagram_comments")) return "Instagram Kommentare";
-  if (source.includes("instagram_messages")) return "Instagram Nachrichten";
-  if (source.includes("whatsapp_messages")) return "WhatsApp Nachrichten";
-  if (source.includes("tiktok_comments")) return "TikTok Kommentare";
-  if (source.includes("tiktok_messages")) return "TikTok Nachrichten";
   const base = formatSource(platform);
   if (source.includes("comment")) return `${base} Kommentare`;
   if (source.includes("dm") || source.includes("message")) return `${base} Nachrichten`;
@@ -1149,12 +1147,6 @@ function formatDirection(value: string): string {
 
 function formatMessageType(value: string | null): string {
   const labels: Record<string, string> = {
-    facebook_messages: "Facebook Nachrichten",
-    facebook_comments: "Facebook Kommentare",
-    instagram_messages: "Instagram Nachrichten",
-    instagram_comments: "Instagram Kommentare",
-    tiktok_comments: "TikTok Kommentare",
-    tiktok_messages: "TikTok Nachrichten",
     dm: "DM",
     comment: "Kommentar",
     post: "Post",
@@ -1163,7 +1155,7 @@ function formatMessageType(value: string | null): string {
     note: "Notiz",
     manual: "Manuell",
   };
-  return labels[value ?? ""] ?? "DM";
+  return getChannelSourceLabel(value, labels[value ?? ""] ?? "DM");
 }
 
 function inferMessageType(sourcePlatform: string | null): string {
@@ -1172,12 +1164,8 @@ function inferMessageType(sourcePlatform: string | null): string {
   if (normalized.includes("mail")) return "E-Mail";
   if (normalized.includes("form") || normalized.includes("web"))
     return "Formular";
-  if (normalized.includes("facebook_messages")) return "Facebook Nachrichten";
-  if (normalized.includes("facebook_comments")) return "Facebook Kommentare";
-  if (normalized.includes("instagram_messages")) return "Instagram Nachrichten";
-  if (normalized.includes("instagram_comments")) return "Instagram Kommentare";
-  if (normalized.includes("tiktok_comments")) return "TikTok Kommentare";
-  if (normalized.includes("tiktok_messages")) return "TikTok Nachrichten";
+  const preparedLabel = getChannelSourceLabel(sourcePlatform, "");
+  if (preparedLabel) return preparedLabel;
   if (normalized.includes("comment") || normalized.includes("kommentar"))
     return "Kommentar";
   if (normalized.includes("post")) return "Post";
@@ -1204,7 +1192,7 @@ function formatFollowupDueDate(value: string | null): string {
 }
 
 function formatSource(value: string | null): string {
-  return formatPlatformLabel(value);
+  return getChannelSourceLabel(value, formatPlatformLabel(value));
 }
 
 function formatStatus(value: string | null): string {
