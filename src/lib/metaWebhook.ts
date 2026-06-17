@@ -1,4 +1,10 @@
 import {
+  buildAttachmentFallbackText,
+  getMessageKindFromAttachments,
+  normalizeAttachmentType,
+  normalizeMessageAttachments,
+} from "@/lib/messageAttachments";
+import {
   createMetaWebhookConversationMessage,
   createMetaWebhookDebugEvent,
   findMetaSocialConnectionByPageId,
@@ -66,7 +72,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       const text = stringValue(message?.text);
       const isEcho = Boolean(message?.is_echo) || Boolean(item.message_echoes);
       const attachments = extractMessengerAttachments(message);
-      const content = text ?? getAttachmentFallbackText(attachments);
+      const content = text ?? buildAttachmentFallbackText(attachments);
       const mid = stringValue(message?.mid);
       const rawSenderId = isRecord(item.sender)
         ? stringValue(item.sender.id)
@@ -87,7 +93,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         sourcePlatform: isInstagram ? "instagram" : "facebook",
         content,
         attachments,
-        messageKind: getMessageKind(text, attachments),
+        messageKind: getMessageKindFromAttachments(text, attachments),
         direction: isEcho ? "outbound" : "inbound",
         externalMessageId: mid,
         externalThreadId:
@@ -477,7 +483,7 @@ function extractMessengerAttachments(
       : undefined;
     const url = validUrl(stringValue(payload?.url));
     return {
-      type: normalizeMessengerAttachmentType(stringValue(attachment.type)),
+      type: normalizeAttachmentType(stringValue(attachment.type)),
       ...(url ? { url } : {}),
       ...(stringValue(payload?.sticker_id)
         ? { sticker_id: stringValue(payload?.sticker_id)! }
@@ -497,60 +503,10 @@ function extractMessengerAttachments(
     } satisfies ConversationMessageAttachment;
   });
 
-  return attachments.length ? attachments : null;
+  return normalizeMessageAttachments(attachments);
 }
 
-function normalizeMessengerAttachmentType(
-  type: string | null,
-): ConversationMessageAttachment["type"] {
-  if (
-    type === "image" ||
-    type === "video" ||
-    type === "audio" ||
-    type === "file"
-  )
-    return type;
-  return "unknown";
-}
-
-function getAttachmentFallbackText(
-  attachments: ConversationMessageAttachment[] | null,
-): string | null {
-  const firstType = attachments?.[0]?.type;
-  if (!firstType) return null;
-  return {
-    image: "Bild empfangen",
-    video: "Video empfangen",
-    audio: "Audio empfangen",
-    file: "Datei empfangen",
-    unknown: "Anhang empfangen",
-  }[firstType];
-}
-
-function getMessageKind(
-  text: string | null,
-  attachments: ConversationMessageAttachment[] | null,
-): MetaWebhookEvent["messageKind"] {
-  if (text && attachments?.length) return "mixed";
-  if (!attachments?.length) return "text";
-  const types = Array.from(
-    new Set(attachments.map((attachment) => attachment.type)),
-  );
-  return types.length === 1 ? types[0] : "mixed";
-}
-
-function formatDebugStatus(status: string, event: MetaWebhookEvent): string {
-  const directionLabel =
-    event.direction === "outbound"
-      ? "message_echoes · outbound"
-      : "messages · inbound";
-  const baseStatus =
-    event.eventType === "messages" ? `${directionLabel} · ${status}` : status;
-  if (!event.attachments?.length) return baseStatus;
-  return `${baseStatus} · Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
-}
-
-function formatDebugMessageText(event: MetaWebhookEvent): string | null {
+function normalizeMesessageText(event: MetaWebhookEvent): string | null {
   const directionLabel =
     event.eventType === "messages"
       ? `${event.direction === "outbound" ? "message_echoes / outbound" : "messages / inbound"}: `
@@ -562,4 +518,13 @@ function formatDebugMessageText(event: MetaWebhookEvent): string | null {
 
 function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function formatDebugStatus(baseStatus: string, event: MetaWebhookEvent): string {
+  if (!event.attachments?.length) return baseStatus;
+  return `${baseStatus} · Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
+}
+
+function formatDebugMessageText(event: MetaWebhookEvent): string | null {
+  return normalizeMesessageText(event);
 }

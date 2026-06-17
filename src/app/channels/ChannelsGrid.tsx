@@ -40,6 +40,7 @@ type FacebookConnection = {
   last_messenger_sync_checked_count: number | null;
   last_messenger_sync_imported_inbound_count: number | null;
   last_messenger_sync_imported_outbound_count: number | null;
+  last_messenger_sync_imported_media_count: number | null;
   last_messenger_sync_skipped_count: number | null;
   last_messenger_sync_error: string | null;
   last_messenger_sync_outbound_at: string | null;
@@ -512,13 +513,20 @@ export function ChannelsGrid({
       setMessengerSyncResult(result);
       router.refresh();
     } catch (error) {
+      const failedAt = new Date().toISOString();
       setMessengerSyncResult({
         ok: false,
-        syncedAt: new Date().toISOString(),
+        syncedAt: failedAt,
         conversationsChecked: 0,
+        checkedConversations: 0,
+        checkedMessages: 0,
         importedInbound: 0,
         importedOutbound: 0,
+        importedMedia: 0,
         skippedDuplicates: 0,
+        errors: [],
+        syncLimit: 50,
+        lastSyncAt: failedAt,
         error:
           error instanceof Error
             ? error.message
@@ -613,6 +621,9 @@ export function ChannelsGrid({
   const messageEchoesReady =
     displayedWebhookStatus?.fields.message_echoes === "active";
   const facebookCommentsReady = false;
+  const activeSourceConfig = activeChannel ? CHANNEL_SOURCE_CONFIGS[activeChannel.key as PreparedSourceType] : undefined;
+  const activeSyncStatus = activeSourceConfig ? buildChannelSyncStatus(activeSourceConfig, facebookConnection) : null;
+
   const activeDisplayStatus =
     activeChannel?.key === "facebook_messages" && facebookConnection
       ? "Verbunden"
@@ -783,6 +794,24 @@ export function ChannelsGrid({
                 ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
                 : "Melde dich an, um diesen Kanal zu verbinden und eingehende Nachrichten für FanMind freizugeben."}
             </p>
+
+            {activeSyncStatus ? (
+              <div className={styles.releaseBox} aria-label={`Statusblock für ${activeChannel.name}`}>
+                <strong>Kanal-Statusstandard</strong>
+                <ul>
+                  <li>Verbindung/Status: {activeSyncStatus.connection}</li>
+                  <li>Webhook: {activeSyncStatus.webhook}</li>
+                  <li>Verlauf-Sync: {activeSyncStatus.historySync}</li>
+                  <li>Sync-Limit: {activeSyncStatus.syncLimit}</li>
+                  <li>Letzter Sync: {activeSyncStatus.lastSync}</li>
+                  <li>Imported inbound: {activeSyncStatus.importedInbound}</li>
+                  <li>Imported outbound: {activeSyncStatus.importedOutbound}</li>
+                  <li>Imported media: {activeSyncStatus.importedMedia}</li>
+                  <li>Dubletten übersprungen: {activeSyncStatus.skippedDuplicates}</li>
+                  <li>Letzter Fehler: {activeSyncStatus.lastError}</li>
+                </ul>
+              </div>
+            ) : null}
             {activeChannel.key === "facebook_messages" &&
             !facebookConnection ? (
               <p
@@ -888,7 +917,7 @@ export function ChannelsGrid({
                   Letzter Messenger-Sync:{" "}
                   <strong>
                     {facebookConnection.last_messenger_sync_at
-                      ? `${formatDateTime(facebookConnection.last_messenger_sync_at)} · ${facebookConnection.last_messenger_sync_checked_count ?? 0} Conversations geprüft · inbound ${facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} · outbound ${facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} · Dubletten ${facebookConnection.last_messenger_sync_skipped_count ?? 0} · bis zu 50 Nachrichten je Conversation`
+                      ? `${formatDateTime(facebookConnection.last_messenger_sync_at)} · ${facebookConnection.last_messenger_sync_checked_count ?? 0} Conversations geprüft · inbound ${facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} · outbound ${facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} · Medien ${facebookConnection.last_messenger_sync_imported_media_count ?? 0} · Dubletten ${facebookConnection.last_messenger_sync_skipped_count ?? 0} · bis zu 50 Nachrichten je Conversation`
                       : "noch nicht ausgeführt · bis zu 50 Nachrichten je Conversation"}
                   </strong>
                   <br />
@@ -1056,7 +1085,7 @@ export function ChannelsGrid({
                     Conversations geprüft ·{" "}
                     {messengerSyncResult.importedInbound} inbound neu ·{" "}
                     {messengerSyncResult.importedOutbound} outbound neu ·{" "}
-                    {messengerSyncResult.skippedDuplicates} Dubletten
+                    {messengerSyncResult.importedMedia} Medien · {messengerSyncResult.skippedDuplicates} Dubletten
                     übersprungen
                     {messengerSyncResult.error
                       ? ` · Fehler: ${messengerSyncResult.error}`
@@ -1289,6 +1318,50 @@ export function ChannelsGrid({
       ) : null}
     </section>
   );
+}
+
+function buildChannelSyncStatus(
+  config: (typeof CHANNEL_SOURCE_CONFIGS)[PreparedSourceType],
+  facebookConnection: FacebookConnection | null,
+): {
+  connection: string;
+  webhook: string;
+  historySync: string;
+  syncLimit: string;
+  lastSync: string;
+  importedInbound: string;
+  importedOutbound: string;
+  importedMedia: string;
+  skippedDuplicates: string;
+  lastError: string;
+} {
+  const isFacebookMessages = config.sourceType === "facebook_messages";
+  if (isFacebookMessages && facebookConnection) {
+    return {
+      connection: `verbunden${facebookConnection.page_name ? ` · ${facebookConnection.page_name}` : ""}`,
+      webhook: facebookConnection.webhook_subscribed ? "aktiv" : "nicht bestätigt",
+      historySync: config.historySyncSupported ? "aktiv/manuell auslösbar" : "nicht verfügbar",
+      syncLimit: config.defaultSyncLimit ? `${config.defaultSyncLimit} Nachrichten je Conversation` : "kein Limit gesetzt",
+      lastSync: facebookConnection.last_messenger_sync_at ? formatDateTime(facebookConnection.last_messenger_sync_at) : "noch nicht ausgeführt",
+      importedInbound: String(facebookConnection.last_messenger_sync_imported_inbound_count ?? 0),
+      importedOutbound: String(facebookConnection.last_messenger_sync_imported_outbound_count ?? 0),
+      importedMedia: String(facebookConnection.last_messenger_sync_imported_media_count ?? 0),
+      skippedDuplicates: String(facebookConnection.last_messenger_sync_skipped_count ?? 0),
+      lastError: facebookConnection.last_messenger_sync_error ?? "kein Fehler gespeichert",
+    };
+  }
+  return {
+    connection: config.statusText,
+    webhook: config.liveWebhookSupported ? "vorbereitet" : "nicht aktiv/vorbereitet",
+    historySync: config.historySyncSupported ? "vorbereitet" : "nicht verfügbar oder später",
+    syncLimit: config.defaultSyncLimit ? `${config.defaultSyncLimit} Nachrichten je Conversation` : "kein Live-Sync-Limit",
+    lastSync: "kein echter Sync ausgeführt",
+    importedInbound: "—",
+    importedOutbound: "—",
+    importedMedia: "—",
+    skippedDuplicates: "—",
+    lastError: "—",
+  };
 }
 
 function getFacebookErrorMessage(errorCode: string | null): string {

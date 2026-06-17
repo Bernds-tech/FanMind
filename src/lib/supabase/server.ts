@@ -1,3 +1,10 @@
+import {
+  getMessageKindFromAttachments,
+  normalizeMessageAttachments,
+  type NormalizedMessageAttachment as ConversationMessageAttachment,
+} from "@/lib/messageAttachments";
+export type { NormalizedMessageAttachment as ConversationMessageAttachment } from "@/lib/messageAttachments";
+
 import { cookies } from "next/headers";
 import {
   getRegistrationCommercialTerms,
@@ -86,6 +93,7 @@ export type ConversationRow = {
   external_thread_id: string | null;
   external_message_id: string | null;
   external_post_id: string | null;
+  external_video_id: string | null;
   external_comment_id: string | null;
   original_author_label: string | null;
   original_text_excerpt: string | null;
@@ -99,15 +107,7 @@ export type ConversationRow = {
   updated_at: string | null;
 };
 
-export type ConversationMessageAttachment = {
-  type: "image" | "video" | "audio" | "file" | "unknown";
-  url?: string;
-  sticker_id?: string;
-  title?: string;
-  name?: string;
-  mime_type?: string;
-  size?: number;
-};
+
 
 export type ConversationMessageRow = {
   id: string;
@@ -123,6 +123,7 @@ export type ConversationMessageRow = {
   external_thread_id: string | null;
   external_message_id: string | null;
   external_post_id: string | null;
+  external_video_id: string | null;
   external_comment_id: string | null;
   original_author_label: string | null;
   original_text_excerpt: string | null;
@@ -212,6 +213,7 @@ export type SocialConnectionRow = {
   last_messenger_sync_checked_count: number | null;
   last_messenger_sync_imported_inbound_count: number | null;
   last_messenger_sync_imported_outbound_count: number | null;
+  last_messenger_sync_imported_media_count: number | null;
   last_messenger_sync_skipped_count: number | null;
   last_messenger_sync_error: string | null;
   last_messenger_sync_outbound_at: string | null;
@@ -441,9 +443,9 @@ const CONTACT_COLUMNS =
 const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
 const CONVERSATION_COLUMNS =
-  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
+  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
-  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,attachments,message_kind,created_at,seen_at";
+  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,attachments,message_kind,created_at,seen_at";
 const CONVERSATION_SUMMARY_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,summary,key_points,open_questions,last_summarized_message_at,message_count_seen,updated_at,created_at";
 const CONTACT_AI_PROFILE_COLUMNS =
@@ -451,7 +453,7 @@ const CONTACT_AI_PROFILE_COLUMNS =
 const WORKSPACE_VOICE_PROFILE_COLUMNS =
   "id,workspace_id,user_id,owner_label,language,tone,sentence_length,emoji_style,greeting_style,closing_style,common_phrases,avoided_phrases,sales_style,examples_count,confidence_score,updated_at,created_at";
 const SOCIAL_CONNECTION_COLUMNS =
-  "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,last_comment_fetch_at,last_comment_fetch_count,last_comment_fetch_error,last_messenger_sync_at,last_messenger_sync_checked_count,last_messenger_sync_imported_inbound_count,last_messenger_sync_imported_outbound_count,last_messenger_sync_skipped_count,last_messenger_sync_error,last_messenger_sync_outbound_at,created_at,updated_at";
+  "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,last_comment_fetch_at,last_comment_fetch_count,last_comment_fetch_error,last_messenger_sync_at,last_messenger_sync_checked_count,last_messenger_sync_imported_inbound_count,last_messenger_sync_imported_outbound_count,last_messenger_sync_imported_media_count,last_messenger_sync_skipped_count,last_messenger_sync_error,last_messenger_sync_outbound_at,created_at,updated_at";
 const META_WEBHOOK_EVENT_COLUMNS =
   "id,workspace_id,social_connection_id,platform,source,event_type,page_id,sender_id,recipient_id,text,message_text,raw_payload,status,error_reason,message_id,received_at,created_at";
 const FOLLOWUP_COLUMNS =
@@ -780,6 +782,7 @@ export async function updateFacebookMessengerSyncStatus(
     checkedConversations: number;
     importedInbound: number;
     importedOutbound: number;
+    importedMedia?: number;
     skippedDuplicates: number;
     error?: string | null;
     lastOutboundAt?: string | null;
@@ -794,6 +797,7 @@ export async function updateFacebookMessengerSyncStatus(
       last_messenger_sync_checked_count: input.checkedConversations,
       last_messenger_sync_imported_inbound_count: input.importedInbound,
       last_messenger_sync_imported_outbound_count: input.importedOutbound,
+      last_messenger_sync_imported_media_count: input.importedMedia ?? 0,
       last_messenger_sync_skipped_count: input.skippedDuplicates,
       last_messenger_sync_error: normalizeOptionalText(input.error),
       last_messenger_sync_outbound_at: normalizeIsoTimestamp(
@@ -3196,52 +3200,6 @@ function normalizeUrl(value: string | null | undefined): string | null {
   return normalized && /^https?:\/\//i.test(normalized) ? normalized : null;
 }
 
-function normalizeMessageAttachments(
-  attachments: ConversationMessageAttachment[] | null | undefined,
-): ConversationMessageAttachment[] | null {
-  if (!attachments?.length) return null;
-  const normalized = attachments
-    .map((attachment) => ({
-      type: normalizeAttachmentType(attachment.type),
-      ...(normalizeUrl(attachment.url)
-        ? { url: normalizeUrl(attachment.url)! }
-        : {}),
-      ...(normalizeOptionalText(attachment.sticker_id)
-        ? { sticker_id: normalizeOptionalText(attachment.sticker_id)! }
-        : {}),
-      ...(normalizeOptionalText(attachment.title)
-        ? { title: normalizeOptionalText(attachment.title)! }
-        : {}),
-      ...(normalizeOptionalText(attachment.name)
-        ? { name: normalizeOptionalText(attachment.name)! }
-        : {}),
-      ...(normalizeOptionalText(attachment.mime_type)
-        ? { mime_type: normalizeOptionalText(attachment.mime_type)! }
-        : {}),
-      ...(typeof attachment.size === "number" &&
-      Number.isFinite(attachment.size)
-        ? { size: attachment.size }
-        : {}),
-    }))
-    .filter(
-      (attachment) =>
-        attachment.type || attachment.url || attachment.sticker_id,
-    );
-
-  return normalized.length ? normalized : null;
-}
-
-function normalizeAttachmentType(
-  value: unknown,
-): ConversationMessageAttachment["type"] {
-  return value === "image" ||
-    value === "video" ||
-    value === "audio" ||
-    value === "file"
-    ? value
-    : "unknown";
-}
-
 function normalizeMessageKind(
   requestedKind: string | null | undefined,
   attachments: ConversationMessageAttachment[] | null | undefined,
@@ -3255,13 +3213,7 @@ function normalizeMessageKind(
   ) {
     return requestedKind;
   }
-  const normalizedAttachments = normalizeMessageAttachments(attachments);
-  if (!normalizedAttachments?.length) return "text";
-  if (content.trim() && normalizedAttachments.length) return "mixed";
-  const types = Array.from(
-    new Set(normalizedAttachments.map((attachment) => attachment.type)),
-  );
-  return types.length === 1 ? types[0] : "mixed";
+  return getMessageKindFromAttachments(content, attachments);
 }
 
 function normalizeOptionalText(
