@@ -399,6 +399,7 @@ function FanDetailContent({
                         <span className={styles.sourceBadge}>{item.sourceContext.contextLabel}</span>
                       </div>
                       <p>{item.text}</p>
+                      <AttachmentPreview attachments={item.attachments} />
                       <OriginalChatAction
                         actionLabel={getOriginalActionLabel(
                           item.channel + " " + item.type,
@@ -894,11 +895,72 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
     ),
     time: formatDate(message.created_at),
     text: message.original_text_excerpt || message.content,
+    attachments: message.attachments ?? [],
     url:
       normalizeHttpUrl(message.reply_target_url) ??
       normalizeHttpUrl(message.source_url),
     sourceContext: getMessageSourceContext(message),
   }));
+}
+
+function AttachmentPreview({
+  attachments,
+}: {
+  attachments: ConversationMessageRow["attachments"];
+}) {
+  if (!attachments?.length) return null;
+
+  return (
+    <div className={styles.attachmentList}>
+      {attachments.map((attachment, index) => {
+        const label = getAttachmentLabel(attachment.type);
+        const title = attachment.title || attachment.name || label;
+
+        return (
+          <div className={styles.attachmentCard} key={`${attachment.type}-${index}`}>
+            {attachment.type === "image" && attachment.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt={title} src={attachment.url} />
+            ) : (
+              <span className={styles.attachmentIcon}>{getAttachmentIcon(attachment.type)}</span>
+            )}
+            <div>
+              <strong>{title}</strong>
+              <small>
+                {label}
+                {attachment.mime_type ? ` · ${attachment.mime_type}` : ""}
+                {typeof attachment.size === "number" ? ` · ${attachment.size} Bytes` : ""}
+              </small>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function getAttachmentLabel(type: string): string {
+  return {
+    image: "Bild empfangen",
+    video: "Video empfangen",
+    audio: "Audio empfangen",
+    file: "Datei empfangen",
+    unknown: "Anhang empfangen",
+  }[type] ?? "Anhang empfangen";
+}
+
+function getAttachmentIcon(type: string): string {
+  return { image: "🖼️", video: "🎬", audio: "🎧", file: "📎", unknown: "📎" }[type] ?? "📎";
+}
+
+function formatAiMessageText(message: ConversationMessageRow): string {
+  const text = message.content || message.original_text_excerpt || "";
+  if (!message.attachments?.length) return text;
+  const hasImage = message.attachments.some((attachment) => attachment.type === "image");
+  const mediaContext = hasImage
+    ? "Der Fan hat ein Bild gesendet."
+    : `Der Fan hat ${message.attachments.length === 1 ? "einen Anhang" : "Anhänge"} gesendet.`;
+  return text ? `${mediaContext} Begleittext: ${text}` : mediaContext;
 }
 
 function buildAiMessageContext(
@@ -925,7 +987,7 @@ function buildAiMessageContext(
     .slice(-50)
     .map(
       (message) =>
-        `${formatDate(message.created_at)} · ${formatDirection(message.direction)} · ${formatSource(message.source_platform)} · ${formatMessageType(message.message_type)}: ${message.content}`,
+        `${formatDate(message.created_at)} · ${formatDirection(message.direction)} · ${formatSource(message.source_platform)} · ${formatMessageType(message.message_type)}: ${formatAiMessageText(message)}`,
     )
     .join("\n");
 
