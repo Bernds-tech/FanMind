@@ -186,6 +186,7 @@ export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchRe
 export async function syncFacebookMessengerHistory(input?: {
   contactId?: string;
   markInboundSeen?: boolean;
+  revalidate?: boolean;
 }): Promise<FacebookMessengerSyncResult> {
   const syncedAt = new Date().toISOString();
   const { connection, error } = await getCurrentFacebookConnection();
@@ -194,6 +195,7 @@ export async function syncFacebookMessengerHistory(input?: {
   return syncFacebookMessengerHistoryForConnection(connection, {
     ...input,
     syncedAt,
+    revalidate: input?.revalidate ?? true,
   });
 }
 
@@ -202,11 +204,13 @@ export async function syncFacebookMessengerConversationForContact(input: {
   contactId?: string | null;
   fanSenderId?: string | null;
   markInboundSeen?: boolean;
+  revalidate?: boolean;
 }): Promise<FacebookMessengerSyncResult> {
   return syncFacebookMessengerHistoryForConnection(input.connection, {
     contactId: input.contactId ?? undefined,
     fanSenderId: input.fanSenderId ?? undefined,
     markInboundSeen: input.markInboundSeen,
+    revalidate: input.revalidate ?? true,
     syncedAt: new Date().toISOString(),
   });
 }
@@ -217,6 +221,7 @@ async function syncFacebookMessengerHistoryForConnection(
     contactId?: string;
     fanSenderId?: string;
     markInboundSeen?: boolean;
+    revalidate: boolean;
     syncedAt: string;
   },
 ): Promise<FacebookMessengerSyncResult> {
@@ -236,7 +241,7 @@ async function syncFacebookMessengerHistoryForConnection(
       skippedDuplicates: 0,
       error: message,
     });
-    revalidatePath("/channels");
+    if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
   }
 
@@ -345,9 +350,11 @@ async function syncFacebookMessengerHistoryForConnection(
         workspaceId: connection.workspace_id,
         contactId: input.contactId,
       });
-    revalidatePath("/channels");
-    revalidatePath("/inbox");
-    if (input.contactId) revalidatePath(`/fans/${input.contactId}`);
+    if (input.revalidate) {
+      revalidatePath("/channels");
+      revalidatePath("/inbox");
+      if (input.contactId) revalidatePath(`/fans/${input.contactId}`);
+    }
     return {
       ok: true,
       syncedAt,
@@ -376,7 +383,7 @@ async function syncFacebookMessengerHistoryForConnection(
       skippedDuplicates: 0,
       error: message,
     });
-    revalidatePath("/channels");
+    if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
   }
 }
