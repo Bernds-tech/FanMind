@@ -16,7 +16,8 @@ import {
 const OAUTH_VERSION = "v20.0";
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
-export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS = FACEBOOK_MESSAGES_OAUTH_SCOPES;
+export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS =
+  FACEBOOK_MESSAGES_OAUTH_SCOPES;
 
 export type FacebookPermissionStatus = {
   permission: string;
@@ -50,7 +51,10 @@ export type FacebookTokenDiagnostics = {
   error?: { message?: string; code?: number; type?: string };
 };
 
-export function getFacebookOAuthUrl(state: string, scopes: readonly string[] = FACEBOOK_MESSAGES_OAUTH_SCOPES): string {
+export function getFacebookOAuthUrl(
+  state: string,
+  scopes: readonly string[] = FACEBOOK_MESSAGES_OAUTH_SCOPES,
+): string {
   const appId = requireEnv("FACEBOOK_APP_ID", "META_APP_ID");
   const redirectUri = requireEnv("FACEBOOK_REDIRECT_URI", "META_REDIRECT_URI");
   const url = new URL(`https://www.facebook.com/${OAUTH_VERSION}/dialog/oauth`);
@@ -106,9 +110,18 @@ export async function exchangeFacebookCode(code: string): Promise<string> {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/oauth/access_token`,
   );
-  url.searchParams.set("client_id", requireEnv("FACEBOOK_APP_ID", "META_APP_ID"));
-  url.searchParams.set("client_secret", requireEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET"));
-  url.searchParams.set("redirect_uri", requireEnv("FACEBOOK_REDIRECT_URI", "META_REDIRECT_URI"));
+  url.searchParams.set(
+    "client_id",
+    requireEnv("FACEBOOK_APP_ID", "META_APP_ID"),
+  );
+  url.searchParams.set(
+    "client_secret",
+    requireEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET"),
+  );
+  url.searchParams.set(
+    "redirect_uri",
+    requireEnv("FACEBOOK_REDIRECT_URI", "META_REDIRECT_URI"),
+  );
   url.searchParams.set("code", code);
 
   const response = await fetch(url, { cache: "no-store" });
@@ -186,19 +199,27 @@ export function getFacebookGrantedScopeNames(
   return [...scopes].sort();
 }
 
-export function hasFacebookPagesMessagingScope(scopes: string[] | null | undefined): boolean {
+export function hasFacebookPagesMessagingScope(
+  scopes: string[] | null | undefined,
+): boolean {
   return Boolean(scopes?.includes(FACEBOOK_PAGES_MESSAGING_SCOPE));
 }
 
-export function hasFacebookPagesReadUserContentScope(scopes: string[] | null | undefined): boolean {
+export function hasFacebookPagesReadUserContentScope(
+  scopes: string[] | null | undefined,
+): boolean {
   return Boolean(scopes?.includes(FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE));
 }
 
-export function hasFacebookPagesManageEngagementScope(scopes: string[] | null | undefined): boolean {
+export function hasFacebookPagesManageEngagementScope(
+  scopes: string[] | null | undefined,
+): boolean {
   return Boolean(scopes?.includes(FACEBOOK_PAGES_MANAGE_ENGAGEMENT_SCOPE));
 }
 
-export function hasFacebookCommentFeedScopes(scopes: string[] | null | undefined): boolean {
+export function hasFacebookCommentFeedScopes(
+  scopes: string[] | null | undefined,
+): boolean {
   return FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => scopes?.includes(scope));
 }
 
@@ -283,7 +304,14 @@ export type FacebookMessengerMessage = {
   createdTime: string | null;
   message: string | null;
   from: { id: string; name: string | null } | null;
-  attachments: Array<{ type: "image" | "video" | "audio" | "file" | "unknown"; url?: string; name?: string; title?: string; mime_type?: string; size?: number }> | null;
+  attachments: Array<{
+    type: "image" | "video" | "audio" | "file" | "unknown";
+    url?: string;
+    name?: string;
+    title?: string;
+    mime_type?: string;
+    size?: number;
+  }> | null;
 };
 
 export async function fetchFacebookMessengerConversations(
@@ -291,74 +319,171 @@ export async function fetchFacebookMessengerConversations(
   pageAccessToken: string,
   limit = 10,
 ): Promise<FacebookMessengerConversation[]> {
-  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(pageId)}/conversations`);
+  const url = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(pageId)}/conversations`,
+  );
   url.searchParams.set("platform", "messenger");
   url.searchParams.set("fields", "id,updated_time,participants{id,name}");
   url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 25))));
   url.searchParams.set("access_token", pageAccessToken);
 
   const response = await fetch(url, { cache: "no-store" });
-  const payload = (await response.json().catch(() => null)) as { data?: unknown[]; error?: { message?: string; code?: number; type?: string } } | null;
+  const payload = (await response.json().catch(() => null)) as {
+    data?: unknown[];
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
   if (!response.ok) {
-    logFacebookApiError("Facebook Messenger conversations fetch failed", payload?.error);
-    throw new Error(payload?.error?.message ?? "Facebook Messenger Conversations konnten nicht abgerufen werden.");
+    logFacebookApiError(
+      "Facebook Messenger conversations fetch failed",
+      payload?.error,
+    );
+    throw new Error(
+      payload?.error?.message ??
+        "Facebook Messenger Conversations konnten nicht abgerufen werden.",
+    );
   }
 
-  return (payload?.data ?? []).filter(isRecord).map((conversation) => ({
-    id: stringValue(conversation.id) ?? "",
-    updatedTime: stringValue(conversation.updated_time),
-    participants: (isRecord(conversation.participants) && Array.isArray(conversation.participants.data) ? conversation.participants.data : [])
-      .filter(isRecord)
-      .map((participant) => ({ id: stringValue(participant.id) ?? "", name: stringValue(participant.name) }))
-      .filter((participant) => participant.id),
-  })).filter((conversation) => conversation.id);
+  return (payload?.data ?? [])
+    .filter(isRecord)
+    .map((conversation) => ({
+      id: stringValue(conversation.id) ?? "",
+      updatedTime: stringValue(conversation.updated_time),
+      participants: (isRecord(conversation.participants) &&
+      Array.isArray(conversation.participants.data)
+        ? conversation.participants.data
+        : []
+      )
+        .filter(isRecord)
+        .map((participant) => ({
+          id: stringValue(participant.id) ?? "",
+          name: stringValue(participant.name),
+        }))
+        .filter((participant) => participant.id),
+    }))
+    .filter((conversation) => conversation.id);
 }
 
 export async function fetchFacebookMessengerConversationMessages(
   conversationId: string,
   pageAccessToken: string,
-  limit = 25,
+  limit = 50,
 ): Promise<FacebookMessengerMessage[]> {
-  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(conversationId)}/messages`);
-  url.searchParams.set("fields", "id,created_time,message,from{id,name},attachments{id,mime_type,name,size,image_data,video_data,file_url}");
-  url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 50))));
-  url.searchParams.set("access_token", pageAccessToken);
+  const targetLimit = Math.max(1, Math.min(limit, 50));
+  const messages: FacebookMessengerMessage[] = [];
+  const seenIds = new Set<string>();
+  let nextUrl: string | null = buildFacebookMessengerMessagesUrl(
+    conversationId,
+    pageAccessToken,
+    targetLimit,
+  ).toString();
 
-  const response = await fetch(url, { cache: "no-store" });
-  const payload = (await response.json().catch(() => null)) as { data?: unknown[]; error?: { message?: string; code?: number; type?: string } } | null;
-  if (!response.ok) {
-    logFacebookApiError("Facebook Messenger conversation messages fetch failed", payload?.error);
-    throw new Error(payload?.error?.message ?? "Facebook Messenger Nachrichten konnten nicht abgerufen werden.");
+  while (nextUrl && messages.length < targetLimit) {
+    const response = await fetch(nextUrl, { cache: "no-store" });
+    const payload = (await response.json().catch(() => null)) as {
+      data?: unknown[];
+      paging?: { next?: string };
+      error?: { message?: string; code?: number; type?: string };
+    } | null;
+    if (!response.ok) {
+      logFacebookApiError(
+        "Facebook Messenger conversation messages fetch failed",
+        payload?.error,
+      );
+      throw new Error(
+        payload?.error?.message ??
+          "Facebook Messenger Nachrichten konnten nicht abgerufen werden.",
+      );
+    }
+
+    for (const message of (payload?.data ?? [])
+      .filter(isRecord)
+      .map(normalizeGraphMessage)
+      .filter((message) => message.id)) {
+      if (seenIds.has(message.id)) continue;
+      messages.push(message);
+      seenIds.add(message.id);
+      if (messages.length >= targetLimit) break;
+    }
+
+    nextUrl =
+      messages.length < targetLimit
+        ? validUrl(payload?.paging?.next ?? null)
+        : null;
   }
 
-  return (payload?.data ?? []).filter(isRecord).map((message) => {
-    const from = isRecord(message.from) ? message.from : null;
-    return {
-      id: stringValue(message.id) ?? "",
-      createdTime: stringValue(message.created_time),
-      message: stringValue(message.message),
-      from: from ? { id: stringValue(from.id) ?? "", name: stringValue(from.name) } : null,
-      attachments: normalizeGraphMessageAttachments(message.attachments),
-    };
-  }).filter((message) => message.id);
+  return messages;
 }
 
-type FacebookMessengerAttachment = NonNullable<FacebookMessengerMessage["attachments"]>[number];
+function buildFacebookMessengerMessagesUrl(
+  conversationId: string,
+  pageAccessToken: string,
+  limit: number,
+): URL {
+  const url = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(conversationId)}/messages`,
+  );
+  url.searchParams.set(
+    "fields",
+    "id,created_time,message,from{id,name},attachments{id,mime_type,name,size,image_data,video_data,file_url}",
+  );
+  url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 50))));
+  url.searchParams.set("access_token", pageAccessToken);
+  return url;
+}
 
-function normalizeGraphMessageAttachments(value: unknown): FacebookMessengerMessage["attachments"] {
+function normalizeGraphMessage(
+  message: Record<string, unknown>,
+): FacebookMessengerMessage {
+  const from = isRecord(message.from) ? message.from : null;
+  return {
+    id: stringValue(message.id) ?? "",
+    createdTime: stringValue(message.created_time),
+    message: stringValue(message.message),
+    from: from
+      ? { id: stringValue(from.id) ?? "", name: stringValue(from.name) }
+      : null,
+    attachments: normalizeGraphMessageAttachments(message.attachments),
+  };
+}
+
+type FacebookMessengerAttachment = NonNullable<
+  FacebookMessengerMessage["attachments"]
+>[number];
+
+function normalizeGraphMessageAttachments(
+  value: unknown,
+): FacebookMessengerMessage["attachments"] {
   const raw = isRecord(value) && Array.isArray(value.data) ? value.data : [];
   const attachments = raw.filter(isRecord).map((attachment) => {
-    const imageData = isRecord(attachment.image_data) ? attachment.image_data : undefined;
-    const videoData = isRecord(attachment.video_data) ? attachment.video_data : undefined;
+    const imageData = isRecord(attachment.image_data)
+      ? attachment.image_data
+      : undefined;
+    const videoData = isRecord(attachment.video_data)
+      ? attachment.video_data
+      : undefined;
     const fileUrl = stringValue(attachment.file_url);
     const mime = stringValue(attachment.mime_type);
-    const url = validUrl(stringValue(imageData?.url) ?? stringValue(videoData?.url) ?? fileUrl);
+    const url = validUrl(
+      stringValue(imageData?.url) ?? stringValue(videoData?.url) ?? fileUrl,
+    );
     return {
-      type: mime?.startsWith("image/") ? "image" : mime?.startsWith("video/") ? "video" : mime?.startsWith("audio/") ? "audio" : fileUrl ? "file" : "unknown",
+      type: mime?.startsWith("image/")
+        ? "image"
+        : mime?.startsWith("video/")
+          ? "video"
+          : mime?.startsWith("audio/")
+            ? "audio"
+            : fileUrl
+              ? "file"
+              : "unknown",
       ...(url ? { url } : {}),
-      ...(stringValue(attachment.name) ? { name: stringValue(attachment.name)! } : {}),
+      ...(stringValue(attachment.name)
+        ? { name: stringValue(attachment.name)! }
+        : {}),
       ...(mime ? { mime_type: mime } : {}),
-      ...(numberValue(attachment.size) ? { size: numberValue(attachment.size)! } : {}),
+      ...(numberValue(attachment.size)
+        ? { size: numberValue(attachment.size)! }
+        : {}),
     } satisfies FacebookMessengerAttachment;
   });
   return attachments.length ? attachments : null;
@@ -657,14 +782,20 @@ function buildFacebookPagesFetchResult(
 
 export type FacebookPageWebhookFieldStatus = "active" | "missing" | "unknown";
 
-export const FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS = ["messages", "message_echoes"] as const;
+export const FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS = [
+  "messages",
+  "message_echoes",
+] as const;
 
 export type FacebookPageWebhookStatus = {
   ok: boolean;
   pageId: string | null;
   hasPageAccessToken: boolean;
   subscribedAppsStatus: "active" | "missing" | "error" | "unknown";
-  fields: Record<"feed" | "messages" | "message_echoes", FacebookPageWebhookFieldStatus>;
+  fields: Record<
+    "feed" | "messages" | "message_echoes",
+    FacebookPageWebhookFieldStatus
+  >;
   error: string | null;
   metaError?: { message?: string; code?: number; type?: string };
 };
@@ -679,10 +810,26 @@ export async function fetchFacebookPageWebhookStatus(
   pageId: string | null,
   pageAccessToken: string | null,
 ): Promise<FacebookPageWebhookStatus> {
-  if (!pageId) return buildWebhookStatus(pageId, Boolean(pageAccessToken), "unknown", [], "Facebook Page-ID fehlt.");
-  if (!pageAccessToken) return buildWebhookStatus(pageId, false, "unknown", [], "Page Access Token fehlt serverseitig.");
+  if (!pageId)
+    return buildWebhookStatus(
+      pageId,
+      Boolean(pageAccessToken),
+      "unknown",
+      [],
+      "Facebook Page-ID fehlt.",
+    );
+  if (!pageAccessToken)
+    return buildWebhookStatus(
+      pageId,
+      false,
+      "unknown",
+      [],
+      "Page Access Token fehlt serverseitig.",
+    );
 
-  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`);
+  const url = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`,
+  );
   url.searchParams.set("fields", "id,name,subscribed_fields");
   url.searchParams.set("access_token", pageAccessToken);
 
@@ -693,15 +840,26 @@ export async function fetchFacebookPageWebhookStatus(
   } | null;
 
   if (!response.ok) {
-    logFacebookApiError("Facebook Page subscribed_apps check failed", payload?.error);
+    logFacebookApiError(
+      "Facebook Page subscribed_apps check failed",
+      payload?.error,
+    );
     return {
-      ...buildWebhookStatus(pageId, true, "error", [], payload?.error?.message ?? "Meta subscribed_apps konnte nicht geprüft werden."),
+      ...buildWebhookStatus(
+        pageId,
+        true,
+        "error",
+        [],
+        payload?.error?.message ??
+          "Meta subscribed_apps konnte nicht geprüft werden.",
+      ),
       metaError: payload?.error,
     };
   }
 
   const appId = getOptionalEnv("FACEBOOK_APP_ID", "META_APP_ID");
-  const appSubscription = (payload?.data ?? []).find((entry) => !appId || entry.id === appId) ?? null;
+  const appSubscription =
+    (payload?.data ?? []).find((entry) => !appId || entry.id === appId) ?? null;
   const subscribedFields = appSubscription?.subscribed_fields ?? [];
   return buildWebhookStatus(
     pageId,
@@ -719,7 +877,10 @@ export async function subscribeFacebookPage(
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`,
   );
-  url.searchParams.set("subscribed_fields", FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS.join(","));
+  url.searchParams.set(
+    "subscribed_fields",
+    FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS.join(","),
+  );
   url.searchParams.set("access_token", pageAccessToken);
   const response = await fetch(url, { method: "POST", cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as {
@@ -730,7 +891,14 @@ export async function subscribeFacebookPage(
   if (!response.ok || payload?.success === false) {
     logFacebookApiError("Facebook Page subscribe failed", payload?.error);
     return {
-      ...buildWebhookStatus(pageId, true, "error", [], payload?.error?.message ?? "Meta hat die Page-Webhook-Aktivierung abgelehnt."),
+      ...buildWebhookStatus(
+        pageId,
+        true,
+        "error",
+        [],
+        payload?.error?.message ??
+          "Meta hat die Page-Webhook-Aktivierung abgelehnt.",
+      ),
       metaError: payload?.error,
     };
   }
@@ -746,17 +914,27 @@ function buildWebhookStatus(
   error: string | null,
 ): FacebookPageWebhookStatus {
   const fieldSet = new Set(subscribedFields);
-  const fieldStatus = (field: "feed" | "messages" | "message_echoes"): FacebookPageWebhookFieldStatus => {
-    if (subscribedAppsStatus === "error" || subscribedAppsStatus === "unknown") return "unknown";
+  const fieldStatus = (
+    field: "feed" | "messages" | "message_echoes",
+  ): FacebookPageWebhookFieldStatus => {
+    if (subscribedAppsStatus === "error" || subscribedAppsStatus === "unknown")
+      return "unknown";
     return fieldSet.has(field) ? "active" : "missing";
   };
 
   return {
-    ok: subscribedAppsStatus === "active" && fieldSet.has("messages") && fieldSet.has("message_echoes"),
+    ok:
+      subscribedAppsStatus === "active" &&
+      fieldSet.has("messages") &&
+      fieldSet.has("message_echoes"),
     pageId,
     hasPageAccessToken,
     subscribedAppsStatus,
-    fields: { feed: fieldStatus("feed"), messages: fieldStatus("messages"), message_echoes: fieldStatus("message_echoes") },
+    fields: {
+      feed: fieldStatus("feed"),
+      messages: fieldStatus("messages"),
+      message_echoes: fieldStatus("message_echoes"),
+    },
     error,
   };
 }
@@ -799,7 +977,10 @@ export function tokenLastFour(token: string | null): string | null {
 }
 
 function signState(encodedPayload: string): string {
-  return createHmac("sha256", requireEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET"))
+  return createHmac(
+    "sha256",
+    requireEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET"),
+  )
     .update(encodedPayload)
     .digest("base64url");
 }
@@ -881,7 +1062,9 @@ export type FacebookPageComment = {
   postPermalinkUrl?: string;
 };
 
-export type FacebookCommentFetchEndpointType = "page-feed-with-comments" | "post-comments-fallback";
+export type FacebookCommentFetchEndpointType =
+  | "page-feed-with-comments"
+  | "post-comments-fallback";
 
 export type FacebookCommentFetchDiagnostics = {
   endpointType: FacebookCommentFetchEndpointType;
@@ -895,7 +1078,11 @@ export class FacebookCommentFetchError extends Error {
 
   constructor(
     message: string,
-    input: { endpointType: FacebookCommentFetchEndpointType; usedPageAccessToken: boolean; graphErrorCode?: number },
+    input: {
+      endpointType: FacebookCommentFetchEndpointType;
+      usedPageAccessToken: boolean;
+      graphErrorCode?: number;
+    },
   ) {
     super(message);
     this.name = "FacebookCommentFetchError";
@@ -914,17 +1101,27 @@ type FacebookPagePostWithInlineComments = FacebookPagePost & {
 export async function fetchFacebookPagePostsWithComments(
   pageId: string,
   pageAccessToken: string,
-): Promise<{ posts: FacebookPagePost[]; comments: FacebookPageComment[]; diagnostics: FacebookCommentFetchDiagnostics }> {
-  const feedUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/feed`);
-  feedUrl.searchParams.set("fields", "id,message,created_time,permalink_url,comments.limit(50){id,message,created_time,from,permalink_url,attachment,attachments{media,target,type,url}}");
+): Promise<{
+  posts: FacebookPagePost[];
+  comments: FacebookPageComment[];
+  diagnostics: FacebookCommentFetchDiagnostics;
+}> {
+  const feedUrl = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/feed`,
+  );
+  feedUrl.searchParams.set(
+    "fields",
+    "id,message,created_time,permalink_url,comments.limit(50){id,message,created_time,from,permalink_url,attachment,attachments{media,target,type,url}}",
+  );
   feedUrl.searchParams.set("limit", "25");
   feedUrl.searchParams.set("access_token", pageAccessToken);
 
   try {
-    const feedPosts = await fetchGraphCollection<FacebookPagePostWithInlineComments>(
-      feedUrl,
-      "Facebook Page-Feed mit Kommentaren konnte nicht geladen werden.",
-    );
+    const feedPosts =
+      await fetchGraphCollection<FacebookPagePostWithInlineComments>(
+        feedUrl,
+        "Facebook Page-Feed mit Kommentaren konnte nicht geladen werden.",
+      );
     const posts = feedPosts.map((post) => ({
       id: post.id,
       message: post.message,
@@ -934,14 +1131,28 @@ export async function fetchFacebookPagePostsWithComments(
     const comments = feedPosts.flatMap((post) =>
       (post.comments?.data ?? [])
         .filter((comment) => Boolean(comment.id))
-        .map((comment) => ({ ...comment, postId: post.id, postPermalinkUrl: post.permalink_url })),
+        .map((comment) => ({
+          ...comment,
+          postId: post.id,
+          postPermalinkUrl: post.permalink_url,
+        })),
     );
-    return { posts, comments, diagnostics: { endpointType: "page-feed-with-comments", usedPageAccessToken: true } };
+    return {
+      posts,
+      comments,
+      diagnostics: {
+        endpointType: "page-feed-with-comments",
+        usedPageAccessToken: true,
+      },
+    };
   } catch (error) {
-    if (!isMetaPermissionError(error)) throw withCommentFetchEndpoint(error, "page-feed-with-comments");
+    if (!isMetaPermissionError(error))
+      throw withCommentFetchEndpoint(error, "page-feed-with-comments");
   }
 
-  const postsUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/feed`);
+  const postsUrl = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/feed`,
+  );
   postsUrl.searchParams.set("fields", "id,message,created_time,permalink_url");
   postsUrl.searchParams.set("limit", "25");
   postsUrl.searchParams.set("access_token", pageAccessToken);
@@ -955,36 +1166,69 @@ export async function fetchFacebookPagePostsWithComments(
   const comments: FacebookPageComment[] = [];
 
   for (const post of posts) {
-    const commentsUrl = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${post.id}/comments`);
-    commentsUrl.searchParams.set("fields", "id,message,created_time,from,permalink_url,attachment,attachments{media,target,type,url}");
+    const commentsUrl = new URL(
+      `https://graph.facebook.com/${OAUTH_VERSION}/${post.id}/comments`,
+    );
+    commentsUrl.searchParams.set(
+      "fields",
+      "id,message,created_time,from,permalink_url,attachment,attachments{media,target,type,url}",
+    );
     commentsUrl.searchParams.set("filter", "stream");
     commentsUrl.searchParams.set("limit", "100");
     commentsUrl.searchParams.set("access_token", pageAccessToken);
-    const postComments = await fetchGraphCollection<Omit<FacebookPageComment, "postId" | "postPermalinkUrl">>(
+    const postComments = await fetchGraphCollection<
+      Omit<FacebookPageComment, "postId" | "postPermalinkUrl">
+    >(
       commentsUrl,
       `Facebook-Kommentare für Post ${post.id} konnten nicht geladen werden.`,
     ).catch((error) => {
       throw withCommentFetchEndpoint(error, "post-comments-fallback");
     });
-    comments.push(...postComments.map((comment) => ({ ...comment, postId: post.id, postPermalinkUrl: post.permalink_url })));
+    comments.push(
+      ...postComments.map((comment) => ({
+        ...comment,
+        postId: post.id,
+        postPermalinkUrl: post.permalink_url,
+      })),
+    );
   }
 
-  return { posts, comments, diagnostics: { endpointType: "post-comments-fallback", usedPageAccessToken: true } };
+  return {
+    posts,
+    comments,
+    diagnostics: {
+      endpointType: "post-comments-fallback",
+      usedPageAccessToken: true,
+    },
+  };
 }
 
 function isMetaPermissionError(error: unknown): boolean {
   return error instanceof GraphApiError && error.code === 10;
 }
 
-function withCommentFetchEndpoint(error: unknown, endpointType: FacebookCommentFetchEndpointType): Error {
+function withCommentFetchEndpoint(
+  error: unknown,
+  endpointType: FacebookCommentFetchEndpointType,
+): Error {
   if (error instanceof FacebookCommentFetchError) return error;
   if (error instanceof GraphApiError) {
-    return new FacebookCommentFetchError(error.message, { endpointType, usedPageAccessToken: true, graphErrorCode: error.code });
+    return new FacebookCommentFetchError(error.message, {
+      endpointType,
+      usedPageAccessToken: true,
+      graphErrorCode: error.code,
+    });
   }
   if (error instanceof Error) {
-    return new FacebookCommentFetchError(error.message, { endpointType, usedPageAccessToken: true });
+    return new FacebookCommentFetchError(error.message, {
+      endpointType,
+      usedPageAccessToken: true,
+    });
   }
-  return new FacebookCommentFetchError("Facebook-Kommentarabruf fehlgeschlagen.", { endpointType, usedPageAccessToken: true });
+  return new FacebookCommentFetchError(
+    "Facebook-Kommentarabruf fehlgeschlagen.",
+    { endpointType, usedPageAccessToken: true },
+  );
 }
 
 class GraphApiError extends Error {
@@ -997,7 +1241,10 @@ class GraphApiError extends Error {
   }
 }
 
-async function fetchGraphCollection<T extends { id?: string }>(url: URL, errorFallback: string): Promise<T[]> {
+async function fetchGraphCollection<T extends { id?: string }>(
+  url: URL,
+  errorFallback: string,
+): Promise<T[]> {
   const items: T[] = [];
   let nextUrl: string | null = url.toString();
 
@@ -1011,7 +1258,10 @@ async function fetchGraphCollection<T extends { id?: string }>(url: URL, errorFa
 
     if (!response.ok) {
       logFacebookApiError(errorFallback, payload?.error);
-      throw new GraphApiError(payload?.error?.message ?? errorFallback, payload?.error?.code);
+      throw new GraphApiError(
+        payload?.error?.message ?? errorFallback,
+        payload?.error?.code,
+      );
     }
 
     items.push(...(payload?.data ?? []).filter((item) => Boolean(item.id)));

@@ -7,15 +7,27 @@ import {
   type SocialConnectionRow,
 } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/facebookIntegration";
+import { syncFacebookMessengerConversationForContact } from "@/app/channels/facebookWebhookActions";
 
 export type MetaWebhookEvent = {
   eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
   messageType: "dm" | "comment";
-  channelType: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments";
+  channelType:
+    | "facebook_messages"
+    | "facebook_comments"
+    | "instagram_messages"
+    | "instagram_comments";
   sourcePlatform: "facebook" | "instagram";
   content: string | null;
   attachments: ConversationMessageAttachment[] | null;
-  messageKind: "text" | "image" | "video" | "audio" | "file" | "mixed" | "unknown";
+  messageKind:
+    | "text"
+    | "image"
+    | "video"
+    | "audio"
+    | "file"
+    | "mixed"
+    | "unknown";
   direction: "inbound" | "outbound";
   externalMessageId: string | null;
   externalThreadId: string | null;
@@ -56,9 +68,15 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       const attachments = extractMessengerAttachments(message);
       const content = text ?? getAttachmentFallbackText(attachments);
       const mid = stringValue(message?.mid);
-      const rawSenderId = isRecord(item.sender) ? stringValue(item.sender.id) : null;
-      const rawRecipientId = isRecord(item.recipient) ? stringValue(item.recipient.id) : null;
-      const pageId = isEcho ? (rawSenderId ?? entryPageId) : (rawRecipientId ?? entryPageId);
+      const rawSenderId = isRecord(item.sender)
+        ? stringValue(item.sender.id)
+        : null;
+      const rawRecipientId = isRecord(item.recipient)
+        ? stringValue(item.recipient.id)
+        : null;
+      const pageId = isEcho
+        ? (rawSenderId ?? entryPageId)
+        : (rawRecipientId ?? entryPageId);
       const senderId = isEcho ? rawRecipientId : rawSenderId;
 
       const isInstagram = isInstagramMessagingItem(item, payload);
@@ -72,12 +90,26 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         messageKind: getMessageKind(text, attachments),
         direction: isEcho ? "outbound" : "inbound",
         externalMessageId: mid,
-        externalThreadId: senderId && pageId ? `${pageId}:${senderId}` : senderId,
+        externalThreadId:
+          senderId && pageId ? `${pageId}:${senderId}` : senderId,
         externalPostId: null,
         externalCommentId: null,
-        sourceUrl: validUrl(stringValue(message?.link) ?? stringValue(message?.url)),
-        replyTargetUrl: validUrl(stringValue(message?.link) ?? stringValue(message?.url)),
-        authorLabel: isEcho ? "Page" : ((isRecord(item.sender) ? stringValue(item.sender.username) : null) ?? (senderId ? `${isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"} ${senderId}` : (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"))),
+        sourceUrl: validUrl(
+          stringValue(message?.link) ?? stringValue(message?.url),
+        ),
+        replyTargetUrl: validUrl(
+          stringValue(message?.link) ?? stringValue(message?.url),
+        ),
+        authorLabel: isEcho
+          ? "Page"
+          : ((isRecord(item.sender)
+              ? stringValue(item.sender.username)
+              : null) ??
+            (senderId
+              ? `${isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"} ${senderId}`
+              : isInstagram
+                ? "Instagram Nutzer"
+                : "Facebook Nutzer")),
         pageId,
         senderId,
         recipientId: isEcho ? rawSenderId : pageId,
@@ -93,16 +125,46 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       const field = stringValue(change.field);
       const item = stringValue(value?.item) ?? field;
       const isInstagram = isInstagramChange(change, payload);
-      const content = stringValue(value?.message) ?? stringValue(value?.comment_message) ?? stringValue(value?.text) ?? stringValue(value?.caption);
-      const commentId = stringValue(value?.comment_id) ?? stringValue(value?.id);
-      const permalink = validUrl(stringValue(value?.permalink_url) ?? stringValue(value?.link) ?? (isRecord(value?.media) ? stringValue(value.media.permalink) : null));
-      const postId = stringValue(value?.post_id) ?? stringValue(value?.media_id) ?? (isRecord(value?.media) ? stringValue(value.media.id) : null) ?? stringValue(value?.parent_id);
+      const content =
+        stringValue(value?.message) ??
+        stringValue(value?.comment_message) ??
+        stringValue(value?.text) ??
+        stringValue(value?.caption);
+      const commentId =
+        stringValue(value?.comment_id) ?? stringValue(value?.id);
+      const permalink = validUrl(
+        stringValue(value?.permalink_url) ??
+          stringValue(value?.link) ??
+          (isRecord(value?.media) ? stringValue(value.media.permalink) : null),
+      );
+      const postId =
+        stringValue(value?.post_id) ??
+        stringValue(value?.media_id) ??
+        (isRecord(value?.media) ? stringValue(value.media.id) : null) ??
+        stringValue(value?.parent_id);
       const from = isRecord(value?.from) ? value.from : undefined;
-      const senderId = stringValue(value?.from_id) ?? stringValue(value?.sender_id) ?? stringValue(from?.id);
-      const senderName = stringValue(value?.from_name) ?? stringValue(value?.sender_name) ?? stringValue(from?.username) ?? stringValue(from?.name) ?? stringValue(value?.username);
-      const isFeedField = field === "feed" || field === "comments" || field === "mentions";
-      const isCommentItem = item === "comment" || Boolean(commentId) || field === "comments";
-      const eventType = isInstagram && isCommentItem ? "comments" : isFeedField ? (isCommentItem ? "feed_comment" : "feed") : "unknown";
+      const senderId =
+        stringValue(value?.from_id) ??
+        stringValue(value?.sender_id) ??
+        stringValue(from?.id);
+      const senderName =
+        stringValue(value?.from_name) ??
+        stringValue(value?.sender_name) ??
+        stringValue(from?.username) ??
+        stringValue(from?.name) ??
+        stringValue(value?.username);
+      const isFeedField =
+        field === "feed" || field === "comments" || field === "mentions";
+      const isCommentItem =
+        item === "comment" || Boolean(commentId) || field === "comments";
+      const eventType =
+        isInstagram && isCommentItem
+          ? "comments"
+          : isFeedField
+            ? isCommentItem
+              ? "feed_comment"
+              : "feed"
+            : "unknown";
 
       events.push({
         eventType,
@@ -119,7 +181,8 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         externalCommentId: commentId,
         sourceUrl: permalink,
         replyTargetUrl: permalink,
-        authorLabel: senderName ?? (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"),
+        authorLabel:
+          senderName ?? (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"),
         pageId: entryPageId,
         senderId,
         recipientId: entryPageId,
@@ -142,14 +205,18 @@ export async function processMetaWebhookPayload(
   for (const event of events) {
     const receivedAt = new Date().toISOString();
     const connection = event.pageId
-      ? await findMetaSocialConnectionByPageId(event.sourcePlatform, event.pageId)
+      ? await findMetaSocialConnectionByPageId(
+          event.sourcePlatform,
+          event.pageId,
+        )
       : { connection: null, error: null };
 
     if (connection.error) firstError ??= connection.error.message;
 
     if (!connection.connection) {
       const fallbackWorkspace = await findMetaWebhookFallbackWorkspaceId();
-      if (fallbackWorkspace.error) firstError ??= fallbackWorkspace.error.message;
+      if (fallbackWorkspace.error)
+        firstError ??= fallbackWorkspace.error.message;
 
       const debugResult = await createMetaWebhookDebugEvent({
         workspaceId: fallbackWorkspace.workspaceId,
@@ -171,7 +238,13 @@ export async function processMetaWebhookPayload(
       continue;
     }
 
-    if (connection.connection && event.eventType === "messages" && event.sourcePlatform === "facebook" && event.direction === "inbound" && event.senderId) {
+    if (
+      connection.connection &&
+      event.eventType === "messages" &&
+      event.sourcePlatform === "facebook" &&
+      event.direction === "inbound" &&
+      event.senderId
+    ) {
       const profile = await fetchFacebookMessengerProfile(
         event.senderId,
         connection.connection,
@@ -179,18 +252,31 @@ export async function processMetaWebhookPayload(
       if (profile.displayName) event.authorLabel = profile.displayName;
     }
 
-    let status = event.eventType === "feed" || event.eventType === "feed_comment" ? "stored" : "received";
+    let status =
+      event.eventType === "feed" || event.eventType === "feed_comment"
+        ? "stored"
+        : "received";
     let errorReason: string | null = null;
     let messageId: string | null = null;
 
-    if (event.eventType === "messages" || event.eventType === "feed" || event.eventType === "feed_comment" || event.eventType === "comments") {
+    if (
+      event.eventType === "messages" ||
+      event.eventType === "feed" ||
+      event.eventType === "feed_comment" ||
+      event.eventType === "comments"
+    ) {
       if (event.content) {
         const result = await createMetaWebhookConversationMessage({
           workspaceId: connection.connection.workspace_id,
           senderId: event.senderId,
           content: event.content,
           sourcePlatform: event.sourcePlatform,
-          messageType: event.eventType === "feed" || event.eventType === "feed_comment" || event.eventType === "comments" ? "comment" : event.messageType,
+          messageType:
+            event.eventType === "feed" ||
+            event.eventType === "feed_comment" ||
+            event.eventType === "comments"
+              ? "comment"
+              : event.messageType,
           sourceType: event.channelType,
           sourceUrl: event.sourceUrl,
           replyTargetUrl: event.replyTargetUrl,
@@ -199,7 +285,10 @@ export async function processMetaWebhookPayload(
           externalPostId: event.externalPostId,
           externalCommentId: event.externalCommentId,
           originalTextExcerpt: event.content,
-          authorLabel: event.direction === "outbound" ? (connection.connection.page_name ?? event.authorLabel) : event.authorLabel,
+          authorLabel:
+            event.direction === "outbound"
+              ? (connection.connection.page_name ?? event.authorLabel)
+              : event.authorLabel,
           direction: event.direction,
           attachments: event.attachments,
           messageKind: event.messageKind,
@@ -209,13 +298,35 @@ export async function processMetaWebhookPayload(
           errorReason = result.error.message;
           firstError ??= result.error.message;
         } else {
-          status = event.eventType === "feed" || event.eventType === "feed_comment" ? "feed_comment_stored" : "stored";
+          status =
+            event.eventType === "feed" || event.eventType === "feed_comment"
+              ? "feed_comment_stored"
+              : "stored";
           messageId = result.message?.id ?? null;
           saved += 1;
+
+          if (
+            event.eventType === "messages" &&
+            event.sourcePlatform === "facebook" &&
+            event.direction === "inbound" &&
+            event.senderId
+          ) {
+            const syncResult =
+              await syncFacebookMessengerConversationForContact({
+                connection: connection.connection,
+                contactId: result.message?.contact_id ?? null,
+                fanSenderId: event.senderId,
+              });
+            if (!syncResult.ok && syncResult.error)
+              firstError ??= syncResult.error;
+          }
         }
       } else {
         status = "ignored";
-        errorReason = event.eventType === "feed" || event.eventType === "feed_comment" ? "Feed/comment-Event ohne Kommentartext." : "Message-Event ohne Nachrichtentext.";
+        errorReason =
+          event.eventType === "feed" || event.eventType === "feed_comment"
+            ? "Feed/comment-Event ohne Kommentartext."
+            : "Message-Event ohne Nachrichtentext.";
         skipped += 1;
       }
     } else {
@@ -242,18 +353,62 @@ export async function processMetaWebhookPayload(
     if (debugResult.error) firstError ??= debugResult.error.message;
   }
 
-  return { received: true, saved: saved > 0, skipped: skipped > 0, eventCount: events.length, error: firstError };
+  return {
+    received: true,
+    saved: saved > 0,
+    skipped: skipped > 0,
+    eventCount: events.length,
+    error: firstError,
+  };
 }
 
-function unknownEvent(pageId: string | null, senderId: string | null, rawEvent: unknown): MetaWebhookEvent {
-  return { eventType: "unknown", messageType: "comment", channelType: "facebook_comments", sourcePlatform: "facebook", content: null, attachments: null, messageKind: "text", externalMessageId: null, externalThreadId: null, externalPostId: null, externalCommentId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent, direction: "inbound" };
+function unknownEvent(
+  pageId: string | null,
+  senderId: string | null,
+  rawEvent: unknown,
+): MetaWebhookEvent {
+  return {
+    eventType: "unknown",
+    messageType: "comment",
+    channelType: "facebook_comments",
+    sourcePlatform: "facebook",
+    content: null,
+    attachments: null,
+    messageKind: "text",
+    externalMessageId: null,
+    externalThreadId: null,
+    externalPostId: null,
+    externalCommentId: null,
+    sourceUrl: null,
+    replyTargetUrl: null,
+    authorLabel: "Facebook Nutzer",
+    pageId,
+    senderId,
+    recipientId: pageId,
+    rawEvent,
+    direction: "inbound",
+  };
 }
 
-function isInstagramMessagingItem(item: Record<string, unknown>, payload: Record<string, unknown>): boolean {
-  return stringValue(payload.object) === "instagram" || stringValue(item.object) === "instagram" || Boolean(isRecord(item.message) && (item.message.attachments || item.message.is_echo === false) && (item.sender as Record<string, unknown> | undefined)?.username);
+function isInstagramMessagingItem(
+  item: Record<string, unknown>,
+  payload: Record<string, unknown>,
+): boolean {
+  return (
+    stringValue(payload.object) === "instagram" ||
+    stringValue(item.object) === "instagram" ||
+    Boolean(
+      isRecord(item.message) &&
+      (item.message.attachments || item.message.is_echo === false) &&
+      (item.sender as Record<string, unknown> | undefined)?.username,
+    )
+  );
 }
 
-function isInstagramChange(change: Record<string, unknown>, payload: Record<string, unknown>): boolean {
+function isInstagramChange(
+  change: Record<string, unknown>,
+  payload: Record<string, unknown>,
+): boolean {
   const value = isRecord(change.value) ? change.value : undefined;
   return (
     stringValue(payload.object) === "instagram" ||
@@ -275,7 +430,6 @@ function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-
 type FacebookMessengerProfile = {
   displayName: string | null;
 };
@@ -290,7 +444,9 @@ async function fetchFacebookMessengerProfile(
   if (!pageToken) return { displayName: null };
 
   try {
-    const url = new URL(`https://graph.facebook.com/v20.0/${encodeURIComponent(psid)}`);
+    const url = new URL(
+      `https://graph.facebook.com/v20.0/${encodeURIComponent(psid)}`,
+    );
     url.searchParams.set("fields", "first_name,last_name,name");
     url.searchParams.set("access_token", pageToken);
 
@@ -309,33 +465,57 @@ async function fetchFacebookMessengerProfile(
   }
 }
 
-function extractMessengerAttachments(message: Record<string, unknown> | undefined): ConversationMessageAttachment[] | null {
-  const rawAttachments = Array.isArray(message?.attachments) ? message.attachments : [];
-  const attachments = rawAttachments
-    .filter(isRecord)
-    .map((attachment) => {
-      const payload = isRecord(attachment.payload) ? attachment.payload : undefined;
-      const url = validUrl(stringValue(payload?.url));
-      return {
-        type: normalizeMessengerAttachmentType(stringValue(attachment.type)),
-        ...(url ? { url } : {}),
-        ...(stringValue(payload?.sticker_id) ? { sticker_id: stringValue(payload?.sticker_id)! } : {}),
-        ...(stringValue(attachment.title) ? { title: stringValue(attachment.title)! } : {}),
-        ...(stringValue(attachment.name) ? { name: stringValue(attachment.name)! } : {}),
-        ...(stringValue(attachment.mime_type) ? { mime_type: stringValue(attachment.mime_type)! } : {}),
-        ...(numberValue(attachment.size) ? { size: numberValue(attachment.size)! } : {}),
-      } satisfies ConversationMessageAttachment;
-    });
+function extractMessengerAttachments(
+  message: Record<string, unknown> | undefined,
+): ConversationMessageAttachment[] | null {
+  const rawAttachments = Array.isArray(message?.attachments)
+    ? message.attachments
+    : [];
+  const attachments = rawAttachments.filter(isRecord).map((attachment) => {
+    const payload = isRecord(attachment.payload)
+      ? attachment.payload
+      : undefined;
+    const url = validUrl(stringValue(payload?.url));
+    return {
+      type: normalizeMessengerAttachmentType(stringValue(attachment.type)),
+      ...(url ? { url } : {}),
+      ...(stringValue(payload?.sticker_id)
+        ? { sticker_id: stringValue(payload?.sticker_id)! }
+        : {}),
+      ...(stringValue(attachment.title)
+        ? { title: stringValue(attachment.title)! }
+        : {}),
+      ...(stringValue(attachment.name)
+        ? { name: stringValue(attachment.name)! }
+        : {}),
+      ...(stringValue(attachment.mime_type)
+        ? { mime_type: stringValue(attachment.mime_type)! }
+        : {}),
+      ...(numberValue(attachment.size)
+        ? { size: numberValue(attachment.size)! }
+        : {}),
+    } satisfies ConversationMessageAttachment;
+  });
 
   return attachments.length ? attachments : null;
 }
 
-function normalizeMessengerAttachmentType(type: string | null): ConversationMessageAttachment["type"] {
-  if (type === "image" || type === "video" || type === "audio" || type === "file") return type;
+function normalizeMessengerAttachmentType(
+  type: string | null,
+): ConversationMessageAttachment["type"] {
+  if (
+    type === "image" ||
+    type === "video" ||
+    type === "audio" ||
+    type === "file"
+  )
+    return type;
   return "unknown";
 }
 
-function getAttachmentFallbackText(attachments: ConversationMessageAttachment[] | null): string | null {
+function getAttachmentFallbackText(
+  attachments: ConversationMessageAttachment[] | null,
+): string | null {
   const firstType = attachments?.[0]?.type;
   if (!firstType) return null;
   return {
@@ -347,25 +527,36 @@ function getAttachmentFallbackText(attachments: ConversationMessageAttachment[] 
   }[firstType];
 }
 
-function getMessageKind(text: string | null, attachments: ConversationMessageAttachment[] | null): MetaWebhookEvent["messageKind"] {
+function getMessageKind(
+  text: string | null,
+  attachments: ConversationMessageAttachment[] | null,
+): MetaWebhookEvent["messageKind"] {
   if (text && attachments?.length) return "mixed";
   if (!attachments?.length) return "text";
-  const types = Array.from(new Set(attachments.map((attachment) => attachment.type)));
+  const types = Array.from(
+    new Set(attachments.map((attachment) => attachment.type)),
+  );
   return types.length === 1 ? types[0] : "mixed";
 }
 
 function formatDebugStatus(status: string, event: MetaWebhookEvent): string {
-  const directionLabel = event.direction === "outbound" ? "message_echoes · outbound" : "messages · inbound";
-  const baseStatus = event.eventType === "messages" ? `${directionLabel} · ${status}` : status;
+  const directionLabel =
+    event.direction === "outbound"
+      ? "message_echoes · outbound"
+      : "messages · inbound";
+  const baseStatus =
+    event.eventType === "messages" ? `${directionLabel} · ${status}` : status;
   if (!event.attachments?.length) return baseStatus;
   return `${baseStatus} · Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
 }
 
 function formatDebugMessageText(event: MetaWebhookEvent): string | null {
-  const directionLabel = event.eventType === "messages"
-    ? `${event.direction === "outbound" ? "message_echoes / outbound" : "messages / inbound"}: `
-    : "";
-  if (!event.attachments?.length) return event.content ? `${directionLabel}${event.content}` : null;
+  const directionLabel =
+    event.eventType === "messages"
+      ? `${event.direction === "outbound" ? "message_echoes / outbound" : "messages / inbound"}: `
+      : "";
+  if (!event.attachments?.length)
+    return event.content ? `${directionLabel}${event.content}` : null;
   return `${directionLabel}Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
 }
 

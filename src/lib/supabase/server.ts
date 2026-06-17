@@ -219,7 +219,6 @@ export type SocialConnectionRow = {
   updated_at: string;
 };
 
-
 export type MetaWebhookEventRow = {
   id: string;
   workspace_id: string | null;
@@ -721,20 +720,20 @@ export async function upsertFacebookSocialConnection(
   return { connection: result.data, error: null };
 }
 
-
 export async function updateFacebookWebhookSubscribed(
   connectionId: string,
   webhookSubscribed: boolean,
 ): Promise<SocialConnectionResult> {
-  const accessToken = await getAccessToken();
-  if (!accessToken)
-    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+  const accessToken = (await getAccessToken()) ?? getServiceAccessToken();
 
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
     { webhook_subscribed: webhookSubscribed },
     accessToken,
-    [["id", connectionId], ["platform", "facebook"]],
+    [
+      ["id", connectionId],
+      ["platform", "facebook"],
+    ],
     { select: SOCIAL_CONNECTION_COLUMNS, single: true },
   );
 
@@ -760,7 +759,10 @@ export async function updateFacebookCommentFetchStatus(
       last_comment_fetch_error: normalizeOptionalText(input.error),
     },
     accessToken,
-    [["id", connectionId], ["platform", "facebook"]],
+    [
+      ["id", connectionId],
+      ["platform", "facebook"],
+    ],
     { select: SOCIAL_CONNECTION_COLUMNS, single: true },
   );
 
@@ -783,9 +785,7 @@ export async function updateFacebookMessengerSyncStatus(
     lastOutboundAt?: string | null;
   },
 ): Promise<SocialConnectionResult> {
-  const accessToken = await getAccessToken();
-  if (!accessToken)
-    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+  const accessToken = (await getAccessToken()) ?? getServiceAccessToken();
 
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
@@ -796,10 +796,15 @@ export async function updateFacebookMessengerSyncStatus(
       last_messenger_sync_imported_outbound_count: input.importedOutbound,
       last_messenger_sync_skipped_count: input.skippedDuplicates,
       last_messenger_sync_error: normalizeOptionalText(input.error),
-      last_messenger_sync_outbound_at: normalizeIsoTimestamp(input.lastOutboundAt),
+      last_messenger_sync_outbound_at: normalizeIsoTimestamp(
+        input.lastOutboundAt,
+      ),
     },
     accessToken,
-    [["id", connectionId], ["platform", "facebook"]],
+    [
+      ["id", connectionId],
+      ["platform", "facebook"],
+    ],
     { select: SOCIAL_CONNECTION_COLUMNS, single: true },
   );
 
@@ -869,7 +874,6 @@ export async function findMetaSocialConnectionByPageId(
   return { connection: result.data, error: null };
 }
 
-
 export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
   workspaceId: string | null;
   error: Error | null;
@@ -921,7 +925,6 @@ export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
 
   return { workspaceId: workspaceResult.data?.id ?? null, error: null };
 }
-
 
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
@@ -988,7 +991,6 @@ export async function createMetaWebhookDebugEvent(input: {
   return { event: result.data, error: null };
 }
 
-
 export async function checkMetaWebhookStorageHealth(): Promise<{
   serviceRoleConfigured: boolean;
   tableReadable: boolean;
@@ -1000,7 +1002,9 @@ export async function checkMetaWebhookStorageHealth(): Promise<{
     return {
       serviceRoleConfigured: false,
       tableReadable: false,
-      error: new Error("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert."),
+      error: new Error(
+        "SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.",
+      ),
     };
   }
 
@@ -1026,7 +1030,11 @@ export async function getWorkspaceMetaWebhookEvents(
   limit = 20,
 ): Promise<MetaWebhookEventsResult> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { events: [], error: new Error("Keine aktive Supabase-Session gefunden.") };
+  if (!accessToken)
+    return {
+      events: [],
+      error: new Error("Keine aktive Supabase-Session gefunden."),
+    };
 
   const result = await postgrestSelect<MetaWebhookEventRow[]>(
     "meta_webhook_events",
@@ -1336,7 +1344,6 @@ export async function getContactConversationMessages(
   return { messages: result.data ?? [], error: null };
 }
 
-
 export async function getWorkspaceUnseenInboundMessages(
   workspaceId: string,
 ): Promise<ConversationMessagesResult> {
@@ -1500,7 +1507,9 @@ export async function createManualConversationMessage(
   const sourceUrl = normalizeUrl(input.sourceUrl);
   const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
   const messageType = normalizeMessageType(input.messageType);
-  const sourceType = normalizeMessageType(input.sourceType ?? input.messageType);
+  const sourceType = normalizeMessageType(
+    input.sourceType ?? input.messageType,
+  );
   const direction = input.direction ?? "inbound";
   const conversationResult = await ensureConversationForContact({
     workspaceId: input.workspaceId,
@@ -1538,14 +1547,22 @@ export async function createManualConversationMessage(
       external_message_id: normalizeOptionalText(input.externalMessageId),
       external_post_id: normalizeOptionalText(input.externalPostId),
       external_comment_id: normalizeOptionalText(input.externalCommentId),
-      original_author_label: normalizeOptionalText(input.originalAuthorLabel) ?? normalizeOptionalText(input.authorLabel),
-      original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content),
+      original_author_label:
+        normalizeOptionalText(input.originalAuthorLabel) ??
+        normalizeOptionalText(input.authorLabel),
+      original_text_excerpt: normalizeExcerpt(
+        input.originalTextExcerpt ?? content,
+      ),
       author_label:
         normalizeOptionalText(input.authorLabel) ??
         (direction === "inbound" ? "Fan" : "Team"),
       content,
       attachments: normalizeMessageAttachments(input.attachments),
-      message_kind: normalizeMessageKind(input.messageKind, input.attachments, content),
+      message_kind: normalizeMessageKind(
+        input.messageKind,
+        input.attachments,
+        content,
+      ),
     },
     accessToken,
     { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
@@ -1568,12 +1585,25 @@ export async function createManualConversationMessage(
       replyTargetUrl ?? conversationResult.conversation.reply_target_url,
     ai_status: "partial",
     next_step: "Antwort vorbereiten",
-    external_thread_id: normalizeOptionalText(input.externalThreadId) ?? conversationResult.conversation.external_thread_id,
-    external_message_id: normalizeOptionalText(input.externalMessageId) ?? conversationResult.conversation.external_message_id,
-    external_post_id: normalizeOptionalText(input.externalPostId) ?? conversationResult.conversation.external_post_id,
-    external_comment_id: normalizeOptionalText(input.externalCommentId) ?? conversationResult.conversation.external_comment_id,
-    original_author_label: normalizeOptionalText(input.originalAuthorLabel) ?? normalizeOptionalText(input.authorLabel) ?? conversationResult.conversation.original_author_label,
-    original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content) ?? conversationResult.conversation.original_text_excerpt,
+    external_thread_id:
+      normalizeOptionalText(input.externalThreadId) ??
+      conversationResult.conversation.external_thread_id,
+    external_message_id:
+      normalizeOptionalText(input.externalMessageId) ??
+      conversationResult.conversation.external_message_id,
+    external_post_id:
+      normalizeOptionalText(input.externalPostId) ??
+      conversationResult.conversation.external_post_id,
+    external_comment_id:
+      normalizeOptionalText(input.externalCommentId) ??
+      conversationResult.conversation.external_comment_id,
+    original_author_label:
+      normalizeOptionalText(input.originalAuthorLabel) ??
+      normalizeOptionalText(input.authorLabel) ??
+      conversationResult.conversation.original_author_label,
+    original_text_excerpt:
+      normalizeExcerpt(input.originalTextExcerpt ?? content) ??
+      conversationResult.conversation.original_text_excerpt,
   };
 
   if (direction === "inbound")
@@ -1621,12 +1651,21 @@ export async function getConversationSummary(input: {
   conversationId: string;
 }): Promise<{ summary: ConversationSummaryRow | null; error: Error | null }> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { summary: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  if (!accessToken)
+    return {
+      summary: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
   const result = await postgrestSelect<ConversationSummaryRow>(
     "conversation_summaries",
     accessToken,
     CONVERSATION_SUMMARY_COLUMNS,
-    [["workspace_id", input.workspaceId], ["conversation_id", input.conversationId]],
+    [
+      ["workspace_id", input.workspaceId],
+      ["conversation_id", input.conversationId],
+    ],
     1,
     true,
   );
@@ -1644,7 +1683,13 @@ export async function upsertConversationSummary(input: {
   messageCountSeen?: number;
 }): Promise<{ summary: ConversationSummaryRow | null; error: Error | null }> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { summary: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  if (!accessToken)
+    return {
+      summary: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
   const result = await postgrestRequest<ConversationSummaryRow>(
     "conversation_summaries",
     "POST",
@@ -1660,48 +1705,146 @@ export async function upsertConversationSummary(input: {
       updated_at: new Date().toISOString(),
     },
     accessToken,
-    { select: CONVERSATION_SUMMARY_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,conversation_id" },
+    {
+      select: CONVERSATION_SUMMARY_COLUMNS,
+      single: true,
+      upsert: true,
+      onConflict: "workspace_id,conversation_id",
+    },
   );
   return { summary: result.data, error: result.error };
 }
 
-export async function getContactAiProfile(workspaceId: string, contactId: string): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
+export async function getContactAiProfile(
+  workspaceId: string,
+  contactId: string,
+): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
-  const result = await postgrestSelect<ContactAiProfileRow>("contact_ai_profiles", accessToken, CONTACT_AI_PROFILE_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contactId]], 1, true);
+  if (!accessToken)
+    return {
+      profile: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  const result = await postgrestSelect<ContactAiProfileRow>(
+    "contact_ai_profiles",
+    accessToken,
+    CONTACT_AI_PROFILE_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contactId],
+    ],
+    1,
+    true,
+  );
   return { profile: result.data, error: result.error };
 }
 
-export async function upsertContactAiProfile(input: Partial<ContactAiProfileRow> & { workspace_id: string; contact_id: string }): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
+export async function upsertContactAiProfile(
+  input: Partial<ContactAiProfileRow> & {
+    workspace_id: string;
+    contact_id: string;
+  },
+): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
-  const result = await postgrestRequest<ContactAiProfileRow>("contact_ai_profiles", "POST", { ...input, updated_at: new Date().toISOString() }, accessToken, { select: CONTACT_AI_PROFILE_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,contact_id" });
+  if (!accessToken)
+    return {
+      profile: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  const result = await postgrestRequest<ContactAiProfileRow>(
+    "contact_ai_profiles",
+    "POST",
+    { ...input, updated_at: new Date().toISOString() },
+    accessToken,
+    {
+      select: CONTACT_AI_PROFILE_COLUMNS,
+      single: true,
+      upsert: true,
+      onConflict: "workspace_id,contact_id",
+    },
+  );
   return { profile: result.data, error: result.error };
 }
 
-export async function getWorkspaceVoiceProfile(workspaceId: string, userId?: string | null): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
+export async function getWorkspaceVoiceProfile(
+  workspaceId: string,
+  userId?: string | null,
+): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
-  const filters: [string, SupabaseFilterValue][] = [["workspace_id", workspaceId]];
+  if (!accessToken)
+    return {
+      profile: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  const filters: [string, SupabaseFilterValue][] = [
+    ["workspace_id", workspaceId],
+  ];
   if (userId) filters.push(["user_id", userId]);
-  const result = await postgrestSelect<WorkspaceVoiceProfileRow>("workspace_voice_profiles", accessToken, WORKSPACE_VOICE_PROFILE_COLUMNS, filters, 1, true, "updated_at.desc");
+  const result = await postgrestSelect<WorkspaceVoiceProfileRow>(
+    "workspace_voice_profiles",
+    accessToken,
+    WORKSPACE_VOICE_PROFILE_COLUMNS,
+    filters,
+    1,
+    true,
+    "updated_at.desc",
+  );
   return { profile: result.data, error: result.error };
 }
 
-export async function upsertWorkspaceVoiceProfile(input: Partial<WorkspaceVoiceProfileRow> & { workspace_id: string; user_id?: string | null }): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
+export async function upsertWorkspaceVoiceProfile(
+  input: Partial<WorkspaceVoiceProfileRow> & {
+    workspace_id: string;
+    user_id?: string | null;
+  },
+): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { profile: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
-  const result = await postgrestRequest<WorkspaceVoiceProfileRow>("workspace_voice_profiles", "POST", { ...input, updated_at: new Date().toISOString() }, accessToken, { select: WORKSPACE_VOICE_PROFILE_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,user_id" });
+  if (!accessToken)
+    return {
+      profile: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  const result = await postgrestRequest<WorkspaceVoiceProfileRow>(
+    "workspace_voice_profiles",
+    "POST",
+    { ...input, updated_at: new Date().toISOString() },
+    accessToken,
+    {
+      select: WORKSPACE_VOICE_PROFILE_COLUMNS,
+      single: true,
+      upsert: true,
+      onConflict: "workspace_id,user_id",
+    },
+  );
   return { profile: result.data, error: result.error };
 }
 
-export async function updateContactProfileFromInboundMessage(input: { workspaceId: string; contactId: string; content: string; language?: string | null }): Promise<void> {
-  const existing = await getContactAiProfile(input.workspaceId, input.contactId);
+export async function updateContactProfileFromInboundMessage(input: {
+  workspaceId: string;
+  contactId: string;
+  content: string;
+  language?: string | null;
+}): Promise<void> {
+  const existing = await getContactAiProfile(
+    input.workspaceId,
+    input.contactId,
+  );
   const count = (existing.profile?.source_message_count ?? 0) + 1;
   await upsertContactAiProfile({
     workspace_id: input.workspaceId,
     contact_id: input.contactId,
-    language: existing.profile?.language ?? input.language ?? detectLanguage(input.content),
+    language:
+      existing.profile?.language ??
+      input.language ??
+      detectLanguage(input.content),
     tone: existing.profile?.tone ?? detectTone(input.content),
     sentiment: existing.profile?.sentiment ?? "im Aufbau",
     confidence_score: Math.min(30, count * 5),
@@ -1709,18 +1852,32 @@ export async function updateContactProfileFromInboundMessage(input: { workspaceI
   });
 }
 
-export async function updateWorkspaceVoiceProfileFromManualOutbound(input: { workspaceId: string; userId?: string | null; ownerLabel?: string | null; content: string }): Promise<void> {
-  const existing = await getWorkspaceVoiceProfile(input.workspaceId, input.userId);
+export async function updateWorkspaceVoiceProfileFromManualOutbound(input: {
+  workspaceId: string;
+  userId?: string | null;
+  ownerLabel?: string | null;
+  content: string;
+}): Promise<void> {
+  const existing = await getWorkspaceVoiceProfile(
+    input.workspaceId,
+    input.userId,
+  );
   const count = (existing.profile?.examples_count ?? 0) + 1;
   await upsertWorkspaceVoiceProfile({
     workspace_id: input.workspaceId,
     user_id: input.userId ?? null,
-    owner_label: normalizeOptionalText(input.ownerLabel) ?? existing.profile?.owner_label ?? "Team",
+    owner_label:
+      normalizeOptionalText(input.ownerLabel) ??
+      existing.profile?.owner_label ??
+      "Team",
     language: existing.profile?.language ?? detectLanguage(input.content),
     tone: existing.profile?.tone ?? detectTone(input.content),
-    sentence_length: existing.profile?.sentence_length ?? detectSentenceLength(input.content),
-    emoji_style: existing.profile?.emoji_style ?? detectEmojiStyle(input.content),
-    common_phrases: existing.profile?.common_phrases ?? extractCommonPhrases(input.content),
+    sentence_length:
+      existing.profile?.sentence_length ?? detectSentenceLength(input.content),
+    emoji_style:
+      existing.profile?.emoji_style ?? detectEmojiStyle(input.content),
+    common_phrases:
+      existing.profile?.common_phrases ?? extractCommonPhrases(input.content),
     examples_count: count,
     confidence_score: Math.min(35, count * 5),
   });
@@ -1732,7 +1889,9 @@ function normalizeExcerpt(value?: string | null): string | null {
 }
 
 function detectLanguage(content: string): string {
-  return /\b(und|oder|danke|bitte|ich|du|sie|wir)\b/i.test(content) ? "de" : "unbekannt";
+  return /\b(und|oder|danke|bitte|ich|du|sie|wir)\b/i.test(content)
+    ? "de"
+    : "unbekannt";
 }
 
 function detectTone(content: string): string {
@@ -1742,16 +1901,22 @@ function detectTone(content: string): string {
 
 function detectSentenceLength(content: string): string {
   const sentences = content.split(/[.!?]+/).filter((part) => part.trim());
-  const average = sentences.length ? content.split(/\s+/).length / sentences.length : 0;
+  const average = sentences.length
+    ? content.split(/\s+/).length / sentences.length
+    : 0;
   return average > 18 ? "eher lang" : "eher kurz";
 }
 
 function detectEmojiStyle(content: string): string {
-  return /[\p{Extended_Pictographic}]/u.test(content) ? "nutzt Emojis" : "kaum Emojis";
+  return /[\p{Extended_Pictographic}]/u.test(content)
+    ? "nutzt Emojis"
+    : "kaum Emojis";
 }
 
 function extractCommonPhrases(content: string): string[] {
-  return ["Danke", "Liebe Grüße", "Viele Grüße"].filter((phrase) => content.toLowerCase().includes(phrase.toLowerCase()));
+  return ["Danke", "Liebe Grüße", "Viele Grüße"].filter((phrase) =>
+    content.toLowerCase().includes(phrase.toLowerCase()),
+  );
 }
 
 export async function createMetaWebhookConversationMessage(input: {
@@ -1761,7 +1926,17 @@ export async function createMetaWebhookConversationMessage(input: {
   authorLabel: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "tiktok_messages" | "dm" | "comment" | null;
+  sourceType?:
+    | "facebook_messages"
+    | "facebook_comments"
+    | "instagram_messages"
+    | "instagram_comments"
+    | "whatsapp_messages"
+    | "tiktok_comments"
+    | "tiktok_messages"
+    | "dm"
+    | "comment"
+    | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1805,12 +1980,19 @@ export async function createMetaWebhookConversationMessage(input: {
     if (
       nextDisplayName &&
       nextDisplayName !== contact.display_name &&
-      !isWebhookFallbackDisplayName(nextDisplayName, input.sourcePlatform, handle) &&
+      !isWebhookFallbackDisplayName(
+        nextDisplayName,
+        input.sourcePlatform,
+        handle,
+      ) &&
       (currentIsFallback || !contact.display_name)
     ) {
       const updated = await postgrestUpdate<ContactRow>(
         "contacts",
-        { display_name: nextDisplayName, source_platform: contact.source_platform ?? input.sourcePlatform },
+        {
+          display_name: nextDisplayName,
+          source_platform: contact.source_platform ?? input.sourcePlatform,
+        },
         getServiceAccessToken(),
         [
           ["workspace_id", input.workspaceId],
@@ -1828,7 +2010,9 @@ export async function createMetaWebhookConversationMessage(input: {
       "POST",
       {
         workspace_id: input.workspaceId,
-        display_name: input.authorLabel || getDefaultWebhookAuthorLabel(input.sourcePlatform),
+        display_name:
+          input.authorLabel ||
+          getDefaultWebhookAuthorLabel(input.sourcePlatform),
         handle,
         source_platform: input.sourcePlatform,
         language: "de",
@@ -1853,7 +2037,9 @@ export async function createMetaWebhookConversationMessage(input: {
     messageType: input.messageType,
     sourcePlatform: input.sourcePlatform,
     direction: input.direction,
-    sourceType: input.sourceType ?? getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
+    sourceType:
+      input.sourceType ??
+      getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
     sourceUrl: input.sourceUrl,
     replyTargetUrl: input.replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1887,7 +2073,17 @@ export async function createMetaTestConversationMessage(input: {
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "tiktok_messages" | "dm" | "comment" | null;
+  sourceType?:
+    | "facebook_messages"
+    | "facebook_comments"
+    | "instagram_messages"
+    | "instagram_comments"
+    | "whatsapp_messages"
+    | "tiktok_comments"
+    | "tiktok_messages"
+    | "dm"
+    | "comment"
+    | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1955,14 +2151,20 @@ export async function createMetaTestConversationMessage(input: {
     }
   }
 
-  const receivedAt = normalizeIsoTimestamp(input.receivedAt) ?? new Date().toISOString();
+  const receivedAt =
+    normalizeIsoTimestamp(input.receivedAt) ?? new Date().toISOString();
   const sourceUrl = normalizeUrl(input.sourceUrl);
   const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
   const conversationResult = await ensureMetaTestConversation({
     workspaceId: input.workspaceId,
     contactId: input.contactId,
     sourcePlatform: input.sourcePlatform ?? "facebook",
-    sourceType: input.sourceType ?? getDefaultWebhookSourceType(input.sourcePlatform ?? "facebook", input.messageType),
+    sourceType:
+      input.sourceType ??
+      getDefaultWebhookSourceType(
+        input.sourcePlatform ?? "facebook",
+        input.messageType,
+      ),
     sourceUrl,
     replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1996,15 +2198,25 @@ export async function createMetaTestConversationMessage(input: {
       external_message_id: normalizeOptionalText(input.externalMessageId),
       external_post_id: normalizeOptionalText(input.externalPostId),
       external_comment_id: normalizeOptionalText(input.externalCommentId),
-      original_author_label: normalizeOptionalText(input.authorLabel) ?? getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
-      original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content),
+      original_author_label:
+        normalizeOptionalText(input.authorLabel) ??
+        getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
+      original_text_excerpt: normalizeExcerpt(
+        input.originalTextExcerpt ?? content,
+      ),
       author_label:
-        normalizeOptionalText(input.authorLabel) ?? getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
+        normalizeOptionalText(input.authorLabel) ??
+        getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
       content,
       attachments: normalizeMessageAttachments(input.attachments),
-      message_kind: normalizeMessageKind(input.messageKind, input.attachments, content),
+      message_kind: normalizeMessageKind(
+        input.messageKind,
+        input.attachments,
+        content,
+      ),
       created_at: receivedAt,
-      seen_at: (input.direction ?? "inbound") === "outbound" ? receivedAt : null,
+      seen_at:
+        (input.direction ?? "inbound") === "outbound" ? receivedAt : null,
     },
     getServiceAccessToken(),
     { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
@@ -2020,7 +2232,9 @@ export async function createMetaTestConversationMessage(input: {
     "conversations",
     {
       last_message_preview: content.slice(0, 240),
-      ...((input.direction ?? "inbound") === "inbound" ? { last_inbound_at: receivedAt } : { last_outbound_at: receivedAt }),
+      ...((input.direction ?? "inbound") === "inbound"
+        ? { last_inbound_at: receivedAt }
+        : { last_outbound_at: receivedAt }),
       source_platform: input.sourcePlatform ?? "facebook",
       source_type: normalizeMessageType(input.sourceType ?? input.messageType),
       source_url: sourceUrl ?? conversationResult.conversation.source_url,
@@ -2989,20 +3203,41 @@ function normalizeMessageAttachments(
   const normalized = attachments
     .map((attachment) => ({
       type: normalizeAttachmentType(attachment.type),
-      ...(normalizeUrl(attachment.url) ? { url: normalizeUrl(attachment.url)! } : {}),
-      ...(normalizeOptionalText(attachment.sticker_id) ? { sticker_id: normalizeOptionalText(attachment.sticker_id)! } : {}),
-      ...(normalizeOptionalText(attachment.title) ? { title: normalizeOptionalText(attachment.title)! } : {}),
-      ...(normalizeOptionalText(attachment.name) ? { name: normalizeOptionalText(attachment.name)! } : {}),
-      ...(normalizeOptionalText(attachment.mime_type) ? { mime_type: normalizeOptionalText(attachment.mime_type)! } : {}),
-      ...(typeof attachment.size === "number" && Number.isFinite(attachment.size) ? { size: attachment.size } : {}),
+      ...(normalizeUrl(attachment.url)
+        ? { url: normalizeUrl(attachment.url)! }
+        : {}),
+      ...(normalizeOptionalText(attachment.sticker_id)
+        ? { sticker_id: normalizeOptionalText(attachment.sticker_id)! }
+        : {}),
+      ...(normalizeOptionalText(attachment.title)
+        ? { title: normalizeOptionalText(attachment.title)! }
+        : {}),
+      ...(normalizeOptionalText(attachment.name)
+        ? { name: normalizeOptionalText(attachment.name)! }
+        : {}),
+      ...(normalizeOptionalText(attachment.mime_type)
+        ? { mime_type: normalizeOptionalText(attachment.mime_type)! }
+        : {}),
+      ...(typeof attachment.size === "number" &&
+      Number.isFinite(attachment.size)
+        ? { size: attachment.size }
+        : {}),
     }))
-    .filter((attachment) => attachment.type || attachment.url || attachment.sticker_id);
+    .filter(
+      (attachment) =>
+        attachment.type || attachment.url || attachment.sticker_id,
+    );
 
   return normalized.length ? normalized : null;
 }
 
-function normalizeAttachmentType(value: unknown): ConversationMessageAttachment["type"] {
-  return value === "image" || value === "video" || value === "audio" || value === "file"
+function normalizeAttachmentType(
+  value: unknown,
+): ConversationMessageAttachment["type"] {
+  return value === "image" ||
+    value === "video" ||
+    value === "audio" ||
+    value === "file"
     ? value
     : "unknown";
 }
@@ -3012,13 +3247,20 @@ function normalizeMessageKind(
   attachments: ConversationMessageAttachment[] | null | undefined,
   content: string,
 ): string {
-  if (requestedKind && ["text", "image", "video", "audio", "file", "mixed", "unknown"].includes(requestedKind)) {
+  if (
+    requestedKind &&
+    ["text", "image", "video", "audio", "file", "mixed", "unknown"].includes(
+      requestedKind,
+    )
+  ) {
     return requestedKind;
   }
   const normalizedAttachments = normalizeMessageAttachments(attachments);
   if (!normalizedAttachments?.length) return "text";
   if (content.trim() && normalizedAttachments.length) return "mixed";
-  const types = Array.from(new Set(normalizedAttachments.map((attachment) => attachment.type)));
+  const types = Array.from(
+    new Set(normalizedAttachments.map((attachment) => attachment.type)),
+  );
   return types.length === 1 ? types[0] : "mixed";
 }
 
@@ -3115,36 +3357,59 @@ function isWebhookFallbackDisplayName(
   if (normalized === fallback) return true;
   if (handle && normalized === `${fallback} ${handle}`) return true;
 
-  return new RegExp(`^${escapeRegExp(fallback)}\\s+\\d+$`, "i").test(normalized);
+  return new RegExp(`^${escapeRegExp(fallback)}\\s+\\d+$`, "i").test(
+    normalized,
+  );
 }
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function getDefaultWebhookAuthorLabel(platform: "facebook" | "instagram" | "whatsapp" | "tiktok"): string {
+function getDefaultWebhookAuthorLabel(
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+): string {
   if (platform === "instagram") return "Instagram Nutzer";
   if (platform === "whatsapp") return "WhatsApp Kontakt";
   if (platform === "tiktok") return "TikTok Nutzer";
   return "Facebook Nutzer";
 }
 
-function getWebhookPlatformLabel(platform: "facebook" | "instagram" | "whatsapp" | "tiktok"): string {
+function getWebhookPlatformLabel(
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+): string {
   if (platform === "instagram") return "Instagram";
   if (platform === "whatsapp") return "WhatsApp";
   if (platform === "tiktok") return "TikTok";
   return "Facebook";
 }
 
-function normalizeIsoTimestamp(value: string | null | undefined): string | null {
+function normalizeIsoTimestamp(
+  value: string | null | undefined,
+): string | null {
   const normalized = normalizeOptionalText(value);
   if (!normalized) return null;
-  const date = new Date(/^\d+$/.test(normalized) ? Number(normalized) * 1000 : normalized);
+  const date = new Date(
+    /^\d+$/.test(normalized) ? Number(normalized) * 1000 : normalized,
+  );
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function getDefaultWebhookSourceType(platform: "facebook" | "instagram" | "whatsapp" | "tiktok", messageType: "dm" | "comment"): "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "tiktok_messages" {
+function getDefaultWebhookSourceType(
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+  messageType: "dm" | "comment",
+):
+  | "facebook_messages"
+  | "facebook_comments"
+  | "instagram_messages"
+  | "instagram_comments"
+  | "whatsapp_messages"
+  | "tiktok_comments"
+  | "tiktok_messages" {
   if (platform === "whatsapp") return "whatsapp_messages";
-  if (platform === "tiktok") return messageType === "comment" ? "tiktok_comments" : "tiktok_messages";
-  return messageType === "comment" ? `${platform}_comments` : `${platform}_messages`;
+  if (platform === "tiktok")
+    return messageType === "comment" ? "tiktok_comments" : "tiktok_messages";
+  return messageType === "comment"
+    ? `${platform}_comments`
+    : `${platform}_messages`;
 }

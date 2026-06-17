@@ -11,6 +11,7 @@ import {
   getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
+  getWorkspaceSocialConnections,
   getWorkspaceConversations,
   getWorkspaceVoiceProfile,
   markContactInboundMessagesSeen,
@@ -79,6 +80,7 @@ type FanDetailWorkspaceProps = {
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
   activeSource: string;
+  facebookMessengerLastSyncedAt?: string | null;
 };
 
 type ConversationChannelKey =
@@ -121,7 +123,6 @@ const channelSourceTypes: Record<
   notes: ["note", "notes", "manual_note", "internal_note"],
 };
 
-
 async function logout() {
   "use server";
 
@@ -149,6 +150,7 @@ function FanDetailWorkspace({
   workspaceVoiceProfile,
   activeChannel,
   activeSource,
+  facebookMessengerLastSyncedAt,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -209,6 +211,7 @@ function FanDetailWorkspace({
             workspaceVoiceProfile={workspaceVoiceProfile}
             activeChannel={activeChannel}
             activeSource={activeSource}
+            facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
           />
         ) : (
           <FanNotFound />
@@ -232,6 +235,7 @@ function FanDetailContent({
   workspaceVoiceProfile,
   activeChannel,
   activeSource,
+  facebookMessengerLastSyncedAt,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -246,6 +250,7 @@ function FanDetailContent({
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
   activeSource: string;
+  facebookMessengerLastSyncedAt?: string | null;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const channelTabs = buildConversationChannelTabs(
@@ -254,9 +259,17 @@ function FanDetailContent({
     activeChannel,
     activeSource,
   );
-  const sourceFilters = buildSourceFilters(messages, contact.id, activeChannel, activeSource);
+  const sourceFilters = buildSourceFilters(
+    messages,
+    contact.id,
+    activeChannel,
+    activeSource,
+  );
   const channelMessages = filterMessagesByChannel(messages, activeChannel);
-  const filteredMessages = filterMessagesBySource(channelMessages, activeSource);
+  const filteredMessages = filterMessagesBySource(
+    channelMessages,
+    activeSource,
+  );
   const timeline = filteredMessages.length
     ? buildMessageTimeline(filteredMessages)
     : [];
@@ -346,11 +359,16 @@ function FanDetailContent({
                 </Link>
               ))}
             </nav>
-            <nav className={styles.sourceTabs} aria-label="Verlauf nach Ursprung filtern">
+            <nav
+              className={styles.sourceTabs}
+              aria-label="Verlauf nach Ursprung filtern"
+            >
               {sourceFilters.map((filter) => (
                 <Link
                   aria-current={filter.active ? "page" : undefined}
-                  className={filter.active ? styles.sourceTabActive : styles.sourceTab}
+                  className={
+                    filter.active ? styles.sourceTabActive : styles.sourceTab
+                  }
                   href={filter.href}
                   key={filter.key}
                 >
@@ -372,12 +390,34 @@ function FanDetailContent({
                 <span>{messagesError}</span>
               </p>
             ) : null}
-            {contact && messages.some((message) => message.source_platform === "facebook" && (message.source_type === "facebook_messages" || message.message_type === "dm")) ? (
-              <form action={syncFacebookChatForContact.bind(null, contact.id)}>
-                <button className={dashboardStyles.secondaryButton} type="submit">
-                  Facebook-Chat aktualisieren
-                </button>
-              </form>
+            {contact &&
+            messages.some(
+              (message) =>
+                message.source_platform === "facebook" &&
+                (message.source_type === "facebook_messages" ||
+                  message.message_type === "dm"),
+            ) ? (
+              <div className={styles.syncBox}>
+                <p className={styles.syncHint}>
+                  Facebook-Chat zuletzt synchronisiert:{" "}
+                  <strong>
+                    {facebookMessengerLastSyncedAt
+                      ? formatDate(facebookMessengerLastSyncedAt)
+                      : "noch nicht"}
+                  </strong>{" "}
+                  · bis zu 50 Nachrichten je Conversation.
+                </p>
+                <form
+                  action={syncFacebookChatForContact.bind(null, contact.id)}
+                >
+                  <button
+                    className={dashboardStyles.secondaryButton}
+                    type="submit"
+                  >
+                    Facebook-Chat aktualisieren
+                  </button>
+                </form>
+              </div>
             ) : null}
             <div className={styles.timeline}>
               {timeline.length ? (
@@ -403,7 +443,9 @@ function FanDetailContent({
                         <span className={styles.channelBadge}>
                           {item.channel}
                         </span>
-                        <span className={styles.sourceBadge}>{item.sourceContext.contextLabel}</span>
+                        <span className={styles.sourceBadge}>
+                          {item.sourceContext.contextLabel}
+                        </span>
                       </div>
                       <p>{item.text}</p>
                       <AttachmentPreview attachments={item.attachments} />
@@ -416,7 +458,9 @@ function FanDetailContent({
                         url={item.url}
                       />
                       <OriginalChatAction
-                        actionLabel={getSourceContextActionLabel(item.sourceContext)}
+                        actionLabel={getSourceContextActionLabel(
+                          item.sourceContext,
+                        )}
                         compact
                         url={item.sourceContext.contextUrl ?? undefined}
                       />
@@ -828,13 +872,22 @@ function getFanAnalysisReportSection(
   if (includesAny(haystack, ["no-go", "nogo", "vorsicht", "trigger"])) {
     return "Vorsicht / No-Gos";
   }
-  if (includesAny(haystack, ["spirit", "energie", "energetisch", "intuition"])) {
+  if (
+    includesAny(haystack, ["spirit", "energie", "energetisch", "intuition"])
+  ) {
     return "Optionale spirituelle oder energetische Hinweise";
   }
   if (includesAny(haystack, ["antwort", "stil", "ton", "strategie"])) {
     return "Empfohlener Antwortstil";
   }
-  if (includesAny(haystack, ["kauf", "conversion", "reagiert", "wahrscheinlichkeit"])) {
+  if (
+    includesAny(haystack, [
+      "kauf",
+      "conversion",
+      "reagiert",
+      "wahrscheinlichkeit",
+    ])
+  ) {
     return "Kauf-/Reaktionswahrscheinlichkeit";
   }
   if (includesAny(haystack, ["interesse", "thema", "preis", "verfügbarkeit"])) {
@@ -843,7 +896,9 @@ function getFanAnalysisReportSection(
   if (includesAny(haystack, ["stimmung", "emotional", "gefühl", "wirkt"])) {
     return "Stimmung / emotionale Tendenz";
   }
-  if (includesAny(haystack, ["kommunikation", "kommuniziert", "kurz", "direkt"])) {
+  if (
+    includesAny(haystack, ["kommunikation", "kommuniziert", "kurz", "direkt"])
+  ) {
     return "Kommunikationsstil";
   }
 
@@ -924,19 +979,26 @@ function AttachmentPreview({
         const title = attachment.title || attachment.name || label;
 
         return (
-          <div className={styles.attachmentCard} key={`${attachment.type}-${index}`}>
+          <div
+            className={styles.attachmentCard}
+            key={`${attachment.type}-${index}`}
+          >
             {attachment.type === "image" && attachment.url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img alt={title} src={attachment.url} />
             ) : (
-              <span className={styles.attachmentIcon}>{getAttachmentIcon(attachment.type)}</span>
+              <span className={styles.attachmentIcon}>
+                {getAttachmentIcon(attachment.type)}
+              </span>
             )}
             <div>
               <strong>{title}</strong>
               <small>
                 {label}
                 {attachment.mime_type ? ` · ${attachment.mime_type}` : ""}
-                {typeof attachment.size === "number" ? ` · ${attachment.size} Bytes` : ""}
+                {typeof attachment.size === "number"
+                  ? ` · ${attachment.size} Bytes`
+                  : ""}
               </small>
             </div>
           </div>
@@ -947,23 +1009,31 @@ function AttachmentPreview({
 }
 
 function getAttachmentLabel(type: string): string {
-  return {
-    image: "Bild empfangen",
-    video: "Video empfangen",
-    audio: "Audio empfangen",
-    file: "Datei empfangen",
-    unknown: "Anhang empfangen",
-  }[type] ?? "Anhang empfangen";
+  return (
+    {
+      image: "Bild empfangen",
+      video: "Video empfangen",
+      audio: "Audio empfangen",
+      file: "Datei empfangen",
+      unknown: "Anhang empfangen",
+    }[type] ?? "Anhang empfangen"
+  );
 }
 
 function getAttachmentIcon(type: string): string {
-  return { image: "🖼️", video: "🎬", audio: "🎧", file: "📎", unknown: "📎" }[type] ?? "📎";
+  return (
+    { image: "🖼️", video: "🎬", audio: "🎧", file: "📎", unknown: "📎" }[
+      type
+    ] ?? "📎"
+  );
 }
 
 function formatAiMessageText(message: ConversationMessageRow): string {
   const text = message.content || message.original_text_excerpt || "";
   if (!message.attachments?.length) return text;
-  const hasImage = message.attachments.some((attachment) => attachment.type === "image");
+  const hasImage = message.attachments.some(
+    (attachment) => attachment.type === "image",
+  );
   const mediaContext = hasImage
     ? "Der Fan hat ein Bild gesendet."
     : `Der Fan hat ${message.attachments.length === 1 ? "einen Anhang" : "Anhänge"} gesendet.`;
@@ -1127,6 +1197,13 @@ function getUserDisplayName(
     : fallback;
 }
 
+function isMessengerSyncStale(value: string | null | undefined): boolean {
+  if (!value) return true;
+  const syncedAt = Date.parse(value);
+  if (!Number.isFinite(syncedAt)) return true;
+  return Date.now() - syncedAt > 60_000;
+}
+
 export default async function FanDetailPage({
   params,
   searchParams,
@@ -1167,6 +1244,31 @@ export default async function FanDetailPage({
     workspace && contactResult?.contact
       ? await getContactFollowups(workspace.id, contactResult.contact.id)
       : null;
+  const socialConnectionsResult = workspace
+    ? await getWorkspaceSocialConnections(workspace.id)
+    : null;
+  const facebookConnection =
+    socialConnectionsResult?.connections.find(
+      (connection) =>
+        connection.platform === "facebook" && connection.status === "connected",
+    ) ?? null;
+
+  if (
+    workspace &&
+    contactResult?.contact?.source_platform === "facebook" &&
+    contactResult.contact.handle &&
+    facebookConnection &&
+    isMessengerSyncStale(facebookConnection.last_messenger_sync_at)
+  ) {
+    const { syncFacebookMessengerConversationForContact } =
+      await import("@/app/channels/facebookWebhookActions");
+    await syncFacebookMessengerConversationForContact({
+      connection: facebookConnection,
+      contactId: contactResult.contact.id,
+      fanSenderId: contactResult.contact.handle,
+    });
+  }
+
   const messagesResult =
     workspace && contactResult?.contact
       ? await getContactConversationMessages(
@@ -1224,6 +1326,9 @@ export default async function FanDetailPage({
           workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
           activeChannel={activeChannel}
           activeSource={activeSource}
+          facebookMessengerLastSyncedAt={
+            facebookConnection?.last_messenger_sync_at ?? null
+          }
         />
       ) : (
         <section

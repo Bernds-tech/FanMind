@@ -3,8 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./channels.module.css";
-import { FACEBOOK_COMMENT_FEED_SCOPES, FACEBOOK_MESSAGES_OAUTH_SCOPES } from "@/lib/facebookScopes";
-import { CHANNEL_SOURCE_CONFIGS, type PreparedSourceType } from "@/lib/channelSources";
+import {
+  FACEBOOK_COMMENT_FEED_SCOPES,
+  FACEBOOK_MESSAGES_OAUTH_SCOPES,
+} from "@/lib/facebookScopes";
+import {
+  CHANNEL_SOURCE_CONFIGS,
+  type PreparedSourceType,
+} from "@/lib/channelSources";
 import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
@@ -89,7 +95,10 @@ type Channel = {
 
 const logoPath = (name: string) => `/channel-logos/${name}.svg`;
 
-const preparedChannel = (sourceType: PreparedSourceType, overrides: Omit<Channel, "key" | "name">): Channel => ({
+const preparedChannel = (
+  sourceType: PreparedSourceType,
+  overrides: Omit<Channel, "key" | "name">,
+): Channel => ({
   key: sourceType,
   name: CHANNEL_SOURCE_CONFIGS[sourceType].label,
   ...overrides,
@@ -115,7 +124,8 @@ const channels: Channel[] = [
   preparedChannel("tiktok_comments", {
     description: `${CHANNEL_SOURCE_CONFIGS.tiktok_comments.statusHint} Keine automatische Antwort und kein automatisches Senden.`,
     status: "In Arbeit",
-    technology: "tiktok_comments · vorbereitet · offizielle Freigabe erforderlich",
+    technology:
+      "tiktok_comments · vorbereitet · offizielle Freigabe erforderlich",
     intakeTypes: "Kommentare · Copy-&-Open",
     logo: logoPath("tiktok"),
     signal: true,
@@ -394,12 +404,17 @@ export function ChannelsGrid({
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [notice, setNotice] = useState("");
   const [selfTestPending, setSelfTestPending] = useState(false);
-  const [selfTestResult, setSelfTestResult] = useState<MetaWebhookSelfTestResult | null>(null);
+  const [selfTestResult, setSelfTestResult] =
+    useState<MetaWebhookSelfTestResult | null>(null);
   const [selfTestError, setSelfTestError] = useState<string | null>(null);
-  const [pageWebhookPending, setPageWebhookPending] = useState<"check" | "activate" | null>(null);
-  const [pageWebhookResult, setPageWebhookResult] = useState<FacebookPageWebhookActionResult | null>(null);
+  const [pageWebhookPending, setPageWebhookPending] = useState<
+    "check" | "activate" | null
+  >(null);
+  const [pageWebhookResult, setPageWebhookResult] =
+    useState<FacebookPageWebhookActionResult | null>(null);
   const [messengerSyncPending, setMessengerSyncPending] = useState(false);
-  const [messengerSyncResult, setMessengerSyncResult] = useState<FacebookMessengerSyncResult | null>(null);
+  const [messengerSyncResult, setMessengerSyncResult] =
+    useState<FacebookMessengerSyncResult | null>(null);
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -433,17 +448,24 @@ export function ChannelsGrid({
         method: "POST",
         headers: { Accept: "application/json" },
       });
-      const payload = (await response.json()) as MetaWebhookSelfTestResult | { error?: string };
+      const payload = (await response.json()) as
+        | MetaWebhookSelfTestResult
+        | { error?: string };
 
       if (!response.ok) {
-        if ("workspace_id" in payload) setSelfTestResult(payload as MetaWebhookSelfTestResult);
+        if ("workspace_id" in payload)
+          setSelfTestResult(payload as MetaWebhookSelfTestResult);
         setSelfTestError(payload.error ?? "Webhook-Selbsttest fehlgeschlagen.");
       } else {
         setSelfTestResult(payload as MetaWebhookSelfTestResult);
         router.refresh();
       }
     } catch (error) {
-      setSelfTestError(error instanceof Error ? error.message : "Webhook-Selbsttest fehlgeschlagen.");
+      setSelfTestError(
+        error instanceof Error
+          ? error.message
+          : "Webhook-Selbsttest fehlgeschlagen.",
+      );
     } finally {
       setSelfTestPending(false);
     }
@@ -454,9 +476,10 @@ export function ChannelsGrid({
     setPageWebhookResult(null);
 
     try {
-      const result = action === "check"
-        ? await checkFacebookPageWebhooks()
-        : await activateFacebookPageWebhooks();
+      const result =
+        action === "check"
+          ? await checkFacebookPageWebhooks()
+          : await activateFacebookPageWebhooks();
       setPageWebhookResult(result);
       router.refresh();
     } catch (error) {
@@ -465,15 +488,21 @@ export function ChannelsGrid({
         pageId: facebookConnection?.page_id ?? null,
         hasPageAccessToken: Boolean(facebookConnection?.has_page_access_token),
         subscribedAppsStatus: "error",
-        fields: { feed: "unknown", messages: "unknown", message_echoes: "unknown" },
-        error: error instanceof Error ? error.message : "Page-Webhooks konnten nicht verarbeitet werden.",
+        fields: {
+          feed: "unknown",
+          messages: "unknown",
+          message_echoes: "unknown",
+        },
+        error:
+          error instanceof Error
+            ? error.message
+            : "Page-Webhooks konnten nicht verarbeitet werden.",
         updatedConnection: false,
       });
     } finally {
       setPageWebhookPending(null);
     }
   }
-
 
   async function runMessengerSync() {
     setMessengerSyncPending(true);
@@ -490,7 +519,10 @@ export function ChannelsGrid({
         importedInbound: 0,
         importedOutbound: 0,
         skippedDuplicates: 0,
-        error: error instanceof Error ? error.message : "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.",
       });
     } finally {
       setMessengerSyncPending(false);
@@ -503,48 +535,91 @@ export function ChannelsGrid({
     : !metaWebhookStorageHealth.tableReadable
       ? "Meta-Webhook-Tabelle fehlt oder ist nicht lesbar"
       : null;
-  const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && (event.text ?? event.message_text));
+  const lastMessageEvent = metaWebhookEvents.find(
+    (event) =>
+      event.event_type === "messages" && (event.text ?? event.message_text),
+  );
   const lastInboundMessageEvent = metaWebhookEvents.find(isInboundMessageEvent);
   const lastOutboundEchoEvent = metaWebhookEvents.find(isOutboundEchoEvent);
-  const lastFeedCommentEvent = metaWebhookEvents.find((event) => (event.event_type === "feed" || event.event_type === "feed_comment") && (event.text ?? event.message_text));
-  const detectedFacebookScopes = pageWebhookResult?.tokenScopes ?? facebookConnection?.scopes ?? [];
-  const pagesMessagingGranted = pageWebhookResult?.pagesMessagingGranted ?? detectedFacebookScopes.includes("pages_messaging");
+  const lastFeedCommentEvent = metaWebhookEvents.find(
+    (event) =>
+      (event.event_type === "feed" || event.event_type === "feed_comment") &&
+      (event.text ?? event.message_text),
+  );
+  const detectedFacebookScopes =
+    pageWebhookResult?.tokenScopes ?? facebookConnection?.scopes ?? [];
+  const pagesMessagingGranted =
+    pageWebhookResult?.pagesMessagingGranted ??
+    detectedFacebookScopes.includes("pages_messaging");
   const requestedMessagesOauthScopes = [...FACEBOOK_MESSAGES_OAUTH_SCOPES];
   const requestedCommentOauthScopes = [...FACEBOOK_COMMENT_FEED_SCOPES];
-  const commentFeedScopesRequested = FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => requestedCommentOauthScopes.includes(scope));
-  const pagesReadUserContentGranted = pageWebhookResult?.pagesReadUserContentGranted ?? detectedFacebookScopes.includes("pages_read_user_content");
-  const pagesManageEngagementGranted = pageWebhookResult?.pagesManageEngagementGranted ?? detectedFacebookScopes.includes("pages_manage_engagement");
-  const commentFeedScopesGranted = pageWebhookResult?.commentFeedScopesGranted ?? FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => detectedFacebookScopes.includes(scope));
-  const displayedWebhookStatus = pageWebhookResult ?? (facebookConnection ? {
-    ok: facebookConnection.webhook_subscribed,
-    pageId: facebookConnection.page_id,
-    hasPageAccessToken: facebookConnection.has_page_access_token,
-    subscribedAppsStatus: facebookConnection.webhook_subscribed ? "active" : "unknown",
-    fields: {
-      feed: facebookConnection.webhook_subscribed ? "active" : "unknown",
-      messages: facebookConnection.webhook_subscribed ? "active" : "unknown",
-      message_echoes: facebookConnection.webhook_subscribed ? "unknown" : "unknown",
-    },
-    error: null,
-    updatedConnection: false,
-  } satisfies FacebookPageWebhookActionResult : null);
+  const commentFeedScopesRequested = FACEBOOK_COMMENT_FEED_SCOPES.every(
+    (scope) => requestedCommentOauthScopes.includes(scope),
+  );
+  const pagesReadUserContentGranted =
+    pageWebhookResult?.pagesReadUserContentGranted ??
+    detectedFacebookScopes.includes("pages_read_user_content");
+  const pagesManageEngagementGranted =
+    pageWebhookResult?.pagesManageEngagementGranted ??
+    detectedFacebookScopes.includes("pages_manage_engagement");
+  const commentFeedScopesGranted =
+    pageWebhookResult?.commentFeedScopesGranted ??
+    FACEBOOK_COMMENT_FEED_SCOPES.every((scope) =>
+      detectedFacebookScopes.includes(scope),
+    );
+  const displayedWebhookStatus =
+    pageWebhookResult ??
+    (facebookConnection
+      ? ({
+          ok: facebookConnection.webhook_subscribed,
+          pageId: facebookConnection.page_id,
+          hasPageAccessToken: facebookConnection.has_page_access_token,
+          subscribedAppsStatus: facebookConnection.webhook_subscribed
+            ? "active"
+            : "unknown",
+          fields: {
+            feed: facebookConnection.webhook_subscribed ? "active" : "unknown",
+            messages: facebookConnection.webhook_subscribed
+              ? "active"
+              : "unknown",
+            message_echoes: facebookConnection.webhook_subscribed
+              ? "unknown"
+              : "unknown",
+          },
+          error: null,
+          updatedConnection: false,
+        } satisfies FacebookPageWebhookActionResult)
+      : null);
 
   const missingFacebookSetupItems = [
-    !facebookLiveSetupStatus.facebookAppIdConfigured ? "FACEBOOK_APP_ID fehlt" : null,
-    !facebookLiveSetupStatus.facebookAppSecretConfigured ? "FACEBOOK_APP_SECRET fehlt" : null,
-    !facebookLiveSetupStatus.webhookVerifyTokenConfigured ? "FACEBOOK_WEBHOOK_VERIFY_TOKEN fehlt" : null,
-    !facebookLiveSetupStatus.publicBaseUrlConfigured ? "NEXT_PUBLIC_APP_URL fehlt" : null,
-    !metaWebhookStorageHealth.serviceRoleConfigured ? "SUPABASE_SERVICE_ROLE_KEY fehlt" : null,
+    !facebookLiveSetupStatus.facebookAppIdConfigured
+      ? "FACEBOOK_APP_ID fehlt"
+      : null,
+    !facebookLiveSetupStatus.facebookAppSecretConfigured
+      ? "FACEBOOK_APP_SECRET fehlt"
+      : null,
+    !facebookLiveSetupStatus.webhookVerifyTokenConfigured
+      ? "FACEBOOK_WEBHOOK_VERIFY_TOKEN fehlt"
+      : null,
+    !facebookLiveSetupStatus.publicBaseUrlConfigured
+      ? "NEXT_PUBLIC_APP_URL fehlt"
+      : null,
+    !metaWebhookStorageHealth.serviceRoleConfigured
+      ? "SUPABASE_SERVICE_ROLE_KEY fehlt"
+      : null,
   ].filter(Boolean);
-  const messengerWebhookReady = displayedWebhookStatus?.fields.messages === "active";
-  const messageEchoesReady = displayedWebhookStatus?.fields.message_echoes === "active";
+  const messengerWebhookReady =
+    displayedWebhookStatus?.fields.messages === "active";
+  const messageEchoesReady =
+    displayedWebhookStatus?.fields.message_echoes === "active";
   const facebookCommentsReady = false;
   const activeDisplayStatus =
     activeChannel?.key === "facebook_messages" && facebookConnection
       ? "Verbunden"
       : activeChannel?.key === "facebook_comments" && facebookCommentsReady
         ? "Verbunden"
-        : activeChannel?.key === "facebook_comments" && facebookConnection?.last_comment_fetch_error
+        : activeChannel?.key === "facebook_comments" &&
+            facebookConnection?.last_comment_fetch_error
           ? "In Arbeit"
           : activeChannel?.status;
 
@@ -556,15 +631,20 @@ export function ChannelsGrid({
           const isFacebookComments = channel.key === "facebook_comments";
           const isFacebook = isFacebookMessages || isFacebookComments;
           const commentsReady = facebookCommentsReady;
-          const displayStatus = isFacebookMessages && facebookConnection
-            ? "Verbunden"
-            : isFacebookComments && commentsReady
+          const displayStatus =
+            isFacebookMessages && facebookConnection
               ? "Verbunden"
-              : isFacebookComments && facebookConnection?.last_comment_fetch_error
-                ? "In Arbeit"
-                : channel.status;
+              : isFacebookComments && commentsReady
+                ? "Verbunden"
+                : isFacebookComments &&
+                    facebookConnection?.last_comment_fetch_error
+                  ? "In Arbeit"
+                  : channel.status;
           const pageName = isFacebook ? facebookConnection?.page_name : null;
-          const showComingSoonBadge = isBookable(displayStatus) && !isFacebookMessages && !(isFacebookComments && commentsReady);
+          const showComingSoonBadge =
+            isBookable(displayStatus) &&
+            !isFacebookMessages &&
+            !(isFacebookComments && commentsReady);
 
           return (
             <article className={styles.channelCard} key={channel.key}>
@@ -618,9 +698,9 @@ export function ChannelsGrid({
                         ? facebookConnection
                           ? "Kommentare vorbereitet"
                           : "Kommentare vorbereitet"
-                      : isBookable(displayStatus)
-                        ? "Verbindung vormerken"
-                        : `Mit ${channel.name} verbinden`}
+                        : isBookable(displayStatus)
+                          ? "Verbindung vormerken"
+                          : `Mit ${channel.name} verbinden`}
                   </span>
                 </span>
                 {pageName ? (
@@ -630,14 +710,24 @@ export function ChannelsGrid({
                 ) : null}
                 {isFacebookMessages && facebookConnection ? (
                   <span className={styles.connectionHint}>
-                    Letzter Messenger-Webhook: {lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}
+                    Letzter Messenger-Webhook:{" "}
+                    {lastWebhookEvent
+                      ? formatDateTime(lastWebhookEvent.received_at)
+                      : "noch keines empfangen"}
                   </span>
                 ) : null}
                 {isFacebookComments && facebookConnection && !commentsReady ? (
-                  <span className={styles.connectionHint}>Kommentare vorbereitet, Live-Test später. Nachrichten können trotzdem separat verbunden werden.</span>
+                  <span className={styles.connectionHint}>
+                    Kommentare vorbereitet, Live-Test später. Nachrichten können
+                    trotzdem separat verbunden werden.
+                  </span>
                 ) : null}
                 {showComingSoonBadge ? (
-                  <img className={styles.soonCornerBadge} src="/assets/coming-soon-badge.png" alt="Coming Soon" />
+                  <img
+                    className={styles.soonCornerBadge}
+                    src="/assets/coming-soon-badge.png"
+                    alt="Coming Soon"
+                  />
                 ) : null}
               </button>
             </article>
@@ -693,11 +783,24 @@ export function ChannelsGrid({
                 ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
                 : "Melde dich an, um diesen Kanal zu verbinden und eingehende Nachrichten für FanMind freizugeben."}
             </p>
-            {activeChannel.key === "facebook_messages" && !facebookConnection ? (
-              <p className={styles.modalNotice} role={missingFacebookSetupItems.length ? "alert" : "status"}>
-                Live-Setup Facebook Nachrichten: <strong>{missingFacebookSetupItems.length ? `unvollständig (${missingFacebookSetupItems.join(", ")})` : "bereit zum Verbinden"}</strong>
+            {activeChannel.key === "facebook_messages" &&
+            !facebookConnection ? (
+              <p
+                className={styles.modalNotice}
+                role={missingFacebookSetupItems.length ? "alert" : "status"}
+              >
+                Live-Setup Facebook Nachrichten:{" "}
+                <strong>
+                  {missingFacebookSetupItems.length
+                    ? `unvollständig (${missingFacebookSetupItems.join(", ")})`
+                    : "bereit zum Verbinden"}
+                </strong>
                 <br />
-                OAuth Callback URL: <strong>{facebookLiveSetupStatus.oauthCallbackUrl ?? "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}</strong>
+                OAuth Callback URL:{" "}
+                <strong>
+                  {facebookLiveSetupStatus.oauthCallbackUrl ??
+                    "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}
+                </strong>
                 <br />
                 Page verbunden: <strong>nein</strong>
                 <br />
@@ -706,87 +809,212 @@ export function ChannelsGrid({
             ) : null}
             {activeChannel.key === "facebook_messages" && facebookConnection ? (
               <>
-              <p className={styles.modalNotice}>
-                OAuth verbunden · Page: <strong>{facebookConnection.page_name ?? facebookConnection.page_id}</strong>
-                <br />
-                Setup-Konfiguration: <strong>{missingFacebookSetupItems.length ? `unvollständig (${missingFacebookSetupItems.join(", ")})` : "vollständig"}</strong>
-                <br />
-                OAuth Callback URL: <strong>{facebookLiveSetupStatus.oauthCallbackUrl ?? "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}</strong>
-                <br />
-                Page verbunden: <strong>{facebookConnection.page_id ? "ja" : "nein"}</strong>
-                <br />
-                Webhook bereit: <strong>{messengerWebhookReady ? "bestätigt" : "nicht bestätigt"}</strong>
-                <br />
-                Webhook messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
-                <br />
-                Webhook message_echoes: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</strong>
-                <br />
-                Letztes Webhook-Event: <strong>{lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}</strong>
-                <br />
-                Letzte Nachricht: <strong>{lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</strong>
-                <br />
-                Letzter inbound message Event-Zeitpunkt: <strong>{lastInboundMessageEvent ? formatDateTime(lastInboundMessageEvent.received_at) : "noch kein inbound messages Event empfangen"}</strong>
-                <br />
-                Letzter outbound echo Event-Zeitpunkt: <strong>{lastOutboundEchoEvent ? formatDateTime(lastOutboundEchoEvent.received_at) : "Kein message_echoes Event empfangen"}</strong>
-                <br />
-                Letztes echtes feed/comment Event: <strong>{lastFeedCommentEvent ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}` : "noch kein echter Kommentar empfangen"}</strong>
-                <br />
-                Letzter Messenger-Sync: <strong>{facebookConnection.last_messenger_sync_at ? `${formatDateTime(facebookConnection.last_messenger_sync_at)} · ${facebookConnection.last_messenger_sync_checked_count ?? 0} Conversations geprüft · inbound ${facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} · outbound ${facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} · Dubletten ${facebookConnection.last_messenger_sync_skipped_count ?? 0}` : "noch nicht ausgeführt"}</strong>
-                <br />
-                Letzte importierte outbound Message: <strong>{facebookConnection.last_messenger_sync_outbound_at ? formatDateTime(facebookConnection.last_messenger_sync_outbound_at) : "noch keine via Sync importiert"}</strong>
-                {facebookConnection.last_messenger_sync_error ? (<>
+                <p className={styles.modalNotice}>
+                  OAuth verbunden · Page:{" "}
+                  <strong>
+                    {facebookConnection.page_name ?? facebookConnection.page_id}
+                  </strong>
                   <br />
-                  Messenger-Sync Fehler: <strong>{facebookConnection.last_messenger_sync_error}</strong>
-                </>) : null}
-                <br />
-                Letzter Kommentar-Abruf: <strong>{facebookConnection.last_comment_fetch_at ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert` : "geparkt, nicht ausgeführt"}</strong>
-                {(facebookConnection.last_comment_fetch_error) ? (
-                  <>
-                    <br />
-                    Kommentar-Abruf Fehler: <strong>{facebookConnection.last_comment_fetch_error}</strong>
-                  </>
-                ) : null}
-                <br />
-                Page-ID: <strong>{displayedWebhookStatus?.pageId ?? facebookConnection.page_id ?? "unbekannt"}</strong>
-                <br />
-                Page Access Token vorhanden: <strong>{displayedWebhookStatus?.hasPageAccessToken ? "ja" : "nein"}</strong>
-                <br />
-                Angeforderte Messenger-OAuth-Scopes: <strong>{formatScopeList(requestedMessagesOauthScopes)}</strong>
-                <br />
-                comment/feed-relevante Scopes angefordert: <strong>{commentFeedScopesRequested ? "ja" : "nein"}</strong>
-                <br />
-                Vom Token erkannte Scopes: <strong>{formatScopeList(detectedFacebookScopes)}</strong>
-                <br />
-                pages_messaging vorhanden: <strong>{pagesMessagingGranted ? "ja" : "nein"}</strong>
-                <br />
-                pages_read_user_content vorhanden: <strong>{pagesReadUserContentGranted ? "ja" : "nein"}</strong>
-                <br />
-                pages_manage_engagement vorhanden: <strong>{pagesManageEngagementGranted ? "ja" : "nein"}</strong>
-                <br />
-                comment/feed-relevante Token-Scopes vollständig: <strong>{commentFeedScopesGranted ? "ja" : "nein"}</strong>
-                <br />
-                Page subscribed_apps: <strong>{formatWebhookStatus(displayedWebhookStatus?.subscribedAppsStatus)}</strong>
-                <br />
-                messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong> · message_echoes: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</strong> · feed/Kommentare: <strong>geparkt, nicht automatisch aktiviert</strong>
-                {!messageEchoesReady ? (
-                  <>
-                    <br />
-                    <strong>Keine outbound Echo-Events empfangen. Nutze Messenger-Sync als Fallback.</strong>
-                  </>
-                ) : null}
-                {displayedWebhookStatus?.error ? (
-                  <>
-                    <br />
-                    Meta-Fehler: <strong>{displayedWebhookStatus.error}</strong>
-                  </>
-                ) : null}
-                {!lastFeedCommentEvent && (!commentFeedScopesGranted || displayedWebhookStatus?.fields.feed !== "active") ? (
-                  <>
-                    <br />
-                    Kommentar-Empfang blockiert: <strong>{getFacebookCommentBlockingReason(commentFeedScopesGranted, displayedWebhookStatus?.fields.feed)}</strong>
-                  </>
-                ) : null}
-              </p>
+                  Setup-Konfiguration:{" "}
+                  <strong>
+                    {missingFacebookSetupItems.length
+                      ? `unvollständig (${missingFacebookSetupItems.join(", ")})`
+                      : "vollständig"}
+                  </strong>
+                  <br />
+                  OAuth Callback URL:{" "}
+                  <strong>
+                    {facebookLiveSetupStatus.oauthCallbackUrl ??
+                      "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}
+                  </strong>
+                  <br />
+                  Page verbunden:{" "}
+                  <strong>{facebookConnection.page_id ? "ja" : "nein"}</strong>
+                  <br />
+                  Webhook bereit:{" "}
+                  <strong>
+                    {messengerWebhookReady ? "bestätigt" : "nicht bestätigt"}
+                  </strong>
+                  <br />
+                  Webhook messages:{" "}
+                  <strong>
+                    {formatWebhookStatus(
+                      displayedWebhookStatus?.fields.messages,
+                    )}
+                  </strong>
+                  <br />
+                  Webhook message_echoes:{" "}
+                  <strong>
+                    {formatWebhookStatus(
+                      displayedWebhookStatus?.fields.message_echoes,
+                    )}
+                  </strong>
+                  <br />
+                  Letztes Webhook-Event:{" "}
+                  <strong>
+                    {lastWebhookEvent
+                      ? formatDateTime(lastWebhookEvent.received_at)
+                      : "noch keines empfangen"}
+                  </strong>
+                  <br />
+                  Letzte Nachricht:{" "}
+                  <strong>
+                    {lastMessageEvent
+                      ? formatDateTime(lastMessageEvent.received_at)
+                      : "noch keine Nachricht empfangen"}
+                  </strong>
+                  <br />
+                  Letzter inbound message Event-Zeitpunkt:{" "}
+                  <strong>
+                    {lastInboundMessageEvent
+                      ? formatDateTime(lastInboundMessageEvent.received_at)
+                      : "noch kein inbound messages Event empfangen"}
+                  </strong>
+                  <br />
+                  Letzter outbound echo Event-Zeitpunkt:{" "}
+                  <strong>
+                    {lastOutboundEchoEvent
+                      ? formatDateTime(lastOutboundEchoEvent.received_at)
+                      : "Kein message_echoes Event empfangen"}
+                  </strong>
+                  <br />
+                  Letztes echtes feed/comment Event:{" "}
+                  <strong>
+                    {lastFeedCommentEvent
+                      ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}`
+                      : "noch kein echter Kommentar empfangen"}
+                  </strong>
+                  <br />
+                  Letzter Messenger-Sync:{" "}
+                  <strong>
+                    {facebookConnection.last_messenger_sync_at
+                      ? `${formatDateTime(facebookConnection.last_messenger_sync_at)} · ${facebookConnection.last_messenger_sync_checked_count ?? 0} Conversations geprüft · inbound ${facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} · outbound ${facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} · Dubletten ${facebookConnection.last_messenger_sync_skipped_count ?? 0} · bis zu 50 Nachrichten je Conversation`
+                      : "noch nicht ausgeführt · bis zu 50 Nachrichten je Conversation"}
+                  </strong>
+                  <br />
+                  Letzte importierte outbound Message:{" "}
+                  <strong>
+                    {facebookConnection.last_messenger_sync_outbound_at
+                      ? formatDateTime(
+                          facebookConnection.last_messenger_sync_outbound_at,
+                        )
+                      : "noch keine via Sync importiert"}
+                  </strong>
+                  {facebookConnection.last_messenger_sync_error ? (
+                    <>
+                      <br />
+                      Messenger-Sync Fehler:{" "}
+                      <strong>
+                        {facebookConnection.last_messenger_sync_error}
+                      </strong>
+                    </>
+                  ) : null}
+                  <br />
+                  Letzter Kommentar-Abruf:{" "}
+                  <strong>
+                    {facebookConnection.last_comment_fetch_at
+                      ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert`
+                      : "geparkt, nicht ausgeführt"}
+                  </strong>
+                  {facebookConnection.last_comment_fetch_error ? (
+                    <>
+                      <br />
+                      Kommentar-Abruf Fehler:{" "}
+                      <strong>
+                        {facebookConnection.last_comment_fetch_error}
+                      </strong>
+                    </>
+                  ) : null}
+                  <br />
+                  Page-ID:{" "}
+                  <strong>
+                    {displayedWebhookStatus?.pageId ??
+                      facebookConnection.page_id ??
+                      "unbekannt"}
+                  </strong>
+                  <br />
+                  Page Access Token vorhanden:{" "}
+                  <strong>
+                    {displayedWebhookStatus?.hasPageAccessToken ? "ja" : "nein"}
+                  </strong>
+                  <br />
+                  Angeforderte Messenger-OAuth-Scopes:{" "}
+                  <strong>
+                    {formatScopeList(requestedMessagesOauthScopes)}
+                  </strong>
+                  <br />
+                  comment/feed-relevante Scopes angefordert:{" "}
+                  <strong>{commentFeedScopesRequested ? "ja" : "nein"}</strong>
+                  <br />
+                  Vom Token erkannte Scopes:{" "}
+                  <strong>{formatScopeList(detectedFacebookScopes)}</strong>
+                  <br />
+                  pages_messaging vorhanden:{" "}
+                  <strong>{pagesMessagingGranted ? "ja" : "nein"}</strong>
+                  <br />
+                  pages_read_user_content vorhanden:{" "}
+                  <strong>{pagesReadUserContentGranted ? "ja" : "nein"}</strong>
+                  <br />
+                  pages_manage_engagement vorhanden:{" "}
+                  <strong>
+                    {pagesManageEngagementGranted ? "ja" : "nein"}
+                  </strong>
+                  <br />
+                  comment/feed-relevante Token-Scopes vollständig:{" "}
+                  <strong>{commentFeedScopesGranted ? "ja" : "nein"}</strong>
+                  <br />
+                  Page subscribed_apps:{" "}
+                  <strong>
+                    {formatWebhookStatus(
+                      displayedWebhookStatus?.subscribedAppsStatus,
+                    )}
+                  </strong>
+                  <br />
+                  messages:{" "}
+                  <strong>
+                    {formatWebhookStatus(
+                      displayedWebhookStatus?.fields.messages,
+                    )}
+                  </strong>{" "}
+                  · message_echoes:{" "}
+                  <strong>
+                    {formatWebhookStatus(
+                      displayedWebhookStatus?.fields.message_echoes,
+                    )}
+                  </strong>{" "}
+                  · feed/Kommentare:{" "}
+                  <strong>geparkt, nicht automatisch aktiviert</strong>
+                  {!messageEchoesReady ? (
+                    <>
+                      <br />
+                      <strong>
+                        Keine outbound Echo-Events empfangen. Nutze
+                        Messenger-Sync als Fallback.
+                      </strong>
+                    </>
+                  ) : null}
+                  {displayedWebhookStatus?.error ? (
+                    <>
+                      <br />
+                      Meta-Fehler:{" "}
+                      <strong>{displayedWebhookStatus.error}</strong>
+                    </>
+                  ) : null}
+                  {!lastFeedCommentEvent &&
+                  (!commentFeedScopesGranted ||
+                    displayedWebhookStatus?.fields.feed !== "active") ? (
+                    <>
+                      <br />
+                      Kommentar-Empfang blockiert:{" "}
+                      <strong>
+                        {getFacebookCommentBlockingReason(
+                          commentFeedScopesGranted,
+                          displayedWebhookStatus?.fields.feed,
+                        )}
+                      </strong>
+                    </>
+                  ) : null}
+                </p>
                 <div className={styles.modalActions}>
                   <button
                     type="button"
@@ -794,7 +1022,9 @@ export function ChannelsGrid({
                     onClick={() => runPageWebhookAction("check")}
                     disabled={Boolean(pageWebhookPending)}
                   >
-                    {pageWebhookPending === "check" ? "Page-Webhooks prüfen ..." : "Page-Webhooks prüfen"}
+                    {pageWebhookPending === "check"
+                      ? "Page-Webhooks prüfen ..."
+                      : "Page-Webhooks prüfen"}
                   </button>
                   <button
                     type="button"
@@ -802,7 +1032,9 @@ export function ChannelsGrid({
                     onClick={() => runPageWebhookAction("activate")}
                     disabled={Boolean(pageWebhookPending)}
                   >
-                    {pageWebhookPending === "activate" ? "Page-Webhooks aktivieren ..." : "Page-Webhooks aktivieren"}
+                    {pageWebhookPending === "activate"
+                      ? "Page-Webhooks aktivieren ..."
+                      : "Page-Webhooks aktivieren"}
                   </button>
                   <button
                     type="button"
@@ -810,57 +1042,116 @@ export function ChannelsGrid({
                     onClick={runMessengerSync}
                     disabled={messengerSyncPending}
                   >
-                    {messengerSyncPending ? "Messenger-Verlauf synchronisiert ..." : "Messenger-Verlauf synchronisieren"}
+                    {messengerSyncPending
+                      ? "Messenger-Verlauf synchronisiert ..."
+                      : "Messenger-Verlauf synchronisieren"}
                   </button>
                 </div>
                 {messengerSyncResult ? (
-                  <p className={styles.modalNotice} role={messengerSyncResult.ok ? "status" : "alert"}>
-                    Messenger-Sync: {messengerSyncResult.conversationsChecked} Conversations geprüft · {messengerSyncResult.importedInbound} inbound neu · {messengerSyncResult.importedOutbound} outbound neu · {messengerSyncResult.skippedDuplicates} Dubletten übersprungen{messengerSyncResult.error ? ` · Fehler: ${messengerSyncResult.error}` : ""}
+                  <p
+                    className={styles.modalNotice}
+                    role={messengerSyncResult.ok ? "status" : "alert"}
+                  >
+                    Messenger-Sync: {messengerSyncResult.conversationsChecked}{" "}
+                    Conversations geprüft ·{" "}
+                    {messengerSyncResult.importedInbound} inbound neu ·{" "}
+                    {messengerSyncResult.importedOutbound} outbound neu ·{" "}
+                    {messengerSyncResult.skippedDuplicates} Dubletten
+                    übersprungen
+                    {messengerSyncResult.error
+                      ? ` · Fehler: ${messengerSyncResult.error}`
+                      : ""}
                   </p>
                 ) : null}
-             </>
+              </>
             ) : null}
-            {activeChannel.key === "facebook_messages" && facebookConnection && metaWebhookError ? (
+            {activeChannel.key === "facebook_messages" &&
+            facebookConnection &&
+            metaWebhookError ? (
               <p className={styles.modalNotice} role="alert">
-                Meta-Webhook-Events konnten nicht gelesen werden: {metaWebhookError}
+                Meta-Webhook-Events konnten nicht gelesen werden:{" "}
+                {metaWebhookError}
               </p>
             ) : null}
             {activeChannel.key === "facebook_messages" && facebookConnection ? (
-              <div className={styles.releaseBox} aria-label="Meta Webhook Diagnose">
+              <div
+                className={styles.releaseBox}
+                aria-label="Meta Webhook Diagnose"
+              >
                 <strong>Meta Webhook Diagnose (letzte 20 Events)</strong>
                 <p>
-                  Service-Role-Key: <strong>{metaWebhookStorageHealth.serviceRoleConfigured ? "verfügbar" : "fehlt"}</strong> · Tabelle public.meta_webhook_events: <strong>{metaWebhookStorageHealth.tableReadable ? "lesbar" : "fehlt/nicht lesbar"}</strong>
-                  {metaWebhookStorageHealth.error ? ` · Fehler: ${metaWebhookStorageHealth.error}` : ""}
+                  Service-Role-Key:{" "}
+                  <strong>
+                    {metaWebhookStorageHealth.serviceRoleConfigured
+                      ? "verfügbar"
+                      : "fehlt"}
+                  </strong>{" "}
+                  · Tabelle public.meta_webhook_events:{" "}
+                  <strong>
+                    {metaWebhookStorageHealth.tableReadable
+                      ? "lesbar"
+                      : "fehlt/nicht lesbar"}
+                  </strong>
+                  {metaWebhookStorageHealth.error
+                    ? ` · Fehler: ${metaWebhookStorageHealth.error}`
+                    : ""}
                 </p>
                 {selfTestDisabledReason ? (
-                  <p role="alert">Selbsttest blockiert: {selfTestDisabledReason}.</p>
+                  <p role="alert">
+                    Selbsttest blockiert: {selfTestDisabledReason}.
+                  </p>
                 ) : null}
                 <button
                   type="button"
                   className={styles.secondaryModalButton}
                   onClick={runMetaWebhookSelfTest}
                   disabled={selfTestPending || Boolean(selfTestDisabledReason)}
-                  title={selfTestDisabledReason ?? "Speichert ein Testevent in public.meta_webhook_events"}
+                  title={
+                    selfTestDisabledReason ??
+                    "Speichert ein Testevent in public.meta_webhook_events"
+                  }
                 >
-                  {selfTestPending ? "Webhook-Selbsttest läuft ..." : "Webhook-Selbsttest starten"}
+                  {selfTestPending
+                    ? "Webhook-Selbsttest läuft ..."
+                    : "Webhook-Selbsttest starten"}
                 </button>
                 {selfTestResult ? (
                   <p role="status">
-                    Selbsttest: {selfTestResult.ok ? "Insert erfolgreich" : "Insert fehlgeschlagen"} · workspace_id {selfTestResult.workspace_id} · event_type {selfTestResult.event_type} · status {selfTestResult.status}
-                    {selfTestResult.error ? ` · Fehler: ${selfTestResult.error}` : ""}
+                    Selbsttest:{" "}
+                    {selfTestResult.ok
+                      ? "Insert erfolgreich"
+                      : "Insert fehlgeschlagen"}{" "}
+                    · workspace_id {selfTestResult.workspace_id} · event_type{" "}
+                    {selfTestResult.event_type} · status {selfTestResult.status}
+                    {selfTestResult.error
+                      ? ` · Fehler: ${selfTestResult.error}`
+                      : ""}
                   </p>
                 ) : null}
-                {selfTestError ? <p role="alert">Selbsttest fehlgeschlagen: {selfTestError}</p> : null}
+                {selfTestError ? (
+                  <p role="alert">Selbsttest fehlgeschlagen: {selfTestError}</p>
+                ) : null}
                 {!lastOutboundEchoEvent ? (
-                  <p role="status">Keine outbound Echo-Events empfangen. Nutze Messenger-Sync als Fallback; message_echoes bleibt weiterhin aktiv und wird verarbeitet, sobald Meta Events liefert.</p>
+                  <p role="status">
+                    Keine outbound Echo-Events empfangen. Nutze Messenger-Sync
+                    als Fallback; message_echoes bleibt weiterhin aktiv und wird
+                    verarbeitet, sobald Meta Events liefert.
+                  </p>
                 ) : null}
                 {metaWebhookEvents.length ? (
                   <ul>
                     {metaWebhookEvents.map((event) => (
                       <li key={event.id}>
-                        {formatDateTime(event.received_at)} · {formatMetaWebhookEventKind(event)} · Page {event.page_id ?? "unbekannt"} · Sender {event.sender_id ?? "unbekannt"} · Status {event.status}
-                        {event.text ?? event.message_text ? ` · Text: ${event.text ?? event.message_text}` : ""}
-                        {event.error_reason ? ` · Grund: ${event.error_reason}` : ""}
+                        {formatDateTime(event.received_at)} ·{" "}
+                        {formatMetaWebhookEventKind(event)} · Page{" "}
+                        {event.page_id ?? "unbekannt"} · Sender{" "}
+                        {event.sender_id ?? "unbekannt"} · Status {event.status}
+                        {(event.text ?? event.message_text)
+                          ? ` · Text: ${event.text ?? event.message_text}`
+                          : ""}
+                        {event.error_reason
+                          ? ` · Grund: ${event.error_reason}`
+                          : ""}
                       </li>
                     ))}
                   </ul>
@@ -871,25 +1162,44 @@ export function ChannelsGrid({
             ) : null}
 
             {activeChannel.key === "facebook_comments" ? (
-              <p className={styles.modalNotice} role={facebookConnection?.last_comment_fetch_error || facebookErrorCode === "comment_review" ? "alert" : "status"}>
-                Kommentare vorbereitet, Live-Test später. Nachrichten können trotzdem separat verbunden werden.
+              <p
+                className={styles.modalNotice}
+                role={
+                  facebookConnection?.last_comment_fetch_error ||
+                  facebookErrorCode === "comment_review"
+                    ? "alert"
+                    : "status"
+                }
+              >
+                Kommentare vorbereitet, Live-Test später. Nachrichten können
+                trotzdem separat verbunden werden.
                 <br />
                 Technischer Typ: <strong>facebook_comments</strong>
                 <br />
-                Angeforderte Kommentar-OAuth-Scopes: <strong>{formatScopeList(requestedCommentOauthScopes)}</strong>
+                Angeforderte Kommentar-OAuth-Scopes:{" "}
+                <strong>{formatScopeList(requestedCommentOauthScopes)}</strong>
                 <br />
-                Optionale Scopes werden nur vorbereitet, wenn Meta/App-Review sie erlaubt: <strong>pages_read_user_content, pages_manage_engagement</strong>
+                Optionale Scopes werden nur vorbereitet, wenn Meta/App-Review
+                sie erlaubt:{" "}
+                <strong>
+                  pages_read_user_content, pages_manage_engagement
+                </strong>
                 <br />
                 Status: <strong>vorbereitet · Live-Test später</strong>
                 {facebookConnection?.last_comment_fetch_error ? (
                   <>
                     <br />
-                    Letzter Kommentarimport-Fehler: <strong>{facebookConnection.last_comment_fetch_error}</strong>
+                    Letzter Kommentarimport-Fehler:{" "}
+                    <strong>
+                      {facebookConnection.last_comment_fetch_error}
+                    </strong>
                   </>
                 ) : null}
               </p>
             ) : null}
-            {(activeChannel.key === "facebook_messages" || activeChannel.key === "facebook_comments") && facebookError ? (
+            {(activeChannel.key === "facebook_messages" ||
+              activeChannel.key === "facebook_comments") &&
+            facebookError ? (
               <p className={styles.modalNotice} role="alert">
                 {getFacebookErrorMessage(facebookErrorCode)}
               </p>
@@ -912,13 +1222,18 @@ export function ChannelsGrid({
               </p>
             ) : null}
             <div className={styles.modalActions}>
-              {activeChannel.key === "facebook_messages" || activeChannel.key === "facebook_comments" ? (
+              {activeChannel.key === "facebook_messages" ||
+              activeChannel.key === "facebook_comments" ? (
                 facebookConnection ? (
                   <>
                     {activeChannel.key === "facebook_comments" ? (
-                      <span className={styles.modalNotice}>Kommentare vorbereitet, Live-Test später.</span>
+                      <span className={styles.modalNotice}>
+                        Kommentare vorbereitet, Live-Test später.
+                      </span>
                     ) : (
-                      <a className={styles.modalLinkButton} href="/channels">Nachrichten verwalten</a>
+                      <a className={styles.modalLinkButton} href="/channels">
+                        Nachrichten verwalten
+                      </a>
                     )}
                     <form
                       method="post"
@@ -935,10 +1250,16 @@ export function ChannelsGrid({
                 ) : (
                   <a
                     className={styles.modalLinkButton}
-                    href={activeChannel.key === "facebook_comments" ? "/channels" : "/api/integrations/facebook/start?type=facebook_messages"}
+                    href={
+                      activeChannel.key === "facebook_comments"
+                        ? "/channels"
+                        : "/api/integrations/facebook/start?type=facebook_messages"
+                    }
                     aria-disabled={activeChannel.key === "facebook_comments"}
                   >
-                    {activeChannel.key === "facebook_messages" ? "Nachrichten verbinden" : "Kommentare vorbereitet"}
+                    {activeChannel.key === "facebook_messages"
+                      ? "Nachrichten verbinden"
+                      : "Kommentare vorbereitet"}
                   </a>
                 )
               ) : (
@@ -1004,10 +1325,15 @@ function getFacebookErrorMessage(errorCode: string | null): string {
 
 function formatDateTime(value: string | null): string {
   if (!value) return "unbekannt";
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
-function formatWebhookStatus(status: "active" | "missing" | "error" | "unknown" | undefined): string {
+function formatWebhookStatus(
+  status: "active" | "missing" | "error" | "unknown" | undefined,
+): string {
   if (status === "active") return "aktiv";
   if (status === "missing") return "fehlt";
   if (status === "error") return "Fehler";
@@ -1034,7 +1360,12 @@ function getFacebookCommentBlockingReason(
 function isOutboundEchoEvent(event: MetaWebhookEvent): boolean {
   const status = event.status.toLowerCase();
   const text = `${event.text ?? ""} ${event.message_text ?? ""}`.toLowerCase();
-  return event.event_type === "messages" && (status.includes("message_echoes") || status.includes("outbound") || text.includes("message_echoes / outbound"));
+  return (
+    event.event_type === "messages" &&
+    (status.includes("message_echoes") ||
+      status.includes("outbound") ||
+      text.includes("message_echoes / outbound"))
+  );
 }
 
 function isInboundMessageEvent(event: MetaWebhookEvent): boolean {
