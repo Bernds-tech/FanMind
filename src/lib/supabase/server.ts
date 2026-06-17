@@ -1620,11 +1620,11 @@ function extractCommonPhrases(content: string): string[] {
 export async function createMetaWebhookConversationMessage(input: {
   workspaceId: string;
   senderId?: string | null;
-  sourcePlatform: "facebook" | "instagram" | "whatsapp";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
   authorLabel: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1713,11 +1713,11 @@ export async function createMetaWebhookConversationMessage(input: {
 
 export async function createMetaTestConversationMessage(input: {
   workspaceId: string;
-  sourcePlatform?: "facebook" | "instagram" | "whatsapp";
+  sourcePlatform?: "facebook" | "instagram" | "whatsapp" | "tiktok";
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1866,7 +1866,7 @@ export async function createMetaTestConversationMessage(input: {
 async function ensureMetaTestConversation(input: {
   workspaceId: string;
   contactId: string;
-  sourcePlatform: "facebook" | "instagram" | "whatsapp";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
   sourceType: string;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
@@ -2754,6 +2754,7 @@ function normalizeMessageType(value: string | null | undefined): string {
     "instagram_messages",
     "instagram_comments",
     "whatsapp_messages",
+    "tiktok_comments",
     "dm",
     "comment",
     "post",
@@ -2852,15 +2853,17 @@ function isProductiveCommercialOption(
   );
 }
 
-function getDefaultWebhookAuthorLabel(platform: "facebook" | "instagram" | "whatsapp"): string {
+function getDefaultWebhookAuthorLabel(platform: "facebook" | "instagram" | "whatsapp" | "tiktok"): string {
   if (platform === "instagram") return "Instagram Nutzer";
   if (platform === "whatsapp") return "WhatsApp Kontakt";
+  if (platform === "tiktok") return "TikTok Nutzer";
   return "Facebook Nutzer";
 }
 
-function getWebhookPlatformLabel(platform: "facebook" | "instagram" | "whatsapp"): string {
+function getWebhookPlatformLabel(platform: "facebook" | "instagram" | "whatsapp" | "tiktok"): string {
   if (platform === "instagram") return "Instagram";
   if (platform === "whatsapp") return "WhatsApp";
+  if (platform === "tiktok") return "TikTok";
   return "Facebook";
 }
 
@@ -2871,7 +2874,8 @@ function normalizeIsoTimestamp(value: string | null | undefined): string | null 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function getDefaultWebhookSourceType(platform: "facebook" | "instagram" | "whatsapp", messageType: "dm" | "comment"): "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" {
+function getDefaultWebhookSourceType(platform: "facebook" | "instagram" | "whatsapp" | "tiktok", messageType: "dm" | "comment"): "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" {
   if (platform === "whatsapp") return "whatsapp_messages";
+  if (platform === "tiktok") return "tiktok_comments";
   return messageType === "comment" ? `${platform}_comments` : `${platform}_messages`;
 }
