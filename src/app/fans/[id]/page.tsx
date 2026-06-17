@@ -470,7 +470,7 @@ function FanDetailContent({
                     </div>
                     <p>{item.text}</p>
                     <OriginalChatAction
-                      actionLabel="Original öffnen"
+                      actionLabel={getOriginalActionLabel(item.channel + " " + item.type)}
                       url={item.url}
                     />
                   </article>
@@ -788,7 +788,7 @@ function OriginalChatAction({
         </a>
       ) : (
         <p className={styles.originalChatMissing}>
-          Original-Chat-Link noch nicht verbunden.
+          Original-Link noch nicht verfügbar.
         </p>
       )}
     </div>
@@ -1038,9 +1038,9 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
     type: message.direction === "note" && message.author_label === "Antwortentwurf"
       ? "Antwortentwurf · nicht gesendet"
       : formatMessageType(message.message_type),
-    channel: formatSource(message.source_platform),
+    channel: formatDetailedSource(message.source_platform, message.source_type ?? message.message_type),
     time: formatDate(message.created_at),
-    text: message.content,
+    text: message.original_text_excerpt || message.content,
     url: message.reply_target_url || message.source_url || undefined,
   }));
 }
@@ -1103,13 +1103,25 @@ function getOriginalChatUrl(
 function getOriginalActionLabel(platform: string): string {
   const normalized = platform.toLowerCase();
 
-  if (normalized.includes("facebook")) return "Facebook öffnen";
-  if (normalized.includes("messenger")) return "Messenger öffnen";
-  if (normalized.includes("instagram")) return "Instagram öffnen";
-  if (normalized.includes("whatsapp")) return "WhatsApp öffnen";
+  if (normalized.includes("comment") || normalized.includes("kommentar")) return "Kommentar öffnen";
+  if (normalized.includes("post") || normalized.includes("beitrag")) return "Beitrag öffnen";
+  if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger") || normalized.includes("chat")) return "Chat öffnen";
+  if (normalized.includes("facebook")) return "Original öffnen";
+  if (normalized.includes("instagram")) return "Original öffnen";
+  if (normalized.includes("whatsapp")) return "Chat öffnen";
   if (normalized.includes("mail")) return "E-Mail öffnen";
 
-  return "Original-Chat öffnen";
+  return "Original öffnen";
+}
+
+function formatDetailedSource(platform: string | null, sourceType: string | null): string {
+  const source = (sourceType ?? "").toLowerCase();
+  if (source.includes("facebook_comments")) return "Facebook Kommentare";
+  if (source.includes("facebook_messages")) return "Facebook Nachrichten";
+  const base = formatSource(platform);
+  if (source.includes("comment")) return `${base} Kommentare`;
+  if (source.includes("dm") || source.includes("message")) return `${base} Nachrichten`;
+  return base;
 }
 
 function formatConversationStatus(value: string): string {
