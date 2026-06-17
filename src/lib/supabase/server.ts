@@ -1758,6 +1758,30 @@ export async function createMetaTestConversationMessage(input: {
     }
   }
 
+  const externalCommentId = normalizeOptionalText(input.externalCommentId);
+  if (externalCommentId) {
+    const existingComment = await postgrestSelect<ConversationMessageRow>(
+      "conversation_messages",
+      getServiceAccessToken(),
+      CONVERSATION_MESSAGE_COLUMNS,
+      [
+        ["workspace_id", input.workspaceId],
+        ["source_platform", input.sourcePlatform ?? "facebook"],
+        ["external_comment_id", externalCommentId],
+      ],
+      1,
+      true,
+    );
+    if (existingComment.error) {
+      return conversationMessageCreateError(
+        `Kommentar konnte nicht auf Duplikate geprüft werden: ${withOptionalSchemaHint(existingComment.error.message, "conversation_messages")}`,
+      );
+    }
+    if (existingComment.data) {
+      return { message: existingComment.data, conversation: null, error: null };
+    }
+  }
+
   const receivedAt = normalizeIsoTimestamp(input.receivedAt) ?? new Date().toISOString();
   const sourceUrl = normalizeUrl(input.sourceUrl);
   const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
