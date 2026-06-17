@@ -119,6 +119,7 @@ export type ConversationMessageRow = {
   author_label: string | null;
   content: string;
   created_at: string | null;
+  seen_at: string | null;
 };
 
 export type ConversationSummaryRow = {
@@ -410,7 +411,7 @@ type PostgrestCountResult = {
   error: Error | null;
 };
 
-type SupabaseFilterValue = string | number | boolean;
+type SupabaseFilterValue = string | number | boolean | null;
 
 const WORKSPACE_COLUMNS =
   "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months";
@@ -421,7 +422,7 @@ const MEMORY_COLUMNS =
 const CONVERSATION_COLUMNS =
   "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
-  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,created_at";
+  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,created_at,seen_at";
 const CONVERSATION_SUMMARY_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,summary,key_points,open_questions,last_summarized_message_at,message_count_seen,updated_at,created_at";
 const CONTACT_AI_PROFILE_COLUMNS =
@@ -1274,6 +1275,76 @@ export async function getContactConversationMessages(
   return { messages: result.data ?? [], error: null };
 }
 
+
+export async function getWorkspaceUnseenInboundMessages(
+  workspaceId: string,
+): Promise<ConversationMessagesResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationMessagesError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const result = await postgrestSelect<ConversationMessageRow[]>(
+    "conversation_messages",
+    accessToken,
+    CONVERSATION_MESSAGE_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["direction", "inbound"],
+      ["seen_at", null],
+    ],
+    undefined,
+    false,
+    "created_at.desc",
+  );
+
+  if (result.error) {
+    return conversationMessagesError(
+      `Neue Nachrichten konnten nicht geladen werden: ${withOptionalSchemaHint(result.error.message, "conversation_messages")}`,
+    );
+  }
+
+  return { messages: result.data ?? [], error: null };
+}
+
+export async function markConversationMessageSeen(input: {
+  workspaceId: string;
+  contactId: string;
+  messageId: string;
+}): Promise<ConversationMessageCreateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationMessageCreateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const result = await postgrestUpdate<ConversationMessageRow>(
+    "conversation_messages",
+    { seen_at: new Date().toISOString() },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+      ["id", input.messageId],
+      ["direction", "inbound"],
+    ],
+    { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return conversationMessageCreateError(
+      `Nachricht konnte nicht als gesehen markiert werden: ${withOptionalSchemaHint(result.error.message, "conversation_messages")}`,
+    );
+  }
+
+  return { message: result.data, conversation: null, error: null };
+}
+
 export async function ensureConversationForContact(input: {
   workspaceId: string;
   contactId: string;
@@ -1655,6 +1726,24 @@ export async function createMetaWebhookConversationMessage(input: {
     contact = existing.data;
   }
 
+  if (contact) {
+    const nextDisplayName = normalizeOptionalText(input.authorLabel);
+    const currentIsFallback = contact.display_name === `${getDefaultWebhookAuthorLabel(input.sourcePlatform)} ${handle}` || contact.display_name === getDefaultWebhookAuthorLabel(input.sourcePlatform);
+    if (nextDisplayName && nextDisplayName !== contact.display_name && (currentIsFallback || !contact.display_name)) {
+      const updated = await postgrestUpdate<ContactRow>(
+        "contacts",
+        { display_name: nextDisplayName, source_platform: contact.source_platform ?? input.sourcePlatform },
+        getServiceAccessToken(),
+        [
+          ["workspace_id", input.workspaceId],
+          ["id", contact.id],
+        ],
+        { select: CONTACT_COLUMNS, single: true },
+      );
+      if (!updated.error && updated.data) contact = updated.data;
+    }
+  }
+
   if (!contact) {
     const created = await postgrestRequest<ContactRow>(
       "contacts",
@@ -1829,6 +1918,7 @@ export async function createMetaTestConversationMessage(input: {
         normalizeOptionalText(input.authorLabel) ?? getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
       content,
       created_at: receivedAt,
+      seen_at: null,
     },
     getServiceAccessToken(),
     { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
@@ -2544,7 +2634,10 @@ async function postgrestUpdate<T = unknown>(
     }
 
     for (const [column, value] of filters) {
-      url.searchParams.set(column, `eq.${String(value)}`);
+      url.searchParams.set(
+        column,
+        value === null ? "is.null" : `eq.${String(value)}`,
+      );
     }
 
     const response = await fetch(url.toString(), {
@@ -2592,7 +2685,10 @@ async function postgrestCount(
     url.searchParams.set("select", "id");
 
     for (const [column, value] of filters) {
-      url.searchParams.set(column, `eq.${String(value)}`);
+      url.searchParams.set(
+        column,
+        value === null ? "is.null" : `eq.${String(value)}`,
+      );
     }
 
     const response = await fetch(url.toString(), {
@@ -2640,7 +2736,10 @@ async function postgrestSelect<T>(
     url.searchParams.set("select", columns);
 
     for (const [column, value] of filters) {
-      url.searchParams.set(column, `eq.${String(value)}`);
+      url.searchParams.set(
+        column,
+        value === null ? "is.null" : `eq.${String(value)}`,
+      );
     }
 
     if (limitCount) {

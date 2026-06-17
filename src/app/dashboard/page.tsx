@@ -7,9 +7,11 @@ import {
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceOpenFollowups,
+  getWorkspaceUnseenInboundMessages,
   signOutSupabaseServerSession,
   type ContactRow,
   type FollowupRow,
+  type ConversationMessageRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
@@ -25,6 +27,8 @@ type WorkspaceDetailsProps = {
   contactsError?: string;
   followups: FollowupRow[];
   followupsError?: string;
+  unseenMessages: ConversationMessageRow[];
+  unseenMessagesError?: string;
   openFollowupCount: number;
 };
 
@@ -49,6 +53,15 @@ type WorkInboxItem = {
   due: string;
   status: string;
   dueTime: number;
+};
+
+type NewMessageItem = {
+  id: string;
+  contactId: string;
+  name: string;
+  source: string;
+  excerpt: string;
+  createdAt: string | null;
 };
 
 const euroFormatter = new Intl.NumberFormat("de-DE", {
@@ -207,6 +220,21 @@ function getWorkInboxItems(
   return Array.from(itemsByFan.values()).slice(0, 8);
 }
 
+function getNewMessageItems(contacts: ContactRow[], messages: ConversationMessageRow[]): NewMessageItem[] {
+  const contactsById = new Map(contacts.map((contact) => [contact.id, contact]));
+  return messages.slice(0, 8).map((message) => {
+    const contact = contactsById.get(message.contact_id);
+    return {
+      id: message.id,
+      contactId: message.contact_id,
+      name: contact?.display_name || contact?.handle || message.author_label || "Unbenannter Kontakt",
+      source: formatSource(message.source_platform),
+      excerpt: message.original_text_excerpt || message.content,
+      createdAt: message.created_at,
+    };
+  });
+}
+
 function getFollowupDueTime(value: string | null): number {
   return value
     ? new Date(`${value}T00:00:00Z`).getTime()
@@ -223,10 +251,16 @@ function formatDueDate(value: string | null): string {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
+function formatDateTime(value: string | null): string {
+  if (!value) return "Zeitpunkt unbekannt";
+  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
 function formatSource(value: string | null): string {
   const sourceLabels: Record<string, string> = {
     manual: "Manuell",
-    instagram: "Instagram (manuell)",
+    facebook: "Facebook Nachrichten",
+    instagram: "Instagram",
     tiktok: "TikTok (manuell)",
   };
 
@@ -278,6 +312,8 @@ function WorkspaceDetails({
   contactsError,
   followups,
   followupsError,
+  unseenMessages,
+  unseenMessagesError,
   openFollowupCount,
 }: WorkspaceDetailsProps) {
   const display = getWorkspaceDisplay(workspace);
@@ -290,6 +326,7 @@ function WorkspaceDetails({
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("dashboard");
   const workInboxItems = getWorkInboxItems(contacts, followups);
+  const newMessageItems = getNewMessageItems(contacts, unseenMessages);
   const uniqueFanCount = countUniqueFans(contacts);
   return (
     <WorkspaceShell
@@ -321,7 +358,7 @@ function WorkspaceDetails({
           <div className={styles.moduleHeader}>
             <div>
               <p className={styles.eyebrow}>Arbeits-Eingang</p>
-              <h2 id="work-inbox-title">Heute zu bearbeiten</h2>
+              <h2 id="work-inbox-title">Neue Nachrichten</h2>
             </div>
             <Link className={styles.moduleHeaderLink} href="/fans#fans-list">
               Alle Fans öffnen
@@ -344,7 +381,33 @@ function WorkspaceDetails({
               <span>{followupsError}</span>
             </p>
           ) : null}
-          {workInboxItems.length ? (
+          {unseenMessagesError ? (
+            <p className={styles.error}>
+              <strong>Neue Nachrichten konnten nicht geladen werden.</strong>
+              <span>{unseenMessagesError}</span>
+            </p>
+          ) : null}
+          {newMessageItems.length ? (
+            <div className={styles.workInboxList}>
+              {newMessageItems.map((item) => (
+                <article className={styles.workInboxItem} key={item.id}>
+                  <div>
+                    <span className={styles.tableBadge}>Neue Nachricht</span>
+                    <h3>
+                      <Link className={styles.contactNameLink} href={`/fans/${item.contactId}?seen_message=${item.id}`}>
+                        {item.name}
+                      </Link>
+                    </h3>
+                    <p>{item.excerpt}</p>
+                    <small>{item.source} · {formatDateTime(item.createdAt)}</small>
+                  </div>
+                  <div className={styles.workInboxMeta}>
+                    <Link className={styles.moduleHeaderLink} href={`/fans/${item.contactId}?seen_message=${item.id}`}>Öffnen</Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : workInboxItems.length ? (
             <div className={styles.workInboxList}>
               {workInboxItems.map((item) => (
                 <article className={styles.workInboxItem} key={item.key}>
@@ -421,6 +484,9 @@ export default async function DashboardPage() {
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
+  const unseenMessagesResult = workspace
+    ? await getWorkspaceUnseenInboundMessages(workspace.id)
+    : null;
 
   return (
     <main className={styles.page}>
@@ -435,6 +501,8 @@ export default async function DashboardPage() {
           contactsError={contactsResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           followupsError={followupsResult?.error?.message}
+          unseenMessages={unseenMessagesResult?.messages ?? []}
+          unseenMessagesError={unseenMessagesResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
         />
       ) : (

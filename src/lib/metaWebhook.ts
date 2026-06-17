@@ -3,7 +3,9 @@ import {
   createMetaWebhookDebugEvent,
   findMetaSocialConnectionByPageId,
   findMetaWebhookFallbackWorkspaceId,
+  type SocialConnectionRow,
 } from "@/lib/supabase/server";
+import { decryptToken } from "@/lib/facebookIntegration";
 
 export type MetaWebhookEvent = {
   eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
@@ -156,6 +158,14 @@ export async function processMetaWebhookPayload(
       continue;
     }
 
+    if (connection.connection && event.eventType === "messages" && event.sourcePlatform === "facebook" && event.senderId) {
+      const profile = await fetchFacebookMessengerProfile(
+        event.senderId,
+        connection.connection,
+      );
+      if (profile.displayName) event.authorLabel = profile.displayName;
+    }
+
     let status = event.eventType === "feed" || event.eventType === "feed_comment" ? "stored" : "received";
     let errorReason: string | null = null;
     let messageId: string | null = null;
@@ -247,4 +257,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+
+type FacebookMessengerProfile = {
+  displayName: string | null;
+};
+
+async function fetchFacebookMessengerProfile(
+  psid: string,
+  connection: SocialConnectionRow,
+): Promise<FacebookMessengerProfile> {
+  const encryptedToken = connection.page_access_token_encrypted;
+  const pageToken = encryptedToken ? decryptToken(encryptedToken) : null;
+
+  if (!pageToken) return { displayName: null };
+
+  try {
+    const url = new URL(`https://graph.facebook.com/v20.0/${encodeURIComponent(psid)}`);
+    url.searchParams.set("fields", "first_name,last_name,name");
+    url.searchParams.set("access_token", pageToken);
+
+    const response = await fetch(url.toString(), { cache: "no-store" });
+    if (!response.ok) return { displayName: null };
+
+    const profile = await response.json();
+    if (!isRecord(profile)) return { displayName: null };
+
+    const firstName = stringValue(profile.first_name);
+    const lastName = stringValue(profile.last_name);
+    const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+    return { displayName: fullName || stringValue(profile.name) };
+  } catch {
+    return { displayName: null };
+  }
 }

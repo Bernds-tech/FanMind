@@ -13,6 +13,7 @@ import {
   getWorkspaceContacts,
   getWorkspaceConversations,
   getWorkspaceVoiceProfile,
+  markConversationMessageSeen,
   signOutSupabaseServerSession,
   type ContactAiProfileRow,
   type ContactRow,
@@ -38,9 +39,6 @@ import {
 import styles from "./fan-detail.module.css";
 import { AiReplySuggestions } from "./AiReplySuggestions";
 import {
-  markConversationDone,
-  markConversationWaiting,
-  reopenConversation,
   saveInboundMessage,
   saveManualSentReply,
   saveReplyDraft,
@@ -49,7 +47,7 @@ import {
 
 type FanDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ notice?: string | string[] }>;
+  searchParams?: Promise<{ notice?: string | string[]; seen_message?: string | string[] }>;
 };
 
 type FanDetailWorkspaceProps = {
@@ -690,23 +688,6 @@ function ConversationActionForms({
 }) {
   return (
     <div className={styles.conversationActions}>
-      {[markConversationDone, markConversationWaiting, reopenConversation].map(
-        (action, index) => (
-          <form action={action} key={index}>
-            <input name="contact_id" type="hidden" value={contactId} />
-            {conversation ? (
-              <input name="conversation_id" type="hidden" value={conversation.id} />
-            ) : null}
-            <button className={dashboardStyles.secondaryButton} type="submit">
-              {index === 0
-                ? "Als erledigt markieren"
-                : index === 1
-                  ? "Wartet auf Fan"
-                  : "Wieder öffnen"}
-            </button>
-          </form>
-        ),
-      )}
       <form action={setConversationPriority} className={styles.priorityForm}>
         <input name="contact_id" type="hidden" value={contactId} />
         {conversation ? (
@@ -1256,6 +1237,7 @@ export default async function FanDetailPage({
 }: FanDetailPageProps) {
   const { id } = await params;
   const pageSearchParams = await searchParams;
+  const seenMessageId = normalizeParam(pageSearchParams?.seen_message);
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -1264,6 +1246,14 @@ export default async function FanDetailPage({
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
+
+  if (workspace && seenMessageId) {
+    await markConversationMessageSeen({
+      workspaceId: workspace.id,
+      contactId: id,
+      messageId: seenMessageId,
+    });
+  }
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;

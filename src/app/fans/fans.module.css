@@ -1151,3 +1151,17 @@
   gap: 6px;
   justify-content: flex-end;
 }
+
+.unseenCell {
+  text-align: right;
+  width: 44px;
+}
+
+.unseenDot {
+  background: #0b8cff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(11, 140, 255, 0.14);
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
