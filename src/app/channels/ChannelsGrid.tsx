@@ -470,6 +470,8 @@ export function ChannelsGrid({
       ? "Meta-Webhook-Tabelle fehlt oder ist nicht lesbar"
       : null;
   const lastMessageEvent = metaWebhookEvents.find((event) => event.event_type === "messages" && (event.text ?? event.message_text));
+  const lastInboundMessageEvent = metaWebhookEvents.find(isInboundMessageEvent);
+  const lastOutboundEchoEvent = metaWebhookEvents.find(isOutboundEchoEvent);
   const lastFeedCommentEvent = metaWebhookEvents.find((event) => (event.event_type === "feed" || event.event_type === "feed_comment") && (event.text ?? event.message_text));
   const detectedFacebookScopes = pageWebhookResult?.tokenScopes ?? facebookConnection?.scopes ?? [];
   const pagesMessagingGranted = pageWebhookResult?.pagesMessagingGranted ?? detectedFacebookScopes.includes("pages_messaging");
@@ -689,6 +691,10 @@ export function ChannelsGrid({
                 <br />
                 Letzte Nachricht: <strong>{lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</strong>
                 <br />
+                Letzter inbound message Event-Zeitpunkt: <strong>{lastInboundMessageEvent ? formatDateTime(lastInboundMessageEvent.received_at) : "noch kein inbound messages Event empfangen"}</strong>
+                <br />
+                Letzter outbound echo Event-Zeitpunkt: <strong>{lastOutboundEchoEvent ? formatDateTime(lastOutboundEchoEvent.received_at) : "Kein message_echoes Event empfangen"}</strong>
+                <br />
                 Letztes echtes feed/comment Event: <strong>{lastFeedCommentEvent ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}` : "noch kein echter Kommentar empfangen"}</strong>
                 <br />
                 Letzter Kommentar-Abruf: <strong>{facebookConnection.last_comment_fetch_at ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert` : "geparkt, nicht ausgeführt"}</strong>
@@ -719,7 +725,7 @@ export function ChannelsGrid({
                 <br />
                 Page subscribed_apps: <strong>{formatWebhookStatus(displayedWebhookStatus?.subscribedAppsStatus)}</strong>
                 <br />
-                messages subscribed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong> · message_echoes: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</strong> · feed/Kommentare: <strong>geparkt, nicht automatisch aktiviert</strong>
+                messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong> · message_echoes: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</strong> · feed/Kommentare: <strong>geparkt, nicht automatisch aktiviert</strong>
                 {!messageEchoesReady ? (
                   <>
                     <br />
@@ -791,11 +797,14 @@ export function ChannelsGrid({
                   </p>
                 ) : null}
                 {selfTestError ? <p role="alert">Selbsttest fehlgeschlagen: {selfTestError}</p> : null}
+                {!lastOutboundEchoEvent ? (
+                  <p role="status">Kein message_echoes Event empfangen. Prüfe, ob die Page-Subscription message_echoes aktiv hat und ob Meta Echo-Events an diese App liefert.</p>
+                ) : null}
                 {metaWebhookEvents.length ? (
                   <ul>
                     {metaWebhookEvents.map((event) => (
                       <li key={event.id}>
-                        {formatDateTime(event.received_at)} · {event.event_type} · Page {event.page_id ?? "unbekannt"} · Sender {event.sender_id ?? "unbekannt"} · Status {event.status}
+                        {formatDateTime(event.received_at)} · {formatMetaWebhookEventKind(event)} · Page {event.page_id ?? "unbekannt"} · Sender {event.sender_id ?? "unbekannt"} · Status {event.status}
                         {event.text ?? event.message_text ? ` · Text: ${event.text ?? event.message_text}` : ""}
                         {event.error_reason ? ` · Grund: ${event.error_reason}` : ""}
                       </li>
@@ -948,7 +957,7 @@ function formatWebhookStatus(status: "active" | "missing" | "error" | "unknown" 
   if (status === "active") return "aktiv";
   if (status === "missing") return "fehlt";
   if (status === "error") return "Fehler";
-  return "unbekannt";
+  return "nicht geprüft";
 }
 
 function formatScopeList(scopes: string[] | null | undefined): string {
@@ -966,4 +975,20 @@ function getFacebookCommentBlockingReason(
     return "Page-Webhook-Feld feed ist nicht aktiv. Bitte Page-Webhooks prüfen oder aktivieren.";
   }
   return "noch kein echtes feed/comment Event von Meta empfangen.";
+}
+
+function isOutboundEchoEvent(event: MetaWebhookEvent): boolean {
+  const status = event.status.toLowerCase();
+  const text = `${event.text ?? ""} ${event.message_text ?? ""}`.toLowerCase();
+  return event.event_type === "messages" && (status.includes("message_echoes") || status.includes("outbound") || text.includes("message_echoes / outbound"));
+}
+
+function isInboundMessageEvent(event: MetaWebhookEvent): boolean {
+  return event.event_type === "messages" && !isOutboundEchoEvent(event);
+}
+
+function formatMetaWebhookEventKind(event: MetaWebhookEvent): string {
+  if (isOutboundEchoEvent(event)) return "message_echoes / outbound";
+  if (event.event_type === "messages") return "messages / inbound";
+  return event.event_type;
 }

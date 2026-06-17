@@ -565,6 +565,8 @@ function buildFacebookPagesFetchResult(
 
 export type FacebookPageWebhookFieldStatus = "active" | "missing" | "unknown";
 
+export const FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS = ["messages", "message_echoes"] as const;
+
 export type FacebookPageWebhookStatus = {
   ok: boolean;
   pageId: string | null;
@@ -625,7 +627,7 @@ export async function subscribeFacebookPage(
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`,
   );
-  url.searchParams.set("subscribed_fields", "messages,message_echoes");
+  url.searchParams.set("subscribed_fields", FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS.join(","));
   url.searchParams.set("access_token", pageAccessToken);
   const response = await fetch(url, { method: "POST", cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as {
