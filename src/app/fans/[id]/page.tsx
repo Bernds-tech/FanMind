@@ -36,6 +36,11 @@ import {
   normalizeHttpUrl,
 } from "@/lib/channelSources";
 import styles from "./fan-detail.module.css";
+import {
+  getMessageSourceContext,
+  getSourceContextActionLabel,
+  type MessageSourceContext,
+} from "@/lib/sourceContext";
 import { AiReplySuggestions } from "./AiReplySuggestions";
 import {
   saveManualSentReply,
@@ -49,6 +54,7 @@ type FanDetailPageProps = {
     notice?: string | string[];
     seen_message?: string | string[];
     channel?: string | string[];
+    source?: string | string[];
   }>;
 };
 
@@ -71,6 +77,7 @@ type FanDetailWorkspaceProps = {
   contactAiProfile: ContactAiProfileRow | null;
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
+  activeSource: string;
 };
 
 type ConversationChannelKey =
@@ -140,6 +147,7 @@ function FanDetailWorkspace({
   contactAiProfile,
   workspaceVoiceProfile,
   activeChannel,
+  activeSource,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -200,6 +208,7 @@ function FanDetailWorkspace({
             contactAiProfile={contactAiProfile}
             workspaceVoiceProfile={workspaceVoiceProfile}
             activeChannel={activeChannel}
+            activeSource={activeSource}
           />
         ) : (
           <FanNotFound />
@@ -222,6 +231,7 @@ function FanDetailContent({
   contactAiProfile,
   workspaceVoiceProfile,
   activeChannel,
+  activeSource,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -235,14 +245,18 @@ function FanDetailContent({
   contactAiProfile: ContactAiProfileRow | null;
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
+  activeSource: string;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const channelTabs = buildConversationChannelTabs(
     messages,
     contact.id,
     activeChannel,
+    activeSource,
   );
-  const filteredMessages = filterMessagesByChannel(messages, activeChannel);
+  const sourceFilters = buildSourceFilters(messages, contact.id, activeChannel, activeSource);
+  const channelMessages = filterMessagesByChannel(messages, activeChannel);
+  const filteredMessages = filterMessagesBySource(channelMessages, activeSource);
   const timeline = filteredMessages.length
     ? buildMessageTimeline(filteredMessages)
     : [];
@@ -332,6 +346,18 @@ function FanDetailContent({
                 </Link>
               ))}
             </nav>
+            <nav className={styles.sourceTabs} aria-label="Verlauf nach Ursprung filtern">
+              {sourceFilters.map((filter) => (
+                <Link
+                  aria-current={filter.active ? "page" : undefined}
+                  className={filter.active ? styles.sourceTabActive : styles.sourceTab}
+                  href={filter.href}
+                  key={filter.key}
+                >
+                  {filter.label}
+                </Link>
+              ))}
+            </nav>
             {conversationsError ? (
               <p className={dashboardStyles.error}>
                 <strong>
@@ -370,6 +396,7 @@ function FanDetailContent({
                         <span className={styles.channelBadge}>
                           {item.channel}
                         </span>
+                        <span className={styles.sourceBadge}>{item.sourceContext.contextLabel}</span>
                       </div>
                       <p>{item.text}</p>
                       <OriginalChatAction
@@ -379,6 +406,11 @@ function FanDetailContent({
                         )}
                         compact
                         url={item.url}
+                      />
+                      <OriginalChatAction
+                        actionLabel={getSourceContextActionLabel(item.sourceContext)}
+                        compact
+                        url={item.sourceContext.contextUrl ?? undefined}
                       />
                     </div>
                   </article>
@@ -492,6 +524,7 @@ function buildConversationChannelTabs(
   messages: ConversationMessageRow[],
   contactId: string,
   activeChannel: ConversationChannelKey,
+  activeSource: string,
 ) {
   return conversationChannelTabs.map((tab) => {
     const channelMessages =
@@ -499,13 +532,64 @@ function buildConversationChannelTabs(
     const hasUnread = channelMessages.some(
       (message) => message.direction === "inbound" && !message.seen_at,
     );
-    const href =
-      tab.key === "all"
-        ? `/fans/${contactId}`
-        : `/fans/${contactId}?channel=${tab.key}`;
+    const params = new URLSearchParams();
+    if (tab.key !== "all") params.set("channel", tab.key);
+    if (activeSource !== "all") params.set("source", activeSource);
+    const query = params.toString();
+    const href = `/fans/${contactId}${query ? `?${query}` : ""}`;
 
     return { ...tab, active: tab.key === activeChannel, hasUnread, href };
   });
+}
+
+function buildSourceFilters(
+  messages: ConversationMessageRow[],
+  contactId: string,
+  activeChannel: ConversationChannelKey,
+  activeSource: string,
+) {
+  const channelMessages = filterMessagesByChannel(messages, activeChannel);
+  const contexts = new Map<string, MessageSourceContext>();
+
+  for (const message of channelMessages) {
+    const context = getMessageSourceContext(message);
+    if (!contexts.has(context.contextKey)) {
+      contexts.set(context.contextKey, context);
+    }
+  }
+
+  const paramsFor = (source: string) => {
+    const params = new URLSearchParams();
+    if (activeChannel !== "all") params.set("channel", activeChannel);
+    if (source !== "all") params.set("source", source);
+    const query = params.toString();
+    return `/fans/${contactId}${query ? `?${query}` : ""}`;
+  };
+
+  return [
+    {
+      key: "all",
+      label: "Alle Ursprünge",
+      active: activeSource === "all",
+      href: paramsFor("all"),
+    },
+    ...Array.from(contexts.values()).map((context) => ({
+      key: context.contextKey,
+      label: context.contextLabel,
+      active: activeSource === context.contextKey,
+      href: paramsFor(context.contextKey),
+    })),
+  ];
+}
+
+function filterMessagesBySource(
+  messages: ConversationMessageRow[],
+  activeSource: string,
+): ConversationMessageRow[] {
+  if (activeSource === "all") return messages;
+  return messages.filter(
+    (message) => getMessageSourceContext(message).contextKey === activeSource,
+  );
 }
 
 function filterMessagesByChannel(
@@ -813,6 +897,7 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
     url:
       normalizeHttpUrl(message.reply_target_url) ??
       normalizeHttpUrl(message.source_url),
+    sourceContext: getMessageSourceContext(message),
   }));
 }
 
@@ -983,6 +1068,7 @@ export default async function FanDetailPage({
   const activeChannel = normalizeConversationChannel(
     normalizeParam(pageSearchParams?.channel),
   );
+  const activeSource = normalizeParam(pageSearchParams?.source) || "all";
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -1068,6 +1154,7 @@ export default async function FanDetailPage({
           contactAiProfile={contactAiProfileResult?.profile ?? null}
           workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
           activeChannel={activeChannel}
+          activeSource={activeSource}
         />
       ) : (
         <section
