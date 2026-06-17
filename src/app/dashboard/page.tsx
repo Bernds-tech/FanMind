@@ -405,24 +405,33 @@ function WorkspaceDetails({
             </p>
           ) : null}
           {newMessageItems.length ? (
-            <div className={styles.workInboxList}>
-              {newMessageItems.map((item) => (
-                <article className={styles.workInboxItem} key={item.id}>
-                  <div>
-                    <span className={styles.tableBadge}>Neue Nachricht</span>
-                    <h3>
-                      <Link className={styles.contactNameLink} href={`/fans/${item.contactId}?seen_message=${item.id}&from=dashboard`}>
-                        {item.name}
-                      </Link>
-                    </h3>
-                    <p>{item.excerpt}</p>
-                    <small>{item.source} · {formatDateTime(item.createdAt)}</small>
-                  </div>
-                  <div className={styles.workInboxMeta}>
-                    <Link className={styles.moduleHeaderLink} href={`/fans/${item.contactId}?seen_message=${item.id}&from=dashboard`}>Öffnen</Link>
-                  </div>
-                </article>
-              ))}
+            <div className={styles.newMessageList}>
+              {newMessageItems.map((item) => {
+                const detailHref = `/fans/${item.contactId}?seen_message=${item.id}&from=dashboard`;
+
+                return (
+                  <article className={styles.newMessageRow} key={item.id}>
+                    <div className={styles.newMessageMain}>
+                      <div className={styles.newMessageHeader}>
+                        <Link
+                          className={styles.contactNameLink}
+                          href={detailHref}
+                        >
+                          {item.name}
+                        </Link>
+                        <span className={styles.tableBadge}>{item.source}</span>
+                        <time dateTime={item.createdAt ?? undefined}>
+                          {formatDateTime(item.createdAt)}
+                        </time>
+                      </div>
+                      <p className={styles.newMessageExcerpt}>{item.excerpt}</p>
+                    </div>
+                    <Link className={styles.newMessageAction} href={detailHref}>
+                      Öffnen
+                    </Link>
+                  </article>
+                );
+              })}
             </div>
           ) : workInboxItems.length ? (
             <div className={styles.workInboxList}>
