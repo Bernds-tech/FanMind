@@ -45,6 +45,7 @@ import { AiReplySuggestions } from "./AiReplySuggestions";
 import {
   saveManualSentReply,
   saveReplyDraft,
+  syncFacebookChatForContact,
   setConversationPriority,
 } from "../actions";
 
@@ -153,7 +154,6 @@ function FanDetailWorkspace({
     getWorkspaceNavigation("fans");
   const userLabel = userDisplayName || workspace.name || "Nutzer";
   const title = contact?.display_name ?? "Fan-Detail";
-
   return (
     <WorkspaceShell
       workspaceName={workspace.name}
@@ -371,6 +371,13 @@ function FanDetailContent({
                 <strong>Nachrichten konnten nicht geladen werden.</strong>
                 <span>{messagesError}</span>
               </p>
+            ) : null}
+            {contact && messages.some((message) => message.source_platform === "facebook" && (message.source_type === "facebook_messages" || message.message_type === "dm")) ? (
+              <form action={syncFacebookChatForContact.bind(null, contact.id)}>
+                <button className={dashboardStyles.secondaryButton} type="submit">
+                  Facebook-Chat aktualisieren
+                </button>
+              </form>
             ) : null}
             <div className={styles.timeline}>
               {timeline.length ? (

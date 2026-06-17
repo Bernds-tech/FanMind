@@ -208,6 +208,13 @@ export type SocialConnectionRow = {
   last_comment_fetch_at: string | null;
   last_comment_fetch_count: number | null;
   last_comment_fetch_error: string | null;
+  last_messenger_sync_at: string | null;
+  last_messenger_sync_checked_count: number | null;
+  last_messenger_sync_imported_inbound_count: number | null;
+  last_messenger_sync_imported_outbound_count: number | null;
+  last_messenger_sync_skipped_count: number | null;
+  last_messenger_sync_error: string | null;
+  last_messenger_sync_outbound_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -445,7 +452,7 @@ const CONTACT_AI_PROFILE_COLUMNS =
 const WORKSPACE_VOICE_PROFILE_COLUMNS =
   "id,workspace_id,user_id,owner_label,language,tone,sentence_length,emoji_style,greeting_style,closing_style,common_phrases,avoided_phrases,sales_style,examples_count,confidence_score,updated_at,created_at";
 const SOCIAL_CONNECTION_COLUMNS =
-  "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,last_comment_fetch_at,last_comment_fetch_count,last_comment_fetch_error,created_at,updated_at";
+  "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,last_comment_fetch_at,last_comment_fetch_count,last_comment_fetch_error,last_messenger_sync_at,last_messenger_sync_checked_count,last_messenger_sync_imported_inbound_count,last_messenger_sync_imported_outbound_count,last_messenger_sync_skipped_count,last_messenger_sync_error,last_messenger_sync_outbound_at,created_at,updated_at";
 const META_WEBHOOK_EVENT_COLUMNS =
   "id,workspace_id,social_connection_id,platform,source,event_type,page_id,sender_id,recipient_id,text,message_text,raw_payload,status,error_reason,message_id,received_at,created_at";
 const FOLLOWUP_COLUMNS =
@@ -760,6 +767,45 @@ export async function updateFacebookCommentFetchStatus(
   if (result.error)
     return socialConnectionError(
       `Facebook-Kommentarabruf konnte nicht aktualisiert werden: ${result.error.message}`,
+    );
+  return { connection: result.data, error: null };
+}
+
+export async function updateFacebookMessengerSyncStatus(
+  connectionId: string,
+  input: {
+    syncedAt: string;
+    checkedConversations: number;
+    importedInbound: number;
+    importedOutbound: number;
+    skippedDuplicates: number;
+    error?: string | null;
+    lastOutboundAt?: string | null;
+  },
+): Promise<SocialConnectionResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken)
+    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+
+  const result = await postgrestUpdate<SocialConnectionRow>(
+    "social_connections",
+    {
+      last_messenger_sync_at: input.syncedAt,
+      last_messenger_sync_checked_count: input.checkedConversations,
+      last_messenger_sync_imported_inbound_count: input.importedInbound,
+      last_messenger_sync_imported_outbound_count: input.importedOutbound,
+      last_messenger_sync_skipped_count: input.skippedDuplicates,
+      last_messenger_sync_error: normalizeOptionalText(input.error),
+      last_messenger_sync_outbound_at: normalizeIsoTimestamp(input.lastOutboundAt),
+    },
+    accessToken,
+    [["id", connectionId], ["platform", "facebook"]],
+    { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+  );
+
+  if (result.error)
+    return socialConnectionError(
+      `Facebook-Messenger-Sync konnte nicht aktualisiert werden: ${result.error.message}`,
     );
   return { connection: result.data, error: null };
 }

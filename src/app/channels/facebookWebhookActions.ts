@@ -5,6 +5,8 @@ import {
   decryptToken,
   getFacebookGrantedScopeNames,
   fetchFacebookPagePostsWithComments,
+  fetchFacebookMessengerConversationMessages,
+  fetchFacebookMessengerConversations,
   FacebookCommentFetchError,
   fetchFacebookPageWebhookStatus,
   fetchFacebookTokenDiagnostics,
@@ -21,7 +23,10 @@ import {
   getWorkspaceSocialConnections,
   createMetaWebhookConversationMessage,
   updateFacebookCommentFetchStatus,
+  updateFacebookMessengerSyncStatus,
   updateFacebookWebhookSubscribed,
+  markContactInboundMessagesSeen,
+  getWorkspaceContacts,
 } from "@/lib/supabase/server";
 
 export type FacebookCommentFetchResult = {
@@ -34,6 +39,16 @@ export type FacebookCommentFetchResult = {
   endpointType?: string | null;
   usedPageAccessToken?: boolean;
   tokenScopes?: string[];
+};
+
+export type FacebookMessengerSyncResult = {
+  ok: boolean;
+  syncedAt: string;
+  conversationsChecked: number;
+  importedInbound: number;
+  importedOutbound: number;
+  skippedDuplicates: number;
+  error?: string | null;
 };
 
 export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
@@ -118,6 +133,110 @@ export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchRe
       tokenScopes,
     };
   }
+}
+
+export async function syncFacebookMessengerHistory(input?: { contactId?: string; markInboundSeen?: boolean }): Promise<FacebookMessengerSyncResult> {
+  const syncedAt = new Date().toISOString();
+  const { connection, error } = await getCurrentFacebookConnection();
+  if (error || !connection) return syncError(syncedAt, error ?? "Facebook-Verbindung fehlt.");
+
+  const token = connection.page_access_token_encrypted
+    ? decryptToken(connection.page_access_token_encrypted)
+    : null;
+
+  if (!connection.page_id || !token) {
+    const message = "Page Access Token fehlt oder konnte nicht entschlüsselt werden.";
+    await updateFacebookMessengerSyncStatus(connection.id, { syncedAt, checkedConversations: 0, importedInbound: 0, importedOutbound: 0, skippedDuplicates: 0, error: message });
+    revalidatePath("/channels");
+    return syncError(syncedAt, message);
+  }
+
+  try {
+    const conversations = await fetchFacebookMessengerConversations(connection.page_id, token, 10);
+    let importedInbound = 0;
+    let importedOutbound = 0;
+    let skippedDuplicates = 0;
+    let lastOutboundAt: string | null = null;
+
+    for (const conversation of conversations) {
+      const fanParticipant = conversation.participants.find((participant) => participant.id !== connection.page_id);
+      if (input?.contactId && fanParticipant?.id) {
+        // Contact-scoped sync: only import the thread for the currently opened fan/PSID.
+        const workspaceContacts = await getWorkspaceContacts(connection.workspace_id);
+        const contact = workspaceContacts.contacts.find((entry) => entry.id === input.contactId);
+        if (!contact || contact.handle !== fanParticipant.id) continue;
+      }
+
+      const messages = await fetchFacebookMessengerConversationMessages(conversation.id, token, 25);
+      for (const message of messages.reverse()) {
+        const senderId = message.from?.id ?? fanParticipant?.id ?? null;
+        const direction = senderId === connection.page_id ? "outbound" : "inbound";
+        const fanSenderId = direction === "outbound" ? fanParticipant?.id ?? null : senderId;
+        const content = message.message ?? getSyncAttachmentFallbackText(message.attachments, direction);
+        if (!content) continue;
+
+        const result = await createMetaWebhookConversationMessage({
+          workspaceId: connection.workspace_id,
+          senderId: fanSenderId,
+          sourcePlatform: "facebook",
+          authorLabel: direction === "outbound" ? connection.page_name ?? "Team" : message.from?.name ?? fanParticipant?.name ?? "Facebook Nutzer",
+          content,
+          messageType: "dm",
+          sourceType: "facebook_messages",
+          externalMessageId: message.id,
+          externalThreadId: conversation.id,
+          originalTextExcerpt: content,
+          direction,
+          attachments: message.attachments,
+          messageKind: getSyncMessageKind(message.message, message.attachments),
+          receivedAt: message.createdTime,
+        });
+        if (result.error) throw result.error;
+        if (result.conversation) {
+          if (direction === "outbound") {
+            importedOutbound += 1;
+            lastOutboundAt = message.createdTime ?? syncedAt;
+          } else {
+            importedInbound += 1;
+          }
+        } else {
+          skippedDuplicates += 1;
+        }
+      }
+    }
+
+    await updateFacebookMessengerSyncStatus(connection.id, { syncedAt, checkedConversations: conversations.length, importedInbound, importedOutbound, skippedDuplicates, error: null, lastOutboundAt });
+    if (input?.contactId && input.markInboundSeen) await markContactInboundMessagesSeen({ workspaceId: connection.workspace_id, contactId: input.contactId });
+    revalidatePath("/channels");
+    revalidatePath("/inbox");
+    if (input?.contactId) revalidatePath(`/fans/${input.contactId}`);
+    return { ok: true, syncedAt, conversationsChecked: conversations.length, importedInbound, importedOutbound, skippedDuplicates, error: null };
+  } catch (syncErrorValue) {
+    const message = syncErrorValue instanceof Error ? syncErrorValue.message : "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.";
+    await updateFacebookMessengerSyncStatus(connection.id, { syncedAt, checkedConversations: 0, importedInbound: 0, importedOutbound: 0, skippedDuplicates: 0, error: message });
+    revalidatePath("/channels");
+    return syncError(syncedAt, message);
+  }
+}
+
+function syncError(syncedAt: string, error: string): FacebookMessengerSyncResult {
+  return { ok: false, syncedAt, conversationsChecked: 0, importedInbound: 0, importedOutbound: 0, skippedDuplicates: 0, error };
+}
+
+function getSyncAttachmentFallbackText(attachments: FacebookMessengerSyncAttachment[] | null, direction: "inbound" | "outbound"): string | null {
+  const type = attachments?.[0]?.type;
+  if (!type) return null;
+  const suffix = direction === "outbound" ? "gesendet" : "empfangen";
+  return ({ image: `Bild ${suffix}`, video: `Video ${suffix}`, audio: `Audio ${suffix}`, file: `Datei ${suffix}`, unknown: `Anhang ${suffix}` })[type];
+}
+
+type FacebookMessengerSyncAttachment = NonNullable<Awaited<ReturnType<typeof fetchFacebookMessengerConversationMessages>>[number]["attachments"]>[number];
+
+function getSyncMessageKind(text: string | null, attachments: FacebookMessengerSyncAttachment[] | null): string {
+  if (text && attachments?.length) return "mixed";
+  if (!attachments?.length) return "text";
+  const types = Array.from(new Set(attachments.map((attachment) => attachment.type)));
+  return types.length === 1 ? types[0] : "mixed";
 }
 
 export async function checkFacebookPageWebhooks(): Promise<FacebookPageWebhookActionResult> {

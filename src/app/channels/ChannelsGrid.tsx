@@ -8,6 +8,8 @@ import { CHANNEL_SOURCE_CONFIGS, type PreparedSourceType } from "@/lib/channelSo
 import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
+  syncFacebookMessengerHistory,
+  type FacebookMessengerSyncResult,
   type FacebookPageWebhookActionResult,
 } from "./facebookWebhookActions";
 
@@ -28,6 +30,13 @@ type FacebookConnection = {
   last_comment_fetch_at: string | null;
   last_comment_fetch_count: number | null;
   last_comment_fetch_error: string | null;
+  last_messenger_sync_at: string | null;
+  last_messenger_sync_checked_count: number | null;
+  last_messenger_sync_imported_inbound_count: number | null;
+  last_messenger_sync_imported_outbound_count: number | null;
+  last_messenger_sync_skipped_count: number | null;
+  last_messenger_sync_error: string | null;
+  last_messenger_sync_outbound_at: string | null;
 };
 
 type MetaWebhookStorageHealth = {
@@ -389,6 +398,8 @@ export function ChannelsGrid({
   const [selfTestError, setSelfTestError] = useState<string | null>(null);
   const [pageWebhookPending, setPageWebhookPending] = useState<"check" | "activate" | null>(null);
   const [pageWebhookResult, setPageWebhookResult] = useState<FacebookPageWebhookActionResult | null>(null);
+  const [messengerSyncPending, setMessengerSyncPending] = useState(false);
+  const [messengerSyncResult, setMessengerSyncResult] = useState<FacebookMessengerSyncResult | null>(null);
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -408,6 +419,7 @@ export function ChannelsGrid({
     setSelfTestError(null);
     setSelfTestResult(null);
     setPageWebhookResult(null);
+    setMessengerSyncResult(null);
     setActiveChannel(channel);
   };
 
@@ -462,6 +474,28 @@ export function ChannelsGrid({
     }
   }
 
+
+  async function runMessengerSync() {
+    setMessengerSyncPending(true);
+    setMessengerSyncResult(null);
+    try {
+      const result = await syncFacebookMessengerHistory();
+      setMessengerSyncResult(result);
+      router.refresh();
+    } catch (error) {
+      setMessengerSyncResult({
+        ok: false,
+        syncedAt: new Date().toISOString(),
+        conversationsChecked: 0,
+        importedInbound: 0,
+        importedOutbound: 0,
+        skippedDuplicates: 0,
+        error: error instanceof Error ? error.message : "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.",
+      });
+    } finally {
+      setMessengerSyncPending(false);
+    }
+  }
 
   const lastWebhookEvent = metaWebhookEvents[0] ?? null;
   const selfTestDisabledReason = !metaWebhookStorageHealth.serviceRoleConfigured
@@ -697,6 +731,14 @@ export function ChannelsGrid({
                 <br />
                 Letztes echtes feed/comment Event: <strong>{lastFeedCommentEvent ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}` : "noch kein echter Kommentar empfangen"}</strong>
                 <br />
+                Letzter Messenger-Sync: <strong>{facebookConnection.last_messenger_sync_at ? `${formatDateTime(facebookConnection.last_messenger_sync_at)} · ${facebookConnection.last_messenger_sync_checked_count ?? 0} Conversations geprüft · inbound ${facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} · outbound ${facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} · Dubletten ${facebookConnection.last_messenger_sync_skipped_count ?? 0}` : "noch nicht ausgeführt"}</strong>
+                <br />
+                Letzte importierte outbound Message: <strong>{facebookConnection.last_messenger_sync_outbound_at ? formatDateTime(facebookConnection.last_messenger_sync_outbound_at) : "noch keine via Sync importiert"}</strong>
+                {facebookConnection.last_messenger_sync_error ? (<>
+                  <br />
+                  Messenger-Sync Fehler: <strong>{facebookConnection.last_messenger_sync_error}</strong>
+                </>) : null}
+                <br />
                 Letzter Kommentar-Abruf: <strong>{facebookConnection.last_comment_fetch_at ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert` : "geparkt, nicht ausgeführt"}</strong>
                 {(facebookConnection.last_comment_fetch_error) ? (
                   <>
@@ -729,7 +771,7 @@ export function ChannelsGrid({
                 {!messageEchoesReady ? (
                   <>
                     <br />
-                    <strong>Ausgehende Page-Nachrichten werden erst angezeigt, wenn message_echoes abonniert ist.</strong>
+                    <strong>Keine outbound Echo-Events empfangen. Nutze Messenger-Sync als Fallback.</strong>
                   </>
                 ) : null}
                 {displayedWebhookStatus?.error ? (
@@ -762,8 +804,20 @@ export function ChannelsGrid({
                   >
                     {pageWebhookPending === "activate" ? "Page-Webhooks aktivieren ..." : "Page-Webhooks aktivieren"}
                   </button>
-
+                  <button
+                    type="button"
+                    className={styles.secondaryModalButton}
+                    onClick={runMessengerSync}
+                    disabled={messengerSyncPending}
+                  >
+                    {messengerSyncPending ? "Messenger-Verlauf synchronisiert ..." : "Messenger-Verlauf synchronisieren"}
+                  </button>
                 </div>
+                {messengerSyncResult ? (
+                  <p className={styles.modalNotice} role={messengerSyncResult.ok ? "status" : "alert"}>
+                    Messenger-Sync: {messengerSyncResult.conversationsChecked} Conversations geprüft · {messengerSyncResult.importedInbound} inbound neu · {messengerSyncResult.importedOutbound} outbound neu · {messengerSyncResult.skippedDuplicates} Dubletten übersprungen{messengerSyncResult.error ? ` · Fehler: ${messengerSyncResult.error}` : ""}
+                  </p>
+                ) : null}
              </>
             ) : null}
             {activeChannel.key === "facebook_messages" && facebookConnection && metaWebhookError ? (
@@ -798,7 +852,7 @@ export function ChannelsGrid({
                 ) : null}
                 {selfTestError ? <p role="alert">Selbsttest fehlgeschlagen: {selfTestError}</p> : null}
                 {!lastOutboundEchoEvent ? (
-                  <p role="status">Kein message_echoes Event empfangen. Prüfe, ob die Page-Subscription message_echoes aktiv hat und ob Meta Echo-Events an diese App liefert.</p>
+                  <p role="status">Keine outbound Echo-Events empfangen. Nutze Messenger-Sync als Fallback; message_echoes bleibt weiterhin aktiv und wird verarbeitet, sobald Meta Events liefert.</p>
                 ) : null}
                 {metaWebhookEvents.length ? (
                   <ul>

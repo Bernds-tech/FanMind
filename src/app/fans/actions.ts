@@ -581,3 +581,17 @@ function getDueDate(inDays: number | null | undefined): string | null {
 
   return dueDate.toISOString().slice(0, 10);
 }
+
+export async function syncFacebookChatForContact(contactId: string) {
+  const { syncFacebookMessengerHistory } = await import("@/app/channels/facebookWebhookActions");
+  const result = await syncFacebookMessengerHistory({ contactId, markInboundSeen: true });
+  const params = new URLSearchParams();
+  params.set(
+    "notice",
+    result.ok
+      ? `Facebook-Chat synchronisiert: ${result.importedInbound} inbound, ${result.importedOutbound} outbound neu.`
+      : "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.",
+  );
+  revalidatePath(`/fans/${contactId}`);
+  redirect(`/fans/${contactId}?${params.toString()}`);
+}

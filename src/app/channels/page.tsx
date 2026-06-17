@@ -18,7 +18,7 @@ import { ChannelsGrid } from "./ChannelsGrid";
 
 type SafeFacebookConnection = Pick<
   SocialConnectionRow,
-  "page_name" | "page_id" | "webhook_subscribed" | "last_event_at" | "scopes" | "last_comment_fetch_at" | "last_comment_fetch_count" | "last_comment_fetch_error"
+  "page_name" | "page_id" | "webhook_subscribed" | "last_event_at" | "scopes" | "last_comment_fetch_at" | "last_comment_fetch_count" | "last_comment_fetch_error" | "last_messenger_sync_at" | "last_messenger_sync_checked_count" | "last_messenger_sync_imported_inbound_count" | "last_messenger_sync_imported_outbound_count" | "last_messenger_sync_skipped_count" | "last_messenger_sync_error" | "last_messenger_sync_outbound_at"
 > & { has_page_access_token: boolean };
 
 type FacebookLiveSetupStatus = {
@@ -163,6 +163,13 @@ export default async function ChannelsPage({
             last_comment_fetch_at: facebookConnection.last_comment_fetch_at,
             last_comment_fetch_count: facebookConnection.last_comment_fetch_count,
             last_comment_fetch_error: facebookConnection.last_comment_fetch_error,
+            last_messenger_sync_at: facebookConnection.last_messenger_sync_at,
+            last_messenger_sync_checked_count: facebookConnection.last_messenger_sync_checked_count,
+            last_messenger_sync_imported_inbound_count: facebookConnection.last_messenger_sync_imported_inbound_count,
+            last_messenger_sync_imported_outbound_count: facebookConnection.last_messenger_sync_imported_outbound_count,
+            last_messenger_sync_skipped_count: facebookConnection.last_messenger_sync_skipped_count,
+            last_messenger_sync_error: facebookConnection.last_messenger_sync_error,
+            last_messenger_sync_outbound_at: facebookConnection.last_messenger_sync_outbound_at,
           } : null}
           facebookError={Boolean(params.facebook_error)}
           metaWebhookEvents={metaWebhookEventsResult?.events ?? []}
