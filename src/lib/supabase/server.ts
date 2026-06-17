@@ -780,7 +780,8 @@ export async function disconnectFacebookSocialConnection(
   return { connection: result.data, error: null };
 }
 
-export async function findFacebookSocialConnectionByPageId(
+export async function findMetaSocialConnectionByPageId(
+  platform: "facebook" | "instagram",
   pageId: string,
 ): Promise<SocialConnectionResult> {
   const serviceAccessToken = getServiceAccessToken();
@@ -795,7 +796,7 @@ export async function findFacebookSocialConnectionByPageId(
     serviceAccessToken,
     SOCIAL_CONNECTION_COLUMNS,
     [
-      ["platform", "facebook"],
+      ["platform", platform],
       ["status", "connected"],
       ["page_id", pageId],
     ],
@@ -863,7 +864,8 @@ export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
   socialConnectionId?: string | null;
-  eventType: "feed" | "feed_comment" | "messages" | "unknown";
+  platform?: "facebook" | "instagram";
+  eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
   pageId?: string | null;
   senderId?: string | null;
   recipientId?: string | null;
@@ -891,7 +893,7 @@ export async function createMetaWebhookDebugEvent(input: {
     {
       workspace_id: input.workspaceId ?? null,
       social_connection_id: input.socialConnectionId ?? null,
-      platform: "facebook",
+      platform: input.platform ?? "facebook",
       source: "meta_webhook",
       event_type: input.eventType,
       page_id: normalizeOptionalText(input.pageId),
@@ -1615,13 +1617,14 @@ function extractCommonPhrases(content: string): string[] {
   return ["Danke", "Liebe Grüße", "Viele Grüße"].filter((phrase) => content.toLowerCase().includes(phrase.toLowerCase()));
 }
 
-export async function createFacebookWebhookConversationMessage(input: {
+export async function createMetaWebhookConversationMessage(input: {
   workspaceId: string;
   senderId?: string | null;
+  sourcePlatform: "facebook" | "instagram";
   authorLabel: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1657,13 +1660,13 @@ export async function createFacebookWebhookConversationMessage(input: {
       "POST",
       {
         workspace_id: input.workspaceId,
-        display_name: input.authorLabel || "Facebook Nutzer",
+        display_name: input.authorLabel || (input.sourcePlatform === "instagram" ? "Instagram Nutzer" : "Facebook Nutzer"),
         handle,
-        source_platform: "facebook",
+        source_platform: input.sourcePlatform,
         language: "de",
         status: "new",
-        tags: ["facebook"],
-        summary: "Automatisch aus einem eingehenden Facebook-Webhook angelegt.",
+        tags: [input.sourcePlatform],
+        summary: `Automatisch aus einem eingehenden ${input.sourcePlatform === "instagram" ? "Instagram" : "Facebook"}-Webhook angelegt.`,
       },
       getServiceAccessToken(),
       { select: CONTACT_COLUMNS, single: true },
@@ -1680,7 +1683,8 @@ export async function createFacebookWebhookConversationMessage(input: {
     contactId: contact.id,
     content: input.content,
     messageType: input.messageType,
-    sourceType: input.sourceType ?? (input.messageType === "comment" ? "facebook_comments" : "facebook_messages"),
+    sourcePlatform: input.sourcePlatform,
+    sourceType: input.sourceType ?? (input.messageType === "comment" ? `${input.sourcePlatform}_comments` : `${input.sourcePlatform}_messages`),
     sourceUrl: input.sourceUrl,
     replyTargetUrl: input.replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1697,7 +1701,7 @@ export async function createFacebookWebhookConversationMessage(input: {
     getServiceAccessToken(),
     [
       ["workspace_id", input.workspaceId],
-      ["platform", "facebook"],
+      ["platform", input.sourcePlatform],
       ["status", "connected"],
     ],
   );
@@ -1707,10 +1711,11 @@ export async function createFacebookWebhookConversationMessage(input: {
 
 export async function createMetaTestConversationMessage(input: {
   workspaceId: string;
+  sourcePlatform?: "facebook" | "instagram";
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1734,7 +1739,7 @@ export async function createMetaTestConversationMessage(input: {
       CONVERSATION_MESSAGE_COLUMNS,
       [
         ["workspace_id", input.workspaceId],
-        ["source_platform", "facebook"],
+        ["source_platform", input.sourcePlatform ?? "facebook"],
         ["external_message_id", externalMessageId],
       ],
       1,
@@ -1755,7 +1760,8 @@ export async function createMetaTestConversationMessage(input: {
   const conversationResult = await ensureMetaTestConversation({
     workspaceId: input.workspaceId,
     contactId: input.contactId,
-    sourceType: input.sourceType ?? (input.messageType === "comment" ? "facebook_comments" : "facebook_messages"),
+    sourcePlatform: input.sourcePlatform ?? "facebook",
+    sourceType: input.sourceType ?? (input.messageType === "comment" ? `${input.sourcePlatform ?? "facebook"}_comments` : `${input.sourcePlatform ?? "facebook"}_messages`),
     sourceUrl,
     replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1781,7 +1787,7 @@ export async function createMetaTestConversationMessage(input: {
       contact_id: input.contactId,
       direction: "inbound",
       message_type: input.messageType,
-      source_platform: "facebook",
+      source_platform: input.sourcePlatform ?? "facebook",
       source_url: sourceUrl,
       reply_target_url: replyTargetUrl,
       source_type: normalizeMessageType(input.sourceType ?? input.messageType),
@@ -1789,10 +1795,10 @@ export async function createMetaTestConversationMessage(input: {
       external_message_id: normalizeOptionalText(input.externalMessageId),
       external_post_id: normalizeOptionalText(input.externalPostId),
       external_comment_id: normalizeOptionalText(input.externalCommentId),
-      original_author_label: normalizeOptionalText(input.authorLabel) ?? "Facebook Nutzer",
+      original_author_label: normalizeOptionalText(input.authorLabel) ?? (input.sourcePlatform === "instagram" ? "Instagram Nutzer" : "Facebook Nutzer"),
       original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content),
       author_label:
-        normalizeOptionalText(input.authorLabel) ?? "Facebook Nutzer",
+        normalizeOptionalText(input.authorLabel) ?? (input.sourcePlatform === "instagram" ? "Instagram Nutzer" : "Facebook Nutzer"),
       content,
     },
     getServiceAccessToken(),
@@ -1810,7 +1816,7 @@ export async function createMetaTestConversationMessage(input: {
     {
       last_message_preview: content.slice(0, 240),
       last_inbound_at: new Date().toISOString(),
-      source_platform: "facebook",
+      source_platform: input.sourcePlatform ?? "facebook",
       source_type: normalizeMessageType(input.sourceType ?? input.messageType),
       source_url: sourceUrl ?? conversationResult.conversation.source_url,
       reply_target_url:
@@ -1855,6 +1861,7 @@ export async function createMetaTestConversationMessage(input: {
 async function ensureMetaTestConversation(input: {
   workspaceId: string;
   contactId: string;
+  sourcePlatform: "facebook" | "instagram";
   sourceType: string;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
@@ -1873,7 +1880,7 @@ async function ensureMetaTestConversation(input: {
       [
         ["workspace_id", input.workspaceId],
         ["contact_id", input.contactId],
-        ["source_platform", "facebook"],
+        ["source_platform", input.sourcePlatform],
         ["external_thread_id", externalThreadId],
         ["source_type", normalizeMessageType(input.sourceType)],
       ],
@@ -1898,7 +1905,7 @@ async function ensureMetaTestConversation(input: {
     [
       ["workspace_id", input.workspaceId],
       ["contact_id", input.contactId],
-      ["source_platform", "facebook"],
+      ["source_platform", input.sourcePlatform],
     ],
     undefined,
     false,
@@ -1940,7 +1947,7 @@ async function ensureMetaTestConversation(input: {
       contact_id: input.contactId,
       status: "open",
       priority: "normal",
-      source_platform: "facebook",
+      source_platform: input.sourcePlatform,
       source_type: normalizeMessageType(input.sourceType),
       source_url: sourceUrl,
       reply_target_url: replyTargetUrl,
@@ -2739,6 +2746,8 @@ function normalizeMessageType(value: string | null | undefined): string {
   return [
     "facebook_messages",
     "facebook_comments",
+    "instagram_messages",
+    "instagram_comments",
     "dm",
     "comment",
     "post",

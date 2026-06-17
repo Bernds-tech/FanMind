@@ -1,14 +1,15 @@
 import {
-  createFacebookWebhookConversationMessage,
+  createMetaWebhookConversationMessage,
   createMetaWebhookDebugEvent,
-  findFacebookSocialConnectionByPageId,
+  findMetaSocialConnectionByPageId,
   findMetaWebhookFallbackWorkspaceId,
 } from "@/lib/supabase/server";
 
 export type MetaWebhookEvent = {
-  eventType: "feed" | "feed_comment" | "messages" | "unknown";
+  eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
   messageType: "dm" | "comment";
-  channelType: "facebook_messages" | "facebook_comments";
+  channelType: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments";
+  sourcePlatform: "facebook" | "instagram";
   content: string | null;
   externalMessageId: string | null;
   externalThreadId: string | null;
@@ -51,18 +52,20 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
         ? stringValue(item.recipient.id)
         : entryPageId;
 
+      const isInstagram = isInstagramMessagingItem(item, payload);
       events.push({
         eventType: "messages",
         messageType: "dm",
-        channelType: "facebook_messages",
+        channelType: isInstagram ? "instagram_messages" : "facebook_messages",
+        sourcePlatform: isInstagram ? "instagram" : "facebook",
         content: text,
         externalMessageId: mid,
         externalThreadId: senderId && pageId ? `${pageId}:${senderId}` : senderId,
         externalPostId: null,
         externalCommentId: null,
-        sourceUrl: null,
-        replyTargetUrl: null,
-        authorLabel: senderId ? `Facebook Nutzer ${senderId}` : "Facebook Nutzer",
+        sourceUrl: validUrl(stringValue(message?.link) ?? stringValue(message?.url)),
+        replyTargetUrl: validUrl(stringValue(message?.link) ?? stringValue(message?.url)),
+        authorLabel: (isRecord(item.sender) ? stringValue(item.sender.username) : null) ?? (senderId ? `${isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"} ${senderId}` : (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer")),
         pageId,
         senderId,
         recipientId: pageId,
@@ -77,29 +80,31 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       const value = isRecord(change.value) ? change.value : undefined;
       const field = stringValue(change.field);
       const item = stringValue(value?.item) ?? field;
-      const content = stringValue(value?.message) ?? stringValue(value?.comment_message) ?? stringValue(value?.text);
+      const isInstagram = isInstagramChange(change, payload);
+      const content = stringValue(value?.message) ?? stringValue(value?.comment_message) ?? stringValue(value?.text) ?? stringValue(value?.caption);
       const commentId = stringValue(value?.comment_id) ?? stringValue(value?.id);
-      const permalink = stringValue(value?.permalink_url) ?? stringValue(value?.link);
-      const postId = stringValue(value?.post_id) ?? stringValue(value?.parent_id);
+      const permalink = validUrl(stringValue(value?.permalink_url) ?? stringValue(value?.link) ?? (isRecord(value?.media) ? stringValue(value.media.permalink) : null));
+      const postId = stringValue(value?.post_id) ?? stringValue(value?.media_id) ?? (isRecord(value?.media) ? stringValue(value.media.id) : null) ?? stringValue(value?.parent_id);
       const from = isRecord(value?.from) ? value.from : undefined;
       const senderId = stringValue(value?.from_id) ?? stringValue(value?.sender_id) ?? stringValue(from?.id);
-      const senderName = stringValue(value?.from_name) ?? stringValue(value?.sender_name) ?? stringValue(from?.name);
-      const isFeedField = field === "feed" || field === "comments";
+      const senderName = stringValue(value?.from_name) ?? stringValue(value?.sender_name) ?? stringValue(from?.username) ?? stringValue(from?.name) ?? stringValue(value?.username);
+      const isFeedField = field === "feed" || field === "comments" || field === "mentions";
       const isCommentItem = item === "comment" || Boolean(commentId) || field === "comments";
-      const eventType = isFeedField ? (isCommentItem ? "feed_comment" : "feed") : "unknown";
+      const eventType = isInstagram && isCommentItem ? "comments" : isFeedField ? (isCommentItem ? "feed_comment" : "feed") : "unknown";
 
       events.push({
         eventType,
         messageType: "comment",
-        channelType: "facebook_comments",
+        channelType: isInstagram ? "instagram_comments" : "facebook_comments",
+        sourcePlatform: isInstagram ? "instagram" : "facebook",
         content,
         externalMessageId: commentId,
         externalThreadId: postId ?? permalink ?? commentId,
         externalPostId: postId,
         externalCommentId: commentId,
-        sourceUrl: permalink ?? (postId ? `https://www.facebook.com/${postId}` : null),
-        replyTargetUrl: permalink ?? (postId ? `https://www.facebook.com/${postId}` : null),
-        authorLabel: senderName ?? "Facebook Nutzer",
+        sourceUrl: permalink,
+        replyTargetUrl: permalink,
+        authorLabel: senderName ?? (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"),
         pageId: entryPageId,
         senderId,
         recipientId: entryPageId,
@@ -122,7 +127,7 @@ export async function processMetaWebhookPayload(
   for (const event of events) {
     const receivedAt = new Date().toISOString();
     const connection = event.pageId
-      ? await findFacebookSocialConnectionByPageId(event.pageId)
+      ? await findMetaSocialConnectionByPageId(event.sourcePlatform, event.pageId)
       : { connection: null, error: null };
 
     if (connection.error) firstError ??= connection.error.message;
@@ -133,6 +138,7 @@ export async function processMetaWebhookPayload(
 
       const debugResult = await createMetaWebhookDebugEvent({
         workspaceId: fallbackWorkspace.workspaceId,
+        platform: event.sourcePlatform,
         eventType: event.eventType,
         pageId: event.pageId,
         senderId: event.senderId,
@@ -141,7 +147,7 @@ export async function processMetaWebhookPayload(
         rawPayload: event.rawEvent,
         status: event.pageId ? "ignored_unmapped_page" : "ignored",
         errorReason: event.pageId
-          ? "Page-ID konnte keiner Facebook-Verbindung zugeordnet werden."
+          ? "Page-ID konnte keiner Meta-Verbindung zugeordnet werden."
           : "Keine Page-ID im Meta-Event erkannt.",
         receivedAt,
       });
@@ -154,13 +160,14 @@ export async function processMetaWebhookPayload(
     let errorReason: string | null = null;
     let messageId: string | null = null;
 
-    if (event.eventType === "messages" || event.eventType === "feed" || event.eventType === "feed_comment") {
+    if (event.eventType === "messages" || event.eventType === "feed" || event.eventType === "feed_comment" || event.eventType === "comments") {
       if (event.content) {
-        const result = await createFacebookWebhookConversationMessage({
+        const result = await createMetaWebhookConversationMessage({
           workspaceId: connection.connection.workspace_id,
           senderId: event.senderId,
           content: event.content,
-          messageType: event.eventType === "feed" || event.eventType === "feed_comment" ? "comment" : event.messageType,
+          sourcePlatform: event.sourcePlatform,
+          messageType: event.eventType === "feed" || event.eventType === "feed_comment" || event.eventType === "comments" ? "comment" : event.messageType,
           sourceType: event.channelType,
           sourceUrl: event.sourceUrl,
           replyTargetUrl: event.replyTargetUrl,
@@ -193,6 +200,7 @@ export async function processMetaWebhookPayload(
 
     const debugResult = await createMetaWebhookDebugEvent({
       workspaceId: connection.connection.workspace_id,
+      platform: event.sourcePlatform,
       socialConnectionId: connection.connection.id,
       eventType: event.eventType,
       pageId: event.pageId,
@@ -212,7 +220,25 @@ export async function processMetaWebhookPayload(
 }
 
 function unknownEvent(pageId: string | null, senderId: string | null, rawEvent: unknown): MetaWebhookEvent {
-  return { eventType: "unknown", messageType: "comment", channelType: "facebook_comments", content: null, externalMessageId: null, externalThreadId: null, externalPostId: null, externalCommentId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent };
+  return { eventType: "unknown", messageType: "comment", channelType: "facebook_comments", sourcePlatform: "facebook", content: null, externalMessageId: null, externalThreadId: null, externalPostId: null, externalCommentId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent };
+}
+
+function isInstagramMessagingItem(item: Record<string, unknown>, payload: Record<string, unknown>): boolean {
+  return stringValue(payload.object) === "instagram" || stringValue(item.object) === "instagram" || Boolean(isRecord(item.message) && (item.message.attachments || item.message.is_echo === false) && (item.sender as Record<string, unknown> | undefined)?.username);
+}
+
+function isInstagramChange(change: Record<string, unknown>, payload: Record<string, unknown>): boolean {
+  const value = isRecord(change.value) ? change.value : undefined;
+  return (
+    stringValue(payload.object) === "instagram" ||
+    stringValue(value?.object) === "instagram" ||
+    Boolean(value?.media_id) ||
+    Boolean(isRecord(value?.media))
+  );
+}
+
+function validUrl(value: string | null): string | null {
+  return value && /^https?:\/\//i.test(value) ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
