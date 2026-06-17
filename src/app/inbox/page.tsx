@@ -606,6 +606,7 @@ function formatConversationType(value: string | null): string {
     facebook_comments: "Facebook Kommentare",
     instagram_messages: "Instagram Nachrichten",
     instagram_comments: "Instagram Kommentare",
+    whatsapp_messages: "WhatsApp Nachrichten",
     dm: "DM",
     comment: "Kommentar",
     post_comment: "Post-Kommentar",
@@ -661,6 +662,7 @@ function getChannelLabel(value: string | null): string {
     instagram_messages: "Instagram Nachrichten",
     instagram_comments: "Instagram Kommentare",
     whatsapp: "WhatsApp",
+    whatsapp_messages: "WhatsApp Nachrichten",
     email: "E-Mail",
     form: "Webformular",
     webform: "Webformular",
@@ -695,7 +697,7 @@ function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
   const value = (source ?? "").toLowerCase();
 
   if (value.includes("facebook_comments")) return "comment";
-  if (value.includes("facebook_messages") || value.includes("instagram_messages")) return "dm";
+  if (value.includes("facebook_messages") || value.includes("instagram_messages") || value.includes("whatsapp_messages")) return "dm";
   if (value.includes("mail")) return "email";
   if (value.includes("form") || value.includes("web")) return "form";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "post";
@@ -751,6 +753,7 @@ function getConversationType(
   if (value.includes("facebook_messages")) return "Facebook Nachrichten";
   if (value.includes("instagram_comments")) return "Instagram Kommentare";
   if (value.includes("instagram_messages")) return "Instagram Nachrichten";
+  if (value.includes("whatsapp_messages")) return "WhatsApp Nachrichten";
   if (value.includes("email")) return "E-Mail";
   if (value.includes("form")) return "Formular";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "Post-Kommentar";
