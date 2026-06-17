@@ -272,6 +272,98 @@ export async function fetchFacebookPages(
   return [];
 }
 
+export type FacebookMessengerConversation = {
+  id: string;
+  updatedTime: string | null;
+  participants: Array<{ id: string; name: string | null }>;
+};
+
+export type FacebookMessengerMessage = {
+  id: string;
+  createdTime: string | null;
+  message: string | null;
+  from: { id: string; name: string | null } | null;
+  attachments: Array<{ type: "image" | "video" | "audio" | "file" | "unknown"; url?: string; name?: string; title?: string; mime_type?: string; size?: number }> | null;
+};
+
+export async function fetchFacebookMessengerConversations(
+  pageId: string,
+  pageAccessToken: string,
+  limit = 10,
+): Promise<FacebookMessengerConversation[]> {
+  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(pageId)}/conversations`);
+  url.searchParams.set("platform", "messenger");
+  url.searchParams.set("fields", "id,updated_time,participants{id,name}");
+  url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 25))));
+  url.searchParams.set("access_token", pageAccessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as { data?: unknown[]; error?: { message?: string; code?: number; type?: string } } | null;
+  if (!response.ok) {
+    logFacebookApiError("Facebook Messenger conversations fetch failed", payload?.error);
+    throw new Error(payload?.error?.message ?? "Facebook Messenger Conversations konnten nicht abgerufen werden.");
+  }
+
+  return (payload?.data ?? []).filter(isRecord).map((conversation) => ({
+    id: stringValue(conversation.id) ?? "",
+    updatedTime: stringValue(conversation.updated_time),
+    participants: (isRecord(conversation.participants) && Array.isArray(conversation.participants.data) ? conversation.participants.data : [])
+      .filter(isRecord)
+      .map((participant) => ({ id: stringValue(participant.id) ?? "", name: stringValue(participant.name) }))
+      .filter((participant) => participant.id),
+  })).filter((conversation) => conversation.id);
+}
+
+export async function fetchFacebookMessengerConversationMessages(
+  conversationId: string,
+  pageAccessToken: string,
+  limit = 25,
+): Promise<FacebookMessengerMessage[]> {
+  const url = new URL(`https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(conversationId)}/messages`);
+  url.searchParams.set("fields", "id,created_time,message,from{id,name},attachments{id,mime_type,name,size,image_data,video_data,file_url}");
+  url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 50))));
+  url.searchParams.set("access_token", pageAccessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as { data?: unknown[]; error?: { message?: string; code?: number; type?: string } } | null;
+  if (!response.ok) {
+    logFacebookApiError("Facebook Messenger conversation messages fetch failed", payload?.error);
+    throw new Error(payload?.error?.message ?? "Facebook Messenger Nachrichten konnten nicht abgerufen werden.");
+  }
+
+  return (payload?.data ?? []).filter(isRecord).map((message) => {
+    const from = isRecord(message.from) ? message.from : null;
+    return {
+      id: stringValue(message.id) ?? "",
+      createdTime: stringValue(message.created_time),
+      message: stringValue(message.message),
+      from: from ? { id: stringValue(from.id) ?? "", name: stringValue(from.name) } : null,
+      attachments: normalizeGraphMessageAttachments(message.attachments),
+    };
+  }).filter((message) => message.id);
+}
+
+type FacebookMessengerAttachment = NonNullable<FacebookMessengerMessage["attachments"]>[number];
+
+function normalizeGraphMessageAttachments(value: unknown): FacebookMessengerMessage["attachments"] {
+  const raw = isRecord(value) && Array.isArray(value.data) ? value.data : [];
+  const attachments = raw.filter(isRecord).map((attachment) => {
+    const imageData = isRecord(attachment.image_data) ? attachment.image_data : undefined;
+    const videoData = isRecord(attachment.video_data) ? attachment.video_data : undefined;
+    const fileUrl = stringValue(attachment.file_url);
+    const mime = stringValue(attachment.mime_type);
+    const url = validUrl(stringValue(imageData?.url) ?? stringValue(videoData?.url) ?? fileUrl);
+    return {
+      type: mime?.startsWith("image/") ? "image" : mime?.startsWith("video/") ? "video" : mime?.startsWith("audio/") ? "audio" : fileUrl ? "file" : "unknown",
+      ...(url ? { url } : {}),
+      ...(stringValue(attachment.name) ? { name: stringValue(attachment.name)! } : {}),
+      ...(mime ? { mime_type: mime } : {}),
+      ...(numberValue(attachment.size) ? { size: numberValue(attachment.size)! } : {}),
+    } satisfies FacebookMessengerAttachment;
+  });
+  return attachments.length ? attachments : null;
+}
+
 type FacebookRawPage = {
   id?: string;
   name?: string;
@@ -927,4 +1019,20 @@ async function fetchGraphCollection<T extends { id?: string }>(url: URL, errorFa
   }
 
   return items;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function validUrl(value: string | null): string | null {
+  return value && /^https?:\/\//i.test(value) ? value : null;
 }
