@@ -47,7 +47,10 @@ import {
 
 type FanDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ notice?: string | string[]; seen_message?: string | string[] }>;
+  searchParams?: Promise<{
+    notice?: string | string[];
+    seen_message?: string | string[];
+  }>;
 };
 
 type FanDetailWorkspaceProps = {
@@ -59,7 +62,6 @@ type FanDetailWorkspaceProps = {
   memories: MemoryRow[];
   memoriesError?: string;
   followups: FollowupRow[];
-  followupsError?: string;
   messages: ConversationMessageRow[];
   messagesError?: string;
   conversation: ConversationRow | null;
@@ -95,7 +97,6 @@ function FanDetailWorkspace({
   memories,
   memoriesError,
   followups,
-  followupsError,
   messages,
   messagesError,
   conversation,
@@ -124,7 +125,7 @@ function FanDetailWorkspace({
       header={{
         title,
         subtitle: "Kontaktdetail mit echten Workspace-Daten",
-        searchPlaceholder: "Suche bleibt in dieser MVP-Ansicht unverändert ...",
+        searchPlaceholder: "Fans und Nachrichten suchen ...",
         primaryActionLabel: "Zur Fanliste",
         primaryActionHref: "/fans#fans-list",
       }}
@@ -155,7 +156,6 @@ function FanDetailWorkspace({
           <FanDetailContent
             contact={contact}
             followups={followups}
-            followupsError={followupsError}
             memories={memories}
             memoriesError={memoriesError}
             messages={messages}
@@ -179,7 +179,6 @@ function FanDetailContent({
   memories,
   memoriesError,
   followups,
-  followupsError,
   messages,
   messagesError,
   conversation,
@@ -192,7 +191,6 @@ function FanDetailContent({
   memories: MemoryRow[];
   memoriesError?: string;
   followups: FollowupRow[];
-  followupsError?: string;
   messages: ConversationMessageRow[];
   messagesError?: string;
   conversation: ConversationRow | null;
@@ -205,14 +203,12 @@ function FanDetailContent({
   const tags = contact.tags?.length
     ? contact.tags
     : [formatStatus(contact.status)];
-  const fanScore = calculateFanScore(
-    contact,
-    memories.length,
-    followups.length,
-  );
   const timeline = messages.length ? buildMessageTimeline(messages) : [];
   const originalChatUrl = getOriginalChatUrl(contact, messages, conversation);
-  const originalActionLabel = getOriginalActionLabel(primaryChannel, originalChatUrl);
+  const originalActionLabel = getOriginalActionLabel(
+    primaryChannel,
+    originalChatUrl,
+  );
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
   );
@@ -244,12 +240,6 @@ function FanDetailContent({
             </dd>
           </div>
           <div className={styles.metric}>
-            <dt>Fan Score</dt>
-            <dd>
-              <strong>{fanScore}/100</strong>
-            </dd>
-          </div>
-          <div className={styles.metric}>
             <dt>Letzter Kontakt</dt>
             <dd>
               <strong>
@@ -261,42 +251,6 @@ function FanDetailContent({
             <dt>Kontakt seit</dt>
             <dd>
               <strong>{formatDate(contact.created_at)}</strong>
-            </dd>
-          </div>
-          <div className={styles.metric}>
-            <dt>Interaktionen</dt>
-            <dd>
-              <strong>
-                {messages.length + memories.length + followups.length}
-              </strong>
-            </dd>
-          </div>
-          <div className={styles.metric}>
-            <dt>Käufe</dt>
-            <dd>
-              <strong>
-                {contact.tags?.some((tag) =>
-                  tag.toLowerCase().includes("käufer"),
-                )
-                  ? "Hinweis in Tags"
-                  : "Nicht hinterlegt"}
-              </strong>
-            </dd>
-          </div>
-          <div className={styles.metric}>
-            <dt>Antwortstil-Match</dt>
-            <dd>
-              <strong>
-                {contact.language === "de" ? "Hoch · DE" : "Zu prüfen"}
-              </strong>
-            </dd>
-          </div>
-          <div className={styles.metric}>
-            <dt>Reaktionschance</dt>
-            <dd>
-              <strong>
-                {fanScore > 70 ? "Hoch" : fanScore > 48 ? "Mittel" : "Unklar"}
-              </strong>
             </dd>
           </div>
           <div className={styles.metric}>
@@ -312,112 +266,12 @@ function FanDetailContent({
             </dd>
           </div>
         </dl>
-
-        <nav className={styles.tabs} aria-label="Fan-Detail Tabs">
-          <span className={styles.tabActive}>Überblick</span>
-          <span className={styles.tab}>Verlauf</span>
-          <span className={styles.tab}>Analyse</span>
-          <span className={styles.tab}>Memory</span>
-          <span className={styles.tab}>Dateien</span>
-          <span className={styles.tab}>Follow-ups</span>
-        </nav>
       </section>
 
       <section
         className={styles.workbenchGrid}
         aria-label="Conversation Workbench"
       >
-        <aside className={styles.rail} aria-label="Fan-Kontext">
-          <ContextCard
-            title="Fan-Gedächtnis"
-            eyebrow="Echte Daten"
-            items={memories.map((memory) => ({
-              title: formatMemoryType(memory.type),
-              body: memory.content,
-              meta: `Wichtigkeit: ${memory.importance ?? "normal"} · ${formatDate(memory.created_at)}`,
-            }))}
-            emptyTitle="Noch keine Memories gespeichert."
-            emptyBody="Gespeicherte KI- oder Team-Memories erscheinen hier."
-            error={memoriesError}
-          />
-          <article className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Kontext</p>
-                <h3>Interessen, Tonalität & Grenzen</h3>
-              </div>
-              <span className={styles.pill}>MVP</span>
-            </div>
-            <div className={styles.compactList}>
-              <InfoBlock
-                title="Interessen"
-                body={
-                  contact.summary ||
-                  tags.join(", ") ||
-                  "Noch nicht sauber erkannt."
-                }
-              />
-              <InfoBlock
-                title="Kaufhistorie"
-                body={
-                  contact.tags?.some((tag) =>
-                    tag.toLowerCase().includes("käufer"),
-                  )
-                    ? "Kauf-/Kundensignal aus Tags vorhanden."
-                    : "Keine Kaufhistorie in FanMind hinterlegt."
-                }
-              />
-              <InfoBlock
-                title="Tonalität"
-                body={
-                  contact.language === "de"
-                    ? "Deutsch, direkt, hilfreich; Emojis sparsam einsetzen."
-                    : "Sprache und Stil vor Versand manuell prüfen."
-                }
-              />
-              <InfoBlock
-                title="Grenzen / No-Gos"
-                body="Keine automatische Sendung, keine extern synchronisierten Plattformdaten behaupten."
-              />
-              <InfoBlock
-                title="Gute Trigger"
-                body="Auf letzte Nachricht eingehen, Memory nutzen, nächsten manuellen Schritt klar machen."
-              />
-            </div>
-          </article>
-          <ContextCard
-            title="Offene Follow-ups"
-            eyebrow="Echte Daten"
-            items={openFollowups.map((followup) => ({
-              title: formatFollowupDueDate(followup.due_date),
-              body: followup.reason,
-              meta: `Priorität: ${followup.priority ?? "normal"} · Status: ${followup.status ?? "open"}`,
-            }))}
-            emptyTitle="Keine offenen Follow-ups."
-            emptyBody="KI-Empfehlungen können über sichere Server Actions gespeichert werden."
-            error={followupsError}
-          />
-          <ProfileStatusCard
-            conversationSummary={conversationSummary}
-            contactAiProfile={contactAiProfile}
-            workspaceVoiceProfile={workspaceVoiceProfile}
-          />
-          <article className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Dateien & Historie</p>
-                <h3>Arbeitsnotizen</h3>
-              </div>
-              <span className={styles.pill}>Empty</span>
-            </div>
-            <p className={styles.muted}>
-              Keine Dateien oder externen Plattform-Historien verknüpft. Diese
-              Workbench zeigt nur Workspace-Kontakt, Memories und Follow-ups als
-              echte Daten.
-            </p>
-          </article>
-        </aside>
-
         <main
           className={styles.conversation}
           aria-label="Kanalübergreifender Verlauf"
@@ -430,7 +284,6 @@ function FanDetailContent({
                 </p>
                 <h3>Kanalübergreifender Verlauf</h3>
               </div>
-              <span className={styles.pill}>Lokale MVP-Struktur</span>
             </div>
             <InboundMessageForm contactId={contact.id} />
             <OriginalChatAction
@@ -448,7 +301,9 @@ function FanDetailContent({
             </div>
             {conversationsError ? (
               <p className={dashboardStyles.error}>
-                <strong>Conversation-Daten konnten gerade nicht geladen werden.</strong>
+                <strong>
+                  Conversation-Daten konnten gerade nicht geladen werden.
+                </strong>
                 <span>{conversationsError}</span>
               </p>
             ) : null}
@@ -475,7 +330,10 @@ function FanDetailContent({
                     </div>
                     <p>{item.text}</p>
                     <OriginalChatAction
-                      actionLabel={getOriginalActionLabel(item.channel + " " + item.type, item.url)}
+                      actionLabel={getOriginalActionLabel(
+                        item.channel + " " + item.type,
+                        item.url,
+                      )}
                       url={item.url}
                     />
                   </article>
@@ -502,7 +360,11 @@ function FanDetailContent({
             <form className={styles.replyBox}>
               <input name="contact_id" type="hidden" value={contact.id} />
               {conversation ? (
-                <input name="conversation_id" type="hidden" value={conversation.id} />
+                <input
+                  name="conversation_id"
+                  type="hidden"
+                  value={conversation.id}
+                />
               ) : null}
               <textarea
                 name="content"
@@ -512,62 +374,45 @@ function FanDetailContent({
                 aria-label={`Antwort an ${contact.display_name} vorbereiten`}
               />
               <div className={styles.replyFooter}>
-                <button className={dashboardStyles.primaryButton} formAction={saveReplyDraft} type="submit">
+                <button
+                  className={dashboardStyles.primaryButton}
+                  formAction={saveReplyDraft}
+                  type="submit"
+                >
                   Entwurf speichern
                 </button>
-                <button className={dashboardStyles.secondaryButton} formAction={saveManualSentReply} type="submit">
+                <button
+                  className={dashboardStyles.secondaryButton}
+                  formAction={saveManualSentReply}
+                  type="submit"
+                >
                   Als manuell gesendet speichern
                 </button>
-                <OriginalChatAction actionLabel={originalActionLabel} url={originalChatUrl} />
+                <OriginalChatAction
+                  actionLabel={originalActionLabel}
+                  url={originalChatUrl}
+                />
                 <Link className={dashboardStyles.secondaryButton} href="/inbox">
                   Zur Inbox
                 </Link>
                 <span className={styles.safeBadge}>
-                  Es wird nichts automatisch gesendet. Manuell gesendet im Originalkanal.
+                  Es wird nichts automatisch gesendet. Manuell gesendet im
+                  Originalkanal.
                 </span>
               </div>
             </form>
-            <ConversationActionForms contactId={contact.id} conversation={conversation} />
+            <ConversationActionForms
+              contactId={contact.id}
+              conversation={conversation}
+            />
           </article>
         </main>
 
-        <aside className={styles.copilot} aria-label="KI-CoPilot">
-          <article className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>KI-CoPilot</p>
-                <h3>Analyse</h3>
-              </div>
-              <span className={styles.pill}>Keine Sendung</span>
-            </div>
-            <div className={styles.analysisGrid}>
-              <InfoMetric
-                label="Stimmung"
-                value={contact.status === "warm" ? "Warm" : "Neutral"}
-              />
-              <InfoMetric
-                label="Kaufinteresse"
-                value={
-                  tags.join(", ").toLowerCase().includes("vip")
-                    ? "Hoch"
-                    : "Zu prüfen"
-                }
-              />
-              <InfoMetric
-                label="Reaktionswahrscheinlichkeit"
-                value={fanScore > 70 ? "Hoch" : "Mittel"}
-              />
-              <InfoMetric
-                label="Beste Zeit"
-                value="Manuell aus Verlauf ableiten"
-              />
-              <InfoMetric label="Risiko" value="Niedrig, solange geprüft" />
-              <InfoMetric
-                label="Stil-Match"
-                value={contact.language === "de" ? "Deutsch" : "Unklar"}
-              />
-            </div>
-          </article>
+        <aside
+          className={styles.copilot}
+          aria-label="Fan-Gedächtnis und KI-Antwortvorschläge"
+        >
+          <FanMemoryCard memories={memories} memoriesError={memoriesError} />
           <AiReplySuggestions
             contact={{
               contactId: contact.id,
@@ -575,7 +420,12 @@ function FanDetailContent({
               handle: contact.handle,
               sourcePlatform: contact.source_platform,
               originalChatUrl,
-              storedConversationContext: buildAiMessageContext(messages, conversationSummary, contactAiProfile, workspaceVoiceProfile),
+              storedConversationContext: buildAiMessageContext(
+                messages,
+                conversationSummary,
+                contactAiProfile,
+                workspaceVoiceProfile,
+              ),
               originalActionLabel,
               language: contact.language,
               status: contact.status,
@@ -583,75 +433,9 @@ function FanDetailContent({
               summary: contact.summary,
             }}
           />
-          <article className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Nächste beste Aktion</p>
-                <h3>Priorisierte Empfehlung</h3>
-              </div>
-              <span className={styles.statusBadge}>
-                Priorität {openFollowups.length ? "hoch" : "mittel"}
-              </span>
-            </div>
-            <div className={styles.nextAction}>
-              <strong>
-                {openFollowups[0]?.reason ??
-                  "Letzte Nachricht prüfen und Antwortentwurf vorbereiten."}
-              </strong>
-              <p className={styles.muted}>
-                Begründung: FanMind hat {memories.length} Memories und{" "}
-                {openFollowups.length} offene Follow-ups für diesen Kontakt
-                geladen. Versand bleibt manuell.
-              </p>
-            </div>
-            <div className={styles.quickActions}>
-              <button type="button">Notiz speichern</button>
-              <button type="button">Segment zuweisen</button>
-              <button type="button">Follow-up planen</button>
-              <button type="button">Profil öffnen</button>
-            </div>
-          </article>
         </aside>
       </section>
     </>
-  );
-}
-
-function ProfileStatusCard({
-  conversationSummary,
-  contactAiProfile,
-  workspaceVoiceProfile,
-}: {
-  conversationSummary: ConversationSummaryRow | null;
-  contactAiProfile: ContactAiProfileRow | null;
-  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
-}) {
-  return (
-    <article className={styles.card}>
-      <div className={styles.cardHeader}>
-        <div>
-          <p className={dashboardStyles.eyebrow}>Memory & Stilprofile</p>
-          <h3>Profile im Aufbau</h3>
-        </div>
-        <span className={styles.pill}>MVP</span>
-      </div>
-      <InfoBlock
-        title="Fan-Profil im Aufbau"
-        body={contactAiProfile
-          ? `Sprache: ${contactAiProfile.language ?? "unbekannt"} · Ton: ${contactAiProfile.tone ?? "im Aufbau"} · Quellen: ${contactAiProfile.source_message_count ?? 0} inbound Nachrichten.`
-          : "Noch keine echten Fan-Erkenntnisse gespeichert. Fan-Profil lernt nur aus inbound Nachrichten."}
-      />
-      <InfoBlock
-        title="Workspace-Schreibstil im Aufbau"
-        body={workspaceVoiceProfile
-          ? `Ton: ${workspaceVoiceProfile.tone ?? "im Aufbau"} · Beispiele: ${workspaceVoiceProfile.examples_count ?? 0} manuell bestätigte Antworten.`
-          : "Noch kein Schreibstilprofil gespeichert. Nur bestätigte manuell gesendete Antworten verbessern den Workspace-Schreibstil."}
-      />
-      <InfoBlock
-        title="Conversation Summary"
-        body={conversationSummary?.summary || "Noch keine Langzeit-Zusammenfassung vorhanden."}
-      />
-    </article>
   );
 }
 
@@ -673,8 +457,12 @@ function ConversationStatusPanel({
   return (
     <div className={styles.conversationState}>
       <span>Status: {formatConversationStatus(conversation.status)}</span>
-      <span>Priorität: {formatConversationPriority(conversation.priority)}</span>
-      <span>Nächster Schritt: {conversation.next_step || "Antwort vorbereiten"}</span>
+      <span>
+        Priorität: {formatConversationPriority(conversation.priority)}
+      </span>
+      <span>
+        Nächster Schritt: {conversation.next_step || "Antwort vorbereiten"}
+      </span>
     </div>
   );
 }
@@ -693,7 +481,10 @@ function ConversationActionForms({
         {conversation ? (
           <input name="conversation_id" type="hidden" value={conversation.id} />
         ) : null}
-        <select name="priority" defaultValue={conversation?.priority ?? "normal"}>
+        <select
+          name="priority"
+          defaultValue={conversation?.priority ?? "normal"}
+        >
           <option value="low">Niedrig</option>
           <option value="normal">Normal</option>
           <option value="medium">Mittel</option>
@@ -775,83 +566,13 @@ function OriginalChatAction({
           {actionLabel}
         </a>
       ) : (
-        <p className={styles.originalChatMissing}>
-          {ORIGINAL_LINK_FALLBACK}.
-        </p>
+        <p className={styles.originalChatMissing}>{ORIGINAL_LINK_FALLBACK}.</p>
       )}
     </div>
   );
 }
 
-function ContextCard({
-  title,
-  eyebrow,
-  items,
-  emptyTitle,
-  emptyBody,
-  error,
-}: {
-  title: string;
-  eyebrow: string;
-  items: { title: string; body: string; meta: string }[];
-  emptyTitle: string;
-  emptyBody: string;
-  error?: string;
-}) {
-  return (
-    <article className={styles.card}>
-      <div className={styles.cardHeader}>
-        <div>
-          <p className={dashboardStyles.eyebrow}>{eyebrow}</p>
-          <h3>{title}</h3>
-        </div>
-        <span className={styles.pill}>{items.length}</span>
-      </div>
-      {error ? (
-        <p className={dashboardStyles.error}>
-          <strong>{title} konnten nicht geladen werden.</strong>
-          <span>{error}</span>
-        </p>
-      ) : null}
-      {items.length ? (
-        <div className={styles.compactList}>
-          {items.map((item) => (
-            <article
-              className={styles.compactItem}
-              key={`${item.title}-${item.body}`}
-            >
-              <strong>{item.title}</strong>
-              <p>{item.body}</p>
-              <p className={styles.muted}>{item.meta}</p>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <EmptyState title={emptyTitle} body={emptyBody} />
-      )}
-    </article>
-  );
-}
-
-function InfoBlock({ title, body }: { title: string; body: string }) {
-  return (
-    <article className={styles.compactItem}>
-      <strong>{title}</strong>
-      <p>{body}</p>
-    </article>
-  );
-}
-
-function InfoMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span className={styles.label}>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function MemoryCard({
+function FanMemoryCard({
   memories,
   memoriesError,
 }: {
@@ -859,13 +580,12 @@ function MemoryCard({
   memoriesError?: string;
 }) {
   return (
-    <article className={dashboardStyles.moduleCard}>
-      <div className={dashboardStyles.moduleHeader}>
+    <article className={styles.card}>
+      <div className={styles.cardHeader}>
         <div>
-          <p className={dashboardStyles.eyebrow}>Fan-Gedächtnis</p>
-          <h2>Gespeicherte Memories</h2>
+          <p className={dashboardStyles.eyebrow}>Echte Daten</p>
+          <h3>Fan-Gedächtnis</h3>
         </div>
-        <span>Echte Daten</span>
       </div>
       {memoriesError ? (
         <p className={dashboardStyles.error}>
@@ -874,111 +594,29 @@ function MemoryCard({
         </p>
       ) : null}
       {memories.length ? (
-        <div className={styles.contextList}>
+        <div className={styles.compactList}>
           {memories.map((memory) => (
-            <article className={styles.contextItem} key={memory.id}>
+            <article className={styles.compactItem} key={memory.id}>
+              <strong>{formatMemoryType(memory.type)}</strong>
               <p>{memory.content}</p>
-              <small>
-                {formatMemoryType(memory.type)} · Wichtigkeit:{" "}
-                {memory.importance ?? "normal"} ·{" "}
+              <p className={styles.muted}>
+                Wichtigkeit: {memory.importance ?? "normal"} ·{" "}
                 {formatDate(memory.created_at)}
-              </small>
+              </p>
             </article>
           ))}
         </div>
       ) : (
-        <EmptyState
-          title="Noch keine Memories gespeichert."
-          body="Sobald du einen KI-vorgeschlagenen Memory speicherst, erscheint er hier."
-        />
+        <EmptyState title="Noch keine Memories gespeichert." body="" />
       )}
     </article>
   );
 }
-
-function FollowupCard({
-  followups,
-  followupsError,
-  messages,
-  messagesError,
-  conversation,
-  conversationsError,
-}: {
-  followups: FollowupRow[];
-  followupsError?: string;
-  messages: ConversationMessageRow[];
-  messagesError?: string;
-  conversation: ConversationRow | null;
-  conversationsError?: string;
-}) {
-  return (
-    <article className={dashboardStyles.moduleCard}>
-      <div className={dashboardStyles.moduleHeader}>
-        <div>
-          <p className={dashboardStyles.eyebrow}>Follow-ups</p>
-          <h2>Gespeicherte nächste Schritte</h2>
-        </div>
-        <span>Manuell</span>
-      </div>
-      {followupsError ? (
-        <p className={dashboardStyles.error}>
-          <strong>Follow-ups konnten nicht geladen werden.</strong>
-          <span>{followupsError}</span>
-        </p>
-      ) : null}
-      {followups.length ? (
-        <div className={styles.contextList}>
-          {followups.map((followup) => (
-            <article className={styles.contextItem} key={followup.id}>
-              <p>{followup.reason}</p>
-              <small>
-                {formatFollowupDueDate(followup.due_date)} · Priorität:{" "}
-                {followup.priority ?? "normal"} · Status:{" "}
-                {followup.status ?? "open"}
-              </small>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          title="Noch keine Follow-ups gespeichert."
-          body="Sobald du einen KI-vorgeschlagenen Follow-up speicherst, erscheint er hier. Es wird nichts automatisch versendet."
-        />
-      )}
-    </article>
-  );
-}
-
-function PlaceholderCard({
-  eyebrow,
-  title,
-  badge,
-  body,
-}: {
-  eyebrow: string;
-  title: string;
-  badge: string;
-  body: string;
-}) {
-  return (
-    <article className={dashboardStyles.moduleCard}>
-      <div className={dashboardStyles.moduleHeader}>
-        <div>
-          <p className={dashboardStyles.eyebrow}>{eyebrow}</p>
-          <h2>{title}</h2>
-        </div>
-        <span>{badge}</span>
-      </div>
-      <EmptyState title={title} body={body} />
-    </article>
-  );
-}
-
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <div className={dashboardStyles.emptyState}>
       <strong>{title}</strong>
-      <p>{body}</p>
+      {body ? <p>{body}</p> : null}
     </div>
   );
 }
@@ -1001,35 +639,23 @@ function FanNotFound() {
   );
 }
 
-function calculateFanScore(
-  contact: ContactRow,
-  memoryCount: number,
-  followupCount: number,
-): number {
-  const tagScore = Math.min(contact.tags?.length ?? 0, 6) * 6;
-  const statusScore =
-    contact.status === "warm" ? 22 : contact.status === "active" ? 18 : 10;
-  const contextScore = contact.summary ? 14 : 0;
-  const memoryScore = Math.min(memoryCount, 4) * 5;
-  const followupScore = followupCount ? 8 : 0;
-
-  return Math.min(
-    100,
-    32 + tagScore + statusScore + contextScore + memoryScore + followupScore,
-  );
-}
-
 function buildMessageTimeline(messages: ConversationMessageRow[]) {
   return messages.map((message) => ({
     id: message.id,
     direction: formatDirection(message.direction),
-    type: message.direction === "note" && message.author_label === "Antwortentwurf"
-      ? "Antwortentwurf · nicht gesendet"
-      : formatMessageType(message.message_type),
-    channel: formatDetailedSource(message.source_platform, message.source_type ?? message.message_type),
+    type:
+      message.direction === "note" && message.author_label === "Antwortentwurf"
+        ? "Antwortentwurf · nicht gesendet"
+        : formatMessageType(message.message_type),
+    channel: formatDetailedSource(
+      message.source_platform,
+      message.source_type ?? message.message_type,
+    ),
     time: formatDate(message.created_at),
     text: message.original_text_excerpt || message.content,
-    url: normalizeHttpUrl(message.reply_target_url) ?? normalizeHttpUrl(message.source_url),
+    url:
+      normalizeHttpUrl(message.reply_target_url) ??
+      normalizeHttpUrl(message.source_url),
   }));
 }
 
@@ -1040,11 +666,19 @@ function buildAiMessageContext(
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null,
 ): string {
   const profileContext = [
-    conversationSummary?.summary ? `Conversation Summary: ${conversationSummary.summary}` : "",
-    contactAiProfile ? `Fan-Profil: Sprache ${contactAiProfile.language ?? "unbekannt"}, Ton ${contactAiProfile.tone ?? "im Aufbau"}, Quellen ${contactAiProfile.source_message_count ?? 0}.` : "",
-    workspaceVoiceProfile ? `Workspace-Schreibstil: Ton ${workspaceVoiceProfile.tone ?? "im Aufbau"}, Beispiele ${workspaceVoiceProfile.examples_count ?? 0}.` : "",
+    conversationSummary?.summary
+      ? `Conversation Summary: ${conversationSummary.summary}`
+      : "",
+    contactAiProfile
+      ? `Fan-Profil: Sprache ${contactAiProfile.language ?? "unbekannt"}, Ton ${contactAiProfile.tone ?? "im Aufbau"}, Quellen ${contactAiProfile.source_message_count ?? 0}.`
+      : "",
+    workspaceVoiceProfile
+      ? `Workspace-Schreibstil: Ton ${workspaceVoiceProfile.tone ?? "im Aufbau"}, Beispiele ${workspaceVoiceProfile.examples_count ?? 0}.`
+      : "",
     "Sicherheitsgrenze: nichts automatisch senden; Antwort nur als Entwurf oder manuell gesendet dokumentieren.",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
   const recentMessages = messages
     .slice(-50)
     .map(
@@ -1063,11 +697,17 @@ function getOriginalChatUrl(
 ): string | undefined {
   const latestMessageUrl = [...messages]
     .reverse()
-    .map((message) => normalizeHttpUrl(message.reply_target_url) ?? normalizeHttpUrl(message.source_url))
+    .map(
+      (message) =>
+        normalizeHttpUrl(message.reply_target_url) ??
+        normalizeHttpUrl(message.source_url),
+    )
     .find(Boolean);
 
   if (latestMessageUrl) return latestMessageUrl;
-  const conversationUrl = normalizeHttpUrl(conversation?.reply_target_url) ?? normalizeHttpUrl(conversation?.source_url);
+  const conversationUrl =
+    normalizeHttpUrl(conversation?.reply_target_url) ??
+    normalizeHttpUrl(conversation?.source_url);
   if (conversationUrl) return conversationUrl;
   const metadata = contact as ContactRow & Record<string, unknown>;
 
@@ -1089,35 +729,59 @@ function getOriginalChatUrl(
 
 function getOriginalActionLabel(platform: string, url?: string): string {
   const prepared = getChannelSourceConfig(platform);
-  if (prepared) return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
+  if (prepared)
+    return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
 
   if (!url) return ORIGINAL_LINK_FALLBACK;
   const normalized = platform.toLowerCase();
 
-  if (normalized.includes("comment") || normalized.includes("kommentar")) return "Kommentar öffnen";
-  if (normalized.includes("post") || normalized.includes("beitrag")) return "Beitrag öffnen";
-  if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger") || normalized.includes("chat")) return "Chat öffnen";
+  if (normalized.includes("comment") || normalized.includes("kommentar"))
+    return "Kommentar öffnen";
+  if (normalized.includes("post") || normalized.includes("beitrag"))
+    return "Beitrag öffnen";
+  if (
+    normalized.includes("dm") ||
+    normalized.includes("message") ||
+    normalized.includes("messenger") ||
+    normalized.includes("chat")
+  )
+    return "Chat öffnen";
   if (normalized.includes("mail")) return "E-Mail öffnen";
 
   return "Original öffnen";
 }
 
-function formatDetailedSource(platform: string | null, sourceType: string | null): string {
+function formatDetailedSource(
+  platform: string | null,
+  sourceType: string | null,
+): string {
   const preparedLabel = getChannelSourceLabel(sourceType, "");
   if (preparedLabel) return preparedLabel;
   const source = (sourceType ?? "").toLowerCase();
   const base = formatSource(platform);
   if (source.includes("comment")) return `${base} Kommentare`;
-  if (source.includes("dm") || source.includes("message")) return `${base} Nachrichten`;
+  if (source.includes("dm") || source.includes("message"))
+    return `${base} Nachrichten`;
   return base;
 }
 
 function formatConversationStatus(value: string): string {
-  return { open: "Offen", waiting: "Wartet", done: "Erledigt", archived: "Archiviert" }[value] ?? value;
+  return (
+    {
+      open: "Offen",
+      waiting: "Wartet",
+      done: "Erledigt",
+      archived: "Archiviert",
+    }[value] ?? value
+  );
 }
 
 function formatConversationPriority(value: string): string {
-  return { low: "Niedrig", normal: "Normal", medium: "Mittel", high: "Hoch" }[value] ?? value;
+  return (
+    { low: "Niedrig", normal: "Normal", medium: "Mittel", high: "Hoch" }[
+      value
+    ] ?? value
+  );
 }
 
 function formatDirection(value: string): string {
@@ -1139,21 +803,6 @@ function formatMessageType(value: string | null): string {
   return getChannelSourceLabel(value, labels[value ?? ""] ?? "DM");
 }
 
-function inferMessageType(sourcePlatform: string | null): string {
-  const normalized = sourcePlatform?.toLowerCase() ?? "";
-
-  if (normalized.includes("mail")) return "E-Mail";
-  if (normalized.includes("form") || normalized.includes("web"))
-    return "Formular";
-  const preparedLabel = getChannelSourceLabel(sourcePlatform, "");
-  if (preparedLabel) return preparedLabel;
-  if (normalized.includes("comment") || normalized.includes("kommentar"))
-    return "Kommentar";
-  if (normalized.includes("post")) return "Post";
-
-  return "DM";
-}
-
 function formatMemoryType(value: string | null): string {
   if (value === "note") {
     return "Notiz";
@@ -1162,38 +811,12 @@ function formatMemoryType(value: string | null): string {
   return value ?? "Notiz";
 }
 
-function formatFollowupDueDate(value: string | null): string {
-  if (!value) {
-    return "Kein Fälligkeitsdatum";
-  }
-
-  return `Fällig am ${new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-  }).format(new Date(`${value}T00:00:00Z`))}`;
-}
-
 function formatSource(value: string | null): string {
   return getChannelSourceLabel(value, formatPlatformLabel(value));
 }
 
 function formatStatus(value: string | null): string {
   return statusLabels[value ?? ""] ?? value ?? "Nicht hinterlegt";
-}
-
-function formatLanguage(value: string | null): string {
-  if (value === "de") {
-    return "Deutsch";
-  }
-
-  if (value === "en") {
-    return "Englisch";
-  }
-
-  if (value === "fr") {
-    return "Französisch";
-  }
-
-  return value ?? "Nicht hinterlegt";
 }
 
 function formatDate(value: string | null): string {
@@ -1212,9 +835,12 @@ function normalizeParam(value: string | string[] | undefined): string {
 }
 
 function formatNotice(value: string): string {
-  if (value === "draft_saved") return "Entwurf gespeichert – noch nicht gesendet.";
-  if (value === "done") return "Konversation als erledigt markiert. Es wurde nichts extern gesendet.";
-  if (value === "waiting") return "Konversation wartet auf Antwort im Originalkanal.";
+  if (value === "draft_saved")
+    return "Entwurf gespeichert – noch nicht gesendet.";
+  if (value === "done")
+    return "Konversation als erledigt markiert. Es wurde nichts extern gesendet.";
+  if (value === "waiting")
+    return "Konversation wartet auf Antwort im Originalkanal.";
   if (value === "open") return "Konversation wieder geöffnet.";
   if (value === "priority_saved") return "Priorität gespeichert.";
   return value;
@@ -1283,12 +909,17 @@ export default async function FanDetailPage({
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
-  const conversationSummaryResult = workspace && conversation
-    ? await getConversationSummary({ workspaceId: workspace.id, conversationId: conversation.id })
-    : null;
-  const contactAiProfileResult = workspace && contactResult?.contact
-    ? await getContactAiProfile(workspace.id, contactResult.contact.id)
-    : null;
+  const conversationSummaryResult =
+    workspace && conversation
+      ? await getConversationSummary({
+          workspaceId: workspace.id,
+          conversationId: conversation.id,
+        })
+      : null;
+  const contactAiProfileResult =
+    workspace && contactResult?.contact
+      ? await getContactAiProfile(workspace.id, contactResult.contact.id)
+      : null;
   const workspaceVoiceProfileResult = workspace
     ? await getWorkspaceVoiceProfile(workspace.id, data.user.id)
     : null;
@@ -1306,7 +937,6 @@ export default async function FanDetailPage({
           contactCount={contactsResult?.contacts.length ?? 0}
           contactError={contactResult?.error?.message}
           followups={followupsResult?.followups ?? []}
-          followupsError={followupsResult?.error?.message}
           messages={messagesResult?.messages ?? []}
           messagesError={messagesResult?.error?.message}
           conversation={conversation}
