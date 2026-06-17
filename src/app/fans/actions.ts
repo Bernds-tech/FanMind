@@ -12,11 +12,14 @@ import {
   updateConversationStatus,
   createWorkspaceContact,
   getSupabaseServerUser,
+  getContactConversationMessages,
   getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
   getWorkspaceConversations,
   updateWorkspaceContact,
+  updateContactInternalNotes,
+  upsertFanAnalysisReport,
 } from "@/lib/supabase/server";
 import {
   getDuplicateKey,
@@ -132,6 +135,83 @@ export async function importCsvContacts(
     skippedDuplicates,
     skippedInvalid: parsed.errors.length,
   };
+}
+
+
+export async function saveContactInternalNotes(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+
+  const result = await updateContactInternalNotes({
+    workspaceId: workspace.id,
+    contactId,
+    internalNotes: formValue(formData, "internal_notes"),
+  });
+
+  if (result.error) throw new Error(result.error.message);
+  revalidatePath(`/fans/${contactId}`);
+  redirect(`/fans/${contactId}?notice=notes_saved`);
+}
+
+export async function analyzeFan(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+  const messagesResult = await getContactConversationMessages(workspace.id, contactId);
+  if (messagesResult.error) throw new Error(messagesResult.error.message);
+
+  const sourceMessages = messagesResult.messages.slice(-50).map((message) => ({
+    direction: message.direction,
+    channel: message.source_platform ?? message.source_type ?? "unbekannt",
+    source: message.source_type ?? message.message_type,
+    text: message.content || message.original_text_excerpt || "",
+    mediaHint: message.attachments?.length ? `Medien/Anhänge: ${message.attachments.length}` : null,
+    createdAt: message.created_at,
+  }));
+
+  const fallback = {
+    kurzprofil: sourceMessages.length < 3 ? "Noch nicht genügend Daten für einen belastbaren Analyse-Report." : "Aus dem Chat ableitbarer erster Kommunikationsüberblick.",
+    kommunikationsstil: "Noch vorsichtig einschätzen; bitte weitere Nachrichten berücksichtigen.",
+    stimmung: "Wirkt aus den vorhandenen Nachrichten nicht eindeutig bestimmbar.",
+    interessen_trigger: "Nur explizit genannte Themen berücksichtigen.",
+    kauf_reaktion: "Keine harte Prognose; mögliche Reaktion abhängig vom nächsten manuellen Kontakt.",
+    antwortstil: "Freundlich, klar und ohne Druck antworten.",
+    no_gos: "Keine sensiblen Eigenschaften behaupten, keine Diagnosen, keine automatische Sendung.",
+    spirituell: "Falls genutzt, nur weich als möglicher Eindruck formulieren.",
+  };
+
+  let report = fallback;
+  const model = "gpt-5.2";
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (apiKey && sourceMessages.length >= 3) {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        store: false,
+        input: [{ role: "system", content: "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Keine Diagnosen, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell zurück." }, { role: "user", content: JSON.stringify({ messages: sourceMessages }) }],
+      }),
+    });
+    const data = await response.json().catch(() => null) as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> } | null;
+    const text = data?.output_text ?? data?.output?.flatMap((o) => o.content ?? []).map((c) => c.text).find(Boolean);
+    if (response.ok && text) {
+      try { report = { ...fallback, ...JSON.parse(text) }; } catch { report = fallback; }
+    }
+  }
+
+  const result = await upsertFanAnalysisReport({
+    workspaceId: workspace.id,
+    contactId,
+    reportJson: report,
+    summary: report.kurzprofil,
+    model: apiKey ? model : "fallback-no-api-key",
+    sourceMessageCount: sourceMessages.length,
+  });
+  if (result.error) throw new Error(result.error.message);
+  revalidatePath(`/fans/${contactId}`);
+  redirect(`/fans/${contactId}?notice=analysis_saved`);
 }
 
 export async function saveSuggestedMemory(input: {
