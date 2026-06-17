@@ -84,6 +84,7 @@ type FanDetailWorkspaceProps = {
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  facebookMessengerSyncError?: string | null;
 };
 
 type ConversationChannelKey =
@@ -156,6 +157,7 @@ function FanDetailWorkspace({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  facebookMessengerSyncError,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -219,6 +221,7 @@ function FanDetailWorkspace({
             activeChannel={activeChannel}
             activeSource={activeSource}
             facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
+            facebookMessengerSyncError={facebookMessengerSyncError}
           />
         ) : (
           <FanNotFound />
@@ -245,6 +248,7 @@ function FanDetailContent({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  facebookMessengerSyncError,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -262,6 +266,7 @@ function FanDetailContent({
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  facebookMessengerSyncError?: string | null;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const channelTabs = buildConversationChannelTabs(
@@ -399,6 +404,12 @@ function FanDetailContent({
               <p className={dashboardStyles.error}>
                 <strong>Nachrichten konnten nicht geladen werden.</strong>
                 <span>{messagesError}</span>
+              </p>
+            ) : null}
+            {facebookMessengerSyncError ? (
+              <p className={dashboardStyles.error}>
+                <strong>Facebook-Verlauf konnte nicht automatisch aktualisiert werden.</strong>
+                <span>{facebookMessengerSyncError}</span>
               </p>
             ) : null}
             {contact &&
@@ -1155,6 +1166,8 @@ export default async function FanDetailPage({
         connection.platform === "facebook" && connection.status === "connected",
     ) ?? null;
 
+  let facebookMessengerSyncError: string | null = null;
+
   if (
     workspace &&
     contactResult?.contact?.source_platform === "facebook" &&
@@ -1164,11 +1177,24 @@ export default async function FanDetailPage({
   ) {
     const { syncFacebookMessengerConversationForContact } =
       await import("@/app/channels/facebookWebhookActions");
-    await syncFacebookMessengerConversationForContact({
-      connection: facebookConnection,
-      contactId: contactResult.contact.id,
-      fanSenderId: contactResult.contact.handle,
-    });
+    try {
+      const syncResult = await syncFacebookMessengerConversationForContact({
+        connection: facebookConnection,
+        contactId: contactResult.contact.id,
+        fanSenderId: contactResult.contact.handle,
+        revalidate: false,
+      });
+      if (!syncResult.ok) {
+        facebookMessengerSyncError =
+          syncResult.error ??
+          "Facebook-Verlauf konnte nicht automatisch aktualisiert werden.";
+      }
+    } catch (error) {
+      facebookMessengerSyncError =
+        error instanceof Error
+          ? error.message
+          : "Facebook-Verlauf konnte nicht automatisch aktualisiert werden.";
+    }
   }
 
   const messagesResult =
@@ -1237,6 +1263,7 @@ export default async function FanDetailPage({
           facebookMessengerLastSyncedAt={
             facebookConnection?.last_messenger_sync_at ?? null
           }
+          facebookMessengerSyncError={facebookMessengerSyncError}
         />
       ) : (
         <section
