@@ -13,7 +13,7 @@ import {
   getWorkspaceContacts,
   getWorkspaceConversations,
   getWorkspaceVoiceProfile,
-  markConversationMessageSeen,
+  markContactInboundMessagesSeen,
   signOutSupabaseServerSession,
   type ContactAiProfileRow,
   type ContactRow,
@@ -1248,10 +1248,9 @@ export default async function FanDetailPage({
   const workspace = workspaceResult.workspace;
 
   if (workspace && seenMessageId) {
-    await markConversationMessageSeen({
+    await markContactInboundMessagesSeen({
       workspaceId: workspace.id,
       contactId: id,
-      messageId: seenMessageId,
     });
   }
   const contactsResult = workspace

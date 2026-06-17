@@ -1310,39 +1310,41 @@ export async function getWorkspaceUnseenInboundMessages(
   return { messages: result.data ?? [], error: null };
 }
 
-export async function markConversationMessageSeen(input: {
+export async function markContactInboundMessagesSeen(input: {
   workspaceId: string;
   contactId: string;
-  messageId: string;
-}): Promise<ConversationMessageCreateResult> {
+}): Promise<{ error: Error | null }> {
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
-    return conversationMessageCreateError(
-      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
-    );
+    return {
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
   }
 
-  const result = await postgrestUpdate<ConversationMessageRow>(
+  const result = await postgrestUpdate(
     "conversation_messages",
     { seen_at: new Date().toISOString() },
     accessToken,
     [
       ["workspace_id", input.workspaceId],
       ["contact_id", input.contactId],
-      ["id", input.messageId],
       ["direction", "inbound"],
+      ["seen_at", null],
     ],
-    { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
   );
 
   if (result.error) {
-    return conversationMessageCreateError(
-      `Nachricht konnte nicht als gesehen markiert werden: ${withOptionalSchemaHint(result.error.message, "conversation_messages")}`,
-    );
+    return {
+      error: new Error(
+        `Nachrichten konnten nicht als gesehen markiert werden: ${withOptionalSchemaHint(result.error.message, "conversation_messages")}`,
+      ),
+    };
   }
 
-  return { message: result.data, conversation: null, error: null };
+  return { error: null };
 }
 
 export async function ensureConversationForContact(input: {
@@ -1728,8 +1730,17 @@ export async function createMetaWebhookConversationMessage(input: {
 
   if (contact) {
     const nextDisplayName = normalizeOptionalText(input.authorLabel);
-    const currentIsFallback = contact.display_name === `${getDefaultWebhookAuthorLabel(input.sourcePlatform)} ${handle}` || contact.display_name === getDefaultWebhookAuthorLabel(input.sourcePlatform);
-    if (nextDisplayName && nextDisplayName !== contact.display_name && (currentIsFallback || !contact.display_name)) {
+    const currentIsFallback = isWebhookFallbackDisplayName(
+      contact.display_name,
+      input.sourcePlatform,
+      handle,
+    );
+    if (
+      nextDisplayName &&
+      nextDisplayName !== contact.display_name &&
+      !isWebhookFallbackDisplayName(nextDisplayName, input.sourcePlatform, handle) &&
+      (currentIsFallback || !contact.display_name)
+    ) {
       const updated = await postgrestUpdate<ContactRow>(
         "contacts",
         { display_name: nextDisplayName, source_platform: contact.source_platform ?? input.sourcePlatform },
@@ -2975,6 +2986,25 @@ function isProductiveCommercialOption(
     value === "starter_paid_setup" ||
     value === "starter_no_setup_commitment"
   );
+}
+
+function isWebhookFallbackDisplayName(
+  displayName: string | null | undefined,
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+  handle?: string | null,
+): boolean {
+  const normalized = normalizeOptionalText(displayName);
+  const fallback = getDefaultWebhookAuthorLabel(platform);
+
+  if (!normalized) return true;
+  if (normalized === fallback) return true;
+  if (handle && normalized === `${fallback} ${handle}`) return true;
+
+  return new RegExp(`^${escapeRegExp(fallback)}\\s+\\d+$`, "i").test(normalized);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function getDefaultWebhookAuthorLabel(platform: "facebook" | "instagram" | "whatsapp" | "tiktok"): string {
