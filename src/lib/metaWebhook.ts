@@ -355,13 +355,18 @@ function getMessageKind(text: string | null, attachments: ConversationMessageAtt
 }
 
 function formatDebugStatus(status: string, event: MetaWebhookEvent): string {
-  if (!event.attachments?.length) return status;
-  return `${status} · Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
+  const directionLabel = event.direction === "outbound" ? "message_echoes · outbound" : "messages · inbound";
+  const baseStatus = event.eventType === "messages" ? `${directionLabel} · ${status}` : status;
+  if (!event.attachments?.length) return baseStatus;
+  return `${baseStatus} · Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
 }
 
 function formatDebugMessageText(event: MetaWebhookEvent): string | null {
-  if (!event.attachments?.length) return event.content;
-  return `Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
+  const directionLabel = event.eventType === "messages"
+    ? `${event.direction === "outbound" ? "message_echoes / outbound" : "messages / inbound"}: `
+    : "";
+  if (!event.attachments?.length) return event.content ? `${directionLabel}${event.content}` : null;
+  return `${directionLabel}Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
 }
 
 function numberValue(value: unknown): number | null {
