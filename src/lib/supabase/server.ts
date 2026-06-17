@@ -1624,7 +1624,7 @@ export async function createMetaWebhookConversationMessage(input: {
   authorLabel: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "tiktok_messages" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1717,7 +1717,7 @@ export async function createMetaTestConversationMessage(input: {
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "tiktok_messages" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -2755,6 +2755,7 @@ function normalizeMessageType(value: string | null | undefined): string {
     "instagram_comments",
     "whatsapp_messages",
     "tiktok_comments",
+    "tiktok_messages",
     "dm",
     "comment",
     "post",
@@ -2874,8 +2875,8 @@ function normalizeIsoTimestamp(value: string | null | undefined): string | null 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function getDefaultWebhookSourceType(platform: "facebook" | "instagram" | "whatsapp" | "tiktok", messageType: "dm" | "comment"): "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" {
+function getDefaultWebhookSourceType(platform: "facebook" | "instagram" | "whatsapp" | "tiktok", messageType: "dm" | "comment"): "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "tiktok_comments" | "tiktok_messages" {
   if (platform === "whatsapp") return "whatsapp_messages";
-  if (platform === "tiktok") return "tiktok_comments";
+  if (platform === "tiktok") return messageType === "comment" ? "tiktok_comments" : "tiktok_messages";
   return messageType === "comment" ? `${platform}_comments` : `${platform}_messages`;
 }

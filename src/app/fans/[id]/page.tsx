@@ -1111,6 +1111,7 @@ function getOriginalActionLabel(platform: string): string {
   if (normalized.includes("instagram") && (normalized.includes("kommentare") || normalized.includes("comments"))) return "Kommentar öffnen";
   if (normalized.includes("instagram")) return "Original öffnen";
   if (normalized.includes("whatsapp")) return "Chat öffnen";
+  if (normalized.includes("tiktok") && (normalized.includes("nachrichten") || normalized.includes("messages") || normalized.includes("dm"))) return "Chat öffnen";
   if (normalized.includes("tiktok") && (normalized.includes("kommentare") || normalized.includes("comments") || normalized.includes("comment"))) return "Kommentar öffnen";
   if (normalized.includes("mail")) return "E-Mail öffnen";
 
@@ -1125,6 +1126,7 @@ function formatDetailedSource(platform: string | null, sourceType: string | null
   if (source.includes("instagram_messages")) return "Instagram Nachrichten";
   if (source.includes("whatsapp_messages")) return "WhatsApp Nachrichten";
   if (source.includes("tiktok_comments")) return "TikTok Kommentare";
+  if (source.includes("tiktok_messages")) return "TikTok Nachrichten";
   const base = formatSource(platform);
   if (source.includes("comment")) return `${base} Kommentare`;
   if (source.includes("dm") || source.includes("message")) return `${base} Nachrichten`;
@@ -1152,6 +1154,7 @@ function formatMessageType(value: string | null): string {
     instagram_messages: "Instagram Nachrichten",
     instagram_comments: "Instagram Kommentare",
     tiktok_comments: "TikTok Kommentare",
+    tiktok_messages: "TikTok Nachrichten",
     dm: "DM",
     comment: "Kommentar",
     post: "Post",
@@ -1174,6 +1177,7 @@ function inferMessageType(sourcePlatform: string | null): string {
   if (normalized.includes("instagram_messages")) return "Instagram Nachrichten";
   if (normalized.includes("instagram_comments")) return "Instagram Kommentare";
   if (normalized.includes("tiktok_comments")) return "TikTok Kommentare";
+  if (normalized.includes("tiktok_messages")) return "TikTok Nachrichten";
   if (normalized.includes("comment") || normalized.includes("kommentar"))
     return "Kommentar";
   if (normalized.includes("post")) return "Post";

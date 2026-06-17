@@ -613,6 +613,7 @@ function formatConversationType(value: string | null): string {
     instagram_comments: "Instagram Kommentare",
     whatsapp_messages: "WhatsApp Nachrichten",
     tiktok_comments: "TikTok Kommentare",
+    tiktok_messages: "TikTok Nachrichten",
     dm: "DM",
     comment: "Kommentar",
     post_comment: "Post-Kommentar",
@@ -675,6 +676,7 @@ function getChannelLabel(value: string | null): string {
     manual: "Manuell",
     tiktok: "TikTok",
     tiktok_comments: "TikTok Kommentare",
+    tiktok_messages: "TikTok Nachrichten",
   };
 
   return labels[(value ?? "manual").toLowerCase()] ?? "Manuell";
@@ -704,7 +706,7 @@ function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
   const value = (source ?? "").toLowerCase();
 
   if (value.includes("facebook_comments") || value.includes("tiktok_comments")) return "comment";
-  if (value.includes("facebook_messages") || value.includes("instagram_messages") || value.includes("whatsapp_messages")) return "dm";
+  if (value.includes("facebook_messages") || value.includes("instagram_messages") || value.includes("whatsapp_messages") || value.includes("tiktok_messages")) return "dm";
   if (value.includes("mail")) return "email";
   if (value.includes("form") || value.includes("web")) return "form";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "post";
@@ -763,6 +765,7 @@ function getConversationType(
   if (value.includes("instagram_messages")) return "Instagram Nachrichten";
   if (value.includes("whatsapp_messages")) return "WhatsApp Nachrichten";
   if (value.includes("tiktok_comments")) return "TikTok Kommentare";
+  if (value.includes("tiktok_messages")) return "TikTok Nachrichten";
   if (value.includes("email")) return "E-Mail";
   if (value.includes("form")) return "Formular";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "Post-Kommentar";
