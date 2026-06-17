@@ -5,9 +5,11 @@ import {
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceOpenFollowups,
+  getWorkspaceUnseenInboundMessages,
   signOutSupabaseServerSession,
   type ContactRow,
   type FollowupRow,
+  type ConversationMessageRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
@@ -31,6 +33,8 @@ type FansWorkspaceProps = {
   contactsError?: string;
   followups: FollowupRow[];
   followupsError?: string;
+  unseenMessages: ConversationMessageRow[];
+  unseenMessagesError?: string;
   activeChannel: PlatformValue | "all";
 };
 
@@ -48,6 +52,7 @@ type FanGroup = {
   tags: string[];
   latestCreatedAt: string | null;
   nextFollowup: FollowupRow | null;
+  hasUnseenMessages: boolean;
 };
 
 const statusLabels: Record<string, string> = {
@@ -81,12 +86,14 @@ function FansWorkspace({
   contactsError,
   followups,
   followupsError,
+  unseenMessages,
+  unseenMessagesError,
   activeChannel,
 }: FansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
   const userLabel = userDisplayName || workspace.name || "Nutzer";
-  const fanGroups = groupContactsByFan(contacts, followups);
+  const fanGroups = groupContactsByFan(contacts, followups, unseenMessages);
   const visibleFanGroups = filterFanGroupsByChannel(fanGroups, activeChannel);
 
   return (
@@ -125,6 +132,12 @@ function FansWorkspace({
             <p className={dashboardStyles.error}>
               <strong>Follow-ups konnten nicht geladen werden.</strong>
               <span>{followupsError}</span>
+            </p>
+          ) : null}
+          {unseenMessagesError ? (
+            <p className={dashboardStyles.error}>
+              <strong>Neue Nachrichten konnten nicht geladen werden.</strong>
+              <span>{unseenMessagesError}</span>
             </p>
           ) : null}
           {fanGroups.length ? (
@@ -299,6 +312,7 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
             <th>Nächster Follow-up</th>
             <th>Antwortkanal</th>
             <th>Aktion</th>
+            <th aria-label="Neue Nachrichten">Neu</th>
           </tr>
         </thead>
         <tbody>
@@ -359,6 +373,11 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
                 >
                   Bearbeiten
                 </a>
+              </td>
+              <td className={styles.unseenCell}>
+                {group.hasUnseenMessages ? (
+                  <span className={styles.unseenDot} title="Neue ungesehene Nachricht" aria-label="Neue ungesehene Nachricht" />
+                ) : null}
               </td>
             </tr>
           ))}
@@ -602,8 +621,10 @@ function FansEmptyState() {
 function groupContactsByFan(
   contacts: ContactRow[],
   followups: FollowupRow[],
+  unseenMessages: ConversationMessageRow[],
 ): FanGroup[] {
   const followupsByContact = new Map<string, FollowupRow[]>();
+  const unseenContactIds = new Set(unseenMessages.map((message) => message.contact_id));
 
   for (const followup of followups) {
     if (followup.status && followup.status !== "open") {
@@ -649,7 +670,13 @@ function groupContactsByFan(
         sortedContacts.find((contact) => contact.created_at)?.created_at ??
         null,
       nextFollowup: getNextFollowup(groupFollowups),
+      hasUnseenMessages: sortedContacts.some((contact) => unseenContactIds.has(contact.id)),
     };
+  }).sort((left, right) => {
+    if (left.hasUnseenMessages !== right.hasUnseenMessages) {
+      return left.hasUnseenMessages ? -1 : 1;
+    }
+    return left.displayName.localeCompare(right.displayName, "de");
   });
 }
 
@@ -833,6 +860,9 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   const followupsResult = workspace
     ? await getWorkspaceOpenFollowups(workspace.id)
     : null;
+  const unseenMessagesResult = workspace
+    ? await getWorkspaceUnseenInboundMessages(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -847,6 +877,8 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           contactsError={contactsResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           followupsError={followupsResult?.error?.message}
+          unseenMessages={unseenMessagesResult?.messages ?? []}
+          unseenMessagesError={unseenMessagesResult?.error?.message}
           activeChannel={activeChannel}
         />
       ) : (

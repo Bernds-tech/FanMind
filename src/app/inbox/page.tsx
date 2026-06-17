@@ -16,7 +16,6 @@ import { countUniqueFans, getFanGroupKey } from "@/lib/fanIdentity";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../dashboard/dashboard.module.css";
-import { markConversationDone, markConversationWaiting } from "../fans/actions";
 import {
   ORIGINAL_LINK_FALLBACK,
   getChannelSourceActionLabel,
@@ -90,7 +89,6 @@ const filterChips: { label: string; value: InboxFilter }[] = [
   { label: "Antwort fällig", value: "due" },
   { label: "Hohe Priorität", value: "high" },
   { label: "Mit KI vorbereitet", value: "ai" },
-  { label: "Erledigt", value: "done" },
 ];
 
 async function logout() {
@@ -367,22 +365,6 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
               <Link href={`/fans/${item.contactId}?focus=followup`}>
                 Follow-up planen
               </Link>
-              {item.conversationId ? (
-                <>
-                  <form action={markConversationDone}>
-                    <input name="contact_id" type="hidden" value={item.contactId} />
-                    <input name="conversation_id" type="hidden" value={item.conversationId} />
-                    <input name="return_to" type="hidden" value="inbox" />
-                    <button type="submit">Als erledigt</button>
-                  </form>
-                  <form action={markConversationWaiting}>
-                    <input name="contact_id" type="hidden" value={item.contactId} />
-                    <input name="conversation_id" type="hidden" value={item.conversationId} />
-                    <input name="return_to" type="hidden" value="inbox" />
-                    <button type="submit">Wartet</button>
-                  </form>
-                </>
-              ) : null}
             </div>
           </div>
         </div>
