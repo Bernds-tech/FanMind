@@ -51,8 +51,8 @@ export type FacebookTokenDiagnostics = {
 };
 
 export function getFacebookOAuthUrl(state: string, scopes: readonly string[] = FACEBOOK_MESSAGES_OAUTH_SCOPES): string {
-  const appId = requireEnv("META_APP_ID");
-  const redirectUri = requireEnv("META_REDIRECT_URI");
+  const appId = requireEnv("FACEBOOK_APP_ID", "META_APP_ID");
+  const redirectUri = requireEnv("FACEBOOK_REDIRECT_URI", "META_REDIRECT_URI");
   const url = new URL(`https://www.facebook.com/${OAUTH_VERSION}/dialog/oauth`);
   url.searchParams.set("client_id", appId);
   url.searchParams.set("redirect_uri", redirectUri);
@@ -106,9 +106,9 @@ export async function exchangeFacebookCode(code: string): Promise<string> {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/oauth/access_token`,
   );
-  url.searchParams.set("client_id", requireEnv("META_APP_ID"));
-  url.searchParams.set("client_secret", requireEnv("META_APP_SECRET"));
-  url.searchParams.set("redirect_uri", requireEnv("META_REDIRECT_URI"));
+  url.searchParams.set("client_id", requireEnv("FACEBOOK_APP_ID", "META_APP_ID"));
+  url.searchParams.set("client_secret", requireEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET"));
+  url.searchParams.set("redirect_uri", requireEnv("FACEBOOK_REDIRECT_URI", "META_REDIRECT_URI"));
   url.searchParams.set("code", code);
 
   const response = await fetch(url, { cache: "no-store" });
@@ -289,7 +289,7 @@ export async function fetchFacebookTokenDiagnostics(
   url.searchParams.set("input_token", userAccessToken);
   url.searchParams.set(
     "access_token",
-    `${requireEnv("META_APP_ID")}|${requireEnv("META_APP_SECRET")}`,
+    `${requireEnv("FACEBOOK_APP_ID", "META_APP_ID")}|${requireEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET")}`,
   );
 
   const response = await fetch(url, { cache: "no-store" });
@@ -606,7 +606,7 @@ export async function fetchFacebookPageWebhookStatus(
     };
   }
 
-  const appId = process.env.META_APP_ID;
+  const appId = getOptionalEnv("FACEBOOK_APP_ID", "META_APP_ID");
   const appSubscription = (payload?.data ?? []).find((entry) => !appId || entry.id === appId) ?? null;
   const subscribedFields = appSubscription?.subscribed_fields ?? [];
   return buildWebhookStatus(
@@ -625,7 +625,7 @@ export async function subscribeFacebookPage(
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`,
   );
-  url.searchParams.set("subscribed_fields", "feed,messages");
+  url.searchParams.set("subscribed_fields", "messages");
   url.searchParams.set("access_token", pageAccessToken);
   const response = await fetch(url, { method: "POST", cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as {
@@ -705,7 +705,7 @@ export function tokenLastFour(token: string | null): string | null {
 }
 
 function signState(encodedPayload: string): string {
-  return createHmac("sha256", requireEnv("META_APP_SECRET"))
+  return createHmac("sha256", requireEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET"))
     .update(encodedPayload)
     .digest("base64url");
 }
@@ -741,9 +741,23 @@ function logFacebookApiError(
   });
 }
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} ist nicht konfiguriert.`);
+function getOptionalEnv(...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) return value;
+  }
+  return undefined;
+}
+
+function requireEnv(name: string, fallbackName?: string): string {
+  const value = getOptionalEnv(name, ...(fallbackName ? [fallbackName] : []));
+  if (!value) {
+    throw new Error(
+      fallbackName
+        ? `${name} ist nicht konfiguriert (Fallback ${fallbackName} fehlt ebenfalls).`
+        : `${name} ist nicht konfiguriert.`,
+    );
+  }
   return value;
 }
 

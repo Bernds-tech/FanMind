@@ -21,6 +21,14 @@ type SafeFacebookConnection = Pick<
   "page_name" | "page_id" | "webhook_subscribed" | "last_event_at" | "scopes" | "last_comment_fetch_at" | "last_comment_fetch_count" | "last_comment_fetch_error"
 > & { has_page_access_token: boolean };
 
+type FacebookLiveSetupStatus = {
+  facebookAppIdConfigured: boolean;
+  facebookAppSecretConfigured: boolean;
+  webhookVerifyTokenConfigured: boolean;
+  publicBaseUrlConfigured: boolean;
+  oauthCallbackUrl: string | null;
+};
+
 type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
@@ -34,6 +42,7 @@ type ChannelsWorkspaceProps = {
     tableReadable: boolean;
     error: string | null;
   };
+  facebookLiveSetupStatus: FacebookLiveSetupStatus;
 };
 
 async function logout() {
@@ -52,6 +61,7 @@ function ChannelsWorkspace({
   metaWebhookEvents,
   metaWebhookError,
   metaWebhookStorageHealth,
+  facebookLiveSetupStatus,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -84,6 +94,7 @@ function ChannelsWorkspace({
         metaWebhookEvents={metaWebhookEvents}
         metaWebhookError={metaWebhookError}
         metaWebhookStorageHealth={metaWebhookStorageHealth}
+        facebookLiveSetupStatus={facebookLiveSetupStatus}
       />
     </WorkspaceShell>
   );
@@ -162,6 +173,7 @@ export default async function ChannelsPage({
             tableReadable: metaWebhookStorageHealthResult?.tableReadable ?? false,
             error: metaWebhookStorageHealthResult?.error?.message ?? null,
           }}
+          facebookLiveSetupStatus={getFacebookLiveSetupStatus()}
         />
       ) : (
         <section
@@ -199,4 +211,26 @@ export default async function ChannelsPage({
       )}
     </main>
   );
+}
+
+function getFacebookLiveSetupStatus(): FacebookLiveSetupStatus {
+  const publicBaseUrl = firstConfiguredEnv("NEXT_PUBLIC_APP_URL", "FANMIND_APP_URL");
+  const explicitCallbackUrl = firstConfiguredEnv("FACEBOOK_REDIRECT_URI", "META_REDIRECT_URI");
+  const oauthCallbackUrl = explicitCallbackUrl ?? (publicBaseUrl ? `${publicBaseUrl.replace(/\/$/, "")}/api/integrations/facebook/callback` : null);
+
+  return {
+    facebookAppIdConfigured: Boolean(firstConfiguredEnv("FACEBOOK_APP_ID", "META_APP_ID")),
+    facebookAppSecretConfigured: Boolean(firstConfiguredEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET", "META_WEBHOOK_APP_SECRET")),
+    webhookVerifyTokenConfigured: Boolean(firstConfiguredEnv("FACEBOOK_WEBHOOK_VERIFY_TOKEN", "META_WEBHOOK_VERIFY_TOKEN")),
+    publicBaseUrlConfigured: Boolean(publicBaseUrl),
+    oauthCallbackUrl,
+  };
+}
+
+function firstConfiguredEnv(...names: string[]): string | null {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value?.trim()) return value.trim();
+  }
+  return null;
 }

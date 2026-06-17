@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   if (
     mode === "subscribe" &&
     verifyToken &&
-    verifyToken === process.env.META_WEBHOOK_VERIFY_TOKEN &&
+    verifyToken === getWebhookVerifyToken() &&
     challenge
   ) {
     return new Response(challenge, {
@@ -74,7 +74,7 @@ function isValidMetaSignature(
   rawBody: string,
   signatureHeader: string | null,
 ): boolean {
-  const appSecret = process.env.META_WEBHOOK_APP_SECRET;
+  const appSecret = getWebhookAppSecret();
 
   if (!appSecret) return true;
   if (!signatureHeader?.startsWith("sha256=")) return false;
@@ -90,4 +90,12 @@ function isValidMetaSignature(
     expectedBuffer.length === receivedBuffer.length &&
     timingSafeEqual(expectedBuffer, receivedBuffer)
   );
+}
+
+function getWebhookVerifyToken(): string | undefined {
+  return process.env.FACEBOOK_WEBHOOK_VERIFY_TOKEN ?? process.env.META_WEBHOOK_VERIFY_TOKEN;
+}
+
+function getWebhookAppSecret(): string | undefined {
+  return process.env.FACEBOOK_APP_SECRET ?? process.env.META_WEBHOOK_APP_SECRET ?? process.env.META_APP_SECRET;
 }

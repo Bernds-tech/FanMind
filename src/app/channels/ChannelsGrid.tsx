@@ -8,8 +8,6 @@ import { CHANNEL_SOURCE_CONFIGS, type PreparedSourceType } from "@/lib/channelSo
 import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
-  fetchFacebookCommentsNow,
-  type FacebookCommentFetchResult,
   type FacebookPageWebhookActionResult,
 } from "./facebookWebhookActions";
 
@@ -36,6 +34,14 @@ type MetaWebhookStorageHealth = {
   serviceRoleConfigured: boolean;
   tableReadable: boolean;
   error: string | null;
+};
+
+type FacebookLiveSetupStatus = {
+  facebookAppIdConfigured: boolean;
+  facebookAppSecretConfigured: boolean;
+  webhookVerifyTokenConfigured: boolean;
+  publicBaseUrlConfigured: boolean;
+  oauthCallbackUrl: string | null;
 };
 
 type MetaWebhookSelfTestResult = {
@@ -366,12 +372,14 @@ export function ChannelsGrid({
   metaWebhookEvents,
   metaWebhookError,
   metaWebhookStorageHealth,
+  facebookLiveSetupStatus,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEvent[];
   metaWebhookError?: string | null;
   metaWebhookStorageHealth: MetaWebhookStorageHealth;
+  facebookLiveSetupStatus: FacebookLiveSetupStatus;
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -381,8 +389,6 @@ export function ChannelsGrid({
   const [selfTestError, setSelfTestError] = useState<string | null>(null);
   const [pageWebhookPending, setPageWebhookPending] = useState<"check" | "activate" | null>(null);
   const [pageWebhookResult, setPageWebhookResult] = useState<FacebookPageWebhookActionResult | null>(null);
-  const [commentFetchPending, setCommentFetchPending] = useState(false);
-  const [commentFetchResult, setCommentFetchResult] = useState<FacebookCommentFetchResult | null>(null);
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -402,7 +408,6 @@ export function ChannelsGrid({
     setSelfTestError(null);
     setSelfTestResult(null);
     setPageWebhookResult(null);
-    setCommentFetchResult(null);
     setActiveChannel(channel);
   };
 
@@ -457,27 +462,6 @@ export function ChannelsGrid({
     }
   }
 
-  async function runCommentFetch() {
-    setCommentFetchPending(true);
-    setCommentFetchResult(null);
-
-    try {
-      const result = await fetchFacebookCommentsNow();
-      setCommentFetchResult(result);
-      router.refresh();
-    } catch (error) {
-      setCommentFetchResult({
-        ok: false,
-        fetchedAt: new Date().toISOString(),
-        postsChecked: 0,
-        commentsChecked: 0,
-        importedCount: 0,
-        error: error instanceof Error ? error.message : "Facebook-Kommentare konnten nicht abgerufen werden.",
-      });
-    } finally {
-      setCommentFetchPending(false);
-    }
-  }
 
   const lastWebhookEvent = metaWebhookEvents[0] ?? null;
   const selfTestDisabledReason = !metaWebhookStorageHealth.serviceRoleConfigured
@@ -508,6 +492,14 @@ export function ChannelsGrid({
     updatedConnection: false,
   } satisfies FacebookPageWebhookActionResult : null);
 
+  const missingFacebookSetupItems = [
+    !facebookLiveSetupStatus.facebookAppIdConfigured ? "FACEBOOK_APP_ID fehlt" : null,
+    !facebookLiveSetupStatus.facebookAppSecretConfigured ? "FACEBOOK_APP_SECRET fehlt" : null,
+    !facebookLiveSetupStatus.webhookVerifyTokenConfigured ? "FACEBOOK_WEBHOOK_VERIFY_TOKEN fehlt" : null,
+    !facebookLiveSetupStatus.publicBaseUrlConfigured ? "NEXT_PUBLIC_APP_URL fehlt" : null,
+    !metaWebhookStorageHealth.serviceRoleConfigured ? "SUPABASE_SERVICE_ROLE_KEY fehlt" : null,
+  ].filter(Boolean);
+  const messengerWebhookReady = displayedWebhookStatus?.fields.messages === "active";
   const facebookCommentsReady = false;
   const activeDisplayStatus =
     activeChannel?.key === "facebook_messages" && facebookConnection
@@ -663,12 +655,31 @@ export function ChannelsGrid({
                 ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
                 : "Melde dich an, um diesen Kanal zu verbinden und eingehende Nachrichten für FanMind freizugeben."}
             </p>
+            {activeChannel.key === "facebook_messages" && !facebookConnection ? (
+              <p className={styles.modalNotice} role={missingFacebookSetupItems.length ? "alert" : "status"}>
+                Live-Setup Facebook Nachrichten: <strong>{missingFacebookSetupItems.length ? `unvollständig (${missingFacebookSetupItems.join(", ")})` : "bereit zum Verbinden"}</strong>
+                <br />
+                OAuth Callback URL: <strong>{facebookLiveSetupStatus.oauthCallbackUrl ?? "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}</strong>
+                <br />
+                Page verbunden: <strong>nein</strong>
+                <br />
+                Webhook bereit: <strong>nicht bestätigt</strong>
+              </p>
+            ) : null}
             {activeChannel.key === "facebook_messages" && facebookConnection ? (
               <>
               <p className={styles.modalNotice}>
                 OAuth verbunden · Page: <strong>{facebookConnection.page_name ?? facebookConnection.page_id}</strong>
                 <br />
-                Webhook feed/messages: <strong>{displayedWebhookStatus?.ok ? "aktiv" : "unbekannt"}</strong>
+                Setup-Konfiguration: <strong>{missingFacebookSetupItems.length ? `unvollständig (${missingFacebookSetupItems.join(", ")})` : "vollständig"}</strong>
+                <br />
+                OAuth Callback URL: <strong>{facebookLiveSetupStatus.oauthCallbackUrl ?? "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}</strong>
+                <br />
+                Page verbunden: <strong>{facebookConnection.page_id ? "ja" : "nein"}</strong>
+                <br />
+                Webhook bereit: <strong>{messengerWebhookReady ? "bestätigt" : "nicht bestätigt"}</strong>
+                <br />
+                Webhook messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
                 <br />
                 Letztes Webhook-Event: <strong>{lastWebhookEvent ? formatDateTime(lastWebhookEvent.received_at) : "noch keines empfangen"}</strong>
                 <br />
@@ -676,11 +687,11 @@ export function ChannelsGrid({
                 <br />
                 Letztes echtes feed/comment Event: <strong>{lastFeedCommentEvent ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}` : "noch kein echter Kommentar empfangen"}</strong>
                 <br />
-                Letzter Kommentar-Abruf: <strong>{commentFetchResult ? `${formatDateTime(commentFetchResult.fetchedAt)} · ${commentFetchResult.importedCount} neu importiert` : facebookConnection.last_comment_fetch_at ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert` : "noch nicht ausgeführt"}</strong>
-                {(commentFetchResult?.error ?? facebookConnection.last_comment_fetch_error) ? (
+                Letzter Kommentar-Abruf: <strong>{facebookConnection.last_comment_fetch_at ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert` : "geparkt, nicht ausgeführt"}</strong>
+                {(facebookConnection.last_comment_fetch_error) ? (
                   <>
                     <br />
-                    Kommentar-Abruf Fehler: <strong>{commentFetchResult?.error ?? facebookConnection.last_comment_fetch_error}</strong>
+                    Kommentar-Abruf Fehler: <strong>{facebookConnection.last_comment_fetch_error}</strong>
                   </>
                 ) : null}
                 <br />
@@ -704,7 +715,7 @@ export function ChannelsGrid({
                 <br />
                 Page subscribed_apps: <strong>{formatWebhookStatus(displayedWebhookStatus?.subscribedAppsStatus)}</strong>
                 <br />
-                feed subscribed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.feed)}</strong> · messages: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong>
+                messages subscribed: <strong>{formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</strong> · feed/Kommentare: <strong>geparkt, nicht automatisch aktiviert</strong>
                 {displayedWebhookStatus?.error ? (
                   <>
                     <br />
@@ -735,24 +746,9 @@ export function ChannelsGrid({
                   >
                     {pageWebhookPending === "activate" ? "Page-Webhooks aktivieren ..." : "Page-Webhooks aktivieren"}
                   </button>
-                  <button
-                    type="button"
-                    className={styles.secondaryModalButton}
-                    onClick={runCommentFetch}
-                    disabled={commentFetchPending}
-                  >
-                    {commentFetchPending ? "Kommentare werden abgerufen ..." : "Kommentare jetzt abrufen"}
-                  </button>
+
                 </div>
-                {commentFetchResult ? (
-                  <p className={styles.modalNotice} role={commentFetchResult.ok ? "status" : "alert"}>
-                    Kommentar-Abruf: {commentFetchResult.ok ? "erfolgreich" : "fehlgeschlagen"} · Posts geprüft: {commentFetchResult.postsChecked} · Kommentare geprüft: {commentFetchResult.commentsChecked} · Neu importiert: {commentFetchResult.importedCount}
-                    {commentFetchResult.error ? ` · Fehler: ${commentFetchResult.error}` : ""}
-                    <br />
-                    Endpoint-Typ: <strong>{commentFetchResult.endpointType ?? "nicht ermittelt"}</strong> · Page Token genutzt: <strong>{commentFetchResult.usedPageAccessToken ? "ja" : "nein"}</strong> · Erkannte Scopes: <strong>{formatScopeList(commentFetchResult.tokenScopes)}</strong>
-                  </p>
-                ) : null}
-              </>
+             </>
             ) : null}
             {activeChannel.key === "facebook_messages" && facebookConnection && metaWebhookError ? (
               <p className={styles.modalNotice} role="alert">
