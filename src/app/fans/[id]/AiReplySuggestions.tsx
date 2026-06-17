@@ -301,7 +301,7 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
                         rel="noreferrer"
                         target="_blank"
                       >
-                        Original-Chat öffnen
+                        {contact.originalActionLabel ?? "Original öffnen"}
                       </a>
                     ) : null}
                   </div>
@@ -359,7 +359,7 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
 
           {!contact.originalChatUrl ? (
             <p className={styles.aiSafetyNote}>
-              Original-Chat-Link noch nicht verbunden.
+              Original-Link noch nicht verfügbar.
             </p>
           ) : null}
 

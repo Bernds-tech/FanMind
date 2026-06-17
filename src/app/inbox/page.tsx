@@ -68,6 +68,7 @@ type InboxQueueItem = {
   aiStatus: "KI-ready" | "Teilweise" | "Nicht bereit";
   nextStep: string;
   replyTargetUrl?: string;
+  originalPreview?: string;
   sourceType?: "dm" | "comment" | "post" | "email" | "form" | "manual";
   sourcePlatformLabel?: string;
   unread: boolean;
@@ -304,7 +305,10 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
                 {item.channel}
               </b>
             </span>
-            <span className={styles.messageCell}>{item.messagePreview}</span>
+            <span className={styles.messageCell}>
+              {item.messagePreview}
+              {item.originalPreview ? <small>{item.originalPreview}</small> : null}
+            </span>
             <span>{item.conversationType}</span>
             <span>{item.status}</span>
             <span>
@@ -331,7 +335,7 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
                 rel="noreferrer"
                 target="_blank"
               >
-                {getOriginalActionLabel(item.sourcePlatformLabel)}
+                {getOriginalActionLabel(item.sourceType, item.replyTargetUrl, item.sourcePlatformLabel)}
               </a>
             ) : (
               <button
@@ -340,12 +344,12 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
                 type="button"
                 disabled
               >
-                Original öffnen
+                Original-Link noch nicht verfügbar
               </button>
             )}
             {!item.replyTargetUrl ? (
               <small>
-                Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert.
+                Original-Link noch nicht verfügbar. Spätere Echt-Events können hier den Kommentar- oder Chat-Link liefern.
               </small>
             ) : null}
             <div className={styles.rowActions}>
@@ -459,6 +463,7 @@ function buildConversationInboxQueue(
         aiStatus: formatAiStatus(conversation.ai_status),
         nextStep: conversation.next_step || "Antwort vorbereiten",
         replyTargetUrl,
+        originalPreview: conversation.original_text_excerpt ?? undefined,
         sourceType: getSourceType(conversation.source_type),
         sourcePlatformLabel: channel,
         unread: Boolean(conversation.last_inbound_at),
@@ -696,16 +701,23 @@ function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
   return "dm";
 }
 
-function getOriginalActionLabel(platform?: string): string {
-  const normalized = platform?.toLowerCase() ?? "";
+function getOriginalActionLabel(
+  sourceType?: InboxQueueItem["sourceType"],
+  url?: string,
+  platform?: string,
+): string {
+  const normalized = `${sourceType ?? ""} ${platform ?? ""}`.toLowerCase();
 
-  if (normalized.includes("facebook")) return "Facebook öffnen";
-  if (normalized.includes("messenger")) return "Messenger öffnen";
-  if (normalized.includes("instagram")) return "Instagram öffnen";
-  if (normalized.includes("whatsapp")) return "WhatsApp öffnen";
-  if (normalized.includes("mail")) return "E-Mail öffnen";
+  if (normalized.includes("comment") || normalized.includes("kommentar")) {
+    return url ? "Kommentar öffnen" : "Original-Link noch nicht verfügbar";
+  }
 
-  return "Original öffnen";
+  if (normalized.includes("post")) return "Beitrag öffnen";
+  if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger")) {
+    return url ? "Chat öffnen" : "Original-Link noch nicht verfügbar";
+  }
+
+  return url ? "Original öffnen" : "Original-Link noch nicht verfügbar";
 }
 
 function getChannelClass(value: string | null): string {

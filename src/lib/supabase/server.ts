@@ -85,6 +85,10 @@ export type ConversationRow = {
   reply_target_url: string | null;
   external_thread_id: string | null;
   external_message_id: string | null;
+  external_post_id: string | null;
+  external_comment_id: string | null;
+  original_author_label: string | null;
+  original_text_excerpt: string | null;
   last_inbound_at: string | null;
   last_outbound_at: string | null;
   last_message_preview: string | null;
@@ -103,9 +107,15 @@ export type ConversationMessageRow = {
   direction: string;
   message_type: string;
   source_platform: string | null;
+  source_type: string | null;
   source_url: string | null;
   reply_target_url: string | null;
+  external_thread_id: string | null;
   external_message_id: string | null;
+  external_post_id: string | null;
+  external_comment_id: string | null;
+  original_author_label: string | null;
+  original_text_excerpt: string | null;
   author_label: string | null;
   content: string;
   created_at: string | null;
@@ -256,6 +266,11 @@ type CreateManualConversationMessageInput = {
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
+  externalThreadId?: string | null;
+  externalPostId?: string | null;
+  externalCommentId?: string | null;
+  originalAuthorLabel?: string | null;
+  originalTextExcerpt?: string | null;
   authorLabel?: string | null;
   userId?: string | null;
   content: string;
@@ -404,9 +419,9 @@ const CONTACT_COLUMNS =
 const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
 const CONVERSATION_COLUMNS =
-  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
+  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
-  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_url,reply_target_url,external_message_id,author_label,content,created_at";
+  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,created_at";
 const CONVERSATION_SUMMARY_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,summary,key_points,open_questions,last_summarized_message_at,message_count_seen,updated_at,created_at";
 const CONTACT_AI_PROFILE_COLUMNS =
@@ -1381,7 +1396,13 @@ export async function createManualConversationMessage(
       source_platform: normalizeOptionalText(input.sourcePlatform) ?? "manual",
       source_url: sourceUrl,
       reply_target_url: replyTargetUrl,
+      source_type: messageType,
+      external_thread_id: normalizeOptionalText(input.externalThreadId),
       external_message_id: normalizeOptionalText(input.externalMessageId),
+      external_post_id: normalizeOptionalText(input.externalPostId),
+      external_comment_id: normalizeOptionalText(input.externalCommentId),
+      original_author_label: normalizeOptionalText(input.originalAuthorLabel) ?? normalizeOptionalText(input.authorLabel),
+      original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content),
       author_label:
         normalizeOptionalText(input.authorLabel) ??
         (direction === "inbound" ? "Fan" : "Team"),
@@ -1408,6 +1429,12 @@ export async function createManualConversationMessage(
       replyTargetUrl ?? conversationResult.conversation.reply_target_url,
     ai_status: "partial",
     next_step: "Antwort vorbereiten",
+    external_thread_id: normalizeOptionalText(input.externalThreadId) ?? conversationResult.conversation.external_thread_id,
+    external_message_id: normalizeOptionalText(input.externalMessageId) ?? conversationResult.conversation.external_message_id,
+    external_post_id: normalizeOptionalText(input.externalPostId) ?? conversationResult.conversation.external_post_id,
+    external_comment_id: normalizeOptionalText(input.externalCommentId) ?? conversationResult.conversation.external_comment_id,
+    original_author_label: normalizeOptionalText(input.originalAuthorLabel) ?? normalizeOptionalText(input.authorLabel) ?? conversationResult.conversation.original_author_label,
+    original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content) ?? conversationResult.conversation.original_text_excerpt,
   };
 
   if (direction === "inbound")
@@ -1560,6 +1587,11 @@ export async function updateWorkspaceVoiceProfileFromManualOutbound(input: { wor
   });
 }
 
+function normalizeExcerpt(value?: string | null): string | null {
+  const normalized = normalizeOptionalText(value);
+  return normalized ? normalized.slice(0, 500) : null;
+}
+
 function detectLanguage(content: string): string {
   return /\b(und|oder|danke|bitte|ich|du|sie|wir)\b/i.test(content) ? "de" : "unbekannt";
 }
@@ -1594,6 +1626,10 @@ export async function createFacebookWebhookConversationMessage(input: {
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
   externalThreadId?: string | null;
+  externalPostId?: string | null;
+  externalCommentId?: string | null;
+  originalAuthorLabel?: string | null;
+  originalTextExcerpt?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const handle = normalizeOptionalText(input.senderId);
   let contact: ContactRow | null = null;
@@ -1649,6 +1685,9 @@ export async function createFacebookWebhookConversationMessage(input: {
     replyTargetUrl: input.replyTargetUrl,
     externalMessageId: input.externalMessageId,
     externalThreadId: input.externalThreadId,
+    externalPostId: input.externalPostId,
+    externalCommentId: input.externalCommentId,
+    originalTextExcerpt: input.originalTextExcerpt ?? input.content,
     authorLabel: input.authorLabel,
   });
 
@@ -1676,6 +1715,9 @@ export async function createMetaTestConversationMessage(input: {
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
   externalThreadId?: string | null;
+  externalPostId?: string | null;
+  externalCommentId?: string | null;
+  originalTextExcerpt?: string | null;
   authorLabel?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const content = input.content.trim();
@@ -1742,7 +1784,13 @@ export async function createMetaTestConversationMessage(input: {
       source_platform: "facebook",
       source_url: sourceUrl,
       reply_target_url: replyTargetUrl,
+      source_type: normalizeMessageType(input.sourceType ?? input.messageType),
+      external_thread_id: normalizeOptionalText(input.externalThreadId),
       external_message_id: normalizeOptionalText(input.externalMessageId),
+      external_post_id: normalizeOptionalText(input.externalPostId),
+      external_comment_id: normalizeOptionalText(input.externalCommentId),
+      original_author_label: normalizeOptionalText(input.authorLabel) ?? "Facebook Nutzer",
+      original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content),
       author_label:
         normalizeOptionalText(input.authorLabel) ?? "Facebook Nutzer",
       content,
@@ -1773,6 +1821,18 @@ export async function createMetaTestConversationMessage(input: {
       external_message_id:
         normalizeOptionalText(input.externalMessageId) ??
         conversationResult.conversation.external_message_id,
+      external_post_id:
+        normalizeOptionalText(input.externalPostId) ??
+        conversationResult.conversation.external_post_id,
+      external_comment_id:
+        normalizeOptionalText(input.externalCommentId) ??
+        conversationResult.conversation.external_comment_id,
+      original_author_label:
+        normalizeOptionalText(input.authorLabel) ??
+        conversationResult.conversation.original_author_label,
+      original_text_excerpt:
+        normalizeExcerpt(input.originalTextExcerpt ?? content) ??
+        conversationResult.conversation.original_text_excerpt,
       status: "open",
       ai_status: "partial",
       next_step: "Antwort vorbereiten",
