@@ -12,8 +12,6 @@ type ContactAiContext = {
   displayName: string;
   handle: string | null;
   sourcePlatform: string | null;
-  originalChatUrl?: string;
-  originalActionLabel?: string;
   language: string | null;
   status: string | null;
   tags: string[] | null;
@@ -294,16 +292,6 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
                         ? "Kopiert"
                         : "Antwort kopieren"}
                     </button>
-                    {contact.originalChatUrl ? (
-                      <a
-                        className={dashboardStyles.secondaryButton}
-                        href={contact.originalChatUrl}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        {contact.originalActionLabel ?? "Original öffnen"}
-                      </a>
-                    ) : null}
                   </div>
                 </div>
                 <p>{option.text}</p>
@@ -356,12 +344,6 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
               </button>
             </article>
           </div>
-
-          {!contact.originalChatUrl ? (
-            <p className={styles.aiSafetyNote}>
-              Original-Link noch nicht verfügbar.
-            </p>
-          ) : null}
 
           <p className={styles.aiSafetyNote}>
             {suggestions.safety_note} Kopierte Antwortentwürfe müssen extern
