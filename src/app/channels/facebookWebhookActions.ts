@@ -76,6 +76,7 @@ export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchRe
         authorLabel: comment.from?.name ?? "Facebook Nutzer",
         content: comment.message,
         messageType: "comment",
+        sourceType: "facebook_comments",
         sourceUrl: comment.permalink_url ?? comment.postPermalinkUrl ?? `https://www.facebook.com/${comment.postId}`,
         replyTargetUrl: comment.permalink_url ?? comment.postPermalinkUrl ?? `https://www.facebook.com/${comment.postId}`,
         externalMessageId: comment.id,

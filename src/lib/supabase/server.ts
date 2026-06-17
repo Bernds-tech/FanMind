@@ -1589,6 +1589,7 @@ export async function createFacebookWebhookConversationMessage(input: {
   authorLabel: string;
   content: string;
   messageType: "dm" | "comment";
+  sourceType?: "facebook_messages" | "facebook_comments" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1643,6 +1644,7 @@ export async function createFacebookWebhookConversationMessage(input: {
     contactId: contact.id,
     content: input.content,
     messageType: input.messageType,
+    sourceType: input.sourceType ?? (input.messageType === "comment" ? "facebook_comments" : "facebook_messages"),
     sourceUrl: input.sourceUrl,
     replyTargetUrl: input.replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1669,6 +1671,7 @@ export async function createMetaTestConversationMessage(input: {
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
+  sourceType?: "facebook_messages" | "facebook_comments" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1710,7 +1713,7 @@ export async function createMetaTestConversationMessage(input: {
   const conversationResult = await ensureMetaTestConversation({
     workspaceId: input.workspaceId,
     contactId: input.contactId,
-    sourceType: input.messageType,
+    sourceType: input.sourceType ?? (input.messageType === "comment" ? "facebook_comments" : "facebook_messages"),
     sourceUrl,
     replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1760,7 +1763,7 @@ export async function createMetaTestConversationMessage(input: {
       last_message_preview: content.slice(0, 240),
       last_inbound_at: new Date().toISOString(),
       source_platform: "facebook",
-      source_type: input.messageType,
+      source_type: normalizeMessageType(input.sourceType ?? input.messageType),
       source_url: sourceUrl ?? conversationResult.conversation.source_url,
       reply_target_url:
         replyTargetUrl ?? conversationResult.conversation.reply_target_url,
@@ -2669,9 +2672,17 @@ function withOptionalSchemaHint(
 
 function normalizeMessageType(value: string | null | undefined): string {
   const normalized = normalizeOptionalText(value)?.toLowerCase();
-  return ["dm", "comment", "post", "email", "form", "note", "manual"].includes(
-    normalized ?? "",
-  )
+  return [
+    "facebook_messages",
+    "facebook_comments",
+    "dm",
+    "comment",
+    "post",
+    "email",
+    "form",
+    "note",
+    "manual",
+  ].includes(normalized ?? "")
     ? normalized!
     : "dm";
 }

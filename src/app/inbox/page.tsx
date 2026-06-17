@@ -597,6 +597,8 @@ function formatAiStatus(value: string | null): InboxQueueItem["aiStatus"] {
 
 function formatConversationType(value: string | null): string {
   const labels: Record<string, string> = {
+    facebook_messages: "Facebook Nachrichten",
+    facebook_comments: "Facebook Kommentare",
     dm: "DM",
     comment: "Kommentar",
     post_comment: "Post-Kommentar",
@@ -681,6 +683,8 @@ function getReplyTargetUrl(contact: ContactRow): string | undefined {
 function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
   const value = (source ?? "").toLowerCase();
 
+  if (value.includes("facebook_comments")) return "comment";
+  if (value.includes("facebook_messages")) return "dm";
   if (value.includes("mail")) return "email";
   if (value.includes("form") || value.includes("web")) return "form";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "post";
@@ -725,6 +729,8 @@ function getConversationType(
 
   const value = (source ?? "").toLowerCase();
 
+  if (value.includes("facebook_comments")) return "Facebook Kommentare";
+  if (value.includes("facebook_messages")) return "Facebook Nachrichten";
   if (value.includes("email")) return "E-Mail";
   if (value.includes("form")) return "Formular";
   if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "Post-Kommentar";

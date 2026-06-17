@@ -8,6 +8,7 @@ import {
 export type MetaWebhookEvent = {
   eventType: "feed" | "feed_comment" | "messages" | "unknown";
   messageType: "dm" | "comment";
+  channelType: "facebook_messages" | "facebook_comments";
   content: string | null;
   externalMessageId: string | null;
   externalThreadId: string | null;
@@ -51,6 +52,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
       events.push({
         eventType: "messages",
         messageType: "dm",
+        channelType: "facebook_messages",
         content: text,
         externalMessageId: mid,
         externalThreadId: senderId,
@@ -84,7 +86,8 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
 
       events.push({
         eventType,
-        messageType: isCommentItem ? "comment" : "comment",
+        messageType: "comment",
+        channelType: "facebook_comments",
         content,
         externalMessageId: commentId,
         externalThreadId: postId ?? permalink ?? commentId,
@@ -152,6 +155,7 @@ export async function processMetaWebhookPayload(
           senderId: event.senderId,
           content: event.content,
           messageType: event.eventType === "feed" || event.eventType === "feed_comment" ? "comment" : event.messageType,
+          sourceType: event.channelType,
           sourceUrl: event.sourceUrl,
           replyTargetUrl: event.replyTargetUrl,
           externalMessageId: event.externalMessageId,
@@ -199,7 +203,7 @@ export async function processMetaWebhookPayload(
 }
 
 function unknownEvent(pageId: string | null, senderId: string | null, rawEvent: unknown): MetaWebhookEvent {
-  return { eventType: "unknown", messageType: "comment", content: null, externalMessageId: null, externalThreadId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent };
+  return { eventType: "unknown", messageType: "comment", channelType: "facebook_comments", content: null, externalMessageId: null, externalThreadId: null, sourceUrl: null, replyTargetUrl: null, authorLabel: "Facebook Nutzer", pageId, senderId, recipientId: pageId, rawEvent };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
