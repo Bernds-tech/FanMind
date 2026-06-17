@@ -19,6 +19,7 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { countUniqueFans, getFanGroupKey } from "@/lib/fanIdentity";
 import styles from "./dashboard.module.css";
+import { getMessageSourceContext } from "@/lib/sourceContext";
 
 type WorkspaceDetailsProps = {
   workspace: WorkspaceDashboardRow;
@@ -60,6 +61,8 @@ type NewMessageItem = {
   contactId: string;
   name: string;
   source: string;
+  sourceContext: string;
+  sourceKey: string;
   excerpt: string;
   createdAt: string | null;
 };
@@ -242,6 +245,8 @@ function getNewMessageItems(contacts: ContactRow[], messages: ConversationMessag
         contactId: message.contact_id,
         name: contact?.display_name || contact?.handle || message.author_label || "Unbenannter Kontakt",
         source: formatSource(message.source_platform),
+        sourceContext: getMessageSourceContext(message).contextLabel,
+        sourceKey: getMessageSourceContext(message).contextKey,
         excerpt: message.original_text_excerpt || message.content,
         createdAt: message.created_at,
       };
@@ -407,7 +412,11 @@ function WorkspaceDetails({
           {newMessageItems.length ? (
             <div className={styles.newMessageList}>
               {newMessageItems.map((item) => {
-                const detailHref = `/fans/${item.contactId}?seen_message=${item.id}&from=dashboard`;
+                const params = new URLSearchParams({ seen_message: item.id, from: "dashboard" });
+                const channel = normalizeDashboardChannel(item.source);
+                if (channel) params.set("channel", channel);
+                if (item.sourceKey !== "all") params.set("source", item.sourceKey);
+                const detailHref = `/fans/${item.contactId}?${params.toString()}`;
 
                 return (
                   <article className={styles.newMessageRow} key={item.id}>
@@ -420,6 +429,7 @@ function WorkspaceDetails({
                           {item.name}
                         </Link>
                         <span className={styles.tableBadge}>{item.source}</span>
+                        <span className={styles.tableBadge}>{item.sourceContext}</span>
                         <time dateTime={item.createdAt ?? undefined}>
                           {formatDateTime(item.createdAt)}
                         </time>
@@ -564,4 +574,15 @@ export default async function DashboardPage() {
       )}
     </main>
   );
+}
+
+function normalizeDashboardChannel(source: string): string | null {
+  const value = source.toLowerCase();
+  if (value.includes("instagram")) return "instagram";
+  if (value.includes("whatsapp")) return "whatsapp";
+  if (value.includes("facebook")) return "facebook";
+  if (value.includes("tiktok")) return "tiktok";
+  if (value.includes("mail")) return "email";
+  if (value.includes("web") || value.includes("formular")) return "webform";
+  return null;
 }
