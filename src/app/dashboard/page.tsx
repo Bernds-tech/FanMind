@@ -222,17 +222,34 @@ function getWorkInboxItems(
 
 function getNewMessageItems(contacts: ContactRow[], messages: ConversationMessageRow[]): NewMessageItem[] {
   const contactsById = new Map(contacts.map((contact) => [contact.id, contact]));
-  return messages.slice(0, 8).map((message) => {
-    const contact = contactsById.get(message.contact_id);
-    return {
-      id: message.id,
-      contactId: message.contact_id,
-      name: contact?.display_name || contact?.handle || message.author_label || "Unbenannter Kontakt",
-      source: formatSource(message.source_platform),
-      excerpt: message.original_text_excerpt || message.content,
-      createdAt: message.created_at,
-    };
-  });
+  const latestByContact = new Map<string, ConversationMessageRow>();
+
+  for (const message of messages) {
+    const existing = latestByContact.get(message.contact_id);
+
+    if (!existing || getTimestamp(message.created_at) > getTimestamp(existing.created_at)) {
+      latestByContact.set(message.contact_id, message);
+    }
+  }
+
+  return Array.from(latestByContact.values())
+    .sort((left, right) => getTimestamp(right.created_at) - getTimestamp(left.created_at))
+    .slice(0, 8)
+    .map((message) => {
+      const contact = contactsById.get(message.contact_id);
+      return {
+        id: message.id,
+        contactId: message.contact_id,
+        name: contact?.display_name || contact?.handle || message.author_label || "Unbenannter Kontakt",
+        source: formatSource(message.source_platform),
+        excerpt: message.original_text_excerpt || message.content,
+        createdAt: message.created_at,
+      };
+    });
+}
+
+function getTimestamp(value: string | null): number {
+  return value ? new Date(value).getTime() : 0;
 }
 
 function getFollowupDueTime(value: string | null): number {
@@ -394,7 +411,7 @@ function WorkspaceDetails({
                   <div>
                     <span className={styles.tableBadge}>Neue Nachricht</span>
                     <h3>
-                      <Link className={styles.contactNameLink} href={`/fans/${item.contactId}?seen_message=${item.id}`}>
+                      <Link className={styles.contactNameLink} href={`/fans/${item.contactId}?seen_message=${item.id}&from=dashboard`}>
                         {item.name}
                       </Link>
                     </h3>
@@ -402,7 +419,7 @@ function WorkspaceDetails({
                     <small>{item.source} · {formatDateTime(item.createdAt)}</small>
                   </div>
                   <div className={styles.workInboxMeta}>
-                    <Link className={styles.moduleHeaderLink} href={`/fans/${item.contactId}?seen_message=${item.id}`}>Öffnen</Link>
+                    <Link className={styles.moduleHeaderLink} href={`/fans/${item.contactId}?seen_message=${item.id}&from=dashboard`}>Öffnen</Link>
                   </div>
                 </article>
               ))}
