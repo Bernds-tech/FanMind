@@ -1620,11 +1620,11 @@ function extractCommonPhrases(content: string): string[] {
 export async function createMetaWebhookConversationMessage(input: {
   workspaceId: string;
   senderId?: string | null;
-  sourcePlatform: "facebook" | "instagram";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp";
   authorLabel: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1633,6 +1633,7 @@ export async function createMetaWebhookConversationMessage(input: {
   externalCommentId?: string | null;
   originalAuthorLabel?: string | null;
   originalTextExcerpt?: string | null;
+  receivedAt?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const handle = normalizeOptionalText(input.senderId);
   let contact: ContactRow | null = null;
@@ -1660,13 +1661,13 @@ export async function createMetaWebhookConversationMessage(input: {
       "POST",
       {
         workspace_id: input.workspaceId,
-        display_name: input.authorLabel || (input.sourcePlatform === "instagram" ? "Instagram Nutzer" : "Facebook Nutzer"),
+        display_name: input.authorLabel || getDefaultWebhookAuthorLabel(input.sourcePlatform),
         handle,
         source_platform: input.sourcePlatform,
         language: "de",
         status: "new",
         tags: [input.sourcePlatform],
-        summary: `Automatisch aus einem eingehenden ${input.sourcePlatform === "instagram" ? "Instagram" : "Facebook"}-Webhook angelegt.`,
+        summary: `Automatisch aus einem eingehenden ${getWebhookPlatformLabel(input.sourcePlatform)}-Webhook angelegt.`,
       },
       getServiceAccessToken(),
       { select: CONTACT_COLUMNS, single: true },
@@ -1684,7 +1685,7 @@ export async function createMetaWebhookConversationMessage(input: {
     content: input.content,
     messageType: input.messageType,
     sourcePlatform: input.sourcePlatform,
-    sourceType: input.sourceType ?? (input.messageType === "comment" ? `${input.sourcePlatform}_comments` : `${input.sourcePlatform}_messages`),
+    sourceType: input.sourceType ?? getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
     sourceUrl: input.sourceUrl,
     replyTargetUrl: input.replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1693,6 +1694,7 @@ export async function createMetaWebhookConversationMessage(input: {
     externalCommentId: input.externalCommentId,
     originalTextExcerpt: input.originalTextExcerpt ?? input.content,
     authorLabel: input.authorLabel,
+    receivedAt: input.receivedAt,
   });
 
   await postgrestUpdate(
@@ -1711,11 +1713,11 @@ export async function createMetaWebhookConversationMessage(input: {
 
 export async function createMetaTestConversationMessage(input: {
   workspaceId: string;
-  sourcePlatform?: "facebook" | "instagram";
+  sourcePlatform?: "facebook" | "instagram" | "whatsapp";
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
-  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "dm" | "comment" | null;
+  sourceType?: "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" | "dm" | "comment" | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
@@ -1724,6 +1726,7 @@ export async function createMetaTestConversationMessage(input: {
   externalCommentId?: string | null;
   originalTextExcerpt?: string | null;
   authorLabel?: string | null;
+  receivedAt?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const content = input.content.trim();
 
@@ -1755,13 +1758,14 @@ export async function createMetaTestConversationMessage(input: {
     }
   }
 
+  const receivedAt = normalizeIsoTimestamp(input.receivedAt) ?? new Date().toISOString();
   const sourceUrl = normalizeUrl(input.sourceUrl);
   const replyTargetUrl = normalizeUrl(input.replyTargetUrl) ?? sourceUrl;
   const conversationResult = await ensureMetaTestConversation({
     workspaceId: input.workspaceId,
     contactId: input.contactId,
     sourcePlatform: input.sourcePlatform ?? "facebook",
-    sourceType: input.sourceType ?? (input.messageType === "comment" ? `${input.sourcePlatform ?? "facebook"}_comments` : `${input.sourcePlatform ?? "facebook"}_messages`),
+    sourceType: input.sourceType ?? getDefaultWebhookSourceType(input.sourcePlatform ?? "facebook", input.messageType),
     sourceUrl,
     replyTargetUrl,
     externalMessageId: input.externalMessageId,
@@ -1795,11 +1799,12 @@ export async function createMetaTestConversationMessage(input: {
       external_message_id: normalizeOptionalText(input.externalMessageId),
       external_post_id: normalizeOptionalText(input.externalPostId),
       external_comment_id: normalizeOptionalText(input.externalCommentId),
-      original_author_label: normalizeOptionalText(input.authorLabel) ?? (input.sourcePlatform === "instagram" ? "Instagram Nutzer" : "Facebook Nutzer"),
+      original_author_label: normalizeOptionalText(input.authorLabel) ?? getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
       original_text_excerpt: normalizeExcerpt(input.originalTextExcerpt ?? content),
       author_label:
-        normalizeOptionalText(input.authorLabel) ?? (input.sourcePlatform === "instagram" ? "Instagram Nutzer" : "Facebook Nutzer"),
+        normalizeOptionalText(input.authorLabel) ?? getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
       content,
+      created_at: receivedAt,
     },
     getServiceAccessToken(),
     { select: CONVERSATION_MESSAGE_COLUMNS, single: true },
@@ -1815,7 +1820,7 @@ export async function createMetaTestConversationMessage(input: {
     "conversations",
     {
       last_message_preview: content.slice(0, 240),
-      last_inbound_at: new Date().toISOString(),
+      last_inbound_at: receivedAt,
       source_platform: input.sourcePlatform ?? "facebook",
       source_type: normalizeMessageType(input.sourceType ?? input.messageType),
       source_url: sourceUrl ?? conversationResult.conversation.source_url,
@@ -1861,7 +1866,7 @@ export async function createMetaTestConversationMessage(input: {
 async function ensureMetaTestConversation(input: {
   workspaceId: string;
   contactId: string;
-  sourcePlatform: "facebook" | "instagram";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp";
   sourceType: string;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
@@ -2748,6 +2753,7 @@ function normalizeMessageType(value: string | null | undefined): string {
     "facebook_comments",
     "instagram_messages",
     "instagram_comments",
+    "whatsapp_messages",
     "dm",
     "comment",
     "post",
@@ -2844,4 +2850,28 @@ function isProductiveCommercialOption(
     value === "starter_paid_setup" ||
     value === "starter_no_setup_commitment"
   );
+}
+
+function getDefaultWebhookAuthorLabel(platform: "facebook" | "instagram" | "whatsapp"): string {
+  if (platform === "instagram") return "Instagram Nutzer";
+  if (platform === "whatsapp") return "WhatsApp Kontakt";
+  return "Facebook Nutzer";
+}
+
+function getWebhookPlatformLabel(platform: "facebook" | "instagram" | "whatsapp"): string {
+  if (platform === "instagram") return "Instagram";
+  if (platform === "whatsapp") return "WhatsApp";
+  return "Facebook";
+}
+
+function normalizeIsoTimestamp(value: string | null | undefined): string | null {
+  const normalized = normalizeOptionalText(value);
+  if (!normalized) return null;
+  const date = new Date(/^\d+$/.test(normalized) ? Number(normalized) * 1000 : normalized);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function getDefaultWebhookSourceType(platform: "facebook" | "instagram" | "whatsapp", messageType: "dm" | "comment"): "facebook_messages" | "facebook_comments" | "instagram_messages" | "instagram_comments" | "whatsapp_messages" {
+  if (platform === "whatsapp") return "whatsapp_messages";
+  return messageType === "comment" ? `${platform}_comments` : `${platform}_messages`;
 }

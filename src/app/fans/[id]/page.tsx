@@ -1122,6 +1122,7 @@ function formatDetailedSource(platform: string | null, sourceType: string | null
   if (source.includes("facebook_messages")) return "Facebook Nachrichten";
   if (source.includes("instagram_comments")) return "Instagram Kommentare";
   if (source.includes("instagram_messages")) return "Instagram Nachrichten";
+  if (source.includes("whatsapp_messages")) return "WhatsApp Nachrichten";
   const base = formatSource(platform);
   if (source.includes("comment")) return `${base} Kommentare`;
   if (source.includes("dm") || source.includes("message")) return `${base} Nachrichten`;
