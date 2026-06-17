@@ -455,7 +455,7 @@ function FanDetailContent({
 
         <aside
           className={styles.copilot}
-          aria-label="Fan-Gedächtnis und KI-Antwortvorschläge"
+          aria-label="Fan-Analyse-Report und KI-Antwortvorschläge"
         >
           <FanMemoryCard memories={memories} memoriesError={memoriesError} />
           <AiReplySuggestions
@@ -638,39 +638,130 @@ function FanMemoryCard({
   memories: MemoryRow[];
   memoriesError?: string;
 }) {
+  const reportSections = buildFanAnalysisReportSections(memories);
+
   return (
     <article className={styles.card}>
       <div className={styles.cardHeader}>
         <div>
-          <p className={dashboardStyles.eyebrow}>Echte Daten</p>
-          <h3>Fan-Gedächtnis</h3>
+          <h3>Fan-Analyse-Report</h3>
+          <p className={styles.reportIntro}>
+            Assistenz-Report aus gespeicherten Nachrichten, Interaktionen und
+            Analyse-Notizen. Einschätzungen bleiben kommunikative Hinweise und
+            keine Diagnose.
+          </p>
         </div>
       </div>
       {memoriesError ? (
         <p className={dashboardStyles.error}>
-          <strong>Memories konnten nicht geladen werden.</strong>
+          <strong>Analyse-Report konnte nicht geladen werden.</strong>
           <span>{memoriesError}</span>
         </p>
       ) : null}
-      {memories.length ? (
-        <div className={styles.compactList}>
-          {memories.map((memory) => (
-            <article className={styles.compactItem} key={memory.id}>
-              <strong>{formatMemoryType(memory.type)}</strong>
-              <p>{memory.content}</p>
-              <p className={styles.muted}>
-                Wichtigkeit: {memory.importance ?? "normal"} ·{" "}
-                {formatDate(memory.created_at)}
-              </p>
-            </article>
+      {reportSections.length ? (
+        <div className={styles.reportSectionList}>
+          {reportSections.map((section) => (
+            <section className={styles.reportSection} key={section.title}>
+              <div className={styles.reportSectionHeader}>
+                <strong>{section.title}</strong>
+                <span>{section.entries.length} Hinweis(e)</span>
+              </div>
+              <div className={styles.compactList}>
+                {section.entries.map((memory) => (
+                  <article className={styles.compactItem} key={memory.id}>
+                    <strong>{formatMemoryType(memory.type)}</strong>
+                    <p>{memory.content}</p>
+                    <p className={styles.muted}>
+                      Wichtigkeit: {memory.importance ?? "normal"} ·{" "}
+                      {formatDate(memory.created_at)}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
           ))}
+          <p className={styles.reportSafetyNote}>
+            Bitte als vorsichtige Kommunikationshilfe lesen: keine medizinische
+            oder psychologische Diagnose, keine harten sensiblen Behauptungen.
+            Spirituelle oder energetische Hinweise nur weich interpretieren und
+            nicht als Fakt bewerten.
+          </p>
         </div>
       ) : (
-        <EmptyState title="Noch keine Memories gespeichert." body="" />
+        <EmptyState
+          title="Noch kein Fan-Analyse-Report vorhanden."
+          body="Sobald genügend Nachrichten vorliegen, kann FanMind Kommunikationsstil, Interessen, Stimmung, Trigger und passende Antwortstrategie zusammenfassen."
+        />
       )}
     </article>
   );
 }
+const fanAnalysisReportSectionOrder = [
+  "Kurzprofil",
+  "Kommunikationsstil",
+  "Stimmung / emotionale Tendenz",
+  "Interessen & Trigger",
+  "Kauf-/Reaktionswahrscheinlichkeit",
+  "Empfohlener Antwortstil",
+  "Vorsicht / No-Gos",
+  "Optionale spirituelle oder energetische Hinweise",
+] as const;
+
+type FanAnalysisReportSectionTitle =
+  (typeof fanAnalysisReportSectionOrder)[number];
+
+function buildFanAnalysisReportSections(memories: MemoryRow[]): {
+  title: FanAnalysisReportSectionTitle;
+  entries: MemoryRow[];
+}[] {
+  const sections = new Map<FanAnalysisReportSectionTitle, MemoryRow[]>();
+
+  memories.forEach((memory) => {
+    const sectionTitle = getFanAnalysisReportSection(memory);
+    sections.set(sectionTitle, [...(sections.get(sectionTitle) ?? []), memory]);
+  });
+
+  return fanAnalysisReportSectionOrder
+    .map((title) => ({ title, entries: sections.get(title) ?? [] }))
+    .filter((section) => section.entries.length > 0);
+}
+
+function getFanAnalysisReportSection(
+  memory: MemoryRow,
+): FanAnalysisReportSectionTitle {
+  const type = (memory.type ?? "").toLowerCase();
+  const content = memory.content.toLowerCase();
+  const haystack = `${type} ${content}`;
+
+  if (includesAny(haystack, ["no-go", "nogo", "vorsicht", "trigger"])) {
+    return "Vorsicht / No-Gos";
+  }
+  if (includesAny(haystack, ["spirit", "energie", "energetisch", "intuition"])) {
+    return "Optionale spirituelle oder energetische Hinweise";
+  }
+  if (includesAny(haystack, ["antwort", "stil", "ton", "strategie"])) {
+    return "Empfohlener Antwortstil";
+  }
+  if (includesAny(haystack, ["kauf", "conversion", "reagiert", "wahrscheinlichkeit"])) {
+    return "Kauf-/Reaktionswahrscheinlichkeit";
+  }
+  if (includesAny(haystack, ["interesse", "thema", "preis", "verfügbarkeit"])) {
+    return "Interessen & Trigger";
+  }
+  if (includesAny(haystack, ["stimmung", "emotional", "gefühl", "wirkt"])) {
+    return "Stimmung / emotionale Tendenz";
+  }
+  if (includesAny(haystack, ["kommunikation", "kommuniziert", "kurz", "direkt"])) {
+    return "Kommunikationsstil";
+  }
+
+  return "Kurzprofil";
+}
+
+function includesAny(value: string, needles: string[]): boolean {
+  return needles.some((needle) => value.includes(needle));
+}
+
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <div className={dashboardStyles.emptyState}>
