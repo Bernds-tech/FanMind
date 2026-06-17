@@ -66,6 +66,7 @@ export type ContactRow = {
   status: string | null;
   tags: string[] | null;
   summary: string | null;
+  internal_notes: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -147,6 +148,20 @@ export type ConversationSummaryRow = {
   message_count_seen: number;
   updated_at: string | null;
   created_at: string | null;
+};
+
+
+export type FanAnalysisReportRow = {
+  id: string;
+  workspace_id: string;
+  contact_id: string;
+  report_json: Record<string, unknown>;
+  summary: string | null;
+  model: string | null;
+  source_message_count: number;
+  generated_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type ContactAiProfileRow = {
@@ -342,6 +357,11 @@ type ContactDetailResult = {
   error: Error | null;
 };
 
+type FanAnalysisReportResult = {
+  report: FanAnalysisReportRow | null;
+  error: Error | null;
+};
+
 type MemoriesResult = {
   memories: MemoryRow[];
   error: Error | null;
@@ -439,7 +459,7 @@ type SupabaseFilterValue = string | number | boolean | null;
 const WORKSPACE_COLUMNS =
   "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months";
 const CONTACT_COLUMNS =
-  "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,created_at,updated_at";
+  "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,created_at,updated_at";
 const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
 const CONVERSATION_COLUMNS =
@@ -450,6 +470,8 @@ const CONVERSATION_SUMMARY_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,summary,key_points,open_questions,last_summarized_message_at,message_count_seen,updated_at,created_at";
 const CONTACT_AI_PROFILE_COLUMNS =
   "id,workspace_id,contact_id,language,tone,sentiment,interests,buying_signals,no_gos,preferred_style,response_triggers,risk_notes,confidence_score,source_message_count,updated_at,created_at";
+const FAN_ANALYSIS_REPORT_COLUMNS =
+  "id,workspace_id,contact_id,report_json,summary,model,source_message_count,generated_at,created_at,updated_at";
 const WORKSPACE_VOICE_PROFILE_COLUMNS =
   "id,workspace_id,user_id,owner_label,language,tone,sentence_length,emoji_style,greeting_style,closing_style,common_phrases,avoided_phrases,sales_style,examples_count,confidence_score,updated_at,created_at";
 const SOCIAL_CONNECTION_COLUMNS =
@@ -1203,6 +1225,74 @@ export async function updateWorkspaceContact(
   }
 
   return { contact: contactResult.data, error: null };
+}
+
+
+export async function updateContactInternalNotes(input: {
+  workspaceId: string;
+  contactId: string;
+  internalNotes: string;
+}): Promise<ContactUpdateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return contactUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const result = await postgrestUpdate<ContactRow>(
+    "contacts",
+    { internal_notes: input.internalNotes.trim() || null },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.contactId],
+    ],
+    { select: CONTACT_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return contactUpdateError(
+      `Notizen konnten nicht gespeichert werden: ${result.error.message}`,
+    );
+  }
+
+  return { contact: result.data, error: null };
+}
+
+export async function getFanAnalysisReport(
+  workspaceId: string,
+  contactId: string,
+): Promise<FanAnalysisReportResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { report: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const result = await postgrestSelect<FanAnalysisReportRow>(
+    "fan_analysis_reports",
+    accessToken,
+    FAN_ANALYSIS_REPORT_COLUMNS,
+    [["workspace_id", workspaceId], ["contact_id", contactId]],
+    1,
+    true,
+  );
+  if (result.error) return { report: null, error: new Error(`Analyse-Report konnte nicht geladen werden: ${result.error.message}`) };
+  return { report: result.data, error: null };
+}
+
+export async function upsertFanAnalysisReport(input: {
+  workspaceId: string; contactId: string; reportJson: Record<string, unknown>; summary: string; model: string; sourceMessageCount: number;
+}): Promise<FanAnalysisReportResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { report: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  const result = await postgrestRequest<FanAnalysisReportRow>(
+    "fan_analysis_reports",
+    "POST",
+    { workspace_id: input.workspaceId, contact_id: input.contactId, report_json: input.reportJson, summary: input.summary, model: input.model, source_message_count: input.sourceMessageCount, generated_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    accessToken,
+    { select: FAN_ANALYSIS_REPORT_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,contact_id" },
+  );
+  if (result.error) return { report: null, error: new Error(`Analyse-Report konnte nicht gespeichert werden: ${result.error.message}`) };
+  return { report: result.data, error: null };
 }
 
 export async function getContactMemories(

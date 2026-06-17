@@ -6,6 +6,7 @@ import {
   getConversationSummary,
   getContactFollowups,
   getContactMemories,
+  getFanAnalysisReport,
   getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
@@ -21,6 +22,7 @@ import {
   type ConversationSummaryRow,
   type ConversationMessageRow,
   type ConversationRow,
+  type FanAnalysisReportRow,
   type FollowupRow,
   type MemoryRow,
   type WorkspaceDashboardRow,
@@ -42,12 +44,11 @@ import {
   getSourceContextActionLabel,
   type MessageSourceContext,
 } from "@/lib/sourceContext";
-import { AiReplySuggestions } from "./AiReplySuggestions";
+import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
 import {
-  saveManualSentReply,
-  saveReplyDraft,
+  analyzeFan,
+  saveContactInternalNotes,
   syncFacebookChatForContact,
-  setConversationPriority,
 } from "../actions";
 
 type FanDetailPageProps = {
@@ -77,6 +78,8 @@ type FanDetailWorkspaceProps = {
   notice?: string;
   conversationSummary: ConversationSummaryRow | null;
   contactAiProfile: ContactAiProfileRow | null;
+  fanAnalysisReport: FanAnalysisReportRow | null;
+  fanAnalysisReportError?: string;
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
   activeSource: string;
@@ -147,6 +150,8 @@ function FanDetailWorkspace({
   notice,
   conversationSummary,
   contactAiProfile,
+  fanAnalysisReport,
+  fanAnalysisReportError,
   workspaceVoiceProfile,
   activeChannel,
   activeSource,
@@ -208,6 +213,8 @@ function FanDetailWorkspace({
             conversationsError={conversationsError}
             conversationSummary={conversationSummary}
             contactAiProfile={contactAiProfile}
+            fanAnalysisReport={fanAnalysisReport}
+            fanAnalysisReportError={fanAnalysisReportError}
             workspaceVoiceProfile={workspaceVoiceProfile}
             activeChannel={activeChannel}
             activeSource={activeSource}
@@ -232,6 +239,8 @@ function FanDetailContent({
   conversationsError,
   conversationSummary,
   contactAiProfile,
+  fanAnalysisReport,
+  fanAnalysisReportError,
   workspaceVoiceProfile,
   activeChannel,
   activeSource,
@@ -247,6 +256,8 @@ function FanDetailContent({
   conversationsError?: string;
   conversationSummary: ConversationSummaryRow | null;
   contactAiProfile: ContactAiProfileRow | null;
+  fanAnalysisReport: FanAnalysisReportRow | null;
+  fanAnalysisReportError?: string;
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
   activeSource: string;
@@ -479,69 +490,6 @@ function FanDetailContent({
               )}
             </div>
           </article>
-          <article className={`${styles.card} ${styles.replyCard}`}>
-            <div className={styles.cardHeader}>
-              <div>
-                <p className={dashboardStyles.eyebrow}>Antwortvorbereitung</p>
-                <h3>Manuelle Freigabe erforderlich</h3>
-              </div>
-              <span className={styles.statusBadge}>
-                Automatisches Senden deaktiviert
-              </span>
-            </div>
-            <ConversationStatusPanel conversation={conversation} />
-            <form className={styles.replyBox}>
-              <input name="contact_id" type="hidden" value={contact.id} />
-              {conversation ? (
-                <input
-                  name="conversation_id"
-                  type="hidden"
-                  value={conversation.id}
-                />
-              ) : null}
-              <textarea
-                name="content"
-                required
-                maxLength={4000}
-                placeholder={`Antwort an ${contact.display_name} vorbereiten …`}
-                aria-label={`Antwort an ${contact.display_name} vorbereiten`}
-              />
-              <div className={styles.replyFooter}>
-                <button
-                  className={dashboardStyles.primaryButton}
-                  formAction={saveReplyDraft}
-                  type="submit"
-                >
-                  Entwurf speichern
-                </button>
-                <button
-                  className={dashboardStyles.secondaryButton}
-                  formAction={saveManualSentReply}
-                  type="submit"
-                >
-                  Als manuell gesendet speichern
-                </button>
-                <Link className={dashboardStyles.secondaryButton} href="/inbox">
-                  Zur Inbox
-                </Link>
-                <span className={styles.safeBadge}>
-                  Es wird nichts automatisch gesendet. Manuell gesendet im
-                  Originalkanal.
-                </span>
-              </div>
-            </form>
-            <ConversationActionForms
-              contactId={contact.id}
-              conversation={conversation}
-            />
-          </article>
-        </main>
-
-        <aside
-          className={styles.copilot}
-          aria-label="Fan-Analyse-Report und KI-Antwortvorschläge"
-        >
-          <FanMemoryCard memories={memories} memoriesError={memoriesError} />
           <AiReplySuggestions
             contact={{
               contactId: contact.id,
@@ -554,17 +502,44 @@ function FanDetailContent({
                 contactAiProfile,
                 workspaceVoiceProfile,
               ),
+              latestInboundMessage: getLatestInboundMessage(messages),
+              analysisReport: stringifyAnalysisReport(fanAnalysisReport),
               language: contact.language,
               status: contact.status,
               tags: contact.tags,
               summary: contact.summary,
             }}
+            modes={defaultReplyModes}
+            originalChannelAction={getOriginalChannelAction(conversation, messages)}
+          />
+        </main>
+
+        <aside
+          className={styles.copilot}
+          aria-label="Fan-Analyse-Report und KI-Antwortvorschläge"
+        >
+          <FanNotesCard contact={contact} />
+          <FanMemoryCard
+            contactId={contact.id}
+            report={fanAnalysisReport}
+            reportError={fanAnalysisReportError}
+            memories={memories}
+            memoriesError={memoriesError}
           />
         </aside>
       </section>
     </>
   );
 }
+
+const defaultReplyModes: ReplyMode[] = [
+  { id: "friendly", label: "Freundlich", prompt: "warm, persönlich und hilfreich" },
+  { id: "short", label: "Kurz & direkt", prompt: "knapp, klar und ohne Umwege" },
+  { id: "sales", label: "Verkaufsorientiert", prompt: "vorsichtig verkaufsorientiert ohne Druck" },
+  { id: "calming", label: "Beruhigend", prompt: "ruhig, deeskalierend und sicherheitsgebend" },
+  { id: "casual", label: "Locker", prompt: "natürlich, locker und nahbar" },
+  { id: "vip", label: "VIP/Premium", prompt: "wertschätzend, exklusiv und serviceorientiert" },
+];
 
 function normalizeConversationChannel(value: string): ConversationChannelKey {
   return conversationChannelTabs.some((tab) => tab.key === value)
@@ -682,65 +657,6 @@ function isMessageInChannel(
   return platform === channel || sourceType.startsWith(`${channel}_`);
 }
 
-function ConversationStatusPanel({
-  conversation,
-}: {
-  conversation: ConversationRow | null;
-}) {
-  if (!conversation) {
-    return (
-      <div className={styles.conversationState}>
-        <span>Status: Offen</span>
-        <span>Priorität: Normal</span>
-        <span>Nächster Schritt: Antwort vorbereiten</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.conversationState}>
-      <span>Status: {formatConversationStatus(conversation.status)}</span>
-      <span>
-        Priorität: {formatConversationPriority(conversation.priority)}
-      </span>
-      <span>
-        Nächster Schritt: {conversation.next_step || "Antwort vorbereiten"}
-      </span>
-    </div>
-  );
-}
-
-function ConversationActionForms({
-  contactId,
-  conversation,
-}: {
-  contactId: string;
-  conversation: ConversationRow | null;
-}) {
-  return (
-    <div className={styles.conversationActions}>
-      <form action={setConversationPriority} className={styles.priorityForm}>
-        <input name="contact_id" type="hidden" value={contactId} />
-        {conversation ? (
-          <input name="conversation_id" type="hidden" value={conversation.id} />
-        ) : null}
-        <select
-          name="priority"
-          defaultValue={conversation?.priority ?? "normal"}
-        >
-          <option value="low">Niedrig</option>
-          <option value="normal">Normal</option>
-          <option value="medium">Mittel</option>
-          <option value="high">Hoch</option>
-        </select>
-        <button className={dashboardStyles.secondaryButton} type="submit">
-          Priorität ändern
-        </button>
-      </form>
-    </div>
-  );
-}
-
 function OriginalChatAction({
   actionLabel,
   className,
@@ -767,14 +683,45 @@ function OriginalChatAction({
   );
 }
 
+function FanNotesCard({ contact }: { contact: ContactRow }) {
+  return (
+    <article className={styles.card}>
+      <div className={styles.cardHeader}>
+        <div>
+          <h3>Notizen</h3>
+          <p className={styles.reportIntro}>Interne Notizen zu diesem Fan. Nur im Workspace sichtbar.</p>
+        </div>
+      </div>
+      <form action={saveContactInternalNotes} className={styles.notesForm}>
+        <input name="contact_id" type="hidden" value={contact.id} />
+        <textarea
+          aria-label="Interne Notizen zu diesem Fan"
+          defaultValue={contact.internal_notes ?? ""}
+          maxLength={8000}
+          name="internal_notes"
+          placeholder="Eigene Notizen, Kontext, Team-Hinweise …"
+        />
+        <div className={styles.replyFooter}>
+          <button className={dashboardStyles.primaryButton} type="submit">Notizen speichern</button>
+        </div>
+      </form>
+    </article>
+  );
+}
+
 function FanMemoryCard({
-  memories,
+  contactId,
+  report,
+  reportError,
   memoriesError,
 }: {
+  contactId: string;
+  report: FanAnalysisReportRow | null;
+  reportError?: string;
   memories: MemoryRow[];
   memoriesError?: string;
 }) {
-  const reportSections = buildFanAnalysisReportSections(memories);
+  const reportSections = buildStoredFanAnalysisReportSections(report);
 
   return (
     <article className={styles.card}>
@@ -782,16 +729,20 @@ function FanMemoryCard({
         <div>
           <h3>Fan-Analyse-Report</h3>
           <p className={styles.reportIntro}>
-            Assistenz-Report aus gespeicherten Nachrichten, Interaktionen und
-            Analyse-Notizen. Einschätzungen bleiben kommunikative Hinweise und
-            keine Diagnose.
+            KI-Report aus gespeicherten Nachrichten. Einschätzungen bleiben vorsichtige kommunikative Hinweise und keine Diagnose.
           </p>
         </div>
       </div>
-      {memoriesError ? (
+      <form action={analyzeFan} className={styles.inlineForm}>
+        <input name="contact_id" type="hidden" value={contactId} />
+        <button className={dashboardStyles.secondaryButton} type="submit">
+          {report ? "Analyse aktualisieren" : "Fan analysieren"}
+        </button>
+      </form>
+      {reportError || memoriesError ? (
         <p className={dashboardStyles.error}>
           <strong>Analyse-Report konnte nicht geladen werden.</strong>
-          <span>{memoriesError}</span>
+          <span>{reportError ?? memoriesError}</span>
         </p>
       ) : null}
       {reportSections.length ? (
@@ -800,27 +751,15 @@ function FanMemoryCard({
             <section className={styles.reportSection} key={section.title}>
               <div className={styles.reportSectionHeader}>
                 <strong>{section.title}</strong>
-                <span>{section.entries.length} Hinweis(e)</span>
               </div>
-              <div className={styles.compactList}>
-                {section.entries.map((memory) => (
-                  <article className={styles.compactItem} key={memory.id}>
-                    <strong>{formatMemoryType(memory.type)}</strong>
-                    <p>{memory.content}</p>
-                    <p className={styles.muted}>
-                      Wichtigkeit: {memory.importance ?? "normal"} ·{" "}
-                      {formatDate(memory.created_at)}
-                    </p>
-                  </article>
-                ))}
-              </div>
+              <p>{section.content}</p>
             </section>
           ))}
+          <p className={styles.muted}>
+            Quelle: {report?.source_message_count ?? 0} Nachrichten · {report?.generated_at ? formatDate(report.generated_at) : "noch nicht erzeugt"}
+          </p>
           <p className={styles.reportSafetyNote}>
-            Bitte als vorsichtige Kommunikationshilfe lesen: keine medizinische
-            oder psychologische Diagnose, keine harten sensiblen Behauptungen.
-            Spirituelle oder energetische Hinweise nur weich interpretieren und
-            nicht als Fakt bewerten.
+            Bitte als vorsichtige Kommunikationshilfe lesen: keine medizinische oder psychologische Diagnose, keine harten sensiblen Behauptungen.
           </p>
         </div>
       ) : (
@@ -832,82 +771,36 @@ function FanMemoryCard({
     </article>
   );
 }
-const fanAnalysisReportSectionOrder = [
-  "Kurzprofil",
-  "Kommunikationsstil",
-  "Stimmung / emotionale Tendenz",
-  "Interessen & Trigger",
-  "Kauf-/Reaktionswahrscheinlichkeit",
-  "Empfohlener Antwortstil",
-  "Vorsicht / No-Gos",
-  "Optionale spirituelle oder energetische Hinweise",
-] as const;
+
+function buildStoredFanAnalysisReportSections(report: FanAnalysisReportRow | null) {
+  if (!report?.report_json) return [];
+  const values = report.report_json as Record<string, unknown>;
+  const entries: Array<[FanAnalysisReportSectionTitle, string]> = [
+    ["Kurzprofil", stringValue(values.kurzprofil) || report.summary || ""],
+    ["Kommunikationsstil", stringValue(values.kommunikationsstil)],
+    ["Stimmung / emotionale Tendenz", stringValue(values.stimmung)],
+    ["Interessen & Trigger", stringValue(values.interessen_trigger)],
+    ["Kauf-/Reaktionswahrscheinlichkeit", stringValue(values.kauf_reaktion)],
+    ["Empfohlener Antwortstil", stringValue(values.antwortstil)],
+    ["Vorsicht / No-Gos", stringValue(values.no_gos)],
+    ["Optionale spirituelle oder energetische Hinweise", stringValue(values.spirituell)],
+  ];
+  return entries.filter(([, content]) => content.trim()).map(([title, content]) => ({ title, content }));
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : Array.isArray(value) ? value.join(", ") : "";
+}
 
 type FanAnalysisReportSectionTitle =
-  (typeof fanAnalysisReportSectionOrder)[number];
-
-function buildFanAnalysisReportSections(memories: MemoryRow[]): {
-  title: FanAnalysisReportSectionTitle;
-  entries: MemoryRow[];
-}[] {
-  const sections = new Map<FanAnalysisReportSectionTitle, MemoryRow[]>();
-
-  memories.forEach((memory) => {
-    const sectionTitle = getFanAnalysisReportSection(memory);
-    sections.set(sectionTitle, [...(sections.get(sectionTitle) ?? []), memory]);
-  });
-
-  return fanAnalysisReportSectionOrder
-    .map((title) => ({ title, entries: sections.get(title) ?? [] }))
-    .filter((section) => section.entries.length > 0);
-}
-
-function getFanAnalysisReportSection(
-  memory: MemoryRow,
-): FanAnalysisReportSectionTitle {
-  const type = (memory.type ?? "").toLowerCase();
-  const content = memory.content.toLowerCase();
-  const haystack = `${type} ${content}`;
-
-  if (includesAny(haystack, ["no-go", "nogo", "vorsicht", "trigger"])) {
-    return "Vorsicht / No-Gos";
-  }
-  if (
-    includesAny(haystack, ["spirit", "energie", "energetisch", "intuition"])
-  ) {
-    return "Optionale spirituelle oder energetische Hinweise";
-  }
-  if (includesAny(haystack, ["antwort", "stil", "ton", "strategie"])) {
-    return "Empfohlener Antwortstil";
-  }
-  if (
-    includesAny(haystack, [
-      "kauf",
-      "conversion",
-      "reagiert",
-      "wahrscheinlichkeit",
-    ])
-  ) {
-    return "Kauf-/Reaktionswahrscheinlichkeit";
-  }
-  if (includesAny(haystack, ["interesse", "thema", "preis", "verfügbarkeit"])) {
-    return "Interessen & Trigger";
-  }
-  if (includesAny(haystack, ["stimmung", "emotional", "gefühl", "wirkt"])) {
-    return "Stimmung / emotionale Tendenz";
-  }
-  if (
-    includesAny(haystack, ["kommunikation", "kommuniziert", "kurz", "direkt"])
-  ) {
-    return "Kommunikationsstil";
-  }
-
-  return "Kurzprofil";
-}
-
-function includesAny(value: string, needles: string[]): boolean {
-  return needles.some((needle) => value.includes(needle));
-}
+  | "Kurzprofil"
+  | "Kommunikationsstil"
+  | "Stimmung / emotionale Tendenz"
+  | "Interessen & Trigger"
+  | "Kauf-/Reaktionswahrscheinlichkeit"
+  | "Empfohlener Antwortstil"
+  | "Vorsicht / No-Gos"
+  | "Optionale spirituelle oder energetische Hinweise";
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
@@ -1006,6 +899,40 @@ function AttachmentPreview({
       })}
     </div>
   );
+}
+
+
+function getLatestInboundMessage(messages: ConversationMessageRow[]): string {
+  return [...messages].reverse().find((message) => message.direction === "inbound")?.content ?? "";
+}
+
+function stringifyAnalysisReport(report: FanAnalysisReportRow | null): string {
+  return report ? JSON.stringify(report.report_json) : "";
+}
+
+function getOriginalChannelAction(
+  conversation: ConversationRow | null,
+  messages: ConversationMessageRow[],
+): { label: string; url: string | null; disabledHint: string } {
+  const latestInbound = [...messages].reverse().find((message) => message.direction === "inbound");
+  const url =
+    normalizeHttpUrl(latestInbound?.reply_target_url) ??
+    normalizeHttpUrl(conversation?.reply_target_url) ??
+    normalizeHttpUrl(latestInbound?.source_url) ??
+    normalizeHttpUrl(conversation?.source_url);
+  const platform = (latestInbound?.source_platform ?? conversation?.source_platform ?? "").toLowerCase();
+  if (url) {
+    return {
+      label: platform === "facebook" ? "In Facebook antworten" : "Nachricht senden",
+      url,
+      disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+    };
+  }
+  return {
+    label: platform === "facebook" ? "Facebook-Postfach öffnen" : "Nachricht senden",
+    url: platform === "facebook" ? "https://business.facebook.com/latest/inbox" : null,
+    disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+  };
 }
 
 function getAttachmentLabel(type: string): string {
@@ -1109,25 +1036,6 @@ function formatDetailedSource(
   return base;
 }
 
-function formatConversationStatus(value: string): string {
-  return (
-    {
-      open: "Offen",
-      waiting: "Wartet",
-      done: "Erledigt",
-      archived: "Archiviert",
-    }[value] ?? value
-  );
-}
-
-function formatConversationPriority(value: string): string {
-  return (
-    { low: "Niedrig", normal: "Normal", medium: "Mittel", high: "Hoch" }[
-      value
-    ] ?? value
-  );
-}
-
 function formatDirection(value: string, authorLabel?: string | null): string {
   if (value === "outbound") return authorLabel?.trim() || "Team";
   if (value === "note") return "Notiz";
@@ -1145,14 +1053,6 @@ function formatMessageType(value: string | null): string {
     manual: "Manuell",
   };
   return getChannelSourceLabel(value, labels[value ?? ""] ?? "DM");
-}
-
-function formatMemoryType(value: string | null): string {
-  if (value === "note") {
-    return "Notiz";
-  }
-
-  return value ?? "Notiz";
 }
 
 function formatSource(value: string | null): string {
@@ -1183,6 +1083,8 @@ function formatNotice(value: string): string {
     return "Konversation wartet auf Antwort im Originalkanal.";
   if (value === "open") return "Konversation wieder geöffnet.";
   if (value === "priority_saved") return "Priorität gespeichert.";
+  if (value === "notes_saved") return "Gespeichert: Notizen wurden aktualisiert.";
+  if (value === "analysis_saved") return "Fan-Analyse-Report wurde aktualisiert.";
   return value;
 }
 
@@ -1296,6 +1198,10 @@ export default async function FanDetailPage({
     workspace && contactResult?.contact
       ? await getContactAiProfile(workspace.id, contactResult.contact.id)
       : null;
+  const fanAnalysisReportResult =
+    workspace && contactResult?.contact
+      ? await getFanAnalysisReport(workspace.id, contactResult.contact.id)
+      : null;
   const workspaceVoiceProfileResult = workspace
     ? await getWorkspaceVoiceProfile(workspace.id, data.user.id)
     : null;
@@ -1323,6 +1229,8 @@ export default async function FanDetailPage({
           notice={normalizeParam(pageSearchParams?.notice)}
           conversationSummary={conversationSummaryResult?.summary ?? null}
           contactAiProfile={contactAiProfileResult?.profile ?? null}
+          fanAnalysisReport={fanAnalysisReportResult?.report ?? null}
+          fanAnalysisReportError={fanAnalysisReportResult?.error?.message}
           workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
           activeChannel={activeChannel}
           activeSource={activeSource}

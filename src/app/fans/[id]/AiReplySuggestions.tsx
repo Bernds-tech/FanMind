@@ -1,106 +1,48 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { saveSuggestedFollowup, saveSuggestedMemory } from "../actions";
+import { useMemo, useState } from "react";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
-import { formatPlatformLabel } from "../import/csv";
-import styles from "../fans.module.css";
+import styles from "./fan-detail.module.css";
 
-type ContactAiContext = {
-  contactId: string;
-  displayName: string;
-  handle: string | null;
-  sourcePlatform: string | null;
-  language: string | null;
-  status: string | null;
-  tags: string[] | null;
-  summary: string | null;
-  storedConversationContext?: string;
-};
+export type ReplyMode = { id: string; label: string; prompt: string };
 
-type ReplySuggestion = {
-  tone: string;
-  label: string;
-  text: string;
-};
+type ReplySuggestion = { tone: string; label: string; text: string };
+type AiSuggestionsResult = { reply_options: ReplySuggestion[]; safety_note: string };
 
-type AiSuggestionsResult = {
-  reply_options: ReplySuggestion[];
-  suggested_memory: {
-    content: string;
-    importance: string;
+type Props = {
+  contact: {
+    contactId: string;
+    displayName: string;
+    handle: string | null;
+    sourcePlatform: string | null;
+    language: string | null;
+    status: string | null;
+    tags: string[] | null;
+    summary: string | null;
+    storedConversationContext?: string;
+    latestInboundMessage?: string;
+    analysisReport?: string;
   };
-  suggested_followup: {
-    recommended: boolean;
-    in_days: number | null;
-    reason: string;
-  };
-  safety_note: string;
+  modes: ReplyMode[];
+  originalChannelAction: { label: string; url: string | null; disabledHint: string };
 };
 
-type AiReplySuggestionsProps = {
-  contact: ContactAiContext;
-};
-
-const genericError = "Antwortvorschläge konnten gerade nicht erzeugt werden.";
-
-function getApiErrorMessage(
-  data: AiSuggestionsResult | { error?: string } | null,
-) {
-  if (data && "error" in data && data.error) {
-    return data.error;
-  }
-
-  return genericError;
-}
-
-export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
-  const [pastedChatContext, setPastedChatContext] = useState("");
-  const [incomingMessage, setIncomingMessage] = useState("");
-  const [suggestions, setSuggestions] = useState<AiSuggestionsResult | null>(
-    null,
-  );
+export function AiReplySuggestions({ contact, modes, originalChannelAction }: Props) {
+  const [activeModeId, setActiveModeId] = useState(modes[0]?.id ?? "friendly");
+  const activeMode = useMemo(() => modes.find((mode) => mode.id === activeModeId) ?? modes[0], [activeModeId, modes]);
+  const [suggestions, setSuggestions] = useState<AiSuggestionsResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const [error, setError] = useState("");
-  const [saveMessage, setSaveMessage] = useState("");
-  const [copiedTone, setCopiedTone] = useState("");
-  const [isSavingMemory, startMemorySave] = useTransition();
-  const [isSavingFollowup, startFollowupSave] = useTransition();
-  const responseChannel = formatPlatformLabel(contact.sourcePlatform);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function generateSuggestions(mode = activeMode) {
     setError("");
-    setSaveMessage("");
-    setCopiedTone("");
-    setSuggestions(null);
-
-    const effectiveIncomingMessage =
-      incomingMessage.trim() ||
-      contact.storedConversationContext?.trim().split("\n").at(-1) ||
-      "";
-    const effectiveChatContext = [
-      contact.storedConversationContext,
-      pastedChatContext,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    if (!effectiveIncomingMessage) {
-      setError("Bitte füge zuerst die neue eingegangene Nachricht ein.");
-      return;
-    }
-
+    setCopiedIndex(null);
     setIsLoading(true);
-
     try {
       const response = await fetch("/api/ai/reply-suggestions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contactId: contact.contactId,
           displayName: contact.displayName,
@@ -110,247 +52,80 @@ export function AiReplySuggestions({ contact }: AiReplySuggestionsProps) {
           status: contact.status,
           tags: contact.tags ?? [],
           summary: contact.summary,
-          pastedChatContext: effectiveChatContext,
-          incomingMessage: effectiveIncomingMessage,
+          pastedChatContext: contact.storedConversationContext ?? "",
+          incomingMessage: contact.latestInboundMessage ?? "",
+          responseMode: `${mode.label}: ${mode.prompt}`,
+          analysisReport: contact.analysisReport,
         }),
       });
-
-      const data = (await response.json().catch(() => null)) as
-        | AiSuggestionsResult
-        | { error?: string }
-        | null;
-
+      const data = (await response.json().catch(() => null)) as AiSuggestionsResult | { error?: string } | null;
       if (!response.ok || !data || !("reply_options" in data)) {
-        setError(getApiErrorMessage(data));
+        setError((data && "error" in data && data.error) || "Antwortvorschläge konnten gerade nicht erzeugt werden.");
         return;
       }
-
-      setSuggestions(data);
+      setSuggestions({ ...data, reply_options: data.reply_options.slice(0, 3) });
     } catch {
-      setError(genericError);
+      setError("Antwortvorschläge konnten gerade nicht erzeugt werden.");
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleSaveMemory() {
-    if (!suggestions?.suggested_memory.content.trim()) {
-      setSaveMessage("Keine Memory-Notiz zum Speichern vorhanden.");
-      return;
-    }
-
-    setSaveMessage("");
-    startMemorySave(async () => {
-      try {
-        const result = await saveSuggestedMemory({
-          contactId: contact.contactId,
-          content: suggestions.suggested_memory.content,
-          importance: suggestions.suggested_memory.importance,
-        });
-        setSaveMessage(result.message);
-
-        if (result.ok) {
-          router.refresh();
-        }
-      } catch (saveError) {
-        setSaveMessage(
-          saveError instanceof Error
-            ? saveError.message
-            : "Memory konnte nicht gespeichert werden.",
-        );
-      }
-    });
-  }
-
-  function handleSaveFollowup() {
-    if (!suggestions?.suggested_followup.recommended) {
-      setSaveMessage("Kein Follow-up zum Speichern empfohlen.");
-      return;
-    }
-
-    if (!suggestions.suggested_followup.reason.trim()) {
-      setSaveMessage("Kein Follow-up-Grund zum Speichern vorhanden.");
-      return;
-    }
-
-    setSaveMessage("");
-    startFollowupSave(async () => {
-      try {
-        const result = await saveSuggestedFollowup({
-          contactId: contact.contactId,
-          reason: suggestions.suggested_followup.reason,
-          inDays: suggestions.suggested_followup.in_days,
-        });
-        setSaveMessage(result.message);
-
-        if (result.ok) {
-          router.refresh();
-        }
-      } catch (saveError) {
-        setSaveMessage(
-          saveError instanceof Error
-            ? saveError.message
-            : "Follow-up konnte nicht gespeichert werden.",
-        );
-      }
-    });
-  }
-
-  async function copySuggestion(option: ReplySuggestion) {
-    try {
-      await navigator.clipboard.writeText(option.text);
-      setCopiedTone(option.tone);
-    } catch {
-      setCopiedTone("");
-    }
+  async function copySuggestion(text: string, index: number) {
+    await navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
   }
 
   return (
-    <section
-      className={styles.aiAssistantCard}
-      aria-labelledby="fanmind-ai-title"
-    >
-      <div className={dashboardStyles.moduleHeader}>
+    <article className={`${styles.card} ${styles.replyCard}`} aria-labelledby="ai-replies-title">
+      <div className={styles.cardHeader}>
         <div>
           <p className={dashboardStyles.eyebrow}>KI-Antwortvorschläge</p>
-          <h2 id="fanmind-ai-title">FanMind-Assistent</h2>
+          <h3 id="ai-replies-title">Drei Vorschläge</h3>
+          <p className={styles.muted}>Drei Vorschläge – kopieren und manuell im Originalkanal senden.</p>
         </div>
-        <span>Serverseitig</span>
+        <span className={styles.statusBadge}>Keine automatische Sendefunktion</span>
       </div>
-
-      <form className={styles.aiComposer} onSubmit={handleSubmit}>
-        <label htmlFor="pasted_chat_context">
-          <span>Chatverlauf einfügen</span>
-          <textarea
-            id="pasted_chat_context"
-            maxLength={12000}
-            name="pasted_chat_context"
-            onChange={(event) => setPastedChatContext(event.target.value)}
-            placeholder="Optional: Füge hier den bisherigen manuellen Chatverlauf ein."
-            value={pastedChatContext}
-          />
-        </label>
-        <p className={styles.fieldHint}>
-          Gespeicherter FanMind-Verlauf wird automatisch als Kontext genutzt.
-          Füge hier bei Bedarf weiteren Chatverlauf aus dem ursprünglichen Kanal
-          ein. Antwort bitte manuell in {responseChannel} senden. FanMind
-          synchronisiert aktuell keine externen Plattformen.
-        </p>
-
-        <label htmlFor="incoming_message">
-          <span>Neue Nachricht</span>
-          <textarea
-            id="incoming_message"
-            maxLength={4000}
-            name="incoming_message"
-            onChange={(event) => setIncomingMessage(event.target.value)}
-            placeholder="Füge hier die letzte eingegangene Nachricht ein, auf die du antworten möchtest."
-            value={incomingMessage}
-          />
-        </label>
-
-        <div className={styles.aiActions}>
+      <div className={styles.modeBar} aria-label="Antwort-Richtung wählen">
+        {modes.map((mode) => (
           <button
-            className={dashboardStyles.primaryButton}
-            disabled={isLoading}
-            type="submit"
+            className={mode.id === activeModeId ? styles.modeButtonActive : styles.modeButton}
+            key={mode.id}
+            onClick={() => { setActiveModeId(mode.id); void generateSuggestions(mode); }}
+            type="button"
           >
-            {isLoading
-              ? "FanMind erzeugt Vorschläge…"
-              : "KI-Vorschläge erzeugen"}
+            {mode.label}
           </button>
-          <span>Keine automatische Sendefunktion.</span>
-        </div>
-      </form>
-
-      {error ? (
-        <p className={styles.aiError} role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {saveMessage ? (
-        <p className={styles.aiSaveMessage} role="status">
-          {saveMessage}
-        </p>
-      ) : null}
-
-      {suggestions ? (
-        <div className={styles.aiResults} aria-live="polite">
-          <div className={styles.replyCards}>
-            {suggestions.reply_options.map((option) => (
-              <article className={styles.replyCard} key={option.tone}>
-                <div className={styles.replyCardHeader}>
-                  <strong>{option.label}</strong>
-                  <div className={styles.replyCardActions}>
-                    <button
-                      className={dashboardStyles.secondaryButton}
-                      onClick={() => copySuggestion(option)}
-                      type="button"
-                    >
-                      {copiedTone === option.tone
-                        ? "Kopiert"
-                        : "Antwort kopieren"}
-                    </button>
-                  </div>
-                </div>
-                <p>{option.text}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className={styles.suggestionMetaGrid}>
-            <article>
-              <span>Suggested Memory</span>
-              <strong>Noch nicht gespeichert</strong>
-              <p>
-                {suggestions.suggested_memory.content ||
-                  "Keine Memory-Notiz empfohlen."}
-              </p>
-              <small>
-                Wichtigkeit: {suggestions.suggested_memory.importance}
-              </small>
-              <button
-                className={dashboardStyles.secondaryButton}
-                disabled={
-                  isSavingMemory || !suggestions.suggested_memory.content.trim()
-                }
-                onClick={handleSaveMemory}
-                type="button"
-              >
-                {isSavingMemory ? "Speichert…" : "Memory speichern"}
+        ))}
+      </div>
+      <div className={styles.replyFooter}>
+        <button className={dashboardStyles.primaryButton} disabled={isLoading || !contact.latestInboundMessage} onClick={() => void generateSuggestions()} type="button">
+          {isLoading ? "Vorschläge werden erzeugt…" : "KI-Vorschläge erzeugen"}
+        </button>
+        {!contact.latestInboundMessage ? <span>Keine eingehende Nachricht als Kontext vorhanden.</span> : null}
+      </div>
+      {error ? <p className={dashboardStyles.error} role="alert"><strong>{error}</strong></p> : null}
+      <div className={styles.suggestionGrid} aria-live="polite">
+        {(suggestions?.reply_options ?? []).map((option, index) => (
+          <article className={styles.suggestionCard} key={`${option.tone}-${index}`}>
+            <div className={styles.replyCardHeader}>
+              <div><strong>{option.label || `Vorschlag ${index + 1}`}</strong><p className={styles.muted}>{option.tone || activeMode?.label}</p></div>
+            </div>
+            <p>{option.text}</p>
+            <div className={styles.replyCardActions}>
+              <button className={dashboardStyles.secondaryButton} onClick={() => void copySuggestion(option.text, index)} type="button">
+                {copiedIndex === index ? "Kopiert" : "Kopieren"}
               </button>
-            </article>
-            <article>
-              <span>Suggested Follow-up</span>
-              <strong>Noch nicht gespeichert</strong>
-              <p>{suggestions.suggested_followup.reason}</p>
-              <small>
-                {suggestions.suggested_followup.recommended
-                  ? `Empfohlen in ${suggestions.suggested_followup.in_days ?? "?"} Tagen`
-                  : "Kein Follow-up empfohlen"}
-              </small>
-              <button
-                className={dashboardStyles.secondaryButton}
-                disabled={
-                  isSavingFollowup ||
-                  !suggestions.suggested_followup.recommended ||
-                  !suggestions.suggested_followup.reason.trim()
-                }
-                onClick={handleSaveFollowup}
-                type="button"
-              >
-                {isSavingFollowup ? "Speichert…" : "Follow-up speichern"}
-              </button>
-            </article>
-          </div>
-
-          <p className={styles.aiSafetyNote}>
-            {suggestions.safety_note} Kopierte Antwortentwürfe müssen extern
-            manuell geprüft und versendet werden.
-          </p>
-        </div>
-      ) : null}
-    </section>
+              {originalChannelAction.url ? (
+                <a className={dashboardStyles.secondaryButton} href={originalChannelAction.url} rel="noreferrer" target="_blank">{originalChannelAction.label}</a>
+              ) : (
+                <button className={dashboardStyles.secondaryButton} disabled type="button">{originalChannelAction.disabledHint}</button>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+      <p className={styles.reportSafetyNote}>{suggestions?.safety_note ?? "FanMind schlägt nur Text vor. Der Mensch kopiert, prüft und sendet manuell im Originalkanal."}</p>
+    </article>
   );
 }

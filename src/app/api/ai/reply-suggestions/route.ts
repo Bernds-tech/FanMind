@@ -18,10 +18,12 @@ type ReplySuggestionRequest = {
   summary?: unknown;
   pastedChatContext?: unknown;
   incomingMessage?: unknown;
+  responseMode?: unknown;
+  analysisReport?: unknown;
 };
 
 type ReplyOption = {
-  tone: "warm" | "short" | "sales_careful";
+  tone: string;
   label: string;
   text: string;
 };
@@ -64,7 +66,7 @@ const replySuggestionsSchema = {
   properties: {
     reply_options: {
       type: "array",
-      minItems: 2,
+      minItems: 3,
       maxItems: 3,
       items: {
         type: "object",
@@ -73,15 +75,11 @@ const replySuggestionsSchema = {
         properties: {
           tone: {
             type: "string",
-            enum: ["warm", "short", "sales_careful"],
+            minLength: 1,
           },
           label: {
             type: "string",
-            enum: [
-              "Warm & persönlich",
-              "Kurz & direkt",
-              "Vorsichtig verkaufsorientiert",
-            ],
+            minLength: 1,
           },
           text: {
             type: "string",
@@ -186,6 +184,8 @@ export async function POST(request: Request) {
     summary: normalizeOptionalString(payload.summary),
     pastedChatContext,
     incomingMessage,
+    responseMode: normalizeString(payload.responseMode) || "Freundlich",
+    analysisReport: normalizeOptionalString(payload.analysisReport),
   };
 
   try {
@@ -250,13 +250,14 @@ export async function POST(request: Request) {
 function buildSystemPrompt(): string {
   return [
     "Du bist FanMind, ein Antwort- und Memory-Assistent für manuelle Fan- und Kundengespräche.",
-    "Der Nutzer fügt einen WhatsApp- oder Chatverlauf manuell ein. Nutze ausschließlich den gelieferten Kontaktkontext, den manuell eingefügten Chatverlauf und die letzte eingegangene Nachricht.",
-    "Erzeuge sinnvolle Antwortvorschläge, eine kurze vorgeschlagene Memory-Notiz und eine vorgeschlagene Follow-up-Einschätzung.",
+    "Nutze ausschließlich den gelieferten Kontaktkontext, den gespeicherten Chatverlauf, den Analyse-Report und die letzte eingegangene Nachricht.",
+    "Erzeuge exakt drei unterschiedliche Antwortvorschläge passend zum Feld responseMode, zur Analyse und zum Verlauf.",
     "Behaupte niemals, dass WhatsApp verbunden ist, dass externe Plattformen synchronisiert werden oder dass Nachrichten automatisch gesendet werden.",
     "FanMind hat keine automatische Sendefunktion. Der Mensch prüft und sendet final selbst.",
     "Wähle die Sprache anhand von contact.language. Wenn keine klare Sprache vorhanden ist, antworte auf Deutsch.",
     "Stil: menschlich, freundlich, professionell, hilfreich und nicht aufdringlich.",
-    "Die Variante sales_careful darf nur vorsichtig verkaufsorientiert sein und soll keinen Druck aufbauen.",
+    "Verkaufsorientierte Varianten dürfen nur vorsichtig sein und keinen Druck aufbauen.",
+    "Keine Antwort automatisch senden oder als gesendet darstellen; die Vorschläge werden nur kopiert und manuell im Originalkanal eingefügt.",
     "Gib ausschließlich JSON im vorgegebenen Schema zurück.",
   ].join("\n");
 }
