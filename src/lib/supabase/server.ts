@@ -99,6 +99,16 @@ export type ConversationRow = {
   updated_at: string | null;
 };
 
+export type ConversationMessageAttachment = {
+  type: "image" | "video" | "audio" | "file" | "unknown";
+  url?: string;
+  sticker_id?: string;
+  title?: string;
+  name?: string;
+  mime_type?: string;
+  size?: number;
+};
+
 export type ConversationMessageRow = {
   id: string;
   workspace_id: string;
@@ -118,6 +128,8 @@ export type ConversationMessageRow = {
   original_text_excerpt: string | null;
   author_label: string | null;
   content: string;
+  attachments: ConversationMessageAttachment[] | null;
+  message_kind: string | null;
   created_at: string | null;
   seen_at: string | null;
 };
@@ -275,6 +287,8 @@ type CreateManualConversationMessageInput = {
   authorLabel?: string | null;
   userId?: string | null;
   content: string;
+  attachments?: ConversationMessageAttachment[] | null;
+  messageKind?: string | null;
 };
 
 type UpsertFacebookSocialConnectionInput = {
@@ -422,7 +436,7 @@ const MEMORY_COLUMNS =
 const CONVERSATION_COLUMNS =
   "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
-  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,created_at,seen_at";
+  "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,attachments,message_kind,created_at,seen_at";
 const CONVERSATION_SUMMARY_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,summary,key_points,open_questions,last_summarized_message_at,message_count_seen,updated_at,created_at";
 const CONTACT_AI_PROFILE_COLUMNS =
@@ -1706,6 +1720,8 @@ export async function createMetaWebhookConversationMessage(input: {
   externalCommentId?: string | null;
   originalAuthorLabel?: string | null;
   originalTextExcerpt?: string | null;
+  attachments?: ConversationMessageAttachment[] | null;
+  messageKind?: string | null;
   receivedAt?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const handle = normalizeOptionalText(input.senderId);
@@ -1794,6 +1810,8 @@ export async function createMetaWebhookConversationMessage(input: {
     externalCommentId: input.externalCommentId,
     originalTextExcerpt: input.originalTextExcerpt ?? input.content,
     authorLabel: input.authorLabel,
+    attachments: input.attachments,
+    messageKind: input.messageKind,
     receivedAt: input.receivedAt,
   });
 
@@ -1826,6 +1844,8 @@ export async function createMetaTestConversationMessage(input: {
   externalCommentId?: string | null;
   originalTextExcerpt?: string | null;
   authorLabel?: string | null;
+  attachments?: ConversationMessageAttachment[] | null;
+  messageKind?: string | null;
   receivedAt?: string | null;
 }): Promise<ConversationMessageCreateResult> {
   const content = input.content.trim();
@@ -1928,6 +1948,8 @@ export async function createMetaTestConversationMessage(input: {
       author_label:
         normalizeOptionalText(input.authorLabel) ?? getDefaultWebhookAuthorLabel(input.sourcePlatform ?? "facebook"),
       content,
+      attachments: normalizeMessageAttachments(input.attachments),
+      message_kind: normalizeMessageKind(input.messageKind, input.attachments, content),
       created_at: receivedAt,
       seen_at: null,
     },
@@ -2905,6 +2927,46 @@ function normalizeMessageType(value: string | null | undefined): string {
 function normalizeUrl(value: string | null | undefined): string | null {
   const normalized = normalizeOptionalText(value);
   return normalized && /^https?:\/\//i.test(normalized) ? normalized : null;
+}
+
+function normalizeMessageAttachments(
+  attachments: ConversationMessageAttachment[] | null | undefined,
+): ConversationMessageAttachment[] | null {
+  if (!attachments?.length) return null;
+  const normalized = attachments
+    .map((attachment) => ({
+      type: normalizeAttachmentType(attachment.type),
+      ...(normalizeUrl(attachment.url) ? { url: normalizeUrl(attachment.url)! } : {}),
+      ...(normalizeOptionalText(attachment.sticker_id) ? { sticker_id: normalizeOptionalText(attachment.sticker_id)! } : {}),
+      ...(normalizeOptionalText(attachment.title) ? { title: normalizeOptionalText(attachment.title)! } : {}),
+      ...(normalizeOptionalText(attachment.name) ? { name: normalizeOptionalText(attachment.name)! } : {}),
+      ...(normalizeOptionalText(attachment.mime_type) ? { mime_type: normalizeOptionalText(attachment.mime_type)! } : {}),
+      ...(typeof attachment.size === "number" && Number.isFinite(attachment.size) ? { size: attachment.size } : {}),
+    }))
+    .filter((attachment) => attachment.type || attachment.url || attachment.sticker_id);
+
+  return normalized.length ? normalized : null;
+}
+
+function normalizeAttachmentType(value: unknown): ConversationMessageAttachment["type"] {
+  return value === "image" || value === "video" || value === "audio" || value === "file"
+    ? value
+    : "unknown";
+}
+
+function normalizeMessageKind(
+  requestedKind: string | null | undefined,
+  attachments: ConversationMessageAttachment[] | null | undefined,
+  content: string,
+): string {
+  if (requestedKind && ["text", "image", "video", "audio", "file", "mixed", "unknown"].includes(requestedKind)) {
+    return requestedKind;
+  }
+  const normalizedAttachments = normalizeMessageAttachments(attachments);
+  if (!normalizedAttachments?.length) return "text";
+  if (content.trim() && normalizedAttachments.length) return "mixed";
+  const types = Array.from(new Set(normalizedAttachments.map((attachment) => attachment.type)));
+  return types.length === 1 ? types[0] : "mixed";
 }
 
 function normalizeOptionalText(
