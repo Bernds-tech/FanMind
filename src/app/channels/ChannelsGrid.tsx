@@ -104,6 +104,17 @@ const channels: Channel[] = [
     logo: logoPath("tiktok"),
     signal: true,
   },
+
+  {
+    key: "tiktok_messages",
+    name: "TikTok Nachrichten",
+    description: "TikTok DMs sind als vorbereiteter Importpfad für Data-Portability-/Export-Daten modelliert; Data-Portability/API-Freigabe erforderlich, kein Live-Chat-Test, kein Scraping und kein automatisches Senden.",
+    status: "In Arbeit",
+    technology: "tiktok_messages · vorbereitet · Data-Portability/API-Freigabe erforderlich",
+    intakeTypes: "Nachrichten · Export-Import · Copy-&-Open",
+    logo: logoPath("tiktok"),
+    signal: true,
+  },
   {
     key: "facebook_messages",
     name: "Facebook Nachrichten",
