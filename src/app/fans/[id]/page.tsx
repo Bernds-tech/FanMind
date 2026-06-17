@@ -1128,6 +1128,8 @@ function formatDirection(value: string): string {
 
 function formatMessageType(value: string | null): string {
   const labels: Record<string, string> = {
+    facebook_messages: "Facebook Nachrichten",
+    facebook_comments: "Facebook Kommentare",
     dm: "DM",
     comment: "Kommentar",
     post: "Post",
@@ -1145,6 +1147,8 @@ function inferMessageType(sourcePlatform: string | null): string {
   if (normalized.includes("mail")) return "E-Mail";
   if (normalized.includes("form") || normalized.includes("web"))
     return "Formular";
+  if (normalized.includes("facebook_messages")) return "Facebook Nachrichten";
+  if (normalized.includes("facebook_comments")) return "Facebook Kommentare";
   if (normalized.includes("comment") || normalized.includes("kommentar"))
     return "Kommentar";
   if (normalized.includes("post")) return "Post";
