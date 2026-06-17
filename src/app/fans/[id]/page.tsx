@@ -50,6 +50,7 @@ type FanDetailPageProps = {
   searchParams?: Promise<{
     notice?: string | string[];
     seen_message?: string | string[];
+    channel?: string | string[];
   }>;
 };
 
@@ -71,6 +72,47 @@ type FanDetailWorkspaceProps = {
   conversationSummary: ConversationSummaryRow | null;
   contactAiProfile: ContactAiProfileRow | null;
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
+  activeChannel: ConversationChannelKey;
+};
+
+type ConversationChannelKey =
+  | "all"
+  | "instagram"
+  | "whatsapp"
+  | "facebook"
+  | "tiktok"
+  | "email"
+  | "webform"
+  | "notes";
+
+type ConversationChannelTab = {
+  key: ConversationChannelKey;
+  label: string;
+  icon: string;
+};
+
+const conversationChannelTabs: ConversationChannelTab[] = [
+  { key: "all", label: "Alle", icon: "●" },
+  { key: "instagram", label: "Instagram", icon: "IG" },
+  { key: "whatsapp", label: "WhatsApp", icon: "WA" },
+  { key: "facebook", label: "Facebook", icon: "FB" },
+  { key: "tiktok", label: "TikTok", icon: "TT" },
+  { key: "email", label: "E-Mail", icon: "@" },
+  { key: "webform", label: "Webformular", icon: "WF" },
+  { key: "notes", label: "Notizen", icon: "N" },
+];
+
+const channelSourceTypes: Record<
+  Exclude<ConversationChannelKey, "all">,
+  string[]
+> = {
+  instagram: ["instagram_messages", "instagram_comments"],
+  whatsapp: ["whatsapp_messages"],
+  facebook: ["facebook_messages", "facebook_comments"],
+  tiktok: ["tiktok_messages", "tiktok_comments"],
+  email: ["email", "e_mail", "manual_email"],
+  webform: ["webform", "webformular", "form"],
+  notes: ["note", "notes", "manual_note", "internal_note"],
 };
 
 const statusLabels: Record<string, string> = {
@@ -106,6 +148,7 @@ function FanDetailWorkspace({
   conversationSummary,
   contactAiProfile,
   workspaceVoiceProfile,
+  activeChannel,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -165,6 +208,7 @@ function FanDetailWorkspace({
             conversationSummary={conversationSummary}
             contactAiProfile={contactAiProfile}
             workspaceVoiceProfile={workspaceVoiceProfile}
+            activeChannel={activeChannel}
           />
         ) : (
           <FanNotFound />
@@ -186,6 +230,7 @@ function FanDetailContent({
   conversationSummary,
   contactAiProfile,
   workspaceVoiceProfile,
+  activeChannel,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -198,12 +243,21 @@ function FanDetailContent({
   conversationSummary: ConversationSummaryRow | null;
   contactAiProfile: ContactAiProfileRow | null;
   workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
+  activeChannel: ConversationChannelKey;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const tags = contact.tags?.length
     ? contact.tags
     : [formatStatus(contact.status)];
-  const timeline = messages.length ? buildMessageTimeline(messages) : [];
+  const channelTabs = buildConversationChannelTabs(
+    messages,
+    contact.id,
+    activeChannel,
+  );
+  const filteredMessages = filterMessagesByChannel(messages, activeChannel);
+  const timeline = filteredMessages.length
+    ? buildMessageTimeline(filteredMessages)
+    : [];
   const originalChatUrl = getOriginalChatUrl(contact, messages, conversation);
   const originalActionLabel = getOriginalActionLabel(
     primaryChannel,
@@ -291,14 +345,32 @@ function FanDetailContent({
               className={styles.originalChatPanel}
               url={originalChatUrl}
             />
-            <div className={styles.filterChips} aria-label="Verlaufsfilter">
-              <span>Alle</span>
-              <span>Instagram</span>
-              <span>WhatsApp</span>
-              <span>E-Mail</span>
-              <span>Webformular</span>
-              <span>Notizen</span>
-            </div>
+            <nav
+              className={styles.channelTabs}
+              aria-label="Verlauf nach Kanal filtern"
+            >
+              {channelTabs.map((tab) => (
+                <Link
+                  aria-current={tab.active ? "page" : undefined}
+                  className={
+                    tab.active ? styles.channelTabActive : styles.channelTab
+                  }
+                  href={tab.href}
+                  key={tab.key}
+                >
+                  <span aria-hidden="true" className={styles.channelIcon}>
+                    {tab.icon}
+                  </span>
+                  <span>{tab.label}</span>
+                  {tab.hasUnread ? (
+                    <span
+                      aria-label="Ungesehene eingehende Nachrichten"
+                      className={styles.unreadDot}
+                    />
+                  ) : null}
+                </Link>
+              ))}
+            </nav>
             {conversationsError ? (
               <p className={dashboardStyles.error}>
                 <strong>
@@ -320,33 +392,49 @@ function FanDetailContent({
                     className={`${styles.message} ${item.direction === "Fan" ? styles.messageFan : styles.messageTeam}`}
                     key={item.id}
                   >
-                    <div className={styles.messageMeta}>
-                      <span>
-                        {item.direction} · {item.type}
-                      </span>
-                      <span>
-                        {item.channel} · {item.time}
-                      </span>
+                    <time
+                      className={styles.messageTime}
+                      dateTime={item.createdAt ?? undefined}
+                    >
+                      {item.time}
+                    </time>
+                    <div className={styles.messageAvatar} aria-hidden="true">
+                      {item.avatar}
                     </div>
-                    <p>{item.text}</p>
-                    <OriginalChatAction
-                      actionLabel={getOriginalActionLabel(
-                        item.channel + " " + item.type,
-                        item.url,
-                      )}
-                      url={item.url}
-                    />
+                    <div className={styles.messageBubble}>
+                      <div className={styles.messageMeta}>
+                        <span>
+                          {item.direction} · {item.type}
+                        </span>
+                        <span className={styles.channelBadge}>
+                          {item.channel}
+                        </span>
+                      </div>
+                      <p>{item.text}</p>
+                      <OriginalChatAction
+                        actionLabel={getOriginalActionLabel(
+                          item.channel + " " + item.type,
+                          item.url,
+                        )}
+                        compact
+                        url={item.url}
+                      />
+                    </div>
                   </article>
                 ))
               ) : (
                 <EmptyState
                   title="Noch kein gespeicherter Nachrichtenverlauf."
-                  body="Erfasse eine Eingangsnachricht, um KI-Vorschläge und Verlauf aufzubauen."
+                  body={
+                    activeChannel === "all"
+                      ? "Erfasse eine Eingangsnachricht, um KI-Vorschläge und Verlauf aufzubauen."
+                      : "Für diesen Kanal gibt es noch keine gespeicherten Nachrichten."
+                  }
                 />
               )}
             </div>
           </article>
-          <article className={styles.card}>
+          <article className={`${styles.card} ${styles.replyCard}`}>
             <div className={styles.cardHeader}>
               <div>
                 <p className={dashboardStyles.eyebrow}>Antwortvorbereitung</p>
@@ -437,6 +525,70 @@ function FanDetailContent({
       </section>
     </>
   );
+}
+
+function normalizeConversationChannel(value: string): ConversationChannelKey {
+  return conversationChannelTabs.some((tab) => tab.key === value)
+    ? (value as ConversationChannelKey)
+    : "all";
+}
+
+function buildConversationChannelTabs(
+  messages: ConversationMessageRow[],
+  contactId: string,
+  activeChannel: ConversationChannelKey,
+) {
+  return conversationChannelTabs.map((tab) => {
+    const channelMessages =
+      tab.key === "all" ? messages : filterMessagesByChannel(messages, tab.key);
+    const hasUnread = channelMessages.some(
+      (message) => message.direction === "inbound" && !message.seen_at,
+    );
+    const href =
+      tab.key === "all"
+        ? `/fans/${contactId}`
+        : `/fans/${contactId}?channel=${tab.key}`;
+
+    return { ...tab, active: tab.key === activeChannel, hasUnread, href };
+  });
+}
+
+function filterMessagesByChannel(
+  messages: ConversationMessageRow[],
+  channel: ConversationChannelKey,
+): ConversationMessageRow[] {
+  if (channel === "all") return messages;
+  return messages.filter((message) => isMessageInChannel(message, channel));
+}
+
+function isMessageInChannel(
+  message: ConversationMessageRow,
+  channel: Exclude<ConversationChannelKey, "all">,
+): boolean {
+  const sourceType = (
+    message.source_type ??
+    message.message_type ??
+    ""
+  ).toLowerCase();
+  const platform = (message.source_platform ?? "").toLowerCase();
+  const messageType = (message.message_type ?? "").toLowerCase();
+  const haystack = [sourceType, platform, messageType].filter(Boolean);
+
+  if (channelSourceTypes[channel].some((source) => haystack.includes(source))) {
+    return true;
+  }
+
+  if (channel === "notes") {
+    return message.direction === "note" || messageType === "note";
+  }
+  if (channel === "email") {
+    return platform.includes("mail") || sourceType.includes("mail");
+  }
+  if (channel === "webform") {
+    return platform.includes("form") || sourceType.includes("form");
+  }
+
+  return platform === channel || sourceType.startsWith(`${channel}_`);
 }
 
 function ConversationStatusPanel({
@@ -549,11 +701,15 @@ function OriginalChatAction({
   actionLabel,
   className,
   url,
+  compact = false,
 }: {
   actionLabel: string;
   className?: string;
+  compact?: boolean;
   url?: string;
 }) {
+  if (!url && compact) return null;
+
   return (
     <div className={className}>
       {url ? (
@@ -642,6 +798,13 @@ function FanNotFound() {
 function buildMessageTimeline(messages: ConversationMessageRow[]) {
   return messages.map((message) => ({
     id: message.id,
+    createdAt: message.created_at,
+    avatar:
+      message.direction === "inbound"
+        ? "F"
+        : message.direction === "note"
+          ? "N"
+          : "T",
     direction: formatDirection(message.direction),
     type:
       message.direction === "note" && message.author_label === "Antwortentwurf"
@@ -864,6 +1027,9 @@ export default async function FanDetailPage({
   const { id } = await params;
   const pageSearchParams = await searchParams;
   const seenMessageId = normalizeParam(pageSearchParams?.seen_message);
+  const activeChannel = normalizeConversationChannel(
+    normalizeParam(pageSearchParams?.channel),
+  );
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -948,6 +1114,7 @@ export default async function FanDetailPage({
           conversationSummary={conversationSummaryResult?.summary ?? null}
           contactAiProfile={contactAiProfileResult?.profile ?? null}
           workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
+          activeChannel={activeChannel}
         />
       ) : (
         <section
