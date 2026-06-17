@@ -108,8 +108,8 @@ const channels: Channel[] = [
     key: "facebook_comments",
     name: "Facebook Kommentare",
     description: "Kommentare unter Facebook-Page-Posts importieren.",
-    status: "Verfügbar",
-    technology: "facebook_comments · Graph API · OAuth",
+    status: "In Arbeit",
+    technology: "facebook_comments · vorbereitet · Live-Test später",
     intakeTypes: "Kommentar · Post-Kommentar",
     logo: logoPath("facebook"),
     signal: true,
@@ -494,7 +494,7 @@ export function ChannelsGrid({
     updatedConnection: false,
   } satisfies FacebookPageWebhookActionResult : null);
 
-  const facebookCommentsReady = Boolean(facebookConnection && commentFeedScopesGranted && !facebookConnection.last_comment_fetch_error);
+  const facebookCommentsReady = false;
   const activeDisplayStatus =
     activeChannel?.key === "facebook_messages" && facebookConnection
       ? "Verbunden"
@@ -572,8 +572,8 @@ export function ChannelsGrid({
                         : "Nachrichten verbinden"
                       : isFacebookComments
                         ? facebookConnection
-                          ? "Kommentare importieren"
-                          : "Kommentare verbinden"
+                          ? "Kommentare vorbereitet"
+                          : "Kommentare vorbereitet"
                       : isBookable(displayStatus)
                         ? "Verbindung vormerken"
                         : `Mit ${channel.name} verbinden`}
@@ -590,7 +590,7 @@ export function ChannelsGrid({
                   </span>
                 ) : null}
                 {isFacebookComments && facebookConnection && !commentsReady ? (
-                  <span className={styles.connectionHint}>Kommentarimport benötigt zusätzliche Meta-Freigaben/App-Review. Nachrichten können trotzdem separat verbunden werden.</span>
+                  <span className={styles.connectionHint}>Kommentare vorbereitet, Live-Test später. Nachrichten können trotzdem separat verbunden werden.</span>
                 ) : null}
                 {showComingSoonBadge ? (
                   <img className={styles.soonCornerBadge} src="/assets/coming-soon-badge.png" alt="Coming Soon" />
@@ -789,7 +789,7 @@ export function ChannelsGrid({
 
             {activeChannel.key === "facebook_comments" ? (
               <p className={styles.modalNotice} role={facebookConnection?.last_comment_fetch_error || facebookErrorCode === "comment_review" ? "alert" : "status"}>
-                Kommentarimport benötigt zusätzliche Meta-Freigaben/App-Review. Nachrichten können trotzdem separat verbunden werden.
+                Kommentare vorbereitet, Live-Test später. Nachrichten können trotzdem separat verbunden werden.
                 <br />
                 Technischer Typ: <strong>facebook_comments</strong>
                 <br />
@@ -797,7 +797,7 @@ export function ChannelsGrid({
                 <br />
                 Optionale Scopes werden nur vorbereitet, wenn Meta/App-Review sie erlaubt: <strong>pages_read_user_content, pages_manage_engagement</strong>
                 <br />
-                Status: <strong>{facebookCommentsReady ? "verbunden" : facebookConnection?.last_comment_fetch_error ? "fehlerhaft" : "verfügbar"}</strong>
+                Status: <strong>vorbereitet · Live-Test später</strong>
                 {facebookConnection?.last_comment_fetch_error ? (
                   <>
                     <br />
@@ -833,9 +833,7 @@ export function ChannelsGrid({
                 facebookConnection ? (
                   <>
                     {activeChannel.key === "facebook_comments" ? (
-                      <button type="button" className={styles.secondaryModalButton} onClick={runCommentFetch} disabled={commentFetchPending}>
-                        {commentFetchPending ? "Kommentare werden abgerufen ..." : "Kommentare importieren"}
-                      </button>
+                      <span className={styles.modalNotice}>Kommentare vorbereitet, Live-Test später.</span>
                     ) : (
                       <a className={styles.modalLinkButton} href="/channels">Nachrichten verwalten</a>
                     )}
@@ -854,9 +852,10 @@ export function ChannelsGrid({
                 ) : (
                   <a
                     className={styles.modalLinkButton}
-                    href={activeChannel.key === "facebook_comments" ? "/api/integrations/facebook/start?type=facebook_comments" : "/api/integrations/facebook/start?type=facebook_messages"}
+                    href={activeChannel.key === "facebook_comments" ? "/channels" : "/api/integrations/facebook/start?type=facebook_messages"}
+                    aria-disabled={activeChannel.key === "facebook_comments"}
                   >
-                    {activeChannel.key === "facebook_messages" ? "Nachrichten verbinden" : "Kommentare verbinden"}
+                    {activeChannel.key === "facebook_messages" ? "Nachrichten verbinden" : "Kommentare vorbereitet"}
                   </a>
                 )
               ) : (

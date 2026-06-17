@@ -431,7 +431,7 @@ function buildConversationInboxQueue(
           conversation.created_at,
       );
       const channel = getChannelLabel(
-        conversation.source_platform ?? contact.source_platform,
+        conversation.source_type ?? conversation.source_platform ?? contact.source_platform,
       );
       const replyTargetUrl =
         conversation.reply_target_url || conversation.source_url || undefined;
@@ -651,6 +651,8 @@ function getSegment(contact: ContactRow): string {
 function getChannelLabel(value: string | null): string {
   const labels: Record<string, string> = {
     facebook: "Facebook",
+    facebook_messages: "Facebook Nachrichten",
+    facebook_comments: "Facebook Kommentare",
     messenger: "Messenger",
     facebook_messenger: "Messenger",
     instagram: "Instagram",
