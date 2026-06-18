@@ -6,6 +6,7 @@ import {
   getConversationSummary,
   getContactFollowups,
   getContactMemories,
+  getContactReplyTarget,
   getFanAnalysisReport,
   getOpenFollowupCount,
   getSupabaseServerUser,
@@ -18,6 +19,7 @@ import {
   markContactInboundMessagesSeen,
   signOutSupabaseServerSession,
   type ContactAiProfileRow,
+  type ContactReplyTargetRow,
   type ContactRow,
   type ConversationSummaryRow,
   type ConversationMessageRow,
@@ -44,6 +46,7 @@ import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
 import { FanAnalysisReport } from "./FanAnalysisReport";
 import {
   saveContactInternalNotes,
+  saveFacebookReplyTarget,
   syncFacebookChatForContact,
 } from "../actions";
 
@@ -80,6 +83,8 @@ type FanDetailWorkspaceProps = {
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  facebookReplyTarget: ContactReplyTargetRow | null;
+  facebookReplyTargetError?: string;
 };
 
 type ConversationChannelKey =
@@ -152,6 +157,8 @@ function FanDetailWorkspace({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  facebookReplyTarget,
+  facebookReplyTargetError,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -215,6 +222,8 @@ function FanDetailWorkspace({
             activeChannel={activeChannel}
             activeSource={activeSource}
             facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
+            facebookReplyTarget={facebookReplyTarget}
+            facebookReplyTargetError={facebookReplyTargetError}
           />
         ) : (
           <FanNotFound />
@@ -241,6 +250,8 @@ function FanDetailContent({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  facebookReplyTarget,
+  facebookReplyTargetError,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -258,6 +269,8 @@ function FanDetailContent({
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  facebookReplyTarget: ContactReplyTargetRow | null;
+  facebookReplyTargetError?: string;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const channelTabs = buildConversationChannelTabs(
@@ -278,7 +291,7 @@ function FanDetailContent({
     activeSource,
   );
   const timeline = filteredMessages.length
-    ? buildMessageTimeline(filteredMessages, contact)
+    ? buildMessageTimeline(filteredMessages, contact, facebookReplyTarget)
     : [];
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
@@ -426,6 +439,13 @@ function FanDetailContent({
                 </form>
               </div>
             ) : null}
+            {contact && hasFacebookMessages(messages) ? (
+              <FacebookReplyTargetCard
+                contact={contact}
+                target={facebookReplyTarget}
+                error={facebookReplyTargetError}
+              />
+            ) : null}
             <div className={styles.timeline}>
               {timeline.length ? (
                 timeline.map((item) => (
@@ -496,6 +516,7 @@ function FanDetailContent({
               conversation,
               messages,
               contact,
+              facebookReplyTarget,
             )}
           />
         </main>
@@ -696,6 +717,65 @@ function OriginalChatAction({
   );
 }
 
+function FacebookReplyTargetCard({
+  contact,
+  target,
+  error,
+}: {
+  contact: ContactRow;
+  target: ContactReplyTargetRow | null;
+  error?: string;
+}) {
+  return (
+    <details className={styles.replyTargetBox} open={Boolean(error)}>
+      <summary>
+        {target
+          ? "Exakter Facebook-Chat-Link hinterlegt"
+          : "Exakten Facebook-Chat-Link hinterlegen"}
+      </summary>
+      <p className={styles.syncHint}>
+        Öffne einmal den richtigen Facebook-Chat, kopiere die URL aus dem
+        Browser und speichere sie hier.
+      </p>
+      {error ? (
+        <p className={dashboardStyles.error}>
+          <strong>Chat-Link konnte nicht geladen werden.</strong>
+          <span>{error}</span>
+        </p>
+      ) : null}
+      {target ? (
+        <div className={styles.replyTargetStatus}>
+          <span>Manuell hinterlegter Chat-Link</span>
+          <a
+            className={dashboardStyles.secondaryButton}
+            href={target.url}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Link testen
+          </a>
+        </div>
+      ) : null}
+      <form action={saveFacebookReplyTarget} className={styles.inlineForm}>
+        <input name="contact_id" type="hidden" value={contact.id} />
+        <label>
+          <span>{target ? "Link ändern" : "Facebook-Chat-URL"}</span>
+          <input
+            defaultValue={target?.url ?? ""}
+            name="reply_target_url"
+            placeholder="https://business.facebook.com/.../inbox/t/..."
+            type="url"
+            required
+          />
+        </label>
+        <button className={dashboardStyles.secondaryButton} type="submit">
+          {target ? "Ändern" : "Chat-Link speichern"}
+        </button>
+      </form>
+    </details>
+  );
+}
+
 function FanNotesCard({ contact }: { contact: ContactRow }) {
   return (
     <article className={styles.card}>
@@ -774,9 +854,33 @@ function FanNotFound() {
   );
 }
 
+function hasFacebookMessages(messages: ConversationMessageRow[]): boolean {
+  return messages.some(
+    (message) =>
+      message.source_platform === "facebook" &&
+      (message.source_type === "facebook_messages" ||
+        message.message_type === "dm"),
+  );
+}
+
+function getManualFacebookReplyTargetUrl(
+  message: ConversationMessageRow,
+  target: ContactReplyTargetRow | null,
+): string | null {
+  if (!target || target.quality !== "manual_exact_thread") return null;
+  if (target.source_platform !== "facebook") return null;
+  const sourceType = message.source_type ?? message.message_type;
+  if (target.source_type !== "facebook_messages") return null;
+  if (sourceType !== "facebook_messages" && message.message_type !== "dm") {
+    return null;
+  }
+  return target.url;
+}
+
 function buildMessageTimeline(
   messages: ConversationMessageRow[],
   contact: ContactRow,
+  facebookReplyTarget: ContactReplyTargetRow | null,
 ) {
   return messages.map((message) => ({
     id: message.id,
@@ -803,6 +907,10 @@ function buildMessageTimeline(
     replyAction: buildReplyTargetAction(message, null, {
       fallbackContactLabel: contact.display_name,
       fallbackContactId: contact.handle,
+      manualReplyTargetUrl: getManualFacebookReplyTargetUrl(
+        message,
+        facebookReplyTarget,
+      ),
     }),
   }));
 }
@@ -865,6 +973,7 @@ function getOriginalChannelAction(
   conversation: ConversationRow | null,
   messages: ConversationMessageRow[],
   contact: ContactRow,
+  facebookReplyTarget: ContactReplyTargetRow | null,
 ): ReplyTargetAction {
   const latestInbound = [...messages]
     .reverse()
@@ -872,6 +981,7 @@ function getOriginalChannelAction(
   return buildReplyTargetAction(latestInbound ?? conversation, conversation, {
     fallbackContactLabel: contact.display_name,
     fallbackContactId: contact.handle,
+    manualReplyTargetUrl: facebookReplyTarget?.url ?? null,
   });
 }
 
@@ -1003,6 +1113,10 @@ function formatNotice(value: string): string {
     return "Gespeichert: Notizen wurden aktualisiert.";
   if (value === "analysis_saved")
     return "Fan-Analyse-Report wurde aktualisiert.";
+  if (value === "reply_target_saved")
+    return "Exakter Facebook-Chat-Link wurde gespeichert.";
+  if (value === "reply_target_invalid")
+    return "Bitte speichere nur einen HTTPS-Link zu einem konkreten Facebook-Chat, keinen generischen Postfach-Link.";
   return value;
 }
 
@@ -1067,6 +1181,7 @@ export default async function FanDetailPage({
     contactAiProfileResult,
     fanAnalysisReportResult,
     workspaceVoiceProfileResult,
+    facebookReplyTargetResult,
   ] = workspace
     ? await Promise.all([
         contact
@@ -1087,8 +1202,11 @@ export default async function FanDetailPage({
           ? getFanAnalysisReport(workspace.id, contact.id)
           : Promise.resolve(null),
         getWorkspaceVoiceProfile(workspace.id, data.user.id),
+        contact
+          ? getContactReplyTarget(workspace.id, contact.id, "facebook_messages")
+          : Promise.resolve(null),
       ])
-    : [null, null, null, null, null, null, null, null];
+    : [null, null, null, null, null, null, null, null, null];
 
   const conversation =
     conversationsResult?.conversations.find((item) => item.contact_id === id) ??
@@ -1132,6 +1250,8 @@ export default async function FanDetailPage({
           facebookMessengerLastSyncedAt={
             facebookConnection?.last_messenger_sync_at ?? null
           }
+          facebookReplyTarget={facebookReplyTargetResult?.target ?? null}
+          facebookReplyTargetError={facebookReplyTargetResult?.error?.message}
         />
       ) : (
         <section

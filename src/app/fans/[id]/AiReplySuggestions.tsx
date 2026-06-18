@@ -47,6 +47,7 @@ export function AiReplySuggestions({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [copiedHelper, setCopiedHelper] = useState<string | null>(null);
 
   async function generateSuggestions(mode = activeMode) {
     setError("");
@@ -96,6 +97,11 @@ export function AiReplySuggestions({
   async function copySuggestion(text: string, index: number) {
     await navigator.clipboard.writeText(text);
     setCopiedIndex(index);
+  }
+
+  async function copyHelper(text: string, label: string) {
+    await navigator.clipboard.writeText(text);
+    setCopiedHelper(label);
   }
 
   return (
@@ -196,14 +202,47 @@ export function AiReplySuggestions({
               )}
             </div>
             {originalChannelAction.quality === "inbox_fallback" ? (
-              <p className={styles.muted}>
-                Chat im Postfach auswählen:{" "}
-                {originalChannelAction.fallbackContactLabel ??
-                  contact.displayName}
-                {originalChannelAction.fallbackContactId
-                  ? ` · Facebook-ID: ${originalChannelAction.fallbackContactId}`
-                  : ""}
-              </p>
+              <div className={styles.fallbackHelp}>
+                <p className={styles.muted}>
+                  Chat im Postfach auswählen:{" "}
+                  {originalChannelAction.fallbackContactLabel ??
+                    contact.displayName}
+                  {originalChannelAction.fallbackContactId
+                    ? ` · Facebook-ID: ${originalChannelAction.fallbackContactId}`
+                    : ""}
+                </p>
+                <button
+                  className={dashboardStyles.secondaryButton}
+                  onClick={() =>
+                    void copyHelper(
+                      originalChannelAction.fallbackContactLabel ??
+                        contact.displayName,
+                      "name",
+                    )
+                  }
+                  type="button"
+                >
+                  {copiedHelper === "name"
+                    ? "Fanname kopiert"
+                    : "Fanname kopieren"}
+                </button>
+                {originalChannelAction.fallbackContactId ? (
+                  <button
+                    className={dashboardStyles.secondaryButton}
+                    onClick={() =>
+                      void copyHelper(
+                        originalChannelAction.fallbackContactId ?? "",
+                        "facebook-id",
+                      )
+                    }
+                    type="button"
+                  >
+                    {copiedHelper === "facebook-id"
+                      ? "Facebook-ID kopiert"
+                      : "Facebook-ID kopieren"}
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </article>
         ))}
