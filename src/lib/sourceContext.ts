@@ -140,6 +140,7 @@ export function buildReplyTargetAction(
   options?: {
     fallbackContactLabel?: string | null;
     fallbackContactId?: string | null;
+    manualReplyTargetUrl?: string | null;
   },
 ): ReplyTargetAction {
   const primary = messageOrConversation ?? null;
@@ -163,6 +164,21 @@ export function buildReplyTargetAction(
   );
 
   if (platform === "facebook" && isMessengerSource(sourceType)) {
+    const manualExactUrl = isAllowedManualFacebookThreadUrl(
+      options?.manualReplyTargetUrl,
+    )
+      ? options.manualReplyTargetUrl
+      : null;
+    if (manualExactUrl) {
+      return {
+        href: manualExactUrl,
+        label: "In Facebook-Chat antworten",
+        quality: "manual_exact_thread",
+        reason: "Manuell hinterlegter Chat-Link.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+      };
+    }
+
     const exactUrl =
       [replyTargetUrl, sourceUrl].find(isExactFacebookThreadUrl) ?? null;
     if (exactUrl) {
@@ -247,6 +263,23 @@ export function isExactFacebookThreadUrl(
       normalizedPath.includes("/messenger/t/") ||
       normalizedPath.includes("/messages/t/") ||
       Boolean(url.searchParams.get("thread_id"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isAllowedManualFacebookThreadUrl(
+  value: string | null | undefined,
+): value is string {
+  if (!value || !isExactFacebookThreadUrl(value)) return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      ["business.facebook.com", "facebook.com", "www.facebook.com"].includes(
+        url.hostname.toLowerCase(),
+      )
     );
   } catch {
     return false;

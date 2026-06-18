@@ -19,6 +19,7 @@ import {
   getWorkspaceConversations,
   updateWorkspaceContact,
   updateContactInternalNotes,
+  upsertContactReplyTarget,
   upsertFanAnalysisReport,
 } from "@/lib/supabase/server";
 import {
@@ -26,6 +27,7 @@ import {
   normalizePlatform,
   parseCsvContacts,
 } from "./import/csv";
+import { isAllowedManualFacebookThreadUrl } from "@/lib/sourceContext";
 
 type SuggestedSaveResult = {
   ok: boolean;
@@ -149,6 +151,30 @@ export async function importCsvContacts(
   };
 }
 
+export async function saveFacebookReplyTarget(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+
+  const url = formValue(formData, "reply_target_url");
+  if (!isAllowedManualFacebookThreadUrl(url)) {
+    redirect(`/fans/${contactId}?notice=reply_target_invalid`);
+  }
+
+  const result = await upsertContactReplyTarget({
+    workspaceId: workspace.id,
+    contactId,
+    sourcePlatform: "facebook",
+    sourceType: "facebook_messages",
+    label: "Exakter Facebook-Chat-Link",
+    url,
+    quality: "manual_exact_thread",
+  });
+
+  if (result.error) throw new Error(result.error.message);
+  revalidatePath(`/fans/${contactId}`);
+  redirect(`/fans/${contactId}?notice=reply_target_saved`);
+}
 
 export async function saveContactInternalNotes(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
@@ -189,25 +215,38 @@ export async function analyzeFan(
   const sourceMessages = messagesResult.messages.slice(-50).map((message) => ({
     direction: message.direction,
     channel: message.source_platform ?? "unbekannter Kanal",
-    origin: message.source_type ?? message.message_type ?? "unbekannter Ursprung",
+    origin:
+      message.source_type ?? message.message_type ?? "unbekannter Ursprung",
     author: message.author_label ?? message.original_author_label ?? null,
     text: message.content || message.original_text_excerpt || "",
-    mediaHint: message.attachments?.length ? `Medien/Anhänge vorhanden (${message.attachments.length}); nur als Hinweis nutzen, keine Bildanalyse.` : null,
+    mediaHint: message.attachments?.length
+      ? `Medien/Anhänge vorhanden (${message.attachments.length}); nur als Hinweis nutzen, keine Bildanalyse.`
+      : null,
     createdAt: message.created_at,
   }));
 
-  const lowDataHint = sourceMessages.length < 3
-    ? "Es liegen nur wenige Nachrichten vor; der Report ist deshalb ein kurzer, vorsichtiger Zwischenstand."
-    : "";
+  const lowDataHint =
+    sourceMessages.length < 3
+      ? "Es liegen nur wenige Nachrichten vor; der Report ist deshalb ein kurzer, vorsichtiger Zwischenstand."
+      : "";
   const fallback = {
-    kurzprofil: lowDataHint || "Aus dem bisherigen Austausch ableitbarer vorsichtiger Kommunikationsüberblick.",
-    kommunikationsstil: "Nur aus expliziten Nachrichten ableiten; vorsichtig formulieren und weitere Nachrichten berücksichtigen.",
-    stimmung: "Aus den vorhandenen Nachrichten nicht sicher bestimmbar; höchstens als möglicher Eindruck formulieren.",
-    interessen_trigger: "Nur ausdrücklich genannte Themen, Kanalhinweise und Ursprünge berücksichtigen.",
-    kauf_reaktion: "Keine harte Prognose; mögliche Reaktion hängt vom nächsten manuellen Kontakt und Kontext ab.",
-    antwortstil: "Freundlich, klar, respektvoll und ohne Druck antworten. Keine automatische Sendung auslösen.",
-    no_gos: "Keine Diagnosen, keine sensiblen Eigenschaften als Tatsache, keine psychologischen Gewissheiten und keine Bildanalyse behaupten.",
-    spirituell: "Falls genutzt, nur weich als optionaler möglicher Eindruck formulieren und nicht als Tatsache darstellen.",
+    kurzprofil:
+      lowDataHint ||
+      "Aus dem bisherigen Austausch ableitbarer vorsichtiger Kommunikationsüberblick.",
+    kommunikationsstil:
+      "Nur aus expliziten Nachrichten ableiten; vorsichtig formulieren und weitere Nachrichten berücksichtigen.",
+    stimmung:
+      "Aus den vorhandenen Nachrichten nicht sicher bestimmbar; höchstens als möglicher Eindruck formulieren.",
+    interessen_trigger:
+      "Nur ausdrücklich genannte Themen, Kanalhinweise und Ursprünge berücksichtigen.",
+    kauf_reaktion:
+      "Keine harte Prognose; mögliche Reaktion hängt vom nächsten manuellen Kontakt und Kontext ab.",
+    antwortstil:
+      "Freundlich, klar, respektvoll und ohne Druck antworten. Keine automatische Sendung auslösen.",
+    no_gos:
+      "Keine Diagnosen, keine sensiblen Eigenschaften als Tatsache, keine psychologischen Gewissheiten und keine Bildanalyse behaupten.",
+    spirituell:
+      "Falls genutzt, nur weich als optionaler möglicher Eindruck formulieren und nicht als Tatsache darstellen.",
   };
 
   let report = fallback;
@@ -216,32 +255,68 @@ export async function analyzeFan(
   let userMessage = lowDataHint;
 
   if (!apiKey) {
-    userMessage = "OPENAI_API_KEY ist serverseitig nicht gesetzt. FanMind hat deshalb einen einfachen Kurzreport ohne KI-Aufruf gespeichert.";
+    userMessage =
+      "OPENAI_API_KEY ist serverseitig nicht gesetzt. FanMind hat deshalb einen einfachen Kurzreport ohne KI-Aufruf gespeichert.";
   } else if (sourceMessages.length >= 3) {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         model,
         store: false,
         input: [
-          { role: "system", content: "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Keine Diagnosen, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Medien nur als Hinweis erwähnen, keine Bildanalyse. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell zurück." },
-          { role: "user", content: JSON.stringify({ internalNotes: contactResult.contact?.internal_notes ?? "", messages: sourceMessages }) },
+          {
+            role: "system",
+            content:
+              "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Keine Diagnosen, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Medien nur als Hinweis erwähnen, keine Bildanalyse. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell zurück.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              internalNotes: contactResult.contact?.internal_notes ?? "",
+              messages: sourceMessages,
+            }),
+          },
         ],
       }),
     });
-    const data = await response.json().catch(() => null) as { error?: { message?: string }; output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> } | null;
-    const text = data?.output_text ?? data?.output?.flatMap((o) => o.content ?? []).map((c) => c.text).find(Boolean);
+    const data = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+      output_text?: string;
+      output?: Array<{ content?: Array<{ text?: string }> }>;
+    } | null;
+    const text =
+      data?.output_text ??
+      data?.output
+        ?.flatMap((o) => o.content ?? [])
+        .map((c) => c.text)
+        .find(Boolean);
     if (!response.ok) {
-      return { ok: false, message: data?.error?.message || "OpenAI konnte den Fan-Analyse-Report gerade nicht erstellen." };
+      return {
+        ok: false,
+        message:
+          data?.error?.message ||
+          "OpenAI konnte den Fan-Analyse-Report gerade nicht erstellen.",
+      };
     }
     if (!text) {
-      return { ok: false, message: "OpenAI hat keinen auswertbaren Fan-Analyse-Report zurückgegeben." };
+      return {
+        ok: false,
+        message:
+          "OpenAI hat keinen auswertbaren Fan-Analyse-Report zurückgegeben.",
+      };
     }
     try {
       report = { ...fallback, ...JSON.parse(text) };
     } catch {
-      return { ok: false, message: "OpenAI hat keinen gültigen JSON-Report zurückgegeben. Bitte erneut versuchen." };
+      return {
+        ok: false,
+        message:
+          "OpenAI hat keinen gültigen JSON-Report zurückgegeben. Bitte erneut versuchen.",
+      };
     }
     userMessage = "Fan-Analyse-Report wurde gespeichert und aktualisiert.";
   } else {
@@ -253,7 +328,12 @@ export async function analyzeFan(
     contactId,
     reportJson: report,
     summary: report.kurzprofil,
-    model: apiKey && sourceMessages.length >= 3 ? model : apiKey ? "fallback-low-message-count" : "fallback-no-api-key",
+    model:
+      apiKey && sourceMessages.length >= 3
+        ? model
+        : apiKey
+          ? "fallback-low-message-count"
+          : "fallback-no-api-key",
     sourceMessageCount: sourceMessages.length,
   });
   if (result.error) return { ok: false, message: result.error.message };
@@ -262,12 +342,17 @@ export async function analyzeFan(
     ok: true,
     message: userMessage,
     generatedAt: result.report?.generated_at ?? undefined,
-    report: result.report ? {
-      report_json: result.report.report_json as Record<string, unknown> | null,
-      summary: result.report.summary,
-      source_message_count: result.report.source_message_count,
-      generated_at: result.report.generated_at,
-    } : null,
+    report: result.report
+      ? {
+          report_json: result.report.report_json as Record<
+            string,
+            unknown
+          > | null,
+          summary: result.report.summary,
+          source_message_count: result.report.source_message_count,
+          generated_at: result.report.generated_at,
+        }
+      : null,
   };
 }
 
@@ -366,12 +451,21 @@ export async function saveManualSentReply(formData: FormData) {
     contactId,
     direction: "outbound",
     messageType: "dm",
-    sourcePlatform: conversation.source_platform || formValue(formData, "source_platform") || "manual",
+    sourcePlatform:
+      conversation.source_platform ||
+      formValue(formData, "source_platform") ||
+      "manual",
     sourceType: conversation.source_type || undefined,
     sourceUrl: conversation.source_url,
     replyTargetUrl: conversation.reply_target_url,
-    authorLabel: conversation.source_platform === "facebook" ? (workspace.name || "Team") : getActionUserLabel(user.data.user, workspace.name),
-    originalAuthorLabel: conversation.source_platform === "facebook" ? (workspace.name || "Team") : undefined,
+    authorLabel:
+      conversation.source_platform === "facebook"
+        ? workspace.name || "Team"
+        : getActionUserLabel(user.data.user, workspace.name),
+    originalAuthorLabel:
+      conversation.source_platform === "facebook"
+        ? workspace.name || "Team"
+        : undefined,
     userId: user.data.user?.id,
     content: formValue(formData, "content"),
   });
@@ -576,7 +670,8 @@ async function getExistingOrNewConversation(
 
     const existing = conversations.conversations.find(
       (conversation) =>
-        conversation.id === conversationId && conversation.contact_id === contactId,
+        conversation.id === conversationId &&
+        conversation.contact_id === contactId,
     );
 
     if (!existing) {
@@ -586,7 +681,10 @@ async function getExistingOrNewConversation(
     return existing;
   }
 
-  const ensured = await ensureConversationForContact({ workspaceId, contactId });
+  const ensured = await ensureConversationForContact({
+    workspaceId,
+    contactId,
+  });
 
   if (ensured.error || !ensured.conversation) {
     throw new Error(
@@ -626,11 +724,19 @@ async function updateConversationStatusAction(
   revalidatePath("/inbox");
 
   const returnTo = formValue(formData, "return_to");
-  redirect(returnTo === "inbox" ? `/inbox?notice=${notice}` : `/fans/${contactId}?focus=reply&notice=${notice}`);
+  redirect(
+    returnTo === "inbox"
+      ? `/inbox?notice=${notice}`
+      : `/fans/${contactId}?focus=reply&notice=${notice}`,
+  );
 }
 
-function getActionUserLabel(user: { email?: string; user_metadata?: Record<string, unknown> } | null, fallback: string): string {
-  const label = user?.user_metadata?.display_name ?? user?.user_metadata?.full_name;
+function getActionUserLabel(
+  user: { email?: string; user_metadata?: Record<string, unknown> } | null,
+  fallback: string,
+): string {
+  const label =
+    user?.user_metadata?.display_name ?? user?.user_metadata?.full_name;
 
   if (typeof label === "string" && label.trim()) return label.trim();
   if (user?.email) return user.email;
@@ -720,8 +826,12 @@ function getDueDate(inDays: number | null | undefined): string | null {
 }
 
 export async function syncFacebookChatForContact(contactId: string) {
-  const { syncFacebookMessengerHistory } = await import("@/app/channels/facebookWebhookActions");
-  const result = await syncFacebookMessengerHistory({ contactId, markInboundSeen: true });
+  const { syncFacebookMessengerHistory } =
+    await import("@/app/channels/facebookWebhookActions");
+  const result = await syncFacebookMessengerHistory({
+    contactId,
+    markInboundSeen: true,
+  });
   const params = new URLSearchParams();
   params.set(
     "notice",

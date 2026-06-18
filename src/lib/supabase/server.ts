@@ -81,6 +81,19 @@ export type MemoryRow = {
   created_at: string | null;
 };
 
+export type ContactReplyTargetRow = {
+  id: string;
+  workspace_id: string;
+  contact_id: string;
+  source_platform: string;
+  source_type: string;
+  label: string | null;
+  url: string;
+  quality: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 export type ConversationRow = {
   id: string;
   workspace_id: string;
@@ -107,8 +120,6 @@ export type ConversationRow = {
   created_at: string | null;
   updated_at: string | null;
 };
-
-
 
 export type ConversationMessageRow = {
   id: string;
@@ -149,7 +160,6 @@ export type ConversationSummaryRow = {
   updated_at: string | null;
   created_at: string | null;
 };
-
 
 export type FanAnalysisReportRow = {
   id: string;
@@ -357,6 +367,11 @@ type ContactDetailResult = {
   error: Error | null;
 };
 
+type ContactReplyTargetResult = {
+  target: ContactReplyTargetRow | null;
+  error: Error | null;
+};
+
 type FanAnalysisReportResult = {
   report: FanAnalysisReportRow | null;
   error: Error | null;
@@ -462,6 +477,8 @@ const CONTACT_COLUMNS =
   "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,created_at,updated_at";
 const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
+const CONTACT_REPLY_TARGET_COLUMNS =
+  "id,workspace_id,contact_id,source_platform,source_type,label,url,quality,created_at,updated_at";
 const CONVERSATION_COLUMNS =
   "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
@@ -1076,6 +1093,91 @@ export async function getWorkspaceMetaWebhookEvents(
   return { events: result.data ?? [], error: null };
 }
 
+export async function getContactReplyTarget(
+  workspaceId: string,
+  contactId: string,
+  sourceType: string,
+): Promise<ContactReplyTargetResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return {
+      target: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  }
+
+  const result = await postgrestSelect<ContactReplyTargetRow>(
+    "contact_reply_targets",
+    accessToken,
+    CONTACT_REPLY_TARGET_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contactId],
+      ["source_type", sourceType],
+    ],
+    1,
+    true,
+  );
+
+  if (result.error) {
+    return { target: null, error: result.error };
+  }
+
+  return { target: result.data, error: null };
+}
+
+export async function upsertContactReplyTarget(input: {
+  workspaceId: string;
+  contactId: string;
+  sourcePlatform: string;
+  sourceType: string;
+  label?: string | null;
+  url: string;
+  quality?: string;
+}): Promise<ContactReplyTargetResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return {
+      target: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  }
+
+  const result = await postgrestRequest<ContactReplyTargetRow>(
+    "contact_reply_targets",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      contact_id: input.contactId,
+      source_platform: input.sourcePlatform,
+      source_type: input.sourceType,
+      label: input.label ?? null,
+      url: input.url,
+      quality: input.quality ?? "manual_exact_thread",
+      updated_at: new Date().toISOString(),
+    },
+    accessToken,
+    {
+      select: CONTACT_REPLY_TARGET_COLUMNS,
+      single: true,
+      upsert: true,
+      onConflict: "workspace_id,contact_id,source_type",
+    },
+  );
+
+  if (result.error) {
+    return { target: null, error: result.error };
+  }
+
+  return { target: result.data, error: null };
+}
+
 export async function getWorkspaceContacts(
   workspaceId: string,
 ): Promise<ContactsResult> {
@@ -1227,7 +1329,6 @@ export async function updateWorkspaceContact(
   return { contact: contactResult.data, error: null };
 }
 
-
 export async function updateContactInternalNotes(input: {
   workspaceId: string;
   contactId: string;
@@ -1266,32 +1367,78 @@ export async function getFanAnalysisReport(
   contactId: string,
 ): Promise<FanAnalysisReportResult> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { report: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  if (!accessToken)
+    return {
+      report: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
   const result = await postgrestSelect<FanAnalysisReportRow>(
     "fan_analysis_reports",
     accessToken,
     FAN_ANALYSIS_REPORT_COLUMNS,
-    [["workspace_id", workspaceId], ["contact_id", contactId]],
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contactId],
+    ],
     1,
     true,
   );
-  if (result.error) return { report: null, error: new Error(`Analyse-Report konnte nicht geladen werden: ${result.error.message}`) };
+  if (result.error)
+    return {
+      report: null,
+      error: new Error(
+        `Analyse-Report konnte nicht geladen werden: ${result.error.message}`,
+      ),
+    };
   return { report: result.data, error: null };
 }
 
 export async function upsertFanAnalysisReport(input: {
-  workspaceId: string; contactId: string; reportJson: Record<string, unknown>; summary: string; model: string; sourceMessageCount: number;
+  workspaceId: string;
+  contactId: string;
+  reportJson: Record<string, unknown>;
+  summary: string;
+  model: string;
+  sourceMessageCount: number;
 }): Promise<FanAnalysisReportResult> {
   const accessToken = await getAccessToken();
-  if (!accessToken) return { report: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  if (!accessToken)
+    return {
+      report: null,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
   const result = await postgrestRequest<FanAnalysisReportRow>(
     "fan_analysis_reports",
     "POST",
-    { workspace_id: input.workspaceId, contact_id: input.contactId, report_json: input.reportJson, summary: input.summary, model: input.model, source_message_count: input.sourceMessageCount, generated_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    {
+      workspace_id: input.workspaceId,
+      contact_id: input.contactId,
+      report_json: input.reportJson,
+      summary: input.summary,
+      model: input.model,
+      source_message_count: input.sourceMessageCount,
+      generated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
     accessToken,
-    { select: FAN_ANALYSIS_REPORT_COLUMNS, single: true, upsert: true, onConflict: "workspace_id,contact_id" },
+    {
+      select: FAN_ANALYSIS_REPORT_COLUMNS,
+      single: true,
+      upsert: true,
+      onConflict: "workspace_id,contact_id",
+    },
   );
-  if (result.error) return { report: null, error: new Error(`Analyse-Report konnte nicht gespeichert werden: ${result.error.message}`) };
+  if (result.error)
+    return {
+      report: null,
+      error: new Error(
+        `Analyse-Report konnte nicht gespeichert werden: ${result.error.message}`,
+      ),
+    };
   return { report: result.data, error: null };
 }
 
