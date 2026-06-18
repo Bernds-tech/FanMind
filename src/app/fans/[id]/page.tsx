@@ -32,9 +32,7 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
-import {
-  getChannelSourceLabel,
-} from "@/lib/channelSources";
+import { getChannelSourceLabel } from "@/lib/channelSources";
 import styles from "./fan-detail.module.css";
 import {
   buildReplyTargetAction,
@@ -82,7 +80,6 @@ type FanDetailWorkspaceProps = {
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
-  facebookMessengerSyncError?: string | null;
 };
 
 type ConversationChannelKey =
@@ -155,7 +152,6 @@ function FanDetailWorkspace({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
-  facebookMessengerSyncError,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -219,7 +215,6 @@ function FanDetailWorkspace({
             activeChannel={activeChannel}
             activeSource={activeSource}
             facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
-            facebookMessengerSyncError={facebookMessengerSyncError}
           />
         ) : (
           <FanNotFound />
@@ -246,7 +241,6 @@ function FanDetailContent({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
-  facebookMessengerSyncError,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -264,7 +258,6 @@ function FanDetailContent({
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
-  facebookMessengerSyncError?: string | null;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const channelTabs = buildConversationChannelTabs(
@@ -285,7 +278,7 @@ function FanDetailContent({
     activeSource,
   );
   const timeline = filteredMessages.length
-    ? buildMessageTimeline(filteredMessages)
+    ? buildMessageTimeline(filteredMessages, contact)
     : [];
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
@@ -404,12 +397,6 @@ function FanDetailContent({
                 <span>{messagesError}</span>
               </p>
             ) : null}
-            {facebookMessengerSyncError ? (
-              <p className={dashboardStyles.error}>
-                <strong>Facebook-Verlauf konnte nicht automatisch aktualisiert werden.</strong>
-                <span>{facebookMessengerSyncError}</span>
-              </p>
-            ) : null}
             {contact &&
             messages.some(
               (message) =>
@@ -469,10 +456,7 @@ function FanDetailContent({
                       </div>
                       <p>{item.text}</p>
                       <AttachmentPreview attachments={item.attachments} />
-                      <OriginalChatAction
-                        action={item.replyAction}
-                        compact
-                      />
+                      <OriginalChatAction action={item.replyAction} compact />
                     </div>
                   </article>
                 ))
@@ -508,7 +492,11 @@ function FanDetailContent({
               summary: contact.summary,
             }}
             modes={defaultReplyModes}
-            originalChannelAction={getOriginalChannelAction(conversation, messages)}
+            originalChannelAction={getOriginalChannelAction(
+              conversation,
+              messages,
+              contact,
+            )}
           />
         </main>
 
@@ -531,12 +519,32 @@ function FanDetailContent({
 }
 
 const defaultReplyModes: ReplyMode[] = [
-  { id: "friendly", label: "Freundlich", prompt: "warm, persönlich und hilfreich" },
-  { id: "short", label: "Kurz & direkt", prompt: "knapp, klar und ohne Umwege" },
-  { id: "sales", label: "Verkaufsorientiert", prompt: "vorsichtig verkaufsorientiert ohne Druck" },
-  { id: "calming", label: "Beruhigend", prompt: "ruhig, deeskalierend und sicherheitsgebend" },
+  {
+    id: "friendly",
+    label: "Freundlich",
+    prompt: "warm, persönlich und hilfreich",
+  },
+  {
+    id: "short",
+    label: "Kurz & direkt",
+    prompt: "knapp, klar und ohne Umwege",
+  },
+  {
+    id: "sales",
+    label: "Verkaufsorientiert",
+    prompt: "vorsichtig verkaufsorientiert ohne Druck",
+  },
+  {
+    id: "calming",
+    label: "Beruhigend",
+    prompt: "ruhig, deeskalierend und sicherheitsgebend",
+  },
   { id: "casual", label: "Locker", prompt: "natürlich, locker und nahbar" },
-  { id: "vip", label: "VIP/Premium", prompt: "wertschätzend, exklusiv und serviceorientiert" },
+  {
+    id: "vip",
+    label: "VIP/Premium",
+    prompt: "wertschätzend, exklusiv und serviceorientiert",
+  },
 ];
 
 function normalizeConversationChannel(value: string): ConversationChannelKey {
@@ -677,7 +685,12 @@ function OriginalChatAction({
         {action.label}
       </a>
       {action.quality === "inbox_fallback" ? (
-        <small className={styles.muted}>Chat ggf. im Postfach auswählen.</small>
+        <small className={styles.muted}>
+          Chat im Postfach auswählen: {action.fallbackContactLabel ?? "Kontakt"}
+          {action.fallbackContactId
+            ? ` · Facebook-ID: ${action.fallbackContactId}`
+            : ""}
+        </small>
       ) : null}
     </div>
   );
@@ -689,7 +702,9 @@ function FanNotesCard({ contact }: { contact: ContactRow }) {
       <div className={styles.cardHeader}>
         <div>
           <h3>Notizen</h3>
-          <p className={styles.reportIntro}>Interne Notizen zu diesem Fan. Nur im Workspace sichtbar.</p>
+          <p className={styles.reportIntro}>
+            Interne Notizen zu diesem Fan. Nur im Workspace sichtbar.
+          </p>
         </div>
       </div>
       <form action={saveContactInternalNotes} className={styles.notesForm}>
@@ -702,7 +717,9 @@ function FanNotesCard({ contact }: { contact: ContactRow }) {
           placeholder="Eigene Notizen, Kontext, Team-Hinweise …"
         />
         <div className={styles.replyFooter}>
-          <button className={dashboardStyles.primaryButton} type="submit">Notizen speichern</button>
+          <button className={dashboardStyles.primaryButton} type="submit">
+            Notizen speichern
+          </button>
         </div>
       </form>
     </article>
@@ -757,7 +774,10 @@ function FanNotFound() {
   );
 }
 
-function buildMessageTimeline(messages: ConversationMessageRow[]) {
+function buildMessageTimeline(
+  messages: ConversationMessageRow[],
+  contact: ContactRow,
+) {
   return messages.map((message) => ({
     id: message.id,
     createdAt: message.created_at,
@@ -780,7 +800,10 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
     text: message.original_text_excerpt || message.content,
     attachments: message.attachments ?? [],
     sourceContext: getMessageSourceContext(message),
-    replyAction: buildReplyTargetAction(message),
+    replyAction: buildReplyTargetAction(message, null, {
+      fallbackContactLabel: contact.display_name,
+      fallbackContactId: contact.handle,
+    }),
   }));
 }
 
@@ -827,9 +850,11 @@ function AttachmentPreview({
   );
 }
 
-
 function getLatestInboundMessage(messages: ConversationMessageRow[]): string {
-  return [...messages].reverse().find((message) => message.direction === "inbound")?.content ?? "";
+  return (
+    [...messages].reverse().find((message) => message.direction === "inbound")
+      ?.content ?? ""
+  );
 }
 
 function stringifyAnalysisReport(report: FanAnalysisReportRow | null): string {
@@ -839,9 +864,15 @@ function stringifyAnalysisReport(report: FanAnalysisReportRow | null): string {
 function getOriginalChannelAction(
   conversation: ConversationRow | null,
   messages: ConversationMessageRow[],
+  contact: ContactRow,
 ): ReplyTargetAction {
-  const latestInbound = [...messages].reverse().find((message) => message.direction === "inbound");
-  return buildReplyTargetAction(latestInbound ?? conversation, conversation);
+  const latestInbound = [...messages]
+    .reverse()
+    .find((message) => message.direction === "inbound");
+  return buildReplyTargetAction(latestInbound ?? conversation, conversation, {
+    fallbackContactLabel: contact.display_name,
+    fallbackContactId: contact.handle,
+  });
 }
 
 function getAttachmentLabel(type: string): string {
@@ -968,8 +999,10 @@ function formatNotice(value: string): string {
     return "Konversation wartet auf Antwort im Originalkanal.";
   if (value === "open") return "Konversation wieder geöffnet.";
   if (value === "priority_saved") return "Priorität gespeichert.";
-  if (value === "notes_saved") return "Gespeichert: Notizen wurden aktualisiert.";
-  if (value === "analysis_saved") return "Fan-Analyse-Report wurde aktualisiert.";
+  if (value === "notes_saved")
+    return "Gespeichert: Notizen wurden aktualisiert.";
+  if (value === "analysis_saved")
+    return "Fan-Analyse-Report wurde aktualisiert.";
   return value;
 }
 
@@ -982,13 +1015,6 @@ function getUserDisplayName(
   return typeof displayName === "string" && displayName.trim()
     ? displayName.trim()
     : fallback;
-}
-
-function isMessengerSyncStale(value: string | null | undefined): boolean {
-  if (!value) return true;
-  const syncedAt = Date.parse(value);
-  if (!Number.isFinite(syncedAt)) return true;
-  return Date.now() - syncedAt > 60_000;
 }
 
 export default async function FanDetailPage({
@@ -1017,76 +1043,56 @@ export default async function FanDetailPage({
       contactId: id,
     });
   }
-  const contactsResult = workspace
-    ? await getWorkspaceContacts(workspace.id)
-    : null;
-  const contactResult = workspace
-    ? await getWorkspaceContact(workspace.id, id)
-    : null;
-  const memoriesResult =
-    workspace && contactResult?.contact
-      ? await getContactMemories(workspace.id, contactResult.contact.id)
-      : null;
-  const followupsResult =
-    workspace && contactResult?.contact
-      ? await getContactFollowups(workspace.id, contactResult.contact.id)
-      : null;
-  const socialConnectionsResult = workspace
-    ? await getWorkspaceSocialConnections(workspace.id)
-    : null;
+  const [contactsResult, contactResult, socialConnectionsResult] = workspace
+    ? await Promise.all([
+        getWorkspaceContacts(workspace.id),
+        getWorkspaceContact(workspace.id, id),
+        getWorkspaceSocialConnections(workspace.id),
+      ])
+    : [null, null, null];
+
   const facebookConnection =
     socialConnectionsResult?.connections.find(
       (connection) =>
         connection.platform === "facebook" && connection.status === "connected",
     ) ?? null;
 
-  let facebookMessengerSyncError: string | null = null;
+  const contact = contactResult?.contact ?? null;
+  const [
+    memoriesResult,
+    followupsResult,
+    messagesResult,
+    conversationsResult,
+    openFollowupCountResult,
+    contactAiProfileResult,
+    fanAnalysisReportResult,
+    workspaceVoiceProfileResult,
+  ] = workspace
+    ? await Promise.all([
+        contact
+          ? getContactMemories(workspace.id, contact.id)
+          : Promise.resolve(null),
+        contact
+          ? getContactFollowups(workspace.id, contact.id)
+          : Promise.resolve(null),
+        contact
+          ? getContactConversationMessages(workspace.id, contact.id)
+          : Promise.resolve(null),
+        getWorkspaceConversations(workspace.id),
+        getOpenFollowupCount(workspace.id),
+        contact
+          ? getContactAiProfile(workspace.id, contact.id)
+          : Promise.resolve(null),
+        contact
+          ? getFanAnalysisReport(workspace.id, contact.id)
+          : Promise.resolve(null),
+        getWorkspaceVoiceProfile(workspace.id, data.user.id),
+      ])
+    : [null, null, null, null, null, null, null, null];
 
-  if (
-    workspace &&
-    contactResult?.contact?.source_platform === "facebook" &&
-    contactResult.contact.handle &&
-    facebookConnection &&
-    isMessengerSyncStale(facebookConnection.last_messenger_sync_at)
-  ) {
-    const { syncFacebookMessengerConversationForContact } =
-      await import("@/app/channels/facebookWebhookActions");
-    try {
-      const syncResult = await syncFacebookMessengerConversationForContact({
-        connection: facebookConnection,
-        contactId: contactResult.contact.id,
-        fanSenderId: contactResult.contact.handle,
-        revalidate: false,
-      });
-      if (!syncResult.ok) {
-        facebookMessengerSyncError =
-          syncResult.error ??
-          "Facebook-Verlauf konnte nicht automatisch aktualisiert werden.";
-      }
-    } catch (error) {
-      facebookMessengerSyncError =
-        error instanceof Error
-          ? error.message
-          : "Facebook-Verlauf konnte nicht automatisch aktualisiert werden.";
-    }
-  }
-
-  const messagesResult =
-    workspace && contactResult?.contact
-      ? await getContactConversationMessages(
-          workspace.id,
-          contactResult.contact.id,
-        )
-      : null;
-  const conversationsResult = workspace
-    ? await getWorkspaceConversations(workspace.id)
-    : null;
   const conversation =
     conversationsResult?.conversations.find((item) => item.contact_id === id) ??
     null;
-  const openFollowupCountResult = workspace
-    ? await getOpenFollowupCount(workspace.id)
-    : null;
   const conversationSummaryResult =
     workspace && conversation
       ? await getConversationSummary({
@@ -1094,17 +1100,6 @@ export default async function FanDetailPage({
           conversationId: conversation.id,
         })
       : null;
-  const contactAiProfileResult =
-    workspace && contactResult?.contact
-      ? await getContactAiProfile(workspace.id, contactResult.contact.id)
-      : null;
-  const fanAnalysisReportResult =
-    workspace && contactResult?.contact
-      ? await getFanAnalysisReport(workspace.id, contactResult.contact.id)
-      : null;
-  const workspaceVoiceProfileResult = workspace
-    ? await getWorkspaceVoiceProfile(workspace.id, data.user.id)
-    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -1137,7 +1132,6 @@ export default async function FanDetailPage({
           facebookMessengerLastSyncedAt={
             facebookConnection?.last_messenger_sync_at ?? null
           }
-          facebookMessengerSyncError={facebookMessengerSyncError}
         />
       ) : (
         <section
