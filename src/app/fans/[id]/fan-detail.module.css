@@ -776,3 +776,29 @@
   align-items: center;
   gap: 6px;
 }
+
+.detailStack,
+.workbenchStack {
+  margin-top: 0;
+}
+
+.backLink {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+@media (max-width: 1180px) {
+  .workbenchGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .cardHeader,
+  .reportSectionHeader {
+    flex-wrap: wrap;
+  }
+}

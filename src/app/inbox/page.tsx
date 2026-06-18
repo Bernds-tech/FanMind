@@ -25,6 +25,7 @@ import {
   normalizeHttpUrl,
 } from "@/lib/channelSources";
 import styles from "./inbox.module.css";
+import { InboxSearchForm } from "./InboxSearchForm";
 
 type InboxPageProps = {
   searchParams?: Promise<{ filter?: string | string[]; q?: string | string[] }>;
@@ -143,26 +144,15 @@ function InboxWorkspace({
       <div className={styles.inboxStack}>
         <section className={styles.introBar} aria-label="Inbox Suche">
           <div>
-            <p className={dashboardStyles.eyebrow}>Lokale MVP-Arbeitsliste</p>
-            <h2>Workspace-Daten statt Social-Sync</h2>
+            <p className={dashboardStyles.eyebrow}>Manuelle Arbeitsliste</p>
+            <h2>Workspace-Daten und verbundene Messenger-Eingänge</h2>
             <p>
               Die Queue nutzt echte gespeicherte Conversations. Wenn noch keine
               Conversation existiert, bleibt der vorhandene
               Kontakte-/Follow-up-Fallback aktiv.
             </p>
           </div>
-          <form className={styles.searchForm} action="/inbox">
-            <input type="hidden" name="filter" value={activeFilter} />
-            <label className={styles.searchLabel} htmlFor="inbox-search">
-              Suche
-            </label>
-            <input
-              id="inbox-search"
-              name="q"
-              defaultValue={searchQuery}
-              placeholder="Suche nach Fan, Kanal, Nachricht, Segment …"
-            />
-          </form>
+<InboxSearchForm activeFilter={activeFilter} initialQuery={searchQuery} />
         </section>
 
         <section className={styles.kpiGrid} aria-label="Inbox Kennzahlen">
@@ -227,7 +217,7 @@ function InboxWorkspace({
             {visibleItems.length ? (
               <QueueList items={visibleItems} />
             ) : (
-              <EmptyState />
+              <EmptyState hasSearch={Boolean(searchQuery)} />
             )}
           </section>
 
@@ -373,14 +363,14 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ hasSearch }: { hasSearch: boolean }) {
   return (
     <div className={dashboardStyles.emptyState}>
-      <strong>Keine Queue-Einträge für diesen Filter.</strong>
+      <strong>{hasSearch ? "Keine passenden Nachrichten gefunden." : "Keine Queue-Einträge für diesen Filter."}</strong>
       <p>
-        Lege Fans oder offene Follow-ups an, um die lokale MVP-Arbeitsliste zu
-        füllen. Ohne echte Social-Synchronisierung wird keine externe
-        Eingangsnachricht behauptet.
+        {hasSearch
+          ? "Passe den Suchbegriff an oder lösche die Suche, um alle passenden Inbox-Einträge zu sehen."
+          : "Lege Fans oder offene Follow-ups an, um die manuelle Arbeitsliste zu füllen. Verbundene Messenger-Eingänge erscheinen hier, ohne dass Antworten automatisch gesendet werden."}
       </p>
     </div>
   );

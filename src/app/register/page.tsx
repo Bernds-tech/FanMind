@@ -118,7 +118,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         badge: "Active",
         title: "Start Pilot / Setup",
         price: "€990 one-time · test for 1 month · no commitment",
-        description: "Demo/setup access for 1 month. No automatic renewal; if you do not continue, the pilot ends.",
+        description: "Setup access for 1 month. No automatic renewal; if you do not continue, the pilot ends.",
         bullets: ["no commitment", "no automatic renewal", "paid setup fee is credited if you continue with Starter"],
         href: registerPlanHref("pilot", language),
         cta: "Start Pilot / Setup",
@@ -139,7 +139,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         title: "Growth",
         price: "Available soon",
         description: "Not directly available yet.",
-        bullets: ["Coming Soon / roadmap preview", "not productively bookable yet", "start with Pilot / Setup or Starter for the MVP"],
+        bullets: ["Coming Soon / roadmap preview", "not productively bookable yet", "start with Pilot / Setup or Starter for the Produkt"],
         href: registerPlanHref("growth", language),
         cta: "Learn more",
       },
@@ -162,7 +162,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       badge: "Aktiv",
       title: "Pilot / Setup starten",
       price: "990 € einmalig · 1 Monat testen · keine Bindung",
-      description: "Demo-/Setup-Zugang für 1 Monat. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.",
+      description: "Setup-/Testzugang für 1 Monat. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.",
       bullets: ["keine Bindung", "keine automatische Verlängerung", "bezahlte Setup-Gebühr wird beim Starter angerechnet"],
       href: registerPlanHref("pilot", language),
       cta: "Pilot / Setup starten",
@@ -183,7 +183,7 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       title: "Growth",
       price: "Bald verfügbar",
       description: "Noch nicht direkt verfügbar.",
-      bullets: ["Coming Soon / Roadmap-Vorschau", "noch nicht produktiv buchbar", "für den MVP mit Pilot / Setup oder Starter starten"],
+      bullets: ["Coming Soon / Roadmap-Vorschau", "noch nicht produktiv buchbar", "für den Produkt mit Pilot / Setup oder Starter starten"],
       href: registerPlanHref("growth", language),
       cta: "Mehr erfahren",
     },
@@ -209,7 +209,7 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
         price: "€990 setup + €299 / month",
         description: "Setup fee applies; cancellable monthly.",
         bullets: ["setup/onboarding fee applies", "no long commitment"],
-        badge: "MVP access",
+        badge: "Produkt access",
       },
       {
         id: "starter_no_setup_commitment",
@@ -229,7 +229,7 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
       price: "990 € Einrichtung + 299 €/Monat",
       description: "Setup-/Einrichtungsgebühr fällt an; monatlich kündbar.",
       bullets: ["Setup-/Einrichtungsgebühr fällt an", "monatlich kündbar", "keine lange Bindung"],
-      badge: "MVP-Zugang",
+      badge: "Produkt-Zugang",
     },
     {
       id: "starter_no_setup_commitment",
@@ -481,7 +481,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             <div className={styles.planIntro}>
               <p className={styles.eyebrow}>{language === "en" ? "Setup first" : "Setup zuerst"}</p>
               <h1>{language === "en" ? "Choose your FanMind entry" : "Wähle deinen FanMind-Einstieg"}</h1>
-              <p>{language === "en" ? "Starter shows two MVP entry options: setup fee plus monthly cancellation, or no setup fee with a 12-month commitment." : "Starter zeigt zwei MVP-Einstiege: Einrichtung plus monatliche Kündbarkeit oder ohne Einrichtung mit 12 Monaten Bindung."}</p>
+              <p>{language === "en" ? "Starter shows two Produkt entry options: setup fee plus monthly cancellation, or no setup fee with a 12-month commitment." : "Starter zeigt zwei Produkt-Einstiege: Einrichtung plus monatliche Kündbarkeit oder ohne Einrichtung mit 12 Monaten Bindung."}</p>
             </div>
 
             {hasInvalidPlan && (
@@ -526,7 +526,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.formHeader}>
                 <p className={styles.eyebrow}>{selectedPlanId === "pilot" ? "Pilot / Setup" : "Starter-Abo"}</p>
                 <h1>{selectedPlanId === "pilot" ? (language === "en" ? "Start Pilot / Setup" : "Pilot / Setup starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
-                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, test for 1 month, no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Monat testen · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Pick the MVP setup access; no payment is collected here." : "Wähle deinen MVP-Setup-Zugang; hier wird keine Zahlung ausgelöst.")}</p>
+                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time, test for 1 month, no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Monat testen · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Pick the Produkt setup access; no payment is collected here." : "Wähle deinen Produkt-Setup-Zugang; hier wird keine Zahlung ausgelöst.")}</p>
               </div>
 
               {selectedPlanId === "starter" && (
@@ -648,7 +648,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             <section className={`${styles.previewCard} ${styles.cardWithComingSoon}`} aria-label={selectedPlanId === "growth" ? "Growth Vorschau" : "Agency Demo"}>
               <p className={styles.eyebrow}>{selectedPlanId === "growth" ? (language === "en" ? "Growth preview" : "Growth Vorschau") : (language === "en" ? "Agency demo" : "Agency Demo/Erstgespräch")}</p>
               <h1>{selectedPlanId === "growth" ? "Growth" : "Agency"}</h1>
-              <p>{selectedPlanId === "growth" ? (language === "en" ? "Growth is visible for planning, but it is not directly available as a productive registration in the MVP start." : "Growth ist für die Planung sichtbar, aber zum MVP-Start noch nicht direkt produktiv registrierbar.") : (language === "en" ? "Agency starts with a demo/intro call. It is not directly available as a productive registration in the MVP start." : "Agency startet mit Demo/Erstgespräch. Zum MVP-Start ist es noch nicht direkt produktiv registrierbar.")}</p>
+              <p>{selectedPlanId === "growth" ? (language === "en" ? "Growth is visible for planning, but it is not directly available as a productive registration in the Produkt start." : "Growth ist für die Planung sichtbar, aber zum Produkt-Start noch nicht direkt produktiv registrierbar.") : (language === "en" ? "Agency starts with a demo/intro call. It is not directly available as a productive registration in the Produkt start." : "Agency startet mit Demo/Erstgespräch. Zum Produkt-Start ist es noch nicht direkt produktiv registrierbar.")}</p>
               <div className={styles.previewNotice}>
                 <FeatureStatusLabel variant={selectedPlanId === "growth" ? "preview" : "roadmap"}>
                   {selectedPlanId === "growth" ? (language === "en" ? "Preview" : "Vorschau") : "Roadmap"}
@@ -657,7 +657,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               </div>
               <div className={styles.previewActions}>
                 <a className={styles.primaryLink} href={registerPlanHref("starter", language)}>{language === "en" ? "Start with Starter" : "Mit Starter starten"}</a>
-                <a className={styles.secondaryLink} href="mailto:kontakt@fanmind.de?subject=FanMind%20Demo%20anfragen">{language === "en" ? "Request demo" : "Demo anfragen"}</a>
+                <a className={styles.secondaryLink} href="mailto:kontakt@fanmind.de?subject=FanMind%20Demo%20anfragen">{language === "en" ? "Request demo" : "Zugang anfragen"}</a>
               </div>
               {error && <p className={styles.error} role="alert">{error}</p>}
               <p className={styles.notice}>{language === "en" ? "No productive Growth/Agency activation, no payment and no subscription billing are created here." : "Hier wird keine produktive Growth-/Agency-Freischaltung, keine Zahlung und keine Subscription-Abrechnung erstellt."}</p>

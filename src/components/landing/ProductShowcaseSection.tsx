@@ -105,7 +105,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
         <header className={styles.header}>
           <span className={styles.eyebrow}>{t("03 · Produkt-Showcase")}</span>
           <h2 id="product-showcase-title">{t("Ein Premium-Workspace für dein gesamtes")} <span>{t("Fan-Management.")}</span></h2>
-          <p>{t("FanMind verbindet Kontakte, Fan-Gedächtnis, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind im MVP als Vorschau markiert.")}</p>
+          <p>{t("FanMind verbindet Kontakte, Fan-Gedächtnis, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind aktuell als Vorschau markiert.")}</p>
         </header>
 
         <div className={styles.stage}>
@@ -176,7 +176,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
 
             <article className={`${styles.card} ${styles.analyticsCard} ${styles.cardWithComingSoon}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>{t("Analytics")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
-              <div className={styles.analyticsTooltip}>{t("Roadmap · keine Vollsuite im MVP")}</div>
+              <div className={styles.analyticsTooltip}>{t("Roadmap · keine Vollsuite aktuell")}</div>
               <SparkLine tone="purple" />
               <div className={styles.analyticsLegend}><span><i />{t("Conversion")}</span><span><i />{t("Antwortquote")}</span></div>
               <a href={landingPath(language, "#roadmap")}>{t("Roadmap anzeigen →")}</a>

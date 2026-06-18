@@ -40,7 +40,7 @@ function getKpiCards(
       tone: "blue",
       sparklinePoints: "M2 13 C16 12 25 11 38 11.5 S61 12 74 10 S96 8.5 124 5",
       infoLabel:
-        "Gesamtfans zeigt die echte Anzahl der gespeicherten Kontakte im aktuellen Workspace.",
+        "Anzahl gespeicherter Kontakte im aktuellen Workspace.",
     },
     {
       label: "Aktive Fans",
@@ -51,7 +51,7 @@ function getKpiCards(
       sparklinePoints:
         "M2 13 C13 12.5 21 11 31 11.5 S47 12.5 56 9.5 S72 6.5 82 7.5 S97 10.5 107 6.5 S118 5 124 4",
       infoLabel:
-        "Aktive Fans bleibt 0, weil die Aktivitätslogik im MVP noch nicht aktiv ist.",
+        "Kontakte mit aktueller Aktivität im ausgewählten Zeitraum.",
     },
     {
       label: "Offene Follow-ups",
@@ -62,7 +62,7 @@ function getKpiCards(
       sparklinePoints:
         "M2 12.5 C13 11 21 11.5 31 9.5 S47 7 57 9 S72 12.5 83 9.5 S98 5.5 108 6.5 S118 7.5 124 4.5",
       infoLabel:
-        "Offene Follow-ups zeigt die echte Anzahl gespeicherter Follow-ups mit Status open im aktuellen Workspace. Ohne eingespielte Follow-up-Tabelle bleibt der Wert tolerant bei 0.",
+        "Geplante oder fällige manuelle Nachfassaktionen.",
     },
     {
       label: "Laufende Kampagnen",
@@ -73,7 +73,7 @@ function getKpiCards(
       sparklinePoints:
         "M2 13 C14 12.5 22 10.5 32 11 S48 12.5 58 9.5 S73 7.5 83 9 S98 10.5 108 7 S119 5 124 4.5",
       infoLabel:
-        "Laufende Kampagnen bleibt 0; Kampagnen sind im MVP nicht aktiv.",
+        "Kampagnenfunktion vorbereitet, aktuell noch nicht aktiv.",
       comingSoon: true,
     },
     {
@@ -85,7 +85,7 @@ function getKpiCards(
       sparklinePoints:
         "M2 13.5 C12 12.5 20 8 31 9 S47 13 57 8.5 S72 6 82 8 S97 11.5 107 7 S118 5.5 124 4.25",
       infoLabel:
-        "Reaktivierung bleibt 0, weil die Reaktivierungslogik im MVP noch nicht aktiv ist.",
+        "Kontakte, die später gezielt wieder angesprochen werden können.",
       comingSoon: true,
     },
     {
@@ -97,7 +97,7 @@ function getKpiCards(
       sparklinePoints:
         "M2 12.5 C14 12 22 11.5 32 12 S48 13 58 11 S73 9 83 9.5 S98 10 108 7.5 S119 6 124 4.75",
       infoLabel:
-        "Conversion Rate bleibt 0 %, weil die Conversion-Logik im MVP noch nicht aktiv ist.",
+        "Künftige Kennzahl für erfolgreiche Antworten/Konversionen.",
       comingSoon: true,
     },
   ];
@@ -180,9 +180,15 @@ function KpiCard({
       <div className={styles.kpiIcon}>
         <KpiIcon icon={icon} />
       </div>
-      <span className={styles.kpiInfo} title={infoLabel} aria-label={infoLabel}>
+      <button
+        type="button"
+        className={styles.kpiInfo}
+        title={infoLabel}
+        aria-label={infoLabel}
+        data-tooltip={infoLabel}
+      >
         i
-      </span>
+      </button>
       <div className={styles.kpiTextBlock}>
         <p className={styles.kpiLabel}>{label}</p>
         <p className={styles.kpiValue}>{value}</p>

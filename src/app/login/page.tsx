@@ -11,7 +11,6 @@ type LoginPageProps = {
 };
 
 const LOGIN_TARGET = "/dashboard";
-const DEMO_TARGET_BASE = "/onboarding?plan=pilot&demo=1";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
   return (
@@ -78,17 +77,6 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     }
   }
 
-  async function handleDemoStart() {
-    try {
-      await createSupabaseBrowserClient().auth.signOut();
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // Demo muss auch ohne gesetzte Supabase-ENV möglich bleiben.
-    }
-
-    router.push(language === "en" ? `${DEMO_TARGET_BASE}&lang=en` : DEMO_TARGET_BASE);
-  }
-
   return (
     <main className={styles.page}>
       <div className={styles.gridPattern} aria-hidden="true" />
@@ -118,7 +106,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 <span className={styles.pinkIcon}>⚡</span>
                 <div>
                   <h2>{language === "en" ? "Fast access" : "Schneller Zugriff"}</h2>
-                  <p>{language === "en" ? "Instantly access demo data, contacts and prepared workflows." : "Greife sofort auf Demo-Daten, Kontakte und vorbereitete Workflows zu."}</p>
+                  <p>{language === "en" ? "Open your workspace with contacts, connected Messenger inbox and prepared workflows." : "Öffne deinen Workspace mit Kontakten, verbundener Messenger-Inbox und vorbereiteten Workflows."}</p>
                 </div>
               </article>
               <article>
@@ -141,7 +129,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           <form className={styles.formCard} onSubmit={handleLogin}>
             {isDemoMode && (
               <p className={styles.demoBadge} role="status">
-                {language === "en" ? "Demo mode active · forwarding to a safe preview" : "Demo-Modus aktiv · Weiterleitung in eine sichere Vorschau"}
+                {language === "en" ? "Test access selected · please register to create a private workspace" : "Testzugang ausgewählt · registriere dich für einen privaten Workspace"}
               </p>
             )}
 
@@ -183,8 +171,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 {error}
               </p>
             )}
-            <button className={styles.secondaryButton} type="button" onClick={handleDemoStart}>
-              {copy.demo}
+            <button className={styles.secondaryButton} type="button" onClick={() => router.push(localizedPath("/register", language, "?plan=test"))}>
+              {language === "en" ? "Try for free" : "Kostenlos testen"}
             </button>
 
             <p className={styles.notice}>{copy.notice}</p>
@@ -192,8 +180,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             <div className={styles.safetyCard}>
               <span aria-hidden="true">🛡</span>
               <div>
-                <strong>{language === "en" ? "Safe MVP scope" : "Sicherer MVP-Rahmen"}</strong>
-                <p>{language === "en" ? "Login leitet in das interne Onboarding; der Demo-Flow bleibt ohne Login verfügbar." : "Login leitet in das interne Onboarding; der Demo-Flow bleibt ohne Login verfügbar."}</p>
+                <strong>{language === "en" ? "Secure manual workflow" : "Sicherer manueller Workflow"}</strong>
+                <p>{language === "en" ? "FanMind is a multi-channel CRM and copy-&-open assistant. Facebook Messenger can be connected; replies are reviewed manually and sent externally." : "FanMind ist ein Multi-Channel CRM und Copy-&-Open-Assistent. Facebook Messenger kann angebunden werden; Antworten werden manuell geprüft und extern gesendet."}</p>
               </div>
             </div>
 
