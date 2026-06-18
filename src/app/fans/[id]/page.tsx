@@ -45,8 +45,8 @@ import {
   type MessageSourceContext,
 } from "@/lib/sourceContext";
 import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
+import { FanAnalysisReport } from "./FanAnalysisReport";
 import {
-  analyzeFan,
   saveContactInternalNotes,
   syncFacebookChatForContact,
 } from "../actions";
@@ -732,86 +732,14 @@ function FanMemoryCard({
   memories: MemoryRow[];
   memoriesError?: string;
 }) {
-  const reportSections = buildStoredFanAnalysisReportSections(report);
-
   return (
-    <article className={styles.card}>
-      <div className={styles.cardHeader}>
-        <div>
-          <h3>Fan-Analyse-Report</h3>
-          <p className={styles.reportIntro}>
-            KI-Report aus gespeicherten Nachrichten. Einschätzungen bleiben vorsichtige kommunikative Hinweise und keine Diagnose.
-          </p>
-        </div>
-      </div>
-      <form action={analyzeFan} className={styles.inlineForm}>
-        <input name="contact_id" type="hidden" value={contactId} />
-        <button className={dashboardStyles.secondaryButton} type="submit">
-          {report ? "Analyse aktualisieren" : "Fan analysieren"}
-        </button>
-      </form>
-      {reportError || memoriesError ? (
-        <p className={dashboardStyles.error}>
-          <strong>Analyse-Report konnte nicht geladen werden.</strong>
-          <span>{reportError ?? memoriesError}</span>
-        </p>
-      ) : null}
-      {reportSections.length ? (
-        <div className={styles.reportSectionList}>
-          {reportSections.map((section) => (
-            <section className={styles.reportSection} key={section.title}>
-              <div className={styles.reportSectionHeader}>
-                <strong>{section.title}</strong>
-              </div>
-              <p>{section.content}</p>
-            </section>
-          ))}
-          <p className={styles.muted}>
-            Quelle: {report?.source_message_count ?? 0} Nachrichten · {report?.generated_at ? formatDate(report.generated_at) : "noch nicht erzeugt"}
-          </p>
-          <p className={styles.reportSafetyNote}>
-            Bitte als vorsichtige Kommunikationshilfe lesen: keine medizinische oder psychologische Diagnose, keine harten sensiblen Behauptungen.
-          </p>
-        </div>
-      ) : (
-        <EmptyState
-          title="Noch kein Fan-Analyse-Report vorhanden."
-          body="Sobald genügend Nachrichten vorliegen, kann FanMind Kommunikationsstil, Interessen, Stimmung, Trigger und passende Antwortstrategie zusammenfassen."
-        />
-      )}
-    </article>
+    <FanAnalysisReport
+      contactId={contactId}
+      initialReport={report}
+      loadError={reportError ?? memoriesError}
+    />
   );
 }
-
-function buildStoredFanAnalysisReportSections(report: FanAnalysisReportRow | null) {
-  if (!report?.report_json) return [];
-  const values = report.report_json as Record<string, unknown>;
-  const entries: Array<[FanAnalysisReportSectionTitle, string]> = [
-    ["Kurzprofil", stringValue(values.kurzprofil) || report.summary || ""],
-    ["Kommunikationsstil", stringValue(values.kommunikationsstil)],
-    ["Stimmung / emotionale Tendenz", stringValue(values.stimmung)],
-    ["Interessen & Trigger", stringValue(values.interessen_trigger)],
-    ["Kauf-/Reaktionswahrscheinlichkeit", stringValue(values.kauf_reaktion)],
-    ["Empfohlener Antwortstil", stringValue(values.antwortstil)],
-    ["Vorsicht / No-Gos", stringValue(values.no_gos)],
-    ["Optionale spirituelle oder energetische Hinweise", stringValue(values.spirituell)],
-  ];
-  return entries.filter(([, content]) => content.trim()).map(([title, content]) => ({ title, content }));
-}
-
-function stringValue(value: unknown): string {
-  return typeof value === "string" ? value : Array.isArray(value) ? value.join(", ") : "";
-}
-
-type FanAnalysisReportSectionTitle =
-  | "Kurzprofil"
-  | "Kommunikationsstil"
-  | "Stimmung / emotionale Tendenz"
-  | "Interessen & Trigger"
-  | "Kauf-/Reaktionswahrscheinlichkeit"
-  | "Empfohlener Antwortstil"
-  | "Vorsicht / No-Gos"
-  | "Optionale spirituelle oder energetische Hinweise";
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
