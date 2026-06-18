@@ -32,6 +32,18 @@ type SuggestedSaveResult = {
   message: string;
 };
 
+export type FanAnalysisActionState = {
+  ok: boolean;
+  message: string;
+  generatedAt?: string;
+  report?: {
+    report_json: Record<string, unknown> | null;
+    summary: string | null;
+    source_message_count: number | null;
+    generated_at: string | null;
+  } | null;
+};
+
 export type CsvImportActionState = {
   ok: boolean;
   message: string;
@@ -154,51 +166,86 @@ export async function saveContactInternalNotes(formData: FormData) {
   redirect(`/fans/${contactId}?notice=notes_saved`);
 }
 
-export async function analyzeFan(formData: FormData) {
+export async function analyzeFan(
+  _previousState: FanAnalysisActionState,
+  formData: FormData,
+): Promise<FanAnalysisActionState> {
   const workspace = await getCurrentWorkspaceOrThrow();
   const contactId = formValue(formData, "contact_id");
   await ensureContactInWorkspace(workspace.id, contactId);
-  const messagesResult = await getContactConversationMessages(workspace.id, contactId);
-  if (messagesResult.error) throw new Error(messagesResult.error.message);
+
+  const [contactResult, messagesResult] = await Promise.all([
+    getWorkspaceContact(workspace.id, contactId),
+    getContactConversationMessages(workspace.id, contactId),
+  ]);
+
+  if (contactResult.error) {
+    return { ok: false, message: contactResult.error.message };
+  }
+  if (messagesResult.error) {
+    return { ok: false, message: messagesResult.error.message };
+  }
 
   const sourceMessages = messagesResult.messages.slice(-50).map((message) => ({
     direction: message.direction,
-    channel: message.source_platform ?? message.source_type ?? "unbekannt",
-    source: message.source_type ?? message.message_type,
+    channel: message.source_platform ?? "unbekannter Kanal",
+    origin: message.source_type ?? message.message_type ?? "unbekannter Ursprung",
+    author: message.author_label ?? message.original_author_label ?? null,
     text: message.content || message.original_text_excerpt || "",
-    mediaHint: message.attachments?.length ? `Medien/Anhänge: ${message.attachments.length}` : null,
+    mediaHint: message.attachments?.length ? `Medien/Anhänge vorhanden (${message.attachments.length}); nur als Hinweis nutzen, keine Bildanalyse.` : null,
     createdAt: message.created_at,
   }));
 
+  const lowDataHint = sourceMessages.length < 3
+    ? "Es liegen nur wenige Nachrichten vor; der Report ist deshalb ein kurzer, vorsichtiger Zwischenstand."
+    : "";
   const fallback = {
-    kurzprofil: sourceMessages.length < 3 ? "Noch nicht genügend Daten für einen belastbaren Analyse-Report." : "Aus dem Chat ableitbarer erster Kommunikationsüberblick.",
-    kommunikationsstil: "Noch vorsichtig einschätzen; bitte weitere Nachrichten berücksichtigen.",
-    stimmung: "Wirkt aus den vorhandenen Nachrichten nicht eindeutig bestimmbar.",
-    interessen_trigger: "Nur explizit genannte Themen berücksichtigen.",
-    kauf_reaktion: "Keine harte Prognose; mögliche Reaktion abhängig vom nächsten manuellen Kontakt.",
-    antwortstil: "Freundlich, klar und ohne Druck antworten.",
-    no_gos: "Keine sensiblen Eigenschaften behaupten, keine Diagnosen, keine automatische Sendung.",
-    spirituell: "Falls genutzt, nur weich als möglicher Eindruck formulieren.",
+    kurzprofil: lowDataHint || "Aus dem bisherigen Austausch ableitbarer vorsichtiger Kommunikationsüberblick.",
+    kommunikationsstil: "Nur aus expliziten Nachrichten ableiten; vorsichtig formulieren und weitere Nachrichten berücksichtigen.",
+    stimmung: "Aus den vorhandenen Nachrichten nicht sicher bestimmbar; höchstens als möglicher Eindruck formulieren.",
+    interessen_trigger: "Nur ausdrücklich genannte Themen, Kanalhinweise und Ursprünge berücksichtigen.",
+    kauf_reaktion: "Keine harte Prognose; mögliche Reaktion hängt vom nächsten manuellen Kontakt und Kontext ab.",
+    antwortstil: "Freundlich, klar, respektvoll und ohne Druck antworten. Keine automatische Sendung auslösen.",
+    no_gos: "Keine Diagnosen, keine sensiblen Eigenschaften als Tatsache, keine psychologischen Gewissheiten und keine Bildanalyse behaupten.",
+    spirituell: "Falls genutzt, nur weich als optionaler möglicher Eindruck formulieren und nicht als Tatsache darstellen.",
   };
 
   let report = fallback;
   const model = "gpt-5.2";
   const apiKey = process.env.OPENAI_API_KEY;
-  if (apiKey && sourceMessages.length >= 3) {
+  let userMessage = lowDataHint;
+
+  if (!apiKey) {
+    userMessage = "OPENAI_API_KEY ist serverseitig nicht gesetzt. FanMind hat deshalb einen einfachen Kurzreport ohne KI-Aufruf gespeichert.";
+  } else if (sourceMessages.length >= 3) {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         store: false,
-        input: [{ role: "system", content: "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Keine Diagnosen, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell zurück." }, { role: "user", content: JSON.stringify({ messages: sourceMessages }) }],
+        input: [
+          { role: "system", content: "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Keine Diagnosen, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Medien nur als Hinweis erwähnen, keine Bildanalyse. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell zurück." },
+          { role: "user", content: JSON.stringify({ internalNotes: contactResult.contact?.internal_notes ?? "", messages: sourceMessages }) },
+        ],
       }),
     });
-    const data = await response.json().catch(() => null) as { output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> } | null;
+    const data = await response.json().catch(() => null) as { error?: { message?: string }; output_text?: string; output?: Array<{ content?: Array<{ text?: string }> }> } | null;
     const text = data?.output_text ?? data?.output?.flatMap((o) => o.content ?? []).map((c) => c.text).find(Boolean);
-    if (response.ok && text) {
-      try { report = { ...fallback, ...JSON.parse(text) }; } catch { report = fallback; }
+    if (!response.ok) {
+      return { ok: false, message: data?.error?.message || "OpenAI konnte den Fan-Analyse-Report gerade nicht erstellen." };
     }
+    if (!text) {
+      return { ok: false, message: "OpenAI hat keinen auswertbaren Fan-Analyse-Report zurückgegeben." };
+    }
+    try {
+      report = { ...fallback, ...JSON.parse(text) };
+    } catch {
+      return { ok: false, message: "OpenAI hat keinen gültigen JSON-Report zurückgegeben. Bitte erneut versuchen." };
+    }
+    userMessage = "Fan-Analyse-Report wurde gespeichert und aktualisiert.";
+  } else {
+    userMessage = `${lowDataHint} FanMind hat einen einfachen Kurzreport gespeichert.`;
   }
 
   const result = await upsertFanAnalysisReport({
@@ -206,12 +253,22 @@ export async function analyzeFan(formData: FormData) {
     contactId,
     reportJson: report,
     summary: report.kurzprofil,
-    model: apiKey ? model : "fallback-no-api-key",
+    model: apiKey && sourceMessages.length >= 3 ? model : apiKey ? "fallback-low-message-count" : "fallback-no-api-key",
     sourceMessageCount: sourceMessages.length,
   });
-  if (result.error) throw new Error(result.error.message);
+  if (result.error) return { ok: false, message: result.error.message };
   revalidatePath(`/fans/${contactId}`);
-  redirect(`/fans/${contactId}?notice=analysis_saved`);
+  return {
+    ok: true,
+    message: userMessage,
+    generatedAt: result.report?.generated_at ?? undefined,
+    report: result.report ? {
+      report_json: result.report.report_json as Record<string, unknown> | null,
+      summary: result.report.summary,
+      source_message_count: result.report.source_message_count,
+      generated_at: result.report.generated_at,
+    } : null,
+  };
 }
 
 export async function saveSuggestedMemory(input: {
