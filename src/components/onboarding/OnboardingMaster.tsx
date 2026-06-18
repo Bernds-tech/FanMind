@@ -53,9 +53,9 @@ function planFocus(planId: PlanId) {
   if (planId === "pilot") {
     return {
       title: "Demo-Workspace einrichten",
-      profile: "Demo-Daten mit Sandra M.",
-      copy: "Teste den echten MVP-Kern sicher mit Beispieldaten. CSV-Import bleibt Vorschau, externe Integrationen und automatisches Senden sind nicht aktiv.",
-      next: "Demo starten",
+      profile: "Beispieldaten mit Sandra M.",
+      copy: "Teste den echten Produktkern sicher mit Beispieldaten. CSV-Import bleibt Vorschau, externe Integrationen und automatisches Senden sind nicht aktiv.",
+      next: "Kostenlos testen",
       hint: "Pilot ist ein Testmodus, kein produktiver Workspace.",
     };
   }
@@ -74,7 +74,7 @@ function planFocus(planId: PlanId) {
     return {
       title: "Growth Vorschau prüfen",
       profile: "Coming Soon / Vorschau",
-      copy: "Growth bleibt im MVP eine Roadmap-Vorschau. Mehrere Profile, Segmente und höhere Nutzung werden nicht als produktive Funktionen freigeschaltet.",
+      copy: "Growth bleibt aktuell eine Roadmap-Vorschau. Mehrere Profile, Segmente und höhere Nutzung werden nicht als produktive Funktionen freigeschaltet.",
       next: "Mit Pilot / Setup oder Starter starten",
       hint: "Growth ist Coming Soon und wird nicht als aktive Vollversion verkauft.",
     };
@@ -83,9 +83,9 @@ function planFocus(planId: PlanId) {
   return {
     title: "Agency Roadmap prüfen",
     profile: "Coming Soon / Roadmap",
-    copy: "Agency bleibt im MVP eine Demo-/Roadmap-Vorschau. Multi-Client, Teamstruktur, Analytics und Kampagnen werden nicht produktiv freigeschaltet.",
-    next: "Demo anfragen oder mit Starter starten",
-    hint: "Agency zeigt Roadmap-Funktionen transparent, ohne sie als aktive MVP-Funktionen zu behaupten.",
+    copy: "Agency bleibt aktuell eine Demo-/Roadmap-Vorschau. Multi-Client, Teamstruktur, Analytics und Kampagnen werden nicht produktiv freigeschaltet.",
+    next: "Zugang anfragen oder mit Starter starten",
+    hint: "Agency zeigt Roadmap-Funktionen transparent, ohne sie als aktive Produkt-Funktionen zu behaupten.",
   };
 }
 
@@ -113,7 +113,7 @@ function FeatureCard({ featureKey, planId }: { featureKey: FeatureKey; planId: P
         ) : status === "limited" ? (
           <p>Mit Paketlimit nutzbar.</p>
         ) : status === "demo" ? (
-          <p>Nur mit Demo-Daten aktiv.</p>
+          <p>Nur mit Beispieldaten aktiv.</p>
         ) : (
           <p>Heute in deinem Paket freigeschaltet.</p>
         )}
@@ -153,7 +153,7 @@ export default function OnboardingMaster({ planId, isDemoMode = false }: Onboard
         <p className={styles.breadcrumb}>Onboarding / {plan.name}</p>
         {isDemoMode && (
           <p className={styles.demoBadge} role="status">
-            Demo-Modus aktiv · kein produktiver Workspace, keine echte Automatisierung und keine Social-Media-Integration.
+            Testmodus aktiv · kein produktiver Workspace, keine echte Assistenz und keine Social-Media-Integration.
           </p>
         )}
         <div className={styles.heroTitleRow}>
@@ -255,7 +255,7 @@ export default function OnboardingMaster({ planId, isDemoMode = false }: Onboard
       </section>
 
       <p className={styles.safetyNote}>
-        Keine externe Plattformintegration, kein Scraping, kein Checkout und kein automatisches Senden sind im MVP aktiv.
+        Keine externe Plattformintegration, kein Scraping, kein Checkout und kein automatisches Senden sind aktuell aktiv.
       </p>
     </main>
   );

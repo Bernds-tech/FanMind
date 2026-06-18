@@ -20,7 +20,7 @@ function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | un
   if (["Roadmap", "In Kürze"].includes(status)) return "roadmap";
   if (["Vorschau", "Preview", "BETA"].includes(status)) return "preview";
   if (["Geplant", "Planned"].includes(status)) return "planned";
-  if (["Im MVP", "Bereit", "Verfügbar", "Aktiv", "Active"].includes(status)) return "active";
+  if (["Aktiv", "Bereit", "Verfügbar", "Aktiv", "Active"].includes(status)) return "active";
   return undefined;
 }
 
@@ -80,7 +80,7 @@ const features = [
     icon: "▥",
     title: "Analytics auf der Roadmap",
     status: "Roadmap",
-    text: "Roadmap-Reports zeigen, welche Auswertungen später folgen; keine vollständige Analytics-Suite im MVP.",
+    text: "Roadmap-Reports zeigen, welche Auswertungen später folgen; keine vollständige Analytics-Suite aktuell.",
     tone: "cyan",
   },
   {
@@ -160,7 +160,7 @@ const functionCards = [
     icon: "📣",
     title: "5. Kampagnen",
     status: "Roadmap",
-    text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt im MVP inaktiv und manuell abgegrenzt.",
+    text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt aktuell inaktiv und manuell abgegrenzt.",
     body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
     cta: "Roadmap ansehen",
     href: LANDING_ROADMAP_HREF,
@@ -295,7 +295,7 @@ const sixStepCards = [
       "Zielgruppe: 1.260",
       "Roadmap: Segment- und Kampagnenplanung",
       "Versand: inaktiv / manuell abgegrenzt",
-      "Kanäle: E-Mail-Kontext im MVP, weitere Kanäle Roadmap",
+      "Kanäle: E-Mail-Kontext aktuell, weitere Kanäle Roadmap",
       "Status: Vorschau geprüft",
     ],
     cta: "Roadmap ansehen",
@@ -611,7 +611,7 @@ const faqs = [
     number: "2",
     question: "Kann FanMind E-Mail, WhatsApp und Chat verbinden?",
     answer:
-      "E-Mail, Kontakte, CSV-Import und zentrale Gesprächsnotizen stehen im MVP im Fokus. Weitere Kanäle wie WhatsApp, Social DMs und Community-Chats sind als Roadmap transparent markiert.",
+      "E-Mail, Kontakte, CSV-Import und zentrale Gesprächsnotizen stehen aktuell im Fokus. Weitere Kanäle wie WhatsApp, Social DMs und Community-Chats sind als Roadmap transparent markiert.",
   },
   {
     number: "3",
@@ -656,9 +656,9 @@ const faqContacts = [
   },
   {
     icon: "▶",
-    title: "Demo anfragen",
+    title: "Zugang anfragen",
     text: "Erlebe FanMind live und sieh, wie es für dich funktioniert.",
-    cta: "Demo anfragen",
+    cta: "Zugang anfragen",
     href: "#produkt-showcase",
     tone: "purple",
   },
@@ -801,7 +801,7 @@ const pricingPlans = [
     pricePrefix: "",
     price: "Coming Soon",
     cadence: "Roadmap / Vorschau",
-    cta: "Demo buchen",
+    cta: "Kostenlos testen",
     href: "/register?plan=agency",
     tone: "purple",
     featured: false,
@@ -861,7 +861,7 @@ const roadmapPhases = [
     number: "01",
     phase: "Phase 1",
     icon: "rocket",
-    title: "MVP-Kern",
+    title: "Produktkern",
     status: "Verfügbar",
     statusIcon: "●",
     tone: "blue",
@@ -1140,7 +1140,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <p>{t("FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Segmente, Follow-ups, CSV-Import und Roadmap in einer intelligenten Plattform – damit aus Fans echte Beziehungen und messbare Conversions werden.")}</p>
             <div className={styles.heroCtas}>
               <a className={styles.demoButton} href="#produkt-showcase">
-                <span>▶</span> {t("Demo ansehen")}
+                <span>▶</span> {t("Produkt ansehen")}
               </a>
               <a className={styles.outlineButton} href={registerHref}>
                 <span>♙</span> {t("Zugang anfragen")}
@@ -1320,7 +1320,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                       "Formular",
                       "Chat-Notiz",
                       "CSV-Import",
-                      "Demo-Daten",
+                      "Beispieldaten",
                       "Roadmap",
                     ].map((channel, index) => (
                       <div className={styles.channelRow} key={channel}>
@@ -1366,7 +1366,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <div className={styles.conversionCard}>
                 <span>{t("Roadmap-Ausblick")}</span>
                 <strong>{t("In Kürze")}</strong>
-                <small>{t("keine Vollsuite im MVP")}</small>
+                <small>{t("keine Vollsuite aktuell")}</small>
                 <svg viewBox="0 0 230 70" aria-hidden="true">
                   <path d="M4 56 C28 58 34 42 49 45 S76 43 85 38 S108 44 120 30 S141 35 151 22 S176 31 184 15 S206 20 226 7" />
                 </svg>
@@ -1435,7 +1435,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             className={styles.demoSecondary}
             href="#produkt-showcase"
           >
-            <span>▶</span> {t("Demo ansehen")}
+            <span>▶</span> {t("Produkt ansehen")}
           </a>
         </section>
 
@@ -1521,7 +1521,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <div className={styles.problemCtas}>
           <a className={styles.demoButton} href="#produkt-showcase">
-            <span>▶</span> {t("Demo ansehen")}
+            <span>▶</span> {t("Produkt ansehen")}
           </a>
           <a className={styles.outlineButton} href={registerHref}>
             <span>♙</span> {t("Zugang anfragen")}
@@ -1861,7 +1861,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <h2 id="integrations-title">
             {t("Verbinde deine wichtigsten")} <span>{t("Kanäle.")}</span>
           </h2>
-          <p>{t("FanMind macht vollautomatische Social-Media-Synchronisation zum Pflichtbereich: Kontakte, Handles, Plattformen, Profil-/Kanalinformationen, Nachrichten-/Interaktionskontext und relevante Aktivitätsstände werden automatisch synchronisiert, soweit die jeweilige Plattform es technisch und rechtlich zulässt. Unfertige Plattformen bleiben klar markiert.")}</p>
+          <p>{t("FanMind macht kontrollierte Multi-Channel-Arbeit mit angebundenem Facebook Messenger: Kontakte, Handles, Plattformen, Profil-/Kanalinformationen, Nachrichten-/Interaktionskontext und relevante Aktivitätsstände werden automatisch synchronisiert, soweit die jeweilige Plattform es technisch und rechtlich zulässt. Unfertige Plattformen bleiben klar markiert.")}</p>
         </div>
 
         <div className={styles.integrationChannelGrid}>
@@ -2014,7 +2014,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.integrationCtaBox}>
           <div>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▶</span> {t("Demo ansehen")}
+              <span>▶</span> {t("Produkt ansehen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
               {t("Zugang anfragen")}
@@ -2148,14 +2148,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </div>
           <div className={styles.responsiveCtaActions}>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▶</span> {t("Demo ansehen")}
+              <span>▶</span> {t("Produkt ansehen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
               {t("Zugang anfragen")}
             </a>
           </div>
           <p>
-            <span>{t("✓ MVP klar gekennzeichnet")}</span>
+            <span>{t("✓ Roadmap klar gekennzeichnet")}</span>
             <span>{t("✓ Keine Kreditkarte erforderlich")}</span>
             <span>{t("✓ Kein automatischer Versand")}</span>
             <span>{t("✓ Manuelle Freigabe")}</span>
@@ -2178,7 +2178,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <h2 id="pricing-title">
             {t("Wähle das passende")} <span>{t("FanMind-Paket")}</span> {t("für deinen Einstieg.")}
           </h2>
-          <p>{t("FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Teams. Dieses MVP konzentriert sich auf Kontakte, KI-Antwortvorschläge, Memory, Follow-ups und CSV-Import.")}</p>
+          <p>{t("FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Teams. Dieses Produkt konzentriert sich auf Kontakte, KI-Antwortvorschläge, Memory, Follow-ups und CSV-Import.")}</p>
         </div>
 
         <div className={styles.pricingGrid} aria-label="FanMind Pakete">
@@ -2237,7 +2237,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </div>
           <div className={styles.pricingCtaActions}>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▷</span> {t("Demo ansehen")}
+              <span>▷</span> {t("Produkt ansehen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
               <span>🚀</span> {t("Pilot anfragen")}
@@ -2338,7 +2338,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>🔒</span> {t("Datenschutz ansehen")}
             </a>
             <a className={styles.outlineButton} href="#produkt-showcase">
-              {t("Demo buchen")} <span>→</span>
+              {t("Kostenlos testen")} <span>→</span>
             </a>
             <p>
               <span>🛡</span> {t("Vertrauen entsteht durch Sicherheit. FanMind liefert klare KI-Unterstützung mit bewusster Kontrolle.")}

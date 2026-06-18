@@ -26,11 +26,21 @@ export function WorkspaceHeader({
           <span>Suche</span>
           <input type="search" placeholder={searchPlaceholder} />
         </label>
-        <button type="button" className={styles.filterChip}>
-          Letzte 30 Tage
+        <button
+          type="button"
+          className={styles.filterChip}
+          disabled
+          title="Zeitraumfilter ist vorbereitet und wird in Kürze aktiviert."
+        >
+          Letzte 30 Tage · bald
         </button>
-        <button type="button" className={styles.filterChip}>
-          Filter
+        <button
+          type="button"
+          className={styles.filterChip}
+          disabled
+          title="Erweiterte Filter sind vorbereitet und werden in Kürze aktiviert."
+        >
+          Filter · bald
         </button>
         <a className={styles.primaryButton} href={primaryActionHref}>
           {primaryActionLabel}

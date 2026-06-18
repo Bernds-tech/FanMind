@@ -1,4 +1,6 @@
-import { type ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
 import styles from "../app/dashboard/dashboard.module.css";
 import { WorkspaceHeader, type WorkspaceHeaderProps } from "./WorkspaceHeader";
 import { WorkspaceKpiStrip } from "./WorkspaceKpiStrip";
@@ -73,16 +75,26 @@ function SidebarItem({
   badge,
   disabled = false,
   href,
-}: WorkspaceNavLink) {
+  collapsed = false,
+}: WorkspaceNavLink & { collapsed?: boolean }) {
+  const shortLabel = label
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <a
       aria-disabled={disabled || undefined}
       className={active ? styles.navItemActive : styles.navItem}
       href={href}
+      title={label}
       tabIndex={disabled ? -1 : undefined}
     >
-      <span>{label}</span>
-      {badge ? <small>{badge}</small> : null}
+      <span aria-hidden={collapsed ? "true" : undefined} className={collapsed ? styles.navIconLabel : undefined}>
+        {collapsed ? shortLabel : label}
+      </span>
+      {badge && !collapsed ? <small>{badge}</small> : null}
     </a>
   );
 }
@@ -104,6 +116,20 @@ export function WorkspaceShell({
   profileHref = "/settings/profile",
   children,
 }: WorkspaceShellProps) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : localStorage.getItem("fanmind_sidebar_collapsed") === "true",
+  );
+
+  function toggleSidebar() {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      localStorage.setItem("fanmind_sidebar_collapsed", String(next));
+      return next;
+    });
+  }
+
   const visibleMainNavigation = mainNavigation.filter(
     (item) => !isHiddenProductNavigationItem(item),
   );
@@ -115,33 +141,45 @@ export function WorkspaceShell({
   );
 
   return (
-    <div className={styles.dashboardShell}>
-      <aside className={styles.sidebar} aria-label="FanMind Navigation">
+    <div className={`${styles.dashboardShell} ${sidebarCollapsed ? styles.dashboardShellCollapsed : ""}`}>
+      <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""}`} aria-label="FanMind Navigation">
         <div className={styles.logoBlock}>
           <div className={styles.logoMark}>FM</div>
-          <div>
-            <strong>FanMind</strong>
-            <small>Multi-Channel CRM</small>
-          </div>
+          {!sidebarCollapsed ? (
+            <div>
+              <strong>FanMind</strong>
+              <small>Multi-Channel CRM</small>
+            </div>
+          ) : null}
         </div>
+        <button
+          type="button"
+          className={styles.sidebarToggle}
+          onClick={toggleSidebar}
+          aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"}
+          title={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"}
+        >
+          {sidebarCollapsed ? "→" : "←"}
+        </button>
 
         <nav className={styles.navList} aria-label="Hauptnavigation">
-          <span className={styles.navSectionLabel}>Navigation</span>
+          {!sidebarCollapsed ? <span className={styles.navSectionLabel}>Navigation</span> : null}
           {visibleMainNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
+            <SidebarItem key={item.label} {...item} collapsed={sidebarCollapsed} />
           ))}
         </nav>
 
         <nav className={styles.navList} aria-label="Workspace Navigation">
-          <span className={styles.navSectionLabel}>Workspace</span>
+          {!sidebarCollapsed ? <span className={styles.navSectionLabel}>Workspace</span> : null}
           {visibleSettingsNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} />
+            <SidebarItem key={item.label} {...item} collapsed={sidebarCollapsed} />
           ))}
         </nav>
 
         <section
           className={styles.savedViews}
           aria-label="Gespeicherte Ansichten"
+          hidden={sidebarCollapsed}
         >
           <span>Gespeicherte Ansichten</span>
           {visibleSavedViews.map((item) => (
@@ -151,7 +189,7 @@ export function WorkspaceShell({
           ))}
         </section>
 
-        <div className={styles.sidebarFooter}>
+        <div className={styles.sidebarFooter} hidden={sidebarCollapsed}>
           <a
             className={styles.userMiniCard}
             aria-label="Nutzerprofil öffnen"

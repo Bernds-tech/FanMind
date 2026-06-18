@@ -17,7 +17,7 @@ import styles from "../dashboard/dashboard.module.css";
 
 export const metadata: Metadata = {
   title: "FanMind | Onboarding",
-  description: "Geschützter Onboarding-Grundablauf für den FanMind MVP.",
+  description: "Geschützter Onboarding-Grundablauf für den FanMind Produkt.",
 };
 
 type OnboardingAction = {
@@ -118,7 +118,7 @@ function getOnboardingSteps({
     {
       title: "Paket bestätigt",
       description:
-        "Das bestätigte Paket steuert den begleiteten Setup-Rahmen. Es gibt keine Online-Zahlung im MVP.",
+        "Das bestätigte Paket steuert den begleiteten Setup-Rahmen. Es gibt keine Online-Zahlung aktuell.",
       status: packageDone ? "done" : "next",
       statusLabel: packageDone ? "Erledigt" : "Nächster Schritt",
     },
@@ -246,7 +246,7 @@ function OnboardingWorkspace({
           <div className={styles.moduleHeader}>
             <div>
               <p className={styles.eyebrow}>Checkliste</p>
-              <h2>MVP-Schritte</h2>
+              <h2>Produkt-Schritte</h2>
             </div>
             <span>{contacts.length ? "Echte Daten" : "Kontakt fehlt"}</span>
           </div>
@@ -342,7 +342,7 @@ function OnboardingWorkspace({
         <strong>Begleiteter Start ohne Checkout</strong>
         <span>
           Keine Verkaufsseite, keine Kaufbuttons, keine Zahlungslogik und kein
-          automatisches Senden. FanMind bleibt im MVP ein persönlich begleiteter
+          automatisches Senden. FanMind bleibt aktuell ein persönlich begleiteter
           Setup- und Starter-Ablauf.
         </span>
       </div>
