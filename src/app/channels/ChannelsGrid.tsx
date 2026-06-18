@@ -57,6 +57,7 @@ type FacebookLiveSetupStatus = {
   facebookAppSecretConfigured: boolean;
   webhookVerifyTokenConfigured: boolean;
   publicBaseUrlConfigured: boolean;
+  metaBusinessIdConfigured: boolean;
   oauthCallbackUrl: string | null;
 };
 
@@ -849,6 +850,23 @@ export function ChannelsGrid({
                     {missingFacebookSetupItems.length
                       ? `unvollständig (${missingFacebookSetupItems.join(", ")})`
                       : "vollständig"}
+                  </strong>
+                  <br />
+                  Business-ID bekannt:{" "}
+                  <strong>
+                    {facebookLiveSetupStatus.metaBusinessIdConfigured
+                      ? "ja"
+                      : "nein · Postfach-Fallback bleibt nutzbar"}
+                  </strong>
+                  <br />
+                  Conversation-Links beim Sync:{" "}
+                  <strong>
+                    werden aus dem Graph-Feld link gespeichert, falls Meta es für Conversations liefert
+                  </strong>
+                  <br />
+                  Aktuelle Öffnen-Qualität:{" "}
+                  <strong>
+                    exakter Chat nur mit gespeichertem Conversation-Link, sonst Facebook-Postfach-Fallback
                   </strong>
                   <br />
                   OAuth Callback URL:{" "}

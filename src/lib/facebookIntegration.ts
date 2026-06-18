@@ -295,6 +295,7 @@ export async function fetchFacebookPages(
 
 export type FacebookMessengerConversation = {
   id: string;
+  link: string | null;
   updatedTime: string | null;
   participants: Array<{ id: string; name: string | null }>;
 };
@@ -319,11 +320,25 @@ export async function fetchFacebookMessengerConversations(
   pageAccessToken: string,
   limit = 10,
 ): Promise<FacebookMessengerConversation[]> {
+  return fetchFacebookMessengerConversationsWithFields(
+    pageId,
+    pageAccessToken,
+    limit,
+    "id,link,updated_time,participants{id,name}",
+  );
+}
+
+async function fetchFacebookMessengerConversationsWithFields(
+  pageId: string,
+  pageAccessToken: string,
+  limit: number,
+  fields: string,
+): Promise<FacebookMessengerConversation[]> {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(pageId)}/conversations`,
   );
   url.searchParams.set("platform", "messenger");
-  url.searchParams.set("fields", "id,updated_time,participants{id,name}");
+  url.searchParams.set("fields", fields);
   url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 25))));
   url.searchParams.set("access_token", pageAccessToken);
 
@@ -333,6 +348,18 @@ export async function fetchFacebookMessengerConversations(
     error?: { message?: string; code?: number; type?: string };
   } | null;
   if (!response.ok) {
+    if (fields.includes("link") && isFacebookFieldError(payload?.error)) {
+      console.info("Facebook Messenger conversation link field unavailable; retrying without direct link field", {
+        errorCode: payload?.error?.code,
+        errorType: payload?.error?.type,
+      });
+      return fetchFacebookMessengerConversationsWithFields(
+        pageId,
+        pageAccessToken,
+        limit,
+        "id,updated_time,participants{id,name}",
+      );
+    }
     logFacebookApiError(
       "Facebook Messenger conversations fetch failed",
       payload?.error,
@@ -347,6 +374,7 @@ export async function fetchFacebookMessengerConversations(
     .filter(isRecord)
     .map((conversation) => ({
       id: stringValue(conversation.id) ?? "",
+      link: validUrl(stringValue(conversation.link)),
       updatedTime: stringValue(conversation.updated_time),
       participants: (isRecord(conversation.participants) &&
       Array.isArray(conversation.participants.data)
