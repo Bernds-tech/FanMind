@@ -33,16 +33,14 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
 import {
-  getChannelSourceActionLabel,
-  getChannelSourceConfig,
   getChannelSourceLabel,
-  normalizeHttpUrl,
 } from "@/lib/channelSources";
 import styles from "./fan-detail.module.css";
 import {
+  buildReplyTargetAction,
   getMessageSourceContext,
-  getSourceContextActionLabel,
   type MessageSourceContext,
+  type ReplyTargetAction,
 } from "@/lib/sourceContext";
 import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
 import { FanAnalysisReport } from "./FanAnalysisReport";
@@ -472,19 +470,8 @@ function FanDetailContent({
                       <p>{item.text}</p>
                       <AttachmentPreview attachments={item.attachments} />
                       <OriginalChatAction
-                        actionLabel={getOriginalActionLabel(
-                          item.channel + " " + item.type,
-                          item.url,
-                        )}
+                        action={item.replyAction}
                         compact
-                        url={item.url}
-                      />
-                      <OriginalChatAction
-                        actionLabel={getSourceContextActionLabel(
-                          item.sourceContext,
-                        )}
-                        compact
-                        url={item.sourceContext.contextUrl ?? undefined}
                       />
                     </div>
                   </article>
@@ -669,27 +656,29 @@ function isMessageInChannel(
 }
 
 function OriginalChatAction({
-  actionLabel,
+  action,
   className,
-  url,
 }: {
-  actionLabel: string;
+  action: ReplyTargetAction;
   className?: string;
   compact?: boolean;
-  url?: string;
 }) {
-  if (!url) return null;
+  if (!action.href) return null;
 
   return (
     <div className={className}>
       <a
         className={dashboardStyles.secondaryButton}
-        href={url}
+        href={action.href}
         rel="noreferrer"
         target="_blank"
+        title={action.reason}
       >
-        {actionLabel}
+        {action.label}
       </a>
+      {action.quality === "inbox_fallback" ? (
+        <small className={styles.muted}>Chat ggf. im Postfach auswählen.</small>
+      ) : null}
     </div>
   );
 }
@@ -790,10 +779,8 @@ function buildMessageTimeline(messages: ConversationMessageRow[]) {
     time: formatDate(message.created_at),
     text: message.original_text_excerpt || message.content,
     attachments: message.attachments ?? [],
-    url:
-      normalizeHttpUrl(message.reply_target_url) ??
-      normalizeHttpUrl(message.source_url),
     sourceContext: getMessageSourceContext(message),
+    replyAction: buildReplyTargetAction(message),
   }));
 }
 
@@ -852,26 +839,9 @@ function stringifyAnalysisReport(report: FanAnalysisReportRow | null): string {
 function getOriginalChannelAction(
   conversation: ConversationRow | null,
   messages: ConversationMessageRow[],
-): { label: string; url: string | null; disabledHint: string } {
+): ReplyTargetAction {
   const latestInbound = [...messages].reverse().find((message) => message.direction === "inbound");
-  const url =
-    normalizeHttpUrl(latestInbound?.reply_target_url) ??
-    normalizeHttpUrl(conversation?.reply_target_url) ??
-    normalizeHttpUrl(latestInbound?.source_url) ??
-    normalizeHttpUrl(conversation?.source_url);
-  const platform = (latestInbound?.source_platform ?? conversation?.source_platform ?? "").toLowerCase();
-  if (url) {
-    return {
-      label: platform === "facebook" ? "In Facebook antworten" : "Nachricht senden",
-      url,
-      disabledHint: "Originalkanal-Link noch nicht verfügbar.",
-    };
-  }
-  return {
-    label: platform === "facebook" ? "Facebook-Postfach öffnen" : "Nachricht senden",
-    url: platform === "facebook" ? "https://business.facebook.com/latest/inbox" : null,
-    disabledHint: "Originalkanal-Link noch nicht verfügbar.",
-  };
+  return buildReplyTargetAction(latestInbound ?? conversation, conversation);
 }
 
 function getAttachmentLabel(type: string): string {
@@ -935,30 +905,6 @@ function buildAiMessageContext(
     .join("\n");
 
   return [profileContext, recentMessages].filter(Boolean).join("\n\n");
-}
-
-function getOriginalActionLabel(platform: string, url?: string): string {
-  const prepared = getChannelSourceConfig(platform);
-  if (prepared)
-    return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
-
-  if (!url) return "Original öffnen";
-  const normalized = platform.toLowerCase();
-
-  if (normalized.includes("comment") || normalized.includes("kommentar"))
-    return "Kommentar öffnen";
-  if (normalized.includes("post") || normalized.includes("beitrag"))
-    return "Beitrag öffnen";
-  if (
-    normalized.includes("dm") ||
-    normalized.includes("message") ||
-    normalized.includes("messenger") ||
-    normalized.includes("chat")
-  )
-    return "Chat öffnen";
-  if (normalized.includes("mail")) return "E-Mail öffnen";
-
-  return "Original öffnen";
 }
 
 function formatDetailedSource(

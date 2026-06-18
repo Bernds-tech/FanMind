@@ -26,6 +26,7 @@ type FacebookLiveSetupStatus = {
   facebookAppSecretConfigured: boolean;
   webhookVerifyTokenConfigured: boolean;
   publicBaseUrlConfigured: boolean;
+  metaBusinessIdConfigured: boolean;
   oauthCallbackUrl: string | null;
 };
 
@@ -231,6 +232,7 @@ function getFacebookLiveSetupStatus(): FacebookLiveSetupStatus {
     facebookAppSecretConfigured: Boolean(firstConfiguredEnv("FACEBOOK_APP_SECRET", "META_APP_SECRET", "META_WEBHOOK_APP_SECRET")),
     webhookVerifyTokenConfigured: Boolean(firstConfiguredEnv("FACEBOOK_WEBHOOK_VERIFY_TOKEN", "META_WEBHOOK_VERIFY_TOKEN")),
     publicBaseUrlConfigured: Boolean(publicBaseUrl),
+    metaBusinessIdConfigured: Boolean(firstConfiguredEnv("META_BUSINESS_ID", "NEXT_PUBLIC_META_BUSINESS_ID")),
     oauthCallbackUrl,
   };
 }

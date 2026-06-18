@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "./fan-detail.module.css";
+import type { ReplyTargetAction } from "@/lib/sourceContext";
 
 export type ReplyMode = { id: string; label: string; prompt: string };
 
@@ -24,7 +25,7 @@ type Props = {
     analysisReport?: string;
   };
   modes: ReplyMode[];
-  originalChannelAction: { label: string; url: string | null; disabledHint: string };
+  originalChannelAction: ReplyTargetAction;
 };
 
 export function AiReplySuggestions({ contact, modes, originalChannelAction }: Props) {
@@ -116,12 +117,15 @@ export function AiReplySuggestions({ contact, modes, originalChannelAction }: Pr
               <button className={dashboardStyles.secondaryButton} onClick={() => void copySuggestion(option.text, index)} type="button">
                 {copiedIndex === index ? "Kopiert" : "Kopieren"}
               </button>
-              {originalChannelAction.url ? (
-                <a className={dashboardStyles.secondaryButton} href={originalChannelAction.url} rel="noreferrer" target="_blank">{originalChannelAction.label}</a>
+              {originalChannelAction.href ? (
+                <a className={dashboardStyles.secondaryButton} href={originalChannelAction.href} rel="noreferrer" target="_blank" title={originalChannelAction.reason}>{originalChannelAction.label}</a>
               ) : (
                 <button className={dashboardStyles.secondaryButton} disabled type="button">{originalChannelAction.disabledHint}</button>
               )}
             </div>
+            {originalChannelAction.quality === "inbox_fallback" ? (
+              <p className={styles.muted}>Chat ggf. im Postfach auswählen.</p>
+            ) : null}
           </article>
         ))}
       </div>

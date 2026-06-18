@@ -312,6 +312,8 @@ async function syncFacebookMessengerHistoryForConnection(
           content,
           messageType: "dm",
           sourceType: "facebook_messages",
+          sourceUrl: conversation.link,
+          replyTargetUrl: conversation.link,
           externalMessageId: message.id,
           externalThreadId: conversation.id,
           originalTextExcerpt: content,

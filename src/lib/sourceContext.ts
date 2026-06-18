@@ -31,6 +31,16 @@ export type MessageSourceContext = {
   contextUrl: string | null;
 };
 
+export type ReplyTargetQuality = "exact_thread" | "inbox_fallback" | "unavailable";
+
+export type ReplyTargetAction = {
+  href: string | null;
+  label: string;
+  quality: ReplyTargetQuality;
+  reason: string;
+  disabledHint: string;
+};
+
 const generalChatContext: MessageSourceContext = {
   contextKey: "general_chat",
   contextLabel: "Allgemeiner Chat",
@@ -103,6 +113,108 @@ export function getSourceContextActionLabel(context: MessageSourceContext): stri
   if (context.contextType === "video" || context.contextType === "reel") return "Video öffnen";
   if (context.contextType === "general_chat") return "Chat öffnen";
   return "Beitrag öffnen";
+}
+
+export function buildReplyTargetAction(
+  messageOrConversation: SourceContextMessage | null | undefined,
+  fallback?: SourceContextMessage | null,
+): ReplyTargetAction {
+  const primary = messageOrConversation ?? null;
+  const platform = normalizeText(primary?.source_platform ?? fallback?.source_platform);
+  const sourceType = normalizeText(primary?.source_type ?? primary?.message_type ?? fallback?.source_type ?? fallback?.message_type);
+  const replyTargetUrl = normalizeHttpUrl(primary?.reply_target_url) ?? normalizeHttpUrl(fallback?.reply_target_url);
+  const sourceUrl = normalizeHttpUrl(primary?.source_url) ?? normalizeHttpUrl(fallback?.source_url);
+  const externalThreadId = normalizeText(primary?.external_thread_id ?? fallback?.external_thread_id);
+
+  if (platform === "facebook" && isMessengerSource(sourceType)) {
+    const exactUrl = [replyTargetUrl, sourceUrl].find(isExactFacebookThreadUrl) ?? null;
+    if (exactUrl) {
+      return {
+        href: exactUrl,
+        label: "In Facebook-Chat antworten",
+        quality: "exact_thread",
+        reason: "Ein verifizierter Facebook-Conversation-/Thread-Link ist gespeichert.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+      };
+    }
+
+    const inboxUrl = buildFacebookInboxFallbackUrl();
+    return {
+      href: inboxUrl,
+      label: "Facebook-Postfach öffnen",
+      quality: "inbox_fallback",
+      reason: externalThreadId
+        ? "Facebook Conversation-ID ist gespeichert, aber kein verifizierter direkter Thread-Link verfügbar."
+        : "Kein verifizierter direkter Facebook-Thread-Link verfügbar.",
+      disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+    };
+  }
+
+  const url = replyTargetUrl ?? sourceUrl;
+  if (url) {
+    return {
+      href: url,
+      label: getNonFacebookReplyLabel(platform || sourceType, url),
+      quality: "exact_thread",
+      reason: "Originalkanal-Link ist gespeichert.",
+      disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+    };
+  }
+
+  return {
+    href: null,
+    label: "Originalkanal-Link noch nicht verfügbar",
+    quality: "unavailable",
+    reason: "Für diese Nachricht ist noch kein öffnbarer Originalkanal-Link gespeichert.",
+    disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+  };
+}
+
+function isMessengerSource(sourceType: string): boolean {
+  return sourceType.includes("message") || sourceType.includes("messenger") || sourceType === "dm";
+}
+
+function isExactFacebookThreadUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (!host.endsWith("facebook.com")) return false;
+    const normalizedPath = url.pathname.toLowerCase();
+    if (normalizedPath === "/latest/inbox" || normalizedPath === "/") return false;
+    return (
+      normalizedPath.includes("/inbox/") ||
+      normalizedPath.includes("/messenger/") ||
+      normalizedPath.includes("/messages/") ||
+      Boolean(url.searchParams.get("thread_id") || url.searchParams.get("selected_item_id") || url.searchParams.get("mailbox_id"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildFacebookInboxFallbackUrl(): string {
+  const url = new URL("https://business.facebook.com/latest/inbox");
+  const businessId = firstConfiguredEnv("META_BUSINESS_ID", "NEXT_PUBLIC_META_BUSINESS_ID");
+  if (businessId) url.searchParams.set("business_id", businessId);
+  return url.toString();
+}
+
+function firstConfiguredEnv(...names: string[]): string | null {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value?.trim()) return value.trim();
+  }
+  return null;
+}
+
+function getNonFacebookReplyLabel(platform: string, url: string): string {
+  const haystack = `${platform} ${url}`.toLowerCase();
+  if (haystack.includes("comment") || haystack.includes("kommentar")) return "Kommentar öffnen";
+  if (haystack.includes("post") || haystack.includes("beitrag")) return "Beitrag öffnen";
+  if (haystack.includes("dm") || haystack.includes("message") || haystack.includes("messenger") || haystack.includes("chat")) return "Chat öffnen";
+  if (haystack.includes("mail")) return "E-Mail öffnen";
+  return "Original öffnen";
 }
 
 function getPostContextType(platform: string, sourceType: string, contextUrl: string | null): SourceContextType {
