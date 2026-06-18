@@ -5,7 +5,11 @@ import {
   buildAttachmentFallbackText,
   getMessageKindFromAttachments,
 } from "@/lib/messageAttachments";
-import { createEmptySocialSyncResult, type SocialSyncResult } from "@/lib/socialSync";
+import {
+  createEmptySocialSyncResult,
+  type SocialSyncResult,
+} from "@/lib/socialSync";
+import { isExactFacebookThreadUrl } from "@/lib/sourceContext";
 import {
   decryptToken,
   getFacebookGrantedScopeNames,
@@ -313,13 +317,18 @@ async function syncFacebookMessengerHistoryForConnection(
           messageType: "dm",
           sourceType: "facebook_messages",
           sourceUrl: conversation.link,
-          replyTargetUrl: conversation.link,
+          replyTargetUrl: isExactFacebookThreadUrl(conversation.link)
+            ? conversation.link
+            : null,
           externalMessageId: message.id,
           externalThreadId: conversation.id,
           originalTextExcerpt: content,
           direction,
           attachments: message.attachments,
-          messageKind: getMessageKindFromAttachments(message.message, message.attachments),
+          messageKind: getMessageKindFromAttachments(
+            message.message,
+            message.attachments,
+          ),
           receivedAt: message.createdTime,
         });
         if (result.error) throw result.error;
@@ -330,7 +339,8 @@ async function syncFacebookMessengerHistoryForConnection(
           } else {
             importedInbound += 1;
           }
-          if (message.attachments?.length) importedMedia += message.attachments.length;
+          if (message.attachments?.length)
+            importedMedia += message.attachments.length;
         } else {
           skippedDuplicates += 1;
         }
