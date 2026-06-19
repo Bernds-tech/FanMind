@@ -99,6 +99,48 @@ function SidebarItem({
   );
 }
 
+function getCollapsedNavToken(item: WorkspaceNavLink): string {
+  const href = item.href.toLowerCase();
+  const label = item.label.toLowerCase();
+
+  if (href.includes("/dashboard") || label.includes("dashboard")) return "D";
+  if (href.includes("/fans") || label.includes("fans")) return "F";
+  if (href.includes("/inbox") || label.includes("inbox")) return "I";
+  if (href.includes("/channels") || label.includes("kanäle") || label.includes("kanaele")) return "K";
+  if (href.includes("/settings") || label.includes("einstellungen")) return "E";
+  if (href.includes("/top-fans") || label.includes("top fans")) return "T";
+  if (href.includes("/reactivation") || label.includes("reaktivierung")) return "R";
+
+  return (
+    item.label
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "FM"
+  );
+}
+
+function CollapsedSidebarItem({
+  label,
+  active = false,
+  disabled = false,
+  href,
+}: WorkspaceNavLink) {
+  return (
+    <a
+      aria-disabled={disabled || undefined}
+      aria-label={label}
+      className={active ? styles.compactNavItemActive : styles.compactNavItem}
+      href={href}
+      title={label}
+      tabIndex={disabled ? -1 : undefined}
+    >
+      <span aria-hidden="true">{getCollapsedNavToken({ label, active, disabled, href })}</span>
+    </a>
+  );
+}
+
 export function WorkspaceShell({
   workspaceName,
   userLabel,
@@ -139,83 +181,129 @@ export function WorkspaceShell({
   const visibleSavedViews = savedViews.filter(
     (item) => !isHiddenProductNavigationItem(item),
   );
+  const compactNavigation = [...visibleMainNavigation, ...visibleSettingsNavigation, ...visibleSavedViews];
 
   return (
     <div className={`${styles.dashboardShell} ${sidebarCollapsed ? styles.dashboardShellCollapsed : ""}`}>
       <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""}`} aria-label="FanMind Navigation">
-        <div className={styles.logoBlock}>
-          <div className={styles.logoMark}>FM</div>
-          {!sidebarCollapsed ? (
-            <div>
-              <strong>FanMind</strong>
-              <small>Multi-Channel CRM</small>
+        {sidebarCollapsed ? (
+          <>
+            <div className={styles.sidebarRailTop}>
+              <div className={styles.logoMark} aria-hidden="true">
+                FM
+              </div>
+              <button
+                type="button"
+                className={`${styles.sidebarToggle} ${styles.sidebarToggleCompact}`}
+                onClick={toggleSidebar}
+                aria-label="Sidebar ausklappen"
+                title="Sidebar ausklappen"
+              >
+                →
+              </button>
             </div>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          className={styles.sidebarToggle}
-          onClick={toggleSidebar}
-          aria-label={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"}
-          title={sidebarCollapsed ? "Sidebar ausklappen" : "Sidebar einklappen"}
-        >
-          {sidebarCollapsed ? "→" : "←"}
-        </button>
 
-        <nav className={styles.navList} aria-label="Hauptnavigation">
-          {!sidebarCollapsed ? <span className={styles.navSectionLabel}>Navigation</span> : null}
-          {visibleMainNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} collapsed={sidebarCollapsed} />
-          ))}
-        </nav>
+            <nav className={styles.compactNavList} aria-label="Workspace Navigation kompakt">
+              {compactNavigation.map((item) => (
+                <CollapsedSidebarItem key={item.label} {...item} />
+              ))}
+            </nav>
 
-        <nav className={styles.navList} aria-label="Workspace Navigation">
-          {!sidebarCollapsed ? <span className={styles.navSectionLabel}>Workspace</span> : null}
-          {visibleSettingsNavigation.map((item) => (
-            <SidebarItem key={item.label} {...item} collapsed={sidebarCollapsed} />
-          ))}
-        </nav>
-
-        <section
-          className={styles.savedViews}
-          aria-label="Gespeicherte Ansichten"
-          hidden={sidebarCollapsed}
-        >
-          <span>Gespeicherte Ansichten</span>
-          {visibleSavedViews.map((item) => (
-            <a key={item.label} href={item.href}>
-              {item.label}
-            </a>
-          ))}
-        </section>
-
-        <div className={styles.sidebarFooter} hidden={sidebarCollapsed}>
-          <a
-            className={styles.userMiniCard}
-            aria-label="Nutzerprofil öffnen"
-            href={profileHref}
-          >
-            <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
-            <div>
-              <span>Nutzerkarte</span>
-              <strong>{userLabel}</strong>
-              <p>{workspaceName}</p>
+            <div className={styles.compactSidebarFooter}>
+              <a
+                className={styles.compactCircleAction}
+                aria-label={`Profil von ${userLabel} öffnen`}
+                href={profileHref}
+                title={`${userLabel} (${workspaceName})`}
+              >
+                <span aria-hidden="true">{getInitials(userLabel)}</span>
+              </a>
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  className={styles.compactCircleAction}
+                  aria-label="Abmelden"
+                  title="Abmelden"
+                >
+                  <span aria-hidden="true">AB</span>
+                </button>
+              </form>
             </div>
-          </a>
-          <section className={styles.planMiniCard} aria-label="Paket">
-            <div>
-              <span>Paket</span>
-              <strong>{planLabel}</strong>
-              <p>{planMeta}</p>
+          </>
+        ) : (
+          <>
+            <div className={styles.logoBlock}>
+              <div className={styles.logoMark}>FM</div>
+              <div>
+                <strong>FanMind</strong>
+                <small>Multi-Channel CRM</small>
+              </div>
             </div>
-            <small>{planStatus}</small>
-          </section>
-          <form action={logoutAction}>
-            <button type="submit" className={styles.logoutButton}>
-              Abmelden
+            <button
+              type="button"
+              className={styles.sidebarToggle}
+              onClick={toggleSidebar}
+              aria-label="Sidebar einklappen"
+              title="Sidebar einklappen"
+            >
+              ←
             </button>
-          </form>
-        </div>
+
+            <nav className={styles.navList} aria-label="Hauptnavigation">
+              <span className={styles.navSectionLabel}>Navigation</span>
+              {visibleMainNavigation.map((item) => (
+                <SidebarItem key={item.label} {...item} />
+              ))}
+            </nav>
+
+            <nav className={styles.navList} aria-label="Workspace Navigation">
+              <span className={styles.navSectionLabel}>Workspace</span>
+              {visibleSettingsNavigation.map((item) => (
+                <SidebarItem key={item.label} {...item} />
+              ))}
+            </nav>
+
+            <section
+              className={styles.savedViews}
+              aria-label="Gespeicherte Ansichten"
+            >
+              <span>Gespeicherte Ansichten</span>
+              {visibleSavedViews.map((item) => (
+                <a key={item.label} href={item.href}>
+                  {item.label}
+                </a>
+              ))}
+            </section>
+
+            <div className={styles.sidebarFooter}>
+              <a
+                className={styles.userMiniCard}
+                aria-label="Nutzerprofil öffnen"
+                href={profileHref}
+              >
+                <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
+                <div>
+                  <span>Nutzerkarte</span>
+                  <strong>{userLabel}</strong>
+                  <p>{workspaceName}</p>
+                </div>
+              </a>
+              <section className={styles.planMiniCard} aria-label="Paket">
+                <div>
+                  <span>Paket</span>
+                  <strong>{planLabel}</strong>
+                  <p>{planMeta}</p>
+                </div>
+                <small>{planStatus}</small>
+              </section>
+              <form action={logoutAction}>
+                <button type="submit" className={styles.logoutButton}>
+                  Abmelden
+                </button>
+              </form>
+            </div>
+          </>
+        )}
       </aside>
 
       <div
