@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
@@ -210,7 +211,7 @@ function OnboardingWorkspace({
         primaryActionLabel: "Zum Dashboard",
         primaryActionHref: "/dashboard",
       }}
-      contactCount={contacts.length}
+      contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >

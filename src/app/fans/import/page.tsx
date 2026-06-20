@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
@@ -103,7 +104,7 @@ export default async function CsvImportPage() {
             data.user.user_metadata,
             workspace.name,
           )}
-          contactCount={contactsResult?.contacts.length ?? 0}
+          contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           contactsError={contactsResult?.error?.message}
         />
       ) : (

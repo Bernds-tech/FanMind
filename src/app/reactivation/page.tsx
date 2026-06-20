@@ -8,6 +8,7 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
 type ReactivationWorkspaceProps = {
@@ -114,7 +115,7 @@ export default async function ReactivationPage() {
             data.user.user_metadata,
             workspace.name,
           )}
-          contactCount={contactsResult?.contacts.length ?? 0}
+          contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
         />
       ) : (
         <section

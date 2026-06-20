@@ -13,6 +13,7 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
 
@@ -153,7 +154,7 @@ export default async function ChannelsPage({
             data.user.user_metadata,
             workspace.name,
           )}
-          contactCount={contactsResult?.contacts.length ?? 0}
+          contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           facebookConnection={facebookConnection ? {
             page_name: facebookConnection.page_name,
             page_id: facebookConnection.page_id,

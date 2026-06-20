@@ -9,6 +9,7 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
 type TopFansWorkspaceProps = {
@@ -140,7 +141,7 @@ function TopFansWorkspace({
         primaryActionLabel: "MVP-Vorschau",
         primaryActionHref: "#top-fans-list",
       }}
-      contactCount={contacts.length}
+      contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       logoutAction={logout}
     >
       <section
