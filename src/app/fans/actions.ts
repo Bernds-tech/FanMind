@@ -172,6 +172,13 @@ export async function saveFacebookReplyTarget(formData: FormData) {
   });
 
   if (result.error) {
+    if (
+      result.error.message.includes(
+        "Der exakte Chat-Link kann derzeit nicht gespeichert werden.",
+      )
+    ) {
+      redirect(`/fans/${contactId}?notice=reply_target_storage_unavailable`);
+    }
     redirect(`/fans/${contactId}?notice=reply_target_save_failed`);
   }
   revalidatePath(`/fans/${contactId}`);

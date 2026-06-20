@@ -43,6 +43,7 @@ export type ReplyTargetAction = {
   quality: ReplyTargetQuality;
   reason: string;
   disabledHint: string;
+  platform?: string;
   fallbackContactLabel?: string | null;
   fallbackContactId?: string | null;
 };
@@ -159,6 +160,9 @@ export function buildReplyTargetAction(
   const sourceUrl =
     normalizeHttpUrl(primary?.source_url) ??
     normalizeHttpUrl(fallback?.source_url);
+  const externalThreadId = normalizeText(
+    primary?.external_thread_id ?? fallback?.external_thread_id,
+  );
 
   if (platform === "facebook" && isMessengerSource(sourceType)) {
     const manualExactUrl = isAllowedManualFacebookThreadUrl(
@@ -169,10 +173,11 @@ export function buildReplyTargetAction(
     if (manualExactUrl) {
       return {
         href: manualExactUrl,
-        label: "In Facebook-Chat antworten",
+        label: "Exakten Facebook-Chat öffnen",
         quality: "manual_exact_thread",
         reason: "Manuell hinterlegter Chat-Link.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
       };
     }
 
@@ -181,15 +186,20 @@ export function buildReplyTargetAction(
     if (exactUrl) {
       return {
         href: exactUrl,
-        label: "In Facebook-Chat antworten",
+        label: "Exakten Facebook-Chat öffnen",
         quality: "exact_thread",
         reason:
           "Ein verifizierter Facebook-Conversation-/Thread-Link ist gespeichert.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
       };
     }
 
-    const inboxUrl = buildFacebookInboxFallbackUrl();
+    const inboxUrl = buildFacebookInboxFallbackUrl({
+      replyTargetUrl,
+      sourceUrl,
+      externalThreadId,
+    });
     return {
       href: inboxUrl,
       label: "Facebook-Postfach öffnen",
@@ -197,6 +207,7 @@ export function buildReplyTargetAction(
       reason:
         "Nur der allgemeine Facebook-Postfach-Zugang ist verfügbar. Bitte den Kontakt dort manuell auswählen.",
       disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+      platform,
       fallbackContactLabel: options?.fallbackContactLabel ?? null,
       fallbackContactId: options?.fallbackContactId ?? null,
     };
@@ -210,6 +221,7 @@ export function buildReplyTargetAction(
       quality: "exact_thread",
       reason: "Originalkanal-Link ist gespeichert.",
       disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+      platform,
     };
   }
 
@@ -220,6 +232,7 @@ export function buildReplyTargetAction(
     reason:
       "Für diese Nachricht ist noch kein öffnbarer Originalkanal-Link gespeichert.",
     disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+    platform,
   };
 }
 
@@ -241,10 +254,16 @@ export function isExactFacebookThreadUrl(
     if (!host.endsWith("facebook.com")) return false;
     const normalizedPath =
       url.pathname.toLowerCase().replace(/\/+$/, "") || "/";
+    const hasThreadQuery =
+      Boolean(url.searchParams.get("thread_id")) ||
+      Boolean(url.searchParams.get("selected_item_id"));
+    const hasThreadPath =
+      normalizedPath.includes("/inbox/t/") ||
+      normalizedPath.includes("/messenger/t/") ||
+      normalizedPath.includes("/messages/t/");
     if (
       normalizedPath === "/" ||
-      normalizedPath === "/latest/inbox" ||
-      normalizedPath.startsWith("/latest/inbox/")
+      (normalizedPath === "/latest/inbox" && !hasThreadQuery)
     ) {
       return false;
     }
@@ -255,10 +274,8 @@ export function isExactFacebookThreadUrl(
       return false;
     }
     return (
-      normalizedPath.includes("/inbox/t/") ||
-      normalizedPath.includes("/messenger/t/") ||
-      normalizedPath.includes("/messages/t/") ||
-      Boolean(url.searchParams.get("thread_id"))
+      hasThreadPath ||
+      hasThreadQuery
     );
   } catch {
     return false;
@@ -282,14 +299,78 @@ export function isAllowedManualFacebookThreadUrl(
   }
 }
 
-function buildFacebookInboxFallbackUrl(): string {
-  const url = new URL("https://business.facebook.com/latest/inbox");
+function buildFacebookInboxFallbackUrl(options?: {
+  replyTargetUrl?: string | null;
+  sourceUrl?: string | null;
+  externalThreadId?: string | null;
+}): string {
+  const baseUrl = getFacebookInboxBaseUrl(
+    options?.replyTargetUrl,
+    options?.sourceUrl,
+  );
+  const url = new URL(baseUrl);
   const businessId = firstConfiguredEnv(
     "META_BUSINESS_ID",
     "NEXT_PUBLIC_META_BUSINESS_ID",
   );
   if (businessId) url.searchParams.set("business_id", businessId);
+  const threadId = getFacebookThreadIdentifier(
+    options?.replyTargetUrl,
+    options?.sourceUrl,
+    options?.externalThreadId,
+  );
+  if (threadId && !url.searchParams.get("thread_id")) {
+    url.searchParams.set("thread_id", threadId);
+  }
   return url.toString();
+}
+
+function getFacebookInboxBaseUrl(
+  replyTargetUrl?: string | null,
+  sourceUrl?: string | null,
+): string {
+  for (const candidate of [replyTargetUrl, sourceUrl]) {
+    if (!candidate) continue;
+    try {
+      const parsed = new URL(candidate);
+      if (!parsed.hostname.toLowerCase().endsWith("facebook.com")) continue;
+      if (!parsed.pathname.toLowerCase().includes("inbox")) continue;
+      return parsed.toString();
+    } catch {
+      continue;
+    }
+  }
+  return "https://business.facebook.com/latest/inbox";
+}
+
+function getFacebookThreadIdentifier(
+  replyTargetUrl?: string | null,
+  sourceUrl?: string | null,
+  externalThreadId?: string | null,
+): string | null {
+  const fromUrl = extractThreadIdFromUrl(replyTargetUrl) ?? extractThreadIdFromUrl(sourceUrl);
+  if (fromUrl) return fromUrl;
+  const normalized = normalizeText(externalThreadId);
+  if (!normalized) return null;
+  if (normalized.includes(":")) {
+    const [, senderId] = normalized.split(":");
+    return senderId?.trim() || null;
+  }
+  return normalized;
+}
+
+function extractThreadIdFromUrl(value?: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const threadId =
+      url.searchParams.get("thread_id") ?? url.searchParams.get("selected_item_id");
+    if (threadId?.trim()) return threadId.trim();
+    const match = url.pathname.match(/\/t\/([^/?#]+)/i);
+    return match?.[1]?.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 function firstConfiguredEnv(...names: string[]): string | null {

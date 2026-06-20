@@ -1123,6 +1123,14 @@ export async function getContactReplyTarget(
   );
 
   if (result.error) {
+    if (isReplyTargetStorageUnavailableError(result.error)) {
+      return {
+        target: null,
+        error: new Error(
+          "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden.",
+        ),
+      };
+    }
     return {
       target: null,
       error: new Error(
@@ -1177,6 +1185,14 @@ export async function upsertContactReplyTarget(input: {
   );
 
   if (result.error) {
+    if (isReplyTargetStorageUnavailableError(result.error)) {
+      return {
+        target: null,
+        error: new Error(
+          "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden.",
+        ),
+      };
+    }
     return {
       target: null,
       error: new Error(
@@ -1186,6 +1202,17 @@ export async function upsertContactReplyTarget(input: {
   }
 
   return { target: result.data, error: null };
+}
+
+function isReplyTargetStorageUnavailableError(error: Error): boolean {
+  const message = error.message.toLowerCase();
+  return (
+    (message.includes("contact_reply_targets") &&
+      (message.includes("does not exist") ||
+        message.includes("could not find") ||
+        message.includes("schema cache"))) ||
+    message.includes("relation \"contact_reply_targets\"")
+  );
 }
 
 export async function getWorkspaceContacts(
