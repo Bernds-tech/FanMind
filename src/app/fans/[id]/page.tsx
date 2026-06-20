@@ -706,9 +706,16 @@ function OriginalChatAction({
       >
         {action.label}
       </a>
+      {(action.quality === "manual_exact_thread" ||
+        action.quality === "exact_thread") &&
+      action.platform === "facebook" ? (
+        <small className={styles.muted}>
+          Öffnet den für diesen Kontakt gespeicherten Chat-Link.
+        </small>
+      ) : null}
       {action.quality === "inbox_fallback" ? (
         <small className={styles.muted}>
-          Im Postfach manuell auswählen: {action.fallbackContactLabel ?? "Kontakt"}
+          Meta öffnet eventuell die zuletzt aktive Unterhaltung. Bitte im Postfach manuell auswählen: {action.fallbackContactLabel ?? "Kontakt"}
           {action.fallbackContactId
             ? ` · Facebook-ID: ${action.fallbackContactId}`
             : ""}
@@ -727,9 +734,14 @@ function FacebookReplyTargetCard({
   target: ContactReplyTargetRow | null;
   error?: string;
 }) {
+  const storageUnavailable =
+    error?.includes("Der exakte Chat-Link kann derzeit nicht gespeichert werden.") ??
+    false;
   const fallbackHint = target
     ? "Öffne einmal den richtigen Facebook-Chat, kopiere die URL aus dem Browser und speichere sie hier."
-    : error
+    : storageUnavailable
+      ? "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden."
+      : error
       ? "Der gespeicherte Chat-Link konnte gerade nicht geladen werden. Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen."
       : "Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen.";
 
@@ -756,22 +768,24 @@ function FacebookReplyTargetCard({
           </a>
         </div>
       ) : null}
-      <form action={saveFacebookReplyTarget} className={styles.inlineForm}>
-        <input name="contact_id" type="hidden" value={contact.id} />
-        <label>
-          <span>{target ? "Link ändern" : "Facebook-Chat-URL"}</span>
-          <input
-            defaultValue={target?.url ?? ""}
-            name="reply_target_url"
-            placeholder="https://business.facebook.com/.../inbox/t/..."
-            type="url"
-            required
-          />
-        </label>
-        <button className={dashboardStyles.secondaryButton} type="submit">
-          {target ? "Ändern" : "Chat-Link speichern"}
-        </button>
-      </form>
+      {!storageUnavailable ? (
+        <form action={saveFacebookReplyTarget} className={styles.inlineForm}>
+          <input name="contact_id" type="hidden" value={contact.id} />
+          <label>
+            <span>{target ? "Link ändern" : "Facebook-Chat-URL"}</span>
+            <input
+              defaultValue={target?.url ?? ""}
+              name="reply_target_url"
+              placeholder="https://business.facebook.com/.../inbox/t/..."
+              type="url"
+              required
+            />
+          </label>
+          <button className={dashboardStyles.secondaryButton} type="submit">
+            {target ? "Ändern" : "Chat-Link speichern"}
+          </button>
+        </form>
+      ) : null}
     </details>
   );
 }
@@ -1117,6 +1131,8 @@ function formatNotice(value: string): string {
     return "Exakter Facebook-Chat-Link wurde gespeichert.";
   if (value === "reply_target_save_failed")
     return "Der Chat-Link konnte gerade nicht gespeichert werden. Bitte später erneut versuchen.";
+  if (value === "reply_target_storage_unavailable")
+    return "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden.";
   if (value === "reply_target_invalid")
     return "Bitte speichere nur einen HTTPS-Link zu einem konkreten Facebook-Chat, keinen generischen Postfach-Link.";
   return value;

@@ -204,7 +204,7 @@ export function AiReplySuggestions({
             {originalChannelAction.quality === "inbox_fallback" ? (
               <div className={styles.fallbackHelp}>
                 <p className={styles.muted}>
-                  Chat im Postfach auswählen:{" "}
+                  Meta öffnet eventuell die zuletzt aktive Unterhaltung. Bitte im Postfach manuell auswählen:{" "}
                   {originalChannelAction.fallbackContactLabel ??
                     contact.displayName}
                   {originalChannelAction.fallbackContactId
