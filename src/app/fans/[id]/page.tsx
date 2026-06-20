@@ -713,10 +713,16 @@ function OriginalChatAction({
       >
         {action.label}
       </a>
+      {action.quality === "auto_selected_item" &&
+      action.platform === "facebook" ? (
+        <small className={styles.muted}>
+          FanMind öffnet den Facebook-Chat über die erkannte Facebook-Kontakt-ID.
+        </small>
+      ) : null}
       {action.quality === "manual_exact_thread" &&
       action.platform === "facebook" ? (
         <small className={styles.muted}>
-          Öffnet direkt den hinterlegten Chat dieses Fans.
+          Öffnet den gespeicherten Chat-Link.
         </small>
       ) : null}
       {(action.quality === "attempted_thread_link" ||
@@ -744,14 +750,21 @@ function FacebookReplyTargetCard({
   error?: string;
   directAction: ReplyTargetAction;
 }) {
+  const hasAutoDirectLink =
+    target?.source_platform === "facebook" &&
+    target?.source_type === "facebook_messages" &&
+    target?.quality === "auto_selected_item";
   const hasManualDirectLink =
     target?.source_platform === "facebook" &&
     target?.source_type === "facebook_messages" &&
     target?.quality === "manual_exact_thread";
+  const hasDirectLink = hasAutoDirectLink || hasManualDirectLink;
   const storageUnavailable =
     error?.includes("Der exakte Chat-Link kann derzeit nicht gespeichert werden.") ??
     false;
-  const fallbackHint = hasManualDirectLink
+  const fallbackHint = hasAutoDirectLink
+    ? "Direkter Chat-Link wurde automatisch erkannt und wird verwendet."
+    : hasManualDirectLink
     ? "Direkter Chat-Link ist gespeichert und wird verwendet."
     : storageUnavailable
       ? "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden."
@@ -762,17 +775,17 @@ function FacebookReplyTargetCard({
   return (
     <details
       className={styles.replyTargetBox}
-      open={!hasManualDirectLink || Boolean(error)}
+      open={!hasDirectLink || Boolean(error)}
     >
       <summary>
-        {hasManualDirectLink
+        {hasDirectLink
           ? "Direkter Facebook-Chat-Link hinterlegt"
           : "Direkten Chat-Link für diesen Fan einrichten"}
       </summary>
       <p className={styles.syncHint}>
         {fallbackHint}
       </p>
-      {!hasManualDirectLink ? (
+      {!hasDirectLink ? (
         <ol className={styles.setupFlow}>
           <li>
             1. Facebook-Postfach öffnen
@@ -795,9 +808,11 @@ function FacebookReplyTargetCard({
           <li>4. Hier speichern</li>
         </ol>
       ) : null}
-      {hasManualDirectLink ? (
+      {hasDirectLink ? (
         <div className={styles.replyTargetStatus}>
-          <span>Gespeicherter Direktlink</span>
+          <span>
+            {hasAutoDirectLink ? "Automatisch erkannter Direktlink" : "Gespeicherter Direktlink"}
+          </span>
           <a
             className={dashboardStyles.secondaryButton}
             href={target.url}
@@ -918,17 +933,28 @@ function hasFacebookMessages(messages: ConversationMessageRow[]): boolean {
 }
 
 function getManualFacebookReplyTargetUrl(
-  message: ConversationMessageRow,
+  _message: ConversationMessageRow,
   target: ContactReplyTargetRow | null,
 ): string | null {
-  if (!target || target.quality !== "manual_exact_thread") return null;
+  if (!target) return null;
   if (target.source_platform !== "facebook") return null;
-  const sourceType = message.source_type ?? message.message_type;
   if (target.source_type !== "facebook_messages") return null;
-  if (sourceType !== "facebook_messages" && message.message_type !== "dm") {
+  if (
+    target.quality !== "manual_exact_thread" &&
+    target.quality !== "auto_selected_item"
+  ) {
     return null;
   }
   return target.url;
+}
+
+function getStoredFacebookReplyTargetQuality(
+  target: ContactReplyTargetRow | null,
+): string | null {
+  if (!target) return null;
+  if (target.source_platform !== "facebook") return null;
+  if (target.source_type !== "facebook_messages") return null;
+  return target.quality;
 }
 
 function buildMessageTimeline(
@@ -961,8 +987,11 @@ function buildMessageTimeline(
     replyAction: buildReplyTargetAction(message, null, {
       fallbackContactLabel: contact.display_name,
       fallbackContactId: contact.handle,
-      manualReplyTargetUrl: getManualFacebookReplyTargetUrl(
+      storedReplyTargetUrl: getManualFacebookReplyTargetUrl(
         message,
+        facebookReplyTarget,
+      ),
+      storedReplyTargetQuality: getStoredFacebookReplyTargetQuality(
         facebookReplyTarget,
       ),
     }),
@@ -1035,7 +1064,10 @@ function getOriginalChannelAction(
   return buildReplyTargetAction(latestInbound ?? conversation, conversation, {
     fallbackContactLabel: contact.display_name,
     fallbackContactId: contact.handle,
-    manualReplyTargetUrl: facebookReplyTarget?.url ?? null,
+    storedReplyTargetUrl: facebookReplyTarget?.url ?? null,
+    storedReplyTargetQuality: getStoredFacebookReplyTargetQuality(
+      facebookReplyTarget,
+    ),
   });
 }
 

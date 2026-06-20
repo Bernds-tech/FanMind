@@ -9,7 +9,6 @@ import {
   createEmptySocialSyncResult,
   type SocialSyncResult,
 } from "@/lib/socialSync";
-import { isExactFacebookThreadUrl } from "@/lib/sourceContext";
 import {
   decryptToken,
   getFacebookGrantedScopeNames,
@@ -325,9 +324,7 @@ async function syncFacebookMessengerHistoryForConnection(
           messageType: "dm",
           sourceType: "facebook_messages",
           sourceUrl: conversation.link,
-          replyTargetUrl: isExactFacebookThreadUrl(conversation.link)
-            ? conversation.link
-            : null,
+          replyTargetUrl: conversation.link,
           externalMessageId: message.id,
           externalThreadId,
           sourceConversationId: conversation.id,
