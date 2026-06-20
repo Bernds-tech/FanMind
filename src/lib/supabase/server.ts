@@ -3,6 +3,13 @@ import {
   normalizeMessageAttachments,
   type NormalizedMessageAttachment as ConversationMessageAttachment,
 } from "@/lib/messageAttachments";
+import {
+  buildFacebookBusinessInboxThreadUrl,
+  extractFacebookBusinessId,
+  extractFacebookPageId,
+  extractFacebookSelectedItemId,
+  extractFacebookThreadId,
+} from "@/lib/sourceContext";
 export type { NormalizedMessageAttachment as ConversationMessageAttachment } from "@/lib/messageAttachments";
 
 import { cookies } from "next/headers";
@@ -1204,6 +1211,105 @@ export async function upsertContactReplyTarget(input: {
   return { target: result.data, error: null };
 }
 
+export async function upsertAutoFacebookContactReplyTarget(input: {
+  workspaceId: string;
+  contactId: string;
+  url: string;
+}): Promise<ContactReplyTargetResult> {
+  const serviceAccessToken = getServiceAccessToken();
+
+  if (!serviceAccessToken) {
+    return {
+      target: null,
+      error: new Error(
+        "Serverberechtigungen für die Direktlink-Speicherung sind nicht verfügbar.",
+      ),
+    };
+  }
+
+  const existing = await postgrestSelect<ContactReplyTargetRow>(
+    "contact_reply_targets",
+    serviceAccessToken,
+    CONTACT_REPLY_TARGET_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+      ["source_type", "facebook_messages"],
+    ],
+    1,
+    true,
+  );
+
+  if (existing.error) {
+    if (isReplyTargetStorageUnavailableError(existing.error)) {
+      return {
+        target: null,
+        error: new Error(
+          "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden.",
+        ),
+      };
+    }
+    return {
+      target: null,
+      error: new Error(
+        "Der automatische Direktlink konnte gerade nicht gespeichert werden.",
+      ),
+    };
+  }
+
+  if (existing.data?.quality === "manual_exact_thread") {
+    return { target: existing.data, error: null };
+  }
+
+  if (
+    existing.data?.quality === "auto_selected_item" &&
+    existing.data.url === input.url
+  ) {
+    return { target: existing.data, error: null };
+  }
+
+  const result = await postgrestRequest<ContactReplyTargetRow>(
+    "contact_reply_targets",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      contact_id: input.contactId,
+      source_platform: "facebook",
+      source_type: "facebook_messages",
+      label: "Automatisch erkannter Facebook-Direktlink",
+      url: input.url,
+      quality: "auto_selected_item",
+      updated_at: new Date().toISOString(),
+    },
+    serviceAccessToken,
+    {
+      select: CONTACT_REPLY_TARGET_COLUMNS,
+      single: true,
+      upsert: true,
+      onConflict: "workspace_id,contact_id,source_type",
+    },
+  );
+
+  if (result.error) {
+    if (isReplyTargetStorageUnavailableError(result.error)) {
+      return {
+        target: null,
+        error: new Error(
+          "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden.",
+        ),
+      };
+    }
+    return {
+      target: null,
+      error: new Error(
+        "Der automatische Direktlink konnte gerade nicht gespeichert werden.",
+      ),
+    };
+  }
+
+  return { target: result.data, error: null };
+}
+
 function isReplyTargetStorageUnavailableError(error: Error): boolean {
   const message = error.message.toLowerCase();
   return (
@@ -2360,6 +2466,43 @@ export async function createMetaWebhookConversationMessage(input: {
     contact = created.data;
   }
 
+  const normalizedReplyTargetUrl = normalizeUrl(input.replyTargetUrl);
+  const normalizedSourceUrl = normalizeUrl(input.sourceUrl);
+  const normalizedSenderId = normalizeOptionalText(input.senderId);
+  const normalizedPageId = normalizeOptionalText(input.pageId ?? input.recipientId);
+  const normalizedBusinessId =
+    process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID;
+
+  const autoSelectedItemId =
+    extractFacebookSelectedItemId(normalizedReplyTargetUrl) ??
+    extractFacebookSelectedItemId(normalizedSourceUrl) ??
+    normalizedSenderId;
+  const autoThreadId =
+    extractFacebookThreadId(normalizedReplyTargetUrl) ??
+    extractFacebookThreadId(normalizedSourceUrl) ??
+    normalizeOptionalText(input.sourceConversationId) ??
+    normalizeOptionalText(input.externalThreadId);
+  const autoPageId =
+    extractFacebookPageId(normalizedReplyTargetUrl) ??
+    extractFacebookPageId(normalizedSourceUrl) ??
+    normalizedPageId;
+  const autoBusinessId =
+    extractFacebookBusinessId(normalizedReplyTargetUrl) ??
+    extractFacebookBusinessId(normalizedSourceUrl) ??
+    normalizeOptionalText(normalizedBusinessId);
+
+  const autoReplyTargetUrl =
+    input.sourcePlatform === "facebook" &&
+    normalizedSourceType === "facebook_messages" &&
+    autoSelectedItemId
+      ? buildFacebookBusinessInboxThreadUrl({
+          selectedItemId: autoSelectedItemId,
+          pageId: autoPageId,
+          businessId: autoBusinessId,
+          threadId: autoThreadId,
+        })
+      : null;
+
   const result = await createMetaTestConversationMessage({
     workspaceId: input.workspaceId,
     contactId: contact.id,
@@ -2370,8 +2513,8 @@ export async function createMetaWebhookConversationMessage(input: {
     sourceType:
       input.sourceType ??
       getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
-    sourceUrl: input.sourceUrl,
-    replyTargetUrl: input.replyTargetUrl,
+    sourceUrl: normalizedSourceUrl,
+    replyTargetUrl: autoReplyTargetUrl ?? normalizedReplyTargetUrl,
     externalMessageId: input.externalMessageId,
     externalThreadId: preferredThreadId,
     externalPostId: input.externalPostId,
@@ -2382,6 +2525,19 @@ export async function createMetaWebhookConversationMessage(input: {
     messageKind: input.messageKind,
     receivedAt: input.receivedAt,
   });
+
+  if (
+    autoReplyTargetUrl &&
+    contact?.id &&
+    input.sourcePlatform === "facebook" &&
+    normalizedSourceType === "facebook_messages"
+  ) {
+    await upsertAutoFacebookContactReplyTarget({
+      workspaceId: input.workspaceId,
+      contactId: contact.id,
+      url: autoReplyTargetUrl,
+    });
+  }
 
   await postgrestUpdate(
     "social_connections",

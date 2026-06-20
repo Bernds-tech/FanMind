@@ -34,6 +34,7 @@ export type MessageSourceContext = {
 export type ReplyTargetQuality =
   | "exact_thread"
   | "manual_exact_thread"
+  | "auto_selected_item"
   | "attempted_thread_link"
   | "inbox_fallback"
   | "unavailable";
@@ -142,7 +143,10 @@ export function buildReplyTargetAction(
   options?: {
     fallbackContactLabel?: string | null;
     fallbackContactId?: string | null;
-    manualReplyTargetUrl?: string | null;
+    storedReplyTargetUrl?: string | null;
+    storedReplyTargetQuality?: string | null;
+    facebookPageId?: string | null;
+    facebookBusinessId?: string | null;
   },
 ): ReplyTargetAction {
   const primary = messageOrConversation ?? null;
@@ -166,17 +170,69 @@ export function buildReplyTargetAction(
   );
 
   if (platform === "facebook" && isMessengerSource(sourceType)) {
-    const manualExactUrl = isAllowedManualFacebookThreadUrl(
-      options?.manualReplyTargetUrl,
-    )
-      ? options.manualReplyTargetUrl
-      : null;
-    if (manualExactUrl) {
+    const storedReplyTargetUrl =
+      isAllowedManualFacebookThreadUrl(options?.storedReplyTargetUrl)
+        ? options?.storedReplyTargetUrl
+        : null;
+    const storedReplyTargetQuality = normalizeText(
+      options?.storedReplyTargetQuality,
+    );
+
+    if (storedReplyTargetUrl && storedReplyTargetQuality === "manual_exact_thread") {
       return {
-        href: manualExactUrl,
+        href: storedReplyTargetUrl,
         label: "Direkten Facebook-Chat öffnen",
         quality: "manual_exact_thread",
         reason: "Manuell hinterlegter Direktlink.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
+      };
+    }
+
+    if (storedReplyTargetUrl && storedReplyTargetQuality === "auto_selected_item") {
+      return {
+        href: storedReplyTargetUrl,
+        label: "Direkten Facebook-Chat öffnen",
+        quality: "auto_selected_item",
+        reason: "Direktlink wurde automatisch aus den vorhandenen Facebook-Daten aufgebaut.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
+      };
+    }
+
+    const selectedItemId =
+      extractFacebookSelectedItemId(replyTargetUrl) ??
+      extractFacebookSelectedItemId(sourceUrl) ??
+      normalizeFacebookSelectedItemId(options?.fallbackContactId);
+    const threadId =
+      extractFacebookThreadId(replyTargetUrl) ??
+      extractFacebookThreadId(sourceUrl) ??
+      deriveFacebookThreadIdFromExternalThreadId(externalThreadId);
+    const pageId =
+      extractFacebookPageId(replyTargetUrl) ??
+      extractFacebookPageId(sourceUrl) ??
+      normalizeFacebookPageId(options?.facebookPageId);
+    const businessId =
+      extractFacebookBusinessId(replyTargetUrl) ??
+      extractFacebookBusinessId(sourceUrl) ??
+      normalizeFacebookBusinessId(options?.facebookBusinessId);
+
+    const autoSelectedItemUrl = selectedItemId
+      ? buildFacebookBusinessInboxThreadUrl({
+          selectedItemId,
+          pageId,
+          businessId,
+          threadId,
+        })
+      : null;
+
+    if (autoSelectedItemUrl) {
+      return {
+        href: autoSelectedItemUrl,
+        label: "Direkten Facebook-Chat öffnen",
+        quality: "auto_selected_item",
+        reason:
+          "Direktlink wurde automatisch aus den vorhandenen Facebook-Daten aufgebaut.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
       };
@@ -425,6 +481,133 @@ function getFacebookThreadIdentifier(
     return senderId?.trim() || null;
   }
   return normalized;
+}
+
+function deriveFacebookThreadIdFromExternalThreadId(
+  externalThreadId?: string | null,
+): string | null {
+  const normalized = normalizeText(externalThreadId);
+  if (!normalized) return null;
+  if (normalized.includes(":")) {
+    const [conversationId] = normalized.split(":");
+    return conversationId?.trim() || null;
+  }
+  return normalized;
+}
+
+function normalizeFacebookSelectedItemId(
+  value: string | null | undefined,
+): string | null {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  return /^[a-zA-Z0-9_]+$/.test(normalized) ? normalized : null;
+}
+
+function normalizeFacebookPageId(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  return /^[0-9]+$/.test(normalized) ? normalized : null;
+}
+
+function normalizeFacebookBusinessId(
+  value: string | null | undefined,
+): string | null {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  return /^[0-9]+$/.test(normalized) ? normalized : null;
+}
+
+export function extractFacebookSelectedItemId(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return normalizeFacebookSelectedItemId(
+      url.searchParams.get("selected_item_id"),
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function extractFacebookThreadId(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const paramThreadId = normalizeFacebookSelectedItemId(
+      url.searchParams.get("thread_id"),
+    );
+    if (paramThreadId) return paramThreadId;
+    const match = url.pathname.match(/\/t\/([^/?#]+)/i);
+    return normalizeFacebookSelectedItemId(match?.[1] ?? null);
+  } catch {
+    return null;
+  }
+}
+
+export function extractFacebookPageId(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return (
+      normalizeFacebookPageId(url.searchParams.get("asset_id")) ??
+      normalizeFacebookPageId(url.searchParams.get("mailbox_id"))
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function extractFacebookBusinessId(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return normalizeFacebookBusinessId(url.searchParams.get("business_id"));
+  } catch {
+    return null;
+  }
+}
+
+export function buildFacebookBusinessInboxThreadUrl(input: {
+  selectedItemId: string;
+  pageId?: string | null;
+  businessId?: string | null;
+  threadId?: string | null;
+}): string {
+  const url = new URL("https://business.facebook.com/latest/inbox/all/");
+  const selectedItemId = normalizeFacebookSelectedItemId(input.selectedItemId);
+  if (!selectedItemId) {
+    throw new Error("selectedItemId ist für den Facebook-Direktlink erforderlich.");
+  }
+  const pageId =
+    normalizeFacebookPageId(input.pageId) ??
+    firstConfiguredEnv("META_FACEBOOK_PAGE_ID", "NEXT_PUBLIC_META_FACEBOOK_PAGE_ID");
+  const businessId =
+    normalizeFacebookBusinessId(input.businessId) ??
+    firstConfiguredEnv("META_BUSINESS_ID", "NEXT_PUBLIC_META_BUSINESS_ID");
+  const threadId = normalizeFacebookSelectedItemId(input.threadId);
+
+  if (pageId) {
+    url.searchParams.set("asset_id", pageId);
+    url.searchParams.set("mailbox_id", pageId);
+  }
+  if (businessId) {
+    url.searchParams.set("business_id", businessId);
+  }
+  if (threadId) {
+    url.searchParams.set("thread_id", threadId);
+  }
+  url.searchParams.set("ir_qe_exposed", "1");
+  url.searchParams.set("selected_item_id", selectedItemId);
+  url.searchParams.set("thread_type", "FB_MESSAGE");
+  return url.toString();
 }
 
 function extractThreadIdFromUrl(value?: string | null): string | null {
