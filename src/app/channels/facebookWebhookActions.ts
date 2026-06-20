@@ -11,6 +11,7 @@ import {
 } from "@/lib/socialSync";
 import {
   decryptToken,
+  type FacebookMessengerConversation,
   getFacebookGrantedScopeNames,
   fetchFacebookPagePostsWithComments,
   fetchFacebookMessengerConversationMessages,
@@ -37,6 +38,7 @@ import {
   getWorkspaceContacts,
   type SocialConnectionRow,
 } from "@/lib/supabase/server";
+import { extractFacebookSelectedItemId } from "@/lib/sourceContext";
 
 export type FacebookCommentFetchResult = {
   ok: boolean;
@@ -66,6 +68,22 @@ export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
   commentFeedScopesGranted?: boolean;
   pagesReadUserContentGranted?: boolean;
   pagesManageEngagementGranted?: boolean;
+};
+
+export type FacebookDirectLinkSourceDiagnosis = {
+  ok: boolean;
+  pageIdConfigured: boolean;
+  businessIdConfigured: boolean;
+  sampledConversations: number;
+  conversationLinkAvailable: number;
+  conversationLinkWithDirectId: number;
+  participantIdsAvailable: number;
+  matchedConversationFound: boolean;
+  matchedConversationHasDirectId: boolean;
+  participantIdMatchesDirectId: boolean | null;
+  directLinkIdDetected: boolean;
+  directLinkIdSource: "conversation.link" | "stored_auto" | "not_detected";
+  note: string;
 };
 
 export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchResult> {
@@ -216,6 +234,69 @@ export async function syncFacebookMessengerConversationForContact(input: {
     revalidate: input.revalidate ?? true,
     syncedAt: new Date().toISOString(),
   });
+}
+
+export async function diagnoseFacebookDirectLinkSource(input: {
+  connection: SocialConnectionRow;
+  contactHandle?: string | null;
+  limit?: number;
+}): Promise<FacebookDirectLinkSourceDiagnosis> {
+  const token = input.connection.page_access_token_encrypted
+    ? decryptToken(input.connection.page_access_token_encrypted)
+    : null;
+
+  if (!input.connection.page_id || !token) {
+    return {
+      ok: false,
+      pageIdConfigured: Boolean(input.connection.page_id),
+      businessIdConfigured: Boolean(
+        process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID,
+      ),
+      sampledConversations: 0,
+      conversationLinkAvailable: 0,
+      conversationLinkWithDirectId: 0,
+      participantIdsAvailable: 0,
+      matchedConversationFound: false,
+      matchedConversationHasDirectId: false,
+      participantIdMatchesDirectId: null,
+      directLinkIdDetected: false,
+      directLinkIdSource: "not_detected",
+      note: "Meta-Verbindung ist vorhanden, aber die Direktlink-Quelle konnte gerade nicht geprüft werden.",
+    };
+  }
+
+  try {
+    const conversations = await fetchFacebookMessengerConversations(
+      input.connection.page_id,
+      token,
+      Math.max(1, Math.min(input.limit ?? 5, 10)),
+    );
+    return summarizeFacebookDirectLinkDiagnosis({
+      pageId: input.connection.page_id,
+      businessId:
+        process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID ?? null,
+      contactHandle: input.contactHandle ?? null,
+      conversations,
+    });
+  } catch {
+    return {
+      ok: false,
+      pageIdConfigured: Boolean(input.connection.page_id),
+      businessIdConfigured: Boolean(
+        process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID,
+      ),
+      sampledConversations: 0,
+      conversationLinkAvailable: 0,
+      conversationLinkWithDirectId: 0,
+      participantIdsAvailable: 0,
+      matchedConversationFound: false,
+      matchedConversationHasDirectId: false,
+      participantIdMatchesDirectId: null,
+      directLinkIdDetected: false,
+      directLinkIdSource: "not_detected",
+      note: "Meta-Direktlink-Quelle konnte gerade nicht geprüft werden.",
+    };
+  }
 }
 
 async function syncFacebookMessengerHistoryForConnection(
@@ -420,6 +501,64 @@ function syncError(
     syncedAt,
     conversationsChecked: 0,
     error,
+  };
+}
+
+function summarizeFacebookDirectLinkDiagnosis(input: {
+  pageId: string;
+  businessId: string | null;
+  contactHandle: string | null;
+  conversations: FacebookMessengerConversation[];
+}): FacebookDirectLinkSourceDiagnosis {
+  let conversationLinkAvailable = 0;
+  let conversationLinkWithDirectId = 0;
+  let participantIdsAvailable = 0;
+  let matchedConversationFound = false;
+  let matchedConversationHasDirectId = false;
+  let participantIdMatchesDirectId: boolean | null = null;
+
+  for (const conversation of input.conversations) {
+    const fanParticipant = conversation.participants.find(
+      (participant) => participant.id !== input.pageId,
+    );
+    if (fanParticipant?.id) participantIdsAvailable += 1;
+
+    const selectedItemId = extractFacebookSelectedItemId(conversation.link);
+    if (conversation.link) conversationLinkAvailable += 1;
+    if (selectedItemId) conversationLinkWithDirectId += 1;
+
+    if (input.contactHandle && fanParticipant?.id === input.contactHandle) {
+      matchedConversationFound = true;
+      if (selectedItemId) {
+        matchedConversationHasDirectId = true;
+        participantIdMatchesDirectId = fanParticipant.id === selectedItemId;
+      }
+    }
+  }
+
+  const directLinkIdDetected = matchedConversationHasDirectId;
+  const note = directLinkIdDetected
+    ? "Direktlink-ID erkannt. FanMind kann den direkten Chat automatisch aufbauen."
+    : matchedConversationFound
+      ? "Conversation gefunden, aber keine eindeutige Direktlink-ID im Link erkannt."
+      : conversationLinkWithDirectId > 0
+        ? "Meta liefert Direktlink-IDs in der Stichprobe, aber nicht für diesen Kontakt in der geprüften Auswahl."
+        : "In der geprüften Auswahl wurde keine eindeutige Direktlink-ID erkannt.";
+
+  return {
+    ok: true,
+    pageIdConfigured: Boolean(input.pageId),
+    businessIdConfigured: Boolean(input.businessId),
+    sampledConversations: input.conversations.length,
+    conversationLinkAvailable,
+    conversationLinkWithDirectId,
+    participantIdsAvailable,
+    matchedConversationFound,
+    matchedConversationHasDirectId,
+    participantIdMatchesDirectId,
+    directLinkIdDetected,
+    directLinkIdSource: directLinkIdDetected ? "conversation.link" : "not_detected",
+    note,
   };
 }
 

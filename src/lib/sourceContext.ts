@@ -196,6 +196,23 @@ export function buildReplyTargetAction(
       };
     }
 
+    if (
+      storedReplyTargetUrl &&
+      storedReplyTargetQuality === "auto_selected_item" &&
+      extractFacebookSelectedItemId(storedReplyTargetUrl)
+    ) {
+      return {
+        href: storedReplyTargetUrl,
+        label: "Direkten Facebook-Chat öffnen",
+        quality: "auto_selected_item",
+        reason:
+          "Direktlink wurde bereits aus einer echten Facebook-Chat-Adresse erkannt und gespeichert.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
+        selectedItemSource: "stored_auto",
+      };
+    }
+
     const selectedFromReplyTarget = extractFacebookSelectedItemId(replyTargetUrl);
     const selectedFromSourceUrl = extractFacebookSelectedItemId(sourceUrl);
     const selectedItemId = selectedFromReplyTarget ?? selectedFromSourceUrl;
