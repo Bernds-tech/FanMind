@@ -174,20 +174,22 @@ function KpiCard({
   comingSoon = false,
 }: KpiCardData) {
   const toneClass = `tone-${tone}`;
+  const cardClassName = `${styles.kpiCard} ${styles[toneClass]} ${comingSoon ? styles.kpiCardComingSoon : ""}`;
 
   return (
-    <article className={`${styles.kpiCard} ${styles[toneClass]}`}>
+    <article className={cardClassName}>
       <div className={styles.kpiIcon}>
         <KpiIcon icon={icon} />
       </div>
       <button
         type="button"
         className={styles.kpiInfo}
-        title={infoLabel}
         aria-label={infoLabel}
-        data-tooltip={infoLabel}
       >
         i
+        <span className={styles.kpiInfoTooltip} role="tooltip">
+          {infoLabel}
+        </span>
       </button>
       <div className={styles.kpiTextBlock}>
         <p className={styles.kpiLabel}>{label}</p>
