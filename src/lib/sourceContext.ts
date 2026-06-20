@@ -159,9 +159,6 @@ export function buildReplyTargetAction(
   const sourceUrl =
     normalizeHttpUrl(primary?.source_url) ??
     normalizeHttpUrl(fallback?.source_url);
-  const externalThreadId = normalizeText(
-    primary?.external_thread_id ?? fallback?.external_thread_id,
-  );
 
   if (platform === "facebook" && isMessengerSource(sourceType)) {
     const manualExactUrl = isAllowedManualFacebookThreadUrl(
@@ -197,9 +194,8 @@ export function buildReplyTargetAction(
       href: inboxUrl,
       label: "Facebook-Postfach öffnen",
       quality: "inbox_fallback",
-      reason: externalThreadId
-        ? "Facebook Conversation-ID ist gespeichert, aber kein verifizierter direkter Thread-Link verfügbar."
-        : "Kein verifizierter direkter Facebook-Thread-Link verfügbar.",
+      reason:
+        "Nur der allgemeine Facebook-Postfach-Zugang ist verfügbar. Bitte den Kontakt dort manuell auswählen.",
       disabledHint: "Originalkanal-Link noch nicht verfügbar.",
       fallbackContactLabel: options?.fallbackContactLabel ?? null,
       fallbackContactId: options?.fallbackContactId ?? null,
