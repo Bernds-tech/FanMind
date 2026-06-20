@@ -32,6 +32,7 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
 import { getChannelSourceLabel } from "@/lib/channelSources";
@@ -1175,7 +1176,7 @@ export default async function FanDetailPage({
   const [
     memoriesResult,
     followupsResult,
-    messagesResult,
+    initialMessagesResult,
     conversationsResult,
     openFollowupCountResult,
     contactAiProfileResult,
@@ -1208,8 +1209,54 @@ export default async function FanDetailPage({
       ])
     : [null, null, null, null, null, null, null, null, null];
 
+  let messagesResult = initialMessagesResult;
+
+  let additionalMessagesError: string | undefined;
+  const relatedContactIds =
+    contact && contactsResult
+      ? getRelatedFanContactIds(contact, contactsResult.contacts).filter(
+          (contactId) => contactId !== contact.id,
+        )
+      : [];
+
+  if (
+    workspace &&
+    contact &&
+    messagesResult &&
+    messagesResult.messages.length === 0 &&
+    relatedContactIds.length
+  ) {
+    const relatedMessageResults = await Promise.all(
+      relatedContactIds.map((contactId) =>
+        getContactConversationMessages(workspace.id, contactId),
+      ),
+    );
+
+    const mergedMessages = relatedMessageResults.flatMap(
+      (result) => result.messages,
+    );
+    if (mergedMessages.length) {
+      messagesResult = {
+        messages: mergeUniqueMessagesById([
+          ...messagesResult.messages,
+          ...mergedMessages,
+        ]),
+        error: messagesResult.error,
+      };
+    }
+
+    const firstError = relatedMessageResults.find((result) => result.error)
+      ?.error;
+    if (firstError) additionalMessagesError = firstError.message;
+  }
+
   const conversation =
     conversationsResult?.conversations.find((item) => item.contact_id === id) ??
+    (relatedContactIds.length
+      ? conversationsResult?.conversations.find((item) =>
+          relatedContactIds.includes(item.contact_id),
+        )
+      : null) ??
     null;
   const conversationSummaryResult =
     workspace && conversation
@@ -1233,7 +1280,9 @@ export default async function FanDetailPage({
           contactError={contactResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           messages={messagesResult?.messages ?? []}
-          messagesError={messagesResult?.error?.message}
+          messagesError={
+            messagesResult?.error?.message ?? additionalMessagesError
+          }
           conversation={conversation}
           conversationsError={conversationsResult?.error?.message}
           memories={memoriesResult?.memories ?? []}
@@ -1288,5 +1337,30 @@ export default async function FanDetailPage({
         </section>
       )}
     </main>
+  );
+}
+
+function getRelatedFanContactIds(
+  contact: ContactRow,
+  contacts: ContactRow[],
+): string[] {
+  const baseKey = getFanGroupKey(contact);
+  return contacts
+    .filter((entry) => getFanGroupKey(entry) === baseKey)
+    .map((entry) => entry.id);
+}
+
+function mergeUniqueMessagesById(
+  messages: ConversationMessageRow[],
+): ConversationMessageRow[] {
+  const byId = new Map<string, ConversationMessageRow>();
+  for (const message of messages) {
+    byId.set(message.id, message);
+  }
+
+  return Array.from(byId.values()).sort(
+    (left, right) =>
+      new Date(left.created_at ?? 0).getTime() -
+      new Date(right.created_at ?? 0).getTime(),
   );
 }
