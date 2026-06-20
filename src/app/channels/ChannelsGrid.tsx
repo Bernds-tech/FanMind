@@ -26,6 +26,8 @@ type ChannelStatus =
   | "Verfügbar"
   | "In Arbeit"
   | "Vorschau"
+  | "Vorbereitet"
+  | "Noch nicht live"
   | "Coming Soon";
 
 type FacebookConnection = {
@@ -93,7 +95,8 @@ type Channel = {
   status: ChannelStatus;
   technology: string;
   intakeTypes: string;
-  logo: string;
+  logo?: string;
+  logoInitials?: string;
   signal?: boolean;
 };
 
@@ -109,52 +112,52 @@ const preparedChannel = (
 });
 
 const channels: Channel[] = [
+  preparedChannel("facebook_messages", {
+    description: `${CHANNEL_SOURCE_CONFIGS.facebook_messages.statusHint} Messenger-DMs werden übernommen. Antworten bleiben manuell im Originalkanal; kein automatischer Versand.`,
+    status: "Verfügbar",
+    technology: "Messenger-DMs verbunden, Antworten manuell",
+    intakeTypes: "DM · Copy-&-Open",
+    logo: logoPath("facebook"),
+    signal: true,
+  }),
+
   preparedChannel("instagram_messages", {
-    description: `${CHANNEL_SOURCE_CONFIGS.instagram_messages.statusHint} FanMind bleibt Copy-&-Open-Assistent.`,
-    status: "In Arbeit",
-    technology: "instagram_messages · Meta Webhook · vorbereitet",
+    description: `${CHANNEL_SOURCE_CONFIGS.instagram_messages.statusHint} Noch nicht live: FanMind bleibt Copy-&-Open-Assistent.`,
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "DM · Copy-&-Open",
     logo: logoPath("instagram"),
     signal: true,
   }),
   preparedChannel("instagram_comments", {
-    description: `${CHANNEL_SOURCE_CONFIGS.instagram_comments.statusHint} FanMind öffnet nur das Original und kopiert Vorschläge.`,
-    status: "In Arbeit",
-    technology: "instagram_comments · Meta Webhook · vorbereitet",
+    description: `${CHANNEL_SOURCE_CONFIGS.instagram_comments.statusHint} Noch nicht live: FanMind öffnet nur das Original und kopiert Vorschläge.`,
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Kommentar · Beitrag · Copy-&-Open",
     logo: logoPath("instagram"),
     signal: true,
   }),
   preparedChannel("tiktok_comments", {
-    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_comments.statusHint} Keine automatische Antwort und kein automatisches Senden.`,
-    status: "In Arbeit",
-    technology:
-      "tiktok_comments · vorbereitet · offizielle Freigabe erforderlich",
+    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_comments.statusHint} Noch nicht live: keine automatische Antwort und kein automatisches Senden.`,
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Offizielle Freigabe erforderlich",
     intakeTypes: "Kommentare · Copy-&-Open",
     logo: logoPath("tiktok"),
     signal: true,
   }),
 
   preparedChannel("tiktok_messages", {
-    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_messages.statusHint} Antwortvorschläge werden nur kopiert und extern manuell eingefügt.`,
-    status: "In Arbeit",
-    technology: "tiktok_messages · nicht-live · Export/Data-Portability-Import",
+    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_messages.statusHint} Noch nicht live: Antwortvorschläge werden nur kopiert und extern manuell eingefügt.`,
+    status: "Noch nicht live",
+    technology: "Importpfad vorbereitet, noch nicht live",
     intakeTypes: "Nachrichten · Export-Import · Copy-&-Open",
     logo: logoPath("tiktok"),
     signal: true,
   }),
-  preparedChannel("facebook_messages", {
-    description: `${CHANNEL_SOURCE_CONFIGS.facebook_messages.statusHint} Antwort bleibt Copy-&-Open, kein automatischer Versand.`,
-    status: "Verfügbar",
-    technology: "facebook_messages · Graph API · OAuth",
-    intakeTypes: "DM · Copy-&-Open",
-    logo: logoPath("facebook"),
-    signal: true,
-  }),
   preparedChannel("facebook_comments", {
     description: CHANNEL_SOURCE_CONFIGS.facebook_comments.statusHint,
-    status: "In Arbeit",
-    technology: "facebook_comments · geparkt/vorbereitet · Live später",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Kommentar · Post-Kommentar · Copy-&-Open",
     logo: logoPath("facebook"),
     signal: true,
@@ -162,16 +165,17 @@ const channels: Channel[] = [
   {
     key: "twitter",
     name: "X / Twitter",
-    description: "Mentions und Direktnachrichten empfangen",
+    description:
+      "Mentions und Direktnachrichten sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "API v2",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Mentions · DMs",
     logo: logoPath("twitter"),
   },
   preparedChannel("whatsapp_messages", {
     description: CHANNEL_SOURCE_CONFIGS.whatsapp_messages.statusHint,
-    status: "In Arbeit",
-    technology: "whatsapp_messages · Cloud API · vorbereitet",
+    status: "Vorbereitet",
+    technology: "Cloud-API-Anbindung vorbereitet, noch nicht live",
     intakeTypes: "Nachrichten · Copy-&-Open",
     logo: logoPath("whatsapp"),
     signal: true,
@@ -179,63 +183,79 @@ const channels: Channel[] = [
   {
     key: "discord",
     name: "Discord",
-    description: "DMs und Server-Nachrichten importieren",
+    description:
+      "DMs und Community-Nachrichten sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "Bot API · Webhook",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "DMs · Server",
     logo: logoPath("discord"),
   },
   {
     key: "telegram",
     name: "Telegram",
-    description: "Nachrichten und Gruppen-Eingänge abrufen",
+    description:
+      "Nachrichten und Gruppen-Eingänge sind als künftiger Kanal vorgemerkt.",
     status: "Coming Soon",
-    technology: "Bot API · Webhook",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Nachrichten · Gruppen",
     logo: logoPath("telegram"),
   },
   {
     key: "youtube",
     name: "YouTube",
-    description: "Kommentare und Live-Chat-Nachrichten importieren",
+    description:
+      "Kommentare und Live-Chat-Nachrichten sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "YouTube API",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Kommentare · Live-Chat",
     logo: logoPath("youtube"),
   },
   {
+    key: "bluesky",
+    name: "Bluesky",
+    description:
+      "Mentions und Antworten sind als künftiger Eingang vorgemerkt.",
+    status: "Coming Soon",
+    technology: "Vorbereitet · Noch nicht live",
+    intakeTypes: "Mentions · Antworten",
+    logoInitials: "BS",
+  },
+  {
     key: "twitch",
     name: "Twitch",
-    description: "Chat-Nachrichten und Whispers importieren",
+    description:
+      "Chat-Nachrichten und Whispers sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "EventSub · API",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Chat · Whispers",
     logo: logoPath("twitch"),
   },
   {
     key: "onlyfans",
     name: "OnlyFans",
-    description: "Nachrichten und Sub-Anfragen importieren",
-    status: "Vorschau",
-    technology: "API (Beta)",
+    description:
+      "Nachrichten und Sub-Anfragen sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Nachrichten · Sub-Anfragen",
     logo: logoPath("onlyfans"),
   },
   {
     key: "patreon",
     name: "Patreon",
-    description: "Nachrichten und Support-Anfragen abrufen",
-    status: "Vorschau",
-    technology: "API (Beta)",
+    description:
+      "Nachrichten und Support-Anfragen sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Nachrichten · Support",
     logo: logoPath("patreon"),
   },
   {
     key: "email",
     name: "E-Mail / Postfach",
-    description: "E-Mails automatisch inboxen",
-    status: "Verfügbar",
-    technology: "IMAP · OAuth",
+    description: "E-Mail-Eingänge sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "E-Mails",
     logo: logoPath("email"),
     signal: true,
@@ -243,9 +263,9 @@ const channels: Channel[] = [
   {
     key: "webform",
     name: "Webformular / Website-Lead",
-    description: "Leads und Anfragen aus Formularen empfangen",
-    status: "Verfügbar",
-    technology: "Webhook · Form-API",
+    description: "Formular-Leads sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Leads · Anfragen",
     logo: logoPath("webform"),
     signal: true,
@@ -253,9 +273,9 @@ const channels: Channel[] = [
   {
     key: "shopify",
     name: "Shopify / Shop-Bestellungen",
-    description: "Bestellungen und Kunden-Anfragen importieren",
-    status: "Verfügbar",
-    technology: "API · Webhook",
+    description: "Shop-Anfragen sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Bestellungen · Kundenfragen",
     logo: logoPath("shopify"),
     signal: true,
@@ -263,9 +283,9 @@ const channels: Channel[] = [
   {
     key: "eventbrite",
     name: "Eventbrite / Event-Anfragen",
-    description: "Event-Anmeldungen und Anfragen importieren",
-    status: "Verfügbar",
-    technology: "API · Webhook",
+    description: "Event-Anfragen sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Anmeldungen · Anfragen",
     logo: logoPath("eventbrite"),
     signal: true,
@@ -293,9 +313,9 @@ const channels: Channel[] = [
   {
     key: "api",
     name: "API / Custom Connector",
-    description: "Eigene Systeme und Plattformen anbinden",
-    status: "Verfügbar",
-    technology: "API · Webhook",
+    description: "Eigene Connectoren sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Eigene Events",
     logo: logoPath("api"),
     signal: true,
@@ -303,63 +323,68 @@ const channels: Channel[] = [
   {
     key: "linkedin",
     name: "LinkedIn",
-    description: "Nachrichten und Lead-Kommentare vormerken",
+    description:
+      "Nachrichten und Lead-Kommentare sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "API · Webhook",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Nachrichten · Leads",
     logo: logoPath("linkedin"),
   },
   {
     key: "threads",
     name: "Threads",
-    description: "Mentions und Antworten als Eingang planen",
-    status: "Vorschau",
-    technology: "API (Beta)",
+    description: "Mentions und Antworten sind als künftiger Eingang vorgemerkt",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Mentions · Antworten",
     logo: logoPath("threads"),
   },
   {
     key: "snapchat",
     name: "Snapchat",
-    description: "Creator-Nachrichten und Story-Antworten prüfen",
+    description:
+      "Creator-Nachrichten und Story-Antworten sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "API",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Nachrichten · Story-Antworten",
     logo: logoPath("snapchat"),
   },
   {
     key: "reddit",
     name: "Reddit",
-    description: "Kommentare, Modmail und Erwähnungen sammeln",
+    description:
+      "Kommentare, Modmail und Erwähnungen sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "API · Webhook",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Kommentare · Modmail",
     logo: logoPath("reddit"),
   },
   {
     key: "pinterest",
     name: "Pinterest",
-    description: "Kommentare und Produkt-Anfragen aufnehmen",
+    description:
+      "Kommentare und Produkt-Anfragen sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "API",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Kommentare · Anfragen",
     logo: logoPath("pinterest"),
   },
   {
     key: "fediverse",
-    name: "Bluesky / Mastodon",
-    description: "Mentions und Community-Antworten importieren",
-    status: "Vorschau",
-    technology: "ATProto · ActivityPub",
+    name: "Mastodon / Fediverse",
+    description:
+      "Mentions und Community-Antworten sind als künftiger Eingang vorgemerkt.",
+    status: "Coming Soon",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Mentions · Antworten",
     logo: logoPath("fediverse"),
   },
   {
     key: "woocommerce",
     name: "WooCommerce",
-    description: "Shop-Anfragen und Bestellungen übernehmen",
-    status: "Verfügbar",
-    technology: "REST API · Webhook",
+    description: "Shop-Anfragen sind vorbereitet, aber noch nicht live",
+    status: "Vorbereitet",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Bestellungen · Support",
     logo: logoPath("woocommerce"),
     signal: true,
@@ -367,9 +392,10 @@ const channels: Channel[] = [
   {
     key: "ticketing",
     name: "Ticketing / Events",
-    description: "Event-Tickets und Supportfälle zentral sammeln",
+    description:
+      "Event-Tickets und Supportfälle sind als künftiger Eingang vorgemerkt.",
     status: "Coming Soon",
-    technology: "API · Webhook",
+    technology: "Vorbereitet · Noch nicht live",
     intakeTypes: "Tickets · Events",
     logo: logoPath("ticketing"),
   },
@@ -380,12 +406,18 @@ const statusClassName: Record<ChannelStatus, string> = {
   Verfügbar: styles.statusAvailable,
   "In Arbeit": styles.statusProgress,
   Vorschau: styles.statusPreview,
+  Vorbereitet: styles.statusProgress,
+  "Noch nicht live": styles.statusPreview,
   "Coming Soon": styles.statusPreview,
 };
 
 function isBookable(status: ChannelStatus) {
   return (
-    status === "Coming Soon" || status === "In Arbeit" || status === "Vorschau"
+    status === "Coming Soon" ||
+    status === "In Arbeit" ||
+    status === "Vorschau" ||
+    status === "Vorbereitet" ||
+    status === "Noch nicht live"
   );
 }
 
@@ -669,8 +701,12 @@ export function ChannelsGrid({
   const messageEchoesReady =
     displayedWebhookStatus?.fields.message_echoes === "active";
   const facebookCommentsReady = false;
-  const activeSourceConfig = activeChannel ? CHANNEL_SOURCE_CONFIGS[activeChannel.key as PreparedSourceType] : undefined;
-  const activeSyncStatus = activeSourceConfig ? buildChannelSyncStatus(activeSourceConfig, facebookConnection) : null;
+  const activeSourceConfig = activeChannel
+    ? CHANNEL_SOURCE_CONFIGS[activeChannel.key as PreparedSourceType]
+    : undefined;
+  const activeSyncStatus = activeSourceConfig
+    ? buildChannelSyncStatus(activeSourceConfig, facebookConnection)
+    : null;
 
   const activeDisplayStatus =
     activeChannel?.key === "facebook_messages" && facebookConnection
@@ -714,12 +750,18 @@ export function ChannelsGrid({
               >
                 <div className={styles.cardTopline}>
                   <div className={styles.identityGroup}>
-                    <img
-                      className={styles.logoTile}
-                      src={channel.logo}
-                      alt=""
-                      aria-hidden="true"
-                    />
+                    {channel.logo ? (
+                      <img
+                        className={styles.logoTile}
+                        src={channel.logo}
+                        alt=""
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <span className={styles.logoTile} aria-hidden="true">
+                        {channel.logoInitials ?? channel.name.slice(0, 2)}
+                      </span>
+                    )}
                     <div>
                       <h3>{channel.name}</h3>
                       <p>{channel.description}</p>
@@ -808,17 +850,23 @@ export function ChannelsGrid({
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className={styles.modalHeader}>
-              <img
-                className={styles.modalLogo}
-                src={activeChannel.logo}
-                alt=""
-                aria-hidden="true"
-              />
+              {activeChannel.logo ? (
+                <img
+                  className={styles.modalLogo}
+                  src={activeChannel.logo}
+                  alt=""
+                  aria-hidden="true"
+                />
+              ) : (
+                <span className={styles.modalLogo} aria-hidden="true">
+                  {activeChannel.logoInitials ?? activeChannel.name.slice(0, 2)}
+                </span>
+              )}
               <div>
                 <p className={styles.modalEyebrow}>Kanal verbinden</p>
                 <h2 id="channel-modal-title">{activeChannel.name}</h2>
                 <div className={styles.metaRow}>
-                  {activeDisplayStatus === "Coming Soon" ? (
+                  {activeDisplayStatus && isBookable(activeDisplayStatus) ? (
                     <img
                       className={styles.soonBadgeImage}
                       src="/assets/coming-soon-badge.png"
@@ -840,11 +888,16 @@ export function ChannelsGrid({
             <p className={styles.modalText}>
               {activeChannel.key === "facebook_messages" && facebookConnection
                 ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
-                : "Melde dich an, um diesen Kanal zu verbinden und eingehende Nachrichten für FanMind freizugeben."}
+                : isBookable(activeChannel.status)
+                  ? "Dieser Kanal ist vorbereitet, aber noch nicht live. Du kannst die Verbindung vormerken; es wird keine echte Anmeldung oder automatische Sendefunktion gestartet."
+                  : "Öffne diesen Kanal nur, wenn der passende manuelle Workflow in FanMind verfügbar ist."}
             </p>
 
             {activeSyncStatus ? (
-              <div className={styles.releaseBox} aria-label={`Statusblock für ${activeChannel.name}`}>
+              <div
+                className={styles.releaseBox}
+                aria-label={`Statusblock für ${activeChannel.name}`}
+              >
                 <strong>Kanal-Statusstandard</strong>
                 <ul>
                   <li>Verbindung/Status: {activeSyncStatus.connection}</li>
@@ -853,9 +906,13 @@ export function ChannelsGrid({
                   <li>Sync-Limit: {activeSyncStatus.syncLimit}</li>
                   <li>Letzter Sync: {activeSyncStatus.lastSync}</li>
                   <li>Imported inbound: {activeSyncStatus.importedInbound}</li>
-                  <li>Imported outbound: {activeSyncStatus.importedOutbound}</li>
+                  <li>
+                    Imported outbound: {activeSyncStatus.importedOutbound}
+                  </li>
                   <li>Imported media: {activeSyncStatus.importedMedia}</li>
-                  <li>Dubletten übersprungen: {activeSyncStatus.skippedDuplicates}</li>
+                  <li>
+                    Dubletten übersprungen: {activeSyncStatus.skippedDuplicates}
+                  </li>
                   <li>Letzter Fehler: {activeSyncStatus.lastError}</li>
                 </ul>
               </div>
@@ -908,12 +965,14 @@ export function ChannelsGrid({
                   <br />
                   Conversation-Links beim Sync:{" "}
                   <strong>
-                    werden aus dem Graph-Feld link gespeichert, falls Meta es für Conversations liefert
+                    werden aus dem Graph-Feld link gespeichert, falls Meta es
+                    für Conversations liefert
                   </strong>
                   <br />
                   Aktuelle Öffnen-Qualität:{" "}
                   <strong>
-                    exakter Chat nur mit gespeichertem Conversation-Link, sonst Facebook-Postfach-Fallback
+                    exakter Chat nur mit gespeichertem Conversation-Link, sonst
+                    Facebook-Postfach-Fallback
                   </strong>
                   <br />
                   OAuth Callback URL:{" "}
@@ -1160,34 +1219,62 @@ export function ChannelsGrid({
                     <strong>Meta-Berechtigungen prüfen</strong>
                     <ul>
                       <li>
-                        Verbindung aktiv: {formatBoolean(metaPermissionDiagnosis.connectionActive)}
+                        Verbindung aktiv:{" "}
+                        {formatBoolean(
+                          metaPermissionDiagnosis.connectionActive,
+                        )}
                       </li>
                       <li>
-                        Page-ID erkannt: {formatBoolean(metaPermissionDiagnosis.pageIdDetected)}
+                        Page-ID erkannt:{" "}
+                        {formatBoolean(metaPermissionDiagnosis.pageIdDetected)}
                       </li>
                       <li>
-                        Page Access Token vorhanden: {formatBoolean(metaPermissionDiagnosis.pageAccessTokenPresent)}
+                        Page Access Token vorhanden:{" "}
+                        {formatBoolean(
+                          metaPermissionDiagnosis.pageAccessTokenPresent,
+                        )}
                       </li>
                       <li>
-                        Token-Prüfung erfolgreich: {formatBoolean(metaPermissionDiagnosis.tokenCheckSuccessful)}
+                        Token-Prüfung erfolgreich:{" "}
+                        {formatBoolean(
+                          metaPermissionDiagnosis.tokenCheckSuccessful,
+                        )}
                       </li>
                       <li>
-                        Erkannte Berechtigungen: {formatScopeList(metaPermissionDiagnosis.detectedPermissions)}
+                        Erkannte Berechtigungen:{" "}
+                        {formatScopeList(
+                          metaPermissionDiagnosis.detectedPermissions,
+                        )}
                       </li>
                       <li>
-                        Sichtbare Page-/Messenger-/Business-Rechte: {formatScopeList(metaPermissionDiagnosis.visiblePageRights)}
+                        Sichtbare Page-/Messenger-/Business-Rechte:{" "}
+                        {formatScopeList(
+                          metaPermissionDiagnosis.visiblePageRights,
+                        )}
                       </li>
                       <li>
-                        Möglicherweise fehlende Berechtigungen: {formatScopeList(metaPermissionDiagnosis.missingPermissions)}
+                        Möglicherweise fehlende Berechtigungen:{" "}
+                        {formatScopeList(
+                          metaPermissionDiagnosis.missingPermissions,
+                        )}
                       </li>
                       <li>
-                        App Review prüfen: {formatBoolean(metaPermissionDiagnosis.appReviewCheckRecommended)}
+                        App Review prüfen:{" "}
+                        {formatBoolean(
+                          metaPermissionDiagnosis.appReviewCheckRecommended,
+                        )}
                       </li>
                       <li>
-                        Advanced Access prüfen: {formatBoolean(metaPermissionDiagnosis.advancedAccessCheckRecommended)}
+                        Advanced Access prüfen:{" "}
+                        {formatBoolean(
+                          metaPermissionDiagnosis.advancedAccessCheckRecommended,
+                        )}
                       </li>
                       <li>
-                        Token wirkt eingeschränkt: {formatBoolean(metaPermissionDiagnosis.tokenAppearsRestricted)}
+                        Token wirkt eingeschränkt:{" "}
+                        {formatBoolean(
+                          metaPermissionDiagnosis.tokenAppearsRestricted,
+                        )}
                       </li>
                       <li>{metaPermissionDiagnosis.directChatIdStatus}</li>
                     </ul>
@@ -1206,7 +1293,8 @@ export function ChannelsGrid({
                     Conversations geprüft ·{" "}
                     {messengerSyncResult.importedInbound} inbound neu ·{" "}
                     {messengerSyncResult.importedOutbound} outbound neu ·{" "}
-                    {messengerSyncResult.importedMedia} Medien · {messengerSyncResult.skippedDuplicates} Dubletten
+                    {messengerSyncResult.importedMedia} Medien ·{" "}
+                    {messengerSyncResult.skippedDuplicates} Dubletten
                     übersprungen
                     {messengerSyncResult.error
                       ? ` · Fehler: ${messengerSyncResult.error}`
@@ -1460,22 +1548,46 @@ function buildChannelSyncStatus(
   if (isFacebookMessages && facebookConnection) {
     return {
       connection: `verbunden${facebookConnection.page_name ? ` · ${facebookConnection.page_name}` : ""}`,
-      webhook: facebookConnection.webhook_subscribed ? "aktiv" : "nicht bestätigt",
-      historySync: config.historySyncSupported ? "aktiv/manuell auslösbar" : "nicht verfügbar",
-      syncLimit: config.defaultSyncLimit ? `${config.defaultSyncLimit} Nachrichten je Conversation` : "kein Limit gesetzt",
-      lastSync: facebookConnection.last_messenger_sync_at ? formatDateTime(facebookConnection.last_messenger_sync_at) : "noch nicht ausgeführt",
-      importedInbound: String(facebookConnection.last_messenger_sync_imported_inbound_count ?? 0),
-      importedOutbound: String(facebookConnection.last_messenger_sync_imported_outbound_count ?? 0),
-      importedMedia: String(facebookConnection.last_messenger_sync_imported_media_count ?? 0),
-      skippedDuplicates: String(facebookConnection.last_messenger_sync_skipped_count ?? 0),
-      lastError: facebookConnection.last_messenger_sync_error ?? "kein Fehler gespeichert",
+      webhook: facebookConnection.webhook_subscribed
+        ? "aktiv"
+        : "nicht bestätigt",
+      historySync: config.historySyncSupported
+        ? "aktiv/manuell auslösbar"
+        : "nicht verfügbar",
+      syncLimit: config.defaultSyncLimit
+        ? `${config.defaultSyncLimit} Nachrichten je Conversation`
+        : "kein Limit gesetzt",
+      lastSync: facebookConnection.last_messenger_sync_at
+        ? formatDateTime(facebookConnection.last_messenger_sync_at)
+        : "noch nicht ausgeführt",
+      importedInbound: String(
+        facebookConnection.last_messenger_sync_imported_inbound_count ?? 0,
+      ),
+      importedOutbound: String(
+        facebookConnection.last_messenger_sync_imported_outbound_count ?? 0,
+      ),
+      importedMedia: String(
+        facebookConnection.last_messenger_sync_imported_media_count ?? 0,
+      ),
+      skippedDuplicates: String(
+        facebookConnection.last_messenger_sync_skipped_count ?? 0,
+      ),
+      lastError:
+        facebookConnection.last_messenger_sync_error ??
+        "kein Fehler gespeichert",
     };
   }
   return {
     connection: config.statusText,
-    webhook: config.liveWebhookSupported ? "vorbereitet" : "nicht aktiv/vorbereitet",
-    historySync: config.historySyncSupported ? "vorbereitet" : "nicht verfügbar oder später",
-    syncLimit: config.defaultSyncLimit ? `${config.defaultSyncLimit} Nachrichten je Conversation` : "kein Live-Sync-Limit",
+    webhook: config.liveWebhookSupported
+      ? "vorbereitet"
+      : "nicht aktiv/vorbereitet",
+    historySync: config.historySyncSupported
+      ? "vorbereitet"
+      : "nicht verfügbar oder später",
+    syncLimit: config.defaultSyncLimit
+      ? `${config.defaultSyncLimit} Nachrichten je Conversation`
+      : "kein Live-Sync-Limit",
     lastSync: "kein echter Sync ausgeführt",
     importedInbound: "—",
     importedOutbound: "—",
