@@ -806,6 +806,7 @@ function FacebookReplyTargetCard({
       </p>
       {diagnosis ? (
         <div className={styles.replyTargetStatus}>
+          <span>Graph-API-Version: {diagnosis.graphApiVersion}</span>
           <span>
             Meta-Direktlink-Quelle prüfen: {diagnosis.directLinkIdDetected
               ? "Direktlink-ID erkannt"
@@ -826,6 +827,16 @@ function FacebookReplyTargetCard({
           {diagnosis.participantIdMatchesDirectId !== null ? (
             <span>
               Teilnehmer-ID entspricht Direktlink-ID: {diagnosis.participantIdMatchesDirectId ? "ja" : "nein"}
+            </span>
+          ) : null}
+          {diagnosis.conversationFieldProbes.map((probe) => (
+            <span key={probe.label}>
+              {probe.label}: Endpoint erfolgreich {probe.ok ? "ja" : "nein"} · Link-Feld {probe.linkFieldPresent ? "ja" : "nein"} · Direktlink-ID in Link {probe.selectedItemIdInLink ? "ja" : "nein"} · participants {probe.participantsPresent ? "ja" : "nein"}
+            </span>
+          ))}
+          {diagnosis.messageFieldProbe ? (
+            <span>
+              {diagnosis.messageFieldProbe.label}: Endpoint erfolgreich {diagnosis.messageFieldProbe.ok ? "ja" : "nein"} · from-Feld {diagnosis.messageFieldProbe.fromFieldPresent ? "ja" : "nein"}
             </span>
           ) : null}
           <p className={styles.muted}>{diagnosis.note}</p>

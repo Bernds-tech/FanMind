@@ -14,6 +14,7 @@ import {
 } from "node:crypto";
 
 const OAUTH_VERSION = "v20.0";
+export const FACEBOOK_GRAPH_API_VERSION = OAUTH_VERSION;
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
 export const REQUIRED_FACEBOOK_PAGE_PERMISSIONS =
@@ -315,6 +316,32 @@ export type FacebookMessengerMessage = {
   }> | null;
 };
 
+export type FacebookConversationFieldProbe = {
+  label: string;
+  endpoint: string;
+  fields: string;
+  ok: boolean;
+  conversationCount: number;
+  linkFieldPresent: boolean;
+  selectedItemIdInLink: boolean;
+  participantsPresent: boolean;
+  participantMatchesKnownHandle: boolean | null;
+  snippetFieldPresent: boolean;
+  canReplyFieldPresent: boolean;
+  scopedThreadKeyFieldPresent: boolean;
+  note: string;
+};
+
+export type FacebookMessageFieldProbe = {
+  label: string;
+  endpoint: string;
+  fields: string;
+  ok: boolean;
+  messageCount: number;
+  fromFieldPresent: boolean;
+  note: string;
+};
+
 export async function fetchFacebookMessengerConversations(
   pageId: string,
   pageAccessToken: string,
@@ -326,6 +353,92 @@ export async function fetchFacebookMessengerConversations(
     limit,
     "id,link,updated_time,participants{id,name}",
   );
+}
+
+export async function probeFacebookMessengerConversationFieldSets(input: {
+  pageId: string;
+  pageAccessToken: string;
+  knownParticipantId?: string | null;
+  limit?: number;
+}): Promise<FacebookConversationFieldProbe[]> {
+  const fieldSets = [
+    {
+      label: "Standard Conversations",
+      fields: "id,link,updated_time,participants{id,name}",
+    },
+    {
+      label: "Conversation Metadata",
+      fields:
+        "id,updated_time,participants{id,name},snippet,can_reply,scoped_thread_key",
+    },
+    {
+      label: "Conversation Metadata With Link",
+      fields:
+        "id,link,updated_time,participants{id,name},snippet,can_reply,scoped_thread_key",
+    },
+  ] as const;
+
+  return Promise.all(
+    fieldSets.map((fieldSet) =>
+      probeFacebookMessengerConversationFieldSet({
+        pageId: input.pageId,
+        pageAccessToken: input.pageAccessToken,
+        knownParticipantId: input.knownParticipantId ?? null,
+        limit: input.limit,
+        label: fieldSet.label,
+        fields: fieldSet.fields,
+      }),
+    ),
+  );
+}
+
+export async function probeFacebookMessengerMessageFieldSet(input: {
+  conversationId: string;
+  pageAccessToken: string;
+  limit?: number;
+}): Promise<FacebookMessageFieldProbe> {
+  const fields = "id,created_time,message,from{id,name}";
+  const endpoint = `/${input.conversationId}/messages`;
+  const url = buildFacebookMessengerMessagesUrl(
+    input.conversationId,
+    input.pageAccessToken,
+    Math.max(1, Math.min(input.limit ?? 5, 10)),
+  );
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as {
+    data?: unknown[];
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
+
+  if (!response.ok) {
+    return {
+      label: "Messages Probe",
+      endpoint,
+      fields,
+      ok: false,
+      messageCount: 0,
+      fromFieldPresent: false,
+      note:
+        payload?.error?.message ??
+        "Messages-Endpunkt lieferte keine nutzbare Antwort.",
+    };
+  }
+
+  const rows = (payload?.data ?? []).filter(isRecord);
+  const fromFieldPresent = rows.some((row) => isRecord(row.from));
+
+  return {
+    label: "Messages Probe",
+    endpoint,
+    fields,
+    ok: true,
+    messageCount: rows.length,
+    fromFieldPresent,
+    note: fromFieldPresent
+      ? "from-Feld ist vorhanden."
+      : "from-Feld ist in der Stichprobe nicht vorhanden.",
+  };
 }
 
 async function fetchFacebookMessengerConversationsWithFields(
@@ -389,6 +502,107 @@ async function fetchFacebookMessengerConversationsWithFields(
         .filter((participant) => participant.id),
     }))
     .filter((conversation) => conversation.id);
+}
+
+async function probeFacebookMessengerConversationFieldSet(input: {
+  pageId: string;
+  pageAccessToken: string;
+  knownParticipantId?: string | null;
+  limit?: number;
+  label: string;
+  fields: string;
+}): Promise<FacebookConversationFieldProbe> {
+  const endpoint = `/${input.pageId}/conversations`;
+  const url = new URL(
+    `https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(input.pageId)}/conversations`,
+  );
+  url.searchParams.set("platform", "messenger");
+  url.searchParams.set("fields", input.fields);
+  url.searchParams.set(
+    "limit",
+    String(Math.max(1, Math.min(input.limit ?? 5, 10))),
+  );
+  url.searchParams.set("access_token", input.pageAccessToken);
+
+  const response = await fetch(url, { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as {
+    data?: unknown[];
+    error?: { message?: string; code?: number; type?: string };
+  } | null;
+
+  if (!response.ok) {
+    return {
+      label: input.label,
+      endpoint,
+      fields: input.fields,
+      ok: false,
+      conversationCount: 0,
+      linkFieldPresent: false,
+      selectedItemIdInLink: false,
+      participantsPresent: false,
+      participantMatchesKnownHandle: null,
+      snippetFieldPresent: false,
+      canReplyFieldPresent: false,
+      scopedThreadKeyFieldPresent: false,
+      note:
+        payload?.error?.message ??
+        "Conversation-Endpunkt lieferte keine nutzbare Antwort.",
+    };
+  }
+
+  const rows = (payload?.data ?? []).filter(isRecord);
+  const linkFieldPresent = rows.some((row) => stringValue(row.link));
+  const selectedItemIdInLink = rows.some((row) => {
+    const link = stringValue(row.link);
+    if (!link) return false;
+    try {
+      return Boolean(new URL(link).searchParams.get("selected_item_id"));
+    } catch {
+      return false;
+    }
+  });
+  const participantsPresent = rows.some(
+    (row) =>
+      isRecord(row.participants) && Array.isArray(row.participants.data),
+  );
+  const participantMatchesKnownHandle = input.knownParticipantId
+    ? rows.some((row) => {
+        const participants =
+          isRecord(row.participants) && Array.isArray(row.participants.data)
+            ? row.participants.data.filter(isRecord)
+            : [];
+        return participants.some(
+          (participant) =>
+            stringValue(participant.id) === input.knownParticipantId,
+        );
+      })
+    : null;
+  const snippetFieldPresent = rows.some((row) => stringValue(row.snippet));
+  const canReplyFieldPresent = rows.some(
+    (row) => typeof row.can_reply === "boolean",
+  );
+  const scopedThreadKeyFieldPresent = rows.some((row) => {
+    const value = row.scoped_thread_key;
+    return typeof value === "string" || typeof value === "number";
+  });
+
+  return {
+    label: input.label,
+    endpoint,
+    fields: input.fields,
+    ok: true,
+    conversationCount: rows.length,
+    linkFieldPresent,
+    selectedItemIdInLink,
+    participantsPresent,
+    participantMatchesKnownHandle,
+    snippetFieldPresent,
+    canReplyFieldPresent,
+    scopedThreadKeyFieldPresent,
+    note: selectedItemIdInLink
+      ? "Eine Direktlink-ID wurde in einem Conversation-Link erkannt."
+      : "In diesem Feldset wurde keine Direktlink-ID erkannt.",
+  };
 }
 
 export async function fetchFacebookMessengerConversationMessages(
