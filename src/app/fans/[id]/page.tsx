@@ -708,7 +708,7 @@ function OriginalChatAction({
       </a>
       {action.quality === "inbox_fallback" ? (
         <small className={styles.muted}>
-          Chat im Postfach auswählen: {action.fallbackContactLabel ?? "Kontakt"}
+          Im Postfach manuell auswählen: {action.fallbackContactLabel ?? "Kontakt"}
           {action.fallbackContactId
             ? ` · Facebook-ID: ${action.fallbackContactId}`
             : ""}
@@ -727,23 +727,22 @@ function FacebookReplyTargetCard({
   target: ContactReplyTargetRow | null;
   error?: string;
 }) {
+  const fallbackHint = target
+    ? "Öffne einmal den richtigen Facebook-Chat, kopiere die URL aus dem Browser und speichere sie hier."
+    : error
+      ? "Der gespeicherte Chat-Link konnte gerade nicht geladen werden. Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen."
+      : "Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen.";
+
   return (
-    <details className={styles.replyTargetBox} open={Boolean(error)}>
+    <details className={styles.replyTargetBox} open={!target || Boolean(error)}>
       <summary>
         {target
           ? "Exakter Facebook-Chat-Link hinterlegt"
-          : "Exakten Facebook-Chat-Link hinterlegen"}
+          : "Noch kein exakter Facebook-Chat-Link hinterlegt"}
       </summary>
       <p className={styles.syncHint}>
-        Öffne einmal den richtigen Facebook-Chat, kopiere die URL aus dem
-        Browser und speichere sie hier.
+        {fallbackHint}
       </p>
-      {error ? (
-        <p className={dashboardStyles.error}>
-          <strong>Chat-Link konnte nicht geladen werden.</strong>
-          <span>{error}</span>
-        </p>
-      ) : null}
       {target ? (
         <div className={styles.replyTargetStatus}>
           <span>Manuell hinterlegter Chat-Link</span>
@@ -1140,7 +1139,6 @@ export default async function FanDetailPage({
 }: FanDetailPageProps) {
   const { id } = await params;
   const pageSearchParams = await searchParams;
-  const seenMessageId = normalizeParam(pageSearchParams?.seen_message);
   const activeChannel = normalizeConversationChannel(
     normalizeParam(pageSearchParams?.channel),
   );
@@ -1154,12 +1152,6 @@ export default async function FanDetailPage({
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
 
-  if (workspace && seenMessageId) {
-    await markContactInboundMessagesSeen({
-      workspaceId: workspace.id,
-      contactId: id,
-    });
-  }
   const [contactsResult, contactResult, socialConnectionsResult] = workspace
     ? await Promise.all([
         getWorkspaceContacts(workspace.id),
@@ -1168,13 +1160,31 @@ export default async function FanDetailPage({
       ])
     : [null, null, null];
 
+  const contact = contactResult?.contact ?? null;
+  const relatedContactIds =
+    contact && contactsResult
+      ? getRelatedFanContactIds(contact, contactsResult.contacts).filter(
+          (contactId) => contactId !== contact.id,
+        )
+      : [];
+
+  if (workspace && contact) {
+    await Promise.all(
+      [contact.id, ...relatedContactIds].map((contactId) =>
+        markContactInboundMessagesSeen({
+          workspaceId: workspace.id,
+          contactId,
+        }),
+      ),
+    );
+  }
+
   const facebookConnection =
     socialConnectionsResult?.connections.find(
       (connection) =>
         connection.platform === "facebook" && connection.status === "connected",
     ) ?? null;
 
-  const contact = contactResult?.contact ?? null;
   const [
     memoriesResult,
     followupsResult,
@@ -1214,12 +1224,6 @@ export default async function FanDetailPage({
   let messagesResult = initialMessagesResult;
 
   let additionalMessagesError: string | undefined;
-  const relatedContactIds =
-    contact && contactsResult
-      ? getRelatedFanContactIds(contact, contactsResult.contacts).filter(
-          (contactId) => contactId !== contact.id,
-        )
-      : [];
 
   if (
     workspace &&
