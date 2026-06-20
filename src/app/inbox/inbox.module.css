@@ -1,6 +1,6 @@
 .inboxStack {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .introBar,
@@ -63,10 +63,12 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
+  margin-bottom: 2px;
 }
 
 .kpiCard {
   border-radius: 18px;
+  min-height: 96px;
   padding: 14px;
 }
 
@@ -76,6 +78,11 @@
   color: #94a3b8;
   font-size: 11px;
   font-weight: 850;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
 }
 
 .kpiCard strong {
