@@ -2468,15 +2468,13 @@ export async function createMetaWebhookConversationMessage(input: {
 
   const normalizedReplyTargetUrl = normalizeUrl(input.replyTargetUrl);
   const normalizedSourceUrl = normalizeUrl(input.sourceUrl);
-  const normalizedSenderId = normalizeOptionalText(input.senderId);
   const normalizedPageId = normalizeOptionalText(input.pageId ?? input.recipientId);
   const normalizedBusinessId =
     process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID;
 
   const autoSelectedItemId =
     extractFacebookSelectedItemId(normalizedReplyTargetUrl) ??
-    extractFacebookSelectedItemId(normalizedSourceUrl) ??
-    normalizedSenderId;
+    extractFacebookSelectedItemId(normalizedSourceUrl);
   const autoThreadId =
     extractFacebookThreadId(normalizedReplyTargetUrl) ??
     extractFacebookThreadId(normalizedSourceUrl) ??

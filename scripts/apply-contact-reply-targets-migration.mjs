@@ -9,10 +9,30 @@ const dbUrl =
   process.env.SUPABASE_DB_URL ??
   "";
 
+const hasRestConfig = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
+
 if (!dbUrl) {
   console.error(
-    "DATABASE_URL oder POSTGRES_URL oder SUPABASE_DB_URL fehlt. Migration wurde nicht ausgefuehrt.",
+    "Keine Datenbank-URL gefunden. Migration nicht ausgefuehrt. Erwartet: DATABASE_URL oder POSTGRES_URL oder SUPABASE_DB_URL.",
   );
+  if (hasRestConfig) {
+    console.error(
+      "Hinweis: REST-Konfiguration allein reicht fuer CREATE TABLE nicht aus.",
+    );
+  }
+  process.exit(1);
+}
+
+const psqlCheck = spawnSync("psql", ["--version"], {
+  stdio: ["ignore", "ignore", "ignore"],
+});
+if (psqlCheck.error || (psqlCheck.status ?? 1) !== 0) {
+  console.error("psql ist nicht installiert.");
   process.exit(1);
 }
 
@@ -34,7 +54,7 @@ const run = spawnSync("psql", [dbUrl, "-v", "ON_ERROR_STOP=1"], {
 
 if (run.error) {
   if (run.error.code === "ENOENT") {
-    console.error("psql ist nicht installiert oder nicht im PATH verfügbar.");
+    console.error("psql ist nicht installiert.");
   } else {
     console.error(`Migration konnte nicht gestartet werden: ${run.error.message}`);
   }

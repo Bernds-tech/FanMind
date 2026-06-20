@@ -46,6 +46,12 @@ export type ReplyTargetAction = {
   reason: string;
   disabledHint: string;
   platform?: string;
+  selectedItemSource?:
+    | "manual"
+    | "reply_target_url"
+    | "source_url"
+    | "stored_auto"
+    | "not_detected";
   fallbackContactLabel?: string | null;
   fallbackContactId?: string | null;
 };
@@ -186,24 +192,19 @@ export function buildReplyTargetAction(
         reason: "Manuell hinterlegter Direktlink.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
+        selectedItemSource: "manual",
       };
     }
 
-    if (storedReplyTargetUrl && storedReplyTargetQuality === "auto_selected_item") {
-      return {
-        href: storedReplyTargetUrl,
-        label: "Direkten Facebook-Chat öffnen",
-        quality: "auto_selected_item",
-        reason: "Direktlink wurde automatisch aus den vorhandenen Facebook-Daten aufgebaut.",
-        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
-        platform,
-      };
-    }
-
-    const selectedItemId =
-      extractFacebookSelectedItemId(replyTargetUrl) ??
-      extractFacebookSelectedItemId(sourceUrl) ??
-      normalizeFacebookSelectedItemId(options?.fallbackContactId);
+    const selectedFromReplyTarget = extractFacebookSelectedItemId(replyTargetUrl);
+    const selectedFromSourceUrl = extractFacebookSelectedItemId(sourceUrl);
+    const selectedItemId = selectedFromReplyTarget ?? selectedFromSourceUrl;
+    const selectedItemSource: ReplyTargetAction["selectedItemSource"] =
+      selectedFromReplyTarget
+        ? "reply_target_url"
+        : selectedFromSourceUrl
+          ? "source_url"
+          : "not_detected";
     const threadId =
       extractFacebookThreadId(replyTargetUrl) ??
       extractFacebookThreadId(sourceUrl) ??
@@ -235,6 +236,7 @@ export function buildReplyTargetAction(
           "Direktlink wurde automatisch aus den vorhandenen Facebook-Daten aufgebaut.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
+        selectedItemSource,
       };
     }
 
@@ -251,6 +253,7 @@ export function buildReplyTargetAction(
           "Spezifischer Chat-Link vorhanden, Meta kann dennoch eine andere Unterhaltung zeigen.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
+        selectedItemSource,
       };
     }
 
@@ -267,6 +270,7 @@ export function buildReplyTargetAction(
           "Spezifischer Chat-Link vorhanden, Meta kann dennoch eine andere Unterhaltung zeigen.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
+        selectedItemSource,
       };
     }
 
@@ -280,7 +284,6 @@ export function buildReplyTargetAction(
         replyTargetUrl,
         sourceUrl,
         externalThreadId,
-        includeSelectedItemId: true,
       });
       return {
         href: attemptedUrl,
@@ -290,6 +293,7 @@ export function buildReplyTargetAction(
           "Thread-Parameter wurden ergänzt, Meta kann dennoch die zuletzt aktive Unterhaltung öffnen.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
+        selectedItemSource,
         fallbackContactLabel: options?.fallbackContactLabel ?? null,
         fallbackContactId: options?.fallbackContactId ?? null,
       };
@@ -308,6 +312,7 @@ export function buildReplyTargetAction(
         "Nur der allgemeine Facebook-Postfach-Zugang ist verfügbar. Bitte den Kontakt dort manuell auswählen.",
       disabledHint: "Originalkanal-Link noch nicht verfügbar.",
       platform,
+      selectedItemSource,
       fallbackContactLabel: options?.fallbackContactLabel ?? null,
       fallbackContactId: options?.fallbackContactId ?? null,
     };
@@ -322,6 +327,7 @@ export function buildReplyTargetAction(
       reason: "Originalkanal-Link ist gespeichert.",
       disabledHint: "Originalkanal-Link noch nicht verfügbar.",
       platform,
+      selectedItemSource: "not_detected",
     };
   }
 
@@ -333,6 +339,7 @@ export function buildReplyTargetAction(
       "Für diese Nachricht ist noch kein öffnbarer Originalkanal-Link gespeichert.",
     disabledHint: "Originalkanal-Link noch nicht verfügbar.",
     platform,
+    selectedItemSource: "not_detected",
   };
 }
 
@@ -403,7 +410,6 @@ function buildFacebookInboxFallbackUrl(options?: {
   replyTargetUrl?: string | null;
   sourceUrl?: string | null;
   externalThreadId?: string | null;
-  includeSelectedItemId?: boolean;
 }): string {
   const baseUrl = getFacebookInboxBaseUrl(
     options?.replyTargetUrl,
@@ -422,9 +428,6 @@ function buildFacebookInboxFallbackUrl(options?: {
   );
   if (threadId && !url.searchParams.get("thread_id")) {
     url.searchParams.set("thread_id", threadId);
-    if (options?.includeSelectedItemId && !url.searchParams.get("selected_item_id")) {
-      url.searchParams.set("selected_item_id", threadId);
-    }
   }
   return url.toString();
 }
