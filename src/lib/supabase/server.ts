@@ -5,10 +5,11 @@ import {
 } from "@/lib/messageAttachments";
 import {
   buildFacebookBusinessInboxThreadUrl,
+  extractBusinessInboxUrlCandidates,
   extractFacebookBusinessId,
   extractFacebookPageId,
-  extractFacebookSelectedItemId,
-  extractFacebookThreadId,
+  extractSelectedItemIdFromMetaUrl,
+  extractThreadIdFromMetaUrl,
 } from "@/lib/sourceContext";
 export type { NormalizedMessageAttachment as ConversationMessageAttachment } from "@/lib/messageAttachments";
 
@@ -2325,6 +2326,7 @@ export async function createMetaWebhookConversationMessage(input: {
     | null;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
+  metaUrlCandidates?: Array<string | null | undefined>;
   externalMessageId?: string | null;
   externalThreadId?: string | null;
   sourceConversationId?: string | null;
@@ -2468,25 +2470,39 @@ export async function createMetaWebhookConversationMessage(input: {
 
   const normalizedReplyTargetUrl = normalizeUrl(input.replyTargetUrl);
   const normalizedSourceUrl = normalizeUrl(input.sourceUrl);
+  const normalizedMetaUrlCandidates = Array.from(
+    new Set(
+      [
+        normalizedReplyTargetUrl,
+        normalizedSourceUrl,
+        ...(input.metaUrlCandidates ?? []).map((entry) => normalizeUrl(entry)),
+      ].filter((entry): entry is string => Boolean(entry)),
+    ),
+  );
+  const preferredBusinessInboxUrl =
+    extractBusinessInboxUrlCandidates(normalizedMetaUrlCandidates)[0] ?? null;
   const normalizedPageId = normalizeOptionalText(input.pageId ?? input.recipientId);
   const normalizedBusinessId =
     process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID;
 
-  const autoSelectedItemId =
-    extractFacebookSelectedItemId(normalizedReplyTargetUrl) ??
-    extractFacebookSelectedItemId(normalizedSourceUrl);
+  const autoSelectedItemId = normalizedMetaUrlCandidates
+    .map((url) => extractSelectedItemIdFromMetaUrl(url))
+    .find((id): id is string => Boolean(id));
   const autoThreadId =
-    extractFacebookThreadId(normalizedReplyTargetUrl) ??
-    extractFacebookThreadId(normalizedSourceUrl) ??
+    normalizedMetaUrlCandidates
+      .map((url) => extractThreadIdFromMetaUrl(url))
+      .find((id): id is string => Boolean(id)) ??
     normalizeOptionalText(input.sourceConversationId) ??
     normalizeOptionalText(input.externalThreadId);
   const autoPageId =
-    extractFacebookPageId(normalizedReplyTargetUrl) ??
-    extractFacebookPageId(normalizedSourceUrl) ??
+    normalizedMetaUrlCandidates
+      .map((url) => extractFacebookPageId(url))
+      .find((id): id is string => Boolean(id)) ??
     normalizedPageId;
   const autoBusinessId =
-    extractFacebookBusinessId(normalizedReplyTargetUrl) ??
-    extractFacebookBusinessId(normalizedSourceUrl) ??
+    normalizedMetaUrlCandidates
+      .map((url) => extractFacebookBusinessId(url))
+      .find((id): id is string => Boolean(id)) ??
     normalizeOptionalText(normalizedBusinessId);
 
   const autoReplyTargetUrl =
@@ -2511,8 +2527,9 @@ export async function createMetaWebhookConversationMessage(input: {
     sourceType:
       input.sourceType ??
       getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
-    sourceUrl: normalizedSourceUrl,
-    replyTargetUrl: autoReplyTargetUrl ?? normalizedReplyTargetUrl,
+    sourceUrl: preferredBusinessInboxUrl ?? normalizedSourceUrl,
+    replyTargetUrl:
+      autoReplyTargetUrl ?? preferredBusinessInboxUrl ?? normalizedReplyTargetUrl,
     externalMessageId: input.externalMessageId,
     externalThreadId: preferredThreadId,
     externalPostId: input.externalPostId,

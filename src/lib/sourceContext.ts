@@ -540,29 +540,70 @@ function normalizeFacebookBusinessId(
 export function extractFacebookSelectedItemId(
   value: string | null | undefined,
 ): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return normalizeFacebookSelectedItemId(
-      url.searchParams.get("selected_item_id"),
-    );
-  } catch {
-    return null;
-  }
+  return extractSelectedItemIdFromMetaUrl(value);
 }
 
 export function extractFacebookThreadId(
   value: string | null | undefined,
 ): string | null {
+  return extractThreadIdFromMetaUrl(value);
+}
+
+export function extractSelectedItemIdFromMetaUrl(
+  value: string | null | undefined,
+): string | null {
+  const url = parseMetaUrl(value);
+  if (!url) return null;
+  return normalizeFacebookSelectedItemId(
+    url.searchParams.get("selected_item_id"),
+  );
+}
+
+export function extractThreadIdFromMetaUrl(
+  value: string | null | undefined,
+): string | null {
+  const url = parseMetaUrl(value);
+  if (!url) return null;
+  const paramThreadId = normalizeFacebookSelectedItemId(
+    url.searchParams.get("thread_id"),
+  );
+  if (paramThreadId) return paramThreadId;
+  const match = url.pathname.match(/\/t\/([^/?#]+)/i);
+  return normalizeFacebookSelectedItemId(match?.[1] ?? null);
+}
+
+export function extractBusinessInboxUrlCandidates(
+  values: Array<string | null | undefined>,
+): string[] {
+  const candidates = new Set<string>();
+  for (const value of values) {
+    const url = parseMetaUrl(value);
+    if (!url) continue;
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.toLowerCase();
+    if (
+      host === "business.facebook.com" &&
+      (path.includes("/latest/inbox") || path.includes("/inbox"))
+    ) {
+      candidates.add(url.toString());
+      continue;
+    }
+    if (
+      host.endsWith("facebook.com") &&
+      extractSelectedItemIdFromMetaUrl(url.toString())
+    ) {
+      candidates.add(url.toString());
+    }
+  }
+  return Array.from(candidates);
+}
+
+function parseMetaUrl(value: string | null | undefined): URL | null {
   if (!value) return null;
   try {
     const url = new URL(value);
-    const paramThreadId = normalizeFacebookSelectedItemId(
-      url.searchParams.get("thread_id"),
-    );
-    if (paramThreadId) return paramThreadId;
-    const match = url.pathname.match(/\/t\/([^/?#]+)/i);
-    return normalizeFacebookSelectedItemId(match?.[1] ?? null);
+    if (!url.hostname.toLowerCase().endsWith("facebook.com")) return null;
+    return url;
   } catch {
     return null;
   }

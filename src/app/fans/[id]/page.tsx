@@ -739,7 +739,9 @@ function OriginalChatAction({
         action.quality === "inbox_fallback") &&
       action.platform === "facebook" ? (
         <small className={styles.muted}>
-          Meta öffnet eventuell die zuletzt aktive Unterhaltung. Für direkten Zugriff bitte einmal den exakten Chat-Link speichern. Im Postfach manuell auswählen: {action.fallbackContactLabel ?? "Kontakt"}
+          Meta öffnet eventuell die zuletzt aktive Unterhaltung. FanMind prüft beim Sync automatisch verfügbare Direktlink-Daten.
+          {" "}
+          Falls nötig, kann im Postfach manuell dieser Kontakt gewählt werden: {action.fallbackContactLabel ?? "Kontakt"}
           {action.fallbackContactId
             ? ` · Facebook-ID: ${action.fallbackContactId}`
             : ""}
@@ -785,8 +787,8 @@ function FacebookReplyTargetCard({
     : storageUnavailable
       ? "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden."
       : error
-      ? "Ein gespeicherter Direktlink konnte gerade nicht geladen werden. Bitte nutze den Einrichtungsablauf unten."
-      : "Direkter Zugriff ist erst nach einmaliger Einrichtung verfügbar.";
+      ? "Ein gespeicherter Direktlink konnte gerade nicht geladen werden. FanMind sammelt die nötigen Linkdaten weiter automatisch beim Sync."
+      : "FanMind ermittelt den Direktlink automatisch über verfügbare Facebook-Metadaten beim Sync.";
 
   return (
     <details
@@ -796,7 +798,7 @@ function FacebookReplyTargetCard({
       <summary>
         {hasDirectLink
           ? "Direkter Facebook-Chat-Link hinterlegt"
-          : "Direkten Chat-Link für diesen Fan einrichten"}
+          : "Facebook-Direktchat wird automatisch ermittelt"}
       </summary>
       <p className={styles.syncHint}>
         {fallbackHint}
@@ -811,6 +813,24 @@ function FacebookReplyTargetCard({
             Meta-Direktlink-Quelle prüfen: {diagnosis.directLinkIdDetected
               ? "Direktlink-ID erkannt"
               : "Direktlink-ID nicht erkannt"}
+          </span>
+          <span>
+            Conversation-Feldset stabil: {diagnosis.conversationFieldsetStable ? "ja" : "nein"}
+          </span>
+          <span>
+            Message-Feldset stabil: {diagnosis.messageFieldsetStable ? "ja" : "nein"}
+          </span>
+          <span>
+            Link-Felder gefunden: {diagnosis.linkFieldsFound ? "ja" : "nein"}
+          </span>
+          <span>
+            Business-Inbox-URL gefunden: {diagnosis.businessInboxUrlFound ? "ja" : "nein"}
+          </span>
+          <span>
+            selected_item_id erkannt: {diagnosis.selectedItemIdRecognized ? "ja" : "nein"}
+          </span>
+          <span>
+            Quelle: {formatSelectedItemSource(diagnosis.directLinkIdSource)}
           </span>
           <span>
             Conversation-Link vorhanden: {diagnosis.conversationLinkAvailable > 0 ? "ja" : "nein"}
@@ -831,39 +851,31 @@ function FacebookReplyTargetCard({
           ) : null}
           {diagnosis.conversationFieldProbes.map((probe) => (
             <span key={probe.label}>
-              {probe.label}: Endpoint erfolgreich {probe.ok ? "ja" : "nein"} · Link-Feld {probe.linkFieldPresent ? "ja" : "nein"} · Direktlink-ID in Link {probe.selectedItemIdInLink ? "ja" : "nein"} · participants {probe.participantsPresent ? "ja" : "nein"}
+              {probe.label}: Endpoint erfolgreich {probe.ok ? "ja" : "nein"} · Link-Feld {probe.linkFieldPresent ? "ja" : "nein"} · Direktlink-ID in Link {probe.selectedItemIdInLink ? "ja" : "nein"} · participants {probe.participantsPresent ? "ja" : "nein"} · senders {probe.sendersPresent ? "ja" : "nein"} · can_reply {probe.canReplyFieldPresent ? "ja" : "nein"} · scoped_thread_key {probe.scopedThreadKeyFieldPresent ? "ja" : "nein"} · message_count {probe.messageCountFieldPresent ? "ja" : "nein"}
             </span>
           ))}
           {diagnosis.messageFieldProbe ? (
             <span>
-              {diagnosis.messageFieldProbe.label}: Endpoint erfolgreich {diagnosis.messageFieldProbe.ok ? "ja" : "nein"} · from-Feld {diagnosis.messageFieldProbe.fromFieldPresent ? "ja" : "nein"}
+              {diagnosis.messageFieldProbe.label}: Endpoint erfolgreich {diagnosis.messageFieldProbe.ok ? "ja" : "nein"} · from {diagnosis.messageFieldProbe.fromFieldPresent ? "ja" : "nein"} · to {diagnosis.messageFieldProbe.toFieldPresent ? "ja" : "nein"} · attachments {diagnosis.messageFieldProbe.attachmentsFieldPresent ? "ja" : "nein"} · shares {diagnosis.messageFieldProbe.sharesFieldPresent ? "ja" : "nein"} · tags {diagnosis.messageFieldProbe.tagsFieldPresent ? "ja" : "nein"} · Link-Felder {diagnosis.messageFieldProbe.linkFieldPresent ? "ja" : "nein"} · Business-Inbox-URL {diagnosis.messageFieldProbe.businessInboxUrlFound ? "ja" : "nein"} · selected_item_id {diagnosis.messageFieldProbe.selectedItemIdFound ? "ja" : "nein"} · Fallback aktiv {diagnosis.messageFieldProbe.usedFallback ? "ja" : "nein"}
             </span>
           ) : null}
           <p className={styles.muted}>{diagnosis.note}</p>
         </div>
       ) : null}
-      {!hasDirectLink ? (
-        <ol className={styles.setupFlow}>
-          <li>
-            1. Facebook-Postfach öffnen
-            {directAction.href ? (
-              <a
-                className={dashboardStyles.secondaryButton}
-                href={directAction.href}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Facebook-Postfach öffnen
-              </a>
-            ) : null}
-          </li>
-          <li>
-            2. Im Postfach diesen Kontakt auswählen: {contact.display_name ?? "Kontakt"}
-            {contact.handle ? ` · Facebook-ID: ${contact.handle}` : ""}
-          </li>
-          <li>3. Die komplette Browser-URL kopieren</li>
-          <li>4. Hier speichern</li>
-        </ol>
+      {!hasDirectLink && directAction.href ? (
+        <div className={styles.replyTargetStatus}>
+          <span>
+            Solange keine Direktlink-ID erkannt wurde, öffnet FanMind das Facebook-Postfach.
+          </span>
+          <a
+            className={dashboardStyles.secondaryButton}
+            href={directAction.href}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Facebook-Postfach öffnen
+          </a>
+        </div>
       ) : null}
       {hasDirectLink ? (
         <div className={styles.replyTargetStatus}>
@@ -886,6 +898,9 @@ function FacebookReplyTargetCard({
       ) : null}
       {!storageUnavailable ? (
         <form action={saveFacebookReplyTarget} className={styles.inlineForm}>
+          <p className={styles.muted}>
+            Admin-Notfall-Fallback: manuellen Direktlink nur verwenden, wenn die automatische Erkennung vorübergehend keinen Direktchat liefert.
+          </p>
           <input name="contact_id" type="hidden" value={contact.id} />
           <label>
             <span>{target ? "Link ändern" : "Facebook-Chat-URL"}</span>
@@ -1019,11 +1034,18 @@ function getStoredFacebookReplyTargetQuality(
 }
 
 function formatSelectedItemSource(
-  value: ReplyTargetAction["selectedItemSource"],
+  value:
+    | ReplyTargetAction["selectedItemSource"]
+    | FacebookDirectLinkSourceDiagnosis["directLinkIdSource"]
+    | undefined,
 ): string {
   if (value === "manual") return "manual";
   if (value === "reply_target_url") return "reply_target_url";
   if (value === "source_url") return "source_url";
+  if (value === "message_field") return "message_field";
+  if (value === "share") return "share";
+  if (value === "attachment") return "attachment";
+  if (value === "conversation.link") return "conversation.link";
   if (value === "stored_auto") return "stored_auto";
   return "unbekannt";
 }
