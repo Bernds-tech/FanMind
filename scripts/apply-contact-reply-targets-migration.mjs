@@ -16,6 +16,8 @@ const hasRestConfig = Boolean(
     process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
+console.log(`DB-URL vorhanden: ${dbUrl ? "ja" : "nein"}`);
+
 if (!dbUrl) {
   console.error(
     "Keine Datenbank-URL gefunden. Migration nicht ausgefuehrt. Erwartet: DATABASE_URL oder POSTGRES_URL oder SUPABASE_DB_URL.",
@@ -31,6 +33,9 @@ if (!dbUrl) {
 const psqlCheck = spawnSync("psql", ["--version"], {
   stdio: ["ignore", "ignore", "ignore"],
 });
+console.log(
+  `psql vorhanden: ${!psqlCheck.error && (psqlCheck.status ?? 1) === 0 ? "ja" : "nein"}`,
+);
 if (psqlCheck.error || (psqlCheck.status ?? 1) !== 0) {
   console.error("psql ist nicht installiert.");
   process.exit(1);

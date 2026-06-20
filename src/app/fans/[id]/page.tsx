@@ -50,6 +50,10 @@ import {
   saveFacebookReplyTarget,
   syncFacebookChatForContact,
 } from "../actions";
+import {
+  diagnoseFacebookDirectLinkSource,
+  type FacebookDirectLinkSourceDiagnosis,
+} from "@/app/channels/facebookWebhookActions";
 
 type FanDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -86,6 +90,7 @@ type FanDetailWorkspaceProps = {
   facebookMessengerLastSyncedAt?: string | null;
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
+  facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
 };
 
 type ConversationChannelKey =
@@ -160,6 +165,7 @@ function FanDetailWorkspace({
   facebookMessengerLastSyncedAt,
   facebookReplyTarget,
   facebookReplyTargetError,
+  facebookDirectLinkDiagnosis,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -225,6 +231,7 @@ function FanDetailWorkspace({
             facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
             facebookReplyTarget={facebookReplyTarget}
             facebookReplyTargetError={facebookReplyTargetError}
+            facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
           />
         ) : (
           <FanNotFound />
@@ -253,6 +260,7 @@ function FanDetailContent({
   facebookMessengerLastSyncedAt,
   facebookReplyTarget,
   facebookReplyTargetError,
+  facebookDirectLinkDiagnosis,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -272,6 +280,7 @@ function FanDetailContent({
   facebookMessengerLastSyncedAt?: string | null;
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
+  facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const channelTabs = buildConversationChannelTabs(
@@ -452,6 +461,7 @@ function FanDetailContent({
                 target={facebookReplyTarget}
                 error={facebookReplyTargetError}
                 directAction={originalChannelAction}
+                diagnosis={facebookDirectLinkDiagnosis}
               />
             ) : null}
             <div className={styles.timeline}>
@@ -744,11 +754,13 @@ function FacebookReplyTargetCard({
   target,
   error,
   directAction,
+  diagnosis,
 }: {
   contact: ContactRow;
   target: ContactReplyTargetRow | null;
   error?: string;
   directAction: ReplyTargetAction;
+  diagnosis: FacebookDirectLinkSourceDiagnosis | null;
 }) {
   const hasAutoDirectLink =
     directAction.platform === "facebook" &&
@@ -761,8 +773,8 @@ function FacebookReplyTargetCard({
     ? "Direktlink vorhanden"
     : "Direktlink fehlt";
   const selectedItemStatus = hasDirectLink
-    ? `selected_item_id erkannt aus: ${formatSelectedItemSource(directAction.selectedItemSource)}`
-    : "selected_item_id nicht erkannt";
+    ? `Direktlink-ID erkannt aus: ${formatSelectedItemSource(directAction.selectedItemSource)}`
+    : "Direktlink-ID nicht erkannt";
   const storageUnavailable =
     error?.includes("Der exakte Chat-Link kann derzeit nicht gespeichert werden.") ??
     false;
@@ -792,6 +804,33 @@ function FacebookReplyTargetCard({
       <p className={styles.muted}>
         {directLinkStatus} · {selectedItemStatus}
       </p>
+      {diagnosis ? (
+        <div className={styles.replyTargetStatus}>
+          <span>
+            Meta-Direktlink-Quelle prüfen: {diagnosis.directLinkIdDetected
+              ? "Direktlink-ID erkannt"
+              : "Direktlink-ID nicht erkannt"}
+          </span>
+          <span>
+            Conversation-Link vorhanden: {diagnosis.conversationLinkAvailable > 0 ? "ja" : "nein"}
+          </span>
+          <span>
+            Conversation-Link mit Direktlink-ID: {diagnosis.conversationLinkWithDirectId}/{diagnosis.sampledConversations}
+          </span>
+          <span>
+            Teilnehmer-IDs vorhanden: {diagnosis.participantIdsAvailable > 0 ? "ja" : "nein"}
+          </span>
+          <span>
+            Kontakt in geprüfter Auswahl gefunden: {diagnosis.matchedConversationFound ? "ja" : "nein"}
+          </span>
+          {diagnosis.participantIdMatchesDirectId !== null ? (
+            <span>
+              Teilnehmer-ID entspricht Direktlink-ID: {diagnosis.participantIdMatchesDirectId ? "ja" : "nein"}
+            </span>
+          ) : null}
+          <p className={styles.muted}>{diagnosis.note}</p>
+        </div>
+      ) : null}
       {!hasDirectLink ? (
         <ol className={styles.setupFlow}>
           <li>
@@ -950,7 +989,10 @@ function getManualFacebookReplyTargetUrl(
   if (!target) return null;
   if (target.source_platform !== "facebook") return null;
   if (target.source_type !== "facebook_messages") return null;
-  if (target.quality !== "manual_exact_thread") {
+  if (
+    target.quality !== "manual_exact_thread" &&
+    target.quality !== "auto_selected_item"
+  ) {
     return null;
   }
   return target.url;
@@ -1377,6 +1419,14 @@ export default async function FanDetailPage({
           conversationId: conversation.id,
         })
       : null;
+  const facebookDirectLinkDiagnosis =
+    workspace && contact && facebookConnection
+      ? await diagnoseFacebookDirectLinkSource({
+          connection: facebookConnection,
+          contactHandle: contact.handle,
+          limit: 5,
+        })
+      : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -1413,6 +1463,7 @@ export default async function FanDetailPage({
           }
           facebookReplyTarget={facebookReplyTargetResult?.target ?? null}
           facebookReplyTargetError={facebookReplyTargetResult?.error?.message}
+          facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
         />
       ) : (
         <section
