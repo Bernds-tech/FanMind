@@ -11,11 +11,16 @@ import {
 } from "@/lib/socialSync";
 import {
   decryptToken,
+  FACEBOOK_GRAPH_API_VERSION,
+  type FacebookConversationFieldProbe,
+  type FacebookMessageFieldProbe,
   type FacebookMessengerConversation,
   getFacebookGrantedScopeNames,
   fetchFacebookPagePostsWithComments,
   fetchFacebookMessengerConversationMessages,
   fetchFacebookMessengerConversations,
+  probeFacebookMessengerConversationFieldSets,
+  probeFacebookMessengerMessageFieldSet,
   FacebookCommentFetchError,
   fetchFacebookPageWebhookStatus,
   fetchFacebookTokenDiagnostics,
@@ -72,6 +77,7 @@ export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
 
 export type FacebookDirectLinkSourceDiagnosis = {
   ok: boolean;
+  graphApiVersion: string;
   pageIdConfigured: boolean;
   businessIdConfigured: boolean;
   sampledConversations: number;
@@ -83,6 +89,8 @@ export type FacebookDirectLinkSourceDiagnosis = {
   participantIdMatchesDirectId: boolean | null;
   directLinkIdDetected: boolean;
   directLinkIdSource: "conversation.link" | "stored_auto" | "not_detected";
+  conversationFieldProbes: FacebookConversationFieldProbe[];
+  messageFieldProbe: FacebookMessageFieldProbe | null;
   note: string;
 };
 
@@ -248,6 +256,7 @@ export async function diagnoseFacebookDirectLinkSource(input: {
   if (!input.connection.page_id || !token) {
     return {
       ok: false,
+      graphApiVersion: FACEBOOK_GRAPH_API_VERSION,
       pageIdConfigured: Boolean(input.connection.page_id),
       businessIdConfigured: Boolean(
         process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID,
@@ -261,26 +270,47 @@ export async function diagnoseFacebookDirectLinkSource(input: {
       participantIdMatchesDirectId: null,
       directLinkIdDetected: false,
       directLinkIdSource: "not_detected",
+      conversationFieldProbes: [],
+      messageFieldProbe: null,
       note: "Meta-Verbindung ist vorhanden, aber die Direktlink-Quelle konnte gerade nicht geprüft werden.",
     };
   }
 
   try {
-    const conversations = await fetchFacebookMessengerConversations(
-      input.connection.page_id,
-      token,
-      Math.max(1, Math.min(input.limit ?? 5, 10)),
-    );
+    const limit = Math.max(1, Math.min(input.limit ?? 5, 10));
+    const [conversations, conversationFieldProbes] = await Promise.all([
+      fetchFacebookMessengerConversations(
+        input.connection.page_id,
+        token,
+        limit,
+      ),
+      probeFacebookMessengerConversationFieldSets({
+        pageId: input.connection.page_id,
+        pageAccessToken: token,
+        knownParticipantId: input.contactHandle ?? null,
+        limit,
+      }),
+    ]);
+    const messageFieldProbe = conversations[0]?.id
+      ? await probeFacebookMessengerMessageFieldSet({
+          conversationId: conversations[0].id,
+          pageAccessToken: token,
+          limit: 5,
+        })
+      : null;
     return summarizeFacebookDirectLinkDiagnosis({
       pageId: input.connection.page_id,
       businessId:
         process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID ?? null,
       contactHandle: input.contactHandle ?? null,
       conversations,
+      conversationFieldProbes,
+      messageFieldProbe,
     });
   } catch {
     return {
       ok: false,
+      graphApiVersion: FACEBOOK_GRAPH_API_VERSION,
       pageIdConfigured: Boolean(input.connection.page_id),
       businessIdConfigured: Boolean(
         process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID,
@@ -294,6 +324,8 @@ export async function diagnoseFacebookDirectLinkSource(input: {
       participantIdMatchesDirectId: null,
       directLinkIdDetected: false,
       directLinkIdSource: "not_detected",
+      conversationFieldProbes: [],
+      messageFieldProbe: null,
       note: "Meta-Direktlink-Quelle konnte gerade nicht geprüft werden.",
     };
   }
@@ -509,6 +541,8 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
   businessId: string | null;
   contactHandle: string | null;
   conversations: FacebookMessengerConversation[];
+  conversationFieldProbes: FacebookConversationFieldProbe[];
+  messageFieldProbe: FacebookMessageFieldProbe | null;
 }): FacebookDirectLinkSourceDiagnosis {
   let conversationLinkAvailable = 0;
   let conversationLinkWithDirectId = 0;
@@ -547,6 +581,7 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
 
   return {
     ok: true,
+    graphApiVersion: FACEBOOK_GRAPH_API_VERSION,
     pageIdConfigured: Boolean(input.pageId),
     businessIdConfigured: Boolean(input.businessId),
     sampledConversations: input.conversations.length,
@@ -558,6 +593,8 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
     participantIdMatchesDirectId,
     directLinkIdDetected,
     directLinkIdSource: directLinkIdDetected ? "conversation.link" : "not_detected",
+    conversationFieldProbes: input.conversationFieldProbes,
+    messageFieldProbe: input.messageFieldProbe,
     note,
   };
 }
