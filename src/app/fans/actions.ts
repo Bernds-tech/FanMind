@@ -171,7 +171,9 @@ export async function saveFacebookReplyTarget(formData: FormData) {
     quality: "manual_exact_thread",
   });
 
-  if (result.error) throw new Error(result.error.message);
+  if (result.error) {
+    redirect(`/fans/${contactId}?notice=reply_target_save_failed`);
+  }
   revalidatePath(`/fans/${contactId}`);
   redirect(`/fans/${contactId}?notice=reply_target_saved`);
 }
