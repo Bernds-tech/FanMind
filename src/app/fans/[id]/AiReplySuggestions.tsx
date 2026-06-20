@@ -201,10 +201,11 @@ export function AiReplySuggestions({
                 </button>
               )}
             </div>
-            {originalChannelAction.quality === "inbox_fallback" ? (
+            {(originalChannelAction.quality === "attempted_thread_link" ||
+              originalChannelAction.quality === "inbox_fallback") ? (
               <div className={styles.fallbackHelp}>
                 <p className={styles.muted}>
-                  Meta öffnet eventuell die zuletzt aktive Unterhaltung. Bitte im Postfach manuell auswählen:{" "}
+                  Meta öffnet eventuell die zuletzt aktive Unterhaltung. Für direkten Zugriff bitte einmal den exakten Chat-Link speichern. Bitte im Postfach manuell auswählen:{" "}
                   {originalChannelAction.fallbackContactLabel ??
                     contact.displayName}
                   {originalChannelAction.fallbackContactId

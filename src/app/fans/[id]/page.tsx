@@ -291,6 +291,12 @@ function FanDetailContent({
     channelMessages,
     activeSource,
   );
+  const originalChannelAction = getOriginalChannelAction(
+    conversation,
+    messages,
+    contact,
+    facebookReplyTarget,
+  );
   const timeline = filteredMessages.length
     ? buildMessageTimeline(filteredMessages, contact, facebookReplyTarget)
     : [];
@@ -445,6 +451,7 @@ function FanDetailContent({
                 contact={contact}
                 target={facebookReplyTarget}
                 error={facebookReplyTargetError}
+                directAction={originalChannelAction}
               />
             ) : null}
             <div className={styles.timeline}>
@@ -706,16 +713,17 @@ function OriginalChatAction({
       >
         {action.label}
       </a>
-      {(action.quality === "manual_exact_thread" ||
-        action.quality === "exact_thread") &&
+      {action.quality === "manual_exact_thread" &&
       action.platform === "facebook" ? (
         <small className={styles.muted}>
-          Öffnet den für diesen Kontakt gespeicherten Chat-Link.
+          Öffnet direkt den hinterlegten Chat dieses Fans.
         </small>
       ) : null}
-      {action.quality === "inbox_fallback" ? (
+      {(action.quality === "attempted_thread_link" ||
+        action.quality === "inbox_fallback") &&
+      action.platform === "facebook" ? (
         <small className={styles.muted}>
-          Meta öffnet eventuell die zuletzt aktive Unterhaltung. Bitte im Postfach manuell auswählen: {action.fallbackContactLabel ?? "Kontakt"}
+          Meta öffnet eventuell die zuletzt aktive Unterhaltung. Für direkten Zugriff bitte einmal den exakten Chat-Link speichern. Im Postfach manuell auswählen: {action.fallbackContactLabel ?? "Kontakt"}
           {action.fallbackContactId
             ? ` · Facebook-ID: ${action.fallbackContactId}`
             : ""}
@@ -729,35 +737,67 @@ function FacebookReplyTargetCard({
   contact,
   target,
   error,
+  directAction,
 }: {
   contact: ContactRow;
   target: ContactReplyTargetRow | null;
   error?: string;
+  directAction: ReplyTargetAction;
 }) {
+  const hasManualDirectLink =
+    target?.source_platform === "facebook" &&
+    target?.source_type === "facebook_messages" &&
+    target?.quality === "manual_exact_thread";
   const storageUnavailable =
     error?.includes("Der exakte Chat-Link kann derzeit nicht gespeichert werden.") ??
     false;
-  const fallbackHint = target
-    ? "Öffne einmal den richtigen Facebook-Chat, kopiere die URL aus dem Browser und speichere sie hier."
+  const fallbackHint = hasManualDirectLink
+    ? "Direkter Chat-Link ist gespeichert und wird verwendet."
     : storageUnavailable
-      ? "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden."
+      ? "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden."
       : error
-      ? "Der gespeicherte Chat-Link konnte gerade nicht geladen werden. Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen."
-      : "Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen.";
+      ? "Ein gespeicherter Direktlink konnte gerade nicht geladen werden. Bitte nutze den Einrichtungsablauf unten."
+      : "Direkter Zugriff ist erst nach einmaliger Einrichtung verfügbar.";
 
   return (
-    <details className={styles.replyTargetBox} open={!target || Boolean(error)}>
+    <details
+      className={styles.replyTargetBox}
+      open={!hasManualDirectLink || Boolean(error)}
+    >
       <summary>
-        {target
-          ? "Exakter Facebook-Chat-Link hinterlegt"
-          : "Noch kein exakter Facebook-Chat-Link hinterlegt"}
+        {hasManualDirectLink
+          ? "Direkter Facebook-Chat-Link hinterlegt"
+          : "Direkten Chat-Link für diesen Fan einrichten"}
       </summary>
       <p className={styles.syncHint}>
         {fallbackHint}
       </p>
-      {target ? (
+      {!hasManualDirectLink ? (
+        <ol className={styles.setupFlow}>
+          <li>
+            1. Facebook-Postfach öffnen
+            {directAction.href ? (
+              <a
+                className={dashboardStyles.secondaryButton}
+                href={directAction.href}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Facebook-Postfach öffnen
+              </a>
+            ) : null}
+          </li>
+          <li>
+            2. Im Postfach diesen Kontakt auswählen: {contact.display_name ?? "Kontakt"}
+            {contact.handle ? ` · Facebook-ID: ${contact.handle}` : ""}
+          </li>
+          <li>3. Die komplette Browser-URL kopieren</li>
+          <li>4. Hier speichern</li>
+        </ol>
+      ) : null}
+      {hasManualDirectLink ? (
         <div className={styles.replyTargetStatus}>
-          <span>Manuell hinterlegter Chat-Link</span>
+          <span>Gespeicherter Direktlink</span>
           <a
             className={dashboardStyles.secondaryButton}
             href={target.url}
@@ -1128,13 +1168,13 @@ function formatNotice(value: string): string {
   if (value === "analysis_saved")
     return "Fan-Analyse-Report wurde aktualisiert.";
   if (value === "reply_target_saved")
-    return "Exakter Facebook-Chat-Link wurde gespeichert.";
+    return "Direkter Facebook-Chat-Link wurde gespeichert.";
   if (value === "reply_target_save_failed")
     return "Der Chat-Link konnte gerade nicht gespeichert werden. Bitte später erneut versuchen.";
   if (value === "reply_target_storage_unavailable")
-    return "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden.";
+    return "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden.";
   if (value === "reply_target_invalid")
-    return "Bitte speichere nur einen HTTPS-Link zu einem konkreten Facebook-Chat, keinen generischen Postfach-Link.";
+    return "Bitte speichere nur einen HTTPS-Link zum direkten Chat dieses Fans, keinen generischen Postfach-Link.";
   return value;
 }
 

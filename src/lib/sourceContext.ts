@@ -34,6 +34,7 @@ export type MessageSourceContext = {
 export type ReplyTargetQuality =
   | "exact_thread"
   | "manual_exact_thread"
+  | "attempted_thread_link"
   | "inbox_fallback"
   | "unavailable";
 
@@ -173,25 +174,68 @@ export function buildReplyTargetAction(
     if (manualExactUrl) {
       return {
         href: manualExactUrl,
-        label: "Exakten Facebook-Chat öffnen",
+        label: "Direkten Facebook-Chat öffnen",
         quality: "manual_exact_thread",
-        reason: "Manuell hinterlegter Chat-Link.",
+        reason: "Manuell hinterlegter Direktlink.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
       };
     }
 
-    const exactUrl =
-      [replyTargetUrl, sourceUrl].find(isExactFacebookThreadUrl) ?? null;
-    if (exactUrl) {
+    const exactConversationUrl =
+      sourceUrl && isGuaranteedFacebookThreadPathUrl(sourceUrl)
+        ? sourceUrl
+        : null;
+    if (exactConversationUrl) {
       return {
-        href: exactUrl,
-        label: "Exakten Facebook-Chat öffnen",
-        quality: "exact_thread",
+        href: exactConversationUrl,
+        label: "Facebook-Postfach öffnen",
+        quality: "attempted_thread_link",
         reason:
-          "Ein verifizierter Facebook-Conversation-/Thread-Link ist gespeichert.",
+          "Spezifischer Chat-Link vorhanden, Meta kann dennoch eine andere Unterhaltung zeigen.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
+      };
+    }
+
+    const exactReplyTargetUrl =
+      replyTargetUrl && isExactFacebookThreadUrl(replyTargetUrl)
+        ? replyTargetUrl
+        : null;
+    if (exactReplyTargetUrl) {
+      return {
+        href: exactReplyTargetUrl,
+        label: "Facebook-Postfach öffnen",
+        quality: "attempted_thread_link",
+        reason:
+          "Spezifischer Chat-Link vorhanden, Meta kann dennoch eine andere Unterhaltung zeigen.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
+      };
+    }
+
+    const attemptedThreadId = getFacebookThreadIdentifier(
+      replyTargetUrl,
+      sourceUrl,
+      externalThreadId,
+    );
+    if (attemptedThreadId) {
+      const attemptedUrl = buildFacebookInboxFallbackUrl({
+        replyTargetUrl,
+        sourceUrl,
+        externalThreadId,
+        includeSelectedItemId: true,
+      });
+      return {
+        href: attemptedUrl,
+        label: "Facebook-Postfach öffnen",
+        quality: "attempted_thread_link",
+        reason:
+          "Thread-Parameter wurden ergänzt, Meta kann dennoch die zuletzt aktive Unterhaltung öffnen.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
+        fallbackContactLabel: options?.fallbackContactLabel ?? null,
+        fallbackContactId: options?.fallbackContactId ?? null,
       };
     }
 
@@ -303,6 +347,7 @@ function buildFacebookInboxFallbackUrl(options?: {
   replyTargetUrl?: string | null;
   sourceUrl?: string | null;
   externalThreadId?: string | null;
+  includeSelectedItemId?: boolean;
 }): string {
   const baseUrl = getFacebookInboxBaseUrl(
     options?.replyTargetUrl,
@@ -321,8 +366,31 @@ function buildFacebookInboxFallbackUrl(options?: {
   );
   if (threadId && !url.searchParams.get("thread_id")) {
     url.searchParams.set("thread_id", threadId);
+    if (options?.includeSelectedItemId && !url.searchParams.get("selected_item_id")) {
+      url.searchParams.set("selected_item_id", threadId);
+    }
   }
   return url.toString();
+}
+
+function isGuaranteedFacebookThreadPathUrl(
+  value: string | null | undefined,
+): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (!host.endsWith("facebook.com")) return false;
+    const normalizedPath =
+      url.pathname.toLowerCase().replace(/\/+$/, "") || "/";
+    return (
+      normalizedPath.includes("/inbox/t/") ||
+      normalizedPath.includes("/messenger/t/") ||
+      normalizedPath.includes("/messages/t/")
+    );
+  } catch {
+    return false;
+  }
 }
 
 function getFacebookInboxBaseUrl(
