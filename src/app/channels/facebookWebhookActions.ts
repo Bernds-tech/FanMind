@@ -13,6 +13,7 @@ import {
   decryptToken,
   FACEBOOK_GRAPH_API_VERSION,
   type FacebookConversationFieldProbe,
+  type FacebookMessengerMessage,
   type FacebookMessageFieldProbe,
   type FacebookMessengerConversation,
   getFacebookGrantedScopeNames,
@@ -43,7 +44,10 @@ import {
   getWorkspaceContacts,
   type SocialConnectionRow,
 } from "@/lib/supabase/server";
-import { extractFacebookSelectedItemId } from "@/lib/sourceContext";
+import {
+  extractBusinessInboxUrlCandidates,
+  extractSelectedItemIdFromMetaUrl,
+} from "@/lib/sourceContext";
 
 export type FacebookCommentFetchResult = {
   ok: boolean;
@@ -87,8 +91,19 @@ export type FacebookDirectLinkSourceDiagnosis = {
   matchedConversationFound: boolean;
   matchedConversationHasDirectId: boolean;
   participantIdMatchesDirectId: boolean | null;
+  conversationFieldsetStable: boolean;
+  messageFieldsetStable: boolean;
+  linkFieldsFound: boolean;
+  businessInboxUrlFound: boolean;
+  selectedItemIdRecognized: boolean;
   directLinkIdDetected: boolean;
-  directLinkIdSource: "conversation.link" | "stored_auto" | "not_detected";
+  directLinkIdSource:
+    | "conversation.link"
+    | "message_field"
+    | "share"
+    | "attachment"
+    | "stored_auto"
+    | "not_detected";
   conversationFieldProbes: FacebookConversationFieldProbe[];
   messageFieldProbe: FacebookMessageFieldProbe | null;
   note: string;
@@ -268,6 +283,11 @@ export async function diagnoseFacebookDirectLinkSource(input: {
       matchedConversationFound: false,
       matchedConversationHasDirectId: false,
       participantIdMatchesDirectId: null,
+      conversationFieldsetStable: false,
+      messageFieldsetStable: false,
+      linkFieldsFound: false,
+      businessInboxUrlFound: false,
+      selectedItemIdRecognized: false,
       directLinkIdDetected: false,
       directLinkIdSource: "not_detected",
       conversationFieldProbes: [],
@@ -322,6 +342,11 @@ export async function diagnoseFacebookDirectLinkSource(input: {
       matchedConversationFound: false,
       matchedConversationHasDirectId: false,
       participantIdMatchesDirectId: null,
+      conversationFieldsetStable: false,
+      messageFieldsetStable: false,
+      linkFieldsFound: false,
+      businessInboxUrlFound: false,
+      selectedItemIdRecognized: false,
       directLinkIdDetected: false,
       directLinkIdSource: "not_detected",
       conversationFieldProbes: [],
@@ -421,6 +446,20 @@ async function syncFacebookMessengerHistoryForConnection(
           buildAttachmentFallbackText(message.attachments, direction);
         if (!content) continue;
 
+        const metaUrlCandidates = collectFacebookMetaUrlCandidates(
+          conversation,
+          message,
+        );
+        const inboxCandidates = extractBusinessInboxUrlCandidates(metaUrlCandidates);
+        const preferredMetaUrl =
+          inboxCandidates[0] ??
+          message.replyTargetUrl ??
+          message.sourceUrl ??
+          message.link ??
+          conversation.link;
+        const sourceMetaUrl =
+          message.sourceUrl ?? message.link ?? conversation.link ?? preferredMetaUrl;
+
         const result = await createMetaWebhookConversationMessage({
           workspaceId: connection.workspace_id,
           senderId: normalizedFanSenderId,
@@ -436,8 +475,9 @@ async function syncFacebookMessengerHistoryForConnection(
           content,
           messageType: "dm",
           sourceType: "facebook_messages",
-          sourceUrl: conversation.link,
-          replyTargetUrl: conversation.link,
+          sourceUrl: sourceMetaUrl,
+          replyTargetUrl: preferredMetaUrl,
+          metaUrlCandidates,
           externalMessageId: message.id,
           externalThreadId,
           sourceConversationId: conversation.id,
@@ -550,6 +590,10 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
   let matchedConversationFound = false;
   let matchedConversationHasDirectId = false;
   let participantIdMatchesDirectId: boolean | null = null;
+  let businessInboxUrlFound = false;
+  let selectedItemIdRecognized = false;
+  let selectedItemSource: FacebookDirectLinkSourceDiagnosis["directLinkIdSource"] =
+    "not_detected";
 
   for (const conversation of input.conversations) {
     const fanParticipant = conversation.participants.find(
@@ -557,9 +601,16 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
     );
     if (fanParticipant?.id) participantIdsAvailable += 1;
 
-    const selectedItemId = extractFacebookSelectedItemId(conversation.link);
+    const selectedItemId = extractSelectedItemIdFromMetaUrl(conversation.link);
     if (conversation.link) conversationLinkAvailable += 1;
-    if (selectedItemId) conversationLinkWithDirectId += 1;
+    if (conversation.link?.includes("business.facebook.com/latest/inbox")) {
+      businessInboxUrlFound = true;
+    }
+    if (selectedItemId) {
+      conversationLinkWithDirectId += 1;
+      selectedItemIdRecognized = true;
+      selectedItemSource = "conversation.link";
+    }
 
     if (input.contactHandle && fanParticipant?.id === input.contactHandle) {
       matchedConversationFound = true;
@@ -570,7 +621,37 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
     }
   }
 
-  const directLinkIdDetected = matchedConversationHasDirectId;
+  if (
+    !selectedItemIdRecognized &&
+    input.messageFieldProbe?.selectedItemIdFound &&
+    input.messageFieldProbe.selectedItemIdSource !== "not_detected"
+  ) {
+    selectedItemIdRecognized = true;
+    selectedItemSource = input.messageFieldProbe.selectedItemIdSource;
+  }
+
+  if (input.messageFieldProbe?.businessInboxUrlFound) {
+    businessInboxUrlFound = true;
+  }
+
+  const conversationFieldsetStable = input.conversationFieldProbes.some(
+    (probe) =>
+      probe.ok &&
+      probe.participantsPresent &&
+      probe.canReplyFieldPresent &&
+      probe.scopedThreadKeyFieldPresent,
+  );
+  const messageFieldsetStable =
+    input.messageFieldProbe?.ok === true &&
+    input.messageFieldProbe.fromFieldPresent &&
+    input.messageFieldProbe.attachmentsFieldPresent;
+  const linkFieldsFound =
+    conversationLinkAvailable > 0 ||
+    Boolean(input.messageFieldProbe?.linkFieldPresent) ||
+    Boolean(input.messageFieldProbe?.sharesFieldPresent) ||
+    Boolean(input.messageFieldProbe?.attachmentsFieldPresent);
+
+  const directLinkIdDetected = matchedConversationHasDirectId || selectedItemIdRecognized;
   const note = directLinkIdDetected
     ? "Direktlink-ID erkannt. FanMind kann den direkten Chat automatisch aufbauen."
     : matchedConversationFound
@@ -591,12 +672,45 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
     matchedConversationFound,
     matchedConversationHasDirectId,
     participantIdMatchesDirectId,
+    conversationFieldsetStable,
+    messageFieldsetStable,
+    linkFieldsFound,
+    businessInboxUrlFound,
+    selectedItemIdRecognized,
     directLinkIdDetected,
-    directLinkIdSource: directLinkIdDetected ? "conversation.link" : "not_detected",
+    directLinkIdSource: directLinkIdDetected ? selectedItemSource : "not_detected",
     conversationFieldProbes: input.conversationFieldProbes,
     messageFieldProbe: input.messageFieldProbe,
     note,
   };
+}
+
+function collectFacebookMetaUrlCandidates(
+  conversation: FacebookMessengerConversation,
+  message: FacebookMessengerMessage,
+): string[] {
+  const values = [
+    conversation.link,
+    message.link,
+    message.sourceUrl,
+    message.replyTargetUrl,
+    ...message.shares.map((share) => share.url),
+    ...(message.attachments?.map((attachment) => attachment.url ?? null) ?? []),
+  ];
+
+  return Array.from(
+    new Set(values.filter((value): value is string => isFacebookUrl(value))),
+  );
+}
+
+function isFacebookUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.hostname.toLowerCase().endsWith("facebook.com");
+  } catch {
+    return false;
+  }
 }
 
 export async function checkFacebookPageWebhooks(): Promise<FacebookPageWebhookActionResult> {

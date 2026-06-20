@@ -299,6 +299,11 @@ export type FacebookMessengerConversation = {
   link: string | null;
   updatedTime: string | null;
   participants: Array<{ id: string; name: string | null }>;
+  senders: Array<{ id: string; name: string | null }>;
+  snippet: string | null;
+  canReply: boolean | null;
+  scopedThreadKey: string | null;
+  messageCount: number | null;
 };
 
 export type FacebookMessengerMessage = {
@@ -306,6 +311,12 @@ export type FacebookMessengerMessage = {
   createdTime: string | null;
   message: string | null;
   from: { id: string; name: string | null } | null;
+  to: Array<{ id: string; name: string | null }>;
+  link: string | null;
+  sourceUrl: string | null;
+  replyTargetUrl: string | null;
+  shares: Array<{ url: string | null }>;
+  tags: string[];
   attachments: Array<{
     type: "image" | "video" | "audio" | "file" | "unknown";
     url?: string;
@@ -329,6 +340,8 @@ export type FacebookConversationFieldProbe = {
   snippetFieldPresent: boolean;
   canReplyFieldPresent: boolean;
   scopedThreadKeyFieldPresent: boolean;
+  sendersPresent: boolean;
+  messageCountFieldPresent: boolean;
   note: string;
 };
 
@@ -339,19 +352,63 @@ export type FacebookMessageFieldProbe = {
   ok: boolean;
   messageCount: number;
   fromFieldPresent: boolean;
+  toFieldPresent: boolean;
+  attachmentsFieldPresent: boolean;
+  sharesFieldPresent: boolean;
+  tagsFieldPresent: boolean;
+  linkFieldPresent: boolean;
+  businessInboxUrlFound: boolean;
+  selectedItemIdFound: boolean;
+  selectedItemIdSource: "message_field" | "share" | "attachment" | "not_detected";
+  usedFallback: boolean;
   note: string;
 };
+
+const FACEBOOK_MESSENGER_CONVERSATION_FIELD_SETS = [
+  "id,link,updated_time,participants{id,name},senders{id,name},snippet,can_reply,scoped_thread_key,message_count",
+  "id,link,updated_time,participants{id,name},snippet,can_reply,scoped_thread_key",
+  "id,link,updated_time,participants{id,name}",
+  "id,updated_time,participants{id,name}",
+] as const;
+
+const FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS = [
+  "id,created_time,message,from{id,name},to{id,name},link,source_url,reply_target_url,attachments{id,mime_type,name,size,image_data,video_data,file_url,url,target},shares,tags",
+  "id,created_time,message,from{id,name},to{id,name},attachments{id,mime_type,name,size,image_data,video_data,file_url,url,target},shares,tags",
+  "id,created_time,message,from{id,name},attachments{id,mime_type,name,size,image_data,video_data,file_url}",
+] as const;
 
 export async function fetchFacebookMessengerConversations(
   pageId: string,
   pageAccessToken: string,
   limit = 10,
 ): Promise<FacebookMessengerConversation[]> {
-  return fetchFacebookMessengerConversationsWithFields(
-    pageId,
-    pageAccessToken,
-    limit,
-    "id,link,updated_time,participants{id,name}",
+  for (let index = 0; index < FACEBOOK_MESSENGER_CONVERSATION_FIELD_SETS.length; index += 1) {
+    const fields = FACEBOOK_MESSENGER_CONVERSATION_FIELD_SETS[index];
+    const fallbackActive = index > 0;
+    try {
+      return await fetchFacebookMessengerConversationsWithFields(
+        pageId,
+        pageAccessToken,
+        limit,
+        fields,
+      );
+    } catch (error) {
+      if (!(error instanceof FacebookFieldFetchError) || !error.retryable) {
+        throw error;
+      }
+      if (fallbackActive) {
+        console.info("Facebook Messenger conversation field fallback active", {
+          fallbackFrom: FACEBOOK_MESSENGER_CONVERSATION_FIELD_SETS[index - 1],
+          fallbackTo: fields,
+          errorCode: error.code,
+          errorType: error.type,
+        });
+      }
+    }
+  }
+
+  throw new Error(
+    "Facebook Messenger Conversations konnten mit keinem stabilen Feldset abgerufen werden.",
   );
 }
 
@@ -365,6 +422,11 @@ export async function probeFacebookMessengerConversationFieldSets(input: {
     {
       label: "Standard Conversations",
       fields: "id,link,updated_time,participants{id,name}",
+    },
+    {
+      label: "Conversation Extended Metadata",
+      fields:
+        "id,link,updated_time,participants{id,name},senders{id,name},snippet,can_reply,scoped_thread_key,message_count",
     },
     {
       label: "Conversation Metadata",
@@ -397,21 +459,61 @@ export async function probeFacebookMessengerMessageFieldSet(input: {
   pageAccessToken: string;
   limit?: number;
 }): Promise<FacebookMessageFieldProbe> {
-  const fields = "id,created_time,message,from{id,name}";
   const endpoint = `/${input.conversationId}/messages`;
-  const url = buildFacebookMessengerMessagesUrl(
-    input.conversationId,
-    input.pageAccessToken,
-    Math.max(1, Math.min(input.limit ?? 5, 10)),
-  );
+  const maxLimit = Math.max(1, Math.min(input.limit ?? 5, 10));
 
-  const response = await fetch(url, { cache: "no-store" });
-  const payload = (await response.json().catch(() => null)) as {
-    data?: unknown[];
-    error?: { message?: string; code?: number; type?: string };
-  } | null;
+  let rows: Record<string, unknown>[] = [];
+  let fields: string = FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS[0];
+  let usedFallback = false;
+  let lastErrorMessage: string | null = null;
 
-  if (!response.ok) {
+  for (let index = 0; index < FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS.length; index += 1) {
+    fields = FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS[index];
+    const url = buildFacebookMessengerMessagesUrl(
+      input.conversationId,
+      input.pageAccessToken,
+      maxLimit,
+      fields,
+    );
+    const response = await fetch(url, { cache: "no-store" });
+    const payload = (await response.json().catch(() => null)) as {
+      data?: unknown[];
+      error?: { message?: string; code?: number; type?: string };
+    } | null;
+
+    if (response.ok) {
+      rows = (payload?.data ?? []).filter(isRecord);
+      usedFallback = index > 0;
+      lastErrorMessage = null;
+      break;
+    }
+
+    lastErrorMessage =
+      payload?.error?.message ??
+      "Messages-Endpunkt lieferte keine nutzbare Antwort.";
+    if (!isFacebookFieldError(payload?.error)) {
+      return {
+        label: "Messages Probe",
+        endpoint,
+        fields,
+        ok: false,
+        messageCount: 0,
+        fromFieldPresent: false,
+        toFieldPresent: false,
+        attachmentsFieldPresent: false,
+        sharesFieldPresent: false,
+        tagsFieldPresent: false,
+        linkFieldPresent: false,
+        businessInboxUrlFound: false,
+        selectedItemIdFound: false,
+        selectedItemIdSource: "not_detected",
+        usedFallback,
+        note: lastErrorMessage,
+      };
+    }
+  }
+
+  if (!rows.length && lastErrorMessage) {
     return {
       label: "Messages Probe",
       endpoint,
@@ -419,25 +521,105 @@ export async function probeFacebookMessengerMessageFieldSet(input: {
       ok: false,
       messageCount: 0,
       fromFieldPresent: false,
-      note:
-        payload?.error?.message ??
-        "Messages-Endpunkt lieferte keine nutzbare Antwort.",
+      toFieldPresent: false,
+      attachmentsFieldPresent: false,
+      sharesFieldPresent: false,
+      tagsFieldPresent: false,
+      linkFieldPresent: false,
+      businessInboxUrlFound: false,
+      selectedItemIdFound: false,
+      selectedItemIdSource: "not_detected",
+      usedFallback,
+      note: lastErrorMessage,
     };
   }
 
-  const rows = (payload?.data ?? []).filter(isRecord);
+  const normalizedMessages = rows.map(normalizeGraphMessage);
   const fromFieldPresent = rows.some((row) => isRecord(row.from));
+  const toFieldPresent = rows.some(
+    (row) => isRecord(row.to) && Array.isArray(row.to.data),
+  );
+  const attachmentsFieldPresent = rows.some(
+    (row) => isRecord(row.attachments) && Array.isArray(row.attachments.data),
+  );
+  const sharesFieldPresent = rows.some(
+    (row) => isRecord(row.shares) && Array.isArray(row.shares.data),
+  );
+  const tagsFieldPresent = rows.some((row) => {
+    if (Array.isArray(row.tags)) return true;
+    return isRecord(row.tags) && Array.isArray(row.tags.data);
+  });
+  const linkFieldPresent = normalizedMessages.some(
+    (message) => Boolean(message.link || message.sourceUrl || message.replyTargetUrl),
+  );
+
+  let selectedItemIdSource: FacebookMessageFieldProbe["selectedItemIdSource"] =
+    "not_detected";
+  let selectedItemIdFound = false;
+  let businessInboxUrlFound = false;
+
+  for (const message of normalizedMessages) {
+    const messageFieldUrls = [message.link, message.sourceUrl, message.replyTargetUrl];
+    if (
+      messageFieldUrls.some((url) =>
+        isBusinessInboxUrl(url),
+      )
+    ) {
+      businessInboxUrlFound = true;
+    }
+    if (
+      !selectedItemIdFound &&
+      messageFieldUrls.some((url) => hasSelectedItemId(url))
+    ) {
+      selectedItemIdFound = true;
+      selectedItemIdSource = "message_field";
+    }
+    if (
+      !selectedItemIdFound &&
+      message.shares.some((share) => hasSelectedItemId(share.url))
+    ) {
+      selectedItemIdFound = true;
+      selectedItemIdSource = "share";
+    }
+    if (
+      !selectedItemIdFound &&
+      message.attachments?.some((attachment) => hasSelectedItemId(attachment.url ?? null))
+    ) {
+      selectedItemIdFound = true;
+      selectedItemIdSource = "attachment";
+    }
+    if (
+      !businessInboxUrlFound &&
+      (message.shares.some((share) => isBusinessInboxUrl(share.url)) ||
+        Boolean(
+          message.attachments?.some((attachment) =>
+            isBusinessInboxUrl(attachment.url ?? null),
+          ),
+        ))
+    ) {
+      businessInboxUrlFound = true;
+    }
+  }
 
   return {
     label: "Messages Probe",
     endpoint,
     fields,
     ok: true,
-    messageCount: rows.length,
+    messageCount: normalizedMessages.length,
     fromFieldPresent,
+    toFieldPresent,
+    attachmentsFieldPresent,
+    sharesFieldPresent,
+    tagsFieldPresent,
+    linkFieldPresent,
+    businessInboxUrlFound,
+    selectedItemIdFound,
+    selectedItemIdSource,
+    usedFallback,
     note: fromFieldPresent
-      ? "from-Feld ist vorhanden."
-      : "from-Feld ist in der Stichprobe nicht vorhanden.",
+      ? "Messages-Feldset wurde verarbeitet."
+      : "Messages-Feldset enthält kein from-Feld in der Stichprobe.",
   };
 }
 
@@ -461,16 +643,12 @@ async function fetchFacebookMessengerConversationsWithFields(
     error?: { message?: string; code?: number; type?: string };
   } | null;
   if (!response.ok) {
-    if (fields.includes("link") && isFacebookFieldError(payload?.error)) {
-      console.info("Facebook Messenger conversation link field unavailable; retrying without direct link field", {
-        errorCode: payload?.error?.code,
-        errorType: payload?.error?.type,
-      });
-      return fetchFacebookMessengerConversationsWithFields(
-        pageId,
-        pageAccessToken,
-        limit,
-        "id,updated_time,participants{id,name}",
+    if (isFacebookFieldError(payload?.error)) {
+      throw new FacebookFieldFetchError(
+        payload?.error?.message ?? "Facebook-Feldset wurde abgelehnt.",
+        payload?.error?.code,
+        payload?.error?.type,
+        true,
       );
     }
     logFacebookApiError(
@@ -489,6 +667,7 @@ async function fetchFacebookMessengerConversationsWithFields(
       id: stringValue(conversation.id) ?? "",
       link: validUrl(stringValue(conversation.link)),
       updatedTime: stringValue(conversation.updated_time),
+      senders: normalizeActorArray(conversation.senders),
       participants: (isRecord(conversation.participants) &&
       Array.isArray(conversation.participants.data)
         ? conversation.participants.data
@@ -500,6 +679,16 @@ async function fetchFacebookMessengerConversationsWithFields(
           name: stringValue(participant.name),
         }))
         .filter((participant) => participant.id),
+      snippet: stringValue(conversation.snippet),
+      canReply:
+        typeof conversation.can_reply === "boolean"
+          ? conversation.can_reply
+          : null,
+      scopedThreadKey:
+        stringValue(conversation.scoped_thread_key) ??
+        numberValue(conversation.scoped_thread_key)?.toString() ??
+        null,
+      messageCount: numberValue(conversation.message_count),
     }))
     .filter((conversation) => conversation.id);
 }
@@ -544,6 +733,8 @@ async function probeFacebookMessengerConversationFieldSet(input: {
       snippetFieldPresent: false,
       canReplyFieldPresent: false,
       scopedThreadKeyFieldPresent: false,
+      sendersPresent: false,
+      messageCountFieldPresent: false,
       note:
         payload?.error?.message ??
         "Conversation-Endpunkt lieferte keine nutzbare Antwort.",
@@ -585,6 +776,12 @@ async function probeFacebookMessengerConversationFieldSet(input: {
     const value = row.scoped_thread_key;
     return typeof value === "string" || typeof value === "number";
   });
+  const sendersPresent = rows.some(
+    (row) => isRecord(row.senders) && Array.isArray(row.senders.data),
+  );
+  const messageCountFieldPresent = rows.some(
+    (row) => typeof row.message_count === "number",
+  );
 
   return {
     label: input.label,
@@ -599,6 +796,8 @@ async function probeFacebookMessengerConversationFieldSet(input: {
     snippetFieldPresent,
     canReplyFieldPresent,
     scopedThreadKeyFieldPresent,
+    sendersPresent,
+    messageCountFieldPresent,
     note: selectedItemIdInLink
       ? "Eine Direktlink-ID wurde in einem Conversation-Link erkannt."
       : "In diesem Feldset wurde keine Direktlink-ID erkannt.",
@@ -613,10 +812,12 @@ export async function fetchFacebookMessengerConversationMessages(
   const targetLimit = Math.max(1, Math.min(limit, 50));
   const messages: FacebookMessengerMessage[] = [];
   const seenIds = new Set<string>();
+  let fieldSetIndex = 0;
   let nextUrl: string | null = buildFacebookMessengerMessagesUrl(
     conversationId,
     pageAccessToken,
     targetLimit,
+    FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS[fieldSetIndex],
   ).toString();
 
   while (nextUrl && messages.length < targetLimit) {
@@ -627,6 +828,29 @@ export async function fetchFacebookMessengerConversationMessages(
       error?: { message?: string; code?: number; type?: string };
     } | null;
     if (!response.ok) {
+      if (
+        messages.length === 0 &&
+        isFacebookFieldError(payload?.error) &&
+        fieldSetIndex < FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS.length - 1
+      ) {
+        const previousFields = FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS[fieldSetIndex];
+        fieldSetIndex += 1;
+        const fallbackFields = FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS[fieldSetIndex];
+        console.info("Facebook Messenger message field fallback active", {
+          conversationId,
+          fallbackFrom: previousFields,
+          fallbackTo: fallbackFields,
+          errorCode: payload?.error?.code,
+          errorType: payload?.error?.type,
+        });
+        nextUrl = buildFacebookMessengerMessagesUrl(
+          conversationId,
+          pageAccessToken,
+          targetLimit,
+          fallbackFields,
+        ).toString();
+        continue;
+      }
       logFacebookApiError(
         "Facebook Messenger conversation messages fetch failed",
         payload?.error,
@@ -660,14 +884,12 @@ function buildFacebookMessengerMessagesUrl(
   conversationId: string,
   pageAccessToken: string,
   limit: number,
+  fields: string,
 ): URL {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(conversationId)}/messages`,
   );
-  url.searchParams.set(
-    "fields",
-    "id,created_time,message,from{id,name},attachments{id,mime_type,name,size,image_data,video_data,file_url}",
-  );
+  url.searchParams.set("fields", fields);
   url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 50))));
   url.searchParams.set("access_token", pageAccessToken);
   return url;
@@ -677,6 +899,12 @@ function normalizeGraphMessage(
   message: Record<string, unknown>,
 ): FacebookMessengerMessage {
   const from = isRecord(message.from) ? message.from : null;
+  const toRows =
+    isRecord(message.to) && Array.isArray(message.to.data)
+      ? message.to.data.filter(isRecord)
+      : [];
+  const normalizedShares = normalizeGraphMessageShares(message.shares);
+  const normalizedTags = normalizeGraphMessageTags(message.tags);
   return {
     id: stringValue(message.id) ?? "",
     createdTime: stringValue(message.created_time),
@@ -684,6 +912,17 @@ function normalizeGraphMessage(
     from: from
       ? { id: stringValue(from.id) ?? "", name: stringValue(from.name) }
       : null,
+    to: toRows
+      .map((entry) => ({
+        id: stringValue(entry.id) ?? "",
+        name: stringValue(entry.name),
+      }))
+      .filter((entry) => entry.id),
+    link: validUrl(stringValue(message.link)),
+    sourceUrl: validUrl(stringValue(message.source_url)),
+    replyTargetUrl: validUrl(stringValue(message.reply_target_url)),
+    shares: normalizedShares,
+    tags: normalizedTags,
     attachments: normalizeGraphMessageAttachments(message.attachments),
   };
 }
@@ -703,10 +942,15 @@ function normalizeGraphMessageAttachments(
     const videoData = isRecord(attachment.video_data)
       ? attachment.video_data
       : undefined;
+    const target = isRecord(attachment.target) ? attachment.target : undefined;
     const fileUrl = stringValue(attachment.file_url);
     const mime = stringValue(attachment.mime_type);
     const url = validUrl(
-      stringValue(imageData?.url) ?? stringValue(videoData?.url) ?? fileUrl,
+      stringValue(imageData?.url) ??
+        stringValue(videoData?.url) ??
+        fileUrl ??
+        stringValue(attachment.url) ??
+        stringValue(target?.url),
     );
     return {
       type: mime?.startsWith("image/")
@@ -729,6 +973,88 @@ function normalizeGraphMessageAttachments(
     } satisfies FacebookMessengerAttachment;
   });
   return attachments.length ? attachments : null;
+}
+
+function normalizeGraphMessageShares(
+  value: unknown,
+): FacebookMessengerMessage["shares"] {
+  const rows =
+    isRecord(value) && Array.isArray(value.data) ? value.data.filter(isRecord) : [];
+  return rows.map((share) => ({
+    url: validUrl(stringValue(share.link) ?? stringValue(share.url)),
+  }));
+}
+
+function normalizeGraphMessageTags(value: unknown): string[] {
+  const values = Array.isArray(value)
+    ? value
+    : isRecord(value) && Array.isArray(value.data)
+      ? value.data
+      : [];
+  return values
+    .map((entry) =>
+      typeof entry === "string"
+        ? entry
+        : isRecord(entry)
+          ? stringValue(entry.name) ?? stringValue(entry.value)
+          : null,
+    )
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function normalizeActorArray(
+  value: unknown,
+): Array<{ id: string; name: string | null }> {
+  const rows = isRecord(value) && Array.isArray(value.data) ? value.data : [];
+  return rows
+    .filter(isRecord)
+    .map((entry) => ({
+      id: stringValue(entry.id) ?? "",
+      name: stringValue(entry.name),
+    }))
+    .filter((entry) => entry.id);
+}
+
+function isBusinessInboxUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname.toLowerCase() === "business.facebook.com" &&
+      url.pathname.toLowerCase().includes("/inbox")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function hasSelectedItemId(value: string | null | undefined): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return Boolean(url.searchParams.get("selected_item_id"));
+  } catch {
+    return false;
+  }
+}
+
+class FacebookFieldFetchError extends Error {
+  code?: number;
+  type?: string;
+  retryable: boolean;
+
+  constructor(
+    message: string,
+    code?: number,
+    type?: string,
+    retryable = false,
+  ) {
+    super(message);
+    this.name = "FacebookFieldFetchError";
+    this.code = code;
+    this.type = type;
+    this.retryable = retryable;
+  }
 }
 
 type FacebookRawPage = {
