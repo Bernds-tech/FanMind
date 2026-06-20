@@ -655,10 +655,10 @@ function summarizeFacebookDirectLinkDiagnosis(input: {
   const note = directLinkIdDetected
     ? "Direktlink-ID erkannt. FanMind kann den direkten Chat automatisch aufbauen."
     : matchedConversationFound
-      ? "Conversation gefunden, aber keine eindeutige Direktlink-ID im Link erkannt."
+      ? "Meta liefert mit aktuellem Zugriff keine Direktchat-ID."
       : conversationLinkWithDirectId > 0
         ? "Meta liefert Direktlink-IDs in der Stichprobe, aber nicht für diesen Kontakt in der geprüften Auswahl."
-        : "In der geprüften Auswahl wurde keine eindeutige Direktlink-ID erkannt.";
+        : "Meta liefert mit aktuellem Zugriff keine Direktchat-ID.";
 
   return {
     ok: true,
