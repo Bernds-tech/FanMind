@@ -142,6 +142,8 @@ export function buildReplyTargetAction(
     fallbackContactLabel?: string | null;
     fallbackContactId?: string | null;
     manualReplyTargetUrl?: string | null;
+    facebookPageId?: string | null;
+    facebookBusinessId?: string | null;
   },
 ): ReplyTargetAction {
   const primary = messageOrConversation ?? null;
@@ -173,7 +175,7 @@ export function buildReplyTargetAction(
     if (manualExactUrl) {
       return {
         href: manualExactUrl,
-        label: "Exakten Facebook-Chat öffnen",
+        label: "Direkten Facebook-Chat öffnen",
         quality: "manual_exact_thread",
         reason: "Manuell hinterlegter Chat-Link.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
@@ -181,15 +183,51 @@ export function buildReplyTargetAction(
       };
     }
 
-    const exactUrl =
-      [replyTargetUrl, sourceUrl].find(isExactFacebookThreadUrl) ?? null;
-    if (exactUrl) {
+    const exactConversationUrl =
+      sourceUrl && isExactFacebookThreadUrl(sourceUrl) ? sourceUrl : null;
+    if (exactConversationUrl) {
       return {
-        href: exactUrl,
-        label: "Exakten Facebook-Chat öffnen",
+        href: exactConversationUrl,
+        label: "Direkten Facebook-Chat öffnen",
+        quality: "exact_thread",
+        reason:
+          "Ein direkter Facebook-Conversation-Link aus dem Nachrichtenverlauf ist gespeichert.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
+      };
+    }
+
+    const exactReplyTargetUrl =
+      replyTargetUrl && isExactFacebookThreadUrl(replyTargetUrl)
+        ? replyTargetUrl
+        : null;
+    if (exactReplyTargetUrl) {
+      return {
+        href: exactReplyTargetUrl,
+        label: "Direkten Facebook-Chat öffnen",
         quality: "exact_thread",
         reason:
           "Ein verifizierter Facebook-Conversation-/Thread-Link ist gespeichert.",
+        disabledHint: "Originalkanal-Link noch nicht verfügbar.",
+        platform,
+      };
+    }
+
+    const derivedDirectUrl = buildDerivedFacebookThreadUrl({
+      replyTargetUrl,
+      sourceUrl,
+      externalThreadId,
+      fanSenderId: options?.fallbackContactId,
+      pageId: options?.facebookPageId,
+      businessId: options?.facebookBusinessId,
+    });
+    if (derivedDirectUrl) {
+      return {
+        href: derivedDirectUrl,
+        label: "Direkten Facebook-Chat öffnen",
+        quality: "exact_thread",
+        reason:
+          "Direkter Facebook-Chat-Link wurde aus vorhandenen Konversationsdaten abgeleitet.",
         disabledHint: "Originalkanal-Link noch nicht verfügbar.",
         platform,
       };
@@ -199,6 +237,8 @@ export function buildReplyTargetAction(
       replyTargetUrl,
       sourceUrl,
       externalThreadId,
+      pageId: options?.facebookPageId,
+      businessId: options?.facebookBusinessId,
     });
     return {
       href: inboxUrl,
@@ -303,17 +343,22 @@ function buildFacebookInboxFallbackUrl(options?: {
   replyTargetUrl?: string | null;
   sourceUrl?: string | null;
   externalThreadId?: string | null;
+  pageId?: string | null;
+  businessId?: string | null;
 }): string {
   const baseUrl = getFacebookInboxBaseUrl(
     options?.replyTargetUrl,
     options?.sourceUrl,
   );
   const url = new URL(baseUrl);
-  const businessId = firstConfiguredEnv(
-    "META_BUSINESS_ID",
-    "NEXT_PUBLIC_META_BUSINESS_ID",
-  );
+  const businessId =
+    normalizeText(options?.businessId) ||
+    firstConfiguredEnv("META_BUSINESS_ID", "NEXT_PUBLIC_META_BUSINESS_ID");
   if (businessId) url.searchParams.set("business_id", businessId);
+  const pageId = normalizeText(options?.pageId);
+  if (pageId && !url.searchParams.get("asset_id")) {
+    url.searchParams.set("asset_id", pageId);
+  }
   const threadId = getFacebookThreadIdentifier(
     options?.replyTargetUrl,
     options?.sourceUrl,
@@ -322,6 +367,34 @@ function buildFacebookInboxFallbackUrl(options?: {
   if (threadId && !url.searchParams.get("thread_id")) {
     url.searchParams.set("thread_id", threadId);
   }
+  return url.toString();
+}
+
+function buildDerivedFacebookThreadUrl(input: {
+  replyTargetUrl?: string | null;
+  sourceUrl?: string | null;
+  externalThreadId?: string | null;
+  fanSenderId?: string | null;
+  pageId?: string | null;
+  businessId?: string | null;
+}): string | null {
+  const threadId =
+    getFacebookThreadIdentifier(
+      input.replyTargetUrl,
+      input.sourceUrl,
+      input.externalThreadId,
+    ) ?? normalizeText(input.fanSenderId);
+  if (!threadId) return null;
+
+  const url = new URL("https://business.facebook.com/latest/inbox");
+  url.searchParams.set("thread_id", threadId);
+  url.searchParams.set("selected_item_id", threadId);
+  const pageId = normalizeText(input.pageId);
+  if (pageId) url.searchParams.set("asset_id", pageId);
+  const businessId =
+    normalizeText(input.businessId) ||
+    firstConfiguredEnv("META_BUSINESS_ID", "NEXT_PUBLIC_META_BUSINESS_ID");
+  if (businessId) url.searchParams.set("business_id", businessId);
   return url.toString();
 }
 

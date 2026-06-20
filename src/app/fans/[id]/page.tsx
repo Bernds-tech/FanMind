@@ -84,6 +84,8 @@ type FanDetailWorkspaceProps = {
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  facebookPageId?: string | null;
+  facebookBusinessId?: string | null;
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
 };
@@ -158,6 +160,8 @@ function FanDetailWorkspace({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  facebookPageId,
+  facebookBusinessId,
   facebookReplyTarget,
   facebookReplyTargetError,
 }: FanDetailWorkspaceProps) {
@@ -223,6 +227,8 @@ function FanDetailWorkspace({
             activeChannel={activeChannel}
             activeSource={activeSource}
             facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
+            facebookPageId={facebookPageId}
+            facebookBusinessId={facebookBusinessId}
             facebookReplyTarget={facebookReplyTarget}
             facebookReplyTargetError={facebookReplyTargetError}
           />
@@ -251,6 +257,8 @@ function FanDetailContent({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  facebookPageId,
+  facebookBusinessId,
   facebookReplyTarget,
   facebookReplyTargetError,
 }: {
@@ -270,6 +278,8 @@ function FanDetailContent({
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  facebookPageId?: string | null;
+  facebookBusinessId?: string | null;
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
 }) {
@@ -292,8 +302,22 @@ function FanDetailContent({
     activeSource,
   );
   const timeline = filteredMessages.length
-    ? buildMessageTimeline(filteredMessages, contact, facebookReplyTarget)
+    ? buildMessageTimeline(
+        filteredMessages,
+        contact,
+        facebookReplyTarget,
+        facebookPageId,
+        facebookBusinessId,
+      )
     : [];
+  const originalChannelAction = getOriginalChannelAction(
+    conversation,
+    messages,
+    contact,
+    facebookReplyTarget,
+    facebookPageId,
+    facebookBusinessId,
+  );
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
   );
@@ -445,6 +469,7 @@ function FanDetailContent({
                 contact={contact}
                 target={facebookReplyTarget}
                 error={facebookReplyTargetError}
+                directAction={originalChannelAction}
               />
             ) : null}
             <div className={styles.timeline}>
@@ -518,6 +543,8 @@ function FanDetailContent({
               messages,
               contact,
               facebookReplyTarget,
+              facebookPageId,
+              facebookBusinessId,
             )}
           />
         </main>
@@ -710,7 +737,7 @@ function OriginalChatAction({
         action.quality === "exact_thread") &&
       action.platform === "facebook" ? (
         <small className={styles.muted}>
-          Öffnet den für diesen Kontakt gespeicherten Chat-Link.
+          Öffnet direkt den Chat dieses Fans in Facebook.
         </small>
       ) : null}
       {action.quality === "inbox_fallback" ? (
@@ -729,35 +756,64 @@ function FacebookReplyTargetCard({
   contact,
   target,
   error,
+  directAction,
 }: {
   contact: ContactRow;
   target: ContactReplyTargetRow | null;
   error?: string;
+  directAction: ReplyTargetAction;
 }) {
+  const directChatAvailable =
+    directAction.platform === "facebook" &&
+    (directAction.quality === "manual_exact_thread" ||
+      directAction.quality === "exact_thread") &&
+    Boolean(directAction.href);
   const storageUnavailable =
     error?.includes("Der exakte Chat-Link kann derzeit nicht gespeichert werden.") ??
     false;
-  const fallbackHint = target
-    ? "Öffne einmal den richtigen Facebook-Chat, kopiere die URL aus dem Browser und speichere sie hier."
+  const fallbackHint = directChatAvailable
+    ? target
+      ? "Für diesen Fan ist ein direkter Chat-Link hinterlegt und aktiv."
+      : "Für diesen Fan ist ein direkter Chat-Link aus vorhandenen Daten verfügbar."
     : storageUnavailable
       ? "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden."
       : error
-      ? "Der gespeicherte Chat-Link konnte gerade nicht geladen werden. Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen."
-      : "Du kannst das Facebook-Postfach öffnen und den Kontakt dort manuell auswählen.";
+        ? "Ein direkter Chat-Link konnte gerade nicht geladen werden. Bitte nutze den Setup-Flow unten."
+        : "Noch kein direkter Chat-Link vorhanden. Bitte einmalig den Setup-Flow unten durchführen.";
 
   return (
     <details className={styles.replyTargetBox} open={!target || Boolean(error)}>
       <summary>
-        {target
-          ? "Exakter Facebook-Chat-Link hinterlegt"
-          : "Noch kein exakter Facebook-Chat-Link hinterlegt"}
+        {directChatAvailable
+          ? "Direkter Facebook-Chat verfügbar"
+          : "Direkten Chat-Link für diesen Fan hinterlegen"}
       </summary>
       <p className={styles.syncHint}>
         {fallbackHint}
       </p>
+      {!directChatAvailable ? (
+        <ol className={styles.setupFlow}>
+          <li>
+            Schritt 1: Facebook-Postfach öffnen
+            {directAction.href ? (
+              <a
+                className={dashboardStyles.secondaryButton}
+                href={directAction.href}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Facebook-Postfach öffnen
+              </a>
+            ) : null}
+          </li>
+          <li>Schritt 2: richtigen Fan-Chat auswählen</li>
+          <li>Schritt 3: Browser-URL kopieren</li>
+          <li>Schritt 4: hier speichern</li>
+        </ol>
+      ) : null}
       {target ? (
         <div className={styles.replyTargetStatus}>
-          <span>Manuell hinterlegter Chat-Link</span>
+          <span>Gespeicherter direkter Chat-Link</span>
           <a
             className={dashboardStyles.secondaryButton}
             href={target.url}
@@ -895,6 +951,8 @@ function buildMessageTimeline(
   messages: ConversationMessageRow[],
   contact: ContactRow,
   facebookReplyTarget: ContactReplyTargetRow | null,
+  facebookPageId?: string | null,
+  facebookBusinessId?: string | null,
 ) {
   return messages.map((message) => ({
     id: message.id,
@@ -925,6 +983,8 @@ function buildMessageTimeline(
         message,
         facebookReplyTarget,
       ),
+      facebookPageId,
+      facebookBusinessId,
     }),
   }));
 }
@@ -988,6 +1048,8 @@ function getOriginalChannelAction(
   messages: ConversationMessageRow[],
   contact: ContactRow,
   facebookReplyTarget: ContactReplyTargetRow | null,
+  facebookPageId?: string | null,
+  facebookBusinessId?: string | null,
 ): ReplyTargetAction {
   const latestInbound = [...messages]
     .reverse()
@@ -996,6 +1058,8 @@ function getOriginalChannelAction(
     fallbackContactLabel: contact.display_name,
     fallbackContactId: contact.handle,
     manualReplyTargetUrl: facebookReplyTarget?.url ?? null,
+    facebookPageId,
+    facebookBusinessId,
   });
 }
 
@@ -1128,13 +1192,13 @@ function formatNotice(value: string): string {
   if (value === "analysis_saved")
     return "Fan-Analyse-Report wurde aktualisiert.";
   if (value === "reply_target_saved")
-    return "Exakter Facebook-Chat-Link wurde gespeichert.";
+    return "Direkter Facebook-Chat-Link wurde gespeichert.";
   if (value === "reply_target_save_failed")
     return "Der Chat-Link konnte gerade nicht gespeichert werden. Bitte später erneut versuchen.";
   if (value === "reply_target_storage_unavailable")
     return "Der exakte Chat-Link kann derzeit nicht gespeichert werden. Das Facebook-Postfach kann weiterhin geöffnet werden.";
   if (value === "reply_target_invalid")
-    return "Bitte speichere nur einen HTTPS-Link zu einem konkreten Facebook-Chat, keinen generischen Postfach-Link.";
+    return "Bitte speichere nur einen HTTPS-Link zu einem direkten Facebook-Chat, keinen generischen Postfach-Link.";
   return value;
 }
 
@@ -1320,6 +1384,12 @@ export default async function FanDetailPage({
           activeSource={activeSource}
           facebookMessengerLastSyncedAt={
             facebookConnection?.last_messenger_sync_at ?? null
+          }
+          facebookPageId={facebookConnection?.page_id ?? null}
+          facebookBusinessId={
+            process.env.NEXT_PUBLIC_META_BUSINESS_ID ??
+            process.env.META_BUSINESS_ID ??
+            null
           }
           facebookReplyTarget={facebookReplyTargetResult?.target ?? null}
           facebookReplyTargetError={facebookReplyTargetResult?.error?.message}
