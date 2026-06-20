@@ -751,14 +751,18 @@ function FacebookReplyTargetCard({
   directAction: ReplyTargetAction;
 }) {
   const hasAutoDirectLink =
-    target?.source_platform === "facebook" &&
-    target?.source_type === "facebook_messages" &&
-    target?.quality === "auto_selected_item";
+    directAction.platform === "facebook" &&
+    directAction.quality === "auto_selected_item";
   const hasManualDirectLink =
-    target?.source_platform === "facebook" &&
-    target?.source_type === "facebook_messages" &&
-    target?.quality === "manual_exact_thread";
+    directAction.platform === "facebook" &&
+    directAction.quality === "manual_exact_thread";
   const hasDirectLink = hasAutoDirectLink || hasManualDirectLink;
+  const directLinkStatus = hasDirectLink
+    ? "Direktlink vorhanden"
+    : "Direktlink fehlt";
+  const selectedItemStatus = hasDirectLink
+    ? `selected_item_id erkannt aus: ${formatSelectedItemSource(directAction.selectedItemSource)}`
+    : "selected_item_id nicht erkannt";
   const storageUnavailable =
     error?.includes("Der exakte Chat-Link kann derzeit nicht gespeichert werden.") ??
     false;
@@ -784,6 +788,9 @@ function FacebookReplyTargetCard({
       </summary>
       <p className={styles.syncHint}>
         {fallbackHint}
+      </p>
+      <p className={styles.muted}>
+        {directLinkStatus} · {selectedItemStatus}
       </p>
       {!hasDirectLink ? (
         <ol className={styles.setupFlow}>
@@ -811,16 +818,20 @@ function FacebookReplyTargetCard({
       {hasDirectLink ? (
         <div className={styles.replyTargetStatus}>
           <span>
-            {hasAutoDirectLink ? "Automatisch erkannter Direktlink" : "Gespeicherter Direktlink"}
+            {hasAutoDirectLink
+              ? "Automatisch erkannter Direktlink"
+              : "Gespeicherter Direktlink"}
           </span>
-          <a
-            className={dashboardStyles.secondaryButton}
-            href={target.url}
-            rel="noreferrer"
-            target="_blank"
-          >
-            Link testen
-          </a>
+          {directAction.href ? (
+            <a
+              className={dashboardStyles.secondaryButton}
+              href={directAction.href}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Link testen
+            </a>
+          ) : null}
         </div>
       ) : null}
       {!storageUnavailable ? (
@@ -939,10 +950,7 @@ function getManualFacebookReplyTargetUrl(
   if (!target) return null;
   if (target.source_platform !== "facebook") return null;
   if (target.source_type !== "facebook_messages") return null;
-  if (
-    target.quality !== "manual_exact_thread" &&
-    target.quality !== "auto_selected_item"
-  ) {
+  if (target.quality !== "manual_exact_thread") {
     return null;
   }
   return target.url;
@@ -955,6 +963,16 @@ function getStoredFacebookReplyTargetQuality(
   if (target.source_platform !== "facebook") return null;
   if (target.source_type !== "facebook_messages") return null;
   return target.quality;
+}
+
+function formatSelectedItemSource(
+  value: ReplyTargetAction["selectedItemSource"],
+): string {
+  if (value === "manual") return "manual";
+  if (value === "reply_target_url") return "reply_target_url";
+  if (value === "source_url") return "source_url";
+  if (value === "stored_auto") return "stored_auto";
+  return "unbekannt";
 }
 
 function buildMessageTimeline(
