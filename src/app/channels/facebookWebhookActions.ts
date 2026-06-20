@@ -79,6 +79,24 @@ export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
   pagesManageEngagementGranted?: boolean;
 };
 
+export type MetaPermissionDiagnosis = {
+  ok: boolean;
+  checkedAt: string;
+  connectionActive: boolean;
+  pageIdDetected: boolean;
+  tokenCheckSuccessful: boolean;
+  pageAccessTokenPresent: boolean;
+  detectedPermissions: string[];
+  visiblePageRights: string[];
+  missingPermissions: string[];
+  appReviewCheckRecommended: boolean;
+  advancedAccessCheckRecommended: boolean;
+  tokenAppearsRestricted: boolean;
+  directChatIdStatus: string;
+  note: string;
+  error?: string | null;
+};
+
 export type FacebookDirectLinkSourceDiagnosis = {
   ok: boolean;
   graphApiVersion: string;
@@ -108,6 +126,92 @@ export type FacebookDirectLinkSourceDiagnosis = {
   messageFieldProbe: FacebookMessageFieldProbe | null;
   note: string;
 };
+
+export async function diagnoseMetaPermissions(): Promise<MetaPermissionDiagnosis> {
+  const checkedAt = new Date().toISOString();
+  const { connection, error } = await getCurrentFacebookConnection();
+  if (error || !connection) {
+    return {
+      ok: false,
+      checkedAt,
+      connectionActive: false,
+      pageIdDetected: false,
+      tokenCheckSuccessful: false,
+      pageAccessTokenPresent: false,
+      detectedPermissions: [],
+      visiblePageRights: [],
+      missingPermissions: requiredMetaPermissionNames(),
+      appReviewCheckRecommended: true,
+      advancedAccessCheckRecommended: true,
+      tokenAppearsRestricted: true,
+      directChatIdStatus:
+        "Mit aktuellem Zugriff liefert Meta keine Direktchat-ID.",
+      note: error ?? "Facebook-Verbindung fehlt.",
+      error: error ?? "Facebook-Verbindung fehlt.",
+    };
+  }
+
+  const token = connection.page_access_token_encrypted
+    ? decryptToken(connection.page_access_token_encrypted)
+    : null;
+  const tokenScopes = await getSafeTokenScopeNames(token);
+  const pageStatus = await fetchFacebookPageWebhookStatus(
+    connection.page_id,
+    token,
+  );
+  const visiblePageRights = Array.from(
+    new Set([...(connection.scopes ?? []), ...tokenScopes]),
+  ).sort();
+  const missingPermissions = requiredMetaPermissionNames().filter(
+    (permission) => !tokenScopes.includes(permission),
+  );
+  const tokenCheckSuccessful = Boolean(
+    token && tokenScopes.length > 0 && !pageStatus.error,
+  );
+  const webhookMissing =
+    pageStatus.fields.messages !== "active" ||
+    pageStatus.fields.message_echoes !== "active" ||
+    pageStatus.subscribedAppsStatus !== "active";
+  const tokenAppearsRestricted =
+    !token ||
+    missingPermissions.length > 0 ||
+    !pageStatus.ok ||
+    webhookMissing;
+
+  return {
+    ok: !tokenAppearsRestricted,
+    checkedAt,
+    connectionActive: true,
+    pageIdDetected: Boolean(connection.page_id),
+    tokenCheckSuccessful,
+    pageAccessTokenPresent: Boolean(token),
+    detectedPermissions: tokenScopes,
+    visiblePageRights,
+    missingPermissions,
+    appReviewCheckRecommended: tokenAppearsRestricted,
+    advancedAccessCheckRecommended: tokenAppearsRestricted,
+    tokenAppearsRestricted,
+    directChatIdStatus:
+      "Mit aktuellem Zugriff liefert Meta keine Direktchat-ID.",
+    note: tokenAppearsRestricted
+      ? "Prüfe Meta App Review, Advanced Access und Page-Zuweisung für die fehlenden Berechtigungen."
+      : "Keine klare Berechtigungslücke erkannt. Meta liefert dennoch keine Direktchat-ID.",
+    error: pageStatus.error,
+  };
+}
+
+function requiredMetaPermissionNames(): string[] {
+  return Array.from(
+    new Set([
+      "pages_show_list",
+      "pages_manage_metadata",
+      "pages_messaging",
+      "pages_read_engagement",
+      "pages_read_user_content",
+      "pages_manage_engagement",
+    ]),
+  );
+}
 
 export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchResult> {
   const fetchedAt = new Date().toISOString();

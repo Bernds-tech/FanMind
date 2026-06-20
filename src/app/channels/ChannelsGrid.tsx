@@ -15,6 +15,8 @@ import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
   syncFacebookMessengerHistory,
+  diagnoseMetaPermissions,
+  type MetaPermissionDiagnosis,
   type FacebookMessengerSyncResult,
   type FacebookPageWebhookActionResult,
 } from "./facebookWebhookActions";
@@ -415,6 +417,9 @@ export function ChannelsGrid({
   const [pageWebhookResult, setPageWebhookResult] =
     useState<FacebookPageWebhookActionResult | null>(null);
   const [messengerSyncPending, setMessengerSyncPending] = useState(false);
+  const [metaPermissionPending, setMetaPermissionPending] = useState(false);
+  const [metaPermissionDiagnosis, setMetaPermissionDiagnosis] =
+    useState<MetaPermissionDiagnosis | null>(null);
   const [messengerSyncResult, setMessengerSyncResult] =
     useState<FacebookMessengerSyncResult | null>(null);
   const [facebookErrorCode] = useState<string | null>(() => {
@@ -437,6 +442,7 @@ export function ChannelsGrid({
     setSelfTestResult(null);
     setPageWebhookResult(null);
     setMessengerSyncResult(null);
+    setMetaPermissionDiagnosis(null);
     setActiveChannel(channel);
   };
 
@@ -503,6 +509,47 @@ export function ChannelsGrid({
       });
     } finally {
       setPageWebhookPending(null);
+    }
+  }
+
+  async function runMetaPermissionDiagnosis() {
+    setMetaPermissionPending(true);
+    setMetaPermissionDiagnosis(null);
+    try {
+      setMetaPermissionDiagnosis(await diagnoseMetaPermissions());
+    } catch (error) {
+      setMetaPermissionDiagnosis({
+        ok: false,
+        checkedAt: new Date().toISOString(),
+        connectionActive: Boolean(facebookConnection),
+        pageIdDetected: Boolean(facebookConnection?.page_id),
+        tokenCheckSuccessful: false,
+        pageAccessTokenPresent: Boolean(
+          facebookConnection?.has_page_access_token,
+        ),
+        detectedPermissions: [],
+        visiblePageRights: facebookConnection?.scopes ?? [],
+        missingPermissions: [
+          "pages_show_list",
+          "pages_manage_metadata",
+          "pages_messaging",
+          "pages_read_engagement",
+          "pages_read_user_content",
+          "pages_manage_engagement",
+        ],
+        appReviewCheckRecommended: true,
+        advancedAccessCheckRecommended: true,
+        tokenAppearsRestricted: true,
+        directChatIdStatus:
+          "Mit aktuellem Zugriff liefert Meta keine Direktchat-ID.",
+        note: "Meta-Berechtigungsdiagnose konnte nicht abgeschlossen werden.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unbekannter Diagnosefehler.",
+      });
+    } finally {
+      setMetaPermissionPending(false);
     }
   }
 
@@ -1086,6 +1133,16 @@ export function ChannelsGrid({
                   <button
                     type="button"
                     className={styles.secondaryModalButton}
+                    onClick={runMetaPermissionDiagnosis}
+                    disabled={metaPermissionPending}
+                  >
+                    {metaPermissionPending
+                      ? "Meta-Berechtigungen prüfen ..."
+                      : "Meta-Berechtigungen prüfen"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryModalButton}
                     onClick={runMessengerSync}
                     disabled={messengerSyncPending}
                   >
@@ -1094,6 +1151,52 @@ export function ChannelsGrid({
                       : "Messenger-Verlauf synchronisieren"}
                   </button>
                 </div>
+                {metaPermissionDiagnosis ? (
+                  <div
+                    className={styles.releaseBox}
+                    role={metaPermissionDiagnosis.ok ? "status" : "alert"}
+                    aria-label="Meta-Berechtigungsdiagnose"
+                  >
+                    <strong>Meta-Berechtigungen prüfen</strong>
+                    <ul>
+                      <li>
+                        Verbindung aktiv: {formatBoolean(metaPermissionDiagnosis.connectionActive)}
+                      </li>
+                      <li>
+                        Page-ID erkannt: {formatBoolean(metaPermissionDiagnosis.pageIdDetected)}
+                      </li>
+                      <li>
+                        Page Access Token vorhanden: {formatBoolean(metaPermissionDiagnosis.pageAccessTokenPresent)}
+                      </li>
+                      <li>
+                        Token-Prüfung erfolgreich: {formatBoolean(metaPermissionDiagnosis.tokenCheckSuccessful)}
+                      </li>
+                      <li>
+                        Erkannte Berechtigungen: {formatScopeList(metaPermissionDiagnosis.detectedPermissions)}
+                      </li>
+                      <li>
+                        Sichtbare Page-/Messenger-/Business-Rechte: {formatScopeList(metaPermissionDiagnosis.visiblePageRights)}
+                      </li>
+                      <li>
+                        Möglicherweise fehlende Berechtigungen: {formatScopeList(metaPermissionDiagnosis.missingPermissions)}
+                      </li>
+                      <li>
+                        App Review prüfen: {formatBoolean(metaPermissionDiagnosis.appReviewCheckRecommended)}
+                      </li>
+                      <li>
+                        Advanced Access prüfen: {formatBoolean(metaPermissionDiagnosis.advancedAccessCheckRecommended)}
+                      </li>
+                      <li>
+                        Token wirkt eingeschränkt: {formatBoolean(metaPermissionDiagnosis.tokenAppearsRestricted)}
+                      </li>
+                      <li>{metaPermissionDiagnosis.directChatIdStatus}</li>
+                    </ul>
+                    <p>{metaPermissionDiagnosis.note}</p>
+                    {metaPermissionDiagnosis.error ? (
+                      <p>Meta-Hinweis: {metaPermissionDiagnosis.error}</p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {messengerSyncResult ? (
                   <p
                     className={styles.modalNotice}
@@ -1429,6 +1532,10 @@ function formatWebhookStatus(
   if (status === "missing") return "fehlt";
   if (status === "error") return "Fehler";
   return "nicht geprüft";
+}
+
+function formatBoolean(value: boolean): string {
+  return value ? "ja" : "nein";
 }
 
 function formatScopeList(scopes: string[] | null | undefined): string {
