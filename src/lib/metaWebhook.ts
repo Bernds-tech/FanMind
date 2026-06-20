@@ -275,6 +275,8 @@ export async function processMetaWebhookPayload(
         const result = await createMetaWebhookConversationMessage({
           workspaceId: connection.connection.workspace_id,
           senderId: event.senderId,
+          pageId: event.pageId,
+          recipientId: event.recipientId,
           content: event.content,
           sourcePlatform: event.sourcePlatform,
           messageType:
@@ -288,6 +290,7 @@ export async function processMetaWebhookPayload(
           replyTargetUrl: event.replyTargetUrl,
           externalMessageId: event.externalMessageId,
           externalThreadId: event.externalThreadId,
+          sourceConversationId: event.externalThreadId,
           externalPostId: event.externalPostId,
           externalCommentId: event.externalCommentId,
           originalTextExcerpt: event.content,

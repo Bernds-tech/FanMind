@@ -298,6 +298,12 @@ async function syncFacebookMessengerHistoryForConnection(
           direction === "outbound"
             ? (fanParticipant?.id ?? targetFanSenderId)
             : senderId;
+        const normalizedFanSenderId = fanSenderId?.trim() || null;
+        const externalThreadId =
+          conversation.id ||
+          (connection.page_id && normalizedFanSenderId
+            ? `${connection.page_id}:${normalizedFanSenderId}`
+            : null);
         const content =
           message.message ??
           buildAttachmentFallbackText(message.attachments, direction);
@@ -305,7 +311,9 @@ async function syncFacebookMessengerHistoryForConnection(
 
         const result = await createMetaWebhookConversationMessage({
           workspaceId: connection.workspace_id,
-          senderId: fanSenderId,
+          senderId: normalizedFanSenderId,
+          pageId: connection.page_id,
+          recipientId: connection.page_id,
           sourcePlatform: "facebook",
           authorLabel:
             direction === "outbound"
@@ -321,7 +329,8 @@ async function syncFacebookMessengerHistoryForConnection(
             ? conversation.link
             : null,
           externalMessageId: message.id,
-          externalThreadId: conversation.id,
+          externalThreadId,
+          sourceConversationId: conversation.id,
           originalTextExcerpt: content,
           direction,
           attachments: message.attachments,
