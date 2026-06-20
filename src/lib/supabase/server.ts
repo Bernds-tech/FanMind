@@ -2236,6 +2236,17 @@ export async function createMetaWebhookConversationMessage(input: {
     if (existing.error)
       return conversationMessageCreateError(existing.error.message);
     contact = existing.data;
+
+    if (!contact) {
+      const aliasContact = await findPreferredContactBySenderAlias({
+        workspaceId: input.workspaceId,
+        sourcePlatform: input.sourcePlatform,
+        senderId,
+      });
+      if (aliasContact.error)
+        return conversationMessageCreateError(aliasContact.error.message);
+      contact = aliasContact.contact;
+    }
   }
 
   if (contact) {
@@ -2271,7 +2282,7 @@ export async function createMetaWebhookConversationMessage(input: {
       if (!updated.error && updated.data) contact = updated.data;
     }
 
-    if (senderId && contact.handle !== senderId) {
+    if (senderId && !normalizeOptionalText(contact.handle)) {
       const syncedHandle = await postgrestUpdate<ContactRow>(
         "contacts",
         { handle: senderId },
@@ -2797,6 +2808,91 @@ async function getContactById(
   }
 
   return { contact: result.data, error: null };
+}
+
+async function findPreferredContactBySenderAlias(input: {
+  workspaceId: string;
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  senderId: string;
+}): Promise<{ contact: ContactRow | null; error: Error | null }> {
+  const contactsResult = await postgrestSelect<ContactRow[]>(
+    "contacts",
+    getServiceAccessToken(),
+    CONTACT_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["source_platform", input.sourcePlatform],
+    ],
+    undefined,
+    false,
+    "updated_at.desc",
+  );
+
+  if (contactsResult.error) {
+    return {
+      contact: null,
+      error: new Error(
+        `Kontakt-Alias konnte nicht geprüft werden: ${contactsResult.error.message}`,
+      ),
+    };
+  }
+
+  const senderAlias = normalizeSenderAlias(input.senderId);
+  if (!senderAlias) return { contact: null, error: null };
+
+  const aliasMatches = (contactsResult.data ?? []).filter(
+    (contact) => normalizeSenderAlias(contact.handle) === senderAlias,
+  );
+  if (!aliasMatches.length) return { contact: null, error: null };
+
+  for (const match of aliasMatches) {
+    const hasMessages = await contactHasConversationMessages({
+      workspaceId: input.workspaceId,
+      contactId: match.id,
+      sourcePlatform: input.sourcePlatform,
+    });
+    if (hasMessages.error) return { contact: null, error: hasMessages.error };
+    if (hasMessages.exists) return { contact: match, error: null };
+  }
+
+  return { contact: aliasMatches[0], error: null };
+}
+
+async function contactHasConversationMessages(input: {
+  workspaceId: string;
+  contactId: string;
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+}): Promise<{ exists: boolean; error: Error | null }> {
+  const result = await postgrestSelect<{ id: string }>(
+    "conversation_messages",
+    getServiceAccessToken(),
+    "id",
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+      ["source_platform", input.sourcePlatform],
+    ],
+    1,
+    true,
+    "created_at.desc",
+  );
+
+  if (result.error) {
+    return {
+      exists: false,
+      error: new Error(
+        `Kontakt-Nachrichten konnten nicht geprüft werden: ${result.error.message}`,
+      ),
+    };
+  }
+
+  return { exists: Boolean(result.data), error: null };
+}
+
+function normalizeSenderAlias(value: string | null | undefined): string | null {
+  const normalized = normalizeOptionalText(value)?.toLowerCase();
+  if (!normalized) return null;
+  return normalized.startsWith("@") ? normalized.slice(1) : normalized;
 }
 
 export async function updateConversationStatus(input: {
