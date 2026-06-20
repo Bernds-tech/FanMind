@@ -10,6 +10,7 @@ import {
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 
 type ProfileWorkspaceProps = {
@@ -188,7 +189,7 @@ export default async function ProfileSettingsPage() {
           workspace={workspace}
           user={data.user}
           userDisplayName={getUserDisplayName(data.user.user_metadata)}
-          contactCount={contactsResult?.contacts.length ?? 0}
+          contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
         />
       ) : (
         <section

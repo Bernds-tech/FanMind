@@ -32,6 +32,7 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
@@ -1473,7 +1474,7 @@ export default async function FanDetailPage({
             workspace.name,
           )}
           contact={contactResult?.contact ?? null}
-          contactCount={contactsResult?.contacts.length ?? 0}
+          contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           contactError={contactResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           messages={messagesResult?.messages ?? []}

@@ -17,7 +17,8 @@ import {
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
-import { countUniqueFans, getFanGroupKey } from "@/lib/fanIdentity";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
+import { getFanGroupKey } from "@/lib/fanIdentity";
 import styles from "./dashboard.module.css";
 import { getMessageSourceContext } from "@/lib/sourceContext";
 
@@ -349,7 +350,7 @@ function WorkspaceDetails({
     getWorkspaceNavigation("dashboard");
   const workInboxItems = getWorkInboxItems(contacts, followups);
   const newMessageItems = getNewMessageItems(contacts, unseenMessages);
-  const uniqueFanCount = countUniqueFans(contacts);
+  const workspaceKpis = getWorkspaceKpiStatsFromContacts(contacts, openFollowupCount);
   return (
     <WorkspaceShell
       workspaceName={workspace.name}
@@ -367,7 +368,7 @@ function WorkspaceDetails({
         primaryActionLabel,
         primaryActionHref: "/fans",
       }}
-      contactCount={uniqueFanCount}
+      contactCount={workspaceKpis.totalFans}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >

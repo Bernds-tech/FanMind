@@ -14,6 +14,7 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { createFan, updateFan } from "./actions";
@@ -113,7 +114,7 @@ function FansWorkspace({
         primaryActionLabel: "+ Neuer Fan",
         primaryActionHref: "#new-fan-modal",
       }}
-      contactCount={fanGroups.length}
+      contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       logoutAction={logout}
     >
       <div className={styles.fansStack}>

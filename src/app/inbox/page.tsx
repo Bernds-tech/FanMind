@@ -12,9 +12,10 @@ import {
   type FollowupRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import { countUniqueFans, getFanGroupKey } from "@/lib/fanIdentity";
+import { getFanGroupKey } from "@/lib/fanIdentity";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import {
   ORIGINAL_LINK_FALLBACK,
@@ -137,7 +138,7 @@ function InboxWorkspace({
         primaryActionLabel: "Zur Fanliste",
         primaryActionHref: "/fans#fans-list",
       }}
-      contactCount={countUniqueFans(contacts)}
+      contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       openFollowupCount={followups.length}
       logoutAction={logout}
     >
