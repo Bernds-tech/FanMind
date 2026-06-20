@@ -342,6 +342,7 @@ export type FacebookConversationFieldProbe = {
   scopedThreadKeyFieldPresent: boolean;
   sendersPresent: boolean;
   messageCountFieldPresent: boolean;
+  observedKeys: string[];
   note: string;
 };
 
@@ -361,6 +362,7 @@ export type FacebookMessageFieldProbe = {
   selectedItemIdFound: boolean;
   selectedItemIdSource: "message_field" | "share" | "attachment" | "not_detected";
   usedFallback: boolean;
+  observedKeys: string[];
   note: string;
 };
 
@@ -508,6 +510,7 @@ export async function probeFacebookMessengerMessageFieldSet(input: {
         selectedItemIdFound: false,
         selectedItemIdSource: "not_detected",
         usedFallback,
+        observedKeys: [],
         note: lastErrorMessage,
       };
     }
@@ -530,11 +533,13 @@ export async function probeFacebookMessengerMessageFieldSet(input: {
       selectedItemIdFound: false,
       selectedItemIdSource: "not_detected",
       usedFallback,
+      observedKeys: [],
       note: lastErrorMessage,
     };
   }
 
   const normalizedMessages = rows.map(normalizeGraphMessage);
+  const observedKeys = summarizeObservedGraphKeys(rows);
   const fromFieldPresent = rows.some((row) => isRecord(row.from));
   const toFieldPresent = rows.some(
     (row) => isRecord(row.to) && Array.isArray(row.to.data),
@@ -617,6 +622,7 @@ export async function probeFacebookMessengerMessageFieldSet(input: {
     selectedItemIdFound,
     selectedItemIdSource,
     usedFallback,
+    observedKeys,
     note: fromFieldPresent
       ? "Messages-Feldset wurde verarbeitet."
       : "Messages-Feldset enthält kein from-Feld in der Stichprobe.",
@@ -735,6 +741,7 @@ async function probeFacebookMessengerConversationFieldSet(input: {
       scopedThreadKeyFieldPresent: false,
       sendersPresent: false,
       messageCountFieldPresent: false,
+      observedKeys: [],
       note:
         payload?.error?.message ??
         "Conversation-Endpunkt lieferte keine nutzbare Antwort.",
@@ -742,6 +749,7 @@ async function probeFacebookMessengerConversationFieldSet(input: {
   }
 
   const rows = (payload?.data ?? []).filter(isRecord);
+  const observedKeys = summarizeObservedGraphKeys(rows);
   const linkFieldPresent = rows.some((row) => stringValue(row.link));
   const selectedItemIdInLink = rows.some((row) => {
     const link = stringValue(row.link);
@@ -798,6 +806,7 @@ async function probeFacebookMessengerConversationFieldSet(input: {
     scopedThreadKeyFieldPresent,
     sendersPresent,
     messageCountFieldPresent,
+    observedKeys,
     note: selectedItemIdInLink
       ? "Eine Direktlink-ID wurde in einem Conversation-Link erkannt."
       : "In diesem Feldset wurde keine Direktlink-ID erkannt.",
@@ -1035,6 +1044,48 @@ function hasSelectedItemId(value: string | null | undefined): boolean {
     return Boolean(url.searchParams.get("selected_item_id"));
   } catch {
     return false;
+  }
+}
+
+const GRAPH_KEY_SUMMARY_LIMIT = 80;
+const GRAPH_KEY_SUMMARY_DEPTH = 3;
+
+function summarizeObservedGraphKeys(rows: Record<string, unknown>[]): string[] {
+  const keys = new Set<string>();
+
+  for (const row of rows) {
+    collectObservedGraphKeys(row, "", keys, GRAPH_KEY_SUMMARY_DEPTH);
+    if (keys.size >= GRAPH_KEY_SUMMARY_LIMIT) break;
+  }
+
+  return [...keys].sort().slice(0, GRAPH_KEY_SUMMARY_LIMIT);
+}
+
+function collectObservedGraphKeys(
+  value: unknown,
+  prefix: string,
+  keys: Set<string>,
+  depth: number,
+): void {
+  if (keys.size >= GRAPH_KEY_SUMMARY_LIMIT || depth < 0) return;
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectObservedGraphKeys(entry, prefix, keys, depth);
+      if (keys.size >= GRAPH_KEY_SUMMARY_LIMIT) return;
+    }
+    return;
+  }
+
+  if (!isRecord(value)) return;
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    keys.add(path);
+    if (keys.size >= GRAPH_KEY_SUMMARY_LIMIT) return;
+    if (depth > 0 && (isRecord(nestedValue) || Array.isArray(nestedValue))) {
+      collectObservedGraphKeys(nestedValue, path, keys, depth - 1);
+    }
   }
 }
 

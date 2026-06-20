@@ -852,11 +852,13 @@ function FacebookReplyTargetCard({
           {diagnosis.conversationFieldProbes.map((probe) => (
             <span key={probe.label}>
               {probe.label}: Endpoint erfolgreich {probe.ok ? "ja" : "nein"} · Link-Feld {probe.linkFieldPresent ? "ja" : "nein"} · Direktlink-ID in Link {probe.selectedItemIdInLink ? "ja" : "nein"} · participants {probe.participantsPresent ? "ja" : "nein"} · senders {probe.sendersPresent ? "ja" : "nein"} · can_reply {probe.canReplyFieldPresent ? "ja" : "nein"} · scoped_thread_key {probe.scopedThreadKeyFieldPresent ? "ja" : "nein"} · message_count {probe.messageCountFieldPresent ? "ja" : "nein"}
+              {probe.observedKeys.length > 0 ? ` · Keys: ${probe.observedKeys.join(", ")}` : ""}
             </span>
           ))}
           {diagnosis.messageFieldProbe ? (
             <span>
               {diagnosis.messageFieldProbe.label}: Endpoint erfolgreich {diagnosis.messageFieldProbe.ok ? "ja" : "nein"} · from {diagnosis.messageFieldProbe.fromFieldPresent ? "ja" : "nein"} · to {diagnosis.messageFieldProbe.toFieldPresent ? "ja" : "nein"} · attachments {diagnosis.messageFieldProbe.attachmentsFieldPresent ? "ja" : "nein"} · shares {diagnosis.messageFieldProbe.sharesFieldPresent ? "ja" : "nein"} · tags {diagnosis.messageFieldProbe.tagsFieldPresent ? "ja" : "nein"} · Link-Felder {diagnosis.messageFieldProbe.linkFieldPresent ? "ja" : "nein"} · Business-Inbox-URL {diagnosis.messageFieldProbe.businessInboxUrlFound ? "ja" : "nein"} · selected_item_id {diagnosis.messageFieldProbe.selectedItemIdFound ? "ja" : "nein"} · Fallback aktiv {diagnosis.messageFieldProbe.usedFallback ? "ja" : "nein"}
+              {diagnosis.messageFieldProbe.observedKeys.length > 0 ? ` · Keys: ${diagnosis.messageFieldProbe.observedKeys.join(", ")}` : ""}
             </span>
           ) : null}
           <p className={styles.muted}>{diagnosis.note}</p>
