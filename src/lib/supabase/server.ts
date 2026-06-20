@@ -2163,6 +2163,8 @@ function extractCommonPhrases(content: string): string[] {
 export async function createMetaWebhookConversationMessage(input: {
   workspaceId: string;
   senderId?: string | null;
+  pageId?: string | null;
+  recipientId?: string | null;
   sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
   authorLabel: string;
   content: string;
@@ -2182,6 +2184,7 @@ export async function createMetaWebhookConversationMessage(input: {
   replyTargetUrl?: string | null;
   externalMessageId?: string | null;
   externalThreadId?: string | null;
+  sourceConversationId?: string | null;
   externalPostId?: string | null;
   externalCommentId?: string | null;
   originalAuthorLabel?: string | null;
@@ -2191,17 +2194,41 @@ export async function createMetaWebhookConversationMessage(input: {
   receivedAt?: string | null;
   direction?: "inbound" | "outbound";
 }): Promise<ConversationMessageCreateResult> {
-  const handle = normalizeOptionalText(input.senderId);
+  const normalizedSourceType = normalizeMessageType(
+    input.sourceType ??
+      getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
+  );
+  const senderId = normalizeOptionalText(input.senderId);
+  const pageId = normalizeOptionalText(input.pageId ?? input.recipientId);
+  const threadIdentifiers = buildMetaThreadIdentifiers({
+    sourcePlatform: input.sourcePlatform,
+    sourceType: normalizedSourceType,
+    externalThreadId: input.externalThreadId,
+    sourceConversationId: input.sourceConversationId,
+    pageId,
+    senderId,
+  });
+  const preferredThreadId = threadIdentifiers[0] ?? null;
   let contact: ContactRow | null = null;
 
-  if (handle) {
+  if (threadIdentifiers.length) {
+    const byThread = await findContactByThreadIdentifiers({
+      workspaceId: input.workspaceId,
+      sourcePlatform: input.sourcePlatform,
+      threadIdentifiers,
+    });
+    if (byThread.error) return conversationMessageCreateError(byThread.error.message);
+    contact = byThread.contact;
+  }
+
+  if (!contact && senderId) {
     const existing = await postgrestSelect<ContactRow>(
       "contacts",
       getServiceAccessToken(),
       CONTACT_COLUMNS,
       [
         ["workspace_id", input.workspaceId],
-        ["handle", handle],
+        ["handle", senderId],
       ],
       1,
       true,
@@ -2216,7 +2243,7 @@ export async function createMetaWebhookConversationMessage(input: {
     const currentIsFallback = isWebhookFallbackDisplayName(
       contact.display_name,
       input.sourcePlatform,
-      handle,
+      senderId,
     );
     if (
       nextDisplayName &&
@@ -2224,7 +2251,7 @@ export async function createMetaWebhookConversationMessage(input: {
       !isWebhookFallbackDisplayName(
         nextDisplayName,
         input.sourcePlatform,
-        handle,
+        senderId,
       ) &&
       (currentIsFallback || !contact.display_name)
     ) {
@@ -2243,6 +2270,20 @@ export async function createMetaWebhookConversationMessage(input: {
       );
       if (!updated.error && updated.data) contact = updated.data;
     }
+
+    if (senderId && contact.handle !== senderId) {
+      const syncedHandle = await postgrestUpdate<ContactRow>(
+        "contacts",
+        { handle: senderId },
+        getServiceAccessToken(),
+        [
+          ["workspace_id", input.workspaceId],
+          ["id", contact.id],
+        ],
+        { select: CONTACT_COLUMNS, single: true },
+      );
+      if (!syncedHandle.error && syncedHandle.data) contact = syncedHandle.data;
+    }
   }
 
   if (!contact) {
@@ -2254,7 +2295,7 @@ export async function createMetaWebhookConversationMessage(input: {
         display_name:
           input.authorLabel ||
           getDefaultWebhookAuthorLabel(input.sourcePlatform),
-        handle,
+        handle: senderId,
         source_platform: input.sourcePlatform,
         language: "de",
         status: "new",
@@ -2284,7 +2325,7 @@ export async function createMetaWebhookConversationMessage(input: {
     sourceUrl: input.sourceUrl,
     replyTargetUrl: input.replyTargetUrl,
     externalMessageId: input.externalMessageId,
-    externalThreadId: input.externalThreadId,
+    externalThreadId: preferredThreadId,
     externalPostId: input.externalPostId,
     externalCommentId: input.externalCommentId,
     originalTextExcerpt: input.originalTextExcerpt ?? input.content,
@@ -2542,7 +2583,6 @@ async function ensureMetaTestConversation(input: {
         ["contact_id", input.contactId],
         ["source_platform", input.sourcePlatform],
         ["external_thread_id", externalThreadId],
-        ["source_type", normalizeMessageType(input.sourceType)],
       ],
       1,
       true,
@@ -2629,6 +2669,134 @@ async function ensureMetaTestConversation(input: {
   }
 
   return { conversation: created.data, error: null };
+}
+
+function buildMetaThreadIdentifiers(input: {
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourceType: string;
+  externalThreadId?: string | null;
+  sourceConversationId?: string | null;
+  pageId?: string | null;
+  senderId?: string | null;
+}): string[] {
+  const identifiers = new Set<string>();
+  const explicitExternalThreadId = normalizeOptionalText(input.externalThreadId);
+  const sourceConversationId = normalizeOptionalText(input.sourceConversationId);
+  const pageId = normalizeOptionalText(input.pageId);
+  const senderId = normalizeOptionalText(input.senderId);
+
+  if (explicitExternalThreadId) identifiers.add(explicitExternalThreadId);
+  if (sourceConversationId) identifiers.add(sourceConversationId);
+
+  if (
+    input.sourcePlatform === "facebook" &&
+    input.sourceType === "facebook_messages" &&
+    pageId &&
+    senderId
+  ) {
+    identifiers.add(`${pageId}:${senderId}`);
+  }
+
+  return Array.from(identifiers);
+}
+
+async function findContactByThreadIdentifiers(input: {
+  workspaceId: string;
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  threadIdentifiers: string[];
+}): Promise<{ contact: ContactRow | null; error: Error | null }> {
+  for (const identifier of input.threadIdentifiers) {
+    const byConversation = await postgrestSelect<ConversationRow>(
+      "conversations",
+      getServiceAccessToken(),
+      CONVERSATION_COLUMNS,
+      [
+        ["workspace_id", input.workspaceId],
+        ["source_platform", input.sourcePlatform],
+        ["external_thread_id", identifier],
+      ],
+      1,
+      true,
+      "updated_at.desc",
+    );
+
+    if (byConversation.error) {
+      return {
+        contact: null,
+        error: new Error(
+          `Conversation-Mapping konnte nicht geprüft werden: ${withOptionalSchemaHint(byConversation.error.message, "conversations")}`,
+        ),
+      };
+    }
+
+    if (byConversation.data?.contact_id) {
+      const contact = await getContactById(
+        input.workspaceId,
+        byConversation.data.contact_id,
+      );
+      if (contact.error) return contact;
+      if (contact.contact) return contact;
+    }
+
+    const byMessage = await postgrestSelect<ConversationMessageRow>(
+      "conversation_messages",
+      getServiceAccessToken(),
+      CONVERSATION_MESSAGE_COLUMNS,
+      [
+        ["workspace_id", input.workspaceId],
+        ["source_platform", input.sourcePlatform],
+        ["external_thread_id", identifier],
+      ],
+      1,
+      true,
+      "created_at.desc",
+    );
+
+    if (byMessage.error) {
+      return {
+        contact: null,
+        error: new Error(
+          `Nachrichten-Mapping konnte nicht geprüft werden: ${withOptionalSchemaHint(byMessage.error.message, "conversation_messages")}`,
+        ),
+      };
+    }
+
+    if (byMessage.data?.contact_id) {
+      const contact = await getContactById(input.workspaceId, byMessage.data.contact_id);
+      if (contact.error) return contact;
+      if (contact.contact) return contact;
+    }
+  }
+
+  return { contact: null, error: null };
+}
+
+async function getContactById(
+  workspaceId: string,
+  contactId: string,
+): Promise<{ contact: ContactRow | null; error: Error | null }> {
+  const result = await postgrestSelect<ContactRow>(
+    "contacts",
+    getServiceAccessToken(),
+    CONTACT_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["id", contactId],
+    ],
+    1,
+    true,
+  );
+
+  if (result.error) {
+    return {
+      contact: null,
+      error: new Error(
+        `Kontakt konnte nicht geladen werden: ${result.error.message}`,
+      ),
+    };
+  }
+
+  return { contact: result.data, error: null };
 }
 
 export async function updateConversationStatus(input: {
