@@ -1123,7 +1123,12 @@ export async function getContactReplyTarget(
   );
 
   if (result.error) {
-    return { target: null, error: result.error };
+    return {
+      target: null,
+      error: new Error(
+        "Der gespeicherte Chat-Link konnte gerade nicht geladen werden. Du kannst den Facebook-Chat weiterhin über das Postfach öffnen.",
+      ),
+    };
   }
 
   return { target: result.data, error: null };
@@ -1172,7 +1177,12 @@ export async function upsertContactReplyTarget(input: {
   );
 
   if (result.error) {
-    return { target: null, error: result.error };
+    return {
+      target: null,
+      error: new Error(
+        "Der Chat-Link konnte gerade nicht gespeichert werden. Bitte später erneut versuchen.",
+      ),
+    };
   }
 
   return { target: result.data, error: null };

@@ -1116,6 +1116,8 @@ function formatNotice(value: string): string {
     return "Fan-Analyse-Report wurde aktualisiert.";
   if (value === "reply_target_saved")
     return "Exakter Facebook-Chat-Link wurde gespeichert.";
+  if (value === "reply_target_save_failed")
+    return "Der Chat-Link konnte gerade nicht gespeichert werden. Bitte später erneut versuchen.";
   if (value === "reply_target_invalid")
     return "Bitte speichere nur einen HTTPS-Link zu einem konkreten Facebook-Chat, keinen generischen Postfach-Link.";
   return value;
