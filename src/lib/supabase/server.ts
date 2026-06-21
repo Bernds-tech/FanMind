@@ -1524,7 +1524,12 @@ export async function getWorkspaceContacts(
     );
   }
 
-  return { contacts: (contactsResult.data ?? []).filter((contact) => contact.status !== "archived"), error: null };
+  return {
+    contacts: (contactsResult.data ?? []).filter(
+      (contact) => contact.status !== "archived",
+    ),
+    error: null,
+  };
 }
 
 export async function getWorkspaceContact(
@@ -1664,23 +1669,33 @@ export async function archiveWorkspaceContact(input: {
 
   const existing = await getWorkspaceContact(input.workspaceId, input.contactId);
   if (existing.error) return existing;
-  if (!existing.contact) return contactUpdateError("Kontakt wurde nicht gefunden.");
+  if (!existing.contact) {
+    return contactUpdateError("Kontakt wurde nicht gefunden.");
+  }
 
   const archiveNote = input.reason
     ? `[Archiviert] ${input.reason}`
     : "[Archiviert] Kontakt wurde manuell archiviert.";
-  const internalNotes = mergeTextBlocks(existing.contact.internal_notes, archiveNote);
+  const internalNotes = mergeTextBlocks(
+    existing.contact.internal_notes,
+    archiveNote,
+  );
 
   const result = await postgrestUpdate<ContactRow>(
     "contacts",
     { status: "archived", internal_notes: internalNotes },
     accessToken,
-    [["workspace_id", input.workspaceId], ["id", input.contactId]],
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.contactId],
+    ],
     { select: CONTACT_COLUMNS, single: true },
   );
 
   if (result.error) {
-    return contactUpdateError(`Kontakt konnte nicht archiviert werden: ${result.error.message}`);
+    return contactUpdateError(
+      `Kontakt konnte nicht archiviert werden: ${result.error.message}`,
+    );
   }
 
   return { contact: result.data, error: null };
