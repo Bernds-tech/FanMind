@@ -703,7 +703,7 @@ export function ChannelsGrid({
                   : "Öffne diesen Kanal nur, wenn der passende manuelle Workflow in FanMind verfügbar ist."}
             </p>
 
-            {activeConnectionCards.length > 0 ? (
+            {activeConnectionCards.length > 0 && activeChannel.key !== "telegram" ? (
               <div
                 className={`${styles.childSourceGrid} ${
                   activeConnectionCards.length === 1
@@ -759,86 +759,139 @@ export function ChannelsGrid({
             ) : null}
 
             {activeChannel.key === "telegram" ? (
-              <div className={styles.modalDetailGrid}>
-                <div
-                  className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
-                  aria-label="Telegram Live-Sync Status"
-                >
-                  <strong>Telegram Live-Eingang</strong>
-                  {telegramCheckRequested ? (
-                    <p className={styles.inlineStatus}>Live-Verbindung gerade geprüft.</p>
-                  ) : null}
-                  <ul className={styles.compactStatusList}>
-                    <li>Status: {telegramMessagesError ? "Nachrichtenprüfung fehlerhaft" : telegramStatusLabel}</li>
-                    <li>Verbindungstyp: Telegram Bot</li>
-                    <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
-                    <li>Webhook: {telegramWebhookLabel}</li>
-                    <li>Webhook-URL stimmt: {telegramSetupStatus.webhookUrlMatches ? "ja" : "nein"}</li>
-                    <li>Auto-Senden: deaktiviert</li>
-                    <li>Mensch prüft final</li>
-                  </ul>
-                  {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage ? (
-                    <p className={styles.modalNotice}>
-                      Prüfung nötig: {telegramSetupStatus.lastErrorMessage ?? telegramSetupStatus.error}
+              <div className={styles.telegramSplitGrid} aria-label="Telegram Detailbereiche">
+                <section className={styles.telegramColumn} aria-label="Telegram Kommentare">
+                  <div className={styles.telegramColumnHeader}>
+                    <p className={styles.modalEyebrow}>FanMind Bot / FanMind</p>
+                    <h3>Telegram Kommentare</h3>
+                    <p>
+                      Offizieller FanMind-Eingang für Bot- und Kommentar-Kontexte. Eingehende Nachrichten landen in FanMind; automatische Antworten bleiben deaktiviert.
                     </p>
-                  ) : null}
-                  {telegramMessagesError ? (
-                    <p className={styles.modalNotice}>
-                      Telegram-Nachrichten konnten nicht geladen werden: {telegramMessagesError}
-                    </p>
-                  ) : null}
-                </div>
-                <div className={styles.releaseBox} aria-label="Telegram technische Details">
-                  <strong>Technische Details</strong>
-                  <ul className={styles.compactStatusList}>
-                    <li>Letzte Prüfung: {telegramSetupStatus.checkedAt ? formatDateTime(telegramSetupStatus.checkedAt) : "noch nicht geprüft"}</li>
-                    <li>Webhook-URL: <span className={styles.breakableText}>{telegramSetupStatus.webhookUrl ?? TELEGRAM_EXPECTED_WEBHOOK_URL}</span></li>
-                    <li>Pending Updates: {telegramSetupStatus.pendingUpdateCount ?? "nicht geprüft"}</li>
-                    <li>Eingang: Textnachrichten</li>
-                    <li>Workspace-Zuordnung: aktueller Workspace</li>
-                  </ul>
-                </div>
-                <div className={styles.releaseBox} aria-label="Telegram Testablauf">
-                  <strong>Telegram testen</strong>
-                  <ol className={styles.stepList}>
-                    <li>Bot öffnen.</li>
-                    <li>In Telegram auf Start drücken.</li>
-                    <li>Testnachricht senden.</li>
-                    <li>FanMind neu laden oder Live-Verbindung prüfen.</li>
-                    <li>Nachricht erscheint unter Letzte Nachrichten / Inbox.</li>
-                  </ol>
-                </div>
-                <div
-                  className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
-                  aria-label="Letzte Telegram Nachrichten"
-                >
-                  <strong>Letzte Nachrichten</strong>
-                  <p className={styles.subtleModalText}>
-                    Nachrichtenquelle: conversation_messages · source_platform=telegram
-                  </p>
-                  {telegramMessages.length > 0 ? (
-                    <ul className={styles.messageList}>
-                      {telegramMessages.map((message) => (
-                        <li key={message.id}>
-                          <a href={`/fans/${message.contact_id}`}>
-                            <strong>{message.author_label ?? "Telegram Kontakt"}</strong>
-                            <span> · {getTelegramSourceTypeLabel(message.source_type)}</span>
-                            <span> · {formatDateTime(message.created_at)}</span>
-                            <p>{message.content.slice(0, 140)}</p>
-                          </a>
-                        </li>
-                      ))}
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Telegram Kommentare Status">
+                    <strong>Status & Verbindung</strong>
+                    {telegramCheckRequested ? (
+                      <p className={styles.inlineStatus}>Live-Verbindung gerade geprüft.</p>
+                    ) : null}
+                    <ul className={styles.compactStatusList}>
+                      <li>Status: {telegramMessagesError ? "Nachrichtenprüfung fehlerhaft" : telegramStatusLabel}</li>
+                      <li>Verbindungstyp: Telegram Bot</li>
+                      <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
+                      <li>Webhook: {telegramWebhookLabel}</li>
+                      <li>Webhook-URL stimmt: {telegramSetupStatus.webhookUrlMatches ? "ja" : "nein"}</li>
+                      <li>Auto-Senden: deaktiviert</li>
+                      <li>Mensch prüft final</li>
                     </ul>
-                  ) : telegramMessagesError ? null : telegramMessagesInOtherWorkspace ? (
-                    <p className={styles.modalNotice}>Telegram-Nachrichten vorhanden, aber nicht im aktuellen Workspace.</p>
-                  ) : (
-                    <p className={styles.modalNotice}>Noch keine Telegram-Nachrichten in diesem Workspace gefunden.</p>
-                  )}
-                </div>
+                    {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage ? (
+                      <p className={styles.modalNotice}>
+                        Prüfung nötig: {telegramSetupStatus.lastErrorMessage ?? telegramSetupStatus.error}
+                      </p>
+                    ) : null}
+                    {telegramMessagesError ? (
+                      <p className={styles.modalNotice}>
+                        Telegram-Kommentare konnten nicht geladen werden: {telegramMessagesError}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Letzte Telegram Kommentare">
+                    <strong>Letzte Kommentare</strong>
+                    <p className={styles.subtleModalText}>
+                      Quelle: conversation_messages · source_platform=telegram · FanMind Bot
+                    </p>
+                    {telegramMessages.length > 0 ? (
+                      <ul className={styles.messageList}>
+                        {telegramMessages.map((message) => (
+                          <li key={`comments-${message.id}`}>
+                            <a href={`/fans/${message.contact_id}`}>
+                              <strong>{message.author_label ?? "Telegram Kontakt"}</strong>
+                              <span> · {getTelegramSourceTypeLabel(message.source_type)}</span>
+                              <span> · {formatDateTime(message.created_at)}</span>
+                              <p>{message.content.slice(0, 140)}</p>
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : telegramMessagesError ? null : telegramMessagesInOtherWorkspace ? (
+                      <p className={styles.modalNotice}>Telegram-Kommentare vorhanden, aber nicht im aktuellen Workspace.</p>
+                    ) : (
+                      <p className={styles.modalNotice}>Noch keine Telegram-Kommentare in diesem Workspace gefunden.</p>
+                    )}
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Telegram Kommentare technische Details">
+                    <strong>Technische Details</strong>
+                    <ul className={styles.compactStatusList}>
+                      <li>Letzte Prüfung: {telegramSetupStatus.checkedAt ? formatDateTime(telegramSetupStatus.checkedAt) : "noch nicht geprüft"}</li>
+                      <li>Webhook-URL: <span className={styles.breakableText}>{telegramSetupStatus.webhookUrl ?? TELEGRAM_EXPECTED_WEBHOOK_URL}</span></li>
+                      <li>Pending Updates: {telegramSetupStatus.pendingUpdateCount ?? "nicht geprüft"}</li>
+                      <li>Eingang: Textnachrichten</li>
+                      <li>Workspace-Zuordnung: aktueller Workspace</li>
+                    </ul>
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Telegram Kommentare Testablauf">
+                    <strong>Kommentare testen</strong>
+                    <ol className={styles.stepList}>
+                      <li>FanMind Bot öffnen.</li>
+                      <li>In Telegram auf Start drücken.</li>
+                      <li>Testkommentar senden.</li>
+                      <li>FanMind neu laden oder Live-Verbindung prüfen.</li>
+                      <li>Kommentar erscheint im linken Kommentarbereich und in der Inbox.</li>
+                    </ol>
+                  </div>
+                </section>
+                <section className={styles.telegramColumn} aria-label="Telegram Nachrichten">
+                  <div className={styles.telegramColumnHeader}>
+                    <p className={styles.modalEyebrow}>Private Chats / WellFit</p>
+                    <h3>Telegram Nachrichten</h3>
+                    <p>
+                      Vorbereiteter privater Telegram-Eingang für direkte Chat-Kontexte wie WellFit. Keine automatische Sendefunktion und kein zusätzlicher Backend-Flow.
+                    </p>
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Telegram Nachrichten Status">
+                    <strong>Status & Verbindung</strong>
+                    <ul className={styles.compactStatusList}>
+                      <li>Status: vorbereitet / noch nicht live</li>
+                      <li>Verbindungstyp: Private Telegram Chats</li>
+                      <li>Bot: separater privater Eingang vorbereitet</li>
+                      <li>Webhook: nicht aktiv geschaltet</li>
+                      <li>Auto-Senden: deaktiviert</li>
+                      <li>Mensch prüft final</li>
+                    </ul>
+                    <p className={styles.modalNotice}>
+                      Private Telegram-Nachrichten sind als eigener Bereich vorbereitet. Bestehende Live-Daten werden nicht mit dem Kommentarbereich vermischt.
+                    </p>
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Letzte Telegram Nachrichten">
+                    <strong>Letzte Nachrichten</strong>
+                    <p className={styles.subtleModalText}>
+                      Quelle vorbereitet: private Telegram Chats · WellFit-Kontext
+                    </p>
+                    <p className={styles.modalNotice}>Noch keine privaten Telegram-Nachrichten in diesem Bereich importiert.</p>
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Telegram Nachrichten technische Details">
+                    <strong>Technische Details</strong>
+                    <ul className={styles.compactStatusList}>
+                      <li>Letzte Prüfung: noch nicht live geprüft</li>
+                      <li>Webhook-URL: eigener Eingang vorbereitet</li>
+                      <li>Pending Updates: nicht geprüft</li>
+                      <li>Eingang: private Textnachrichten</li>
+                      <li>Workspace-Zuordnung: vorbereitet</li>
+                    </ul>
+                  </div>
+                  <div className={styles.releaseBox} aria-label="Telegram Nachrichten Testablauf">
+                    <strong>Nachrichten testen</strong>
+                    <ol className={styles.stepList}>
+                      <li>Privaten Telegram-Eingang konfigurieren.</li>
+                      <li>WellFit-Testchat zuordnen.</li>
+                      <li>Testnachricht senden.</li>
+                      <li>Import manuell prüfen.</li>
+                      <li>Nachricht erscheint nur im rechten Nachrichtenbereich.</li>
+                    </ol>
+                  </div>
+                </section>
               </div>
             ) : null}
 
-            {activeSyncStatus ? (
+            {activeSyncStatus && activeChannel.key !== "telegram" ? (
               <div
                 className={styles.releaseBox}
                 aria-label={`Statusblock für ${activeChannel.name}`}
