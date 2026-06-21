@@ -313,7 +313,7 @@ function FanDetailContent({
   );
   const originalChannelAction = getOriginalChannelAction(
     conversation,
-    messages,
+    filteredMessages,
     contact,
     facebookReplyTarget,
   );
@@ -437,13 +437,7 @@ function FanDetailContent({
                 <span>{messagesError}</span>
               </p>
             ) : null}
-            {contact &&
-            messages.some(
-              (message) =>
-                message.source_platform === "facebook" &&
-                (message.source_type === "facebook_messages" ||
-                  message.message_type === "dm"),
-            ) ? (
+            {shouldShowFacebookHelpers(activeChannel, filteredMessages) ? (
               <div className={styles.syncBox}>
                 <p className={styles.syncHint}>
                   Facebook-Chat zuletzt synchronisiert:{" "}
@@ -466,7 +460,7 @@ function FanDetailContent({
                 </form>
               </div>
             ) : null}
-            {contact && hasFacebookMessages(messages) ? (
+            {shouldShowFacebookHelpers(activeChannel, filteredMessages) ? (
               <FacebookReplyTargetCard
                 contact={contact}
                 target={facebookReplyTarget}
@@ -511,12 +505,8 @@ function FanDetailContent({
                 ))
               ) : (
                 <EmptyState
-                  title="Noch kein gespeicherter Nachrichtenverlauf."
-                  body={
-                    activeChannel === "all"
-                      ? "Sobald echte Nachrichten eingehen, erscheinen sie hier chronologisch."
-                      : "Für diesen Kanal gibt es noch keine gespeicherten Nachrichten."
-                  }
+                  title={getTimelineEmptyTitle(activeChannel)}
+                  body={getTimelineEmptyBody(activeChannel)}
                 />
               )}
             </div>
@@ -543,7 +533,7 @@ function FanDetailContent({
             modes={defaultReplyModes}
             originalChannelAction={getOriginalChannelAction(
               conversation,
-              messages,
+              filteredMessages,
               contact,
               facebookReplyTarget,
             )}
@@ -575,6 +565,39 @@ function FanDetailContent({
   );
 }
 
+function shouldShowFacebookHelpers(
+  activeChannel: ConversationChannelKey,
+  visibleMessages: ConversationMessageRow[],
+): boolean {
+  return (
+    activeChannel !== "telegram" &&
+    (activeChannel === "all" || activeChannel === "facebook") &&
+    hasFacebookMessages(visibleMessages)
+  );
+}
+
+function getTimelineEmptyTitle(activeChannel: ConversationChannelKey): string {
+  if (activeChannel === "all")
+    return "Noch kein gespeicherter Nachrichtenverlauf.";
+  return `Keine ${getChannelEmptyLabel(activeChannel)} für diesen Fan vorhanden.`;
+}
+
+function getTimelineEmptyBody(activeChannel: ConversationChannelKey): string {
+  if (activeChannel === "all") {
+    return "Sobald echte Nachrichten eingehen, erscheinen sie hier chronologisch.";
+  }
+  return "Wähle „Alle“, um kanalübergreifende Einträge zu sehen, oder prüfe einen anderen Kanalfilter.";
+}
+
+function getChannelEmptyLabel(activeChannel: ConversationChannelKey): string {
+  const tab = conversationChannelTabs.find(
+    (item) => item.key === activeChannel,
+  );
+  if (!tab) return "Nachrichten";
+  if (activeChannel === "notes") return "manuellen Notizen";
+  return `${tab.label}-Nachrichten`;
+}
+
 function ContactManagementCard({
   contact,
   allContacts,
@@ -596,7 +619,7 @@ function ContactManagementCard({
       <div className={styles.cardHeader}>
         <div>
           <p className={dashboardStyles.eyebrow}>Kontaktpflege</p>
-          <h3>Archivieren oder zusammenführen</h3>
+          <h3>Kontakt zusammenführen oder archivieren</h3>
         </div>
       </div>
       <p className={styles.syncHint}>
@@ -605,7 +628,7 @@ function ContactManagementCard({
         · {memories.length} Memories · {followups.length} Follow-ups.
       </p>
       <form action={mergeFanContacts} className={styles.noteForm}>
-        <input name="return_to" type="hidden" value="/fans" />
+        <input name="return_to" type="hidden" value={`/fans/${contact.id}`} />
         <input name="source_contact_id" type="hidden" value={contact.id} />
         <label htmlFor="target_contact_id">Zielkontakt</label>
         <select
@@ -630,13 +653,19 @@ function ContactManagementCard({
           Tags und Notizen werden kombiniert; der Quellkontakt wird danach
           archiviert.
         </p>
-        <button className={dashboardStyles.secondaryButton} type="submit">
+        <button
+          className={`${dashboardStyles.secondaryButton} ${styles.fullWidthButton}`}
+          type="submit"
+        >
           Diesen Kontakt zusammenführen
         </button>
       </form>
       <form action={archiveFan} className={styles.noteForm}>
         <input name="contact_id" type="hidden" value={contact.id} />
-        <button className={dashboardStyles.secondaryButton} type="submit">
+        <button
+          className={`${dashboardStyles.secondaryButton} ${styles.fullWidthButton}`}
+          type="submit"
+        >
           Kontakt wirklich archivieren
         </button>
       </form>
