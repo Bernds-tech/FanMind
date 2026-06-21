@@ -1225,3 +1225,20 @@
   font-weight: 700;
   padding: 0.7rem 1rem;
 }
+
+.actionLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mergeLink {
+  color: #4f46e5;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mergeLink:hover {
+  text-decoration: underline;
+}

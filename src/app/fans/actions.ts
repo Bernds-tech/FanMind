@@ -23,12 +23,20 @@ import {
   updateContactInternalNotes,
   upsertContactReplyTarget,
   upsertFanAnalysisReport,
+  type ContactRow,
+  type ContactUpdateResult,
 } from "@/lib/supabase/server";
 import {
+  formatPlatformLabel,
   getDuplicateKey,
   normalizePlatform,
   parseCsvContacts,
+  type PlatformValue,
 } from "./import/csv";
+import {
+  getContactGroupIdentity,
+  normalizeFanIdentity,
+} from "@/lib/fanIdentity";
 import { isAllowedManualFacebookThreadUrl } from "@/lib/sourceContext";
 
 type SuggestedSaveResult = {
@@ -599,18 +607,17 @@ export async function createFan(formData: FormData) {
 
 export async function updateFan(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
-  const contactIds = formData
-    .getAll("contact_ids")
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter(Boolean);
+  const primaryContactId =
+    formValue(formData, "primary_contact_id") ||
+    formValue(formData, "group_primary_contact_id");
+  const submittedGroupKey = formValue(formData, "fan_group_key");
   const platforms = formPlatforms(formData, "source_platforms", {
     fallbackManual: false,
   });
   const baseContact = getContactFormValues(formData);
 
-  if (!contactIds.length) {
-    throw new Error("Mindestens ein Kontakt muss zur Fan-Gruppe gehören.");
+  if (!primaryContactId) {
+    throw new Error("Primärer Kontakt der Fan-Gruppe fehlt.");
   }
 
   if (!platforms.length) {
@@ -619,70 +626,117 @@ export async function updateFan(formData: FormData) {
     );
   }
 
-  const contactsResult = await getWorkspaceContacts(workspace.id);
+  const [primaryResult, contactsResult] = await Promise.all([
+    getWorkspaceContact(workspace.id, primaryContactId),
+    getWorkspaceContacts(workspace.id),
+  ]);
 
+  if (primaryResult.error) {
+    throw new Error(primaryResult.error.message);
+  }
+  if (!primaryResult.contact) {
+    throw new Error("Primärer Kontakt wurde nicht gefunden.");
+  }
   if (contactsResult.error) {
     throw new Error(contactsResult.error.message);
   }
 
-  const contactsById = new Map(
-    contactsResult.contacts.map((contact) => [contact.id, contact]),
-  );
-  const editableContacts = contactIds.map((contactId) => {
-    const contact = contactsById.get(contactId);
-
-    if (!contact) {
-      throw new Error("Kontakt wurde im aktuellen Workspace nicht gefunden.");
-    }
-
-    return contact;
-  });
-  const contactsByPlatform = new Map(
-    editableContacts.map((contact) => [normalizePlatform(contact.source_platform), contact]),
+  const primaryContact = primaryResult.contact;
+  const editableContacts = resolveServerFanGroup(
+    primaryContact,
+    contactsResult.contacts,
+    submittedGroupKey,
   );
   const selectedPlatforms = new Set(platforms);
+  const contactsByPlatform = new Map<PlatformValue, ContactRow[]>();
 
-  // Kanäle sind aktuell als je ein Kontakt-Datensatz pro Fan-Gruppe modelliert.
-  // Abgewählte Zusatzkanäle werden deshalb sicher archiviert statt hart gelöscht;
-  // bestehende Conversations, Messages, Reply-Targets und Memories bleiben erhalten.
   for (const contact of editableContacts) {
     const platform = normalizePlatform(contact.source_platform);
+    contactsByPlatform.set(platform, [
+      ...(contactsByPlatform.get(platform) ?? []),
+      contact,
+    ]);
+  }
+
+  const archivedPlatforms: PlatformValue[] = [];
+
+  for (const [platform, platformContacts] of contactsByPlatform) {
+    const sortedPlatformContacts = [...platformContacts].sort(compareContactAgeAsc);
+
     if (!selectedPlatforms.has(platform)) {
-      const result = await archiveWorkspaceContact({
-        workspaceId: workspace.id,
-        contactId: contact.id,
-        reason: `Kanal ${platform} in der Fan-Bearbeitung abgewählt.`,
-      });
-      if (result.error) throw new Error(result.error.message);
+      for (const contact of sortedPlatformContacts) {
+        const archived = await archiveWorkspaceContact({
+          workspaceId: workspace.id,
+          contactId: contact.id,
+          reason: `Kanal ${formatPlatformLabel(platform)} in der Fan-Bearbeitung abgewählt.`,
+        });
+        assertUpdatedContact(archived, `Kanal ${formatPlatformLabel(platform)} konnte nicht archiviert werden.`);
+      }
+      archivedPlatforms.push(platform);
       continue;
     }
 
-    const result = await updateWorkspaceContact({
+    const [keptContact, ...duplicateContacts] = sortedPlatformContacts;
+    const updated = await updateWorkspaceContact({
       ...baseContact,
       workspaceId: workspace.id,
-      contactId: contact.id,
+      contactId: keptContact.id,
       sourcePlatform: platform,
     });
-    if (result.error) throw new Error(result.error.message);
+    assertUpdatedContact(updated, `Kanal ${formatPlatformLabel(platform)} konnte nicht aktualisiert werden.`);
+
+    for (const duplicate of duplicateContacts) {
+      const archived = await archiveWorkspaceContact({
+        workspaceId: workspace.id,
+        contactId: duplicate.id,
+        reason: `Doppelter aktiver Kontakt für ${formatPlatformLabel(platform)} in der Fan-Bearbeitung archiviert; Kontakt ${keptContact.id} bleibt aktiv.`,
+      });
+      assertUpdatedContact(archived, `Doppelter Kanal ${formatPlatformLabel(platform)} konnte nicht archiviert werden.`);
+    }
   }
 
   for (const platform of platforms) {
-    if (contactsByPlatform.has(platform)) continue;
-    const result = await createWorkspaceContact({
+    if ((contactsByPlatform.get(platform) ?? []).length > 0) continue;
+    const created = await createWorkspaceContact({
       ...baseContact,
       workspaceId: workspace.id,
       sourcePlatform: platform,
     });
-    if (result.error) throw new Error(result.error.message);
+    if (created.error || !created.contact) {
+      throw new Error(
+        created.error?.message ??
+          `Kanal ${formatPlatformLabel(platform)} konnte nicht erstellt werden.`,
+      );
+    }
+  }
+
+  const verificationResult = await getWorkspaceContacts(workspace.id);
+  if (verificationResult.error) {
+    throw new Error(verificationResult.error.message);
+  }
+  const verifyGroup = resolveServerFanGroup(
+    { ...primaryContact, ...baseContact },
+    verificationResult.contacts,
+    submittedGroupKey,
+  );
+  const activePlatforms = uniqueActionPlatforms(verifyGroup);
+  const expectedPlatforms = [...selectedPlatforms].sort();
+
+  if (activePlatforms.join(",") !== expectedPlatforms.join(",")) {
+    throw new Error(
+      `Kanäle konnten nicht aktualisiert werden: aktiv sind ${formatActionPlatformList(activePlatforms)}, erwartet war ${formatActionPlatformList(expectedPlatforms)}.`,
+    );
   }
 
   revalidatePath("/fans");
   revalidatePath("/dashboard");
   revalidatePath("/inbox");
-  for (const contactId of contactIds) {
-    revalidatePath(`/fans/${contactId}`);
+  for (const contact of editableContacts) {
+    revalidatePath(`/fans/${contact.id}`);
   }
-  redirect("/fans?notice=fan_updated#fans-list");
+  redirect(
+    `/fans?notice=fan_updated&active=${encodeURIComponent(activePlatforms.join(","))}&archived=${archivedPlatforms.length}#fans-list`,
+  );
 }
 
 export async function archiveFan(formData: FormData) {
@@ -705,14 +759,41 @@ export async function mergeFanContacts(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
   const sourceContactId = formValue(formData, "source_contact_id");
   const targetContactId = formValue(formData, "target_contact_id");
-  await ensureContactInWorkspace(workspace.id, sourceContactId);
-  await ensureContactInWorkspace(workspace.id, targetContactId);
-  const result = await mergeWorkspaceContacts({
-    workspaceId: workspace.id,
-    sourceContactId,
-    targetContactId,
-  });
-  if (result.error) throw new Error(result.error.message);
+  const [sourceResult, targetResult, contactsResult] = await Promise.all([
+    getWorkspaceContact(workspace.id, sourceContactId),
+    getWorkspaceContact(workspace.id, targetContactId),
+    getWorkspaceContacts(workspace.id),
+  ]);
+
+  if (sourceResult.error) throw new Error(sourceResult.error.message);
+  if (targetResult.error) throw new Error(targetResult.error.message);
+  if (contactsResult.error) throw new Error(contactsResult.error.message);
+  if (!sourceResult.contact || !targetResult.contact) {
+    throw new Error("Quelle oder Ziel wurde nicht gefunden.");
+  }
+
+  const sourceGroup = resolveServerFanGroup(
+    sourceResult.contact,
+    contactsResult.contacts,
+    "",
+  ).filter((contact) => contact.id !== targetContactId);
+
+  if (!sourceGroup.length) {
+    throw new Error("Keine Quellkontakte zum Zusammenführen gefunden.");
+  }
+
+  for (const sourceContact of sourceGroup) {
+    const result = await mergeWorkspaceContacts({
+      workspaceId: workspace.id,
+      sourceContactId: sourceContact.id,
+      targetContactId,
+    });
+    assertUpdatedContact(
+      result,
+      `Kontakt ${sourceContact.id} konnte nicht zusammengeführt werden.`,
+    );
+  }
+
   revalidatePath("/fans");
   revalidatePath("/dashboard");
   revalidatePath("/inbox");
@@ -805,6 +886,85 @@ function getActionUserLabel(
   if (typeof label === "string" && label.trim()) return label.trim();
   if (user?.email) return user.email;
   return fallback || "Team";
+}
+
+function resolveServerFanGroup(
+  primaryContact: ContactRow,
+  contacts: ContactRow[],
+  submittedGroupKey: string,
+): ContactRow[] {
+  const activeContacts = contacts.filter(
+    (contact) => contact.status?.trim().toLowerCase() !== "archived",
+  );
+  const contactsById = new Map(activeContacts.map((contact) => [contact.id, contact]));
+  const primary = contactsById.get(primaryContact.id) ?? primaryContact;
+  const groupIdentity = getContactGroupIdentity(primary);
+  const normalizedName = normalizeFanIdentity(primary.display_name);
+  const normalizedHandle = normalizeFanIdentity(primary.handle);
+  const exactName = primary.display_name?.trim();
+  const exactNameKey = exactName?.toLowerCase() ?? "";
+
+  const group = activeContacts.filter((contact) => {
+    if (contact.id === primary.id) return true;
+
+    const contactGroupIdentity = getContactGroupIdentity(contact);
+    if (groupIdentity && contactGroupIdentity === groupIdentity) return true;
+    if (submittedGroupKey && contactGroupIdentity === submittedGroupKey) return true;
+
+    const contactName = normalizeFanIdentity(contact.display_name);
+    const contactHandle = normalizeFanIdentity(contact.handle);
+    if (normalizedName && normalizedHandle) {
+      if (contactName === normalizedName && contactHandle === normalizedHandle) {
+        return true;
+      }
+      if (contactHandle === normalizedHandle) return true;
+    }
+
+    if (
+      exactNameKey &&
+      contact.display_name?.trim().toLowerCase() === exactNameKey &&
+      !normalizedHandle
+    ) {
+      return true;
+    }
+
+    return false;
+  });
+
+  return group.length ? group : [primary];
+}
+
+function assertUpdatedContact(
+  result: ContactUpdateResult,
+  fallbackMessage: string,
+): asserts result is ContactUpdateResult & { contact: ContactRow } {
+  if (result.error || !result.contact) {
+    throw new Error(result.error?.message ?? fallbackMessage);
+  }
+}
+
+function compareContactAgeAsc(left: ContactRow, right: ContactRow): number {
+  return getActionTime(left.created_at) - getActionTime(right.created_at);
+}
+
+function uniqueActionPlatforms(contacts: ContactRow[]): PlatformValue[] {
+  return Array.from(
+    new Set(
+      contacts
+        .filter((contact) => contact.status?.trim().toLowerCase() !== "archived")
+        .map((contact) => normalizePlatform(contact.source_platform)),
+    ),
+  ).sort();
+}
+
+function formatActionPlatformList(platforms: PlatformValue[]): string {
+  return platforms.length
+    ? platforms.map(formatPlatformLabel).join(", ")
+    : "keine Kanäle";
+}
+
+function getActionTime(value: string | null): number {
+  return value ? new Date(value).getTime() : 0;
 }
 
 function formValue(formData: FormData, key: string): string {

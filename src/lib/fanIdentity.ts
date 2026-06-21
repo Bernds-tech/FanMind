@@ -1,6 +1,6 @@
 import { type ContactRow } from "@/lib/supabase/server";
 
-function normalizeFanIdentity(value: string | null | undefined): string {
+export function normalizeFanIdentity(value: string | null | undefined): string {
   return (value ?? "")
     .trim()
     .toLowerCase()
@@ -10,7 +10,20 @@ function normalizeFanIdentity(value: string | null | undefined): string {
     .trim();
 }
 
+export function getContactGroupIdentity(contact: ContactRow): string | null {
+  const value = (contact as ContactRow & { group_identity?: string | null }).group_identity;
+  const normalized = normalizeFanIdentity(value);
+
+  return normalized ? `group:${normalized}` : null;
+}
+
 export function getFanGroupKey(contact: ContactRow): string {
+  const groupIdentity = getContactGroupIdentity(contact);
+
+  if (groupIdentity) {
+    return groupIdentity;
+  }
+
   const nameKey = normalizeFanIdentity(contact.display_name);
   const handleKey = normalizeFanIdentity(contact.handle);
 
