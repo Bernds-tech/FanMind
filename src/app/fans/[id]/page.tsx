@@ -100,6 +100,7 @@ type ConversationChannelKey =
   | "whatsapp"
   | "facebook"
   | "tiktok"
+  | "telegram"
   | "email"
   | "webform"
   | "notes";
@@ -116,6 +117,7 @@ const conversationChannelTabs: ConversationChannelTab[] = [
   { key: "whatsapp", label: "WhatsApp", icon: "WA" },
   { key: "facebook", label: "Facebook", icon: "FB" },
   { key: "tiktok", label: "TikTok", icon: "TT" },
+  { key: "telegram", label: "Telegram", icon: "TG" },
   { key: "email", label: "E-Mail", icon: "@" },
   { key: "webform", label: "Webformular", icon: "WF" },
   { key: "notes", label: "Notizen", icon: "N" },
@@ -129,6 +131,7 @@ const channelSourceTypes: Record<
   whatsapp: ["whatsapp_messages"],
   facebook: ["facebook_messages", "facebook_comments"],
   tiktok: ["tiktok_messages", "tiktok_comments"],
+  telegram: ["telegram_messages"],
   email: ["email", "e_mail", "manual_email"],
   webform: ["webform", "webformular", "form"],
   notes: ["note", "notes", "manual_note", "internal_note"],

@@ -4,6 +4,7 @@ export type PreparedSourceType =
   | "instagram_messages"
   | "instagram_comments"
   | "whatsapp_messages"
+  | "telegram_messages"
   | "tiktok_comments"
   | "tiktok_messages"
   | "email"
@@ -21,6 +22,7 @@ export type SourcePlatform =
   | "facebook"
   | "instagram"
   | "whatsapp"
+  | "telegram"
   | "tiktok"
   | "email"
   | "webform"
@@ -35,6 +37,7 @@ export type ChannelSourceConfig = {
     | "Facebook"
     | "Instagram"
     | "WhatsApp"
+    | "Telegram"
     | "TikTok"
     | "E-Mail"
     | "Webformular"
@@ -174,6 +177,27 @@ export const CHANNEL_SOURCE_CONFIGS: Record<
     statusText: "Vorbereitet · Cloud-API-Konfiguration erforderlich",
     statusHint:
       "Cloud-API-Anbindung vorbereitet, noch nicht live. Keine automatische Sendefunktion in FanMind.",
+  },
+
+  telegram_messages: {
+    ...base,
+    sourceType: "telegram_messages",
+    source_platform: "telegram",
+    source_type: "telegram_messages",
+    label: "Telegram Nachrichten",
+    platformName: "Telegram",
+    platformKey: "telegram",
+    interactionType: "message",
+    actionLabel: "Chat öffnen",
+    status: "prepared",
+    inboundSupported: true,
+    outboundSupported: false,
+    mediaSupported: false,
+    historySyncSupported: false,
+    liveWebhookSupported: true,
+    statusText: "Live-Sync vorbereitet · Telegram Bot · kein automatisches Senden",
+    statusHint:
+      "Telegram ist als Eingangskanal verbunden. FanMind sendet keine automatischen Antworten. Der Mensch prüft und sendet final selbst.",
   },
   tiktok_comments: {
     ...base,
