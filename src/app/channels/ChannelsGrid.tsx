@@ -117,6 +117,7 @@ type Channel = {
   logoInitials?: string;
   signal?: boolean;
   childSources?: PreparedSourceType[];
+  connectionCardCount?: 1 | 2;
 };
 
 const logoPath = (name: string) => `/channel-logos/${name}.svg`;
@@ -191,6 +192,7 @@ const channels: Channel[] = [
     technology: "Kommentare geplant",
     intakeTypes: "Kommentare · Live-Chat",
     logo: logoPath("youtube"),
+    connectionCardCount: 2,
   },
   {
     key: "discord",
@@ -838,7 +840,35 @@ export function ChannelsGrid({
                         <li>Status: {connectionCard.status}</li>
                         <li>Verbindungstyp: {connectionCard.connectionType}</li>
                         <li>Auto-Senden: deaktiviert</li>
+                        {connectionCard.details.map((detail) => (
+                          <li key={detail}>{detail}</li>
+                        ))}
                       </ul>
+                      {connectionCard.key === "facebook_messages" ? (
+                        <div className={styles.releaseBox}>
+                          <strong>Nachrichten-Status</strong>
+                          <ul className={styles.connectionCardList}>
+                            <li>Page: {facebookConnection?.page_name ?? facebookConnection?.page_id ?? "nicht verbunden"}</li>
+                            <li>Webhook messages: {formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</li>
+                            <li>Webhook message_echoes: {formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</li>
+                            <li>Letzte Nachricht: {lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</li>
+                            <li>Letzter Messenger-Sync: {facebookConnection?.last_messenger_sync_at ? formatDateTime(facebookConnection.last_messenger_sync_at) : "noch nicht ausgeführt"}</li>
+                            <li>OAuth Callback: {facebookLiveSetupStatus.oauthCallbackUrl ?? "nicht vollständig konfiguriert"}</li>
+                          </ul>
+                        </div>
+                      ) : null}
+                      {connectionCard.key === "facebook_comments" ? (
+                        <div className={styles.releaseBox}>
+                          <strong>Kommentar-Status</strong>
+                          <ul className={styles.connectionCardList}>
+                            <li>Letztes Kommentar-Event: {lastFeedCommentEvent ? formatDateTime(lastFeedCommentEvent.received_at) : "noch kein echter Kommentar empfangen"}</li>
+                            <li>Letzter Kommentar-Abruf: {facebookConnection?.last_comment_fetch_at ? formatDateTime(facebookConnection.last_comment_fetch_at) : "geparkt, nicht ausgeführt"}</li>
+                            <li>Kommentar-Scopes angefordert: {commentFeedScopesRequested ? "ja" : "nein"}</li>
+                            <li>Token-Scopes vollständig: {commentFeedScopesGranted ? "ja" : "nein"}</li>
+                            <li>feed/Kommentare: geparkt, nicht automatisch aktiviert</li>
+                          </ul>
+                        </div>
+                      ) : null}
                       <div className={styles.connectionCardActions}>
                         {connectionCard.key === "facebook_messages" &&
                         !facebookConnection ? (
@@ -1203,7 +1233,7 @@ export function ChannelsGrid({
                 </div>
               ) : null}
 
-              {activeSyncStatus && activeChannel.key !== "telegram" ? (
+              {activeSyncStatus && activeConnectionCards.length === 0 && activeChannel.key !== "telegram" ? (
                 <div
                   className={styles.releaseBox}
                   aria-label={`Statusblock für ${activeChannel.name}`}
@@ -1230,7 +1260,7 @@ export function ChannelsGrid({
                   </ul>
                 </div>
               ) : null}
-              {activeChannel.key === "facebook" && !facebookConnection ? (
+              {activeChannel.key === "facebook" && activeConnectionCards.length === 0 && !facebookConnection ? (
                 <p
                   className={styles.modalNotice}
                   role={missingFacebookSetupItems.length ? "alert" : "status"}
@@ -1253,7 +1283,7 @@ export function ChannelsGrid({
                   Webhook bereit: <strong>nicht bestätigt</strong>
                 </p>
               ) : null}
-              {activeChannel.key === "facebook" && facebookConnection ? (
+              {activeChannel.key === "facebook" && activeConnectionCards.length === 0 && facebookConnection ? (
                 <>
                   <p className={styles.modalNotice}>
                     OAuth verbunden · Page:{" "}
@@ -1627,6 +1657,7 @@ export function ChannelsGrid({
                 </>
               ) : null}
               {activeChannel.key === "facebook" &&
+              activeConnectionCards.length === 0 &&
               facebookConnection &&
               metaWebhookError ? (
                 <p className={styles.modalNotice} role="alert">
@@ -1634,7 +1665,7 @@ export function ChannelsGrid({
                   {metaWebhookError}
                 </p>
               ) : null}
-              {activeChannel.key === "facebook" && facebookConnection ? (
+              {activeChannel.key === "facebook" && activeConnectionCards.length === 0 && facebookConnection ? (
                 <div
                   className={styles.releaseBox}
                   aria-label="Meta Webhook Diagnose"
@@ -1771,7 +1802,8 @@ export function ChannelsGrid({
                   {getFacebookErrorMessage(facebookErrorCode)}
                 </p>
               ) : null}
-              <div
+              {activeConnectionCards.length === 0 ? (
+                <div
                 className={styles.releaseBox}
                 aria-label={`Nachrichtenfreigabe für ${activeChannel.name}`}
               >
@@ -1782,7 +1814,8 @@ export function ChannelsGrid({
                   <li>Manuelle Prüfung vor Antwort</li>
                   <li>Automatisches Senden deaktiviert</li>
                 </ul>
-              </div>
+                </div>
+              ) : null}
               {notice ? (
                 <p className={styles.modalNotice} role="status">
                   {notice}
@@ -1894,6 +1927,7 @@ type ConnectionCard = {
   status: string;
   connectionType: string;
   actionLabel: string;
+  details: string[];
 };
 
 function buildConnectionCards({
@@ -1921,6 +1955,11 @@ function buildConnectionCards({
         actionLabel: facebookConnection
           ? "DM-Verbindung prüfen"
           : "DM-Verbindung vorbereiten",
+        details: [
+          `Page: ${facebookConnection?.page_name ?? facebookConnection?.page_id ?? "nicht verbunden"}`,
+          `Webhook: ${facebookConnection?.webhook_subscribed ? "aktiv" : "nicht bestätigt"}`,
+          `Verlauf-Sync: ${facebookConnection?.last_messenger_sync_at ? "zuletzt ausgeführt" : "manuell auslösbar"}`,
+        ],
       },
       {
         key: "facebook_comments",
@@ -1930,6 +1969,34 @@ function buildConnectionCards({
         status: "nicht verbunden / in Arbeit",
         connectionType: "Facebook Page Kommentare",
         actionLabel: "Kommentarverbindung vorbereiten",
+        details: [
+          "Live-Test später",
+          "Kein Scraping",
+          `Letzter Abruf: ${facebookConnection?.last_comment_fetch_at ? "vorhanden" : "geparkt"}`,
+        ],
+      },
+    ];
+  }
+
+  if (channel.key === "youtube" && channel.connectionCardCount === 2) {
+    return [
+      {
+        key: "youtube_comments",
+        title: "YouTube Kommentare",
+        description: "Kommentar-Eingang ist vorbereitet. Keine automatische Antwort.",
+        status: `${channel.status.toLowerCase()} / noch nicht live`,
+        connectionType: "Kommentare",
+        actionLabel: "Kommentarverbindung vormerken",
+        details: ["Live-Anbindung später", "Kein Scraping"],
+      },
+      {
+        key: "youtube_live_chat",
+        title: "YouTube Live-Chat",
+        description: "Live-Chat-Eingang ist als eigener Bereich vorgesehen.",
+        status: `${channel.status.toLowerCase()} / noch nicht live`,
+        connectionType: "Live-Chat",
+        actionLabel: "Live-Chat vormerken",
+        details: ["Eigener Bereich", "Keine automatische Sendefunktion"],
       },
     ];
   }
@@ -1954,6 +2021,7 @@ function buildConnectionCards({
             : "konfiguriert / Prüfung nötig",
           connectionType: `Telegram Bot · Webhook ${telegramWebhookLabel}`,
           actionLabel: "Live-Verbindung prüfen",
+          details: ["Letzte Nachrichten werden im Kommentarbereich angezeigt"],
         },
         {
           key: "telegram_private_chats",
@@ -1963,6 +2031,7 @@ function buildConnectionCards({
           status: "vorbereitet / noch nicht live",
           connectionType: "Private Telegram Chats",
           actionLabel: "Privaten Eingang vormerken",
+          details: ["Eigener privater Bereich vorbereitet"],
         },
       ];
     }
@@ -1981,6 +2050,10 @@ function buildConnectionCards({
       actionLabel: isBookable(channel.status)
         ? "Verbindung vormerken"
         : `${channel.name} verbinden`,
+      details: [
+        config?.statusHint ?? "Keine automatische Sendefunktion",
+        `Technik: ${channel.technology}`,
+      ],
     };
   });
 }
