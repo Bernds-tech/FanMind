@@ -285,6 +285,8 @@ function formatSource(value: string | null): string {
     facebook: "Facebook Nachrichten",
     instagram: "Instagram",
     tiktok: "TikTok (manuell)",
+    telegram: "Telegram",
+    telegram_messages: "Telegram",
   };
 
   return sourceLabels[value ?? ""] ?? value ?? "Manuell";

@@ -7,6 +7,7 @@ import {
   getWorkspaceMetaWebhookEvents,
   getWorkspaceSocialConnections,
   getWorkspaceTelegramMessages,
+  getTelegramMessagesWorkspacePresence,
   signOutSupabaseServerSession,
   type ConversationMessageRow,
   type MetaWebhookEventRow,
@@ -52,6 +53,7 @@ type ChannelsWorkspaceProps = {
   telegramMessagesError?: string | null;
   telegramSetupStatus: TelegramWebhookStatus;
   telegramCheckRequested: boolean;
+  telegramMessagesInOtherWorkspace: boolean;
 };
 
 async function logout() {
@@ -75,6 +77,7 @@ function ChannelsWorkspace({
   telegramMessagesError,
   telegramSetupStatus,
   telegramCheckRequested,
+  telegramMessagesInOtherWorkspace,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -112,6 +115,7 @@ function ChannelsWorkspace({
         telegramMessagesError={telegramMessagesError}
         telegramSetupStatus={telegramSetupStatus}
         telegramCheckRequested={telegramCheckRequested}
+        telegramMessagesInOtherWorkspace={telegramMessagesInOtherWorkspace}
       />
     </WorkspaceShell>
   );
@@ -156,6 +160,9 @@ export default async function ChannelsPage({
     : null;
   const telegramMessagesResult = workspace
     ? await getWorkspaceTelegramMessages(workspace.id, 5)
+    : null;
+  const telegramPresenceResult = workspace
+    ? await getTelegramMessagesWorkspacePresence(workspace.id)
     : null;
   const telegramSetupStatus = await getTelegramWebhookStatus();
   const telegramCheckRequested = params.check === "telegram";
@@ -208,6 +215,7 @@ export default async function ChannelsPage({
           telegramMessagesError={telegramMessagesResult?.error?.message ?? null}
           telegramSetupStatus={telegramSetupStatus}
           telegramCheckRequested={telegramCheckRequested}
+          telegramMessagesInOtherWorkspace={Boolean(telegramPresenceResult?.hasMessagesInOtherWorkspace)}
         />
       ) : (
         <section

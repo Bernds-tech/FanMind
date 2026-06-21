@@ -645,6 +645,8 @@ function getChannelLabel(value: string | null): string {
     webform: "Webformular",
     manual: "Manuell",
     tiktok: "TikTok",
+    telegram: "Telegram",
+    telegram_messages: "Telegram",
   };
 
   return labels[(value ?? "manual").toLowerCase()] ?? "Manuell";
@@ -711,6 +713,7 @@ function getChannelClass(value: string | null): string {
   if (channel.includes("facebook") || channel.includes("messenger"))
     return "channelInstagram";
   if (channel.includes("whatsapp")) return "channelWhatsapp";
+  if (channel.includes("telegram")) return "channelManual";
   if (channel.includes("tiktok")) return "channelManual";
   if (channel.includes("email")) return "channelEmail";
   if (channel.includes("form")) return "channelForm";
@@ -735,7 +738,8 @@ function getConversationType(
   if (
     value.includes("instagram") ||
     value.includes("whatsapp") ||
-    value.includes("tiktok")
+    value.includes("tiktok") ||
+    value.includes("telegram")
   ) {
     return "DM";
   }

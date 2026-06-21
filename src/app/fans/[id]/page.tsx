@@ -131,7 +131,7 @@ const channelSourceTypes: Record<
   whatsapp: ["whatsapp_messages"],
   facebook: ["facebook_messages", "facebook_comments"],
   tiktok: ["tiktok_messages", "tiktok_comments"],
-  telegram: ["telegram_messages"],
+  telegram: ["telegram_messages", "telegram", "dm"],
   email: ["email", "e_mail", "manual_email"],
   webform: ["webform", "webformular", "form"],
   notes: ["note", "notes", "manual_note", "internal_note"],
