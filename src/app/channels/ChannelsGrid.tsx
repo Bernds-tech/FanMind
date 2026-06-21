@@ -693,7 +693,8 @@ export function ChannelsGrid({
                 </div>
               </div>
             </div>
-            <p className={styles.modalText}>
+            <div className={styles.modalBody}>
+              <p className={styles.modalText}>
               {activeChannel.key === "telegram"
                 ? "Telegram ist als erster Live-Eingangskanal verbunden. Eingehende Bot-Nachrichten landen in FanMind. FanMind sendet keine automatischen Antworten."
                 : activeChannel.key === "facebook" && facebookConnection
@@ -1456,8 +1457,8 @@ export function ChannelsGrid({
                 {notice}
               </p>
             ) : null}
-            <div className={styles.modalActions}>
-              {activeChannel.key === "facebook" ? (
+              <div className={styles.modalActions}>
+                {activeChannel.key === "facebook" ? (
                 facebookConnection ? (
                   <>
                     {false ? (
@@ -1524,13 +1525,14 @@ export function ChannelsGrid({
                     : `Mit ${activeChannel.name} verbinden`}
                 </button>
               )}
-              <button
-                type="button"
-                className={styles.secondaryModalButton}
-                onClick={() => setActiveChannel(null)}
-              >
-                Schließen
-              </button>
+                <button
+                  type="button"
+                  className={styles.secondaryModalButton}
+                  onClick={() => setActiveChannel(null)}
+                >
+                  Schließen
+                </button>
+              </div>
             </div>
           </div>
         </div>
