@@ -12,6 +12,7 @@ export type TelegramWebhookStatus = {
   pendingUpdateCount: number | null;
   lastErrorMessage: string | null;
   error: string | null;
+  checkedAt: string | null;
 };
 
 type TelegramGetWebhookInfoResponse = {
@@ -39,6 +40,7 @@ export async function getTelegramWebhookStatus(): Promise<TelegramWebhookStatus>
     pendingUpdateCount: null,
     lastErrorMessage: null,
     error: null,
+    checkedAt: null,
   };
 
   if (!botToken) {
@@ -56,6 +58,7 @@ export async function getTelegramWebhookStatus(): Promise<TelegramWebhookStatus>
       return {
         ...baseStatus,
         checked: true,
+        checkedAt: new Date().toISOString(),
         error:
           payload.description ??
           `Telegram getWebhookInfo fehlgeschlagen (${response.status}).`,
@@ -67,6 +70,7 @@ export async function getTelegramWebhookStatus(): Promise<TelegramWebhookStatus>
     return {
       ...baseStatus,
       checked: true,
+      checkedAt: new Date().toISOString(),
       webhookUrlMatches: webhookUrl === TELEGRAM_EXPECTED_WEBHOOK_URL,
       webhookUrl,
       pendingUpdateCount: payload.result.pending_update_count ?? null,
@@ -76,6 +80,7 @@ export async function getTelegramWebhookStatus(): Promise<TelegramWebhookStatus>
     return {
       ...baseStatus,
       checked: true,
+      checkedAt: new Date().toISOString(),
       error:
         error instanceof Error
           ? error.message
