@@ -1056,6 +1056,102 @@ export async function getWorkspaceTelegramMessages(
   return { messages: result.data ?? [], error: null };
 }
 
+
+export async function sendManualTelegramMessage(input: {
+  workspaceId: string;
+  contactId: string;
+  text: string;
+}): Promise<{ message: ConversationMessageRow | null; error: Error | null }> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    return { message: null, error: new Error("Telegram-Bot-Token ist serverseitig nicht konfiguriert.") };
+  }
+
+  const text = input.text.trim();
+  if (!text) {
+    return { message: null, error: new Error("Antworttext ist erforderlich.") };
+  }
+
+  const conversationResult = await postgrestSelect<ConversationRow>(
+    "conversations",
+    getServiceAccessToken(),
+    CONVERSATION_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+      ["source_platform", "telegram"],
+    ],
+    1,
+    true,
+    "updated_at.desc",
+  );
+  if (conversationResult.error) {
+    return { message: null, error: new Error(`Telegram-Konversation konnte nicht geladen werden: ${conversationResult.error.message}`) };
+  }
+
+  const conversation = conversationResult.data;
+  const chatId = normalizeOptionalText(conversation?.external_thread_id);
+  if (!conversation || !chatId) {
+    return { message: null, error: new Error("Kein Telegram-Chat für diesen Kontakt gefunden.") };
+  }
+
+  const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text }),
+  });
+  const telegramData = (await telegramResponse.json().catch(() => null)) as
+    | { ok?: boolean; description?: string; result?: { message_id?: number; date?: number } }
+    | null;
+
+  if (!telegramResponse.ok || !telegramData?.ok) {
+    const description = telegramData?.description ?? "Telegram API Fehler";
+    const lower = description.toLowerCase();
+    const safeMessage = lower.includes("bot was blocked")
+      ? "Telegram-Versand fehlgeschlagen: Bot wurde blockiert."
+      : lower.includes("chat not found")
+        ? "Telegram-Versand fehlgeschlagen: Chat nicht gefunden."
+        : `Telegram-Versand fehlgeschlagen: ${description}`;
+    return { message: null, error: new Error(safeMessage) };
+  }
+
+  const saved = await createMetaTestConversationMessage({
+    workspaceId: input.workspaceId,
+    contactId: input.contactId,
+    content: text,
+    messageType: "dm",
+    sourcePlatform: "telegram",
+    sourceType: "telegram_messages",
+    externalThreadId: chatId,
+    externalMessageId: telegramData.result?.message_id ? String(telegramData.result.message_id) : undefined,
+    receivedAt: telegramData.result?.date ? String(telegramData.result.date) : new Date().toISOString(),
+    direction: "outbound",
+    authorLabel: "FanMind Team",
+  });
+
+  return { message: saved.message, error: saved.error };
+}
+
+
+export async function getTelegramMessagesWorkspacePresence(currentWorkspaceId: string): Promise<{ hasMessagesInOtherWorkspace: boolean; error: Error | null }> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) return { hasMessagesInOtherWorkspace: false, error: null };
+  const result = await postgrestSelect<ConversationMessageRow>(
+    "conversation_messages",
+    serviceAccessToken,
+    CONVERSATION_MESSAGE_COLUMNS,
+    [["source_platform", "telegram"]],
+    1,
+    true,
+    "created_at.desc",
+  );
+  if (result.error) return { hasMessagesInOtherWorkspace: false, error: result.error };
+  return {
+    hasMessagesInOtherWorkspace: Boolean(result.data && result.data.workspace_id !== currentWorkspaceId),
+    error: null,
+  };
+}
+
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
   socialConnectionId?: string | null;
@@ -3973,6 +4069,7 @@ function normalizeMessageType(value: string | null | undefined): string {
     "whatsapp_messages",
     "tiktok_comments",
     "tiktok_messages",
+    "telegram_messages",
     "dm",
     "comment",
     "post",

@@ -192,6 +192,7 @@ export function ChannelsGrid({
   telegramMessagesError,
   telegramSetupStatus,
   telegramCheckRequested,
+  telegramMessagesInOtherWorkspace,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
@@ -203,6 +204,7 @@ export function ChannelsGrid({
   telegramMessagesError?: string | null;
   telegramSetupStatus: TelegramWebhookStatus;
   telegramCheckRequested: boolean;
+  telegramMessagesInOtherWorkspace: boolean;
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -758,7 +760,9 @@ export function ChannelsGrid({
                         </li>
                       ))}
                     </ul>
-                  ) : telegramMessagesError ? null : (
+                  ) : telegramMessagesError ? null : telegramMessagesInOtherWorkspace ? (
+                    <p className={styles.modalNotice}>Telegram-Nachrichten vorhanden, aber nicht im aktuellen Workspace.</p>
+                  ) : (
                     <p className={styles.modalNotice}>Noch keine Telegram-Nachrichten in diesem Workspace gefunden.</p>
                   )}
                 </div>

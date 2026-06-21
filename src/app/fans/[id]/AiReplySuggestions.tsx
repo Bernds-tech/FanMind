@@ -48,6 +48,10 @@ export function AiReplySuggestions({
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedHelper, setCopiedHelper] = useState<string | null>(null);
+  const [telegramDraft, setTelegramDraft] = useState("");
+  const [telegramSending, setTelegramSending] = useState(false);
+  const [telegramStatus, setTelegramStatus] = useState("");
+  const canSendTelegram = contact.sourcePlatform === "telegram";
 
   async function generateSuggestions(mode = activeMode) {
     setError("");
@@ -83,10 +87,12 @@ export function AiReplySuggestions({
         );
         return;
       }
+      const nextSuggestions = data.reply_options.slice(0, 3);
       setSuggestions({
         ...data,
-        reply_options: data.reply_options.slice(0, 3),
+        reply_options: nextSuggestions,
       });
+      setTelegramDraft((current) => current || nextSuggestions[0]?.text || "");
     } catch {
       setError("Antwortvorschläge konnten gerade nicht erzeugt werden.");
     } finally {
@@ -102,6 +108,29 @@ export function AiReplySuggestions({
   async function copyHelper(text: string, label: string) {
     await navigator.clipboard.writeText(text);
     setCopiedHelper(label);
+  }
+
+  async function sendTelegramDraft() {
+    setTelegramStatus("");
+    setTelegramSending(true);
+    try {
+      const response = await fetch("/api/integrations/telegram/send-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId: contact.contactId, text: telegramDraft }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setTelegramStatus(data?.error ?? "Telegram-Nachricht konnte nicht gesendet werden.");
+        return;
+      }
+      setTelegramStatus("Telegram-Nachricht wurde manuell gesendet und dokumentiert.");
+      setTelegramDraft("");
+    } catch {
+      setTelegramStatus("Telegram-Nachricht konnte nicht gesendet werden.");
+    } finally {
+      setTelegramSending(false);
+    }
   }
 
   return (
@@ -173,6 +202,15 @@ export function AiReplySuggestions({
               </div>
             </div>
             <p>{option.text}</p>
+            {canSendTelegram ? (
+              <button
+                className={dashboardStyles.secondaryButton}
+                onClick={() => setTelegramDraft(option.text)}
+                type="button"
+              >
+                Als Telegram-Entwurf übernehmen
+              </button>
+            ) : null}
             <div className={styles.replyCardActions}>
               <button
                 className={dashboardStyles.secondaryButton}
@@ -248,6 +286,32 @@ export function AiReplySuggestions({
           </article>
         ))}
       </div>
+      {canSendTelegram ? (
+        <div className={styles.fallbackHelp}>
+          <strong>Manueller Telegram-Antwortfluss</strong>
+          <p className={styles.muted}>
+            FanMind sendet nur nach deinem Klick. Keine automatischen Antworten. Prüfe den Entwurf vor dem Versand.
+          </p>
+          <label>
+            Antwortentwurf
+            <textarea
+              value={telegramDraft}
+              onChange={(event) => setTelegramDraft(event.target.value)}
+              placeholder="Geprüften Telegram-Antwortentwurf eingeben …"
+              rows={5}
+            />
+          </label>
+          <button
+            className={dashboardStyles.primaryButton}
+            disabled={telegramSending || !telegramDraft.trim()}
+            onClick={() => void sendTelegramDraft()}
+            type="button"
+          >
+            {telegramSending ? "Sende manuell …" : "Manuell über Telegram senden"}
+          </button>
+          {telegramStatus ? <p className={styles.muted}>{telegramStatus}</p> : null}
+        </div>
+      ) : null}
       <p className={styles.reportSafetyNote}>
         {suggestions?.safety_note ??
           "FanMind schlägt nur Text vor. Der Mensch kopiert, prüft und sendet manuell im Originalkanal."}
