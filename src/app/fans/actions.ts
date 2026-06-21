@@ -210,6 +210,8 @@ export async function saveContactInternalNotes(formData: FormData) {
 
   if (result.error) throw new Error(result.error.message);
   revalidatePath(`/fans/${contactId}`);
+  revalidatePath(`/fans/${contactId}`, "page");
+  revalidatePath("/fans");
   redirect(`/fans/${contactId}?notice=notes_saved`);
 }
 
@@ -619,7 +621,9 @@ export async function updateFan(formData: FormData) {
   const baseContact = getContactFormValues(formData);
 
   if (!primaryContactId) {
-    redirectFanUpdateFailed(new Error("Primärer Kontakt der Fan-Gruppe fehlt."));
+    redirectFanUpdateFailed(
+      new Error("Primärer Kontakt der Fan-Gruppe fehlt."),
+    );
   }
 
   if (!platforms.length) {
@@ -937,7 +941,9 @@ function resolveServerFanGroup(
   const activeContacts = contacts.filter(
     (contact) => contact.status?.trim().toLowerCase() !== "archived",
   );
-  const contactsById = new Map(activeContacts.map((contact) => [contact.id, contact]));
+  const contactsById = new Map(
+    activeContacts.map((contact) => [contact.id, contact]),
+  );
   const primary = contactsById.get(primaryContact.id) ?? primaryContact;
   const groupIdentity = getContactGroupIdentity(primary);
   const normalizedName = normalizeFanIdentity(primary.display_name);
@@ -950,12 +956,16 @@ function resolveServerFanGroup(
 
     const contactGroupIdentity = getContactGroupIdentity(contact);
     if (groupIdentity && contactGroupIdentity === groupIdentity) return true;
-    if (submittedGroupKey && contactGroupIdentity === submittedGroupKey) return true;
+    if (submittedGroupKey && contactGroupIdentity === submittedGroupKey)
+      return true;
 
     const contactName = normalizeFanIdentity(contact.display_name);
     const contactHandle = normalizeFanIdentity(contact.handle);
     if (normalizedName && normalizedHandle) {
-      if (contactName === normalizedName && contactHandle === normalizedHandle) {
+      if (
+        contactName === normalizedName &&
+        contactHandle === normalizedHandle
+      ) {
         return true;
       }
       if (contactHandle === normalizedHandle) return true;
@@ -986,7 +996,9 @@ function assertUpdatedContact(
 
 function redirectFanUpdateFailed(error: unknown): never {
   console.error("Fan-Kanal-Bearbeitung fehlgeschlagen.", error);
-  redirect("/fans?notice=fan_update_failed&error=contact_update_failed#fans-list");
+  redirect(
+    "/fans?notice=fan_update_failed&error=contact_update_failed#fans-list",
+  );
 }
 
 function redirectMergeFailed(error: unknown, returnTo = "/fans"): never {
@@ -1010,7 +1022,9 @@ function uniqueActionPlatforms(contacts: ContactRow[]): PlatformValue[] {
   return Array.from(
     new Set(
       contacts
-        .filter((contact) => contact.status?.trim().toLowerCase() !== "archived")
+        .filter(
+          (contact) => contact.status?.trim().toLowerCase() !== "archived",
+        )
         .map((contact) => normalizePlatform(contact.source_platform)),
     ),
   ).sort();
