@@ -37,10 +37,14 @@ type FansWorkspaceProps = {
   unseenMessages: ConversationMessageRow[];
   unseenMessagesError?: string;
   activeChannel: PlatformValue | "all";
+  notice?: string;
 };
 
 type FansPageProps = {
-  searchParams?: Promise<{ channel?: string | string[] }>;
+  searchParams?: Promise<{
+    channel?: string | string[];
+    notice?: string | string[];
+  }>;
 };
 
 type FanGroup = {
@@ -90,6 +94,7 @@ function FansWorkspace({
   unseenMessages,
   unseenMessagesError,
   activeChannel,
+  notice,
 }: FansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -123,6 +128,9 @@ function FansWorkspace({
           id="fans-list"
           aria-label="Fans-Liste"
         >
+          {notice ? (
+            <p className={styles.successNotice}>{formatNotice(notice)}</p>
+          ) : null}
           {contactsError ? (
             <p className={dashboardStyles.error}>
               <strong>Kontakte konnten nicht geladen werden.</strong>
@@ -571,7 +579,10 @@ function PlatformCheckboxes({
         const isSelected = selectedPlatforms.includes(option.value);
 
         return (
-          <label className={styles.platformOption} key={option.value}>
+          <label
+            className={styles.platformOption}
+            key={`${option.value}-${isSelected ? "checked" : "empty"}`}
+          >
             <input
               name="source_platforms"
               type="checkbox"
@@ -620,6 +631,9 @@ function groupContactsByFan(
   followups: FollowupRow[],
   unseenMessages: ConversationMessageRow[],
 ): FanGroup[] {
+  const activeContacts = contacts.filter(
+    (contact) => contact.status !== "archived",
+  );
   const followupsByContact = new Map<string, FollowupRow[]>();
   const unseenContactIds = new Set(unseenMessages.map((message) => message.contact_id));
 
@@ -636,7 +650,7 @@ function groupContactsByFan(
 
   const groups = new Map<string, ContactRow[]>();
 
-  for (const contact of contacts) {
+  for (const contact of activeContacts) {
     const groupKey = getFanGroupKey(contact);
     groups.set(groupKey, [...(groups.get(groupKey) ?? []), contact]);
   }
@@ -675,6 +689,16 @@ function groupContactsByFan(
     }
     return left.displayName.localeCompare(right.displayName, "de");
   });
+}
+
+function formatNotice(notice: string): string {
+  const noticeLabels: Record<string, string> = {
+    fan_created: "Fan wurde angelegt.",
+    fan_updated: "Fan wurde aktualisiert.",
+    contact_archived: "Kontakt wurde archiviert.",
+  };
+
+  return noticeLabels[notice] ?? "Änderung wurde gespeichert.";
 }
 
 function filterFanGroupsByChannel(
@@ -842,6 +866,9 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   const channelParam = Array.isArray(resolvedSearchParams?.channel)
     ? resolvedSearchParams?.channel[0]
     : resolvedSearchParams?.channel;
+  const noticeParam = Array.isArray(resolvedSearchParams?.notice)
+    ? resolvedSearchParams?.notice[0]
+    : resolvedSearchParams?.notice;
   const activeChannel = getActiveChannel(channelParam);
   const { data, error: userError } = await getSupabaseServerUser();
 
@@ -877,6 +904,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           unseenMessages={unseenMessagesResult?.messages ?? []}
           unseenMessagesError={unseenMessagesResult?.error?.message}
           activeChannel={activeChannel}
+          notice={noticeParam}
         />
       ) : (
         <section

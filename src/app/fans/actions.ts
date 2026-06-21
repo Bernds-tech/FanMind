@@ -575,7 +575,9 @@ export async function setConversationPriority(formData: FormData) {
 
 export async function createFan(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
-  const platforms = formPlatforms(formData, "source_platforms");
+  const platforms = formPlatforms(formData, "source_platforms", {
+    fallbackManual: true,
+  });
   const baseContact = getContactFormValues(formData);
 
   for (const platform of platforms) {
@@ -592,7 +594,7 @@ export async function createFan(formData: FormData) {
 
   revalidatePath("/fans");
   revalidatePath("/dashboard");
-  redirect("/fans");
+  redirect("/fans?notice=fan_created#fans-list");
 }
 
 export async function updateFan(formData: FormData) {
@@ -602,11 +604,19 @@ export async function updateFan(formData: FormData) {
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
     .filter(Boolean);
-  const platforms = formPlatforms(formData, "source_platforms");
+  const platforms = formPlatforms(formData, "source_platforms", {
+    fallbackManual: false,
+  });
   const baseContact = getContactFormValues(formData);
 
   if (!contactIds.length) {
     throw new Error("Mindestens ein Kontakt muss zur Fan-Gruppe gehören.");
+  }
+
+  if (!platforms.length) {
+    throw new Error(
+      "Mindestens ein aktiver Kanal muss ausgewählt bleiben oder der Kontakt muss archiviert werden.",
+    );
   }
 
   const contactsResult = await getWorkspaceContacts(workspace.id);
@@ -668,7 +678,11 @@ export async function updateFan(formData: FormData) {
 
   revalidatePath("/fans");
   revalidatePath("/dashboard");
-  redirect("/fans");
+  revalidatePath("/inbox");
+  for (const contactId of contactIds) {
+    revalidatePath(`/fans/${contactId}`);
+  }
+  redirect("/fans?notice=fan_updated#fans-list");
 }
 
 export async function archiveFan(formData: FormData) {
@@ -799,14 +813,20 @@ function formValue(formData: FormData, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function formPlatforms(formData: FormData, key: string) {
+function formPlatforms(
+  formData: FormData,
+  key: string,
+  options: { fallbackManual: boolean },
+) {
   const platforms = formData
     .getAll(key)
     .filter((value): value is string => typeof value === "string")
     .map((value) => normalizePlatform(value));
 
-  return Array.from(new Set(platforms)).slice(0, 9).length
-    ? Array.from(new Set(platforms)).slice(0, 9)
+  const uniquePlatforms = Array.from(new Set(platforms)).slice(0, 9);
+
+  return uniquePlatforms.length || !options.fallbackManual
+    ? uniquePlatforms
     : ["manual" as const];
 }
 
