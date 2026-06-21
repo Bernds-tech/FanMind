@@ -777,15 +777,26 @@ export async function archiveFan(formData: FormData) {
 }
 
 export async function mergeFanContacts(formData: FormData) {
-  const workspace = await getCurrentWorkspaceOrThrow();
-  const sourceContactId = formValue(formData, "source_contact_id");
-  const targetContactId = formValue(formData, "target_contact_id");
-
-  if (!targetContactId) {
-    redirectMergeFailed(new Error("Bitte wähle einen Ziel-Fan aus."));
-  }
+  const returnTo = getMergeReturnPath(formValue(formData, "return_to"));
+  let targetContactId = "";
 
   try {
+    const workspace = await getCurrentWorkspaceOrThrow();
+    const sourceContactId = formValue(formData, "source_contact_id");
+    targetContactId = formValue(formData, "target_contact_id");
+
+    if (!sourceContactId) {
+      throw new Error("Der Quell-Fan fehlt.");
+    }
+
+    if (!targetContactId) {
+      throw new Error("Bitte wähle einen Ziel-Fan aus.");
+    }
+
+    if (sourceContactId === targetContactId) {
+      throw new Error("Quelle und Ziel dürfen nicht identisch sein.");
+    }
+
     const [sourceResult, targetResult, contactsResult] = await Promise.all([
       getWorkspaceContact(workspace.id, sourceContactId),
       getWorkspaceContact(workspace.id, targetContactId),
@@ -821,14 +832,14 @@ export async function mergeFanContacts(formData: FormData) {
       );
     }
   } catch (error) {
-    redirectMergeFailed(error);
+    redirectMergeFailed(error, returnTo);
   }
 
   revalidatePath("/fans");
   revalidatePath("/dashboard");
   revalidatePath("/inbox");
   revalidatePath(`/fans/${targetContactId}`);
-  redirect(`/fans?notice=contacts_merged#fans-list`);
+  redirect(`${returnTo}?notice=contacts_merged#fans-list`);
 }
 
 async function getExistingOrNewConversation(
@@ -978,9 +989,17 @@ function redirectFanUpdateFailed(error: unknown): never {
   redirect("/fans?notice=fan_update_failed&error=contact_update_failed#fans-list");
 }
 
-function redirectMergeFailed(error: unknown): never {
+function redirectMergeFailed(error: unknown, returnTo = "/fans"): never {
   console.error("Fan-Merge fehlgeschlagen.", error);
-  redirect("/fans?notice=contacts_merge_failed&error=merge_failed#fans-list");
+  const message = error instanceof Error ? error.message : "merge_failed";
+  redirect(
+    `${returnTo}?notice=contacts_merge_failed&error=${encodeURIComponent(message)}#fans-list`,
+  );
+}
+
+function getMergeReturnPath(value: string): string {
+  if (value.startsWith("/fans/")) return value;
+  return "/fans";
 }
 
 function compareContactAgeAsc(left: ContactRow, right: ContactRow): number {

@@ -605,6 +605,7 @@ function ContactManagementCard({
         · {memories.length} Memories · {followups.length} Follow-ups.
       </p>
       <form action={mergeFanContacts} className={styles.noteForm}>
+        <input name="return_to" type="hidden" value="/fans" />
         <input name="source_contact_id" type="hidden" value={contact.id} />
         <label htmlFor="target_contact_id">Zielkontakt</label>
         <select
@@ -1433,6 +1434,8 @@ function formatNotice(value: string): string {
   if (value === "reply_target_invalid")
     return "Bitte speichere nur einen HTTPS-Link zum direkten Chat dieses Fans, keinen generischen Postfach-Link.";
   if (value === "contacts_merged") return "Fans wurden zusammengeführt.";
+  if (value === "contacts_merge_failed")
+    return "Fans konnten nicht zusammengeführt werden. Bitte Ziel-Fan prüfen und erneut versuchen.";
   return value;
 }
 

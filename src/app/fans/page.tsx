@@ -40,6 +40,7 @@ type FansWorkspaceProps = {
   notice?: string;
   activePlatformsNotice?: string;
   archivedChannelsNotice?: string;
+  noticeError?: string;
 };
 
 type FansPageProps = {
@@ -48,6 +49,7 @@ type FansPageProps = {
     notice?: string | string[];
     active?: string | string[];
     archived?: string | string[];
+    error?: string | string[];
   }>;
 };
 
@@ -101,6 +103,7 @@ function FansWorkspace({
   notice,
   activePlatformsNotice,
   archivedChannelsNotice,
+  noticeError,
 }: FansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -135,8 +138,19 @@ function FansWorkspace({
           aria-label="Fans-Liste"
         >
           {notice ? (
-            <p className={styles.successNotice}>
-              {formatNotice(notice, activePlatformsNotice, archivedChannelsNotice)}
+            <p
+              className={
+                isErrorNotice(notice)
+                  ? dashboardStyles.error
+                  : styles.successNotice
+              }
+            >
+              {formatNotice(
+                notice,
+                activePlatformsNotice,
+                archivedChannelsNotice,
+                noticeError,
+              )}
             </p>
           ) : null}
           {contactsError ? (
@@ -615,6 +629,7 @@ function EditFanModal({
             </p>
           </div>
           <form className={styles.mergeForm} action={mergeFanContacts}>
+            <input name="return_to" type="hidden" value="/fans" />
             <input
               name="source_contact_id"
               type="hidden"
@@ -801,6 +816,7 @@ function formatNotice(
   notice: string,
   activePlatformsNotice?: string,
   archivedChannelsNotice?: string,
+  noticeError?: string,
 ): string {
   const activePlatforms = parseNoticePlatforms(activePlatformsNotice);
   const noticeLabels: Record<string, string> = {
@@ -812,11 +828,16 @@ function formatNotice(
     contacts_merged: "Fans wurden zusammengeführt.",
     fan_update_failed:
       "Kanäle konnten nicht aktualisiert werden. Bitte erneut versuchen oder Admin prüfen.",
-    contacts_merge_failed:
-      "Fans konnten nicht zusammengeführt werden. Bitte Ziel-Fan prüfen und erneut versuchen.",
+    contacts_merge_failed: noticeError
+      ? `Fans konnten nicht zusammengeführt werden: ${noticeError}`
+      : "Fans konnten nicht zusammengeführt werden. Bitte Ziel-Fan prüfen und erneut versuchen.",
   };
 
   return noticeLabels[notice] ?? "Änderung wurde gespeichert.";
+}
+
+function isErrorNotice(notice: string): boolean {
+  return notice.endsWith("_failed");
 }
 
 function parseNoticePlatforms(value?: string): PlatformValue[] {
@@ -1004,6 +1025,9 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   const archivedNoticeParam = Array.isArray(resolvedSearchParams?.archived)
     ? resolvedSearchParams?.archived[0]
     : resolvedSearchParams?.archived;
+  const errorParam = Array.isArray(resolvedSearchParams?.error)
+    ? resolvedSearchParams?.error[0]
+    : resolvedSearchParams?.error;
   const activeChannel = getActiveChannel(channelParam);
   const { data, error: userError } = await getSupabaseServerUser();
 
@@ -1042,6 +1066,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           notice={noticeParam}
           activePlatformsNotice={activeNoticeParam}
           archivedChannelsNotice={archivedNoticeParam}
+          noticeError={errorParam}
         />
       ) : (
         <section
