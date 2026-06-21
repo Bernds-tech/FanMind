@@ -137,7 +137,7 @@ const channels: Channel[] = [
     key: "facebook",
     name: "Facebook",
     description: "DM: nicht verbunden · Kommentare: nicht verbunden",
-    status: "Vorbereitet",
+    status: "In Arbeit",
     technology: "DM vorbereitet · Kommentare vorbereitet",
     intakeTypes: "Direct Messages · Kommentare",
     logo: logoPath("facebook"),
@@ -510,6 +510,14 @@ export function ChannelsGrid({
             facebookConnection?.last_comment_fetch_error
           ? "In Arbeit"
           : activeChannel?.status;
+  const activeConnectionCards = activeChannel
+    ? buildConnectionCards({
+        channel: activeChannel,
+        facebookConnection,
+        telegramLive,
+        telegramWebhookLabel,
+      })
+    : [];
 
   return (
     <section className={styles.gridSection} aria-label="Kanalkarten">
@@ -537,7 +545,6 @@ export function ChannelsGrid({
           const showComingSoonBadge =
             isBookable(displayStatus) &&
             !isTelegram &&
-            !isFacebookMessages &&
             !(isFacebookComments && commentsReady);
 
           return (
@@ -596,11 +603,6 @@ export function ChannelsGrid({
                 {pageName ? (
                   <span className={styles.connectionHint}>
                     Page: {pageName}
-                  </span>
-                ) : null}
-                {isTelegram ? (
-                  <span className={styles.connectionHint}>
-                    Status: {telegramStatusLabel}
                   </span>
                 ) : null}
                 {isFacebookMessages && facebookConnection ? (
@@ -689,6 +691,61 @@ export function ChannelsGrid({
                   : "Öffne diesen Kanal nur, wenn der passende manuelle Workflow in FanMind verfügbar ist."}
             </p>
 
+            {activeConnectionCards.length > 0 ? (
+              <div
+                className={`${styles.childSourceGrid} ${
+                  activeConnectionCards.length === 1
+                    ? styles.childSourceGridSingle
+                    : ""
+                }`}
+                aria-label={`${activeChannel.name} Verbindungsmöglichkeiten`}
+              >
+                {activeConnectionCards.map((connectionCard) => (
+                  <div
+                    className={styles.childSourceCard}
+                    key={connectionCard.key}
+                  >
+                    <div>
+                      <strong>{connectionCard.title}</strong>
+                      <p>{connectionCard.description}</p>
+                    </div>
+                    <ul className={styles.connectionCardList}>
+                      <li>Status: {connectionCard.status}</li>
+                      <li>Verbindungstyp: {connectionCard.connectionType}</li>
+                      <li>Auto-Senden: deaktiviert</li>
+                    </ul>
+                    <button
+                      type="button"
+                      className={styles.secondaryModalButton}
+                      onClick={() => {
+                        if (connectionCard.key === "facebook_messages") {
+                          if (facebookConnection) {
+                            runPageWebhookAction("check");
+                          } else {
+                            setNotice(
+                              "DM-Verbindung ist vorbereitet. Starte die Facebook-Verbindung über den Haupt-CTA.",
+                            );
+                          }
+                          return;
+                        }
+                        if (connectionCard.key === "facebook_comments") {
+                          setNotice(
+                            "Kommentarverbindung ist vorbereitet. Es wurde kein OAuth-Flow und kein Scraping gestartet.",
+                          );
+                          return;
+                        }
+                        setNotice(
+                          `${connectionCard.title} ist nach dem einheitlichen Kanalstandard vorbereitet. Es wurde keine externe Anmeldung gestartet.`,
+                        );
+                      }}
+                    >
+                      {connectionCard.actionLabel}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             {activeChannel.key === "telegram" ? (
               <div className={styles.modalDetailGrid}>
                 <div
@@ -765,24 +822,6 @@ export function ChannelsGrid({
                   ) : (
                     <p className={styles.modalNotice}>Noch keine Telegram-Nachrichten in diesem Workspace gefunden.</p>
                   )}
-                </div>
-              </div>
-            ) : null}
-
-            {activeChannel.key === "facebook" ? (
-              <div className={styles.childSourceGrid} aria-label="Facebook Teilverbindungen">
-                <div className={styles.childSourceCard}>
-                  <strong>Direct Messages</strong>
-                  <p>Status: {facebookConnection ? "verbunden" : "nicht verbunden / vorbereitet"}</p>
-                  <p>Verbindungstyp: Facebook Page / Messenger</p>
-                  <p>Auto-Senden: deaktiviert</p>
-                  <button type="button" className={styles.secondaryModalButton} onClick={() => facebookConnection ? runPageWebhookAction("check") : setNotice("DM-Verbindung ist vorbereitet. Starte die Facebook-Verbindung über den Haupt-CTA.")}>DM-Verbindung prüfen</button>
-                </div>
-                <div className={styles.childSourceCard}>
-                  <strong>Kommentare</strong>
-                  <p>Status: nicht verbunden / vorbereitet</p>
-                  <p>Keine automatische Antwort, kein Scraping.</p>
-                  <button type="button" className={styles.secondaryModalButton} onClick={() => setNotice("Kommentarverbindung ist vorbereitet. Es wurde kein OAuth-Flow und kein Scraping gestartet.")}>Kommentarverbindung vorbereiten</button>
                 </div>
               </div>
             ) : null}
@@ -1501,6 +1540,89 @@ function buildChannelSyncStatus(
     skippedDuplicates: "—",
     lastError: "—",
   };
+}
+
+type ConnectionCard = {
+  key: string;
+  title: string;
+  description: string;
+  status: string;
+  connectionType: string;
+  actionLabel: string;
+};
+
+function buildConnectionCards({
+  channel,
+  facebookConnection,
+  telegramLive,
+  telegramWebhookLabel,
+}: {
+  channel: Channel;
+  facebookConnection: FacebookConnection | null;
+  telegramLive: boolean;
+  telegramWebhookLabel: string;
+}): ConnectionCard[] {
+  if (channel.key === "facebook") {
+    return [
+      {
+        key: "facebook_messages",
+        title: "Facebook DM",
+        description:
+          "Direktnachrichten aus der verbundenen Facebook Page werden in FanMind übernommen.",
+        status: facebookConnection ? "verbunden" : "nicht verbunden / in Arbeit",
+        connectionType: "Facebook Page / Messenger",
+        actionLabel: facebookConnection
+          ? "DM-Verbindung prüfen"
+          : "DM-Verbindung vorbereiten",
+      },
+      {
+        key: "facebook_comments",
+        title: "Facebook Kommentare",
+        description:
+          "Kommentar-Eingänge sind vorbereitet, aber noch nicht live geschaltet.",
+        status: "nicht verbunden / in Arbeit",
+        connectionType: "Facebook Page Kommentare",
+        actionLabel: "Kommentarverbindung vorbereiten",
+      },
+    ];
+  }
+
+  const sources = channel.childSources?.length
+    ? channel.childSources
+    : [channel.key as PreparedSourceType];
+
+  return sources.map((sourceType) => {
+    const config = CHANNEL_SOURCE_CONFIGS[sourceType];
+    const sourceLabel = config?.label ?? channel.name;
+
+    if (channel.key === "telegram") {
+      return {
+        key: sourceType,
+        title: "Telegram Bot",
+        description:
+          "Bot-Nachrichten laufen als einzelner Live-Eingang ein; automatische Antworten bleiben deaktiviert.",
+        status: telegramLive ? "verbunden / live" : "konfiguriert / Prüfung nötig",
+        connectionType: `Telegram Bot · Webhook ${telegramWebhookLabel}`,
+        actionLabel: "Live-Verbindung prüfen",
+      };
+    }
+
+    return {
+      key: sourceType,
+      title: sourceLabel,
+      description:
+        config?.statusText ??
+        `${channel.name} ist vorbereitet und folgt dem einheitlichen Kanalstandard.`,
+      status:
+        channel.status === "Verfügbar"
+          ? "verfügbar"
+          : `${channel.status.toLowerCase()} / noch nicht live`,
+      connectionType: channel.intakeTypes,
+      actionLabel: isBookable(channel.status)
+        ? "Verbindung vormerken"
+        : `${channel.name} verbinden`,
+    };
+  });
 }
 
 function getFacebookErrorMessage(errorCode: string | null): string {
