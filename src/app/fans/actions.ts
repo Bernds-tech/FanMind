@@ -15,9 +15,7 @@ import {
   archiveWorkspaceContact,
   archiveWorkspaceContactServer,
   mergeWorkspaceContacts,
-  getSupabaseServerUser,
   getContactConversationMessages,
-  getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
   getWorkspaceConversations,
@@ -28,6 +26,10 @@ import {
   type ContactRow,
   type ContactUpdateResult,
 } from "@/lib/supabase/server";
+import {
+  requireAuthorizedWorkspace,
+  requireContactInAuthorizedWorkspace,
+} from "@/lib/workspaceAuthorization";
 import {
   formatPlatformLabel,
   getDuplicateKey,
@@ -459,8 +461,7 @@ export async function saveInboundMessage(formData: FormData) {
 }
 
 export async function saveManualSentReply(formData: FormData) {
-  const workspace = await getCurrentWorkspaceOrThrow();
-  const user = await getSupabaseServerUser();
+  const { workspace, user } = await requireAuthorizedWorkspace();
   const contactId = formValue(formData, "contact_id");
   await ensureContactInWorkspace(workspace.id, contactId);
   const conversation = await getExistingOrNewConversation(
@@ -484,12 +485,12 @@ export async function saveManualSentReply(formData: FormData) {
     authorLabel:
       conversation.source_platform === "facebook"
         ? workspace.name || "Team"
-        : getActionUserLabel(user.data.user, workspace.name),
+        : getActionUserLabel(user, workspace.name),
     originalAuthorLabel:
       conversation.source_platform === "facebook"
         ? workspace.name || "Team"
         : undefined,
-    userId: user.data.user?.id,
+    userId: user.id,
     content: formValue(formData, "content"),
   });
 
@@ -1083,36 +1084,23 @@ function parseTags(value: string): string[] {
 }
 
 async function getCurrentWorkspaceOrThrow() {
-  const { data } = await getSupabaseServerUser();
-
-  if (!data.user) {
-    redirect("/login");
+  try {
+    const { workspace } = await requireAuthorizedWorkspace();
+    return workspace;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("User-Session")) {
+      redirect("/login");
+    }
+    throw error;
   }
-
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  const workspace = workspaceResult.workspace;
-
-  if (!workspace) {
-    throw new Error(
-      workspaceResult.error?.message ??
-        "Workspace konnte nicht geladen werden.",
-    );
-  }
-
-  return workspace;
 }
 
 async function ensureContactInWorkspace(
   workspaceId: string,
   contactId: string,
 ) {
-  const contactResult = await getWorkspaceContact(workspaceId, contactId);
-
-  if (contactResult.error) {
-    throw new Error(contactResult.error.message);
-  }
-
-  if (!contactResult.contact) {
+  const authorized = await requireContactInAuthorizedWorkspace(contactId);
+  if (authorized.workspace.id !== workspaceId) {
     throw new Error("Kontakt wurde im aktuellen Workspace nicht gefunden.");
   }
 }

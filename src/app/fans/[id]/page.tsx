@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   getContactAiProfile,
   getContactConversationMessages,
@@ -9,8 +9,6 @@ import {
   getContactReplyTarget,
   getFanAnalysisReport,
   getOpenFollowupCount,
-  getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContact,
   getWorkspaceContacts,
   getWorkspaceSocialConnections,
@@ -30,6 +28,7 @@ import {
   type WorkspaceDashboardRow,
   type WorkspaceVoiceProfileRow,
 } from "@/lib/supabase/server";
+import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
@@ -1612,24 +1611,23 @@ export default async function FanDetailPage({
     normalizeParam(pageSearchParams?.channel),
   );
   const activeSource = normalizeParam(pageSearchParams?.source) || "all";
-  const { data, error: userError } = await getSupabaseServerUser();
-
-  if (!data.user) {
+  let authorized;
+  try {
+    authorized = await requireAuthorizedWorkspace();
+  } catch {
     redirect("/login");
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  const workspace = workspaceResult.workspace;
+  const { user, workspace } = authorized;
 
-  const [contactsResult, contactResult, socialConnectionsResult] = workspace
-    ? await Promise.all([
-        getWorkspaceContacts(workspace.id),
-        getWorkspaceContact(workspace.id, id),
-        getWorkspaceSocialConnections(workspace.id),
-      ])
-    : [null, null, null];
+  const [contactsResult, contactResult, socialConnectionsResult] = await Promise.all([
+    getWorkspaceContacts(workspace.id),
+    getWorkspaceContact(workspace.id, id),
+    getWorkspaceSocialConnections(workspace.id),
+  ]);
 
   const contact = contactResult?.contact ?? null;
+  if (!contact) notFound();
   const relatedContactIds =
     contact && contactsResult
       ? getRelatedFanContactIds(contact, contactsResult.contacts).filter(
@@ -1683,7 +1681,7 @@ export default async function FanDetailPage({
         contact
           ? getFanAnalysisReport(workspace.id, contact.id)
           : Promise.resolve(null),
-        getWorkspaceVoiceProfile(workspace.id, data.user.id),
+        getWorkspaceVoiceProfile(workspace.id, user.id),
         contact
           ? getContactReplyTarget(workspace.id, contact.id, "facebook_messages")
           : Promise.resolve(null),
@@ -1752,79 +1750,39 @@ export default async function FanDetailPage({
 
   return (
     <main className={dashboardStyles.page}>
-      {workspace ? (
-        <FanDetailWorkspace
-          workspace={workspace}
-          userDisplayName={getUserDisplayName(
-            data.user.user_metadata,
-            workspace.name,
-          )}
-          contact={contactResult?.contact ?? null}
-          contactCount={
-            getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? [])
-              .totalFans
-          }
-          contactError={contactResult?.error?.message}
-          followups={followupsResult?.followups ?? []}
-          messages={messagesResult?.messages ?? []}
-          messagesError={
-            messagesResult?.error?.message ?? additionalMessagesError
-          }
-          conversation={conversation}
-          conversationsError={conversationsResult?.error?.message}
-          memories={memoriesResult?.memories ?? []}
-          memoriesError={memoriesResult?.error?.message}
-          openFollowupCount={openFollowupCountResult?.count ?? 0}
-          notice={normalizeParam(pageSearchParams?.notice)}
-          conversationSummary={conversationSummaryResult?.summary ?? null}
-          contactAiProfile={contactAiProfileResult?.profile ?? null}
-          fanAnalysisReport={fanAnalysisReportResult?.report ?? null}
-          fanAnalysisReportError={fanAnalysisReportResult?.error?.message}
-          workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
-          activeChannel={activeChannel}
-          activeSource={activeSource}
-          facebookMessengerLastSyncedAt={
-            facebookConnection?.last_messenger_sync_at ?? null
-          }
-          facebookReplyTarget={facebookReplyTargetResult?.target ?? null}
-          facebookReplyTargetError={facebookReplyTargetResult?.error?.message}
-          facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
-          allContacts={contactsResult?.contacts ?? []}
-        />
-      ) : (
-        <section
-          className={dashboardStyles.fallbackCard}
-          aria-label="FanMind Workspace"
-        >
-          <div>
-            <p className={dashboardStyles.eyebrow}>FanMind Fan-Detail</p>
-            <h1>Workspace-Status</h1>
-            <p>
-              Fan-Details sind geschützt: Supabase Auth ist aktiv. Für deinen
-              Account wurde noch kein Workspace gefunden.
-            </p>
-          </div>
-          {userError ? (
-            <p className={dashboardStyles.error}>
-              <strong>
-                Supabase-Session konnte nicht vollständig geprüft werden.
-              </strong>
-              <span>{userError.message}</span>
-            </p>
-          ) : null}
-          {workspaceResult.error ? (
-            <p className={dashboardStyles.error}>
-              <strong>Workspace-Daten konnten nicht geladen werden.</strong>
-              <span>{workspaceResult.error.message}</span>
-            </p>
-          ) : null}
-          <form action={logout}>
-            <button type="submit" className={dashboardStyles.secondaryButton}>
-              Abmelden
-            </button>
-          </form>
-        </section>
-      )}
+      <FanDetailWorkspace
+        workspace={workspace}
+        userDisplayName={getUserDisplayName(user.user_metadata, workspace.name)}
+        contact={contact}
+        contactCount={
+          getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? [])
+            .totalFans
+        }
+        contactError={contactResult?.error?.message}
+        followups={followupsResult?.followups ?? []}
+        messages={messagesResult?.messages ?? []}
+        messagesError={messagesResult?.error?.message ?? additionalMessagesError}
+        conversation={conversation}
+        conversationsError={conversationsResult?.error?.message}
+        memories={memoriesResult?.memories ?? []}
+        memoriesError={memoriesResult?.error?.message}
+        openFollowupCount={openFollowupCountResult?.count ?? 0}
+        notice={normalizeParam(pageSearchParams?.notice)}
+        conversationSummary={conversationSummaryResult?.summary ?? null}
+        contactAiProfile={contactAiProfileResult?.profile ?? null}
+        fanAnalysisReport={fanAnalysisReportResult?.report ?? null}
+        fanAnalysisReportError={fanAnalysisReportResult?.error?.message}
+        workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
+        activeChannel={activeChannel}
+        activeSource={activeSource}
+        facebookMessengerLastSyncedAt={
+          facebookConnection?.last_messenger_sync_at ?? null
+        }
+        facebookReplyTarget={facebookReplyTargetResult?.target ?? null}
+        facebookReplyTargetError={facebookReplyTargetResult?.error?.message}
+        facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
+        allContacts={contactsResult?.contacts ?? []}
+      />
     </main>
   );
 }
