@@ -282,6 +282,7 @@
 
 .releaseBox {
   margin-top: 16px;
+  min-width: 0;
   border: 1px solid rgba(103, 232, 249, 0.13);
   border-radius: 14px;
   padding: 12px;
@@ -302,7 +303,9 @@
 }
 
 .releaseBox li {
+  min-width: 0;
   color: #cbd5e1;
+  overflow-wrap: anywhere;
   font-size: 12px;
   line-height: 1.35;
 }
@@ -313,12 +316,18 @@
   color: #67e8f9;
 }
 
+.breakableText {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
 .modalNotice {
   border: 1px solid rgba(103, 232, 249, 0.22);
   border-radius: 12px;
   padding: 10px 12px;
   color: #cffafe;
   background: rgba(8, 47, 73, 0.36);
+  overflow-wrap: anywhere;
 }
 
 .modalActions {
