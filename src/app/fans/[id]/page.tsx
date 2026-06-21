@@ -294,22 +294,35 @@ function FanDetailContent({
   allContacts: ContactRow[];
 }) {
   const primaryChannel = formatSource(contact.source_platform);
+  const activeFanContacts = getActiveRelatedFanContacts(contact, allContacts);
+  const availableChannels = getAvailableConversationChannels(
+    messages,
+    activeFanContacts,
+  );
+  const effectiveChannel = availableChannels.includes(activeChannel)
+    ? activeChannel
+    : "all";
+  const channelMessages = filterMessagesByChannel(messages, effectiveChannel);
+  const availableSources = getAvailableSourceFilterKeys(channelMessages);
+  const effectiveSource = availableSources.includes(activeSource)
+    ? activeSource
+    : "all";
   const channelTabs = buildConversationChannelTabs(
     messages,
     contact.id,
-    activeChannel,
-    activeSource,
+    effectiveChannel,
+    effectiveSource,
+    availableChannels,
   );
   const sourceFilters = buildSourceFilters(
     messages,
     contact.id,
-    activeChannel,
-    activeSource,
+    effectiveChannel,
+    effectiveSource,
   );
-  const channelMessages = filterMessagesByChannel(messages, activeChannel);
   const filteredMessages = filterMessagesBySource(
     channelMessages,
-    activeSource,
+    effectiveSource,
   );
   const originalChannelAction = getOriginalChannelAction(
     conversation,
@@ -437,7 +450,7 @@ function FanDetailContent({
                 <span>{messagesError}</span>
               </p>
             ) : null}
-            {shouldShowFacebookHelpers(activeChannel, filteredMessages) ? (
+            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) ? (
               <div className={styles.syncBox}>
                 <p className={styles.syncHint}>
                   Facebook-Chat zuletzt synchronisiert:{" "}
@@ -460,7 +473,7 @@ function FanDetailContent({
                 </form>
               </div>
             ) : null}
-            {shouldShowFacebookHelpers(activeChannel, filteredMessages) ? (
+            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) ? (
               <FacebookReplyTargetCard
                 contact={contact}
                 target={facebookReplyTarget}
@@ -505,8 +518,8 @@ function FanDetailContent({
                 ))
               ) : (
                 <EmptyState
-                  title={getTimelineEmptyTitle(activeChannel)}
-                  body={getTimelineEmptyBody(activeChannel)}
+                  title={getTimelineEmptyTitle(effectiveChannel)}
+                  body={getTimelineEmptyBody(effectiveChannel)}
                 />
               )}
             </div>
@@ -713,21 +726,29 @@ function buildConversationChannelTabs(
   contactId: string,
   activeChannel: ConversationChannelKey,
   activeSource: string,
+  availableChannels: ConversationChannelKey[],
 ) {
-  return conversationChannelTabs.map((tab) => {
-    const channelMessages =
-      tab.key === "all" ? messages : filterMessagesByChannel(messages, tab.key);
-    const hasUnread = channelMessages.some(
-      (message) => message.direction === "inbound" && !message.seen_at,
-    );
-    const params = new URLSearchParams();
-    if (tab.key !== "all") params.set("channel", tab.key);
-    if (activeSource !== "all") params.set("source", activeSource);
-    const query = params.toString();
-    const href = `/fans/${contactId}${query ? `?${query}` : ""}`;
+  return conversationChannelTabs
+    .filter((tab) => availableChannels.includes(tab.key))
+    .map((tab) => {
+      const channelMessages =
+        tab.key === "all"
+          ? messages
+          : filterMessagesByChannel(messages, tab.key);
+      const hasUnread = channelMessages.some(
+        (message) => message.direction === "inbound" && !message.seen_at,
+      );
+      const targetSourceKeys = getAvailableSourceFilterKeys(channelMessages);
+      const params = new URLSearchParams();
+      if (tab.key !== "all") params.set("channel", tab.key);
+      if (activeSource !== "all" && targetSourceKeys.includes(activeSource)) {
+        params.set("source", activeSource);
+      }
+      const query = params.toString();
+      const href = `/fans/${contactId}${query ? `?${query}` : ""}`;
 
-    return { ...tab, active: tab.key === activeChannel, hasUnread, href };
-  });
+      return { ...tab, active: tab.key === activeChannel, hasUnread, href };
+    });
 }
 
 function buildSourceFilters(
@@ -737,14 +758,7 @@ function buildSourceFilters(
   activeSource: string,
 ) {
   const channelMessages = filterMessagesByChannel(messages, activeChannel);
-  const contexts = new Map<string, MessageSourceContext>();
-
-  for (const message of channelMessages) {
-    const context = getMessageSourceContext(message);
-    if (!contexts.has(context.contextKey)) {
-      contexts.set(context.contextKey, context);
-    }
-  }
+  const contexts = getAvailableSourceContexts(channelMessages);
 
   const paramsFor = (source: string) => {
     const params = new URLSearchParams();
@@ -761,13 +775,113 @@ function buildSourceFilters(
       active: activeSource === "all",
       href: paramsFor("all"),
     },
-    ...Array.from(contexts.values()).map((context) => ({
+    ...contexts.map((context) => ({
       key: context.contextKey,
       label: context.contextLabel,
       active: activeSource === context.contextKey,
       href: paramsFor(context.contextKey),
     })),
   ];
+}
+
+function getActiveRelatedFanContacts(
+  contact: ContactRow,
+  allContacts: ContactRow[],
+): ContactRow[] {
+  const baseKey = getFanGroupKey(contact);
+  const relatedContacts = allContacts.filter(
+    (entry) => getFanGroupKey(entry) === baseKey && !isArchivedContact(entry),
+  );
+
+  if (relatedContacts.some((entry) => entry.id === contact.id)) {
+    return relatedContacts;
+  }
+
+  return isArchivedContact(contact)
+    ? relatedContacts
+    : [contact, ...relatedContacts];
+}
+
+function getAvailableConversationChannels(
+  messages: ConversationMessageRow[],
+  activeContacts: ContactRow[],
+): ConversationChannelKey[] {
+  const channels = new Set<ConversationChannelKey>(["all"]);
+
+  for (const contact of activeContacts) {
+    const channel = normalizeContactPlatformChannel(contact.source_platform);
+    if (channel) channels.add(channel);
+  }
+
+  for (const message of messages) {
+    const channel = getMessageExplicitChannel(message);
+    if (channel) channels.add(channel);
+  }
+
+  return conversationChannelTabs
+    .map((tab) => tab.key)
+    .filter((channel) => channels.has(channel));
+}
+
+function getAvailableSourceFilterKeys(
+  messages: ConversationMessageRow[],
+): string[] {
+  return [
+    "all",
+    ...getAvailableSourceContexts(messages).map(
+      (context) => context.contextKey,
+    ),
+  ];
+}
+
+function getAvailableSourceContexts(
+  messages: ConversationMessageRow[],
+): MessageSourceContext[] {
+  const contexts = new Map<string, MessageSourceContext>();
+
+  for (const message of messages) {
+    const context = getMessageSourceContext(message);
+    if (!contexts.has(context.contextKey)) {
+      contexts.set(context.contextKey, context);
+    }
+  }
+
+  return Array.from(contexts.values());
+}
+
+function normalizeContactPlatformChannel(
+  value: string | null | undefined,
+): Exclude<ConversationChannelKey, "all"> | null {
+  const platform = normalizeSourceValue(value);
+  return isConversationPlatformChannel(platform) ? platform : null;
+}
+
+function getMessageExplicitChannel(
+  message: ConversationMessageRow,
+): Exclude<ConversationChannelKey, "all"> | null {
+  const platform = normalizeSourceValue(message.source_platform);
+  if (isConversationPlatformChannel(platform)) return platform;
+
+  const sourceType = normalizeSourceValue(message.source_type);
+  for (const tab of conversationChannelTabs) {
+    if (tab.key !== "all" && isExplicitChannelSourceType(sourceType, tab.key)) {
+      return tab.key;
+    }
+  }
+
+  return null;
+}
+
+function isConversationPlatformChannel(
+  value: string,
+): value is Exclude<ConversationChannelKey, "all"> {
+  return conversationChannelTabs.some(
+    (tab) => tab.key !== "all" && tab.key === value,
+  );
+}
+
+function isArchivedContact(contact: ContactRow): boolean {
+  return normalizeSourceValue(contact.status) === "archived";
 }
 
 function filterMessagesBySource(
