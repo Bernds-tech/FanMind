@@ -189,8 +189,9 @@ export function WorkspaceShell({
         {sidebarCollapsed ? (
           <>
             <div className={styles.sidebarRailTop}>
-              <div className={styles.logoMark} aria-hidden="true">
-                FM
+              <div className={styles.logoMark} aria-label="FanMind" title="FanMind">
+                <span className={styles.logoMarkFan} aria-hidden="true">F</span>
+                <span className={styles.logoMarkMind} aria-hidden="true">M</span>
               </div>
               <button
                 type="button"
