@@ -111,8 +111,8 @@
 }
 .workbenchGrid {
   display: grid;
-  grid-template-columns: minmax(520px, 1fr) minmax(300px, 0.42fr);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 16px;
   align-items: start;
 }
 .rail,
@@ -120,6 +120,7 @@
 .copilot {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 .card {
   border: 1px solid rgba(148, 163, 184, 0.16);
@@ -326,7 +327,7 @@
 .nextAction strong {
   color: #fef3c7;
 }
-@media (max-width: 1260px) {
+@media (max-width: 1080px) {
   .workbenchGrid {
     grid-template-columns: 1fr;
   }
