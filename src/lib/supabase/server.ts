@@ -1027,20 +1027,27 @@ export async function getWorkspaceTelegramMessages(
   workspaceId: string,
   limit = 5,
 ): Promise<{ messages: ConversationMessageRow[]; error: Error | null }> {
-  const accessToken = await getAccessToken();
-  if (!accessToken) {
-    return { messages: [], error: new Error("Keine aktive Supabase-Session gefunden.") };
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      messages: [],
+      error: new Error("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert."),
+    };
   }
 
+  const requestedLimit = Math.floor(limit);
+  const safeLimit = Number.isFinite(requestedLimit)
+    ? Math.max(1, Math.min(requestedLimit, 50))
+    : 5;
   const result = await postgrestSelect<ConversationMessageRow[]>(
     "conversation_messages",
-    accessToken,
+    serviceAccessToken,
     CONVERSATION_MESSAGE_COLUMNS,
     [
       ["workspace_id", workspaceId],
       ["source_platform", "telegram"],
     ],
-    limit,
+    safeLimit,
     false,
     "created_at.desc",
   );

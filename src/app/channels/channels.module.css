@@ -282,6 +282,13 @@
   line-height: 1.65;
 }
 
+.subtleModalText {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .releaseBox {
   margin-top: 14px;
   min-width: 0;
@@ -346,6 +353,11 @@
 .messageList a {
   color: #dbeafe;
   text-decoration: none;
+}
+
+.messageList p {
+  margin: 4px 0 0;
+  color: #bfdbfe;
 }
 
 .messageList a:hover {

@@ -90,6 +90,7 @@ type TelegramMessage = {
   contact_id: string;
   author_label: string | null;
   content: string;
+  source_type: string | null;
   created_at: string | null;
 };
 
@@ -487,6 +488,12 @@ export function ChannelsGrid({
     : telegramSetupStatus.checked
       ? "nicht bestätigt"
       : "Prüfung nötig";
+  const getTelegramSourceTypeLabel = (sourceType: string | null) =>
+    sourceType === "dm"
+      ? "Telegram DM"
+      : sourceType === "telegram_messages"
+        ? "Telegram Nachricht"
+        : "Telegram";
 
   const activeDisplayStatus =
     activeChannel?.key === "telegram"
@@ -699,9 +706,14 @@ export function ChannelsGrid({
                     <li>Auto-Senden: deaktiviert</li>
                     <li>Mensch prüft final</li>
                   </ul>
-                  {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage || telegramMessagesError ? (
+                  {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage ? (
                     <p className={styles.modalNotice}>
-                      Prüfung nötig: {telegramSetupStatus.lastErrorMessage ?? telegramSetupStatus.error ?? telegramMessagesError}
+                      Prüfung nötig: {telegramSetupStatus.lastErrorMessage ?? telegramSetupStatus.error}
+                    </p>
+                  ) : null}
+                  {telegramMessagesError ? (
+                    <p className={styles.modalNotice}>
+                      Telegram-Nachrichten konnten nicht geladen werden: {telegramMessagesError}
                     </p>
                   ) : null}
                 </div>
@@ -730,18 +742,23 @@ export function ChannelsGrid({
                   aria-label="Letzte Telegram Nachrichten"
                 >
                   <strong>Letzte Nachrichten</strong>
-                  {telegramMessages.length ? (
+                  <p className={styles.subtleModalText}>
+                    Nachrichtenquelle: conversation_messages · source_platform=telegram
+                  </p>
+                  {telegramMessages.length > 0 ? (
                     <ul className={styles.messageList}>
                       {telegramMessages.map((message) => (
                         <li key={message.id}>
                           <a href={`/fans/${message.contact_id}`}>
-                            <strong>{message.author_label ?? "Telegram Kontakt"}</strong>: {message.content.slice(0, 90)}
+                            <strong>{message.author_label ?? "Telegram Kontakt"}</strong>
+                            <span> · {getTelegramSourceTypeLabel(message.source_type)}</span>
                             <span> · {formatDateTime(message.created_at)}</span>
+                            <p>{message.content.slice(0, 140)}</p>
                           </a>
                         </li>
                       ))}
                     </ul>
-                  ) : (
+                  ) : telegramMessagesError ? null : (
                     <p className={styles.modalNotice}>Noch keine Telegram-Nachrichten in diesem Workspace gefunden.</p>
                   )}
                 </div>
