@@ -1182,6 +1182,40 @@
   padding-top: 1rem;
 }
 
+.mergePanel {
+  border-top: 1px solid rgba(103, 232, 249, 0.2);
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.mergePanel h3 {
+  color: #f8fafc;
+  font-size: 1rem;
+  margin: 0.15rem 0 0.35rem;
+}
+
+.mergeForm {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mergeForm label {
+  color: #dbeafe;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.mergeForm select {
+  background: rgba(15, 23, 42, 0.84);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  color: #e2e8f0;
+  font: inherit;
+  padding: 0.7rem 0.8rem;
+}
+
 .dangerButton {
   background: rgba(127, 29, 29, 0.18);
   border: 1px solid rgba(248, 113, 113, 0.45);

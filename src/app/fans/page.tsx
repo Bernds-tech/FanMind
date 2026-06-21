@@ -17,7 +17,7 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../dashboard/dashboard.module.css";
-import { archiveFan, createFan, updateFan } from "./actions";
+import { archiveFan, createFan, mergeFanContacts, updateFan } from "./actions";
 import {
   PLATFORM_OPTIONS,
   formatPlatformLabel,
@@ -271,7 +271,11 @@ function FansWorkspace({
         </section>
 
         {fanGroups.map((group) => (
-          <EditFanModal group={group} key={group.key} />
+          <EditFanModal
+            allGroups={fanGroups}
+            group={group}
+            key={getEditModalKey(group)}
+          />
         ))}
       </div>
     </WorkspaceShell>
@@ -385,7 +389,11 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
               </td>
               <td className={styles.unseenCell}>
                 {group.hasUnseenMessages ? (
-                  <span className={styles.unseenDot} title="Neue ungesehene Nachricht" aria-label="Neue ungesehene Nachricht" />
+                  <span
+                    className={styles.unseenDot}
+                    title="Neue ungesehene Nachricht"
+                    aria-label="Neue ungesehene Nachricht"
+                  />
                 ) : null}
               </td>
             </tr>
@@ -431,8 +439,36 @@ function renderPlatformBadges(platforms: PlatformValue[]) {
   );
 }
 
-function EditFanModal({ group }: { group: FanGroup }) {
+function isArchivedContact(contact: ContactRow): boolean {
+  return contact.status?.trim().toLowerCase() === "archived";
+}
+
+function getEditModalKey(group: FanGroup): string {
+  const platformKey = group.platforms.join("-") || "no-platforms";
+  const contactKey = group.contacts
+    .map(
+      (contact) =>
+        `${contact.id}:${contact.status ?? ""}:${contact.source_platform ?? ""}`,
+    )
+    .join("|");
+
+  return `${group.key}:${platformKey}:${contactKey}`;
+}
+
+function EditFanModal({
+  allGroups,
+  group,
+}: {
+  allGroups: FanGroup[];
+  group: FanGroup;
+}) {
   const primaryContact = group.primaryContact;
+  const mergeTargets = allGroups.filter(
+    (candidate) => candidate.key !== group.key,
+  );
+  const activeContactCount = group.contacts.filter(
+    (contact) => !isArchivedContact(contact),
+  ).length;
 
   return (
     <section
@@ -553,14 +589,64 @@ function EditFanModal({ group }: { group: FanGroup }) {
             </button>
           </div>
         </form>
+        <div className={styles.mergePanel}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Duplikate</p>
+            <h3>Mit anderem Fan zusammenführen</h3>
+            <p className={styles.fieldHint}>
+              Quelle: {group.displayName} · Kanäle:{" "}
+              {group.platforms.map(formatPlatformLabel).join(", ")} · Tags:{" "}
+              {group.tags.length ? group.tags.join(", ") : "keine"} · Aktive
+              Kanal-Datensätze: {activeContactCount}
+            </p>
+          </div>
+          <form className={styles.mergeForm} action={mergeFanContacts}>
+            <input
+              name="source_contact_id"
+              type="hidden"
+              value={primaryContact.id}
+            />
+            <label htmlFor={`${getEditModalId(group)}-merge-target`}>
+              Ziel-Fan auswählen
+            </label>
+            <select
+              id={`${getEditModalId(group)}-merge-target`}
+              name="target_contact_id"
+              required
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Nach Name/Handle auswählen
+              </option>
+              {mergeTargets.map((target) => (
+                <option key={target.key} value={target.primaryContact.id}>
+                  {target.displayName} · {target.handles[0] ?? "kein Handle"} ·{" "}
+                  {target.platforms.map(getPlatformShortLabel).join("/")} ·{" "}
+                  {target.tags.length
+                    ? target.tags.slice(0, 3).join(", ")
+                    : "keine Tags"}
+                </option>
+              ))}
+            </select>
+            <p className={styles.fieldHint}>
+              Conversations, Nachrichten, Memories, Follow-ups, Reply-Targets,
+              Summaries und Profile werden auf den Ziel-Fan umgehängt. Tags,
+              Notizen und Kanäle werden zusammengeführt; die Quelle wird danach
+              archiviert.
+            </p>
+            <button className={dashboardStyles.secondaryButton} type="submit">
+              Zusammenführen bestätigen
+            </button>
+          </form>
+        </div>
         <form className={styles.dangerForm} action={archiveFan}>
           <input name="contact_id" type="hidden" value={primaryContact.id} />
-          <button
-            className={styles.dangerButton}
-            type="submit"
-            formAction={archiveFan}
-          >
-            Kontakt wirklich archivieren
+          <p className={styles.fieldHint}>
+            Nachrichten bleiben erhalten. Der Fan wird aus der Standardliste
+            ausgeblendet.
+          </p>
+          <button className={styles.dangerButton} type="submit">
+            Fan archivieren
           </button>
         </form>
       </div>
@@ -632,10 +718,12 @@ function groupContactsByFan(
   unseenMessages: ConversationMessageRow[],
 ): FanGroup[] {
   const activeContacts = contacts.filter(
-    (contact) => contact.status !== "archived",
+    (contact) => !isArchivedContact(contact),
   );
   const followupsByContact = new Map<string, FollowupRow[]>();
-  const unseenContactIds = new Set(unseenMessages.map((message) => message.contact_id));
+  const unseenContactIds = new Set(
+    unseenMessages.map((message) => message.contact_id),
+  );
 
   for (const followup of followups) {
     if (followup.status && followup.status !== "open") {
@@ -655,40 +743,44 @@ function groupContactsByFan(
     groups.set(groupKey, [...(groups.get(groupKey) ?? []), contact]);
   }
 
-  return Array.from(groups.entries()).map(([key, groupedContacts]) => {
-    const sortedContacts = [...groupedContacts].sort(
-      compareContactsByCreatedAt,
-    );
-    const primaryContact = sortedContacts[0];
-    const groupFollowups = sortedContacts.flatMap(
-      (contact) => followupsByContact.get(contact.id) ?? [],
-    );
+  return Array.from(groups.entries())
+    .map(([key, groupedContacts]) => {
+      const sortedContacts = [...groupedContacts].sort(
+        compareContactsByCreatedAt,
+      );
+      const primaryContact = sortedContacts[0];
+      const groupFollowups = sortedContacts.flatMap(
+        (contact) => followupsByContact.get(contact.id) ?? [],
+      );
 
-    return {
-      key,
-      displayName:
-        primaryContact.display_name ||
-        primaryContact.handle ||
-        "Unbenannter Fan",
-      primaryContact,
-      contacts: sortedContacts,
-      handles: uniqueValues(sortedContacts.map((contact) => contact.handle)),
-      platforms: uniquePlatforms(sortedContacts),
-      tags: uniqueValues(
-        sortedContacts.flatMap((contact) => contact.tags ?? []),
-      ),
-      latestCreatedAt:
-        sortedContacts.find((contact) => contact.created_at)?.created_at ??
-        null,
-      nextFollowup: getNextFollowup(groupFollowups),
-      hasUnseenMessages: sortedContacts.some((contact) => unseenContactIds.has(contact.id)),
-    };
-  }).sort((left, right) => {
-    if (left.hasUnseenMessages !== right.hasUnseenMessages) {
-      return left.hasUnseenMessages ? -1 : 1;
-    }
-    return left.displayName.localeCompare(right.displayName, "de");
-  });
+      return {
+        key,
+        displayName:
+          primaryContact.display_name ||
+          primaryContact.handle ||
+          "Unbenannter Fan",
+        primaryContact,
+        contacts: sortedContacts,
+        handles: uniqueValues(sortedContacts.map((contact) => contact.handle)),
+        platforms: uniquePlatforms(sortedContacts),
+        tags: uniqueValues(
+          sortedContacts.flatMap((contact) => contact.tags ?? []),
+        ),
+        latestCreatedAt:
+          sortedContacts.find((contact) => contact.created_at)?.created_at ??
+          null,
+        nextFollowup: getNextFollowup(groupFollowups),
+        hasUnseenMessages: sortedContacts.some((contact) =>
+          unseenContactIds.has(contact.id),
+        ),
+      };
+    })
+    .sort((left, right) => {
+      if (left.hasUnseenMessages !== right.hasUnseenMessages) {
+        return left.hasUnseenMessages ? -1 : 1;
+      }
+      return left.displayName.localeCompare(right.displayName, "de");
+    });
 }
 
 function formatNotice(notice: string): string {
@@ -696,6 +788,7 @@ function formatNotice(notice: string): string {
     fan_created: "Fan wurde angelegt.",
     fan_updated: "Fan wurde aktualisiert.",
     contact_archived: "Kontakt wurde archiviert.",
+    contacts_merged: "Fans wurden zusammengeführt.",
   };
 
   return noticeLabels[notice] ?? "Änderung wurde gespeichert.";
@@ -743,16 +836,18 @@ function uniqueValues(values: Array<string | null | undefined>): string[] {
 function uniquePlatforms(contacts: ContactRow[]): PlatformValue[] {
   const seen = new Set<PlatformValue>();
 
-  return contacts.flatMap((contact) => {
-    const platform = normalizePlatform(contact.source_platform);
+  return contacts
+    .filter((contact) => !isArchivedContact(contact))
+    .flatMap((contact) => {
+      const platform = normalizePlatform(contact.source_platform);
 
-    if (seen.has(platform)) {
-      return [];
-    }
+      if (seen.has(platform)) {
+        return [];
+      }
 
-    seen.add(platform);
-    return [platform];
-  });
+      seen.add(platform);
+      return [platform];
+    });
 }
 
 function getNextFollowup(followups: FollowupRow[]): FollowupRow | null {
