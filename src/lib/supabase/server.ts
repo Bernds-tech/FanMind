@@ -977,10 +977,82 @@ export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
   return { workspaceId: workspaceResult.data?.id ?? null, error: null };
 }
 
+export async function findTelegramWebhookWorkspaceId(): Promise<{
+  workspaceId: string | null;
+  error: Error | null;
+}> {
+  const configuredWorkspaceId = normalizeOptionalText(
+    process.env.FANMIND_DEFAULT_WORKSPACE_ID_FOR_TELEGRAM_TEST,
+  );
+  if (configuredWorkspaceId) return { workspaceId: configuredWorkspaceId, error: null };
+
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      workspaceId: null,
+      error: new Error(
+        "SUPABASE_SERVICE_ROLE_KEY ist für Telegram-Webhook-Ingestion nicht konfiguriert.",
+      ),
+    };
+  }
+
+  const connectionResult = await postgrestSelect<SocialConnectionRow>(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_COLUMNS,
+    [["platform", "telegram"]],
+    1,
+    true,
+    "connected_at.desc",
+  );
+  if (connectionResult.error) return { workspaceId: null, error: connectionResult.error };
+  if (connectionResult.data?.workspace_id) {
+    return { workspaceId: connectionResult.data.workspace_id, error: null };
+  }
+
+  const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
+    "workspaces",
+    serviceAccessToken,
+    WORKSPACE_COLUMNS,
+    [],
+    1,
+    true,
+    "created_at.desc",
+  );
+  if (workspaceResult.error) return { workspaceId: null, error: workspaceResult.error };
+  return { workspaceId: workspaceResult.data?.id ?? null, error: null };
+}
+
+export async function getWorkspaceTelegramMessages(
+  workspaceId: string,
+  limit = 5,
+): Promise<{ messages: ConversationMessageRow[]; error: Error | null }> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    return { messages: [], error: new Error("Keine aktive Supabase-Session gefunden.") };
+  }
+
+  const result = await postgrestSelect<ConversationMessageRow[]>(
+    "conversation_messages",
+    accessToken,
+    CONVERSATION_MESSAGE_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["source_platform", "telegram"],
+    ],
+    limit,
+    false,
+    "created_at.desc",
+  );
+
+  if (result.error) return { messages: [], error: result.error };
+  return { messages: result.data ?? [], error: null };
+}
+
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
   socialConnectionId?: string | null;
-  platform?: "facebook" | "instagram";
+  platform?: "facebook" | "instagram" | "telegram";
   eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
   pageId?: string | null;
   senderId?: string | null;
@@ -2309,7 +2381,7 @@ export async function createMetaWebhookConversationMessage(input: {
   senderId?: string | null;
   pageId?: string | null;
   recipientId?: string | null;
-  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
   authorLabel: string;
   content: string;
   messageType: "dm" | "comment";
@@ -2321,6 +2393,7 @@ export async function createMetaWebhookConversationMessage(input: {
     | "whatsapp_messages"
     | "tiktok_comments"
     | "tiktok_messages"
+    | "telegram_messages"
     | "dm"
     | "comment"
     | null;
@@ -2570,7 +2643,7 @@ export async function createMetaWebhookConversationMessage(input: {
 
 export async function createMetaTestConversationMessage(input: {
   workspaceId: string;
-  sourcePlatform?: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourcePlatform?: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
@@ -2582,6 +2655,7 @@ export async function createMetaTestConversationMessage(input: {
     | "whatsapp_messages"
     | "tiktok_comments"
     | "tiktok_messages"
+    | "telegram_messages"
     | "dm"
     | "comment"
     | null;
@@ -2781,7 +2855,7 @@ export async function createMetaTestConversationMessage(input: {
 async function ensureMetaTestConversation(input: {
   workspaceId: string;
   contactId: string;
-  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
   sourceType: string;
   sourceUrl?: string | null;
   replyTargetUrl?: string | null;
@@ -2891,7 +2965,7 @@ async function ensureMetaTestConversation(input: {
 }
 
 function buildMetaThreadIdentifiers(input: {
-  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
   sourceType: string;
   externalThreadId?: string | null;
   sourceConversationId?: string | null;
@@ -2921,7 +2995,7 @@ function buildMetaThreadIdentifiers(input: {
 
 async function findContactByThreadIdentifiers(input: {
   workspaceId: string;
-  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
   threadIdentifiers: string[];
 }): Promise<{ contact: ContactRow | null; error: Error | null }> {
   for (const identifier of input.threadIdentifiers) {
@@ -3020,7 +3094,7 @@ async function getContactById(
 
 async function findPreferredContactBySenderAlias(input: {
   workspaceId: string;
-  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
   senderId: string;
 }): Promise<{ contact: ContactRow | null; error: Error | null }> {
   const contactsResult = await postgrestSelect<ContactRow[]>(
@@ -3069,7 +3143,7 @@ async function findPreferredContactBySenderAlias(input: {
 async function contactHasConversationMessages(input: {
   workspaceId: string;
   contactId: string;
-  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok";
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
 }): Promise<{ exists: boolean; error: Error | null }> {
   const result = await postgrestSelect<{ id: string }>(
     "conversation_messages",
@@ -4008,7 +4082,7 @@ function isProductiveCommercialOption(
 
 function isWebhookFallbackDisplayName(
   displayName: string | null | undefined,
-  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram",
   handle?: string | null,
 ): boolean {
   const normalized = normalizeOptionalText(displayName);
@@ -4028,20 +4102,22 @@ function escapeRegExp(value: string): string {
 }
 
 function getDefaultWebhookAuthorLabel(
-  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram",
 ): string {
   if (platform === "instagram") return "Instagram Nutzer";
   if (platform === "whatsapp") return "WhatsApp Kontakt";
   if (platform === "tiktok") return "TikTok Nutzer";
+  if (platform === "telegram") return "Telegram Nutzer";
   return "Facebook Nutzer";
 }
 
 function getWebhookPlatformLabel(
-  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram",
 ): string {
   if (platform === "instagram") return "Instagram";
   if (platform === "whatsapp") return "WhatsApp";
   if (platform === "tiktok") return "TikTok";
+  if (platform === "telegram") return "Telegram";
   return "Facebook";
 }
 
@@ -4057,7 +4133,7 @@ function normalizeIsoTimestamp(
 }
 
 function getDefaultWebhookSourceType(
-  platform: "facebook" | "instagram" | "whatsapp" | "tiktok",
+  platform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram",
   messageType: "dm" | "comment",
 ):
   | "facebook_messages"
@@ -4066,8 +4142,10 @@ function getDefaultWebhookSourceType(
   | "instagram_comments"
   | "whatsapp_messages"
   | "tiktok_comments"
-  | "tiktok_messages" {
+  | "tiktok_messages"
+  | "telegram_messages" {
   if (platform === "whatsapp") return "whatsapp_messages";
+  if (platform === "telegram") return "telegram_messages";
   if (platform === "tiktok")
     return messageType === "comment" ? "tiktok_comments" : "tiktok_messages";
   return messageType === "comment"

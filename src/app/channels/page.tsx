@@ -6,7 +6,9 @@ import {
   getWorkspaceContacts,
   getWorkspaceMetaWebhookEvents,
   getWorkspaceSocialConnections,
+  getWorkspaceTelegramMessages,
   signOutSupabaseServerSession,
+  type ConversationMessageRow,
   type MetaWebhookEventRow,
   type SocialConnectionRow,
   type WorkspaceDashboardRow,
@@ -45,6 +47,9 @@ type ChannelsWorkspaceProps = {
     error: string | null;
   };
   facebookLiveSetupStatus: FacebookLiveSetupStatus;
+  telegramMessages: ConversationMessageRow[];
+  telegramMessagesError?: string | null;
+  telegramSetupStatus: { botTokenConfigured: boolean; webhookSecretConfigured: boolean };
 };
 
 async function logout() {
@@ -64,6 +69,9 @@ function ChannelsWorkspace({
   metaWebhookError,
   metaWebhookStorageHealth,
   facebookLiveSetupStatus,
+  telegramMessages,
+  telegramMessagesError,
+  telegramSetupStatus,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -97,6 +105,9 @@ function ChannelsWorkspace({
         metaWebhookError={metaWebhookError}
         metaWebhookStorageHealth={metaWebhookStorageHealth}
         facebookLiveSetupStatus={facebookLiveSetupStatus}
+        telegramMessages={telegramMessages}
+        telegramMessagesError={telegramMessagesError}
+        telegramSetupStatus={telegramSetupStatus}
       />
     </WorkspaceShell>
   );
@@ -138,6 +149,9 @@ export default async function ChannelsPage({
     : null;
   const metaWebhookStorageHealthResult = workspace
     ? await checkMetaWebhookStorageHealth()
+    : null;
+  const telegramMessagesResult = workspace
+    ? await getWorkspaceTelegramMessages(workspace.id, 5)
     : null;
   const facebookConnection =
     socialConnectionsResult?.connections.find(
@@ -184,6 +198,9 @@ export default async function ChannelsPage({
             error: metaWebhookStorageHealthResult?.error?.message ?? null,
           }}
           facebookLiveSetupStatus={getFacebookLiveSetupStatus()}
+          telegramMessages={telegramMessagesResult?.messages ?? []}
+          telegramMessagesError={telegramMessagesResult?.error?.message ?? null}
+          telegramSetupStatus={getTelegramSetupStatus()}
         />
       ) : (
         <section
@@ -244,4 +261,11 @@ function firstConfiguredEnv(...names: string[]): string | null {
     if (value?.trim()) return value.trim();
   }
   return null;
+}
+
+function getTelegramSetupStatus() {
+  return {
+    botTokenConfigured: Boolean(process.env.TELEGRAM_BOT_TOKEN),
+    webhookSecretConfigured: Boolean(process.env.TELEGRAM_WEBHOOK_SECRET),
+  };
 }

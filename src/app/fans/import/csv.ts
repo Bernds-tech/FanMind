@@ -5,6 +5,7 @@ export type PlatformValue =
   | "facebook"
   | "x"
   | "discord"
+  | "telegram"
   | "email"
   | "onlyfans"
   | "manual";
@@ -20,6 +21,7 @@ export const PLATFORM_OPTIONS: Array<{
   { value: "facebook", label: "Facebook", shortLabel: "FB" },
   { value: "x", label: "X / Twitter", shortLabel: "X" },
   { value: "discord", label: "Discord", shortLabel: "DC" },
+  { value: "telegram", label: "Telegram", shortLabel: "TG" },
   { value: "email", label: "E-Mail", shortLabel: "@" },
   { value: "onlyfans", label: "OnlyFans", shortLabel: "OF" },
   { value: "manual", label: "Manuell", shortLabel: "M" },
@@ -41,6 +43,9 @@ const PLATFORM_ALIAS_MAP: Record<string, PlatformValue> = {
   x: "x",
   x_com: "x",
   discord: "discord",
+  telegram: "telegram",
+  tg: "telegram",
+  telegram_messages: "telegram",
   mail: "email",
   e_mail: "email",
   email: "email",
