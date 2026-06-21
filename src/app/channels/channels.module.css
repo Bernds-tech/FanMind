@@ -223,13 +223,20 @@
 }
 
 .modalBackdrop {
+  --channel-modal-viewport-gap: 18px;
+  --channel-modal-bottom-gap: max(32px, env(safe-area-inset-bottom));
+
   position: fixed;
   inset: 0;
   z-index: 80;
   display: grid;
-  place-items: center;
-  padding: 18px 18px max(18px, env(safe-area-inset-bottom));
-  overflow: hidden;
+  align-items: start;
+  justify-items: center;
+  padding: var(--channel-modal-viewport-gap) var(--channel-modal-viewport-gap)
+    var(--channel-modal-bottom-gap);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgba(2, 6, 23, 0.72);
   backdrop-filter: blur(12px);
 }
@@ -237,14 +244,21 @@
 .modal {
   width: min(92vw, 1120px);
   max-width: 100%;
-  max-height: min(820px, calc(100dvh - 36px - env(safe-area-inset-bottom)));
+  max-height: min(
+    820px,
+    calc(
+      100dvh - var(--channel-modal-viewport-gap) -
+        var(--channel-modal-bottom-gap)
+    )
+  );
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-padding-bottom: max(28px, env(safe-area-inset-bottom));
   scrollbar-gutter: stable;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 24px;
-  padding: 22px 22px max(22px, calc(22px + env(safe-area-inset-bottom)));
+  padding: 22px 22px max(34px, calc(22px + env(safe-area-inset-bottom)));
   background:
     radial-gradient(
       circle at 12% 0%,
