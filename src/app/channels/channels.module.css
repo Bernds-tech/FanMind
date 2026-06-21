@@ -43,6 +43,7 @@
 }
 
 .channelCard {
+  display: flex;
   min-width: 0;
   min-height: 170px;
   border: 1px solid rgba(148, 163, 184, 0.15);
@@ -59,6 +60,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: 100%;
   min-height: 170px;
   border: 0;
   padding: 12px;
@@ -205,7 +207,7 @@
   gap: 8px;
   align-items: center;
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 14px;
 }
 
 .primaryCardAction,
@@ -299,15 +301,19 @@
 }
 
 .modalBody {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: calc(
+    100dvh - var(--channel-modal-viewport-gap) -
+      var(--channel-modal-bottom-gap) - 132px
+  );
   margin-top: 14px;
-  padding: 0 6px var(--channel-modal-content-bottom-safe-space) 0;
+  padding: 0 6px 24px 0;
   contain: layout;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-padding-bottom: var(--channel-modal-content-bottom-safe-space);
+  scroll-padding-bottom: 24px;
   scrollbar-gutter: stable;
 }
 
@@ -570,7 +576,7 @@
 .soonCornerBadge {
   position: absolute;
   right: 10px;
-  bottom: 10px;
+  bottom: 58px;
   width: 82px;
   max-width: 34%;
   height: auto;
