@@ -18,6 +18,7 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
+import { getTelegramWebhookStatus, type TelegramWebhookStatus } from "@/lib/telegramStatus";
 
 type SafeFacebookConnection = Pick<
   SocialConnectionRow,
@@ -49,7 +50,7 @@ type ChannelsWorkspaceProps = {
   facebookLiveSetupStatus: FacebookLiveSetupStatus;
   telegramMessages: ConversationMessageRow[];
   telegramMessagesError?: string | null;
-  telegramSetupStatus: { botTokenConfigured: boolean; webhookSecretConfigured: boolean };
+  telegramSetupStatus: TelegramWebhookStatus;
 };
 
 async function logout() {
@@ -153,6 +154,7 @@ export default async function ChannelsPage({
   const telegramMessagesResult = workspace
     ? await getWorkspaceTelegramMessages(workspace.id, 5)
     : null;
+  const telegramSetupStatus = await getTelegramWebhookStatus();
   const facebookConnection =
     socialConnectionsResult?.connections.find(
       (connection) =>
@@ -200,7 +202,7 @@ export default async function ChannelsPage({
           facebookLiveSetupStatus={getFacebookLiveSetupStatus()}
           telegramMessages={telegramMessagesResult?.messages ?? []}
           telegramMessagesError={telegramMessagesResult?.error?.message ?? null}
-          telegramSetupStatus={getTelegramSetupStatus()}
+          telegramSetupStatus={telegramSetupStatus}
         />
       ) : (
         <section
@@ -261,11 +263,4 @@ function firstConfiguredEnv(...names: string[]): string | null {
     if (value?.trim()) return value.trim();
   }
   return null;
-}
-
-function getTelegramSetupStatus() {
-  return {
-    botTokenConfigured: Boolean(process.env.TELEGRAM_BOT_TOKEN),
-    webhookSecretConfigured: Boolean(process.env.TELEGRAM_WEBHOOK_SECRET),
-  };
 }

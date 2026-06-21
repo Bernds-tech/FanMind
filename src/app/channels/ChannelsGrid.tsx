@@ -12,6 +12,11 @@ import {
   type PreparedSourceType,
 } from "@/lib/channelSources";
 import {
+  TELEGRAM_BOT_USERNAME,
+  TELEGRAM_EXPECTED_WEBHOOK_URL,
+  type TelegramWebhookStatus,
+} from "@/lib/telegramStatus";
+import {
   activateFacebookPageWebhooks,
   checkFacebookPageWebhooks,
   syncFacebookMessengerHistory,
@@ -28,7 +33,9 @@ type ChannelStatus =
   | "Vorschau"
   | "Vorbereitet"
   | "Noch nicht live"
-  | "Coming Soon";
+  | "Coming Soon"
+  | "Live"
+  | "Konfiguriert";
 
 type FacebookConnection = {
   page_name: string | null;
@@ -202,10 +209,10 @@ const channels: Channel[] = [
     key: "telegram",
     name: "Telegram",
     description:
-      "Nachrichten und Gruppen-Eingänge sind als künftiger Kanal vorgemerkt.",
-    status: "Vorbereitet",
+      "Telegram ist als erster Live-Eingangskanal verbunden. Eingehende Bot-Nachrichten landen in FanMind. FanMind sendet keine automatischen Antworten.",
+    status: "Live",
     technology: "Telegram Bot",
-    intakeTypes: "Nachrichten · Bot @FanMindBot",
+    intakeTypes: "Textnachrichten · Bot @FanMindBot",
     signal: true,
     logo: logoPath("telegram"),
   },
@@ -418,6 +425,8 @@ const statusClassName: Record<ChannelStatus, string> = {
   Vorbereitet: styles.statusProgress,
   "Noch nicht live": styles.statusPreview,
   "Coming Soon": styles.statusPreview,
+  Live: styles.statusConnected,
+  Konfiguriert: styles.statusProgress,
 };
 
 function isBookable(status: ChannelStatus) {
@@ -449,7 +458,7 @@ export function ChannelsGrid({
   facebookLiveSetupStatus: FacebookLiveSetupStatus;
   telegramMessages: TelegramMessage[];
   telegramMessagesError?: string | null;
-  telegramSetupStatus: { botTokenConfigured: boolean; webhookSecretConfigured: boolean };
+  telegramSetupStatus: TelegramWebhookStatus;
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -723,9 +732,24 @@ export function ChannelsGrid({
     ? buildChannelSyncStatus(activeSourceConfig, facebookConnection)
     : null;
 
+  const telegramLive = telegramSetupStatus.configured && telegramSetupStatus.webhookUrlMatches && !telegramSetupStatus.lastErrorMessage;
+  const telegramConfiguredNeedsCheck = telegramSetupStatus.configured && !telegramLive;
+  const telegramStatusLabel = telegramLive
+    ? "Live-Sync aktiv"
+    : telegramConfiguredNeedsCheck
+      ? "Konfiguriert · Prüfung nötig"
+      : "Nicht vollständig konfiguriert";
+  const telegramWebhookLabel = telegramLive
+    ? "aktiv"
+    : telegramSetupStatus.checked
+      ? "nicht bestätigt"
+      : "Prüfung nötig";
+
   const activeDisplayStatus =
     activeChannel?.key === "telegram"
-      ? "Vorbereitet"
+      ? telegramLive
+        ? "Live"
+        : "Konfiguriert"
       : activeChannel?.key === "facebook_messages" && facebookConnection
       ? "Verbunden"
       : activeChannel?.key === "facebook_comments" && facebookCommentsReady
@@ -745,7 +769,11 @@ export function ChannelsGrid({
           const isTelegram = channel.key === "telegram";
           const commentsReady = facebookCommentsReady;
           const displayStatus =
-            isFacebookMessages && facebookConnection
+            isTelegram
+              ? telegramLive
+                ? "Live"
+                : "Konfiguriert"
+            : isFacebookMessages && facebookConnection
               ? "Verbunden"
               : isFacebookComments && commentsReady
                 ? "Verbunden"
@@ -819,7 +847,7 @@ export function ChannelsGrid({
                           ? "Kommentare vorbereitet"
                           : "Kommentare vorbereitet"
                         : isTelegram
-                        ? "Live-Sync ansehen"
+                        ? "Live-Verbindung prüfen"
                         : isBookable(displayStatus)
                           ? "Verbindung vormerken"
                           : `Mit ${channel.name} verbinden`}
@@ -832,7 +860,7 @@ export function ChannelsGrid({
                 ) : null}
                 {isTelegram ? (
                   <span className={styles.connectionHint}>
-                    Status: {telegramMessages.length ? "Webhook aktiv" : "Live-Sync vorbereitet"}
+                    Status: {telegramStatusLabel}
                   </span>
                 ) : null}
                 {isFacebookMessages && facebookConnection ? (
@@ -913,7 +941,7 @@ export function ChannelsGrid({
             </div>
             <p className={styles.modalText}>
               {activeChannel.key === "telegram"
-                ? "Telegram ist als Eingangskanal verbunden. FanMind sendet keine automatischen Antworten. Der Mensch prüft und sendet final selbst."
+                ? "Telegram ist als erster Live-Eingangskanal verbunden. Eingehende Bot-Nachrichten landen in FanMind. FanMind sendet keine automatischen Antworten."
                 : activeChannel.key === "facebook_messages" && facebookConnection
                   ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
                 : isBookable(activeChannel.status)
@@ -923,34 +951,38 @@ export function ChannelsGrid({
 
             {activeChannel.key === "telegram" ? (
               <div className={styles.releaseBox} aria-label="Telegram Live-Sync Status">
-                <strong>Telegram Phase 2</strong>
+                <strong>Telegram Live-Eingang</strong>
                 <ul>
-                  <li>Status: {telegramMessagesError ? "Fehler" : telegramMessages.length ? "Webhook aktiv" : "Live-Sync vorbereitet"}</li>
+                  <li>Status: {telegramMessagesError ? "Nachrichtenprüfung fehlerhaft" : telegramStatusLabel}</li>
                   <li>Verbindungstyp: Telegram Bot</li>
-                  <li>Bot: @FanMindBot</li>
-                  <li>Bot-Token serverseitig konfiguriert: {telegramSetupStatus.botTokenConfigured ? "ja" : "nein"}</li>
-                  <li>Webhook-Secret konfiguriert: {telegramSetupStatus.webhookSecretConfigured ? "ja" : "nein"}</li>
+                  <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
+                  <li>Webhook: {telegramWebhookLabel}</li>
+                  <li>Webhook-URL: <span className={styles.breakableText}>{telegramSetupStatus.webhookUrl ?? TELEGRAM_EXPECTED_WEBHOOK_URL}</span></li>
+                  <li>Pending Updates: {telegramSetupStatus.pendingUpdateCount ?? "nicht geprüft"}</li>
+                  <li>Eingang: Textnachrichten</li>
                   <li>Auto-Senden: deaktiviert</li>
-                  <li>Webhook-Route: /api/integrations/telegram/webhook</li>
+                  <li>Mensch prüft final</li>
                   <li>Letzte Nachrichten: {telegramMessages.length ? `${telegramMessages.length} sichtbar` : "noch keine empfangen"}</li>
                 </ul>
-                {telegramMessagesError ? (
-                  <p className={styles.modalNotice}>Fehler: {telegramMessagesError}</p>
+                {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage || telegramMessagesError ? (
+                  <p className={styles.modalNotice}>
+                    Prüfung nötig: {telegramSetupStatus.lastErrorMessage ?? telegramSetupStatus.error ?? telegramMessagesError}
+                  </p>
                 ) : null}
                 {telegramMessages.length ? (
                   <ul>
                     {telegramMessages.map((message) => (
                       <li key={message.id}>
                         <a href={`/fans/${message.contact_id}`}>
-                          {message.author_label ?? "Telegram Kontakt"}: {message.content.slice(0, 90)}
+                          <strong>{message.author_label ?? "Telegram Kontakt"}</strong>: {message.content.slice(0, 90)}
+                          <span> · {formatDateTime(message.created_at)}</span>
                         </a>
                       </li>
                     ))}
                   </ul>
-                ) : null}
-                <p className={styles.modalNotice}>
-                  Webhook später setzen: https://api.telegram.org/bot&lt;TELEGRAM_BOT_TOKEN&gt;/setWebhook?url=https://fanmind.ch/api/integrations/telegram/webhook&amp;secret_token=&lt;TELEGRAM_WEBHOOK_SECRET&gt;
-                </p>
+                ) : (
+                  <p className={styles.modalNotice}>Noch keine Telegram-Nachrichten empfangen.</p>
+                )}
               </div>
             ) : null}
 
@@ -1561,6 +1593,20 @@ export function ChannelsGrid({
                       : "Kommentare vorbereitet"}
                   </a>
                 )
+              ) : activeChannel.key === "telegram" ? (
+                <>
+                  <button type="button" onClick={() => router.refresh()}>
+                    Live-Verbindung prüfen
+                  </button>
+                  <a
+                    className={styles.modalLinkButton}
+                    href="https://t.me/FanMindBot"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Bot in Telegram öffnen
+                  </a>
+                </>
               ) : (
                 <button
                   type="button"
