@@ -73,7 +73,9 @@
 }
 
 .cardButton:focus-visible,
-.modalActions button:focus-visible {
+.modalActions button:focus-visible,
+.connectionCardActions button:focus-visible,
+.connectionCardActions a:focus-visible {
   outline: 3px solid rgba(103, 232, 249, 0.65);
   outline-offset: 3px;
 }
@@ -214,7 +216,8 @@
 }
 
 .primaryCardAction,
-.modalActions button {
+.modalActions button,
+.connectionCardActions button {
   border: 0;
   border-radius: 999px;
   min-height: 36px;
@@ -230,7 +233,10 @@
 .modalBackdrop {
   --channel-modal-viewport-gap: 18px;
   --channel-modal-bottom-gap: max(44px, env(safe-area-inset-bottom));
-  --channel-modal-content-bottom-safe-space: max(56px, calc(56px + env(safe-area-inset-bottom)));
+  --channel-modal-content-bottom-safe-space: max(
+    56px,
+    calc(56px + env(safe-area-inset-bottom))
+  );
   --channel-modal-detail-scroll-height: clamp(360px, 54dvh, 520px);
 
   position: fixed;
@@ -259,8 +265,7 @@
     )
   );
   max-height: calc(
-    100dvh - var(--channel-modal-viewport-gap) -
-      var(--channel-modal-bottom-gap)
+    100dvh - var(--channel-modal-viewport-gap) - var(--channel-modal-bottom-gap)
   );
   display: flex;
   flex-direction: column;
@@ -585,7 +590,6 @@
   background: rgba(127, 29, 29, 0.42) !important;
 }
 
-
 .soonCornerBadge {
   position: absolute;
   right: 12px;
@@ -654,9 +658,21 @@
   line-height: 1.4;
 }
 
-.childSourceCard button {
+.connectionCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
   margin-top: auto;
-  width: fit-content;
+}
+
+.connectionCardActions button,
+.connectionCardActions a {
+  min-height: 36px;
+}
+
+.connectionCardActions form {
+  display: contents;
 }
 
 .connectionCardList {
