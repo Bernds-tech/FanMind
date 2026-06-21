@@ -644,7 +644,11 @@ function EditFanModal({
               Notizen und Kanäle werden zusammengeführt; die Quelle wird danach
               archiviert.
             </p>
-            <button className={dashboardStyles.secondaryButton} type="submit">
+            <button
+              className={dashboardStyles.secondaryButton}
+              type="submit"
+              disabled={!mergeTargets.length}
+            >
               Zusammenführen bestätigen
             </button>
           </form>
@@ -806,6 +810,10 @@ function formatNotice(
       : "Fan wurde aktualisiert.",
     contact_archived: "Kontakt wurde archiviert.",
     contacts_merged: "Fans wurden zusammengeführt.",
+    fan_update_failed:
+      "Kanäle konnten nicht aktualisiert werden. Bitte erneut versuchen oder Admin prüfen.",
+    contacts_merge_failed:
+      "Fans konnten nicht zusammengeführt werden. Bitte Ziel-Fan prüfen und erneut versuchen.",
   };
 
   return noticeLabels[notice] ?? "Änderung wurde gespeichert.";

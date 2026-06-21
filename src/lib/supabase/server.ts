@@ -1563,6 +1563,46 @@ export async function getWorkspaceContacts(
   };
 }
 
+function getContactServiceAccessToken(): string | undefined {
+  return getServiceAccessToken();
+}
+
+function missingContactServiceRoleError(): Error {
+  return new Error("Serverberechtigungen für Kontaktpflege fehlen.");
+}
+
+function assertContactWorkspaceInput(workspaceId: string): Error | null {
+  return workspaceId
+    ? null
+    : new Error("Kontaktpflege ohne workspace_id ist nicht erlaubt.");
+}
+
+async function getWorkspaceContactWithToken(
+  workspaceId: string,
+  contactId: string,
+  accessToken: string,
+): Promise<ContactDetailResult> {
+  const contactResult = await postgrestSelect<ContactRow>(
+    "contacts",
+    accessToken,
+    CONTACT_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["id", contactId],
+    ],
+    1,
+    true,
+  );
+
+  if (contactResult.error) {
+    return contactDetailError(
+      `Kontakt konnte nicht geladen werden: ${contactResult.error.message}`,
+    );
+  }
+
+  return { contact: contactResult.data, error: null };
+}
+
 export async function getWorkspaceContact(
   workspaceId: string,
   contactId: string,
@@ -1639,6 +1679,54 @@ export async function createWorkspaceContact(
   return { contact: contactResult.data, error: null };
 }
 
+export async function createWorkspaceContactServer(
+  input: CreateContactInput,
+): Promise<ContactCreateResult> {
+  const workspaceError = assertContactWorkspaceInput(input.workspaceId);
+  if (workspaceError) return contactCreateError(workspaceError.message);
+
+  const accessToken = getContactServiceAccessToken();
+  if (!accessToken) {
+    return contactCreateError(missingContactServiceRoleError().message);
+  }
+
+  const displayName = input.displayName.trim();
+
+  if (!displayName) {
+    return contactCreateError("Name ist erforderlich.");
+  }
+
+  const contactResult = await postgrestRequest<ContactRow>(
+    "contacts",
+    "POST",
+    {
+      workspace_id: input.workspaceId,
+      display_name: displayName,
+      handle: normalizeOptionalText(input.handle),
+      source_platform: normalizeOptionalText(input.sourcePlatform) ?? "manual",
+      language: normalizeOptionalText(input.language) ?? "de",
+      status: normalizeOptionalText(input.status) ?? "new",
+      tags: input.tags ?? [],
+      summary: normalizeOptionalText(input.summary),
+    },
+    accessToken,
+    { select: CONTACT_COLUMNS, single: true },
+  );
+
+  if (contactResult.error) {
+    return contactCreateError(
+      `Kontakt konnte nicht gespeichert werden: ${contactResult.error.message}`,
+    );
+  }
+  if (!contactResult.data) {
+    return contactCreateError(
+      "Kontakt konnte nicht aktualisiert werden: keine Zeile geändert. Prüfe workspace_id/RLS.",
+    );
+  }
+
+  return { contact: contactResult.data, error: null };
+}
+
 export async function updateWorkspaceContact(
   input: UpdateContactInput,
 ): Promise<ContactUpdateResult> {
@@ -1678,6 +1766,70 @@ export async function updateWorkspaceContact(
   if (contactResult.error) {
     return contactUpdateError(
       `Kontakt konnte nicht aktualisiert werden: ${contactResult.error.message}`,
+    );
+  }
+
+  return { contact: contactResult.data, error: null };
+}
+
+export async function updateWorkspaceContactServer(
+  input: UpdateContactInput,
+): Promise<ContactUpdateResult> {
+  const workspaceError = assertContactWorkspaceInput(input.workspaceId);
+  if (workspaceError) return contactUpdateError(workspaceError.message);
+
+  const accessToken = getContactServiceAccessToken();
+  if (!accessToken) {
+    return contactUpdateError(missingContactServiceRoleError().message);
+  }
+
+  const displayName = input.displayName.trim();
+
+  if (!displayName) {
+    return contactUpdateError("Name ist erforderlich.");
+  }
+
+  const expectedPlatform =
+    normalizeOptionalText(input.sourcePlatform) ?? "manual";
+  const expectedStatus = normalizeOptionalText(input.status) ?? "new";
+
+  const contactResult = await postgrestUpdate<ContactRow>(
+    "contacts",
+    {
+      display_name: displayName,
+      handle: normalizeOptionalText(input.handle),
+      source_platform: expectedPlatform,
+      language: normalizeOptionalText(input.language) ?? "de",
+      status: expectedStatus,
+      tags: input.tags ?? [],
+      summary: normalizeOptionalText(input.summary),
+    },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.contactId],
+    ],
+    { select: CONTACT_COLUMNS, single: true },
+  );
+
+  if (contactResult.error) {
+    return contactUpdateError(
+      `Kontakt konnte nicht aktualisiert werden: ${contactResult.error.message}`,
+    );
+  }
+  if (!contactResult.data) {
+    return contactUpdateError(
+      "Kontakt konnte nicht aktualisiert werden: keine Zeile geändert. Prüfe workspace_id/RLS.",
+    );
+  }
+  if (
+    contactResult.data.workspace_id !== input.workspaceId ||
+    contactResult.data.id !== input.contactId ||
+    contactResult.data.source_platform !== expectedPlatform ||
+    contactResult.data.status !== expectedStatus
+  ) {
+    return contactUpdateError(
+      "Kontakt konnte nicht aktualisiert werden: Verifikation nach Speicherung fehlgeschlagen.",
     );
   }
 
@@ -1734,16 +1886,82 @@ export async function archiveWorkspaceContact(input: {
   return { contact: result.data, error: null };
 }
 
+export async function archiveWorkspaceContactServer(input: {
+  workspaceId: string;
+  contactId: string;
+  reason?: string | null;
+}): Promise<ContactUpdateResult> {
+  const workspaceError = assertContactWorkspaceInput(input.workspaceId);
+  if (workspaceError) return contactUpdateError(workspaceError.message);
+
+  const accessToken = getContactServiceAccessToken();
+  if (!accessToken) {
+    return contactUpdateError(missingContactServiceRoleError().message);
+  }
+
+  const existing = await getWorkspaceContactWithToken(
+    input.workspaceId,
+    input.contactId,
+    accessToken,
+  );
+  if (existing.error) return existing;
+  if (!existing.contact) {
+    return contactUpdateError("Kontakt wurde nicht gefunden.");
+  }
+
+  const archiveNote = input.reason
+    ? `[Archiviert] ${input.reason}`
+    : "[Archiviert] Kontakt wurde manuell archiviert.";
+  const internalNotes = mergeTextBlocks(
+    existing.contact.internal_notes,
+    archiveNote,
+  );
+
+  const result = await postgrestUpdate<ContactRow>(
+    "contacts",
+    { status: "archived", internal_notes: internalNotes },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.contactId],
+    ],
+    { select: CONTACT_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return contactUpdateError(
+      `Kontakt konnte nicht archiviert werden: ${result.error.message}`,
+    );
+  }
+  if (!result.data) {
+    return contactUpdateError(
+      "Kontakt konnte nicht aktualisiert werden: keine Zeile geändert. Prüfe workspace_id/RLS.",
+    );
+  }
+  if (
+    result.data.workspace_id !== input.workspaceId ||
+    result.data.id !== input.contactId ||
+    result.data.status !== "archived"
+  ) {
+    return contactUpdateError(
+      "Kontakt konnte nicht archiviert werden: Verifikation nach Speicherung fehlgeschlagen.",
+    );
+  }
+
+  return { contact: result.data, error: null };
+}
+
 export async function mergeWorkspaceContacts(input: {
   workspaceId: string;
   sourceContactId: string;
   targetContactId: string;
 }): Promise<ContactUpdateResult> {
-  const accessToken = await getAccessToken();
+  const workspaceError = assertContactWorkspaceInput(input.workspaceId);
+  if (workspaceError) return contactUpdateError(workspaceError.message);
+
+  const accessToken = getContactServiceAccessToken();
   if (!accessToken) {
-    return contactUpdateError(
-      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
-    );
+    return contactUpdateError(missingContactServiceRoleError().message);
   }
   if (input.sourceContactId === input.targetContactId) {
     return contactUpdateError(
@@ -1752,8 +1970,16 @@ export async function mergeWorkspaceContacts(input: {
   }
 
   const [sourceResult, targetResult] = await Promise.all([
-    getWorkspaceContact(input.workspaceId, input.sourceContactId),
-    getWorkspaceContact(input.workspaceId, input.targetContactId),
+    getWorkspaceContactWithToken(
+      input.workspaceId,
+      input.sourceContactId,
+      accessToken,
+    ),
+    getWorkspaceContactWithToken(
+      input.workspaceId,
+      input.targetContactId,
+      accessToken,
+    ),
   ]);
   if (sourceResult.error) return sourceResult;
   if (targetResult.error) return targetResult;
@@ -1839,11 +2065,16 @@ export async function mergeWorkspaceContacts(input: {
   );
   if (updatedTarget.error)
     return contactUpdateError(updatedTarget.error.message);
+  if (!updatedTarget.data) {
+    return contactUpdateError(
+      "Kontakt konnte nicht aktualisiert werden: keine Zeile geändert. Prüfe workspace_id/RLS.",
+    );
+  }
 
   const sourcePlatform = normalizeOptionalText(source.source_platform);
   const targetPlatform = normalizeOptionalText(target.source_platform);
   if (sourcePlatform && sourcePlatform !== targetPlatform) {
-    const mergedChannel = await createWorkspaceContact({
+    const mergedChannel = await createWorkspaceContactServer({
       workspaceId: input.workspaceId,
       displayName: target.display_name || source.display_name,
       handle: target.handle ?? source.handle,
@@ -1856,7 +2087,7 @@ export async function mergeWorkspaceContacts(input: {
     if (mergedChannel.error) return mergedChannel;
   }
 
-  const archived = await archiveWorkspaceContact({
+  const archived = await archiveWorkspaceContactServer({
     workspaceId: input.workspaceId,
     contactId: input.sourceContactId,
     reason: `Zusammengeführt in Kontakt ${input.targetContactId}.`,
