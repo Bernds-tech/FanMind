@@ -231,7 +231,7 @@
   --channel-modal-viewport-gap: 18px;
   --channel-modal-bottom-gap: max(44px, env(safe-area-inset-bottom));
   --channel-modal-content-bottom-safe-space: max(56px, calc(56px + env(safe-area-inset-bottom)));
-  --channel-modal-scroll-reserve: max(104px, calc(104px + env(safe-area-inset-bottom)));
+  --channel-modal-detail-scroll-height: clamp(360px, 54dvh, 520px);
 
   position: fixed;
   inset: 0;
@@ -307,10 +307,7 @@
 .modalBody {
   flex: 0 1 auto;
   min-height: 0;
-  max-height: calc(
-    100dvh - var(--channel-modal-viewport-gap) -
-      var(--channel-modal-bottom-gap) - var(--channel-modal-scroll-reserve)
-  );
+  max-height: var(--channel-modal-detail-scroll-height);
   margin-top: 14px;
   padding: 0 6px var(--channel-modal-content-bottom-safe-space) 0;
   contain: layout;
@@ -551,6 +548,10 @@
         var(--channel-modal-bottom-gap)
     );
     padding: 18px;
+  }
+
+  .modalBody {
+    max-height: clamp(320px, 50dvh, 480px);
   }
 }
 
