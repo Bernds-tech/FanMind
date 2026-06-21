@@ -97,9 +97,37 @@
 
 .logoBlock {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
   padding: 2px 2px 18px;
+}
+
+.logoWordmark {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  white-space: nowrap;
+  background: #020617;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 28px rgba(0, 0, 0, 0.24);
+}
+
+.logoWordFan {
+  color: #ffffff;
+}
+
+.logoWordMind {
+  color: #38bdf8;
 }
 
 .logoMark {
@@ -114,7 +142,6 @@
   background: linear-gradient(135deg, #67e8f9, #a78bfa 58%, #f0abfc);
 }
 
-.logoBlock strong,
 .workspaceMiniCard strong,
 .userMiniCard strong,
 .planMiniCard strong {
