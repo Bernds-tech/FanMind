@@ -134,9 +134,9 @@ const channelSourceTypes: Record<
   whatsapp: ["whatsapp_messages"],
   facebook: ["facebook_messages", "facebook_comments"],
   tiktok: ["tiktok_messages", "tiktok_comments"],
-  telegram: ["telegram_messages", "telegram", "dm"],
+  telegram: ["telegram_messages", "telegram", "telegram_dm"],
   email: ["email", "e_mail", "manual_email"],
-  webform: ["webform", "webformular", "form"],
+  webform: ["webform", "webformular"],
   notes: ["note", "notes", "manual_note", "internal_note"],
 };
 
@@ -792,16 +792,15 @@ function isMessageInChannel(
   message: ConversationMessageRow,
   channel: Exclude<ConversationChannelKey, "all">,
 ): boolean {
-  const sourceType = (
-    message.source_type ??
-    message.message_type ??
-    ""
-  ).toLowerCase();
-  const platform = (message.source_platform ?? "").toLowerCase();
-  const messageType = (message.message_type ?? "").toLowerCase();
-  const haystack = [sourceType, platform, messageType].filter(Boolean);
+  const sourceType = normalizeSourceValue(message.source_type);
+  const platform = normalizeSourceValue(message.source_platform);
+  const messageType = normalizeSourceValue(message.message_type);
 
-  if (channelSourceTypes[channel].some((source) => haystack.includes(source))) {
+  if (platform === channel) {
+    return true;
+  }
+
+  if (isExplicitChannelSourceType(sourceType, channel)) {
     return true;
   }
 
@@ -812,10 +811,25 @@ function isMessageInChannel(
     return platform.includes("mail") || sourceType.includes("mail");
   }
   if (channel === "webform") {
-    return platform.includes("form") || sourceType.includes("form");
+    return platform === "webform" || sourceType === "webform";
   }
 
-  return platform === channel || sourceType.startsWith(`${channel}_`);
+  return false;
+}
+
+function normalizeSourceValue(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isExplicitChannelSourceType(
+  sourceType: string,
+  channel: Exclude<ConversationChannelKey, "all">,
+): boolean {
+  if (!sourceType) return false;
+  return (
+    channelSourceTypes[channel].includes(sourceType) ||
+    sourceType.startsWith(`${channel}_`)
+  );
 }
 
 function OriginalChatAction({
@@ -1164,12 +1178,7 @@ function FanNotFound() {
 }
 
 function hasFacebookMessages(messages: ConversationMessageRow[]): boolean {
-  return messages.some(
-    (message) =>
-      message.source_platform === "facebook" &&
-      (message.source_type === "facebook_messages" ||
-        message.message_type === "dm"),
-  );
+  return messages.some((message) => isMessageInChannel(message, "facebook"));
 }
 
 function getManualFacebookReplyTargetUrl(
