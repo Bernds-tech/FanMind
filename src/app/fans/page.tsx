@@ -38,12 +38,16 @@ type FansWorkspaceProps = {
   unseenMessagesError?: string;
   activeChannel: PlatformValue | "all";
   notice?: string;
+  activePlatformsNotice?: string;
+  archivedChannelsNotice?: string;
 };
 
 type FansPageProps = {
   searchParams?: Promise<{
     channel?: string | string[];
     notice?: string | string[];
+    active?: string | string[];
+    archived?: string | string[];
   }>;
 };
 
@@ -95,6 +99,8 @@ function FansWorkspace({
   unseenMessagesError,
   activeChannel,
   notice,
+  activePlatformsNotice,
+  archivedChannelsNotice,
 }: FansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -129,7 +135,9 @@ function FansWorkspace({
           aria-label="Fans-Liste"
         >
           {notice ? (
-            <p className={styles.successNotice}>{formatNotice(notice)}</p>
+            <p className={styles.successNotice}>
+              {formatNotice(notice, activePlatformsNotice, archivedChannelsNotice)}
+            </p>
           ) : null}
           {contactsError ? (
             <p className={dashboardStyles.error}>
@@ -380,12 +388,20 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
                 </span>
               </td>
               <td>
-                <a
-                  className={styles.editButton}
-                  href={`#${getEditModalId(group)}`}
-                >
-                  Bearbeiten
-                </a>
+                <span className={styles.actionLinks}>
+                  <a
+                    className={styles.editButton}
+                    href={`#${getEditModalId(group)}`}
+                  >
+                    Bearbeiten
+                  </a>
+                  <a
+                    className={styles.mergeLink}
+                    href={`#${getEditModalId(group)}-merge`}
+                  >
+                    Zusammenführen
+                  </a>
+                </span>
               </td>
               <td className={styles.unseenCell}>
                 {group.hasUnseenMessages ? (
@@ -493,14 +509,12 @@ function EditFanModal({
           </a>
         </div>
         <form className={styles.formGrid} action={updateFan}>
-          {group.contacts.map((contact) => (
-            <input
-              key={contact.id}
-              name="contact_ids"
-              type="hidden"
-              value={contact.id}
-            />
-          ))}
+          <input
+            name="primary_contact_id"
+            type="hidden"
+            value={primaryContact.id}
+          />
+          <input name="fan_group_key" type="hidden" value={group.key} />
           <div className={styles.fieldWide}>
             <label htmlFor={`${getEditModalId(group)}-display-name`}>
               Name
@@ -589,10 +603,10 @@ function EditFanModal({
             </button>
           </div>
         </form>
-        <div className={styles.mergePanel}>
+        <div className={styles.mergePanel} id={`${getEditModalId(group)}-merge`}>
           <div>
             <p className={dashboardStyles.eyebrow}>Duplikate</p>
-            <h3>Mit anderem Fan zusammenführen</h3>
+            <h3>Doppelten Fan zusammenführen</h3>
             <p className={styles.fieldHint}>
               Quelle: {group.displayName} · Kanäle:{" "}
               {group.platforms.map(formatPlatformLabel).join(", ")} · Tags:{" "}
@@ -620,11 +634,7 @@ function EditFanModal({
               </option>
               {mergeTargets.map((target) => (
                 <option key={target.key} value={target.primaryContact.id}>
-                  {target.displayName} · {target.handles[0] ?? "kein Handle"} ·{" "}
-                  {target.platforms.map(getPlatformShortLabel).join("/")} ·{" "}
-                  {target.tags.length
-                    ? target.tags.slice(0, 3).join(", ")
-                    : "keine Tags"}
+                  {target.displayName} · Handles: {target.handles.join(", ") || "kein Handle"} · Kanäle: {target.platforms.map(getPlatformShortLabel).join("/") || "keine"} · Kontakte: {target.contacts.length}
                 </option>
               ))}
             </select>
@@ -783,15 +793,31 @@ function groupContactsByFan(
     });
 }
 
-function formatNotice(notice: string): string {
+function formatNotice(
+  notice: string,
+  activePlatformsNotice?: string,
+  archivedChannelsNotice?: string,
+): string {
+  const activePlatforms = parseNoticePlatforms(activePlatformsNotice);
   const noticeLabels: Record<string, string> = {
     fan_created: "Fan wurde angelegt.",
-    fan_updated: "Fan wurde aktualisiert.",
+    fan_updated: activePlatforms.length
+      ? `Fan wurde aktualisiert: aktive Kanäle ${activePlatforms.map(formatPlatformLabel).join(", ")}${archivedChannelsNotice ? `; archivierte Kanäle: ${archivedChannelsNotice}` : ""}.`
+      : "Fan wurde aktualisiert.",
     contact_archived: "Kontakt wurde archiviert.",
     contacts_merged: "Fans wurden zusammengeführt.",
   };
 
   return noticeLabels[notice] ?? "Änderung wurde gespeichert.";
+}
+
+function parseNoticePlatforms(value?: string): PlatformValue[] {
+  if (!value) return [];
+
+  return value
+    .split(",")
+    .map((platform) => normalizePlatform(platform))
+    .filter((platform, index, platforms) => platforms.indexOf(platform) === index);
 }
 
 function filterFanGroupsByChannel(
@@ -964,6 +990,12 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   const noticeParam = Array.isArray(resolvedSearchParams?.notice)
     ? resolvedSearchParams?.notice[0]
     : resolvedSearchParams?.notice;
+  const activeNoticeParam = Array.isArray(resolvedSearchParams?.active)
+    ? resolvedSearchParams?.active[0]
+    : resolvedSearchParams?.active;
+  const archivedNoticeParam = Array.isArray(resolvedSearchParams?.archived)
+    ? resolvedSearchParams?.archived[0]
+    : resolvedSearchParams?.archived;
   const activeChannel = getActiveChannel(channelParam);
   const { data, error: userError } = await getSupabaseServerUser();
 
@@ -1000,6 +1032,8 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           unseenMessagesError={unseenMessagesResult?.error?.message}
           activeChannel={activeChannel}
           notice={noticeParam}
+          activePlatformsNotice={activeNoticeParam}
+          archivedChannelsNotice={archivedNoticeParam}
         />
       ) : (
         <section

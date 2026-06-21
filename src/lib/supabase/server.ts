@@ -365,7 +365,7 @@ type ContactCreateResult = {
   error: Error | null;
 };
 
-type ContactUpdateResult = {
+export type ContactUpdateResult = {
   contact: ContactRow | null;
   error: Error | null;
 };
