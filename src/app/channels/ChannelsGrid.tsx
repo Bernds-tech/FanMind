@@ -174,10 +174,13 @@ const statusClassName: Record<ChannelStatus, string> = {
 function isBookable(status: ChannelStatus) {
   return (
     status === "Coming Soon" ||
+    status === "Teilweise verbunden" ||
     status === "In Arbeit" ||
     status === "Vorschau" ||
     status === "Vorbereitet" ||
-    status === "Noch nicht live"
+    status === "Noch nicht live" ||
+    status === "Geplant" ||
+    status === "Konfiguriert"
   );
 }
 
@@ -231,11 +234,22 @@ export function ChannelsGrid({
 
   useEffect(() => {
     if (!activeChannel) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setActiveChannel(null);
     };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+    };
   }, [activeChannel]);
 
   const openModal = (channel: Channel) => {
@@ -594,12 +608,6 @@ export function ChannelsGrid({
                   <span className={styles.techBadge}>{channel.technology}</span>
                 </span>
 
-                <span className={styles.cardSpacer} />
-                <span className={styles.cardActions}>
-                  <span className={styles.primaryCardAction}>
-                    {isTelegram ? "Details" : isFacebook ? "Details" : "Details"}
-                  </span>
-                </span>
                 {pageName ? (
                   <span className={styles.connectionHint}>
                     Page: {pageName}
@@ -619,6 +627,10 @@ export function ChannelsGrid({
                     trotzdem separat verbunden werden.
                   </span>
                 ) : null}
+                <span className={styles.cardSpacer} />
+                <span className={styles.cardActions}>
+                  <span className={styles.primaryCardAction}>Details</span>
+                </span>
                 {showComingSoonBadge ? (
                   <img
                     className={styles.soonCornerBadge}
@@ -1591,20 +1603,31 @@ function buildConnectionCards({
     ? channel.childSources
     : [channel.key as PreparedSourceType];
 
-  return sources.map((sourceType) => {
+  return sources.flatMap((sourceType) => {
     const config = CHANNEL_SOURCE_CONFIGS[sourceType];
     const sourceLabel = config?.label ?? channel.name;
 
     if (channel.key === "telegram") {
-      return {
-        key: sourceType,
-        title: "Telegram Bot",
-        description:
-          "Bot-Nachrichten laufen als einzelner Live-Eingang ein; automatische Antworten bleiben deaktiviert.",
-        status: telegramLive ? "verbunden / live" : "konfiguriert / Prüfung nötig",
-        connectionType: `Telegram Bot · Webhook ${telegramWebhookLabel}`,
-        actionLabel: "Live-Verbindung prüfen",
-      };
+      return [
+        {
+          key: sourceType,
+          title: "FanMind Bot",
+          description:
+            "Offizieller FanMind-Eingang für Bot-Nachrichten. Eingehende Nachrichten landen in FanMind; automatische Antworten bleiben deaktiviert.",
+          status: telegramLive ? "verbunden / live" : "konfiguriert / Prüfung nötig",
+          connectionType: `Telegram Bot · Webhook ${telegramWebhookLabel}`,
+          actionLabel: "Live-Verbindung prüfen",
+        },
+        {
+          key: "telegram_private_chats",
+          title: "Private Chats / WellFit",
+          description:
+            "Vorbereiteter privater Telegram-Eingang für direkte Chat-Kontexte wie WellFit. Keine automatische Sendefunktion und kein zusätzlicher Backend-Flow.",
+          status: "vorbereitet / noch nicht live",
+          connectionType: "Private Telegram Chats",
+          actionLabel: "Privaten Eingang vormerken",
+        },
+      ];
     }
 
     return {
