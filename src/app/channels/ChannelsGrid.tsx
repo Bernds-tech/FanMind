@@ -28,6 +28,7 @@ import {
 
 type ChannelStatus =
   | "Verbunden"
+  | "Teilweise verbunden"
   | "Verfügbar"
   | "In Arbeit"
   | "Vorschau"
@@ -35,7 +36,8 @@ type ChannelStatus =
   | "Noch nicht live"
   | "Coming Soon"
   | "Live"
-  | "Konfiguriert";
+  | "Konfiguriert"
+  | "Geplant";
 
 type FacebookConnection = {
   page_name: string | null;
@@ -113,312 +115,50 @@ type Channel = {
   logo?: string;
   logoInitials?: string;
   signal?: boolean;
+  childSources?: PreparedSourceType[];
 };
 
 const logoPath = (name: string) => `/channel-logos/${name}.svg`;
 
-const preparedChannel = (
-  sourceType: PreparedSourceType,
-  overrides: Omit<Channel, "key" | "name">,
-): Channel => ({
-  key: sourceType,
-  name: CHANNEL_SOURCE_CONFIGS[sourceType].label,
-  ...overrides,
-});
-
 const channels: Channel[] = [
-  preparedChannel("facebook_messages", {
-    description: `${CHANNEL_SOURCE_CONFIGS.facebook_messages.statusHint} Messenger-DMs werden übernommen. Antworten bleiben manuell im Originalkanal; kein automatischer Versand.`,
-    status: "Verfügbar",
-    technology: "Messenger-DMs verbunden, Antworten manuell",
-    intakeTypes: "DM · Copy-&-Open",
-    logo: logoPath("facebook"),
-    signal: true,
-  }),
-
-  preparedChannel("instagram_messages", {
-    description: `${CHANNEL_SOURCE_CONFIGS.instagram_messages.statusHint} Noch nicht live: FanMind bleibt Copy-&-Open-Assistent.`,
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "DM · Copy-&-Open",
-    logo: logoPath("instagram"),
-    signal: true,
-  }),
-  preparedChannel("instagram_comments", {
-    description: `${CHANNEL_SOURCE_CONFIGS.instagram_comments.statusHint} Noch nicht live: FanMind öffnet nur das Original und kopiert Vorschläge.`,
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Kommentar · Beitrag · Copy-&-Open",
-    logo: logoPath("instagram"),
-    signal: true,
-  }),
-  preparedChannel("tiktok_comments", {
-    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_comments.statusHint} Noch nicht live: keine automatische Antwort und kein automatisches Senden.`,
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Offizielle Freigabe erforderlich",
-    intakeTypes: "Kommentare · Copy-&-Open",
-    logo: logoPath("tiktok"),
-    signal: true,
-  }),
-
-  preparedChannel("tiktok_messages", {
-    description: `${CHANNEL_SOURCE_CONFIGS.tiktok_messages.statusHint} Noch nicht live: Antwortvorschläge werden nur kopiert und extern manuell eingefügt.`,
-    status: "Noch nicht live",
-    technology: "Importpfad vorbereitet, noch nicht live",
-    intakeTypes: "Nachrichten · Export-Import · Copy-&-Open",
-    logo: logoPath("tiktok"),
-    signal: true,
-  }),
-  preparedChannel("facebook_comments", {
-    description: CHANNEL_SOURCE_CONFIGS.facebook_comments.statusHint,
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Kommentar · Post-Kommentar · Copy-&-Open",
-    logo: logoPath("facebook"),
-    signal: true,
-  }),
-  {
-    key: "twitter",
-    name: "X / Twitter",
-    description:
-      "Mentions und Direktnachrichten sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Mentions · DMs",
-    logo: logoPath("twitter"),
-  },
-  preparedChannel("whatsapp_messages", {
-    description: CHANNEL_SOURCE_CONFIGS.whatsapp_messages.statusHint,
-    status: "Vorbereitet",
-    technology: "Cloud-API-Anbindung vorbereitet, noch nicht live",
-    intakeTypes: "Nachrichten · Copy-&-Open",
-    logo: logoPath("whatsapp"),
-    signal: true,
-  }),
-  {
-    key: "discord",
-    name: "Discord",
-    description:
-      "DMs und Community-Nachrichten sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "DMs · Server",
-    logo: logoPath("discord"),
-  },
   {
     key: "telegram",
     name: "Telegram",
-    description:
-      "Telegram ist als erster Live-Eingangskanal verbunden. Eingehende Bot-Nachrichten landen in FanMind. FanMind sendet keine automatischen Antworten.",
+    description: "Bot-Eingang aktiv · Auto-Senden deaktiviert",
     status: "Live",
-    technology: "Telegram Bot",
+    technology: "Eingang aktiv · Auto-Senden aus",
     intakeTypes: "Textnachrichten · Bot @FanMindBot",
     signal: true,
     logo: logoPath("telegram"),
+    childSources: ["telegram_messages"],
   },
   {
-    key: "youtube",
-    name: "YouTube",
-    description:
-      "Kommentare und Live-Chat-Nachrichten sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Kommentare · Live-Chat",
-    logo: logoPath("youtube"),
-  },
-  {
-    key: "bluesky",
-    name: "Bluesky",
-    description:
-      "Mentions und Antworten sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Mentions · Antworten",
-    logoInitials: "BS",
-  },
-  {
-    key: "twitch",
-    name: "Twitch",
-    description:
-      "Chat-Nachrichten und Whispers sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Chat · Whispers",
-    logo: logoPath("twitch"),
-  },
-  {
-    key: "onlyfans",
-    name: "OnlyFans",
-    description:
-      "Nachrichten und Sub-Anfragen sind vorbereitet, aber noch nicht live",
+    key: "facebook",
+    name: "Facebook",
+    description: "DM: nicht verbunden · Kommentare: nicht verbunden",
     status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Nachrichten · Sub-Anfragen",
-    logo: logoPath("onlyfans"),
-  },
-  {
-    key: "patreon",
-    name: "Patreon",
-    description:
-      "Nachrichten und Support-Anfragen sind vorbereitet, aber noch nicht live",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Nachrichten · Support",
-    logo: logoPath("patreon"),
-  },
-  {
-    key: "email",
-    name: "E-Mail / Postfach",
-    description: "E-Mail-Eingänge sind vorbereitet, aber noch nicht live",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "E-Mails",
-    logo: logoPath("email"),
+    technology: "DM vorbereitet · Kommentare vorbereitet",
+    intakeTypes: "Direct Messages · Kommentare",
+    logo: logoPath("facebook"),
     signal: true,
+    childSources: ["facebook_messages", "facebook_comments"],
   },
-  {
-    key: "webform",
-    name: "Webformular / Website-Lead",
-    description: "Formular-Leads sind vorbereitet, aber noch nicht live",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Leads · Anfragen",
-    logo: logoPath("webform"),
-    signal: true,
-  },
-  {
-    key: "shopify",
-    name: "Shopify / Shop-Bestellungen",
-    description: "Shop-Anfragen sind vorbereitet, aber noch nicht live",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Bestellungen · Kundenfragen",
-    logo: logoPath("shopify"),
-    signal: true,
-  },
-  {
-    key: "eventbrite",
-    name: "Eventbrite / Event-Anfragen",
-    description: "Event-Anfragen sind vorbereitet, aber noch nicht live",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Anmeldungen · Anfragen",
-    logo: logoPath("eventbrite"),
-    signal: true,
-  },
-  {
-    key: "csv",
-    name: "CSV-Import",
-    description: "Kontakte & Nachrichten per CSV hochladen",
-    status: "Verbunden",
-    technology: "CSV · Datei-Upload",
-    intakeTypes: "Kontakte · Nachrichten",
-    logo: logoPath("csv"),
-    signal: true,
-  },
-  {
-    key: "manual",
-    name: "Manueller Eingang",
-    description: "Manuelle Kontakte & Nachrichten erfassen",
-    status: "Verfügbar",
-    technology: "Manuell",
-    intakeTypes: "Kontakte · Notizen",
-    logo: logoPath("manual"),
-    signal: true,
-  },
-  {
-    key: "api",
-    name: "API / Custom Connector",
-    description: "Eigene Connectoren sind vorbereitet, aber noch nicht live",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Eigene Events",
-    logo: logoPath("api"),
-    signal: true,
-  },
-  {
-    key: "linkedin",
-    name: "LinkedIn",
-    description:
-      "Nachrichten und Lead-Kommentare sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Nachrichten · Leads",
-    logo: logoPath("linkedin"),
-  },
-  {
-    key: "threads",
-    name: "Threads",
-    description: "Mentions und Antworten sind als künftiger Eingang vorgemerkt",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Mentions · Antworten",
-    logo: logoPath("threads"),
-  },
-  {
-    key: "snapchat",
-    name: "Snapchat",
-    description:
-      "Creator-Nachrichten und Story-Antworten sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Nachrichten · Story-Antworten",
-    logo: logoPath("snapchat"),
-  },
-  {
-    key: "reddit",
-    name: "Reddit",
-    description:
-      "Kommentare, Modmail und Erwähnungen sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Kommentare · Modmail",
-    logo: logoPath("reddit"),
-  },
-  {
-    key: "pinterest",
-    name: "Pinterest",
-    description:
-      "Kommentare und Produkt-Anfragen sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Kommentare · Anfragen",
-    logo: logoPath("pinterest"),
-  },
-  {
-    key: "fediverse",
-    name: "Mastodon / Fediverse",
-    description:
-      "Mentions und Community-Antworten sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Mentions · Antworten",
-    logo: logoPath("fediverse"),
-  },
-  {
-    key: "woocommerce",
-    name: "WooCommerce",
-    description: "Shop-Anfragen sind vorbereitet, aber noch nicht live",
-    status: "Vorbereitet",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Bestellungen · Support",
-    logo: logoPath("woocommerce"),
-    signal: true,
-  },
-  {
-    key: "ticketing",
-    name: "Ticketing / Events",
-    description:
-      "Event-Tickets und Supportfälle sind als künftiger Eingang vorgemerkt.",
-    status: "Coming Soon",
-    technology: "Vorbereitet · Noch nicht live",
-    intakeTypes: "Tickets · Events",
-    logo: logoPath("ticketing"),
-  },
+  { key: "instagram", name: "Instagram", description: "DM geplant · Kommentare geplant", status: "Geplant", technology: "DM geplant · Kommentare geplant", intakeTypes: "DM · Kommentare", logo: logoPath("instagram"), childSources: ["instagram_messages", "instagram_comments"] },
+  { key: "whatsapp", name: "WhatsApp", description: "Cloud API geplant", status: "Geplant", technology: "Cloud API geplant", intakeTypes: "Nachrichten", logo: logoPath("whatsapp"), childSources: ["whatsapp_messages"] },
+  { key: "tiktok", name: "TikTok", description: "Kommentare geplant · DMs vorbereitet", status: "Vorbereitet", technology: "Offizielle Freigabe nötig", intakeTypes: "Kommentare · Nachrichten", logo: logoPath("tiktok"), childSources: ["tiktok_comments", "tiktok_messages"] },
+  { key: "linkedin", name: "LinkedIn", description: "API-Prüfung nötig", status: "Geplant", technology: "API-Prüfung nötig", intakeTypes: "Nachrichten · Leads", logo: logoPath("linkedin") },
+  { key: "youtube", name: "YouTube", description: "Kommentare · Live-Chat geplant", status: "Geplant", technology: "Kommentare geplant", intakeTypes: "Kommentare · Live-Chat", logo: logoPath("youtube") },
+  { key: "discord", name: "Discord", description: "Community-Eingang geplant", status: "Geplant", technology: "Bot/API geplant", intakeTypes: "DMs · Server", logo: logoPath("discord") },
+  { key: "bluesky", name: "Bluesky", description: "Mentions geplant", status: "Geplant", technology: "API-Prüfung nötig", intakeTypes: "Mentions · Antworten", logoInitials: "BS" },
+  { key: "twitter", name: "X / Twitter", description: "DMs/Mentions geplant", status: "Geplant", technology: "API-Prüfung nötig", intakeTypes: "Mentions · DMs", logo: logoPath("twitter") },
+  { key: "email", name: "E-Mail", description: "Postfach-Anbindung vorbereitet", status: "Vorbereitet", technology: "Postfach vorbereitet", intakeTypes: "E-Mails", logo: logoPath("email"), signal: true, childSources: ["email"] },
+  { key: "webform", name: "Webformular", description: "Website-Leads vorbereitet", status: "Vorbereitet", technology: "Formular vorbereitet", intakeTypes: "Leads · Anfragen", logo: logoPath("webform"), signal: true, childSources: ["webform"] },
+  { key: "manual", name: "Manuell / CSV", description: "Manuelle Erfassung und CSV-Import", status: "Verfügbar", technology: "Manuell nutzbar", intakeTypes: "Kontakte · Notizen · CSV", logo: logoPath("manual"), signal: true, childSources: ["manual"] },
 ];
 
 const statusClassName: Record<ChannelStatus, string> = {
   Verbunden: styles.statusConnected,
+  "Teilweise verbunden": styles.statusProgress,
   Verfügbar: styles.statusAvailable,
   "In Arbeit": styles.statusProgress,
   Vorschau: styles.statusPreview,
@@ -427,6 +167,7 @@ const statusClassName: Record<ChannelStatus, string> = {
   "Coming Soon": styles.statusPreview,
   Live: styles.statusConnected,
   Konfiguriert: styles.statusProgress,
+  Geplant: styles.statusPreview,
 };
 
 function isBookable(status: ChannelStatus) {
@@ -449,6 +190,7 @@ export function ChannelsGrid({
   telegramMessages,
   telegramMessagesError,
   telegramSetupStatus,
+  telegramCheckRequested,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
@@ -459,6 +201,7 @@ export function ChannelsGrid({
   telegramMessages: TelegramMessage[];
   telegramMessagesError?: string | null;
   telegramSetupStatus: TelegramWebhookStatus;
+  telegramCheckRequested: boolean;
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -726,7 +469,7 @@ export function ChannelsGrid({
     displayedWebhookStatus?.fields.message_echoes === "active";
   const facebookCommentsReady = false;
   const activeSourceConfig = activeChannel
-    ? CHANNEL_SOURCE_CONFIGS[activeChannel.key as PreparedSourceType]
+    ? CHANNEL_SOURCE_CONFIGS[((activeChannel.key === "facebook" ? "facebook_messages" : activeChannel.key === "telegram" ? "telegram_messages" : activeChannel.childSources?.[0] ?? activeChannel.key) as PreparedSourceType)]
     : undefined;
   const activeSyncStatus = activeSourceConfig
     ? buildChannelSyncStatus(activeSourceConfig, facebookConnection)
@@ -750,8 +493,8 @@ export function ChannelsGrid({
       ? telegramLive
         ? "Live"
         : "Konfiguriert"
-      : activeChannel?.key === "facebook_messages" && facebookConnection
-      ? "Verbunden"
+      : activeChannel?.key === "facebook" && facebookConnection
+      ? "Teilweise verbunden"
       : activeChannel?.key === "facebook_comments" && facebookCommentsReady
         ? "Verbunden"
         : activeChannel?.key === "facebook_comments" &&
@@ -763,9 +506,9 @@ export function ChannelsGrid({
     <section className={styles.gridSection} aria-label="Kanalkarten">
       <div className={styles.channelGrid}>
         {channels.map((channel) => {
-          const isFacebookMessages = channel.key === "facebook_messages";
-          const isFacebookComments = channel.key === "facebook_comments";
-          const isFacebook = isFacebookMessages || isFacebookComments;
+          const isFacebook = channel.key === "facebook";
+          const isFacebookMessages = isFacebook;
+          const isFacebookComments = false;
           const isTelegram = channel.key === "telegram";
           const commentsReady = facebookCommentsReady;
           const displayStatus =
@@ -773,8 +516,8 @@ export function ChannelsGrid({
               ? telegramLive
                 ? "Live"
                 : "Konfiguriert"
-            : isFacebookMessages && facebookConnection
-              ? "Verbunden"
+            : isFacebook && facebookConnection
+              ? "Teilweise verbunden"
               : isFacebookComments && commentsReady
                 ? "Verbunden"
                 : isFacebookComments &&
@@ -838,19 +581,7 @@ export function ChannelsGrid({
                 <span className={styles.cardSpacer} />
                 <span className={styles.cardActions}>
                   <span className={styles.primaryCardAction}>
-                    {isFacebookMessages
-                      ? facebookConnection
-                        ? "Nachrichten verwalten"
-                        : "Nachrichten verbinden"
-                      : isFacebookComments
-                        ? facebookConnection
-                          ? "Kommentare vorbereitet"
-                          : "Kommentare vorbereitet"
-                        : isTelegram
-                        ? "Live-Verbindung prüfen"
-                        : isBookable(displayStatus)
-                          ? "Verbindung vormerken"
-                          : `Mit ${channel.name} verbinden`}
+                    {isTelegram ? "Details" : isFacebook ? "Details" : "Details"}
                   </span>
                 </span>
                 {pageName ? (
@@ -918,7 +649,7 @@ export function ChannelsGrid({
               )}
               <div>
                 <p className={styles.modalEyebrow}>Kanal verbinden</p>
-                <h2 id="channel-modal-title">{activeChannel.name}</h2>
+                <h2 id="channel-modal-title">{activeChannel.key === "telegram" ? "Telegram Live-Eingang" : activeChannel.name}</h2>
                 <div className={styles.metaRow}>
                   {activeDisplayStatus && isBookable(activeDisplayStatus) ? (
                     <img
@@ -942,7 +673,7 @@ export function ChannelsGrid({
             <p className={styles.modalText}>
               {activeChannel.key === "telegram"
                 ? "Telegram ist als erster Live-Eingangskanal verbunden. Eingehende Bot-Nachrichten landen in FanMind. FanMind sendet keine automatischen Antworten."
-                : activeChannel.key === "facebook_messages" && facebookConnection
+                : activeChannel.key === "facebook" && facebookConnection
                   ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
                 : isBookable(activeChannel.status)
                   ? "Dieser Kanal ist vorbereitet, aber noch nicht live. Du kannst die Verbindung vormerken; es wird keine echte Anmeldung oder automatische Sendefunktion gestartet."
@@ -950,19 +681,26 @@ export function ChannelsGrid({
             </p>
 
             {activeChannel.key === "telegram" ? (
+              <>
               <div className={styles.releaseBox} aria-label="Telegram Live-Sync Status">
                 <strong>Telegram Live-Eingang</strong>
+                {telegramCheckRequested ? (
+                  <p className={styles.inlineStatus}>Live-Verbindung gerade geprüft.</p>
+                ) : null}
                 <ul>
                   <li>Status: {telegramMessagesError ? "Nachrichtenprüfung fehlerhaft" : telegramStatusLabel}</li>
                   <li>Verbindungstyp: Telegram Bot</li>
                   <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
                   <li>Webhook: {telegramWebhookLabel}</li>
+                  <li>Webhook-URL stimmt: {telegramSetupStatus.webhookUrlMatches ? "ja" : "nein"}</li>
+                  <li>Letzte Prüfung: {telegramSetupStatus.checkedAt ? formatDateTime(telegramSetupStatus.checkedAt) : "noch nicht geprüft"}</li>
                   <li>Webhook-URL: <span className={styles.breakableText}>{telegramSetupStatus.webhookUrl ?? TELEGRAM_EXPECTED_WEBHOOK_URL}</span></li>
                   <li>Pending Updates: {telegramSetupStatus.pendingUpdateCount ?? "nicht geprüft"}</li>
                   <li>Eingang: Textnachrichten</li>
                   <li>Auto-Senden: deaktiviert</li>
                   <li>Mensch prüft final</li>
-                  <li>Letzte Nachrichten: {telegramMessages.length ? `${telegramMessages.length} sichtbar` : "noch keine empfangen"}</li>
+                  <li>Letzte Nachrichten: {telegramMessages.length ? `${telegramMessages.length} sichtbar` : "noch keine in diesem Workspace gefunden"}</li>
+                  <li>Telegram Workspace-Zuordnung: aktueller Workspace</li>
                 </ul>
                 {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage || telegramMessagesError ? (
                   <p className={styles.modalNotice}>
@@ -981,8 +719,37 @@ export function ChannelsGrid({
                     ))}
                   </ul>
                 ) : (
-                  <p className={styles.modalNotice}>Noch keine Telegram-Nachrichten empfangen.</p>
+                  <p className={styles.modalNotice}>Webhook aktiv, aber noch keine Nachricht in diesem Workspace gefunden. Prüfe, ob Testnachrichten dem aktuell eingeloggten Workspace zugeordnet werden.</p>
                 )}
+              </div>
+              <div className={styles.releaseBox} aria-label="Telegram Testablauf">
+                <strong>Telegram testen</strong>
+                <ol className={styles.stepList}>
+                  <li>Bot öffnen.</li>
+                  <li>In Telegram auf Start drücken.</li>
+                  <li>Testnachricht senden.</li>
+                  <li>FanMind neu laden oder Live-Verbindung prüfen.</li>
+                  <li>Nachricht erscheint unter Letzte Nachrichten / Inbox.</li>
+                </ol>
+              </div>
+              </>
+            ) : null}
+
+            {activeChannel.key === "facebook" ? (
+              <div className={styles.childSourceGrid} aria-label="Facebook Teilverbindungen">
+                <div className={styles.childSourceCard}>
+                  <strong>Direct Messages</strong>
+                  <p>Status: {facebookConnection ? "verbunden" : "nicht verbunden / vorbereitet"}</p>
+                  <p>Verbindungstyp: Facebook Page / Messenger</p>
+                  <p>Auto-Senden: deaktiviert</p>
+                  <button type="button" className={styles.secondaryModalButton} onClick={() => facebookConnection ? runPageWebhookAction("check") : setNotice("DM-Verbindung ist vorbereitet. Starte die Facebook-Verbindung über den Haupt-CTA.")}>DM-Verbindung prüfen</button>
+                </div>
+                <div className={styles.childSourceCard}>
+                  <strong>Kommentare</strong>
+                  <p>Status: nicht verbunden / vorbereitet</p>
+                  <p>Keine automatische Antwort, kein Scraping.</p>
+                  <button type="button" className={styles.secondaryModalButton} onClick={() => setNotice("Kommentarverbindung ist vorbereitet. Es wurde kein OAuth-Flow und kein Scraping gestartet.")}>Kommentarverbindung vorbereiten</button>
+                </div>
               </div>
             ) : null}
 
@@ -1010,7 +777,7 @@ export function ChannelsGrid({
                 </ul>
               </div>
             ) : null}
-            {activeChannel.key === "facebook_messages" &&
+            {activeChannel.key === "facebook" &&
             !facebookConnection ? (
               <p
                 className={styles.modalNotice}
@@ -1034,7 +801,7 @@ export function ChannelsGrid({
                 Webhook bereit: <strong>nicht bestätigt</strong>
               </p>
             ) : null}
-            {activeChannel.key === "facebook_messages" && facebookConnection ? (
+            {activeChannel.key === "facebook" && facebookConnection ? (
               <>
                 <p className={styles.modalNotice}>
                   OAuth verbunden · Page:{" "}
@@ -1167,7 +934,7 @@ export function ChannelsGrid({
                       <br />
                       Kommentar-Abruf Fehler:{" "}
                       <strong>
-                        {facebookConnection.last_comment_fetch_error}
+                        {facebookConnection?.last_comment_fetch_error}
                       </strong>
                     </>
                   ) : null}
@@ -1396,7 +1163,7 @@ export function ChannelsGrid({
                 ) : null}
               </>
             ) : null}
-            {activeChannel.key === "facebook_messages" &&
+            {activeChannel.key === "facebook" &&
             facebookConnection &&
             metaWebhookError ? (
               <p className={styles.modalNotice} role="alert">
@@ -1404,7 +1171,7 @@ export function ChannelsGrid({
                 {metaWebhookError}
               </p>
             ) : null}
-            {activeChannel.key === "facebook_messages" && facebookConnection ? (
+            {activeChannel.key === "facebook" && facebookConnection ? (
               <div
                 className={styles.releaseBox}
                 aria-label="Meta Webhook Diagnose"
@@ -1492,7 +1259,7 @@ export function ChannelsGrid({
               </div>
             ) : null}
 
-            {activeChannel.key === "facebook_comments" ? (
+            {false ? (
               <p
                 className={styles.modalNotice}
                 role={
@@ -1522,14 +1289,13 @@ export function ChannelsGrid({
                     <br />
                     Letzter Kommentarimport-Fehler:{" "}
                     <strong>
-                      {facebookConnection.last_comment_fetch_error}
+                      {facebookConnection?.last_comment_fetch_error}
                     </strong>
                   </>
                 ) : null}
               </p>
             ) : null}
-            {(activeChannel.key === "facebook_messages" ||
-              activeChannel.key === "facebook_comments") &&
+            {activeChannel.key === "facebook" &&
             facebookError ? (
               <p className={styles.modalNotice} role="alert">
                 {getFacebookErrorMessage(facebookErrorCode)}
@@ -1553,11 +1319,10 @@ export function ChannelsGrid({
               </p>
             ) : null}
             <div className={styles.modalActions}>
-              {activeChannel.key === "facebook_messages" ||
-              activeChannel.key === "facebook_comments" ? (
+              {activeChannel.key === "facebook" ? (
                 facebookConnection ? (
                   <>
-                    {activeChannel.key === "facebook_comments" ? (
+                    {false ? (
                       <span className={styles.modalNotice}>
                         Kommentare vorbereitet, Live-Test später.
                       </span>
@@ -1582,20 +1347,20 @@ export function ChannelsGrid({
                   <a
                     className={styles.modalLinkButton}
                     href={
-                      activeChannel.key === "facebook_comments"
+                      false
                         ? "/channels"
                         : "/api/integrations/facebook/start?type=facebook_messages"
                     }
-                    aria-disabled={activeChannel.key === "facebook_comments"}
+                    aria-disabled={false}
                   >
-                    {activeChannel.key === "facebook_messages"
+                    {activeChannel.key === "facebook"
                       ? "Nachrichten verbinden"
                       : "Kommentare vorbereitet"}
                   </a>
                 )
               ) : activeChannel.key === "telegram" ? (
                 <>
-                  <button type="button" onClick={() => router.refresh()}>
+                  <button type="button" onClick={() => { router.push("/channels?check=telegram"); router.refresh(); }}>
                     Live-Verbindung prüfen
                   </button>
                   <a
@@ -1604,7 +1369,7 @@ export function ChannelsGrid({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Bot in Telegram öffnen
+                    Bot öffnen / starten
                   </a>
                 </>
               ) : (
