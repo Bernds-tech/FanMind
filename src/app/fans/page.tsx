@@ -17,7 +17,7 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../dashboard/dashboard.module.css";
-import { createFan, updateFan } from "./actions";
+import { archiveFan, createFan, updateFan } from "./actions";
 import {
   PLATFORM_OPTIONS,
   formatPlatformLabel,
@@ -529,14 +529,11 @@ function EditFanModal({ group }: { group: FanGroup }) {
           </div>
           <div className={styles.fieldFull}>
             <span className={styles.groupLabel}>Plattformen/Kanäle</span>
-            <PlatformCheckboxes
-              selectedPlatforms={group.platforms}
-              lockedPlatforms={group.platforms}
-            />
+            <PlatformCheckboxes selectedPlatforms={group.platforms} />
             <p className={styles.fieldHint}>
-              Kanäle werden im MVP nicht gelöscht, damit keine Chat-/
-              Kontaktinformationen verloren gehen. Du kannst zusätzliche Kanäle
-              ergänzen.
+              Kanäle sind aktuell als je ein Kontakt-Datensatz pro Fan-Gruppe
+              modelliert. Abgewählte Kanäle werden archiviert, damit bestehende
+              Nachrichten und Reply-Targets erhalten bleiben.
             </p>
           </div>
           <div className={styles.formActions}>
@@ -548,6 +545,16 @@ function EditFanModal({ group }: { group: FanGroup }) {
             </button>
           </div>
         </form>
+        <form className={styles.dangerForm} action={archiveFan}>
+          <input name="contact_id" type="hidden" value={primaryContact.id} />
+          <button
+            className={styles.dangerButton}
+            type="submit"
+            formAction={archiveFan}
+          >
+            Kontakt wirklich archivieren
+          </button>
+        </form>
       </div>
     </section>
   );
@@ -555,32 +562,21 @@ function EditFanModal({ group }: { group: FanGroup }) {
 
 function PlatformCheckboxes({
   selectedPlatforms,
-  lockedPlatforms = [],
 }: {
   selectedPlatforms: PlatformValue[];
-  lockedPlatforms?: PlatformValue[];
 }) {
   return (
     <div className={styles.platformPicker}>
       {PLATFORM_OPTIONS.map((option) => {
         const isSelected = selectedPlatforms.includes(option.value);
-        const isLocked = lockedPlatforms.includes(option.value);
 
         return (
           <label className={styles.platformOption} key={option.value}>
-            {isLocked ? (
-              <input
-                name="source_platforms"
-                type="hidden"
-                value={option.value}
-              />
-            ) : null}
             <input
               name="source_platforms"
               type="checkbox"
               value={option.value}
               defaultChecked={isSelected}
-              disabled={isLocked}
             />
             <span>
               <strong>{option.shortLabel}</strong>

@@ -48,6 +48,8 @@ import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
 import { FanAnalysisReport } from "./FanAnalysisReport";
 import {
   saveContactInternalNotes,
+  archiveFan,
+  mergeFanContacts,
   saveFacebookReplyTarget,
   syncFacebookChatForContact,
 } from "../actions";
@@ -92,6 +94,7 @@ type FanDetailWorkspaceProps = {
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
+  allContacts: ContactRow[];
 };
 
 type ConversationChannelKey =
@@ -170,6 +173,7 @@ function FanDetailWorkspace({
   facebookReplyTarget,
   facebookReplyTargetError,
   facebookDirectLinkDiagnosis,
+  allContacts,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -236,6 +240,7 @@ function FanDetailWorkspace({
             facebookReplyTarget={facebookReplyTarget}
             facebookReplyTargetError={facebookReplyTargetError}
             facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
+            allContacts={allContacts}
           />
         ) : (
           <FanNotFound />
@@ -265,6 +270,7 @@ function FanDetailContent({
   facebookReplyTarget,
   facebookReplyTargetError,
   facebookDirectLinkDiagnosis,
+  allContacts,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -285,6 +291,7 @@ function FanDetailContent({
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
+  allContacts: ContactRow[];
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const channelTabs = buildConversationChannelTabs(
@@ -547,6 +554,7 @@ function FanDetailContent({
           className={styles.copilot}
           aria-label="Fan-Analyse-Report und KI-Antwortvorschläge"
         >
+          <ContactManagementCard contact={contact} allContacts={allContacts} messages={messages} memories={memories} followups={followups} />
           <FanNotesCard contact={contact} />
           <FanMemoryCard
             contactId={contact.id}
@@ -558,6 +566,59 @@ function FanDetailContent({
         </aside>
       </section>
     </>
+  );
+}
+
+function ContactManagementCard({
+  contact,
+  allContacts,
+  messages,
+  memories,
+  followups,
+}: {
+  contact: ContactRow;
+  allContacts: ContactRow[];
+  messages: ConversationMessageRow[];
+  memories: MemoryRow[];
+  followups: FollowupRow[];
+}) {
+  const targets = allContacts.filter((candidate) => candidate.id !== contact.id);
+  return (
+    <article className={styles.card}>
+      <div className={styles.cardHeader}>
+        <div>
+          <p className={dashboardStyles.eyebrow}>Kontaktpflege</p>
+          <h3>Archivieren oder zusammenführen</h3>
+        </div>
+      </div>
+      <p className={styles.syncHint}>
+        Vorschau Quelle: {contact.display_name} · {formatSource(contact.source_platform)} · {messages.length} Nachrichten · {memories.length} Memories · {followups.length} Follow-ups.
+      </p>
+      <form action={mergeFanContacts} className={styles.noteForm}>
+        <input name="source_contact_id" type="hidden" value={contact.id} />
+        <label htmlFor="target_contact_id">Zielkontakt</label>
+        <select id="target_contact_id" name="target_contact_id" required defaultValue="">
+          <option value="" disabled>Kontakt auswählen</option>
+          {targets.map((target) => (
+            <option key={target.id} value={target.id}>
+              {target.display_name || target.handle || target.id} · {formatSource(target.source_platform)}
+            </option>
+          ))}
+        </select>
+        <p className={styles.syncHint}>
+          Beim Merge werden Conversations, Messages, Memories, Follow-ups, Reply-Targets, Summaries und Profile auf den Zielkontakt umgehängt. Tags und Notizen werden kombiniert; der Quellkontakt wird danach archiviert.
+        </p>
+        <button className={dashboardStyles.secondaryButton} type="submit">
+          Diesen Kontakt zusammenführen
+        </button>
+      </form>
+      <form action={archiveFan} className={styles.noteForm}>
+        <input name="contact_id" type="hidden" value={contact.id} />
+        <button className={dashboardStyles.secondaryButton} type="submit">
+          Kontakt wirklich archivieren
+        </button>
+      </form>
+    </article>
   );
 }
 
@@ -1503,6 +1564,7 @@ export default async function FanDetailPage({
           facebookReplyTarget={facebookReplyTargetResult?.target ?? null}
           facebookReplyTargetError={facebookReplyTargetResult?.error?.message}
           facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
+          allContacts={contactsResult?.contacts ?? []}
         />
       ) : (
         <section

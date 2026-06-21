@@ -11,6 +11,8 @@ import {
   updateConversationPriority,
   updateConversationStatus,
   createWorkspaceContact,
+  archiveWorkspaceContact,
+  mergeWorkspaceContacts,
   getSupabaseServerUser,
   getContactConversationMessages,
   getUserWorkspaceDashboard,
@@ -625,44 +627,83 @@ export async function updateFan(formData: FormData) {
 
     return contact;
   });
-  const existingPlatforms = new Set(
-    editableContacts.map((contact) =>
-      normalizePlatform(contact.source_platform),
-    ),
+  const contactsByPlatform = new Map(
+    editableContacts.map((contact) => [normalizePlatform(contact.source_platform), contact]),
   );
+  const selectedPlatforms = new Set(platforms);
 
+  // Kanäle sind aktuell als je ein Kontakt-Datensatz pro Fan-Gruppe modelliert.
+  // Abgewählte Zusatzkanäle werden deshalb sicher archiviert statt hart gelöscht;
+  // bestehende Conversations, Messages, Reply-Targets und Memories bleiben erhalten.
   for (const contact of editableContacts) {
+    const platform = normalizePlatform(contact.source_platform);
+    if (!selectedPlatforms.has(platform)) {
+      const result = await archiveWorkspaceContact({
+        workspaceId: workspace.id,
+        contactId: contact.id,
+        reason: `Kanal ${platform} in der Fan-Bearbeitung abgewählt.`,
+      });
+      if (result.error) throw new Error(result.error.message);
+      continue;
+    }
+
     const result = await updateWorkspaceContact({
       ...baseContact,
       workspaceId: workspace.id,
       contactId: contact.id,
-      sourcePlatform: normalizePlatform(contact.source_platform),
+      sourcePlatform: platform,
     });
-
-    if (result.error) {
-      throw new Error(result.error.message);
-    }
+    if (result.error) throw new Error(result.error.message);
   }
 
   for (const platform of platforms) {
-    if (existingPlatforms.has(platform)) {
-      continue;
-    }
-
+    if (contactsByPlatform.has(platform)) continue;
     const result = await createWorkspaceContact({
       ...baseContact,
       workspaceId: workspace.id,
       sourcePlatform: platform,
     });
-
-    if (result.error) {
-      throw new Error(result.error.message);
-    }
+    if (result.error) throw new Error(result.error.message);
   }
 
   revalidatePath("/fans");
   revalidatePath("/dashboard");
   redirect("/fans");
+}
+
+export async function archiveFan(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  await ensureContactInWorkspace(workspace.id, contactId);
+  const result = await archiveWorkspaceContact({
+    workspaceId: workspace.id,
+    contactId,
+    reason: "Kontakt wurde über FanMind archiviert.",
+  });
+  if (result.error) throw new Error(result.error.message);
+  revalidatePath("/fans");
+  revalidatePath("/dashboard");
+  revalidatePath("/inbox");
+  redirect("/fans?notice=contact_archived#fans-list");
+}
+
+export async function mergeFanContacts(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const sourceContactId = formValue(formData, "source_contact_id");
+  const targetContactId = formValue(formData, "target_contact_id");
+  await ensureContactInWorkspace(workspace.id, sourceContactId);
+  await ensureContactInWorkspace(workspace.id, targetContactId);
+  const result = await mergeWorkspaceContacts({
+    workspaceId: workspace.id,
+    sourceContactId,
+    targetContactId,
+  });
+  if (result.error) throw new Error(result.error.message);
+  revalidatePath("/fans");
+  revalidatePath("/dashboard");
+  revalidatePath("/inbox");
+  revalidatePath(`/fans/${targetContactId}`);
+  redirect(`/fans/${targetContactId}?notice=contacts_merged`);
 }
 
 async function getExistingOrNewConversation(
