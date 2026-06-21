@@ -1524,7 +1524,7 @@ export async function getWorkspaceContacts(
     );
   }
 
-  return { contacts: contactsResult.data ?? [], error: null };
+  return { contacts: (contactsResult.data ?? []).filter((contact) => contact.status !== "archived"), error: null };
 }
 
 export async function getWorkspaceContact(
@@ -1646,6 +1646,136 @@ export async function updateWorkspaceContact(
   }
 
   return { contact: contactResult.data, error: null };
+}
+
+
+export async function archiveWorkspaceContact(input: {
+  workspaceId: string;
+  contactId: string;
+  reason?: string | null;
+}): Promise<ContactUpdateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return contactUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const existing = await getWorkspaceContact(input.workspaceId, input.contactId);
+  if (existing.error) return existing;
+  if (!existing.contact) return contactUpdateError("Kontakt wurde nicht gefunden.");
+
+  const archiveNote = input.reason
+    ? `[Archiviert] ${input.reason}`
+    : "[Archiviert] Kontakt wurde manuell archiviert.";
+  const internalNotes = mergeTextBlocks(existing.contact.internal_notes, archiveNote);
+
+  const result = await postgrestUpdate<ContactRow>(
+    "contacts",
+    { status: "archived", internal_notes: internalNotes },
+    accessToken,
+    [["workspace_id", input.workspaceId], ["id", input.contactId]],
+    { select: CONTACT_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return contactUpdateError(`Kontakt konnte nicht archiviert werden: ${result.error.message}`);
+  }
+
+  return { contact: result.data, error: null };
+}
+
+export async function mergeWorkspaceContacts(input: {
+  workspaceId: string;
+  sourceContactId: string;
+  targetContactId: string;
+}): Promise<ContactUpdateResult> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    return contactUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+  if (input.sourceContactId === input.targetContactId) {
+    return contactUpdateError("Quelle und Ziel müssen unterschiedliche Kontakte sein.");
+  }
+
+  const [sourceResult, targetResult] = await Promise.all([
+    getWorkspaceContact(input.workspaceId, input.sourceContactId),
+    getWorkspaceContact(input.workspaceId, input.targetContactId),
+  ]);
+  if (sourceResult.error) return sourceResult;
+  if (targetResult.error) return targetResult;
+  const source = sourceResult.contact;
+  const target = targetResult.contact;
+  if (!source || !target) return contactUpdateError("Quelle oder Ziel wurde nicht gefunden.");
+
+  for (const table of [
+    "conversations",
+    "conversation_messages",
+    "memories",
+    "followups",
+    "contact_reply_targets",
+    "conversation_summaries",
+    "contact_ai_profiles",
+    "fan_analysis_reports",
+  ]) {
+    const moved = await postgrestUpdate(
+      table,
+      { contact_id: input.targetContactId },
+      accessToken,
+      [["workspace_id", input.workspaceId], ["contact_id", input.sourceContactId]],
+    );
+    if (moved.error) {
+      return contactUpdateError(`Merge abgebrochen: ${table} konnte nicht umgehängt werden: ${moved.error.message}`);
+    }
+  }
+
+  const mergedTags = uniqueTextValues([...(target.tags ?? []), ...(source.tags ?? []), source.source_platform ?? ""]);
+  const sourceHandleNote = source.handle && source.handle !== target.handle
+    ? `Alias aus zusammengeführtem Kontakt: ${source.handle}`
+    : null;
+  const sourcePlatformNote = source.source_platform && source.source_platform !== target.source_platform
+    ? `Zusätzlicher Quellkanal aus Merge: ${source.source_platform}`
+    : null;
+  const mergedSummary = mergeTextBlocks(
+    target.summary,
+    source.summary ? `Aus zusammengeführtem Kontakt ${source.id}: ${source.summary}` : null,
+  );
+  const mergedNotes = mergeTextBlocks(
+    target.internal_notes,
+    [
+      `Kontakt ${source.id} (${source.display_name}) wurde in diesen Kontakt zusammengeführt.`,
+      sourceHandleNote,
+      sourcePlatformNote,
+      source.internal_notes ? `Notizen aus Quelle: ${source.internal_notes}` : null,
+    ].filter(Boolean).join("\n"),
+  );
+
+  const updatedTarget = await postgrestUpdate<ContactRow>(
+    "contacts",
+    {
+      tags: mergedTags,
+      summary: normalizeOptionalText(mergedSummary),
+      internal_notes: normalizeOptionalText(mergedNotes),
+      handle: target.handle ?? source.handle,
+      source_platform: target.source_platform ?? source.source_platform ?? "manual",
+    },
+    accessToken,
+    [["workspace_id", input.workspaceId], ["id", input.targetContactId]],
+    { select: CONTACT_COLUMNS, single: true },
+  );
+  if (updatedTarget.error) return contactUpdateError(updatedTarget.error.message);
+
+  const archived = await archiveWorkspaceContact({
+    workspaceId: input.workspaceId,
+    contactId: input.sourceContactId,
+    reason: `Zusammengeführt in Kontakt ${input.targetContactId}.`,
+  });
+  if (archived.error) return archived;
+
+  return { contact: updatedTarget.data, error: null };
 }
 
 export async function updateContactInternalNotes(input: {
@@ -3972,6 +4102,23 @@ function workspaceBackfillError(message: string): WorkspaceBackfillResult {
 
 function workspaceDashboardError(message: string): WorkspaceDashboardResult {
   return { workspace: null, error: new Error(message) };
+}
+
+function mergeTextBlocks(...values: Array<string | null | undefined>): string | null {
+  const blocks = values.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
+  return blocks.length ? blocks.join("\n\n") : null;
+}
+
+function uniqueTextValues(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  return values.flatMap((value) => {
+    const trimmed = value?.trim();
+    if (!trimmed) return [];
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [trimmed];
+  });
 }
 
 function contactsError(message: string): ContactsResult {
