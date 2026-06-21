@@ -233,11 +233,11 @@ export function WorkspaceShell({
         ) : (
           <>
             <div className={styles.logoBlock}>
-              <div className={styles.logoMark}>FM</div>
-              <div>
-                <strong>FanMind</strong>
-                <small>Multi-Channel CRM</small>
+              <div className={styles.logoWordmark} aria-label="FanMind">
+                <span className={styles.logoWordFan}>Fan</span>
+                <span className={styles.logoWordMind}>Mind</span>
               </div>
+              <small>Multi-Channel CRM</small>
             </div>
             <button
               type="button"
