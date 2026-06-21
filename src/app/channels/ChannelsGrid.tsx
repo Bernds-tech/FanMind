@@ -681,58 +681,71 @@ export function ChannelsGrid({
             </p>
 
             {activeChannel.key === "telegram" ? (
-              <>
-              <div className={styles.releaseBox} aria-label="Telegram Live-Sync Status">
-                <strong>Telegram Live-Eingang</strong>
-                {telegramCheckRequested ? (
-                  <p className={styles.inlineStatus}>Live-Verbindung gerade geprüft.</p>
-                ) : null}
-                <ul>
-                  <li>Status: {telegramMessagesError ? "Nachrichtenprüfung fehlerhaft" : telegramStatusLabel}</li>
-                  <li>Verbindungstyp: Telegram Bot</li>
-                  <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
-                  <li>Webhook: {telegramWebhookLabel}</li>
-                  <li>Webhook-URL stimmt: {telegramSetupStatus.webhookUrlMatches ? "ja" : "nein"}</li>
-                  <li>Letzte Prüfung: {telegramSetupStatus.checkedAt ? formatDateTime(telegramSetupStatus.checkedAt) : "noch nicht geprüft"}</li>
-                  <li>Webhook-URL: <span className={styles.breakableText}>{telegramSetupStatus.webhookUrl ?? TELEGRAM_EXPECTED_WEBHOOK_URL}</span></li>
-                  <li>Pending Updates: {telegramSetupStatus.pendingUpdateCount ?? "nicht geprüft"}</li>
-                  <li>Eingang: Textnachrichten</li>
-                  <li>Auto-Senden: deaktiviert</li>
-                  <li>Mensch prüft final</li>
-                  <li>Letzte Nachrichten: {telegramMessages.length ? `${telegramMessages.length} sichtbar` : "noch keine in diesem Workspace gefunden"}</li>
-                  <li>Telegram Workspace-Zuordnung: aktueller Workspace</li>
-                </ul>
-                {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage || telegramMessagesError ? (
-                  <p className={styles.modalNotice}>
-                    Prüfung nötig: {telegramSetupStatus.lastErrorMessage ?? telegramSetupStatus.error ?? telegramMessagesError}
-                  </p>
-                ) : null}
-                {telegramMessages.length ? (
-                  <ul>
-                    {telegramMessages.map((message) => (
-                      <li key={message.id}>
-                        <a href={`/fans/${message.contact_id}`}>
-                          <strong>{message.author_label ?? "Telegram Kontakt"}</strong>: {message.content.slice(0, 90)}
-                          <span> · {formatDateTime(message.created_at)}</span>
-                        </a>
-                      </li>
-                    ))}
+              <div className={styles.modalDetailGrid}>
+                <div
+                  className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
+                  aria-label="Telegram Live-Sync Status"
+                >
+                  <strong>Telegram Live-Eingang</strong>
+                  {telegramCheckRequested ? (
+                    <p className={styles.inlineStatus}>Live-Verbindung gerade geprüft.</p>
+                  ) : null}
+                  <ul className={styles.compactStatusList}>
+                    <li>Status: {telegramMessagesError ? "Nachrichtenprüfung fehlerhaft" : telegramStatusLabel}</li>
+                    <li>Verbindungstyp: Telegram Bot</li>
+                    <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
+                    <li>Webhook: {telegramWebhookLabel}</li>
+                    <li>Webhook-URL stimmt: {telegramSetupStatus.webhookUrlMatches ? "ja" : "nein"}</li>
+                    <li>Auto-Senden: deaktiviert</li>
+                    <li>Mensch prüft final</li>
                   </ul>
-                ) : (
-                  <p className={styles.modalNotice}>Webhook aktiv, aber noch keine Nachricht in diesem Workspace gefunden. Prüfe, ob Testnachrichten dem aktuell eingeloggten Workspace zugeordnet werden.</p>
-                )}
+                  {telegramSetupStatus.error || telegramSetupStatus.lastErrorMessage || telegramMessagesError ? (
+                    <p className={styles.modalNotice}>
+                      Prüfung nötig: {telegramSetupStatus.lastErrorMessage ?? telegramSetupStatus.error ?? telegramMessagesError}
+                    </p>
+                  ) : null}
+                </div>
+                <div className={styles.releaseBox} aria-label="Telegram technische Details">
+                  <strong>Technische Details</strong>
+                  <ul className={styles.compactStatusList}>
+                    <li>Letzte Prüfung: {telegramSetupStatus.checkedAt ? formatDateTime(telegramSetupStatus.checkedAt) : "noch nicht geprüft"}</li>
+                    <li>Webhook-URL: <span className={styles.breakableText}>{telegramSetupStatus.webhookUrl ?? TELEGRAM_EXPECTED_WEBHOOK_URL}</span></li>
+                    <li>Pending Updates: {telegramSetupStatus.pendingUpdateCount ?? "nicht geprüft"}</li>
+                    <li>Eingang: Textnachrichten</li>
+                    <li>Workspace-Zuordnung: aktueller Workspace</li>
+                  </ul>
+                </div>
+                <div className={styles.releaseBox} aria-label="Telegram Testablauf">
+                  <strong>Telegram testen</strong>
+                  <ol className={styles.stepList}>
+                    <li>Bot öffnen.</li>
+                    <li>In Telegram auf Start drücken.</li>
+                    <li>Testnachricht senden.</li>
+                    <li>FanMind neu laden oder Live-Verbindung prüfen.</li>
+                    <li>Nachricht erscheint unter Letzte Nachrichten / Inbox.</li>
+                  </ol>
+                </div>
+                <div
+                  className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
+                  aria-label="Letzte Telegram Nachrichten"
+                >
+                  <strong>Letzte Nachrichten</strong>
+                  {telegramMessages.length ? (
+                    <ul className={styles.messageList}>
+                      {telegramMessages.map((message) => (
+                        <li key={message.id}>
+                          <a href={`/fans/${message.contact_id}`}>
+                            <strong>{message.author_label ?? "Telegram Kontakt"}</strong>: {message.content.slice(0, 90)}
+                            <span> · {formatDateTime(message.created_at)}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={styles.modalNotice}>Noch keine Telegram-Nachrichten in diesem Workspace gefunden.</p>
+                  )}
+                </div>
               </div>
-              <div className={styles.releaseBox} aria-label="Telegram Testablauf">
-                <strong>Telegram testen</strong>
-                <ol className={styles.stepList}>
-                  <li>Bot öffnen.</li>
-                  <li>In Telegram auf Start drücken.</li>
-                  <li>Testnachricht senden.</li>
-                  <li>FanMind neu laden oder Live-Verbindung prüfen.</li>
-                  <li>Nachricht erscheint unter Letzte Nachrichten / Inbox.</li>
-                </ol>
-              </div>
-              </>
             ) : null}
 
             {activeChannel.key === "facebook" ? (
