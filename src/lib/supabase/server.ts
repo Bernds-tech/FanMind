@@ -598,48 +598,6 @@ export async function getUserWorkspaceDashboard(
     );
   }
 
-  const memberResult = await postgrestSelect<WorkspaceMemberRow>(
-    "workspace_members",
-    accessToken,
-    "id,workspace_id,role",
-    [["user_id", user.id]],
-    1,
-    true,
-  );
-
-  if (memberResult.error) {
-    return workspaceDashboardError(
-      `Workspace-Mitgliedschaft konnte nicht gelesen werden: ${memberResult.error.message}`,
-    );
-  }
-
-  if (memberResult.data?.workspace_id) {
-    const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
-      "workspaces",
-      accessToken,
-      WORKSPACE_COLUMNS,
-      [["id", memberResult.data.workspace_id]],
-      1,
-      true,
-    );
-
-    if (workspaceResult.error) {
-      return workspaceDashboardError(
-        `Workspace konnte nicht gelesen werden: ${workspaceResult.error.message}`,
-      );
-    }
-
-    if (workspaceResult.data) {
-      return {
-        workspace: {
-          ...workspaceResult.data,
-          role: memberResult.data.role,
-        },
-        error: null,
-      };
-    }
-  }
-
   const ownerWorkspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
     "workspaces",
     accessToken,
@@ -665,7 +623,9 @@ export async function getUserWorkspaceDashboard(
     };
   }
 
-  return workspaceDashboardError("Workspace konnte noch nicht geladen werden.");
+  return workspaceDashboardError(
+    "Workspace konnte noch nicht geladen werden. Bitte schließe das Onboarding ab.",
+  );
 }
 
 export async function getWorkspaceSocialConnections(
@@ -960,21 +920,12 @@ export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
     return { workspaceId: connectionResult.data.workspace_id, error: null };
   }
 
-  const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
-    "workspaces",
-    serviceAccessToken,
-    WORKSPACE_COLUMNS,
-    [],
-    1,
-    true,
-    "created_at.desc",
-  );
-
-  if (workspaceResult.error) {
-    return { workspaceId: null, error: workspaceResult.error };
-  }
-
-  return { workspaceId: workspaceResult.data?.id ?? null, error: null };
+  return {
+    workspaceId: null,
+    error: new Error(
+      "Kein verbundener Facebook/Instagram-Workspace für diesen Webhook gefunden.",
+    ),
+  };
 }
 
 export async function findTelegramWebhookWorkspaceId(): Promise<{
@@ -1012,18 +963,12 @@ export async function findTelegramWebhookWorkspaceId(): Promise<{
     return { workspaceId: connectionResult.data.workspace_id, error: null };
   }
 
-  const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
-    "workspaces",
-    serviceAccessToken,
-    WORKSPACE_COLUMNS,
-    [],
-    1,
-    true,
-    "created_at.desc",
-  );
-  if (workspaceResult.error)
-    return { workspaceId: null, error: workspaceResult.error };
-  return { workspaceId: workspaceResult.data?.id ?? null, error: null };
+  return {
+    workspaceId: null,
+    error: new Error(
+      "Kein verbundener Telegram-Workspace für diesen Webhook gefunden.",
+    ),
+  };
 }
 
 export async function getWorkspaceTelegramMessages(
@@ -4066,46 +4011,6 @@ export async function ensureUserWorkspace(
     return workspaceBackfillError(
       `Profil konnte nicht vorbereitet werden: ${profileResult.error.message}`,
     );
-  }
-
-  const memberResult = await postgrestSelect<WorkspaceMemberRow>(
-    "workspace_members",
-    accessToken,
-    "id,workspace_id",
-    [["user_id", user.id]],
-    1,
-    true,
-  );
-
-  if (memberResult.error) {
-    return workspaceBackfillError(
-      `Workspace-Mitgliedschaft konnte nicht gelesen werden: ${memberResult.error.message}`,
-    );
-  }
-
-  if (memberResult.data?.workspace_id) {
-    const memberWorkspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
-      "workspaces",
-      accessToken,
-      WORKSPACE_COLUMNS,
-      [["id", memberResult.data.workspace_id]],
-      1,
-      true,
-    );
-
-    if (memberWorkspaceResult.error) {
-      return workspaceBackfillError(
-        `Workspace konnte nicht gelesen werden: ${memberWorkspaceResult.error.message}`,
-      );
-    }
-
-    if (memberWorkspaceResult.data) {
-      return {
-        workspace: memberWorkspaceResult.data,
-        error: null,
-        created: false,
-      };
-    }
   }
 
   const ownerWorkspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
