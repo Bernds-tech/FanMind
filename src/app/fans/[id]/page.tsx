@@ -554,7 +554,13 @@ function FanDetailContent({
           className={styles.copilot}
           aria-label="Fan-Analyse-Report und KI-Antwortvorschläge"
         >
-          <ContactManagementCard contact={contact} allContacts={allContacts} messages={messages} memories={memories} followups={followups} />
+          <ContactManagementCard
+            contact={contact}
+            allContacts={allContacts}
+            messages={messages}
+            memories={memories}
+            followups={followups}
+          />
           <FanNotesCard contact={contact} />
           <FanMemoryCard
             contactId={contact.id}
@@ -582,7 +588,9 @@ function ContactManagementCard({
   memories: MemoryRow[];
   followups: FollowupRow[];
 }) {
-  const targets = allContacts.filter((candidate) => candidate.id !== contact.id);
+  const targets = allContacts.filter(
+    (candidate) => candidate.id !== contact.id,
+  );
   return (
     <article className={styles.card}>
       <div className={styles.cardHeader}>
@@ -592,21 +600,34 @@ function ContactManagementCard({
         </div>
       </div>
       <p className={styles.syncHint}>
-        Vorschau Quelle: {contact.display_name} · {formatSource(contact.source_platform)} · {messages.length} Nachrichten · {memories.length} Memories · {followups.length} Follow-ups.
+        Vorschau Quelle: {contact.display_name} ·{" "}
+        {formatSource(contact.source_platform)} · {messages.length} Nachrichten
+        · {memories.length} Memories · {followups.length} Follow-ups.
       </p>
       <form action={mergeFanContacts} className={styles.noteForm}>
         <input name="source_contact_id" type="hidden" value={contact.id} />
         <label htmlFor="target_contact_id">Zielkontakt</label>
-        <select id="target_contact_id" name="target_contact_id" required defaultValue="">
-          <option value="" disabled>Kontakt auswählen</option>
+        <select
+          id="target_contact_id"
+          name="target_contact_id"
+          required
+          defaultValue=""
+        >
+          <option value="" disabled>
+            Kontakt auswählen
+          </option>
           {targets.map((target) => (
             <option key={target.id} value={target.id}>
-              {target.display_name || target.handle || target.id} · {formatSource(target.source_platform)}
+              {target.display_name || target.handle || target.id} ·{" "}
+              {formatSource(target.source_platform)}
             </option>
           ))}
         </select>
         <p className={styles.syncHint}>
-          Beim Merge werden Conversations, Messages, Memories, Follow-ups, Reply-Targets, Summaries und Profile auf den Zielkontakt umgehängt. Tags und Notizen werden kombiniert; der Quellkontakt wird danach archiviert.
+          Beim Merge werden Conversations, Messages, Memories, Follow-ups,
+          Reply-Targets, Summaries und Profile auf den Zielkontakt umgehängt.
+          Tags und Notizen werden kombiniert; der Quellkontakt wird danach
+          archiviert.
         </p>
         <button className={dashboardStyles.secondaryButton} type="submit">
           Diesen Kontakt zusammenführen
@@ -791,7 +812,8 @@ function OriginalChatAction({
       {action.quality === "auto_selected_item" &&
       action.platform === "facebook" ? (
         <small className={styles.muted}>
-          FanMind öffnet den Facebook-Chat über die erkannte Facebook-Kontakt-ID.
+          FanMind öffnet den Facebook-Chat über die erkannte
+          Facebook-Kontakt-ID.
         </small>
       ) : null}
       {action.quality === "manual_exact_thread" &&
@@ -804,9 +826,10 @@ function OriginalChatAction({
         action.quality === "inbox_fallback") &&
       action.platform === "facebook" ? (
         <small className={styles.muted}>
-          Meta öffnet eventuell die zuletzt aktive Unterhaltung. FanMind prüft beim Sync automatisch verfügbare Direktlink-Daten.
-          {" "}
-          Falls nötig, kann im Postfach manuell dieser Kontakt gewählt werden: {action.fallbackContactLabel ?? "Kontakt"}
+          Meta öffnet eventuell die zuletzt aktive Unterhaltung. FanMind prüft
+          beim Sync automatisch verfügbare Direktlink-Daten. Falls nötig, kann
+          im Postfach manuell dieser Kontakt gewählt werden:{" "}
+          {action.fallbackContactLabel ?? "Kontakt"}
           {action.fallbackContactId
             ? ` · Facebook-ID: ${action.fallbackContactId}`
             : ""}
@@ -843,17 +866,18 @@ function FacebookReplyTargetCard({
     ? `Direktlink-ID erkannt aus: ${formatSelectedItemSource(directAction.selectedItemSource)}`
     : "Direktlink-ID nicht erkannt";
   const storageUnavailable =
-    error?.includes("Der exakte Chat-Link kann derzeit nicht gespeichert werden.") ??
-    false;
+    error?.includes(
+      "Der exakte Chat-Link kann derzeit nicht gespeichert werden.",
+    ) ?? false;
   const fallbackHint = hasAutoDirectLink
     ? "Direkter Chat-Link wurde automatisch erkannt und wird verwendet."
     : hasManualDirectLink
-    ? "Direkter Chat-Link ist gespeichert und wird verwendet."
-    : storageUnavailable
-      ? "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden."
-      : error
-      ? "Ein gespeicherter Direktlink konnte gerade nicht geladen werden. FanMind sammelt die nötigen Linkdaten weiter automatisch beim Sync."
-      : "FanMind ermittelt den Direktlink automatisch über verfügbare Facebook-Metadaten beim Sync.";
+      ? "Direkter Chat-Link ist gespeichert und wird verwendet."
+      : storageUnavailable
+        ? "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden."
+        : error
+          ? "Ein gespeicherter Direktlink konnte gerade nicht geladen werden. FanMind sammelt die nötigen Linkdaten weiter automatisch beim Sync."
+          : "FanMind ermittelt den Direktlink automatisch über verfügbare Facebook-Metadaten beim Sync.";
 
   return (
     <details
@@ -865,9 +889,7 @@ function FacebookReplyTargetCard({
           ? "Direkter Facebook-Chat-Link hinterlegt"
           : "Facebook-Direktchat wird automatisch ermittelt"}
       </summary>
-      <p className={styles.syncHint}>
-        {fallbackHint}
-      </p>
+      <p className={styles.syncHint}>{fallbackHint}</p>
       <p className={styles.muted}>
         {directLinkStatus} · {selectedItemStatus}
       </p>
@@ -875,55 +897,98 @@ function FacebookReplyTargetCard({
         <div className={styles.replyTargetStatus}>
           <span>Graph-API-Version: {diagnosis.graphApiVersion}</span>
           <span>
-            Meta-Direktlink-Quelle prüfen: {diagnosis.directLinkIdDetected
+            Meta-Direktlink-Quelle prüfen:{" "}
+            {diagnosis.directLinkIdDetected
               ? "Direktlink-ID erkannt"
               : "Direktlink-ID nicht erkannt"}
           </span>
           <span>
-            Conversation-Feldset stabil: {diagnosis.conversationFieldsetStable ? "ja" : "nein"}
+            Conversation-Feldset stabil:{" "}
+            {diagnosis.conversationFieldsetStable ? "ja" : "nein"}
           </span>
           <span>
-            Message-Feldset stabil: {diagnosis.messageFieldsetStable ? "ja" : "nein"}
+            Message-Feldset stabil:{" "}
+            {diagnosis.messageFieldsetStable ? "ja" : "nein"}
           </span>
           <span>
             Link-Felder gefunden: {diagnosis.linkFieldsFound ? "ja" : "nein"}
           </span>
           <span>
-            Business-Inbox-URL gefunden: {diagnosis.businessInboxUrlFound ? "ja" : "nein"}
+            Business-Inbox-URL gefunden:{" "}
+            {diagnosis.businessInboxUrlFound ? "ja" : "nein"}
           </span>
           <span>
-            selected_item_id erkannt: {diagnosis.selectedItemIdRecognized ? "ja" : "nein"}
+            selected_item_id erkannt:{" "}
+            {diagnosis.selectedItemIdRecognized ? "ja" : "nein"}
           </span>
           <span>
             Quelle: {formatSelectedItemSource(diagnosis.directLinkIdSource)}
           </span>
           <span>
-            Conversation-Link vorhanden: {diagnosis.conversationLinkAvailable > 0 ? "ja" : "nein"}
+            Conversation-Link vorhanden:{" "}
+            {diagnosis.conversationLinkAvailable > 0 ? "ja" : "nein"}
           </span>
           <span>
-            Conversation-Link mit Direktlink-ID: {diagnosis.conversationLinkWithDirectId}/{diagnosis.sampledConversations}
+            Conversation-Link mit Direktlink-ID:{" "}
+            {diagnosis.conversationLinkWithDirectId}/
+            {diagnosis.sampledConversations}
           </span>
           <span>
-            Teilnehmer-IDs vorhanden: {diagnosis.participantIdsAvailable > 0 ? "ja" : "nein"}
+            Teilnehmer-IDs vorhanden:{" "}
+            {diagnosis.participantIdsAvailable > 0 ? "ja" : "nein"}
           </span>
           <span>
-            Kontakt in geprüfter Auswahl gefunden: {diagnosis.matchedConversationFound ? "ja" : "nein"}
+            Kontakt in geprüfter Auswahl gefunden:{" "}
+            {diagnosis.matchedConversationFound ? "ja" : "nein"}
           </span>
           {diagnosis.participantIdMatchesDirectId !== null ? (
             <span>
-              Teilnehmer-ID entspricht Direktlink-ID: {diagnosis.participantIdMatchesDirectId ? "ja" : "nein"}
+              Teilnehmer-ID entspricht Direktlink-ID:{" "}
+              {diagnosis.participantIdMatchesDirectId ? "ja" : "nein"}
             </span>
           ) : null}
           {diagnosis.conversationFieldProbes.map((probe) => (
             <span key={probe.label}>
-              {probe.label}: Endpoint erfolgreich {probe.ok ? "ja" : "nein"} · Link-Feld {probe.linkFieldPresent ? "ja" : "nein"} · Direktlink-ID in Link {probe.selectedItemIdInLink ? "ja" : "nein"} · participants {probe.participantsPresent ? "ja" : "nein"} · senders {probe.sendersPresent ? "ja" : "nein"} · can_reply {probe.canReplyFieldPresent ? "ja" : "nein"} · scoped_thread_key {probe.scopedThreadKeyFieldPresent ? "ja" : "nein"} · message_count {probe.messageCountFieldPresent ? "ja" : "nein"}
-              {probe.observedKeys.length > 0 ? ` · Keys: ${probe.observedKeys.join(", ")}` : ""}
+              {probe.label}: Endpoint erfolgreich {probe.ok ? "ja" : "nein"} ·
+              Link-Feld {probe.linkFieldPresent ? "ja" : "nein"} · Direktlink-ID
+              in Link {probe.selectedItemIdInLink ? "ja" : "nein"} ·
+              participants {probe.participantsPresent ? "ja" : "nein"} · senders{" "}
+              {probe.sendersPresent ? "ja" : "nein"} · can_reply{" "}
+              {probe.canReplyFieldPresent ? "ja" : "nein"} · scoped_thread_key{" "}
+              {probe.scopedThreadKeyFieldPresent ? "ja" : "nein"} ·
+              message_count {probe.messageCountFieldPresent ? "ja" : "nein"}
+              {probe.observedKeys.length > 0
+                ? ` · Keys: ${probe.observedKeys.join(", ")}`
+                : ""}
             </span>
           ))}
           {diagnosis.messageFieldProbe ? (
             <span>
-              {diagnosis.messageFieldProbe.label}: Endpoint erfolgreich {diagnosis.messageFieldProbe.ok ? "ja" : "nein"} · from {diagnosis.messageFieldProbe.fromFieldPresent ? "ja" : "nein"} · to {diagnosis.messageFieldProbe.toFieldPresent ? "ja" : "nein"} · attachments {diagnosis.messageFieldProbe.attachmentsFieldPresent ? "ja" : "nein"} · shares {diagnosis.messageFieldProbe.sharesFieldPresent ? "ja" : "nein"} · tags {diagnosis.messageFieldProbe.tagsFieldPresent ? "ja" : "nein"} · Link-Felder {diagnosis.messageFieldProbe.linkFieldPresent ? "ja" : "nein"} · Business-Inbox-URL {diagnosis.messageFieldProbe.businessInboxUrlFound ? "ja" : "nein"} · selected_item_id {diagnosis.messageFieldProbe.selectedItemIdFound ? "ja" : "nein"} · Fallback aktiv {diagnosis.messageFieldProbe.usedFallback ? "ja" : "nein"}
-              {diagnosis.messageFieldProbe.observedKeys.length > 0 ? ` · Keys: ${diagnosis.messageFieldProbe.observedKeys.join(", ")}` : ""}
+              {diagnosis.messageFieldProbe.label}: Endpoint erfolgreich{" "}
+              {diagnosis.messageFieldProbe.ok ? "ja" : "nein"} · from{" "}
+              {diagnosis.messageFieldProbe.fromFieldPresent ? "ja" : "nein"} ·
+              to {diagnosis.messageFieldProbe.toFieldPresent ? "ja" : "nein"} ·
+              attachments{" "}
+              {diagnosis.messageFieldProbe.attachmentsFieldPresent
+                ? "ja"
+                : "nein"}{" "}
+              · shares{" "}
+              {diagnosis.messageFieldProbe.sharesFieldPresent ? "ja" : "nein"} ·
+              tags{" "}
+              {diagnosis.messageFieldProbe.tagsFieldPresent ? "ja" : "nein"} ·
+              Link-Felder{" "}
+              {diagnosis.messageFieldProbe.linkFieldPresent ? "ja" : "nein"} ·
+              Business-Inbox-URL{" "}
+              {diagnosis.messageFieldProbe.businessInboxUrlFound
+                ? "ja"
+                : "nein"}{" "}
+              · selected_item_id{" "}
+              {diagnosis.messageFieldProbe.selectedItemIdFound ? "ja" : "nein"}{" "}
+              · Fallback aktiv{" "}
+              {diagnosis.messageFieldProbe.usedFallback ? "ja" : "nein"}
+              {diagnosis.messageFieldProbe.observedKeys.length > 0
+                ? ` · Keys: ${diagnosis.messageFieldProbe.observedKeys.join(", ")}`
+                : ""}
             </span>
           ) : null}
           <p className={styles.muted}>{diagnosis.note}</p>
@@ -932,7 +997,8 @@ function FacebookReplyTargetCard({
       {!hasDirectLink && directAction.href ? (
         <div className={styles.replyTargetStatus}>
           <span>
-            Solange keine Direktlink-ID erkannt wurde, öffnet FanMind das Facebook-Postfach.
+            Solange keine Direktlink-ID erkannt wurde, öffnet FanMind das
+            Facebook-Postfach.
           </span>
           <a
             className={dashboardStyles.secondaryButton}
@@ -966,7 +1032,8 @@ function FacebookReplyTargetCard({
       {!storageUnavailable ? (
         <form action={saveFacebookReplyTarget} className={styles.inlineForm}>
           <p className={styles.muted}>
-            Admin-Notfall-Fallback: manuellen Direktlink nur verwenden, wenn die automatische Erkennung vorübergehend keinen Direktchat liefert.
+            Admin-Notfall-Fallback: manuellen Direktlink nur verwenden, wenn die
+            automatische Erkennung vorübergehend keinen Direktchat liefert.
           </p>
           <input name="contact_id" type="hidden" value={contact.id} />
           <label>
@@ -1151,9 +1218,8 @@ function buildMessageTimeline(
         message,
         facebookReplyTarget,
       ),
-      storedReplyTargetQuality: getStoredFacebookReplyTargetQuality(
-        facebookReplyTarget,
-      ),
+      storedReplyTargetQuality:
+        getStoredFacebookReplyTargetQuality(facebookReplyTarget),
     }),
   }));
 }
@@ -1225,9 +1291,8 @@ function getOriginalChannelAction(
     fallbackContactLabel: contact.display_name,
     fallbackContactId: contact.handle,
     storedReplyTargetUrl: facebookReplyTarget?.url ?? null,
-    storedReplyTargetQuality: getStoredFacebookReplyTargetQuality(
-      facebookReplyTarget,
-    ),
+    storedReplyTargetQuality:
+      getStoredFacebookReplyTargetQuality(facebookReplyTarget),
   });
 }
 
@@ -1367,6 +1432,7 @@ function formatNotice(value: string): string {
     return "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden.";
   if (value === "reply_target_invalid")
     return "Bitte speichere nur einen HTTPS-Link zum direkten Chat dieses Fans, keinen generischen Postfach-Link.";
+  if (value === "contacts_merged") return "Fans wurden zusammengeführt.";
   return value;
 }
 
@@ -1499,8 +1565,9 @@ export default async function FanDetailPage({
       };
     }
 
-    const firstError = relatedMessageResults.find((result) => result.error)
-      ?.error;
+    const firstError = relatedMessageResults.find(
+      (result) => result.error,
+    )?.error;
     if (firstError) additionalMessagesError = firstError.message;
   }
 
@@ -1538,7 +1605,10 @@ export default async function FanDetailPage({
             workspace.name,
           )}
           contact={contactResult?.contact ?? null}
-          contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
+          contactCount={
+            getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? [])
+              .totalFans
+          }
           contactError={contactResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           messages={messagesResult?.messages ?? []}

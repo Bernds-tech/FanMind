@@ -984,7 +984,8 @@ export async function findTelegramWebhookWorkspaceId(): Promise<{
   const configuredWorkspaceId = normalizeOptionalText(
     process.env.FANMIND_DEFAULT_WORKSPACE_ID_FOR_TELEGRAM_TEST,
   );
-  if (configuredWorkspaceId) return { workspaceId: configuredWorkspaceId, error: null };
+  if (configuredWorkspaceId)
+    return { workspaceId: configuredWorkspaceId, error: null };
 
   const serviceAccessToken = getServiceAccessToken();
   if (!serviceAccessToken) {
@@ -1005,7 +1006,8 @@ export async function findTelegramWebhookWorkspaceId(): Promise<{
     true,
     "connected_at.desc",
   );
-  if (connectionResult.error) return { workspaceId: null, error: connectionResult.error };
+  if (connectionResult.error)
+    return { workspaceId: null, error: connectionResult.error };
   if (connectionResult.data?.workspace_id) {
     return { workspaceId: connectionResult.data.workspace_id, error: null };
   }
@@ -1019,7 +1021,8 @@ export async function findTelegramWebhookWorkspaceId(): Promise<{
     true,
     "created_at.desc",
   );
-  if (workspaceResult.error) return { workspaceId: null, error: workspaceResult.error };
+  if (workspaceResult.error)
+    return { workspaceId: null, error: workspaceResult.error };
   return { workspaceId: workspaceResult.data?.id ?? null, error: null };
 }
 
@@ -1031,7 +1034,9 @@ export async function getWorkspaceTelegramMessages(
   if (!serviceAccessToken) {
     return {
       messages: [],
-      error: new Error("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert."),
+      error: new Error(
+        "SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.",
+      ),
     };
   }
 
@@ -1056,7 +1061,6 @@ export async function getWorkspaceTelegramMessages(
   return { messages: result.data ?? [], error: null };
 }
 
-
 export async function sendManualTelegramMessage(input: {
   workspaceId: string;
   contactId: string;
@@ -1064,7 +1068,12 @@ export async function sendManualTelegramMessage(input: {
 }): Promise<{ message: ConversationMessageRow | null; error: Error | null }> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
-    return { message: null, error: new Error("Telegram-Bot-Token ist serverseitig nicht konfiguriert.") };
+    return {
+      message: null,
+      error: new Error(
+        "Telegram-Bot-Token ist serverseitig nicht konfiguriert.",
+      ),
+    };
   }
 
   const text = input.text.trim();
@@ -1086,23 +1095,36 @@ export async function sendManualTelegramMessage(input: {
     "updated_at.desc",
   );
   if (conversationResult.error) {
-    return { message: null, error: new Error(`Telegram-Konversation konnte nicht geladen werden: ${conversationResult.error.message}`) };
+    return {
+      message: null,
+      error: new Error(
+        `Telegram-Konversation konnte nicht geladen werden: ${conversationResult.error.message}`,
+      ),
+    };
   }
 
   const conversation = conversationResult.data;
   const chatId = normalizeOptionalText(conversation?.external_thread_id);
   if (!conversation || !chatId) {
-    return { message: null, error: new Error("Kein Telegram-Chat für diesen Kontakt gefunden.") };
+    return {
+      message: null,
+      error: new Error("Kein Telegram-Chat für diesen Kontakt gefunden."),
+    };
   }
 
-  const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  });
-  const telegramData = (await telegramResponse.json().catch(() => null)) as
-    | { ok?: boolean; description?: string; result?: { message_id?: number; date?: number } }
-    | null;
+  const telegramResponse = await fetch(
+    `https://api.telegram.org/bot${botToken}/sendMessage`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    },
+  );
+  const telegramData = (await telegramResponse.json().catch(() => null)) as {
+    ok?: boolean;
+    description?: string;
+    result?: { message_id?: number; date?: number };
+  } | null;
 
   if (!telegramResponse.ok || !telegramData?.ok) {
     const description = telegramData?.description ?? "Telegram API Fehler";
@@ -1123,8 +1145,12 @@ export async function sendManualTelegramMessage(input: {
     sourcePlatform: "telegram",
     sourceType: "telegram_messages",
     externalThreadId: chatId,
-    externalMessageId: telegramData.result?.message_id ? String(telegramData.result.message_id) : undefined,
-    receivedAt: telegramData.result?.date ? String(telegramData.result.date) : new Date().toISOString(),
+    externalMessageId: telegramData.result?.message_id
+      ? String(telegramData.result.message_id)
+      : undefined,
+    receivedAt: telegramData.result?.date
+      ? String(telegramData.result.date)
+      : new Date().toISOString(),
     direction: "outbound",
     authorLabel: "FanMind Team",
   });
@@ -1132,10 +1158,12 @@ export async function sendManualTelegramMessage(input: {
   return { message: saved.message, error: saved.error };
 }
 
-
-export async function getTelegramMessagesWorkspacePresence(currentWorkspaceId: string): Promise<{ hasMessagesInOtherWorkspace: boolean; error: Error | null }> {
+export async function getTelegramMessagesWorkspacePresence(
+  currentWorkspaceId: string,
+): Promise<{ hasMessagesInOtherWorkspace: boolean; error: Error | null }> {
   const serviceAccessToken = getServiceAccessToken();
-  if (!serviceAccessToken) return { hasMessagesInOtherWorkspace: false, error: null };
+  if (!serviceAccessToken)
+    return { hasMessagesInOtherWorkspace: false, error: null };
   const result = await postgrestSelect<ConversationMessageRow>(
     "conversation_messages",
     serviceAccessToken,
@@ -1145,9 +1173,12 @@ export async function getTelegramMessagesWorkspacePresence(currentWorkspaceId: s
     true,
     "created_at.desc",
   );
-  if (result.error) return { hasMessagesInOtherWorkspace: false, error: result.error };
+  if (result.error)
+    return { hasMessagesInOtherWorkspace: false, error: result.error };
   return {
-    hasMessagesInOtherWorkspace: Boolean(result.data && result.data.workspace_id !== currentWorkspaceId),
+    hasMessagesInOtherWorkspace: Boolean(
+      result.data && result.data.workspace_id !== currentWorkspaceId,
+    ),
     error: null,
   };
 }
@@ -1493,7 +1524,7 @@ function isReplyTargetStorageUnavailableError(error: Error): boolean {
       (message.includes("does not exist") ||
         message.includes("could not find") ||
         message.includes("schema cache"))) ||
-    message.includes("relation \"contact_reply_targets\"")
+    message.includes('relation "contact_reply_targets"')
   );
 }
 
@@ -1526,7 +1557,7 @@ export async function getWorkspaceContacts(
 
   return {
     contacts: (contactsResult.data ?? []).filter(
-      (contact) => contact.status !== "archived",
+      (contact) => !isArchivedStatus(contact.status),
     ),
     error: null,
   };
@@ -1653,7 +1684,6 @@ export async function updateWorkspaceContact(
   return { contact: contactResult.data, error: null };
 }
 
-
 export async function archiveWorkspaceContact(input: {
   workspaceId: string;
   contactId: string;
@@ -1667,7 +1697,10 @@ export async function archiveWorkspaceContact(input: {
     );
   }
 
-  const existing = await getWorkspaceContact(input.workspaceId, input.contactId);
+  const existing = await getWorkspaceContact(
+    input.workspaceId,
+    input.contactId,
+  );
   if (existing.error) return existing;
   if (!existing.contact) {
     return contactUpdateError("Kontakt wurde nicht gefunden.");
@@ -1713,7 +1746,9 @@ export async function mergeWorkspaceContacts(input: {
     );
   }
   if (input.sourceContactId === input.targetContactId) {
-    return contactUpdateError("Quelle und Ziel müssen unterschiedliche Kontakte sein.");
+    return contactUpdateError(
+      "Quelle und Ziel müssen unterschiedliche Kontakte sein.",
+    );
   }
 
   const [sourceResult, targetResult] = await Promise.all([
@@ -1724,7 +1759,8 @@ export async function mergeWorkspaceContacts(input: {
   if (targetResult.error) return targetResult;
   const source = sourceResult.contact;
   const target = targetResult.contact;
-  if (!source || !target) return contactUpdateError("Quelle oder Ziel wurde nicht gefunden.");
+  if (!source || !target)
+    return contactUpdateError("Quelle oder Ziel wurde nicht gefunden.");
 
   for (const table of [
     "conversations",
@@ -1740,23 +1776,35 @@ export async function mergeWorkspaceContacts(input: {
       table,
       { contact_id: input.targetContactId },
       accessToken,
-      [["workspace_id", input.workspaceId], ["contact_id", input.sourceContactId]],
+      [
+        ["workspace_id", input.workspaceId],
+        ["contact_id", input.sourceContactId],
+      ],
     );
     if (moved.error) {
-      return contactUpdateError(`Merge abgebrochen: ${table} konnte nicht umgehängt werden: ${moved.error.message}`);
+      return contactUpdateError(
+        `Merge abgebrochen: ${table} konnte nicht umgehängt werden: ${moved.error.message}`,
+      );
     }
   }
 
-  const mergedTags = uniqueTextValues([...(target.tags ?? []), ...(source.tags ?? []), source.source_platform ?? ""]);
-  const sourceHandleNote = source.handle && source.handle !== target.handle
-    ? `Alias aus zusammengeführtem Kontakt: ${source.handle}`
-    : null;
-  const sourcePlatformNote = source.source_platform && source.source_platform !== target.source_platform
-    ? `Zusätzlicher Quellkanal aus Merge: ${source.source_platform}`
-    : null;
+  const mergedTags = uniqueTextValues([
+    ...(target.tags ?? []),
+    ...(source.tags ?? []),
+  ]);
+  const sourceHandleNote =
+    source.handle && source.handle !== target.handle
+      ? `Alias aus zusammengeführtem Kontakt: ${source.handle}`
+      : null;
+  const sourcePlatformNote =
+    source.source_platform && source.source_platform !== target.source_platform
+      ? `Zusätzlicher Quellkanal aus Merge: ${source.source_platform}`
+      : null;
   const mergedSummary = mergeTextBlocks(
     target.summary,
-    source.summary ? `Aus zusammengeführtem Kontakt ${source.id}: ${source.summary}` : null,
+    source.summary
+      ? `Aus zusammengeführtem Kontakt ${source.id}: ${source.summary}`
+      : null,
   );
   const mergedNotes = mergeTextBlocks(
     target.internal_notes,
@@ -1764,8 +1812,12 @@ export async function mergeWorkspaceContacts(input: {
       `Kontakt ${source.id} (${source.display_name}) wurde in diesen Kontakt zusammengeführt.`,
       sourceHandleNote,
       sourcePlatformNote,
-      source.internal_notes ? `Notizen aus Quelle: ${source.internal_notes}` : null,
-    ].filter(Boolean).join("\n"),
+      source.internal_notes
+        ? `Notizen aus Quelle: ${source.internal_notes}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n"),
   );
 
   const updatedTarget = await postgrestUpdate<ContactRow>(
@@ -1775,13 +1827,34 @@ export async function mergeWorkspaceContacts(input: {
       summary: normalizeOptionalText(mergedSummary),
       internal_notes: normalizeOptionalText(mergedNotes),
       handle: target.handle ?? source.handle,
-      source_platform: target.source_platform ?? source.source_platform ?? "manual",
+      source_platform:
+        target.source_platform ?? source.source_platform ?? "manual",
     },
     accessToken,
-    [["workspace_id", input.workspaceId], ["id", input.targetContactId]],
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.targetContactId],
+    ],
     { select: CONTACT_COLUMNS, single: true },
   );
-  if (updatedTarget.error) return contactUpdateError(updatedTarget.error.message);
+  if (updatedTarget.error)
+    return contactUpdateError(updatedTarget.error.message);
+
+  const sourcePlatform = normalizeOptionalText(source.source_platform);
+  const targetPlatform = normalizeOptionalText(target.source_platform);
+  if (sourcePlatform && sourcePlatform !== targetPlatform) {
+    const mergedChannel = await createWorkspaceContact({
+      workspaceId: input.workspaceId,
+      displayName: target.display_name || source.display_name,
+      handle: target.handle ?? source.handle,
+      sourcePlatform,
+      language: target.language ?? source.language ?? "de",
+      status: target.status ?? source.status ?? "new",
+      tags: mergedTags,
+      summary: normalizeOptionalText(mergedSummary),
+    });
+    if (mergedChannel.error) return mergedChannel;
+  }
 
   const archived = await archiveWorkspaceContact({
     workspaceId: input.workspaceId,
@@ -2683,7 +2756,8 @@ export async function createMetaWebhookConversationMessage(input: {
       sourcePlatform: input.sourcePlatform,
       threadIdentifiers,
     });
-    if (byThread.error) return conversationMessageCreateError(byThread.error.message);
+    if (byThread.error)
+      return conversationMessageCreateError(byThread.error.message);
     contact = byThread.contact;
   }
 
@@ -2802,7 +2876,9 @@ export async function createMetaWebhookConversationMessage(input: {
   );
   const preferredBusinessInboxUrl =
     extractBusinessInboxUrlCandidates(normalizedMetaUrlCandidates)[0] ?? null;
-  const normalizedPageId = normalizeOptionalText(input.pageId ?? input.recipientId);
+  const normalizedPageId = normalizeOptionalText(
+    input.pageId ?? input.recipientId,
+  );
   const normalizedBusinessId =
     process.env.META_BUSINESS_ID ?? process.env.NEXT_PUBLIC_META_BUSINESS_ID;
 
@@ -2818,8 +2894,7 @@ export async function createMetaWebhookConversationMessage(input: {
   const autoPageId =
     normalizedMetaUrlCandidates
       .map((url) => extractFacebookPageId(url))
-      .find((id): id is string => Boolean(id)) ??
-    normalizedPageId;
+      .find((id): id is string => Boolean(id)) ?? normalizedPageId;
   const autoBusinessId =
     normalizedMetaUrlCandidates
       .map((url) => extractFacebookBusinessId(url))
@@ -2850,7 +2925,9 @@ export async function createMetaWebhookConversationMessage(input: {
       getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),
     sourceUrl: preferredBusinessInboxUrl ?? normalizedSourceUrl,
     replyTargetUrl:
-      autoReplyTargetUrl ?? preferredBusinessInboxUrl ?? normalizedReplyTargetUrl,
+      autoReplyTargetUrl ??
+      preferredBusinessInboxUrl ??
+      normalizedReplyTargetUrl,
     externalMessageId: input.externalMessageId,
     externalThreadId: preferredThreadId,
     externalPostId: input.externalPostId,
@@ -2891,7 +2968,12 @@ export async function createMetaWebhookConversationMessage(input: {
 
 export async function createMetaTestConversationMessage(input: {
   workspaceId: string;
-  sourcePlatform?: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
+  sourcePlatform?:
+    | "facebook"
+    | "instagram"
+    | "whatsapp"
+    | "tiktok"
+    | "telegram";
   contactId: string;
   content: string;
   messageType: "dm" | "comment";
@@ -3221,8 +3303,12 @@ function buildMetaThreadIdentifiers(input: {
   senderId?: string | null;
 }): string[] {
   const identifiers = new Set<string>();
-  const explicitExternalThreadId = normalizeOptionalText(input.externalThreadId);
-  const sourceConversationId = normalizeOptionalText(input.sourceConversationId);
+  const explicitExternalThreadId = normalizeOptionalText(
+    input.externalThreadId,
+  );
+  const sourceConversationId = normalizeOptionalText(
+    input.sourceConversationId,
+  );
   const pageId = normalizeOptionalText(input.pageId);
   const senderId = normalizeOptionalText(input.senderId);
 
@@ -3303,7 +3389,10 @@ async function findContactByThreadIdentifiers(input: {
     }
 
     if (byMessage.data?.contact_id) {
-      const contact = await getContactById(input.workspaceId, byMessage.data.contact_id);
+      const contact = await getContactById(
+        input.workspaceId,
+        byMessage.data.contact_id,
+      );
       if (contact.error) return contact;
       if (contact.contact) return contact;
     }
@@ -4119,8 +4208,16 @@ function workspaceDashboardError(message: string): WorkspaceDashboardResult {
   return { workspace: null, error: new Error(message) };
 }
 
-function mergeTextBlocks(...values: Array<string | null | undefined>): string | null {
-  const blocks = values.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
+function isArchivedStatus(status: string | null | undefined): boolean {
+  return status?.trim().toLowerCase() === "archived";
+}
+
+function mergeTextBlocks(
+  ...values: Array<string | null | undefined>
+): string | null {
+  const blocks = values
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
   return blocks.length ? blocks.join("\n\n") : null;
 }
 
