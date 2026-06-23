@@ -4,6 +4,8 @@ import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
 import { createFanMindTranslator, fanmindCopy, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { FanMindLogo } from "@/components/FanMindLogo";
+import { ComingSoonMark } from "@/components/ComingSoonMark";
+import { PlatformLogo } from "@/components/PlatformLogo";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import styles from "./landing-v2.module.css";
@@ -346,6 +348,7 @@ const sixStepBenefits = [
 const integrationChannels = [
   {
     icon: "✉",
+    platform: "email",
     title: "E-Mail",
     text: "Anfragen automatisch synchronisieren und zentral bündeln.",
     status: "Bereit",
@@ -353,6 +356,7 @@ const integrationChannels = [
   },
   {
     icon: "☏",
+    platform: "whatsapp",
     title: "WhatsApp",
     text: "Kontakte, Handles und Chat-Kontext automatisch synchronisieren, soweit verfügbar.",
     status: "In Arbeit",
@@ -360,6 +364,7 @@ const integrationChannels = [
   },
   {
     icon: "◖",
+    platform: "discord",
     title: "Discord",
     text: "Server-, Profil- und Interaktionskontext automatisch abgleichen, soweit verfügbar.",
     status: "In Arbeit",
@@ -367,6 +372,7 @@ const integrationChannels = [
   },
   {
     icon: "f",
+    platform: "facebook",
     title: "Facebook",
     text: "Profil- und Seitenkontakte automatisch synchronisieren, soweit verfügbar.",
     status: "Coming Soon",
@@ -374,6 +380,7 @@ const integrationChannels = [
   },
   {
     icon: "𝕏",
+    platform: "x",
     title: "X",
     text: "Handles, Profile und Aktivität automatisch abgleichen, soweit verfügbar.",
     status: "Coming Soon",
@@ -381,6 +388,7 @@ const integrationChannels = [
   },
   {
     icon: "♪",
+    platform: "tiktok",
     title: "TikTok",
     text: "Kommentare, Handles und Aktivitätsstände automatisch synchronisieren, soweit verfügbar.",
     status: "In Arbeit",
@@ -388,6 +396,7 @@ const integrationChannels = [
   },
   {
     icon: "◎",
+    platform: "instagram",
     title: "Instagram",
     text: "DM-Kontext, Profile und relevante Aktivität automatisch synchronisieren, soweit verfügbar.",
     status: "In Arbeit",
@@ -395,6 +404,7 @@ const integrationChannels = [
   },
   {
     icon: "▤",
+    platform: "webform",
     title: "Webformulare",
     text: "Formularanfragen automatisch erfassen und Kontaktprofilen zuordnen.",
     status: "Bereit",
@@ -403,14 +413,14 @@ const integrationChannels = [
 ];
 
 const integrationSources = [
-  { icon: "✉", label: "E-Mail" },
-  { icon: "◖", label: "Discord" },
-  { icon: "☏", label: "WhatsApp" },
-  { icon: "♪", label: "TikTok" },
-  { icon: "◎", label: "Instagram" },
-  { icon: "𝕏", label: "X" },
-  { icon: "f", label: "Facebook" },
-  { icon: "▤", label: "Webformulare" },
+  { platform: "email", label: "E-Mail" },
+  { platform: "discord", label: "Discord" },
+  { platform: "whatsapp", label: "WhatsApp" },
+  { platform: "tiktok", label: "TikTok" },
+  { platform: "instagram", label: "Instagram" },
+  { platform: "x", label: "X" },
+  { platform: "facebook", label: "Facebook" },
+  { platform: "webform", label: "Webformulare" },
 ];
 
 const integrationActions = [
@@ -713,11 +723,11 @@ const landingFooterColumns = [
 ];
 
 const landingFooterSocials = [
-  { label: "Instagram", href: "https://www.instagram.com/", icon: "◎" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/", icon: "in" },
-  { label: "X", href: "https://x.com/", icon: "𝕏" },
-  { label: "YouTube", href: "https://www.youtube.com/", icon: "▶" },
-  { label: "Discord", href: "https://discord.com/", icon: "◖" },
+  { label: "Instagram", href: "https://www.instagram.com/", platform: "instagram" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/", platform: "linkedin" },
+  { label: "X", href: "https://x.com/", platform: "x" },
+  { label: "YouTube", href: "https://www.youtube.com/", platform: "youtube" },
+  { label: "Discord", href: "https://discord.com/", platform: "discord" },
 ];
 
 const pricingPlans = [
@@ -1006,18 +1016,6 @@ function Logo({ compact = false, language = "de" }: { compact?: boolean; languag
   return <FanMindLogo compact={compact} className={styles.logo} href={landingPath(language)} />;
 }
 
-
-function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" | "large" }) {
-  return (
-    <Image
-      src="/assets/coming-soon-badge.png"
-      alt="Coming Soon"
-      width={1536}
-      height={1024}
-      className={`${styles.comingSoonImage} ${styles[`comingSoon-${size}`]}`}
-    />
-  );
-}
 
 function isComingSoonStatus(status?: string) {
   return Boolean(status && ["Roadmap", "In Kürze", "Coming Soon", "Vorschau", "Preview", "Geplant", "Planned"].includes(status));
@@ -1403,7 +1401,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <FeatureStatusLabel variant={statusVariantFromLabel(feature.status)!}>{feature.status}</FeatureStatusLabel>
               ) : null}
               <p>{feature.text}</p>
-              {isComingSoonStatus(feature.status) ? <ComingSoonImage size="small" /> : null}
+              {isComingSoonStatus(feature.status) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
             </article>
           ))}
         </section>
@@ -1506,7 +1504,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <a href={card.href}>
                 {card.cta} <span>→</span>
               </a>
-              {isComingSoonStatus(card.status) ? <ComingSoonImage size="medium" /> : null}
+              {isComingSoonStatus(card.status) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
             </article>
           ))}
         </div>
@@ -1581,7 +1579,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <span>→</span>
                 </a>
               </div>
-              {isComingSoonStatus(step.badge) ? <ComingSoonImage size="medium" /> : null}
+              {isComingSoonStatus(step.badge) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
             </article>
           ))}
         </div>
@@ -1863,11 +1861,11 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               data-tone={channel.tone}
               key={channel.title}
             >
-              <div className={styles.integrationChannelIcon}>{channel.icon}</div>
+              <PlatformLogo className={styles.integrationChannelIcon} platform={channel.platform} size="md" />
               <h3>{channel.title}</h3>
               <p>{channel.text}</p>
               {isComingSoonStatus(channel.status) ? (
-                <span className={styles.integrationStatusBadge}>{channel.status}</span>
+                <ComingSoonMark size="small" className={styles.comingSoonImage} />
               ) : (
                 <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
               )}
@@ -1884,7 +1882,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   className={inProgressIntegrationLabels.has(source.label) ? styles.cardWithComingSoon : undefined}
                   key={source.label}
                 >
-                  <i aria-hidden="true">{source.icon}</i>
+                  <PlatformLogo platform={source.platform} size="sm" />
                   {source.label}
                   {inProgressIntegrationLabels.has(source.label) ? <span className={styles.sourceStatusBadge}>{t("In Arbeit")}</span> : null}
                   <em aria-hidden="true" />
@@ -1984,7 +1982,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   ) : null}
                   <p>{action.text}</p>
                   <i aria-hidden="true">{action.status ? "·" : "✓"}</i>
-                  {isComingSoonStatus(action.status) ? <span className={styles.integrationStatusBadge}>{action.status}</span> : null}
+                  {isComingSoonStatus(action.status) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
                 </article>
               ))}
             </div>
@@ -2068,7 +2066,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <li key={item}>{item}</li>
                 ))}
               </ul>
-              {phase.number === "01" ? null : <ComingSoonImage size="medium" />}
+              {phase.number === "01" ? null : <ComingSoonMark size="medium" className={styles.comingSoonImage} />}
             </article>
           ))}
         </div>
@@ -2201,7 +2199,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <a href={plan.href}>
                 {plan.cta} <span>→</span>
               </a>
-              {isComingSoonStatus(plan.status) ? <ComingSoonImage size="medium" /> : null}
+              {isComingSoonStatus(plan.status) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
             </article>
           ))}
         </div>
@@ -2299,7 +2297,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   </FeatureStatusLabel>
                   <span>{card.label}</span>
                 </div>
-                <ComingSoonImage size="small" />
+                <ComingSoonMark size="small" className={styles.comingSoonImage} />
               </article>
             ))}
           </div>
@@ -2433,7 +2431,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <div className={styles.landingFooterSocials} aria-label="FanMind Social Media">
               {landingFooterSocials.map((social) => (
                 <a href={social.href} aria-label={social.label} key={social.label}>
-                  {social.icon}
+                  <PlatformLogo platform={social.platform} size="sm" />
                 </a>
               ))}
             </div>
@@ -2491,19 +2489,19 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         </nav>
         <div id="kontakt" className={styles.socials}>
           <a href="https://www.instagram.com/" aria-label="Instagram">
-            ◎
+            <PlatformLogo platform="instagram" size="sm" />
           </a>
           <a href="https://discord.com/" aria-label="Discord">
-            ◖
+            <PlatformLogo platform="discord" size="sm" />
           </a>
           <a href="https://x.com/" aria-label="X">
-            𝕏
+            <PlatformLogo platform="x" size="sm" />
           </a>
           <a href="https://www.linkedin.com/" aria-label="LinkedIn">
-            in
+            <PlatformLogo platform="linkedin" size="sm" />
           </a>
           <a href="https://www.youtube.com/" aria-label="YouTube">
-            ▶
+            <PlatformLogo platform="youtube" size="sm" />
           </a>
         </div>
         <a className={styles.backTop} href="#top" aria-label="Nach oben">
