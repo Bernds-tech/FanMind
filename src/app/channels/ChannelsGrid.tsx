@@ -276,6 +276,7 @@ export function ChannelsGrid({
   telegramMessagesError,
   telegramSetupStatus,
   telegramCheckRequested,
+  demoConnectionsDisabled = false,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
@@ -287,6 +288,7 @@ export function ChannelsGrid({
   telegramMessagesError?: string | null;
   telegramSetupStatus: TelegramWebhookStatus;
   telegramCheckRequested: boolean;
+  demoConnectionsDisabled?: boolean;
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -306,6 +308,7 @@ export function ChannelsGrid({
     useState<MetaPermissionDiagnosis | null>(null);
   const [messengerSyncResult, setMessengerSyncResult] =
     useState<FacebookMessengerSyncResult | null>(null);
+  const demoConnectionNotice = "Echte Verbindungen sind im öffentlichen Demo-Workspace deaktiviert. Bitte registriere einen eigenen Workspace.";
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -873,17 +876,31 @@ export function ChannelsGrid({
                       <div className={styles.connectionCardActions}>
                         {connectionCard.key === "facebook_messages" &&
                         !facebookConnection ? (
-                          <a
-                            className={styles.modalLinkButton}
-                            href="/api/integrations/facebook/start?type=facebook_messages"
-                          >
-                            Nachrichten verbinden
-                          </a>
+                          demoConnectionsDisabled ? (
+                            <button
+                              type="button"
+                              className={styles.modalLinkButton}
+                              onClick={() => setNotice(demoConnectionNotice)}
+                            >
+                              Nachrichten verbinden
+                            </button>
+                          ) : (
+                            <a
+                              className={styles.modalLinkButton}
+                              href="/api/integrations/facebook/start?type=facebook_messages"
+                            >
+                              Nachrichten verbinden
+                            </a>
+                          )
                         ) : (
                           <button
                             type="button"
                             className={styles.secondaryModalButton}
                             onClick={() => {
+                              if (demoConnectionsDisabled) {
+                                setNotice(demoConnectionNotice);
+                                return;
+                              }
                               if (connectionCard.key === "facebook_messages") {
                                 if (facebookConnection) {
                                   runPageWebhookAction("check");
@@ -919,7 +936,13 @@ export function ChannelsGrid({
                         facebookConnection ? (
                           <form
                             method="post"
-                            action="/api/integrations/facebook/disconnect"
+                            action={demoConnectionsDisabled ? undefined : "/api/integrations/facebook/disconnect"}
+                            onSubmit={(event) => {
+                              if (demoConnectionsDisabled) {
+                                event.preventDefault();
+                                setNotice(demoConnectionNotice);
+                              }
+                            }}
                           >
                             <button
                               type="submit"
