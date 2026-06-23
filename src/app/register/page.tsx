@@ -7,6 +7,7 @@ import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib
 import { getRegistrationCommercialTerms, isPlanId, resolvePlanId, type CommercialOption, type ProductiveCommercialOption } from "@/lib/plans";
 import type { PlanId } from "@/config/plans";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
+import { FanMindLogo } from "@/components/FanMindLogo";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./register.module.css";
 
@@ -96,19 +97,6 @@ function showPlanStatusBadge(planId: RegisterPlanId) {
   return !isPreviewPlan(planId);
 }
 
-function FanMindLogo({ language }: { language: FanMindLanguage }) {
-  return (
-    <a className={styles.logo} href={landingPath(language)} aria-label={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"}>
-      <svg viewBox="0 0 52 52" aria-hidden="true" className={styles.logoMark}>
-        <path d="M25.7 17.2C22.7 7.8 13.5 4.6 9.2 9.7c-4.4 5.1.4 13.1 10.1 12.2-8.8 4.9-8.6 15.4-1.7 17.1 6.8 1.6 10.2-7.4 8.4-16.4 1.8 9 6.8 16.7 13.1 13.7 6.4-3 4.6-13.3-5-16.1 9.7-.3 12.7-9.4 7.1-13.2-5.6-3.9-13.5 1.5-15.5 10.2Z" />
-        <circle cx="17.1" cy="17.5" r="3.4" />
-        <circle cx="34.9" cy="17.5" r="3.4" />
-        <circle cx="25.9" cy="31.5" r="3.4" />
-      </svg>
-      <span>FanMind</span>
-    </a>
-  );
-}
 
 function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
   if (language === "en") {
@@ -468,7 +456,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
       <div className={styles.gridPattern} aria-hidden="true" />
       <section className={styles.shell} aria-label={language === "en" ? "FanMind access" : "FanMind Zugang"}>
         <header className={styles.header}>
-          <FanMindLogo language={language} />
+          <FanMindLogo className={styles.logo} compact href={language === "en" ? "/landing-v2?lang=en" : "/landing-v2"} ariaLabel={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"} />
           <nav className={styles.topLinks} aria-label="Registrierung Navigation">
             <LanguageSwitch language={language} planId={selectedPlanId} />
             <span>{copy.loginPrompt}</span>
