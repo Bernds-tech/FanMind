@@ -1,12 +1,20 @@
-export type ReviewSourceStatus = "planned" | "active";
+export type ReferenceSourceStatus = "pending" | "available";
 
-export type ReviewSource = {
-  source: "google";
+export type ReferenceSource = {
+  id: "google";
   label: string;
-  status: ReviewSourceStatus;
-  rating?: number;
-  reviewCount?: number;
-  profileUrl?: string;
+  status: ReferenceSourceStatus;
+  profileUrl: string | null;
+  rating: number | null;
+  reviewCount: number | null;
+  visible: boolean;
+};
+
+export type ReferenceStatusCard = {
+  title: string;
+  status: string;
+  text: string;
+  sourceId?: ReferenceSource["id"];
   visible: boolean;
 };
 
@@ -15,12 +23,6 @@ export type Reference = {
   name: string;
   logoSrc: string;
   logoAlt: string;
-  visible: boolean;
-};
-
-export type TrustSignal = {
-  title: string;
-  text: string;
   visible: boolean;
 };
 
@@ -34,23 +36,38 @@ export const references: Reference[] = [
   },
 ];
 
-export const reviewSources: ReviewSource[] = [
+export const referenceSources: ReferenceSource[] = [
   {
-    source: "google",
+    id: "google",
     label: "Google Bewertungen",
-    status: "planned",
+    status: "pending",
+    profileUrl: null,
+    rating: null,
+    reviewCount: null,
     visible: true,
   },
 ];
 
-export const trustSignals: TrustSignal[] = [
+export const referenceStatusCards: ReferenceStatusCard[] = [
   {
-    title: "Erste Referenzen im Aufbau",
-    text: "FanMind startet mit Pilotmarken und echten Nutzerstimmen. Öffentliche Google-Bewertungen werden angezeigt, sobald das Google-Unternehmensprofil live ist.",
+    title: "Google Unternehmensprofil",
+    status: "In Prüfung",
+    text: "Öffentliche Bewertungen werden angezeigt, sobald das Profil live ist.",
+    sourceId: "google",
+    visible: true,
+  },
+  {
+    title: "Kundenstimmen",
+    status: "Bald verfügbar",
+    text: "Echte Rückmeldungen von ersten Testnutzern werden hier später eingebunden.",
     visible: true,
   },
 ];
 
-export function hasPublicRating(source: ReviewSource) {
-  return source.status === "active" && typeof source.rating === "number" && typeof source.reviewCount === "number";
+export function hasPublicRating(source: ReferenceSource): source is ReferenceSource & { rating: number; reviewCount: number } {
+  return source.rating !== null && source.reviewCount !== null;
+}
+
+export function hasReviewProfileUrl(source: ReferenceSource): source is ReferenceSource & { profileUrl: string } {
+  return source.profileUrl !== null;
 }

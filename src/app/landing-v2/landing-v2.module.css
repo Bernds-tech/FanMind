@@ -838,40 +838,66 @@
   gap: 10px;
 }
 
-.referencePill,
-.reviewSourcePill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.referencePill img {
-  width: 86px;
-  height: auto;
-  padding: 5px 7px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.referencePill span,
-.reviewSourcePill span {
+.referenceStatusCard {
   display: grid;
-  gap: 2px;
-  color: #9fb0c6;
-  font-size: 11px;
+  gap: 8px;
+  min-height: 124px;
+  flex: 1 1 230px;
+  padding: 13px 14px;
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(21, 255, 161, 0.05));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.referencePill strong,
-.reviewSourcePill strong {
-  display: block;
-  color: #f5fbff;
-  font-size: 13px;
+.referenceStatusCard div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
+
+.referenceStatusCard span {
+  color: #eef8ff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.referenceStatusCard strong {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid rgba(74, 222, 128, 0.26);
+  border-radius: 999px;
+  color: #74f7b8;
+  background: rgba(34, 197, 94, 0.1);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.referenceStatusCard p {
+  margin: 0;
+  color: #cbd3df;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.referenceStatusCard small {
+  color: #f5fbff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.referenceStatusCard a {
+  width: fit-content;
+  color: #74f7b8;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 
 .dashboardWrap {
   position: relative;
