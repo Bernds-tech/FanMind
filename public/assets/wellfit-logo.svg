@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 72" role="img" aria-labelledby="title desc">
+  <title id="title">WellFit Logo</title>
+  <desc id="desc">WellFit Wordmark mit grünem Wellness-Akzent.</desc>
+  <defs>
+    <linearGradient id="wellfit-leaf" x1="28" y1="12" x2="66" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8BE56D"/>
+      <stop offset="1" stop-color="#15B87A"/>
+    </linearGradient>
+    <linearGradient id="wellfit-word" x1="82" y1="17" x2="211" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FFF8"/>
+      <stop offset="0.52" stop-color="#DFFFEA"/>
+      <stop offset="1" stop-color="#77E1AC"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="236" height="68" rx="24" fill="#041B18" opacity="0.96"/>
+  <path d="M44 48c-12.2 0-20-7.8-20-18.1C36.5 29 47.9 34.3 52 44.9 49.6 46.9 46.9 48 44 48Z" fill="url(#wellfit-leaf)"/>
+  <path d="M54.9 45.4C55 31.7 63.7 20.8 77.4 18.3c1.7 14-6.8 25.8-20.8 29.1l-1.7-2Z" fill="url(#wellfit-leaf)" opacity="0.86"/>
+  <path d="M42.4 53.8c8.7-9.1 18.7-16.1 31.4-21.4" fill="none" stroke="#E8FFF0" stroke-width="4" stroke-linecap="round" opacity="0.92"/>
+  <text x="86" y="47" fill="url(#wellfit-word)" font-family="Arial, Helvetica, sans-serif" font-size="33" font-weight="900" letter-spacing="-1.8">WellFit</text>
+</svg>

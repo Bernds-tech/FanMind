@@ -37,18 +37,13 @@ const navItems = [
   { label: "Kontakt", href: "#kontakt" },
 ];
 
-const trustLogos = [
-  "FC Bayern München",
-  "BVB 09",
-  "LEAGUE of LEGENDS",
-  "BIG",
-  "ELEVATE Festival",
-  "Red Bull",
-  "SK Gaming",
-  "Team Liquid",
-  "DAZN",
-  "ELIAS NERLICH",
-];
+const trustLogos = Array.from({ length: 10 }, (_, index) => ({
+  name: "WellFit",
+  src: "/assets/wellfit-logo.svg",
+  id: `wellfit-${index + 1}`,
+}));
+
+const trustLogoLoop = [...trustLogos, ...trustLogos];
 
 const features = [
   {
@@ -1384,9 +1379,15 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           aria-label="Vertrauen von Top Creator, Clubs und Brands"
         >
           <strong>{t("Vertraut von Top Creator, Clubs & Brands")}</strong>
-          {trustLogos.map((logo) => (
-            <span key={logo}>{logo}</span>
-          ))}
+          <div className={styles.trustLogoViewport} aria-label="Partnerlogos">
+            <div className={styles.trustLogoTrack}>
+              {trustLogoLoop.map((logo, index) => (
+                <span className={styles.trustLogoCard} key={`${logo.id}-${index}`} aria-label={logo.name}>
+                  <Image src={logo.src} alt={logo.name} width={240} height={72} />
+                </span>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section id="features" className={styles.heroFeatureGrid}>
