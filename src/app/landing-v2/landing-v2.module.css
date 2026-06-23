@@ -557,11 +557,10 @@
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
+  justify-content: flex-start;
   width: max-content;
-  font-size: 27px;
-  font-weight: 800;
-  letter-spacing: -1.3px;
+  min-height: 44px;
+  line-height: 1;
 }
 
 .logoMark {
@@ -575,10 +574,13 @@
 
 .nav {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: clamp(14px, 1.55vw, 28px);
+  gap: clamp(10px, 1.2vw, 22px);
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.94);
 }
 
@@ -594,6 +596,17 @@
     color 160ms ease;
 }
 
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .nav a:hover,
 .siteFooter a:hover {
   color: #fff;
@@ -601,21 +614,32 @@
 }
 
 .nav span {
-  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  margin-left: 0;
   color: #c8d3e6;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .headerActions {
   display: flex;
-  gap: 12px;
   align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+  line-height: 1;
 }
 
 .languageSwitch {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  height: 32px;
+  height: 43px;
   padding: 0 9px;
   border: 1px solid rgba(72, 147, 255, 0.34);
   border-radius: 999px;
@@ -623,6 +647,7 @@
   background: rgba(4, 14, 34, 0.58);
   font-size: 11px;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.08em;
 }
 
@@ -651,6 +676,7 @@
   gap: 12px;
   border-radius: 8px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
 }
 
@@ -3082,7 +3108,12 @@
   .nav {
     grid-column: 1 / -1;
     order: 3;
+    align-items: center;
     flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .nav a {
+    min-height: 34px;
   }
   .hero {
     grid-template-columns: 1fr;
