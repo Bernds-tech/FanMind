@@ -291,7 +291,6 @@ export function ChannelsGrid({
   telegramMessagesError,
   telegramSetupStatus,
   telegramCheckRequested,
-  telegramMessagesInOtherWorkspace,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: boolean;
@@ -303,7 +302,6 @@ export function ChannelsGrid({
   telegramMessagesError?: string | null;
   telegramSetupStatus: TelegramWebhookStatus;
   telegramCheckRequested: boolean;
-  telegramMessagesInOtherWorkspace: boolean;
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
@@ -1051,9 +1049,9 @@ export function ChannelsGrid({
                         </p>
                       ) : null}
                       <p className={styles.modalNotice}>
-                        Eingehende Nachrichten an den FanMind Bot können in
-                        FanMind landen. Der Bot importiert nicht automatisch
-                        deine privaten Telegram-Kontakte.
+                        Eingehende Nachrichten an den FanMind Bot landen nur
+                        im explizit serverseitig konfigurierten Test-Workspace.
+                        Ohne eindeutige Workspace-Zuordnung wird nichts angelegt.
                       </p>
                     </div>
                     <div
@@ -1094,11 +1092,6 @@ export function ChannelsGrid({
                           Bot-Eingänge konnten nicht geladen werden:{" "}
                           {telegramMessagesError}
                         </p>
-                      ) : telegramMessagesInOtherWorkspace ? (
-                        <p className={styles.modalNotice}>
-                          Bot-Eingänge vorhanden, aber nicht im aktuellen
-                          Workspace.
-                        </p>
                       ) : (
                         <p className={styles.modalNotice}>
                           Noch keine Bot-Eingänge in diesem Workspace gefunden.
@@ -1130,7 +1123,7 @@ export function ChannelsGrid({
                             "nicht geprüft"}
                         </li>
                         <li>Eingang: Bot-Textnachrichten</li>
-                        <li>Workspace-Zuordnung: aktueller Workspace</li>
+                        <li>Workspace-Zuordnung: explizit konfigurierte Testbindung</li>
                       </ul>
                     </div>
                     <div

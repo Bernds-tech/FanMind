@@ -14,7 +14,18 @@ export async function POST(request: Request) {
     const result = await processTelegramWebhookUpdate(update);
 
     if (result.error && !result.skipped) {
+      console.error("Telegram webhook processing failed", {
+        reason: result.reason ?? "processing_error",
+        error: result.error,
+      });
       return Response.json({ ok: false, error: "Telegram update could not be processed" }, { status: 500 });
+    }
+
+    if (result.skipped && result.reason === "no_workspace") {
+      console.warn("Telegram webhook skipped without workspace mapping", {
+        reason: result.reason,
+        error: result.error,
+      });
     }
 
     return Response.json({ ok: true, saved: result.saved, skipped: result.skipped });
