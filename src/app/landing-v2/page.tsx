@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
-import { hasPublicRating, references, reviewSources, trustSignals } from "@/lib/landingReferences";
+import { hasPublicRating, hasReviewProfileUrl, referenceSources, referenceStatusCards } from "@/lib/landingReferences";
 import { createFanMindTranslator, fanmindCopy, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
@@ -1132,38 +1132,35 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               </a>
             </div>
             <div id="zielgruppen" className={styles.socialProof}>
-              {trustSignals
-                .filter((signal) => signal.visible)
-                .map((signal) => (
-                  <div key={signal.title} className={styles.referenceIntro}>
-                    <strong>{t(signal.title)}</strong>
-                    <p>{t(signal.text)}</p>
-                  </div>
-                ))}
+              <div className={styles.referenceIntro}>
+                <strong>{t("FanMind Referenzen im Aufbau")}</strong>
+                <p>{t("FanMind startet mit echten Pilotnutzern und öffentlichen Bewertungen. Das Google-Unternehmensprofil ist eingerichtet und wird sichtbar, sobald die Verifizierung abgeschlossen ist.")}</p>
+              </div>
               <div className={styles.referenceDetails}>
-                {references
-                  .filter((reference) => reference.visible)
-                  .map((reference) => (
-                    <div key={reference.name} className={styles.referencePill}>
-                      <Image src={reference.logoSrc} alt={reference.logoAlt} width={86} height={32} />
-                      <span>
-                        {t(reference.label)}
-                        <strong>{reference.name}</strong>
-                      </span>
-                    </div>
-                  ))}
-                {reviewSources
-                  .filter((source) => source.visible)
-                  .map((source) => (
-                    <div key={source.source} className={styles.reviewSourcePill}>
-                      <span>{t(source.label)}</span>
-                      {hasPublicRating(source) ? (
-                        <strong>{source.rating?.toLocaleString(language === "de" ? "de-DE" : "en-US")} / 5 · {source.reviewCount} {t("Bewertungen")}</strong>
-                      ) : (
-                        <strong>{t("in Vorbereitung")}</strong>
-                      )}
-                    </div>
-                  ))}
+                {referenceStatusCards
+                  .filter((card) => card.visible)
+                  .map((card) => {
+                    const linkedSource = card.sourceId ? referenceSources.find((source) => source.id === card.sourceId && source.visible) : undefined;
+                    return (
+                      <div key={card.title} className={styles.referenceStatusCard}>
+                        <div>
+                          <span>{t(card.title)}</span>
+                          <strong>{t(card.status)}</strong>
+                        </div>
+                        <p>{t(card.text)}</p>
+                        {linkedSource && hasPublicRating(linkedSource) ? (
+                          <small>
+                            {linkedSource.rating.toLocaleString(language === "de" ? "de-DE" : "en-US")} / 5 {t("bei Google")} · {linkedSource.reviewCount.toLocaleString(language === "de" ? "de-DE" : "en-US")} {t("echte Bewertungen")}
+                          </small>
+                        ) : null}
+                        {linkedSource && hasReviewProfileUrl(linkedSource) ? (
+                          <a href={linkedSource.profileUrl} target="_blank" rel="noreferrer">
+                            {t("Bei Google bewerten")}
+                          </a>
+                        ) : null}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </div>
