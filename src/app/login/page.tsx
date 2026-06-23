@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, use, useState } from "react";
+import { FormEvent, use, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
@@ -46,28 +46,38 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  const invalidCredentialsMessage =
+    language === "en"
+      ? "Login failed. Please check your email and password. If your browser automatically fills saved credentials, delete them once and save them again after a successful login."
+      : "Login fehlgeschlagen. Bitte prüfe E-Mail und Passwort. Falls dein Browser gespeicherte Zugangsdaten automatisch einfügt, lösche sie einmal und speichere sie nach erfolgreichem Login neu.";
+
+  function normalizeLoginError(message: string) {
+    return message.toLowerCase().includes("invalid login credentials") ? invalidCredentialsMessage : message;
+  }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "").trim();
-    const password = String(formData.get("password") ?? "");
+    const formEmail = String(formData.get("email") ?? "");
+    const formPassword = String(formData.get("password") ?? "");
+    const currentEmailValue = emailInputRef.current?.value;
+    const currentPasswordValue = passwordInputRef.current?.value;
+    const email = (currentEmailValue || formEmail).trim();
+    const password = currentPasswordValue ?? formPassword;
 
-    if (password !== password.trim()) {
-      setError(language === "en" ? "Please remove spaces at the beginning or end of your password." : "Bitte entferne Leerzeichen am Anfang oder Ende deines Passworts.");
-      setIsSubmitting(false);
-      return;
-    }
+    setIsSubmitting(true);
 
     try {
       const supabase = createSupabaseBrowserClient();
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (authError) {
-        setError(authError.message);
+        setError(normalizeLoginError(authError.message));
         return;
       }
 
@@ -79,7 +89,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       await syncSupabaseSessionForServer(data.session);
       window.location.assign(LOGIN_TARGET);
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Unbekannter Supabase-Fehler.");
+      const message = authError instanceof Error ? authError.message : language === "en" ? "Unknown Supabase error." : "Unbekannter Supabase-Fehler.";
+      setError(normalizeLoginError(message));
     } finally {
       setIsSubmitting(false);
     }
@@ -150,7 +161,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.email}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">✉</span>
-                <input type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} autoComplete="username" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
+                <input ref={emailInputRef} type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} autoComplete="username" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
               </div>
             </label>
 
@@ -158,7 +169,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.password}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">▣</span>
-                <input type="password" name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} autoComplete="current-password" required />
+                <input ref={passwordInputRef} type="password" name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} autoComplete="current-password" required />
               </div>
             </label>
 
