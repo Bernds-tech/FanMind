@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import styles from "./channels.module.css";
 import {
@@ -692,10 +693,9 @@ export function ChannelsGrid({
                   <span className={styles.primaryCardAction}>Details</span>
                 </span>
                 {showComingSoonBadge ? (
-                  <img
+                  <ComingSoonMark
                     className={styles.soonCornerBadge}
-                    src="/assets/coming-soon-badge.png"
-                    alt="Coming Soon"
+                    size="overlay"
                   />
                 ) : null}
               </button>
@@ -732,9 +732,9 @@ export function ChannelsGrid({
                 </h2>
                 <div className={styles.metaRow}>
                   {activeDisplayStatus && isBookable(activeDisplayStatus) ? (
-                    <img
+                    <ComingSoonMark
                       className={styles.soonBadgeImage}
-                      src="/assets/coming-soon-badge.png"
+                      size="small"
                       alt="Verbindung in Vorbereitung"
                     />
                   ) : (

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { FormEvent, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
@@ -9,6 +8,7 @@ import type { PlanId } from "@/config/plans";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
+import { ComingSoonMark } from "@/components/ComingSoonMark";
 import styles from "./register.module.css";
 
 type RegisterPlanId = PlanId;
@@ -76,18 +76,6 @@ function LanguageSwitch({ language, planId }: { language: FanMindLanguage; planI
   );
 }
 
-
-function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" }) {
-  return (
-    <Image
-      src="/assets/coming-soon-badge.png"
-      alt="Coming Soon"
-      width={1536}
-      height={1024}
-      className={`${styles.comingSoonImage} ${styles[`comingSoon-${size}`]}`}
-    />
-  );
-}
 
 function isPreviewPlan(planId: RegisterPlanId) {
   return planId === "growth" || planId === "agency";
@@ -502,7 +490,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                       {plan.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
                     </ul>
                     <span className={styles.planCta}>{plan.cta} →</span>
-                    {isPreviewPlan(planId) ? <ComingSoonImage size="small" /> : null}
+                    {isPreviewPlan(planId) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
                   </a>
                 );
               })}
@@ -649,7 +637,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               </div>
               {error && <p className={styles.error} role="alert">{error}</p>}
               <p className={styles.notice}>{language === "en" ? "No productive Growth/Agency activation, no payment and no subscription billing are created here." : "Hier wird keine produktive Growth-/Agency-Freischaltung, keine Zahlung und keine Subscription-Abrechnung erstellt."}</p>
-              <ComingSoonImage size="medium" />
+              <ComingSoonMark size="medium" className={styles.comingSoonImage} />
               <div className={styles.footerLinks}>
                 <a href={loginHref}>{copy.loginPrompt} {copy.loginLink}</a>
                 <a href={landingPath(language)}>{copy.landing}</a>

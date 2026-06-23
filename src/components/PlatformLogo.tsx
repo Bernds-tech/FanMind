@@ -29,24 +29,24 @@ type NormalizedPlatform =
   | "notes"
   | "unknown";
 
-const platformLabels: Record<NormalizedPlatform, string> = {
-  all: "Alle",
-  facebook: "Facebook",
-  instagram: "Instagram",
-  whatsapp: "WhatsApp",
-  telegram: "Telegram",
-  discord: "Discord",
-  tiktok: "TikTok",
-  x: "X / Twitter",
-  twitter: "X / Twitter",
-  youtube: "YouTube",
-  linkedin: "LinkedIn",
-  email: "E-Mail",
-  webform: "Webformular",
-  onlyfans: "OnlyFans",
-  manual: "Manuell",
-  notes: "Notizen",
-  unknown: "Sonstiges",
+export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
+  all: { label: "Alle" },
+  facebook: { label: "Facebook" },
+  instagram: { label: "Instagram" },
+  whatsapp: { label: "WhatsApp" },
+  telegram: { label: "Telegram" },
+  discord: { label: "Discord" },
+  tiktok: { label: "TikTok" },
+  x: { label: "X / Twitter" },
+  twitter: { label: "X / Twitter" },
+  youtube: { label: "YouTube" },
+  linkedin: { label: "LinkedIn" },
+  email: { label: "E-Mail" },
+  webform: { label: "Webformular" },
+  onlyfans: { label: "OnlyFans" },
+  manual: { label: "Manuell" },
+  notes: { label: "Notizen" },
+  unknown: { label: "Sonstiges" },
 };
 
 export function normalizePlatformLogoKey(
@@ -89,7 +89,7 @@ export function normalizePlatformLogoKey(
 export function getPlatformLogoLabel(
   platform: string | null | undefined,
 ): string {
-  return platformLabels[normalizePlatformLogoKey(platform)];
+  return platformLogoMap[normalizePlatformLogoKey(platform)].label;
 }
 
 export function PlatformLogo({
@@ -100,7 +100,7 @@ export function PlatformLogo({
   className,
 }: PlatformLogoProps) {
   const key = normalizePlatformLogoKey(platform);
-  const accessibleLabel = label ?? platformLabels[key];
+  const accessibleLabel = label ?? platformLogoMap[key].label;
   const classNames = [
     styles.platformLogo,
     styles[size],
