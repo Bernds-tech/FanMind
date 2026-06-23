@@ -29,6 +29,7 @@ import {
   type WorkspaceVoiceProfileRow,
 } from "@/lib/supabase/server";
 import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
@@ -110,19 +111,18 @@ type ConversationChannelKey =
 type ConversationChannelTab = {
   key: ConversationChannelKey;
   label: string;
-  icon: string;
 };
 
 const conversationChannelTabs: ConversationChannelTab[] = [
-  { key: "all", label: "Alle", icon: "●" },
-  { key: "instagram", label: "Instagram", icon: "IG" },
-  { key: "whatsapp", label: "WhatsApp", icon: "WA" },
-  { key: "facebook", label: "Facebook", icon: "FB" },
-  { key: "tiktok", label: "TikTok", icon: "TT" },
-  { key: "telegram", label: "Telegram", icon: "TG" },
-  { key: "email", label: "E-Mail", icon: "@" },
-  { key: "webform", label: "Webformular", icon: "WF" },
-  { key: "notes", label: "Notizen", icon: "N" },
+  { key: "all", label: "Alle" },
+  { key: "instagram", label: "Instagram" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "facebook", label: "Facebook" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "telegram", label: "Telegram" },
+  { key: "email", label: "E-Mail" },
+  { key: "webform", label: "Webformular" },
+  { key: "notes", label: "Notizen" },
 ];
 
 const channelSourceTypes: Record<
@@ -405,9 +405,11 @@ function FanDetailContent({
                   href={tab.href}
                   key={tab.key}
                 >
-                  <span aria-hidden="true" className={styles.channelIcon}>
-                    {tab.icon}
-                  </span>
+                  <PlatformLogo
+                    className={styles.channelIcon}
+                    platform={tab.key}
+                    size="sm"
+                  />
                   <span>{tab.label}</span>
                   {tab.hasUnread ? (
                     <span
@@ -503,6 +505,10 @@ function FanDetailContent({
                           {item.direction} · {item.type}
                         </span>
                         <span className={styles.channelBadge}>
+                          <PlatformLogo
+                            platform={item.sourcePlatform}
+                            size="sm"
+                          />
                           {item.channel}
                         </span>
                         <span className={styles.sourceBadge}>
@@ -1359,6 +1365,7 @@ function buildMessageTimeline(
       message.source_platform,
       message.source_type ?? message.message_type,
     ),
+    sourcePlatform: message.source_platform,
     time: formatDate(message.created_at),
     text: message.original_text_excerpt || message.content,
     attachments: message.attachments ?? [],
@@ -1620,11 +1627,12 @@ export default async function FanDetailPage({
 
   const { user, workspace } = authorized;
 
-  const [contactsResult, contactResult, socialConnectionsResult] = await Promise.all([
-    getWorkspaceContacts(workspace.id),
-    getWorkspaceContact(workspace.id, id),
-    getWorkspaceSocialConnections(workspace.id),
-  ]);
+  const [contactsResult, contactResult, socialConnectionsResult] =
+    await Promise.all([
+      getWorkspaceContacts(workspace.id),
+      getWorkspaceContact(workspace.id, id),
+      getWorkspaceSocialConnections(workspace.id),
+    ]);
 
   const contact = contactResult?.contact ?? null;
   if (!contact || contact.status?.trim().toLowerCase() === "archived") {
@@ -1763,7 +1771,9 @@ export default async function FanDetailPage({
         contactError={contactResult?.error?.message}
         followups={followupsResult?.followups ?? []}
         messages={messagesResult?.messages ?? []}
-        messagesError={messagesResult?.error?.message ?? additionalMessagesError}
+        messagesError={
+          messagesResult?.error?.message ?? additionalMessagesError
+        }
         conversation={conversation}
         conversationsError={conversationsResult?.error?.message}
         memories={memoriesResult?.memories ?? []}

@@ -659,6 +659,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 999px;
   padding: 8px 12px;
@@ -704,6 +705,7 @@
   height: 20px;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   border: 1px solid rgba(103, 232, 249, 0.2);
   border-radius: 999px;
   padding: 0 7px;
@@ -1018,8 +1020,8 @@
 
 .platformBadge {
   min-width: 26px;
-  height: 19px;
-  padding: 0 6px;
+  height: 22px;
+  padding: 0 2px;
   font-size: 9px;
 }
 

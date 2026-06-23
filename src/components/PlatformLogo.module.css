@@ -1,0 +1,136 @@
+.platformLogo {
+  --platform-logo-size: 22px;
+  --platform-logo-icon-size: calc(var(--platform-logo-size) * 0.68);
+  --platform-logo-bg: rgba(15, 23, 42, 0.82);
+  --platform-logo-fg: #e2e8f0;
+  --platform-logo-ring: rgba(148, 163, 184, 0.2);
+  display: inline-flex;
+  width: var(--platform-logo-size);
+  height: var(--platform-logo-size);
+  flex: 0 0 var(--platform-logo-size);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--platform-logo-ring);
+  border-radius: 999px;
+  color: var(--platform-logo-fg);
+  line-height: 1;
+  vertical-align: middle;
+  background: var(--platform-logo-bg);
+  overflow: hidden;
+}
+
+.sm {
+  --platform-logo-size: 20px;
+}
+.md {
+  --platform-logo-size: 44px;
+  --platform-logo-icon-size: 28px;
+  border-radius: 14px;
+}
+.lg {
+  --platform-logo-size: 56px;
+  --platform-logo-icon-size: 36px;
+  border-radius: 18px;
+}
+
+.withLabel {
+  width: auto;
+  min-width: var(--platform-logo-size);
+  gap: 7px;
+  padding: 0 9px 0 0;
+}
+
+.icon {
+  width: var(--platform-logo-icon-size);
+  height: var(--platform-logo-icon-size);
+  display: block;
+}
+.label {
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.facebook {
+  --platform-logo-bg: #1877f2;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.instagram {
+  --platform-logo-bg: radial-gradient(
+    circle at 30% 105%,
+    #feda75 0 20%,
+    #fa7e1e 31%,
+    #d62976 52%,
+    #962fbf 74%,
+    #4f5bd5 100%
+  );
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.2);
+}
+.whatsapp {
+  --platform-logo-bg: #25d366;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.telegram {
+  --platform-logo-bg: #229ed9;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.discord {
+  --platform-logo-bg: #5865f2;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.tiktok {
+  --platform-logo-bg: #050505;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.x,
+.twitter {
+  --platform-logo-bg: #fff;
+  --platform-logo-fg: #0f172a;
+  --platform-logo-ring: rgba(148, 163, 184, 0.38);
+}
+.youtube {
+  --platform-logo-bg: #ff0000;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.linkedin {
+  --platform-logo-bg: #0a66c2;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.email {
+  --platform-logo-bg: #2563eb;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.webform {
+  --platform-logo-bg: #7c3aed;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.onlyfans {
+  --platform-logo-bg: #00aff0;
+  --platform-logo-fg: #fff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.manual,
+.notes,
+.unknown {
+  --platform-logo-bg: rgba(71, 85, 105, 0.72);
+  --platform-logo-fg: #e2e8f0;
+}
+.all {
+  --platform-logo-bg: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.9),
+    rgba(168, 85, 247, 0.9)
+  );
+  --platform-logo-fg: #fff;
+}
