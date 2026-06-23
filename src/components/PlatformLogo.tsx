@@ -26,6 +26,7 @@ type NormalizedPlatform =
   | "webform"
   | "onlyfans"
   | "manual"
+  | "other"
   | "notes"
   | "unknown";
 
@@ -45,6 +46,7 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   webform: { label: "Webformular" },
   onlyfans: { label: "OnlyFans" },
   manual: { label: "Manuell" },
+  other: { label: "Sonstiges" },
   notes: { label: "Notizen" },
   unknown: { label: "Sonstiges" },
 };
@@ -83,6 +85,7 @@ export function normalizePlatformLogoKey(
     value.includes("csv")
   )
     return "manual";
+  if (value.includes("other") || value.includes("sonstig")) return "other";
   return "unknown";
 }
 

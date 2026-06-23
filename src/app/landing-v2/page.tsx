@@ -1376,7 +1376,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           className={styles.heroTrustBar}
           aria-label="Vertrauen von Top Creator, Clubs und Brands"
         >
-          <strong>{t("Vertraut von Top Creator, Clubs & Brands")}</strong>
+          <strong>{t("Erste Referenz & Pilotmarke")}</strong>
           <div className={styles.trustLogoViewport} aria-label="Partnerlogos">
             <div className={styles.trustLogoTrack}>
               {trustLogoLoop.map((logo, index) => (
