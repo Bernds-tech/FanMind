@@ -806,50 +806,71 @@
 
 .socialProof {
   display: grid;
-  grid-template-columns: auto 224px auto;
-  align-items: center;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  max-width: 650px;
   margin-top: 13px;
+  padding: 16px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(7, 18, 35, 0.88), rgba(8, 44, 31, 0.74));
+  box-shadow: 0 20px 48px rgba(1, 10, 22, 0.28);
 }
 
-.avatars {
-  display: flex;
-  padding-left: 0;
+.referenceIntro strong {
+  display: block;
+  color: #f5fbff;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }
 
-.avatar {
-  display: inline-grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  margin-left: calc(var(--i) * -7px);
-  border: 2px solid #142b47;
-  border-radius: 50%;
-  color: #fff;
-  font-weight: 800;
-  background:
-    radial-gradient(circle at 35% 28%, #ffe4bd 0 22%, transparent 23%),
-    linear-gradient(140deg, #e67343, #452612 47%, #e7edf7 48% 100%);
-}
-
-.socialProof p {
+.referenceIntro p {
+  max-width: 590px;
+  margin-top: 5px;
   color: #cbd3df;
   font-size: 12px;
-  line-height: 1.22;
+  line-height: 1.45;
 }
 
-.rating strong {
-  display: block;
-  color: #ffb000;
-  font-size: 14px;
-  letter-spacing: 1.8px;
+.referenceDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.rating span {
+.referencePill,
+.reviewSourcePill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.referencePill img {
+  width: 86px;
+  height: auto;
+  padding: 5px 7px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.referencePill span,
+.reviewSourcePill span {
+  display: grid;
+  gap: 2px;
+  color: #9fb0c6;
+  font-size: 11px;
+}
+
+.referencePill strong,
+.reviewSourcePill strong {
   display: block;
-  margin-top: 2px;
-  color: #d7dce5;
-  font-size: 12px;
+  color: #f5fbff;
+  font-size: 13px;
 }
 
 .dashboardWrap {

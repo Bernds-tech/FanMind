@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
+import { hasPublicRating, references, reviewSources, trustSignals } from "@/lib/landingReferences";
 import { createFanMindTranslator, fanmindCopy, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
@@ -1131,24 +1132,38 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               </a>
             </div>
             <div id="zielgruppen" className={styles.socialProof}>
-              <div
-                className={styles.avatars}
-                aria-label="Creator, Clubs und Veranstalter"
-              >
-                {["A", "M", "J", "S"].map((avatar, index) => (
-                  <span
-                    key={avatar}
-                    className={styles.avatar}
-                    style={{ "--i": index } as React.CSSProperties}
-                  >
-                    {avatar}
-                  </span>
+              {trustSignals
+                .filter((signal) => signal.visible)
+                .map((signal) => (
+                  <div key={signal.title} className={styles.referenceIntro}>
+                    <strong>{t(signal.title)}</strong>
+                    <p>{t(signal.text)}</p>
+                  </div>
                 ))}
-              </div>
-              <p>{t("Über 10.000 Creator, Clubs & Veranstalter vertrauen FanMind")}</p>
-              <div className={styles.rating}>
-                <strong>★★★★★</strong>
-                <span>{t("4,9/5 auf G2")}</span>
+              <div className={styles.referenceDetails}>
+                {references
+                  .filter((reference) => reference.visible)
+                  .map((reference) => (
+                    <div key={reference.name} className={styles.referencePill}>
+                      <Image src={reference.logoSrc} alt={reference.logoAlt} width={86} height={32} />
+                      <span>
+                        {t(reference.label)}
+                        <strong>{reference.name}</strong>
+                      </span>
+                    </div>
+                  ))}
+                {reviewSources
+                  .filter((source) => source.visible)
+                  .map((source) => (
+                    <div key={source.source} className={styles.reviewSourcePill}>
+                      <span>{t(source.label)}</span>
+                      {hasPublicRating(source) ? (
+                        <strong>{source.rating?.toLocaleString(language === "de" ? "de-DE" : "en-US")} / 5 · {source.reviewCount} {t("Bewertungen")}</strong>
+                      ) : (
+                        <strong>{t("in Vorbereitung")}</strong>
+                      )}
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
