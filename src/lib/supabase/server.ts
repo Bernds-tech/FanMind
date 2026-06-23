@@ -1761,6 +1761,57 @@ export async function updateWorkspaceContactServer(
   return { contact: contactResult.data, error: null };
 }
 
+async function archiveContactActiveWorkItems(input: {
+  workspaceId: string;
+  contactId: string;
+  accessToken: string;
+}): Promise<Error | null> {
+  const now = new Date().toISOString();
+  const conversationStatuses: ConversationStatus[] = ["open", "waiting"];
+
+  for (const status of conversationStatuses) {
+    const result = await postgrestUpdate<ConversationRow[]>(
+      "conversations",
+      {
+        status: "archived",
+        next_step: "Kontakt archiviert",
+        updated_at: now,
+      },
+      input.accessToken,
+      [
+        ["workspace_id", input.workspaceId],
+        ["contact_id", input.contactId],
+        ["status", status],
+      ],
+    );
+
+    if (result.error) {
+      return new Error(
+        `Offene Conversations konnten nicht archiviert werden: ${withOptionalSchemaHint(result.error.message, "conversations")}`,
+      );
+    }
+  }
+
+  const followupsResult = await postgrestUpdate<FollowupRow[]>(
+    "followups",
+    { status: "done" },
+    input.accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+      ["status", "open"],
+    ],
+  );
+
+  if (followupsResult.error) {
+    return new Error(
+      `Offene Follow-ups konnten nicht geschlossen werden: ${withOptionalSchemaHint(followupsResult.error.message, "followups")}`,
+    );
+  }
+
+  return null;
+}
+
 export async function archiveWorkspaceContact(input: {
   workspaceId: string;
   contactId: string;
@@ -1807,6 +1858,13 @@ export async function archiveWorkspaceContact(input: {
       `Kontakt konnte nicht archiviert werden: ${result.error.message}`,
     );
   }
+
+  const workItemsError = await archiveContactActiveWorkItems({
+    workspaceId: input.workspaceId,
+    contactId: input.contactId,
+    accessToken,
+  });
+  if (workItemsError) return contactUpdateError(workItemsError.message);
 
   return { contact: result.data, error: null };
 }
@@ -1872,6 +1930,13 @@ export async function archiveWorkspaceContactServer(input: {
       "Kontakt konnte nicht archiviert werden: Verifikation nach Speicherung fehlgeschlagen.",
     );
   }
+
+  const workItemsError = await archiveContactActiveWorkItems({
+    workspaceId: input.workspaceId,
+    contactId: input.contactId,
+    accessToken,
+  });
+  if (workItemsError) return contactUpdateError(workItemsError.message);
 
   return { contact: result.data, error: null };
 }

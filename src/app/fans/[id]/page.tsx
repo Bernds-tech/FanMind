@@ -1627,7 +1627,9 @@ export default async function FanDetailPage({
   ]);
 
   const contact = contactResult?.contact ?? null;
-  if (!contact) notFound();
+  if (!contact || contact.status?.trim().toLowerCase() === "archived") {
+    notFound();
+  }
   const relatedContactIds =
     contact && contactsResult
       ? getRelatedFanContactIds(contact, contactsResult.contacts).filter(

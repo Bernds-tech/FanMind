@@ -114,9 +114,16 @@ function InboxWorkspace({
 }: InboxWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("inbox");
-  const queueItems = conversations.length
-    ? buildConversationInboxQueue(conversations, contacts)
-    : buildInboxQueue(contacts, followups);
+  const activeContactIds = new Set(contacts.map((contact) => contact.id));
+  const activeFollowups = followups.filter((followup) =>
+    activeContactIds.has(followup.contact_id),
+  );
+  const activeConversations = conversations.filter((conversation) =>
+    activeContactIds.has(conversation.contact_id),
+  );
+  const queueItems = activeConversations.length
+    ? buildConversationInboxQueue(activeConversations, contacts)
+    : buildInboxQueue(contacts, activeFollowups);
   const visibleItems = filterQueueItems(queueItems, activeFilter, searchQuery);
   const kpis = getInboxKpis(queueItems);
 
@@ -139,7 +146,7 @@ function InboxWorkspace({
         primaryActionHref: "/fans#fans-list",
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
-      openFollowupCount={followups.length}
+      openFollowupCount={activeFollowups.length}
       logoutAction={logout}
     >
       <div className={styles.inboxStack}>
