@@ -1392,7 +1392,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div className={styles.trustLogoViewport} aria-label="Partnerlogos">
             <div className={styles.trustLogoTrack}>
               {trustLogoLoop.map((logo, index) => (
-                <span className={styles.trustLogoCard} key={`${logo.id}-${index}`} aria-label={logo.name}>
+                <span className={styles.trustLogoItem} key={`${logo.id}-${index}`} aria-label={logo.name}>
                   <Image src={logo.src} alt={logo.name} width={894} height={859} />
                 </span>
               ))}
