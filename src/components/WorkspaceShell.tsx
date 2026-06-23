@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import styles from "../app/dashboard/dashboard.module.css";
+import { FanMindLogo } from "./FanMindLogo";
 import { WorkspaceHeader, type WorkspaceHeaderProps } from "./WorkspaceHeader";
 import { WorkspaceKpiStrip } from "./WorkspaceKpiStrip";
 
@@ -189,10 +190,7 @@ export function WorkspaceShell({
         {sidebarCollapsed ? (
           <>
             <div className={styles.sidebarRailTop}>
-              <div className={styles.logoMark} aria-label="FanMind" title="FanMind">
-                <span className={styles.logoMarkFan} aria-hidden="true">F</span>
-                <span className={styles.logoMarkMind} aria-hidden="true">M</span>
-              </div>
+              <FanMindLogo markOnly />
               <button
                 type="button"
                 className={`${styles.sidebarToggle} ${styles.sidebarToggleCompact}`}
@@ -234,11 +232,7 @@ export function WorkspaceShell({
         ) : (
           <>
             <div className={styles.logoBlock}>
-              <div className={styles.logoWordmark} aria-label="FanMind">
-                <span className={styles.logoWordFan}>Fan</span>
-                <span className={styles.logoWordMind}>Mind</span>
-              </div>
-              <small>Multi-Channel CRM</small>
+              <FanMindLogo subtitle="Multi-Channel CRM" />
             </div>
             <button
               type="button"
