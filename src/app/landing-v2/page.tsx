@@ -41,9 +41,9 @@ const navItems = [
 ];
 
 const trustLogos = Array.from({ length: 10 }, (_, index) => ({
-  name: "WellFit",
-  src: "/assets/wellfit-logo.svg",
-  id: `wellfit-${index + 1}`,
+  name: "WellFit Wellness",
+  src: "/brands/Logo.png",
+  id: `wellfit-wellness-${index + 1}`,
 }));
 
 const trustLogoLoop = [...trustLogos, ...trustLogos];
@@ -1393,7 +1393,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <div className={styles.trustLogoTrack}>
               {trustLogoLoop.map((logo, index) => (
                 <span className={styles.trustLogoCard} key={`${logo.id}-${index}`} aria-label={logo.name}>
-                  <Image src={logo.src} alt={logo.name} width={240} height={72} />
+                  <Image src={logo.src} alt={logo.name} width={894} height={859} />
                 </span>
               ))}
             </div>
