@@ -64,17 +64,6 @@ function ComingSoonImage({ size = "medium" }: { size?: "small" | "medium" }) {
     />
   );
 }
-function BrandMark() {
-  return (
-    <svg className={styles.brandMark} viewBox="0 0 52 52" aria-hidden="true">
-      <path d="M25.7 17.2C22.7 7.8 13.5 4.6 9.2 9.7c-4.4 5.1.4 13.1 10.1 12.2-8.8 4.9-8.6 15.4-1.7 17.1 6.8 1.6 10.2-7.4 8.4-16.4 1.8 9 6.8 16.7 13.1 13.7 6.4-3 4.6-13.3-5-16.1 9.7-.3 12.7-9.4 7.1-13.2-5.6-3.9-13.5 1.5-15.5 10.2Z" />
-      <circle cx="17.1" cy="17.5" r="3.4" />
-      <circle cx="34.9" cy="17.5" r="3.4" />
-      <circle cx="25.9" cy="31.5" r="3.4" />
-    </svg>
-  );
-}
-
 function SparkLine({ tone = "blue" }: { tone?: "blue" | "green" | "purple" }) {
   return (
     <svg className={styles.sparkLine} data-tone={tone} viewBox="0 0 180 54" aria-hidden="true">
@@ -136,7 +125,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
           <div className={styles.centerColumn}>
             <div className={styles.dashboardShell} aria-label="FanMind Kontakte-Dashboard">
               <aside className={styles.sidebar}>
-                <div className={styles.brand}><BrandMark /><b>FanMind</b></div>
+                <div className={styles.brand}><b>FanMind</b></div>
                 <nav>
                   {localizedNavItems.map((item) => <span className={item.featureKey === "contacts" ? styles.activeNav : undefined} key={item.label}><i>{item.icon}</i>{item.label}</span>)}
                 </nav>
