@@ -164,10 +164,9 @@
 .queueRow,
 .queueRowLink {
   display: grid;
-  grid-template-columns: 64px 180px 112px minmax(
-      210px,
-      1.5fr
-    ) 84px 88px 96px 86px 104px 112px 132px 126px;
+  grid-template-columns:
+    64px 180px 112px minmax(210px, 1.5fr)
+    84px 88px 96px 86px 104px 112px 132px 126px;
   gap: 10px;
   align-items: center;
 }
@@ -212,10 +211,9 @@
 }
 
 .queueRowLink {
-  grid-template-columns: 180px 112px minmax(
-      210px,
-      1.5fr
-    ) 84px 88px 96px 86px 104px 112px 132px;
+  grid-template-columns:
+    180px 112px minmax(210px, 1.5fr)
+    84px 88px 96px 86px 104px 112px 132px;
   padding: 10px 10px 10px 0;
   color: #dbeafe;
   font-size: 12px;
@@ -307,6 +305,8 @@
 .priorityBadge,
 .aiBadge {
   display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border-radius: 999px;
   padding: 5px 8px;
   font-size: 11px;

@@ -12,6 +12,7 @@ import {
   type ConversationMessageRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
@@ -21,7 +22,6 @@ import { archiveFan, createFan, mergeFanContacts, updateFan } from "./actions";
 import {
   PLATFORM_OPTIONS,
   formatPlatformLabel,
-  getPlatformShortLabel,
   normalizePlatform,
   type PlatformValue,
 } from "./import/csv";
@@ -325,6 +325,9 @@ function ChannelFilters({
             href={href}
             key={filter.value}
           >
+            {filter.value === "all" ? null : (
+              <PlatformLogo platform={filter.value} size="sm" />
+            )}
             {filter.label}
           </Link>
         );
@@ -451,7 +454,7 @@ function renderPlatformBadges(platforms: PlatformValue[]) {
           key={platform}
           title={formatPlatformLabel(platform)}
         >
-          {getPlatformShortLabel(platform)}
+          <PlatformLogo platform={platform} size="sm" />
         </span>
       ))}
       {hiddenCount > 0 ? (
@@ -617,7 +620,10 @@ function EditFanModal({
             </button>
           </div>
         </form>
-        <div className={styles.mergePanel} id={`${getEditModalId(group)}-merge`}>
+        <div
+          className={styles.mergePanel}
+          id={`${getEditModalId(group)}-merge`}
+        >
           <div>
             <p className={dashboardStyles.eyebrow}>Duplikate</p>
             <h3>Doppelten Fan zusammenführen</h3>
@@ -649,7 +655,11 @@ function EditFanModal({
               </option>
               {mergeTargets.map((target) => (
                 <option key={target.key} value={target.primaryContact.id}>
-                  {target.displayName} · Handles: {target.handles.join(", ") || "kein Handle"} · Kanäle: {target.platforms.map(getPlatformShortLabel).join("/") || "keine"} · Kontakte: {target.contacts.length}
+                  {target.displayName} · Handles:{" "}
+                  {target.handles.join(", ") || "kein Handle"} · Kanäle:{" "}
+                  {target.platforms.map(formatPlatformLabel).join("/") ||
+                    "keine"}{" "}
+                  · Kontakte: {target.contacts.length}
                 </option>
               ))}
             </select>
@@ -705,7 +715,7 @@ function PlatformCheckboxes({
               defaultChecked={isSelected}
             />
             <span>
-              <strong>{option.shortLabel}</strong>
+              <PlatformLogo platform={option.value} size="sm" />
               {option.label === "Manuell"
                 ? "Manuell / Sonstiges"
                 : option.label}
@@ -846,7 +856,9 @@ function parseNoticePlatforms(value?: string): PlatformValue[] {
   return value
     .split(",")
     .map((platform) => normalizePlatform(platform))
-    .filter((platform, index, platforms) => platforms.indexOf(platform) === index);
+    .filter(
+      (platform, index, platforms) => platforms.indexOf(platform) === index,
+    );
 }
 
 function filterFanGroupsByChannel(

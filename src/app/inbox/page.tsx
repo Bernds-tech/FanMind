@@ -13,6 +13,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { getFanGroupKey } from "@/lib/fanIdentity";
+import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
@@ -45,14 +46,7 @@ type InboxWorkspaceProps = {
   searchQuery: string;
 };
 
-type InboxFilter =
-  | "all"
-  | "open"
-  | "waiting"
-  | "due"
-  | "high"
-  | "ai"
-  | "done";
+type InboxFilter = "all" | "open" | "waiting" | "due" | "high" | "ai" | "done";
 
 type InboxQueueItem = {
   key: string;
@@ -63,6 +57,7 @@ type InboxQueueItem = {
   tags: string[];
   channel: string;
   channelClass: string;
+  channelPlatform: string | null;
   messagePreview: string;
   conversationType: string;
   segment: string;
@@ -160,7 +155,10 @@ function InboxWorkspace({
               Kontakte-/Follow-up-Fallback aktiv.
             </p>
           </div>
-<InboxSearchForm activeFilter={activeFilter} initialQuery={searchQuery} />
+          <InboxSearchForm
+            activeFilter={activeFilter}
+            initialQuery={searchQuery}
+          />
         </section>
 
         <section className={styles.kpiGrid} aria-label="Inbox Kennzahlen">
@@ -306,12 +304,15 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
               <b
                 className={`${styles.channelBadge} ${styles[item.channelClass]}`}
               >
+                <PlatformLogo platform={item.channelPlatform} size="sm" />
                 {item.channel}
               </b>
             </span>
             <span className={styles.messageCell}>
               {item.messagePreview}
-              {item.originalPreview ? <small>{item.originalPreview}</small> : null}
+              {item.originalPreview ? (
+                <small>{item.originalPreview}</small>
+              ) : null}
             </span>
             <span>{item.conversationType}</span>
             <span>{item.status}</span>
@@ -339,7 +340,11 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
                 rel="noreferrer"
                 target="_blank"
               >
-                {getOriginalActionLabel(item.sourceType, item.replyTargetUrl, item.sourcePlatformLabel)}
+                {getOriginalActionLabel(
+                  item.sourceType,
+                  item.replyTargetUrl,
+                  item.sourcePlatformLabel,
+                )}
               </a>
             ) : (
               <button
@@ -353,7 +358,8 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
             )}
             {!item.replyTargetUrl ? (
               <small>
-                {ORIGINAL_LINK_FALLBACK}. Spätere Echt-Events können hier den Kommentar- oder Chat-Link liefern.
+                {ORIGINAL_LINK_FALLBACK}. Spätere Echt-Events können hier den
+                Kommentar- oder Chat-Link liefern.
               </small>
             ) : null}
             <div className={styles.rowActions}>
@@ -374,7 +380,11 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
 function EmptyState({ hasSearch }: { hasSearch: boolean }) {
   return (
     <div className={dashboardStyles.emptyState}>
-      <strong>{hasSearch ? "Keine passenden Nachrichten gefunden." : "Keine Queue-Einträge für diesen Filter."}</strong>
+      <strong>
+        {hasSearch
+          ? "Keine passenden Nachrichten gefunden."
+          : "Keine Queue-Einträge für diesen Filter."}
+      </strong>
       <p>
         {hasSearch
           ? "Passe den Suchbegriff an oder lösche die Suche, um alle passenden Inbox-Einträge zu sehen."
@@ -419,7 +429,9 @@ function buildConversationInboxQueue(
           conversation.created_at,
       );
       const channel = getChannelLabel(
-        conversation.source_type ?? conversation.source_platform ?? contact.source_platform,
+        conversation.source_type ??
+          conversation.source_platform ??
+          contact.source_platform,
       );
       const replyTargetUrl =
         normalizeHttpUrl(conversation.reply_target_url) ??
@@ -439,6 +451,8 @@ function buildConversationInboxQueue(
         channelClass: getChannelClass(
           conversation.source_platform ?? contact.source_platform,
         ),
+        channelPlatform:
+          conversation.source_platform ?? contact.source_platform,
         messagePreview:
           conversation.last_message_preview ||
           "Conversation ohne gespeicherte Vorschau.",
@@ -535,6 +549,7 @@ function createQueueItem(
     tags,
     channel: getChannelLabel(contact.source_platform),
     channelClass: getChannelClass(contact.source_platform),
+    channelPlatform: contact.source_platform,
     messagePreview:
       latestFollowup?.reason ||
       "Noch keine gespeicherte Eingangsnachricht. Kontext manuell einfügen.",
@@ -686,7 +701,11 @@ function getSourceType(source: string | null): InboxQueueItem["sourceType"] {
   if (preparedType === "message") return "dm";
   if (value.includes("mail")) return "email";
   if (value.includes("form") || value.includes("web")) return "form";
-  if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "post";
+  if (
+    value.includes("post") &&
+    (value.includes("comment") || value.includes("kommentar"))
+  )
+    return "post";
   if (value.includes("comment") || value.includes("kommentar"))
     return "comment";
   if (value.includes("post")) return "post";
@@ -701,14 +720,21 @@ function getOriginalActionLabel(
   platform?: string,
 ): string {
   const prepared = getChannelSourceConfig(platform);
-  if (prepared) return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
+  if (prepared)
+    return getChannelSourceActionLabel(prepared.sourceType, Boolean(url));
 
   const normalized = `${sourceType ?? ""} ${platform ?? ""}`.toLowerCase();
 
   if (!url) return ORIGINAL_LINK_FALLBACK;
-  if (normalized.includes("comment") || normalized.includes("kommentar")) return "Kommentar öffnen";
+  if (normalized.includes("comment") || normalized.includes("kommentar"))
+    return "Kommentar öffnen";
   if (normalized.includes("post")) return "Beitrag öffnen";
-  if (normalized.includes("dm") || normalized.includes("message") || normalized.includes("messenger")) return "Chat öffnen";
+  if (
+    normalized.includes("dm") ||
+    normalized.includes("message") ||
+    normalized.includes("messenger")
+  )
+    return "Chat öffnen";
 
   return "Original öffnen";
 }
@@ -740,8 +766,13 @@ function getConversationType(
   if (preparedLabel) return preparedLabel;
   if (value.includes("email")) return "E-Mail";
   if (value.includes("form")) return "Formular";
-  if (value.includes("post") && (value.includes("comment") || value.includes("kommentar"))) return "Post-Kommentar";
-  if (value.includes("comment") || value.includes("kommentar")) return "Kommentar";
+  if (
+    value.includes("post") &&
+    (value.includes("comment") || value.includes("kommentar"))
+  )
+    return "Post-Kommentar";
+  if (value.includes("comment") || value.includes("kommentar"))
+    return "Kommentar";
   if (
     value.includes("instagram") ||
     value.includes("whatsapp") ||
@@ -852,7 +883,9 @@ function getInboxKpis(items: InboxQueueItem[]) {
     },
     {
       label: "Wartet",
-      value: String(items.filter((item) => item.statusValue === "waiting").length),
+      value: String(
+        items.filter((item) => item.statusValue === "waiting").length,
+      ),
       meta: "auf Fan-Antwort",
     },
     {

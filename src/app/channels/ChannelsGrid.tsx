@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PlatformLogo } from "@/components/PlatformLogo";
 import styles from "./channels.module.css";
 import {
   FACEBOOK_COMMENT_FEED_SCOPES,
@@ -119,14 +120,10 @@ type Channel = {
   status: ChannelStatus;
   technology: string;
   intakeTypes: string;
-  logo?: string;
-  logoInitials?: string;
   signal?: boolean;
   childSources?: PreparedSourceType[];
   connectionCardCount?: 1 | 2;
 };
-
-const logoPath = (name: string) => `/channel-logos/${name}.svg`;
 
 const channels: Channel[] = [
   {
@@ -137,7 +134,6 @@ const channels: Channel[] = [
     technology: "Hauptweg: Account/Inbox · Zusatzweg: Bot",
     intakeTypes: "Telegram Account / Inbox",
     signal: true,
-    logo: logoPath("telegram"),
     childSources: ["telegram_messages"],
   },
   {
@@ -147,7 +143,6 @@ const channels: Channel[] = [
     status: "Nicht verbunden",
     technology: "Page / Inbox als Hauptweg · Kommentare als Zusatzweg",
     intakeTypes: "Facebook Page / Inbox",
-    logo: logoPath("facebook"),
     signal: true,
     childSources: ["facebook_messages", "facebook_comments"],
   },
@@ -158,7 +153,6 @@ const channels: Channel[] = [
     status: "Geplant",
     technology: "Account / Inbox als Hauptweg · Kommentare als Zusatzweg",
     intakeTypes: "Instagram Account / Inbox",
-    logo: logoPath("instagram"),
     childSources: ["instagram_messages", "instagram_comments"],
   },
   {
@@ -168,7 +162,6 @@ const channels: Channel[] = [
     status: "Geplant",
     technology: "Business Inbox als Hauptweg",
     intakeTypes: "WhatsApp Business Inbox",
-    logo: logoPath("whatsapp"),
     childSources: ["whatsapp_messages"],
   },
   {
@@ -178,7 +171,6 @@ const channels: Channel[] = [
     status: "In Vorbereitung",
     technology: "Account / Inbox als Hauptweg · Kommentare als Zusatzweg",
     intakeTypes: "TikTok Account / Inbox",
-    logo: logoPath("tiktok"),
     childSources: ["tiktok_comments", "tiktok_messages"],
   },
   {
@@ -188,7 +180,6 @@ const channels: Channel[] = [
     status: "Geplant",
     technology: "Account / Inbox als Hauptweg · Page/Kommentare als Zusatzweg",
     intakeTypes: "LinkedIn Account / Inbox",
-    logo: logoPath("linkedin"),
   },
   {
     key: "youtube",
@@ -197,7 +188,6 @@ const channels: Channel[] = [
     status: "Geplant",
     technology: "Kanal/Kommentare als Hauptweg · Live-Chat als Zusatzweg",
     intakeTypes: "YouTube Kanal / Kommentare",
-    logo: logoPath("youtube"),
     connectionCardCount: 2,
   },
   {
@@ -207,7 +197,6 @@ const channels: Channel[] = [
     status: "Geplant",
     technology: "Server / Channel Inbox als Hauptweg",
     intakeTypes: "Discord Server / Channel Inbox",
-    logo: logoPath("discord"),
   },
   {
     key: "bluesky",
@@ -216,7 +205,6 @@ const channels: Channel[] = [
     status: "Geplant",
     technology: "API-Prüfung nötig",
     intakeTypes: "Mentions · Antworten",
-    logoInitials: "BS",
   },
   {
     key: "twitter",
@@ -225,7 +213,6 @@ const channels: Channel[] = [
     status: "Geplant",
     technology: "Account / Inbox als Hauptweg · Mentions als Zusatzweg",
     intakeTypes: "X / Twitter Account / Inbox",
-    logo: logoPath("twitter"),
   },
   {
     key: "email",
@@ -234,7 +221,6 @@ const channels: Channel[] = [
     status: "In Vorbereitung",
     technology: "Inbox als Hauptweg",
     intakeTypes: "E-Mail Inbox",
-    logo: logoPath("email"),
     signal: true,
     childSources: ["email"],
   },
@@ -245,7 +231,6 @@ const channels: Channel[] = [
     status: "In Vorbereitung",
     technology: "Formular als Hauptweg",
     intakeTypes: "Formular-Eingang",
-    logo: logoPath("webform"),
     signal: true,
     childSources: ["webform"],
   },
@@ -256,7 +241,6 @@ const channels: Channel[] = [
     status: "Live",
     technology: "Manuell nutzbar",
     intakeTypes: "Kontakte · Notizen · CSV",
-    logo: logoPath("manual"),
     signal: true,
     childSources: ["manual"],
   },
@@ -648,9 +632,7 @@ export function ChannelsGrid({
               : channel.status;
           const pageName = isFacebook ? facebookConnection?.page_name : null;
           const showComingSoonBadge =
-            isBookable(displayStatus) &&
-            !isTelegram &&
-            !isFacebook;
+            isBookable(displayStatus) && !isTelegram && !isFacebook;
 
           return (
             <article className={styles.channelCard} key={channel.key}>
@@ -661,18 +643,11 @@ export function ChannelsGrid({
               >
                 <div className={styles.cardTopline}>
                   <div className={styles.identityGroup}>
-                    {channel.logo ? (
-                      <img
-                        className={styles.logoTile}
-                        src={channel.logo}
-                        alt=""
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <span className={styles.logoTile} aria-hidden="true">
-                        {channel.logoInitials ?? channel.name.slice(0, 2)}
-                      </span>
-                    )}
+                    <PlatformLogo
+                      className={styles.logoTile}
+                      platform={channel.key}
+                      size="md"
+                    />
                     <div>
                       <h3>{channel.name}</h3>
                       <p>{channel.description}</p>
@@ -743,18 +718,11 @@ export function ChannelsGrid({
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className={styles.modalHeader}>
-              {activeChannel.logo ? (
-                <img
-                  className={styles.modalLogo}
-                  src={activeChannel.logo}
-                  alt=""
-                  aria-hidden="true"
-                />
-              ) : (
-                <span className={styles.modalLogo} aria-hidden="true">
-                  {activeChannel.logoInitials ?? activeChannel.name.slice(0, 2)}
-                </span>
-              )}
+              <PlatformLogo
+                className={styles.modalLogo}
+                platform={activeChannel.key}
+                size="lg"
+              />
               <div>
                 <p className={styles.modalEyebrow}>Kanal verbinden</p>
                 <h2 id="channel-modal-title">
@@ -814,7 +782,9 @@ export function ChannelsGrid({
                       </div>
                       <ul className={styles.connectionCardList}>
                         <li>Status: {connectionCard.status}</li>
-                        <li>Integrationstyp: {connectionCard.integrationType}</li>
+                        <li>
+                          Integrationstyp: {connectionCard.integrationType}
+                        </li>
                         <li>Verbindungstyp: {connectionCard.connectionType}</li>
                         <li>Auto-Senden: deaktiviert</li>
                         {connectionCard.details.map((detail) => (
@@ -825,12 +795,43 @@ export function ChannelsGrid({
                         <div className={styles.releaseBox}>
                           <strong>Nachrichten-Status</strong>
                           <ul className={styles.connectionCardList}>
-                            <li>Page: {facebookConnection?.page_name ?? facebookConnection?.page_id ?? "nicht verbunden"}</li>
-                            <li>Webhook messages: {formatWebhookStatus(displayedWebhookStatus?.fields.messages)}</li>
-                            <li>Webhook message_echoes: {formatWebhookStatus(displayedWebhookStatus?.fields.message_echoes)}</li>
-                            <li>Letzte Nachricht: {lastMessageEvent ? formatDateTime(lastMessageEvent.received_at) : "noch keine Nachricht empfangen"}</li>
-                            <li>Letzter Messenger-Sync: {facebookConnection?.last_messenger_sync_at ? formatDateTime(facebookConnection.last_messenger_sync_at) : "noch nicht ausgeführt"}</li>
-                            <li>OAuth Callback: {facebookLiveSetupStatus.oauthCallbackUrl ?? "nicht vollständig konfiguriert"}</li>
+                            <li>
+                              Page:{" "}
+                              {facebookConnection?.page_name ??
+                                facebookConnection?.page_id ??
+                                "nicht verbunden"}
+                            </li>
+                            <li>
+                              Webhook messages:{" "}
+                              {formatWebhookStatus(
+                                displayedWebhookStatus?.fields.messages,
+                              )}
+                            </li>
+                            <li>
+                              Webhook message_echoes:{" "}
+                              {formatWebhookStatus(
+                                displayedWebhookStatus?.fields.message_echoes,
+                              )}
+                            </li>
+                            <li>
+                              Letzte Nachricht:{" "}
+                              {lastMessageEvent
+                                ? formatDateTime(lastMessageEvent.received_at)
+                                : "noch keine Nachricht empfangen"}
+                            </li>
+                            <li>
+                              Letzter Messenger-Sync:{" "}
+                              {facebookConnection?.last_messenger_sync_at
+                                ? formatDateTime(
+                                    facebookConnection.last_messenger_sync_at,
+                                  )
+                                : "noch nicht ausgeführt"}
+                            </li>
+                            <li>
+                              OAuth Callback:{" "}
+                              {facebookLiveSetupStatus.oauthCallbackUrl ??
+                                "nicht vollständig konfiguriert"}
+                            </li>
                           </ul>
                         </div>
                       ) : null}
@@ -838,11 +839,34 @@ export function ChannelsGrid({
                         <div className={styles.releaseBox}>
                           <strong>Kommentar-Status</strong>
                           <ul className={styles.connectionCardList}>
-                            <li>Letztes Kommentar-Event: {lastFeedCommentEvent ? formatDateTime(lastFeedCommentEvent.received_at) : "noch kein echter Kommentar empfangen"}</li>
-                            <li>Letzter Kommentar-Abruf: {facebookConnection?.last_comment_fetch_at ? formatDateTime(facebookConnection.last_comment_fetch_at) : "geparkt, nicht ausgeführt"}</li>
-                            <li>Kommentar-Scopes angefordert: {commentFeedScopesRequested ? "ja" : "nein"}</li>
-                            <li>Token-Scopes vollständig: {commentFeedScopesGranted ? "ja" : "nein"}</li>
-                            <li>feed/Kommentare: geparkt, nicht automatisch aktiviert</li>
+                            <li>
+                              Letztes Kommentar-Event:{" "}
+                              {lastFeedCommentEvent
+                                ? formatDateTime(
+                                    lastFeedCommentEvent.received_at,
+                                  )
+                                : "noch kein echter Kommentar empfangen"}
+                            </li>
+                            <li>
+                              Letzter Kommentar-Abruf:{" "}
+                              {facebookConnection?.last_comment_fetch_at
+                                ? formatDateTime(
+                                    facebookConnection.last_comment_fetch_at,
+                                  )
+                                : "geparkt, nicht ausgeführt"}
+                            </li>
+                            <li>
+                              Kommentar-Scopes angefordert:{" "}
+                              {commentFeedScopesRequested ? "ja" : "nein"}
+                            </li>
+                            <li>
+                              Token-Scopes vollständig:{" "}
+                              {commentFeedScopesGranted ? "ja" : "nein"}
+                            </li>
+                            <li>
+                              feed/Kommentare: geparkt, nicht automatisch
+                              aktiviert
+                            </li>
                           </ul>
                         </div>
                       ) : null}
@@ -926,9 +950,8 @@ export function ChannelsGrid({
                       <p>
                         Verbinde dein eigenes Telegram-Konto, damit FanMind
                         deine Telegram-Chats/Kontakte als Arbeits-Eingang
-                        verwalten kann. Du entscheidest, welche Chats
-                        importiert werden. Antworten werden nie automatisch
-                        gesendet.
+                        verwalten kann. Du entscheidest, welche Chats importiert
+                        werden. Antworten werden nie automatisch gesendet.
                       </p>
                     </div>
                     <div
@@ -957,9 +980,14 @@ export function ChannelsGrid({
                     >
                       <strong>Datenschutz & Kontrolle</strong>
                       <ul className={styles.compactStatusList}>
-                        <li>Du entscheidest, welche Chats importiert werden.</li>
+                        <li>
+                          Du entscheidest, welche Chats importiert werden.
+                        </li>
                         <li>Keine automatische Antwort.</li>
-                        <li>Jeder Workspace sieht nur seine eigenen Telegram-Daten.</li>
+                        <li>
+                          Jeder Workspace sieht nur seine eigenen
+                          Telegram-Daten.
+                        </li>
                         <li>Trennung pro Nutzer/Workspace.</li>
                         <li>Disconnect jederzeit möglich.</li>
                         <li>Kein Zugriff auf fremde Workspaces.</li>
@@ -1012,13 +1040,10 @@ export function ChannelsGrid({
                       <p className={styles.modalEyebrow}>Optionaler Zusatz</p>
                       <h3>FanMind Bot</h3>
                       <p>
-                        Optionaler Bot-Eingang für Nachrichten, die direkt an
-                        {" "}
-                        {TELEGRAM_BOT_USERNAME}
-                        {" "}
-                        gesendet werden. Geeignet für Tests, Support oder
-                        einfache Bot-Kommunikation. Das ist nicht deine
-                        persönliche Telegram-Inbox.
+                        Optionaler Bot-Eingang für Nachrichten, die direkt an{" "}
+                        {TELEGRAM_BOT_USERNAME} gesendet werden. Geeignet für
+                        Tests, Support oder einfache Bot-Kommunikation. Das ist
+                        nicht deine persönliche Telegram-Inbox.
                       </p>
                     </div>
                     <div
@@ -1049,9 +1074,10 @@ export function ChannelsGrid({
                         </p>
                       ) : null}
                       <p className={styles.modalNotice}>
-                        Eingehende Nachrichten an den FanMind Bot landen nur
-                        im explizit serverseitig konfigurierten Test-Workspace.
-                        Ohne eindeutige Workspace-Zuordnung wird nichts angelegt.
+                        Eingehende Nachrichten an den FanMind Bot landen nur im
+                        explizit serverseitig konfigurierten Test-Workspace.
+                        Ohne eindeutige Workspace-Zuordnung wird nichts
+                        angelegt.
                       </p>
                     </div>
                     <div
@@ -1118,12 +1144,15 @@ export function ChannelsGrid({
                           </span>
                         </li>
                         <li>
-                          Pending Updates: {" "}
+                          Pending Updates:{" "}
                           {telegramSetupStatus.pendingUpdateCount ??
                             "nicht geprüft"}
                         </li>
                         <li>Eingang: Bot-Textnachrichten</li>
-                        <li>Workspace-Zuordnung: explizit konfigurierte Testbindung</li>
+                        <li>
+                          Workspace-Zuordnung: explizit konfigurierte
+                          Testbindung
+                        </li>
                       </ul>
                     </div>
                     <div
@@ -1183,7 +1212,9 @@ export function ChannelsGrid({
                 </div>
               ) : null}
 
-              {activeSyncStatus && activeConnectionCards.length === 0 && activeChannel.key !== "telegram" ? (
+              {activeSyncStatus &&
+              activeConnectionCards.length === 0 &&
+              activeChannel.key !== "telegram" ? (
                 <div
                   className={styles.releaseBox}
                   aria-label={`Statusblock für ${activeChannel.name}`}
@@ -1210,7 +1241,9 @@ export function ChannelsGrid({
                   </ul>
                 </div>
               ) : null}
-              {activeChannel.key === "facebook" && activeConnectionCards.length === 0 && !facebookConnection ? (
+              {activeChannel.key === "facebook" &&
+              activeConnectionCards.length === 0 &&
+              !facebookConnection ? (
                 <p
                   className={styles.modalNotice}
                   role={missingFacebookSetupItems.length ? "alert" : "status"}
@@ -1233,7 +1266,9 @@ export function ChannelsGrid({
                   Webhook bereit: <strong>nicht bestätigt</strong>
                 </p>
               ) : null}
-              {activeChannel.key === "facebook" && activeConnectionCards.length === 0 && facebookConnection ? (
+              {activeChannel.key === "facebook" &&
+              activeConnectionCards.length === 0 &&
+              facebookConnection ? (
                 <>
                   <p className={styles.modalNotice}>
                     OAuth verbunden · Page:{" "}
@@ -1615,7 +1650,9 @@ export function ChannelsGrid({
                   {metaWebhookError}
                 </p>
               ) : null}
-              {activeChannel.key === "facebook" && activeConnectionCards.length === 0 && facebookConnection ? (
+              {activeChannel.key === "facebook" &&
+              activeConnectionCards.length === 0 &&
+              facebookConnection ? (
                 <div
                   className={styles.releaseBox}
                   aria-label="Meta Webhook Diagnose"
@@ -1754,16 +1791,16 @@ export function ChannelsGrid({
               ) : null}
               {activeConnectionCards.length === 0 ? (
                 <div
-                className={styles.releaseBox}
-                aria-label={`Nachrichtenfreigabe für ${activeChannel.name}`}
-              >
-                <strong>Nachrichtenfreigabe</strong>
-                <ul>
-                  <li>Eingänge in Arbeits-Eingang übernehmen</li>
-                  <li>{activeChannel.intakeTypes} je nach Kanal</li>
-                  <li>Manuelle Prüfung vor Antwort</li>
-                  <li>Automatisches Senden deaktiviert</li>
-                </ul>
+                  className={styles.releaseBox}
+                  aria-label={`Nachrichtenfreigabe für ${activeChannel.name}`}
+                >
+                  <strong>Nachrichtenfreigabe</strong>
+                  <ul>
+                    <li>Eingänge in Arbeits-Eingang übernehmen</li>
+                    <li>{activeChannel.intakeTypes} je nach Kanal</li>
+                    <li>Manuelle Prüfung vor Antwort</li>
+                    <li>Automatisches Senden deaktiviert</li>
+                  </ul>
                 </div>
               ) : null}
               {notice ? (

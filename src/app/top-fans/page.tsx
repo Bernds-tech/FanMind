@@ -7,6 +7,7 @@ import {
   type ContactRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
@@ -92,7 +93,12 @@ function TopFansList({ contacts }: { contacts: ContactRow[] }) {
                 </strong>
                 {contact.handle ? <span> · {contact.handle}</span> : null}
               </td>
-              <td>{formatSource(contact.source_platform)}</td>
+              <td>
+                <span className={dashboardStyles.sourceChip}>
+                  <PlatformLogo platform={contact.source_platform} size="sm" />
+                  {formatSource(contact.source_platform)}
+                </span>
+              </td>
               <td>{contact.status ?? "Neu"}</td>
               <td>
                 {contact.tags?.length ? (

@@ -46,7 +46,10 @@
   flex-direction: column;
   width: 236px;
   max-width: 236px;
-  transition: width 180ms ease, max-width 180ms ease, padding 180ms ease;
+  transition:
+    width 180ms ease,
+    max-width 180ms ease,
+    padding 180ms ease;
   height: 100vh;
   border-right: 1px solid rgba(148, 163, 184, 0.14);
   padding: 16px 14px;
@@ -627,7 +630,6 @@
   opacity: 0.62;
 }
 
-
 .primaryButton,
 .inlineButton {
   color: #06111f;
@@ -866,7 +868,9 @@
   opacity: 0;
   pointer-events: none;
   transform: translateY(-4px);
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 .kpiInfo:hover .kpiInfoTooltip,
@@ -888,7 +892,6 @@
     display: none;
   }
 }
-
 
 .kpiSparkline {
   grid-column: 1 / -1;
@@ -1941,7 +1944,6 @@
   text-underline-offset: 3px;
 }
 
-
 .newMessageList {
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -2088,7 +2090,6 @@
   background: rgba(8, 47, 73, 0.3);
 }
 
-
 @media (max-width: 720px) {
   .newMessageRow {
     grid-template-columns: minmax(0, 1fr);
@@ -2126,16 +2127,38 @@
 }
 
 @media (max-width: 1180px) {
-  .topbar { align-items: flex-start; flex-wrap: wrap; }
-  .topbarActions { justify-content: flex-start; flex-basis: 100%; }
-  .kpiGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .topbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .topbarActions {
+    justify-content: flex-start;
+    flex-basis: 100%;
+  }
+  .kpiGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 860px) {
-  .dashboardShell, .dashboardShellCollapsed { grid-template-columns: 1fr; }
-  .sidebar, .sidebarCollapsed { position: static; width: auto; max-width: none; height: auto; }
-  .dashboardContent { grid-column: 1; padding-inline: 10px; }
-  .kpiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboardShell,
+  .dashboardShellCollapsed {
+    grid-template-columns: 1fr;
+  }
+  .sidebar,
+  .sidebarCollapsed {
+    position: static;
+    width: auto;
+    max-width: none;
+    height: auto;
+  }
+  .dashboardContent {
+    grid-column: 1;
+    padding-inline: 10px;
+  }
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   .compactNavList {
     grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
@@ -2152,4 +2175,11 @@
     justify-content: center;
     justify-items: stretch;
   }
+}
+
+.sourceChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
