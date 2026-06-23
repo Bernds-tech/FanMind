@@ -154,6 +154,7 @@ const functionCards = [
     cta: "Alle Follow-ups",
     href: "#follow-ups",
     tone: "cyan",
+    showComingSoonMark: true,
   },
   {
     icon: "📣",
@@ -1401,21 +1402,27 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         </section>
 
         <section id="features" className={styles.heroFeatureGrid}>
-          {localizedFeatures.map((feature) => (
-            <article
-              className={`${styles.heroFeatureCard} ${isComingSoonStatus(feature.status) ? styles.cardWithComingSoon : ""}`}
-              key={feature.title}
-              data-tone={feature.tone}
-            >
-              <div>{feature.icon}</div>
-              <h3>{feature.title}</h3>
-              {statusVariantFromLabel(feature.status) ? (
-                <FeatureStatusLabel variant={statusVariantFromLabel(feature.status)!}>{feature.status}</FeatureStatusLabel>
-              ) : null}
-              <p>{feature.text}</p>
-              {isComingSoonStatus(feature.status) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
-            </article>
-          ))}
+          {localizedFeatures.map((feature) => {
+            const showComingSoonMark =
+              isComingSoonStatus(feature.status) ||
+              ("showComingSoonMark" in feature && feature.showComingSoonMark);
+
+            return (
+              <article
+                className={`${styles.heroFeatureCard} ${showComingSoonMark ? styles.cardWithComingSoon : ""}`}
+                key={feature.title}
+                data-tone={feature.tone}
+              >
+                <div>{feature.icon}</div>
+                <h3>{feature.title}</h3>
+                {statusVariantFromLabel(feature.status) ? (
+                  <FeatureStatusLabel variant={statusVariantFromLabel(feature.status)!}>{feature.status}</FeatureStatusLabel>
+                ) : null}
+                <p>{feature.text}</p>
+                {showComingSoonMark ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
+              </article>
+            );
+          })}
         </section>
 
         <section id="early-access" className={styles.heroBottomCta}>
