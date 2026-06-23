@@ -14,7 +14,7 @@ import styles from "./landing-v2.module.css";
 export const metadata: Metadata = {
   title: "FanMind | KI-CRM für Creator, Clubs und Events",
   description:
-    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Follow-ups und verpflichtende Social-Media-Synchronisation für smarte Fan-Beziehungen; unfertige Plattformen bleiben klar als Coming Soon oder In Arbeit markiert.",
+    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Follow-ups und verpflichtende Social-Media-Synchronisation für smarte Fan-Beziehungen; unfertige Plattformen bleiben klar als Coming Soon markiert.",
 };
 
 const LANDING_ROADMAP_HREF = "/landing-v2#roadmap";
@@ -28,7 +28,7 @@ function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | un
   return undefined;
 }
 
-const inProgressIntegrationLabels = new Set(["Discord", "WhatsApp", "TikTok", "Instagram", "X", "Facebook"]);
+const comingSoonIntegrationPlatforms = new Set(["email", "discord", "whatsapp", "tiktok", "instagram", "x", "facebook"]);
 
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase", caret: true },
@@ -276,12 +276,13 @@ const sixStepCards = [
     rows: [
       "Nächster Schritt: VIP-Infos + Friend-Ticket",
       "Manuelle Erinnerung: Heute, 10:00",
-      "Kanäle notieren: E-Mail aktiv, weitere Kanäle Roadmap",
+      "Kanäle notieren: E-Mail-Kontext vorbereiten, weitere Kanäle Roadmap",
       "Priorität: Hoch",
       "Owner: Nina D.",
     ],
     cta: "Alle Follow-ups anzeigen",
     href: "#follow-ups",
+    showComingSoonMark: true,
   },
   {
     step: "5",
@@ -290,12 +291,12 @@ const sixStepCards = [
     cardTitle: "Sommer-Event Early Bird",
     icon: "📣",
     tone: "green",
-    badge: "Geplant",
+    showComingSoonMark: true,
     rows: [
       "Zielgruppe: 1.260",
       "Roadmap: Segment- und Kampagnenplanung",
       "Versand: inaktiv / manuell abgegrenzt",
-      "Kanäle: E-Mail-Kontext aktuell, weitere Kanäle Roadmap",
+      "Kanäle: E-Mail-Kontext vorbereitet, weitere Kanäle Roadmap",
       "Status: Vorschau geprüft",
     ],
     cta: "Roadmap ansehen",
@@ -316,6 +317,7 @@ const sixStepCards = [
     ],
     cta: "Roadmap öffnen",
     href: LANDING_ROADMAP_HREF,
+    showComingSoonMark: true,
   },
 ];
 
@@ -352,31 +354,31 @@ const integrationChannels = [
     icon: "✉",
     platform: "email",
     title: "E-Mail",
-    text: "Anfragen automatisch synchronisieren und zentral bündeln.",
-    status: "Bereit",
+    text: "E-Mail-Anfragen zentral bündeln und die Synchronisation transparent vorbereiten.",
+    status: "Coming Soon",
     tone: "blue",
   },
   {
     icon: "☏",
     platform: "whatsapp",
     title: "WhatsApp",
-    text: "Kontakte, Handles und Chat-Kontext automatisch synchronisieren, soweit verfügbar.",
-    status: "In Arbeit",
+    text: "Kontakte, Handles und Chat-Kontext für die spätere Synchronisation vorbereiten.",
+    status: "Coming Soon",
     tone: "green",
   },
   {
     icon: "◖",
     platform: "discord",
     title: "Discord",
-    text: "Server-, Profil- und Interaktionskontext automatisch abgleichen, soweit verfügbar.",
-    status: "In Arbeit",
+    text: "Server-, Profil- und Interaktionskontext für den späteren Abgleich vorbereiten.",
+    status: "Coming Soon",
     tone: "violet",
   },
   {
     icon: "f",
     platform: "facebook",
     title: "Facebook",
-    text: "Profil- und Seitenkontakte automatisch synchronisieren, soweit verfügbar.",
+    text: "Profil- und Seitenkontakte für die spätere Synchronisation vorbereiten.",
     status: "Coming Soon",
     tone: "blue",
   },
@@ -384,7 +386,7 @@ const integrationChannels = [
     icon: "𝕏",
     platform: "x",
     title: "X",
-    text: "Handles, Profile und Aktivität automatisch abgleichen, soweit verfügbar.",
+    text: "Handles, Profile und Aktivität für den späteren Abgleich vorbereiten.",
     status: "Coming Soon",
     tone: "white",
   },
@@ -392,16 +394,16 @@ const integrationChannels = [
     icon: "♪",
     platform: "tiktok",
     title: "TikTok",
-    text: "Kommentare, Handles und Aktivitätsstände automatisch synchronisieren, soweit verfügbar.",
-    status: "In Arbeit",
+    text: "Kommentare, Handles und Aktivitätsstände für die spätere Synchronisation vorbereiten.",
+    status: "Coming Soon",
     tone: "purple",
   },
   {
     icon: "◎",
     platform: "instagram",
     title: "Instagram",
-    text: "DM-Kontext, Profile und relevante Aktivität automatisch synchronisieren, soweit verfügbar.",
-    status: "In Arbeit",
+    text: "DM-Kontext, Profile und relevante Aktivität für die spätere Synchronisation vorbereiten.",
+    status: "Coming Soon",
     tone: "pink",
   },
   {
@@ -1561,7 +1563,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.processTrack} aria-label="FanMind Prozesslinie">
           {localizedSixStepCards.map((step, index) => (
             <article
-              className={`${styles.processStep} ${isComingSoonStatus(step.badge) ? styles.cardWithComingSoon : ""}`}
+              className={`${styles.processStep} ${step.showComingSoonMark || isComingSoonStatus(step.badge) ? styles.cardWithComingSoon : ""}`}
               data-tone={step.tone}
               key={step.title}
             >
@@ -1576,7 +1578,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <div className={styles.stepCardTitle}>
                   <span>{step.icon}</span>
                   <strong>{step.cardTitle}</strong>
-                  {step.badge && (
+                  {step.badge && !step.showComingSoonMark && (
                     <FeatureStatusLabel variant={statusVariantFromLabel(step.badge) ?? "preview"}>{step.badge}</FeatureStatusLabel>
                   )}
                 </div>
@@ -1598,7 +1600,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <span>→</span>
                 </a>
               </div>
-              {isComingSoonStatus(step.badge) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
+              {step.showComingSoonMark || isComingSoonStatus(step.badge) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
             </article>
           ))}
         </div>
@@ -1870,7 +1872,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <h2 id="integrations-title">
             {t("Verbinde deine wichtigsten")} <span>{t("Kanäle.")}</span>
           </h2>
-          <p>{t("FanMind macht kontrollierte Multi-Channel-Arbeit mit angebundenem Facebook Messenger: Kontakte, Handles, Plattformen, Profil-/Kanalinformationen, Nachrichten-/Interaktionskontext und relevante Aktivitätsstände werden automatisch synchronisiert, soweit die jeweilige Plattform es technisch und rechtlich zulässt. Unfertige Plattformen bleiben klar markiert.")}</p>
+          <p>{t("FanMind macht kontrollierte Multi-Channel-Arbeit transparent: angebundene Kanäle bleiben nutzbar, geplante Kanäle werden vorbereitet und erst nach technischer sowie rechtlicher Prüfung als aktiv gekennzeichnet. Unfertige Plattformen bleiben klar markiert.")}</p>
         </div>
 
         <div className={styles.integrationChannelGrid}>
@@ -1898,12 +1900,12 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <div>
               {localizedIntegrationSources.map((source) => (
                 <span
-                  className={inProgressIntegrationLabels.has(source.label) ? styles.cardWithComingSoon : undefined}
+                  className={comingSoonIntegrationPlatforms.has(source.platform) ? styles.cardWithComingSoon : undefined}
                   key={source.label}
                 >
                   <PlatformLogo platform={source.platform} size="sm" />
                   {source.label}
-                  {inProgressIntegrationLabels.has(source.label) ? <span className={styles.sourceStatusBadge}>{t("In Arbeit")}</span> : null}
+                  {comingSoonIntegrationPlatforms.has(source.platform) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
                   <em aria-hidden="true" />
                 </span>
               ))}
