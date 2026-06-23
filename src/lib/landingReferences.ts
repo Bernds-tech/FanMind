@@ -29,9 +29,9 @@ export type Reference = {
 export const references: Reference[] = [
   {
     label: "Erste Pilotmarke",
-    name: "WellFit",
-    logoSrc: "/assets/wellfit-logo.svg",
-    logoAlt: "WellFit Logo",
+    name: "WellFit Wellness",
+    logoSrc: "/brands/Logo.png",
+    logoAlt: "WellFit Wellness Logo",
     visible: true,
   },
 ];
