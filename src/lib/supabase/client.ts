@@ -71,12 +71,13 @@ async function parseSupabaseError(response: Response): Promise<Error> {
 
 export async function syncSupabaseSessionForServer(session: SupabaseAuthSession | null): Promise<void> {
   if (!session?.access_token) {
-    return;
+    throw new Error("Login fehlgeschlagen: Die Supabase-Sitzung enthält keinen Access Token.");
   }
 
-  await fetch("/api/auth/session", {
+  const response = await fetch("/api/auth/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify({
       accessToken: session.access_token,
       refreshToken: session.refresh_token,
@@ -84,6 +85,11 @@ export async function syncSupabaseSessionForServer(session: SupabaseAuthSession 
       expiresAt: session.expires_at,
     }),
   });
+
+  if (!response.ok) {
+    const responseText = await response.text().catch(() => "");
+    throw new Error(`Login fehlgeschlagen: Server-Sitzung konnte nicht gesetzt werden (${response.status}${responseText ? `: ${responseText}` : ""}).`);
+  }
 }
 
 function normalizeAuthPayload(payload: SupabaseAuthPayload): SupabaseAuthResponse {

@@ -377,6 +377,17 @@
   color: #8f8b9c;
 }
 
+.inputWrap input:-webkit-autofill,
+.inputWrap input:-webkit-autofill:hover,
+.inputWrap input:-webkit-autofill:focus {
+  border: 0;
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  box-shadow: 0 0 0 1000px #02091a inset;
+  -webkit-box-shadow: 0 0 0 1000px #02091a inset;
+  transition: background-color 9999s ease-out, color 9999s ease-out;
+}
+
 .inlineOptions {
   display: flex;
   justify-content: space-between;

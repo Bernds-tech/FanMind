@@ -55,21 +55,29 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+
+    if (password !== password.trim()) {
+      setError(language === "en" ? "Please remove spaces at the beginning or end of your password." : "Bitte entferne Leerzeichen am Anfang oder Ende deines Passworts.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const supabase = createSupabaseBrowserClient();
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (!authError) {
-        await syncSupabaseSessionForServer(data.session);
-      }
 
       if (authError) {
         setError(authError.message);
         return;
       }
 
-      router.push(LOGIN_TARGET);
-      router.refresh();
+      if (!data.session?.access_token) {
+        setError(language === "en" ? "Login failed: no valid session was returned. Please try again." : "Login fehlgeschlagen: Es wurde keine gültige Sitzung zurückgegeben. Bitte versuche es erneut.");
+        return;
+      }
+
+      await syncSupabaseSessionForServer(data.session);
+      window.location.assign(LOGIN_TARGET);
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : "Unbekannter Supabase-Fehler.");
     } finally {
@@ -142,7 +150,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.email}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">✉</span>
-                <input type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} autoComplete="email" required />
+                <input type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} autoComplete="username" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
               </div>
             </label>
 
