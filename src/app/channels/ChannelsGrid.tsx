@@ -27,17 +27,23 @@ import {
 } from "./facebookWebhookActions";
 
 type ChannelStatus =
-  | "Verbunden"
-  | "Teilweise verbunden"
-  | "Verfügbar"
-  | "In Arbeit"
-  | "Vorschau"
-  | "Vorbereitet"
-  | "Noch nicht live"
-  | "Coming Soon"
   | "Live"
-  | "Konfiguriert"
-  | "Geplant";
+  | "In Vorbereitung"
+  | "Geplant"
+  | "Coming Soon"
+  | "Optional"
+  | "Nicht verbunden"
+  | "Verbunden";
+
+type IntegrationType =
+  | "account_inbox"
+  | "page_inbox"
+  | "comments"
+  | "bot"
+  | "form"
+  | "email_inbox"
+  | "business_inbox"
+  | "community_inbox";
 
 type FacebookConnection = {
   page_name: string | null;
@@ -126,10 +132,10 @@ const channels: Channel[] = [
   {
     key: "telegram",
     name: "Telegram",
-    description: "Bot-Eingang aktiv · Auto-Senden deaktiviert",
-    status: "Live",
-    technology: "Eingang aktiv · Auto-Senden aus",
-    intakeTypes: "Textnachrichten · Bot @FanMindBot",
+    description: "Eigenes Telegram-Konto verbinden · Bot nur optional",
+    status: "In Vorbereitung",
+    technology: "Hauptweg: Account/Inbox · Zusatzweg: Bot",
+    intakeTypes: "Telegram Account / Inbox",
     signal: true,
     logo: logoPath("telegram"),
     childSources: ["telegram_messages"],
@@ -137,10 +143,10 @@ const channels: Channel[] = [
   {
     key: "facebook",
     name: "Facebook",
-    description: "DM: nicht verbunden · Kommentare: nicht verbunden",
-    status: "In Arbeit",
-    technology: "DM vorbereitet · Kommentare vorbereitet",
-    intakeTypes: "Direct Messages · Kommentare",
+    description: "Eigene Facebook Page/Inbox verbinden",
+    status: "Nicht verbunden",
+    technology: "Page / Inbox als Hauptweg · Kommentare als Zusatzweg",
+    intakeTypes: "Facebook Page / Inbox",
     logo: logoPath("facebook"),
     signal: true,
     childSources: ["facebook_messages", "facebook_comments"],
@@ -148,59 +154,59 @@ const channels: Channel[] = [
   {
     key: "instagram",
     name: "Instagram",
-    description: "DM geplant · Kommentare geplant",
+    description: "Eigenes Instagram Account / Inbox verbinden",
     status: "Geplant",
-    technology: "DM geplant · Kommentare geplant",
-    intakeTypes: "DM · Kommentare",
+    technology: "Account / Inbox als Hauptweg · Kommentare als Zusatzweg",
+    intakeTypes: "Instagram Account / Inbox",
     logo: logoPath("instagram"),
     childSources: ["instagram_messages", "instagram_comments"],
   },
   {
     key: "whatsapp",
     name: "WhatsApp",
-    description: "Cloud API geplant",
+    description: "Eigene WhatsApp Business Inbox verbinden",
     status: "Geplant",
-    technology: "Cloud API geplant",
-    intakeTypes: "Nachrichten",
+    technology: "Business Inbox als Hauptweg",
+    intakeTypes: "WhatsApp Business Inbox",
     logo: logoPath("whatsapp"),
     childSources: ["whatsapp_messages"],
   },
   {
     key: "tiktok",
     name: "TikTok",
-    description: "Kommentare geplant · DMs vorbereitet",
-    status: "Vorbereitet",
-    technology: "Offizielle Freigabe nötig",
-    intakeTypes: "Kommentare · Nachrichten",
+    description: "Eigenes TikTok Account / Inbox verbinden",
+    status: "In Vorbereitung",
+    technology: "Account / Inbox als Hauptweg · Kommentare als Zusatzweg",
+    intakeTypes: "TikTok Account / Inbox",
     logo: logoPath("tiktok"),
     childSources: ["tiktok_comments", "tiktok_messages"],
   },
   {
     key: "linkedin",
     name: "LinkedIn",
-    description: "API-Prüfung nötig",
+    description: "Eigenes LinkedIn Account / Inbox verbinden",
     status: "Geplant",
-    technology: "API-Prüfung nötig",
-    intakeTypes: "Nachrichten · Leads",
+    technology: "Account / Inbox als Hauptweg · Page/Kommentare als Zusatzweg",
+    intakeTypes: "LinkedIn Account / Inbox",
     logo: logoPath("linkedin"),
   },
   {
     key: "youtube",
     name: "YouTube",
-    description: "Kommentare · Live-Chat geplant",
+    description: "Eigenen YouTube Kanal / Kommentare verbinden",
     status: "Geplant",
-    technology: "Kommentare geplant",
-    intakeTypes: "Kommentare · Live-Chat",
+    technology: "Kanal/Kommentare als Hauptweg · Live-Chat als Zusatzweg",
+    intakeTypes: "YouTube Kanal / Kommentare",
     logo: logoPath("youtube"),
     connectionCardCount: 2,
   },
   {
     key: "discord",
     name: "Discord",
-    description: "Community-Eingang geplant",
+    description: "Eigenen Discord Server/Channel verbinden",
     status: "Geplant",
-    technology: "Bot/API geplant",
-    intakeTypes: "DMs · Server",
+    technology: "Server / Channel Inbox als Hauptweg",
+    intakeTypes: "Discord Server / Channel Inbox",
     logo: logoPath("discord"),
   },
   {
@@ -215,19 +221,19 @@ const channels: Channel[] = [
   {
     key: "twitter",
     name: "X / Twitter",
-    description: "DMs/Mentions geplant",
+    description: "Eigenes X/Twitter Account / Inbox verbinden",
     status: "Geplant",
-    technology: "API-Prüfung nötig",
-    intakeTypes: "Mentions · DMs",
+    technology: "Account / Inbox als Hauptweg · Mentions als Zusatzweg",
+    intakeTypes: "X / Twitter Account / Inbox",
     logo: logoPath("twitter"),
   },
   {
     key: "email",
     name: "E-Mail",
-    description: "Postfach-Anbindung vorbereitet",
-    status: "Vorbereitet",
-    technology: "Postfach vorbereitet",
-    intakeTypes: "E-Mails",
+    description: "Eigene E-Mail Inbox verbinden",
+    status: "In Vorbereitung",
+    technology: "Inbox als Hauptweg",
+    intakeTypes: "E-Mail Inbox",
     logo: logoPath("email"),
     signal: true,
     childSources: ["email"],
@@ -235,10 +241,10 @@ const channels: Channel[] = [
   {
     key: "webform",
     name: "Webformular",
-    description: "Website-Leads vorbereitet",
-    status: "Vorbereitet",
-    technology: "Formular vorbereitet",
-    intakeTypes: "Leads · Anfragen",
+    description: "Eigenen Formular-Eingang verbinden",
+    status: "In Vorbereitung",
+    technology: "Formular als Hauptweg",
+    intakeTypes: "Formular-Eingang",
     logo: logoPath("webform"),
     signal: true,
     childSources: ["webform"],
@@ -247,7 +253,7 @@ const channels: Channel[] = [
     key: "manual",
     name: "Manuell / CSV",
     description: "Manuelle Erfassung und CSV-Import",
-    status: "Verfügbar",
+    status: "Live",
     technology: "Manuell nutzbar",
     intakeTypes: "Kontakte · Notizen · CSV",
     logo: logoPath("manual"),
@@ -257,29 +263,20 @@ const channels: Channel[] = [
 ];
 
 const statusClassName: Record<ChannelStatus, string> = {
-  Verbunden: styles.statusConnected,
-  "Teilweise verbunden": styles.statusProgress,
-  Verfügbar: styles.statusAvailable,
-  "In Arbeit": styles.statusProgress,
-  Vorschau: styles.statusPreview,
-  Vorbereitet: styles.statusProgress,
-  "Noch nicht live": styles.statusPreview,
-  "Coming Soon": styles.statusPreview,
   Live: styles.statusConnected,
-  Konfiguriert: styles.statusProgress,
+  "In Vorbereitung": styles.statusProgress,
   Geplant: styles.statusPreview,
+  "Coming Soon": styles.statusPreview,
+  Optional: styles.statusPreview,
+  "Nicht verbunden": styles.statusAvailable,
+  Verbunden: styles.statusConnected,
 };
 
 function isBookable(status: ChannelStatus) {
   return (
     status === "Coming Soon" ||
-    status === "Teilweise verbunden" ||
-    status === "In Arbeit" ||
-    status === "Vorschau" ||
-    status === "Vorbereitet" ||
-    status === "Noch nicht live" ||
-    status === "Geplant" ||
-    status === "Konfiguriert"
+    status === "In Vorbereitung" ||
+    status === "Geplant"
   );
 }
 
@@ -583,7 +580,6 @@ export function ChannelsGrid({
     displayedWebhookStatus?.fields.messages === "active";
   const messageEchoesReady =
     displayedWebhookStatus?.fields.message_echoes === "active";
-  const facebookCommentsReady = false;
   const activeSourceConfig = activeChannel
     ? CHANNEL_SOURCE_CONFIGS[
         (activeChannel.key === "facebook"
@@ -624,16 +620,11 @@ export function ChannelsGrid({
   const activeDisplayStatus =
     activeChannel?.key === "telegram"
       ? telegramLive
-        ? "Live"
-        : "Konfiguriert"
+        ? "Optional"
+        : "In Vorbereitung"
       : activeChannel?.key === "facebook" && facebookConnection
-        ? "Teilweise verbunden"
-        : activeChannel?.key === "facebook_comments" && facebookCommentsReady
-          ? "Verbunden"
-          : activeChannel?.key === "facebook_comments" &&
-              facebookConnection?.last_comment_fetch_error
-            ? "In Arbeit"
-            : activeChannel?.status;
+        ? "Verbunden"
+        : activeChannel?.status;
   const activeConnectionCards = activeChannel
     ? buildConnectionCards({
         channel: activeChannel,
@@ -649,26 +640,19 @@ export function ChannelsGrid({
         {channels.map((channel) => {
           const isFacebook = channel.key === "facebook";
           const isFacebookMessages = isFacebook;
-          const isFacebookComments = false;
           const isTelegram = channel.key === "telegram";
-          const commentsReady = facebookCommentsReady;
           const displayStatus = isTelegram
             ? telegramLive
-              ? "Live"
-              : "Konfiguriert"
+              ? "Optional"
+              : "In Vorbereitung"
             : isFacebook && facebookConnection
-              ? "Teilweise verbunden"
-              : isFacebookComments && commentsReady
-                ? "Verbunden"
-                : isFacebookComments &&
-                    facebookConnection?.last_comment_fetch_error
-                  ? "In Arbeit"
-                  : channel.status;
+              ? "Verbunden"
+              : channel.status;
           const pageName = isFacebook ? facebookConnection?.page_name : null;
           const showComingSoonBadge =
             isBookable(displayStatus) &&
             !isTelegram &&
-            !(isFacebookComments && commentsReady);
+            !isFacebook;
 
           return (
             <article className={styles.channelCard} key={channel.key}>
@@ -730,12 +714,6 @@ export function ChannelsGrid({
                       : "noch keines empfangen"}
                   </span>
                 ) : null}
-                {isFacebookComments && facebookConnection && !commentsReady ? (
-                  <span className={styles.connectionHint}>
-                    Kommentare vorbereitet, Live-Test später. Nachrichten können
-                    trotzdem separat verbunden werden.
-                  </span>
-                ) : null}
                 <span className={styles.cardSpacer} />
                 <span className={styles.cardActions}>
                   <span className={styles.primaryCardAction}>Details</span>
@@ -783,7 +761,7 @@ export function ChannelsGrid({
                 <p className={styles.modalEyebrow}>Kanal verbinden</p>
                 <h2 id="channel-modal-title">
                   {activeChannel.key === "telegram"
-                    ? "Telegram Live-Eingang"
+                    ? "Telegram verbinden"
                     : activeChannel.name}
                 </h2>
                 <div className={styles.metaRow}>
@@ -795,7 +773,7 @@ export function ChannelsGrid({
                     />
                   ) : (
                     <span
-                      className={`${styles.statusBadge} ${statusClassName[activeDisplayStatus ?? "Verfügbar"]}`}
+                      className={`${styles.statusBadge} ${statusClassName[activeDisplayStatus ?? "Live"]}`}
                     >
                       {activeDisplayStatus}
                     </span>
@@ -809,12 +787,12 @@ export function ChannelsGrid({
             <div className={styles.modalBody}>
               <p className={styles.modalText}>
                 {activeChannel.key === "telegram"
-                  ? "Telegram ist als erster Live-Eingangskanal verbunden. Eingehende Bot-Nachrichten landen in FanMind. FanMind sendet keine automatischen Antworten."
+                  ? "Telegram hat zwei getrennte Wege: Telegram Account / Inbox als Hauptintegration in Vorbereitung und FanMind Bot als optionaler Live-Eingang. Der Bot ist nicht deine persönliche Telegram-Inbox."
                   : activeChannel.key === "facebook" && facebookConnection
-                    ? "Facebook ist verbunden. Eingänge werden in FanMind übernommen. Antworten werden manuell im Originalkanal gesendet."
+                    ? "Du verbindest deinen eigenen Kanal. FanMind synchronisiert deine eigenen Kontakte, Fans und Nachrichten in deinen Workspace. Antworten werden vorbereitet; gesendet wird manuell im Originalkanal oder über einen sicheren Reply-Link/API-Flow."
                     : isBookable(activeChannel.status)
-                      ? "Dieser Kanal ist vorbereitet, aber noch nicht live. Du kannst die Verbindung vormerken; es wird keine echte Anmeldung oder automatische Sendefunktion gestartet."
-                      : "Öffne diesen Kanal nur, wenn der passende manuelle Workflow in FanMind verfügbar ist."}
+                      ? "Dieser Kanal ist als Account-/Inbox-Integration vorbereitet oder geplant. Es wird keine echte Anmeldung vorgetäuscht und keine automatische Sendefunktion gestartet."
+                      : "Verbinde deinen eigenen Kanal, damit FanMind deine echten Nachrichten, Kontakte und Fans in deinem Workspace verwalten kann."}
               </p>
 
               {activeConnectionCards.length > 0 &&
@@ -838,6 +816,7 @@ export function ChannelsGrid({
                       </div>
                       <ul className={styles.connectionCardList}>
                         <li>Status: {connectionCard.status}</li>
+                        <li>Integrationstyp: {connectionCard.integrationType}</li>
                         <li>Verbindungstyp: {connectionCard.connectionType}</li>
                         <li>Auto-Senden: deaktiviert</li>
                         {connectionCard.details.map((detail) => (
@@ -937,51 +916,131 @@ export function ChannelsGrid({
               {activeChannel.key === "telegram" ? (
                 <div
                   className={styles.telegramSplitGrid}
-                  aria-label="Telegram Detailbereiche"
+                  aria-label="Telegram Integrationswege"
                 >
                   <section
                     className={styles.telegramColumn}
-                    aria-label="Telegram Kommentare"
+                    aria-label="Telegram Account und Inbox"
                   >
                     <div className={styles.telegramColumnHeader}>
-                      <p className={styles.modalEyebrow}>
-                        FanMind Bot / FanMind
-                      </p>
-                      <h3>Telegram Kommentare</h3>
+                      <p className={styles.modalEyebrow}>Hauptintegration</p>
+                      <h3>Telegram Account / Inbox</h3>
                       <p>
-                        Offizieller FanMind-Eingang für Bot- und
-                        Kommentar-Kontexte. Eingehende Nachrichten landen in
-                        FanMind; automatische Antworten bleiben deaktiviert.
+                        Verbinde dein eigenes Telegram-Konto, damit FanMind
+                        deine Telegram-Chats/Kontakte als Arbeits-Eingang
+                        verwalten kann. Du entscheidest, welche Chats
+                        importiert werden. Antworten werden nie automatisch
+                        gesendet.
                       </p>
                     </div>
                     <div
                       className={styles.releaseBox}
-                      aria-label="Telegram Kommentare Status"
+                      aria-label="Telegram Account und Inbox Status"
+                    >
+                      <strong>Status & Verbindung</strong>
+                      <ul className={styles.compactStatusList}>
+                        <li>Status: Geplant / Vorbereitung</li>
+                        <li>Integrationstyp: telegram_account</li>
+                        <li>Verbindung: noch nicht live geschaltet</li>
+                        <li>Import: nur nach deiner Auswahl</li>
+                        <li>Auto-Senden: deaktiviert</li>
+                        <li>Antworten: vorbereitet oder manuell gesendet</li>
+                      </ul>
+                      <p className={styles.modalNotice}>
+                        Diese Verbindung ist als Produkt-/UI-Vorbereitung
+                        sichtbar. Es wird aktuell keine Telefonnummer abgefragt,
+                        keine Telegram-Session gespeichert und kein privater
+                        Chat importiert.
+                      </p>
+                    </div>
+                    <div
+                      className={styles.releaseBox}
+                      aria-label="Telegram Account und Inbox Datenschutz"
+                    >
+                      <strong>Datenschutz & Kontrolle</strong>
+                      <ul className={styles.compactStatusList}>
+                        <li>Du entscheidest, welche Chats importiert werden.</li>
+                        <li>Keine automatische Antwort.</li>
+                        <li>Jeder Workspace sieht nur seine eigenen Telegram-Daten.</li>
+                        <li>Trennung pro Nutzer/Workspace.</li>
+                        <li>Disconnect jederzeit möglich.</li>
+                        <li>Kein Zugriff auf fremde Workspaces.</li>
+                      </ul>
+                    </div>
+                    <div
+                      className={styles.releaseBox}
+                      aria-label="Telegram Account und Inbox Ablauf"
+                    >
+                      <strong>Geplanter Ablauf</strong>
+                      <ul className={styles.compactStatusList}>
+                        <li>Einwilligung und Scope-Auswahl pro Workspace</li>
+                        <li>Chat-Auswahl vor Import statt Vollimport</li>
+                        <li>Ingress in den FanMind Arbeits-Eingang</li>
+                        <li>Antworten nur vorbereitet oder manuell</li>
+                        <li>Keine automatische Sendefunktion</li>
+                        <li>Saubere Trennung je Nutzer/Workspace</li>
+                      </ul>
+                    </div>
+                    <div
+                      className={styles.connectionCardActions}
+                      aria-label="Telegram Account und Inbox Aktionen"
+                    >
+                      <button
+                        type="button"
+                        className={styles.secondaryModalButton}
+                        disabled
+                        title="Telegram Account / Inbox ist als Hauptintegration in Vorbereitung"
+                      >
+                        Telegram-Inbox verbinden
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.secondaryModalButton}
+                        onClick={() =>
+                          setNotice(
+                            "Telegram Account / Inbox ist als Hauptintegration geplant. Noch kein MTProto-/TDLib-Flow, keine Telefonnummern und keine Session-Speicherung aktiv.",
+                          )
+                        }
+                      >
+                        Coming Soon
+                      </button>
+                    </div>
+                  </section>
+                  <section
+                    className={styles.telegramColumn}
+                    aria-label="FanMind Bot"
+                  >
+                    <div className={styles.telegramColumnHeader}>
+                      <p className={styles.modalEyebrow}>Optionaler Zusatz</p>
+                      <h3>FanMind Bot</h3>
+                      <p>
+                        Optionaler Bot-Eingang für Nachrichten, die direkt an
+                        {" "}
+                        {TELEGRAM_BOT_USERNAME}
+                        {" "}
+                        gesendet werden. Geeignet für Tests, Support oder
+                        einfache Bot-Kommunikation. Das ist nicht deine
+                        persönliche Telegram-Inbox.
+                      </p>
+                    </div>
+                    <div
+                      className={styles.releaseBox}
+                      aria-label="FanMind Bot Status"
                     >
                       <strong>Status & Verbindung</strong>
                       {telegramCheckRequested ? (
                         <p className={styles.inlineStatus}>
-                          Live-Verbindung gerade geprüft.
+                          Bot-Verbindung wurde gerade geprüft.
                         </p>
                       ) : null}
                       <ul className={styles.compactStatusList}>
-                        <li>
-                          Status:{" "}
-                          {telegramMessagesError
-                            ? "Nachrichtenprüfung fehlerhaft"
-                            : telegramStatusLabel}
-                        </li>
-                        <li>Verbindungstyp: Telegram Bot</li>
+                        <li>Status: Live</li>
+                        <li>Integrationstyp: telegram_bot</li>
                         <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
                         <li>Webhook: {telegramWebhookLabel}</li>
-                        <li>
-                          Webhook-URL stimmt:{" "}
-                          {telegramSetupStatus.webhookUrlMatches
-                            ? "ja"
-                            : "nein"}
-                        </li>
+                        <li>Live-Check: {telegramStatusLabel}</li>
                         <li>Auto-Senden: deaktiviert</li>
-                        <li>Mensch prüft final</li>
+                        <li>Rolle: optionaler Eingang</li>
                       </ul>
                       {telegramSetupStatus.error ||
                       telegramSetupStatus.lastErrorMessage ? (
@@ -991,18 +1050,17 @@ export function ChannelsGrid({
                             telegramSetupStatus.error}
                         </p>
                       ) : null}
-                      {telegramMessagesError ? (
-                        <p className={styles.modalNotice}>
-                          Telegram-Kommentare konnten nicht geladen werden:{" "}
-                          {telegramMessagesError}
-                        </p>
-                      ) : null}
+                      <p className={styles.modalNotice}>
+                        Eingehende Nachrichten an den FanMind Bot können in
+                        FanMind landen. Der Bot importiert nicht automatisch
+                        deine privaten Telegram-Kontakte.
+                      </p>
                     </div>
                     <div
                       className={styles.releaseBox}
-                      aria-label="Letzte Telegram Kommentare"
+                      aria-label="Letzte FanMind Bot Eingänge"
                     >
-                      <strong>Letzte Kommentare</strong>
+                      <strong>Letzte Bot-Eingänge</strong>
                       <p className={styles.subtleModalText}>
                         Quelle: conversation_messages · source_platform=telegram
                         · FanMind Bot
@@ -1010,7 +1068,7 @@ export function ChannelsGrid({
                       {telegramMessages.length > 0 ? (
                         <ul className={styles.messageList}>
                           {telegramMessages.map((message) => (
-                            <li key={`comments-${message.id}`}>
+                            <li key={`bot-${message.id}`}>
                               <a href={`/fans/${message.contact_id}`}>
                                 <strong>
                                   {message.author_label ?? "Telegram Kontakt"}
@@ -1031,21 +1089,25 @@ export function ChannelsGrid({
                             </li>
                           ))}
                         </ul>
-                      ) : telegramMessagesError ? null : telegramMessagesInOtherWorkspace ? (
+                      ) : telegramMessagesError ? (
                         <p className={styles.modalNotice}>
-                          Telegram-Kommentare vorhanden, aber nicht im aktuellen
+                          Bot-Eingänge konnten nicht geladen werden:{" "}
+                          {telegramMessagesError}
+                        </p>
+                      ) : telegramMessagesInOtherWorkspace ? (
+                        <p className={styles.modalNotice}>
+                          Bot-Eingänge vorhanden, aber nicht im aktuellen
                           Workspace.
                         </p>
                       ) : (
                         <p className={styles.modalNotice}>
-                          Noch keine Telegram-Kommentare in diesem Workspace
-                          gefunden.
+                          Noch keine Bot-Eingänge in diesem Workspace gefunden.
                         </p>
                       )}
                     </div>
                     <div
                       className={styles.releaseBox}
-                      aria-label="Telegram Kommentare technische Details"
+                      aria-label="FanMind Bot technische Details"
                     >
                       <strong>Technische Details</strong>
                       <ul className={styles.compactStatusList}>
@@ -1063,35 +1125,30 @@ export function ChannelsGrid({
                           </span>
                         </li>
                         <li>
-                          Pending Updates:{" "}
+                          Pending Updates: {" "}
                           {telegramSetupStatus.pendingUpdateCount ??
                             "nicht geprüft"}
                         </li>
-                        <li>Eingang: Textnachrichten</li>
+                        <li>Eingang: Bot-Textnachrichten</li>
                         <li>Workspace-Zuordnung: aktueller Workspace</li>
                       </ul>
                     </div>
                     <div
                       className={styles.releaseBox}
-                      aria-label="Telegram Kommentare Testablauf"
+                      aria-label="FanMind Bot Testablauf"
                     >
-                      <strong>Kommentare testen</strong>
+                      <strong>Bot-Eingang testen</strong>
                       <ol className={styles.stepList}>
                         <li>FanMind Bot öffnen.</li>
                         <li>In Telegram auf Start drücken.</li>
-                        <li>Testkommentar senden.</li>
-                        <li>
-                          FanMind neu laden oder Kommentar-Eingang prüfen.
-                        </li>
-                        <li>
-                          Kommentar erscheint im linken Kommentarbereich und in
-                          der Inbox.
-                        </li>
+                        <li>Testnachricht an den Bot senden.</li>
+                        <li>Bot-Verbindung prüfen oder FanMind neu laden.</li>
+                        <li>Nachricht erscheint in Inbox und Fan-Detail.</li>
                       </ol>
                     </div>
                     <div
                       className={styles.connectionCardActions}
-                      aria-label="Telegram Kommentare Aktionen"
+                      aria-label="FanMind Bot Aktionen"
                     >
                       <button
                         type="button"
@@ -1100,7 +1157,7 @@ export function ChannelsGrid({
                           router.refresh();
                         }}
                       >
-                        Kommentar-Eingang prüfen
+                        Bot-Verbindung prüfen
                       </button>
                       <a
                         className={styles.modalLinkButton}
@@ -1113,120 +1170,20 @@ export function ChannelsGrid({
                       <button
                         type="button"
                         className={styles.secondaryModalButton}
-                        onClick={() => setActiveChannel(null)}
-                      >
-                        Kommentar-Eingang schließen
-                      </button>
-                    </div>
-                  </section>
-                  <section
-                    className={styles.telegramColumn}
-                    aria-label="Telegram Nachrichten"
-                  >
-                    <div className={styles.telegramColumnHeader}>
-                      <p className={styles.modalEyebrow}>
-                        Private Chats / WellFit
-                      </p>
-                      <h3>Telegram Nachrichten</h3>
-                      <p>
-                        Vorbereiteter privater Telegram-Eingang für direkte
-                        Chat-Kontexte wie WellFit. Keine automatische
-                        Sendefunktion und kein zusätzlicher Backend-Flow.
-                      </p>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Telegram Nachrichten Status"
-                    >
-                      <strong>Status & Verbindung</strong>
-                      <ul className={styles.compactStatusList}>
-                        <li>Status: vorbereitet / noch nicht live</li>
-                        <li>Verbindungstyp: Private Telegram Chats</li>
-                        <li>Bot: separater privater Eingang vorbereitet</li>
-                        <li>Webhook: nicht aktiv geschaltet</li>
-                        <li>Auto-Senden: deaktiviert</li>
-                        <li>Mensch prüft final</li>
-                      </ul>
-                      <p className={styles.modalNotice}>
-                        Private Telegram-Nachrichten sind als eigener Bereich
-                        vorbereitet. Bestehende Live-Daten werden nicht mit dem
-                        Kommentarbereich vermischt.
-                      </p>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Letzte Telegram Nachrichten"
-                    >
-                      <strong>Letzte Nachrichten</strong>
-                      <p className={styles.subtleModalText}>
-                        Quelle vorbereitet: private Telegram Chats ·
-                        WellFit-Kontext
-                      </p>
-                      <p className={styles.modalNotice}>
-                        Noch keine privaten Telegram-Nachrichten in diesem
-                        Bereich importiert.
-                      </p>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Telegram Nachrichten technische Details"
-                    >
-                      <strong>Technische Details</strong>
-                      <ul className={styles.compactStatusList}>
-                        <li>Letzte Prüfung: noch nicht live geprüft</li>
-                        <li>Webhook-URL: eigener Eingang vorbereitet</li>
-                        <li>Pending Updates: nicht geprüft</li>
-                        <li>Eingang: private Textnachrichten</li>
-                        <li>Workspace-Zuordnung: vorbereitet</li>
-                      </ul>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Telegram Nachrichten Testablauf"
-                    >
-                      <strong>Nachrichten testen</strong>
-                      <ol className={styles.stepList}>
-                        <li>Privaten Telegram-Eingang konfigurieren.</li>
-                        <li>WellFit-Testchat zuordnen.</li>
-                        <li>Testnachricht senden.</li>
-                        <li>Import manuell prüfen.</li>
-                        <li>
-                          Nachricht erscheint nur im rechten Nachrichtenbereich.
-                        </li>
-                      </ol>
-                    </div>
-                    <div
-                      className={styles.connectionCardActions}
-                      aria-label="Telegram Nachrichten Aktionen"
-                    >
-                      <button
-                        type="button"
-                        className={styles.secondaryModalButton}
                         onClick={() =>
                           setNotice(
-                            "Nachrichten-Eingang ist vorgemerkt. Es wurde kein neuer Backend-, Webhook- oder OAuth-Flow gestartet.",
+                            "FanMind Bot ist ein optionaler Zusatzkanal. Die persönliche Telegram Account-/Inbox-Integration bleibt der Hauptweg und ist in Vorbereitung.",
                           )
                         }
                       >
-                        Nachrichten-Eingang vormerken
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.secondaryModalButton}
-                        onClick={() =>
-                          setNotice(
-                            "Privater Telegram-Eingang ist vorbereitet, aber noch nicht live aktiv.",
-                          )
-                        }
-                      >
-                        Noch nicht live
+                        Hinweis anzeigen
                       </button>
                       <button
                         type="button"
                         className={styles.secondaryModalButton}
                         onClick={() => setActiveChannel(null)}
                       >
-                        Nachrichten-Eingang schließen
+                        Schließen
                       </button>
                     </div>
                   </section>
@@ -1924,11 +1881,52 @@ type ConnectionCard = {
   key: string;
   title: string;
   description: string;
-  status: string;
+  status: ChannelStatus;
+  integrationType: IntegrationType;
   connectionType: string;
   actionLabel: string;
   details: string[];
 };
+
+function baseAccountPolicyDetails(): string[] {
+  return [
+    "Du verbindest deinen eigenen Kanal",
+    "Keine automatische Antwort",
+    "Jeder Workspace sieht nur eigene Daten",
+    "Trennung pro Nutzer/Workspace",
+    "Disconnect jederzeit möglich",
+  ];
+}
+
+function defaultActionLabel(status: ChannelStatus): string {
+  if (status === "Verbunden" || status === "Live") return "Verbindung prüfen";
+  if (status === "Optional") return "Zusatzweg anzeigen";
+  if (status === "Nicht verbunden") return "Kanal verbinden";
+  if (status === "Coming Soon") return "Coming Soon";
+  return "Verbindung vormerken";
+}
+
+function createCard(input: {
+  key: string;
+  title: string;
+  description: string;
+  status: ChannelStatus;
+  integrationType: IntegrationType;
+  connectionType: string;
+  actionLabel?: string;
+  details?: string[];
+}): ConnectionCard {
+  return {
+    key: input.key,
+    title: input.title,
+    description: input.description,
+    status: input.status,
+    integrationType: input.integrationType,
+    connectionType: input.connectionType,
+    actionLabel: input.actionLabel ?? defaultActionLabel(input.status),
+    details: input.details ?? baseAccountPolicyDetails(),
+  };
+}
 
 function buildConnectionCards({
   channel,
@@ -1943,118 +1941,260 @@ function buildConnectionCards({
 }): ConnectionCard[] {
   if (channel.key === "facebook") {
     return [
-      {
+      createCard({
         key: "facebook_messages",
-        title: "Facebook DM",
+        title: "Facebook Page / Inbox",
         description:
-          "Direktnachrichten aus der verbundenen Facebook Page werden in FanMind übernommen.",
-        status: facebookConnection
-          ? "verbunden"
-          : "nicht verbunden / in Arbeit",
-        connectionType: "Facebook Page / Messenger",
+          "Verbinde deine eigene Facebook Page/Inbox, damit FanMind deine echten Nachrichten und Kontakte in deinem Workspace verwalten kann.",
+        status: facebookConnection ? "Verbunden" : "Nicht verbunden",
+        integrationType: "page_inbox",
+        connectionType: "page_inbox",
         actionLabel: facebookConnection
           ? "DM-Verbindung prüfen"
-          : "DM-Verbindung vorbereiten",
+          : "Facebook Page verbinden",
         details: [
+          ...baseAccountPolicyDetails(),
           `Page: ${facebookConnection?.page_name ?? facebookConnection?.page_id ?? "nicht verbunden"}`,
           `Webhook: ${facebookConnection?.webhook_subscribed ? "aktiv" : "nicht bestätigt"}`,
-          `Verlauf-Sync: ${facebookConnection?.last_messenger_sync_at ? "zuletzt ausgeführt" : "manuell auslösbar"}`,
         ],
-      },
-      {
+      }),
+      createCard({
         key: "facebook_comments",
         title: "Facebook Kommentare",
         description:
-          "Kommentar-Eingänge sind vorbereitet, aber noch nicht live geschaltet.",
-        status: "nicht verbunden / in Arbeit",
-        connectionType: "Facebook Page Kommentare",
+          "Zusatzquelle für Kommentare deiner eigenen Facebook-Präsenz. Nicht deine komplette persönliche Inbox.",
+        status: "Optional",
+        integrationType: "comments",
+        connectionType: "comments",
         actionLabel: "Kommentarverbindung vorbereiten",
         details: [
+          "Optionaler Zusatzweg",
           "Live-Test später",
           "Kein Scraping",
           `Letzter Abruf: ${facebookConnection?.last_comment_fetch_at ? "vorhanden" : "geparkt"}`,
         ],
-      },
+      }),
     ];
   }
 
-  if (channel.key === "youtube" && channel.connectionCardCount === 2) {
+  if (channel.key === "telegram") {
     return [
-      {
-        key: "youtube_comments",
-        title: "YouTube Kommentare",
-        description: "Kommentar-Eingang ist vorbereitet. Keine automatische Antwort.",
-        status: `${channel.status.toLowerCase()} / noch nicht live`,
-        connectionType: "Kommentare",
-        actionLabel: "Kommentarverbindung vormerken",
-        details: ["Live-Anbindung später", "Kein Scraping"],
-      },
-      {
+      createCard({
+        key: "telegram_account",
+        title: "Telegram Account / Inbox",
+        description:
+          "Hauptintegration in Vorbereitung: eigenes Telegram-Konto verbinden, Chats/Kontakte gezielt importieren und im Workspace verwalten.",
+        status: "In Vorbereitung",
+        integrationType: "account_inbox",
+        connectionType: "account_inbox",
+        actionLabel: "Telegram-Inbox verbinden",
+        details: [
+          ...baseAccountPolicyDetails(),
+          "Du entscheidest, welche Chats importiert werden",
+        ],
+      }),
+      createCard({
+        key: "telegram_messages",
+        title: "FanMind Bot",
+        description:
+          "Optionaler Bot-Eingang für Test-, Support- oder einfache Bot-Kommunikation. Nicht deine persönliche Inbox.",
+        status: telegramLive ? "Live" : "Optional",
+        integrationType: "bot",
+        connectionType: `bot · Webhook ${telegramWebhookLabel}`,
+        actionLabel: "Bot-Verbindung prüfen",
+        details: [
+          "Optionaler Zusatzweg",
+          "Nicht deine persönliche Inbox",
+          "Auto-Senden deaktiviert",
+        ],
+      }),
+    ];
+  }
+
+  const byChannelKey: Partial<Record<string, ConnectionCard[]>> = {
+    instagram: [
+      createCard({
+        key: "instagram_account",
+        title: "Instagram Account / Inbox",
+        description:
+          "Verbinde dein eigenes Instagram-Konto, damit FanMind Nachrichten und Kontakte in deinem Workspace verwalten kann.",
+        status: "Geplant",
+        integrationType: "account_inbox",
+        connectionType: "account_inbox",
+      }),
+      createCard({
+        key: "instagram_comments",
+        title: "Instagram Kommentare",
+        description:
+          "Optionaler Kommentar-Eingang als Zusatzquelle für deinen eigenen Kanal.",
+        status: "In Vorbereitung",
+        integrationType: "comments",
+        connectionType: "comments",
+      }),
+    ],
+    whatsapp: [
+      createCard({
+        key: "whatsapp_business",
+        title: "WhatsApp Business Inbox",
+        description:
+          "Verbinde deine eigene WhatsApp Business Inbox als Hauptweg für Nachrichten in FanMind.",
+        status: "Geplant",
+        integrationType: "business_inbox",
+        connectionType: "business_inbox",
+      }),
+    ],
+    linkedin: [
+      createCard({
+        key: "linkedin_account",
+        title: "LinkedIn Account / Inbox",
+        description:
+          "Verbinde dein eigenes LinkedIn-Konto, damit FanMind deine Kontakte und Nachrichten im Workspace verwalten kann.",
+        status: "Geplant",
+        integrationType: "account_inbox",
+        connectionType: "account_inbox",
+      }),
+      createCard({
+        key: "linkedin_page_comments",
+        title: "LinkedIn Page / Kommentare",
+        description:
+          "Optionaler Zusatzweg für Page- und Kommentar-Kontexte. Nicht deine persönliche Inbox.",
+        status: "Coming Soon",
+        integrationType: "comments",
+        connectionType: "comments",
+      }),
+    ],
+    tiktok: [
+      createCard({
+        key: "tiktok_account",
+        title: "TikTok Account / Inbox",
+        description:
+          "Verbinde dein eigenes TikTok-Konto, damit FanMind Nachrichten und Kontakte in deinem Workspace verwalten kann.",
+        status: "In Vorbereitung",
+        integrationType: "account_inbox",
+        connectionType: "account_inbox",
+      }),
+      createCard({
+        key: "tiktok_comments",
+        title: "TikTok Kommentare",
+        description:
+          "Kommentar-Eingang als Zusatzquelle fuer deinen eigenen TikTok-Kanal.",
+        status: "Geplant",
+        integrationType: "comments",
+        connectionType: "comments",
+      }),
+    ],
+    youtube: [
+      createCard({
+        key: "youtube_channel_comments",
+        title: "YouTube Kanal / Kommentare",
+        description:
+          "Hauptweg fuer Kommentare deines eigenen YouTube-Kanals in deinem Workspace.",
+        status: "Geplant",
+        integrationType: "account_inbox",
+        connectionType: "account_inbox",
+      }),
+      createCard({
         key: "youtube_live_chat",
         title: "YouTube Live-Chat",
-        description: "Live-Chat-Eingang ist als eigener Bereich vorgesehen.",
-        status: `${channel.status.toLowerCase()} / noch nicht live`,
-        connectionType: "Live-Chat",
-        actionLabel: "Live-Chat vormerken",
-        details: ["Eigener Bereich", "Keine automatische Sendefunktion"],
-      },
-    ];
+        description:
+          "Optionaler Zusatzweg fuer Live-Chat-Kontexte. Nicht deine persoenliche Inbox.",
+        status: "Coming Soon",
+        integrationType: "comments",
+        connectionType: "comments",
+      }),
+    ],
+    email: [
+      createCard({
+        key: "email_inbox",
+        title: "E-Mail Inbox",
+        description:
+          "Verbinde dein eigenes E-Mail-Postfach, damit FanMind Eingänge im Workspace verwalten kann.",
+        status: "In Vorbereitung",
+        integrationType: "email_inbox",
+        connectionType: "email_inbox",
+      }),
+    ],
+    webform: [
+      createCard({
+        key: "webform_intake",
+        title: "Formular-Eingang",
+        description:
+          "Verbinde deinen eigenen Formular-Eingang als Hauptweg fuer Web-Leads und Anfragen.",
+        status: "In Vorbereitung",
+        integrationType: "form",
+        connectionType: "form",
+      }),
+    ],
+    discord: [
+      createCard({
+        key: "discord_server_inbox",
+        title: "Discord Server / Channel Inbox",
+        description:
+          "Verbinde deinen eigenen Discord-Server bzw. Channel als Inbox-Quelle in deinem Workspace.",
+        status: "Geplant",
+        integrationType: "community_inbox",
+        connectionType: "community_inbox",
+      }),
+    ],
+    twitter: [
+      createCard({
+        key: "twitter_account",
+        title: "X / Twitter Account / Inbox",
+        description:
+          "Verbinde dein eigenes X/Twitter-Konto, damit FanMind Kontakte und Nachrichten im Workspace verwalten kann.",
+        status: "Geplant",
+        integrationType: "account_inbox",
+        connectionType: "account_inbox",
+      }),
+      createCard({
+        key: "twitter_mentions",
+        title: "X / Twitter Mentions",
+        description:
+          "Optionaler Zusatzweg fuer Mentions und oeffentliche Interaktionen.",
+        status: "Coming Soon",
+        integrationType: "comments",
+        connectionType: "comments",
+      }),
+    ],
+    manual: [
+      createCard({
+        key: "manual_import",
+        title: "Manuell / CSV Eingang",
+        description:
+          "Direkter FanMind-Standardweg fuer manuelle Daten und CSV-Import in den eigenen Workspace.",
+        status: "Live",
+        integrationType: "form",
+        connectionType: "form",
+      }),
+    ],
+  };
+
+  if (byChannelKey[channel.key]) {
+    return byChannelKey[channel.key] ?? [];
   }
 
   const sources = channel.childSources?.length
     ? channel.childSources
     : [channel.key as PreparedSourceType];
 
-  return sources.flatMap((sourceType) => {
+  return sources.map((sourceType) => {
     const config = CHANNEL_SOURCE_CONFIGS[sourceType];
     const sourceLabel = config?.label ?? channel.name;
 
-    if (channel.key === "telegram") {
-      return [
-        {
-          key: sourceType,
-          title: "FanMind Bot",
-          description:
-            "Offizieller FanMind-Eingang für Bot-Nachrichten. Eingehende Nachrichten landen in FanMind; automatische Antworten bleiben deaktiviert.",
-          status: telegramLive
-            ? "verbunden / live"
-            : "konfiguriert / Prüfung nötig",
-          connectionType: `Telegram Bot · Webhook ${telegramWebhookLabel}`,
-          actionLabel: "Live-Verbindung prüfen",
-          details: ["Letzte Nachrichten werden im Kommentarbereich angezeigt"],
-        },
-        {
-          key: "telegram_private_chats",
-          title: "Private Chats / WellFit",
-          description:
-            "Vorbereiteter privater Telegram-Eingang für direkte Chat-Kontexte wie WellFit. Keine automatische Sendefunktion und kein zusätzlicher Backend-Flow.",
-          status: "vorbereitet / noch nicht live",
-          connectionType: "Private Telegram Chats",
-          actionLabel: "Privaten Eingang vormerken",
-          details: ["Eigener privater Bereich vorbereitet"],
-        },
-      ];
-    }
-
-    return {
+    return createCard({
       key: sourceType,
-      title: sourceLabel,
+      title: `${sourceLabel} Account / Inbox`,
       description:
         config?.statusText ??
-        `${channel.name} ist vorbereitet und folgt dem einheitlichen Kanalstandard.`,
-      status:
-        channel.status === "Verfügbar"
-          ? "verfügbar"
-          : `${channel.status.toLowerCase()} / noch nicht live`,
-      connectionType: channel.intakeTypes,
-      actionLabel: isBookable(channel.status)
-        ? "Verbindung vormerken"
-        : `${channel.name} verbinden`,
+        `Verbinde deinen eigenen ${channel.name}-Kanal, damit FanMind Nachrichten und Kontakte in deinem Workspace verwalten kann.`,
+      status: channel.status,
+      integrationType: "account_inbox",
+      connectionType: "account_inbox",
       details: [
+        ...baseAccountPolicyDetails(),
         config?.statusHint ?? "Keine automatische Sendefunktion",
-        `Technik: ${channel.technology}`,
       ],
-    };
+    });
   });
 }
 
