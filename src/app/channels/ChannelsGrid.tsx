@@ -1028,7 +1028,10 @@ export function ChannelsGrid({
                           )
                         }
                       >
-                        Coming Soon
+                        <ComingSoonMark
+                          className={styles.soonButtonImage}
+                          size="small"
+                        />
                       </button>
                     </div>
                   </section>

@@ -181,13 +181,18 @@
   background: rgba(8, 145, 178, 0.26);
 }
 
-.soonBadgeImage {
+.soonBadgeImage,
+.soonButtonImage {
   display: block;
   width: 78px;
   max-width: 100%;
   height: auto;
   border-radius: 10px;
   object-fit: contain;
+}
+
+.soonButtonImage {
+  width: 74px;
 }
 
 .techBadge {

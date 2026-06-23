@@ -121,6 +121,7 @@
   --platform-logo-ring: rgba(255, 255, 255, 0.18);
 }
 .manual,
+.other,
 .notes,
 .unknown {
   --platform-logo-bg: rgba(71, 85, 105, 0.72);
