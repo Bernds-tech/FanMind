@@ -935,38 +935,43 @@ export async function findTelegramWebhookWorkspaceId(): Promise<{
   const configuredWorkspaceId = normalizeOptionalText(
     process.env.FANMIND_DEFAULT_WORKSPACE_ID_FOR_TELEGRAM_TEST,
   );
-  if (configuredWorkspaceId)
+  if (configuredWorkspaceId) {
+    const serviceAccessToken = getServiceAccessToken();
+    if (!serviceAccessToken) {
+      return {
+        workspaceId: null,
+        error: new Error(
+          "SUPABASE_SERVICE_ROLE_KEY ist für Telegram-Webhook-Ingestion nicht konfiguriert.",
+        ),
+      };
+    }
+
+    const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
+      "workspaces",
+      serviceAccessToken,
+      WORKSPACE_COLUMNS,
+      [["id", configuredWorkspaceId]],
+      1,
+      true,
+    );
+    if (workspaceResult.error)
+      return { workspaceId: null, error: workspaceResult.error };
+    if (!workspaceResult.data) {
+      return {
+        workspaceId: null,
+        error: new Error(
+          "Der konfigurierte Telegram-Test-Workspace wurde nicht gefunden. Kein Kontakt und keine Nachricht wurde angelegt.",
+        ),
+      };
+    }
+
     return { workspaceId: configuredWorkspaceId, error: null };
-
-  const serviceAccessToken = getServiceAccessToken();
-  if (!serviceAccessToken) {
-    return {
-      workspaceId: null,
-      error: new Error(
-        "SUPABASE_SERVICE_ROLE_KEY ist für Telegram-Webhook-Ingestion nicht konfiguriert.",
-      ),
-    };
-  }
-
-  const connectionResult = await postgrestSelect<SocialConnectionRow>(
-    "social_connections",
-    serviceAccessToken,
-    SOCIAL_CONNECTION_COLUMNS,
-    [["platform", "telegram"]],
-    1,
-    true,
-    "connected_at.desc",
-  );
-  if (connectionResult.error)
-    return { workspaceId: null, error: connectionResult.error };
-  if (connectionResult.data?.workspace_id) {
-    return { workspaceId: connectionResult.data.workspace_id, error: null };
   }
 
   return {
     workspaceId: null,
     error: new Error(
-      "Kein verbundener Telegram-Workspace für diesen Webhook gefunden.",
+      "Telegram-Webhook-Ingestion ist ohne FANMIND_DEFAULT_WORKSPACE_ID_FOR_TELEGRAM_TEST deaktiviert. Kein Kontakt und keine Nachricht wurde angelegt.",
     ),
   };
 }
@@ -1101,31 +1106,6 @@ export async function sendManualTelegramMessage(input: {
   });
 
   return { message: saved.message, error: saved.error };
-}
-
-export async function getTelegramMessagesWorkspacePresence(
-  currentWorkspaceId: string,
-): Promise<{ hasMessagesInOtherWorkspace: boolean; error: Error | null }> {
-  const serviceAccessToken = getServiceAccessToken();
-  if (!serviceAccessToken)
-    return { hasMessagesInOtherWorkspace: false, error: null };
-  const result = await postgrestSelect<ConversationMessageRow>(
-    "conversation_messages",
-    serviceAccessToken,
-    CONVERSATION_MESSAGE_COLUMNS,
-    [["source_platform", "telegram"]],
-    1,
-    true,
-    "created_at.desc",
-  );
-  if (result.error)
-    return { hasMessagesInOtherWorkspace: false, error: result.error };
-  return {
-    hasMessagesInOtherWorkspace: Boolean(
-      result.data && result.data.workspace_id !== currentWorkspaceId,
-    ),
-    error: null,
-  };
 }
 
 export async function createMetaWebhookDebugEvent(input: {
