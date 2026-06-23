@@ -506,6 +506,9 @@ const META_WEBHOOK_EVENT_COLUMNS =
 const FOLLOWUP_COLUMNS =
   "id,workspace_id,contact_id,due_date,priority,reason,status,created_at";
 const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
+const DEMO_EMAIL = "sandra.m@fanmind.ch";
+const DEMO_WORKSPACE_NAME = "Sandra M. Demo Workspace";
+const DEMO_CONTACT_HANDLE = "@sandra-demo";
 
 function getServiceAccessToken(): string | undefined {
   return process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -4018,6 +4021,107 @@ export async function getWorkspaceOpenFollowups(
   return { followups: followupsResult.data ?? [], error: null };
 }
 
+async function ensureSandraDemoWorkspaceData(
+  workspace: WorkspaceBackfillRow,
+  user: SupabaseServerUser,
+  accessToken: string,
+): Promise<Error | null> {
+  const email = (user.email ?? stringMetadataValue(user.user_metadata, "email") ?? "").toLowerCase();
+  if (email !== DEMO_EMAIL) return null;
+
+  if (workspace.name !== DEMO_WORKSPACE_NAME) {
+    const workspaceUpdate = await postgrestUpdate<WorkspaceBackfillRow>(
+      "workspaces",
+      { name: DEMO_WORKSPACE_NAME, plan_id: "pilot", commercial_option: "pilot_only", setup_fee_cents: 0, monthly_fee_cents: 0, commitment_months: 0 },
+      accessToken,
+      [["id", workspace.id]],
+      { select: WORKSPACE_COLUMNS, single: true },
+    );
+    if (workspaceUpdate.error) return workspaceUpdate.error;
+  }
+
+  const existingContact = await postgrestSelect<ContactRow>(
+    "contacts",
+    accessToken,
+    CONTACT_COLUMNS,
+    [["workspace_id", workspace.id], ["handle", DEMO_CONTACT_HANDLE]],
+    1,
+    true,
+  );
+  if (existingContact.error) return existingContact.error;
+
+  let contact = existingContact.data;
+  if (!contact) {
+    const createdContact = await postgrestRequest<ContactRow>(
+      "contacts",
+      "POST",
+      {
+        workspace_id: workspace.id,
+        display_name: "Sandra M.",
+        handle: DEMO_CONTACT_HANDLE,
+        source_platform: "facebook",
+        language: "de",
+        status: "active",
+        tags: ["Demo", "VIP", "Sommer-Event"],
+        summary: "Demo-Kontakt mit Interesse am Sommer-Event, Early-Bird-Plätzen und Member-Angeboten.",
+      },
+      accessToken,
+      { select: CONTACT_COLUMNS, single: true },
+    );
+    if (createdContact.error) return createdContact.error;
+    contact = createdContact.data;
+  }
+
+  if (!contact?.id) return new Error("Demo-Kontakt konnte nicht erstellt werden.");
+
+  const memories = await postgrestSelect<MemoryRow[]>("memories", accessToken, MEMORY_COLUMNS, [["workspace_id", workspace.id], ["contact_id", contact.id]], undefined, false);
+  if (memories.error) return memories.error;
+  if (!(memories.data ?? []).some((memory) => memory.content.includes("Early-Bird"))) {
+    const memory = await postgrestRequest<MemoryRow>("memories", "POST", {
+      workspace_id: workspace.id,
+      contact_id: contact.id,
+      type: "preference",
+      content: "Sandra interessiert sich besonders für Early-Bird-Plätze und Member-Vorteile beim Sommer-Event.",
+      importance: "high",
+    }, accessToken, { select: MEMORY_COLUMNS, single: true });
+    if (memory.error) return memory.error;
+  }
+
+  const followups = await postgrestSelect<FollowupRow[]>("followups", accessToken, FOLLOWUP_COLUMNS, [["workspace_id", workspace.id], ["contact_id", contact.id]], undefined, false);
+  if (followups.error) return followups.error;
+  if (!(followups.data ?? []).some((followup) => followup.status === "open")) {
+    const followup = await postgrestRequest<FollowupRow>("followups", "POST", {
+      workspace_id: workspace.id,
+      contact_id: contact.id,
+      due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      priority: "high",
+      reason: "Sandra M. zu Early-Bird-Plätzen und Member-Angebot zurückmelden.",
+      status: "open",
+    }, accessToken, { select: FOLLOWUP_COLUMNS, single: true });
+    if (followup.error) return followup.error;
+  }
+
+  const conversations = await getWorkspaceConversations(workspace.id);
+  if (conversations.error) return conversations.error;
+  const hasDemoConversation = conversations.conversations.some((conversation) => conversation.contact_id === contact.id && conversation.original_text_excerpt?.includes("Early-Bird"));
+  if (!hasDemoConversation) {
+    const message = await createManualConversationMessage({
+      workspaceId: workspace.id,
+      contactId: contact.id,
+      direction: "inbound",
+      messageType: "dm",
+      sourcePlatform: "facebook",
+      sourceType: "dm",
+      authorLabel: "Sandra M.",
+      content: "Hallo! Gibt es noch Early-Bird Plätze für Member beim Sommer-Event? Ich würde gern heute noch entscheiden.",
+      originalTextExcerpt: "Gibt es noch Early-Bird Plätze für Member?",
+    });
+    if (message.error) return message.error;
+  }
+
+  return null;
+}
+
 export async function ensureUserWorkspace(
   user: SupabaseServerUser,
 ): Promise<WorkspaceBackfillResult> {
@@ -4146,7 +4250,12 @@ export async function ensureUserWorkspace(
     }
   }
 
-  return { workspace, error: null, created };
+  const demoSeedError = await ensureSandraDemoWorkspaceData(workspace, user, accessToken);
+  if (demoSeedError) {
+    return workspaceBackfillError(`Demo-Workspace konnte nicht vorbereitet werden: ${demoSeedError.message}`);
+  }
+
+  return { workspace: user.email?.toLowerCase() === DEMO_EMAIL ? { ...workspace, name: DEMO_WORKSPACE_NAME, plan_id: "pilot", commercial_option: "pilot_only", setup_fee_cents: 0, monthly_fee_cents: 0, commitment_months: 0 } : workspace, error: null, created };
 }
 
 async function parseSupabaseServerError(response: Response): Promise<Error> {

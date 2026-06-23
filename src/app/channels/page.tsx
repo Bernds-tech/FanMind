@@ -52,6 +52,7 @@ type ChannelsWorkspaceProps = {
   telegramMessagesError?: string | null;
   telegramSetupStatus: TelegramWebhookStatus;
   telegramCheckRequested: boolean;
+  demoConnectionsDisabled: boolean;
 };
 
 async function logout() {
@@ -75,6 +76,7 @@ function ChannelsWorkspace({
   telegramMessagesError,
   telegramSetupStatus,
   telegramCheckRequested,
+  demoConnectionsDisabled,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("channels");
@@ -112,6 +114,7 @@ function ChannelsWorkspace({
         telegramMessagesError={telegramMessagesError}
         telegramSetupStatus={telegramSetupStatus}
         telegramCheckRequested={telegramCheckRequested}
+        demoConnectionsDisabled={demoConnectionsDisabled}
       />
     </WorkspaceShell>
   );
@@ -208,6 +211,7 @@ export default async function ChannelsPage({
           telegramMessagesError={telegramMessagesResult?.error?.message ?? null}
           telegramSetupStatus={telegramSetupStatus}
           telegramCheckRequested={telegramCheckRequested}
+          demoConnectionsDisabled={(data.user.email ?? "").toLowerCase() === "sandra.m@fanmind.ch" || workspace.name === "Sandra M. Demo Workspace"}
         />
       ) : (
         <section

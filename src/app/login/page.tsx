@@ -12,6 +12,8 @@ type LoginPageProps = {
 };
 
 const LOGIN_TARGET = "/dashboard";
+const DEMO_EMAIL = "sandra.m@fanmind.ch";
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-Demo-Sandra-2026!";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
   return (
@@ -136,7 +138,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           <form className={styles.formCard} onSubmit={handleLogin}>
             {isDemoMode && (
               <p className={styles.demoBadge} role="status">
-                {language === "en" ? "Test access selected · please register to create a private workspace" : "Testzugang ausgewählt · registriere dich für einen privaten Workspace"}
+                {language === "en" ? "Public demo access. Please do not enter real data. Other demo users can see demo content. Real account connections are disabled in demo mode." : "Öffentlicher Demo-Zugang. Bitte keine echten Daten eingeben. Andere Demo-Nutzer können Demo-Inhalte sehen. Echte Account-Verbindungen sind im Demo-Modus deaktiviert."}
               </p>
             )}
 
@@ -149,7 +151,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.email}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">✉</span>
-                <input ref={emailInputRef} type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} autoComplete="username" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
+                <input ref={emailInputRef} type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} defaultValue={isDemoMode ? DEMO_EMAIL : ""} autoComplete="username" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
               </div>
             </label>
 
@@ -157,7 +159,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.password}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">▣</span>
-                <input ref={passwordInputRef} type="password" name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} autoComplete="current-password" required />
+                <input ref={passwordInputRef} type="password" name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} defaultValue={isDemoMode ? DEMO_PASSWORD : ""} autoComplete="current-password" required />
               </div>
             </label>
 
@@ -178,7 +180,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 {error}
               </p>
             )}
-            <button className={styles.secondaryButton} type="button" onClick={() => router.push(localizedPath("/register", language, "?plan=test"))}>
+            <button className={styles.secondaryButton} type="button" onClick={() => router.push(localizedPath("/login", language, "?demo=1"))}>
               {language === "en" ? "Try for free" : "Kostenlos testen"}
             </button>
 
