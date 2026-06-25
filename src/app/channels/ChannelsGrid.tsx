@@ -308,7 +308,7 @@ export function ChannelsGrid({
     useState<MetaPermissionDiagnosis | null>(null);
   const [messengerSyncResult, setMessengerSyncResult] =
     useState<FacebookMessengerSyncResult | null>(null);
-  const demoConnectionNotice = "Echte Verbindungen sind im öffentlichen Demo-Workspace deaktiviert. Bitte registriere einen eigenen Workspace.";
+  const demoConnectionNotice = "Dieser Demo-Workspace ist öffentlich. Echte Kanalverbindungen und externe Bot-Tests sind hier deaktiviert. Bitte registriere einen eigenen Workspace, um Verbindungen sicher zu testen.";
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -345,6 +345,10 @@ export function ChannelsGrid({
   };
 
   async function runMetaWebhookSelfTest() {
+    if (demoConnectionsDisabled) {
+      setNotice(demoConnectionNotice);
+      return;
+    }
     setSelfTestPending(true);
     setSelfTestError(null);
     setSelfTestResult(null);
@@ -378,6 +382,10 @@ export function ChannelsGrid({
   }
 
   async function runPageWebhookAction(action: "check" | "activate") {
+    if (demoConnectionsDisabled) {
+      setNotice(demoConnectionNotice);
+      return;
+    }
     setPageWebhookPending(action);
     setPageWebhookResult(null);
 
@@ -411,6 +419,10 @@ export function ChannelsGrid({
   }
 
   async function runMetaPermissionDiagnosis() {
+    if (demoConnectionsDisabled) {
+      setNotice(demoConnectionNotice);
+      return;
+    }
     setMetaPermissionPending(true);
     setMetaPermissionDiagnosis(null);
     try {
@@ -452,6 +464,10 @@ export function ChannelsGrid({
   }
 
   async function runMessengerSync() {
+    if (demoConnectionsDisabled) {
+      setNotice(demoConnectionNotice);
+      return;
+    }
     setMessengerSyncPending(true);
     setMessengerSyncResult(null);
     try {
@@ -622,6 +638,11 @@ export function ChannelsGrid({
 
   return (
     <section className={styles.gridSection} aria-label="Kanalkarten">
+      {demoConnectionsDisabled ? (
+        <p className={styles.modalNotice} role="status">
+          {demoConnectionNotice}
+        </p>
+      ) : null}
       <div className={styles.channelGrid}>
         {channels.map((channel) => {
           const isFacebook = channel.key === "facebook";
@@ -1083,7 +1104,7 @@ export function ChannelsGrid({
                         </p>
                       ) : null}
                       <ul className={styles.compactStatusList}>
-                        <li>Status: Live</li>
+                        <li>Status: {demoConnectionsDisabled ? "Demo-Modus öffentlich · externe Bot-Tests deaktiviert" : "Live im eigenen Workspace"}</li>
                         <li>Integrationstyp: telegram_bot</li>
                         <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
                         <li>Webhook: {telegramWebhookLabel}</li>
@@ -1201,20 +1222,34 @@ export function ChannelsGrid({
                       <button
                         type="button"
                         onClick={() => {
+                          if (demoConnectionsDisabled) {
+                            setNotice(demoConnectionNotice);
+                            return;
+                          }
                           router.push("/channels?check=telegram");
                           router.refresh();
                         }}
                       >
                         Bot-Verbindung prüfen
                       </button>
-                      <a
-                        className={styles.modalLinkButton}
-                        href="https://t.me/FanMindBot"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        FanMind Bot öffnen
-                      </a>
+                      {demoConnectionsDisabled ? (
+                        <button
+                          type="button"
+                          className={styles.secondaryModalButton}
+                          onClick={() => setNotice(demoConnectionNotice)}
+                        >
+                          FanMind Bot öffnen
+                        </button>
+                      ) : (
+                        <a
+                          className={styles.modalLinkButton}
+                          href="https://t.me/FanMindBot"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          FanMind Bot öffnen
+                        </a>
+                      )}
                       <button
                         type="button"
                         className={styles.secondaryModalButton}
@@ -1274,7 +1309,7 @@ export function ChannelsGrid({
                   className={styles.modalNotice}
                   role={missingFacebookSetupItems.length ? "alert" : "status"}
                 >
-                  Live-Setup Facebook Nachrichten:{" "}
+                  {demoConnectionsDisabled ? "Demo-Modus öffentlich: Facebook-Verbindungen" : "Live-Setup Facebook Nachrichten"}:{" "}
                   <strong>
                     {missingFacebookSetupItems.length
                       ? `unvollständig (${missingFacebookSetupItems.join(", ")})`
@@ -1840,7 +1875,9 @@ export function ChannelsGrid({
                     type="button"
                     onClick={() =>
                       setNotice(
-                        "Verbindung wird vorbereitet. Externe Anmeldung/OAuth ist noch nicht aktiv.",
+                        demoConnectionsDisabled
+                          ? demoConnectionNotice
+                          : "Verbindung wird vorbereitet. Externe Anmeldung/OAuth ist noch nicht aktiv.",
                       )
                     }
                   >
