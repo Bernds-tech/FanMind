@@ -153,3 +153,49 @@
   );
   --platform-logo-fg: #fff;
 }
+
+.google {
+  --platform-logo-bg: #ffffff;
+  --platform-logo-fg: #4285f4;
+  --platform-logo-ring: rgba(66, 133, 244, 0.34);
+}
+.trustpilot {
+  --platform-logo-bg: #00b67a;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.shopify {
+  --platform-logo-bg: #95bf47;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.amazon {
+  --platform-logo-bg: #111827;
+  --platform-logo-fg: #ff9900;
+  --platform-logo-ring: rgba(255, 153, 0, 0.35);
+}
+.etsy {
+  --platform-logo-bg: #f1641e;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.wechat {
+  --platform-logo-bg: #07c160;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.line {
+  --platform-logo-bg: #06c755;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
+.kakao {
+  --platform-logo-bg: #fee500;
+  --platform-logo-fg: #191919;
+  --platform-logo-ring: rgba(25, 25, 25, 0.18);
+}
+.viber {
+  --platform-logo-bg: #7360f2;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.18);
+}
