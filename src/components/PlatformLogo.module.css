@@ -199,3 +199,49 @@
   --platform-logo-fg: #ffffff;
   --platform-logo-ring: rgba(255, 255, 255, 0.18);
 }
+
+.douyin {
+  --platform-logo-bg: linear-gradient(135deg, #050505, #ff0050 52%, #00f2ea);
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(0, 242, 234, 0.34);
+}
+.rednote {
+  --platform-logo-bg: #ff2442;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.2);
+}
+.weibo {
+  --platform-logo-bg: linear-gradient(135deg, #f9d423, #e6162d);
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(249, 212, 35, 0.32);
+}
+.kuaishou {
+  --platform-logo-bg: #ff4906;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.2);
+}
+.bilibili {
+  --platform-logo-bg: #00a1d6;
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(255, 255, 255, 0.2);
+}
+.qq {
+  --platform-logo-bg: linear-gradient(180deg, #ffffff, #dbeafe);
+  --platform-logo-fg: #111827;
+  --platform-logo-ring: rgba(15, 23, 42, 0.24);
+}
+.sharechat {
+  --platform-logo-bg: linear-gradient(135deg, #f9c80e, #f86624, #43bccd);
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(249, 200, 14, 0.3);
+}
+.moj {
+  --platform-logo-bg: linear-gradient(135deg, #111827, #f97316);
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(249, 115, 22, 0.3);
+}
+.josh {
+  --platform-logo-bg: linear-gradient(135deg, #7c3aed, #ef4444);
+  --platform-logo-fg: #ffffff;
+  --platform-logo-ring: rgba(239, 68, 68, 0.3);
+}

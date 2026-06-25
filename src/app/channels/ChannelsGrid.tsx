@@ -652,29 +652,15 @@ export function ChannelsGrid({
                 <span className={styles.techBadge}>{channel.technology}</span>
               </span>
 
-              <span className={styles.inputGrid}>
-                {channel.inputs.map((input) => (
-                  <span className={styles.inputCard} key={input.key}>
-                    <span className={styles.inputCardHeader}>
-                      <span className={styles.inputTitle}>{input.name}</span>
-                      <span
-                        className={`${styles.inputStatusDot} ${
-                          input.live
-                            ? styles.inputStatusLive
-                            : styles.inputStatusSoon
-                        }`}
-                        aria-hidden="true"
-                      />
-                    </span>
-                    <span className={styles.inputDescription}>
-                      {input.description}
-                    </span>
-                    <span className={styles.inputMeta}>
-                      <span>{input.purpose}</span>
-                      <span>{input.live ? "Live" : "Coming Soon"}</span>
-                    </span>
-                  </span>
-                ))}
+              <span className={styles.cardSummary}>
+                <span className={styles.inputCountBadge}>
+                  {channel.inputs.length === 1
+                    ? "1 Eingang vorbereitet"
+                    : `${channel.inputs.length} Eingänge vorbereitet`}
+                </span>
+                <span className={styles.inputTypeHint}>
+                  {channel.inputs.map((input) => input.purpose).join(" · ")}
+                </span>
               </span>
 
               <span className={styles.cardSpacer} />
@@ -761,13 +747,56 @@ export function ChannelsGrid({
                     className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
                   >
                     <strong>Geplante Verbindungsblöcke</strong>
-                    <ul className={styles.compactStatusList}>
+                    <div className={styles.connectionGrid}>
                       {activeChannel.inputs.map((input) => (
-                        <li key={input.key}>
-                          {input.name}: {input.status} · {input.technology}
-                        </li>
+                        <article
+                          className={styles.connectionCard}
+                          key={input.key}
+                        >
+                          <div className={styles.connectionCardHeader}>
+                            <strong>
+                              {activeChannel.name} {input.name}
+                            </strong>
+                            <span
+                              className={`${styles.statusBadge} ${
+                                input.live
+                                  ? styles.statusConnected
+                                  : styles.statusPreview
+                              }`}
+                            >
+                              {input.live ? "Live / manuell" : input.status}
+                            </span>
+                          </div>
+                          <p>{input.description}</p>
+                          <div className={styles.inputMeta}>
+                            <span>{input.purpose}</span>
+                            <span>{input.technology}</span>
+                          </div>
+                          <span className={styles.connectionHint}>
+                            Separat verbindbar, sobald freigegeben.
+                          </span>
+                          <div className={styles.connectionCardActions}>
+                            <button
+                              type="button"
+                              disabled={demoConnectionsDisabled}
+                              onClick={() =>
+                                setNotice(
+                                  demoConnectionsDisabled
+                                    ? demoNotice
+                                    : `${activeChannel.name} ${input.name} wurde lokal vorgemerkt. Es wurde keine API-Aktion gestartet.`,
+                                )
+                              }
+                            >
+                              {demoConnectionsDisabled
+                                ? "Im Demo-Modus deaktiviert"
+                                : input.live
+                                  ? "Details vormerken"
+                                  : "Verbindung vormerken"}
+                            </button>
+                          </div>
+                        </article>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                   <div className={styles.releaseBox}>
                     <strong>Sicherheit</strong>
@@ -789,13 +818,18 @@ export function ChannelsGrid({
                   <button
                     type="button"
                     className={styles.secondaryModalButton}
+                    disabled={demoConnectionsDisabled}
                     onClick={() =>
                       setNotice(
-                        `${activeChannel.name} wurde lokal vorgemerkt. Es wurde keine API-Aktion gestartet.`,
+                        demoConnectionsDisabled
+                          ? demoNotice
+                          : `${activeChannel.name} wurde lokal vorgemerkt. Es wurde keine API-Aktion gestartet.`,
                       )
                     }
                   >
-                    Verbindung vormerken
+                    {demoConnectionsDisabled
+                      ? "Demo-Modus aktiv"
+                      : "Details vormerken"}
                   </button>
                   <button
                     type="button"
