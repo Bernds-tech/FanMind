@@ -44,6 +44,15 @@ type NormalizedPlatform =
   | "line"
   | "kakao"
   | "viber"
+  | "douyin"
+  | "rednote"
+  | "weibo"
+  | "kuaishou"
+  | "bilibili"
+  | "qq"
+  | "sharechat"
+  | "moj"
+  | "josh"
   | "international"
   | "manual"
   | "other"
@@ -84,6 +93,15 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   line: { label: "LINE" },
   kakao: { label: "KakaoTalk" },
   viber: { label: "Viber" },
+  douyin: { label: "Douyin" },
+  rednote: { label: "Xiaohongshu / RedNote" },
+  weibo: { label: "Weibo" },
+  kuaishou: { label: "Kuaishou" },
+  bilibili: { label: "Bilibili" },
+  qq: { label: "QQ" },
+  sharechat: { label: "ShareChat" },
+  moj: { label: "Moj" },
+  josh: { label: "Josh" },
   international: { label: "International" },
   manual: { label: "Manuell" },
   other: { label: "Sonstiges" },
@@ -147,6 +165,16 @@ export function normalizePlatformLogoKey(
   if (value.includes("etsy")) return "etsy";
   if (value.includes("mercado")) return "commerce";
   if (value.includes("wechat")) return "wechat";
+  if (value.includes("douyin")) return "douyin";
+  if (value.includes("xiaohongshu") || value.includes("rednote"))
+    return "rednote";
+  if (value.includes("weibo")) return "weibo";
+  if (value.includes("kuaishou")) return "kuaishou";
+  if (value.includes("bilibili")) return "bilibili";
+  if (value === "qq") return "qq";
+  if (value.includes("sharechat")) return "sharechat";
+  if (value === "moj") return "moj";
+  if (value === "josh") return "josh";
   if (value.includes("line")) return "line";
   if (value.includes("kakao")) return "kakao";
   if (value.includes("viber")) return "viber";
@@ -363,6 +391,15 @@ function PlatformSvg({ platform }: { platform: NormalizedPlatform }) {
       "viber",
       "review",
       "commerce",
+      "douyin",
+      "rednote",
+      "weibo",
+      "kuaishou",
+      "bilibili",
+      "qq",
+      "sharechat",
+      "moj",
+      "josh",
       "international",
     ].includes(platform)
   )
