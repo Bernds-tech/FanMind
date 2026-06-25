@@ -1612,7 +1612,10 @@ export default async function FanDetailPage({
   let authorized;
   try {
     authorized = await requireAuthorizedWorkspace();
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "TEMPORARY_DEMO_DELETED") {
+      redirect("/login?demo_deleted=1");
+    }
     redirect("/login");
   }
 

@@ -8,7 +8,7 @@ import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMi
 import styles from "./login.module.css";
 
 type LoginPageProps = {
-  searchParams: Promise<{ demo?: string | string[]; lang?: string | string[] }>;
+  searchParams: Promise<{ demo?: string | string[]; lang?: string | string[]; demo_deleted?: string | string[] }>;
 };
 
 const LOGIN_TARGET = "/dashboard";
@@ -30,6 +30,7 @@ function LanguageSwitch({ language }: { language: FanMindLanguage }) {
 export default function LoginPage({ searchParams }: LoginPageProps) {
   const params = use(searchParams);
   const isDemoMode = Array.isArray(params.demo) ? params.demo.includes("1") : params.demo === "1";
+  const isDemoDeleted = Array.isArray(params.demo_deleted) ? params.demo_deleted.includes("1") : params.demo_deleted === "1";
   const language = getFanMindLanguage(params.lang);
   const copy = fanmindCopy[language].login;
   const registerHref = localizedPath("/register", language);
@@ -60,6 +61,24 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       passwordInputRef.current.value = DEMO_PASSWORD;
     }
   }, [isDemoMode]);
+
+  async function handleDemoStart() {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/demo/start", { method: "POST" });
+      const payload = (await response.json().catch(() => null)) as { error?: string; redirectTo?: string } | null;
+      if (!response.ok) {
+        setError(`${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den Sandra-Demo-Fallback über /login?demo=1 nutzen.`);
+        return;
+      }
+      window.location.assign(payload?.redirectTo ?? LOGIN_TARGET);
+    } catch (startError) {
+      setError(startError instanceof Error ? startError.message : "Die Demo konnte gerade nicht vorbereitet werden. Bitte nutze /login?demo=1 als Fallback.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -149,6 +168,12 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           </aside>
 
           <form className={styles.formCard} onSubmit={handleLogin}>
+            {isDemoDeleted && (
+              <p className={styles.demoBadge} role="status">
+                {"Deine Demo-Zeit ist abgelaufen. Der temporäre Demo-Zugang wurde gelöscht. Bitte starte eine neue Demo oder registriere einen eigenen Workspace."}
+              </p>
+            )}
+
             {isDemoMode && (
               <p className={styles.demoBadge} role="status">
                 {language === "en" ? "Public demo access. Please do not enter real data. Other demo users can see demo content. Real account connections are disabled in demo mode." : "Öffentlicher Demo-Zugang. Bitte keine echten Daten eingeben. Andere Demo-Nutzer können Demo-Inhalte sehen. Echte Account-Verbindungen sind im Demo-Modus deaktiviert."}
@@ -193,9 +218,14 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 {error}
               </p>
             )}
-            <button className={styles.secondaryButton} type="button" onClick={() => router.push(localizedPath("/login", language, "?demo=1"))}>
-              {language === "en" ? "Try for free" : "Kostenlos testen"}
+            <button className={styles.secondaryButton} type="button" onClick={handleDemoStart} disabled={isSubmitting}>
+              {isSubmitting ? (language === "en" ? "Preparing demo…" : "Demo wird vorbereitet…") : (language === "en" ? "Try for free" : "Kostenlos testen")}
             </button>
+            {error && (
+              <p className={styles.notice}>
+                <button className={styles.secondaryButton} type="button" onClick={() => router.push(localizedPath("/login", language, "?demo=1"))}>Sandra-Demo-Fallback öffnen</button>
+              </p>
+            )}
 
             <p className={styles.notice}>{copy.notice}</p>
 
