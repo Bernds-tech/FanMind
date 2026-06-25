@@ -25,6 +25,17 @@ type NormalizedPlatform =
   | "email"
   | "webform"
   | "onlyfans"
+  | "snapchat"
+  | "threads"
+  | "reddit"
+  | "twitch"
+  | "pinterest"
+  | "patreon"
+  | "kofi"
+  | "substack"
+  | "review"
+  | "commerce"
+  | "international"
   | "manual"
   | "other"
   | "notes"
@@ -45,6 +56,17 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   email: { label: "E-Mail" },
   webform: { label: "Webformular" },
   onlyfans: { label: "OnlyFans" },
+  snapchat: { label: "Snapchat" },
+  threads: { label: "Threads" },
+  reddit: { label: "Reddit" },
+  twitch: { label: "Twitch" },
+  pinterest: { label: "Pinterest" },
+  patreon: { label: "Patreon / Memberships" },
+  kofi: { label: "Ko-fi" },
+  substack: { label: "Newsletter / Substack" },
+  review: { label: "Reviews" },
+  commerce: { label: "Commerce" },
+  international: { label: "International" },
   manual: { label: "Manuell" },
   other: { label: "Sonstiges" },
   notes: { label: "Notizen" },
@@ -78,6 +100,48 @@ export function normalizePlatformLogoKey(
   )
     return "webform";
   if (value.includes("onlyfans")) return "onlyfans";
+  if (value.includes("snapchat")) return "snapchat";
+  if (value.includes("threads")) return "threads";
+  if (value.includes("reddit")) return "reddit";
+  if (value.includes("twitch")) return "twitch";
+  if (value.includes("pinterest")) return "pinterest";
+  if (value.includes("patreon") || value.includes("membership")) return "patreon";
+  if (value.includes("ko-fi") || value.includes("kofi") || value.includes("coffee"))
+    return "kofi";
+  if (value.includes("substack") || value.includes("newsletter")) return "substack";
+  if (
+    value.includes("review") ||
+    value.includes("bewertung") ||
+    value.includes("trustpilot") ||
+    value.includes("app-store") ||
+    value.includes("play-store") ||
+    value.includes("google")
+  )
+    return "review";
+  if (
+    value.includes("shopify") ||
+    value.includes("amazon") ||
+    value.includes("etsy") ||
+    value.includes("mercado")
+  )
+    return "commerce";
+  if (
+    value.includes("wechat") ||
+    value.includes("douyin") ||
+    value.includes("xiaohongshu") ||
+    value.includes("rednote") ||
+    value.includes("weibo") ||
+    value.includes("kuaishou") ||
+    value.includes("bilibili") ||
+    value === "qq" ||
+    value.includes("line") ||
+    value.includes("kakao") ||
+    value.includes("viber") ||
+    value.includes("sharechat") ||
+    value === "moj" ||
+    value === "josh"
+  )
+    return "international";
   if (value.includes("note")) return "notes";
   if (
     value.includes("manual") ||
