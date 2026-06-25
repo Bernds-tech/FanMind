@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -18,6 +19,7 @@ type ProfileWorkspaceProps = {
   user: SupabaseServerUser;
   userDisplayName: string;
   contactCount: number;
+  openFollowupCount: number;
 };
 
 type ProfileField = {
@@ -108,6 +110,7 @@ function ProfileWorkspace({
   user,
   userDisplayName,
   contactCount,
+  openFollowupCount,
 }: ProfileWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("settings");
@@ -137,6 +140,7 @@ function ProfileWorkspace({
         primaryActionHref: "#user-profile",
       }}
       contactCount={contactCount}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <section
@@ -181,6 +185,9 @@ export default async function ProfileSettingsPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -190,6 +197,7 @@ export default async function ProfileSettingsPage() {
           user={data.user}
           userDisplayName={getUserDisplayName(data.user.user_metadata)}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
         />
       ) : (
         <section

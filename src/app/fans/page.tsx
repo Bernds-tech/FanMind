@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -34,6 +35,7 @@ type FansWorkspaceProps = {
   contactsError?: string;
   followups: FollowupRow[];
   followupsError?: string;
+  openFollowupCount: number;
   unseenMessages: ConversationMessageRow[];
   unseenMessagesError?: string;
   activeChannel: PlatformValue | "all";
@@ -97,6 +99,7 @@ function FansWorkspace({
   contactsError,
   followups,
   followupsError,
+  openFollowupCount,
   unseenMessages,
   unseenMessagesError,
   activeChannel,
@@ -129,6 +132,7 @@ function FansWorkspace({
         primaryActionHref: "#new-fan-modal",
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <div className={styles.fansStack}>
@@ -1055,6 +1059,9 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   const followupsResult = workspace
     ? await getWorkspaceOpenFollowups(workspace.id)
     : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
   const unseenMessagesResult = workspace
     ? await getWorkspaceUnseenInboundMessages(workspace.id)
     : null;
@@ -1072,6 +1079,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           contactsError={contactsResult?.error?.message}
           followups={followupsResult?.followups ?? []}
           followupsError={followupsResult?.error?.message}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
           unseenMessages={unseenMessagesResult?.messages ?? []}
           unseenMessagesError={unseenMessagesResult?.error?.message}
           activeChannel={activeChannel}

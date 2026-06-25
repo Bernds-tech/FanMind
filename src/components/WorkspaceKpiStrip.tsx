@@ -54,15 +54,15 @@ function getKpiCards(
         "Kontakte mit aktueller Aktivität im ausgewählten Zeitraum.",
     },
     {
-      label: "Offene Follow-ups",
+      label: "Offene Wiedervorlagen",
       value: openFollowupCount.toLocaleString("de-DE"),
-      meta: "Echte offene Follow-ups",
+      meta: "Rückmeldungen / Aufgaben",
       icon: "check",
       tone: "violet",
       sparklinePoints:
         "M2 12.5 C13 11 21 11.5 31 9.5 S47 7 57 9 S72 12.5 83 9.5 S98 5.5 108 6.5 S118 7.5 124 4.5",
       infoLabel:
-        "Geplante oder fällige manuelle Nachfassaktionen.",
+        "Offene Rückmelde-Aufgaben zu Fans oder Kontakten.",
     },
     {
       label: "Laufende Kampagnen",
