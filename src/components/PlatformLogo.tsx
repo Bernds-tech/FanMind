@@ -33,8 +33,17 @@ type NormalizedPlatform =
   | "patreon"
   | "kofi"
   | "substack"
+  | "google"
+  | "trustpilot"
+  | "shopify"
+  | "amazon"
+  | "etsy"
   | "review"
   | "commerce"
+  | "wechat"
+  | "line"
+  | "kakao"
+  | "viber"
   | "international"
   | "manual"
   | "other"
@@ -64,8 +73,17 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   patreon: { label: "Patreon / Memberships" },
   kofi: { label: "Ko-fi" },
   substack: { label: "Newsletter / Substack" },
+  google: { label: "Google Business Profile" },
+  trustpilot: { label: "Trustpilot" },
+  shopify: { label: "Shopify" },
+  amazon: { label: "Amazon" },
+  etsy: { label: "Etsy" },
   review: { label: "Reviews" },
   commerce: { label: "Commerce" },
+  wechat: { label: "WeChat" },
+  line: { label: "LINE" },
+  kakao: { label: "KakaoTalk" },
+  viber: { label: "Viber" },
   international: { label: "International" },
   manual: { label: "Manuell" },
   other: { label: "Sonstiges" },
@@ -105,28 +123,34 @@ export function normalizePlatformLogoKey(
   if (value.includes("reddit")) return "reddit";
   if (value.includes("twitch")) return "twitch";
   if (value.includes("pinterest")) return "pinterest";
-  if (value.includes("patreon") || value.includes("membership")) return "patreon";
-  if (value.includes("ko-fi") || value.includes("kofi") || value.includes("coffee"))
+  if (value.includes("patreon") || value.includes("membership"))
+    return "patreon";
+  if (
+    value.includes("ko-fi") ||
+    value.includes("kofi") ||
+    value.includes("coffee")
+  )
     return "kofi";
-  if (value.includes("substack") || value.includes("newsletter")) return "substack";
+  if (value.includes("substack") || value.includes("newsletter"))
+    return "substack";
+  if (value.includes("google")) return "google";
+  if (value.includes("trustpilot")) return "trustpilot";
   if (
     value.includes("review") ||
     value.includes("bewertung") ||
-    value.includes("trustpilot") ||
     value.includes("app-store") ||
-    value.includes("play-store") ||
-    value.includes("google")
+    value.includes("play-store")
   )
     return "review";
+  if (value.includes("shopify")) return "shopify";
+  if (value.includes("amazon")) return "amazon";
+  if (value.includes("etsy")) return "etsy";
+  if (value.includes("mercado")) return "commerce";
+  if (value.includes("wechat")) return "wechat";
+  if (value.includes("line")) return "line";
+  if (value.includes("kakao")) return "kakao";
+  if (value.includes("viber")) return "viber";
   if (
-    value.includes("shopify") ||
-    value.includes("amazon") ||
-    value.includes("etsy") ||
-    value.includes("mercado")
-  )
-    return "commerce";
-  if (
-    value.includes("wechat") ||
     value.includes("douyin") ||
     value.includes("xiaohongshu") ||
     value.includes("rednote") ||
@@ -300,6 +324,53 @@ function PlatformSvg({ platform }: { platform: NormalizedPlatform }) {
         <path
           fill="currentColor"
           d="M5 3.5h14A1.5 1.5 0 0 1 20.5 5v14A1.5 1.5 0 0 1 19 20.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5Zm1.8 4.1h10.4V5.8H6.8v1.8Zm0 4.1h10.4V9.9H6.8v1.8Zm0 4.1h6.6V14H6.8v1.8Z"
+        />
+      </svg>
+    );
+  if (platform === "threads")
+    return (
+      <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M12.2 2.6c4.1 0 7.1 2.7 7.1 6.4h-3.1c0-1.9-1.5-3.5-4-3.5-3.1 0-5.1 2.5-5.1 6.5s2 6.5 5.1 6.5c2.8 0 4.7-1.6 4.7-3.5 0-1.4-1-2.3-2.7-2.5-.5 2.1-1.9 3.4-4 3.4-2 0-3.5-1.2-3.5-3s1.6-3.1 4.2-3.1c.3 0 .6 0 .9.02-.28-.9-1-1.4-2.1-1.4-.8 0-1.6.24-2.3.72l-1.1-2.2c1-.72 2.2-1.07 3.6-1.07 2.8 0 4.4 1.55 4.6 4.35 3 .45 5 2.15 5 4.75 0 3.6-3.1 6.2-7.4 6.2-5 0-8.2-3.6-8.2-9.4s3.3-9.4 8.3-9.4Z"
+        />
+      </svg>
+    );
+  if (platform === "reddit")
+    return (
+      <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M21.5 11.8c0-1.1-.9-2-2-2-.54 0-1.04.22-1.4.58-1.38-.9-3.24-1.48-5.3-1.58l.9-4.2 2.9.62a1.7 1.7 0 1 0 .22-1.03l-3.45-.74a.55.55 0 0 0-.65.42l-1.05 4.92c-2.12.07-4.04.65-5.46 1.57a2 2 0 1 0-2.2 3.25c-.04.23-.06.46-.06.7 0 3.04 3.58 5.5 8 5.5s8-2.46 8-5.5c0-.23-.02-.46-.06-.68.4-.37.61-.91.61-1.83ZM8.7 13.35a1.25 1.25 0 1 1 2.5 0 1.25 1.25 0 0 1-2.5 0Zm6.2 3.45c-.83.83-2.45.9-2.9.9s-2.07-.07-2.9-.9a.58.58 0 0 1 .82-.82c.52.52 1.7.57 2.08.57s1.56-.05 2.08-.57a.58.58 0 1 1 .82.82Zm.4-2.2a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Z"
+        />
+      </svg>
+    );
+  if (
+    [
+      "twitch",
+      "pinterest",
+      "patreon",
+      "kofi",
+      "substack",
+      "google",
+      "trustpilot",
+      "shopify",
+      "amazon",
+      "etsy",
+      "wechat",
+      "line",
+      "kakao",
+      "viber",
+      "review",
+      "commerce",
+      "international",
+    ].includes(platform)
+  )
+    return (
+      <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v9A2.5 2.5 0 0 1 17.5 17H13l-4.2 3.5V17H6.5A2.5 2.5 0 0 1 4 14.5v-9Zm4 2v2h8v-2H8Zm0 4v2h5.6v-2H8Z"
         />
       </svg>
     );
