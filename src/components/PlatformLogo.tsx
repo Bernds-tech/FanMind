@@ -36,6 +36,7 @@ type NormalizedPlatform =
   | "buymeacoffee"
   | "substack"
   | "google"
+  | "googleReviews"
   | "trustpilot"
   | "shopify"
   | "amazon"
@@ -90,6 +91,7 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   buymeacoffee: { label: "Buy Me a Coffee" },
   substack: { label: "Newsletter / Substack" },
   google: { label: "Google Business Profile" },
+  googleReviews: { label: "Google Reviews" },
   trustpilot: { label: "Trustpilot" },
   shopify: { label: "Shopify" },
   amazon: { label: "Amazon" },
@@ -160,6 +162,8 @@ export function normalizePlatformLogoKey(
   if (value.includes("ko-fi") || value.includes("kofi")) return "kofi";
   if (value.includes("substack") || value.includes("newsletter"))
     return "substack";
+  if (value.includes("google") && (value.includes("review") || value.includes("bewertung")))
+    return "googleReviews";
   if (value.includes("google")) return "google";
   if (value.includes("trustpilot")) return "trustpilot";
   if (value.includes("app-store")) return "appstore";
@@ -249,12 +253,11 @@ export function PlatformLogo({
   );
 }
 
-function InternationalSvg({ platform }: { platform: NormalizedPlatform }) {
-  const letter = platform === "rednote" ? "小" : platform === "bilibili" ? "B" : platform === "qq" ? "Q" : platform === "sharechat" ? "S" : platform === "moj" ? "M" : platform === "josh" ? "J" : platform === "douyin" ? "♪" : platform === "weibo" ? "◎" : platform === "kuaishou" ? "K" : platform === "wechat" ? "☵" : platform === "line" ? "L" : platform === "kakao" ? "K" : platform === "viber" ? "☎" : "★";
+function BadgeSvg({ text }: { text: string }) {
   return (
     <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" d="M4 7.5A4.5 4.5 0 0 1 8.5 3h7A4.5 4.5 0 0 1 20 7.5v4.2a4.5 4.5 0 0 1-4.5 4.5H13l-4.3 3.4v-3.4h-.2A4.5 4.5 0 0 1 4 11.7V7.5Z" />
-      <text x="12" y="13.9" textAnchor="middle" className={styles.iconText}>{letter}</text>
+      <rect x="3" y="4" width="18" height="16" rx="5" fill="currentColor" />
+      <text x="12" y="14.2" textAnchor="middle" className={styles.badgeText}>{text}</text>
     </svg>
   );
 }
@@ -415,11 +418,50 @@ function PlatformSvg({ platform }: { platform: NormalizedPlatform }) {
     return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="#22c55e" d="M5 3.8v16.4l7.2-8.2L5 3.8Z" /><path fill="#60a5fa" d="m6 3.2 12.7 7.2-5.5 1L6 3.2Z" /><path fill="#f59e0b" d="m13.2 12.6 5.5 1L6 20.8l7.2-8.2Z" /><path fill="#ef4444" d="m14.1 11.4 5 .6-5 .6-1.2-.6 1.2-.6Z" /></svg>);
   if (platform === "mercadolibre")
     return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5.2c5.1 0 9.2 2.15 9.2 4.8s-4.1 4.8-9.2 4.8S2.8 12.65 2.8 10 6.9 5.2 12 5.2Z" /><path fill="#1d4ed8" d="M7.2 10.2c1.7-1.45 3.15-1.45 4.5 0l.3.3.3-.3c1.35-1.45 2.8-1.45 4.5 0l-1.2 1.35c-.82-.7-1.34-.7-2.05.02L12 13.1l-1.55-1.53c-.71-.72-1.23-.72-2.05-.02l-1.2-1.35Z" /></svg>);
-  if (["wechat","line","kakao","viber","douyin","rednote","weibo","kuaishou","bilibili","qq","sharechat","moj","josh","international"].includes(platform))
-    return <InternationalSvg platform={platform} />;
+  if (platform === "google")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" d="M12 2.8a6.8 6.8 0 0 1 6.8 6.8c0 4.65-6.8 11.6-6.8 11.6S5.2 14.25 5.2 9.6A6.8 6.8 0 0 1 12 2.8Z" /><path fill="#fff" d="M8.1 9.5h7.8v5.6H8.1V9.5Z" /><path fill="#34a853" d="M7.4 8.8h9.2l-.8-2.2H8.2l-.8 2.2Z" /><path fill="#fbbc05" d="M9 11h2v4.1H9V11Z" /><path fill="#ea4335" d="M13 11h2v4.1h-2V11Z" /></svg>);
+  if (platform === "googleReviews")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" d="M20.2 12.2c0-.7-.06-1.37-.18-2H12v3.78h4.58a3.9 3.9 0 0 1-1.7 2.56v2.12h2.75c1.6-1.48 2.57-3.66 2.57-6.46Z" /><path fill="#34a853" d="M12 20.5c2.3 0 4.23-.76 5.63-2.06l-2.75-2.12c-.76.5-1.73.8-2.88.8-2.22 0-4.1-1.5-4.77-3.52H4.4v2.2A8.5 8.5 0 0 0 12 20.5Z" /><path fill="#fbbc05" d="M7.23 13.6a5.1 5.1 0 0 1 0-3.2V8.2H4.4a8.5 8.5 0 0 0 0 7.6l2.83-2.2Z" /><path fill="#ea4335" d="M12 6.88c1.25 0 2.37.43 3.25 1.27l2.44-2.44A8.16 8.16 0 0 0 12 3.5a8.5 8.5 0 0 0-7.6 4.7l2.83 2.2C7.9 8.38 9.78 6.88 12 6.88Z" /><path fill="#fbbc05" d="m18.2 14.8.7 1.42 1.56.23-1.13 1.1.27 1.55-1.4-.73-1.39.73.27-1.55-1.13-1.1 1.56-.23.7-1.42Z" /></svg>);
+  if (platform === "trustpilot")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 3 2.15 5.05 5.47.46-4.15 3.6 1.25 5.35L12 14.63l-4.72 2.83 1.25-5.35-4.15-3.6 5.47-.46L12 3Z" /><path fill="#063" fillOpacity=".28" d="m12 14.63 4.72 2.83-1.25-5.35L12 3v11.63Z" /></svg>);
+  if (platform === "shopify")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 7.3 9.8 6l.65-1.6c.5-1.15 1.42-1.9 2.48-1.78 1 .12 1.73.95 1.95 2.2l.08.47 2.25.42 1.55 14.15L5.4 21.2 7 7.3Zm5.62-2.05-.2.52.9-.18c-.1-.36-.25-.57-.45-.6-.06-.01-.16.06-.25.26Zm-2.08.4.82-.16.37-.96c-.44.21-.86.64-1.19 1.12Z" /><text x="12.4" y="16" textAnchor="middle" className={styles.badgeText}>S</text></svg>);
+  if (platform === "amazon")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><text x="11.7" y="14.2" textAnchor="middle" className={styles.marketText}>a</text><path fill="currentColor" d="M5.2 16.2c3.6 2.1 8.8 2.25 13.1-.12.55-.3.9.42.42.82-3.6 3-9.7 3.25-14.05.35-.5-.33-.05-1.4.53-1.05Z" /><path fill="currentColor" d="M17.6 18.25c.72-.1 1.78-.1 2.02.18.24.27-.08 1.3-.36 1.98-.1.25.18.38.4.18 1.4-1.18 1.76-3.64 1.48-3.98-.28-.34-2.75-.62-4.23.42-.23.16-.15.38.16.35.35-.04 1.05-.12 1.36.05.3.16-.44.53-.83.82Z" /></svg>);
+  if (platform === "etsy")
+    return <BadgeSvg text="E" />;
+  if (platform === "wechat")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9.7 5.1c-3.9 0-7 2.52-7 5.62 0 1.75 1 3.32 2.56 4.35l-.62 2.1 2.4-1.23c.82.25 1.72.4 2.66.4 3.9 0 7-2.52 7-5.62s-3.1-5.62-7-5.62Z" /><path fill="#fff" d="M7.2 9.9a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6Zm5 0a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6Z" /><path fill="#eafff2" d="M15 11.2c3.25 0 5.9 2.02 5.9 4.5 0 1.4-.84 2.66-2.15 3.48l.5 1.72-1.95-.98c-.7.2-1.46.3-2.3.3-3.25 0-5.9-2.02-5.9-4.52 0-2.48 2.65-4.5 5.9-4.5Z" /></svg>);
+  if (platform === "line")
+    return <BadgeSvg text="LINE" />;
+  if (platform === "kakao")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4C7.05 4 3 7.05 3 10.8c0 2.44 1.72 4.58 4.3 5.78l-.7 3.1 3.65-2.28c.56.08 1.14.12 1.75.12 4.95 0 9-3.04 9-6.72C21 7.05 16.95 4 12 4Z" /><text x="12" y="13.5" textAnchor="middle" className={styles.kakaoText}>TALK</text></svg>);
+  if (platform === "viber")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.3 4.2h11.4A3.3 3.3 0 0 1 21 7.5v7.4a3.3 3.3 0 0 1-3.3 3.3h-3.2L12 21l-2.5-2.8H6.3A3.3 3.3 0 0 1 3 14.9V7.5a3.3 3.3 0 0 1 3.3-3.3Z" /><path fill="#7360f2" d="M8.6 8.2c.55-.5 1.35-.35 1.65.32l.55 1.2c.18.4.08.86-.25 1.14l-.45.38a5.2 5.2 0 0 0 2.62 2.62l.38-.45c.28-.33.75-.43 1.14-.25l1.2.55c.67.3.83 1.1.32 1.65-.65.7-1.63.95-2.55.65-2.55-.82-4.43-2.7-5.25-5.25-.3-.92-.05-1.9.65-2.55Z" /></svg>);
+  if (platform === "douyin")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="#00f2ea" d="M10 8.2v8.2a2 2 0 1 1-2-2v-3a5 5 0 1 0 5 5V7.6c1.2 1.32 2.78 2.04 4.8 2.1V6.75c-1.8-.12-2.9-1.22-3.24-3.25H10v4.7Z" /><path fill="#ff0050" d="M12.3 7.2v8.3a2 2 0 1 1-2-2v-2.7a5 5 0 1 0 5 5V9.2a7.2 7.2 0 0 0 3.5.9V7.2a4.6 4.6 0 0 1-3.4-1.5 5.4 5.4 0 0 1-.95-2.2H12.3v3.7Z" /></svg>);
+  if (platform === "rednote")
+    return <BadgeSvg text="RN" />;
+  if (platform === "weibo")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 12.5c1.1-3 4.7-4.78 8.1-4 3.4.77 5.2 3.78 4.1 6.76-1.1 2.98-4.73 4.75-8.1 4C5.7 18.48 3.9 15.48 5 12.5Z" /><circle cx="10.2" cy="13.8" r="1.5" fill="#fff" /><circle cx="14.3" cy="13" r="1.05" fill="#fff" /><path fill="none" stroke="currentColor" strokeWidth="1.8" d="M14.8 4.8c2.7-.15 4.75 1.48 4.95 4.1M16.2 7.2c1.1.05 1.75.66 1.86 1.75" /></svg>);
+  if (platform === "kuaishou")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.7 6.1a2.35 2.35 0 1 1 4.7 0 2.35 2.35 0 0 1-4.7 0Zm5.3.45a2.15 2.15 0 1 1 4.3 0 2.15 2.15 0 0 1-4.3 0ZM5 10h14v8.4A2.6 2.6 0 0 1 16.4 21H7.6A2.6 2.6 0 0 1 5 18.4V10Zm5 3.2v4.6l4-2.3-4-2.3Z" /></svg>);
+  if (platform === "bilibili")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.1 3.8 2.05 2.45h3.7L15.9 3.8l1.5 1.25-1 1.2h1.3A3.3 3.3 0 0 1 21 9.55v6.65a3.3 3.3 0 0 1-3.3 3.3H6.3A3.3 3.3 0 0 1 3 16.2V9.55a3.3 3.3 0 0 1 3.3-3.3h1.3l-1-1.2 1.5-1.25Z" /><path fill="#00a1d6" d="M8 11h1.7v3H8v-3Zm6.3 0H16v3h-1.7v-3Z" /><path fill="none" stroke="#00a1d6" strokeWidth="1.4" d="M9.2 16.2h5.6" /></svg>);
+  if (platform === "qq")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3c2.6 0 4.3 2.55 4.3 5.95 0 .65-.06 1.28-.18 1.87 1.3 1.3 2.55 3.72 2.05 4.45-.32.47-1.18.24-2.02-.3-.65 1.58-2.1 2.58-4.15 2.58s-3.5-1-4.15-2.58c-.84.54-1.7.77-2.02.3-.5-.73.75-3.15 2.05-4.45A9.4 9.4 0 0 1 7.7 8.95C7.7 5.55 9.4 3 12 3Z" /><path fill="#fff" d="M10.2 8.2a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8Zm3.6 0a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8Z" /><path fill="#f59e0b" d="M9 11.2h6l-1.4 1.8h-3.2L9 11.2Z" /></svg>);
+  if (platform === "sharechat")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 5.2h9.4a4.6 4.6 0 0 1 0 9.2h-2.1L7 18.6v-4.2H5a4.6 4.6 0 0 1 0-9.2Z" /><path fill="#43bccd" d="M15.2 9.2h4.2v2.1h-4.2z" /><path fill="#f86624" d="M11 7.1h2.2v6.4H11z" /><path fill="#f9c80e" d="M6.8 9.25h2.2v2.2H6.8z" /></svg>);
+  if (platform === "moj")
+    return <BadgeSvg text="M▶" />;
+  if (platform === "josh")
+    return <BadgeSvg text="J▶" />;
+  if (platform === "international")
+    return <BadgeSvg text="INT" />;
   if (
     [
       "google",
+      "googleReviews",
       "trustpilot",
       "shopify",
       "amazon",
