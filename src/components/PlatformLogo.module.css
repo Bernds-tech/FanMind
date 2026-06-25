@@ -120,6 +120,24 @@
   --platform-logo-fg: #fff;
   --platform-logo-ring: rgba(255, 255, 255, 0.18);
 }
+.snapchat {
+  --platform-logo-bg: #fffc00;
+  --platform-logo-fg: #111827;
+}
+.threads,
+.reddit,
+.twitch,
+.pinterest,
+.patreon,
+.kofi,
+.substack,
+.review,
+.commerce,
+.international {
+  --platform-logo-bg: linear-gradient(135deg, #0f172a, #334155);
+  --platform-logo-fg: #e0f2fe;
+  --platform-logo-ring: rgba(103, 232, 249, 0.22);
+}
 .manual,
 .other,
 .notes,
