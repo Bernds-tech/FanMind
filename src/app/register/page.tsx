@@ -227,8 +227,8 @@ type WorkspaceSetupError = {
 };
 
 const EMAIL_CONFIRMATION_WORKSPACE_MESSAGES: Record<FanMindLanguage, string> = {
-  de: "Bitte bestätige deine E-Mail-Adresse. Dein Workspace wird danach beim ersten Login eingerichtet.",
-  en: "Please confirm your email address. Your workspace will be set up after your first login.",
+  de: "Registrierung angelegt. Bitte bestätige deine E-Mail-Adresse oder melde dich nach Freischaltung an.",
+  en: "Registration created. Please confirm your email address or sign in after activation.",
 };
 
 function workspaceSetupError(message: string): WorkspaceSetupError {
@@ -396,7 +396,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
         },
       });
 
-      if (!authError) {
+      if (!authError && data.session?.access_token) {
         await syncSupabaseSessionForServer(data.session);
       }
 
