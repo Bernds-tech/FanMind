@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import styles from "./channels.module.css";
@@ -257,6 +258,12 @@ const statusClassName: Record<ChannelStatus, string> = {
   Verbunden: styles.statusConnected,
 };
 
+function BodyPortal({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") return null;
+
+  return createPortal(children, document.body);
+}
+
 function isBookable(status: ChannelStatus) {
   return (
     status === "Coming Soon" ||
@@ -292,6 +299,8 @@ export function ChannelsGrid({
 }) {
   const router = useRouter();
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
   const [notice, setNotice] = useState("");
   const [selfTestPending, setSelfTestPending] = useState(false);
   const [selfTestResult, setSelfTestResult] =
@@ -308,7 +317,8 @@ export function ChannelsGrid({
     useState<MetaPermissionDiagnosis | null>(null);
   const [messengerSyncResult, setMessengerSyncResult] =
     useState<FacebookMessengerSyncResult | null>(null);
-  const demoConnectionNotice = "Dieser Demo-Workspace ist öffentlich. Echte Kanalverbindungen und externe Bot-Tests sind hier deaktiviert. Bitte registriere einen eigenen Workspace, um Verbindungen sicher zu testen.";
+  const demoConnectionNotice =
+    "Dieser Demo-Workspace ist öffentlich. Echte Kanalverbindungen und externe Bot-Tests sind hier deaktiviert. Bitte registriere einen eigenen Workspace, um Verbindungen sicher zu testen.";
   const [facebookErrorCode] = useState<string | null>(() => {
     if (!facebookError || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("facebook_error");
@@ -316,6 +326,9 @@ export function ChannelsGrid({
 
   useEffect(() => {
     if (!activeChannel) return;
+
+    modalBodyRef.current?.scrollTo({ top: 0, left: 0 });
+    modalRef.current?.focus({ preventScroll: true });
 
     const previousBodyOverflow = document.body.style.overflow;
     const previousDocumentOverflow = document.documentElement.style.overflow;
@@ -729,639 +742,614 @@ export function ChannelsGrid({
       </div>
 
       {activeChannel ? (
-        <div
-          className={styles.modalBackdrop}
-          role="presentation"
-          onMouseDown={() => setActiveChannel(null)}
-        >
+        <BodyPortal>
           <div
-            className={styles.modal}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="channel-modal-title"
-            onMouseDown={(event) => event.stopPropagation()}
+            className={styles.modalBackdrop}
+            role="presentation"
+            onMouseDown={() => setActiveChannel(null)}
           >
-            <div className={styles.modalHeader}>
-              <PlatformLogo
-                className={styles.modalLogo}
-                platform={activeChannel.key}
-                size="lg"
-              />
-              <div>
-                <p className={styles.modalEyebrow}>Kanal verbinden</p>
-                <h2 id="channel-modal-title">
-                  {activeChannel.key === "telegram"
-                    ? "Telegram verbinden"
-                    : activeChannel.name}
-                </h2>
-                <div className={styles.metaRow}>
-                  {activeDisplayStatus && isBookable(activeDisplayStatus) ? (
-                    <ComingSoonMark
-                      className={styles.soonBadgeImage}
-                      size="small"
-                      alt="Verbindung in Vorbereitung"
-                    />
-                  ) : (
-                    <span
-                      className={`${styles.statusBadge} ${statusClassName[activeDisplayStatus ?? "Live"]}`}
-                    >
-                      {activeDisplayStatus}
+            <div
+              ref={modalRef}
+              className={styles.modal}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="channel-modal-title"
+              tabIndex={-1}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className={styles.modalHeader}>
+                <PlatformLogo
+                  className={styles.modalLogo}
+                  platform={activeChannel.key}
+                  size="lg"
+                />
+                <div>
+                  <p className={styles.modalEyebrow}>Kanal verbinden</p>
+                  <h2 id="channel-modal-title">
+                    {activeChannel.key === "telegram"
+                      ? "Telegram verbinden"
+                      : activeChannel.name}
+                  </h2>
+                  <div className={styles.metaRow}>
+                    {activeDisplayStatus && isBookable(activeDisplayStatus) ? (
+                      <ComingSoonMark
+                        className={styles.soonBadgeImage}
+                        size="small"
+                        alt="Verbindung in Vorbereitung"
+                      />
+                    ) : (
+                      <span
+                        className={`${styles.statusBadge} ${statusClassName[activeDisplayStatus ?? "Live"]}`}
+                      >
+                        {activeDisplayStatus}
+                      </span>
+                    )}
+                    <span className={styles.techBadge}>
+                      {activeChannel.technology}
                     </span>
-                  )}
-                  <span className={styles.techBadge}>
-                    {activeChannel.technology}
-                  </span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className={styles.modalBody}>
-              <p className={styles.modalText}>
-                {activeChannel.key === "telegram"
-                  ? "Telegram hat zwei getrennte Wege: Telegram Account / Inbox als Hauptintegration in Vorbereitung und FanMind Bot als optionaler Live-Eingang. Der Bot ist nicht deine persönliche Telegram-Inbox."
-                  : activeChannel.key === "facebook" && facebookConnection
-                    ? "Du verbindest deinen eigenen Kanal. FanMind synchronisiert deine eigenen Kontakte, Fans und Nachrichten in deinen Workspace. Antworten werden vorbereitet; gesendet wird manuell im Originalkanal oder über einen sicheren Reply-Link/API-Flow."
-                    : isBookable(activeChannel.status)
-                      ? "Dieser Kanal ist als Account-/Inbox-Integration vorbereitet oder geplant. Es wird keine echte Anmeldung vorgetäuscht und keine automatische Sendefunktion gestartet."
-                      : "Verbinde deinen eigenen Kanal, damit FanMind deine echten Nachrichten, Kontakte und Fans in deinem Workspace verwalten kann."}
-              </p>
+              <div ref={modalBodyRef} className={styles.modalBody}>
+                <p className={styles.modalText}>
+                  {activeChannel.key === "telegram"
+                    ? "Telegram hat zwei getrennte Wege: Telegram Account / Inbox als Hauptintegration in Vorbereitung und FanMind Bot als optionaler Live-Eingang. Der Bot ist nicht deine persönliche Telegram-Inbox."
+                    : activeChannel.key === "facebook" && facebookConnection
+                      ? "Du verbindest deinen eigenen Kanal. FanMind synchronisiert deine eigenen Kontakte, Fans und Nachrichten in deinen Workspace. Antworten werden vorbereitet; gesendet wird manuell im Originalkanal oder über einen sicheren Reply-Link/API-Flow."
+                      : isBookable(activeChannel.status)
+                        ? "Dieser Kanal ist als Account-/Inbox-Integration vorbereitet oder geplant. Es wird keine echte Anmeldung vorgetäuscht und keine automatische Sendefunktion gestartet."
+                        : "Verbinde deinen eigenen Kanal, damit FanMind deine echten Nachrichten, Kontakte und Fans in deinem Workspace verwalten kann."}
+                </p>
 
-              {activeConnectionCards.length > 0 &&
-              activeChannel.key !== "telegram" ? (
-                <div
-                  className={`${styles.childSourceGrid} ${
-                    activeConnectionCards.length === 1
-                      ? styles.childSourceGridSingle
-                      : ""
-                  }`}
-                  aria-label={`${activeChannel.name} Verbindungsmöglichkeiten`}
-                >
-                  {activeConnectionCards.map((connectionCard) => (
-                    <div
-                      className={styles.childSourceCard}
-                      key={connectionCard.key}
-                    >
-                      <div>
-                        <strong>{connectionCard.title}</strong>
-                        <p>{connectionCard.description}</p>
-                      </div>
-                      <ul className={styles.connectionCardList}>
-                        <li>Status: {connectionCard.status}</li>
-                        <li>
-                          Integrationstyp: {connectionCard.integrationType}
-                        </li>
-                        <li>Verbindungstyp: {connectionCard.connectionType}</li>
-                        <li>Auto-Senden: deaktiviert</li>
-                        {connectionCard.details.map((detail) => (
-                          <li key={detail}>{detail}</li>
-                        ))}
-                      </ul>
-                      {connectionCard.key === "facebook_messages" ? (
-                        <div className={styles.releaseBox}>
-                          <strong>Nachrichten-Status</strong>
-                          <ul className={styles.connectionCardList}>
-                            <li>
-                              Page:{" "}
-                              {facebookConnection?.page_name ??
-                                facebookConnection?.page_id ??
-                                "nicht verbunden"}
-                            </li>
-                            <li>
-                              Webhook messages:{" "}
-                              {formatWebhookStatus(
-                                displayedWebhookStatus?.fields.messages,
-                              )}
-                            </li>
-                            <li>
-                              Webhook message_echoes:{" "}
-                              {formatWebhookStatus(
-                                displayedWebhookStatus?.fields.message_echoes,
-                              )}
-                            </li>
-                            <li>
-                              Letzte Nachricht:{" "}
-                              {lastMessageEvent
-                                ? formatDateTime(lastMessageEvent.received_at)
-                                : "noch keine Nachricht empfangen"}
-                            </li>
-                            <li>
-                              Letzter Messenger-Sync:{" "}
-                              {facebookConnection?.last_messenger_sync_at
-                                ? formatDateTime(
-                                    facebookConnection.last_messenger_sync_at,
-                                  )
-                                : "noch nicht ausgeführt"}
-                            </li>
-                            <li>
-                              OAuth Callback:{" "}
-                              {facebookLiveSetupStatus.oauthCallbackUrl ??
-                                "nicht vollständig konfiguriert"}
-                            </li>
-                          </ul>
-                        </div>
-                      ) : null}
-                      {connectionCard.key === "facebook_comments" ? (
-                        <div className={styles.releaseBox}>
-                          <strong>Kommentar-Status</strong>
-                          <ul className={styles.connectionCardList}>
-                            <li>
-                              Letztes Kommentar-Event:{" "}
-                              {lastFeedCommentEvent
-                                ? formatDateTime(
-                                    lastFeedCommentEvent.received_at,
-                                  )
-                                : "noch kein echter Kommentar empfangen"}
-                            </li>
-                            <li>
-                              Letzter Kommentar-Abruf:{" "}
-                              {facebookConnection?.last_comment_fetch_at
-                                ? formatDateTime(
-                                    facebookConnection.last_comment_fetch_at,
-                                  )
-                                : "geparkt, nicht ausgeführt"}
-                            </li>
-                            <li>
-                              Kommentar-Scopes angefordert:{" "}
-                              {commentFeedScopesRequested ? "ja" : "nein"}
-                            </li>
-                            <li>
-                              Token-Scopes vollständig:{" "}
-                              {commentFeedScopesGranted ? "ja" : "nein"}
-                            </li>
-                            <li>
-                              feed/Kommentare: geparkt, nicht automatisch
-                              aktiviert
-                            </li>
-                          </ul>
-                        </div>
-                      ) : null}
-                      <div className={styles.connectionCardActions}>
-                        {connectionCard.key === "facebook_messages" &&
-                        !facebookConnection ? (
-                          demoConnectionsDisabled ? (
-                            <button
-                              type="button"
-                              className={styles.modalLinkButton}
-                              onClick={() => setNotice(demoConnectionNotice)}
-                            >
-                              Nachrichten verbinden
-                            </button>
-                          ) : (
-                            <a
-                              className={styles.modalLinkButton}
-                              href="/api/integrations/facebook/start?type=facebook_messages"
-                            >
-                              Nachrichten verbinden
-                            </a>
-                          )
-                        ) : (
-                          <button
-                            type="button"
-                            className={styles.secondaryModalButton}
-                            onClick={() => {
-                              if (demoConnectionsDisabled) {
-                                setNotice(demoConnectionNotice);
-                                return;
-                              }
-                              if (connectionCard.key === "facebook_messages") {
-                                if (facebookConnection) {
-                                  runPageWebhookAction("check");
-                                } else {
-                                  setNotice(
-                                    "DM-Verbindung ist vorbereitet. Starte die Facebook-Verbindung über die DM-Karte.",
-                                  );
-                                }
-                                return;
-                              }
-                              if (connectionCard.key === "facebook_comments") {
-                                setNotice(
-                                  "Kommentarverbindung ist vorbereitet. Es wurde kein OAuth-Flow und kein Scraping gestartet.",
-                                );
-                                return;
-                              }
-                              setNotice(
-                                `${connectionCard.title} ist nach dem einheitlichen Kanalstandard vorbereitet. Es wurde keine externe Anmeldung gestartet.`,
-                              );
-                            }}
-                            disabled={
-                              connectionCard.key === "facebook_messages" &&
-                              Boolean(pageWebhookPending)
-                            }
-                          >
-                            {connectionCard.key === "facebook_messages" &&
-                            pageWebhookPending === "check"
-                              ? "DM-Verbindung wird geprüft ..."
-                              : connectionCard.actionLabel}
-                          </button>
-                        )}
-                        {connectionCard.key === "facebook_messages" &&
-                        facebookConnection ? (
-                          <form
-                            method="post"
-                            action={demoConnectionsDisabled ? undefined : "/api/integrations/facebook/disconnect"}
-                            onSubmit={(event) => {
-                              if (demoConnectionsDisabled) {
-                                event.preventDefault();
-                                setNotice(demoConnectionNotice);
-                              }
-                            }}
-                          >
-                            <button
-                              type="submit"
-                              className={styles.dangerModalButton}
-                            >
-                              DM-Verbindung trennen
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {activeChannel.key === "telegram" ? (
-                <div
-                  className={styles.telegramSplitGrid}
-                  aria-label="Telegram Integrationswege"
-                >
-                  <section
-                    className={styles.telegramColumn}
-                    aria-label="Telegram Account und Inbox"
+                {activeConnectionCards.length > 0 &&
+                activeChannel.key !== "telegram" ? (
+                  <div
+                    className={`${styles.childSourceGrid} ${
+                      activeConnectionCards.length === 1
+                        ? styles.childSourceGridSingle
+                        : ""
+                    }`}
+                    aria-label={`${activeChannel.name} Verbindungsmöglichkeiten`}
                   >
-                    <div className={styles.telegramColumnHeader}>
-                      <p className={styles.modalEyebrow}>Hauptintegration</p>
-                      <h3>Telegram Account / Inbox</h3>
-                      <p>
-                        Verbinde dein eigenes Telegram-Konto, damit FanMind
-                        deine Telegram-Chats/Kontakte als Arbeits-Eingang
-                        verwalten kann. Du entscheidest, welche Chats importiert
-                        werden. Antworten werden nie automatisch gesendet.
-                      </p>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Telegram Account und Inbox Status"
-                    >
-                      <strong>Status & Verbindung</strong>
-                      <ul className={styles.compactStatusList}>
-                        <li>Status: Geplant / Vorbereitung</li>
-                        <li>Integrationstyp: telegram_account</li>
-                        <li>Verbindung: noch nicht live geschaltet</li>
-                        <li>Import: nur nach deiner Auswahl</li>
-                        <li>Auto-Senden: deaktiviert</li>
-                        <li>Antworten: vorbereitet oder manuell gesendet</li>
-                      </ul>
-                      <p className={styles.modalNotice}>
-                        Diese Verbindung ist als Produkt-/UI-Vorbereitung
-                        sichtbar. Es wird aktuell keine Telefonnummer abgefragt,
-                        keine Telegram-Session gespeichert und kein privater
-                        Chat importiert.
-                      </p>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Telegram Account und Inbox Datenschutz"
-                    >
-                      <strong>Datenschutz & Kontrolle</strong>
-                      <ul className={styles.compactStatusList}>
-                        <li>
-                          Du entscheidest, welche Chats importiert werden.
-                        </li>
-                        <li>Keine automatische Antwort.</li>
-                        <li>
-                          Jeder Workspace sieht nur seine eigenen
-                          Telegram-Daten.
-                        </li>
-                        <li>Trennung pro Nutzer/Workspace.</li>
-                        <li>Disconnect jederzeit möglich.</li>
-                        <li>Kein Zugriff auf fremde Workspaces.</li>
-                      </ul>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Telegram Account und Inbox Ablauf"
-                    >
-                      <strong>Geplanter Ablauf</strong>
-                      <ul className={styles.compactStatusList}>
-                        <li>Einwilligung und Scope-Auswahl pro Workspace</li>
-                        <li>Chat-Auswahl vor Import statt Vollimport</li>
-                        <li>Ingress in den FanMind Arbeits-Eingang</li>
-                        <li>Antworten nur vorbereitet oder manuell</li>
-                        <li>Keine automatische Sendefunktion</li>
-                        <li>Saubere Trennung je Nutzer/Workspace</li>
-                      </ul>
-                    </div>
-                    <div
-                      className={styles.connectionCardActions}
-                      aria-label="Telegram Account und Inbox Aktionen"
-                    >
-                      <button
-                        type="button"
-                        className={styles.secondaryModalButton}
-                        disabled
-                        title="Telegram Account / Inbox ist als Hauptintegration in Vorbereitung"
+                    {activeConnectionCards.map((connectionCard) => (
+                      <div
+                        className={styles.childSourceCard}
+                        key={connectionCard.key}
                       >
-                        Telegram-Inbox verbinden
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.secondaryModalButton}
-                        onClick={() =>
-                          setNotice(
-                            "Telegram Account / Inbox ist als Hauptintegration geplant. Noch kein MTProto-/TDLib-Flow, keine Telefonnummern und keine Session-Speicherung aktiv.",
-                          )
-                        }
-                      >
-                        <ComingSoonMark
-                          className={styles.soonButtonImage}
-                          size="small"
-                        />
-                      </button>
-                    </div>
-                  </section>
-                  <section
-                    className={styles.telegramColumn}
-                    aria-label="FanMind Bot"
-                  >
-                    <div className={styles.telegramColumnHeader}>
-                      <p className={styles.modalEyebrow}>Optionaler Zusatz</p>
-                      <h3>FanMind Bot</h3>
-                      <p>
-                        Optionaler Bot-Eingang für Nachrichten, die direkt an{" "}
-                        {TELEGRAM_BOT_USERNAME} gesendet werden. Geeignet für
-                        Tests, Support oder einfache Bot-Kommunikation. Das ist
-                        nicht deine persönliche Telegram-Inbox.
-                      </p>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="FanMind Bot Status"
-                    >
-                      <strong>Status & Verbindung</strong>
-                      {telegramCheckRequested ? (
-                        <p className={styles.inlineStatus}>
-                          Bot-Verbindung wurde gerade geprüft.
-                        </p>
-                      ) : null}
-                      <ul className={styles.compactStatusList}>
-                        <li>Status: {demoConnectionsDisabled ? "Demo-Modus öffentlich · externe Bot-Tests deaktiviert" : "Live im eigenen Workspace"}</li>
-                        <li>Integrationstyp: telegram_bot</li>
-                        <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
-                        <li>Webhook: {telegramWebhookLabel}</li>
-                        <li>Live-Check: {telegramStatusLabel}</li>
-                        <li>Auto-Senden: deaktiviert</li>
-                        <li>Rolle: optionaler Eingang</li>
-                      </ul>
-                      {telegramSetupStatus.error ||
-                      telegramSetupStatus.lastErrorMessage ? (
-                        <p className={styles.modalNotice}>
-                          Prüfung nötig:{" "}
-                          {telegramSetupStatus.lastErrorMessage ??
-                            telegramSetupStatus.error}
-                        </p>
-                      ) : null}
-                      <p className={styles.modalNotice}>
-                        Eingehende Nachrichten an den FanMind Bot landen nur im
-                        explizit serverseitig konfigurierten Test-Workspace.
-                        Ohne eindeutige Workspace-Zuordnung wird nichts
-                        angelegt.
-                      </p>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="Letzte FanMind Bot Eingänge"
-                    >
-                      <strong>Letzte Bot-Eingänge</strong>
-                      <p className={styles.subtleModalText}>
-                        Quelle: conversation_messages · source_platform=telegram
-                        · FanMind Bot
-                      </p>
-                      {telegramMessages.length > 0 ? (
-                        <ul className={styles.messageList}>
-                          {telegramMessages.map((message) => (
-                            <li key={`bot-${message.id}`}>
-                              <a href={`/fans/${message.contact_id}`}>
-                                <strong>
-                                  {message.author_label ?? "Telegram Kontakt"}
-                                </strong>
-                                <span>
-                                  {" "}
-                                  ·{" "}
-                                  {getTelegramSourceTypeLabel(
-                                    message.source_type,
-                                  )}
-                                </span>
-                                <span>
-                                  {" "}
-                                  · {formatDateTime(message.created_at)}
-                                </span>
-                                <p>{message.content.slice(0, 140)}</p>
-                              </a>
-                            </li>
+                        <div>
+                          <strong>{connectionCard.title}</strong>
+                          <p>{connectionCard.description}</p>
+                        </div>
+                        <ul className={styles.connectionCardList}>
+                          <li>Status: {connectionCard.status}</li>
+                          <li>
+                            Integrationstyp: {connectionCard.integrationType}
+                          </li>
+                          <li>
+                            Verbindungstyp: {connectionCard.connectionType}
+                          </li>
+                          <li>Auto-Senden: deaktiviert</li>
+                          {connectionCard.details.map((detail) => (
+                            <li key={detail}>{detail}</li>
                           ))}
                         </ul>
-                      ) : telegramMessagesError ? (
-                        <p className={styles.modalNotice}>
-                          Bot-Eingänge konnten nicht geladen werden:{" "}
-                          {telegramMessagesError}
+                        {connectionCard.key === "facebook_messages" ? (
+                          <div className={styles.releaseBox}>
+                            <strong>Nachrichten-Status</strong>
+                            <ul className={styles.connectionCardList}>
+                              <li>
+                                Page:{" "}
+                                {facebookConnection?.page_name ??
+                                  facebookConnection?.page_id ??
+                                  "nicht verbunden"}
+                              </li>
+                              <li>
+                                Webhook messages:{" "}
+                                {formatWebhookStatus(
+                                  displayedWebhookStatus?.fields.messages,
+                                )}
+                              </li>
+                              <li>
+                                Webhook message_echoes:{" "}
+                                {formatWebhookStatus(
+                                  displayedWebhookStatus?.fields.message_echoes,
+                                )}
+                              </li>
+                              <li>
+                                Letzte Nachricht:{" "}
+                                {lastMessageEvent
+                                  ? formatDateTime(lastMessageEvent.received_at)
+                                  : "noch keine Nachricht empfangen"}
+                              </li>
+                              <li>
+                                Letzter Messenger-Sync:{" "}
+                                {facebookConnection?.last_messenger_sync_at
+                                  ? formatDateTime(
+                                      facebookConnection.last_messenger_sync_at,
+                                    )
+                                  : "noch nicht ausgeführt"}
+                              </li>
+                              <li>
+                                OAuth Callback:{" "}
+                                {facebookLiveSetupStatus.oauthCallbackUrl ??
+                                  "nicht vollständig konfiguriert"}
+                              </li>
+                            </ul>
+                          </div>
+                        ) : null}
+                        {connectionCard.key === "facebook_comments" ? (
+                          <div className={styles.releaseBox}>
+                            <strong>Kommentar-Status</strong>
+                            <ul className={styles.connectionCardList}>
+                              <li>
+                                Letztes Kommentar-Event:{" "}
+                                {lastFeedCommentEvent
+                                  ? formatDateTime(
+                                      lastFeedCommentEvent.received_at,
+                                    )
+                                  : "noch kein echter Kommentar empfangen"}
+                              </li>
+                              <li>
+                                Letzter Kommentar-Abruf:{" "}
+                                {facebookConnection?.last_comment_fetch_at
+                                  ? formatDateTime(
+                                      facebookConnection.last_comment_fetch_at,
+                                    )
+                                  : "geparkt, nicht ausgeführt"}
+                              </li>
+                              <li>
+                                Kommentar-Scopes angefordert:{" "}
+                                {commentFeedScopesRequested ? "ja" : "nein"}
+                              </li>
+                              <li>
+                                Token-Scopes vollständig:{" "}
+                                {commentFeedScopesGranted ? "ja" : "nein"}
+                              </li>
+                              <li>
+                                feed/Kommentare: geparkt, nicht automatisch
+                                aktiviert
+                              </li>
+                            </ul>
+                          </div>
+                        ) : null}
+                        <div className={styles.connectionCardActions}>
+                          {connectionCard.key === "facebook_messages" &&
+                          !facebookConnection ? (
+                            demoConnectionsDisabled ? (
+                              <button
+                                type="button"
+                                className={styles.modalLinkButton}
+                                onClick={() => setNotice(demoConnectionNotice)}
+                              >
+                                Nachrichten verbinden
+                              </button>
+                            ) : (
+                              <a
+                                className={styles.modalLinkButton}
+                                href="/api/integrations/facebook/start?type=facebook_messages"
+                              >
+                                Nachrichten verbinden
+                              </a>
+                            )
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.secondaryModalButton}
+                              onClick={() => {
+                                if (demoConnectionsDisabled) {
+                                  setNotice(demoConnectionNotice);
+                                  return;
+                                }
+                                if (
+                                  connectionCard.key === "facebook_messages"
+                                ) {
+                                  if (facebookConnection) {
+                                    runPageWebhookAction("check");
+                                  } else {
+                                    setNotice(
+                                      "DM-Verbindung ist vorbereitet. Starte die Facebook-Verbindung über die DM-Karte.",
+                                    );
+                                  }
+                                  return;
+                                }
+                                if (
+                                  connectionCard.key === "facebook_comments"
+                                ) {
+                                  setNotice(
+                                    "Kommentarverbindung ist vorbereitet. Es wurde kein OAuth-Flow und kein Scraping gestartet.",
+                                  );
+                                  return;
+                                }
+                                setNotice(
+                                  `${connectionCard.title} ist nach dem einheitlichen Kanalstandard vorbereitet. Es wurde keine externe Anmeldung gestartet.`,
+                                );
+                              }}
+                              disabled={
+                                connectionCard.key === "facebook_messages" &&
+                                Boolean(pageWebhookPending)
+                              }
+                            >
+                              {connectionCard.key === "facebook_messages" &&
+                              pageWebhookPending === "check"
+                                ? "DM-Verbindung wird geprüft ..."
+                                : connectionCard.actionLabel}
+                            </button>
+                          )}
+                          {connectionCard.key === "facebook_messages" &&
+                          facebookConnection ? (
+                            <form
+                              method="post"
+                              action={
+                                demoConnectionsDisabled
+                                  ? undefined
+                                  : "/api/integrations/facebook/disconnect"
+                              }
+                              onSubmit={(event) => {
+                                if (demoConnectionsDisabled) {
+                                  event.preventDefault();
+                                  setNotice(demoConnectionNotice);
+                                }
+                              }}
+                            >
+                              <button
+                                type="submit"
+                                className={styles.dangerModalButton}
+                              >
+                                DM-Verbindung trennen
+                              </button>
+                            </form>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {activeChannel.key === "telegram" ? (
+                  <div
+                    className={styles.telegramSplitGrid}
+                    aria-label="Telegram Integrationswege"
+                  >
+                    <section
+                      className={styles.telegramColumn}
+                      aria-label="Telegram Account und Inbox"
+                    >
+                      <div className={styles.telegramColumnHeader}>
+                        <p className={styles.modalEyebrow}>Hauptintegration</p>
+                        <h3>Telegram Account / Inbox</h3>
+                        <p>
+                          Verbinde dein eigenes Telegram-Konto, damit FanMind
+                          deine Telegram-Chats/Kontakte als Arbeits-Eingang
+                          verwalten kann. Du entscheidest, welche Chats
+                          importiert werden. Antworten werden nie automatisch
+                          gesendet.
                         </p>
-                      ) : (
-                        <p className={styles.modalNotice}>
-                          Noch keine Bot-Eingänge in diesem Workspace gefunden.
-                        </p>
-                      )}
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="FanMind Bot technische Details"
-                    >
-                      <strong>Technische Details</strong>
-                      <ul className={styles.compactStatusList}>
-                        <li>
-                          Letzte Prüfung:{" "}
-                          {telegramSetupStatus.checkedAt
-                            ? formatDateTime(telegramSetupStatus.checkedAt)
-                            : "noch nicht geprüft"}
-                        </li>
-                        <li>
-                          Webhook-URL:{" "}
-                          <span className={styles.breakableText}>
-                            {telegramSetupStatus.webhookUrl ??
-                              TELEGRAM_EXPECTED_WEBHOOK_URL}
-                          </span>
-                        </li>
-                        <li>
-                          Pending Updates:{" "}
-                          {telegramSetupStatus.pendingUpdateCount ??
-                            "nicht geprüft"}
-                        </li>
-                        <li>Eingang: Bot-Textnachrichten</li>
-                        <li>
-                          Workspace-Zuordnung: explizit konfigurierte
-                          Testbindung
-                        </li>
-                      </ul>
-                    </div>
-                    <div
-                      className={styles.releaseBox}
-                      aria-label="FanMind Bot Testablauf"
-                    >
-                      <strong>Bot-Eingang testen</strong>
-                      <ol className={styles.stepList}>
-                        <li>FanMind Bot öffnen.</li>
-                        <li>In Telegram auf Start drücken.</li>
-                        <li>Testnachricht an den Bot senden.</li>
-                        <li>Bot-Verbindung prüfen oder FanMind neu laden.</li>
-                        <li>Nachricht erscheint in Inbox und Fan-Detail.</li>
-                      </ol>
-                    </div>
-                    <div
-                      className={styles.connectionCardActions}
-                      aria-label="FanMind Bot Aktionen"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (demoConnectionsDisabled) {
-                            setNotice(demoConnectionNotice);
-                            return;
-                          }
-                          router.push("/channels?check=telegram");
-                          router.refresh();
-                        }}
+                      </div>
+                      <div
+                        className={styles.releaseBox}
+                        aria-label="Telegram Account und Inbox Status"
                       >
-                        Bot-Verbindung prüfen
-                      </button>
-                      {demoConnectionsDisabled ? (
+                        <strong>Status & Verbindung</strong>
+                        <ul className={styles.compactStatusList}>
+                          <li>Status: Geplant / Vorbereitung</li>
+                          <li>Integrationstyp: telegram_account</li>
+                          <li>Verbindung: noch nicht live geschaltet</li>
+                          <li>Import: nur nach deiner Auswahl</li>
+                          <li>Auto-Senden: deaktiviert</li>
+                          <li>Antworten: vorbereitet oder manuell gesendet</li>
+                        </ul>
+                        <p className={styles.modalNotice}>
+                          Diese Verbindung ist als Produkt-/UI-Vorbereitung
+                          sichtbar. Es wird aktuell keine Telefonnummer
+                          abgefragt, keine Telegram-Session gespeichert und kein
+                          privater Chat importiert.
+                        </p>
+                      </div>
+                      <div
+                        className={styles.releaseBox}
+                        aria-label="Telegram Account und Inbox Datenschutz"
+                      >
+                        <strong>Datenschutz & Kontrolle</strong>
+                        <ul className={styles.compactStatusList}>
+                          <li>
+                            Du entscheidest, welche Chats importiert werden.
+                          </li>
+                          <li>Keine automatische Antwort.</li>
+                          <li>
+                            Jeder Workspace sieht nur seine eigenen
+                            Telegram-Daten.
+                          </li>
+                          <li>Trennung pro Nutzer/Workspace.</li>
+                          <li>Disconnect jederzeit möglich.</li>
+                          <li>Kein Zugriff auf fremde Workspaces.</li>
+                        </ul>
+                      </div>
+                      <div
+                        className={styles.releaseBox}
+                        aria-label="Telegram Account und Inbox Ablauf"
+                      >
+                        <strong>Geplanter Ablauf</strong>
+                        <ul className={styles.compactStatusList}>
+                          <li>Einwilligung und Scope-Auswahl pro Workspace</li>
+                          <li>Chat-Auswahl vor Import statt Vollimport</li>
+                          <li>Ingress in den FanMind Arbeits-Eingang</li>
+                          <li>Antworten nur vorbereitet oder manuell</li>
+                          <li>Keine automatische Sendefunktion</li>
+                          <li>Saubere Trennung je Nutzer/Workspace</li>
+                        </ul>
+                      </div>
+                      <div
+                        className={styles.connectionCardActions}
+                        aria-label="Telegram Account und Inbox Aktionen"
+                      >
                         <button
                           type="button"
                           className={styles.secondaryModalButton}
-                          onClick={() => setNotice(demoConnectionNotice)}
+                          disabled
+                          title="Telegram Account / Inbox ist als Hauptintegration in Vorbereitung"
                         >
-                          FanMind Bot öffnen
+                          Telegram-Inbox verbinden
                         </button>
-                      ) : (
-                        <a
-                          className={styles.modalLinkButton}
-                          href="https://t.me/FanMindBot"
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          type="button"
+                          className={styles.secondaryModalButton}
+                          onClick={() =>
+                            setNotice(
+                              "Telegram Account / Inbox ist als Hauptintegration geplant. Noch kein MTProto-/TDLib-Flow, keine Telefonnummern und keine Session-Speicherung aktiv.",
+                            )
+                          }
                         >
-                          FanMind Bot öffnen
-                        </a>
-                      )}
-                      <button
-                        type="button"
-                        className={styles.secondaryModalButton}
-                        onClick={() =>
-                          setNotice(
-                            "FanMind Bot ist ein optionaler Zusatzkanal. Die persönliche Telegram Account-/Inbox-Integration bleibt der Hauptweg und ist in Vorbereitung.",
-                          )
-                        }
+                          <ComingSoonMark
+                            className={styles.soonButtonImage}
+                            size="small"
+                          />
+                        </button>
+                      </div>
+                    </section>
+                    <section
+                      className={styles.telegramColumn}
+                      aria-label="FanMind Bot"
+                    >
+                      <div className={styles.telegramColumnHeader}>
+                        <p className={styles.modalEyebrow}>Optionaler Zusatz</p>
+                        <h3>FanMind Bot</h3>
+                        <p>
+                          Optionaler Bot-Eingang für Nachrichten, die direkt an{" "}
+                          {TELEGRAM_BOT_USERNAME} gesendet werden. Geeignet für
+                          Tests, Support oder einfache Bot-Kommunikation. Das
+                          ist nicht deine persönliche Telegram-Inbox.
+                        </p>
+                      </div>
+                      <div
+                        className={styles.releaseBox}
+                        aria-label="FanMind Bot Status"
                       >
-                        Hinweis anzeigen
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.secondaryModalButton}
-                        onClick={() => setActiveChannel(null)}
+                        <strong>Status & Verbindung</strong>
+                        {telegramCheckRequested ? (
+                          <p className={styles.inlineStatus}>
+                            Bot-Verbindung wurde gerade geprüft.
+                          </p>
+                        ) : null}
+                        <ul className={styles.compactStatusList}>
+                          <li>
+                            Status:{" "}
+                            {demoConnectionsDisabled
+                              ? "Demo-Modus öffentlich · externe Bot-Tests deaktiviert"
+                              : "Live im eigenen Workspace"}
+                          </li>
+                          <li>Integrationstyp: telegram_bot</li>
+                          <li>Bot: {TELEGRAM_BOT_USERNAME}</li>
+                          <li>Webhook: {telegramWebhookLabel}</li>
+                          <li>Live-Check: {telegramStatusLabel}</li>
+                          <li>Auto-Senden: deaktiviert</li>
+                          <li>Rolle: optionaler Eingang</li>
+                        </ul>
+                        {telegramSetupStatus.error ||
+                        telegramSetupStatus.lastErrorMessage ? (
+                          <p className={styles.modalNotice}>
+                            Prüfung nötig:{" "}
+                            {telegramSetupStatus.lastErrorMessage ??
+                              telegramSetupStatus.error}
+                          </p>
+                        ) : null}
+                        <p className={styles.modalNotice}>
+                          Eingehende Nachrichten an den FanMind Bot landen nur
+                          im explizit serverseitig konfigurierten
+                          Test-Workspace. Ohne eindeutige Workspace-Zuordnung
+                          wird nichts angelegt.
+                        </p>
+                      </div>
+                      <div
+                        className={styles.releaseBox}
+                        aria-label="Letzte FanMind Bot Eingänge"
                       >
-                        Schließen
-                      </button>
-                    </div>
-                  </section>
-                </div>
-              ) : null}
+                        <strong>Letzte Bot-Eingänge</strong>
+                        <p className={styles.subtleModalText}>
+                          Quelle: conversation_messages ·
+                          source_platform=telegram · FanMind Bot
+                        </p>
+                        {telegramMessages.length > 0 ? (
+                          <ul className={styles.messageList}>
+                            {telegramMessages.map((message) => (
+                              <li key={`bot-${message.id}`}>
+                                <a href={`/fans/${message.contact_id}`}>
+                                  <strong>
+                                    {message.author_label ?? "Telegram Kontakt"}
+                                  </strong>
+                                  <span>
+                                    {" "}
+                                    ·{" "}
+                                    {getTelegramSourceTypeLabel(
+                                      message.source_type,
+                                    )}
+                                  </span>
+                                  <span>
+                                    {" "}
+                                    · {formatDateTime(message.created_at)}
+                                  </span>
+                                  <p>{message.content.slice(0, 140)}</p>
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : telegramMessagesError ? (
+                          <p className={styles.modalNotice}>
+                            Bot-Eingänge konnten nicht geladen werden:{" "}
+                            {telegramMessagesError}
+                          </p>
+                        ) : (
+                          <p className={styles.modalNotice}>
+                            Noch keine Bot-Eingänge in diesem Workspace
+                            gefunden.
+                          </p>
+                        )}
+                      </div>
+                      <div
+                        className={styles.releaseBox}
+                        aria-label="FanMind Bot technische Details"
+                      >
+                        <strong>Technische Details</strong>
+                        <ul className={styles.compactStatusList}>
+                          <li>
+                            Letzte Prüfung:{" "}
+                            {telegramSetupStatus.checkedAt
+                              ? formatDateTime(telegramSetupStatus.checkedAt)
+                              : "noch nicht geprüft"}
+                          </li>
+                          <li>
+                            Webhook-URL:{" "}
+                            <span className={styles.breakableText}>
+                              {telegramSetupStatus.webhookUrl ??
+                                TELEGRAM_EXPECTED_WEBHOOK_URL}
+                            </span>
+                          </li>
+                          <li>
+                            Pending Updates:{" "}
+                            {telegramSetupStatus.pendingUpdateCount ??
+                              "nicht geprüft"}
+                          </li>
+                          <li>Eingang: Bot-Textnachrichten</li>
+                          <li>
+                            Workspace-Zuordnung: explizit konfigurierte
+                            Testbindung
+                          </li>
+                        </ul>
+                      </div>
+                      <div
+                        className={styles.releaseBox}
+                        aria-label="FanMind Bot Testablauf"
+                      >
+                        <strong>Bot-Eingang testen</strong>
+                        <ol className={styles.stepList}>
+                          <li>FanMind Bot öffnen.</li>
+                          <li>In Telegram auf Start drücken.</li>
+                          <li>Testnachricht an den Bot senden.</li>
+                          <li>Bot-Verbindung prüfen oder FanMind neu laden.</li>
+                          <li>Nachricht erscheint in Inbox und Fan-Detail.</li>
+                        </ol>
+                      </div>
+                      <div
+                        className={styles.connectionCardActions}
+                        aria-label="FanMind Bot Aktionen"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (demoConnectionsDisabled) {
+                              setNotice(demoConnectionNotice);
+                              return;
+                            }
+                            router.push("/channels?check=telegram");
+                            router.refresh();
+                          }}
+                        >
+                          Bot-Verbindung prüfen
+                        </button>
+                        {demoConnectionsDisabled ? (
+                          <button
+                            type="button"
+                            className={styles.secondaryModalButton}
+                            onClick={() => setNotice(demoConnectionNotice)}
+                          >
+                            FanMind Bot öffnen
+                          </button>
+                        ) : (
+                          <a
+                            className={styles.modalLinkButton}
+                            href="https://t.me/FanMindBot"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            FanMind Bot öffnen
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          className={styles.secondaryModalButton}
+                          onClick={() =>
+                            setNotice(
+                              "FanMind Bot ist ein optionaler Zusatzkanal. Die persönliche Telegram Account-/Inbox-Integration bleibt der Hauptweg und ist in Vorbereitung.",
+                            )
+                          }
+                        >
+                          Hinweis anzeigen
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.secondaryModalButton}
+                          onClick={() => setActiveChannel(null)}
+                        >
+                          Schließen
+                        </button>
+                      </div>
+                    </section>
+                  </div>
+                ) : null}
 
-              {activeSyncStatus &&
-              activeConnectionCards.length === 0 &&
-              activeChannel.key !== "telegram" ? (
-                <div
-                  className={styles.releaseBox}
-                  aria-label={`Statusblock für ${activeChannel.name}`}
-                >
-                  <strong>Kanal-Statusstandard</strong>
-                  <ul>
-                    <li>Verbindung/Status: {activeSyncStatus.connection}</li>
-                    <li>Webhook: {activeSyncStatus.webhook}</li>
-                    <li>Verlauf-Sync: {activeSyncStatus.historySync}</li>
-                    <li>Sync-Limit: {activeSyncStatus.syncLimit}</li>
-                    <li>Letzter Sync: {activeSyncStatus.lastSync}</li>
-                    <li>
-                      Imported inbound: {activeSyncStatus.importedInbound}
-                    </li>
-                    <li>
-                      Imported outbound: {activeSyncStatus.importedOutbound}
-                    </li>
-                    <li>Imported media: {activeSyncStatus.importedMedia}</li>
-                    <li>
-                      Dubletten übersprungen:{" "}
-                      {activeSyncStatus.skippedDuplicates}
-                    </li>
-                    <li>Letzter Fehler: {activeSyncStatus.lastError}</li>
-                  </ul>
-                </div>
-              ) : null}
-              {activeChannel.key === "facebook" &&
-              activeConnectionCards.length === 0 &&
-              !facebookConnection ? (
-                <p
-                  className={styles.modalNotice}
-                  role={missingFacebookSetupItems.length ? "alert" : "status"}
-                >
-                  {demoConnectionsDisabled ? "Demo-Modus öffentlich: Facebook-Verbindungen" : "Live-Setup Facebook Nachrichten"}:{" "}
-                  <strong>
-                    {missingFacebookSetupItems.length
-                      ? `unvollständig (${missingFacebookSetupItems.join(", ")})`
-                      : "bereit zum Verbinden"}
-                  </strong>
-                  <br />
-                  OAuth Callback URL:{" "}
-                  <strong>
-                    {facebookLiveSetupStatus.oauthCallbackUrl ??
-                      "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}
-                  </strong>
-                  <br />
-                  Page verbunden: <strong>nein</strong>
-                  <br />
-                  Webhook bereit: <strong>nicht bestätigt</strong>
-                </p>
-              ) : null}
-              {activeChannel.key === "facebook" &&
-              activeConnectionCards.length === 0 &&
-              facebookConnection ? (
-                <>
-                  <p className={styles.modalNotice}>
-                    OAuth verbunden · Page:{" "}
-                    <strong>
-                      {facebookConnection.page_name ??
-                        facebookConnection.page_id}
-                    </strong>
-                    <br />
-                    Setup-Konfiguration:{" "}
+                {activeSyncStatus &&
+                activeConnectionCards.length === 0 &&
+                activeChannel.key !== "telegram" ? (
+                  <div
+                    className={styles.releaseBox}
+                    aria-label={`Statusblock für ${activeChannel.name}`}
+                  >
+                    <strong>Kanal-Statusstandard</strong>
+                    <ul>
+                      <li>Verbindung/Status: {activeSyncStatus.connection}</li>
+                      <li>Webhook: {activeSyncStatus.webhook}</li>
+                      <li>Verlauf-Sync: {activeSyncStatus.historySync}</li>
+                      <li>Sync-Limit: {activeSyncStatus.syncLimit}</li>
+                      <li>Letzter Sync: {activeSyncStatus.lastSync}</li>
+                      <li>
+                        Imported inbound: {activeSyncStatus.importedInbound}
+                      </li>
+                      <li>
+                        Imported outbound: {activeSyncStatus.importedOutbound}
+                      </li>
+                      <li>Imported media: {activeSyncStatus.importedMedia}</li>
+                      <li>
+                        Dubletten übersprungen:{" "}
+                        {activeSyncStatus.skippedDuplicates}
+                      </li>
+                      <li>Letzter Fehler: {activeSyncStatus.lastError}</li>
+                    </ul>
+                  </div>
+                ) : null}
+                {activeChannel.key === "facebook" &&
+                activeConnectionCards.length === 0 &&
+                !facebookConnection ? (
+                  <p
+                    className={styles.modalNotice}
+                    role={missingFacebookSetupItems.length ? "alert" : "status"}
+                  >
+                    {demoConnectionsDisabled
+                      ? "Demo-Modus öffentlich: Facebook-Verbindungen"
+                      : "Live-Setup Facebook Nachrichten"}
+                    :{" "}
                     <strong>
                       {missingFacebookSetupItems.length
                         ? `unvollständig (${missingFacebookSetupItems.join(", ")})`
-                        : "vollständig"}
-                    </strong>
-                    <br />
-                    Business-ID bekannt:{" "}
-                    <strong>
-                      {facebookLiveSetupStatus.metaBusinessIdConfigured
-                        ? "ja"
-                        : "nein · Postfach-Fallback bleibt nutzbar"}
-                    </strong>
-                    <br />
-                    Conversation-Links beim Sync:{" "}
-                    <strong>
-                      werden aus dem Graph-Feld link gespeichert, falls Meta es
-                      für Conversations liefert
-                    </strong>
-                    <br />
-                    Aktuelle Öffnen-Qualität:{" "}
-                    <strong>
-                      exakter Chat nur mit gespeichertem Conversation-Link,
-                      sonst Facebook-Postfach-Fallback
+                        : "bereit zum Verbinden"}
                     </strong>
                     <br />
                     OAuth Callback URL:{" "}
@@ -1370,533 +1358,587 @@ export function ChannelsGrid({
                         "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}
                     </strong>
                     <br />
-                    Page verbunden:{" "}
-                    <strong>
-                      {facebookConnection.page_id ? "ja" : "nein"}
-                    </strong>
+                    Page verbunden: <strong>nein</strong>
                     <br />
-                    Webhook bereit:{" "}
-                    <strong>
-                      {messengerWebhookReady ? "bestätigt" : "nicht bestätigt"}
-                    </strong>
-                    <br />
-                    Webhook messages:{" "}
-                    <strong>
-                      {formatWebhookStatus(
-                        displayedWebhookStatus?.fields.messages,
-                      )}
-                    </strong>
-                    <br />
-                    Webhook message_echoes:{" "}
-                    <strong>
-                      {formatWebhookStatus(
-                        displayedWebhookStatus?.fields.message_echoes,
-                      )}
-                    </strong>
-                    <br />
-                    Letztes Webhook-Event:{" "}
-                    <strong>
-                      {lastWebhookEvent
-                        ? formatDateTime(lastWebhookEvent.received_at)
-                        : "noch keines empfangen"}
-                    </strong>
-                    <br />
-                    Letzte Nachricht:{" "}
-                    <strong>
-                      {lastMessageEvent
-                        ? formatDateTime(lastMessageEvent.received_at)
-                        : "noch keine Nachricht empfangen"}
-                    </strong>
-                    <br />
-                    Letzter inbound message Event-Zeitpunkt:{" "}
-                    <strong>
-                      {lastInboundMessageEvent
-                        ? formatDateTime(lastInboundMessageEvent.received_at)
-                        : "noch kein inbound messages Event empfangen"}
-                    </strong>
-                    <br />
-                    Letzter outbound echo Event-Zeitpunkt:{" "}
-                    <strong>
-                      {lastOutboundEchoEvent
-                        ? formatDateTime(lastOutboundEchoEvent.received_at)
-                        : "Kein message_echoes Event empfangen"}
-                    </strong>
-                    <br />
-                    Letztes echtes feed/comment Event:{" "}
-                    <strong>
-                      {lastFeedCommentEvent
-                        ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}`
-                        : "noch kein echter Kommentar empfangen"}
-                    </strong>
-                    <br />
-                    Letzter Messenger-Sync:{" "}
-                    <strong>
-                      {facebookConnection.last_messenger_sync_at
-                        ? `${formatDateTime(facebookConnection.last_messenger_sync_at)} · ${facebookConnection.last_messenger_sync_checked_count ?? 0} Conversations geprüft · inbound ${facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} · outbound ${facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} · Medien ${facebookConnection.last_messenger_sync_imported_media_count ?? 0} · Dubletten ${facebookConnection.last_messenger_sync_skipped_count ?? 0} · bis zu 50 Nachrichten je Conversation`
-                        : "noch nicht ausgeführt · bis zu 50 Nachrichten je Conversation"}
-                    </strong>
-                    <br />
-                    Letzte importierte outbound Message:{" "}
-                    <strong>
-                      {facebookConnection.last_messenger_sync_outbound_at
-                        ? formatDateTime(
-                            facebookConnection.last_messenger_sync_outbound_at,
-                          )
-                        : "noch keine via Sync importiert"}
-                    </strong>
-                    {facebookConnection.last_messenger_sync_error ? (
-                      <>
-                        <br />
-                        Messenger-Sync Fehler:{" "}
-                        <strong>
-                          {facebookConnection.last_messenger_sync_error}
-                        </strong>
-                      </>
+                    Webhook bereit: <strong>nicht bestätigt</strong>
+                  </p>
+                ) : null}
+                {activeChannel.key === "facebook" &&
+                activeConnectionCards.length === 0 &&
+                facebookConnection ? (
+                  <>
+                    <p className={styles.modalNotice}>
+                      OAuth verbunden · Page:{" "}
+                      <strong>
+                        {facebookConnection.page_name ??
+                          facebookConnection.page_id}
+                      </strong>
+                      <br />
+                      Setup-Konfiguration:{" "}
+                      <strong>
+                        {missingFacebookSetupItems.length
+                          ? `unvollständig (${missingFacebookSetupItems.join(", ")})`
+                          : "vollständig"}
+                      </strong>
+                      <br />
+                      Business-ID bekannt:{" "}
+                      <strong>
+                        {facebookLiveSetupStatus.metaBusinessIdConfigured
+                          ? "ja"
+                          : "nein · Postfach-Fallback bleibt nutzbar"}
+                      </strong>
+                      <br />
+                      Conversation-Links beim Sync:{" "}
+                      <strong>
+                        werden aus dem Graph-Feld link gespeichert, falls Meta
+                        es für Conversations liefert
+                      </strong>
+                      <br />
+                      Aktuelle Öffnen-Qualität:{" "}
+                      <strong>
+                        exakter Chat nur mit gespeichertem Conversation-Link,
+                        sonst Facebook-Postfach-Fallback
+                      </strong>
+                      <br />
+                      OAuth Callback URL:{" "}
+                      <strong>
+                        {facebookLiveSetupStatus.oauthCallbackUrl ??
+                          "NEXT_PUBLIC_APP_URL/FACEBOOK_REDIRECT_URI fehlt"}
+                      </strong>
+                      <br />
+                      Page verbunden:{" "}
+                      <strong>
+                        {facebookConnection.page_id ? "ja" : "nein"}
+                      </strong>
+                      <br />
+                      Webhook bereit:{" "}
+                      <strong>
+                        {messengerWebhookReady
+                          ? "bestätigt"
+                          : "nicht bestätigt"}
+                      </strong>
+                      <br />
+                      Webhook messages:{" "}
+                      <strong>
+                        {formatWebhookStatus(
+                          displayedWebhookStatus?.fields.messages,
+                        )}
+                      </strong>
+                      <br />
+                      Webhook message_echoes:{" "}
+                      <strong>
+                        {formatWebhookStatus(
+                          displayedWebhookStatus?.fields.message_echoes,
+                        )}
+                      </strong>
+                      <br />
+                      Letztes Webhook-Event:{" "}
+                      <strong>
+                        {lastWebhookEvent
+                          ? formatDateTime(lastWebhookEvent.received_at)
+                          : "noch keines empfangen"}
+                      </strong>
+                      <br />
+                      Letzte Nachricht:{" "}
+                      <strong>
+                        {lastMessageEvent
+                          ? formatDateTime(lastMessageEvent.received_at)
+                          : "noch keine Nachricht empfangen"}
+                      </strong>
+                      <br />
+                      Letzter inbound message Event-Zeitpunkt:{" "}
+                      <strong>
+                        {lastInboundMessageEvent
+                          ? formatDateTime(lastInboundMessageEvent.received_at)
+                          : "noch kein inbound messages Event empfangen"}
+                      </strong>
+                      <br />
+                      Letzter outbound echo Event-Zeitpunkt:{" "}
+                      <strong>
+                        {lastOutboundEchoEvent
+                          ? formatDateTime(lastOutboundEchoEvent.received_at)
+                          : "Kein message_echoes Event empfangen"}
+                      </strong>
+                      <br />
+                      Letztes echtes feed/comment Event:{" "}
+                      <strong>
+                        {lastFeedCommentEvent
+                          ? `${formatDateTime(lastFeedCommentEvent.received_at)} · ${lastFeedCommentEvent.text ?? lastFeedCommentEvent.message_text ?? "ohne Text"}`
+                          : "noch kein echter Kommentar empfangen"}
+                      </strong>
+                      <br />
+                      Letzter Messenger-Sync:{" "}
+                      <strong>
+                        {facebookConnection.last_messenger_sync_at
+                          ? `${formatDateTime(facebookConnection.last_messenger_sync_at)} · ${facebookConnection.last_messenger_sync_checked_count ?? 0} Conversations geprüft · inbound ${facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} · outbound ${facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} · Medien ${facebookConnection.last_messenger_sync_imported_media_count ?? 0} · Dubletten ${facebookConnection.last_messenger_sync_skipped_count ?? 0} · bis zu 50 Nachrichten je Conversation`
+                          : "noch nicht ausgeführt · bis zu 50 Nachrichten je Conversation"}
+                      </strong>
+                      <br />
+                      Letzte importierte outbound Message:{" "}
+                      <strong>
+                        {facebookConnection.last_messenger_sync_outbound_at
+                          ? formatDateTime(
+                              facebookConnection.last_messenger_sync_outbound_at,
+                            )
+                          : "noch keine via Sync importiert"}
+                      </strong>
+                      {facebookConnection.last_messenger_sync_error ? (
+                        <>
+                          <br />
+                          Messenger-Sync Fehler:{" "}
+                          <strong>
+                            {facebookConnection.last_messenger_sync_error}
+                          </strong>
+                        </>
+                      ) : null}
+                      <br />
+                      Letzter Kommentar-Abruf:{" "}
+                      <strong>
+                        {facebookConnection.last_comment_fetch_at
+                          ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert`
+                          : "geparkt, nicht ausgeführt"}
+                      </strong>
+                      {facebookConnection.last_comment_fetch_error ? (
+                        <>
+                          <br />
+                          Kommentar-Abruf Fehler:{" "}
+                          <strong>
+                            {facebookConnection?.last_comment_fetch_error}
+                          </strong>
+                        </>
+                      ) : null}
+                      <br />
+                      Page-ID:{" "}
+                      <strong>
+                        {displayedWebhookStatus?.pageId ??
+                          facebookConnection.page_id ??
+                          "unbekannt"}
+                      </strong>
+                      <br />
+                      Page Access Token vorhanden:{" "}
+                      <strong>
+                        {displayedWebhookStatus?.hasPageAccessToken
+                          ? "ja"
+                          : "nein"}
+                      </strong>
+                      <br />
+                      Angeforderte Messenger-OAuth-Scopes:{" "}
+                      <strong>
+                        {formatScopeList(requestedMessagesOauthScopes)}
+                      </strong>
+                      <br />
+                      comment/feed-relevante Scopes angefordert:{" "}
+                      <strong>
+                        {commentFeedScopesRequested ? "ja" : "nein"}
+                      </strong>
+                      <br />
+                      Vom Token erkannte Scopes:{" "}
+                      <strong>{formatScopeList(detectedFacebookScopes)}</strong>
+                      <br />
+                      pages_messaging vorhanden:{" "}
+                      <strong>{pagesMessagingGranted ? "ja" : "nein"}</strong>
+                      <br />
+                      pages_read_user_content vorhanden:{" "}
+                      <strong>
+                        {pagesReadUserContentGranted ? "ja" : "nein"}
+                      </strong>
+                      <br />
+                      pages_manage_engagement vorhanden:{" "}
+                      <strong>
+                        {pagesManageEngagementGranted ? "ja" : "nein"}
+                      </strong>
+                      <br />
+                      comment/feed-relevante Token-Scopes vollständig:{" "}
+                      <strong>
+                        {commentFeedScopesGranted ? "ja" : "nein"}
+                      </strong>
+                      <br />
+                      Page subscribed_apps:{" "}
+                      <strong>
+                        {formatWebhookStatus(
+                          displayedWebhookStatus?.subscribedAppsStatus,
+                        )}
+                      </strong>
+                      <br />
+                      messages:{" "}
+                      <strong>
+                        {formatWebhookStatus(
+                          displayedWebhookStatus?.fields.messages,
+                        )}
+                      </strong>{" "}
+                      · message_echoes:{" "}
+                      <strong>
+                        {formatWebhookStatus(
+                          displayedWebhookStatus?.fields.message_echoes,
+                        )}
+                      </strong>{" "}
+                      · feed/Kommentare:{" "}
+                      <strong>geparkt, nicht automatisch aktiviert</strong>
+                      {!messageEchoesReady ? (
+                        <>
+                          <br />
+                          <strong>
+                            Keine outbound Echo-Events empfangen. Nutze
+                            Messenger-Sync als Fallback.
+                          </strong>
+                        </>
+                      ) : null}
+                      {displayedWebhookStatus?.error ? (
+                        <>
+                          <br />
+                          Meta-Fehler:{" "}
+                          <strong>{displayedWebhookStatus.error}</strong>
+                        </>
+                      ) : null}
+                      {!lastFeedCommentEvent &&
+                      (!commentFeedScopesGranted ||
+                        displayedWebhookStatus?.fields.feed !== "active") ? (
+                        <>
+                          <br />
+                          Kommentar-Empfang blockiert:{" "}
+                          <strong>
+                            {getFacebookCommentBlockingReason(
+                              commentFeedScopesGranted,
+                              displayedWebhookStatus?.fields.feed,
+                            )}
+                          </strong>
+                        </>
+                      ) : null}
+                    </p>
+                    <div className={styles.modalActions}>
+                      <button
+                        type="button"
+                        className={styles.secondaryModalButton}
+                        onClick={() => runPageWebhookAction("check")}
+                        disabled={Boolean(pageWebhookPending)}
+                      >
+                        {pageWebhookPending === "check"
+                          ? "Page-Webhooks prüfen ..."
+                          : "Page-Webhooks prüfen"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.secondaryModalButton}
+                        onClick={() => runPageWebhookAction("activate")}
+                        disabled={Boolean(pageWebhookPending)}
+                      >
+                        {pageWebhookPending === "activate"
+                          ? "Page-Webhooks aktivieren ..."
+                          : "Page-Webhooks aktivieren"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.secondaryModalButton}
+                        onClick={runMetaPermissionDiagnosis}
+                        disabled={metaPermissionPending}
+                      >
+                        {metaPermissionPending
+                          ? "Meta-Berechtigungen prüfen ..."
+                          : "Meta-Berechtigungen prüfen"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.secondaryModalButton}
+                        onClick={runMessengerSync}
+                        disabled={messengerSyncPending}
+                      >
+                        {messengerSyncPending
+                          ? "Messenger-Verlauf synchronisiert ..."
+                          : "Messenger-Verlauf synchronisieren"}
+                      </button>
+                    </div>
+                    {metaPermissionDiagnosis ? (
+                      <div
+                        className={styles.releaseBox}
+                        role={metaPermissionDiagnosis.ok ? "status" : "alert"}
+                        aria-label="Meta-Berechtigungsdiagnose"
+                      >
+                        <strong>Meta-Berechtigungen prüfen</strong>
+                        <ul>
+                          <li>
+                            Verbindung aktiv:{" "}
+                            {formatBoolean(
+                              metaPermissionDiagnosis.connectionActive,
+                            )}
+                          </li>
+                          <li>
+                            Page-ID erkannt:{" "}
+                            {formatBoolean(
+                              metaPermissionDiagnosis.pageIdDetected,
+                            )}
+                          </li>
+                          <li>
+                            Page Access Token vorhanden:{" "}
+                            {formatBoolean(
+                              metaPermissionDiagnosis.pageAccessTokenPresent,
+                            )}
+                          </li>
+                          <li>
+                            Token-Prüfung erfolgreich:{" "}
+                            {formatBoolean(
+                              metaPermissionDiagnosis.tokenCheckSuccessful,
+                            )}
+                          </li>
+                          <li>
+                            Erkannte Berechtigungen:{" "}
+                            {formatScopeList(
+                              metaPermissionDiagnosis.detectedPermissions,
+                            )}
+                          </li>
+                          <li>
+                            Sichtbare Page-/Messenger-/Business-Rechte:{" "}
+                            {formatScopeList(
+                              metaPermissionDiagnosis.visiblePageRights,
+                            )}
+                          </li>
+                          <li>
+                            Möglicherweise fehlende Berechtigungen:{" "}
+                            {formatScopeList(
+                              metaPermissionDiagnosis.missingPermissions,
+                            )}
+                          </li>
+                          <li>
+                            App Review prüfen:{" "}
+                            {formatBoolean(
+                              metaPermissionDiagnosis.appReviewCheckRecommended,
+                            )}
+                          </li>
+                          <li>
+                            Advanced Access prüfen:{" "}
+                            {formatBoolean(
+                              metaPermissionDiagnosis.advancedAccessCheckRecommended,
+                            )}
+                          </li>
+                          <li>
+                            Token wirkt eingeschränkt:{" "}
+                            {formatBoolean(
+                              metaPermissionDiagnosis.tokenAppearsRestricted,
+                            )}
+                          </li>
+                          <li>{metaPermissionDiagnosis.directChatIdStatus}</li>
+                        </ul>
+                        <p>{metaPermissionDiagnosis.note}</p>
+                        {metaPermissionDiagnosis.error ? (
+                          <p>Meta-Hinweis: {metaPermissionDiagnosis.error}</p>
+                        ) : null}
+                      </div>
                     ) : null}
+                    {messengerSyncResult ? (
+                      <p
+                        className={styles.modalNotice}
+                        role={messengerSyncResult.ok ? "status" : "alert"}
+                      >
+                        Messenger-Sync:{" "}
+                        {messengerSyncResult.conversationsChecked} Conversations
+                        geprüft · {messengerSyncResult.importedInbound} inbound
+                        neu · {messengerSyncResult.importedOutbound} outbound
+                        neu · {messengerSyncResult.importedMedia} Medien ·{" "}
+                        {messengerSyncResult.skippedDuplicates} Dubletten
+                        übersprungen
+                        {messengerSyncResult.error
+                          ? ` · Fehler: ${messengerSyncResult.error}`
+                          : ""}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
+                {activeChannel.key === "facebook" &&
+                activeConnectionCards.length === 0 &&
+                facebookConnection &&
+                metaWebhookError ? (
+                  <p className={styles.modalNotice} role="alert">
+                    Meta-Webhook-Events konnten nicht gelesen werden:{" "}
+                    {metaWebhookError}
+                  </p>
+                ) : null}
+                {activeChannel.key === "facebook" &&
+                activeConnectionCards.length === 0 &&
+                facebookConnection ? (
+                  <div
+                    className={styles.releaseBox}
+                    aria-label="Meta Webhook Diagnose"
+                  >
+                    <strong>Meta Webhook Diagnose (letzte 20 Events)</strong>
+                    <p>
+                      Service-Role-Key:{" "}
+                      <strong>
+                        {metaWebhookStorageHealth.serviceRoleConfigured
+                          ? "verfügbar"
+                          : "fehlt"}
+                      </strong>{" "}
+                      · Tabelle public.meta_webhook_events:{" "}
+                      <strong>
+                        {metaWebhookStorageHealth.tableReadable
+                          ? "lesbar"
+                          : "fehlt/nicht lesbar"}
+                      </strong>
+                      {metaWebhookStorageHealth.error
+                        ? ` · Fehler: ${metaWebhookStorageHealth.error}`
+                        : ""}
+                    </p>
+                    {selfTestDisabledReason ? (
+                      <p role="alert">
+                        Selbsttest blockiert: {selfTestDisabledReason}.
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={styles.secondaryModalButton}
+                      onClick={runMetaWebhookSelfTest}
+                      disabled={
+                        selfTestPending || Boolean(selfTestDisabledReason)
+                      }
+                      title={
+                        selfTestDisabledReason ??
+                        "Speichert ein Testevent in public.meta_webhook_events"
+                      }
+                    >
+                      {selfTestPending
+                        ? "Webhook-Selbsttest läuft ..."
+                        : "Webhook-Selbsttest starten"}
+                    </button>
+                    {selfTestResult ? (
+                      <p role="status">
+                        Selbsttest:{" "}
+                        {selfTestResult.ok
+                          ? "Insert erfolgreich"
+                          : "Insert fehlgeschlagen"}{" "}
+                        · workspace_id {selfTestResult.workspace_id} ·
+                        event_type {selfTestResult.event_type} · status{" "}
+                        {selfTestResult.status}
+                        {selfTestResult.error
+                          ? ` · Fehler: ${selfTestResult.error}`
+                          : ""}
+                      </p>
+                    ) : null}
+                    {selfTestError ? (
+                      <p role="alert">
+                        Selbsttest fehlgeschlagen: {selfTestError}
+                      </p>
+                    ) : null}
+                    {!lastOutboundEchoEvent ? (
+                      <p role="status">
+                        Keine outbound Echo-Events empfangen. Nutze
+                        Messenger-Sync als Fallback; message_echoes bleibt
+                        weiterhin aktiv und wird verarbeitet, sobald Meta Events
+                        liefert.
+                      </p>
+                    ) : null}
+                    {metaWebhookEvents.length ? (
+                      <ul>
+                        {metaWebhookEvents.map((event) => (
+                          <li key={event.id}>
+                            {formatDateTime(event.received_at)} ·{" "}
+                            {formatMetaWebhookEventKind(event)} · Page{" "}
+                            {event.page_id ?? "unbekannt"} · Sender{" "}
+                            {event.sender_id ?? "unbekannt"} · Status{" "}
+                            {event.status}
+                            {(event.text ?? event.message_text)
+                              ? ` · Text: ${event.text ?? event.message_text}`
+                              : ""}
+                            {event.error_reason
+                              ? ` · Grund: ${event.error_reason}`
+                              : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>Noch keine Meta-Webhook-Events empfangen.</p>
+                    )}
+                  </div>
+                ) : null}
+
+                {false ? (
+                  <p
+                    className={styles.modalNotice}
+                    role={
+                      facebookConnection?.last_comment_fetch_error ||
+                      facebookErrorCode === "comment_review"
+                        ? "alert"
+                        : "status"
+                    }
+                  >
+                    Kommentare vorbereitet, Live-Test später. Nachrichten können
+                    trotzdem separat verbunden werden.
                     <br />
-                    Letzter Kommentar-Abruf:{" "}
+                    Technischer Typ: <strong>facebook_comments</strong>
+                    <br />
+                    Angeforderte Kommentar-OAuth-Scopes:{" "}
                     <strong>
-                      {facebookConnection.last_comment_fetch_at
-                        ? `${formatDateTime(facebookConnection.last_comment_fetch_at)} · ${facebookConnection.last_comment_fetch_count ?? 0} neu importiert`
-                        : "geparkt, nicht ausgeführt"}
+                      {formatScopeList(requestedCommentOauthScopes)}
                     </strong>
-                    {facebookConnection.last_comment_fetch_error ? (
+                    <br />
+                    Optionale Scopes werden nur vorbereitet, wenn
+                    Meta/App-Review sie erlaubt:{" "}
+                    <strong>
+                      pages_read_user_content, pages_manage_engagement
+                    </strong>
+                    <br />
+                    Status: <strong>vorbereitet · Live-Test später</strong>
+                    {facebookConnection?.last_comment_fetch_error ? (
                       <>
                         <br />
-                        Kommentar-Abruf Fehler:{" "}
+                        Letzter Kommentarimport-Fehler:{" "}
                         <strong>
                           {facebookConnection?.last_comment_fetch_error}
                         </strong>
                       </>
                     ) : null}
-                    <br />
-                    Page-ID:{" "}
-                    <strong>
-                      {displayedWebhookStatus?.pageId ??
-                        facebookConnection.page_id ??
-                        "unbekannt"}
-                    </strong>
-                    <br />
-                    Page Access Token vorhanden:{" "}
-                    <strong>
-                      {displayedWebhookStatus?.hasPageAccessToken
-                        ? "ja"
-                        : "nein"}
-                    </strong>
-                    <br />
-                    Angeforderte Messenger-OAuth-Scopes:{" "}
-                    <strong>
-                      {formatScopeList(requestedMessagesOauthScopes)}
-                    </strong>
-                    <br />
-                    comment/feed-relevante Scopes angefordert:{" "}
-                    <strong>
-                      {commentFeedScopesRequested ? "ja" : "nein"}
-                    </strong>
-                    <br />
-                    Vom Token erkannte Scopes:{" "}
-                    <strong>{formatScopeList(detectedFacebookScopes)}</strong>
-                    <br />
-                    pages_messaging vorhanden:{" "}
-                    <strong>{pagesMessagingGranted ? "ja" : "nein"}</strong>
-                    <br />
-                    pages_read_user_content vorhanden:{" "}
-                    <strong>
-                      {pagesReadUserContentGranted ? "ja" : "nein"}
-                    </strong>
-                    <br />
-                    pages_manage_engagement vorhanden:{" "}
-                    <strong>
-                      {pagesManageEngagementGranted ? "ja" : "nein"}
-                    </strong>
-                    <br />
-                    comment/feed-relevante Token-Scopes vollständig:{" "}
-                    <strong>{commentFeedScopesGranted ? "ja" : "nein"}</strong>
-                    <br />
-                    Page subscribed_apps:{" "}
-                    <strong>
-                      {formatWebhookStatus(
-                        displayedWebhookStatus?.subscribedAppsStatus,
-                      )}
-                    </strong>
-                    <br />
-                    messages:{" "}
-                    <strong>
-                      {formatWebhookStatus(
-                        displayedWebhookStatus?.fields.messages,
-                      )}
-                    </strong>{" "}
-                    · message_echoes:{" "}
-                    <strong>
-                      {formatWebhookStatus(
-                        displayedWebhookStatus?.fields.message_echoes,
-                      )}
-                    </strong>{" "}
-                    · feed/Kommentare:{" "}
-                    <strong>geparkt, nicht automatisch aktiviert</strong>
-                    {!messageEchoesReady ? (
-                      <>
-                        <br />
-                        <strong>
-                          Keine outbound Echo-Events empfangen. Nutze
-                          Messenger-Sync als Fallback.
-                        </strong>
-                      </>
-                    ) : null}
-                    {displayedWebhookStatus?.error ? (
-                      <>
-                        <br />
-                        Meta-Fehler:{" "}
-                        <strong>{displayedWebhookStatus.error}</strong>
-                      </>
-                    ) : null}
-                    {!lastFeedCommentEvent &&
-                    (!commentFeedScopesGranted ||
-                      displayedWebhookStatus?.fields.feed !== "active") ? (
-                      <>
-                        <br />
-                        Kommentar-Empfang blockiert:{" "}
-                        <strong>
-                          {getFacebookCommentBlockingReason(
-                            commentFeedScopesGranted,
-                            displayedWebhookStatus?.fields.feed,
-                          )}
-                        </strong>
-                      </>
-                    ) : null}
                   </p>
+                ) : null}
+                {activeChannel.key === "facebook" && facebookError ? (
+                  <p className={styles.modalNotice} role="alert">
+                    {getFacebookErrorMessage(facebookErrorCode)}
+                  </p>
+                ) : null}
+                {activeConnectionCards.length === 0 ? (
+                  <div
+                    className={styles.releaseBox}
+                    aria-label={`Nachrichtenfreigabe für ${activeChannel.name}`}
+                  >
+                    <strong>Nachrichtenfreigabe</strong>
+                    <ul>
+                      <li>Eingänge in Arbeits-Eingang übernehmen</li>
+                      <li>{activeChannel.intakeTypes} je nach Kanal</li>
+                      <li>Manuelle Prüfung vor Antwort</li>
+                      <li>Automatisches Senden deaktiviert</li>
+                    </ul>
+                  </div>
+                ) : null}
+                {notice ? (
+                  <p className={styles.modalNotice} role="status">
+                    {notice}
+                  </p>
+                ) : null}
+                {activeConnectionCards.length === 0 ? (
                   <div className={styles.modalActions}>
                     <button
                       type="button"
-                      className={styles.secondaryModalButton}
-                      onClick={() => runPageWebhookAction("check")}
-                      disabled={Boolean(pageWebhookPending)}
+                      onClick={() =>
+                        setNotice(
+                          demoConnectionsDisabled
+                            ? demoConnectionNotice
+                            : "Verbindung wird vorbereitet. Externe Anmeldung/OAuth ist noch nicht aktiv.",
+                        )
+                      }
                     >
-                      {pageWebhookPending === "check"
-                        ? "Page-Webhooks prüfen ..."
-                        : "Page-Webhooks prüfen"}
+                      {isBookable(activeChannel.status)
+                        ? "Verbindung vormerken"
+                        : `Mit ${activeChannel.name} verbinden`}
                     </button>
                     <button
                       type="button"
                       className={styles.secondaryModalButton}
-                      onClick={() => runPageWebhookAction("activate")}
-                      disabled={Boolean(pageWebhookPending)}
+                      onClick={() => setActiveChannel(null)}
                     >
-                      {pageWebhookPending === "activate"
-                        ? "Page-Webhooks aktivieren ..."
-                        : "Page-Webhooks aktivieren"}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.secondaryModalButton}
-                      onClick={runMetaPermissionDiagnosis}
-                      disabled={metaPermissionPending}
-                    >
-                      {metaPermissionPending
-                        ? "Meta-Berechtigungen prüfen ..."
-                        : "Meta-Berechtigungen prüfen"}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.secondaryModalButton}
-                      onClick={runMessengerSync}
-                      disabled={messengerSyncPending}
-                    >
-                      {messengerSyncPending
-                        ? "Messenger-Verlauf synchronisiert ..."
-                        : "Messenger-Verlauf synchronisieren"}
+                      Schließen
                     </button>
                   </div>
-                  {metaPermissionDiagnosis ? (
-                    <div
-                      className={styles.releaseBox}
-                      role={metaPermissionDiagnosis.ok ? "status" : "alert"}
-                      aria-label="Meta-Berechtigungsdiagnose"
-                    >
-                      <strong>Meta-Berechtigungen prüfen</strong>
-                      <ul>
-                        <li>
-                          Verbindung aktiv:{" "}
-                          {formatBoolean(
-                            metaPermissionDiagnosis.connectionActive,
-                          )}
-                        </li>
-                        <li>
-                          Page-ID erkannt:{" "}
-                          {formatBoolean(
-                            metaPermissionDiagnosis.pageIdDetected,
-                          )}
-                        </li>
-                        <li>
-                          Page Access Token vorhanden:{" "}
-                          {formatBoolean(
-                            metaPermissionDiagnosis.pageAccessTokenPresent,
-                          )}
-                        </li>
-                        <li>
-                          Token-Prüfung erfolgreich:{" "}
-                          {formatBoolean(
-                            metaPermissionDiagnosis.tokenCheckSuccessful,
-                          )}
-                        </li>
-                        <li>
-                          Erkannte Berechtigungen:{" "}
-                          {formatScopeList(
-                            metaPermissionDiagnosis.detectedPermissions,
-                          )}
-                        </li>
-                        <li>
-                          Sichtbare Page-/Messenger-/Business-Rechte:{" "}
-                          {formatScopeList(
-                            metaPermissionDiagnosis.visiblePageRights,
-                          )}
-                        </li>
-                        <li>
-                          Möglicherweise fehlende Berechtigungen:{" "}
-                          {formatScopeList(
-                            metaPermissionDiagnosis.missingPermissions,
-                          )}
-                        </li>
-                        <li>
-                          App Review prüfen:{" "}
-                          {formatBoolean(
-                            metaPermissionDiagnosis.appReviewCheckRecommended,
-                          )}
-                        </li>
-                        <li>
-                          Advanced Access prüfen:{" "}
-                          {formatBoolean(
-                            metaPermissionDiagnosis.advancedAccessCheckRecommended,
-                          )}
-                        </li>
-                        <li>
-                          Token wirkt eingeschränkt:{" "}
-                          {formatBoolean(
-                            metaPermissionDiagnosis.tokenAppearsRestricted,
-                          )}
-                        </li>
-                        <li>{metaPermissionDiagnosis.directChatIdStatus}</li>
-                      </ul>
-                      <p>{metaPermissionDiagnosis.note}</p>
-                      {metaPermissionDiagnosis.error ? (
-                        <p>Meta-Hinweis: {metaPermissionDiagnosis.error}</p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {messengerSyncResult ? (
-                    <p
-                      className={styles.modalNotice}
-                      role={messengerSyncResult.ok ? "status" : "alert"}
-                    >
-                      Messenger-Sync: {messengerSyncResult.conversationsChecked}{" "}
-                      Conversations geprüft ·{" "}
-                      {messengerSyncResult.importedInbound} inbound neu ·{" "}
-                      {messengerSyncResult.importedOutbound} outbound neu ·{" "}
-                      {messengerSyncResult.importedMedia} Medien ·{" "}
-                      {messengerSyncResult.skippedDuplicates} Dubletten
-                      übersprungen
-                      {messengerSyncResult.error
-                        ? ` · Fehler: ${messengerSyncResult.error}`
-                        : ""}
-                    </p>
-                  ) : null}
-                </>
-              ) : null}
-              {activeChannel.key === "facebook" &&
-              activeConnectionCards.length === 0 &&
-              facebookConnection &&
-              metaWebhookError ? (
-                <p className={styles.modalNotice} role="alert">
-                  Meta-Webhook-Events konnten nicht gelesen werden:{" "}
-                  {metaWebhookError}
-                </p>
-              ) : null}
-              {activeChannel.key === "facebook" &&
-              activeConnectionCards.length === 0 &&
-              facebookConnection ? (
-                <div
-                  className={styles.releaseBox}
-                  aria-label="Meta Webhook Diagnose"
-                >
-                  <strong>Meta Webhook Diagnose (letzte 20 Events)</strong>
-                  <p>
-                    Service-Role-Key:{" "}
-                    <strong>
-                      {metaWebhookStorageHealth.serviceRoleConfigured
-                        ? "verfügbar"
-                        : "fehlt"}
-                    </strong>{" "}
-                    · Tabelle public.meta_webhook_events:{" "}
-                    <strong>
-                      {metaWebhookStorageHealth.tableReadable
-                        ? "lesbar"
-                        : "fehlt/nicht lesbar"}
-                    </strong>
-                    {metaWebhookStorageHealth.error
-                      ? ` · Fehler: ${metaWebhookStorageHealth.error}`
-                      : ""}
-                  </p>
-                  {selfTestDisabledReason ? (
-                    <p role="alert">
-                      Selbsttest blockiert: {selfTestDisabledReason}.
-                    </p>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={styles.secondaryModalButton}
-                    onClick={runMetaWebhookSelfTest}
-                    disabled={
-                      selfTestPending || Boolean(selfTestDisabledReason)
-                    }
-                    title={
-                      selfTestDisabledReason ??
-                      "Speichert ein Testevent in public.meta_webhook_events"
-                    }
-                  >
-                    {selfTestPending
-                      ? "Webhook-Selbsttest läuft ..."
-                      : "Webhook-Selbsttest starten"}
-                  </button>
-                  {selfTestResult ? (
-                    <p role="status">
-                      Selbsttest:{" "}
-                      {selfTestResult.ok
-                        ? "Insert erfolgreich"
-                        : "Insert fehlgeschlagen"}{" "}
-                      · workspace_id {selfTestResult.workspace_id} · event_type{" "}
-                      {selfTestResult.event_type} · status{" "}
-                      {selfTestResult.status}
-                      {selfTestResult.error
-                        ? ` · Fehler: ${selfTestResult.error}`
-                        : ""}
-                    </p>
-                  ) : null}
-                  {selfTestError ? (
-                    <p role="alert">
-                      Selbsttest fehlgeschlagen: {selfTestError}
-                    </p>
-                  ) : null}
-                  {!lastOutboundEchoEvent ? (
-                    <p role="status">
-                      Keine outbound Echo-Events empfangen. Nutze Messenger-Sync
-                      als Fallback; message_echoes bleibt weiterhin aktiv und
-                      wird verarbeitet, sobald Meta Events liefert.
-                    </p>
-                  ) : null}
-                  {metaWebhookEvents.length ? (
-                    <ul>
-                      {metaWebhookEvents.map((event) => (
-                        <li key={event.id}>
-                          {formatDateTime(event.received_at)} ·{" "}
-                          {formatMetaWebhookEventKind(event)} · Page{" "}
-                          {event.page_id ?? "unbekannt"} · Sender{" "}
-                          {event.sender_id ?? "unbekannt"} · Status{" "}
-                          {event.status}
-                          {(event.text ?? event.message_text)
-                            ? ` · Text: ${event.text ?? event.message_text}`
-                            : ""}
-                          {event.error_reason
-                            ? ` · Grund: ${event.error_reason}`
-                            : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>Noch keine Meta-Webhook-Events empfangen.</p>
-                  )}
-                </div>
-              ) : null}
-
-              {false ? (
-                <p
-                  className={styles.modalNotice}
-                  role={
-                    facebookConnection?.last_comment_fetch_error ||
-                    facebookErrorCode === "comment_review"
-                      ? "alert"
-                      : "status"
-                  }
-                >
-                  Kommentare vorbereitet, Live-Test später. Nachrichten können
-                  trotzdem separat verbunden werden.
-                  <br />
-                  Technischer Typ: <strong>facebook_comments</strong>
-                  <br />
-                  Angeforderte Kommentar-OAuth-Scopes:{" "}
-                  <strong>
-                    {formatScopeList(requestedCommentOauthScopes)}
-                  </strong>
-                  <br />
-                  Optionale Scopes werden nur vorbereitet, wenn Meta/App-Review
-                  sie erlaubt:{" "}
-                  <strong>
-                    pages_read_user_content, pages_manage_engagement
-                  </strong>
-                  <br />
-                  Status: <strong>vorbereitet · Live-Test später</strong>
-                  {facebookConnection?.last_comment_fetch_error ? (
-                    <>
-                      <br />
-                      Letzter Kommentarimport-Fehler:{" "}
-                      <strong>
-                        {facebookConnection?.last_comment_fetch_error}
-                      </strong>
-                    </>
-                  ) : null}
-                </p>
-              ) : null}
-              {activeChannel.key === "facebook" && facebookError ? (
-                <p className={styles.modalNotice} role="alert">
-                  {getFacebookErrorMessage(facebookErrorCode)}
-                </p>
-              ) : null}
-              {activeConnectionCards.length === 0 ? (
-                <div
-                  className={styles.releaseBox}
-                  aria-label={`Nachrichtenfreigabe für ${activeChannel.name}`}
-                >
-                  <strong>Nachrichtenfreigabe</strong>
-                  <ul>
-                    <li>Eingänge in Arbeits-Eingang übernehmen</li>
-                    <li>{activeChannel.intakeTypes} je nach Kanal</li>
-                    <li>Manuelle Prüfung vor Antwort</li>
-                    <li>Automatisches Senden deaktiviert</li>
-                  </ul>
-                </div>
-              ) : null}
-              {notice ? (
-                <p className={styles.modalNotice} role="status">
-                  {notice}
-                </p>
-              ) : null}
-              {activeConnectionCards.length === 0 ? (
-                <div className={styles.modalActions}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setNotice(
-                        demoConnectionsDisabled
-                          ? demoConnectionNotice
-                          : "Verbindung wird vorbereitet. Externe Anmeldung/OAuth ist noch nicht aktiv.",
-                      )
-                    }
-                  >
-                    {isBookable(activeChannel.status)
-                      ? "Verbindung vormerken"
-                      : `Mit ${activeChannel.name} verbinden`}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.secondaryModalButton}
-                    onClick={() => setActiveChannel(null)}
-                  >
-                    Schließen
-                  </button>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           </div>
-        </div>
+        </BodyPortal>
       ) : null}
     </section>
   );
