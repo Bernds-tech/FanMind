@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, use, useRef, useState } from "react";
+import { FormEvent, use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
 import { FanMindLogo } from "@/components/FanMindLogo";
@@ -13,7 +13,8 @@ type LoginPageProps = {
 
 const LOGIN_TARGET = "/dashboard";
 const DEMO_EMAIL = "sandra.m@fanmind.ch";
-const DEMO_PASSWORD = process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-Demo-Sandra-2026!";
+// Stage 1 uses a public demo login; Stage 2 replaces this with temporary demo workspaces.
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-Demo-2026!";
 
 function LanguageSwitch({ language }: { language: FanMindLanguage }) {
   return (
@@ -41,12 +42,26 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 
   const invalidCredentialsMessage =
     language === "en"
-      ? "Login failed. Please check your email and password. If your browser automatically fills saved credentials, delete them once and save them again after a successful login."
-      : "Login fehlgeschlagen. Bitte prüfe E-Mail und Passwort. Falls dein Browser gespeicherte Zugangsdaten automatisch einfügt, lösche sie einmal und speichere sie nach erfolgreichem Login neu.";
+      ? "Login failed. Please check your email, password, and whether your browser inserted old saved credentials. Delete saved credentials for fanmind.ch or type your email and password manually once."
+      : "Login nicht möglich. Bitte prüfe E-Mail, Passwort und ob dein Browser alte gespeicherte Zugangsdaten eingefügt hat. Lösche gespeicherte Zugangsdaten für fanmind.ch oder tippe E-Mail und Passwort einmal manuell ein.";
 
   function normalizeLoginError(message: string) {
     return message.toLowerCase().includes("invalid login credentials") ? invalidCredentialsMessage : message;
   }
+
+  useEffect(() => {
+    if (!isDemoMode) return;
+
+    setError(null);
+
+    if (emailInputRef.current) {
+      emailInputRef.current.value = DEMO_EMAIL;
+    }
+
+    if (passwordInputRef.current) {
+      passwordInputRef.current.value = DEMO_PASSWORD;
+    }
+  }, [isDemoMode]);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,8 +72,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     const formPassword = String(formData.get("password") ?? "");
     const currentEmailValue = emailInputRef.current?.value;
     const currentPasswordValue = passwordInputRef.current?.value;
-    const email = (currentEmailValue || formEmail).trim();
-    const password = currentPasswordValue ?? formPassword;
+    const email = isDemoMode ? DEMO_EMAIL : (currentEmailValue || formEmail).trim();
+    const password = isDemoMode ? DEMO_PASSWORD : currentPasswordValue ?? formPassword;
 
     setIsSubmitting(true);
 
@@ -151,7 +166,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.email}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">✉</span>
-                <input ref={emailInputRef} type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} defaultValue={isDemoMode ? DEMO_EMAIL : ""} autoComplete="username" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
+                <input ref={emailInputRef} type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} defaultValue={isDemoMode ? DEMO_EMAIL : ""} autoComplete={isDemoMode ? "off" : "username"} inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} readOnly={isDemoMode} required />
               </div>
             </label>
 
@@ -159,7 +174,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.password}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">▣</span>
-                <input ref={passwordInputRef} type="password" name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} defaultValue={isDemoMode ? DEMO_PASSWORD : ""} autoComplete="current-password" required />
+                <input ref={passwordInputRef} type="password" name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} defaultValue={isDemoMode ? DEMO_PASSWORD : ""} autoComplete={isDemoMode ? "off" : "current-password"} readOnly={isDemoMode} required />
               </div>
             </label>
 
