@@ -24,6 +24,7 @@ type NormalizedPlatform =
   | "linkedin"
   | "email"
   | "webform"
+  | "websiteChat"
   | "onlyfans"
   | "snapchat"
   | "threads"
@@ -32,6 +33,7 @@ type NormalizedPlatform =
   | "pinterest"
   | "patreon"
   | "kofi"
+  | "buymeacoffee"
   | "substack"
   | "google"
   | "trustpilot"
@@ -39,6 +41,9 @@ type NormalizedPlatform =
   | "amazon"
   | "etsy"
   | "review"
+  | "appstore"
+  | "playstore"
+  | "mercadolibre"
   | "commerce"
   | "wechat"
   | "line"
@@ -73,6 +78,7 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   linkedin: { label: "LinkedIn" },
   email: { label: "E-Mail" },
   webform: { label: "Webformular" },
+  websiteChat: { label: "Website-Chat" },
   onlyfans: { label: "OnlyFans" },
   snapchat: { label: "Snapchat" },
   threads: { label: "Threads" },
@@ -81,6 +87,7 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   pinterest: { label: "Pinterest" },
   patreon: { label: "Patreon / Memberships" },
   kofi: { label: "Ko-fi" },
+  buymeacoffee: { label: "Buy Me a Coffee" },
   substack: { label: "Newsletter / Substack" },
   google: { label: "Google Business Profile" },
   trustpilot: { label: "Trustpilot" },
@@ -88,6 +95,9 @@ export const platformLogoMap: Record<NormalizedPlatform, { label: string }> = {
   amazon: { label: "Amazon" },
   etsy: { label: "Etsy" },
   review: { label: "Reviews" },
+  appstore: { label: "App Store Reviews" },
+  playstore: { label: "Play Store Reviews" },
+  mercadolibre: { label: "Mercado Libre" },
   commerce: { label: "Commerce" },
   wechat: { label: "WeChat" },
   line: { label: "LINE" },
@@ -129,6 +139,8 @@ export function normalizePlatformLogoKey(
   if (value.includes("youtube")) return "youtube";
   if (value.includes("linkedin")) return "linkedin";
   if (value.includes("mail")) return "email";
+  if (value.includes("website-chat") || value.includes("site-chat"))
+    return "websiteChat";
   if (
     value.includes("webform") ||
     value.includes("webformular") ||
@@ -143,27 +155,20 @@ export function normalizePlatformLogoKey(
   if (value.includes("pinterest")) return "pinterest";
   if (value.includes("patreon") || value.includes("membership"))
     return "patreon";
-  if (
-    value.includes("ko-fi") ||
-    value.includes("kofi") ||
-    value.includes("coffee")
-  )
-    return "kofi";
+  if (value.includes("buy-me-a-coffee") || value.includes("buymeacoffee"))
+    return "buymeacoffee";
+  if (value.includes("ko-fi") || value.includes("kofi")) return "kofi";
   if (value.includes("substack") || value.includes("newsletter"))
     return "substack";
   if (value.includes("google")) return "google";
   if (value.includes("trustpilot")) return "trustpilot";
-  if (
-    value.includes("review") ||
-    value.includes("bewertung") ||
-    value.includes("app-store") ||
-    value.includes("play-store")
-  )
-    return "review";
+  if (value.includes("app-store")) return "appstore";
+  if (value.includes("play-store")) return "playstore";
+  if (value.includes("review") || value.includes("bewertung")) return "review";
   if (value.includes("shopify")) return "shopify";
   if (value.includes("amazon")) return "amazon";
   if (value.includes("etsy")) return "etsy";
-  if (value.includes("mercado")) return "commerce";
+  if (value.includes("mercado")) return "mercadolibre";
   if (value.includes("wechat")) return "wechat";
   if (value.includes("douyin")) return "douyin";
   if (value.includes("xiaohongshu") || value.includes("rednote"))
@@ -241,6 +246,16 @@ export function PlatformLogo({
         <span className={styles.label}>{accessibleLabel}</span>
       ) : null}
     </span>
+  );
+}
+
+function InternationalSvg({ platform }: { platform: NormalizedPlatform }) {
+  const letter = platform === "rednote" ? "小" : platform === "bilibili" ? "B" : platform === "qq" ? "Q" : platform === "sharechat" ? "S" : platform === "moj" ? "M" : platform === "josh" ? "J" : platform === "douyin" ? "♪" : platform === "weibo" ? "◎" : platform === "kuaishou" ? "K" : platform === "wechat" ? "☵" : platform === "line" ? "L" : platform === "kakao" ? "K" : platform === "viber" ? "☎" : "★";
+  return (
+    <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M4 7.5A4.5 4.5 0 0 1 8.5 3h7A4.5 4.5 0 0 1 20 7.5v4.2a4.5 4.5 0 0 1-4.5 4.5H13l-4.3 3.4v-3.4h-.2A4.5 4.5 0 0 1 4 11.7V7.5Z" />
+      <text x="12" y="13.9" textAnchor="middle" className={styles.iconText}>{letter}</text>
+    </svg>
   );
 }
 
@@ -373,34 +388,42 @@ function PlatformSvg({ platform }: { platform: NormalizedPlatform }) {
         />
       </svg>
     );
+  if (platform === "websiteChat")
+    return (
+      <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="none" stroke="currentColor" strokeWidth="1.7" d="M3.2 6.2h17.6v11.6H3.2V6.2Z" />
+        <path fill="currentColor" d="M4.2 7.2h15.6v2.2H4.2V7.2Zm3 5.4a3 3 0 0 1 3-3h3.2a3 3 0 0 1 0 6h-1.2L9 18v-2.4H7.2v-3Z" />
+        <circle cx="6" cy="8.3" r=".55" fill="#93c5fd" />
+        <circle cx="7.8" cy="8.3" r=".55" fill="#a7f3d0" />
+      </svg>
+    );
+  if (platform === "twitch")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h15v10.4l-4.2 4.2h-3.2L10 21H7v-3.4H3.8V6.2L5 3Zm2.2 2.2v9.6h3.2v2.6l2.6-2.6h3.6l1.2-1.2V5.2H7.2Zm4 2.6h1.9v4.4h-1.9V7.8Zm4.1 0h1.9v4.4h-1.9V7.8Z" /></svg>);
+  if (platform === "pinterest")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.1 2.8a8.4 8.4 0 0 0-3.05 16.22c-.05-.7-.08-1.78.02-2.55l1.08-4.58s-.28-.56-.28-1.38c0-1.3.75-2.26 1.68-2.26.8 0 1.18.6 1.18 1.31 0 .8-.5 2-.77 3.1-.22.93.47 1.7 1.39 1.7 1.67 0 2.95-1.76 2.95-4.3 0-2.25-1.62-3.82-3.93-3.82-2.68 0-4.25 2-4.25 4.08 0 .8.3 1.67.7 2.14.08.1.09.18.06.28l-.26 1.05c-.04.17-.14.2-.32.12-1.2-.56-1.95-2.32-1.95-3.73 0-3.03 2.2-5.82 6.36-5.82 3.34 0 5.94 2.38 5.94 5.56 0 3.32-2.1 6-5.02 6-.98 0-1.9-.52-2.22-1.13l-.6 2.3c-.22.84-.82 1.9-1.22 2.54a8.4 8.4 0 1 0 2.52-16.82Z" /></svg>);
+  if (platform === "patreon")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.5 4h3.7v16h-3.7V4Zm11.1.2a5.9 5.9 0 1 1 0 11.8 5.9 5.9 0 0 1 0-11.8Z" /></svg>);
+  if (platform === "kofi" || platform === "buymeacoffee")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h12.7a3.3 3.3 0 0 1 .4 6.58A6.5 6.5 0 0 1 10.8 18H9.2A6.2 6.2 0 0 1 3 11.8V7a1 1 0 0 1 1-1Zm13 2.2v2.2a1.1 1.1 0 0 0 0-2.2ZM7.3 9.3c.9-.85 2.3-.55 2.7.5.45-1.05 1.86-1.35 2.74-.5.88.86.77 2.25-.2 3.08L10 14.5l-2.55-2.12c-.98-.83-1.08-2.22-.16-3.08Z" /></svg>);
+  if (platform === "substack")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h14v2.2H5V4Zm0 4h14v2.2H5V8Zm0 4h14v8l-7-3.8L5 20v-8Z" /></svg>);
+  if (platform === "review")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 3 2.5 5.05 5.58.82-4.04 3.93.95 5.55L12 15.72l-4.99 2.63.95-5.55-4.04-3.93 5.58-.82L12 3Z" /><path fill="#fff" fillOpacity=".88" d="M6.3 19.2h11.4v1.8H6.3v-1.8Z" /></svg>);
+  if (platform === "appstore")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.6 5.3 19.5h2.6l1.15-2.85h5.9l1.15 2.85h2.6L12 3.6Zm-2.1 10.9L12 9.25l2.1 5.25H9.9Z" /><circle cx="19" cy="6" r="2" fill="#bfdbfe" /></svg>);
+  if (platform === "playstore")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="#22c55e" d="M5 3.8v16.4l7.2-8.2L5 3.8Z" /><path fill="#60a5fa" d="m6 3.2 12.7 7.2-5.5 1L6 3.2Z" /><path fill="#f59e0b" d="m13.2 12.6 5.5 1L6 20.8l7.2-8.2Z" /><path fill="#ef4444" d="m14.1 11.4 5 .6-5 .6-1.2-.6 1.2-.6Z" /></svg>);
+  if (platform === "mercadolibre")
+    return (<svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5.2c5.1 0 9.2 2.15 9.2 4.8s-4.1 4.8-9.2 4.8S2.8 12.65 2.8 10 6.9 5.2 12 5.2Z" /><path fill="#1d4ed8" d="M7.2 10.2c1.7-1.45 3.15-1.45 4.5 0l.3.3.3-.3c1.35-1.45 2.8-1.45 4.5 0l-1.2 1.35c-.82-.7-1.34-.7-2.05.02L12 13.1l-1.55-1.53c-.71-.72-1.23-.72-2.05-.02l-1.2-1.35Z" /></svg>);
+  if (["wechat","line","kakao","viber","douyin","rednote","weibo","kuaishou","bilibili","qq","sharechat","moj","josh","international"].includes(platform))
+    return <InternationalSvg platform={platform} />;
   if (
     [
-      "twitch",
-      "pinterest",
-      "patreon",
-      "kofi",
-      "substack",
       "google",
       "trustpilot",
       "shopify",
       "amazon",
       "etsy",
-      "wechat",
-      "line",
-      "kakao",
-      "viber",
-      "review",
-      "commerce",
-      "douyin",
-      "rednote",
-      "weibo",
-      "kuaishou",
-      "bilibili",
-      "qq",
-      "sharechat",
-      "moj",
-      "josh",
-      "international",
     ].includes(platform)
   )
     return (
@@ -411,6 +434,8 @@ function PlatformSvg({ platform }: { platform: NormalizedPlatform }) {
         />
       </svg>
     );
+
+
   if (platform === "onlyfans")
     return (
       <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
