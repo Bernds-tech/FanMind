@@ -30,6 +30,7 @@ import {
   requireAuthorizedWorkspace,
   requireContactInAuthorizedWorkspace,
 } from "@/lib/workspaceAuthorization";
+import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import {
   formatPlatformLabel,
   getDuplicateKey,
@@ -166,8 +167,11 @@ export async function importCsvContacts(
 }
 
 export async function saveFacebookReplyTarget(formData: FormData) {
-  const workspace = await getCurrentWorkspaceOrThrow();
+  const { user, workspace } = await requireAuthorizedWorkspace();
   const contactId = formValue(formData, "contact_id");
+  if (areDemoConnectionsDisabled(user, workspace)) {
+    redirect(`/fans/${contactId}?notice=demo_external_actions_disabled`);
+  }
   await ensureContactInWorkspace(workspace.id, contactId);
 
   const url = formValue(formData, "reply_target_url");
@@ -1117,6 +1121,10 @@ function getDueDate(inDays: number | null | undefined): string | null {
 }
 
 export async function syncFacebookChatForContact(contactId: string) {
+  const { user, workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  if (areDemoConnectionsDisabled(user, workspace)) {
+    redirect(`/fans/${contactId}?notice=demo_external_actions_disabled`);
+  }
   const { syncFacebookMessengerHistory } =
     await import("@/app/channels/facebookWebhookActions");
   const result = await syncFacebookMessengerHistory({

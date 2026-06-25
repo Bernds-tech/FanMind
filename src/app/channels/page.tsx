@@ -19,6 +19,7 @@ import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
 import { getTelegramWebhookStatus, type TelegramWebhookStatus } from "@/lib/telegramStatus";
+import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 
 type SafeFacebookConnection = Pick<
   SocialConnectionRow,
@@ -211,7 +212,7 @@ export default async function ChannelsPage({
           telegramMessagesError={telegramMessagesResult?.error?.message ?? null}
           telegramSetupStatus={telegramSetupStatus}
           telegramCheckRequested={telegramCheckRequested}
-          demoConnectionsDisabled={(data.user.email ?? "").toLowerCase() === "sandra.m@fanmind.ch" || workspace.name === "Sandra M. Demo Workspace"}
+          demoConnectionsDisabled={areDemoConnectionsDisabled(data.user, workspace)}
         />
       ) : (
         <section

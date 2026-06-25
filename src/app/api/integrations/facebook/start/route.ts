@@ -8,6 +8,7 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
 } from "@/lib/supabase/server";
+import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (!workspaceResult.workspace)
     redirect("/channels?facebook_error=workspace");
-  if ((data.user.email ?? "").toLowerCase() === "sandra.m@fanmind.ch" || workspaceResult.workspace.name === "Sandra M. Demo Workspace")
+  if (areDemoConnectionsDisabled(data.user, workspaceResult.workspace))
     redirect("/channels?facebook_error=demo_disabled");
 
   try {

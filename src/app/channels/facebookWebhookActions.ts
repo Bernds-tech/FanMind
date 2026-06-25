@@ -48,6 +48,7 @@ import {
   extractBusinessInboxUrlCandidates,
   extractSelectedItemIdFromMetaUrl,
 } from "@/lib/sourceContext";
+import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 
 export type FacebookCommentFetchResult = {
   ok: boolean;
@@ -893,6 +894,13 @@ async function getCurrentFacebookConnection() {
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (!workspaceResult.workspace)
     return { connection: null, error: "Kein Workspace gefunden." };
+  if (areDemoConnectionsDisabled(data.user, workspaceResult.workspace)) {
+    return {
+      connection: null,
+      error:
+        "Dieser Demo-Workspace ist öffentlich. Echte Kanalverbindungen und externe Bot-Tests sind hier deaktiviert.",
+    };
+  }
   const connectionsResult = await getWorkspaceSocialConnections(
     workspaceResult.workspace.id,
   );

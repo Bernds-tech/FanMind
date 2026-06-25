@@ -37,6 +37,7 @@ import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { formatPlatformLabel } from "../import/csv";
 import { getChannelSourceLabel } from "@/lib/channelSources";
+import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import styles from "./fan-detail.module.css";
 import {
   buildReplyTargetAction,
@@ -95,6 +96,7 @@ type FanDetailWorkspaceProps = {
   facebookReplyTargetError?: string;
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
   allContacts: ContactRow[];
+  demoConnectionsDisabled: boolean;
 };
 
 type ConversationChannelKey =
@@ -173,6 +175,7 @@ function FanDetailWorkspace({
   facebookReplyTargetError,
   facebookDirectLinkDiagnosis,
   allContacts,
+  demoConnectionsDisabled,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans");
@@ -240,6 +243,7 @@ function FanDetailWorkspace({
             facebookReplyTargetError={facebookReplyTargetError}
             facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
             allContacts={allContacts}
+            demoConnectionsDisabled={demoConnectionsDisabled}
           />
         ) : (
           <FanNotFound />
@@ -270,6 +274,7 @@ function FanDetailContent({
   facebookReplyTargetError,
   facebookDirectLinkDiagnosis,
   allContacts,
+  demoConnectionsDisabled,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -291,6 +296,7 @@ function FanDetailContent({
   facebookReplyTargetError?: string;
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
   allContacts: ContactRow[];
+  demoConnectionsDisabled: boolean;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const activeFanContacts = getActiveRelatedFanContacts(contact, allContacts);
@@ -462,16 +468,26 @@ function FanDetailContent({
                   </strong>{" "}
                   · bis zu 50 Nachrichten je Conversation.
                 </p>
-                <form
-                  action={syncFacebookChatForContact.bind(null, contact.id)}
-                >
+                {demoConnectionsDisabled ? (
                   <button
                     className={dashboardStyles.secondaryButton}
-                    type="submit"
+                    type="button"
+                    disabled
                   >
-                    Facebook-Chat aktualisieren
+                    Demo-Modus: Facebook-Chat aktualisieren blockiert
                   </button>
-                </form>
+                ) : (
+                  <form
+                    action={syncFacebookChatForContact.bind(null, contact.id)}
+                  >
+                    <button
+                      className={dashboardStyles.secondaryButton}
+                      type="submit"
+                    >
+                      Facebook-Chat aktualisieren
+                    </button>
+                  </form>
+                )}
               </div>
             ) : null}
             {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) ? (
@@ -481,6 +497,7 @@ function FanDetailContent({
                 error={facebookReplyTargetError}
                 directAction={originalChannelAction}
                 diagnosis={facebookDirectLinkDiagnosis}
+                demoConnectionsDisabled={demoConnectionsDisabled}
               />
             ) : null}
             <div className={styles.timeline}>
@@ -517,7 +534,11 @@ function FanDetailContent({
                       </div>
                       <p>{item.text}</p>
                       <AttachmentPreview attachments={item.attachments} />
-                      <OriginalChatAction action={item.replyAction} compact />
+                      <OriginalChatAction
+                        action={item.replyAction}
+                        compact
+                        demoConnectionsDisabled={demoConnectionsDisabled}
+                      />
                     </div>
                   </article>
                 ))
@@ -549,12 +570,27 @@ function FanDetailContent({
               summary: contact.summary,
             }}
             modes={defaultReplyModes}
-            originalChannelAction={getOriginalChannelAction(
-              conversation,
-              filteredMessages,
-              contact,
-              facebookReplyTarget,
-            )}
+            originalChannelAction={
+              demoConnectionsDisabled
+                ? {
+                    ...getOriginalChannelAction(
+                      conversation,
+                      filteredMessages,
+                      contact,
+                      facebookReplyTarget,
+                    ),
+                    href: null,
+                    label: "Demo-Fallback: Originalkanal blockiert",
+                    reason:
+                      "Im öffentlichen Demo-Workspace sind externe Direktlinks deaktiviert.",
+                  }
+                : getOriginalChannelAction(
+                    conversation,
+                    filteredMessages,
+                    contact,
+                    facebookReplyTarget,
+                  )
+            }
           />
         </main>
 
@@ -954,11 +990,27 @@ function isExplicitChannelSourceType(
 function OriginalChatAction({
   action,
   className,
+  demoConnectionsDisabled = false,
 }: {
   action: ReplyTargetAction;
   className?: string;
   compact?: boolean;
+  demoConnectionsDisabled?: boolean;
 }) {
+  if (demoConnectionsDisabled && action.platform === "facebook") {
+    return (
+      <div className={className}>
+        <button className={dashboardStyles.secondaryButton} type="button" disabled>
+          Demo-Fallback: Facebook-Postfach blockiert
+        </button>
+        <small className={styles.muted}>
+          Dieser Demo-Workspace ist öffentlich. Echte externe Direktlinks werden
+          hier nicht geöffnet; KI-Vorschläge können weiterhin kopiert werden.
+        </small>
+      </div>
+    );
+  }
+
   if (!action.href) return null;
 
   return (
@@ -1008,12 +1060,14 @@ function FacebookReplyTargetCard({
   error,
   directAction,
   diagnosis,
+  demoConnectionsDisabled,
 }: {
   contact: ContactRow;
   target: ContactReplyTargetRow | null;
   error?: string;
   directAction: ReplyTargetAction;
   diagnosis: FacebookDirectLinkSourceDiagnosis | null;
+  demoConnectionsDisabled: boolean;
 }) {
   const hasAutoDirectLink =
     directAction.platform === "facebook" &&
@@ -1157,7 +1211,18 @@ function FacebookReplyTargetCard({
           <p className={styles.muted}>{diagnosis.note}</p>
         </div>
       ) : null}
-      {!hasDirectLink && directAction.href ? (
+      {demoConnectionsDisabled ? (
+        <div className={styles.replyTargetStatus}>
+          <span>
+            Demo-Modus öffentlich: Facebook-Postfach öffnen, Chat-Link speichern
+            und externe Direktlinks sind deaktiviert. Nutze einen eigenen
+            Workspace, um echte Verbindungen sicher zu testen.
+          </span>
+          <button className={dashboardStyles.secondaryButton} type="button" disabled>
+            Facebook-Postfach öffnen blockiert
+          </button>
+        </div>
+      ) : !hasDirectLink && directAction.href ? (
         <div className={styles.replyTargetStatus}>
           <span>
             Solange keine Direktlink-ID erkannt wurde, öffnet FanMind das
@@ -1192,7 +1257,7 @@ function FacebookReplyTargetCard({
           ) : null}
         </div>
       ) : null}
-      {!storageUnavailable ? (
+      {!storageUnavailable && !demoConnectionsDisabled ? (
         <form action={saveFacebookReplyTarget} className={styles.inlineForm}>
           <p className={styles.muted}>
             Admin-Notfall-Fallback: manuellen Direktlink nur verwenden, wenn die
@@ -1589,6 +1654,8 @@ function formatNotice(value: string): string {
     return "Der Chat-Link konnte gerade nicht gespeichert werden. Bitte später erneut versuchen.";
   if (value === "reply_target_storage_unavailable")
     return "Direktlink-Speicherung ist derzeit nicht verfügbar. Das Facebook-Postfach kann weiterhin geöffnet werden.";
+  if (value === "demo_external_actions_disabled")
+    return "Dieser Demo-Workspace ist öffentlich. Echte externe Kanalaktionen sind deaktiviert. KI-Vorschläge können weiterhin kopiert werden.";
   if (value === "reply_target_invalid")
     return "Bitte speichere nur einen HTTPS-Link zum direkten Chat dieses Fans, keinen generischen Postfach-Link.";
   if (value === "contacts_merged") return "Fans wurden zusammengeführt.";
@@ -1750,7 +1817,7 @@ export default async function FanDetailPage({
         })
       : null;
   const facebookDirectLinkDiagnosis =
-    workspace && contact && facebookConnection
+    !areDemoConnectionsDisabled(user, workspace) && workspace && contact && facebookConnection
       ? await diagnoseFacebookDirectLinkSource({
           connection: facebookConnection,
           contactHandle: contact.handle,
@@ -1794,6 +1861,7 @@ export default async function FanDetailPage({
         facebookReplyTargetError={facebookReplyTargetResult?.error?.message}
         facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
         allContacts={contactsResult?.contacts ?? []}
+        demoConnectionsDisabled={areDemoConnectionsDisabled(user, workspace)}
       />
     </main>
   );
