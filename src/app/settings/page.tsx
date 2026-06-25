@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -16,6 +17,7 @@ type SettingsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
+  openFollowupCount: number;
 };
 
 async function logout() {
@@ -40,6 +42,7 @@ function SettingsWorkspace({
   workspace,
   userDisplayName,
   contactCount,
+  openFollowupCount,
 }: SettingsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("settings");
@@ -64,6 +67,7 @@ function SettingsWorkspace({
         primaryActionHref: "#workspace-settings",
       }}
       contactCount={contactCount}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <section
@@ -108,6 +112,9 @@ export default async function SettingsPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -119,6 +126,7 @@ export default async function SettingsPage() {
             workspace.name,
           )}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
         />
       ) : (
         <section

@@ -4,6 +4,7 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import {
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -40,11 +41,13 @@ function CsvImportWorkspace({
   workspace,
   userDisplayName,
   contactCount,
+  openFollowupCount,
   contactsError,
 }: {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
+  openFollowupCount: number;
   contactsError?: string;
 }) {
   const { mainNavigation, settingsNavigation, savedViews } =
@@ -69,6 +72,7 @@ function CsvImportWorkspace({
         primaryActionHref: "/fans#fans-list",
       }}
       contactCount={contactCount}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       {contactsError ? (
@@ -94,6 +98,9 @@ export default async function CsvImportPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -105,6 +112,7 @@ export default async function CsvImportPage() {
             workspace.name,
           )}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
           contactsError={contactsResult?.error?.message}
         />
       ) : (

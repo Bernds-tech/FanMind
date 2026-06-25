@@ -52,8 +52,6 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   useEffect(() => {
     if (!isDemoMode) return;
 
-    setError(null);
-
     if (emailInputRef.current) {
       emailInputRef.current.value = DEMO_EMAIL;
     }

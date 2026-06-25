@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -18,6 +19,7 @@ type TopFansWorkspaceProps = {
   userDisplayName: string;
   contacts: ContactRow[];
   contactsError?: string;
+  openFollowupCount: number;
 };
 
 const sourceLabels: Record<string, string> = {
@@ -125,6 +127,7 @@ function TopFansWorkspace({
   userDisplayName,
   contacts,
   contactsError,
+  openFollowupCount,
 }: TopFansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("top-fans");
@@ -148,6 +151,7 @@ function TopFansWorkspace({
         primaryActionHref: "#top-fans-list",
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <section
@@ -191,6 +195,9 @@ export default async function TopFansPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -202,6 +209,7 @@ export default async function TopFansPage() {
             workspace.name,
           )}
           contacts={contactsResult?.contacts ?? []}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
           contactsError={contactsResult?.error?.message}
         />
       ) : (

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -15,6 +16,7 @@ type ReactivationWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
+  openFollowupCount: number;
 };
 
 async function logout() {
@@ -39,6 +41,7 @@ function ReactivationWorkspace({
   workspace,
   userDisplayName,
   contactCount,
+  openFollowupCount,
 }: ReactivationWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("reactivation");
@@ -62,6 +65,7 @@ function ReactivationWorkspace({
         primaryActionHref: "#reactivation-preview",
       }}
       contactCount={contactCount}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <section
@@ -105,6 +109,9 @@ export default async function ReactivationPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -116,6 +123,7 @@ export default async function ReactivationPage() {
             workspace.name,
           )}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
         />
       ) : (
         <section

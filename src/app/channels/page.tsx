@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import {
   checkMetaWebhookStorageHealth,
+  getOpenFollowupCount,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -39,6 +40,7 @@ type ChannelsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
+  openFollowupCount: number;
   facebookConnection: SafeFacebookConnection | null;
   facebookError?: boolean;
   metaWebhookEvents: MetaWebhookEventRow[];
@@ -67,6 +69,7 @@ function ChannelsWorkspace({
   workspace,
   userDisplayName,
   contactCount,
+  openFollowupCount,
   facebookConnection,
   facebookError,
   metaWebhookEvents,
@@ -102,6 +105,7 @@ function ChannelsWorkspace({
         primaryActionHref: "#channel-grid-title",
       }}
       contactCount={contactCount}
+      openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
       <ChannelsGrid
@@ -161,6 +165,9 @@ export default async function ChannelsPage({
   const telegramMessagesResult = workspace
     ? await getWorkspaceTelegramMessages(workspace.id, 5)
     : null;
+  const openFollowupCountResult = workspace
+    ? await getOpenFollowupCount(workspace.id)
+    : null;
   const telegramSetupStatus = await getTelegramWebhookStatus();
   const telegramCheckRequested = params.check === "telegram";
   const facebookConnection =
@@ -179,6 +186,7 @@ export default async function ChannelsPage({
             workspace.name,
           )}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
+          openFollowupCount={openFollowupCountResult?.count ?? 0}
           facebookConnection={facebookConnection ? {
             page_name: facebookConnection.page_name,
             page_id: facebookConnection.page_id,
