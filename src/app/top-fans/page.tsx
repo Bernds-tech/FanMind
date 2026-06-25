@@ -191,6 +191,10 @@ export default async function TopFansPage() {
   }
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
+    redirect("/login?demo_deleted=1");
+  }
+
   const workspace = workspaceResult.workspace;
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)

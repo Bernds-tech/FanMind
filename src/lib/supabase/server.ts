@@ -20,6 +20,7 @@ import {
   type ProductiveCommercialOption,
 } from "@/lib/plans";
 import type { PlanId } from "@/config/plans";
+import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
 import {
   getSupabaseAuthUrl,
   getSupabaseHeaders,
@@ -617,13 +618,14 @@ export async function getUserWorkspaceDashboard(
   }
 
   if (ownerWorkspaceResult.data) {
-    return {
-      workspace: {
-        ...ownerWorkspaceResult.data,
-        role: "owner",
-      },
-      error: null,
-    };
+    const workspace = { ...ownerWorkspaceResult.data, role: "owner" };
+    const expiryState = getTemporaryDemoExpiryState(user);
+    if (expiryState.isTemporaryDemo && expiryState.isExpired) {
+      const deleted = await deleteExpiredTemporaryDemo(user, workspace);
+      if (deleted.error) console.error("Temporary demo cleanup failed", deleted.error);
+      return workspaceDashboardError("TEMPORARY_DEMO_DELETED");
+    }
+    return { workspace, error: null };
   }
 
   return workspaceDashboardError(
@@ -4021,6 +4023,53 @@ export async function getWorkspaceOpenFollowups(
   return { followups: followupsResult.data ?? [], error: null };
 }
 
+
+export async function createTemporaryDemoWorkspace(input: {
+  userId: string;
+  userEmail: string;
+}): Promise<WorkspaceBackfillResult> {
+  const accessToken = getServiceAccessToken();
+  if (!accessToken) return workspaceBackfillError("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.");
+
+  const workspaceResult = await postgrestRequest<WorkspaceBackfillRow>(
+    "workspaces",
+    "POST",
+    {
+      name: TEMPORARY_DEMO_WORKSPACE_NAME,
+      owner_user_id: input.userId,
+      plan_id: "pilot",
+      commercial_option: "pilot_only",
+      setup_fee_cents: 0,
+      monthly_fee_cents: 0,
+      commitment_months: 0,
+    },
+    accessToken,
+    { select: WORKSPACE_COLUMNS, single: true },
+  );
+  if (workspaceResult.error || !workspaceResult.data) {
+    return workspaceBackfillError(workspaceResult.error?.message ?? "Demo-Workspace konnte nicht angelegt werden.");
+  }
+
+  const profileResult = await postgrestRequest("profiles", "POST", {
+    id: input.userId,
+    email: input.userEmail,
+    display_name: "Demo Nutzer",
+  }, accessToken, { upsert: true });
+  if (profileResult.error) return workspaceBackfillError(profileResult.error.message);
+
+  const memberResult = await postgrestRequest("workspace_members", "POST", {
+    workspace_id: workspaceResult.data.id,
+    user_id: input.userId,
+    role: "owner",
+  }, accessToken);
+  if (memberResult.error) return workspaceBackfillError(memberResult.error.message);
+
+  const seedError = await seedSandraDemoWorkspaceData(workspaceResult.data, accessToken);
+  if (seedError) return workspaceBackfillError(seedError.message);
+
+  return { workspace: workspaceResult.data, error: null, created: true };
+}
+
 async function ensureSandraDemoWorkspaceData(
   workspace: WorkspaceBackfillRow,
   user: SupabaseServerUser,
@@ -4040,6 +4089,13 @@ async function ensureSandraDemoWorkspaceData(
     if (workspaceUpdate.error) return workspaceUpdate.error;
   }
 
+  return seedSandraDemoWorkspaceData(workspace, accessToken);
+}
+
+async function seedSandraDemoWorkspaceData(
+  workspace: Pick<WorkspaceBackfillRow, "id">,
+  accessToken: string,
+): Promise<Error | null> {
   const existingContact = await postgrestSelect<ContactRow>(
     "contacts",
     accessToken,
@@ -4101,21 +4157,40 @@ async function ensureSandraDemoWorkspaceData(
     if (followup.error) return followup.error;
   }
 
-  const conversations = await getWorkspaceConversations(workspace.id);
+  const conversations = await postgrestSelect<ConversationRow[]>("conversations", accessToken, CONVERSATION_COLUMNS, [["workspace_id", workspace.id], ["contact_id", contact.id]], undefined, false);
   if (conversations.error) return conversations.error;
-  const hasDemoConversation = conversations.conversations.some((conversation) => conversation.contact_id === contact.id && conversation.original_text_excerpt?.includes("Early-Bird"));
+  const hasDemoConversation = conversations.data?.some((conversation) => conversation.original_text_excerpt?.includes("Early-Bird"));
   if (!hasDemoConversation) {
-    const message = await createManualConversationMessage({
-      workspaceId: workspace.id,
-      contactId: contact.id,
+    const conversation = await postgrestRequest<ConversationRow>("conversations", "POST", {
+      workspace_id: workspace.id,
+      contact_id: contact.id,
+      status: "open",
+      priority: "high",
+      source_platform: "facebook",
+      source_type: "dm",
+      ai_status: "partial",
+      next_step: "Antwort vorbereiten",
+      last_message_preview: "Hallo! Gibt es noch Early-Bird Plätze für Member beim Sommer-Event? Ich würde gern heute noch entscheiden.",
+      last_inbound_at: new Date().toISOString(),
+      original_author_label: "Sandra M.",
+      original_text_excerpt: "Gibt es noch Early-Bird Plätze für Member?",
+    }, accessToken, { select: CONVERSATION_COLUMNS, single: true });
+    if (conversation.error) return conversation.error;
+    if (!conversation.data) return new Error("Demo-Conversation konnte nicht erstellt werden.");
+    const message = await postgrestRequest<ConversationMessageRow>("conversation_messages", "POST", {
+      workspace_id: workspace.id,
+      conversation_id: conversation.data.id,
+      contact_id: contact.id,
       direction: "inbound",
-      messageType: "dm",
-      sourcePlatform: "facebook",
-      sourceType: "dm",
-      authorLabel: "Sandra M.",
+      message_type: "dm",
+      source_platform: "facebook",
+      source_type: "dm",
+      author_label: "Sandra M.",
+      original_author_label: "Sandra M.",
+      original_text_excerpt: "Gibt es noch Early-Bird Plätze für Member?",
       content: "Hallo! Gibt es noch Early-Bird Plätze für Member beim Sommer-Event? Ich würde gern heute noch entscheiden.",
-      originalTextExcerpt: "Gibt es noch Early-Bird Plätze für Member?",
-    });
+      message_kind: "text",
+    }, accessToken, { select: CONVERSATION_MESSAGE_COLUMNS, single: true });
     if (message.error) return message.error;
   }
 
@@ -4258,6 +4333,54 @@ export async function ensureUserWorkspace(
   return { workspace: user.email?.toLowerCase() === DEMO_EMAIL ? { ...workspace, name: DEMO_WORKSPACE_NAME, plan_id: "pilot", commercial_option: "pilot_only", setup_fee_cents: 0, monthly_fee_cents: 0, commitment_months: 0 } : workspace, error: null, created };
 }
 
+
+async function deleteWorkspaceRows(table: string, workspaceId: string, accessToken: string, optional = false): Promise<Error | null> {
+  const result = await postgrestDelete(table, accessToken, [["workspace_id", workspaceId]]);
+  if (!result.error) return null;
+  const message = result.error.message.toLowerCase();
+  if (optional && (message.includes("does not exist") || message.includes("schema cache") || message.includes("relation"))) return null;
+  return result.error;
+}
+
+export async function deleteExpiredTemporaryDemo(user: SupabaseServerUser, workspace: WorkspaceDashboardRow | WorkspaceBackfillRow): Promise<{ deleted: boolean; error: Error | null }> {
+  const accessToken = getServiceAccessToken();
+  if (!accessToken) return { deleted: false, error: new Error("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.") };
+  if ((user.email ?? "").toLowerCase() === DEMO_EMAIL || !isTemporaryDemoUser(user)) {
+    return { deleted: false, error: new Error("Löschung abgebrochen: User ist nicht eindeutig temporär.") };
+  }
+  if (workspace.owner_user_id !== user.id || workspace.name !== TEMPORARY_DEMO_WORKSPACE_NAME) {
+    return { deleted: false, error: new Error("Löschung abgebrochen: Workspace gehört nicht eindeutig zum temporären Demo-User.") };
+  }
+
+  const tables: Array<[string, boolean]> = [
+    ["conversation_messages", false],
+    ["conversations", false],
+    ["memories", false],
+    ["followups", false],
+    ["contact_reply_targets", true],
+    ["conversation_summaries", true],
+    ["contact_ai_profiles", true],
+    ["fan_analysis_reports", true],
+    ["contacts", false],
+    ["workspace_members", false],
+    ["workspaces", false],
+  ];
+
+  for (const [table, optional] of tables) {
+    const error = await deleteWorkspaceRows(table, workspace.id, accessToken, optional);
+    if (error) return { deleted: false, error };
+  }
+
+  const authDelete = await fetch(getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(user.id)}`), {
+    method: "DELETE",
+    headers: getSupabaseHeaders(accessToken),
+    cache: "no-store",
+  });
+  if (!authDelete.ok) return { deleted: false, error: await parseSupabaseServerError(authDelete) };
+  await signOutSupabaseServerSession();
+  return { deleted: true, error: null };
+}
+
 async function parseSupabaseServerError(response: Response): Promise<Error> {
   const payload = (await response.json().catch(() => null)) as {
     msg?: string;
@@ -4386,6 +4509,29 @@ async function postgrestUpdate<T = unknown>(
           ? error
           : new Error("Unbekannter Supabase-Fehler."),
     };
+  }
+}
+
+
+async function postgrestDelete(
+  table: string,
+  accessToken: string | undefined,
+  filters: [string, SupabaseFilterValue][],
+): Promise<PostgrestResult<null>> {
+  try {
+    const url = new URL(getSupabaseRestUrl(table));
+    for (const [column, value] of filters) {
+      url.searchParams.set(column, value === null ? "is.null" : `eq.${String(value)}`);
+    }
+    const response = await fetch(url.toString(), {
+      method: "DELETE",
+      headers: { ...getSupabaseHeaders(accessToken), Prefer: "return=minimal" },
+      cache: "no-store",
+    });
+    if (!response.ok) return { data: null, error: await parseSupabaseServerError(response) };
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler.") };
   }
 }
 
