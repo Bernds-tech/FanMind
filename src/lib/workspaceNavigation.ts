@@ -23,7 +23,6 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey): {
         active: activeRoute === "dashboard",
       },
       { label: "Fans", href: "/fans", active: activeRoute === "fans" },
-      { label: "Inbox", href: "/inbox", active: activeRoute === "inbox" },
       {
         label: "Onboarding",
         href: "/onboarding",

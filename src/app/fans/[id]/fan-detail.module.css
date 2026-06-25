@@ -915,3 +915,114 @@
     overflow-x: visible;
   }
 }
+
+.contactHeaderTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.contactHeaderTop h2 {
+  margin: 2px 0 0;
+  color: #f8fbff;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+
+.actionMenuWrap {
+  position: relative;
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.actionMenuButton {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  color: #e0f2fe;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: -0.18em;
+  cursor: pointer;
+  background: rgba(2, 6, 23, 0.54);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+}
+
+.actionMenuButton:hover,
+.actionMenuButton:focus-visible {
+  border-color: rgba(56, 189, 248, 0.58);
+  color: #f8fbff;
+  outline: none;
+  background: rgba(14, 116, 144, 0.28);
+}
+
+.actionMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  min-width: 190px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.98);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+}
+
+.actionMenuItem {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: #dbeafe;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+}
+
+.actionMenuItem:hover,
+.actionMenuItem:focus-visible {
+  color: #f8fbff;
+  outline: none;
+  background: rgba(14, 116, 144, 0.28);
+}
+
+.actionMenuNotice {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 4;
+  width: min(280px, 72vw);
+  margin: 0;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 12px;
+  padding: 9px 10px;
+  color: #bae6fd;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.4;
+  background: rgba(8, 47, 73, 0.96);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+}
+
+@media (max-width: 720px) {
+  .contactHeaderTop {
+    align-items: center;
+  }
+
+  .actionMenu {
+    min-width: 176px;
+  }
+}
