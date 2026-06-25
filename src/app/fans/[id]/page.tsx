@@ -47,10 +47,9 @@ import {
 } from "@/lib/sourceContext";
 import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
 import { FanAnalysisReport } from "./FanAnalysisReport";
+import { FanActionMenu } from "./FanActionMenu";
 import {
   saveContactInternalNotes,
-  archiveFan,
-  mergeFanContacts,
   saveFacebookReplyTarget,
   syncFacebookChatForContact,
 } from "../actions";
@@ -345,6 +344,13 @@ function FanDetailContent({
   return (
     <>
       <section className={styles.contactHeader} aria-label="Fan-Workbench">
+        <div className={styles.contactHeaderTop}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Fan-Aktionen</p>
+            <h2>{contact.display_name || contact.handle || "Unbenannter Fan"}</h2>
+          </div>
+          <FanActionMenu fanName={contact.display_name || contact.handle || "Fan"} />
+        </div>
         <dl className={styles.headerMetrics}>
           <div className={styles.metric}>
             <dt>Owner</dt>
@@ -598,13 +604,6 @@ function FanDetailContent({
           className={styles.copilot}
           aria-label="Fan-Analyse-Report und KI-Antwortvorschläge"
         >
-          <ContactManagementCard
-            contact={contact}
-            allContacts={allContacts}
-            messages={messages}
-            memories={memories}
-            followups={followups}
-          />
           <FanNotesCard contact={contact} />
           <FanMemoryCard
             contactId={contact.id}
@@ -650,81 +649,6 @@ function getChannelEmptyLabel(activeChannel: ConversationChannelKey): string {
   if (!tab) return "Nachrichten";
   if (activeChannel === "notes") return "manuellen Notizen";
   return `${tab.label}-Nachrichten`;
-}
-
-function ContactManagementCard({
-  contact,
-  allContacts,
-  messages,
-  memories,
-  followups,
-}: {
-  contact: ContactRow;
-  allContacts: ContactRow[];
-  messages: ConversationMessageRow[];
-  memories: MemoryRow[];
-  followups: FollowupRow[];
-}) {
-  const targets = allContacts.filter(
-    (candidate) => candidate.id !== contact.id,
-  );
-  return (
-    <article className={styles.card}>
-      <div className={styles.cardHeader}>
-        <div>
-          <p className={dashboardStyles.eyebrow}>Kontaktpflege</p>
-          <h3>Kontakt zusammenführen oder archivieren</h3>
-        </div>
-      </div>
-      <p className={styles.syncHint}>
-        Vorschau Quelle: {contact.display_name} ·{" "}
-        {formatSource(contact.source_platform)} · {messages.length} Nachrichten
-        · {memories.length} Memories · {followups.length} Follow-ups.
-      </p>
-      <form action={mergeFanContacts} className={styles.noteForm}>
-        <input name="return_to" type="hidden" value={`/fans/${contact.id}`} />
-        <input name="source_contact_id" type="hidden" value={contact.id} />
-        <label htmlFor="target_contact_id">Zielkontakt</label>
-        <select
-          id="target_contact_id"
-          name="target_contact_id"
-          required
-          defaultValue=""
-        >
-          <option value="" disabled>
-            Kontakt auswählen
-          </option>
-          {targets.map((target) => (
-            <option key={target.id} value={target.id}>
-              {target.display_name || target.handle || target.id} ·{" "}
-              {formatSource(target.source_platform)}
-            </option>
-          ))}
-        </select>
-        <p className={styles.syncHint}>
-          Beim Merge werden Conversations, Messages, Memories, Follow-ups,
-          Reply-Targets, Summaries und Profile auf den Zielkontakt umgehängt.
-          Tags und Notizen werden kombiniert; der Quellkontakt wird danach
-          archiviert.
-        </p>
-        <button
-          className={`${dashboardStyles.secondaryButton} ${styles.fullWidthButton}`}
-          type="submit"
-        >
-          Diesen Kontakt zusammenführen
-        </button>
-      </form>
-      <form action={archiveFan} className={styles.noteForm}>
-        <input name="contact_id" type="hidden" value={contact.id} />
-        <button
-          className={`${dashboardStyles.secondaryButton} ${styles.fullWidthButton}`}
-          type="submit"
-        >
-          Kontakt wirklich archivieren
-        </button>
-      </form>
-    </article>
-  );
 }
 
 const defaultReplyModes: ReplyMode[] = [

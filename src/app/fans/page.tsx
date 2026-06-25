@@ -353,7 +353,6 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
             <th>Angelegt</th>
             <th>Nächster Follow-up</th>
             <th>Antwortkanal</th>
-            <th>Aktion</th>
             <th aria-label="Neue Nachrichten">Neu</th>
           </tr>
         </thead>
@@ -406,22 +405,6 @@ function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
               <td>
                 <span className={styles.replyChannel}>
                   {formatReplyChannel(group.platforms)}
-                </span>
-              </td>
-              <td>
-                <span className={styles.actionLinks}>
-                  <a
-                    className={styles.editButton}
-                    href={`#${getEditModalId(group)}`}
-                  >
-                    Bearbeiten
-                  </a>
-                  <a
-                    className={styles.mergeLink}
-                    href={`#${getEditModalId(group)}-merge`}
-                  >
-                    Zusammenführen
-                  </a>
                 </span>
               </td>
               <td className={styles.unseenCell}>
