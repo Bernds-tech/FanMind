@@ -216,7 +216,7 @@ function FanDetailWorkspace({
 
         {notice ? (
           <p className={styles.safeNotice}>
-            <strong>{formatNotice(notice)}</strong>
+            <strong>{formatNotice(notice, locale)}</strong>
           </p>
         ) : null}
 
@@ -599,8 +599,12 @@ function FanDetailContent({
               summary: contact.summary,
             }}
             modes={defaultReplyModes}
-              locale={locale}
-
+            originalChannelAction={{
+              href: originalChannelAction.href,
+              label: getOriginalChannelButtonLabel(originalChannelAction, messages, contact),
+            }}
+            demoConnectionsDisabled={demoConnectionsDisabled}
+            locale={locale}
           />
         </main>
 
@@ -1434,6 +1438,36 @@ function stringifyAnalysisReport(report: FanAnalysisReportRow | null): string {
   return report ? JSON.stringify(report.report_json) : "";
 }
 
+function getOriginalChannelButtonLabel(
+  action: ReplyTargetAction,
+  messages: ConversationMessageRow[],
+  contact: ContactRow,
+): string {
+  const latestInbound = [...messages]
+    .reverse()
+    .find((message) => message.direction === "inbound");
+  const platform = normalizeSourceValue(
+    latestInbound?.source_platform ?? contact.source_platform ?? action.platform,
+  );
+  const sourceType = normalizeSourceValue(
+    latestInbound?.source_type ?? latestInbound?.message_type,
+  );
+  const isComment = sourceType.includes("comment");
+
+  if (platform === "facebook") {
+    return isComment ? "Zum Facebook-Kommentar wechseln" : "Zu Facebook wechseln";
+  }
+  if (platform === "instagram") {
+    return isComment ? "Zum Instagram-Kommentar wechseln" : "Zu Instagram wechseln";
+  }
+  if (platform === "linkedin") {
+    return isComment ? "Zum LinkedIn-Kommentar wechseln" : "Zu LinkedIn wechseln";
+  }
+  if (platform === "whatsapp") return "Zu WhatsApp wechseln";
+  if (platform === "email" || platform.includes("mail")) return "Zur E-Mail wechseln";
+  return action.href ? action.label : "Zum Originalkanal wechseln";
+}
+
 function getOriginalChannelAction(
   conversation: ConversationRow | null,
   messages: ConversationMessageRow[],
@@ -1567,7 +1601,7 @@ function normalizeParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }
 
-function formatNotice(value: string): string {
+function formatNotice(value: string, locale: FanMindLanguage = "de"): string {
   if (value === "draft_saved")
     return "Entwurf gespeichert – noch nicht gesendet.";
   if (value === "done")
@@ -1577,9 +1611,13 @@ function formatNotice(value: string): string {
   if (value === "open") return "Konversation wieder geöffnet.";
   if (value === "priority_saved") return "Priorität gespeichert.";
   if (value === "notes_saved")
-    return "Gespeichert: Notizen wurden aktualisiert.";
+    return locale === "en"
+      ? "Saved: Notes were updated."
+      : "Gespeichert: Notizen wurden aktualisiert.";
   if (value === "notes_empty")
-    return "Leere Notiz wurde nicht gespeichert.";
+    return locale === "en"
+      ? "Empty note was not saved."
+      : "Leere Notiz wurde nicht gespeichert.";
   if (value === "analysis_saved")
     return "Fan-Analyse-Report wurde aktualisiert.";
   if (value === "reply_target_saved")

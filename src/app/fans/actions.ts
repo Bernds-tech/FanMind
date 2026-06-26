@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   createContactFollowup,
@@ -221,8 +221,9 @@ export async function saveContactInternalNotes(formData: FormData) {
 
   if (result.error) throw new Error(result.error.message);
   revalidatePath(`/fans/${contactId}`);
-  revalidatePath(`/fans/${contactId}`, "page");
+  revalidatePath("/fans/[id]", "page");
   revalidatePath("/fans");
+  refresh();
   redirect(`/fans/${contactId}?notice=notes_saved`);
 }
 
