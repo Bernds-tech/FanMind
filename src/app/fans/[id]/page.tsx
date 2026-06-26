@@ -1229,6 +1229,7 @@ function FanNotesCard({ contact, locale }: { contact: ContactRow; locale: FanMin
       </div>
       <form action={saveContactInternalNotes} className={styles.notesForm}>
         <input name="contact_id" type="hidden" value={contact.id} />
+        <input name="lang" type="hidden" value={locale} />
         <textarea
           aria-label="Interne Notizen zu diesem Fan"
           defaultValue={contact.internal_notes ?? ""}
@@ -1618,6 +1619,10 @@ function formatNotice(value: string, locale: FanMindLanguage = "de"): string {
     return locale === "en"
       ? "Empty note was not saved."
       : "Leere Notiz wurde nicht gespeichert.";
+  if (value === "notes_save_failed")
+    return locale === "en"
+      ? "Notes could not be saved. Please try again."
+      : "Notizen konnten nicht gespeichert werden. Bitte erneut versuchen.";
   if (value === "analysis_saved")
     return "Fan-Analyse-Report wurde aktualisiert.";
   if (value === "reply_target_saved")

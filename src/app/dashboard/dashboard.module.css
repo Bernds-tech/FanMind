@@ -248,11 +248,32 @@
     transform 160ms ease;
 }
 
-.compactNavItem span,
-.compactNavItemActive span {
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+.compactNavIcon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+}
+
+.compactNavIcon svg {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
+}
+
+.compactBrand {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(103, 232, 249, 0.34);
+  border-radius: 14px;
+  color: #ecfeff;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(124, 58, 237, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .compactNavItem:hover,
@@ -586,7 +607,7 @@
   background: rgba(2, 6, 23, 0.68);
 }
 
-.searchBox span {
+.searchBox label {
   font-size: 11px;
   font-weight: 900;
 }

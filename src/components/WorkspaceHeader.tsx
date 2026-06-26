@@ -9,6 +9,10 @@ export type WorkspaceHeaderProps = {
   primaryActionLabel: string;
   primaryActionHref: string;
   locale?: FanMindLanguage;
+  searchAction?: string;
+  searchName?: string;
+  searchValue?: string;
+  hiddenSearchParams?: Record<string, string>;
 };
 
 export function WorkspaceHeader({
@@ -18,6 +22,10 @@ export function WorkspaceHeader({
   primaryActionLabel,
   primaryActionHref,
   locale = "de",
+  searchAction,
+  searchName = "q",
+  searchValue = "",
+  hiddenSearchParams,
 }: WorkspaceHeaderProps) {
   return (
     <header className={styles.topbar}>
@@ -26,10 +34,21 @@ export function WorkspaceHeader({
         <p>{subtitle}</p>
       </div>
       <div className={styles.topbarActions}>
-        <label className={styles.searchBox}>
-          <span>{wt(locale, "Suche")}</span>
-          <input type="search" placeholder={searchPlaceholder} />
-        </label>
+        <form className={styles.searchBox} action={searchAction} method="get">
+          <label htmlFor={`${title}-workspace-search`}>{wt(locale, "Suche")}</label>
+          <input
+            id={`${title}-workspace-search`}
+            type="search"
+            name={searchName}
+            defaultValue={searchValue}
+            placeholder={searchPlaceholder}
+          />
+          {hiddenSearchParams
+            ? Object.entries(hiddenSearchParams).map(([name, value]) => (
+                <input key={name} type="hidden" name={name} value={value} />
+              ))
+            : null}
+        </form>
         <button
           type="button"
           className={styles.filterChip}

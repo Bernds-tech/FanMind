@@ -206,11 +206,14 @@ export async function saveFacebookReplyTarget(formData: FormData) {
 export async function saveContactInternalNotes(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
   const contactId = formValue(formData, "contact_id");
+  const locale = formValue(formData, "lang") === "en" ? "en" : "de";
+  const langParam = locale === "en" ? "&lang=en" : "";
+
   await ensureContactInWorkspace(workspace.id, contactId);
 
   const internalNotes = formValue(formData, "internal_notes");
   if (!internalNotes.trim()) {
-    redirect(`/fans/${contactId}?notice=notes_empty`);
+    redirect(`/fans/${contactId}?notice=notes_empty${langParam}`);
   }
 
   const result = await updateContactInternalNotes({
@@ -219,12 +222,16 @@ export async function saveContactInternalNotes(formData: FormData) {
     internalNotes,
   });
 
-  if (result.error) throw new Error(result.error.message);
+  if (result.error || result.contact?.internal_notes !== internalNotes.trim()) {
+    revalidatePath(`/fans/${contactId}`);
+    redirect(`/fans/${contactId}?notice=notes_save_failed${langParam}`);
+  }
+
   revalidatePath(`/fans/${contactId}`);
   revalidatePath("/fans/[id]", "page");
   revalidatePath("/fans");
   refresh();
-  redirect(`/fans/${contactId}?notice=notes_saved`);
+  redirect(`/fans/${contactId}?notice=notes_saved${langParam}`);
 }
 
 export async function analyzeFan(

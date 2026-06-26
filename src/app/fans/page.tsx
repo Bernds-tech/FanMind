@@ -45,6 +45,7 @@ type FansWorkspaceProps = {
   conversationMessagesError?: string;
   unseenMessagesError?: string;
   activeChannel: PlatformValue | "all";
+  searchQuery: string;
   notice?: string;
   activePlatformsNotice?: string;
   archivedChannelsNotice?: string;
@@ -60,6 +61,7 @@ type FansPageProps = {
     archived?: string | string[];
     error?: string | string[];
     lang?: string | string[];
+    q?: string | string[];
   }>;
 };
 
@@ -113,6 +115,7 @@ function FansWorkspace({
   conversationMessagesError,
   unseenMessagesError,
   activeChannel,
+  searchQuery,
   notice,
   activePlatformsNotice,
   archivedChannelsNotice,
@@ -128,7 +131,8 @@ function FansWorkspace({
     unseenMessages,
     conversationMessages,
   );
-  const visibleFanGroups = filterFanGroupsByChannel(fanGroups, activeChannel);
+  const channelFilteredFanGroups = filterFanGroupsByChannel(fanGroups, activeChannel);
+  const visibleFanGroups = filterFanGroupsBySearch(channelFilteredFanGroups, searchQuery);
 
   return (
     <WorkspaceShell
@@ -146,6 +150,12 @@ function FansWorkspace({
         searchPlaceholder: wt(locale, "Suche nach Name, Tag, Kanal, Sprache ..."),
         primaryActionLabel: wt(locale, "+ Neuer Fan"),
         primaryActionHref: "#new-fan-modal",
+        searchAction: "/fans",
+        searchValue: searchQuery,
+        hiddenSearchParams: {
+          ...(activeChannel !== "all" ? { channel: activeChannel } : {}),
+          ...(locale === "en" ? { lang: locale } : {}),
+        },
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       openFollowupCount={openFollowupCount}
@@ -201,7 +211,7 @@ function FansWorkspace({
           {fanGroups.length ? (
             <>
               <div className={styles.listToolbar}>
-                <ChannelFilters activeChannel={activeChannel} />
+                <ChannelFilters activeChannel={activeChannel} searchQuery={searchQuery} locale={locale} />
                 <Link className={styles.importLink} href="/fans/import">
                   {wt(locale, "CSV importieren")}
                 </Link>
@@ -210,10 +220,9 @@ function FansWorkspace({
                 <FansTable fanGroups={visibleFanGroups} locale={locale} />
               ) : (
                 <div className={dashboardStyles.emptyState}>
-                  <strong>Keine Fans für diesen Kanal</strong>
+                  <strong>Keine Fans gefunden.</strong>
                   <p>
-                    Für den gewählten Kanal gibt es aktuell keine echten
-                    Kontakte im Workspace.
+                    Passe Suche oder Kanalfilter an, um wieder Fans zu sehen.
                   </p>
                 </div>
               )}
@@ -333,17 +342,18 @@ function FansWorkspace({
 
 function ChannelFilters({
   activeChannel,
+  searchQuery,
+  locale,
 }: {
   activeChannel: PlatformValue | "all";
+  searchQuery: string;
+  locale: FanMindLanguage;
 }) {
   return (
     <nav className={styles.channelFilters} aria-label="Kanalfilter">
       {channelFilters.map((filter) => {
         const isActive = filter.value === activeChannel;
-        const href =
-          filter.value === "all"
-            ? "/fans#fans-list"
-            : `/fans?channel=${filter.value}#fans-list`;
+        const href = getFansListHref(filter.value, searchQuery, locale);
 
         return (
           <Link
@@ -361,6 +371,27 @@ function ChannelFilters({
       })}
     </nav>
   );
+}
+
+function getFansListHref(
+  channel: PlatformValue | "all",
+  searchQuery: string,
+  locale: FanMindLanguage,
+): string {
+  const params = new URLSearchParams();
+
+  if (channel !== "all") {
+    params.set("channel", channel);
+  }
+  if (searchQuery.trim()) {
+    params.set("q", searchQuery.trim());
+  }
+  if (locale === "en") {
+    params.set("lang", locale);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `/fans?${queryString}#fans-list` : "/fans#fans-list";
 }
 
 function FansTable({ fanGroups, locale }: { fanGroups: FanGroup[]; locale: FanMindLanguage }) {
@@ -897,6 +928,43 @@ function filterFanGroupsByChannel(
   return groups.filter((group) => group.platforms.includes(activeChannel));
 }
 
+function filterFanGroupsBySearch(groups: FanGroup[], searchQuery: string): FanGroup[] {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return groups;
+  }
+
+  return groups.filter((group) => getFanGroupSearchHaystack(group).includes(normalizedQuery));
+}
+
+function getFanGroupSearchHaystack(group: FanGroup): string {
+  const values = [
+    group.displayName,
+    ...group.handles,
+    ...group.tags,
+    ...group.platforms,
+    ...group.platforms.map(formatPlatformLabel),
+    formatReplyChannel(group.platforms, group.primaryContact.source_platform),
+    ...group.contacts.flatMap((contact) => [
+      contact.display_name,
+      contact.handle,
+      contact.source_platform,
+      contact.source_platform ? formatPlatformLabel(normalizePlatform(contact.source_platform)) : null,
+      contact.language,
+      contact.status,
+      contact.summary,
+      contact.internal_notes,
+      ...(contact.tags ?? []),
+    ]),
+  ];
+
+  return values
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .toLowerCase();
+}
+
 function compareContactsByCreatedAt(
   left: ContactRow,
   right: ContactRow,
@@ -1082,7 +1150,11 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   const errorParam = Array.isArray(resolvedSearchParams?.error)
     ? resolvedSearchParams?.error[0]
     : resolvedSearchParams?.error;
+  const queryParam = Array.isArray(resolvedSearchParams?.q)
+    ? resolvedSearchParams?.q[0]
+    : resolvedSearchParams?.q;
   const activeChannel = getActiveChannel(channelParam);
+  const searchQuery = queryParam?.trim() ?? "";
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
@@ -1131,6 +1203,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           conversationMessagesError={conversationMessagesResult?.error?.message}
           unseenMessagesError={unseenMessagesResult?.error?.message}
           activeChannel={activeChannel}
+          searchQuery={searchQuery}
           notice={noticeParam}
           activePlatformsNotice={activeNoticeParam}
           archivedChannelsNotice={archivedNoticeParam}
