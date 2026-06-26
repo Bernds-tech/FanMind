@@ -4092,108 +4092,121 @@ async function ensureSandraDemoWorkspaceData(
   return seedSandraDemoWorkspaceData(workspace, accessToken);
 }
 
-async function seedSandraDemoWorkspaceData(
-  workspace: Pick<WorkspaceBackfillRow, "id">,
-  accessToken: string,
-): Promise<Error | null> {
-  const existingContact = await postgrestSelect<ContactRow>(
-    "contacts",
-    accessToken,
-    CONTACT_COLUMNS,
-    [["workspace_id", workspace.id], ["handle", DEMO_CONTACT_HANDLE]],
-    1,
-    true,
-  );
-  if (existingContact.error) return existingContact.error;
+type DemoFanSeed = {
+  displayName: string;
+  handle: string;
+  platform: string;
+  tags: string[];
+  summary: string;
+  notes?: string;
+  memory: string;
+  followup?: { priority: string; reason: string; daysFromNow: number };
+  conversation: { direction: "inbound" | "outbound"; text: string }[];
+};
 
+const sandraConversation: DemoFanSeed["conversation"] = [
+  ["inbound", "Hallo liebes FanMind-Team, ich habe das Sommer-Event gesehen. Gibt es für Member noch Early-Bird-Plätze?"],
+  ["outbound", "Hallo Sandra, ja, aktuell sind noch wenige Early-Bird-Plätze für Member verfügbar. Schön, dass du dabei sein möchtest!"],
+  ["inbound", "Super, danke! Ich war letztes Jahr beim kleinen Workshop dabei und fand die Atmosphäre richtig gut."],
+  ["outbound", "Das freut uns sehr. Dieses Jahr ist das Event größer, aber weiterhin persönlich gehalten – inklusive Member-Check-in und kurzer Welcome-Session."],
+  ["inbound", "Was ist denn genau im Member-Vorteil enthalten? Nur der niedrigere Preis oder noch mehr?"],
+  ["outbound", "Neben dem Early-Bird-Preis bekommst du bevorzugten Einlass, Zugang zur Member-Lounge und eine kleine Q&A-Runde nach dem Hauptprogramm."],
+  ["inbound", "Das klingt interessant. Wie viel kostet der Early-Bird aktuell?"],
+  ["outbound", "Für Member liegt der Early-Bird aktuell bei 89 €. Der reguläre Preis danach liegt voraussichtlich bei 119 €."],
+  ["inbound", "Okay. Kann ich eine Begleitperson mitnehmen, die noch kein Member ist?"],
+  ["outbound", "Ja, das geht. Für Begleitpersonen können wir ebenfalls einen Platz reservieren; der Member-Vorteil gilt aber nur für deinen eigenen Platz."],
+  ["inbound", "Verstehe. Meine Freundin überlegt noch, sie kennt das Format nicht."],
+  ["outbound", "Kein Problem. Wir können ihr gern kurz erklären, wie der Abend abläuft: Empfang, Impuls, Austausch und danach optionales Networking."],
+  ["inbound", "Wie viele Plätze sind denn insgesamt noch frei? Ich möchte ungern zu lange warten."],
+  ["outbound", "Stand jetzt sind noch einige Plätze frei, aber das Early-Bird-Kontingent ist begrenzt. Wir empfehlen eine Reservierung, wenn du sicher teilnehmen möchtest."],
+  ["inbound", "Kann man reservieren, ohne sofort komplett zu buchen?"],
+  ["outbound", "Wir können dir den Platz kurz vormerken und dir dann den Buchungslink schicken. Die Buchung wird erst final, wenn du sie bestätigst."],
+  ["inbound", "Das wäre gut. Ich muss heute Abend nur noch mit meiner Freundin sprechen."],
+  ["outbound", "Sehr gern. Soll ich dir die wichtigsten Infos für sie kurz zusammenfassen?"],
+  ["inbound", "Ja bitte, vor allem Uhrzeit, Ablauf und ob man jemanden kennen muss."],
+  ["outbound", "Start ist 18:30 Uhr, Einlass ab 18:00 Uhr. Man muss niemanden kennen – viele kommen mit Begleitung oder allein, und wir achten auf einen angenehmen Einstieg."],
+  ["inbound", "Das klingt beruhigend. Gibt es einen Dresscode?"],
+  ["outbound", "Nein, kein strenger Dresscode. Smart casual passt, aber komm so, wie du dich wohlfühlst."],
+  ["inbound", "Perfekt. Gibt es beim Early-Bird eine Deadline?"],
+  ["outbound", "Die Deadline ist entweder Ende der Woche oder sobald das Kontingent voll ist – je nachdem, was zuerst eintritt."],
+  ["inbound", "Ah okay, dann sollte ich wahrscheinlich nicht zu lange warten."],
+  ["outbound", "Genau. Wir machen aber keinen Druck; wichtig ist, dass es für dich und deine Freundin gut passt."],
+  ["inbound", "Kann ich zwei Plätze nebeneinander buchen oder ist das freie Platzwahl?"],
+  ["outbound", "Es ist freie Platzwahl, aber wenn ihr zusammen kommt, könnt ihr selbstverständlich zusammen sitzen."],
+  ["inbound", "Gibt es nach der Buchung eine Bestätigung per Mail?"],
+  ["outbound", "Ja, direkt nach der Buchung erhältst du eine Bestätigung mit allen Details und dem Kalendereintrag."],
+  ["inbound", "Sehr gut. Kannst du mir bitte den Link schicken und vielleicht dazuschreiben, ob zwei Plätze heute noch realistisch sind?"],
+  ["outbound", "Natürlich. Ich prüfe kurz den aktuellen Stand und schicke dir dann den passenden Buchungslink mit einer klaren Empfehlung."],
+  ["inbound", "Danke dir! Wenn noch zwei Early-Bird-Plätze verfügbar sind, würde ich wahrscheinlich heute buchen."],
+  ["outbound", "Sehr gern, Sandra. Ich halte dir die Infos kompakt und transparent, damit du heute Abend gut entscheiden kannst."],
+  ["inbound", "Eine letzte Frage: Falls meine Freundin absagt, kann ich meinen Platz trotzdem behalten und allein kommen?"],
+  ["outbound", "Ja, absolut. Dein Platz ist unabhängig von ihrer Entscheidung. Du kannst allein kommen oder später noch eine Begleitperson ergänzen, solange Plätze frei sind."],
+  ["inbound", "Perfekt. Dann schick mir bitte den Link und sag kurz, ob ich lieber direkt einen oder zwei Plätze sichern soll."],
+].map(([direction, text]) => ({ direction: direction as "inbound" | "outbound", text }));
+
+const demoFanSeeds: DemoFanSeed[] = [
+  { displayName: "Sandra M.", handle: DEMO_CONTACT_HANDLE, platform: "facebook", tags: ["Demo", "VIP", "Sommer-Event"], summary: "Demo-Kontakt mit Interesse am Sommer-Event, Early-Bird-Plätzen und Member-Angeboten.", notes: "Sandra ist kaufnah, möchte aber eine Begleitperson einbeziehen. Wichtig: klare Verfügbarkeit, Link und freundliche Empfehlung.", memory: "Sandra interessiert sich besonders für Early-Bird-Plätze, Member-Vorteile und eine unkomplizierte Teilnahme mit Begleitperson beim Sommer-Event.", followup: { priority: "high", reason: "Sandra M. Buchungslink und klare Empfehlung zu ein oder zwei Early-Bird-Plätzen senden.", daysFromNow: 1 }, conversation: sandraConversation },
+  { displayName: "Markus T.", handle: "@markus_fitness", platform: "instagram", tags: ["Demo", "Preisfrage", "Instagram"], summary: "Direkter Instagram-Fan mit Preis- und VIP-Frage, entscheidet gern schnell.", memory: "Markus bevorzugt kurze, klare Antworten mit Preis, Verfügbarkeit und konkretem nächsten Schritt.", followup: { priority: "medium", reason: "Markus Preis und VIP-Verfügbarkeit knapp beantworten.", daysFromNow: 2 }, conversation: [
+    { direction: "inbound", text: "Hey, was kostet der VIP-Zugang fürs Sommer-Event?" }, { direction: "outbound", text: "Hi Markus, der VIP-Zugang liegt aktuell bei 149 € inklusive bevorzugtem Einlass und Q&A." }, { direction: "inbound", text: "Noch Plätze frei oder schon voll?" }, { direction: "outbound", text: "Aktuell sind noch wenige VIP-Plätze frei. Das Kontingent ist aber kleiner als beim Standardticket." }, { direction: "inbound", text: "Brauche keine lange Erklärung, nur ob sich VIP lohnt." }, { direction: "outbound", text: "Wenn dir kurzer Zugang zum Team, bessere Planung und Q&A wichtig sind, lohnt sich VIP. Wenn du nur das Hauptprogramm willst, reicht Standard." }, { direction: "inbound", text: "Okay. Kann ich heute buchen und später Namen ändern?" }, { direction: "outbound", text: "Ja, eine Namensänderung ist bis kurz vor dem Event möglich." }, { direction: "inbound", text: "Dann schick mir bitte Preis + Link. Wenn VIP noch verfügbar ist, entscheide ich heute." },
+  ] },
+  { displayName: "Julia K.", handle: "+43-demo-julia", platform: "whatsapp", tags: ["Demo", "Unsicher", "Beratung"], summary: "Vorsichtige Interessentin, möchte mit Freundin kommen und braucht Sicherheit zum Ablauf.", notes: "Julia nicht drängen. Sicherheit, Ablauf und freundliche Einladung betonen.", memory: "Julia braucht vor einer Buchung Vertrauen, einen klaren Ablauf und die Bestätigung, dass Teilnahme auch ohne Vorkenntnisse angenehm ist.", conversation: [
+    { direction: "inbound", text: "Hallo, ich überlege zum Sommer-Event zu kommen, bin aber noch unsicher." }, { direction: "outbound", text: "Hallo Julia, danke für deine Nachricht. Was macht dich denn unsicher? Dann kann ich gezielt helfen." }, { direction: "inbound", text: "Ich kenne dort niemanden und würde vielleicht eine Freundin mitnehmen." }, { direction: "outbound", text: "Das passt sehr gut. Viele kommen zu zweit oder allein, und der Einstieg ist bewusst locker gestaltet." }, { direction: "inbound", text: "Ist das eher laut und voll oder kann man auch in Ruhe ankommen?" }, { direction: "outbound", text: "Es gibt einen ruhigen Check-in und genug Zeit zum Ankommen. Niemand muss sofort netzwerken." }, { direction: "inbound", text: "Okay, das beruhigt mich. Gibt es vorher genaue Infos zum Ablauf?" }, { direction: "outbound", text: "Ja, nach der Anmeldung bekommst du eine Mail mit Uhrzeit, Ablauf, Adresse und Ansprechpartner vor Ort." }, { direction: "inbound", text: "Kannst du mir kurz sagen, ob das auch geeignet ist, wenn man noch nie bei euch war?" },
+  ] },
+  { displayName: "Alex R.", handle: "alex.demo@example.com", platform: "email", tags: ["Demo", "Support", "Kritisch"], summary: "Sachlicher Support-Fall mit Umbuchungsfrage und leicht kritischem Ton.", memory: "Alex erwartet verbindliche, lösungsorientierte Antworten mit konkreter nächster Aktion und ohne Marketing-Floskeln.", conversation: [
+    { direction: "inbound", text: "Guten Tag, ich habe mein Ticket gebucht, kann aber an dem Termin wahrscheinlich nicht teilnehmen." }, { direction: "outbound", text: "Guten Tag Alex, danke für die Info. Wir prüfen gern, welche Umbuchungsoptionen möglich sind." }, { direction: "inbound", text: "In der Bestätigung war das für mich nicht eindeutig. Gibt es eine klare Regel?" }, { direction: "outbound", text: "Eine Umbuchung ist je nach Verfügbarkeit möglich. Wir benötigen dafür die Buchungsnummer und den gewünschten Alternativtermin." }, { direction: "inbound", text: "Ich finde es ehrlich gesagt etwas umständlich, dass das nicht direkt im Kundenbereich geht." }, { direction: "outbound", text: "Das verstehe ich. Wir nehmen das als Feedback mit und lösen deinen Fall jetzt manuell möglichst unkompliziert." }, { direction: "inbound", text: "Meine Buchungsnummer ist DEMO-4821. Bitte sagen Sie mir konkret, ob eine Umbuchung möglich ist und ob Kosten entstehen." },
+  ] },
+];
+
+async function seedSandraDemoWorkspaceData(workspace: Pick<WorkspaceBackfillRow, "id">, accessToken: string): Promise<Error | null> {
+  for (const seed of demoFanSeeds) {
+    const error = await seedDemoFan(workspace.id, accessToken, seed);
+    if (error) return error;
+  }
+  return null;
+}
+
+async function seedDemoFan(workspaceId: string, accessToken: string, seed: DemoFanSeed): Promise<Error | null> {
+  const existingContact = await postgrestSelect<ContactRow>("contacts", accessToken, CONTACT_COLUMNS, [["workspace_id", workspaceId], ["handle", seed.handle]], 1, true);
+  if (existingContact.error) return existingContact.error;
   let contact = existingContact.data;
   if (!contact) {
-    const createdContact = await postgrestRequest<ContactRow>(
-      "contacts",
-      "POST",
-      {
-        workspace_id: workspace.id,
-        display_name: "Sandra M.",
-        handle: DEMO_CONTACT_HANDLE,
-        source_platform: "facebook",
-        language: "de",
-        status: "active",
-        tags: ["Demo", "VIP", "Sommer-Event"],
-        summary: "Demo-Kontakt mit Interesse am Sommer-Event, Early-Bird-Plätzen und Member-Angeboten.",
-      },
-      accessToken,
-      { select: CONTACT_COLUMNS, single: true },
-    );
+    const createdContact = await postgrestRequest<ContactRow>("contacts", "POST", { workspace_id: workspaceId, display_name: seed.displayName, handle: seed.handle, source_platform: seed.platform, language: "de", status: "active", tags: seed.tags, summary: seed.summary, internal_notes: seed.notes ?? null }, accessToken, { select: CONTACT_COLUMNS, single: true });
     if (createdContact.error) return createdContact.error;
     contact = createdContact.data;
   }
-
   if (!contact?.id) return new Error("Demo-Kontakt konnte nicht erstellt werden.");
 
-  const memories = await postgrestSelect<MemoryRow[]>("memories", accessToken, MEMORY_COLUMNS, [["workspace_id", workspace.id], ["contact_id", contact.id]], undefined, false);
+  const memories = await postgrestSelect<MemoryRow[]>("memories", accessToken, MEMORY_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contact.id]], undefined, false);
   if (memories.error) return memories.error;
-  if (!(memories.data ?? []).some((memory) => memory.content.includes("Early-Bird"))) {
-    const memory = await postgrestRequest<MemoryRow>("memories", "POST", {
-      workspace_id: workspace.id,
-      contact_id: contact.id,
-      type: "preference",
-      content: "Sandra interessiert sich besonders für Early-Bird-Plätze und Member-Vorteile beim Sommer-Event.",
-      importance: "high",
-    }, accessToken, { select: MEMORY_COLUMNS, single: true });
+  if (!(memories.data ?? []).some((memory) => memory.content === seed.memory)) {
+    const memory = await postgrestRequest<MemoryRow>("memories", "POST", { workspace_id: workspaceId, contact_id: contact.id, type: "preference", content: seed.memory, importance: seed.followup?.priority === "high" ? "high" : "medium" }, accessToken, { select: MEMORY_COLUMNS, single: true });
     if (memory.error) return memory.error;
   }
 
-  const followups = await postgrestSelect<FollowupRow[]>("followups", accessToken, FOLLOWUP_COLUMNS, [["workspace_id", workspace.id], ["contact_id", contact.id]], undefined, false);
-  if (followups.error) return followups.error;
-  if (!(followups.data ?? []).some((followup) => followup.status === "open")) {
-    const followup = await postgrestRequest<FollowupRow>("followups", "POST", {
-      workspace_id: workspace.id,
-      contact_id: contact.id,
-      due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      priority: "high",
-      reason: "Sandra M. zu Early-Bird-Plätzen und Member-Angebot zurückmelden.",
-      status: "open",
-    }, accessToken, { select: FOLLOWUP_COLUMNS, single: true });
-    if (followup.error) return followup.error;
+  if (seed.followup) {
+    const followups = await postgrestSelect<FollowupRow[]>("followups", accessToken, FOLLOWUP_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contact.id]], undefined, false);
+    if (followups.error) return followups.error;
+    if (!(followups.data ?? []).some((followup) => followup.status === "open")) {
+      const followup = await postgrestRequest<FollowupRow>("followups", "POST", { workspace_id: workspaceId, contact_id: contact.id, due_date: new Date(Date.now() + seed.followup.daysFromNow * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), priority: seed.followup.priority, reason: seed.followup.reason, status: "open" }, accessToken, { select: FOLLOWUP_COLUMNS, single: true });
+      if (followup.error) return followup.error;
+    }
   }
 
-  const conversations = await postgrestSelect<ConversationRow[]>("conversations", accessToken, CONVERSATION_COLUMNS, [["workspace_id", workspace.id], ["contact_id", contact.id]], undefined, false);
+  const conversations = await postgrestSelect<ConversationRow[]>("conversations", accessToken, CONVERSATION_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contact.id]], undefined, false);
   if (conversations.error) return conversations.error;
-  const hasDemoConversation = conversations.data?.some((conversation) => conversation.original_text_excerpt?.includes("Early-Bird"));
-  if (!hasDemoConversation) {
-    const conversation = await postgrestRequest<ConversationRow>("conversations", "POST", {
-      workspace_id: workspace.id,
-      contact_id: contact.id,
-      status: "open",
-      priority: "high",
-      source_platform: "facebook",
-      source_type: "dm",
-      ai_status: "partial",
-      next_step: "Antwort vorbereiten",
-      last_message_preview: "Hallo! Gibt es noch Early-Bird Plätze für Member beim Sommer-Event? Ich würde gern heute noch entscheiden.",
-      last_inbound_at: new Date().toISOString(),
-      original_author_label: "Sandra M.",
-      original_text_excerpt: "Gibt es noch Early-Bird Plätze für Member?",
-    }, accessToken, { select: CONVERSATION_COLUMNS, single: true });
-    if (conversation.error) return conversation.error;
-    if (!conversation.data) return new Error("Demo-Conversation konnte nicht erstellt werden.");
-    const message = await postgrestRequest<ConversationMessageRow>("conversation_messages", "POST", {
-      workspace_id: workspace.id,
-      conversation_id: conversation.data.id,
-      contact_id: contact.id,
-      direction: "inbound",
-      message_type: "dm",
-      source_platform: "facebook",
-      source_type: "dm",
-      author_label: "Sandra M.",
-      original_author_label: "Sandra M.",
-      original_text_excerpt: "Gibt es noch Early-Bird Plätze für Member?",
-      content: "Hallo! Gibt es noch Early-Bird Plätze für Member beim Sommer-Event? Ich würde gern heute noch entscheiden.",
-      message_kind: "text",
-    }, accessToken, { select: CONVERSATION_MESSAGE_COLUMNS, single: true });
+  if (conversations.data?.length) return null;
+
+  const lastInbound = [...seed.conversation].reverse().find((message) => message.direction === "inbound") ?? seed.conversation.at(-1);
+  const conversation = await postgrestRequest<ConversationRow>("conversations", "POST", { workspace_id: workspaceId, contact_id: contact.id, status: "open", priority: seed.followup?.priority ?? "medium", source_platform: seed.platform, source_type: seed.platform === "email" ? "email" : "dm", ai_status: "partial", next_step: "Antwort vorbereiten", last_message_preview: lastInbound?.text ?? seed.summary, last_inbound_at: new Date().toISOString(), original_author_label: seed.displayName, original_text_excerpt: lastInbound?.text ?? seed.summary }, accessToken, { select: CONVERSATION_COLUMNS, single: true });
+  if (conversation.error) return conversation.error;
+  if (!conversation.data) return new Error("Demo-Conversation konnte nicht erstellt werden.");
+
+  const baseTime = Date.now() - seed.conversation.length * 11 * 60 * 1000;
+  for (const [index, item] of seed.conversation.entries()) {
+    const createdAt = new Date(baseTime + index * 11 * 60 * 1000).toISOString();
+    const message = await postgrestRequest<ConversationMessageRow>("conversation_messages", "POST", { workspace_id: workspaceId, conversation_id: conversation.data.id, contact_id: contact.id, direction: item.direction, message_type: seed.platform === "email" ? "email" : "dm", source_platform: seed.platform, source_type: seed.platform === "email" ? "email" : "dm", author_label: item.direction === "inbound" ? seed.displayName : "FanMind Team", original_author_label: item.direction === "inbound" ? seed.displayName : "FanMind Team", original_text_excerpt: item.text, content: item.text, message_kind: "text", created_at: createdAt }, accessToken, { select: CONVERSATION_MESSAGE_COLUMNS, single: true });
     if (message.error) return message.error;
   }
-
   return null;
 }
 

@@ -208,10 +208,15 @@ export async function saveContactInternalNotes(formData: FormData) {
   const contactId = formValue(formData, "contact_id");
   await ensureContactInWorkspace(workspace.id, contactId);
 
+  const internalNotes = formValue(formData, "internal_notes");
+  if (!internalNotes.trim()) {
+    redirect(`/fans/${contactId}?notice=notes_empty`);
+  }
+
   const result = await updateContactInternalNotes({
     workspaceId: workspace.id,
     contactId,
-    internalNotes: formValue(formData, "internal_notes"),
+    internalNotes,
   });
 
   if (result.error) throw new Error(result.error.message);

@@ -349,6 +349,12 @@ function FanDetailContent({
             <p className={dashboardStyles.eyebrow}>Fan-Aktionen</p>
             <h2>{contact.display_name || contact.handle || "Unbenannter Fan"}</h2>
           </div>
+          {demoConnectionsDisabled ? (
+            <span className={styles.demoModeBadge}>
+              <strong>Demo Modus</strong>
+              <small>Externe Verbindungen deaktiviert</small>
+            </span>
+          ) : null}
           <FanActionMenu fanName={contact.display_name || contact.handle || "Fan"} />
         </div>
         <dl className={styles.headerMetrics}>
@@ -463,7 +469,12 @@ function FanDetailContent({
                 <span>{messagesError}</span>
               </p>
             ) : null}
-            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) ? (
+            {demoConnectionsDisabled ? (
+              <p className={styles.demoCompactNotice}>
+                Demo-Modus: Externe Kanalzugriffe sind deaktiviert. KI-Vorschläge und interne Bearbeitung können getestet werden.
+              </p>
+            ) : null}
+            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) && !demoConnectionsDisabled ? (
               <div className={styles.syncBox}>
                 <p className={styles.syncHint}>
                   Facebook-Chat zuletzt synchronisiert:{" "}
@@ -496,7 +507,7 @@ function FanDetailContent({
                 )}
               </div>
             ) : null}
-            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) ? (
+            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) && !demoConnectionsDisabled ? (
               <FacebookReplyTargetCard
                 contact={contact}
                 target={facebookReplyTarget}
@@ -540,11 +551,13 @@ function FanDetailContent({
                       </div>
                       <p>{item.text}</p>
                       <AttachmentPreview attachments={item.attachments} />
-                      <OriginalChatAction
-                        action={item.replyAction}
-                        compact
-                        demoConnectionsDisabled={demoConnectionsDisabled}
-                      />
+                      {demoConnectionsDisabled ? null : (
+                        <OriginalChatAction
+                          action={item.replyAction}
+                          compact
+                          demoConnectionsDisabled={demoConnectionsDisabled}
+                        />
+                      )}
                     </div>
                   </article>
                 ))
@@ -576,27 +589,7 @@ function FanDetailContent({
               summary: contact.summary,
             }}
             modes={defaultReplyModes}
-            originalChannelAction={
-              demoConnectionsDisabled
-                ? {
-                    ...getOriginalChannelAction(
-                      conversation,
-                      filteredMessages,
-                      contact,
-                      facebookReplyTarget,
-                    ),
-                    href: null,
-                    label: "Demo-Fallback: Originalkanal blockiert",
-                    reason:
-                      "Im öffentlichen Demo-Workspace sind externe Direktlinks deaktiviert.",
-                  }
-                : getOriginalChannelAction(
-                    conversation,
-                    filteredMessages,
-                    contact,
-                    facebookReplyTarget,
-                  )
-            }
+
           />
         </main>
 
@@ -1570,6 +1563,8 @@ function formatNotice(value: string): string {
   if (value === "priority_saved") return "Priorität gespeichert.";
   if (value === "notes_saved")
     return "Gespeichert: Notizen wurden aktualisiert.";
+  if (value === "notes_empty")
+    return "Leere Notiz wurde nicht gespeichert.";
   if (value === "analysis_saved")
     return "Fan-Analyse-Report wurde aktualisiert.";
   if (value === "reply_target_saved")
