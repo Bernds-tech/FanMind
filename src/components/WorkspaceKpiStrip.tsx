@@ -1,3 +1,5 @@
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { wt } from "@/lib/workspaceCopy";
 import Image from "next/image";
 import styles from "../app/dashboard/dashboard.module.css";
 
@@ -25,17 +27,19 @@ type KpiCardData = {
 type WorkspaceKpiStripProps = {
   contactCount: number;
   openFollowupCount?: number;
+  locale?: FanMindLanguage;
 };
 
 function getKpiCards(
   contactCount: number,
   openFollowupCount: number,
+  locale: FanMindLanguage,
 ): KpiCardData[] {
   return [
     {
-      label: "Gesamtfans",
+      label: wt(locale, "Gesamtfans"),
       value: contactCount.toLocaleString("de-DE"),
-      meta: "Echte Kontakte im Workspace",
+      meta: wt(locale, "Echte Kontakte im Workspace"),
       icon: "users",
       tone: "blue",
       sparklinePoints: "M2 13 C16 12 25 11 38 11.5 S61 12 74 10 S96 8.5 124 5",
@@ -43,9 +47,9 @@ function getKpiCards(
         "Anzahl gespeicherter Kontakte im aktuellen Workspace.",
     },
     {
-      label: "Aktive Fans",
+      label: wt(locale, "Aktive Fans"),
       value: "0",
-      meta: "Aktivitätslogik noch nicht aktiv",
+      meta: wt(locale, "Aktivitätslogik noch nicht aktiv"),
       icon: "pulse",
       tone: "green",
       sparklinePoints:
@@ -54,9 +58,9 @@ function getKpiCards(
         "Kontakte mit aktueller Aktivität im ausgewählten Zeitraum.",
     },
     {
-      label: "Offene Wiedervorlagen",
+      label: wt(locale, "Offene Wiedervorlagen"),
       value: openFollowupCount.toLocaleString("de-DE"),
-      meta: "Rückmeldungen / Aufgaben",
+      meta: wt(locale, "Rückmeldungen / Aufgaben"),
       icon: "check",
       tone: "violet",
       sparklinePoints:
@@ -65,9 +69,9 @@ function getKpiCards(
         "Offene Rückmelde-Aufgaben zu Fans oder Kontakten.",
     },
     {
-      label: "Laufende Kampagnen",
+      label: wt(locale, "Laufende Kampagnen"),
       value: "0",
-      meta: "Kampagnen nicht aktiv",
+      meta: wt(locale, "Kampagnen nicht aktiv"),
       icon: "megaphone",
       tone: "blue",
       sparklinePoints:
@@ -77,9 +81,9 @@ function getKpiCards(
       comingSoon: true,
     },
     {
-      label: "Reaktivierung",
+      label: wt(locale, "Reaktivierung"),
       value: "0",
-      meta: "Reaktivierung noch nicht aktiv",
+      meta: wt(locale, "Reaktivierung noch nicht aktiv"),
       icon: "refresh",
       tone: "orange",
       sparklinePoints:
@@ -89,9 +93,9 @@ function getKpiCards(
       comingSoon: true,
     },
     {
-      label: "Conversion Rate",
+      label: wt(locale, "Conversion Rate"),
       value: "0 %",
-      meta: "Conversion-Logik noch nicht aktiv",
+      meta: wt(locale, "Conversion-Logik noch nicht aktiv"),
       icon: "percent",
       tone: "cyan",
       sparklinePoints:
@@ -212,8 +216,9 @@ function KpiCard({
 export function WorkspaceKpiStrip({
   contactCount,
   openFollowupCount = 0,
+  locale = "de",
 }: WorkspaceKpiStripProps) {
-  const kpiCards = getKpiCards(contactCount, openFollowupCount);
+  const kpiCards = getKpiCards(contactCount, openFollowupCount, locale);
 
   return (
     <section className={styles.kpiGrid} aria-label="KPI-Karten">

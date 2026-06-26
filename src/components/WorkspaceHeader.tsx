@@ -1,3 +1,5 @@
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { wt } from "@/lib/workspaceCopy";
 import styles from "../app/dashboard/dashboard.module.css";
 
 export type WorkspaceHeaderProps = {
@@ -6,6 +8,7 @@ export type WorkspaceHeaderProps = {
   searchPlaceholder: string;
   primaryActionLabel: string;
   primaryActionHref: string;
+  locale?: FanMindLanguage;
 };
 
 export function WorkspaceHeader({
@@ -14,6 +17,7 @@ export function WorkspaceHeader({
   searchPlaceholder,
   primaryActionLabel,
   primaryActionHref,
+  locale = "de",
 }: WorkspaceHeaderProps) {
   return (
     <header className={styles.topbar}>
@@ -23,7 +27,7 @@ export function WorkspaceHeader({
       </div>
       <div className={styles.topbarActions}>
         <label className={styles.searchBox}>
-          <span>Suche</span>
+          <span>{wt(locale, "Suche")}</span>
           <input type="search" placeholder={searchPlaceholder} />
         </label>
         <button
@@ -32,7 +36,7 @@ export function WorkspaceHeader({
           disabled
           title="Zeitraumfilter ist vorbereitet und wird in Kürze aktiviert."
         >
-          Letzte 30 Tage · bald
+          {wt(locale, "Letzte 30 Tage · bald")}
         </button>
         <button
           type="button"
@@ -40,7 +44,7 @@ export function WorkspaceHeader({
           disabled
           title="Erweiterte Filter sind vorbereitet und werden in Kürze aktiviert."
         >
-          Filter · bald
+          {wt(locale, "Filter · bald")}
         </button>
         <a className={styles.primaryButton} href={primaryActionHref}>
           {primaryActionLabel}

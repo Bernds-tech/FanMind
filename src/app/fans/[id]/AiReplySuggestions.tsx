@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { wt } from "@/lib/workspaceCopy";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "./fan-detail.module.css";
 
@@ -27,11 +29,13 @@ type Props = {
     analysisReport?: string;
   };
   modes: ReplyMode[];
+  locale?: FanMindLanguage;
 };
 
 export function AiReplySuggestions({
   contact,
   modes,
+  locale = "de",
 }: Props) {
   const [activeModeId, setActiveModeId] = useState(modes[0]?.id ?? "friendly");
   const activeMode = useMemo(
@@ -133,14 +137,14 @@ export function AiReplySuggestions({
     >
       <div className={styles.cardHeader}>
         <div>
-          <p className={dashboardStyles.eyebrow}>KI-Antwortvorschläge</p>
+          <p className={dashboardStyles.eyebrow}>{wt(locale, "KI-Antwortvorschläge")}</p>
           <h3 id="ai-replies-title">Drei Vorschläge</h3>
           <p className={styles.muted}>
             Wähle einen Stil, erzeuge Karten und kopiere die passende Antwort manuell.
           </p>
         </div>
         <span className={styles.statusBadge}>
-          Keine automatische Sendefunktion
+          {wt(locale, "Keine automatische Sendefunktion.").replace(/\.$/, "")}
         </span>
       </div>
       <div className={styles.modeBar} aria-label="Antwort-Richtung wählen">
@@ -169,7 +173,7 @@ export function AiReplySuggestions({
           onClick={() => void generateSuggestions()}
           type="button"
         >
-          {isLoading ? "Vorschläge werden erzeugt…" : "KI-Vorschläge erzeugen"}
+          {isLoading ? (locale === "en" ? "Generating suggestions…" : "Vorschläge werden erzeugt…") : wt(locale, "KI-Vorschläge erzeugen")}
         </button>
         {!contact.latestInboundMessage ? (
           <span>Keine eingehende Nachricht als Kontext vorhanden.</span>
@@ -210,7 +214,7 @@ export function AiReplySuggestions({
                 onClick={() => void copySuggestion(option.text, index)}
                 type="button"
               >
-                {copiedIndex === index ? "Kopiert" : "Antwort kopieren"}
+                {copiedIndex === index ? wt(locale, "Kopiert") : wt(locale, "Antwort kopieren")}
               </button>
             </div>
           </article>
@@ -243,7 +247,7 @@ export function AiReplySuggestions({
         </div>
       ) : null}
       <p className={styles.reportSafetyNote}>
-        Der Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.
+        {wt(locale, "Der Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.")}
       </p>
     </article>
   );

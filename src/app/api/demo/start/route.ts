@@ -1,8 +1,9 @@
 import { randomBytes } from "crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_ACCESS_TOKEN_COOKIE, SUPABASE_REFRESH_TOKEN_COOKIE } from "@/lib/supabase/config";
 import { createTemporaryDemoWorkspace, deleteExpiredTemporaryDemo } from "@/lib/supabase/server";
 import { getSupabaseAuthUrl, getSupabaseHeaders } from "@/lib/supabase/config";
+import { FANMIND_LOCALE_COOKIE, localeCookieOptions, normalizeWorkspaceLocale } from "@/lib/workspaceLocale";
 
 const isProduction = process.env.NODE_ENV === "production";
 const DEMO_DURATION_MS = 60 * 60 * 1000;
@@ -31,7 +32,9 @@ async function parseError(response: Response): Promise<string> {
   return payload?.message ?? payload?.msg ?? payload?.error_description ?? payload?.error ?? "Demo konnte nicht vorbereitet werden.";
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const body = (await request.json().catch(() => null)) as { locale?: string; lang?: string } | null;
+  const locale = normalizeWorkspaceLocale(body?.locale ?? body?.lang ?? request.nextUrl.searchParams.get("lang"));
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceRoleKey) {
     return NextResponse.json({ error: "Demo-Start ist serverseitig noch nicht konfiguriert." }, { status: 500 });
@@ -55,7 +58,9 @@ export async function POST() {
         demo_started_at: now.toISOString(),
         demo_expires_at: expiresAt.toISOString(),
         demo_workspace_name: "FanMind Demo Workspace",
-        display_name: "Demo Nutzer",
+        display_name: locale === "en" ? "Demo User" : "Demo Nutzer",
+        fanmind_locale: locale,
+        locale,
       },
     }),
     cache: "no-store",
@@ -71,7 +76,7 @@ export async function POST() {
     return NextResponse.json({ error: "Demo-User wurde ohne ID erstellt." }, { status: 500 });
   }
 
-  const workspaceResult = await createTemporaryDemoWorkspace({ userId, userEmail: email });
+  const workspaceResult = await createTemporaryDemoWorkspace({ userId, userEmail: email, locale });
   if (workspaceResult.error) {
     await fetch(getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(userId)}`), { method: "DELETE", headers: getSupabaseHeaders(serviceRoleKey), cache: "no-store" }).catch(() => undefined);
     return NextResponse.json({ error: workspaceResult.error.message }, { status: 500 });
@@ -94,7 +99,9 @@ export async function POST() {
     return NextResponse.json({ error: "Supabase hat keine gültige Demo-Session zurückgegeben." }, { status: 500 });
   }
 
-  const response = NextResponse.json({ ok: true, redirectTo: "/dashboard" });
+  const redirectTo = locale === "en" ? "/dashboard?lang=en" : "/dashboard";
+  const response = NextResponse.json({ ok: true, redirectTo });
+  response.cookies.set(FANMIND_LOCALE_COOKIE, locale, localeCookieOptions());
   response.cookies.set(SUPABASE_ACCESS_TOKEN_COOKIE, session.access_token, { httpOnly: true, sameSite: "lax", secure: isProduction, path: "/", maxAge: session.expires_in ?? 60 * 60 });
   if (session.refresh_token) {
     response.cookies.set(SUPABASE_REFRESH_TOKEN_COOKIE, session.refresh_token, { httpOnly: true, sameSite: "lax", secure: isProduction, path: "/", maxAge: 60 * 60 });

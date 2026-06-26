@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { wt } from "@/lib/workspaceCopy";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { analyzeFan, type FanAnalysisActionState } from "../actions";
 import styles from "./fan-detail.module.css";
@@ -17,11 +19,12 @@ type Props = {
   contactId: string;
   initialReport: Report;
   loadError?: string;
+  locale?: FanMindLanguage;
 };
 
 const initialState: FanAnalysisActionState = { ok: false, message: "" };
 
-export function FanAnalysisReport({ contactId, initialReport, loadError }: Props) {
+export function FanAnalysisReport({ contactId, initialReport, loadError, locale = "de" }: Props) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(analyzeFan, initialState);
   const report = state.report ?? initialReport;
@@ -35,7 +38,7 @@ export function FanAnalysisReport({ contactId, initialReport, loadError }: Props
     <article className={styles.card}>
       <div className={styles.cardHeader}>
         <div>
-          <h3>Fan-Analyse-Report</h3>
+          <h3>{wt(locale, "Fan-Analyse-Report")}</h3>
           <p className={styles.reportIntro}>
             KI-Report aus gespeicherten Nachrichten. Einschätzungen bleiben vorsichtige kommunikative Hinweise und keine Diagnose.
           </p>
@@ -44,7 +47,7 @@ export function FanAnalysisReport({ contactId, initialReport, loadError }: Props
       <form action={formAction} className={styles.inlineForm}>
         <input name="contact_id" type="hidden" value={contactId} />
         <button className={dashboardStyles.secondaryButton} disabled={pending} type="submit">
-          {pending ? "Analyse wird erstellt …" : report ? "Analyse aktualisieren" : "Fan analysieren"}
+          {pending ? "Analyse wird erstellt …" : report ? (locale === "en" ? "Update analysis" : "Analyse aktualisieren") : wt(locale, "Fan analysieren")}
         </button>
       </form>
       <div aria-live="polite">
@@ -81,7 +84,7 @@ export function FanAnalysisReport({ contactId, initialReport, loadError }: Props
         </div>
       ) : (
         <EmptyState
-          title="Noch kein Fan-Analyse-Report vorhanden."
+          title={wt(locale, "Noch kein Fan-Analyse-Report vorhanden.")}
           body="Klicke auf „Fan analysieren“, um aus bis zu 50 Nachrichten und internen Notizen einen vorsichtigen Kommunikationsreport zu speichern."
         />
       )}

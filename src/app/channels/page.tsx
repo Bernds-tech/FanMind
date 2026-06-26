@@ -16,6 +16,9 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { wt } from "@/lib/workspaceCopy";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
@@ -56,6 +59,7 @@ type ChannelsWorkspaceProps = {
   telegramSetupStatus: TelegramWebhookStatus;
   telegramCheckRequested: boolean;
   demoConnectionsDisabled: boolean;
+  locale: FanMindLanguage;
 };
 
 async function logout() {
@@ -81,10 +85,11 @@ function ChannelsWorkspace({
   telegramSetupStatus,
   telegramCheckRequested,
   demoConnectionsDisabled,
+  locale,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("channels");
-  const userLabel = userDisplayName || workspace.name || "Nutzer";
+    getWorkspaceNavigation("channels", locale);
+  const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
 
   return (
     <WorkspaceShell
@@ -97,7 +102,7 @@ function ChannelsWorkspace({
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
-        title: "Kanäle",
+        title: wt(locale, "Kanäle"),
         subtitle:
           "Verbinde Quellen für Nachrichten, Kommentare, Leads und Support-Anfragen.",
         searchPlaceholder: "Suche nach Plattform, Status oder Anschlussart ...",
@@ -107,6 +112,7 @@ function ChannelsWorkspace({
       contactCount={contactCount}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
+      locale={locale}
     >
       <ChannelsGrid
         facebookConnection={facebookConnection}
@@ -148,6 +154,7 @@ export default async function ChannelsPage({
     redirect("/login");
   }
 
+  const locale = await resolveWorkspaceLocale({ lang: params.lang, user: data.user });
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
@@ -225,6 +232,7 @@ export default async function ChannelsPage({
           telegramSetupStatus={telegramSetupStatus}
           telegramCheckRequested={telegramCheckRequested}
           demoConnectionsDisabled={areDemoConnectionsDisabled(data.user, workspace)}
+          locale={locale}
         />
       ) : (
         <section

@@ -1,4 +1,6 @@
 import { type WorkspaceNavLink } from "@/components/WorkspaceShell";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { wt } from "@/lib/workspaceCopy";
 
 export type WorkspaceRouteKey =
   | "dashboard"
@@ -10,7 +12,7 @@ export type WorkspaceRouteKey =
   | "top-fans"
   | "reactivation";
 
-export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey): {
+export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey, locale: FanMindLanguage = "de"): {
   mainNavigation: WorkspaceNavLink[];
   settingsNavigation: WorkspaceNavLink[];
   savedViews: WorkspaceNavLink[];
@@ -18,18 +20,18 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey): {
   return {
     mainNavigation: [
       {
-        label: "Dashboard",
+        label: wt(locale, "Dashboard"),
         href: "/dashboard",
         active: activeRoute === "dashboard",
       },
-      { label: "Fans", href: "/fans", active: activeRoute === "fans" },
+      { label: wt(locale, "Fans"), href: "/fans", active: activeRoute === "fans" },
       {
-        label: "Onboarding",
+        label: wt(locale, "Onboarding"),
         href: "/onboarding",
         active: activeRoute === "onboarding",
       },
       {
-        label: "Kanäle",
+        label: wt(locale, "Kanäle"),
         href: "/channels",
         active: activeRoute === "channels",
         badge: "Sync",
@@ -37,19 +39,19 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey): {
     ],
     settingsNavigation: [
       {
-        label: "Einstellungen",
+        label: wt(locale, "Einstellungen"),
         href: "/settings",
         active: activeRoute === "settings",
       },
     ],
     savedViews: [
       {
-        label: "Top Fans",
+        label: wt(locale, "Top Fans"),
         href: "/top-fans",
         active: activeRoute === "top-fans",
       },
       {
-        label: "Reaktivierung",
+        label: wt(locale, "Reaktivierung"),
         href: "/reactivation",
         active: activeRoute === "reactivation",
       },

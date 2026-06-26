@@ -16,6 +16,9 @@ import {
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { wt } from "@/lib/workspaceCopy";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../dashboard/dashboard.module.css";
@@ -43,6 +46,7 @@ type FansWorkspaceProps = {
   activePlatformsNotice?: string;
   archivedChannelsNotice?: string;
   noticeError?: string;
+  locale: FanMindLanguage;
 };
 
 type FansPageProps = {
@@ -52,6 +56,7 @@ type FansPageProps = {
     active?: string | string[];
     archived?: string | string[];
     error?: string | string[];
+    lang?: string | string[];
   }>;
 };
 
@@ -107,10 +112,11 @@ function FansWorkspace({
   activePlatformsNotice,
   archivedChannelsNotice,
   noticeError,
+  locale,
 }: FansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("fans");
-  const userLabel = userDisplayName || workspace.name || "Nutzer";
+    getWorkspaceNavigation("fans", locale);
+  const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const fanGroups = groupContactsByFan(contacts, followups, unseenMessages);
   const visibleFanGroups = filterFanGroupsByChannel(fanGroups, activeChannel);
 
@@ -120,20 +126,21 @@ function FansWorkspace({
       userLabel={userLabel}
       planLabel={workspace.plan_id}
       planMeta={workspace.role}
-      planStatus="Aktiv"
+      planStatus={wt(locale, "Aktiv")}
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
-        title: "Fans",
-        subtitle: "Willkommen zurück, Pilot Test 👋",
-        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
-        primaryActionLabel: "+ Neuer Fan",
+        title: wt(locale, "Fans"),
+        subtitle: wt(locale, "Willkommen zurück, Pilot Test 👋"),
+        searchPlaceholder: wt(locale, "Suche nach Name, Tag, Kanal, Sprache ..."),
+        primaryActionLabel: wt(locale, "+ Neuer Fan"),
         primaryActionHref: "#new-fan-modal",
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
+      locale={locale}
     >
       <div className={styles.fansStack}>
         <section
@@ -180,11 +187,11 @@ function FansWorkspace({
               <div className={styles.listToolbar}>
                 <ChannelFilters activeChannel={activeChannel} />
                 <Link className={styles.importLink} href="/fans/import">
-                  CSV importieren
+                  {wt(locale, "CSV importieren")}
                 </Link>
               </div>
               {visibleFanGroups.length ? (
-                <FansTable fanGroups={visibleFanGroups} />
+                <FansTable fanGroups={visibleFanGroups} locale={locale} />
               ) : (
                 <div className={dashboardStyles.emptyState}>
                   <strong>Keine Fans für diesen Kanal</strong>
@@ -196,7 +203,7 @@ function FansWorkspace({
               )}
             </>
           ) : (
-            <FansEmptyState />
+            <FansEmptyState locale={locale} />
           )}
         </section>
 
@@ -340,19 +347,19 @@ function ChannelFilters({
   );
 }
 
-function FansTable({ fanGroups }: { fanGroups: FanGroup[] }) {
+function FansTable({ fanGroups, locale }: { fanGroups: FanGroup[]; locale: FanMindLanguage }) {
   return (
     <div className={styles.crmTableWrap}>
       <table className={styles.crmTable}>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Status</th>
-            <th>Kanäle</th>
-            <th>Tags</th>
-            <th>Angelegt</th>
-            <th>Nächster Follow-up</th>
-            <th>Antwortkanal</th>
+            <th>{wt(locale, "Name")}</th>
+            <th>{wt(locale, "Status")}</th>
+            <th>{wt(locale, "Kanäle")}</th>
+            <th>{wt(locale, "Tags")}</th>
+            <th>{wt(locale, "Angelegt")}</th>
+            <th>{wt(locale, "Nächster Follow-up")}</th>
+            <th>{wt(locale, "Antwortkanal")}</th>
             <th aria-label="Neue Nachrichten">Neu</th>
           </tr>
         </thead>
@@ -714,7 +721,7 @@ function PlatformCheckboxes({
   );
 }
 
-function FansEmptyState() {
+function FansEmptyState({ locale }: { locale: FanMindLanguage }) {
   return (
     <div className={dashboardStyles.emptyState}>
       <strong>Noch keine echten Fans gespeichert</strong>
@@ -731,7 +738,7 @@ function FansEmptyState() {
           Ersten Fan anlegen
         </Link>
         <Link className={dashboardStyles.secondaryButton} href="/fans/import">
-          CSV importieren
+          {wt(locale, "CSV importieren")}
         </Link>
       </div>
     </div>
@@ -1034,6 +1041,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
     redirect("/login");
   }
 
+  const locale = await resolveWorkspaceLocale({ lang: resolvedSearchParams?.lang, user: data.user });
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
@@ -1074,6 +1082,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           activePlatformsNotice={activeNoticeParam}
           archivedChannelsNotice={archivedNoticeParam}
           noticeError={errorParam}
+          locale={locale}
         />
       ) : (
         <section
