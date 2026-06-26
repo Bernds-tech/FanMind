@@ -20,7 +20,7 @@ import {
   getWorkspaceContacts,
   getWorkspaceConversations,
   updateWorkspaceContactServer,
-  updateContactInternalNotes,
+  updateContactInternalNotesServer,
   upsertContactReplyTarget,
   upsertFanAnalysisReport,
   type ContactRow,
@@ -216,7 +216,7 @@ export async function saveContactInternalNotes(formData: FormData) {
     redirect(`/fans/${contactId}?notice=notes_empty${langParam}`);
   }
 
-  const result = await updateContactInternalNotes({
+  const result = await updateContactInternalNotesServer({
     workspaceId: workspace.id,
     contactId,
     internalNotes,
