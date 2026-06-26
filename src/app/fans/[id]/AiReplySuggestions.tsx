@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "./fan-detail.module.css";
-import type { ReplyTargetAction } from "@/lib/sourceContext";
 
 export type ReplyMode = { id: string; label: string; prompt: string };
 
@@ -28,13 +27,11 @@ type Props = {
     analysisReport?: string;
   };
   modes: ReplyMode[];
-  originalChannelAction: ReplyTargetAction;
 };
 
 export function AiReplySuggestions({
   contact,
   modes,
-  originalChannelAction,
 }: Props) {
   const [activeModeId, setActiveModeId] = useState(modes[0]?.id ?? "friendly");
   const activeMode = useMemo(
@@ -47,7 +44,6 @@ export function AiReplySuggestions({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [copiedHelper, setCopiedHelper] = useState<string | null>(null);
   const [telegramDraft, setTelegramDraft] = useState("");
   const [telegramSending, setTelegramSending] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState("");
@@ -105,10 +101,7 @@ export function AiReplySuggestions({
     setCopiedIndex(index);
   }
 
-  async function copyHelper(text: string, label: string) {
-    await navigator.clipboard.writeText(text);
-    setCopiedHelper(label);
-  }
+
 
   async function sendTelegramDraft() {
     setTelegramStatus("");
@@ -143,7 +136,7 @@ export function AiReplySuggestions({
           <p className={dashboardStyles.eyebrow}>KI-Antwortvorschläge</p>
           <h3 id="ai-replies-title">Drei Vorschläge</h3>
           <p className={styles.muted}>
-            Drei Vorschläge – kopieren und manuell im Originalkanal senden.
+            Wähle einen Stil, erzeuge Karten und kopiere die passende Antwort manuell.
           </p>
         </div>
         <span className={styles.statusBadge}>
@@ -217,72 +210,9 @@ export function AiReplySuggestions({
                 onClick={() => void copySuggestion(option.text, index)}
                 type="button"
               >
-                {copiedIndex === index ? "Kopiert" : "Kopieren"}
+                {copiedIndex === index ? "Kopiert" : "Antwort kopieren"}
               </button>
-              {originalChannelAction.href ? (
-                <a
-                  className={dashboardStyles.secondaryButton}
-                  href={originalChannelAction.href}
-                  rel="noreferrer"
-                  target="_blank"
-                  title={originalChannelAction.reason}
-                >
-                  {originalChannelAction.label}
-                </a>
-              ) : (
-                <button
-                  className={dashboardStyles.secondaryButton}
-                  disabled
-                  type="button"
-                >
-                  {originalChannelAction.disabledHint}
-                </button>
-              )}
             </div>
-            {(originalChannelAction.quality === "attempted_thread_link" ||
-              originalChannelAction.quality === "inbox_fallback") ? (
-              <div className={styles.fallbackHelp}>
-                <p className={styles.muted}>
-                  Meta öffnet eventuell die zuletzt aktive Unterhaltung. Für direkten Zugriff bitte einmal den exakten Chat-Link speichern. Bitte im Postfach manuell auswählen:{" "}
-                  {originalChannelAction.fallbackContactLabel ??
-                    contact.displayName}
-                  {originalChannelAction.fallbackContactId
-                    ? ` · Facebook-ID: ${originalChannelAction.fallbackContactId}`
-                    : ""}
-                </p>
-                <button
-                  className={dashboardStyles.secondaryButton}
-                  onClick={() =>
-                    void copyHelper(
-                      originalChannelAction.fallbackContactLabel ??
-                        contact.displayName,
-                      "name",
-                    )
-                  }
-                  type="button"
-                >
-                  {copiedHelper === "name"
-                    ? "Fanname kopiert"
-                    : "Fanname kopieren"}
-                </button>
-                {originalChannelAction.fallbackContactId ? (
-                  <button
-                    className={dashboardStyles.secondaryButton}
-                    onClick={() =>
-                      void copyHelper(
-                        originalChannelAction.fallbackContactId ?? "",
-                        "facebook-id",
-                      )
-                    }
-                    type="button"
-                  >
-                    {copiedHelper === "facebook-id"
-                      ? "Facebook-ID kopiert"
-                      : "Facebook-ID kopieren"}
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
           </article>
         ))}
       </div>
@@ -313,8 +243,7 @@ export function AiReplySuggestions({
         </div>
       ) : null}
       <p className={styles.reportSafetyNote}>
-        {suggestions?.safety_note ??
-          "FanMind schlägt nur Text vor. Der Mensch kopiert, prüft und sendet manuell im Originalkanal."}
+        Der Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.
       </p>
     </article>
   );
