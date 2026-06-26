@@ -2106,9 +2106,107 @@ export async function updateContactInternalNotes(input: {
     );
   }
 
+  return updateContactInternalNotesWithToken(input, accessToken);
+}
+
+export async function updateContactInternalNotesServer(input: {
+  workspaceId: string;
+  contactId: string;
+  internalNotes: string;
+}): Promise<ContactUpdateResult> {
+  const accessToken = await getAccessToken();
+  const serviceAccessToken = getServiceAccessToken();
+  const context = {
+    contactId: input.contactId,
+    workspaceId: input.workspaceId,
+    serviceRoleConfigured: Boolean(serviceAccessToken),
+    contactFoundBeforeUpdate: false,
+    updateChangedRow: false,
+  };
+
+  if (!accessToken) {
+    console.error("[Fan notes save] Kein eingeloggter User.", context);
+    return contactUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const contactBeforeUpdate = await postgrestSelect<ContactRow>(
+    "contacts",
+    accessToken,
+    CONTACT_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.contactId],
+    ],
+    1,
+    true,
+  );
+
+  const contactFoundBeforeUpdate = Boolean(contactBeforeUpdate.data);
+
+  if (contactBeforeUpdate.error || !contactBeforeUpdate.data) {
+    console.error("[Fan notes save] Kontakt vor Update nicht gefunden.", {
+      ...context,
+      contactFoundBeforeUpdate,
+      supabaseError: contactBeforeUpdate.error?.message ?? null,
+    });
+    return contactUpdateError(
+      "Notizen konnten nicht gespeichert werden: Kontakt wurde im Workspace nicht gefunden.",
+    );
+  }
+
+  const userResult = await updateContactInternalNotesWithToken(
+    input,
+    accessToken,
+  );
+
+  if (!userResult.error && userResult.contact) {
+    return userResult;
+  }
+
+  if (!serviceAccessToken) {
+    console.error(
+      "[Fan notes save] User-Update fehlgeschlagen, Service-Role fehlt.",
+      {
+        ...context,
+        contactFoundBeforeUpdate,
+        supabaseError: userResult.error?.message ?? null,
+      },
+    );
+    return userResult.error
+      ? userResult
+      : contactUpdateError(
+          "Notizen konnten nicht gespeichert werden: keine Zeile geändert.",
+        );
+  }
+
+  const serviceResult = await updateContactInternalNotesWithToken(
+    input,
+    serviceAccessToken,
+  );
+
+  if (serviceResult.error || !serviceResult.contact) {
+    console.error("[Fan notes save] Service-Update fehlgeschlagen.", {
+      ...context,
+      contactFoundBeforeUpdate,
+      updateChangedRow: Boolean(serviceResult.contact),
+      supabaseError: serviceResult.error?.message ?? null,
+      userUpdateError: userResult.error?.message ?? null,
+    });
+  }
+
+  return serviceResult;
+}
+
+async function updateContactInternalNotesWithToken(
+  input: { workspaceId: string; contactId: string; internalNotes: string },
+  accessToken: string,
+): Promise<ContactUpdateResult> {
+  const normalizedNotes = input.internalNotes.trim();
   const result = await postgrestUpdate<ContactRow>(
     "contacts",
-    { internal_notes: input.internalNotes.trim() || null },
+    { internal_notes: normalizedNotes, updated_at: new Date().toISOString() },
     accessToken,
     [
       ["workspace_id", input.workspaceId],
@@ -2120,6 +2218,22 @@ export async function updateContactInternalNotes(input: {
   if (result.error) {
     return contactUpdateError(
       `Notizen konnten nicht gespeichert werden: ${result.error.message}`,
+    );
+  }
+
+  if (!result.data) {
+    return contactUpdateError(
+      "Notizen konnten nicht gespeichert werden: keine Zeile geändert.",
+    );
+  }
+
+  if (
+    result.data.id !== input.contactId ||
+    result.data.workspace_id !== input.workspaceId ||
+    result.data.internal_notes !== normalizedNotes
+  ) {
+    return contactUpdateError(
+      "Notizen konnten nicht gespeichert werden: Verifikation fehlgeschlagen.",
     );
   }
 
