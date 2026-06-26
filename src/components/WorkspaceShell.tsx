@@ -198,7 +198,10 @@ export function WorkspaceShell({
         {sidebarCollapsed ? (
           <>
             <div className={styles.sidebarRailTop}>
-              <div className={styles.compactBrand} aria-label="FanMind" title="FanMind">FM</div>
+              <div className={styles.compactBrand} aria-label="FanMind" title="FanMind">
+                <span className={styles.compactBrandFan}>F</span>
+                <span className={styles.compactBrandMind}>M</span>
+              </div>
               <button
                 type="button"
                 className={`${styles.sidebarToggle} ${styles.sidebarToggleCompact}`}
