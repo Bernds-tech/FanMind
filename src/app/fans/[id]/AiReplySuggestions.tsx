@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { wt } from "@/lib/workspaceCopy";
+import { OriginalChannelButton } from "./OriginalChannelButton";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "./fan-detail.module.css";
 
@@ -15,6 +16,8 @@ type AiSuggestionsResult = {
 };
 
 type Props = {
+  originalChannelAction?: { href: string | null; label: string };
+  demoConnectionsDisabled?: boolean;
   contact: {
     contactId: string;
     displayName: string;
@@ -35,6 +38,8 @@ type Props = {
 export function AiReplySuggestions({
   contact,
   modes,
+  originalChannelAction,
+  demoConnectionsDisabled = false,
   locale = "de",
 }: Props) {
   const [activeModeId, setActiveModeId] = useState(modes[0]?.id ?? "friendly");
@@ -177,6 +182,14 @@ export function AiReplySuggestions({
         </button>
         {!contact.latestInboundMessage ? (
           <span>Keine eingehende Nachricht als Kontext vorhanden.</span>
+        ) : null}
+        {originalChannelAction ? (
+          <OriginalChannelButton
+            demoConnectionsDisabled={demoConnectionsDisabled}
+            href={originalChannelAction.href}
+            label={originalChannelAction.label}
+            locale={locale}
+          />
         ) : null}
       </div>
       {error ? (

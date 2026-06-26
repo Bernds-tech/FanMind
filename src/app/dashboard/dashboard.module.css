@@ -729,7 +729,8 @@
   row-gap: 4px;
   min-width: 0;
   min-height: 94px;
-  overflow: hidden;
+  overflow: visible;
+  isolation: isolate;
   border: 1px solid
     color-mix(
       in srgb,
@@ -846,15 +847,22 @@
   background: rgba(15, 23, 42, 0.42);
   opacity: 0.82;
   cursor: help;
-  z-index: 4;
+  z-index: 20;
+}
+
+.kpiInfo:hover,
+.kpiInfo:focus-visible {
+  z-index: 80;
 }
 
 .kpiInfoTooltip {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 6;
-  width: min(220px, calc(100vw - 36px));
+  z-index: 90;
+  width: max-content;
+  min-width: 180px;
+  max-width: min(260px, calc(100vw - 36px));
   border: 1px solid rgba(103, 232, 249, 0.28);
   border-radius: 12px;
   padding: 9px 10px;
@@ -862,6 +870,8 @@
   font-size: 11px;
   font-weight: 750;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
   text-align: left;
   background: rgba(2, 6, 23, 0.96);
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
