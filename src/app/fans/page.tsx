@@ -5,6 +5,7 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
+  getWorkspaceConversationMessages,
   getWorkspaceOpenFollowups,
   getWorkspaceUnseenInboundMessages,
   signOutSupabaseServerSession,
@@ -40,6 +41,8 @@ type FansWorkspaceProps = {
   followupsError?: string;
   openFollowupCount: number;
   unseenMessages: ConversationMessageRow[];
+  conversationMessages: ConversationMessageRow[];
+  conversationMessagesError?: string;
   unseenMessagesError?: string;
   activeChannel: PlatformValue | "all";
   notice?: string;
@@ -106,6 +109,8 @@ function FansWorkspace({
   followupsError,
   openFollowupCount,
   unseenMessages,
+  conversationMessages,
+  conversationMessagesError,
   unseenMessagesError,
   activeChannel,
   notice,
@@ -117,7 +122,12 @@ function FansWorkspace({
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans", locale);
   const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
-  const fanGroups = groupContactsByFan(contacts, followups, unseenMessages);
+  const fanGroups = groupContactsByFan(
+    contacts,
+    followups,
+    unseenMessages,
+    conversationMessages,
+  );
   const visibleFanGroups = filterFanGroupsByChannel(fanGroups, activeChannel);
 
   return (
@@ -174,6 +184,12 @@ function FansWorkspace({
             <p className={dashboardStyles.error}>
               <strong>Follow-ups konnten nicht geladen werden.</strong>
               <span>{followupsError}</span>
+            </p>
+          ) : null}
+          {conversationMessagesError ? (
+            <p className={dashboardStyles.error}>
+              <strong>Nachrichten konnten nicht geladen werden.</strong>
+              <span>{conversationMessagesError}</span>
             </p>
           ) : null}
           {unseenMessagesError ? (
@@ -411,7 +427,7 @@ function FansTable({ fanGroups, locale }: { fanGroups: FanGroup[]; locale: FanMi
               <td>{renderNextFollowup(group.nextFollowup)}</td>
               <td>
                 <span className={styles.replyChannel}>
-                  {formatReplyChannel(group.platforms)}
+                  {formatReplyChannel(group.platforms, group.primaryContact.source_platform)}
                 </span>
               </td>
               <td className={styles.unseenCell}>
@@ -749,6 +765,7 @@ function groupContactsByFan(
   contacts: ContactRow[],
   followups: FollowupRow[],
   unseenMessages: ConversationMessageRow[],
+  conversationMessages: ConversationMessageRow[],
 ): FanGroup[] {
   const activeContacts = contacts.filter(
     (contact) => !isArchivedContact(contact),
@@ -766,6 +783,15 @@ function groupContactsByFan(
     followupsByContact.set(followup.contact_id, [
       ...(followupsByContact.get(followup.contact_id) ?? []),
       followup,
+    ]);
+  }
+
+  const messagesByContact = new Map<string, ConversationMessageRow[]>();
+
+  for (const message of conversationMessages) {
+    messagesByContact.set(message.contact_id, [
+      ...(messagesByContact.get(message.contact_id) ?? []),
+      message,
     ]);
   }
 
@@ -795,7 +821,12 @@ function groupContactsByFan(
         primaryContact,
         contacts: sortedContacts,
         handles: uniqueValues(sortedContacts.map((contact) => contact.handle)),
-        platforms: uniquePlatforms(sortedContacts),
+        platforms: uniquePlatforms(
+          sortedContacts,
+          sortedContacts.flatMap(
+            (contact) => messagesByContact.get(contact.id) ?? [],
+          ),
+        ),
         tags: uniqueValues(
           sortedContacts.flatMap((contact) => contact.tags ?? []),
         ),
@@ -894,21 +925,27 @@ function uniqueValues(values: Array<string | null | undefined>): string[] {
   });
 }
 
-function uniquePlatforms(contacts: ContactRow[]): PlatformValue[] {
+function uniquePlatforms(
+  contacts: ContactRow[],
+  messages: ConversationMessageRow[] = [],
+): PlatformValue[] {
   const seen = new Set<PlatformValue>();
 
-  return contacts
-    .filter((contact) => !isArchivedContact(contact))
-    .flatMap((contact) => {
-      const platform = normalizePlatform(contact.source_platform);
+  return [
+    ...contacts
+      .filter((contact) => !isArchivedContact(contact))
+      .map((contact) => contact.source_platform),
+    ...messages.map((message) => message.source_platform ?? message.source_type),
+  ].flatMap((source) => {
+    const platform = normalizePlatform(source);
 
-      if (seen.has(platform)) {
-        return [];
-      }
+    if (seen.has(platform)) {
+      return [];
+    }
 
-      seen.add(platform);
-      return [platform];
-    });
+    seen.add(platform);
+    return [platform];
+  });
 }
 
 function getNextFollowup(followups: FollowupRow[]): FollowupRow | null {
@@ -933,7 +970,18 @@ function formatLimitedList(values: string[], limit: number): string {
   return hiddenCount > 0 ? `${visible} + weitere` : visible;
 }
 
-function formatReplyChannel(platforms: PlatformValue[]): string {
+function formatReplyChannel(
+  platforms: PlatformValue[],
+  primaryPlatform?: string | null,
+): string {
+  const normalizedPrimary = primaryPlatform
+    ? normalizePlatform(primaryPlatform)
+    : null;
+
+  if (normalizedPrimary && platforms.includes(normalizedPrimary)) {
+    return `Antwort in ${formatPlatformLabel(normalizedPrimary)}`;
+  }
+
   if (platforms.length === 1) {
     return `Antwort in ${formatPlatformLabel(platforms[0])}`;
   }
@@ -1057,6 +1105,9 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
+  const conversationMessagesResult = workspace
+    ? await getWorkspaceConversationMessages(workspace.id)
+    : null;
   const unseenMessagesResult = workspace
     ? await getWorkspaceUnseenInboundMessages(workspace.id)
     : null;
@@ -1076,6 +1127,8 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           followupsError={followupsResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
           unseenMessages={unseenMessagesResult?.messages ?? []}
+          conversationMessages={conversationMessagesResult?.messages ?? []}
+          conversationMessagesError={conversationMessagesResult?.error?.message}
           unseenMessagesError={unseenMessagesResult?.error?.message}
           activeChannel={activeChannel}
           notice={noticeParam}
