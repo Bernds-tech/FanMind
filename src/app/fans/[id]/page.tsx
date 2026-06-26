@@ -618,6 +618,7 @@ function FanDetailContent({
             report={fanAnalysisReport}
             reportError={fanAnalysisReportError}
             memories={memories}
+            hasNewMessages={hasMessagesAfterReport(messages, fanAnalysisReport)}
             memoriesError={memoriesError}
             locale={locale}
           />
@@ -1253,6 +1254,7 @@ function FanMemoryCard({
   reportError,
   memoriesError,
   locale,
+  hasNewMessages,
 }: {
   contactId: string;
   report: FanAnalysisReportRow | null;
@@ -1260,6 +1262,7 @@ function FanMemoryCard({
   memories: MemoryRow[];
   memoriesError?: string;
   locale: FanMindLanguage;
+  hasNewMessages: boolean;
 }) {
   return (
     <FanAnalysisReport
@@ -1267,8 +1270,21 @@ function FanMemoryCard({
       initialReport={report}
       loadError={reportError ?? memoriesError}
       locale={locale}
+      hasNewMessages={hasNewMessages}
     />
   );
+}
+
+function hasMessagesAfterReport(
+  messages: ConversationMessageRow[],
+  report: FanAnalysisReportRow | null,
+): boolean {
+  if (!report?.generated_at) return false;
+  const generatedAt = new Date(report.generated_at).getTime();
+  return messages.some((message) => {
+    if (!message.created_at) return false;
+    return new Date(message.created_at).getTime() > generatedAt;
+  });
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
