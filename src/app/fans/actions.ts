@@ -16,6 +16,7 @@ import {
   archiveWorkspaceContactServer,
   mergeWorkspaceContacts,
   getContactConversationMessages,
+  getContactMemories,
   getWorkspaceContact,
   getWorkspaceContacts,
   getWorkspaceConversations,
@@ -58,6 +59,7 @@ export type FanAnalysisActionState = {
     summary: string | null;
     source_message_count: number | null;
     generated_at: string | null;
+    updated_at?: string | null;
   } | null;
 };
 
@@ -242,9 +244,12 @@ export async function analyzeFan(
   const contactId = formValue(formData, "contact_id");
   await ensureContactInWorkspace(workspace.id, contactId);
 
-  const [contactResult, messagesResult] = await Promise.all([
+  const locale = formValue(formData, "locale") === "en" ? "en" : "de";
+
+  const [contactResult, messagesResult, memoriesResult] = await Promise.all([
     getWorkspaceContact(workspace.id, contactId),
     getContactConversationMessages(workspace.id, contactId),
+    getContactMemories(workspace.id, contactId),
   ]);
 
   if (contactResult.error) {
@@ -252,6 +257,9 @@ export async function analyzeFan(
   }
   if (messagesResult.error) {
     return { ok: false, message: messagesResult.error.message };
+  }
+  if (memoriesResult.error) {
+    return { ok: false, message: memoriesResult.error.message };
   }
 
   const sourceMessages = messagesResult.messages.slice(-50).map((message) => ({
@@ -265,6 +273,23 @@ export async function analyzeFan(
       ? `Medien/Anhänge vorhanden (${message.attachments.length}); nur als Hinweis nutzen, keine Bildanalyse.`
       : null,
     createdAt: message.created_at,
+  }));
+
+  const contactContext = {
+    displayName: contactResult.contact?.display_name ?? null,
+    handle: contactResult.contact?.handle ?? null,
+    sourcePlatform: contactResult.contact?.source_platform ?? null,
+    contactLanguage: contactResult.contact?.language ?? null,
+    status: contactResult.contact?.status ?? null,
+    tags: contactResult.contact?.tags ?? [],
+    summary: contactResult.contact?.summary ?? null,
+    internalNotes: contactResult.contact?.internal_notes ?? "",
+  };
+  const memories = memoriesResult.memories.slice(0, 20).map((memory) => ({
+    type: memory.type,
+    content: memory.content,
+    importance: memory.importance,
+    createdAt: memory.created_at,
   }));
 
   const lowDataHint =
@@ -288,7 +313,8 @@ export async function analyzeFan(
     no_gos:
       "Keine Diagnosen, keine sensiblen Eigenschaften als Tatsache, keine psychologischen Gewissheiten und keine Bildanalyse behaupten.",
     spirituell:
-      "Falls genutzt, nur weich als optionaler möglicher Eindruck formulieren und nicht als Tatsache darstellen.",
+      "Aus dem Chat kein belastbarer Hinweis auf spirituelle Interessen oder Motive; Fokus liegt auf Organisation, Entscheidungssicherheit und konkreten Buchungsdetails.",
+    language: locale,
   };
 
   let report = fallback;
@@ -313,12 +339,16 @@ export async function analyzeFan(
           {
             role: "system",
             content:
-              "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Keine Diagnosen, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Medien nur als Hinweis erwähnen, keine Bildanalyse. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell zurück.",
+              locale === "en"
+                ? "Create a careful fan analysis report in English. Use only the provided contact data, stored messages, notes, and memories. Do not state medical, psychological, diagnostic, protected, or sensitive attributes as facts. Use cautious wording such as seems, based on the chat, possible hint, could indicate. Keep every section detailed but readable and fitted to the actual conversation. Media may only be mentioned as a hint; do not analyze images. Fill spiritual/energetic notes only if the chat supports it; otherwise write that there is no reliable indication and the focus is practical context. Return only valid JSON with keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell, language."
+                : "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Nutze ausschließlich die gelieferten Kontaktdaten, gespeicherten Nachrichten, Notizen und Memories. Keine medizinischen, psychologischen oder diagnostischen Aussagen als Tatsache, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze vorsichtige Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Jeder Abschnitt soll ausführlich, klar lesbar und passend zur tatsächlichen Kommunikation sein. Medien nur als Hinweis erwähnen, keine Bildanalyse. Spirituelle/energetische Hinweise nur ausfüllen, wenn der Chat dafür Hinweise enthält; sonst klar schreiben, dass kein belastbarer Hinweis vorliegt und der Fokus auf praktischem Kontext liegt. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell, language zurück.",
           },
           {
             role: "user",
             content: JSON.stringify({
-              internalNotes: contactResult.contact?.internal_notes ?? "",
+              language: locale,
+              contact: contactContext,
+              memories,
               messages: sourceMessages,
             }),
           },
@@ -393,6 +423,7 @@ export async function analyzeFan(
           summary: result.report.summary,
           source_message_count: result.report.source_message_count,
           generated_at: result.report.generated_at,
+          updated_at: result.report.updated_at,
         }
       : null,
   };
