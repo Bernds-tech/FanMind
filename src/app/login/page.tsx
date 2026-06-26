@@ -66,7 +66,11 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     setError(null);
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/demo/start", { method: "POST" });
+      const response = await fetch("/api/demo/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale: language }),
+      });
       const payload = (await response.json().catch(() => null)) as { error?: string; redirectTo?: string } | null;
       if (!response.ok) {
         setError(`${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den Sandra-Demo-Fallback über /login?demo=1 nutzen.`);
@@ -109,7 +113,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       }
 
       await syncSupabaseSessionForServer(data.session);
-      window.location.assign(LOGIN_TARGET);
+      document.cookie = `fanmind_locale=${language}; path=/; max-age=31536000; samesite=lax`;
+      window.location.assign(language === "en" ? `${LOGIN_TARGET}?lang=en` : LOGIN_TARGET);
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : language === "en" ? "Unknown Supabase error." : "Unbekannter Supabase-Fehler.";
       setError(normalizeLoginError(message));

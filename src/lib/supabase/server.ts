@@ -20,6 +20,7 @@ import {
   type ProductiveCommercialOption,
 } from "@/lib/plans";
 import type { PlanId } from "@/config/plans";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
 import {
   getSupabaseAuthUrl,
@@ -4027,7 +4028,9 @@ export async function getWorkspaceOpenFollowups(
 export async function createTemporaryDemoWorkspace(input: {
   userId: string;
   userEmail: string;
+  locale?: FanMindLanguage;
 }): Promise<WorkspaceBackfillResult> {
+  const locale = input.locale ?? "de";
   const accessToken = getServiceAccessToken();
   if (!accessToken) return workspaceBackfillError("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.");
 
@@ -4053,7 +4056,7 @@ export async function createTemporaryDemoWorkspace(input: {
   const profileResult = await postgrestRequest("profiles", "POST", {
     id: input.userId,
     email: input.userEmail,
-    display_name: "Demo Nutzer",
+    display_name: locale === "en" ? "Demo User" : "Demo Nutzer",
   }, accessToken, { upsert: true });
   if (profileResult.error) return workspaceBackfillError(profileResult.error.message);
 
@@ -4064,7 +4067,7 @@ export async function createTemporaryDemoWorkspace(input: {
   }, accessToken);
   if (memberResult.error) return workspaceBackfillError(memberResult.error.message);
 
-  const seedError = await seedSandraDemoWorkspaceData(workspaceResult.data, accessToken);
+  const seedError = await seedSandraDemoWorkspaceData(workspaceResult.data, accessToken, locale);
   if (seedError) return workspaceBackfillError(seedError.message);
 
   return { workspace: workspaceResult.data, error: null, created: true };
@@ -4089,7 +4092,7 @@ async function ensureSandraDemoWorkspaceData(
     if (workspaceUpdate.error) return workspaceUpdate.error;
   }
 
-  return seedSandraDemoWorkspaceData(workspace, accessToken);
+  return seedSandraDemoWorkspaceData(workspace, accessToken, "de");
 }
 
 type DemoFanSeed = {
@@ -4102,6 +4105,7 @@ type DemoFanSeed = {
   memory: string;
   followup?: { priority: string; reason: string; daysFromNow: number };
   conversation: { direction: "inbound" | "outbound"; text: string }[];
+  locale?: FanMindLanguage;
 };
 
 const sandraConversation: DemoFanSeed["conversation"] = [
@@ -4157,8 +4161,33 @@ const demoFanSeeds: DemoFanSeed[] = [
   ] },
 ];
 
-async function seedSandraDemoWorkspaceData(workspace: Pick<WorkspaceBackfillRow, "id">, accessToken: string): Promise<Error | null> {
-  for (const seed of demoFanSeeds) {
+
+const englishDemoFanSeeds: DemoFanSeed[] = [
+  { displayName: "Sandra M.", handle: DEMO_CONTACT_HANDLE, platform: "facebook", locale: "en", tags: ["Demo", "VIP", "Summer Event"], summary: "Demo contact interested in the summer event, early-bird seats, and member benefits.", notes: "Sandra is close to booking but wants to involve a friend. Important: clear availability, link, and a friendly recommendation.", memory: "Sandra is especially interested in early-bird seats, member benefits, and attending the summer event with a friend.", followup: { priority: "high", reason: "Follow up with Sandra M. about the booking link and whether one or two early-bird seats are still realistic.", daysFromNow: 1 }, conversation: [
+    { direction: "inbound", text: "Hi FanMind team, I saw the summer event. Are there still early-bird seats for members?" },
+    { direction: "outbound", text: "Hi Sandra, yes, a few early-bird member seats are still available. Great that you are interested!" },
+    { direction: "inbound", text: "Thanks! I joined the smaller workshop last year and really liked the atmosphere." },
+    { direction: "outbound", text: "Lovely to hear. This year is a bit bigger but still personal, with member check-in and a short welcome session." },
+    { direction: "inbound", text: "What exactly is included in the member benefit? Just the lower price or more?" },
+    { direction: "outbound", text: "Besides the early-bird price, you get priority entry, access to the member lounge, and a short Q&A after the main program." },
+    { direction: "inbound", text: "Sounds interesting. Can I bring a friend who is not a member yet?" },
+    { direction: "outbound", text: "Yes, that works. We can reserve a seat for your friend too; the member benefit applies to your own seat." },
+    { direction: "inbound", text: "Please send me the link and tell me whether booking two seats today still makes sense." },
+  ] },
+  { displayName: "Markus T.", handle: "@markus_fitness", platform: "instagram", locale: "en", tags: ["Demo", "Pricing question", "Instagram"], summary: "Direct Instagram fan with pricing and VIP questions who prefers quick decisions.", memory: "Markus prefers short, clear replies with price, availability, and a concrete next step.", followup: { priority: "medium", reason: "Reply briefly to Markus with price and VIP availability.", daysFromNow: 2 }, conversation: [
+    { direction: "inbound", text: "Hey, how much is VIP access for the summer event?" }, { direction: "outbound", text: "Hi Markus, VIP access is currently 149 € including priority entry and Q&A." }, { direction: "inbound", text: "Any seats left or sold out?" }, { direction: "outbound", text: "There are still a few VIP seats available, but the allocation is smaller than standard tickets." }, { direction: "inbound", text: "No long explanation needed, just whether VIP is worth it." }, { direction: "outbound", text: "If direct team access, smoother planning, and Q&A matter to you, VIP is worth it. If you only want the main program, standard is enough." }, { direction: "inbound", text: "Send price + link. If VIP is still available, I will decide today." },
+  ] },
+  { displayName: "Julia K.", handle: "+43-demo-julia", platform: "whatsapp", locale: "en", tags: ["Demo", "Unsure", "Advice"], summary: "Careful prospect who wants to come with a friend and needs reassurance about the format.", notes: "Do not pressure Julia. Emphasize safety, flow, and a friendly invitation.", memory: "Julia needs trust, a clear agenda, and reassurance that the event is comfortable for newcomers.", conversation: [
+    { direction: "inbound", text: "Hi, I am thinking about coming to the summer event, but I am still unsure." }, { direction: "outbound", text: "Hi Julia, thanks for reaching out. What are you unsure about? Then I can help more specifically." }, { direction: "inbound", text: "I do not know anyone there and might bring a friend." }, { direction: "outbound", text: "That is completely fine. Many people come with a friend or alone, and the beginning is intentionally relaxed." }, { direction: "inbound", text: "Is it loud and crowded, or can you arrive calmly?" }, { direction: "outbound", text: "There is a calm check-in and enough time to settle in. Nobody has to network immediately." }, { direction: "inbound", text: "Can you briefly tell me whether it is suitable if I have never attended before?" },
+  ] },
+  { displayName: "Alex R.", handle: "alex.demo@example.com", platform: "email", locale: "en", tags: ["Demo", "Support", "Critical"], summary: "Practical support case about rescheduling with a slightly critical tone.", memory: "Alex expects reliable, solution-focused replies with a concrete next action and no marketing phrases.", conversation: [
+    { direction: "inbound", text: "Hello, I booked my ticket but will probably not be able to attend on that date." }, { direction: "outbound", text: "Hello Alex, thanks for letting us know. We can check which rescheduling options are available." }, { direction: "inbound", text: "The confirmation was not clear to me. Is there a clear rule?" }, { direction: "outbound", text: "Rescheduling is possible depending on availability. We need your booking number and preferred alternative date." }, { direction: "inbound", text: "Honestly, it feels a bit cumbersome that this cannot be done directly in the customer area." }, { direction: "outbound", text: "I understand. We will take that feedback and solve your case manually as smoothly as possible." }, { direction: "inbound", text: "My booking number is DEMO-4821. Please tell me specifically whether rescheduling is possible and whether there are costs." },
+  ] },
+];
+
+async function seedSandraDemoWorkspaceData(workspace: Pick<WorkspaceBackfillRow, "id">, accessToken: string, locale: FanMindLanguage = "de"): Promise<Error | null> {
+  const seeds = locale === "en" ? englishDemoFanSeeds : demoFanSeeds;
+  for (const seed of seeds) {
     const error = await seedDemoFan(workspace.id, accessToken, seed);
     if (error) return error;
   }
@@ -4170,7 +4199,7 @@ async function seedDemoFan(workspaceId: string, accessToken: string, seed: DemoF
   if (existingContact.error) return existingContact.error;
   let contact = existingContact.data;
   if (!contact) {
-    const createdContact = await postgrestRequest<ContactRow>("contacts", "POST", { workspace_id: workspaceId, display_name: seed.displayName, handle: seed.handle, source_platform: seed.platform, language: "de", status: "active", tags: seed.tags, summary: seed.summary, internal_notes: seed.notes ?? null }, accessToken, { select: CONTACT_COLUMNS, single: true });
+    const createdContact = await postgrestRequest<ContactRow>("contacts", "POST", { workspace_id: workspaceId, display_name: seed.displayName, handle: seed.handle, source_platform: seed.platform, language: seed.locale ?? "de", status: "active", tags: seed.tags, summary: seed.summary, internal_notes: seed.notes ?? null }, accessToken, { select: CONTACT_COLUMNS, single: true });
     if (createdContact.error) return createdContact.error;
     contact = createdContact.data;
   }

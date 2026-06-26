@@ -17,6 +17,9 @@ import {
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { wt } from "@/lib/workspaceCopy";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import styles from "./dashboard.module.css";
@@ -340,16 +343,17 @@ function WorkspaceDetails({
   unseenMessages,
   unseenMessagesError,
   openFollowupCount,
-}: WorkspaceDetailsProps) {
+  locale,
+}: WorkspaceDetailsProps & { locale: FanMindLanguage }) {
   const display = getWorkspaceDisplay(workspace);
   const pageTitle = "Dashboard";
   const displayName = userDisplayName ?? workspace.name ?? "Nutzer";
-  const pageSubtitle = "Willkommen zurück, Pilot Test 👋";
-  const primaryActionLabel = "+ Neuer Kontakt";
+  const pageSubtitle = wt(locale, "Willkommen zurück, Pilot Test 👋");
+  const primaryActionLabel = wt(locale, "+ Neuer Kontakt");
   const planStatus = getPlanStatus(workspace);
   const userLabel = displayName;
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("dashboard");
+    getWorkspaceNavigation("dashboard", locale);
   const workInboxItems = getWorkInboxItems(contacts, followups);
   const newMessageItems = getNewMessageItems(contacts, unseenMessages);
   const workspaceKpis = getWorkspaceKpiStatsFromContacts(contacts, openFollowupCount);
@@ -359,22 +363,23 @@ function WorkspaceDetails({
       userLabel={userLabel}
       planLabel={display.packageName}
       planMeta={display.commercialOptionName}
-      planStatus={planStatus}
+      planStatus={wt(locale, planStatus)}
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
-        title: pageTitle,
+        title: wt(locale, pageTitle),
         subtitle: pageSubtitle,
-        searchPlaceholder: "Suche nach Name, Tag, Kanal, Sprache ...",
+        searchPlaceholder: wt(locale, "Suche nach Name, Tag, Kanal, Sprache ..."),
         primaryActionLabel,
         primaryActionHref: "/fans",
       }}
       contactCount={workspaceKpis.totalFans}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
+      locale={locale}
     >
-      <section className={styles.crmGrid} aria-label="Arbeits-Eingang">
+      <section className={styles.crmGrid} aria-label={wt(locale, "Arbeits-Eingang")}>
         <section
           className={`${styles.moduleCard} ${styles.contactCard}`}
           id="work-inbox"
@@ -382,11 +387,11 @@ function WorkspaceDetails({
         >
           <div className={styles.moduleHeader}>
             <div>
-              <p className={styles.eyebrow}>Arbeits-Eingang</p>
-              <h2 id="work-inbox-title">Neue Nachrichten</h2>
+              <p className={styles.eyebrow}>{wt(locale, "Arbeits-Eingang")}</p>
+              <h2 id="work-inbox-title">{wt(locale, "Neue Nachrichten")}</h2>
             </div>
             <Link className={styles.moduleHeaderLink} href="/fans#fans-list">
-              Alle Fans öffnen
+              {wt(locale, "Alle Fans öffnen")}
             </Link>
           </div>
           <p className={styles.moduleText}>
@@ -491,7 +496,7 @@ function WorkspaceDetails({
       </section>
 
       <div className={styles.safetyNote} role="note">
-        <strong>Keine automatische Sendefunktion.</strong>
+        <strong>{wt(locale, "Keine automatische Sendefunktion.")}</strong>
         <span>
           Social-Media-Synchronisation wird als Pflichtbereich ausgebaut, soweit
           Plattformen es technisch und rechtlich zulassen. Mensch prüft und
@@ -502,13 +507,15 @@ function WorkspaceDetails({
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams?: Promise<{ lang?: string | string[] }> }) {
+  const resolvedSearchParams = await searchParams;
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
     redirect("/login");
   }
 
+  const locale = await resolveWorkspaceLocale({ lang: resolvedSearchParams?.lang, user: data.user });
   const backfillResult = await ensureUserWorkspace(data.user);
   const workspaceResult = backfillResult.workspace
     ? await getUserWorkspaceDashboard(data.user)
@@ -547,6 +554,7 @@ export default async function DashboardPage() {
           unseenMessages={unseenMessagesResult?.messages ?? []}
           unseenMessagesError={unseenMessagesResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          locale={locale}
         />
       ) : (
         <section className={styles.fallbackCard} aria-label="FanMind Workspace">

@@ -5,6 +5,8 @@ import styles from "../app/dashboard/dashboard.module.css";
 import { FanMindLogo } from "./FanMindLogo";
 import { WorkspaceHeader, type WorkspaceHeaderProps } from "./WorkspaceHeader";
 import { WorkspaceKpiStrip } from "./WorkspaceKpiStrip";
+import { wt } from "@/lib/workspaceCopy";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 
 export type WorkspaceNavLink = {
   label: string;
@@ -29,6 +31,7 @@ type WorkspaceShellProps = {
   showStats?: boolean;
   logoutAction: () => Promise<void>;
   profileHref?: string;
+  locale?: FanMindLanguage;
   children: ReactNode;
 };
 
@@ -158,6 +161,7 @@ export function WorkspaceShell({
   logoutAction,
   profileHref = "/settings/profile",
   children,
+  locale = "de",
 }: WorkspaceShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
     typeof window === "undefined"
@@ -195,8 +199,8 @@ export function WorkspaceShell({
                 type="button"
                 className={`${styles.sidebarToggle} ${styles.sidebarToggleCompact}`}
                 onClick={toggleSidebar}
-                aria-label="Sidebar ausklappen"
-                title="Sidebar ausklappen"
+                aria-label={wt(locale, "Sidebar ausklappen")}
+                title={wt(locale, "Sidebar ausklappen")}
               >
                 →
               </button>
@@ -221,8 +225,8 @@ export function WorkspaceShell({
                 <button
                   type="submit"
                   className={styles.compactCircleAction}
-                  aria-label="Abmelden"
-                  title="Abmelden"
+                  aria-label={wt(locale, "Abmelden")}
+                  title={wt(locale, "Abmelden")}
                 >
                   <span aria-hidden="true">AB</span>
                 </button>
@@ -238,21 +242,21 @@ export function WorkspaceShell({
               type="button"
               className={styles.sidebarToggle}
               onClick={toggleSidebar}
-              aria-label="Sidebar einklappen"
-              title="Sidebar einklappen"
+              aria-label={wt(locale, "Sidebar einklappen")}
+              title={wt(locale, "Sidebar einklappen")}
             >
               ←
             </button>
 
-            <nav className={styles.navList} aria-label="Hauptnavigation">
-              <span className={styles.navSectionLabel}>Navigation</span>
+            <nav className={styles.navList} aria-label={wt(locale, "Hauptnavigation")}>
+              <span className={styles.navSectionLabel}>{wt(locale, "Navigation")}</span>
               {visibleMainNavigation.map((item) => (
                 <SidebarItem key={item.label} {...item} />
               ))}
             </nav>
 
             <nav className={styles.navList} aria-label="Workspace Navigation">
-              <span className={styles.navSectionLabel}>Workspace</span>
+              <span className={styles.navSectionLabel}>{wt(locale, "Workspace")}</span>
               {visibleSettingsNavigation.map((item) => (
                 <SidebarItem key={item.label} {...item} />
               ))}
@@ -260,9 +264,9 @@ export function WorkspaceShell({
 
             <section
               className={styles.savedViews}
-              aria-label="Gespeicherte Ansichten"
+              aria-label={wt(locale, "Gespeicherte Ansichten")}
             >
-              <span>Gespeicherte Ansichten</span>
+              <span>{wt(locale, "Gespeicherte Ansichten")}</span>
               {visibleSavedViews.map((item) => (
                 <a key={item.label} href={item.href}>
                   {item.label}
@@ -273,19 +277,19 @@ export function WorkspaceShell({
             <div className={styles.sidebarFooter}>
               <a
                 className={styles.userMiniCard}
-                aria-label="Nutzerprofil öffnen"
+                aria-label={wt(locale, "Nutzerprofil öffnen")}
                 href={profileHref}
               >
                 <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
                 <div>
-                  <span>Nutzerkarte</span>
+                  <span>{wt(locale, "Nutzerkarte")}</span>
                   <strong>{userLabel}</strong>
                   <p>{workspaceName}</p>
                 </div>
               </a>
-              <section className={styles.planMiniCard} aria-label="Paket">
+              <section className={styles.planMiniCard} aria-label={wt(locale, "Paket")}>
                 <div>
-                  <span>Paket</span>
+                  <span>{wt(locale, "Paket")}</span>
                   <strong>{planLabel}</strong>
                   <p>{planMeta}</p>
                 </div>
@@ -293,7 +297,7 @@ export function WorkspaceShell({
               </section>
               <form action={logoutAction}>
                 <button type="submit" className={styles.logoutButton}>
-                  Abmelden
+                  {wt(locale, "Abmelden")}
                 </button>
               </form>
             </div>
@@ -304,11 +308,12 @@ export function WorkspaceShell({
       <div
         className={`${styles.dashboardContent} ${styles.dashboardContentStart}`}
       >
-        <WorkspaceHeader {...header} />
+        <WorkspaceHeader {...header} locale={locale} />
         {showStats ? (
           <WorkspaceKpiStrip
             contactCount={contactCount}
             openFollowupCount={openFollowupCount}
+            locale={locale}
           />
         ) : null}
         {children}

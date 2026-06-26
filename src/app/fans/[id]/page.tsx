@@ -32,6 +32,9 @@ import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { wt } from "@/lib/workspaceCopy";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
@@ -65,6 +68,7 @@ type FanDetailPageProps = {
     seen_message?: string | string[];
     channel?: string | string[];
     source?: string | string[];
+    lang?: string | string[];
   }>;
 };
 
@@ -96,6 +100,7 @@ type FanDetailWorkspaceProps = {
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
   allContacts: ContactRow[];
   demoConnectionsDisabled: boolean;
+  locale: FanMindLanguage;
 };
 
 type ConversationChannelKey =
@@ -175,10 +180,11 @@ function FanDetailWorkspace({
   facebookDirectLinkDiagnosis,
   allContacts,
   demoConnectionsDisabled,
+  locale,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("fans");
-  const userLabel = userDisplayName || workspace.name || "Nutzer";
+    getWorkspaceNavigation("fans", locale);
+  const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const title = contact?.display_name ?? "Fan-Detail";
   return (
     <WorkspaceShell
@@ -186,25 +192,26 @@ function FanDetailWorkspace({
       userLabel={userLabel}
       planLabel={workspace.plan_id}
       planMeta={workspace.role}
-      planStatus="Aktiv"
+      planStatus={wt(locale, "Aktiv")}
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
         title,
-        subtitle: "Kontaktdetail mit echten Workspace-Daten",
-        searchPlaceholder: "Fans und Nachrichten suchen ...",
-        primaryActionLabel: "Zur Fanliste",
+        subtitle: wt(locale, "Kontaktdetail mit echten Workspace-Daten"),
+        searchPlaceholder: wt(locale, "Fans und Nachrichten suchen ..."),
+        primaryActionLabel: wt(locale, "Zur Fanliste"),
         primaryActionHref: "/fans#fans-list",
       }}
       contactCount={contactCount}
       openFollowupCount={openFollowupCount}
       showStats={false}
       logoutAction={logout}
+      locale={locale}
     >
       <div className={styles.detailStack}>
         <Link className={styles.backLink} href="/fans#fans-list">
-          ← Zurück zur Fanliste
+          {wt(locale, "← Zurück zur Fanliste")}
         </Link>
 
         {notice ? (
@@ -243,6 +250,7 @@ function FanDetailWorkspace({
             facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
             allContacts={allContacts}
             demoConnectionsDisabled={demoConnectionsDisabled}
+            locale={locale}
           />
         ) : (
           <FanNotFound />
@@ -274,6 +282,7 @@ function FanDetailContent({
   facebookDirectLinkDiagnosis,
   allContacts,
   demoConnectionsDisabled,
+  locale,
 }: {
   contact: ContactRow;
   memories: MemoryRow[];
@@ -296,6 +305,7 @@ function FanDetailContent({
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
   allContacts: ContactRow[];
   demoConnectionsDisabled: boolean;
+  locale: FanMindLanguage;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const activeFanContacts = getActiveRelatedFanContacts(contact, allContacts);
@@ -346,26 +356,26 @@ function FanDetailContent({
       <section className={styles.contactHeader} aria-label="Fan-Workbench">
         <div className={styles.contactHeaderTop}>
           <div>
-            <p className={dashboardStyles.eyebrow}>Fan-Aktionen</p>
+            <p className={dashboardStyles.eyebrow}>{wt(locale, "Fan-Aktionen")}</p>
             <h2>{contact.display_name || contact.handle || "Unbenannter Fan"}</h2>
           </div>
           {demoConnectionsDisabled ? (
             <span className={styles.demoModeBadge}>
-              <strong>Demo Modus</strong>
-              <small>Externe Verbindungen deaktiviert</small>
+              <strong>{wt(locale, "Demo Modus")}</strong>
+              <small>{wt(locale, "Externe Verbindungen deaktiviert")}</small>
             </span>
           ) : null}
           <FanActionMenu fanName={contact.display_name || contact.handle || "Fan"} />
         </div>
         <dl className={styles.headerMetrics}>
           <div className={styles.metric}>
-            <dt>Owner</dt>
+            <dt>{wt(locale, "Owner")}</dt>
             <dd>
               <strong>Team Inbox</strong>
             </dd>
           </div>
           <div className={styles.metric}>
-            <dt>Letzter Kontakt</dt>
+            <dt>{wt(locale, "Letzter Kontakt")}</dt>
             <dd>
               <strong>
                 {formatDate(contact.updated_at || contact.created_at)}
@@ -373,19 +383,19 @@ function FanDetailContent({
             </dd>
           </div>
           <div className={styles.metric}>
-            <dt>Kontakt seit</dt>
+            <dt>{wt(locale, "Kontakt seit")}</dt>
             <dd>
               <strong>{formatDate(contact.created_at)}</strong>
             </dd>
           </div>
           <div className={styles.metric}>
-            <dt>Primärkanal</dt>
+            <dt>{wt(locale, "Primärkanal")}</dt>
             <dd>
               <strong>{primaryChannel}</strong>
             </dd>
           </div>
           <div className={styles.metric}>
-            <dt>Offene Follow-ups</dt>
+            <dt>{wt(locale, "Offene Follow-ups")}</dt>
             <dd>
               <strong>{openFollowups.length}</strong>
             </dd>
@@ -399,7 +409,7 @@ function FanDetailContent({
       >
         <main
           className={styles.conversation}
-          aria-label="Kanalübergreifender Verlauf"
+          aria-label={wt(locale, "Kanalübergreifender Verlauf")}
         >
           <article className={styles.card}>
             <div className={styles.cardHeader}>
@@ -407,7 +417,7 @@ function FanDetailContent({
                 <p className={dashboardStyles.eyebrow}>
                   Unified Inbox Timeline
                 </p>
-                <h3>Kanalübergreifender Verlauf</h3>
+                <h3>{wt(locale, "Kanalübergreifender Verlauf")}</h3>
               </div>
             </div>
             <nav
@@ -589,21 +599,23 @@ function FanDetailContent({
               summary: contact.summary,
             }}
             modes={defaultReplyModes}
+              locale={locale}
 
           />
         </main>
 
         <aside
           className={styles.copilot}
-          aria-label="Fan-Analyse-Report und KI-Antwortvorschläge"
+          aria-label={locale === "en" ? "Fan analysis report and AI reply suggestions" : "Fan-Analyse-Report und KI-Antwortvorschläge"}
         >
-          <FanNotesCard contact={contact} />
+          <FanNotesCard contact={contact} locale={locale} />
           <FanMemoryCard
             contactId={contact.id}
             report={fanAnalysisReport}
             reportError={fanAnalysisReportError}
             memories={memories}
             memoriesError={memoriesError}
+            locale={locale}
           />
         </aside>
       </section>
@@ -1200,12 +1212,12 @@ function FacebookReplyTargetCard({
   );
 }
 
-function FanNotesCard({ contact }: { contact: ContactRow }) {
+function FanNotesCard({ contact, locale }: { contact: ContactRow; locale: FanMindLanguage }) {
   return (
     <article className={styles.card}>
       <div className={styles.cardHeader}>
         <div>
-          <h3>Notizen</h3>
+          <h3>{wt(locale, "Notizen")}</h3>
           <p className={styles.reportIntro}>
             Interne Notizen zu diesem Fan. Nur im Workspace sichtbar.
           </p>
@@ -1222,7 +1234,7 @@ function FanNotesCard({ contact }: { contact: ContactRow }) {
         />
         <div className={styles.replyFooter}>
           <button className={dashboardStyles.primaryButton} type="submit">
-            Notizen speichern
+            {wt(locale, "Notizen speichern")}
           </button>
         </div>
       </form>
@@ -1235,18 +1247,21 @@ function FanMemoryCard({
   report,
   reportError,
   memoriesError,
+  locale,
 }: {
   contactId: string;
   report: FanAnalysisReportRow | null;
   reportError?: string;
   memories: MemoryRow[];
   memoriesError?: string;
+  locale: FanMindLanguage;
 }) {
   return (
     <FanAnalysisReport
       contactId={contactId}
       initialReport={report}
       loadError={reportError ?? memoriesError}
+      locale={locale}
     />
   );
 }
@@ -1615,6 +1630,7 @@ export default async function FanDetailPage({
   }
 
   const { user, workspace } = authorized;
+  const locale = await resolveWorkspaceLocale({ lang: pageSearchParams?.lang, user });
 
   const [contactsResult, contactResult, socialConnectionsResult] =
     await Promise.all([
@@ -1784,6 +1800,7 @@ export default async function FanDetailPage({
         facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
         allContacts={contactsResult?.contacts ?? []}
         demoConnectionsDisabled={areDemoConnectionsDisabled(user, workspace)}
+        locale={locale}
       />
     </main>
   );
