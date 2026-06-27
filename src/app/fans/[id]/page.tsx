@@ -54,7 +54,6 @@ import { FanActionMenu } from "./FanActionMenu";
 import {
   saveContactInternalNotes,
   saveFacebookReplyTarget,
-  saveManualFanMessage,
   saveManualFollowup,
   saveManualMemory,
   syncFacebookChatForContact,
@@ -530,7 +529,6 @@ function FanDetailContent({
                 demoConnectionsDisabled={demoConnectionsDisabled}
               />
             ) : null}
-            <ManualMessageComposer contact={contact} locale={locale} />
             <div className={styles.timeline}>
               {timeline.length ? (
                 timeline.map((item) => (
@@ -631,56 +629,6 @@ function FanDetailContent({
         </aside>
       </section>
     </>
-  );
-}
-
-function ManualMessageComposer({
-  contact,
-  locale,
-}: {
-  contact: ContactRow;
-  locale: FanMindLanguage;
-}) {
-  return (
-    <form action={saveManualFanMessage} className={styles.manualActionForm}>
-      <input name="contact_id" type="hidden" value={contact.id} />
-      <input name="lang" type="hidden" value={locale} />
-      <div className={styles.formRow}>
-        <label>
-          <span>{locale === "en" ? "Direction" : "Richtung"}</span>
-          <select name="direction" defaultValue="inbound">
-            <option value="inbound">{locale === "en" ? "Inbound" : "Eingehend"}</option>
-            <option value="outbound">{locale === "en" ? "Outbound" : "Ausgehend"}</option>
-          </select>
-        </label>
-        <label>
-          <span>{locale === "en" ? "Channel" : "Kanal"}</span>
-          <select name="source_platform" defaultValue={contact.source_platform ?? "manual"}>
-            <option value="manual">Manuell</option>
-            <option value="instagram">Instagram</option>
-            <option value="facebook">Facebook</option>
-            <option value="tiktok">TikTok</option>
-            <option value="telegram">Telegram</option>
-            <option value="email">E-Mail</option>
-            <option value="webform">Webformular</option>
-          </select>
-        </label>
-      </div>
-      <label>
-        <span>{locale === "en" ? "New internal message" : "Neue interne Nachricht"}</span>
-        <textarea
-          name="content"
-          placeholder={locale === "en" ? "Paste or type the message. It will only be stored in this workspace." : "Nachricht einfügen oder eingeben. Sie wird nur in diesem Workspace gespeichert."}
-          required
-        />
-      </label>
-      <div className={styles.replyFooter}>
-        <small className={styles.muted}>{locale === "en" ? "No automatic sending." : "Keine automatische Sendefunktion."}</small>
-        <button className={dashboardStyles.primaryButton} type="submit">
-          {locale === "en" ? "Save message" : "Nachricht speichern"}
-        </button>
-      </div>
-    </form>
   );
 }
 
