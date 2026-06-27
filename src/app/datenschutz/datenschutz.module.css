@@ -308,3 +308,155 @@
   .toc { grid-template-columns: 1fr; }
   .siteFooter nav { flex-wrap: wrap; justify-content: center; gap: 18px; }
 }
+
+.paymentHero {
+  padding-bottom: 34px;
+}
+
+.trustBox {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 1040px;
+  margin: 28px auto 0;
+  padding: 14px;
+  border: 1px solid rgba(65, 158, 255, 0.34);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(5, 25, 55, 0.9), rgba(18, 12, 45, 0.78));
+  box-shadow: inset 0 0 42px rgba(0, 128, 255, 0.08), 0 24px 80px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(16px);
+}
+
+.trustBox span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  border: 1px solid rgba(119, 194, 255, 0.24);
+  border-radius: 18px;
+  padding: 12px;
+  color: #e8f5ff;
+  background: rgba(2, 10, 28, 0.54);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.paymentContent {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 24px;
+  width: min(1180px, 100%);
+  margin-inline: auto;
+  padding-bottom: 44px;
+}
+
+.packageGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.packageCard,
+.infoPanel {
+  border: 1px solid rgba(42, 139, 255, 0.32);
+  background: linear-gradient(180deg, rgba(5, 22, 48, 0.92), rgba(3, 14, 32, 0.9));
+  box-shadow: inset 0 0 34px rgba(0, 128, 255, 0.08), 0 24px 70px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(14px);
+}
+
+.packageCard {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-height: 260px;
+  padding: clamp(22px, 2.2vw, 30px);
+  border-radius: 28px;
+}
+
+.packageCard h2,
+.infoPanel h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(24px, 2vw, 34px);
+  letter-spacing: -1px;
+}
+
+.packageCard strong {
+  color: #7ee8ff;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.packageCard ul,
+.infoPanel ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+  color: #c4d1e6;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.packageCard li::marker,
+.infoPanel li::marker {
+  color: #28d5ff;
+}
+
+.infoPanel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: 32px;
+}
+
+.infoPanel .badge {
+  width: fit-content;
+}
+
+.infoPanel p {
+  max-width: 860px;
+  margin: 0;
+  color: #c7d2e5;
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+@media (max-width: 1040px) {
+  .trustBox,
+  .packageGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .paymentHero {
+    padding-bottom: 28px;
+  }
+
+  .trustBox,
+  .packageGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .trustBox {
+    margin-top: 22px;
+    padding: 10px;
+    border-radius: 22px;
+  }
+
+  .trustBox span {
+    justify-content: flex-start;
+    min-height: 0;
+  }
+
+  .paymentContent {
+    gap: 16px;
+  }
+
+  .packageCard {
+    min-height: 0;
+  }
+}
