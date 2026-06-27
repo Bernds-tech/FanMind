@@ -184,17 +184,15 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
         id: "starter_paid_setup",
         title: "Starter Flex",
         price: "€990 setup + €312/month",
-        description: "For teams that want to start without a term commitment.",
-        bullets: ["setup/onboarding fee applies", "€312/month", "cancel anytime", "no long commitment"],
-        badge: "Starter package",
+        description: "For teams that want to start without a long commitment.",
+        bullets: ["one-time setup", "cancel monthly", "fast productive start"],
       },
       {
         id: "starter_no_setup_commitment",
         title: "Starter 12 months",
         price: "€0 setup + €312/month",
-        description: "For teams that want to start without a setup fee and commit for 12 months.",
-        bullets: ["no setup fee", "€312/month", "12-month commitment"],
-        badge: "Alternative",
+        description: "For teams that want to start directly with a 12-month term.",
+        bullets: ["no setup fee", "12-month term", "monthly billing"],
       },
     ];
   }
@@ -204,17 +202,15 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
       id: "starter_paid_setup",
       title: "Starter Flex",
       price: "990 € Setup + 312 €/Monat",
-      description: "Für Teams, die ohne Laufzeitbindung starten möchten.",
-      bullets: ["Setup-/Einrichtungsgebühr fällt an", "312 €/Monat", "jederzeit kündbar", "keine lange Bindung"],
-      badge: "Starter-Paket",
+      description: "Für Teams, die ohne lange Bindung starten möchten.",
+      bullets: ["einmalige Einrichtung", "monatlich kündbar", "schneller produktiver Start"],
     },
     {
       id: "starter_no_setup_commitment",
       title: "Starter 12 Monate",
       price: "0 € Setup + 312 €/Monat",
-      description: "Für Teams, die ohne Setup-Gebühr starten und sich für 12 Monate binden.",
-      bullets: ["keine Einrichtungsgebühr", "312 €/Monat", "12 Monate Bindung"],
-      badge: "Alternative",
+      description: "Für Teams, die direkt mit 12 Monaten Laufzeit starten möchten.",
+      bullets: ["keine Einrichtungsgebühr", "12 Monate Laufzeit", "monatliche Abrechnung"],
     },
   ];
 }
@@ -517,12 +513,12 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.formHeader}>
                 <p className={styles.eyebrow}>{selectedPlanId === "pilot" ? "Pilot / Setup" : "Starter-Paket"}</p>
                 <h1>{selectedPlanId === "pilot" ? (language === "en" ? "Start Pilot / Setup" : "Pilot / Setup starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
-                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time · 1 test month · no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Testmonat · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Pick your Starter package option; no payment is collected here." : "Wähle deine Starter-Paket-Option; hier wird keine Zahlung ausgelöst.")}</p>
+                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time · 1 test month · no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Testmonat · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Choose the right Starter variant. Registration creates your access. No payment is triggered here yet." : "Wähle die passende Starter-Variante. Die Registrierung legt deinen Zugang an. Eine Zahlung wird hier noch nicht ausgelöst.")}</p>
               </div>
 
               {selectedPlanId === "starter" && (
                 <fieldset className={styles.commercialOptions}>
-                  <legend>{language === "en" ? "Starter package" : "Starter-Paket"}</legend>
+                  <legend>{language === "en" ? "Starter options" : "Starter-Optionen"}</legend>
                   {starterOptionsCopy.map((option) => (
                     <label key={option.id} className={`${styles.optionCard} ${option.id === starterOption ? styles.optionCardSelected : ""}`}>
                       <input
@@ -536,7 +532,6 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                       <span>
                         <span className={styles.optionTitleRow}>
                           <strong>{option.title}</strong>
-                          {option.badge && <FeatureStatusLabel variant="active">{option.badge}</FeatureStatusLabel>}
                         </span>
                         <b>{option.price}</b>
                         {option.id === starterOption ? <em className={styles.selectedOptionLabel}>{language === "en" ? "Selected" : "Ausgewählt"}</em> : null}
@@ -639,7 +634,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 </p>
               )}
 
-              <p className={styles.notice}>{language === "en" ? "No payment, checkout or subscription billing is created here. FanMind remains an assistant: replies are prepared, but not sent automatically." : "Hier wird keine Zahlung, kein Checkout und keine Subscription-Abrechnung erstellt. FanMind bleibt ein Assistent: Antworten werden vorbereitet, aber nicht automatisch versendet."}</p>
+              <p className={styles.notice}>{language === "en" ? "No payment is triggered yet. No checkout, no debit and no subscription activation on this page. Payment processing is approved separately." : "Es wird noch keine Zahlung ausgelöst. Kein Checkout, keine Abbuchung und keine Subscription-Aktivierung auf dieser Seite. Die Freigabe der Zahlungsabwicklung erfolgt separat."}</p>
 
               <div className={styles.footerLinks}>
                 <a href={loginHref}>{copy.loginPrompt} {copy.loginLink}</a>

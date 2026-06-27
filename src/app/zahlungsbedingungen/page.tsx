@@ -17,39 +17,33 @@ const navItems = [
   { label: "Kontakt", href: "/landing-v2#kontakt" },
 ];
 
-const sections = [
-  {
-    title: "1. Kostenlos testen",
-    body: ["1 Stunde Demo-Zugang.", "Keine Zahlung, keine Kreditkarte, keine Bindung und kein Abo."],
-  },
-  {
-    title: "2. Pilot / Setup",
-    body: ["990 € einmalig.", "1 Testmonat, keine automatische Verlängerung und keine Bindung.", "Der Pilot endet, wenn er nicht aktiv fortgesetzt wird.", "Die Zahlung wird separat vorbereitet; aktuell gibt es keinen Checkout auf der Website."],
-  },
-  {
-    title: "3. Starter Flex",
-    body: ["990 € Setup plus 312 €/Monat.", "Jederzeit kündbar.", "Monatliche Abrechnung im Voraus.", "Die Zahlung wird separat vorbereitet; aktuell gibt es keinen Checkout auf der Website."],
-  },
-  {
-    title: "4. Starter 12 Monate",
-    body: ["0 € Setup plus 312 €/Monat.", "12 Monate Mindestlaufzeit.", "Monatliche Abrechnung im Voraus.", "Die Zahlung wird separat vorbereitet; aktuell gibt es keinen Checkout auf der Website."],
-  },
-  {
-    title: "5. Growth und Agency",
-    body: ["Coming Soon.", "Aktuell nicht produktiv buchbar.", "Keine Zahlung."],
-  },
-  {
-    title: "6. Zahlungsart / SEPA später",
-    body: ["Spätere Zahlung soll über einen Zahlungsanbieter wie Stripe Billing mit SEPA-Lastschrift vorbereitet werden.", "SEPA erfordert ein gültiges Mandat.", "FanMind speichert keine IBAN in der eigenen App-Datenbank.", "Abbuchungen erfolgen erst nach gültigem Zahlungsprozess und Mandat.", "Diese Website löst aktuell keine Zahlung und keine Abbuchung aus."],
-  },
-  {
-    title: "7. Zahlungsverzug",
-    body: ["Bei fehlgeschlagener Zahlung kann FanMind nach Hinweis und angemessener Frist den Zugang einschränken oder pausieren.", "Details werden im finalen Vertrag oder Angebot geregelt."],
-  },
-  {
-    title: "8. Hinweis",
-    body: ["Diese Zahlungsbedingungen sind eine MVP-Vorbereitung und müssen vor produktiver Zahlungsfreischaltung rechtlich und steuerlich final geprüft werden."],
-  },
+const trustItems = [
+  "kein Checkout auf dieser Seite",
+  "keine automatische Abbuchung",
+  "keine IBAN-Eingabe in FanMind",
+  "spätere Zahlungsfreigabe separat",
+];
+
+const packageCards = [
+  { title: "Kostenlos testen", price: "1 Stunde Demo-Zugang", bullets: ["keine Zahlung", "keine Kreditkarte", "kein Abo", "endet automatisch"] },
+  { title: "Pilot / Setup", price: "990 € einmalig", bullets: ["1 Testmonat", "keine automatische Verlängerung", "keine Bindung", "späterer Wechsel in Starter möglich"] },
+  { title: "Starter Flex", price: "990 € Setup + 312 €/Monat", bullets: ["monatliche Abrechnung im Voraus", "jederzeit kündbar", "für flexible Einstiege"] },
+  { title: "Starter 12 Monate", price: "0 € Setup + 312 €/Monat", bullets: ["12 Monate Mindestlaufzeit", "monatliche Abrechnung im Voraus", "keine Einrichtungsgebühr"] },
+  { title: "Growth & Agency", price: "Coming Soon", bullets: ["aktuell noch nicht direkt buchbar", "Freischaltung später", "derzeit keine Online-Zahlung"] },
+];
+
+const processItems = [
+  "FanMind speichert aktuell keine IBAN in der App-Datenbank",
+  "Zahlungen werden erst nach separater Freigabe aktiviert",
+  "Abbuchungen erfolgen nur mit gültigem Mandat und aktivem Zahlungsprozess",
+  "aktuell wird keine Zahlung auf dieser Website ausgelöst",
+];
+
+const noteItems = [
+  "Diese Seite beschreibt die aktuelle MVP-Vorbereitung.",
+  "Preise und Modelle dienen der strukturierten Produktfreigabe.",
+  "Rechtliche und steuerliche Prüfung erfolgt vor produktiver Zahlungsfreischaltung final.",
+  "Details zu Rechnung, Abbuchung und Mandat werden im finalen Vertrags- oder Angebotsprozess geregelt.",
 ];
 
 export default function ZahlungsbedingungenPage() {
@@ -60,9 +54,7 @@ export default function ZahlungsbedingungenPage() {
         <FanMindLogo className={styles.logo} href="/landing-v2" ariaLabel="FanMind Landingpage öffnen" />
         <nav className={styles.nav} aria-label="Zahlungsbedingungen Navigation">
           {navItems.map((item) => (
-            <a href={item.href} key={item.label}>
-              {item.label}{item.caret ? <span>▾</span> : null}
-            </a>
+            <a href={item.href} key={item.label}>{item.label}{item.caret ? <span>▾</span> : null}</a>
           ))}
         </nav>
         <div className={styles.headerActions}>
@@ -71,21 +63,37 @@ export default function ZahlungsbedingungenPage() {
         </div>
       </header>
 
-      <section className={styles.hero} aria-labelledby="payment-terms-title">
-        <p className={styles.badge}>Billing-Vorbereitung · keine Zahlung auf der Website</p>
+      <section className={`${styles.hero} ${styles.paymentHero}`} aria-labelledby="payment-terms-title">
+        <p className={styles.badge}>Billing-Vorbereitung</p>
         <h1 id="payment-terms-title">Zahlungsbedingungen</h1>
-        <p>
-          Diese Seite beschreibt die aktuell sichtbaren FanMind-Pakete und bereitet spätere Zahlungsprozesse vor. Aktuell wird hier keine Zahlung, kein Checkout, keine Subscription-Abrechnung und keine automatische Abbuchung ausgelöst.
-        </p>
+        <p>Hier findest du die aktuell geplanten Paket- und Zahlungsmodelle von FanMind. Aktuell wird auf dieser Website noch keine Zahlung ausgelöst.</p>
+        <div className={styles.trustBox} aria-label="Wichtige Zahlungs-Hinweise">
+          {trustItems.map((item) => <span key={item}>✓ {item}</span>)}
+        </div>
       </section>
 
-      <section className={styles.content} aria-label="Zahlungsbedingungen Inhalt">
-        {sections.map((section) => (
-          <article className={styles.sectionCard} key={section.title}>
-            <h2>{section.title}</h2>
-            {section.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-          </article>
-        ))}
+      <section className={styles.paymentContent} aria-label="Paket- und Zahlungsmodelle">
+        <div className={styles.packageGrid}>
+          {packageCards.map((card) => (
+            <article className={styles.packageCard} key={card.title}>
+              <h2>{card.title}</h2>
+              <strong>{card.price}</strong>
+              <ul>{card.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
+            </article>
+          ))}
+        </div>
+
+        <section className={styles.infoPanel} aria-labelledby="future-payment-title">
+          <p className={styles.badge}>keine Zahlung auf dieser Website</p>
+          <h2 id="future-payment-title">Spätere Zahlungsabwicklung</h2>
+          <p>Die spätere Zahlungsabwicklung soll über einen geeigneten Zahlungsanbieter vorbereitet werden, zum Beispiel Stripe Billing mit SEPA-Lastschrift.</p>
+          <ul>{processItems.map((item) => <li key={item}>{item}</li>)}</ul>
+        </section>
+
+        <section className={styles.infoPanel} aria-labelledby="important-notes-title">
+          <h2 id="important-notes-title">Wichtige Hinweise</h2>
+          <ul>{noteItems.map((item) => <li key={item}>{item}</li>)}</ul>
+        </section>
       </section>
 
       <footer className={styles.siteFooter}>

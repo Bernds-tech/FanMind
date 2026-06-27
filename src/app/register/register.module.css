@@ -978,3 +978,118 @@
   color: #74c9ff;
   font-weight: 800;
 }
+
+.formCard:has(.commercialOptions) {
+  max-width: 470px;
+  padding: clamp(18px, 1.8vw, 24px);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(5, 14, 33, 0.98), rgba(3, 10, 26, 0.96)) padding-box,
+    linear-gradient(135deg, rgba(0, 200, 255, 0.72), rgba(42, 112, 255, 0.52), rgba(186, 55, 255, 0.68)) border-box;
+}
+
+.formCard:has(.commercialOptions) .formHeader {
+  text-align: left;
+}
+
+.formCard:has(.commercialOptions) .formHeader p:last-child {
+  max-width: none;
+  margin-top: 9px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.formCard:has(.commercialOptions) .commercialOptions {
+  gap: 12px;
+  margin: 22px 0 18px;
+}
+
+.formCard:has(.commercialOptions) .commercialOptions legend {
+  margin-bottom: 2px;
+}
+
+.formCard:has(.commercialOptions) .optionCard {
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 13px;
+  padding: 16px;
+  border-color: rgba(107, 169, 255, 0.28);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(6, 23, 52, 0.88), rgba(8, 15, 38, 0.88));
+  box-shadow: inset 0 0 24px rgba(0, 105, 255, 0.06);
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.formCard:has(.commercialOptions) .optionCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(116, 201, 255, 0.58);
+}
+
+.formCard:has(.commercialOptions) .optionCardSelected {
+  border-color: rgba(0, 216, 255, 0.86);
+  background: linear-gradient(145deg, rgba(7, 32, 70, 0.96), rgba(15, 20, 52, 0.94));
+  box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.1), inset 0 0 34px rgba(0, 105, 255, 0.16);
+}
+
+.formCard:has(.commercialOptions) .optionMarker {
+  width: 32px;
+  height: 32px;
+  margin-top: 0;
+  font-size: 12px;
+}
+
+.formCard:has(.commercialOptions) .optionCard > span:last-child {
+  gap: 7px;
+}
+
+.formCard:has(.commercialOptions) .optionTitleRow strong {
+  font-size: 18px;
+  letter-spacing: -0.4px;
+}
+
+.formCard:has(.commercialOptions) .optionCard b {
+  color: #8eefff;
+  font-size: 15px;
+}
+
+.formCard:has(.commercialOptions) .optionCard small {
+  color: #d3def0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.formCard:has(.commercialOptions) .optionCard ul {
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.formCard:has(.commercialOptions) .formGrid {
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.formCard:has(.commercialOptions) .field {
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.formCard:has(.commercialOptions) .inputWrap {
+  min-height: 42px;
+}
+
+.formCard:has(.commercialOptions) .termsCheckbox {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.formCard:has(.commercialOptions) .primaryButton {
+  min-height: 46px;
+  margin-top: 14px;
+}
+
+.formCard:has(.commercialOptions) .notice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  line-height: 1.45;
+}
