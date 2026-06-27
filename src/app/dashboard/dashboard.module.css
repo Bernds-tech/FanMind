@@ -2225,3 +2225,31 @@
   gap: 6px;
   white-space: nowrap;
 }
+
+.simpleTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+.simpleTable th,
+.simpleTable td {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.simpleTable th {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.simpleTable td {
+  color: #e2e8f0;
+  font-size: 13px;
+}
+.simpleTable a {
+  color: #93c5fd;
+  font-weight: 900;
+}

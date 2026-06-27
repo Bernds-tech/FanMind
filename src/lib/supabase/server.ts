@@ -4170,6 +4170,41 @@ export async function getWorkspaceOpenFollowups(
 }
 
 
+
+export async function getWorkspaceFollowups(
+  workspaceId: string,
+  status?: string,
+): Promise<FollowupsResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return followupsError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const filters: Array<[string, string]> = [["workspace_id", workspaceId]];
+  if (status) filters.push(["status", status]);
+
+  const followupsResult = await postgrestSelect<FollowupRow[]>(
+    "followups",
+    accessToken,
+    FOLLOWUP_COLUMNS,
+    filters,
+    undefined,
+    false,
+    "due_date.asc.nullslast,created_at.desc",
+  );
+
+  if (followupsResult.error) {
+    return followupsError(
+      `Follow-ups konnten nicht geladen werden: ${withOptionalSchemaHint(followupsResult.error.message, "followups")}`,
+    );
+  }
+
+  return { followups: followupsResult.data ?? [], error: null };
+}
+
 export async function createTemporaryDemoWorkspace(input: {
   userId: string;
   userEmail: string;
