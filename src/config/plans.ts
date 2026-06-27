@@ -160,16 +160,16 @@ const growthUpgradeTargets: Partial<Record<FeatureKey, PlanId>> = {
 export const PLANS: Record<PlanId, PlanConfig> = {
   pilot: {
     id: "pilot",
-    name: "Pilot",
-    badge: "Pilot / Setup",
+    name: "Pilot / Setup",
+    badge: "Aktiv / verfügbar",
     priceLabel: "990 € einmalig · 1 Monat testen · keine Bindung",
     mode: "demo",
     maxProfiles: 0,
     maxContacts: null,
     contactsLabel: "Demo-Daten",
     description:
-      "Einmaliger Pilot-/Setup-Zugang für 1 Monat zum Reinschnuppern und Testen; keine automatische Verlängerung, keine Bindung, mit vorbereiteter Pflicht-Social-Synchronisation, aber ohne produktiv fertige Social-Plattformen.",
-    primaryAction: "Pilot / Setup starten",
+      "Geführter Setup- und Demo-Start für 1 Monat testen: temporärer Pilot-Zugang ohne Abo, ohne automatische Verlängerung, ohne Bindung und ohne produktive externe Social-Integrationen.",
+    primaryAction: "Pilot anfragen",
     upgradePlan: "starter",
     featureConfig: featureConfig({
       login: "active",
@@ -205,7 +205,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     maxContacts: 1000,
     contactsLabel: "bis 1.000 Kontakte",
     description:
-      "Ein produktives Profil für laufende Nutzung nach dem Setup: 990 € Einrichtung plus 299 €/Monat, monatlich kündbar und mit verpflichtender Social-Media-Synchronisation, soweit Plattformen technisch und rechtlich angebunden sind.",
+      "Produktiver MVP-Workspace für ein Profil nach dem Setup: 990 € Einrichtung plus 299 €/Monat, monatlich kündbar; externe Social-Integrationen bleiben Roadmap/Preview bis zur technischen und rechtlichen Freigabe.",
     primaryAction: "Starter wählen",
     upgradePlan: "growth",
     featureConfig: featureConfig({
@@ -226,7 +226,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       campaigns: "coming_soon",
       analytics: "upgrade",
       team_roles: "upgrade",
-      integrations: "active",
+      integrations: "preview",
       payments: "hidden",
       automatic_sending: "hidden",
     }),
@@ -236,7 +236,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "growth",
     name: "Growth",
     badge: "Coming Soon / Vorschau",
-    priceLabel: "Coming Soon · Vorschau",
+    priceLabel: "Coming Soon",
     mode: "production",
     maxProfiles: 5,
     maxContacts: 10000,
@@ -273,14 +273,14 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "agency",
     name: "Agency",
     badge: "Coming Soon / Roadmap",
-    priceLabel: "Coming Soon · Roadmap",
+    priceLabel: "Coming Soon",
     mode: "agency",
     maxProfiles: null,
     maxContacts: null,
     contactsLabel: "Coming Soon / Roadmap",
     description:
       "Roadmap-Vorschau für mehrere Profile oder Kunden-Workspaces. Multi-Client, Rollen, Analytics und Kampagnen bleiben im MVP als Vorschau markiert und werden nicht produktiv freigeschaltet.",
-    primaryAction: "Demo anfragen",
+    primaryAction: "Agency anfragen",
     featureConfig: featureConfig({
       login: "preview",
       dashboard: "preview",

@@ -14,7 +14,7 @@ import styles from "./landing-v2.module.css";
 export const metadata: Metadata = {
   title: "FanMind | KI-CRM für Creator, Clubs und Events",
   description:
-    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Follow-ups und verpflichtende Social-Media-Synchronisation für smarte Fan-Beziehungen; unfertige Plattformen bleiben klar als Coming Soon markiert.",
+    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
 };
 
 const LANDING_ROADMAP_HREF = "/landing-v2#roadmap";
@@ -739,10 +739,10 @@ const pricingPlans = [
     icon: "🚀",
     name: "Pilot / Setup",
     eyebrow: "Zum Einstieg",
-    audience: "Für Teams, die FanMind 1 Monat testen möchten.",
+    audience: "Für Teams, die FanMind 1 Monat mit geführtem Setup testen möchten.",
     pricePrefix: "",
     price: "990 € einmalig · 1 Monat testen · keine Bindung",
-    cadence: "Pilot- und Setup-Zugang",
+    cadence: "Pilot- und Setup-Zugang · kein Abo",
     cta: "Pilot anfragen",
     href: "/register?plan=pilot",
     tone: "purple",
@@ -750,11 +750,13 @@ const pricingPlans = [
     status: "Aktiv",
     features: [
       "Geführter Setup- & Demo-Start",
-      "Ziel: reinschnuppern, testen und echten Workspace erleben",
+      "Ziel: geführter Demo-Start mit temporärem Pilot-Zugang",
       "1 Monat Test-/Setup-Zugang",
-      "Keine automatische Verlängerung",
-      "KI-Antwortvorschläge testen",
-      "Memory & Follow-ups erleben",
+      "Keine automatische Verlängerung, kein Abo, keine Bindung",
+      "Demo-Workspace, Kontakte/Fans und manuelle Kontakte testen",
+      "CSV-Import minimal, Notizen und Fan-Gedächtnis testen",
+      "Follow-ups, KI-Antwortvorschläge und Fan-Analyse-Report testen",
+      "Kanäle-Roadmap / Coming Soon sichtbar",
       "Endet, wenn du danach nicht weitermachst",
     ],
   },
@@ -774,10 +776,12 @@ const pricingPlans = [
     features: [
       "990 € einmalige Einrichtungsgebühr",
       "299 € pro Monat",
-      "Kontakte & CSV-Import",
-      "KI-Antwortvorschläge",
-      "Fan-Gedächtnis / Memory",
-      "Follow-ups & Aufgaben",
+      "Ein Profil / ein produktiver MVP-Workspace",
+      "Kontakte/Fans, manuelle Kontakte & CSV-Import minimal",
+      "Notizen und Fan-Gedächtnis / Memory",
+      "Follow-ups & Aufgaben inklusive /followups",
+      "KI-Antwortvorschläge und Fan-Analyse-Report",
+      "Externe Social-Integrationen nur Roadmap/Preview",
       "Monatlich kündbar",
     ],
   },
@@ -811,7 +815,7 @@ const pricingPlans = [
     pricePrefix: "",
     price: "Coming Soon",
     cadence: "Roadmap / Vorschau",
-    cta: "Kostenlos testen",
+    cta: "Agency anfragen",
     href: "/register?plan=agency",
     tone: "purple",
     featured: false,
@@ -843,7 +847,7 @@ const pricingProofs = [
   {
     icon: "↗",
     title: "Pilot-Gebühr wird angerechnet",
-    text: "Wenn du nach dem Pilot weitermachst, wird die bereits bezahlte Setup-Gebühr angerechnet. Du zahlst dann im Starter nur 299 €/Monat.",
+    text: "Wenn du nach dem Pilot auf Starter wechselst, wird die bereits bezahlte Pilot-/Setup-Gebühr auf die Starter-Einrichtung angerechnet. Danach zahlst du 299 €/Monat.",
     tone: "green",
   },
   {
