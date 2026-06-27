@@ -58,7 +58,7 @@ function getKpiCards(
         "Kontakte mit aktueller Aktivität im ausgewählten Zeitraum.",
     },
     {
-      label: wt(locale, "Offene Wiedervorlagen"),
+      label: wt(locale, "Offene Follow-ups"),
       value: openFollowupCount.toLocaleString("de-DE"),
       meta: wt(locale, "Rückmeldungen / Aufgaben"),
       icon: "check",

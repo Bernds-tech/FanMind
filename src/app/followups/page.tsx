@@ -6,6 +6,7 @@ import {
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceFollowups,
+  getWorkspaceOpenFollowups,
   signOutSupabaseServerSession,
   type ContactRow,
   type FollowupRow,
@@ -46,9 +47,15 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
   if (!workspace) redirect("/login");
 
   const locale = await resolveWorkspaceLocale({ lang: getSingleParam(params?.lang), user: data.user });
-  const [contactsResult, followupsResult, openFollowupCountResult] = await Promise.all([
+  const [
+    contactsResult,
+    followupsResult,
+    openFollowupsResult,
+    openFollowupCountResult,
+  ] = await Promise.all([
     getWorkspaceContacts(workspace.id),
     getWorkspaceFollowups(workspace.id, status),
+    getWorkspaceOpenFollowups(workspace.id),
     getOpenFollowupCount(workspace.id),
   ]);
 
@@ -63,10 +70,19 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
         followups={followupsResult.followups}
         followupsError={followupsResult.error?.message}
         openFollowupCount={openFollowupCountResult.count}
+        dueFollowupCount={countDueOrOverdueOpenFollowups(openFollowupsResult.followups)}
         activeStatus={status}
       />
     </main>
   );
+}
+
+function countDueOrOverdueOpenFollowups(followups: FollowupRow[]): number {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return followups.filter(
+    (followup) => followup.status === "open" && followup.due_date && followup.due_date <= today,
+  ).length;
 }
 
 function FollowupsWorkspace({
@@ -78,6 +94,7 @@ function FollowupsWorkspace({
   followups,
   followupsError,
   openFollowupCount,
+  dueFollowupCount,
   activeStatus,
 }: {
   workspace: WorkspaceDashboardRow;
@@ -88,9 +105,10 @@ function FollowupsWorkspace({
   followups: FollowupRow[];
   followupsError?: string;
   openFollowupCount: number;
+  dueFollowupCount: number;
   activeStatus: "open" | "done";
 }) {
-  const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigation("followups", locale);
+  const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigation("followups", locale, dueFollowupCount);
   const contactsById = new Map(contacts.map((contact) => [contact.id, contact]));
 
   return (
@@ -104,8 +122,8 @@ function FollowupsWorkspace({
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
-        title: locale === "en" ? "Follow-ups" : "Wiedervorlagen",
-        subtitle: locale === "en" ? "Stored manual follow-up tasks for this workspace." : "Gespeicherte manuelle Follow-up-Aufgaben in diesem Workspace.",
+        title: "Follow-ups",
+        subtitle: locale === "en" ? "Manual tasks and replies that are still open." : "Manuelle Aufgaben und Rückmeldungen, die noch offen sind.",
         searchPlaceholder: locale === "en" ? "Search follow-ups ..." : "Follow-ups suchen ...",
         primaryActionLabel: wt(locale, "Zur Fanliste"),
         primaryActionHref: "/fans#fans-list",
@@ -160,7 +178,7 @@ function FollowupsWorkspace({
           </div>
         ) : (
           <div className={dashboardStyles.emptyState}>
-            <strong>{locale === "en" ? "No follow-ups found." : "Keine Wiedervorlagen gefunden."}</strong>
+            <strong>{locale === "en" ? "No follow-ups found." : "Keine Follow-ups gefunden."}</strong>
           </div>
         )}
       </section>

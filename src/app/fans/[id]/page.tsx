@@ -13,6 +13,7 @@ import {
   getWorkspaceContacts,
   getWorkspaceSocialConnections,
   getWorkspaceConversations,
+  getWorkspaceOpenFollowups,
   getWorkspaceVoiceProfile,
   markContactInboundMessagesSeen,
   signOutSupabaseServerSession,
@@ -88,6 +89,7 @@ type FanDetailWorkspaceProps = {
   conversation: ConversationRow | null;
   conversationsError?: string;
   openFollowupCount: number;
+  dueFollowupCount: number;
   notice?: string;
   conversationSummary: ConversationSummaryRow | null;
   contactAiProfile: ContactAiProfileRow | null;
@@ -168,6 +170,7 @@ function FanDetailWorkspace({
   conversation,
   conversationsError,
   openFollowupCount,
+  dueFollowupCount,
   notice,
   conversationSummary,
   contactAiProfile,
@@ -185,7 +188,7 @@ function FanDetailWorkspace({
   locale,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("fans", locale);
+    getWorkspaceNavigation("fans", locale, dueFollowupCount);
   const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const title = contact?.display_name ?? "Fan-Detail";
   return (
@@ -676,6 +679,14 @@ function ManualMemoryCard({
   );
 }
 
+function countDueOrOverdueOpenFollowups(followups: FollowupRow[]): number {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return followups.filter(
+    (followup) => followup.status === "open" && followup.due_date && followup.due_date <= today,
+  ).length;
+}
+
 function ManualFollowupCard({
   contactId,
   followups,
@@ -686,10 +697,10 @@ function ManualFollowupCard({
   locale: FanMindLanguage;
 }) {
   return (
-    <article className={styles.card}>
+    <article className={styles.card} id="followups">
       <div className={styles.cardHeader}>
         <div>
-          <h3>{locale === "en" ? "Follow-ups" : "Wiedervorlagen"}</h3>
+          <h3>Follow-ups</h3>
           <p className={styles.reportIntro}>{locale === "en" ? "Manual tasks only; nothing is sent automatically." : "Nur manuelle Aufgaben; es wird nichts automatisch gesendet."}</p>
         </div>
       </div>
@@ -710,7 +721,7 @@ function ManualFollowupCard({
       <div className={styles.compactList}>
         {followups.length ? followups.map((followup) => (
           <p key={followup.id}><strong>{followup.status ?? "open"}</strong> · {followup.reason}{followup.due_date ? ` · ${followup.due_date}` : ""}</p>
-        )) : <p className={styles.muted}>{locale === "en" ? "No follow-ups yet." : "Noch keine Wiedervorlagen."}</p>}
+        )) : <p className={styles.muted}>{locale === "en" ? "No follow-ups yet." : "Noch keine Follow-ups."}</p>}
       </div>
     </article>
   );
@@ -1820,6 +1831,7 @@ export default async function FanDetailPage({
     initialMessagesResult,
     conversationsResult,
     openFollowupCountResult,
+    workspaceOpenFollowupsResult,
     contactAiProfileResult,
     fanAnalysisReportResult,
     workspaceVoiceProfileResult,
@@ -1837,6 +1849,7 @@ export default async function FanDetailPage({
           : Promise.resolve(null),
         getWorkspaceConversations(workspace.id),
         getOpenFollowupCount(workspace.id),
+        getWorkspaceOpenFollowups(workspace.id),
         contact
           ? getContactAiProfile(workspace.id, contact.id)
           : Promise.resolve(null),
@@ -1848,7 +1861,7 @@ export default async function FanDetailPage({
           ? getContactReplyTarget(workspace.id, contact.id, "facebook_messages")
           : Promise.resolve(null),
       ])
-    : [null, null, null, null, null, null, null, null, null];
+    : [null, null, null, null, null, null, null, null, null, null];
 
   let messagesResult = initialMessagesResult;
 
@@ -1931,6 +1944,7 @@ export default async function FanDetailPage({
         memories={memoriesResult?.memories ?? []}
         memoriesError={memoriesResult?.error?.message}
         openFollowupCount={openFollowupCountResult?.count ?? 0}
+        dueFollowupCount={countDueOrOverdueOpenFollowups(workspaceOpenFollowupsResult?.followups ?? [])}
         notice={normalizeParam(pageSearchParams?.notice)}
         conversationSummary={conversationSummaryResult?.summary ?? null}
         contactAiProfile={contactAiProfileResult?.profile ?? null}

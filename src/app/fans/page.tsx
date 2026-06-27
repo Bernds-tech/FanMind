@@ -122,8 +122,9 @@ function FansWorkspace({
   noticeError,
   locale,
 }: FansWorkspaceProps) {
+  const dueFollowupCount = countDueOrOverdueOpenFollowups(followups);
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("fans", locale);
+    getWorkspaceNavigation("fans", locale, dueFollowupCount);
   const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const fanGroups = groupContactsByFan(
     contacts,
@@ -1057,20 +1058,28 @@ function formatReplyChannel(
   return "Kanal wählen";
 }
 
+function countDueOrOverdueOpenFollowups(followups: FollowupRow[]): number {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return followups.filter(
+    (followup) => followup.status === "open" && followup.due_date && followup.due_date <= today,
+  ).length;
+}
+
 function renderNextFollowup(followup: FollowupRow | null) {
   if (!followup) {
     return <span className={styles.mutedText}>—</span>;
   }
 
   return (
-    <span className={styles.followupCell}>
+    <Link className={styles.followupCellLink} href={`/fans/${followup.contact_id}#followups`}>
       {followup.due_date ? (
         <span className={styles.followupDate}>
           {formatDateOnly(followup.due_date)}
         </span>
       ) : null}
       <span className={styles.followupReason}>{followup.reason}</span>
-    </span>
+    </Link>
   );
 }
 
