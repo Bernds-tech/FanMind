@@ -10,7 +10,8 @@ export type WorkspaceRouteKey =
   | "onboarding"
   | "settings"
   | "top-fans"
-  | "reactivation";
+  | "reactivation"
+  | "followups";
 
 export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey, locale: FanMindLanguage = "de"): {
   mainNavigation: WorkspaceNavLink[];
@@ -25,6 +26,11 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey, locale: F
         active: activeRoute === "dashboard",
       },
       { label: wt(locale, "Fans"), href: "/fans", active: activeRoute === "fans" },
+      {
+        label: locale === "en" ? "Follow-ups" : "Wiedervorlagen",
+        href: "/followups",
+        active: activeRoute === "followups",
+      },
       {
         label: wt(locale, "Onboarding"),
         href: "/onboarding",

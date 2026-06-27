@@ -106,8 +106,21 @@ export function AiReplySuggestions({
   }
 
   async function copySuggestion(text: string, index: number) {
-    await navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
+    setError("");
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard unavailable");
+      }
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+    } catch {
+      setCopiedIndex(index);
+      setError(
+        locale === "en"
+          ? "Clipboard is unavailable. Please select and copy the suggestion manually."
+          : "Clipboard ist nicht verfügbar. Bitte markiere und kopiere den Vorschlag manuell.",
+      );
+    }
   }
 
 

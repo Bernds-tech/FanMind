@@ -482,6 +482,86 @@ export async function saveSuggestedFollowup(input: {
   return { ok: true, message: "Follow-up gespeichert." };
 }
 
+export async function saveManualFanMessage(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  const locale = formValue(formData, "lang") === "en" ? "en" : "de";
+  const langParam = locale === "en" ? "?lang=en" : "";
+  await ensureContactInWorkspace(workspace.id, contactId);
+
+  const direction = formValue(formData, "direction") === "outbound" ? "outbound" : "inbound";
+  const result = await createManualConversationMessage({
+    workspaceId: workspace.id,
+    contactId,
+    direction,
+    sourcePlatform: formValue(formData, "source_platform") || "manual",
+    messageType: "manual",
+    sourceType: "manual_note",
+    authorLabel: direction === "inbound" ? "Fan" : "Team",
+    content: formValue(formData, "content"),
+  });
+
+  if (result.error) {
+    redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=message_save_failed`);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/fans");
+  revalidatePath("/dashboard");
+  redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=message_saved`);
+}
+
+export async function saveManualMemory(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  const locale = formValue(formData, "lang") === "en" ? "en" : "de";
+  const langParam = locale === "en" ? "?lang=en" : "";
+  await ensureContactInWorkspace(workspace.id, contactId);
+
+  const result = await createContactMemory({
+    workspaceId: workspace.id,
+    contactId,
+    content: formValue(formData, "content"),
+    importance: formValue(formData, "importance") || "normal",
+    type: formValue(formData, "type") || "note",
+  });
+
+  if (result.error) {
+    redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=memory_save_failed`);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/dashboard");
+  redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=memory_saved`);
+}
+
+export async function saveManualFollowup(formData: FormData) {
+  const workspace = await getCurrentWorkspaceOrThrow();
+  const contactId = formValue(formData, "contact_id");
+  const locale = formValue(formData, "lang") === "en" ? "en" : "de";
+  const langParam = locale === "en" ? "?lang=en" : "";
+  await ensureContactInWorkspace(workspace.id, contactId);
+
+  const result = await createContactFollowup({
+    workspaceId: workspace.id,
+    contactId,
+    reason: formValue(formData, "reason"),
+    dueDate: formValue(formData, "due_date"),
+    priority: formValue(formData, "priority") || "normal",
+    status: "open",
+  });
+
+  if (result.error) {
+    redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=followup_save_failed`);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/fans");
+  revalidatePath("/followups");
+  revalidatePath("/dashboard");
+  redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=followup_saved`);
+}
+
 export async function saveInboundMessage(formData: FormData) {
   const workspace = await getCurrentWorkspaceOrThrow();
   const contactId = formValue(formData, "contact_id");

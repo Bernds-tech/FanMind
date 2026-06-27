@@ -54,6 +54,9 @@ import { FanActionMenu } from "./FanActionMenu";
 import {
   saveContactInternalNotes,
   saveFacebookReplyTarget,
+  saveManualFanMessage,
+  saveManualFollowup,
+  saveManualMemory,
   syncFacebookChatForContact,
 } from "../actions";
 import {
@@ -527,6 +530,7 @@ function FanDetailContent({
                 demoConnectionsDisabled={demoConnectionsDisabled}
               />
             ) : null}
+            <ManualMessageComposer contact={contact} locale={locale} />
             <div className={styles.timeline}>
               {timeline.length ? (
                 timeline.map((item) => (
@@ -613,6 +617,8 @@ function FanDetailContent({
           aria-label={locale === "en" ? "Fan analysis report and AI reply suggestions" : "Fan-Analyse-Report und KI-Antwortvorschläge"}
         >
           <FanNotesCard contact={contact} locale={locale} />
+          <ManualMemoryCard contactId={contact.id} memories={memories} locale={locale} />
+          <ManualFollowupCard contactId={contact.id} followups={followups} locale={locale} />
           <FanMemoryCard
             contactId={contact.id}
             report={fanAnalysisReport}
@@ -625,6 +631,140 @@ function FanDetailContent({
         </aside>
       </section>
     </>
+  );
+}
+
+function ManualMessageComposer({
+  contact,
+  locale,
+}: {
+  contact: ContactRow;
+  locale: FanMindLanguage;
+}) {
+  return (
+    <form action={saveManualFanMessage} className={styles.manualActionForm}>
+      <input name="contact_id" type="hidden" value={contact.id} />
+      <input name="lang" type="hidden" value={locale} />
+      <div className={styles.formRow}>
+        <label>
+          <span>{locale === "en" ? "Direction" : "Richtung"}</span>
+          <select name="direction" defaultValue="inbound">
+            <option value="inbound">{locale === "en" ? "Inbound" : "Eingehend"}</option>
+            <option value="outbound">{locale === "en" ? "Outbound" : "Ausgehend"}</option>
+          </select>
+        </label>
+        <label>
+          <span>{locale === "en" ? "Channel" : "Kanal"}</span>
+          <select name="source_platform" defaultValue={contact.source_platform ?? "manual"}>
+            <option value="manual">Manuell</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="tiktok">TikTok</option>
+            <option value="telegram">Telegram</option>
+            <option value="email">E-Mail</option>
+            <option value="webform">Webformular</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        <span>{locale === "en" ? "New internal message" : "Neue interne Nachricht"}</span>
+        <textarea
+          name="content"
+          placeholder={locale === "en" ? "Paste or type the message. It will only be stored in this workspace." : "Nachricht einfügen oder eingeben. Sie wird nur in diesem Workspace gespeichert."}
+          required
+        />
+      </label>
+      <div className={styles.replyFooter}>
+        <small className={styles.muted}>{locale === "en" ? "No automatic sending." : "Keine automatische Sendefunktion."}</small>
+        <button className={dashboardStyles.primaryButton} type="submit">
+          {locale === "en" ? "Save message" : "Nachricht speichern"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ManualMemoryCard({
+  contactId,
+  memories,
+  locale,
+}: {
+  contactId: string;
+  memories: MemoryRow[];
+  locale: FanMindLanguage;
+}) {
+  return (
+    <article className={styles.card}>
+      <div className={styles.cardHeader}>
+        <div>
+          <h3>{locale === "en" ? "Memories" : "Memories"}</h3>
+          <p className={styles.reportIntro}>{locale === "en" ? "Store durable fan context for this workspace." : "Dauerhaften Fan-Kontext in diesem Workspace speichern."}</p>
+        </div>
+      </div>
+      <form action={saveManualMemory} className={styles.manualActionForm}>
+        <input name="contact_id" type="hidden" value={contactId} />
+        <input name="lang" type="hidden" value={locale} />
+        <textarea name="content" required placeholder={locale === "en" ? "Important preference, context or promise…" : "Wichtige Präferenz, Kontext oder Zusage …"} />
+        <div className={styles.formRow}>
+          <select name="importance" defaultValue="normal" aria-label="Wichtigkeit">
+            <option value="low">Low</option>
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+          </select>
+          <select name="type" defaultValue="note" aria-label="Typ">
+            <option value="note">Note</option>
+            <option value="preference">Preference</option>
+            <option value="promise">Promise</option>
+          </select>
+        </div>
+        <button className={dashboardStyles.secondaryButton} type="submit">{locale === "en" ? "Save memory" : "Memory speichern"}</button>
+      </form>
+      <div className={styles.compactList}>
+        {memories.length ? memories.map((memory) => (
+          <p key={memory.id}><strong>{memory.importance ?? "normal"}</strong> · {memory.content}</p>
+        )) : <p className={styles.muted}>{locale === "en" ? "No memories yet." : "Noch keine Memories."}</p>}
+      </div>
+    </article>
+  );
+}
+
+function ManualFollowupCard({
+  contactId,
+  followups,
+  locale,
+}: {
+  contactId: string;
+  followups: FollowupRow[];
+  locale: FanMindLanguage;
+}) {
+  return (
+    <article className={styles.card}>
+      <div className={styles.cardHeader}>
+        <div>
+          <h3>{locale === "en" ? "Follow-ups" : "Wiedervorlagen"}</h3>
+          <p className={styles.reportIntro}>{locale === "en" ? "Manual tasks only; nothing is sent automatically." : "Nur manuelle Aufgaben; es wird nichts automatisch gesendet."}</p>
+        </div>
+      </div>
+      <form action={saveManualFollowup} className={styles.manualActionForm}>
+        <input name="contact_id" type="hidden" value={contactId} />
+        <input name="lang" type="hidden" value={locale} />
+        <input name="reason" required placeholder={locale === "en" ? "Task/title" : "Aufgabe/Titel"} />
+        <div className={styles.formRow}>
+          <input name="due_date" type="date" />
+          <select name="priority" defaultValue="normal" aria-label="Priorität">
+            <option value="low">Low</option>
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <button className={dashboardStyles.secondaryButton} type="submit">{locale === "en" ? "Save follow-up" : "Follow-up speichern"}</button>
+      </form>
+      <div className={styles.compactList}>
+        {followups.length ? followups.map((followup) => (
+          <p key={followup.id}><strong>{followup.status ?? "open"}</strong> · {followup.reason}{followup.due_date ? ` · ${followup.due_date}` : ""}</p>
+        )) : <p className={styles.muted}>{locale === "en" ? "No follow-ups yet." : "Noch keine Wiedervorlagen."}</p>}
+      </div>
+    </article>
   );
 }
 
