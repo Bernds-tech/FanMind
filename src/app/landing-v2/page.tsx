@@ -713,6 +713,7 @@ const landingFooterColumns = [
       { label: "Datenschutz", href: "#datenschutz-kontrolle" },
       { label: "Impressum", href: "#impressum" },
       { label: "AGB", href: "#agb" },
+      { label: "Zahlungsbedingungen", href: "/zahlungsbedingungen" },
     ],
   },
   {
@@ -2261,6 +2262,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           ))}
         </div>
 
+        <p className={styles.pricingTermsLink}>
+          <a href="/zahlungsbedingungen">{t("Zahlungsbedingungen")}</a>
+        </p>
+
         <div className={styles.pricingProofBar}>
           {localizedPricingProofs.map((proof) => (
             <article data-tone={proof.tone} key={proof.title}>
@@ -2539,6 +2544,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </a>
           <a id="agb" href="#agb">
             {t("AGB")}
+          </a>
+          <a id="zahlungsbedingungen" href="/zahlungsbedingungen">
+            {t("Zahlungsbedingungen")}
           </a>
           <a id="cookies" href="#cookies">
             Cookies

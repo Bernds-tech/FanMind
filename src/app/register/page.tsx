@@ -4,6 +4,7 @@ import { FormEvent, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
 import { getRegistrationCommercialTerms, isPlanId, resolvePlanId, type CommercialOption, type ProductiveCommercialOption } from "@/lib/plans";
+import { PAYMENT_TERMS_VERSION, getBillingProvider, getInitialBillingStatus, getPaymentCollectionMethod, requiresPaymentTermsAcceptance } from "@/lib/billing";
 import type { PlanId } from "@/config/plans";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import { FanMindLogo } from "@/components/FanMindLogo";
@@ -343,6 +344,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const copy = fanmindCopy[language].register;
   const loginHref = localizedPath("/login", language);
   const selectedOnboardingHref = selectedPlanId === "pilot" || selectedPlanId === "starter" ? onboardingHref(selectedPlanId, language) : onboardingHref("starter", language);
+  const paymentTermsHref = language === "en" ? "/zahlungsbedingungen?lang=en" : "/zahlungsbedingungen";
   const planSelectionCopy = getPlanSelectionCopy(language);
   const starterOptionsCopy = getStarterOptionsCopy(language);
   const [starterOption, setStarterOption] = useState<StarterOfferOptionId>("starter_paid_setup");
@@ -377,6 +379,13 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
     const selectedCommercialOption: ProductiveCommercialOption | StarterOfferOptionId = selectedPlanId === "starter" && (commercialOptionValue === "starter_paid_setup" || commercialOptionValue === "starter_no_setup_commitment")
       ? commercialOptionValue
       : "pilot_only";
+    const paymentTermsAccepted = formData.get("paymentTermsAccepted") === "on";
+
+    if (requiresPaymentTermsAcceptance(selectedPlanId) && !paymentTermsAccepted) {
+      setError(language === "en" ? "Please accept the payment terms before continuing." : "Bitte akzeptiere die Zahlungsbedingungen, bevor du fortfährst.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const supabase = createSupabaseBrowserClient();
@@ -392,6 +401,12 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             message: message || undefined,
             plan_id: selectedPlanId,
             commercial_option: selectedCommercialOption,
+            payment_terms_version: PAYMENT_TERMS_VERSION,
+            payment_terms_accepted_at: paymentTermsAccepted ? new Date().toISOString() : undefined,
+            payment_terms_accepted: paymentTermsAccepted || undefined,
+            billing_provider: getBillingProvider(),
+            payment_collection_method: getPaymentCollectionMethod(selectedPlanId, selectedCommercialOption),
+            billing_status: getInitialBillingStatus(selectedPlanId, selectedCommercialOption),
           },
         },
       });
@@ -593,6 +608,17 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 </div>
               </label>
 
+
+              <label className={styles.termsCheckbox}>
+                <input type="checkbox" name="paymentTermsAccepted" required={requiresPaymentTermsAcceptance(selectedPlanId)} />
+                <span>
+                  {language === "en"
+                    ? "I have read the payment terms and acknowledge that no payment is collected here. Payment processing follows separately after setup/approval."
+                    : "Ich habe die Zahlungsbedingungen gelesen und akzeptiere, dass hier noch keine Zahlung ausgelöst wird. Die Zahlungsabwicklung erfolgt separat nach Setup-/Freigabeprozess."} {" "}
+                  <a href={paymentTermsHref} target="_blank" rel="noreferrer">{language === "en" ? "Payment terms" : "Zahlungsbedingungen"}</a>
+                </span>
+              </label>
+
               <button className={styles.primaryButton} type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (language === "en" ? "Creating account…" : "Konto wird erstellt…") : copy.submit} <span>→</span>
               </button>
@@ -618,6 +644,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.footerLinks}>
                 <a href={loginHref}>{copy.loginPrompt} {copy.loginLink}</a>
                 <a href={landingPath(language)}>{copy.landing}</a>
+                <a href={paymentTermsHref}>{language === "en" ? "Payment terms" : "Zahlungsbedingungen"}</a>
               </div>
             </form>
           ) : (
@@ -641,6 +668,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.footerLinks}>
                 <a href={loginHref}>{copy.loginPrompt} {copy.loginLink}</a>
                 <a href={landingPath(language)}>{copy.landing}</a>
+                <a href={paymentTermsHref}>{language === "en" ? "Payment terms" : "Zahlungsbedingungen"}</a>
               </div>
             </section>
           )}

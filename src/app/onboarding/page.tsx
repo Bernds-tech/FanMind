@@ -319,7 +319,7 @@ function OnboardingWorkspace({
             <strong>Pilot / Setup</strong>
             <p>990 € einmalig · 1 Monat testen · persönlich begleitet</p>
             <strong>Starter</strong>
-            <p>990 € Einrichtung + 299 €/Monat · monatlich kündbar</p>
+            <p>990 € Einrichtung + 312 €/Monat · monatlich kündbar</p>
             <p>
               Wenn du nach dem Pilot weitermachst, wird die Setup-Gebühr
               angerechnet.

@@ -8579,3 +8579,16 @@
   background: linear-gradient(180deg, #fde68a, #f59e0b);
   box-shadow: 0 8px 18px rgba(245, 158, 11, 0.16);
 }
+
+
+.pricingTermsLink {
+  position: relative;
+  z-index: 1;
+  margin: 16px 0 0;
+  text-align: center;
+}
+
+.pricingTermsLink a {
+  color: #7fd7ff;
+  font-weight: 800;
+}

@@ -229,9 +229,10 @@ export function getCommercialOptionLabel(commercialOption: CommercialOption | Pr
   switch (commercialOption) {
     case "pilot_only":
       return "Pilot / Setup · 990 € einmalig · 1 Monat testen · keine Bindung";
-    case "starter_12m_setup_waived":
     case "starter_paid_setup":
-      return "Starter · 990 € Einrichtung + 299 €/Monat · monatlich kündbar";
+      return "Starter Flex · 990 € Einrichtung + 312 €/Monat · monatlich kündbar";
+    case "starter_no_setup_commitment":
+      return "Starter 12 Monate · 0 € Einrichtung + 312 €/Monat · 12 Monate Bindung";
     case "growth_preview":
       return "Growth Vorschau";
     case "agency_preview":

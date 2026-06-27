@@ -329,6 +329,7 @@ const englishCopy: Record<string, string> = {
   "🛡 Persönliche Anfrage statt automatischem Newsletter.": "🛡 Personal request instead of automated newsletter.",
   "© 2025 FanMind. Alle Rechte vorbehalten.": "© 2025 FanMind. All rights reserved.",
   "Datenschutz": "Privacy",
+  "Zahlungsbedingungen": "Payment terms",
   "Impressum": "Legal notice",
   "AGB": "Terms",
   "Nach oben": "Back to top",
