@@ -94,9 +94,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         label: "1",
         badge: "Active",
         title: "Start Pilot / Setup",
-        price: "€990 one-time · 1 test month · no commitment",
-        description: "Guided setup/pilot month as a real test month. No automatic renewal; if you do not continue, the pilot ends.",
-        bullets: ["no commitment", "no automatic renewal", "paid setup fee is credited if you continue with Starter"],
+        price: "€990 one-time · 1 test month",
+        description: "Guided setup month. No automatic renewal.",
+        bullets: ["no commitment", "no automatic renewal"],
         href: registerPlanHref("pilot", language),
         cta: "Start Pilot / Setup",
       },
@@ -105,8 +105,8 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         badge: "Active",
         title: "Start Starter",
         price: "€312/month",
-        description: "Starter includes two visible options: Starter Flex or Starter 12 months.",
-        bullets: ["Starter Flex: €990 setup + €312/month", "cancel anytime", "Starter 12 months: €0 setup + €312/month", "12-month commitment"],
+        description: "Two options for your productive start.",
+        bullets: ["Starter Flex: €990 setup", "Starter 12 months: €0 setup"],
         href: registerPlanHref("starter", language),
         cta: "Choose Starter",
       },
@@ -115,8 +115,8 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         badge: "Preview",
         title: "Growth",
         price: "Coming Soon",
-        description: "Not directly available yet.",
-        bullets: ["Coming Soon / roadmap preview", "not productively bookable yet", "start with Pilot / Setup or Starter for the Produkt"],
+        description: "Roadmap preview.",
+        bullets: ["Roadmap"],
         href: registerPlanHref("growth", language),
         cta: "Learn more",
       },
@@ -125,8 +125,8 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
         badge: "Demo",
         title: "Agency",
         price: "Coming Soon",
-        description: "Intro call; not productively available yet.",
-        bullets: ["Coming Soon / roadmap preview", "not productively bookable yet", "scope agency needs first"],
+        description: "Roadmap preview.",
+        bullets: ["Roadmap"],
         href: registerPlanHref("agency", language),
         cta: "Learn more",
       },
@@ -138,9 +138,9 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       label: "1",
       badge: "Aktiv",
       title: "Pilot / Setup starten",
-      price: "990 € einmalig · 1 Testmonat · keine Bindung",
-      description: "Geführter Setup-/Pilotmonat als echter Testmonat. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.",
-      bullets: ["keine Bindung", "keine automatische Verlängerung", "bezahlte Setup-Gebühr wird beim Starter angerechnet"],
+      price: "990 € einmalig · 1 Testmonat",
+      description: "Geführter Setup-Monat. Keine automatische Verlängerung.",
+      bullets: ["keine Bindung", "keine automatische Verlängerung"],
       href: registerPlanHref("pilot", language),
       cta: "Pilot / Setup starten",
     },
@@ -149,8 +149,8 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       badge: "Aktiv",
       title: "Starter starten",
       price: "312 €/Monat",
-      description: "Starter umfasst zwei sichtbare Optionen: Starter Flex oder Starter 12 Monate.",
-      bullets: ["Starter Flex: 990 € Setup + 312 €/Monat", "jederzeit kündbar", "Starter 12 Monate: 0 € Setup + 312 €/Monat", "12 Monate Bindung"],
+      description: "Zwei Optionen für deinen Produktivstart.",
+      bullets: ["Starter Flex: 990 € Setup", "Starter 12 Monate: 0 € Setup"],
       href: registerPlanHref("starter", language),
       cta: "Starter wählen",
     },
@@ -159,8 +159,8 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       badge: "Vorschau",
       title: "Growth",
       price: "Coming Soon",
-      description: "Noch nicht direkt verfügbar.",
-      bullets: ["Coming Soon / Roadmap-Vorschau", "noch nicht produktiv buchbar", "für den Produkt mit Pilot / Setup oder Starter starten"],
+      description: "Roadmap-Vorschau.",
+      bullets: ["Roadmap"],
       href: registerPlanHref("growth", language),
       cta: "Mehr erfahren",
     },
@@ -169,8 +169,8 @@ function getPlanSelectionCopy(language: FanMindLanguage): PlanSelectionCopy[] {
       badge: "Demo",
       title: "Agency",
       price: "Coming Soon",
-      description: "Erstgespräch; noch nicht direkt produktiv verfügbar.",
-      bullets: ["Coming Soon / Roadmap-Vorschau", "noch nicht produktiv buchbar", "Agenturbedarf zuerst besprechen"],
+      description: "Roadmap-Vorschau.",
+      bullets: ["Roadmap"],
       href: registerPlanHref("agency", language),
       cta: "Mehr erfahren",
     },
@@ -184,15 +184,15 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
         id: "starter_paid_setup",
         title: "Starter Flex",
         price: "€990 setup + €312/month",
-        description: "For teams that want to start without a long commitment.",
-        bullets: ["one-time setup", "cancel monthly", "fast productive start"],
+        description: "Cancel anytime",
+        bullets: ["one-time setup", "cancel monthly"],
       },
       {
         id: "starter_no_setup_commitment",
         title: "Starter 12 months",
         price: "€0 setup + €312/month",
-        description: "For teams that want to start directly with a 12-month term.",
-        bullets: ["no setup fee", "12-month term", "monthly billing"],
+        description: "12-month commitment",
+        bullets: ["no setup fee", "12-month term"],
       },
     ];
   }
@@ -202,15 +202,15 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
       id: "starter_paid_setup",
       title: "Starter Flex",
       price: "990 € Setup + 312 €/Monat",
-      description: "Für Teams, die ohne lange Bindung starten möchten.",
-      bullets: ["einmalige Einrichtung", "monatlich kündbar", "schneller produktiver Start"],
+      description: "Jederzeit kündbar",
+      bullets: ["einmalige Einrichtung", "monatlich kündbar"],
     },
     {
       id: "starter_no_setup_commitment",
       title: "Starter 12 Monate",
       price: "0 € Setup + 312 €/Monat",
-      description: "Für Teams, die direkt mit 12 Monaten Laufzeit starten möchten.",
-      bullets: ["keine Einrichtungsgebühr", "12 Monate Laufzeit", "monatliche Abrechnung"],
+      description: "12 Monate Bindung",
+      bullets: ["keine Einrichtungsgebühr", "12 Monate Laufzeit"],
     },
   ];
 }
@@ -468,7 +468,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             <div className={styles.planIntro}>
               <p className={styles.eyebrow}>{language === "en" ? "Setup first" : "Setup zuerst"}</p>
               <h1>{language === "en" ? "Choose your FanMind entry" : "Wähle deinen FanMind-Einstieg"}</h1>
-              <p>{language === "en" ? "Starter shows two Produkt entry options: setup fee plus monthly cancellation, or no setup fee with a 12-month commitment." : "Starter zeigt zwei Produkt-Einstiege: Einrichtung plus monatliche Kündbarkeit oder ohne Einrichtung mit 12 Monaten Bindung."}</p>
+              <p>{language === "en" ? "Compact overview for Pilot, Starter and roadmap." : "Kompakte Paketübersicht für Pilot, Starter und Roadmap."}</p>
             </div>
 
             {hasInvalidPlan && (
@@ -513,7 +513,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               <div className={styles.formHeader}>
                 <p className={styles.eyebrow}>{selectedPlanId === "pilot" ? "Pilot / Setup" : "Starter-Paket"}</p>
                 <h1>{selectedPlanId === "pilot" ? (language === "en" ? "Start Pilot / Setup" : "Pilot / Setup starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
-                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time · 1 test month · no commitment. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Testmonat · keine Bindung. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Choose the right Starter variant. Registration creates your access. No payment is triggered here yet." : "Wähle die passende Starter-Variante. Die Registrierung legt deinen Zugang an. Eine Zahlung wird hier noch nicht ausgelöst.")}</p>
+                <p>{selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time · 1 test month. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Testmonat. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Choose your Starter option. No payment is triggered here." : "Wähle deine Starter-Variante. Hier wird noch keine Zahlung ausgelöst.")}</p>
               </div>
 
               {selectedPlanId === "starter" && (
@@ -573,7 +573,8 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 </div>
               </label>
 
-              <label className={styles.field}>
+              <div className={styles.formGrid}>
+                <label className={styles.field}>
                 <span>{copy.organization}</span>
                 <div className={styles.inputWrap}>
                   <span aria-hidden="true">▤</span>
@@ -596,10 +597,12 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 </div>
               </label>
 
+              </div>
+
               <label className={styles.field}>
                 <span>{copy.message}</span>
                 <div className={styles.textareaWrap}>
-                  <textarea name="nachricht" placeholder={language === "en" ? "What would you like to improve first with FanMind?" : "Was möchtest du mit FanMind zuerst verbessern?"} rows={2} />
+                  <textarea name="nachricht" placeholder={language === "en" ? "What would you like to improve first with FanMind?" : "Was möchtest du mit FanMind zuerst verbessern?"} rows={1} />
                 </div>
               </label>
 
@@ -608,8 +611,8 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 <input type="checkbox" name="paymentTermsAccepted" required={requiresPaymentTermsAcceptance(selectedPlanId)} />
                 <span>
                   {language === "en"
-                    ? "I have read the payment terms and acknowledge that no payment is collected here. Payment processing follows separately after setup/approval."
-                    : "Ich habe die Zahlungsbedingungen gelesen und akzeptiere, dass hier noch keine Zahlung ausgelöst wird. Die Zahlungsabwicklung erfolgt separat nach Setup-/Freigabeprozess."} {" "}
+                    ? "I accept the payment terms and understand that no payment is collected here."
+                    : "Ich akzeptiere die Zahlungsbedingungen. Mir ist bewusst, dass hier noch keine Zahlung ausgelöst wird."} {" "}
                   <a href={paymentTermsHref} target="_blank" rel="noreferrer">{language === "en" ? "Payment terms" : "Zahlungsbedingungen"}</a>
                 </span>
               </label>
@@ -634,7 +637,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 </p>
               )}
 
-              <p className={styles.notice}>{language === "en" ? "No payment is triggered yet. No checkout, no debit and no subscription activation on this page. Payment processing is approved separately." : "Es wird noch keine Zahlung ausgelöst. Kein Checkout, keine Abbuchung und keine Subscription-Aktivierung auf dieser Seite. Die Freigabe der Zahlungsabwicklung erfolgt separat."}</p>
+              <p className={styles.notice}>{language === "en" ? "No payment on this page. No checkout, no debit, no subscription activation." : "Keine Zahlung auf dieser Seite. Kein Checkout, keine Abbuchung, keine Subscription-Aktivierung."}</p>
 
               <div className={styles.footerLinks}>
                 <a href={loginHref}>{copy.loginPrompt} {copy.loginLink}</a>
