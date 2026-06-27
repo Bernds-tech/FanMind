@@ -50,13 +50,10 @@ import {
   type ReplyTargetAction,
 } from "@/lib/sourceContext";
 import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
-import { FanAnalysisReport } from "./FanAnalysisReport";
+import { FanContextPanel } from "./FanContextPanel";
 import { FanActionMenu } from "./FanActionMenu";
 import {
-  saveContactInternalNotes,
   saveFacebookReplyTarget,
-  saveManualFollowup,
-  saveManualMemory,
   syncFacebookChatForContact,
 } from "../actions";
 import {
@@ -189,7 +186,8 @@ function FanDetailWorkspace({
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("fans", locale, dueFollowupCount);
-  const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
+  const userLabel =
+    userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const title = contact?.display_name ?? "Fan-Detail";
   return (
     <WorkspaceShell
@@ -361,8 +359,12 @@ function FanDetailContent({
       <section className={styles.contactHeader} aria-label="Fan-Workbench">
         <div className={styles.contactHeaderTop}>
           <div>
-            <p className={dashboardStyles.eyebrow}>{wt(locale, "Fan-Aktionen")}</p>
-            <h2>{contact.display_name || contact.handle || "Unbenannter Fan"}</h2>
+            <p className={dashboardStyles.eyebrow}>
+              {wt(locale, "Fan-Aktionen")}
+            </p>
+            <h2>
+              {contact.display_name || contact.handle || "Unbenannter Fan"}
+            </h2>
           </div>
           {demoConnectionsDisabled ? (
             <span className={styles.demoModeBadge}>
@@ -370,7 +372,9 @@ function FanDetailContent({
               <small>{wt(locale, "Externe Verbindungen deaktiviert")}</small>
             </span>
           ) : null}
-          <FanActionMenu fanName={contact.display_name || contact.handle || "Fan"} />
+          <FanActionMenu
+            fanName={contact.display_name || contact.handle || "Fan"}
+          />
         </div>
         <dl className={styles.headerMetrics}>
           <div className={styles.metric}>
@@ -486,10 +490,12 @@ function FanDetailContent({
             ) : null}
             {demoConnectionsDisabled ? (
               <p className={styles.demoCompactNotice}>
-                Demo-Modus: Externe Kanalzugriffe sind deaktiviert. KI-Vorschläge und interne Bearbeitung können getestet werden.
+                Demo-Modus: Externe Kanalzugriffe sind deaktiviert.
+                KI-Vorschläge und interne Bearbeitung können getestet werden.
               </p>
             ) : null}
-            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) && !demoConnectionsDisabled ? (
+            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) &&
+            !demoConnectionsDisabled ? (
               <div className={styles.syncBox}>
                 <p className={styles.syncHint}>
                   Facebook-Chat zuletzt synchronisiert:{" "}
@@ -522,7 +528,8 @@ function FanDetailContent({
                 )}
               </div>
             ) : null}
-            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) && !demoConnectionsDisabled ? (
+            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) &&
+            !demoConnectionsDisabled ? (
               <FacebookReplyTargetCard
                 contact={contact}
                 target={facebookReplyTarget}
@@ -606,7 +613,11 @@ function FanDetailContent({
             modes={defaultReplyModes}
             originalChannelAction={{
               href: originalChannelAction.href,
-              label: getOriginalChannelButtonLabel(originalChannelAction, messages, contact),
+              label: getOriginalChannelButtonLabel(
+                originalChannelAction,
+                messages,
+                contact,
+              ),
             }}
             demoConnectionsDisabled={demoConnectionsDisabled}
             locale={locale}
@@ -615,18 +626,16 @@ function FanDetailContent({
 
         <aside
           className={styles.copilot}
-          aria-label={locale === "en" ? "Fan analysis report and AI reply suggestions" : "Fan-Analyse-Report und KI-Antwortvorschläge"}
+          aria-label={locale === "en" ? "Fan context" : "Fan-Kontext"}
         >
-          <FanNotesCard contact={contact} locale={locale} />
-          <ManualMemoryCard contactId={contact.id} memories={memories} locale={locale} />
-          <ManualFollowupCard contactId={contact.id} followups={followups} locale={locale} />
-          <FanMemoryCard
-            contactId={contact.id}
+          <FanContextPanel
+            contact={contact}
+            memories={memories}
+            memoriesError={memoriesError}
+            followups={followups}
             report={fanAnalysisReport}
             reportError={fanAnalysisReportError}
-            memories={memories}
             hasNewMessages={hasMessagesAfterReport(messages, fanAnalysisReport)}
-            memoriesError={memoriesError}
             locale={locale}
           />
         </aside>
@@ -635,96 +644,15 @@ function FanDetailContent({
   );
 }
 
-function ManualMemoryCard({
-  contactId,
-  memories,
-  locale,
-}: {
-  contactId: string;
-  memories: MemoryRow[];
-  locale: FanMindLanguage;
-}) {
-  return (
-    <article className={styles.card}>
-      <div className={styles.cardHeader}>
-        <div>
-          <h3>{locale === "en" ? "Memories" : "Memories"}</h3>
-          <p className={styles.reportIntro}>{locale === "en" ? "Store durable fan context for this workspace." : "Dauerhaften Fan-Kontext in diesem Workspace speichern."}</p>
-        </div>
-      </div>
-      <form action={saveManualMemory} className={styles.manualActionForm}>
-        <input name="contact_id" type="hidden" value={contactId} />
-        <input name="lang" type="hidden" value={locale} />
-        <textarea name="content" required placeholder={locale === "en" ? "Important preference, context or promise…" : "Wichtige Präferenz, Kontext oder Zusage …"} />
-        <div className={styles.formRow}>
-          <select name="importance" defaultValue="normal" aria-label="Wichtigkeit">
-            <option value="low">Low</option>
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
-          </select>
-          <select name="type" defaultValue="note" aria-label="Typ">
-            <option value="note">Note</option>
-            <option value="preference">Preference</option>
-            <option value="promise">Promise</option>
-          </select>
-        </div>
-        <button className={dashboardStyles.secondaryButton} type="submit">{locale === "en" ? "Save memory" : "Memory speichern"}</button>
-      </form>
-      <div className={styles.compactList}>
-        {memories.length ? memories.map((memory) => (
-          <p key={memory.id}><strong>{memory.importance ?? "normal"}</strong> · {memory.content}</p>
-        )) : <p className={styles.muted}>{locale === "en" ? "No memories yet." : "Noch keine Memories."}</p>}
-      </div>
-    </article>
-  );
-}
-
 function countDueOrOverdueOpenFollowups(followups: FollowupRow[]): number {
   const today = new Date().toISOString().slice(0, 10);
 
   return followups.filter(
-    (followup) => followup.status === "open" && followup.due_date && followup.due_date <= today,
+    (followup) =>
+      followup.status === "open" &&
+      followup.due_date !== null &&
+      followup.due_date <= today,
   ).length;
-}
-
-function ManualFollowupCard({
-  contactId,
-  followups,
-  locale,
-}: {
-  contactId: string;
-  followups: FollowupRow[];
-  locale: FanMindLanguage;
-}) {
-  return (
-    <article className={styles.card} id="followups">
-      <div className={styles.cardHeader}>
-        <div>
-          <h3>Follow-ups</h3>
-          <p className={styles.reportIntro}>{locale === "en" ? "Manual tasks only; nothing is sent automatically." : "Nur manuelle Aufgaben; es wird nichts automatisch gesendet."}</p>
-        </div>
-      </div>
-      <form action={saveManualFollowup} className={styles.manualActionForm}>
-        <input name="contact_id" type="hidden" value={contactId} />
-        <input name="lang" type="hidden" value={locale} />
-        <input name="reason" required placeholder={locale === "en" ? "Task/title" : "Aufgabe/Titel"} />
-        <div className={styles.formRow}>
-          <input name="due_date" type="date" />
-          <select name="priority" defaultValue="normal" aria-label="Priorität">
-            <option value="low">Low</option>
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-        <button className={dashboardStyles.secondaryButton} type="submit">{locale === "en" ? "Save follow-up" : "Follow-up speichern"}</button>
-      </form>
-      <div className={styles.compactList}>
-        {followups.length ? followups.map((followup) => (
-          <p key={followup.id}><strong>{followup.status ?? "open"}</strong> · {followup.reason}{followup.due_date ? ` · ${followup.due_date}` : ""}</p>
-        )) : <p className={styles.muted}>{locale === "en" ? "No follow-ups yet." : "Noch keine Follow-ups."}</p>}
-      </div>
-    </article>
-  );
 }
 
 function shouldShowFacebookHelpers(
@@ -1033,7 +961,11 @@ function OriginalChatAction({
   if (demoConnectionsDisabled && action.platform === "facebook") {
     return (
       <div className={className}>
-        <button className={dashboardStyles.secondaryButton} type="button" disabled>
+        <button
+          className={dashboardStyles.secondaryButton}
+          type="button"
+          disabled
+        >
           Demo-Fallback: Facebook-Postfach blockiert
         </button>
         <small className={styles.muted}>
@@ -1251,7 +1183,11 @@ function FacebookReplyTargetCard({
             und externe Direktlinks sind deaktiviert. Nutze einen eigenen
             Workspace, um echte Verbindungen sicher zu testen.
           </span>
-          <button className={dashboardStyles.secondaryButton} type="button" disabled>
+          <button
+            className={dashboardStyles.secondaryButton}
+            type="button"
+            disabled
+          >
             Facebook-Postfach öffnen blockiert
           </button>
         </div>
@@ -1313,64 +1249,6 @@ function FacebookReplyTargetCard({
         </form>
       ) : null}
     </details>
-  );
-}
-
-function FanNotesCard({ contact, locale }: { contact: ContactRow; locale: FanMindLanguage }) {
-  return (
-    <article className={styles.card}>
-      <div className={styles.cardHeader}>
-        <div>
-          <h3>{wt(locale, "Notizen")}</h3>
-          <p className={styles.reportIntro}>
-            Interne Notizen zu diesem Fan. Nur im Workspace sichtbar.
-          </p>
-        </div>
-      </div>
-      <form action={saveContactInternalNotes} className={styles.notesForm}>
-        <input name="contact_id" type="hidden" value={contact.id} />
-        <input name="lang" type="hidden" value={locale} />
-        <textarea
-          aria-label="Interne Notizen zu diesem Fan"
-          defaultValue={contact.internal_notes ?? ""}
-          maxLength={8000}
-          name="internal_notes"
-          placeholder="Eigene Notizen, Kontext, Team-Hinweise …"
-        />
-        <div className={styles.replyFooter}>
-          <button className={dashboardStyles.primaryButton} type="submit">
-            {wt(locale, "Notizen speichern")}
-          </button>
-        </div>
-      </form>
-    </article>
-  );
-}
-
-function FanMemoryCard({
-  contactId,
-  report,
-  reportError,
-  memoriesError,
-  locale,
-  hasNewMessages,
-}: {
-  contactId: string;
-  report: FanAnalysisReportRow | null;
-  reportError?: string;
-  memories: MemoryRow[];
-  memoriesError?: string;
-  locale: FanMindLanguage;
-  hasNewMessages: boolean;
-}) {
-  return (
-    <FanAnalysisReport
-      contactId={contactId}
-      initialReport={report}
-      loadError={reportError ?? memoriesError}
-      locale={locale}
-      hasNewMessages={hasNewMessages}
-    />
   );
 }
 
@@ -1563,7 +1441,9 @@ function getOriginalChannelButtonLabel(
     .reverse()
     .find((message) => message.direction === "inbound");
   const platform = normalizeSourceValue(
-    latestInbound?.source_platform ?? contact.source_platform ?? action.platform,
+    latestInbound?.source_platform ??
+      contact.source_platform ??
+      action.platform,
   );
   const sourceType = normalizeSourceValue(
     latestInbound?.source_type ?? latestInbound?.message_type,
@@ -1571,16 +1451,23 @@ function getOriginalChannelButtonLabel(
   const isComment = sourceType.includes("comment");
 
   if (platform === "facebook") {
-    return isComment ? "Zum Facebook-Kommentar wechseln" : "Zu Facebook wechseln";
+    return isComment
+      ? "Zum Facebook-Kommentar wechseln"
+      : "Zu Facebook wechseln";
   }
   if (platform === "instagram") {
-    return isComment ? "Zum Instagram-Kommentar wechseln" : "Zu Instagram wechseln";
+    return isComment
+      ? "Zum Instagram-Kommentar wechseln"
+      : "Zu Instagram wechseln";
   }
   if (platform === "linkedin") {
-    return isComment ? "Zum LinkedIn-Kommentar wechseln" : "Zu LinkedIn wechseln";
+    return isComment
+      ? "Zum LinkedIn-Kommentar wechseln"
+      : "Zu LinkedIn wechseln";
   }
   if (platform === "whatsapp") return "Zu WhatsApp wechseln";
-  if (platform === "email" || platform.includes("mail")) return "Zur E-Mail wechseln";
+  if (platform === "email" || platform.includes("mail"))
+    return "Zur E-Mail wechseln";
   return action.href ? action.label : "Zum Originalkanal wechseln";
 }
 
@@ -1788,7 +1675,10 @@ export default async function FanDetailPage({
   }
 
   const { user, workspace } = authorized;
-  const locale = await resolveWorkspaceLocale({ lang: pageSearchParams?.lang, user });
+  const locale = await resolveWorkspaceLocale({
+    lang: pageSearchParams?.lang,
+    user,
+  });
 
   const [contactsResult, contactResult, socialConnectionsResult] =
     await Promise.all([
@@ -1915,7 +1805,10 @@ export default async function FanDetailPage({
         })
       : null;
   const facebookDirectLinkDiagnosis =
-    !areDemoConnectionsDisabled(user, workspace) && workspace && contact && facebookConnection
+    !areDemoConnectionsDisabled(user, workspace) &&
+    workspace &&
+    contact &&
+    facebookConnection
       ? await diagnoseFacebookDirectLinkSource({
           connection: facebookConnection,
           contactHandle: contact.handle,
@@ -1944,7 +1837,9 @@ export default async function FanDetailPage({
         memories={memoriesResult?.memories ?? []}
         memoriesError={memoriesResult?.error?.message}
         openFollowupCount={openFollowupCountResult?.count ?? 0}
-        dueFollowupCount={countDueOrOverdueOpenFollowups(workspaceOpenFollowupsResult?.followups ?? [])}
+        dueFollowupCount={countDueOrOverdueOpenFollowups(
+          workspaceOpenFollowupsResult?.followups ?? [],
+        )}
         notice={normalizeParam(pageSearchParams?.notice)}
         conversationSummary={conversationSummaryResult?.summary ?? null}
         contactAiProfile={contactAiProfileResult?.profile ?? null}
