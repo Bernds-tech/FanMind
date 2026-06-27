@@ -489,7 +489,8 @@ export async function saveManualFanMessage(formData: FormData) {
   const langParam = locale === "en" ? "?lang=en" : "";
   await ensureContactInWorkspace(workspace.id, contactId);
 
-  const direction = formValue(formData, "direction") === "outbound" ? "outbound" : "inbound";
+  const direction =
+    formValue(formData, "direction") === "outbound" ? "outbound" : "inbound";
   const result = await createManualConversationMessage({
     workspaceId: workspace.id,
     contactId,
@@ -502,13 +503,17 @@ export async function saveManualFanMessage(formData: FormData) {
   });
 
   if (result.error) {
-    redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=message_save_failed`);
+    redirect(
+      `/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=message_save_failed`,
+    );
   }
 
   revalidatePath(`/fans/${contactId}`);
   revalidatePath("/fans");
   revalidatePath("/dashboard");
-  redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=message_saved`);
+  redirect(
+    `/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=message_saved`,
+  );
 }
 
 export async function saveManualMemory(formData: FormData) {
@@ -518,21 +523,32 @@ export async function saveManualMemory(formData: FormData) {
   const langParam = locale === "en" ? "?lang=en" : "";
   await ensureContactInWorkspace(workspace.id, contactId);
 
+  const content = formValue(formData, "content").trim();
+  if (!content) {
+    redirect(
+      `/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=memory_empty`,
+    );
+  }
+
   const result = await createContactMemory({
     workspaceId: workspace.id,
     contactId,
-    content: formValue(formData, "content"),
+    content,
     importance: formValue(formData, "importance") || "normal",
     type: formValue(formData, "type") || "note",
   });
 
   if (result.error) {
-    redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=memory_save_failed`);
+    redirect(
+      `/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=memory_save_failed`,
+    );
   }
 
   revalidatePath(`/fans/${contactId}`);
   revalidatePath("/dashboard");
-  redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=memory_saved`);
+  redirect(
+    `/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=memory_saved`,
+  );
 }
 
 export async function saveManualFollowup(formData: FormData) {
@@ -552,14 +568,18 @@ export async function saveManualFollowup(formData: FormData) {
   });
 
   if (result.error) {
-    redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=followup_save_failed`);
+    redirect(
+      `/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=followup_save_failed`,
+    );
   }
 
   revalidatePath(`/fans/${contactId}`);
   revalidatePath("/fans");
   revalidatePath("/followups");
   revalidatePath("/dashboard");
-  redirect(`/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=followup_saved`);
+  redirect(
+    `/fans/${contactId}${langParam ? `${langParam}&` : "?"}notice=followup_saved`,
+  );
 }
 
 export async function saveInboundMessage(formData: FormData) {
@@ -1245,7 +1265,8 @@ function getDueDate(inDays: number | null | undefined): string | null {
 }
 
 export async function syncFacebookChatForContact(contactId: string) {
-  const { user, workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const { user, workspace } =
+    await requireContactInAuthorizedWorkspace(contactId);
   if (areDemoConnectionsDisabled(user, workspace)) {
     redirect(`/fans/${contactId}?notice=demo_external_actions_disabled`);
   }
