@@ -878,24 +878,28 @@ const roadmapPhases = [
     items: [
       "Login & Registrierung",
       "Dashboard & Kontakte",
-      "Fan-Gedächtnis",
+      "Manuelle Kontakte",
+      "CSV-Import minimal",
+      "AI-Infos / Fan-Gedächtnis",
       "KI-Antwortvorschläge",
       "Follow-ups",
+      "Fan-Analyse-Report",
     ],
   },
   {
     number: "02",
     phase: "Phase 2",
     icon: "upload",
-    title: "Kontakt-Import",
+    title: "Kontakt-Import & Datenqualität",
     status: "In Arbeit",
     statusIcon: "✣",
     tone: "green",
     items: [
-      "CSV-Import",
-      "Feld-Zuordnung",
-      "Kontakt-Mapping",
+      "Erweiterte CSV-Feldzuordnung",
       "Import-Validierung",
+      "Kontakt-Mapping",
+      "Duplikaterkennung",
+      "Segment-Vorbereitung",
     ],
   },
   {
@@ -916,7 +920,7 @@ const roadmapPhases = [
     status: "In Kürze",
     statusIcon: "◷",
     tone: "violet",
-    items: ["Analytics", "Team & Rollen", "Performance-Übersicht", "Workspaces"],
+    items: ["Analytics", "Team & Rollen", "Performance-Übersicht", "Workspaces / Multi-Workspace-Ausbau"],
   },
   {
     number: "05",
@@ -926,15 +930,15 @@ const roadmapPhases = [
     status: "In Kürze",
     statusIcon: "◷",
     tone: "gold",
-    items: ["Instagram", "TikTok", "WhatsApp", "Facebook", "X & Discord"],
+    items: ["Instagram", "TikTok", "WhatsApp", "Facebook", "X / Twitter", "Discord", "LinkedIn"],
   },
 ];
 
 const roadmapNotes = [
   {
     icon: "♢",
-    title: "Mensch prüft vor Versand",
-    text: "Qualität und Vertrauen stehen an erster Stelle.",
+    title: "Mensch prüft und sendet final selbst",
+    text: "FanMind bleibt ein manueller Copy-&-Open-Workflow: KI bereitet Antworten vor, der Mensch prüft und sendet final selbst.",
     tone: "blue",
   },
   {
@@ -945,8 +949,8 @@ const roadmapNotes = [
   },
   {
     icon: "ϟ",
-    title: "Roadmap wird laufend erweitert",
-    text: "Deine Wünsche und Feedback fließen ein.",
+    title: "Integrationen nach Prüfung",
+    text: "Externe Kanalverbindungen sind geplant, in der Demo blockiert und werden erst nach technischer und rechtlicher Prüfung aktiviert.",
     tone: "cyan",
   },
 ];
