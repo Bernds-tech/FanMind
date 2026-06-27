@@ -29,6 +29,7 @@ const workspaceTranslations: Record<string, string> = {
   "Aktive Fans": "Active fans",
   "Aktivitätslogik noch nicht aktiv": "Activity logic not active yet",
   "Offene Wiedervorlagen": "Open follow-ups",
+  "Heute fällig": "Due today",
   "Rückmeldungen / Aufgaben": "Replies / tasks",
   "Laufende Kampagnen": "Running campaigns",
   "Kampagnen nicht aktiv": "Campaigns not active",

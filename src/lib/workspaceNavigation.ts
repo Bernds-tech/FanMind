@@ -13,7 +13,11 @@ export type WorkspaceRouteKey =
   | "reactivation"
   | "followups";
 
-export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey, locale: FanMindLanguage = "de"): {
+export function getWorkspaceNavigation(
+  activeRoute: WorkspaceRouteKey,
+  locale: FanMindLanguage = "de",
+  dueFollowupCount = 0,
+): {
   mainNavigation: WorkspaceNavLink[];
   settingsNavigation: WorkspaceNavLink[];
   savedViews: WorkspaceNavLink[];
@@ -27,9 +31,10 @@ export function getWorkspaceNavigation(activeRoute: WorkspaceRouteKey, locale: F
       },
       { label: wt(locale, "Fans"), href: "/fans", active: activeRoute === "fans" },
       {
-        label: locale === "en" ? "Follow-ups" : "Wiedervorlagen",
+        label: "Follow-ups",
         href: "/followups",
         active: activeRoute === "followups",
+        badge: dueFollowupCount > 0 ? String(dueFollowupCount) : undefined,
       },
       {
         label: wt(locale, "Onboarding"),

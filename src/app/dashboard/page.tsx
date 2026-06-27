@@ -185,6 +185,14 @@ function getWorkspaceDisplay(
   };
 }
 
+function countDueOrOverdueOpenFollowups(followups: FollowupRow[]): number {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return followups.filter(
+    (followup) => followup.status === "open" && followup.due_date && followup.due_date <= today,
+  ).length;
+}
+
 function getWorkInboxItems(
   contacts: ContactRow[],
   followups: FollowupRow[],
@@ -352,8 +360,9 @@ function WorkspaceDetails({
   const primaryActionLabel = wt(locale, "+ Neuer Kontakt");
   const planStatus = getPlanStatus(workspace);
   const userLabel = displayName;
+  const dueFollowupCount = countDueOrOverdueOpenFollowups(followups);
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("dashboard", locale);
+    getWorkspaceNavigation("dashboard", locale, dueFollowupCount);
   const workInboxItems = getWorkInboxItems(contacts, followups);
   const newMessageItems = getNewMessageItems(contacts, unseenMessages);
   const workspaceKpis = getWorkspaceKpiStatsFromContacts(contacts, openFollowupCount);

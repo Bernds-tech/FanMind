@@ -132,6 +132,7 @@ function CollapsedNavIcon({ item }: { item: WorkspaceNavLink }) {
 function CollapsedSidebarItem({
   label,
   active = false,
+  badge,
   disabled = false,
   href,
 }: WorkspaceNavLink) {
@@ -144,7 +145,8 @@ function CollapsedSidebarItem({
       title={label}
       tabIndex={disabled ? -1 : undefined}
     >
-      <span aria-hidden="true" className={styles.compactNavIcon}><CollapsedNavIcon item={{ label, active, disabled, href }} /></span>
+      <span aria-hidden="true" className={styles.compactNavIcon}><CollapsedNavIcon item={{ label, active, badge, disabled, href }} /></span>
+      {badge ? <small className={styles.compactNavBadge}>{badge}</small> : null}
     </a>
   );
 }
