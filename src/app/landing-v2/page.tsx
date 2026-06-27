@@ -739,19 +739,20 @@ const pricingPlans = [
     icon: "🚀",
     name: "Pilot / Setup",
     eyebrow: "Zum Einstieg",
-    audience: "Für Teams, die FanMind 1 Monat mit geführtem Setup testen möchten.",
+    audience: "Für Teams, die einen geführten Setup-/Pilotmonat als echten Testmonat möchten.",
     pricePrefix: "",
-    price: "990 € einmalig · 1 Monat testen · keine Bindung",
-    cadence: "Pilot- und Setup-Zugang · kein Abo",
+    price: "990 € einmalig · 1 Testmonat · keine Bindung",
+    cadence: "Geführter Setup-/Pilotmonat · kein Abo",
+    options: undefined,
     cta: "Pilot anfragen",
     href: "/register?plan=pilot",
     tone: "purple",
     featured: false,
     status: "Aktiv",
     features: [
-      "Geführter Setup- & Demo-Start",
-      "Ziel: geführter Demo-Start mit temporärem Pilot-Zugang",
-      "1 Monat Test-/Setup-Zugang",
+      "Geführter Setup-/Pilotmonat",
+      "Ziel: echter Testmonat mit begleitetem Setup",
+      "1 Testmonat ohne automatische Verlängerung",
       "Keine automatische Verlängerung, kein Abo, keine Bindung",
       "Demo-Workspace, Kontakte/Fans und manuelle Kontakte testen",
       "CSV-Import minimal, Notizen und Fan-Gedächtnis testen",
@@ -766,23 +767,37 @@ const pricingPlans = [
     eyebrow: "",
     audience: "Für kleine Teams mit einem ersten echten Workspace.",
     pricePrefix: "",
-    price: "990 € Einrichtung + 299 €/Monat · monatlich kündbar",
-    cadence: "Für laufende Nutzung",
+    price: "312 €/Monat",
+    cadence: "Zwei Starter-Optionen im Paket",
+    options: [
+      {
+        title: "Starter Flex",
+        price: "990 € Setup + 312 €/Monat",
+        note: "jederzeit kündbar",
+        description: "Für Teams, die ohne Laufzeitbindung starten möchten.",
+      },
+      {
+        title: "Starter 12 Monate",
+        price: "0 € Setup + 312 €/Monat",
+        note: "12 Monate Bindung",
+        description: "Für Teams, die die Einrichtung ohne Setup-Gebühr starten und sich für 12 Monate binden.",
+      },
+    ],
     cta: "Starter wählen",
     href: "/register?plan=starter",
     tone: "blue",
     featured: false,
     status: "Aktiv",
     features: [
-      "990 € einmalige Einrichtungsgebühr",
-      "299 € pro Monat",
+      "Starter Flex: 990 € Setup + 312 €/Monat · jederzeit kündbar",
+      "Starter 12 Monate: 0 € Setup + 312 €/Monat · 12 Monate Bindung",
       "Ein Profil / ein produktiver MVP-Workspace",
       "Kontakte/Fans, manuelle Kontakte & CSV-Import minimal",
       "Notizen und Fan-Gedächtnis / Memory",
       "Follow-ups & Aufgaben inklusive /followups",
       "KI-Antwortvorschläge und Fan-Analyse-Report",
       "Externe Social-Integrationen nur Roadmap/Preview",
-      "Monatlich kündbar",
+      "Beide Varianten gehören zum Starter-Paket",
     ],
   },
   {
@@ -793,6 +808,7 @@ const pricingPlans = [
     pricePrefix: "",
     price: "Coming Soon",
     cadence: "Roadmap / Vorschau",
+    options: undefined,
     cta: "Growth Vorschau",
     href: "/register?plan=growth",
     tone: "blue",
@@ -815,6 +831,7 @@ const pricingPlans = [
     pricePrefix: "",
     price: "Coming Soon",
     cadence: "Roadmap / Vorschau",
+    options: undefined,
     cta: "Agency anfragen",
     href: "/register?plan=agency",
     tone: "purple",
@@ -847,7 +864,7 @@ const pricingProofs = [
   {
     icon: "↗",
     title: "Pilot-Gebühr wird angerechnet",
-    text: "Wenn du nach dem Pilot auf Starter wechselst, wird die bereits bezahlte Pilot-/Setup-Gebühr auf die Starter-Einrichtung angerechnet. Danach zahlst du 299 €/Monat.",
+    text: "Der Pilot ist vom kostenlosen 1-Stunden-Demo-Zugang getrennt: 990 € einmalig für 1 Testmonat, ohne Abo und ohne automatische Verlängerung.",
     tone: "green",
   },
   {
@@ -1440,8 +1457,8 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div>
             <h2>{t("Starte jetzt smartere Fan-Beziehungen.")}</h2>
             <p>
-              {t("Keine Kreditkarte erforderlich")} <span>•</span> Setup in 2 Minuten{" "}
-              <span>•</span> {t("Jederzeit kündbar")}
+              {t("Kostenlos testen · 1 Stunde Demo-Zugang")} <span>•</span> {t("Keine Kreditkarte erforderlich")} {" "}
+              <span>•</span> {t("Keine Bindung")}
             </p>
           </div>
           <a
@@ -2220,6 +2237,17 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <strong>{plan.price}</strong>
                 <small>{plan.cadence}</small>
               </div>
+              {plan.options ? (
+                <div className={styles.pricingOptions}>
+                  {plan.options.map((option) => (
+                    <div className={styles.pricingOption} key={option.title}>
+                      <strong>{option.title}</strong>
+                      <span>{option.price} · {option.note}</span>
+                      <p>{option.description}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <ul>
                 {plan.features.map((feature) => (
                   <li key={feature}>{feature}</li>
@@ -2357,7 +2385,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>🔒</span> {t("Datenschutz ansehen")}
             </a>
             <a className={styles.outlineButton} href="#produkt-showcase">
-              {t("Kostenlos testen")} <span>→</span>
+              {t("Kostenlos testen · 1 Stunde Demo-Zugang")} <span>→</span>
             </a>
             <p>
               <span>🛡</span> {t("Vertrauen entsteht durch Sicherheit. FanMind liefert klare KI-Unterstützung mit bewusster Kontrolle.")}

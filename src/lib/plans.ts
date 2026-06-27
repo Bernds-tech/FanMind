@@ -38,14 +38,14 @@ export function getCommercialTerms(commercialOption: ProductiveCommercialOption)
       return {
         commercialOption,
         setupFeeCents: 99000,
-        monthlyFeeCents: 29900,
+        monthlyFeeCents: 31200,
         commitmentMonths: 0,
       };
     case "starter_no_setup_commitment":
       return {
         commercialOption,
         setupFeeCents: 0,
-        monthlyFeeCents: 29900,
+        monthlyFeeCents: 31200,
         commitmentMonths: 12,
       };
   }

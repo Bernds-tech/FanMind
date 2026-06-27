@@ -162,13 +162,13 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "pilot",
     name: "Pilot / Setup",
     badge: "Aktiv / verfügbar",
-    priceLabel: "990 € einmalig · 1 Monat testen · keine Bindung",
+    priceLabel: "990 € einmalig · 1 Testmonat · keine Bindung",
     mode: "demo",
     maxProfiles: 0,
     maxContacts: null,
     contactsLabel: "Demo-Daten",
     description:
-      "Geführter Setup- und Demo-Start für 1 Monat testen: temporärer Pilot-Zugang ohne Abo, ohne automatische Verlängerung, ohne Bindung und ohne produktive externe Social-Integrationen.",
+      "Geführter Setup-/Pilotmonat als echter Testmonat: 990 € einmalig, ohne Abo, ohne automatische Verlängerung, ohne Bindung und ohne produktive externe Social-Integrationen.",
     primaryAction: "Pilot anfragen",
     upgradePlan: "starter",
     featureConfig: featureConfig({
@@ -199,13 +199,13 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "starter",
     name: "Starter",
     badge: "Produktiver MVP-Workspace",
-    priceLabel: "990 € Einrichtung + 299 €/Monat · monatlich kündbar",
+    priceLabel: "Starter Flex: 990 € Setup + 312 €/Monat · jederzeit kündbar; Starter 12 Monate: 0 € Setup + 312 €/Monat · 12 Monate Bindung",
     mode: "production",
     maxProfiles: 1,
     maxContacts: 1000,
     contactsLabel: "bis 1.000 Kontakte",
     description:
-      "Produktiver MVP-Workspace für ein Profil nach dem Setup: 990 € Einrichtung plus 299 €/Monat, monatlich kündbar; externe Social-Integrationen bleiben Roadmap/Preview bis zur technischen und rechtlichen Freigabe.",
+      "Produktiver MVP-Workspace für ein Profil mit zwei Starter-Optionen: Starter Flex mit 990 € Setup plus 312 €/Monat, jederzeit kündbar, oder Starter 12 Monate mit 0 € Setup plus 312 €/Monat und 12 Monate Bindung; externe Social-Integrationen bleiben Roadmap/Preview bis zur technischen und rechtlichen Freigabe.",
     primaryAction: "Starter wählen",
     upgradePlan: "growth",
     featureConfig: featureConfig({
