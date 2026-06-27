@@ -5064,7 +5064,7 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
       planId,
       commercialOption,
       setupFeeCents: 0,
-      monthlyFeeCents: 29900,
+      monthlyFeeCents: 31200,
       commitmentMonths: 12 as const,
     };
   }

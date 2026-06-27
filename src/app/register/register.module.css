@@ -953,3 +953,28 @@
   background: #6ee7b7;
   box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.14);
 }
+
+.termsCheckbox {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 8px;
+  border: 1px solid rgba(39, 132, 255, 0.38);
+  border-radius: 10px;
+  padding: 8px 9px;
+  color: #d7e4f5;
+  background: rgba(4, 17, 41, 0.78);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.termsCheckbox input {
+  margin-top: 2px;
+  accent-color: #0b8cff;
+}
+
+.termsCheckbox a {
+  color: #74c9ff;
+  font-weight: 800;
+}
