@@ -9,7 +9,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
@@ -18,6 +18,7 @@ type ReactivationWorkspaceProps = {
   userDisplayName: string;
   contactCount: number;
   openFollowupCount: number;
+  userEmail: string | null | undefined;
 };
 
 async function logout() {
@@ -43,9 +44,10 @@ function ReactivationWorkspace({
   userDisplayName,
   contactCount,
   openFollowupCount,
+  userEmail,
 }: ReactivationWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("reactivation");
+    getWorkspaceNavigationForUser("reactivation", userEmail);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (
@@ -130,6 +132,7 @@ export default async function ReactivationPage() {
           )}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          userEmail={data.user.email}
         />
       ) : (
         <section

@@ -14,7 +14,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
@@ -74,6 +74,7 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
         openFollowupCount={openFollowupCountResult.count}
         dueFollowupCount={countDueOrOverdueOpenFollowups(openFollowupsResult.followups)}
         activeStatus={status}
+        userEmail={data.user.email}
       />
     </main>
   );
@@ -98,6 +99,7 @@ function FollowupsWorkspace({
   openFollowupCount,
   dueFollowupCount,
   activeStatus,
+  userEmail,
 }: {
   workspace: WorkspaceDashboardRow;
   locale: FanMindLanguage;
@@ -109,8 +111,9 @@ function FollowupsWorkspace({
   openFollowupCount: number;
   dueFollowupCount: number;
   activeStatus: "open" | "done";
+  userEmail: string | null | undefined;
 }) {
-  const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigation("followups", locale, dueFollowupCount);
+  const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigationForUser("followups", userEmail, locale, dueFollowupCount);
   const contactsById = new Map(contacts.map((contact) => [contact.id, contact]));
 
   return (

@@ -16,7 +16,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
@@ -61,6 +61,7 @@ type ChannelsWorkspaceProps = {
   telegramCheckRequested: boolean;
   demoConnectionsDisabled: boolean;
   locale: FanMindLanguage;
+  userEmail: string | null | undefined;
 };
 
 async function logout() {
@@ -87,9 +88,10 @@ function ChannelsWorkspace({
   telegramCheckRequested,
   demoConnectionsDisabled,
   locale,
+  userEmail,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("channels", locale);
+    getWorkspaceNavigationForUser("channels", userEmail, locale);
   const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
 
   return (
@@ -235,6 +237,7 @@ export default async function ChannelsPage({
           telegramCheckRequested={telegramCheckRequested}
           demoConnectionsDisabled={areDemoConnectionsDisabled(data.user, workspace)}
           locale={locale}
+          userEmail={data.user.email}
         />
       ) : (
         <section

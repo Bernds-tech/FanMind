@@ -15,7 +15,7 @@ import {
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import {
@@ -44,6 +44,7 @@ type InboxWorkspaceProps = {
   conversationsError?: string;
   activeFilter: InboxFilter;
   searchQuery: string;
+  userEmail: string | null | undefined;
 };
 
 type InboxFilter = "all" | "open" | "waiting" | "due" | "high" | "ai" | "done";
@@ -106,9 +107,10 @@ function InboxWorkspace({
   conversationsError,
   activeFilter,
   searchQuery,
+  userEmail,
 }: InboxWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("inbox");
+    getWorkspaceNavigationForUser("inbox", userEmail);
   const activeContactIds = new Set(contacts.map((contact) => contact.id));
   const activeFollowups = followups.filter((followup) =>
     activeContactIds.has(followup.contact_id),
@@ -989,6 +991,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           conversationsError={conversationsResult?.error?.message}
           activeFilter={normalizeFilter(normalizeParam(params?.filter))}
           searchQuery={normalizeParam(params?.q)}
+          userEmail={data.user.email}
         />
       ) : (
         <section
