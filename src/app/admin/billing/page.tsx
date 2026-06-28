@@ -26,11 +26,9 @@ function statusClass(status?: string | null) {
 }
 
 function overviewStatusLabel(workspace: AdminBillingWorkspace) {
-  if (workspace.billing_status?.includes("suspended")) return "Gesperrt";
-  if (workspace.billing_status === "active") return "Aktiv";
-  if (workspace.plan_id === "pilot" || workspace.commercial_option === "pilot") return "Pilot";
-  if (workspace.billing_status?.startsWith("pending") || workspace.billing_status === "past_due" || workspace.billing_status === "payment_failed") return "Offen";
-  return workspace.billing_status ? getBillingStatusLabel(workspace.billing_status) : "Unbekannt";
+  if (workspace.billing_status) return getBillingStatusLabel(workspace.billing_status);
+  if (workspace.plan_id === "pilot" || workspace.plan_id === "starter") return "Zahlung offen";
+  return "Unbekannt";
 }
 
 function customerStatusLabel(status?: string | null) {
@@ -45,7 +43,7 @@ function customerStatusLabel(status?: string | null) {
     cancelled: "Gekündigt",
     expired: "Abgelaufen",
   };
-  return status ? labels[status] ?? "Unbekannt" : "Unbekannt";
+  return status ? labels[status] ?? getBillingStatusLabel(status) : "Zahlung offen";
 }
 
 function getWorkspaceDate(workspace: AdminBillingWorkspace) {

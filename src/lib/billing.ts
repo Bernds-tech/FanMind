@@ -81,3 +81,25 @@ export function getBillingStatusLabel(status: string | null | undefined): string
     default: return "Unbekannt";
   }
 }
+
+export const CHECKOUT_ACTION_BILLING_STATUSES = new Set<string>([
+  "pending_payment_setup",
+  "pending_sepa_mandate",
+  "past_due",
+  "payment_failed",
+  "suspended",
+]);
+
+export function shouldShowBillingCheckoutAction(workspace: { plan_id?: string | null; commercial_option?: string | null; billing_status?: string | null; name?: string | null } | null | undefined): boolean {
+  if (!workspace) return false;
+  if (workspace.name === "Temporary FanMind Demo") return false;
+  if (workspace.plan_id !== "pilot" && workspace.plan_id !== "starter") return false;
+  if (workspace.billing_status === "active" || workspace.billing_status === "cancelled" || workspace.billing_status === "demo_free" || workspace.billing_status === "manual_suspended") return false;
+  if (!workspace.billing_status) return true;
+  return CHECKOUT_ACTION_BILLING_STATUSES.has(workspace.billing_status);
+}
+
+export function getBillingCheckoutActionLabel(status: string | null | undefined): string {
+  if (status === "past_due" || status === "payment_failed" || status === "suspended") return "Zahlung erneut versuchen";
+  return "Zahlung starten";
+}

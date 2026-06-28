@@ -1,11 +1,28 @@
 import Link from "next/link";
+import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
+import { getBillingCheckoutActionLabel, shouldShowBillingCheckoutAction } from "@/lib/billing";
+import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
+import styles from "../../dashboard/dashboard.module.css";
 
-export default function BillingCancelPage() {
+export default async function BillingCancelPage() {
+  const { data } = await getSupabaseServerUser();
+  const workspaceResult = data.user ? await getUserWorkspaceDashboard(data.user) : { workspace: null };
+  const workspace = workspaceResult.workspace;
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 20px" }}>
-      <h1>Zahlung nicht abgeschlossen</h1>
-      <p>Zahlung wurde abgebrochen oder nicht abgeschlossen.</p>
-      <p><Link href="/dashboard">Zurück zum Dashboard</Link> · <Link href="/register">Zur Registrierung</Link></p>
+    <main className={styles.page}>
+      <section className={styles.fallbackCard}>
+        <p className={styles.eyebrow}>Stripe Checkout</p>
+        <h1>Zahlung nicht abgeschlossen</h1>
+        <p>Zahlung wurde nicht abgeschlossen. Du kannst die Zahlung erneut starten.</p>
+        {workspace && shouldShowBillingCheckoutAction(workspace) ? (
+          <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label={getBillingCheckoutActionLabel(workspace.billing_status)} />
+        ) : (
+          <Link className={styles.primaryButton} href="/billing/start">Zahlung erneut versuchen</Link>
+        )}
+        <div className={styles.emptyActions}>
+          <Link className={styles.secondaryButton} href="/dashboard">Zum Dashboard</Link>
+        </div>
+      </section>
     </main>
   );
 }

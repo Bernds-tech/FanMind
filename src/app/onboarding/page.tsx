@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
@@ -13,6 +14,7 @@ import {
   type ContactRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getBillingCheckoutActionLabel, shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import styles from "../dashboard/dashboard.module.css";
 
@@ -317,6 +319,14 @@ function OnboardingWorkspace({
               <dd>{contacts.length.toLocaleString("de-DE")}</dd>
             </div>
           </dl>
+          {shouldShowBillingCheckoutAction(workspace) ? (
+            <div className={styles.emptyState}>
+              <strong>Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.</strong>
+              <p>Öffne Stripe Checkout, damit FanMind deinen Zugang nach bestätigter Zahlung aktualisieren kann.</p>
+              <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label={getBillingCheckoutActionLabel(workspace.billing_status)} />
+              <Link className={styles.secondaryButton} href="/billing/start">Paket & Zahlung ansehen</Link>
+            </div>
+          ) : null}
           <div className={styles.emptyState}>
             <strong>Pilot / Setup</strong>
             <p>990 € einmalig · 1 Monat testen · persönlich begleitet</p>
@@ -342,11 +352,9 @@ function OnboardingWorkspace({
       </section>
 
       <div className={styles.safetyNote} role="note">
-        <strong>Begleiteter Start ohne Checkout</strong>
+        <strong>Zahlung sicher über Stripe Checkout</strong>
         <span>
-          Keine Verkaufsseite, keine Kaufbuttons, keine Zahlungslogik und kein
-          automatisches Senden. FanMind bleibt aktuell ein persönlich begleiteter
-          Setup- und Starter-Ablauf.
+          FanMind speichert keine Bankdaten. Automatisches Senden bleibt deaktiviert; der Mensch prüft und sendet final selbst.
         </span>
       </div>
     </WorkspaceShell>
