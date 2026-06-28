@@ -184,3 +184,53 @@
 #workspace-verzeichnis .workspaceDirectory { grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
 @media (max-width: 1240px) { .crmKpiGrid { grid-template-columns: repeat(3,minmax(0,1fr)); } .dashboardMiddleGrid { grid-template-columns: 1fr; } }
 @media (max-width: 820px) { .dashboardTabs { grid-template-columns: 1fr; border-radius: 18px; } .dashboardTabs span { justify-content: flex-start; } .crmKpiGrid, .dashboardBottomGrid { grid-template-columns:1fr; } .compactTableHead { display:none; } .compactTableRow { grid-template-columns:1fr; } .timelineItem { grid-template-columns: 18px minmax(0,1fr); } .timelineItem time { grid-column: 2; } }
+
+/* Finaler Dichte-Pass für die Adminbereich-Übersicht */
+.adminStack { gap: 10px; padding-bottom: 22px; }
+.dashboardTabs { border-radius: 14px; padding: 3px; }
+.dashboardTabs span { min-height: 32px; border-radius: 11px; padding: 6px 8px; font-size: 11px; letter-spacing: .01em; }
+.dashboardTabs small { margin-left: 2px; line-height: 1; }
+.crmKpiGrid { gap: 8px; }
+.crmKpiCard { min-height: 86px; gap: 9px; border-radius: 15px; padding: 10px; }
+.crmKpiIcon { width: 28px; height: 28px; font-size: 11px; }
+.crmKpiCard strong { font-size: clamp(19px,1.45vw,23px); }
+.crmKpiCard small { max-width: 18ch; }
+.card { border-radius: 15px; padding: 12px; }
+.cardHeader { gap: 8px; margin-bottom: 8px; }
+.card h2 { font-size: 15px; line-height: 1.15; }
+.badge, .badgeOk, .badgeWarn, .badgeBad, .chip { padding: 4px 7px; font-size: 10px; }
+.dashboardMiddleGrid { grid-template-columns: minmax(0,1.8fr) minmax(220px,1fr) minmax(220px,1fr); gap: 10px; }
+.dashboardBottomGrid { gap: 10px; align-items: stretch; }
+.dashboardBottomGrid > .card { height: 100%; }
+.compactTable { gap: 5px; }
+.compactTableHead, .compactTableRow { grid-template-columns: minmax(145px,1.48fr) minmax(82px,.68fr) 40px 72px 72px; gap: 6px; }
+.compactTableHead { padding: 0 7px; font-size: 8px; }
+.compactTableRow { min-height: 44px; border-radius: 11px; padding: 7px; }
+.compactTableRow > span { font-size: 10.5px; }
+.compactTableRow small { margin-top: 2px; max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workspaceLink { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.textLink { display: inline-flex; margin-top: 8px; font-size: 11px; }
+.quickActionList, .statusList, .roadmapList, .workspaceDirectory { gap: 6px; }
+.quickAction { grid-template-columns: 26px minmax(0,1fr) auto; gap: 8px; border-radius: 11px; padding: 7px 8px; }
+.actionIcon { width: 24px; height: 24px; font-size: 11px; }
+.quickAction strong { font-size: 11.5px; }
+.quickAction small { font-size: 9.5px; }
+.disabledAction { opacity: .54; }
+.statusItem { min-height: 34px; border-radius: 11px; padding: 7px 8px; font-size: 11.5px; }
+.statusIcon { width: 7px; height: 7px; box-shadow: 0 0 0 3px rgba(103,232,249,.09); }
+.muted { margin-top: 8px; font-size: 10.5px; }
+.roadmapItem, .directoryItem { min-height: 38px; border-radius: 11px; padding: 8px 9px; }
+.roadmapItem strong, .directoryItem strong { font-size: 11.5px; }
+.timelineItem { grid-template-columns: 16px minmax(0,1fr) auto; gap: 8px; padding-bottom: 9px; }
+.timelineDot { width: 9px; height: 9px; box-shadow: 0 0 0 3px rgba(103,232,249,.11); }
+.timelineItem:not(:last-child)::before { left: 4px; top: 11px; }
+.timelineItem strong, .timelineItem p { font-size: 11.5px; }
+.timelineItem time { font-size: 10px; }
+.emptyState { padding: 12px; font-size: 11.5px; line-height: 1.45; }
+.directoryCard { padding: 10px 12px; opacity: .92; }
+.directoryCard .cardHeader { margin-bottom: 7px; }
+.directoryCard .workspaceDirectory { grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); }
+.directoryCard .directoryItem { padding: 7px 8px; min-height: 34px; }
+.directoryCard .directoryItem span { font-size: 10.5px; }
+@media (max-width: 1240px) { .dashboardMiddleGrid { grid-template-columns: 1fr; } }
+@media (min-width: 1241px) { .dashboardMiddleGrid > .card { height: 100%; } }
