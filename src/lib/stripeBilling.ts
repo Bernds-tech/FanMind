@@ -28,6 +28,12 @@ export type CheckoutPlan = {
   commitmentMonths: 0 | 12;
 };
 
+export type StripeWorkspaceReferences = {
+  customerId?: string;
+  subscriptionId?: string;
+  paymentIntentId?: string;
+};
+
 export function getStripeConfigStatus(): StripeConfigStatus {
   const hasSecretKey = Boolean(process.env.STRIPE_SECRET_KEY);
   const hasWebhookSecret = Boolean(process.env.STRIPE_WEBHOOK_SECRET);
@@ -88,6 +94,7 @@ export async function createStripeCheckoutSession(input: { plan: CheckoutPlan; u
   params.set("success_url", `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`);
   params.set("cancel_url", `${appUrl}/billing/cancel`);
   params.append("payment_method_types[]", "sepa_debit");
+  if (input.workspaceId) params.set("client_reference_id", input.workspaceId);
   if (input.userEmail) params.set("customer_email", input.userEmail);
   input.plan.priceIds.forEach((price, index) => {
     params.set(`line_items[${index}][price]`, price);
@@ -95,6 +102,7 @@ export async function createStripeCheckoutSession(input: { plan: CheckoutPlan; u
   });
   const metadata = { user_id: input.userId, workspace_id: input.workspaceId, plan_id: input.plan.planId, commercial_option: input.plan.commercialOption, setup_fee_cents: String(input.plan.setupFeeCents), monthly_fee_cents: String(input.plan.monthlyFeeCents), commitment_months: String(input.plan.commitmentMonths) };
   Object.entries(metadata).forEach(([key, value]) => params.set(`metadata[${key}]`, value));
+  if (input.plan.mode === "payment") Object.entries(metadata).forEach(([key, value]) => params.set(`payment_intent_data[metadata][${key}]`, value));
   if (input.plan.mode === "subscription") Object.entries(metadata).forEach(([key, value]) => params.set(`subscription_data[metadata][${key}]`, value));
 
   const response = await fetch("https://api.stripe.com/v1/checkout/sessions", { method: "POST", headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/x-www-form-urlencoded" }, body: params });
@@ -114,6 +122,29 @@ export function verifyStripeSignature(rawBody: string, signatureHeader: string |
   const signedPayload = `${parts.t}.${rawBody}`;
   const expected = crypto.createHmac("sha256", secret).update(signedPayload).digest("hex");
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1));
+}
+
+export async function findWorkspaceIdByStripeReferences(references: StripeWorkspaceReferences): Promise<string | null> {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return null;
+  const lookups: Array<[string, string | undefined]> = [["stripe_customer_id", references.customerId], ["stripe_subscription_id", references.subscriptionId], ["stripe_payment_intent_id", references.paymentIntentId]];
+  for (const [column, value] of lookups) {
+    if (!value) continue;
+    try {
+      const url = `${getSupabaseRestUrl("workspaces")}?select=id&${column}=eq.${encodeURIComponent(value)}&limit=1`;
+      const response = await fetch(url, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } });
+      if (!response.ok) {
+        console.warn("Stripe workspace lookup skipped", column, response.status);
+        continue;
+      }
+      const rows = await response.json().catch(() => []) as Array<{ id?: string }>;
+      const id = rows[0]?.id;
+      if (typeof id === "string" && id) return id;
+    } catch (error) {
+      console.warn("Stripe workspace lookup skipped", column, error instanceof Error ? error.message : "unknown error");
+    }
+  }
+  return null;
 }
 
 export async function updateWorkspaceBillingDefensively(workspaceId: string | undefined, fields: Record<string, string | number | boolean | null | undefined>): Promise<void> {
