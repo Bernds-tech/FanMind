@@ -11,7 +11,8 @@ export type WorkspaceRouteKey =
   | "settings"
   | "top-fans"
   | "reactivation"
-  | "followups";
+  | "followups"
+  | "admin";
 
 export function getWorkspaceNavigation(
   activeRoute: WorkspaceRouteKey,
@@ -60,7 +61,7 @@ export function getWorkspaceNavigation(
             {
               label: "Adminbereich",
               href: "/admin/billing",
-              active: false,
+              active: activeRoute === "admin",
             },
           ]
         : []),
