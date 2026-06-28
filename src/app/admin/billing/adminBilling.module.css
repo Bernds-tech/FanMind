@@ -313,3 +313,28 @@
 .noticeCard p:last-child { margin-bottom:0; color:#94a3b8; }
 @media (max-width: 1240px) { .packageLayout { grid-template-columns:1fr; } .packageAside { position:static; grid-template-columns:repeat(3,minmax(0,1fr)); } .packageGrid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width: 900px) { .packageAside, .packageGrid { grid-template-columns:1fr; } .featureMatrixHead { display:none; } .featureMatrixRow { grid-template-columns:1fr; align-items:start; } .featureMatrixRow strong { margin-bottom:2px; } }
+
+/* Zahlungen */
+.paymentsLayout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,380px); gap:10px; align-items:start; }
+.paymentsTableCard { min-width:0; }
+.paymentFilterBar { display:grid; grid-template-columns:minmax(130px,.28fr) auto minmax(220px,1fr); gap:8px; margin-bottom:10px; }
+.paymentTable { display:grid; gap:5px; }
+.paymentTableHead, .paymentTableRow { display:grid; grid-template-columns:minmax(160px,1.2fr) minmax(115px,.8fr) minmax(82px,.55fr) minmax(92px,.62fr) minmax(88px,.6fr) minmax(96px,.65fr) minmax(86px,.56fr); gap:7px; align-items:center; }
+.paymentTableHead { color:#7f95b0; font-size:8px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; padding:0 7px; }
+.paymentTableRow { min-height:50px; border:1px solid rgba(148,163,184,.12); border-radius:12px; padding:8px 7px; color:#dbeafe; background:rgba(2,6,23,.28); }
+.paymentTableRow > span { min-width:0; font-size:11px; overflow:hidden; text-overflow:ellipsis; }
+.paymentTableRow strong { display:block; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.paymentTableRow small { display:block; margin-top:2px; color:#64748b; font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.paymentDetailPanel { position:sticky; top:72px; }
+.paymentDetailList { display:grid; gap:8px; margin:0; }
+.paymentDetailList div { border:1px solid rgba(148,163,184,.12); border-radius:12px; padding:9px; background:rgba(2,6,23,.24); }
+.paymentDetailList dt { color:#94a3b8; font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+.paymentDetailList dd { display:grid; gap:3px; margin:0; color:#f8fafc; font-size:12px; font-weight:850; line-height:1.4; word-break:break-word; }
+.paymentDetailList small { color:#94a3b8; font-size:10.5px; font-weight:700; }
+.paymentBottomGrid { display:grid; grid-template-columns:minmax(260px,.75fr) minmax(0,1fr); gap:10px; }
+.methodList, .summaryList { display:grid; gap:7px; margin-bottom:10px; }
+.methodList div, .summaryList div { display:flex; justify-content:space-between; gap:12px; align-items:center; min-height:38px; border:1px solid rgba(148,163,184,.12); border-radius:11px; padding:8px 9px; background:rgba(2,6,23,.28); }
+.methodList strong, .summaryList strong { color:#f8fafc; font-size:12px; }
+.methodList span, .summaryList span { color:#94a3b8; font-size:11px; font-weight:850; }
+.summaryList strong { color:#e0faff; }
+@media (max-width:1180px) { .paymentsLayout, .paymentBottomGrid { grid-template-columns:1fr; } .paymentDetailPanel { position:static; } .paymentTableHead { display:none; } .paymentTableRow { grid-template-columns:1fr; gap:6px; } .paymentFilterBar { grid-template-columns:1fr; } }
