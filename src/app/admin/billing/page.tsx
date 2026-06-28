@@ -1,43 +1,169 @@
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/admin";
-import { listAdminBillingWorkspaces } from "@/lib/adminBilling";
+import { listAdminBillingWorkspaces, type AdminBillingWorkspace } from "@/lib/adminBilling";
 import { getBillingStatusLabel } from "@/lib/billing";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getStripeConfigStatus } from "@/lib/stripeBilling";
 import { AdminBillingShell } from "./AdminBillingShell";
 import styles from "./adminBilling.module.css";
 
-function money(cents?: number | null) { return typeof cents === "number" ? (cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "—"; }
-function date(value?: string | null) { return value ? new Date(value).toLocaleDateString("de-DE") : "—"; }
-function statusClass(status?: string | null) { if (status === "active") return styles.badgeOk; if (status === "past_due" || status === "payment_failed" || status?.includes("suspended")) return styles.badgeBad; if (status?.startsWith("pending")) return styles.badgeWarn; return styles.badge; }
-function StripeBadge({ ok, prepared }: { ok: boolean; prepared?: boolean }) { return <span className={ok ? styles.badgeOk : prepared ? styles.badgeWarn : styles.badgeBad}>{ok ? "aktiv" : prepared ? "vorbereitet" : "fehlt"}</span>; }
+function date(value?: string | null) {
+  return value ? new Date(value).toLocaleDateString("de-DE") : "—";
+}
+
+function statusClass(status?: string | null) {
+  if (status === "active") return styles.badgeOk;
+  if (status === "past_due" || status === "payment_failed" || status?.includes("suspended")) return styles.badgeBad;
+  if (status?.startsWith("pending")) return styles.badgeWarn;
+  return styles.badge;
+}
+
+function getWorkspaceDate(workspace: AdminBillingWorkspace) {
+  return workspace.created_at ?? workspace.billing_updated_at ?? null;
+}
+
+function sortByDateDesc(left: AdminBillingWorkspace, right: AdminBillingWorkspace) {
+  return new Date(getWorkspaceDate(right) ?? 0).getTime() - new Date(getWorkspaceDate(left) ?? 0).getTime();
+}
+
+function planLabel(planId?: string | null) {
+  if (planId === "pilot") return "Pilot-Demo";
+  if (planId === "starter") return "Starter";
+  if (planId === "growth") return "Growth";
+  if (planId === "agency") return "Agency";
+  return planId ?? "—";
+}
+
+function StatCard({ icon, label, value, hint, tone }: { icon: string; label: string; value: string | number; hint: string; tone: string }) {
+  return (
+    <article className={styles.crmKpiCard}>
+      <span className={`${styles.crmKpiIcon} ${tone}`}>{icon}</span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{hint}</small>
+      </div>
+    </article>
+  );
+}
 
 export default async function AdminBillingPage() {
   const user = await requirePlatformAdmin();
   const stripe = getStripeConfigStatus();
   const { workspaces, error } = await listAdminBillingWorkspaces();
+
   const active = workspaces.filter((w) => w.billing_status === "active").length;
-  const pending = workspaces.filter((w) => w.billing_status?.startsWith("pending")).length;
-  const failed = workspaces.filter((w) => w.billing_status === "past_due" || w.billing_status === "payment_failed").length;
-  const suspended = workspaces.filter((w) => w.billing_status === "suspended" || w.billing_status === "manual_suspended").length;
-  const cancelled = workspaces.filter((w) => w.billing_status === "cancelled").length;
-  const mrr = workspaces.filter((w) => w.billing_status === "active").reduce((sum, w) => sum + (w.monthly_fee_cents ?? 0), 0);
-  const stripeItems = [
-    ["Secret Key", stripe.hasSecretKey], ["Webhook Secret", stripe.hasWebhookSecret], ["Pilot Price ID", stripe.hasPilotPrice],
-    ["Starter Setup Price ID", stripe.hasStarterSetupPrice], ["Starter Monatsabo Price ID", stripe.hasStarterMonthlyPrice],
-    ["Growth vorbereitet", stripe.hasGrowthMonthlyPrice], ["Agency vorbereitet", stripe.hasAgencyMonthlyPrice], ["Feature-Flag aktiv", stripe.growthAgencyBillingEnabled],
+  const pilotDemos = workspaces.filter((w) => w.plan_id === "pilot" || w.commercial_option === "pilot").length;
+  const openPayments = workspaces.filter((w) => w.billing_status?.startsWith("pending") || w.billing_status === "past_due" || w.billing_status === "payment_failed").length;
+  const recentlyUpdated = workspaces.filter((w) => w.billing_updated_at || w.billing_admin_note).length;
+  const aiConfigured = Boolean(process.env.OPENAI_API_KEY);
+  const recentWorkspaces = [...workspaces].sort(sortByDateDesc).slice(0, 5);
+  const activityItems = [...workspaces]
+    .filter((w) => w.billing_updated_at || w.billing_admin_note)
+    .sort((left, right) => new Date(right.billing_updated_at ?? 0).getTime() - new Date(left.billing_updated_at ?? 0).getTime())
+    .slice(0, 5);
+
+  const systemStatus = [
+    ["Datenbank", error ? "Eingeschränkt" : "Online", error ? styles.badgeWarn : styles.badgeOk],
+    ["API & Dienste", "Online", styles.badgeOk],
+    ["Dateispeicher", "Unbekannt", styles.badge],
+    ["E-Mail Versand", "Nicht konfiguriert", styles.badgeWarn],
+    ["KI-Verarbeitung", aiConfigured ? "Aktiv" : "Fehlt", aiConfigured ? styles.badgeOk : styles.badgeBad],
+    ["Integrationen", "Teilweise", styles.badgeWarn],
   ] as const;
 
-  return <AdminBillingShell user={user} title="Adminbereich" subtitle={`Billing & Workspaces · Angemeldet als Admin: ${user.email ?? "Admin"}`}>
-    <div className={styles.adminStack}>
-      <section className={styles.hero}>
-        <div><span className={styles.eyebrow}>FanMind Admin</span><h1>Billing & Workspaces</h1><p>Verwalte Pläne, Zahlungsstatus, Sperren und Rechnungsstatus aller Workspaces.</p></div>
-        <span className={styles.badgeOk}>Admin</span>
-      </section>
-      <section className={styles.kpiGrid}>{[["Gesamt", workspaces.length], ["Aktiv", active], ["Offen", pending], ["Fehlgeschlagen", failed], ["Gesperrt", suspended], ["Gekündigt", cancelled], ["MRR erwartet", money(mrr)]].map(([label, value]) => <article className={styles.kpiCard} key={label}><strong>{value}</strong><span>{label}</span></article>)}</section>
-      <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Systemstatus</span><h2>Zahlungsstatus / Stripe-Konfiguration</h2></div><span className={stripe.readyForCheckout ? styles.badgeOk : styles.badgeWarn}>{stripe.readyForCheckout ? "Checkout bereit" : "unvollständig"}</span></div><div className={styles.statusList}>{stripeItems.map(([label, ok]) => <div className={styles.statusItem} key={label}><span>{label}</span><StripeBadge ok={ok} prepared={label.includes("vorbereitet")} /></div>)}</div><p className={styles.muted}>Growth/Agency Checkout bleibt ohne Feature-Flag und Price IDs deaktiviert.</p></section>
-      {error ? <p className={styles.badgeWarn}>{error}</p> : null}
-      <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>CRM-Übersicht</span><h2>Workspace-Liste</h2></div><span className={styles.badge}>{workspaces.length} Workspaces</span></div><div className={styles.tableWrap}><table className={styles.table}><thead><tr>{["Workspace", "Owner", "Plan", "Option", "Status", "Monat", "Retry", "Nächste Aktion", "Rechnung", "Aktionen"].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{workspaces.map((w) => <tr key={w.id}><td><Link className={styles.workspaceLink} href={`/admin/billing/workspaces/${w.id}`}>{w.name}</Link><span className={styles.subline}>{w.id}</span></td><td>{w.owner_user_id ?? "—"}</td><td><span className={styles.chip}>{w.plan_id ?? "—"}</span></td><td>{getCommercialOptionLabel(w.commercial_option ?? "")}</td><td><span className={statusClass(w.billing_status)}>{getBillingStatusLabel(w.billing_status)}</span></td><td>{money(w.monthly_fee_cents)}</td><td>{w.billing_retry_count ?? 0}</td><td>{date(w.billing_next_retry_at)}</td><td>{w.last_invoice_status ?? "—"}<span className={styles.subline}>{w.last_invoice_hosted_url ? <a href={w.last_invoice_hosted_url}>Hosted</a> : null} {w.last_invoice_pdf_url ? <a href={w.last_invoice_pdf_url}>PDF</a> : null}</span></td><td><div className={styles.actions}><Link className={styles.buttonPrimary} href={`/admin/billing/workspaces/${w.id}`}>Details</Link><form action={`/api/admin/billing/workspaces/${w.id}/suspend`} method="post"><button className={styles.buttonDanger}>Sperren</button></form><form action={`/api/admin/billing/workspaces/${w.id}/unsuspend`} method="post"><button className={styles.buttonSecondary}>Entsperren</button></form><form action={`/api/admin/billing/workspaces/${w.id}/mark-paid`} method="post"><button className={styles.buttonSecondary}>Zahlung</button></form></div></td></tr>)}</tbody></table></div></section>
-    </div>
-  </AdminBillingShell>;
+  const quickActions = [
+    { label: "Neuen Kunden anlegen", href: "/register?plan=starter", meta: "Starter-Registrierung", enabled: true },
+    { label: "Pilot-Demo anlegen", href: "/register?plan=pilot", meta: "Pilot-Onboarding", enabled: true },
+    { label: "Paket zuweisen", meta: "Über Workspace-Details", enabled: false },
+    { label: "Nutzer einladen", meta: "In Vorbereitung", enabled: false },
+    { label: "Rechnung erstellen", meta: stripe.readyForCheckout ? "Über Stripe Checkout" : "Stripe unvollständig", enabled: false },
+  ];
+
+  const roadmapItems = [
+    ["KI-gestützte Fan-Segmentierung", "In Entwicklung"],
+    ["Automatisierte Kampagnen", "Roadmap"],
+    ["Abo-Management für Kunden", "Geplant"],
+    ["Erweiterte Reporting-Dashboards", "Roadmap"],
+  ] as const;
+
+  return (
+    <AdminBillingShell user={user} title="Adminbereich" subtitle="Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.">
+      <div className={styles.adminStack}>
+        <section className={styles.overviewHeader}>
+          <span className={styles.eyebrow}>FanMind Admin</span>
+          <h1>Adminbereich</h1>
+          <p>Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.</p>
+        </section>
+
+        <nav className={styles.dashboardTabs} aria-label="Adminbereiche">
+          <span className={styles.activeTab}>Übersicht</span>
+          <span>Kunden &amp; Nutzer</span>
+          <span>Pakete &amp; Freigaben</span>
+          <span>Zahlungen</span>
+          <span>Abos <small>Später</small></span>
+        </nav>
+
+        <section className={styles.crmKpiGrid} aria-label="Admin-Kennzahlen">
+          <StatCard icon="👥" label="Kunden gesamt" value={workspaces.length} hint={workspaces.length ? "Echte Workspaces" : "Noch keine Daten"} tone={styles.toneBlue} />
+          <StatCard icon="✓" label="Aktive Workspaces" value={active} hint="Billing-Status aktiv" tone={styles.toneGreen} />
+          <StatCard icon="◆" label="Pilot-Demos" value={pilotDemos} hint="Plan oder Option Pilot" tone={styles.toneViolet} />
+          <StatCard icon="€" label="Offene Zahlungen" value={openPayments} hint="Pending, fehlgeschlagen oder überfällig" tone={styles.toneAmber} />
+          <StatCard icon="AI" label="KI-Status" value={aiConfigured ? "Aktiv" : "Fehlt"} hint={aiConfigured ? "OpenAI-Key vorhanden" : "Nicht konfiguriert"} tone={aiConfigured ? styles.toneGreen : styles.toneRed} />
+          <StatCard icon="↻" label="Letzte Admin-Aktionen" value={recentlyUpdated} hint={recentlyUpdated ? "Billing-Updates/Notizen" : "Noch keine Daten"} tone={styles.toneCyan} />
+        </section>
+
+        {error ? <p className={styles.badgeWarn}>{error}</p> : null}
+
+        <section className={styles.dashboardMiddleGrid}>
+          <article className={`${styles.card} ${styles.recentCard}`}>
+            <div className={styles.cardHeader}><div><span className={styles.eyebrow}>CRM-Übersicht</span><h2>Kürzlich hinzugekommene Kunden/Workspaces</h2></div><span className={styles.badge}>{workspaces.length} gesamt</span></div>
+            {recentWorkspaces.length ? (
+              <div className={styles.compactTable}>
+                <div className={styles.compactTableHead}><span>Kunde / Workspace</span><span>Plan</span><span>Nutzer</span><span>Erstellt am</span><span>Status</span></div>
+                {recentWorkspaces.map((workspace) => (
+                  <div className={styles.compactTableRow} key={workspace.id}>
+                    <span><Link className={styles.workspaceLink} href={`/admin/billing/workspaces/${workspace.id}`}>{workspace.name}</Link><small>{workspace.id}</small></span>
+                    <span>{planLabel(workspace.plan_id)}<small>{getCommercialOptionLabel(workspace.commercial_option ?? "")}</small></span>
+                    <span>{workspace.owner_user_id ?? "—"}</span>
+                    <span>{date(getWorkspaceDate(workspace))}</span>
+                    <span><span className={statusClass(workspace.billing_status)}>{getBillingStatusLabel(workspace.billing_status)}</span></span>
+                  </div>
+                ))}
+              </div>
+            ) : <div className={styles.emptyState}>Noch keine Workspaces vorhanden.</div>}
+            <Link className={styles.textLink} href="#workspace-verzeichnis">Alle Kunden anzeigen</Link>
+          </article>
+
+          <article className={styles.card}>
+            <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Direktzugriff</span><h2>Schnellaktionen</h2></div></div>
+            <div className={styles.quickActionList}>{quickActions.map((action) => action.enabled && action.href ? <Link className={styles.quickAction} href={action.href} key={action.label}><strong>{action.label}</strong><span>{action.meta}</span></Link> : <div className={`${styles.quickAction} ${styles.disabledAction}`} key={action.label}><strong>{action.label}</strong><span>{action.meta}</span></div>)}</div>
+          </article>
+
+          <article className={styles.card}>
+            <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Betrieb</span><h2>Systemstatus</h2></div></div>
+            <div className={styles.statusList}>{systemStatus.map(([label, status, className]) => <div className={styles.statusItem} key={label}><span>{label}</span><span className={className}>{status}</span></div>)}</div>
+            <p className={styles.muted}>Systemstatus geprüft · externe Dienste nur angezeigt, wenn sicher ableitbar.</p>
+          </article>
+        </section>
+
+        <section className={styles.dashboardBottomGrid}>
+          <article className={styles.card}>
+            <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Produkt</span><h2>Feature-Roadmap &amp; Sichtbarkeit</h2></div><Link className={styles.textLink} href="/roadmap">Roadmap ansehen</Link></div>
+            <div className={styles.roadmapList}>{roadmapItems.map(([label, status]) => <div className={styles.roadmapItem} key={label}><strong>{label}</strong><span className={status === "In Entwicklung" ? styles.badgeOk : status === "Geplant" ? styles.badgeWarn : styles.badge}>{status}</span></div>)}</div>
+          </article>
+
+          <article className={`${styles.card} ${styles.activityCard}`}>
+            <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Audit</span><h2>Letzte Aktivitäten (Audit-Log)</h2></div></div>
+            {activityItems.length ? <ul className={styles.timeline}>{activityItems.map((workspace) => <li className={styles.timelineItem} key={workspace.id}><span className={styles.timelineDot} /><div><strong>{workspace.name}</strong><p>{workspace.billing_admin_note ? "Admin-Notiz gespeichert" : "Billing-Daten aktualisiert"}</p><span className={styles.subline}>{date(workspace.billing_updated_at)}</span></div></li>)}</ul> : <div className={styles.emptyState}>Noch keine Admin-Aktivitäten gespeichert.</div>}
+          </article>
+        </section>
+
+        <section className={styles.card} id="workspace-verzeichnis">
+          <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Verzeichnis</span><h2>Alle Workspaces</h2></div><span className={styles.badge}>{workspaces.length} Einträge</span></div>
+          {workspaces.length ? <div className={styles.workspaceDirectory}>{workspaces.map((workspace) => <Link className={styles.directoryItem} href={`/admin/billing/workspaces/${workspace.id}`} key={workspace.id}><strong>{workspace.name}</strong><span>{planLabel(workspace.plan_id)} · {getBillingStatusLabel(workspace.billing_status)}</span></Link>)}</div> : <div className={styles.emptyState}>Noch keine Kunden vorhanden.</div>}
+        </section>
+      </div>
+    </AdminBillingShell>
+  );
 }
