@@ -106,13 +106,13 @@ function StatCard({ icon, label, value, hint, trend, tone }: { icon: string; lab
   );
 }
 
-function AdminTabs({ activeTab }: { activeTab: "overview" | "customers" | "packages" }) {
+function AdminTabs({ activeTab }: { activeTab: "overview" | "customers" | "packages" | "payments" }) {
   return (
     <nav className={styles.dashboardTabs} aria-label="Adminbereiche">
       <Link className={activeTab === "overview" ? styles.activeTab : undefined} href="/admin/billing">Übersicht</Link>
       <Link className={activeTab === "customers" ? styles.activeTab : undefined} href="/admin/billing?tab=customers">Kunden &amp; Nutzer</Link>
       <Link className={activeTab === "packages" ? styles.activeTab : undefined} href="/admin/billing?tab=packages">Pakete &amp; Freigaben</Link>
-      <span>Zahlungen</span>
+      <Link className={activeTab === "payments" ? styles.activeTab : undefined} href="/admin/billing?tab=payments">Zahlungen</Link>
       <span>Abos <small>Später</small></span>
     </nav>
   );
@@ -228,6 +228,87 @@ function OverviewContent({ workspaces, error }: { workspaces: AdminBillingWorksp
   </>;
 }
 
+
+function cents(value?: number | null) {
+  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format((value ?? 0) / 100);
+}
+
+function invoiceStatusLabel(status?: string | null) {
+  if (status === "paid" || status === "bezahlt" || status === "active") return "Bezahlt";
+  if (status === "open" || status === "pending" || status?.startsWith("pending")) return "Offen";
+  if (status === "past_due") return "Überfällig";
+  if (status === "payment_failed") return "Fehlgeschlagen";
+  if (status === "suspended" || status === "manual_suspended") return "Gesperrt";
+  return "Unbekannt";
+}
+
+function invoiceStatusClass(status?: string | null) {
+  const label = invoiceStatusLabel(status);
+  if (label === "Bezahlt") return styles.badgeOk;
+  if (label === "Offen") return styles.badgeWarn;
+  if (label === "Überfällig" || label === "Fehlgeschlagen" || label === "Gesperrt") return styles.badgeBad;
+  return styles.badge;
+}
+
+function invoiceStatus(workspace: AdminBillingWorkspace) {
+  return workspace.last_invoice_status ?? workspace.billing_status;
+}
+
+function invoiceAmountDue(workspace: AdminBillingWorkspace) {
+  return workspace.last_invoice_amount_due_cents ?? workspace.last_invoice_amount_paid_cents ?? 0;
+}
+
+function invoiceAmountPaid(workspace: AdminBillingWorkspace) {
+  return workspace.last_invoice_amount_paid_cents ?? (invoiceStatusLabel(invoiceStatus(workspace)) === "Bezahlt" ? workspace.last_invoice_amount_due_cents : null) ?? 0;
+}
+
+function hasInvoiceSignal(workspace: AdminBillingWorkspace) {
+  return Boolean(workspace.last_invoice_id || workspace.last_invoice_status || workspace.last_invoice_amount_due_cents || workspace.last_invoice_amount_paid_cents || workspace.last_invoice_hosted_url || workspace.last_invoice_pdf_url || workspace.billing_last_payment_at || workspace.billing_last_payment_failed_at);
+}
+
+function isThisMonth(value?: string | null) {
+  if (!value) return false;
+  const dateValue = new Date(value);
+  const now = new Date();
+  return dateValue.getFullYear() === now.getFullYear() && dateValue.getMonth() === now.getMonth();
+}
+
+function PaymentsContent({ workspaces, members, selectedWorkspaceId, error }: { workspaces: AdminBillingWorkspace[]; members: AdminBillingMember[]; selectedWorkspaceId?: string; error: string | null }) {
+  const invoices = workspaces.filter(hasInvoiceSignal).sort((left, right) => new Date(getLastActivityDate(right) ?? 0).getTime() - new Date(getLastActivityDate(left) ?? 0).getTime());
+  const selected = invoices.find((workspace) => workspace.id === selectedWorkspaceId) ?? invoices[0] ?? null;
+  const selectedOwner = selected ? members.find((member) => member.workspace_id === selected.id && member.user_id === selected.owner_user_id) ?? members.find((member) => member.workspace_id === selected.id) : null;
+  const openInvoices = invoices.filter((workspace) => invoiceStatusLabel(invoiceStatus(workspace)) === "Offen");
+  const overdueInvoices = invoices.filter((workspace) => invoiceStatusLabel(invoiceStatus(workspace)) === "Überfällig");
+  const paidInvoices = invoices.filter((workspace) => invoiceStatusLabel(invoiceStatus(workspace)) === "Bezahlt");
+  const monthlyRevenue = invoices.filter((workspace) => isThisMonth(workspace.billing_last_payment_at)).reduce((sum, workspace) => sum + invoiceAmountPaid(workspace), 0);
+  const totalDue = invoices.reduce((sum, workspace) => sum + invoiceAmountDue(workspace), 0);
+  const totalPaid = invoices.reduce((sum, workspace) => sum + invoiceAmountPaid(workspace), 0);
+  const openAmount = openInvoices.reduce((sum, workspace) => sum + Math.max(0, invoiceAmountDue(workspace) - invoiceAmountPaid(workspace)), 0);
+  const overdueAmount = overdueInvoices.reduce((sum, workspace) => sum + Math.max(0, invoiceAmountDue(workspace) - invoiceAmountPaid(workspace)), 0);
+  const history = selected ? [
+    selected.created_at ? `Rechnung erstellt: ${date(selected.created_at)}` : null,
+    invoiceStatusLabel(invoiceStatus(selected)) === "Offen" ? "Zahlung erwartet" : null,
+    selected.billing_last_payment_at ? `Zahlung eingegangen: ${date(selected.billing_last_payment_at)}` : null,
+    selected.billing_last_payment_failed_at ? `Zahlungsfehler: ${date(selected.billing_last_payment_failed_at)}` : null,
+  ].filter(Boolean) : [];
+
+  return <>
+    <section className={styles.crmKpiGrid} aria-label="Zahlungskennzahlen">
+      <StatCard icon="€" label="Umsatz diesen Monat" value={cents(monthlyRevenue)} hint={invoices.length ? "Aus bestätigten Zahlungsdaten" : "Keine Rechnungen vorhanden"} trend="Echte Billing-Daten" tone={styles.toneGreen} />
+      <StatCard icon="◷" label="Offene Rechnungen" value={openInvoices.length} hint="Status offen/pending" trend="Keine Demo-Rechnungen" tone={styles.toneAmber} />
+      <StatCard icon="!" label="Überfällige Zahlungen" value={overdueInvoices.length} hint="Status past_due" trend="Aus Billing-Status" tone={styles.toneRed} />
+      <StatCard icon="✓" label="Erfolgreiche Zahlungen" value={paidInvoices.length} hint="Status paid/active" trend="Echt verbucht" tone={styles.toneCyan} />
+      <StatCard icon="M" label="Manuelle Rechnungen" value={0} hint="Keine separate Datenquelle" trend="Sauberer Fallback" tone={styles.toneBlue} />
+    </section>
+    {error ? <p className={styles.badgeWarn}>{error}</p> : null}
+    <section className={styles.paymentsLayout}>
+      <article className={`${styles.card} ${styles.paymentsTableCard}`}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Billing</span><h2>Zahlungen &amp; Rechnungen</h2></div><span className={styles.badge}>{invoices.length} Einträge</span></div><div className={styles.paymentFilterBar}><select className={styles.select} disabled><option>Status: Alle</option></select><button className={styles.buttonSecondary} disabled>Letzte 30 Tage · vorbereitet</button><input className={styles.input} placeholder="Suche nach Kunde, Rechnungs-Nr. ..." disabled /></div>{invoices.length ? <div className={styles.paymentTable}><div className={styles.paymentTableHead}><span>Kunde</span><span>Rechnungs-Nr.</span><span>Betrag</span><span>Fälligkeitsdatum</span><span>Status</span><span>Zahlungsmethode</span><span>Aktion</span></div>{invoices.map((workspace) => <div className={styles.paymentTableRow} key={workspace.id}><span><strong>{workspace.name}</strong><small>{workspace.id}</small></span><span>{workspace.last_invoice_id ?? "—"}</span><span>{cents(invoiceAmountDue(workspace))}</span><span>—</span><span><span className={invoiceStatusClass(invoiceStatus(workspace))}>{invoiceStatusLabel(invoiceStatus(workspace))}</span></span><span>—</span><span><Link className={styles.buttonSecondary} href={`/admin/billing?tab=payments&workspace=${workspace.id}`}>Details</Link></span></div>)}</div> : <div className={styles.emptyState}>Noch keine Rechnungen vorhanden. Sobald Stripe Rechnungen liefert oder Zahlungen verbucht wurden, erscheinen sie hier.</div>}</article>
+      <aside className={`${styles.card} ${styles.paymentDetailPanel}`}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Details</span><h2>{selected?.last_invoice_id ? `Rechnung ${selected.last_invoice_id}` : "Rechnungsdetails"}</h2></div>{selected ? <span className={invoiceStatusClass(invoiceStatus(selected))}>{invoiceStatusLabel(invoiceStatus(selected))}</span> : null}</div>{selected ? <><dl className={styles.paymentDetailList}><div><dt>Rechnungsempfänger</dt><dd>{selected.name}<small>{selectedOwner?.display_name ?? selectedOwner?.email ?? selected.owner_user_id ?? "Owner nicht hinterlegt"}</small><small>{selectedOwner?.email ?? "E-Mail nicht hinterlegt"}</small></dd></div><div><dt>Paket &amp; Abrechnung</dt><dd>{readablePlan(selected)}<small>{getCommercialOptionLabel(selected.commercial_option ?? "") || "—"}</small><small>Betrag: {cents(invoiceAmountDue(selected))}</small><small>Zeitraum: —</small></dd></div><div><dt>Zahlungshistorie</dt><dd>{history.length ? history.map((item) => <small key={item}>{item}</small>) : <small>Noch kein Zahlungsverlauf gespeichert.</small>}</dd></div><div><dt>Notizen</dt><dd>{selected.billing_admin_note || "Noch keine Zahlungsnotiz vorhanden."}</dd></div></dl><div className={styles.panelActions}>{selected.last_invoice_hosted_url ? <a className={styles.buttonPrimary} href={selected.last_invoice_hosted_url} target="_blank" rel="noreferrer">Rechnung öffnen</a> : <button className={styles.buttonSecondary} disabled>Rechnung öffnen · nicht verfügbar</button>}{selected.last_invoice_pdf_url ? <a className={styles.buttonSecondary} href={selected.last_invoice_pdf_url} target="_blank" rel="noreferrer">PDF öffnen</a> : <button className={styles.buttonSecondary} disabled>PDF öffnen · nicht verfügbar</button>}<Link className={styles.buttonSecondary} href={`/admin/billing/workspaces/${selected.id}`}>Zahlung verbuchen</Link><button className={styles.buttonSecondary} disabled>Erinnerung senden · in Vorbereitung</button></div></> : <div className={styles.emptyState}>Wähle eine echte Rechnung aus, sobald Billing-Daten vorhanden sind.</div>}</aside>
+    </section>
+    <section className={styles.paymentBottomGrid}><article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Zahlungsarten</span><h2>Zahlungsmethoden</h2></div></div><div className={styles.methodList}><div><strong>SEPA Lastschrift</strong><span>SEPA via Stripe vorbereitet</span></div><div><strong>Überweisung</strong><span>Überweisung extern</span></div><div><strong>Kreditkarte</strong><span>Kreditkarte nicht aktiv</span></div></div><p className={styles.muted}>Noch keine Zahlungsstatistik vorhanden.</p><button className={styles.buttonSecondary} disabled>Zahlungsmethoden verwalten · in Vorbereitung</button></article><article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Aktueller Zeitraum</span><h2>Zahlungsübersicht</h2></div></div><div className={styles.summaryList}><div><span>Gesamtumsatz</span><strong>{cents(totalDue)}</strong></div><div><span>Erfolgreich vereinnahmt</span><strong>{cents(totalPaid)}</strong></div><div><span>Offene Beträge</span><strong>{cents(openAmount)}</strong></div><div><span>Überfällige Beträge</span><strong>{cents(overdueAmount)}</strong></div></div>{invoices.length ? null : <p className={styles.muted}>Noch keine bestätigten Zahlungsdaten vorhanden.</p>}<button className={styles.buttonSecondary} disabled>Zur Umsatzanalyse · in Vorbereitung</button></article></section>
+  </>;
+}
+
 function CustomersContent({ workspaces, members, contactCounts, selectedWorkspaceId, error, memberError }: { workspaces: AdminBillingWorkspace[]; members: AdminBillingMember[]; contactCounts: Map<string, number>; selectedWorkspaceId?: string; error: string | null; memberError: string | null }) {
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? workspaces[0] ?? null;
   const workspaceRows = [...workspaces].sort(sortByDateDesc).slice(0, 10);
@@ -269,7 +350,7 @@ export default async function AdminBillingPage({ searchParams }: AdminBillingPag
   const user = await requirePlatformAdmin();
   const params = await searchParams;
   const tabParam = getSingleParam(params.tab);
-  const activeTab = tabParam === "customers" ? "customers" : tabParam === "packages" ? "packages" : "overview";
+  const activeTab = tabParam === "customers" ? "customers" : tabParam === "packages" ? "packages" : tabParam === "payments" ? "payments" : "overview";
   const selectedWorkspaceId = getSingleParam(params.workspace);
   const [{ workspaces, error }, { members, error: memberError }, { counts: contactCounts }] = await Promise.all([listAdminBillingWorkspaces(), listAdminBillingMembers(), listWorkspaceContactCounts()]);
 
@@ -277,7 +358,7 @@ export default async function AdminBillingPage({ searchParams }: AdminBillingPag
     <AdminBillingShell user={user} title="Adminbereich" subtitle="Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.">
       <div className={styles.adminStack}>
         <AdminTabs activeTab={activeTab} />
-        {activeTab === "customers" ? <CustomersContent workspaces={workspaces} members={members} contactCounts={contactCounts} selectedWorkspaceId={selectedWorkspaceId} error={error} memberError={memberError} /> : activeTab === "packages" ? <PackagesContent /> : <OverviewContent workspaces={workspaces} error={error} />}
+        {activeTab === "customers" ? <CustomersContent workspaces={workspaces} members={members} contactCounts={contactCounts} selectedWorkspaceId={selectedWorkspaceId} error={error} memberError={memberError} /> : activeTab === "packages" ? <PackagesContent /> : activeTab === "payments" ? <PaymentsContent workspaces={workspaces} members={members} selectedWorkspaceId={selectedWorkspaceId} error={error} /> : <OverviewContent workspaces={workspaces} error={error} />}
       </div>
     </AdminBillingShell>
   );
