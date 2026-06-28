@@ -42,6 +42,14 @@ function planLabel(planId?: string | null) {
   return planId ?? "—";
 }
 
+function compactOptionLabel(option?: string | null) {
+  if (option === "pilot") return "Pilot-Demo";
+  if (option === "starter_flex") return "Starter Flex";
+  if (option === "starter_12m") return "Starter 12M";
+  const label = getCommercialOptionLabel(option ?? "");
+  return label.length > 18 ? `${label.slice(0, 15)}…` : label;
+}
+
 function StatCard({ icon, label, value, hint, tone }: { icon: string; label: string; value: string | number; hint: string; tone: string }) {
   return (
     <article className={styles.crmKpiCard}>
@@ -100,8 +108,8 @@ export default async function AdminBillingPage() {
       <div className={styles.adminStack}>
         <nav className={styles.dashboardTabs} aria-label="Adminbereiche">
           <span className={styles.activeTab}>Übersicht</span>
-          <span>Kunden &amp; Nutzer</span>
-          <span>Pakete &amp; Freigaben</span>
+          <span>Kunden</span>
+          <span>Pakete</span>
           <span>Zahlungen</span>
           <span>Abos <small>Später</small></span>
         </nav>
@@ -126,7 +134,7 @@ export default async function AdminBillingPage() {
                 {recentWorkspaces.map((workspace) => (
                   <div className={styles.compactTableRow} key={workspace.id}>
                     <span><Link className={styles.workspaceLink} href={`/admin/billing/workspaces/${workspace.id}`}>{workspace.name}</Link><small>{workspace.id}</small></span>
-                    <span>{planLabel(workspace.plan_id)}<small>{getCommercialOptionLabel(workspace.commercial_option ?? "")}</small></span>
+                    <span>{planLabel(workspace.plan_id)}<small>{compactOptionLabel(workspace.commercial_option)}</small></span>
                     <span>—</span>
                     <span>{date(getWorkspaceDate(workspace))}</span>
                     <span><span className={statusClass(workspace.billing_status)}>{overviewStatusLabel(workspace)}</span></span>
@@ -145,7 +153,7 @@ export default async function AdminBillingPage() {
           <article className={styles.card}>
             <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Betrieb</span><h2>Systemstatus</h2></div></div>
             <div className={styles.statusList}>{systemStatus.map(([label, status, className]) => <div className={styles.statusItem} key={label}><span className={styles.statusLabel}><span className={styles.statusIcon} aria-hidden="true" />{label}</span><span className={className}>{status}</span></div>)}</div>
-            <p className={styles.muted}>Systemstatus geprüft · externe Dienste nur angezeigt, wenn sicher ableitbar.</p>
+            <p className={styles.muted}>Status aus vorhandener Konfiguration; unsichere Dienste bleiben neutral.</p>
           </article>
         </section>
 
@@ -161,7 +169,7 @@ export default async function AdminBillingPage() {
           </article>
         </section>
 
-        <section className={styles.card} id="workspace-verzeichnis">
+        <section className={`${styles.card} ${styles.directoryCard}`} id="workspace-verzeichnis">
           <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Verzeichnis</span><h2>Alle Workspaces</h2></div><span className={styles.badge}>{workspaces.length} Einträge</span></div>
           {workspaces.length ? <div className={styles.workspaceDirectory}>{workspaces.map((workspace) => <Link className={styles.directoryItem} href={`/admin/billing/workspaces/${workspace.id}`} key={workspace.id}><strong>{workspace.name}</strong><span>{planLabel(workspace.plan_id)} · {getBillingStatusLabel(workspace.billing_status)}</span></Link>)}</div> : <div className={styles.emptyState}>Noch keine Kunden vorhanden.</div>}
         </section>
