@@ -17,7 +17,7 @@ import {
 } from "@/lib/supabase/server";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
@@ -52,6 +52,7 @@ type FansWorkspaceProps = {
   archivedChannelsNotice?: string;
   noticeError?: string;
   locale: FanMindLanguage;
+  userEmail: string | null | undefined;
 };
 
 type FansPageProps = {
@@ -122,10 +123,11 @@ function FansWorkspace({
   archivedChannelsNotice,
   noticeError,
   locale,
+  userEmail,
 }: FansWorkspaceProps) {
   const dueFollowupCount = countDueOrOverdueOpenFollowups(followups);
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("fans", locale, dueFollowupCount);
+    getWorkspaceNavigationForUser("fans", userEmail, locale, dueFollowupCount);
   const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const fanGroups = groupContactsByFan(
     contacts,
@@ -1220,6 +1222,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
           archivedChannelsNotice={archivedNoticeParam}
           noticeError={errorParam}
           locale={locale}
+          userEmail={data.user.email}
         />
       ) : (
         <section

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import {
   getOpenFollowupCount,
@@ -40,6 +40,7 @@ type OnboardingWorkspaceProps = {
   contactsError?: string;
   openFollowupCount: number;
   userDisplayName: string;
+  userEmail: string | null | undefined;
 };
 
 async function logout() {
@@ -185,9 +186,10 @@ function OnboardingWorkspace({
   contactsError,
   openFollowupCount,
   userDisplayName,
+  userEmail,
 }: OnboardingWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("onboarding");
+    getWorkspaceNavigationForUser("onboarding", userEmail);
   const planLabel = getPlanLabel(workspace);
   const planStatus = getPlanStatus(workspace);
   const steps = getOnboardingSteps({ workspace, contacts });
@@ -383,6 +385,7 @@ export default async function OnboardingPage() {
             data.user.user_metadata,
             workspace.name,
           )}
+          userEmail={data.user.email}
         />
       ) : (
         <section

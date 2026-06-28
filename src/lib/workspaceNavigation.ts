@@ -1,5 +1,6 @@
 import { type WorkspaceNavLink } from "@/components/WorkspaceShell";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import { wt } from "@/lib/workspaceCopy";
 
 export type WorkspaceRouteKey =
@@ -14,6 +15,20 @@ export type WorkspaceRouteKey =
   | "reactivation"
   | "followups"
   | "admin";
+
+export function getWorkspaceNavigationForUser(
+  activeRoute: WorkspaceRouteKey,
+  email: string | null | undefined,
+  locale: FanMindLanguage = "de",
+  dueFollowupCount = 0,
+) {
+  return getWorkspaceNavigation(
+    activeRoute,
+    locale,
+    dueFollowupCount,
+    isPlatformAdminEmail(email),
+  );
+}
 
 export function getWorkspaceNavigation(
   activeRoute: WorkspaceRouteKey,

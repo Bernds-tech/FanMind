@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import {
   getOpenFollowupCount,
@@ -43,15 +43,17 @@ function CsvImportWorkspace({
   contactCount,
   openFollowupCount,
   contactsError,
+  userEmail,
 }: {
   workspace: WorkspaceDashboardRow;
   userDisplayName: string;
   contactCount: number;
   openFollowupCount: number;
+  userEmail: string | null | undefined;
   contactsError?: string;
 }) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("fans");
+    getWorkspaceNavigationForUser("fans", userEmail);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (
@@ -117,6 +119,7 @@ export default async function CsvImportPage() {
           )}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          userEmail={data.user.email}
           contactsError={contactsResult?.error?.message}
         />
       ) : (

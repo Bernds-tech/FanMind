@@ -11,7 +11,7 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
@@ -39,6 +39,7 @@ type ReachWorkspaceProps = {
   contacts: ContactRow[];
   contactsError?: string;
   openFollowupCount: number;
+  userEmail: string | null | undefined;
 };
 
 const numberFormatter = new Intl.NumberFormat("de-DE");
@@ -170,9 +171,10 @@ function ReachWorkspace({
   contacts,
   contactsError,
   openFollowupCount,
+  userEmail,
 }: ReachWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("reach", "de", openFollowupCount);
+    getWorkspaceNavigationForUser("reach", userEmail, "de", openFollowupCount);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
   const totals = getReachTotals(REACH_CHANNELS);
   const topChannel = [...REACH_CHANNELS].sort((left, right) => right.reach - left.reach)[0];
@@ -402,6 +404,7 @@ export default async function ReachPage() {
           contacts={contactsResult?.contacts ?? []}
           contactsError={contactsResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          userEmail={data.user.email}
         />
       ) : (
         <section

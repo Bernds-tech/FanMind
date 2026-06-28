@@ -11,7 +11,7 @@ import {
 } from "@/lib/supabase/server";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
@@ -21,6 +21,7 @@ type TopFansWorkspaceProps = {
   contacts: ContactRow[];
   contactsError?: string;
   openFollowupCount: number;
+  userEmail: string | null | undefined;
 };
 
 const sourceLabels: Record<string, string> = {
@@ -129,9 +130,10 @@ function TopFansWorkspace({
   contacts,
   contactsError,
   openFollowupCount,
+  userEmail,
 }: TopFansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("top-fans");
+    getWorkspaceNavigationForUser("top-fans", userEmail);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (
@@ -216,6 +218,7 @@ export default async function TopFansPage() {
           )}
           contacts={contactsResult?.contacts ?? []}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          userEmail={data.user.email}
           contactsError={contactsResult?.error?.message}
         />
       ) : (

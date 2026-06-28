@@ -32,7 +32,7 @@ import {
 import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
@@ -102,6 +102,7 @@ type FanDetailWorkspaceProps = {
   allContacts: ContactRow[];
   demoConnectionsDisabled: boolean;
   locale: FanMindLanguage;
+  userEmail: string | null | undefined;
 };
 
 type ConversationChannelKey =
@@ -183,9 +184,10 @@ function FanDetailWorkspace({
   allContacts,
   demoConnectionsDisabled,
   locale,
+  userEmail,
 }: FanDetailWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("fans", locale, dueFollowupCount);
+    getWorkspaceNavigationForUser("fans", userEmail, locale, dueFollowupCount);
   const userLabel =
     userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const title = contact?.display_name ?? "Fan-Detail";
@@ -1857,6 +1859,7 @@ export default async function FanDetailPage({
         allContacts={contactsResult?.contacts ?? []}
         demoConnectionsDisabled={areDemoConnectionsDisabled(user, workspace)}
         locale={locale}
+        userEmail={user.email}
       />
     </main>
   );
