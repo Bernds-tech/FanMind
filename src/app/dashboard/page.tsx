@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getBillingCheckoutActionLabel, isWorkspaceBillingSuspended, shouldShowBillingCheckoutAction } from "@/lib/billing";
+import { getPreActivationRedirect } from "@/lib/preActivation";
+import { getBillingCheckoutActionLabel, shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
@@ -551,7 +552,8 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   }
 
   const workspace = workspaceResult.workspace;
-  if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
+  const preActivationRedirect = getPreActivationRedirect(workspace);
+  if (preActivationRedirect) redirect(preActivationRedirect);
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;

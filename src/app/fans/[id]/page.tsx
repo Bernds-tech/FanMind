@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getContactAiProfile,
   getContactConversationMessages,
@@ -1677,6 +1678,8 @@ export default async function FanDetailPage({
   }
 
   const { user, workspace } = authorized;
+  const preActivationRedirect = getPreActivationRedirect(workspace);
+  if (preActivationRedirect) redirect(preActivationRedirect);
   const locale = await resolveWorkspaceLocale({
     lang: pageSearchParams?.lang,
     user,

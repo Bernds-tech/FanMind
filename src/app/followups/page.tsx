@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isWorkspaceBillingSuspended } from "@/lib/billing";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
@@ -45,7 +45,8 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
   }
 
   const workspace = workspaceResult.workspace;
-  if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
+  const preActivationRedirect = getPreActivationRedirect(workspace);
+  if (preActivationRedirect) redirect(preActivationRedirect);
   if (!workspace) redirect("/login");
 
   const locale = await resolveWorkspaceLocale({ lang: getSingleParam(params?.lang), user: data.user });
