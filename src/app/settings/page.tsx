@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isWorkspaceBillingSuspended } from "@/lib/billing";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
@@ -19,6 +20,7 @@ type SettingsWorkspaceProps = {
   userDisplayName: string;
   contactCount: number;
   openFollowupCount: number;
+  showAdminArea: boolean;
 };
 
 async function logout() {
@@ -44,9 +46,10 @@ function SettingsWorkspace({
   userDisplayName,
   contactCount,
   openFollowupCount,
+  showAdminArea,
 }: SettingsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("settings");
+    getWorkspaceNavigation("settings", "de", 0, showAdminArea);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
   const planLabel = workspace.plan_id === "pilot" ? "Pilot / Setup" : workspace.plan_id === "starter" ? "Starter" : workspace.plan_id === "growth" ? "Growth" : "Agency";
 
@@ -133,6 +136,7 @@ export default async function SettingsPage() {
           )}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          showAdminArea={isPlatformAdminEmail(data.user.email)}
         />
       ) : (
         <section

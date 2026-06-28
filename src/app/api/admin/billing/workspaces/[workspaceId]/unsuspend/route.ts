@@ -6,5 +6,6 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/b
   const admin = await requirePlatformAdmin();
   const { workspaceId } = await ctx.params;
   const result = await updateAdminBillingWorkspace(workspaceId, admin, { billing_status: "active", billing_suspended_at: null, billing_suspended_reason: null, billing_manual_override: false });
+  if (request.headers.get("accept")?.includes("text/html")) return NextResponse.redirect(new URL(`/admin/billing/workspaces/${workspaceId}`, request.url), { status: 303 });
   return NextResponse.json(result.ok ? { ok: true } : { error: result.error }, { status: result.status });
 }

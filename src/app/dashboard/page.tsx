@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isWorkspaceBillingSuspended } from "@/lib/billing";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
   ensureUserWorkspace,
@@ -37,6 +38,7 @@ type WorkspaceDetailsProps = {
   unseenMessages: ConversationMessageRow[];
   unseenMessagesError?: string;
   openFollowupCount: number;
+  showAdminArea: boolean;
 };
 
 type WorkspaceDisplay = {
@@ -354,6 +356,7 @@ function WorkspaceDetails({
   unseenMessagesError,
   openFollowupCount,
   locale,
+  showAdminArea,
 }: WorkspaceDetailsProps & { locale: FanMindLanguage }) {
   const display = getWorkspaceDisplay(workspace);
   const pageTitle = "Dashboard";
@@ -364,7 +367,7 @@ function WorkspaceDetails({
   const userLabel = displayName;
   const dueFollowupCount = countDueOrOverdueOpenFollowups(followups);
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("dashboard", locale, dueFollowupCount);
+    getWorkspaceNavigation("dashboard", locale, dueFollowupCount, showAdminArea);
   const workInboxItems = getWorkInboxItems(contacts, followups);
   const newMessageItems = getNewMessageItems(contacts, unseenMessages);
   const workspaceKpis = getWorkspaceKpiStatsFromContacts(contacts, openFollowupCount);
@@ -571,6 +574,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
           unseenMessagesError={unseenMessagesResult?.error?.message}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
           locale={locale}
+          showAdminArea={isPlatformAdminEmail(data.user.email)}
         />
       ) : (
         <section className={styles.fallbackCard} aria-label="FanMind Workspace">

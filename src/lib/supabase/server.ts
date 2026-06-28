@@ -68,6 +68,7 @@ export type WorkspaceBackfillRow = {
   billing_updated_by_user_id?: string | null;
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
+  stripe_checkout_session_id?: string | null;
   last_invoice_id?: string | null;
   last_invoice_status?: string | null;
   last_invoice_amount_due_cents?: number | null;
@@ -502,7 +503,7 @@ type PostgrestCountResult = {
 type SupabaseFilterValue = string | number | boolean | null;
 
 const WORKSPACE_COLUMNS =
-  "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url";
+  "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,stripe_checkout_session_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url";
 const CONTACT_COLUMNS =
   "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,created_at,updated_at";
 const MEMORY_COLUMNS =

@@ -17,6 +17,7 @@ export function getWorkspaceNavigation(
   activeRoute: WorkspaceRouteKey,
   locale: FanMindLanguage = "de",
   dueFollowupCount = 0,
+  showAdminArea = false,
 ): {
   mainNavigation: WorkspaceNavLink[];
   settingsNavigation: WorkspaceNavLink[];
@@ -54,6 +55,15 @@ export function getWorkspaceNavigation(
         href: "/settings",
         active: activeRoute === "settings",
       },
+      ...(showAdminArea
+        ? [
+            {
+              label: "Adminbereich",
+              href: "/admin/billing",
+              active: false,
+            },
+          ]
+        : []),
     ],
     savedViews: [
       {

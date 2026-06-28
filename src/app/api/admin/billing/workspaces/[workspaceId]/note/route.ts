@@ -10,5 +10,6 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/b
     ? ((await request.json().catch(() => ({}))) as { note?: string })
     : { note: (await request.formData().catch(() => new FormData())).get("note")?.toString() };
   const result = await updateAdminBillingWorkspace(workspaceId, admin, { billing_admin_note: String(payload.note ?? "").slice(0, 2000) });
+  if (request.headers.get("accept")?.includes("text/html")) return NextResponse.redirect(new URL(`/admin/billing/workspaces/${workspaceId}`, request.url), { status: 303 });
   return NextResponse.json(result.ok ? { ok: true } : { error: result.error }, { status: result.status });
 }
