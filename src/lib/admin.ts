@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSupabaseServerUser, type SupabaseServerUser } from "@/lib/supabase/server";
 
-const FALLBACK_ADMIN_EMAILS = "fanmind@fanmind.ch,b.gugggennberger@gmail.com";
+const FALLBACK_ADMIN_EMAILS = "fanmind@fanmind.ch,b.guggennberger@gmail.com";
 
 function normalizeEmail(email: string | null | undefined): string {
   return String(email ?? "").trim().toLowerCase();
