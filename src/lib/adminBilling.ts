@@ -67,3 +67,63 @@ export async function listStripeInvoicesForWorkspace(workspace: Pick<AdminBillin
   if (!response.ok) return { invoices: [], error: json.error?.message ?? "Stripe-Rechnungen konnten nicht geladen werden." };
   return { invoices: (json.data ?? []).map((invoice) => ({ id: String(invoice.id), status: typeof invoice.status === "string" ? invoice.status : null, created: typeof invoice.created === "number" ? new Date(invoice.created * 1000).toISOString() : null, amount_due: typeof invoice.amount_due === "number" ? invoice.amount_due : null, hosted_invoice_url: typeof invoice.hosted_invoice_url === "string" ? invoice.hosted_invoice_url : null, invoice_pdf: typeof invoice.invoice_pdf === "string" ? invoice.invoice_pdf : null })), error: null };
 }
+
+export type AdminBillingMember = {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: string | null;
+  created_at: string | null;
+  email?: string | null;
+  display_name?: string | null;
+};
+
+type WorkspaceMemberRow = { id: string; workspace_id: string; user_id: string; role: string | null; created_at: string | null };
+type ProfileRow = { id: string; email: string | null; display_name: string | null };
+type ContactCountRow = { workspace_id: string; count: number };
+
+export async function listAdminBillingMembers(): Promise<{ members: AdminBillingMember[]; error: string | null }> {
+  const key = serviceKey();
+  if (!key) return { members: [], error: "Supabase Service Role ist nicht konfiguriert." };
+  try {
+    const memberUrl = new URL(getSupabaseRestUrl("workspace_members"));
+    memberUrl.searchParams.set("select", "id,workspace_id,user_id,role,created_at");
+    memberUrl.searchParams.set("order", "created_at.desc.nullslast");
+    memberUrl.searchParams.set("limit", "100");
+    const memberResponse = await fetch(memberUrl, { headers: getSupabaseHeaders(key), cache: "no-store" });
+    if (!memberResponse.ok) return { members: [], error: `Workspace-Mitglieder konnten nicht geladen werden (${memberResponse.status}).` };
+    const rows = await memberResponse.json() as WorkspaceMemberRow[];
+    const userIds = [...new Set(rows.map((row) => row.user_id).filter(Boolean))];
+    const profiles = new Map<string, ProfileRow>();
+
+    if (userIds.length) {
+      const profileUrl = new URL(getSupabaseRestUrl("profiles"));
+      profileUrl.searchParams.set("select", "id,email,display_name");
+      profileUrl.searchParams.set("id", `in.(${userIds.join(",")})`);
+      const profileResponse = await fetch(profileUrl, { headers: getSupabaseHeaders(key), cache: "no-store" });
+      if (profileResponse.ok) {
+        for (const profile of await profileResponse.json() as ProfileRow[]) profiles.set(profile.id, profile);
+      }
+    }
+
+    return {
+      members: rows.map((row) => ({ ...row, email: profiles.get(row.user_id)?.email ?? null, display_name: profiles.get(row.user_id)?.display_name ?? null })),
+      error: null,
+    };
+  } catch (error) { return { members: [], error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
+}
+
+export async function listWorkspaceContactCounts(): Promise<{ counts: Map<string, number>; error: string | null }> {
+  const key = serviceKey();
+  if (!key) return { counts: new Map(), error: null };
+  try {
+    const url = new URL(getSupabaseRestUrl("contacts"));
+    url.searchParams.set("select", "workspace_id");
+    const response = await fetch(url, { headers: { ...getSupabaseHeaders(key), Prefer: "count=exact" }, cache: "no-store" });
+    if (!response.ok) return { counts: new Map(), error: null };
+    const rows = await response.json() as ContactCountRow[];
+    const counts = new Map<string, number>();
+    for (const row of rows) counts.set(row.workspace_id, (counts.get(row.workspace_id) ?? 0) + 1);
+    return { counts, error: null };
+  } catch { return { counts: new Map(), error: null }; }
+}
