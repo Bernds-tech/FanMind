@@ -1,3 +1,4 @@
+import type React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/admin";
@@ -8,9 +9,51 @@ import { getStripeConfigStatus } from "@/lib/stripeBilling";
 import { AdminBillingShell } from "../../AdminBillingShell";
 import styles from "../../adminBilling.module.css";
 
-function money(cents?: number | null) { return typeof cents === "number" ? (cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "—"; }
-function date(value?: string | null) { return value ? new Date(value).toLocaleString("de-DE") : "—"; }
-function Field({ label, value }: { label: string; value: React.ReactNode }) { return <div className={styles.field}><dt>{label}</dt><dd>{value || "—"}</dd></div>; }
+function money(cents?: number | null) {
+  return typeof cents === "number" ? (cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "—";
+}
+
+function date(value?: string | null) {
+  return value ? new Date(value).toLocaleString("de-DE") : "—";
+}
+
+function shortId(value?: string | null) {
+  if (!value) return "—";
+  return value.length > 18 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
+}
+
+function statusClass(status?: string | null) {
+  switch (status) {
+    case "active":
+    case "demo_free":
+      return styles.badgeOk;
+    case "pending_payment_setup":
+    case "pending_sepa_mandate":
+    case "past_due":
+      return styles.badgeWarn;
+    case "payment_failed":
+    case "suspended":
+    case "manual_suspended":
+    case "cancelled":
+    case "expired":
+      return styles.badgeBad;
+    default:
+      return styles.badge;
+  }
+}
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return <div className={styles.field}><dt>{label}</dt><dd>{value || "—"}</dd></div>;
+}
+
+function QuickFact({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) {
+  return <div className={styles.quickFact}><span>{label}</span><strong className={tone}>{value || "—"}</strong></div>;
+}
+
+function TimelineItem({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) {
+  if (!value || value === "—" || value === 0) return null;
+  return <li className={styles.timelineItem}><span className={styles.timelineDot} /><div><strong>{label}</strong><p className={tone}>{value}</p></div></li>;
+}
 
 export default async function AdminBillingWorkspaceDetailPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const user = await requirePlatformAdmin();
@@ -19,17 +62,65 @@ export default async function AdminBillingWorkspaceDetailPage({ params }: { para
   if (!workspace && !error) notFound();
   const stripe = getStripeConfigStatus();
   const invoices = workspace ? await listStripeInvoicesForWorkspace(workspace) : { invoices: [], error: null };
+  const planLabel = workspace?.plan_id ?? "—";
+  const optionLabel = getCommercialOptionLabel(workspace?.commercial_option ?? "");
+  const billingStatusLabel = getBillingStatusLabel(workspace?.billing_status);
+  const isSuspended = workspace?.billing_status === "suspended" || workspace?.billing_status === "manual_suspended";
+  const timelineHasItems = Boolean(workspace?.billing_last_payment_at || workspace?.billing_last_payment_failed_at || workspace?.billing_next_retry_at || workspace?.billing_grace_until || workspace?.billing_suspended_at || workspace?.billing_admin_note || (workspace?.billing_retry_count ?? 0) > 0);
 
   return <AdminBillingShell user={user} title="Adminbereich" subtitle={`Workspace-Detail · Angemeldet als Admin: ${user.email ?? "Admin"}`}>
     <div className={styles.adminStack}>
-      <section className={styles.hero}><div><span className={styles.eyebrow}>Workspace-Detail</span><h1>{workspace?.name ?? "Workspace"}</h1><p>{workspace?.owner_email ?? workspace?.owner_user_id ?? "Owner nicht hinterlegt"}</p></div><div className={styles.actions}><Link className={styles.buttonSecondary} href="/admin/billing">← Übersicht</Link>{workspace ? <span className={styles.badgeOk}>{getBillingStatusLabel(workspace.billing_status)}</span> : null}</div></section>
       {error ? <p className={styles.badgeWarn}>{error}</p> : null}
       {workspace ? <>
-        <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Paket & Abrechnung</span><h2>Plan, Option und Beträge</h2></div><span className={styles.chip}>{workspace.plan_id ?? "—"}</span></div><dl className={styles.detailGrid}><Field label="Workspace Name" value={workspace.name} /><Field label="Owner" value={workspace.owner_email ?? workspace.owner_user_id} /><Field label="Plan" value={workspace.plan_id} /><Field label="Option" value={getCommercialOptionLabel(workspace.commercial_option ?? "")} /><Field label="Setup-Kosten" value={money(workspace.setup_fee_cents)} /><Field label="Monatsbetrag" value={money(workspace.monthly_fee_cents)} /><Field label="Bindung" value={`${workspace.commitment_months ?? 0} Monate`} /><Field label="Workspace ID" value={workspace.id} /></dl></section>
-        <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Zahlungsstatus</span><h2>Status & Fristen</h2></div><span className={styles.badge}>{getBillingStatusLabel(workspace.billing_status)}</span></div><dl className={styles.detailGrid}><Field label="Billing Status" value={getBillingStatusLabel(workspace.billing_status)} /><Field label="Sperre / Grund" value={`${date(workspace.billing_suspended_at)} · ${workspace.billing_suspended_reason ?? "—"}`} /><Field label="Retry Count" value={workspace.billing_retry_count ?? 0} /><Field label="Next Retry" value={date(workspace.billing_next_retry_at)} /><Field label="Grace Until" value={date(workspace.billing_grace_until)} /><Field label="Last Payment" value={date(workspace.billing_last_payment_at)} /></dl></section>
-        <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Rechnungen</span><h2>Rechnungsinformationen</h2></div>{!stripe.hasSecretKey ? <span className={styles.badgeWarn}>Stripe fehlt</span> : <span className={styles.badgeOk}>Stripe aktiv</span>}</div><dl className={styles.detailGrid}><Field label="Letzte Rechnung" value={`${workspace.last_invoice_status ?? "—"} · ${money(workspace.last_invoice_amount_due_cents)}`} /><Field label="Bezahlt" value={money(workspace.last_invoice_amount_paid_cents)} /><Field label="Invoice ID" value={workspace.last_invoice_id} /><Field label="Invoice Links" value={<>{workspace.last_invoice_hosted_url ? <a href={workspace.last_invoice_hosted_url}>Hosted Invoice</a> : "—"} {workspace.last_invoice_pdf_url ? <a href={workspace.last_invoice_pdf_url}>PDF</a> : null}</>} /></dl>{invoices.error ? <p className={styles.badgeWarn}>{invoices.error}</p> : null}<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Datum</th><th>Status</th><th>Betrag</th><th>Links</th></tr></thead><tbody>{invoices.invoices.map((i) => <tr key={i.id}><td>{date(i.created)}</td><td>{i.status ?? "—"}</td><td>{money(i.amount_due)}</td><td>{i.hosted_invoice_url ? <a href={i.hosted_invoice_url}>Hosted</a> : null} {i.invoice_pdf ? <a href={i.invoice_pdf}>PDF</a> : null}</td></tr>)}</tbody></table></div></section>
-        <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Systemdaten</span><h2>Stripe-Daten</h2></div></div><dl className={styles.detailGrid}><Field label="Stripe Customer ID" value={workspace.stripe_customer_id} /><Field label="Stripe Subscription ID" value={workspace.stripe_subscription_id} /><Field label="Stripe Checkout Session ID" value={workspace.stripe_checkout_session_id} /><Field label="Aktualisiert" value={date(workspace.billing_updated_at)} /></dl></section>
-        <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Admin-Aktionen</span><h2>Aktionen & Notizen</h2></div></div><div className={styles.actions}><form action={`/api/admin/billing/workspaces/${workspace.id}/suspend`} method="post"><button className={styles.buttonDanger}>Sperren</button></form><form action={`/api/admin/billing/workspaces/${workspace.id}/unsuspend`} method="post"><button className={styles.buttonSecondary}>Entsperren</button></form></div><form action={`/api/admin/billing/workspaces/${workspace.id}/mark-paid`} method="post" className={styles.formGrid}><h3>Zahlung als eingegangen markieren</h3><label>Zahlungsquelle<select className={styles.select} name="payment_source" defaultValue="bank_transfer"><option value="bank_transfer">Banküberweisung</option><option value="stripe_confirmed">Stripe bestätigt</option><option value="cash_or_other">Bar/anderer Weg</option><option value="credit_note">Gutschrift/Kulanz</option><option value="correction">Korrektur</option></select></label><label>Betrag optional<input className={styles.input} name="amount" inputMode="decimal" /></label><label>Referenz/Notiz optional<input className={styles.input} name="reference" /></label><label>Datum optional<input className={styles.input} name="paid_at" type="date" /></label><label><input type="checkbox" name="lift_payment_suspension" value="true" defaultChecked={workspace.billing_status !== "manual_suspended"} disabled={workspace.billing_status === "manual_suspended"} /> Zahlungsbedingte Sperre aufheben</label><button className={styles.buttonPrimary}>Zahlung verbuchen</button></form><form action={`/api/admin/billing/workspaces/${workspace.id}/note`} method="post" className={styles.formGrid}><h3>Admin-Notiz</h3><textarea className={styles.textarea} name="note" defaultValue={workspace.billing_admin_note ?? ""} rows={5} /><button className={styles.buttonPrimary}>Admin-Notiz speichern</button></form></section>
+        <section className={styles.crmHero}>
+          <div className={styles.crmHeroMain}>
+            <span className={styles.eyebrow}>Kundenprofil</span>
+            <h1>{workspace.name ?? "Workspace"}</h1>
+            <p>Owner: {workspace.owner_email ?? workspace.owner_user_id ?? "nicht hinterlegt"} · Workspace-ID: <span>{workspace.id}</span></p>
+            <div className={styles.crmBadgeRow}>
+              <span className={styles.chip}>{planLabel}</span>
+              <span className={styles.badge}>{optionLabel}</span>
+              <span className={statusClass(workspace.billing_status)}>Status: {billingStatusLabel}</span>
+              {isSuspended ? <span className={styles.badgeBad}>Sperre aktiv</span> : null}
+            </div>
+          </div>
+          <div className={styles.crmHeroAside}>
+            <Link className={styles.buttonSecondary} href="/admin/billing">← Zur Übersicht</Link>
+            <span>Monat / MRR</span>
+            <strong>{money(workspace.monthly_fee_cents)}</strong>
+          </div>
+        </section>
+
+        <section className={styles.quickFacts} aria-label="Wichtigste Kennzahlen">
+          <QuickFact label="Plan" value={planLabel} />
+          <QuickFact label="Option" value={optionLabel} />
+          <QuickFact label="Setup" value={money(workspace.setup_fee_cents)} />
+          <QuickFact label="Monat" value={money(workspace.monthly_fee_cents)} />
+          <QuickFact label="Bindung" value={`${workspace.commitment_months ?? 0} Monate`} />
+          <QuickFact label="Zahlungsstatus" value={billingStatusLabel} tone={statusClass(workspace.billing_status)} />
+          <QuickFact label="Letzte Zahlung" value={date(workspace.billing_last_payment_at)} />
+          <QuickFact label="Nächster Versuch / Kulanz" value={workspace.billing_next_retry_at ? date(workspace.billing_next_retry_at) : date(workspace.billing_grace_until)} />
+        </section>
+
+        <nav className={styles.sectionNav} aria-label="CRM-Abschnitte">
+          <a href="#uebersicht">Übersicht</a><a href="#rechnungen">Rechnungen</a><a href="#zahlungsverlauf">Zahlungsverlauf</a><a href="#admin-notizen">Admin-Notizen</a><a href="#technische-daten">Technische Daten</a>
+        </nav>
+
+        <div className={styles.crmLayout}>
+          <main className={styles.crmMain}>
+            <section id="uebersicht" className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Übersicht</span><h2>Vertrag & Zahlungsstatus</h2></div><span className={statusClass(workspace.billing_status)}>{billingStatusLabel}</span></div><dl className={styles.detailGrid}><Field label="Workspace" value={workspace.name} /><Field label="Owner" value={workspace.owner_email ?? workspace.owner_user_id} /><Field label="Plan" value={planLabel} /><Field label="Option" value={optionLabel} /><Field label="Setup" value={money(workspace.setup_fee_cents)} /><Field label="Monatsbetrag" value={money(workspace.monthly_fee_cents)} /><Field label="Bindung" value={`${workspace.commitment_months ?? 0} Monate`} /><Field label="Kulanzfrist" value={date(workspace.billing_grace_until)} /></dl></section>
+
+            <section id="rechnungen" className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Rechnungen</span><h2>Rechnungen</h2></div>{!stripe.hasSecretKey ? <span className={styles.badgeWarn}>Stripe nicht konfiguriert</span> : <span className={styles.badgeOk}>Stripe aktiv</span>}</div>{invoices.error ? <p className={styles.badgeWarn}>{invoices.error}</p> : null}{workspace.last_invoice_id || invoices.invoices.length ? <div className={styles.invoiceList}>{workspace.last_invoice_id ? <article className={styles.invoiceCard}><div><span className={styles.subline}>Letzte Rechnung</span><strong>{workspace.last_invoice_id}</strong></div><span className={styles.badge}>{workspace.last_invoice_status ?? "—"}</span><dl><Field label="Betrag fällig" value={money(workspace.last_invoice_amount_due_cents)} /><Field label="Betrag bezahlt" value={money(workspace.last_invoice_amount_paid_cents)} /></dl><div className={styles.actions}>{workspace.last_invoice_hosted_url ? <a className={styles.buttonSecondary} href={workspace.last_invoice_hosted_url}>Rechnung öffnen</a> : null}{workspace.last_invoice_pdf_url ? <a className={styles.buttonSecondary} href={workspace.last_invoice_pdf_url}>PDF öffnen</a> : null}</div></article> : null}{invoices.invoices.map((invoice) => <article className={styles.invoiceRow} key={invoice.id}><div><span>{date(invoice.created)}</span><strong>{invoice.id}</strong></div><span className={styles.badge}>{invoice.status ?? "—"}</span><span>{money(invoice.amount_due)}</span><div className={styles.actions}>{invoice.hosted_invoice_url ? <a href={invoice.hosted_invoice_url}>Rechnung öffnen</a> : null}{invoice.invoice_pdf ? <a href={invoice.invoice_pdf}>PDF öffnen</a> : null}</div></article>)}</div> : <div className={styles.emptyState}>Noch keine Rechnung vorhanden. Sobald Stripe eine Rechnung liefert oder eine Zahlung verbucht wurde, erscheint sie hier.</div>}</section>
+
+            <section id="zahlungsverlauf" className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Historie</span><h2>Zahlungsverlauf</h2></div></div>{timelineHasItems ? <ul className={styles.timeline}><TimelineItem label="Letzte Zahlung" value={date(workspace.billing_last_payment_at)} tone={styles.goodText} /><TimelineItem label="Letzter Zahlungsfehler" value={date(workspace.billing_last_payment_failed_at)} tone={styles.badText} /><TimelineItem label="Fehlversuche" value={(workspace.billing_retry_count ?? 0) > 0 ? workspace.billing_retry_count : null} /><TimelineItem label="Nächster Zahlungsversuch" value={date(workspace.billing_next_retry_at)} /><TimelineItem label="Kulanzfrist" value={date(workspace.billing_grace_until)} /><TimelineItem label="Gesperrt seit" value={date(workspace.billing_suspended_at)} tone={styles.badText} />{workspace.billing_admin_note ? <TimelineItem label="Admin-Notiz / Zahlung verbucht" value={workspace.billing_admin_note} /> : null}</ul> : <div className={styles.emptyState}>Noch kein Zahlungsereignis gespeichert.</div>}</section>
+
+            <section id="technische-daten" className={styles.card}><details className={styles.technicalDetails}><summary>Technische Daten anzeigen</summary><dl className={styles.detailGrid}><Field label="Workspace ID" value={workspace.id} /><Field label="Stripe Customer ID" value={workspace.stripe_customer_id} /><Field label="Stripe Subscription ID" value={workspace.stripe_subscription_id} /><Field label="Stripe Checkout Session ID" value={workspace.stripe_checkout_session_id} /><Field label="Aktualisiert" value={date(workspace.billing_updated_at)} /><Field label="Aktualisiert von" value={shortId(workspace.billing_updated_by_user_id)} /></dl></details></section>
+          </main>
+
+          <aside className={styles.crmAside}>
+            <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Steuerung</span><h2>Admin-Aktionen</h2></div></div><div className={styles.actionGroup}><form action={`/api/admin/billing/workspaces/${workspace.id}/suspend`} method="post"><button className={styles.buttonDanger}>Sperren</button></form><form action={`/api/admin/billing/workspaces/${workspace.id}/unsuspend`} method="post"><button className={styles.buttonSecondary}>Entsperren</button></form></div><form action={`/api/admin/billing/workspaces/${workspace.id}/mark-paid`} method="post" className={styles.compactForm}><h3>Zahlung verbuchen</h3><label>Zahlungsquelle<select className={styles.select} name="payment_source" defaultValue="bank_transfer"><option value="bank_transfer">Banküberweisung</option><option value="stripe_confirmed">Stripe bestätigt</option><option value="cash_or_other">Bar/anderer Weg</option><option value="credit_note">Gutschrift/Kulanz</option><option value="correction">Korrektur</option></select></label><label>Betrag optional<input className={styles.input} name="amount" inputMode="decimal" /></label><label>Referenz/Notiz optional<input className={styles.input} name="reference" /></label><label>Datum optional<input className={styles.input} name="paid_at" type="date" /></label><label className={styles.checkboxLabel}><input type="checkbox" name="lift_payment_suspension" value="true" defaultChecked={workspace.billing_status !== "manual_suspended"} disabled={workspace.billing_status === "manual_suspended"} /> Zahlungsbedingte Sperre aufheben</label><button className={styles.buttonPrimary}>Zahlung verbuchen</button></form><form id="admin-notizen" action={`/api/admin/billing/workspaces/${workspace.id}/note`} method="post" className={styles.compactForm}><h3>Admin-Notiz</h3><textarea className={styles.textarea} name="note" defaultValue={workspace.billing_admin_note ?? ""} rows={4} /><button className={styles.buttonPrimary}>Admin-Notiz speichern</button></form></section>
+          </aside>
+        </div>
       </> : null}
     </div>
   </AdminBillingShell>;
