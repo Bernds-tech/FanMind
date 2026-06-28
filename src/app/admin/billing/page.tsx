@@ -98,11 +98,6 @@ export default async function AdminBillingPage() {
   return (
     <AdminBillingShell user={user} title="Adminbereich" subtitle="Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.">
       <div className={styles.adminStack}>
-        <section className={styles.overviewHeader}>
-          <h1>Adminbereich</h1>
-          <p>Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.</p>
-        </section>
-
         <nav className={styles.dashboardTabs} aria-label="Adminbereiche">
           <span className={styles.activeTab}>Übersicht</span>
           <span>Kunden &amp; Nutzer</span>
