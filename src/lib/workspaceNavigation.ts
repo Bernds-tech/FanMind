@@ -7,6 +7,7 @@ export type WorkspaceRouteKey =
   | "fans"
   | "inbox"
   | "channels"
+  | "reach"
   | "onboarding"
   | "settings"
   | "top-fans"
