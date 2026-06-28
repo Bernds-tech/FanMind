@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { isWorkspaceBillingSuspended } from "@/lib/billing";
 import {
   getOpenFollowupCount,
   ensureUserWorkspace,
@@ -539,6 +540,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   }
 
   const workspace = workspaceResult.workspace;
+  if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
