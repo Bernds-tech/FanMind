@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { isWorkspaceBillingSuspended } from "@/lib/billing";
+import { getBillingStatusLabel, isWorkspaceBillingSuspended } from "@/lib/billing";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
@@ -11,6 +11,8 @@ import {
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
+import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
@@ -21,6 +23,7 @@ type ProfileWorkspaceProps = {
   userDisplayName: string;
   contactCount: number;
   openFollowupCount: number;
+  showAdminArea: boolean;
 };
 
 type ProfileField = {
@@ -30,6 +33,14 @@ type ProfileField = {
 };
 
 const EMPTY_VALUE = "Noch nicht hinterlegt";
+
+function formatMoney(cents?: number | null): string {
+  return typeof cents === "number" ? (cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "—";
+}
+
+function formatDate(value?: string | null): string {
+  return value ? new Date(value).toLocaleDateString("de-DE") : "—";
+}
 
 async function logout() {
   "use server";
@@ -112,9 +123,10 @@ function ProfileWorkspace({
   userDisplayName,
   contactCount,
   openFollowupCount,
+  showAdminArea,
 }: ProfileWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("settings");
+    getWorkspaceNavigation("settings", "de", 0, showAdminArea);
   const fields = getProfileFields(user, workspace, userDisplayName);
   const hasOnlyRealValues = fields.every((field) => field.source === "real");
   const userLabel = getSidebarUserLabel(
@@ -170,6 +182,36 @@ function ProfileWorkspace({
           ))}
         </dl>
       </section>
+      <section className={dashboardStyles.moduleCard} aria-labelledby="billing-profile-title">
+        <div className={dashboardStyles.moduleHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Billing</p>
+            <h2 id="billing-profile-title">Paket & Rechnungen</h2>
+          </div>
+          <span>{getBillingStatusLabel(workspace.billing_status)}</span>
+        </div>
+        <dl className={dashboardStyles.profileDetails}>
+          <div><dt>Aktueller Workspace/Plan</dt><dd>{workspace.name} · {getPlanLabel(workspace)}</dd></div>
+          <div><dt>Commercial Option</dt><dd>{getCommercialOptionLabel(workspace.commercial_option)}</dd></div>
+          <div><dt>Monatlicher Betrag</dt><dd>{formatMoney(workspace.monthly_fee_cents)}</dd></div>
+          <div><dt>Setup Fee</dt><dd>{formatMoney(workspace.setup_fee_cents)}</dd></div>
+          <div><dt>Bindung/Laufzeit</dt><dd>{workspace.commitment_months ? `${workspace.commitment_months} Monate` : "Keine feste Bindung"}</dd></div>
+          <div><dt>Letzte Zahlung</dt><dd>{formatDate(workspace.billing_last_payment_at)}</dd></div>
+          <div><dt>Sperrstatus</dt><dd>{workspace.billing_status === "suspended" || workspace.billing_status === "manual_suspended" ? getBillingStatusLabel(workspace.billing_status) : "nicht gesperrt"}</dd></div>
+        </dl>
+        <div style={{ marginTop: 16 }}>
+          <h3>Letzte Rechnung</h3>
+          {workspace.last_invoice_id || workspace.last_invoice_status ? (
+            <p>Status: {workspace.last_invoice_status ?? "—"} · Betrag: {formatMoney(workspace.last_invoice_amount_due_cents)}<br />
+              {workspace.last_invoice_hosted_url ? <a href={workspace.last_invoice_hosted_url} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
+              {workspace.last_invoice_pdf_url ? <> · <a href={workspace.last_invoice_pdf_url} target="_blank" rel="noreferrer">PDF öffnen</a></> : null}
+            </p>
+          ) : <p>Noch keine Rechnung vorhanden.</p>}
+        </div>
+        {["pending_payment_setup", "past_due", "payment_failed", "suspended"].includes(workspace.billing_status ?? "") ? (
+          <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label={workspace.billing_status === "pending_payment_setup" ? "Zahlung starten" : "Zahlung erneut versuchen"} />
+        ) : null}
+      </section>
     </WorkspaceShell>
   );
 }
@@ -204,6 +246,7 @@ export default async function ProfileSettingsPage() {
           userDisplayName={getUserDisplayName(data.user.user_metadata)}
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
+          showAdminArea={isPlatformAdminEmail(data.user.email)}
         />
       ) : (
         <section

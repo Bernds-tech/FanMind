@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { PlanId } from "@/config/plans";
 
-export function BillingCheckoutButton({ planId, commercialOption }: { planId: PlanId; commercialOption: string }) {
+export function BillingCheckoutButton({ planId, commercialOption, label = "Zahlung starten" }: { planId: PlanId; commercialOption: string; label?: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,7 +30,7 @@ export function BillingCheckoutButton({ planId, commercialOption }: { planId: Pl
   return (
     <div style={{ marginTop: 16 }}>
       <button type="button" onClick={startCheckout} disabled={isLoading} style={{ border: 0, borderRadius: 999, padding: "10px 16px", background: "#111827", color: "white", fontWeight: 700, cursor: "pointer" }}>
-        {isLoading ? "Zahlung wird vorbereitet ..." : "Zahlung starten"}
+        {isLoading ? "Zahlung wird vorbereitet ..." : label}
       </button>
       {message ? <p style={{ color: "#b45309", marginTop: 8 }}>{message}</p> : null}
     </div>

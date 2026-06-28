@@ -66,8 +66,6 @@ function isHiddenProductNavigationItem(item: WorkspaceNavLink): boolean {
   return (
     normalizedLabel.includes("onboarding") ||
     normalizedHref.includes("/onboarding") ||
-    normalizedLabel.includes("admin") ||
-    normalizedHref.includes("/admin") ||
     normalizedLabel.includes("agent") ||
     normalizedHref.includes("/agent")
   );
@@ -115,6 +113,9 @@ function CollapsedNavIcon({ item }: { item: WorkspaceNavLink }) {
   }
   if (href.includes("/channels") || href.includes("/kanaele") || href.includes("/kanäle") || label.includes("kanäle") || label.includes("kanaele")) {
     return <svg viewBox="0 0 24 24"><path d="M7 6.5A3.5 3.5 0 1 1 10.2 11l3.6 2a3.5 3.5 0 1 1-.9 1.8L9.3 12.7a3.5 3.5 0 1 1 0-2.4l3.6-2.1a3.5 3.5 0 1 1 .9 1.8l-3.6 2.1A3.7 3.7 0 0 1 10.2 12l3.6 2.1.2-.3" /></svg>;
+  }
+  if (href.includes("/admin") || label.includes("adminbereich")) {
+    return <svg viewBox="0 0 24 24"><path d="M12 2 4.5 5.2v5.9c0 4.7 3.2 9 7.5 10.4 4.3-1.4 7.5-5.7 7.5-10.4V5.2L12 2Zm0 3.2 4.5 1.9v4c0 3-1.8 5.9-4.5 7.2-2.7-1.3-4.5-4.2-4.5-7.2v-4L12 5.2Zm-1 4.3h2V16h-2V9.5Z" /></svg>;
   }
   if (href.includes("/settings") || href.includes("/einstellungen") || label.includes("einstellungen")) {
     return <svg viewBox="0 0 24 24"><path d="M19.4 13.5a7.8 7.8 0 0 0 .1-1.5 7.8 7.8 0 0 0-.1-1.5l2-1.5-2-3.5-2.4 1a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.7 7.7 0 0 0 7 6.5l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0-.1 1.5 7.8 7.8 0 0 0 .1 1.5l-2 1.5 2 3.5 2.4-1a7.7 7.7 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.7 7.7 0 0 0 2.6-1.5l2.4 1 2-3.5-2-1.5ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" /></svg>;
