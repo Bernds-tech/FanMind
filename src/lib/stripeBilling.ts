@@ -121,7 +121,7 @@ export async function updateWorkspaceBillingDefensively(workspaceId: string | un
   if (!workspaceId || !serviceKey) return;
   const body = Object.fromEntries(Object.entries({ ...fields, billing_provider: "stripe", payment_collection_method: "sepa_direct_debit", billing_updated_at: new Date().toISOString() }).filter(([, value]) => value !== undefined));
   try {
-    const manualGuard = fields.billing_status === "active" ? "&billing_status=not.eq.manual_suspended" : "";
+    const manualGuard = fields.billing_status && fields.billing_status !== "manual_suspended" ? "&billing_status=not.eq.manual_suspended" : "";
     const response = await fetch(`${getSupabaseRestUrl("workspaces")}?id=eq.${encodeURIComponent(workspaceId)}${manualGuard}`, { method: "PATCH", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(body) });
     if (!response.ok) console.warn("Stripe billing update skipped", response.status);
   } catch (error) {

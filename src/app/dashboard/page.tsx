@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isWorkspaceBillingSuspended } from "@/lib/billing";
+import { getBillingCheckoutActionLabel, isWorkspaceBillingSuspended, shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
@@ -413,10 +413,18 @@ function WorkspaceDetails({
             offene/fällige Follow-ups. Normale Kontakte ohne Aufgabe bleiben in
             der vollständigen Fanliste. Pro Fan wird nur ein Eintrag angezeigt.
           </p>
-          <BillingCheckoutButton
-            planId={workspace.plan_id}
-            commercialOption={workspace.commercial_option}
-          />
+          {shouldShowBillingCheckoutAction(workspace) ? (
+            <div className={styles.emptyState}>
+              <strong>Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.</strong>
+              <p>Öffne den sicheren Stripe Checkout. FanMind speichert keine Bankdaten.</p>
+              <BillingCheckoutButton
+                planId={workspace.plan_id}
+                commercialOption={workspace.commercial_option}
+                label={getBillingCheckoutActionLabel(workspace.billing_status)}
+              />
+              <Link className={styles.secondaryButton} href="/billing/start">Paket & Zahlung ansehen</Link>
+            </div>
+          ) : null}
           {contactsError ? (
             <p className={styles.error}>
               <strong>Kontakte konnten nicht geladen werden.</strong>

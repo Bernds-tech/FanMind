@@ -55,11 +55,6 @@ function registerPlanHref(planId: RegisterPlanId, language: FanMindLanguage) {
   return language === "en" ? `/register?plan=${planId}&lang=en` : `/register?plan=${planId}`;
 }
 
-function onboardingHref(planId: Extract<RegisterPlanId, "pilot" | "starter">, language: FanMindLanguage) {
-  const base = planId === "pilot" ? "/onboarding?plan=pilot&demo=1" : "/onboarding?plan=starter";
-  return language === "en" ? `${base}&lang=en` : base;
-}
-
 function planCommercialOption(planId: RegisterPlanId, starterOption: StarterOfferOptionId): CommercialOption | StarterOfferOptionId {
   if (planId === "pilot") return "pilot_only";
   if (planId === "starter") return starterOption;
@@ -290,15 +285,44 @@ async function prepareUserWorkspace(
         setup_fee_cents: commercialTerms.setupFeeCents,
         monthly_fee_cents: commercialTerms.monthlyFeeCents,
         commitment_months: commercialTerms.commitmentMonths,
+        billing_status: getInitialBillingStatus(planId, commercialTerms.commercialOption),
+        billing_provider: getBillingProvider(),
+        payment_collection_method: getPaymentCollectionMethod(planId, commercialTerms.commercialOption),
+        payment_terms_version: PAYMENT_TERMS_VERSION,
+        payment_terms_accepted_at: new Date().toISOString(),
+        payment_terms_accepted_by_user_id: userId,
+        billing_updated_at: new Date().toISOString(),
       })
       .select<WorkspaceRow>("id")
       .single();
 
     if (workspaceError) {
-      return workspaceSetupError(workspaceError.message);
-    }
+      const likelyMissingBillingColumn = /billing_|payment_|column|schema cache/i.test(workspaceError.message);
+      if (!likelyMissingBillingColumn) {
+        return workspaceSetupError(workspaceError.message);
+      }
 
-    workspace = insertedWorkspace;
+      const { data: fallbackWorkspace, error: fallbackWorkspaceError } = await supabase
+        .from("workspaces")
+        .insert({
+          name: workspaceName || displayName || "FanMind Workspace",
+          owner_user_id: userId,
+          plan_id: planId,
+          commercial_option: commercialTerms.commercialOption,
+          setup_fee_cents: commercialTerms.setupFeeCents,
+          monthly_fee_cents: commercialTerms.monthlyFeeCents,
+          commitment_months: commercialTerms.commitmentMonths,
+        })
+        .select<WorkspaceRow>("id")
+        .single();
+
+      if (fallbackWorkspaceError) {
+        return workspaceSetupError(fallbackWorkspaceError.message);
+      }
+      workspace = fallbackWorkspace;
+    } else {
+      workspace = insertedWorkspace;
+    }
   }
 
   if (!workspace?.id) {
@@ -339,7 +363,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const isProductiveRegistration = ACTIVE_REGISTER_PLANS.includes(selectedPlanId);
   const copy = fanmindCopy[language].register;
   const loginHref = localizedPath("/login", language);
-  const selectedOnboardingHref = selectedPlanId === "pilot" || selectedPlanId === "starter" ? onboardingHref(selectedPlanId, language) : onboardingHref("starter", language);
+  const billingStartHref = "/billing/start";
   const paymentTermsHref = language === "en" ? "/zahlungsbedingungen?lang=en" : "/zahlungsbedingungen";
   const planSelectionCopy = getPlanSelectionCopy(language);
   const starterOptionsCopy = getStarterOptionsCopy(language);
@@ -440,7 +464,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
       setAwaitingEmailConfirmation(!data.session);
 
       if (data.session?.user) {
-        router.push(selectedOnboardingHref);
+        router.push("/billing/start");
         router.refresh();
       }
     } catch (authError) {
@@ -632,8 +656,8 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                   {copy.success} {awaitingEmailConfirmation
                     ? (EMAIL_CONFIRMATION_WORKSPACE_MESSAGES[language])
                     : selectedPlanId === "pilot"
-                      ? (language === "en" ? "Pilot / Setup stays a demo/setup month without commitment. You will be forwarded to onboarding." : "Pilot / Setup bleibt ein Demo-/Setupmonat ohne Bindung. Du wirst ins Onboarding weitergeleitet.")
-                      : (language === "en" ? "Profile, workspace and Starter option are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Starter-Option werden vorbereitet. Du wirst ins Onboarding weitergeleitet.")} <a href={selectedOnboardingHref}>{language === "en" ? "Open onboarding" : "Onboarding öffnen"}</a>
+                      ? (language === "en" ? "Pilot / Setup stays without commitment. Your access has been created. Start payment now to unlock FanMind." : "Pilot / Setup bleibt ohne Bindung. Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.")
+                      : (language === "en" ? "Profile, workspace and Starter option are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Starter-Option sind vorbereitet. Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.")} <a href={billingStartHref}>{language === "en" ? "Open payment" : "Zahlung öffnen"}</a>
                 </p>
               )}
 
