@@ -1,0 +1,40 @@
+.adminStack { display: grid; gap: 18px; padding-bottom: 36px; }
+.hero { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; border:1px solid rgba(148,163,184,.16); border-radius:22px; padding:22px; background:linear-gradient(135deg, rgba(14,165,233,.16), rgba(15,23,42,.86)); box-shadow:0 22px 60px rgba(0,0,0,.24); }
+.hero h1 { margin:4px 0 8px; color:#fff; font-size:clamp(26px,3vw,40px); letter-spacing:-.05em; }
+.hero p, .muted { color:#a9bdd6; line-height:1.55; }
+.eyebrow { color:#67e8f9; font-size:10px; font-weight:950; letter-spacing:.18em; text-transform:uppercase; }
+.badge, .badgeOk, .badgeWarn, .badgeBad, .chip { display:inline-flex; align-items:center; border-radius:999px; padding:5px 9px; font-size:11px; font-weight:950; white-space:nowrap; }
+.badge { color:#dbeafe; border:1px solid rgba(148,163,184,.22); background:rgba(15,23,42,.78); }
+.badgeOk { color:#bbf7d0; border:1px solid rgba(34,197,94,.28); background:rgba(22,101,52,.22); }
+.badgeWarn { color:#fde68a; border:1px solid rgba(245,158,11,.28); background:rgba(120,53,15,.25); }
+.badgeBad { color:#fecaca; border:1px solid rgba(248,113,113,.3); background:rgba(127,29,29,.28); }
+.kpiGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:12px; }
+.kpiCard, .card { border:1px solid rgba(148,163,184,.16); border-radius:18px; padding:16px; background:rgba(15,23,42,.74); box-shadow:0 20px 58px rgba(0,0,0,.2); }
+.kpiCard strong { display:block; color:#fff; font-size:26px; letter-spacing:-.04em; }
+.kpiCard span { color:#94a3b8; font-size:12px; font-weight:850; }
+.cardHeader { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:14px; }
+.card h2 { color:#fff; font-size:20px; margin:0; }
+.statusList { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; }
+.statusItem { display:flex; justify-content:space-between; gap:10px; align-items:center; border:1px solid rgba(148,163,184,.12); border-radius:14px; padding:10px 12px; color:#dbeafe; background:rgba(2,6,23,.34); }
+.tableWrap { overflow-x:auto; border:1px solid rgba(148,163,184,.14); border-radius:18px; background:rgba(2,6,23,.28); }
+.table { width:100%; min-width:980px; border-collapse:collapse; }
+.table th, .table td { padding:14px 12px; border-bottom:1px solid rgba(148,163,184,.1); text-align:left; vertical-align:middle; }
+.table th { color:#94a3b8; font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; }
+.table td { color:#dbeafe; font-size:13px; }
+.table tbody tr:hover { background:rgba(14,165,233,.08); }
+.workspaceLink { color:#fff; font-weight:950; text-decoration:none; }
+.workspaceLink:hover { color:#67e8f9; }
+.subline { display:block; margin-top:4px; color:#64748b; font-size:11px; }
+.actions { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+.actions form { margin:0; }
+.buttonPrimary, .buttonSecondary, .buttonDanger { border-radius:999px; min-height:32px; padding:0 10px; font:inherit; font-size:11px; font-weight:950; cursor:pointer; text-decoration:none; border:1px solid rgba(148,163,184,.22); }
+.buttonPrimary { color:#06111f; background:linear-gradient(135deg,#67e8f9,#a7f3d0); border:0; }
+.buttonSecondary { color:#dbeafe; background:rgba(15,23,42,.78); }
+.buttonDanger { color:#fecaca; background:rgba(127,29,29,.24); border-color:rgba(248,113,113,.24); }
+.detailGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+.field { border:1px solid rgba(148,163,184,.14); border-radius:14px; padding:12px; background:rgba(2,6,23,.28); }
+.field dt { color:#94a3b8; font-size:11px; font-weight:900; margin-bottom:5px; }
+.field dd { margin:0; color:#fff; font-weight:850; word-break:break-word; }
+.formGrid { display:grid; gap:10px; max-width:640px; }
+.input, .textarea, .select { width:100%; border:1px solid rgba(148,163,184,.22); border-radius:12px; padding:10px 12px; color:#fff; background:rgba(2,6,23,.58); font:inherit; }
+@media (max-width: 760px) { .hero { flex-direction:column; } .table { min-width:860px; } }

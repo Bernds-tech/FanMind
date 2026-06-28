@@ -2,11 +2,15 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { listAdminBillingWorkspaces } from "@/lib/adminBilling";
 import { getBillingStatusLabel } from "@/lib/billing";
+import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getStripeConfigStatus } from "@/lib/stripeBilling";
+import { AdminBillingShell } from "./AdminBillingShell";
+import styles from "./adminBilling.module.css";
 
-function Status({ ok }: { ok: boolean }) { return <strong>{ok ? "ja" : "nein"}</strong>; }
-function money(cents?: number | null) { return typeof cents === "number" ? `${(cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" })}` : "—"; }
+function money(cents?: number | null) { return typeof cents === "number" ? (cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" }) : "—"; }
 function date(value?: string | null) { return value ? new Date(value).toLocaleDateString("de-DE") : "—"; }
+function statusClass(status?: string | null) { if (status === "active") return styles.badgeOk; if (status === "past_due" || status === "payment_failed" || status?.includes("suspended")) return styles.badgeBad; if (status?.startsWith("pending")) return styles.badgeWarn; return styles.badge; }
+function StripeBadge({ ok, prepared }: { ok: boolean; prepared?: boolean }) { return <span className={ok ? styles.badgeOk : prepared ? styles.badgeWarn : styles.badgeBad}>{ok ? "aktiv" : prepared ? "vorbereitet" : "fehlt"}</span>; }
 
 export default async function AdminBillingPage() {
   const user = await requirePlatformAdmin();
@@ -18,27 +22,22 @@ export default async function AdminBillingPage() {
   const suspended = workspaces.filter((w) => w.billing_status === "suspended" || w.billing_status === "manual_suspended").length;
   const cancelled = workspaces.filter((w) => w.billing_status === "cancelled").length;
   const mrr = workspaces.filter((w) => w.billing_status === "active").reduce((sum, w) => sum + (w.monthly_fee_cents ?? 0), 0);
+  const stripeItems = [
+    ["Secret Key", stripe.hasSecretKey], ["Webhook Secret", stripe.hasWebhookSecret], ["Pilot Price ID", stripe.hasPilotPrice],
+    ["Starter Setup Price ID", stripe.hasStarterSetupPrice], ["Starter Monatsabo Price ID", stripe.hasStarterMonthlyPrice],
+    ["Growth vorbereitet", stripe.hasGrowthMonthlyPrice], ["Agency vorbereitet", stripe.hasAgencyMonthlyPrice], ["Feature-Flag aktiv", stripe.growthAgencyBillingEnabled],
+  ] as const;
 
-  return (
-    <main style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 20px", fontFamily: "var(--font-geist-sans)" }}>
-      <p style={{ color: "#64748b", textTransform: "uppercase", letterSpacing: "0.12em" }}>FanMind Admin</p>
-      <h1>Billing-Konfiguration & Workspaces</h1>
-      <p>Admin-Status: <strong>aktiv</strong> für {user.email}</p>
-      <section style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 24, marginTop: 24 }}>
-        <h2>Stripe-Konfiguration</h2>
-        <ul>
-          <li>Secret Key vorhanden: <Status ok={stripe.hasSecretKey} /></li><li>Webhook Secret vorhanden: <Status ok={stripe.hasWebhookSecret} /></li>
-          <li>Pilot Price ID vorhanden: <Status ok={stripe.hasPilotPrice} /></li><li>Starter Setup Price ID vorhanden: <Status ok={stripe.hasStarterSetupPrice} /></li><li>Starter Monatsabo Price ID vorhanden: <Status ok={stripe.hasStarterMonthlyPrice} /></li>
-          <li>Growth Monatsabo vorbereitet: <Status ok={stripe.hasGrowthMonthlyPrice} /></li><li>Agency Monatsabo vorbereitet: <Status ok={stripe.hasAgencyMonthlyPrice} /></li><li>Growth/Agency Feature Flag aktiv: <Status ok={stripe.growthAgencyBillingEnabled} /></li>
-        </ul>
-        <p>{stripe.readyForCheckout ? "Checkout ist technisch konfiguriert." : "Stripe-Testmodus/Live-Konfiguration ist noch unvollständig."} Growth/Agency Checkout bleibt ohne Feature-Flag und Price IDs deaktiviert.</p>
+  return <AdminBillingShell user={user} title="Adminbereich" subtitle={`Billing & Workspaces · Angemeldet als Admin: ${user.email ?? "Admin"}`}>
+    <div className={styles.adminStack}>
+      <section className={styles.hero}>
+        <div><span className={styles.eyebrow}>FanMind Admin</span><h1>Billing & Workspaces</h1><p>Verwalte Pläne, Zahlungsstatus, Sperren und Rechnungsstatus aller Workspaces.</p></div>
+        <span className={styles.badgeOk}>Admin</span>
       </section>
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 24 }}>
-        {[ ["Gesamt", workspaces.length], ["Aktiv", active], ["Offen", pending], ["Fehlgeschlagen", failed], ["Gesperrt", suspended], ["Gekündigt", cancelled], ["MRR erwartet", money(mrr)] ].map(([label,value]) => <div key={label} style={{ border: "1px solid #e2e8f0", borderRadius: 14, padding: 16 }}><strong>{value}</strong><br/><span>{label}</span></div>)}
-      </section>
-      {error ? <p style={{ color: "#b45309" }}>{error}</p> : null}
-      <div style={{ overflowX: "auto", marginTop: 24 }}><table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}><thead><tr>{["Workspace","Owner","Plan","Option","Setup","Monat","Bindung","Status","Retry","Next Retry","Grace","Last Payment","Invoice","Stripe Customer","Stripe Subscription","Aktionen"].map((h) => <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #cbd5e1", padding: 8 }}>{h}</th>)}</tr></thead><tbody>{workspaces.map((w) => <tr key={w.id}><td style={{ padding: 8 }}><Link href={`/admin/billing/workspaces/${w.id}`}>{w.name}</Link></td><td style={{ padding: 8 }}>{w.owner_user_id ?? "—"}</td><td style={{ padding: 8 }}>{w.plan_id}</td><td style={{ padding: 8 }}>{w.commercial_option}</td><td style={{ padding: 8 }}>{money(w.setup_fee_cents)}</td><td style={{ padding: 8 }}>{money(w.monthly_fee_cents)}</td><td style={{ padding: 8 }}>{w.commitment_months ?? 0} Monate</td><td style={{ padding: 8 }}>{getBillingStatusLabel(w.billing_status)}</td><td style={{ padding: 8 }}>{w.billing_retry_count ?? 0}</td><td style={{ padding: 8 }}>{date(w.billing_next_retry_at)}</td><td style={{ padding: 8 }}>{date(w.billing_grace_until)}</td><td style={{ padding: 8 }}>{date(w.billing_last_payment_at)}</td><td style={{ padding: 8 }}>{w.last_invoice_status ?? "—"}<br/>{w.last_invoice_hosted_url ? <a href={w.last_invoice_hosted_url}>Hosted</a> : null} {w.last_invoice_pdf_url ? <a href={w.last_invoice_pdf_url}>PDF</a> : null}</td><td style={{ padding: 8 }}>{w.stripe_customer_id ?? "—"}</td><td style={{ padding: 8 }}>{w.stripe_subscription_id ?? "—"}</td><td style={{ padding: 8 }}><form action={`/api/admin/billing/workspaces/${w.id}/suspend`} method="post"><button>Manuell sperren</button></form><form action={`/api/admin/billing/workspaces/${w.id}/unsuspend`} method="post"><button>Entsperren</button></form><form action={`/api/admin/billing/workspaces/${w.id}/mark-paid`} method="post"><button>Zahlung verbuchen</button></form>{w.stripe_customer_id ? <a href={`https://dashboard.stripe.com/customers/${w.stripe_customer_id}`}>Stripe</a> : null}<details><summary>Details/Notiz</summary><p>{w.billing_admin_note ?? "Keine Notiz"}</p><form action={`/api/admin/billing/workspaces/${w.id}/note`} method="post"><textarea name="note" defaultValue={w.billing_admin_note ?? ""}/><button>Notiz speichern</button></form><p>Invoice ID: {w.last_invoice_id ?? "—"}<br/>Due: {money(w.last_invoice_amount_due_cents)} Paid: {money(w.last_invoice_amount_paid_cents)}</p></details></td></tr>)}</tbody></table></div>
-      <p style={{ marginTop: 24 }}><Link href="/dashboard">Zurück zum Dashboard</Link></p>
-    </main>
-  );
+      <section className={styles.kpiGrid}>{[["Gesamt", workspaces.length], ["Aktiv", active], ["Offen", pending], ["Fehlgeschlagen", failed], ["Gesperrt", suspended], ["Gekündigt", cancelled], ["MRR erwartet", money(mrr)]].map(([label, value]) => <article className={styles.kpiCard} key={label}><strong>{value}</strong><span>{label}</span></article>)}</section>
+      <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Systemstatus</span><h2>Zahlungsstatus / Stripe-Konfiguration</h2></div><span className={stripe.readyForCheckout ? styles.badgeOk : styles.badgeWarn}>{stripe.readyForCheckout ? "Checkout bereit" : "unvollständig"}</span></div><div className={styles.statusList}>{stripeItems.map(([label, ok]) => <div className={styles.statusItem} key={label}><span>{label}</span><StripeBadge ok={ok} prepared={label.includes("vorbereitet")} /></div>)}</div><p className={styles.muted}>Growth/Agency Checkout bleibt ohne Feature-Flag und Price IDs deaktiviert.</p></section>
+      {error ? <p className={styles.badgeWarn}>{error}</p> : null}
+      <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>CRM-Übersicht</span><h2>Workspace-Liste</h2></div><span className={styles.badge}>{workspaces.length} Workspaces</span></div><div className={styles.tableWrap}><table className={styles.table}><thead><tr>{["Workspace", "Owner", "Plan", "Option", "Status", "Monat", "Retry", "Nächste Aktion", "Rechnung", "Aktionen"].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{workspaces.map((w) => <tr key={w.id}><td><Link className={styles.workspaceLink} href={`/admin/billing/workspaces/${w.id}`}>{w.name}</Link><span className={styles.subline}>{w.id}</span></td><td>{w.owner_user_id ?? "—"}</td><td><span className={styles.chip}>{w.plan_id ?? "—"}</span></td><td>{getCommercialOptionLabel(w.commercial_option ?? "")}</td><td><span className={statusClass(w.billing_status)}>{getBillingStatusLabel(w.billing_status)}</span></td><td>{money(w.monthly_fee_cents)}</td><td>{w.billing_retry_count ?? 0}</td><td>{date(w.billing_next_retry_at)}</td><td>{w.last_invoice_status ?? "—"}<span className={styles.subline}>{w.last_invoice_hosted_url ? <a href={w.last_invoice_hosted_url}>Hosted</a> : null} {w.last_invoice_pdf_url ? <a href={w.last_invoice_pdf_url}>PDF</a> : null}</span></td><td><div className={styles.actions}><Link className={styles.buttonPrimary} href={`/admin/billing/workspaces/${w.id}`}>Details</Link><form action={`/api/admin/billing/workspaces/${w.id}/suspend`} method="post"><button className={styles.buttonDanger}>Sperren</button></form><form action={`/api/admin/billing/workspaces/${w.id}/unsuspend`} method="post"><button className={styles.buttonSecondary}>Entsperren</button></form><form action={`/api/admin/billing/workspaces/${w.id}/mark-paid`} method="post"><button className={styles.buttonSecondary}>Zahlung</button></form></div></td></tr>)}</tbody></table></div></section>
+    </div>
+  </AdminBillingShell>;
 }
