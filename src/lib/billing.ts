@@ -45,12 +45,12 @@ export function getPaymentCollectionMethod(
   commercialOption?: CommercialOption | ProductiveCommercialOption | string,
 ): PaymentCollectionMethod {
   if (planId === "pilot" || planId === "starter" || commercialOption === "pilot_only" || commercialOption === "starter_paid_setup" || commercialOption === "starter_no_setup_commitment") {
-    return "manual_invoice";
+    return "sepa_direct_debit";
   }
 
   return "none";
 }
 
 export function getBillingProvider(): BillingProvider {
-  return "manual";
+  return "stripe";
 }
