@@ -18,6 +18,14 @@ function statusClass(status?: string | null) {
   return styles.badge;
 }
 
+function overviewStatusLabel(workspace: AdminBillingWorkspace) {
+  if (workspace.billing_status?.includes("suspended")) return "Gesperrt";
+  if (workspace.billing_status === "active") return "Aktiv";
+  if (workspace.plan_id === "pilot" || workspace.commercial_option === "pilot") return "Pilot";
+  if (workspace.billing_status?.startsWith("pending") || workspace.billing_status === "past_due" || workspace.billing_status === "payment_failed") return "Offen";
+  return workspace.billing_status ? getBillingStatusLabel(workspace.billing_status) : "Unbekannt";
+}
+
 function getWorkspaceDate(workspace: AdminBillingWorkspace) {
   return workspace.created_at ?? workspace.billing_updated_at ?? null;
 }
@@ -68,16 +76,16 @@ export default async function AdminBillingPage() {
     ["API & Dienste", "Online", styles.badgeOk],
     ["Dateispeicher", "Unbekannt", styles.badge],
     ["E-Mail Versand", "Nicht konfiguriert", styles.badgeWarn],
-    ["KI-Verarbeitung", aiConfigured ? "Aktiv" : "Fehlt", aiConfigured ? styles.badgeOk : styles.badgeBad],
+    ["KI-Verarbeitung", aiConfigured ? "Aktiv" : "Nicht konfiguriert", aiConfigured ? styles.badgeOk : styles.badgeWarn],
     ["Integrationen", "Teilweise", styles.badgeWarn],
   ] as const;
 
   const quickActions = [
-    { label: "Neuen Kunden anlegen", href: "/register?plan=starter", meta: "Starter-Registrierung", enabled: true },
-    { label: "Pilot-Demo anlegen", href: "/register?plan=pilot", meta: "Pilot-Onboarding", enabled: true },
-    { label: "Paket zuweisen", meta: "Über Workspace-Details", enabled: false },
-    { label: "Nutzer einladen", meta: "In Vorbereitung", enabled: false },
-    { label: "Rechnung erstellen", meta: stripe.readyForCheckout ? "Über Stripe Checkout" : "Stripe unvollständig", enabled: false },
+    { icon: "+", label: "Neuen Kunden anlegen", href: "/register?plan=starter", meta: "Starter-Registrierung", enabled: true },
+    { icon: "◆", label: "Pilot-Demo anlegen", href: "/register?plan=pilot", meta: "Pilot-Onboarding", enabled: true },
+    { icon: "↗", label: "Paket zuweisen", meta: "In Vorbereitung", enabled: false },
+    { icon: "@", label: "Nutzer einladen", meta: "In Vorbereitung", enabled: false },
+    { icon: "€", label: "Rechnung erstellen", meta: stripe.readyForCheckout ? "In Vorbereitung" : "Stripe unvollständig", enabled: false },
   ];
 
   const roadmapItems = [
@@ -91,7 +99,6 @@ export default async function AdminBillingPage() {
     <AdminBillingShell user={user} title="Adminbereich" subtitle="Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.">
       <div className={styles.adminStack}>
         <section className={styles.overviewHeader}>
-          <span className={styles.eyebrow}>FanMind Admin</span>
           <h1>Adminbereich</h1>
           <p>Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.</p>
         </section>
@@ -125,9 +132,9 @@ export default async function AdminBillingPage() {
                   <div className={styles.compactTableRow} key={workspace.id}>
                     <span><Link className={styles.workspaceLink} href={`/admin/billing/workspaces/${workspace.id}`}>{workspace.name}</Link><small>{workspace.id}</small></span>
                     <span>{planLabel(workspace.plan_id)}<small>{getCommercialOptionLabel(workspace.commercial_option ?? "")}</small></span>
-                    <span>{workspace.owner_user_id ?? "—"}</span>
+                    <span>—</span>
                     <span>{date(getWorkspaceDate(workspace))}</span>
-                    <span><span className={statusClass(workspace.billing_status)}>{getBillingStatusLabel(workspace.billing_status)}</span></span>
+                    <span><span className={statusClass(workspace.billing_status)}>{overviewStatusLabel(workspace)}</span></span>
                   </div>
                 ))}
               </div>
@@ -137,12 +144,12 @@ export default async function AdminBillingPage() {
 
           <article className={styles.card}>
             <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Direktzugriff</span><h2>Schnellaktionen</h2></div></div>
-            <div className={styles.quickActionList}>{quickActions.map((action) => action.enabled && action.href ? <Link className={styles.quickAction} href={action.href} key={action.label}><strong>{action.label}</strong><span>{action.meta}</span></Link> : <div className={`${styles.quickAction} ${styles.disabledAction}`} key={action.label}><strong>{action.label}</strong><span>{action.meta}</span></div>)}</div>
+            <div className={styles.quickActionList}>{quickActions.map((action) => action.enabled && action.href ? <Link className={styles.quickAction} href={action.href} key={action.label}><span className={styles.actionIcon}>{action.icon}</span><span><strong>{action.label}</strong><small>{action.meta}</small></span><b aria-hidden="true">→</b></Link> : <div className={`${styles.quickAction} ${styles.disabledAction}`} key={action.label}><span className={styles.actionIcon}>{action.icon}</span><span><strong>{action.label}</strong><small>{action.meta}</small></span><b aria-hidden="true">→</b></div>)}</div>
           </article>
 
           <article className={styles.card}>
             <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Betrieb</span><h2>Systemstatus</h2></div></div>
-            <div className={styles.statusList}>{systemStatus.map(([label, status, className]) => <div className={styles.statusItem} key={label}><span>{label}</span><span className={className}>{status}</span></div>)}</div>
+            <div className={styles.statusList}>{systemStatus.map(([label, status, className]) => <div className={styles.statusItem} key={label}><span className={styles.statusLabel}><span className={styles.statusIcon} aria-hidden="true" />{label}</span><span className={className}>{status}</span></div>)}</div>
             <p className={styles.muted}>Systemstatus geprüft · externe Dienste nur angezeigt, wenn sicher ableitbar.</p>
           </article>
         </section>
@@ -155,7 +162,7 @@ export default async function AdminBillingPage() {
 
           <article className={`${styles.card} ${styles.activityCard}`}>
             <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Audit</span><h2>Letzte Aktivitäten (Audit-Log)</h2></div></div>
-            {activityItems.length ? <ul className={styles.timeline}>{activityItems.map((workspace) => <li className={styles.timelineItem} key={workspace.id}><span className={styles.timelineDot} /><div><strong>{workspace.name}</strong><p>{workspace.billing_admin_note ? "Admin-Notiz gespeichert" : "Billing-Daten aktualisiert"}</p><span className={styles.subline}>{date(workspace.billing_updated_at)}</span></div></li>)}</ul> : <div className={styles.emptyState}>Noch keine Admin-Aktivitäten gespeichert.</div>}
+            {activityItems.length ? <ul className={styles.timeline}>{activityItems.map((workspace) => <li className={styles.timelineItem} key={workspace.id}><span className={styles.timelineDot} /><div><strong>{workspace.name}</strong><p>{workspace.billing_admin_note ? "Admin-Notiz gespeichert" : "Billing-Daten aktualisiert"}</p></div><time>{date(workspace.billing_updated_at)}</time></li>)}</ul> : <div className={styles.emptyState}>Noch keine Admin-Aktivitäten gespeichert.</div>}
           </article>
         </section>
 

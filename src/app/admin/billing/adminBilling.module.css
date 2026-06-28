@@ -130,3 +130,57 @@
 .directoryItem:hover { border-color:rgba(103,232,249,.36); }
 @media (max-width: 1240px) { .crmKpiGrid { grid-template-columns:repeat(3,minmax(0,1fr)); } .dashboardMiddleGrid { grid-template-columns:1fr; } }
 @media (max-width: 820px) { .dashboardTabs { border-radius:22px; } .crmKpiGrid, .dashboardBottomGrid { grid-template-columns:1fr; } .compactTableHead { display:none; } .compactTableRow { grid-template-columns:1fr; } .roadmapItem, .directoryItem { align-items:flex-start; flex-direction:column; } }
+
+/* Kompakte CRM-Dashboard-Übersicht für /admin/billing */
+.adminStack { gap: 12px; padding-bottom: 28px; }
+.overviewHeader { border-color: rgba(125,211,252,.12); border-radius: 18px; padding: 8px 2px 2px; background: transparent; box-shadow: none; }
+.overviewHeader h1 { margin: 0 0 3px; color: #f8fafc; font-size: clamp(24px,2.2vw,32px); line-height: 1.05; letter-spacing: -.045em; }
+.overviewHeader p { margin: 0; color: #94a3b8; font-size: 13px; line-height: 1.45; max-width: none; }
+.dashboardTabs { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 0; padding: 4px; border-color: rgba(148,163,184,.16); border-radius: 18px; background: rgba(2,6,23,.62); box-shadow: 0 12px 36px rgba(0,0,0,.16); overflow: hidden; }
+.dashboardTabs span { justify-content: center; min-width: 0; border: 0; border-radius: 14px; padding: 8px 10px; color: #9fb1c9; font-size: 12px; background: transparent; white-space: nowrap; }
+.dashboardTabs .activeTab { color: #e0faff; border: 1px solid rgba(103,232,249,.24); background: linear-gradient(135deg, rgba(8,145,178,.72), rgba(37,99,235,.46)); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.dashboardTabs small { color: #fef3c7; font-size: 10px; padding: 1px 5px; }
+.crmKpiGrid { gap: 9px; }
+.crmKpiCard { min-height: 104px; gap: 10px; align-items: center; border-radius: 18px; padding: 12px; background: radial-gradient(circle at 100% 0, rgba(14,165,233,.10), transparent 36%), linear-gradient(180deg, rgba(15,23,42,.88), rgba(2,6,23,.70)); }
+.crmKpiCard div { gap: 2px; }
+.crmKpiCard span:not(.crmKpiIcon) { font-size: 10px; letter-spacing: .045em; }
+.crmKpiCard strong { font-size: clamp(20px,1.7vw,25px); line-height: 1.05; }
+.crmKpiCard small { font-size: 10px; line-height: 1.25; }
+.crmKpiIcon { width: 32px; height: 32px; border-radius: 999px; font-size: 12px; }
+.card { border-color: rgba(148,163,184,.14); border-radius: 18px; padding: 14px; background: linear-gradient(180deg, rgba(15,23,42,.80), rgba(2,6,23,.56)); box-shadow: 0 16px 44px rgba(0,0,0,.18); }
+.cardHeader { align-items: center; margin-bottom: 10px; }
+.card h2 { font-size: 16px; letter-spacing: -.025em; }
+.eyebrow { font-size: 9px; letter-spacing: .15em; }
+.dashboardMiddleGrid { grid-template-columns: minmax(0,1.55fr) minmax(220px,.82fr) minmax(240px,.88fr); gap: 12px; }
+.dashboardBottomGrid { grid-template-columns: minmax(280px,.82fr) minmax(0,1.18fr); gap: 12px; }
+.compactTable { gap: 6px; }
+.compactTableHead, .compactTableRow { grid-template-columns: minmax(150px,1.45fr) minmax(90px,.78fr) 52px 82px 82px; gap: 8px; }
+.compactTableHead { padding: 0 8px; font-size: 9px; }
+.compactTableRow { border-radius: 13px; padding: 9px 8px; }
+.compactTableRow > span { font-size: 11px; }
+.compactTableRow small { font-size: 9px; }
+.quickActionList { gap: 7px; }
+.quickAction { display:grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 9px; align-items:center; border-radius: 13px; padding: 9px; }
+.quickAction strong, .quickAction small { display:block; }
+.quickAction strong { font-size: 12px; }
+.quickAction small { color:#7f95b0; font-size: 10px; line-height: 1.25; }
+.quickAction b { color:#67e8f9; font-size: 13px; }
+.actionIcon { width: 28px; height: 28px; display:grid; place-items:center; border-radius: 999px; color:#cffafe; font-size: 12px; font-weight: 950; background: rgba(14,165,233,.16); border: 1px solid rgba(103,232,249,.20); }
+.statusList { grid-template-columns: 1fr; gap: 7px; }
+.statusItem { border-radius: 13px; padding: 8px 9px; font-size: 12px; }
+.statusLabel { display:inline-flex; align-items:center; gap: 8px; min-width:0; }
+.statusIcon { width: 8px; height: 8px; border-radius:999px; background:#67e8f9; box-shadow:0 0 0 4px rgba(103,232,249,.10); }
+.muted { margin: 10px 0 0; font-size: 11px; line-height: 1.45; }
+.roadmapList, .workspaceDirectory { gap: 7px; }
+.roadmapItem, .directoryItem { border-radius: 13px; padding: 10px; }
+.roadmapItem strong, .directoryItem strong { font-size: 12px; }
+.activityCard .timeline { gap: 2px; }
+.timelineItem { grid-template-columns: 18px minmax(0,1fr) auto; gap: 9px; align-items: start; padding: 0 0 12px; }
+.timelineItem time { color:#7f95b0; font-size: 11px; white-space: nowrap; }
+.timelineItem strong { font-size: 12px; }
+.timelineItem p { font-size: 12px; line-height: 1.35; }
+.emptyState { border-radius: 14px; padding: 14px; font-size: 12px; }
+#workspace-verzeichnis { margin-top: 2px; }
+#workspace-verzeichnis .workspaceDirectory { grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
+@media (max-width: 1240px) { .crmKpiGrid { grid-template-columns: repeat(3,minmax(0,1fr)); } .dashboardMiddleGrid { grid-template-columns: 1fr; } }
+@media (max-width: 820px) { .dashboardTabs { grid-template-columns: 1fr; border-radius: 18px; } .dashboardTabs span { justify-content: flex-start; } .crmKpiGrid, .dashboardBottomGrid { grid-template-columns:1fr; } .compactTableHead { display:none; } .compactTableRow { grid-template-columns:1fr; } .timelineItem { grid-template-columns: 18px minmax(0,1fr); } .timelineItem time { grid-column: 2; } }
