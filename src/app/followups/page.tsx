@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { isWorkspaceBillingSuspended } from "@/lib/billing";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
@@ -44,6 +45,7 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
   }
 
   const workspace = workspaceResult.workspace;
+  if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
   if (!workspace) redirect("/login");
 
   const locale = await resolveWorkspaceLocale({ lang: getSingleParam(params?.lang), user: data.user });

@@ -16,7 +16,9 @@ export type ProductiveCommercialOption = "pilot_only" | "starter_paid_setup" | "
 export type CommercialOption =
   | ProductiveCommercialOption
   | "growth_preview"
-  | "agency_preview";
+  | "agency_preview"
+  | "growth_monthly"
+  | "agency_monthly";
 
 export type CommercialTerms = {
   commercialOption: ProductiveCommercialOption;

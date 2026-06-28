@@ -10,6 +10,9 @@ export type StripeConfigStatus = {
   hasPilotPrice: boolean;
   hasStarterSetupPrice: boolean;
   hasStarterMonthlyPrice: boolean;
+  hasGrowthMonthlyPrice: boolean;
+  hasAgencyMonthlyPrice: boolean;
+  growthAgencyBillingEnabled: boolean;
   hasAppUrl: boolean;
   readyForCheckout: boolean;
   readyForWebhook: boolean;
@@ -31,6 +34,9 @@ export function getStripeConfigStatus(): StripeConfigStatus {
   const hasPilotPrice = Boolean(process.env.STRIPE_PRICE_PILOT_SETUP);
   const hasStarterSetupPrice = Boolean(process.env.STRIPE_PRICE_STARTER_SETUP);
   const hasStarterMonthlyPrice = Boolean(process.env.STRIPE_PRICE_STARTER_MONTHLY);
+  const hasGrowthMonthlyPrice = Boolean(process.env.STRIPE_PRICE_GROWTH_MONTHLY);
+  const hasAgencyMonthlyPrice = Boolean(process.env.STRIPE_PRICE_AGENCY_MONTHLY);
+  const growthAgencyBillingEnabled = process.env.FANMIND_ENABLE_GROWTH_AGENCY_BILLING === "true";
   const hasAppUrl = Boolean(getAppUrl());
 
   return {
@@ -39,6 +45,9 @@ export function getStripeConfigStatus(): StripeConfigStatus {
     hasPilotPrice,
     hasStarterSetupPrice,
     hasStarterMonthlyPrice,
+    hasGrowthMonthlyPrice,
+    hasAgencyMonthlyPrice,
+    growthAgencyBillingEnabled,
     hasAppUrl,
     readyForCheckout: hasSecretKey && hasAppUrl && hasPilotPrice && hasStarterSetupPrice && hasStarterMonthlyPrice,
     readyForWebhook: hasSecretKey && hasWebhookSecret,
@@ -107,12 +116,13 @@ export function verifyStripeSignature(rawBody: string, signatureHeader: string |
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1));
 }
 
-export async function updateWorkspaceBillingDefensively(workspaceId: string | undefined, fields: Record<string, string | null | undefined>): Promise<void> {
+export async function updateWorkspaceBillingDefensively(workspaceId: string | undefined, fields: Record<string, string | number | boolean | null | undefined>): Promise<void> {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!workspaceId || !serviceKey) return;
   const body = Object.fromEntries(Object.entries({ ...fields, billing_provider: "stripe", payment_collection_method: "sepa_direct_debit", billing_updated_at: new Date().toISOString() }).filter(([, value]) => value !== undefined));
   try {
-    const response = await fetch(`${getSupabaseRestUrl("workspaces")}?id=eq.${encodeURIComponent(workspaceId)}`, { method: "PATCH", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(body) });
+    const manualGuard = fields.billing_status === "active" ? "&billing_status=not.eq.manual_suspended" : "";
+    const response = await fetch(`${getSupabaseRestUrl("workspaces")}?id=eq.${encodeURIComponent(workspaceId)}${manualGuard}`, { method: "PATCH", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(body) });
     if (!response.ok) console.warn("Stripe billing update skipped", response.status);
   } catch (error) {
     console.warn("Stripe billing update skipped", error instanceof Error ? error.message : "unknown error");

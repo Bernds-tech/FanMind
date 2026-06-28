@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isWorkspaceBillingSuspended } from "@/lib/billing";
 import {
   checkMetaWebhookStorageHealth,
   getOpenFollowupCount,
@@ -161,6 +162,7 @@ export default async function ChannelsPage({
   }
 
   const workspace = workspaceResult.workspace;
+  if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
