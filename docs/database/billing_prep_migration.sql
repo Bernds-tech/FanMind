@@ -1,4 +1,4 @@
--- FanMind Billing-Vorbereitung (MVP) – keine echte Zahlung, keine IBAN, keine Stripe Keys.
+-- FanMind Billing-Vorbereitung (MVP) – Stripe Checkout/Billing, keine IBAN, keine Stripe Keys.
 -- Diese SQL-Datei bereitet optionale Workspace-Felder für spätere Billing-Prozesse vor.
 -- Registrierung darf ohne diese Migration weiter funktionieren; aktuell werden Billing-Daten nur als Auth-Metadaten gesetzt.
 -- Aktuelle Preislogik: pilot_only = 99000 Setup-Cents, 0 Monats-Cents; starter_paid_setup = 99000 Setup-Cents, 31200 Monats-Cents; starter_no_setup_commitment = 0 Setup-Cents, 31200 Monats-Cents.
@@ -28,3 +28,7 @@ alter table public.workspaces add constraint workspaces_billing_provider_check
 alter table public.workspaces drop constraint if exists workspaces_payment_collection_method_check;
 alter table public.workspaces add constraint workspaces_payment_collection_method_check
   check (payment_collection_method is null or payment_collection_method in ('none', 'manual_invoice', 'sepa_direct_debit'));
+
+
+-- Stripe-Billing bleibt additiv: keine IBAN-/Bankdaten-Spalten anlegen.
+-- Admin-Zugriff wird primär über FANMIND_ADMIN_EMAILS bzw. Code-Fallback gesteuert; keine Pflichtmigration nötig.

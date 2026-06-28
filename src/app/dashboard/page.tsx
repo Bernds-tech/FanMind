@@ -16,6 +16,7 @@ import {
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
@@ -408,6 +409,10 @@ function WorkspaceDetails({
             offene/fällige Follow-ups. Normale Kontakte ohne Aufgabe bleiben in
             der vollständigen Fanliste. Pro Fan wird nur ein Eintrag angezeigt.
           </p>
+          <BillingCheckoutButton
+            planId={workspace.plan_id}
+            commercialOption={workspace.commercial_option}
+          />
           {contactsError ? (
             <p className={styles.error}>
               <strong>Kontakte konnten nicht geladen werden.</strong>
