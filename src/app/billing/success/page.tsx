@@ -1,16 +1,29 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getBillingStatusLabel } from "@/lib/billing";
+import { getBillingContinuationHref } from "@/lib/preActivation";
+import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 import styles from "../../dashboard/dashboard.module.css";
 
-export default function BillingSuccessPage() {
+export default async function BillingSuccessPage() {
+  const { data } = await getSupabaseServerUser();
+  if (!data.user) redirect("/login");
+  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");
+  const workspace = workspaceResult.workspace;
+  const isActive = workspace?.billing_status === "active";
+  const continuationHref = getBillingContinuationHref(workspace);
+
   return (
     <main className={styles.page}>
       <section className={styles.fallbackCard}>
         <p className={styles.eyebrow}>Stripe Checkout</p>
-        <h1>Zahlung wurde gestartet</h1>
-        <p>Zahlung wurde gestartet. Bei SEPA-Lastschrift kann die endgültige Bestätigung einige Geschäftstage dauern. Dein Zugang wird aktualisiert, sobald Stripe die Zahlung bestätigt.</p>
+        <h1>{isActive ? "Freischaltung erfolgreich" : "Zahlung wurde gestartet"}</h1>
+        <p>{isActive ? "Deine Zahlung wurde bestätigt und dein FanMind-Workspace ist freigeschaltet." : "Stripe hat die Zahlung angenommen. Bei SEPA-Lastschrift kann die finale Bestätigung einige Geschäftstage dauern."}</p>
+        {workspace ? <div className={styles.emptyState}><strong>Aktueller Status: {getBillingStatusLabel(workspace.billing_status)}</strong></div> : null}
         <div className={styles.emptyActions}>
-          <Link className={styles.primaryButton} href="/dashboard">Zum Dashboard</Link>
-          <Link className={styles.secondaryButton} href="/billing/start">Zu Paket &amp; Rechnungen</Link>
+          <Link className={styles.primaryButton} href={continuationHref}>{isActive ? "Zum Dashboard" : "Status ansehen"}</Link>
+          {!isActive ? <Link className={styles.secondaryButton} href="/billing/pending">Zu Zahlung eingereicht</Link> : null}
         </div>
       </section>
     </main>
