@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { listAdminBillingMembers, listAdminBillingWorkspaces, listWorkspaceContactCounts, type AdminBillingMember, type AdminBillingWorkspace } from "@/lib/adminBilling";
+import { PLANS, type FeatureKey, type FeatureStatus, type PlanId } from "@/config/plans";
 import { getBillingStatusLabel } from "@/lib/billing";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getStripeConfigStatus } from "@/lib/stripeBilling";
@@ -105,16 +106,94 @@ function StatCard({ icon, label, value, hint, trend, tone }: { icon: string; lab
   );
 }
 
-function AdminTabs({ activeTab }: { activeTab: "overview" | "customers" }) {
+function AdminTabs({ activeTab }: { activeTab: "overview" | "customers" | "packages" }) {
   return (
     <nav className={styles.dashboardTabs} aria-label="Adminbereiche">
       <Link className={activeTab === "overview" ? styles.activeTab : undefined} href="/admin/billing">Übersicht</Link>
       <Link className={activeTab === "customers" ? styles.activeTab : undefined} href="/admin/billing?tab=customers">Kunden &amp; Nutzer</Link>
-      <span>Pakete &amp; Freigaben</span>
+      <Link className={activeTab === "packages" ? styles.activeTab : undefined} href="/admin/billing?tab=packages">Pakete &amp; Freigaben</Link>
       <span>Zahlungen</span>
       <span>Abos <small>Später</small></span>
     </nav>
   );
+}
+
+const packagePlanIds: PlanId[] = ["pilot", "starter", "growth", "agency"];
+const matrixFeatures: Array<{ key: FeatureKey; label: string }> = [
+  { key: "dashboard", label: "Dashboard" },
+  { key: "contacts", label: "Kontakte / Fans" },
+  { key: "contact_detail", label: "Manuelle Kontakte" },
+  { key: "csv_import", label: "CSV-Import" },
+  { key: "memory", label: "AI-Infos / Fan-Gedächtnis" },
+  { key: "ai_replies", label: "KI-Antwortvorschläge" },
+  { key: "followups", label: "Follow-ups" },
+  { key: "analytics", label: "Fan-Analyse-Report" },
+  { key: "roadmap", label: "Kanäle-Roadmap" },
+  { key: "basic_segments", label: "Segmente" },
+  { key: "campaigns", label: "Kampagnen" },
+  { key: "analytics", label: "Analytics / Reporting" },
+  { key: "integrations", label: "Integrationen" },
+  { key: "automatic_sending", label: "Automatisches Senden" },
+  { key: "payments", label: "Zahlungen / Billing" },
+];
+
+function packageStatusLabel(status: FeatureStatus, planId: PlanId, featureKey: FeatureKey) {
+  if (featureKey === "automatic_sending") return "Hidden";
+  if (planId === "growth" || planId === "agency") {
+    if (status === "hidden") return "Hidden";
+    if (status === "coming_soon") return "Coming Soon";
+    return "Roadmap";
+  }
+  if (featureKey === "integrations") return status === "hidden" ? "Hidden" : "Roadmap";
+  if (status === "active" || status === "demo") return "Aktiv";
+  if (status === "limited" || status === "preview") return "Limitiert";
+  if (status === "coming_soon") return "Coming Soon";
+  if (status === "hidden") return "Hidden";
+  return "Nicht aktiv";
+}
+
+function matrixChipClass(label: string) {
+  if (label === "Aktiv") return styles.matrixActive;
+  if (label === "Limitiert") return styles.matrixLimited;
+  if (label === "Coming Soon") return styles.matrixSoon;
+  if (label === "Roadmap") return styles.matrixRoadmap;
+  if (label === "Hidden") return styles.matrixHidden;
+  return styles.matrixInactive;
+}
+
+function PackagesContent() {
+  const activePackages = packagePlanIds.filter((planId) => planId === "pilot" || planId === "starter").length;
+  const hiddenFeatures = packagePlanIds.reduce((count, planId) => count + Object.values(PLANS[planId].featureConfig).filter((feature) => feature.status === "hidden" || feature.visibility === "hidden").length, 0);
+  const comingSoonFeatures = packagePlanIds.reduce((count, planId) => count + Object.values(PLANS[planId].featureConfig).filter((feature) => feature.status === "coming_soon" || feature.status === "preview").length, 0);
+  const packageCards = [
+    { id: "pilot" as PlanId, icon: "P", title: "Pilot / Setup", price: "990 € einmalig", meta: ["1 Testmonat", "keine Bindung", "keine automatische Verlängerung"], status: "Aktiv", tone: styles.packagePilot },
+    { id: "starter" as PlanId, icon: "S", title: "Starter", price: "312 €/Monat", meta: ["Starter Flex: 990 € Setup + 312 €/Monat", "Starter 12 Monate: 0 € Setup + 312 €/Monat"], status: "Aktiv", tone: styles.packageStarter },
+    { id: "growth" as PlanId, icon: "G", title: "Growth", price: "Coming Soon", meta: ["Vorschau / Roadmap", "noch nicht produktiv buchbar"], status: "Coming Soon", tone: styles.packageGrowth },
+    { id: "agency" as PlanId, icon: "A", title: "Agency", price: "Coming Soon", meta: ["Roadmap / Agenturen", "noch nicht produktiv buchbar"], status: "Coming Soon", tone: styles.packageAgency },
+  ];
+  const visibilityRules = [["App", "Kundensicht"], ["Landingpage", "Öffentlich"], ["Roadmap", "Öffentlich"], ["Admin", "Immer sichtbar"], ["Sales-Demo", "Nur intern"]] as const;
+  const upgradeRules = [["Downgrade-Sperre", "in Vorbereitung"], ["Upgrade-Pfade", "Linearer Pfad"], ["Feature-Entsperrung", "nach Zahlung"], ["Zahlungsprüfung", "Erforderlich"]] as const;
+
+  return <>
+    <section className={styles.crmKpiGrid} aria-label="Paket- und Feature-Kennzahlen">
+      <StatCard icon="◆" label="Aktive Pakete" value={activePackages} hint="Pilot und Starter verfügbar" trend="Aus Plan-Konfiguration" tone={styles.toneGreen} />
+      <StatCard icon="◌" label="Versteckte Features" value={hiddenFeatures} hint="Hidden Status/Sichtbarkeit" trend="Keine UI-Secrets" tone={styles.toneRed} />
+      <StatCard icon="↗" label="Coming Soon Features" value={comingSoonFeatures} hint="Preview oder Coming Soon" trend="Roadmap ehrlich markiert" tone={styles.toneAmber} />
+      <StatCard icon="⇄" label="Upgrade-Regeln" value="4" hint="Nur Status-Übersicht" trend="Keine Engine geändert" tone={styles.toneCyan} />
+      <StatCard icon="◎" label="Landingpage Sichtbarkeit" value="Öffentlich" hint="Roadmap/Preise kontrolliert" trend="Planlogik unverändert" tone={styles.toneBlue} />
+    </section>
+    <section className={styles.packageLayout}>
+      <div className={styles.packageMain}>
+        <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Pakete</span><h2>Paketübersicht</h2></div><span className={styles.badge}>4 Pakete</span></div><div className={styles.packageGrid}>{packageCards.map((item) => <div className={`${styles.packageCard} ${item.tone}`} key={item.id}><div className={styles.packageTopline}><span className={styles.packageIcon}>{item.icon}</span><span className={item.status === "Aktiv" ? styles.badgeOk : styles.badgeWarn}>{item.status}</span></div><h3>{item.title}</h3><strong>{item.price}</strong><ul>{item.meta.map((line) => <li key={line}>{line}</li>)}</ul></div>)}</div></article>
+        <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Freigaben</span><h2>Feature-Matrix</h2></div><span className={styles.badge}>Admin-Übersicht</span></div><div className={styles.featureMatrix}><div className={styles.featureMatrixHead}><span>Feature</span>{packagePlanIds.map((planId) => <span key={planId}>{PLANS[planId].name}</span>)}</div>{matrixFeatures.map((feature, index) => <div className={styles.featureMatrixRow} key={`${feature.key}-${index}`}><strong>{feature.label}</strong>{packagePlanIds.map((planId) => { const label = packageStatusLabel(PLANS[planId].featureConfig[feature.key].status, planId, feature.key); return <span className={matrixChipClass(label)} key={planId}>{label}</span>; })}</div>)}</div><div className={styles.legendRow}><span className={styles.matrixActive}>Aktiv</span><span className={styles.matrixLimited}>Limitiert</span><span className={styles.matrixSoon}>Coming Soon</span><span className={styles.matrixHidden}>Hidden</span><span className={styles.matrixRoadmap}>Roadmap Only</span></div></article>
+      </div>
+      <aside className={styles.packageAside}>
+        <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Sichtbarkeit</span><h2>Sichtbarkeits-Regeln</h2><p className={styles.cardSubtitle}>Steuere, wo Features und Pakete sichtbar sind.</p></div></div><div className={styles.ruleList}>{visibilityRules.map(([label, status]) => <div className={styles.ruleItem} key={label}><span>{label}</span><strong>{status}</strong></div>)}</div><p className={styles.muted}>Anzeige der aktuellen Sichtbarkeit; keine neue Regel-Engine.</p></article>
+        <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Upgrades</span><h2>Upgrade-Regeln</h2><p className={styles.cardSubtitle}>Definiere, wie und wann Upgrades möglich sind.</p></div></div><div className={styles.ruleList}>{upgradeRules.map(([label, status]) => <div className={styles.ruleItem} key={label}><span>{label}</span><strong>{status}</strong></div>)}</div><button className={styles.buttonSecondary} disabled>Regeln verwalten · in Vorbereitung</button></article>
+        <article className={`${styles.card} ${styles.noticeCard}`}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Hinweis</span><h2>Hinweis</h2></div></div><p>Änderungen an Paketen und Features gelten für neue Kunden sofort. Für bestehende Kunden gelten Bestandsschutz-Regeln, sofern vertraglich vereinbart.</p><p>Produktive Freigaben erfolgen erst nach Zahlungs- und Admin-Prüfung.</p></article>
+      </aside>
+    </section>
+  </>;
 }
 
 function OverviewContent({ workspaces, error }: { workspaces: AdminBillingWorkspace[]; error: string | null }) {
@@ -189,7 +268,8 @@ function CustomersContent({ workspaces, members, contactCounts, selectedWorkspac
 export default async function AdminBillingPage({ searchParams }: AdminBillingPageProps) {
   const user = await requirePlatformAdmin();
   const params = await searchParams;
-  const activeTab = getSingleParam(params.tab) === "customers" ? "customers" : "overview";
+  const tabParam = getSingleParam(params.tab);
+  const activeTab = tabParam === "customers" ? "customers" : tabParam === "packages" ? "packages" : "overview";
   const selectedWorkspaceId = getSingleParam(params.workspace);
   const [{ workspaces, error }, { members, error: memberError }, { counts: contactCounts }] = await Promise.all([listAdminBillingWorkspaces(), listAdminBillingMembers(), listWorkspaceContactCounts()]);
 
@@ -197,7 +277,7 @@ export default async function AdminBillingPage({ searchParams }: AdminBillingPag
     <AdminBillingShell user={user} title="Adminbereich" subtitle="Verwalte Kunden, Workspaces, Pakete und Systemeinstellungen.">
       <div className={styles.adminStack}>
         <AdminTabs activeTab={activeTab} />
-        {activeTab === "customers" ? <CustomersContent workspaces={workspaces} members={members} contactCounts={contactCounts} selectedWorkspaceId={selectedWorkspaceId} error={error} memberError={memberError} /> : <OverviewContent workspaces={workspaces} error={error} />}
+        {activeTab === "customers" ? <CustomersContent workspaces={workspaces} members={members} contactCounts={contactCounts} selectedWorkspaceId={selectedWorkspaceId} error={error} memberError={memberError} /> : activeTab === "packages" ? <PackagesContent /> : <OverviewContent workspaces={workspaces} error={error} />}
       </div>
     </AdminBillingShell>
   );
