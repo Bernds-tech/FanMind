@@ -7,9 +7,22 @@ import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase
 
 export const dynamic = "force-dynamic";
 
+const FANMIND_PUBLIC_APP_URL = "https://fanmind.ch";
+
+function getPublicAppUrl() {
+  const configuredAppUrl = getAppUrl() || FANMIND_PUBLIC_APP_URL;
+
+  try {
+    const url = new URL(configuredAppUrl);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return FANMIND_PUBLIC_APP_URL;
+    return url.origin;
+  } catch {
+    return FANMIND_PUBLIC_APP_URL;
+  }
+}
+
 function getInternalRedirectUrl(path: string) {
-  const appUrl = getAppUrl() || "https://fanmind.ch";
-  return new URL(path, appUrl);
+  return new URL(path, getPublicAppUrl());
 }
 
 function redirectTo(path: string) {
