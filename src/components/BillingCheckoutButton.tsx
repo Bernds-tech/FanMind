@@ -28,7 +28,7 @@ function getCheckoutMessage(status: number, error?: string): CheckoutMessage {
   return { kind: "generic", text: error ?? "Checkout konnte nicht gestartet werden. Bitte kontaktiere FanMind." };
 }
 
-export function BillingCheckoutButton({ planId, commercialOption, label = "Zahlung starten", showHint = true }: { planId: PlanId; commercialOption: string; label?: string; showHint?: boolean }) {
+export function BillingCheckoutButton({ planId, commercialOption, label = "Zahlung starten", showHint = true, hint = "Du wirst zum sicheren Stripe Checkout weitergeleitet." }: { planId: PlanId; commercialOption: string; label?: string; showHint?: boolean; hint?: string }) {
   const [message, setMessage] = useState<CheckoutMessage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -63,7 +63,7 @@ export function BillingCheckoutButton({ planId, commercialOption, label = "Zahlu
       <button className={styles.button} type="button" onClick={startCheckout} disabled={isLoading}>
         {isLoading ? "Zahlung wird vorbereitet …" : label}
       </button>
-      {showHint ? <p className={styles.hint}>Du wirst zum sicheren Stripe Checkout weitergeleitet.</p> : null}
+      {showHint ? <p className={styles.hint}>{hint}</p> : null}
       {message ? (
         <div className={styles.error} role="alert">
           <p>{message.text}</p>

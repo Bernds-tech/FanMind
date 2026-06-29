@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
+import { FanMindLogo } from "@/components/FanMindLogo";
 import { shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
@@ -10,46 +11,52 @@ import styles from "./billingStart.module.css";
 
 type BillingPlanSummary = {
   name: string;
-  price: string;
-  setupFee: string;
+  dueToday: string;
+  monthly?: string;
   term: string;
+  status: string;
 };
 
 function getBillingPlanSummary(planId?: string | null, commercialOption?: string | null): BillingPlanSummary {
   if (planId === "pilot") {
     return {
       name: "Pilot / Setup",
-      price: "990 € einmalig · zzgl. USt.",
-      setupFee: "im Pilotpreis enthalten",
+      dueToday: "990 € einmalig · zzgl. USt.",
       term: "1 Testmonat · keine automatische Verlängerung",
+      status: "Zahlung offen",
     };
   }
 
   if (planId === "starter" && commercialOption === "starter_no_setup_commitment") {
     return {
       name: "Starter 12 Monate",
-      price: "312 €/Monat · zzgl. USt.",
-      setupFee: "0 €",
+      dueToday: "0 € Setup",
+      monthly: "312 €/Monat · zzgl. USt.",
       term: "12 Monate",
+      status: "Zahlung offen",
     };
   }
 
   if (planId === "starter" && commercialOption === "starter_paid_setup") {
     return {
       name: "Starter Flex",
-      price: "312 €/Monat · zzgl. USt.",
-      setupFee: "990 € einmalig · zzgl. USt.",
+      dueToday: "990 € Setup · zzgl. USt.",
+      monthly: "312 €/Monat · zzgl. USt.",
       term: "monatlich kündbar",
+      status: "Zahlung offen",
     };
   }
 
   return {
     name: "Ausgewähltes Paket",
-    price: "gemäß Auswahl · zzgl. USt.",
-    setupFee: "gemäß Auswahl",
+    dueToday: "gemäß Auswahl · zzgl. USt.",
+    monthly: "gemäß Auswahl",
     term: "gemäß Auswahl",
+    status: "Zahlung offen",
   };
 }
+
+const checkoutSteps = ["Konto erstellt", "Zahlung", "Freischaltung"];
 
 export default async function BillingStartPage() {
   const { data } = await getSupabaseServerUser();
@@ -72,52 +79,73 @@ export default async function BillingStartPage() {
   return (
     <main className={styles.shell}>
       <section className={styles.overlay} aria-label="FanMind freischalten">
+        <div className={styles.topbar}>
+          <div className={styles.brandBlock}>
+            <FanMindLogo className={styles.logo} compact href="/landing-v2" ariaLabel="FanMind Landingpage öffnen" />
+            <p>Setup &amp; Zahlung</p>
+          </div>
+          <ol className={styles.progress} aria-label="Checkout-Fortschritt">
+            {checkoutSteps.map((step, index) => (
+              <li className={index === 1 ? styles.activeStep : undefined} key={step} aria-current={index === 1 ? "step" : undefined}>
+                <span>{index + 1}</span>
+                {step}
+              </li>
+            ))}
+          </ol>
+        </div>
+
         <header className={styles.header}>
-          <p className={styles.brand}>FanMind · Setup &amp; Zahlung</p>
           <h1>FanMind freischalten</h1>
-          <p>Bestätige dein Paket und starte anschließend die sichere Zahlung.</p>
+          <p>Schließe deine Zahlung ab, damit dein Workspace aktiviert werden kann.</p>
         </header>
 
         {workspace && plan ? (
           <div className={styles.grid}>
             <section className={styles.panel} aria-labelledby="billing-plan-title">
-              <h2 id="billing-plan-title">Paket &amp; Preis</h2>
+              <p className={styles.panelKicker}>Ausgewähltes Angebot</p>
+              <h2 id="billing-plan-title">Dein Paket</h2>
               <dl className={styles.facts}>
-                <div><dt>Paket</dt><dd>{plan.name}</dd></div>
-                <div><dt>Preis netto</dt><dd>{plan.price}</dd></div>
-                <div><dt>Setup Fee netto</dt><dd>{plan.setupFee}</dd></div>
-                <div><dt>Laufzeit / Bindung</dt><dd>{plan.term}</dd></div>
-                <div><dt>USt.-Hinweis</dt><dd>Alle Preise zzgl. USt.</dd></div>
-                <div><dt>Status</dt><dd><span className={styles.status}>Zahlung offen</span></dd></div>
+                <div><dt>Paketname</dt><dd>{plan.name}</dd></div>
+                <div><dt>Heute fällig</dt><dd>{plan.dueToday}</dd></div>
+                {plan.monthly ? <div><dt>Danach monatlich</dt><dd>{plan.monthly}</dd></div> : null}
+                <div><dt>Laufzeit</dt><dd>{plan.term}</dd></div>
+                <div><dt>Status</dt><dd><span className={styles.status}>{plan.status}</span></dd></div>
               </dl>
             </section>
 
             <section className={styles.panel} aria-labelledby="billing-payment-title">
-              <h2 id="billing-payment-title">Rechnung &amp; Zahlung</h2>
+              <p className={styles.panelKicker}>Nächster Schritt</p>
+              <h2 id="billing-payment-title">Sichere Zahlung</h2>
               <dl className={styles.facts}>
-                <div><dt>Firma / Name</dt><dd>{workspace.name}</dd></div>
-                <div><dt>Nächster Schritt</dt><dd>Rechnungs- und Zahlungsdaten werden im nächsten Schritt sicher bei Stripe eingegeben.</dd></div>
-                <div><dt>Bankdaten</dt><dd>FanMind speichert keine Bankdaten.</dd></div>
+                <div><dt>Workspace</dt><dd>{workspace.name}</dd></div>
+                <div><dt>Zahlungsabwicklung</dt><dd>Zahlung über Stripe</dd></div>
+                <div><dt>Zahlart</dt><dd>SEPA-Lastschrift im nächsten Schritt</dd></div>
+                <div><dt>Datenerfassung</dt><dd>Rechnung und Zahlungsdaten werden bei Stripe erfasst</dd></div>
               </dl>
-              <div className={styles.notice}>
-                <p>Stripe Checkout verarbeitet die Zahlungsdaten verschlüsselt und führt dich nach Abschluss zurück zu FanMind.</p>
-              </div>
             </section>
           </div>
         ) : (
           <div className={styles.infoBox}>Dein Workspace wird vorbereitet. Bitte aktualisiere die Seite in Kürze.</div>
         )}
 
-        <div className={styles.actions}>
-          {!stripe.readyForCheckout && !isDemo ? (
-            <div className={styles.infoBox}>Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind.</div>
-          ) : canStartCheckout && workspace ? (
-            <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label="Weiter zur Zahlung" />
-          ) : isDemo ? (
-            <div className={styles.infoBox}>Demo-Zugang aktiv. Für diesen Zugang ist keine Zahlung erforderlich.</div>
-          ) : null}
-          <Link className={styles.logout} href="/logout">Abmelden</Link>
+        <div className={styles.checkoutFooter}>
+          <ul className={styles.trustList} aria-label="Sicherheit und Vertrauen">
+            <li>Zahlung über Stripe</li>
+            <li>SEPA-Lastschrift im nächsten Schritt</li>
+            <li>Keine Bankdaten in FanMind</li>
+            <li>Rechnung und Zahlungsdaten werden bei Stripe erfasst</li>
+          </ul>
+          <div className={styles.actions}>
+            {!stripe.readyForCheckout && !isDemo ? (
+              <div className={styles.infoBox}>Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind.</div>
+            ) : canStartCheckout && workspace ? (
+              <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label="Weiter zur Zahlung" hint="Du wirst zum sicheren Stripe Checkout weitergeleitet. FanMind speichert keine Bankdaten." />
+            ) : isDemo ? (
+              <div className={styles.infoBox}>Demo-Zugang aktiv. Für diesen Zugang ist keine Zahlung erforderlich.</div>
+            ) : null}
+          </div>
         </div>
+        <Link className={styles.logout} href="/logout">Abmelden</Link>
       </section>
     </main>
   );
