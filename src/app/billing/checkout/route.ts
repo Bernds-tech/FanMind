@@ -29,7 +29,7 @@ function redirectTo(path: string) {
   return NextResponse.redirect(getInternalRedirectUrl(path), { status: 303 });
 }
 
-export async function POST() {
+async function startCheckout() {
   const { data } = await getSupabaseServerUser();
   if (!data.user) return redirectTo("/login?returnTo=/billing/start");
   if (isTemporaryDemoUser(data.user)) return redirectTo("/billing/start");
@@ -59,4 +59,12 @@ export async function POST() {
   if (!session.url) return redirectTo("/billing/start?error=payment-start");
 
   return NextResponse.redirect(session.url, { status: 303 });
+}
+
+export async function GET() {
+  return startCheckout();
+}
+
+export async function POST() {
+  return startCheckout();
 }
