@@ -149,9 +149,9 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
             ) : params?.error === "payment-start" ? (
               <div className={styles.infoBox}>Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind.</div>
             ) : canStartCheckout && workspace ? (
-              <form className={buttonStyles.wrap} method="post" action="/billing/checkout">
-                <button className={buttonStyles.button} type="submit">Weiter zur Zahlung</button>
-              </form>
+              <div className={buttonStyles.wrap}>
+                <Link className={buttonStyles.button} href="/billing/checkout">Weiter zur Zahlung</Link>
+              </div>
             ) : isDemo ? (
               <div className={styles.infoBox}>Demo-Zugang aktiv. Für diesen Zugang ist keine Zahlung erforderlich.</div>
             ) : null}
