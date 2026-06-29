@@ -8,7 +8,7 @@ import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMi
 import styles from "./login.module.css";
 
 type LoginPageProps = {
-  searchParams: Promise<{ demo?: string | string[]; lang?: string | string[]; demo_deleted?: string | string[] }>;
+  searchParams: Promise<{ demo?: string | string[]; lang?: string | string[]; demo_deleted?: string | string[]; returnTo?: string | string[] }>;
 };
 
 const LOGIN_TARGET = "/dashboard";
@@ -16,12 +16,26 @@ const DEMO_EMAIL = "sandra.m@fanmind.ch";
 // Stage 1 uses a public demo login; Stage 2 replaces this with temporary demo workspaces.
 const DEMO_PASSWORD = process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-Demo-2026!";
 
-function LanguageSwitch({ language }: { language: FanMindLanguage }) {
+function getSafeReturnTo(returnTo?: string | string[] | null) {
+  const value = Array.isArray(returnTo) ? returnTo[0] : returnTo;
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return null;
+  return value;
+}
+
+function withReturnTo(path: string, returnTo: string | null) {
+  if (!returnTo) return path;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}returnTo=${encodeURIComponent(returnTo)}`;
+}
+
+function LanguageSwitch({ language, returnTo }: { language: FanMindLanguage; returnTo: string | null }) {
   return (
     <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
-      <a className={language === "de" ? styles.languageActive : undefined} href="/login" aria-current={language === "de" ? "true" : undefined}>DE</a>
+      <a className={language === "de" ? styles.languageActive : undefined} href={withReturnTo("/login", returnTo)} aria-current={language === "de" ? "true" : undefined}>DE</a>
       <span>|</span>
-      <a className={language === "en" ? styles.languageActive : undefined} href="/login?lang=en" aria-current={language === "en" ? "true" : undefined}>EN</a>
+      <a className={language === "en" ? styles.languageActive : undefined} href={withReturnTo("/login?lang=en", returnTo)} aria-current={language === "en" ? "true" : undefined}>EN</a>
     </div>
   );
 }
@@ -32,9 +46,11 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const isDemoMode = Array.isArray(params.demo) ? params.demo.includes("1") : params.demo === "1";
   const isDemoDeleted = Array.isArray(params.demo_deleted) ? params.demo_deleted.includes("1") : params.demo_deleted === "1";
   const language = getFanMindLanguage(params.lang);
+  const returnTo = getSafeReturnTo(params.returnTo);
+  const loginTarget = returnTo ?? LOGIN_TARGET;
   const copy = fanmindCopy[language].login;
   const registerHref = localizedPath("/register", language);
-  const loginHref = localizedPath("/login", language);
+  const loginHref = withReturnTo(localizedPath("/login", language), returnTo);
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,7 +92,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         setError(`${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den Sandra-Demo-Fallback über /login?demo=1 nutzen.`);
         return;
       }
-      window.location.assign(payload?.redirectTo ?? LOGIN_TARGET);
+      window.location.assign(payload?.redirectTo ?? loginTarget);
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : "Die Demo konnte gerade nicht vorbereitet werden. Bitte nutze /login?demo=1 als Fallback.");
     } finally {
@@ -114,7 +130,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 
       await syncSupabaseSessionForServer(data.session);
       document.cookie = `fanmind_locale=${language}; path=/; max-age=31536000; samesite=lax`;
-      window.location.assign(language === "en" ? `${LOGIN_TARGET}?lang=en` : LOGIN_TARGET);
+      const target = language === "en" && !loginTarget.includes("lang=") ? `${loginTarget}${loginTarget.includes("?") ? "&" : "?"}lang=en` : loginTarget;
+      window.location.assign(target);
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : language === "en" ? "Unknown Supabase error." : "Unbekannter Supabase-Fehler.";
       setError(normalizeLoginError(message));
@@ -130,7 +147,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         <header className={styles.header}>
           <FanMindLogo className={styles.logo} compact href={language === "en" ? "/landing-v2?lang=en" : "/landing-v2"} ariaLabel={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"} />
           <nav className={styles.topLinks} aria-label="Login Navigation">
-            <LanguageSwitch language={language} />
+            <LanguageSwitch language={language} returnTo={returnTo} />
             <span>{copy.registerPrompt}</span>
             <a href={registerHref}>{copy.registerLink}</a>
           </nav>
@@ -228,7 +245,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             </button>
             {error && (
               <p className={styles.notice}>
-                <button className={styles.secondaryButton} type="button" onClick={() => router.push(localizedPath("/login", language, "?demo=1"))}>Sandra-Demo-Fallback öffnen</button>
+                <button className={styles.secondaryButton} type="button" onClick={() => router.push(withReturnTo(localizedPath("/login", language, "?demo=1"), returnTo))}>Sandra-Demo-Fallback öffnen</button>
               </p>
             )}
 
