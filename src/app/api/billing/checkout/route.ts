@@ -24,6 +24,6 @@ export async function POST(request: NextRequest) {
   }
 
   const session = await createStripeCheckoutSession({ plan, userId: data.user.id, workspaceId: workspaceResult.workspace.id, userEmail: data.user.email });
-  if (!session.url) return NextResponse.json({ error: session.error ?? "Stripe Checkout konnte nicht gestartet werden." }, { status: 502 });
+  if (!session.url) return NextResponse.json({ error: session.error ?? "Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind." }, { status: 502 });
   return NextResponse.json({ url: session.url, sessionId: session.id });
 }
