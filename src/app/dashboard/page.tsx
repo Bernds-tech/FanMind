@@ -5,7 +5,6 @@ import { getBillingCheckoutActionLabel, shouldShowBillingCheckoutAction } from "
 import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
-  ensureUserWorkspace,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -543,10 +542,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   }
 
   const locale = await resolveWorkspaceLocale({ lang: resolvedSearchParams?.lang, user: data.user });
-  const backfillResult = await ensureUserWorkspace(data.user);
-  const workspaceResult = backfillResult.workspace
-    ? await getUserWorkspaceDashboard(data.user)
-    : { workspace: null, error: backfillResult.error };
+  const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }

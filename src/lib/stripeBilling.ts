@@ -96,6 +96,8 @@ export async function createStripeCheckoutSession(input: { plan: CheckoutPlan; u
   params.append("payment_method_types[]", "sepa_debit");
   if (input.workspaceId) params.set("client_reference_id", input.workspaceId);
   if (input.userEmail) params.set("customer_email", input.userEmail);
+  params.set("billing_address_collection", "required");
+  params.set("tax_id_collection[enabled]", "true");
   input.plan.priceIds.forEach((price, index) => {
     params.set(`line_items[${index}][price]`, price);
     params.set(`line_items[${index}][quantity]`, "1");

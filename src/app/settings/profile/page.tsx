@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getBillingStatusLabel, isWorkspaceBillingSuspended } from "@/lib/billing";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
@@ -229,6 +230,8 @@ export default async function ProfileSettingsPage() {
   }
 
   const workspace = workspaceResult.workspace;
+  const preActivationRedirect = getPreActivationRedirect(workspace);
+  if (preActivationRedirect) redirect(preActivationRedirect);
   if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)

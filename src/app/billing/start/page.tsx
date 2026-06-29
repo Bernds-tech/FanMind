@@ -36,6 +36,7 @@ export default async function BillingStartPage() {
   const stripe = getStripeConfigStatus();
   const isDemo = isTemporaryDemoUser(data.user) || workspace?.billing_status === "demo_free" || workspace?.name === "Temporary FanMind Demo";
   const redirectTarget = getPreActivationRedirect(workspace);
+  if (redirectTarget === "/workspace/setup") redirect("/workspace/setup");
   if (workspace?.billing_status === "active" || redirectTarget === "/dashboard") redirect("/dashboard");
   if (redirectTarget === "/billing/pending") redirect("/billing/pending");
   if (redirectTarget === "/billing/suspended") redirect("/billing/suspended");
@@ -47,25 +48,26 @@ export default async function BillingStartPage() {
         <div>
           <p className={styles.eyebrow}>Setup &amp; Billing</p>
           <h1>FanMind freischalten</h1>
-          <p>Willkommen bei FanMind. Bitte prüfe deine Paket- und Rechnungsdaten — danach leiten wir dich sicher zu Stripe weiter.</p>
+          <p>Bestätige dein Paket und starte die sichere Zahlung über Stripe.</p>
         </div>
 
         {workspace ? (
           <>
             <dl className={styles.onboardingFacts}>
               <div><dt>Paket</dt><dd>{planLabel(workspace.plan_id)}</dd></div>
-              <div><dt>Preis</dt><dd>{formatEuro(workspace.setup_fee_cents)} Setup · {formatEuro(workspace.monthly_fee_cents)} monatlich</dd></div>
+              <div><dt>Preis netto</dt><dd>{formatEuro(workspace.monthly_fee_cents)} monatlich · zzgl. USt.</dd></div>
+              <div><dt>Laufzeit / Bindung</dt><dd>{workspace.commitment_months ? `${workspace.commitment_months} Monate` : "monatlich kündbarer Pilot-/Setup-Zugang"}</dd></div>
+              <div><dt>Setup Fee netto</dt><dd>{formatEuro(workspace.setup_fee_cents)} · zzgl. USt.</dd></div>
               <div><dt>Leistungsumfang</dt><dd>{featureSummary(workspace.plan_id)}</dd></div>
               <div><dt>Status</dt><dd>{getBillingStatusLabel(workspace.billing_status)}</dd></div>
             </dl>
 
             <div className={styles.emptyState}>
-              <strong>Rechnungsdaten bestätigen</strong>
+              <strong>Rechnungs- und Zahlungshinweis</strong>
               <dl className={styles.onboardingFacts}>
                 <div><dt>Firma / Name</dt><dd>{workspace.name}</dd></div>
-                <div><dt>Rechnungsadresse</dt><dd>Wird im nächsten Schritt sicher in Stripe ergänzt oder bestätigt.</dd></div>
-                <div><dt>Land</dt><dd>Deutschland / EU — bitte in Stripe final prüfen.</dd></div>
-                <div><dt>UID/VAT</dt><dd>Optional in Stripe hinterlegen.</dd></div>
+                <div><dt>Stripe Checkout</dt><dd>Rechnungs- und Zahlungsdaten werden im nächsten Schritt sicher bei Stripe eingegeben.</dd></div>
+                <div><dt>Bankdaten</dt><dd>FanMind speichert keine Bankdaten.</dd></div>
               </dl>
             </div>
           </>

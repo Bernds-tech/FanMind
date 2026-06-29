@@ -55,12 +55,6 @@ export function getWorkspaceNavigation(
         badge: dueFollowupCount > 0 ? String(dueFollowupCount) : undefined,
       },
       {
-        label: "Reichweite",
-        href: "/reach",
-        active: activeRoute === "reach",
-        badge: "MVP",
-      },
-      {
         label: wt(locale, "Onboarding"),
         href: "/onboarding",
         active: activeRoute === "onboarding",
