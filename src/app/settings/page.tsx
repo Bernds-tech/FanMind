@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isWorkspaceBillingSuspended } from "@/lib/billing";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
@@ -117,6 +118,8 @@ export default async function SettingsPage() {
   }
 
   const workspace = workspaceResult.workspace;
+  const preActivationRedirect = getPreActivationRedirect(workspace);
+  if (preActivationRedirect) redirect(preActivationRedirect);
   if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)

@@ -13,6 +13,7 @@ export default async function BillingSuccessPage() {
   const workspace = workspaceResult.workspace;
   const isActive = workspace?.billing_status === "active";
   const continuationHref = getBillingContinuationHref(workspace);
+  if (workspace && !isActive && ["pending_sepa_mandate", "pending_payment_setup"].includes(String(workspace.billing_status))) redirect("/billing/pending");
 
   return (
     <main className={styles.page}>

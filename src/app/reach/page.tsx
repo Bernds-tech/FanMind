@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
@@ -386,6 +387,24 @@ export default async function ReachPage() {
   const workspace = workspaceResult.workspace;
   const preActivationRedirect = getPreActivationRedirect(workspace);
   if (preActivationRedirect) redirect(preActivationRedirect);
+
+  if (!isPlatformAdminEmail(data.user.email)) {
+    return (
+      <main className={dashboardStyles.page}>
+        <section className={dashboardStyles.fallbackCard} aria-label="Reach Intelligence">
+          <div>
+            <p className={dashboardStyles.eyebrow}>Späteres Modul</p>
+            <h1>Reach Intelligence kommt später</h1>
+            <p>Die Reichweitenanalyse ist nicht Teil der aktiven Starter-Funktionen und wird im Nutzerbereich aktuell nicht prominent angezeigt.</p>
+          </div>
+          <div className={dashboardStyles.emptyActions}>
+            <Link className={dashboardStyles.primaryButton} href="/dashboard">Zum Dashboard</Link>
+            <Link className={dashboardStyles.secondaryButton} href="/roadmap">Roadmap ansehen</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;

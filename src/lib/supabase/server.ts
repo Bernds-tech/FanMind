@@ -15,6 +15,12 @@ export type { NormalizedMessageAttachment as ConversationMessageAttachment } fro
 
 import { cookies } from "next/headers";
 import {
+  getBillingProvider,
+  getInitialBillingStatus,
+  getPaymentCollectionMethod,
+  PAYMENT_TERMS_VERSION,
+} from "@/lib/billing";
+import {
   getRegistrationCommercialTerms,
   isPlanId,
   type ProductiveCommercialOption,
@@ -4498,6 +4504,31 @@ export async function ensureUserWorkspace(
   let workspace = ownerWorkspaceResult.data;
   let created = false;
 
+  if (workspace) {
+    const repairValues: Record<string, unknown> = {};
+    if (!workspace.billing_status) repairValues.billing_status = getInitialBillingStatus(workspaceTerms.planId, workspaceTerms.commercialOption);
+    if (!workspace.plan_id) repairValues.plan_id = workspaceTerms.planId;
+    if (!workspace.commercial_option) repairValues.commercial_option = workspaceTerms.commercialOption;
+    if (workspace.setup_fee_cents == null) repairValues.setup_fee_cents = workspaceTerms.setupFeeCents;
+    if (workspace.monthly_fee_cents == null) repairValues.monthly_fee_cents = workspaceTerms.monthlyFeeCents;
+    if (workspace.commitment_months == null) repairValues.commitment_months = workspaceTerms.commitmentMonths;
+    repairValues.billing_provider = getBillingProvider();
+    repairValues.payment_collection_method = getPaymentCollectionMethod(workspace.plan_id ?? workspaceTerms.planId, workspace.commercial_option ?? workspaceTerms.commercialOption);
+    repairValues.billing_updated_at = new Date().toISOString();
+
+    const repairedWorkspaceResult = await postgrestUpdate<WorkspaceBackfillRow>(
+      "workspaces",
+      repairValues,
+      accessToken,
+      [["id", workspace.id]],
+      { select: WORKSPACE_COLUMNS, single: true },
+    );
+
+    if (!repairedWorkspaceResult.error && repairedWorkspaceResult.data) {
+      workspace = repairedWorkspaceResult.data;
+    }
+  }
+
   if (!workspace) {
     const insertWorkspaceResult = await postgrestRequest<WorkspaceBackfillRow>(
       "workspaces",
@@ -4510,6 +4541,13 @@ export async function ensureUserWorkspace(
         setup_fee_cents: workspaceTerms.setupFeeCents,
         monthly_fee_cents: workspaceTerms.monthlyFeeCents,
         commitment_months: workspaceTerms.commitmentMonths,
+        billing_status: getInitialBillingStatus(workspaceTerms.planId, workspaceTerms.commercialOption),
+        billing_provider: getBillingProvider(),
+        payment_collection_method: getPaymentCollectionMethod(workspaceTerms.planId, workspaceTerms.commercialOption),
+        payment_terms_version: stringMetadataValue(user.user_metadata, "payment_terms_version") ?? PAYMENT_TERMS_VERSION,
+        payment_terms_accepted_at: stringMetadataValue(user.user_metadata, "payment_terms_accepted_at") ?? new Date().toISOString(),
+        payment_terms_accepted_by_user_id: user.id,
+        billing_updated_at: new Date().toISOString(),
       },
       accessToken,
       { select: WORKSPACE_COLUMNS, single: true },
