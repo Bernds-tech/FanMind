@@ -5,9 +5,11 @@ import { getBillingContinuationHref } from "@/lib/preActivation";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 import styles from "../../dashboard/dashboard.module.css";
 
+export const dynamic = "force-dynamic";
+
 export default async function BillingSuccessPage() {
   const { data } = await getSupabaseServerUser();
-  if (!data.user) redirect("/login");
+  if (!data.user) redirect("/login?returnTo=/billing/success");
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");
   const workspace = workspaceResult.workspace;

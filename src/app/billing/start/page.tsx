@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
+import buttonStyles from "@/components/BillingCheckoutButton.module.css";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
-import { getStripeConfigStatus } from "@/lib/stripeBilling";
+import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import styles from "./billingStart.module.css";
+
+export const dynamic = "force-dynamic";
 
 type BillingPlanSummary = {
   name: string;
@@ -58,9 +60,45 @@ function getBillingPlanSummary(planId?: string | null, commercialOption?: string
 
 const checkoutSteps = ["Konto erstellt", "Zahlung", "Freischaltung"];
 
-export default async function BillingStartPage() {
+async function startBillingCheckout() {
+  "use server";
+
   const { data } = await getSupabaseServerUser();
-  if (!data.user) redirect("/login");
+  if (!data.user) redirect("/login?returnTo=/billing/start");
+  if (isTemporaryDemoUser(data.user)) redirect("/billing/start");
+
+  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");
+
+  const workspace = workspaceResult.workspace;
+  if (!workspace) redirect("/workspace/setup");
+
+  const redirectTarget = getPreActivationRedirect(workspace);
+  if (workspace.billing_status === "active" || redirectTarget === "/dashboard") redirect("/dashboard");
+  if (redirectTarget === "/billing/pending") redirect("/billing/pending");
+  if (redirectTarget === "/billing/suspended") redirect("/billing/suspended");
+  if (redirectTarget === "/workspace/setup") redirect("/workspace/setup");
+
+  const isDemo = workspace.billing_status === "demo_free" || workspace.name === "Temporary FanMind Demo";
+  if (isDemo || !shouldShowBillingCheckoutAction(workspace)) redirect("/billing/start");
+
+  const config = getStripeConfigStatus();
+  if (!config.readyForCheckout) redirect("/billing/start?error=payment-config");
+
+  const plan = resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option);
+  if (!plan) redirect("/billing/start?error=payment-option");
+
+  const session = await createStripeCheckoutSession({ plan, userId: data.user.id, workspaceId: workspace.id, userEmail: data.user.email });
+  if (!session.url) redirect("/billing/start?error=payment-start");
+
+  redirect(session.url);
+}
+
+
+export default async function BillingStartPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
+  const params = await searchParams;
+  const { data } = await getSupabaseServerUser();
+  if (!data.user) redirect("/login?returnTo=/billing/start");
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");
@@ -72,7 +110,9 @@ export default async function BillingStartPage() {
   if (workspace?.billing_status === "active" || redirectTarget === "/dashboard") redirect("/dashboard");
   if (redirectTarget === "/billing/pending") redirect("/billing/pending");
   if (redirectTarget === "/billing/suspended") redirect("/billing/suspended");
-  const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && stripe.readyForCheckout && !isDemo);
+  const resolvedCheckoutPlan = workspace ? resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option) : null;
+  const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
+  const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && stripe.readyForCheckout && !isDemo && resolvedCheckoutPlan);
 
   const plan = workspace ? getBillingPlanSummary(workspace.plan_id, workspace.commercial_option) : null;
 
@@ -138,8 +178,15 @@ export default async function BillingStartPage() {
           <div className={styles.actions}>
             {!stripe.readyForCheckout && !isDemo ? (
               <div className={styles.infoBox}>Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind.</div>
+            ) : hasUnclearPaymentOption || params?.error === "payment-option" ? (
+              <div className={styles.infoBox}>Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind.</div>
+            ) : params?.error === "payment-start" ? (
+              <div className={styles.infoBox}>Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind.</div>
             ) : canStartCheckout && workspace ? (
-              <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label="Weiter zur Zahlung" hint="Du wirst zur sicheren Zahlungsseite weitergeleitet. FanMind speichert keine Bankdaten." />
+              <form className={buttonStyles.wrap} action={startBillingCheckout}>
+                <button className={buttonStyles.button} type="submit">Weiter zur Zahlung</button>
+                <p className={buttonStyles.hint}>Rechnungs- und Zahlungsdaten werden auf der sicheren Zahlungsseite erfasst. FanMind speichert keine Bankdaten.</p>
+              </form>
             ) : isDemo ? (
               <div className={styles.infoBox}>Demo-Zugang aktiv. Für diesen Zugang ist keine Zahlung erforderlich.</div>
             ) : null}

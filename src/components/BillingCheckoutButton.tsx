@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { PlanId } from "@/config/plans";
 import styles from "./BillingCheckoutButton.module.css";
 
-type CheckoutErrorKind = "session" | "stripe" | "plan" | "generic";
+type CheckoutErrorKind = "session" | "payment" | "plan" | "generic";
 
 type CheckoutMessage = {
   kind: CheckoutErrorKind;
@@ -18,7 +18,7 @@ function getCheckoutMessage(status: number, error?: string): CheckoutMessage {
   }
 
   if (status === 503) {
-    return { kind: "stripe", text: "Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind." };
+    return { kind: "payment", text: "Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind." };
   }
 
   if (status === 400) {

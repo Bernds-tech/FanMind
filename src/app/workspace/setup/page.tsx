@@ -9,6 +9,8 @@ import {
 } from "@/lib/supabase/server";
 import styles from "../../dashboard/dashboard.module.css";
 
+export const dynamic = "force-dynamic";
+
 async function logout() {
   "use server";
   await signOutSupabaseServerSession();
@@ -17,7 +19,7 @@ async function logout() {
 
 export default async function WorkspaceSetupPage() {
   const { data } = await getSupabaseServerUser();
-  if (!data.user) redirect("/login");
+  if (!data.user) redirect("/login?returnTo=/workspace/setup");
 
   const existingWorkspaceResult = await getUserWorkspaceDashboard(data.user);
   if (existingWorkspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");

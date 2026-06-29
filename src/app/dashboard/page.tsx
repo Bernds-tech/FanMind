@@ -416,7 +416,7 @@ function WorkspaceDetails({
           {shouldShowBillingCheckoutAction(workspace) ? (
             <div className={styles.emptyState}>
               <strong>Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.</strong>
-              <p>Öffne den sicheren Stripe Checkout. FanMind speichert keine Bankdaten.</p>
+              <p>Öffne die sichere Zahlungsseite. FanMind speichert keine Bankdaten.</p>
               <BillingCheckoutButton
                 planId={workspace.plan_id}
                 commercialOption={workspace.commercial_option}

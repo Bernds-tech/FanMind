@@ -6,6 +6,8 @@ import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getSupabaseServerUser, getUserWorkspaceDashboard, signOutSupabaseServerSession } from "@/lib/supabase/server";
 import styles from "../../dashboard/dashboard.module.css";
 
+export const dynamic = "force-dynamic";
+
 async function logout() {
   "use server";
   await signOutSupabaseServerSession();
@@ -22,7 +24,7 @@ function planLabel(planId?: string | null) {
 
 export default async function BillingPendingPage() {
   const { data } = await getSupabaseServerUser();
-  if (!data.user) redirect("/login");
+  if (!data.user) redirect("/login?returnTo=/billing/pending");
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");

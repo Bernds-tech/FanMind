@@ -322,7 +322,7 @@ function OnboardingWorkspace({
           {shouldShowBillingCheckoutAction(workspace) ? (
             <div className={styles.emptyState}>
               <strong>Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.</strong>
-              <p>Öffne Stripe Checkout, damit FanMind deinen Zugang nach bestätigter Zahlung aktualisieren kann.</p>
+              <p>Öffne die sichere Zahlungsseite, damit FanMind deinen Zugang nach bestätigter Zahlung aktualisieren kann.</p>
               <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label={getBillingCheckoutActionLabel(workspace.billing_status)} />
               <Link className={styles.secondaryButton} href="/billing/start">Paket & Zahlung ansehen</Link>
             </div>
@@ -352,7 +352,7 @@ function OnboardingWorkspace({
       </section>
 
       <div className={styles.safetyNote} role="note">
-        <strong>Zahlung sicher über Stripe Checkout</strong>
+        <strong>Sichere Zahlung</strong>
         <span>
           FanMind speichert keine Bankdaten. Automatisches Senden bleibt deaktiviert; der Mensch prüft und sendet final selbst.
         </span>
