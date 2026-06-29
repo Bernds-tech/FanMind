@@ -118,9 +118,9 @@ export default async function BillingStartPage() {
               <h2 id="billing-payment-title">Sichere Zahlung</h2>
               <dl className={styles.facts}>
                 <div><dt>Workspace</dt><dd>{workspace.name}</dd></div>
-                <div><dt>Zahlungsabwicklung</dt><dd>Zahlung über Stripe</dd></div>
+                <div><dt>Zahlungsabwicklung</dt><dd>Sichere Zahlung</dd></div>
                 <div><dt>Zahlart</dt><dd>SEPA-Lastschrift im nächsten Schritt</dd></div>
-                <div><dt>Datenerfassung</dt><dd>Rechnung und Zahlungsdaten werden bei Stripe erfasst</dd></div>
+                <div><dt>Datenerfassung</dt><dd>Rechnungs- und Zahlungsdaten werden auf der sicheren Zahlungsseite erfasst</dd></div>
               </dl>
             </section>
           </div>
@@ -130,16 +130,16 @@ export default async function BillingStartPage() {
 
         <div className={styles.checkoutFooter}>
           <ul className={styles.trustList} aria-label="Sicherheit und Vertrauen">
-            <li>Zahlung über Stripe</li>
+            <li>Sichere Zahlung</li>
             <li>SEPA-Lastschrift im nächsten Schritt</li>
             <li>Keine Bankdaten in FanMind</li>
-            <li>Rechnung und Zahlungsdaten werden bei Stripe erfasst</li>
+            <li>Rechnungs- und Zahlungsdaten werden auf der sicheren Zahlungsseite erfasst</li>
           </ul>
           <div className={styles.actions}>
             {!stripe.readyForCheckout && !isDemo ? (
               <div className={styles.infoBox}>Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind.</div>
             ) : canStartCheckout && workspace ? (
-              <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label="Weiter zur Zahlung" hint="Du wirst zum sicheren Stripe Checkout weitergeleitet. FanMind speichert keine Bankdaten." />
+              <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label="Weiter zur Zahlung" hint="Du wirst zur sicheren Zahlungsseite weitergeleitet. FanMind speichert keine Bankdaten." />
             ) : isDemo ? (
               <div className={styles.infoBox}>Demo-Zugang aktiv. Für diesen Zugang ist keine Zahlung erforderlich.</div>
             ) : null}

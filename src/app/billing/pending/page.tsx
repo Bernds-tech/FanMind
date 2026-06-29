@@ -35,7 +35,7 @@ export default async function BillingPendingPage() {
         <div>
           <p className={styles.eyebrow}>Freischaltung in Bearbeitung</p>
           <h1>Zahlung eingereicht</h1>
-          <p>Danke — deine Zahlung wurde an Stripe übergeben. Bei SEPA-Lastschrift und anderen asynchronen Zahlarten kann die finale Bestätigung einige Geschäftstage dauern.</p>
+          <p>Danke — deine Zahlung wurde sicher übergeben. Bei SEPA-Lastschrift und anderen asynchronen Zahlarten kann die finale Bestätigung einige Geschäftstage dauern.</p>
         </div>
 
         {workspace ? (
