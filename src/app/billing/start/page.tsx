@@ -126,7 +126,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
                 <div><dt>Workspace</dt><dd>{workspace.name}</dd></div>
                 <div><dt>Zahlungsabwicklung</dt><dd>Sichere Zahlung</dd></div>
                 <div><dt>Zahlart</dt><dd>SEPA-Lastschrift im nächsten Schritt</dd></div>
-                <div><dt>Datenerfassung</dt><dd>Rechnungs- und Zahlungsdaten werden auf der sicheren Zahlungsseite erfasst</dd></div>
+                <div><dt>Datenerfassung</dt><dd>Stripe kümmert sich um die Abbuchungen.</dd></div>
               </dl>
             </section>
           </div>
@@ -139,7 +139,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
             <li>Sichere Zahlung</li>
             <li>SEPA-Lastschrift im nächsten Schritt</li>
             <li>Keine Bankdaten in FanMind</li>
-            <li>Rechnungs- und Zahlungsdaten werden auf der sicheren Zahlungsseite erfasst</li>
+            <li>Rechnungs- und Zahlungsdaten werden von FanMind nicht gespeichert</li>
           </ul>
           <div className={styles.actions}>
             {!stripe.readyForCheckout && !isDemo ? (
@@ -151,7 +151,6 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
             ) : canStartCheckout && workspace ? (
               <form className={buttonStyles.wrap} method="post" action="/billing/checkout">
                 <button className={buttonStyles.button} type="submit">Weiter zur Zahlung</button>
-                <p className={buttonStyles.hint}>Rechnungs- und Zahlungsdaten werden auf der sicheren Zahlungsseite erfasst. FanMind speichert keine Bankdaten.</p>
               </form>
             ) : isDemo ? (
               <div className={styles.infoBox}>Demo-Zugang aktiv. Für diesen Zugang ist keine Zahlung erforderlich.</div>

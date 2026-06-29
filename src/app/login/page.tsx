@@ -19,9 +19,15 @@ const DEMO_PASSWORD = process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-
 function getSafeReturnTo(returnTo?: string | string[] | null) {
   const value = Array.isArray(returnTo) ? returnTo[0] : returnTo;
   if (!value) return null;
-  if (!value.startsWith("/") || value.startsWith("//")) return null;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return null;
-  return value;
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value) || /[\r\n]/.test(value)) return null;
+
+  try {
+    const parsed = new URL(value, "https://fanmind.ch");
+    return parsed.origin === "https://fanmind.ch" ? `${parsed.pathname}${parsed.search}${parsed.hash}` : null;
+  } catch {
+    return null;
+  }
 }
 
 function withReturnTo(path: string, returnTo: string | null) {
