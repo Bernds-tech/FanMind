@@ -8,19 +8,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 320px);
-  min-height: 48px;
+  width: min(100%, 360px);
+  min-height: 54px;
   border: 0;
   border-radius: 999px;
   padding: 0 22px;
   color: #06111f;
   background: linear-gradient(135deg, #67e8f9, #a7f3d0);
   font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 950;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(34, 211, 238, 0.18);
+  box-shadow: 0 18px 40px rgba(34, 211, 238, 0.22);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: saturate(1.08);
+  box-shadow: 0 22px 48px rgba(34, 211, 238, 0.3);
 }
 
 .button:disabled {
