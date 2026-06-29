@@ -18,9 +18,9 @@ export default async function BillingSuccessPage() {
   return (
     <main className={styles.page}>
       <section className={styles.fallbackCard}>
-        <p className={styles.eyebrow}>Stripe Checkout</p>
+        <p className={styles.eyebrow}>Sichere Zahlungsseite</p>
         <h1>{isActive ? "Freischaltung erfolgreich" : "Zahlung wurde gestartet"}</h1>
-        <p>{isActive ? "Deine Zahlung wurde bestätigt und dein FanMind-Workspace ist freigeschaltet." : "Stripe hat die Zahlung angenommen. Bei SEPA-Lastschrift kann die finale Bestätigung einige Geschäftstage dauern."}</p>
+        <p>{isActive ? "Deine Zahlung wurde bestätigt und dein FanMind-Workspace ist freigeschaltet." : "Die Zahlung wurde angenommen. Bei SEPA-Lastschrift kann die finale Bestätigung einige Geschäftstage dauern."}</p>
         {workspace ? <div className={styles.emptyState}><strong>Aktueller Status: {getBillingStatusLabel(workspace.billing_status)}</strong></div> : null}
         <div className={styles.emptyActions}>
           <Link className={styles.primaryButton} href={continuationHref}>{isActive ? "Zum Dashboard" : "Status ansehen"}</Link>

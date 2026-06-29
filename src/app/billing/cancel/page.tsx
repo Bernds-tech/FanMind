@@ -11,7 +11,7 @@ export default async function BillingCancelPage() {
   return (
     <main className={styles.page}>
       <section className={styles.fallbackCard}>
-        <p className={styles.eyebrow}>Stripe Checkout</p>
+        <p className={styles.eyebrow}>Sichere Zahlungsseite</p>
         <h1>Zahlung nicht abgeschlossen</h1>
         <p>Zahlung wurde nicht abgeschlossen. Du kannst die Zahlung erneut starten.</p>
         {workspace && shouldShowBillingCheckoutAction(workspace) ? (

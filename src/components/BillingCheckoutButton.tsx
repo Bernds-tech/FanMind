@@ -25,10 +25,10 @@ function getCheckoutMessage(status: number, error?: string): CheckoutMessage {
     return { kind: "plan", text: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." };
   }
 
-  return { kind: "generic", text: error ?? "Checkout konnte nicht gestartet werden. Bitte kontaktiere FanMind." };
+  return { kind: "generic", text: error ?? "Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind." };
 }
 
-export function BillingCheckoutButton({ planId, commercialOption, label = "Zahlung starten", showHint = true, hint = "Du wirst zum sicheren Stripe Checkout weitergeleitet." }: { planId: PlanId; commercialOption: string; label?: string; showHint?: boolean; hint?: string }) {
+export function BillingCheckoutButton({ planId, commercialOption, label = "Weiter zur Zahlung", showHint = true, hint = "Du wirst zur sicheren Zahlungsseite weitergeleitet." }: { planId: PlanId; commercialOption: string; label?: string; showHint?: boolean; hint?: string }) {
   const [message, setMessage] = useState<CheckoutMessage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -52,7 +52,7 @@ export function BillingCheckoutButton({ planId, commercialOption, label = "Zahlu
       }
       setMessage(getCheckoutMessage(response.status, payload.error));
     } catch {
-      setMessage({ kind: "generic", text: "Checkout konnte nicht gestartet werden. Bitte kontaktiere FanMind." });
+      setMessage({ kind: "generic", text: "Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind." });
     } finally {
       setIsLoading(false);
     }
