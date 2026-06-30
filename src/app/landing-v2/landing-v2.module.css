@@ -2699,7 +2699,7 @@
 }
 
 .segmentDonut::before {
-  content: "10.248";
+  content: "248";
   position: absolute;
   left: 6px;
   top: 5px;

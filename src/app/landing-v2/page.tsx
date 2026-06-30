@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
-import { hasPublicRating, hasReviewProfileUrl, referenceSources, referenceStatusCards } from "@/lib/landingReferences";
 import { createFanMindTranslator, fanmindCopy, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
@@ -33,20 +32,18 @@ const comingSoonIntegrationPlatforms = new Set(["email", "discord", "whatsapp", 
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase", caret: true },
   { label: "Probleme", href: "#problem" },
-  { label: "Conversion", href: "#conversion", caret: true },
+  { label: "Workflow", href: "#conversion", caret: true },
   { label: "Integrationen", href: "#integrationen" },
   { label: "Preise", href: "#preise" },
   { label: "Roadmap", href: LANDING_ROADMAP_HREF, caret: true },
   { label: "Kontakt", href: "#kontakt" },
 ];
 
-const trustLogos = Array.from({ length: 10 }, (_, index) => ({
-  name: "WellFit Wellness",
-  src: "/brands/Logo.png",
-  id: `wellfit-wellness-${index + 1}`,
-}));
-
-const trustLogoLoop = [...trustLogos, ...trustLogos];
+const pilotSignals = [
+  "Pilotphase startet",
+  "Erste Workflows werden gemeinsam validiert",
+  "Keine erfundenen Kundenlogos oder Testimonials",
+];
 
 const features = [
   {
@@ -115,7 +112,7 @@ const solutionBenefits = [
   { icon: "♙", title: "Alle Kontakte", text: "an einem Ort." },
   { icon: "🧠", title: "Kontext & Historie", text: "für jede Interaktion." },
   { icon: "✦", title: "KI-Vorschläge & Abläufe", text: "unterstützen dich." },
-  { icon: "⌁", title: "Messbare Ergebnisse", text: "und Wachstum." },
+  { icon: "⌁", title: "Klare nächste Schritte", text: "ohne Versandautomatik." },
 ];
 
 const functionCards = [
@@ -336,8 +333,8 @@ const sixStepBenefits = [
   },
   {
     icon: "↗",
-    title: "Höhere Conversion",
-    text: "Die richtige Nachricht, zum richtigen Zeitpunkt.",
+    title: "Besseres Timing",
+    text: "Follow-ups werden sichtbar, bevor Gespräche verloren gehen.",
     tone: "purple",
   },
   {
@@ -410,7 +407,7 @@ const integrationChannels = [
     icon: "▤",
     platform: "webform",
     title: "Webformulare",
-    text: "Formularanfragen automatisch erfassen und Kontaktprofilen zuordnen.",
+    text: "Formularanfragen manuell übernehmen und Kontaktprofilen zuordnen.",
     status: "Bereit",
     tone: "cyan",
   },
@@ -455,27 +452,27 @@ const integrationActions = [
 
 const integrationBenefits = [
   {
-    icon: "ϟ",
-    title: "Schneller verbunden",
-    text: "Kanäle zentral bündeln.",
+    icon: "✓",
+    title: "Aktiv / MVP",
+    text: "Manuelle Kontaktpflege, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups und Demo.",
     tone: "blue",
   },
   {
     icon: "◷",
-    title: "Weniger manuelle Arbeit",
-    text: "Routinen schlank vorbereiten.",
+    title: "Beta / vorbereitet",
+    text: "Facebook und Instagram werden nur als vorbereitete Workflows gezeigt; keine produktive Vollintegration.",
     tone: "purple",
   },
   {
     icon: "▣",
-    title: "Zentrale Datenbasis",
-    text: "Kontext sauber zusammenführen.",
+    title: "Coming Soon",
+    text: "WhatsApp, TikTok, X, Discord, automatische Kampagnen, Reichweiten-Analytics sowie tiefe Rollen/Rechte.",
     tone: "green",
   },
   {
     icon: "◇",
-    title: "Sicher & zuverlässig",
-    text: "Nachvollziehbar für EU-Teams.",
+    title: "Manueller Workflow",
+    text: "FanMind sendet nichts automatisch: KI bereitet vor, der Mensch prüft und sendet final selbst.",
     tone: "cyan",
   },
 ];
@@ -686,54 +683,19 @@ const faqContacts = [
 const landingFooterColumns = [
   {
     icon: "✦",
-    title: "Produkt",
+    title: "FanMind",
     links: [
-      { label: "Produkt", href: "#produkt-showcase" },
-      { label: "Integrationen", href: "#integrationen" },
-      { label: "Preise", href: "#preise" },
-      { label: "Roadmap", href: LANDING_ROADMAP_HREF },
-      { label: "Demo", href: "#produkt-showcase" },
-    ],
-  },
-  {
-    icon: "👥",
-    title: "Unternehmen",
-    links: [
-      { label: "Über FanMind", href: "#produkt-showcase" },
-      { label: "Kontakt", href: "#kontakt" },
-      { label: "Partner", href: "#zielgruppen" },
-      { label: "Karriere", href: "#kontakt" },
-    ],
-  },
-  {
-    icon: "▤",
-    title: "Ressourcen",
-    links: [
-      { label: "FAQ", href: "#faq" },
-      { label: "Datenschutz", href: "#datenschutz-kontrolle" },
-      { label: "Impressum", href: "#impressum" },
-      { label: "AGB", href: "#agb" },
+      { label: "Datenschutz", href: "/datenschutz" },
       { label: "Zahlungsbedingungen", href: "/zahlungsbedingungen" },
-    ],
-  },
-  {
-    icon: "🛡",
-    title: "Rechtliches",
-    links: [
-      { label: "DSGVO", href: "#datenschutz-kontrolle" },
-      { label: "Cookies", href: "#cookies" },
-      { label: "Sicherheit", href: "#datenschutz-kontrolle" },
+      { label: "Login", href: "/login" },
+      { label: "Registrieren", href: "/register" },
+      { label: "Roadmap", href: LANDING_ROADMAP_HREF },
+      { label: "Impressum", href: "#kontakt" },
+      { label: "AGB", href: "/zahlungsbedingungen" },
     ],
   },
 ];
 
-const landingFooterSocials = [
-  { label: "Instagram", href: "https://www.instagram.com/", platform: "instagram" },
-  { label: "LinkedIn", href: "https://www.linkedin.com/", platform: "linkedin" },
-  { label: "X", href: "https://x.com/", platform: "x" },
-  { label: "YouTube", href: "https://www.youtube.com/", platform: "youtube" },
-  { label: "Discord", href: "https://discord.com/", platform: "discord" },
-];
 
 const pricingPlans = [
   {
@@ -742,8 +704,8 @@ const pricingPlans = [
     eyebrow: "Zum Einstieg",
     audience: "Für Teams, die einen geführten Setup-/Pilotmonat als echten Testmonat möchten.",
     pricePrefix: "",
-    price: "990 € einmalig · 1 Testmonat · keine Bindung",
-    cadence: "Geführter Setup-/Pilotmonat · kein Abo",
+    price: "990 € einmalig · zzgl. USt.",
+    cadence: "1 Testmonat · keine automatische Verlängerung",
     options: undefined,
     cta: "Pilot anfragen",
     href: "/register?plan=pilot",
@@ -768,19 +730,19 @@ const pricingPlans = [
     eyebrow: "",
     audience: "Für kleine Teams mit einem ersten echten Workspace.",
     pricePrefix: "",
-    price: "312 €/Monat",
+    price: "Starter ab 312 €/Monat · zzgl. USt.",
     cadence: "Zwei Starter-Optionen im Paket",
     options: [
       {
         title: "Starter Flex",
-        price: "990 € Setup + 312 €/Monat",
-        note: "jederzeit kündbar",
+        price: "990 € Setup + 312 €/Monat · zzgl. USt.",
+        note: "monatlich kündbar",
         description: "Für Teams, die ohne Laufzeitbindung starten möchten.",
       },
       {
         title: "Starter 12 Monate",
-        price: "0 € Setup + 312 €/Monat",
-        note: "12 Monate Bindung",
+        price: "0 € Setup + 312 €/Monat · zzgl. USt.",
+        note: "12 Monate Laufzeit",
         description: "Für Teams, die die Einrichtung ohne Setup-Gebühr starten und sich für 12 Monate binden.",
       },
     ],
@@ -790,8 +752,8 @@ const pricingPlans = [
     featured: false,
     status: "Aktiv",
     features: [
-      "Starter Flex: 990 € Setup + 312 €/Monat · jederzeit kündbar",
-      "Starter 12 Monate: 0 € Setup + 312 €/Monat · 12 Monate Bindung",
+      "Starter Flex: 990 € Setup + 312 €/Monat · zzgl. USt. · monatlich kündbar",
+      "Starter 12 Monate: 0 € Setup + 312 €/Monat · zzgl. USt. · 12 Monate Laufzeit",
       "Ein Profil / ein produktiver MVP-Workspace",
       "Kontakte/Fans, manuelle Kontakte & CSV-Import minimal",
       "Notizen und Fan-Gedächtnis / Memory",
@@ -810,8 +772,8 @@ const pricingPlans = [
     price: "Coming Soon",
     cadence: "Roadmap / Vorschau",
     options: undefined,
-    cta: "Growth Vorschau",
-    href: "/register?plan=growth",
+    cta: "Auf Anfrage",
+    href: "#kontakt",
     tone: "blue",
     featured: true,
     status: "Vorschau",
@@ -833,8 +795,8 @@ const pricingPlans = [
     price: "Coming Soon",
     cadence: "Roadmap / Vorschau",
     options: undefined,
-    cta: "Agency anfragen",
-    href: "/register?plan=agency",
+    cta: "Auf Anfrage",
+    href: "#kontakt",
     tone: "purple",
     featured: false,
     status: "Roadmap",
@@ -865,7 +827,7 @@ const pricingProofs = [
   {
     icon: "↗",
     title: "Pilot-Gebühr wird angerechnet",
-    text: "Der Pilot ist vom kostenlosen 1-Stunden-Demo-Zugang getrennt: 990 € einmalig für 1 Testmonat, ohne Abo und ohne automatische Verlängerung.",
+    text: "Der Pilot ist vom kostenlosen 1-Stunden-Demo-Zugang getrennt: 990 € einmalig zzgl. USt. für 1 Testmonat, ohne Abo und ohne automatische Verlängerung.",
     tone: "green",
   },
   {
@@ -1148,13 +1110,13 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>NEU</span> {t("Die intelligente Fan-Management Plattform")}
             </a>
             <h1>
-              {t("Das KI-CRM für")} <span>Creator, Clubs, Events</span> {t("und")}{" "}
-              <span>Fan-Communities.</span>
+              {t("FanMind ist dein KI-gestütztes")} <span>Fan-CRM für Kontakte, Nachrichten</span> {t("und")}{" "}
+              <span>manuelle Follow-ups.</span>
             </h1>
-            <p>{t("FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis, Segmente, Follow-ups, CSV-Import und Roadmap in einer intelligenten Plattform – damit aus Fans echte Beziehungen und messbare Conversions werden.")}</p>
+            <p>{t("FanMind bündelt Fan-Kontakte, Nachrichten, Memory, KI-Antwortvorschläge und Follow-ups. Die KI bereitet vor, der Mensch prüft und sendet final selbst – ohne automatische Sendefunktion.")}</p>
             <div className={styles.heroCtas}>
               <a className={styles.demoButton} href="#produkt-showcase">
-                <span>▶</span> {t("Produkt ansehen")}
+                <span>▶</span> {t("Kostenlos testen")}
               </a>
               <a className={styles.outlineButton} href={registerHref}>
                 <span>♙</span> {t("Zugang anfragen")}
@@ -1162,34 +1124,19 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </div>
             <div id="zielgruppen" className={styles.socialProof}>
               <div className={styles.referenceIntro}>
-                <strong>{t("FanMind Referenzen im Aufbau")}</strong>
-                <p>{t("FanMind startet mit echten Pilotnutzern und öffentlichen Bewertungen. Das Google-Unternehmensprofil ist eingerichtet und wird sichtbar, sobald die Verifizierung abgeschlossen ist.")}</p>
+                <strong>{t("Pilotphase startet")}</strong>
+                <p>{t("Wir nehmen erste Pilotkunden auf und entwickeln FanMind gemeinsam mit echten Workflows weiter.")}</p>
               </div>
               <div className={styles.referenceDetails}>
-                {referenceStatusCards
-                  .filter((card) => card.visible)
-                  .map((card) => {
-                    const linkedSource = card.sourceId ? referenceSources.find((source) => source.id === card.sourceId && source.visible) : undefined;
-                    return (
-                      <div key={card.title} className={styles.referenceStatusCard}>
-                        <div>
-                          <span>{t(card.title)}</span>
-                          <strong>{t(card.status)}</strong>
-                        </div>
-                        <p>{t(card.text)}</p>
-                        {linkedSource && hasPublicRating(linkedSource) ? (
-                          <small>
-                            {linkedSource.rating.toLocaleString(language === "de" ? "de-DE" : "en-US")} / 5 {t("bei Google")} · {linkedSource.reviewCount.toLocaleString(language === "de" ? "de-DE" : "en-US")} {t("echte Bewertungen")}
-                          </small>
-                        ) : null}
-                        {linkedSource && hasReviewProfileUrl(linkedSource) ? (
-                          <a href={linkedSource.profileUrl} target="_blank" rel="noreferrer">
-                            {t("Bei Google bewerten")}
-                          </a>
-                        ) : null}
-                      </div>
-                    );
-                  })}
+                {pilotSignals.map((signal) => (
+                  <div key={signal} className={styles.referenceStatusCard}>
+                    <div>
+                      <span>{t("Status")}</span>
+                      <strong>{t(signal)}</strong>
+                    </div>
+                    <p>{t("Ehrlicher Pilot-Hinweis statt Social Proof: keine Fake-Referenzen, keine erfundenen Logos, keine ungeprüften Kundenergebnisse.")}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -1197,7 +1144,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div
             id="screens"
             className={styles.dashboardWrap}
-            aria-label="FanMind Dashboard Mockup"
+            aria-label="FanMind Produktvorschau mit Beispieldaten"
           >
             <div className={styles.dashboardShell}>
               <aside className={styles.sidebar}>
@@ -1229,14 +1176,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <section className={styles.dashboardMain}>
                 <div className={styles.dashboardTopbar}>
                   <div>
-                    <h2>Dashboard</h2>
-                    <p>{t("Willkommen zurück, Nina 👋")}</p>
+                    <h2>Demo-Ansicht</h2>
+                    <p>{t("Produktvorschau · Beispieldaten")}</p>
                     <small>
-                      {t("Heute ist Mittwoch, der 21. Mai 2025 · 09:42 Uhr")}
+                      {t("Beispieldaten · keine Kundenergebnisse")}
                     </small>
                   </div>
                   <div className={styles.dashboardControls}>
-                    <span>{t("● Alle Systeme aktiv")}</span>
+                    <span>{t("● Demo-Ansicht")}</span>
                     <button>{t("Letzte 30 Tage⌄")}</button>
                     <a href="#kontakte">{t("+ Neuer Kontakt")}</a>
                   </div>
@@ -1245,14 +1192,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <div className={styles.metricsGrid}>
                   <MetricCard
                     label="Gesamtfans"
-                    value="10.248"
-                    change="+12,1 % vs. letzter Monat"
+                    value="248"
+                    change="Beispieldaten"
                     color="#0b8cff"
                   />
                   <MetricCard
                     label="Aktive Fans"
-                    value="4.892"
-                    change="+8,8 % vs. letzter Monat"
+                    value="126"
+                    change="Beispieldaten"
                     color="#00d86f"
                   />
                   <MetricCard
@@ -1262,9 +1209,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                     color="#cf34ff"
                   />
                   <MetricCard
-                    label="Conversion Rate"
-                    value="9,4 %"
-                    change="+1,2 % vs. letzter Monat"
+                    label="Demo-Signal"
+                    value="Demo"
+                    change="keine Kundenergebnisse"
                     color="#00d86f"
                   />
                 </div>
@@ -1272,10 +1219,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <div className={styles.analyticsGrid}>
                   <div className={styles.chartCard}>
                     <div className={styles.cardTitle}>
-                      <strong>{t("Fan-Wachstum")}</strong>
+                      <strong>{t("Produktvorschau")}</strong>
                       <button>{t("Letzte 30 Tage⌄")}</button>
                     </div>
-                    <span>{t("Entwicklung der Gesamtfans")}</span>
+                    <span>{t("Beispieldaten im Demo-Dashboard")}</span>
                     <div className={styles.lineChart}>
                       <svg viewBox="0 0 430 170" aria-hidden="true">
                         <defs>
@@ -1327,9 +1274,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                       <div className={styles.tooltip}>
                         13. Mai 2025
                         <br />
-                        Gesamtfans: 10.248
+                        Beispieldaten: 248 Kontakte
                         <br />
-                        Aktive Fans: 4.892
+                        Aktive Beispiele: 126
                       </div>
                       <div className={styles.legend}>
                         <span /> {t("Gesamtfans")} <i /> {t("Aktive Fans")}
@@ -1398,14 +1345,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               </div>
               <div className={styles.miniStats}>
                 <div>
-                  <span>{t("Review-Quote")}</span>
-                  <strong>38 %</strong>
-                  <small>+4,2 %</small>
+                  <span>{t("Demo-Quote")}</span>
+                  <strong>Demo</strong>
+                  <small>Beispieldaten</small>
                 </div>
                 <div>
                   <span>{t("Follow-up Quote")}</span>
-                  <strong>34,8 %</strong>
-                  <small>+2,1 %</small>
+                  <strong>Demo</strong>
+                  <small>Beispieldaten</small>
                 </div>
               </div>
               <a href="#produkt-showcase">{t("und viele mehr")}</a>
@@ -1415,18 +1362,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <section
           className={styles.heroTrustBar}
-          aria-label="Vertrauen von Top Creator, Clubs und Brands"
+          aria-label="Pilotphase von FanMind"
         >
-          <strong>{t("Erste Referenz & Pilotmarke")}</strong>
-          <div className={styles.trustLogoViewport} aria-label="Partnerlogos">
-            <div className={styles.trustLogoTrack}>
-              {trustLogoLoop.map((logo, index) => (
-                <span className={styles.trustLogoItem} key={`${logo.id}-${index}`} aria-label={logo.name}>
-                  <Image src={logo.src} alt={logo.name} width={894} height={859} />
-                </span>
-              ))}
-            </div>
-          </div>
+          <strong>{t("Pilotphase startet")}</strong>
+          <p>{t("Wir nehmen erste Pilotkunden auf und entwickeln FanMind gemeinsam mit echten Workflows weiter – ohne erfundene Kundenlogos oder Fake-Testimonials.")}</p>
         </section>
 
         <section id="features" className={styles.heroFeatureGrid}>
@@ -1466,13 +1405,13 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             className={styles.accessButton}
             href={registerHref}
           >
-            {t("Zugang vormerken")} <span>→</span>
+            {t("Kostenlos testen")} <span>→</span>
           </a>
           <a
             className={styles.demoSecondary}
             href="#produkt-showcase"
           >
-            <span>▶</span> {t("Produkt ansehen")}
+            <span>▶</span> {t("Kostenlos testen")}
           </a>
         </section>
 
@@ -1558,7 +1497,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <div className={styles.problemCtas}>
           <a className={styles.demoButton} href="#produkt-showcase">
-            <span>▶</span> {t("Produkt ansehen")}
+            <span>▶</span> {t("Kostenlos testen")}
           </a>
           <a className={styles.outlineButton} href={registerHref}>
             <span>♙</span> {t("Zugang anfragen")}
@@ -1656,11 +1595,11 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
       >
         <div className={styles.sandraUseCaseHero}>
           <div className={styles.sandraUseCaseHeader}>
-            <span className={styles.sandraUseCaseBadge}>{t("Use Case Sandra M.")}</span>
+            <span className={styles.sandraUseCaseBadge}>{t("Demo-Workflow mit Beispieldaten")}</span>
             <h2 id="sandra-use-case-title">
-              {t("Aus Interesse wird")} <span>Conversion.</span>
+              {t("Aus Anfrage wird")} <span>ein nächster Schritt.</span>
             </h2>
-            <p>{t("FanMind verwandelt eine einfache Fan-Frage in den richtigen nächsten Schritt – kontextbasiert, persönlich und messbar erfolgreich.")}</p>
+            <p>{t("Produktvorschau mit Beispieldaten: FanMind zeigt, wie Kontakte, Memory, KI-Vorschläge und manuelle Follow-ups zusammenarbeiten.")}</p>
           </div>
 
           <aside
@@ -1693,7 +1632,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               </article>
               <article>
                 <span>↗</span>
-                <strong>{t("Mehr Conversion")}</strong>
+                <strong>{t("Besseres Timing")}</strong>
                 <p>{t("Bessere Erlebnisse, stärkere Bindung.")}</p>
               </article>
             </div>
@@ -1808,7 +1747,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <li>hohes Kaufinteresse</li>
                   <li>{t("positiver Verlauf")}</li>
                   <li>{t("Early-Bird relevant")}</li>
-                  <li>{t("hohe Conversion-Chance")}</li>
+                  <li>{t("hohe Relevanz")}</li>
                 </ul>
               </div>
               <div className={styles.sandraFollowUpBox}>
@@ -1822,10 +1761,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
           <article className={styles.sandraFlowStep}>
             <div className={styles.sandraStepNode}>5</div>
-            <h3>{t("Ergebnis: mehr Conversion, besseres Timing, mehr Impact")}</h3>
+            <h3>{t("Demo-Ergebnis: klarer nächster Schritt, besseres Timing")}</h3>
             <div className={`${styles.sandraFlowCard} ${styles.sandraResultCard}`}>
               <div className={styles.sandraConversionPanel}>
-                <strong>Conversion</strong>
+                <strong>Demo-Signal</strong>
                 <span>9,4 %</span>
                 <em>{t("↑ +1,2 % vs. letzter Zeitraum")}</em>
                 <div aria-hidden="true" />
@@ -1844,8 +1783,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               </div>
             </div>
             <p>
-              Sandra kauft ihr Ticket. Der richtige Zeitpunkt, die richtige
-              Aktion – messbar mehr Erfolg.
+              Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.
             </p>
           </article>
         </div>
@@ -1858,7 +1796,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 {t("Mit Memory, KI und Follow-ups zum richtigen nächsten Schritt.")}
               </strong>
               <p>
-                {t("FanMind denkt mit. Für echte Verbindungen und messbare Ergebnisse.")}
+                {t("FanMind denkt mit. Für echte Verbindungen und nachvollziehbare nächste Schritte.")}
               </p>
             </div>
           </div>
@@ -1869,7 +1807,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </article>
           <article>
             <span>↗</span>
-            <strong>{t("Mehr Conversion")}</strong>
+            <strong>{t("Besseres Timing")}</strong>
             <p>{t("Passende Vorschläge entstehen aus Sandras Verlauf und aktuellem Bedarf.")}</p>
           </article>
           <article>
@@ -1896,7 +1834,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <span>⌬</span> {t("INTEGRATIONEN")}
           </div>
           <h2 id="integrations-title">
-            {t("Verbinde deine wichtigsten")} <span>{t("Kanäle.")}</span>
+            {t("Ordne deine wichtigsten")} <span>{t("Kanäle ehrlich ein.")}</span>
           </h2>
           <p>{t("FanMind macht kontrollierte Multi-Channel-Arbeit transparent: angebundene Kanäle bleiben nutzbar, geplante Kanäle werden vorbereitet und erst nach technischer sowie rechtlicher Prüfung als aktiv gekennzeichnet. Unfertige Plattformen bleiben klar markiert.")}</p>
         </div>
@@ -2051,7 +1989,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.integrationCtaBox}>
           <div>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▶</span> {t("Produkt ansehen")}
+              <span>▶</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
               {t("Zugang anfragen")}
@@ -2059,7 +1997,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </div>
           <p>
             <span>{t("✓ Keine Kreditkarte erforderlich")}</span>
-            <span>{t("✓ Social-Sync als Pflichtbereich")}</span>
+            <span>{t("✓ Aktiv, Beta und Coming Soon klar getrennt")}</span>
             <span>{t("✓ Kein automatischer Versand")}</span>
           </p>
         </div>
@@ -2185,7 +2123,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </div>
           <div className={styles.responsiveCtaActions}>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▶</span> {t("Produkt ansehen")}
+              <span>▶</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
               {t("Zugang anfragen")}
@@ -2289,7 +2227,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </div>
           <div className={styles.pricingCtaActions}>
             <a className={styles.demoButton} href="#produkt-showcase">
-              <span>▷</span> {t("Produkt ansehen")}
+              <span>▷</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
               <span>🚀</span> {t("Pilot anfragen")}
@@ -2483,20 +2421,12 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div className={styles.landingFooterBrand}>
             <Logo language={language} />
             <h2 id="landing-footer-title">
-              {t("Das")} <span>{t("KI-CRM für Creator, Clubs, Events und Fan-Communities.")}</span>
+              <span>{t("KI-gestütztes Fan-CRM für Kontakte, Nachrichten, Memory und manuelle Follow-ups.")}</span>
             </h2>
-            <p>{t("FanMind verbindet Kontakte, KI und Aktionen in einem System – für echte Fan-Beziehungen, mehr Conversion und nachhaltiges Wachstum.")}</p>
+            <p>{t("FanMind verbindet Kontakte, KI-Antwortvorschläge, Memory und Follow-ups in einem manuellen Copy-&-Open-Workflow.")}</p>
 
             <div className={styles.landingFooterDivider} aria-hidden="true" />
 
-            <strong>{t("Folge uns")}</strong>
-            <div className={styles.landingFooterSocials} aria-label="FanMind Social Media">
-              {landingFooterSocials.map((social) => (
-                <a href={social.href} aria-label={social.label} key={social.label}>
-                  <PlatformLogo platform={social.platform} size="sm" />
-                </a>
-              ))}
-            </div>
           </div>
 
           <div className={styles.landingFooterNav}>
@@ -2536,38 +2466,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <Logo language={language} />
         <p>{t("© 2025 FanMind. Alle Rechte vorbehalten.")}</p>
         <nav aria-label="Footer Navigation">
-          <a id="datenschutz" href="/datenschutz">
-            {t("Datenschutz")}
-          </a>
-          <a id="impressum" href="#impressum">
-            {t("Impressum")}
-          </a>
-          <a id="agb" href="#agb">
-            {t("AGB")}
-          </a>
-          <a id="zahlungsbedingungen" href="/zahlungsbedingungen">
-            {t("Zahlungsbedingungen")}
-          </a>
-          <a id="cookies" href="#cookies">
-            Cookies
-          </a>
+          <a id="datenschutz" href="/datenschutz">{t("Datenschutz")}</a>
+          <a id="zahlungsbedingungen" href="/zahlungsbedingungen">{t("Zahlungsbedingungen")}</a>
+          <a href={loginHref}>Login</a>
+          <a href={registerHref}>{t("Registrieren")}</a>
+          <a href={roadmapHref}>{t("Roadmap")}</a>
         </nav>
         <div id="kontakt" className={styles.socials}>
-          <a href="https://www.instagram.com/" aria-label="Instagram">
-            <PlatformLogo platform="instagram" size="sm" />
-          </a>
-          <a href="https://discord.com/" aria-label="Discord">
-            <PlatformLogo platform="discord" size="sm" />
-          </a>
-          <a href="https://x.com/" aria-label="X">
-            <PlatformLogo platform="x" size="sm" />
-          </a>
-          <a href="https://www.linkedin.com/" aria-label="LinkedIn">
-            <PlatformLogo platform="linkedin" size="sm" />
-          </a>
-          <a href="https://www.youtube.com/" aria-label="YouTube">
-            <PlatformLogo platform="youtube" size="sm" />
-          </a>
+          <a href="mailto:kontakt@fanmind.de?subject=Pilot%20anfragen">{t("Pilot anfragen")}</a>
         </div>
         <a className={styles.backTop} href="#top" aria-label="Nach oben">
           ↑

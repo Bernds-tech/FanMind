@@ -21,10 +21,10 @@ const visibleLandingNavItems = navItems.filter((item) =>
 );
 
 const metrics = [
-  { label: "Gesamtfans", value: "10.248", change: "+12 %", accent: "#0b8cff" },
-  { label: "Aktive", value: "4.892", change: "+7,8 %", accent: "#00e178" },
-  { label: "VIP", value: "182", change: "+1,8 %", accent: "#9b55ff" },
-  { label: "Follow-ups heute", value: "128", change: "24 hoch", accent: "#00c9ff" },
+  { label: "Demo-Kontakte", value: "248", change: "Beispieldaten", accent: "#0b8cff" },
+  { label: "Aktive Beispiele", value: "126", change: "Beispieldaten", accent: "#00e178" },
+  { label: "VIP-Beispiele", value: "18", change: "Demo", accent: "#9b55ff" },
+  { label: "Follow-ups heute", value: "12", change: "Demo", accent: "#00c9ff" },
 ];
 
 const contacts = [
@@ -81,7 +81,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
   const localizedContacts = localizeFanMindValue(contacts, t);
   const localizedBenefits = localizeFanMindValue(benefits, t);
   const localizedFeatureCards = localizeFanMindValue(featureCards, t);
-  const segmentChips = localizeFanMindValue(["Alle", "VIP 182", "Warm 2.150", "Buyer 912", "Inactive 1.876", "Do not push 60", "Heute fällig 128"], t);
+  const segmentChips = localizeFanMindValue(["Alle", "VIP 18", "Warm 52", "Buyer 42", "Inactive 36", "Do not push 6", "Heute fällig 12"], t);
   const followupItems = localizeFanMindValue(["Sandra M. · 10:00 · Hoch", "Lukas S. · 11:00 · Mittel", "Ella L. · überfällig", "Tara J. · Freitag"], t);
 
   return (
@@ -93,7 +93,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
 
         <header className={styles.header}>
           <span className={styles.eyebrow}>{t("03 · Produkt-Showcase")}</span>
-          <h2 id="product-showcase-title">{t("Ein Premium-Workspace für dein gesamtes")} <span>{t("Fan-Management.")}</span></h2>
+          <h2 id="product-showcase-title">{t("Produktvorschau für dein")} <span>{t("Fan-Management mit Beispieldaten.")}</span></h2>
           <p>{t("FanMind verbindet Kontakte, Fan-Gedächtnis, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind aktuell als Vorschau markiert.")}</p>
         </header>
 
@@ -115,7 +115,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
 
             <article className={`${styles.card} ${styles.campaignCard} ${styles.cardWithComingSoon}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>📣</span><strong>{t("Sommer-Event Early Bird")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
-              <div className={styles.campaignStatus}><span>{t("Geplant: VIP + Buyer")}</span><b>1.824 Fans</b></div>
+              <div className={styles.campaignStatus}><span>{t("Geplant: VIP + Buyer")}</span><b>{t("Beispieldaten")}</b></div>
               <div className={styles.rateGrid}><span>{t("Roadmap")}<b>{t("In Kürze")}</b></span><span>{t("Freigabe")}<b>{t("Manuell")}</b></span><span>{t("Versand")}<b>{t("Inaktiv")}</b></span></div>
               <SparkLine tone="green" />
               <ComingSoonImage size="medium" />
@@ -123,13 +123,13 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
           </aside>
 
           <div className={styles.centerColumn}>
-            <div className={styles.dashboardShell} aria-label="FanMind Kontakte-Dashboard">
+            <div className={styles.dashboardShell} aria-label="FanMind Kontakte-Dashboard mit Beispieldaten">
               <aside className={styles.sidebar}>
                 <div className={styles.brand}><b>FanMind</b></div>
                 <nav>
                   {localizedNavItems.map((item) => <span className={item.featureKey === "contacts" ? styles.activeNav : undefined} key={item.label}><i>{item.icon}</i>{item.label}</span>)}
                 </nav>
-                <div className={styles.savedViews}><small>{t("Gespeicherte Ansichten")}</small><span>★ Top Fans <b>182</b></span><span>✦ Reaktivierung <b>739</b></span><span>◆ Premium-Käufer <b>312</b></span></div>
+                <div className={styles.savedViews}><small>{t("Gespeicherte Ansichten")}</small><span>★ Top Fans <b>18</b></span><span>✦ Reaktivierung <b>36</b></span><span>◆ Premium-Käufer <b>42</b></span></div>
               </aside>
 
               <main id="kontakte" className={styles.mainPanel}>
@@ -144,7 +144,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
                   <div className={styles.tableHead}><span>{t("Name")}</span><span>{t("Status")}</span><span>{t("Profil")}</span><span>{t("Tags")}</span><span>{t("Score")}</span><span>{t("Letzter Kontakt")}</span><span>{t("Nächster Follow-up")}</span><span>{t("Owner")}</span></div>
                   {localizedContacts.map((row) => <div className={styles.tableRow} key={`${row[1]}-${row[6]}`}><span><i>{row[0]}</i>{row[1]}</span><span><b>{row[2]}</b></span><span>{row[3]}</span><span>{row[4]}</span><span className={styles.score}>{row[5]}</span><span>{row[6]}</span><span className={row[7] === t("Überfällig") ? styles.overdue : undefined}>{row[7]}</span><span><i>{row[8]}</i></span></div>)}
                 </div>
-                <div className={styles.pagination}><span>{t("1–8 von 10.248 Kontakten")}</span><div><button type="button">←</button><button type="button">→</button></div></div>
+                <div className={styles.pagination}><span>{t("1–8 von 248 Demo-Kontakten")}</span><div><button type="button">←</button><button type="button">→</button></div></div>
               </main>
             </div>
 
@@ -159,7 +159,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
 
             <article className={`${styles.card} ${styles.segmentCard} ${styles.cardWithComingSoon}`}>
               <div className={styles.cardTop}><span className={styles.iconBubble}>◌</span><strong>{t("Segmente")}</strong><FeatureStatusLabel variant="preview">{t("Vorschau")}</FeatureStatusLabel></div>
-              <div className={styles.donutWrap}><div className={styles.donut}><span>10.248<small>{t("Fans")}</small></span></div><div className={styles.segmentLegend}><span><i />VIP 1.824</span><span><i />Warm 2.150</span><span><i />Buyer 1.920</span><span><i />Inactive 2.048</span></div></div>
+              <div className={styles.donutWrap}><div className={styles.donut}><span>248<small>{t("Demo")}</small></span></div><div className={styles.segmentLegend}><span><i />VIP 18</span><span><i />Warm 52</span><span><i />Buyer 42</span><span><i />Inactive 36</span></div></div>
               <ComingSoonImage size="medium" />
             </article>
 
@@ -167,7 +167,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
               <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>{t("Analytics")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
               <div className={styles.analyticsTooltip}>{t("Roadmap · keine Vollsuite aktuell")}</div>
               <SparkLine tone="purple" />
-              <div className={styles.analyticsLegend}><span><i />{t("Conversion")}</span><span><i />{t("Antwortquote")}</span></div>
+              <div className={styles.analyticsLegend}><span><i />{t("Demo-Signal")}</span><span><i />{t("Antwortquote")}</span></div>
               <a href={landingPath(language, "#roadmap")}>{t("Roadmap anzeigen →")}</a>
               <ComingSoonImage size="medium" />
             </article>
