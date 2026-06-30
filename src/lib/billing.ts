@@ -1,5 +1,6 @@
 import type { PlanId } from "@/config/plans";
 import type { CommercialOption, ProductiveCommercialOption } from "@/lib/plans";
+import { isDemoWorkspace } from "@/lib/demoMode";
 
 export type BillingStatus =
   | "demo_free"
@@ -62,7 +63,7 @@ export const SUSPENDED_BILLING_STATUSES: BillingStatus[] = ["suspended", "manual
 
 export function isWorkspaceBillingSuspended(workspace: { billing_status?: string | null; name?: string | null } | null | undefined): boolean {
   if (!workspace) return false;
-  if (workspace.name === "Temporary FanMind Demo") return false;
+  if (isDemoWorkspace(workspace)) return false;
   return workspace.billing_status === "suspended" || workspace.billing_status === "manual_suspended";
 }
 
@@ -92,9 +93,9 @@ export const CHECKOUT_ACTION_BILLING_STATUSES = new Set<string>([
 
 export function shouldShowBillingCheckoutAction(workspace: { plan_id?: string | null; commercial_option?: string | null; billing_status?: string | null; name?: string | null } | null | undefined): boolean {
   if (!workspace) return false;
-  if (workspace.name === "Temporary FanMind Demo") return false;
+  if (isDemoWorkspace(workspace)) return false;
   if (workspace.plan_id !== "pilot" && workspace.plan_id !== "starter") return false;
-  if (workspace.billing_status === "active" || workspace.billing_status === "cancelled" || workspace.billing_status === "demo_free" || workspace.billing_status === "manual_suspended") return false;
+  if (workspace.billing_status === "active" || workspace.billing_status === "cancelled" || workspace.billing_status === "manual_suspended") return false;
   if (!workspace.billing_status) return true;
   return CHECKOUT_ACTION_BILLING_STATUSES.has(workspace.billing_status);
 }

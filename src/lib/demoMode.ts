@@ -3,9 +3,20 @@ import type { SupabaseServerUser, WorkspaceDashboardRow } from "@/lib/supabase/s
 export const DEMO_WORKSPACE_EMAIL = "sandra.m@fanmind.ch";
 export const DEMO_WORKSPACE_NAME = "Sandra M. Demo Workspace";
 export const TEMPORARY_DEMO_WORKSPACE_NAME = "FanMind Demo Workspace";
+const LEGACY_TEMPORARY_DEMO_WORKSPACE_NAME = "Temporary FanMind Demo";
 
 export function isTemporaryDemoUser(user: Pick<SupabaseServerUser, "user_metadata"> | null | undefined): boolean {
   return user?.user_metadata?.fanmind_demo === true && user.user_metadata.demo_type === "temporary";
+}
+
+export function isDemoWorkspace(workspace: { billing_status?: string | null; name?: string | null } | null | undefined): boolean {
+  const workspaceName = (workspace?.name ?? "").trim();
+  return (
+    workspace?.billing_status === "demo_free" ||
+    workspaceName === DEMO_WORKSPACE_NAME ||
+    workspaceName === TEMPORARY_DEMO_WORKSPACE_NAME ||
+    workspaceName === LEGACY_TEMPORARY_DEMO_WORKSPACE_NAME
+  );
 }
 
 export function isPublicDemoWorkspace({
@@ -19,8 +30,7 @@ export function isPublicDemoWorkspace({
 }): boolean {
   return (
     (userEmail ?? "").trim().toLowerCase() === DEMO_WORKSPACE_EMAIL ||
-    (workspaceName ?? "").trim() === DEMO_WORKSPACE_NAME ||
-    (workspaceName ?? "").trim() === TEMPORARY_DEMO_WORKSPACE_NAME ||
+    isDemoWorkspace({ billing_status: null, name: workspaceName }) ||
     isTemporaryDemoUser(user)
   );
 }

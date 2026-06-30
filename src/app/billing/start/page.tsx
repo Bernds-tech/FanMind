@@ -4,7 +4,7 @@ import buttonStyles from "@/components/BillingCheckoutButton.module.css";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { isPlatformAdminEmail } from "@/lib/admin";
-import { isTemporaryDemoUser } from "@/lib/demoMode";
+import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
@@ -72,7 +72,9 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");
   const workspace = workspaceResult.workspace;
   const stripe = getStripeConfigStatus();
-  const isDemo = isTemporaryDemoUser(data.user) || workspace?.billing_status === "demo_free" || workspace?.name === "Temporary FanMind Demo";
+  const isDemo = isTemporaryDemoUser(data.user) || isDemoWorkspace(workspace);
+  if (isDemo) redirect("/dashboard");
+
   const redirectTarget = getPreActivationRedirect(workspace, data.user.email);
   if (redirectTarget === "/workspace/setup") redirect("/workspace/setup");
   if (workspace?.billing_status === "active" || redirectTarget === "/dashboard") redirect("/dashboard");
