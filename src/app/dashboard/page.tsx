@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getPreActivationRedirect } from "@/lib/preActivation";
-import { getBillingCheckoutActionLabel, shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
@@ -18,7 +17,6 @@ import {
 } from "@/lib/supabase/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
@@ -193,7 +191,10 @@ function countDueOrOverdueOpenFollowups(followups: FollowupRow[]): number {
   const today = new Date().toISOString().slice(0, 10);
 
   return followups.filter(
-    (followup) => followup.status === "open" && followup.due_date && followup.due_date <= today,
+    (followup) =>
+      followup.status === "open" &&
+      followup.due_date &&
+      followup.due_date <= today,
   ).length;
 }
 
@@ -239,27 +240,42 @@ function getWorkInboxItems(
   return Array.from(itemsByFan.values()).slice(0, 8);
 }
 
-function getNewMessageItems(contacts: ContactRow[], messages: ConversationMessageRow[]): NewMessageItem[] {
-  const contactsById = new Map(contacts.map((contact) => [contact.id, contact]));
+function getNewMessageItems(
+  contacts: ContactRow[],
+  messages: ConversationMessageRow[],
+): NewMessageItem[] {
+  const contactsById = new Map(
+    contacts.map((contact) => [contact.id, contact]),
+  );
   const latestByContact = new Map<string, ConversationMessageRow>();
 
   for (const message of messages) {
     const existing = latestByContact.get(message.contact_id);
 
-    if (!existing || getTimestamp(message.created_at) > getTimestamp(existing.created_at)) {
+    if (
+      !existing ||
+      getTimestamp(message.created_at) > getTimestamp(existing.created_at)
+    ) {
       latestByContact.set(message.contact_id, message);
     }
   }
 
   return Array.from(latestByContact.values())
-    .sort((left, right) => getTimestamp(right.created_at) - getTimestamp(left.created_at))
+    .sort(
+      (left, right) =>
+        getTimestamp(right.created_at) - getTimestamp(left.created_at),
+    )
     .slice(0, 8)
     .map((message) => {
       const contact = contactsById.get(message.contact_id);
       return {
         id: message.id,
         contactId: message.contact_id,
-        name: contact?.display_name || contact?.handle || message.author_label || "Unbenannter Kontakt",
+        name:
+          contact?.display_name ||
+          contact?.handle ||
+          message.author_label ||
+          "Unbenannter Kontakt",
         source: formatSource(message.source_platform),
         sourceContext: getMessageSourceContext(message).contextLabel,
         sourceKey: getMessageSourceContext(message).contextKey,
@@ -291,7 +307,10 @@ function formatDueDate(value: string | null): string {
 
 function formatDateTime(value: string | null): string {
   if (!value) return "Zeitpunkt unbekannt";
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 function formatSource(value: string | null): string {
@@ -367,10 +386,18 @@ function WorkspaceDetails({
   const userLabel = displayName;
   const dueFollowupCount = countDueOrOverdueOpenFollowups(followups);
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("dashboard", locale, dueFollowupCount, showAdminArea);
+    getWorkspaceNavigation(
+      "dashboard",
+      locale,
+      dueFollowupCount,
+      showAdminArea,
+    );
   const workInboxItems = getWorkInboxItems(contacts, followups);
   const newMessageItems = getNewMessageItems(contacts, unseenMessages);
-  const workspaceKpis = getWorkspaceKpiStatsFromContacts(contacts, openFollowupCount);
+  const workspaceKpis = getWorkspaceKpiStatsFromContacts(
+    contacts,
+    openFollowupCount,
+  );
   return (
     <WorkspaceShell
       workspaceName={workspace.name}
@@ -384,7 +411,10 @@ function WorkspaceDetails({
       header={{
         title: wt(locale, pageTitle),
         subtitle: pageSubtitle,
-        searchPlaceholder: wt(locale, "Suche nach Name, Tag, Kanal, Sprache ..."),
+        searchPlaceholder: wt(
+          locale,
+          "Suche nach Name, Tag, Kanal, Sprache ...",
+        ),
         primaryActionLabel,
         primaryActionHref: "/fans",
       }}
@@ -393,7 +423,10 @@ function WorkspaceDetails({
       logoutAction={logout}
       locale={locale}
     >
-      <section className={styles.crmGrid} aria-label={wt(locale, "Arbeits-Eingang")}>
+      <section
+        className={styles.crmGrid}
+        aria-label={wt(locale, "Arbeits-Eingang")}
+      >
         <section
           className={`${styles.moduleCard} ${styles.contactCard}`}
           id="work-inbox"
@@ -413,18 +446,6 @@ function WorkspaceDetails({
             offene/fällige Follow-ups. Normale Kontakte ohne Aufgabe bleiben in
             der vollständigen Fanliste. Pro Fan wird nur ein Eintrag angezeigt.
           </p>
-          {shouldShowBillingCheckoutAction(workspace) ? (
-            <div className={styles.emptyState}>
-              <strong>Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.</strong>
-              <p>Öffne die sichere Zahlungsseite. FanMind speichert keine Bankdaten.</p>
-              <BillingCheckoutButton
-                planId={workspace.plan_id}
-                commercialOption={workspace.commercial_option}
-                label={getBillingCheckoutActionLabel(workspace.billing_status)}
-              />
-              <Link className={styles.secondaryButton} href="/billing/start">Paket & Zahlung ansehen</Link>
-            </div>
-          ) : null}
           {contactsError ? (
             <p className={styles.error}>
               <strong>Kontakte konnten nicht geladen werden.</strong>
@@ -446,10 +467,14 @@ function WorkspaceDetails({
           {newMessageItems.length ? (
             <div className={styles.newMessageList}>
               {newMessageItems.map((item) => {
-                const params = new URLSearchParams({ seen_message: item.id, from: "dashboard" });
+                const params = new URLSearchParams({
+                  seen_message: item.id,
+                  from: "dashboard",
+                });
                 const channel = normalizeDashboardChannel(item.source);
                 if (channel) params.set("channel", channel);
-                if (item.sourceKey !== "all") params.set("source", item.sourceKey);
+                if (item.sourceKey !== "all")
+                  params.set("source", item.sourceKey);
                 const detailHref = `/fans/${item.contactId}?${params.toString()}`;
 
                 return (
@@ -463,7 +488,9 @@ function WorkspaceDetails({
                           {item.name}
                         </Link>
                         <span className={styles.tableBadge}>{item.source}</span>
-                        <span className={styles.tableBadge}>{item.sourceContext}</span>
+                        <span className={styles.tableBadge}>
+                          {item.sourceContext}
+                        </span>
                         <time dateTime={item.createdAt ?? undefined}>
                           {formatDateTime(item.createdAt)}
                         </time>
@@ -533,7 +560,11 @@ function WorkspaceDetails({
   );
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams?: Promise<{ lang?: string | string[] }> }) {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ lang?: string | string[] }>;
+}) {
   const resolvedSearchParams = await searchParams;
   const { data, error: userError } = await getSupabaseServerUser();
 
@@ -541,14 +572,20 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
     redirect("/login");
   }
 
-  const locale = await resolveWorkspaceLocale({ lang: resolvedSearchParams?.lang, user: data.user });
+  const locale = await resolveWorkspaceLocale({
+    lang: resolvedSearchParams?.lang,
+    user: data.user,
+  });
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }
 
   const workspace = workspaceResult.workspace;
-  const preActivationRedirect = getPreActivationRedirect(workspace, data.user.email);
+  const preActivationRedirect = getPreActivationRedirect(
+    workspace,
+    data.user.email,
+  );
   if (preActivationRedirect) redirect(preActivationRedirect);
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
