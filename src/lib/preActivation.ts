@@ -1,11 +1,16 @@
 import type { WorkspaceDashboardRow } from "@/lib/supabase/server";
 import { isWorkspaceBillingSuspended } from "@/lib/billing";
+import { isPlatformAdminEmail } from "@/lib/admin";
 
 const ASYNC_BILLING_STATUSES = new Set(["pending_sepa_mandate"]);
 const PRE_ACTIVATION_BILLING_STATUSES = new Set(["pending_payment_setup", "past_due", "payment_failed"]);
 
-export function getPreActivationRedirect(workspace: Pick<WorkspaceDashboardRow, "billing_status" | "plan_id" | "name"> | null | undefined): string | null {
+export function getPreActivationRedirect(
+  workspace: Pick<WorkspaceDashboardRow, "billing_status" | "plan_id" | "name"> | null | undefined,
+  userEmail?: string | null,
+): string | null {
   if (!workspace) return "/workspace/setup";
+  if (isPlatformAdminEmail(userEmail)) return null;
   if (workspace.name === "Temporary FanMind Demo" || workspace.billing_status === "demo_free") return null;
   if (isWorkspaceBillingSuspended(workspace)) return "/billing/suspended";
   if (workspace.billing_status === "active") return null;
@@ -16,6 +21,9 @@ export function getPreActivationRedirect(workspace: Pick<WorkspaceDashboardRow, 
   return null;
 }
 
-export function getBillingContinuationHref(workspace: Pick<WorkspaceDashboardRow, "billing_status" | "plan_id" | "name"> | null | undefined): string {
-  return getPreActivationRedirect(workspace) ?? "/dashboard";
+export function getBillingContinuationHref(
+  workspace: Pick<WorkspaceDashboardRow, "billing_status" | "plan_id" | "name"> | null | undefined,
+  userEmail?: string | null,
+): string {
+  return getPreActivationRedirect(workspace, userEmail) ?? "/dashboard";
 }

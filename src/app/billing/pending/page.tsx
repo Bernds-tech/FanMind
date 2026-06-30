@@ -29,7 +29,7 @@ export default async function BillingPendingPage() {
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");
   const workspace = workspaceResult.workspace;
-  const continuationHref = getBillingContinuationHref(workspace);
+  const continuationHref = getBillingContinuationHref(workspace, data.user.email);
 
   return (
     <main className={styles.page}>

@@ -1180,7 +1180,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   }
 
   const workspace = workspaceResult.workspace;
-  const preActivationRedirect = getPreActivationRedirect(workspace);
+  const preActivationRedirect = getPreActivationRedirect(workspace, data.user.email);
   if (preActivationRedirect) redirect(preActivationRedirect);
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)

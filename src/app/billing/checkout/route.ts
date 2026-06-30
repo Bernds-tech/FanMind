@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { shouldShowBillingCheckoutAction, isWorkspaceBillingSuspended } from "@/lib/billing";
+import { isPlatformAdminEmail } from "@/lib/admin";
 import { isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { createStripeCheckoutSession, getAppUrl, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
@@ -32,6 +33,7 @@ function redirectTo(path: string) {
 async function startCheckout() {
   const { data } = await getSupabaseServerUser();
   if (!data.user) return redirectTo("/login?returnTo=/billing/start");
+  if (isPlatformAdminEmail(data.user.email)) return redirectTo("/dashboard");
   if (isTemporaryDemoUser(data.user)) return redirectTo("/billing/start");
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
@@ -40,7 +42,7 @@ async function startCheckout() {
   const workspace = workspaceResult.workspace;
   if (!workspace) return redirectTo("/workspace/setup");
 
-  const redirectTarget = getPreActivationRedirect(workspace);
+  const redirectTarget = getPreActivationRedirect(workspace, data.user.email);
   if (workspace.billing_status === "active" || redirectTarget === "/dashboard") return redirectTo("/dashboard");
   if (redirectTarget === "/billing/pending") return redirectTo("/billing/pending");
   if (isWorkspaceBillingSuspended(workspace) || redirectTarget === "/billing/suspended") return redirectTo("/billing/suspended");

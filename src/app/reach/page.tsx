@@ -385,7 +385,7 @@ export default async function ReachPage() {
   }
 
   const workspace = workspaceResult.workspace;
-  const preActivationRedirect = getPreActivationRedirect(workspace);
+  const preActivationRedirect = getPreActivationRedirect(workspace, data.user.email);
   if (preActivationRedirect) redirect(preActivationRedirect);
 
   if (!isPlatformAdminEmail(data.user.email)) {
