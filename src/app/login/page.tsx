@@ -56,10 +56,11 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const loginTarget = returnTo ?? LOGIN_TARGET;
   const copy = fanmindCopy[language].login;
   const registerHref = localizedPath("/register", language);
-  const loginHref = withReturnTo(localizedPath("/login", language), returnTo);
+  const forgotPasswordHref = localizedPath("/forgot-password", language);
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
@@ -225,7 +226,15 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.password}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">▣</span>
-                <input ref={passwordInputRef} type="password" name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} defaultValue={isDemoMode ? DEMO_PASSWORD : ""} autoComplete={isDemoMode ? "off" : "current-password"} readOnly={isDemoMode} required />
+                <input ref={passwordInputRef} type={showPassword ? "text" : "password"} name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} defaultValue={isDemoMode ? DEMO_PASSWORD : ""} autoComplete={isDemoMode ? "off" : "current-password"} readOnly={isDemoMode} required />
+                <button
+                  className={styles.passwordToggle}
+                  type="button"
+                  aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                  onClick={() => setShowPassword((current) => !current)}
+                >
+                  {showPassword ? "◉" : "◌"}
+                </button>
               </div>
             </label>
 
@@ -234,7 +243,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 <input type="checkbox" defaultChecked />
                 {language === "en" ? "Stay signed in" : "Angemeldet bleiben"}
               </label>
-              <a href={loginHref}>{language === "en" ? "Forgot password?" : "Passwort vergessen?"}</a>
+              <a href={forgotPasswordHref}>{language === "en" ? "Forgot password?" : "Passwort vergessen?"}</a>
             </div>
 
             <button className={styles.primaryButton} type="submit" disabled={isSubmitting}>

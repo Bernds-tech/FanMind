@@ -372,6 +372,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const commercialOption = planCommercialOption(selectedPlanId, starterOption);
 
@@ -593,7 +594,15 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
                 <span>{copy.password}</span>
                 <div className={styles.inputWrap}>
                   <span aria-hidden="true">▣</span>
-                  <input type="password" name="password" placeholder={language === "en" ? "Choose a secure password" : "Wähle ein sicheres Passwort"} autoComplete="new-password" minLength={6} required />
+                  <input type={showPassword ? "text" : "password"} name="password" placeholder={language === "en" ? "Choose a secure password" : "Wähle ein sicheres Passwort"} autoComplete="new-password" minLength={6} required />
+                  <button
+                    className={styles.passwordToggle}
+                    type="button"
+                    aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                    onClick={() => setShowPassword((current) => !current)}
+                  >
+                    {showPassword ? "◉" : "◌"}
+                  </button>
                 </div>
               </label>
 

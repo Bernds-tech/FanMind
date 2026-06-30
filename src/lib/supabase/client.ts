@@ -43,6 +43,24 @@ type SignInInput = {
   password: string;
 };
 
+type ResetPasswordInput = {
+  email: string;
+  options?: {
+    redirectTo?: string;
+  };
+};
+
+type SetSessionInput = {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  expires_at?: number;
+};
+
+type UpdateUserInput = {
+  password?: string;
+};
+
 type SupabaseMutationResponse<T = unknown> = {
   data: T | null;
   error: Error | null;
@@ -110,11 +128,37 @@ function normalizeAuthPayload(payload: SupabaseAuthPayload): SupabaseAuthRespons
   return { data: { session, user }, error: null };
 }
 
-async function postAuth(path: string, body: Record<string, unknown>, rememberSession: (session: SupabaseAuthSession | null) => void): Promise<SupabaseAuthResponse> {
+async function postAuth(path: string, body: Record<string, unknown>, rememberSession: (session: SupabaseAuthSession | null) => void, accessToken?: string): Promise<SupabaseAuthResponse> {
   try {
     const response = await fetch(getSupabaseAuthUrl(path), {
       method: "POST",
-      headers: getSupabaseHeaders(),
+      headers: getSupabaseHeaders(accessToken),
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      return { data: { session: null, user: null }, error: await parseSupabaseError(response) };
+    }
+
+    const payload = (await response.json()) as SupabaseAuthPayload;
+    const authResponse = normalizeAuthPayload(payload);
+    rememberSession(authResponse.data.session);
+
+    return authResponse;
+  } catch (error) {
+    return { data: { session: null, user: null }, error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler.") };
+  }
+}
+
+async function putAuthUser(body: UpdateUserInput, accessToken: string | undefined, rememberSession: (session: SupabaseAuthSession | null) => void): Promise<SupabaseAuthResponse> {
+  if (!accessToken) {
+    return { data: { session: null, user: null }, error: new Error("Keine gültige Recovery-Sitzung gefunden.") };
+  }
+
+  try {
+    const response = await fetch(getSupabaseAuthUrl("/user"), {
+      method: "PUT",
+      headers: getSupabaseHeaders(accessToken),
       body: JSON.stringify(body),
     });
 
@@ -250,6 +294,22 @@ export function createSupabaseBrowserClient() {
       },
       signInWithPassword({ email, password }: SignInInput) {
         return postAuth("/token?grant_type=password", { email, password }, rememberSession);
+      },
+      resetPasswordForEmail({ email, options }: ResetPasswordInput) {
+        return postAuth("/recover", { email, redirect_to: options?.redirectTo }, rememberSession);
+      },
+      setSession(session: SetSessionInput) {
+        const normalizedSession: SupabaseAuthSession = {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_in: session.expires_in,
+          expires_at: session.expires_at,
+        };
+        rememberSession(normalizedSession);
+        return Promise.resolve({ data: { session: normalizedSession, user: null }, error: null });
+      },
+      updateUser(values: UpdateUserInput) {
+        return putAuthUser(values, getAccessToken(), rememberSession);
       },
       async signOut() {
         await fetch("/api/auth/logout", { method: "POST" });
