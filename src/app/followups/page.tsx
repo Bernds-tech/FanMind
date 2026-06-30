@@ -45,7 +45,7 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
   }
 
   const workspace = workspaceResult.workspace;
-  const preActivationRedirect = getPreActivationRedirect(workspace);
+  const preActivationRedirect = getPreActivationRedirect(workspace, data.user.email);
   if (preActivationRedirect) redirect(preActivationRedirect);
   if (!workspace) redirect("/login");
 

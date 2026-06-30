@@ -1678,7 +1678,7 @@ export default async function FanDetailPage({
   }
 
   const { user, workspace } = authorized;
-  const preActivationRedirect = getPreActivationRedirect(workspace);
+  const preActivationRedirect = getPreActivationRedirect(workspace, user.email);
   if (preActivationRedirect) redirect(preActivationRedirect);
   const locale = await resolveWorkspaceLocale({
     lang: pageSearchParams?.lang,

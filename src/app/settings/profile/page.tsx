@@ -230,7 +230,7 @@ export default async function ProfileSettingsPage() {
   }
 
   const workspace = workspaceResult.workspace;
-  const preActivationRedirect = getPreActivationRedirect(workspace);
+  const preActivationRedirect = getPreActivationRedirect(workspace, data.user.email);
   if (preActivationRedirect) redirect(preActivationRedirect);
   if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
   const contactsResult = workspace

@@ -164,7 +164,7 @@ export default async function ChannelsPage({
   }
 
   const workspace = workspaceResult.workspace;
-  const preActivationRedirect = getPreActivationRedirect(workspace);
+  const preActivationRedirect = getPreActivationRedirect(workspace, data.user.email);
   if (preActivationRedirect) redirect(preActivationRedirect);
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
