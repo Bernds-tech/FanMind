@@ -11,7 +11,7 @@ export function landingPath(language: FanMindLanguage, hash = "") {
   return language === "en" ? `/landing-v2?lang=en${hash}` : `/landing-v2${hash}`;
 }
 
-export function localizedPath(path: "/login" | "/register", language: FanMindLanguage, query = "") {
+export function localizedPath(path: "/login" | "/register" | "/forgot-password" | "/reset-password", language: FanMindLanguage, query = "") {
   const separator = query ? "&" : "?";
   return language === "en" ? `${path}${query}${separator}lang=en` : `${path}${query}`;
 }
