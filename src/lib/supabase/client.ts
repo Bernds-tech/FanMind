@@ -30,6 +30,13 @@ type SupabaseAuthPayload = Partial<SupabaseAuthSession> &
     user?: SupabaseAuthUser | null;
   };
 
+type SupabaseUserResponse = {
+  data: {
+    user: SupabaseAuthUser | null;
+  };
+  error: Error | null;
+};
+
 type SignUpInput = {
   email: string;
   password: string;
@@ -147,6 +154,30 @@ async function postAuth(path: string, body: Record<string, unknown>, rememberSes
     return authResponse;
   } catch (error) {
     return { data: { session: null, user: null }, error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler.") };
+  }
+}
+
+async function getAuthUser(accessToken: string | undefined): Promise<SupabaseUserResponse> {
+  if (!accessToken) {
+    return { data: { user: null }, error: new Error("Keine gültige Recovery-Sitzung gefunden.") };
+  }
+
+  try {
+    const response = await fetch(getSupabaseAuthUrl("/user"), {
+      method: "GET",
+      headers: getSupabaseHeaders(accessToken),
+    });
+
+    if (!response.ok) {
+      return { data: { user: null }, error: await parseSupabaseError(response) };
+    }
+
+    const payload = (await response.json()) as SupabaseAuthPayload;
+    const user = payload.user ?? (payload.id ? { id: payload.id, email: payload.email, user_metadata: payload.user_metadata } : null);
+
+    return { data: { user }, error: null };
+  } catch (error) {
+    return { data: { user: null }, error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler.") };
   }
 }
 
@@ -310,8 +341,14 @@ export function createSupabaseBrowserClient() {
         rememberSession(normalizedSession);
         return Promise.resolve({ data: { session: normalizedSession, user: null }, error: null });
       },
-      updateUser(values: UpdateUserInput) {
-        return putAuthUser(values, getAccessToken(), rememberSession);
+      getUser(accessToken?: string) {
+        return getAuthUser(accessToken ?? getAccessToken());
+      },
+      updateUser(values: UpdateUserInput, accessToken?: string) {
+        return putAuthUser(values, accessToken ?? getAccessToken(), rememberSession);
+      },
+      updateUserWithAccessToken(values: UpdateUserInput, accessToken: string) {
+        return putAuthUser(values, accessToken, rememberSession);
       },
       async signOut() {
         await fetch("/api/auth/logout", { method: "POST" });
