@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { wt } from "@/lib/workspaceCopy";
+import { saveSuggestedFollowup, saveSuggestedMemory } from "../actions";
 import { OriginalChannelButton } from "./OriginalChannelButton";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "./fan-detail.module.css";
@@ -10,8 +12,21 @@ import styles from "./fan-detail.module.css";
 export type ReplyMode = { id: string; label: string; prompt: string };
 
 type ReplySuggestion = { tone: string; label: string; text: string };
+type SuggestedMemory = {
+  content: string;
+  importance: "low" | "normal" | "high";
+};
+
+type SuggestedFollowup = {
+  recommended: boolean;
+  in_days: number | null;
+  reason: string;
+};
+
 type AiSuggestionsResult = {
   reply_options: ReplySuggestion[];
+  suggested_memory?: SuggestedMemory;
+  suggested_followup?: SuggestedFollowup;
   safety_note: string;
 };
 
@@ -42,6 +57,7 @@ export function AiReplySuggestions({
   demoConnectionsDisabled = false,
   locale = "de",
 }: Props) {
+  const router = useRouter();
   const [activeModeId, setActiveModeId] = useState(modes[0]?.id ?? "friendly");
   const activeMode = useMemo(
     () => modes.find((mode) => mode.id === activeModeId) ?? modes[0],
@@ -56,11 +72,21 @@ export function AiReplySuggestions({
   const [telegramDraft, setTelegramDraft] = useState("");
   const [telegramSending, setTelegramSending] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState("");
+  const [memoryDismissed, setMemoryDismissed] = useState(false);
+  const [followupDismissed, setFollowupDismissed] = useState(false);
+  const [memorySaving, setMemorySaving] = useState(false);
+  const [followupSaving, setFollowupSaving] = useState(false);
+  const [memoryStatus, setMemoryStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [followupStatus, setFollowupStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const canSendTelegram = contact.sourcePlatform === "telegram";
 
   async function generateSuggestions(mode = activeMode) {
     setError("");
     setCopiedIndex(null);
+    setMemoryDismissed(false);
+    setFollowupDismissed(false);
+    setMemoryStatus(null);
+    setFollowupStatus(null);
     setIsLoading(true);
     try {
       const response = await fetch("/api/ai/reply-suggestions", {
@@ -123,6 +149,52 @@ export function AiReplySuggestions({
     }
   }
 
+
+  const suggestedMemory = suggestions?.suggested_memory;
+  const hasMemorySuggestion = Boolean(suggestedMemory?.content?.trim()) && !memoryDismissed;
+  const suggestedFollowup = suggestions?.suggested_followup;
+  const hasFollowupSuggestion = Boolean(
+    suggestedFollowup?.recommended && suggestedFollowup.reason?.trim(),
+  ) && !followupDismissed;
+  const followupDateLabel = formatFollowupDate(suggestedFollowup?.in_days);
+
+  async function saveMemorySuggestion() {
+    if (!suggestedMemory?.content?.trim()) return;
+    setMemorySaving(true);
+    setMemoryStatus(null);
+    try {
+      const result = await saveSuggestedMemory({
+        contactId: contact.contactId,
+        content: suggestedMemory.content.trim(),
+        importance: suggestedMemory.importance,
+      });
+      setMemoryStatus(result);
+      if (result.ok) router.refresh();
+    } catch {
+      setMemoryStatus({ ok: false, message: "Memory konnte nicht gespeichert werden." });
+    } finally {
+      setMemorySaving(false);
+    }
+  }
+
+  async function saveFollowupSuggestion() {
+    if (!suggestedFollowup?.reason?.trim()) return;
+    setFollowupSaving(true);
+    setFollowupStatus(null);
+    try {
+      const result = await saveSuggestedFollowup({
+        contactId: contact.contactId,
+        reason: suggestedFollowup.reason.trim(),
+        inDays: suggestedFollowup.in_days,
+      });
+      setFollowupStatus(result);
+      if (result.ok) router.refresh();
+    } catch {
+      setFollowupStatus({ ok: false, message: "Follow-up konnte nicht gespeichert werden." });
+    } finally {
+      setFollowupSaving(false);
+    }
+  }
 
 
   async function sendTelegramDraft() {
@@ -246,6 +318,84 @@ export function AiReplySuggestions({
           </article>
         ))}
       </div>
+      {hasMemorySuggestion || hasFollowupSuggestion ? (
+        <div className={styles.suggestionGrid} aria-live="polite">
+          {hasMemorySuggestion ? (
+            <article className={styles.suggestionCard}>
+              <div className={styles.replyCardHeader}>
+                <div>
+                  <strong>Memory-Vorschlag</strong>
+                  <p className={styles.muted}>Kontext speichern · nichts wird gesendet</p>
+                </div>
+              </div>
+              <div>
+                <p>{suggestedMemory?.content}</p>
+                <p className={styles.muted}>Wichtigkeit: {suggestedMemory?.importance ?? "normal"}</p>
+              </div>
+              <div className={styles.replyCardActions}>
+                <button
+                  className={dashboardStyles.primaryButton}
+                  disabled={memorySaving || memoryStatus?.ok}
+                  onClick={() => void saveMemorySuggestion()}
+                  type="button"
+                >
+                  {memorySaving ? "Speichere …" : memoryStatus?.ok ? "Gespeichert" : "Speichern"}
+                </button>
+                <button
+                  className={dashboardStyles.secondaryButton}
+                  disabled={memorySaving || memoryStatus?.ok}
+                  onClick={() => setMemoryDismissed(true)}
+                  type="button"
+                >
+                  Verwerfen
+                </button>
+                {memoryStatus ? (
+                  <p className={memoryStatus.ok ? styles.noteSavedHint : dashboardStyles.error} role="status">
+                    {memoryStatus.message}
+                  </p>
+                ) : null}
+              </div>
+            </article>
+          ) : null}
+          {hasFollowupSuggestion ? (
+            <article className={styles.suggestionCard}>
+              <div className={styles.replyCardHeader}>
+                <div>
+                  <strong>Follow-up-Vorschlag</strong>
+                  <p className={styles.muted}>Aufgabe speichern · nichts wird automatisch gesendet</p>
+                </div>
+              </div>
+              <div>
+                <p>{suggestedFollowup?.reason}</p>
+                <p className={styles.muted}>Empfohlenes Datum: {followupDateLabel}</p>
+              </div>
+              <div className={styles.replyCardActions}>
+                <button
+                  className={dashboardStyles.primaryButton}
+                  disabled={followupSaving || followupStatus?.ok}
+                  onClick={() => void saveFollowupSuggestion()}
+                  type="button"
+                >
+                  {followupSaving ? "Speichere …" : followupStatus?.ok ? "Gespeichert" : "Speichern"}
+                </button>
+                <button
+                  className={dashboardStyles.secondaryButton}
+                  disabled={followupSaving || followupStatus?.ok}
+                  onClick={() => setFollowupDismissed(true)}
+                  type="button"
+                >
+                  Verwerfen
+                </button>
+                {followupStatus ? (
+                  <p className={followupStatus.ok ? styles.noteSavedHint : dashboardStyles.error} role="status">
+                    {followupStatus.message}
+                  </p>
+                ) : null}
+              </div>
+            </article>
+          ) : null}
+        </div>
+      ) : null}
       {canSendTelegram ? (
         <div className={styles.fallbackHelp}>
           <strong>Manueller Telegram-Antwortfluss</strong>
@@ -277,4 +427,18 @@ export function AiReplySuggestions({
       </p>
     </article>
   );
+}
+
+
+function formatFollowupDate(inDays: number | null | undefined) {
+  if (typeof inDays !== "number" || !Number.isFinite(inDays)) {
+    return "Datum manuell prüfen";
+  }
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + inDays);
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(dueDate);
 }
