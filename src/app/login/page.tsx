@@ -99,7 +99,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         setError(`${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den Sandra-Demo-Fallback über /login?demo=1 nutzen.`);
         return;
       }
-      window.location.assign(payload?.redirectTo ?? loginTarget);
+      window.location.assign(payload?.redirectTo ?? LOGIN_TARGET);
     } catch (startError) {
       setError(startError instanceof Error ? startError.message : "Die Demo konnte gerade nicht vorbereitet werden. Bitte nutze /login?demo=1 als Fallback.");
     } finally {

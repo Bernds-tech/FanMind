@@ -99,8 +99,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Supabase hat keine gültige Demo-Session zurückgegeben." }, { status: 500 });
   }
 
-  const redirectTo = locale === "en" ? "/dashboard?lang=en" : "/dashboard";
-  const response = NextResponse.json({ ok: true, redirectTo });
+  const response = NextResponse.json({ ok: true, redirectTo: "/dashboard" });
   response.cookies.set(FANMIND_LOCALE_COOKIE, locale, localeCookieOptions());
   response.cookies.set(SUPABASE_ACCESS_TOKEN_COOKIE, session.access_token, { httpOnly: true, sameSite: "lax", secure: isProduction, path: "/", maxAge: session.expires_in ?? 60 * 60 });
   if (session.refresh_token) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { shouldShowBillingCheckoutAction, isWorkspaceBillingSuspended } from "@/lib/billing";
 import { isPlatformAdminEmail } from "@/lib/admin";
-import { isTemporaryDemoUser } from "@/lib/demoMode";
+import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { createStripeCheckoutSession, getAppUrl, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
@@ -34,7 +34,7 @@ async function startCheckout() {
   const { data } = await getSupabaseServerUser();
   if (!data.user) return redirectTo("/login?returnTo=/billing/start");
   if (isPlatformAdminEmail(data.user.email)) return redirectTo("/dashboard");
-  if (isTemporaryDemoUser(data.user)) return redirectTo("/billing/start");
+  if (isTemporaryDemoUser(data.user)) return redirectTo("/dashboard");
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") return redirectTo("/login?demo_deleted=1");
@@ -48,8 +48,9 @@ async function startCheckout() {
   if (isWorkspaceBillingSuspended(workspace) || redirectTarget === "/billing/suspended") return redirectTo("/billing/suspended");
   if (redirectTarget === "/workspace/setup") return redirectTo("/workspace/setup");
 
-  const isDemo = workspace.billing_status === "demo_free" || workspace.name === "Temporary FanMind Demo";
-  if (isDemo || !shouldShowBillingCheckoutAction(workspace)) return redirectTo("/billing/start");
+  const isDemo = isDemoWorkspace(workspace);
+  if (isDemo) return redirectTo("/dashboard");
+  if (!shouldShowBillingCheckoutAction(workspace)) return redirectTo("/billing/start");
 
   const plan = resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option);
   if (!plan) return redirectTo("/billing/start?error=payment-option");
