@@ -10,6 +10,16 @@ type ForgotPasswordPageProps = {
   searchParams: Promise<{ lang?: string | string[] }>;
 };
 
+function getPasswordResetRedirectTo(language: ReturnType<typeof getFanMindLanguage>) {
+  const resetPasswordPath = localizedPath("/reset-password", language);
+  const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const origin = isLocalhost ? window.location.origin : "https://fanmind.ch";
+
+  // Supabase muss diese Redirect-URL unter Authentication → URL Configuration erlauben:
+  // https://fanmind.ch/reset-password (optional zusätzlich https://fanmind.ch/reset-password?lang=en)
+  return `${origin}${resetPasswordPath}`;
+}
+
 export default function ForgotPasswordPage({ searchParams }: ForgotPasswordPageProps) {
   const params = use(searchParams);
   const language = getFanMindLanguage(params.lang);
@@ -27,7 +37,7 @@ export default function ForgotPasswordPage({ searchParams }: ForgotPasswordPageP
     setIsSubmitting(true);
 
     try {
-      const redirectTo = `${window.location.origin}${localizedPath("/reset-password", language)}`;
+      const redirectTo = getPasswordResetRedirectTo(language);
       const supabase = createSupabaseBrowserClient();
       const { error: recoveryError } = await supabase.auth.resetPasswordForEmail({ email: email.trim(), options: { redirectTo } });
 

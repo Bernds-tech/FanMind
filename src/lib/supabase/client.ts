@@ -296,7 +296,9 @@ export function createSupabaseBrowserClient() {
         return postAuth("/token?grant_type=password", { email, password }, rememberSession);
       },
       resetPasswordForEmail({ email, options }: ResetPasswordInput) {
-        return postAuth("/recover", { email, redirect_to: options?.redirectTo }, rememberSession);
+        const recoverPath = options?.redirectTo ? `/recover?redirect_to=${encodeURIComponent(options.redirectTo)}` : "/recover";
+
+        return postAuth(recoverPath, { email }, rememberSession);
       },
       setSession(session: SetSessionInput) {
         const normalizedSession: SupabaseAuthSession = {
