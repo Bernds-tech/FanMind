@@ -61,7 +61,7 @@ function getBillingPlanSummary(planId?: string | null, commercialOption?: string
 const checkoutSteps = ["Konto erstellt", "Zahlung", "Freischaltung"];
 
 
-export default async function BillingStartPage({ searchParams }: { searchParams?: Promise<{ checkout?: string; error?: string }> }) {
+export default async function BillingStartPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
   const params = await searchParams;
   const { data } = await getSupabaseServerUser();
   if (!data.user) redirect("/login?returnTo=/billing/start");
@@ -78,14 +78,12 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
   if (redirectTarget === "/billing/suspended") redirect("/billing/suspended");
   const resolvedCheckoutPlan = workspace ? resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option) : null;
 
-  if (params?.checkout === "1") {
-    if (!workspace) redirect("/workspace/setup");
-    if (isDemo || !shouldShowBillingCheckoutAction(workspace)) redirect("/billing/start");
-    if (!resolvedCheckoutPlan) redirect("/billing/start?error=payment-option");
-    if (!stripe.readyForCheckout) redirect("/billing/start?error=payment-start");
+  const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
+  const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && stripe.readyForCheckout && !isDemo && resolvedCheckoutPlan);
+  let checkoutUrl: string | undefined;
+  let checkoutPreparationFailed = false;
 
-    let checkoutUrl: string | undefined;
-
+  if (canStartCheckout && workspace && resolvedCheckoutPlan) {
     try {
       const session = await createStripeCheckoutSession({
         plan: resolvedCheckoutPlan,
@@ -94,16 +92,12 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
         userEmail: data.user.email,
       });
       checkoutUrl = session.url;
+      checkoutPreparationFailed = !checkoutUrl;
     } catch (error) {
+      checkoutPreparationFailed = true;
       console.error("Stripe checkout session could not be created", error);
     }
-
-    if (!checkoutUrl) redirect("/billing/start?error=payment-start");
-    redirect(checkoutUrl);
   }
-
-  const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
-  const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && stripe.readyForCheckout && !isDemo && resolvedCheckoutPlan);
 
   const plan = workspace ? getBillingPlanSummary(workspace.plan_id, workspace.commercial_option) : null;
 
@@ -171,11 +165,11 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
               <div className={styles.infoBox}>Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind.</div>
             ) : hasUnclearPaymentOption || params?.error === "payment-option" ? (
               <div className={styles.infoBox}>Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind.</div>
-            ) : params?.error === "payment-start" ? (
-              <div className={styles.infoBox}>Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind.</div>
-            ) : canStartCheckout && workspace ? (
+            ) : checkoutPreparationFailed || params?.error === "payment-start" ? (
+              <div className={styles.infoBox}>Die Zahlung konnte aktuell nicht vorbereitet werden. Bitte versuche es erneut oder kontaktiere FanMind.</div>
+            ) : checkoutUrl ? (
               <div className={buttonStyles.wrap}>
-                <a className={buttonStyles.button} href="/billing/start?checkout=1">Weiter zur Zahlung</a>
+                <a className={buttonStyles.button} href={checkoutUrl}>Weiter zur Zahlung</a>
               </div>
             ) : isDemo ? (
               <div className={styles.infoBox}>Demo-Zugang aktiv. Für diesen Zugang ist keine Zahlung erforderlich.</div>
