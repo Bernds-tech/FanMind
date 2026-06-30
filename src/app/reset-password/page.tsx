@@ -9,16 +9,46 @@ import styles from "../login/login.module.css";
 type ResetPasswordPageProps = { searchParams: Promise<{ lang?: string | string[] }> };
 
 function readRecoverySessionFromUrl() {
-  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const query = new URLSearchParams(window.location.search);
-  const accessToken = params.get("access_token") ?? query.get("access_token");
-  if (!accessToken) return null;
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const queryParams = new URLSearchParams(window.location.search);
+  const error = hashParams.get("error") ?? queryParams.get("error");
+  const errorCode = hashParams.get("error_code") ?? queryParams.get("error_code");
+  const errorDescription = hashParams.get("error_description") ?? queryParams.get("error_description");
+
+  if (error || errorCode || errorDescription) {
+    return { session: null, hasRecoveryError: true };
+  }
+
+  const accessToken = hashParams.get("access_token") ?? queryParams.get("access_token");
+  if (!accessToken) return { session: null, hasRecoveryError: false };
+
   return {
-    access_token: accessToken,
-    refresh_token: params.get("refresh_token") ?? query.get("refresh_token") ?? undefined,
-    expires_in: Number(params.get("expires_in") ?? query.get("expires_in") ?? undefined) || undefined,
-    expires_at: Number(params.get("expires_at") ?? query.get("expires_at") ?? undefined) || undefined,
+    session: {
+      access_token: accessToken,
+      refresh_token: hashParams.get("refresh_token") ?? queryParams.get("refresh_token") ?? undefined,
+      expires_in: Number(hashParams.get("expires_in") ?? queryParams.get("expires_in") ?? undefined) || undefined,
+      expires_at: Number(hashParams.get("expires_at") ?? queryParams.get("expires_at") ?? undefined) || undefined,
+    },
+    hasRecoveryError: false,
   };
+}
+
+function getPasswordUpdateErrorMessage(updateError: Error, language: "de" | "en") {
+  const normalizedMessage = updateError.message.toLowerCase();
+
+  if (normalizedMessage.includes("same") || normalizedMessage.includes("different") || normalizedMessage.includes("old password") || normalizedMessage.includes("new password should be different")) {
+    return language === "en" ? "Please choose a different password than your current password." : "Bitte wähle ein anderes Passwort als dein bisheriges Passwort.";
+  }
+
+  if (normalizedMessage.includes("weak") || normalizedMessage.includes("short") || normalizedMessage.includes("password") && normalizedMessage.includes("characters")) {
+    return language === "en" ? "Your new password is too weak or too short." : "Dein neues Passwort ist zu schwach oder zu kurz.";
+  }
+
+  if (normalizedMessage.includes("token") || normalizedMessage.includes("jwt") || normalizedMessage.includes("expired") || normalizedMessage.includes("invalid") || normalizedMessage.includes("unauthorized") || normalizedMessage.includes("session")) {
+    return language === "en" ? "The link is invalid or expired. Please request a new link." : "Der Link ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.";
+  }
+
+  return language === "en" ? "The password could not be saved right now. Please try again." : "Das Passwort konnte gerade nicht gespeichert werden. Bitte versuche es erneut.";
 }
 
 export default function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
@@ -26,6 +56,7 @@ export default function ResetPasswordPage({ searchParams }: ResetPasswordPagePro
   const language = getFanMindLanguage(params.lang);
   const copy = fanmindCopy[language].login;
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [recoveryAccessToken, setRecoveryAccessToken] = useState<string | null>(null);
   const [isValidRecoverySession, setIsValidRecoverySession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [password, setPassword] = useState("");
@@ -40,8 +71,8 @@ export default function ResetPasswordPage({ searchParams }: ResetPasswordPagePro
     let isMounted = true;
 
     async function prepareRecoverySession() {
-      const session = readRecoverySessionFromUrl();
-      if (!session) {
+      const { session, hasRecoveryError } = readRecoverySessionFromUrl();
+      if (!session || hasRecoveryError) {
         await Promise.resolve();
         if (!isMounted) return;
         setIsValidRecoverySession(false);
@@ -49,11 +80,21 @@ export default function ResetPasswordPage({ searchParams }: ResetPasswordPagePro
         return;
       }
 
-      const { error: sessionError } = await supabase.auth.setSession(session);
+      const { error: userError } = await supabase.auth.getUser(session.access_token);
       if (!isMounted) return;
-      setIsValidRecoverySession(!sessionError);
+
+      if (userError) {
+        setRecoveryAccessToken(null);
+        setIsValidRecoverySession(false);
+        setIsCheckingSession(false);
+        window.history.replaceState(null, "", localizedPath("/reset-password", language));
+        return;
+      }
+
+      setRecoveryAccessToken(session.access_token);
+      setIsValidRecoverySession(true);
       setIsCheckingSession(false);
-      if (!sessionError) window.history.replaceState(null, "", localizedPath("/reset-password", language));
+      window.history.replaceState(null, "", localizedPath("/reset-password", language));
     }
 
     void prepareRecoverySession();
@@ -76,17 +117,29 @@ export default function ResetPasswordPage({ searchParams }: ResetPasswordPagePro
       return;
     }
 
-    setIsSubmitting(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    setIsSubmitting(false);
-
-    if (updateError) {
+    if (!recoveryAccessToken) {
       setError(language === "en" ? "The link is invalid or expired. Please request a new link." : "Der Link ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.");
       setIsValidRecoverySession(false);
       return;
     }
 
+    setIsSubmitting(true);
+    const { error: updateError } = await supabase.auth.updateUserWithAccessToken({ password }, recoveryAccessToken);
+    setIsSubmitting(false);
+
+    if (updateError) {
+      const errorMessage = getPasswordUpdateErrorMessage(updateError, language);
+      setError(errorMessage);
+      if (errorMessage.includes("ungültig") || errorMessage.includes("invalid")) {
+        setRecoveryAccessToken(null);
+        setIsValidRecoverySession(false);
+      }
+      return;
+    }
+
+    setRecoveryAccessToken(null);
     setSuccess(true);
+    await supabase.auth.signOut();
   }
 
   const invalidLink = !isCheckingSession && !isValidRecoverySession && !success;
