@@ -460,3 +460,15 @@
     min-height: 0;
   }
 }
+
+.noticeBox {
+  border: 1px solid rgba(255, 198, 87, 0.52);
+  border-radius: 22px;
+  padding: 18px 22px;
+  color: #fff3cf;
+  background: linear-gradient(135deg, rgba(76, 48, 5, 0.78), rgba(20, 17, 8, 0.82));
+  box-shadow: inset 0 0 28px rgba(255, 198, 87, 0.08), 0 18px 42px rgba(0, 0, 0, 0.22);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+}
