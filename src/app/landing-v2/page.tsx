@@ -685,13 +685,14 @@ const landingFooterColumns = [
     icon: "✦",
     title: "FanMind",
     links: [
+      { label: "Impressum", href: "/impressum" },
       { label: "Datenschutz", href: "/datenschutz" },
+      { label: "AGB", href: "/agb" },
       { label: "Zahlungsbedingungen", href: "/zahlungsbedingungen" },
+      { label: "AVV", href: "/avv" },
+      { label: "Roadmap", href: LANDING_ROADMAP_HREF },
       { label: "Login", href: "/login" },
       { label: "Registrieren", href: "/register" },
-      { label: "Roadmap", href: LANDING_ROADMAP_HREF },
-      { label: "Impressum", href: "#kontakt" },
-      { label: "AGB", href: "/zahlungsbedingungen" },
     ],
   },
 ];
@@ -2464,13 +2465,16 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
       <footer id="ressourcen" className={styles.siteFooter}>
         <Logo language={language} />
-        <p>{t("© 2025 FanMind. Alle Rechte vorbehalten.")}</p>
+        <p>{t("FanMind · KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · kontakt@fanmind.de")}</p>
         <nav aria-label="Footer Navigation">
+          <a href="/impressum">Impressum</a>
           <a id="datenschutz" href="/datenschutz">{t("Datenschutz")}</a>
+          <a href="/agb">AGB</a>
           <a id="zahlungsbedingungen" href="/zahlungsbedingungen">{t("Zahlungsbedingungen")}</a>
+          <a href="/avv">AVV</a>
+          <a href={roadmapHref}>{t("Roadmap")}</a>
           <a href={loginHref}>Login</a>
           <a href={registerHref}>{t("Registrieren")}</a>
-          <a href={roadmapHref}>{t("Roadmap")}</a>
         </nav>
         <div id="kontakt" className={styles.socials}>
           <a href="mailto:kontakt@fanmind.de?subject=Pilot%20anfragen">{t("Pilot anfragen")}</a>

@@ -100,6 +100,21 @@ export default function RoadmapPage() {
           Geplante Integrationen werden erst nach technischer und rechtlicher Prüfung umgesetzt. Aktuell werden keine Nachrichten automatisch aus externen Plattformen gesendet oder synchronisiert.
         </p>
       </section>
+
+      <footer className={styles.siteFooter}>
+        <strong>FanMind</strong>
+        <p>KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · kontakt@fanmind.de</p>
+        <nav aria-label="Footer Navigation">
+          <a href="/impressum">Impressum</a>
+          <a href="/datenschutz">Datenschutz</a>
+          <a href="/agb">AGB</a>
+          <a href="/zahlungsbedingungen">Zahlungsbedingungen</a>
+          <a href="/avv">AVV</a>
+          <a href="/roadmap">Roadmap</a>
+          <a href="/login">Login</a>
+          <a href="/register">Registrieren</a>
+        </nav>
+      </footer>
     </main>
   );
 }
