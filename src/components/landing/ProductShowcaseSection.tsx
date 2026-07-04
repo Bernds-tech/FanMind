@@ -42,14 +42,14 @@ const featureCards = [
     "Liefert passende Entwürfe – Mensch prüft, editiert und gibt frei.",
   ],
   [
-    "☑",
-    "Follow-up Queue",
-    "Bündelt fällige Aktionen nach Priorität, Owner und nächstem Schritt.",
-  ],
-  [
     "▣",
     "Roadmap sauber markiert",
     "Kampagnen, Analytics und externe Kanäle bleiben als Roadmap/Beta getrennt.",
+  ],
+  [
+    "☑",
+    "Follow-up Queue",
+    "Bündelt fällige Aktionen nach Priorität, Owner und nächstem Schritt.",
   ],
 ];
 
