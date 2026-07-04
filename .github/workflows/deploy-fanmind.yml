@@ -39,7 +39,7 @@ jobs:
 
           sudo nginx -t
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsSI https://fanmind.ch/login >/dev/null; then
+            if curl -fsSL --max-time 15 https://fanmind.ch/login -o /dev/null; then
               echo "Health check passed."
               break
             fi
@@ -47,6 +47,7 @@ jobs:
             if [ "$attempt" = "10" ]; then
               echo "Health check failed after 10 attempts."
               curl -I https://fanmind.ch/login || true
+              curl -L https://fanmind.ch/login -o /dev/null -w 'HTTP_STATUS=%{http_code}\n' || true
               exit 1
             fi
 
