@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import type { FeatureKey } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
-import { createFanMindTranslator, fanmindCopy, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
+import { createFanMindTranslator, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { PlatformLogo } from "@/components/PlatformLogo";
@@ -20,7 +20,8 @@ const LANDING_ROADMAP_HREF = "/landing-v2#roadmap";
 
 function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | undefined {
   if (!status) return undefined;
-  if (["Roadmap", "In Kürze"].includes(status)) return "roadmap";
+  if (["Roadmap", "In Kürze", "Coming Soon"].includes(status)) return "roadmap";
+  if (["Beta / in Vorbereitung"].includes(status)) return "preview";
   if (["Vorschau", "Preview", "BETA"].includes(status)) return "preview";
   if (["Geplant", "Planned"].includes(status)) return "planned";
   if (["Aktiv", "Bereit", "Verfügbar", "Aktiv", "Active"].includes(status)) return "active";
@@ -31,8 +32,8 @@ const comingSoonIntegrationPlatforms = new Set(["email", "discord", "whatsapp", 
 
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase", caret: true },
-  { label: "Probleme", href: "#problem" },
   { label: "Workflow", href: "#conversion", caret: true },
+  { label: "MVP", href: "#features" },
   { label: "Integrationen", href: "#integrationen" },
   { label: "Preise", href: "#preise" },
   { label: "Roadmap", href: LANDING_ROADMAP_HREF, caret: true },
@@ -48,41 +49,39 @@ const pilotSignals = [
 const features = [
   {
     icon: "✉",
-    title: "Alle Kanäle im Blick",
-    text: "Kontaktpunkte, Gesprächsnotizen und Kanal-Kontext werden zentral dokumentiert – dein Team behält alles nachvollziehbar im Blick.",
+    title: "Kontakte / Fans",
+    text: "Profile, Gesprächsnotizen, Tags und Kontaktverlauf werden zentral und nachvollziehbar gepflegt.",
     tone: "blue",
   },
   {
     icon: "🧠",
-    title: "KI versteht deine Fans",
-    text: "Intelligente Vorschläge, geprüfte Antwortentwürfe und smarte Insights für bessere Beziehungen.",
+    title: "KI-Antwortvorschläge",
+    text: "FanMind erstellt passende Entwürfe aus Kontext und Memory. Du prüfst, kopierst und sendest selbst.",
     tone: "purple",
   },
   {
     icon: "♙",
-    title: "Segmentieren & personalisieren",
-    status: "Vorschau",
-    text: "Erstelle präzise Segmente und bereite die richtige Botschaft zur richtigen Zeit vor.",
+    title: "CSV-Import & Memory",
+    text: "Bestehende Kontakte importieren, Details speichern und Follow-ups aus dem Kontext vorbereiten.",
     tone: "green",
   },
   {
     icon: "📣",
-    title: "Kampagnen vorbereiten",
-    status: "Roadmap",
-    text: "Plane Kampagnenentwürfe als Vorschau – ohne automatischen Versand und ohne vollständige Versandfunktion.",
+    title: "Manuelle Follow-ups",
+    text: "Nächste Schritte bleiben sichtbar, priorisiert und bewusst manuell steuerbar.",
     tone: "orange",
   },
   {
     icon: "▥",
-    title: "Analytics auf der Roadmap",
+    title: "Ehrliche Roadmap",
     status: "Roadmap",
-    text: "Roadmap-Reports zeigen, welche Auswertungen später folgen; keine vollständige Analytics-Suite aktuell.",
+    text: "Kampagnen, Reichweiten-Analytics und Rollen/Rechte sind klar als spätere Ausbaustufen markiert.",
     tone: "cyan",
   },
   {
     icon: "⬟",
-    title: "Sicher & DSGVO-konform",
-    text: "Deine Daten sind sicher, verschlüsselt und in europäischen Rechenzentren gehostet.",
+    title: "Kontrolle & Sicherheit",
+    text: "Keine automatische Sendefunktion, keine Bankdaten in FanMind und sichere Zahlung über den Zahlungsanbieter.",
     tone: "violet",
   },
 ];
@@ -360,7 +359,7 @@ const integrationChannels = [
     platform: "whatsapp",
     title: "WhatsApp",
     text: "Kontakte, Handles und Chat-Kontext für die spätere Synchronisation vorbereiten.",
-    status: "Coming Soon",
+    status: "Beta / in Vorbereitung",
     tone: "green",
   },
   {
@@ -375,8 +374,8 @@ const integrationChannels = [
     icon: "f",
     platform: "facebook",
     title: "Facebook",
-    text: "Profil- und Seitenkontakte für die spätere Synchronisation vorbereiten.",
-    status: "Coming Soon",
+    text: "Profil- und Seitenkontakte als vorbereiteten Beta-Workflow einordnen – keine produktive Vollintegration.",
+    status: "Beta / in Vorbereitung",
     tone: "blue",
   },
   {
@@ -399,8 +398,8 @@ const integrationChannels = [
     icon: "◎",
     platform: "instagram",
     title: "Instagram",
-    text: "DM-Kontext, Profile und relevante Aktivität für die spätere Synchronisation vorbereiten.",
-    status: "Coming Soon",
+    text: "DM-Kontext und Profile als vorbereiteten Beta-Workflow einordnen – keine produktive Vollintegration.",
+    status: "Beta / in Vorbereitung",
     tone: "pink",
   },
   {
@@ -460,13 +459,13 @@ const integrationBenefits = [
   {
     icon: "◷",
     title: "Beta / vorbereitet",
-    text: "Facebook und Instagram werden nur als vorbereitete Workflows gezeigt; keine produktive Vollintegration.",
+    text: "Facebook, Instagram und WhatsApp werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.",
     tone: "purple",
   },
   {
     icon: "▣",
     title: "Coming Soon",
-    text: "WhatsApp, TikTok, X, Discord, automatische Kampagnen, Reichweiten-Analytics sowie tiefe Rollen/Rechte.",
+    text: "TikTok, X, Discord, Kampagnen, Analytics/Reichweite sowie Rollen/Rechte bleiben Roadmap.",
     tone: "green",
   },
   {
@@ -529,10 +528,10 @@ const privacyControlCards = [
   },
   {
     number: "4",
-    icon: "⚠",
+    icon: "◇",
     title: "Do-not-push-Regeln",
     text: "Präferenzen und Sperrlisten werden respektiert – für vertrauensvolle, bewusste Kommunikation.",
-    label: "Automatisch geschützt gedacht",
+    label: "Roadmap: Präferenzen",
     tone: "amber",
   },
   {
@@ -655,26 +654,26 @@ const faqs = [
 const faqContacts = [
   {
     icon: "✉",
-    title: "Kontakt aufnehmen",
-    text: "Schreib uns eine Nachricht oder buche ein persönliches Gespräch.",
-    cta: "Jetzt schreiben",
-    href: "mailto:kontakt@fanmind.de?subject=Frage%20zu%20FanMind",
+    title: "Pilot anfragen",
+    text: "Schreib uns eine Nachricht zu deinem Use Case und zum passenden Pilot-Setup.",
+    cta: "Pilot anfragen",
+    href: "mailto:kontakt@fanmind.de?subject=Pilot%20anfragen",
     tone: "blue",
   },
   {
     icon: "▶",
-    title: "Zugang anfragen",
-    text: "Erlebe FanMind live und sieh, wie es für dich funktioniert.",
-    cta: "Zugang anfragen",
-    href: "#produkt-showcase",
+    title: "Kostenlos testen",
+    text: "Sieh dir die Produktvorschau an und starte mit einem kostenlosen Demo-Zugang.",
+    cta: "Kostenlos testen",
+    href: "/register",
     tone: "purple",
   },
   {
     icon: "ϟ",
-    title: "Antwort in unter 24 Stunden",
-    text: "Wir antworten schnell – persönlich und auf den Punkt.",
-    cta: "Mehr erfahren",
-    href: "/register",
+    title: "Login für bestehende Teams",
+    text: "Bestehende Nutzer gelangen direkt in ihren FanMind-Workspace.",
+    cta: "Login",
+    href: "/login",
     tone: "green",
   },
 ];
@@ -702,11 +701,11 @@ const pricingPlans = [
   {
     icon: "🚀",
     name: "Pilot / Setup",
-    eyebrow: "Zum Einstieg",
-    audience: "Für Teams, die einen geführten Setup-/Pilotmonat als echten Testmonat möchten.",
+    eyebrow: "Geführter Testmonat",
+    audience: "Für Teams, die FanMind mit einem echten Workflow gemeinsam einrichten und prüfen möchten.",
     pricePrefix: "",
     price: "990 € einmalig · zzgl. USt.",
-    cadence: "1 Testmonat · keine automatische Verlängerung",
+    cadence: "1 Testmonat · kein Abo · keine automatische Verlängerung",
     options: undefined,
     cta: "Pilot anfragen",
     href: "/register?plan=pilot",
@@ -714,100 +713,81 @@ const pricingPlans = [
     featured: false,
     status: "Aktiv",
     features: [
-      "Geführter Setup-/Pilotmonat",
-      "Ziel: echter Testmonat mit begleitetem Setup",
-      "1 Testmonat ohne automatische Verlängerung",
-      "Keine automatische Verlängerung, kein Abo, keine Bindung",
-      "Demo-Workspace, Kontakte/Fans und manuelle Kontakte testen",
-      "CSV-Import minimal, Notizen und Fan-Gedächtnis testen",
-      "Follow-ups, KI-Antwortvorschläge und Fan-Analyse-Report testen",
-      "Kanäle-Roadmap / Coming Soon sichtbar",
-      "Endet, wenn du danach nicht weitermachst",
+      "Begleiteter Setup-/Pilotmonat",
+      "Demo-Workspace mit realistischem MVP-Workflow",
+      "Kontakte/Fans, CSV-Import, Notizen und Memory testen",
+      "Follow-ups und KI-Antwortvorschläge prüfen",
+      "Externe Social-Integrationen klar als Roadmap/Beta markiert",
+      "Endet ohne automatische Verlängerung",
     ],
   },
   {
     icon: "♙",
-    name: "Starter",
-    eyebrow: "",
-    audience: "Für kleine Teams mit einem ersten echten Workspace.",
+    name: "Starter Flex",
+    eyebrow: "Monatlich kündbar",
+    audience: "Für kleine Teams, die produktiv starten und flexibel bleiben möchten.",
     pricePrefix: "",
-    price: "Starter ab 312 €/Monat · zzgl. USt.",
-    cadence: "Zwei Starter-Optionen im Paket",
-    options: [
-      {
-        title: "Starter Flex",
-        price: "990 € Setup + 312 €/Monat · zzgl. USt.",
-        note: "monatlich kündbar",
-        description: "Für Teams, die ohne Laufzeitbindung starten möchten.",
-      },
-      {
-        title: "Starter 12 Monate",
-        price: "0 € Setup + 312 €/Monat · zzgl. USt.",
-        note: "12 Monate Laufzeit",
-        description: "Für Teams, die die Einrichtung ohne Setup-Gebühr starten und sich für 12 Monate binden.",
-      },
-    ],
-    cta: "Starter wählen",
-    href: "/register?plan=starter",
+    price: "990 € Setup + 312 €/Monat · zzgl. USt.",
+    cadence: "monatlich kündbar",
+    options: undefined,
+    cta: "Registrieren",
+    href: "/register?plan=starter-flex",
     tone: "blue",
     featured: false,
     status: "Aktiv",
     features: [
-      "Starter Flex: 990 € Setup + 312 €/Monat · zzgl. USt. · monatlich kündbar",
-      "Starter 12 Monate: 0 € Setup + 312 €/Monat · zzgl. USt. · 12 Monate Laufzeit",
-      "Ein Profil / ein produktiver MVP-Workspace",
-      "Kontakte/Fans, manuelle Kontakte & CSV-Import minimal",
-      "Notizen und Fan-Gedächtnis / Memory",
+      "Ein produktiver MVP-Workspace",
+      "Kontakte/Fans und manuelle Kontaktpflege",
+      "CSV-Import, Notizen und Fan-Gedächtnis / Memory",
       "Follow-ups & Aufgaben inklusive /followups",
       "KI-Antwortvorschläge und Fan-Analyse-Report",
-      "Externe Social-Integrationen nur Roadmap/Preview",
-      "Beide Varianten gehören zum Starter-Paket",
+      "Kein automatischer Versand",
+    ],
+  },
+  {
+    icon: "◎",
+    name: "Starter 12 Monate",
+    eyebrow: "Setup inklusive",
+    audience: "Für Teams, die FanMind langfristiger einführen und die Setup-Gebühr sparen möchten.",
+    pricePrefix: "",
+    price: "0 € Setup + 312 €/Monat · zzgl. USt.",
+    cadence: "12 Monate Laufzeit",
+    options: undefined,
+    cta: "Registrieren",
+    href: "/register?plan=starter-12",
+    tone: "green",
+    featured: true,
+    status: "Aktiv",
+    features: [
+      "Ein produktiver MVP-Workspace",
+      "Setup ohne separate Setup-Gebühr",
+      "Kontakte/Fans, CSV-Import und Memory",
+      "Follow-ups & Aufgaben inklusive /followups",
+      "KI-Antwortvorschläge und Fan-Analyse-Report",
+      "Externe Integrationen nur Beta/Roadmap",
     ],
   },
   {
     icon: "▥",
-    name: "Growth",
+    name: "Growth / Agency",
     eyebrow: "Coming Soon",
-    audience: "Vorschau für wachsende Teams mit mehreren Profilen und mehr Struktur.",
+    audience: "Roadmap für wachsende Teams, Agenturen und mehrere Kunden-Workspaces.",
     pricePrefix: "",
-    price: "Coming Soon",
-    cadence: "Roadmap / Vorschau",
+    price: "Auf Anfrage",
+    cadence: "Coming Soon · nicht produktiv buchbar",
     options: undefined,
-    cta: "Auf Anfrage",
+    cta: "Pilot anfragen",
     href: "#kontakt",
     tone: "blue",
-    featured: true,
-    status: "Vorschau",
-    features: [
-      "Vorschau: mehrere Profile",
-      "Roadmap: mehr Struktur für Teams",
-      "Vorschau: erweiterte Follow-ups",
-      "Roadmap: Basis-Segmente",
-      "Noch nicht produktiv buchbar",
-      "Keine aktiven Features versprochen",
-    ],
-  },
-  {
-    icon: "♧",
-    name: "Agency",
-    eyebrow: "",
-    audience: "Roadmap-Vorschau für Agenturen mit mehreren Kunden und Team-Workflow.",
-    pricePrefix: "",
-    price: "Coming Soon",
-    cadence: "Roadmap / Vorschau",
-    options: undefined,
-    cta: "Auf Anfrage",
-    href: "#kontakt",
-    tone: "purple",
     featured: false,
     status: "Roadmap",
     features: [
-      "Vorschau: mehrere Profile / Kunden",
-      "Roadmap: Team-Workspace",
-      "Vorschau: größere Kontaktmengen",
-      "Roadmap: Workflow-Steuerung",
-      "Noch nicht produktiv buchbar",
-      "Analytics, Rollen & Integrationen als Roadmap / In Kürze",
+      "Mehrere Profile / Kunden als Roadmap",
+      "Team-Workspace und Rollen/Rechte geplant",
+      "Größere Kontaktmengen und Workflows geplant",
+      "Kampagnen und Analytics/Reichweite geplant",
+      "Noch nicht kaufbar dargestellt",
+      "Pilot-Feedback bestimmt den Ausbau",
     ],
   },
 ];
@@ -821,20 +801,20 @@ const pricingProofs = [
   },
   {
     icon: "✈",
-    title: "Sicherheitsgrenze: kein automatisches Senden",
-    text: "FanMind sendet nicht automatisch. Du entscheidest, wann und wie.",
+    title: "Keine automatische Sendefunktion",
+    text: "FanMind bereitet vor. Du entscheidest, kopierst und sendest selbst.",
     tone: "purple",
   },
   {
     icon: "↗",
-    title: "Pilot-Gebühr wird angerechnet",
-    text: "Der Pilot ist vom kostenlosen 1-Stunden-Demo-Zugang getrennt: 990 € einmalig zzgl. USt. für 1 Testmonat, ohne Abo und ohne automatische Verlängerung.",
+    title: "Keine Bankdaten in FanMind",
+    text: "Zahlungen laufen sicher über den Zahlungsanbieter; FanMind speichert keine Bankdaten.",
     tone: "green",
   },
   {
     icon: "◇",
-    title: "DSGVO-konform gedacht",
-    text: "Datenschutz steht im Fokus – Privacy by Design.",
+    title: "KI bleibt Assistenz",
+    text: "Antwortvorschläge sind Hilfen, keine Pflichtantworten und kein Autopilot.",
     tone: "cyan",
   },
   {
@@ -845,8 +825,8 @@ const pricingProofs = [
   },
   {
     icon: "▣",
-    title: "Sicherer KI-Einsatz",
-    text: "Prompts & Daten werden verantwortungsvoll verarbeitet.",
+    title: "Sicherer Zahlungsprozess",
+    text: "Pilot und Starter bleiben transparent mit zzgl. USt. und klaren Laufzeiten.",
     tone: "green",
   },
 ];
@@ -1047,7 +1027,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const params = await searchParams;
   const language = getFanMindLanguage(params?.lang);
   const t = createFanMindTranslator(language);
-  const navCopy = fanmindCopy[language].nav;
   const loginHref = localizedPath("/login", language);
   const registerHref = localizedPath("/register", language);
   const roadmapHref = landingPath(language, "#roadmap");
@@ -1100,7 +1079,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               Login
             </a>
             <a className={styles.accessButton} href={registerHref}>
-              {navCopy.register} <span>→</span>
+              {t("Registrieren")} <span>→</span>
             </a>
           </div>
         </header>
@@ -1111,16 +1090,16 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>NEU</span> {t("Die intelligente Fan-Management Plattform")}
             </a>
             <h1>
-              {t("FanMind ist dein KI-gestütztes")} <span>Fan-CRM für Kontakte, Nachrichten</span> {t("und")}{" "}
-              <span>manuelle Follow-ups.</span>
+              {t("Dein KI-gestütztes")} <span>Fan-CRM für Nachrichten, Erinnerungen</span> {t("und")} {" "}
+              <span>Follow-ups.</span>
             </h1>
-            <p>{t("FanMind bündelt Fan-Kontakte, Nachrichten, Memory, KI-Antwortvorschläge und Follow-ups. Die KI bereitet vor, der Mensch prüft und sendet final selbst – ohne automatische Sendefunktion.")}</p>
+            <p>{t("FanMind bündelt Kontakte, Gesprächskontext und KI-Antwortvorschläge in einem manuellen Workflow. Du prüfst, kopierst und sendest selbst – ohne automatische Sendefunktion.")}</p>
             <div className={styles.heroCtas}>
               <a className={styles.demoButton} href="#produkt-showcase">
                 <span>▶</span> {t("Kostenlos testen")}
               </a>
               <a className={styles.outlineButton} href={registerHref}>
-                <span>♙</span> {t("Zugang anfragen")}
+                <span>♙</span> {t("Pilot anfragen")}
               </a>
             </div>
             <div id="zielgruppen" className={styles.socialProof}>
@@ -1501,7 +1480,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <span>▶</span> {t("Kostenlos testen")}
           </a>
           <a className={styles.outlineButton} href={registerHref}>
-            <span>♙</span> {t("Zugang anfragen")}
+            <span>♙</span> {t("Pilot anfragen")}
           </a>
         </div>
       </section>
@@ -1993,7 +1972,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>▶</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
-              {t("Zugang anfragen")}
+              {t("Pilot anfragen")}
             </a>
           </div>
           <p>
@@ -2127,7 +2106,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>▶</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href={registerHref}>
-              {t("Zugang anfragen")}
+              {t("Pilot anfragen")}
             </a>
           </div>
           <p>
@@ -2177,17 +2156,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <strong>{plan.price}</strong>
                 <small>{plan.cadence}</small>
               </div>
-              {plan.options ? (
-                <div className={styles.pricingOptions}>
-                  {plan.options.map((option) => (
-                    <div className={styles.pricingOption} key={option.title}>
-                      <strong>{option.title}</strong>
-                      <span>{option.price} · {option.note}</span>
-                      <p>{option.description}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
               <ul>
                 {plan.features.map((feature) => (
                   <li key={feature}>{feature}</li>
@@ -2455,7 +2423,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </div>
             <div className={styles.landingFooterSignup} aria-label="Zugangsanfrage">
               <span>{t("E-Mail-Adresse eingeben")}</span>
-              <a href={registerHref}>{t("Zugang anfragen")} <span>→</span></a>
+              <a href={registerHref}>{t("Pilot anfragen")} <span>→</span></a>
               <small>{t("🛡 Persönliche Anfrage statt automatischem Newsletter.")}</small>
             </div>
           </div>

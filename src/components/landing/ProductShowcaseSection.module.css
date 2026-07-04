@@ -486,3 +486,66 @@
 .comingSoon-medium {
   width: 94px;
 }
+
+/* Go-live product preview polish */
+.section {
+  overflow-x: clip;
+}
+
+.artboard {
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(5, 18, 42, 0.9), rgba(3, 11, 26, 0.94));
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.header h2 {
+  text-wrap: balance;
+}
+
+.stage,
+.benefitGrid,
+.featureStrip {
+  min-width: 0;
+}
+
+.card,
+.dashboardShell,
+.benefitGrid article,
+.featureStrip article {
+  border-radius: 20px;
+}
+
+.card button,
+.topbar button,
+.pagination button {
+  min-height: 36px;
+  border-radius: 999px;
+}
+
+.metricRow {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric strong {
+  font-size: clamp(24px, 2vw, 34px);
+}
+
+.tableRow,
+.tableHead {
+  min-width: 760px;
+}
+
+@media (max-width: 900px) {
+  .artboard {
+    border-radius: 22px;
+  }
+
+  .metricRow {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
