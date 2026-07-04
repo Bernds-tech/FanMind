@@ -1124,12 +1124,16 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div
             id="screens"
             className={styles.dashboardWrap}
-            aria-label="FanMind Produktvorschau mit Beispieldaten"
+            aria-label="FanMind Dashboard-Produktvorschau mit Beispieldaten"
           >
             <div className={styles.dashboardShell}>
-              <aside className={styles.sidebar}>
+              <aside className={styles.sidebar} aria-label="Dashboard Navigation">
+                <div className={styles.sidebarPreviewBrand}>
+                  <Logo language={language} />
+                  <small>{t("Produktvorschau")}</small>
+                </div>
                 <div className={styles.sidebarMenu}>
-                  {localizedMenuItems.map((item, index) => (
+                  {localizedMenuItems.slice(0, 6).map((item, index) => (
                     <a
                       className={index === 0 ? styles.activeMenu : ""}
                       href={getLandingMenuHref(item.featureKey, index)}
@@ -1137,15 +1141,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                     >
                       <span>{item.icon}</span>
                       {item.label}
-                      {item.featureKey === "followups" && <b>128</b>}
                     </a>
                   ))}
                 </div>
                 <div className={styles.profileCard}>
-                  <span>ND</span>
+                  <span>FM</span>
                   <div>
-                    <strong>Nina D.</strong>
-                    <small>Team Arena</small>
+                    <strong>FanMind</strong>
+                    <small>{t("Demo-Workspace")}</small>
                   </div>
                   <i>›</i>
                 </div>
@@ -1154,187 +1157,73 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <section className={styles.dashboardMain}>
                 <div className={styles.dashboardTopbar}>
                   <div>
-                    <h2>Demo-Ansicht</h2>
-                    <p>{t("Produktvorschau · Beispieldaten")}</p>
-                    <small>
-                      {t("Beispieldaten · keine Kundenergebnisse")}
-                    </small>
+                    <h2>{t("Dashboard")}</h2>
+                    <p>{t("Kontakte, Nachrichten und Follow-ups im Überblick")}</p>
+                    <small>{t("Produktvorschau · Beispieldaten · keine Kundenergebnisse")}</small>
                   </div>
                   <div className={styles.dashboardControls}>
-                    <span>{t("● Demo-Ansicht")}</span>
-                    <button>{t("Letzte 30 Tage⌄")}</button>
+                    <span>{t("Demo-Ansicht")}</span>
+                    <button type="button">{t("Filter")}</button>
                     <a href="#kontakte">{t("+ Neuer Kontakt")}</a>
                   </div>
                 </div>
 
-                <div className={styles.metricsGrid}>
-                  <MetricCard
-                    label="Gesamtfans"
-                    value="248"
-                    change="Beispieldaten"
-                    color="#0b8cff"
-                  />
-                  <MetricCard
-                    label="Aktive Fans"
-                    value="126"
-                    change="Beispieldaten"
-                    color="#00d86f"
-                  />
-                  <MetricCard
-                    label="Offene Follow-ups"
-                    value="136"
-                    change="12 fällig heute"
-                    color="#cf34ff"
-                  />
-                  <MetricCard
-                    label="Demo-Signal"
-                    value="Demo"
-                    change="keine Kundenergebnisse"
-                    color="#00d86f"
-                  />
+                <div className={styles.dashboardSearchRow}>
+                  <div className={styles.dashboardSearchBox}>{t("Suche nach Name, Tag oder Notiz …")}</div>
+                  <button type="button">{t("Segment")}</button>
+                  <button type="button">{t("Status")}</button>
                 </div>
 
-                <div className={styles.analyticsGrid}>
-                  <div className={styles.chartCard}>
-                    <div className={styles.cardTitle}>
-                      <strong>{t("Produktvorschau")}</strong>
-                      <button>{t("Letzte 30 Tage⌄")}</button>
-                    </div>
-                    <span>{t("Beispieldaten im Demo-Dashboard")}</span>
-                    <div className={styles.lineChart}>
-                      <svg viewBox="0 0 430 170" aria-hidden="true">
-                        <defs>
-                          <linearGradient
-                            id="blueFill"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0"
-                              stopColor="#0c8cff"
-                              stopOpacity="0.34"
-                            />
-                            <stop
-                              offset="1"
-                              stopColor="#0c8cff"
-                              stopOpacity="0"
-                            />
-                          </linearGradient>
-                        </defs>
-                        {[32, 64, 96, 128].map((y) => (
-                          <line key={y} x1="0" x2="430" y1={y} y2={y} />
-                        ))}
-                        {[70, 170, 270, 370].map((x) => (
-                          <line key={x} y1="16" y2="164" x1={x} x2={x} />
-                        ))}
-                        <path
-                          d="M16 126 C70 102 100 100 144 88 S236 54 285 52 S358 35 414 24 L414 164 L16 164 Z"
-                          fill="url(#blueFill)"
-                        />
-                        <path
-                          d="M16 126 C70 102 100 100 144 88 S236 54 285 52 S358 35 414 24"
-                          className={styles.blueLine}
-                        />
-                        <path
-                          d="M16 154 C82 142 116 138 153 139 S232 130 284 112 S360 96 414 82"
-                          className={styles.greenLine}
-                        />
-                        <circle cx="285" cy="52" r="6" />
-                        <circle
-                          cx="284"
-                          cy="112"
-                          r="6"
-                          className={styles.greenDot}
-                        />
-                      </svg>
-                      <div className={styles.tooltip}>
-                        13. Mai 2025
-                        <br />
-                        Beispieldaten: 248 Kontakte
-                        <br />
-                        Aktive Beispiele: 126
-                      </div>
-                      <div className={styles.legend}>
-                        <span /> {t("Gesamtfans")} <i /> {t("Aktive Fans")}
-                      </div>
-                    </div>
-                  </div>
+                <div className={styles.metricsGrid}>
+                  <MetricCard label="Gesamtfans" value="248" change="Beispieldaten" color="#0b8cff" />
+                  <MetricCard label="Aktive Kontakte" value="126" change="Beispieldaten" color="#00d86f" />
+                  <MetricCard label="Offene Follow-ups" value="12" change="manuell prüfen" color="#8b43ff" />
+                  <MetricCard label="Neue Nachrichten" value="8" change="Entwürfe vorbereiten" color="#00c9ff" />
+                </div>
 
-                  <div className={styles.channelCard}>
-                    <strong>{t("Interaktionen nach Kanal")}</strong>
-                    <span>{t("Interaktionen pro Kanal")}</span>
-                    {[
-                      "E-Mail",
-                      "Formular",
-                      "Chat-Notiz",
-                      "CSV-Import",
-                      "Beispieldaten",
-                      "Roadmap",
-                    ].map((channel, index) => (
-                      <div className={styles.channelRow} key={channel}>
-                        <b>{channel}</b>
-                        <div>
-                          <span style={{ width: `${36 + index * 3}%` }} />
-                          <i style={{ width: `${25 - index}%` }} />
-                          <em style={{ width: `${20 + index}%` }} />
-                          <small />
-                        </div>
+                <div className={styles.dashboardPreviewGrid}>
+                  <section className={styles.previewPanel} aria-label="Neue Nachrichten">
+                    <div className={styles.previewPanelHeader}>
+                      <div>
+                        <strong>{t("Neue Nachrichten")}</strong>
+                        <span>{t("Beispieldaten für den manuellen Workflow")}</span>
                       </div>
+                      <button type="button">{t("Alle ansehen")}</button>
+                    </div>
+                    {[
+                      ["Mia R.", "VIP", "Frage zum Early-Bird Zugang", "KI-Entwurf vorbereiten"],
+                      ["Alex K.", "Event", "Rückfrage zu zwei Tickets", "Antwort manuell prüfen"],
+                      ["Sandra M.", "Partner", "Notiz zum nächsten Follow-up", "Kontakt öffnen"],
+                    ].map(([name, tag, message, action]) => (
+                      <article className={styles.messagePreviewRow} key={name}>
+                        <div className={styles.messageAvatar}>{name.slice(0, 1)}</div>
+                        <div>
+                          <strong>{name}</strong>
+                          <p>{t(message)}</p>
+                        </div>
+                        <span>{tag}</span>
+                        <small>{t(action)}</small>
+                      </article>
                     ))}
-                    <div className={styles.percentScale}>
-                      0% <span>20%</span>
-                      <span>40%</span>
-                      <span>60%</span>
-                      <span>80%</span>
-                      <span>100%</span>
+                  </section>
+
+                  <section className={styles.previewPanel} aria-label="Dashboard Aufgaben">
+                    <div className={styles.previewPanelHeader}>
+                      <div>
+                        <strong>{t("Heute im Blick")}</strong>
+                        <span>{t("Kontakte und Follow-ups bleiben manuell steuerbar")}</span>
+                      </div>
                     </div>
-                    <div className={styles.channelLegend}>
-                      {t("Nachrichten · Replies · Klicks · Sonstige")}
+                    <div className={styles.taskPreviewList}>
+                      <div><span />{t("Neue Kontakte sichten")}</div>
+                      <div><span />{t("Antwortvorschläge prüfen")}</div>
+                      <div><span />{t("Follow-ups priorisieren")}</div>
+                      <div><span />{t("CSV-Import vorbereiten")}</div>
                     </div>
-                  </div>
+                  </section>
                 </div>
               </section>
             </div>
-
-            <aside className={styles.floatingPanel}>
-              <div className={styles.scoreCard}>
-                <span>♡</span>
-                <small>Fan Score</small>
-                <strong>92 ◆</strong>
-                <p>{t("Sehr starkes Potenzial")}</p>
-              </div>
-              <div className={styles.nextAction}>
-                <b>{t("✦ Nächste beste Aktion")}</b>
-                <div>
-                  VIP-Infos +<br />
-                  {t("Friend-Ticket vorbereiten")}
-                </div>
-                <span>{t("→ Hohe Priorität")}</span>
-              </div>
-              <div className={styles.conversionCard}>
-                <span>{t("Roadmap-Ausblick")}</span>
-                <strong>{t("In Kürze")}</strong>
-                <small>{t("keine Vollsuite aktuell")}</small>
-                <svg viewBox="0 0 230 70" aria-hidden="true">
-                  <path d="M4 56 C28 58 34 42 49 45 S76 43 85 38 S108 44 120 30 S141 35 151 22 S176 31 184 15 S206 20 226 7" />
-                </svg>
-              </div>
-              <div className={styles.miniStats}>
-                <div>
-                  <span>{t("Demo-Quote")}</span>
-                  <strong>Demo</strong>
-                  <small>Beispieldaten</small>
-                </div>
-                <div>
-                  <span>{t("Follow-up Quote")}</span>
-                  <strong>Demo</strong>
-                  <small>Beispieldaten</small>
-                </div>
-              </div>
-              <a href="#produkt-showcase">{t("und viele mehr")}</a>
-            </aside>
           </div>
         </section>
 
