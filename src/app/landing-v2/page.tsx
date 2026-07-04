@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
 };
 
-const LANDING_ROADMAP_HREF = "/landing-v2#roadmap";
+const LANDING_ROADMAP_HREF = "#roadmap";
 
 function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | undefined {
   if (!status) return undefined;
@@ -31,19 +31,18 @@ function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | un
 const comingSoonIntegrationPlatforms = new Set(["email", "discord", "whatsapp", "tiktok", "instagram", "x", "facebook"]);
 
 const navItems = [
-  { label: "Produkt", href: "#produkt-showcase", caret: true },
-  { label: "Workflow", href: "#conversion", caret: true },
+  { label: "Produkt", href: "#produkt-showcase" },
+  { label: "Workflow", href: "#conversion" },
   { label: "MVP", href: "#features" },
-  { label: "Integrationen", href: "#integrationen" },
   { label: "Preise", href: "#preise" },
-  { label: "Roadmap", href: LANDING_ROADMAP_HREF, caret: true },
+  { label: "Roadmap", href: LANDING_ROADMAP_HREF },
   { label: "Kontakt", href: "#kontakt" },
 ];
 
-const pilotSignals = [
-  "Pilotphase startet",
-  "Erste Workflows werden gemeinsam validiert",
-  "Keine erfundenen Kundenlogos oder Testimonials",
+const heroTrustSignals = [
+  "Keine Kreditkarte für Demo erforderlich",
+  "Keine automatische Sendefunktion",
+  "Mensch prüft und sendet final selbst",
 ];
 
 const features = [
@@ -1030,7 +1029,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const loginHref = localizedPath("/login", language);
   const registerHref = localizedPath("/register", language);
   const roadmapHref = landingPath(language, "#roadmap");
-  const switchBase = "/landing-v2";
+  const switchBase = "/";
   const localizedNavItems = navItems.map((item) => ({ ...item, label: t(item.label), href: item.href === LANDING_ROADMAP_HREF ? roadmapHref : item.href }));
   const localizedFeatures = localizeFanMindValue(features, t);
   const localizedProblemCards = localizeFanMindValue(problemCards, t);
@@ -1065,7 +1064,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             {localizedNavItems.map((item) => (
               <a key={item.label} href={item.href}>
                 {item.label}
-                {item.caret && <span>⌄</span>}
               </a>
             ))}
           </nav>
@@ -1095,7 +1093,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </h1>
             <p>{t("FanMind bündelt Kontakte, Gesprächskontext und KI-Antwortvorschläge in einem manuellen Workflow. Du prüfst, kopierst und sendest selbst – ohne automatische Sendefunktion.")}</p>
             <div className={styles.heroCtas}>
-              <a className={styles.demoButton} href="#produkt-showcase">
+              <a className={styles.demoButton} href={registerHref}>
                 <span>▶</span> {t("Kostenlos testen")}
               </a>
               <a className={styles.outlineButton} href={registerHref}>
@@ -1108,13 +1106,13 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <p>{t("Wir nehmen erste Pilotkunden auf und entwickeln FanMind gemeinsam mit echten Workflows weiter.")}</p>
               </div>
               <div className={styles.referenceDetails}>
-                {pilotSignals.map((signal) => (
+                {heroTrustSignals.map((signal) => (
                   <div key={signal} className={styles.referenceStatusCard}>
                     <div>
-                      <span>{t("Status")}</span>
+                      <span>✓</span>
                       <strong>{t(signal)}</strong>
                     </div>
-                    <p>{t("Ehrlicher Pilot-Hinweis statt Social Proof: keine Fake-Referenzen, keine erfundenen Logos, keine ungeprüften Kundenergebnisse.")}</p>
+                    <p>{t("Vertrauensmerkmal für den MVP: bewusst manuell, transparent und ohne ungeprüfte Automatisierung.")}</p>
                   </div>
                 ))}
               </div>

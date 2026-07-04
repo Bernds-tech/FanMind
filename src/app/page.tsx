@@ -1,5 +1,2 @@
-import { redirect } from "next/navigation";
-
-export default function Home() {
-  redirect("/landing-v2");
-}
+export { metadata } from "./landing-v2/page";
+export { default } from "./landing-v2/page";
