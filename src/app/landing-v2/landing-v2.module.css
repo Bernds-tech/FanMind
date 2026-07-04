@@ -9543,3 +9543,355 @@
     width: fit-content;
   }
 }
+
+/* Issue #386: real CRM dashboard-style hero preview. */
+.dashboardShell {
+  grid-template-columns: 190px 1fr;
+  width: min(100%, 860px);
+  min-height: 520px;
+  background: #f5f7fb;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  color: #0f172a;
+  box-shadow: 0 26px 80px rgba(3, 10, 28, 0.36), 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+  padding: 16px 14px;
+  border-right: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.sidebarPreviewBrand {
+  gap: 4px;
+  padding: 0 0 8px;
+}
+
+.sidebarPreviewBrand small,
+.sidebarSection span,
+.savedViews span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebarMenu {
+  gap: 4px;
+  margin-top: 0;
+}
+
+.sidebarMenu a,
+.savedViews a {
+  color: #334155;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sidebarMenu a {
+  min-height: 29px;
+  padding: 0 9px;
+  border-radius: 10px;
+}
+
+.sidebarMenu a span {
+  color: #64748b;
+}
+
+.activeMenu {
+  background: #eef6ff !important;
+  color: #0758c7 !important;
+}
+
+.sidebarSection,
+.savedViews,
+.profileCard,
+.planCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.sidebarSection {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+}
+
+.sidebarSection strong,
+.planCard strong {
+  color: #0f172a;
+  font-size: 12px;
+}
+
+.sidebarSection small,
+.planCard small {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.savedViews {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+}
+
+.savedViews a {
+  display: block;
+  padding: 6px 7px;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.sidebarBottomCards {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.profileCard {
+  position: static;
+  grid-template-columns: 30px 1fr;
+  gap: 8px;
+  min-height: 0;
+  padding: 8px;
+}
+
+.profileCard > span {
+  width: 30px;
+  height: 30px;
+  background: #dbeafe;
+  color: #0758c7;
+  font-size: 11px;
+}
+
+.profileCard strong {
+  color: #0f172a;
+  font-size: 11px;
+}
+
+.profileCard small {
+  color: #64748b;
+  font-size: 9px;
+}
+
+.planCard {
+  padding: 9px 10px;
+  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+}
+
+.dashboardMain {
+  padding: 22px;
+  background: #f5f7fb;
+}
+
+.dashboardTopbar h2 {
+  color: #0f172a;
+  font-size: 26px;
+}
+
+.dashboardTopbar p {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.dashboardControls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.dashboardControls button,
+.dashboardControls a,
+.dashboardSearchBox {
+  border: 1px solid #dbe4f0;
+  background: #fff;
+  color: #334155;
+}
+
+.dashboardControls button,
+.dashboardControls a {
+  height: 32px;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.dashboardControls a {
+  border-color: #0b7bff;
+  background: linear-gradient(90deg, #0758e8, #0b8cff);
+  color: #fff;
+}
+
+.dashboardSearchRow {
+  grid-template-columns: 1fr;
+  margin-top: 16px;
+}
+
+.dashboardSearchBox {
+  min-height: 38px;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.metricsGrid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.metricCard {
+  display: block;
+  min-height: 82px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.metricIcon {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 7px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  font-size: 13px;
+}
+
+.metricCard span,
+.metricCard small {
+  color: #64748b;
+  font-size: 9px;
+}
+
+.metricCard strong {
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.inboxPanel {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.previewPanelHeader strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.previewPanelHeader span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.messagePreviewRow {
+  grid-template-columns: 32px minmax(0, 1fr) auto auto auto auto;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 0;
+}
+
+.messageAvatar {
+  background: #eef6ff;
+  color: #0758c7;
+}
+
+.messagePreviewRow strong {
+  color: #0f172a;
+  font-size: 12px;
+}
+
+.messagePreviewRow p,
+.messagePreviewRow small,
+.messagePreviewRow em {
+  color: #64748b;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.messagePreviewRow > span {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.messagePreviewRow small {
+  grid-column: auto;
+  font-weight: 700;
+}
+
+.messagePreviewRow button {
+  min-height: 28px;
+  border: 1px solid #dbe4f0;
+  border-radius: 10px;
+  padding: 0 10px;
+  background: #fff;
+  color: #0758c7;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.safetyStrip {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #0758c7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+@media (max-width: 980px) {
+  .dashboardShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboardMain {
+    padding: 16px;
+  }
+
+  .dashboardTopbar,
+  .dashboardControls {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .messagePreviewRow {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+
+  .messagePreviewRow small,
+  .messagePreviewRow em,
+  .messagePreviewRow button {
+    grid-column: 2 / 4;
+    width: fit-content;
+  }
+}
