@@ -1058,29 +1058,31 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
     <main id="top" className={styles.page}>
       <div className={styles.backgroundGlow} aria-hidden="true" />
       <section className={styles.heroSection} aria-label="Startbereich FanMind">
-        <header className={styles.header}>
-          <Logo language={language} />
-          <nav className={styles.nav} aria-label="Hauptnavigation">
-            {localizedNavItems.map((item) => (
-              <a key={item.label} href={item.href}>
-                {item.label}
+        <div className={styles.fixedHeaderShell}>
+          <header className={styles.header}>
+            <Logo language={language} />
+            <nav className={styles.nav} aria-label="Hauptnavigation">
+              {localizedNavItems.map((item) => (
+                <a key={item.label} href={item.href}>
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+            <div className={styles.headerActions}>
+              <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
+                <a className={language === "de" ? styles.languageActive : undefined} href={switchBase} aria-current={language === "de" ? "true" : undefined}>DE</a>
+                <span>|</span>
+                <a className={language === "en" ? styles.languageActive : undefined} href={`${switchBase}?lang=en`} aria-current={language === "en" ? "true" : undefined}>EN</a>
+              </div>
+              <a className={styles.loginButton} href={loginHref}>
+                Login
               </a>
-            ))}
-          </nav>
-          <div className={styles.headerActions}>
-            <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
-              <a className={language === "de" ? styles.languageActive : undefined} href={switchBase} aria-current={language === "de" ? "true" : undefined}>DE</a>
-              <span>|</span>
-              <a className={language === "en" ? styles.languageActive : undefined} href={`${switchBase}?lang=en`} aria-current={language === "en" ? "true" : undefined}>EN</a>
+              <a className={styles.accessButton} href={registerHref}>
+                {t("Registrieren")} <span>→</span>
+              </a>
             </div>
-            <a className={styles.loginButton} href={loginHref}>
-              Login
-            </a>
-            <a className={styles.accessButton} href={registerHref}>
-              {t("Registrieren")} <span>→</span>
-            </a>
-          </div>
-        </header>
+          </header>
+        </div>
 
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
