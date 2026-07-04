@@ -696,6 +696,7 @@
 
 .featureStrip {
   width: min(1360px, calc(100% - 64px));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   height: 148px;
   margin-top: 30px;
 }
