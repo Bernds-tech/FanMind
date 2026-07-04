@@ -38,6 +38,20 @@ jobs:
           pm2 save
 
           sudo nginx -t
-          curl -fsSI https://fanmind.ch/login >/dev/null
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsSI https://fanmind.ch/login >/dev/null; then
+              echo "Health check passed."
+              break
+            fi
+
+            if [ "$attempt" = "10" ]; then
+              echo "Health check failed after 10 attempts."
+              curl -I https://fanmind.ch/login || true
+              exit 1
+            fi
+
+            echo "Health check not ready yet, retrying..."
+            sleep 3
+          done
 
           echo "FanMind deployment finished successfully."
