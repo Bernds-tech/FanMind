@@ -6,37 +6,38 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: fanmind-production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    name: Deploy to FanMind server
-    runs-on: ubuntu-latest
+    name: Deploy to Exoscale production
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
 
     steps:
-      - name: Prepare SSH
-        env:
-          SSH_HOST: ${{ secrets.FANMIND_SSH_HOST }}
-          SSH_PORT: ${{ secrets.FANMIND_SSH_PORT }}
-          SSH_KEY: ${{ secrets.FANMIND_SSH_KEY }}
+      - name: Deploy on fanmind-prod-01
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/fanmind_deploy_key
-          chmod 600 ~/.ssh/fanmind_deploy_key
-          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Deploy on server
-        env:
-          SSH_HOST: ${{ secrets.FANMIND_SSH_HOST }}
-          SSH_PORT: ${{ secrets.FANMIND_SSH_PORT }}
-          SSH_USER: ${{ secrets.FANMIND_SSH_USER }}
-        run: |
-          set -euo pipefail
-          ssh -i ~/.ssh/fanmind_deploy_key -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" << 'EOF_SERVER'
-            set -euo pipefail
-            cd /srv/www/fanmind
-            git pull --ff-only
-            npm ci --no-audit --no-fund
-            npm run build
-            systemctl restart fanmind
-            systemctl status fanmind --no-pager
-          EOF_SERVER
+          cd /var/www/fanmind
+
+          echo "Deploying FanMind from origin/main on Exoscale..."
+          git fetch --prune origin main
+          git reset --hard origin/main
+
+          npm ci --no-audit --no-fund
+          npm run build
+
+          pm2 restart fanmind --update-env
+          pm2 save
+
+          sudo nginx -t
+          curl -fsSI https://fanmind.ch/login >/dev/null
+
+          echo "FanMind deployment finished successfully."
