@@ -9895,3 +9895,63 @@
     width: fit-content;
   }
 }
+
+/* Issue #388: use the repository dashboard screenshot as the right hero preview. */
+.dashboardWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: min(100%, 920px);
+  margin: 0 0 0 auto;
+  padding: clamp(8px, 1vw, 14px);
+  border: 1px solid rgba(76, 135, 255, 0.5);
+  border-radius: clamp(20px, 2.2vw, 34px);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(76, 135, 255, 0.04)),
+    rgba(2, 10, 25, 0.7);
+  box-shadow:
+    0 30px 95px rgba(0, 0, 0, 0.4),
+    0 0 78px rgba(25, 112, 255, 0.34),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.dashboardWrap::before {
+  content: "";
+  position: absolute;
+  inset: -22% -12% auto;
+  height: 55%;
+  background: radial-gradient(ellipse at center, rgba(45, 154, 255, 0.32), transparent 68%);
+  pointer-events: none;
+}
+
+.dashboardImage {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: clamp(14px, 1.6vw, 24px);
+  object-fit: cover;
+  box-shadow: 0 18px 54px rgba(1, 8, 22, 0.34);
+}
+
+@media (max-width: 980px) {
+  .dashboardWrap {
+    width: min(100%, 820px);
+    margin: 28px auto 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboardWrap {
+    padding: 6px;
+    border-radius: 18px;
+  }
+
+  .dashboardImage {
+    border-radius: 13px;
+  }
+}

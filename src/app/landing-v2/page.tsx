@@ -1121,118 +1121,21 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </div>
           </div>
 
-          <div
+          <figure
             id="screens"
             className={styles.dashboardWrap}
-            aria-label="FanMind Dashboard-Produktvorschau mit Beispieldaten"
+            aria-label="FanMind Dashboard-Produktvorschau"
           >
-            <div className={styles.dashboardShell}>
-              <aside className={styles.sidebar} aria-label="Dashboard Navigation">
-                <div className={styles.sidebarPreviewBrand}>
-                  <Logo language={language} />
-                  <small>{t("Multi-Channel CRM")}</small>
-                </div>
-
-                <nav className={styles.sidebarMenu} aria-label="Produktvorschau Navigation">
-                  {localizedMenuItems.slice(0, 6).map((item, index) => (
-                    <a
-                      className={index === 0 ? styles.activeMenu : ""}
-                      href={getLandingMenuHref(item.featureKey, index)}
-                      key={item.label}
-                    >
-                      <span>{item.icon}</span>
-                      {item.label}
-                    </a>
-                  ))}
-                </nav>
-
-                <div className={styles.sidebarSection}>
-                  <span>{t("Workspace")}</span>
-                  <strong>FanMind Studio</strong>
-                  <small>{t("Beispielworkspace")}</small>
-                </div>
-
-                <div className={styles.savedViews}>
-                  <span>{t("Gespeicherte Ansichten")}</span>
-                  <a href="#kontakte">{t("Neue Nachrichten")}</a>
-                  <a href="#follow-ups">{t("Follow-ups heute")}</a>
-                  <a href="#ki">{t("KI-Entwürfe prüfen")}</a>
-                </div>
-
-                <div className={styles.sidebarBottomCards}>
-                  <div className={styles.profileCard}>
-                    <span>FM</span>
-                    <div>
-                      <strong>FanMind Team</strong>
-                      <small>{t("Mensch prüft final")}</small>
-                    </div>
-                  </div>
-                  <div className={styles.planCard}>
-                    <strong>{t("Starter")}</strong>
-                    <small>312 €/Monat</small>
-                  </div>
-                </div>
-              </aside>
-
-              <section className={styles.dashboardMain}>
-                <div className={styles.dashboardTopbar}>
-                  <div>
-                    <h2>{t("Dashboard")}</h2>
-                    <p>{t("Kontakte, Nachrichten und Follow-ups im Überblick")}</p>
-                  </div>
-                  <div className={styles.dashboardControls}>
-                    <button type="button">{t("Letzte 30 Tage")}</button>
-                    <button type="button">{t("Filter")}</button>
-                    <a href="#kontakte">{t("+ Neuer Kontakt")}</a>
-                  </div>
-                </div>
-
-                <div className={styles.dashboardSearchRow}>
-                  <div className={styles.dashboardSearchBox}>{t("Suche nach Name, Tag oder Notiz …")}</div>
-                </div>
-
-                <div className={styles.metricsGrid} aria-label="Dashboard KPI-Leiste mit Beispieldaten">
-                  <MetricCard label={t("Kontakte")} value="248" change={t("Beispieldaten")} color="#0b8cff" />
-                  <MetricCard label={t("Neue Nachrichten")} value="8" change={t("manuell öffnen")} color="#00c9ff" />
-                  <MetricCard label={t("Offene Follow-ups")} value="12" change={t("bewusst prüfen")} color="#8b43ff" />
-                  <MetricCard label={t("Gespeicherte Notizen")} value="64" change={t("CRM-Memory")} color="#00e178" />
-                  <MetricCard label={t("KI-Entwürfe")} value="5" change={t("Vorschläge")} color="#ffaf19" />
-                  <MetricCard label={t("Roadmap-Kanäle")} value="4" change={t("Coming Soon")} color="#c538ff" />
-                </div>
-
-                <section className={styles.inboxPanel} aria-label="Neue Nachrichten">
-                  <div className={styles.previewPanelHeader}>
-                    <div>
-                      <strong>{t("Neue Nachrichten")}</strong>
-                      <span>{t("Arbeits-Eingang mit Beispielzeilen für den manuellen CRM-Workflow")}</span>
-                    </div>
-                  </div>
-                  {[
-                    ["Mia R.", "VIP", "Frage zum Early-Bird Zugang", "Instagram · Roadmap", "09:42"],
-                    ["Alex K.", "Event", "Rückfrage zu zwei Tickets", "E-Mail", "10:08"],
-                    ["Sandra M.", "Partner", "Notiz zum nächsten Follow-up", "Kontaktformular", "11:15"],
-                    ["Jonas P.", "Club", "Interesse am Testzugang", "WhatsApp · Roadmap", "12:04"],
-                  ].map(([name, tag, message, channel, time]) => (
-                    <article className={styles.messagePreviewRow} key={name}>
-                      <div className={styles.messageAvatar}>{name.slice(0, 1)}</div>
-                      <div>
-                        <strong>{name}</strong>
-                        <p>{t(message)}</p>
-                      </div>
-                      <span>{tag}</span>
-                      <small>{channel}</small>
-                      <em>{time}</em>
-                      <button type="button">{t("Öffnen")}</button>
-                    </article>
-                  ))}
-                </section>
-
-                <div className={styles.safetyStrip}>
-                  {t("Keine automatische Sendefunktion. Mensch prüft und sendet final selbst.")}
-                </div>
-              </section>
-            </div>
-          </div>
+            <Image
+              className={styles.dashboardImage}
+              src="/assets/Landingpage-dashboard.png"
+              alt={t("FanMind Dashboard mit Kontaktübersicht, Kennzahlen und KI-gestütztem CRM-Workflow")}
+              width={2245}
+              height={1231}
+              priority
+              sizes="(max-width: 980px) 100vw, 48vw"
+            />
+          </figure>
         </section>
 
         <section
