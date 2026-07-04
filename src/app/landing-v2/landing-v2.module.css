@@ -8912,7 +8912,7 @@
   gap: clamp(22px, 3vw, 48px);
   align-items: start;
   min-height: 0;
-  padding: clamp(24px, 3.4vw, 46px) 0 16px;
+  padding: clamp(8px, 1.1vw, 16px) 0 16px;
 }
 
 .heroCopy {
@@ -9070,7 +9070,7 @@
 @media (max-width: 1280px) {
   .hero {
     grid-template-columns: 1fr;
-    padding-top: 30px;
+    padding-top: 12px;
   }
 
   .dashboardWrap {
@@ -9084,7 +9084,7 @@
 
 @media (max-width: 720px) {
   .hero {
-    padding-top: 28px;
+    padding-top: 10px;
   }
 
   .hero h1 {
@@ -9160,6 +9160,11 @@
 
 .logo {
   min-height: 36px;
+}
+
+.fixedHeaderShell .logo {
+  justify-content: center;
+  transform: translateY(3px);
 }
 
 .logoMark {
