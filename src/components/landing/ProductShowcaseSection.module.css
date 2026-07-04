@@ -581,3 +581,80 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Product screenshot replacement for the former JSX dashboard mockup */
+.stage {
+  display: block;
+  width: min(1260px, calc(100% - 56px));
+  height: auto;
+  margin-top: 26px;
+}
+
+.showcaseImageFrame {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  padding: 10px;
+  border: 1px solid rgba(123, 190, 255, 0.32);
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)) padding-box,
+    linear-gradient(135deg, rgba(0, 201, 255, 0.45), rgba(155, 85, 255, 0.35)) border-box;
+  box-shadow:
+    0 30px 88px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(255, 255, 255, 0.045) inset,
+    0 0 70px rgba(11, 140, 255, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.showcaseImageFrame::before {
+  position: absolute;
+  inset: 10px 10px auto;
+  z-index: 1;
+  height: 34%;
+  border-radius: 22px 22px 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent);
+  content: "";
+  pointer-events: none;
+}
+
+.showcaseImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 22px;
+  object-fit: cover;
+}
+
+@media (max-width: 1180px) {
+  .stage {
+    width: min(100% - 32px, 960px);
+  }
+
+  .showcaseImageFrame {
+    padding: 8px;
+    border-radius: 24px;
+  }
+
+  .showcaseImage,
+  .showcaseImageFrame::before {
+    border-radius: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .stage {
+    width: calc(100% - 22px);
+    margin-top: 20px;
+  }
+
+  .showcaseImageFrame {
+    padding: 5px;
+    border-radius: 18px;
+  }
+
+  .showcaseImage,
+  .showcaseImageFrame::before {
+    border-radius: 14px;
+  }
+}
