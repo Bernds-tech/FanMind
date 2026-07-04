@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import type { FeatureKey } from "@/config/plans";
 import FeatureStatusLabel from "@/components/FeatureStatusLabel";
 import { shouldShowFeature } from "@/lib/plans";
-import { createFanMindTranslator, type FanMindLanguage, landingPath, localizeFanMindValue } from "@/lib/fanmindCopy";
+import { createFanMindTranslator, type FanMindLanguage, localizeFanMindValue } from "@/lib/fanmindCopy";
 import styles from "./ProductShowcaseSection.module.css";
 
 const navItems: Array<{ icon: string; label: string; featureKey: FeatureKey }> = [
@@ -39,7 +39,7 @@ const contacts = [
 
 const benefits = [
   ["♙", "Persönlicher Fan-Kontext", "Interaktionen, Tags und Notizen bleiben sichtbar, bevor dein Team antwortet."],
-  ["☆", "Nächste beste Aktion", "Priorisierte Aufgaben zeigen, welcher geprüfte Schritt jetzt Wirkung hat."],
+  ["☆", "Geprüfte Aufgaben", "Priorisierte Aufgaben zeigen, welcher manuelle Schritt als Nächstes geprüft werden sollte."],
   ["▤", "CSV-Import & Notizen", "Bestehende Kontakte können in den MVP-Workflow übernommen und ergänzt werden."],
   ["↗", "Geprüfte nächste Schritte", "Follow-ups und vorbereitete Entwürfe bleiben transparent nachvollziehbar."],
 ];
@@ -81,7 +81,6 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
   const localizedBenefits = localizeFanMindValue(benefits, t);
   const localizedFeatureCards = localizeFanMindValue(featureCards, t);
   const segmentChips = localizeFanMindValue(["Alle", "VIP 18", "Warm 52", "Buyer 42", "Inactive 36", "Do not push 6", "Heute fällig 12"], t);
-  const followupItems = localizeFanMindValue(["Sandra M. · 10:00 · Hoch", "Lukas S. · 11:00 · Mittel", "Ella L. · überfällig", "Tara J. · Freitag"], t);
 
   return (
     <section id="produkt-showcase" className={styles.section} aria-labelledby="product-showcase-title">
@@ -121,7 +120,7 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
             </article>
           </aside>
 
-          <div className={styles.centerColumn}>
+          <div id="follow-ups" className={styles.centerColumn}>
             <div className={styles.dashboardShell} aria-label="FanMind Kontakte-Dashboard mit Beispieldaten">
               <aside className={styles.sidebar}>
                 <div className={styles.brand}><b>FanMind</b></div>
@@ -149,28 +148,6 @@ export default function ProductShowcaseSection({ language = "de" }: { language?:
 
             <div className={styles.benefitGrid}>{localizedBenefits.map(([icon, title, text]) => <article key={title}><span>{icon}</span><div><h3>{title}</h3><p>{text}</p></div></article>)}</div>
           </div>
-
-          <aside className={styles.rightColumn} aria-label="Follow-ups, Segmente und Roadmap">
-            <article id="follow-ups" className={`${styles.card} ${styles.followupCard}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>☑</span><strong>{t("Follow-ups")}</strong><em>{t("Heute")}</em></div>
-              {followupItems.map((item) => <div className={styles.followupRow} key={item}><span />{item}</div>)}
-            </article>
-
-            <article className={`${styles.card} ${styles.segmentCard} ${styles.cardWithComingSoon}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>◌</span><strong>{t("Segmente")}</strong><FeatureStatusLabel variant="preview">{t("Vorschau")}</FeatureStatusLabel></div>
-              <div className={styles.donutWrap}><div className={styles.donut}><span>248<small>{t("Demo")}</small></span></div><div className={styles.segmentLegend}><span><i />VIP 18</span><span><i />Warm 52</span><span><i />Buyer 42</span><span><i />Inactive 36</span></div></div>
-              <ComingSoonImage size="medium" />
-            </article>
-
-            <article className={`${styles.card} ${styles.analyticsCard} ${styles.cardWithComingSoon}`}>
-              <div className={styles.cardTop}><span className={styles.iconBubble}>⌁</span><strong>{t("Analytics")}</strong><FeatureStatusLabel variant="roadmap">{t("Roadmap")}</FeatureStatusLabel></div>
-              <div className={styles.analyticsTooltip}>{t("Roadmap · keine Vollsuite aktuell")}</div>
-              <SparkLine tone="purple" />
-              <div className={styles.analyticsLegend}><span><i />{t("Demo-Signal")}</span><span><i />{t("Antwortquote")}</span></div>
-              <a href={landingPath(language, "#roadmap")}>{t("Roadmap anzeigen →")}</a>
-              <ComingSoonImage size="medium" />
-            </article>
-          </aside>
         </div>
 
         <div className={styles.featureStrip}>{localizedFeatureCards.map(([icon, title, text]) => {

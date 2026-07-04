@@ -9272,3 +9272,71 @@
     font-size: 11px;
   }
 }
+
+/* Final header/anchor cleanup for production landing page */
+.page :where(section[id], div[id], main[id]) {
+  scroll-margin-top: 132px;
+}
+
+.fixedHeaderShell {
+  z-index: 10000;
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+.fixedHeaderShell .header,
+.header {
+  align-items: center;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.heroSection,
+.problemSolutionSection,
+.productShowcaseSection,
+.sixStepsSection,
+.siteFooter,
+.dashboardWrap,
+.dashboardShell {
+  z-index: 1;
+}
+
+.referenceDetails {
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  align-items: stretch;
+}
+
+.referenceStatusCard {
+  overflow-wrap: anywhere;
+}
+
+.referenceStatusCard div {
+  align-items: center;
+}
+
+.referenceStatusCard strong {
+  hyphens: auto;
+}
+
+@media (max-width: 720px) {
+  .page :where(section[id], div[id], main[id]) {
+    scroll-margin-top: 124px;
+  }
+
+  .referenceDetails {
+    grid-template-columns: 1fr;
+  }
+}
+
+.anchorTarget {
+  position: relative;
+  display: block;
+  width: 1px;
+  height: 1px;
+  scroll-margin-top: 132px;
+  pointer-events: none;
+}
