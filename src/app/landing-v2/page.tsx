@@ -1088,14 +1088,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>Follow-ups.</span>
             </h1>
             <p>{t("FanMind bündelt Kontakte, Gesprächskontext und KI-Antwortvorschläge in einem manuellen Workflow. Du prüfst, kopierst und sendest selbst – ohne automatische Sendefunktion.")}</p>
-            <div className={styles.heroCtas}>
-              <a className={styles.demoButton} href={loginHref}>
-                <span>▶</span> {t("Kostenlos testen")}
-              </a>
-              <a className={styles.outlineButton} href="#kontakt">
-                <span>♙</span> {t("Pilot anfragen")}
-              </a>
-            </div>
           </div>
 
           <figure
@@ -1156,9 +1148,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </a>
           <a
             className={styles.demoSecondary}
-            href={loginHref}
+            href="#kontakt"
           >
-            <span>▶</span> {t("Kostenlos testen")}
+            <span>♙</span> {t("Pilot anfragen")}
           </a>
         </section>
 

@@ -585,7 +585,6 @@
 
 .nav a,
 .headerActions a,
-.heroCtas a,
 .heroBottomCta a,
 .siteFooter a {
   transition:
@@ -765,11 +764,6 @@
   line-height: 1.23;
 }
 
-.heroCtas {
-  display: flex;
-  gap: 13px;
-  margin-top: 16px;
-}
 
 .demoButton,
 .outlineButton {
@@ -3107,7 +3101,6 @@
 
 @media (max-width: 720px) {
   .headerActions,
-  .heroCtas,
   .metricsGrid,
   .analyticsGrid,
   .floatingPanel,
@@ -3133,7 +3126,6 @@
     font-size: 52px;
     letter-spacing: -2.8px;
   }
-  .heroCtas,
   .problemCtas {
     flex-direction: column;
     gap: 14px;
@@ -8445,7 +8437,6 @@
 
 .nav a:focus-visible,
 .headerActions a:focus-visible,
-.heroCtas a:focus-visible,
 .pricingPlanCard > a:focus-visible,
 .siteFooter a:focus-visible,
 .landingFooterNav a:focus-visible,
@@ -8503,7 +8494,6 @@
   line-height: 1.55;
 }
 
-.heroCtas,
 .problemCtas,
 .responsiveCtaActions,
 .pricingCtaActions {
@@ -8650,7 +8640,6 @@
     letter-spacing: -0.055em;
   }
 
-  .heroCtas,
   .problemCtas,
   .responsiveCtaActions,
   .pricingCtaActions {
@@ -8756,9 +8745,6 @@
   line-height: 1.45;
 }
 
-.heroCtas {
-  margin-top: 18px;
-}
 
 .demoButton,
 .outlineButton {
