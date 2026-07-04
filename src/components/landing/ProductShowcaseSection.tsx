@@ -22,9 +22,8 @@ const visibleLandingNavItems = navItems.filter((item) =>
 
 const metrics = [
   { label: "Demo-Kontakte", value: "248", change: "Beispieldaten", accent: "#0b8cff" },
-  { label: "Aktive Beispiele", value: "126", change: "Beispieldaten", accent: "#00e178" },
-  { label: "VIP-Beispiele", value: "18", change: "Demo", accent: "#9b55ff" },
-  { label: "Follow-ups heute", value: "12", change: "Demo", accent: "#00c9ff" },
+  { label: "Memory-Notizen", value: "42", change: "Beispieldaten", accent: "#00e178" },
+  { label: "Follow-ups", value: "12", change: "Beispieldaten", accent: "#00c9ff" },
 ];
 
 const contacts = [
@@ -41,7 +40,7 @@ const contacts = [
 const benefits = [
   ["♙", "Persönlicher Fan-Kontext", "Interaktionen, Tags und Notizen bleiben sichtbar, bevor dein Team antwortet."],
   ["☆", "Nächste beste Aktion", "Priorisierte Aufgaben zeigen, welcher geprüfte Schritt jetzt Wirkung hat."],
-  ["◌", "KI-gestützte Segmentierung", "KI erkennt Muster und schlägt Segmente vor; dein Team prüft und nutzt sie gezielt."],
+  ["▤", "CSV-Import & Notizen", "Bestehende Kontakte können in den MVP-Workflow übernommen und ergänzt werden."],
   ["↗", "Geprüfte nächste Schritte", "Follow-ups und vorbereitete Entwürfe bleiben transparent nachvollziehbar."],
 ];
 
@@ -49,7 +48,7 @@ const featureCards = [
   ["🧠", "Fan-Gedächtnis", "Merkt sich Kaufhistorie, Interessen, Notizen und Kontaktverlauf pro Fan."],
   ["✦", "KI-Antwortvorschläge", "Liefert passende Entwürfe – Mensch prüft, editiert und gibt frei."],
   ["☑", "Follow-up Queue", "Bündelt fällige Aktionen nach Priorität, Owner und nächstem Schritt."],
-  ["📣", "Kampagnen & Analytics", "Als Vorschau sichtbar: Inhalte planen und Roadmap-Auswertungen prüfen."],
+  ["▣", "Roadmap sauber markiert", "Kampagnen, Analytics und externe Kanäle bleiben als Roadmap/Beta getrennt."],
 ];
 
 

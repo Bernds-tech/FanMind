@@ -8592,3 +8592,281 @@
   color: #7fd7ff;
   font-weight: 800;
 }
+
+/* Go-live Landingpage Polish */
+.page {
+  --radius-card: 24px;
+  overflow-x: clip;
+  padding: 22px clamp(16px, 3vw, 48px) 16px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.heroSection,
+.problemSolutionSection,
+.sandraUseCaseSection,
+.integrationsSection,
+.pricingSection,
+.roadmapSection,
+.responsiveSection,
+.privacyControlSection,
+.faqSection,
+.landingFooterSection,
+.siteFooter {
+  width: min(100%, 1480px);
+}
+
+.header {
+  position: sticky;
+  top: 14px;
+  z-index: 20;
+  height: auto;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 1px solid rgba(121, 165, 230, 0.18);
+  border-radius: 999px;
+  background: rgba(4, 14, 32, 0.78);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(22px);
+}
+
+.nav a:focus-visible,
+.headerActions a:focus-visible,
+.heroCtas a:focus-visible,
+.pricingPlanCard > a:focus-visible,
+.siteFooter a:focus-visible,
+.landingFooterNav a:focus-visible,
+.landingFooterSignup a:focus-visible {
+  outline: 3px solid rgba(0, 201, 255, 0.9);
+  outline-offset: 3px;
+}
+
+.loginButton,
+.accessButton,
+.demoButton,
+.outlineButton,
+.demoSecondary,
+.pricingPlanCard > a {
+  border-radius: 999px;
+}
+
+.accessButton,
+.demoButton {
+  border: 1px solid rgba(126, 196, 255, 0.54);
+  background: linear-gradient(135deg, #0b8cff 0%, #2366ff 56%, #8b43ff 100%);
+  box-shadow: 0 16px 38px rgba(14, 107, 255, 0.34), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.loginButton,
+.outlineButton,
+.demoSecondary {
+  border-color: rgba(165, 190, 225, 0.36);
+  background: rgba(7, 18, 42, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.hero {
+  grid-template-columns: minmax(0, 0.9fr) minmax(620px, 1.25fr);
+  gap: clamp(28px, 4vw, 72px);
+  align-items: center;
+  min-height: 640px;
+  padding: clamp(44px, 6vw, 86px) 0 34px;
+}
+
+.hero h1 {
+  max-width: 720px;
+  margin-top: 18px;
+  font-size: clamp(48px, 5.2vw, 84px);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+  text-wrap: balance;
+}
+
+.heroCopy > p {
+  max-width: 680px;
+  margin-top: 22px;
+  color: #dbe5f3;
+  font-size: clamp(17px, 1.25vw, 21px);
+  line-height: 1.55;
+}
+
+.heroCtas,
+.problemCtas,
+.responsiveCtaActions,
+.pricingCtaActions {
+  gap: 12px;
+}
+
+.demoButton,
+.outlineButton {
+  min-height: 52px;
+  height: auto;
+  padding: 0 24px;
+  font-size: 15px;
+}
+
+.socialProof,
+.heroTrustBar,
+.heroBottomCta,
+.pricingPlanCard,
+.pricingProofBar,
+.landingFooterPanel,
+.siteFooter {
+  border-radius: var(--radius-card);
+}
+
+.heroFeatureGrid,
+.solutionFlow,
+.integrationChannelGrid,
+.roadmapGrid {
+  align-items: stretch;
+}
+
+.heroFeatureCard,
+.solutionFunctionCard,
+.integrationChannelCard,
+.roadmapCard,
+.pricingPlanCard {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pricingGrid {
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
+  align-items: stretch;
+}
+
+.pricingPlanCard {
+  min-height: 640px;
+  padding: 28px 24px 24px;
+}
+
+.pricingAmount {
+  display: grid;
+  align-items: start;
+  min-height: 94px;
+}
+
+.pricingAmount strong {
+  font-size: clamp(24px, 1.55vw, 31px);
+  line-height: 1.12;
+}
+
+.pricingProofBar {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.landingFooterSignup span {
+  color: #d8e5f7;
+}
+
+.siteFooter {
+  margin-bottom: 0;
+  padding: 28px;
+  background: linear-gradient(180deg, rgba(5, 18, 42, 0.86), rgba(3, 11, 26, 0.94));
+}
+
+.siteFooter nav {
+  gap: 10px 18px;
+}
+
+@media (max-width: 1280px) {
+  .header {
+    grid-template-columns: 1fr;
+    border-radius: 28px;
+  }
+
+  .nav,
+  .headerActions {
+    flex-wrap: wrap;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .dashboardWrap {
+    max-width: 100%;
+  }
+
+  .pricingGrid,
+  .pricingProofBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding-inline: 12px;
+  }
+
+  .header {
+    position: relative;
+    top: auto;
+    padding: 14px;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .headerActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .languageSwitch {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .loginButton,
+  .accessButton,
+  .demoButton,
+  .outlineButton,
+  .demoSecondary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .hero {
+    padding-top: 34px;
+  }
+
+  .hero h1 {
+    font-size: clamp(42px, 12vw, 56px);
+    letter-spacing: -0.055em;
+  }
+
+  .heroCtas,
+  .problemCtas,
+  .responsiveCtaActions,
+  .pricingCtaActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .pricingGrid,
+  .pricingProofBar {
+    grid-template-columns: 1fr;
+  }
+
+  .pricingPlanCard {
+    min-height: auto;
+  }
+
+  .siteFooter nav {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .hero h1 {
+    font-size: 40px;
+  }
+
+  .siteFooter nav {
+    grid-template-columns: 1fr;
+  }
+}
