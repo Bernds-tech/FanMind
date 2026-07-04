@@ -40,9 +40,9 @@ const navItems = [
 ];
 
 const heroTrustSignals = [
-  "Keine Kreditkarte für Demo erforderlich",
-  "Keine automatische Sendefunktion",
-  "Mensch prüft und sendet final selbst",
+  "Keine Kreditkarte",
+  "Kein Auto-Senden",
+  "Mensch prüft final",
 ];
 
 const features = [
@@ -664,7 +664,7 @@ const faqContacts = [
     title: "Kostenlos testen",
     text: "Sieh dir die Produktvorschau an und starte mit einem kostenlosen Demo-Zugang.",
     cta: "Kostenlos testen",
-    href: "/register",
+    href: "/login",
     tone: "purple",
   },
   {
@@ -1047,7 +1047,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const localizedPrivacyControlBenefits = localizeFanMindValue(privacyControlBenefits, t);
   const localizedFaqHighlights = localizeFanMindValue(faqHighlights, t);
   const localizedFaqs = localizeFanMindValue(faqs, t);
-  const localizedFaqContacts = localizeFanMindValue(faqContacts, t).map((contact) => ({ ...contact, href: contact.href === "/register" ? registerHref : contact.href }));
+  const localizedFaqContacts = localizeFanMindValue(faqContacts, t).map((contact) => ({ ...contact, href: contact.href === "/login" ? loginHref : contact.href }));
   const localizedLandingFooterColumns = localizeFanMindValue(landingFooterColumns, t).map((column) => ({ ...column, links: column.links.map((link) => ({ ...link, href: link.href === LANDING_ROADMAP_HREF ? roadmapHref : link.href })) }));
   const localizedPricingPlans = localizeFanMindValue(pricingPlans, t).map((plan) => ({ ...plan, href: plan.href.startsWith("/register") ? localizedPath("/register", language, plan.href.includes("?") ? plan.href.slice(plan.href.indexOf("?")) : "") : plan.href }));
   const localizedPricingProofs = localizeFanMindValue(pricingProofs, t);
@@ -1095,10 +1095,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </h1>
             <p>{t("FanMind bündelt Kontakte, Gesprächskontext und KI-Antwortvorschläge in einem manuellen Workflow. Du prüfst, kopierst und sendest selbst – ohne automatische Sendefunktion.")}</p>
             <div className={styles.heroCtas}>
-              <a className={styles.demoButton} href={registerHref}>
+              <a className={styles.demoButton} href={loginHref}>
                 <span>▶</span> {t("Kostenlos testen")}
               </a>
-              <a className={styles.outlineButton} href={registerHref}>
+              <a className={styles.outlineButton} href="#kontakt">
                 <span>♙</span> {t("Pilot anfragen")}
               </a>
             </div>
@@ -1128,8 +1128,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           >
             <div className={styles.dashboardShell}>
               <aside className={styles.sidebar}>
-                <Logo compact language={language} />
-                <span className={styles.sidebarBrand}>FanMind</span>
                 <div className={styles.sidebarMenu}>
                   {localizedMenuItems.map((item, index) => (
                     <a
@@ -1383,13 +1381,13 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </div>
           <a
             className={styles.accessButton}
-            href={registerHref}
+            href={loginHref}
           >
             {t("Kostenlos testen")} <span>→</span>
           </a>
           <a
             className={styles.demoSecondary}
-            href="#produkt-showcase"
+            href={loginHref}
           >
             <span>▶</span> {t("Kostenlos testen")}
           </a>
@@ -1476,10 +1474,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         </div>
 
         <div className={styles.problemCtas}>
-          <a className={styles.demoButton} href="#produkt-showcase">
+          <a className={styles.demoButton} href={loginHref}>
             <span>▶</span> {t("Kostenlos testen")}
           </a>
-          <a className={styles.outlineButton} href={registerHref}>
+          <a className={styles.outlineButton} href="#kontakt">
             <span>♙</span> {t("Pilot anfragen")}
           </a>
         </div>
@@ -1968,10 +1966,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <div className={styles.integrationCtaBox}>
           <div>
-            <a className={styles.demoButton} href="#produkt-showcase">
+            <a className={styles.demoButton} href={loginHref}>
               <span>▶</span> {t("Kostenlos testen")}
             </a>
-            <a className={styles.outlineButton} href={registerHref}>
+            <a className={styles.outlineButton} href="#kontakt">
               {t("Pilot anfragen")}
             </a>
           </div>
@@ -2102,10 +2100,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </div>
           </div>
           <div className={styles.responsiveCtaActions}>
-            <a className={styles.demoButton} href="#produkt-showcase">
+            <a className={styles.demoButton} href={loginHref}>
               <span>▶</span> {t("Kostenlos testen")}
             </a>
-            <a className={styles.outlineButton} href={registerHref}>
+            <a className={styles.outlineButton} href="#kontakt">
               {t("Pilot anfragen")}
             </a>
           </div>
@@ -2124,6 +2122,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         className={styles.pricingSection}
         aria-labelledby="pricing-title"
       >
+        <span id="pricing" className={styles.anchorTarget} aria-hidden="true" />
         <div className={styles.pricingConstellation} aria-hidden="true" />
 
         <div className={styles.pricingHeader}>
@@ -2195,10 +2194,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </p>
           </div>
           <div className={styles.pricingCtaActions}>
-            <a className={styles.demoButton} href="#produkt-showcase">
+            <a className={styles.demoButton} href={loginHref}>
               <span>▷</span> {t("Kostenlos testen")}
             </a>
-            <a className={styles.outlineButton} href={registerHref}>
+            <a className={styles.outlineButton} href="#kontakt">
               <span>🚀</span> {t("Pilot anfragen")}
             </a>
             <p>
@@ -2296,7 +2295,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <a className={styles.demoButton} href="#datenschutz-kontrolle">
               <span>🔒</span> {t("Datenschutz ansehen")}
             </a>
-            <a className={styles.outlineButton} href="#produkt-showcase">
+            <a className={styles.outlineButton} href={loginHref}>
               {t("Kostenlos testen · 1 Stunde Demo-Zugang")} <span>→</span>
             </a>
             <p>
@@ -2423,7 +2422,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </div>
             <div className={styles.landingFooterSignup} aria-label="Zugangsanfrage">
               <span>{t("E-Mail-Adresse eingeben")}</span>
-              <a href={registerHref}>{t("Pilot anfragen")} <span>→</span></a>
+              <a href="#kontakt">{t("Pilot anfragen")} <span>→</span></a>
               <small>{t("🛡 Persönliche Anfrage statt automatischem Newsletter.")}</small>
             </div>
           </div>

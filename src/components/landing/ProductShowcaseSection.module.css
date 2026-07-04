@@ -549,3 +549,35 @@
     scrollbar-width: thin;
   }
 }
+
+/* Calmer product preview: no right-side floating/demo performance stack */
+.stage {
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  width: min(1260px, calc(100% - 28px));
+}
+
+.centerColumn {
+  min-width: 0;
+}
+
+.dashboardShell {
+  grid-template-columns: 148px minmax(0, 1fr);
+}
+
+.sidebar nav {
+  margin-top: 0;
+}
+
+@media (max-width: 1700px) {
+  .stage {
+    width: calc(100% - 28px);
+    grid-template-columns: minmax(280px, 300px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .stage {
+    width: calc(100% - 32px);
+    grid-template-columns: 1fr;
+  }
+}
