@@ -37,9 +37,18 @@ sudo nginx -t
 
 Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase keys, OpenAI keys, Stripe keys, runner tokens, and snapshot URLs out of GitHub.
 
+## Current product truth
+
+- FanMind is no longer to be treated as a slide demo or a throwaway mockup. Build and describe it as a real AI-supported CRM and communication system that is becoming production-ready.
+- The word "Demo" should mean a free test access or prepared example workspace only. The product itself should look and feel like a serious CRM system.
+- Current commercial truth: Starter is `312 €/Monat`. Do not reintroduce the old `299 €/Monat` pricing.
+- The core sales flow remains: landing page -> free test/demo login -> dashboard -> fans/contacts -> contact detail -> AI reply suggestions -> copy answer -> save memory -> save follow-up -> roadmap.
+- Active CRM core: login, registration, dashboard, contacts/fans, contact detail, CSV import, server-side AI reply suggestions, memory, follow-ups, roadmap, admin/billing groundwork, Stripe test checkout, and draft legal pages.
+- Position FanMind as a Copy-&-Open assistant, not as a bot. AI prepares replies; the human reviews, copies, opens the original channel if needed, and sends manually.
+
 ## MVP scope
 
-Build FanMind as a real MVP core, not as a slide/demo shell. Active MVP functionality may include:
+Build FanMind as a real CRM core, not as a slide/demo shell. Active MVP functionality may include:
 
 - Login and registration
 - Protected dashboard
@@ -63,7 +72,7 @@ Do not build or present as active unless explicitly requested and validated:
 - No full analytics suite unless explicitly scoped
 - No enterprise role/permission complexity unless explicitly scoped
 
-Social integrations, analytics, campaign logic, and automation must remain clearly marked as Roadmap, Coming Soon, or later pilot-feedback work unless the user explicitly changes scope.
+Social integrations, analytics, campaign logic, and automation must remain clearly marked as Roadmap, Coming Soon, Beta / in preparation, or later pilot-feedback work unless the user explicitly changes scope. Meta channels may be prepared next, but must not be presented as live until technically and legally tested.
 
 ## AI safety and implementation rules
 
@@ -79,7 +88,7 @@ Before changing code:
 
 1. Inspect the existing implementation and routes.
 2. Preserve the current production deployment workflow.
-3. Keep changes small, testable, and aligned with the MVP scope.
+3. Keep changes small, testable, and aligned with the CRM/MVP scope.
 4. Run the relevant checks locally when possible, especially `npm run build`.
 5. Avoid broad rewrites unless the user explicitly asks for them.
 
