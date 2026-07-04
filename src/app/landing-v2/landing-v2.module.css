@@ -9130,7 +9130,7 @@
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 20000;
   display: flex;
   justify-content: center;
   padding: 10px clamp(12px, 3vw, 48px);
@@ -9144,7 +9144,7 @@
 }
 
 .heroSection {
-  padding-top: 78px;
+  padding-top: 70px;
 }
 
 .header {
@@ -9164,7 +9164,7 @@
 
 .fixedHeaderShell .logo {
   justify-content: center;
-  transform: translateY(3px);
+  transform: translateY(-3px);
 }
 
 .logoMark {
@@ -9207,7 +9207,7 @@
   }
 
   .heroSection {
-    padding-top: 128px;
+    padding-top: 104px;
   }
 
   .header {
@@ -9229,7 +9229,7 @@
   }
 
   .heroSection {
-    padding-top: 116px;
+    padding-top: 96px;
   }
 
   .header {
@@ -9284,7 +9284,7 @@
 }
 
 .fixedHeaderShell {
-  z-index: 10000;
+  z-index: 20000;
   isolation: isolate;
   transform: translateZ(0);
 }
@@ -9308,6 +9308,10 @@
 .dashboardWrap,
 .dashboardShell {
   z-index: 1;
+}
+
+.heroSection {
+  z-index: 100;
 }
 
 .referenceDetails {
