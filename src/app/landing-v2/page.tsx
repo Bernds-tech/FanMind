@@ -1211,29 +1211,33 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         </div>
 
         <div className={styles.solutionFlow}>
-          {localizedFunctionCards.map((card) => (
-            <article
-              className={`${styles.solutionFunctionCard} ${isComingSoonStatus(card.status) ? styles.cardWithComingSoon : ""}`}
-              data-tone={card.tone}
-              key={card.title}
-            >
-              <div className={styles.functionTitle}>
-                <span>{card.icon}</span>
-                <div>
-                  <h3>{card.title}</h3>
-                  {card.hideStatusLabel ? null : statusVariantFromLabel(card.status) ? (
-                    <FeatureStatusLabel variant={statusVariantFromLabel(card.status)!}>{card.status}</FeatureStatusLabel>
-                  ) : null}
-                  <p>{card.text}</p>
+          {localizedFunctionCards.map((card) => {
+            const showComingSoonMark = card.showComingSoonMark || isComingSoonStatus(card.status);
+
+            return (
+              <article
+                className={`${styles.solutionFunctionCard} ${showComingSoonMark ? styles.cardWithComingSoon : ""}`}
+                data-tone={card.tone}
+                key={card.title}
+              >
+                <div className={styles.functionTitle}>
+                  <span>{card.icon}</span>
+                  <div>
+                    <h3>{card.title}</h3>
+                    {card.hideStatusLabel ? null : statusVariantFromLabel(card.status) ? (
+                      <FeatureStatusLabel variant={statusVariantFromLabel(card.status)!}>{card.status}</FeatureStatusLabel>
+                    ) : null}
+                    <p>{card.text}</p>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.functionPreview}>{card.body}</div>
-              <a href={card.href}>
-                {card.cta} <span>→</span>
-              </a>
-              {isComingSoonStatus(card.status) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
-            </article>
-          ))}
+                <div className={styles.functionPreview}>{card.body}</div>
+                <a href={card.href}>
+                  {card.cta} <span>→</span>
+                </a>
+                {showComingSoonMark ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
+              </article>
+            );
+          })}
         </div>
 
         <div className={styles.problemCtas}>
