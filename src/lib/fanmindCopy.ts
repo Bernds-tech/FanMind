@@ -8,7 +8,7 @@ export function getFanMindLanguage(lang?: string | string[] | null): FanMindLang
 }
 
 export function landingPath(language: FanMindLanguage, hash = "") {
-  return language === "en" ? `/landing-v2?lang=en${hash}` : `/landing-v2${hash}`;
+  return language === "en" ? `/?lang=en${hash}` : `/${hash}`;
 }
 
 export function localizedPath(path: "/login" | "/register" | "/forgot-password" | "/reset-password", language: FanMindLanguage, query = "") {
