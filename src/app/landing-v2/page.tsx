@@ -39,12 +39,6 @@ const navItems = [
   { label: "Kontakt", href: "#kontakt" },
 ];
 
-const heroTrustSignals = [
-  "Keine Kreditkarte",
-  "Kein Auto-Senden",
-  "Mensch prüft final",
-];
-
 const features = [
   {
     icon: "✉",
@@ -1102,23 +1096,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <span>♙</span> {t("Pilot anfragen")}
               </a>
             </div>
-            <div id="zielgruppen" className={styles.socialProof}>
-              <div className={styles.referenceIntro}>
-                <strong>{t("Pilotphase startet")}</strong>
-                <p>{t("Wir nehmen erste Pilotkunden auf und entwickeln FanMind gemeinsam mit echten Workflows weiter.")}</p>
-              </div>
-              <div className={styles.referenceDetails}>
-                {heroTrustSignals.map((signal) => (
-                  <div key={signal} className={styles.referenceStatusCard}>
-                    <div>
-                      <span>✓</span>
-                      <strong>{t(signal)}</strong>
-                    </div>
-                    <p>{t("Vertrauensmerkmal für den MVP: bewusst manuell, transparent und ohne ungeprüfte Automatisierung.")}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
           <figure
@@ -1136,14 +1113,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               sizes="(max-width: 980px) 100vw, 48vw"
             />
           </figure>
-        </section>
-
-        <section
-          className={styles.heroTrustBar}
-          aria-label="Pilotphase von FanMind"
-        >
-          <strong>{t("Pilotphase startet")}</strong>
-          <p>{t("Wir nehmen erste Pilotkunden auf und entwickeln FanMind gemeinsam mit echten Workflows weiter – ohne erfundene Kundenlogos oder Fake-Testimonials.")}</p>
         </section>
 
         <section id="features" className={styles.heroFeatureGrid}>

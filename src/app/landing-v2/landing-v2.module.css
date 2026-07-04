@@ -510,7 +510,6 @@
 
 .header,
 .hero,
-.heroTrustBar,
 .heroFeatureGrid,
 .heroBottomCta {
   position: relative;
@@ -804,100 +803,6 @@
   background: rgba(9, 10, 31, 0.72);
 }
 
-.socialProof {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  max-width: 650px;
-  margin-top: 13px;
-  padding: 16px;
-  border: 1px solid rgba(74, 222, 128, 0.22);
-  border-radius: 22px;
-  background: linear-gradient(135deg, rgba(7, 18, 35, 0.88), rgba(8, 44, 31, 0.74));
-  box-shadow: 0 20px 48px rgba(1, 10, 22, 0.28);
-}
-
-.referenceIntro strong {
-  display: block;
-  color: #f5fbff;
-  font-size: 15px;
-  letter-spacing: -0.01em;
-}
-
-.referenceIntro p {
-  max-width: 590px;
-  margin-top: 5px;
-  color: #cbd3df;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.referenceDetails {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.referenceStatusCard {
-  display: grid;
-  gap: 8px;
-  min-height: 124px;
-  flex: 1 1 230px;
-  padding: 13px 14px;
-  border: 1px solid rgba(74, 222, 128, 0.18);
-  border-radius: 18px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(21, 255, 161, 0.05));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.referenceStatusCard div {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.referenceStatusCard span {
-  color: #eef8ff;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.referenceStatusCard strong {
-  flex: 0 0 auto;
-  padding: 4px 8px;
-  border: 1px solid rgba(74, 222, 128, 0.26);
-  border-radius: 999px;
-  color: #74f7b8;
-  background: rgba(34, 197, 94, 0.1);
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.referenceStatusCard p {
-  margin: 0;
-  color: #cbd3df;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.referenceStatusCard small {
-  color: #f5fbff;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.referenceStatusCard a {
-  width: fit-content;
-  color: #74f7b8;
-  font-size: 12px;
-  font-weight: 900;
-  text-decoration: none;
-}
-
 
 .dashboardWrap {
   position: relative;
@@ -1179,7 +1084,6 @@
 .conversionCard,
 .miniStats > div,
 .heroFeatureCard,
-.heroTrustBar,
 .heroBottomCta {
   border: 1px solid var(--line);
   background: linear-gradient(
@@ -2862,70 +2766,6 @@
   text-shadow: 0 0 23px rgba(0, 217, 255, 0.64);
 }
 
-.heroTrustBar {
-  display: grid;
-  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
-  min-height: 82px;
-  margin-top: 8px;
-  overflow: hidden;
-  padding: 14px 0 14px 24px;
-  border-radius: 16px;
-}
-
-.heroTrustBar strong {
-  font-size: 14px;
-  line-height: 1.25;
-}
-
-.trustLogoViewport {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  padding-block: 4px;
-  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-}
-
-.trustLogoTrack {
-  display: flex;
-  width: max-content;
-  gap: 18px;
-  animation: trustLogoMarquee 28s linear infinite;
-  will-change: transform;
-}
-
-.trustLogoViewport:hover .trustLogoTrack {
-  animation-play-state: paused;
-}
-
-.trustLogoItem {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 170px;
-  height: 92px;
-}
-
-.trustLogoItem img {
-  display: block;
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  max-height: 86px;
-  object-fit: contain;
-}
-
-@keyframes trustLogoMarquee {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-
 .heroFeatureGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -3149,15 +2989,6 @@
   .solutionFunctionCard:nth-child(3)::after {
     display: none;
   }
-
-  .heroTrustBar {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    padding: 18px 0 18px 18px;
-  }
-  .heroTrustBar strong {
-    padding-right: 18px;
-  }
   .heroBottomCta {
     grid-template-columns: 60px 1fr;
     padding: 24px;
@@ -3277,7 +3108,6 @@
 @media (max-width: 720px) {
   .headerActions,
   .heroCtas,
-  .socialProof,
   .metricsGrid,
   .analyticsGrid,
   .floatingPanel,
@@ -3325,22 +3155,6 @@
   }
   .solutionFunctionCard::after {
     display: none !important;
-  }
-
-  .heroTrustBar {
-    grid-template-columns: 1fr;
-    padding-left: 14px;
-  }
-  .trustLogoItem {
-    flex-basis: 132px;
-    height: 68px;
-  }
-  .trustLogoItem img {
-    max-height: 62px;
-  }
-  .trustLogoTrack {
-    gap: 12px;
-    animation-duration: 24s;
   }
   .dashboardMain {
     padding: 18px;
@@ -8703,9 +8517,6 @@
   padding: 0 24px;
   font-size: 15px;
 }
-
-.socialProof,
-.heroTrustBar,
 .heroBottomCta,
 .pricingPlanCard,
 .pricingProofBar,
@@ -8957,53 +8768,6 @@
   font-size: 14px;
 }
 
-.socialProof {
-  max-width: 610px;
-  margin-top: 16px;
-  padding: 12px;
-  gap: 10px;
-}
-
-.referenceIntro p {
-  display: none;
-}
-
-.referenceDetails {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.referenceStatusCard {
-  min-height: 0;
-  padding: 10px;
-}
-
-.referenceStatusCard div {
-  gap: 6px;
-}
-
-.referenceStatusCard div span {
-  display: inline-grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  color: #03111f;
-  background: #9fffd0;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.referenceStatusCard strong {
-  font-size: 11px;
-  line-height: 1.25;
-}
-
-.referenceStatusCard p {
-  display: none;
-}
-
 .dashboardWrap {
   padding-top: 0;
   transform: translateY(-6px);
@@ -9045,18 +8809,6 @@
   transform-origin: bottom right;
 }
 
-.heroTrustBar {
-  grid-template-columns: 220px minmax(0, 1fr);
-  min-height: 58px;
-  margin-top: 0;
-  padding: 10px 18px;
-}
-
-.heroTrustBar p {
-  font-size: 12px;
-  line-height: 1.35;
-}
-
 .heroFeatureGrid {
   margin-top: 10px;
   gap: 9px;
@@ -9076,10 +8828,6 @@
   .dashboardWrap {
     transform: none;
   }
-
-  .referenceDetails {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 720px) {
@@ -9096,10 +8844,6 @@
     font-size: 15px;
   }
 
-  .referenceDetails {
-    grid-template-columns: 1fr;
-  }
-
   .dashboardShell {
     grid-template-columns: 1fr;
     min-height: 0;
@@ -9112,7 +8856,6 @@
   .dashboardControls,
   .metricsGrid,
   .analyticsGrid,
-  .heroTrustBar,
   .heroFeatureGrid {
     grid-template-columns: 1fr;
   }
@@ -9314,30 +9057,9 @@
   z-index: 100;
 }
 
-.referenceDetails {
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
-  align-items: stretch;
-}
-
-.referenceStatusCard {
-  overflow-wrap: anywhere;
-}
-
-.referenceStatusCard div {
-  align-items: center;
-}
-
-.referenceStatusCard strong {
-  hyphens: auto;
-}
-
 @media (max-width: 720px) {
   .page :where(section[id], div[id], main[id]) {
     scroll-margin-top: 124px;
-  }
-
-  .referenceDetails {
-    grid-template-columns: 1fr;
   }
 }
 
