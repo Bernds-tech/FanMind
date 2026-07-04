@@ -1130,9 +1130,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <aside className={styles.sidebar} aria-label="Dashboard Navigation">
                 <div className={styles.sidebarPreviewBrand}>
                   <Logo language={language} />
-                  <small>{t("Produktvorschau")}</small>
+                  <small>{t("Multi-Channel CRM")}</small>
                 </div>
-                <div className={styles.sidebarMenu}>
+
+                <nav className={styles.sidebarMenu} aria-label="Produktvorschau Navigation">
                   {localizedMenuItems.slice(0, 6).map((item, index) => (
                     <a
                       className={index === 0 ? styles.activeMenu : ""}
@@ -1143,14 +1144,33 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                       {item.label}
                     </a>
                   ))}
+                </nav>
+
+                <div className={styles.sidebarSection}>
+                  <span>{t("Workspace")}</span>
+                  <strong>FanMind Studio</strong>
+                  <small>{t("Beispielworkspace")}</small>
                 </div>
-                <div className={styles.profileCard}>
-                  <span>FM</span>
-                  <div>
-                    <strong>FanMind</strong>
-                    <small>{t("Demo-Workspace")}</small>
+
+                <div className={styles.savedViews}>
+                  <span>{t("Gespeicherte Ansichten")}</span>
+                  <a href="#kontakte">{t("Neue Nachrichten")}</a>
+                  <a href="#follow-ups">{t("Follow-ups heute")}</a>
+                  <a href="#ki">{t("KI-Entwürfe prüfen")}</a>
+                </div>
+
+                <div className={styles.sidebarBottomCards}>
+                  <div className={styles.profileCard}>
+                    <span>FM</span>
+                    <div>
+                      <strong>FanMind Team</strong>
+                      <small>{t("Mensch prüft final")}</small>
+                    </div>
                   </div>
-                  <i>›</i>
+                  <div className={styles.planCard}>
+                    <strong>{t("Starter")}</strong>
+                    <small>312 €/Monat</small>
+                  </div>
                 </div>
               </aside>
 
@@ -1159,10 +1179,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <div>
                     <h2>{t("Dashboard")}</h2>
                     <p>{t("Kontakte, Nachrichten und Follow-ups im Überblick")}</p>
-                    <small>{t("Produktvorschau · Beispieldaten · keine Kundenergebnisse")}</small>
                   </div>
                   <div className={styles.dashboardControls}>
-                    <span>{t("Demo-Ansicht")}</span>
+                    <button type="button">{t("Letzte 30 Tage")}</button>
                     <button type="button">{t("Filter")}</button>
                     <a href="#kontakte">{t("+ Neuer Kontakt")}</a>
                   </div>
@@ -1170,57 +1189,46 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
                 <div className={styles.dashboardSearchRow}>
                   <div className={styles.dashboardSearchBox}>{t("Suche nach Name, Tag oder Notiz …")}</div>
-                  <button type="button">{t("Segment")}</button>
-                  <button type="button">{t("Status")}</button>
                 </div>
 
-                <div className={styles.metricsGrid}>
-                  <MetricCard label="Gesamtfans" value="248" change="Beispieldaten" color="#0b8cff" />
-                  <MetricCard label="Aktive Kontakte" value="126" change="Beispieldaten" color="#00d86f" />
-                  <MetricCard label="Offene Follow-ups" value="12" change="manuell prüfen" color="#8b43ff" />
-                  <MetricCard label="Neue Nachrichten" value="8" change="Entwürfe vorbereiten" color="#00c9ff" />
+                <div className={styles.metricsGrid} aria-label="Dashboard KPI-Leiste mit Beispieldaten">
+                  <MetricCard label={t("Kontakte")} value="248" change={t("Beispieldaten")} color="#0b8cff" />
+                  <MetricCard label={t("Neue Nachrichten")} value="8" change={t("manuell öffnen")} color="#00c9ff" />
+                  <MetricCard label={t("Offene Follow-ups")} value="12" change={t("bewusst prüfen")} color="#8b43ff" />
+                  <MetricCard label={t("Gespeicherte Notizen")} value="64" change={t("CRM-Memory")} color="#00e178" />
+                  <MetricCard label={t("KI-Entwürfe")} value="5" change={t("Vorschläge")} color="#ffaf19" />
+                  <MetricCard label={t("Roadmap-Kanäle")} value="4" change={t("Coming Soon")} color="#c538ff" />
                 </div>
 
-                <div className={styles.dashboardPreviewGrid}>
-                  <section className={styles.previewPanel} aria-label="Neue Nachrichten">
-                    <div className={styles.previewPanelHeader}>
-                      <div>
-                        <strong>{t("Neue Nachrichten")}</strong>
-                        <span>{t("Beispieldaten für den manuellen Workflow")}</span>
-                      </div>
-                      <button type="button">{t("Alle ansehen")}</button>
+                <section className={styles.inboxPanel} aria-label="Neue Nachrichten">
+                  <div className={styles.previewPanelHeader}>
+                    <div>
+                      <strong>{t("Neue Nachrichten")}</strong>
+                      <span>{t("Arbeits-Eingang mit Beispielzeilen für den manuellen CRM-Workflow")}</span>
                     </div>
-                    {[
-                      ["Mia R.", "VIP", "Frage zum Early-Bird Zugang", "KI-Entwurf vorbereiten"],
-                      ["Alex K.", "Event", "Rückfrage zu zwei Tickets", "Antwort manuell prüfen"],
-                      ["Sandra M.", "Partner", "Notiz zum nächsten Follow-up", "Kontakt öffnen"],
-                    ].map(([name, tag, message, action]) => (
-                      <article className={styles.messagePreviewRow} key={name}>
-                        <div className={styles.messageAvatar}>{name.slice(0, 1)}</div>
-                        <div>
-                          <strong>{name}</strong>
-                          <p>{t(message)}</p>
-                        </div>
-                        <span>{tag}</span>
-                        <small>{t(action)}</small>
-                      </article>
-                    ))}
-                  </section>
+                  </div>
+                  {[
+                    ["Mia R.", "VIP", "Frage zum Early-Bird Zugang", "Instagram · Roadmap", "09:42"],
+                    ["Alex K.", "Event", "Rückfrage zu zwei Tickets", "E-Mail", "10:08"],
+                    ["Sandra M.", "Partner", "Notiz zum nächsten Follow-up", "Kontaktformular", "11:15"],
+                    ["Jonas P.", "Club", "Interesse am Testzugang", "WhatsApp · Roadmap", "12:04"],
+                  ].map(([name, tag, message, channel, time]) => (
+                    <article className={styles.messagePreviewRow} key={name}>
+                      <div className={styles.messageAvatar}>{name.slice(0, 1)}</div>
+                      <div>
+                        <strong>{name}</strong>
+                        <p>{t(message)}</p>
+                      </div>
+                      <span>{tag}</span>
+                      <small>{channel}</small>
+                      <em>{time}</em>
+                      <button type="button">{t("Öffnen")}</button>
+                    </article>
+                  ))}
+                </section>
 
-                  <section className={styles.previewPanel} aria-label="Dashboard Aufgaben">
-                    <div className={styles.previewPanelHeader}>
-                      <div>
-                        <strong>{t("Heute im Blick")}</strong>
-                        <span>{t("Kontakte und Follow-ups bleiben manuell steuerbar")}</span>
-                      </div>
-                    </div>
-                    <div className={styles.taskPreviewList}>
-                      <div><span />{t("Neue Kontakte sichten")}</div>
-                      <div><span />{t("Antwortvorschläge prüfen")}</div>
-                      <div><span />{t("Follow-ups priorisieren")}</div>
-                      <div><span />{t("CSV-Import vorbereiten")}</div>
-                    </div>
-                  </section>
+                <div className={styles.safetyStrip}>
+                  {t("Keine automatische Sendefunktion. Mensch prüft und sendet final selbst.")}
                 </div>
               </section>
             </div>
