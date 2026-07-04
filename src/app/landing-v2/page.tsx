@@ -149,6 +149,7 @@ const functionCards = [
     icon: "📣",
     title: "5. Kampagnen",
     status: "Roadmap",
+    hideStatusLabel: true,
     text: "Kampagnen als geprüfte Entwürfe vorbereiten – Versand bleibt aktuell inaktiv und manuell abgegrenzt.",
     body: "Sommer-Event Early Bird · Vorschau · manuelle Freigabe",
     cta: "Roadmap ansehen",
@@ -159,6 +160,7 @@ const functionCards = [
     icon: "⌁",
     title: "6. Analytics",
     status: "Roadmap",
+    hideStatusLabel: true,
     text: "Roadmap-Ausblick für spätere Auswertungen und Wachstumssignale.",
     body: "Roadmap-Auswertung · In Kürze",
     cta: "Roadmap öffnen",
@@ -1219,7 +1221,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <span>{card.icon}</span>
                 <div>
                   <h3>{card.title}</h3>
-                  {statusVariantFromLabel(card.status) ? (
+                  {card.hideStatusLabel ? null : statusVariantFromLabel(card.status) ? (
                     <FeatureStatusLabel variant={statusVariantFromLabel(card.status)!}>{card.status}</FeatureStatusLabel>
                   ) : null}
                   <p>{card.text}</p>
