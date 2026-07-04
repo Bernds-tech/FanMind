@@ -570,8 +570,9 @@
 
 @media (max-width: 1700px) {
   .stage {
-    width: calc(100% - 28px);
-    grid-template-columns: minmax(280px, 300px) minmax(0, 1fr);
+    width: min(1360px, calc(100% - 56px));
+    grid-template-columns: minmax(330px, 360px) minmax(0, 1fr);
+    gap: 28px;
   }
 }
 
@@ -579,6 +580,7 @@
   .stage {
     width: calc(100% - 32px);
     grid-template-columns: 1fr;
+    gap: 18px;
   }
 }
 
@@ -639,5 +641,106 @@
   .dashboardShell::before,
   .dashboardImage {
     border-radius: 14px;
+  }
+}
+
+
+/* Keep the composed product showcase spacious enough for the left rail, dashboard image and lower cards. */
+.artboard {
+  height: 1040px;
+}
+
+.stage {
+  width: min(1360px, calc(100% - 64px));
+  height: 620px;
+  grid-template-columns: minmax(340px, 370px) minmax(0, 1fr);
+  gap: 32px;
+}
+
+.leftColumn {
+  gap: 16px;
+}
+
+.memoryCard { height: 180px; }
+.aiCard { height: 204px; }
+.campaignCard { height: 204px; }
+
+.dashboardShell {
+  height: 468px;
+}
+
+.benefitGrid {
+  height: 138px;
+  gap: 12px;
+}
+
+.featureStrip {
+  width: min(1360px, calc(100% - 64px));
+  height: 148px;
+  margin-top: 30px;
+}
+
+@media (max-width: 1700px) {
+  .artboard {
+    height: 1040px;
+  }
+
+  .featureStrip {
+    width: min(1360px, calc(100% - 56px));
+  }
+}
+
+@media (max-width: 1320px) and (min-width: 1181px) {
+  .stage {
+    width: calc(100% - 48px);
+    grid-template-columns: minmax(320px, 340px) minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .featureStrip {
+    width: calc(100% - 48px);
+  }
+}
+
+@media (max-width: 1180px) {
+  .artboard {
+    height: auto;
+  }
+
+  .stage,
+  .featureStrip {
+    width: calc(100% - 32px);
+  }
+
+  .stage {
+    height: auto;
+  }
+
+  .leftColumn {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .memoryCard,
+  .aiCard,
+  .campaignCard,
+  .dashboardShell,
+  .benefitGrid,
+  .featureStrip {
+    height: auto;
+  }
+
+  .dashboardImage {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+}
+
+@media (max-width: 900px) {
+  .leftColumn,
+  .benefitGrid,
+  .featureStrip {
+    grid-template-columns: 1fr;
   }
 }
