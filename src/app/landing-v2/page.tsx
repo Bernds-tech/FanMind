@@ -417,6 +417,7 @@ const integrationActions = [
   {
     icon: "☑",
     title: "Follow-ups",
+    status: "Coming Soon",
     text: "Nachfassaktionen vorbereiten.",
   },
   {
@@ -1590,6 +1591,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                       <p>{channel.text}</p>
                     </div>
                     <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
+                    {isComingSoonStatus(channel.status) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
                   </article>
                 ))}
               </div>
