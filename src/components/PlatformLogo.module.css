@@ -45,6 +45,12 @@
   height: var(--platform-logo-icon-size);
   display: block;
 }
+.assetIcon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
 .label {
   color: #e2e8f0;
   font-size: 12px;

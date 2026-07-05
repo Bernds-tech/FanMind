@@ -23,7 +23,7 @@ const LANDING_ROADMAP_HREF = "#roadmap";
 function statusVariantFromLabel(status?: string): FeatureStatusLabelVariant | undefined {
   if (!status) return undefined;
   if (["Roadmap", "In Kürze", "Coming Soon"].includes(status)) return "roadmap";
-  if (["Beta / in Vorbereitung"].includes(status)) return "preview";
+  if (["Beta / in Vorbereitung", "Pilot-Upgrade", "Auf Anfrage"].includes(status)) return "preview";
   if (["Vorschau", "Preview", "BETA"].includes(status)) return "preview";
   if (["Geplant", "Planned"].includes(status)) return "planned";
   if (["Aktiv", "Bereit", "Verfügbar", "Aktiv", "Active"].includes(status)) return "active";
@@ -743,7 +743,7 @@ const pricingPlans = [
     href: "#kontakt",
     tone: "blue",
     featured: false,
-    status: "Auf Anfrage",
+    status: "Pilot-Upgrade",
     features: ["Mehrere Profile als Ausbaupfad", "Basis-Segmente und Listen in Vorbereitung", "Reichweiten- und Performance-Signale als Roadmap", "Kein automatischer Versand", "Umfang wird vor Buchung gemeinsam geprüft", "Keine falschen Live-Integrationen"],
   },
   {
