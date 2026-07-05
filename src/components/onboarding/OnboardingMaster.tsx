@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FEATURE_KEYS, type FeatureKey, type PlanId } from "@/config/plans";
 import {
   canUseFeature,
@@ -141,7 +142,7 @@ export default function OnboardingMaster({ planId, isDemoMode = false }: Onboard
     <main className={styles.page}>
       <div className={styles.background} aria-hidden="true" />
       <header className={styles.header}>
-        <a className={styles.brand} href="/landing-v2">FanMind</a>
+        <Link className={styles.brand} href="/">FanMind</Link>
         <nav aria-label="Workspace Navigation">
           {navigationItems.map((item) => (
             <a href={item.href} key={item.featureKey}>{item.label}</a>

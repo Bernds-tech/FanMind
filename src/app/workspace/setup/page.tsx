@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 async function logout() {
   "use server";
   await signOutSupabaseServerSession();
-  redirect("/login");
+  redirect("/");
 }
 
 export default async function WorkspaceSetupPage() {

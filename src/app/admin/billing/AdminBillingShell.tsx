@@ -16,7 +16,7 @@ async function logout() {
   "use server";
 
   await signOutSupabaseServerSession();
-  redirect("/login");
+  redirect("/");
 }
 
 function displayName(user: SupabaseServerUser, fallback: string): string {

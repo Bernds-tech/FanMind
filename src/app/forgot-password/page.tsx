@@ -57,7 +57,7 @@ export default function ForgotPasswordPage({ searchParams }: ForgotPasswordPageP
       <div className={styles.gridPattern} aria-hidden="true" />
       <section className={styles.shell} aria-label={language === "en" ? "Reset password" : "Passwort zurücksetzen"}>
         <header className={styles.header}>
-          <FanMindLogo className={styles.logo} compact href={landingPath(language)} ariaLabel={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"} />
+          <FanMindLogo className={styles.logo} compact href={landingPath(language)} ariaLabel={language === "en" ? "Open FanMind homepage" : "FanMind Startseite öffnen"} />
           <nav className={styles.topLinks} aria-label="Login Navigation">
             <span>{copy.registerPrompt}</span>
             <a href={localizedPath("/register", language)}>{copy.registerLink}</a>
