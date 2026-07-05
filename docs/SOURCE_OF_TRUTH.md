@@ -64,7 +64,28 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 
 Begründung für 312 €/Monat: FanMind ist kein Billig-Tool und der Aufwand liegt in sicherer CRM-Struktur, KI, Memory, Follow-ups, Datenpflege, Demo-Setup, Support, Security/RLS und späterer kontrollierter Integrationsfähigkeit. Die Preislogik soll diesen Arbeitsaufwand und B2B-Charakter widerspiegeln.
 
-## 4. Gefrorener Gerhard-Demo-Pfad
+## 4. Referral / Founder-100 Programm
+
+Geplant ist ein begrenztes Referral-Programm für die ersten 100 berechtigten FanMind-Nutzer.
+
+Kernlogik:
+
+- Ein Nutzer erhält einen persönlichen Referral-Link oder Referral-Code.
+- Für jeden aktiv zahlenden geworbenen Nutzer erhält der Referrer `5 %` Rabatt auf seine eigenen laufenden FanMind-Kosten.
+- Maximal zählen `20` aktive geworbene Nutzer.
+- Bei 20 aktiven geworbenen Nutzern ergibt sich rechnerisch `100 %` Rabatt auf die laufenden FanMind-Kosten.
+- Wenn ein geworbener Nutzer kündigt, nicht mehr zahlt, gesperrt wird oder inaktiv wird, fällt dessen `5 %` wieder weg.
+- Das Programm ist auf die ersten `100` berechtigten Nutzer begrenzt.
+- Rabatte werden nicht automatisch bar ausgezahlt und dürfen nicht unter 0 € fallen.
+
+Status:
+
+- Roadmap / Founder-Programm, noch nicht als automatische Billing-Funktion aktiv.
+- Darf nur mit klarer Begrenzung kommuniziert werden: erste 100 Nutzer, maximal 20 aktive Referrals, Rabatt nur solange geworbene Nutzer aktiv bleiben.
+- Vor Umsetzung müssen Tracking, Billing-Verrechnung, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung geprüft werden.
+- Details stehen in `docs/REFERRAL_PROGRAM.md`.
+
+## 5. Gefrorener Gerhard-Demo-Pfad
 
 Der Demo-Pfad ist fest. Er darf optisch anders umgesetzt sein, aber fachlich bleibt die Reihenfolge:
 
@@ -85,7 +106,7 @@ Der Demo-Pfad ist fest. Er darf optisch anders umgesetzt sein, aber fachlich ble
 
 Alles, was nicht zu diesem Pfad gehört, wird für Gerhards Standarddemo versteckt, admin-only gemacht, feature-geflaggt oder als Roadmap/Beta klar markiert.
 
-## 5. Roadmap-Statuslogik
+## 6. Roadmap-Statuslogik
 
 | Status | Bedeutung | Darf wie aktiv verkauft werden? |
 | --- | --- | --- |
@@ -100,7 +121,7 @@ Pflichtsatz für Integrationen:
 
 > Geplante Integrationen werden erst nach technischer und rechtlicher Prüfung umgesetzt. FanMind sendet keine Nachrichten automatisch. Im Standard-Workflow prüft der Mensch, kopiert die Antwort und sendet final selbst im Originalkanal.
 
-## 6. Integrationsstatus
+## 7. Integrationsstatus
 
 Aktiv im Standard-MVP:
 
@@ -127,6 +148,7 @@ Roadmap / Coming Soon:
 - Analytics/Reichweite
 - Rollen/Rechte-Komplexität
 - Enterprise-Governance
+- Referral-/Founder-100-Automation, bis Tracking/Billing/Legal fertig ist
 
 Sonderregel Telegram:
 
@@ -134,7 +156,7 @@ Sonderregel Telegram:
 - Wenn Telegram-Senden im Code existiert, muss es deaktiviert, versteckt, admin-/pilot-only oder ausdrücklich als validierter Pilot markiert werden.
 - Der Standardnutzer darf nicht den Eindruck bekommen, FanMind sei bereits ein In-App-Sendewerkzeug.
 
-## 7. Security / RLS / Secrets
+## 8. Security / RLS / Secrets
 
 Vor Pilotkundendaten, Integration-Aktivierung oder Billing-Aktivierung muss `docs/SECURITY_RLS_SECRETS_CHECK.md` abgearbeitet werden.
 
@@ -150,7 +172,7 @@ Kernregeln:
 - Demo-Workspaces dürfen keine echten Kundendaten enthalten;
 - externe Plattform-Login-Daten werden nicht gespeichert.
 
-## 8. Datenbank-Source-of-Truth
+## 9. Datenbank-Source-of-Truth
 
 Die aktuelle Datenbankwahrheit steht in:
 
@@ -179,8 +201,9 @@ Aktuell relevante Objekte:
 - `meta_webhook_events`
 - Billing-Felder an `workspaces`
 - Inquiry-/Pilot-Anfrage-Tabellen, soweit in Migrations vorhanden
+- spätere Referral-Tabellen laut `docs/REFERRAL_PROGRAM.md`
 
-## 9. KI und Kostenbeobachtung
+## 10. KI und Kostenbeobachtung
 
 Aktuell muss die KI sicher und kostenbewusst laufen:
 
@@ -203,11 +226,12 @@ Nächster Ausbau:
 
 Details stehen in `docs/AI_COST_MONITORING.md`.
 
-## 10. Reader-Synchronisierung
+## 11. Reader-Synchronisierung
 
 Wenn eine Änderung eines dieser Themen berührt, müssen Reader/Dokumente im selben PR geprüft und aktualisiert werden:
 
 - Preis/Pakete/Commercial Terms
+- Referral-/Rabattlogik
 - aktiver MVP-Scope
 - Demo-Pfad
 - Integrationsstatus
@@ -216,7 +240,7 @@ Wenn eine Änderung eines dieser Themen berührt, müssen Reader/Dokumente im se
 - Datenbanktabellen/RLS
 - Secrets/Security
 - öffentliche Landingpage-Versprechen
-- Legal-/Zahlungsbedingungen, falls Preis oder Leistungsgrenzen betroffen sind
+- Legal-/Zahlungsbedingungen, falls Preis, Referral oder Leistungsgrenzen betroffen sind
 
 Pflichtdateien für Synchronisierung:
 
@@ -226,4 +250,5 @@ Pflichtdateien für Synchronisierung:
 - `docs/database/fanmind_current_schema.md`
 - `docs/SECURITY_RLS_SECRETS_CHECK.md`, wenn Security/RLS/Secrets betroffen sind
 - `docs/AI_COST_MONITORING.md`, wenn KI/Kosten betroffen sind
+- `docs/REFERRAL_PROGRAM.md`, wenn Referral/Rabatte betroffen sind
 - Landingpage/Legal/Pricing-Code, wenn öffentliche Aussagen betroffen sind
