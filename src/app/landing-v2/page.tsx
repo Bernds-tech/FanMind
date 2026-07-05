@@ -341,70 +341,59 @@ const sixStepBenefits = [
 
 
 const integrationChannels = [
-  {
-    icon: "✉",
-    platform: "email",
-    title: "E-Mail",
-    text: "E-Mail-Anfragen zentral bündeln und die Synchronisation transparent vorbereiten.",
-    status: "Coming Soon",
-    tone: "blue",
-  },
-  {
-    icon: "☏",
-    platform: "whatsapp",
-    title: "WhatsApp",
-    text: "Kontakte, Handles und Chat-Kontext für die spätere Synchronisation vorbereiten.",
-    status: "Beta / in Vorbereitung",
-    tone: "green",
-  },
-  {
-    icon: "◖",
-    platform: "discord",
-    title: "Discord",
-    text: "Server-, Profil- und Interaktionskontext für den späteren Abgleich vorbereiten.",
-    status: "Coming Soon",
-    tone: "violet",
-  },
-  {
-    icon: "f",
-    platform: "facebook",
-    title: "Facebook",
-    text: "Profil- und Seitenkontakte als vorbereiteten Beta-Workflow einordnen – keine produktive Vollintegration.",
-    status: "Beta / in Vorbereitung",
-    tone: "blue",
-  },
-  {
-    icon: "𝕏",
-    platform: "x",
-    title: "X",
-    text: "Handles, Profile und Aktivität für den späteren Abgleich vorbereiten.",
-    status: "Coming Soon",
-    tone: "white",
-  },
-  {
-    icon: "♪",
-    platform: "tiktok",
-    title: "TikTok",
-    text: "Kommentare, Handles und Aktivitätsstände für die spätere Synchronisation vorbereiten.",
-    status: "Coming Soon",
-    tone: "purple",
-  },
-  {
-    icon: "◎",
-    platform: "instagram",
-    title: "Instagram",
-    text: "DM-Kontext und Profile als vorbereiteten Beta-Workflow einordnen – keine produktive Vollintegration.",
-    status: "Beta / in Vorbereitung",
-    tone: "pink",
-  },
-  {
-    icon: "▤",
-    platform: "webform",
-    title: "Webformulare",
-    text: "Formularanfragen manuell übernehmen und Kontaktprofilen zuordnen.",
-    status: "Bereit",
-    tone: "cyan",
-  },
+  { platform: "instagram", title: "Instagram", text: "DM- und Profilkontext vorbereitet, noch keine Live-Anbindung.", status: "Beta / in Vorbereitung", tone: "pink" },
+  { platform: "tiktok", title: "TikTok", text: "Kommentare und Handles als geprüfter Roadmap-Kanal.", status: "Coming Soon", tone: "purple" },
+  { platform: "youtube", title: "YouTube", text: "Community- und Kommentar-Kontext für spätere Workflows.", status: "Roadmap", tone: "pink" },
+  { platform: "facebook", title: "Facebook", text: "Seiten- und Profilkontakte vorbereitet, nicht produktiv angebunden.", status: "Beta / in Vorbereitung", tone: "blue" },
+  { platform: "whatsapp", title: "WhatsApp", text: "Chat-Kontext für spätere Synchronisation vorbereitet.", status: "Beta / in Vorbereitung", tone: "green" },
+  { platform: "telegram", title: "Telegram", text: "Community-Nachrichten als geplanter Kanal.", status: "Coming Soon", tone: "cyan" },
+  { platform: "snapchat", title: "Snapchat", text: "Creator-Kontakte als späterer Social-Kanal.", status: "Roadmap", tone: "yellow" },
+  { platform: "linkedin", title: "LinkedIn", text: "Business-Kontakte und Nachrichten für spätere Prüfung.", status: "Roadmap", tone: "blue" },
+  { platform: "discord", title: "Discord", text: "Server- und Profilkontext vorbereitet, keine Live-Integration.", status: "Coming Soon", tone: "violet" },
+  { platform: "x", title: "X / Twitter", text: "Handles und Aktivität für spätere Einordnung.", status: "Coming Soon", tone: "white" },
+  { platform: "threads", title: "Threads", text: "Social-Kontext als Roadmap-Erweiterung.", status: "Roadmap", tone: "white" },
+  { platform: "reddit", title: "Reddit", text: "Communities und Erwähnungen für spätere Pilotphasen.", status: "Roadmap", tone: "orange" },
+  { platform: "email", title: "E-Mail", text: "Anfragen manuell bündeln; Synchronisation bleibt vorbereitet.", status: "Coming Soon", tone: "blue" },
+  { platform: "website-chat", title: "Website-Chat", text: "Chat-Anfragen als vorbereiteter Eingangskanal.", status: "Beta / in Vorbereitung", tone: "cyan" },
+  { platform: "webform", title: "Webformular", text: "Formularanfragen manuell übernehmen und zuordnen.", status: "Bereit", tone: "cyan" },
+  { platform: "manual", title: "Manuell / CSV", text: "Kontakte importieren oder manuell pflegen.", status: "Bereit", tone: "green" },
+  { platform: "twitch", title: "Twitch", text: "Streaming-Community als späterer Kanal.", status: "Roadmap", tone: "purple" },
+  { platform: "pinterest", title: "Pinterest", text: "Content-Interaktionen für spätere Auswertung.", status: "Roadmap", tone: "pink" },
+  { platform: "patreon", title: "Patreon / Memberships", text: "Mitgliedschaften als geplanter CRM-Kontext.", status: "Roadmap", tone: "orange" },
+  { platform: "kofi", title: "Ko-fi", text: "Supporter-Kontext für spätere Workflows.", status: "Roadmap", tone: "cyan" },
+  { platform: "buy-me-a-coffee", title: "Buy Me a Coffee", text: "Supporter-Profile als vorbereiteter Eingang.", status: "Roadmap", tone: "orange" },
+  { platform: "substack", title: "Newsletter / Substack", text: "Newsletter-Reaktionen für spätere CRM-Sichten.", status: "Roadmap", tone: "orange" },
+  { platform: "youtube-live-chat", title: "YouTube Live-Chat", text: "Live-Kommentare als späterer Pilot-Kanal.", status: "Roadmap", tone: "pink" },
+  { platform: "discord-server", title: "Discord Server", text: "Server-Kontext bleibt klar vorbereitet.", status: "Coming Soon", tone: "violet" },
+  { platform: "reddit-communities", title: "Reddit Communities", text: "Community-Kontext für spätere Pilotphasen.", status: "Roadmap", tone: "orange" },
+  { platform: "google", title: "Google Business Profile", text: "Profil-Anfragen als geplanter Business-Kanal.", status: "Roadmap", tone: "blue" },
+  { platform: "google-reviews", title: "Google Reviews", text: "Bewertungen für spätere Antwort-Workflows.", status: "Roadmap", tone: "green" },
+  { platform: "review", title: "Reviews / Bewertungen", text: "Feedback-Quellen als ehrlicher Roadmap-Block.", status: "Roadmap", tone: "green" },
+  { platform: "trustpilot", title: "Trustpilot", text: "Review-Kontext für spätere Bearbeitung.", status: "Roadmap", tone: "green" },
+  { platform: "app-store", title: "App Store Reviews", text: "Store-Feedback als geplanter Eingang.", status: "Roadmap", tone: "blue" },
+  { platform: "play-store", title: "Play Store Reviews", text: "App-Feedback als späterer Review-Kanal.", status: "Roadmap", tone: "green" },
+  { platform: "shopify", title: "Shopify", text: "Shop-Kontakte als mögliche Commerce-Erweiterung.", status: "Roadmap", tone: "green" },
+  { platform: "amazon", title: "Amazon", text: "Marketplace-Kontext für spätere Prüfung.", status: "Roadmap", tone: "orange" },
+  { platform: "etsy", title: "Etsy", text: "Shop-Interaktionen als geplanter Kanal.", status: "Roadmap", tone: "orange" },
+  { platform: "mercado-libre", title: "Mercado Libre", text: "Marketplace-Nachrichten für spätere Regionen.", status: "Roadmap", tone: "yellow" },
+  { platform: "wechat", title: "WeChat", text: "Internationaler Messaging-Kanal auf der Roadmap.", status: "Roadmap", tone: "green" },
+  { platform: "douyin", title: "Douyin", text: "Kurzvideo-Kanal für spätere Marktprüfung.", status: "Roadmap", tone: "purple" },
+  { platform: "xiaohongshu-rednote", title: "Xiaohongshu / RedNote", text: "Community-Commerce-Kontext als Roadmap-Thema.", status: "Roadmap", tone: "pink" },
+  { platform: "weibo", title: "Weibo", text: "Social-Profile für spätere internationale Piloten.", status: "Roadmap", tone: "orange" },
+  { platform: "kuaishou", title: "Kuaishou", text: "Kurzvideo-Community für spätere Prüfung.", status: "Roadmap", tone: "purple" },
+  { platform: "bilibili", title: "Bilibili", text: "Video-Community als internationaler Roadmap-Kanal.", status: "Roadmap", tone: "cyan" },
+  { platform: "qq", title: "QQ", text: "Messaging-Kontext für spätere regionale Piloten.", status: "Roadmap", tone: "blue" },
+  { platform: "line", title: "LINE", text: "Messaging-Kanal für spätere Marktprüfung.", status: "Roadmap", tone: "green" },
+  { platform: "kakao", title: "KakaoTalk", text: "Messaging-Kontext als Roadmap-Erweiterung.", status: "Roadmap", tone: "yellow" },
+  { platform: "viber", title: "Viber", text: "Messenger-Kontext für spätere Pilotphasen.", status: "Roadmap", tone: "purple" },
+  { platform: "sharechat", title: "ShareChat", text: "Regionale Communities für spätere Validierung.", status: "Roadmap", tone: "orange" },
+  { platform: "moj", title: "Moj", text: "Kurzvideo-Community als Roadmap-Kanal.", status: "Roadmap", tone: "pink" },
+  { platform: "josh", title: "Josh", text: "Creator-Community für spätere Marktprüfung.", status: "Roadmap", tone: "pink" },
+];
+
+const integrationMarqueeRows = [
+  integrationChannels.filter((_, index) => index % 2 === 0),
+  integrationChannels.filter((_, index) => index % 2 === 1),
 ];
 
 const integrationSources = [
@@ -1034,7 +1023,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const localizedMenuItems = localizeFanMindValue(visibleLandingMenuItems, t);
   const localizedSixStepCards = localizeFanMindValue(sixStepCards, t).map((card) => ({ ...card, href: card.href === LANDING_ROADMAP_HREF ? roadmapHref : card.href }));
   const localizedSixStepBenefits = localizeFanMindValue(sixStepBenefits, t);
-  const localizedIntegrationChannels = localizeFanMindValue(integrationChannels, t);
+  const localizedIntegrationMarqueeRows = localizeFanMindValue(integrationMarqueeRows, t);
   const localizedIntegrationSources = localizeFanMindValue(integrationSources, t);
   const localizedIntegrationActions = localizeFanMindValue(integrationActions, t);
   const localizedIntegrationBenefits = localizeFanMindValue(integrationBenefits, t);
@@ -1584,22 +1573,27 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <p>{t("FanMind macht kontrollierte Multi-Channel-Arbeit transparent: angebundene Kanäle bleiben nutzbar, geplante Kanäle werden vorbereitet und erst nach technischer sowie rechtlicher Prüfung als aktiv gekennzeichnet. Unfertige Plattformen bleiben klar markiert.")}</p>
         </div>
 
-        <div className={styles.integrationChannelGrid}>
-          {localizedIntegrationChannels.map((channel) => (
-            <article
-              className={`${styles.integrationChannelCard} ${isComingSoonStatus(channel.status) ? styles.cardWithComingSoon : ""}`}
-              data-tone={channel.tone}
-              key={channel.title}
-            >
-              <PlatformLogo className={styles.integrationChannelIcon} platform={channel.platform} size="md" />
-              <h3>{channel.title}</h3>
-              <p>{channel.text}</p>
-              {isComingSoonStatus(channel.status) ? (
-                <ComingSoonMark size="small" className={styles.comingSoonImage} />
-              ) : (
-                <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
-              )}
-            </article>
+        <div className={styles.integrationMarquee} aria-label={t("Vorbereitete und manuell nutzbare Kanäle")}>
+          {localizedIntegrationMarqueeRows.map((row, rowIndex) => (
+            <div className={styles.integrationMarqueeViewport} key={`integration-row-${rowIndex}`}>
+              <div className={styles.integrationMarqueeTrack} data-row={rowIndex + 1}>
+                {[...row, ...row].map((channel, channelIndex) => (
+                  <article
+                    className={`${styles.integrationChannelCard} ${isComingSoonStatus(channel.status) ? styles.cardWithComingSoon : ""}`}
+                    data-tone={channel.tone}
+                    key={`${channel.title}-${channelIndex}`}
+                    aria-hidden={channelIndex >= row.length ? "true" : undefined}
+                  >
+                    <PlatformLogo className={styles.integrationChannelIcon} platform={channel.platform} size="md" />
+                    <div>
+                      <h3>{channel.title}</h3>
+                      <p>{channel.text}</p>
+                    </div>
+                    <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
+                  </article>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 
