@@ -30,10 +30,7 @@ export function LegalFooter() {
         <a href="/datenschutz">Datenschutz</a>
         <a href="/agb">AGB</a>
         <a href="/zahlungsbedingungen">Zahlungsbedingungen</a>
-        <a href="/avv">AVV</a>
-        <a href="/roadmap">Roadmap</a>
-        <a href="/login">Login</a>
-        <a href="/register">Registrieren</a>
+        <a href="mailto:kontakt@fanmind.ch">Kontakt</a>
       </nav>
       <p className={styles.updated}>Stand: Juli 2026</p>
       <a className={styles.backTop} href="#top" aria-label="Nach oben">↑</a>
@@ -50,12 +47,7 @@ export function LegalHeader() {
         <a href="/datenschutz">Datenschutz</a>
         <a href="/agb">AGB</a>
         <a href="/zahlungsbedingungen">Zahlungsbedingungen</a>
-        <a href="/avv">AVV</a>
       </nav>
-      <div className={styles.headerActions}>
-        <a className={styles.loginButton} href="/login">Login</a>
-        <a className={styles.accessButton} href="/register">Registrieren</a>
-      </div>
     </header>
   );
 }
