@@ -24,7 +24,7 @@ export function LegalFooter() {
   return (
     <footer className={styles.siteFooter}>
       <FanMindLogo className={styles.logo} compact href="/" ariaLabel="FanMind Startseite öffnen" />
-      <p>FanMind · KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · anfrage@fanmind.ch</p>
+      <p>FanMind · KI-gestützter Antwort- und Memory-Assistent · kontakt@fanmind.ch</p>
       <nav aria-label="Footer Navigation">
         <a href="/impressum">Impressum</a>
         <a href="/datenschutz">Datenschutz</a>
@@ -35,7 +35,7 @@ export function LegalFooter() {
         <a href="/login">Login</a>
         <a href="/register">Registrieren</a>
       </nav>
-      <p className={styles.updated}>Entwurf · Stand: Juni 2026</p>
+      <p className={styles.updated}>Stand: Juli 2026</p>
       <a className={styles.backTop} href="#top" aria-label="Nach oben">↑</a>
     </footer>
   );
