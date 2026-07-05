@@ -1,103 +1,141 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import styles from "./impressum.module.css";
 
 export const metadata: Metadata = {
-  title: "Impressum | FanMind",
-  description: "Anbieterkennzeichnung, Kontakt und rechtliche Hinweise für FanMind.",
+  title: "Impressum / Offenlegung | FanMind",
+  description: "Impressum, Offenlegung und rechtliche Hinweise für FanMind.",
 };
 
-const contactRows = [
-  { label: "Allgemeine Anfragen", value: "anfrage@fanmind.ch", href: "mailto:anfrage@fanmind.ch" },
-  { label: "Datenschutz", value: "privacy@fanmind.ch", href: "mailto:privacy@fanmind.ch" },
+const operatorRows = [
+  { label: "FanMind", value: "Ein Projekt von Gerhard Novy und Bernd Guggenberger" },
+  { label: "Adresse", value: <>Turnerstraße 18<br />2345 Brunn am Gebirge<br />Österreich</> },
+  { label: "E-Mail", value: <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a> },
+  { label: "Website", value: <a href="https://fanmind.ch">https://fanmind.ch</a> },
+  { label: "Rechtsform", value: "[BITTE FINAL EINTRAGEN: z. B. FanMind GesbR / Einzelunternehmen / GmbH / andere Rechtsform]" },
+  { label: "Vertreten durch", value: "Gerhard Novy und Bernd Guggenberger" },
+  { label: "Beteiligungsverhältnisse", value: <>Gerhard Novy: 50&nbsp;%<br />Bernd Guggenberger: 50&nbsp;%</> },
+  { label: "Vertretungsbefugnis", value: "[BITTE FINAL EINTRAGEN: gemeinsam vertretungsbefugt oder jeweils einzeln vertretungsbefugt]" },
 ];
 
 export default function ImpressumPage() {
   return (
-    <main className={styles.page}>
-      <div className={styles.headerWrap}>
-        <header className={styles.header}>
-          <a className={styles.backLink} href="/landing-v2">← Zurück</a>
-          <h1>Impressum</h1>
-          <p>Anbieterkennzeichnung und Kontaktinformationen für FanMind.</p>
+    <main id="top" className={styles.page}>
+      <div className={styles.watermark} aria-hidden="true" />
+      <div className={styles.shell}>
+        <header className={styles.hero}>
+          <Link className={styles.logoLink} href="/" aria-label="Zur FanMind Startseite">
+            <span>Fan</span>Mind
+          </Link>
+          <h1>Impressum / Offenlegung</h1>
+          <p className={styles.eyebrow}>Betreiber der Website</p>
+          <dl className={styles.operatorList}>
+            {operatorRows.map((row) => (
+              <div className={styles.operatorRow} key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {/* TODO: UID-Nummer ATU68319269 nur anzeigen, wenn sie tatsächlich zum aktuellen rechtlichen Betreiber von FanMind gehört. */}
+          {/* TODO: Firmenbuchnummer FN 408734f nur anzeigen, wenn sie tatsächlich zum aktuellen rechtlichen Betreiber von FanMind gehört. */}
+          {/* TODO: Firmenbuchgericht Landesgericht Wiener Neustadt nur anzeigen, wenn die Firmenbuchnummer tatsächlich zum aktuellen rechtlichen Betreiber von FanMind gehört. */}
         </header>
-      </div>
 
-      <div className={styles.contentWrap}>
-        <article className={styles.document} aria-label="Impressum für FanMind">
-          <p className={styles.intro}>
-            Diese Seite bündelt die öffentlich bereitgestellten Anbieter-, Kontakt- und Produktinformationen für FanMind. Angaben werden bewusst nur auf Grundlage final bestätigter Informationen veröffentlicht.
-          </p>
-
-          <section className={styles.section} aria-labelledby="anbieterkennzeichnung">
-            <h2 id="anbieterkennzeichnung">Für den Inhalt verantwortlich / Anbieterkennzeichnung</h2>
-            <div className={styles.lines}>
-              <p className={styles.line}>
-                FanMind ist ein KI-gestütztes CRM- und Kommunikationssystem für strukturierte Fan- und Kontaktbeziehungen. Die Plattform unterstützt Teams dabei, Kontakte zu verwalten, Antwortvorschläge vorzubereiten, relevante Erinnerungen festzuhalten und Follow-ups sauber nachzuhalten.
-              </p>
-              <p className={styles.line}>
-                Website: <a href="https://fanmind.ch">https://fanmind.ch</a>
-              </p>
-              <p className={styles.line}>
-                Die finale Anbieter- beziehungsweise Firmierung wird im Produktumfeld nur mit bestätigten Angaben geführt. Nicht eindeutig bestätigte Firmen-, Register-, Steuer- oder Adressdaten werden hier bewusst nicht behauptet.
-              </p>
-            </div>
+        <article className={styles.legalContent} aria-label="Impressum und Offenlegung für FanMind">
+          <section className={styles.section} aria-labelledby="grundlegende-richtung">
+            <h2 id="grundlegende-richtung">Grundlegende Richtung der Website</h2>
+            <p>
+              Diese Website informiert über FanMind, die angebotenen Funktionen, Pilotangebote,
+              Produktentwicklung, Roadmap und Kontaktmöglichkeiten.
+            </p>
+            <p>
+              FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Fan-, Kunden- und
+              Community-Beziehungen. FanMind unterstützt Teams dabei, Kontakte zu verwalten,
+              Kontextinformationen zu speichern, KI-gestützte Antwortvorschläge zu erstellen und
+              Follow-ups manuell zu organisieren.
+            </p>
           </section>
 
-          <section className={styles.section} aria-labelledby="kontakt">
-            <h2 id="kontakt">Kontakt</h2>
-            <dl className={styles.metaList}>
-              {contactRows.map((row) => (
-                <div className={styles.metaRow} key={row.label}>
-                  <dt>{row.label}</dt>
-                  <dd><a href={row.href}>{row.value}</a></dd>
-                </div>
-              ))}
-            </dl>
-            <p className={styles.footerNote}>Datenschutzanfragen können alternativ auch an anfrage@fanmind.ch gerichtet werden.</p>
+          <section className={styles.section} aria-labelledby="produktstatus">
+            <h2 id="produktstatus">Produktstatus und Leistungsgrenzen</h2>
+            <p>
+              FanMind befindet sich in einer MVP- und Pilotphase. Der aktuelle Funktionsumfang
+              umfasst insbesondere Login, Dashboard, Kontaktverwaltung, Kontaktprofile,
+              KI-gestützte Antwortvorschläge, Memory-Funktionen, Follow-ups, CSV-Import und
+              Roadmap-Ansichten.
+            </p>
+            <h3>Keine automatische Kommunikation</h3>
+            <p>
+              FanMind versendet keine Nachrichten automatisch. Antwortvorschläge werden von
+              Nutzerinnen und Nutzern geprüft, kopiert, übernommen oder verworfen. Der finale
+              Versand erfolgt manuell durch die Nutzerinnen und Nutzer.
+            </p>
+            <h3>Keine aktiven Social-Media-Integrationen</h3>
+            <p>
+              Aktuell bestehen keine produktiven Social-Media-Synchronisierungen und keine
+              automatischen Integrationen mit Instagram, TikTok, Facebook, X / Twitter, WhatsApp
+              oder Discord. Ebenfalls nicht Bestandteil der aktuellen Version sind Scraping,
+              automatische Nachrichtenversendung, autonome Kommunikation und Zahlungslogik.
+            </p>
+            <h3>Roadmap</h3>
+            <p>
+              Geplante Integrationen und Erweiterungen werden als „Geplant“, „Coming Soon“ oder
+              „In Arbeit“ gekennzeichnet. Sie werden erst nach technischer, rechtlicher und
+              produktseitiger Prüfung umgesetzt.
+            </p>
           </section>
 
-          <section className={styles.section} aria-labelledby="register-steuer">
-            <h2 id="register-steuer">Register / Steuer</h2>
-            <div className={styles.lines}>
-              <p className={styles.line}>Register-, steuer- oder berufsrechtliche Angaben werden ausschließlich auf Grundlage bestätigter Anbieterinformationen veröffentlicht.</p>
-              <p className={styles.line}>Solange solche Angaben im Projekt nicht final bestätigt sind, werden keine Register- oder Steuernummern, keine UID und keine berufsrechtlichen Pflichtangaben aufgeführt.</p>
-            </div>
+          <section className={styles.section} aria-labelledby="rechtliche-hinweise">
+            <h2 id="rechtliche-hinweise">Rechtliche Hinweise</h2>
+            <h3>1. Haftung für Inhalte</h3>
+            <p>
+              Die Inhalte dieser Website werden mit größtmöglicher Sorgfalt erstellt. Für die
+              Richtigkeit, Vollständigkeit und Aktualität der bereitgestellten Informationen kann
+              jedoch keine Gewähr übernommen werden. Rechtlich zwingende Haftungstatbestände bleiben
+              unberührt.
+            </p>
+            <h3>2. Urheberrecht</h3>
+            <p>
+              Die auf dieser Website veröffentlichten Inhalte, Texte, Grafiken, Markenbestandteile
+              und sonstigen Materialien sind urheberrechtlich geschützt, soweit sie nicht
+              ausdrücklich anders gekennzeichnet sind. Eine Nutzung, Vervielfältigung, Bearbeitung
+              oder Weitergabe außerhalb der gesetzlichen Grenzen bedarf der vorherigen Zustimmung
+              des jeweiligen Rechteinhabers.
+            </p>
+            <h3>3. Haftung für externe Links</h3>
+            <p>
+              Diese Website kann Links zu externen Websites enthalten. Auf deren Inhalte haben die
+              Betreiber von FanMind keinen Einfluss. Für die Inhalte verlinkter Seiten ist stets der
+              jeweilige Anbieter oder Betreiber der verlinkten Seite verantwortlich. Bei
+              Bekanntwerden rechtswidriger Inhalte werden entsprechende Links entfernt.
+            </p>
           </section>
 
-          <section className={styles.section} aria-labelledby="verantwortlich-inhalte">
-            <h2 id="verantwortlich-inhalte">Verantwortlich für Inhalte</h2>
-            <div className={styles.lines}>
-              <p className={styles.line}>Die inhaltliche Verantwortung für diese Website wird im Rahmen der finalen Anbieterbestätigung präzisiert und nur mit belastbaren Angaben veröffentlicht.</p>
-              <p className={styles.line}>Bis zur finalen Bestätigung werden keine Personen- oder Unternehmensdaten ergänzt, die nicht eindeutig im Projekt hinterlegt und freigegeben sind.</p>
-            </div>
-          </section>
-
-          <section className={styles.section} aria-labelledby="produkt-roadmap">
-            <h2 id="produkt-roadmap">Produkt- und Roadmap-Hinweis</h2>
-            <div className={styles.lines}>
-              <p className={styles.line}>FanMind ist kein Bot und bietet keine automatische Sendefunktion. Die KI unterstützt den Arbeitsprozess, indem sie Antwortvorschläge, Memory-Hinweise und Follow-ups vorbereitet.</p>
-              <p className={styles.line}>Der Mensch bleibt verantwortlich: Vorschläge werden geprüft, bei Bedarf angepasst und anschließend manuell im passenden Kanal versendet.</p>
-              <p className={styles.line}>Externe Social-Integrationen werden erst nach technischer und rechtlicher Prüfung aktiviert. Roadmap-, Beta-, Pilot- und Coming-Soon-Funktionen sind nicht als aktive Live-Funktionen zu verstehen, solange sie nicht ausdrücklich als verfügbar gekennzeichnet sind.</p>
-            </div>
-          </section>
-
-          <section className={styles.section} aria-labelledby="datenschutzverweis">
-            <h2 id="datenschutzverweis">Datenschutzverweis</h2>
-            <div className={styles.lines}>
-              <p className={styles.line}>Hinweise zur Verarbeitung personenbezogener Daten stehen in der <a href="/datenschutz">Datenschutzerklärung</a>.</p>
-              <p className={styles.line}>Datenschutzanfragen können an privacy@fanmind.ch oder anfrage@fanmind.ch gerichtet werden.</p>
-            </div>
-          </section>
-
-          <section className={styles.section} aria-labelledby="verbraucherstreitbeilegung">
-            <h2 id="verbraucherstreitbeilegung">Verbraucherstreitbeilegung</h2>
-            <div className={styles.lines}>
-              <p className={styles.line}>Angaben zur Teilnahme an einem Verbraucherstreitbeilegungsverfahren werden nur veröffentlicht, wenn eine entsprechende Entscheidung final bestätigt ist.</p>
-              <p className={styles.line}>Diese Information stellt keine rechtliche Zusage und keine Rechtsberatung dar.</p>
-            </div>
+          <section className={styles.section} aria-labelledby="datenschutz">
+            <h2 id="datenschutz">Datenschutz</h2>
+            <p>
+              Informationen zur Verarbeitung personenbezogener Daten enthält die Datenschutzerklärung
+              unter <Link href="/datenschutz">/datenschutz</Link>.
+            </p>
+            <p>
+              Datenschutzanfragen können gerichtet werden an:{" "}
+              <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>.
+            </p>
+            {/* TODO: privacy@fanmind.ch zusätzlich anzeigen, sobald die Adresse aktiv und überwacht ist. */}
           </section>
         </article>
+
+        <footer className={styles.footer}>
+          <p>© 2026 FanMind. Alle Rechte vorbehalten.</p>
+          <nav aria-label="Rechtliche Links">
+            <Link href="/datenschutz">Datenschutz</Link>
+            <Link href="/impressum">Impressum</Link>
+            <a href="mailto:kontakt@fanmind.ch">Kontakt</a>
+          </nav>
+        </footer>
       </div>
+      <a className={styles.backToTop} href="#top" aria-label="Zurück nach oben">↑</a>
     </main>
   );
 }
