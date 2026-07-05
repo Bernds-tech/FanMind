@@ -676,17 +676,32 @@ const faqContacts = [
 
 const landingFooterColumns = [
   {
-    icon: "✦",
-    title: "FanMind",
+    title: "Produkt",
+    links: [
+      { label: "Produkt", href: "#produkt-showcase" },
+      { label: "Workflow", href: "#conversion" },
+      { label: "MVP", href: "#features" },
+      { label: "Preise", href: "#preise" },
+      { label: "Roadmap", href: LANDING_ROADMAP_HREF },
+    ],
+  },
+  {
+    title: "Rechtliches",
     links: [
       { label: "Impressum", href: "/impressum" },
       { label: "Datenschutz", href: "/datenschutz" },
       { label: "AGB", href: "/agb" },
       { label: "Zahlungsbedingungen", href: "/zahlungsbedingungen" },
       { label: "AVV", href: "/avv" },
-      { label: "Roadmap", href: LANDING_ROADMAP_HREF },
+    ],
+  },
+  {
+    title: "Zugang",
+    links: [
       { label: "Login", href: "/login" },
       { label: "Registrieren", href: "/register" },
+      { label: "Kostenlos testen", href: "/login" },
+      { label: "Pilot anfragen", href: "#kontakt" },
     ],
   },
 ];
@@ -892,7 +907,13 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const localizedFaqHighlights = localizeFanMindValue(faqHighlights, t);
   const localizedFaqs = localizeFanMindValue(faqs, t);
   const localizedFaqContacts = localizeFanMindValue(faqContacts, t).map((contact) => ({ ...contact, href: contact.href === "/login" ? loginHref : contact.href }));
-  const localizedLandingFooterColumns = localizeFanMindValue(landingFooterColumns, t).map((column) => ({ ...column, links: column.links.map((link) => ({ ...link, href: link.href === LANDING_ROADMAP_HREF ? roadmapHref : link.href })) }));
+  const localizedLandingFooterColumns = localizeFanMindValue(landingFooterColumns, t).map((column) => ({
+    ...column,
+    links: column.links.map((link) => ({
+      ...link,
+      href: link.href === LANDING_ROADMAP_HREF ? roadmapHref : link.href === "/login" ? loginHref : link.href === "/register" ? registerHref : link.href,
+    })),
+  }));
   const localizedPricingPlans = localizeFanMindValue(pricingPlans, t).map((plan) => ({ ...plan, href: plan.href.startsWith("/register") ? localizedPath("/register", language, plan.href.includes("?") ? plan.href.slice(plan.href.indexOf("?")) : "") : plan.href }));
   const localizedPricingProofs = localizeFanMindValue(pricingProofs, t);
   const localizedRoadmapPhases = localizeFanMindValue(roadmapPhases, t);
@@ -1960,74 +1981,52 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
       </section>
 
 
-      <section
-        className={styles.landingFooterSection}
-        aria-labelledby="landing-footer-title"
-      >
+      <footer id="ressourcen" className={styles.siteFooter} aria-labelledby="landing-footer-title">
         <div className={styles.landingFooterPanel}>
           <div className={styles.landingFooterBrand}>
             <Logo language={language} />
             <h2 id="landing-footer-title">
-              <span>{t("KI-gestütztes Fan-CRM für Kontakte, Nachrichten, Memory und manuelle Follow-ups.")}</span>
+              {t("KI-gestütztes Fan-CRM für Nachrichten, Memory und manuelle Follow-ups.")}
             </h2>
-            <p>{t("FanMind verbindet Kontakte, KI-Antwortvorschläge, Memory und Follow-ups in einem manuellen Copy-&-Open-Workflow.")}</p>
-
-            <div className={styles.landingFooterDivider} aria-hidden="true" />
-
+            <p>{t("Kein Bot. Keine automatische Sendefunktion. Mensch prüft final.")}</p>
+            <a className={styles.landingFooterContact} href="mailto:kontakt@fanmind.de?subject=Pilot%20anfragen">
+              kontakt@fanmind.de
+            </a>
           </div>
 
           <div className={styles.landingFooterNav}>
             {localizedLandingFooterColumns.map((column) => (
               <nav aria-label={column.title} key={column.title}>
-                <h3>
-                  <span>{column.icon}</span> {column.title}
-                </h3>
+                <h3>{column.title}</h3>
                 {column.links.map((link) => (
                   <a href={link.href} key={link.label}>
-                    {link.label} <span>›</span>
+                    {link.label}
                   </a>
                 ))}
               </nav>
             ))}
           </div>
 
-          <div className={styles.landingFooterNewsletter}>
-            <div className={styles.landingFooterMailIcon}>✉</div>
+          <div id="kontakt" className={styles.landingFooterNewsletter}>
+            <span className={styles.landingFooterMailIcon} aria-hidden="true">✉</span>
             <div>
-              <h3>
-                {t("Bleib")} <span>{t("einen Schritt voraus.")}</span>
-              </h3>
-              <p>{t("Für Updates, Early-Access-Hinweise und Insights kannst du eine persönliche Anfrage an unser Team senden.")}</p>
+              <h3>{t("Pilot anfragen")}</h3>
+              <p>{t("Wir prüfen deinen Use Case und zeigen dir, wie FanMind in deinem Workflow eingesetzt werden kann.")}</p>
             </div>
-            <div className={styles.landingFooterSignup} aria-label="Zugangsanfrage">
-              <span>{t("E-Mail-Adresse eingeben")}</span>
-              <a href="#kontakt">{t("Pilot anfragen")} <span>→</span></a>
-              <small>{t("🛡 Persönliche Anfrage statt automatischem Newsletter.")}</small>
-            </div>
+            <a className={styles.landingFooterCta} href="mailto:kontakt@fanmind.de?subject=Pilot%20anfragen">
+              {t("Pilot anfragen")} <span>→</span>
+            </a>
+            <small>{t("Persönliche Anfrage · keine Newsletter-Automation")}</small>
           </div>
         </div>
-      </section>
 
-
-      <footer id="ressourcen" className={styles.siteFooter}>
-        <Logo language={language} />
-        <p>{t("FanMind · KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · kontakt@fanmind.de")}</p>
-        <nav aria-label="Footer Navigation">
-          <a href="/impressum">Impressum</a>
-          <a id="datenschutz" href="/datenschutz">{t("Datenschutz")}</a>
-          <a href="/agb">AGB</a>
-          <a id="zahlungsbedingungen" href="/zahlungsbedingungen">{t("Zahlungsbedingungen")}</a>
-          <a href="/avv">AVV</a>
-          <a href={roadmapHref}>{t("Roadmap")}</a>
-          <a href={loginHref}>Login</a>
-          <a href={registerHref}>{t("Registrieren")}</a>
-        </nav>
-        <div id="kontakt" className={styles.socials}>
-          <a href="mailto:kontakt@fanmind.de?subject=Pilot%20anfragen">{t("Pilot anfragen")}</a>
+        <div className={styles.landingFooterBottom}>
+          <p>© 2026 FanMind · {t("Alle Rechte vorbehalten.")}</p>
+          <p>{t("Copy-&-Open-Workflow · Keine automatische Sendefunktion")}</p>
+          <a className={styles.backTop} href="#top" aria-label="Nach oben">
+            ↑
+          </a>
         </div>
-        <a className={styles.backTop} href="#top" aria-label="Nach oben">
-          ↑
-        </a>
       </footer>
     </main>
   );
