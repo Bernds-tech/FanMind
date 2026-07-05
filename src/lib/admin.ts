@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { getSupabaseServerUser, type SupabaseServerUser } from "@/lib/supabase/server";
 
-const FALLBACK_ADMIN_EMAILS = "fanmind@fanmind.ch,b.guggennberger@gmail.com";
-
 function normalizeEmail(email: string | null | undefined): string {
   return String(email ?? "").trim().toLowerCase();
 }
 
 export function getAdminEmails(): string[] {
-  const configured = process.env.FANMIND_ADMIN_EMAILS?.trim() || FALLBACK_ADMIN_EMAILS;
+  // Admins are configured via `FANMIND_ADMIN_EMAILS` only.
+  const configured = process.env.FANMIND_ADMIN_EMAILS?.trim();
+  if (!configured) return [];
+
   return configured.split(",").map(normalizeEmail).filter(Boolean);
 }
 
