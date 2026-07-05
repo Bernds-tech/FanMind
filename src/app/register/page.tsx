@@ -691,7 +691,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               </div>
               <div className={styles.previewActions}>
                 <a className={styles.primaryLink} href={registerPlanHref("starter", language)}>{language === "en" ? "Start with Starter" : "Mit Starter starten"}</a>
-                <a className={styles.secondaryLink} href="mailto:kontakt@fanmind.de?subject=FanMind%20Demo%20anfragen">{language === "en" ? "Request demo" : "Zugang anfragen"}</a>
+                <a className={styles.secondaryLink} href="mailto:anfrage@fanmind.ch?subject=FanMind%20Demo%20anfragen">{language === "en" ? "Request demo" : "Zugang anfragen"}</a>
               </div>
               {error && <p className={styles.error} role="alert">{error}</p>}
               <p className={styles.notice}>{language === "en" ? "No productive Growth/Agency activation, no payment and no subscription billing are created here." : "Hier wird keine produktive Growth-/Agency-Freischaltung, keine Zahlung und keine Subscription-Abrechnung erstellt."}</p>

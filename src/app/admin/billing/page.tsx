@@ -112,7 +112,7 @@ function AdminTabs({ activeTab }: { activeTab: "overview" | "customers" | "packa
       <Link className={activeTab === "customers" ? styles.activeTab : undefined} href="/admin/billing?tab=customers">Kunden &amp; Nutzer</Link>
       <Link className={activeTab === "packages" ? styles.activeTab : undefined} href="/admin/billing?tab=packages">Pakete &amp; Freigaben</Link>
       <Link className={activeTab === "payments" ? styles.activeTab : undefined} href="/admin/billing?tab=payments">Zahlungen</Link>
-      <Link href="/admin/roadmap">Roadmap</Link>
+      <Link href="/admin/roadmap">Roadmap</Link><Link href="/admin/inquiries">Anfragen</Link>
       <span>Abos <small>Später</small></span>
     </nav>
   );

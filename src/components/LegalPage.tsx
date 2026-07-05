@@ -23,7 +23,7 @@ export function LegalFooter() {
   return (
     <footer className={styles.siteFooter}>
       <FanMindLogo className={styles.logo} compact href="/landing-v2" ariaLabel="FanMind Landingpage öffnen" />
-      <p>FanMind · KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · kontakt@fanmind.de</p>
+      <p>FanMind · KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · anfrage@fanmind.ch</p>
       <nav aria-label="Footer Navigation">
         <a href="/impressum">Impressum</a>
         <a href="/datenschutz">Datenschutz</a>
