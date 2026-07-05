@@ -740,17 +740,17 @@ const pricingPlans = [
   {
     icon: "↗",
     name: "Growth",
-    eyebrow: "Auf Anfrage",
-    audience: "Für wachsende Teams, die mehrere Profile und mehr Struktur vorbereiten möchten.",
+    eyebrow: "Coming Soon",
+    audience: "Roadmap-Paket für wachsende Teams, die mehrere Profile und mehr Struktur vorbereiten möchten.",
     pricePrefix: "",
-    price: "Auf Anfrage",
-    cadence: "Pilot-Feedback und Umfang klären · nicht automatisch buchbar",
-    cta: "Growth anfragen",
+    price: "Coming Soon",
+    cadence: "Coming Soon · noch nicht produktiv buchbar",
+    cta: "Pilot anfragen",
     href: "#kontakt",
     tone: "blue",
     featured: false,
-    status: "Pilot-Upgrade",
-    features: ["Mehrere Profile als Ausbaupfad", "Basis-Segmente und Listen in Vorbereitung", "Reichweiten- und Performance-Signale als Roadmap", "Kein automatischer Versand", "Umfang wird vor Buchung gemeinsam geprüft", "Keine falschen Live-Integrationen"],
+    status: "Coming Soon",
+    features: ["Mehrere Profile als Ausbaupfad geplant", "Basis-Segmente und Listen als Roadmap", "Reichweiten- und Performance-Signale als Roadmap", "Kein automatischer Versand", "Pilot-Feedback bestimmt den Ausbau", "Noch nicht kaufbar dargestellt"],
   },
   {
     icon: "▥",
@@ -1832,29 +1832,15 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </h2>
             <p>{t("FanMind unterstützt dein Team mit KI – während du die Kontrolle über Versand, Berechtigungen und Compliance jederzeit bewusst behältst.")}</p>
 
-            <div className={styles.privacyOrbit} aria-label="Kontrollprinzipien rund um FanMind">
-              <div className={styles.privacyOrbitCore}>
-                <span>🧠</span>
-                <strong>FanMind</strong>
-              </div>
-              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitData}`}>
-                <i>▣</i> {t("Sichere Daten")}
-              </span>
-              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitRoles}`}>
-                <i>👥</i> {t("Rollen & Rechte")}
-              </span>
-              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitAudit}`}>
-                <i>▤</i> Audit-Log
-              </span>
-              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitRules}`}>
-                <i>⚠</i> {t("Regeln & Kontrollen")}
-              </span>
-              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitEu}`}>
-                <i>☁</i> {t("EU-Fokus")}
-              </span>
-              <span className={`${styles.privacyOrbitItem} ${styles.privacyOrbitApproval}`}>
-                <i>☑</i> {t("Freigabe & Zustimmung")}
-              </span>
+            <div className={styles.privacyImageFrame}>
+              <Image
+                src="/assets/Landingpage-KI.png"
+                alt={t("FanMind KI-Unterstützung mit Kontrolle und Datenschutz")}
+                width={577}
+                height={334}
+                className={styles.privacyControlImage}
+                sizes="(max-width: 820px) 100vw, 46vw"
+              />
             </div>
           </div>
 
