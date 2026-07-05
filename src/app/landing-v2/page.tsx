@@ -1986,13 +1986,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.landingFooterPanel}>
           <div className={styles.landingFooterBrand}>
             <Logo language={language} />
-            <h2 id="landing-footer-title">
-              {t("KI-gestütztes Fan-CRM für Nachrichten, Memory und manuelle Follow-ups.")}
-            </h2>
-            <p>{t("Kein Bot. Keine automatische Sendefunktion. Mensch prüft final.")}</p>
-            <a className={styles.landingFooterContact} href="mailto:anfrage@fanmind.ch?subject=Pilot%20anfragen">
-              anfrage@fanmind.ch
-            </a>
+            <span id="landing-footer-title" className={styles.srOnly}>FanMind Footer</span>
           </div>
 
           <div className={styles.landingFooterNav}>
