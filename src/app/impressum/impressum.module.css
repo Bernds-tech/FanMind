@@ -30,7 +30,7 @@
   z-index: 1;
   width: min(100% - 40px, 1020px);
   margin: 0 auto;
-  padding: clamp(42px, 7vw, 86px) 0 52px;
+  padding: clamp(42px, 7vw, 86px) 0 clamp(56px, 8vw, 96px);
 }
 
 .hero {
@@ -150,8 +150,7 @@
 }
 
 .operatorRow a,
-.section a,
-.footer a {
+.section a {
   color: #5b22e6;
   font-weight: 800;
   text-decoration: underline;
@@ -160,32 +159,8 @@
 }
 
 .operatorRow a:hover,
-.section a:hover,
-.footer a:hover {
+.section a:hover {
   color: #7c3aed;
-}
-
-.footer {
-  display: grid;
-  gap: 18px;
-  justify-items: center;
-  padding-top: clamp(28px, 5vw, 48px);
-  color: #4b5563;
-  text-align: center;
-  border-top: 1px solid rgba(91, 34, 230, 0.14);
-}
-
-.footer p {
-  margin: 0;
-  font-size: 0.98rem;
-  line-height: 1.6;
-}
-
-.footer nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 22px;
-  justify-content: center;
 }
 
 .backToTop {

@@ -20,24 +20,6 @@ function slug(value: string) {
   return value.toLowerCase().replaceAll(" ", "-").replaceAll("/", "-");
 }
 
-export function LegalFooter() {
-  return (
-    <footer className={styles.siteFooter}>
-      <FanMindLogo className={styles.logo} compact href="/" ariaLabel="FanMind Startseite öffnen" />
-      <p>FanMind · KI-gestützter Antwort- und Memory-Assistent · kontakt@fanmind.ch</p>
-      <nav aria-label="Footer Navigation">
-        <a href="/impressum">Impressum</a>
-        <a href="/datenschutz">Datenschutz</a>
-        <a href="/agb">AGB</a>
-        <a href="/zahlungsbedingungen">Zahlungsbedingungen</a>
-        <a href="mailto:kontakt@fanmind.ch">Kontakt</a>
-      </nav>
-      <p className={styles.updated}>Stand: Juli 2026</p>
-      <a className={styles.backTop} href="#top" aria-label="Nach oben">↑</a>
-    </footer>
-  );
-}
-
 export function LegalHeader() {
   return (
     <header className={styles.header}>
@@ -78,7 +60,7 @@ export function LegalPage({ badge, title, intro, sections, children }: LegalPage
           ))}
         </div>
       </section>
-      <LegalFooter />
+      <a className={styles.backTop} href="#top" aria-label="Nach oben">↑</a>
     </main>
   );
 }

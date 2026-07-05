@@ -14,14 +14,6 @@ type TermsSection = {
   content: React.ReactNode;
 };
 
-const legalLinks = [
-  { href: "/impressum", label: "Impressum" },
-  { href: "/datenschutz", label: "Datenschutz" },
-  { href: "/agb", label: "AGB" },
-  { href: "/zahlungsbedingungen", label: "Zahlungsbedingungen" },
-  { href: "mailto:kontakt@fanmind.ch", label: "Kontakt" },
-];
-
 const sections: TermsSection[] = [
   {
     title: "Vertragspartner und Vertragsgegenstand",
@@ -466,21 +458,6 @@ export default function AgbPage() {
             </section>
           ))}
         </article>
-
-        <footer className={styles.footer}>
-          <div className={styles.footerBrand}>
-            <strong>FanMind</strong>
-            <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>
-            <a href="https://fanmind.ch">www.fanmind.ch</a>
-          </div>
-          <nav aria-label="Rechtliche Links">
-            {legalLinks.map((link) => (
-              <Link href={link.href} key={link.href}>
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </footer>
       </div>
       <a className={styles.backToTop} href="#top" aria-label="Zurück nach oben">
         ↑
