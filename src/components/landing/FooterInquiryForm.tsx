@@ -64,7 +64,7 @@ export function FooterInquiryForm() {
       </button>
       <small>Persönliche Anfrage statt automatischem Newsletter.</small>
       {state === "success" ? <p className={styles.footerInquirySuccess}>Danke, wir melden uns bei dir.</p> : null}
-      {state === "error" ? <p className={styles.footerInquiryError}>Anfrage konnte gerade nicht gesendet werden.</p> : null}
+      {state === "error" ? <p className={styles.footerInquiryError}>Anfrage konnte gerade nicht gesendet werden. Bitte schreibe direkt an kontakt@fanmind.ch.</p> : null}
     </form>
   );
 }
