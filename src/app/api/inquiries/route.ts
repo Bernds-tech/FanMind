@@ -1,25 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPilotInquiry, normalizeInquiryText } from "@/lib/inquiries";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { sendPilotInquiryNotification } from "@/lib/inquiryNotifications";
 
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 5;
-const buckets = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimitKey(request: NextRequest): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "anonymous";
-}
-
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const bucket = buckets.get(key);
-  if (!bucket || bucket.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-  bucket.count += 1;
-  return bucket.count > MAX_REQUESTS_PER_WINDOW;
-}
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as { email?: unknown; name?: unknown; message?: unknown; source?: unknown; company?: unknown } | null;
@@ -28,7 +13,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Anfrage konnte gerade nicht gesendet werden." }, { status: 400 });
   }
 
-  if (isRateLimited(rateLimitKey(request))) {
+  if (!checkRateLimit(`inquiry:${getClientIp(request)}`, { maxRequests: MAX_REQUESTS_PER_WINDOW, windowMs: WINDOW_MS }).allowed) {
     return NextResponse.json({ error: "Anfrage konnte gerade nicht gesendet werden." }, { status: 429 });
   }
 
