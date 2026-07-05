@@ -996,7 +996,11 @@ function Logo({ compact = false, language = "de" }: { compact?: boolean; languag
 
 
 function isComingSoonStatus(status?: string) {
-  return Boolean(status && ["Roadmap", "In Kürze", "Coming Soon", "Vorschau", "Preview", "Geplant", "Planned"].includes(status));
+  return Boolean(status && ["Roadmap", "In Kürze", "Coming Soon", "Beta / in Vorbereitung", "Vorschau", "Preview", "Geplant", "Planned"].includes(status));
+}
+
+function isReadyStatus(status?: string) {
+  return Boolean(status && ["Bereit", "Verfügbar", "Aktiv", "Active"].includes(status));
 }
 function MetricCard({
   label,
@@ -1610,14 +1614,12 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                       <h3>{channel.title}</h3>
                       <p>{channel.text}</p>
                     </div>
-                    {channel.status === "Roadmap" ? null : (
-                      <FeatureStatusLabel
-                        className={styles.integrationStatusBadge}
-                        variant={statusVariantFromLabel(channel.status) ?? "preview"}
-                      >
-                        {channel.status}
-                      </FeatureStatusLabel>
-                    )}
+                    {isReadyStatus(channel.status) ? (
+                      <span className={styles.integrationStatusBadge}>
+                        <span aria-hidden="true">✓</span>
+                        {t("BEREIT")}
+                      </span>
+                    ) : null}
                     {isComingSoonStatus(channel.status) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
                   </article>
                 ))}

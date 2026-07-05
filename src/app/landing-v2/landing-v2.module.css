@@ -4387,31 +4387,6 @@
   line-height: 1.28;
 }
 
-.integrationChannelCard > .integrationStatusBadge {
-  grid-column: 1 / -1;
-  justify-self: start;
-  margin-top: 12px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: rgba(0, 224, 132, 0.1);
-  color: #13e695;
-  font-size: 11.5px;
-  font-weight: 900;
-}
-
-.integrationChannelCard[data-tone="purple"] > .integrationStatusBadge,
-.integrationChannelCard[data-tone="violet"] > .integrationStatusBadge,
-.integrationChannelCard[data-tone="pink"] > .integrationStatusBadge,
-.integrationChannelCard[data-tone="white"] > .integrationStatusBadge {
-  background: rgba(169, 74, 255, 0.12);
-  color: #c557ff;
-}
-
-.integrationChannelCard[data-tone="cyan"] > .integrationStatusBadge {
-  background: rgba(0, 154, 255, 0.14);
-  color: #5fc4ff;
-}
-
 @keyframes integrationMarqueeScroll {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(calc(-50% - 7px), 0, 0); }
