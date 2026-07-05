@@ -17,25 +17,27 @@ const legalNavigation: Array<{ href: string; label: string; key: LegalTopHeaderK
 export default function LegalTopHeader({ active }: LegalTopHeaderProps) {
   return (
     <header className={styles.header}>
-      <Link className={styles.logoLink} href="/" aria-label="Zur FanMind Startseite">
-        <span>Fan</span>Mind
-      </Link>
-      <nav className={styles.nav} aria-label="Rechtsseiten Navigation">
-        {legalNavigation.map((item) => {
-          const isActive = item.key === active;
+      <div className={styles.inner}>
+        <Link className={styles.logoLink} href="/" aria-label="Zur FanMind Startseite">
+          <span>Fan</span>Mind
+        </Link>
+        <nav className={styles.nav} aria-label="Rechtsseiten Navigation">
+          {legalNavigation.map((item) => {
+            const isActive = item.key === active;
 
-          return (
-            <Link
-              className={isActive ? styles.activeLink : undefined}
-              href={item.href}
-              key={item.key}
-              aria-current={isActive ? "page" : undefined}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+            return (
+              <Link
+                className={isActive ? styles.activeLink : undefined}
+                href={item.href}
+                key={item.key}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </header>
   );
 }

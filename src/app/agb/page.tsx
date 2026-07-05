@@ -430,9 +430,8 @@ export default function AgbPage() {
     <main id="top" className={styles.page}>
       <div className={styles.shapeOne} aria-hidden="true" />
       <div className={styles.shapeTwo} aria-hidden="true" />
+      <LegalTopHeader active="agb" />
       <div className={styles.shell}>
-        <LegalTopHeader active="agb" />
-
         <header className={styles.hero}>
           <h1>AGB / VERTRAGSBEDINGUNGEN</h1>
           <p className={styles.subtitle}>für die Nutzung von FanMind</p>

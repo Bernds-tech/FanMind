@@ -589,9 +589,8 @@ export default function DatenschutzPage() {
     <main id="top" className={styles.page}>
       <div className={styles.watermark} aria-hidden="true" />
       <div className={styles.dotPattern} aria-hidden="true" />
+      <LegalTopHeader active="datenschutz" />
       <div className={styles.shell}>
-        <LegalTopHeader active="datenschutz" />
-
         <section className={styles.hero} aria-labelledby="privacy-title">
           <h1 id="privacy-title">Datenschutzerklärung</h1>
           <p>Transparenz zur Verarbeitung personenbezogener Daten bei FanMind</p>

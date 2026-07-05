@@ -23,9 +23,8 @@ export default function ImpressumPage() {
   return (
     <main id="top" className={styles.page}>
       <div className={styles.watermark} aria-hidden="true" />
+      <LegalTopHeader active="impressum" />
       <div className={styles.shell}>
-        <LegalTopHeader active="impressum" />
-
         <header className={styles.hero}>
           <h1>Impressum / Offenlegung</h1>
           <p className={styles.eyebrow}>Betreiber der Website</p>
