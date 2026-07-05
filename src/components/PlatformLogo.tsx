@@ -262,7 +262,36 @@ function BadgeSvg({ text }: { text: string }) {
   );
 }
 
+const platformLogoAssets: Partial<Record<NormalizedPlatform, string>> = {
+  facebook: "/channel-logos/facebook.svg",
+  instagram: "/channel-logos/instagram.svg",
+  whatsapp: "/channel-logos/whatsapp.svg",
+  telegram: "/channel-logos/telegram.svg",
+  discord: "/channel-logos/discord.svg",
+  tiktok: "/channel-logos/tiktok.svg",
+  x: "/channel-logos/twitter.svg",
+  twitter: "/channel-logos/twitter.svg",
+  youtube: "/channel-logos/youtube.svg",
+  linkedin: "/channel-logos/linkedin.svg",
+  email: "/channel-logos/email.svg",
+  webform: "/channel-logos/webform.svg",
+  onlyfans: "/channel-logos/onlyfans.svg",
+  snapchat: "/channel-logos/snapchat.svg",
+  threads: "/channel-logos/threads.svg",
+  reddit: "/channel-logos/reddit.svg",
+  twitch: "/channel-logos/twitch.svg",
+  pinterest: "/channel-logos/pinterest.svg",
+  patreon: "/channel-logos/patreon.svg",
+  shopify: "/channel-logos/shopify.svg",
+  manual: "/channel-logos/csv.svg",
+};
+
 function PlatformSvg({ platform }: { platform: NormalizedPlatform }) {
+  const assetSrc = platformLogoAssets[platform];
+  if (assetSrc) {
+    return <img className={styles.assetIcon} src={assetSrc} alt="" aria-hidden="true" />;
+  }
+
   if (platform === "facebook")
     return (
       <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
