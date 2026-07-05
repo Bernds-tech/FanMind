@@ -4,7 +4,7 @@ import styles from "@/app/datenschutz/datenschutz.module.css";
 
 export type LegalSection = {
   title: string;
-  body: string[];
+  body: ReactNode[];
 };
 
 type LegalPageProps = {
@@ -80,7 +80,7 @@ export function LegalPage({ badge, title, intro, sections, children }: LegalPage
           {sections.map((section) => (
             <article className={styles.card} id={slug(section.title)} key={section.title}>
               <h2>{section.title}</h2>
-              {section.body.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              {section.body.map((paragraph, index) => <p key={`${section.title}-${index}`}>{paragraph}</p>)}
             </article>
           ))}
         </div>
