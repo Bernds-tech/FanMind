@@ -816,15 +816,26 @@ const pricingProofs = [
   },
 ];
 
-const roadmapPhases = [
+const roadmapPhases: Array<{
+  number: string;
+  phase: string;
+  icon: string;
+  title: string;
+  status: string;
+  statusIcon: string;
+  tone: string;
+  availability: "done" | "upcoming" | "later";
+  items: Array<{ label: string; state: string; status?: string }>;
+}> = [
   {
     number: "01",
     phase: "Phase 1",
     icon: "rocket",
     title: "Produktkern",
     status: "Verfügbar",
-    statusIcon: "●",
+    statusIcon: "✓",
     tone: "blue",
+    availability: "done",
     items: [
       { label: "Login & Registrierung", state: "done" },
       { label: "Dashboard & Fans", state: "done" },
@@ -841,65 +852,174 @@ const roadmapPhases = [
     phase: "Phase 2",
     icon: "upload",
     title: "Fan-Import & Datenqualität",
-    status: "In Arbeit",
-    statusIcon: "✣",
+    status: "Erledigt / Basis steht",
+    statusIcon: "✓",
     tone: "green",
+    availability: "done",
     items: [
-      { label: "Erweiterte CSV-Feldzuordnung", state: "progress", status: "In Arbeit" },
-      { label: "Import-Validierung", state: "progress", status: "In Arbeit" },
-      { label: "Fan-Mapping", state: "progress", status: "In Arbeit" },
-      { label: "Duplikaterkennung", state: "partial", status: "Teilweise" },
-      { label: "Segment-Vorbereitung", state: "planned", status: "Vorbereitet" },
+      { label: "Erweiterte CSV-Feldzuordnung", state: "done" },
+      { label: "Import-Validierung", state: "done" },
+      { label: "Fan-Mapping", state: "done" },
+      { label: "Duplikaterkennung", state: "done" },
+      { label: "Segment-Vorbereitung", state: "done" },
     ],
   },
   {
     number: "03",
     phase: "Phase 3",
     icon: "campaign",
-    title: "Segmente & Kampagnen",
-    status: "In Kürze",
+    title: "Segmente & Listen",
+    status: "In Arbeit",
     statusIcon: "◷",
     tone: "purple",
+    availability: "upcoming",
     items: [
-      { label: "Segmente", state: "planned", status: "Vorbereitet" },
-      { label: "Kampagnen", state: "later", status: "Coming Soon" },
-      { label: "Vorlagen", state: "later", status: "Coming Soon" },
-      { label: "A/B-Tests", state: "later", status: "Coming Soon" },
+      { label: "Segment-Ansichten", state: "planned", status: "Vorbereitet" },
+      { label: "Listenlogik", state: "planned", status: "In Arbeit" },
+      { label: "Filter & Tags", state: "planned", status: "In Arbeit" },
+      { label: "CSV-Import für Segmente nutzen", state: "planned", status: "Nächster Schritt" },
     ],
   },
   {
     number: "04",
     phase: "Phase 4",
-    icon: "analytics",
-    title: "Analytics & Team",
-    status: "In Kürze",
+    icon: "campaign",
+    title: "Kampagnen-Vorbereitung",
+    status: "In Arbeit",
     statusIcon: "◷",
     tone: "violet",
+    availability: "upcoming",
     items: [
-      { label: "Analytics", state: "later", status: "Coming Soon" },
-      { label: "Team & Rollen", state: "later", status: "Coming Soon" },
-      { label: "Performance-Übersicht", state: "later", status: "Coming Soon" },
-      { label: "Workspaces / Multi-Workspace-Ausbau", state: "later", status: "Coming Soon" },
+      { label: "Geprüfte Kampagnen-Entwürfe", state: "planned", status: "Geplant" },
+      { label: "Vorlagen", state: "later", status: "Coming Soon" },
+      { label: "Manuelle Freigabe", state: "planned", status: "Pflicht" },
+      { label: "Kein Auto-Senden", state: "planned", status: "Guardrail" },
     ],
   },
   {
     number: "05",
     phase: "Phase 5",
-    icon: "integrations",
-    title: "Integrationen",
-    status: "In Kürze",
+    icon: "analytics",
+    title: "Reichweite & Performance",
+    status: "In Vorbereitung",
     statusIcon: "◷",
     tone: "gold",
+    availability: "upcoming",
     items: [
-      { label: "Manuell / CSV", state: "done" },
-      { label: "Webformular", state: "done" },
-      { label: "Instagram", state: "planned", status: "Roadmap" },
-      { label: "TikTok", state: "planned", status: "Roadmap" },
-      { label: "WhatsApp", state: "planned", status: "Roadmap" },
+      { label: "Performance-Übersicht", state: "planned", status: "Geplant" },
+      { label: "Reichweiten-Auswertung", state: "later", status: "Coming Soon" },
+      { label: "Fan-Reaktionssignale", state: "later", status: "Roadmap" },
+      { label: "Keine Vollanalytics als Live-Suite", state: "planned", status: "Ehrlich" },
+    ],
+  },
+  {
+    number: "06",
+    phase: "Phase 6",
+    icon: "integrations",
+    title: "Meta-Vorbereitung",
+    status: "Beta / in Vorbereitung",
+    statusIcon: "◷",
+    tone: "blue",
+    availability: "upcoming",
+    items: [
       { label: "Facebook", state: "planned", status: "Roadmap" },
-      { label: "X / Twitter", state: "planned", status: "Roadmap" },
-      { label: "Discord", state: "planned", status: "Roadmap" },
-      { label: "LinkedIn", state: "planned", status: "Roadmap" },
+      { label: "Instagram", state: "planned", status: "Roadmap" },
+      { label: "WhatsApp", state: "planned", status: "Roadmap" },
+      { label: "Technische & rechtliche Prüfung", state: "planned", status: "Pflicht" },
+    ],
+  },
+  {
+    number: "07",
+    phase: "Phase 7",
+    icon: "upload",
+    title: "Stripe Live & Sales Readiness",
+    status: "In Vorbereitung",
+    statusIcon: "◷",
+    tone: "green",
+    availability: "upcoming",
+    items: [
+      { label: "Stripe-Live-Schritte", state: "planned", status: "Geplant" },
+      { label: "Abrechnung & Admin-Basis", state: "planned", status: "In Arbeit" },
+      { label: "Sales-Unterlagen", state: "planned", status: "Nächster Schritt" },
+      { label: "Produktionsfreigabe", state: "later", status: "Coming Soon" },
+    ],
+  },
+  {
+    number: "08",
+    phase: "Phase 8",
+    icon: "analytics",
+    title: "Produktion & Testumgebung",
+    status: "Geplant",
+    statusIcon: "◇",
+    tone: "violet",
+    availability: "later",
+    items: [
+      { label: "Produktions- und Testdaten trennen", state: "later", status: "Geplant" },
+      { label: "Release-Checks", state: "later", status: "Geplant" },
+      { label: "Umgebungs-Governance", state: "later", status: "Geplant" },
+    ],
+  },
+  {
+    number: "09",
+    phase: "Phase 9",
+    icon: "integrations",
+    title: "Weitere Social-Kanäle",
+    status: "Später",
+    statusIcon: "◇",
+    tone: "gold",
+    availability: "later",
+    items: [
+      { label: "TikTok", state: "later", status: "Roadmap" },
+      { label: "X / Twitter", state: "later", status: "Roadmap" },
+      { label: "Discord", state: "later", status: "Roadmap" },
+      { label: "LinkedIn & weitere Kanäle", state: "later", status: "Roadmap" },
+    ],
+  },
+  {
+    number: "10",
+    phase: "Phase 10",
+    icon: "analytics",
+    title: "Team & Rollen/Rechte",
+    status: "Später",
+    statusIcon: "◇",
+    tone: "purple",
+    availability: "later",
+    items: [
+      { label: "Teamzugänge", state: "later", status: "Roadmap" },
+      { label: "Rollen/Rechte", state: "later", status: "Roadmap" },
+      { label: "Auditierbare Freigaben", state: "later", status: "Roadmap" },
+    ],
+  },
+  {
+    number: "11",
+    phase: "Phase 11",
+    icon: "rocket",
+    title: "Multi-Workspace / Agency",
+    status: "Später",
+    statusIcon: "◇",
+    tone: "blue",
+    availability: "later",
+    items: [
+      { label: "Mehrere Workspaces", state: "later", status: "Roadmap" },
+      { label: "Agency-Ansichten", state: "later", status: "Roadmap" },
+      { label: "Workspace-Grenzen", state: "later", status: "Roadmap" },
+    ],
+  },
+  {
+    number: "12",
+    phase: "Phase 12",
+    icon: "campaign",
+    title: "AI Plus, Ultra & Prompts",
+    status: "Später",
+    statusIcon: "◇",
+    tone: "violet",
+    availability: "later",
+    items: [
+      { label: "AI Plus", state: "later", status: "Roadmap" },
+      { label: "AI Ultra", state: "later", status: "Roadmap" },
+      { label: "Prompt-Bibliothek", state: "later", status: "Roadmap" },
+      { label: "Fan-spezifische Prompts", state: "later", status: "Roadmap" },
+      { label: "Automationen nur als geprüfte Erinnerungen", state: "later", status: "Kein Auto-Senden" },
     ],
   },
 ];
@@ -1640,7 +1760,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <PlatformLogo platform={source.platform} size="sm" />
                   {source.label}
                   {comingSoonIntegrationPlatforms.has(source.platform) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
-                  <em aria-hidden="true" />
                 </span>
               ))}
             </div>
@@ -1801,12 +1920,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           ))}
         </div>
 
-        <div className={styles.roadmapGrid}>
-          {localizedRoadmapPhases.map((phase) => (
+        <div className={styles.roadmapMarquee} aria-label={t("Roadmap-Phasen")}>
+          <div className={styles.roadmapGrid}>
+          {[...localizedRoadmapPhases, ...localizedRoadmapPhases].map((phase, phaseIndex) => (
             <article
-              className={`${styles.roadmapCard} ${phase.number === "01" ? "" : styles.cardWithComingSoon}`}
+              className={`${styles.roadmapCard} ${phase.availability === "done" ? "" : styles.cardWithComingSoon}`}
               data-tone={phase.tone}
-              key={phase.phase}
+              key={`${phase.phase}-${phaseIndex}`}
+              aria-hidden={phaseIndex >= localizedRoadmapPhases.length ? "true" : undefined}
             >
               <div className={styles.roadmapPhasePill}>{phase.phase}</div>
               <div className={styles.roadmapIcon}>
@@ -1824,9 +1945,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   </li>
                 ))}
               </ul>
-              {phase.number === "01" ? null : <ComingSoonMark size="medium" className={styles.comingSoonImage} />}
+              {phase.availability === "done" ? null : <ComingSoonMark size="medium" className={styles.comingSoonImage} />}
             </article>
           ))}
+          </div>
         </div>
 
         <div className={styles.roadmapNotes}>
