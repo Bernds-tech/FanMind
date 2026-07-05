@@ -6582,18 +6582,38 @@
   line-height: 1.42;
 }
 
-.pricingGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
+.pricingMarquee {
+  max-width: 100%;
   margin-top: 18px;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+.pricingGrid {
+  display: flex;
+  width: max-content;
+  gap: 24px;
+  animation: pricingMarqueeScroll 54s linear infinite;
+  will-change: transform;
+}
+
+.pricingMarquee:hover .pricingGrid,
+.pricingMarquee:focus-within .pricingGrid {
+  animation-play-state: paused;
+}
+
+@keyframes pricingMarqueeScroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(-50% - 12px), 0, 0); }
 }
 
 .pricingPlanCard {
   --pricing-accent: #b94dff;
   position: relative;
   display: flex;
+  width: clamp(292px, 27vw, 382px);
   min-height: 515px;
+  flex: 0 0 clamp(292px, 27vw, 382px);
   flex-direction: column;
   padding: 26px 26px 24px;
   border: 1px solid color-mix(in srgb, var(--pricing-accent) 46%, rgba(31, 125, 255, 0.28));
@@ -6607,6 +6627,10 @@
 
 .pricingPlanCard[data-tone="blue"] {
   --pricing-accent: #0b8cff;
+}
+
+.pricingPlanCard[data-tone="green"] {
+  --pricing-accent: #00df9a;
 }
 
 .pricingPlanCard[data-featured="true"] {
@@ -6807,6 +6831,20 @@
   box-shadow: 0 0 30px rgba(18, 95, 255, 0.46);
 }
 
+
+@media (prefers-reduced-motion: reduce) {
+  .pricingGrid {
+    width: auto;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    animation: none;
+  }
+
+  .pricingPlanCard {
+    scroll-snap-align: center;
+  }
+}
+
 .pricingProofBar {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -6941,7 +6979,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .pricingProofBar {
+
+
+.pricingProofBar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px 0;
   }
@@ -8760,6 +8800,8 @@
   line-height: 1.12;
 }
 
+
+
 .pricingProofBar {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -8798,7 +8840,6 @@
     max-width: 100%;
   }
 
-  .pricingGrid,
   .pricingProofBar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -8855,7 +8896,6 @@
     grid-template-columns: 1fr;
   }
 
-  .pricingGrid,
   .pricingProofBar {
     grid-template-columns: 1fr;
   }

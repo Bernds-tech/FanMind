@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import type { FeatureKey } from "@/config/plans";
+import { roadmapNotes, roadmapPhases } from "@/config/roadmap";
 import { shouldShowFeature } from "@/lib/plans";
 import { createFanMindTranslator, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { FanMindLogo } from "@/components/FanMindLogo";
@@ -693,20 +694,12 @@ const pricingPlans = [
     pricePrefix: "",
     price: "990 € einmalig · zzgl. USt.",
     cadence: "1 Testmonat · kein Abo · keine automatische Verlängerung",
-    options: undefined,
     cta: "Pilot anfragen",
     href: "/register?plan=pilot",
     tone: "purple",
     featured: false,
     status: "Aktiv",
-    features: [
-      "Begleiteter Setup-/Pilotmonat",
-      "Demo-Workspace mit realistischem MVP-Workflow",
-      "Kontakte/Fans, CSV-Import, Notizen und Memory testen",
-      "Follow-ups und KI-Antwortvorschläge prüfen",
-      "Externe Social-Integrationen klar als Roadmap/Beta markiert",
-      "Endet ohne automatische Verlängerung",
-    ],
+    features: ["Begleiteter Setup-/Pilotmonat", "Demo-Workspace mit realistischem MVP-Workflow", "Kontakte/Fans, CSV-Import, Notizen und Memory testen", "Follow-ups und KI-Antwortvorschläge prüfen", "Externe Social-Integrationen klar als Roadmap/Beta markiert", "Endet ohne automatische Verlängerung"],
   },
   {
     icon: "♙",
@@ -716,20 +709,12 @@ const pricingPlans = [
     pricePrefix: "",
     price: "990 € Setup + 312 €/Monat · zzgl. USt.",
     cadence: "monatlich kündbar",
-    options: undefined,
     cta: "Registrieren",
     href: "/register?plan=starter-flex",
     tone: "blue",
     featured: false,
     status: "Aktiv",
-    features: [
-      "Ein produktiver MVP-Workspace",
-      "Kontakte/Fans und manuelle Kontaktpflege",
-      "CSV-Import, Notizen und Fan-Gedächtnis / Memory",
-      "Follow-ups & Aufgaben inklusive /followups",
-      "KI-Antwortvorschläge und Fan-Analyse-Report",
-      "Kein automatischer Versand",
-    ],
+    features: ["Ein produktiver MVP-Workspace", "Kontakte/Fans und manuelle Kontaktpflege", "CSV-Import, Notizen und Fan-Gedächtnis / Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Kein automatischer Versand"],
   },
   {
     icon: "◎",
@@ -739,43 +724,57 @@ const pricingPlans = [
     pricePrefix: "",
     price: "0 € Setup + 312 €/Monat · zzgl. USt.",
     cadence: "12 Monate Laufzeit",
-    options: undefined,
     cta: "Registrieren",
     href: "/register?plan=starter-12",
     tone: "green",
     featured: true,
     status: "Aktiv",
-    features: [
-      "Ein produktiver MVP-Workspace",
-      "Setup ohne separate Setup-Gebühr",
-      "Kontakte/Fans, CSV-Import und Memory",
-      "Follow-ups & Aufgaben inklusive /followups",
-      "KI-Antwortvorschläge und Fan-Analyse-Report",
-      "Externe Integrationen nur Beta/Roadmap",
-    ],
+    features: ["Ein produktiver MVP-Workspace", "Setup ohne separate Setup-Gebühr", "Kontakte/Fans, CSV-Import und Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Externe Integrationen nur Beta/Roadmap"],
   },
   {
-    icon: "▥",
-    name: "Growth / Agency",
-    eyebrow: "Coming Soon",
-    audience: "Roadmap für wachsende Teams, Agenturen und mehrere Kunden-Workspaces.",
+    icon: "↗",
+    name: "Growth",
+    eyebrow: "Auf Anfrage",
+    audience: "Für wachsende Teams, die mehrere Profile und mehr Struktur vorbereiten möchten.",
     pricePrefix: "",
     price: "Auf Anfrage",
-    cadence: "Coming Soon · nicht produktiv buchbar",
-    options: undefined,
-    cta: "Pilot anfragen",
+    cadence: "Pilot-Feedback und Umfang klären · nicht automatisch buchbar",
+    cta: "Growth anfragen",
     href: "#kontakt",
     tone: "blue",
     featured: false,
-    status: "Roadmap",
-    features: [
-      "Mehrere Profile / Kunden als Roadmap",
-      "Team-Workspace und Rollen/Rechte geplant",
-      "Größere Kontaktmengen und Workflows geplant",
-      "Kampagnen und Analytics/Reichweite geplant",
-      "Noch nicht kaufbar dargestellt",
-      "Pilot-Feedback bestimmt den Ausbau",
-    ],
+    status: "Auf Anfrage",
+    features: ["Mehrere Profile als Ausbaupfad", "Basis-Segmente und Listen in Vorbereitung", "Reichweiten- und Performance-Signale als Roadmap", "Kein automatischer Versand", "Umfang wird vor Buchung gemeinsam geprüft", "Keine falschen Live-Integrationen"],
+  },
+  {
+    icon: "▥",
+    name: "Agency",
+    eyebrow: "Coming Soon",
+    audience: "Roadmap für Agenturen mit mehreren Kunden-Workspaces und abgestimmten Freigaben.",
+    pricePrefix: "",
+    price: "Auf Anfrage",
+    cadence: "Coming Soon · noch nicht produktiv buchbar",
+    cta: "Pilot anfragen",
+    href: "#kontakt",
+    tone: "purple",
+    featured: false,
+    status: "Coming Soon",
+    features: ["Multi-Workspace / Agency-Ansichten geplant", "Team-Rollen und Rechte als Roadmap", "Kampagnen nur mit manueller Freigabe geplant", "Analytics & Reichweite nicht als Live-Suite", "Pilot-Feedback bestimmt den Ausbau", "Noch nicht kaufbar dargestellt"],
+  },
+  {
+    icon: "◇",
+    name: "Enterprise / Custom",
+    eyebrow: "Coming Soon",
+    audience: "Für spätere individuelle Anforderungen, Governance und größere interne Abstimmungen.",
+    pricePrefix: "",
+    price: "Auf Anfrage",
+    cadence: "Coming Soon · individuelle Prüfung erforderlich",
+    cta: "Kontakt aufnehmen",
+    href: "#kontakt",
+    tone: "green",
+    featured: false,
+    status: "Coming Soon",
+    features: ["Individuelle Workflows später geplant", "Governance und Freigabeprozesse als Roadmap", "Keine Enterprise-Rollen im MVP aktiv", "Keine automatische Sendefunktion", "Technische und rechtliche Prüfung vor Zusage", "Keine Fake-Live-Kennzahlen"],
   },
 ];
 
@@ -817,237 +816,6 @@ const pricingProofs = [
     tone: "green",
   },
 ];
-
-const roadmapPhases: Array<{
-  number: string;
-  phase: string;
-  icon: string;
-  title: string;
-  status: string;
-  statusIcon: string;
-  tone: string;
-  availability: "done" | "upcoming" | "later";
-  items: Array<{ label: string; state: string; status?: string }>;
-}> = [
-  {
-    number: "01",
-    phase: "Phase 1",
-    icon: "rocket",
-    title: "Produktkern",
-    status: "Verfügbar",
-    statusIcon: "✓",
-    tone: "blue",
-    availability: "done",
-    items: [
-      { label: "Login & Registrierung", state: "done" },
-      { label: "Dashboard & Fans", state: "done" },
-      { label: "Manuelle Fans", state: "done" },
-      { label: "CSV-Import minimal", state: "done" },
-      { label: "AI-Infos / Fan-Gedächtnis", state: "done" },
-      { label: "KI-Antwortvorschläge", state: "done" },
-      { label: "Follow-ups", state: "done" },
-      { label: "Fan-Analyse-Report", state: "done" },
-    ],
-  },
-  {
-    number: "02",
-    phase: "Phase 2",
-    icon: "upload",
-    title: "Fan-Import & Datenqualität",
-    status: "Erledigt / Basis steht",
-    statusIcon: "✓",
-    tone: "green",
-    availability: "done",
-    items: [
-      { label: "Erweiterte CSV-Feldzuordnung", state: "done" },
-      { label: "Import-Validierung", state: "done" },
-      { label: "Fan-Mapping", state: "done" },
-      { label: "Duplikaterkennung", state: "done" },
-      { label: "Segment-Vorbereitung", state: "done" },
-    ],
-  },
-  {
-    number: "03",
-    phase: "Phase 3",
-    icon: "campaign",
-    title: "Segmente & Listen",
-    status: "In Arbeit",
-    statusIcon: "◷",
-    tone: "purple",
-    availability: "upcoming",
-    items: [
-      { label: "Segment-Ansichten", state: "planned", status: "Vorbereitet" },
-      { label: "Listenlogik", state: "planned", status: "In Arbeit" },
-      { label: "Filter & Tags", state: "planned", status: "In Arbeit" },
-      { label: "CSV-Import für Segmente nutzen", state: "planned", status: "Nächster Schritt" },
-    ],
-  },
-  {
-    number: "04",
-    phase: "Phase 4",
-    icon: "campaign",
-    title: "Kampagnen-Vorbereitung",
-    status: "In Arbeit",
-    statusIcon: "◷",
-    tone: "violet",
-    availability: "upcoming",
-    items: [
-      { label: "Geprüfte Kampagnen-Entwürfe", state: "planned", status: "Geplant" },
-      { label: "Vorlagen", state: "later", status: "Coming Soon" },
-      { label: "Manuelle Freigabe", state: "planned", status: "Pflicht" },
-      { label: "Kein Auto-Senden", state: "planned", status: "Guardrail" },
-    ],
-  },
-  {
-    number: "05",
-    phase: "Phase 5",
-    icon: "analytics",
-    title: "Analytics & Reichweitenerkennung",
-    status: "In Kürze",
-    statusIcon: "◷",
-    tone: "gold",
-    availability: "upcoming",
-    items: [
-      { label: "Reichweiten-Auswertung", state: "later", status: "Coming Soon" },
-      { label: "Performance-Signale", state: "later", status: "Roadmap" },
-      { label: "Fan-/Kanal-Reichweite erkennen", state: "later", status: "Roadmap" },
-      { label: "Interaktionen und Wachstumssignale einordnen", state: "later", status: "Roadmap" },
-      { label: "Keine Vollanalytics als Live-Suite", state: "planned", status: "Ehrlich" },
-    ],
-  },
-  {
-    number: "06",
-    phase: "Phase 6",
-    icon: "integrations",
-    title: "Meta-Vorbereitung",
-    status: "Beta / in Vorbereitung",
-    statusIcon: "◷",
-    tone: "blue",
-    availability: "upcoming",
-    items: [
-      { label: "Facebook", state: "planned", status: "Roadmap" },
-      { label: "Instagram", state: "planned", status: "Roadmap" },
-      { label: "WhatsApp", state: "planned", status: "Roadmap" },
-      { label: "Technische & rechtliche Prüfung", state: "planned", status: "Pflicht" },
-    ],
-  },
-  {
-    number: "07",
-    phase: "Phase 7",
-    icon: "upload",
-    title: "Stripe Live & Sales Readiness",
-    status: "In Vorbereitung",
-    statusIcon: "◷",
-    tone: "green",
-    availability: "upcoming",
-    items: [
-      { label: "Stripe-Live-Schritte", state: "planned", status: "Geplant" },
-      { label: "Abrechnung & Admin-Basis", state: "planned", status: "In Arbeit" },
-      { label: "Sales-Unterlagen", state: "planned", status: "Nächster Schritt" },
-      { label: "Produktionsfreigabe", state: "later", status: "Coming Soon" },
-    ],
-  },
-  {
-    number: "08",
-    phase: "Phase 8",
-    icon: "analytics",
-    title: "Produktion & Testumgebung",
-    status: "Geplant",
-    statusIcon: "◇",
-    tone: "violet",
-    availability: "later",
-    items: [
-      { label: "Produktions- und Testdaten trennen", state: "later", status: "Geplant" },
-      { label: "Release-Checks", state: "later", status: "Geplant" },
-      { label: "Umgebungs-Governance", state: "later", status: "Geplant" },
-    ],
-  },
-  {
-    number: "09",
-    phase: "Phase 9",
-    icon: "integrations",
-    title: "Weitere Social-Kanäle",
-    status: "Später",
-    statusIcon: "◇",
-    tone: "gold",
-    availability: "later",
-    items: [
-      { label: "TikTok", state: "later", status: "Roadmap" },
-      { label: "X / Twitter", state: "later", status: "Roadmap" },
-      { label: "Discord", state: "later", status: "Roadmap" },
-      { label: "LinkedIn & weitere Kanäle", state: "later", status: "Roadmap" },
-    ],
-  },
-  {
-    number: "10",
-    phase: "Phase 10",
-    icon: "analytics",
-    title: "Team & Rollen/Rechte",
-    status: "Später",
-    statusIcon: "◇",
-    tone: "purple",
-    availability: "later",
-    items: [
-      { label: "Teamzugänge", state: "later", status: "Roadmap" },
-      { label: "Rollen/Rechte", state: "later", status: "Roadmap" },
-      { label: "Auditierbare Freigaben", state: "later", status: "Roadmap" },
-    ],
-  },
-  {
-    number: "11",
-    phase: "Phase 11",
-    icon: "rocket",
-    title: "Multi-Workspace / Agency",
-    status: "Später",
-    statusIcon: "◇",
-    tone: "blue",
-    availability: "later",
-    items: [
-      { label: "Mehrere Workspaces", state: "later", status: "Roadmap" },
-      { label: "Agency-Ansichten", state: "later", status: "Roadmap" },
-      { label: "Workspace-Grenzen", state: "later", status: "Roadmap" },
-    ],
-  },
-  {
-    number: "12",
-    phase: "Phase 12",
-    icon: "campaign",
-    title: "AI Plus, Ultra & Prompts",
-    status: "Später",
-    statusIcon: "◇",
-    tone: "violet",
-    availability: "later",
-    items: [
-      { label: "AI Plus", state: "later", status: "Roadmap" },
-      { label: "AI Ultra", state: "later", status: "Roadmap" },
-      { label: "Prompt-Bibliothek", state: "later", status: "Roadmap" },
-      { label: "Fan-spezifische Prompts", state: "later", status: "Roadmap" },
-      { label: "Automationen nur als geprüfte Erinnerungen", state: "later", status: "Kein Auto-Senden" },
-    ],
-  },
-];
-
-const roadmapNotes = [
-  {
-    icon: "♢",
-    title: "Mensch prüft und sendet final selbst",
-    text: "FanMind bleibt ein manueller Copy-&-Open-Workflow: KI bereitet Antworten vor, der Mensch prüft und sendet final selbst.",
-    tone: "blue",
-  },
-  {
-    icon: "▣",
-    title: "Keine automatischen Nachrichten",
-    text: "Keine Bots. Keine Massenmails. Kein Spam.",
-    tone: "purple",
-  },
-  {
-    icon: "ϟ",
-    title: "Integrationen nach Prüfung",
-    text: "Externe Kanalverbindungen sind geplant, in der Demo blockiert und werden erst nach technischer und rechtlicher Prüfung aktiviert.",
-    tone: "cyan",
-  },
-];
-
 
 function Logo({ compact = false, language = "de" }: { compact?: boolean; language?: FanMindLanguage }) {
   return <FanMindLogo compact={compact} className={styles.logo} href={landingPath(language)} />;
@@ -1964,37 +1732,40 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <p>{t("FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Teams. Dieses Produkt konzentriert sich auf Kontakte, KI-Antwortvorschläge, Memory, Follow-ups und CSV-Import.")}</p>
         </div>
 
-        <div className={styles.pricingGrid} aria-label="FanMind Pakete">
-          {localizedPricingPlans.map((plan) => (
-            <article
-              className={`${styles.pricingPlanCard} ${isComingSoonStatus(plan.status) ? styles.cardWithComingSoon : ""}`}
-              data-featured={plan.featured ? "true" : undefined}
-              data-tone={plan.tone}
-              key={plan.name}
-            >
-              {plan.eyebrow && <div className={styles.pricingPlanPill}>{plan.eyebrow}</div>}
-              <div className={styles.pricingPlanIcon}>{plan.icon}</div>
-              <h3>{plan.name}</h3>
-              {statusVariantFromLabel(plan.status) ? (
-                <FeatureStatusLabel variant={statusVariantFromLabel(plan.status)!}>{plan.status}</FeatureStatusLabel>
-              ) : null}
-              <p>{plan.audience}</p>
-              <div className={styles.pricingAmount}>
-                {plan.pricePrefix && <span>{plan.pricePrefix}</span>}
-                <strong>{plan.price}</strong>
-                <small>{plan.cadence}</small>
-              </div>
-              <ul>
-                {plan.features.map((feature) => (
-                  <li key={feature}>{feature}</li>
-                ))}
-              </ul>
-              <a href={plan.href}>
-                {plan.cta} <span>→</span>
-              </a>
-              {isComingSoonStatus(plan.status) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
-            </article>
-          ))}
+        <div className={styles.pricingMarquee} aria-label="FanMind Pakete">
+          <div className={styles.pricingGrid}>
+            {[...localizedPricingPlans, ...localizedPricingPlans].map((plan, index) => (
+              <article
+                className={`${styles.pricingPlanCard} ${isComingSoonStatus(plan.status) ? styles.cardWithComingSoon : ""}`}
+                data-featured={plan.featured ? "true" : undefined}
+                data-tone={plan.tone}
+                key={`${plan.name}-${index}`}
+                aria-hidden={index >= localizedPricingPlans.length ? "true" : undefined}
+              >
+                {plan.eyebrow && <div className={styles.pricingPlanPill}>{plan.eyebrow}</div>}
+                <div className={styles.pricingPlanIcon}>{plan.icon}</div>
+                <h3>{plan.name}</h3>
+                {statusVariantFromLabel(plan.status) ? (
+                  <FeatureStatusLabel variant={statusVariantFromLabel(plan.status)!}>{plan.status}</FeatureStatusLabel>
+                ) : null}
+                <p>{plan.audience}</p>
+                <div className={styles.pricingAmount}>
+                  {plan.pricePrefix && <span>{plan.pricePrefix}</span>}
+                  <strong>{plan.price}</strong>
+                  <small>{plan.cadence}</small>
+                </div>
+                <ul>
+                  {plan.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+                <a href={plan.href} tabIndex={index >= localizedPricingPlans.length ? -1 : undefined}>
+                  {plan.cta} <span>→</span>
+                </a>
+                {isComingSoonStatus(plan.status) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
+              </article>
+            ))}
+          </div>
         </div>
 
         <p className={styles.pricingTermsLink}>
