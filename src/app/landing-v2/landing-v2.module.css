@@ -4457,7 +4457,7 @@
 .integrationSourcePanel span {
   display: grid;
   position: relative;
-  grid-template-columns: 30px minmax(0, 1fr) 8px;
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   min-height: 52px;
@@ -4481,15 +4481,6 @@
 
 .integrationSourcePanel i {
   display: none;
-}
-
-.integrationSourcePanel em {
-  justify-self: end;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #22e099;
-  box-shadow: 0 0 12px rgba(34, 224, 153, 0.72);
 }
 
 .integrationFlowLinesLeft,
@@ -4960,7 +4951,7 @@
 .roadmapTimeline {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(12, 1fr);
   align-items: end;
   gap: 34px;
   margin: 36px 0 0;
@@ -5011,15 +5002,31 @@
   box-shadow: 0 0 16px var(--phase);
 }
 
+.roadmapMarquee {
+  position: relative;
+  width: min(100vw - 28px, 1420px);
+  margin: 8px calc(50% - min(50vw, 710px)) 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.roadmapMarquee:hover .roadmapGrid {
+  animation-play-state: paused;
+}
+
 .roadmapGrid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 30px;
+  display: flex;
+  width: max-content;
+  gap: 24px;
   margin-top: 8px;
+  padding: 18px 12px 26px;
+  animation: roadmapMarqueeScroll 96s linear infinite;
 }
 
 .roadmapCard {
   --phase: #168cff;
+  flex: 0 0 320px;
   display: grid;
   justify-items: center;
   align-content: start;
@@ -5029,6 +5036,29 @@
   border-radius: 12px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--phase) 7%, transparent), rgba(3, 13, 31, 0.82) 46%, rgba(2, 11, 27, 0.95));
   box-shadow: inset 0 0 38px color-mix(in srgb, var(--phase) 9%, transparent), 0 0 26px color-mix(in srgb, var(--phase) 13%, transparent);
+}
+
+@keyframes roadmapMarqueeScroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(calc(-50% - 12px), 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmapGrid {
+    width: auto;
+    animation: none;
+  }
+
+  .roadmapMarquee {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 .roadmapCard[data-tone="blue"] {
