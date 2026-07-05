@@ -179,9 +179,8 @@ export default function ZahlungsbedingungenPage() {
       <div className={styles.shapeOne} aria-hidden="true" />
       <div className={styles.shapeTwo} aria-hidden="true" />
       <div className={styles.dotPattern} aria-hidden="true" />
+      <LegalTopHeader active="zahlungsbedingungen" />
       <div className={styles.shell}>
-        <LegalTopHeader active="zahlungsbedingungen" />
-
         <header className={styles.hero}>
           <h1>ZAHLUNGSBEDINGUNGEN</h1>
           <p className={styles.subtitle}>Preise, Laufzeiten, Zahlungsprozess und Freischaltung bei FanMind</p>
