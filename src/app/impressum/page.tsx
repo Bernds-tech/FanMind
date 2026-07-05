@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LegalTopHeader from "@/components/LegalTopHeader";
 import styles from "./impressum.module.css";
 
 export const metadata: Metadata = {
@@ -23,10 +24,9 @@ export default function ImpressumPage() {
     <main id="top" className={styles.page}>
       <div className={styles.watermark} aria-hidden="true" />
       <div className={styles.shell}>
+        <LegalTopHeader active="impressum" />
+
         <header className={styles.hero}>
-          <Link className={styles.logoLink} href="/" aria-label="Zur FanMind Startseite">
-            <span>Fan</span>Mind
-          </Link>
           <h1>Impressum / Offenlegung</h1>
           <p className={styles.eyebrow}>Betreiber der Website</p>
           <dl className={styles.operatorList}>
@@ -129,8 +129,10 @@ export default function ImpressumPage() {
         <footer className={styles.footer}>
           <p>© 2026 FanMind. Alle Rechte vorbehalten.</p>
           <nav aria-label="Rechtliche Links">
-            <Link href="/datenschutz">Datenschutz</Link>
             <Link href="/impressum">Impressum</Link>
+            <Link href="/datenschutz">Datenschutz</Link>
+            <Link href="/agb">AGB</Link>
+            <Link href="/zahlungsbedingungen">Zahlungsbedingungen</Link>
             <a href="mailto:kontakt@fanmind.ch">Kontakt</a>
           </nav>
         </footer>

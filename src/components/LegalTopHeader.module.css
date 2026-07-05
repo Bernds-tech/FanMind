@@ -1,0 +1,95 @@
+.header {
+  align-items: center;
+  border-bottom: 1px solid rgba(91, 34, 230, 0.14);
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  padding: 22px 0;
+  width: 100%;
+}
+
+.logoLink {
+  align-items: center;
+  color: #111827;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.logoLink span {
+  color: #5b22e6;
+}
+
+.nav {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.nav a {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #4b5563;
+  display: inline-flex;
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1.1;
+  min-height: 42px;
+  padding: 10px 14px;
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nav a:hover,
+.nav a:focus-visible {
+  color: #5b22e6;
+  border-color: rgba(91, 34, 230, 0.22);
+  background: rgba(91, 34, 230, 0.07);
+}
+
+.nav a:focus-visible {
+  outline: 3px solid rgba(124, 58, 237, 0.24);
+  outline-offset: 2px;
+}
+
+.nav a.activeLink {
+  background: linear-gradient(135deg, #5b22e6, #7c3aed);
+  border-color: rgba(91, 34, 230, 0.24);
+  box-shadow: 0 14px 30px rgba(91, 34, 230, 0.16);
+  color: #ffffff;
+}
+
+.nav a.activeLink:hover,
+.nav a.activeLink:focus-visible {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 720px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 0;
+  }
+
+  .nav {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .nav a {
+    font-size: 0.88rem;
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+}

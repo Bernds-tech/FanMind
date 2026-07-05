@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LegalTopHeader from "@/components/LegalTopHeader";
 import styles from "./datenschutz.module.css";
 
 export const metadata: Metadata = {
@@ -20,10 +21,7 @@ const legalLinks = [
   { href: "/datenschutz", label: "Datenschutz" },
   { href: "/agb", label: "AGB" },
   { href: "/zahlungsbedingungen", label: "Zahlungsbedingungen" },
-  { href: "/avv", label: "AVV" },
-  { href: "/roadmap", label: "Roadmap" },
-  { href: "/login", label: "Login" },
-  { href: "/register", label: "Registrieren" },
+  { href: "mailto:kontakt@fanmind.ch", label: "Kontakt" },
 ];
 
 const sections: PrivacySection[] = [
@@ -542,8 +540,8 @@ const sections: PrivacySection[] = [
           verarbeiten.
         </p>
         <p>
-          FanMind verarbeitet solche Kundendaten regelmäßig als Auftragsverarbeiter. Informationen
-          zur Auftragsverarbeitung sind unter <Link href="/avv">/avv</Link> abrufbar.
+          Soweit FanMind personenbezogene Daten im Auftrag eines Kunden verarbeitet, wird die
+          Auftragsverarbeitung bei Bedarf individuell vertraglich geregelt.
         </p>
       </>
     ),
@@ -600,18 +598,7 @@ export default function DatenschutzPage() {
       <div className={styles.watermark} aria-hidden="true" />
       <div className={styles.dotPattern} aria-hidden="true" />
       <div className={styles.shell}>
-        <header className={styles.topNav}>
-          <Link className={styles.logoLink} href="/" aria-label="Zur FanMind Startseite">
-            <span>Fan</span>Mind
-          </Link>
-          <nav aria-label="Hauptnavigation">
-            <Link href="/#produkt">Produkt</Link>
-            <Link href="/roadmap">Roadmap</Link>
-            <Link href="/#preise">Preise</Link>
-            <Link href="/impressum">Impressum</Link>
-            <Link className={styles.demoButton} href="/register">Demo anfragen</Link>
-          </nav>
-        </header>
+        <LegalTopHeader active="datenschutz" />
 
         <section className={styles.hero} aria-labelledby="privacy-title">
           <h1 id="privacy-title">Datenschutzerklärung</h1>

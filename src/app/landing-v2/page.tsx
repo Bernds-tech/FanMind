@@ -653,7 +653,7 @@ const faqContacts = [
     title: "Pilot anfragen",
     text: "Schreib uns eine Nachricht zu deinem Use Case und zum passenden Pilot-Setup.",
     cta: "Pilot anfragen",
-    href: "mailto:anfrage@fanmind.ch?subject=Pilot%20anfragen",
+    href: "mailto:kontakt@fanmind.ch?subject=Pilot%20anfragen",
     tone: "blue",
   },
   {
@@ -693,7 +693,6 @@ const landingFooterColumns = [
       { label: "Datenschutz", href: "/datenschutz" },
       { label: "AGB", href: "/agb" },
       { label: "Zahlungsbedingungen", href: "/zahlungsbedingungen" },
-      { label: "AVV", href: "/avv" },
     ],
   },
   {

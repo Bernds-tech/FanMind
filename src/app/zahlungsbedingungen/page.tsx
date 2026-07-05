@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LegalTopHeader from "@/components/LegalTopHeader";
 import type { ReactNode } from "react";
 import { getCommercialTerms } from "@/lib/plans";
 import styles from "./zahlungsbedingungen.module.css";
@@ -84,10 +85,7 @@ const legalLinks = [
   { href: "/datenschutz", label: "Datenschutz" },
   { href: "/agb", label: "AGB" },
   { href: "/zahlungsbedingungen", label: "Zahlungsbedingungen" },
-  { href: "/avv", label: "AVV" },
-  { href: "/roadmap", label: "Roadmap" },
-  { href: "/login", label: "Login" },
-  { href: "/register", label: "Registrieren" },
+  { href: "mailto:kontakt@fanmind.ch", label: "Kontakt" },
 ];
 
 const sections: PaymentSection[] = [
@@ -169,8 +167,8 @@ const sections: PaymentSection[] = [
     content: <p>FanMind kann Preise, Pakete und Leistungsumfänge für die Zukunft ändern. Bestehende individuelle Vereinbarungen bleiben nach Maßgabe der jeweiligen Vereinbarung unberührt. Änderungen werden rechtzeitig kommuniziert, soweit sie bestehende Verträge betreffen. Coming-Soon-Funktionen begründen keinen Anspruch auf bestimmte Preise oder Termine.</p>,
   },
   {
-    title: "Verhältnis zu AGB, Datenschutz und AVV",
-    content: <p>Die <Link href="/agb">AGB</Link> regeln die allgemeinen Vertragsbedingungen. Die <Link href="/datenschutz">Datenschutzerklärung</Link> informiert über Datenverarbeitung. Soweit FanMind personenbezogene Daten im Auftrag verarbeitet, gilt eine <Link href="/avv">AVV</Link>. Ergänzende Anbieterangaben stehen im <Link href="/impressum">Impressum</Link>. Die Zahlungsbedingungen ergänzen diese Dokumente.</p>,
+    title: "Verhältnis zu AGB und Datenschutz",
+    content: <p>Die <Link href="/agb">AGB</Link> regeln die allgemeinen Vertragsbedingungen. Die <Link href="/datenschutz">Datenschutzerklärung</Link> informiert über Datenverarbeitung. Soweit FanMind personenbezogene Daten im Auftrag eines Kunden verarbeitet, wird die Auftragsverarbeitung bei Bedarf individuell vertraglich geregelt. Ergänzende Anbieterangaben stehen im <Link href="/impressum">Impressum</Link>. Die Zahlungsbedingungen ergänzen diese Dokumente.</p>,
   },
   {
     title: "Kontakt",
@@ -189,8 +187,9 @@ export default function ZahlungsbedingungenPage() {
       <div className={styles.shapeTwo} aria-hidden="true" />
       <div className={styles.dotPattern} aria-hidden="true" />
       <div className={styles.shell}>
+        <LegalTopHeader active="zahlungsbedingungen" />
+
         <header className={styles.hero}>
-          <Link className={styles.logo} href="/" aria-label="Zur FanMind Startseite">FanMind</Link>
           <h1>ZAHLUNGSBEDINGUNGEN</h1>
           <p className={styles.subtitle}>Preise, Laufzeiten, Zahlungsprozess und Freischaltung bei FanMind</p>
           <p className={styles.stand}>Stand: Juli 2026</p>

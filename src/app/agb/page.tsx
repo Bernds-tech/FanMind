@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LegalTopHeader from "@/components/LegalTopHeader";
 import styles from "./agb.module.css";
 
 export const metadata: Metadata = {
@@ -18,8 +19,7 @@ const legalLinks = [
   { href: "/datenschutz", label: "Datenschutz" },
   { href: "/agb", label: "AGB" },
   { href: "/zahlungsbedingungen", label: "Zahlungsbedingungen" },
-  { href: "/avv", label: "AVV" },
-  { href: "/roadmap", label: "Roadmap" },
+  { href: "mailto:kontakt@fanmind.ch", label: "Kontakt" },
 ];
 
 const sections: TermsSection[] = [
@@ -348,11 +348,9 @@ const sections: TermsSection[] = [
         <p>
           Informationen zur Verarbeitung personenbezogener Daten stehen unter{" "}
           <Link href="/datenschutz">/datenschutz</Link>. Soweit FanMind personenbezogene Daten im
-          Auftrag des Kunden verarbeitet, gilt eine Vereinbarung zur Auftragsverarbeitung.
-        </p>
-        <p>
-          Weitere Informationen stehen unter <Link href="/avv">/avv</Link>. Kunden dürfen
-          personenbezogene Daten Dritter nur einbringen, wenn sie dazu berechtigt sind.
+          Auftrag eines Kunden verarbeitet, wird die Auftragsverarbeitung bei Bedarf individuell
+          vertraglich geregelt. Kunden dürfen personenbezogene Daten Dritter nur einbringen, wenn
+          sie dazu berechtigt sind.
         </p>
       </>
     ),
@@ -441,10 +439,9 @@ export default function AgbPage() {
       <div className={styles.shapeOne} aria-hidden="true" />
       <div className={styles.shapeTwo} aria-hidden="true" />
       <div className={styles.shell}>
+        <LegalTopHeader active="agb" />
+
         <header className={styles.hero}>
-          <Link className={styles.logo} href="/" aria-label="Zur FanMind Startseite">
-            FanMind
-          </Link>
           <h1>AGB / VERTRAGSBEDINGUNGEN</h1>
           <p className={styles.subtitle}>für die Nutzung von FanMind</p>
           <p className={styles.stand}>Stand: Juli 2026</p>
