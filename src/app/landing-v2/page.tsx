@@ -63,6 +63,7 @@ const features = [
     title: "Manuelle Follow-ups",
     text: "Nächste Schritte bleiben sichtbar, priorisiert und bewusst manuell steuerbar.",
     tone: "orange",
+    showComingSoonMark: true,
   },
   {
     icon: "▥",
