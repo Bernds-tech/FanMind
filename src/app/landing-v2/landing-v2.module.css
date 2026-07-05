@@ -4473,6 +4473,31 @@
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
 }
 
+.integrationSourcePanel .sourceReadyCard {
+  padding-right: 42px;
+  border-color: rgba(0, 225, 120, 0.36);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14), inset 0 0 24px rgba(0, 225, 120, 0.08);
+}
+
+.integrationSourcePanel .sourceReadyCheck {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(87, 255, 180, 0.72);
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 25%, rgba(110, 255, 194, 0.95), rgba(0, 181, 103, 0.92) 62%, rgba(0, 93, 72, 0.98));
+  box-shadow: 0 0 18px rgba(0, 225, 120, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  color: #effff8;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
 .integrationSourcePanel span > svg {
   width: 26px;
   height: 26px;

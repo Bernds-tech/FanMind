@@ -1693,11 +1693,22 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <div>
               {localizedIntegrationSources.map((source) => (
                 <span
-                  className={comingSoonIntegrationPlatforms.has(source.platform) ? styles.cardWithComingSoon : undefined}
+                  className={
+                    source.platform === "webform"
+                      ? styles.sourceReadyCard
+                      : comingSoonIntegrationPlatforms.has(source.platform)
+                        ? styles.cardWithComingSoon
+                        : undefined
+                  }
                   key={source.label}
                 >
                   <PlatformLogo platform={source.platform} size="sm" />
                   {source.label}
+                  {source.platform === "webform" ? (
+                    <span className={styles.sourceReadyCheck} aria-label={t("Bereit")}>
+                      ✓
+                    </span>
+                  ) : null}
                   {comingSoonIntegrationPlatforms.has(source.platform) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
                 </span>
               ))}
