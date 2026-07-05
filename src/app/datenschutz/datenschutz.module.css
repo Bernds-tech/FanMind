@@ -50,7 +50,7 @@
 }
 
 .shell {
-  padding-bottom: 42px;
+  padding-bottom: clamp(56px, 8vw, 96px);
 }
 
 .topNav,
@@ -101,7 +101,6 @@
 .topNav a:hover,
 .nav a:hover,
 .headerActions a:hover,
-.footer a:hover,
 .siteFooter a:hover {
   color: #7c3aed;
 }
@@ -176,7 +175,7 @@
   gap: clamp(30px, 4.6vw, 52px);
   width: min(100%, 900px);
   margin: 0 auto;
-  padding-bottom: 42px;
+  padding-bottom: clamp(56px, 8vw, 96px);
 }
 
 .section {
@@ -236,7 +235,6 @@
 
 .section a,
 .card a,
-.footer a,
 .siteFooter a {
   color: #5b22e6;
   font-weight: 800;
@@ -268,7 +266,6 @@
   font-weight: 900;
 }
 
-.footer,
 .siteFooter {
   display: grid;
   gap: 14px;
@@ -279,24 +276,17 @@
   border-top: 1px solid rgba(91, 34, 230, 0.22);
 }
 
-.footer p,
 .siteFooter p {
   margin: 0;
   font-size: 0.98rem;
   line-height: 1.6;
 }
 
-.footer nav,
 .siteFooter nav {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
   justify-content: center;
-}
-
-.updated {
-  color: #6b7280;
-  font-size: 0.9rem !important;
 }
 
 .backToTop,
@@ -330,7 +320,7 @@
   grid-template-columns: 260px 1fr;
   gap: 28px;
   align-items: start;
-  padding-bottom: 42px;
+  padding-bottom: clamp(56px, 8vw, 96px);
 }
 
 .toc,
@@ -428,8 +418,7 @@
     letter-spacing: 0.015em;
   }
 
-  .footer nav,
-  .siteFooter nav {
+    .siteFooter nav {
     gap: 8px 12px;
   }
 

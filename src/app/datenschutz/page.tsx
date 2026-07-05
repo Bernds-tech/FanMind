@@ -16,14 +16,6 @@ type PrivacySection = {
   content: React.ReactNode;
 };
 
-const legalLinks = [
-  { href: "/impressum", label: "Impressum" },
-  { href: "/datenschutz", label: "Datenschutz" },
-  { href: "/agb", label: "AGB" },
-  { href: "/zahlungsbedingungen", label: "Zahlungsbedingungen" },
-  { href: "mailto:kontakt@fanmind.ch", label: "Kontakt" },
-];
-
 const sections: PrivacySection[] = [
   {
     id: "verantwortlicher",
@@ -617,16 +609,6 @@ export default function DatenschutzPage() {
             </section>
           ))}
         </article>
-
-        <footer className={styles.footer}>
-          <p>FanMind · KI-gestützter Antwort- und Memory-Assistent · kontakt@fanmind.ch</p>
-          <nav aria-label="Rechtliche Links">
-            {legalLinks.map((link) => (
-              <Link href={link.href} key={link.href}>{link.label}</Link>
-            ))}
-          </nav>
-          <p className={styles.updated}>Stand: Juli 2026</p>
-        </footer>
       </div>
       <a className={styles.backToTop} href="#top" aria-label="Zurück nach oben">↑</a>
     </main>

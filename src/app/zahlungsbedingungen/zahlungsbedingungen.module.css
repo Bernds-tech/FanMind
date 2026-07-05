@@ -42,7 +42,7 @@
   z-index: 1;
   width: min(100% - 40px, 1120px);
   margin: 0 auto;
-  padding: clamp(28px, 6vw, 54px) 0 28px;
+  padding: clamp(28px, 6vw, 54px) 0 clamp(56px, 8vw, 96px);
 }
 
 .hero {
@@ -61,8 +61,7 @@
   text-decoration: none;
 }
 
-.logo:hover,
-.footer a:hover {
+.logo:hover {
   color: #7c3aed;
 }
 
@@ -177,48 +176,12 @@
   color: #5b22e6;
 }
 
-.sectionBody a,
-.footer a {
+.sectionBody a {
   color: #5b22e6;
   font-weight: 800;
-  text-decoration: none;
-}
-
-.sectionBody a {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
-}
-
-.footer {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) 2fr;
-  gap: 24px;
-  align-items: center;
-  margin-top: 30px;
-  padding: 26px 0 0;
-  border-top: 1px solid rgba(91, 34, 230, 0.17);
-}
-
-.footerBrand {
-  display: grid;
-  gap: 6px;
-  color: #4b5563;
-}
-
-.footerBrand strong {
-  color: #5b22e6;
-  font-size: 1.35rem;
-  font-weight: 950;
-}
-
-.footer nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 28px;
-  justify-content: flex-end;
-  text-transform: uppercase;
-  font-size: 0.82rem;
 }
 
 .backToTop {
@@ -261,15 +224,6 @@
   .number {
     width: 38px;
     height: 38px;
-  }
-
-  .footer {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
-
-  .footer nav {
-    justify-content: center;
   }
 
   .backToTop {

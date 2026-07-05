@@ -125,17 +125,6 @@ export default function ImpressumPage() {
             {/* TODO: privacy@fanmind.ch zusätzlich anzeigen, sobald die Adresse aktiv und überwacht ist. */}
           </section>
         </article>
-
-        <footer className={styles.footer}>
-          <p>© 2026 FanMind. Alle Rechte vorbehalten.</p>
-          <nav aria-label="Rechtliche Links">
-            <Link href="/impressum">Impressum</Link>
-            <Link href="/datenschutz">Datenschutz</Link>
-            <Link href="/agb">AGB</Link>
-            <Link href="/zahlungsbedingungen">Zahlungsbedingungen</Link>
-            <a href="mailto:kontakt@fanmind.ch">Kontakt</a>
-          </nav>
-        </footer>
       </div>
       <a className={styles.backToTop} href="#top" aria-label="Zurück nach oben">↑</a>
     </main>
