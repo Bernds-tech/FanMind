@@ -496,6 +496,7 @@ const privacyControlCards = [
     title: "DSGVO-orientierte Einwilligungen",
     text: "Einwilligungen und Opt-outs sollen transparent dokumentiert und für dein Team nachvollziehbar bleiben.",
     label: "Rechtssicher gedacht",
+    status: "Geplant",
     tone: "blue",
   },
   {
@@ -504,6 +505,7 @@ const privacyControlCards = [
     title: "Rollen & Rechte",
     text: "Team-Zugriffe werden bewusst geplant – mit klaren Zuständigkeiten statt ungeprüfter Vollzugriffe.",
     label: "Roadmap: Team-Rechte",
+    status: "Roadmap",
     tone: "purple",
   },
   {
@@ -512,6 +514,7 @@ const privacyControlCards = [
     title: "Audit-Log",
     text: "Änderungen, Freigaben und sensible Aktionen sind als nachvollziehbare Protokollierung vorgesehen.",
     label: "Roadmap: Protokolle",
+    status: "Roadmap",
     tone: "green",
   },
   {
@@ -520,6 +523,7 @@ const privacyControlCards = [
     title: "Do-not-push-Regeln",
     text: "Präferenzen und Sperrlisten werden respektiert – für vertrauensvolle, bewusste Kommunikation.",
     label: "Roadmap: Präferenzen",
+    status: "Roadmap",
     tone: "amber",
   },
   {
@@ -528,6 +532,7 @@ const privacyControlCards = [
     title: "Manuelle Freigabe vor Versand",
     text: "KI-Vorschläge bleiben Vorschläge. Dein Team prüft bewusst, bevor etwas an Fans geht.",
     label: "Kontrolle vor Versand",
+    status: "Geplant",
     tone: "violet",
   },
   {
@@ -536,6 +541,7 @@ const privacyControlCards = [
     title: "EU-Datenfokus",
     text: "Datenschutz, Transparenz und europäische Anforderungen werden als Produktprinzip mitgedacht.",
     label: "Sicherheitsfokus EU",
+    status: "Geplant",
     tone: "blue",
   },
 ];
@@ -1860,10 +1866,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
                 <div className={styles.privacyControlStatus}>
-                  <FeatureStatusLabel variant={card.label.includes("Roadmap") ? "roadmap" : "planned"}>
-                    {card.label.includes("Roadmap") ? "Roadmap" : "Geplant"}
-                  </FeatureStatusLabel>
-                  <span>{card.label}</span>
+                  <span>{card.status}</span>
                 </div>
                 <ComingSoonMark size="small" className={styles.comingSoonImage} />
               </article>
