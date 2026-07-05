@@ -9,6 +9,7 @@ import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
 import RoadmapShowcase from "./RoadmapShowcase";
+import FaqAccordion from "./FaqAccordion";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import styles from "./landing-v2.module.css";
 
@@ -1932,18 +1933,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             </div>
           </div>
 
-          <div className={styles.faqList} aria-label="Häufige Fragen">
-            {localizedFaqs.map((faq) => (
-              <details className={styles.faqItem} key={faq.number} open={faq.open}>
-                <summary>
-                  <span>{faq.number}</span>
-                  <strong>{faq.question}</strong>
-                  <i aria-hidden="true" />
-                </summary>
-                <p>{faq.answer}</p>
-              </details>
-            ))}
-          </div>
+          <FaqAccordion items={localizedFaqs} label={t("Häufige Fragen")} />
         </div>
 
         <div className={styles.faqContactPanel}>
