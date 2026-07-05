@@ -4294,39 +4294,70 @@
   line-height: 1.34;
 }
 
-.integrationChannelGrid {
+.integrationMarquee {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 14px;
+  gap: 16px;
+  margin-top: 22px;
+  overflow: hidden;
+}
+
+.integrationMarqueeViewport {
+  position: relative;
+  overflow: hidden;
+  padding: 4px 0;
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+
+.integrationMarqueeTrack {
+  display: flex;
+  width: max-content;
+  gap: 14px;
+  will-change: transform;
+  animation: integrationMarqueeScroll 82s linear infinite;
+}
+
+.integrationMarqueeTrack[data-row="2"] {
+  animation-duration: 96s;
+}
+
+.integrationMarqueeViewport:hover .integrationMarqueeTrack {
+  animation-play-state: paused;
 }
 
 .integrationChannelCard {
   display: grid;
-  justify-items: center;
-  min-height: 132px;
-  padding: 13px 12px 10px;
-  border: 1px solid rgba(16, 134, 255, 0.54);
-  border-radius: 11px;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  column-gap: 12px;
+  align-items: center;
+  width: clamp(260px, 24vw, 342px);
+  min-height: 124px;
+  padding: 15px 16px 13px;
+  border: 1px solid rgba(16, 134, 255, 0.44);
+  border-radius: 18px;
   background:
-    radial-gradient(circle at 50% 6%, rgba(8, 111, 255, 0.1), transparent 38%),
-    linear-gradient(180deg, rgba(5, 18, 43, 0.72), rgba(4, 13, 31, 0.9));
-  box-shadow: inset 0 0 18px rgba(0, 126, 255, 0.06), 0 0 14px rgba(0, 110, 255, 0.04);
-  text-align: center;
+    radial-gradient(circle at 16% 8%, rgba(12, 136, 255, 0.2), transparent 42%),
+    linear-gradient(180deg, rgba(5, 20, 48, 0.78), rgba(4, 12, 29, 0.92));
+  box-shadow: inset 0 0 24px rgba(0, 126, 255, 0.08), 0 18px 44px rgba(0, 7, 22, 0.26), 0 0 24px rgba(0, 126, 255, 0.06);
+  text-align: left;
+  backdrop-filter: blur(16px);
 }
 
-.integrationChannelCard[data-tone="green"] { border-color: rgba(0, 218, 132, 0.5); }
-.integrationChannelCard[data-tone="violet"] { border-color: rgba(91, 95, 255, 0.5); }
-.integrationChannelCard[data-tone="purple"] { border-color: rgba(139, 67, 255, 0.5); }
-.integrationChannelCard[data-tone="pink"] { border-color: rgba(234, 70, 174, 0.5); }
-.integrationChannelCard[data-tone="cyan"] { border-color: rgba(0, 168, 255, 0.54); }
-.integrationChannelCard[data-tone="white"] { border-color: rgba(88, 107, 158, 0.54); }
+.integrationChannelCard[data-tone="green"] { border-color: rgba(0, 218, 132, 0.44); }
+.integrationChannelCard[data-tone="violet"] { border-color: rgba(91, 95, 255, 0.46); }
+.integrationChannelCard[data-tone="purple"] { border-color: rgba(139, 67, 255, 0.46); }
+.integrationChannelCard[data-tone="pink"] { border-color: rgba(234, 70, 174, 0.46); }
+.integrationChannelCard[data-tone="cyan"] { border-color: rgba(0, 168, 255, 0.5); }
+.integrationChannelCard[data-tone="white"] { border-color: rgba(160, 174, 212, 0.4); }
+.integrationChannelCard[data-tone="orange"] { border-color: rgba(255, 175, 25, 0.46); }
+.integrationChannelCard[data-tone="yellow"] { border-color: rgba(255, 223, 86, 0.46); }
 
 .integrationChannelIcon {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   color: #0b9dff;
   font-size: 27px;
   font-weight: 900;
@@ -4340,24 +4371,26 @@
 .integrationChannelCard[data-tone="pink"] .integrationChannelIcon { color: #ff5fc7; }
 .integrationChannelCard[data-tone="cyan"] .integrationChannelIcon { color: #10c8ff; }
 .integrationChannelCard[data-tone="white"] .integrationChannelIcon { color: #ffffff; }
+.integrationChannelCard[data-tone="orange"] .integrationChannelIcon { color: #ffb72c; }
+.integrationChannelCard[data-tone="yellow"] .integrationChannelIcon { color: #ffe15c; }
 
 .integrationChannelCard h3 {
-  margin-top: 7px;
   color: #fff;
   font-size: 16px;
   letter-spacing: -0.35px;
 }
 
 .integrationChannelCard p {
-  margin-top: 5px;
+  margin-top: 4px;
   color: #cbd3e1;
-  font-size: 11.6px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.28;
 }
 
 .integrationChannelCard > span {
-  align-self: end;
-  margin-top: 8px;
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 12px;
   padding: 3px 9px;
   border-radius: 999px;
   background: rgba(0, 224, 132, 0.1);
@@ -4377,6 +4410,23 @@
 .integrationChannelCard[data-tone="cyan"] > span {
   background: rgba(0, 154, 255, 0.14);
   color: #5fc4ff;
+}
+
+@keyframes integrationMarqueeScroll {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(calc(-50% - 7px), 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .integrationMarqueeViewport {
+    overflow-x: auto;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .integrationMarqueeTrack {
+    animation: none;
+  }
 }
 
 .integrationFlowPanel {
