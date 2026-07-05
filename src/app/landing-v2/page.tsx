@@ -11,6 +11,7 @@ import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection"
 import RoadmapShowcase from "./RoadmapShowcase";
 import FaqAccordion from "./FaqAccordion";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
+import { FooterInquiryForm } from "@/components/landing/FooterInquiryForm";
 import styles from "./landing-v2.module.css";
 
 export const metadata: Metadata = {
@@ -652,7 +653,7 @@ const faqContacts = [
     title: "Pilot anfragen",
     text: "Schreib uns eine Nachricht zu deinem Use Case und zum passenden Pilot-Setup.",
     cta: "Pilot anfragen",
-    href: "mailto:kontakt@fanmind.de?subject=Pilot%20anfragen",
+    href: "mailto:anfrage@fanmind.ch?subject=Pilot%20anfragen",
     tone: "blue",
   },
   {
@@ -1989,8 +1990,8 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               {t("KI-gestütztes Fan-CRM für Nachrichten, Memory und manuelle Follow-ups.")}
             </h2>
             <p>{t("Kein Bot. Keine automatische Sendefunktion. Mensch prüft final.")}</p>
-            <a className={styles.landingFooterContact} href="mailto:kontakt@fanmind.de?subject=Pilot%20anfragen">
-              kontakt@fanmind.de
+            <a className={styles.landingFooterContact} href="mailto:anfrage@fanmind.ch?subject=Pilot%20anfragen">
+              anfrage@fanmind.ch
             </a>
           </div>
 
@@ -2013,10 +2014,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <h3>{t("Pilot anfragen")}</h3>
               <p>{t("Wir prüfen deinen Use Case und zeigen dir, wie FanMind in deinem Workflow eingesetzt werden kann.")}</p>
             </div>
-            <a className={styles.landingFooterCta} href="mailto:kontakt@fanmind.de?subject=Pilot%20anfragen">
-              {t("Pilot anfragen")} <span>→</span>
-            </a>
-            <small>{t("Persönliche Anfrage · keine Newsletter-Automation")}</small>
+            <FooterInquiryForm />
           </div>
         </div>
 

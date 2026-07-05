@@ -32,6 +32,7 @@ export default async function AdminRoadmapPage() {
         <nav className={styles.adminRoadmapTabs} aria-label="Adminbereiche">
           <Link href="/admin/billing">Billing</Link>
           <Link className={styles.activeTab} href="/admin/roadmap">Roadmap</Link>
+          <Link href="/admin/inquiries">Anfragen</Link>
         </nav>
 
         <section className={styles.heroCard}>
