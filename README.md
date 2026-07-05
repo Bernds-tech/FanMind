@@ -10,6 +10,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
+- Geplantes Referral-/Founder-100-Programm: erste 100 berechtigte Nutzer können über Referral-Link je aktivem geworbenen Nutzer 5 % Rabatt erhalten, maximal 20 aktive Referrals = 100 % Rabatt, nur solange die geworbenen Nutzer aktiv bleiben.
 - FanMind ist ein Copy-&-Open-Assistent, kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert, öffnet bei Bedarf den Originalkanal und sendet selbst.
 - Externe Integrationen wie Meta/Facebook/Instagram, Telegram, WhatsApp, TikTok, X/Twitter und Discord dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
 - Jede in FanMind integrierte Sendefunktion, auch wenn sie manuell ausgelöst wird, muss gesondert freigegeben, versteckt oder als Pilot-Feature gekennzeichnet werden.
@@ -39,7 +40,7 @@ Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markie
 - UI: React `19.2.4`
 - Sprache: TypeScript
 - Auth und Daten: Supabase Auth / Supabase PostgREST
-- KI: serverseitige OpenAI Responses API über `OPENAI_API_KEY`
+- KI: serverseitige OpenAI Responses API über serverseitige Environment-Konfiguration
 - Deployment: Exoscale + PM2 + nginx über `.github/workflows/deploy-fanmind.yml`
 - Produktionsdomain: `https://fanmind.ch`
 
@@ -81,29 +82,6 @@ npm run lint
 
 Siehe `.env.example` für Platzhalter. Echte Werte gehören nur in lokale oder Server-ENV-Dateien und niemals ins Repository.
 
-Public / Browser-zulässig:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_APP_URL=
-```
-
-Server-only:
-
-```bash
-OPENAI_API_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-FANMIND_ADMIN_EMAILS=
-RESEND_API_KEY=
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-FACEBOOK_APP_SECRET=
-FACEBOOK_WEBHOOK_VERIFY_TOKEN=
-FANMIND_TOKEN_ENCRYPTION_KEY=
-TELEGRAM_BOT_TOKEN=
-```
-
 Regel: Alles mit Service Role, Secret, Token, Stripe, OpenAI, Facebook App Secret, Telegram Bot Token oder Admin-E-Mail ist server-only. Keine echten Werte in `.env.example`, Logs, Screenshots, Client-Code oder Dokumentation.
 
 ## Datenbank und RLS
@@ -133,6 +111,7 @@ Aktuell genutzte Kernbereiche:
 - `meta_webhook_events`
 - Billing-Felder an `workspaces`
 - optional Inquiry-/Pilot-Anfrage-Tabellen, falls in der jeweiligen Migration vorhanden
+- spätere Referral-Tabellen laut `docs/REFERRAL_PROGRAM.md`
 
 Vor Pilotkundendaten muss der Security-/RLS-/Secrets-Check aus `docs/SECURITY_RLS_SECRETS_CHECK.md` abgearbeitet werden.
 
@@ -141,7 +120,7 @@ Vor Pilotkundendaten muss der Security-/RLS-/Secrets-Check aus `docs/SECURITY_RL
 Aktueller MVP-Schutz:
 
 - KI läuft serverseitig über `/api/ai/reply-suggestions`.
-- `OPENAI_API_KEY` wird nicht im Browser verwendet.
+- KI-Keys werden nicht im Browser verwendet.
 - Eingaben werden begrenzt.
 - KI-Anfragen werden rate-limitiert.
 - Die Ausgabe ist strukturiert: `reply_options`, `suggested_memory`, `suggested_followup`, `safety_note`.
@@ -172,6 +151,20 @@ Provider-Preise dürfen nicht hart in UI-Texten stehen. Sie sollen serverseitig 
 | Enterprise / Custom | später | individuelle Prüfung |
 
 Keine alten Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` wieder einführen, solange `docs/SOURCE_OF_TRUTH.md` nicht bewusst geändert wurde.
+
+## Referral / Founder-100 Programm
+
+Geplant ist ein begrenztes Empfehlungsprogramm für die ersten 100 berechtigten FanMind-Nutzer:
+
+- persönlicher Referral-Link / Referral-Code;
+- je aktivem geworbenen zahlenden Nutzer `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten;
+- maximal 20 aktive geworbene Nutzer zählen;
+- 20 aktive Referrals ergeben rechnerisch `100 %` Rabatt;
+- kündigt ein geworbener Nutzer oder wird inaktiv, fällt dessen `5 %` wieder weg;
+- keine Barauszahlung, kein negativer Rechnungsbetrag;
+- vor Aktivierung sind Tracking, Billing, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung zu prüfen.
+
+Details: `docs/REFERRAL_PROGRAM.md`.
 
 ## Harte Stop-Regeln
 
@@ -211,6 +204,7 @@ Danach prüft der Workflow `/login` auf `https://fanmind.ch`.
 Wenn eines dieser Themen geändert wird, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und ggf. Legal-/Pricing-/Database-Dokumente im selben PR angepasst werden:
 
 - Preise oder Pakete
+- Referral-/Rabattlogik
 - aktive MVP-Funktionen
 - Demo-Pfad
 - Integrationsstatus
