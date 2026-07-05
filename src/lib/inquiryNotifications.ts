@@ -1,6 +1,6 @@
 import type { PilotInquiry } from "@/lib/inquiries";
 
-const NOTIFICATION_TO = "Fanmind@fanmind.ch";
+const DEFAULT_NOTIFICATION_TO = "Fanmind@fanmind.ch";
 const SUBJECT = "Neue FanMind Pilot-Anfrage";
 
 type NotificationResult = { sent: boolean; provider: string | null; error: string | null };
@@ -19,7 +19,7 @@ function textBody(inquiry: PilotInquiry): string {
 
 export function getInquiryNotificationConfigStatus(): string {
   if (process.env.RESEND_API_KEY) return "Resend API ist konfiguriert.";
-  return "Kein Mail-Provider konfiguriert. Setze RESEND_API_KEY, um Benachrichtigungen an Fanmind@fanmind.ch zu senden.";
+  return "Kein Mail-Provider konfiguriert. Setze RESEND_API_KEY, um Pilot-Anfrage-Benachrichtigungen zu senden.";
 }
 
 export async function sendPilotInquiryNotification(inquiry: PilotInquiry): Promise<NotificationResult> {
@@ -27,13 +27,14 @@ export async function sendPilotInquiryNotification(inquiry: PilotInquiry): Promi
   if (!resendApiKey) return { sent: false, provider: null, error: "RESEND_API_KEY ist nicht konfiguriert." };
 
   const from = process.env.FANMIND_NOTIFICATION_FROM || "FanMind <noreply@fanmind.ch>";
+  const to = process.env.FANMIND_INQUIRY_TO || DEFAULT_NOTIFICATION_TO;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${resendApiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from, to: NOTIFICATION_TO, subject: SUBJECT, text: textBody(inquiry) }),
+    body: JSON.stringify({ from, to, subject: SUBJECT, reply_to: inquiry.email, text: textBody(inquiry) }),
     cache: "no-store",
   });
 
