@@ -4387,7 +4387,7 @@
   line-height: 1.28;
 }
 
-.integrationChannelCard > span {
+.integrationChannelCard > .integrationStatusBadge {
   grid-column: 1 / -1;
   justify-self: start;
   margin-top: 12px;
@@ -4399,15 +4399,15 @@
   font-weight: 900;
 }
 
-.integrationChannelCard[data-tone="purple"] > span,
-.integrationChannelCard[data-tone="violet"] > span,
-.integrationChannelCard[data-tone="pink"] > span,
-.integrationChannelCard[data-tone="white"] > span {
+.integrationChannelCard[data-tone="purple"] > .integrationStatusBadge,
+.integrationChannelCard[data-tone="violet"] > .integrationStatusBadge,
+.integrationChannelCard[data-tone="pink"] > .integrationStatusBadge,
+.integrationChannelCard[data-tone="white"] > .integrationStatusBadge {
   background: rgba(169, 74, 255, 0.12);
   color: #c557ff;
 }
 
-.integrationChannelCard[data-tone="cyan"] > span {
+.integrationChannelCard[data-tone="cyan"] > .integrationStatusBadge {
   background: rgba(0, 154, 255, 0.14);
   color: #5fc4ff;
 }
@@ -8400,13 +8400,13 @@
 }
 
 .integrationChannelCard .comingSoonImage {
-  right: 7px;
-  bottom: 2px;
-  width: 48px;
+  right: 10px;
+  bottom: 8px;
+  width: 52px;
 }
 
 .integrationChannelCard.cardWithComingSoon {
-  padding-bottom: 52px;
+  padding-bottom: 58px;
 }
 
 .integrationActionPanel .cardWithComingSoon {
