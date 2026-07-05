@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 async function logout() {
   "use server";
   await signOutSupabaseServerSession();
-  redirect("/login");
+  redirect("/");
 }
 
 function planLabel(planId?: string | null) {

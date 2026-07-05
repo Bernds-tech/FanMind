@@ -152,7 +152,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       <div className={styles.gridPattern} aria-hidden="true" />
       <section className={styles.shell} aria-label="FanMind Login">
         <header className={styles.header}>
-          <FanMindLogo className={styles.logo} compact href={language === "en" ? "/landing-v2?lang=en" : "/landing-v2"} ariaLabel={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"} />
+          <FanMindLogo className={styles.logo} compact href={landingPath(language)} ariaLabel={language === "en" ? "Open FanMind homepage" : "FanMind Startseite öffnen"} />
           <nav className={styles.topLinks} aria-label="Login Navigation">
             <LanguageSwitch language={language} returnTo={returnTo} />
             <span>{copy.registerPrompt}</span>

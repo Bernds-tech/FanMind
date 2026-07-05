@@ -480,7 +480,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
       <div className={styles.gridPattern} aria-hidden="true" />
       <section className={styles.shell} aria-label={language === "en" ? "FanMind access" : "FanMind Zugang"}>
         <header className={styles.header}>
-          <FanMindLogo className={styles.logo} compact href={language === "en" ? "/landing-v2?lang=en" : "/landing-v2"} ariaLabel={language === "en" ? "Open FanMind landing page" : "FanMind Landingpage öffnen"} />
+          <FanMindLogo className={styles.logo} compact href={landingPath(language)} ariaLabel={language === "en" ? "Open FanMind homepage" : "FanMind Startseite öffnen"} />
           <nav className={styles.topLinks} aria-label="Registrierung Navigation">
             <LanguageSwitch language={language} planId={selectedPlanId} />
             <span>{copy.loginPrompt}</span>

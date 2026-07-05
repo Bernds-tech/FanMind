@@ -3,10 +3,10 @@ import { signOutSupabaseServerSession } from "@/lib/supabase/server";
 
 export async function GET() {
   await signOutSupabaseServerSession();
-  redirect("/login");
+  redirect("/");
 }
 
 export async function POST() {
   await signOutSupabaseServerSession();
-  redirect("/login");
+  redirect("/");
 }

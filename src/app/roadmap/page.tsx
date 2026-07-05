@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { FEATURE_LABELS, type FeatureKey, type PlanId } from "@/config/plans";
 import { shouldShowFeature } from "@/lib/plans";
 import FeatureStatusBadge from "@/components/plans/FeatureStatusBadge";
@@ -72,7 +73,7 @@ export default function RoadmapPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <a href="/landing-v2">FanMind</a>
+        <Link href="/">FanMind</Link>
         <nav aria-label="Roadmap Navigation">
           <a href="/onboarding">Onboarding</a>
           <a href="/roadmap">Roadmap</a>

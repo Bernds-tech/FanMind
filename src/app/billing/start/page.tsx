@@ -110,7 +110,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
       <section className={styles.overlay} aria-label="FanMind freischalten">
         <div className={styles.topbar}>
           <div className={styles.brandBlock}>
-            <FanMindLogo className={styles.logo} compact href="/landing-v2" ariaLabel="FanMind Landingpage öffnen" />
+            <FanMindLogo className={styles.logo} compact href="/" ariaLabel="FanMind Startseite öffnen" />
             <p>Setup &amp; Zahlung</p>
           </div>
           <ol className={styles.progress} aria-label="Checkout-Fortschritt">

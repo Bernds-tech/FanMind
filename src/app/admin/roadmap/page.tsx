@@ -43,7 +43,7 @@ export default async function AdminRoadmapPage() {
               Die Reihenfolge entspricht der öffentlichen Landingpage: Die priorisierten Phasen sind neu auf 01 bis 13 nummeriert und nutzen dieselbe zentrale Datenquelle.
             </p>
           </div>
-          <Link className={styles.primaryLink} href="/landing-v2#roadmap">Öffentliche Roadmap prüfen</Link>
+          <Link className={styles.primaryLink} href="/#roadmap">Öffentliche Roadmap prüfen</Link>
         </section>
 
         <div className={styles.phaseGrid}>

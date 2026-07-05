@@ -28,7 +28,7 @@ type FollowupsPageProps = {
 async function logout() {
   "use server";
   await signOutSupabaseServerSession();
-  redirect("/login");
+  redirect("/");
 }
 
 export default async function FollowupsPage({ searchParams }: FollowupsPageProps) {

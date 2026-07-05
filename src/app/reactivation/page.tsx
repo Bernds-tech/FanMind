@@ -25,7 +25,7 @@ async function logout() {
   "use server";
 
   await signOutSupabaseServerSession();
-  redirect("/login");
+  redirect("/");
 }
 
 function getUserDisplayName(

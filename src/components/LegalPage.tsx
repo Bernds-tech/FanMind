@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import styles from "@/app/datenschutz/datenschutz.module.css";
@@ -22,7 +23,7 @@ function slug(value: string) {
 export function LegalFooter() {
   return (
     <footer className={styles.siteFooter}>
-      <FanMindLogo className={styles.logo} compact href="/landing-v2" ariaLabel="FanMind Landingpage öffnen" />
+      <FanMindLogo className={styles.logo} compact href="/" ariaLabel="FanMind Startseite öffnen" />
       <p>FanMind · KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · anfrage@fanmind.ch</p>
       <nav aria-label="Footer Navigation">
         <a href="/impressum">Impressum</a>
@@ -43,7 +44,7 @@ export function LegalFooter() {
 export function LegalHeader() {
   return (
     <header className={styles.header}>
-      <FanMindLogo className={styles.logo} href="/landing-v2" ariaLabel="FanMind Landingpage öffnen" />
+      <FanMindLogo className={styles.logo} href="/" ariaLabel="FanMind Startseite öffnen" />
       <nav className={styles.nav} aria-label="Rechtsseiten Navigation">
         <a href="/impressum">Impressum</a>
         <a href="/datenschutz">Datenschutz</a>
@@ -68,7 +69,7 @@ export function LegalPage({ badge, title, intro, sections, children }: LegalPage
         <p className={styles.badge}>{badge}</p>
         <h1 id="legal-title">{title}</h1>
         <p>{intro}</p>
-        <a className={styles.homeLink} href="/landing-v2">Zurück zu FanMind</a>
+        <Link className={styles.homeLink} href="/">Zurück zu FanMind</Link>
       </section>
       <section className={styles.content} aria-label={`${title} Inhalt`}>
         <aside className={styles.toc} aria-label="Inhaltsverzeichnis">
