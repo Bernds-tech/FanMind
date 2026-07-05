@@ -14,7 +14,7 @@ export type RoadmapPhase = {
   items: Array<{ label: string; state: RoadmapItemState; status?: string }>;
 };
 
-export const roadmapPhases: RoadmapPhase[] = ([
+export const roadmapPhases: RoadmapPhase[] = [
   {
     number: "01",
     phase: "Phase 1",
@@ -211,10 +211,7 @@ export const roadmapPhases: RoadmapPhase[] = ([
       { label: "Automationen nur als geprüfte Erinnerungen", state: "later", status: "Kein Auto-Senden" },
     ],
   },
-] satisfies RoadmapPhase[]).sort((left, right) => {
-  const displayOrder = ["01", "02", "06", "07", "08", "09", "03", "04", "05", "10", "11", "12"];
-  return displayOrder.indexOf(left.number) - displayOrder.indexOf(right.number);
-});
+] satisfies RoadmapPhase[];
 
 export const roadmapNotes = [
   {
