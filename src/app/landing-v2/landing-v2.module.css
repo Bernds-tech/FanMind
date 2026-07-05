@@ -204,6 +204,7 @@
 .processStep {
   position: relative;
   display: flex;
+  height: 100%;
   min-width: 0;
   flex-direction: column;
   align-items: stretch;
@@ -276,10 +277,10 @@
   position: relative;
   display: flex;
   width: 100%;
-  min-height: 342px;
+  min-height: 360px;
   margin-top: 12px;
   padding: 13px;
-  flex: 1;
+  flex: 1 1 auto;
   flex-direction: column;
   border: 1px solid rgba(55, 134, 235, 0.5);
   border-radius: 16px;
@@ -351,6 +352,7 @@
   display: grid;
   gap: 6px;
   margin-top: 10px;
+  margin-bottom: 16px;
 }
 
 .stepRow {
@@ -404,16 +406,19 @@
 .stepExampleCard > a {
   display: inline-flex;
   align-items: center;
+  align-self: stretch;
+  flex: 0 0 auto;
   justify-content: center;
   gap: 8px;
-  min-height: 30px;
+  min-height: 34px;
   margin-top: auto;
-  padding-top: 10px;
+  padding-top: 12px;
   color: #18a8ff;
-  font-size: clamp(12px, 0.76vw, 14px);
+  font-size: clamp(11px, 0.72vw, 13px);
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
+  white-space: nowrap;
 }
 
 
@@ -423,7 +428,7 @@
 
 .processStep.cardWithComingSoon .comingSoonImage {
   right: 12px;
-  bottom: 34px;
+  bottom: 54px;
   z-index: 9;
 }
 
