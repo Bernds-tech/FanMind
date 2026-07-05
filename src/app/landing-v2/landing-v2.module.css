@@ -4431,84 +4431,90 @@
 
 .integrationFlowPanel {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(20px, 36px) minmax(145px, 170px) minmax(20px, 36px) minmax(260px, 1fr);
+  grid-template-columns: minmax(280px, 0.95fr) minmax(44px, 72px) minmax(170px, 210px) minmax(44px, 72px) minmax(300px, 1.1fr);
   align-items: center;
-  gap: clamp(6px, 0.65vw, 10px);
-  min-height: 210px;
+  gap: clamp(12px, 1.4vw, 22px);
+  min-height: 260px;
   margin-top: 10px;
-  padding: 14px;
+  padding: clamp(18px, 2.1vw, 28px);
   overflow: hidden;
   min-width: 0;
-  border: 1px solid rgba(59, 116, 184, 0.36);
-  border-radius: 12px;
-  background: rgba(4, 15, 34, 0.68);
-  box-shadow: inset 0 0 34px rgba(0, 132, 255, 0.05);
+  border: 1px solid rgba(93, 143, 205, 0.3);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 23% 18%, rgba(0, 184, 255, 0.13), transparent 30%),
+    radial-gradient(circle at 62% 50%, rgba(122, 91, 255, 0.12), transparent 34%),
+    linear-gradient(135deg, rgba(5, 18, 40, 0.88), rgba(4, 11, 28, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 80px rgba(0, 0, 0, 0.24);
+}
+
+.integrationSourcePanel,
+.integrationActionPanel {
+  min-width: 0;
 }
 
 .integrationSourcePanel > strong,
 .integrationActionPanel > strong {
   display: block;
-  margin-bottom: 8px;
-  color: #00b8ff;
-  font-size: 12px;
-  text-align: center;
-  letter-spacing: 0.15px;
+  margin-bottom: 12px;
+  color: #9deaff;
+  font-size: 11px;
+  text-align: left;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .integrationActionPanel > strong {
-  color: #cf4fff;
+  color: #e3b6ff;
 }
 
 .integrationSourcePanel > div {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 8px;
-  padding: 8px;
-  justify-items: stretch;
-  border: 1px solid rgba(0, 139, 255, 0.3);
-  border-radius: 11px;
-  background: rgba(2, 18, 39, 0.66);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(126, 174, 230, 0.24);
+  border-radius: 20px;
+  background: rgba(5, 18, 40, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .integrationSourcePanel span {
   display: grid;
   position: relative;
-  grid-template-columns: 22px minmax(0, 1fr) 10px;
+  grid-template-columns: 30px minmax(0, 1fr) 8px;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 4px 8px;
-  overflow: hidden;
-  border: 1px solid rgba(34, 122, 190, 0.34);
-  border-radius: 8px;
-  background: rgba(5, 28, 55, 0.72);
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  overflow: visible;
+  border: 1px solid rgba(119, 165, 218, 0.22);
+  border-radius: 15px;
+  background: linear-gradient(180deg, rgba(13, 32, 62, 0.82), rgba(6, 19, 42, 0.9));
   color: #f8fbff;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 800;
   line-height: 1.15;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+}
+
+.integrationSourcePanel span > svg {
+  width: 26px;
+  height: 26px;
+  justify-self: center;
 }
 
 .integrationSourcePanel i {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 1px solid rgba(4, 216, 255, 0.82);
-  border-radius: 5px;
-  color: #04d8ff;
-  font-size: 13px;
-  font-style: normal;
-  line-height: 1;
-  box-shadow: 0 0 11px rgba(0, 205, 255, 0.38);
+  display: none;
 }
 
 .integrationSourcePanel em {
   justify-self: end;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #18e68c;
-  box-shadow: 0 0 10px rgba(24, 230, 140, 0.82);
+  background: #22e099;
+  box-shadow: 0 0 12px rgba(34, 224, 153, 0.72);
 }
 
 .integrationFlowLinesLeft,
@@ -4517,7 +4523,7 @@
   width: 100%;
   height: 124px;
   overflow: visible;
-  opacity: 0.82;
+  opacity: 0.58;
 }
 
 .integrationFlowLinesLeft g > path,
@@ -4525,65 +4531,76 @@
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.85;
+  stroke-width: 1.25;
+  stroke-dasharray: 5 7;
   vector-effect: non-scaling-stroke;
 }
 
 .integrationFlowLinesLeft g > path {
-  stroke: rgba(21, 220, 255, 0.78);
+  stroke: rgba(126, 226, 255, 0.58);
   marker-end: url("#integration-flow-arrow-cyan");
 }
 
 .integrationFlowLinesLeft marker path {
-  fill: rgba(21, 220, 255, 0.88);
+  fill: rgba(126, 226, 255, 0.7);
   stroke: none;
 }
 
 .integrationFlowLinesRight g > path {
-  stroke: rgba(210, 82, 255, 0.76);
+  stroke: rgba(221, 151, 255, 0.58);
   marker-end: url("#integration-flow-arrow-magenta");
 }
 
 .integrationFlowLinesRight marker path {
-  fill: rgba(210, 82, 255, 0.88);
+  fill: rgba(221, 151, 255, 0.72);
   stroke: none;
 }
 
 .integrationBrainCard {
   display: grid;
   justify-items: center;
-  min-height: 160px;
-  padding: 16px 12px;
-  border: 1px solid rgba(0, 135, 255, 0.68);
-  border-radius: 14px;
-  background: radial-gradient(circle at 50% 15%, rgba(0, 120, 255, 0.36), rgba(5, 18, 43, 0.94) 58%);
-  box-shadow: inset 0 0 28px rgba(0, 132, 255, 0.12), 0 0 24px rgba(0, 123, 255, 0.13);
+  min-height: 190px;
+  padding: 22px 16px;
+  border: 1px solid rgba(102, 190, 255, 0.42);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 22%, rgba(47, 164, 255, 0.34), transparent 44%),
+    linear-gradient(180deg, rgba(12, 33, 67, 0.96), rgba(4, 14, 34, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 22px 46px rgba(0, 89, 180, 0.18);
   text-align: center;
 }
 
 .integrationBrainCard div {
-  font-size: 52px;
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  border: 1px solid rgba(137, 213, 255, 0.36);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 42px;
   line-height: 1;
-  filter: drop-shadow(0 0 14px rgba(0, 133, 255, 0.72));
+  filter: drop-shadow(0 0 14px rgba(0, 133, 255, 0.42));
 }
 
 .integrationBrainCard strong {
-  margin-top: 8px;
+  margin-top: 14px;
   color: #fff;
-  font-size: 27px;
+  font-size: 28px;
   letter-spacing: -1px;
 }
 
 .integrationBrainCard span {
-  margin-top: 8px;
-  color: #bfc9d9;
-  font-size: 12.5px;
+  margin-top: 9px;
+  color: #c9d5e8;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .integrationActionPanel > div {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -4592,33 +4609,34 @@
   justify-items: center;
   min-height: 150px;
   min-width: 0;
-  padding: 12px 7px 10px;
+  padding: 16px 12px 14px;
   overflow: hidden;
   overflow-wrap: anywhere;
-  border: 1px solid rgba(99, 73, 188, 0.5);
-  border-radius: 11px;
-  background: linear-gradient(180deg, rgba(14, 20, 50, 0.78), rgba(5, 14, 32, 0.92));
+  border: 1px solid rgba(142, 111, 220, 0.38);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(20, 25, 57, 0.82), rgba(7, 15, 35, 0.94));
   text-align: center;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.14);
 }
 
 .integrationActionPanel article > span {
-  color: #bf4fff;
+  color: #d981ff;
   font-size: 27px;
-  text-shadow: 0 0 11px rgba(197, 84, 255, 0.5);
+  text-shadow: 0 0 11px rgba(197, 84, 255, 0.38);
 }
 
 .integrationActionPanel h3 {
-  margin-top: 7px;
+  margin-top: 8px;
   color: #fff;
   font-size: 16px;
   letter-spacing: -0.4px;
 }
 
 .integrationActionPanel p {
-  margin-top: 6px;
+  margin-top: 7px;
   color: #d2d7e4;
   font-size: 12.5px;
-  line-height: 1.32;
+  line-height: 1.35;
 }
 
 .integrationActionPanel i {
@@ -4628,10 +4646,10 @@
   width: 24px;
   height: 24px;
   margin-top: 8px;
-  border: 1px solid rgba(0, 157, 255, 0.46);
+  border: 1px solid rgba(0, 157, 255, 0.36);
   border-radius: 50%;
-  background: rgba(0, 121, 255, 0.16);
-  color: #00d7ff;
+  background: rgba(0, 121, 255, 0.12);
+  color: #77e7ff;
   font-size: 13px;
   font-style: normal;
   font-weight: 900;
@@ -4802,7 +4820,7 @@
   }
 
   .integrationSourcePanel > div {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .integrationBenefits {
@@ -4840,6 +4858,10 @@
   }
 
   .integrationBenefits article {
+    grid-template-columns: 1fr;
+  }
+
+  .integrationSourcePanel > div {
     grid-template-columns: 1fr;
   }
 
@@ -5123,32 +5145,73 @@
 
 .roadmapCard li {
   position: relative;
-  padding-left: 27px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-left: 29px;
 }
 
 .roadmapCard li::before {
-  content: "✓";
+  content: "";
   position: absolute;
   left: 0;
-  top: -1px;
+  top: 0;
   display: grid;
   place-items: center;
   width: 17px;
   height: 17px;
-  border: 1px solid color-mix(in srgb, var(--phase) 68%, transparent);
+  border: 1px solid color-mix(in srgb, var(--phase) 48%, transparent);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--phase) 32%, transparent);
+  background: rgba(255, 255, 255, 0.035);
   color: #fff;
   font-size: 10px;
   font-weight: 900;
+}
+
+.roadmapCard li[data-state="done"]::before {
+  content: "✓";
+  border-color: color-mix(in srgb, var(--phase) 72%, transparent);
+  background: color-mix(in srgb, var(--phase) 34%, transparent);
   box-shadow: 0 0 12px color-mix(in srgb, var(--phase) 34%, transparent);
 }
 
-.roadmapCard:not([data-tone="blue"]) li::before {
-  content: "";
-  width: 15px;
-  height: 15px;
+.roadmapCard li[data-state="progress"]::before,
+.roadmapCard li[data-state="partial"]::before {
   border-width: 2px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--phase) 86%, transparent) 0 35%, transparent 40%);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--phase) 22%, transparent);
+}
+
+.roadmapCard li[data-state="planned"]::before,
+.roadmapCard li[data-state="later"]::before {
+  border-style: dashed;
+}
+
+.roadmapCard li span {
+  min-width: 0;
+}
+
+.roadmapCard li em {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 3px 7px;
+  border: 1px solid rgba(151, 169, 205, 0.26);
+  border-radius: 999px;
+  color: #bfc9dc;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.roadmapCard li[data-state="progress"] em,
+.roadmapCard li[data-state="partial"] em {
+  border-color: color-mix(in srgb, var(--phase) 42%, transparent);
+  color: #e8fff6;
+  background: color-mix(in srgb, var(--phase) 12%, transparent);
 }
 
 .roadmapNotes {
@@ -8382,15 +8445,15 @@
 }
 
 .integrationSourcePanel .comingSoonImage {
-  right: 6px;
-  bottom: 50%;
-  width: 28px;
-  transform: translateY(50%) rotate(-4deg);
+  right: 8px;
+  bottom: 6px;
+  width: 34px;
+  transform: rotate(-4deg);
 }
 
 .integrationSourcePanel .cardWithComingSoon {
-  padding-right: 40px;
-  padding-bottom: 4px;
+  padding-right: 12px;
+  padding-bottom: 22px;
 }
 
 .integrationActionPanel .comingSoonImage {

@@ -826,30 +826,30 @@ const roadmapPhases = [
     statusIcon: "●",
     tone: "blue",
     items: [
-      "Login & Registrierung",
-      "Dashboard & Kontakte",
-      "Manuelle Kontakte",
-      "CSV-Import minimal",
-      "AI-Infos / Fan-Gedächtnis",
-      "KI-Antwortvorschläge",
-      "Follow-ups",
-      "Fan-Analyse-Report",
+      { label: "Login & Registrierung", state: "done" },
+      { label: "Dashboard & Fans", state: "done" },
+      { label: "Manuelle Fans", state: "done" },
+      { label: "CSV-Import minimal", state: "done" },
+      { label: "AI-Infos / Fan-Gedächtnis", state: "done" },
+      { label: "KI-Antwortvorschläge", state: "done" },
+      { label: "Follow-ups", state: "done" },
+      { label: "Fan-Analyse-Report", state: "done" },
     ],
   },
   {
     number: "02",
     phase: "Phase 2",
     icon: "upload",
-    title: "Kontakt-Import & Datenqualität",
+    title: "Fan-Import & Datenqualität",
     status: "In Arbeit",
     statusIcon: "✣",
     tone: "green",
     items: [
-      "Erweiterte CSV-Feldzuordnung",
-      "Import-Validierung",
-      "Kontakt-Mapping",
-      "Duplikaterkennung",
-      "Segment-Vorbereitung",
+      { label: "Erweiterte CSV-Feldzuordnung", state: "progress", status: "In Arbeit" },
+      { label: "Import-Validierung", state: "progress", status: "In Arbeit" },
+      { label: "Fan-Mapping", state: "progress", status: "In Arbeit" },
+      { label: "Duplikaterkennung", state: "partial", status: "Teilweise" },
+      { label: "Segment-Vorbereitung", state: "planned", status: "Vorbereitet" },
     ],
   },
   {
@@ -860,7 +860,12 @@ const roadmapPhases = [
     status: "In Kürze",
     statusIcon: "◷",
     tone: "purple",
-    items: ["Segmente", "Kampagnen", "Vorlagen", "A/B-Tests"],
+    items: [
+      { label: "Segmente", state: "planned", status: "Vorbereitet" },
+      { label: "Kampagnen", state: "later", status: "Coming Soon" },
+      { label: "Vorlagen", state: "later", status: "Coming Soon" },
+      { label: "A/B-Tests", state: "later", status: "Coming Soon" },
+    ],
   },
   {
     number: "04",
@@ -870,7 +875,12 @@ const roadmapPhases = [
     status: "In Kürze",
     statusIcon: "◷",
     tone: "violet",
-    items: ["Analytics", "Team & Rollen", "Performance-Übersicht", "Workspaces / Multi-Workspace-Ausbau"],
+    items: [
+      { label: "Analytics", state: "later", status: "Coming Soon" },
+      { label: "Team & Rollen", state: "later", status: "Coming Soon" },
+      { label: "Performance-Übersicht", state: "later", status: "Coming Soon" },
+      { label: "Workspaces / Multi-Workspace-Ausbau", state: "later", status: "Coming Soon" },
+    ],
   },
   {
     number: "05",
@@ -880,7 +890,17 @@ const roadmapPhases = [
     status: "In Kürze",
     statusIcon: "◷",
     tone: "gold",
-    items: ["Instagram", "TikTok", "WhatsApp", "Facebook", "X / Twitter", "Discord", "LinkedIn"],
+    items: [
+      { label: "Manuell / CSV", state: "done" },
+      { label: "Webformular", state: "done" },
+      { label: "Instagram", state: "planned", status: "Roadmap" },
+      { label: "TikTok", state: "planned", status: "Roadmap" },
+      { label: "WhatsApp", state: "planned", status: "Roadmap" },
+      { label: "Facebook", state: "planned", status: "Roadmap" },
+      { label: "X / Twitter", state: "planned", status: "Roadmap" },
+      { label: "Discord", state: "planned", status: "Roadmap" },
+      { label: "LinkedIn", state: "planned", status: "Roadmap" },
+    ],
   },
 ];
 
@@ -1796,7 +1816,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               </div>
               <ul>
                 {phase.items.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li data-state={item.state} key={item.label}>
+                    <span>{item.label}</span>
+                    {item.status ? <em>{item.status}</em> : null}
+                  </li>
                 ))}
               </ul>
               {phase.number === "01" ? null : <ComingSoonMark size="medium" className={styles.comingSoonImage} />}
