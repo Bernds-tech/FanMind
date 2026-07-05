@@ -1590,7 +1590,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                       <h3>{channel.title}</h3>
                       <p>{channel.text}</p>
                     </div>
-                    <FeatureStatusLabel variant={statusVariantFromLabel(channel.status) ?? "preview"}>{channel.status}</FeatureStatusLabel>
+                    {channel.status === "Roadmap" ? null : (
+                      <FeatureStatusLabel
+                        className={styles.integrationStatusBadge}
+                        variant={statusVariantFromLabel(channel.status) ?? "preview"}
+                      >
+                        {channel.status}
+                      </FeatureStatusLabel>
+                    )}
                     {isComingSoonStatus(channel.status) ? <ComingSoonMark size="small" className={styles.comingSoonImage} /> : null}
                   </article>
                 ))}
