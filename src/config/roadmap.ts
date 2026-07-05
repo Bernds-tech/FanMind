@@ -222,6 +222,25 @@ export const roadmapPhases: RoadmapPhase[] = [
       { label: "Automationen nur als geprüfte Erinnerungen", state: "later", status: "Kein Auto-Senden" },
     ],
   },
+
+  {
+    number: "13",
+    phase: "Phase 13",
+    icon: "analytics",
+    title: "Datenschutz & Kontrolle",
+    status: "Später",
+    statusIcon: "◇",
+    tone: "cyan",
+    availability: "later",
+    items: [
+      { label: "DSGVO-orientierte Einwilligungen", state: "later", status: "Geplant" },
+      { label: "Rollen & Rechte", state: "later", status: "Roadmap" },
+      { label: "Audit-Log", state: "later", status: "Roadmap" },
+      { label: "Do-not-push-Regeln", state: "later", status: "Roadmap" },
+      { label: "Manuelle Freigabe vor Versand", state: "later", status: "Kontrollprinzip" },
+      { label: "EU-Datenfokus", state: "later", status: "Produktprinzip" },
+    ],
+  },
 ] satisfies RoadmapPhase[];
 
 export const roadmapNotes = [

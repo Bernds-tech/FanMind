@@ -39,7 +39,7 @@ export default async function AdminRoadmapPage() {
             <span className={styles.eyebrow}>Produktplanung</span>
             <h1>Roadmap-Phasen intern verfolgen</h1>
             <p>
-              Die Reihenfolge entspricht der öffentlichen Landingpage: Die priorisierten Phasen sind neu auf 01 bis 12 nummeriert und nutzen dieselbe zentrale Datenquelle.
+              Die Reihenfolge entspricht der öffentlichen Landingpage: Die priorisierten Phasen sind neu auf 01 bis 13 nummeriert und nutzen dieselbe zentrale Datenquelle.
             </p>
           </div>
           <Link className={styles.primaryLink} href="/landing-v2#roadmap">Öffentliche Roadmap prüfen</Link>
