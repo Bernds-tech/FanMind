@@ -472,3 +472,39 @@
   font-weight: 800;
   line-height: 1.45;
 }
+
+.homeLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 26px;
+  padding: 0 18px;
+  border: 1px solid rgba(91, 174, 255, 0.42);
+  border-radius: 999px;
+  color: #eff8ff;
+  background: rgba(3, 20, 44, 0.72);
+  box-shadow: inset 0 0 24px rgba(34, 147, 255, 0.1), 0 16px 42px rgba(0, 0, 0, 0.22);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.homeLink:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 213, 255, 0.72);
+  background: rgba(5, 36, 76, 0.86);
+}
+
+.card:first-child,
+.infoPanel:first-of-type {
+  border-color: rgba(37, 213, 255, 0.46);
+}
+
+@media (min-width: 1200px) {
+  .packageGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
