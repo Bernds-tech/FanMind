@@ -10044,8 +10044,9 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(190px, 0.62fr) minmax(420px, 1fr) minmax(340px, 0.86fr);
-  gap: clamp(28px, 4vw, 58px);
+  grid-template-columns: minmax(170px, 0.54fr) minmax(360px, 0.78fr) minmax(390px, 0.92fr);
+  column-gap: clamp(18px, 2.6vw, 38px);
+  row-gap: clamp(24px, 3vw, 44px);
   align-items: start;
   padding: 0;
   overflow: visible;
@@ -10114,7 +10115,9 @@
 .siteFooter .landingFooterNav {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(22px, 3vw, 40px);
+  gap: clamp(18px, 2.2vw, 30px);
+  justify-self: start;
+  width: min(100%, 390px);
   min-width: 0;
   padding: 8px 0 4px;
 }
@@ -10160,9 +10163,10 @@
   gap: 14px 16px;
   align-self: start;
   width: 100%;
-  max-width: none;
+  max-width: 440px;
   min-width: 0;
-  margin: 0;
+  justify-self: end;
+  margin: -8px 0 0;
   padding: 22px;
   border: 1px solid rgba(109, 151, 219, 0.28);
   border-radius: 22px;
@@ -10265,8 +10269,9 @@
 
 @media (max-width: 1180px) {
   .siteFooter .landingFooterPanel {
-    grid-template-columns: minmax(180px, 0.58fr) minmax(360px, 1fr) minmax(320px, 0.9fr);
-    gap: 28px;
+    grid-template-columns: minmax(160px, 0.5fr) minmax(320px, 0.78fr) minmax(350px, 0.92fr);
+    column-gap: 24px;
+    row-gap: 28px;
   }
 }
 
@@ -10277,6 +10282,8 @@
 
   .siteFooter .landingFooterNewsletter {
     grid-column: 1 / -1;
+    justify-self: end;
+    margin-top: 0;
   }
 }
 
@@ -10304,6 +10311,8 @@
 
   .siteFooter .landingFooterNewsletter {
     grid-template-columns: 1fr;
+    justify-self: stretch;
+    max-width: none;
   }
 
   .landingFooterBottom {
