@@ -1,9 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import {
+  requireContactInAuthorizedWorkspace,
+  WorkspaceAuthorizationError,
+} from "@/lib/workspaceAuthorization";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENAI_MODEL = "gpt-5.2";
 const MAX_INCOMING_MESSAGE_LENGTH = 4000;
 const MAX_PASTED_CHAT_CONTEXT_LENGTH = 12000;
+const AI_RATE_LIMIT_MAX = 20;
+const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const SAFETY_NOTE =
   "Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.";
 
@@ -134,13 +141,47 @@ const replySuggestionsSchema = {
   },
 } as const;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const payload = (await request.json().catch(() => null)) as
     | ReplySuggestionRequest
     | null;
 
   if (!payload) {
     return jsonError("Ungültiger JSON-Body.", 400);
+  }
+
+  const contactId = normalizeString(payload.contactId);
+  if (!contactId) {
+    return jsonError("contactId ist Pflicht.", 400);
+  }
+
+  let authorizationContext: Awaited<
+    ReturnType<typeof requireContactInAuthorizedWorkspace>
+  >;
+
+  try {
+    authorizationContext = await requireContactInAuthorizedWorkspace(contactId);
+  } catch (error) {
+    if (error instanceof WorkspaceAuthorizationError) {
+      if (error.code === "unauthenticated") {
+        return jsonError("Bitte melde dich erneut an.", 401);
+      }
+
+      if (error.code === "resource_forbidden") {
+        return jsonError("Kontakt ist nicht für diesen Workspace freigegeben.", 403);
+      }
+    }
+
+    return jsonError("Kontakt konnte nicht autorisiert geladen werden.", 404);
+  }
+
+  const rateLimit = checkRateLimit(
+    `ai-reply:${authorizationContext.user.id}:${getClientIp(request)}`,
+    { maxRequests: AI_RATE_LIMIT_MAX, windowMs: AI_RATE_LIMIT_WINDOW_MS },
+  );
+
+  if (!rateLimit.allowed) {
+    return jsonError("Zu viele KI-Anfragen. Bitte versuche es später erneut.", 429);
   }
 
   const incomingMessage = normalizeString(payload.incomingMessage);
@@ -168,20 +209,21 @@ export async function POST(request: Request) {
 
   if (!apiKey) {
     return jsonError(
-      "OPENAI_API_KEY ist serverseitig nicht gesetzt. Antwortvorschläge konnten nicht erzeugt werden.",
+      "Antwortvorschläge konnten gerade nicht erzeugt werden.",
       503,
     );
   }
 
+  const { contact } = authorizationContext;
   const contactContext = {
-    contactId: normalizeString(payload.contactId),
-    displayName: normalizeString(payload.displayName) || "Kontakt",
-    handle: normalizeOptionalString(payload.handle),
-    sourcePlatform: normalizeOptionalString(payload.sourcePlatform),
-    language: normalizeString(payload.language) || "de",
-    status: normalizeOptionalString(payload.status),
-    tags: normalizeStringArray(payload.tags),
-    summary: normalizeOptionalString(payload.summary),
+    contactId: contact.id,
+    displayName: contact.display_name || "Kontakt",
+    handle: contact.handle,
+    sourcePlatform: contact.source_platform,
+    language: contact.language || "de",
+    status: contact.status,
+    tags: contact.tags ?? [],
+    summary: contact.summary,
     pastedChatContext,
     incomingMessage,
     responseMode: normalizeString(payload.responseMode) || "Freundlich",
@@ -225,7 +267,7 @@ export async function POST(request: Request) {
 
     if (!openAiResponse.ok) {
       return jsonError(
-        "OpenAI konnte gerade keine Antwortvorschläge erzeugen.",
+        "Antwortvorschläge konnten gerade nicht erzeugt werden.",
         openAiResponse.status >= 500 ? 502 : 400,
       );
     }
@@ -233,7 +275,7 @@ export async function POST(request: Request) {
     const outputText = extractOutputText(responseBody);
 
     if (!outputText) {
-      return jsonError("OpenAI hat kein auswertbares Ergebnis geliefert.", 502);
+      return jsonError("Antwortvorschläge konnten gerade nicht erzeugt werden.", 502);
     }
 
     const suggestions = JSON.parse(outputText) as ReplySuggestionsResponse;
@@ -301,18 +343,6 @@ function normalizeOptionalString(value: unknown): string | null {
   const normalized = normalizeString(value);
 
   return normalized || null;
-}
-
-function normalizeStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter((item): item is string => typeof item === "string")
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 12);
 }
 
 function jsonError(message: string, status: number) {
