@@ -1,90 +1,219 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FanMind
 
-## Getting Started
+FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan-/Kontaktbeziehungen. Der aktive Kern ist kein Folien-Dummy mehr: Login, Demo-Workspace, Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, serverseitige KI-Antwortvorschläge, Memory, Follow-ups und Roadmap sind der aktuelle Produktfokus.
 
-First, run the development server:
+## Schnellentscheidung / Reader-Stand
+
+Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
+
+- Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
+- Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
+- Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
+- Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
+- Geplantes Referral Growth Window: alle berechtigten zahlenden Nutzer können teilnehmen, solange FanMind noch unter `2.000` aktiven zahlenden Kunden/Workspaces liegt; je aktivem geworbenen Kunden/Workspace gibt es 5 % Rabatt, maximal 20 aktive Referrals = 100 % Rabatt.
+- Nach Erreichen des 2.000er-Caps wird das Referral Growth Window geschlossen. Bestehende aktive Rabattansprüche bleiben bestehen, aber neue zusätzliche Rabattprozente entstehen nicht mehr, außer FanMind öffnet das Programm ausdrücklich wieder.
+- FanMind ist ein Copy-&-Open-Assistent, kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert, öffnet bei Bedarf den Originalkanal und sendet selbst.
+- Externe Integrationen wie Meta/Facebook/Instagram, Telegram, WhatsApp, TikTok, X/Twitter und Discord dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
+- Jede in FanMind integrierte Sendefunktion, auch wenn sie manuell ausgelöst wird, muss gesondert freigegeben, versteckt oder als Pilot-Feature gekennzeichnet werden.
+
+## Gefrorener Gerhard-Demo-Pfad
+
+Der Verkaufsdemo-Pfad ist fest und soll nicht durch Nebenfunktionen überlagert werden:
+
+1. Landingpage öffnen.
+2. Login oder Demo starten.
+3. Dashboard zeigen.
+4. Fans/Kontakte öffnen.
+5. CSV-Import kurz zeigen oder direkt Sandra/demo-Kontakt öffnen.
+6. Kontaktdetail öffnen.
+7. vorhandene bzw. letzte eingehende Nachricht als Kontext verwenden.
+8. KI-Antwortvorschläge erzeugen.
+9. Antwort kopieren.
+10. Memory-Vorschlag speichern.
+11. Follow-up-Vorschlag speichern.
+12. Follow-up-Liste und/oder Roadmap zeigen.
+
+Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markiert oder aus Gerhards Standarddemo herausgehalten werden.
+
+## Technik
+
+- Framework: Next.js `16.2.7`
+- UI: React `19.2.4`
+- Sprache: TypeScript
+- Auth und Daten: Supabase Auth / Supabase PostgREST
+- KI: serverseitige OpenAI Responses API über serverseitige Environment-Konfiguration
+- Deployment: Exoscale + PM2 + nginx über `.github/workflows/deploy-fanmind.yml`
+- Produktionsdomain: `https://fanmind.ch`
+
+Installieren und lokal starten:
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## FanMind MVP Auth-Basis (Supabase)
-
-Dieser Stand verbindet die vorhandenen optischen Login- und Registrierungsseiten mit einer minimalen Supabase-Auth-Grundlage. Gebaut sind nur Auth, Session-Synchronisierung, ein geschützter Dashboard-Platzhalter, Demo-Onboarding und die vorbereitete Workspace-/Plan-Basis. Kontakte, Memory, Follow-ups, KI, CSV-Import, Kampagnen, Analytics, Integrationen, Payment und Admin-Funktionen sind bewusst nicht Teil dieses PRs.
-
-### Aktueller Auth-/ENV-Stand
-
-- Supabase ist als einzige Auth-Integration vorgesehen. Die MVP-Client-Dateien sprechen Supabase Auth/PostgREST ausschließlich mit `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY` an; es wird keine Service-Role im Browser genutzt.
-- Firebase spielt in diesem Repository aktuell keine Rolle; es gibt keine aktive Firebase-Konfiguration und keine Firebase-Abhängigkeit.
-- Es gibt keine Middleware. Geschützte Einstiege prüfen die Session direkt serverseitig.
-- Echte Secrets gehören nicht ins Repository. Die `.env.example` enthält nur leere Platzhalter.
-
-### Lokal benötigte ENV-Werte
+Build prüfen:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+npm run build
+npm run lint
 ```
 
-Optional kann für spätere serverseitige Admin-/Migrationsaufgaben ein `SUPABASE_SERVICE_ROLE_KEY` dokumentiert werden. Dieser MVP verwendet ihn nicht. Er darf niemals mit `NEXT_PUBLIC_` veröffentlicht und niemals im Browser genutzt werden.
+## Wichtige Routen
 
-### Supabase-Flow
+| Route | Zweck | Status |
+| --- | --- | --- |
+| `/` | öffentliche Landingpage, Re-Export von `/landing-v2` | aktiv |
+| `/landing-v2` | aktuelle Landingpage | aktiv |
+| `/login` | Login und Demo-Einstieg | aktiv |
+| `/register` | Pilot/Starter-Registrierung | aktiv |
+| `/dashboard` | geschützter Arbeits-Eingang | aktiv |
+| `/fans` | Fan-/Kontaktliste | aktiv |
+| `/fans/import` | CSV-Import | aktiv |
+| `/fans/[id]` | Kontaktdetail, Timeline, KI, Memory, Follow-ups | aktiv |
+| `/followups` | Follow-up-Übersicht | aktiv, wenn DB-Tabellen vorhanden |
+| `/billing/start` | Zahlungs-/Setup-Start | aktiv als Billing-Grundlage |
+| `/admin/...` | Admin-/Billing-Grundlagen | admin-only |
+| `/api/ai/reply-suggestions` | serverseitiger KI-Endpunkt | aktiv |
+| `/api/demo/start` | temporärer Demo-Workspace | aktiv |
+| `/api/webhooks/meta` | Meta/Facebook/Instagram-Webhooks | vorbereitet/Beta, nicht allgemein live verkaufen |
+| `/api/integrations/telegram/send-message` | Telegram-Senden | nur als expliziter Pilot zulässig, nicht Standarddemo |
 
-- `/register?plan=pilot|starter|growth|agency` übernimmt die `plan`-Query als `planId`; ohne Query wird `starter` genutzt.
-- Die Registrierung ruft `supabase.auth.signUp` mit E-Mail, Passwort und Metadaten wie Name, Organisation und `plan_id` auf.
-- Falls Supabase direkt eine Session zurückgibt, wird sie für Server-Routen gespiegelt und es werden `profiles`, `workspaces` und `workspace_members` per RLS-sicherem Anon-Zugriff vorbereitet.
-- Falls E-Mail-Bestätigung aktiv ist und dadurch keine Session entsteht, zeigt die UI eine Bestätigungsmeldung und fordert zum E-Mail-Bestätigen und anschließenden Login auf.
-- `/login` ruft `supabase.auth.signInWithPassword` auf und leitet nach erfolgreichem Login zum minimal geschützten `/dashboard` weiter.
-- Demo bleibt ohne echte Auth erreichbar, z. B. über `/onboarding?plan=pilot&demo=1` oder über den Demo-Button im Login.
+## ENV und Secrets
 
+Siehe `.env.example` für Platzhalter. Echte Werte gehören nur in lokale oder Server-ENV-Dateien und niemals ins Repository.
 
-### FanMind-Pakete im MVP
+Regel: Alles mit Service Role, Secret, Token, Stripe, OpenAI, Facebook App Secret, Telegram Bot Token oder Admin-E-Mail ist server-only. Keine echten Werte in `.env.example`, Logs, Screenshots, Client-Code oder Dokumentation.
 
-Die zentrale fachliche Quelle für Paket- und Feature-Logik bleibt `src/config/plans.ts` zusammen mit `src/lib/plans.ts`. Die Datenbank speichert im MVP nur den `plan_id` am Workspace; es gibt keine Zahlungslogik, keine Stripe-/Payment-Integration und keine echte Subscription-Abrechnung.
+## Datenbank und RLS
 
-| plan_id | Name | Preis | Zweck im MVP |
-| --- | --- | --- | --- |
-| `pilot` | Pilot | 990 € einmalig | Demo/Testmodus ohne produktiven Workspace |
-| `starter` | Starter | 299 €/Monat | echter Einstieg mit 1 betreutem Profil |
-| `growth` | Growth | 499 €/Monat | für wachsende Teams mit 3–5 betreuten Profilen |
-| `agency` | Agency | ab 990 €/Monat | für Agenturen bzw. mehrere Kunden/Profile |
+Die alte Datei `docs/database/fanmind_mvp_schema.sql` ist nur noch ein historischer Auth-/Workspace-Basisstand. Die aktuelle Datenbankwahrheit steht in:
 
-Technisch akzeptiert die Registrierung `/register?plan=pilot`, `/register?plan=starter`, `/register?plan=growth` und `/register?plan=agency`. Ohne `plan` fällt die Registrierung auf `starter` zurück; ungültige Werte werden durch die zentrale Plan-Resolver-Logik auf den übergebenen Fallback normalisiert und sollen nicht crashen. Das Onboarding nutzt den aufgelösten `planId`, damit pro Paket passende Inhalte angezeigt werden. Später soll `plan_id` aus Session → Workspace-Membership → Workspace gelesen werden, nicht mehr primär aus der URL.
+- `docs/database/fanmind_current_schema.md`
+- `supabase/migrations/`
+- `src/lib/supabase/server.ts`
 
-### Datenbank-Schema
-
-Das vorgeschlagene MVP-Schema liegt unter `docs/database/fanmind_mvp_schema.sql`. Es enthält nur:
+Aktuell genutzte Kernbereiche:
 
 - `profiles`
 - `workspaces`
 - `workspace_members`
-- minimale RLS-Policies für eigene Profile, eigene Workspaces und eigene Memberships
+- `contacts`
+- `memories`
+- `followups`
+- `conversations`
+- `conversation_messages`
+- `conversation_summaries`
+- `contact_ai_profiles`
+- `workspace_voice_profiles`
+- `fan_analysis_reports`
+- `contact_reply_targets`
+- `social_connections`
+- `meta_webhook_events`
+- Billing-Felder an `workspaces`
+- optional Inquiry-/Pilot-Anfrage-Tabellen, falls in der jeweiligen Migration vorhanden
+- spätere Referral-Tabellen laut `docs/REFERRAL_PROGRAM.md`
 
-Später sollte die produktive `planId` nicht mehr aus der URL kommen, sondern über Session → Workspace-Membership → Workspace (`workspaces.plan_id`) gelesen werden. Die Query bleibt dann nur noch für Landingpage-/Demo-Einstiege relevant.
+Vor Pilotkundendaten muss der Security-/RLS-/Secrets-Check aus `docs/SECURITY_RLS_SECRETS_CHECK.md` abgearbeitet werden.
+
+## KI und Kostenkontrolle
+
+Aktueller MVP-Schutz:
+
+- KI läuft serverseitig über `/api/ai/reply-suggestions`.
+- KI-Keys werden nicht im Browser verwendet.
+- Eingaben werden begrenzt.
+- KI-Anfragen werden rate-limitiert.
+- Die Ausgabe ist strukturiert: `reply_options`, `suggested_memory`, `suggested_followup`, `safety_note`.
+- Keine automatische Sendefunktion.
+
+Nächster Ausbau: Admin-/Workspace-Kostenmonitoring nach `docs/AI_COST_MONITORING.md`.
+
+Gewünschte Kennzahlen:
+
+- KI-Anfragen pro Workspace und Zeitraum.
+- geschätzte Input-/Output-Tokens.
+- geschätzte Kosten pro Workspace, Kontakt und Feature.
+- Kosten pro 100 Fans / 1.000 Fans.
+- Warnschwellen pro Workspace und Admin-Gesamtübersicht.
+- Modell und Feature je Request.
+
+Provider-Preise dürfen nicht hart in UI-Texten stehen. Sie sollen serverseitig konfigurierbar sein, damit Preisänderungen nicht zu falschen Berechnungen führen.
+
+## Pricing / Commercial Truth
+
+| Paket | Status | Preislogik |
+| --- | --- | --- |
+| Pilot / Setup | aktiv | 990 € einmalig, 1 Testmonat, keine automatische Verlängerung |
+| Starter Flex | aktiv | 990 € Setup + 312 €/Monat, monatlich kündbar |
+| Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat, 12 Monate Laufzeit |
+| Growth | Coming Soon | nicht produktiv buchbar |
+| Agency | Coming Soon / auf Anfrage | nicht produktiv als Vollversion freigeschaltet |
+| Enterprise / Custom | später | individuelle Prüfung |
+
+Keine alten Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` wieder einführen, solange `docs/SOURCE_OF_TRUTH.md` nicht bewusst geändert wurde.
+
+## Referral Growth Window
+
+Geplant ist ein begrenztes Empfehlungsprogramm, das bis zum globalen 2.000er-Ziel läuft:
+
+- persönlicher Referral-Link / Referral-Code;
+- Teilnahme möglich, solange FanMind unter `2.000` aktiven zahlenden Kunden/Workspaces liegt;
+- je aktivem geworbenen zahlenden Kunden/Workspace `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten;
+- maximal 20 aktive geworbene Kunden/Workspaces zählen pro Referrer;
+- 20 aktive Referrals ergeben rechnerisch `100 %` Rabatt;
+- kündigt ein geworbener Kunde oder wird inaktiv, fällt dessen `5 %` wieder weg;
+- nach Schließung des Growth Windows kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden;
+- keine Barauszahlung, kein negativer Rechnungsbetrag;
+- vor Aktivierung sind Tracking, Billing, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung zu prüfen.
+
+Details: `docs/REFERRAL_PROGRAM.md`.
+
+## Harte Stop-Regeln
+
+Nicht als aktiv bauen oder verkaufen, sofern nicht explizit freigegeben und validiert:
+
+- echte Instagram-/TikTok-/WhatsApp-/Facebook-/X-/Discord-Vollintegration
+- Scraping
+- automatisches Senden
+- versteckte In-App-Sendefunktionen unter Copy-&-Open-Sprache
+- externe Plattform-Login-Daten speichern
+- Kampagnenversand-Automation
+- vollständige Analytics-Suite
+- Enterprise-Rollen-/Rechte-Komplexität
+- Fake-Kunden, Fake-Live-Integrationen, Fake-Metriken
+
+## Deployment
+
+Deployments auf `main` laufen über `.github/workflows/deploy-fanmind.yml` auf dem Self-Hosted Runner.
+
+Die Workflow-Sequenz:
+
+```bash
+cd /var/www/fanmind
+git fetch --prune origin main
+git reset --hard origin/main
+npm ci --no-audit --no-fund
+npm run build
+pm2 restart fanmind --update-env
+pm2 save
+sudo nginx -t
+```
+
+Danach prüft der Workflow `/login` auf `https://fanmind.ch`.
+
+## Dokumentations-Synchronisierung
+
+Wenn eines dieser Themen geändert wird, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und ggf. Legal-/Pricing-/Database-Dokumente im selben PR angepasst werden:
+
+- Preise oder Pakete
+- Referral-/Rabattlogik
+- aktive MVP-Funktionen
+- Demo-Pfad
+- Integrationsstatus
+- Billing-/Stripe-Verhalten
+- AI-Modell oder AI-Kostenlogik
+- Datenbanktabellen oder RLS
+- Security-/Secrets-Regeln
+
+Diese Synchronisierung ist Pflicht, damit Bernd/Codex nicht wieder aus veralteten Readern falsche Tasks ableiten.

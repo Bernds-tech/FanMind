@@ -1,20 +1,31 @@
--- FanMind MVP Supabase/Postgres schema
--- Zweck dieses PRs: nur Auth-/Workspace-Grundstein mit planId vorbereiten.
--- Kontakte, Messages, Memories, Follow-ups und KI-Ausgaben bleiben bewusst spätere Tabellen.
--- Dieses Schema setzt keine Service-Role im Browser voraus; Inserts laufen über auth.uid() + RLS.
+-- FanMind legacy Auth-/Workspace-Baseline für Supabase/Postgres
+-- Stand: historischer MVP-Basisstand, nicht mehr vollständige Datenbank-Source-of-Truth.
 --
--- Plan-/Paket-Regeln im MVP:
--- - FanMind kennt genau vier plan_id-Werte: pilot, starter, growth, agency.
--- - plan_id kommt aktuell aus /register?plan=...; gültig sind /register?plan=pilot,
---   /register?plan=starter, /register?plan=growth und /register?plan=agency.
--- - Wenn kein plan gesetzt ist, nutzt die App starter als Default für echte Registrierungen.
--- - Ungültige plan-Werte werden in der App auf einen sicheren Fallback normalisiert und
---   sollen weder Registrierung noch Onboarding crashen lassen.
--- - Onboarding verwendet plan_id, um pro Paket passende Inhalte anzuzeigen.
--- - Später wird plan_id produktiv aus Session -> Workspace-Membership -> workspaces.plan_id
---   gelesen; die URL bleibt dann nur Landingpage-/Demo-Einstieg.
--- - Keine Payment-, Stripe- oder Subscription-Logik in diesem Schema.
--- - MVP-Commercial-Werte werden als Workspace-Grunddaten gespeichert:
+-- Aktueller Reader:
+-- - docs/database/fanmind_current_schema.md
+-- - supabase/migrations/
+-- - src/lib/supabase/server.ts
+--
+-- Zweck dieser Datei:
+-- - Auth-/Workspace-Grundstein dokumentieren.
+-- - Mindesttabellen profiles, workspaces und workspace_members zeigen.
+-- - Commercial-Basiswerte für Pilot/Starter festhalten.
+--
+-- Nicht mehr korrekt als Vollschema:
+-- - contacts, conversations, conversation_messages, memories, followups,
+--   summaries, AI/Profile-Tabellen, Meta/Webhook-Tabellen, Reply Targets,
+--   Billing-Erweiterungen und AI-Usage-Ausbau sind inzwischen separate
+--   Migrationen bzw. aktuelle Reader-Themen.
+--
+-- Dieses Schema setzt keine Service-Role im Browser voraus; Inserts laufen über auth.uid() + RLS.
+-- Vor Pilotkundendaten immer docs/SECURITY_RLS_SECRETS_CHECK.md prüfen.
+--
+-- Plan-/Paket-Regeln im aktuellen Reader:
+-- - FanMind kennt vier plan_id-Werte: pilot, starter, growth, agency.
+-- - Produktiv aktiv: Pilot / Setup und Starter.
+-- - Growth und Agency bleiben Coming Soon / Roadmap, bis sie explizit freigegeben sind.
+-- - Keine alten 299-Euro-Preise wieder einführen.
+-- - Aktuelle Commercial-Werte:
 --   pilot_only = 99000 Setup-Cents, 0 Monats-Cents, 0 Monate Bindung.
 --   starter_paid_setup = 99000 Setup-Cents, 31200 Monats-Cents, 0 Monate Bindung.
 --   starter_no_setup_commitment = 0 Setup-Cents, 31200 Monats-Cents, 12 Monate Bindung.
@@ -118,10 +129,6 @@ create policy "workspace_members_insert_workspace_owner"
     )
   );
 
--- Spätere, in diesem PR NICHT im UI genutzte Tabellen:
--- - public.contacts: Fan-/Kontaktstammdaten pro Workspace.
--- - public.messages: manuell verwaltete Nachrichtenhistorie pro Kontakt.
--- - public.memories: zusammengefasste Kontextnotizen/Fan-Gedächtnis pro Kontakt.
--- - public.followups: manuelle Follow-up-Erinnerungen und Status.
--- - public.ai_generations: protokollierte KI-Entwürfe ohne automatischen Versand.
--- Diese Tabellen werden absichtlich erst ergänzt, wenn die jeweiligen Produktflows gebaut werden.
+-- Aktuelle CRM-/KI-/Integrations-/Billing-Tabellen stehen nicht mehr in dieser Legacy-Datei.
+-- Bitte die aktuelle Übersicht in docs/database/fanmind_current_schema.md und die Migrationen
+-- unter supabase/migrations/ verwenden.
