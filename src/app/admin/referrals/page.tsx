@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { calculateReferralDiscount, getAdminReferralOverview, type ReferralStatus } from "@/lib/adminReferrals";
 import { AdminBillingShell } from "../billing/AdminBillingShell";
+import { AdminTabs } from "../billing/AdminTabs";
 import styles from "../billing/adminBilling.module.css";
 
 function date(value: string | null | undefined) {
@@ -34,12 +34,7 @@ export default async function AdminReferralsPage() {
   return (
     <AdminBillingShell user={user} title="Referral Admin" subtitle="Admin-only Grundlage für das Referral Growth Window. Keine automatische Billing-Verrechnung ist aktiv.">
       <div className={styles.adminStack}>
-        <nav className={styles.dashboardTabs} aria-label="Adminbereiche">
-          <Link href="/admin/billing">Billing</Link>
-          <Link className={styles.activeTab} href="/admin/referrals">Referrals</Link>
-          <Link href="/admin/roadmap">Roadmap</Link>
-          <Link href="/admin/inquiries">Anfragen</Link>
-        </nav>
+        <AdminTabs activeTab="referrals" />
 
         <section className={styles.hero}>
           <div>
