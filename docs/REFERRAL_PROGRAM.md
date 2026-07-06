@@ -1,4 +1,4 @@
-# FanMind Referral / Founder-100 Programm
+# FanMind Referral Growth Window
 
 Stand: Juli 2026
 
@@ -6,64 +6,114 @@ Dieses Dokument beschreibt das geplante Referral-Programm. Es ist eine Produkt-/
 
 ## 1. Kernidee
 
-Ein FanMind-Nutzer, der über einen persönlichen Referral-Link neue zahlende FanMind-Nutzer bringt, erhält pro aktivem geworbenen Nutzer einen dauerhaften Rabatt auf seine eigenen FanMind-Kosten.
+FanMind startet ein zeitlich bzw. wachstumsbasiert begrenztes Referral-Programm. Nicht nur die ersten 100 Nutzer bekommen diese Chance. Stattdessen läuft die Aktion, bis FanMind global `2.000` aktive zahlende FanMind-Kunden/Workspaces erreicht.
+
+Innerhalb dieses Growth Windows kann jeder berechtigte zahlende FanMind-Nutzer über einen persönlichen Referral-Link neue zahlende FanMind-Kunden bringen und dadurch seine eigenen laufenden FanMind-Kosten senken.
 
 Regel:
 
-- Pro aktivem geworbenen Nutzer: `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten.
-- Maximal wirksam: `20` aktive geworbene Nutzer.
-- Bei 20 aktiven geworbenen Nutzern: rechnerisch `100 %` Rabatt auf die eigenen laufenden FanMind-Kosten.
-- Wenn ein geworbener Nutzer kündigt, nicht zahlt, gesperrt wird oder nicht mehr aktiv ist, fällt dessen `5 %` wieder weg.
-- Das Programm ist auf die ersten `100` berechtigten FanMind-Nutzer begrenzt.
+- Pro aktivem geworbenen zahlenden Kunden/Workspace: `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten.
+- Maximal wirksam pro Referrer: `20` aktive geworbene Kunden/Workspaces.
+- Bei 20 aktiven geworbenen Kunden/Workspaces: rechnerisch `100 %` Rabatt auf die eigenen laufenden FanMind-Kosten.
+- Wenn ein geworbener Kunde kündigt, nicht zahlt, gesperrt wird oder nicht mehr aktiv ist, fällt dessen `5 %` wieder weg.
+- Die Aktion ist global auf das Wachstum bis `2.000` aktive zahlende FanMind-Kunden/Workspaces begrenzt.
+- Sobald der 2.000. aktive zahlende FanMind-Kunde/Workspace erreicht ist, wird das Referral Growth Window geschlossen.
+- Nach Schließung bleiben bereits erworbene aktive Referral-Rabatte bestehen, solange die geworbenen Kunden aktiv bleiben.
+- Nach Schließung können keine neuen zusätzlichen Rabattprozente mehr verdient werden, außer FanMind fällt wieder unter die definierte Schwelle und öffnet das Growth Window ausdrücklich erneut.
 
-## 2. Beispiel
+## 2. Warum 2.000 statt erste 100
 
-| Aktive geworbene Nutzer | Rabatt | Effekt |
+Die erste Idee `100 Nutzer × 20 Referrals = 2.000 Nutzer` wird sauberer umgesetzt, wenn nicht nur 100 Referrer begrenzt werden, sondern das gesamte Programm an das globale Wachstumsziel gekoppelt wird.
+
+Vorteile:
+
+- Jeder frühe FanMind-Kunde hat eine faire Chance, seine Kosten zu senken.
+- Das Programm bleibt trotzdem wirtschaftlich gedeckelt.
+- FanMind belohnt Wachstum bis zum strategischen Ziel von 2.000 aktiven Kunden/Workspaces.
+- Sobald dieses Ziel erreicht ist, endet die Aktion für neue Rabattsteigerungen.
+- Bestehende Rabatte bleiben nachvollziehbar, solange die dazugehörigen geworbenen Kunden aktiv bleiben.
+
+## 3. Beispiel
+
+| Aktive geworbene Kunden/Workspaces | Rabatt | Effekt |
 | --- | ---: | --- |
-| 0 | 0 % | voller Preis |
+| 0 | 0 % | voller laufender Preis |
 | 1 | 5 % | 95 % des laufenden Preises |
 | 5 | 25 % | 75 % des laufenden Preises |
 | 10 | 50 % | 50 % des laufenden Preises |
 | 20 | 100 % | laufende FanMind-Kosten rechnerisch 0 € |
 
-Wenn von 20 aktiven geworbenen Nutzern einer kündigt, bleiben 19 aktive Referrals. Der Rabatt fällt dann von 100 % auf 95 %.
+Wenn von 20 aktiven geworbenen Kunden einer kündigt, bleiben 19 aktive Referrals. Der Rabatt fällt dann von 100 % auf 95 %.
 
-## 3. Begriffe
+Wenn das globale Growth Window bereits geschlossen ist, kann der Referrer diesen verlorenen 5-%-Anteil nicht automatisch durch einen neuen Referral ersetzen, solange FanMind nicht wieder unter die definierte Schwelle fällt oder Admin das Programm ausdrücklich erneut öffnet.
+
+## 4. Globale Programmphase
+
+Das Programm braucht einen globalen Status.
+
+Mögliche Status:
+
+- `open`: Referral Growth Window ist offen. Neue Referrals können Rabatt erzeugen.
+- `closing`: 2.000er-Schwelle ist erreicht oder wird geprüft. Neue Attribution wird eingefroren oder nur noch admin-geprüft.
+- `closed`: Aktion ist beendet. Bestehende aktive Rabatte bleiben dynamisch erhalten, aber neue zusätzliche Rabattprozente entstehen nicht mehr.
+- `reopened`: Aktion wurde ausdrücklich wieder geöffnet, z. B. falls die aktive Kundenzahl dauerhaft unter die Schwelle fällt.
+
+Standardregel:
+
+- Bei Erreichen von `2.000` aktiven zahlenden Kunden/Workspaces wird der Status `closed`.
+- Ab `closed` werden keine neuen Rabattansprüche mehr aufgebaut.
+- Bestehende Referral-Beziehungen bleiben gespeichert und werden weiter für bestehende Rabattansprüche ausgewertet.
+
+## 5. Was genau zählt als 2.000?
+
+Für die Begrenzung sollte FanMind nicht reine User-Accounts zählen, sondern aktive zahlende Kunden/Workspaces.
+
+Empfohlene Zählgröße:
+
+`active_paid_workspace_count`
+
+Ein Workspace zählt für die 2.000er-Schwelle, wenn:
+
+- Workspace ist nicht Demo-only.
+- Plan ist zahlungspflichtig oder bezahlt.
+- Billing-Status ist aktiv oder innerhalb akzeptierter Zahlungsfrist.
+- Workspace ist nicht gekündigt, gesperrt, dauerhaft zahlungsfehlerhaft oder refundiert.
+
+Warum Workspace statt User:
+
+- Ein Kunde kann mehrere Teammitglieder haben.
+- Mehrere Teammitglieder derselben Firma sollen nicht mehrfach als Kundenziel zählen.
+- Es schützt vor Fake-Accounts und mehrfachen Self-Registrierungen.
+
+Wenn FanMind später doch einzelne Nutzer zählen will, muss dieses Dokument bewusst geändert werden. Standard bleibt: Workspace/Kunde zählt.
+
+## 6. Begriffe
 
 ### Referrer
 
-Der bestehende FanMind-Nutzer, der seinen Referral-Link teilt.
+Der bestehende FanMind-Kunde/Workspace, der seinen Referral-Link teilt.
 
-### Referred User
+### Referred Customer / Referred Workspace
 
-Der neue Nutzer, der über den Referral-Link zu FanMind kommt und zahlender aktiver Kunde wird.
+Der neue zahlende FanMind-Kunde/Workspace, der über den Referral-Link oder Referral-Code zugeordnet wurde.
 
-### Aktiver geworbener Nutzer
+### Aktiver geworbener Kunde
 
-Ein geworbener Nutzer zählt nur, wenn alle Bedingungen erfüllt sind:
+Ein geworbener Kunde zählt nur, wenn alle Bedingungen erfüllt sind:
 
-- Registrierung über gültigen Referral-Link oder eindeutig zuordenbaren Referral-Code.
+- Registrierung oder Checkout über gültigen Referral-Link oder eindeutig zuordenbaren Referral-Code.
 - Workspace ist nicht Demo-only.
 - Zahlungspflichtiger Plan ist aktiv oder bezahlt.
 - Billing-Status ist nicht gekündigt, nicht gesperrt, nicht dauerhaft fehlgeschlagen.
 - Keine Rückerstattung, kein Testmissbrauch, kein Self-Referral.
+- Das Referral wurde während eines offenen Referral Growth Windows erzeugt oder vom Admin ausdrücklich zugelassen.
 
-## 4. Begrenzung auf erste 100 Nutzer
-
-Das Programm steht nur den ersten `100` berechtigten FanMind-Nutzern zur Verfügung.
-
-Dafür braucht FanMind eine klare Eligibility-Regel:
-
-- Nutzer erhält `referral_program_eligible = true` nur, wenn noch Plätze verfügbar sind.
-- Es wird ein `referral_program_slot_number` zwischen 1 und 100 gespeichert.
-- Nach 100 berechtigten Nutzern werden keine neuen Standard-Teilnahmen vergeben, außer Admin entscheidet explizit anders.
-
-## 5. Was rabattiert wird
+## 7. Was rabattiert wird
 
 Standardregel:
 
 - Der Rabatt gilt auf laufende monatliche FanMind-Kosten.
-- Einmalige Setup-Gebühren werden standardmäßig nicht automatisch rabattiert, außer FanMind entscheidet das explizit später.
+- Einmalige Setup-Gebühren werden nicht automatisch rabattiert, außer FanMind entscheidet das später ausdrücklich.
 - Rabatte werden nicht bar ausgezahlt.
 - Nicht genutzte Rabatte werden nicht in Guthaben umgewandelt.
 - Rabatt kann nicht unter 0 € fallen.
@@ -74,60 +124,117 @@ Formel:
 
 `discounted_monthly_fee = monthly_fee * (1 - discount_percent / 100)`
 
-## 6. Statuslogik für geworbene Nutzer
+## 8. Statuslogik für Referrals
 
 Ein Referral kann diese Status haben:
 
-- `pending`: Registrierung erkannt, aber noch nicht zahlend aktiv.
+- `pending`: Registrierung oder Lead erkannt, aber noch nicht zahlend aktiv.
+- `qualified`: Checkout/Plan passt, aber Wartefrist/Prüfung läuft noch.
 - `active`: zählt für Rabatt.
 - `inactive`: zählt nicht, z. B. gekündigt, gesperrt, abgelaufen.
 - `rejected`: abgelehnt, z. B. Self-Referral, Missbrauch, Duplikat.
 - `refunded`: zählt nicht.
+- `locked_after_window_closed`: nach Programmende erfasst, aber nicht rabattwirksam.
 
 Nur `active` zählt für Rabatt.
 
-## 7. Missbrauchsschutz
+## 9. Rabattverlust nach Programmende
+
+Wichtiges Verhalten nach dem 2.000er-Cap:
+
+- Bereits aktive Referrals bleiben rabattwirksam, solange sie aktiv bleiben.
+- Fällt ein aktives Referral weg, sinkt der Rabatt entsprechend um 5 %.
+- Nach geschlossenem Growth Window kann dieser verlorene Rabatt nicht automatisch durch ein neues Referral ersetzt werden.
+- Eine Ausnahme gibt es nur, wenn der globale Programmstatus wieder auf `open` oder `reopened` gesetzt wird.
+
+Beispiel:
+
+- Referrer hat 12 aktive Referrals = 60 % Rabatt.
+- FanMind erreicht 2.000 aktive zahlende Workspaces. Growth Window schließt.
+- Zwei geworbene Workspaces kündigen.
+- Referrer fällt auf 10 aktive Referrals = 50 % Rabatt.
+- Neue Referrals nach Programmschluss erhöhen den Rabatt nicht, solange das Programm geschlossen bleibt.
+
+## 10. Attribution-Regeln
+
+Empfohlen:
+
+- Referral-Link setzt `referral_code`.
+- Attribution gilt z. B. 90 Tage.
+- Ein Workspace kann nur einem Referrer zugeordnet werden.
+- Keine Multi-Level-Logik.
+- Keine Provision auf Referrals von Referrals.
+- Admin kann bei Streitfällen manuell korrigieren.
+
+Offene Entscheidung:
+
+- `first_valid_click_wins` oder `last_valid_click_wins`.
+
+Empfehlung:
+
+- `first_valid_click_wins`, weil es frühe echte Empfehlung schützt.
+
+## 11. Missbrauchsschutz
 
 Nicht erlaubt:
 
-- Self-Referral mit eigener E-Mail oder eigenem Unternehmen.
+- Self-Referral mit eigener E-Mail, eigenem Workspace oder eigener Firma.
 - Mehrfachaccounts zur Rabattmaximierung.
 - Fake-Registrierungen.
 - Rückerstattung/Chargeback und trotzdem Rabatt behalten.
 - Referral-Spam im Namen von FanMind.
 - Irreführende Versprechen über aktive Integrationen, automatische Sendung oder Preise.
+- Referrals nach geschlossenem Growth Window als rabattwirksam darstellen.
 
-Admin muss Referrals sperren oder ablehnen können.
+Admin muss Referrals sperren, ablehnen oder manuell korrigieren können.
 
-## 8. Transparenz im Produkt
+## 12. Transparenz im Produkt
 
 Späteres Dashboard-Modul für berechtigte Nutzer:
 
 - persönlicher Referral-Link;
-- Anzahl geworbener Nutzer;
-- Anzahl aktiver geworbener Nutzer;
+- globaler Programmstatus: offen / geschlossen;
+- globale Zählung: z. B. `1.284 / 2.000 aktive zahlende Workspaces`;
+- Anzahl geworbener Kunden;
+- Anzahl aktiver rabattwirksamer geworbener Kunden;
 - aktueller Rabatt in Prozent;
 - rechnerischer monatlicher Vorteil;
-- Hinweis: Rabatt hängt von aktiven, zahlenden geworbenen Nutzern ab;
-- Hinweis: Wenn ein geworbener Nutzer kündigt, sinkt der Rabatt wieder;
+- Hinweis: Rabatt hängt von aktiven, zahlenden geworbenen Kunden ab;
+- Hinweis: Wenn ein geworbener Kunde kündigt, sinkt der Rabatt wieder;
+- Hinweis: Nach Schließung des Growth Windows können verlorene Prozente nicht automatisch ersetzt werden;
 - Limit: maximal 20 aktive Referrals für 100 % Rabatt.
 
-## 9. Adminbereich
+## 13. Adminbereich
 
 Admin braucht eine Übersicht:
 
-- alle berechtigten Nutzer;
-- Slot 1 bis 100;
+- globaler Programmstatus;
+- aktueller aktiver zahlender Workspace-/Kundenzähler;
+- Cap: 2.000;
+- alle Referrer;
 - Referral-Code / Link;
 - aktive Referrals;
-- pending/inactive/rejected Referrals;
+- pending/inactive/rejected/locked Referrals;
 - aktueller Rabatt;
+- verlorener Rabatt durch inaktive Referrals;
 - manueller Override;
 - Missbrauchsnotizen;
 - Billing-Verrechnung;
 - Export für Prüfung.
 
-## 10. Datenmodell-Vorschlag
+## 14. Datenmodell-Vorschlag
+
+### `referral_program_state`
+
+- `id`
+- `status`
+- `active_paid_workspace_cap`
+- `active_paid_workspace_count_snapshot`
+- `closed_at`
+- `reopened_at`
+- `updated_at`
+- `updated_by_user_id`
+- `admin_note`
 
 ### `referral_program_members`
 
@@ -135,9 +242,9 @@ Admin braucht eine Übersicht:
 - `workspace_id`
 - `user_id`
 - `referral_code`
-- `slot_number`
 - `eligible`
 - `status`
+- `joined_at`
 - `created_at`
 - `updated_at`
 - `admin_note`
@@ -151,11 +258,14 @@ Admin braucht eine Übersicht:
 - `referred_user_id`
 - `referral_code`
 - `status`
+- `created_during_program_status`
 - `first_seen_at`
+- `qualified_at`
 - `activated_at`
 - `deactivated_at`
 - `deactivation_reason`
 - `billing_status_snapshot`
+- `locked_reason`
 - `created_at`
 - `updated_at`
 
@@ -168,55 +278,64 @@ Admin braucht eine Übersicht:
 - `monthly_fee_cents_before_discount`
 - `monthly_discount_cents`
 - `monthly_fee_cents_after_discount`
+- `program_status_snapshot`
 - `calculated_at`
 
-## 11. Billing-Regel
+## 15. Billing-Regel
 
 Billing darf nicht nur beim Signup berechnen. Es muss regelmäßig neu berechnen:
 
 - vor Rechnungslauf;
-- nach Kündigung eines geworbenen Nutzers;
+- nach Kündigung eines geworbenen Kunden;
 - nach fehlgeschlagener Zahlung;
 - nach Rückerstattung;
 - nach Admin-Override;
-- nach Reaktivierung eines geworbenen Nutzers.
+- nach Reaktivierung eines geworbenen Kunden;
+- nach Schließung oder Wiederöffnung des Referral Growth Windows.
 
-Wenn ein geworbener Nutzer wegfällt, steigt der zu zahlende Betrag beim Referrer entsprechend wieder.
+Wenn ein geworbener Kunde wegfällt, steigt der zu zahlende Betrag beim Referrer entsprechend wieder.
 
-## 12. Recht/Steuer/AGB
+Nach Programmschluss dürfen neue Referrals nicht automatisch Rabatt erzeugen, selbst wenn ein Referrer Rabatt verloren hat. Ausnahme: Programm wird ausdrücklich wieder geöffnet.
+
+## 16. Recht/Steuer/AGB
 
 Vor Aktivierung prüfen und in AGB/Zahlungsbedingungen ergänzen:
 
 - Teilnahmebedingungen;
 - Rabatt statt Auszahlung;
 - keine Auszahlung von Guthaben;
-- Begrenzung auf erste 100 Teilnehmer;
-- maximal 20 aktive Referrals;
-- Wegfall des Rabatts bei Kündigung/Inaktivität geworbener Nutzer;
+- globales Cap bis 2.000 aktive zahlende FanMind-Kunden/Workspaces;
+- maximal 20 aktive Referrals pro Referrer;
+- Wegfall des Rabatts bei Kündigung/Inaktivität geworbener Kunden;
+- kein automatisches Nachverdienen neuer Rabatte nach geschlossenem Growth Window;
 - Missbrauchsausschluss;
 - Admin-Entscheid bei Streitfällen;
 - Datenschutz bei Referral-Tracking;
 - steuerliche Behandlung von Rabatten/Gutschriften.
 
-## 13. Status in FanMind
+## 17. Status in FanMind
 
 Aktueller Status:
 
 - Produktidee / Roadmap.
 - Noch nicht aktiv als automatische Billing-Funktion.
-- Darf erwähnt werden als geplantes Founder-/Referral-Programm für erste Nutzer, aber nur mit klarer Einschränkung.
+- Darf erwähnt werden als geplantes Growth-/Referral-Programm bis zum 2.000er-Ziel, aber nur mit klarer Einschränkung.
 - Nicht in Gerhards Standarddemo zeigen, solange Tracking/Billing/Legal nicht fertig ist.
 
-## 14. Akzeptanzkriterien für Umsetzung
+## 18. Akzeptanzkriterien für Umsetzung
 
-- [ ] Nur erste 100 berechtigte Nutzer können teilnehmen.
+- [ ] Globales Referral Growth Window ist auf 2.000 aktive zahlende Workspaces/Kunden begrenzt.
+- [ ] Jeder berechtigte zahlende Nutzer/Workspace kann teilnehmen, solange das Growth Window offen ist.
 - [ ] Jeder Teilnehmer hat eindeutigen Referral-Code/Link.
 - [ ] Referral wird beim Signup/Checkout gespeichert.
-- [ ] Nur aktive zahlende geworbene Nutzer zählen.
+- [ ] Nur aktive zahlende geworbene Workspaces/Kunden zählen.
 - [ ] Rabatt = aktive Referrals * 5 %, maximal 100 %.
-- [ ] Kündigung/Deaktivierung eines geworbenen Nutzers reduziert Rabatt automatisch.
-- [ ] Admin kann Referrals prüfen, sperren und überschreiben.
+- [ ] Maximal 20 aktive Referrals pro Referrer sind rabattwirksam.
+- [ ] Erreichen von 2.000 aktiven zahlenden Workspaces/Kunden schließt das Programm für neue Rabattsteigerungen.
+- [ ] Kündigung/Deaktivierung eines geworbenen Kunden reduziert Rabatt automatisch.
+- [ ] Nach Programmschluss kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden.
+- [ ] Admin kann Programmstatus, Referrals, Sperren und Overrides verwalten.
 - [ ] Billing berücksichtigt Rabatt erst nach validiertem Status.
-- [ ] Dashboard zeigt Rabatt transparent.
+- [ ] Dashboard zeigt Rabatt und globalen Programmstatus transparent.
 - [ ] AGB/Zahlungsbedingungen sind aktualisiert.
 - [ ] Security/RLS verhindert fremde Referral-Daten.
