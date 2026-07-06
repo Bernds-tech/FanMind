@@ -623,6 +623,7 @@ function FanDetailContent({
               ),
             }}
             demoConnectionsDisabled={demoConnectionsDisabled}
+            telegramSendEnabled={process.env.FANMIND_ENABLE_TELEGRAM_SEND === "true"}
             locale={locale}
           />
         </main>
