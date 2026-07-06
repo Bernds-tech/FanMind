@@ -112,7 +112,7 @@ Aktuell genutzte Kernbereiche:
 - `meta_webhook_events`
 - Billing-Felder an `workspaces`
 - optional Inquiry-/Pilot-Anfrage-Tabellen, falls in der jeweiligen Migration vorhanden
-- spätere Referral-Tabellen laut `docs/REFERRAL_PROGRAM.md`
+- admin-only Referral-Tabellen laut `docs/REFERRAL_PROGRAM.md` (`referral_program_state`, `referral_program_members`, `referrals`, `referral_discount_snapshots`)
 
 Vor Pilotkundendaten muss der Security-/RLS-/Secrets-Check aus `docs/SECURITY_RLS_SECRETS_CHECK.md` abgearbeitet werden.
 
@@ -166,7 +166,8 @@ Geplant ist ein begrenztes Empfehlungsprogramm, das bis zum globalen 2.000er-Zie
 - kündigt ein geworbener Kunde oder wird inaktiv, fällt dessen `5 %` wieder weg;
 - nach Schließung des Growth Windows kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden;
 - keine Barauszahlung, kein negativer Rechnungsbetrag;
-- vor Aktivierung sind Tracking, Billing, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung zu prüfen.
+- admin-only Grundlage: Datenmodell, RLS und Adminübersicht für Programmstatus, Referrals, aktive Referrals, Rabattberechnung und Overrides.
+- vor öffentlicher Aktivierung sind Signup-/Checkout-Attribution, Rabatt-Snapshots, Billing-Verrechnung, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung separat umzusetzen bzw. zu prüfen.
 
 Details: `docs/REFERRAL_PROGRAM.md`.
 

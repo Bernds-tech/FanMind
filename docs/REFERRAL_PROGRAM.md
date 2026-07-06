@@ -317,25 +317,25 @@ Vor Aktivierung prüfen und in AGB/Zahlungsbedingungen ergänzen:
 
 Aktueller Status:
 
-- Produktidee / Roadmap.
-- Noch nicht aktiv als automatische Billing-Funktion.
+- Admin-only Datenmodell und Adminübersicht sind als Grundlage vorbereitet.
+- Noch nicht aktiv als öffentliche Rabatt- oder automatische Billing-Funktion.
 - Darf erwähnt werden als geplantes Growth-/Referral-Programm bis zum 2.000er-Ziel, aber nur mit klarer Einschränkung.
 - Nicht in Gerhards Standarddemo zeigen, solange Tracking/Billing/Legal nicht fertig ist.
 
 ## 18. Akzeptanzkriterien für Umsetzung
 
-- [ ] Globales Referral Growth Window ist auf 2.000 aktive zahlende Workspaces/Kunden begrenzt.
+- [x] Globales Referral Growth Window ist auf 2.000 aktive zahlende Workspaces/Kunden begrenzt (`active_paid_workspace_count` als globale Cap-Größe).
 - [ ] Jeder berechtigte zahlende Nutzer/Workspace kann teilnehmen, solange das Growth Window offen ist.
 - [ ] Jeder Teilnehmer hat eindeutigen Referral-Code/Link.
-- [ ] Referral wird beim Signup/Checkout gespeichert.
+- [ ] Referral wird beim Signup/Checkout gespeichert (separater nächster Schritt nach admin-only Foundation).
 - [ ] Nur aktive zahlende geworbene Workspaces/Kunden zählen.
 - [ ] Rabatt = aktive Referrals * 5 %, maximal 100 %.
 - [ ] Maximal 20 aktive Referrals pro Referrer sind rabattwirksam.
 - [ ] Erreichen von 2.000 aktiven zahlenden Workspaces/Kunden schließt das Programm für neue Rabattsteigerungen.
 - [ ] Kündigung/Deaktivierung eines geworbenen Kunden reduziert Rabatt automatisch.
 - [ ] Nach Programmschluss kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden.
-- [ ] Admin kann Programmstatus, Referrals, Sperren und Overrides verwalten.
+- [x] Admin kann Programmstatus, Referrals, aktive Referrals, Rabattberechnung und Overrides in einer Adminübersicht prüfen; schreibende Admin-Aktionen bleiben der nächsten Admin-Workflow-Ausbaustufe vorbehalten.
 - [ ] Billing berücksichtigt Rabatt erst nach validiertem Status.
 - [ ] Dashboard zeigt Rabatt und globalen Programmstatus transparent.
-- [ ] AGB/Zahlungsbedingungen sind aktualisiert.
-- [ ] Security/RLS verhindert fremde Referral-Daten.
+- [ ] AGB/Zahlungsbedingungen sind aktualisiert (separater Legal-/Payment-Schritt vor Aktivierung).
+- [x] Security/RLS verhindert fremde Referral-Daten im ersten Schritt durch admin-only Service-Role-Zugriff ohne öffentliche authenticated Policies.
