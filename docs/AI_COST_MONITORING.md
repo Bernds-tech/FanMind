@@ -47,10 +47,13 @@ Solange keine exakten Provider-Usage-Werte gespeichert werden, ist das nur eine 
 Empfohlene server-only Konfiguration:
 
 - `FANMIND_AI_MODEL`
-- `FANMIND_AI_INPUT_EUR_PER_1M_TOKENS`
-- `FANMIND_AI_OUTPUT_EUR_PER_1M_TOKENS`
-- `FANMIND_AI_MONTHLY_WORKSPACE_BUDGET_CENTS`
-- `FANMIND_AI_GLOBAL_MONTHLY_BUDGET_CENTS`
+- `FANMIND_AI_PRICE_INPUT_PER_MILLION_CENTS`
+- `FANMIND_AI_PRICE_OUTPUT_PER_MILLION_CENTS`
+- optional modellgenau: `FANMIND_AI_PRICE_<NORMALIZED_MODEL>_INPUT_PER_MILLION_CENTS`
+- optional modellgenau: `FANMIND_AI_PRICE_<NORMALIZED_MODEL>_OUTPUT_PER_MILLION_CENTS`
+- `FANMIND_AI_USAGE_CURRENCY`
+
+`<NORMALIZED_MODEL>` entspricht dem Modellnamen in Großbuchstaben, wobei Nicht-Buchstaben/-Zahlen durch `_` ersetzt werden. Beispiel: `gpt-5.2` wird zu `GPT_5_2`.
 
 Regel:
 
