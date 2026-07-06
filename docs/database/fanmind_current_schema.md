@@ -506,3 +506,22 @@ Wenn Tabellen, Spalten oder RLS-Policies geändert werden:
 ## 11. Bekannte Altlast
 
 `docs/database/fanmind_mvp_schema.sql` enthält historische Aussagen wie „Kontakte, Messages, Memories, Follow-ups und KI-Ausgaben bleiben spätere Tabellen“. Das ist nicht mehr der aktuelle Stand. Diese Datei bleibt nur als Auth-Basis-Snapshot erhalten und verweist künftig auf dieses Dokument.
+
+## 12. Referral Growth Window (admin-only foundation)
+
+Issue #442 ist bewusst als Admin-Grundlage umgesetzt, nicht als öffentliche Rabattfunktion.
+
+Neue Tabellen aus `supabase/migrations/20260706143000_referral_program_admin_foundation.sql`:
+
+- `referral_program_state`: globaler Programmstatus mit `status in ('open','closing','closed','reopened')`, `active_paid_workspace_cap` und `active_paid_workspace_count` als globale Cap-Größe. Standard-Cap ist `2.000` aktive zahlende Workspaces/Kunden.
+- `referral_program_members`: berechtigte/referrende Workspaces mit Referral-Code, Teilnahme-/Prüfstatus, Admin-Notiz und manuellen Override-Feldern für aktive Referrals oder Rabattprozent.
+- `referrals`: einzelne Zuordnungen zwischen Referrer-Workspace und geworbenem Workspace mit Status `pending`, `qualified`, `active`, `inactive`, `rejected` oder `locked_after_window_closed`.
+- `referral_discount_snapshots`: vorbereitete Rabatt-Snapshots mit aktiver Referral-Zahl, Prozentwert und monatlichen Beträgen vor/nach Rabatt. Diese Snapshots sind noch keine aktive Billing-Verrechnung.
+
+RLS/Scope:
+
+- RLS ist für alle vier Referral-Tabellen aktiviert.
+- Es gibt im ersten Schritt bewusst keine öffentlichen `authenticated` Policies. Die Adminübersicht nutzt serverseitige Service-Role-Abfragen nach `requirePlatformAdmin()`.
+- Normale Nutzer dürfen Referral-Ökonomie, fremde Codes und Rabatt-Snapshots nicht sehen oder verändern.
+- Signup-/Checkout-Attribution, Nutzerdashboard, automatische Snapshot-Erzeugung und Billing-Verrechnung sind separate Schritte.
+- AGB/Zahlungsbedingungen, Missbrauchsschutz und steuerliche Prüfung müssen vor öffentlicher Aktivierung ergänzt werden.
