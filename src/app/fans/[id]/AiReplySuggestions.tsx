@@ -33,6 +33,7 @@ type AiSuggestionsResult = {
 type Props = {
   originalChannelAction?: { href: string | null; label: string };
   demoConnectionsDisabled?: boolean;
+  telegramSendEnabled?: boolean;
   contact: {
     contactId: string;
     displayName: string;
@@ -55,6 +56,7 @@ export function AiReplySuggestions({
   modes,
   originalChannelAction,
   demoConnectionsDisabled = false,
+  telegramSendEnabled = false,
   locale = "de",
 }: Props) {
   const router = useRouter();
@@ -78,7 +80,10 @@ export function AiReplySuggestions({
   const [followupSaving, setFollowupSaving] = useState(false);
   const [memoryStatus, setMemoryStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [followupStatus, setFollowupStatus] = useState<{ ok: boolean; message: string } | null>(null);
-  const canSendTelegram = contact.sourcePlatform === "telegram";
+  const canSendTelegram =
+    telegramSendEnabled &&
+    !demoConnectionsDisabled &&
+    contact.sourcePlatform === "telegram";
 
   async function generateSuggestions(mode = activeMode) {
     setError("");

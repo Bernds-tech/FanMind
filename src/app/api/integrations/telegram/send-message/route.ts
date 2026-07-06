@@ -1,10 +1,22 @@
 import { sendManualTelegramMessage } from "@/lib/supabase/server";
+import { isPlatformAdminEmail } from "@/lib/admin";
+import { isTemporaryDemoUser } from "@/lib/demoMode";
 import {
   requireContactInAuthorizedWorkspace,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
 
 export async function POST(request: Request) {
+  if (process.env.FANMIND_ENABLE_TELEGRAM_SEND !== "true") {
+    return Response.json(
+      {
+        error:
+          "Telegram-Senden ist in dieser Umgebung deaktiviert und nicht Teil der Standarddemo.",
+      },
+      { status: 403 },
+    );
+  }
+
   const body = (await request.json().catch(() => null)) as {
     contactId?: string;
     text?: string;
@@ -33,6 +45,19 @@ export async function POST(request: Request) {
           error instanceof Error ? error.message : "Kein Workspace-Zugriff.",
       },
       { status },
+    );
+  }
+
+  if (
+    isTemporaryDemoUser(authorized.user) ||
+    !isPlatformAdminEmail(authorized.user.email)
+  ) {
+    return Response.json(
+      {
+        error:
+          "Telegram-Senden ist nur für ausdrücklich freigegebene Admin-/Pilotprüfungen erlaubt.",
+      },
+      { status: 403 },
     );
   }
 
