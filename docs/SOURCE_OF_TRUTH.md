@@ -216,15 +216,14 @@ Aktuell muss die KI sicher und kostenbewusst laufen:
 - strukturierte Ausgabe;
 - keine automatische Sendefunktion.
 
-Nächster Ausbau:
+Aktiver Ausbau:
 
-- Usage-Logging je Workspace, User, Kontakt, Feature, Modell und Zeitraum;
+- Usage-Logging je Workspace, User, Kontakt, Feature, Modell und Zeitraum für Reply Suggestions und Fan-Analyse;
 - Schätzung von Input-/Output-Tokens;
 - Berechnung von Kosten über serverseitig gepflegte Modellpreise;
-- Admin-Dashboard für Gesamtverbrauch;
-- Workspace-Ansicht für Verbrauch pro Kunde;
-- Kosten pro Fan und pro 100/1.000 Fans;
-- Warnschwellen und monatliche Limits.
+- Admin-Dashboard `/admin/ai-usage` für Gesamtverbrauch, Workspaces, Features und Zeitraum;
+- Werte werden als geschätzt markiert;
+- Workspace-Detail, Kosten pro Fan und Warnschwellen bleiben weitere Ausbaustufen.
 
 Details stehen in `docs/AI_COST_MONITORING.md`.
 

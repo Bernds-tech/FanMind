@@ -460,11 +460,11 @@ RLS-/Security-Erwartung:
 - Stripe-Webhooks müssen Signatur prüfen.
 - Stripe-IDs nicht unnötig im Client anzeigen.
 
-## 9. KI-Usage-Tabellen: geplanter Ausbau
+## 9. KI-Usage-Tabelle
 
-Für KI-Kostenmonitoring soll eine Tabelle eingeführt werden, z. B. `ai_usage_events`.
+`ai_usage_events` ist das aktive serverseitige Kosten-/Usage-Observability-Log für KI-Aufrufe. Es speichert keine Prompt- oder Antwortvolltexte, sondern nur Zähler, Modell, Feature, Status und geschätzte Kosten.
 
-Vorschlag:
+Spalten:
 
 - `id`
 - `workspace_id`
@@ -480,21 +480,17 @@ Vorschlag:
 - `estimated_total_tokens`
 - `estimated_cost_cents`
 - `currency`
-- `status`
+- `status` (`ok`, `error`, `skipped`)
 - `error_code`
-- `created_at`
-
-Optional:
-
-- `request_id`
 - `latency_ms`
 - `source_route`
-- `metadata_json`
+- `created_at`
 
 RLS-Erwartung:
 
-- Workspace-Owner sieht eigene Usage.
-- Admin sieht aggregierte Usage.
+- Workspace-Mitglieder sehen nur Usage ihres eigenen Workspace.
+- Inserts laufen serverseitig; der Helper nutzt Service Role, damit Logging nicht am User-Token hängt.
+- Admin-Aggregation läuft ausschließlich nach `requirePlatformAdmin()` über serverseitige Service-Role-Abfragen.
 - Normale User sehen keine anderen Workspaces.
 
 ## 10. Migrations- und Reader-Regel

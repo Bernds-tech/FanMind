@@ -127,13 +127,14 @@ Aktueller MVP-Schutz:
 - Die Ausgabe ist strukturiert: `reply_options`, `suggested_memory`, `suggested_followup`, `safety_note`.
 - Keine automatische Sendefunktion.
 
-Nächster Ausbau: Admin-/Workspace-Kostenmonitoring nach `docs/AI_COST_MONITORING.md`.
+Aktiver Ausbau: serverseitiges KI-Usage-Logging und Admin-Kostenmonitoring nach `docs/AI_COST_MONITORING.md`.
 
 Gewünschte Kennzahlen:
 
 - KI-Anfragen pro Workspace und Zeitraum.
 - geschätzte Input-/Output-Tokens.
 - geschätzte Kosten pro Workspace, Kontakt und Feature.
+- Adminseite `/admin/ai-usage` mit als geschätzt markierten Aggregationen.
 - Kosten pro 100 Fans / 1.000 Fans.
 - Warnschwellen pro Workspace und Admin-Gesamtübersicht.
 - Modell und Feature je Request.
