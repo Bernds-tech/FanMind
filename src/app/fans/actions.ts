@@ -1,5 +1,6 @@
 "use server";
 
+import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -240,7 +241,7 @@ export async function analyzeFan(
   _previousState: FanAnalysisActionState,
   formData: FormData,
 ): Promise<FanAnalysisActionState> {
-  const workspace = await getCurrentWorkspaceOrThrow();
+  const { workspace, user } = await requireAuthorizedWorkspace();
   const contactId = formValue(formData, "contact_id");
   await ensureContactInWorkspace(workspace.id, contactId);
 
@@ -318,14 +319,17 @@ export async function analyzeFan(
   };
 
   let report = fallback;
-  const model = "gpt-5.2";
+  const model = getFanMindAiModel();
   const apiKey = process.env.OPENAI_API_KEY;
+  const aiInputPayload = { language: locale, contact: contactContext, memories, messages: sourceMessages };
+  const aiInputChars = JSON.stringify(aiInputPayload).length;
   let userMessage = lowDataHint;
 
   if (!apiKey) {
     userMessage =
       "OPENAI_API_KEY ist serverseitig nicht gesetzt. FanMind hat deshalb einen einfachen Kurzreport ohne KI-Aufruf gespeichert.";
   } else if (sourceMessages.length >= 3) {
+    const latencyStartedAt = Date.now();
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -345,12 +349,7 @@ export async function analyzeFan(
           },
           {
             role: "user",
-            content: JSON.stringify({
-              language: locale,
-              contact: contactContext,
-              memories,
-              messages: sourceMessages,
-            }),
+            content: JSON.stringify(aiInputPayload),
           },
         ],
       }),
@@ -367,6 +366,7 @@ export async function analyzeFan(
         .map((c) => c.text)
         .find(Boolean);
     if (!response.ok) {
+      await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: text?.length ?? 0, status: "error", errorCode: String(response.status), latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
       return {
         ok: false,
         message:
@@ -375,6 +375,7 @@ export async function analyzeFan(
       };
     }
     if (!text) {
+      await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: 0, status: "error", errorCode: "missing_output", latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
       return {
         ok: false,
         message:
@@ -384,12 +385,14 @@ export async function analyzeFan(
     try {
       report = { ...fallback, ...JSON.parse(text) };
     } catch {
+      await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: text.length, status: "error", errorCode: "invalid_json", latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
       return {
         ok: false,
         message:
           "OpenAI hat keinen gültigen JSON-Report zurückgegeben. Bitte erneut versuchen.",
       };
     }
+    await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: text.length, status: "ok", latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
     userMessage = "Fan-Analyse-Report wurde gespeichert und aktualisiert.";
   } else {
     userMessage = `${lowDataHint} FanMind hat einen einfachen Kurzreport gespeichert.`;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import {
   requireContactInAuthorizedWorkspace,
@@ -6,7 +7,6 @@ import {
 } from "@/lib/workspaceAuthorization";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
-const OPENAI_MODEL = "gpt-5.2";
 const MAX_INCOMING_MESSAGE_LENGTH = 4000;
 const MAX_PASTED_CHAT_CONTEXT_LENGTH = 12000;
 const AI_RATE_LIMIT_MAX = 20;
@@ -214,7 +214,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { contact } = authorizationContext;
+  const { contact, workspace, user } = authorizationContext;
+  const model = getFanMindAiModel();
+  const startedAt = Date.now();
   const contactContext = {
     contactId: contact.id,
     displayName: contact.display_name || "Kontakt",
@@ -238,7 +240,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model,
         store: false,
         input: [
           {
@@ -266,6 +268,19 @@ export async function POST(request: NextRequest) {
       | null;
 
     if (!openAiResponse.ok) {
+      await recordAiUsageEvent({
+        workspaceId: workspace.id,
+        userId: user.id,
+        contactId: contact.id,
+        feature: "reply_suggestions",
+        model,
+        inputChars: estimateJsonChars(contactContext),
+        outputChars: 0,
+        status: "error",
+        errorCode: String(openAiResponse.status),
+        latencyMs: Date.now() - startedAt,
+        sourceRoute: "/api/ai/reply-suggestions",
+      });
       return jsonError(
         "Antwortvorschläge konnten gerade nicht erzeugt werden.",
         openAiResponse.status >= 500 ? 502 : 400,
@@ -275,13 +290,52 @@ export async function POST(request: NextRequest) {
     const outputText = extractOutputText(responseBody);
 
     if (!outputText) {
+      await recordAiUsageEvent({
+        workspaceId: workspace.id,
+        userId: user.id,
+        contactId: contact.id,
+        feature: "reply_suggestions",
+        model,
+        inputChars: estimateJsonChars(contactContext),
+        outputChars: 0,
+        status: "error",
+        errorCode: "missing_output",
+        latencyMs: Date.now() - startedAt,
+        sourceRoute: "/api/ai/reply-suggestions",
+      });
       return jsonError("Antwortvorschläge konnten gerade nicht erzeugt werden.", 502);
     }
 
     const suggestions = JSON.parse(outputText) as ReplySuggestionsResponse;
 
+    await recordAiUsageEvent({
+      workspaceId: workspace.id,
+      userId: user.id,
+      contactId: contact.id,
+      feature: "reply_suggestions",
+      model,
+      inputChars: estimateJsonChars(contactContext),
+      outputChars: outputText.length,
+      status: "ok",
+      latencyMs: Date.now() - startedAt,
+      sourceRoute: "/api/ai/reply-suggestions",
+    });
+
     return NextResponse.json(normalizeSuggestions(suggestions));
   } catch {
+    await recordAiUsageEvent({
+      workspaceId: workspace.id,
+      userId: user.id,
+      contactId: contact.id,
+      feature: "reply_suggestions",
+      model,
+      inputChars: estimateJsonChars(contactContext),
+      outputChars: 0,
+      status: "error",
+      errorCode: "exception",
+      latencyMs: Date.now() - startedAt,
+      sourceRoute: "/api/ai/reply-suggestions",
+    });
     return jsonError(
       "Antwortvorschläge konnten gerade nicht erzeugt werden.",
       500,
@@ -347,4 +401,8 @@ function normalizeOptionalString(value: unknown): string | null {
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
+}
+
+function estimateJsonChars(value: unknown): number {
+  return JSON.stringify(value).length;
 }
