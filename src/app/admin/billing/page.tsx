@@ -7,6 +7,7 @@ import { getBillingStatusLabel } from "@/lib/billing";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getStripeConfigStatus } from "@/lib/stripeBilling";
 import { AdminBillingShell } from "./AdminBillingShell";
+import { AdminTabs } from "./AdminTabs";
 import styles from "./adminBilling.module.css";
 
 const suspendedStatuses = new Set(["suspended", "manual_suspended"]);
@@ -102,19 +103,6 @@ function StatCard({ icon, label, value, hint, trend, tone }: { icon: string; lab
         <em>{trend}</em>
       </div>
     </article>
-  );
-}
-
-function AdminTabs({ activeTab }: { activeTab: "overview" | "customers" | "packages" | "payments" }) {
-  return (
-    <nav className={styles.dashboardTabs} aria-label="Adminbereiche">
-      <Link className={activeTab === "overview" ? styles.activeTab : undefined} href="/admin/billing">Übersicht</Link>
-      <Link className={activeTab === "customers" ? styles.activeTab : undefined} href="/admin/billing?tab=customers">Kunden &amp; Nutzer</Link>
-      <Link className={activeTab === "packages" ? styles.activeTab : undefined} href="/admin/billing?tab=packages">Pakete &amp; Freigaben</Link>
-      <Link className={activeTab === "payments" ? styles.activeTab : undefined} href="/admin/billing?tab=payments">Zahlungen</Link>
-      <Link href="/admin/referrals">Referrals</Link><Link href="/admin/roadmap">Roadmap</Link><Link href="/admin/inquiries">Anfragen</Link>
-      <span>Abos <small>Später</small></span>
-    </nav>
   );
 }
 

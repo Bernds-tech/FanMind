@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { getInquiryNotificationConfigStatus } from "@/lib/inquiryNotifications";
 import { listPilotInquiries, type InquiryStatus } from "@/lib/inquiries";
 import { AdminBillingShell } from "../billing/AdminBillingShell";
+import { AdminTabs } from "../billing/AdminTabs";
 import styles from "./adminInquiries.module.css";
 
 const statusLabels: Record<InquiryStatus, string> = {
@@ -37,11 +37,7 @@ export default async function AdminInquiriesPage() {
       subtitle="Pilot- und Kontaktanfragen aus dem Landingpage-Footer prüfen und nachverfolgen."
     >
       <div className={styles.stack}>
-        <nav className={styles.tabs} aria-label="Adminbereiche">
-          <Link href="/admin/billing">Billing</Link>
-          <Link href="/admin/roadmap">Roadmap</Link>
-          <Link className={styles.activeTab} href="/admin/inquiries">Anfragen</Link>
-        </nav>
+        <AdminTabs activeTab="inquiries" />
 
         <section className={styles.heroCard}>
           <div>

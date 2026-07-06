@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { roadmapPhases } from "@/config/roadmap";
 import { AdminBillingShell } from "../billing/AdminBillingShell";
+import { AdminTabs } from "../billing/AdminTabs";
 import styles from "./adminRoadmap.module.css";
 
 const statusLabels: Record<string, string> = {
@@ -29,11 +30,7 @@ export default async function AdminRoadmapPage() {
       subtitle="Interne Roadmap aus derselben Datenquelle wie die Landingpage – ohne falsche Live-Versprechen."
     >
       <div className={styles.adminRoadmapStack}>
-        <nav className={styles.adminRoadmapTabs} aria-label="Adminbereiche">
-          <Link href="/admin/billing">Billing</Link>
-          <Link className={styles.activeTab} href="/admin/roadmap">Roadmap</Link>
-          <Link href="/admin/inquiries">Anfragen</Link>
-        </nav>
+        <AdminTabs activeTab="roadmap" />
 
         <section className={styles.heroCard}>
           <div>
