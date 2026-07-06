@@ -10,7 +10,8 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
-- Geplantes Referral-/Founder-100-Programm: erste 100 berechtigte Nutzer können über Referral-Link je aktivem geworbenen Nutzer 5 % Rabatt erhalten, maximal 20 aktive Referrals = 100 % Rabatt, nur solange die geworbenen Nutzer aktiv bleiben.
+- Geplantes Referral Growth Window: alle berechtigten zahlenden Nutzer können teilnehmen, solange FanMind noch unter `2.000` aktiven zahlenden Kunden/Workspaces liegt; je aktivem geworbenen Kunden/Workspace gibt es 5 % Rabatt, maximal 20 aktive Referrals = 100 % Rabatt.
+- Nach Erreichen des 2.000er-Caps wird das Referral Growth Window geschlossen. Bestehende aktive Rabattansprüche bleiben bestehen, aber neue zusätzliche Rabattprozente entstehen nicht mehr, außer FanMind öffnet das Programm ausdrücklich wieder.
 - FanMind ist ein Copy-&-Open-Assistent, kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert, öffnet bei Bedarf den Originalkanal und sendet selbst.
 - Externe Integrationen wie Meta/Facebook/Instagram, Telegram, WhatsApp, TikTok, X/Twitter und Discord dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
 - Jede in FanMind integrierte Sendefunktion, auch wenn sie manuell ausgelöst wird, muss gesondert freigegeben, versteckt oder als Pilot-Feature gekennzeichnet werden.
@@ -152,15 +153,17 @@ Provider-Preise dürfen nicht hart in UI-Texten stehen. Sie sollen serverseitig 
 
 Keine alten Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` wieder einführen, solange `docs/SOURCE_OF_TRUTH.md` nicht bewusst geändert wurde.
 
-## Referral / Founder-100 Programm
+## Referral Growth Window
 
-Geplant ist ein begrenztes Empfehlungsprogramm für die ersten 100 berechtigten FanMind-Nutzer:
+Geplant ist ein begrenztes Empfehlungsprogramm, das bis zum globalen 2.000er-Ziel läuft:
 
 - persönlicher Referral-Link / Referral-Code;
-- je aktivem geworbenen zahlenden Nutzer `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten;
-- maximal 20 aktive geworbene Nutzer zählen;
+- Teilnahme möglich, solange FanMind unter `2.000` aktiven zahlenden Kunden/Workspaces liegt;
+- je aktivem geworbenen zahlenden Kunden/Workspace `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten;
+- maximal 20 aktive geworbene Kunden/Workspaces zählen pro Referrer;
 - 20 aktive Referrals ergeben rechnerisch `100 %` Rabatt;
-- kündigt ein geworbener Nutzer oder wird inaktiv, fällt dessen `5 %` wieder weg;
+- kündigt ein geworbener Kunde oder wird inaktiv, fällt dessen `5 %` wieder weg;
+- nach Schließung des Growth Windows kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden;
 - keine Barauszahlung, kein negativer Rechnungsbetrag;
 - vor Aktivierung sind Tracking, Billing, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung zu prüfen.
 
