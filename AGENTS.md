@@ -44,7 +44,8 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - Database/RLS truth lives in `docs/database/fanmind_current_schema.md` plus the Supabase migrations under `supabase/migrations/`.
 - Security/RLS/Secrets checks live in `docs/SECURITY_RLS_SECRETS_CHECK.md`.
 - AI usage/cost monitoring requirements live in `docs/AI_COST_MONITORING.md`.
-- When updating pricing, scope, demo flow, integrations, billing or AI model behavior, update all relevant reader files in the same PR.
+- Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
+- When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
 ## Current product truth
 
@@ -52,6 +53,7 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - The word `Demo` means free test access or a prepared example workspace only. The product itself must look and feel like a serious CRM system.
 - Current commercial truth: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`. Starter has two options: `Starter Flex = 990 € Setup + 312 €/Monat` and `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`. Do not reintroduce the old `299 €/Monat` pricing.
 - Growth, Agency and Enterprise remain Roadmap / Coming Soon / Auf Anfrage unless explicitly scoped and validated.
+- Referral Growth Window truth: planned until FanMind reaches 2.000 active paying customers/workspaces. During the open window, each active referred paying customer/workspace gives the referrer 5 % discount on ongoing FanMind costs; maximum 20 active referrals count per referrer; after the 2.000 cap closes the window, existing active discounts remain but no new additional discount percentages are earned unless the window is explicitly reopened.
 - The frozen sales/demo flow is: landing page -> login/demo -> dashboard -> fans/contacts -> CSV import or Sandra/demo contact -> contact detail -> existing/latest inbound message -> AI reply suggestions -> copy answer -> save memory -> save follow-up -> follow-up list / roadmap.
 - Active CRM core: login, registration, protected dashboard, contacts/fans, contact detail, CSV import, server-side AI reply suggestions, memory, follow-ups, roadmap, admin/billing groundwork, Stripe test checkout, legal pages, and temporary demo workspace.
 - Position FanMind as a Copy-&-Open assistant, not as a bot. AI prepares replies; the human reviews, copies, opens the original channel if needed, and sends manually.
@@ -85,9 +87,10 @@ Do not build or present as active unless explicitly requested, tested and legall
 - No campaign sending automation
 - No full analytics suite unless explicitly scoped
 - No enterprise role/permission complexity unless explicitly scoped
+- No referral discount automation until `docs/REFERRAL_PROGRAM.md` acceptance criteria, billing logic and legal/payment terms are satisfied
 - No fake live integrations, fake customers, fake testimonials or fake production numbers
 
-Social integrations, analytics, campaign logic, and automation must remain clearly marked as Roadmap, Coming Soon, Beta / in preparation, or later pilot-feedback work unless the user explicitly changes scope. Meta channels may be prepared, but must not be presented as generally live until technically and legally tested.
+Social integrations, analytics, campaign logic, referral automation and automation must remain clearly marked as Roadmap, Coming Soon, Beta / in preparation, or later pilot-feedback work unless the user explicitly changes scope. Meta channels may be prepared, but must not be presented as generally live until technically and legally tested.
 
 ## Security, RLS and secrets rules
 
@@ -97,8 +100,9 @@ Social integrations, analytics, campaign logic, and automation must remain clear
 - `FANMIND_ADMIN_EMAILS` is the only admin source. No hardcoded real admin email fallback.
 - RLS must be enabled and verified for workspace-scoped tables before any pilot customer data is used.
 - Every protected API route must authorize the current user against the workspace and resource it reads or mutates.
+- Referral data must be workspace-scoped; users must not see other users' referral economics except through admin-only views.
 - Keep human-in-the-loop messaging: FanMind can draft and suggest, but must not automatically send messages.
-- Run `docs/SECURITY_RLS_SECRETS_CHECK.md` before production-affecting changes, pilot customer onboarding, integration activation or billing activation.
+- Run `docs/SECURITY_RLS_SECRETS_CHECK.md` before production-affecting changes, pilot customer onboarding, integration activation, referral activation or billing activation.
 
 ## AI safety, cost and implementation rules
 
@@ -124,4 +128,4 @@ After changing code:
 1. Summarize what changed.
 2. Mention affected files.
 3. Call out any migration, environment, security, RLS, AI-cost or production-deploy impact.
-4. Update reader/source-of-truth documentation if product truth, pricing, demo path, integrations, billing or AI behavior changed.
+4. Update reader/source-of-truth documentation if product truth, pricing, referral logic, demo path, integrations, billing or AI behavior changed.
