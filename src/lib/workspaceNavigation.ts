@@ -79,11 +79,6 @@ export function getWorkspaceNavigation(
               href: "/admin/billing",
               active: activeRoute === "admin",
             },
-            {
-              label: "Anfragen",
-              href: "/admin/inquiries",
-              active: activeRoute === "admin",
-            },
           ]
         : []),
     ],
