@@ -64,24 +64,26 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 
 Begründung für 312 €/Monat: FanMind ist kein Billig-Tool und der Aufwand liegt in sicherer CRM-Struktur, KI, Memory, Follow-ups, Datenpflege, Demo-Setup, Support, Security/RLS und späterer kontrollierter Integrationsfähigkeit. Die Preislogik soll diesen Arbeitsaufwand und B2B-Charakter widerspiegeln.
 
-## 4. Referral / Founder-100 Programm
+## 4. Referral Growth Window
 
-Geplant ist ein begrenztes Referral-Programm für die ersten 100 berechtigten FanMind-Nutzer.
+Geplant ist ein begrenztes Referral-Programm, das nicht nur den ersten 100 Nutzern vorbehalten ist. Stattdessen läuft die Aktion, bis FanMind global `2.000` aktive zahlende FanMind-Kunden/Workspaces erreicht.
 
 Kernlogik:
 
-- Ein Nutzer erhält einen persönlichen Referral-Link oder Referral-Code.
-- Für jeden aktiv zahlenden geworbenen Nutzer erhält der Referrer `5 %` Rabatt auf seine eigenen laufenden FanMind-Kosten.
-- Maximal zählen `20` aktive geworbene Nutzer.
-- Bei 20 aktiven geworbenen Nutzern ergibt sich rechnerisch `100 %` Rabatt auf die laufenden FanMind-Kosten.
-- Wenn ein geworbener Nutzer kündigt, nicht mehr zahlt, gesperrt wird oder inaktiv wird, fällt dessen `5 %` wieder weg.
-- Das Programm ist auf die ersten `100` berechtigten Nutzer begrenzt.
+- Jeder berechtigte zahlende FanMind-Nutzer kann während des offenen Referral Growth Windows einen persönlichen Referral-Link oder Referral-Code nutzen.
+- Für jeden aktiv zahlenden geworbenen Kunden/Workspace erhält der Referrer `5 %` Rabatt auf seine eigenen laufenden FanMind-Kosten.
+- Maximal zählen `20` aktive geworbene Kunden/Workspaces pro Referrer.
+- Bei 20 aktiven geworbenen Kunden/Workspaces ergibt sich rechnerisch `100 %` Rabatt auf die laufenden FanMind-Kosten.
+- Wenn ein geworbener Kunde kündigt, nicht mehr zahlt, gesperrt wird oder inaktiv wird, fällt dessen `5 %` wieder weg.
+- Sobald der 2.000. aktive zahlende FanMind-Kunde/Workspace erreicht ist, wird das Referral Growth Window geschlossen.
+- Nach Schließung bleiben bereits erworbene aktive Referral-Rabatte bestehen, solange die geworbenen Kunden aktiv bleiben.
+- Nach Schließung können keine neuen zusätzlichen Rabattprozente mehr verdient werden, außer FanMind fällt wieder unter die definierte Schwelle und öffnet das Growth Window ausdrücklich erneut.
 - Rabatte werden nicht automatisch bar ausgezahlt und dürfen nicht unter 0 € fallen.
 
 Status:
 
-- Roadmap / Founder-Programm, noch nicht als automatische Billing-Funktion aktiv.
-- Darf nur mit klarer Begrenzung kommuniziert werden: erste 100 Nutzer, maximal 20 aktive Referrals, Rabatt nur solange geworbene Nutzer aktiv bleiben.
+- Roadmap / Growth-Programm, noch nicht als automatische Billing-Funktion aktiv.
+- Darf nur mit klarer Begrenzung kommuniziert werden: Aktion bis 2.000 aktive zahlende Kunden/Workspaces, maximal 20 aktive Referrals pro Referrer, Rabatt nur solange geworbene Kunden aktiv bleiben.
 - Vor Umsetzung müssen Tracking, Billing-Verrechnung, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung geprüft werden.
 - Details stehen in `docs/REFERRAL_PROGRAM.md`.
 
@@ -148,7 +150,7 @@ Roadmap / Coming Soon:
 - Analytics/Reichweite
 - Rollen/Rechte-Komplexität
 - Enterprise-Governance
-- Referral-/Founder-100-Automation, bis Tracking/Billing/Legal fertig ist
+- Referral-Growth-Window-Automation, bis Tracking/Billing/Legal fertig ist
 
 Sonderregel Telegram:
 
