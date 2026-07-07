@@ -567,6 +567,40 @@ export function createSupabaseServerClient() {
   };
 }
 
+
+export async function updateSupabaseServerUserMetadata(metadata: Record<string, unknown>): Promise<SupabaseServerUserResponse> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return { data: { user: null }, error: new Error("Keine gültige Supabase-Sitzung gefunden.") };
+  }
+
+  try {
+    const response = await fetch(getSupabaseAuthUrl("/user"), {
+      method: "PUT",
+      headers: getSupabaseHeaders(accessToken),
+      body: JSON.stringify({ data: metadata }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return {
+        data: { user: null },
+        error: await parseSupabaseServerError(response),
+      };
+    }
+
+    const payload = (await response.json()) as SupabaseServerUser;
+
+    return { data: { user: payload }, error: null };
+  } catch (error) {
+    return {
+      data: { user: null },
+      error: error instanceof Error ? error : new Error("Unbekannter Supabase-Fehler."),
+    };
+  }
+}
+
 export async function getSupabaseServerUser(): Promise<SupabaseServerUserResponse> {
   const accessToken = await getAccessToken();
 
