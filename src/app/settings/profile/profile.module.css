@@ -1,0 +1,187 @@
+.profileStack {
+  display: grid;
+  gap: 12px;
+}
+
+.compactCard {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 18px;
+  padding: 14px;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(2, 6, 23, 0.74)),
+    rgba(15, 23, 42, 0.74);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.2);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cardHeader h2 {
+  margin: 2px 0 0;
+  color: #ffffff;
+  font-size: clamp(16px, 1.35vw, 19px);
+  letter-spacing: -0.035em;
+}
+
+.headerCopy {
+  max-width: 620px;
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.statusChip,
+.softChip,
+.warningChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statusChip {
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  color: #bbf7d0;
+  background: rgba(6, 78, 59, 0.24);
+}
+
+.softChip {
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  color: #a5f3fc;
+  background: rgba(8, 47, 73, 0.28);
+}
+
+.warningChip {
+  border: 1px solid rgba(251, 191, 36, 0.26);
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.28);
+}
+
+.infoGrid,
+.billingGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.infoGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.billingGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.infoItem,
+.billingItem,
+.invoicePanel {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 13px;
+  padding: 10px;
+  background: rgba(2, 6, 23, 0.3);
+}
+
+.infoItem dt,
+.billingItem dt,
+.invoiceLabel {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.infoItem dd,
+.billingItem dd,
+.invoiceValue {
+  margin: 5px 0 0;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.placeholderValue {
+  color: #cbd5e1 !important;
+  font-weight: 750 !important;
+}
+
+.billingItemWide {
+  grid-column: span 2;
+}
+
+.invoiceRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.invoiceLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.invoiceLinks a {
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #a5f3fc;
+  font-size: 11px;
+  font-weight: 850;
+  text-decoration: none;
+  background: rgba(8, 47, 73, 0.24);
+}
+
+.actionRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+@media (max-width: 1100px) {
+  .billingGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .cardHeader,
+  .invoiceRow {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+  }
+
+  .infoGrid,
+  .billingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .billingItemWide {
+    grid-column: auto;
+  }
+
+  .invoiceLinks {
+    justify-content: flex-start;
+  }
+}

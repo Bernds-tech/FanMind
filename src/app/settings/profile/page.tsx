@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
-import { getBillingStatusLabel, isWorkspaceBillingSuspended } from "@/lib/billing";
+import {
+  getBillingCheckoutActionLabel,
+  getBillingStatusLabel,
+  isWorkspaceBillingSuspended,
+  shouldShowBillingCheckoutAction,
+} from "@/lib/billing";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
@@ -17,6 +22,7 @@ import { isPlatformAdminEmail } from "@/lib/admin";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
+import profileStyles from "./profile.module.css";
 
 type ProfileWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -70,6 +76,29 @@ function getSidebarUserLabel(
   }
 
   return userEmail || workspaceName || "Nutzer";
+}
+
+function getBillingProfileStatusLabel(workspace: WorkspaceDashboardRow): string {
+  if (workspace.billing_status === "demo_free" && (workspace.plan_id === "pilot" || workspace.plan_id === "starter")) {
+    return workspace.monthly_fee_cents || workspace.setup_fee_cents
+      ? "Testmodus"
+      : "Noch nicht abgerechnet";
+  }
+
+  if (workspace.billing_status === "pending_payment_setup") {
+    return "Setup vorbereitet";
+  }
+
+  return getBillingStatusLabel(workspace.billing_status);
+}
+
+function getBillingChipClass(status: string | null | undefined): string {
+  if (status === "active") return profileStyles.statusChip;
+  if (["past_due", "payment_failed", "suspended", "manual_suspended"].includes(status ?? "")) {
+    return profileStyles.warningChip;
+  }
+
+  return profileStyles.softChip;
 }
 
 function getPlanLabel(workspace: WorkspaceDashboardRow): string {
@@ -157,62 +186,83 @@ function ProfileWorkspace({
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
-      <section
-        className={dashboardStyles.moduleCard}
-        id="user-profile"
-        aria-labelledby="user-profile-title"
-      >
-        <div className={dashboardStyles.moduleHeader}>
-          <div>
-            <p className={dashboardStyles.eyebrow}>Profil</p>
-            <h2 id="user-profile-title">Nutzerprofil</h2>
-          </div>
-          <span>{hasOnlyRealValues ? "Echte Kontodaten" : "MVP-Vorschau"}</span>
-        </div>
-        <p className={dashboardStyles.moduleText}>
-          Diese Profilseite zeigt vorhandene Account- und Workspace-Daten aus
-          der bestehenden geschützten Sitzung. Bearbeitung, Passwortänderung,
-          Rollenverwaltung und Zahlungslogik sind im MVP nicht aktiv.
-        </p>
-        <dl className={dashboardStyles.profileDetails}>
-          {fields.map((field) => (
-            <div key={field.label}>
-              <dt>{field.label}</dt>
-              <dd>{field.value}</dd>
+      <div className={profileStyles.profileStack}>
+        <section
+          className={profileStyles.compactCard}
+          id="user-profile"
+          aria-labelledby="user-profile-title"
+        >
+          <div className={profileStyles.cardHeader}>
+            <div>
+              <p className={dashboardStyles.eyebrow}>Profil</p>
+              <h2 id="user-profile-title">Nutzerprofil</h2>
             </div>
-          ))}
-        </dl>
-      </section>
-      <section className={dashboardStyles.moduleCard} aria-labelledby="billing-profile-title">
-        <div className={dashboardStyles.moduleHeader}>
-          <div>
-            <p className={dashboardStyles.eyebrow}>Billing</p>
-            <h2 id="billing-profile-title">Paket & Rechnungen</h2>
+            <span className={profileStyles.softChip}>
+              {hasOnlyRealValues ? "Kontodaten" : "Unvollständig"}
+            </span>
           </div>
-          <span>{getBillingStatusLabel(workspace.billing_status)}</span>
-        </div>
-        <dl className={dashboardStyles.profileDetails}>
-          <div><dt>Aktueller Workspace/Plan</dt><dd>{workspace.name} · {getPlanLabel(workspace)}</dd></div>
-          <div><dt>Commercial Option</dt><dd>{getCommercialOptionLabel(workspace.commercial_option)}</dd></div>
-          <div><dt>Monatlicher Betrag</dt><dd>{formatMoney(workspace.monthly_fee_cents)}</dd></div>
-          <div><dt>Setup Fee</dt><dd>{formatMoney(workspace.setup_fee_cents)}</dd></div>
-          <div><dt>Bindung/Laufzeit</dt><dd>{workspace.commitment_months ? `${workspace.commitment_months} Monate` : "Keine feste Bindung"}</dd></div>
-          <div><dt>Letzte Zahlung</dt><dd>{formatDate(workspace.billing_last_payment_at)}</dd></div>
-          <div><dt>Sperrstatus</dt><dd>{workspace.billing_status === "suspended" || workspace.billing_status === "manual_suspended" ? getBillingStatusLabel(workspace.billing_status) : "nicht gesperrt"}</dd></div>
-        </dl>
-        <div style={{ marginTop: 16 }}>
-          <h3>Letzte Rechnung</h3>
-          {workspace.last_invoice_id || workspace.last_invoice_status ? (
-            <p>Status: {workspace.last_invoice_status ?? "—"} · Betrag: {formatMoney(workspace.last_invoice_amount_due_cents)}<br />
-              {workspace.last_invoice_hosted_url ? <a href={workspace.last_invoice_hosted_url} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
-              {workspace.last_invoice_pdf_url ? <> · <a href={workspace.last_invoice_pdf_url} target="_blank" rel="noreferrer">PDF öffnen</a></> : null}
-            </p>
-          ) : <p>Noch keine Rechnung vorhanden.</p>}
-        </div>
-        {["pending_payment_setup", "past_due", "payment_failed", "suspended"].includes(workspace.billing_status ?? "") ? (
-          <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label={workspace.billing_status === "pending_payment_setup" ? "Zahlung starten" : "Zahlung erneut versuchen"} />
-        ) : null}
-      </section>
+          <p className={profileStyles.headerCopy}>
+            Account- und Workspace-Daten aus der geschützten Sitzung. Bearbeitung
+            und Zahlungslogik bleiben im MVP getrennt.
+          </p>
+          <dl className={profileStyles.infoGrid}>
+            {fields.map((field) => (
+              <div className={profileStyles.infoItem} key={field.label}>
+                <dt>{field.label}</dt>
+                <dd className={field.source === "placeholder" ? profileStyles.placeholderValue : undefined}>
+                  {field.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <section className={profileStyles.compactCard} aria-labelledby="billing-profile-title">
+          <div className={profileStyles.cardHeader}>
+            <div>
+              <p className={dashboardStyles.eyebrow}>Billing</p>
+              <h2 id="billing-profile-title">Paket & Rechnungen</h2>
+            </div>
+            <span className={getBillingChipClass(workspace.billing_status)}>
+              {getBillingProfileStatusLabel(workspace)}
+            </span>
+          </div>
+          <dl className={profileStyles.billingGrid}>
+            <div className={`${profileStyles.billingItem} ${profileStyles.billingItemWide}`}><dt>Workspace / Plan</dt><dd>{workspace.name} · {getPlanLabel(workspace)}</dd></div>
+            <div className={profileStyles.billingItem}><dt>Commercial Option</dt><dd>{getCommercialOptionLabel(workspace.commercial_option)}</dd></div>
+            <div className={profileStyles.billingItem}><dt>Monatlich</dt><dd>{formatMoney(workspace.monthly_fee_cents)}</dd></div>
+            <div className={profileStyles.billingItem}><dt>Setup Fee</dt><dd>{formatMoney(workspace.setup_fee_cents)}</dd></div>
+            <div className={profileStyles.billingItem}><dt>Bindung</dt><dd>{workspace.commitment_months ? `${workspace.commitment_months} Monate` : "Keine feste Bindung"}</dd></div>
+            <div className={profileStyles.billingItem}><dt>Sperrstatus</dt><dd>{workspace.billing_status === "suspended" || workspace.billing_status === "manual_suspended" ? getBillingStatusLabel(workspace.billing_status) : "Nicht gesperrt"}</dd></div>
+            <div className={profileStyles.billingItem}><dt>Letzte Zahlung</dt><dd>{workspace.billing_last_payment_at ? formatDate(workspace.billing_last_payment_at) : "Noch keine Zahlung erfasst."}</dd></div>
+            <div className={`${profileStyles.invoicePanel} ${profileStyles.billingItemWide}`}>
+              <p className={profileStyles.invoiceLabel}>Letzte Rechnung</p>
+              {workspace.last_invoice_id || workspace.last_invoice_status ? (
+                <div className={profileStyles.invoiceRow}>
+                  <p className={profileStyles.invoiceValue}>
+                    {workspace.last_invoice_status ?? "Status offen"} · {formatMoney(workspace.last_invoice_amount_due_cents)}
+                  </p>
+                  <div className={profileStyles.invoiceLinks}>
+                    {workspace.last_invoice_hosted_url ? <a href={workspace.last_invoice_hosted_url} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
+                    {workspace.last_invoice_pdf_url ? <a href={workspace.last_invoice_pdf_url} target="_blank" rel="noreferrer">PDF öffnen</a> : null}
+                  </div>
+                </div>
+              ) : (
+                <p className={profileStyles.invoiceValue}>Noch keine Rechnung vorhanden.</p>
+              )}
+            </div>
+          </dl>
+          {shouldShowBillingCheckoutAction(workspace) ? (
+            <div className={profileStyles.actionRow}>
+              <BillingCheckoutButton
+                planId={workspace.plan_id}
+                commercialOption={workspace.commercial_option}
+                label={getBillingCheckoutActionLabel(workspace.billing_status)}
+              />
+            </div>
+          ) : null}
+        </section>
+      </div>
     </WorkspaceShell>
   );
 }
