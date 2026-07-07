@@ -623,7 +623,9 @@ function FanDetailContent({
               ),
             }}
             demoConnectionsDisabled={demoConnectionsDisabled}
-            telegramSendEnabled={process.env.FANMIND_ENABLE_TELEGRAM_SEND === "true"}
+            telegramSendEnabled={
+              process.env.FANMIND_ENABLE_TELEGRAM_SEND === "true"
+            }
             locale={locale}
           />
         </main>
@@ -640,6 +642,7 @@ function FanDetailContent({
             report={fanAnalysisReport}
             reportError={fanAnalysisReportError}
             hasNewMessages={hasMessagesAfterReport(messages, fanAnalysisReport)}
+            storedMessageCount={messages.length}
             locale={locale}
           />
         </aside>
