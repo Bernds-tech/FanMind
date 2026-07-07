@@ -1027,3 +1027,44 @@
   box-shadow: 0 0 0 3px rgba(0, 200, 255, 0.12);
   outline: 0;
 }
+
+.referralField {
+  border: 1px solid rgba(0, 200, 255, 0.18);
+  border-radius: 11px;
+  padding: 7px;
+  background: linear-gradient(135deg, rgba(0, 118, 255, 0.10), rgba(4, 14, 34, 0.46));
+}
+
+.referralDetected {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(0, 240, 173, 0.28);
+  border-radius: 9px;
+  padding: 6px 8px;
+  background: rgba(0, 95, 69, 0.18);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.referralDetected strong {
+  color: #c2ffeb;
+  font-size: 11px;
+}
+
+.referralDetected small {
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .referralDetected {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

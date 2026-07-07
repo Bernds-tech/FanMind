@@ -650,11 +650,17 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
 
               </div>
 
-              <label className={styles.field}>
-                <span>{language === "en" ? "Referral code (optional)" : "Referral-Code (optional)"}</span>
+              <label className={`${styles.field} ${styles.referralField}`}>
+                <span>{language === "en" ? "Referral code" : "Referral-Code"}</span>
+                {referralCodeFromUrl ? (
+                  <div className={styles.referralDetected}>
+                    <strong>{language === "en" ? "Referral code detected" : "Referral-Code erkannt"}</strong>
+                    <small>{language === "en" ? `Referred by ${referralCodeFromUrl}` : `Geworben durch ${referralCodeFromUrl}`}</small>
+                  </div>
+                ) : null}
                 <div className={styles.inputWrap}>
                   <span aria-hidden="true">%</span>
-                  <input type="text" name="referralCode" defaultValue={referralCodeFromUrl} placeholder={language === "en" ? "e.g. FM-ABC123" : "z. B. FM-ABC123"} autoComplete="off" />
+                  <input type="text" name="referralCode" defaultValue={referralCodeFromUrl} placeholder={language === "en" ? "Optional, e.g. FM-ABC123" : "Optional, z. B. FM-ABC123"} autoComplete="off" />
                 </div>
               </label>
 
