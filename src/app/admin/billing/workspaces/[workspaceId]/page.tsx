@@ -2,7 +2,7 @@ import type React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePlatformAdmin } from "@/lib/admin";
-import { getAdminBillingWorkspace, listStripeInvoicesForWorkspace } from "@/lib/adminBilling";
+import { getAdminBillingWorkspace, isInternalTestWorkspace, listStripeInvoicesForWorkspace } from "@/lib/adminBilling";
 import { getBillingStatusLabel } from "@/lib/billing";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getStripeConfigStatus } from "@/lib/stripeBilling";
@@ -66,6 +66,7 @@ export default async function AdminBillingWorkspaceDetailPage({ params }: { para
   const optionLabel = getCommercialOptionLabel(workspace?.commercial_option ?? "");
   const billingStatusLabel = getBillingStatusLabel(workspace?.billing_status);
   const isSuspended = workspace?.billing_status === "suspended" || workspace?.billing_status === "manual_suspended";
+  const isInternalTest = isInternalTestWorkspace(workspace);
   const timelineHasItems = Boolean(workspace?.billing_last_payment_at || workspace?.billing_last_payment_failed_at || workspace?.billing_next_retry_at || workspace?.billing_grace_until || workspace?.billing_suspended_at || workspace?.billing_admin_note || (workspace?.billing_retry_count ?? 0) > 0);
 
   return <AdminBillingShell user={user} title="Adminbereich" subtitle={`Workspace-Detail · Angemeldet als Admin: ${user.email ?? "Admin"}`}>
@@ -82,6 +83,7 @@ export default async function AdminBillingWorkspaceDetailPage({ params }: { para
               <span className={styles.badge}>{optionLabel}</span>
               <span className={statusClass(workspace.billing_status)}>Status: {billingStatusLabel}</span>
               {isSuspended ? <span className={styles.badgeBad}>Sperre aktiv</span> : null}
+              {isInternalTest ? <span className={styles.badgeInternalTest}>Interner Testzugang</span> : null}
             </div>
           </div>
           <div className={styles.crmHeroAside}>
@@ -97,7 +99,7 @@ export default async function AdminBillingWorkspaceDetailPage({ params }: { para
           <QuickFact label="Setup" value={money(workspace.setup_fee_cents)} />
           <QuickFact label="Monat" value={money(workspace.monthly_fee_cents)} />
           <QuickFact label="Bindung" value={`${workspace.commitment_months ?? 0} Monate`} />
-          <QuickFact label="Zahlungsstatus" value={billingStatusLabel} tone={statusClass(workspace.billing_status)} />
+          <QuickFact label="Zahlungsstatus" value={isInternalTest ? "Interner Testzugang" : billingStatusLabel} tone={isInternalTest ? styles.badgeInternalTest : statusClass(workspace.billing_status)} />
           <QuickFact label="Letzte Zahlung" value={date(workspace.billing_last_payment_at)} />
           <QuickFact label="Nächster Versuch / Kulanz" value={workspace.billing_next_retry_at ? date(workspace.billing_next_retry_at) : date(workspace.billing_grace_until)} />
         </section>
@@ -118,7 +120,7 @@ export default async function AdminBillingWorkspaceDetailPage({ params }: { para
           </main>
 
           <aside className={styles.crmAside}>
-            <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Steuerung</span><h2>Admin-Aktionen</h2></div></div><div className={styles.actionGroup}><form action={`/api/admin/billing/workspaces/${workspace.id}/suspend`} method="post"><button className={styles.buttonDanger}>Sperren</button></form><form action={`/api/admin/billing/workspaces/${workspace.id}/unsuspend`} method="post"><button className={styles.buttonSecondary}>Entsperren</button></form></div><form action={`/api/admin/billing/workspaces/${workspace.id}/mark-paid`} method="post" className={styles.compactForm}><h3>Zahlung verbuchen</h3><label>Zahlungsquelle<select className={styles.select} name="payment_source" defaultValue="bank_transfer"><option value="bank_transfer">Banküberweisung</option><option value="stripe_confirmed">Stripe bestätigt</option><option value="cash_or_other">Bar/anderer Weg</option><option value="credit_note">Gutschrift/Kulanz</option><option value="correction">Korrektur</option></select></label><label>Betrag optional<input className={styles.input} name="amount" inputMode="decimal" /></label><label>Referenz/Notiz optional<input className={styles.input} name="reference" /></label><label>Datum optional<input className={styles.input} name="paid_at" type="date" /></label><label className={styles.checkboxLabel}><input type="checkbox" name="lift_payment_suspension" value="true" defaultChecked={workspace.billing_status !== "manual_suspended"} disabled={workspace.billing_status === "manual_suspended"} /> Zahlungsbedingte Sperre aufheben</label><button className={styles.buttonPrimary}>Zahlung verbuchen</button></form><form id="admin-notizen" action={`/api/admin/billing/workspaces/${workspace.id}/note`} method="post" className={styles.compactForm}><h3>Admin-Notiz</h3><textarea className={styles.textarea} name="note" defaultValue={workspace.billing_admin_note ?? ""} rows={4} /><button className={styles.buttonPrimary}>Admin-Notiz speichern</button></form></section>
+            <section className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Steuerung</span><h2>Admin-Aktionen</h2></div></div><div className={styles.actionGroup}><form action={`/api/admin/billing/workspaces/${workspace.id}/suspend`} method="post"><button className={styles.buttonDanger}>Sperren</button></form><form action={`/api/admin/billing/workspaces/${workspace.id}/unsuspend`} method="post"><button className={styles.buttonSecondary}>Entsperren</button></form><form action={`/api/admin/billing/workspaces/${workspace.id}/internal-test`} method="post"><button className={styles.buttonSecondary}>Kostenfreien internen Testzugang freischalten</button></form></div><form action={`/api/admin/billing/workspaces/${workspace.id}/mark-paid`} method="post" className={styles.compactForm}><h3>Zahlung verbuchen</h3><label>Zahlungsquelle<select className={styles.select} name="payment_source" defaultValue="bank_transfer"><option value="bank_transfer">Banküberweisung</option><option value="stripe_confirmed">Stripe bestätigt</option><option value="cash_or_other">Bar/anderer Weg</option><option value="credit_note">Gutschrift/Kulanz</option><option value="correction">Korrektur</option></select></label><label>Betrag optional<input className={styles.input} name="amount" inputMode="decimal" /></label><label>Referenz/Notiz optional<input className={styles.input} name="reference" /></label><label>Datum optional<input className={styles.input} name="paid_at" type="date" /></label><label className={styles.checkboxLabel}><input type="checkbox" name="lift_payment_suspension" value="true" defaultChecked={workspace.billing_status !== "manual_suspended"} disabled={workspace.billing_status === "manual_suspended"} /> Zahlungsbedingte Sperre aufheben</label><button className={styles.buttonPrimary}>Zahlung verbuchen</button></form><form id="admin-notizen" action={`/api/admin/billing/workspaces/${workspace.id}/note`} method="post" className={styles.compactForm}><h3>Admin-Notiz</h3><textarea className={styles.textarea} name="note" defaultValue={workspace.billing_admin_note ?? ""} rows={4} /><button className={styles.buttonPrimary}>Admin-Notiz speichern</button></form></section>
           </aside>
         </div>
       </> : null}

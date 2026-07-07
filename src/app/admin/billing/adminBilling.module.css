@@ -338,3 +338,10 @@
 .methodList span, .summaryList span { color:#94a3b8; font-size:11px; font-weight:850; }
 .summaryList strong { color:#e0faff; }
 @media (max-width:1180px) { .paymentsLayout, .paymentBottomGrid { grid-template-columns:1fr; } .paymentDetailPanel { position:static; } .paymentTableHead { display:none; } .paymentTableRow { grid-template-columns:1fr; gap:6px; } .paymentFilterBar { grid-template-columns:1fr; } }
+.internalTestRow { border-color: rgba(248,113,113,.42) !important; background: linear-gradient(90deg, rgba(127,29,29,.34), rgba(2,6,23,.28)) !important; }
+.internalTestUser { color:#fecaca !important; font-weight:950 !important; }
+.internalTestUser small { color:#fca5a5 !important; font-weight:950 !important; }
+.badgeInternalTest { color:#fecaca; border:1px solid rgba(248,113,113,.42); background:rgba(127,29,29,.38); }
+.teamTableRow .actions { align-items:center; }
+.teamTableRow .actions form { margin:0; }
+.teamTableRow .actions button { min-height:28px; }

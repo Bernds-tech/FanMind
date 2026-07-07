@@ -457,6 +457,7 @@ RLS-/Security-Erwartung:
 
 - Normale User dürfen Billing-Felder nicht beliebig ändern.
 - Admin-Änderungen nur über admin-only Routen.
+- Kostenfreie interne Testzugänge nutzen eine admin-only Markierung auf `workspaces` (`billing_status = demo_free`, `billing_manual_override = true`, `billing_admin_note` enthält „Interner Testzugang“) und werden in der Admin-Nutzerliste sichtbar getrennt.
 - Stripe-Webhooks müssen Signatur prüfen.
 - Stripe-IDs nicht unnötig im Client anzeigen.
 
