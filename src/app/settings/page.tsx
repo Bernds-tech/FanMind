@@ -31,6 +31,7 @@ import { getWorkspaceReferralSummary, type WorkspaceReferralSummary } from "@/li
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ReferralCopyButton } from "./ReferralCopyButton";
+import { SettingsPreferenceForm } from "./SettingsPreferenceForm";
 
 type SettingsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -133,45 +134,15 @@ function SettingsWorkspace({
         id="appearance-language"
         aria-labelledby="appearance-language-title"
       >
-        <div className={dashboardStyles.moduleHeader}>
+        <div className={dashboardStyles.compactModuleHeader}>
           <div>
             <p className={dashboardStyles.eyebrow}>{wt(locale, "Nutzerpräferenzen")}</p>
             <h2 id="appearance-language-title">{wt(locale, "Darstellung & Sprache")}</h2>
           </div>
-          <span>{wt(locale, "Gespeichert pro Nutzer")}</span>
+          <span>{wt(locale, "Profil · Cookie · LocalStorage-Fallback")}</span>
         </div>
-        <p className={dashboardStyles.moduleText}>
-          {wt(locale, "Wähle die Workspace-Sprache und eine dezente Helligkeit. Die Auswahl wird in deinem Nutzerprofil und als Cookie-Fallback gespeichert.")}
-        </p>
         {preferencesError ? <p className={dashboardStyles.error}>{preferencesError}</p> : null}
-        <form action={saveAppearancePreferences} className={dashboardStyles.preferenceForm}>
-          <fieldset className={dashboardStyles.preferenceGroup}>
-            <legend>{wt(locale, "Sprache")}</legend>
-            {[
-              { value: "de", label: "Deutsch" },
-              { value: "en", label: "English" },
-            ].map((option) => (
-              <label key={option.value} className={dashboardStyles.preferenceOption}>
-                <input type="radio" name="locale" value={option.value} defaultChecked={locale === option.value} />
-                <span>{option.label}</span>
-              </label>
-            ))}
-          </fieldset>
-          <fieldset className={dashboardStyles.preferenceGroup}>
-            <legend>{wt(locale, "Helligkeit")}</legend>
-            {[
-              { value: "standard", label: wt(locale, "Standard") },
-              { value: "brighter", label: wt(locale, "Heller") },
-              { value: "light", label: wt(locale, "Hell") },
-            ].map((option) => (
-              <label key={option.value} className={dashboardStyles.preferenceOption}>
-                <input type="radio" name="brightness" value={option.value} defaultChecked={brightness === option.value} />
-                <span>{option.label}</span>
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" className={dashboardStyles.primaryButton}>{wt(locale, "Einstellungen speichern")}</button>
-        </form>
+        <SettingsPreferenceForm action={saveAppearancePreferences} locale={locale} brightness={brightness} />
       </section>
 
       <section
@@ -230,19 +201,9 @@ function SettingsWorkspace({
           </div>
           <span>MVP-Vorschau</span>
         </div>
-        <p className={dashboardStyles.moduleText}>
-          Einstellungen für Workspace, Nutzerprofil und Paketlogik werden hier
-          vorbereitet. Im aktuellen MVP werden noch keine komplexen
-          Rollen/Rechte oder Zahlungsfunktionen gebaut.
+        <p className={dashboardStyles.compactInfoLine}>
+          MVP-Hinweis: Workspace-, Rollen- und Zahlungslogik bleibt vorbereitet, aber hier noch nicht bearbeitbar.
         </p>
-        <div className={dashboardStyles.emptyState}>
-          <strong>Noch keine bearbeitbaren Einstellungen aktiv.</strong>
-          <p>
-            Diese Seite hält den geschützten Workspace-Rahmen bereit, ohne echte
-            Rollenverwaltung, Zahlungslogik oder Datenbankänderungen
-            einzuführen.
-          </p>
-        </div>
       </section>
     </WorkspaceShell>
     </>
