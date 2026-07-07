@@ -8,11 +8,12 @@ export type AdminBillingWorkspace = {
   setup_fee_cents: number | null; monthly_fee_cents: number | null; commitment_months: number | null;
   billing_status: string | null; billing_suspended_at: string | null; billing_suspended_reason: string | null; billing_manual_override: boolean | null;
   billing_last_payment_failed_at: string | null; billing_last_payment_at: string | null; billing_retry_count: number | null; billing_next_retry_at: string | null; billing_grace_until: string | null; billing_admin_note: string | null; billing_updated_at: string | null; billing_updated_by_user_id: string | null;
+  test_access_flags: InternalTestAccessFlags | null;
   stripe_customer_id: string | null; stripe_subscription_id: string | null; stripe_checkout_session_id: string | null;
   last_invoice_id: string | null; last_invoice_status: string | null; last_invoice_amount_due_cents: number | null; last_invoice_amount_paid_cents: number | null; last_invoice_hosted_url: string | null; last_invoice_pdf_url: string | null;
 };
 
-const ADMIN_BILLING_COLUMNS = "id,name,created_at,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,stripe_checkout_session_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url";
+const ADMIN_BILLING_COLUMNS = "id,name,created_at,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,stripe_checkout_session_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url,test_access_flags";
 
 function serviceKey() { return process.env.SUPABASE_SERVICE_ROLE_KEY; }
 function validUuid(id: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id); }
@@ -83,12 +84,54 @@ export type AdminBillingMember = {
 type WorkspaceMemberRow = { id: string; workspace_id: string; user_id: string; role: string | null; created_at: string | null };
 type ProfileRow = { id: string; email: string | null; display_name: string | null };
 
-export function isInternalTestWorkspace(workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents"> | null | undefined): boolean {
-  if (!workspace) return false;
-  return workspace.billing_status === "demo_free" && (workspace.billing_admin_note ?? "").includes(INTERNAL_TEST_ACCESS_NOTE);
+export type InternalTestAccessFlags = {
+  admin: boolean;
+  demo: boolean;
+  internal: boolean;
+  test: boolean;
+  billing_disabled: boolean;
+  mail_confirmed: boolean;
+  no_expiry: boolean;
+  ai_maintenance: boolean;
+};
+
+export const INTERNAL_TEST_ACCESS_FLAGS: InternalTestAccessFlags = {
+  admin: true,
+  demo: true,
+  internal: true,
+  test: true,
+  billing_disabled: true,
+  mail_confirmed: true,
+  no_expiry: true,
+  ai_maintenance: true,
+};
+
+export function normalizeInternalTestAccessFlags(flags: Partial<Record<keyof InternalTestAccessFlags, unknown>> | null | undefined): InternalTestAccessFlags {
+  return {
+    admin: flags?.admin === true,
+    demo: flags?.demo === true,
+    internal: flags?.internal === true,
+    test: flags?.test === true,
+    billing_disabled: flags?.billing_disabled === true,
+    mail_confirmed: flags?.mail_confirmed === true,
+    no_expiry: flags?.no_expiry === true,
+    ai_maintenance: flags?.ai_maintenance === true,
+  };
 }
 
-export function isInternalTestMember(member: Pick<AdminBillingMember, "email">, workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents"> | null | undefined): boolean {
+export function isAiMaintenanceInternalTestWorkspace(workspace: Pick<AdminBillingWorkspace, "test_access_flags"> | null | undefined): boolean {
+  return normalizeInternalTestAccessFlags(workspace?.test_access_flags).ai_maintenance;
+}
+
+export function isInternalTestWorkspace(workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents" | "test_access_flags"> | null | undefined): boolean {
+  if (!workspace) return false;
+  const flags = normalizeInternalTestAccessFlags(workspace.test_access_flags);
+  const hasInternalFlags = flags.internal && flags.test && flags.billing_disabled;
+  const hasLegacyNote = (workspace.billing_admin_note ?? "").includes(INTERNAL_TEST_ACCESS_NOTE);
+  return workspace.billing_status === "demo_free" && (hasInternalFlags || hasLegacyNote);
+}
+
+export function isInternalTestMember(member: Pick<AdminBillingMember, "email">, workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents" | "test_access_flags"> | null | undefined): boolean {
   const email = (member.email ?? "").trim().toLowerCase();
   return isInternalTestWorkspace(workspace) || email.endsWith("@fanmind.local") || email.includes("+test") || email.includes("+demo");
 }
@@ -157,8 +200,33 @@ export async function confirmAdminBillingUserEmail(userId: string): Promise<{ ok
   return { ok: true, status: 200, error: null };
 }
 
+async function getWorkspaceOwnerUserId(workspaceId: string, key: string): Promise<string | null> {
+  const url = new URL(getSupabaseRestUrl("workspaces"));
+  url.searchParams.set("select", "owner_user_id");
+  url.searchParams.set("id", `eq.${workspaceId}`);
+  url.searchParams.set("limit", "1");
+  const response = await fetch(url, { headers: getSupabaseHeaders(key), cache: "no-store" });
+  if (!response.ok) return null;
+  const rows = (await response.json().catch(() => [])) as Array<{ owner_user_id?: string | null }>;
+  return rows[0]?.owner_user_id ?? null;
+}
+
+async function confirmInternalTestOwnerEmail(workspaceId: string, key: string): Promise<void> {
+  const ownerUserId = await getWorkspaceOwnerUserId(workspaceId, key);
+  if (!ownerUserId || !validUuid(ownerUserId)) return;
+  await fetch(getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(ownerUserId)}`), {
+    method: "PUT",
+    headers: getSupabaseHeaders(key),
+    body: JSON.stringify({ email_confirm: true }),
+    cache: "no-store",
+  }).catch(() => undefined);
+}
+
 export async function markWorkspaceAsInternalTestAccess(workspaceId: string, admin: SupabaseServerUser): Promise<{ ok: boolean; status: number; error: string | null }> {
-  const note = `${INTERNAL_TEST_ACCESS_NOTE} · kostenfrei durch Admin freigeschaltet · ${new Date().toISOString().slice(0, 10)}`;
+  const key = serviceKey();
+  if (!key) return { ok: false, status: 503, error: "Supabase Service Role ist nicht konfiguriert." };
+  await confirmInternalTestOwnerEmail(workspaceId, key);
+  const note = `${INTERNAL_TEST_ACCESS_NOTE} · Admin/Demo/Internal/Test · Billing deaktiviert · Mail bestätigt · Keine Ablaufzeit · AI Maintenance · ${new Date().toISOString().slice(0, 10)}`;
   return updateAdminBillingWorkspace(workspaceId, admin, {
     billing_status: "demo_free",
     billing_manual_override: true,
@@ -170,5 +238,6 @@ export async function markWorkspaceAsInternalTestAccess(workspaceId: string, adm
     setup_fee_cents: 0,
     monthly_fee_cents: 0,
     billing_admin_note: note,
+    test_access_flags: INTERNAL_TEST_ACCESS_FLAGS,
   });
 }

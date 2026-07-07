@@ -46,7 +46,7 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - Follow-up-Vorschlag aus KI-Ausgabe
 - Kopieren von Antwortvorschlägen
 - Admin-/Billing-Grundlagen
-- Admin-only Freischaltung kostenfreier interner Testzugänge ohne Änderung der normalen Kundenlogik
+- Admin-only Freischaltung kostenfreier interner Testzugänge ohne Änderung der normalen Kundenlogik, inklusive serverseitig vorbereiteter Test-Flags für AI Maintenance
 - Stripe-Test-/Setup-Checkout für Pilot/Starter, wenn ENV vollständig gesetzt ist
 - Legal-Seiten und Zahlungsbedingungen
 
