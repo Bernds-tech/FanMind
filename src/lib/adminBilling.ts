@@ -1,5 +1,7 @@
-import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
+import { getSupabaseAuthUrl, getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 import type { SupabaseServerUser } from "@/lib/supabase/server";
+
+export const INTERNAL_TEST_ACCESS_NOTE = "Interner Testzugang";
 
 export type AdminBillingWorkspace = {
   id: string; name: string; created_at: string | null; owner_user_id: string | null; plan_id: string | null; commercial_option: string | null;
@@ -80,6 +82,17 @@ export type AdminBillingMember = {
 
 type WorkspaceMemberRow = { id: string; workspace_id: string; user_id: string; role: string | null; created_at: string | null };
 type ProfileRow = { id: string; email: string | null; display_name: string | null };
+
+export function isInternalTestWorkspace(workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents"> | null | undefined): boolean {
+  if (!workspace) return false;
+  return workspace.billing_status === "demo_free" && (workspace.billing_admin_note ?? "").includes(INTERNAL_TEST_ACCESS_NOTE);
+}
+
+export function isInternalTestMember(member: Pick<AdminBillingMember, "email">, workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents"> | null | undefined): boolean {
+  const email = (member.email ?? "").trim().toLowerCase();
+  return isInternalTestWorkspace(workspace) || email.endsWith("@fanmind.local") || email.includes("+test") || email.includes("+demo");
+}
+
 type ContactCountRow = { workspace_id: string; count: number };
 
 export async function listAdminBillingMembers(): Promise<{ members: AdminBillingMember[]; error: string | null }> {
@@ -126,4 +139,36 @@ export async function listWorkspaceContactCounts(): Promise<{ counts: Map<string
     for (const row of rows) counts.set(row.workspace_id, (counts.get(row.workspace_id) ?? 0) + 1);
     return { counts, error: null };
   } catch { return { counts: new Map(), error: null }; }
+}
+
+export async function confirmAdminBillingUserEmail(userId: string): Promise<{ ok: boolean; status: number; error: string | null }> {
+  const key = serviceKey();
+  if (!key) return { ok: false, status: 503, error: "Supabase Service Role ist nicht konfiguriert." };
+  if (!validUuid(userId)) return { ok: false, status: 400, error: "Ungültige User-ID." };
+
+  const response = await fetch(getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(userId)}`), {
+    method: "PUT",
+    headers: getSupabaseHeaders(key),
+    body: JSON.stringify({ email_confirm: true }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) return { ok: false, status: response.status, error: "E-Mail-Bestätigung konnte serverseitig nicht gesetzt werden." };
+  return { ok: true, status: 200, error: null };
+}
+
+export async function markWorkspaceAsInternalTestAccess(workspaceId: string, admin: SupabaseServerUser): Promise<{ ok: boolean; status: number; error: string | null }> {
+  const note = `${INTERNAL_TEST_ACCESS_NOTE} · kostenfrei durch Admin freigeschaltet · ${new Date().toISOString().slice(0, 10)}`;
+  return updateAdminBillingWorkspace(workspaceId, admin, {
+    billing_status: "demo_free",
+    billing_manual_override: true,
+    billing_suspended_at: null,
+    billing_suspended_reason: null,
+    billing_retry_count: 0,
+    billing_next_retry_at: null,
+    billing_grace_until: null,
+    setup_fee_cents: 0,
+    monthly_fee_cents: 0,
+    billing_admin_note: note,
+  });
 }
