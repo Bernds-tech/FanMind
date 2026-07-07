@@ -16,6 +16,7 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceReferralSummary, type WorkspaceReferralSummary } from "@/lib/referrals";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
+import { ReferralCopyButton } from "./ReferralCopyButton";
 
 type SettingsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -81,42 +82,46 @@ function SettingsWorkspace({
 
 
       <section
-        className={dashboardStyles.moduleCard}
+        className={`${dashboardStyles.moduleCard} ${dashboardStyles.referralPanel}`}
         id="referral-growth-window"
         aria-labelledby="referral-growth-window-title"
       >
-        <div className={dashboardStyles.moduleHeader}>
+        <div className={dashboardStyles.referralHeader}>
           <div>
             <p className={dashboardStyles.eyebrow}>Referral Growth Window</p>
-            <h2 id="referral-growth-window-title">Dein Referral-Link &amp; Status</h2>
+            <h2 id="referral-growth-window-title">Referral-Link &amp; Status</h2>
+            <p>Link teilen, Attribution erfassen, Billing-Verrechnung bleibt geprüft und manuell.</p>
           </div>
-          <span>{referralSummary?.state?.status ?? "Vorbereitet"}</span>
+          <span className={dashboardStyles.referralBadge}>{referralSummary?.state?.status ?? "Vorbereitet"}</span>
         </div>
-        <p className={dashboardStyles.moduleText}>
-          Teile deinen persönlichen Link mit passenden FanMind-Interessenten. Nach Registrierung, Zahlungs-/Aktivitätsprüfung und Admin-Freigabe zählt jeder aktive geworbene Workspace mit 5 % auf laufende FanMind-Kosten, maximal 20 aktive Referrals. Es gibt keine Auszahlung und keine zweite Ebene.
-        </p>
         {referralSummary?.error ? <p className={dashboardStyles.error}>{referralSummary.error}</p> : null}
-        <div className={dashboardStyles.actionGrid}>
-          <div className={dashboardStyles.actionCard}>
+        <div className={dashboardStyles.referralGrid}>
+          <article className={`${dashboardStyles.referralCard} ${dashboardStyles.referralPrimaryCard}`}>
             <span>Referral-Code</span>
             <strong>{referralSummary?.member?.referral_code ?? "Noch nicht verfügbar"}</strong>
-            <p>Status: {referralSummary?.member?.status ?? "wird vorbereitet"}</p>
-          </div>
-          <div className={dashboardStyles.actionCard}>
+            <div className={dashboardStyles.referralMetaRow}>
+              <span className={dashboardStyles.referralBadge}>{referralSummary?.member?.status ?? "wird vorbereitet"}</span>
+              <ReferralCopyButton value={referralSummary?.member?.referral_code} label="Code kopieren" />
+            </div>
+          </article>
+          <article className={`${dashboardStyles.referralCard} ${dashboardStyles.referralLinkCard}`}>
             <span>Persönlicher Link</span>
             <strong>{referralSummary?.referralUrl ?? "Migration/Service Role prüfen"}</strong>
-            <p>Der Link füllt den Referral-Code bei der Registrierung vor.</p>
-          </div>
-          <div className={dashboardStyles.actionCard}>
+            <div className={dashboardStyles.referralMetaRow}>
+              <small>Füllt den Code bei der Registrierung vor.</small>
+              <ReferralCopyButton value={referralSummary?.referralUrl} label="Link kopieren" />
+            </div>
+          </article>
+          <article className={dashboardStyles.referralCard}>
             <span>Aktive Referrals</span>
             <strong>{referralSummary?.activeReferralCount ?? 0} / 20</strong>
-            <p>Rabattstatus: {referralSummary?.discountPercent ?? 0} % vorbereitet, nicht automatisch verrechnet.</p>
-          </div>
-          <div className={dashboardStyles.actionCard}>
+            <small>{referralSummary?.discountPercent ?? 0} % Rabatt vorbereitet · nicht automatisch verrechnet.</small>
+          </article>
+          <article className={dashboardStyles.referralCard}>
             <span>Growth-Window-Cap</span>
             <strong>{referralSummary?.state?.active_paid_workspace_count ?? 0} / {referralSummary?.state?.active_paid_workspace_cap ?? 2000}</strong>
-            <p>Neue rabattwirksame Referrals nur solange das Window offen bzw. ausdrücklich wieder geöffnet ist.</p>
-          </div>
+            <small>Neue rabattwirksame Referrals nur solange das Window offen ist.</small>
+          </article>
         </div>
       </section>
 

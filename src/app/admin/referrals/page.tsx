@@ -37,7 +37,7 @@ export default async function AdminReferralsPage() {
       <div className={styles.adminStack}>
         <AdminTabs activeTab="referrals" />
 
-        <section className={styles.hero}>
+        <section className={styles.referralAdminHero}>
           <div>
             <span className={styles.eyebrow}>Issue #461 · Phase 2</span>
             <h1>Referral Growth Window vorbereiten</h1>
@@ -48,21 +48,21 @@ export default async function AdminReferralsPage() {
 
         {error ? <div className={styles.emptyState}>{error}</div> : null}
 
-        <section className={styles.kpiGrid} aria-label="Referral Kennzahlen">
+        <section className={styles.referralKpiGrid} aria-label="Referral Kennzahlen">
           <article className={styles.kpiCard}><span>Programmstatus</span><strong>{state?.status ?? "—"}</strong></article>
           <article className={styles.kpiCard}><span>active_paid_workspace_count</span><strong>{activePaidWorkspaceCount} / {effectiveCap}</strong></article>
           <article className={styles.kpiCard}><span>Cap-Fortschritt</span><strong>{capProgress}%</strong></article>
           <article className={styles.kpiCard}><span>Aktive Referrals</span><strong>{activeReferrals}</strong></article>
         </section>
 
-        <section className={styles.detailGrid}>
+        <section className={styles.referralDetailGrid}>
           <dl className={styles.field}><dt>Globale Cap-Größe</dt><dd>active_paid_workspace_count</dd></dl>
           <dl className={styles.field}><dt>Cap-Regel</dt><dd>Schließen bei {effectiveCap} aktiven zahlenden Workspaces</dd></dl>
           <dl className={styles.field}><dt>Letztes Status-Update</dt><dd>{date(state?.updated_at)}</dd></dl>
           <dl className={styles.field}><dt>AGB/Zahlungsbedingungen</dt><dd>Separater Schritt vor Aktivierung</dd></dl>
         </section>
 
-        <section className={styles.card}>
+        <section className={`${styles.card} ${styles.referralAdminCard}`}>
           <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Referrer</span><h2>Mitglieder, Rabattberechnung &amp; Overrides</h2></div><span className={styles.badge}>{members.length} Einträge</span></div>
           {members.length ? <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Workspace</th><th>Code</th><th>Status</th><th>Aktive Referrals</th><th>Rabatt</th><th>Override</th><th>Notiz</th></tr></thead><tbody>{members.map((member) => {
             const workspace = workspaces.get(member.workspace_id);
@@ -72,13 +72,13 @@ export default async function AdminReferralsPage() {
           })}</tbody></table></div> : <div className={styles.emptyState}>Noch keine Referral-Mitglieder. Admin kann sie nach Migration serverseitig anlegen; öffentliche Teilnahme ist noch nicht aktiv.</div>}
         </section>
 
-        <section className={styles.card}>
+        <section className={`${styles.card} ${styles.referralAdminCard}`}>
           <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Referrals</span><h2>Attributionen &amp; Status</h2></div><span className={styles.badge}>{referrals.length} Einträge</span></div>
           <div className={styles.statusList}>{(["pending","qualified","active","inactive","rejected","locked_after_window_closed"] as ReferralStatus[]).map((status) => <div className={styles.statusItem} key={status}><span>{status}</span><strong>{countStatus(referrals, status)}</strong></div>)}</div>
           {referrals.length ? <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Code</th><th>Referrer</th><th>Geworbener Workspace</th><th>Status</th><th>Programmphase</th><th>Billing Snapshot</th><th>Zeitpunkt</th><th>Korrektur</th></tr></thead><tbody>{referrals.map((referral) => <tr key={referral.id}><td>{referral.referral_code}</td><td>{workspaces.get(referral.referrer_workspace_id)?.name ?? referral.referrer_workspace_id}</td><td>{referral.referred_workspace_id ? workspaces.get(referral.referred_workspace_id)?.name ?? referral.referred_workspace_id : "—"}</td><td><span className={statusClass(referral.status)}>{referral.status}</span></td><td>{referral.created_during_program_status}</td><td>{referral.billing_status_snapshot ?? "—"}</td><td>{date(referral.first_seen_at)}</td><td><form action={updateReferralStatusAction} className={styles.inlineForm}><input type="hidden" name="id" value={referral.id} /><select name="status" defaultValue={referral.status}>{(["pending","qualified","active","inactive","rejected","locked_after_window_closed"] as ReferralStatus[]).map((status) => <option key={status} value={status}>{status}</option>)}</select><input name="adminNote" defaultValue={referral.admin_note ?? ""} placeholder="Admin-Notiz" /><button type="submit">Speichern</button></form></td></tr>)}</tbody></table></div> : null}
         </section>
 
-        <section className={styles.card}>
+        <section className={`${styles.card} ${styles.referralAdminCard}`}>
           <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Snapshots</span><h2>Rabatt-Snapshots vorbereitet</h2></div><span className={styles.badge}>Keine Billing-Automatik</span></div>
           {snapshots.length ? <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Workspace</th><th>Aktive Referrals</th><th>Rabatt</th><th>Vorher</th><th>Nachher</th><th>Status</th><th>Berechnet</th></tr></thead><tbody>{snapshots.map((snapshot) => <tr key={snapshot.id}><td>{workspaces.get(snapshot.workspace_id)?.name ?? snapshot.workspace_id}</td><td>{snapshot.active_referral_count}</td><td>{snapshot.discount_percent}%</td><td>{money(snapshot.monthly_fee_cents_before_discount)}</td><td>{money(snapshot.monthly_fee_cents_after_discount)}</td><td>{snapshot.program_status_snapshot}</td><td>{date(snapshot.calculated_at)}</td></tr>)}</tbody></table></div> : <div className={styles.emptyState}>Snapshots sind als Datenmodell vorbereitet. Sie werden erst nach separater Signup-/Checkout-Attribution und Admin-Prüfung erzeugt.</div>}
         </section>
