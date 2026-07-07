@@ -2447,3 +2447,109 @@
     grid-template-columns: 1fr;
   }
 }
+
+.page {
+  color: var(--fanmind-page-text, #f8fbff);
+  background: var(--fanmind-page-bg, linear-gradient(135deg, #020617 0%, #07111f 48%, #090518 100%));
+}
+
+.sidebar {
+  border-right-color: var(--fanmind-shell-border, rgba(148, 163, 184, 0.14));
+  background: var(--fanmind-shell-sidebar, linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.96)), #020617);
+}
+
+.topbar,
+.workspaceStrip,
+.moduleCard,
+.contextCard,
+.quickActions,
+.featureSection,
+.fallbackCard,
+.secondaryButton,
+.ghostButton,
+.filterChip,
+.emptyState {
+  border-color: var(--fanmind-shell-border, rgba(148, 163, 184, 0.16));
+  background: var(--fanmind-shell-card, rgba(15, 23, 42, 0.74));
+}
+
+.topbar {
+  background: var(--fanmind-shell-card-strong, rgba(15, 23, 42, 0.92));
+}
+
+.titleCluster h1,
+.workspaceStrip strong,
+.emptyState strong,
+.moduleHeader h2,
+.moduleCard h2,
+.moduleCard h3,
+.searchBox input {
+  color: var(--fanmind-shell-text, #ffffff);
+}
+
+.titleCluster p,
+.workspaceStrip p,
+.moduleText,
+.emptyState p {
+  color: var(--fanmind-shell-muted, #cbd5e1);
+}
+
+.eyebrow,
+.workspaceStrip div > span {
+  color: var(--fanmind-shell-accent, #67e8f9);
+}
+
+.searchBox {
+  color: var(--fanmind-shell-soft, #94a3b8);
+  background: var(--fanmind-input-bg, rgba(2, 6, 23, 0.68));
+}
+
+.preferenceForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.preferenceGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--fanmind-shell-border, rgba(148, 163, 184, 0.16));
+  border-radius: 14px;
+  padding: 10px;
+  background: var(--fanmind-input-bg, rgba(2, 6, 23, 0.42));
+}
+
+.preferenceGroup legend {
+  padding: 0 5px;
+  color: var(--fanmind-shell-soft, #94a3b8);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.preferenceOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--fanmind-shell-border, rgba(148, 163, 184, 0.16));
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--fanmind-shell-muted, #cbd5e1);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  background: var(--fanmind-shell-card, rgba(15, 23, 42, 0.62));
+}
+
+.preferenceOption input {
+  accent-color: var(--fanmind-shell-accent, #67e8f9);
+}
+
+@media (max-width: 980px) {
+  .preferenceForm {
+    grid-template-columns: 1fr;
+  }
+}

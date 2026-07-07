@@ -21,10 +21,13 @@ export async function resolveWorkspaceLocale(input?: {
   const urlLocale = Array.isArray(input?.lang) ? input?.lang[0] : input?.lang;
   if (urlLocale === "en" || urlLocale === "de") return urlLocale;
 
+  const metadataLocale = getUserMetadataLocale(input?.user);
+  if (metadataLocale) return metadataLocale;
+
   const cookieLocale = (await cookies()).get(FANMIND_LOCALE_COOKIE)?.value;
   if (cookieLocale === "en" || cookieLocale === "de") return cookieLocale;
 
-  return getUserMetadataLocale(input?.user) ?? "de";
+  return "de";
 }
 
 export function localeCookieOptions(maxAge = 60 * 60 * 24 * 365) {

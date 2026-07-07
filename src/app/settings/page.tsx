@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isWorkspaceBillingSuspended } from "@/lib/billing";
 import { getPreActivationRedirect } from "@/lib/preActivation";
@@ -5,14 +6,27 @@ import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
+  updateSupabaseServerUserMetadata,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { UserPreferenceFallback } from "@/components/UserPreferenceFallback";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { FANMIND_LOCALE_COOKIE, localeCookieOptions, resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { wt } from "@/lib/workspaceCopy";
+import {
+  FANMIND_BRIGHTNESS_COOKIE,
+  getPreferenceMetadata,
+  getUserMetadataBrightness,
+  normalizeFanMindBrightness,
+  preferenceCookieOptions,
+  type FanMindBrightness,
+} from "@/lib/userPreferences";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceReferralSummary, type WorkspaceReferralSummary } from "@/lib/referrals";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
@@ -25,7 +39,35 @@ type SettingsWorkspaceProps = {
   openFollowupCount: number;
   showAdminArea: boolean;
   referralSummary: WorkspaceReferralSummary | null;
+  locale: FanMindLanguage;
+  brightness: FanMindBrightness;
+  preferencesError?: string | null;
 };
+
+
+async function saveAppearancePreferences(formData: FormData) {
+  "use server";
+
+  const { data } = await getSupabaseServerUser();
+  if (!data.user) redirect("/login");
+
+  const locale = formData.get("locale") === "en" ? "en" : "de";
+  const brightness = normalizeFanMindBrightness(formData.get("brightness"));
+  const cookieStore = await cookies();
+
+  cookieStore.set(FANMIND_LOCALE_COOKIE, locale, localeCookieOptions());
+  cookieStore.set(FANMIND_BRIGHTNESS_COOKIE, brightness, preferenceCookieOptions());
+
+  const metadata = getPreferenceMetadata({
+    currentMetadata: data.user.user_metadata,
+    locale,
+    brightness,
+  });
+  const result = await updateSupabaseServerUserMetadata(metadata);
+
+  const search = result.error ? `?preferences_error=${encodeURIComponent(result.error.message)}` : "?preferences_saved=1";
+  redirect(`/settings${search}`);
+}
 
 async function logout() {
   "use server";
@@ -52,34 +94,85 @@ function SettingsWorkspace({
   openFollowupCount,
   showAdminArea,
   referralSummary,
+  locale,
+  brightness,
+  preferencesError,
 }: SettingsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigation("settings", "de", 0, showAdminArea);
+    getWorkspaceNavigation("settings", locale, 0, showAdminArea);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
   const planLabel = workspace.plan_id === "pilot" ? "Pilot / Setup" : workspace.plan_id === "starter" ? "Starter" : workspace.plan_id === "growth" ? "Growth" : "Agency";
 
   return (
+    <>
+    <UserPreferenceFallback locale={locale} brightness={brightness} />
     <WorkspaceShell
       workspaceName={workspace.name}
       userLabel={userLabel}
       planLabel={planLabel}
       planMeta={getCommercialOptionLabel(workspace.commercial_option)}
-      planStatus={workspace.plan_id === "starter" ? "Aktiv" : workspace.plan_id === "pilot" ? "Demo" : "Vorschau"}
+      planStatus={workspace.plan_id === "starter" ? wt(locale, "Aktiv") : workspace.plan_id === "pilot" ? "Demo" : wt(locale, "Vorschau")}
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
-        title: "Einstellungen",
-        subtitle: "Willkommen zurück, Pilot Test 👋",
-        searchPlaceholder: "Suche nach Workspace, Profil, Paket ...",
-        primaryActionLabel: "Speichern vorbereiten",
+        title: wt(locale, "Einstellungen"),
+        subtitle: wt(locale, "Willkommen zurück, Pilot Test 👋"),
+        searchPlaceholder: wt(locale, "Suche nach Workspace, Profil, Paket ..."),
+        primaryActionLabel: wt(locale, "Einstellungen speichern"),
         primaryActionHref: "#workspace-settings",
       }}
       contactCount={contactCount}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
+      locale={locale}
     >
 
+      <section
+        className={dashboardStyles.moduleCard}
+        id="appearance-language"
+        aria-labelledby="appearance-language-title"
+      >
+        <div className={dashboardStyles.moduleHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>{wt(locale, "Nutzerpräferenzen")}</p>
+            <h2 id="appearance-language-title">{wt(locale, "Darstellung & Sprache")}</h2>
+          </div>
+          <span>{wt(locale, "Gespeichert pro Nutzer")}</span>
+        </div>
+        <p className={dashboardStyles.moduleText}>
+          {wt(locale, "Wähle die Workspace-Sprache und eine dezente Helligkeit. Die Auswahl wird in deinem Nutzerprofil und als Cookie-Fallback gespeichert.")}
+        </p>
+        {preferencesError ? <p className={dashboardStyles.error}>{preferencesError}</p> : null}
+        <form action={saveAppearancePreferences} className={dashboardStyles.preferenceForm}>
+          <fieldset className={dashboardStyles.preferenceGroup}>
+            <legend>{wt(locale, "Sprache")}</legend>
+            {[
+              { value: "de", label: "Deutsch" },
+              { value: "en", label: "English" },
+            ].map((option) => (
+              <label key={option.value} className={dashboardStyles.preferenceOption}>
+                <input type="radio" name="locale" value={option.value} defaultChecked={locale === option.value} />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <fieldset className={dashboardStyles.preferenceGroup}>
+            <legend>{wt(locale, "Helligkeit")}</legend>
+            {[
+              { value: "standard", label: wt(locale, "Standard") },
+              { value: "brighter", label: wt(locale, "Heller") },
+              { value: "light", label: wt(locale, "Hell") },
+            ].map((option) => (
+              <label key={option.value} className={dashboardStyles.preferenceOption}>
+                <input type="radio" name="brightness" value={option.value} defaultChecked={brightness === option.value} />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <button type="submit" className={dashboardStyles.primaryButton}>{wt(locale, "Einstellungen speichern")}</button>
+        </form>
+      </section>
 
       <section
         className={`${dashboardStyles.moduleCard} ${dashboardStyles.referralPanel}`}
@@ -152,15 +245,26 @@ function SettingsWorkspace({
         </div>
       </section>
     </WorkspaceShell>
+    </>
   );
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ preferences_error?: string }>;
+}) {
   const { data, error: userError } = await getSupabaseServerUser();
 
   if (!data.user) {
     redirect("/login");
   }
+
+  const locale = await resolveWorkspaceLocale({ user: data.user });
+  const cookieStore = await cookies();
+  const brightness = getUserMetadataBrightness(data.user) ?? normalizeFanMindBrightness(cookieStore.get(FANMIND_BRIGHTNESS_COOKIE)?.value);
+  const resolvedSearchParams = await searchParams;
+  const preferencesError = resolvedSearchParams?.preferences_error ?? null;
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
@@ -194,6 +298,9 @@ export default async function SettingsPage() {
           openFollowupCount={openFollowupCountResult?.count ?? 0}
           showAdminArea={isPlatformAdminEmail(data.user.email)}
           referralSummary={referralSummary}
+          locale={locale}
+          brightness={brightness}
+          preferencesError={preferencesError}
         />
       ) : (
         <section
