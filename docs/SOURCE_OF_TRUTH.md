@@ -84,7 +84,7 @@ Kernlogik:
 Status:
 
 - Roadmap / Growth-Programm, noch nicht als automatische Billing-Funktion aktiv.
-- Darf nur mit klarer Begrenzung kommuniziert werden: Aktion bis 2.000 aktive zahlende Kunden/Workspaces, maximal 20 aktive Referrals pro Referrer, Rabatt nur solange geworbene Kunden aktiv bleiben.
+- Darf nur mit klarer Begrenzung kommuniziert werden: Aktion bis 2.000 aktive zahlende Kunden/Workspaces, maximal 20 aktive Referrals pro Referrer, Rabatt nur solange geworbene Kunden aktiv bleiben. Phase 2 zeigt berechtigten Workspaces Link/Code und Status und speichert Signup-Attributionen; Billing-Verrechnung bleibt separat geprüft.
 - Vor Umsetzung müssen Tracking, Billing-Verrechnung, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung geprüft werden.
 - Details stehen in `docs/REFERRAL_PROGRAM.md`.
 

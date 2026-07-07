@@ -2,6 +2,7 @@ import { requirePlatformAdmin } from "@/lib/admin";
 import { calculateReferralDiscount, getAdminReferralOverview, type ReferralStatus } from "@/lib/adminReferrals";
 import { AdminBillingShell } from "../billing/AdminBillingShell";
 import { AdminTabs } from "../billing/AdminTabs";
+import { updateReferralStatusAction } from "./actions";
 import styles from "../billing/adminBilling.module.css";
 
 function date(value: string | null | undefined) {
@@ -38,9 +39,9 @@ export default async function AdminReferralsPage() {
 
         <section className={styles.hero}>
           <div>
-            <span className={styles.eyebrow}>Issue #442 · admin-only</span>
+            <span className={styles.eyebrow}>Issue #461 · Phase 2</span>
             <h1>Referral Growth Window vorbereiten</h1>
-            <p>Datenmodell, RLS und Adminübersicht sind vorbereitet. Signup-/Checkout-Attribution, Rabatt-Snapshots und jede Billing-Verrechnung bleiben bewusst separate, geprüfte Schritte.</p>
+            <p>Referral-Link, Signup-Attribution, Statusprüfung und Admin-Korrektur sind vorbereitet. Jede Billing-Verrechnung bleibt bewusst ein separater geprüfter Schritt.</p>
           </div>
           <span className={statusClass(state?.status ?? "pending")}>{state?.status ?? "Migration fehlt"}</span>
         </section>
@@ -74,7 +75,7 @@ export default async function AdminReferralsPage() {
         <section className={styles.card}>
           <div className={styles.cardHeader}><div><span className={styles.eyebrow}>Referrals</span><h2>Attributionen &amp; Status</h2></div><span className={styles.badge}>{referrals.length} Einträge</span></div>
           <div className={styles.statusList}>{(["pending","qualified","active","inactive","rejected","locked_after_window_closed"] as ReferralStatus[]).map((status) => <div className={styles.statusItem} key={status}><span>{status}</span><strong>{countStatus(referrals, status)}</strong></div>)}</div>
-          {referrals.length ? <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Code</th><th>Referrer</th><th>Geworbener Workspace</th><th>Status</th><th>Programmphase</th><th>Billing Snapshot</th><th>Zeitpunkt</th></tr></thead><tbody>{referrals.map((referral) => <tr key={referral.id}><td>{referral.referral_code}</td><td>{workspaces.get(referral.referrer_workspace_id)?.name ?? referral.referrer_workspace_id}</td><td>{referral.referred_workspace_id ? workspaces.get(referral.referred_workspace_id)?.name ?? referral.referred_workspace_id : "—"}</td><td><span className={statusClass(referral.status)}>{referral.status}</span></td><td>{referral.created_during_program_status}</td><td>{referral.billing_status_snapshot ?? "—"}</td><td>{date(referral.first_seen_at)}</td></tr>)}</tbody></table></div> : null}
+          {referrals.length ? <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Code</th><th>Referrer</th><th>Geworbener Workspace</th><th>Status</th><th>Programmphase</th><th>Billing Snapshot</th><th>Zeitpunkt</th><th>Korrektur</th></tr></thead><tbody>{referrals.map((referral) => <tr key={referral.id}><td>{referral.referral_code}</td><td>{workspaces.get(referral.referrer_workspace_id)?.name ?? referral.referrer_workspace_id}</td><td>{referral.referred_workspace_id ? workspaces.get(referral.referred_workspace_id)?.name ?? referral.referred_workspace_id : "—"}</td><td><span className={statusClass(referral.status)}>{referral.status}</span></td><td>{referral.created_during_program_status}</td><td>{referral.billing_status_snapshot ?? "—"}</td><td>{date(referral.first_seen_at)}</td><td><form action={updateReferralStatusAction} className={styles.inlineForm}><input type="hidden" name="id" value={referral.id} /><select name="status" defaultValue={referral.status}>{(["pending","qualified","active","inactive","rejected","locked_after_window_closed"] as ReferralStatus[]).map((status) => <option key={status} value={status}>{status}</option>)}</select><input name="adminNote" defaultValue={referral.admin_note ?? ""} placeholder="Admin-Notiz" /><button type="submit">Speichern</button></form></td></tr>)}</tbody></table></div> : null}
         </section>
 
         <section className={styles.card}>

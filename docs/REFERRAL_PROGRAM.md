@@ -326,16 +326,21 @@ Aktueller Status:
 
 - [x] Globales Referral Growth Window ist auf 2.000 aktive zahlende Workspaces/Kunden begrenzt (`active_paid_workspace_count` als globale Cap-Größe).
 - [ ] Jeder berechtigte zahlende Nutzer/Workspace kann teilnehmen, solange das Growth Window offen ist.
-- [ ] Jeder Teilnehmer hat eindeutigen Referral-Code/Link.
-- [ ] Referral wird beim Signup/Checkout gespeichert (separater nächster Schritt nach admin-only Foundation).
+- [x] Jeder berechtigte Workspace kann einen eindeutigen Referral-Code/Link in der Nutzeransicht sehen.
+- [x] Referral-Code wird bei Registrierung erfasst und als Attribution zwischen Referrer-Workspace und neuem Workspace gespeichert; Aktivierung bleibt Admin-/Billing-Prüfung.
 - [ ] Nur aktive zahlende geworbene Workspaces/Kunden zählen.
-- [ ] Rabatt = aktive Referrals * 5 %, maximal 100 %.
-- [ ] Maximal 20 aktive Referrals pro Referrer sind rabattwirksam.
+- [x] Statusanzeige berechnet Rabatt = aktive Referrals * 5 %, maximal 100 %, ohne automatische Billing-Verrechnung.
+- [x] Maximal 20 aktive Referrals pro Referrer werden in der Statusberechnung berücksichtigt.
 - [ ] Erreichen von 2.000 aktiven zahlenden Workspaces/Kunden schließt das Programm für neue Rabattsteigerungen.
 - [ ] Kündigung/Deaktivierung eines geworbenen Kunden reduziert Rabatt automatisch.
-- [ ] Nach Programmschluss kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden.
-- [x] Admin kann Programmstatus, Referrals, aktive Referrals, Rabattberechnung und Overrides in einer Adminübersicht prüfen; schreibende Admin-Aktionen bleiben der nächsten Admin-Workflow-Ausbaustufe vorbehalten.
+- [x] Nach Programmschluss bzw. 2.000er Cap werden neue Attributions als `locked_after_window_closed` vorbereitet und nicht automatisch rabattwirksam.
+- [x] Admin kann Programmstatus, Referrals, aktive Referrals, Rabattberechnung und Overrides in einer Adminübersicht prüfen und Referral-Status/Admin-Notiz korrigieren.
 - [ ] Billing berücksichtigt Rabatt erst nach validiertem Status.
 - [ ] Dashboard zeigt Rabatt und globalen Programmstatus transparent.
 - [ ] AGB/Zahlungsbedingungen sind aktualisiert (separater Legal-/Payment-Schritt vor Aktivierung).
 - [x] Security/RLS verhindert fremde Referral-Daten im ersten Schritt durch admin-only Service-Role-Zugriff ohne öffentliche authenticated Policies.
+
+
+## 21. Phase 2 Umsetzungsstand (Issue #461)
+
+Phase 2 ergänzt den öffentlichen Referral-Link pro berechtigtem Workspace, die Erfassung von `ref`/`referral_code` bei der Registrierung, die serverseitige Speicherung der Attribution und eine Nutzeransicht für Code, Link, Growth-Window-Cap, aktive Referrals und vorbereiteten Rabattstatus. Die Adminansicht erlaubt Status-/Notiz-Korrekturen. Das ist weiterhin keine Auszahlung, keine zweite Ebene und keine automatische Billing-Verrechnung; Aktivierung eines Referrals setzt Zahlungs-/Aktivitätsprüfung voraus.

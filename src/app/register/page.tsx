@@ -16,7 +16,7 @@ type RegisterPlanId = PlanId;
 type StarterOfferOptionId = "starter_paid_setup" | "starter_no_setup_commitment";
 
 type RegisterPageProps = {
-  searchParams: Promise<{ lang?: string | string[]; plan?: string | string[] }>;
+  searchParams: Promise<{ lang?: string | string[]; plan?: string | string[]; ref?: string | string[]; referral_code?: string | string[] }>;
 };
 
 type PlanSelectionCopy = {
@@ -351,13 +351,16 @@ async function prepareUserWorkspace(
     role: "owner",
   });
 
-  return memberError ? workspaceSetupError(memberError.message) : null;
+  if (memberError) return workspaceSetupError(memberError.message);
+
+  return null;
 }
 
 export default function RegisterPage({ searchParams }: RegisterPageProps) {
   const params = use(searchParams);
   const language = getFanMindLanguage(params.lang);
   const rawPlan = firstParamValue(params.plan);
+  const referralCodeFromUrl = firstParamValue(params.ref) ?? firstParamValue(params.referral_code) ?? "";
   const hasInvalidPlan = Boolean(rawPlan && !isPlanId(rawPlan));
   const selectedPlanId = resolvePlanId(rawPlan, "starter");
   const isProductiveRegistration = ACTIVE_REGISTER_PLANS.includes(selectedPlanId);
@@ -401,6 +404,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
       ? commercialOptionValue
       : "pilot_only";
     const paymentTermsAccepted = formData.get("paymentTermsAccepted") === "on";
+    const referralCode = String(formData.get("referralCode") ?? referralCodeFromUrl).trim();
 
     if (requiresPaymentTermsAcceptance(selectedPlanId) && !paymentTermsAccepted) {
       setError(language === "en" ? "Please accept the payment terms before continuing." : "Bitte akzeptiere die Zahlungsbedingungen, bevor du fortfährst.");
@@ -428,6 +432,7 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
             billing_provider: getBillingProvider(),
             payment_collection_method: getPaymentCollectionMethod(selectedPlanId, selectedCommercialOption),
             billing_status: getInitialBillingStatus(selectedPlanId, selectedCommercialOption),
+            referral_code: referralCode || undefined,
           },
         },
       });
@@ -447,6 +452,19 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
           selectedCommercialOption,
           language,
         );
+
+        if (!workspaceError && referralCode) {
+          const referralResponse = await fetch("/api/referrals/attribution", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ referralCode }),
+          });
+          if (!referralResponse.ok) {
+            const referralPayload = await referralResponse.json().catch(() => ({}));
+            setError(typeof referralPayload.error === "string" ? referralPayload.error : (language === "en" ? "Referral code could not be saved." : "Referral-Code konnte nicht gespeichert werden."));
+            return;
+          }
+        }
 
         if (workspaceError) {
           setError(language === "en"
@@ -631,6 +649,14 @@ export default function RegisterPage({ searchParams }: RegisterPageProps) {
               </label>
 
               </div>
+
+              <label className={styles.field}>
+                <span>{language === "en" ? "Referral code (optional)" : "Referral-Code (optional)"}</span>
+                <div className={styles.inputWrap}>
+                  <span aria-hidden="true">%</span>
+                  <input type="text" name="referralCode" defaultValue={referralCodeFromUrl} placeholder={language === "en" ? "e.g. FM-ABC123" : "z. B. FM-ABC123"} autoComplete="off" />
+                </div>
+              </label>
 
               <label className={styles.field}>
                 <span>{copy.message}</span>

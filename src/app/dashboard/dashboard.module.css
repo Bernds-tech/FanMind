@@ -2267,3 +2267,46 @@
   color: #93c5fd;
   font-weight: 900;
 }
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.actionCard {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid rgba(103, 232, 249, 0.16);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.actionCard span {
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.actionCard strong {
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.actionCard p {
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .actionGrid {
+    grid-template-columns: 1fr;
+  }
+}
