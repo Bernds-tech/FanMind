@@ -62,6 +62,7 @@ Wichtige Felder laut aktuellem Code:
 - `billing_next_retry_at`
 - `billing_grace_until`
 - `billing_admin_note`
+- `test_access_flags` (JSONB, serverseitige Flags für interne Testzugänge; Default `{}`)
 - `billing_updated_at`
 - `billing_updated_by_user_id`
 - `stripe_customer_id`
@@ -457,7 +458,7 @@ RLS-/Security-Erwartung:
 
 - Normale User dürfen Billing-Felder nicht beliebig ändern.
 - Admin-Änderungen nur über admin-only Routen.
-- Kostenfreie interne Testzugänge nutzen eine admin-only Markierung auf `workspaces` (`billing_status = demo_free`, `billing_manual_override = true`, `billing_admin_note` enthält „Interner Testzugang“) und werden in der Admin-Nutzerliste sichtbar getrennt.
+- Kostenfreie interne Testzugänge nutzen eine admin-only Markierung auf `workspaces` (`billing_status = demo_free`, `billing_manual_override = true`, `billing_admin_note` enthält „Interner Testzugang“) und serverseitige `test_access_flags` (`admin`, `demo`, `internal`, `test`, `billing_disabled`, `mail_confirmed`, `no_expiry`, `ai_maintenance`). Normale Kunden behalten den Default `{}` und werden davon nicht beeinflusst.
 - Stripe-Webhooks müssen Signatur prüfen.
 - Stripe-IDs nicht unnötig im Client anzeigen.
 
