@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { updateAdminBillingWorkspace } from "@/lib/adminBilling";
+import { redirectAdminHtml } from "@/lib/adminRedirects";
 
 const PAYMENT_SOURCES = ["bank_transfer", "stripe_confirmed", "cash_or_other", "credit_note", "correction"] as const;
 
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/b
   const values: Record<string, unknown> = { billing_status: "active", billing_last_payment_at: paidAt, billing_retry_count: 0, billing_next_retry_at: null, billing_grace_until: null, billing_admin_note: noteParts.join(" · ") };
   if (liftPaymentSuspension) Object.assign(values, { billing_suspended_at: null, billing_suspended_reason: null });
   const result = await updateAdminBillingWorkspace(workspaceId, admin, values);
-  if (request.headers.get("accept")?.includes("text/html")) return NextResponse.redirect(new URL(`/admin/billing/workspaces/${workspaceId}`, request.url), { status: 303 });
+  const htmlRedirect = redirectAdminHtml(request, `/admin/billing/workspaces/${workspaceId}`);
+  if (htmlRedirect) return htmlRedirect;
   return NextResponse.json(result.ok ? { ok: true } : { error: result.error }, { status: result.status });
 }
