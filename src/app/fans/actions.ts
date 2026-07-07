@@ -295,7 +295,9 @@ export async function analyzeFan(
 
   const lowDataHint =
     sourceMessages.length < 3
-      ? "Es liegen nur wenige Nachrichten vor; der Report ist deshalb ein kurzer, vorsichtiger Zwischenstand."
+      ? locale === "en"
+        ? "Not enough saved messages yet for a complete analysis. Use the message history or manual messages to improve the analysis."
+        : "Noch zu wenig gespeicherte Nachrichten für eine vollständige Analyse. Nutze den Nachrichtenverlauf oder manuelle Nachrichten, um die Analyse zu verbessern."
       : "";
   const fallback = {
     kurzprofil:
@@ -321,7 +323,12 @@ export async function analyzeFan(
   let report = fallback;
   const model = getFanMindAiModel();
   const apiKey = process.env.OPENAI_API_KEY;
-  const aiInputPayload = { language: locale, contact: contactContext, memories, messages: sourceMessages };
+  const aiInputPayload = {
+    language: locale,
+    contact: contactContext,
+    memories,
+    messages: sourceMessages,
+  };
   const aiInputChars = JSON.stringify(aiInputPayload).length;
   let userMessage = lowDataHint;
 
@@ -366,7 +373,19 @@ export async function analyzeFan(
         .map((c) => c.text)
         .find(Boolean);
     if (!response.ok) {
-      await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: text?.length ?? 0, status: "error", errorCode: String(response.status), latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
+      await recordAiUsageEvent({
+        workspaceId: workspace.id,
+        userId: user.id,
+        contactId,
+        feature: "fan_analysis",
+        model,
+        inputChars: aiInputChars,
+        outputChars: text?.length ?? 0,
+        status: "error",
+        errorCode: String(response.status),
+        latencyMs: Date.now() - latencyStartedAt,
+        sourceRoute: "src/app/fans/actions.ts#analyzeFan",
+      });
       return {
         ok: false,
         message:
@@ -375,7 +394,19 @@ export async function analyzeFan(
       };
     }
     if (!text) {
-      await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: 0, status: "error", errorCode: "missing_output", latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
+      await recordAiUsageEvent({
+        workspaceId: workspace.id,
+        userId: user.id,
+        contactId,
+        feature: "fan_analysis",
+        model,
+        inputChars: aiInputChars,
+        outputChars: 0,
+        status: "error",
+        errorCode: "missing_output",
+        latencyMs: Date.now() - latencyStartedAt,
+        sourceRoute: "src/app/fans/actions.ts#analyzeFan",
+      });
       return {
         ok: false,
         message:
@@ -385,17 +416,43 @@ export async function analyzeFan(
     try {
       report = { ...fallback, ...JSON.parse(text) };
     } catch {
-      await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: text.length, status: "error", errorCode: "invalid_json", latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
+      await recordAiUsageEvent({
+        workspaceId: workspace.id,
+        userId: user.id,
+        contactId,
+        feature: "fan_analysis",
+        model,
+        inputChars: aiInputChars,
+        outputChars: text.length,
+        status: "error",
+        errorCode: "invalid_json",
+        latencyMs: Date.now() - latencyStartedAt,
+        sourceRoute: "src/app/fans/actions.ts#analyzeFan",
+      });
       return {
         ok: false,
         message:
           "OpenAI hat keinen gültigen JSON-Report zurückgegeben. Bitte erneut versuchen.",
       };
     }
-    await recordAiUsageEvent({ workspaceId: workspace.id, userId: user.id, contactId, feature: "fan_analysis", model, inputChars: aiInputChars, outputChars: text.length, status: "ok", latencyMs: Date.now() - latencyStartedAt, sourceRoute: "src/app/fans/actions.ts#analyzeFan" });
+    await recordAiUsageEvent({
+      workspaceId: workspace.id,
+      userId: user.id,
+      contactId,
+      feature: "fan_analysis",
+      model,
+      inputChars: aiInputChars,
+      outputChars: text.length,
+      status: "ok",
+      latencyMs: Date.now() - latencyStartedAt,
+      sourceRoute: "src/app/fans/actions.ts#analyzeFan",
+    });
     userMessage = "Fan-Analyse-Report wurde gespeichert und aktualisiert.";
   } else {
-    userMessage = `${lowDataHint} FanMind hat einen einfachen Kurzreport gespeichert.`;
+    userMessage =
+      locale === "en"
+        ? `${lowDataHint} FanMind saved a simple low-data interim report.`
+        : `${lowDataHint} FanMind hat einen einfachen Kurzreport gespeichert.`;
   }
 
   const result = await upsertFanAnalysisReport({

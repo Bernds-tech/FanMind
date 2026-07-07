@@ -29,6 +29,7 @@ type Props = {
   report: FanAnalysisReportRow | null;
   reportError?: string;
   hasNewMessages: boolean;
+  storedMessageCount: number;
   locale: FanMindLanguage;
 };
 
@@ -47,6 +48,7 @@ export function FanContextPanel({
   report,
   reportError,
   hasNewMessages,
+  storedMessageCount,
   locale,
 }: Props) {
   const [activeTab, setActiveTab] = useState<ContextTab>(() =>
@@ -130,6 +132,7 @@ export function FanContextPanel({
                 loadError={reportError ?? memoriesError}
                 locale={locale}
                 hasNewMessages={hasNewMessages}
+                storedMessageCount={storedMessageCount}
               />
             </div>
           ) : null}
