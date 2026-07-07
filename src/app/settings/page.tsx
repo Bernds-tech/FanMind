@@ -13,6 +13,7 @@ import {
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { getWorkspaceReferralSummary, type WorkspaceReferralSummary } from "@/lib/referrals";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 
@@ -22,6 +23,7 @@ type SettingsWorkspaceProps = {
   contactCount: number;
   openFollowupCount: number;
   showAdminArea: boolean;
+  referralSummary: WorkspaceReferralSummary | null;
 };
 
 async function logout() {
@@ -48,6 +50,7 @@ function SettingsWorkspace({
   contactCount,
   openFollowupCount,
   showAdminArea,
+  referralSummary,
 }: SettingsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("settings", "de", 0, showAdminArea);
@@ -75,6 +78,48 @@ function SettingsWorkspace({
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
     >
+
+
+      <section
+        className={dashboardStyles.moduleCard}
+        id="referral-growth-window"
+        aria-labelledby="referral-growth-window-title"
+      >
+        <div className={dashboardStyles.moduleHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Referral Growth Window</p>
+            <h2 id="referral-growth-window-title">Dein Referral-Link &amp; Status</h2>
+          </div>
+          <span>{referralSummary?.state?.status ?? "Vorbereitet"}</span>
+        </div>
+        <p className={dashboardStyles.moduleText}>
+          Teile deinen persönlichen Link mit passenden FanMind-Interessenten. Nach Registrierung, Zahlungs-/Aktivitätsprüfung und Admin-Freigabe zählt jeder aktive geworbene Workspace mit 5 % auf laufende FanMind-Kosten, maximal 20 aktive Referrals. Es gibt keine Auszahlung und keine zweite Ebene.
+        </p>
+        {referralSummary?.error ? <p className={dashboardStyles.error}>{referralSummary.error}</p> : null}
+        <div className={dashboardStyles.actionGrid}>
+          <div className={dashboardStyles.actionCard}>
+            <span>Referral-Code</span>
+            <strong>{referralSummary?.member?.referral_code ?? "Noch nicht verfügbar"}</strong>
+            <p>Status: {referralSummary?.member?.status ?? "wird vorbereitet"}</p>
+          </div>
+          <div className={dashboardStyles.actionCard}>
+            <span>Persönlicher Link</span>
+            <strong>{referralSummary?.referralUrl ?? "Migration/Service Role prüfen"}</strong>
+            <p>Der Link füllt den Referral-Code bei der Registrierung vor.</p>
+          </div>
+          <div className={dashboardStyles.actionCard}>
+            <span>Aktive Referrals</span>
+            <strong>{referralSummary?.activeReferralCount ?? 0} / 20</strong>
+            <p>Rabattstatus: {referralSummary?.discountPercent ?? 0} % vorbereitet, nicht automatisch verrechnet.</p>
+          </div>
+          <div className={dashboardStyles.actionCard}>
+            <span>Growth-Window-Cap</span>
+            <strong>{referralSummary?.state?.active_paid_workspace_count ?? 0} / {referralSummary?.state?.active_paid_workspace_cap ?? 2000}</strong>
+            <p>Neue rabattwirksame Referrals nur solange das Window offen bzw. ausdrücklich wieder geöffnet ist.</p>
+          </div>
+        </div>
+      </section>
+
       <section
         className={dashboardStyles.moduleCard}
         id="workspace-settings"
@@ -127,6 +172,9 @@ export default async function SettingsPage() {
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
+  const referralSummary = workspace
+    ? await getWorkspaceReferralSummary(workspace.id, data.user.id)
+    : null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -140,6 +188,7 @@ export default async function SettingsPage() {
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
           showAdminArea={isPlatformAdminEmail(data.user.email)}
+          referralSummary={referralSummary}
         />
       ) : (
         <section

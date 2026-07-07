@@ -526,3 +526,8 @@ RLS/Scope:
 - Normale Nutzer dürfen Referral-Ökonomie, fremde Codes und Rabatt-Snapshots nicht sehen oder verändern.
 - Signup-/Checkout-Attribution, Nutzerdashboard, automatische Snapshot-Erzeugung und Billing-Verrechnung sind separate Schritte.
 - AGB/Zahlungsbedingungen, Missbrauchsschutz und steuerliche Prüfung müssen vor öffentlicher Aktivierung ergänzt werden.
+
+
+### Phase 2 Ergänzungen (20260707120000)
+
+Die Migration `20260707120000_referral_growth_window_phase_2.sql` ergänzt eindeutige Workspace-/Referred-Workspace-Indizes für Referral-Mitglieder und Attributionen sowie Update-Trigger/Kommentare. Die App nutzt serverseitige Service-Role-Zugriffe, um berechtigten Workspaces den eigenen Referral-Code/Link anzuzeigen und Signup-Attributionen zu speichern. Normale Nutzer erhalten weiterhin keinen Zugriff auf fremde Referral-Ökonomie; Rabattwerte sind vorbereitete Statuswerte und werden nicht automatisch mit Billing verrechnet.

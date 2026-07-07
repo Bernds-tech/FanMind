@@ -159,7 +159,7 @@ Keine alten Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/
 
 Geplant ist ein begrenztes Empfehlungsprogramm, das bis zum globalen 2.000er-Ziel läuft:
 
-- persönlicher Referral-Link / Referral-Code;
+- persönlicher Referral-Link / Referral-Code in der geschützten Nutzeransicht;
 - Teilnahme möglich, solange FanMind unter `2.000` aktiven zahlenden Kunden/Workspaces liegt;
 - je aktivem geworbenen zahlenden Kunden/Workspace `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten;
 - maximal 20 aktive geworbene Kunden/Workspaces zählen pro Referrer;
@@ -167,7 +167,7 @@ Geplant ist ein begrenztes Empfehlungsprogramm, das bis zum globalen 2.000er-Zie
 - kündigt ein geworbener Kunde oder wird inaktiv, fällt dessen `5 %` wieder weg;
 - nach Schließung des Growth Windows kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden;
 - keine Barauszahlung, kein negativer Rechnungsbetrag;
-- admin-only Grundlage: Datenmodell, RLS und Adminübersicht für Programmstatus, Referrals, aktive Referrals, Rabattberechnung und Overrides.
+- Phase-2-Grundlage: Signup-Code-Erfassung, Workspace-Attribution, Nutzerstatus sowie Adminprüfung/-korrektur; keine automatische Billing-Verrechnung.
 - vor öffentlicher Aktivierung sind Signup-/Checkout-Attribution, Rabatt-Snapshots, Billing-Verrechnung, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung separat umzusetzen bzw. zu prüfen.
 
 Details: `docs/REFERRAL_PROGRAM.md`.
