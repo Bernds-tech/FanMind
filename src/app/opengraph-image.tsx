@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { FanMindAppIconMark } from "@/lib/fanmindAppIcon";
 import { fanMindDescription, fanMindOgAlt } from "./brandMetadata";
 
 export const alt = fanMindOgAlt;
@@ -53,18 +54,14 @@ export default function OpenGraphImage() {
                 width: "88px",
                 height: "88px",
                 borderRadius: "28px",
-                background: "linear-gradient(135deg, #56dec7, #8b5cf6)",
+                overflow: "hidden",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#06111f",
-                fontSize: "34px",
-                fontWeight: 900,
-                letterSpacing: "-3px",
                 boxShadow: "0 24px 60px rgba(0,0,0,0.26)",
               }}
             >
-              FM
+              <FanMindAppIconMark size={88} />
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: "54px", fontWeight: 900, letterSpacing: "-2.5px" }}>FanMind</div>
