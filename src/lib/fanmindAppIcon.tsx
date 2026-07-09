@@ -1,9 +1,9 @@
 export const fanMindAppIconBrand = {
   background:
-    "radial-gradient(circle at 30% 18%, rgba(103, 232, 249, 0.34) 0, rgba(103, 232, 249, 0) 34%), linear-gradient(135deg, #06111f 0%, #10224b 43%, #4c1d95 72%, #7c3aed 100%)",
-  border: "rgba(103, 232, 249, 0.62)",
+    "radial-gradient(circle at 30% 18%, rgba(103, 232, 249, 0.16) 0, rgba(103, 232, 249, 0) 34%), linear-gradient(135deg, #02040a 0%, #050816 45%, #0b1024 100%)",
+  border: "rgba(103, 232, 249, 0.5)",
   innerBorder: "rgba(255, 255, 255, 0.1)",
-  glow: "rgba(56, 189, 248, 0.5)",
+  glow: "rgba(56, 189, 248, 0.28)",
   shadow: "rgba(0, 0, 0, 0.34)",
   fan: "#f8fdff",
   mind: "#67e8f9",
@@ -52,7 +52,7 @@ export function FanMindAppIconMark({ size }: FanMindAppIconMarkProps) {
             width: `${Math.round(size * 0.78)}px`,
             height: `${Math.round(size * 0.78)}px`,
             borderRadius: "999px",
-            background: "rgba(124, 58, 237, 0.42)",
+            background: "rgba(8, 47, 73, 0.22)",
             filter: `blur(${Math.max(6, Math.round(size * 0.08))}px)`,
           }}
         />
@@ -64,7 +64,7 @@ export function FanMindAppIconMark({ size }: FanMindAppIconMarkProps) {
             width: `${Math.round(size * 0.66)}px`,
             height: `${Math.round(size * 0.66)}px`,
             borderRadius: "999px",
-            background: "rgba(14, 165, 233, 0.3)",
+            background: "rgba(14, 165, 233, 0.16)",
             filter: `blur(${Math.max(5, Math.round(size * 0.07))}px)`,
           }}
         />
