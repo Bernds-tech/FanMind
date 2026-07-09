@@ -62,7 +62,7 @@ export async function getAdminBillingWorkspace(workspaceId: string): Promise<{ w
   } catch (error) { return { workspace: null, error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
 }
 
-export type StripeInvoiceSummary = { id: string; status?: string | null; created?: string | null; amount_due?: number | null; hosted_invoice_url?: string | null; invoice_pdf?: string | null };
+export type StripeInvoiceSummary = { id: string; status?: string | null; created?: string | null; subtotal?: number | null; total_tax_amounts?: number | null; total?: number | null; amount_due?: number | null; hosted_invoice_url?: string | null; invoice_pdf?: string | null };
 
 export async function listStripeInvoicesForWorkspace(workspace: Pick<AdminBillingWorkspace, "stripe_customer_id">): Promise<{ invoices: StripeInvoiceSummary[]; error: string | null }> {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -71,7 +71,7 @@ export async function listStripeInvoicesForWorkspace(workspace: Pick<AdminBillin
   const response = await fetch(`https://api.stripe.com/v1/invoices?${params.toString()}`, { headers: { Authorization: `Bearer ${secretKey}` }, cache: "no-store" });
   const json = await response.json().catch(() => ({})) as { data?: Array<Record<string, unknown>>; error?: { message?: string } };
   if (!response.ok) return { invoices: [], error: json.error?.message ?? "Stripe-Rechnungen konnten nicht geladen werden." };
-  return { invoices: (json.data ?? []).map((invoice) => ({ id: String(invoice.id), status: typeof invoice.status === "string" ? invoice.status : null, created: typeof invoice.created === "number" ? new Date(invoice.created * 1000).toISOString() : null, amount_due: typeof invoice.amount_due === "number" ? invoice.amount_due : null, hosted_invoice_url: typeof invoice.hosted_invoice_url === "string" ? invoice.hosted_invoice_url : null, invoice_pdf: typeof invoice.invoice_pdf === "string" ? invoice.invoice_pdf : null })), error: null };
+  return { invoices: (json.data ?? []).map((invoice) => ({ id: String(invoice.id), status: typeof invoice.status === "string" ? invoice.status : null, created: typeof invoice.created === "number" ? new Date(invoice.created * 1000).toISOString() : null, subtotal: typeof invoice.subtotal === "number" ? invoice.subtotal : null, total_tax_amounts: Array.isArray(invoice.total_tax_amounts) ? invoice.total_tax_amounts.reduce((sum, tax) => sum + (typeof (tax as { amount?: unknown }).amount === "number" ? (tax as { amount: number }).amount : 0), 0) : null, total: typeof invoice.total === "number" ? invoice.total : null, amount_due: typeof invoice.amount_due === "number" ? invoice.amount_due : null, hosted_invoice_url: typeof invoice.hosted_invoice_url === "string" ? invoice.hosted_invoice_url : null, invoice_pdf: typeof invoice.invoice_pdf === "string" ? invoice.invoice_pdf : null })), error: null };
 }
 
 export async function startInternalDailyTestCheckout(workspaceId: string, admin: SupabaseServerUser): Promise<{ ok: boolean; status: number; error: string | null; url?: string; sessionId?: string }> {
