@@ -47,6 +47,7 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - Kopieren von Antwortvorschlägen
 - Admin-/Billing-Grundlagen
 - Admin-only Freischaltung kostenfreier interner Testzugänge ohne Änderung der normalen Kundenlogik, inklusive serverseitig vorbereiteter Test-Flags für AI Maintenance
+- Admin-only Asset-Upload in den Supabase Storage Bucket `fanmind-assets` für Logo, Icon, OpenGraph, Screenshot, Sales und Sonstiges
 - Stripe-Test-/Setup-Checkout für Pilot/Starter, wenn ENV vollständig gesetzt ist
 - konfigurierbarer Billing-Steuermodus: Default `FANMIND_TAX_MODE=small_business` ohne Stripe Automatic Tax und mit Kleinunternehmer-Rechnungshinweis; optional `FANMIND_TAX_MODE=stripe_tax` nur nach ausdrücklicher steuerlicher/technischer Freigabe
 - Internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag für klar markierte Test-Workspaces; öffentlich im Registrierungsflow nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`, sonst admin-only, und ohne Referral-/Rabatt-Automation
