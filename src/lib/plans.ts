@@ -11,7 +11,7 @@ import {
 } from "@/config/plans";
 
 
-export type ProductiveCommercialOption = "pilot_only" | "starter_paid_setup" | "starter_no_setup_commitment";
+export type ProductiveCommercialOption = "pilot_only" | "starter_paid_setup" | "starter_no_setup_commitment" | "internal_daily_test";
 
 export type CommercialOption =
   | ProductiveCommercialOption
@@ -50,14 +50,21 @@ export function getCommercialTerms(commercialOption: ProductiveCommercialOption)
         monthlyFeeCents: 31200,
         commitmentMonths: 12,
       };
+    case "internal_daily_test":
+      return {
+        commercialOption,
+        setupFeeCents: 0,
+        monthlyFeeCents: 0,
+        commitmentMonths: 0,
+      };
   }
 }
 
 export function getRegistrationCommercialTerms(
   planId: PlanId,
-  starterOption: Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_no_setup_commitment"> = "starter_paid_setup",
+  starterOption: Extract<ProductiveCommercialOption, "starter_paid_setup" | "starter_no_setup_commitment" | "internal_daily_test"> = "starter_paid_setup",
 ): CommercialTerms | null {
-  if (planId === "pilot") return getCommercialTerms("pilot_only");
+  if (planId === "pilot") return getCommercialTerms(starterOption === "internal_daily_test" ? "internal_daily_test" : "pilot_only");
   if (planId === "starter") return getCommercialTerms(starterOption);
 
   return null;

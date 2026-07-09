@@ -21,6 +21,15 @@ type BillingPlanSummary = {
 };
 
 function getBillingPlanSummary(planId?: string | null, commercialOption?: string | null): BillingPlanSummary {
+  if (planId === "pilot" && commercialOption === "internal_daily_test") {
+    return {
+      name: "Beta-Test · 1 €/Tag",
+      dueToday: "1 €/Tag",
+      term: "Interner/Beta-Testplan · täglich kündbar",
+      status: "Zahlung offen",
+    };
+  }
+
   if (planId === "pilot") {
     return {
       name: "Pilot / Setup",
@@ -83,7 +92,10 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
   const resolvedCheckoutPlan = workspace ? resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option) : null;
 
   const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
-  const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && stripe.readyForCheckout && !isDemo && resolvedCheckoutPlan);
+  const checkoutReady = workspace?.commercial_option === "internal_daily_test"
+    ? stripe.hasSecretKey && stripe.hasAppUrl && stripe.hasInternalDailyTestPrice
+    : stripe.readyForCheckout;
+  const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && checkoutReady && !isDemo && resolvedCheckoutPlan);
   let checkoutUrl: string | undefined;
   let checkoutPreparationFailed = false;
 
@@ -148,7 +160,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
               <dl className={styles.facts}>
                 <div><dt>Workspace</dt><dd>{workspace.name}</dd></div>
                 <div><dt>Zahlungsabwicklung</dt><dd>Sichere Zahlung</dd></div>
-                <div><dt>Zahlart</dt><dd>SEPA-Lastschrift im nächsten Schritt</dd></div>
+                <div><dt>Zahlart</dt><dd>{workspace.commercial_option === "internal_daily_test" ? "Kartenzahlung im nächsten Schritt" : "SEPA-Lastschrift im nächsten Schritt"}</dd></div>
                 <div><dt>Datenerfassung</dt><dd>Stripe kümmert sich um die Abbuchungen.</dd></div>
               </dl>
             </section>
@@ -160,12 +172,12 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
         <div className={styles.checkoutFooter}>
           <ul className={styles.trustList} aria-label="Sicherheit und Vertrauen">
             <li>Sichere Zahlung</li>
-            <li>SEPA-Lastschrift im nächsten Schritt</li>
+            <li>{workspace?.commercial_option === "internal_daily_test" ? "Kartenzahlung im nächsten Schritt" : "SEPA-Lastschrift im nächsten Schritt"}</li>
             <li>Keine Bankdaten in FanMind</li>
             <li>Rechnungs- und Zahlungsdaten werden von FanMind nicht gespeichert</li>
           </ul>
           <div className={styles.actions}>
-            {!stripe.readyForCheckout && !isDemo ? (
+            {!checkoutReady && !isDemo ? (
               <div className={styles.infoBox}>Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind.</div>
             ) : hasUnclearPaymentOption || params?.error === "payment-option" ? (
               <div className={styles.infoBox}>Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind.</div>
