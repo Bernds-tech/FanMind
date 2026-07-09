@@ -7,7 +7,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
-- Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag nur für Admin/interne Test-Workspaces; es erscheint nicht auf Landingpage, Pricing oder im normalen Registrierungsflow.
+- Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag. Im normalen Registrierungsflow erscheint es nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`; Default ist `false`, damit der Flow unverändert bleibt. Referral-/Rabatt-Automation bleibt deaktiviert.
 - Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Admins Netto/Steuer/Brutto, wenn Stripe diese Daten liefert.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
@@ -150,7 +150,7 @@ Provider-Preise dürfen nicht hart in UI-Texten stehen. Sie sollen serverseitig 
 | Pilot / Setup | aktiv | 990 € einmalig, 1 Testmonat, keine automatische Verlängerung |
 | Starter Flex | aktiv | 990 € Setup + 312 €/Monat, monatlich kündbar |
 | Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat, 12 Monate Laufzeit |
-| Internes Live-Testabo | admin-only / intern | 1 € pro Tag via Stripe Live (`internal_daily_test`), nur für interne Test-Workspaces, nicht öffentlich buchbar |
+| Internes/Beta Live-Testabo | optional öffentlich / intern | 1 € pro Tag via Stripe Live (`internal_daily_test`), öffentlich nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`, sonst admin-only; keine Referral-/Rabatt-Automation |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht produktiv als Vollversion freigeschaltet |
 | Enterprise / Custom | später | individuelle Prüfung |

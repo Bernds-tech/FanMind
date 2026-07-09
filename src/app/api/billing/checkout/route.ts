@@ -11,12 +11,17 @@ export async function POST(request: NextRequest) {
   const payload = await request.json().catch(() => ({})) as { planId?: string; commercialOption?: string };
   if (!payload.planId || !payload.commercialOption) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
 
-  if (payload.commercialOption === "internal_daily_test") return NextResponse.json({ error: "Das interne Live-Testabo kann nur im Adminbereich gestartet werden." }, { status: 403 });
+  if (payload.commercialOption === "internal_daily_test" && process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN !== "true") {
+    return NextResponse.json({ error: "Das interne Live-Testabo kann nur im Adminbereich gestartet werden." }, { status: 403 });
+  }
 
   const config = getStripeConfigStatus();
-  if (!config.readyForCheckout) return NextResponse.json({ error: "Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind." }, { status: 503 });
-
   const plan = resolveCheckoutPlan(payload.planId, payload.commercialOption);
+  const checkoutReady = payload.commercialOption === "internal_daily_test"
+    ? config.hasSecretKey && config.hasAppUrl && config.hasInternalDailyTestPrice
+    : config.readyForCheckout;
+  if (!checkoutReady) return NextResponse.json({ error: "Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind." }, { status: 503 });
+
   if (!plan) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
