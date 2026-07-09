@@ -1,7 +1,10 @@
+import { createStripeCheckoutSession, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import { getSupabaseAuthUrl, getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 import type { SupabaseServerUser } from "@/lib/supabase/server";
 
 export const INTERNAL_TEST_ACCESS_NOTE = "Interner Testzugang";
+export const INTERNAL_DAILY_TEST_OPTION = "internal_daily_test";
+export const INTERNAL_DAILY_TEST_NOTE = "Internes Live-Testabo · 1 €/Tag";
 
 export type AdminBillingWorkspace = {
   id: string; name: string; created_at: string | null; owner_user_id: string | null; plan_id: string | null; commercial_option: string | null;
@@ -71,6 +74,50 @@ export async function listStripeInvoicesForWorkspace(workspace: Pick<AdminBillin
   return { invoices: (json.data ?? []).map((invoice) => ({ id: String(invoice.id), status: typeof invoice.status === "string" ? invoice.status : null, created: typeof invoice.created === "number" ? new Date(invoice.created * 1000).toISOString() : null, amount_due: typeof invoice.amount_due === "number" ? invoice.amount_due : null, hosted_invoice_url: typeof invoice.hosted_invoice_url === "string" ? invoice.hosted_invoice_url : null, invoice_pdf: typeof invoice.invoice_pdf === "string" ? invoice.invoice_pdf : null })), error: null };
 }
 
+export async function startInternalDailyTestCheckout(workspaceId: string, admin: SupabaseServerUser): Promise<{ ok: boolean; status: number; error: string | null; url?: string; sessionId?: string }> {
+  const key = serviceKey();
+  if (!key) return { ok: false, status: 503, error: "Supabase Service Role ist nicht konfiguriert." };
+  const { workspace, error } = await getAdminBillingWorkspace(workspaceId);
+  if (!workspace) return { ok: false, status: 404, error: error ?? "Workspace wurde nicht gefunden." };
+  if (!isInternalTestWorkspace(workspace)) return { ok: false, status: 403, error: "Das 1-€-Live-Testabo ist nur für klar markierte interne Test-Workspaces erlaubt." };
+  const plan = resolveCheckoutPlan("pilot", INTERNAL_DAILY_TEST_OPTION);
+  if (!plan) return { ok: false, status: 503, error: "STRIPE_PRICE_INTERNAL_DAILY_TEST ist nicht konfiguriert." };
+  const session = await createStripeCheckoutSession({ plan, userId: admin.id, workspaceId, userEmail: admin.email ?? undefined });
+  if (!session.url) return { ok: false, status: 502, error: session.error ?? "Stripe Checkout konnte nicht gestartet werden." };
+  await updateAdminBillingWorkspace(workspaceId, admin, {
+    plan_id: "pilot",
+    commercial_option: INTERNAL_DAILY_TEST_OPTION,
+    setup_fee_cents: 0,
+    monthly_fee_cents: 0,
+    commitment_months: 0,
+    billing_status: "pending_payment_setup",
+    billing_manual_override: false,
+    billing_admin_note: `${INTERNAL_TEST_ACCESS_NOTE} · ${INTERNAL_DAILY_TEST_NOTE} · Checkout gestartet · ${new Date().toISOString()}`,
+    stripe_checkout_session_id: session.id ?? null,
+    test_access_flags: { ...normalizeInternalTestAccessFlags(workspace.test_access_flags), internal: true, test: true, billing_disabled: false, stripe_live_daily_test: true },
+  });
+  return { ok: true, status: 200, error: null, url: session.url, sessionId: session.id };
+}
+
+export async function cancelInternalDailyTestSubscription(workspaceId: string, admin: SupabaseServerUser): Promise<{ ok: boolean; status: number; error: string | null }> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const { workspace, error } = await getAdminBillingWorkspace(workspaceId);
+  if (!workspace) return { ok: false, status: 404, error: error ?? "Workspace wurde nicht gefunden." };
+  if (workspace.commercial_option !== INTERNAL_DAILY_TEST_OPTION) return { ok: false, status: 403, error: "Nur interne Live-Testabos können über diese Aktion deaktiviert werden." };
+  if (secretKey && workspace.stripe_subscription_id) {
+    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(workspace.stripe_subscription_id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${secretKey}` }, cache: "no-store" });
+    if (!response.ok) {
+      const json = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      return { ok: false, status: response.status, error: json.error?.message ?? "Stripe-Subscription konnte nicht deaktiviert werden." };
+    }
+  }
+  return updateAdminBillingWorkspace(workspaceId, admin, {
+    billing_status: "cancelled",
+    billing_manual_override: true,
+    billing_admin_note: `${INTERNAL_TEST_ACCESS_NOTE} · ${INTERNAL_DAILY_TEST_NOTE} · deaktiviert/gekündigt · ${new Date().toISOString()}`,
+  });
+}
+
 export type AdminBillingMember = {
   id: string;
   workspace_id: string;
@@ -93,6 +140,7 @@ export type InternalTestAccessFlags = {
   mail_confirmed: boolean;
   no_expiry: boolean;
   ai_maintenance: boolean;
+  stripe_live_daily_test?: boolean;
 };
 
 export const INTERNAL_TEST_ACCESS_FLAGS: InternalTestAccessFlags = {
@@ -116,6 +164,7 @@ export function normalizeInternalTestAccessFlags(flags: Partial<Record<keyof Int
     mail_confirmed: flags?.mail_confirmed === true,
     no_expiry: flags?.no_expiry === true,
     ai_maintenance: flags?.ai_maintenance === true,
+    stripe_live_daily_test: flags?.stripe_live_daily_test === true,
   };
 }
 
@@ -126,9 +175,9 @@ export function isAiMaintenanceInternalTestWorkspace(workspace: Pick<AdminBillin
 export function isInternalTestWorkspace(workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents" | "test_access_flags"> | null | undefined): boolean {
   if (!workspace) return false;
   const flags = normalizeInternalTestAccessFlags(workspace.test_access_flags);
-  const hasInternalFlags = flags.internal && flags.test && flags.billing_disabled;
+  const hasInternalFlags = flags.internal && flags.test && (flags.billing_disabled || flags.stripe_live_daily_test === true);
   const hasLegacyNote = (workspace.billing_admin_note ?? "").includes(INTERNAL_TEST_ACCESS_NOTE);
-  return workspace.billing_status === "demo_free" && (hasInternalFlags || hasLegacyNote);
+  return (workspace.billing_status === "demo_free" || workspace.billing_status === "active" || workspace.billing_status === "pending_payment_setup" || workspace.billing_status === "pending_sepa_mandate" || workspace.billing_status === "past_due" || workspace.billing_status === "payment_failed") && (hasInternalFlags || hasLegacyNote);
 }
 
 export function isInternalTestMember(member: Pick<AdminBillingMember, "email">, workspace: Pick<AdminBillingWorkspace, "billing_status" | "billing_admin_note" | "setup_fee_cents" | "monthly_fee_cents" | "test_access_flags"> | null | undefined): boolean {

@@ -237,6 +237,8 @@ export function getCommercialOptionLabel(commercialOption: CommercialOption | Pr
       return "Growth Vorschau";
     case "agency_preview":
       return "Agency Demo / Erstgespräch";
+    case "internal_daily_test":
+      return "Internes Live-Testabo · 1 € pro Tag · nicht öffentlich";
     default:
       return commercialOption;
   }

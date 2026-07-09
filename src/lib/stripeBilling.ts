@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { getSupabaseRestUrl } from "@/lib/supabase/config";
 import type { PlanId } from "@/config/plans";
 
-export type CheckoutCommercialOption = "pilot_only" | "starter_paid_setup" | "starter_no_setup_commitment";
+export type CheckoutCommercialOption = "pilot_only" | "starter_paid_setup" | "starter_no_setup_commitment" | "internal_daily_test";
 
 export type StripeConfigStatus = {
   hasSecretKey: boolean;
@@ -12,6 +12,7 @@ export type StripeConfigStatus = {
   hasStarterMonthlyPrice: boolean;
   hasGrowthMonthlyPrice: boolean;
   hasAgencyMonthlyPrice: boolean;
+  hasInternalDailyTestPrice: boolean;
   growthAgencyBillingEnabled: boolean;
   hasAppUrl: boolean;
   readyForCheckout: boolean;
@@ -23,6 +24,7 @@ export type CheckoutPlan = {
   commercialOption: CheckoutCommercialOption;
   mode: "payment" | "subscription";
   priceIds: string[];
+  paymentMethodTypes?: string[];
   setupFeeCents: number;
   monthlyFeeCents: number;
   commitmentMonths: 0 | 12;
@@ -42,6 +44,7 @@ export function getStripeConfigStatus(): StripeConfigStatus {
   const hasStarterMonthlyPrice = Boolean(process.env.STRIPE_PRICE_STARTER_MONTHLY);
   const hasGrowthMonthlyPrice = Boolean(process.env.STRIPE_PRICE_GROWTH_MONTHLY);
   const hasAgencyMonthlyPrice = Boolean(process.env.STRIPE_PRICE_AGENCY_MONTHLY);
+  const hasInternalDailyTestPrice = Boolean(process.env.STRIPE_PRICE_INTERNAL_DAILY_TEST);
   const growthAgencyBillingEnabled = process.env.FANMIND_ENABLE_GROWTH_AGENCY_BILLING === "true";
   const hasAppUrl = Boolean(getAppUrl());
 
@@ -53,6 +56,7 @@ export function getStripeConfigStatus(): StripeConfigStatus {
     hasStarterMonthlyPrice,
     hasGrowthMonthlyPrice,
     hasAgencyMonthlyPrice,
+    hasInternalDailyTestPrice,
     growthAgencyBillingEnabled,
     hasAppUrl,
     readyForCheckout: hasSecretKey && hasAppUrl && hasPilotPrice && hasStarterSetupPrice && hasStarterMonthlyPrice,
@@ -81,6 +85,11 @@ export function resolveCheckoutPlan(planId: unknown, commercialOption: unknown):
     return monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [monthlyPrice], setupFeeCents: 0, monthlyFeeCents: 31200, commitmentMonths: 12 } : null;
   }
 
+  if (commercialOption === "internal_daily_test") {
+    const dailyPrice = process.env.STRIPE_PRICE_INTERNAL_DAILY_TEST;
+    return dailyPrice ? { planId: "pilot", commercialOption, mode: "subscription", priceIds: [dailyPrice], paymentMethodTypes: ["card"], setupFeeCents: 0, monthlyFeeCents: 0, commitmentMonths: 0 } : null;
+  }
+
   return null;
 }
 
@@ -93,7 +102,7 @@ export async function createStripeCheckoutSession(input: { plan: CheckoutPlan; u
   params.set("mode", input.plan.mode);
   params.set("success_url", `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`);
   params.set("cancel_url", `${appUrl}/billing/cancel`);
-  params.append("payment_method_types[]", "sepa_debit");
+  (input.plan.paymentMethodTypes ?? ["sepa_debit"]).forEach((type) => params.append("payment_method_types[]", type));
   if (input.workspaceId) params.set("client_reference_id", input.workspaceId);
   if (input.userEmail) params.set("customer_email", input.userEmail);
   params.set("billing_address_collection", "required");
@@ -102,7 +111,7 @@ export async function createStripeCheckoutSession(input: { plan: CheckoutPlan; u
     params.set(`line_items[${index}][price]`, price);
     params.set(`line_items[${index}][quantity]`, "1");
   });
-  const metadata = { user_id: input.userId, workspace_id: input.workspaceId, plan_id: input.plan.planId, commercial_option: input.plan.commercialOption, setup_fee_cents: String(input.plan.setupFeeCents), monthly_fee_cents: String(input.plan.monthlyFeeCents), commitment_months: String(input.plan.commitmentMonths) };
+  const metadata = { user_id: input.userId, workspace_id: input.workspaceId, plan_id: input.plan.planId, commercial_option: input.plan.commercialOption, setup_fee_cents: String(input.plan.setupFeeCents), monthly_fee_cents: String(input.plan.monthlyFeeCents), commitment_months: String(input.plan.commitmentMonths), internal_live_test: input.plan.commercialOption === "internal_daily_test" ? "true" : "false" };
   Object.entries(metadata).forEach(([key, value]) => params.set(`metadata[${key}]`, value));
   if (input.plan.mode === "payment") Object.entries(metadata).forEach(([key, value]) => params.set(`payment_intent_data[metadata][${key}]`, value));
   if (input.plan.mode === "subscription") Object.entries(metadata).forEach(([key, value]) => params.set(`subscription_data[metadata][${key}]`, value));

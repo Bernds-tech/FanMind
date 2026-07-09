@@ -7,7 +7,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
-- Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern.
+- Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag nur für Admin/interne Test-Workspaces; es erscheint nicht auf Landingpage, Pricing oder im normalen Registrierungsflow.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
@@ -149,6 +149,7 @@ Provider-Preise dürfen nicht hart in UI-Texten stehen. Sie sollen serverseitig 
 | Pilot / Setup | aktiv | 990 € einmalig, 1 Testmonat, keine automatische Verlängerung |
 | Starter Flex | aktiv | 990 € Setup + 312 €/Monat, monatlich kündbar |
 | Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat, 12 Monate Laufzeit |
+| Internes Live-Testabo | admin-only / intern | 1 € pro Tag via Stripe Live (`internal_daily_test`), nur für interne Test-Workspaces, nicht öffentlich buchbar |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht produktiv als Vollversion freigeschaltet |
 | Enterprise / Custom | später | individuelle Prüfung |

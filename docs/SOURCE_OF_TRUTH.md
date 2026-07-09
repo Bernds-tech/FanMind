@@ -48,6 +48,7 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - Admin-/Billing-Grundlagen
 - Admin-only Freischaltung kostenfreier interner Testzugänge ohne Änderung der normalen Kundenlogik, inklusive serverseitig vorbereiteter Test-Flags für AI Maintenance
 - Stripe-Test-/Setup-Checkout für Pilot/Starter, wenn ENV vollständig gesetzt ist
+- Admin-only internes Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag für klar markierte interne Test-Workspaces; nicht öffentlich, nicht im Registrierungsflow und ohne Referral-/Rabatt-Automation
 - Legal-Seiten und Zahlungsbedingungen
 
 ## 3. Kommerzielle Wahrheit
@@ -59,6 +60,7 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 | Pilot / Setup | aktiv | 990 € einmalig, 1 Testmonat, keine automatische Verlängerung |
 | Starter Flex | aktiv | 990 € Setup + 312 €/Monat, monatlich kündbar |
 | Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat, 12 Monate Laufzeit |
+| Internes Live-Testabo | admin-only / intern | 1 € pro Tag via Stripe Live (`internal_daily_test`), nur für interne Test-Workspaces, nicht öffentlich buchbar |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht produktiv als Vollversion freigeschaltet |
 | Enterprise / Custom | später | individuelle Prüfung |

@@ -459,6 +459,7 @@ RLS-/Security-Erwartung:
 - Normale User dürfen Billing-Felder nicht beliebig ändern.
 - Admin-Änderungen nur über admin-only Routen.
 - Kostenfreie interne Testzugänge nutzen eine admin-only Markierung auf `workspaces` (`billing_status = demo_free`, `billing_manual_override = true`, `billing_admin_note` enthält „Interner Testzugang“) und serverseitige `test_access_flags` (`admin`, `demo`, `internal`, `test`, `billing_disabled`, `mail_confirmed`, `no_expiry`, `ai_maintenance`). Normale Kunden behalten den Default `{}` und werden davon nicht beeinflusst.
+- Das interne Stripe-Live-Testabo nutzt dieselben Billing-Felder mit `commercial_option = internal_daily_test`, `test_access_flags.stripe_live_daily_test = true`, `STRIPE_PRICE_INTERNAL_DAILY_TEST` und Stripe-Webhook-Updates für Checkout-Session, Subscription, letzte Zahlung und Rechnungsstatus. Es ist admin-only, kostet 1 € pro Tag, ist kündbar/deaktivierbar und löst keine Referral- oder Rabatt-Automation aus.
 - Stripe-Webhooks müssen Signatur prüfen.
 - Stripe-IDs nicht unnötig im Client anzeigen.
 
