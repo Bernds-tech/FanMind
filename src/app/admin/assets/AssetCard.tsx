@@ -9,6 +9,7 @@ export type SystemAsset = {
   type: string;
   url: string;
   description: string;
+  badge?: string;
 };
 
 export function AssetCard({ asset }: { asset: SystemAsset }) {
@@ -31,7 +32,7 @@ export function AssetCard({ asset }: { asset: SystemAsset }) {
             <span className={styles.eyebrow}>{asset.type}</span>
             <h2>{asset.name}</h2>
           </div>
-          <span className={styles.badge}>System</span>
+          <span className={styles.badge}>{asset.badge ?? "System"}</span>
         </div>
         <p className={styles.muted}>{asset.description}</p>
         <dl className={styles.assetMeta}>
