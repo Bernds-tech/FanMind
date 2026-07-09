@@ -9,7 +9,8 @@ export type AdminTabKey =
   | "ai-usage"
   | "referrals"
   | "roadmap"
-  | "inquiries";
+  | "inquiries"
+  | "assets";
 
 export function AdminTabs({ activeTab }: { activeTab: AdminTabKey }) {
   return (
@@ -22,6 +23,7 @@ export function AdminTabs({ activeTab }: { activeTab: AdminTabKey }) {
       <Link className={activeTab === "referrals" ? styles.activeTab : undefined} href="/admin/referrals">Referrals</Link>
       <Link className={activeTab === "roadmap" ? styles.activeTab : undefined} href="/admin/roadmap">Roadmap</Link>
       <Link className={activeTab === "inquiries" ? styles.activeTab : undefined} href="/admin/inquiries">Anfragen</Link>
+      <Link className={activeTab === "assets" ? styles.activeTab : undefined} href="/admin/assets">Assets</Link>
       <span>Abos <small>Später</small></span>
     </nav>
   );
