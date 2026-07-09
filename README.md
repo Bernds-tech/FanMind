@@ -8,7 +8,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
 - Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag. Im normalen Registrierungsflow erscheint es nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`; Default ist `false`, damit der Flow unverändert bleibt. Referral-/Rabatt-Automation bleibt deaktiviert. Admins können unter `/admin/assets` eigene Bilder in den Supabase Storage Bucket `fanmind-assets` hochladen und verwalten.
-- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Admins Netto/Steuer/Brutto, wenn Stripe diese Daten liefert.
+- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Netto/Steuer/Brutto, wenn Stripe diese Daten liefert. Zahlende Nutzer können ihre Stripe-Rechnungen im geschützten Bereich `/billing` öffnen und als PDF herunterladen.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
@@ -74,7 +74,8 @@ npm run lint
 | `/fans/import` | CSV-Import | aktiv |
 | `/fans/[id]` | Kontaktdetail, Timeline, KI, Memory, Follow-ups | aktiv |
 | `/followups` | Follow-up-Übersicht | aktiv, wenn DB-Tabellen vorhanden |
-| `/billing/start` | Zahlungs-/Setup-Start | aktiv als Billing-Grundlage |
+| `/billing` | geschützter Kundenbereich für Stripe-Rechnungen mit Öffnen-/PDF-Links | aktiv für eingeloggte Workspace-Nutzer |
+| `/billing/start` | Zahlungs-/Setup-Start | aktiv als Billing-Grundlage mit Card Checkout; SEPA nur optional per `FANMIND_ENABLE_SEPA_CHECKOUT=true` |
 | `/admin/...` | Admin-/Billing-Grundlagen inklusive Asset-Verwaltung | admin-only |
 | `/api/admin/assets/upload` | serverseitiger Admin-Upload in Supabase Storage Bucket `fanmind-assets` | admin-only |
 | `/api/ai/reply-suggestions` | serverseitiger KI-Endpunkt | aktiv |
@@ -86,7 +87,7 @@ npm run lint
 
 Siehe `.env.example` für Platzhalter. Echte Werte gehören nur in lokale oder Server-ENV-Dateien und niemals ins Repository.
 
-Regel: Alles mit Service Role, Secret, Token, Stripe, OpenAI, Facebook App Secret, Telegram Bot Token oder Admin-E-Mail ist server-only. Keine echten Werte in `.env.example`, Logs, Screenshots, Client-Code oder Dokumentation.
+Regel: Alles mit Service Role, Secret, Token, Stripe, OpenAI, Facebook App Secret, Telegram Bot Token oder Admin-E-Mail ist server-only. Stripe-Rechnungen werden nur serverseitig mit `STRIPE_SECRET_KEY` geladen; Browser-Code erhält nur Anzeige- und Stripe-Hosted/PDF-URLs für den eigenen Workspace. Keine echten Werte in `.env.example`, Logs, Screenshots, Client-Code oder Dokumentation.
 
 ## Datenbank und RLS
 

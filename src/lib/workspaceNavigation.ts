@@ -11,6 +11,7 @@ export type WorkspaceRouteKey =
   | "reach"
   | "onboarding"
   | "settings"
+  | "billing"
   | "top-fans"
   | "reactivation"
   | "followups"
@@ -71,6 +72,11 @@ export function getWorkspaceNavigation(
         label: wt(locale, "Einstellungen"),
         href: "/settings",
         active: activeRoute === "settings",
+      },
+      {
+        label: "Rechnungen",
+        href: "/billing",
+        active: activeRoute === "billing",
       },
       ...(showAdminArea
         ? [
