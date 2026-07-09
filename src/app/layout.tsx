@@ -2,11 +2,48 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { FANMIND_LOCALE_COOKIE, normalizeWorkspaceLocale } from "@/lib/workspaceLocale";
 import { FANMIND_BRIGHTNESS_COOKIE, getThemeClass, normalizeFanMindBrightness } from "@/lib/userPreferences";
+import { fanMindDescription, fanMindOgAlt, fanMindSiteUrl, fanMindTitle } from "./brandMetadata";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FanMind",
-  description: "KI-CRM für Creator, Clubs, Events und Fan-Communities.",
+  metadataBase: new URL(fanMindSiteUrl),
+  title: {
+    default: fanMindTitle,
+    template: "%s | FanMind",
+  },
+  description: fanMindDescription,
+  applicationName: "FanMind",
+  openGraph: {
+    title: fanMindTitle,
+    description: fanMindDescription,
+    url: fanMindSiteUrl,
+    siteName: "FanMind",
+    type: "website",
+    locale: "de_CH",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: fanMindOgAlt,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: fanMindTitle,
+    description: fanMindDescription,
+    images: [
+      {
+        url: "/twitter-image",
+        alt: fanMindOgAlt,
+      },
+    ],
+  },
+  icons: {
+    icon: [{ url: "/icon", type: "image/png", sizes: "64x64" }],
+    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+  },
 };
 
 export default async function RootLayout({
