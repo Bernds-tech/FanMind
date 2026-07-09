@@ -1,9 +1,9 @@
 export const fanMindAppIconBrand = {
   background:
     "radial-gradient(circle at 30% 18%, rgba(103, 232, 249, 0.34) 0, rgba(103, 232, 249, 0) 34%), linear-gradient(135deg, #06111f 0%, #10224b 43%, #4c1d95 72%, #7c3aed 100%)",
-  border: "rgba(103, 232, 249, 0.56)",
-  innerBorder: "rgba(255, 255, 255, 0.08)",
-  glow: "rgba(56, 189, 248, 0.42)",
+  border: "rgba(103, 232, 249, 0.62)",
+  innerBorder: "rgba(255, 255, 255, 0.1)",
+  glow: "rgba(56, 189, 248, 0.5)",
   shadow: "rgba(0, 0, 0, 0.34)",
   fan: "#f8fdff",
   mind: "#67e8f9",
@@ -17,8 +17,6 @@ export function FanMindAppIconMark({ size }: FanMindAppIconMarkProps) {
   const radius = Math.round(size * 0.28);
   const borderWidth = Math.max(1, Math.round(size * 0.025));
   const innerInset = Math.max(2, Math.round(size * 0.07));
-  const fontSize = Math.round(size * 0.41);
-  const letterSpacing = Math.round(size * -0.052);
 
   return (
     <div
@@ -43,13 +41,7 @@ export function FanMindAppIconMark({ size }: FanMindAppIconMarkProps) {
           borderRadius: `${radius}px`,
           border: `${borderWidth}px solid ${fanMindAppIconBrand.border}`,
           background: fanMindAppIconBrand.background,
-          boxShadow: `0 0 ${Math.round(size * 0.22)}px ${fanMindAppIconBrand.glow}, 0 ${Math.round(size * 0.12)}px ${Math.round(size * 0.28)}px ${fanMindAppIconBrand.shadow}, inset 0 0 0 1px ${fanMindAppIconBrand.innerBorder}`,
-          color: fanMindAppIconBrand.fan,
-          fontSize: `${fontSize}px`,
-          fontWeight: 950,
-          letterSpacing: `${letterSpacing}px`,
-          lineHeight: 1,
-          fontFamily: "Arial, Helvetica, sans-serif",
+          boxShadow: `0 0 ${Math.round(size * 0.26)}px ${fanMindAppIconBrand.glow}, 0 ${Math.round(size * 0.12)}px ${Math.round(size * 0.28)}px ${fanMindAppIconBrand.shadow}, inset 0 0 0 1px ${fanMindAppIconBrand.innerBorder}`,
         }}
       >
         <div
@@ -57,10 +49,10 @@ export function FanMindAppIconMark({ size }: FanMindAppIconMarkProps) {
             position: "absolute",
             top: `${Math.round(size * -0.22)}px`,
             right: `${Math.round(size * -0.2)}px`,
-            width: `${Math.round(size * 0.74)}px`,
-            height: `${Math.round(size * 0.74)}px`,
+            width: `${Math.round(size * 0.78)}px`,
+            height: `${Math.round(size * 0.78)}px`,
             borderRadius: "999px",
-            background: "rgba(124, 58, 237, 0.36)",
+            background: "rgba(124, 58, 237, 0.42)",
             filter: `blur(${Math.max(6, Math.round(size * 0.08))}px)`,
           }}
         />
@@ -69,17 +61,42 @@ export function FanMindAppIconMark({ size }: FanMindAppIconMarkProps) {
             position: "absolute",
             left: `${Math.round(size * -0.14)}px`,
             bottom: `${Math.round(size * -0.16)}px`,
-            width: `${Math.round(size * 0.6)}px`,
-            height: `${Math.round(size * 0.6)}px`,
+            width: `${Math.round(size * 0.66)}px`,
+            height: `${Math.round(size * 0.66)}px`,
             borderRadius: "999px",
-            background: "rgba(14, 165, 233, 0.24)",
+            background: "rgba(14, 165, 233, 0.3)",
             filter: `blur(${Math.max(5, Math.round(size * 0.07))}px)`,
           }}
         />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ color: fanMindAppIconBrand.fan }}>F</span>
-          <span style={{ color: fanMindAppIconBrand.mind }}>M</span>
-        </div>
+        <svg
+          aria-hidden="true"
+          width="86%"
+          height="72%"
+          viewBox="0 0 180 118"
+          style={{
+            position: "relative",
+            display: "block",
+            overflow: "visible",
+            filter: `drop-shadow(0 0 ${Math.max(3, Math.round(size * 0.055))}px rgba(103, 232, 249, 0.62))`,
+          }}
+        >
+          <path
+            d="M20 100 V18 H78 M20 57 H69"
+            fill="none"
+            stroke={fanMindAppIconBrand.fan}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="29"
+          />
+          <path
+            d="M88 100 V18 L126 62 L164 18 V100"
+            fill="none"
+            stroke={fanMindAppIconBrand.mind}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="28"
+          />
+        </svg>
       </div>
     </div>
   );
