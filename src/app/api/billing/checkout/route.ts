@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isTemporaryDemoUser } from "@/lib/demoMode";
+import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 
@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (!workspaceResult.workspace) return NextResponse.json({ error: workspaceResult.error?.message ?? "Workspace konnte nicht geladen werden." }, { status: 400 });
+  if (isDemoWorkspace(workspaceResult.workspace)) return NextResponse.json({ error: "Demo-Workspaces können keinen Checkout starten." }, { status: 403 });
   if (workspaceResult.workspace.plan_id !== plan.planId || workspaceResult.workspace.commercial_option !== plan.commercialOption) {
     return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
   }

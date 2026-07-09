@@ -16,7 +16,7 @@ export type BillingStatus =
 
 export type BillingProvider = "manual" | "stripe";
 
-export type PaymentCollectionMethod = "none" | "manual_invoice" | "sepa_direct_debit";
+export type PaymentCollectionMethod = "none" | "manual_invoice" | "sepa_direct_debit" | "card";
 
 export const PAYMENT_TERMS_VERSION = "2026-06-v1";
 
@@ -47,6 +47,10 @@ export function getPaymentCollectionMethod(
   planId: PlanId,
   commercialOption?: CommercialOption | ProductiveCommercialOption | string,
 ): PaymentCollectionMethod {
+  if (commercialOption === "internal_daily_test") {
+    return "card";
+  }
+
   if (planId === "pilot" || planId === "starter" || commercialOption === "pilot_only" || commercialOption === "starter_paid_setup" || commercialOption === "starter_no_setup_commitment") {
     return "sepa_direct_debit";
   }

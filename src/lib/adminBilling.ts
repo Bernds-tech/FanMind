@@ -91,6 +91,7 @@ export async function startInternalDailyTestCheckout(workspaceId: string, admin:
     monthly_fee_cents: 0,
     commitment_months: 0,
     billing_status: "pending_payment_setup",
+    payment_collection_method: plan.paymentCollectionMethod,
     billing_manual_override: false,
     billing_admin_note: `${INTERNAL_TEST_ACCESS_NOTE} · ${INTERNAL_DAILY_TEST_NOTE} · Checkout gestartet · ${new Date().toISOString()}`,
     stripe_checkout_session_id: session.id ?? null,
@@ -114,6 +115,7 @@ export async function cancelInternalDailyTestSubscription(workspaceId: string, a
   return updateAdminBillingWorkspace(workspaceId, admin, {
     billing_status: "cancelled",
     billing_manual_override: true,
+    test_access_flags: { ...normalizeInternalTestAccessFlags(workspace.test_access_flags), billing_disabled: true, stripe_live_daily_test: false },
     billing_admin_note: `${INTERNAL_TEST_ACCESS_NOTE} · ${INTERNAL_DAILY_TEST_NOTE} · deaktiviert/gekündigt · ${new Date().toISOString()}`,
   });
 }
