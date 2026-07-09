@@ -90,21 +90,27 @@ export function getAppUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 }
 
+export function getCheckoutPaymentMethodTypes(): string[] {
+  const types = ["card"];
+  if (process.env.FANMIND_ENABLE_SEPA_CHECKOUT === "true") types.push("sepa_debit");
+  return types;
+}
+
 export function resolveCheckoutPlan(planId: unknown, commercialOption: unknown): CheckoutPlan | null {
   if (planId === "pilot" && commercialOption === "pilot_only") {
     const priceId = process.env.STRIPE_PRICE_PILOT_SETUP;
-    return priceId ? { planId, commercialOption, mode: "payment", priceIds: [priceId], setupFeeCents: 99000, monthlyFeeCents: 0, commitmentMonths: 0, paymentCollectionMethod: "sepa_direct_debit" } : null;
+    return priceId ? { planId, commercialOption, mode: "payment", priceIds: [priceId], setupFeeCents: 99000, monthlyFeeCents: 0, commitmentMonths: 0, paymentCollectionMethod: "card" } : null;
   }
 
   if (planId === "starter" && commercialOption === "starter_paid_setup") {
     const setupPrice = process.env.STRIPE_PRICE_STARTER_SETUP;
     const monthlyPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    return setupPrice && monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [setupPrice, monthlyPrice], setupFeeCents: 99000, monthlyFeeCents: 31200, commitmentMonths: 0, paymentCollectionMethod: "sepa_direct_debit" } : null;
+    return setupPrice && monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [setupPrice, monthlyPrice], setupFeeCents: 99000, monthlyFeeCents: 31200, commitmentMonths: 0, paymentCollectionMethod: "card" } : null;
   }
 
   if (planId === "starter" && commercialOption === "starter_no_setup_commitment") {
     const monthlyPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    return monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [monthlyPrice], setupFeeCents: 0, monthlyFeeCents: 31200, commitmentMonths: 12, paymentCollectionMethod: "sepa_direct_debit" } : null;
+    return monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [monthlyPrice], setupFeeCents: 0, monthlyFeeCents: 31200, commitmentMonths: 12, paymentCollectionMethod: "card" } : null;
   }
 
   if (commercialOption === "internal_daily_test") {
@@ -124,7 +130,7 @@ export async function createStripeCheckoutSession(input: { plan: CheckoutPlan; u
   params.set("mode", input.plan.mode);
   params.set("success_url", `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`);
   params.set("cancel_url", `${appUrl}/billing/cancel`);
-  (input.plan.paymentMethodTypes ?? ["sepa_debit"]).forEach((type) => params.append("payment_method_types[]", type));
+  (input.plan.paymentMethodTypes ?? getCheckoutPaymentMethodTypes()).forEach((type) => params.append("payment_method_types[]", type));
   if (input.workspaceId) params.set("client_reference_id", input.workspaceId);
   if (input.userEmail) params.set("customer_email", input.userEmail);
   params.set("billing_address_collection", "required");

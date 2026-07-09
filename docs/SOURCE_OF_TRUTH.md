@@ -48,10 +48,11 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - Admin-/Billing-Grundlagen
 - Admin-only Freischaltung kostenfreier interner Testzugänge ohne Änderung der normalen Kundenlogik, inklusive serverseitig vorbereiteter Test-Flags für AI Maintenance
 - Admin-only Asset-Upload in den Supabase Storage Bucket `fanmind-assets` für Logo, Icon, OpenGraph, Screenshot, Sales und Sonstiges
-- Stripe-Test-/Setup-Checkout für Pilot/Starter, wenn ENV vollständig gesetzt ist
+- Stripe-Test-/Setup-Checkout für Pilot/Starter, wenn ENV vollständig gesetzt ist; Card Checkout ist Standard für internationale Zahlungen, SEPA ist nur optional per `FANMIND_ENABLE_SEPA_CHECKOUT=true`
 - konfigurierbarer Billing-Steuermodus: Default `FANMIND_TAX_MODE=small_business` ohne Stripe Automatic Tax und mit Kleinunternehmer-Rechnungshinweis; optional `FANMIND_TAX_MODE=stripe_tax` nur nach ausdrücklicher steuerlicher/technischer Freigabe
 - Internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag für klar markierte Test-Workspaces; öffentlich im Registrierungsflow nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`, sonst admin-only, und ohne Referral-/Rabatt-Automation
 - Legal-Seiten und Zahlungsbedingungen
+- geschützter Kundenbereich `/billing`, in dem eingeloggte Workspace-Nutzer eigene Stripe-Rechnungen sehen, öffnen und als PDF herunterladen können
 
 ## 3. Kommerzielle Wahrheit
 
@@ -142,7 +143,7 @@ Vorbereitet / Beta / nicht allgemein live verkaufen:
 - Meta/Facebook/Instagram Webhooks und Social Connections
 - Facebook-Reply-Target-/Messenger-Hilfen
 - Telegram-Webhook-/Bot-Grundlagen
-- Stripe Checkout / SEPA Setup für Pilot/Starter
+- Stripe Checkout für Pilot/Starter; Kartenzahlung ist Standard, SEPA nur optional/zusätzlich und ohne manuelle BIC-Abfrage in FanMind
 
 Roadmap / Coming Soon:
 
