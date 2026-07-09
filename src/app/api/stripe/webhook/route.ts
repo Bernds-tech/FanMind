@@ -10,6 +10,25 @@ function stringField(object: StripeObject | undefined, key: string): string | un
 function numberField(object: StripeObject, key: string): number | undefined { const value = object[key]; return typeof value === "number" ? value : undefined; }
 function stripeTs(value?: number): string | null | undefined { return typeof value === "number" ? new Date(value * 1000).toISOString() : value; }
 function metadataWorkspaceId(object: StripeObject | undefined): string | undefined { return stringField(objectField(object, "metadata"), "workspace_id"); }
+
+function subscriptionStatusFields(object: StripeObject) {
+  const status = stringField(object, "status");
+  const billingStatus = status === "active" || status === "trialing"
+    ? "active"
+    : status === "past_due"
+      ? "past_due"
+      : status === "unpaid"
+        ? "payment_failed"
+        : status === "canceled" || status === "incomplete_expired"
+          ? "cancelled"
+          : undefined;
+  return {
+    billing_status: billingStatus,
+    stripe_customer_id: stringField(object, "customer"),
+    stripe_subscription_id: stringField(object, "id"),
+    billing_note: status ? `Stripe-Subscription-Status: ${status}` : undefined,
+  };
+}
 function invoiceFields(object: StripeObject) { return { last_invoice_id: stringField(object, "id"), last_invoice_status: stringField(object, "status"), last_invoice_amount_due_cents: numberField(object, "amount_due"), last_invoice_amount_paid_cents: numberField(object, "amount_paid"), last_invoice_hosted_url: stringField(object, "hosted_invoice_url"), last_invoice_pdf_url: stringField(object, "invoice_pdf") }; }
 function graceUntil(object: StripeObject): string { const start = numberField(object, "created") ?? Math.floor(Date.now() / 1000); return new Date((start + 10 * 24 * 60 * 60) * 1000).toISOString(); }
 function retryCount(object: StripeObject): number { return Math.max(1, numberField(object, "attempt_count") ?? 1); }
@@ -58,7 +77,7 @@ export async function POST(request: NextRequest) {
   if (event.type === "invoice.paid") await updateOrWarn(event.type, object, { ...invoiceFields(object), billing_status: "active", billing_last_payment_at: now, billing_last_payment_failed_at: null, billing_retry_count: 0, billing_next_retry_at: null, billing_grace_until: null, billing_suspended_at: null, billing_suspended_reason: null, stripe_customer_id: stringField(object, "customer"), stripe_subscription_id: stringField(object, "subscription") });
   if (event.type === "invoice.updated") await updateOrWarn(event.type, object, { ...invoiceFields(object), stripe_customer_id: stringField(object, "customer"), stripe_subscription_id: stringField(object, "subscription") });
   if (event.type === "invoice.payment_failed") { const attempts = retryCount(object); const grace = graceUntil(object); const suspend = attempts >= 3 || Date.now() > Date.parse(grace); await updateOrWarn(event.type, object, { ...invoiceFields(object), billing_status: suspend ? "suspended" : attempts > 1 ? "payment_failed" : "past_due", billing_retry_count: attempts, billing_next_retry_at: stripeTs(numberField(object, "next_payment_attempt")), billing_grace_until: grace, billing_last_payment_failed_at: now, billing_suspended_at: suspend ? now : null, billing_suspended_reason: suspend ? "payment_failed_after_retries" : null, stripe_customer_id: stringField(object, "customer"), stripe_subscription_id: stringField(object, "subscription") }); }
-  if (event.type === "customer.subscription.updated") await updateOrWarn(event.type, object, { stripe_customer_id: stringField(object, "customer"), stripe_subscription_id: stringField(object, "id") });
-  if (event.type === "customer.subscription.deleted") await updateOrWarn(event.type, object, { billing_status: "cancelled", stripe_customer_id: stringField(object, "customer"), stripe_subscription_id: stringField(object, "id") });
+  if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") await updateOrWarn(event.type, object, subscriptionStatusFields(object));
+  if (event.type === "customer.subscription.deleted") await updateOrWarn(event.type, object, { billing_status: "cancelled", stripe_customer_id: stringField(object, "customer"), stripe_subscription_id: stringField(object, "id"), billing_note: "Stripe-Subscription wurde beendet." });
   return NextResponse.json({ received: true });
 }

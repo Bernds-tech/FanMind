@@ -28,6 +28,7 @@ export type CheckoutPlan = {
   setupFeeCents: number;
   monthlyFeeCents: number;
   commitmentMonths: 0 | 12;
+  paymentCollectionMethod: "sepa_direct_debit" | "card";
 };
 
 export type StripeWorkspaceReferences = {
@@ -71,23 +72,23 @@ export function getAppUrl(): string {
 export function resolveCheckoutPlan(planId: unknown, commercialOption: unknown): CheckoutPlan | null {
   if (planId === "pilot" && commercialOption === "pilot_only") {
     const priceId = process.env.STRIPE_PRICE_PILOT_SETUP;
-    return priceId ? { planId, commercialOption, mode: "payment", priceIds: [priceId], setupFeeCents: 99000, monthlyFeeCents: 0, commitmentMonths: 0 } : null;
+    return priceId ? { planId, commercialOption, mode: "payment", priceIds: [priceId], setupFeeCents: 99000, monthlyFeeCents: 0, commitmentMonths: 0, paymentCollectionMethod: "sepa_direct_debit" } : null;
   }
 
   if (planId === "starter" && commercialOption === "starter_paid_setup") {
     const setupPrice = process.env.STRIPE_PRICE_STARTER_SETUP;
     const monthlyPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    return setupPrice && monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [setupPrice, monthlyPrice], setupFeeCents: 99000, monthlyFeeCents: 31200, commitmentMonths: 0 } : null;
+    return setupPrice && monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [setupPrice, monthlyPrice], setupFeeCents: 99000, monthlyFeeCents: 31200, commitmentMonths: 0, paymentCollectionMethod: "sepa_direct_debit" } : null;
   }
 
   if (planId === "starter" && commercialOption === "starter_no_setup_commitment") {
     const monthlyPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    return monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [monthlyPrice], setupFeeCents: 0, monthlyFeeCents: 31200, commitmentMonths: 12 } : null;
+    return monthlyPrice ? { planId, commercialOption, mode: "subscription", priceIds: [monthlyPrice], setupFeeCents: 0, monthlyFeeCents: 31200, commitmentMonths: 12, paymentCollectionMethod: "sepa_direct_debit" } : null;
   }
 
   if (commercialOption === "internal_daily_test") {
     const dailyPrice = process.env.STRIPE_PRICE_INTERNAL_DAILY_TEST;
-    return dailyPrice ? { planId: "pilot", commercialOption, mode: "subscription", priceIds: [dailyPrice], paymentMethodTypes: ["card"], setupFeeCents: 0, monthlyFeeCents: 0, commitmentMonths: 0 } : null;
+    return dailyPrice ? { planId: "pilot", commercialOption, mode: "subscription", priceIds: [dailyPrice], paymentMethodTypes: ["card"], setupFeeCents: 0, monthlyFeeCents: 0, commitmentMonths: 0, paymentCollectionMethod: "card" } : null;
   }
 
   return null;
@@ -161,7 +162,7 @@ export async function findWorkspaceIdByStripeReferences(references: StripeWorksp
 export async function updateWorkspaceBillingDefensively(workspaceId: string | undefined, fields: Record<string, string | number | boolean | null | undefined>): Promise<void> {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!workspaceId || !serviceKey) return;
-  const body = Object.fromEntries(Object.entries({ ...fields, billing_provider: "stripe", payment_collection_method: "sepa_direct_debit", billing_updated_at: new Date().toISOString() }).filter(([, value]) => value !== undefined));
+  const body = Object.fromEntries(Object.entries({ ...fields, billing_provider: "stripe", billing_updated_at: new Date().toISOString() }).filter(([, value]) => value !== undefined));
   try {
     const manualGuard = fields.billing_status && fields.billing_status !== "manual_suspended" ? "&billing_status=not.eq.manual_suspended" : "";
     const response = await fetch(`${getSupabaseRestUrl("workspaces")}?id=eq.${encodeURIComponent(workspaceId)}${manualGuard}`, { method: "PATCH", headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify(body) });
