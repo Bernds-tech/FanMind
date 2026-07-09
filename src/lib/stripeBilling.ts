@@ -4,7 +4,15 @@ import type { PlanId } from "@/config/plans";
 
 export type CheckoutCommercialOption = "pilot_only" | "starter_paid_setup" | "starter_no_setup_commitment" | "internal_daily_test";
 
+export type TaxMode = "small_business" | "stripe_tax";
+
+export const SMALL_BUSINESS_INVOICE_NOTE = "Umsatzsteuerfrei aufgrund Kleinunternehmerregelung gemäß § 6 Abs. 1 Z 27 UStG.";
+
 export type StripeConfigStatus = {
+  taxMode: TaxMode;
+  stripeTaxEnabled: boolean;
+  taxModeLabel: string;
+  invoiceNote: string | null;
   hasSecretKey: boolean;
   hasWebhookSecret: boolean;
   hasPilotPrice: boolean;
@@ -37,7 +45,16 @@ export type StripeWorkspaceReferences = {
   paymentIntentId?: string;
 };
 
+export function getTaxMode(): TaxMode {
+  return process.env.FANMIND_TAX_MODE === "stripe_tax" ? "stripe_tax" : "small_business";
+}
+
+export function getTaxModeLabel(mode: TaxMode = getTaxMode()): string {
+  return mode === "stripe_tax" ? "Stripe Tax" : "Kleinunternehmer / keine USt ausgewiesen";
+}
+
 export function getStripeConfigStatus(): StripeConfigStatus {
+  const taxMode = getTaxMode();
   const hasSecretKey = Boolean(process.env.STRIPE_SECRET_KEY);
   const hasWebhookSecret = Boolean(process.env.STRIPE_WEBHOOK_SECRET);
   const hasPilotPrice = Boolean(process.env.STRIPE_PRICE_PILOT_SETUP);
@@ -50,6 +67,10 @@ export function getStripeConfigStatus(): StripeConfigStatus {
   const hasAppUrl = Boolean(getAppUrl());
 
   return {
+    taxMode,
+    stripeTaxEnabled: taxMode === "stripe_tax",
+    taxModeLabel: getTaxModeLabel(taxMode),
+    invoiceNote: taxMode === "small_business" ? SMALL_BUSINESS_INVOICE_NOTE : null,
     hasSecretKey,
     hasWebhookSecret,
     hasPilotPrice,
@@ -108,6 +129,17 @@ export async function createStripeCheckoutSession(input: { plan: CheckoutPlan; u
   if (input.userEmail) params.set("customer_email", input.userEmail);
   params.set("billing_address_collection", "required");
   params.set("tax_id_collection[enabled]", "true");
+  const taxMode = getTaxMode();
+  if (taxMode === "stripe_tax") {
+    params.set("automatic_tax[enabled]", "true");
+  } else {
+    params.set("custom_text[submit][message]", SMALL_BUSINESS_INVOICE_NOTE);
+    if (input.plan.mode === "payment") {
+      params.set("invoice_creation[enabled]", "true");
+      params.set("invoice_creation[invoice_data][footer]", SMALL_BUSINESS_INVOICE_NOTE);
+    }
+    if (input.plan.mode === "subscription") params.set("subscription_data[description]", SMALL_BUSINESS_INVOICE_NOTE);
+  }
   input.plan.priceIds.forEach((price, index) => {
     params.set(`line_items[${index}][price]`, price);
     params.set(`line_items[${index}][quantity]`, "1");

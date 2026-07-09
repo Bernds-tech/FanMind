@@ -8,6 +8,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
 - Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag nur für Admin/interne Test-Workspaces; es erscheint nicht auf Landingpage, Pricing oder im normalen Registrierungsflow.
+- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Admins Netto/Steuer/Brutto, wenn Stripe diese Daten liefert.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
