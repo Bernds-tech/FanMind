@@ -15,6 +15,7 @@ const statusLabels: Record<string, string> = {
 
 function phaseStatusLabel(availability: string, status: string) {
   if (availability === "done") return "Erledigt";
+  if (status.includes("Smoke-Test")) return "Finaler Smoke-Test";
   if (status.includes("Vorbereitung") || status.includes("Beta") || status.includes("Arbeit")) return "In Arbeit / vorbereitet";
   if (status.includes("Kürze")) return "Coming Soon";
   return "Später / Roadmap";

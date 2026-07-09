@@ -54,6 +54,15 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - Legal-Seiten und Zahlungsbedingungen
 - geschützter Kundenbereich `/billing`, in dem eingeloggte Workspace-Nutzer eigene Stripe-Rechnungen sehen, öffnen und als PDF herunterladen können
 
+Aktueller Roadmap-Stand für Phase 4:
+
+- Phase 4 heißt „Verkaufsstart vorbereitet / finaler Smoke-Test“.
+- Stripe-Live-Schritte: erledigt.
+- Abrechnung & Admin-Basis: erledigt / Feinschliff.
+- Sales-Unterlagen: nächster Schritt.
+- Produktionsfreigabe: finaler Smoke-Test.
+- Offen sichtbar bleiben Issue #491 „Billing/Rechnungen/Paketverwaltung ins Profil“, der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
+
 ## 3. Kommerzielle Wahrheit
 
 Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` dürfen nicht wieder eingeführt werden, solange dieses Dokument nicht bewusst geändert wird.
