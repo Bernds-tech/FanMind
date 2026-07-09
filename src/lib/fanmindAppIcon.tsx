@@ -70,31 +70,31 @@ export function FanMindAppIconMark({ size }: FanMindAppIconMarkProps) {
         />
         <svg
           aria-hidden="true"
-          width="86%"
-          height="72%"
-          viewBox="0 0 180 118"
+          width="76%"
+          height="64%"
+          viewBox="0 0 184 120"
           style={{
             position: "relative",
             display: "block",
             overflow: "visible",
-            filter: `drop-shadow(0 0 ${Math.max(3, Math.round(size * 0.055))}px rgba(103, 232, 249, 0.62))`,
+            filter: `drop-shadow(0 0 ${Math.max(2, Math.round(size * 0.042))}px rgba(103, 232, 249, 0.55))`,
           }}
         >
           <path
-            d="M20 100 V18 H78 M20 57 H69"
+            d="M24 102 V18 H80 M24 58 H72"
             fill="none"
             stroke={fanMindAppIconBrand.fan}
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="29"
+            strokeWidth="20"
           />
           <path
-            d="M88 100 V18 L126 62 L164 18 V100"
+            d="M94 102 V18 L129 62 L164 18 V102"
             fill="none"
             stroke={fanMindAppIconBrand.mind}
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="28"
+            strokeWidth="19"
           />
         </svg>
       </div>
