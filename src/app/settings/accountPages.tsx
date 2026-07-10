@@ -34,7 +34,7 @@ import {
   ProfileSettingsSection,
   SettingsHeaderBar,
 } from "./AccountSections";
-import { saveAppearancePreferences, saveProfileSettings } from "./actions";
+import { saveAppearancePreferences, savePersonalProfileData, saveTaxMasterData, saveWorkspaceMasterData } from "./actions";
 
 type AccountWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -51,7 +51,11 @@ type AccountWorkspaceProps = {
   brightness: FanMindBrightness;
   preferencesError?: string | null;
   profileSaved?: boolean;
-  profileError?: string | null;
+  workspaceSaved?: boolean;
+  taxSaved?: boolean;
+  personalError?: string | null;
+  workspaceError?: string | null;
+  taxError?: string | null;
 };
 
 const EMPTY_VALUE = "Noch nicht hinterlegt";
@@ -72,7 +76,7 @@ function getSidebarUserLabel(userDisplayName: string, userEmail: string | undefi
   return userDisplayName !== EMPTY_VALUE ? userDisplayName : userEmail || workspaceName || "Nutzer";
 }
 
-function AccountWorkspace({ workspace, user, activePage, userDisplayName, contactCount, openFollowupCount, showAdminArea, invoices, invoiceError, taxNote, locale, brightness, preferencesError, profileSaved, profileError }: AccountWorkspaceProps) {
+function AccountWorkspace({ workspace, user, activePage, userDisplayName, contactCount, openFollowupCount, showAdminArea, invoices, invoiceError, taxNote, locale, brightness, preferencesError, profileSaved, workspaceSaved, taxSaved, personalError, workspaceError, taxError }: AccountWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigation("settings", locale, 0, showAdminArea);
   const fields = getProfileFields(user, workspace, userDisplayName, locale);
   const hasOnlyRealValues = fields.every((field) => field.source === "real");
@@ -105,7 +109,7 @@ function AccountWorkspace({ workspace, user, activePage, userDisplayName, contac
     >
       <div className={profileStyles.profileStack}>
         <SettingsHeaderBar activePage={activePage} />
-        {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} logoutAction={logout} preferencesAction={saveAppearancePreferences} locale={locale} brightness={brightness} preferencesError={preferencesError} profileAction={saveProfileSettings} profileSaved={profileSaved} profileError={profileError} /> : null}
+        {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} logoutAction={logout} preferencesAction={saveAppearancePreferences} locale={locale} brightness={brightness} preferencesError={preferencesError} personalAction={savePersonalProfileData} workspaceAction={saveWorkspaceMasterData} taxAction={saveTaxMasterData} profileSaved={profileSaved} workspaceSaved={workspaceSaved} taxSaved={taxSaved} personalError={personalError} workspaceError={workspaceError} taxError={taxError} /> : null}
         {activePage === "package" ? <PackageSettingsSection workspace={workspace} /> : null}
         {activePage === "invoices" ? <InvoicesSettingsSection invoices={invoices} invoiceError={invoiceError} taxNote={taxNote} /> : null}
       </div>
@@ -114,7 +118,7 @@ function AccountWorkspace({ workspace, user, activePage, userDisplayName, contac
   );
 }
 
-export async function renderSettingsAccountPage(activePage: SettingsAccountPage, searchParams?: { preferences_error?: string; profile_saved?: string; profile_error?: string }) {
+export async function renderSettingsAccountPage(activePage: SettingsAccountPage, searchParams?: { preferences_error?: string; profile_saved?: string; workspace_saved?: string; tax_saved?: string; personal_error?: string; workspace_error?: string; tax_error?: string; profile_error?: string }) {
   const { data, error: userError } = await getSupabaseServerUser();
   if (!data.user) redirect("/login");
 
@@ -152,7 +156,11 @@ export async function renderSettingsAccountPage(activePage: SettingsAccountPage,
           brightness={brightness}
           preferencesError={searchParams?.preferences_error ?? null}
           profileSaved={searchParams?.profile_saved === "1"}
-          profileError={searchParams?.profile_error ?? null}
+          workspaceSaved={searchParams?.workspace_saved === "1"}
+          taxSaved={searchParams?.tax_saved === "1"}
+          personalError={searchParams?.personal_error ?? searchParams?.profile_error ?? null}
+          workspaceError={searchParams?.workspace_error ?? null}
+          taxError={searchParams?.tax_error ?? null}
         />
       ) : (
         <section className={dashboardStyles.fallbackCard} aria-label="FanMind Profil-Einstellungen">

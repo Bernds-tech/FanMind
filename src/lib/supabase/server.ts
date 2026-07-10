@@ -664,31 +664,36 @@ export async function signOutSupabaseServerSession(): Promise<void> {
 }
 
 
-export type ProfileSettingsUpdateInput = {
+export type PersonalProfileUpdateInput = {
   displayName: string | null;
   phone: string | null;
   roleAudience: string | null;
+};
+
+export type WorkspaceMasterDataUpdateInput = {
   workspaceName: string;
   organizationName: string | null;
   streetAddress: string | null;
   postalCode: string | null;
   city: string | null;
   country: string | null;
+};
+
+export type TaxMasterDataUpdateInput = {
   vatId: string | null;
   taxNumber: string | null;
   companyRegisterNumber: string | null;
   companyRegisterCourt: string | null;
 };
 
-export async function updateWorkspaceProfileSettings(
+async function getAuthorizedWorkspaceSettingsAccess(
   user: SupabaseServerUser,
   workspaceId: string,
-  input: ProfileSettingsUpdateInput,
-): Promise<{ error: Error | null }> {
+): Promise<{ accessToken: string | null; error: Error | null }> {
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
-    return { error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+    return { accessToken: null, error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
   }
 
   const membership = await postgrestSelect<WorkspaceMemberRow>(
@@ -700,11 +705,22 @@ export async function updateWorkspaceProfileSettings(
     true,
   );
 
-  if (membership.error) return { error: new Error(`Workspace-Berechtigung konnte nicht geprüft werden: ${membership.error.message}`) };
+  if (membership.error) return { accessToken: null, error: new Error(`Workspace-Berechtigung konnte nicht geprüft werden: ${membership.error.message}`) };
   const role = membership.data?.role?.toLowerCase();
   if (!role || !["owner", "admin", "manager"].includes(role)) {
-    return { error: new Error("Du bist für das Speichern dieser Workspace-Stammdaten nicht berechtigt.") };
+    return { accessToken: null, error: new Error("Du bist für das Speichern dieser Workspace-Stammdaten nicht berechtigt.") };
   }
+
+  return { accessToken, error: null };
+}
+
+export async function updatePersonalProfileSettings(
+  user: SupabaseServerUser,
+  workspaceId: string,
+  input: PersonalProfileUpdateInput,
+): Promise<{ error: Error | null }> {
+  const { accessToken, error } = await getAuthorizedWorkspaceSettingsAccess(user, workspaceId);
+  if (error || !accessToken) return { error };
 
   const profileResult = await postgrestRequest(
     "profiles",
@@ -721,6 +737,24 @@ export async function updateWorkspaceProfileSettings(
   );
   if (profileResult.error) return { error: new Error(`Profil konnte nicht gespeichert werden: ${profileResult.error.message}`) };
 
+  const metadataResult = await updateSupabaseServerUserMetadata({
+    ...(user.user_metadata ?? {}),
+    display_name: input.displayName,
+    phone: input.phone,
+    role_audience: input.roleAudience,
+  });
+
+  return { error: metadataResult.error };
+}
+
+export async function updateWorkspaceMasterDataSettings(
+  user: SupabaseServerUser,
+  workspaceId: string,
+  input: WorkspaceMasterDataUpdateInput,
+): Promise<{ error: Error | null }> {
+  const { accessToken, error } = await getAuthorizedWorkspaceSettingsAccess(user, workspaceId);
+  if (error || !accessToken) return { error };
+
   const workspaceResult = await postgrestUpdate(
     "workspaces",
     {
@@ -730,6 +764,31 @@ export async function updateWorkspaceProfileSettings(
       postal_code: input.postalCode,
       city: input.city,
       country: input.country,
+    },
+    accessToken,
+    [["id", workspaceId]],
+  );
+  if (workspaceResult.error) return { error: new Error(`Workspace-Stammdaten konnten nicht gespeichert werden: ${workspaceResult.error.message}`) };
+
+  const metadataResult = await updateSupabaseServerUserMetadata({
+    ...(user.user_metadata ?? {}),
+    organization: input.organizationName,
+  });
+
+  return { error: metadataResult.error };
+}
+
+export async function updateTaxMasterDataSettings(
+  user: SupabaseServerUser,
+  workspaceId: string,
+  input: TaxMasterDataUpdateInput,
+): Promise<{ error: Error | null }> {
+  const { accessToken, error } = await getAuthorizedWorkspaceSettingsAccess(user, workspaceId);
+  if (error || !accessToken) return { error };
+
+  const workspaceResult = await postgrestUpdate(
+    "workspaces",
+    {
       vat_id: input.vatId,
       tax_number: input.taxNumber,
       company_register_number: input.companyRegisterNumber,
@@ -739,17 +798,9 @@ export async function updateWorkspaceProfileSettings(
     [["id", workspaceId]],
   );
 
-  if (workspaceResult.error) return { error: new Error(`Workspace-Stammdaten konnten nicht gespeichert werden: ${workspaceResult.error.message}`) };
-
-  const metadataResult = await updateSupabaseServerUserMetadata({
-    ...(user.user_metadata ?? {}),
-    display_name: input.displayName,
-    phone: input.phone,
-    role_audience: input.roleAudience,
-    organization: input.organizationName,
-  });
-
-  return { error: metadataResult.error };
+  return workspaceResult.error
+    ? { error: new Error(`Steuerdaten konnten nicht gespeichert werden: ${workspaceResult.error.message}`) }
+    : { error: null };
 }
 
 export async function getUserWorkspaceDashboard(

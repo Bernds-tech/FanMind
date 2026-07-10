@@ -389,17 +389,29 @@ export function ProfileSettingsSection({
   locale,
   brightness,
   preferencesError,
-  profileAction,
+  personalAction,
+  workspaceAction,
+  taxAction,
   profileSaved,
-  profileError,
+  workspaceSaved,
+  taxSaved,
+  personalError,
+  workspaceError,
+  taxError,
 }: {
   fields: ProfileField[];
   hasOnlyRealValues: boolean;
   logoutAction: () => Promise<void>;
   preferencesAction: (formData: FormData) => void;
-  profileAction: (formData: FormData) => void;
+  personalAction: (formData: FormData) => void;
+  workspaceAction: (formData: FormData) => void;
+  taxAction: (formData: FormData) => void;
   profileSaved?: boolean;
-  profileError?: string | null;
+  workspaceSaved?: boolean;
+  taxSaved?: boolean;
+  personalError?: string | null;
+  workspaceError?: string | null;
+  taxError?: string | null;
   locale: FanMindLanguage;
   brightness: FanMindBrightness;
   preferencesError?: string | null;
@@ -418,25 +430,40 @@ export function ProfileSettingsSection({
 
   return (
     <div className={profileStyles.profileGrid}>
-      <section className={profileStyles.compactCard} aria-labelledby="user-profile-title">
+      <section className={profileStyles.compactCard} aria-labelledby="personal-profile-title">
         <div className={profileStyles.cardHeader}>
           <div>
             <p className={dashboardStyles.eyebrow}>Profil</p>
-            <h2 id="user-profile-title">Persönliche Daten</h2>
+            <h2 id="personal-profile-title">Persönliche Daten</h2>
           </div>
           <span className={profileStyles.softChip}>{hasOnlyRealValues ? "Vollständig" : "Editierbar"}</span>
         </div>
-        <p className={profileStyles.headerCopy}>E-Mail bleibt aus Auth/Profile geschützt und read-only. Alle anderen Stammdaten werden serverseitig validiert, getrimmt und nur für berechtigte Workspace-Nutzer gespeichert.</p>
-        {profileSaved ? <p className={profileStyles.successNotice}>Profil- und Workspace-Stammdaten wurden gespeichert.</p> : null}
-        {profileError ? <p className={dashboardStyles.error}>{profileError}</p> : null}
-        <form action={profileAction} className={profileStyles.profileForm}>
+        <p className={profileStyles.headerCopy}>E-Mail bleibt geschützt und read-only. Diese Karte speichert nur Name, Telefon und Rolle/Zielgruppe.</p>
+        {profileSaved ? <p className={profileStyles.successNotice}>Persönliche Daten wurden gespeichert.</p> : null}
+        {personalError ? <p className={dashboardStyles.error}>{personalError}</p> : null}
+        <form action={personalAction} className={profileStyles.profileForm}>
           <div className={profileStyles.formGrid}>
             {input("displayName", "Anzeigename / Name", 120)}
             {input("email", "E-Mail", 180, true, "email")}
             {input("phone", "Telefon", 40, false, "tel")}
             {input("roleAudience", "Rolle / Zielgruppe", 120)}
           </div>
-          <div className={profileStyles.sectionDivider}>Workspace / Unternehmen</div>
+          <div className={profileStyles.actionRow}><button type="submit" className={profileStyles.smallSaveButton}>Persönliche Daten speichern</button></div>
+        </form>
+      </section>
+
+      <section className={profileStyles.compactCard} aria-labelledby="workspace-profile-title">
+        <div className={profileStyles.cardHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Workspace</p>
+            <h2 id="workspace-profile-title">Workspace / Unternehmen</h2>
+          </div>
+          <span className={profileStyles.softChip}>Stammdaten</span>
+        </div>
+        <p className={profileStyles.headerCopy}>Diese Karte aktualisiert nur Workspace-Name, Organisation und Adresse.</p>
+        {workspaceSaved ? <p className={profileStyles.successNotice}>Workspace-Stammdaten wurden gespeichert.</p> : null}
+        {workspaceError ? <p className={dashboardStyles.error}>{workspaceError}</p> : null}
+        <form action={workspaceAction} className={profileStyles.profileForm}>
           <div className={profileStyles.formGrid}>
             {input("workspaceName", "Workspace-Name", 120)}
             {input("organizationName", "Unternehmen / Club / Creator", 160)}
@@ -445,14 +472,29 @@ export function ProfileSettingsSection({
             {input("city", "Ort", 100)}
             {input("country", "Land", 80)}
           </div>
-          <div className={profileStyles.sectionDivider}>Steuerdaten</div>
+          <div className={profileStyles.actionRow}><button type="submit" className={profileStyles.smallSaveButton}>Workspace speichern</button></div>
+        </form>
+      </section>
+
+      <section className={profileStyles.compactCard} aria-labelledby="tax-profile-title">
+        <div className={profileStyles.cardHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Steuern</p>
+            <h2 id="tax-profile-title">Steuerdaten</h2>
+          </div>
+          <span className={profileStyles.softChip}>Separat</span>
+        </div>
+        <p className={profileStyles.headerCopy}>Diese Karte speichert ausschließlich UID/VAT ID, Steuernummer und Registerdaten.</p>
+        {taxSaved ? <p className={profileStyles.successNotice}>Steuerdaten wurden gespeichert.</p> : null}
+        {taxError ? <p className={dashboardStyles.error}>{taxError}</p> : null}
+        <form action={taxAction} className={profileStyles.profileForm}>
           <div className={profileStyles.formGrid}>
             {input("vatId", "UID / VAT ID", 40)}
             {input("taxNumber", "Steuernummer", 60)}
             {input("companyRegisterNumber", "Firmenbuchnummer", 80)}
             {input("companyRegisterCourt", "Firmenbuchgericht", 120)}
           </div>
-          <div className={profileStyles.actionRow}><button type="submit" className={dashboardStyles.primaryButton}>Stammdaten speichern</button></div>
+          <div className={profileStyles.actionRow}><button type="submit" className={profileStyles.smallSaveButton}>Steuerdaten speichern</button></div>
         </form>
       </section>
 
@@ -485,6 +527,7 @@ export function ProfileSettingsSection({
     </div>
   );
 }
+
 
 export function PackageSettingsSection({
   workspace,
