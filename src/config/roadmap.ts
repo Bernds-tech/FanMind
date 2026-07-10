@@ -75,7 +75,7 @@ export const roadmapPhases: RoadmapPhase[] = [
     number: "04",
     phase: "Phase 4",
     icon: "upload",
-    title: "Verkaufsstart vorbereitet / finaler Smoke-Test",
+    title: "Verkaufsstart vorbereitet",
     status: "Finaler Smoke-Test",
     statusIcon: "◷",
     tone: "green",
@@ -83,11 +83,11 @@ export const roadmapPhases: RoadmapPhase[] = [
     items: [
       { label: "Stripe-Live-Schritte", state: "done", status: "Erledigt" },
       { label: "Abrechnung & Admin-Basis", state: "partial", status: "Erledigt / Feinschliff" },
+      { label: "Profil/Paket/Rechnungen", state: "partial", status: "Erledigt / Feinschliff" },
       { label: "Sales-Unterlagen", state: "planned", status: "Nächster Schritt" },
       { label: "Produktionsfreigabe", state: "planned", status: "Finaler Smoke-Test" },
-      { label: "Finaler Go-Live-Smoke-Test", state: "planned", status: "Offen sichtbar" },
-      { label: "Issue #491: Billing/Rechnungen/Paketverwaltung ins Profil", state: "planned", status: "Offen sichtbar" },
-      { label: "Steuerberater-Bestätigung", state: "planned", status: "Offen sichtbar" },
+      { label: "Finaler Go-Live-Smoke-Test", state: "planned", status: "Offen" },
+      { label: "Steuerberater-Bestätigung", state: "planned", status: "Offen" },
     ],
   },
 

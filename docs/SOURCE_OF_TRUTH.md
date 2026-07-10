@@ -56,12 +56,13 @@ Aktiv bzw. produktnah im aktuellen Stand:
 
 Aktueller Roadmap-Stand für Phase 4:
 
-- Phase 4 heißt „Verkaufsstart vorbereitet / finaler Smoke-Test“.
+- Phase-4-Karte heißt kompakt „Verkaufsstart vorbereitet“ und hat den Status „Finaler Smoke-Test“.
 - Stripe-Live-Schritte: erledigt.
 - Abrechnung & Admin-Basis: erledigt / Feinschliff.
+- Profil/Paket/Rechnungen: erledigt / Feinschliff.
 - Sales-Unterlagen: nächster Schritt.
 - Produktionsfreigabe: finaler Smoke-Test.
-- Issue #491 „Billing/Rechnungen/Paketverwaltung ins Profil“ ist umgesetzt; offen sichtbar bleiben der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
+- Offen sichtbar bleiben der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
 
 ## 3. Kommerzielle Wahrheit
 

@@ -300,14 +300,16 @@ export function WorkspaceShell({
         className={`${styles.dashboardContent} ${styles.dashboardContentStart}`}
       >
         <WorkspaceHeader {...header} locale={locale} />
-        {showStats ? (
-          <WorkspaceKpiStrip
-            contactCount={contactCount}
-            openFollowupCount={openFollowupCount}
-            locale={locale}
-          />
-        ) : null}
-        {children}
+        <div className={styles.dashboardScrollArea}>
+          {showStats ? (
+            <WorkspaceKpiStrip
+              contactCount={contactCount}
+              openFollowupCount={openFollowupCount}
+              locale={locale}
+            />
+          ) : null}
+          {children}
+        </div>
       </div>
     </div>
   );
