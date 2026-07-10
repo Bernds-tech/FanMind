@@ -52,7 +52,7 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - konfigurierbarer Billing-Steuermodus: Default `FANMIND_TAX_MODE=small_business` ohne Stripe Automatic Tax und mit Kleinunternehmer-Rechnungshinweis; optional `FANMIND_TAX_MODE=stripe_tax` nur nach ausdrücklicher steuerlicher/technischer Freigabe
 - Internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag für klar markierte Test-Workspaces; öffentlich im Registrierungsflow nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`, sonst admin-only, und ohne Referral-/Rabatt-Automation
 - Legal-Seiten und Zahlungsbedingungen
-- getrennte kompakte Konto-Seiten: `/settings/profile` für Profil und Workspace-Basisdaten, `/settings/package` für Paket, Status, Betrag, Setup und geprüfte Paketoptionen, `/settings/invoices` für eigene Stripe-Rechnungen mit Öffnen-/PDF-Links sowie klar markierte Demo-Beispielrechnungen für kostenlose Demo-Workspaces ohne echte Stripe-Rechnungen; `/settings/plan` und `/settings/billing` leiten auf die passenden Seiten weiter, `/billing` auf `/settings/invoices`
+- getrennte kompakte Konto-Seiten: `/settings/profile` für Profil und Workspace-Basisdaten, `/settings/package` für Paket, Status, Betrag, Setup, aktuelle Paket-Badge, bestätigte Kündigungsanfrage, geprüfte Paketoptionen und einzeln verwaltbare Add-ons ohne automatische Stripe-/DB-Änderung, `/settings/invoices` für eigene Stripe-Rechnungen mit Öffnen-/PDF-Links sowie klar markierte Demo-Beispielrechnungen für kostenlose Demo-Workspaces ohne echte Stripe-Rechnungen; `/settings/plan` und `/settings/billing` leiten auf die passenden Seiten weiter, `/billing` auf `/settings/invoices`
 
 Aktueller Roadmap-Stand für Phase 4:
 
