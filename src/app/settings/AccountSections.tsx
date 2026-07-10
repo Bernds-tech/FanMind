@@ -329,17 +329,17 @@ export function getProfileFields(
     field("E-Mail", email, "personal"),
     field("Telefon", value("phone", "phone_number", "telephone"), "personal"),
     field("Sprache", locale === "en" ? "English" : "Deutsch", "personal"),
-    field("Rolle / Zielgruppe", value("role", "target_group", "audience"), "personal"),
+    field("Rolle / Zielgruppe", value("role_audience", "role", "target_group", "audience"), "personal"),
     field("Workspace-Name", workspaceName, "workspace"),
-    field("Unternehmen / Club / Creator", value("organization", "organisation", "company", "club", "creator_name") === EMPTY_VALUE ? workspaceName : value("organization", "organisation", "company", "club", "creator_name"), "workspace"),
-    field("Straße / Hausnummer", value("street", "address_street", "street_address"), "workspace"),
-    field("PLZ", value("postal_code", "zip", "address_zip"), "workspace"),
-    field("Ort", value("city", "address_city", "locality"), "workspace"),
-    field("Land", value("country", "address_country"), "workspace"),
-    field("UID / VAT ID", value("vat_id", "uid", "tax_id"), "tax"),
-    field("Steuernummer", value("tax_number"), "tax"),
-    field("Firmenbuchnummer", value("company_register_number", "commercial_register_number"), "tax"),
-    field("Firmenbuchgericht", value("company_register_court", "commercial_register_court"), "tax"),
+    field("Unternehmen / Club / Creator", workspace.organization_name?.trim() || (value("organization", "organisation", "company", "club", "creator_name") === EMPTY_VALUE ? workspaceName : value("organization", "organisation", "company", "club", "creator_name")), "workspace"),
+    field("Straße / Hausnummer", workspace.street_address?.trim() || value("street", "address_street", "street_address"), "workspace"),
+    field("PLZ", workspace.postal_code?.trim() || value("postal_code", "zip", "address_zip"), "workspace"),
+    field("Ort", workspace.city?.trim() || value("city", "address_city", "locality"), "workspace"),
+    field("Land", workspace.country?.trim() || value("country", "address_country"), "workspace"),
+    field("UID / VAT ID", workspace.vat_id?.trim() || value("vat_id", "uid", "tax_id"), "tax"),
+    field("Steuernummer", workspace.tax_number?.trim() || value("tax_number"), "tax"),
+    field("Firmenbuchnummer", workspace.company_register_number?.trim() || value("company_register_number", "commercial_register_number"), "tax"),
+    field("Firmenbuchgericht", workspace.company_register_court?.trim() || value("company_register_court", "commercial_register_court"), "tax"),
   ];
 }
 
@@ -389,27 +389,31 @@ export function ProfileSettingsSection({
   locale,
   brightness,
   preferencesError,
+  profileAction,
+  profileSaved,
+  profileError,
 }: {
   fields: ProfileField[];
   hasOnlyRealValues: boolean;
   logoutAction: () => Promise<void>;
   preferencesAction: (formData: FormData) => void;
+  profileAction: (formData: FormData) => void;
+  profileSaved?: boolean;
+  profileError?: string | null;
   locale: FanMindLanguage;
   brightness: FanMindBrightness;
   preferencesError?: string | null;
 }) {
-  const personalFields = fields.filter((field) => field.group === "personal");
-  const workspaceFields = fields.filter((field) => field.group === "workspace");
-  const taxFields = fields.filter((field) => field.group === "tax");
-  const renderRows = (rows: ProfileField[]) => (
-    <dl className={profileStyles.crmTable}>
-      {rows.map((field) => (
-        <div className={profileStyles.crmRow} key={field.label}>
-          <dt>{field.label}</dt>
-          <dd className={field.source === "placeholder" ? profileStyles.placeholderValue : undefined}>{field.value}</dd>
-        </div>
-      ))}
-    </dl>
+  const valueFor = (label: string) => fields.find((field) => field.label === label)?.value ?? "";
+  const inputValue = (label: string) => {
+    const value = valueFor(label);
+    return value === EMPTY_VALUE ? "" : value;
+  };
+  const input = (name: string, label: string, maxLength: number, readOnly = false, type = "text") => (
+    <label className={profileStyles.formField}>
+      <span>{label}</span>
+      <input name={name} type={type} defaultValue={inputValue(label)} maxLength={maxLength} readOnly={readOnly} aria-readonly={readOnly} />
+    </label>
   );
 
   return (
@@ -420,24 +424,36 @@ export function ProfileSettingsSection({
             <p className={dashboardStyles.eyebrow}>Profil</p>
             <h2 id="user-profile-title">Persönliche Daten</h2>
           </div>
-          <span className={profileStyles.softChip}>{hasOnlyRealValues ? "Kontodaten" : "Read-only"}</span>
+          <span className={profileStyles.softChip}>{hasOnlyRealValues ? "Vollständig" : "Editierbar"}</span>
         </div>
-        <p className={profileStyles.headerCopy}>Echte Accountdaten aus deiner geschützten Sitzung. Bearbeiten ist vorbereitet; ohne sichere Update-Route bleiben Stammdaten read-only.</p>
-        {renderRows(personalFields)}
-      </section>
-
-      <section className={profileStyles.compactCard} aria-labelledby="workspace-profile-title">
-        <div className={profileStyles.cardHeader}>
-          <div>
-            <p className={dashboardStyles.eyebrow}>Workspace</p>
-            <h2 id="workspace-profile-title">Workspace / Unternehmen</h2>
+        <p className={profileStyles.headerCopy}>E-Mail bleibt aus Auth/Profile geschützt und read-only. Alle anderen Stammdaten werden serverseitig validiert, getrimmt und nur für berechtigte Workspace-Nutzer gespeichert.</p>
+        {profileSaved ? <p className={profileStyles.successNotice}>Profil- und Workspace-Stammdaten wurden gespeichert.</p> : null}
+        {profileError ? <p className={dashboardStyles.error}>{profileError}</p> : null}
+        <form action={profileAction} className={profileStyles.profileForm}>
+          <div className={profileStyles.formGrid}>
+            {input("displayName", "Anzeigename / Name", 120)}
+            {input("email", "E-Mail", 180, true, "email")}
+            {input("phone", "Telefon", 40, false, "tel")}
+            {input("roleAudience", "Rolle / Zielgruppe", 120)}
           </div>
-          <span className={profileStyles.softChip}>CRM-Stammdaten</span>
-        </div>
-        <p className={profileStyles.headerCopy}>Unternehmens-, Adress- und Steuerdaten werden nur angezeigt, soweit sie im Konto sicher hinterlegt sind.</p>
-        {renderRows(workspaceFields)}
-        <div className={profileStyles.sectionDivider}>Steuerdaten</div>
-        {renderRows(taxFields)}
+          <div className={profileStyles.sectionDivider}>Workspace / Unternehmen</div>
+          <div className={profileStyles.formGrid}>
+            {input("workspaceName", "Workspace-Name", 120)}
+            {input("organizationName", "Unternehmen / Club / Creator", 160)}
+            {input("streetAddress", "Straße / Hausnummer", 180)}
+            {input("postalCode", "PLZ", 24)}
+            {input("city", "Ort", 100)}
+            {input("country", "Land", 80)}
+          </div>
+          <div className={profileStyles.sectionDivider}>Steuerdaten</div>
+          <div className={profileStyles.formGrid}>
+            {input("vatId", "UID / VAT ID", 40)}
+            {input("taxNumber", "Steuernummer", 60)}
+            {input("companyRegisterNumber", "Firmenbuchnummer", 80)}
+            {input("companyRegisterCourt", "Firmenbuchgericht", 120)}
+          </div>
+          <div className={profileStyles.actionRow}><button type="submit" className={dashboardStyles.primaryButton}>Stammdaten speichern</button></div>
+        </form>
       </section>
 
       <section className={profileStyles.compactCard} aria-labelledby="preference-profile-title">

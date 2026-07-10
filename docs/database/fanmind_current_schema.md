@@ -31,6 +31,8 @@ Wichtige Felder:
 - `id`
 - `email`
 - `display_name`
+- `phone`
+- `role_audience`
 - `created_at`
 
 RLS-Erwartung:
@@ -74,6 +76,15 @@ Wichtige Felder laut aktuellem Code:
 - `last_invoice_amount_paid_cents`
 - `last_invoice_hosted_url`
 - `last_invoice_pdf_url`
+- `organization_name`
+- `street_address`
+- `postal_code`
+- `city`
+- `country`
+- `vat_id`
+- `tax_number`
+- `company_register_number`
+- `company_register_court`
 
 RLS-Erwartung:
 

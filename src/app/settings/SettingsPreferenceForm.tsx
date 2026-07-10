@@ -3,14 +3,14 @@
 import { useMemo, useState } from "react";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
-import type { FanMindBrightness } from "@/lib/userPreferences";
+import {
+  FANMIND_BRIGHTNESS_MAX,
+  FANMIND_BRIGHTNESS_MIN,
+  normalizeFanMindBrightness,
+  type FanMindBrightness,
+} from "@/lib/userPreferences";
+import { getThemeClass } from "@/lib/userPreferences";
 import { wt } from "@/lib/workspaceCopy";
-
-const brightnessSteps: { value: FanMindBrightness; labelDe: string; labelEn: string }[] = [
-  { value: "standard", labelDe: "Standard", labelEn: "Standard" },
-  { value: "brighter", labelDe: "Heller", labelEn: "Brighter" },
-  { value: "light", labelDe: "Hell", labelEn: "Bright" },
-];
 
 type SettingsPreferenceFormProps = {
   action: (formData: FormData) => void;
@@ -21,17 +21,28 @@ type SettingsPreferenceFormProps = {
   buttonClassName?: string;
 };
 
-function getBrightnessIndex(value: FanMindBrightness) {
-  const index = brightnessSteps.findIndex((step) => step.value === value);
-  return index >= 0 ? index : 0;
+function getBrightnessLabel(locale: FanMindLanguage, value: number) {
+  if (value >= 115) return locale === "en" ? "Bright" : "Hell";
+  if (value >= 95) return locale === "en" ? "Brighter" : "Heller";
+  if (value <= 65) return locale === "en" ? "Dimmed" : "Gedimmt";
+  return locale === "en" ? "Standard" : "Standard";
+}
+
+function applyBrightness(value: number) {
+  const normalized = normalizeFanMindBrightness(value);
+  document.documentElement.classList.remove("fanmind-theme-standard", "fanmind-theme-brighter", "fanmind-theme-light");
+  document.documentElement.classList.add(getThemeClass(normalized));
+  document.documentElement.style.setProperty("--fanmind-dimmer", String(normalized));
+  document.documentElement.style.setProperty("--fanmind-brightness-filter", String(normalized / 80));
+  document.documentElement.style.setProperty("--fanmind-dimmer-bg-lift", String(Math.max(0, (normalized - 80) / 40)));
+  localStorage.setItem("fanmind_brightness", String(normalized));
 }
 
 export function SettingsPreferenceForm({ action, locale, brightness, returnTo = "/settings", formClassName, buttonClassName }: SettingsPreferenceFormProps) {
-  const [brightnessIndex, setBrightnessIndex] = useState(getBrightnessIndex(brightness));
-  const selectedBrightness = brightnessSteps[brightnessIndex] ?? brightnessSteps[0];
+  const [brightnessValue, setBrightnessValue] = useState(normalizeFanMindBrightness(brightness));
   const brightnessLabel = useMemo(
-    () => (locale === "en" ? selectedBrightness.labelEn : selectedBrightness.labelDe),
-    [locale, selectedBrightness],
+    () => `${getBrightnessLabel(locale, brightnessValue)} · ${brightnessValue}%`,
+    [brightnessValue, locale],
   );
 
   return (
@@ -55,7 +66,7 @@ export function SettingsPreferenceForm({ action, locale, brightness, returnTo = 
 
       <fieldset className={`${dashboardStyles.compactPreferenceGroup} ${dashboardStyles.brightnessSliderGroup}`}>
         <legend>{wt(locale, "Helligkeit")}</legend>
-        <input type="hidden" name="brightness" value={selectedBrightness.value} />
+        <input type="hidden" name="brightness" value={brightnessValue} />
         <div className={dashboardStyles.sliderHeader}>
           <span>{wt(locale, "Dark-Look")}</span>
           <strong>{brightnessLabel}</strong>
@@ -63,15 +74,21 @@ export function SettingsPreferenceForm({ action, locale, brightness, returnTo = 
         <input
           className={dashboardStyles.brightnessSlider}
           type="range"
-          min="0"
-          max="2"
+          min={FANMIND_BRIGHTNESS_MIN}
+          max={FANMIND_BRIGHTNESS_MAX}
           step="1"
-          value={brightnessIndex}
+          value={brightnessValue}
           aria-valuetext={brightnessLabel}
-          onChange={(event) => setBrightnessIndex(Number(event.currentTarget.value))}
+          onChange={(event) => {
+            const next = normalizeFanMindBrightness(event.currentTarget.value);
+            setBrightnessValue(next);
+            applyBrightness(next);
+          }}
         />
         <div className={dashboardStyles.sliderScale} aria-hidden="true">
-          {brightnessSteps.map((step) => <span key={step.value}>{locale === "en" ? step.labelEn : step.labelDe}</span>)}
+          <span>{locale === "en" ? "50 dim" : "50 gedimmt"}</span>
+          <span>{locale === "en" ? "80 standard" : "80 Standard"}</span>
+          <span>{locale === "en" ? "120 bright" : "120 hell"}</span>
         </div>
       </fieldset>
 
