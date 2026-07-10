@@ -7,10 +7,10 @@
 .profileTabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 16px;
-  padding: 7px;
+  border-radius: 14px;
+  padding: 5px;
   background:
     linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.78)),
     rgba(15, 23, 42, 0.78);
@@ -22,7 +22,7 @@
   gap: 2px;
   border: 1px solid rgba(103, 232, 249, 0.14);
   border-radius: 12px;
-  padding: 9px 11px;
+  padding: 7px 10px;
   color: #e2e8f0;
   text-decoration: none;
   background: rgba(8, 47, 73, 0.18);
@@ -30,7 +30,8 @@
 }
 
 .profileTab:hover,
-.profileTab:focus-visible {
+.profileTab:focus-visible,
+.profileTabActive {
   border-color: rgba(103, 232, 249, 0.36);
   background: rgba(8, 47, 73, 0.34);
   transform: translateY(-1px);
@@ -54,7 +55,7 @@
 .compactCard {
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: 18px;
-  padding: 14px;
+  padding: 12px;
   background:
     linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(2, 6, 23, 0.74)),
     rgba(15, 23, 42, 0.74);
@@ -66,7 +67,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .cardHeader h2 {
@@ -136,7 +137,7 @@
 .invoicePanel {
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 13px;
-  padding: 10px;
+  padding: 8px;
   background: rgba(2, 6, 23, 0.3);
 }
 
@@ -154,7 +155,7 @@
 .infoItem dd,
 .billingItem dd,
 .invoiceValue {
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: #f8fafc;
   font-size: 13px;
   font-weight: 850;
@@ -249,14 +250,14 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  margin-top: 10px;
-  padding: 12px;
+  margin-top: 8px;
+  padding: 10px;
 }
 
 .invoiceArchive {
   display: grid;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .latestInvoicePanel,
@@ -265,7 +266,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  padding: 11px;
+  padding: 9px;
 }
 
 .taxNote {
