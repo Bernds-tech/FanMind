@@ -185,3 +185,49 @@
     justify-content: flex-start;
   }
 }
+
+.planManagement,
+.invoiceArchiveItem,
+.taxNote {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.3);
+}
+
+.planManagement {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.invoiceArchive {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.invoiceArchiveItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px;
+}
+
+.taxNote {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .planManagement,
+  .invoiceArchiveItem {
+    grid-template-columns: 1fr;
+  }
+}
