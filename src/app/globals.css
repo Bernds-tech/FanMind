@@ -28,6 +28,8 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
+  filter: brightness(var(--fanmind-brightness-filter, 1));
+  transition: filter 120ms ease;
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -66,6 +68,17 @@ a {
   --fanmind-shell-soft: #94a3b8;
   --fanmind-shell-accent: #67e8f9;
   --fanmind-input-bg: rgba(2, 6, 23, 0.68);
+  --fanmind-brightness-filter: 1;
+  --fanmind-dimmer: 80;
+}
+
+html[style*="--fanmind-dimmer"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, calc(var(--fanmind-dimmer-bg-lift, 0) * 0.035));
+  z-index: 2147483647;
 }
 
 .fanmind-theme-brighter {

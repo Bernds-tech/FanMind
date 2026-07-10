@@ -82,6 +82,15 @@ export type WorkspaceBackfillRow = {
   last_invoice_hosted_url?: string | null;
   last_invoice_pdf_url?: string | null;
   test_access_flags?: Record<string, unknown> | null;
+  organization_name?: string | null;
+  street_address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  country?: string | null;
+  vat_id?: string | null;
+  tax_number?: string | null;
+  company_register_number?: string | null;
+  company_register_court?: string | null;
 };
 
 export type WorkspaceDashboardRow = WorkspaceBackfillRow & {
@@ -510,7 +519,7 @@ type PostgrestCountResult = {
 type SupabaseFilterValue = string | number | boolean | null;
 
 const WORKSPACE_COLUMNS =
-  "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,stripe_checkout_session_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url,test_access_flags";
+  "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,stripe_checkout_session_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url,test_access_flags,organization_name,street_address,postal_code,city,country,vat_id,tax_number,company_register_number,company_register_court";
 const CONTACT_COLUMNS =
   "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,created_at,updated_at";
 const MEMORY_COLUMNS =
@@ -652,6 +661,95 @@ export async function signOutSupabaseServerSession(): Promise<void> {
 
   cookieStore.delete(SUPABASE_ACCESS_TOKEN_COOKIE);
   cookieStore.delete(SUPABASE_REFRESH_TOKEN_COOKIE);
+}
+
+
+export type ProfileSettingsUpdateInput = {
+  displayName: string | null;
+  phone: string | null;
+  roleAudience: string | null;
+  workspaceName: string;
+  organizationName: string | null;
+  streetAddress: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
+  vatId: string | null;
+  taxNumber: string | null;
+  companyRegisterNumber: string | null;
+  companyRegisterCourt: string | null;
+};
+
+export async function updateWorkspaceProfileSettings(
+  user: SupabaseServerUser,
+  workspaceId: string,
+  input: ProfileSettingsUpdateInput,
+): Promise<{ error: Error | null }> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return { error: new Error("Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.") };
+  }
+
+  const membership = await postgrestSelect<WorkspaceMemberRow>(
+    "workspace_members",
+    accessToken,
+    "id,workspace_id,role",
+    [["workspace_id", workspaceId], ["user_id", user.id]],
+    1,
+    true,
+  );
+
+  if (membership.error) return { error: new Error(`Workspace-Berechtigung konnte nicht geprüft werden: ${membership.error.message}`) };
+  const role = membership.data?.role?.toLowerCase();
+  if (!role || !["owner", "admin", "manager"].includes(role)) {
+    return { error: new Error("Du bist für das Speichern dieser Workspace-Stammdaten nicht berechtigt.") };
+  }
+
+  const profileResult = await postgrestRequest(
+    "profiles",
+    "POST",
+    {
+      id: user.id,
+      email: user.email ?? null,
+      display_name: input.displayName,
+      phone: input.phone,
+      role_audience: input.roleAudience,
+    },
+    accessToken,
+    { upsert: true },
+  );
+  if (profileResult.error) return { error: new Error(`Profil konnte nicht gespeichert werden: ${profileResult.error.message}`) };
+
+  const workspaceResult = await postgrestUpdate(
+    "workspaces",
+    {
+      name: input.workspaceName,
+      organization_name: input.organizationName,
+      street_address: input.streetAddress,
+      postal_code: input.postalCode,
+      city: input.city,
+      country: input.country,
+      vat_id: input.vatId,
+      tax_number: input.taxNumber,
+      company_register_number: input.companyRegisterNumber,
+      company_register_court: input.companyRegisterCourt,
+    },
+    accessToken,
+    [["id", workspaceId]],
+  );
+
+  if (workspaceResult.error) return { error: new Error(`Workspace-Stammdaten konnten nicht gespeichert werden: ${workspaceResult.error.message}`) };
+
+  const metadataResult = await updateSupabaseServerUserMetadata({
+    ...(user.user_metadata ?? {}),
+    display_name: input.displayName,
+    phone: input.phone,
+    role_audience: input.roleAudience,
+    organization: input.organizationName,
+  });
+
+  return { error: metadataResult.error };
 }
 
 export async function getUserWorkspaceDashboard(
