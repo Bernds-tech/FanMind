@@ -30,14 +30,15 @@ type PackageCard = {
   badge: "Aktuell" | "Verfügbar" | "Beta" | "Coming Soon";
   planId: "pilot" | "starter";
   commercialOption: string;
+  requestMode: "checkout_if_unpaid" | "request" | "contact";
 };
 
 type AddOnCard = {
+  key: string;
   name: string;
   purpose: string;
-  status: "Verfügbar" | "Vorbereitet" | "Coming Soon";
+  status: "Nicht aktiv" | "Aktiv" | "Coming Soon" | "Auf Anfrage";
   price: string;
-  buttonLabel: string;
 };
 
 const BASE_PACKAGE_CARDS: PackageCard[] = [
@@ -50,6 +51,7 @@ const BASE_PACKAGE_CARDS: PackageCard[] = [
     badge: "Verfügbar",
     planId: "pilot",
     commercialOption: "pilot_only",
+    requestMode: "checkout_if_unpaid",
   },
   {
     key: "starter_paid_setup",
@@ -60,6 +62,7 @@ const BASE_PACKAGE_CARDS: PackageCard[] = [
     badge: "Verfügbar",
     planId: "starter",
     commercialOption: "starter_paid_setup",
+    requestMode: "checkout_if_unpaid",
   },
   {
     key: "starter_no_setup_commitment",
@@ -70,6 +73,7 @@ const BASE_PACKAGE_CARDS: PackageCard[] = [
     badge: "Verfügbar",
     planId: "starter",
     commercialOption: "starter_no_setup_commitment",
+    requestMode: "checkout_if_unpaid",
   },
 ];
 
@@ -82,15 +86,16 @@ const BETA_PACKAGE_CARD: PackageCard = {
   badge: "Beta",
   planId: "pilot",
   commercialOption: "internal_daily_test",
+  requestMode: "contact",
 };
 
 const ADD_ON_CARDS: AddOnCard[] = [
-  { name: "KI Standard", purpose: "Antwortvorschläge für den normalen CRM-Alltag.", status: "Verfügbar", price: "inklusive nach Paket", buttonLabel: "Hinzufügen" },
-  { name: "KI Plus", purpose: "Mehr Vorschläge, feinere Memory- und Follow-up-Unterstützung.", status: "Vorbereitet", price: "auf Anfrage", buttonLabel: "Anfragen" },
-  { name: "KI Ultra", purpose: "Erweiterter KI-Spielraum für größere Workspaces nach Prüfung.", status: "Coming Soon", price: "auf Anfrage", buttonLabel: "Coming Soon" },
-  { name: "Reichweitenanalyse", purpose: "Vorbereitete Auswertung für Reichweite und Resonanz.", status: "Vorbereitet", price: "auf Anfrage", buttonLabel: "Anfragen" },
-  { name: "Kampagnen-Insights", purpose: "Spätere Einordnung von Kampagnenwirkung ohne Versandautomation.", status: "Coming Soon", price: "auf Anfrage", buttonLabel: "Coming Soon" },
-  { name: "Custom Add-on", purpose: "Musterplatz für geprüfte Zusatzmodule oder Pilotwünsche.", status: "Vorbereitet", price: "auf Anfrage", buttonLabel: "Anfragen" },
+  { key: "ai_standard", name: "KI Standard", purpose: "Antwortvorschläge für den normalen CRM-Alltag.", status: "Aktiv", price: "inklusive nach Paket" },
+  { key: "ai_plus", name: "KI Plus", purpose: "Mehr Vorschläge, feinere Memory- und Follow-up-Unterstützung nach manueller Freigabe.", status: "Auf Anfrage", price: "auf Anfrage" },
+  { key: "ai_ultra", name: "KI Ultra", purpose: "Erweiterter KI-Spielraum für größere Workspaces nach Prüfung.", status: "Coming Soon", price: "auf Anfrage" },
+  { key: "reach_analysis", name: "Reichweitenanalyse", purpose: "Vorbereitete Auswertung für Reichweite und Resonanz ohne Voll-Analytics-Suite.", status: "Nicht aktiv", price: "auf Anfrage" },
+  { key: "campaign_insights", name: "Kampagnen-Insights", purpose: "Spätere Einordnung von Kampagnenwirkung ohne Versandautomation.", status: "Coming Soon", price: "auf Anfrage" },
+  { key: "custom", name: "Custom Add-on", purpose: "Musterplatz für geprüfte Zusatzmodule oder Pilotwünsche.", status: "Auf Anfrage", price: "auf Anfrage" },
 ];
 
 function getPackageCards(workspace: WorkspaceDashboardRow): PackageCard[] {
@@ -105,9 +110,47 @@ function getPackageCards(workspace: WorkspaceDashboardRow): PackageCard[] {
 }
 
 function getAddOnChipClass(status: AddOnCard["status"]): string {
-  if (status === "Verfügbar") return profileStyles.statusChip;
-  if (status === "Vorbereitet") return profileStyles.softChip;
-  return profileStyles.mutedBadge;
+  if (status === "Aktiv") return profileStyles.statusChip;
+  if (status === "Coming Soon") return profileStyles.mutedBadge;
+  if (status === "Auf Anfrage") return profileStyles.warningChip;
+  return profileStyles.softChip;
+}
+
+function getPackageRequestHref(workspace: WorkspaceDashboardRow, card: PackageCard): string {
+  const subject = encodeURIComponent(`FanMind Planwechsel anfragen: ${card.name}`);
+  const body = encodeURIComponent([
+    `Workspace: ${workspace.name}`,
+    `Aktuelles Paket: ${getPlanLabel(workspace)}`,
+    `Gewünschtes Paket: ${card.name}`,
+    "Bitte prüft den sicheren Billing-/Checkout-Flow und meldet euch mit den nächsten Schritten.",
+  ].join("\n"));
+
+  return `mailto:hello@fanmind.ch?subject=${subject}&body=${body}`;
+}
+
+function getAddOnRequestHref(workspace: WorkspaceDashboardRow, addOn: AddOnCard, action: "add" | "cancel"): string {
+  const actionLabel = action === "add" ? "Hinzufügen anfragen" : "Kündigung anfragen";
+  const subject = encodeURIComponent(`FanMind Add-on ${actionLabel}: ${addOn.name}`);
+  const body = encodeURIComponent([
+    `Workspace: ${workspace.name}`,
+    `Add-on: ${addOn.name}`,
+    `Aktion: ${actionLabel}`,
+    "Bitte prüft die Abrechnung manuell. Es soll keine automatische Abbuchung ohne bestätigten Flow erfolgen.",
+  ].join("\n"));
+
+  return `mailto:hello@fanmind.ch?subject=${subject}&body=${body}`;
+}
+
+function getMainPackageCancellationHref(workspace: WorkspaceDashboardRow): string {
+  const subject = encodeURIComponent(`FanMind Paket kündigen: ${workspace.name}`);
+  const body = encodeURIComponent([
+    `Workspace: ${workspace.name}`,
+    `Aktuelles Paket: ${getPlanLabel(workspace)}`,
+    `Commercial Option: ${getCommercialOptionLabel(workspace.commercial_option)}`,
+    "Ich bestätige, dass ich eine Kündigung des Hauptpakets anfragen möchte. Bitte prüft Laufzeit, offene Rechnungen und den sicheren Billing-Prozess.",
+  ].join("\n"));
+
+  return `mailto:hello@fanmind.ch?subject=${subject}&body=${body}`;
 }
 
 export function getSettingsAccountPageTitle(activePage: SettingsAccountPage): string {
@@ -234,6 +277,7 @@ export function PackageSettingsSection({ workspace }: { workspace: WorkspaceDash
         {packageCards.map((card) => {
           const isCurrent = card.badge === "Aktuell";
           const canStartCheckout = isCurrent && shouldShowBillingCheckoutAction(workspace) && card.commercialOption !== "internal_daily_test";
+          const requestLabel = card.badge === "Beta" ? "Auswählen" : workspace.billing_status === "demo_free" ? "Auswählen" : "Wechseln";
           return (
             <article className={`${profileStyles.packageCard} ${isCurrent ? profileStyles.packageCardCurrent : ""}`} key={card.key}>
               <div className={profileStyles.packageCardTop}>
@@ -246,11 +290,18 @@ export function PackageSettingsSection({ workspace }: { workspace: WorkspaceDash
                 {card.features.map((feature) => <li key={feature}>{feature}</li>)}
               </ul>
               {isCurrent ? (
-                canStartCheckout
-                  ? <BillingCheckoutButton planId={card.planId} commercialOption={card.commercialOption} label={getBillingCheckoutActionLabel(workspace.billing_status)} showHint={false} />
-                  : <span className={profileStyles.packageButtonDisabled}>Aktuell</span>
+                <>
+                  {canStartCheckout
+                    ? <BillingCheckoutButton planId={card.planId} commercialOption={card.commercialOption} label={getBillingCheckoutActionLabel(workspace.billing_status)} showHint={false} />
+                    : <span className={profileStyles.packageButtonDisabled}>Aktuell</span>}
+                  <details className={profileStyles.cancelBox}>
+                    <summary>Paket kündigen</summary>
+                    <p>Bestätigung erforderlich: Die Kündigung wird nur als Anfrage vorbereitet und ändert keine Datenbank- oder Stripe-Daten automatisch.</p>
+                    <a className={profileStyles.dangerButton} href={getMainPackageCancellationHref(workspace)}>Kündigung bestätigen &amp; anfragen</a>
+                  </details>
+                </>
               ) : (
-                <Link className={profileStyles.packageButton} href="/billing/start">{card.badge === "Beta" ? "Auswählen" : "Zahlung starten"}</Link>
+                <a className={profileStyles.packageButton} href={getPackageRequestHref(workspace, card)}>{card.requestMode === "contact" ? "Planwechsel anfragen" : requestLabel}</a>
               )}
             </article>
           );
@@ -265,14 +316,20 @@ export function PackageSettingsSection({ workspace }: { workspace: WorkspaceDash
       </div>
       <div className={profileStyles.addOnGrid}>
         {ADD_ON_CARDS.map((addOn) => (
-          <article className={profileStyles.addOnCard} key={addOn.name}>
+          <article className={profileStyles.addOnCard} key={addOn.key}>
             <div className={profileStyles.packageCardTop}>
               <h3>{addOn.name}</h3>
               <span className={getAddOnChipClass(addOn.status)}>{addOn.status}</span>
             </div>
             <p className={profileStyles.packageDescription}>{addOn.purpose}</p>
             <p className={profileStyles.addOnPrice}>{addOn.price}</p>
-            {addOn.status === "Coming Soon" ? <span className={profileStyles.packageButtonDisabled}>{addOn.buttonLabel}</span> : <Link className={profileStyles.packageButton} href="/billing/start">{addOn.buttonLabel}</Link>}
+            {addOn.status === "Coming Soon" ? (
+              <span className={profileStyles.packageButtonDisabled}>Coming Soon</span>
+            ) : addOn.status === "Aktiv" ? (
+              <a className={profileStyles.packageButton} href={getAddOnRequestHref(workspace, addOn, "cancel")}>Kündigung anfragen</a>
+            ) : (
+              <a className={profileStyles.packageButton} href={getAddOnRequestHref(workspace, addOn, "add")}>Hinzufügen anfragen</a>
+            )}
           </article>
         ))}
       </div>
