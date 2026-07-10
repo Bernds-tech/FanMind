@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
+import { ComingSoonMark } from "@/components/ComingSoonMark";
 import {
   getBillingCheckoutActionLabel,
   shouldShowBillingCheckoutAction,
@@ -53,10 +54,11 @@ type PackageCard = {
   price: string;
   description: string;
   features: string[];
-  badge: "Aktuell" | "Verfügbar" | "Beta" | "Coming Soon";
+  badge: "Aktuell" | "Verfügbar" | "Coming Soon";
   planId: "pilot" | "starter";
   commercialOption: string;
   requestMode: "checkout_if_unpaid" | "request" | "contact";
+  showComingSoonMark?: boolean;
 };
 
 type AddOnCard = {
@@ -111,23 +113,24 @@ const BASE_PACKAGE_CARDS: PackageCard[] = [
     commercialOption: "starter_no_setup_commitment",
     requestMode: "checkout_if_unpaid",
   },
+  {
+    key: "growth",
+    name: "Growth",
+    price: "Coming Soon",
+    description:
+      "Roadmap-Paket für wachsende Teams; noch nicht produktiv buchbar.",
+    features: [
+      "Coming Soon",
+      "Roadmap-Vorschau",
+      "keine aktive Freischaltung",
+    ],
+    badge: "Coming Soon",
+    planId: "starter",
+    commercialOption: "growth",
+    requestMode: "contact",
+    showComingSoonMark: true,
+  },
 ];
-
-const BETA_PACKAGE_CARD: PackageCard = {
-  key: "internal_daily_test",
-  name: "Beta-Test",
-  price: "1 €/Tag",
-  description: "Interner/Beta-Testplan für klar markierte Test-Workspaces.",
-  features: [
-    "täglich kündbar",
-    "nur bei Feature-Flag",
-    "kein Rabatt-/Referral-Automatismus",
-  ],
-  badge: "Beta",
-  planId: "pilot",
-  commercialOption: "internal_daily_test",
-  requestMode: "contact",
-};
 
 const ADD_ON_CARDS: AddOnCard[] = [
   {
@@ -177,12 +180,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
 ];
 
 function getPackageCards(workspace: WorkspaceDashboardRow): PackageCard[] {
-  const cards =
-    process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"
-      ? [...BASE_PACKAGE_CARDS, BETA_PACKAGE_CARD]
-      : BASE_PACKAGE_CARDS;
-
-  return cards.map((card) => ({
+  return BASE_PACKAGE_CARDS.map((card) => ({
     ...card,
     badge:
       workspace.commercial_option === card.commercialOption
@@ -423,11 +421,7 @@ export function PackageSettingsSection({
             shouldShowBillingCheckoutAction(workspace) &&
             card.commercialOption !== "internal_daily_test";
           const requestLabel =
-            card.badge === "Beta"
-              ? "Auswählen"
-              : workspace.billing_status === "demo_free"
-                ? "Auswählen"
-                : "Wechseln";
+            workspace.billing_status === "demo_free" ? "Auswählen" : "Wechseln";
           return (
             <article
               className={`${profileStyles.packageCard} ${isCurrent ? profileStyles.packageCardCurrent : ""}`}
@@ -439,14 +433,22 @@ export function PackageSettingsSection({
                   className={
                     isCurrent
                       ? profileStyles.statusChip
-                      : card.badge === "Beta"
-                        ? profileStyles.warningChip
+                      : card.badge === "Coming Soon"
+                        ? profileStyles.mutedBadge
                         : profileStyles.softChip
                   }
                 >
                   {card.badge}
                 </span>
               </div>
+              {card.showComingSoonMark ? (
+                <div className={profileStyles.cardMarkSlot}>
+                  <ComingSoonMark
+                    size="small"
+                    className={profileStyles.settingsComingSoonMark}
+                  />
+                </div>
+              ) : null}
               <p className={profileStyles.packagePrice}>{card.price}</p>
               <p className={profileStyles.packageDescription}>
                 {card.description}
@@ -520,6 +522,14 @@ export function PackageSettingsSection({
                 {addOn.status}
               </span>
             </div>
+            {addOn.status !== "Aktiv" ? (
+              <div className={profileStyles.cardMarkSlot}>
+                <ComingSoonMark
+                  size="small"
+                  className={profileStyles.settingsComingSoonMark}
+                />
+              </div>
+            ) : null}
             <p className={profileStyles.packageDescription}>{addOn.purpose}</p>
             <p className={profileStyles.addOnPrice}>{addOn.price}</p>
             {addOn.status === "Coming Soon" ? (
