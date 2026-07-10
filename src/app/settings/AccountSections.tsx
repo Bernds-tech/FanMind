@@ -21,6 +21,95 @@ export const SETTINGS_ACCOUNT_TABS: Array<{ key: SettingsAccountPage; label: str
 
 const EMPTY_VALUE = "Noch nicht hinterlegt";
 
+type PackageCard = {
+  key: string;
+  name: string;
+  price: string;
+  description: string;
+  features: string[];
+  badge: "Aktuell" | "Verfügbar" | "Beta" | "Coming Soon";
+  planId: "pilot" | "starter";
+  commercialOption: string;
+};
+
+type AddOnCard = {
+  name: string;
+  purpose: string;
+  status: "Verfügbar" | "Vorbereitet" | "Coming Soon";
+  price: string;
+  buttonLabel: string;
+};
+
+const BASE_PACKAGE_CARDS: PackageCard[] = [
+  {
+    key: "pilot_only",
+    name: "Pilot / Setup",
+    price: "990 € einmalig",
+    description: "Für Erstprüfung, Setup und Pilotstart mit einem sicheren Testmonat.",
+    features: ["1 Testmonat", "keine Bindung", "Setup- und Pilotprüfung"],
+    badge: "Verfügbar",
+    planId: "pilot",
+    commercialOption: "pilot_only",
+  },
+  {
+    key: "starter_paid_setup",
+    name: "Starter Flex",
+    price: "990 € Setup + 312 €/Monat",
+    description: "Für laufende FanMind-Nutzung ohne feste Laufzeitbindung.",
+    features: ["monatlich kündbar", "produktiver CRM-Kern", "Copy-&-Open Workflow"],
+    badge: "Verfügbar",
+    planId: "starter",
+    commercialOption: "starter_paid_setup",
+  },
+  {
+    key: "starter_no_setup_commitment",
+    name: "Starter 12 Monate",
+    price: "0 € Setup + 312 €/Monat",
+    description: "Für Nutzer, die fix starten und Setup-Kosten vermeiden wollen.",
+    features: ["12 Monate Bindung", "produktiver CRM-Kern", "Planungssicherheit"],
+    badge: "Verfügbar",
+    planId: "starter",
+    commercialOption: "starter_no_setup_commitment",
+  },
+];
+
+const BETA_PACKAGE_CARD: PackageCard = {
+  key: "internal_daily_test",
+  name: "Beta-Test",
+  price: "1 €/Tag",
+  description: "Interner/Beta-Testplan für klar markierte Test-Workspaces.",
+  features: ["täglich kündbar", "nur bei Feature-Flag", "kein Rabatt-/Referral-Automatismus"],
+  badge: "Beta",
+  planId: "pilot",
+  commercialOption: "internal_daily_test",
+};
+
+const ADD_ON_CARDS: AddOnCard[] = [
+  { name: "KI Standard", purpose: "Antwortvorschläge für den normalen CRM-Alltag.", status: "Verfügbar", price: "inklusive nach Paket", buttonLabel: "Hinzufügen" },
+  { name: "KI Plus", purpose: "Mehr Vorschläge, feinere Memory- und Follow-up-Unterstützung.", status: "Vorbereitet", price: "auf Anfrage", buttonLabel: "Anfragen" },
+  { name: "KI Ultra", purpose: "Erweiterter KI-Spielraum für größere Workspaces nach Prüfung.", status: "Coming Soon", price: "auf Anfrage", buttonLabel: "Coming Soon" },
+  { name: "Reichweitenanalyse", purpose: "Vorbereitete Auswertung für Reichweite und Resonanz.", status: "Vorbereitet", price: "auf Anfrage", buttonLabel: "Anfragen" },
+  { name: "Kampagnen-Insights", purpose: "Spätere Einordnung von Kampagnenwirkung ohne Versandautomation.", status: "Coming Soon", price: "auf Anfrage", buttonLabel: "Coming Soon" },
+  { name: "Custom Add-on", purpose: "Musterplatz für geprüfte Zusatzmodule oder Pilotwünsche.", status: "Vorbereitet", price: "auf Anfrage", buttonLabel: "Anfragen" },
+];
+
+function getPackageCards(workspace: WorkspaceDashboardRow): PackageCard[] {
+  const cards = process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"
+    ? [...BASE_PACKAGE_CARDS, BETA_PACKAGE_CARD]
+    : BASE_PACKAGE_CARDS;
+
+  return cards.map((card) => ({
+    ...card,
+    badge: workspace.commercial_option === card.commercialOption ? "Aktuell" : card.badge,
+  }));
+}
+
+function getAddOnChipClass(status: AddOnCard["status"]): string {
+  if (status === "Verfügbar") return profileStyles.statusChip;
+  if (status === "Vorbereitet") return profileStyles.softChip;
+  return profileStyles.mutedBadge;
+}
+
 export function getSettingsAccountPageTitle(activePage: SettingsAccountPage): string {
   if (activePage === "profile") return "Profil";
   if (activePage === "package") return "Paket";
@@ -114,12 +203,14 @@ export function ProfileSettingsSection({ fields, hasOnlyRealValues, logoutAction
 }
 
 export function PackageSettingsSection({ workspace }: { workspace: WorkspaceDashboardRow }) {
+  const packageCards = getPackageCards(workspace);
+
   return (
     <section className={profileStyles.compactCard} aria-labelledby="package-profile-title">
       <div className={profileStyles.cardHeader}>
         <div>
           <p className={dashboardStyles.eyebrow}>Paket</p>
-          <h2 id="package-profile-title">Paket, Status & Optionen</h2>
+          <h2 id="package-profile-title">Paket, Status & Add-ons</h2>
         </div>
         <span className={getBillingChipClass(workspace.billing_status)}>{getBillingProfileStatusLabel(workspace)}</span>
       </div>
@@ -132,15 +223,58 @@ export function PackageSettingsSection({ workspace }: { workspace: WorkspaceDash
         <div className={profileStyles.billingItem}><dt>Sperrstatus</dt><dd>{workspace.billing_status === "suspended" || workspace.billing_status === "manual_suspended" ? getBillingStatusLabel(workspace.billing_status) : "Nicht gesperrt"}</dd></div>
         <div className={profileStyles.billingItem}><dt>Letzte Zahlung</dt><dd>{workspace.billing_last_payment_at ? formatDate(workspace.billing_last_payment_at) : "Noch keine Zahlung erfasst."}</dd></div>
       </dl>
-      <div className={profileStyles.planManagement}>
+
+      <div className={profileStyles.packageSectionHeader}>
         <div>
-          <p className={profileStyles.invoiceLabel}>Paketwechsel / Zusatzpakete</p>
-          <p className={profileStyles.invoiceValue}>Starter Flex und Starter 12 Monate sind vorbereitet. Growth, Agency und Enterprise bleiben Coming Soon / auf Anfrage. Kein automatischer Planwechsel ohne Stripe-Flow.</p>
+          <p className={profileStyles.invoiceLabel}>Hauptpakete</p>
+          <p className={profileStyles.invoiceValue}>Kompakte Übersicht ohne automatische Stripe-Planänderung. Wechsel laufen nur über einen geprüften Checkout- oder Anfrageprozess.</p>
         </div>
-        <div className={profileStyles.invoiceLinks}>
-          {shouldShowBillingCheckoutAction(workspace) ? <BillingCheckoutButton planId={workspace.plan_id} commercialOption={workspace.commercial_option} label={getBillingCheckoutActionLabel(workspace.billing_status)} /> : null}
-          <Link href="/billing/start">Paketoptionen ansehen</Link>
+      </div>
+      <div className={profileStyles.packageCardGrid}>
+        {packageCards.map((card) => {
+          const isCurrent = card.badge === "Aktuell";
+          const canStartCheckout = isCurrent && shouldShowBillingCheckoutAction(workspace) && card.commercialOption !== "internal_daily_test";
+          return (
+            <article className={`${profileStyles.packageCard} ${isCurrent ? profileStyles.packageCardCurrent : ""}`} key={card.key}>
+              <div className={profileStyles.packageCardTop}>
+                <h3>{card.name}</h3>
+                <span className={isCurrent ? profileStyles.statusChip : card.badge === "Beta" ? profileStyles.warningChip : profileStyles.softChip}>{card.badge}</span>
+              </div>
+              <p className={profileStyles.packagePrice}>{card.price}</p>
+              <p className={profileStyles.packageDescription}>{card.description}</p>
+              <ul className={profileStyles.packageFeatureList}>
+                {card.features.map((feature) => <li key={feature}>{feature}</li>)}
+              </ul>
+              {isCurrent ? (
+                canStartCheckout
+                  ? <BillingCheckoutButton planId={card.planId} commercialOption={card.commercialOption} label={getBillingCheckoutActionLabel(workspace.billing_status)} showHint={false} />
+                  : <span className={profileStyles.packageButtonDisabled}>Aktuell</span>
+              ) : (
+                <Link className={profileStyles.packageButton} href="/billing/start">{card.badge === "Beta" ? "Auswählen" : "Zahlung starten"}</Link>
+              )}
+            </article>
+          );
+        })}
+      </div>
+
+      <div className={profileStyles.packageSectionHeader}>
+        <div>
+          <p className={profileStyles.invoiceLabel}>Zusatzpakete / Add-ons</p>
+          <p className={profileStyles.invoiceValue}>Vorbereitete Erweiterungen bleiben klar als verfügbar, vorbereitet oder Coming Soon markiert.</p>
         </div>
+      </div>
+      <div className={profileStyles.addOnGrid}>
+        {ADD_ON_CARDS.map((addOn) => (
+          <article className={profileStyles.addOnCard} key={addOn.name}>
+            <div className={profileStyles.packageCardTop}>
+              <h3>{addOn.name}</h3>
+              <span className={getAddOnChipClass(addOn.status)}>{addOn.status}</span>
+            </div>
+            <p className={profileStyles.packageDescription}>{addOn.purpose}</p>
+            <p className={profileStyles.addOnPrice}>{addOn.price}</p>
+            {addOn.status === "Coming Soon" ? <span className={profileStyles.packageButtonDisabled}>{addOn.buttonLabel}</span> : <Link className={profileStyles.packageButton} href="/billing/start">{addOn.buttonLabel}</Link>}
+          </article>
+        ))}
       </div>
     </section>
   );
