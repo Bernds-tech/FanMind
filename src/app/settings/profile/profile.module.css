@@ -416,3 +416,168 @@
   line-height: 1.4;
   background: rgba(2, 6, 23, 0.2);
 }
+
+.packageSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.packageCardGrid,
+.addOnGrid {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.packageCardGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.addOnGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.packageCard,
+.addOnCard {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 15px;
+  padding: 10px;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.58)),
+    rgba(15, 23, 42, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.packageCardCurrent {
+  border-color: rgba(52, 211, 153, 0.28);
+  background:
+    linear-gradient(145deg, rgba(6, 78, 59, 0.2), rgba(2, 6, 23, 0.62)),
+    rgba(15, 23, 42, 0.58);
+}
+
+.packageCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.packageCardTop h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+}
+
+.packagePrice {
+  margin: 0;
+  color: #a5f3fc;
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: -0.025em;
+}
+
+.packageDescription,
+.addOnPrice {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.42;
+}
+
+.addOnPrice {
+  color: #e2e8f0;
+  font-weight: 850;
+}
+
+.packageFeatureList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.packageFeatureList li {
+  position: relative;
+  padding-left: 12px;
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.packageFeatureList li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #67e8f9;
+  opacity: 0.82;
+}
+
+.packageButton,
+.packageButtonDisabled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.packageButton {
+  border: 1px solid rgba(103, 232, 249, 0.28);
+  color: #06111f;
+  background: linear-gradient(135deg, #67e8f9, #a7f3d0);
+  box-shadow: 0 12px 28px rgba(34, 211, 238, 0.16);
+}
+
+.packageButtonDisabled {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.packageCard :global(.wrap) {
+  margin-top: 0;
+}
+
+.packageCard :global(.button) {
+  min-height: 30px;
+  width: fit-content;
+  padding: 6px 10px;
+  font-size: 11px;
+  box-shadow: 0 12px 28px rgba(34, 211, 238, 0.16);
+}
+
+@media (max-width: 1200px) {
+  .packageCardGrid,
+  .addOnGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .packageSectionHeader,
+  .packageCardTop {
+    flex-direction: column;
+  }
+
+  .packageCardGrid,
+  .addOnGrid {
+    grid-template-columns: 1fr;
+  }
+}
