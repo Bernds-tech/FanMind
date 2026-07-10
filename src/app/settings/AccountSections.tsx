@@ -530,42 +530,48 @@ export function PackageSettingsSection({
         </div>
       </div>
       <div className={profileStyles.addOnGrid}>
-        {ADD_ON_CARDS.map((addOn) => (
-          <article className={profileStyles.addOnCard} key={addOn.key}>
-            <div className={profileStyles.packageCardTop}>
-              <h3>{addOn.name}</h3>
-              <span className={getAddOnChipClass(addOn.status)}>
-                {addOn.status}
-              </span>
-            </div>
-            <p className={profileStyles.packageDescription}>{addOn.purpose}</p>
-            {addOn.features ? (
-              <ul className={profileStyles.packageFeatureList}>
-                {addOn.features.map((feature) => (
-                  <li key={feature}>{feature}</li>
-                ))}
-              </ul>
-            ) : null}
-            {addOn.showComingSoonMark ? (
-              <div className={profileStyles.cardMarkSlot}>
-                <ComingSoonMark
-                  size="small"
-                  className={profileStyles.settingsComingSoonMark}
-                />
+        {ADD_ON_CARDS.map((addOn) => {
+          const showStatusBadge = addOn.status === "Aktiv";
+
+          return (
+            <article className={profileStyles.addOnCard} key={addOn.key}>
+              <div className={profileStyles.packageCardTop}>
+                <h3>{addOn.name}</h3>
+                {showStatusBadge ? (
+                  <span className={getAddOnChipClass(addOn.status)}>
+                    {addOn.status}
+                  </span>
+                ) : null}
               </div>
-            ) : (
-              <p className={profileStyles.addOnPrice}>{addOn.price}</p>
-            )}
-            {addOn.status === "Aktiv" || addOn.showComingSoonMark ? null : (
-              <a
-                className={profileStyles.packageButton}
-                href={getAddOnRequestHref(workspace, addOn, "add")}
-              >
-                Anfragen
-              </a>
-            )}
-          </article>
-        ))}
+              <p className={profileStyles.packageDescription}>{addOn.purpose}</p>
+              {addOn.features ? (
+                <ul className={profileStyles.packageFeatureList}>
+                  {addOn.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {addOn.showComingSoonMark ? (
+                <div className={profileStyles.cardMarkSlot}>
+                  <ComingSoonMark
+                    size="small"
+                    className={profileStyles.settingsComingSoonMark}
+                  />
+                </div>
+              ) : (
+                <p className={profileStyles.addOnPrice}>{addOn.price}</p>
+              )}
+              {addOn.status === "Aktiv" || addOn.showComingSoonMark ? null : (
+                <a
+                  className={profileStyles.packageButton}
+                  href={getAddOnRequestHref(workspace, addOn, "add")}
+                >
+                  Anfragen
+                </a>
+              )}
+            </article>
+          );
+        })}
       </div>
     </section>
   );
