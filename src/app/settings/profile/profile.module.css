@@ -488,13 +488,16 @@
 
 .cardMarkSlot {
   display: flex;
+  align-items: flex-end;
   justify-content: flex-end;
-  min-height: 42px;
-  margin: -2px 0 -4px;
+  align-self: end;
+  min-height: 58px;
+  margin: auto -2px -2px 0;
+  padding-top: 8px;
 }
 
 .settingsComingSoonMark {
-  width: clamp(64px, 7vw, 88px);
+  width: clamp(72px, 7.5vw, 96px);
   opacity: 0.88;
 }
 
