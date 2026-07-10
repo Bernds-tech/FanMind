@@ -920,8 +920,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const localizedRoadmapNotes = localizeFanMindValue(roadmapNotes, t);
 
   return (
-    <main id="top" className={styles.page}>
-      <div className={styles.backgroundGlow} aria-hidden="true" />
+    <>
       <div className={styles.fixedHeaderShell}>
         <header className={styles.header}>
           <Logo language={language} />
@@ -948,7 +947,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         </header>
       </div>
 
-      <section className={styles.heroSection} aria-label="Startbereich FanMind">
+      <main id="top" className={styles.page}>
+        <div className={styles.backgroundGlow} aria-hidden="true" />
+        <section className={styles.heroSection} aria-label="Startbereich FanMind">
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
             <a className={styles.badge} href="#produkt-showcase">
@@ -2019,6 +2020,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           </a>
         </div>
       </footer>
-    </main>
+      </main>
+    </>
   );
 }
