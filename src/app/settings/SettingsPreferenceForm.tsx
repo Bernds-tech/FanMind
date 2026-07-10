@@ -17,6 +17,8 @@ type SettingsPreferenceFormProps = {
   locale: FanMindLanguage;
   brightness: FanMindBrightness;
   returnTo?: string;
+  formClassName?: string;
+  buttonClassName?: string;
 };
 
 function getBrightnessIndex(value: FanMindBrightness) {
@@ -24,7 +26,7 @@ function getBrightnessIndex(value: FanMindBrightness) {
   return index >= 0 ? index : 0;
 }
 
-export function SettingsPreferenceForm({ action, locale, brightness, returnTo = "/settings" }: SettingsPreferenceFormProps) {
+export function SettingsPreferenceForm({ action, locale, brightness, returnTo = "/settings", formClassName, buttonClassName }: SettingsPreferenceFormProps) {
   const [brightnessIndex, setBrightnessIndex] = useState(getBrightnessIndex(brightness));
   const selectedBrightness = brightnessSteps[brightnessIndex] ?? brightnessSteps[0];
   const brightnessLabel = useMemo(
@@ -33,7 +35,7 @@ export function SettingsPreferenceForm({ action, locale, brightness, returnTo = 
   );
 
   return (
-    <form action={action} className={dashboardStyles.preferenceToolbar}>
+    <form action={action} className={[dashboardStyles.preferenceToolbar, formClassName].filter(Boolean).join(" ")}>
       <input type="hidden" name="returnTo" value={returnTo} />
       <fieldset className={dashboardStyles.compactPreferenceGroup}>
         <legend>{wt(locale, "Sprache")}</legend>
@@ -73,7 +75,7 @@ export function SettingsPreferenceForm({ action, locale, brightness, returnTo = 
         </div>
       </fieldset>
 
-      <button type="submit" className={dashboardStyles.primaryButton}>{wt(locale, "Einstellungen speichern")}</button>
+      <button type="submit" className={[dashboardStyles.primaryButton, buttonClassName].filter(Boolean).join(" ")}>{wt(locale, "Einstellungen speichern")}</button>
     </form>
   );
 }

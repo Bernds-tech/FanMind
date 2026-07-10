@@ -778,3 +778,33 @@
     padding-top: 0;
   }
 }
+
+.profilePreferenceForm {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.profilePreferenceForm > fieldset {
+  min-width: 0;
+  margin: 0;
+}
+
+.profilePreferenceButton {
+  grid-column: 1 / -1;
+  justify-self: end;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+@media (max-width: 860px) {
+  .profilePreferenceForm {
+    grid-template-columns: 1fr;
+  }
+
+  .profilePreferenceButton {
+    justify-self: stretch;
+    width: 100%;
+  }
+}

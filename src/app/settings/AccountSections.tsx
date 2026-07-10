@@ -449,7 +449,7 @@ export function ProfileSettingsSection({
           <span className={profileStyles.softChip}>Preference-Logik</span>
         </div>
         {preferencesError ? <p className={dashboardStyles.error}>{preferencesError}</p> : null}
-        <SettingsPreferenceForm action={preferencesAction} locale={locale} brightness={brightness} returnTo="/settings/profile" />
+        <SettingsPreferenceForm action={preferencesAction} locale={locale} brightness={brightness} returnTo="/settings/profile" formClassName={profileStyles.profilePreferenceForm} buttonClassName={profileStyles.profilePreferenceButton} />
       </section>
 
       <section className={profileStyles.compactCard} aria-labelledby="gdpr-profile-title">
