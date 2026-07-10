@@ -875,3 +875,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+.smallSaveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid rgba(103, 232, 249, 0.36);
+  border-radius: 999px;
+  padding: 8px 13px;
+  color: #ecfeff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.72), rgba(15, 23, 42, 0.82));
+  box-shadow: 0 12px 28px rgba(8, 145, 178, 0.16);
+  cursor: pointer;
+}
+
+.smallSaveButton:hover,
+.smallSaveButton:focus-visible {
+  border-color: rgba(103, 232, 249, 0.62);
+  outline: none;
+}
