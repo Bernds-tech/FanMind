@@ -125,7 +125,6 @@ function getProfileFields(
     ? user.email.trim()
     : EMPTY_VALUE;
   const workspaceName = workspace.name?.trim() || EMPTY_VALUE;
-  const planLabel = getPlanLabel(workspace);
 
   return [
     {
@@ -142,11 +141,6 @@ function getProfileFields(
       label: "Workspace-Name",
       value: workspaceName,
       source: workspaceName === EMPTY_VALUE ? "placeholder" : "real",
-    },
-    {
-      label: "Paket / Plan",
-      value: planLabel || EMPTY_VALUE,
-      source: planLabel ? "real" : "placeholder",
     },
   ];
 }
@@ -184,9 +178,9 @@ function ProfileWorkspace({
       savedViews={savedViews}
       header={{
         title: "Profil & Konto",
-        subtitle: "Dein zentraler Bereich für Profil, Workspace, Paket, Billing und Rechnungen.",
+        subtitle: "Dein kompakter Konto-Bereich für Profil, Paketstatus und Rechnungsarchiv.",
         searchPlaceholder: "Suche nach Profil, Workspace, Paket ...",
-        primaryActionLabel: "MVP-Vorschau",
+        primaryActionLabel: "Profil öffnen",
         primaryActionHref: "#user-profile",
       }}
       contactCount={contactCount}
@@ -194,6 +188,21 @@ function ProfileWorkspace({
       logoutAction={logout}
     >
       <div className={profileStyles.profileStack}>
+        <nav className={profileStyles.profileTabs} id="profile-tabs" aria-label="Profil- und Konto-Bereiche">
+          <a className={profileStyles.profileTab} href="#user-profile">
+            <span>Profil</span>
+            <small>Persönliche Daten & Workspace</small>
+          </a>
+          <a className={profileStyles.profileTab} href="#package">
+            <span>Paket</span>
+            <small>Status, Betrag & Setup</small>
+          </a>
+          <a className={profileStyles.profileTab} href="#invoices">
+            <span>Rechnungen</span>
+            <small>Archiv, öffnen & PDF</small>
+          </a>
+        </nav>
+
         <section
           className={profileStyles.compactCard}
           id="user-profile"
@@ -202,14 +211,14 @@ function ProfileWorkspace({
           <div className={profileStyles.cardHeader}>
             <div>
               <p className={dashboardStyles.eyebrow}>Profil</p>
-              <h2 id="user-profile-title">Nutzerprofil</h2>
+              <h2 id="user-profile-title">Profil</h2>
             </div>
             <span className={profileStyles.softChip}>
               {hasOnlyRealValues ? "Kontodaten" : "Unvollständig"}
             </span>
           </div>
           <p className={profileStyles.headerCopy}>
-            Account-Daten aus der geschützten Sitzung. Konto, Billing und Rechnungsarchiv sind hier zentral zusammengeführt.
+            Persönliche Daten, E-Mail und Workspace-Informationen aus der geschützten Sitzung.
           </p>
           <dl className={profileStyles.infoGrid}>
             {fields.map((field) => (
@@ -223,11 +232,11 @@ function ProfileWorkspace({
           </dl>
         </section>
 
-        <section className={profileStyles.compactCard} id="billing" aria-labelledby="billing-profile-title">
+        <section className={profileStyles.compactCard} id="package" aria-labelledby="package-profile-title">
           <div className={profileStyles.cardHeader}>
             <div>
-              <p className={dashboardStyles.eyebrow}>Billing</p>
-              <h2 id="billing-profile-title">Paket & Rechnungen</h2>
+              <p className={dashboardStyles.eyebrow}>Paket</p>
+              <h2 id="package-profile-title">Aktuelles Paket</h2>
             </div>
             <span className={getBillingChipClass(workspace.billing_status)}>
               {getBillingProfileStatusLabel(workspace)}
@@ -241,22 +250,6 @@ function ProfileWorkspace({
             <div className={profileStyles.billingItem}><dt>Bindung</dt><dd>{workspace.commitment_months ? `${workspace.commitment_months} Monate` : "Keine feste Bindung"}</dd></div>
             <div className={profileStyles.billingItem}><dt>Sperrstatus</dt><dd>{workspace.billing_status === "suspended" || workspace.billing_status === "manual_suspended" ? getBillingStatusLabel(workspace.billing_status) : "Nicht gesperrt"}</dd></div>
             <div className={profileStyles.billingItem}><dt>Letzte Zahlung</dt><dd>{workspace.billing_last_payment_at ? formatDate(workspace.billing_last_payment_at) : "Noch keine Zahlung erfasst."}</dd></div>
-            <div className={`${profileStyles.invoicePanel} ${profileStyles.billingItemWide}`}>
-              <p className={profileStyles.invoiceLabel}>Letzte Rechnung</p>
-              {workspace.last_invoice_id || workspace.last_invoice_status ? (
-                <div className={profileStyles.invoiceRow}>
-                  <p className={profileStyles.invoiceValue}>
-                    {workspace.last_invoice_status ?? "Status offen"} · {formatMoney(workspace.last_invoice_amount_due_cents)}
-                  </p>
-                  <div className={profileStyles.invoiceLinks}>
-                    {workspace.last_invoice_hosted_url ? <a href={workspace.last_invoice_hosted_url} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
-                    {workspace.last_invoice_pdf_url ? <a href={workspace.last_invoice_pdf_url} target="_blank" rel="noreferrer">PDF öffnen</a> : null}
-                  </div>
-                </div>
-              ) : (
-                <p className={profileStyles.invoiceValue}>Noch keine Rechnung vorhanden.</p>
-              )}
-            </div>
           </dl>
           <div className={profileStyles.planManagement}>
             <div>
@@ -287,6 +280,20 @@ function ProfileWorkspace({
           <p className={profileStyles.headerCopy}>Rechnungen werden serverseitig für deinen Workspace geladen. Du kannst sie öffnen, als PDF herunterladen und den Zahlungsstatus prüfen.</p>
           {invoiceError ? <p className={dashboardStyles.error}>{invoiceError}</p> : null}
           {taxNote ? <p className={profileStyles.taxNote}>{taxNote}</p> : null}
+          {workspace.last_invoice_id || workspace.last_invoice_status ? (
+            <div className={profileStyles.latestInvoicePanel}>
+              <div>
+                <p className={profileStyles.invoiceLabel}>Letzte Rechnung</p>
+                <p className={profileStyles.invoiceValue}>
+                  {workspace.last_invoice_status ?? "Status offen"} · {formatMoney(workspace.last_invoice_amount_due_cents)}
+                </p>
+              </div>
+              <div className={profileStyles.invoiceLinks}>
+                {workspace.last_invoice_hosted_url ? <a href={workspace.last_invoice_hosted_url} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
+                {workspace.last_invoice_pdf_url ? <a href={workspace.last_invoice_pdf_url} target="_blank" rel="noreferrer">PDF herunterladen</a> : null}
+              </div>
+            </div>
+          ) : null}
           <div className={profileStyles.invoiceArchive}>
             {invoices.length ? invoices.map((invoice) => (
               <article className={profileStyles.invoiceArchiveItem} key={invoice.id}>
