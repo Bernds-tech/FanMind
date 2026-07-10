@@ -5090,14 +5090,14 @@
 
 .roadmapCard {
   --phase: #168cff;
-  flex: 0 0 320px;
+  flex: 0 0 336px;
   display: grid;
   justify-items: center;
   align-content: start;
-  min-height: 470px;
+  min-height: 0;
   scroll-snap-align: center;
   scroll-margin-inline: max(24px, calc((100vw - 320px) / 2));
-  padding: 24px 28px 26px;
+  padding: 22px 24px 24px;
   border: 1px solid color-mix(in srgb, var(--phase) 64%, transparent);
   border-radius: 12px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--phase) 7%, transparent), rgba(3, 13, 31, 0.82) 46%, rgba(2, 11, 27, 0.95));
@@ -5183,7 +5183,7 @@
   min-height: 64px;
   margin-top: 18px;
   color: #f7f8fb;
-  font-size: 27px;
+  font-size: 25px;
   line-height: 0.98;
   letter-spacing: -1.2px;
   text-align: center;
@@ -5206,12 +5206,12 @@
 
 .roadmapCard ul {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
-  margin-top: 24px;
+  margin-top: 18px;
   color: #d8dce7;
-  font-size: 17px;
-  line-height: 1.18;
+  font-size: 15px;
+  line-height: 1.16;
 }
 
 .roadmapCard li {
@@ -5219,8 +5219,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
-  padding-left: 29px;
+  gap: 8px;
+  padding-left: 25px;
 }
 
 .roadmapCard li::before {
