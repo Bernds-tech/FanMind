@@ -68,6 +68,7 @@ type AddOnCard = {
   status: "Nicht aktiv" | "Aktiv" | "Coming Soon" | "Auf Anfrage";
   price: string;
   features?: string[];
+  showComingSoonMark?: boolean;
 };
 
 const BASE_PACKAGE_CARDS: PackageCard[] = [
@@ -150,6 +151,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     status: "Auf Anfrage",
     price: "auf Anfrage",
     features: ["manuelle Prüfung", "keine automatische Buchung"],
+    showComingSoonMark: true,
   },
   {
     key: "ai_ultra",
@@ -158,6 +160,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     status: "Coming Soon",
     price: "auf Anfrage",
     features: ["Roadmap-Vorschau", "spätere Freigabe"],
+    showComingSoonMark: true,
   },
   {
     key: "reach_analysis",
@@ -167,6 +170,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     status: "Nicht aktiv",
     price: "auf Anfrage",
     features: ["vorbereitet", "manuelle Prüfung"],
+    showComingSoonMark: true,
   },
   {
     key: "campaign_insights",
@@ -175,6 +179,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     status: "Coming Soon",
     price: "auf Anfrage",
     features: ["Roadmap-Vorschau", "keine Versandautomation"],
+    showComingSoonMark: true,
   },
   {
     key: "custom",
@@ -183,6 +188,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     status: "Auf Anfrage",
     price: "auf Anfrage",
     features: ["Pilotwunsch", "manuelle Freigabe"],
+    showComingSoonMark: true,
   },
 ];
 
@@ -540,7 +546,7 @@ export function PackageSettingsSection({
                 ))}
               </ul>
             ) : null}
-            {addOn.status === "Coming Soon" ? (
+            {addOn.showComingSoonMark ? (
               <div className={profileStyles.cardMarkSlot}>
                 <ComingSoonMark
                   size="small"
@@ -550,7 +556,7 @@ export function PackageSettingsSection({
             ) : (
               <p className={profileStyles.addOnPrice}>{addOn.price}</p>
             )}
-            {addOn.status === "Coming Soon" || addOn.status === "Aktiv" ? null : (
+            {addOn.status === "Aktiv" || addOn.showComingSoonMark ? null : (
               <a
                 className={profileStyles.packageButton}
                 href={getAddOnRequestHref(workspace, addOn, "add")}
