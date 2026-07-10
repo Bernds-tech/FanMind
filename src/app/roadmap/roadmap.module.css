@@ -19,7 +19,7 @@
   border-radius: 20px;
   display: flex;
   justify-content: space-between;
-  margin: 0 auto 28px;
+  margin: 0 auto 16px;
   max-width: 1360px;
   padding: 12px 14px;
   position: sticky;
@@ -149,9 +149,11 @@
 
 @media (max-width: 680px) {
   .page {
-    height: auto;
+    height: 100vh;
+    height: 100dvh;
     min-height: 100vh;
-    overflow: visible;
+    min-height: 100dvh;
+    overflow: hidden;
     padding: 18px;
   }
 
@@ -162,7 +164,8 @@
   }
 
   .contentScroll {
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding-bottom: 18px;
   }
 
