@@ -16,6 +16,7 @@ type SettingsPreferenceFormProps = {
   action: (formData: FormData) => void;
   locale: FanMindLanguage;
   brightness: FanMindBrightness;
+  returnTo?: string;
 };
 
 function getBrightnessIndex(value: FanMindBrightness) {
@@ -23,7 +24,7 @@ function getBrightnessIndex(value: FanMindBrightness) {
   return index >= 0 ? index : 0;
 }
 
-export function SettingsPreferenceForm({ action, locale, brightness }: SettingsPreferenceFormProps) {
+export function SettingsPreferenceForm({ action, locale, brightness, returnTo = "/settings" }: SettingsPreferenceFormProps) {
   const [brightnessIndex, setBrightnessIndex] = useState(getBrightnessIndex(brightness));
   const selectedBrightness = brightnessSteps[brightnessIndex] ?? brightnessSteps[0];
   const brightnessLabel = useMemo(
@@ -33,6 +34,7 @@ export function SettingsPreferenceForm({ action, locale, brightness }: SettingsP
 
   return (
     <form action={action} className={dashboardStyles.preferenceToolbar}>
+      <input type="hidden" name="returnTo" value={returnTo} />
       <fieldset className={dashboardStyles.compactPreferenceGroup}>
         <legend>{wt(locale, "Sprache")}</legend>
         <div className={dashboardStyles.segmentedLanguageControl}>

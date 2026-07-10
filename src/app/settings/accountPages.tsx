@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isWorkspaceBillingSuspended } from "@/lib/billing";
 import { getPreActivationRedirect } from "@/lib/preActivation";
@@ -11,10 +12,14 @@ import {
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { UserPreferenceFallback } from "@/components/UserPreferenceFallback";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getCustomerBillingTaxNote, listCustomerInvoicesForWorkspace, type CustomerInvoiceSummary } from "@/lib/customerBilling";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { FANMIND_BRIGHTNESS_COOKIE, getUserMetadataBrightness, normalizeFanMindBrightness, type FanMindBrightness } from "@/lib/userPreferences";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import profileStyles from "./profile/profile.module.css";
@@ -29,6 +34,7 @@ import {
   ProfileSettingsSection,
   SettingsHeaderBar,
 } from "./AccountSections";
+import { saveAppearancePreferences } from "./actions";
 
 type AccountWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -41,6 +47,9 @@ type AccountWorkspaceProps = {
   invoices: CustomerInvoiceSummary[];
   invoiceError: string | null;
   taxNote: string | null;
+  locale: FanMindLanguage;
+  brightness: FanMindBrightness;
+  preferencesError?: string | null;
 };
 
 const EMPTY_VALUE = "Noch nicht hinterlegt";
@@ -61,14 +70,16 @@ function getSidebarUserLabel(userDisplayName: string, userEmail: string | undefi
   return userDisplayName !== EMPTY_VALUE ? userDisplayName : userEmail || workspaceName || "Nutzer";
 }
 
-function AccountWorkspace({ workspace, user, activePage, userDisplayName, contactCount, openFollowupCount, showAdminArea, invoices, invoiceError, taxNote }: AccountWorkspaceProps) {
-  const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigation("settings", "de", 0, showAdminArea);
-  const fields = getProfileFields(user, workspace, userDisplayName);
+function AccountWorkspace({ workspace, user, activePage, userDisplayName, contactCount, openFollowupCount, showAdminArea, invoices, invoiceError, taxNote, locale, brightness, preferencesError }: AccountWorkspaceProps) {
+  const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigation("settings", locale, 0, showAdminArea);
+  const fields = getProfileFields(user, workspace, userDisplayName, locale);
   const hasOnlyRealValues = fields.every((field) => field.source === "real");
   const userLabel = getSidebarUserLabel(userDisplayName, user.email, workspace.name);
   const pageTitle = getSettingsAccountPageTitle(activePage);
 
   return (
+    <>
+    <UserPreferenceFallback locale={locale} brightness={brightness} />
     <WorkspaceShell
       workspaceName={workspace.name}
       userLabel={userLabel}
@@ -88,20 +99,26 @@ function AccountWorkspace({ workspace, user, activePage, userDisplayName, contac
       contactCount={contactCount}
       openFollowupCount={openFollowupCount}
       logoutAction={logout}
+      locale={locale}
     >
       <div className={profileStyles.profileStack}>
         <SettingsHeaderBar activePage={activePage} />
-        {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} logoutAction={logout} /> : null}
+        {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} logoutAction={logout} preferencesAction={saveAppearancePreferences} locale={locale} brightness={brightness} preferencesError={preferencesError} /> : null}
         {activePage === "package" ? <PackageSettingsSection workspace={workspace} /> : null}
         {activePage === "invoices" ? <InvoicesSettingsSection invoices={invoices} invoiceError={invoiceError} taxNote={taxNote} /> : null}
       </div>
     </WorkspaceShell>
+    </>
   );
 }
 
-export async function renderSettingsAccountPage(activePage: SettingsAccountPage) {
+export async function renderSettingsAccountPage(activePage: SettingsAccountPage, searchParams?: { preferences_error?: string }) {
   const { data, error: userError } = await getSupabaseServerUser();
   if (!data.user) redirect("/login");
+
+  const locale = await resolveWorkspaceLocale({ user: data.user });
+  const cookieStore = await cookies();
+  const brightness = getUserMetadataBrightness(data.user) ?? normalizeFanMindBrightness(cookieStore.get(FANMIND_BRIGHTNESS_COOKIE)?.value);
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") redirect("/login?demo_deleted=1");
@@ -129,6 +146,9 @@ export async function renderSettingsAccountPage(activePage: SettingsAccountPage)
           invoices={invoiceResult.invoices}
           invoiceError={invoiceResult.error}
           taxNote={activePage === "invoices" ? getCustomerBillingTaxNote() : null}
+          locale={locale}
+          brightness={brightness}
+          preferencesError={searchParams?.preferences_error ?? null}
         />
       ) : (
         <section className={dashboardStyles.fallbackCard} aria-label="FanMind Profil-Einstellungen">

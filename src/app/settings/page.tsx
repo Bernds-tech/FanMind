@@ -6,7 +6,6 @@ import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
-  updateSupabaseServerUserMetadata,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
   signOutSupabaseServerSession,
@@ -16,14 +15,12 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { UserPreferenceFallback } from "@/components/UserPreferenceFallback";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
-import { FANMIND_LOCALE_COOKIE, localeCookieOptions, resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
 import {
   FANMIND_BRIGHTNESS_COOKIE,
-  getPreferenceMetadata,
   getUserMetadataBrightness,
   normalizeFanMindBrightness,
-  preferenceCookieOptions,
   type FanMindBrightness,
 } from "@/lib/userPreferences";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
@@ -32,6 +29,7 @@ import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ReferralCopyButton } from "./ReferralCopyButton";
 import { SettingsPreferenceForm } from "./SettingsPreferenceForm";
+import { saveAppearancePreferences } from "./actions";
 
 type SettingsWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -45,30 +43,6 @@ type SettingsWorkspaceProps = {
   preferencesError?: string | null;
 };
 
-
-async function saveAppearancePreferences(formData: FormData) {
-  "use server";
-
-  const { data } = await getSupabaseServerUser();
-  if (!data.user) redirect("/login");
-
-  const locale = formData.get("locale") === "en" ? "en" : "de";
-  const brightness = normalizeFanMindBrightness(formData.get("brightness"));
-  const cookieStore = await cookies();
-
-  cookieStore.set(FANMIND_LOCALE_COOKIE, locale, localeCookieOptions());
-  cookieStore.set(FANMIND_BRIGHTNESS_COOKIE, brightness, preferenceCookieOptions());
-
-  const metadata = getPreferenceMetadata({
-    currentMetadata: data.user.user_metadata,
-    locale,
-    brightness,
-  });
-  const result = await updateSupabaseServerUserMetadata(metadata);
-
-  const search = result.error ? `?preferences_error=${encodeURIComponent(result.error.message)}` : "?preferences_saved=1";
-  redirect(`/settings${search}`);
-}
 
 async function logout() {
   "use server";
@@ -142,7 +116,7 @@ function SettingsWorkspace({
           <span>{wt(locale, "Profil · Cookie · LocalStorage-Fallback")}</span>
         </div>
         {preferencesError ? <p className={dashboardStyles.error}>{preferencesError}</p> : null}
-        <SettingsPreferenceForm action={saveAppearancePreferences} locale={locale} brightness={brightness} />
+        <SettingsPreferenceForm action={saveAppearancePreferences} locale={locale} brightness={brightness} returnTo="/settings" />
       </section>
 
       <section
