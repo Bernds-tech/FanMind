@@ -155,9 +155,6 @@ function CollapsedSidebarItem({
 export function WorkspaceShell({
   workspaceName,
   userLabel,
-  planLabel,
-  planMeta,
-  planStatus,
   mainNavigation,
   settingsNavigation,
   savedViews,
@@ -165,6 +162,7 @@ export function WorkspaceShell({
   contactCount,
   openFollowupCount = 0,
   showStats = true,
+  logoutAction,
   profileHref = "/settings/profile",
   children,
   locale = "de",
@@ -286,10 +284,11 @@ export function WorkspaceShell({
                   <p>{workspaceName}</p>
                 </div>
               </a>
-              <div className={styles.profileMetaBadges} aria-label={wt(locale, "Paket")} title={planMeta}>
-                <span>{planLabel}</span>
-                <small>{planStatus}</small>
-              </div>
+              <form action={logoutAction}>
+                <button type="submit" className={styles.logoutButton}>
+                  {wt(locale, "Abmelden")}
+                </button>
+              </form>
             </div>
           </>
         )}
