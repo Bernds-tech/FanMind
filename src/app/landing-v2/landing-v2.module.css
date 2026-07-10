@@ -10540,3 +10540,69 @@
     font-size: 10px;
   }
 }
+
+/* Issue #529: keep the actual public landing header wrapper pinned to the viewport. */
+.page {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.fixedHeaderShell {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2147483000;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0;
+  padding: 10px clamp(12px, 3vw, 48px);
+  background: linear-gradient(180deg, rgba(2, 8, 22, 0.94), rgba(2, 8, 22, 0.78) 72%, rgba(2, 8, 22, 0));
+  border: 0;
+  transform: none;
+  contain: none;
+  isolation: isolate;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.fixedHeaderShell .header {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  width: min(100%, 1440px);
+  max-width: 100%;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+
+.heroSection {
+  padding-top: 76px;
+}
+
+@media (max-width: 1280px) {
+  .heroSection {
+    padding-top: 112px;
+  }
+}
+
+@media (max-width: 720px) {
+  .fixedHeaderShell {
+    padding: 8px 10px 10px;
+  }
+
+  .heroSection {
+    padding-top: 154px;
+  }
+}
+
+@media (max-width: 390px) {
+  .heroSection {
+    padding-top: 148px;
+  }
+}
