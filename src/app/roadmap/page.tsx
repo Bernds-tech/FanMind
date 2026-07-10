@@ -80,41 +80,43 @@ export default function RoadmapPage() {
         </nav>
       </header>
 
-      <section className={styles.hero}>
-        <p>Roadmap</p>
-        <h1>Was ist verfügbar, was kommt später?</h1>
-        <span>
-          FanMind zeigt nicht aktive Funktionen nur als Upgrade, Vorschau, Coming Soon oder später an.
-        </span>
-      </section>
+      <div className={styles.contentScroll}>
+        <section className={styles.hero}>
+          <p>Roadmap</p>
+          <h1>Was ist verfügbar, was kommt später?</h1>
+          <span>
+            FanMind zeigt nicht aktive Funktionen nur als Upgrade, Vorschau, Coming Soon oder später an.
+          </span>
+        </section>
 
-      <div className={styles.grid}>
-        <RoadmapColumn title="Verfügbar / Aktiv" items={available} status="active" />
-        <RoadmapColumn title="In Arbeit" items={inProgress} status="preview" />
-        <RoadmapColumn title="Coming Soon" items={comingSoon} status="coming_soon" />
-        <RoadmapColumn title="Später" items={later} status="hidden" />
+        <div className={styles.grid}>
+          <RoadmapColumn title="Verfügbar / Aktiv" items={available} status="active" />
+          <RoadmapColumn title="In Arbeit" items={inProgress} status="preview" />
+          <RoadmapColumn title="Coming Soon" items={comingSoon} status="coming_soon" />
+          <RoadmapColumn title="Später" items={later} status="hidden" />
+        </div>
+
+        <section className={styles.integrationNotice}>
+          <h2>Integrationen</h2>
+          <p>
+            Geplante Integrationen werden erst nach technischer und rechtlicher Prüfung umgesetzt. Aktuell werden keine Nachrichten automatisch aus externen Plattformen gesendet oder synchronisiert.
+          </p>
+        </section>
+
+        <footer className={styles.siteFooter}>
+          <strong>FanMind</strong>
+          <p>KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · kontakt@fanmind.ch</p>
+          <nav aria-label="Footer Navigation">
+            <a href="/impressum">Impressum</a>
+            <a href="/datenschutz">Datenschutz</a>
+            <a href="/agb">AGB</a>
+            <a href="/zahlungsbedingungen">Zahlungsbedingungen</a>
+            <a href="/roadmap">Roadmap</a>
+            <a href="/login">Login</a>
+            <a href="/register">Registrieren</a>
+          </nav>
+        </footer>
       </div>
-
-      <section className={styles.integrationNotice}>
-        <h2>Integrationen</h2>
-        <p>
-          Geplante Integrationen werden erst nach technischer und rechtlicher Prüfung umgesetzt. Aktuell werden keine Nachrichten automatisch aus externen Plattformen gesendet oder synchronisiert.
-        </p>
-      </section>
-
-      <footer className={styles.siteFooter}>
-        <strong>FanMind</strong>
-        <p>KI-gestütztes Fan-CRM mit manuellem Copy-&-Open-Workflow · kontakt@fanmind.ch</p>
-        <nav aria-label="Footer Navigation">
-          <a href="/impressum">Impressum</a>
-          <a href="/datenschutz">Datenschutz</a>
-          <a href="/agb">AGB</a>
-          <a href="/zahlungsbedingungen">Zahlungsbedingungen</a>
-          <a href="/roadmap">Roadmap</a>
-          <a href="/login">Login</a>
-          <a href="/register">Registrieren</a>
-        </nav>
-      </footer>
     </main>
   );
 }
