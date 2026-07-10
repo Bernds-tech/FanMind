@@ -18,6 +18,7 @@ import {
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
+import { getCustomerBillingTaxNote, listCustomerInvoicesForWorkspace, type CustomerInvoiceSummary } from "@/lib/customerBilling";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
@@ -31,6 +32,9 @@ type ProfileWorkspaceProps = {
   contactCount: number;
   openFollowupCount: number;
   showAdminArea: boolean;
+  invoices: CustomerInvoiceSummary[];
+  invoiceError: string | null;
+  taxNote: string | null;
 };
 
 type ProfileField = {
@@ -154,6 +158,9 @@ function ProfileWorkspace({
   contactCount,
   openFollowupCount,
   showAdminArea,
+  invoices,
+  invoiceError,
+  taxNote,
 }: ProfileWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigation("settings", "de", 0, showAdminArea);
@@ -176,8 +183,8 @@ function ProfileWorkspace({
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
-        title: "Profil-Einstellungen",
-        subtitle: "Willkommen zurück, Pilot Test 👋",
+        title: "Profil & Konto",
+        subtitle: "Dein zentraler Bereich für Profil, Workspace, Paket, Billing und Rechnungen.",
         searchPlaceholder: "Suche nach Profil, Workspace, Paket ...",
         primaryActionLabel: "MVP-Vorschau",
         primaryActionHref: "#user-profile",
@@ -202,8 +209,7 @@ function ProfileWorkspace({
             </span>
           </div>
           <p className={profileStyles.headerCopy}>
-            Account- und Workspace-Daten aus der geschützten Sitzung. Bearbeitung
-            und Zahlungslogik bleiben im MVP getrennt.
+            Account-Daten aus der geschützten Sitzung. Konto, Billing und Rechnungsarchiv sind hier zentral zusammengeführt.
           </p>
           <dl className={profileStyles.infoGrid}>
             {fields.map((field) => (
@@ -217,7 +223,7 @@ function ProfileWorkspace({
           </dl>
         </section>
 
-        <section className={profileStyles.compactCard} aria-labelledby="billing-profile-title">
+        <section className={profileStyles.compactCard} id="billing" aria-labelledby="billing-profile-title">
           <div className={profileStyles.cardHeader}>
             <div>
               <p className={dashboardStyles.eyebrow}>Billing</p>
@@ -252,15 +258,68 @@ function ProfileWorkspace({
               )}
             </div>
           </dl>
-          {shouldShowBillingCheckoutAction(workspace) ? (
-            <div className={profileStyles.actionRow}>
-              <BillingCheckoutButton
-                planId={workspace.plan_id}
-                commercialOption={workspace.commercial_option}
-                label={getBillingCheckoutActionLabel(workspace.billing_status)}
-              />
+          <div className={profileStyles.planManagement}>
+            <div>
+              <p className={profileStyles.invoiceLabel}>Paket wechseln / Zusatzpakete</p>
+              <p className={profileStyles.invoiceValue}>Starter Flex und Starter 12 Monate sind vorbereitet. Growth, Agency und Enterprise bleiben Coming Soon / auf Anfrage.</p>
             </div>
-          ) : null}
+            <div className={profileStyles.invoiceLinks}>
+              {shouldShowBillingCheckoutAction(workspace) ? (
+                <BillingCheckoutButton
+                  planId={workspace.plan_id}
+                  commercialOption={workspace.commercial_option}
+                  label={getBillingCheckoutActionLabel(workspace.billing_status)}
+                />
+              ) : null}
+              <a href="/billing/start">Paketoptionen ansehen</a>
+            </div>
+          </div>
+        </section>
+
+        <section className={profileStyles.compactCard} id="invoices" aria-labelledby="invoice-archive-title">
+          <div className={profileStyles.cardHeader}>
+            <div>
+              <p className={dashboardStyles.eyebrow}>Rechnungen</p>
+              <h2 id="invoice-archive-title">Rechnungsarchiv</h2>
+            </div>
+            <span className={profileStyles.softChip}>Stripe</span>
+          </div>
+          <p className={profileStyles.headerCopy}>Rechnungen werden serverseitig für deinen Workspace geladen. Du kannst sie öffnen, als PDF herunterladen und den Zahlungsstatus prüfen.</p>
+          {invoiceError ? <p className={dashboardStyles.error}>{invoiceError}</p> : null}
+          {taxNote ? <p className={profileStyles.taxNote}>{taxNote}</p> : null}
+          <div className={profileStyles.invoiceArchive}>
+            {invoices.length ? invoices.map((invoice) => (
+              <article className={profileStyles.invoiceArchiveItem} key={invoice.id}>
+                <div>
+                  <p className={profileStyles.invoiceLabel}>{invoice.number ?? invoice.id}</p>
+                  <p className={profileStyles.invoiceValue}>{formatDate(invoice.created)} · {formatMoney(invoice.total)} · {invoice.status ?? "Status offen"}</p>
+                </div>
+                <div className={profileStyles.invoiceLinks}>
+                  {invoice.hostedInvoiceUrl ? <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
+                  {invoice.invoicePdf ? <a href={invoice.invoicePdf} target="_blank" rel="noreferrer">PDF herunterladen</a> : null}
+                </div>
+              </article>
+            )) : (
+              <div className={profileStyles.invoiceArchiveItem}>
+                <div>
+                  <p className={profileStyles.invoiceLabel}>Noch leer</p>
+                  <p className={profileStyles.invoiceValue}>Für diesen Workspace liegen noch keine Stripe-Rechnungen vor oder der Stripe-Customer ist noch nicht verknüpft.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className={profileStyles.compactCard} aria-labelledby="logout-title">
+          <div className={profileStyles.cardHeader}>
+            <div>
+              <p className={dashboardStyles.eyebrow}>Sitzung</p>
+              <h2 id="logout-title">Logout</h2>
+            </div>
+          </div>
+          <form action={logout} className={profileStyles.actionRow}>
+            <button type="submit" className={dashboardStyles.secondaryButton}>Abmelden</button>
+          </form>
         </section>
       </div>
     </WorkspaceShell>
@@ -289,6 +348,9 @@ export default async function ProfileSettingsPage() {
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
+  const invoiceResult = workspace
+    ? await listCustomerInvoicesForWorkspace(workspace)
+    : { invoices: [], error: null };
 
   return (
     <main className={dashboardStyles.page}>
@@ -300,6 +362,9 @@ export default async function ProfileSettingsPage() {
           contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
           showAdminArea={isPlatformAdminEmail(data.user.email)}
+          invoices={invoiceResult.invoices}
+          invoiceError={invoiceResult.error}
+          taxNote={getCustomerBillingTaxNote()}
         />
       ) : (
         <section

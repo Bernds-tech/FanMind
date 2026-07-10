@@ -52,7 +52,7 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - konfigurierbarer Billing-Steuermodus: Default `FANMIND_TAX_MODE=small_business` ohne Stripe Automatic Tax und mit Kleinunternehmer-Rechnungshinweis; optional `FANMIND_TAX_MODE=stripe_tax` nur nach ausdrücklicher steuerlicher/technischer Freigabe
 - Internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag für klar markierte Test-Workspaces; öffentlich im Registrierungsflow nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`, sonst admin-only, und ohne Referral-/Rabatt-Automation
 - Legal-Seiten und Zahlungsbedingungen
-- geschützter Kundenbereich `/billing`, in dem eingeloggte Workspace-Nutzer eigene Stripe-Rechnungen sehen, öffnen und als PDF herunterladen können
+- zentraler Profil-/Kontobereich `/settings/profile`, in dem eingeloggte Workspace-Nutzer Profil, Workspace, Paket/Billing und eigene Stripe-Rechnungen sehen, öffnen und als PDF herunterladen können; `/billing` leitet intern dorthin weiter
 
 Aktueller Roadmap-Stand für Phase 4:
 
@@ -61,7 +61,7 @@ Aktueller Roadmap-Stand für Phase 4:
 - Abrechnung & Admin-Basis: erledigt / Feinschliff.
 - Sales-Unterlagen: nächster Schritt.
 - Produktionsfreigabe: finaler Smoke-Test.
-- Offen sichtbar bleiben Issue #491 „Billing/Rechnungen/Paketverwaltung ins Profil“, der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
+- Issue #491 „Billing/Rechnungen/Paketverwaltung ins Profil“ ist umgesetzt; offen sichtbar bleiben der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
 
 ## 3. Kommerzielle Wahrheit
 

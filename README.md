@@ -8,11 +8,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
 - Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag. Im normalen Registrierungsflow erscheint es nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`; Default ist `false`, damit der Flow unverändert bleibt. Referral-/Rabatt-Automation bleibt deaktiviert. Admins können unter `/admin/assets` eigene Bilder in den Supabase Storage Bucket `fanmind-assets` hochladen und verwalten.
-- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Netto/Steuer/Brutto, wenn Stripe diese Daten liefert. Zahlende Nutzer können ihre Stripe-Rechnungen im geschützten Bereich `/billing` öffnen und als PDF herunterladen.
+- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Netto/Steuer/Brutto, wenn Stripe diese Daten liefert. Zahlende Nutzer können ihre Stripe-Rechnungen im zentralen Profil-/Kontobereich `/settings/profile` öffnen und als PDF herunterladen; `/billing` leitet intern dorthin weiter.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
-- Roadmap Phase 4 zeigt den echten Verkaufsstart-Stand: „Verkaufsstart vorbereitet / finaler Smoke-Test“. Stripe-Live-Schritte sind erledigt, Abrechnung & Admin-Basis ist erledigt / im Feinschliff, Sales-Unterlagen sind der nächste Schritt und Produktionsfreigabe bleibt finaler Smoke-Test. Offen sichtbar bleiben Issue #491 Billing/Rechnungen/Paketverwaltung ins Profil, der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
+- Roadmap Phase 4 zeigt den echten Verkaufsstart-Stand: „Verkaufsstart vorbereitet / finaler Smoke-Test“. Stripe-Live-Schritte sind erledigt, Abrechnung & Admin-Basis ist erledigt / im Feinschliff, Sales-Unterlagen sind der nächste Schritt und Produktionsfreigabe bleibt finaler Smoke-Test. Issue #491 Billing/Rechnungen/Paketverwaltung ins Profil ist umgesetzt; offen sichtbar bleiben der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
 - Geplantes Referral Growth Window: alle berechtigten zahlenden Nutzer können teilnehmen, solange FanMind noch unter `2.000` aktiven zahlenden Kunden/Workspaces liegt; je aktivem geworbenen Kunden/Workspace gibt es 5 % Rabatt, maximal 20 aktive Referrals = 100 % Rabatt.
 - Nach Erreichen des 2.000er-Caps wird das Referral Growth Window geschlossen. Bestehende aktive Rabattansprüche bleiben bestehen, aber neue zusätzliche Rabattprozente entstehen nicht mehr, außer FanMind öffnet das Programm ausdrücklich wieder.
 - FanMind ist ein Copy-&-Open-Assistent, kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert, öffnet bei Bedarf den Originalkanal und sendet selbst.
@@ -75,7 +75,8 @@ npm run lint
 | `/fans/import` | CSV-Import | aktiv |
 | `/fans/[id]` | Kontaktdetail, Timeline, KI, Memory, Follow-ups | aktiv |
 | `/followups` | Follow-up-Übersicht | aktiv, wenn DB-Tabellen vorhanden |
-| `/billing` | geschützter Kundenbereich für Stripe-Rechnungen mit Öffnen-/PDF-Links | aktiv für eingeloggte Workspace-Nutzer |
+| `/settings/profile` | zentraler Profil-/Kontobereich mit Profil, Workspace, Paket/Billing, Rechnungsarchiv, Öffnen-/PDF-Links und Logout | aktiv für eingeloggte Workspace-Nutzer |
+| `/billing` | interne Weiterleitung zum Profil-/Kontobereich | intern/redirect |
 | `/billing/start` | Zahlungs-/Setup-Start | aktiv als Billing-Grundlage mit Card Checkout; SEPA nur optional per `FANMIND_ENABLE_SEPA_CHECKOUT=true` |
 | `/admin/...` | Admin-/Billing-Grundlagen inklusive Asset-Verwaltung | admin-only |
 | `/api/admin/assets/upload` | serverseitiger Admin-Upload in Supabase Storage Bucket `fanmind-assets` | admin-only |

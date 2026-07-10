@@ -422,7 +422,8 @@
 
 .workspaceMiniCard,
 .userMiniCard,
-.planMiniCard {
+.planMiniCard,
+.profileMetaBadges {
   border: 1px solid rgba(148, 163, 184, 0.13);
   border-radius: 14px;
   padding: 8px;
@@ -471,6 +472,33 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 8px;
+}
+
+
+.profileMetaBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.profileMetaBadges span,
+.profileMetaBadges small {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.profileMetaBadges span {
+  color: #cffafe;
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  background: rgba(8, 47, 73, 0.32);
+}
+
+.profileMetaBadges small {
+  color: #052e16;
+  background: #86efac;
 }
 
 .planMiniCard small {

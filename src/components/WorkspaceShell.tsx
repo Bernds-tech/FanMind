@@ -165,7 +165,6 @@ export function WorkspaceShell({
   contactCount,
   openFollowupCount = 0,
   showStats = true,
-  logoutAction,
   profileHref = "/settings/profile",
   children,
   locale = "de",
@@ -231,16 +230,6 @@ export function WorkspaceShell({
               >
                 <span aria-hidden="true">{getInitials(userLabel)}</span>
               </a>
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  className={styles.compactCircleAction}
-                  aria-label={wt(locale, "Abmelden")}
-                  title={wt(locale, "Abmelden")}
-                >
-                  <span aria-hidden="true">AB</span>
-                </button>
-              </form>
             </div>
           </>
         ) : (
@@ -297,19 +286,10 @@ export function WorkspaceShell({
                   <p>{workspaceName}</p>
                 </div>
               </a>
-              <section className={styles.planMiniCard} aria-label={wt(locale, "Paket")}>
-                <div>
-                  <span>{wt(locale, "Paket")}</span>
-                  <strong>{planLabel}</strong>
-                  <p>{planMeta}</p>
-                </div>
+              <div className={styles.profileMetaBadges} aria-label={wt(locale, "Paket")} title={planMeta}>
+                <span>{planLabel}</span>
                 <small>{planStatus}</small>
-              </section>
-              <form action={logoutAction}>
-                <button type="submit" className={styles.logoutButton}>
-                  {wt(locale, "Abmelden")}
-                </button>
-              </form>
+              </div>
             </div>
           </>
         )}

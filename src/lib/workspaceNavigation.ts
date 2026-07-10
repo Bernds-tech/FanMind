@@ -68,16 +68,6 @@ export function getWorkspaceNavigation(
       },
     ],
     settingsNavigation: [
-      {
-        label: wt(locale, "Einstellungen"),
-        href: "/settings",
-        active: activeRoute === "settings",
-      },
-      {
-        label: "Rechnungen",
-        href: "/billing",
-        active: activeRoute === "billing",
-      },
       ...(showAdminArea
         ? [
             {
