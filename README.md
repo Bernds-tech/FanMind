@@ -8,7 +8,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
 - Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag. Im normalen Registrierungsflow erscheint es nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`; Default ist `false`, damit der Flow unverändert bleibt. Referral-/Rabatt-Automation bleibt deaktiviert. Admins können unter `/admin/assets` eigene Bilder in den Supabase Storage Bucket `fanmind-assets` hochladen und verwalten.
-- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Netto/Steuer/Brutto, wenn Stripe diese Daten liefert. Zahlende Nutzer können ihre Stripe-Rechnungen im zentralen Profil-/Kontobereich `/settings/profile` öffnen und als PDF herunterladen; `/billing` leitet intern dorthin weiter.
+- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Netto/Steuer/Brutto, wenn Stripe diese Daten liefert. Zahlende Nutzer haben getrennte kompakte Konto-Seiten: `/settings/profile` für Profil/Workspace, `/settings/package` für Paket/Status/Optionen und `/settings/invoices` für Stripe-Rechnungen mit Öffnen-/PDF-Links; `/billing` leitet intern zum Rechnungsarchiv weiter.
 - Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
 - Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
@@ -75,8 +75,12 @@ npm run lint
 | `/fans/import` | CSV-Import | aktiv |
 | `/fans/[id]` | Kontaktdetail, Timeline, KI, Memory, Follow-ups | aktiv |
 | `/followups` | Follow-up-Übersicht | aktiv, wenn DB-Tabellen vorhanden |
-| `/settings/profile` | zentraler Profil-/Kontobereich mit Profil, Workspace, Paket/Billing, Rechnungsarchiv, Öffnen-/PDF-Links und Logout | aktiv für eingeloggte Workspace-Nutzer |
-| `/billing` | interne Weiterleitung zum Profil-/Kontobereich | intern/redirect |
+| `/settings/profile` | kompakte Profilseite mit Profil und Workspace-Basisdaten | aktiv für eingeloggte Workspace-Nutzer |
+| `/settings/package` | kompakte Paket-/Statusseite mit Betrag, Setup, Paketoptionen und sicherem Checkout-Einstieg ohne automatischen Planwechsel | aktiv für eingeloggte Workspace-Nutzer |
+| `/settings/invoices` | kompaktes Rechnungsarchiv mit serverseitig geladenen Stripe-Rechnungen, Öffnen- und PDF-Links | aktiv für eingeloggte Workspace-Nutzer |
+| `/settings/plan` | interne Weiterleitung zu `/settings/package` | intern/redirect |
+| `/settings/billing` | interne Weiterleitung zu `/settings/invoices` | intern/redirect |
+| `/billing` | interne Weiterleitung zum Rechnungsarchiv `/settings/invoices` | intern/redirect |
 | `/billing/start` | Zahlungs-/Setup-Start | aktiv als Billing-Grundlage mit Card Checkout; SEPA nur optional per `FANMIND_ENABLE_SEPA_CHECKOUT=true` |
 | `/admin/...` | Admin-/Billing-Grundlagen inklusive Asset-Verwaltung | admin-only |
 | `/api/admin/assets/upload` | serverseitiger Admin-Upload in Supabase Storage Bucket `fanmind-assets` | admin-only |
