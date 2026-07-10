@@ -281,10 +281,13 @@ export function PackageSettingsSection({ workspace }: { workspace: WorkspaceDash
 }
 
 export function InvoicesSettingsSection({ invoices, invoiceError, taxNote }: { invoices: CustomerInvoiceSummary[]; invoiceError: string | null; taxNote: string | null }) {
+  const hasDemoInvoices = invoices.some((invoice) => invoice.isDemo);
+
   return (
     <section className={profileStyles.invoiceTableSection} aria-labelledby="invoice-table-title">
       <h2 id="invoice-table-title" className={profileStyles.visuallyHidden}>Rechnungsübersicht</h2>
       {invoiceError ? <p className={dashboardStyles.error}>{invoiceError}</p> : null}
+      {hasDemoInvoices ? <p className={profileStyles.invoiceDemoNotice}><span className={profileStyles.warningChip}>Demo</span> Beispielrechnung – keine echte Forderung</p> : null}
       <div className={profileStyles.invoiceTableWrap}>
         <table className={profileStyles.invoiceTable}>
           <thead>
@@ -302,15 +305,19 @@ export function InvoicesSettingsSection({ invoices, invoiceError, taxNote }: { i
             {invoices.length ? invoices.map((invoice) => (
               <tr key={invoice.id}>
                 <td>{formatDate(invoice.created)}</td>
-                <td><strong>{invoice.number ?? invoice.id}</strong><small>{invoice.number ? invoice.id : null}</small></td>
+                <td>
+                  <strong>{invoice.number ?? invoice.id}</strong>
+                  {invoice.description ? <small>{invoice.description}</small> : <small>{invoice.number ? invoice.id : null}</small>}
+                  {invoice.isDemo ? <span className={profileStyles.invoiceDemoBadge}>Demo</span> : null}
+                </td>
                 <td><span className={profileStyles.softChip}>{invoice.status ?? "offen"}</span></td>
                 <td>{formatMoney(invoice.amountDue)}</td>
                 <td>{formatMoney(invoice.amountPaid)}</td>
                 <td>{taxNote ? <span className={profileStyles.mutedBadge}>keine USt</span> : formatMoney(invoice.tax)}</td>
                 <td>
                   <div className={profileStyles.invoiceTableActions}>
-                    {invoice.hostedInvoiceUrl ? <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">Ansehen</a> : <span>—</span>}
-                    {invoice.invoicePdf ? <a href={invoice.invoicePdf} target="_blank" rel="noreferrer">PDF</a> : <span>—</span>}
+                    {invoice.hostedInvoiceUrl ? <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">Ansehen</a> : <span title={invoice.isDemo ? "Demo-Ansicht: keine echte Stripe-Rechnung." : undefined}>Ansehen</span>}
+                    {invoice.invoicePdf ? <a href={invoice.invoicePdf} target="_blank" rel="noreferrer">PDF</a> : <span title={invoice.pdfHint ?? undefined}>PDF</span>}
                   </div>
                 </td>
               </tr>

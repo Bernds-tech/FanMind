@@ -77,7 +77,7 @@ npm run lint
 | `/followups` | Follow-up-Übersicht | aktiv, wenn DB-Tabellen vorhanden |
 | `/settings/profile` | kompakte Profilseite mit Profil und Workspace-Basisdaten | aktiv für eingeloggte Workspace-Nutzer |
 | `/settings/package` | kompakte Paket-/Statusseite mit Betrag, Setup, Paketoptionen und sicherem Checkout-Einstieg ohne automatischen Planwechsel | aktiv für eingeloggte Workspace-Nutzer |
-| `/settings/invoices` | kompaktes Rechnungsarchiv mit serverseitig geladenen Stripe-Rechnungen, Öffnen- und PDF-Links | aktiv für eingeloggte Workspace-Nutzer |
+| `/settings/invoices` | kompaktes Rechnungsarchiv mit serverseitig geladenen Stripe-Rechnungen, Öffnen- und PDF-Links; kostenlose Demo-Workspaces sehen nur ohne echte Stripe-Rechnungen klar markierte Beispielrechnungen ohne echte Forderung | aktiv für eingeloggte Workspace-Nutzer |
 | `/settings/plan` | interne Weiterleitung zu `/settings/package` | intern/redirect |
 | `/settings/billing` | interne Weiterleitung zu `/settings/invoices` | intern/redirect |
 | `/billing` | interne Weiterleitung zum Rechnungsarchiv `/settings/invoices` | intern/redirect |
