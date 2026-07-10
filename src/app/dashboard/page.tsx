@@ -23,6 +23,7 @@ import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
+import { PlatformLogo } from "@/components/PlatformLogo";
 import styles from "./dashboard.module.css";
 import { getMessageSourceContext } from "@/lib/sourceContext";
 
@@ -487,7 +488,11 @@ function WorkspaceDetails({
                         >
                           {item.name}
                         </Link>
-                        <span className={styles.tableBadge}>{item.source}</span>
+                        <PlatformLogo
+                          className={styles.newMessageChannelLogo}
+                          platform={item.source}
+                          size="sm"
+                        />
                         <span className={styles.tableBadge}>
                           {item.sourceContext}
                         </span>

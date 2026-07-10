@@ -2067,6 +2067,10 @@
   gap: 8px;
 }
 
+.newMessageChannelLogo {
+  flex: 0 0 auto;
+}
+
 .newMessageHeader .contactNameLink {
   overflow: hidden;
   text-overflow: ellipsis;
