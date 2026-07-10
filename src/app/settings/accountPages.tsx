@@ -93,7 +93,7 @@ function AccountWorkspace({ workspace, user, activePage, userDisplayName, contac
         <SettingsHeaderBar activePage={activePage} />
         {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} logoutAction={logout} /> : null}
         {activePage === "package" ? <PackageSettingsSection workspace={workspace} /> : null}
-        {activePage === "invoices" ? <InvoicesSettingsSection workspace={workspace} invoices={invoices} invoiceError={invoiceError} taxNote={taxNote} /> : null}
+        {activePage === "invoices" ? <InvoicesSettingsSection invoices={invoices} invoiceError={invoiceError} taxNote={taxNote} /> : null}
       </div>
     </WorkspaceShell>
   );

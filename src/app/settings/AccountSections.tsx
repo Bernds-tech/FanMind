@@ -146,52 +146,49 @@ export function PackageSettingsSection({ workspace }: { workspace: WorkspaceDash
   );
 }
 
-export function InvoicesSettingsSection({ workspace, invoices, invoiceError, taxNote }: { workspace: WorkspaceDashboardRow; invoices: CustomerInvoiceSummary[]; invoiceError: string | null; taxNote: string | null }) {
+export function InvoicesSettingsSection({ invoices, invoiceError, taxNote }: { invoices: CustomerInvoiceSummary[]; invoiceError: string | null; taxNote: string | null }) {
   return (
-    <section className={profileStyles.compactCard} aria-labelledby="invoice-archive-title">
-      <div className={profileStyles.cardHeader}>
-        <div>
-          <p className={dashboardStyles.eyebrow}>Rechnungen</p>
-          <h2 id="invoice-archive-title">Rechnungsarchiv</h2>
-        </div>
-        <span className={profileStyles.softChip}>Stripe serverseitig</span>
-      </div>
-      <p className={profileStyles.headerCopy}>Rechnungen werden serverseitig für deinen Workspace geladen. Du kannst sie öffnen, als PDF herunterladen und den Zahlungsstatus prüfen.</p>
+    <section className={profileStyles.invoiceTableSection} aria-labelledby="invoice-table-title">
+      <h2 id="invoice-table-title" className={profileStyles.visuallyHidden}>Rechnungsübersicht</h2>
       {invoiceError ? <p className={dashboardStyles.error}>{invoiceError}</p> : null}
-      {taxNote ? <p className={profileStyles.taxNote}>{taxNote}</p> : null}
-      {workspace.last_invoice_id || workspace.last_invoice_status ? (
-        <div className={profileStyles.latestInvoicePanel}>
-          <div>
-            <p className={profileStyles.invoiceLabel}>Letzte Rechnung</p>
-            <p className={profileStyles.invoiceValue}>{workspace.last_invoice_status ?? "Status offen"} · {formatMoney(workspace.last_invoice_amount_due_cents)}</p>
-          </div>
-          <div className={profileStyles.invoiceLinks}>
-            {workspace.last_invoice_hosted_url ? <a href={workspace.last_invoice_hosted_url} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
-            {workspace.last_invoice_pdf_url ? <a href={workspace.last_invoice_pdf_url} target="_blank" rel="noreferrer">PDF herunterladen</a> : null}
-          </div>
-        </div>
-      ) : null}
-      <div className={profileStyles.invoiceArchive}>
-        {invoices.length ? invoices.map((invoice) => (
-          <article className={profileStyles.invoiceArchiveItem} key={invoice.id}>
-            <div>
-              <p className={profileStyles.invoiceLabel}>{invoice.number ?? invoice.id}</p>
-              <p className={profileStyles.invoiceValue}>{formatDate(invoice.created)} · {formatMoney(invoice.total)} · {invoice.status ?? "Status offen"}</p>
-            </div>
-            <div className={profileStyles.invoiceLinks}>
-              {invoice.hostedInvoiceUrl ? <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">Rechnung öffnen</a> : null}
-              {invoice.invoicePdf ? <a href={invoice.invoicePdf} target="_blank" rel="noreferrer">PDF herunterladen</a> : null}
-            </div>
-          </article>
-        )) : (
-          <div className={profileStyles.invoiceArchiveItem}>
-            <div>
-              <p className={profileStyles.invoiceLabel}>Noch leer</p>
-              <p className={profileStyles.invoiceValue}>Für diesen Workspace liegen noch keine Stripe-Rechnungen vor oder der Stripe-Customer ist noch nicht verknüpft.</p>
-            </div>
-          </div>
-        )}
+      <div className={profileStyles.invoiceTableWrap}>
+        <table className={profileStyles.invoiceTable}>
+          <thead>
+            <tr>
+              <th scope="col">Datum</th>
+              <th scope="col">Rechnungsnummer / Stripe Invoice ID</th>
+              <th scope="col">Status</th>
+              <th scope="col">Betrag fällig</th>
+              <th scope="col">Betrag bezahlt</th>
+              <th scope="col">Steuer / USt-Hinweis</th>
+              <th scope="col" className={profileStyles.invoiceActionsHeader}>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.length ? invoices.map((invoice) => (
+              <tr key={invoice.id}>
+                <td>{formatDate(invoice.created)}</td>
+                <td><strong>{invoice.number ?? invoice.id}</strong><small>{invoice.number ? invoice.id : null}</small></td>
+                <td><span className={profileStyles.softChip}>{invoice.status ?? "offen"}</span></td>
+                <td>{formatMoney(invoice.amountDue)}</td>
+                <td>{formatMoney(invoice.amountPaid)}</td>
+                <td>{taxNote ? <span className={profileStyles.mutedBadge}>keine USt</span> : formatMoney(invoice.tax)}</td>
+                <td>
+                  <div className={profileStyles.invoiceTableActions}>
+                    {invoice.hostedInvoiceUrl ? <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">Ansehen</a> : <span>—</span>}
+                    {invoice.invoicePdf ? <a href={invoice.invoicePdf} target="_blank" rel="noreferrer">PDF</a> : <span>—</span>}
+                  </div>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={7} className={profileStyles.invoiceEmptyCell}>Noch keine Rechnungen vorhanden.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
+      {taxNote ? <p className={profileStyles.invoiceFootnote}>{taxNote}</p> : null}
     </section>
   );
 }
