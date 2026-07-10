@@ -667,3 +667,114 @@
     grid-template-columns: 1fr;
   }
 }
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.2fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.crmTable {
+  display: grid;
+  gap: 0;
+  margin: 10px 0 0;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.crmRow {
+  display: grid;
+  grid-template-columns: minmax(135px, 0.78fr) minmax(0, 1.22fr);
+  min-height: 34px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.crmRow:first-child {
+  border-top: 0;
+}
+
+.crmRow dt,
+.crmRow dd {
+  margin: 0;
+  padding: 8px 10px;
+  line-height: 1.25;
+}
+
+.crmRow dt {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.crmRow dd {
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 820;
+  overflow-wrap: anywhere;
+}
+
+.sectionDivider {
+  margin: 12px 0 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(103, 232, 249, 0.14);
+  border-radius: 999px;
+  color: #a5f3fc;
+  background: rgba(8, 47, 73, 0.18);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.actionRowSplit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.mailButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid rgba(103, 232, 249, 0.28);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #cffafe;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.26), rgba(15, 23, 42, 0.7));
+  box-shadow: 0 12px 30px rgba(8, 145, 178, 0.12);
+}
+
+.mailButton:hover,
+.mailButton:focus-visible {
+  border-color: rgba(103, 232, 249, 0.52);
+  outline: none;
+}
+
+@media (max-width: 1100px) {
+  .profileGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .crmRow {
+    grid-template-columns: 1fr;
+  }
+
+  .crmRow dd {
+    padding-top: 0;
+  }
+}

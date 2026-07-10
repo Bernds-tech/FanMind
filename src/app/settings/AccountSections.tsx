@@ -11,6 +11,9 @@ import type {
   SupabaseServerUser,
   WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import type { FanMindBrightness } from "@/lib/userPreferences";
+import { SettingsPreferenceForm } from "./SettingsPreferenceForm";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import profileStyles from "./profile/profile.module.css";
 export type SettingsAccountPage = "profile" | "package" | "invoices";
@@ -18,6 +21,7 @@ export type ProfileField = {
   label: string;
   value: string;
   source: "real" | "placeholder";
+  group: "personal" | "workspace" | "tax";
 };
 
 export const SETTINGS_ACCOUNT_TABS: Array<{
@@ -298,29 +302,44 @@ export function getProfileFields(
   user: SupabaseServerUser,
   workspace: WorkspaceDashboardRow,
   userDisplayName: string,
+  locale: FanMindLanguage,
 ): ProfileField[] {
   const email =
     typeof user.email === "string" && user.email.trim()
       ? user.email.trim()
       : EMPTY_VALUE;
   const workspaceName = workspace.name?.trim() || EMPTY_VALUE;
+  const metadata = user.user_metadata ?? {};
+  const value = (...keys: string[]) => {
+    for (const key of keys) {
+      const candidate = metadata[key];
+      if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    }
+    return EMPTY_VALUE;
+  };
+  const field = (label: string, fieldValue: string, group: ProfileField["group"]): ProfileField => ({
+    label,
+    value: fieldValue,
+    source: fieldValue === EMPTY_VALUE ? "placeholder" : "real",
+    group,
+  });
 
   return [
-    {
-      label: "Anzeigename",
-      value: userDisplayName,
-      source: userDisplayName === EMPTY_VALUE ? "placeholder" : "real",
-    },
-    {
-      label: "E-Mail",
-      value: email,
-      source: email === EMPTY_VALUE ? "placeholder" : "real",
-    },
-    {
-      label: "Workspace-Name",
-      value: workspaceName,
-      source: workspaceName === EMPTY_VALUE ? "placeholder" : "real",
-    },
+    field("Anzeigename / Name", userDisplayName, "personal"),
+    field("E-Mail", email, "personal"),
+    field("Telefon", value("phone", "phone_number", "telephone"), "personal"),
+    field("Sprache", locale === "en" ? "English" : "Deutsch", "personal"),
+    field("Rolle / Zielgruppe", value("role", "target_group", "audience"), "personal"),
+    field("Workspace-Name", workspaceName, "workspace"),
+    field("Unternehmen / Club / Creator", value("organization", "organisation", "company", "club", "creator_name") === EMPTY_VALUE ? workspaceName : value("organization", "organisation", "company", "club", "creator_name"), "workspace"),
+    field("Straße / Hausnummer", value("street", "address_street", "street_address"), "workspace"),
+    field("PLZ", value("postal_code", "zip", "address_zip"), "workspace"),
+    field("Ort", value("city", "address_city", "locality"), "workspace"),
+    field("Land", value("country", "address_country"), "workspace"),
+    field("UID / VAT ID", value("vat_id", "uid", "tax_id"), "tax"),
+    field("Steuernummer", value("tax_number"), "tax"),
+    field("Firmenbuchnummer", value("company_register_number", "commercial_register_number"), "tax"),
+    field("Firmenbuchgericht", value("company_register_court", "commercial_register_court"), "tax"),
   ];
 }
 
@@ -366,51 +385,88 @@ export function ProfileSettingsSection({
   fields,
   hasOnlyRealValues,
   logoutAction,
+  preferencesAction,
+  locale,
+  brightness,
+  preferencesError,
 }: {
   fields: ProfileField[];
   hasOnlyRealValues: boolean;
   logoutAction: () => Promise<void>;
+  preferencesAction: (formData: FormData) => void;
+  locale: FanMindLanguage;
+  brightness: FanMindBrightness;
+  preferencesError?: string | null;
 }) {
-  return (
-    <section
-      className={profileStyles.compactCard}
-      aria-labelledby="user-profile-title"
-    >
-      <div className={profileStyles.cardHeader}>
-        <div>
-          <p className={dashboardStyles.eyebrow}>Profil</p>
-          <h2 id="user-profile-title">Profil & Workspace-Basisdaten</h2>
+  const personalFields = fields.filter((field) => field.group === "personal");
+  const workspaceFields = fields.filter((field) => field.group === "workspace");
+  const taxFields = fields.filter((field) => field.group === "tax");
+  const renderRows = (rows: ProfileField[]) => (
+    <dl className={profileStyles.crmTable}>
+      {rows.map((field) => (
+        <div className={profileStyles.crmRow} key={field.label}>
+          <dt>{field.label}</dt>
+          <dd className={field.source === "placeholder" ? profileStyles.placeholderValue : undefined}>{field.value}</dd>
         </div>
-        <span className={profileStyles.softChip}>
-          {hasOnlyRealValues ? "Kontodaten" : "Unvollständig"}
-        </span>
-      </div>
-      <p className={profileStyles.headerCopy}>
-        Nur persönliche Daten, E-Mail und Workspace-Basisdaten aus der
-        geschützten Sitzung.
-      </p>
-      <dl className={profileStyles.infoGrid}>
-        {fields.map((field) => (
-          <div className={profileStyles.infoItem} key={field.label}>
-            <dt>{field.label}</dt>
-            <dd
-              className={
-                field.source === "placeholder"
-                  ? profileStyles.placeholderValue
-                  : undefined
-              }
-            >
-              {field.value}
-            </dd>
+      ))}
+    </dl>
+  );
+
+  return (
+    <div className={profileStyles.profileGrid}>
+      <section className={profileStyles.compactCard} aria-labelledby="user-profile-title">
+        <div className={profileStyles.cardHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Profil</p>
+            <h2 id="user-profile-title">Persönliche Daten</h2>
           </div>
-        ))}
-      </dl>
-      <form action={logoutAction} className={profileStyles.actionRow}>
-        <button type="submit" className={dashboardStyles.secondaryButton}>
-          Abmelden
-        </button>
-      </form>
-    </section>
+          <span className={profileStyles.softChip}>{hasOnlyRealValues ? "Kontodaten" : "Read-only"}</span>
+        </div>
+        <p className={profileStyles.headerCopy}>Echte Accountdaten aus deiner geschützten Sitzung. Bearbeiten ist vorbereitet; ohne sichere Update-Route bleiben Stammdaten read-only.</p>
+        {renderRows(personalFields)}
+      </section>
+
+      <section className={profileStyles.compactCard} aria-labelledby="workspace-profile-title">
+        <div className={profileStyles.cardHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Workspace</p>
+            <h2 id="workspace-profile-title">Workspace / Unternehmen</h2>
+          </div>
+          <span className={profileStyles.softChip}>CRM-Stammdaten</span>
+        </div>
+        <p className={profileStyles.headerCopy}>Unternehmens-, Adress- und Steuerdaten werden nur angezeigt, soweit sie im Konto sicher hinterlegt sind.</p>
+        {renderRows(workspaceFields)}
+        <div className={profileStyles.sectionDivider}>Steuerdaten</div>
+        {renderRows(taxFields)}
+      </section>
+
+      <section className={profileStyles.compactCard} aria-labelledby="preference-profile-title">
+        <div className={profileStyles.cardHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Einstellungen</p>
+            <h2 id="preference-profile-title">Sprache & Helligkeit</h2>
+          </div>
+          <span className={profileStyles.softChip}>Preference-Logik</span>
+        </div>
+        {preferencesError ? <p className={dashboardStyles.error}>{preferencesError}</p> : null}
+        <SettingsPreferenceForm action={preferencesAction} locale={locale} brightness={brightness} returnTo="/settings/profile" />
+      </section>
+
+      <section className={profileStyles.compactCard} aria-labelledby="gdpr-profile-title">
+        <div className={profileStyles.cardHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>DSGVO</p>
+            <h2 id="gdpr-profile-title">Datenauskunft</h2>
+          </div>
+          <span className={profileStyles.warningChip}>Sicherer Flow</span>
+        </div>
+        <p className={profileStyles.headerCopy}>FanMind speichert Konto-, Workspace-, Rechnungs-/Billing- und CRM-Daten. Externe Nachrichteninhalte können je nach Integration live vom jeweiligen Kanal abgerufen werden und sind nicht pauschal Teil eines lokalen FanMind-Datenexports, sofern sie nicht dauerhaft gespeichert werden.</p>
+        <div className={profileStyles.actionRowSplit}>
+          <a className={profileStyles.mailButton} href="mailto:kontakt@fanmind.ch?subject=DSGVO-Datenauskunft%20FanMind&body=Bitte%20startet%20einen%20sicheren%20Datenauskunfts-Flow%20fuer%20mein%20FanMind-Konto.">DSGVO-Datenauskunft anfordern</a>
+          <form action={logoutAction}><button type="submit" className={dashboardStyles.secondaryButton}>Abmelden</button></form>
+        </div>
+      </section>
+    </div>
   );
 }
 
