@@ -245,31 +245,33 @@ export function WorkspaceShell({
               ←
             </button>
 
-            <nav className={styles.navList} aria-label={wt(locale, "Hauptnavigation")}>
-              <span className={styles.navSectionLabel}>{wt(locale, "Navigation")}</span>
-              {visibleMainNavigation.map((item) => (
-                <SidebarItem key={item.label} {...item} />
-              ))}
-            </nav>
+            <div className={styles.sidebarScrollArea}>
+              <nav className={styles.navList} aria-label={wt(locale, "Hauptnavigation")}>
+                <span className={styles.navSectionLabel}>{wt(locale, "Navigation")}</span>
+                {visibleMainNavigation.map((item) => (
+                  <SidebarItem key={item.label} {...item} />
+                ))}
+              </nav>
 
-            <nav className={styles.navList} aria-label="Workspace Navigation">
-              <span className={styles.navSectionLabel}>{wt(locale, "Workspace")}</span>
-              {visibleSettingsNavigation.map((item) => (
-                <SidebarItem key={item.label} {...item} />
-              ))}
-            </nav>
+              <nav className={styles.navList} aria-label="Workspace Navigation">
+                <span className={styles.navSectionLabel}>{wt(locale, "Workspace")}</span>
+                {visibleSettingsNavigation.map((item) => (
+                  <SidebarItem key={item.label} {...item} />
+                ))}
+              </nav>
 
-            <section
-              className={styles.savedViews}
-              aria-label={wt(locale, "Gespeicherte Ansichten")}
-            >
-              <span>{wt(locale, "Gespeicherte Ansichten")}</span>
-              {visibleSavedViews.map((item) => (
-                <a key={item.label} href={item.href}>
-                  {item.label}
-                </a>
-              ))}
-            </section>
+              <section
+                className={styles.savedViews}
+                aria-label={wt(locale, "Gespeicherte Ansichten")}
+              >
+                <span>{wt(locale, "Gespeicherte Ansichten")}</span>
+                {visibleSavedViews.map((item) => (
+                  <a key={item.label} href={item.href}>
+                    {item.label}
+                  </a>
+                ))}
+              </section>
+            </div>
 
             <div className={styles.sidebarFooter}>
               <a
