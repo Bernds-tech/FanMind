@@ -67,6 +67,7 @@ type AddOnCard = {
   purpose: string;
   status: "Nicht aktiv" | "Aktiv" | "Coming Soon" | "Auf Anfrage";
   price: string;
+  features?: string[];
 };
 
 const BASE_PACKAGE_CARDS: PackageCard[] = [
@@ -139,6 +140,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     purpose: "Antwortvorschläge für den normalen CRM-Alltag.",
     status: "Aktiv",
     price: "inklusive nach Paket",
+    features: ["Basis-KI", "Antwortvorschläge", "CRM-Workflow"],
   },
   {
     key: "ai_plus",
@@ -147,6 +149,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
       "Mehr Vorschläge, feinere Memory- und Follow-up-Unterstützung nach manueller Freigabe.",
     status: "Auf Anfrage",
     price: "auf Anfrage",
+    features: ["manuelle Prüfung", "keine automatische Buchung"],
   },
   {
     key: "ai_ultra",
@@ -154,6 +157,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     purpose: "Erweiterter KI-Spielraum für größere Workspaces nach Prüfung.",
     status: "Coming Soon",
     price: "auf Anfrage",
+    features: ["Roadmap-Vorschau", "spätere Freigabe"],
   },
   {
     key: "reach_analysis",
@@ -162,6 +166,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
       "Vorbereitete Auswertung für Reichweite und Resonanz ohne Voll-Analytics-Suite.",
     status: "Nicht aktiv",
     price: "auf Anfrage",
+    features: ["vorbereitet", "manuelle Prüfung"],
   },
   {
     key: "campaign_insights",
@@ -169,6 +174,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     purpose: "Spätere Einordnung von Kampagnenwirkung ohne Versandautomation.",
     status: "Coming Soon",
     price: "auf Anfrage",
+    features: ["Roadmap-Vorschau", "keine Versandautomation"],
   },
   {
     key: "custom",
@@ -176,6 +182,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     purpose: "Musterplatz für geprüfte Zusatzmodule oder Pilotwünsche.",
     status: "Auf Anfrage",
     price: "auf Anfrage",
+    features: ["Pilotwunsch", "manuelle Freigabe"],
   },
 ];
 
@@ -420,6 +427,7 @@ export function PackageSettingsSection({
             isCurrent &&
             shouldShowBillingCheckoutAction(workspace) &&
             card.commercialOption !== "internal_daily_test";
+          const isComingSoon = card.badge === "Coming Soon";
           const requestLabel =
             workspace.billing_status === "demo_free" ? "Auswählen" : "Wechseln";
           return (
@@ -441,15 +449,9 @@ export function PackageSettingsSection({
                   {card.badge}
                 </span>
               </div>
-              {card.showComingSoonMark ? (
-                <div className={profileStyles.cardMarkSlot}>
-                  <ComingSoonMark
-                    size="small"
-                    className={profileStyles.settingsComingSoonMark}
-                  />
-                </div>
+              {!isComingSoon ? (
+                <p className={profileStyles.packagePrice}>{card.price}</p>
               ) : null}
-              <p className={profileStyles.packagePrice}>{card.price}</p>
               <p className={profileStyles.packageDescription}>
                 {card.description}
               </p>
@@ -458,7 +460,15 @@ export function PackageSettingsSection({
                   <li key={feature}>{feature}</li>
                 ))}
               </ul>
-              {isCurrent ? (
+              {card.showComingSoonMark ? (
+                <div className={profileStyles.cardMarkSlot}>
+                  <ComingSoonMark
+                    size="small"
+                    className={profileStyles.settingsComingSoonMark}
+                  />
+                </div>
+              ) : null}
+              {isComingSoon ? null : isCurrent ? (
                 <>
                   {canStartCheckout ? (
                     <BillingCheckoutButton
@@ -522,33 +532,30 @@ export function PackageSettingsSection({
                 {addOn.status}
               </span>
             </div>
-            {addOn.status !== "Aktiv" ? (
+            <p className={profileStyles.packageDescription}>{addOn.purpose}</p>
+            {addOn.features ? (
+              <ul className={profileStyles.packageFeatureList}>
+                {addOn.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+            ) : null}
+            {addOn.status === "Coming Soon" ? (
               <div className={profileStyles.cardMarkSlot}>
                 <ComingSoonMark
                   size="small"
                   className={profileStyles.settingsComingSoonMark}
                 />
               </div>
-            ) : null}
-            <p className={profileStyles.packageDescription}>{addOn.purpose}</p>
-            <p className={profileStyles.addOnPrice}>{addOn.price}</p>
-            {addOn.status === "Coming Soon" ? (
-              <span className={profileStyles.packageButtonDisabled}>
-                Coming Soon
-              </span>
-            ) : addOn.status === "Aktiv" ? (
-              <a
-                className={profileStyles.packageButton}
-                href={getAddOnRequestHref(workspace, addOn, "cancel")}
-              >
-                Kündigung anfragen
-              </a>
             ) : (
+              <p className={profileStyles.addOnPrice}>{addOn.price}</p>
+            )}
+            {addOn.status === "Coming Soon" || addOn.status === "Aktiv" ? null : (
               <a
                 className={profileStyles.packageButton}
                 href={getAddOnRequestHref(workspace, addOn, "add")}
               >
-                Hinzufügen anfragen
+                Anfragen
               </a>
             )}
           </article>
