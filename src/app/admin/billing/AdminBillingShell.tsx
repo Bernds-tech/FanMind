@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { AdminNotificationsBell } from "@/app/admin/operations/AdminNotificationsBell";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import {
@@ -71,6 +72,7 @@ export async function AdminBillingShell({
         searchPlaceholder: "Suche nach Workspace, Rechnung, Status ...",
         primaryActionLabel: "Billing öffnen",
         primaryActionHref: "/admin/billing",
+        operationsWidget: isPlatformAdminEmail(user.email) ? <AdminNotificationsBell /> : undefined,
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
       openFollowupCount={openFollowupCountResult?.count ?? 0}

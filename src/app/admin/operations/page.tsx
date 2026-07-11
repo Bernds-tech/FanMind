@@ -1,0 +1,25 @@
+import { requirePlatformAdmin } from "@/lib/admin";
+import { getOperationsOverviewData, runOperationsHealthChecks } from "@/lib/operations";
+import { AdminBillingShell } from "../billing/AdminBillingShell";
+import { AdminTabs } from "../billing/AdminTabs";
+import styles from "../billing/adminBilling.module.css";
+
+function badge(status: string) { if (["healthy", "completed"].includes(status)) return styles.badgeOk; if (["degraded", "running", "warning"].includes(status)) return styles.badgeWarn; if (["unavailable", "failed", "critical"].includes(status)) return styles.badgeBad; return styles.badge; }
+function safeCommit() { return process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? process.env.FANMIND_RELEASE_COMMIT ?? "nicht gesetzt"; }
+
+export default async function AdminOperationsPage() {
+  const user = await requirePlatformAdmin();
+  const [health, data] = await Promise.all([runOperationsHealthChecks(true), getOperationsOverviewData()]);
+  const commit = safeCommit();
+  return <AdminBillingShell user={user} title="Operations Center" subtitle="Sichere Grundlage für Healthchecks, Admin-Meldungen und Backup-Transparenz."><div className={styles.adminStack}><AdminTabs activeTab="operations" />
+    <section className={styles.hero}><div><span className={styles.eyebrow}>Phase 5 gestartet</span><h1>Admin Operations Center</h1><p>Keine Shell-Befehle, kein Restore und keine Production-Migration aus der Web-App. Diese Ansicht liest nur datenschutzsparsame Betriebsdaten.</p></div><span className={badge(health.status)}>{health.status}</span></section>
+    <section className={styles.kpiGrid}>{health.checks.map((check) => <div className={styles.kpiCard} key={check.component}><span>{check.component}</span><strong>{check.status}</strong><small>{check.publicMessage}{check.latencyMs ? ` · ${check.latencyMs} ms` : ""}</small></div>)}<div className={styles.kpiCard}><span>Produktions-Commit</span><strong>{commit.slice(0, 12)}</strong><small>Sicher nur aus ENV ermittelt.</small></div></section>
+    <section className={styles.operationsGrid}>
+      <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Health</span><h2>Letzte Health-Events</h2></div></div>{(data.healthEvents.data ?? []).length ? (data.healthEvents.data ?? []).map((event) => <p className={styles.statusItem} key={String(event.id)}><span>{String(event.component ?? "system")}</span><span className={badge(String(event.status ?? "unknown"))}>{String(event.status ?? "unknown")}</span></p>) : <p className={styles.emptyState}>{data.healthEvents.error ?? "Noch keine Health-Events gespeichert."}</p>}</article>
+      <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Meldungen</span><h2>Letzte Benachrichtigungen</h2></div></div>{(data.notifications.data ?? []).length ? (data.notifications.data ?? []).map((n) => <p className={styles.statusItem} key={n.id}><span>{n.title}<small>{n.message}</small></span><span className={badge(n.severity)}>{n.severity}</span></p>) : <p className={styles.emptyState}>{data.notifications.error ?? "Keine Benachrichtigungen vorhanden."}</p>}</article>
+      <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Backups</span><h2>Backupstatus</h2></div></div>{(data.backups.data ?? []).length ? (data.backups.data ?? []).map((run) => <p className={styles.statusItem} key={String(run.id)}><span>{String(run.backup_type ?? "backup")}</span><span className={badge(String(run.status ?? "unknown"))}>{String(run.status ?? "unknown")}</span></p>) : <p className={styles.emptyState}>{data.backups.error ?? "Datenstruktur vorbereitet; externe Backup-Automation folgt in späterem PR."}</p>}</article>
+      <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Jobs</span><h2>Admin-Operationen</h2></div></div>{(data.jobs.data ?? []).length ? (data.jobs.data ?? []).map((job) => <p className={styles.statusItem} key={String(job.id)}><span>{String(job.job_type ?? "operation")}</span><span className={badge(String(job.status ?? "unknown"))}>{String(job.status ?? "unknown")}</span></p>) : <p className={styles.emptyState}>{data.jobs.error ?? "Keine Operation-Jobs gespeichert."}</p>}</article>
+      <article className={`${styles.card} ${styles.operationsWide}`}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Konfiguration</span><h2>Bekannte Zustände</h2></div></div><div className={styles.statusList}>{health.checks.map((check) => <div className={styles.statusItem} key={`cfg-${check.component}`}><span>{check.component}</span><span className={badge(check.status)}>{check.status}</span></div>)}</div></article>
+    </section>
+  </div></AdminBillingShell>;
+}
