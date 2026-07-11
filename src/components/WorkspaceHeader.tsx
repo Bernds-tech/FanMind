@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { wt } from "@/lib/workspaceCopy";
 import styles from "../app/dashboard/dashboard.module.css";
@@ -13,6 +14,7 @@ export type WorkspaceHeaderProps = {
   searchName?: string;
   searchValue?: string;
   hiddenSearchParams?: Record<string, string>;
+  operationsWidget?: ReactNode;
 };
 
 export function WorkspaceHeader({
@@ -26,6 +28,7 @@ export function WorkspaceHeader({
   searchName = "q",
   searchValue = "",
   hiddenSearchParams,
+  operationsWidget,
 }: WorkspaceHeaderProps) {
   return (
     <header className={styles.topbar}>
@@ -34,6 +37,7 @@ export function WorkspaceHeader({
         <p>{subtitle}</p>
       </div>
       <div className={styles.topbarActions}>
+        {operationsWidget}
         <form className={styles.searchBox} action={searchAction} method="get">
           <label htmlFor={`${title}-workspace-search`}>{wt(locale, "Suche")}</label>
           <input
