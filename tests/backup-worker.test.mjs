@@ -26,6 +26,9 @@ const worker = await import('../scripts/operations/backup-worker.mjs');
 const workerSource = await readFile(new URL('../scripts/operations/backup-worker.mjs', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../supabase/migrations/20260711161500_disable_verify_backup_until_safe_validation.sql', import.meta.url), 'utf8');
 
+const serviceRoleGrantMigration = await readFile(new URL('../supabase/migrations/20260711170000_grant_backup_worker_rpc_service_role.sql', import.meta.url), 'utf8');
+const rpcPermissionProof = await readFile(new URL('./backup-worker-rpc-permissions.sql', import.meta.url), 'utf8');
+
 test('verify_backup is blocked in worker and migration follow-up', () => {
   assert.equal(worker.JOBS.has('verify_backup'), false);
   assert.doesNotMatch(migration.match(/job_type in \(([^)]*)\)/)?.[1] ?? '', /verify_backup/);
@@ -127,4 +130,26 @@ test('worker source keeps checksum offsite upload and no root pm2 path', () => {
   assert.match(workerSource, /copyto.*`\$\{file\}\.sha256`/s);
   assert.doesNotMatch(workerSource, /\/root\/\.pm2\/dump\.pm2/);
   assert.match(workerSource, /sensitive_encrypted_config/);
+});
+
+
+test('service_role follow-up migration grants only the server-side worker role', () => {
+  assert.match(serviceRoleGrantMigration, /to_regprocedure\('public\.claim_admin_backup_job\(text, integer\)'\) is null/i);
+  assert.match(serviceRoleGrantMigration, /raise exception 'required function public\.claim_admin_backup_job\(text, integer\) does not exist'/i);
+  assert.match(serviceRoleGrantMigration, /revoke all on function public\.claim_admin_backup_job\(text, integer\) from public, anon, authenticated;/i);
+  assert.match(serviceRoleGrantMigration, /grant execute on function public\.claim_admin_backup_job\(text, integer\) to service_role;/i);
+  assert.doesNotMatch(serviceRoleGrantMigration, /grant execute on function public\.claim_admin_backup_job\(text, integer\) to (public|anon|authenticated)/i);
+  assert.doesNotMatch(serviceRoleGrantMigration, /alter table|update public\.|insert into public\.|delete from public\./i);
+});
+
+test('documented SQL proof checks RPC privileges and service-role claim path without secrets', () => {
+  assert.match(rpcPermissionProof, /has_schema_privilege\('service_role', 'public', 'USAGE'\)/i);
+  assert.match(rpcPermissionProof, /has_function_privilege\('service_role', 'public\.claim_admin_backup_job\(text, integer\)', 'EXECUTE'\)/i);
+  assert.match(rpcPermissionProof, /not has_function_privilege\('anon', 'public\.claim_admin_backup_job\(text, integer\)', 'EXECUTE'\)/i);
+  assert.match(rpcPermissionProof, /not has_function_privilege\('authenticated', 'public\.claim_admin_backup_job\(text, integer\)', 'EXECUTE'\)/i);
+  assert.match(rpcPermissionProof, /not has_function_privilege\('public', 'public\.claim_admin_backup_job\(text, integer\)', 'EXECUTE'\)/i);
+  assert.match(rpcPermissionProof, /set local role service_role;/i);
+  assert.match(rpcPermissionProof, /public\.claim_admin_backup_job\('rpc-permission-fixture-worker', 900\)/i);
+  assert.match(rpcPermissionProof, /'claimed'/i);
+  assert.doesNotMatch(rpcPermissionProof, /SUPABASE_SERVICE_ROLE_KEY|service-role-test|Bearer\s+[A-Za-z0-9._-]+|apikey\s*[:=]|password\s*[:=]|secret\s*[:=]/i);
 });

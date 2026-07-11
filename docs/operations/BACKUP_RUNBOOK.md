@@ -13,11 +13,16 @@ Automatische Backups verwenden age Public-Key-Verschlüsselung. Auf Production l
 
 ## Manuelle Ausführung
 
-1. Migration `20260711143000_phase_5_backup_worker.sql` manuell in Supabase prüfen und anwenden.
-2. Worker installieren und starten.
-3. Als Platform-Admin unter `/admin/operations` einen Backup-Job einreihen.
-4. Logs mit `journalctl` prüfen.
-5. `backup_runs` und In-App-Benachrichtigung prüfen.
+1. Production-Migrationen manuell in Supabase prüfen und in exakt dieser Reihenfolge anwenden:
+   1. `20260711120000_phase_5_operations_foundation.sql`
+   2. `20260711143000_phase_5_backup_worker.sql`
+   3. `20260711161500_disable_verify_backup_until_safe_validation.sql`
+   4. `20260711170000_grant_backup_worker_rpc_service_role.sql`
+2. Vor der Worker-Installation bestätigen: `service_role` hat `EXECUTE` auf `public.claim_admin_backup_job(text, integer)`, `PUBLIC`, `anon` und `authenticated` nicht; `service_role` hat außerdem `USAGE` auf Schema `public` für den PostgREST-RPC-Lookup.
+3. Erst danach Worker installieren und starten.
+4. Als Platform-Admin unter `/admin/operations` einen Backup-Job einreihen.
+5. Logs mit `journalctl` prüfen.
+6. `backup_runs` und In-App-Benachrichtigung prüfen.
 
 ## Validierung
 
@@ -44,4 +49,4 @@ Full backups are complete only when one encrypted `fanmind-full-*.tar.gz.age` an
 
 The server configuration backup deliberately uses Option A: `/etc/fanmind-backup` is included as `sensitive_encrypted_config` because it contains the operational material required to understand and rebuild backup automation. Never log or publish its contents; verify only encrypted artifacts and checksums on Production.
 
-`verify_backup` remains a later hardening item and is not an active job type in this PR. No Production migration or worker installation is performed by Codex.
+`verify_backup` remains a later hardening item and is not an active job type in this PR. No Production migration or worker installation is performed by Codex. The service-role permission follow-up must be the final migration before installing the worker; otherwise PostgREST calls made with `SUPABASE_SERVICE_ROLE_KEY` can be unable to execute `claim_admin_backup_job` and queued jobs will not be claimed.
