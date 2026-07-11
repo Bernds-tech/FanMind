@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, stat, readdir, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 
@@ -24,6 +24,25 @@ await writeFile('/tmp/fanmind-test-pgrestore.sh', '#!/usr/bin/env bash\nexit 0\n
 
 const worker = await import('../scripts/operations/backup-worker.mjs');
 const workerSource = await readFile(new URL('../scripts/operations/backup-worker.mjs', import.meta.url), 'utf8');
+
+async function makePlacedPairFixture(tmp, name = 'artifact.dump.age', payload = 'payload') {
+  const src = join(tmp, 'src');
+  const root = join(tmp, 'dest');
+  await import('node:fs/promises').then(fs => fs.mkdir(src, { recursive:true, mode:0o700 }));
+  process.env.FANMIND_BACKUP_ROOT = root;
+  const artifact = join(src, name);
+  await writeFile(artifact, payload, { mode:0o600 });
+  const sha = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+  const checksum = [...new Uint8Array(sha)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const checksumPath = `${artifact}.sha256`;
+  await writeFile(checksumPath, `${checksum}  ${basename(artifact)}\n`, { mode:0o600 });
+  return { root, result:{ path:artifact, checksum_path:checksumPath, sha256:checksum, size_bytes:payload.length, manifest:{ backup_type:'database' } } };
+}
+
+async function listRoot(root) {
+  try { return (await readdir(root)).sort(); } catch { return []; }
+}
+
 const migration = await readFile(new URL('../supabase/migrations/20260711161500_disable_verify_backup_until_safe_validation.sql', import.meta.url), 'utf8');
 
 const serviceRoleGrantMigration = await readFile(new URL('../supabase/migrations/20260711170000_grant_backup_worker_rpc_service_role.sql', import.meta.url), 'utf8');
@@ -48,6 +67,80 @@ test('encrypted artifact and sha256 move together and validate after move', asyn
   assert.equal((await stat(moved.final)).isFile(), true);
   assert.equal((await stat(moved.checksumFinal)).isFile(), true);
   assert.match(await readFile(moved.checksumFinal, 'utf8'), new RegExp(result.sha256));
+});
+
+
+test('cross-device rename failure is avoided by copy/verify/finalize placement', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-cross-device-'));
+  const { root, result } = await makePlacedPairFixture(tmp, 'fanmind-database-test.dump.age', 'database-payload');
+  worker.__setBackupWorkerTestHooks({ rename: async (from, to) => {
+    if (!from.startsWith(root) || !to.startsWith(root)) {
+      throw Object.assign(new Error('EXDEV: cross-device link not permitted'), { code:'EXDEV' });
+    }
+    return (await import('node:fs/promises')).rename(from, to);
+  }});
+  const placed = await worker.moveAndValidate(result);
+  worker.__setBackupWorkerTestHooks();
+  assert.equal(await readFile(placed.final, 'utf8'), 'database-payload');
+  assert.match(await readFile(placed.checksumFinal, 'utf8'), new RegExp(result.sha256));
+});
+
+test('successful copy keeps exact destination content and sha256', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-copy-ok-'));
+  const { result } = await makePlacedPairFixture(tmp, 'ok.dump.age', 'exact-payload');
+  const placed = await worker.placeBackupPair(result);
+  assert.equal(await readFile(placed.final, 'utf8'), 'exact-payload');
+  assert.equal((await readFile(placed.checksumFinal, 'utf8')).trim().split(/\s+/)[0], result.sha256);
+});
+
+test('checksum mismatch cleans temporary destination files', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-copy-bad-sha-'));
+  const { root, result } = await makePlacedPairFixture(tmp, 'bad.dump.age', 'payload');
+  result.sha256 = '0'.repeat(64);
+  await assert.rejects(() => worker.placeBackupPair(result), /sha256_mismatch_after_copy/);
+  assert.deepEqual(await listRoot(root), []);
+});
+
+test('copy failure on checksum file leaves no final age artifact', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-second-copy-fails-'));
+  const { root, result } = await makePlacedPairFixture(tmp, 'second.dump.age', 'payload');
+  result.checksum_path = join(tmp, 'missing.sha256');
+  await assert.rejects(() => worker.placeBackupPair(result), /ENOENT/);
+  assert.equal((await listRoot(root)).some(name => name.endsWith('.age')), false);
+});
+
+test('final rename failure cleans misleading finalized files', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-final-rename-fails-'));
+  const { root, result } = await makePlacedPairFixture(tmp, 'rename.dump.age', 'payload');
+  let count = 0;
+  worker.__setBackupWorkerTestHooks({ rename: async (from, to) => {
+    count += 1;
+    if (count === 2) throw Object.assign(new Error('rename_failed'), { code:'EIO' });
+    return (await import('node:fs/promises')).rename(from, to);
+  }});
+  await assert.rejects(() => worker.placeBackupPair(result), /rename_failed/);
+  worker.__setBackupWorkerTestHooks();
+  assert.deepEqual(await listRoot(root), []);
+});
+
+test('existing final destination is not silently overwritten', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-collision-'));
+  const { root, result } = await makePlacedPairFixture(tmp, 'collision.dump.age', 'payload');
+  await import('node:fs/promises').then(fs => fs.mkdir(root, { recursive:true, mode:0o700 }));
+  await writeFile(join(root, basename(result.path)), 'existing', { mode:0o600 });
+  await assert.rejects(() => worker.placeBackupPair(result), /backup_destination_exists/);
+  assert.equal(await readFile(join(root, basename(result.path)), 'utf8'), 'existing');
+});
+
+test('successful placement removes encrypted source pair only after finalization', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-source-remove-'));
+  const { result } = await makePlacedPairFixture(tmp, 'remove.dump.age', 'payload');
+  const source = result.path;
+  const checksumSource = result.checksum_path;
+  const placed = await worker.placeBackupPair(result);
+  await assert.rejects(() => access(source), /ENOENT/);
+  await assert.rejects(() => access(checksumSource), /ENOENT/);
+  assert.equal(basename(placed.checksumFinal), `${basename(placed.final)}.sha256`);
 });
 
 test('storage pagination walks multiple pages, nested folders and ignores placeholders', async () => {
