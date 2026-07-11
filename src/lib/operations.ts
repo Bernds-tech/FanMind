@@ -60,8 +60,8 @@ export async function getOperationsOverviewData() {
   const [notifications, healthEvents, jobs, backups, audits] = await Promise.all([
     getRecentAdminNotifications(6),
     rest<Record<string,unknown>[]>("system_health_events", "?select=*&order=created_at.desc&limit=6"),
-    rest<Record<string,unknown>[]>("admin_operation_jobs", "?select=*&order=created_at.desc&limit=6"),
-    rest<Record<string,unknown>[]>("backup_runs", "?select=*&order=started_at.desc&limit=6"),
+    rest<Record<string,unknown>[]>("admin_operation_jobs", "?select=*&order=priority.asc,requested_at.asc&limit=12"),
+    rest<Record<string,unknown>[]>("backup_runs", "?select=*&order=started_at.desc&limit=12"),
     rest<Record<string,unknown>[]>("operations_audit_log", "?select=*&order=created_at.desc&limit=6"),
   ]);
   return { notifications, healthEvents, jobs, backups, audits };
