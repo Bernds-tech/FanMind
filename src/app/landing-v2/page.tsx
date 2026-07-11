@@ -877,6 +877,50 @@ function MetricCard({
   );
 }
 
+function LandingHeader({
+  language,
+  loginHref,
+  localizedNavItems,
+  registerHref,
+  switchBase,
+  t,
+}: {
+  language: FanMindLanguage;
+  loginHref: string;
+  localizedNavItems: Array<{ label: string; href: string }>;
+  registerHref: string;
+  switchBase: string;
+  t: ReturnType<typeof createFanMindTranslator>;
+}) {
+  return (
+    <div className={styles.landingHeaderRoot} data-landing-header="root">
+      <header className={styles.header}>
+        <Logo language={language} />
+        <nav className={styles.nav} aria-label={language === "en" ? "Main navigation" : "Hauptnavigation"}>
+          {localizedNavItems.map((item) => (
+            <a key={item.label} href={item.href}>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div className={styles.headerActions}>
+          <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
+            <a className={language === "de" ? styles.languageActive : undefined} href={switchBase} aria-current={language === "de" ? "true" : undefined}>DE</a>
+            <span>|</span>
+            <a className={language === "en" ? styles.languageActive : undefined} href={`${switchBase}?lang=en`} aria-current={language === "en" ? "true" : undefined}>EN</a>
+          </div>
+          <a className={styles.loginButton} href={loginHref}>
+            Login
+          </a>
+          <a className={styles.accessButton} href={registerHref}>
+            {t("Registrieren")} <span>→</span>
+          </a>
+        </div>
+      </header>
+    </div>
+  );
+}
+
 type LandingV2Props = {
   searchParams?: Promise<{ lang?: string | string[] }>;
 };
@@ -921,31 +965,14 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
   return (
     <>
-      <div className={styles.fixedHeaderShell}>
-        <header className={styles.header}>
-          <Logo language={language} />
-          <nav className={styles.nav} aria-label="Hauptnavigation">
-            {localizedNavItems.map((item) => (
-              <a key={item.label} href={item.href}>
-                {item.label}
-              </a>
-            ))}
-          </nav>
-          <div className={styles.headerActions}>
-            <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
-              <a className={language === "de" ? styles.languageActive : undefined} href={switchBase} aria-current={language === "de" ? "true" : undefined}>DE</a>
-              <span>|</span>
-              <a className={language === "en" ? styles.languageActive : undefined} href={`${switchBase}?lang=en`} aria-current={language === "en" ? "true" : undefined}>EN</a>
-            </div>
-            <a className={styles.loginButton} href={loginHref}>
-              Login
-            </a>
-            <a className={styles.accessButton} href={registerHref}>
-              {t("Registrieren")} <span>→</span>
-            </a>
-          </div>
-        </header>
-      </div>
+      <LandingHeader
+        language={language}
+        loginHref={loginHref}
+        localizedNavItems={localizedNavItems}
+        registerHref={registerHref}
+        switchBase={switchBase}
+        t={t}
+      />
 
       <main id="top" className={styles.page}>
         <div className={styles.backgroundGlow} aria-hidden="true" />
