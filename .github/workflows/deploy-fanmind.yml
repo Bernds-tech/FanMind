@@ -40,7 +40,6 @@ jobs:
           sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
           sudo systemctl daemon-reload
-          sudo /usr/local/lib/fanmind-ops/write-backup-release-env.sh "$RELEASE_COMMIT"
 
           npm ci --no-audit --no-fund
           npm run build
@@ -49,12 +48,6 @@ jobs:
           pm2 save
 
           sudo nginx -t
-
-          if sudo systemctl is-active --quiet fanmind-backup-worker.service; then
-            sudo systemctl restart fanmind-backup-worker.service
-          else
-            echo "Backup worker is not active; not starting it."
-          fi
 
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             if curl -fsSL --max-time 15 https://fanmind.ch/login -o /dev/null; then
@@ -72,5 +65,13 @@ jobs:
             echo "Health check not ready yet, retrying..."
             sleep 3
           done
+
+          sudo /usr/local/lib/fanmind-ops/write-backup-release-env.sh "$RELEASE_COMMIT"
+
+          if sudo systemctl is-active --quiet fanmind-backup-worker.service; then
+            sudo systemctl restart fanmind-backup-worker.service
+          else
+            echo "Backup worker is not active; not starting it."
+          fi
 
           echo "FanMind deployment finished successfully."
