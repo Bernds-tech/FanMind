@@ -1,0 +1,26 @@
+[Unit]
+Description=FanMind backup worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=/etc/fanmind-backup/worker.env
+WorkingDirectory=/usr/local/lib/fanmind-ops
+ExecStart=/usr/bin/node /usr/local/lib/fanmind-ops/backup-worker.mjs
+Restart=on-failure
+RestartSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/backups/fanmind /tmp
+ReadOnlyPaths=/var/www/fanmind/.env.production /etc/nginx /etc/systemd/system /etc/fanmind-backup /root/.pm2/dump.pm2
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target
