@@ -115,3 +115,34 @@ html[style*="--fanmind-dimmer"] body::before {
   --fanmind-shell-accent: #a5f3fc;
   --fanmind-input-bg: rgba(30, 41, 59, 0.58);
 }
+
+/* Hard global fallback for the public landing navigation.
+   The rendered element exposes data-landing-header="root"; this selector bypasses
+   CSS-module class mismatches and keeps the public header fixed at the viewport. */
+[data-landing-header="root"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  justify-content: center !important;
+  padding: 10px clamp(12px, 3vw, 48px) !important;
+  pointer-events: none !important;
+  background: linear-gradient(180deg, rgba(2, 8, 22, 0.92), rgba(2, 8, 22, 0.74) 72%, rgba(2, 8, 22, 0)) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  transform: translateZ(0) !important;
+  contain: layout paint !important;
+}
+
+[data-landing-header="root"] > * {
+  pointer-events: auto !important;
+}
+
+@media (max-width: 720px) {
+  [data-landing-header="root"] {
+    padding: 8px 10px !important;
+  }
+}
