@@ -28,8 +28,6 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  filter: brightness(var(--fanmind-brightness-filter, 1));
-  transition: filter 120ms ease;
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -77,8 +75,14 @@ html[style*="--fanmind-dimmer"] body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: rgba(255, 255, 255, calc(var(--fanmind-dimmer-bg-lift, 0) * 0.035));
-  z-index: 2147483647;
+  background:
+    linear-gradient(
+      rgba(0, 0, 0, calc(max(0, 80 - var(--fanmind-dimmer, 80)) * 0.009333)),
+      rgba(0, 0, 0, calc(max(0, 80 - var(--fanmind-dimmer, 80)) * 0.009333))
+    ),
+    rgba(255, 255, 255, calc(var(--fanmind-dimmer-bg-lift, 0) * 0.035));
+  z-index: 2147483000;
+  transition: background 120ms ease;
 }
 
 .fanmind-theme-brighter {
