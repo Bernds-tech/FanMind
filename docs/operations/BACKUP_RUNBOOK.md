@@ -24,6 +24,11 @@ Automatische Backups verwenden age Public-Key-Verschlüsselung. Auf Production l
 5. Logs mit `journalctl` prüfen.
 6. `backup_runs` und In-App-Benachrichtigung prüfen.
 
+
+## Leerlaufprüfung nach Start
+
+Wenn keine Backup-Jobs anstehen, darf `claim_admin_backup_job` über PostgREST auch `null`, `[]` oder eine leere Composite-Zeile wie `{ id: null, job_type: null }` zurückgeben. Erwartetes Worker-Verhalten im Leerlauf: kein `job_claimed` mit leerer ID, kein `job_type_not_allowed`-Loop, keine Admin-Benachrichtigung und kein Audit-Eintrag. Der nächste Claim erfolgt nach `FANMIND_BACKUP_POLL_MS` (Standard: 30 Sekunden). Heartbeats sind separat über `FANMIND_BACKUP_HEARTBEAT_MS` getaktet (Standard: 5 Minuten), damit ein ruhender Worker keine unnötig dichten `system_health_events` erzeugt.
+
 ## Validierung
 
 - Server-/Storage-Archive: `tar -tzf` vor Verschlüsselung.
