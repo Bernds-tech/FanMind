@@ -96,16 +96,48 @@ test('systemd unit loads optional release env after required worker env and keep
   assert.match(backupWorkerUnit, /NoNewPrivileges=true/);
 });
 
-test('deployment workflow records deployed commit without starting inactive backup worker', () => {
-  assert.match(deployWorkflow, /RELEASE_COMMIT="\$\(git rev-parse HEAD\)"/);
-  assert.match(deployWorkflow, /\^\[0-9a-f\]\{40\}\$/);
-  assert.match(deployWorkflow, /install -o root -g root -m 0755 scripts\/operations\/write-backup-release-env\.sh \/usr\/local\/lib\/fanmind-ops\/write-backup-release-env\.sh/);
-  assert.match(deployWorkflow, /install -o root -g root -m 0644 ops\/systemd\/fanmind-backup-worker\.service \/etc\/systemd\/system\/fanmind-backup-worker\.service/);
-  assert.match(deployWorkflow, /systemctl daemon-reload/);
-  assert.match(deployWorkflow, /write-backup-release-env\.sh "\$RELEASE_COMMIT"/);
+test('deployment workflow records deployed commit only after successful healthcheck without starting inactive backup worker', () => {
+  const indexOfRequired = (needle) => {
+    const index = deployWorkflow.indexOf(needle);
+    assert.notEqual(index, -1, `Missing workflow command: ${needle}`);
+    return index;
+  };
+
+  const resetIndex = indexOfRequired('git reset --hard origin/main');
+  const releaseCommitIndex = indexOfRequired('RELEASE_COMMIT="$(git rev-parse HEAD)"');
+  const commitValidationIndex = indexOfRequired('^[0-9a-f]{40}$');
+  const helperInstallIndex = indexOfRequired('sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh');
+  const unitInstallIndex = indexOfRequired('sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service');
+  const daemonReloadIndex = indexOfRequired('sudo systemctl daemon-reload');
+  const npmCiIndex = indexOfRequired('npm ci --no-audit --no-fund');
+  const buildIndex = indexOfRequired('npm run build');
+  const pm2RestartIndex = indexOfRequired('pm2 restart fanmind --update-env');
+  const nginxIndex = indexOfRequired('sudo nginx -t');
+  const healthcheckIndex = indexOfRequired('Health check passed.');
+  const releaseWriteIndex = indexOfRequired('sudo /usr/local/lib/fanmind-ops/write-backup-release-env.sh "$RELEASE_COMMIT"');
+  const workerActiveCheckIndex = indexOfRequired('sudo systemctl is-active --quiet fanmind-backup-worker.service');
+  const workerRestartIndex = indexOfRequired('sudo systemctl restart fanmind-backup-worker.service');
+  const inactiveWorkerMessageIndex = indexOfRequired('Backup worker is not active; not starting it.');
+
+  assert.ok(resetIndex < releaseCommitIndex, 'git rev-parse HEAD stays immediately after reset and before build steps');
+  assert.ok(releaseCommitIndex < commitValidationIndex, 'release commit is validated after it is read');
+  assert.ok(commitValidationIndex < helperInstallIndex, 'helper install follows release commit validation');
+  assert.ok(helperInstallIndex < unitInstallIndex);
+  assert.ok(unitInstallIndex < daemonReloadIndex);
+  assert.ok(daemonReloadIndex < npmCiIndex);
+  assert.ok(releaseWriteIndex > healthcheckIndex, 'release.env is written only after the external healthcheck succeeds');
+  assert.ok(releaseWriteIndex > npmCiIndex, 'release.env is not written before npm ci');
+  assert.ok(releaseWriteIndex > buildIndex, 'release.env is not written before npm run build');
+  assert.ok(releaseWriteIndex > pm2RestartIndex, 'release.env is not written before pm2 restart');
+  assert.ok(releaseWriteIndex > nginxIndex, 'release.env is not written before nginx -t');
+  assert.ok(releaseWriteIndex < workerActiveCheckIndex, 'worker restart check happens after release.env is written');
+  assert.ok(workerActiveCheckIndex < workerRestartIndex, 'active worker is restarted only after the active check');
+  assert.ok(workerRestartIndex < inactiveWorkerMessageIndex, 'inactive-worker branch logs instead of starting the worker');
+
   assert.match(deployWorkflow, /systemctl is-active --quiet fanmind-backup-worker\.service[\s\S]*systemctl restart fanmind-backup-worker\.service/);
   assert.match(deployWorkflow, /Backup worker is not active; not starting it\./);
   assert.doesNotMatch(deployWorkflow, /systemctl enable/);
+  assert.doesNotMatch(deployWorkflow, /systemctl start fanmind-backup-worker\.service/);
 });
 
 test('verify_backup is blocked in worker and migration follow-up', () => {
