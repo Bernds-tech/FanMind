@@ -14,3 +14,7 @@ Nur verschlüsselte `.age`-Dateien werden hochgeladen. Klartextarchive werden na
 ## Degraded-Modus
 
 Wenn Offsite nicht konfiguriert ist, scheitert der lokale Backup-Lauf nicht. Der Lauf wird als `offsite_pending`/`not_configured` markiert und erzeugt eine In-App-Meldung. Wenn rclone fehlschlägt, bleibt das lokale Backup erhalten und der Status wird `degraded`/`failed`.
+
+## Checksum pair requirement
+
+Offsite copies are valid only when both `<backup>.age` and `<backup>.age.sha256` are present on the remote. The worker uploads the encrypted artifact first and then the checksum file; `backup_runs.offsite_status='uploaded'` is written only after both transfers complete. If either transfer fails, the local backup remains valid but the run is marked degraded/failed for offsite follow-up.

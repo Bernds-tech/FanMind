@@ -18,9 +18,9 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
 ReadWritePaths=/var/backups/fanmind /tmp
-ReadOnlyPaths=/var/www/fanmind/.env.production /etc/nginx /etc/systemd/system /etc/fanmind-backup /root/.pm2/dump.pm2
+ReadOnlyPaths=/var/www/fanmind/.env.production /etc/nginx /etc/systemd/system /etc/fanmind-backup /home/ubuntu/.pm2/dump.pm2
 LockPersonality=true
-MemoryDenyWriteExecute=true
+# MemoryDenyWriteExecute is intentionally omitted: Node.js/V8 JIT on Ubuntu 24.04/Node 24 can require writable executable memory during startup.
 
 [Install]
 WantedBy=multi-user.target
