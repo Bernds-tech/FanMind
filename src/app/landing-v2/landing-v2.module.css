@@ -10737,3 +10737,47 @@
     overflow: hidden;
   }
 }
+
+/* Issue #539: keep the public landing header fixed to the viewport, not sticky. */
+.landingHeaderRoot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483647;
+}
+
+.landingHeaderRoot + .page {
+  padding-top: 88px;
+}
+
+.landingHeaderRoot + .page .heroSection {
+  padding-top: 0;
+}
+
+.page :where(section[id], div[id], main[id]),
+.anchorTarget {
+  scroll-margin-top: 112px;
+}
+
+@media (max-width: 1280px) {
+  .landingHeaderRoot + .page {
+    padding-top: 122px;
+  }
+
+  .page :where(section[id], div[id], main[id]),
+  .anchorTarget {
+    scroll-margin-top: 146px;
+  }
+}
+
+@media (max-width: 720px) {
+  .landingHeaderRoot + .page {
+    padding-top: 86px;
+  }
+
+  .page :where(section[id], div[id], main[id]),
+  .anchorTarget {
+    scroll-margin-top: 110px;
+  }
+}
