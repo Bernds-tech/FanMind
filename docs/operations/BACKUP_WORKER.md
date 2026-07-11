@@ -12,9 +12,17 @@ Die Web-App legt ausschließlich geprüfte Jobs in `admin_operation_jobs` an. Si
 - `backup_database`
 - `backup_storage`
 - `backup_full`
-- `verify_backup`
 
 Die atomare Übernahme erfolgt über `claim_admin_backup_job(worker_id, lease_seconds)` mit `FOR UPDATE SKIP LOCKED`, Lease, Retry abgelaufener Leases und maximal einem aktiven Backup-Job. Die RPC-Funktion wird ausschließlich serverseitig mit `SUPABASE_SERVICE_ROLE_KEY` aufgerufen; `PUBLIC`, `anon` und `authenticated` dürfen kein `EXECUTE` auf diese Funktion haben, während `service_role` nach der Folgemigration `20260711170000_grant_backup_worker_rpc_service_role.sql` `EXECUTE` erhält.
+
+
+## Leerlauf, RPC-Antworten und Heartbeat
+
+PostgREST kann für `public.claim_admin_backup_job(text, integer)` bei leerer Queue je nach Composite-Rückgabetyp nicht nur JavaScript `null`, sondern auch ein leeres Array oder ein Composite-Leerobjekt wie `{ id: null, job_type: null }` liefern. Der Worker normalisiert deshalb die RPC-Antwort vor jeder Verarbeitung: `null`, `undefined`, `[]`, leere Composite-Zeilen und Jobs ohne nichtleere `id` oder ohne erlaubten `job_type` gelten nicht als ausführbarer Job. In diesem No-Job-Pfad wird kein `job_claimed` geschrieben, kein `handle(job)` aufgerufen, keine Admin-Benachrichtigung erzeugt und kein Audit-Eintrag angelegt; der Worker wartet regulär `FANMIND_BACKUP_POLL_MS` (Standard: 30 Sekunden), bevor er erneut pollt.
+
+Ein tatsächlich beanspruchter Job mit nicht erlaubtem `job_type` wird defensiv als `failed` markiert und ohne Secrets mit `job_rejected` protokolliert. Die Allowlist des Workers bleibt `backup_server_config`, `backup_database`, `backup_storage` und `backup_full`; `verify_backup` bleibt deaktiviert, bis ein echter serverseitiger Verifier implementiert ist.
+
+Der Job-Poll bleibt über `FANMIND_BACKUP_POLL_MS` kurzfristig steuerbar. Heartbeats in `system_health_events` sind davon entkoppelt und werden über `FANMIND_BACKUP_HEARTBEAT_MS` gesteuert (Standard: 300000 ms / 5 Minuten), damit normaler Leerlauf nicht alle 30 Sekunden zusätzliche Health-Zeilen erzeugt.
 
 ## Serverpfade, Eigentümer und Rechte
 

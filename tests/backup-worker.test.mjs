@@ -153,3 +153,56 @@ test('documented SQL proof checks RPC privileges and service-role claim path wit
   assert.match(rpcPermissionProof, /'claimed'/i);
   assert.doesNotMatch(rpcPermissionProof, /SUPABASE_SERVICE_ROLE_KEY|service-role-test|Bearer\s+[A-Za-z0-9._-]+|apikey\s*[:=]|password\s*[:=]|secret\s*[:=]/i);
 });
+
+test('claim response normalization treats nullish and empty responses as no job', () => {
+  assert.equal(worker.normalizeClaimedJob(null), null);
+  assert.equal(worker.normalizeClaimedJob(undefined), null);
+  assert.equal(worker.normalizeClaimedJob([]), null);
+});
+
+test('claim response normalization treats empty composite rows as no job', () => {
+  assert.equal(worker.normalizeClaimedJob([{ id: null, job_type: null }]), null);
+  assert.equal(worker.normalizeClaimedJob({ id: null, job_type: null }), null);
+});
+
+test('claim response normalization accepts a valid direct job object', () => {
+  const job = { id: 'job-1', job_type: 'backup_database', extra: 'kept' };
+  assert.equal(worker.normalizeClaimedJob(job), job);
+});
+
+test('claim response normalization accepts a valid single-row array job', () => {
+  const job = { id: 'job-2', job_type: 'backup_storage' };
+  assert.equal(worker.normalizeClaimedJob([job]), job);
+});
+
+test('claim response normalization rejects unsupported job types as not executable', () => {
+  assert.equal(worker.normalizeClaimedJob({ id: 'job-3', job_type: 'verify_backup' }), null);
+  assert.equal(worker.normalizeClaimedJob([{ id: 'job-4', job_type: 'not_allowed' }]), null);
+});
+
+test('no-job path uses the configured backup poll sleep interval', () => {
+  const previous = process.env.FANMIND_BACKUP_POLL_MS;
+  process.env.FANMIND_BACKUP_POLL_MS = '1234';
+  assert.equal(worker.backupPollMs(), 1234);
+  process.env.FANMIND_BACKUP_POLL_MS = '0';
+  assert.equal(worker.backupPollMs(), 30000);
+  if (previous === undefined) delete process.env.FANMIND_BACKUP_POLL_MS;
+  else process.env.FANMIND_BACKUP_POLL_MS = previous;
+});
+
+test('heartbeat interval is decoupled from the job poll interval and configurable', () => {
+  const previousHeartbeat = process.env.FANMIND_BACKUP_HEARTBEAT_MS;
+  const previousPoll = process.env.FANMIND_BACKUP_POLL_MS;
+  delete process.env.FANMIND_BACKUP_HEARTBEAT_MS;
+  delete process.env.FANMIND_BACKUP_POLL_MS;
+  assert.equal(worker.backupPollMs(), 30000);
+  assert.equal(worker.backupHeartbeatMs(), 300000);
+  process.env.FANMIND_BACKUP_POLL_MS = '30000';
+  process.env.FANMIND_BACKUP_HEARTBEAT_MS = '600000';
+  assert.equal(worker.backupPollMs(), 30000);
+  assert.equal(worker.backupHeartbeatMs(), 600000);
+  if (previousHeartbeat === undefined) delete process.env.FANMIND_BACKUP_HEARTBEAT_MS;
+  else process.env.FANMIND_BACKUP_HEARTBEAT_MS = previousHeartbeat;
+  if (previousPoll === undefined) delete process.env.FANMIND_BACKUP_POLL_MS;
+  else process.env.FANMIND_BACKUP_POLL_MS = previousPoll;
+});
