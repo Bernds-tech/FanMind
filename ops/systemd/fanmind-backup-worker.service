@@ -8,6 +8,7 @@ Type=simple
 User=root
 Group=root
 EnvironmentFile=/etc/fanmind-backup/worker.env
+EnvironmentFile=-/etc/fanmind-backup/release.env
 WorkingDirectory=/usr/local/lib/fanmind-ops
 ExecStart=/usr/bin/node /usr/local/lib/fanmind-ops/backup-worker.mjs
 Restart=on-failure

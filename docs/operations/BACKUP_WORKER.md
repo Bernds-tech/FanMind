@@ -75,6 +75,20 @@ Für die finale Ablage kopiert der Worker beide verschlüsselten Quelldateien zu
 
 Bestehende finale Dateien werden nicht still überschrieben. Bei Kopier-, Prüfsummen- oder Rename-Fehlern entfernt der Worker nur die konkret erzeugten temporären Dateien sowie eine eventuell bereits finalisierte Prüfsummendatei; ein irreführendes finales `.age`-Artefakt bleibt nicht zurück. Die verschlüsselten Quelldateien werden erst nach erfolgreicher Zielvalidierung und finaler Ablage gelöscht.
 
+
+## Release-Metadaten für Vollbackup-Manifeste
+
+Die Worker-Konfiguration ist bewusst in zwei Dateien getrennt:
+
+- `/etc/fanmind-backup/worker.env` enthält stabile Worker-Konfiguration und Secrets wie Supabase-Service-Role, Datenbankzugang, Backup-Root, age-Empfängerpfad und Offsite-Konfiguration. Diese Datei bleibt verpflichtend, root-only und wird durch Deployments nicht überschrieben.
+- `/etc/fanmind-backup/release.env` enthält ausschließlich die aktuelle Release-Metadatenzeile `FANMIND_RELEASE_COMMIT=<40-stelliger-lowercase-git-sha>`. Sie enthält keine Secrets und keine weiteren Variablen.
+
+`fanmind-backup-worker.service` lädt zuerst `worker.env` und danach optional `release.env`. Die Release-Datei ist optional, damit bestehende Installationen weiter starten; fehlt sie, bleibt `production_commit=unknown` nur als kontrollierter Degraded-/Fallback-Zustand im Vollbackup-Manifest möglich.
+
+Das Deployment bestimmt nach `git reset --hard origin/main` den tatsächlich ausgecheckten Commit mit `git rev-parse HEAD`, validiert exakt 40 lowercase Hex-Zeichen und schreibt `/etc/fanmind-backup/release.env` über `scripts/operations/write-backup-release-env.sh` atomar. Der Helper erzeugt die temporäre Datei direkt im Zielverzeichnis, schreibt ausschließlich die eine `FANMIND_RELEASE_COMMIT`-Zeile, setzt `0600`, nutzt auf Production `root:root` und finalisiert per Rename im selben Dateisystem. Bestehende Secrets in `worker.env` werden nicht gelesen oder verändert.
+
+Nach erfolgreichem Deployment wird ein bereits aktiver `fanmind-backup-worker.service` neu gestartet, damit die neue Release-ID geladen wird. Ist der Worker inaktiv oder nicht aktiviert, startet das Deployment ihn nicht automatisch und verwendet kein `systemctl enable`. Zukünftige Vollbackup-Manifeste müssen dadurch den tatsächlich ausgerollten Commit in `production_commit` enthalten; `unknown` signalisiert nur fehlende Release-Metadaten oder den bestehenden Fallback.
+
 ## Sicherheit
 
 Der Worker nutzt `spawn(..., { shell:false })`, feste Jobtypen und feste Backup-Pfade. Browserdaten werden nicht als Shell-Argumente oder Dateipfade verwendet. Logs sind strukturiert und redigieren Key-/Secret-/Token-Felder. Restore ist nicht implementiert.

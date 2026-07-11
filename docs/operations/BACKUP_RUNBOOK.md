@@ -39,6 +39,15 @@ Die dauerhafte Ablage erfolgt als copy/verify/finalize-Prozess: `.age` und `.age
 
 Bei Fehlern muss geprüft werden, dass keine versteckten `.part`-Dateien und kein irreführendes finales `.age` ohne gültige Prüfsumme zurückgeblieben sind. Bestehende finale Backup-Namen dürfen nicht überschrieben werden; eine Kollision ist ein Fehler, der manuell untersucht werden muss.
 
+
+## Release-Commit im Vollbackup-Manifest
+
+`/etc/fanmind-backup/worker.env` enthält die stabile Worker-Konfiguration und Secrets. Der aktuell ausgerollte Git-Commit wird separat in `/etc/fanmind-backup/release.env` verwaltet; diese Datei darf ausschließlich eine Zeile `FANMIND_RELEASE_COMMIT=<40-stelliger-lowercase-git-sha>` enthalten. Keine echten ENV-Inhalte oder Secrets gehören in Git oder Logs.
+
+Das Production-Deployment schreibt `release.env` nach dem Checkout des ausgerollten Commits atomar mit dem root-eigenen Helper `write-backup-release-env.sh`. Erst danach darf ein möglicher Worker-Restart erfolgen. Ist `fanmind-backup-worker.service` bereits aktiv, startet das Deployment ihn nach erfolgreichem App-Deployment neu, damit die neue Release-ID geladen wird. Ist der Worker inaktiv oder disabled, wird er nicht automatisch gestartet und nicht enabled.
+
+Bei der Validierung eines Vollbackups muss das zentrale Manifest `production_commit` mit dem tatsächlich ausgerollten 40-stelligen Commit enthalten. `production_commit=unknown` ist nur ein Degraded-/Fallback-Zustand und weist darauf hin, dass `release.env` fehlt oder keine Release-Commit-Variable im Worker-Prozess vorhanden war.
+
 ## Validierung
 
 - Server-/Storage-Archive: `tar -tzf` vor Verschlüsselung.

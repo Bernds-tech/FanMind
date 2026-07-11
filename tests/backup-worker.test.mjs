@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, stat, readdir, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://supabase.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
@@ -22,8 +24,13 @@ await writeFile('/tmp/fanmind-test-age.sh', '#!/usr/bin/env bash\nout=""\nwhile 
 await writeFile('/tmp/fanmind-test-pgdump.sh', '#!/usr/bin/env bash\nfor ((i=1;i<=$#;i++)); do if [[ "${!i}" == "--file" ]]; then j=$((i+1)); printf "PGDUMP" > "${!j}"; fi; done\n', { mode:0o755 });
 await writeFile('/tmp/fanmind-test-pgrestore.sh', '#!/usr/bin/env bash\nexit 0\n', { mode:0o755 });
 
+const execFileAsync = promisify(execFile);
+
 const worker = await import('../scripts/operations/backup-worker.mjs');
 const workerSource = await readFile(new URL('../scripts/operations/backup-worker.mjs', import.meta.url), 'utf8');
+const releaseEnvHelper = new URL('../scripts/operations/write-backup-release-env.sh', import.meta.url);
+const backupWorkerUnit = await readFile(new URL('../ops/systemd/fanmind-backup-worker.service', import.meta.url), 'utf8');
+const deployWorkflow = await readFile(new URL('../.github/workflows/deploy-fanmind.yml', import.meta.url), 'utf8');
 
 async function makePlacedPairFixture(tmp, name = 'artifact.dump.age', payload = 'payload') {
   const src = join(tmp, 'src');
@@ -47,6 +54,59 @@ const migration = await readFile(new URL('../supabase/migrations/20260711161500_
 
 const serviceRoleGrantMigration = await readFile(new URL('../supabase/migrations/20260711170000_grant_backup_worker_rpc_service_role.sql', import.meta.url), 'utf8');
 const rpcPermissionProof = await readFile(new URL('./backup-worker-rpc-permissions.sql', import.meta.url), 'utf8');
+
+
+
+test('backup release env helper writes one root-only release commit line atomically', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-release-env-'));
+  const target = join(tmp, 'release.env');
+  const first = '0123456789abcdef0123456789abcdef01234567';
+  const second = 'fedcba9876543210fedcba9876543210fedcba98';
+
+  const firstRun = await execFileAsync('bash', [releaseEnvHelper.pathname, first, target]);
+  assert.match(firstRun.stdout, /Backup release commit recorded: 0123456789ab/);
+  assert.equal(await readFile(target, 'utf8'), `FANMIND_RELEASE_COMMIT=${first}\n`);
+  assert.equal((await stat(target)).mode & 0o777, 0o600);
+  assert.deepEqual((await readdir(tmp)).filter(name => name.includes('.tmp.')), []);
+
+  await execFileAsync('bash', [releaseEnvHelper.pathname, second, target]);
+  assert.equal(await readFile(target, 'utf8'), `FANMIND_RELEASE_COMMIT=${second}\n`);
+  assert.deepEqual((await readdir(tmp)).filter(name => name.includes('.tmp.')), []);
+});
+
+test('backup release env helper rejects invalid release commit values without temp files', async () => {
+  const invalidValues = ['', 'abc1234', 'ABCDEF0123456789ABCDEF0123456789ABCDEF01', '0123456789abcdef0123456789abcdef01234567x', '0123456789abcdef0123456789abcdef0123456;', '0123456789abcdef0123\n456789abcdef01234567'];
+
+  for (const value of invalidValues) {
+    const tmp = await mkdtemp(join(tmpdir(), 'fanmind-release-env-bad-'));
+    const target = join(tmp, 'release.env');
+    await assert.rejects(() => execFileAsync('bash', [releaseEnvHelper.pathname, value, target]), /release commit must be a full 40-character lowercase git SHA/);
+    await assert.rejects(() => access(target), /ENOENT/);
+    assert.deepEqual((await readdir(tmp)).filter(name => name.includes('.tmp.')), []);
+  }
+});
+
+test('systemd unit loads optional release env after required worker env and keeps hardening', () => {
+  const workerEnvIndex = backupWorkerUnit.indexOf('EnvironmentFile=/etc/fanmind-backup/worker.env');
+  const releaseEnvIndex = backupWorkerUnit.indexOf('EnvironmentFile=-/etc/fanmind-backup/release.env');
+  assert.ok(workerEnvIndex >= 0);
+  assert.ok(releaseEnvIndex > workerEnvIndex);
+  assert.match(backupWorkerUnit, /PrivateTmp=true/);
+  assert.match(backupWorkerUnit, /ProtectSystem=strict/);
+  assert.match(backupWorkerUnit, /NoNewPrivileges=true/);
+});
+
+test('deployment workflow records deployed commit without starting inactive backup worker', () => {
+  assert.match(deployWorkflow, /RELEASE_COMMIT="\$\(git rev-parse HEAD\)"/);
+  assert.match(deployWorkflow, /\^\[0-9a-f\]\{40\}\$/);
+  assert.match(deployWorkflow, /install -o root -g root -m 0755 scripts\/operations\/write-backup-release-env\.sh \/usr\/local\/lib\/fanmind-ops\/write-backup-release-env\.sh/);
+  assert.match(deployWorkflow, /install -o root -g root -m 0644 ops\/systemd\/fanmind-backup-worker\.service \/etc\/systemd\/system\/fanmind-backup-worker\.service/);
+  assert.match(deployWorkflow, /systemctl daemon-reload/);
+  assert.match(deployWorkflow, /write-backup-release-env\.sh "\$RELEASE_COMMIT"/);
+  assert.match(deployWorkflow, /systemctl is-active --quiet fanmind-backup-worker\.service[\s\S]*systemctl restart fanmind-backup-worker\.service/);
+  assert.match(deployWorkflow, /Backup worker is not active; not starting it\./);
+  assert.doesNotMatch(deployWorkflow, /systemctl enable/);
+});
 
 test('verify_backup is blocked in worker and migration follow-up', () => {
   assert.equal(worker.JOBS.has('verify_backup'), false);
@@ -185,7 +245,16 @@ test('full backup artifact contains encrypted parts and central manifest before 
     if (String(url).includes('/object/list/')) return { ok:true, json: async () => [] };
     return { ok:true, body: new Response('x').body };
   };
+  const previousReleaseCommit = process.env.FANMIND_RELEASE_COMMIT;
+  const previousGithubSha = process.env.GITHUB_SHA;
+  process.env.FANMIND_RELEASE_COMMIT = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  process.env.GITHUB_SHA = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
   const result = await worker.createFull(tmp);
+  if (previousReleaseCommit === undefined) delete process.env.FANMIND_RELEASE_COMMIT;
+  else process.env.FANMIND_RELEASE_COMMIT = previousReleaseCommit;
+  if (previousGithubSha === undefined) delete process.env.GITHUB_SHA;
+  else process.env.GITHUB_SHA = previousGithubSha;
+  assert.equal(result.manifest.production_commit, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
   assert.ok(result.path.endsWith('.tar.gz.age'));
   assert.ok(result.checksum_path.endsWith('.age.sha256'));
   assert.equal(result.manifest.parts.length, 3);
@@ -194,6 +263,29 @@ test('full backup artifact contains encrypted parts and central manifest before 
     assert.match(part.checksum_file, /\.age\.sha256$/);
     assert.ok(part.sha256);
   }
+});
+
+
+
+test('full backup manifest keeps controlled unknown fallback when no release commit exists', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-full-no-release-'));
+  const pm2 = join(tmp, 'dump.pm2');
+  const previousReleaseCommit = process.env.FANMIND_RELEASE_COMMIT;
+  const previousGithubSha = process.env.GITHUB_SHA;
+  delete process.env.FANMIND_RELEASE_COMMIT;
+  delete process.env.GITHUB_SHA;
+  process.env.FANMIND_PM2_DUMP_FILE = pm2;
+  await writeFile(pm2, 'module.exports = {}');
+  global.fetch = async (url) => {
+    if (String(url).includes('/object/list/')) return { ok:true, json: async () => [] };
+    return { ok:true, body: new Response('x').body };
+  };
+  const result = await worker.createFull(tmp);
+  if (previousReleaseCommit === undefined) delete process.env.FANMIND_RELEASE_COMMIT;
+  else process.env.FANMIND_RELEASE_COMMIT = previousReleaseCommit;
+  if (previousGithubSha === undefined) delete process.env.GITHUB_SHA;
+  else process.env.GITHUB_SHA = previousGithubSha;
+  assert.equal(result.manifest.production_commit, 'unknown');
 });
 
 test('missing PM2 dump path fails with data-sparse error', async () => {
