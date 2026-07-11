@@ -9195,7 +9195,7 @@
 }
 
 /* Fixed landing navigation */
-.fixedHeaderShell {
+.landingHeaderRoot {
   position: fixed;
   top: 0;
   left: 0;
@@ -9209,7 +9209,7 @@
   pointer-events: none;
 }
 
-.fixedHeaderShell .header {
+.landingHeaderRoot .header {
   pointer-events: auto;
 }
 
@@ -9232,7 +9232,7 @@
   min-height: 36px;
 }
 
-.fixedHeaderShell .logo {
+.landingHeaderRoot .logo {
   justify-content: center;
   transform: translateY(-3px);
 }
@@ -9272,7 +9272,7 @@
 }
 
 @media (max-width: 1280px) {
-  .fixedHeaderShell {
+  .landingHeaderRoot {
     padding-inline: clamp(12px, 2vw, 24px);
   }
 
@@ -9294,7 +9294,7 @@
 }
 
 @media (max-width: 720px) {
-  .fixedHeaderShell {
+  .landingHeaderRoot {
     padding: 8px 10px;
   }
 
@@ -9337,7 +9337,7 @@
 }
 
 @media (max-width: 390px) {
-  .fixedHeaderShell {
+  .landingHeaderRoot {
     padding-inline: 8px;
   }
 
@@ -9353,13 +9353,13 @@
   scroll-margin-top: 132px;
 }
 
-.fixedHeaderShell {
+.landingHeaderRoot {
   z-index: 20000;
   isolation: isolate;
   transform: translateZ(0);
 }
 
-.fixedHeaderShell .header,
+.landingHeaderRoot .header,
 .header {
   align-items: center;
 }
@@ -10436,7 +10436,7 @@
 }
 
 /* Issue #527: persistent public landing header while scrolling. */
-.fixedHeaderShell {
+.landingHeaderRoot {
   position: fixed;
   inset: 0 0 auto;
   z-index: 50000;
@@ -10449,7 +10449,7 @@
   contain: layout paint;
 }
 
-.fixedHeaderShell .header {
+.landingHeaderRoot .header {
   width: min(100%, 1440px);
   max-width: 100%;
   border-color: rgba(126, 196, 255, 0.32);
@@ -10470,11 +10470,11 @@
 }
 
 @media (max-width: 720px) {
-  .fixedHeaderShell {
+  .landingHeaderRoot {
     padding: 8px 10px 10px;
   }
 
-  .fixedHeaderShell .header {
+  .landingHeaderRoot .header {
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 8px;
     overflow: hidden;
@@ -10547,7 +10547,7 @@
   overflow-y: visible;
 }
 
-.fixedHeaderShell {
+.landingHeaderRoot {
   position: fixed;
   inset: 0 0 auto;
   z-index: 2147483647;
@@ -10568,7 +10568,7 @@
   backdrop-filter: blur(20px) saturate(150%);
 }
 
-.fixedHeaderShell .header {
+.landingHeaderRoot .header {
   position: relative;
   top: auto;
   right: auto;
@@ -10591,7 +10591,7 @@
 }
 
 @media (max-width: 720px) {
-  .fixedHeaderShell {
+  .landingHeaderRoot {
     padding: 8px 10px 10px;
   }
 
@@ -10607,7 +10607,7 @@
 }
 
 /* Issue #531: render the landing headbar as a viewport-level fixed overlay. */
-.fixedHeaderShell {
+.landingHeaderRoot {
   position: fixed;
   top: 0;
   left: 0;
@@ -10631,7 +10631,7 @@
   backdrop-filter: blur(20px) saturate(150%);
 }
 
-.fixedHeaderShell .header {
+.landingHeaderRoot .header {
   position: relative;
   top: auto;
   right: auto;
@@ -10659,11 +10659,11 @@
 }
 
 @media (max-width: 720px) {
-  .fixedHeaderShell {
+  .landingHeaderRoot {
     padding: 8px 10px 10px;
   }
 
-  .fixedHeaderShell .header {
+  .landingHeaderRoot .header {
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 8px;
     overflow: hidden;
@@ -10680,13 +10680,11 @@
   }
 }
 
-/* Issue #531 follow-up: root-level sticky landing headbar.
-   This is intentionally not the previous .fixedHeaderShell overlay: the header
-   is a page-root sibling before <main>, remains in normal flow so content is not
-   hidden underneath it, and sticks during hash deep-links even when body-level
-   brightness filters create containing/stacking contexts. */
+/* Issue #531 follow-up: root-level fixed landing headbar.
+   This is intentionally a viewport-level overlay above <main>; page padding below
+   keeps content visible during normal loads and hash deep-links. */
 .landingHeaderRoot {
-  position: sticky;
+  position: fixed;
   top: 0;
   z-index: 2147483646;
   display: flex;
