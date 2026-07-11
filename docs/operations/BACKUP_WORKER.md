@@ -65,6 +65,16 @@ sudo rm -f /etc/systemd/system/fanmind-backup-worker.service
 sudo systemctl daemon-reload
 ```
 
+## Artefakt-Platzierung über Dateisystemgrenzen
+
+Die systemd-Unit behält `PrivateTmp=true`. Dadurch liegt das private Worker-`/tmp` je nach Host- und Namespace-Konfiguration nicht zwingend auf demselben Dateisystem wie `FANMIND_BACKUP_ROOT` (`/var/backups/fanmind`). Der Worker verwendet deshalb keinen direkten `rename()` von PrivateTmp nach Backup-Root.
+
+Der Klartext-Dump bleibt ausschließlich im privaten temporären Arbeitsverzeichnis und wird durch `encryptedFinalize()` nach erfolgreicher age-Verschlüsselung entfernt. Dauerhaft abgelegt werden nur das verschlüsselte `<backup>.age` und die zugehörige `<backup>.age.sha256`. Beide Dateien gelten als untrennbares Paar.
+
+Für die finale Ablage kopiert der Worker beide verschlüsselten Quelldateien zuerst unter eindeutig benannten, versteckten `.part`-Dateien direkt in `FANMIND_BACKUP_ROOT` und legt diese Dateien mit root-only-Rechten an. Danach prüft er Existenz und Lesbarkeit, berechnet SHA256 über das kopierte `.age`-Artefakt und vergleicht den Wert sowohl mit dem Worker-Ergebnis als auch mit dem Inhalt der kopierten `.sha256`-Datei. Erst nach erfolgreicher Validierung benennt er innerhalb von `FANMIND_BACKUP_ROOT` zuerst die Prüfsumme und danach das `.age`-Artefakt auf die finalen Namen um. Diese finalen Renames bleiben damit atomar innerhalb desselben Ziel-Dateisystems; das eigentliche Backup-Artefakt erscheint erst, wenn seine Prüfsumme bereits vorhanden ist.
+
+Bestehende finale Dateien werden nicht still überschrieben. Bei Kopier-, Prüfsummen- oder Rename-Fehlern entfernt der Worker nur die konkret erzeugten temporären Dateien sowie eine eventuell bereits finalisierte Prüfsummendatei; ein irreführendes finales `.age`-Artefakt bleibt nicht zurück. Die verschlüsselten Quelldateien werden erst nach erfolgreicher Zielvalidierung und finaler Ablage gelöscht.
+
 ## Sicherheit
 
 Der Worker nutzt `spawn(..., { shell:false })`, feste Jobtypen und feste Backup-Pfade. Browserdaten werden nicht als Shell-Argumente oder Dateipfade verwendet. Logs sind strukturiert und redigieren Key-/Secret-/Token-Felder. Restore ist nicht implementiert.

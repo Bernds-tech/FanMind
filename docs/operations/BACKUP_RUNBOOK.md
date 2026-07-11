@@ -29,6 +29,16 @@ Automatische Backups verwenden age Public-Key-Verschlüsselung. Auf Production l
 
 Wenn keine Backup-Jobs anstehen, darf `claim_admin_backup_job` über PostgREST auch `null`, `[]` oder eine leere Composite-Zeile wie `{ id: null, job_type: null }` zurückgeben. Erwartetes Worker-Verhalten im Leerlauf: kein `job_claimed` mit leerer ID, kein `job_type_not_allowed`-Loop, keine Admin-Benachrichtigung und kein Audit-Eintrag. Der nächste Claim erfolgt nach `FANMIND_BACKUP_POLL_MS` (Standard: 30 Sekunden). Heartbeats sind separat über `FANMIND_BACKUP_HEARTBEAT_MS` getaktet (Standard: 5 Minuten), damit ein ruhender Worker keine unnötig dichten `system_health_events` erzeugt.
 
+## PrivateTmp und finale Ablage
+
+`fanmind-backup-worker.service` verwendet weiterhin `PrivateTmp=true`. Das private temporäre Arbeitsverzeichnis und `FANMIND_BACKUP_ROOT` können deshalb unterschiedliche Dateisysteme sein; ein direkter Cross-Filesystem-`rename()` ist nicht zulässig und wird nicht als Platzierungsmechanismus verwendet.
+
+Klartext-Dumps und unverschlüsselte Tar-Dateien dürfen nur im privaten Temp-Bereich des Workers existieren. `encryptedFinalize()` entfernt den Klartext nach erfolgreicher age-Verschlüsselung. Nach `/var/backups/fanmind` beziehungsweise den konfigurierten Backup-Root gelangen ausschließlich verschlüsselte `.age`-Dateien und ihre `.age.sha256`-Prüfsummen.
+
+Die dauerhafte Ablage erfolgt als copy/verify/finalize-Prozess: `.age` und `.age.sha256` werden zuerst als eindeutig benannte versteckte `.part`-Dateien direkt im Backup-Root angelegt, dort gelesen, per SHA256 gegen das Worker-Ergebnis und die kopierte Prüfsummendatei validiert und erst danach innerhalb des Backup-Root atomar umbenannt. Die Reihenfolge ist bewusst: zuerst die finale `.age.sha256`, danach die finale `.age`. Das Paar gilt erst dann als verwendbar, wenn beide finalen Dateien vorhanden sind.
+
+Bei Fehlern muss geprüft werden, dass keine versteckten `.part`-Dateien und kein irreführendes finales `.age` ohne gültige Prüfsumme zurückgeblieben sind. Bestehende finale Backup-Namen dürfen nicht überschrieben werden; eine Kollision ist ein Fehler, der manuell untersucht werden muss.
+
 ## Validierung
 
 - Server-/Storage-Archive: `tar -tzf` vor Verschlüsselung.
