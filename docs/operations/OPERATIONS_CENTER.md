@@ -15,3 +15,7 @@ Die Oberfläche zeigt jetzt echte Metadaten aus `backup_runs` und `admin_operati
 5. Optional rclone-Offsite konfigurieren.
 
 Externe E-Mail-Alarmierung, Sentry/Fehlertracking, Deployment-/Rollback-Umbau, Production/Test-Trennung und Restore-Test bleiben offen.
+
+## Verify backup scope
+
+The Operations Center can enqueue server-config, database, storage and full backups only. `verify_backup` was removed until validation can be implemented strictly by `backup_runs.id`, with server-side path resolution under `FANMIND_BACKUP_ROOT`, symlink/path-traversal protection and checksum/manifest validation without decrypting Production data.

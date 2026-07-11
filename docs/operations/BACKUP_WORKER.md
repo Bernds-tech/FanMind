@@ -87,3 +87,18 @@ sudo systemctl enable --now fanmind-backup-database.timer fanmind-backup-storage
 ```bash
 sudo FANMIND_BACKUP_ROOT=/var/backups/fanmind node /usr/local/lib/fanmind-ops/backup-retention.mjs --dry-run
 ```
+
+## Production-blocker fixes before installation (#538)
+
+This PR keeps Phase 5 in preparation; do not install the worker or run Production migrations until after merge and manual review.
+
+- Full backups are now single encrypted tar artifacts. The tar is assembled in a protected temporary full-backup directory and contains the encrypted server-config, database and storage part artifacts, their `.age.sha256` files, and a central `manifest.json` with file names, sizes and SHA256 values.
+- Every backup move treats `<artifact>.age` and `<artifact>.age.sha256` as one unit. The worker re-reads the destination checksum file and recalculates SHA256 over the destination artifact before it writes `backup_runs.checksum_reference`.
+- Offsite upload copies both the encrypted artifact and its `.sha256`; upload is marked `uploaded` only after both transfers succeed.
+- `FANMIND_PM2_DUMP_FILE` is required operational configuration. Production uses `/home/ubuntu/.pm2/dump.pm2`; the worker checks readability and only logs `pm2_dump_file_unreadable` if it is missing.
+- Storage backup walks each prefix with offset pagination (`FANMIND_STORAGE_BACKUP_PAGE_SIZE`, max 1000), ignores `.emptyFolderPlaceholder`, rejects duplicate paths and fails if listing and downloaded counts differ.
+- `verify_backup` is disabled for this PR: it is absent from the UI, enqueue allowlist, worker allowlist and follow-up DB constraint until a real server-side verifier is implemented.
+- The server-config backup intentionally includes `/etc/fanmind-backup` as `sensitive_encrypted_config`. This captures `worker.env`, `pgpass`, `rclone.conf` and the public age recipient only inside encrypted artifacts; plaintext remains in the worker temp directory and is removed during cleanup.
+- `MemoryDenyWriteExecute=true` is intentionally omitted from the service because Node.js 24/V8 on Ubuntu 24.04 may require writable executable memory during startup. Other hardening remains: `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=strict`, `ProtectHome=read-only`, explicit `ReadOnlyPaths` and explicit `ReadWritePaths`.
+
+Manual order after merge: apply `20260711143000_phase_5_backup_worker.sql`, then `20260711161500_disable_verify_backup_until_safe_validation.sql`; install files; set `/etc/fanmind-backup/worker.env`; run `systemd-analyze verify /etc/systemd/system/fanmind-backup-worker.service`; start worker; enqueue a controlled test backup; verify Operations Center and files under `/var/backups/fanmind`. Rollback: stop/disable the service and timers, leave backup artifacts in place, and revert queued jobs to `blocked` manually if needed.

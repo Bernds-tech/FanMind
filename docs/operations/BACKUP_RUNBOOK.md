@@ -37,3 +37,11 @@ Zielwerte: 7 tägliche, 4 wöchentliche und 6 monatliche Backups. Die erste Work
 ```bash
 sudo FANMIND_BACKUP_ROOT=/var/backups/fanmind node /usr/local/lib/fanmind-ops/backup-retention.mjs --dry-run
 ```
+
+## Phase 5 blocker resolution notes
+
+Full backups are complete only when one encrypted `fanmind-full-*.tar.gz.age` and its adjacent `.age.sha256` exist outside the temporary directory. The encrypted full tar contains encrypted server-config, database and storage part artifacts plus their checksums and a central manifest. Treat the pair as atomic for copy, retention and offsite handling.
+
+The server configuration backup deliberately uses Option A: `/etc/fanmind-backup` is included as `sensitive_encrypted_config` because it contains the operational material required to understand and rebuild backup automation. Never log or publish its contents; verify only encrypted artifacts and checksums on Production.
+
+`verify_backup` remains a later hardening item and is not an active job type in this PR. No Production migration or worker installation is performed by Codex.
