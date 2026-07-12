@@ -7,7 +7,7 @@ import { join, basename, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-const VERSION = 'phase5-backup-worker-3';
+const VERSION = 'phase5-backup-worker-4';
 const JOBS = new Set(['backup_server_config','backup_database','backup_storage','backup_full']);
 const STORAGE_PAGE_SIZE = Math.min(Math.max(Number(process.env.FANMIND_STORAGE_BACKUP_PAGE_SIZE || 1000), 1), 1000);
 const WORKER_ID = process.env.FANMIND_BACKUP_WORKER_ID || `fanmind-backup-${hostname() || 'worker'}-${process.pid}`;
@@ -117,7 +117,38 @@ async function placeBackupPair(result) {
   }
 }
 async function moveAndValidate(result) { return placeBackupPair(result); }
-async function offsite(file) { if (process.env.FANMIND_BACKUP_OFFSITE_ENABLED !== 'true') return { status:'not_configured' }; const remote = required('FANMIND_BACKUP_RCLONE_REMOTE'); const remotePath = process.env.FANMIND_BACKUP_REMOTE_PATH || 'fanmind'; const config = process.env.FANMIND_BACKUP_RCLONE_CONFIG; const mkArgs = (src) => [...(config ? ['--config', config] : []), 'copyto', src, `${remote}:${remotePath}/${basename(src)}`]; await run(process.env.FANMIND_RCLONE_BIN || 'rclone', mkArgs(file)); await run(process.env.FANMIND_RCLONE_BIN || 'rclone', mkArgs(`${file}.sha256`)); return { status:'uploaded', reference:`${remote}:${remotePath}/${basename(file)}`, checksum_reference:`${remote}:${remotePath}/${basename(file)}.sha256` }; }
+async function offsite(file) {
+  if (process.env.FANMIND_BACKUP_OFFSITE_ENABLED !== 'true') return { status:'not_configured' };
+  const remote = required('FANMIND_BACKUP_RCLONE_REMOTE');
+  const remotePath = process.env.FANMIND_BACKUP_REMOTE_PATH || 'fanmind';
+  const config = process.env.FANMIND_BACKUP_RCLONE_CONFIG;
+  const rcloneBin = process.env.FANMIND_RCLONE_BIN || 'rclone';
+  const reference = `${remote}:${remotePath}/${basename(file)}`;
+  const mkArgs = (src) => [...(config ? ['--config', config] : []), 'copyto', src, `${remote}:${remotePath}/${basename(src)}`];
+
+  await run(process.env.FANMIND_RCLONE_BIN || 'rclone', mkArgs(file));
+
+  try {
+    await run(process.env.FANMIND_RCLONE_BIN || 'rclone', mkArgs(`${file}.sha256`));
+  } catch (error) {
+    const cleanupArgs = [...(config ? ['--config', config] : []), 'deletefile', reference];
+    try {
+      await run(rcloneBin, cleanupArgs);
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        'offsite_checksum_upload_failed_cleanup_failed',
+      );
+    }
+    throw error;
+  }
+
+  return {
+    status:'uploaded',
+    reference,
+    checksum_reference:`${remote}:${remotePath}/${basename(file)}.sha256`,
+  };
+}
 async function handle(job) { if (!JOBS.has(job.job_type)) throw new Error('job_type_not_allowed'); await patch('admin_operation_jobs', job.id, { status:'running', started_at:new Date().toISOString(), lease_until:new Date(Date.now()+900000).toISOString() }); const tmp = await mkdtemp(join(tmpdir(), 'fanmind-backup-')); try { const start = Date.now(); let result; if (job.job_type === 'backup_server_config') result = await createServerConfig(tmp); else if (job.job_type === 'backup_database') result = await createDatabase(tmp); else if (job.job_type === 'backup_storage') result = await createStorage(tmp); else result = await createFull(tmp); const { final, checksumFinal } = await moveAndValidate(result); const off = await offsite(final).catch(e => ({ status:'failed', error:e.message })); const status = off.status === 'not_configured' ? 'offsite_pending' : off.status === 'failed' ? 'degraded' : 'succeeded'; const runRow = await insert('backup_runs', { backup_type: result.manifest.backup_type, status, severity: status === 'succeeded' ? 'info':'warning', finished_at:new Date().toISOString(), storage_reference:final, checksum_reference:checksumFinal, sha256:result.sha256, size_bytes:result.size_bytes, validation_status:'passed', offsite_status:off.status, offsite_reference:off.reference || null, job_id:job.id, worker_id:WORKER_ID, duration_ms:Date.now()-start, manifest:{...result.manifest, checksum_reference:checksumFinal, offsite_checksum_reference:off.checksum_reference || null} }); await patch('admin_operation_jobs', job.id, { status:'succeeded', finished_at:new Date().toISOString(), result_reference:runRow.id, lease_until:null }); await notify(status === 'succeeded' ? 'info':'warning', status === 'succeeded' ? 'Backup erfolgreich' : 'Backup lokal erfolgreich, Offsite ausstehend', `${job.job_type} wurde verarbeitet.`, 'backup_worker', runRow.id); await audit(job.job_type, 'success', { backup_run_id:runRow.id, offsite_status:off.status }); } finally { await rm(tmp, { recursive:true, force:true }); } }
 async function loop() { log('info','worker_start',{version:VERSION}); let lastHeartbeatAt = 0; while (!stopping) { const now = Date.now(); if (now - lastHeartbeatAt >= backupHeartbeatMs()) { await heartbeat(); lastHeartbeatAt = now; } const claimResponse = await rpc('claim_admin_backup_job', { p_worker_id:WORKER_ID, p_lease_seconds:900 }).catch(e => { log('warn','claim_failed',{error:e.message}); return null; }); const job = normalizeClaimedJob(claimResponse); if (!job) { if (isUnsupportedClaimedJob(claimResponse)) { const unsupportedJob = firstClaimResponseRow(claimResponse); const msg = 'job_type_not_allowed'; await patch('admin_operation_jobs', unsupportedJob.id, { status:'failed', finished_at:new Date().toISOString(), error_code:'job', error_message:msg, lease_until:null }).catch(()=>{}); log('warn','job_rejected',{job_id:unsupportedJob.id, job_type:unsupportedJob.job_type, error:msg}); } await sleep(backupPollMs()); continue; } log('info','job_claimed',{job_id:job.id, job_type:job.job_type}); try { await handle(job); } catch(e) { const msg = e instanceof Error ? e.message.replace(/[^a-zA-Z0-9_.:-]/g,'_').slice(0,160) : 'unknown_error'; await patch('admin_operation_jobs', job.id, { status:'failed', finished_at:new Date().toISOString(), error_code:msg.split('_')[0] || 'backup_failed', error_message:msg, lease_until:null }).catch(()=>{}); await notify('critical','Backup fehlgeschlagen', `${job.job_type} ist fehlgeschlagen.`, 'backup_worker', job.id); await audit(job.job_type, 'failure', { error_code:msg }); log('error','job_failed',{job_id:job.id,error:msg}); } } log('info','worker_stop'); }
 export { encryptedFinalize, createFull, createStorage, walkStorage, listStorage, placeBackupPair, moveAndValidate, offsite, createServerConfig, normalizeClaimedJob, backupPollMs, backupHeartbeatMs, __setBackupWorkerTestHooks, JOBS };
