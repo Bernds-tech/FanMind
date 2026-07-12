@@ -61,7 +61,7 @@ Restore ist absichtlich nicht in der Web-App implementiert. Ein Restore-Test ble
 
 ## Retention
 
-Zielwerte: 7 tägliche, 4 wöchentliche und 6 monatliche Backups. Die erste Worker-Implementierung liefert einen sicheren Dry-Run-fähigen Retention-Baustein, der ausschließlich eindeutig erkannte FanMind-Backup-Artefakte (`fanmind-*.age`, `fanmind-*.sha256`) betrachtet und mindestens einen Bestand schützt. Vor dem Aktivieren einer echten Löschung muss der Dry-Run auf Production geprüft und der Mindestbestand verifiziert werden.
+Für das MVP gilt die schlanke 1-1-1-Policy: Datenbank, Storage und Server-Konfiguration behalten jeweils einen aktuellen täglichen, einen davon zeitlich getrennten wöchentlichen und einen zeitlich getrennten monatlichen Wiederherstellungspunkt. Vollbackups werden nur wöchentlich erstellt und behalten deshalb einen wöchentlichen und einen monatlichen Stand. Die Retention behandelt `.age` und `.age.sha256` immer als Paar, überspringt unvollständige Paare und schützt selbst bei einer Null-Konfiguration mindestens das neueste vollständige Paar. Vor dem Aktivieren einer echten Löschung muss der Dry-Run auf Production geprüft werden.
 
 ```bash
 sudo FANMIND_BACKUP_ROOT=/var/backups/fanmind node /usr/local/lib/fanmind-ops/backup-retention.mjs --dry-run
