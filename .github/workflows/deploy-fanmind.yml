@@ -37,7 +37,9 @@ jobs:
             exit 1
           fi
 
+          sudo install -d -o root -g root -m 0700 /usr/local/lib/fanmind-ops
           sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh
+          sudo install -o root -g root -m 0750 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
           sudo systemctl daemon-reload
 
