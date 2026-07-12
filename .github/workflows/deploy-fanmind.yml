@@ -40,7 +40,16 @@ jobs:
           sudo install -d -o root -g root -m 0700 /usr/local/lib/fanmind-ops
           sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh
           sudo install -o root -g root -m 0750 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs
+          sudo install -o root -g root -m 0750 scripts/operations/enqueue-backup-job.mjs /usr/local/lib/fanmind-ops/enqueue-backup-job.mjs
+          sudo install -o root -g root -m 0750 scripts/operations/backup-retention.mjs /usr/local/lib/fanmind-ops/backup-retention.mjs
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-enqueue@.service /etc/systemd/system/fanmind-backup-enqueue@.service
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-retention.service /etc/systemd/system/fanmind-backup-retention.service
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-database.timer /etc/systemd/system/fanmind-backup-database.timer
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-storage.timer /etc/systemd/system/fanmind-backup-storage.timer
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-server_config.timer /etc/systemd/system/fanmind-backup-server_config.timer
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-full.timer /etc/systemd/system/fanmind-backup-full.timer
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-retention.timer /etc/systemd/system/fanmind-backup-retention.timer
           sudo systemctl daemon-reload
 
           npm ci --no-audit --no-fund
