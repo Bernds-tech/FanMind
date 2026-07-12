@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  DEFAULT_POLICY,
   discoverBackupPairs,
   executeRetention,
   parseArtifactName,
+  resolvePolicy,
   selectRetention,
 } from '../scripts/operations/backup-retention.mjs';
 
@@ -33,7 +35,9 @@ async function writePair(root, type, timestampMs, payload = 'payload') {
   const artifactPath = join(root, artifactName);
   const checksumPath = `${artifactPath}.sha256`;
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
-  const sha = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  const sha = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
   await writeFile(artifactPath, payload, { mode: 0o600 });
   await writeFile(checksumPath, `${sha}  ${artifactName}\n`, { mode: 0o600 });
   return { artifactName, artifactPath, checksumPath };
@@ -48,28 +52,73 @@ test('recognized backup names parse exact worker artifact formats', () => {
   assert.equal(parseArtifactName('unrelated-1783881096964.tar.gz.age'), null);
 });
 
-test('retention keeps at least seven newest complete pairs per type', () => {
-  const pairs = [];
-  for (let index = 0; index < 10; index += 1) {
-    pairs.push(pair('full', `2026-07-12T${String(index).padStart(2, '0')}:00:00Z`));
-  }
-  const result = selectRetention(pairs, { daily: 0, weekly: 0, monthly: 0, minimumPairs: 7 });
-  assert.equal(result.keep.length, 7);
-  assert.equal(result.remove.length, 3);
-  const keptTimestamps = result.keep.map((item) => item.timestampMs).sort((a, b) => b - a);
-  const expected = pairs.map((item) => item.timestampMs).sort((a, b) => b - a).slice(0, 7);
-  assert.deepEqual(keptTimestamps, expected);
+test('default MVP policy is 1 daily, 1 weekly and 1 monthly, with no daily full backup slot', () => {
+  assert.deepEqual(DEFAULT_POLICY.database, { daily: 1, weekly: 1, monthly: 1 });
+  assert.deepEqual(DEFAULT_POLICY.storage, { daily: 1, weekly: 1, monthly: 1 });
+  assert.deepEqual(DEFAULT_POLICY.server_config, { daily: 1, weekly: 1, monthly: 1 });
+  assert.deepEqual(DEFAULT_POLICY.full, { daily: 0, weekly: 1, monthly: 1 });
+
+  const resolved = resolvePolicy({});
+  assert.deepEqual(resolved, DEFAULT_POLICY);
 });
 
-test('monthly policy keeps newest representative from six distinct UTC months', () => {
-  const pairs = [];
-  for (let month = 0; month < 10; month += 1) {
-    const date = new Date(Date.UTC(2026, 9 - month, 15, 12, 0, 0));
-    pairs.push(pair('database', date.toISOString(), 'dump'));
-  }
-  const result = selectRetention(pairs, { daily: 0, weekly: 0, monthly: 6, minimumPairs: 1 });
-  assert.equal(result.keep.length, 6);
-  assert.equal(result.remove.length, 4);
+test('database policy keeps three distinct restore points across day, week and month', () => {
+  const pairs = [
+    pair('database', '2026-07-12T20:00:00Z', 'dump'),
+    pair('database', '2026-07-11T20:00:00Z', 'dump'),
+    pair('database', '2026-07-05T20:00:00Z', 'dump'),
+    pair('database', '2026-06-28T20:00:00Z', 'dump'),
+    pair('database', '2026-05-31T20:00:00Z', 'dump'),
+  ];
+
+  const result = selectRetention(pairs);
+  const kept = result.keep
+    .map((item) => new Date(item.timestampMs).toISOString())
+    .sort();
+
+  assert.deepEqual(kept, [
+    '2026-06-28T20:00:00.000Z',
+    '2026-07-05T20:00:00.000Z',
+    '2026-07-12T20:00:00.000Z',
+  ]);
+  assert.equal(result.remove.length, 2);
+});
+
+test('full backup policy keeps one weekly and one distinct monthly restore point', () => {
+  const pairs = [
+    pair('full', '2026-07-12T20:00:00Z'),
+    pair('full', '2026-07-05T20:00:00Z'),
+    pair('full', '2026-06-28T20:00:00Z'),
+    pair('full', '2026-05-31T20:00:00Z'),
+  ];
+
+  const result = selectRetention(pairs);
+  const kept = result.keep
+    .map((item) => new Date(item.timestampMs).toISOString())
+    .sort();
+
+  assert.deepEqual(kept, [
+    '2026-06-28T20:00:00.000Z',
+    '2026-07-12T20:00:00.000Z',
+  ]);
+  assert.equal(result.remove.length, 2);
+});
+
+test('latest pair remains protected even when all configured tiers are zero', () => {
+  const pairs = [
+    pair('full', '2026-07-12T20:00:00Z'),
+    pair('full', '2026-07-05T20:00:00Z'),
+  ];
+
+  const result = selectRetention(pairs, {
+    fullDaily: 0,
+    fullWeekly: 0,
+    fullMonthly: 0,
+  });
+
+  assert.equal(result.keep.length, 1);
+  assert.equal(result.keep[0].timestampMs, Date.parse('2026-07-12T20:00:00Z'));
+  assert.deepEqual(result.reasons.get(result.keep[0].artifactName), ['safety_latest']);
 });
 
 test('incomplete or invalid pairs are reported and never selected for deletion', async () => {
@@ -79,52 +128,111 @@ test('incomplete or invalid pairs are reported and never selected for deletion',
   await writeFile(join(root, artifactName), 'payload');
   const invalidName = `fanmind-database-${timestamp}.dump.age`;
   await writeFile(join(root, invalidName), 'payload');
-  await writeFile(join(root, `${invalidName}.sha256`), `not-a-valid-checksum  ${invalidName}\n`);
+  await writeFile(
+    join(root, `${invalidName}.sha256`),
+    `not-a-valid-checksum  ${invalidName}\n`,
+  );
   const orphanName = `fanmind-storage-${timestamp}.tar.gz.age.sha256`;
-  await writeFile(join(root, orphanName), `${'0'.repeat(64)}  ${orphanName.slice(0, -7)}\n`);
+  await writeFile(
+    join(root, orphanName),
+    `${'0'.repeat(64)}  ${orphanName.slice(0, -7)}\n`,
+  );
 
   const discovered = await discoverBackupPairs(root);
   assert.equal(discovered.pairs.length, 0);
-  assert.deepEqual(discovered.incomplete.map((item) => item.reason).sort(), ['artifact_missing', 'checksum_invalid', 'checksum_missing']);
+  assert.deepEqual(
+    discovered.incomplete.map((item) => item.reason).sort(),
+    ['artifact_missing', 'checksum_invalid', 'checksum_missing'],
+  );
 });
 
 test('dry run reports pair deletion candidates without removing either file', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fanmind-retention-dry-'));
-  const newer = await writePair(root, 'full', Date.parse('2026-07-12T12:00:00Z'), 'new');
-  const older = await writePair(root, 'full', Date.parse('2026-06-12T12:00:00Z'), 'old');
+  const newest = await writePair(
+    root,
+    'full',
+    Date.parse('2026-07-12T12:00:00Z'),
+    'newest',
+  );
+  const monthly = await writePair(
+    root,
+    'full',
+    Date.parse('2026-06-01T12:00:00Z'),
+    'monthly',
+  );
+  const obsolete = await writePair(
+    root,
+    'full',
+    Date.parse('2026-05-01T12:00:00Z'),
+    'obsolete',
+  );
   const lines = [];
 
   const summary = await executeRetention({
     root,
     dryRun: true,
-    options: { daily: 0, weekly: 0, monthly: 0, minimumPairs: 1 },
     logger: (line) => lines.push(JSON.parse(line)),
   });
 
   assert.equal(summary.deletion_candidates, 1);
-  assert.equal(lines.some((line) => line.action === 'would_delete_pair' && line.artifact === older.artifactPath && line.checksum === older.checksumPath), true);
-  await access(newer.artifactPath);
-  await access(newer.checksumPath);
-  await access(older.artifactPath);
-  await access(older.checksumPath);
+  assert.equal(
+    lines.some(
+      (line) =>
+        line.action === 'would_delete_pair'
+        && line.artifact === obsolete.artifactPath
+        && line.checksum === obsolete.checksumPath,
+    ),
+    true,
+  );
+  await access(newest.artifactPath);
+  await access(newest.checksumPath);
+  await access(monthly.artifactPath);
+  await access(monthly.checksumPath);
+  await access(obsolete.artifactPath);
+  await access(obsolete.checksumPath);
 });
 
 test('execute mode removes artifact and checksum as one retention decision', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fanmind-retention-execute-'));
-  const newer = await writePair(root, 'database', Date.parse('2026-07-12T12:00:00Z'), 'new');
-  const older = await writePair(root, 'database', Date.parse('2026-06-12T12:00:00Z'), 'old');
+  const newest = await writePair(
+    root,
+    'database',
+    Date.parse('2026-07-12T12:00:00Z'),
+    'newest',
+  );
+  const weekly = await writePair(
+    root,
+    'database',
+    Date.parse('2026-07-05T12:00:00Z'),
+    'weekly',
+  );
+  const monthly = await writePair(
+    root,
+    'database',
+    Date.parse('2026-06-01T12:00:00Z'),
+    'monthly',
+  );
+  const obsolete = await writePair(
+    root,
+    'database',
+    Date.parse('2026-05-01T12:00:00Z'),
+    'obsolete',
+  );
 
   const summary = await executeRetention({
     root,
     dryRun: false,
-    options: { daily: 0, weekly: 0, monthly: 0, minimumPairs: 1 },
     logger: () => {},
   });
 
   assert.equal(summary.deleted_pairs, 1);
-  await access(newer.artifactPath);
-  await access(newer.checksumPath);
-  await assert.rejects(() => access(older.artifactPath), /ENOENT/);
-  await assert.rejects(() => access(older.checksumPath), /ENOENT/);
-  assert.match(await readFile(newer.checksumPath, 'utf8'), /^[0-9a-f]{64}/);
+  await access(newest.artifactPath);
+  await access(newest.checksumPath);
+  await access(weekly.artifactPath);
+  await access(weekly.checksumPath);
+  await access(monthly.artifactPath);
+  await access(monthly.checksumPath);
+  await assert.rejects(() => access(obsolete.artifactPath), /ENOENT/);
+  await assert.rejects(() => access(obsolete.checksumPath), /ENOENT/);
+  assert.match(await readFile(newest.checksumPath, 'utf8'), /^[0-9a-f]{64}/);
 });
