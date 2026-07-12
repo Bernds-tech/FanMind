@@ -13,6 +13,11 @@ import {
   selectRetention,
 } from '../scripts/operations/backup-retention.mjs';
 
+const retentionService = await readFile(
+  new URL('../ops/systemd/fanmind-backup-retention.service', import.meta.url),
+  'utf8',
+);
+
 function pair(type, iso, suffix = 'tar.gz') {
   const timestampMs = Date.parse(iso);
   const prefix = type === 'server_config' ? 'server-config' : type;
@@ -60,6 +65,15 @@ test('default MVP policy is 1 daily, 1 weekly and 1 monthly, with no daily full 
 
   const resolved = resolvePolicy({});
   assert.deepEqual(resolved, DEFAULT_POLICY);
+});
+
+test('systemd retention service pins the agreed MVP policy', () => {
+  assert.match(retentionService, /FANMIND_BACKUP_RETENTION_DAILY=1/);
+  assert.match(retentionService, /FANMIND_BACKUP_RETENTION_WEEKLY=1/);
+  assert.match(retentionService, /FANMIND_BACKUP_RETENTION_MONTHLY=1/);
+  assert.match(retentionService, /FANMIND_BACKUP_RETENTION_FULL_DAILY=0/);
+  assert.match(retentionService, /FANMIND_BACKUP_RETENTION_FULL_WEEKLY=1/);
+  assert.match(retentionService, /FANMIND_BACKUP_RETENTION_FULL_MONTHLY=1/);
 });
 
 test('database policy keeps three distinct restore points across day, week and month', () => {
