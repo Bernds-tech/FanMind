@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-import { readdir, readFile, rm, stat } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+import { readdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const DEFAULTS = Object.freeze({
-  daily: 7,
-  weekly: 4,
-  monthly: 6,
-  minimumPairs: 7,
+const DEFAULT_POLICY = Object.freeze({
+  server_config: Object.freeze({ daily: 1, weekly: 1, monthly: 1 }),
+  database: Object.freeze({ daily: 1, weekly: 1, monthly: 1 }),
+  storage: Object.freeze({ daily: 1, weekly: 1, monthly: 1 }),
+  full: Object.freeze({ daily: 0, weekly: 1, monthly: 1 }),
 });
 
 const ARTIFACT_PATTERNS = Object.freeze([
@@ -20,13 +21,9 @@ const ARTIFACT_PATTERNS = Object.freeze([
 function parseNonNegativeInt(value, fallback, name) {
   if (value === undefined || value === '') return fallback;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) throw new Error(`${name}_must_be_non_negative_integer`);
-  return parsed;
-}
-
-function parsePositiveInt(value, fallback, name) {
-  const parsed = parseNonNegativeInt(value, fallback, name);
-  if (parsed < 1) throw new Error(`${name}_must_be_positive_integer`);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${name}_must_be_non_negative_integer`);
+  }
   return parsed;
 }
 
@@ -59,28 +56,55 @@ function isoWeekKey(date) {
   return `${utc.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-function addPeriodRepresentatives(sortedPairs, limit, keyFn, keepNames, reasons, label) {
+function resolvePolicy(options = {}) {
+  const shared = {
+    daily: parseNonNegativeInt(options.daily, DEFAULT_POLICY.database.daily, 'daily'),
+    weekly: parseNonNegativeInt(options.weekly, DEFAULT_POLICY.database.weekly, 'weekly'),
+    monthly: parseNonNegativeInt(options.monthly, DEFAULT_POLICY.database.monthly, 'monthly'),
+  };
+  const full = {
+    daily: parseNonNegativeInt(options.fullDaily, DEFAULT_POLICY.full.daily, 'full_daily'),
+    weekly: parseNonNegativeInt(options.fullWeekly, DEFAULT_POLICY.full.weekly, 'full_weekly'),
+    monthly: parseNonNegativeInt(options.fullMonthly, DEFAULT_POLICY.full.monthly, 'full_monthly'),
+  };
+  return {
+    server_config: { ...shared },
+    database: { ...shared },
+    storage: { ...shared },
+    full,
+  };
+}
+
+function selectTier({
+  sortedPairs,
+  limit,
+  keyFn,
+  blockedKeys,
+  keepNames,
+  reasons,
+  label,
+}) {
   if (limit <= 0) return;
-  const periods = new Set();
+  const selectedKeys = new Set();
+
   for (const pair of sortedPairs) {
     const key = keyFn(pair.date);
-    if (periods.has(key)) continue;
-    periods.add(key);
+    if (blockedKeys.has(key) || selectedKeys.has(key)) continue;
+
+    selectedKeys.add(key);
     keepNames.add(pair.artifactName);
     const pairReasons = reasons.get(pair.artifactName) ?? [];
     pairReasons.push(`${label}:${key}`);
     reasons.set(pair.artifactName, pairReasons);
-    if (periods.size >= limit) break;
+
+    if (selectedKeys.size >= limit) break;
   }
 }
 
 function selectRetention(pairs, options = {}) {
-  const daily = parseNonNegativeInt(options.daily, DEFAULTS.daily, 'daily');
-  const weekly = parseNonNegativeInt(options.weekly, DEFAULTS.weekly, 'weekly');
-  const monthly = parseNonNegativeInt(options.monthly, DEFAULTS.monthly, 'monthly');
-  const minimumPairs = parsePositiveInt(options.minimumPairs, DEFAULTS.minimumPairs, 'minimum_pairs');
-
+  const policy = resolvePolicy(options);
   const byType = new Map();
+
   for (const pair of pairs) {
     const list = byType.get(pair.type) ?? [];
     list.push(pair);
@@ -90,26 +114,69 @@ function selectRetention(pairs, options = {}) {
   const keepNames = new Set();
   const reasons = new Map();
 
-  for (const typePairs of byType.values()) {
-    const sorted = [...typePairs].sort((a, b) => b.timestampMs - a.timestampMs || a.artifactName.localeCompare(b.artifactName));
+  for (const [type, typePairs] of byType.entries()) {
+    const sorted = [...typePairs].sort(
+      (a, b) => b.timestampMs - a.timestampMs || a.artifactName.localeCompare(b.artifactName),
+    );
+    const typePolicy = policy[type] ?? policy.database;
+    const selectedForType = new Set();
 
-    for (const pair of sorted.slice(0, minimumPairs)) {
-      keepNames.add(pair.artifactName);
-      const pairReasons = reasons.get(pair.artifactName) ?? [];
-      pairReasons.push('minimum_recent');
-      reasons.set(pair.artifactName, pairReasons);
+    selectTier({
+      sortedPairs: sorted,
+      limit: typePolicy.daily,
+      keyFn: dayKey,
+      blockedKeys: new Set(),
+      keepNames: selectedForType,
+      reasons,
+      label: 'daily',
+    });
+
+    const blockedWeeks = new Set(
+      sorted
+        .filter((pair) => selectedForType.has(pair.artifactName))
+        .map((pair) => isoWeekKey(pair.date)),
+    );
+
+    selectTier({
+      sortedPairs: sorted,
+      limit: typePolicy.weekly,
+      keyFn: isoWeekKey,
+      blockedKeys: blockedWeeks,
+      keepNames: selectedForType,
+      reasons,
+      label: 'weekly',
+    });
+
+    const blockedMonths = new Set(
+      sorted
+        .filter((pair) => selectedForType.has(pair.artifactName))
+        .map((pair) => monthKey(pair.date)),
+    );
+
+    selectTier({
+      sortedPairs: sorted,
+      limit: typePolicy.monthly,
+      keyFn: monthKey,
+      blockedKeys: blockedMonths,
+      keepNames: selectedForType,
+      reasons,
+      label: 'monthly',
+    });
+
+    if (selectedForType.size === 0 && sorted.length > 0) {
+      const latest = sorted[0];
+      selectedForType.add(latest.artifactName);
+      reasons.set(latest.artifactName, ['safety_latest']);
     }
 
-    addPeriodRepresentatives(sorted, daily, dayKey, keepNames, reasons, 'daily');
-    addPeriodRepresentatives(sorted, weekly, isoWeekKey, keepNames, reasons, 'weekly');
-    addPeriodRepresentatives(sorted, monthly, monthKey, keepNames, reasons, 'monthly');
+    for (const artifactName of selectedForType) keepNames.add(artifactName);
   }
 
   return {
     keep: pairs.filter((pair) => keepNames.has(pair.artifactName)),
     remove: pairs.filter((pair) => !keepNames.has(pair.artifactName)),
     reasons,
-    policy: { daily, weekly, monthly, minimumPairs },
+    policy,
   };
 }
 
@@ -141,7 +208,14 @@ async function discoverBackupPairs(root) {
     const checksumPath = join(root, checksumName);
 
     if (!fileNames.has(checksumName)) {
-      incomplete.push({ type: parsed.type, artifactName, artifactPath, checksumName, checksumPath, reason: 'checksum_missing' });
+      incomplete.push({
+        type: parsed.type,
+        artifactName,
+        artifactPath,
+        checksumName,
+        checksumPath,
+        reason: 'checksum_missing',
+      });
       continue;
     }
 
@@ -152,7 +226,14 @@ async function discoverBackupPairs(root) {
     ]);
 
     if (!checksumValid) {
-      incomplete.push({ type: parsed.type, artifactName, artifactPath, checksumName, checksumPath, reason: 'checksum_invalid' });
+      incomplete.push({
+        type: parsed.type,
+        artifactName,
+        artifactPath,
+        checksumName,
+        checksumPath,
+        reason: 'checksum_invalid',
+      });
       continue;
     }
 
@@ -185,25 +266,74 @@ async function discoverBackupPairs(root) {
   return { pairs, incomplete };
 }
 
+async function removePair(pair) {
+  const nonce = randomBytes(12).toString('hex');
+  const artifactQuarantine = join(
+    dirname(pair.artifactPath),
+    `.${pair.artifactName}.${nonce}.retention-delete`,
+  );
+  const checksumQuarantine = join(
+    dirname(pair.checksumPath),
+    `.${pair.checksumName}.${nonce}.retention-delete`,
+  );
+
+  let artifactMoved = false;
+  let checksumMoved = false;
+
+  try {
+    await rename(pair.artifactPath, artifactQuarantine);
+    artifactMoved = true;
+    await rename(pair.checksumPath, checksumQuarantine);
+    checksumMoved = true;
+  } catch (error) {
+    if (checksumMoved) {
+      await rename(checksumQuarantine, pair.checksumPath).catch(() => {});
+    }
+    if (artifactMoved) {
+      await rename(artifactQuarantine, pair.artifactPath).catch(() => {});
+    }
+    throw error;
+  }
+
+  await rm(checksumQuarantine, { force: true });
+  await rm(artifactQuarantine, { force: true });
+}
+
 async function executeRetention({ root, dryRun, options = {}, logger = console.log }) {
   const { pairs, incomplete } = await discoverBackupPairs(root);
   const selection = selectRetention(pairs, options);
 
   for (const item of incomplete) {
-    logger(JSON.stringify({ action: 'skip_incomplete_pair', type: item.type, artifact: item.artifactPath, checksum: item.checksumPath, reason: item.reason }));
+    logger(JSON.stringify({
+      action: 'skip_incomplete_pair',
+      type: item.type,
+      artifact: item.artifactPath,
+      checksum: item.checksumPath,
+      reason: item.reason,
+    }));
   }
 
   for (const pair of [...selection.keep].sort((a, b) => b.timestampMs - a.timestampMs)) {
-    logger(JSON.stringify({ action: 'keep_pair', type: pair.type, artifact: pair.artifactPath, checksum: pair.checksumPath, created_at: pair.date.toISOString(), reasons: selection.reasons.get(pair.artifactName) ?? [] }));
+    logger(JSON.stringify({
+      action: 'keep_pair',
+      type: pair.type,
+      artifact: pair.artifactPath,
+      checksum: pair.checksumPath,
+      created_at: pair.date.toISOString(),
+      reasons: selection.reasons.get(pair.artifactName) ?? [],
+    }));
   }
 
   const removePairs = [...selection.remove].sort((a, b) => a.timestampMs - b.timestampMs);
   for (const pair of removePairs) {
-    logger(JSON.stringify({ action: dryRun ? 'would_delete_pair' : 'delete_pair', type: pair.type, artifact: pair.artifactPath, checksum: pair.checksumPath, created_at: pair.date.toISOString() }));
-    if (!dryRun) {
-      await rm(pair.artifactPath);
-      await rm(pair.checksumPath, { force: true });
-    }
+    logger(JSON.stringify({
+      action: dryRun ? 'would_delete_pair' : 'delete_pair',
+      type: pair.type,
+      artifact: pair.artifactPath,
+      checksum: pair.checksumPath,
+      created_at: pair.date.toISOString(),
+    }));
+    if (!dryRun) await removePair(pair);
   }
 
   const summary = {
@@ -233,20 +363,23 @@ async function main() {
       daily: process.env.FANMIND_BACKUP_RETENTION_DAILY,
       weekly: process.env.FANMIND_BACKUP_RETENTION_WEEKLY,
       monthly: process.env.FANMIND_BACKUP_RETENTION_MONTHLY,
-      minimumPairs: process.env.FANMIND_BACKUP_RETENTION_MIN_PAIRS,
+      fullDaily: process.env.FANMIND_BACKUP_RETENTION_FULL_DAILY,
+      fullWeekly: process.env.FANMIND_BACKUP_RETENTION_FULL_WEEKLY,
+      fullMonthly: process.env.FANMIND_BACKUP_RETENTION_FULL_MONTHLY,
     },
   });
 }
 
 export {
   ARTIFACT_PATTERNS,
-  DEFAULTS,
+  DEFAULT_POLICY,
   dayKey,
   discoverBackupPairs,
   executeRetention,
   isoWeekKey,
   monthKey,
   parseArtifactName,
+  resolvePolicy,
   selectRetention,
 };
 
