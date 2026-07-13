@@ -11,6 +11,7 @@ export type WorkspaceRouteKey =
   | "reach"
   | "onboarding"
   | "settings"
+  | "referral"
   | "billing"
   | "top-fans"
   | "reactivation"
@@ -48,7 +49,11 @@ export function getWorkspaceNavigation(
         href: "/dashboard",
         active: activeRoute === "dashboard",
       },
-      { label: wt(locale, "Fans"), href: "/fans", active: activeRoute === "fans" },
+      {
+        label: wt(locale, "Fans"),
+        href: "/fans",
+        active: activeRoute === "fans",
+      },
       {
         label: "Follow-ups",
         href: "/followups",
@@ -68,6 +73,16 @@ export function getWorkspaceNavigation(
       },
     ],
     settingsNavigation: [
+      {
+        label: locale === "en" ? "Profile & account" : "Profil & Konto",
+        href: "/settings/profile",
+        active: activeRoute === "settings",
+      },
+      {
+        label: locale === "en" ? "Recommendations" : "Empfehlungen",
+        href: "/settings/referral",
+        active: activeRoute === "referral",
+      },
       ...(showAdminArea
         ? [
             {
