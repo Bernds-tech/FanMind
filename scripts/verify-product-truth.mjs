@@ -15,6 +15,7 @@ const runtimeFiles = [
   "src/app/brandMetadata.ts",
   "src/app/opengraph-image.tsx",
   "src/components/PlatformLogo.module.css",
+  "src/components/LegalTopHeader.tsx",
   "src/app/register/RegisterClient.tsx",
   "src/app/settings/AccountSections.tsx",
   "src/app/fans/[id]/page.tsx",
@@ -22,6 +23,7 @@ const runtimeFiles = [
   "src/app/zahlungsbedingungen/page.tsx",
   "src/app/datenschutz/page.tsx",
   "src/app/impressum/page.tsx",
+  "src/app/avv/page.tsx",
   "docs/SOURCE_OF_TRUTH.md",
 ];
 
@@ -180,7 +182,6 @@ requireText(
   "Die Source of Truth muss die beschlossenen KI-Leistungsstufen dokumentieren.",
 );
 
-
 forbidIn(
   "src/app/landing-v2/page.tsx",
   /(?:Fan-Analyse-Report|Memory|\bMVP\b|DSGVO-konform)/iu,
@@ -211,10 +212,40 @@ forbidIn(
   /Keine aktiven Social-Media-Integrationen|autonome Kommunikation und Zahlungslogik/iu,
   "Das Impressum muss den gestuften Integrations- und aktiven Billing-Stand korrekt beschreiben.",
 );
+forbidIn(
+  "src/app/impressum/page.tsx",
+  /\[BITTE FINAL EINTRAGEN|TODO:/iu,
+  "Öffentliche Rechtsseiten dürfen keine internen Platzhalter oder TODO-Kommentare enthalten.",
+);
+forbidIn(
+  "src/app/avv/page.tsx",
+  /redirect\s*\(/u,
+  "Die AVV-Seite darf nicht mehr auf die Datenschutzerklärung weiterleiten.",
+);
 requireText(
   "src/app/impressum/page.tsx",
   "Integrationen und Abrechnung",
   "Das Impressum muss den gestuften Integrations- und Billing-Status erklären.",
+);
+requireText(
+  "src/app/impressum/page.tsx",
+  "Rechtlicher Abschlussstatus",
+  "Das Impressum muss fehlende, noch nicht freigegebene Betreiberangaben transparent statt als Platzhalter ausweisen.",
+);
+requireText(
+  "src/app/avv/page.tsx",
+  "Diese Seite ersetzt keine unterschriebene AVV",
+  "Die AVV-Seite muss ihre rechtliche Grenze klar benennen.",
+);
+requireText(
+  "src/app/avv/page.tsx",
+  "Aktuelle AVV per E-Mail anfordern",
+  "Die AVV-Seite muss einen eindeutigen Anforderungsweg enthalten.",
+);
+requireText(
+  "src/components/LegalTopHeader.tsx",
+  '{ href: "/avv", label: "AVV", key: "avv" }',
+  "Die Rechtsnavigation muss die AVV-Seite direkt erreichbar machen.",
 );
 requireText(
   "src/components/PlatformLogo.module.css",
@@ -223,11 +254,7 @@ requireText(
 );
 
 warn(
-  /\[BITTE FINAL EINTRAGEN/iu,
-  "Öffentlicher rechtlicher Platzhalter ist noch offen.",
-);
-warn(
-  /TODO:\s*(Rechtsform|Vertretungsbefugnis|UID|FN|OpenAI-Vertrag|DPA|Transfergrundlagen)/iu,
+  /TODO:\s*(OpenAI-Vertrag|DPA|Transfergrundlagen)/iu,
   "Rechtliche Abschlussprüfung ist noch dokumentiert offen.",
 );
 
