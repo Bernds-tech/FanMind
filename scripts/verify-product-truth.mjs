@@ -13,12 +13,15 @@ const runtimeFiles = [
   "src/app/landing-v2/page.tsx",
   "src/app/register/RegisterClient.tsx",
   "src/app/settings/AccountSections.tsx",
+  "src/app/fans/[id]/page.tsx",
   "src/app/agb/page.tsx",
   "src/app/zahlungsbedingungen/page.tsx",
   "src/app/datenschutz/page.tsx",
   "src/app/impressum/page.tsx",
+  "docs/SOURCE_OF_TRUTH.md",
 ];
 
+const documentationFiles = new Set(["docs/SOURCE_OF_TRUTH.md"]);
 const contents = new Map();
 const errors = [];
 const warnings = [];
@@ -47,6 +50,7 @@ function requireText(file, value, explanation) {
 
 function forbid(pattern, explanation) {
   for (const [file, text] of contents) {
+    if (documentationFiles.has(file)) continue;
     if (pattern.test(text)) {
       errors.push(`${file}: ${explanation}`);
     }
@@ -80,6 +84,18 @@ forbid(
 forbid(
   /Fanmind@fanmind\.ch/u,
   "Uneinheitliche Anfrageadresse gefunden; nutze kontakt@fanmind.ch.",
+);
+forbid(
+  /hello@fanmind\.ch/iu,
+  "Uneinheitliche Kontaktadresse gefunden; nutze kontakt@fanmind.ch.",
+);
+forbid(
+  /Ehrliche Roadmap/iu,
+  "Öffentliche Roadmap darf nicht als Ehrliche Roadmap bezeichnet werden.",
+);
+forbid(
+  /Unified Inbox Timeline/iu,
+  "Nicht aktive Inbox-Synchronisierung darf nicht als Unified Inbox bezeichnet werden.",
 );
 
 requireText(
@@ -137,6 +153,21 @@ requireText(
   "REFERRAL_GROWTH_WINDOW_CAP = 2000",
   "Das Referral Growth Window muss bei 2.000 aktiven zahlenden Workspaces gedeckelt sein.",
 );
+requireText(
+  "src/app/settings/AccountSections.tsx",
+  "KI Standard ist im Basispaket enthalten",
+  "Die Paketansicht muss KI Standard als enthalten und Plus/Ultra als separate Erweiterungen einordnen.",
+);
+requireText(
+  "src/app/settings/AccountSections.tsx",
+  "höherer Zusatzpreis als KI Plus",
+  "KI Ultra muss als höherpreisige Erweiterung oberhalb von KI Plus beschrieben werden.",
+);
+requireText(
+  "docs/SOURCE_OF_TRUTH.md",
+  "### KI-Leistungsstufen / Add-ons",
+  "Die Source of Truth muss die beschlossenen KI-Leistungsstufen dokumentieren.",
+);
 
 warn(
   /\[BITTE FINAL EINTRAGEN/iu,
@@ -162,5 +193,5 @@ if (errors.length) {
 }
 
 console.log(
-  `Product truth verified across ${runtimeFiles.length} runtime files (${warnings.length} warning(s)).`,
+  `Product truth verified across ${runtimeFiles.length} checked files (${warnings.length} warning(s)).`,
 );

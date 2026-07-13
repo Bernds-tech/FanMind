@@ -75,6 +75,7 @@ const workspaceTranslations: Record<string, string> = {
   "Offene Follow-ups": "Open follow-ups",
   "Unified Inbox Timeline": "Message history",
   "Kanalübergreifender Verlauf": "Cross-channel message history",
+  "Nachrichtenverlauf": "Message history",
   "Kanalübergreifender Nachrichtenverlauf": "Cross-channel message history",
   "Demo-Modus: Externe Kanalzugriffe sind deaktiviert. KI-Vorschläge und interne Bearbeitung können getestet werden.": "Demo mode: External channel access is disabled. AI suggestions and internal editing can be tested.",
   "Notizen": "Notes",

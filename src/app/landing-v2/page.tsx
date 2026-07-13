@@ -17,7 +17,7 @@ import styles from "./landing-v2.module.css";
 export const metadata: Metadata = {
   title: "FanMind | KI-CRM für Creator, Clubs und Events",
   description:
-    "FanMind bündelt Kontakte, Gespräche, Fan-Gedächtnis und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
+    "FanMind bündelt Kontakte, Gespräche, Kontaktwissen und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
 };
 
 const LANDING_ROADMAP_HREF = "#roadmap";
@@ -37,7 +37,7 @@ const comingSoonIntegrationPlatforms = new Set(["email", "discord", "whatsapp", 
 const navItems = [
   { label: "Produkt", href: "#produkt-showcase" },
   { label: "Workflow", href: "#conversion" },
-  { label: "MVP", href: "#features" },
+  { label: "Funktionen", href: "#features" },
   { label: "Preise", href: "#preise" },
   { label: "Roadmap", href: LANDING_ROADMAP_HREF },
   { label: "Kontakt", href: "#kontakt" },
@@ -58,7 +58,7 @@ const features = [
   },
   {
     icon: "♙",
-    title: "CSV-Import & Memory",
+    title: "CSV-Import & Kontaktwissen",
     text: "Bestehende Kontakte importieren, Details speichern und Follow-ups aus dem Kontext vorbereiten.",
     tone: "green",
   },
@@ -71,7 +71,7 @@ const features = [
   },
   {
     icon: "▥",
-    title: "Ehrliche Roadmap",
+    title: "Roadmap",
     status: "Roadmap",
     text: "Kampagnen, Reichweiten-Analytics und Rollen/Rechte sind klar als spätere Ausbaustufen markiert.",
     tone: "cyan",
@@ -124,7 +124,7 @@ const functionCards = [
   },
   {
     icon: "🧠",
-    title: "2. Fan-Gedächtnis",
+    title: "2. Kontaktwissen",
     text: "Wichtige Details, Interessen und Historie übersichtlich festhalten.",
     body: "VIP · premium_interessiert · Letzter Kontakt: Heute, 09:42",
     cta: "Details ansehen",
@@ -231,9 +231,9 @@ const sixStepCards = [
   },
   {
     step: "2",
-    title: "Fan-Gedächtnis aufbauen",
+    title: "Kontaktwissen aufbauen",
     copy: "Relevante Infos, Interessen und Interaktionen zentral speichern und sinnvoll verknüpfen.",
-    cardTitle: "Fan-Gedächtnis",
+    cardTitle: "Kontaktwissen",
     icon: "🧠",
     tone: "cyan",
     rows: [
@@ -681,7 +681,7 @@ const landingFooterColumns = [
     links: [
       { label: "Produkt", href: "#produkt-showcase" },
       { label: "Workflow", href: "#conversion" },
-      { label: "MVP", href: "#features" },
+      { label: "Funktionen", href: "#features" },
       { label: "Preise", href: "#preise" },
       { label: "Roadmap", href: LANDING_ROADMAP_HREF },
     ],
@@ -736,7 +736,7 @@ const pricingPlans = [
     tone: "blue",
     featured: false,
     status: "Aktiv",
-    features: ["Ein produktiver MVP-Workspace", "Kontakte/Fans und manuelle Kontaktpflege", "CSV-Import, Notizen und Fan-Gedächtnis / Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Kein automatischer Versand"],
+    features: ["Ein produktiver Workspace", "Kontakte/Fans und manuelle Kontaktpflege", "CSV-Import, Notizen und Kontaktwissen / Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Kein automatischer Versand"],
   },
   {
     icon: "◎",
@@ -751,7 +751,7 @@ const pricingPlans = [
     tone: "green",
     featured: true,
     status: "Aktiv",
-    features: ["Ein produktiver MVP-Workspace", "Setup ohne separate Setup-Gebühr", "Kontakte/Fans, CSV-Import und Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Externe Integrationen nur Beta/Roadmap"],
+    features: ["Ein produktiver Workspace", "Setup ohne separate Setup-Gebühr", "Kontakte/Fans, CSV-Import und Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Externe Integrationen nur Beta/Roadmap"],
   },
   {
     icon: "↗",
@@ -796,7 +796,7 @@ const pricingPlans = [
     tone: "green",
     featured: false,
     status: "Coming Soon",
-    features: ["Individuelle Workflows später geplant", "Governance und Freigabeprozesse als Roadmap", "Keine Enterprise-Rollen im MVP aktiv", "Keine automatische Sendefunktion", "Technische und rechtliche Prüfung vor Zusage", "Keine Fake-Live-Kennzahlen"],
+    features: ["Individuelle Workflows später geplant", "Governance und Freigabeprozesse als Roadmap", "Keine Enterprise-Rollen in der aktuellen Version aktiv", "Keine automatische Sendefunktion", "Technische und rechtliche Prüfung vor Zusage", "Keine Fake-Live-Kennzahlen"],
   },
 ];
 
@@ -1092,7 +1092,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>✓</span> {t("DIE LÖSUNG")}
             </div>
             <h3>
-              <span>FanMind</span> {t("verbindet Kontakte, Fan-Gedächtnis, KI, Follow-ups und Roadmap in")} <em>{t("einem System.")}</em>
+              <span>FanMind</span> {t("verbindet Kontakte, Kontaktwissen, KI, Follow-ups und Roadmap in")} <em>{t("einem System.")}</em>
             </h3>
             <p>{t("Alle Informationen, Interaktionen und Abläufe laufen zusammen – für echte Fan-Beziehungen, die skalieren. KI-Vorschläge bleiben Vorschläge: Der Mensch prüft und gibt frei.")}</p>
             <div className={styles.solutionBenefits}>
@@ -1283,7 +1283,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <div
           className={styles.sandraUseCaseFlow}
-          aria-label="FanMind Demo-Fläche für Sandra M. mit Fan-Gedächtnis, KI-Antwortvorschlägen und Follow-up-Planung"
+          aria-label="FanMind Demo-Fläche für Sandra M. mit Kontaktwissen, KI-Antwortvorschlägen und Follow-up-Planung"
         >
           <article className={styles.sandraFlowStep}>
             <div className={styles.sandraStepNode}>1</div>
@@ -1445,7 +1445,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <article>
             <span>◎</span>
             <strong>{t("Mehr Relevanz")}</strong>
-            <p>{t("Jede Antwort nutzt Sandras Kontext und Fan-Gedächtnis.")}</p>
+            <p>{t("Jede Antwort nutzt Sandras Kontext und Kontaktwissen.")}</p>
           </article>
           <article>
             <span>↗</span>

@@ -78,7 +78,18 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 | Agency | Coming Soon / auf Anfrage | nicht produktiv als Vollversion freigeschaltet |
 | Enterprise / Custom | später | individuelle Prüfung |
 
-Begründung für 312 €/Monat: FanMind ist kein Billig-Tool und der Aufwand liegt in sicherer CRM-Struktur, KI, Memory, Follow-ups, Datenpflege, Demo-Setup, Support, Security/RLS und späterer kontrollierter Integrationsfähigkeit. Die Preislogik soll diesen Arbeitsaufwand und B2B-Charakter widerspiegeln.
+Begründung für 312 €/Monat: FanMind ist kein Billig-Tool und der Aufwand liegt in sicherer CRM-Struktur, KI, Kontaktwissen, Follow-ups, Datenpflege, Demo-Setup, Support, Security/RLS und späterer kontrollierter Integrationsfähigkeit. Die Preislogik soll diesen Arbeitsaufwand und B2B-Charakter widerspiegeln.
+
+
+### KI-Leistungsstufen / Add-ons
+
+KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete. Sie sind KI-Leistungsstufen innerhalb eines gebuchten FanMind-Pakets:
+
+- **KI Standard** ist im Basispaket enthalten und deckt den normalen Antwort-, Kontaktwissen- und Follow-up-Workflow ab.
+- **KI Plus** ist eine separat berechnete Erweiterung mit leistungsstärkerer KI, höherem Kontingent und größerem Gesprächskontext.
+- **KI Ultra** ist eine höherpreisige Premium-Erweiterung mit der stärksten freigegebenen Modellklasse, den höchsten Kontingenten und erweitertem Funktionsumfang.
+- Plus und Ultra dürfen erst automatisch buchbar werden, wenn Zusatzpreise, Kontingente, Modellklassen, Wechsel/Kündigung und Stripe-Subscription-Items freigegeben sind.
+- Für alle Stufen gilt: keine automatische Sendung; der Mensch prüft und sendet final selbst.
 
 ## 4. Referral Growth Window
 

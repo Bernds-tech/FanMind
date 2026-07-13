@@ -49,7 +49,7 @@ export default function ImpressumPage() {
               Produktentwicklung, Roadmap und Kontaktmöglichkeiten.
             </p>
             <p>
-              FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Fan-, Kunden- und
+              FanMind ist ein KI-gestützter Antwort- und Kontaktwissen-Assistent für Fan-, Kunden- und
               Community-Beziehungen. FanMind unterstützt Teams dabei, Kontakte zu verwalten,
               Kontextinformationen zu speichern, KI-gestützte Antwortvorschläge zu erstellen und
               Follow-ups manuell zu organisieren.
@@ -59,9 +59,9 @@ export default function ImpressumPage() {
           <section className={styles.section} aria-labelledby="produktstatus">
             <h2 id="produktstatus">Produktstatus und Leistungsgrenzen</h2>
             <p>
-              FanMind befindet sich in einer MVP- und Pilotphase. Der aktuelle Funktionsumfang
+              FanMind befindet sich in einer Produkt- und Pilotphase. Der aktuelle Funktionsumfang
               umfasst insbesondere Login, Dashboard, Kontaktverwaltung, Kontaktprofile,
-              KI-gestützte Antwortvorschläge, Memory-Funktionen, Follow-ups, CSV-Import und
+              KI-gestützte Antwortvorschläge, Kontaktwissen, Follow-ups, CSV-Import und
               Roadmap-Ansichten.
             </p>
             <h3>Keine automatische Kommunikation</h3>
@@ -70,12 +70,13 @@ export default function ImpressumPage() {
               Nutzerinnen und Nutzern geprüft, kopiert, übernommen oder verworfen. Der finale
               Versand erfolgt manuell durch die Nutzerinnen und Nutzer.
             </p>
-            <h3>Keine aktiven Social-Media-Integrationen</h3>
+            <h3>Integrationen und Abrechnung</h3>
             <p>
-              Aktuell bestehen keine produktiven Social-Media-Synchronisierungen und keine
-              automatischen Integrationen mit Instagram, TikTok, Facebook, X / Twitter, WhatsApp
-              oder Discord. Ebenfalls nicht Bestandteil der aktuellen Version sind Scraping,
-              automatische Nachrichtenversendung, autonome Kommunikation und Zahlungslogik.
+              Produktive Social-Media-Synchronisierungen sind nur dort verfügbar, wo sie ausdrücklich
+              als freigegeben ausgewiesen werden. Scraping, autonome Kommunikation und automatischer
+              Nachrichtenversand sind nicht Bestandteil des Standard-Workflows. Freigegebene
+              Checkout-, Zahlungs- und Rechnungsprozesse werden getrennt vom Kommunikationsworkflow
+              über den jeweils ausgewiesenen Zahlungsanbieter abgewickelt.
             </p>
             <h3>Roadmap</h3>
             <p>
