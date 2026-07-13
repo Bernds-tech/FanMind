@@ -9,8 +9,10 @@ import {
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const MAX_INCOMING_MESSAGE_LENGTH = 4000;
 const MAX_PASTED_CHAT_CONTEXT_LENGTH = 12000;
+const MAX_RESPONSE_INSTRUCTION_LENGTH = 1000;
 const AI_RATE_LIMIT_MAX = 20;
 const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const AI_TIMEOUT_MS = 25_000;
 const SAFETY_NOTE =
   "Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.";
 
@@ -26,6 +28,7 @@ type ReplySuggestionRequest = {
   pastedChatContext?: unknown;
   incomingMessage?: unknown;
   responseMode?: unknown;
+  responseInstruction?: unknown;
   analysisReport?: unknown;
 };
 
@@ -168,7 +171,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (error.code === "resource_forbidden") {
-        return jsonError("Kontakt ist nicht für diesen Workspace freigegeben.", 403);
+        return jsonError(
+          "Kontakt ist nicht für diesen Workspace freigegeben.",
+          403,
+        );
       }
     }
 
@@ -186,6 +192,7 @@ export async function POST(request: NextRequest) {
 
   const incomingMessage = normalizeString(payload.incomingMessage);
   const pastedChatContext = normalizeString(payload.pastedChatContext);
+  const responseInstruction = normalizeString(payload.responseInstruction);
 
   if (!incomingMessage) {
     return jsonError("incomingMessage ist Pflicht.", 400);
@@ -201,6 +208,13 @@ export async function POST(request: NextRequest) {
   if (pastedChatContext.length > MAX_PASTED_CHAT_CONTEXT_LENGTH) {
     return jsonError(
       `pastedChatContext darf maximal ${MAX_PASTED_CHAT_CONTEXT_LENGTH} Zeichen enthalten.`,
+      400,
+    );
+  }
+
+  if (responseInstruction.length > MAX_RESPONSE_INSTRUCTION_LENGTH) {
+    return jsonError(
+      `responseInstruction darf maximal ${MAX_RESPONSE_INSTRUCTION_LENGTH} Zeichen enthalten.`,
       400,
     );
   }
@@ -229,6 +243,7 @@ export async function POST(request: NextRequest) {
     pastedChatContext,
     incomingMessage,
     responseMode: normalizeString(payload.responseMode) || "Freundlich",
+    responseInstruction: responseInstruction || null,
     analysisReport: normalizeOptionalString(payload.analysisReport),
   };
 
@@ -261,6 +276,7 @@ export async function POST(request: NextRequest) {
           },
         },
       }),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     });
 
     const responseBody = (await openAiResponse.json().catch(() => null)) as
@@ -303,7 +319,10 @@ export async function POST(request: NextRequest) {
         latencyMs: Date.now() - startedAt,
         sourceRoute: "/api/ai/reply-suggestions",
       });
-      return jsonError("Antwortvorschläge konnten gerade nicht erzeugt werden.", 502);
+      return jsonError(
+        "Antwortvorschläge konnten gerade nicht erzeugt werden.",
+        502,
+      );
     }
 
     const suggestions = JSON.parse(outputText) as ReplySuggestionsResponse;
@@ -322,7 +341,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(normalizeSuggestions(suggestions));
-  } catch {
+  } catch (error) {
     await recordAiUsageEvent({
       workspaceId: workspace.id,
       userId: user.id,
@@ -332,7 +351,13 @@ export async function POST(request: NextRequest) {
       inputChars: estimateJsonChars(contactContext),
       outputChars: 0,
       status: "error",
-      errorCode: "exception",
+      errorCode:
+        error instanceof SyntaxError
+          ? "invalid_json"
+          : error instanceof Error &&
+              (error.name === "AbortError" || error.name === "TimeoutError")
+            ? "timeout"
+            : "exception",
       latencyMs: Date.now() - startedAt,
       sourceRoute: "/api/ai/reply-suggestions",
     });
@@ -345,15 +370,23 @@ export async function POST(request: NextRequest) {
 
 function buildSystemPrompt(): string {
   return [
-    "Du bist FanMind, ein Antwort- und Memory-Assistent für manuelle Fan- und Kundengespräche.",
-    "Nutze ausschließlich den gelieferten Kontaktkontext, den gespeicherten Chatverlauf, den Analyse-Report und die letzte eingegangene Nachricht.",
-    "Erzeuge exakt drei unterschiedliche Antwortvorschläge passend zum Feld responseMode, zur Analyse und zum Verlauf.",
-    "Behaupte niemals, dass WhatsApp verbunden ist, dass externe Plattformen synchronisiert werden oder dass Nachrichten automatisch gesendet werden.",
+    "Du bist FanMind, ein Antwort- und Kontaktwissen-Assistent für manuelle Fan- und Kundengespräche.",
+    "Nutze ausschließlich den gelieferten Kontaktkontext, gespeicherten Verlauf, Analyse-Report und die letzte eingegangene Nachricht.",
+    "Befolge responseMode und eine optionale responseInstruction, solange sie nicht den Sicherheits- und Wahrheitsregeln widersprechen.",
+    "Erzeuge exakt drei in Funktion und Form deutlich unterschiedliche Antwortvorschläge:",
+    "1. Kurz & direkt: ein bis zwei Sätze, klare Antwort auf die Hauptfrage.",
+    "2. Warm & persönlich: zwei bis vier Sätze, greift einen belegten Kontextpunkt auf.",
+    "3. Nächster Schritt: hilfreich und handlungsorientiert, aber ohne Druck; bei fehlender Information lieber eine konkrete Rückfrage.",
+    "Die drei Varianten dürfen nicht mit demselben Satz beginnen und sollen keine bloßen Umformulierungen sein.",
+    "Erfinde niemals Termine, Preise, Rabatte, Verfügbarkeiten, Zusagen, Beziehungen oder Ereignisse. Nutze solche Angaben nur, wenn sie ausdrücklich im gelieferten Kontext stehen.",
+    "Wenn die gewünschte Antwort ohne fehlende Information nicht sicher möglich ist, formuliere transparent oder stelle eine kurze Rückfrage.",
+    "Behaupte niemals, dass WhatsApp verbunden ist, externe Plattformen vollständig synchronisiert werden oder Nachrichten automatisch gesendet werden.",
     "FanMind hat keine automatische Sendefunktion. Der Mensch prüft und sendet final selbst.",
     "Wähle die Sprache anhand von contact.language. Wenn keine klare Sprache vorhanden ist, antworte auf Deutsch.",
-    "Stil: menschlich, freundlich, professionell, hilfreich und nicht aufdringlich.",
-    "Verkaufsorientierte Varianten dürfen nur vorsichtig sein und keinen Druck aufbauen.",
-    "Keine Antwort automatisch senden oder als gesendet darstellen; die Vorschläge werden nur kopiert und manuell im Originalkanal eingefügt.",
+    "Stil: menschlich, professionell, hilfreich, nicht aufdringlich und ohne psychologische Manipulation.",
+    "Verkaufsorientierte Varianten dürfen nur vorsichtig sein und keinen künstlichen Zeitdruck erzeugen.",
+    "suggested_memory enthält nur eine langfristig nützliche, im Kontext belegte Information; andernfalls bleibt content leer.",
+    "suggested_followup wird nur empfohlen, wenn aus dem Verlauf ein nachvollziehbarer nächster Schritt entsteht.",
     "Gib ausschließlich JSON im vorgegebenen Schema zurück.",
   ].join("\n");
 }
@@ -395,7 +428,6 @@ function normalizeString(value: unknown): string {
 
 function normalizeOptionalString(value: unknown): string | null {
   const normalized = normalizeString(value);
-
   return normalized || null;
 }
 
