@@ -17,6 +17,7 @@ const runtimeFiles = [
   "src/app/zahlungsbedingungen/page.tsx",
   "src/app/datenschutz/page.tsx",
   "src/app/impressum/page.tsx",
+  "docs/SOURCE_OF_TRUTH.md",
 ];
 
 const contents = new Map();
@@ -81,6 +82,18 @@ forbid(
   /Fanmind@fanmind\.ch/u,
   "Uneinheitliche Anfrageadresse gefunden; nutze kontakt@fanmind.ch.",
 );
+forbid(
+  /hello@fanmind\.ch/iu,
+  "Uneinheitliche Kontaktadresse gefunden; nutze kontakt@fanmind.ch.",
+);
+forbid(
+  /Ehrliche Roadmap/iu,
+  "Öffentliche Roadmap darf nicht als Ehrliche Roadmap bezeichnet werden.",
+);
+forbid(
+  /Unified Inbox Timeline/iu,
+  "Nicht aktive Inbox-Synchronisierung darf nicht als Unified Inbox bezeichnet werden.",
+);
 
 requireText(
   "src/config/plans.ts",
@@ -136,6 +149,22 @@ requireText(
   "src/lib/referrals.ts",
   "REFERRAL_GROWTH_WINDOW_CAP = 2000",
   "Das Referral Growth Window muss bei 2.000 aktiven zahlenden Workspaces gedeckelt sein.",
+);
+
+requireText(
+  "src/app/settings/AccountSections.tsx",
+  "KI Standard ist im Basispaket enthalten",
+  "Die Paketansicht muss KI Standard als enthalten und Plus/Ultra als separate Erweiterungen einordnen.",
+);
+requireText(
+  "src/app/settings/AccountSections.tsx",
+  "höherer Zusatzpreis als KI Plus",
+  "KI Ultra muss als höherpreisige Erweiterung oberhalb von KI Plus beschrieben werden.",
+);
+requireText(
+  "docs/SOURCE_OF_TRUTH.md",
+  "### KI-Leistungsstufen / Add-ons",
+  "Die Source of Truth muss die beschlossenen KI-Leistungsstufen dokumentieren.",
 );
 
 warn(

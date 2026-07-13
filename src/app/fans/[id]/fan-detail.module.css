@@ -1270,3 +1270,51 @@
     overflow-x: auto;
   }
 }
+
+/* Final overlap guard for narrow laptops, zoomed browsers and long labels. */
+.contactHeaderTop,
+.cardHeader,
+.messageMeta,
+.replyFooter {
+  min-width: 0;
+}
+
+.contactHeaderTop > *,
+.cardHeader > *,
+.messageMeta > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.channelTabs,
+.sourceTabs {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.messageBubble,
+.messageBubble p,
+.syncHint,
+.demoCompactNotice,
+.reportIntro {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 1320px) {
+  .workbenchGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
+  }
+}
+
+@media (max-width: 1160px) {
+  .workbenchGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .copilot {
+    width: 100%;
+  }
+}

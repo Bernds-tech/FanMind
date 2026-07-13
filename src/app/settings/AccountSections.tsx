@@ -142,28 +142,45 @@ const ADD_ON_CARDS: AddOnCard[] = [
   {
     key: "ai_standard",
     name: "KI Standard",
-    purpose: "Antwortvorschläge für den normalen CRM-Alltag.",
+    purpose:
+      "Im Basispaket enthaltene KI für Antwortvorschläge, Kontaktwissen und Follow-ups.",
     status: "Aktiv",
-    price: "inklusive nach Paket",
-    features: ["Basis-KI", "Antwortvorschläge", "CRM-Workflow"],
+    price: "im Basispaket enthalten",
+    features: [
+      "Standard-Kontingent",
+      "Antwortvorschläge",
+      "Kontaktwissen & Follow-ups",
+      "manuelle Prüfung vor dem Versand",
+    ],
   },
   {
     key: "ai_plus",
     name: "KI Plus",
     purpose:
-      "Mehr Vorschläge, feinere Memory- und Follow-up-Unterstützung nach manueller Freigabe.",
-    status: "Auf Anfrage",
-    price: "auf Anfrage",
-    features: ["manuelle Prüfung", "keine automatische Buchung"],
+      "Kostenpflichtige Erweiterung mit leistungsstärkerer KI, mehr Nutzung und größerem Gesprächskontext.",
+    status: "Coming Soon",
+    price: "Zusatzpreis wird vor Freigabe festgelegt",
+    features: [
+      "leistungsstärkere Modellklasse",
+      "höheres KI-Kontingent",
+      "größerer Gesprächskontext",
+      "weiterhin manuelle Freigabe",
+    ],
     showComingSoonMark: true,
   },
   {
     key: "ai_ultra",
     name: "KI Ultra",
-    purpose: "Erweiterter KI-Spielraum für größere Workspaces nach Prüfung.",
+    purpose:
+      "Höherpreisige Premium-Erweiterung mit der stärksten freigegebenen KI, den höchsten Kontingenten und erweitertem Funktionsumfang.",
     status: "Coming Soon",
-    price: "auf Anfrage",
-    features: ["Roadmap-Vorschau", "spätere Freigabe"],
+    price: "höherer Zusatzpreis als KI Plus",
+    features: [
+      "stärkste freigegebene Modellklasse",
+      "höchstes KI-Kontingent",
+      "größter Gesprächskontext",
+      "keine automatische Sendung",
+    ],
     showComingSoonMark: true,
   },
   {
@@ -229,7 +246,7 @@ function getPackageRequestHref(
     ].join("\n"),
   );
 
-  return `mailto:hello@fanmind.ch?subject=${subject}&body=${body}`;
+  return `mailto:kontakt@fanmind.ch?subject=${subject}&body=${body}`;
 }
 
 function getAddOnRequestHref(
@@ -251,7 +268,7 @@ function getAddOnRequestHref(
     ].join("\n"),
   );
 
-  return `mailto:hello@fanmind.ch?subject=${subject}&body=${body}`;
+  return `mailto:kontakt@fanmind.ch?subject=${subject}&body=${body}`;
 }
 
 function getMainPackageCancellationHref(
@@ -269,7 +286,7 @@ function getMainPackageCancellationHref(
     ].join("\n"),
   );
 
-  return `mailto:hello@fanmind.ch?subject=${subject}&body=${body}`;
+  return `mailto:kontakt@fanmind.ch?subject=${subject}&body=${body}`;
 }
 
 export function getSettingsAccountPageTitle(
@@ -639,14 +656,15 @@ export function PackageSettingsSection({
         <div>
           <p className={profileStyles.invoiceLabel}>Zusatzpakete / Add-ons</p>
           <p className={profileStyles.invoiceValue}>
-            Vorbereitete Erweiterungen bleiben klar als verfügbar, vorbereitet
-            oder Coming Soon markiert.
+            KI Standard ist im Basispaket enthalten. KI Plus und KI Ultra sind
+            separat berechnete Erweiterungen und bleiben bis zur Preis-,
+            Kontingent- und Billing-Freigabe als Coming Soon markiert.
           </p>
         </div>
       </div>
       <div className={profileStyles.addOnGrid}>
         {ADD_ON_CARDS.map((addOn) => {
-          const showStatusBadge = addOn.status === "Aktiv";
+          const showStatusBadge = true;
 
           return (
             <article className={profileStyles.addOnCard} key={addOn.key}>
@@ -666,6 +684,7 @@ export function PackageSettingsSection({
                   ))}
                 </ul>
               ) : null}
+              <p className={profileStyles.addOnPrice}>{addOn.price}</p>
               {addOn.showComingSoonMark ? (
                 <div className={profileStyles.cardMarkSlot}>
                   <ComingSoonMark
@@ -673,9 +692,7 @@ export function PackageSettingsSection({
                     className={profileStyles.settingsComingSoonMark}
                   />
                 </div>
-              ) : (
-                <p className={profileStyles.addOnPrice}>{addOn.price}</p>
-              )}
+              ) : null}
               {addOn.status === "Aktiv" || addOn.showComingSoonMark ? null : (
                 <a
                   className={profileStyles.packageButton}

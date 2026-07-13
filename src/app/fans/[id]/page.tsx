@@ -235,6 +235,7 @@ function FanDetailWorkspace({
 
         {contact ? (
           <FanDetailContent
+            workspaceName={workspace.name}
             contact={contact}
             followups={followups}
             memories={memories}
@@ -267,6 +268,7 @@ function FanDetailWorkspace({
 }
 
 function FanDetailContent({
+  workspaceName,
   contact,
   memories,
   memoriesError,
@@ -290,6 +292,7 @@ function FanDetailContent({
   demoConnectionsDisabled,
   locale,
 }: {
+  workspaceName: string;
   contact: ContactRow;
   memories: MemoryRow[];
   memoriesError?: string;
@@ -351,7 +354,13 @@ function FanDetailContent({
     facebookReplyTarget,
   );
   const timeline = filteredMessages.length
-    ? buildMessageTimeline(filteredMessages, contact, facebookReplyTarget)
+    ? buildMessageTimeline(
+        filteredMessages,
+        contact,
+        facebookReplyTarget,
+        workspaceName,
+        locale,
+      )
     : [];
   const openFollowups = followups.filter(
     (followup) => followup.status !== "done",
@@ -383,7 +392,10 @@ function FanDetailContent({
           <div className={styles.metric}>
             <dt>{wt(locale, "Owner")}</dt>
             <dd>
-              <strong>Team Inbox</strong>
+              <strong>
+                {workspaceName ||
+                  (locale === "en" ? "Workspace team" : "Workspace-Team")}
+              </strong>
             </dd>
           </div>
           <div className={styles.metric}>
@@ -421,15 +433,15 @@ function FanDetailContent({
       >
         <main
           className={styles.conversation}
-          aria-label={wt(locale, "Kanalübergreifender Verlauf")}
+          aria-label={wt(locale, "Kanalübergreifender Nachrichtenverlauf")}
         >
           <article className={styles.card}>
             <div className={styles.cardHeader}>
               <div>
                 <p className={dashboardStyles.eyebrow}>
-                  Unified Inbox Timeline
+                  {wt(locale, "Nachrichtenverlauf")}
                 </p>
-                <h3>{wt(locale, "Kanalübergreifender Verlauf")}</h3>
+                <h3>{wt(locale, "Kanalübergreifender Nachrichtenverlauf")}</h3>
               </div>
             </div>
             <nav
@@ -546,7 +558,7 @@ function FanDetailContent({
               {timeline.length ? (
                 timeline.map((item) => (
                   <article
-                    className={`${styles.message} ${item.direction === "Fan" ? styles.messageFan : styles.messageTeam}`}
+                    className={`${styles.message} ${item.directionKind === "inbound" ? styles.messageFan : styles.messageTeam}`}
                     key={item.id}
                   >
                     <time
@@ -1348,17 +1360,23 @@ function buildMessageTimeline(
   messages: ConversationMessageRow[],
   contact: ContactRow,
   facebookReplyTarget: ContactReplyTargetRow | null,
+  workspaceName: string,
+  locale: FanMindLanguage,
 ) {
   return messages.map((message) => ({
     id: message.id,
     createdAt: message.created_at,
     avatar:
       message.direction === "inbound"
-        ? "F"
+        ? (contact.display_name || contact.handle || "K")
+            .trim()
+            .charAt(0)
+            .toUpperCase()
         : message.direction === "note"
           ? "N"
-          : "T",
-    direction: formatDirection(message.direction, message.author_label),
+          : (workspaceName || "T").trim().charAt(0).toUpperCase(),
+    directionKind: message.direction,
+    direction: formatTimelineDirection(message, contact, workspaceName, locale),
     type:
       message.direction === "note" && message.author_label === "Antwortentwurf"
         ? "Antwortentwurf · nicht gesendet"
@@ -1573,6 +1591,42 @@ function formatDetailedSource(
   return base;
 }
 
+function formatTimelineDirection(
+  message: ConversationMessageRow,
+  contact: ContactRow,
+  workspaceName: string,
+  locale: FanMindLanguage,
+): string {
+  const author = message.author_label?.trim();
+  const genericAuthors = new Set([
+    "Fan",
+    "FanMind Team",
+    "Team",
+    "Demo",
+    "Demo User",
+    "Demo Nutzer",
+  ]);
+
+  if (message.direction === "note") {
+    if (author && author !== "Antwortentwurf" && !genericAuthors.has(author)) {
+      return author;
+    }
+    return locale === "en" ? "Note" : "Notiz";
+  }
+
+  if (message.direction === "inbound") {
+    if (author && !genericAuthors.has(author)) return author;
+    return (
+      contact.display_name ||
+      contact.handle ||
+      (locale === "en" ? "Contact" : "Kontakt")
+    );
+  }
+
+  if (author && !genericAuthors.has(author)) return author;
+  return workspaceName || (locale === "en" ? "Workspace team" : "Workspace-Team");
+}
+
 function formatDirection(value: string, authorLabel?: string | null): string {
   if (value === "outbound") return authorLabel?.trim() || "Team";
   if (value === "note") return "Notiz";
@@ -1633,7 +1687,7 @@ function formatNotice(value: string, locale: FanMindLanguage = "de"): string {
       ? "Notes could not be saved. Please try again."
       : "Notizen konnten nicht gespeichert werden. Bitte erneut versuchen.";
   if (value === "analysis_saved")
-    return "Fan-Analyse-Report wurde aktualisiert.";
+    return "Kommunikationsübersicht wurde aktualisiert.";
   if (value === "reply_target_saved")
     return "Direkter Facebook-Chat-Link wurde gespeichert.";
   if (value === "reply_target_save_failed")

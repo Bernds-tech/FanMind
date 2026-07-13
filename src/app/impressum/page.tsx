@@ -49,7 +49,7 @@ export default function ImpressumPage() {
               Produktentwicklung, Roadmap und Kontaktmöglichkeiten.
             </p>
             <p>
-              FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Fan-, Kunden- und
+              FanMind ist ein KI-gestützter Antwort- und Kontaktwissen-Assistent für Fan-, Kunden- und
               Community-Beziehungen. FanMind unterstützt Teams dabei, Kontakte zu verwalten,
               Kontextinformationen zu speichern, KI-gestützte Antwortvorschläge zu erstellen und
               Follow-ups manuell zu organisieren.
@@ -59,9 +59,9 @@ export default function ImpressumPage() {
           <section className={styles.section} aria-labelledby="produktstatus">
             <h2 id="produktstatus">Produktstatus und Leistungsgrenzen</h2>
             <p>
-              FanMind befindet sich in einer MVP- und Pilotphase. Der aktuelle Funktionsumfang
+              FanMind befindet sich in einer Produkt- und Pilotphase. Der aktuelle Funktionsumfang
               umfasst insbesondere Login, Dashboard, Kontaktverwaltung, Kontaktprofile,
-              KI-gestützte Antwortvorschläge, Memory-Funktionen, Follow-ups, CSV-Import und
+              KI-gestützte Antwortvorschläge, Kontaktwissen, Follow-ups, CSV-Import und
               Roadmap-Ansichten.
             </p>
             <h3>Keine automatische Kommunikation</h3>
