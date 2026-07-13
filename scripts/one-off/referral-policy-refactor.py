@@ -21,6 +21,13 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def replace_all(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count < 1:
+        raise SystemExit(f"{label}: expected at least one match, found {count}")
+    return text.replace(old, new)
+
+
 path = "src/lib/referrals.ts"
 text = read(path)
 
@@ -82,20 +89,65 @@ text = replace_once(
     "remove duplicate percentage function",
 )
 
-start = text.index(
-    "function evaluateEligibility(\n  workspace: WorkspaceEligibilityRow | null,\n): ReferralEligibility {"
-)
-end_marker = "\n}\n\nexport async function getWorkspaceReferralEligibility"
-end = text.index(end_marker, start)
-replacement = '''function evaluateEligibility(
+text = replace_once(
+    text,
+    '''function evaluateEligibility(
+  workspace: WorkspaceEligibilityRow | null,
+): ReferralEligibility {
+  if (!workspace) {
+    return {
+      eligible: false,
+      reason: "Workspace konnte für das Empfehlungsprogramm nicht geprüft werden.",
+      workspace,
+    };
+  }
+
+  const billingStatus = workspace.billing_status ?? "";
+  const isDemo =
+    billingStatus === "demo_free" ||
+    /demo/i.test(workspace.name ?? "") ||
+    workspace.commercial_option === "internal_daily_test";
+  if (isDemo) {
+    return {
+      eligible: false,
+      reason: "Demo- und interne Test-Workspaces nehmen nicht am Empfehlungsprogramm teil.",
+      workspace,
+    };
+  }
+
+  const hasPaidCommercialValue =
+    (workspace.setup_fee_cents ?? 0) > 0 ||
+    (workspace.monthly_fee_cents ?? 0) > 0;
+  if (!hasPaidCommercialValue) {
+    return {
+      eligible: false,
+      reason: "Für diesen Workspace ist noch kein zahlungspflichtiges Paket hinterlegt.",
+      workspace,
+    };
+  }
+
+  if (!["active", "past_due"].includes(billingStatus)) {
+    return {
+      eligible: false,
+      reason: "Der Workspace wird nach erfolgreicher Zahlung für Empfehlungen freigeschaltet.",
+      workspace,
+    };
+  }
+
+  return { eligible: true, reason: null, workspace };
+}
+''',
+    '''function evaluateEligibility(
   workspace: WorkspaceEligibilityRow | null,
 ): ReferralEligibility {
   const policy = evaluateReferralWorkspaceEligibility(workspace);
   return { ...policy, workspace };
-}'''
-text = text[:start] + replacement + text[end:]
+}
+''',
+    "centralize referral eligibility",
+)
 
-text = replace_once(
+text = replace_all(
     text,
     '''  const windowOpen =
     ["open", "reopened"].includes(state.status) &&
