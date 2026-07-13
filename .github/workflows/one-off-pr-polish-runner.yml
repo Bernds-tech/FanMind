@@ -3,7 +3,7 @@ name: One-off PR polish runner
 on:
   pull_request_target:
     types:
-      - labeled
+      - synchronize
 
 permissions:
   contents: write
@@ -14,8 +14,7 @@ jobs:
   apply-final-polish:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'fix/final-rapid-polish-20260713' &&
-      github.event.label.name == 'documentation'
+      github.event.pull_request.head.ref == 'fix/final-rapid-polish-20260713'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
