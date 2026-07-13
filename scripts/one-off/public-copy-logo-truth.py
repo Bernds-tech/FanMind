@@ -76,11 +76,17 @@ for old, new in [
 ]:
     text = replace(text, old, new)
 
-# Capitalized Memory in this public file is only copy, never an identifier.
+# Capitalized Memory in this public file is customer copy, not an identifier.
 text = text.replace("Memory", "Kontaktwissen")
 write(path, text)
 
-for legacy in ["Memory", "Fan-Analyse-Report", "MVP-Workflow", "MVP-Workspace", "DSGVO-konform"]:
+for legacy in [
+    "Memory",
+    "Fan-Analyse-Report",
+    "MVP-Workflow",
+    "MVP-Workspace",
+    "DSGVO-konform",
+]:
     forbid(text, legacy, f"{path} public terminology")
 require(text, "Kommunikationsübersicht", f"{path} report terminology")
 require(text, "Kontaktwissen", f"{path} contact knowledge terminology")
@@ -116,11 +122,15 @@ for old, new in [
         '"Fan-Analyse-Report": "Fan analysis report"',
         '"Kommunikationsübersicht": "Communication overview"',
     ),
+    ("Fan-Analyse-Report", "Kommunikationsübersicht"),
+    ("Fan analysis report", "Communication overview"),
+    ("fan analysis report", "communication overview"),
     ("Fan memory", "Contact knowledge"),
     ("fan memory", "contact knowledge"),
     ("MVP workflow", "product workflow"),
     ("MVP workspace", "workspace"),
     ("MVP focus", "current-version focus"),
+    ("MVP core", "product core"),
     ("in the MVP", "in the current version"),
 ]:
     text = replace(text, old, new)
@@ -129,6 +139,7 @@ write(path, text)
 for legacy in [
     "Notizen und Kontaktwissen / Memory",
     "Fan analysis report",
+    "fan analysis report",
     "fan memory",
     "MVP workspace",
     "DSGVO-konform geschützt",
@@ -180,37 +191,35 @@ forbid(text, "'Memory'", f"{path} preview terminology")
 
 
 # ---------------------------------------------------------------------------
-# Legal product-status copy reflects the actual staged integration model.
+# Legal product-status copy: keep the already corrected staged integration
+# and billing statement, while supporting an older branch state idempotently.
 # ---------------------------------------------------------------------------
 path = "src/app/impressum/page.tsx"
 text = read(path)
-text = replace(
-    text,
-    "<h3>Keine aktiven Social-Media-Integrationen</h3>",
-    "<h3>Keine allgemein freigegebenen Social-Media-Synchronisierungen</h3>",
-)
-text = replace(
-    text,
-    """              Aktuell bestehen keine produktiven Social-Media-Synchronisierungen und keine
+old_block = """            <h3>Keine aktiven Social-Media-Integrationen</h3>
+            <p>
+              Aktuell bestehen keine produktiven Social-Media-Synchronisierungen und keine
               automatischen Integrationen mit Instagram, TikTok, Facebook, X / Twitter, WhatsApp
               oder Discord. Ebenfalls nicht Bestandteil der aktuellen Version sind Scraping,
               automatische Nachrichtenversendung, autonome Kommunikation und Zahlungslogik.
-""",
-    """              Aktuell bestehen keine allgemein freigegebenen produktiven
-              Social-Media-Synchronisierungen. Einzelne Kanalverbindungen können nur als klar
-              gekennzeichneter Pilot oder nach technischer und rechtlicher Freigabe verfügbar sein.
-              Nicht Bestandteil der aktuellen Version sind Scraping, automatische
-              Nachrichtenversendung und autonome Kommunikation.
-""",
-)
+            </p>
+"""
+current_block = """            <h3>Integrationen und Abrechnung</h3>
+            <p>
+              Produktive Social-Media-Synchronisierungen sind nur dort verfügbar, wo sie ausdrücklich
+              als freigegeben ausgewiesen werden. Scraping, autonome Kommunikation und automatischer
+              Nachrichtenversand sind nicht Bestandteil des Standard-Workflows. Freigegebene
+              Checkout-, Zahlungs- und Rechnungsprozesse werden getrennt vom Kommunikationsworkflow
+              über den jeweils ausgewiesenen Zahlungsanbieter abgewickelt.
+            </p>
+"""
+if old_block in text:
+    text = text.replace(old_block, current_block, 1)
 write(path, text)
 forbid(text, "Keine aktiven Social-Media-Integrationen", f"{path} integration truth")
 forbid(text, "autonome Kommunikation und Zahlungslogik", f"{path} billing truth")
-require(
-    text,
-    "Keine allgemein freigegebenen Social-Media-Synchronisierungen",
-    f"{path} integration truth",
-)
+require(text, "Integrationen und Abrechnung", f"{path} integration truth")
+require(text, "Checkout-, Zahlungs- und Rechnungsprozesse", f"{path} billing truth")
 
 
 # ---------------------------------------------------------------------------
@@ -247,11 +256,12 @@ forbid(text, "object-fit: cover", f"{path} cropped channel assets")
 # ---------------------------------------------------------------------------
 path = "scripts/verify-product-truth.mjs"
 text = read(path)
-text = replace(
-    text,
-    '  "src/app/landing-v2/page.tsx",\n',
-    '  "src/app/landing-v2/page.tsx",\n  "src/app/landing-v2/FaqAccordion.tsx",\n  "src/app/brandMetadata.ts",\n  "src/app/opengraph-image.tsx",\n  "src/components/PlatformLogo.module.css",\n',
-)
+if '  "src/app/landing-v2/FaqAccordion.tsx",\n' not in text:
+    text = replace(
+        text,
+        '  "src/app/landing-v2/page.tsx",\n',
+        '  "src/app/landing-v2/page.tsx",\n  "src/app/landing-v2/FaqAccordion.tsx",\n  "src/app/brandMetadata.ts",\n  "src/app/opengraph-image.tsx",\n  "src/components/PlatformLogo.module.css",\n',
+    )
 
 forbid_function = """function forbidIn(file, pattern, explanation) {
   const text = content(file);
@@ -295,13 +305,18 @@ forbidIn(
   "Das Impressum muss den gestuften Integrations- und aktiven Billing-Stand korrekt beschreiben.",
 );
 requireText(
+  "src/app/impressum/page.tsx",
+  "Integrationen und Abrechnung",
+  "Das Impressum muss den gestuften Integrations- und Billing-Status erklären.",
+);
+requireText(
   "src/components/PlatformLogo.module.css",
   "object-fit: contain",
   "Kanal-Logos müssen in der gemeinsamen Komponente einheitlich und ohne Beschneidung dargestellt werden.",
 );
 """
 if "Kanal-Logos müssen in der gemeinsamen Komponente" not in text:
-    anchor = """warn(
+    anchor = r"""warn(
   /\[BITTE FINAL EINTRAGEN/iu,
 """
     if anchor not in text:
