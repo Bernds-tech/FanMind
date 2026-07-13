@@ -7,7 +7,8 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
+  issues: write
+  pull-requests: write
 
 jobs:
   apply-final-polish:
@@ -17,6 +18,8 @@ jobs:
       github.event.label.name == 'documentation'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -26,7 +29,29 @@ jobs:
           persist-credentials: true
 
       - name: Apply deterministic codemod
-        run: python3 scripts/one-off/final-rapid-polish.py
+        id: codemod
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/one-off/final-rapid-polish.py > /tmp/final-polish.log 2>&1
+          status=$?
+          cat /tmp/final-polish.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Report codemod failure
+        if: steps.codemod.outputs.status != '0'
+        shell: bash
+        run: |
+          {
+            echo '## One-off-Polish fehlgeschlagen'
+            echo
+            echo '```text'
+            tail -n 80 /tmp/final-polish.log
+            echo '```'
+          } > /tmp/final-polish-comment.md
+          gh pr comment 562 --repo "$GITHUB_REPOSITORY" --body-file /tmp/final-polish-comment.md
+          exit 1
 
       - name: Validate patch shape
         run: |
@@ -34,9 +59,10 @@ jobs:
           git status --short
 
       - name: Commit generated changes
+        shell: bash
         run: |
           if git diff --quiet; then
-            echo "No generated changes to commit."
+            gh pr comment 562 --repo "$GITHUB_REPOSITORY" --body 'One-off-Polish: keine Quellcodeänderung erzeugt.'
             exit 0
           fi
 
@@ -55,3 +81,4 @@ jobs:
             scripts/verify-product-truth.mjs
           git commit -m "fix: finish visible product polish"
           git push origin HEAD:fix/final-rapid-polish-20260713
+          gh pr comment 562 --repo "$GITHUB_REPOSITORY" --body 'One-off-Polish: Quellcodeänderungen wurden erzeugt und auf den PR-Branch gepusht.'
