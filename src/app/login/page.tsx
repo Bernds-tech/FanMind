@@ -2,29 +2,51 @@
 
 import { FormEvent, use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
+import {
+  createSupabaseBrowserClient,
+  syncSupabaseSessionForServer,
+} from "@/lib/supabase/client";
 import { FanMindLogo } from "@/components/FanMindLogo";
-import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
+import {
+  fanmindCopy,
+  getFanMindLanguage,
+  landingPath,
+  localizedPath,
+  type FanMindLanguage,
+} from "@/lib/fanmindCopy";
 import styles from "./login.module.css";
 
 type LoginPageProps = {
-  searchParams: Promise<{ demo?: string | string[]; lang?: string | string[]; demo_deleted?: string | string[]; returnTo?: string | string[] }>;
+  searchParams: Promise<{
+    demo?: string | string[];
+    lang?: string | string[];
+    demo_deleted?: string | string[];
+    returnTo?: string | string[];
+  }>;
 };
 
 const LOGIN_TARGET = "/dashboard";
 const DEMO_EMAIL = "sandra.m@fanmind.ch";
-// Stage 1 uses a public demo login; Stage 2 replaces this with temporary demo workspaces.
-const DEMO_PASSWORD = process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-Demo-2026!";
+const DEMO_PASSWORD =
+  process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-Demo-2026!";
 
 function getSafeReturnTo(returnTo?: string | string[] | null) {
   const value = Array.isArray(returnTo) ? returnTo[0] : returnTo;
   if (!value) return null;
-  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return null;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(value) || /[\r\n]/.test(value)) return null;
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.startsWith("/\\")
+  )
+    return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(value) || /[\r\n]/.test(value))
+    return null;
 
   try {
     const parsed = new URL(value, "https://fanmind.ch");
-    return parsed.origin === "https://fanmind.ch" ? `${parsed.pathname}${parsed.search}${parsed.hash}` : null;
+    return parsed.origin === "https://fanmind.ch"
+      ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+      : null;
   } catch {
     return null;
   }
@@ -36,21 +58,45 @@ function withReturnTo(path: string, returnTo: string | null) {
   return `${path}${separator}returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-function LanguageSwitch({ language, returnTo }: { language: FanMindLanguage; returnTo: string | null }) {
+function LanguageSwitch({
+  language,
+  returnTo,
+}: {
+  language: FanMindLanguage;
+  returnTo: string | null;
+}) {
   return (
-    <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
-      <a className={language === "de" ? styles.languageActive : undefined} href={withReturnTo("/login", returnTo)} aria-current={language === "de" ? "true" : undefined}>DE</a>
+    <div
+      className={styles.languageSwitch}
+      aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}
+    >
+      <a
+        className={language === "de" ? styles.languageActive : undefined}
+        href={withReturnTo("/login", returnTo)}
+        aria-current={language === "de" ? "true" : undefined}
+      >
+        DE
+      </a>
       <span>|</span>
-      <a className={language === "en" ? styles.languageActive : undefined} href={withReturnTo("/login?lang=en", returnTo)} aria-current={language === "en" ? "true" : undefined}>EN</a>
+      <a
+        className={language === "en" ? styles.languageActive : undefined}
+        href={withReturnTo("/login?lang=en", returnTo)}
+        aria-current={language === "en" ? "true" : undefined}
+      >
+        EN
+      </a>
     </div>
   );
 }
 
-
 export default function LoginPage({ searchParams }: LoginPageProps) {
   const params = use(searchParams);
-  const isDemoMode = Array.isArray(params.demo) ? params.demo.includes("1") : params.demo === "1";
-  const isDemoDeleted = Array.isArray(params.demo_deleted) ? params.demo_deleted.includes("1") : params.demo_deleted === "1";
+  const isDemoMode = Array.isArray(params.demo)
+    ? params.demo.includes("1")
+    : params.demo === "1";
+  const isDemoDeleted = Array.isArray(params.demo_deleted)
+    ? params.demo_deleted.includes("1")
+    : params.demo_deleted === "1";
   const language = getFanMindLanguage(params.lang);
   const returnTo = getSafeReturnTo(params.returnTo);
   const loginTarget = returnTo ?? LOGIN_TARGET;
@@ -70,38 +116,48 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       : "Login nicht möglich. Bitte prüfe E-Mail, Passwort und ob dein Browser alte gespeicherte Zugangsdaten eingefügt hat. Lösche gespeicherte Zugangsdaten für fanmind.ch oder tippe E-Mail und Passwort einmal manuell ein.";
 
   function normalizeLoginError(message: string) {
-    return message.toLowerCase().includes("invalid login credentials") ? invalidCredentialsMessage : message;
+    return message.toLowerCase().includes("invalid login credentials")
+      ? invalidCredentialsMessage
+      : message;
   }
 
   useEffect(() => {
     if (!isDemoMode) return;
 
-    if (emailInputRef.current) {
-      emailInputRef.current.value = DEMO_EMAIL;
-    }
-
-    if (passwordInputRef.current) {
+    if (emailInputRef.current) emailInputRef.current.value = DEMO_EMAIL;
+    if (passwordInputRef.current)
       passwordInputRef.current.value = DEMO_PASSWORD;
-    }
   }, [isDemoMode]);
 
   async function handleDemoStart() {
     setError(null);
     setIsSubmitting(true);
+
     try {
       const response = await fetch("/api/demo/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale: language }),
       });
-      const payload = (await response.json().catch(() => null)) as { error?: string; redirectTo?: string } | null;
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        redirectTo?: string;
+      } | null;
+
       if (!response.ok) {
-        setError(`${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den Sandra-Demo-Fallback über /login?demo=1 nutzen.`);
+        setError(
+          `${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den kontrollierten Sandra-Demo-Zugang über /login?demo=1 nutzen.`,
+        );
         return;
       }
+
       window.location.assign(payload?.redirectTo ?? LOGIN_TARGET);
     } catch (startError) {
-      setError(startError instanceof Error ? startError.message : "Die Demo konnte gerade nicht vorbereitet werden. Bitte nutze /login?demo=1 als Fallback.");
+      setError(
+        startError instanceof Error
+          ? startError.message
+          : "Die Demo konnte gerade nicht vorbereitet werden. Bitte nutze /login?demo=1 als Fallback.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -116,14 +172,21 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     const formPassword = String(formData.get("password") ?? "");
     const currentEmailValue = emailInputRef.current?.value;
     const currentPasswordValue = passwordInputRef.current?.value;
-    const email = isDemoMode ? DEMO_EMAIL : (currentEmailValue || formEmail).trim();
-    const password = isDemoMode ? DEMO_PASSWORD : currentPasswordValue ?? formPassword;
+    const email = isDemoMode
+      ? DEMO_EMAIL
+      : (currentEmailValue || formEmail).trim();
+    const password = isDemoMode
+      ? DEMO_PASSWORD
+      : (currentPasswordValue ?? formPassword);
 
     setIsSubmitting(true);
 
     try {
       const supabase = createSupabaseBrowserClient();
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (authError) {
         setError(normalizeLoginError(authError.message));
@@ -131,16 +194,28 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       }
 
       if (!data.session?.access_token) {
-        setError(language === "en" ? "Login failed: no valid session was returned. Please try again." : "Login fehlgeschlagen: Es wurde keine gültige Sitzung zurückgegeben. Bitte versuche es erneut.");
+        setError(
+          language === "en"
+            ? "Login failed: no valid session was returned. Please try again."
+            : "Login fehlgeschlagen: Es wurde keine gültige Sitzung zurückgegeben. Bitte versuche es erneut.",
+        );
         return;
       }
 
       await syncSupabaseSessionForServer(data.session);
       document.cookie = `fanmind_locale=${language}; path=/; max-age=31536000; samesite=lax`;
-      const target = language === "en" && !loginTarget.includes("lang=") ? `${loginTarget}${loginTarget.includes("?") ? "&" : "?"}lang=en` : loginTarget;
+      const target =
+        language === "en" && !loginTarget.includes("lang=")
+          ? `${loginTarget}${loginTarget.includes("?") ? "&" : "?"}lang=en`
+          : loginTarget;
       window.location.assign(target);
     } catch (authError) {
-      const message = authError instanceof Error ? authError.message : language === "en" ? "Unknown Supabase error." : "Unbekannter Supabase-Fehler.";
+      const message =
+        authError instanceof Error
+          ? authError.message
+          : language === "en"
+            ? "Unknown Supabase error."
+            : "Unbekannter Supabase-Fehler.";
       setError(normalizeLoginError(message));
     } finally {
       setIsSubmitting(false);
@@ -152,7 +227,16 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       <div className={styles.gridPattern} aria-hidden="true" />
       <section className={styles.shell} aria-label="FanMind Login">
         <header className={styles.header}>
-          <FanMindLogo className={styles.logo} compact href={landingPath(language)} ariaLabel={language === "en" ? "Open FanMind homepage" : "FanMind Startseite öffnen"} />
+          <FanMindLogo
+            className={styles.logo}
+            compact
+            href={landingPath(language)}
+            ariaLabel={
+              language === "en"
+                ? "Open FanMind homepage"
+                : "FanMind Startseite öffnen"
+            }
+          />
           <nav className={styles.topLinks} aria-label="Login Navigation">
             <LanguageSwitch language={language} returnTo={returnTo} />
             <span>{copy.registerPrompt}</span>
@@ -176,21 +260,35 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 <span className={styles.pinkIcon}>⚡</span>
                 <div>
                   <h2>{language === "en" ? "Fast access" : "Schneller Zugriff"}</h2>
-                  <p>{language === "en" ? "Open your workspace with contacts, connected Messenger inbox and prepared workflows." : "Öffne deinen Workspace mit Kontakten, verbundener Messenger-Inbox und vorbereiteten Workflows."}</p>
+                  <p>
+                    {language === "en"
+                      ? "Open your workspace with contacts, stored message history, and prepared workflows."
+                      : "Öffne deinen Workspace mit Kontakten, gespeichertem Nachrichtenverlauf und vorbereiteten Abläufen."}
+                  </p>
                 </div>
               </article>
               <article>
                 <span className={styles.blueIcon}>♙</span>
                 <div>
-                  <h2>{language === "en" ? "Team & roles" : "Team & Rollen"}</h2>
-                  <p>{language === "en" ? "Work transparently with clear responsibilities and manual approval." : "Arbeite nachvollziehbar mit klaren Zuständigkeiten und manueller Freigabe."}</p>
+                  <h2>
+                    {language === "en" ? "Clear collaboration" : "Klare Zusammenarbeit"}
+                  </h2>
+                  <p>
+                    {language === "en"
+                      ? "Work transparently with clear responsibilities and manual approval."
+                      : "Arbeite nachvollziehbar mit klaren Zuständigkeiten und manueller Freigabe."}
+                  </p>
                 </div>
               </article>
               <article>
                 <span className={styles.greenIcon}>⌁</span>
                 <div>
                   <h2>{language === "en" ? "Real control" : "Echte Kontrolle"}</h2>
-                  <p>{language === "en" ? "AI prepares replies but never sends automatically." : "KI bereitet Antworten vor, versendet aber nichts automatisch."}</p>
+                  <p>
+                    {language === "en"
+                      ? "AI prepares replies but never sends automatically."
+                      : "KI bereitet Antworten vor, versendet aber nichts automatisch."}
+                  </p>
                 </div>
               </article>
             </div>
@@ -199,13 +297,17 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           <form className={styles.formCard} onSubmit={handleLogin}>
             {isDemoDeleted && (
               <p className={styles.demoBadge} role="status">
-                {"Deine Demo-Zeit ist abgelaufen. Der temporäre Demo-Zugang wurde gelöscht. Bitte starte eine neue Demo oder registriere einen eigenen Workspace."}
+                Deine Demo-Zeit ist abgelaufen. Der temporäre Demo-Zugang wurde
+                gelöscht. Bitte starte eine neue Demo oder registriere einen
+                eigenen Workspace.
               </p>
             )}
 
             {isDemoMode && (
               <p className={styles.demoBadge} role="status">
-                {language === "en" ? "Public demo access. Please do not enter real data. Other demo users can see demo content. Real account connections are disabled in demo mode." : "Öffentlicher Demo-Zugang. Bitte keine echten Daten eingeben. Andere Demo-Nutzer können Demo-Inhalte sehen. Echte Account-Verbindungen sind im Demo-Modus deaktiviert."}
+                {language === "en"
+                  ? "Public demo access. Please do not enter real data. Other demo users can see demo content. Real account connections are disabled in demo mode."
+                  : "Öffentlicher Demo-Zugang. Bitte keine echten Daten eingeben. Andere Demo-Nutzer können Demo-Inhalte sehen. Echte Account-Verbindungen sind im Demo-Modus deaktiviert."}
               </p>
             )}
 
@@ -218,7 +320,24 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.email}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">✉</span>
-                <input ref={emailInputRef} type="email" name="email" placeholder={language === "en" ? "Your email address" : "Deine E-Mail-Adresse"} defaultValue={isDemoMode ? DEMO_EMAIL : ""} autoComplete={isDemoMode ? "off" : "username"} inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} readOnly={isDemoMode} required />
+                <input
+                  ref={emailInputRef}
+                  type="email"
+                  name="email"
+                  placeholder={
+                    language === "en"
+                      ? "Your email address"
+                      : "Deine E-Mail-Adresse"
+                  }
+                  defaultValue={isDemoMode ? DEMO_EMAIL : ""}
+                  autoComplete={isDemoMode ? "off" : "username"}
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  readOnly={isDemoMode}
+                  required
+                />
               </div>
             </label>
 
@@ -226,11 +345,24 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               <span>{copy.password}</span>
               <div className={styles.inputWrap}>
                 <span aria-hidden="true">▣</span>
-                <input ref={passwordInputRef} type={showPassword ? "text" : "password"} name="password" placeholder={language === "en" ? "Your password" : "Dein Passwort"} defaultValue={isDemoMode ? DEMO_PASSWORD : ""} autoComplete={isDemoMode ? "off" : "current-password"} readOnly={isDemoMode} required />
+                <input
+                  ref={passwordInputRef}
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder={
+                    language === "en" ? "Your password" : "Dein Passwort"
+                  }
+                  defaultValue={isDemoMode ? DEMO_PASSWORD : ""}
+                  autoComplete={isDemoMode ? "off" : "current-password"}
+                  readOnly={isDemoMode}
+                  required
+                />
                 <button
                   className={styles.passwordToggle}
                   type="button"
-                  aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                  aria-label={
+                    showPassword ? "Passwort verbergen" : "Passwort anzeigen"
+                  }
                   onClick={() => setShowPassword((current) => !current)}
                 >
                   {showPassword ? "◉" : "◌"}
@@ -243,11 +375,22 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 <input type="checkbox" defaultChecked />
                 {language === "en" ? "Stay signed in" : "Angemeldet bleiben"}
               </label>
-              <a href={forgotPasswordHref}>{language === "en" ? "Forgot password?" : "Passwort vergessen?"}</a>
+              <a href={forgotPasswordHref}>
+                {language === "en" ? "Forgot password?" : "Passwort vergessen?"}
+              </a>
             </div>
 
-            <button className={styles.primaryButton} type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (language === "en" ? "Signing in…" : "Login läuft…") : copy.submit} <span>→</span>
+            <button
+              className={styles.primaryButton}
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? language === "en"
+                  ? "Signing in…"
+                  : "Login läuft…"
+                : copy.submit}{" "}
+              <span>→</span>
             </button>
 
             {error && (
@@ -255,12 +398,38 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                 {error}
               </p>
             )}
-            <button className={styles.secondaryButton} type="button" onClick={handleDemoStart} disabled={isSubmitting}>
-              {isSubmitting ? (language === "en" ? "Preparing demo…" : "Demo wird vorbereitet…") : (language === "en" ? "Try for free" : "Kostenlos testen")}
+
+            <button
+              className={styles.secondaryButton}
+              type="button"
+              onClick={handleDemoStart}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? language === "en"
+                  ? "Preparing demo…"
+                  : "Demo wird vorbereitet…"
+                : language === "en"
+                  ? "Try for free"
+                  : "Kostenlos testen"}
             </button>
+
             {error && (
               <p className={styles.notice}>
-                <button className={styles.secondaryButton} type="button" onClick={() => router.push(withReturnTo(localizedPath("/login", language, "?demo=1"), returnTo))}>Sandra-Demo-Fallback öffnen</button>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      withReturnTo(
+                        localizedPath("/login", language, "?demo=1"),
+                        returnTo,
+                      ),
+                    )
+                  }
+                >
+                  Sandra-Demo-Fallback öffnen
+                </button>
               </p>
             )}
 
@@ -269,13 +438,23 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             <div className={styles.safetyCard}>
               <span aria-hidden="true">🛡</span>
               <div>
-                <strong>{language === "en" ? "Secure manual workflow" : "Sicherer manueller Workflow"}</strong>
-                <p>{language === "en" ? "FanMind is a multi-channel CRM and copy-&-open assistant. Facebook Messenger can be connected; replies are reviewed manually and sent externally." : "FanMind ist ein Multi-Channel CRM und Copy-&-Open-Assistent. Facebook Messenger kann angebunden werden; Antworten werden manuell geprüft und extern gesendet."}</p>
+                <strong>
+                  {language === "en"
+                    ? "Secure manual workflow"
+                    : "Sicherer manueller Workflow"}
+                </strong>
+                <p>
+                  {language === "en"
+                    ? "FanMind prepares replies for manual review. Planned channel connections are activated only after technical and legal validation; the final message is sent by the user in the original channel."
+                    : "FanMind bereitet Antworten zur manuellen Prüfung vor. Geplante Kanalverbindungen werden erst nach technischer und rechtlicher Prüfung aktiviert; die finale Nachricht sendet der Nutzer selbst im Originalkanal."}
+                </p>
               </div>
             </div>
 
             <div className={styles.footerLinks}>
-              <a href={registerHref}>{copy.registerPrompt} {copy.registerLink}</a>
+              <a href={registerHref}>
+                {copy.registerPrompt} {copy.registerLink}
+              </a>
               <a href={landingPath(language)}>{copy.landing}</a>
             </div>
           </form>
