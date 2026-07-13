@@ -91,6 +91,15 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete. Si
 - Plus und Ultra dürfen erst automatisch buchbar werden, wenn Zusatzpreise, Kontingente, Modellklassen, Wechsel/Kündigung und Stripe-Subscription-Items freigegeben sind.
 - Für alle Stufen gilt: keine automatische Sendung; der Mensch prüft und sendet final selbst.
 
+### Verbindliche öffentliche Terminologie und Plattform-Logos
+
+- Deutsche Oberfläche: **KI**; englische Oberfläche: **AI**.
+- Nutzerseitig heißt der gespeicherte Kontext **Kontaktwissen**, nicht Memory oder Fan-Gedächtnis.
+- Der Analysebereich heißt **Kommunikationsübersicht**, nicht Fan-Analyse-Report.
+- Kundenseitige Seiten verwenden **Produkt**, **aktuelle Version** oder **Pilot**, nicht MVP-Jargon.
+- Datenschutz wird konkret und überprüfbar beschrieben; es gibt keine pauschale DSGVO-Konformitätsgarantie in Marketingtexten.
+- Alle Kanal-Logos werden über die gemeinsame `PlatformLogo`-Komponente dargestellt. Assets werden einheitlich skaliert und nicht beschnitten.
+
 ## 4. Referral Growth Window
 
 Geplant ist ein begrenztes Referral-Programm, das nicht nur den ersten 100 Nutzern vorbehalten ist. Stattdessen läuft die Aktion, bis FanMind global `2.000` aktive zahlende FanMind-Kunden/Workspaces erreicht.
