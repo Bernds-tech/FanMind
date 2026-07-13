@@ -1,0 +1,459 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
+import {
+  getContactConversationMessages,
+  getContactMemories,
+  upsertFanAnalysisReport,
+} from "@/lib/supabase/server";
+import { requireContactInAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
+const ANALYSIS_TIMEOUT_MS = 25_000;
+const MAX_INSTRUCTION_LENGTH = 500;
+
+type AnalysisMode = "short" | "standard" | "detailed";
+
+type AnalysisReport = {
+  kurzprofil: string;
+  kommunikationsstil: string;
+  stimmung: string;
+  interessen_trigger: string;
+  kauf_reaktion: string;
+  antwortstil: string;
+  no_gos: string;
+  language: "de" | "en";
+  analysis_mode: AnalysisMode;
+};
+
+export type FanAnalysisActionState = {
+  ok: boolean;
+  message: string;
+  generatedAt?: string;
+  report?: {
+    report_json: Record<string, unknown> | null;
+    summary: string | null;
+    source_message_count: number | null;
+    generated_at: string | null;
+    updated_at?: string | null;
+  } | null;
+};
+
+type OpenAiResponse = {
+  output_text?: string;
+  output?: Array<{ content?: Array<{ text?: string }> }>;
+  error?: { message?: string };
+};
+
+const analysisSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "kurzprofil",
+    "kommunikationsstil",
+    "stimmung",
+    "interessen_trigger",
+    "kauf_reaktion",
+    "antwortstil",
+    "no_gos",
+    "language",
+  ],
+  properties: {
+    kurzprofil: { type: "string" },
+    kommunikationsstil: { type: "string" },
+    stimmung: { type: "string" },
+    interessen_trigger: { type: "string" },
+    kauf_reaktion: { type: "string" },
+    antwortstil: { type: "string" },
+    no_gos: { type: "string" },
+    language: { type: "string", enum: ["de", "en"] },
+  },
+} as const;
+
+function formValue(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? "").trim();
+}
+
+function resolveMode(value: string): AnalysisMode {
+  if (value === "standard" || value === "detailed") return value;
+  return "short";
+}
+
+function fallbackReport(
+  locale: "de" | "en",
+  mode: AnalysisMode,
+  lowDataHint: string,
+): AnalysisReport {
+  if (locale === "en") {
+    return {
+      kurzprofil:
+        lowDataHint ||
+        "Careful communication overview based only on the stored conversation.",
+      kommunikationsstil:
+        "The preferred communication style is not yet clear; stay friendly, concise, and respectful.",
+      stimmung:
+        "The current mood cannot be determined reliably from the available context.",
+      interessen_trigger:
+        "Use only explicitly mentioned interests and practical questions.",
+      kauf_reaktion:
+        "Do not predict a purchase; respond to the concrete question and offer a clear next step.",
+      antwortstil:
+        "Reply calmly, helpfully, and without pressure. The human reviews and sends manually.",
+      no_gos:
+        "No diagnoses, protected or sensitive inferences, pressure, invented facts, or image analysis.",
+      language: locale,
+      analysis_mode: mode,
+    };
+  }
+
+  return {
+    kurzprofil:
+      lowDataHint ||
+      "Vorsichtige Kommunikationsübersicht auf Basis des gespeicherten Austauschs.",
+    kommunikationsstil:
+      "Der bevorzugte Kommunikationsstil ist noch nicht eindeutig; freundlich, knapp und respektvoll bleiben.",
+    stimmung:
+      "Die aktuelle Stimmung ist aus dem vorhandenen Kontext nicht zuverlässig bestimmbar.",
+    interessen_trigger:
+      "Nur ausdrücklich genannte Interessen und konkrete Fragen berücksichtigen.",
+    kauf_reaktion:
+      "Keine Kaufprognose abgeben; auf die konkrete Frage eingehen und einen klaren nächsten Schritt anbieten.",
+    antwortstil:
+      "Ruhig, hilfreich und ohne Druck antworten. Der Mensch prüft und sendet manuell.",
+    no_gos:
+      "Keine Diagnosen, geschützten oder sensiblen Ableitungen, erfundenen Fakten, Druck oder Bildanalyse.",
+    language: locale,
+    analysis_mode: mode,
+  };
+}
+
+function modeInstruction(mode: AnalysisMode, locale: "de" | "en"): string {
+  if (locale === "en") {
+    if (mode === "detailed") {
+      return "Detailed mode: up to 3 concise sentences per section, still readable and non-repetitive.";
+    }
+    if (mode === "standard") {
+      return "Standard mode: 1-2 concise sentences per section.";
+    }
+    return "Short mode: kurzprofil must fit in at most three short lines; every other section is one short sentence.";
+  }
+
+  if (mode === "detailed") {
+    return "Ausführlicher Modus: höchstens drei knappe Sätze je Abschnitt, weiterhin gut lesbar und ohne Wiederholungen.";
+  }
+  if (mode === "standard") {
+    return "Standardmodus: ein bis zwei knappe Sätze je Abschnitt.";
+  }
+  return "Kurzmodus: kurzprofil in höchstens drei kurzen Zeilen; alle weiteren Abschnitte jeweils nur ein kurzer Satz.";
+}
+
+function buildSystemPrompt(input: {
+  locale: "de" | "en";
+  mode: AnalysisMode;
+  instruction: string;
+}): string {
+  const customInstruction = input.instruction
+    ? input.locale === "en"
+      ? `Additional user instruction: ${input.instruction}`
+      : `Zusätzliche Nutzeranweisung: ${input.instruction}`
+    : "";
+
+  const rules =
+    input.locale === "en"
+      ? [
+          "Create a practical communication overview in English.",
+          "Use only the supplied contact data, notes, contact knowledge, and messages.",
+          "Never infer religion, spirituality, health, psychology, diagnosis, ethnicity, sexuality, politics, or other protected or sensitive attributes.",
+          "Do not present a purchase probability, personality judgment, or emotional state as a fact.",
+          "Do not invent dates, prices, promises, availability, relationships, or events.",
+          "Media attachments may only be mentioned as present; do not claim image analysis.",
+          "Use cautious wording when the evidence is limited.",
+          modeInstruction(input.mode, input.locale),
+          customInstruction,
+          "Return only JSON matching the required schema.",
+        ]
+      : [
+          "Erstelle eine praktische Kommunikationsübersicht auf Deutsch.",
+          "Nutze ausschließlich die gelieferten Kontaktdaten, Notizen, das Kontaktwissen und die gespeicherten Nachrichten.",
+          "Leite niemals Religion, Spiritualität, Gesundheit, psychologische Diagnosen, Ethnie, Sexualität, Politik oder andere geschützte beziehungsweise sensible Eigenschaften ab.",
+          "Stelle keine Kaufwahrscheinlichkeit, Persönlichkeitswertung oder Stimmung als sichere Tatsache dar.",
+          "Erfinde keine Termine, Preise, Versprechen, Verfügbarkeiten, Beziehungen oder Ereignisse.",
+          "Medien dürfen nur als vorhanden erwähnt werden; behaupte keine Bildanalyse.",
+          "Formuliere bei geringer Datenlage ausdrücklich vorsichtig.",
+          modeInstruction(input.mode, input.locale),
+          customInstruction,
+          "Gib ausschließlich JSON im vorgegebenen Schema zurück.",
+        ];
+
+  return rules.filter(Boolean).join("\n");
+}
+
+function outputText(response: OpenAiResponse | null): string {
+  if (response?.output_text) return response.output_text;
+  return (
+    response?.output
+      ?.flatMap((item) => item.content ?? [])
+      .map((item) => item.text)
+      .find((value): value is string => Boolean(value)) ?? ""
+  );
+}
+
+function textValue(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function normalizeReport(
+  value: unknown,
+  fallback: AnalysisReport,
+  mode: AnalysisMode,
+  locale: "de" | "en",
+): AnalysisReport {
+  const parsed =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+
+  return {
+    kurzprofil: textValue(parsed.kurzprofil, fallback.kurzprofil),
+    kommunikationsstil: textValue(
+      parsed.kommunikationsstil,
+      fallback.kommunikationsstil,
+    ),
+    stimmung: textValue(parsed.stimmung, fallback.stimmung),
+    interessen_trigger: textValue(
+      parsed.interessen_trigger,
+      fallback.interessen_trigger,
+    ),
+    kauf_reaktion: textValue(parsed.kauf_reaktion, fallback.kauf_reaktion),
+    antwortstil: textValue(parsed.antwortstil, fallback.antwortstil),
+    no_gos: textValue(parsed.no_gos, fallback.no_gos),
+    language: locale,
+    analysis_mode: mode,
+  };
+}
+
+export async function analyzeFanCommunication(
+  _previousState: FanAnalysisActionState,
+  formData: FormData,
+): Promise<FanAnalysisActionState> {
+  const contactId = formValue(formData, "contact_id");
+  const locale = formValue(formData, "locale") === "en" ? "en" : "de";
+  const mode = resolveMode(formValue(formData, "analysis_mode"));
+  const instruction = formValue(formData, "analysis_instruction").slice(
+    0,
+    MAX_INSTRUCTION_LENGTH,
+  );
+
+  if (!contactId) {
+    return { ok: false, message: "Kontakt fehlt." };
+  }
+
+  const { workspace, user, contact } =
+    await requireContactInAuthorizedWorkspace(contactId);
+  const [messagesResult, memoriesResult] = await Promise.all([
+    getContactConversationMessages(workspace.id, contactId),
+    getContactMemories(workspace.id, contactId),
+  ]);
+
+  if (messagesResult.error) {
+    return { ok: false, message: messagesResult.error.message };
+  }
+  if (memoriesResult.error) {
+    return { ok: false, message: memoriesResult.error.message };
+  }
+
+  const sourceMessages = messagesResult.messages.slice(-50).map((message) => ({
+    direction: message.direction,
+    channel: message.source_platform ?? "manual",
+    origin: message.source_type ?? message.message_type ?? "unknown",
+    author: message.author_label ?? message.original_author_label ?? null,
+    text: message.content || message.original_text_excerpt || "",
+    mediaPresent: Boolean(message.attachments?.length),
+    createdAt: message.created_at,
+  }));
+  const contactKnowledge = memoriesResult.memories.slice(0, 20).map((memory) => ({
+    type: memory.type,
+    content: memory.content,
+    importance: memory.importance,
+    createdAt: memory.created_at,
+  }));
+  const lowDataHint =
+    sourceMessages.length < 3
+      ? locale === "en"
+        ? "Only a small amount of message context is available."
+        : "Es ist erst wenig Nachrichtenkontext vorhanden."
+      : "";
+  const fallback = fallbackReport(locale, mode, lowDataHint);
+  const payload = {
+    language: locale,
+    analysisMode: mode,
+    additionalInstruction: instruction || null,
+    contact: {
+      displayName: contact.display_name,
+      handle: contact.handle,
+      sourcePlatform: contact.source_platform,
+      contactLanguage: contact.language,
+      status: contact.status,
+      tags: contact.tags ?? [],
+      summary: contact.summary,
+      internalNotes: contact.internal_notes ?? "",
+    },
+    contactKnowledge,
+    messages: sourceMessages,
+  };
+  const inputChars = JSON.stringify(payload).length;
+  const model = getFanMindAiModel();
+  const apiKey = process.env.OPENAI_API_KEY;
+  const startedAt = Date.now();
+  let report = fallback;
+  let userMessage = lowDataHint;
+
+  if (!apiKey) {
+    userMessage =
+      locale === "en"
+        ? "OpenAI is not configured. A careful interim overview was saved."
+        : "OpenAI ist serverseitig nicht konfiguriert. Eine vorsichtige Zwischenübersicht wurde gespeichert.";
+  } else if (sourceMessages.length > 0) {
+    try {
+      const response = await fetch(OPENAI_RESPONSES_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          store: false,
+          input: [
+            {
+              role: "system",
+              content: buildSystemPrompt({ locale, mode, instruction }),
+            },
+            { role: "user", content: JSON.stringify(payload) },
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "fanmind_communication_overview",
+              strict: true,
+              schema: analysisSchema,
+            },
+          },
+        }),
+        signal: AbortSignal.timeout(ANALYSIS_TIMEOUT_MS),
+      });
+      const responseBody = (await response.json().catch(() => null)) as
+        | OpenAiResponse
+        | null;
+      const text = outputText(responseBody);
+
+      if (!response.ok || !text) {
+        await recordAiUsageEvent({
+          workspaceId: workspace.id,
+          userId: user.id,
+          contactId,
+          feature: "fan_analysis",
+          model,
+          inputChars,
+          outputChars: text.length,
+          status: "error",
+          errorCode: response.ok ? "missing_output" : String(response.status),
+          latencyMs: Date.now() - startedAt,
+          sourceRoute: "src/app/fans/[id]/analysisActions.ts#analyzeFanCommunication",
+        });
+        return {
+          ok: false,
+          message:
+            responseBody?.error?.message ||
+            (locale === "en"
+              ? "The communication overview could not be created."
+              : "Die Kommunikationsübersicht konnte nicht erstellt werden."),
+        };
+      }
+
+      report = normalizeReport(JSON.parse(text), fallback, mode, locale);
+      await recordAiUsageEvent({
+        workspaceId: workspace.id,
+        userId: user.id,
+        contactId,
+        feature: "fan_analysis",
+        model,
+        inputChars,
+        outputChars: text.length,
+        status: "ok",
+        latencyMs: Date.now() - startedAt,
+        sourceRoute: "src/app/fans/[id]/analysisActions.ts#analyzeFanCommunication",
+      });
+      userMessage =
+        locale === "en"
+          ? "Communication overview saved."
+          : "Kommunikationsübersicht gespeichert.";
+    } catch (error) {
+      await recordAiUsageEvent({
+        workspaceId: workspace.id,
+        userId: user.id,
+        contactId,
+        feature: "fan_analysis",
+        model,
+        inputChars,
+        outputChars: 0,
+        status: "error",
+        errorCode:
+          error instanceof SyntaxError
+            ? "invalid_json"
+            : error instanceof Error && error.name === "TimeoutError"
+              ? "timeout"
+              : "exception",
+        latencyMs: Date.now() - startedAt,
+        sourceRoute: "src/app/fans/[id]/analysisActions.ts#analyzeFanCommunication",
+      });
+      return {
+        ok: false,
+        message:
+          locale === "en"
+            ? "The communication overview could not be created. Please try again."
+            : "Die Kommunikationsübersicht konnte nicht erstellt werden. Bitte erneut versuchen.",
+      };
+    }
+  } else {
+    userMessage =
+      locale === "en"
+        ? "No messages are stored yet. A careful interim overview was saved."
+        : "Noch keine Nachrichten gespeichert. Eine vorsichtige Zwischenübersicht wurde gespeichert.";
+  }
+
+  const result = await upsertFanAnalysisReport({
+    workspaceId: workspace.id,
+    contactId,
+    reportJson: report,
+    summary: report.kurzprofil,
+    model:
+      apiKey && sourceMessages.length > 0
+        ? model
+        : apiKey
+          ? "fallback-no-messages"
+          : "fallback-no-api-key",
+    sourceMessageCount: sourceMessages.length,
+  });
+
+  if (result.error) {
+    return { ok: false, message: result.error.message };
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  return {
+    ok: true,
+    message: userMessage,
+    generatedAt: result.report?.generated_at ?? undefined,
+    report: result.report
+      ? {
+          report_json: result.report.report_json as Record<string, unknown> | null,
+          summary: result.report.summary,
+          source_message_count: result.report.source_message_count,
+          generated_at: result.report.generated_at,
+          updated_at: result.report.updated_at,
+        }
+      : null,
+  };
+}
