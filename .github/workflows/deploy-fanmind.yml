@@ -43,6 +43,7 @@ jobs:
           sudo install -o root -g root -m 0750 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs
           sudo install -o root -g root -m 0750 scripts/operations/enqueue-backup-job.mjs /usr/local/lib/fanmind-ops/enqueue-backup-job.mjs
           sudo install -o root -g root -m 0750 scripts/operations/backup-retention.mjs /usr/local/lib/fanmind-ops/backup-retention.mjs
+          sudo install -o root -g root -m 0750 scripts/operations/run-demo-cleanup.mjs /usr/local/lib/fanmind-ops/run-demo-cleanup.mjs
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-enqueue@.service /etc/systemd/system/fanmind-backup-enqueue@.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-retention.service /etc/systemd/system/fanmind-backup-retention.service
@@ -51,6 +52,8 @@ jobs:
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-server_config.timer /etc/systemd/system/fanmind-backup-server_config.timer
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-full.timer /etc/systemd/system/fanmind-backup-full.timer
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-retention.timer /etc/systemd/system/fanmind-backup-retention.timer
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-demo-cleanup.service /etc/systemd/system/fanmind-demo-cleanup.service
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-demo-cleanup.timer /etc/systemd/system/fanmind-demo-cleanup.timer
           sudo systemctl daemon-reload
 
           npm ci --no-audit --no-fund
@@ -90,6 +93,12 @@ jobs:
             sudo systemctl restart fanmind-backup-worker.service
           else
             echo "Backup worker is not active; not starting it."
+          fi
+
+          if sudo systemctl is-enabled --quiet fanmind-demo-cleanup.timer; then
+            sudo systemctl restart fanmind-demo-cleanup.timer
+          else
+            echo "Demo cleanup timer installed but intentionally not enabled yet."
           fi
 
           echo "FanMind deployment finished successfully at $RELEASE_COMMIT."
