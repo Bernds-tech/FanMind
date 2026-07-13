@@ -1,24 +1,42 @@
 import Link from "next/link";
 import styles from "./LegalTopHeader.module.css";
 
-type LegalTopHeaderKey = "impressum" | "datenschutz" | "agb" | "zahlungsbedingungen";
+type LegalTopHeaderKey =
+  | "impressum"
+  | "datenschutz"
+  | "avv"
+  | "agb"
+  | "zahlungsbedingungen";
 
 type LegalTopHeaderProps = {
   active: LegalTopHeaderKey;
 };
 
-const legalNavigation: Array<{ href: string; label: string; key: LegalTopHeaderKey }> = [
+const legalNavigation: Array<{
+  href: string;
+  label: string;
+  key: LegalTopHeaderKey;
+}> = [
   { href: "/impressum", label: "Impressum", key: "impressum" },
   { href: "/datenschutz", label: "Datenschutz", key: "datenschutz" },
+  { href: "/avv", label: "AVV", key: "avv" },
   { href: "/agb", label: "AGB", key: "agb" },
-  { href: "/zahlungsbedingungen", label: "Zahlungsbedingungen", key: "zahlungsbedingungen" },
+  {
+    href: "/zahlungsbedingungen",
+    label: "Zahlungsbedingungen",
+    key: "zahlungsbedingungen",
+  },
 ];
 
 export default function LegalTopHeader({ active }: LegalTopHeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link className={styles.logoLink} href="/" aria-label="Zur FanMind Startseite">
+        <Link
+          className={styles.logoLink}
+          href="/"
+          aria-label="Zur FanMind Startseite"
+        >
           <span>Fan</span>Mind
         </Link>
         <nav className={styles.nav} aria-label="Rechtsseiten Navigation">
