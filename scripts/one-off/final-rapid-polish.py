@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -22,78 +21,153 @@ def replace_once(text: str, old: str, new: str, *, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def replace_all(text: str, old: str, new: str, *, label: str, minimum: int = 1) -> str:
-    count = text.count(old)
-    if count < minimum:
-        raise SystemExit(f"{label}: expected at least {minimum} occurrence(s), found {count}")
-    return text.replace(old, new)
-
-
-def append_once(text: str, marker: str, addition: str, *, label: str) -> str:
+def append_once(text: str, addition: str) -> str:
     if addition.strip() in text:
         return text
-    if marker not in text:
-        raise SystemExit(f"{label}: append marker not found")
     return text.rstrip() + "\n\n" + addition.strip() + "\n"
 
 
 # ---------------------------------------------------------------------------
-# Contact detail: real author labels, truthful timeline name and overlap guards.
+# Contact detail: truthful naming, real author labels and overlap guards.
 # ---------------------------------------------------------------------------
 path = "src/app/fans/[id]/page.tsx"
 text = read(path)
 text = replace_once(
     text,
-    """          <FanDetailContent\n            contact={contact}\n""",
-    """          <FanDetailContent\n            workspaceName={workspace.name}\n            contact={contact}\n""",
+    """          <FanDetailContent
+            contact={contact}
+""",
+    """          <FanDetailContent
+            workspaceName={workspace.name}
+            contact={contact}
+""",
     label="contact detail prop",
 )
 text = replace_once(
     text,
-    """function FanDetailContent({\n  contact,\n""",
-    """function FanDetailContent({\n  workspaceName,\n  contact,\n""",
+    """function FanDetailContent({
+  contact,
+""",
+    """function FanDetailContent({
+  workspaceName,
+  contact,
+""",
     label="contact detail destructuring",
 )
 text = replace_once(
     text,
-    """}: {\n  contact: ContactRow;\n""",
-    """}: {\n  workspaceName: string;\n  contact: ContactRow;\n""",
+    """  demoConnectionsDisabled,
+  locale,
+}: {
+  contact: ContactRow;
+""",
+    """  demoConnectionsDisabled,
+  locale,
+}: {
+  workspaceName: string;
+  contact: ContactRow;
+""",
     label="contact detail type",
 )
 text = replace_once(
     text,
-    """  const timeline = filteredMessages.length\n    ? buildMessageTimeline(filteredMessages, contact, facebookReplyTarget)\n    : [];\n""",
-    """  const timeline = filteredMessages.length\n    ? buildMessageTimeline(\n        filteredMessages,\n        contact,\n        facebookReplyTarget,\n        workspaceName,\n        locale,\n      )\n    : [];\n""",
+    """  const timeline = filteredMessages.length
+    ? buildMessageTimeline(filteredMessages, contact, facebookReplyTarget)
+    : [];
+""",
+    """  const timeline = filteredMessages.length
+    ? buildMessageTimeline(
+        filteredMessages,
+        contact,
+        facebookReplyTarget,
+        workspaceName,
+        locale,
+      )
+    : [];
+""",
     label="timeline call",
 )
 text = replace_once(
     text,
-    """              <strong>Team Inbox</strong>\n""",
-    """              <strong>\n                {workspaceName ||\n                  (locale === \"en\" ? \"Workspace team\" : \"Workspace-Team\")}\n              </strong>\n""",
+    """              <strong>Team Inbox</strong>
+""",
+    """              <strong>
+                {workspaceName ||
+                  (locale === "en" ? "Workspace team" : "Workspace-Team")}
+              </strong>
+""",
     label="owner label",
 )
 text = replace_once(
     text,
-    """          aria-label={wt(locale, \"Kanalübergreifender Verlauf\")}\n""",
-    """          aria-label={wt(locale, \"Kanalübergreifender Nachrichtenverlauf\")}\n""",
+    """          aria-label={wt(locale, "Kanalübergreifender Verlauf")}
+""",
+    """          aria-label={wt(locale, "Kanalübergreifender Nachrichtenverlauf")}
+""",
     label="timeline aria",
 )
 text = replace_once(
     text,
-    """                <p className={dashboardStyles.eyebrow}>\n                  Unified Inbox Timeline\n                </p>\n                <h3>{wt(locale, \"Kanalübergreifender Verlauf\")}</h3>\n""",
-    """                <p className={dashboardStyles.eyebrow}>\n                  {wt(locale, \"Nachrichtenverlauf\")}\n                </p>\n                <h3>{wt(locale, \"Kanalübergreifender Nachrichtenverlauf\")}</h3>\n""",
+    """                <p className={dashboardStyles.eyebrow}>
+                  Unified Inbox Timeline
+                </p>
+                <h3>{wt(locale, "Kanalübergreifender Verlauf")}</h3>
+""",
+    """                <p className={dashboardStyles.eyebrow}>
+                  {wt(locale, "Nachrichtenverlauf")}
+                </p>
+                <h3>{wt(locale, "Kanalübergreifender Nachrichtenverlauf")}</h3>
+""",
     label="timeline heading",
 )
 text = replace_once(
     text,
-    """                    className={`${styles.message} ${item.direction === \"Fan\" ? styles.messageFan : styles.messageTeam}`}\n""",
-    """                    className={`${styles.message} ${item.directionKind === \"inbound\" ? styles.messageFan : styles.messageTeam}`}\n""",
+    """                    className={`${styles.message} ${item.direction === "Fan" ? styles.messageFan : styles.messageTeam}`}
+""",
+    """                    className={`${styles.message} ${item.directionKind === "inbound" ? styles.messageFan : styles.messageTeam}`}
+""",
     label="timeline direction class",
 )
 text = replace_once(
     text,
-    """function buildMessageTimeline(\n  messages: ConversationMessageRow[],\n  contact: ContactRow,\n  facebookReplyTarget: ContactReplyTargetRow | null,\n) {\n  return messages.map((message) => ({\n    id: message.id,\n    createdAt: message.created_at,\n    avatar:\n      message.direction === \"inbound\"\n        ? \"F\"\n        : message.direction === \"note\"\n          ? \"N\"\n          : \"T\",\n    direction: formatDirection(message.direction, message.author_label),\n""",
-    """function buildMessageTimeline(\n  messages: ConversationMessageRow[],\n  contact: ContactRow,\n  facebookReplyTarget: ContactReplyTargetRow | null,\n  workspaceName: string,\n  locale: FanMindLanguage,\n) {\n  return messages.map((message) => ({\n    id: message.id,\n    createdAt: message.created_at,\n    avatar:\n      message.direction === \"inbound\"\n        ? (contact.display_name || contact.handle || \"K\")\n            .trim()\n            .charAt(0)\n            .toUpperCase()\n        : message.direction === \"note\"\n          ? \"N\"\n          : (workspaceName || \"T\").trim().charAt(0).toUpperCase(),\n    directionKind: message.direction,\n    direction: formatTimelineDirection(message, contact, workspaceName, locale),\n""",
+    """function buildMessageTimeline(
+  messages: ConversationMessageRow[],
+  contact: ContactRow,
+  facebookReplyTarget: ContactReplyTargetRow | null,
+) {
+  return messages.map((message) => ({
+    id: message.id,
+    createdAt: message.created_at,
+    avatar:
+      message.direction === "inbound"
+        ? "F"
+        : message.direction === "note"
+          ? "N"
+          : "T",
+    direction: formatDirection(message.direction, message.author_label),
+""",
+    """function buildMessageTimeline(
+  messages: ConversationMessageRow[],
+  contact: ContactRow,
+  facebookReplyTarget: ContactReplyTargetRow | null,
+  workspaceName: string,
+  locale: FanMindLanguage,
+) {
+  return messages.map((message) => ({
+    id: message.id,
+    createdAt: message.created_at,
+    avatar:
+      message.direction === "inbound"
+        ? (contact.display_name || contact.handle || "K")
+            .trim()
+            .charAt(0)
+            .toUpperCase()
+        : message.direction === "note"
+          ? "N"
+          : (workspaceName || "T").trim().charAt(0).toUpperCase(),
+    directionKind: message.direction,
+    direction: formatTimelineDirection(message, contact, workspaceName, locale),
+""",
     label="timeline builder",
 )
 helper = """
@@ -159,7 +233,6 @@ path = "src/app/fans/[id]/fan-detail.module.css"
 text = read(path)
 text = append_once(
     text,
-    ".detailStack",
     """
 /* Final overlap guard for narrow laptops, zoomed browsers and long labels. */
 .contactHeaderTop,
@@ -209,29 +282,26 @@ text = append_once(
   }
 }
 """,
-    label="contact detail css",
 )
 write(path, text)
 
 
 # ---------------------------------------------------------------------------
-# Landing page/customer language: one roadmap, no customer-facing MVP jargon,
-# privacy wording without a blanket guarantee, and Kontaktwissen terminology.
+# Landing page/customer language.
 # ---------------------------------------------------------------------------
 path = "src/app/landing-v2/page.tsx"
 text = read(path)
-replacements = [
-    ('{ label: "MVP", href: "#features" }', '{ label: "Funktionen", href: "#features" }'),
-    ('title: "Ehrliche Roadmap"', 'title: "Roadmap"'),
-    ('title: "CSV-Import & Memory"', 'title: "CSV-Import & Kontaktwissen"'),
-    ('"DSGVO-konform gedacht"', '"Datenschutzorientiert entwickelt"'),
-]
-for old, new in replacements:
-    text = replace_once(text, old, new, label=f"landing replacement {old}")
+for old, new, label in [
+    ('{ label: "MVP", href: "#features" }', '{ label: "Funktionen", href: "#features" }', "landing navigation"),
+    ('title: "Ehrliche Roadmap"', 'title: "Roadmap"', "roadmap title"),
+    ('title: "CSV-Import & Memory"', 'title: "CSV-Import & Kontaktwissen"', "contact knowledge feature"),
+    ('"DSGVO-konform gedacht"', '"Datenschutzorientiert entwickelt"', "privacy wording"),
+]:
+    text = replace_once(text, old, new, label=label)
 text = text.replace("Fan-Gedächtnis", "Kontaktwissen")
-text = text.replace("MVP-Kern", "Produktkern")
 text = text.replace("MVP-Workspace", "Workspace")
 text = text.replace("MVP-Ansicht", "aktuelle Ansicht")
+text = text.replace("MVP-Kern", "Produktkern")
 text = text.replace("keine Vollsuite im MVP", "keine Vollsuite in der aktuellen Version")
 text = text.replace("im MVP", "in der aktuellen Version")
 write(path, text)
@@ -239,20 +309,25 @@ write(path, text)
 path = "src/lib/fanmindCopy.ts"
 text = read(path)
 text = text.replace("Fan-Gedächtnis", "Kontaktwissen")
+text = text.replace("Fan memory", "Contact knowledge")
 text = text.replace("fan memory", "contact knowledge")
 text = text.replace("AI-Infos / Kontaktwissen", "Kontaktwissen")
 text = text.replace("AI info / contact knowledge", "Contact knowledge")
 text = text.replace("Fan-Analyse-Report", "Kommunikationsübersicht")
+text = text.replace("Fan analysis report", "Communication overview")
 text = text.replace("fan analysis report", "communication overview")
-text = text.replace("MVP-Kern", "Produktkern")
-text = text.replace("MVP core", "product core")
 text = text.replace("MVP-Workspace", "Workspace")
 text = text.replace("MVP workspace", "workspace")
+text = text.replace("MVP-Kern", "Produktkern")
+text = text.replace("MVP core", "product core")
 text = text.replace("keine Vollsuite im MVP", "keine Vollsuite in der aktuellen Version")
 text = text.replace("no full suite in the MVP", "no full suite in the current version")
 text = text.replace("im MVP", "in der aktuellen Version")
 text = text.replace("in the MVP", "in the current version")
-text = text.replace('"DSGVO-konform gedacht": "Designed with GDPR in mind"', '"Datenschutzorientiert entwickelt": "Designed with privacy in mind"')
+text = text.replace(
+    '"DSGVO-konform gedacht": "Designed with GDPR in mind"',
+    '"Datenschutzorientiert entwickelt": "Designed with privacy in mind"',
+)
 text = replace_once(
     text,
     '  "Produkt": "Product",\n',
@@ -274,46 +349,148 @@ write(path, text)
 
 
 # ---------------------------------------------------------------------------
-# AI tiers: Standard included, Plus paid upgrade, Ultra higher-priced premium.
-# Prices/credits remain intentionally undecided until commercial approval.
+# KI Standard/Plus/Ultra as included / paid / premium add-ons.
 # ---------------------------------------------------------------------------
 path = "src/app/settings/AccountSections.tsx"
 text = read(path)
 text = text.replace("mailto:hello@fanmind.ch", "mailto:kontakt@fanmind.ch")
 text = replace_once(
     text,
-    """  {\n    key: \"ai_standard\",\n    name: \"KI Standard\",\n    purpose: \"Antwortvorschläge für den normalen CRM-Alltag.\",\n    status: \"Aktiv\",\n    price: \"inklusive nach Paket\",\n    features: [\"Basis-KI\", \"Antwortvorschläge\", \"CRM-Workflow\"],\n  },\n""",
-    """  {\n    key: \"ai_standard\",\n    name: \"KI Standard\",\n    purpose:\n      \"Im Basispaket enthaltene KI für Antwortvorschläge, Kontaktwissen und Follow-ups.\",\n    status: \"Aktiv\",\n    price: \"im Basispaket enthalten\",\n    features: [\n      \"Standard-Kontingent\",\n      \"Antwortvorschläge\",\n      \"Kontaktwissen & Follow-ups\",\n      \"manuelle Prüfung vor dem Versand\",\n    ],\n  },\n""",
-    label="AI standard card",
+    """  {
+    key: "ai_standard",
+    name: "KI Standard",
+    purpose: "Antwortvorschläge für den normalen CRM-Alltag.",
+    status: "Aktiv",
+    price: "inklusive nach Paket",
+    features: ["Basis-KI", "Antwortvorschläge", "CRM-Workflow"],
+  },
+""",
+    """  {
+    key: "ai_standard",
+    name: "KI Standard",
+    purpose:
+      "Im Basispaket enthaltene KI für Antwortvorschläge, Kontaktwissen und Follow-ups.",
+    status: "Aktiv",
+    price: "im Basispaket enthalten",
+    features: [
+      "Standard-Kontingent",
+      "Antwortvorschläge",
+      "Kontaktwissen & Follow-ups",
+      "manuelle Prüfung vor dem Versand",
+    ],
+  },
+""",
+    label="KI Standard card",
 )
 text = replace_once(
     text,
-    """  {\n    key: \"ai_plus\",\n    name: \"KI Plus\",\n    purpose:\n      \"Mehr Vorschläge, feinere Memory- und Follow-up-Unterstützung nach manueller Freigabe.\",\n    status: \"Auf Anfrage\",\n    price: \"auf Anfrage\",\n    features: [\"manuelle Prüfung\", \"keine automatische Buchung\"],\n    showComingSoonMark: true,\n  },\n""",
-    """  {\n    key: \"ai_plus\",\n    name: \"KI Plus\",\n    purpose:\n      \"Kostenpflichtige Erweiterung mit leistungsstärkerer KI, mehr Nutzung und größerem Gesprächskontext.\",\n    status: \"Coming Soon\",\n    price: \"Zusatzpreis wird vor Freigabe festgelegt\",\n    features: [\n      \"leistungsstärkere Modellklasse\",\n      \"höheres KI-Kontingent\",\n      \"größerer Gesprächskontext\",\n      \"weiterhin manuelle Freigabe\",\n    ],\n    showComingSoonMark: true,\n  },\n""",
-    label="AI plus card",
+    """  {
+    key: "ai_plus",
+    name: "KI Plus",
+    purpose:
+      "Mehr Vorschläge, feinere Memory- und Follow-up-Unterstützung nach manueller Freigabe.",
+    status: "Auf Anfrage",
+    price: "auf Anfrage",
+    features: ["manuelle Prüfung", "keine automatische Buchung"],
+    showComingSoonMark: true,
+  },
+""",
+    """  {
+    key: "ai_plus",
+    name: "KI Plus",
+    purpose:
+      "Kostenpflichtige Erweiterung mit leistungsstärkerer KI, mehr Nutzung und größerem Gesprächskontext.",
+    status: "Coming Soon",
+    price: "Zusatzpreis wird vor Freigabe festgelegt",
+    features: [
+      "leistungsstärkere Modellklasse",
+      "höheres KI-Kontingent",
+      "größerer Gesprächskontext",
+      "weiterhin manuelle Freigabe",
+    ],
+    showComingSoonMark: true,
+  },
+""",
+    label="KI Plus card",
 )
 text = replace_once(
     text,
-    """  {\n    key: \"ai_ultra\",\n    name: \"KI Ultra\",\n    purpose: \"Erweiterter KI-Spielraum für größere Workspaces nach Prüfung.\",\n    status: \"Coming Soon\",\n    price: \"auf Anfrage\",\n    features: [\"Roadmap-Vorschau\", \"spätere Freigabe\"],\n    showComingSoonMark: true,\n  },\n""",
-    """  {\n    key: \"ai_ultra\",\n    name: \"KI Ultra\",\n    purpose:\n      \"Höherpreisige Premium-Erweiterung mit der stärksten freigegebenen KI, den höchsten Kontingenten und erweitertem Funktionsumfang.\",\n    status: \"Coming Soon\",\n    price: \"höherer Zusatzpreis als KI Plus\",\n    features: [\n      \"stärkste freigegebene Modellklasse\",\n      \"höchstes KI-Kontingent\",\n      \"größter Gesprächskontext\",\n      \"keine automatische Sendung\",\n    ],\n    showComingSoonMark: true,\n  },\n""",
-    label="AI ultra card",
+    """  {
+    key: "ai_ultra",
+    name: "KI Ultra",
+    purpose: "Erweiterter KI-Spielraum für größere Workspaces nach Prüfung.",
+    status: "Coming Soon",
+    price: "auf Anfrage",
+    features: ["Roadmap-Vorschau", "spätere Freigabe"],
+    showComingSoonMark: true,
+  },
+""",
+    """  {
+    key: "ai_ultra",
+    name: "KI Ultra",
+    purpose:
+      "Höherpreisige Premium-Erweiterung mit der stärksten freigegebenen KI, den höchsten Kontingenten und erweitertem Funktionsumfang.",
+    status: "Coming Soon",
+    price: "höherer Zusatzpreis als KI Plus",
+    features: [
+      "stärkste freigegebene Modellklasse",
+      "höchstes KI-Kontingent",
+      "größter Gesprächskontext",
+      "keine automatische Sendung",
+    ],
+    showComingSoonMark: true,
+  },
+""",
+    label="KI Ultra card",
 )
 text = replace_once(
     text,
-    """          <p className={profileStyles.invoiceValue}>\n            Vorbereitete Erweiterungen bleiben klar als verfügbar, vorbereitet\n            oder Coming Soon markiert.\n          </p>\n""",
-    """          <p className={profileStyles.invoiceValue}>\n            KI Standard ist im Basispaket enthalten. KI Plus und KI Ultra sind\n            separat berechnete Erweiterungen und bleiben bis zur Preis-,\n            Kontingent- und Billing-Freigabe als Coming Soon markiert.\n          </p>\n""",
+    """          <p className={profileStyles.invoiceValue}>
+            Vorbereitete Erweiterungen bleiben klar als verfügbar, vorbereitet
+            oder Coming Soon markiert.
+          </p>
+""",
+    """          <p className={profileStyles.invoiceValue}>
+            KI Standard ist im Basispaket enthalten. KI Plus und KI Ultra sind
+            separat berechnete Erweiterungen und bleiben bis zur Preis-,
+            Kontingent- und Billing-Freigabe als Coming Soon markiert.
+          </p>
+""",
     label="add-on section copy",
 )
 text = replace_once(
     text,
-    """        {ADD_ON_CARDS.map((addOn) => {\n          const showStatusBadge = addOn.status === \"Aktiv\";\n""",
-    """        {ADD_ON_CARDS.map((addOn) => {\n          const showStatusBadge = true;\n""",
+    """        {ADD_ON_CARDS.map((addOn) => {
+          const showStatusBadge = addOn.status === "Aktiv";
+""",
+    """        {ADD_ON_CARDS.map((addOn) => {
+          const showStatusBadge = true;
+""",
     label="add-on status badges",
 )
 text = replace_once(
     text,
-    """              {addOn.showComingSoonMark ? (\n                <div className={profileStyles.cardMarkSlot}>\n                  <ComingSoonMark\n                    size=\"small\"\n                    className={profileStyles.settingsComingSoonMark}\n                  />\n                </div>\n              ) : (\n                <p className={profileStyles.addOnPrice}>{addOn.price}</p>\n              )}\n""",
-    """              <p className={profileStyles.addOnPrice}>{addOn.price}</p>\n              {addOn.showComingSoonMark ? (\n                <div className={profileStyles.cardMarkSlot}>\n                  <ComingSoonMark\n                    size=\"small\"\n                    className={profileStyles.settingsComingSoonMark}\n                  />\n                </div>\n              ) : null}\n""",
+    """              {addOn.showComingSoonMark ? (
+                <div className={profileStyles.cardMarkSlot}>
+                  <ComingSoonMark
+                    size="small"
+                    className={profileStyles.settingsComingSoonMark}
+                  />
+                </div>
+              ) : (
+                <p className={profileStyles.addOnPrice}>{addOn.price}</p>
+              )}
+""",
+    """              <p className={profileStyles.addOnPrice}>{addOn.price}</p>
+              {addOn.showComingSoonMark ? (
+                <div className={profileStyles.cardMarkSlot}>
+                  <ComingSoonMark
+                    size="small"
+                    className={profileStyles.settingsComingSoonMark}
+                  />
+                </div>
+              ) : null}
+""",
     label="add-on price display",
 )
 write(path, text)
@@ -324,7 +501,7 @@ text = replace_once(
     text,
     '    title: "KI Plus, Ultra & Prompts",\n',
     '    title: "Kostenpflichtige KI-Erweiterungen",\n',
-    label="roadmap AI tier title",
+    label="roadmap KI title",
 )
 text = text.replace(
     '{ label: "KI Plus", state: "later", status: "Roadmap" }',
@@ -338,7 +515,8 @@ write(path, text)
 
 path = "docs/SOURCE_OF_TRUTH.md"
 text = read(path)
-anchor = """Begründung für 312 €/Monat: FanMind ist kein Billig-Tool und der Aufwand liegt in sicherer CRM-Struktur, KI, Memory, Follow-ups, Datenpflege, Demo-Setup, Support, Security/RLS und späterer kontrollierter Integrationsfähigkeit. Die Preislogik soll diesen Arbeitsaufwand und B2B-Charakter widerspiegeln.\n"""
+anchor = """Begründung für 312 €/Monat: FanMind ist kein Billig-Tool und der Aufwand liegt in sicherer CRM-Struktur, KI, Memory, Follow-ups, Datenpflege, Demo-Setup, Support, Security/RLS und späterer kontrollierter Integrationsfähigkeit. Die Preislogik soll diesen Arbeitsaufwand und B2B-Charakter widerspiegeln.
+"""
 addition = """
 
 ### KI-Leistungsstufen / Add-ons
@@ -360,17 +538,28 @@ write(path, text)
 
 
 # ---------------------------------------------------------------------------
-# Truth guardrails for the final visible-polish decisions.
+# Automated truth guardrails.
 # ---------------------------------------------------------------------------
 path = "scripts/verify-product-truth.mjs"
 text = read(path)
 text = replace_once(
     text,
+    '  "src/app/impressum/page.tsx",\n];\n',
+    '  "src/app/impressum/page.tsx",\n  "docs/SOURCE_OF_TRUTH.md",\n];\n',
+    label="truth runtime source-of-truth file",
+)
+text = replace_once(
+    text,
     'forbid(/Fanmind@fanmind\\.ch/u, "Uneinheitliche Anfrageadresse gefunden; nutze kontakt@fanmind.ch.");\n',
-    'forbid(/Fanmind@fanmind\\.ch/u, "Uneinheitliche Anfrageadresse gefunden; nutze kontakt@fanmind.ch.");\nforbid(/hello@fanmind\\.ch/iu, "Uneinheitliche Kontaktadresse gefunden; nutze kontakt@fanmind.ch.");\nforbid(/Ehrliche Roadmap/iu, "Öffentliche Roadmap darf nicht mehrfach oder werblich als Ehrliche Roadmap bezeichnet werden.");\nforbid(/Unified Inbox Timeline/iu, "Nicht aktive Inbox-Synchronisierung darf nicht als Unified Inbox bezeichnet werden.");\n',
+    'forbid(/Fanmind@fanmind\\.ch/u, "Uneinheitliche Anfrageadresse gefunden; nutze kontakt@fanmind.ch.");\nforbid(/hello@fanmind\\.ch/iu, "Uneinheitliche Kontaktadresse gefunden; nutze kontakt@fanmind.ch.");\nforbid(/Ehrliche Roadmap/iu, "Öffentliche Roadmap darf nicht als Ehrliche Roadmap bezeichnet werden.");\nforbid(/Unified Inbox Timeline/iu, "Nicht aktive Inbox-Synchronisierung darf nicht als Unified Inbox bezeichnet werden.");\n',
     label="truth forbidden terms",
 )
-insert_anchor = """requireText(\n  \"src/lib/referrals.ts\",\n  \"REFERRAL_GROWTH_WINDOW_CAP = 2000\",\n  \"Das Referral Growth Window muss bei 2.000 aktiven zahlenden Workspaces gedeckelt sein.\",\n);\n"""
+insert_anchor = """requireText(
+  "src/lib/referrals.ts",
+  "REFERRAL_GROWTH_WINDOW_CAP = 2000",
+  "Das Referral Growth Window muss bei 2.000 aktiven zahlenden Workspaces gedeckelt sein.",
+);
+"""
 insert = insert_anchor + """
 requireText(
   "src/app/settings/AccountSections.tsx",
@@ -388,12 +577,9 @@ requireText(
   "Die Source of Truth muss die beschlossenen KI-Leistungsstufen dokumentieren.",
 );
 """
-text = replace_once(text, insert_anchor, insert, label="truth AI tier checks")
+text = replace_once(text, insert_anchor, insert, label="truth KI tier checks")
 write(path, text)
 
-
-# Report residual customer-facing terms. These are warnings for manual review,
-# not automatic replacements of internal identifiers/document history.
 checks = {
     "src/app/landing-v2/page.tsx": ["Ehrliche Roadmap", "Unified Inbox Timeline", 'label: "MVP"'],
     "src/app/fans/[id]/page.tsx": ["Unified Inbox Timeline", "Team Inbox"],
