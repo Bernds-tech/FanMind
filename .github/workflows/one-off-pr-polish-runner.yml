@@ -28,6 +28,40 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      - name: Correct one-off selector
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/one-off/final-rapid-polish.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''text = replace_once(
+              text,
+              """}: {
+            contact: ContactRow;
+          """,
+              """}: {
+            workspaceName: string;
+            contact: ContactRow;
+          """,
+              label="contact detail type",
+          )'''
+          new = '''text = text.replace(
+              """}: {
+            contact: ContactRow;
+          """,
+              """}: {
+            workspaceName: string;
+            contact: ContactRow;
+          """,
+              1,
+          )'''
+          if old not in text:
+              raise SystemExit("runtime correction target not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
       - name: Apply deterministic codemod
         id: codemod
         shell: bash
