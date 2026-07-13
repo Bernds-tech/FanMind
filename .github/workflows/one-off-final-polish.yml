@@ -1,5 +1,6 @@
 name: One-off final FanMind polish
 
+# Second push after workflow installation triggers the deterministic codemod.
 on:
   push:
     branches:
