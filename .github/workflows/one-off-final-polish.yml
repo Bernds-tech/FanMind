@@ -1,0 +1,56 @@
+name: One-off final FanMind polish
+
+on:
+  push:
+    branches:
+      - fix/final-rapid-polish-20260713
+    paths:
+      - .github/workflows/one-off-final-polish.yml
+      - scripts/one-off/final-rapid-polish.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout polish branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/final-rapid-polish-20260713
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply deterministic codemod
+        run: python3 scripts/one-off/final-rapid-polish.py
+
+      - name: Validate patch shape
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Commit generated source changes
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/app/fans/[id]/page.tsx \
+            src/app/fans/[id]/fan-detail.module.css \
+            src/lib/workspaceCopy.ts \
+            src/app/landing-v2/page.tsx \
+            src/lib/fanmindCopy.ts \
+            src/app/impressum/page.tsx \
+            src/app/settings/AccountSections.tsx \
+            src/config/roadmap.ts \
+            docs/SOURCE_OF_TRUTH.md \
+            scripts/verify-product-truth.mjs
+          git commit -m "fix: finish visible product polish [skip ci]"
+          git push origin HEAD:fix/final-rapid-polish-20260713
