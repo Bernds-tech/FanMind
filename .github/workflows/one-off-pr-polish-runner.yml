@@ -16,7 +16,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.number == 562 &&
-      github.event.comment.body == '/run-final-polish-20260713-5')
+      github.event.comment.body == '/run-final-polish-20260713-6')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -29,19 +29,58 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Normalize public-label replacements
+      - name: Normalize codemod selectors
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
           path = Path("scripts/one-off/final-rapid-polish.py")
-          text = path.read_text(encoding="utf-8")
-          old = '    text = replace_once(text, old, new, label=label)\n'
-          new = '    text = text.replace(old, new)\n'
-          if old not in text:
+          script = path.read_text(encoding="utf-8")
+
+          landing_old = '    text = replace_once(text, old, new, label=label)\n'
+          landing_new = '    text = text.replace(old, new)\n'
+          if landing_old not in script:
               raise SystemExit("landing replacement loop not found")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          script = script.replace(landing_old, landing_new, 1)
+
+          block_start = script.find(
+              "text = replace_once(\n    text,\n    'forbid(/Fanmind@fanmind"
+          )
+          if block_start < 0:
+              raise SystemExit("truth forbidden-term codemod block not found")
+          block_end_marker = '    label="truth forbidden terms",\n)\n'
+          block_end = script.find(block_end_marker, block_start)
+          if block_end < 0:
+              raise SystemExit("truth forbidden-term codemod block end not found")
+          block_end += len(block_end_marker)
+
+          robust_truth_block = r'''truth_anchor = r"""forbid(
+            /Fanmind@fanmind\.ch/u,
+            "Uneinheitliche Anfrageadresse gefunden; nutze kontakt@fanmind.ch.",
+          );
+          """
+          truth_addition = truth_anchor + r"""forbid(
+            /hello@fanmind\.ch/iu,
+            "Uneinheitliche Kontaktadresse gefunden; nutze kontakt@fanmind.ch.",
+          );
+          forbid(
+            /Ehrliche Roadmap/iu,
+            "Öffentliche Roadmap darf nicht als Ehrliche Roadmap bezeichnet werden.",
+          );
+          forbid(
+            /Unified Inbox Timeline/iu,
+            "Nicht aktive Inbox-Synchronisierung darf nicht als Unified Inbox bezeichnet werden.",
+          );
+          """
+          if r"/hello@fanmind\.ch/iu" not in text:
+              if truth_anchor not in text:
+                  raise SystemExit("truth forbidden-term anchor missing")
+              text = text.replace(truth_anchor, truth_addition, 1)
+          '''
+
+          script = script[:block_start] + robust_truth_block + script[block_end:]
+          path.write_text(script, encoding="utf-8")
           PY
 
       - name: Apply deterministic codemod
