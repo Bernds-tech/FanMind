@@ -65,12 +65,12 @@ jobs:
 
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             if curl -fsSL --max-time 15 https://fanmind.ch/login -o /dev/null; then
-              echo "Initial health check passed."
+              echo "Health check passed."
               break
             fi
 
             if [ "$attempt" = "10" ]; then
-              echo "Initial health check failed after 10 attempts." >&2
+              echo "Health check failed after 10 attempts." >&2
               curl -I https://fanmind.ch/login || true
               curl -L https://fanmind.ch/login -o /dev/null -w 'HTTP_STATUS=%{http_code}\n' || true
               exit 1
