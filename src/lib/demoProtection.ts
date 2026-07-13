@@ -24,11 +24,23 @@ export type DemoClaimResult = {
   error: string | null;
 };
 
+export type DemoCleanupCandidate = {
+  sessionId: string;
+  authUserId: string | null;
+  workspaceId: string | null;
+};
+
 type DemoClaimRow = {
   decision: DemoClaimDecision;
   reservation_id: string | null;
   retry_after_seconds: number | null;
   active_count: number | null;
+};
+
+type DemoCleanupRow = {
+  session_id: string;
+  auth_user_id: string | null;
+  workspace_id: string | null;
 };
 
 type TurnstileResponse = {
@@ -53,8 +65,34 @@ function protectionSecret(): string | null {
   return value && value.length >= 32 ? value : null;
 }
 
+function cleanupSecret(): string | null {
+  const value = process.env.FANMIND_DEMO_CLEANUP_SECRET?.trim();
+  return value && value.length >= 32 ? value : null;
+}
+
+function timingSafeTextEqual(expected: string, actual: string): boolean {
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  const actualBuffer = Buffer.from(actual, "utf8");
+  return (
+    expectedBuffer.length === actualBuffer.length &&
+    crypto.timingSafeEqual(expectedBuffer, actualBuffer)
+  );
+}
+
 export function publicDemoEnabled(): boolean {
   return process.env.FANMIND_PUBLIC_DEMO_ENABLED === "true";
+}
+
+export function demoCleanupAuthorized(authorization: string | null): boolean {
+  const secret = cleanupSecret();
+  if (!secret) return false;
+
+  const value = authorization?.trim() ?? "";
+  if (!value.startsWith("Bearer ")) return false;
+  const supplied = value.slice("Bearer ".length).trim();
+  if (!supplied) return false;
+
+  return timingSafeTextEqual(secret, supplied);
 }
 
 export function getTrustedClientIp(request: NextRequest): string {
@@ -96,6 +134,7 @@ async function callDemoRpc<T>(
       headers: getSupabaseHeaders(key),
       body: JSON.stringify(body),
       cache: "no-store",
+      signal: AbortSignal.timeout(12000),
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
@@ -255,4 +294,47 @@ export async function failPublicDemoStart(
     p_reservation_id: reservationId,
     p_error_code: errorCode.slice(0, 200),
   });
+}
+
+export async function claimExpiredDemoCleanup(
+  requestedLimit = 25,
+): Promise<{ candidates: DemoCleanupCandidate[]; error: string | null }> {
+  const normalizedLimit = Number.isFinite(requestedLimit)
+    ? Math.max(1, Math.min(Math.floor(requestedLimit), 100))
+    : 25;
+  const result = await callDemoRpc<DemoCleanupRow>("claim_expired_demo_cleanup", {
+    p_limit: normalizedLimit,
+  });
+  if (result.error) return { candidates: [], error: result.error };
+
+  return {
+    candidates: result.rows
+      .filter((row) => Boolean(row.session_id))
+      .map((row) => ({
+        sessionId: row.session_id,
+        authUserId: row.auth_user_id ?? null,
+        workspaceId: row.workspace_id ?? null,
+      })),
+    error: null,
+  };
+}
+
+export async function completeDemoCleanup(input: {
+  sessionId: string;
+  success: boolean;
+  errorCode?: string | null;
+}): Promise<{ ok: boolean; error: string | null }> {
+  const result = await callDemoRpc<boolean>("complete_demo_cleanup", {
+    p_session_id: input.sessionId,
+    p_success: input.success,
+    p_error_code: input.errorCode?.slice(0, 200) ?? null,
+  });
+  if (result.error) return { ok: false, error: result.error };
+  if (result.rows[0] !== true) {
+    return {
+      ok: false,
+      error: "Cleanup-Status konnte nicht aktualisiert werden.",
+    };
+  }
+  return { ok: true, error: null };
 }
