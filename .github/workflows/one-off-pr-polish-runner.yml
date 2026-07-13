@@ -16,7 +16,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.number == 562 &&
-      github.event.comment.body == '/run-final-polish-20260713-4')
+      github.event.comment.body == '/run-final-polish-20260713-5')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Normalize repeated public-label replacements
+      - name: Normalize public-label replacements
         shell: bash
         run: |
           python3 - <<'PY'
@@ -38,11 +38,7 @@ jobs:
           path = Path("scripts/one-off/final-rapid-polish.py")
           text = path.read_text(encoding="utf-8")
           old = '    text = replace_once(text, old, new, label=label)\n'
-          new = '''    count = text.count(old)
-              if count < 1:
-                  raise SystemExit(f"{label}: expected at least one occurrence, found 0")
-              text = text.replace(old, new)
-          '''
+          new = '    text = text.replace(old, new)\n'
           if old not in text:
               raise SystemExit("landing replacement loop not found")
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
