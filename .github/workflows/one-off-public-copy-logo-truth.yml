@@ -1,0 +1,61 @@
+name: One-off public copy and logo truth polish
+
+on:
+  push:
+    branches:
+      - fix/public-copy-logo-truth-20260713
+    paths:
+      - .github/workflows/one-off-public-copy-logo-truth.yml
+      - scripts/one-off/public-copy-logo-truth.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout polish branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/public-copy-logo-truth-20260713
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply deterministic public-copy polish
+        run: python3 scripts/one-off/public-copy-logo-truth.py
+
+      - name: Validate generated patch
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Commit generated source changes and remove one-off helpers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            src/app/landing-v2/page.tsx \
+            src/app/landing-v2/FaqAccordion.tsx \
+            src/lib/fanmindCopy.ts \
+            src/app/brandMetadata.ts \
+            src/app/opengraph-image.tsx \
+            src/app/impressum/page.tsx \
+            src/components/PlatformLogo.module.css \
+            scripts/verify-product-truth.mjs \
+            docs/SOURCE_OF_TRUTH.md
+
+          git rm \
+            .github/workflows/one-off-public-copy-logo-truth.yml \
+            scripts/one-off/public-copy-logo-truth.py
+
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+
+          git commit -m "fix: finish public terminology and channel-logo consistency"
+          git push origin HEAD:fix/public-copy-logo-truth-20260713
