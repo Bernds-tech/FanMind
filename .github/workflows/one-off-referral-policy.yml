@@ -1,0 +1,75 @@
+name: One-off referral policy integration
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'test/referral-policy-guardrails-20260713'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout referral policy branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/referral-policy-guardrails-20260713
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply referral policy integration
+        id: codemod
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/one-off/referral-policy-refactor.py > /tmp/referral-policy.log 2>&1
+          status=$?
+          cat /tmp/referral-policy.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Report integration failure
+        if: steps.codemod.outputs.status != '0'
+        shell: bash
+        run: |
+          {
+            echo '## Referral-Policy-Integration fehlgeschlagen'
+            echo
+            echo '```text'
+            tail -n 120 /tmp/referral-policy.log
+            echo '```'
+          } > /tmp/referral-policy-comment.md
+          gh pr comment 566 --repo "$GITHUB_REPOSITORY" --body-file /tmp/referral-policy-comment.md
+          exit 1
+
+      - name: Validate generated patch
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Commit integration and remove helpers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            src/lib/referrals.ts \
+            scripts/verify-product-truth.mjs
+
+          git rm \
+            .github/workflows/one-off-referral-policy.yml \
+            scripts/one-off/referral-policy-refactor.py
+
+          git commit -m "test: enforce referral policy in code and CI"
+          git push origin HEAD:test/referral-policy-guardrails-20260713
