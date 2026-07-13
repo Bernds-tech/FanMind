@@ -36,6 +36,7 @@ jobs:
             echo "Invalid release commit from git rev-parse HEAD." >&2
             exit 1
           fi
+          export FANMIND_RELEASE_COMMIT="$RELEASE_COMMIT"
 
           sudo install -d -o root -g root -m 0700 /usr/local/lib/fanmind-ops
           sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh
@@ -53,6 +54,8 @@ jobs:
           sudo systemctl daemon-reload
 
           npm ci --no-audit --no-fund
+          npm run verify:truth
+          npm run lint
           npm run build
 
           pm2 restart fanmind --update-env
@@ -67,15 +70,19 @@ jobs:
             fi
 
             if [ "$attempt" = "10" ]; then
-              echo "Health check failed after 10 attempts."
+              echo "Health check failed after 10 attempts." >&2
               curl -I https://fanmind.ch/login || true
               curl -L https://fanmind.ch/login -o /dev/null -w 'HTTP_STATUS=%{http_code}\n' || true
               exit 1
             fi
 
-            echo "Health check not ready yet, retrying..."
+            echo "Application not ready yet, retrying..."
             sleep 3
           done
+
+          FANMIND_SMOKE_BASE_URL="https://fanmind.ch" \
+          FANMIND_EXPECTED_RELEASE_COMMIT="$RELEASE_COMMIT" \
+          npm run smoke:public
 
           sudo /usr/local/lib/fanmind-ops/write-backup-release-env.sh "$RELEASE_COMMIT"
 
@@ -85,4 +92,4 @@ jobs:
             echo "Backup worker is not active; not starting it."
           fi
 
-          echo "FanMind deployment finished successfully."
+          echo "FanMind deployment finished successfully at $RELEASE_COMMIT."
