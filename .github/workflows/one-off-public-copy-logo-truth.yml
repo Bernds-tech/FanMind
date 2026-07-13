@@ -1,19 +1,20 @@
 name: One-off public copy and logo truth polish
 
 on:
-  push:
+  pull_request:
     branches:
-      - fix/public-copy-logo-truth-20260713
-    paths:
-      - .github/workflows/one-off-public-copy-logo-truth.yml
-      - scripts/one-off/public-copy-logo-truth.py
+      - main
+    types:
+      - opened
+      - reopened
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'fix/public-copy-logo-truth-20260713'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
