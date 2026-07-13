@@ -183,8 +183,13 @@ requireText(
 
 forbidIn(
   "src/app/landing-v2/page.tsx",
-  /(?:Fan-Analyse-Report|Memory|MVP-Workflow|MVP-Workspace|DSGVO-konform)/iu,
+  /(?:Fan-Analyse-Report|Memory|\bMVP\b|DSGVO-konform)/iu,
   "Öffentliche Landingpage enthält veraltete oder missverständliche Produktbegriffe.",
+);
+forbidIn(
+  "src/lib/fanmindCopy.ts",
+  /(?:Fan-Analyse-Report|Fan analysis report|Memory|\bMVP\b|DSGVO-konform)/iu,
+  "Öffentliche Übersetzungen enthalten veraltete oder missverständliche Produktbegriffe.",
 );
 forbidIn(
   "src/app/landing-v2/FaqAccordion.tsx",

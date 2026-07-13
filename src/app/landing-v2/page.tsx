@@ -442,7 +442,7 @@ const integrationActions = [
 const integrationBenefits = [
   {
     icon: "✓",
-    title: "Aktiv / MVP",
+    title: "Aktiv / verfügbar",
     text: "Manuelle Kontaktpflege, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups und Demo.",
     tone: "blue",
   },
@@ -1319,7 +1319,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <strong>Sandra M.</strong>
                 <em>Mia Active Club</em>
               </div>
-              <div className={styles.sandraKontaktwissenList}>
+              <div className={styles.sandraKnowledgeList}>
                 <div>
                   <span>{t("Status")}</span>
                   <strong>{t("Käuferin")}</strong>
