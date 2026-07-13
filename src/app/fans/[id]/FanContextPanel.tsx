@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { wt } from "@/lib/workspaceCopy";
 import type {
@@ -16,10 +16,15 @@ import {
   saveManualFollowup,
   saveManualMemory,
 } from "../actions";
+import {
+  deleteManualMemory,
+  updateManualMemory,
+} from "./contextActions";
 import { FanAnalysisReport } from "./FanAnalysisReport";
 import styles from "./fan-detail.module.css";
+import polishStyles from "./fan-context-polish.module.css";
 
-type ContextTab = "notes" | "ai" | "followups" | "analysis";
+type ContextTab = "notes" | "knowledge" | "followups" | "analysis";
 
 type Props = {
   contact: ContactRow;
@@ -35,7 +40,7 @@ type Props = {
 
 const tabs: Array<{ id: ContextTab; de: string; en: string }> = [
   { id: "notes", de: "Notizen", en: "Notes" },
-  { id: "ai", de: "AI-Infos", en: "AI info" },
+  { id: "knowledge", de: "Kontaktwissen", en: "Contact knowledge" },
   { id: "followups", de: "Follow-ups", en: "Follow-ups" },
   { id: "analysis", de: "Analyse", en: "Analysis" },
 ];
@@ -51,20 +56,22 @@ export function FanContextPanel({
   storedMessageCount,
   locale,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<ContextTab>(() =>
-    typeof window !== "undefined" && window.location.hash === "#followups"
-      ? "followups"
-      : "notes",
-  );
+  const [activeTab, setActiveTab] = useState<ContextTab>(() => {
+    if (typeof window === "undefined") return "notes";
+    if (window.location.hash === "#followups") return "followups";
+    if (window.location.hash === "#contact-knowledge") return "knowledge";
+    return "notes";
+  });
 
   const activeLabel =
-    tabs.find((tab) => tab.id === activeTab)?.[locale === "en" ? "en" : "de"] ??
-    "";
+    tabs.find((tab) => tab.id === activeTab)?.[
+      locale === "en" ? "en" : "de"
+    ] ?? "";
 
   return (
     <section
       className={styles.contextPanel}
-      aria-label={locale === "en" ? "Fan context" : "Fan-Kontext"}
+      aria-label={locale === "en" ? "Contact context" : "Kontaktkontext"}
     >
       <nav
         className={styles.contextTabs}
@@ -85,8 +92,13 @@ export function FanContextPanel({
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id);
-                if (tab.id === "followups")
+                if (tab.id === "followups") {
                   history.replaceState(null, "", "#followups");
+                } else if (tab.id === "knowledge") {
+                  history.replaceState(null, "", "#contact-knowledge");
+                } else {
+                  history.replaceState(null, "", window.location.pathname);
+                }
               }}
               role="tab"
               type="button"
@@ -98,7 +110,13 @@ export function FanContextPanel({
       </nav>
       <div
         className={styles.contextBody}
-        id={activeTab === "followups" ? "followups" : undefined}
+        id={
+          activeTab === "followups"
+            ? "followups"
+            : activeTab === "knowledge"
+              ? "contact-knowledge"
+              : undefined
+        }
       >
         <div
           aria-labelledby={`context-tab-${activeTab}`}
@@ -109,8 +127,8 @@ export function FanContextPanel({
           {activeTab === "notes" ? (
             <FanNotesCard contact={contact} locale={locale} />
           ) : null}
-          {activeTab === "ai" ? (
-            <ManualMemoryCard
+          {activeTab === "knowledge" ? (
+            <ContactKnowledgeCard
               contactId={contact.id}
               memories={memories}
               memoriesError={memoriesError}
@@ -176,8 +194,8 @@ function FanNotesCard({
       title={wt(locale, "Notizen")}
       intro={
         locale === "en"
-          ? "Free internal team notes for this fan."
-          : "Freie interne Team-Notizen zu diesem Fan."
+          ? "Internal team notes for this contact."
+          : "Interne Team-Notizen zu diesem Kontakt."
       }
     >
       <form action={saveContactInternalNotes} className={styles.notesForm}>
@@ -186,16 +204,16 @@ function FanNotesCard({
         <textarea
           aria-label={
             locale === "en"
-              ? "Internal notes for this fan"
-              : "Interne Notizen zu diesem Fan"
+              ? "Internal notes for this contact"
+              : "Interne Notizen zu diesem Kontakt"
           }
           defaultValue={contact.internal_notes ?? ""}
           maxLength={8000}
           name="internal_notes"
           placeholder={
             locale === "en"
-              ? "Your notes, context, team hints …"
-              : "Eigene Notizen, Kontext, Team-Hinweise …"
+              ? "Notes, context, team hints …"
+              : "Notizen, Kontext und Team-Hinweise …"
           }
         />
         <div className={styles.replyFooter}>
@@ -208,7 +226,7 @@ function FanNotesCard({
   );
 }
 
-function ManualMemoryCard({
+function ContactKnowledgeCard({
   contactId,
   memories,
   memoriesError,
@@ -221,23 +239,32 @@ function ManualMemoryCard({
 }) {
   return (
     <PanelCard
-      title={locale === "en" ? "AI info" : "AI-Infos"}
+      title={locale === "en" ? "Contact knowledge" : "Kontaktwissen"}
       intro={
         locale === "en"
-          ? "Long-term facts, preferences and important context FanMind can use for AI suggestions."
-          : "Dauerhafte Fakten, Vorlieben und wichtige Hinweise, die FanMind bei KI-Vorschlägen berücksichtigt."
+          ? "Verified facts, preferences, and commitments that may be used for future suggestions."
+          : "Geprüfte Fakten, Vorlieben und Zusagen, die FanMind bei künftigen Vorschlägen berücksichtigen darf."
       }
     >
       <DisclosureButton
-        label={locale === "en" ? "+ Add AI info" : "+ AI-Info hinzufügen"}
+        label={
+          locale === "en"
+            ? "+ Add contact knowledge"
+            : "+ Kontaktwissen hinzufügen"
+        }
       >
         <form action={saveManualMemory} className={styles.manualActionForm}>
           <input name="contact_id" type="hidden" value={contactId} />
           <input name="lang" type="hidden" value={locale} />
           <textarea
+            maxLength={4000}
             name="content"
             required
-            placeholder={locale === "en" ? "Text" : "Text"}
+            placeholder={
+              locale === "en"
+                ? "What should FanMind remember?"
+                : "Was soll FanMind zu diesem Kontakt wissen?"
+            }
           />
           <div className={styles.formRow}>
             <select
@@ -245,22 +272,36 @@ function ManualMemoryCard({
               defaultValue="normal"
               aria-label={locale === "en" ? "Importance" : "Wichtigkeit"}
             >
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
+              <option value="low">
+                {locale === "en" ? "Low" : "Niedrig"}
+              </option>
+              <option value="normal">
+                {locale === "en" ? "Medium" : "Mittel"}
+              </option>
+              <option value="high">
+                {locale === "en" ? "High" : "Hoch"}
+              </option>
             </select>
             <select
               name="type"
               defaultValue="note"
-              aria-label={locale === "en" ? "Type" : "Typ"}
+              aria-label={locale === "en" ? "Type" : "Art"}
             >
-              <option value="note">Note</option>
-              <option value="preference">Preference</option>
-              <option value="promise">Promise</option>
+              <option value="note">
+                {locale === "en" ? "Note" : "Hinweis"}
+              </option>
+              <option value="preference">
+                {locale === "en" ? "Preference" : "Vorliebe"}
+              </option>
+              <option value="promise">
+                {locale === "en" ? "Commitment" : "Zusage"}
+              </option>
             </select>
           </div>
           <button className={dashboardStyles.secondaryButton} type="submit">
-            {locale === "en" ? "Save AI info" : "AI-Info speichern"}
+            {locale === "en"
+              ? "Save contact knowledge"
+              : "Kontaktwissen speichern"}
           </button>
         </form>
       </DisclosureButton>
@@ -268,14 +309,140 @@ function ManualMemoryCard({
         <p className={dashboardStyles.error}>
           <strong>
             {locale === "en"
-              ? "AI info could not be loaded."
-              : "AI-Infos konnten nicht geladen werden."}
+              ? "Contact knowledge could not be loaded."
+              : "Kontaktwissen konnte nicht geladen werden."}
           </strong>
           <span>{memoriesError}</span>
         </p>
       ) : null}
-      <CompactMemoryList memories={memories} locale={locale} />
+      <ContactKnowledgeList
+        contactId={contactId}
+        memories={memories}
+        locale={locale}
+      />
     </PanelCard>
+  );
+}
+
+function ContactKnowledgeList({
+  contactId,
+  memories,
+  locale,
+}: {
+  contactId: string;
+  memories: MemoryRow[];
+  locale: FanMindLanguage;
+}) {
+  if (!memories.length) {
+    return (
+      <p className={styles.muted}>
+        {locale === "en"
+          ? "No contact knowledge saved yet."
+          : "Noch kein Kontaktwissen gespeichert."}
+      </p>
+    );
+  }
+
+  return (
+    <div className={polishStyles.knowledgeList}>
+      {memories.map((memory) => (
+        <article className={polishStyles.knowledgeItem} key={memory.id}>
+          <div className={polishStyles.knowledgeHeader}>
+            <div className={polishStyles.badgeRow}>
+              <span className={polishStyles.badge}>
+                {memoryTypeLabel(memory.type, locale)}
+              </span>
+              <span className={polishStyles.badge}>
+                {importanceLabel(memory.importance, locale)}
+              </span>
+            </div>
+            <small className={polishStyles.compactHint}>
+              {formatDate(memory.created_at, locale)}
+            </small>
+          </div>
+          <p className={polishStyles.knowledgeContent}>{memory.content}</p>
+          <div className={polishStyles.itemActions}>
+            <details className={polishStyles.itemEditor}>
+              <summary>
+                {locale === "en" ? "Edit" : "Bearbeiten"}
+              </summary>
+              <form
+                action={updateManualMemory}
+                className={polishStyles.editorForm}
+              >
+                <input name="contact_id" type="hidden" value={contactId} />
+                <input name="memory_id" type="hidden" value={memory.id} />
+                <input name="lang" type="hidden" value={locale} />
+                <textarea
+                  defaultValue={memory.content}
+                  maxLength={4000}
+                  name="content"
+                  required
+                />
+                <div className={polishStyles.editorGrid}>
+                  <select
+                    defaultValue={normalizeImportance(memory.importance)}
+                    name="importance"
+                    aria-label={
+                      locale === "en" ? "Importance" : "Wichtigkeit"
+                    }
+                  >
+                    <option value="low">
+                      {locale === "en" ? "Low" : "Niedrig"}
+                    </option>
+                    <option value="normal">
+                      {locale === "en" ? "Medium" : "Mittel"}
+                    </option>
+                    <option value="high">
+                      {locale === "en" ? "High" : "Hoch"}
+                    </option>
+                  </select>
+                  <select
+                    defaultValue={normalizeMemoryType(memory.type)}
+                    name="type"
+                    aria-label={locale === "en" ? "Type" : "Art"}
+                  >
+                    <option value="note">
+                      {locale === "en" ? "Note" : "Hinweis"}
+                    </option>
+                    <option value="preference">
+                      {locale === "en" ? "Preference" : "Vorliebe"}
+                    </option>
+                    <option value="promise">
+                      {locale === "en" ? "Commitment" : "Zusage"}
+                    </option>
+                  </select>
+                </div>
+                <button
+                  className={dashboardStyles.secondaryButton}
+                  type="submit"
+                >
+                  {locale === "en" ? "Save changes" : "Änderungen speichern"}
+                </button>
+              </form>
+            </details>
+            <form
+              action={deleteManualMemory}
+              onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                const confirmed = window.confirm(
+                  locale === "en"
+                    ? "Delete this contact knowledge entry?"
+                    : "Diesen Eintrag aus dem Kontaktwissen löschen?",
+                );
+                if (!confirmed) event.preventDefault();
+              }}
+            >
+              <input name="contact_id" type="hidden" value={contactId} />
+              <input name="memory_id" type="hidden" value={memory.id} />
+              <input name="lang" type="hidden" value={locale} />
+              <button className={polishStyles.deleteButton} type="submit">
+                {locale === "en" ? "Delete" : "Löschen"}
+              </button>
+            </form>
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 
@@ -288,37 +455,35 @@ function ManualFollowupCard({
   followups: FollowupRow[];
   locale: FanMindLanguage;
 }) {
-  const nextFollowup = useMemo(
-    () => getNextOpenFollowup(followups),
+  const sortedFollowups = useMemo(
+    () =>
+      [...followups].sort((a, b) =>
+        (a.due_date ?? "9999-12-31").localeCompare(
+          b.due_date ?? "9999-12-31",
+        ),
+      ),
     [followups],
   );
+
   return (
     <PanelCard
       title="Follow-ups"
       intro={
         locale === "en"
-          ? "Manual tasks and replies that are still open."
-          : "Manuelle Aufgaben und Rückmeldungen, die noch offen sind."
+          ? "Open reminders and next steps for this contact."
+          : "Offene Erinnerungen und nächste Schritte zu diesem Kontakt."
       }
     >
-      {nextFollowup ? (
-        <p className={styles.nextAction}>
-          <strong>{nextFollowup.reason}</strong>
-          <br />
-          {locale === "en" ? "Due" : "Fällig"}: {nextFollowup.due_date ?? "—"} ·{" "}
-          {locale === "en" ? "Priority" : "Priorität"}:{" "}
-          {nextFollowup.priority ?? "normal"} · Status:{" "}
-          {nextFollowup.status ?? "open"}
-        </p>
-      ) : null}
-      <DisclosureButton label="+ Follow-up">
+      <DisclosureButton
+        label={locale === "en" ? "+ Add follow-up" : "+ Follow-up"}
+      >
         <form action={saveManualFollowup} className={styles.manualActionForm}>
           <input name="contact_id" type="hidden" value={contactId} />
           <input name="lang" type="hidden" value={locale} />
           <input
             name="reason"
             required
-            placeholder={locale === "en" ? "Task/title" : "Aufgabe/Titel"}
+            placeholder={locale === "en" ? "Task or reason" : "Aufgabe oder Grund"}
           />
           <div className={styles.formRow}>
             <input name="due_date" type="date" />
@@ -327,17 +492,23 @@ function ManualFollowupCard({
               defaultValue="normal"
               aria-label={locale === "en" ? "Priority" : "Priorität"}
             >
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
+              <option value="low">
+                {locale === "en" ? "Low" : "Niedrig"}
+              </option>
+              <option value="normal">
+                {locale === "en" ? "Medium" : "Mittel"}
+              </option>
+              <option value="high">
+                {locale === "en" ? "High" : "Hoch"}
+              </option>
             </select>
           </div>
           <button className={dashboardStyles.secondaryButton} type="submit">
-            {locale === "en" ? "Save follow-up" : "Follow-up speichern"}
+            {locale === "en" ? "Save" : "Speichern"}
           </button>
         </form>
       </DisclosureButton>
-      <CompactFollowupList followups={followups} locale={locale} />
+      <CompactFollowupList followups={sortedFollowups} locale={locale} />
     </PanelCard>
   );
 }
@@ -357,33 +528,6 @@ function DisclosureButton({
   );
 }
 
-function CompactMemoryList({
-  memories,
-  locale,
-}: {
-  memories: MemoryRow[];
-  locale: FanMindLanguage;
-}) {
-  return (
-    <div className={styles.compactList}>
-      {memories.length ? (
-        memories.map((m) => (
-          <p key={m.id}>
-            <strong>{m.importance ?? "normal"}</strong>
-            {m.type ? ` · ${m.type}` : ""}
-            <br />
-            {m.content}
-          </p>
-        ))
-      ) : (
-        <p className={styles.muted}>
-          {locale === "en" ? "No AI info yet." : "Noch keine AI-Infos."}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function CompactFollowupList({
   followups,
   locale,
@@ -392,15 +536,23 @@ function CompactFollowupList({
   locale: FanMindLanguage;
 }) {
   return (
-    <div className={styles.compactList}>
+    <div className={polishStyles.knowledgeList}>
       {followups.length ? (
-        followups.map((f) => (
-          <p key={f.id}>
-            <strong>{f.status ?? "open"}</strong> · {f.priority ?? "normal"}
-            <br />
-            {f.reason}
-            {f.due_date ? ` · ${f.due_date}` : ""}
-          </p>
+        followups.map((followup) => (
+          <article className={polishStyles.knowledgeItem} key={followup.id}>
+            <div className={polishStyles.badgeRow}>
+              <span className={polishStyles.badge}>
+                {followupStatusLabel(followup.status, locale)}
+              </span>
+              <span className={polishStyles.badge}>
+                {importanceLabel(followup.priority, locale)}
+              </span>
+            </div>
+            <p className={polishStyles.knowledgeContent}>{followup.reason}</p>
+            <small className={polishStyles.compactHint}>
+              {locale === "en" ? "Due" : "Fällig"}: {formatDate(followup.due_date, locale)}
+            </small>
+          </article>
         ))
       ) : (
         <p className={styles.muted}>
@@ -411,12 +563,45 @@ function CompactFollowupList({
   );
 }
 
-function getNextOpenFollowup(followups: FollowupRow[]) {
-  return (
-    followups
-      .filter((f) => f.status !== "done")
-      .sort((a, b) =>
-        (a.due_date ?? "9999-12-31").localeCompare(b.due_date ?? "9999-12-31"),
-      )[0] ?? null
-  );
+function normalizeImportance(value: string | null): "low" | "normal" | "high" {
+  if (value === "low" || value === "high") return value;
+  return "normal";
+}
+
+function normalizeMemoryType(value: string | null): "note" | "preference" | "promise" {
+  if (value === "preference" || value === "promise") return value;
+  return "note";
+}
+
+function importanceLabel(value: string | null, locale: FanMindLanguage): string {
+  if (value === "high") return locale === "en" ? "High" : "Hoch";
+  if (value === "low") return locale === "en" ? "Low" : "Niedrig";
+  return locale === "en" ? "Medium" : "Mittel";
+}
+
+function memoryTypeLabel(value: string | null, locale: FanMindLanguage): string {
+  if (value === "preference") {
+    return locale === "en" ? "Preference" : "Vorliebe";
+  }
+  if (value === "promise") {
+    return locale === "en" ? "Commitment" : "Zusage";
+  }
+  return locale === "en" ? "Note" : "Hinweis";
+}
+
+function followupStatusLabel(value: string | null, locale: FanMindLanguage): string {
+  if (value === "done") return locale === "en" ? "Done" : "Erledigt";
+  if (value === "archived") return locale === "en" ? "Archived" : "Archiviert";
+  return locale === "en" ? "Open" : "Offen";
+}
+
+function formatDate(value: string | null, locale: FanMindLanguage): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
 }
