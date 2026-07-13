@@ -25,6 +25,7 @@ const runtimeFiles = [
   "src/app/datenschutz/page.tsx",
   "src/app/impressum/page.tsx",
   "src/app/avv/page.tsx",
+  "tests/referral-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
 ];
 
@@ -169,7 +170,7 @@ requireText(
 );
 requireText(
   "src/lib/referralPolicy.mjs",
-  "billingStatus !== "active"",
+  'billingStatus !== "active"',
   "Nur aktiv zahlende Workspaces dürfen für Referral freigeschaltet werden.",
 );
 requireText(
