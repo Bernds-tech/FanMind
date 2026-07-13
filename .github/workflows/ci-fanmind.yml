@@ -1,0 +1,55 @@
+name: FanMind CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - "fix/**"
+      - "feat/**"
+      - "chore/**"
+
+concurrency:
+  group: fanmind-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Lint, tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: https://fanmind.ch
+      NEXT_PUBLIC_SITE_URL: https://fanmind.ch
+      FANMIND_PUBLIC_DEMO_ENABLED: "false"
+      FANMIND_ENABLE_REFERRAL_BILLING: "false"
+      FANMIND_ENABLE_TELEGRAM_SEND: "false"
+      FANMIND_ADMIN_EMAILS: admin@example.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Operations tests
+        run: npm run test:operations
+
+      - name: Production build
+        run: npm run build
