@@ -15,7 +15,7 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'fix/final-rapid-polish-20260713' &&
-      github.event.label.name == 'documentation'
+      github.event.label.name == 'enhancement'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
