@@ -13,9 +13,8 @@ permissions:
 jobs:
   apply-final-polish:
     if: >-
-      github.event.issue.pull_request &&
       github.event.issue.number == 562 &&
-      github.event.comment.body == '/run-final-polish-20260713'
+      github.event.comment.body == '/run-final-polish-20260713-2'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
