@@ -3,10 +3,13 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
-import { wt } from "@/lib/workspaceCopy";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
-import { analyzeFan, type FanAnalysisActionState } from "../actions";
+import {
+  analyzeFanCommunication,
+  type FanAnalysisActionState,
+} from "./analysisActions";
 import styles from "./fan-detail.module.css";
+import polishStyles from "./fan-context-polish.module.css";
 
 type Report = {
   report_json: Record<string, unknown> | null;
@@ -25,6 +28,9 @@ type Props = {
   storedMessageCount?: number;
 };
 
+type ReportSection = { title: string; content: string };
+type AnalysisMode = "short" | "standard" | "detailed";
+
 const initialState: FanAnalysisActionState = { ok: false, message: "" };
 
 export function FanAnalysisReport({
@@ -36,11 +42,15 @@ export function FanAnalysisReport({
   storedMessageCount = 0,
 }: Props) {
   const router = useRouter();
-  const [state, formAction, pending] = useActionState(analyzeFan, initialState);
+  const [state, formAction, pending] = useActionState(
+    analyzeFanCommunication,
+    initialState,
+  );
   const report = state.report ?? initialReport;
-  const effectiveMessageCount =
-    report?.source_message_count ?? storedMessageCount;
-  const reportSections = buildStoredFanAnalysisReportSections(report, locale);
+  const effectiveMessageCount = report?.source_message_count ?? storedMessageCount;
+  const reportSections = buildStoredReportSections(report, locale);
+  const reportMode = getReportMode(report);
+  const [summarySection, ...detailSections] = reportSections;
   const isLowData = effectiveMessageCount < 3;
 
   useEffect(() => {
@@ -51,17 +61,48 @@ export function FanAnalysisReport({
     <article className={styles.card}>
       <div className={styles.cardHeader}>
         <div>
-          <h3>{wt(locale, "Fan-Analyse-Report")}</h3>
+          <h3>
+            {locale === "en"
+              ? "Communication overview"
+              : "Kommunikationsübersicht"}
+          </h3>
           <p className={styles.reportIntro}>
             {locale === "en"
-              ? "AI report from stored messages, notes, AI info, and contact context. Insights stay careful communication guidance, not a diagnosis."
-              : "KI-Report aus gespeicherten Nachrichten, Notizen, AI-Infos und Kontaktkontext. Einschätzungen bleiben vorsichtige kommunikative Hinweise und keine Diagnose."}
+              ? "Practical, careful guidance from saved messages and contact knowledge."
+              : "Kurze, vorsichtige Hinweise aus Nachrichten und Kontaktwissen."}
           </p>
         </div>
       </div>
-      <form action={formAction} className={styles.inlineForm}>
+
+      <form action={formAction} className={polishStyles.analysisForm}>
         <input name="contact_id" type="hidden" value={contactId} />
         <input name="locale" type="hidden" value={locale} />
+        <div className={polishStyles.analysisControlRow}>
+          <label>
+            {locale === "en" ? "Depth" : "Tiefe"}
+            <select defaultValue="short" name="analysis_mode">
+              <option value="short">
+                {locale === "en" ? "Short" : "Kurz"}
+              </option>
+              <option value="standard">Standard</option>
+              <option value="detailed">
+                {locale === "en" ? "Detailed" : "Ausführlich"}
+              </option>
+            </select>
+          </label>
+          <label>
+            {locale === "en" ? "Additional instruction" : "Zusatzanweisung"}
+            <input
+              maxLength={500}
+              name="analysis_instruction"
+              placeholder={
+                locale === "en"
+                  ? "e.g. summarize in three lines"
+                  : "z. B. in drei Zeilen zusammenfassen"
+              }
+            />
+          </label>
+        </div>
         <button
           className={dashboardStyles.secondaryButton}
           disabled={pending}
@@ -69,21 +110,24 @@ export function FanAnalysisReport({
         >
           {pending
             ? locale === "en"
-              ? "Creating analysis…"
-              : "Analyse wird erstellt…"
+              ? "Creating overview…"
+              : "Übersicht wird erstellt…"
             : report
               ? locale === "en"
-                ? "Update analysis"
-                : "Analyse aktualisieren"
-              : wt(locale, "Fan analysieren")}
+                ? "Update overview"
+                : "Übersicht aktualisieren"
+              : locale === "en"
+                ? "Create overview"
+                : "Übersicht erstellen"}
         </button>
       </form>
+
       <div aria-live="polite">
         {pending ? (
           <p className={styles.safeNotice}>
             {locale === "en"
-              ? "Creating analysis… The report will be shown right after saving."
-              : "Analyse wird erstellt… Der Report wird nach dem Speichern sofort angezeigt."}
+              ? "The overview will appear after saving."
+              : "Die Übersicht erscheint direkt nach dem Speichern."}
           </p>
         ) : null}
         {state.message ? (
@@ -91,84 +135,98 @@ export function FanAnalysisReport({
             <strong>
               {state.ok
                 ? locale === "en"
-                  ? "Analysis saved."
-                  : "Analyse gespeichert."
+                  ? "Saved."
+                  : "Gespeichert."
                 : locale === "en"
-                  ? "Analysis could not be created. Please try again."
-                  : "Analyse konnte nicht erstellt werden. Bitte erneut versuchen."}
+                  ? "Could not create the overview."
+                  : "Übersicht konnte nicht erstellt werden."}
             </strong>
             <span>{state.message}</span>
           </p>
         ) : null}
       </div>
+
       {loadError ? (
         <p className={dashboardStyles.error}>
           <strong>
             {locale === "en"
-              ? "Analysis report could not be loaded."
-              : "Analyse-Report konnte nicht geladen werden."}
+              ? "The overview could not be loaded."
+              : "Die Übersicht konnte nicht geladen werden."}
           </strong>
           <span>{loadError}</span>
         </p>
       ) : null}
+
       <div className={styles.reportSectionList}>
         {isLowData ? (
-          <div className={styles.safeNotice}>
-            <strong>
-              {locale === "en"
-                ? "Not enough saved messages yet for a complete analysis."
-                : "Noch zu wenig gespeicherte Nachrichten für eine vollständige Analyse."}
-            </strong>
-            <span>
-              {locale === "en"
-                ? "Use the message history or manual messages to improve the analysis."
-                : "Nutze den Nachrichtenverlauf oder manuelle Nachrichten, um die Analyse zu verbessern."}
-            </span>
-          </div>
+          <p className={polishStyles.compactHint}>
+            {locale === "en"
+              ? "Only a small amount of message context is available."
+              : "Es ist erst wenig Nachrichtenkontext vorhanden."}
+          </p>
         ) : null}
-        {reportSections.length ? (
+
+        {summarySection ? (
           <>
-            {reportSections.map((section) => (
-              <section className={styles.reportSection} key={section.title}>
-                <div className={styles.reportSectionHeader}>
-                  <strong>{section.title}</strong>
-                </div>
-                <p>{section.content}</p>
-              </section>
-            ))}
+            <section className={polishStyles.primarySummary}>
+              <strong>{summarySection.title}</strong>
+              <p>{summarySection.content}</p>
+            </section>
+            {detailSections.length ? (
+              <details
+                className={polishStyles.analysisDetails}
+                open={reportMode !== "short"}
+              >
+                <summary>
+                  {locale === "en" ? "Show details" : "Details anzeigen"}
+                </summary>
+                {detailSections.map((section) => (
+                  <section className={styles.reportSection} key={section.title}>
+                    <div className={styles.reportSectionHeader}>
+                      <strong>{section.title}</strong>
+                    </div>
+                    <p>{section.content}</p>
+                  </section>
+                ))}
+              </details>
+            ) : null}
             {hasNewMessages ? (
               <p className={styles.safeNotice}>
                 {locale === "en"
-                  ? "New messages since the last analysis are available."
-                  : "Neue Nachrichten seit letzter Analyse vorhanden."}
+                  ? "New messages are available since the last overview."
+                  : "Seit der letzten Übersicht sind neue Nachrichten vorhanden."}
               </p>
             ) : null}
             <p className={styles.muted}>
               {locale === "en" ? "Source" : "Quelle"}: {effectiveMessageCount}{" "}
               {locale === "en" ? "messages" : "Nachrichten"} ·{" "}
-              {locale === "en" ? "Last updated" : "Zuletzt aktualisiert"}:{" "}
+              {locale === "en" ? "Updated" : "Aktualisiert"}: {" "}
               {(report?.updated_at ?? report?.generated_at)
                 ? formatDate(
-                    (report.updated_at ?? report.generated_at) as string,
+                    (report?.updated_at ?? report?.generated_at) as string,
                     locale,
                   )
                 : locale === "en"
-                  ? "not generated yet"
-                  : "noch nicht erzeugt"}
+                  ? "not yet"
+                  : "noch nicht"}
             </p>
             <p className={styles.reportSafetyNote}>
               {locale === "en"
-                ? "Please read as careful communication guidance: no medical or psychological diagnosis, no hard sensitive claims."
-                : "Bitte als vorsichtige Kommunikationshilfe lesen: keine medizinische oder psychologische Diagnose, keine harten sensiblen Behauptungen."}
+                ? "Communication guidance only: no diagnosis or sensitive inference."
+                : "Nur Kommunikationshilfe: keine Diagnose und keine sensiblen Ableitungen."}
             </p>
           </>
         ) : (
           <EmptyState
-            title={wt(locale, "Noch kein Fan-Analyse-Report vorhanden.")}
+            title={
+              locale === "en"
+                ? "No communication overview yet."
+                : "Noch keine Kommunikationsübersicht vorhanden."
+            }
             body={
               locale === "en"
-                ? "Click “Analyze fan” to save a careful communication report from up to 50 messages, notes, AI info, and contact details."
-                : "Klicke auf „Fan analysieren“, um aus bis zu 50 Nachrichten, Notizen, AI-Infos und Kontaktinformationen einen vorsichtigen Kommunikationsreport zu speichern."
+                ? "Choose the depth and create an overview from saved messages and contact knowledge."
+                : "Tiefe auswählen und eine Übersicht aus Nachrichten und Kontaktwissen erstellen."
             }
           />
         )}
@@ -177,47 +235,72 @@ export function FanAnalysisReport({
   );
 }
 
-function buildStoredFanAnalysisReportSections(
+function buildStoredReportSections(
   report: Report,
   locale: FanMindLanguage,
-) {
+): ReportSection[] {
   if (!report?.report_json) return [];
   const values = normalizeReportJson(report.report_json);
   const neutral = getNeutralAnalysisTexts(locale);
-  const entries: Array<[string, string, boolean?]> = [
-    [
-      "Kurzprofil",
-      readableValue(values.kurzprofil) || report.summary || neutral.kurzprofil,
-    ],
-    [
-      "Kommunikationsstil",
-      readableValue(values.kommunikationsstil) || neutral.kommunikationsstil,
-    ],
-    [
-      "Stimmung / emotionale Tendenz",
-      readableValue(values.stimmung) || neutral.stimmung,
-    ],
-    [
-      "Interessen & Trigger",
-      readableValue(values.interessen_trigger) || neutral.interessen_trigger,
-    ],
-    [
-      "Kauf-/Reaktionswahrscheinlichkeit",
-      readableValue(values.kauf_reaktion) || neutral.kauf_reaktion,
-    ],
-    [
-      "Empfohlener Antwortstil",
-      readableValue(values.antwortstil) || neutral.antwortstil,
-    ],
-    ["No-Gos / Vorsicht", readableValue(values.no_gos) || neutral.no_gos],
-    ["Spirituell / energetisch", readableValue(values.spirituell), true],
+  const titles =
+    locale === "en"
+      ? {
+          summary: "Short summary",
+          style: "Communication style",
+          mood: "Current tone",
+          interests: "Interests and relevant topics",
+          reaction: "Response to offers",
+          reply: "Recommended reply style",
+          caution: "Caution",
+        }
+      : {
+          summary: "Kurzfassung",
+          style: "Kommunikationsstil",
+          mood: "Aktuelle Tonlage",
+          interests: "Interessen und relevante Themen",
+          reaction: "Reaktion auf Angebote",
+          reply: "Empfohlener Antwortstil",
+          caution: "Vorsicht",
+        };
+
+  return [
+    {
+      title: titles.summary,
+      content: readableValue(values.kurzprofil) || report.summary || neutral.kurzprofil,
+    },
+    {
+      title: titles.style,
+      content:
+        readableValue(values.kommunikationsstil) || neutral.kommunikationsstil,
+    },
+    {
+      title: titles.mood,
+      content: readableValue(values.stimmung) || neutral.stimmung,
+    },
+    {
+      title: titles.interests,
+      content:
+        readableValue(values.interessen_trigger) || neutral.interessen_trigger,
+    },
+    {
+      title: titles.reaction,
+      content: readableValue(values.kauf_reaktion) || neutral.kauf_reaktion,
+    },
+    {
+      title: titles.reply,
+      content: readableValue(values.antwortstil) || neutral.antwortstil,
+    },
+    {
+      title: titles.caution,
+      content: readableValue(values.no_gos) || neutral.no_gos,
+    },
   ];
-  return entries
-    .filter(
-      ([, content, optional]) =>
-        !optional || hasMeaningfulSpiritualContent(content),
-    )
-    .map(([title, content]) => ({ title, content }));
+}
+
+function getReportMode(report: Report): AnalysisMode {
+  const value = report?.report_json?.analysis_mode;
+  if (value === "short" || value === "detailed") return value;
+  return "standard";
 }
 
 function normalizeReportJson(
@@ -247,8 +330,9 @@ function parseJsonLike(value: unknown): unknown {
 
 function collectReadableParts(value: unknown): string[] {
   if (typeof value === "string") return value.trim() ? [value.trim()] : [];
-  if (typeof value === "number" || typeof value === "boolean")
+  if (typeof value === "number" || typeof value === "boolean") {
     return [String(value)];
+  }
   if (Array.isArray(value)) return value.flatMap(collectReadableParts);
   if (value && typeof value === "object") {
     return Object.values(value as Record<string, unknown>).flatMap(
@@ -258,56 +342,31 @@ function collectReadableParts(value: unknown): string[] {
   return [];
 }
 
-function hasMeaningfulSpiritualContent(value: string): boolean {
-  const normalized = value.trim().toLowerCase();
-  if (!normalized) return false;
-  const noSignalPhrases = [
-    "kein belastbarer hinweis",
-    "kein hinweis",
-    "keine hinweise",
-    "no reliable indication",
-    "no indication",
-    "not enough context",
-  ];
-  return !noSignalPhrases.some((phrase) => normalized.includes(phrase));
-}
-
 function getNeutralAnalysisTexts(locale: FanMindLanguage) {
   if (locale === "en") {
     return {
-      kurzprofil:
-        "No reliable profile details stored yet; use only verified contact context.",
-      kommunikationsstil:
-        "Communication style is not clear yet; keep replies friendly, concise, and respectful.",
-      stimmung:
-        "Emotional tendency is not reliably determinable from the stored context.",
-      interessen_trigger: "No stable interests or triggers are documented yet.",
-      kauf_reaktion:
-        "No reliable purchase or response likelihood can be derived yet.",
-      antwortstil: "Reply manually with a calm, helpful, pressure-free style.",
-      no_gos:
-        "Avoid diagnoses, sensitive claims, pressure, image analysis, and automatic sending.",
+      kurzprofil: "No reliable summary is available yet.",
+      kommunikationsstil: "Keep communication friendly, concise, and respectful.",
+      stimmung: "The current tone cannot be determined reliably.",
+      interessen_trigger: "Use only explicitly documented interests and questions.",
+      kauf_reaktion: "Do not predict a purchase; respond to the concrete request.",
+      antwortstil: "Reply manually in a calm, helpful, pressure-free style.",
+      no_gos: "Avoid diagnoses, sensitive inferences, pressure, and invented facts.",
     };
   }
   return {
-    kurzprofil:
-      "Noch keine belastbaren Profildetails gespeichert; nutze nur verifizierten Kontaktkontext.",
-    kommunikationsstil:
-      "Der Kommunikationsstil ist noch nicht klar erkennbar; antworte freundlich, knapp und respektvoll.",
-    stimmung:
-      "Eine emotionale Tendenz ist aus dem gespeicherten Kontext noch nicht belastbar ableitbar.",
-    interessen_trigger:
-      "Noch keine stabilen Interessen oder Trigger dokumentiert.",
-    kauf_reaktion:
-      "Eine Kauf- oder Reaktionswahrscheinlichkeit ist noch nicht verlässlich ableitbar.",
-    antwortstil: "Manuell ruhig, hilfreich und ohne Druck antworten.",
-    no_gos:
-      "Keine Diagnosen, sensiblen Behauptungen, Druck, Bildanalyse oder automatische Sendung.",
+    kurzprofil: "Noch keine belastbare Kurzfassung vorhanden.",
+    kommunikationsstil: "Freundlich, knapp und respektvoll kommunizieren.",
+    stimmung: "Die aktuelle Tonlage ist nicht zuverlässig bestimmbar.",
+    interessen_trigger: "Nur ausdrücklich dokumentierte Interessen und Fragen nutzen.",
+    kauf_reaktion: "Keine Kaufprognose; auf die konkrete Anfrage eingehen.",
+    antwortstil: "Ruhig, hilfreich und ohne Druck manuell antworten.",
+    no_gos: "Keine Diagnosen, sensiblen Ableitungen, Druck oder erfundenen Fakten.",
   };
 }
 
 function formatDate(value: string, locale: FanMindLanguage) {
-  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "de-DE", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "de-DE", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
