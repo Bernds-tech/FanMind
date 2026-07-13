@@ -10,6 +10,7 @@ const runtimeFiles = [
   "src/lib/plans.ts",
   "src/lib/stripeBilling.ts",
   "src/lib/referrals.ts",
+  "src/lib/referralPolicy.mjs",
   "src/app/landing-v2/page.tsx",
   "src/app/landing-v2/FaqAccordion.tsx",
   "src/app/brandMetadata.ts",
@@ -152,19 +153,34 @@ requireText(
   "Die Datenschutzerklärung muss die einheitliche Kontaktadresse verwenden.",
 );
 requireText(
-  "src/lib/referrals.ts",
+  "src/lib/referralPolicy.mjs",
   "REFERRAL_DISCOUNT_STEP_PERCENT = 5",
   "Referral muss 5 Prozent je aktivem geworbenem Workspace verwenden.",
 );
 requireText(
-  "src/lib/referrals.ts",
+  "src/lib/referralPolicy.mjs",
   "REFERRAL_MAX_ACTIVE_COUNT = 20",
   "Referral muss maximal 20 aktive Empfehlungen berücksichtigen.",
 );
 requireText(
-  "src/lib/referrals.ts",
+  "src/lib/referralPolicy.mjs",
   "REFERRAL_GROWTH_WINDOW_CAP = 2000",
   "Das Referral Growth Window muss bei 2.000 aktiven zahlenden Workspaces gedeckelt sein.",
+);
+requireText(
+  "src/lib/referralPolicy.mjs",
+  "billingStatus !== "active"",
+  "Nur aktiv zahlende Workspaces dürfen für Referral freigeschaltet werden.",
+);
+requireText(
+  "src/lib/referralPolicy.mjs",
+  "monthlyFeeCentsAfterDiscount",
+  "Die wiederkehrende Referral-Berechnung muss einen nicht negativen Monatsbetrag liefern.",
+);
+requireText(
+  "tests/referral-policy.test.mjs",
+  "growth window closes at 2000 active paid workspaces",
+  "Die Referral-Policy muss den 2.000er-Cap automatisiert testen.",
 );
 requireText(
   "src/app/settings/AccountSections.tsx",
