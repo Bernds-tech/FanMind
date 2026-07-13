@@ -29,6 +29,16 @@
   opacity: 1;
 }
 
+/*
+ * The login page now contains one reviewed safety explanation. Hide the older
+ * duplicate notice that still comes from the shared legacy copy object so the
+ * public page cannot claim that a channel is already generally connected.
+ * The centralized copy entry can be removed in the later full copy cleanup.
+ */
+[aria-label="FanMind Login"] form > p:not([role]):not(:has(button)) {
+  display: none;
+}
+
 @media (min-width: 721px) and (max-width: 1480px) {
   [data-landing-header="root"] > header {
     grid-template-columns: minmax(156px, 1fr) auto !important;
