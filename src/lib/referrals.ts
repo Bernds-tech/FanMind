@@ -6,10 +6,21 @@ import type {
   ReferralProgramStatus,
   ReferralStatus,
 } from "@/lib/adminReferrals";
+import {
+  REFERRAL_DISCOUNT_STEP_PERCENT,
+  REFERRAL_GROWTH_WINDOW_CAP,
+  REFERRAL_MAX_ACTIVE_COUNT,
+  calculateReferralPercent,
+  evaluateReferralWorkspaceEligibility,
+  isReferralGrowthWindowOpen,
+} from "@/lib/referralPolicy.mjs";
 
-export const REFERRAL_DISCOUNT_STEP_PERCENT = 5;
-export const REFERRAL_MAX_ACTIVE_COUNT = 20;
-export const REFERRAL_GROWTH_WINDOW_CAP = 2000;
+export {
+  REFERRAL_DISCOUNT_STEP_PERCENT,
+  REFERRAL_GROWTH_WINDOW_CAP,
+  REFERRAL_MAX_ACTIVE_COUNT,
+  calculateReferralPercent,
+};
 
 export type WorkspaceReferralMember = {
   id: string;
@@ -207,23 +218,6 @@ async function patchRows<T>(
   return { rows: (await response.json()) as T[], error: null };
 }
 
-export function calculateReferralPercent(
-  activeReferralCount: number,
-  overrideDiscountPercent?: number | null,
-) {
-  const billableActiveReferralCount = Math.max(
-    0,
-    Math.min(activeReferralCount, REFERRAL_MAX_ACTIVE_COUNT),
-  );
-  const discountPercent =
-    overrideDiscountPercent ??
-    Math.min(
-      billableActiveReferralCount * REFERRAL_DISCOUNT_STEP_PERCENT,
-      100,
-    );
-  return { billableActiveReferralCount, discountPercent };
-}
-
 export function buildReferralCode(workspaceId: string) {
   return normalizeCode(`FM-${workspaceId.replace(/-/g, "").slice(0, 10)}`);
 }
@@ -231,47 +225,8 @@ export function buildReferralCode(workspaceId: string) {
 function evaluateEligibility(
   workspace: WorkspaceEligibilityRow | null,
 ): ReferralEligibility {
-  if (!workspace) {
-    return {
-      eligible: false,
-      reason: "Workspace konnte für das Empfehlungsprogramm nicht geprüft werden.",
-      workspace,
-    };
-  }
-
-  const billingStatus = workspace.billing_status ?? "";
-  const isDemo =
-    billingStatus === "demo_free" ||
-    /demo/i.test(workspace.name ?? "") ||
-    workspace.commercial_option === "internal_daily_test";
-  if (isDemo) {
-    return {
-      eligible: false,
-      reason: "Demo- und interne Test-Workspaces nehmen nicht am Empfehlungsprogramm teil.",
-      workspace,
-    };
-  }
-
-  const hasPaidCommercialValue =
-    (workspace.setup_fee_cents ?? 0) > 0 ||
-    (workspace.monthly_fee_cents ?? 0) > 0;
-  if (!hasPaidCommercialValue) {
-    return {
-      eligible: false,
-      reason: "Für diesen Workspace ist noch kein zahlungspflichtiges Paket hinterlegt.",
-      workspace,
-    };
-  }
-
-  if (!["active", "past_due"].includes(billingStatus)) {
-    return {
-      eligible: false,
-      reason: "Der Workspace wird nach erfolgreicher Zahlung für Empfehlungen freigeschaltet.",
-      workspace,
-    };
-  }
-
-  return { eligible: true, reason: null, workspace };
+  const policy = evaluateReferralWorkspaceEligibility(workspace);
+  return { ...policy, workspace };
 }
 
 export async function getWorkspaceReferralEligibility(
@@ -320,9 +275,11 @@ export async function ensureWorkspaceReferralMember(
     active_paid_workspace_cap: REFERRAL_GROWTH_WINDOW_CAP,
     active_paid_workspace_count: 0,
   };
-  const windowOpen =
-    ["open", "reopened"].includes(state.status) &&
-    state.active_paid_workspace_count < state.active_paid_workspace_cap;
+  const windowOpen = isReferralGrowthWindowOpen(
+    state.status,
+    state.active_paid_workspace_count,
+    state.active_paid_workspace_cap,
+  );
 
   if (!eligibility.eligible) {
     if (existingMember && existingMember.eligible) {
@@ -435,9 +392,11 @@ export async function createReferralAttribution(input: {
     return { error: null };
   }
 
-  const windowOpen =
-    ["open", "reopened"].includes(state.status) &&
-    state.active_paid_workspace_count < state.active_paid_workspace_cap;
+  const windowOpen = isReferralGrowthWindowOpen(
+    state.status,
+    state.active_paid_workspace_count,
+    state.active_paid_workspace_cap,
+  );
   const status: ReferralStatus = windowOpen
     ? "pending"
     : "locked_after_window_closed";
