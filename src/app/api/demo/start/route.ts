@@ -136,14 +136,22 @@ export async function POST(request: NextRequest) {
 
   const existingUserResult = await getSupabaseServerUser();
   const existingUser = existingUserResult.data.user;
-  if (existingUser && isTemporaryDemoUser(existingUser)) {
-    const expiry = getTemporaryDemoExpiryState(existingUser);
-    if (!expiry.isExpired) {
+  if (existingUser) {
+    if (isTemporaryDemoUser(existingUser)) {
+      const expiry = getTemporaryDemoExpiryState(existingUser);
+      if (expiry.isTemporaryDemo && !expiry.isExpired) {
+        return NextResponse.json({
+          ok: true,
+          reused: true,
+          redirectTo: "/dashboard",
+          expiresAt: expiry.expiresAt.toISOString(),
+        });
+      }
+    } else {
       return NextResponse.json({
         ok: true,
         reused: true,
         redirectTo: "/dashboard",
-        expiresAt: expiry.expiresAt.toISOString(),
       });
     }
   }
