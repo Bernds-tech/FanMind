@@ -16,13 +16,11 @@ type SuggestedMemory = {
   content: string;
   importance: "low" | "normal" | "high";
 };
-
 type SuggestedFollowup = {
   recommended: boolean;
   in_days: number | null;
   reason: string;
 };
-
 type AiSuggestionsResult = {
   reply_options: ReplySuggestion[];
   suggested_memory?: SuggestedMemory;
@@ -65,9 +63,8 @@ export function AiReplySuggestions({
     () => modes.find((mode) => mode.id === activeModeId) ?? modes[0],
     [activeModeId, modes],
   );
-  const [suggestions, setSuggestions] = useState<AiSuggestionsResult | null>(
-    null,
-  );
+  const [replyInstruction, setReplyInstruction] = useState("");
+  const [suggestions, setSuggestions] = useState<AiSuggestionsResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -78,14 +75,21 @@ export function AiReplySuggestions({
   const [followupDismissed, setFollowupDismissed] = useState(false);
   const [memorySaving, setMemorySaving] = useState(false);
   const [followupSaving, setFollowupSaving] = useState(false);
-  const [memoryStatus, setMemoryStatus] = useState<{ ok: boolean; message: string } | null>(null);
-  const [followupStatus, setFollowupStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [memoryStatus, setMemoryStatus] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+  const [followupStatus, setFollowupStatus] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
   const canSendTelegram =
     telegramSendEnabled &&
     !demoConnectionsDisabled &&
     contact.sourcePlatform === "telegram";
 
   async function generateSuggestions(mode = activeMode) {
+    if (!mode) return;
     setError("");
     setCopiedIndex(null);
     setMemoryDismissed(false);
@@ -93,6 +97,7 @@ export function AiReplySuggestions({
     setMemoryStatus(null);
     setFollowupStatus(null);
     setIsLoading(true);
+
     try {
       const response = await fetch("/api/ai/reply-suggestions", {
         method: "POST",
@@ -102,13 +107,14 @@ export function AiReplySuggestions({
           displayName: contact.displayName,
           handle: contact.handle,
           sourcePlatform: contact.sourcePlatform,
-          language: contact.language || "de",
+          language: contact.language || locale,
           status: contact.status,
           tags: contact.tags ?? [],
           summary: contact.summary,
           pastedChatContext: contact.storedConversationContext ?? "",
           incomingMessage: contact.latestInboundMessage ?? "",
           responseMode: `${mode.label}: ${mode.prompt}`,
+          responseInstruction: replyInstruction.trim(),
           analysisReport: contact.analysisReport,
         }),
       });
@@ -116,21 +122,26 @@ export function AiReplySuggestions({
         | AiSuggestionsResult
         | { error?: string }
         | null;
+
       if (!response.ok || !data || !("reply_options" in data)) {
         setError(
           (data && "error" in data && data.error) ||
-            "Antwortvorschläge konnten gerade nicht erzeugt werden.",
+            (locale === "en"
+              ? "Reply suggestions could not be created."
+              : "Antwortvorschläge konnten gerade nicht erzeugt werden."),
         );
         return;
       }
+
       const nextSuggestions = data.reply_options.slice(0, 3);
-      setSuggestions({
-        ...data,
-        reply_options: nextSuggestions,
-      });
+      setSuggestions({ ...data, reply_options: nextSuggestions });
       setTelegramDraft((current) => current || nextSuggestions[0]?.text || "");
     } catch {
-      setError("Antwortvorschläge konnten gerade nicht erzeugt werden.");
+      setError(
+        locale === "en"
+          ? "Reply suggestions could not be created."
+          : "Antwortvorschläge konnten gerade nicht erzeugt werden.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -154,14 +165,18 @@ export function AiReplySuggestions({
     }
   }
 
-
   const suggestedMemory = suggestions?.suggested_memory;
-  const hasMemorySuggestion = Boolean(suggestedMemory?.content?.trim()) && !memoryDismissed;
+  const hasMemorySuggestion =
+    Boolean(suggestedMemory?.content?.trim()) && !memoryDismissed;
   const suggestedFollowup = suggestions?.suggested_followup;
-  const hasFollowupSuggestion = Boolean(
-    suggestedFollowup?.recommended && suggestedFollowup.reason?.trim(),
-  ) && !followupDismissed;
-  const followupDateLabel = formatFollowupDate(suggestedFollowup?.in_days);
+  const hasFollowupSuggestion =
+    Boolean(
+      suggestedFollowup?.recommended && suggestedFollowup.reason?.trim(),
+    ) && !followupDismissed;
+  const followupDateLabel = formatFollowupDate(
+    suggestedFollowup?.in_days,
+    locale,
+  );
 
   async function saveMemorySuggestion() {
     if (!suggestedMemory?.content?.trim()) return;
@@ -173,10 +188,26 @@ export function AiReplySuggestions({
         content: suggestedMemory.content.trim(),
         importance: suggestedMemory.importance,
       });
-      setMemoryStatus(result);
+      setMemoryStatus(
+        result.ok
+          ? {
+              ok: true,
+              message:
+                locale === "en"
+                  ? "Saved to contact knowledge."
+                  : "Im Kontaktwissen gespeichert.",
+            }
+          : result,
+      );
       if (result.ok) router.refresh();
     } catch {
-      setMemoryStatus({ ok: false, message: "Memory konnte nicht gespeichert werden." });
+      setMemoryStatus({
+        ok: false,
+        message:
+          locale === "en"
+            ? "Contact knowledge could not be saved."
+            : "Kontaktwissen konnte nicht gespeichert werden.",
+      });
     } finally {
       setMemorySaving(false);
     }
@@ -195,12 +226,17 @@ export function AiReplySuggestions({
       setFollowupStatus(result);
       if (result.ok) router.refresh();
     } catch {
-      setFollowupStatus({ ok: false, message: "Follow-up konnte nicht gespeichert werden." });
+      setFollowupStatus({
+        ok: false,
+        message:
+          locale === "en"
+            ? "Follow-up could not be saved."
+            : "Follow-up konnte nicht gespeichert werden.",
+      });
     } finally {
       setFollowupSaving(false);
     }
   }
-
 
   async function sendTelegramDraft() {
     setTelegramStatus("");
@@ -209,14 +245,23 @@ export function AiReplySuggestions({
       const response = await fetch("/api/integrations/telegram/send-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: contact.contactId, text: telegramDraft }),
+        body: JSON.stringify({
+          contactId: contact.contactId,
+          text: telegramDraft,
+        }),
       });
-      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       if (!response.ok) {
-        setTelegramStatus(data?.error ?? "Telegram-Nachricht konnte nicht gesendet werden.");
+        setTelegramStatus(
+          data?.error ?? "Telegram-Nachricht konnte nicht gesendet werden.",
+        );
         return;
       }
-      setTelegramStatus("Telegram-Nachricht wurde manuell gesendet und dokumentiert.");
+      setTelegramStatus(
+        "Telegram-Nachricht wurde manuell gesendet und dokumentiert.",
+      );
       setTelegramDraft("");
     } catch {
       setTelegramStatus("Telegram-Nachricht konnte nicht gesendet werden.");
@@ -232,16 +277,23 @@ export function AiReplySuggestions({
     >
       <div className={styles.cardHeader}>
         <div>
-          <p className={dashboardStyles.eyebrow}>{wt(locale, "KI-Antwortvorschläge")}</p>
-          <h3 id="ai-replies-title">Drei Vorschläge</h3>
+          <p className={dashboardStyles.eyebrow}>
+            {wt(locale, "KI-Antwortvorschläge")}
+          </p>
+          <h3 id="ai-replies-title">
+            {locale === "en" ? "Three distinct suggestions" : "Drei unterschiedliche Vorschläge"}
+          </h3>
           <p className={styles.muted}>
-            Wähle einen Stil, erzeuge Karten und kopiere die passende Antwort manuell.
+            {locale === "en"
+              ? "Choose a direction, add an instruction if needed, and copy the best draft."
+              : "Richtung wählen, bei Bedarf eine Anweisung ergänzen und den passenden Entwurf kopieren."}
           </p>
         </div>
         <span className={styles.statusBadge}>
           {wt(locale, "Keine automatische Sendefunktion.").replace(/\.$/, "")}
         </span>
       </div>
+
       <div className={styles.modeBar} aria-label="Antwort-Richtung wählen">
         {modes.map((mode) => (
           <button
@@ -251,16 +303,31 @@ export function AiReplySuggestions({
                 : styles.modeButton
             }
             key={mode.id}
-            onClick={() => {
-              setActiveModeId(mode.id);
-              void generateSuggestions(mode);
-            }}
+            onClick={() => setActiveModeId(mode.id)}
             type="button"
           >
             {mode.label}
           </button>
         ))}
       </div>
+
+      <label className={styles.replyBox}>
+        <span className={styles.label}>
+          {locale === "en" ? "Additional instruction" : "Zusatzanweisung"}
+        </span>
+        <textarea
+          maxLength={1000}
+          onChange={(event) => setReplyInstruction(event.target.value)}
+          placeholder={
+            locale === "en"
+              ? "e.g. shorter, more direct, ask one clarifying question"
+              : "z. B. kürzer, direkter oder eine Rückfrage stellen"
+          }
+          rows={2}
+          value={replyInstruction}
+        />
+      </label>
+
       <div className={styles.replyFooter}>
         <button
           className={dashboardStyles.primaryButton}
@@ -268,10 +335,18 @@ export function AiReplySuggestions({
           onClick={() => void generateSuggestions()}
           type="button"
         >
-          {isLoading ? (locale === "en" ? "Generating suggestions…" : "Vorschläge werden erzeugt…") : wt(locale, "KI-Vorschläge erzeugen")}
+          {isLoading
+            ? locale === "en"
+              ? "Generating suggestions…"
+              : "Vorschläge werden erzeugt…"
+            : wt(locale, "KI-Vorschläge erzeugen")}
         </button>
         {!contact.latestInboundMessage ? (
-          <span>Keine eingehende Nachricht als Kontext vorhanden.</span>
+          <span>
+            {locale === "en"
+              ? "No inbound message is available as context."
+              : "Keine eingehende Nachricht als Kontext vorhanden."}
+          </span>
         ) : null}
         {originalChannelAction ? (
           <OriginalChannelButton
@@ -282,11 +357,13 @@ export function AiReplySuggestions({
           />
         ) : null}
       </div>
+
       {error ? (
         <p className={dashboardStyles.error} role="alert">
           <strong>{error}</strong>
         </p>
       ) : null}
+
       <div className={styles.suggestionGrid} aria-live="polite">
         {(suggestions?.reply_options ?? []).map((option, index) => (
           <article
@@ -317,25 +394,39 @@ export function AiReplySuggestions({
                 onClick={() => void copySuggestion(option.text, index)}
                 type="button"
               >
-                {copiedIndex === index ? wt(locale, "Kopiert") : wt(locale, "Antwort kopieren")}
+                {copiedIndex === index
+                  ? wt(locale, "Kopiert")
+                  : wt(locale, "Antwort kopieren")}
               </button>
             </div>
           </article>
         ))}
       </div>
+
       {hasMemorySuggestion || hasFollowupSuggestion ? (
         <div className={styles.suggestionGrid} aria-live="polite">
           {hasMemorySuggestion ? (
             <article className={styles.suggestionCard}>
               <div className={styles.replyCardHeader}>
                 <div>
-                  <strong>Memory-Vorschlag</strong>
-                  <p className={styles.muted}>Kontext speichern · nichts wird gesendet</p>
+                  <strong>
+                    {locale === "en"
+                      ? "Contact knowledge suggestion"
+                      : "Vorschlag fürs Kontaktwissen"}
+                  </strong>
+                  <p className={styles.muted}>
+                    {locale === "en"
+                      ? "Saved in the Contact knowledge tab"
+                      : "Wird im Reiter Kontaktwissen gespeichert"}
+                  </p>
                 </div>
               </div>
               <div>
                 <p>{suggestedMemory?.content}</p>
-                <p className={styles.muted}>Wichtigkeit: {suggestedMemory?.importance ?? "normal"}</p>
+                <p className={styles.muted}>
+                  {locale === "en" ? "Importance" : "Wichtigkeit"}: {" "}
+                  {importanceLabel(suggestedMemory?.importance, locale)}
+                </p>
               </div>
               <div className={styles.replyCardActions}>
                 <button
@@ -344,7 +435,17 @@ export function AiReplySuggestions({
                   onClick={() => void saveMemorySuggestion()}
                   type="button"
                 >
-                  {memorySaving ? "Speichere …" : memoryStatus?.ok ? "Gespeichert" : "Speichern"}
+                  {memorySaving
+                    ? locale === "en"
+                      ? "Saving…"
+                      : "Speichere …"
+                    : memoryStatus?.ok
+                      ? locale === "en"
+                        ? "Saved"
+                        : "Gespeichert"
+                      : locale === "en"
+                        ? "Save"
+                        : "Speichern"}
                 </button>
                 <button
                   className={dashboardStyles.secondaryButton}
@@ -352,27 +453,42 @@ export function AiReplySuggestions({
                   onClick={() => setMemoryDismissed(true)}
                   type="button"
                 >
-                  Verwerfen
+                  {locale === "en" ? "Dismiss" : "Verwerfen"}
                 </button>
                 {memoryStatus ? (
-                  <p className={memoryStatus.ok ? styles.noteSavedHint : dashboardStyles.error} role="status">
+                  <p
+                    className={
+                      memoryStatus.ok
+                        ? styles.noteSavedHint
+                        : dashboardStyles.error
+                    }
+                    role="status"
+                  >
                     {memoryStatus.message}
                   </p>
                 ) : null}
               </div>
             </article>
           ) : null}
+
           {hasFollowupSuggestion ? (
             <article className={styles.suggestionCard}>
               <div className={styles.replyCardHeader}>
                 <div>
                   <strong>Follow-up-Vorschlag</strong>
-                  <p className={styles.muted}>Aufgabe speichern · nichts wird automatisch gesendet</p>
+                  <p className={styles.muted}>
+                    {locale === "en"
+                      ? "Save as a manual reminder"
+                      : "Als manuelle Erinnerung speichern"}
+                  </p>
                 </div>
               </div>
               <div>
                 <p>{suggestedFollowup?.reason}</p>
-                <p className={styles.muted}>Empfohlenes Datum: {followupDateLabel}</p>
+                <p className={styles.muted}>
+                  {locale === "en" ? "Suggested date" : "Empfohlenes Datum"}: {" "}
+                  {followupDateLabel}
+                </p>
               </div>
               <div className={styles.replyCardActions}>
                 <button
@@ -381,7 +497,17 @@ export function AiReplySuggestions({
                   onClick={() => void saveFollowupSuggestion()}
                   type="button"
                 >
-                  {followupSaving ? "Speichere …" : followupStatus?.ok ? "Gespeichert" : "Speichern"}
+                  {followupSaving
+                    ? locale === "en"
+                      ? "Saving…"
+                      : "Speichere …"
+                    : followupStatus?.ok
+                      ? locale === "en"
+                        ? "Saved"
+                        : "Gespeichert"
+                      : locale === "en"
+                        ? "Save"
+                        : "Speichern"}
                 </button>
                 <button
                   className={dashboardStyles.secondaryButton}
@@ -389,10 +515,17 @@ export function AiReplySuggestions({
                   onClick={() => setFollowupDismissed(true)}
                   type="button"
                 >
-                  Verwerfen
+                  {locale === "en" ? "Dismiss" : "Verwerfen"}
                 </button>
                 {followupStatus ? (
-                  <p className={followupStatus.ok ? styles.noteSavedHint : dashboardStyles.error} role="status">
+                  <p
+                    className={
+                      followupStatus.ok
+                        ? styles.noteSavedHint
+                        : dashboardStyles.error
+                    }
+                    role="status"
+                  >
                     {followupStatus.message}
                   </p>
                 ) : null}
@@ -401,11 +534,12 @@ export function AiReplySuggestions({
           ) : null}
         </div>
       ) : null}
+
       {canSendTelegram ? (
         <div className={styles.fallbackHelp}>
           <strong>Manueller Telegram-Antwortfluss</strong>
           <p className={styles.muted}>
-            FanMind sendet nur nach deinem Klick. Keine automatischen Antworten. Prüfe den Entwurf vor dem Versand.
+            FanMind sendet nur nach deinem Klick. Prüfe den Entwurf vor dem Versand.
           </p>
           <label>
             Antwortentwurf
@@ -427,21 +561,36 @@ export function AiReplySuggestions({
           {telegramStatus ? <p className={styles.muted}>{telegramStatus}</p> : null}
         </div>
       ) : null}
+
       <p className={styles.reportSafetyNote}>
-        {wt(locale, "Der Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.")}
+        {wt(
+          locale,
+          "Der Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.",
+        )}
       </p>
     </article>
   );
 }
 
+function importanceLabel(
+  value: "low" | "normal" | "high" | undefined,
+  locale: FanMindLanguage,
+) {
+  if (value === "high") return locale === "en" ? "High" : "Hoch";
+  if (value === "low") return locale === "en" ? "Low" : "Niedrig";
+  return locale === "en" ? "Medium" : "Mittel";
+}
 
-function formatFollowupDate(inDays: number | null | undefined) {
+function formatFollowupDate(
+  inDays: number | null | undefined,
+  locale: FanMindLanguage,
+) {
   if (typeof inDays !== "number" || !Number.isFinite(inDays)) {
-    return "Datum manuell prüfen";
+    return locale === "en" ? "Check date manually" : "Datum manuell prüfen";
   }
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + inDays);
-  return new Intl.DateTimeFormat("de-DE", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "de-DE", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
