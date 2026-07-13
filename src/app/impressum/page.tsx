@@ -70,12 +70,13 @@ export default function ImpressumPage() {
               Nutzerinnen und Nutzern geprüft, kopiert, übernommen oder verworfen. Der finale
               Versand erfolgt manuell durch die Nutzerinnen und Nutzer.
             </p>
-            <h3>Keine aktiven Social-Media-Integrationen</h3>
+            <h3>Integrationen und Abrechnung</h3>
             <p>
-              Aktuell bestehen keine produktiven Social-Media-Synchronisierungen und keine
-              automatischen Integrationen mit Instagram, TikTok, Facebook, X / Twitter, WhatsApp
-              oder Discord. Ebenfalls nicht Bestandteil der aktuellen Version sind Scraping,
-              automatische Nachrichtenversendung, autonome Kommunikation und Zahlungslogik.
+              Produktive Social-Media-Synchronisierungen sind nur dort verfügbar, wo sie ausdrücklich
+              als freigegeben ausgewiesen werden. Scraping, autonome Kommunikation und automatischer
+              Nachrichtenversand sind nicht Bestandteil des Standard-Workflows. Freigegebene
+              Checkout-, Zahlungs- und Rechnungsprozesse werden getrennt vom Kommunikationsworkflow
+              über den jeweils ausgewiesenen Zahlungsanbieter abgewickelt.
             </p>
             <h3>Roadmap</h3>
             <p>
