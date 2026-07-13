@@ -184,8 +184,8 @@ text = read(path)
 if '  "src/lib/referralPolicy.mjs",\n' not in text:
     text = replace_once(
         text,
-        '  "src/lib/referrals.ts",\n',
-        '  "src/lib/referrals.ts",\n  "src/lib/referralPolicy.mjs",\n',
+        '  "src/lib/stripeBilling.ts",\n  "src/lib/referrals.ts",\n',
+        '  "src/lib/stripeBilling.ts",\n  "src/lib/referrals.ts",\n  "src/lib/referralPolicy.mjs",\n',
         "truth runtime referral policy",
     )
 
