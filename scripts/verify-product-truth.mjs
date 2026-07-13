@@ -13,6 +13,7 @@ const runtimeFiles = [
   "src/app/landing-v2/page.tsx",
   "src/app/register/RegisterClient.tsx",
   "src/app/settings/AccountSections.tsx",
+  "src/app/fans/[id]/page.tsx",
   "src/app/agb/page.tsx",
   "src/app/zahlungsbedingungen/page.tsx",
   "src/app/datenschutz/page.tsx",
@@ -20,6 +21,7 @@ const runtimeFiles = [
   "docs/SOURCE_OF_TRUTH.md",
 ];
 
+const documentationFiles = new Set(["docs/SOURCE_OF_TRUTH.md"]);
 const contents = new Map();
 const errors = [];
 const warnings = [];
@@ -48,6 +50,7 @@ function requireText(file, value, explanation) {
 
 function forbid(pattern, explanation) {
   for (const [file, text] of contents) {
+    if (documentationFiles.has(file)) continue;
     if (pattern.test(text)) {
       errors.push(`${file}: ${explanation}`);
     }
@@ -150,7 +153,6 @@ requireText(
   "REFERRAL_GROWTH_WINDOW_CAP = 2000",
   "Das Referral Growth Window muss bei 2.000 aktiven zahlenden Workspaces gedeckelt sein.",
 );
-
 requireText(
   "src/app/settings/AccountSections.tsx",
   "KI Standard ist im Basispaket enthalten",
@@ -191,5 +193,5 @@ if (errors.length) {
 }
 
 console.log(
-  `Product truth verified across ${runtimeFiles.length} runtime files (${warnings.length} warning(s)).`,
+  `Product truth verified across ${runtimeFiles.length} checked files (${warnings.length} warning(s)).`,
 );
