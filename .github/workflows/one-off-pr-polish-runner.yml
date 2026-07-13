@@ -3,7 +3,7 @@ name: One-off PR polish runner
 on:
   pull_request_target:
     types:
-      - reopened
+      - ready_for_review
 
 permissions:
   contents: write
