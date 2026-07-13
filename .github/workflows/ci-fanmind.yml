@@ -66,7 +66,21 @@ jobs:
         run: npm run lint
 
       - name: Operations tests
-        run: npm run test:operations
+        id: operations
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:operations 2>&1 | tee operations-test-report.txt
+
+      - name: Upload operations test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-operations-test-report
+          path: operations-test-report.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Production build
         run: npm run build
@@ -75,4 +89,10 @@ jobs:
         if: always() && steps.truth.outcome != 'success'
         run: |
           echo "Commercial/product truth verification failed. See fanmind-truth-report artifact." >&2
+          exit 1
+
+      - name: Enforce operations test result
+        if: always() && steps.operations.outcome != 'success'
+        run: |
+          echo "Operations tests failed. See fanmind-operations-test-report artifact." >&2
           exit 1
