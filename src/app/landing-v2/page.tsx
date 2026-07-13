@@ -53,7 +53,7 @@ const features = [
   {
     icon: "🧠",
     title: "KI-Antwortvorschläge",
-    text: "FanMind erstellt passende Entwürfe aus Kontext und Memory. Du prüfst, kopierst und sendest selbst.",
+    text: "FanMind erstellt passende Entwürfe aus Kontext und Kontaktwissen. Du prüfst, kopierst und sendest selbst.",
     tone: "purple",
   },
   {
@@ -442,8 +442,8 @@ const integrationActions = [
 const integrationBenefits = [
   {
     icon: "✓",
-    title: "Aktiv / MVP",
-    text: "Manuelle Kontaktpflege, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups und Demo.",
+    title: "Aktiv / verfügbar",
+    text: "Manuelle Kontaktpflege, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups und Demo.",
     tone: "blue",
   },
   {
@@ -623,7 +623,7 @@ const faqs = [
   },
   {
     number: "4",
-    question: "Sind meine Daten DSGVO-konform geschützt?",
+    question: "Wie schützt FanMind meine Daten?",
     answer:
       "FanMind ist mit Datenschutz-Fokus, klaren Freigaben und EU-orientierten Produktprinzipien konzipiert. Sensible Workflows werden bewusst transparent gehalten.",
   },
@@ -721,7 +721,7 @@ const pricingPlans = [
     tone: "purple",
     featured: false,
     status: "Aktiv",
-    features: ["Begleiteter Setup-/Pilotmonat", "Demo-Workspace mit realistischem MVP-Workflow", "Kontakte/Fans, CSV-Import, Notizen und Memory testen", "Follow-ups und KI-Antwortvorschläge prüfen", "Externe Social-Integrationen klar als Roadmap/Beta markiert", "Endet ohne automatische Verlängerung"],
+    features: ["Begleiteter Setup-/Pilotmonat", "Demo-Workspace mit realistischem Produkt-Workflow", "Kontakte/Fans, CSV-Import, Notizen und Kontaktwissen testen", "Follow-ups und KI-Antwortvorschläge prüfen", "Externe Social-Integrationen klar als Roadmap/Beta markiert", "Endet ohne automatische Verlängerung"],
   },
   {
     icon: "♙",
@@ -736,7 +736,7 @@ const pricingPlans = [
     tone: "blue",
     featured: false,
     status: "Aktiv",
-    features: ["Ein produktiver Workspace", "Kontakte/Fans und manuelle Kontaktpflege", "CSV-Import, Notizen und Kontaktwissen / Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Kein automatischer Versand"],
+    features: ["Ein produktiver Workspace", "Kontakte/Fans und manuelle Kontaktpflege", "CSV-Import, Notizen und Kontaktwissen", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Kommunikationsübersicht", "Kein automatischer Versand"],
   },
   {
     icon: "◎",
@@ -751,7 +751,7 @@ const pricingPlans = [
     tone: "green",
     featured: true,
     status: "Aktiv",
-    features: ["Ein produktiver Workspace", "Setup ohne separate Setup-Gebühr", "Kontakte/Fans, CSV-Import und Memory", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Fan-Analyse-Report", "Externe Integrationen nur Beta/Roadmap"],
+    features: ["Ein produktiver Workspace", "Setup ohne separate Setup-Gebühr", "Kontakte/Fans, CSV-Import und Kontaktwissen", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Kommunikationsübersicht", "Externe Integrationen nur Beta/Roadmap"],
   },
   {
     icon: "↗",
@@ -1241,7 +1241,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <h2 id="sandra-use-case-title">
               {t("Aus Anfrage wird")} <span>ein nächster Schritt.</span>
             </h2>
-            <p>{t("Produktvorschau mit Beispieldaten: FanMind zeigt, wie Kontakte, Memory, KI-Vorschläge und manuelle Follow-ups zusammenarbeiten.")}</p>
+            <p>{t("Produktvorschau mit Beispieldaten: FanMind zeigt, wie Kontakte, Kontaktwissen, KI-Vorschläge und manuelle Follow-ups zusammenarbeiten.")}</p>
           </div>
 
           <aside
@@ -1319,7 +1319,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <strong>Sandra M.</strong>
                 <em>Mia Active Club</em>
               </div>
-              <div className={styles.sandraMemoryList}>
+              <div className={styles.sandraKnowledgeList}>
                 <div>
                   <span>{t("Status")}</span>
                   <strong>{t("Käuferin")}</strong>
@@ -1363,7 +1363,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <div>
                   <button type="button">{t("kurzer")}</button>
                   <button type="button">{t("freundlicher")}</button>
-                  <button type="button">{t("mit Memory")}</button>
+                  <button type="button">{t("mit Kontaktwissen")}</button>
                 </div>
               </div>
               <div className={styles.sandraReasonList}>
@@ -1435,7 +1435,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <span>🧠</span>
             <div>
               <strong>
-                {t("Mit Memory, KI und Follow-ups zum richtigen nächsten Schritt.")}
+                {t("Mit Kontaktwissen, KI und Follow-ups zum richtigen nächsten Schritt.")}
               </strong>
               <p>
                 {t("FanMind denkt mit. Für echte Verbindungen und nachvollziehbare nächste Schritte.")}
@@ -1785,7 +1785,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <h2 id="pricing-title">
             {t("Wähle das passende")} <span>{t("FanMind-Paket")}</span> {t("für deinen Einstieg.")}
           </h2>
-          <p>{t("FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Teams. Dieses Produkt konzentriert sich auf Kontakte, KI-Antwortvorschläge, Memory, Follow-ups und CSV-Import.")}</p>
+          <p>{t("FanMind ist ein KI-gestützter Antwort- und Kontaktwissen-Assistent für Teams. Dieses Produkt konzentriert sich auf Kontakte, KI-Antwortvorschläge, Kontaktwissen, Follow-ups und CSV-Import.")}</p>
         </div>
 
         <div className={styles.pricingMarquee} aria-label="FanMind Pakete">
@@ -1846,7 +1846,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               {t("Baue")} <span>{t("stärkere Fan-Beziehungen")}</span> {t("– mit weniger Chaos und besseren Antworten.")}
             </h3>
             <p>
-              {t("FanMind bündelt Kontakte, KI, Memory und Follow-ups an einem Ort.")}
+              {t("FanMind bündelt Kontakte, KI, Kontaktwissen und Follow-ups an einem Ort.")}
             </p>
           </div>
           <div className={styles.pricingCtaActions}>

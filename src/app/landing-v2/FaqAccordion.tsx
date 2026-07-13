@@ -24,10 +24,8 @@ const compactQuestions: Record<string, string> = {
     "Which channels does FanMind support?",
   "Sendet die KI automatisch Nachrichten?": "Sendet FanMind automatisch?",
   "Does the AI send messages automatically?": "Does FanMind send automatically?",
-  "Sind meine Daten DSGVO-konform geschützt?":
-    "Wie schützt FanMind meine Daten?",
-  "Is my data protected in a GDPR-minded way?":
-    "How does FanMind protect my data?",
+  "Wie schützt FanMind meine Daten?": "Wie schützt FanMind meine Daten?",
+  "How does FanMind protect my data?": "How does FanMind protect my data?",
   "Kann ich mehrere Profile oder Kunden verwalten?":
     "Kann ich mehrere Profile verwalten?",
   "Can I manage multiple profiles or clients?":

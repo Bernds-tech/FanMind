@@ -75,7 +75,7 @@ export default function OpenGraphImage() {
             <div style={{ color: "#dce7f7", fontSize: "30px", lineHeight: 1.28, fontWeight: 600 }}>{fanMindDescription}</div>
           </div>
           <div style={{ display: "flex", gap: "16px", color: "#06111f", fontSize: "23px", fontWeight: 800 }}>
-            {['Kontakte', 'KI-Antwortvorschläge', 'Memory', 'Follow-ups'].map((label) => (
+            {['Kontakte', 'KI-Antwortvorschläge', 'Kontaktwissen', 'Follow-ups'].map((label) => (
               <div key={label} style={{ background: "rgba(255,255,255,0.88)", borderRadius: "999px", padding: "13px 20px" }}>
                 {label}
               </div>

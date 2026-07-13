@@ -11,6 +11,10 @@ const runtimeFiles = [
   "src/lib/stripeBilling.ts",
   "src/lib/referrals.ts",
   "src/app/landing-v2/page.tsx",
+  "src/app/landing-v2/FaqAccordion.tsx",
+  "src/app/brandMetadata.ts",
+  "src/app/opengraph-image.tsx",
+  "src/components/PlatformLogo.module.css",
   "src/app/register/RegisterClient.tsx",
   "src/app/settings/AccountSections.tsx",
   "src/app/fans/[id]/page.tsx",
@@ -54,6 +58,13 @@ function forbid(pattern, explanation) {
     if (pattern.test(text)) {
       errors.push(`${file}: ${explanation}`);
     }
+  }
+}
+
+function forbidIn(file, pattern, explanation) {
+  const text = content(file);
+  if (pattern.test(text)) {
+    errors.push(`${file}: ${explanation}`);
   }
 }
 
@@ -167,6 +178,48 @@ requireText(
   "docs/SOURCE_OF_TRUTH.md",
   "### KI-Leistungsstufen / Add-ons",
   "Die Source of Truth muss die beschlossenen KI-Leistungsstufen dokumentieren.",
+);
+
+
+forbidIn(
+  "src/app/landing-v2/page.tsx",
+  /(?:Fan-Analyse-Report|Memory|\bMVP\b|DSGVO-konform)/iu,
+  "Öffentliche Landingpage enthält veraltete oder missverständliche Produktbegriffe.",
+);
+forbidIn(
+  "src/lib/fanmindCopy.ts",
+  /(?:Fan-Analyse-Report|Fan analysis report|Memory|\bMVP\b|DSGVO-konform)/iu,
+  "Öffentliche Übersetzungen enthalten veraltete oder missverständliche Produktbegriffe.",
+);
+forbidIn(
+  "src/app/landing-v2/FaqAccordion.tsx",
+  /DSGVO-konform/iu,
+  "Die FAQ darf Datenschutz nicht als pauschale Konformitätsgarantie formulieren.",
+);
+forbidIn(
+  "src/app/brandMetadata.ts",
+  /(?:Memory|MVP)/iu,
+  "Öffentliche Metadaten müssen Kontaktwissen und aktuelle Produktbegriffe verwenden.",
+);
+forbidIn(
+  "src/app/opengraph-image.tsx",
+  /['"]Memory['"]/iu,
+  "Das Social-Preview darf Memory nicht als sichtbaren Produktbegriff verwenden.",
+);
+forbidIn(
+  "src/app/impressum/page.tsx",
+  /Keine aktiven Social-Media-Integrationen|autonome Kommunikation und Zahlungslogik/iu,
+  "Das Impressum muss den gestuften Integrations- und aktiven Billing-Stand korrekt beschreiben.",
+);
+requireText(
+  "src/app/impressum/page.tsx",
+  "Integrationen und Abrechnung",
+  "Das Impressum muss den gestuften Integrations- und Billing-Status erklären.",
+);
+requireText(
+  "src/components/PlatformLogo.module.css",
+  "object-fit: contain",
+  "Kanal-Logos müssen in der gemeinsamen Komponente einheitlich und ohne Beschneidung dargestellt werden.",
 );
 
 warn(
