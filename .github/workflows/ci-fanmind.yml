@@ -39,14 +39,28 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
       - name: Verify commercial and product truth
-        run: npm run verify:truth
+        id: truth
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run verify:truth 2>&1 | tee truth-report.txt
+
+      - name: Upload truth report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-truth-report
+          path: truth-report.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Lint
         run: npm run lint
@@ -56,3 +70,9 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Enforce truth result
+        if: always() && steps.truth.outcome != 'success'
+        run: |
+          echo "Commercial/product truth verification failed. See fanmind-truth-report artifact." >&2
+          exit 1
