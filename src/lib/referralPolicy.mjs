@@ -2,22 +2,44 @@ export const REFERRAL_DISCOUNT_STEP_PERCENT = 5;
 export const REFERRAL_MAX_ACTIVE_COUNT = 20;
 export const REFERRAL_GROWTH_WINDOW_CAP = 2000;
 
+/**
+ * @param {unknown} value
+ * @param {number} [fallback]
+ * @returns {number}
+ */
 function finiteInteger(value, fallback = 0) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   return Math.trunc(numeric);
 }
 
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
 export function normalizeReferralCount(value) {
   return Math.max(0, finiteInteger(value));
 }
 
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
 export function clampReferralDiscountPercent(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
   return Math.max(0, Math.min(Math.round(numeric), 100));
 }
 
+/**
+ * @param {number} activeReferralCount
+ * @param {number | null | undefined} overrideDiscountPercent
+ * @returns {{
+ *   activeReferralCount: number;
+ *   billableActiveReferralCount: number;
+ *   discountPercent: number;
+ * }}
+ */
 export function calculateReferralPercent(
   activeReferralCount,
   overrideDiscountPercent = null,
@@ -41,6 +63,19 @@ export function calculateReferralPercent(
   };
 }
 
+/**
+ * @param {number} monthlyFeeCents
+ * @param {number} activeReferralCount
+ * @param {number | null | undefined} overrideDiscountPercent
+ * @returns {{
+ *   activeReferralCount: number;
+ *   billableActiveReferralCount: number;
+ *   discountPercent: number;
+ *   monthlyFeeCentsBeforeDiscount: number;
+ *   monthlyDiscountCents: number;
+ *   monthlyFeeCentsAfterDiscount: number;
+ * }}
+ */
 export function calculateReferralMonthlyAmounts(
   monthlyFeeCents,
   activeReferralCount,
@@ -70,6 +105,12 @@ export function calculateReferralMonthlyAmounts(
   };
 }
 
+/**
+ * @param {string | null | undefined} status
+ * @param {number} activePaidWorkspaceCount
+ * @param {number} [activePaidWorkspaceCap]
+ * @returns {boolean}
+ */
 export function isReferralGrowthWindowOpen(
   status,
   activePaidWorkspaceCount,
@@ -82,6 +123,19 @@ export function isReferralGrowthWindowOpen(
   return ["open", "reopened"].includes(normalizedStatus) && count < cap;
 }
 
+/**
+ * @typedef {object} ReferralEligibilityWorkspace
+ * @property {string | null | undefined} [billing_status]
+ * @property {string | null | undefined} [commercial_option]
+ * @property {number | null | undefined} [setup_fee_cents]
+ * @property {number | null | undefined} [monthly_fee_cents]
+ * @property {string | null | undefined} [name]
+ */
+
+/**
+ * @param {ReferralEligibilityWorkspace | null | undefined} workspace
+ * @returns {{ eligible: boolean; reason: string | null }}
+ */
 export function evaluateReferralWorkspaceEligibility(workspace) {
   if (!workspace) {
     return {
