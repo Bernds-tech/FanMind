@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "verify:truth": "node scripts/verify-product-truth.mjs",
+    "smoke:public": "node scripts/smoke-public-routes.mjs",
+    "check:release": "npm run verify:truth && npm run lint && npm run build",
     "db:apply-contact-reply-targets": "node scripts/apply-contact-reply-targets-migration.mjs",
     "test:operations": "node --test tests/backup-worker.test.mjs"
   },
