@@ -4,6 +4,7 @@ import { FANMIND_LOCALE_COOKIE, normalizeWorkspaceLocale } from "@/lib/workspace
 import { FANMIND_BRIGHTNESS_COOKIE, getThemeClass, normalizeFanMindBrightness } from "@/lib/userPreferences";
 import { fanMindDescription, fanMindOgAlt, fanMindSiteUrl, fanMindTitle } from "./brandMetadata";
 import "./globals.css";
+import "./landing-header-visibility.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(fanMindSiteUrl),
