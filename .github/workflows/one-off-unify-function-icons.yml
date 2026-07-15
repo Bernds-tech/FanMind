@@ -34,8 +34,14 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 scripts/one-off/unify-function-icons.py > /tmp/icon-integration.log 2>&1
-          status=$?
+          python3 scripts/one-off/prepare-unify-function-icons.py > /tmp/icon-integration.log 2>&1
+          prepare_status=$?
+          if [ "$prepare_status" = "0" ]; then
+            python3 scripts/one-off/unify-function-icons.py >> /tmp/icon-integration.log 2>&1
+            status=$?
+          else
+            status=$prepare_status
+          fi
           cat /tmp/icon-integration.log
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
@@ -78,6 +84,7 @@ jobs:
 
           git rm \
             .github/workflows/one-off-unify-function-icons.yml \
+            scripts/one-off/prepare-unify-function-icons.py \
             scripts/one-off/unify-function-icons.py
 
           if git diff --cached --quiet; then
