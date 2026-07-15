@@ -99,6 +99,7 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete. Si
 - Kundenseitige Seiten verwenden **Produkt**, **aktuelle Version** oder **Pilot**, nicht MVP-Jargon.
 - Datenschutz wird konkret und überprüfbar beschrieben; es gibt keine pauschale DSGVO-Konformitätsgarantie in Marketingtexten.
 - Alle Kanal-Logos werden über die gemeinsame `PlatformLogo`-Komponente dargestellt. Assets werden einheitlich skaliert und nicht beschnitten.
+- Funktionssymbole werden über die gemeinsame `FanMindFunctionIcon`-Registry gerendert; Landingpage und Anwendung verwenden für dieselbe Funktion denselben semantischen Icon-Schlüssel.
 
 ## 4. Referral Growth Window
 
