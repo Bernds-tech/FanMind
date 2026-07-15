@@ -1,14 +1,26 @@
 const REFERRAL_ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function clean(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
 function positiveAttemptCount(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
 }
 
+/**
+ * @param {string | null | undefined} status
+ * @returns {string | null}
+ */
 export function billingStatusFromStripeSubscriptionStatus(status) {
   const normalized = clean(status);
 
@@ -23,6 +35,10 @@ export function billingStatusFromStripeSubscriptionStatus(status) {
   return null;
 }
 
+/**
+ * @param {{ attemptCount?: number | null, graceExpired?: boolean }} [input]
+ * @returns {string}
+ */
 export function billingStatusFromInvoiceFailure({
   attemptCount = 1,
   graceExpired = false,
@@ -34,6 +50,16 @@ export function billingStatusFromInvoiceFailure({
   return "past_due";
 }
 
+/**
+ * @param {{
+ *   eventType?: string | null,
+ *   paymentStatus?: string | null,
+ *   subscriptionStatus?: string | null,
+ *   attemptCount?: number | null,
+ *   graceExpired?: boolean
+ * }} [input]
+ * @returns {string | null}
+ */
 export function referralBillingStatusFromStripeEvent({
   eventType,
   paymentStatus,
