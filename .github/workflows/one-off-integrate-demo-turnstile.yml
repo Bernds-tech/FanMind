@@ -34,8 +34,14 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 scripts/one-off/integrate-demo-turnstile.py > /tmp/turnstile-integration.log 2>&1
-          status=$?
+          python3 scripts/one-off/prepare-demo-turnstile-integration.py > /tmp/turnstile-integration.log 2>&1
+          prepare_status=$?
+          if [ "$prepare_status" = "0" ]; then
+            python3 scripts/one-off/integrate-demo-turnstile.py >> /tmp/turnstile-integration.log 2>&1
+            status=$?
+          else
+            status=$prepare_status
+          fi
           cat /tmp/turnstile-integration.log
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
