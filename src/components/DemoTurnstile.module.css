@@ -1,0 +1,50 @@
+.card {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(8, 47, 73, 0.24);
+}
+
+.heading {
+  display: grid;
+  gap: 3px;
+}
+
+.heading strong {
+  color: #e0f2fe;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.heading span {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.heading span[data-state="verified"] {
+  color: #86efac;
+}
+
+.heading span[data-state="error"] {
+  color: #fda4af;
+}
+
+.widget {
+  min-height: 65px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.widget iframe {
+  max-width: 100%;
+}
+
+.card noscript {
+  color: #fda4af;
+  font-size: 12px;
+  line-height: 1.4;
+}
