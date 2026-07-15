@@ -21,6 +21,13 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def replace_all(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count < 1:
+        raise SystemExit(f"{label}: expected at least one match, found {count}")
+    return text.replace(old, new)
+
+
 workspace_path = "src/components/WorkspaceShell.tsx"
 workspace = read(workspace_path)
 workspace = replace_once(
@@ -138,7 +145,7 @@ landing = replace_once(
                   </span>''',
     "six-step card icon",
 )
-landing = replace_once(
+landing = replace_all(
     landing,
     '''            <article data-tone={benefit.tone} key={benefit.title}>
               <span>{benefit.icon}</span>
@@ -151,7 +158,7 @@ landing = replace_once(
                 />
               </span>
               <div>''',
-    "six-step benefit icon",
+    "repeated landing benefit icons",
 )
 write(landing_path, landing)
 
@@ -209,7 +216,7 @@ truth = replace_once(
     '  "src/components/PlatformLogo.module.css",\n  "src/components/FanMindFeatureIcon.tsx",\n  "src/components/WorkspaceShell.tsx",\n',
     "truth shared icon runtime files",
 )
-icon_checks = '''requireText(
+icon_checks = r'''requireText(
   "src/components/FanMindFeatureIcon.tsx",
   "getFanMindFeatureIconKey",
   "Zentrale Funktionssymbole müssen über eine gemeinsame Zuordnung aufgelöst werden.",
