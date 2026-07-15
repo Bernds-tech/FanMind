@@ -1,0 +1,72 @@
+name: One-off shared feature icon integration
+
+on:
+  push:
+    branches:
+      - fix/shared-feature-icons-20260715
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message, 'apply shared feature icons') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: https://fanmind.ch
+      NEXT_PUBLIC_SITE_URL: https://fanmind.ch
+      FANMIND_PUBLIC_DEMO_ENABLED: "false"
+      FANMIND_ENABLE_REFERRAL_BILLING: "false"
+      FANMIND_ENABLE_TELEGRAM_SEND: "false"
+      FANMIND_ADMIN_EMAILS: admin@example.com
+    steps:
+      - name: Checkout icon branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/shared-feature-icons-20260715
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply shared icon integration
+        run: python3 scripts/one-off/shared-feature-icons.py
+
+      - name: Remove one-off helpers
+        run: |
+          rm -f scripts/one-off/shared-feature-icons.py
+          rm -f .github/workflows/one-off-shared-feature-icons.yml
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify product truth
+        run: npm run verify:truth
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Operations tests
+        run: npm run test:operations
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit generated product changes
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes found."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: apply shared feature icons"
+          git push origin HEAD:fix/shared-feature-icons-20260715
