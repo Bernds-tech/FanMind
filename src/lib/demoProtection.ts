@@ -179,6 +179,12 @@ export async function verifyDemoTurnstile(input: {
         : "Der Demo-Bot-Schutz ist unvollständig konfiguriert.",
     };
   }
+  if (!secret || !siteKey) {
+    return {
+      ok: false,
+      error: "Der Demo-Bot-Schutz ist serverseitig nicht vollständig konfiguriert.",
+    };
+  }
   if (!input.token?.trim()) {
     return { ok: false, error: "Bitte bestätige den Bot-Schutz." };
   }
