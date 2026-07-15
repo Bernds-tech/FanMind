@@ -4,13 +4,22 @@ on:
   push:
     branches:
       - fix/shared-feature-icons-20260715
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
 
 jobs:
   integrate:
-    if: ${{ !contains(github.event.head_commit.message, 'apply shared feature icons') }}
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'fix/shared-feature-icons-20260715'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
