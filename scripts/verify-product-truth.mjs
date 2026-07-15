@@ -6,11 +6,15 @@ import { resolve } from "node:path";
 const root = process.cwd();
 
 const runtimeFiles = [
+  ".env.example",
   "src/config/plans.ts",
   "src/lib/plans.ts",
   "src/lib/stripeBilling.ts",
   "src/lib/referrals.ts",
   "src/lib/referralPolicy.mjs",
+  "src/lib/aiUsagePolicy.mjs",
+  "src/lib/workspaceAiUsage.ts",
+  "src/lib/workspaceNavigation.ts",
   "src/app/landing-v2/page.tsx",
   "src/app/landing-v2/FaqAccordion.tsx",
   "src/app/brandMetadata.ts",
@@ -19,6 +23,7 @@ const runtimeFiles = [
   "src/components/LegalTopHeader.tsx",
   "src/app/register/RegisterClient.tsx",
   "src/app/settings/AccountSections.tsx",
+  "src/app/settings/ai-usage/page.tsx",
   "src/app/fans/[id]/page.tsx",
   "src/app/agb/page.tsx",
   "src/app/zahlungsbedingungen/page.tsx",
@@ -26,6 +31,7 @@ const runtimeFiles = [
   "src/app/impressum/page.tsx",
   "src/app/avv/page.tsx",
   "tests/referral-policy.test.mjs",
+  "tests/ai-usage-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
 ];
 
@@ -197,6 +203,47 @@ requireText(
   "docs/SOURCE_OF_TRUTH.md",
   "### KI-Leistungsstufen / Add-ons",
   "Die Source of Truth muss die beschlossenen KI-Leistungsstufen dokumentieren.",
+);
+
+requireText(
+  ".env.example",
+  "FANMIND_AI_STANDARD_SOFT_REQUEST_WARNING=",
+  "Die optionale KI-Aktions-Hinweisgrenze muss dokumentiert sein.",
+);
+requireText(
+  ".env.example",
+  "FANMIND_AI_STANDARD_SOFT_TOKEN_WARNING=",
+  "Die optionale KI-Token-Hinweisgrenze muss dokumentiert sein.",
+);
+requireText(
+  "src/lib/aiUsagePolicy.mjs",
+  'level: "unconfigured"',
+  "Nicht konfigurierte KI-Hinweisgrenzen dürfen kein Kontingent vortäuschen.",
+);
+requireText(
+  "tests/ai-usage-policy.test.mjs",
+  "unconfigured thresholds never imply a quota or automatic block",
+  "Die KI-Nutzungs-Policy muss den transparenten Zustand ohne Sperre testen.",
+);
+requireText(
+  "src/app/settings/ai-usage/page.tsx",
+  "weder ein vertragliches Kontingent noch eine automatische Sperre aktiviert",
+  "Die Nutzeransicht muss offenlegen, wenn keine vertragliche KI-Grenze aktiv ist.",
+);
+requireText(
+  "src/app/settings/ai-usage/page.tsx",
+  "Hinweisgrenzen dienen ausschließlich der Orientierung",
+  "Soft-Hinweisgrenzen dürfen nicht als harte Kontingentgrenze dargestellt werden.",
+);
+requireText(
+  "src/app/settings/ai-usage/page.tsx",
+  "KI Standard ist enthalten",
+  "Die KI-Nutzungsseite muss die aktuelle Paketlogik korrekt einordnen.",
+);
+requireText(
+  "src/lib/workspaceNavigation.ts",
+  'href: "/settings/ai-usage"',
+  "Die KI-Nutzungsseite muss im geschützten Kontobereich erreichbar sein.",
 );
 
 forbidIn(
