@@ -68,12 +68,24 @@ FANMIND_DEMO_MAX_CONTACTS=30
 FANMIND_DEMO_CLEANUP_LIMIT=25
 ```
 
-Turnstile bleibt zunächst leer, bis das Browser-Widget ebenfalls verdrahtet und getestet ist:
+Turnstile ist zusätzlich zum Datenbank-Rate-Limit vorbereitet. Solange die Schlüssel noch nicht eingerichtet sind, bleibt der verpflichtende Modus aus:
 
 ```env
+FANMIND_REQUIRE_TURNSTILE_FOR_PUBLIC_DEMO=false
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
 ```
+
+Sobald im Cloudflare-Dashboard ein Widget für `fanmind.ch` angelegt wurde:
+
+1. öffentlichen Site Key in `NEXT_PUBLIC_TURNSTILE_SITE_KEY` setzen;
+2. geheimen Schlüssel ausschließlich serverseitig in `TURNSTILE_SECRET_KEY` setzen;
+3. Anwendung neu bauen und PM2 mit aktualisierter Umgebung starten;
+4. Widget im Browser lösen und einen erfolgreichen Demo-Start prüfen;
+5. abgelaufenen, fehlerhaften und wiederverwendeten Token prüfen;
+6. erst danach `FANMIND_REQUIRE_TURNSTILE_FOR_PUBLIC_DEMO=true` setzen.
+
+Bei nur einem gesetzten Schlüssel oder bei `required=true` ohne vollständige Konfiguration blockiert FanMind den öffentlichen Demo-Start. Der Turnstile-Token wird vom Browser an `/api/demo/start` übergeben und dort serverseitig gegen Siteverify, Hostname und Action `fanmind_demo_start` geprüft. Rate-Limit, Kapazitätslimit und Cleanup bleiben unabhängig davon aktiv.
 
 ## 3. Deployment und Cleanup-Endpunkt
 

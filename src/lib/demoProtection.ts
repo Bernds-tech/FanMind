@@ -4,6 +4,7 @@ import {
   getSupabaseHeaders,
   getSupabaseRestUrl,
 } from "@/lib/supabase/config";
+import { resolveDemoTurnstilePolicy } from "@/lib/demoTurnstilePolicy.mjs";
 
 export const DEMO_BROWSER_COOKIE = "fanmind_demo_browser";
 
@@ -162,12 +163,20 @@ export async function verifyDemoTurnstile(input: {
 }): Promise<{ ok: boolean; error: string | null }> {
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
+  const policy = resolveDemoTurnstilePolicy({
+    required:
+      process.env.FANMIND_REQUIRE_TURNSTILE_FOR_PUBLIC_DEMO === "true",
+    siteKey,
+    secretKey: secret,
+  });
 
-  if (!secret && !siteKey) return { ok: true, error: null };
-  if (!secret || !siteKey) {
+  if (policy.mode === "disabled") return { ok: true, error: null };
+  if (policy.mode === "misconfigured") {
     return {
       ok: false,
-      error: "Der Demo-Bot-Schutz ist unvollständig konfiguriert.",
+      error: policy.required
+        ? "Der vorgeschriebene Demo-Bot-Schutz ist serverseitig nicht vollständig konfiguriert."
+        : "Der Demo-Bot-Schutz ist unvollständig konfiguriert.",
     };
   }
   if (!input.token?.trim()) {
