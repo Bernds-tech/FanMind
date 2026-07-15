@@ -33,5 +33,11 @@ if '  "src/components/FanMindFunctionIcon.tsx",\\n' not in text:
 '''
 if old not in text:
     raise SystemExit("original truth insertion block not found")
-path.write_text(text.replace(old, new, 1), encoding="utf-8")
-print("Prepared unique Product Truth insertion anchor.")
+text = text.replace(old, new, 1)
+text = text.replace(
+    '    text = text.rstrip() + icon_styles + "\\n"\n',
+    '    text = text.rstrip() + icon_styles.rstrip() + "\\n"\n',
+    1,
+)
+path.write_text(text, encoding="utf-8")
+print("Prepared unique Product Truth insertion anchor and normalized CSS EOF.")
