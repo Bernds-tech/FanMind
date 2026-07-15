@@ -2,6 +2,7 @@
   display: grid;
   gap: 10px;
   width: 100%;
+  min-width: 0;
   border: 1px solid rgba(103, 232, 249, 0.2);
   border-radius: 16px;
   padding: 12px;
@@ -11,6 +12,7 @@
 .heading {
   display: grid;
   gap: 3px;
+  min-width: 0;
 }
 
 .heading strong {
@@ -23,6 +25,7 @@
   color: #94a3b8;
   font-size: 12px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .heading span[data-state="verified"] {
@@ -34,17 +37,29 @@
 }
 
 .widget {
+  display: grid;
+  min-width: 0;
   min-height: 65px;
   width: 100%;
-  overflow: hidden;
+  justify-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
 }
 
 .widget iframe {
-  max-width: 100%;
+  display: block;
+  max-width: none;
 }
 
 .card noscript {
   color: #fda4af;
   font-size: 12px;
   line-height: 1.4;
+}
+
+@media (max-width: 380px) {
+  .card {
+    padding: 10px;
+  }
 }
