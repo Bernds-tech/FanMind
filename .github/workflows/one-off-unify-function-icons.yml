@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   apply:
-    if: github.head_ref == 'fix/unified-function-icons-20260715'
+    if: github.head_ref == 'fix/unified-function-icons-20260715' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -92,7 +92,7 @@ jobs:
         if: steps.validate.outputs.status != '0'
         run: exit 1
 
-      - name: Commit generated source changes and remove one-off helpers
+      - name: Commit generated source changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -105,11 +105,6 @@ jobs:
             src/app/landing-v2/page.tsx \
             scripts/verify-product-truth.mjs \
             docs/SOURCE_OF_TRUTH.md
-
-          git rm \
-            .github/workflows/one-off-unify-function-icons.yml \
-            scripts/one-off/prepare-unify-function-icons.py \
-            scripts/one-off/unify-function-icons.py
 
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
