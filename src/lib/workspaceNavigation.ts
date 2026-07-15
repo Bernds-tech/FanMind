@@ -11,6 +11,7 @@ export type WorkspaceRouteKey =
   | "reach"
   | "onboarding"
   | "settings"
+  | "aiUsage"
   | "referral"
   | "billing"
   | "top-fans"
@@ -77,6 +78,11 @@ export function getWorkspaceNavigation(
         label: locale === "en" ? "Profile & account" : "Profil & Konto",
         href: "/settings/profile",
         active: activeRoute === "settings",
+      },
+      {
+        label: locale === "en" ? "AI usage" : "KI-Nutzung",
+        href: "/settings/ai-usage",
+        active: activeRoute === "aiUsage",
       },
       {
         label: locale === "en" ? "Recommendations" : "Empfehlungen",
