@@ -14,6 +14,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   integrate:
@@ -23,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
+      GH_TOKEN: ${{ github.token }}
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       NEXT_PUBLIC_APP_URL: https://fanmind.ch
@@ -46,7 +49,32 @@ jobs:
           cache: npm
 
       - name: Apply shared icon integration
-        run: python3 scripts/one-off/shared-feature-icons.py
+        id: apply
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/one-off/shared-feature-icons.py > /tmp/shared-icons.log 2>&1
+          code=$?
+          cat /tmp/shared-icons.log
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Report integration failure
+        if: steps.apply.outputs.code != '0'
+        shell: bash
+        run: |
+          {
+            echo '## Shared-Icon-Integration fehlgeschlagen'
+            echo
+            echo '```text'
+            tail -n 120 /tmp/shared-icons.log
+            echo '```'
+          } > /tmp/shared-icons-comment.md
+          gh pr comment 569 --repo "$GITHUB_REPOSITORY" --body-file /tmp/shared-icons-comment.md
+
+      - name: Fail integration when codemod failed
+        if: steps.apply.outputs.code != '0'
+        run: exit 1
 
       - name: Remove one-off helpers
         run: |
