@@ -1,0 +1,60 @@
+name: One-off shared function icon integration
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  apply:
+    if: github.head_ref == 'fix/unified-function-icons-20260715'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout icon branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/unified-function-icons-20260715
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply shared function icon integration
+        run: python3 scripts/one-off/unify-function-icons.py
+
+      - name: Validate generated patch
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Commit generated source changes and remove one-off helpers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            src/components/FanMindFunctionIcon.tsx \
+            src/components/WorkspaceShell.tsx \
+            src/lib/workspaceNavigation.ts \
+            src/app/dashboard/dashboard.module.css \
+            src/app/landing-v2/page.tsx \
+            scripts/verify-product-truth.mjs \
+            docs/SOURCE_OF_TRUTH.md
+
+          git rm \
+            .github/workflows/one-off-unify-function-icons.yml \
+            scripts/one-off/unify-function-icons.py
+
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+
+          git commit -m "fix: unify function icons across landing and workspace"
+          git push origin HEAD:fix/unified-function-icons-20260715
