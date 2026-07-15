@@ -7,6 +7,7 @@ import {
   syncSupabaseSessionForServer,
 } from "@/lib/supabase/client";
 import { FanMindLogo } from "@/components/FanMindLogo";
+import { DemoTurnstile } from "@/components/DemoTurnstile";
 import {
   fanmindCopy,
   getFanMindLanguage,
@@ -29,6 +30,8 @@ const LOGIN_TARGET = "/dashboard";
 const DEMO_EMAIL = "sandra.m@fanmind.ch";
 const DEMO_PASSWORD =
   process.env.NEXT_PUBLIC_FANMIND_DEMO_PASSWORD ?? "FanMind-Demo-2026!";
+const TURNSTILE_SITE_KEY =
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
 
 function getSafeReturnTo(returnTo?: string | string[] | null) {
   const value = Array.isArray(returnTo) ? returnTo[0] : returnTo;
@@ -106,6 +109,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -129,22 +134,43 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
       passwordInputRef.current.value = DEMO_PASSWORD;
   }, [isDemoMode]);
 
+  function resetTurnstile() {
+    if (!TURNSTILE_SITE_KEY) return;
+    setTurnstileToken(null);
+    setTurnstileResetSignal((current) => current + 1);
+  }
+
   async function handleDemoStart() {
     setError(null);
+
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError(
+        language === "en"
+          ? "Please confirm bot protection before starting the public demo."
+          : "Bitte bestätige den Bot-Schutz, bevor du die öffentliche Demo startest.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const response = await fetch("/api/demo/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale: language }),
+        body: JSON.stringify({
+          locale: language,
+          turnstileToken: turnstileToken ?? undefined,
+        }),
       });
       const payload = (await response.json().catch(() => null)) as {
+        code?: string;
         error?: string;
         redirectTo?: string;
       } | null;
 
       if (!response.ok) {
+        resetTurnstile();
         setError(
           `${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den kontrollierten Sandra-Demo-Zugang über /login?demo=1 nutzen.`,
         );
@@ -153,6 +179,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 
       window.location.assign(payload?.redirectTo ?? LOGIN_TARGET);
     } catch (startError) {
+      resetTurnstile();
       setError(
         startError instanceof Error
           ? startError.message
@@ -399,11 +426,20 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               </p>
             )}
 
+            <DemoTurnstile
+              siteKey={TURNSTILE_SITE_KEY}
+              language={language}
+              resetSignal={turnstileResetSignal}
+              onTokenChange={setTurnstileToken}
+            />
+
             <button
               className={styles.secondaryButton}
               type="button"
               onClick={handleDemoStart}
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting || Boolean(TURNSTILE_SITE_KEY && !turnstileToken)
+              }
             >
               {isSubmitting
                 ? language === "en"

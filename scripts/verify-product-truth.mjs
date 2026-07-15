@@ -13,14 +13,18 @@ const runtimeFiles = [
   "src/lib/referrals.ts",
   "src/lib/referralPolicy.mjs",
   "src/lib/aiUsagePolicy.mjs",
+  "src/lib/demoTurnstilePolicy.mjs",
+  "src/lib/demoProtection.ts",
   "src/lib/workspaceAiUsage.ts",
   "src/lib/workspaceNavigation.ts",
+  "src/app/login/page.tsx",
   "src/app/landing-v2/page.tsx",
   "src/app/landing-v2/FaqAccordion.tsx",
   "src/app/brandMetadata.ts",
   "src/app/opengraph-image.tsx",
   "src/components/PlatformLogo.module.css",
   "src/components/FanMindFunctionIcon.tsx",
+  "src/components/DemoTurnstile.tsx",
   "src/components/WorkspaceShell.tsx",
   "src/app/dashboard/dashboard.module.css",
   "src/components/LegalTopHeader.tsx",
@@ -35,6 +39,7 @@ const runtimeFiles = [
   "src/app/avv/page.tsx",
   "tests/referral-policy.test.mjs",
   "tests/ai-usage-policy.test.mjs",
+  "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
 ];
 
@@ -273,6 +278,42 @@ requireText(
   "docs/SOURCE_OF_TRUTH.md",
   "Funktionssymbole werden über die gemeinsame `FanMindFunctionIcon`-Registry gerendert",
   "Die Source of Truth muss die gemeinsame Funktionssymbol-Regel dokumentieren.",
+);
+
+requireText(
+  ".env.example",
+  "FANMIND_REQUIRE_TURNSTILE_FOR_PUBLIC_DEMO=false",
+  "Turnstile muss vor vollständiger Schlüsselkonfiguration optional und ausdrücklich deaktivierbar bleiben.",
+);
+requireText(
+  "src/lib/demoTurnstilePolicy.mjs",
+  'mode: "misconfigured"',
+  "Unvollständige Turnstile-Konfiguration muss fail-closed behandelt werden.",
+);
+requireText(
+  "src/lib/demoProtection.ts",
+  'FANMIND_REQUIRE_TURNSTILE_FOR_PUBLIC_DEMO === "true"',
+  "Der öffentliche Demo-Endpunkt muss den verpflichtenden Turnstile-Modus serverseitig auswerten.",
+);
+requireText(
+  "src/components/DemoTurnstile.tsx",
+  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit",
+  "Das Browser-Widget muss die offizielle Turnstile-API direkt und explizit laden.",
+);
+requireText(
+  "src/components/DemoTurnstile.tsx",
+  'action: "fanmind_demo_start"',
+  "Widget und Server müssen dieselbe Turnstile-Action verwenden.",
+);
+requireText(
+  "src/app/login/page.tsx",
+  "turnstileToken: turnstileToken ?? undefined",
+  "Die Loginseite muss den gelösten Token an den geschützten Demo-Endpunkt übergeben.",
+);
+requireText(
+  "tests/demo-turnstile-policy.test.mjs",
+  "Turnstile required mode fails closed before both keys are configured",
+  "Der verpflichtende Turnstile-Modus muss automatisiert auf unvollständige Konfiguration getestet werden.",
 );
 
 forbidIn(
