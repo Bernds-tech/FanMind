@@ -122,7 +122,6 @@ export function DemoTurnstile({
 
     let disposed = false;
     tokenChangeRef.current(null);
-    setState("loading");
 
     loadTurnstileApi()
       .then((api) => {
@@ -171,11 +170,14 @@ export function DemoTurnstile({
 
   useEffect(() => {
     if (resetSignal <= 0) return;
+
     tokenChangeRef.current(null);
-    setState("ready");
     if (apiRef.current && widgetIdRef.current) {
       apiRef.current.reset(widgetIdRef.current);
     }
+
+    const timer = window.setTimeout(() => setState("ready"), 0);
+    return () => window.clearTimeout(timer);
   }, [resetSignal]);
 
   if (!siteKey) return null;
