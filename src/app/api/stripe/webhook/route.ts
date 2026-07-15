@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncReferralAutomationForWorkspace } from "@/lib/referralAutomation";
 import {
+  billingStatusFromInvoiceFailure,
+  billingStatusFromStripeSubscriptionStatus,
+  referralBillingStatusFromStripeEvent,
+} from "@/lib/referralLifecyclePolicy.mjs";
+import {
   findWorkspaceIdByStripeReferences,
   updateWorkspaceBillingDefensively,
   verifyStripeSignature,
@@ -57,17 +62,8 @@ function metadataWorkspaceId(object: StripeObject | undefined): string | undefin
 function subscriptionStatusFields(object: StripeObject) {
   const status = stringField(object, "status");
   const billingStatus =
-    status === "active" || status === "trialing"
-      ? "active"
-      : status === "past_due"
-        ? "past_due"
-        : status === "unpaid"
-          ? "payment_failed"
-          : status === "paused"
-            ? "suspended"
-            : status === "canceled" || status === "incomplete_expired"
-              ? "cancelled"
-              : undefined;
+    billingStatusFromStripeSubscriptionStatus(status) ?? undefined;
+
   return {
     billing_status: billingStatus,
     stripe_customer_id: stringField(object, "customer"),
@@ -211,6 +207,16 @@ export async function POST(request: NextRequest) {
   const event = JSON.parse(rawBody) as StripeEvent;
   const object = event.data?.object ?? {};
   const now = new Date().toISOString();
+  const defaultReferralBillingStatus = referralBillingStatusFromStripeEvent({
+    eventType: event.type,
+    paymentStatus: stringField(object, "payment_status"),
+    subscriptionStatus: stringField(object, "status"),
+    attemptCount: numberField(object, "attempt_count"),
+    graceExpired:
+      event.type === "invoice.payment_failed"
+        ? Date.now() > Date.parse(graceUntil(object))
+        : false,
+  });
   const update = (
     fields: Record<string, string | number | boolean | null | undefined>,
     referralBillingStatus?: string | null,
@@ -220,7 +226,8 @@ export async function POST(request: NextRequest) {
       eventId: event.id,
       object,
       fields,
-      referralBillingStatus,
+      referralBillingStatus:
+        referralBillingStatus ?? defaultReferralBillingStatus,
     });
 
   if (event.type === "checkout.session.completed") {
@@ -337,12 +344,11 @@ export async function POST(request: NextRequest) {
   if (event.type === "invoice.payment_failed") {
     const attempts = retryCount(object);
     const grace = graceUntil(object);
-    const suspend = attempts >= 3 || Date.now() > Date.parse(grace);
-    const billingStatus = suspend
-      ? "suspended"
-      : attempts > 1
-        ? "payment_failed"
-        : "past_due";
+    const billingStatus = billingStatusFromInvoiceFailure({
+      attemptCount: attempts,
+      graceExpired: Date.now() > Date.parse(grace),
+    });
+    const suspend = billingStatus === "suspended";
     await update({
       ...invoiceFields(object),
       billing_status: billingStatus,
