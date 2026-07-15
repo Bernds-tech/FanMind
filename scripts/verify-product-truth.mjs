@@ -20,6 +20,9 @@ const runtimeFiles = [
   "src/app/brandMetadata.ts",
   "src/app/opengraph-image.tsx",
   "src/components/PlatformLogo.module.css",
+  "src/components/FanMindFunctionIcon.tsx",
+  "src/components/WorkspaceShell.tsx",
+  "src/app/dashboard/dashboard.module.css",
   "src/components/LegalTopHeader.tsx",
   "src/app/register/RegisterClient.tsx",
   "src/app/settings/AccountSections.tsx",
@@ -244,6 +247,32 @@ requireText(
   "src/lib/workspaceNavigation.ts",
   'href: "/settings/ai-usage"',
   "Die KI-Nutzungsseite muss im geschützten Kontobereich erreichbar sein.",
+);
+
+requireText(
+  "src/components/FanMindFunctionIcon.tsx",
+  "export type FanMindFunctionIconKey",
+  "Funktionssymbole müssen über eine gemeinsame, typisierte Registry definiert sein.",
+);
+requireText(
+  "src/components/WorkspaceShell.tsx",
+  "icon?: FanMindFunctionIconKey",
+  "Die Workspace-Navigation muss die gemeinsame Funktionssymbol-Registry verwenden.",
+);
+requireText(
+  "src/app/landing-v2/page.tsx",
+  "resolveFanMindFunctionIcon(feature.icon, feature.title)",
+  "Die Landingpage muss für Kernfunktionen dieselben Symbole wie die Anwendung verwenden.",
+);
+requireText(
+  "src/lib/workspaceNavigation.ts",
+  'icon: "dashboard"',
+  "Die zentrale Workspace-Navigation muss semantische Icon-Schlüssel setzen.",
+);
+requireText(
+  "docs/SOURCE_OF_TRUTH.md",
+  "Funktionssymbole werden über die gemeinsame `FanMindFunctionIcon`-Registry gerendert",
+  "Die Source of Truth muss die gemeinsame Funktionssymbol-Regel dokumentieren.",
 );
 
 forbidIn(

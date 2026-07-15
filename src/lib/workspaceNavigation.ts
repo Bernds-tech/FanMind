@@ -48,27 +48,32 @@ export function getWorkspaceNavigation(
       {
         label: wt(locale, "Dashboard"),
         href: "/dashboard",
+        icon: "dashboard",
         active: activeRoute === "dashboard",
       },
       {
         label: wt(locale, "Fans"),
         href: "/fans",
+        icon: "contacts",
         active: activeRoute === "fans",
       },
       {
         label: "Follow-ups",
         href: "/followups",
+        icon: "followups",
         active: activeRoute === "followups",
         badge: dueFollowupCount > 0 ? String(dueFollowupCount) : undefined,
       },
       {
         label: wt(locale, "Onboarding"),
         href: "/onboarding",
+        icon: "roadmap",
         active: activeRoute === "onboarding",
       },
       {
         label: wt(locale, "Kanäle"),
         href: "/channels",
+        icon: "channels",
         active: activeRoute === "channels",
         badge: "Sync",
       },
@@ -77,16 +82,19 @@ export function getWorkspaceNavigation(
       {
         label: locale === "en" ? "Profile & account" : "Profil & Konto",
         href: "/settings/profile",
+        icon: "profile",
         active: activeRoute === "settings",
       },
       {
         label: locale === "en" ? "AI usage" : "KI-Nutzung",
         href: "/settings/ai-usage",
+        icon: "usage",
         active: activeRoute === "aiUsage",
       },
       {
         label: locale === "en" ? "Recommendations" : "Empfehlungen",
         href: "/settings/referral",
+        icon: "referral",
         active: activeRoute === "referral",
       },
       ...(showAdminArea
@@ -94,6 +102,7 @@ export function getWorkspaceNavigation(
             {
               label: "Adminbereich",
               href: "/admin/billing",
+              icon: "admin" as const,
               active: activeRoute === "admin",
             },
           ]
@@ -103,11 +112,13 @@ export function getWorkspaceNavigation(
       {
         label: wt(locale, "Top Fans"),
         href: "/top-fans",
+        icon: "topFans",
         active: activeRoute === "top-fans",
       },
       {
         label: wt(locale, "Reaktivierung"),
         href: "/reactivation",
+        icon: "reactivation",
         active: activeRoute === "reactivation",
       },
     ],

@@ -7,6 +7,7 @@ import { createFanMindTranslator, getFanMindLanguage, landingPath, localizedPath
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { PlatformLogo } from "@/components/PlatformLogo";
+import { FanMindFunctionIcon, resolveFanMindFunctionIcon } from "@/components/FanMindFunctionIcon";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
 import RoadmapShowcase from "./RoadmapShowcase";
 import FaqAccordion from "./FaqAccordion";
@@ -1018,7 +1019,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 key={feature.title}
                 data-tone={feature.tone}
               >
-                <div>{feature.icon}</div>
+                <div><FanMindFunctionIcon name={resolveFanMindFunctionIcon(feature.icon, feature.title)} /></div>
                 <h3>{feature.title}</h3>
                 {statusVariantFromLabel(feature.status) ? (
                   <FeatureStatusLabel variant={statusVariantFromLabel(feature.status)!}>{feature.status}</FeatureStatusLabel>
@@ -1076,7 +1077,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div className={styles.problemCards}>
             {localizedProblemCards.map((card) => (
               <article className={styles.problemCard} key={card.title}>
-                <div className={styles.problemIcon}>{card.icon}</div>
+                <div className={styles.problemIcon}><FanMindFunctionIcon name={resolveFanMindFunctionIcon(card.icon, card.title)} /></div>
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
                 <div className={styles.problemMiniAlert}>
@@ -1098,7 +1099,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <div className={styles.solutionBenefits}>
               {localizedSolutionBenefits.map((benefit) => (
                 <div key={benefit.title}>
-                  <span>{benefit.icon}</span>
+                  <span><FanMindFunctionIcon name={resolveFanMindFunctionIcon(benefit.icon, benefit.title)} /></span>
                   <strong>{benefit.title}</strong>
                   <small>{benefit.text}</small>
                 </div>
@@ -1118,7 +1119,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 key={card.title}
               >
                 <div className={styles.functionTitle}>
-                  <span>{card.icon}</span>
+                  <span><FanMindFunctionIcon name={resolveFanMindFunctionIcon(card.icon, card.title)} /></span>
                   <div>
                     <h3>{card.title}</h3>
                     {card.hideStatusLabel ? null : statusVariantFromLabel(card.status) ? (
@@ -1183,7 +1184,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <p>{step.copy}</p>
               <div className={styles.stepExampleCard}>
                 <div className={styles.stepCardTitle}>
-                  <span>{step.icon}</span>
+                  <span><FanMindFunctionIcon name={resolveFanMindFunctionIcon(step.icon, step.title)} /></span>
                   <strong>{step.cardTitle}</strong>
                   {step.badge && !step.showComingSoonMark && (
                     <FeatureStatusLabel variant={statusVariantFromLabel(step.badge) ?? "preview"}>{step.badge}</FeatureStatusLabel>

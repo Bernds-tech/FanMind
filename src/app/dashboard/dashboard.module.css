@@ -2815,3 +2815,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Shared semantic function icons: identical registry on landing and in-product navigation. */
+.navItemLead,
+.savedViewLead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.navItemLead > svg,
+.savedViewLead > svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  color: #67e8f9;
+}
+
+.navItemLead > span,
+.savedViewLead > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.savedViews a {
+  display: flex;
+  align-items: center;
+}
