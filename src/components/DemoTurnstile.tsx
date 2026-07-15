@@ -96,6 +96,11 @@ function loadTurnstileApi(): Promise<TurnstileApi> {
   return turnstileLoader;
 }
 
+function getWidgetSize(container: HTMLElement): TurnstileWidgetOptions["size"] {
+  const availableWidth = container.getBoundingClientRect().width;
+  return availableWidth > 0 && availableWidth < 300 ? "compact" : "flexible";
+}
+
 export function DemoTurnstile({
   siteKey,
   language,
@@ -122,12 +127,13 @@ export function DemoTurnstile({
     loadTurnstileApi()
       .then((api) => {
         if (disposed || !containerRef.current) return;
+        const container = containerRef.current;
         apiRef.current = api;
-        widgetIdRef.current = api.render(containerRef.current, {
+        widgetIdRef.current = api.render(container, {
           sitekey: siteKey,
           action: "fanmind_demo_start",
           theme: "auto",
-          size: "flexible",
+          size: getWidgetSize(container),
           language,
           callback: (token) => {
             tokenChangeRef.current(token);
