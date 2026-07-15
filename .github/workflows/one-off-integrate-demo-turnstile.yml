@@ -51,7 +51,7 @@ jobs:
             tail -n 160 /tmp/turnstile-integration.log
             echo '```'
           } > /tmp/turnstile-integration-comment.md
-          gh pr comment 569 --repo "$GITHUB_REPOSITORY" --body-file /tmp/turnstile-integration-comment.md
+          gh pr comment 570 --repo "$GITHUB_REPOSITORY" --body-file /tmp/turnstile-integration-comment.md
 
       - name: Stop after reported integration failure
         if: steps.apply.outputs.status != '0'
@@ -80,7 +80,7 @@ jobs:
             tail -n 160 /tmp/turnstile-validation.log
             echo '```'
           } > /tmp/turnstile-validation-comment.md
-          gh pr comment 569 --repo "$GITHUB_REPOSITORY" --body-file /tmp/turnstile-validation-comment.md
+          gh pr comment 570 --repo "$GITHUB_REPOSITORY" --body-file /tmp/turnstile-validation-comment.md
 
       - name: Stop after reported validation failure
         if: steps.validate.outputs.status != '0'
