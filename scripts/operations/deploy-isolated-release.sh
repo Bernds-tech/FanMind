@@ -74,6 +74,7 @@ start_pm2_release() {
 
 rollback() {
   local reason="$1"
+  SWITCHED=0
   log "rollback requested: $reason"
   pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
 
@@ -106,7 +107,17 @@ cleanup() {
     rm -rf -- "$TEMP_RELEASE"
   fi
 }
-trap cleanup EXIT
+
+on_exit() {
+  local status=$?
+  trap - EXIT
+  cleanup
+  if [[ "$status" -ne 0 ]] && [[ "$SWITCHED" -eq 1 ]]; then
+    rollback "unexpected failure after PM2 switched to the new release" || true
+  fi
+  exit "$status"
+}
+trap on_exit EXIT
 
 [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]] || fail "release commit must be a full SHA"
 [[ "$RETAIN_RELEASES" =~ ^[1-9][0-9]*$ ]] || fail "retention count must be a positive integer"
