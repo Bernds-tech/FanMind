@@ -1,0 +1,42 @@
+name: One-off mobile typecheck report 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: github.head_ref == 'feat/mobile-app-foundation-20260718'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - working-directory: apps/mobile
+        run: npm ci --no-audit --no-fund
+      - name: Capture mobile typecheck
+        id: typecheck
+        continue-on-error: true
+        working-directory: apps/mobile
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee mobile-typecheck-report.txt
+      - name: Upload mobile typecheck report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-typecheck-report
+          path: apps/mobile/mobile-typecheck-report.txt
+          if-no-files-found: error
+          retention-days: 3
+      - name: Preserve typecheck result
+        if: steps.typecheck.outcome != 'success'
+        run: exit 1
