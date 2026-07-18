@@ -59,9 +59,17 @@ Der Preflight zeigt ausschließlich Zustände wie `gesetzt`, `nicht gesetzt`, `t
 
 ### Schreibenden Sandbox-Test ausdrücklich freigeben
 
-Nur in einer nicht-produktiven Umgebung:
+Nur in einer vollständig getrennten Staging-/Testumgebung. Ziel- und Production-Projektreferenz durch die tatsächlichen Supabase-Projektreferenzen ersetzen, aber nicht in Tickets oder Chat kopieren:
 
 ```bash
+export FANMIND_RUNTIME_ENVIRONMENT=staging
+export FANMIND_ENABLE_NON_PRODUCTION_WRITES=true
+export FANMIND_NON_PRODUCTION_WRITE_ACK=I_UNDERSTAND_NON_PRODUCTION_ONLY
+export FANMIND_TARGET_SUPABASE_PROJECT_REF=<STAGING_PROJECT_REF>
+export FANMIND_PRODUCTION_SUPABASE_PROJECT_REF=<PRODUCTION_PROJECT_REF>
+
+npm run environment:preflight:write
+
 export FANMIND_ENABLE_REFERRAL_BILLING=true
 export FANMIND_REFERRAL_SANDBOX_ACK=I_UNDERSTAND_TEST_MODE_ONLY
 npm run referral:sandbox:preflight -- --allow-write
@@ -74,6 +82,7 @@ MODE=sandbox-write
 STRIPE_KEY_MODE=test
 REFERRAL_BILLING=aktiv
 TARGET=non-production
+ENVIRONMENT_BOUNDARY=ok
 SECRETS_WURDEN_NICHT_AUSGEGEBEN=true
 PREFLIGHT=OK
 ```
@@ -82,6 +91,8 @@ Der Preflight bricht ab bei:
 
 - Live-Schlüssel;
 - Production-Ziel `fanmind.ch`;
+- Production-Supabase-Projekt oder nicht eindeutig identifizierbarem Zielprojekt;
+- fehlender allgemeiner Staging-/Test-Schreibfreigabe;
 - fehlendem Webhook-, Service-Role- oder Reconcile-Secret;
 - fehlender ausdrücklicher Schreibfreigabe;
 - aktivem Billing im Read-only-Modus.
