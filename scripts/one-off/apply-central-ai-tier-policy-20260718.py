@@ -105,10 +105,10 @@ write(path, json.dumps(package, ensure_ascii=False, indent=2) + "\n")
 path = "scripts/verify-product-truth.mjs"
 text = read(path)
 if '"src/config/aiTiers.mjs",' not in text:
-    text = replace_once(
+    text = regex_replace_once(
         text,
-        '  ".env.example",\n',
-        '  ".env.example",\n  "src/config/aiTiers.mjs",\n  "tests/ai-tier-policy.test.mjs",\n',
+        r'(const runtimeFiles = \[\n\s*"\.env\.example",\n)',
+        r'\1  "src/config/aiTiers.mjs",\n  "tests/ai-tier-policy.test.mjs",\n',
         "truth runtime AI tier files",
     )
 old_checks = '''requireText(
