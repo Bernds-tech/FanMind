@@ -1,0 +1,71 @@
+name: One-off public consultation copy 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'fix/public-consultation-language-20260718' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/public-consultation-language-20260718
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Apply public consultation copy
+        id: apply
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/one-off/replace-public-pilot-cta-20260718.py > /tmp/public-copy.log 2>&1
+          status=$?
+          cat /tmp/public-copy.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Report failure
+        if: steps.apply.outputs.status != '0'
+        run: |
+          {
+            echo '## Public consultation copy integration failed'
+            echo
+            echo '```text'
+            cat /tmp/public-copy.log
+            echo '```'
+          } > /tmp/public-copy-comment.md
+          gh pr comment "$GITHUB_EVENT_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/public-copy-comment.md
+      - name: Stop after failure
+        if: steps.apply.outputs.status != '0'
+        run: exit 1
+      - run: git diff --check
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/app/landing-v2/page.tsx \
+            src/components/landing/FooterInquiryForm.tsx \
+            src/lib/fanmindCopy.ts \
+            src/config/plans.ts \
+            src/components/onboarding/OnboardingMaster.tsx \
+            src/app/channels/ChannelsGrid.tsx \
+            src/app/settings/AccountSections.tsx
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+            exit 0
+          fi
+          git commit -m "fix: replace retired pilot CTAs with consultation language"
+          git push origin HEAD:fix/public-consultation-language-20260718
