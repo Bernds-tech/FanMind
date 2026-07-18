@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 import { createHash, randomBytes } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { access, constants, mkdir, mkdtemp, open, readFile, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { access, constants, mkdir, mkdtemp, open, readFile, realpath, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { hostname, tmpdir } from 'node:os';
-import { join, basename, dirname } from 'node:path';
+import { join, basename, dirname, relative, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { verifyBackupArtifact } from './verify-backup-artifact.mjs';
 
-const VERSION = 'phase5-backup-worker-4';
-const JOBS = new Set(['backup_server_config','backup_database','backup_storage','backup_full']);
+const VERSION = 'phase5-backup-worker-5';
+const JOBS = new Set(['backup_server_config','backup_database','backup_storage','backup_full','verify_backup']);
 const STORAGE_PAGE_SIZE = Math.min(Math.max(Number(process.env.FANMIND_STORAGE_BACKUP_PAGE_SIZE || 1000), 1), 1000);
 const WORKER_ID = process.env.FANMIND_BACKUP_WORKER_ID || `fanmind-backup-${hostname() || 'worker'}-${process.pid}`;
 const DEFAULT_BACKUP_POLL_MS = 30000;
@@ -117,6 +118,50 @@ async function placeBackupPair(result) {
   }
 }
 async function moveAndValidate(result) { return placeBackupPair(result); }
+async function latestVerifiableBackupRun() {
+  const rows = await api(restUrl('backup_runs', '?select=id,backup_type,status,storage_reference,checksum_reference,sha256,size_bytes,started_at&backup_type=neq.verification&status=in.(succeeded,offsite_pending,degraded,completed)&storage_reference=not.is.null&checksum_reference=not.is.null&order=started_at.desc&limit=1'));
+  return Array.isArray(rows) ? rows[0] ?? null : null;
+}
+async function validatedLocalBackupPair(runRow) {
+  if (!runRow || typeof runRow.storage_reference !== 'string' || typeof runRow.checksum_reference !== 'string') throw new Error('verifiable_backup_not_found');
+  const root = await realpath(backupRoot());
+  const artifact = await realpath(resolve(runRow.storage_reference));
+  const checksum = await realpath(resolve(runRow.checksum_reference));
+  const artifactRelative = relative(root, artifact);
+  const checksumRelative = relative(root, checksum);
+  if (!artifactRelative || artifactRelative.startsWith('..') || resolve(root, artifactRelative) !== artifact) throw new Error('backup_artifact_outside_root');
+  if (!checksumRelative || checksumRelative.startsWith('..') || resolve(root, checksumRelative) !== checksum) throw new Error('backup_checksum_outside_root');
+  if (checksum !== `${artifact}.sha256`) throw new Error('backup_checksum_pair_mismatch');
+  return { artifact, checksum };
+}
+async function verifyLatestBackup(job) {
+  const start = Date.now();
+  const sourceRun = await latestVerifiableBackupRun();
+  if (!sourceRun) throw new Error('verifiable_backup_not_found');
+  let result;
+  try {
+    const pair = await validatedLocalBackupPair(sourceRun);
+    result = await verifyBackupArtifact({ artifactPath:pair.artifact, checksumPath:pair.checksum });
+    if (sourceRun.sha256 && sourceRun.sha256 !== result.checksum) throw new Error('backup_run_sha256_mismatch');
+    if (sourceRun.size_bytes != null && Number(sourceRun.size_bytes) !== result.sizeBytes) throw new Error('backup_run_size_mismatch');
+  } catch (error) {
+    await patch('backup_runs', sourceRun.id, { validation_status:'failed' }).catch(()=>{});
+    throw error;
+  }
+  const verificationRun = await insert('backup_runs', {
+    backup_type:'verification', status:'succeeded', severity:'info', finished_at:new Date().toISOString(),
+    validation_status:'passed', storage_reference:null, checksum_reference:null, sha256:result.checksum,
+    size_bytes:result.sizeBytes, offsite_status:'skipped', job_id:job.id, worker_id:WORKER_ID,
+    duration_ms:Date.now()-start, technical_reference:sourceRun.id,
+    manifest:{ source_backup_run_id:sourceRun.id, source_backup_type:sourceRun.backup_type, mode:result.mode, artifact:result.artifact },
+  });
+  await patch('backup_runs', sourceRun.id, { validation_status:'passed' });
+  await patch('admin_operation_jobs', job.id, { status:'succeeded', finished_at:new Date().toISOString(), result_reference:verificationRun.id, lease_until:null });
+  await notify('info', 'Backup-Prüfung erfolgreich', `${sourceRun.backup_type} wurde checksum-only geprüft.`, 'backup_worker', verificationRun.id);
+  await audit(job.job_type, 'success', { source_backup_run_id:sourceRun.id, verification_run_id:verificationRun.id, mode:result.mode });
+  return verificationRun;
+}
+
 async function offsite(file) {
   if (process.env.FANMIND_BACKUP_OFFSITE_ENABLED !== 'true') return { status:'not_configured' };
   const remote = required('FANMIND_BACKUP_RCLONE_REMOTE');
@@ -149,7 +194,7 @@ async function offsite(file) {
     checksum_reference:`${remote}:${remotePath}/${basename(file)}.sha256`,
   };
 }
-async function handle(job) { if (!JOBS.has(job.job_type)) throw new Error('job_type_not_allowed'); await patch('admin_operation_jobs', job.id, { status:'running', started_at:new Date().toISOString(), lease_until:new Date(Date.now()+900000).toISOString() }); const tmp = await mkdtemp(join(tmpdir(), 'fanmind-backup-')); try { const start = Date.now(); let result; if (job.job_type === 'backup_server_config') result = await createServerConfig(tmp); else if (job.job_type === 'backup_database') result = await createDatabase(tmp); else if (job.job_type === 'backup_storage') result = await createStorage(tmp); else result = await createFull(tmp); const { final, checksumFinal } = await moveAndValidate(result); const off = await offsite(final).catch(e => ({ status:'failed', error:e.message })); const status = off.status === 'not_configured' ? 'offsite_pending' : off.status === 'failed' ? 'degraded' : 'succeeded'; const runRow = await insert('backup_runs', { backup_type: result.manifest.backup_type, status, severity: status === 'succeeded' ? 'info':'warning', finished_at:new Date().toISOString(), storage_reference:final, checksum_reference:checksumFinal, sha256:result.sha256, size_bytes:result.size_bytes, validation_status:'passed', offsite_status:off.status, offsite_reference:off.reference || null, job_id:job.id, worker_id:WORKER_ID, duration_ms:Date.now()-start, manifest:{...result.manifest, checksum_reference:checksumFinal, offsite_checksum_reference:off.checksum_reference || null} }); await patch('admin_operation_jobs', job.id, { status:'succeeded', finished_at:new Date().toISOString(), result_reference:runRow.id, lease_until:null }); await notify(status === 'succeeded' ? 'info':'warning', status === 'succeeded' ? 'Backup erfolgreich' : 'Backup lokal erfolgreich, Offsite ausstehend', `${job.job_type} wurde verarbeitet.`, 'backup_worker', runRow.id); await audit(job.job_type, 'success', { backup_run_id:runRow.id, offsite_status:off.status }); } finally { await rm(tmp, { recursive:true, force:true }); } }
+async function handle(job) { if (!JOBS.has(job.job_type)) throw new Error('job_type_not_allowed'); await patch('admin_operation_jobs', job.id, { status:'running', started_at:new Date().toISOString(), lease_until:new Date(Date.now()+900000).toISOString() }); if (job.job_type === 'verify_backup') { await verifyLatestBackup(job); return; } const tmp = await mkdtemp(join(tmpdir(), 'fanmind-backup-')); try { const start = Date.now(); let result; if (job.job_type === 'backup_server_config') result = await createServerConfig(tmp); else if (job.job_type === 'backup_database') result = await createDatabase(tmp); else if (job.job_type === 'backup_storage') result = await createStorage(tmp); else result = await createFull(tmp); const { final, checksumFinal } = await moveAndValidate(result); const off = await offsite(final).catch(e => ({ status:'failed', error:e.message })); const status = off.status === 'not_configured' ? 'offsite_pending' : off.status === 'failed' ? 'degraded' : 'succeeded'; const runRow = await insert('backup_runs', { backup_type: result.manifest.backup_type, status, severity: status === 'succeeded' ? 'info':'warning', finished_at:new Date().toISOString(), storage_reference:final, checksum_reference:checksumFinal, sha256:result.sha256, size_bytes:result.size_bytes, validation_status:'passed', offsite_status:off.status, offsite_reference:off.reference || null, job_id:job.id, worker_id:WORKER_ID, duration_ms:Date.now()-start, manifest:{...result.manifest, checksum_reference:checksumFinal, offsite_checksum_reference:off.checksum_reference || null} }); await patch('admin_operation_jobs', job.id, { status:'succeeded', finished_at:new Date().toISOString(), result_reference:runRow.id, lease_until:null }); await notify(status === 'succeeded' ? 'info':'warning', status === 'succeeded' ? 'Backup erfolgreich' : 'Backup lokal erfolgreich, Offsite ausstehend', `${job.job_type} wurde verarbeitet.`, 'backup_worker', runRow.id); await audit(job.job_type, 'success', { backup_run_id:runRow.id, offsite_status:off.status }); } finally { await rm(tmp, { recursive:true, force:true }); } }
 async function loop() { log('info','worker_start',{version:VERSION}); let lastHeartbeatAt = 0; while (!stopping) { const now = Date.now(); if (now - lastHeartbeatAt >= backupHeartbeatMs()) { await heartbeat(); lastHeartbeatAt = now; } const claimResponse = await rpc('claim_admin_backup_job', { p_worker_id:WORKER_ID, p_lease_seconds:900 }).catch(e => { log('warn','claim_failed',{error:e.message}); return null; }); const job = normalizeClaimedJob(claimResponse); if (!job) { if (isUnsupportedClaimedJob(claimResponse)) { const unsupportedJob = firstClaimResponseRow(claimResponse); const msg = 'job_type_not_allowed'; await patch('admin_operation_jobs', unsupportedJob.id, { status:'failed', finished_at:new Date().toISOString(), error_code:'job', error_message:msg, lease_until:null }).catch(()=>{}); log('warn','job_rejected',{job_id:unsupportedJob.id, job_type:unsupportedJob.job_type, error:msg}); } await sleep(backupPollMs()); continue; } log('info','job_claimed',{job_id:job.id, job_type:job.job_type}); try { await handle(job); } catch(e) { const msg = e instanceof Error ? e.message.replace(/[^a-zA-Z0-9_.:-]/g,'_').slice(0,160) : 'unknown_error'; await patch('admin_operation_jobs', job.id, { status:'failed', finished_at:new Date().toISOString(), error_code:msg.split('_')[0] || 'backup_failed', error_message:msg, lease_until:null }).catch(()=>{}); await notify('critical','Backup fehlgeschlagen', `${job.job_type} ist fehlgeschlagen.`, 'backup_worker', job.id); await audit(job.job_type, 'failure', { error_code:msg }); log('error','job_failed',{job_id:job.id,error:msg}); } } log('info','worker_stop'); }
-export { encryptedFinalize, createFull, createStorage, walkStorage, listStorage, placeBackupPair, moveAndValidate, offsite, createServerConfig, normalizeClaimedJob, backupPollMs, backupHeartbeatMs, __setBackupWorkerTestHooks, JOBS };
+export { encryptedFinalize, createFull, createStorage, walkStorage, listStorage, placeBackupPair, moveAndValidate, offsite, createServerConfig, normalizeClaimedJob, backupPollMs, backupHeartbeatMs, validatedLocalBackupPair, verifyLatestBackup, __setBackupWorkerTestHooks, JOBS };
 if (import.meta.url === pathToFileURL(process.argv[1]).href) loop().catch(e => { log('error','fatal',{error:e.message}); process.exit(2); });

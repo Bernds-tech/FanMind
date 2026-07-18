@@ -53,6 +53,7 @@ async function listRoot(root) {
 const migration = await readFile(new URL('../supabase/migrations/20260711161500_disable_verify_backup_until_safe_validation.sql', import.meta.url), 'utf8');
 
 const serviceRoleGrantMigration = await readFile(new URL('../supabase/migrations/20260711170000_grant_backup_worker_rpc_service_role.sql', import.meta.url), 'utf8');
+const enableVerificationMigration = await readFile(new URL('../supabase/migrations/20260718173000_enable_safe_backup_verification.sql', import.meta.url), 'utf8');
 const rpcPermissionProof = await readFile(new URL('./backup-worker-rpc-permissions.sql', import.meta.url), 'utf8');
 
 
@@ -149,10 +150,14 @@ test('deployment workflow records a verified release only after either deploymen
   assert.doesNotMatch(deployWorkflow, /systemctl start fanmind-backup-worker\.service/);
 });
 
-test('verify_backup is blocked in worker and migration follow-up', () => {
-  assert.equal(worker.JOBS.has('verify_backup'), false);
+test('verify_backup is re-enabled only by the safe follow-up migration', () => {
+  assert.equal(worker.JOBS.has('verify_backup'), true);
   assert.doesNotMatch(migration.match(/job_type in \(([^)]*)\)/)?.[1] ?? '', /verify_backup/);
   assert.match(migration, /verify_backup disabled/);
+  assert.match(enableVerificationMigration, /job_type in \([^)]*verify_backup/s);
+  assert.match(enableVerificationMigration, /backup_type in \([^)]*verification/s);
+  assert.match(enableVerificationMigration, /grant execute on function public\.claim_admin_backup_job\(text, integer\) to service_role;/i);
+  assert.doesNotMatch(enableVerificationMigration, /grant execute .* to (public|anon|authenticated)/i);
 });
 
 test('encrypted artifact and sha256 move together and validate after move', async () => {
@@ -401,8 +406,9 @@ test('claim response normalization accepts a valid single-row array job', () => 
   assert.equal(worker.normalizeClaimedJob([job]), job);
 });
 
-test('claim response normalization rejects unsupported job types as not executable', () => {
-  assert.equal(worker.normalizeClaimedJob({ id: 'job-3', job_type: 'verify_backup' }), null);
+test('claim response normalization accepts verification and rejects unknown job types', () => {
+  const verificationJob = { id: 'job-3', job_type: 'verify_backup' };
+  assert.equal(worker.normalizeClaimedJob(verificationJob), verificationJob);
   assert.equal(worker.normalizeClaimedJob([{ id: 'job-4', job_type: 'not_allowed' }]), null);
 });
 
