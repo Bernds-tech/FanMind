@@ -16,9 +16,13 @@ await writeFile(modulePath, transpiled);
 const auth = await import(`${pathToFileURL(modulePath).href}?v=${Date.now()}`);
 
 function request(authorization) {
-  return new Request("https://fanmind.ch/api/ai/reply-suggestions", {
-    headers: authorization ? { Authorization: authorization } : {},
-  });
+  return {
+    headers: {
+      get(name) {
+        return name.toLowerCase() === "authorization" ? authorization ?? null : null;
+      },
+    },
+  };
 }
 
 test("missing Authorization header preserves the existing Web cookie path", () => {
