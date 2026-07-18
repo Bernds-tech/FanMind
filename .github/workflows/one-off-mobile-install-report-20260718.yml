@@ -1,0 +1,38 @@
+name: One-off mobile install report 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: github.head_ref == 'feat/mobile-app-foundation-20260718'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+      - name: Capture mobile npm ci report
+        id: install
+        continue-on-error: true
+        working-directory: apps/mobile
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci --no-audit --no-fund 2>&1 | tee mobile-install-report.txt
+      - name: Upload mobile install report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-install-report
+          path: apps/mobile/mobile-install-report.txt
+          if-no-files-found: error
+          retention-days: 3
+      - name: Preserve install result
+        if: steps.install.outcome != 'success'
+        run: exit 1
