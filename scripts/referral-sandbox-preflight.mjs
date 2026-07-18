@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import {
+  NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
   WRITE_ACKNOWLEDGEMENT,
   evaluateReferralSandboxConfiguration,
 } from "../src/lib/referralSandboxPolicy.mjs";
@@ -29,6 +30,15 @@ console.log(
 console.log(
   `TARGET=${result.productionHostname ? "production" : result.hostnameConfigured ? "non-production" : "unbekannt"}`,
 );
+console.log(
+  `ENVIRONMENT_BOUNDARY=${
+    result.environmentBoundaryOk === null
+      ? "not-required"
+      : result.environmentBoundaryOk
+        ? "ok"
+        : "blocked"
+  }`,
+);
 console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");
 
 for (const warning of result.warnings) {
@@ -42,9 +52,7 @@ if (!result.ok) {
 
   if (allowWrite) {
     console.error(
-      `HINWEIS=Schreibtests benötigen ${
-        "FANMIND_REFERRAL_SANDBOX_ACK"
-      }=${WRITE_ACKNOWLEDGEMENT} und dürfen nie gegen fanmind.ch laufen.`,
+      `HINWEIS=Schreibtests benötigen FANMIND_REFERRAL_SANDBOX_ACK=${WRITE_ACKNOWLEDGEMENT} und FANMIND_NON_PRODUCTION_WRITE_ACK=${NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT}; Host und Supabase-Projekt müssen eindeutig von Production getrennt sein.`,
     );
   }
 
