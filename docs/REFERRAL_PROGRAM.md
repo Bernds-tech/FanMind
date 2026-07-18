@@ -37,10 +37,10 @@ Vorteile:
 
 | Aktive geworbene Kunden/Workspaces | Rabatt | Effekt |
 | --- | ---: | --- |
-| 0 | 0 % | voller laufender Preis |
-| 1 | 5 % | 95 % des laufenden Preises |
-| 5 | 25 % | 75 % des laufenden Preises |
-| 10 | 50 % | 50 % des laufenden Preises |
+| 0 | 0 % | volle Starter-Grundgebühr; Add-ons zusätzlich |
+| 1 | 5 % | 95 % der Starter-Grundgebühr; Add-ons zusätzlich |
+| 5 | 25 % | 75 % der Starter-Grundgebühr; Add-ons zusätzlich |
+| 10 | 50 % | 50 % der Starter-Grundgebühr; Add-ons zusätzlich |
 | 20 | 100 % | Starter-Grundgebühr rechnerisch 0 €; Add-ons bleiben zahlbar |
 
 Wenn von 20 aktiven geworbenen Kunden einer kündigt, bleiben 19 aktive Referrals. Der Rabatt fällt dann von 100 % auf 95 %.
