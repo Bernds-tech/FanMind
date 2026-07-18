@@ -129,9 +129,9 @@ Geplant ist ein begrenztes Referral-Programm, das nicht nur den ersten 100 Nutze
 Kernlogik:
 
 - Jeder berechtigte zahlende FanMind-Nutzer kann während des offenen Referral Growth Windows einen persönlichen Referral-Link oder Referral-Code nutzen.
-- Für jeden aktiv zahlenden geworbenen Kunden/Workspace erhält der Referrer `5 %` Rabatt auf seine eigenen laufenden FanMind-Kosten.
+- Für jeden aktiv zahlenden geworbenen Kunden/Workspace erhält der Referrer `5 %` Rabatt ausschließlich auf die Starter-Grundgebühr von 312 €/Monat.
 - Maximal zählen `20` aktive geworbene Kunden/Workspaces pro Referrer.
-- Bei 20 aktiven geworbenen Kunden/Workspaces ergibt sich rechnerisch `100 %` Rabatt auf die laufenden FanMind-Kosten.
+- Bei 20 aktiven geworbenen Kunden/Workspaces ergibt sich rechnerisch `100 %` Rabatt auf die Starter-Grundgebühr; Einrichtung und KI-Add-ons bleiben zahlbar.
 - Wenn ein geworbener Kunde kündigt, nicht mehr zahlt, gesperrt wird oder inaktiv wird, fällt dessen `5 %` wieder weg.
 - Sobald der 2.000. aktive zahlende FanMind-Kunde/Workspace erreicht ist, wird das Referral Growth Window geschlossen.
 - Nach Schließung bleiben bereits erworbene aktive Referral-Rabatte bestehen, solange die geworbenen Kunden aktiv bleiben.
@@ -143,7 +143,7 @@ Status:
 - Roadmap / Growth-Programm, noch nicht als automatische Billing-Funktion aktiv.
 - Darf nur mit klarer Begrenzung kommuniziert werden: Aktion bis 2.000 aktive zahlende Kunden/Workspaces, maximal 20 aktive Referrals pro Referrer, Rabatt nur solange geworbene Kunden aktiv bleiben. Phase 2 zeigt berechtigten Workspaces Link/Code und Status und speichert Signup-Attributionen; Billing-Verrechnung bleibt separat geprüft.
 - Vor Umsetzung müssen Tracking, Billing-Verrechnung, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung geprüft werden.
-- Details stehen in `docs/REFERRAL_PROGRAM.md`.
+- Öffentliche Teilnahmebedingungen stehen unter `/referral-bedingungen`; technische Details stehen in `docs/REFERRAL_PROGRAM.md`.
 
 ## 5. Gefrorener Gerhard-Demo-Pfad
 

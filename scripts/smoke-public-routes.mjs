@@ -16,6 +16,7 @@ const routes = [
   "/datenschutz",
   "/impressum",
   "/zahlungsbedingungen",
+  "/referral-bedingungen",
   "/api/version",
 ];
 

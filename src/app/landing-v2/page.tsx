@@ -694,6 +694,7 @@ const landingFooterColumns = [
       { label: "Datenschutz", href: "/datenschutz" },
       { label: "AGB", href: "/agb" },
       { label: "Zahlungsbedingungen", href: "/zahlungsbedingungen" },
+      { label: "Referral-Bedingungen", href: "/referral-bedingungen" },
     ],
   },
   {

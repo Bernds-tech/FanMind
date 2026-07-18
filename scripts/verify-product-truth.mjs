@@ -43,6 +43,8 @@ const checkedFiles = [
   "src/app/datenschutz/page.tsx",
   "src/app/impressum/page.tsx",
   "src/app/avv/page.tsx",
+  "src/app/referral-bedingungen/page.tsx",
+  "src/app/settings/referral/page.tsx",
   "tests/referral-policy.test.mjs",
   "tests/ai-usage-policy.test.mjs",
   "tests/demo-turnstile-policy.test.mjs",
@@ -302,6 +304,37 @@ requireText(
   "tests/referral-policy.test.mjs",
   "growth window closes at 2000 active paid workspaces",
   "Der 2.000er-Cap muss automatisiert getestet werden.",
+);
+
+requireText(
+  "src/app/referral-bedingungen/page.tsx",
+  "Rabatt ausschließlich auf die Starter-Grundgebühr von 312 €/Monat",
+  "Die Referral-Bedingungen müssen die rabattfähige Starter-Grundgebühr eindeutig nennen.",
+);
+requireText(
+  "src/app/referral-bedingungen/page.tsx",
+  "kein Rabatt auf Einrichtung, KI Plus, KI Ultra oder andere Add-ons",
+  "Die Referral-Bedingungen müssen Einrichtung und KI-Add-ons ausschließen.",
+);
+requireText(
+  "src/app/referral-bedingungen/page.tsx",
+  "produktive automatische Rabattverrechnung bleibt",
+  "Die Referral-Bedingungen müssen den noch deaktivierten Billing-Status offenlegen.",
+);
+requireText(
+  "src/app/settings/referral/page.tsx",
+  'href="/referral-bedingungen"',
+  "Die geschützte Referral-Seite muss auf die vollständigen Teilnahmebedingungen verlinken.",
+);
+requireText(
+  "src/components/LegalTopHeader.tsx",
+  'href: "/referral-bedingungen"',
+  "Die Rechtsnavigation muss die Referral-Teilnahmebedingungen enthalten.",
+);
+requireText(
+  "src/app/landing-v2/page.tsx",
+  '{ label: "Referral-Bedingungen", href: "/referral-bedingungen" }',
+  "Der öffentliche Footer muss die Referral-Teilnahmebedingungen verlinken.",
 );
 
 // Betreiber, B2B und Steuerdarstellung.

@@ -8,13 +8,13 @@ Dieses Dokument beschreibt das geplante Referral-Programm. Es ist eine Produkt-/
 
 FanMind startet ein zeitlich bzw. wachstumsbasiert begrenztes Referral-Programm. Nicht nur die ersten 100 Nutzer bekommen diese Chance. Stattdessen läuft die Aktion, bis FanMind global `2.000` aktive zahlende FanMind-Kunden/Workspaces erreicht.
 
-Innerhalb dieses Growth Windows kann jeder berechtigte zahlende FanMind-Nutzer über einen persönlichen Referral-Link neue zahlende FanMind-Kunden bringen und dadurch seine eigenen laufenden FanMind-Kosten senken.
+Innerhalb dieses Growth Windows kann jeder berechtigte zahlende FanMind-Nutzer über einen persönlichen Referral-Link neue zahlende FanMind-Kunden bringen und dadurch seine Starter-Grundgebühr von 312 €/Monat senken.
 
 Regel:
 
-- Pro aktivem geworbenen zahlenden Kunden/Workspace: `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten.
+- Pro aktivem geworbenen zahlenden Kunden/Workspace: `5 %` Rabatt auf die eigene Starter-Grundgebühr von 312 €/Monat.
 - Maximal wirksam pro Referrer: `20` aktive geworbene Kunden/Workspaces.
-- Bei 20 aktiven geworbenen Kunden/Workspaces: rechnerisch `100 %` Rabatt auf die eigenen laufenden FanMind-Kosten.
+- Bei 20 aktiven geworbenen Kunden/Workspaces: rechnerisch `100 %` Rabatt auf die eigene Starter-Grundgebühr.
 - Wenn ein geworbener Kunde kündigt, nicht zahlt, gesperrt wird oder nicht mehr aktiv ist, fällt dessen `5 %` wieder weg.
 - Die Aktion ist global auf das Wachstum bis `2.000` aktive zahlende FanMind-Kunden/Workspaces begrenzt.
 - Sobald der 2.000. aktive zahlende FanMind-Kunde/Workspace erreicht ist, wird das Referral Growth Window geschlossen.
@@ -41,7 +41,7 @@ Vorteile:
 | 1 | 5 % | 95 % des laufenden Preises |
 | 5 | 25 % | 75 % des laufenden Preises |
 | 10 | 50 % | 50 % des laufenden Preises |
-| 20 | 100 % | laufende FanMind-Kosten rechnerisch 0 € |
+| 20 | 100 % | Starter-Grundgebühr rechnerisch 0 €; Add-ons bleiben zahlbar |
 
 Wenn von 20 aktiven geworbenen Kunden einer kündigt, bleiben 19 aktive Referrals. Der Rabatt fällt dann von 100 % auf 95 %.
 
@@ -112,8 +112,8 @@ Ein geworbener Kunde zählt nur, wenn alle Bedingungen erfüllt sind:
 
 Standardregel:
 
-- Der Rabatt gilt auf laufende monatliche FanMind-Kosten.
-- Einmalige Setup-Gebühren werden nicht automatisch rabattiert, außer FanMind entscheidet das später ausdrücklich.
+- Der Rabatt gilt ausschließlich auf die Starter-Grundgebühr von 312 €/Monat.
+- Einmalige Einrichtung, KI Plus, KI Ultra und andere Add-ons sind nicht rabattfähig.
 - Rabatte werden nicht bar ausgezahlt.
 - Nicht genutzte Rabatte werden nicht in Guthaben umgewandelt.
 - Rabatt kann nicht unter 0 € fallen.
@@ -344,3 +344,7 @@ Aktueller Status:
 ## 21. Phase 2 Umsetzungsstand (Issue #461)
 
 Phase 2 ergänzt den öffentlichen Referral-Link pro berechtigtem Workspace, die Erfassung von `ref`/`referral_code` bei der Registrierung, die serverseitige Speicherung der Attribution und eine Nutzeransicht für Code, Link, Growth-Window-Cap, aktive Referrals und vorbereiteten Rabattstatus. Die Adminansicht erlaubt Status-/Notiz-Korrekturen. Das ist weiterhin keine Auszahlung, keine zweite Ebene und keine automatische Billing-Verrechnung; Aktivierung eines Referrals setzt Zahlungs-/Aktivitätsprüfung voraus.
+
+## Öffentliche Teilnahmebedingungen
+
+Öffentliche Teilnahmebedingungen: `/referral-bedingungen`. Die automatische Rabattverrechnung bleibt bis zum freigegebenen Stripe-Sandbox-Lifecycle-Test sowie zur steuerlichen und rechtlichen Prüfung deaktiviert.

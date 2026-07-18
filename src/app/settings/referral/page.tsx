@@ -147,9 +147,9 @@ export default async function ReferralSettingsPage() {
               <h2 id="referral-title">Referral Growth Window</h2>
               <p>
                 Teile deinen persönlichen Link. Für jeden aktiven, zahlenden
-                geworbenen Workspace erhältst du 5 % Rabatt auf deine laufenden
-                FanMind-Kosten – maximal 20 aktive Empfehlungen beziehungsweise
-                100 %.
+                geworbenen Workspace erhältst du 5 % Rabatt auf die Starter-Grundgebühr
+                von 312 €/Monat – maximal 20 aktive Empfehlungen beziehungsweise 100 %.
+                Einrichtung und KI-Add-ons sind nicht rabattfähig.
               </p>
             </div>
             <span
@@ -300,10 +300,15 @@ export default async function ReferralSettingsPage() {
             <ul className={styles.rules}>
               <li>5 % Rabatt je aktivem, zahlendem geworbenen Workspace.</li>
               <li>Maximal 20 aktive Empfehlungen beziehungsweise 100 % Rabatt.</li>
-              <li>Der Rabatt gilt auf laufende Monatskosten, nicht auf Setup-Gebühren.</li>
+              <li>Der Rabatt gilt ausschließlich auf die Starter-Grundgebühr von 312 €/Monat.</li>
+              <li>Einrichtung, KI Plus, KI Ultra und andere Add-ons sind nicht rabattfähig.</li>
               <li>Bei Kündigung, dauerhaftem Zahlungsausfall oder Rückerstattung entfällt der jeweilige 5-%-Anteil für künftige Rechnungen.</li>
               <li>Keine Barauszahlung, kein negativer Rechnungsbetrag und kein mehrstufiges Referral-System.</li>
             </ul>
+            <p>
+              Die vollständige Programmlogik steht in den{" "}
+              <Link href="/referral-bedingungen">Referral-Teilnahmebedingungen</Link>.
+            </p>
           </section>
         </div>
       </WorkspaceShell>

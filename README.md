@@ -97,6 +97,7 @@ npm run build
 | `/settings/package` | Starter-Paket, KI-Add-ons und Kündigungsanfrage | aktiv |
 | `/settings/invoices` | Rechnungsarchiv | aktiv |
 | `/settings/referral` | Referral-Code, Status und Rabattübersicht | aktiv; Billing-Verrechnung separat freizugeben |
+| `/referral-bedingungen` | öffentliche Referral-Teilnahmebedingungen | aktiv; automatische Rabattverrechnung weiterhin deaktiviert |
 | `/settings/ai-usage` | monatliche KI-Nutzungsanzeige | aktiv |
 | `/billing/start` | Starter-Checkout | aktiv; Legacy-Pilot-Checkout gesperrt |
 | `/admin/...` | Admin- und Billing-Grundlagen | admin-only |
