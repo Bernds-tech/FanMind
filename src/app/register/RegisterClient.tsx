@@ -518,7 +518,7 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
             <div className={styles.planIntro}>
               <p className={styles.eyebrow}>{language === "en" ? "Setup first" : "Setup zuerst"}</p>
               <h1>{language === "en" ? "Choose your FanMind entry" : "Wähle deinen FanMind-Einstieg"}</h1>
-              <p>{language === "en" ? "Compact overview for Pilot, Starter and roadmap." : "Kompakte Paketübersicht für Pilot, Starter und Roadmap."}</p>
+              <p>{language === "en" ? "Compact overview for Starter and roadmap." : "Kompakte Paketübersicht für Starter und Roadmap."}</p>
             </div>
 
             {hasInvalidPlan && (
@@ -561,8 +561,8 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
           {isProductiveRegistration ? (
             <form className={styles.formCard} onSubmit={handleRegister}>
               <div className={styles.formHeader}>
-                <p className={styles.eyebrow}>{isDailyTestPlanSelected ? "Beta-Test" : selectedPlanId === "pilot" ? "Pilot / Setup" : "Starter-Paket"}</p>
-                <h1>{isDailyTestPlanSelected ? "Beta-Test · 1 €/Tag" : selectedPlanId === "pilot" ? (language === "en" ? "Start Pilot / Setup" : "Pilot / Setup starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
+                <p className={styles.eyebrow}>{isDailyTestPlanSelected ? "Beta-Test" : selectedPlanId === "pilot" ? "Interne Demo" : "Starter-Paket"}</p>
+                <h1>{isDailyTestPlanSelected ? "Beta-Test · 1 €/Tag" : selectedPlanId === "pilot" ? (language === "en" ? "Start internal demo" : "Interne Demo starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
                 <p>{isDailyTestPlanSelected ? "Interner/Beta-Testplan, täglich kündbar, 1 € pro Tag." : selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time · 1 test month. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Testmonat. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Choose your Starter option. No payment is triggered here." : "Wähle deine Starter-Variante. Hier wird noch keine Zahlung ausgelöst.")}</p>
               </div>
 
