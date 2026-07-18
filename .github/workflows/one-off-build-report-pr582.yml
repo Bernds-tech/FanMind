@@ -1,0 +1,39 @@
+name: One-off build report PR 582
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: github.head_ref == 'feat/privacy-server-error-tracking-20260718'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Capture build report
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build-report.txt
+      - name: Upload build report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-582-build-report
+          path: build-report.txt
+          if-no-files-found: error
+          retention-days: 3
+      - name: Preserve build result
+        if: steps.build.outcome != 'success'
+        run: exit 1
