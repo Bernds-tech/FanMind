@@ -96,10 +96,13 @@ test("disabled capture returns before any remote storage call", async () => {
   }
 });
 
-test("Next instrumentation is Node-only, opt-in and awaits capture", () => {
+test("Next instrumentation is Node-only, opt-in and projects safe request fields", () => {
   assert.match(instrumentation, /NEXT_RUNTIME !== "nodejs"/);
   assert.match(instrumentation, /FANMIND_SERVER_ERROR_TRACKING_ENABLED !== "true"/);
-  assert.match(instrumentation, /await captureServerRequestError\(error, request, context\)/);
+  assert.match(instrumentation, /await captureServerRequestError\(/);
+  assert.match(instrumentation, /path: request\.path/);
+  assert.match(instrumentation, /method: request\.method/);
+  assert.doesNotMatch(instrumentation, /headers: request\.headers/);
 });
 
 test("schema stores metadata only, denies browser roles and rate-limits notifications", () => {
