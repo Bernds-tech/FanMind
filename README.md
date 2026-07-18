@@ -1,42 +1,58 @@
 # FanMind
 
-FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan-/Kontaktbeziehungen. Der aktive Kern ist kein Folien-Dummy mehr: Login, Demo-Workspace, Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, serverseitige KI-Antwortvorschläge, Memory, Follow-ups und Roadmap sind der aktuelle Produktfokus.
+FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan-/Kontaktbeziehungen. Der aktive Kern umfasst Login, temporären Demo-Workspace, Dashboard, Kontakte, Kontaktdetail, CSV-Import, serverseitige KI-Antwortvorschläge, Kontaktwissen, Follow-ups und Roadmap.
 
 ## Schnellentscheidung / Reader-Stand
 
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
-- Aktive MVP-Funktionen: Login, Registrierung, geschütztes Dashboard, Fans/Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Memory, Follow-ups, Roadmap, temporärer Demo-Workspace.
-- Admin-only: interne Testzugänge können separat markiert und kostenfrei freigeschaltet werden, inklusive serverseitiger AI-Maintenance-Test-Flags, ohne normale Kunden-/Billing-Logik zu ändern. Zusätzlich gibt es ein internes/Beta Stripe-Live-Testabo `internal_daily_test` mit 1 € pro Tag. Im normalen Registrierungsflow erscheint es nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`; Default ist `false`, damit der Flow unverändert bleibt. Referral-/Rabatt-Automation bleibt deaktiviert. Admins können unter `/admin/assets` eigene Bilder in den Supabase Storage Bucket `fanmind-assets` hochladen und verwalten.
-- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist Default, aktiviert keine Stripe-Tax-Berechnung und nutzt den Kleinunternehmer-Rechnungshinweis; `FANMIND_TAX_MODE=stripe_tax` aktiviert Stripe Automatic Tax erst ausdrücklich und zeigt Netto/Steuer/Brutto, wenn Stripe diese Daten liefert. Zahlende Nutzer haben getrennte kompakte Konto-Seiten: `/settings/profile` für Profil/Workspace, `/settings/package` für Paket/Status/Optionen inklusive aktueller Paket-Badge, bestätigter Kündigungsanfrage und einzeln verwaltbarer Add-ons ohne automatische Stripe-/DB-Änderung, sowie `/settings/invoices` für Stripe-Rechnungen mit Öffnen-/PDF-Links; `/billing` leitet intern zum Rechnungsarchiv weiter.
-- Kommerzielle Wahrheit: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`.
-- Starter-Optionen: `Starter Flex = 990 € Setup + 312 €/Monat` oder `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`.
-- Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie explizit freigegeben sind.
-- Roadmap Phase 4 zeigt den echten Verkaufsstart-Stand: „Verkaufsstart vorbereitet“ mit Status „Finaler Smoke-Test“. Stripe-Live-Schritte sind erledigt, Abrechnung & Admin-Basis sowie Profil/Paket/Rechnungen sind erledigt / im Feinschliff, Sales-Unterlagen sind der nächste Schritt und Produktionsfreigabe bleibt finaler Smoke-Test. Offen sichtbar bleiben der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
-- Geplantes Referral Growth Window: alle berechtigten zahlenden Nutzer können teilnehmen, solange FanMind noch unter `2.000` aktiven zahlenden Kunden/Workspaces liegt; je aktivem geworbenen Kunden/Workspace gibt es 5 % Rabatt, maximal 20 aktive Referrals = 100 % Rabatt.
-- Nach Erreichen des 2.000er-Caps wird das Referral Growth Window geschlossen. Bestehende aktive Rabattansprüche bleiben bestehen, aber neue zusätzliche Rabattprozente entstehen nicht mehr, außer FanMind öffnet das Programm ausdrücklich wieder.
-- FanMind ist ein Copy-&-Open-Assistent, kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert, öffnet bei Bedarf den Originalkanal und sendet selbst.
-- Externe Integrationen wie Meta/Facebook/Instagram, Telegram, WhatsApp, TikTok, X/Twitter und Discord dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
-- Jede in FanMind integrierte Sendefunktion, auch wenn sie manuell ausgelöst wird, muss gesondert freigegeben, versteckt oder als Pilot-Feature gekennzeichnet werden.
+- Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
+- Öffentliche Registrierung: ausschließlich Starter Flex und Starter 12 Monate.
+- Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
+- Admin-only: interne Testzugänge und das Stripe-Testabo `internal_daily_test` bleiben ausdrücklich intern. Der normale Registrierungsflow zeigt sie nicht öffentlich.
+- Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist der aktuelle Default. Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung müssen dieselbe steuerliche Behandlung zeigen.
+- Kommerzielle Wahrheit: Starter-Grundgebühr `312 €/Monat`.
+- Starter Flex: `990 € einmalige Einrichtung + 312 €/Monat`; jederzeit zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats kündbar.
+- Starter 12 Monate: `0 € Setup + 312 €/Monat`; zwölf Monate Mindestlaufzeit, danach Verlängerung um jeweils einen Monat.
+- KI Standard: in der Starter-Grundgebühr enthalten.
+- KI Plus: zusätzlich `100 €/Monat`.
+- KI Ultra: zusätzlich `200 €/Monat`.
+- Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
+- Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
+- FanMind ist kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert und sendet final selbst.
+- FanMind garantiert keine fehlerfreien KI-Antworten.
+- Externe Integrationen dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
+
+## Betreiber
+
+Vertragspartner ist **Bernd Guggenberger, Einzelunternehmen unter der Geschäftsbezeichnung FanMind**.
+
+- Geschäftsanschrift: Turnerstraße 18, 2345 Brunn am Gebirge, Österreich
+- Inhaber und vertretungsberechtigt: Bernd Guggenberger
+- Zuständige Gewerbebehörde: Bezirkshauptmannschaft Mödling
+- Kontakt: `kontakt@fanmind.ch`
+- Telefon: `+43 676 5367236`
+
+Der Zusatz `e.U.` wird erst nach bestätigter Firmenbucheintragung samt Firmenbuchnummer und Firmenbuchgericht verwendet.
 
 ## Gefrorener Gerhard-Demo-Pfad
 
 Der Verkaufsdemo-Pfad ist fest und soll nicht durch Nebenfunktionen überlagert werden:
 
 1. Landingpage öffnen.
-2. Login oder Demo starten.
+2. Login oder kostenlose Demo starten.
 3. Dashboard zeigen.
-4. Fans/Kontakte öffnen.
-5. CSV-Import kurz zeigen oder direkt Sandra/demo-Kontakt öffnen.
+4. Kontakte öffnen.
+5. CSV-Import kurz zeigen oder direkt einen Demo-Kontakt öffnen.
 6. Kontaktdetail öffnen.
-7. vorhandene bzw. letzte eingehende Nachricht als Kontext verwenden.
+7. letzte eingehende Nachricht als Kontext verwenden.
 8. KI-Antwortvorschläge erzeugen.
 9. Antwort kopieren.
-10. Memory-Vorschlag speichern.
+10. Vorschlag fürs Kontaktwissen speichern.
 11. Follow-up-Vorschlag speichern.
 12. Follow-up-Liste und/oder Roadmap zeigen.
 
-Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markiert oder aus Gerhards Standarddemo herausgehalten werden.
+Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markiert oder aus der Standarddemo herausgehalten werden.
 
 ## Technik
 
@@ -44,7 +60,7 @@ Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markie
 - UI: React `19.2.4`
 - Sprache: TypeScript
 - Auth und Daten: Supabase Auth / Supabase PostgREST
-- KI: serverseitige OpenAI Responses API über serverseitige Environment-Konfiguration
+- KI: serverseitige OpenAI Responses API
 - Deployment: Exoscale + PM2 + nginx über `.github/workflows/deploy-fanmind.yml`
 - Produktionsdomain: `https://fanmind.ch`
 
@@ -55,152 +71,125 @@ npm ci
 npm run dev
 ```
 
-Build prüfen:
+Release-Prüfung:
 
 ```bash
-npm run build
+npm run verify:truth
 npm run lint
+npm run test:operations
+npm run build
 ```
 
 ## Wichtige Routen
 
 | Route | Zweck | Status |
 | --- | --- | --- |
-| `/` | öffentliche Landingpage, Re-Export von `/landing-v2` | aktiv |
-| `/landing-v2` | aktuelle Landingpage | aktiv |
+| `/` | öffentliche Landingpage | aktiv |
 | `/login` | Login und Demo-Einstieg | aktiv |
-| `/register` | Pilot/Starter-Registrierung | aktiv |
-| `/dashboard` | geschützter Arbeits-Eingang | aktiv |
-| `/fans` | Fan-/Kontaktliste | aktiv |
+| `/register` | Starter-Registrierung | aktiv |
+| `/dashboard` | geschützter Arbeitsbereich | aktiv |
+| `/fans` | Kontaktliste | aktiv |
 | `/fans/import` | CSV-Import | aktiv |
-| `/fans/[id]` | Kontaktdetail, Timeline, KI, Memory, Follow-ups | aktiv |
-| `/followups` | Follow-up-Übersicht | aktiv, wenn DB-Tabellen vorhanden |
-| `/settings/profile` | kompakte Profilseite mit Profil und Workspace-Basisdaten | aktiv für eingeloggte Workspace-Nutzer |
-| `/settings/package` | kompakte Paket-/Statusseite mit Betrag, Setup, aktueller Paket-Badge, Paketwechsel-Anfrage, bestätigter Kündigungsanfrage, einzeln verwaltbaren Add-ons und sicherem Checkout-Einstieg ohne automatischen Planwechsel | aktiv für eingeloggte Workspace-Nutzer |
-| `/settings/invoices` | kompaktes Rechnungsarchiv mit serverseitig geladenen Stripe-Rechnungen, Öffnen- und PDF-Links; kostenlose Demo-Workspaces sehen nur ohne echte Stripe-Rechnungen klar markierte Beispielrechnungen ohne echte Forderung | aktiv für eingeloggte Workspace-Nutzer |
-| `/settings/plan` | interne Weiterleitung zu `/settings/package` | intern/redirect |
-| `/settings/billing` | interne Weiterleitung zu `/settings/invoices` | intern/redirect |
-| `/billing` | interne Weiterleitung zum Rechnungsarchiv `/settings/invoices` | intern/redirect |
-| `/billing/start` | Zahlungs-/Setup-Start | aktiv als Billing-Grundlage mit Card Checkout; SEPA nur optional per `FANMIND_ENABLE_SEPA_CHECKOUT=true` |
-| `/admin/...` | Admin-/Billing-Grundlagen inklusive Asset-Verwaltung | admin-only |
-| `/api/admin/assets/upload` | serverseitiger Admin-Upload in Supabase Storage Bucket `fanmind-assets` | admin-only |
+| `/fans/[id]` | Kontaktdetail, Verlauf, KI, Kontaktwissen und Follow-ups | aktiv |
+| `/followups` | Follow-up-Übersicht | aktiv |
+| `/settings/profile` | Profil und Workspace-Basisdaten | aktiv |
+| `/settings/package` | Starter-Paket, KI-Add-ons und Kündigungsanfrage | aktiv |
+| `/settings/invoices` | Rechnungsarchiv | aktiv |
+| `/settings/referral` | Referral-Code, Status und Rabattübersicht | aktiv; Billing-Verrechnung separat freizugeben |
+| `/settings/ai-usage` | monatliche KI-Nutzungsanzeige | aktiv |
+| `/billing/start` | Starter-Checkout | aktiv; Legacy-Pilot-Checkout gesperrt |
+| `/admin/...` | Admin- und Billing-Grundlagen | admin-only |
 | `/api/ai/reply-suggestions` | serverseitiger KI-Endpunkt | aktiv |
 | `/api/demo/start` | temporärer Demo-Workspace | aktiv |
-| `/api/webhooks/meta` | Meta/Facebook/Instagram-Webhooks | vorbereitet/Beta, nicht allgemein live verkaufen |
-| `/api/integrations/telegram/send-message` | Telegram-Senden | nur als expliziter Pilot zulässig, nicht Standarddemo |
+| `/api/stripe/webhook` | Stripe-Lifecycle und Referral-Synchronisierung | aktiv; Referral-Rabattverrechnung per Flag deaktiviert |
+| `/api/webhooks/meta` | Meta-Webhooks | vorbereitet/Beta |
+
+## Pakete und KI-Add-ons
+
+| Produkt | Status | Preislogik |
+| --- | --- | --- |
+| Öffentliche Demo | aktiv | kostenloser temporärer Demo-Zugang; kein entgeltliches Paket |
+| Starter Flex | aktiv | 990 € Einrichtung + 312 €/Monat; Kündigung zum Ende des bezahlten Monats |
+| Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat; 12 Monate Mindestlaufzeit, danach monatlich |
+| KI Standard | aktiv | in 312 €/Monat enthalten |
+| KI Plus | freigegebener Preis, technische Add-on-Aktivierung separat | +100 €/Monat |
+| KI Ultra | freigegebener Preis, technische Add-on-Aktivierung separat | +200 €/Monat |
+| Internes Live-Testabo | admin-/test-only | 1 €/Tag; nicht öffentlich registrierbar |
+| Growth | Coming Soon | nicht produktiv buchbar |
+| Agency | Coming Soon / auf Anfrage | nicht produktiv buchbar |
+| Enterprise / Custom | später | individuelle Prüfung |
+
+Keine alten Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` wieder einführen.
+
+## Kündigungslogik
+
+### Starter Flex
+
+Starter Flex kann jederzeit gekündigt werden. Die Kündigung wird zum Ende des laufenden, bereits bezahlten Abrechnungsmonats wirksam. Der laufende Monat wird vollständig verrechnet und nicht anteilig rückerstattet.
+
+### Starter 12 Monate
+
+Starter 12 Monate hat eine Mindestlaufzeit von zwölf Monaten. Danach verlängert sich der Vertrag jeweils um einen weiteren Monat, sofern er nicht gekündigt wird.
+
+## Referral Growth Window
+
+Das Empfehlungsprogramm ist bis zum globalen Ziel von 2.000 aktiven zahlenden Workspaces begrenzt:
+
+- 5 % Rabatt je aktivem geworbenem zahlenden Workspace;
+- maximal 20 aktive Referrals beziehungsweise 100 % Rabatt;
+- Rabatt ausschließlich auf die Starter-Grundgebühr von 312 €/Monat;
+- kein Rabatt auf Einrichtung oder KI Plus/Ultra;
+- kein negativer Rechnungsbetrag und keine Barauszahlung;
+- bei Kündigung, Nichtzahlung, Refund oder Chargeback entfällt der jeweilige Rabatt;
+- Referral-Live-Billing bleibt bis zur kontrollierten Freigabe mit `FANMIND_ENABLE_REFERRAL_BILLING=false` deaktiviert.
+
+Details: `docs/REFERRAL_PROGRAM.md` und `docs/operations/referral-stripe-sandbox-runbook.md`.
 
 ## ENV und Secrets
 
 Siehe `.env.example` für Platzhalter. Echte Werte gehören nur in lokale oder Server-ENV-Dateien und niemals ins Repository.
 
-Regel: Alles mit Service Role, Secret, Token, Stripe, OpenAI, Facebook App Secret, Telegram Bot Token oder Admin-E-Mail ist server-only. Stripe-Rechnungen werden nur serverseitig mit `STRIPE_SECRET_KEY` geladen; Browser-Code erhält nur Anzeige- und Stripe-Hosted/PDF-URLs für den eigenen Workspace. Keine echten Werte in `.env.example`, Logs, Screenshots, Client-Code oder Dokumentation.
+Regel: Alles mit Service Role, Secret, Token, Stripe, OpenAI, Plattform-App-Secret oder Admin-E-Mail ist server-only. Keine echten Werte in `.env.example`, Logs, Screenshots, Client-Code oder Dokumentation.
 
 ## Datenbank und RLS
 
-Die alte Datei `docs/database/fanmind_mvp_schema.sql` ist nur noch ein historischer Auth-/Workspace-Basisstand. Die aktuelle Datenbankwahrheit steht in:
+Die aktuelle Datenbankwahrheit steht in:
 
 - `docs/database/fanmind_current_schema.md`
 - `supabase/migrations/`
 - `src/lib/supabase/server.ts`
 
-Aktuell genutzte Kernbereiche:
-
-- `profiles`
-- `workspaces`
-- `workspace_members`
-- `contacts`
-- `memories`
-- `followups`
-- `conversations`
-- `conversation_messages`
-- `conversation_summaries`
-- `contact_ai_profiles`
-- `workspace_voice_profiles`
-- `fan_analysis_reports`
-- `contact_reply_targets`
-- `social_connections`
-- `meta_webhook_events`
-- Billing-Felder an `workspaces`
-- optional Inquiry-/Pilot-Anfrage-Tabellen, falls in der jeweiligen Migration vorhanden
-- admin-only Referral-Tabellen laut `docs/REFERRAL_PROGRAM.md` (`referral_program_state`, `referral_program_members`, `referrals`, `referral_discount_snapshots`)
-
-Vor Pilotkundendaten muss der Security-/RLS-/Secrets-Check aus `docs/SECURITY_RLS_SECRETS_CHECK.md` abgearbeitet werden.
+Workspace-scoped Daten müssen per RLS und serverseitiger Autorisierung geschützt sein. Vor echten Kundendaten ist `docs/SECURITY_RLS_SECRETS_CHECK.md` abzuarbeiten.
 
 ## KI und Kostenkontrolle
 
-Aktueller MVP-Schutz:
+- KI läuft serverseitig.
+- API-Keys werden nicht im Browser verwendet.
+- Eingaben werden begrenzt und rate-limitiert.
+- Ausgaben sind strukturiert.
+- KI-Nutzung wird je Workspace gemessen.
+- Es gibt keine automatische Sendefunktion.
+- Nutzer müssen KI-Ausgaben vor Verwendung prüfen.
+- FanMind garantiert keine fehlerfreien, vollständigen oder aktuellen KI-Antworten.
 
-- KI läuft serverseitig über `/api/ai/reply-suggestions`.
-- KI-Keys werden nicht im Browser verwendet.
-- Eingaben werden begrenzt.
-- KI-Anfragen werden rate-limitiert.
-- Die Ausgabe ist strukturiert: `reply_options`, `suggested_memory`, `suggested_followup`, `safety_note`.
-- Keine automatische Sendefunktion.
-
-Aktiver Ausbau: serverseitiges KI-Usage-Logging und Admin-Kostenmonitoring nach `docs/AI_COST_MONITORING.md`.
-
-Gewünschte Kennzahlen:
-
-- KI-Anfragen pro Workspace und Zeitraum.
-- geschätzte Input-/Output-Tokens.
-- geschätzte Kosten pro Workspace, Kontakt und Feature.
-- Adminseite `/admin/ai-usage` mit als geschätzt markierten Aggregationen.
-- Kosten pro 100 Fans / 1.000 Fans.
-- Warnschwellen pro Workspace und Admin-Gesamtübersicht.
-- Modell und Feature je Request.
-
-Provider-Preise dürfen nicht hart in UI-Texten stehen. Sie sollen serverseitig konfigurierbar sein, damit Preisänderungen nicht zu falschen Berechnungen führen.
-
-## Pricing / Commercial Truth
-
-| Paket | Status | Preislogik |
-| --- | --- | --- |
-| Pilot / Setup | aktiv | 990 € einmalig, 1 Testmonat, keine automatische Verlängerung |
-| Starter Flex | aktiv | 990 € Setup + 312 €/Monat, monatlich kündbar |
-| Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat, 12 Monate Laufzeit |
-| Internes/Beta Live-Testabo | optional öffentlich / intern | 1 € pro Tag via Stripe Live (`internal_daily_test`), öffentlich nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`, sonst admin-only; keine Referral-/Rabatt-Automation |
-| Growth | Coming Soon | nicht produktiv buchbar |
-| Agency | Coming Soon / auf Anfrage | nicht produktiv als Vollversion freigeschaltet |
-| Enterprise / Custom | später | individuelle Prüfung |
-
-Keine alten Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` wieder einführen, solange `docs/SOURCE_OF_TRUTH.md` nicht bewusst geändert wurde.
-
-## Referral Growth Window
-
-Geplant ist ein begrenztes Empfehlungsprogramm, das bis zum globalen 2.000er-Ziel läuft:
-
-- persönlicher Referral-Link / Referral-Code in der geschützten Nutzeransicht;
-- Teilnahme möglich, solange FanMind unter `2.000` aktiven zahlenden Kunden/Workspaces liegt;
-- je aktivem geworbenen zahlenden Kunden/Workspace `5 %` Rabatt auf die eigenen laufenden FanMind-Kosten;
-- maximal 20 aktive geworbene Kunden/Workspaces zählen pro Referrer;
-- 20 aktive Referrals ergeben rechnerisch `100 %` Rabatt;
-- kündigt ein geworbener Kunde oder wird inaktiv, fällt dessen `5 %` wieder weg;
-- nach Schließung des Growth Windows kann verlorener Rabatt nicht automatisch durch neue Referrals ersetzt werden;
-- keine Barauszahlung, kein negativer Rechnungsbetrag;
-- Phase-2-Grundlage: Signup-Code-Erfassung, Workspace-Attribution, Nutzerstatus sowie Adminprüfung/-korrektur; keine automatische Billing-Verrechnung.
-- vor öffentlicher Aktivierung sind Signup-/Checkout-Attribution, Rabatt-Snapshots, Billing-Verrechnung, Missbrauchsschutz, Datenschutz, AGB/Zahlungsbedingungen und steuerliche Behandlung separat umzusetzen bzw. zu prüfen.
-
-Details: `docs/REFERRAL_PROGRAM.md`.
+Provider-Preise bleiben serverseitig konfigurierbar und werden nicht als statische UI-Wahrheit hartcodiert.
 
 ## Harte Stop-Regeln
 
-Nicht als aktiv bauen oder verkaufen, sofern nicht explizit freigegeben und validiert:
+Nicht als aktiv bauen oder verkaufen, sofern nicht ausdrücklich freigegeben und validiert:
 
-- echte Instagram-/TikTok-/WhatsApp-/Facebook-/X-/Discord-Vollintegration
-- Scraping
-- automatisches Senden
-- versteckte In-App-Sendefunktionen unter Copy-&-Open-Sprache
-- externe Plattform-Login-Daten speichern
-- Kampagnenversand-Automation
-- vollständige Analytics-Suite
-- Enterprise-Rollen-/Rechte-Komplexität
-- Fake-Kunden, Fake-Live-Integrationen, Fake-Metriken
+- vollständige Instagram-, TikTok-, WhatsApp-, Facebook-, X- oder Discord-Integration;
+- Scraping;
+- ungeprüftes automatisches Senden;
+- externe Plattform-Login-Daten speichern;
+- Kampagnenversand-Automation;
+- vollständige Analytics-Suite;
+- Enterprise-Rollen-/Rechte-Komplexität;
+- Fake-Kunden, Fake-Live-Integrationen oder Fake-Metriken.
 
 ## Deployment
 
-Deployments auf `main` laufen über `.github/workflows/deploy-fanmind.yml` auf dem Self-Hosted Runner.
-
-Die Workflow-Sequenz:
+Deployments auf `main` laufen über `.github/workflows/deploy-fanmind.yml` auf dem Self-Hosted Runner:
 
 ```bash
 cd /var/www/fanmind
@@ -213,20 +202,8 @@ pm2 save
 sudo nginx -t
 ```
 
-Danach prüft der Workflow `/login` auf `https://fanmind.ch`.
+Nach dem Deployment werden öffentliche Kernrouten und der tatsächlich ausgelieferte Commit geprüft.
 
 ## Dokumentations-Synchronisierung
 
-Wenn eines dieser Themen geändert wird, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und ggf. Legal-/Pricing-/Database-Dokumente im selben PR angepasst werden:
-
-- Preise oder Pakete
-- Referral-/Rabattlogik
-- aktive MVP-Funktionen
-- Demo-Pfad
-- Integrationsstatus
-- Billing-/Stripe-Verhalten
-- AI-Modell oder AI-Kostenlogik
-- Datenbanktabellen oder RLS
-- Security-/Secrets-Regeln
-
-Diese Synchronisierung ist Pflicht, damit Bernd/Codex nicht wieder aus veralteten Readern falsche Tasks ableiten.
+Wenn Preise, Pakete, Referral-Logik, aktiver Scope, Demo-Pfad, Billing, KI-Leistungsstufen, Datenbank, Security oder öffentliche Versprechen geändert werden, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und die betroffenen Legal-/Pricing-Dateien im selben PR geprüft und synchronisiert werden.
