@@ -2,7 +2,7 @@ import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import type { SupabaseServerUser } from "@/lib/supabase/server";
 
-export const BACKUP_JOB_TYPES = ["backup_server_config", "backup_database", "backup_storage", "backup_full"] as const;
+export const BACKUP_JOB_TYPES = ["backup_server_config", "backup_database", "backup_storage", "backup_full", "verify_backup"] as const;
 export type BackupJobType = typeof BACKUP_JOB_TYPES[number];
 
 const JOB_TITLES: Record<BackupJobType, string> = {
@@ -10,6 +10,7 @@ const JOB_TITLES: Record<BackupJobType, string> = {
   backup_database: "Datenbankbackup anfordern",
   backup_storage: "Storage-Backup anfordern",
   backup_full: "Vollbackup anfordern",
+  verify_backup: "Neuestes lokales Backup prüfen",
 };
 
 function serviceKey() { return process.env.SUPABASE_SERVICE_ROLE_KEY; }
@@ -35,7 +36,7 @@ export async function enqueueBackupJob(request: Request, user: SupabaseServerUse
   if (!safeOrigin(request)) return { status:403, body:{ error:"origin_forbidden" } };
   if (!isAllowedJobType(rawJobType)) return { status:400, body:{ error:"job_type_not_allowed" } };
 
-  const active = await rest<{ id:string }[]>("admin_operation_jobs", `?select=id&job_type=in.(backup_server_config,backup_database,backup_storage,backup_full)&status=in.(queued,claimed,running)&limit=1`);
+  const active = await rest<{ id:string }[]>("admin_operation_jobs", `?select=id&job_type=in.(backup_server_config,backup_database,backup_storage,backup_full,verify_backup)&status=in.(queued,claimed,running)&limit=1`);
   if (active.error) return { status:500, body:{ error:"operations_store_unavailable" } };
   if ((active.data ?? []).length > 0) return { status:409, body:{ error:"backup_job_already_active" } };
 
@@ -51,9 +52,11 @@ export async function enqueueBackupJob(request: Request, user: SupabaseServerUse
     requested_by_user_id: user.id,
     requested_at: new Date().toISOString(),
     title: JOB_TITLES[rawJobType],
-    summary: "Backup-Job wurde sicher eingereiht. Die Web-App führt keine Shell-Befehle aus.",
+    summary: rawJobType === "verify_backup"
+      ? "Checksum-only-Prüfung des neuesten lokalen Backup-Artefakts wurde sicher eingereiht."
+      : "Backup-Job wurde sicher eingereiht. Die Web-App führt keine Shell-Befehle aus.",
     idempotency_key: idempotency,
-    priority: rawJobType === "backup_full" ? 50 : 100,
+    priority: rawJobType === "backup_full" ? 50 : rawJobType === "verify_backup" ? 75 : 100,
     metadata: { source: "admin_operations_ui" },
   }) });
   if (inserted.error) return { status:500, body:{ error:"job_enqueue_failed" } };
