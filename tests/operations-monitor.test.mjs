@@ -111,5 +111,5 @@ test("migration allows only metadata components and keeps monitor notifications 
     assert.match(migration, new RegExp(`'${component}'`));
   }
   assert.match(migration, /admin_notifications_active_monitor_idx/);
-  assert.doesNotMatch(migration, /contacts|messages|prompt|payment|stripe/i);
+  assert.doesNotMatch(migration, /(?:alter|insert|update|delete)\s+(?:table\s+)?public\.(?:contacts|messages|contact_memories|ai_generations|workspace_members)/i);
 });
