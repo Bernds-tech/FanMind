@@ -11,7 +11,6 @@ export const metadata: Metadata = {
     "Preise, Laufzeiten, Zahlungsprozess, Freischaltung und Zahlungsstatus bei FanMind.",
 };
 
-const pilotTerms = getCommercialTerms("pilot_only");
 const starterFlexTerms = getCommercialTerms("starter_paid_setup");
 const starterCommitmentTerms = getCommercialTerms("starter_no_setup_commitment");
 
@@ -32,31 +31,20 @@ type PaymentSection = {
 };
 
 const trustItems = [
-  "Preise zzgl. USt.",
+  "Derzeit kein Umsatzsteuerausweis",
   "Keine Bankdaten in FanMind",
   "SEPA über Zahlungsdienstleister",
-  "Pilot ohne automatische Verlängerung",
+  "Zwei aktive Starter-Optionen",
 ];
 
 const packageCards: PackageCard[] = [
   {
-    title: "Pilot / Setup",
-    badge: "Aktiv / Setup",
-    price: `${euros(pilotTerms.setupFeeCents)} einmalig · zzgl. USt.`,
-    points: [
-      "1 Testmonat",
-      "Keine automatische Verlängerung",
-      "Keine Bindung",
-      "Kein Abo",
-      "Zahlung nur bei aktivem Checkout oder individueller Vereinbarung",
-    ],
-  },
-  {
     title: "Starter Flex",
     badge: "Aktiv / Produktiv",
-    price: `${euros(starterFlexTerms.setupFeeCents)} Setup + ${euros(starterFlexTerms.monthlyFeeCents)}/Monat · zzgl. USt.`,
+    price: `${euros(starterFlexTerms.setupFeeCents)} Setup + ${euros(starterFlexTerms.monthlyFeeCents)}/Monat`,
     points: [
-      "Monatlich kündbar, sofern nichts anderes vereinbart",
+      "Jederzeit zum Ende des bezahlten Abrechnungsmonats kündbar",
+      "Angefangene Monate werden vollständig verrechnet",
       "Produktiver MVP-Workspace",
       "1 Profil",
       "Bis zu 1.000 Kontakte, sofern technisch/vertraglich so vorgesehen",
@@ -65,8 +53,8 @@ const packageCards: PackageCard[] = [
   {
     title: "Starter 12 Monate",
     badge: "Aktiv / 12 Monate",
-    price: `${euros(starterCommitmentTerms.setupFeeCents)} Setup + ${euros(starterCommitmentTerms.monthlyFeeCents)}/Monat · zzgl. USt.`,
-    points: ["12 Monate Laufzeit", "Produktiver MVP-Workspace", "1 Profil", "Keine Einrichtungsgebühr"],
+    price: `${euros(starterCommitmentTerms.setupFeeCents)} Setup + ${euros(starterCommitmentTerms.monthlyFeeCents)}/Monat`,
+    points: ["12 Monate Mindestlaufzeit", "danach monatliche Verlängerung", "1 Profil", "Keine Einrichtungsgebühr"],
   },
   {
     title: "Growth / Agency",
@@ -86,7 +74,7 @@ const sections: PaymentSection[] = [
     title: "Geltungsbereich",
     content: (
       <>
-        <p>Diese Zahlungsbedingungen gelten für Pilot-, Starter- und künftig freigegebene Pakete von FanMind, soweit keine abweichende individuelle Vereinbarung getroffen wurde.</p>
+        <p>Diese Zahlungsbedingungen gelten für Starter- und künftig freigegebene Pakete von FanMind, soweit keine abweichende individuelle Vereinbarung getroffen wurde.</p>
         <p>Sie ergänzen die AGB / Vertragsbedingungen. Bei Widersprüchen gehen individuelle Angebote oder Auftragsbestätigungen vor.</p>
       </>
     ),
@@ -95,22 +83,22 @@ const sections: PaymentSection[] = [
     title: "Preise und Umsatzsteuer",
     content: (
       <>
-        <p>Alle Preise verstehen sich zuzüglich gesetzlicher Umsatzsteuer, sofern nicht ausdrücklich anders angegeben. Preisangaben auf der Website können durch individuelle Angebote ersetzt werden.</p>
+        <p>Derzeit wird keine Umsatzsteuer ausgewiesen. Die steuerliche Behandlung wird auf Angebot, Checkout und Rechnung transparent ausgewiesen. Preisangaben auf der Website können durch individuelle Angebote ersetzt werden.</p>
         <p>Growth und Agency sind derzeit Coming Soon oder auf Anfrage und begründen kein verbindliches Leistungs- oder Preisversprechen.</p>
       </>
     ),
   },
   {
-    title: "Pilot / Setup",
-    content: <p>Pilot / Setup kostet {euros(pilotTerms.setupFeeCents)} einmalig zzgl. USt. Der Pilot umfasst einen Testmonat / Setup-Monat und endet ohne automatische Verlängerung. Eine Fortführung erfolgt nur durch ausdrückliche Vereinbarung oder Wechsel in ein anderes Paket. Der Pilot dient der Prüfung, Einrichtung und Demonstration des FanMind-MVP.</p>,
-  },
-  {
     title: "Starter Flex",
-    content: <p>Starter Flex kostet {euros(starterFlexTerms.setupFeeCents)} Setup zzgl. USt. plus {euros(starterFlexTerms.monthlyFeeCents)}/Monat zzgl. USt. Starter Flex ist monatlich kündbar, sofern nichts anderes vereinbart wurde. Das Paket umfasst einen produktiven MVP-Workspace für ein Profil. Externe Integrationen bleiben Roadmap/Preview, soweit sie nicht ausdrücklich produktiv freigegeben und verbunden sind.</p>,
+    content: <p>Starter Flex kostet {euros(starterFlexTerms.setupFeeCents)} einmalige Einrichtung plus {euros(starterFlexTerms.monthlyFeeCents)}/Monat. Es kann jederzeit gekündigt werden; die Kündigung wirkt zum Ende des laufenden, bereits bezahlten Abrechnungsmonats. Angefangene Monate werden vollständig verrechnet. Das Paket umfasst einen produktiven MVP-Workspace für ein Profil. Externe Integrationen bleiben Roadmap/Preview, soweit sie nicht ausdrücklich produktiv freigegeben und verbunden sind.</p>,
   },
   {
     title: "Starter 12 Monate",
-    content: <p>Starter 12 Monate kostet {euros(starterCommitmentTerms.setupFeeCents)} Setup zzgl. USt. plus {euros(starterCommitmentTerms.monthlyFeeCents)}/Monat zzgl. USt. Die Laufzeit beträgt {starterCommitmentTerms.commitmentMonths} Monate. Die monatliche Zahlung bleibt während der Laufzeit geschuldet, sofern nichts anderes vereinbart wurde. Die Setup-Gebühr entfällt aufgrund der Laufzeitbindung.</p>,
+    content: <p>Starter 12 Monate kostet {euros(starterCommitmentTerms.setupFeeCents)} Setup plus {euros(starterCommitmentTerms.monthlyFeeCents)}/Monat. Die Mindestlaufzeit beträgt {starterCommitmentTerms.commitmentMonths} Monate. Danach verlängert sich der Vertrag jeweils um einen Monat, sofern er nicht gekündigt wird. Die Setup-Gebühr entfällt aufgrund der Mindestlaufzeit.</p>,
+  },
+  {
+    title: "KI-Stufen und Referral-Rabatte",
+    content: <p>KI Standard ist in der Starter-Grundgebühr von 312 €/Monat enthalten. KI Plus kostet zusätzlich 100 €/Monat, KI Ultra zusätzlich 200 €/Monat. Referral-Rabatte gelten ausschließlich auf die Starter-Grundgebühr von 312 €. Einrichtungsgebühren und KI-Add-ons sind nicht rabattfähig.</p>,
   },
   {
     title: "Growth und Agency",
@@ -118,11 +106,11 @@ const sections: PaymentSection[] = [
   },
   {
     title: "Registrierung und Zahlungsstart",
-    content: <p>Die Registrierung selbst löst keine Zahlung aus. Bei Pilot und Starter wird ein Workspace vorbereitet. Der Zahlungsprozess startet erst, wenn Nutzerinnen und Nutzer den Zahlungsprozess aktiv fortsetzen oder eine individuelle Zahlungsvereinbarung getroffen wurde. Bei Pilot und Starter müssen Zahlungsbedingungen akzeptiert werden. Demo-User und temporäre Demo-Workspaces können keinen Checkout starten.</p>,
+    content: <p>Die Registrierung selbst löst keine Zahlung aus. Bei Starter wird ein Workspace vorbereitet. Der Zahlungsprozess startet erst, wenn Nutzerinnen und Nutzer den Zahlungsprozess aktiv fortsetzen oder eine individuelle Zahlungsvereinbarung getroffen wurde. Bei Starter müssen Zahlungsbedingungen akzeptiert werden. Demo-User und temporäre Demo-Workspaces können keinen Checkout starten.</p>,
   },
   {
     title: "Zahlungsabwicklung über Stripe / SEPA",
-    content: <p>Soweit der Zahlungsprozess produktiv aktiviert ist, kann FanMind Stripe für die Zahlungsabwicklung einsetzen. Die Zahlung erfolgt im Checkout über den Zahlungsdienstleister. Für Pilot kann eine einmalige Zahlung verwendet werden; für Starter kann ein Subscription-Modell verwendet werden. SEPA-Lastschrift kann als Zahlungsmethode verwendet werden. Bei SEPA-Lastschrift kann die endgültige Bestätigung einige Geschäftstage dauern. FanMind speichert keine vollständigen Bankdaten und keine IBAN in der Anwendung. Zahlungsdaten werden durch den Zahlungsdienstleister verarbeitet. Der Checkout ist nur verfügbar, wenn die technische Zahlungs-Konfiguration vollständig aktiv ist.</p>,
+    content: <p>Soweit der Zahlungsprozess produktiv aktiviert ist, kann FanMind Stripe für die Zahlungsabwicklung einsetzen. Die Zahlung erfolgt im Checkout über den Zahlungsdienstleister. Für Starter wird ein Subscription-Modell verwendet; Starter Flex enthält zusätzlich eine einmalige Einrichtungsgebühr. SEPA-Lastschrift kann als Zahlungsmethode verwendet werden. Bei SEPA-Lastschrift kann die endgültige Bestätigung einige Geschäftstage dauern. FanMind speichert keine vollständigen Bankdaten und keine IBAN in der Anwendung. Zahlungsdaten werden durch den Zahlungsdienstleister verarbeitet. Der Checkout ist nur verfügbar, wenn die technische Zahlungs-Konfiguration vollständig aktiv ist.</p>,
   },
   {
     title: "Freischaltung und Zahlungsstatus",
@@ -141,7 +129,7 @@ const sections: PaymentSection[] = [
   },
   {
     title: "Kündigung",
-    content: <p>Pilot / Setup endet ohne automatische Verlängerung. Starter Flex ist monatlich kündbar, sofern nichts anderes vereinbart. Starter 12 Monate läuft für 12 Monate. Kündigungen müssen in Textform erfolgen, sofern kein anderer Kündigungsprozess bereitgestellt wird. Kündigung an: <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>. Individuelle Angebote können abweichende Kündigungsregeln enthalten.</p>,
+    content: <p>Starter Flex kann jederzeit zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats gekündigt werden. Starter 12 Monate hat eine Mindestlaufzeit von zwölf Monaten und verlängert sich danach jeweils um einen Monat. Kündigungen müssen in Textform erfolgen, sofern kein anderer Kündigungsprozess bereitgestellt wird. Kündigung an: <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>. Individuelle Angebote können abweichende Kündigungsregeln enthalten.</p>,
   },
   {
     title: "Rückerstattung und Gutschriften",
@@ -153,7 +141,7 @@ const sections: PaymentSection[] = [
   },
   {
     title: "B2B-Hinweis",
-    content: <p>FanMind richtet sich aktuell primär an geschäftliche Nutzer, Creator-Teams, Clubs, Agenturen, Organisationen und Pilotkunden. Falls eine Nutzung durch Verbraucher zugelassen wird, müssen Verbraucherinformationen, Widerrufsrechte und besondere gesetzliche Pflichten gesondert geprüft und bereitgestellt werden.</p>,
+    content: <p>FanMind richtet sich ausschließlich an Unternehmer, Unternehmen, Creator-Teams, Clubs, Vereine, Agenturen, Organisationen und selbstständig beruflich Tätige. Ein Vertragsabschluss durch Verbraucher ist nicht vorgesehen.</p>,
   },
   {
     title: "Änderungen von Preisen und Paketen",

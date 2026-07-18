@@ -32,9 +32,9 @@ function getBillingPlanSummary(planId?: string | null, commercialOption?: string
 
   if (planId === "pilot") {
     return {
-      name: "Pilot / Setup",
-      dueToday: "990 € einmalig · zzgl. USt.",
-      term: "1 Testmonat · keine automatische Verlängerung",
+      name: "Interne Demo / Legacy",
+      dueToday: "Nicht öffentlich buchbar",
+      term: "Kein aktives Kundenpaket",
       status: "Zahlung offen",
     };
   }
@@ -43,8 +43,8 @@ function getBillingPlanSummary(planId?: string | null, commercialOption?: string
     return {
       name: "Starter 12 Monate",
       dueToday: "0 € Setup",
-      monthly: "312 €/Monat · zzgl. USt.",
-      term: "12 Monate",
+      monthly: "312 €/Monat",
+      term: "12 Monate Mindestlaufzeit · danach monatlich",
       status: "Zahlung offen",
     };
   }
@@ -52,16 +52,16 @@ function getBillingPlanSummary(planId?: string | null, commercialOption?: string
   if (planId === "starter" && commercialOption === "starter_paid_setup") {
     return {
       name: "Starter Flex",
-      dueToday: "990 € Setup · zzgl. USt.",
-      monthly: "312 €/Monat · zzgl. USt.",
-      term: "monatlich kündbar",
+      dueToday: "990 € Setup",
+      monthly: "312 €/Monat",
+      term: "zum Ende des bezahlten Monats kündbar",
       status: "Zahlung offen",
     };
   }
 
   return {
     name: "Ausgewähltes Paket",
-    dueToday: "gemäß Auswahl · zzgl. USt.",
+    dueToday: "gemäß Auswahl",
     monthly: "gemäß Auswahl",
     term: "gemäß Auswahl",
     status: "Zahlung offen",

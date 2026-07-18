@@ -10,11 +10,11 @@ export const metadata: Metadata = {
 
 const operatorRows = [
   {
-    label: "FanMind",
-    value: "Ein Projekt von Gerhard Novy und Bernd Guggenberger",
+    label: "Betreiber / Vertragspartner",
+    value: "Bernd Guggenberger, Einzelunternehmen – Geschäftsbezeichnung FanMind",
   },
   {
-    label: "Adresse",
+    label: "Geschäftsanschrift / Sitz",
     value: (
       <>
         Turnerstraße 18
@@ -26,26 +26,28 @@ const operatorRows = [
     ),
   },
   {
+    label: "Inhaber und vertretungsberechtigt",
+    value: "Bernd Guggenberger",
+  },
+  {
+    label: "Zuständige Gewerbebehörde",
+    value: "Bezirkshauptmannschaft Mödling",
+  },
+  {
+    label: "Kammerzugehörigkeit",
+    value: "Wirtschaftskammer Niederösterreich",
+  },
+  {
     label: "E-Mail",
     value: <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>,
   },
   {
+    label: "Telefon",
+    value: <a href="tel:+436765367236">+43 676 5367236</a>,
+  },
+  {
     label: "Website",
     value: <a href="https://fanmind.ch">https://fanmind.ch</a>,
-  },
-  {
-    label: "Ansprechpartner",
-    value: "Gerhard Novy und Bernd Guggenberger",
-  },
-  {
-    label: "Beteiligungsverhältnisse",
-    value: (
-      <>
-        Gerhard Novy: 50&nbsp;%
-        <br />
-        Bernd Guggenberger: 50&nbsp;%
-      </>
-    ),
   },
 ];
 
@@ -80,16 +82,14 @@ export default function ImpressumPage() {
               Rechtlicher Abschlussstatus
             </h2>
             <p>
-              Rechtsform, Vertretungsregelung, UID und etwaige Registerangaben
-              werden derzeit abschließend geprüft. Solange diese Prüfung nicht
-              freigegeben ist, veröffentlicht FanMind keine geratenen oder
-              widersprüchlichen Angaben als final.
+              FanMind wird derzeit von Bernd Guggenberger als Einzelunternehmen
+              unter der Geschäftsbezeichnung FanMind betrieben. Eine
+              Firmenbuchnummer, ein Firmenbuchgericht und eine UID werden erst
+              angeführt, sobald sie tatsächlich vorhanden und bestätigt sind.
             </p>
             <p>
-              Für ein konkretes Angebot oder Vertragsunterlagen sind die dann
-              verbindlichen Betreiberangaben vor Unterzeichnung über{" "}
-              <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>{" "}
-              anzufordern.
+              Der Rechtsformzusatz „e.U.“ wird erst nach bestätigter Eintragung
+              in das österreichische Firmenbuch verwendet.
             </p>
           </section>
 
