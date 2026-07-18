@@ -607,7 +607,7 @@ const faqs = [
     number: "1",
     question: "Für wen ist FanMind gedacht?",
     answer:
-      "FanMind ist für Creator, Clubs, Agenturen und Brands gedacht, die Fan-Kommunikation professionell verwalten und strukturieren wollen – vom ersten Pilot bis zum wachsenden Team.",
+      "FanMind ist für Creator, Clubs, Agenturen und Brands gedacht, die Fan-Kommunikation professionell verwalten und strukturieren wollen – vom produktiven Start bis zum wachsenden Team.",
     open: true,
   },
   {
@@ -632,7 +632,7 @@ const faqs = [
     number: "5",
     question: "Kann ich mehrere Profile oder Kunden verwalten?",
     answer:
-      "Mehrere Profile und Kunden sind vor allem für Growth- und Agency-Workflows vorgesehen. Im Pilot klären wir gemeinsam, welche Struktur für dein Team sinnvoll ist.",
+      "Mehrere Profile und Kunden sind vor allem für Growth- und Agency-Workflows vorgesehen. In einer Beratung klären wir gemeinsam, welche Struktur für dein Team sinnvoll ist.",
   },
   {
     number: "6",
@@ -651,10 +651,10 @@ const faqs = [
 const faqContacts = [
   {
     icon: "✉",
-    title: "Pilot anfragen",
-    text: "Schreib uns eine Nachricht zu deinem Use Case und zum passenden Pilot-Setup.",
-    cta: "Pilot anfragen",
-    href: "mailto:kontakt@fanmind.ch?subject=Pilot%20anfragen",
+    title: "Beratung anfragen",
+    text: "Schreib uns eine Nachricht zu deinem Use Case und zum passenden FanMind-Einstieg.",
+    cta: "Beratung anfragen",
+    href: "mailto:kontakt@fanmind.ch?subject=Beratung%20anfragen",
     tone: "blue",
   },
   {
@@ -703,7 +703,7 @@ const landingFooterColumns = [
       { label: "Login", href: "/login" },
       { label: "Registrieren", href: "/register" },
       { label: "Kostenlos testen", href: "/login" },
-      { label: "Pilot anfragen", href: "#kontakt" },
+      { label: "Beratung anfragen", href: "#kontakt" },
     ],
   },
 ];
@@ -748,12 +748,12 @@ const pricingPlans = [
     pricePrefix: "",
     price: "Coming Soon",
     cadence: "Coming Soon · noch nicht produktiv buchbar",
-    cta: "Pilot anfragen",
+    cta: "Beratung anfragen",
     href: "#kontakt",
     tone: "blue",
     featured: false,
     status: "Coming Soon",
-    features: ["Mehrere Profile als Ausbaupfad geplant", "Basis-Segmente und Listen als Roadmap", "Reichweiten- und Performance-Signale als Roadmap", "Kein automatischer Versand", "Pilot-Feedback bestimmt den Ausbau", "Noch nicht kaufbar dargestellt"],
+    features: ["Mehrere Profile als Ausbaupfad geplant", "Basis-Segmente und Listen als Roadmap", "Reichweiten- und Performance-Signale als Roadmap", "Kein automatischer Versand", "Kundenfeedback bestimmt den Ausbau", "Noch nicht kaufbar dargestellt"],
   },
   {
     icon: "▥",
@@ -763,12 +763,12 @@ const pricingPlans = [
     pricePrefix: "",
     price: "Auf Anfrage",
     cadence: "Coming Soon · noch nicht produktiv buchbar",
-    cta: "Pilot anfragen",
+    cta: "Beratung anfragen",
     href: "#kontakt",
     tone: "purple",
     featured: false,
     status: "Coming Soon",
-    features: ["Multi-Workspace / Agency-Ansichten geplant", "Team-Rollen und Rechte als Roadmap", "Kampagnen nur mit manueller Freigabe geplant", "Analytics & Reichweite nicht als Live-Suite", "Pilot-Feedback bestimmt den Ausbau", "Noch nicht kaufbar dargestellt"],
+    features: ["Multi-Workspace / Agency-Ansichten geplant", "Team-Rollen und Rechte als Roadmap", "Kampagnen nur mit manueller Freigabe geplant", "Analytics & Reichweite nicht als Live-Suite", "Kundenfeedback bestimmt den Ausbau", "Noch nicht kaufbar dargestellt"],
   },
   {
     icon: "◇",
@@ -1642,7 +1642,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>▶</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href="#kontakt">
-              {t("Pilot anfragen")}
+              {t("Beratung anfragen")}
             </a>
           </div>
           <p>
@@ -1744,7 +1744,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>▶</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href="#kontakt">
-              {t("Pilot anfragen")}
+              {t("Beratung anfragen")}
             </a>
           </div>
           <p>
@@ -1841,7 +1841,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>▷</span> {t("Kostenlos testen")}
             </a>
             <a className={styles.outlineButton} href="#kontakt">
-              <span>🚀</span> {t("Pilot anfragen")}
+              <span>🚀</span> {t("Beratung anfragen")}
             </a>
             <p>
               <span>{t("✓ Keine Kreditkarte erforderlich")}</span>
@@ -2019,7 +2019,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div id="kontakt" className={styles.landingFooterNewsletter}>
             <span className={styles.landingFooterMailIcon} aria-hidden="true">✉</span>
             <div>
-              <h3>{t("Pilot anfragen")}</h3>
+              <h3>{t("Beratung anfragen")}</h3>
               <p>{t("Wir prüfen deinen Use Case und zeigen dir, wie FanMind in deinem Workflow eingesetzt werden kann.")}</p>
             </div>
             <FooterInquiryForm />
