@@ -1,0 +1,89 @@
+name: FanMind Mobile CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/**"
+      - "src/lib/requestAccessToken.ts"
+      - "src/lib/workspaceAuthorization.ts"
+      - "src/lib/supabase/server.ts"
+      - "src/app/api/ai/reply-suggestions/route.ts"
+      - ".github/workflows/ci-mobile.yml"
+  push:
+    branches:
+      - "feat/mobile-**"
+    paths:
+      - "apps/mobile/**"
+      - "src/lib/requestAccessToken.ts"
+      - "src/lib/workspaceAuthorization.ts"
+      - "src/lib/supabase/server.ts"
+      - "src/app/api/ai/reply-suggestions/route.ts"
+      - ".github/workflows/ci-mobile.yml"
+
+concurrency:
+  group: fanmind-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-mobile:
+    name: Typecheck, doctor and Android bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://exampleproject.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key-1234567890
+      EXPO_PUBLIC_FANMIND_API_URL: https://fanmind.ch
+      EXPO_NO_TELEMETRY: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck independent mobile app
+        run: npm run typecheck
+
+      - name: Validate Expo configuration
+        run: npm run doctor
+
+      - name: Build Android JavaScript bundle
+        run: npm run export:android
+
+      - name: Enforce mobile boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE 'from ["'"'](?:\.\./){2,}src/(app|components)|from ["'"']@/app|\.module\.css|next/(headers|navigation|server)|WebView' app src; then
+            echo "Mobile code imports Website/Next/WebView code." >&2
+            exit 1
+          fi
+          if grep -RInE 'SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|STRIPE_SECRET_KEY|sk_live_|sk_test_' app src; then
+            echo "Server-only secret identifier found in mobile runtime code." >&2
+            exit 1
+          fi
+          echo "MOBILE_BOUNDARY=OK"
+
+      - name: Upload Android bundle report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-android-bundle
+          path: apps/mobile/dist-android
+          if-no-files-found: error
+          retention-days: 5
