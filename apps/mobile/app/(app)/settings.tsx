@@ -68,7 +68,7 @@ export default function SettingsScreen() {
         <Text style={mobileStyles.muted}>• Kein Service-Role-Key in der App</Text>
         <Text style={mobileStyles.muted}>• Kein OpenAI-Key in der App</Text>
         <Text style={mobileStyles.muted}>• Keine automatische Sendefunktion</Text>
-        <Text style={mobileStyles.muted}>• Keine Website als WebView</Text>
+        <Text style={mobileStyles.muted}>• Keine eingebettete Website als Haupt-App</Text>
       </Card>
 
       {error ? <Text style={mobileStyles.error}>{error}</Text> : null}
