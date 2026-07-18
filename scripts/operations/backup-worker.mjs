@@ -137,10 +137,17 @@ async function validatedLocalBackupPair(runRow) {
 async function verifyLatestBackup(job) {
   const start = Date.now();
   const sourceRun = await latestVerifiableBackupRun();
-  const pair = await validatedLocalBackupPair(sourceRun);
-  const result = await verifyBackupArtifact({ artifactPath:pair.artifact, checksumPath:pair.checksum });
-  if (sourceRun.sha256 && sourceRun.sha256 !== result.checksum) throw new Error('backup_run_sha256_mismatch');
-  if (sourceRun.size_bytes != null && Number(sourceRun.size_bytes) !== result.sizeBytes) throw new Error('backup_run_size_mismatch');
+  if (!sourceRun) throw new Error('verifiable_backup_not_found');
+  let result;
+  try {
+    const pair = await validatedLocalBackupPair(sourceRun);
+    result = await verifyBackupArtifact({ artifactPath:pair.artifact, checksumPath:pair.checksum });
+    if (sourceRun.sha256 && sourceRun.sha256 !== result.checksum) throw new Error('backup_run_sha256_mismatch');
+    if (sourceRun.size_bytes != null && Number(sourceRun.size_bytes) !== result.sizeBytes) throw new Error('backup_run_size_mismatch');
+  } catch (error) {
+    await patch('backup_runs', sourceRun.id, { validation_status:'failed' }).catch(()=>{});
+    throw error;
+  }
   const verificationRun = await insert('backup_runs', {
     backup_type:'verification', status:'succeeded', severity:'info', finished_at:new Date().toISOString(),
     validation_status:'passed', storage_reference:null, checksum_reference:null, sha256:result.checksum,
