@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "fanmind",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "plugins": [
       "expo-router",
       [
@@ -32,7 +31,6 @@
       "adaptiveIcon": {
         "backgroundColor": "#06142c"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": true
     },
     "web": {
