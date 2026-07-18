@@ -10,7 +10,7 @@ Diese App ist **keine umverpackte Website**:
 - kein Import aus `src/app`, `src/components` oder Website-CSS;
 - eigene Expo-Router-Navigation;
 - eigene mobile UI-Komponenten und Design-Tokens;
-- eigene Paketverwaltung und Mobile-CI;
+- eigene Paketverwaltung, eigene Releases und eigene Mobile-CI;
 - eigene Android-/iOS-App-IDs und Releaseprofile.
 
 Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
