@@ -4,6 +4,7 @@ export type OperationsStatus = "healthy" | "degraded" | "unavailable" | "unknown
 export type NotificationSeverity = "critical" | "warning" | "info" | "resolved";
 export type AdminNotification = { id:string; created_at:string; category:NotificationSeverity; severity:NotificationSeverity; title:string; message:string; source:string|null; status:string; read_at:string|null; acknowledged_at:string|null; technical_reference:string|null };
 export type HealthCheck = { component:string; status:OperationsStatus; publicMessage:string; adminMessage?:string; checkedAt:string; latencyMs?:number };
+export type ServerErrorGroup = { fingerprint:string; first_seen_at:string; last_seen_at:string; occurrence_count:number; route_path:string; route_type:string; router_kind:string; http_method:string; environment:string; latest_release_commit:string|null; status:string; last_notified_severity:string|null };
 
 function serviceKey() { return process.env.SUPABASE_SERVICE_ROLE_KEY; }
 function envFlag(name: string): OperationsStatus { return process.env[name] ? "healthy" : "unknown"; }
@@ -56,13 +57,22 @@ export async function markAdminNotificationRead(id: string, userId: string, ackn
   if (acknowledge) { body.acknowledged_at = body.read_at; body.acknowledged_by_user_id = userId; }
   return rest<AdminNotification[]>("admin_notifications", `?id=eq.${encodeURIComponent(id)}`, { method:"PATCH", body: JSON.stringify(body) });
 }
+export async function getRecentServerErrorGroups(limit = 8) {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 50);
+  return rest<ServerErrorGroup[]>(
+    "server_error_groups",
+    `?select=fingerprint,first_seen_at,last_seen_at,occurrence_count,route_path,route_type,router_kind,http_method,environment,latest_release_commit,status,last_notified_severity&order=last_seen_at.desc&limit=${safeLimit}`,
+  );
+}
+
 export async function getOperationsOverviewData() {
-  const [notifications, healthEvents, jobs, backups, audits] = await Promise.all([
+  const [notifications, healthEvents, jobs, backups, audits, serverErrors] = await Promise.all([
     getRecentAdminNotifications(6),
     rest<Record<string,unknown>[]>("system_health_events", "?select=*&order=created_at.desc&limit=6"),
     rest<Record<string,unknown>[]>("admin_operation_jobs", "?select=*&order=priority.asc,requested_at.asc&limit=12"),
     rest<Record<string,unknown>[]>("backup_runs", "?select=*&order=started_at.desc&limit=12"),
     rest<Record<string,unknown>[]>("operations_audit_log", "?select=*&order=created_at.desc&limit=6"),
+    getRecentServerErrorGroups(8),
   ]);
-  return { notifications, healthEvents, jobs, backups, audits };
+  return { notifications, healthEvents, jobs, backups, audits, serverErrors };
 }
