@@ -1,0 +1,28 @@
+name: One-off environment separation runbooks 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'feat/environment-separation-guardrails-20260718' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/environment-separation-guardrails-20260718
+      - name: Update runbooks
+        run: python3 scripts/one-off/update-environment-separation-runbooks-20260718.py
+      - name: Commit generated runbook updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/operations/referral-stripe-sandbox-runbook.md docs/operations/RESTORE_DRILL.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Require shared environment boundary in write runbooks"
+          git push origin HEAD:feat/environment-separation-guardrails-20260718
