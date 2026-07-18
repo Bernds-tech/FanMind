@@ -1,0 +1,28 @@
+name: One-off server error schema docs 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'feat/privacy-server-error-tracking-20260718' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/privacy-server-error-tracking-20260718
+      - name: Update tests and schema docs
+        run: python3 scripts/one-off/update-server-error-schema-docs-20260718.py
+      - name: Commit generated updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/server-error-telemetry.test.mjs docs/database/fanmind_current_schema.md docs/SECURITY_RLS_SECRETS_CHECK.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Document server error telemetry schema and privacy fallback"
+          git push origin HEAD:feat/privacy-server-error-tracking-20260718
