@@ -6,6 +6,7 @@ import {
 import { AdminBillingShell } from "../billing/AdminBillingShell";
 import { AdminTabs } from "../billing/AdminTabs";
 import { BackupJobActions } from "./BackupJobActions";
+import { ServerErrorGroupsCard } from "./ServerErrorGroupsCard";
 import styles from "../billing/adminBilling.module.css";
 
 function badge(status: string) {
@@ -216,6 +217,8 @@ export default async function AdminOperationsPage() {
               </p>
             )}
           </article>
+
+          <ServerErrorGroupsCard result={data.serverErrors} />
 
           <article className={styles.card}>
             <div className={styles.cardHeader}>
