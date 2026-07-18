@@ -1,6 +1,7 @@
 import {
   NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
   evaluateEnvironmentBoundary,
+  normalizeHostname,
 } from "./environmentBoundaryPolicy.mjs";
 
 const WRITE_ACKNOWLEDGEMENT = "I_UNDERSTAND_TEST_MODE_ONLY";
@@ -14,7 +15,7 @@ function hostnameFromUrl(value) {
   if (!raw) return null;
 
   try {
-    return new URL(raw).hostname.toLowerCase();
+    return normalizeHostname(new URL(raw).hostname);
   } catch {
     return null;
   }
@@ -50,9 +51,7 @@ export function evaluateReferralSandboxConfiguration(
   );
   const productionHostname = hostname === "fanmind.ch" || hostname === "www.fanmind.ch";
   const acknowledgement = clean(environment.FANMIND_REFERRAL_SANDBOX_ACK);
-  const environmentBoundary = allowWrite
-    ? evaluateEnvironmentBoundary(environment, { allowWrite: true })
-    : null;
+  const environmentBoundary = evaluateEnvironmentBoundary(environment, { allowWrite });
 
   if (keyMode === "missing") {
     errors.push("STRIPE_SECRET_KEY fehlt.");
@@ -83,26 +82,22 @@ export function evaluateReferralSandboxConfiguration(
         `Schreibender Sandbox-Test verlangt FANMIND_REFERRAL_SANDBOX_ACK=${WRITE_ACKNOWLEDGEMENT}.`,
       );
     }
-    if (productionHostname) {
-      errors.push(
-        "Schreibende Referral-Sandbox-Tests dürfen nicht gegen fanmind.ch laufen.",
-      );
-    }
     if (!hostname) {
       errors.push(
         "Schreibender Sandbox-Test verlangt eine gültige nicht-produktive NEXT_PUBLIC_APP_URL.",
       );
     }
-    for (const boundaryError of environmentBoundary?.errors ?? []) {
-      errors.push(`Umgebungsgrenze: ${boundaryError}`);
-    }
-    for (const boundaryWarning of environmentBoundary?.warnings ?? []) {
-      warnings.push(`Umgebungsgrenze: ${boundaryWarning}`);
-    }
   } else if (billingEnabled) {
     errors.push(
       "Read-only Preflight verlangt FANMIND_ENABLE_REFERRAL_BILLING=false.",
     );
+  }
+
+  for (const boundaryError of environmentBoundary.errors) {
+    errors.push(`Umgebungsgrenze: ${boundaryError}`);
+  }
+  for (const boundaryWarning of environmentBoundary.warnings) {
+    warnings.push(`Umgebungsgrenze: ${boundaryWarning}`);
   }
 
   if (!allowWrite && !productionHostname && hostname) {
@@ -121,7 +116,7 @@ export function evaluateReferralSandboxConfiguration(
     billingEnabled,
     productionHostname,
     hostnameConfigured: Boolean(hostname),
-    environmentBoundaryOk: environmentBoundary?.ok ?? null,
+    environmentBoundaryOk: environmentBoundary.ok,
     errors,
     warnings,
   };
