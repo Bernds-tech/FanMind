@@ -406,8 +406,9 @@ test('claim response normalization accepts a valid single-row array job', () => 
   assert.equal(worker.normalizeClaimedJob([job]), job);
 });
 
-test('claim response normalization rejects unsupported job types as not executable', () => {
-  assert.equal(worker.normalizeClaimedJob({ id: 'job-3', job_type: 'verify_backup' }), null);
+test('claim response normalization accepts verification and rejects unknown job types', () => {
+  const verificationJob = { id: 'job-3', job_type: 'verify_backup' };
+  assert.equal(worker.normalizeClaimedJob(verificationJob), verificationJob);
   assert.equal(worker.normalizeClaimedJob([{ id: 'job-4', job_type: 'not_allowed' }]), null);
 });
 
