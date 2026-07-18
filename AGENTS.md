@@ -44,6 +44,7 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - Database/RLS truth lives in `docs/database/fanmind_current_schema.md` plus the Supabase migrations under `supabase/migrations/`.
 - Security/RLS/Secrets checks live in `docs/SECURITY_RLS_SECRETS_CHECK.md`.
 - AI usage/cost monitoring requirements live in `docs/AI_COST_MONITORING.md`.
+- Canonical AI tier policy lives in `src/config/aiTiers.mjs`; do not duplicate prices, referral eligibility, auto-send rules or automatic-booking readiness across UI files.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
@@ -51,7 +52,7 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 
 - FanMind is not a slide demo or throwaway mockup. Build and describe it as a real AI-supported CRM and communication system that is becoming production-ready.
 - The word `Demo` means free test access or a prepared example workspace only. The product itself must look and feel like a serious CRM system.
-- Current commercial truth: `Pilot / Setup = 990 € einmalig`, `Starter = 312 €/Monat`. Starter has two options: `Starter Flex = 990 € Setup + 312 €/Monat` and `Starter 12 Monate = 0 € Setup + 312 €/Monat bei 12 Monaten Laufzeit`. Do not reintroduce the old `299 €/Monat` pricing.
+- Current commercial truth: the paid Pilot/Setup package is retired. Public paid offers are `Starter Flex = 990 € one-time setup + 312 €/month` and `Starter 12 Monate = 0 € setup + 312 €/month with a 12-month minimum term, then monthly renewal`. KI Standard is included; KI Plus is +100 €/month; KI Ultra is +200 €/month. Do not reintroduce the old Pilot or 299 €/month pricing.
 - Growth, Agency and Enterprise remain Roadmap / Coming Soon / Auf Anfrage unless explicitly scoped and validated.
 - Referral Growth Window truth: planned until FanMind reaches 2.000 active paying customers/workspaces. During the open window, each active referred paying customer/workspace gives the referrer 5 % discount on ongoing FanMind costs; maximum 20 active referrals count per referrer; after the 2.000 cap closes the window, existing active discounts remain but no new additional discount percentages are earned unless the window is explicitly reopened.
 - The frozen sales/demo flow is: landing page -> login/demo -> dashboard -> fans/contacts -> CSV import or Sandra/demo contact -> contact detail -> existing/latest inbound message -> AI reply suggestions -> copy answer -> save memory -> save follow-up -> follow-up list / roadmap.

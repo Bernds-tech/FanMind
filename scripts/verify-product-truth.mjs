@@ -7,6 +7,8 @@ const root = process.cwd();
 
 const checkedFiles = [
   ".env.example",
+  "src/config/aiTiers.mjs",
+  "tests/ai-tier-policy.test.mjs",
   "README.md",
   "src/config/plans.ts",
   "src/lib/plans.ts",
@@ -227,19 +229,39 @@ requireText(
 
 // KI-Stufen und Referral-Grenzen.
 requireText(
-  "src/app/settings/AccountSections.tsx",
-  "KI Standard ist im Basispaket enthalten",
-  "KI Standard muss als enthalten ausgewiesen werden.",
+  "src/config/aiTiers.mjs",
+  'monthlyAddOnCents: 10000',
+  "Die zentrale KI-Tier-Policy muss KI Plus mit 100 €/Monat führen.",
+);
+requireText(
+  "src/config/aiTiers.mjs",
+  'monthlyAddOnCents: 20000',
+  "Die zentrale KI-Tier-Policy muss KI Ultra mit 200 €/Monat führen.",
+);
+requireText(
+  "src/config/aiTiers.mjs",
+  'includedInBase: true',
+  "KI Standard muss in der zentralen Policy im Basispaket enthalten bleiben.",
+);
+requireText(
+  "src/config/aiTiers.mjs",
+  'addOnReferralDiscountEligible: false',
+  "KI-Add-ons dürfen nicht referral-rabattfähig werden.",
+);
+requireText(
+  "src/config/aiTiers.mjs",
+  'automaticSendingEnabled: false',
+  "Keine KI-Stufe darf automatische Sendung aktivieren.",
 );
 requireText(
   "src/app/settings/AccountSections.tsx",
-  'price: "+100 €/Monat"',
-  "KI Plus muss den freigegebenen Zusatzpreis ausweisen.",
+  'from "@/config/aiTiers.mjs"',
+  "Die Paketansicht muss die zentrale KI-Tier-Policy verwenden.",
 );
 requireText(
-  "src/app/settings/AccountSections.tsx",
-  'price: "+200 €/Monat"',
-  "KI Ultra muss den freigegebenen Zusatzpreis ausweisen.",
+  "tests/ai-tier-policy.test.mjs",
+  "Plus and Ultra cannot be automatically booked before models, limits and billing are approved",
+  "Die nicht freigegebene Auto-Buchung von Plus/Ultra muss automatisiert getestet werden.",
 );
 requireText(
   "docs/SOURCE_OF_TRUTH.md",

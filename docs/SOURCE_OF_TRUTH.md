@@ -92,6 +92,15 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete. Si
 - Für alle Stufen gilt: keine automatische Sendung; der Mensch prüft und sendet final selbst.
 
 
+#### Zentrale technische KI-Stufen-Policy
+
+- `src/config/aiTiers.mjs` ist die technische Source of Truth für KI Standard, Plus und Ultra.
+- KI Standard ist enthalten; KI Plus kostet 100 €/Monat zusätzlich; KI Ultra kostet 200 €/Monat zusätzlich.
+- Einrichtung und KI-Add-ons sind nicht referral-rabattfähig.
+- Keine KI-Stufe aktiviert automatische Sendung.
+- Plus und Ultra bleiben `Coming Soon` und nicht automatisch buchbar, bis Modellklasse, Kontingente, Kontextgrenzen und getrennte Stripe-Subscription-Items ausdrücklich freigegeben sind.
+- Nicht festgelegte Modelle oder Limits werden als `null` geführt und dürfen nicht durch erfundene Werte ersetzt werden.
+
 ### Betreiber- und Steuerstatus
 
 - Vertragspartner ist Bernd Guggenberger, Einzelunternehmen unter der Geschäftsbezeichnung FanMind.
