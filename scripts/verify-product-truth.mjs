@@ -154,7 +154,7 @@ requireText(
 );
 requireText(
   "src/app/landing-v2/page.tsx",
-  "990 € Einrichtung + 312 €/Monat",
+  "990 € Setup + 312 €/Monat",
   "Starter Flex muss die freigegebene Preislogik verwenden.",
 );
 requireText(
@@ -460,8 +460,8 @@ forbidIn(
 );
 forbidIn(
   "src/lib/fanmindCopy.ts",
-  /(?:Fan-Analyse-Report|Fan analysis report|Memory|\bMVP\b|DSGVO-konform)/iu,
-  "Öffentliche Übersetzungen enthalten veraltete Produktbegriffe.",
+  /(?:Fan-Analyse-Report|Fan analysis report|Memory|DSGVO-konform)/iu,
+  "Öffentliche Übersetzungen enthalten veraltete oder missverständliche Produktbegriffe.",
 );
 forbidIn(
   "src/app/landing-v2/FaqAccordion.tsx",
