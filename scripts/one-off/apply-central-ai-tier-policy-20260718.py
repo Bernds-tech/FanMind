@@ -107,9 +107,9 @@ text = read(path)
 if '"src/config/aiTiers.mjs",' not in text:
     text = regex_replace_once(
         text,
-        r'(const runtimeFiles = \[\n\s*"\.env\.example",\n)',
+        r'(const checkedFiles = \[\n\s*"\.env\.example",\n)',
         r'\1  "src/config/aiTiers.mjs",\n  "tests/ai-tier-policy.test.mjs",\n',
-        "truth runtime AI tier files",
+        "truth checked AI tier files",
     )
 old_checks = '''requireText(
   "src/app/settings/AccountSections.tsx",
