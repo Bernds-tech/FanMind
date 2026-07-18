@@ -6,7 +6,8 @@ type LegalTopHeaderKey =
   | "datenschutz"
   | "avv"
   | "agb"
-  | "zahlungsbedingungen";
+  | "zahlungsbedingungen"
+  | "referral";
 
 type LegalTopHeaderProps = {
   active: LegalTopHeaderKey;
@@ -25,6 +26,11 @@ const legalNavigation: Array<{
     href: "/zahlungsbedingungen",
     label: "Zahlungsbedingungen",
     key: "zahlungsbedingungen",
+  },
+  {
+    href: "/referral-bedingungen",
+    label: "Referral",
+    key: "referral",
   },
 ];
 
