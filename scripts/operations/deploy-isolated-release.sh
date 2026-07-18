@@ -83,19 +83,23 @@ rollback() {
     if [[ ! "$rollback_commit" =~ ^[0-9a-f]{40}$ ]]; then
       rollback_commit="unknown"
     fi
-    FANMIND_RELEASE_COMMIT="$rollback_commit" NODE_ENV=production \
-      pm2 start npm --name "$APP_NAME" --cwd "$PREVIOUS_CWD" -- start
-    pm2 save
-    log "rollback completed to previous cwd"
-    return 0
+    if FANMIND_RELEASE_COMMIT="$rollback_commit" NODE_ENV=production \
+      pm2 start npm --name "$APP_NAME" --cwd "$PREVIOUS_CWD" -- start; then
+      pm2 save
+      log "rollback completed to previous cwd"
+      return 0
+    fi
+    log "previous cwd could not be started; trying source checkout fallback"
   fi
 
   if [[ -f "$SOURCE_DIR/package.json" ]] && [[ -d "$SOURCE_DIR/.next" ]]; then
-    FANMIND_RELEASE_COMMIT="${PREVIOUS_COMMIT:-unknown}" NODE_ENV=production \
-      pm2 start npm --name "$APP_NAME" --cwd "$SOURCE_DIR" -- start
-    pm2 save
-    log "rollback completed to source checkout fallback"
-    return 0
+    if FANMIND_RELEASE_COMMIT="${PREVIOUS_COMMIT:-unknown}" NODE_ENV=production \
+      pm2 start npm --name "$APP_NAME" --cwd "$SOURCE_DIR" -- start; then
+      pm2 save
+      log "rollback completed to source checkout fallback"
+      return 0
+    fi
+    log "source checkout fallback could not be started"
   fi
 
   log "rollback target unavailable; manual intervention required"
@@ -129,8 +133,8 @@ for command in git tar npm node pm2 curl sudo; do
 done
 
 export FANMIND_PM2_APP_NAME="$APP_NAME"
-PREVIOUS_CWD="$(read_previous_pm2_cwd)"
-PREVIOUS_COMMIT="$(read_live_commit)"
+PREVIOUS_CWD="$(read_previous_pm2_cwd || true)"
+PREVIOUS_COMMIT="$(read_live_commit || true)"
 
 log "building isolated release $RELEASE_COMMIT"
 log "previous cwd: ${PREVIOUS_CWD:-unknown}"

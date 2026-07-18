@@ -67,4 +67,14 @@ test("production workflow keeps isolated deployment explicitly disabled by defau
     /Using legacy in-place deployment because isolated release deployment is disabled/,
   );
   assert.match(workflow, /git reset --hard origin\/main/);
+  assert.match(workflow, /pm2 start npm --name fanmind --cwd "\$SOURCE_DIR" -- start/);
+});
+
+test("rollback failures fall through to the next safe target and live version lookup is optional", async () => {
+  const script = await readFile(scriptPath, "utf8");
+  assert.match(script, /PREVIOUS_COMMIT="\$\(read_live_commit \|\| true\)"/);
+  assert.match(script, /if FANMIND_RELEASE_COMMIT="\$rollback_commit"[\s\S]*pm2 start npm --name "\$APP_NAME" --cwd "\$PREVIOUS_CWD" -- start; then/);
+  assert.match(script, /previous cwd could not be started; trying source checkout fallback/);
+  assert.match(script, /source checkout fallback could not be started/);
+  assert.match(script, /manual intervention required/);
 });

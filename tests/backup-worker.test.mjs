@@ -111,7 +111,7 @@ test('deployment workflow records a verified release only after either deploymen
   const resetIndex = indexOfRequired('git reset --hard origin/main');
   const npmCiIndex = indexOfRequired('npm ci --no-audit --no-fund');
   const buildIndex = indexOfRequired('npm run build');
-  const pm2RestartIndex = indexOfRequired('pm2 restart fanmind --update-env');
+  const pm2StartIndex = indexOfRequired('pm2 start npm --name fanmind --cwd "$SOURCE_DIR" -- start');
   const nginxIndex = indexOfRequired('sudo nginx -t');
   const healthcheckIndex = indexOfRequired('Health check passed.');
   const sourceSyncCheckIndex = indexOfRequired('Source checkout is not synchronized after deployment.');
@@ -130,8 +130,8 @@ test('deployment workflow records a verified release only after either deploymen
   assert.ok(isolatedGateIndex < resetIndex, 'legacy reset remains in the disabled branch');
   assert.ok(resetIndex < npmCiIndex);
   assert.ok(npmCiIndex < buildIndex);
-  assert.ok(buildIndex < pm2RestartIndex);
-  assert.ok(pm2RestartIndex < nginxIndex);
+  assert.ok(buildIndex < pm2StartIndex);
+  assert.ok(pm2StartIndex < nginxIndex);
   assert.ok(nginxIndex < healthcheckIndex);
   assert.ok(isolatedDeployIndex < sourceSyncCheckIndex, 'the isolated script must return successfully before common post-deploy work');
   assert.ok(healthcheckIndex < sourceSyncCheckIndex, 'legacy healthcheck must pass before common post-deploy work');
