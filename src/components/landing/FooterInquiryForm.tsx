@@ -60,7 +60,7 @@ export function FooterInquiryForm() {
         <input type="text" name="company" tabIndex={-1} autoComplete="off" />
       </label>
       <button className={styles.landingFooterCta} type="submit" disabled={state === "submitting"}>
-        {state === "submitting" ? "Wird gesendet ..." : "Pilot anfragen"} <span>→</span>
+        {state === "submitting" ? "Wird gesendet ..." : "Beratung anfragen"} <span>→</span>
       </button>
       <small>Persönliche Anfrage statt automatischem Newsletter.</small>
       {state === "success" ? <p className={styles.footerInquirySuccess}>Danke, wir melden uns bei dir.</p> : null}

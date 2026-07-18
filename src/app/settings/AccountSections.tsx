@@ -169,7 +169,7 @@ const ADD_ON_CARDS: AddOnCard[] = [
     purpose: "Musterplatz für geprüfte Zusatzmodule oder Pilotwünsche.",
     status: "Auf Anfrage",
     price: "auf Anfrage",
-    features: ["Pilotwunsch", "manuelle Freigabe"],
+    features: ["individueller Wunsch", "manuelle Freigabe"],
     showComingSoonMark: true,
   },
 ];
