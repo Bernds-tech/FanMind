@@ -12,7 +12,7 @@
     "check:release": "npm run verify:truth && npm run lint && npm run build",
     "db:apply-contact-reply-targets": "node scripts/apply-contact-reply-targets-migration.mjs",
     "referral:sandbox:preflight": "node scripts/referral-sandbox-preflight.mjs",
-    "test:operations": "node --test tests/backup-worker.test.mjs tests/demo-cleanup-worker.test.mjs tests/referral-policy.test.mjs tests/referral-lifecycle-policy.test.mjs tests/referral-sandbox-policy.test.mjs tests/ai-usage-policy.test.mjs tests/demo-turnstile-policy.test.mjs"
+    "test:operations": "node --test tests/backup-worker.test.mjs tests/demo-cleanup-worker.test.mjs tests/referral-policy.test.mjs tests/referral-lifecycle-policy.test.mjs tests/referral-sandbox-policy.test.mjs tests/ai-usage-policy.test.mjs tests/demo-turnstile-policy.test.mjs tests/ai-tier-policy.test.mjs"
   },
   "dependencies": {
     "next": "16.2.7",

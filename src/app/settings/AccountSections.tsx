@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
+import { AI_TIER_IDS, formatAiTierPrice, getAiTierConfig } from "@/config/aiTiers.mjs";
 import {
   getBillingCheckoutActionLabel,
   shouldShowBillingCheckoutAction,
@@ -128,53 +129,21 @@ const BASE_PACKAGE_CARDS: PackageCard[] = [
   },
 ];
 
+const AI_ADD_ON_CARDS: AddOnCard[] = AI_TIER_IDS.map((tierId) => {
+  const tier = getAiTierConfig(tierId);
+  return {
+    key: `ai_${tier.id}`,
+    name: tier.name,
+    purpose: tier.description,
+    status: tier.publicStatus,
+    price: formatAiTierPrice(tier),
+    features: [...tier.features],
+    showComingSoonMark: tier.publicStatus === "Coming Soon",
+  };
+});
+
 const ADD_ON_CARDS: AddOnCard[] = [
-  {
-    key: "ai_standard",
-    name: "KI Standard",
-    purpose:
-      "Im Basispaket enthaltene KI für Antwortvorschläge, Kontaktwissen und Follow-ups.",
-    status: "Aktiv",
-    price: "im Basispaket enthalten",
-    features: [
-      "Standard-Kontingent",
-      "Antwortvorschläge",
-      "Kontaktwissen & Follow-ups",
-      "manuelle Prüfung vor dem Versand",
-    ],
-  },
-  {
-    key: "ai_plus",
-    name: "KI Plus",
-    purpose:
-      "Kostenpflichtige Erweiterung mit leistungsstärkerer KI, mehr Nutzung und größerem Gesprächskontext.",
-    status: "Auf Anfrage",
-    price: "+100 €/Monat",
-    features: [
-      "leistungsstärkere Modellklasse",
-      "höheres KI-Kontingent",
-      "größerer Gesprächskontext",
-      "weiterhin manuelle Freigabe",
-      "nicht referral-rabattfähig",
-    ],
-    showComingSoonMark: true,
-  },
-  {
-    key: "ai_ultra",
-    name: "KI Ultra",
-    purpose:
-      "Höherpreisige Premium-Erweiterung mit der stärksten freigegebenen KI, den höchsten Kontingenten und erweitertem Funktionsumfang.",
-    status: "Auf Anfrage",
-    price: "+200 €/Monat",
-    features: [
-      "stärkste freigegebene Modellklasse",
-      "höchstes KI-Kontingent",
-      "größter Gesprächskontext",
-      "keine automatische Sendung",
-      "nicht referral-rabattfähig",
-    ],
-    showComingSoonMark: true,
-  },
+  ...AI_ADD_ON_CARDS,
   {
     key: "reach_analysis",
     name: "Reichweitenanalyse",
