@@ -544,3 +544,71 @@ RLS/Scope:
 ### Phase 2 Ergänzungen (20260707120000)
 
 Die Migration `20260707120000_referral_growth_window_phase_2.sql` ergänzt eindeutige Workspace-/Referred-Workspace-Indizes für Referral-Mitglieder und Attributionen sowie Update-Trigger/Kommentare. Die App nutzt serverseitige Service-Role-Zugriffe, um berechtigten Workspaces den eigenen Referral-Code/Link anzuzeigen und Signup-Attributionen zu speichern. Normale Nutzer erhalten weiterhin keinen Zugriff auf fremde Referral-Ökonomie; Rabattwerte sind vorbereitete Statuswerte und werden nicht automatisch mit Billing verrechnet.
+
+
+## 13. Datenschutzsparsame Serverfehler-Telemetrie
+
+Migration: `supabase/migrations/20260718203000_privacy_server_error_tracking.sql`
+
+### `server_error_events`
+
+Zweck: minimale technische Einzelereignisse für unerwartete serverseitige Next.js-Fehler.
+
+Gespeicherte Felder:
+
+- `id`
+- `created_at`
+- `fingerprint` als SHA-256
+- optionaler, formatgeprüfter Next.js-`digest`
+- `route_path` ausschließlich als Route-Schablone oder `/unknown`
+- `route_type`
+- `router_kind`
+- `http_method`
+- `environment`
+- `release_commit`
+
+Ausdrücklich nicht vorhanden:
+
+- Fehlermeldung oder Stack
+- Request-/Response-Body
+- Header, Cookies, Query-Parameter oder IP-Adresse
+- Kontakt-, Nachrichten-, Prompt-, KI- oder Zahlungsinhalte
+
+RLS/Scope:
+
+- RLS ist aktiviert.
+- `PUBLIC`, `anon` und `authenticated` haben keine Tabellenrechte.
+- Inserts erfolgen ausschließlich über die service-role-only RPC `record_server_error_event(...)`.
+- Einzelereignisse werden über `cleanup_server_error_events(...)` zeitlich begrenzt bereinigt; die RPC ist ebenfalls service-role-only.
+
+### `server_error_groups`
+
+Zweck: Aggregation identischer technischer Fehlergruppen und Alarm-Cooldown.
+
+Gespeicherte Felder:
+
+- `fingerprint`
+- `first_seen_at`
+- `last_seen_at`
+- `occurrence_count`
+- optionaler `digest`
+- Route-Schablone, Route-Typ, Router-Art und HTTP-Methode
+- Umgebung und letzter Release-Commit
+- Status, Auflösungszeitpunkt und letzte Alarmstufe
+
+RLS/Scope:
+
+- RLS ist aktiviert.
+- Keine Browserrolle erhält Tabellen- oder RPC-Zugriff.
+- Platform-Admins lesen aggregierte Gruppen ausschließlich serverseitig nach `requirePlatformAdmin()` über Service Role.
+- Admin-Meldungen enthalten nur generische Texte und eine verkürzte Fingerprint-Referenz; keine Route, Fehlermeldung oder Stackdaten.
+
+### RPCs
+
+- `record_server_error_event(...)`: validiert alle Metadaten, schreibt Ereignis und Gruppe atomar, berechnet das 10-Minuten-Fenster und erzeugt höchstens eine aktive Admin-Meldung je Fingerprint. Ausführung ausschließlich `service_role`.
+- `cleanup_server_error_events(integer)`: löscht minimale Einzelereignisse nach 7 bis 365 Tagen. Ausführung ausschließlich `service_role`.
+
+Aktivierung:
+
+- Code bleibt ohne `FANMIND_SERVER_ERROR_TRACKING_ENABLED=true` inaktiv.
+- Kritische E-Mails bleiben zusätzlich über `FANMIND_SERVER_ERROR_EMAIL_ENABLED=false` gesperrt, bis ein kontrollierter Test abgeschlossen ist.

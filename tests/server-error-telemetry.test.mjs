@@ -70,10 +70,14 @@ test("safe digest can identify a processed server error without storing its mess
   assert.equal(one.releaseCommit, "a".repeat(40));
 });
 
-test("fallback request paths lose query and fragment data", () => {
+test("missing route templates never persist the raw request path", () => {
   assert.equal(
     telemetry.normalizeRoutePath(undefined, "/reset-password?email=private@example.com#secret"),
-    "/reset-password",
+    "/unknown",
+  );
+  assert.equal(
+    telemetry.normalizeRoutePath("", "/fans/private-contact-id"),
+    "/unknown",
   );
   assert.equal(telemetry.normalizeRoutePath("dashboard spaces", undefined), "/dashboard_spaces");
 });

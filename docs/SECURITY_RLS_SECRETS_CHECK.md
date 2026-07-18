@@ -202,3 +202,14 @@ Ein Release ist für Pilotkunden sicherer, wenn alle Aussagen wahr sind:
 5. Keine KI-Antwort wird automatisch gesendet.
 6. Kostenrisiken sind über Rate Limits und perspektivisch Usage-Logging begrenzt.
 7. README, AGENTS und Source of Truth erzählen denselben Stand.
+
+
+## Serverfehler-Telemetrie
+
+- [ ] Migration `20260718203000_privacy_server_error_tracking.sql` kontrolliert angewendet.
+- [ ] RLS für `server_error_events` und `server_error_groups` aktiv.
+- [ ] Keine Rechte für `PUBLIC`, `anon` oder `authenticated`.
+- [ ] `record_server_error_event(...)` und `cleanup_server_error_events(...)` nur für `service_role` ausführbar.
+- [ ] Keine Fehlermeldungen, Stacks, Header, Query-Parameter, Bodies, IP-Adressen oder Kundendaten gespeichert.
+- [ ] Fehlende Route-Schablone wird als `/unknown` gespeichert und fällt nie auf den realen Request-Pfad zurück.
+- [ ] `FANMIND_SERVER_ERROR_TRACKING_ENABLED` und E-Mail-Schalter erst nach kontrolliertem Test aktivieren.
