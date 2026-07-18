@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import {
   NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
   evaluateEnvironmentBoundary,
+  normalizeHostname,
   supabaseProjectRefFromUrl,
 } from "../src/lib/environmentBoundaryPolicy.mjs";
 
@@ -38,6 +39,31 @@ test("read-only Production must match the Production hostname and Supabase proje
   assert.equal(result.writesEnabled, false);
 });
 
+test("production hostname comparison canonicalizes trailing dots", () => {
+  assert.equal(normalizeHostname("FanMind.CH."), "fanmind.ch");
+  assert.equal(normalizeHostname("www.fanmind.ch..."), "www.fanmind.ch");
+
+  const production = evaluateEnvironmentBoundary({
+    ...productionEnvironment,
+    NEXT_PUBLIC_APP_URL: "https://fanmind.ch.",
+  });
+  assert.equal(production.ok, true);
+  assert.equal(production.appProduction, true);
+
+  const unsafeWrite = evaluateEnvironmentBoundary(
+    {
+      ...stagingEnvironment,
+      NEXT_PUBLIC_APP_URL: "https://www.fanmind.ch.",
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+      FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+    },
+    { allowWrite: true },
+  );
+  assert.equal(unsafeWrite.ok, false);
+  assert.equal(unsafeWrite.appProduction, true);
+  assert.match(unsafeWrite.errors.join("\n"), /fanmind\.ch/);
+});
+
 test("read-only staging is accepted but remains write-disabled", () => {
   const result = evaluateEnvironmentBoundary(stagingEnvironment);
   assert.equal(result.ok, true);
@@ -45,6 +71,16 @@ test("read-only staging is accepted but remains write-disabled", () => {
   assert.equal(result.appProduction, false);
   assert.equal(result.supabaseProductionMatch, false);
   assert.match(result.warnings.join("\n"), /Schreibzugriff bleibt/);
+});
+
+test("read-only preflight rejects a stale non-production write gate", () => {
+  const result = evaluateEnvironmentBoundary({
+    ...stagingEnvironment,
+    FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+    FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join("\n"), /Read-only Preflight/);
 });
 
 test("write mode rejects Production, missing acknowledgement and the Production database", () => {
@@ -120,6 +156,7 @@ test("non-production runtime cannot point to fanmind.ch even read-only", () => {
 
 test("Supabase refs are parsed only from standard project URLs", () => {
   assert.equal(supabaseProjectRefFromUrl("https://abcdefgh12345678.supabase.co"), "abcdefgh12345678");
+  assert.equal(supabaseProjectRefFromUrl("https://abcdefgh12345678.supabase.co."), "abcdefgh12345678");
   assert.equal(supabaseProjectRefFromUrl("https://db.example.com"), null);
   assert.equal(supabaseProjectRefFromUrl("not-a-url"), null);
 });
