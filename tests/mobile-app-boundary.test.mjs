@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = new URL("../", import.meta.url);
 const mobileRoot = new URL("../apps/mobile/", import.meta.url);
+const rootPath = fileURLToPath(root);
+const mobileRootPath = fileURLToPath(mobileRoot);
 const packageJson = JSON.parse(await readFile(new URL("package.json", mobileRoot), "utf8"));
 const appConfig = JSON.parse(await readFile(new URL("app.json", mobileRoot), "utf8"));
 const mobileCi = await readFile(new URL("../.github/workflows/ci-mobile.yml", import.meta.url), "utf8");
@@ -23,10 +26,10 @@ async function sourceFiles(directory) {
   return output;
 }
 
-const files = await sourceFiles(new URL(".", mobileRoot));
+const files = await sourceFiles(mobileRootPath);
 const runtimeFiles = files.filter((file) => /[\\/](?:app|src)[\\/]/.test(file));
 const runtimeSource = await Promise.all(runtimeFiles.map(async (file) => ({
-  file: relative(new URL(".", root).pathname, file),
+  file: relative(rootPath, file),
   content: await readFile(file, "utf8"),
 })));
 
