@@ -61,7 +61,21 @@ jobs:
         run: npm run typecheck
 
       - name: Validate Expo configuration
-        run: npm run doctor
+        id: doctor
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run doctor 2>&1 | tee expo-doctor-report.txt
+
+      - name: Upload Expo Doctor report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-expo-doctor-report
+          path: apps/mobile/expo-doctor-report.txt
+          if-no-files-found: error
+          retention-days: 5
 
       - name: Build Android JavaScript bundle
         run: npm run export:android
@@ -87,3 +101,7 @@ jobs:
           path: apps/mobile/dist-android
           if-no-files-found: error
           retention-days: 5
+
+      - name: Enforce Expo Doctor result
+        if: steps.doctor.outcome != 'success'
+        run: exit 1
