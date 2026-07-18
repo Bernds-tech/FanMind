@@ -15,6 +15,7 @@ await writeFile(process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE, "age1test");
 await writeFile(process.env.FANMIND_BACKUP_PGPASSFILE, "localhost:*:*:*:x");
 
 const worker = await import("../scripts/operations/backup-worker.mjs");
+const workerSource = await readFile(new URL("../scripts/operations/backup-worker.mjs", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260718173000_enable_safe_backup_verification.sql", import.meta.url), "utf8");
 const operationsSource = await readFile(new URL("../src/lib/backupOperations.ts", import.meta.url), "utf8");
 const uiSource = await readFile(new URL("../src/app/admin/operations/BackupJobActions.tsx", import.meta.url), "utf8");
@@ -24,6 +25,11 @@ test("safe verification job is allowlisted end to end", () => {
   assert.match(operationsSource, /"verify_backup"/);
   assert.match(uiSource, /Letztes Backup prüfen/);
   assert.match(uiSource, /checksum-only/);
+});
+
+test("each manual verification can enqueue a fresh latest-backup check", () => {
+  assert.match(uiSource, /verify_backup[\s\S]*crypto\.randomUUID\(\)/);
+  assert.match(uiSource, /Idempotency-Key/);
 });
 
 test("verification migration grants only service_role claim access", () => {
@@ -69,8 +75,14 @@ test("outside-root and mismatched checksum paths are rejected", async () => {
   );
 });
 
-test("worker never accepts a browser supplied artifact path", async () => {
-  const workerSource = await readFile(new URL("../scripts/operations/backup-worker.mjs", import.meta.url), "utf8");
+test("failed verification marks the source backup invalid before rethrow", () => {
+  assert.match(
+    workerSource,
+    /catch \(error\) \{[\s\S]*patch\('backup_runs', sourceRun\.id, \{ validation_status:'failed' \}\)[\s\S]*throw error;/,
+  );
+});
+
+test("worker never accepts a browser supplied artifact path", () => {
   assert.match(workerSource, /latestVerifiableBackupRun/);
   assert.match(workerSource, /source_backup_run_id/);
   assert.doesNotMatch(operationsSource, /artifactPath|checksumPath|storage_reference/);
