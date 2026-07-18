@@ -99,17 +99,8 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          : > mobile-boundary-report.txt
-          if grep -RInE 'from ["'"'](?:\.\./){2,}src/(app|components)|from ["'"']@/app|\.module\.css|next/(headers|navigation|server)|WebView' app src | tee -a mobile-boundary-report.txt; then
-            echo "Mobile code imports Website/Next/WebView code." | tee -a mobile-boundary-report.txt >&2
-            exit 1
-          fi
-          if grep -RInE 'SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|STRIPE_SECRET_KEY|sk_live_|sk_test_' app src | tee -a mobile-boundary-report.txt; then
-            echo "Server-only secret identifier found in mobile runtime code." | tee -a mobile-boundary-report.txt >&2
-            exit 1
-          fi
-          echo "MOBILE_BOUNDARY=OK" | tee -a mobile-boundary-report.txt
+          set -o pipefail
+          npm run boundary 2>&1 | tee mobile-boundary-report.txt
 
       - name: Upload mobile boundary report
         if: always()
