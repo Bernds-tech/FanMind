@@ -63,7 +63,9 @@ jobs:
             npm run test:operations
             npm run build
 
-            pm2 restart fanmind --update-env
+            pm2 delete fanmind >/dev/null 2>&1 || true
+            FANMIND_RELEASE_COMMIT="$RELEASE_COMMIT" NODE_ENV=production \
+              pm2 start npm --name fanmind --cwd "$SOURCE_DIR" -- start
             pm2 save
 
             sudo nginx -t
