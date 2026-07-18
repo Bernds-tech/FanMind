@@ -10,8 +10,9 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",
+    "boundary": "node scripts/check-boundary.mjs",
     "export:android": "expo export --platform android --output-dir dist-android",
-    "check": "npm run typecheck && npm run doctor"
+    "check": "npm run typecheck && npm run doctor && npm run boundary"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.5",
