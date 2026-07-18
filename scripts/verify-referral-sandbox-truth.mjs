@@ -80,6 +80,11 @@ requireText(
   "Schreibtests müssen das Ziel-Supabase-Projekt mit Production vergleichen.",
 );
 requireText(
+  "src/lib/environmentBoundaryPolicy.mjs",
+  'replace(/\\.+$/, "")',
+  "Production-Hostnamen müssen vor dem Vergleich abschließende Punkte entfernen.",
+);
+requireText(
   "src/lib/referralLifecyclePolicy.mjs",
   'type === "charge.refunded"',
   "Refunds müssen im zentralen Lifecycle-Mapping berücksichtigt werden.",
@@ -106,8 +111,8 @@ requireText(
 );
 requireText(
   "src/lib/referralSandboxPolicy.mjs",
-  "evaluateEnvironmentBoundary",
-  "Referral-Schreibtests müssen die gemeinsame Production-/Staging-Grenze verwenden.",
+  "evaluateEnvironmentBoundary(environment, { allowWrite })",
+  "Referral-Preflight muss die gemeinsame Grenze in Read-only- und Write-Modus ausführen.",
 );
 requireText(
   "scripts/environment-boundary-preflight.mjs",
@@ -136,6 +141,16 @@ requireText(
 );
 requireText(
   "tests/referral-sandbox-policy.test.mjs",
+  "read-only referral preflight rejects a stale global write gate",
+  "Read-only-Referral-Preflight muss einen stehen gebliebenen globalen Schreibschalter ablehnen.",
+);
+requireText(
+  "tests/referral-sandbox-policy.test.mjs",
+  "trailing-dot Production hostnames remain blocked in write mode",
+  "Production-FQDNs mit abschließendem Punkt müssen ebenfalls blockiert werden.",
+);
+requireText(
+  "tests/referral-sandbox-policy.test.mjs",
   "Production Supabase",
   "Referral-Schreibtests müssen ein versehentliches Production-Supabase-Ziel testen.",
 );
@@ -149,6 +164,20 @@ requireText(
   "Fünf Bedingungen für schreibende Tests",
   "Die verbindliche Production-/Staging-Grenze muss dokumentiert sein.",
 );
+for (const value of [
+  "FANMIND_RUNTIME_ENVIRONMENT=staging",
+  "FANMIND_ENABLE_NON_PRODUCTION_WRITES=true",
+  "FANMIND_NON_PRODUCTION_WRITE_ACK=I_UNDERSTAND_NON_PRODUCTION_ONLY",
+  "FANMIND_PRODUCTION_SUPABASE_PROJECT_REF=<PRODUCTION_PROJECT_REF>",
+  "npm run environment:preflight:write",
+  "ENVIRONMENT_BOUNDARY=ok",
+]) {
+  requireText(
+    "docs/operations/referral-stripe-sandbox-runbook.md",
+    value,
+    "Das Referral-Runbook muss die gemeinsame Production-/Staging-Grenze vollständig anleiten.",
+  );
+}
 requireText(
   "docs/operations/referral-stripe-sandbox-runbook.md",
   "FANMIND_ENABLE_REFERRAL_BILLING=false",
