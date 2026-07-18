@@ -1,16 +1,18 @@
 name: One-off update backup verification test 20260718
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/safe-backup-verification-job-20260718
+      - main
+
+top-level-placeholder: true
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'feat/safe-backup-verification-job-20260718' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
