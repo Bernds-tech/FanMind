@@ -4,6 +4,10 @@ import { AdminNotificationsBell } from "@/app/admin/operations/AdminNotification
 import { isPlatformAdminEmail } from "@/lib/admin";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import {
+  getRecentAdminNotifications,
+  getUnreadAdminNotificationCount,
+} from "@/lib/operations";
+import {
   getOpenFollowupCount,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -23,11 +27,13 @@ async function logout() {
 function displayName(user: SupabaseServerUser, fallback: string): string {
   const metadata = user.user_metadata;
   const value = metadata?.display_name ?? metadata?.full_name;
-  return typeof value === "string" && value.trim() ? value.trim() : user.email ?? fallback;
+  return typeof value === "string" && value.trim()
+    ? value.trim()
+    : user.email ?? fallback;
 }
 
 function planLabel(planId: string | null): string {
-  if (planId === "pilot") return "Pilot / Setup";
+  if (planId === "pilot") return "Interne Demo / Legacy";
   if (planId === "starter") return "Starter";
   if (planId === "growth") return "Growth";
   if (planId === "agency") return "Agency";
@@ -47,8 +53,15 @@ export async function AdminBillingShell({
 }) {
   const workspaceResult = await getUserWorkspaceDashboard(user);
   const workspace = workspaceResult.workspace;
-  const contactsResult = workspace ? await getWorkspaceContacts(workspace.id) : null;
-  const openFollowupCountResult = workspace ? await getOpenFollowupCount(workspace.id) : null;
+
+  const [contactsResult, openFollowupCountResult, notificationResult, unreadResult] =
+    await Promise.all([
+      workspace ? getWorkspaceContacts(workspace.id) : Promise.resolve(null),
+      workspace ? getOpenFollowupCount(workspace.id) : Promise.resolve(null),
+      getRecentAdminNotifications(8),
+      getUnreadAdminNotificationCount(),
+    ]);
+
   const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigation(
     "admin",
     "de",
@@ -61,7 +74,11 @@ export async function AdminBillingShell({
       workspaceName={workspace?.name ?? "FanMind Admin"}
       userLabel={displayName(user, workspace?.name ?? "Admin")}
       planLabel={planLabel(workspace?.plan_id ?? null)}
-      planMeta={workspace ? getCommercialOptionLabel(workspace.commercial_option) : "Interner Bereich"}
+      planMeta={
+        workspace
+          ? getCommercialOptionLabel(workspace.commercial_option)
+          : "Interner Bereich"
+      }
       planStatus="Admin"
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
@@ -72,9 +89,16 @@ export async function AdminBillingShell({
         searchPlaceholder: "Suche nach Workspace, Rechnung, Status ...",
         primaryActionLabel: "Billing öffnen",
         primaryActionHref: "/admin/billing",
-        operationsWidget: isPlatformAdminEmail(user.email) ? <AdminNotificationsBell /> : undefined,
+        operationsWidget: isPlatformAdminEmail(user.email) ? (
+          <AdminNotificationsBell
+            initialItems={notificationResult.data ?? []}
+            initialUnread={unreadResult.count}
+          />
+        ) : undefined,
       }}
-      contactCount={getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans}
+      contactCount={
+        getWorkspaceKpiStatsFromContacts(contactsResult?.contacts ?? []).totalFans
+      }
       openFollowupCount={openFollowupCountResult?.count ?? 0}
       showStats={false}
       logoutAction={logout}
