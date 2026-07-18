@@ -1,0 +1,29 @@
+name: One-off remove registration pilot copy 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'fix/commercial-truth-starter-ai-legal-20260718' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/commercial-truth-starter-ai-legal-20260718
+          fetch-depth: 0
+          persist-credentials: true
+      - run: python3 scripts/one-off/remove-register-pilot-copy-20260718.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/register/RegisterClient.tsx
+          git commit -m "fix: remove remaining public pilot registration copy"
+          git push origin HEAD:fix/commercial-truth-starter-ai-legal-20260718
