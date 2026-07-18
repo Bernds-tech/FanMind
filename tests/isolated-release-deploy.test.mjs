@@ -42,6 +42,7 @@ test("failed health or smoke checks invoke rollback before failure", async () =>
   assert.match(script, /PREVIOUS_CWD/);
   assert.match(script, /pm2 start npm --name "\$APP_NAME" --cwd "\$PREVIOUS_CWD" -- start/);
   assert.match(script, /git reset --hard "\$RELEASE_COMMIT"/);
+  assert.match(script, /unexpected failure after PM2 switched to the new release/);
 });
 
 test("plaintext environment stays shared and releases are retained safely", async () => {
@@ -55,9 +56,15 @@ test("plaintext environment stays shared and releases are retained safely", asyn
   assert.doesNotMatch(script, /cat .*\.env\.production/);
 });
 
-test("production workflow keeps isolated deployment opt-in", async () => {
+test("production workflow keeps isolated deployment explicitly disabled by default", async () => {
   const workflow = await readFile(workflowPath, "utf8");
-  assert.match(workflow, /FANMIND_ENABLE_ISOLATED_RELEASE_DEPLOY=true/);
+  assert.match(workflow, /ISOLATED_DEPLOY_ENABLED="false"/);
+  assert.match(workflow, /FANMIND_ENABLE_ISOLATED_RELEASE_DEPLOY/);
+  assert.match(workflow, /if \[ "\$ISOLATED_DEPLOY_ENABLED" = "true" \]/);
   assert.match(workflow, /deploy-isolated-release\.sh/);
-  assert.match(workflow, /Using legacy in-place deployment because isolated release deployment is disabled/);
+  assert.match(
+    workflow,
+    /Using legacy in-place deployment because isolated release deployment is disabled/,
+  );
+  assert.match(workflow, /git reset --hard origin\/main/);
 });
