@@ -19,6 +19,27 @@ The verifier is deliberately read-only. It never restores a database, uploads St
 - Use a separate test PostgreSQL database and separate test Storage bucket/project.
 - Keep `FANMIND_ENABLE_REFERRAL_BILLING=false` and all write integrations disabled during a restore drill.
 - Do not point a restored test application at `fanmind.ch` or Production webhooks.
+- Before any write or restore, the shared environment boundary must pass with a distinct Staging/Test Supabase project.
+
+### Mandatory environment boundary before restore writes
+
+Load only the isolated target configuration and run:
+
+```bash
+npm run environment:preflight:write
+```
+
+Required gates:
+
+```text
+FANMIND_RUNTIME_ENVIRONMENT=staging or test
+FANMIND_ENABLE_NON_PRODUCTION_WRITES=true
+FANMIND_NON_PRODUCTION_WRITE_ACK=I_UNDERSTAND_NON_PRODUCTION_ONLY
+FANMIND_TARGET_SUPABASE_PROJECT_REF=<isolated target>
+FANMIND_PRODUCTION_SUPABASE_PROJECT_REF=<comparison only>
+```
+
+The restore drill stops unless `ENVIRONMENT_BOUNDARY=OK`. This preflight does not replace the separate database-host confirmation immediately before `pg_restore`.
 
 ## 1. Production checksum-only verification
 

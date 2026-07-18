@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
   WRITE_ACKNOWLEDGEMENT,
   evaluateReferralSandboxConfiguration,
 } from "../src/lib/referralSandboxPolicy.mjs";
@@ -12,10 +13,24 @@ const completeReadOnlyEnvironment = {
   SUPABASE_SERVICE_ROLE_KEY: "service-role-example",
   FANMIND_REFERRAL_RECONCILE_SECRET: "x".repeat(48),
   FANMIND_ENABLE_REFERRAL_BILLING: "false",
+  FANMIND_RUNTIME_ENVIRONMENT: "production",
   NEXT_PUBLIC_APP_URL: "https://fanmind.ch",
+  NEXT_PUBLIC_SUPABASE_URL: "https://productionref123.supabase.co",
+  FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: "productionref123",
+  FANMIND_ENABLE_NON_PRODUCTION_WRITES: "false",
 };
 
-test("read-only preflight accepts test credentials without exposing write mode", () => {
+const safeWriteBoundary = {
+  FANMIND_RUNTIME_ENVIRONMENT: "staging",
+  NEXT_PUBLIC_APP_URL: "https://staging.fanmind.example",
+  NEXT_PUBLIC_SUPABASE_URL: "https://stagingref12345.supabase.co",
+  FANMIND_TARGET_SUPABASE_PROJECT_REF: "stagingref12345",
+  FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: "productionref123",
+  FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+  FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+};
+
+test("read-only preflight accepts test credentials only with a valid shared boundary", () => {
   const result = evaluateReferralSandboxConfiguration(
     completeReadOnlyEnvironment,
   );
@@ -25,6 +40,19 @@ test("read-only preflight accepts test credentials without exposing write mode",
   assert.equal(result.stripeKeyMode, "test");
   assert.equal(result.billingEnabled, false);
   assert.equal(result.productionHostname, true);
+  assert.equal(result.environmentBoundaryOk, true);
+});
+
+test("read-only referral preflight rejects a stale global write gate", () => {
+  const result = evaluateReferralSandboxConfiguration({
+    ...completeReadOnlyEnvironment,
+    FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+    FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.environmentBoundaryOk, false);
+  assert.match(result.errors.join("\n"), /Umgebungsgrenze: Read-only Preflight/);
 });
 
 test("live Stripe keys are rejected in every sandbox mode", () => {
@@ -47,7 +75,7 @@ test("read-only preflight fails when referral billing is enabled", () => {
   assert.match(result.errors.join("\n"), /Read-only Preflight/);
 });
 
-test("write mode requires explicit acknowledgement and non-production target", () => {
+test("write mode requires referral and shared environment acknowledgements", () => {
   const unsafe = evaluateReferralSandboxConfiguration(
     {
       ...completeReadOnlyEnvironment,
@@ -58,14 +86,16 @@ test("write mode requires explicit acknowledgement and non-production target", (
 
   assert.equal(unsafe.ok, false);
   assert.match(unsafe.errors.join("\n"), /SANDBOX_ACK/);
-  assert.match(unsafe.errors.join("\n"), /nicht gegen fanmind\.ch/);
+  assert.match(unsafe.errors.join("\n"), /fanmind\.ch/);
+  assert.match(unsafe.errors.join("\n"), /Umgebungsgrenze/);
+  assert.equal(unsafe.environmentBoundaryOk, false);
 
   const safe = evaluateReferralSandboxConfiguration(
     {
       ...completeReadOnlyEnvironment,
+      ...safeWriteBoundary,
       FANMIND_ENABLE_REFERRAL_BILLING: "true",
       FANMIND_REFERRAL_SANDBOX_ACK: WRITE_ACKNOWLEDGEMENT,
-      NEXT_PUBLIC_APP_URL: "https://staging.fanmind.example",
     },
     { allowWrite: true },
   );
@@ -73,13 +103,55 @@ test("write mode requires explicit acknowledgement and non-production target", (
   assert.equal(safe.ok, true);
   assert.equal(safe.mode, "sandbox-write");
   assert.equal(safe.productionHostname, false);
+  assert.equal(safe.environmentBoundaryOk, true);
+});
+
+test("referral write mode rejects a staging host that points to Production Supabase", () => {
+  const result = evaluateReferralSandboxConfiguration(
+    {
+      ...completeReadOnlyEnvironment,
+      ...safeWriteBoundary,
+      NEXT_PUBLIC_SUPABASE_URL: "https://productionref123.supabase.co",
+      FANMIND_TARGET_SUPABASE_PROJECT_REF: "productionref123",
+      FANMIND_ENABLE_REFERRAL_BILLING: "true",
+      FANMIND_REFERRAL_SANDBOX_ACK: WRITE_ACKNOWLEDGEMENT,
+    },
+    { allowWrite: true },
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.environmentBoundaryOk, false);
+  assert.match(result.errors.join("\n"), /Production-Supabase-Projekt/);
+});
+
+test("trailing-dot Production hostnames remain blocked in write mode", () => {
+  const result = evaluateReferralSandboxConfiguration(
+    {
+      ...completeReadOnlyEnvironment,
+      FANMIND_RUNTIME_ENVIRONMENT: "staging",
+      NEXT_PUBLIC_APP_URL: "https://fanmind.ch.",
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+      FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+      FANMIND_ENABLE_REFERRAL_BILLING: "true",
+      FANMIND_REFERRAL_SANDBOX_ACK: WRITE_ACKNOWLEDGEMENT,
+    },
+    { allowWrite: true },
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.productionHostname, true);
+  assert.match(result.errors.join("\n"), /fanmind\.ch/);
 });
 
 test("missing webhook, service role and reconcile secrets fail without revealing values", () => {
   const result = evaluateReferralSandboxConfiguration({
+    FANMIND_RUNTIME_ENVIRONMENT: "production",
+    NEXT_PUBLIC_APP_URL: "https://fanmind.ch",
+    NEXT_PUBLIC_SUPABASE_URL: "https://productionref123.supabase.co",
+    FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: "productionref123",
+    FANMIND_ENABLE_NON_PRODUCTION_WRITES: "false",
     STRIPE_SECRET_KEY: "sk_test_example",
     FANMIND_ENABLE_REFERRAL_BILLING: "false",
-    NEXT_PUBLIC_APP_URL: "https://fanmind.ch",
   });
 
   assert.equal(result.ok, false);
