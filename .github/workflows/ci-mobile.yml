@@ -81,18 +81,30 @@ jobs:
         run: npm run export:android
 
       - name: Enforce mobile boundary
+        id: boundary
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE 'from ["'"'](?:\.\./){2,}src/(app|components)|from ["'"']@/app|\.module\.css|next/(headers|navigation|server)|WebView' app src; then
-            echo "Mobile code imports Website/Next/WebView code." >&2
+          : > mobile-boundary-report.txt
+          if grep -RInE 'from ["'"'](?:\.\./){2,}src/(app|components)|from ["'"']@/app|\.module\.css|next/(headers|navigation|server)|WebView' app src | tee -a mobile-boundary-report.txt; then
+            echo "Mobile code imports Website/Next/WebView code." | tee -a mobile-boundary-report.txt >&2
             exit 1
           fi
-          if grep -RInE 'SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|STRIPE_SECRET_KEY|sk_live_|sk_test_' app src; then
-            echo "Server-only secret identifier found in mobile runtime code." >&2
+          if grep -RInE 'SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|STRIPE_SECRET_KEY|sk_live_|sk_test_' app src | tee -a mobile-boundary-report.txt; then
+            echo "Server-only secret identifier found in mobile runtime code." | tee -a mobile-boundary-report.txt >&2
             exit 1
           fi
-          echo "MOBILE_BOUNDARY=OK"
+          echo "MOBILE_BOUNDARY=OK" | tee -a mobile-boundary-report.txt
+
+      - name: Upload mobile boundary report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-boundary-report
+          path: apps/mobile/mobile-boundary-report.txt
+          if-no-files-found: error
+          retention-days: 5
 
       - name: Upload Android bundle report
         uses: actions/upload-artifact@v4
@@ -104,4 +116,8 @@ jobs:
 
       - name: Enforce Expo Doctor result
         if: steps.doctor.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce mobile boundary result
+        if: steps.boundary.outcome != 'success'
         run: exit 1
