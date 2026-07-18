@@ -61,68 +61,6 @@ patch(
 )
 
 patch(
-    "src/lib/workspaceAuthorization.ts",
-    [
-        (
-            '''export async function getAuthorizedWorkspaceForCurrentUser(): Promise<AuthorizedWorkspaceContext | null> {
-  const { data, error } = await getSupabaseServerUser();
-''',
-            '''export async function getAuthorizedWorkspaceForCurrentUser(
-  accessToken?: string,
-): Promise<AuthorizedWorkspaceContext | null> {
-  const { data, error } = await getSupabaseServerUser(accessToken);
-''',
-            "optional token current workspace",
-        ),
-        (
-            '''  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-''',
-            '''  const workspaceResult = await getUserWorkspaceDashboard(data.user, accessToken);
-''',
-            "current workspace token propagation",
-        ),
-        (
-            '''export async function requireAuthorizedWorkspace(): Promise<AuthorizedWorkspaceContext> {
-  const { data } = await getSupabaseServerUser();
-''',
-            '''export async function requireAuthorizedWorkspace(
-  accessToken?: string,
-): Promise<AuthorizedWorkspaceContext> {
-  const { data } = await getSupabaseServerUser(accessToken);
-''',
-            "required workspace optional token",
-        ),
-        (
-            '''  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-''',
-            '''  const workspaceResult = await getUserWorkspaceDashboard(data.user, accessToken);
-''',
-            "required workspace token propagation",
-        ),
-        (
-            '''export async function requireContactInAuthorizedWorkspace(
-  contactId: string,
-): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
-  const context = await requireAuthorizedWorkspace();
-  const contactResult = await getWorkspaceContact(context.workspace.id, contactId);
-''',
-            '''export async function requireContactInAuthorizedWorkspace(
-  contactId: string,
-  accessToken?: string,
-): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
-  const context = await requireAuthorizedWorkspace(accessToken);
-  const contactResult = await getWorkspaceContact(
-    context.workspace.id,
-    contactId,
-    accessToken,
-  );
-''',
-            "contact token propagation",
-        ),
-    ],
-)
-
-patch(
     "src/app/api/ai/reply-suggestions/route.ts",
     [
         (
