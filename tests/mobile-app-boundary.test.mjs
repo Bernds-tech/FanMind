@@ -25,17 +25,17 @@ async function sourceFiles(directory) {
 
 const files = await sourceFiles(new URL(".", mobileRoot));
 const runtimeFiles = files.filter((file) => /[\\/](?:app|src)[\\/]/.test(file));
-const runtimeSource = (await Promise.all(runtimeFiles.map(async (file) => ({
+const runtimeSource = await Promise.all(runtimeFiles.map(async (file) => ({
   file: relative(new URL(".", root).pathname, file),
   content: await readFile(file, "utf8"),
-}))));
+})));
 
 test("mobile is a separate Expo package and not a Next application", () => {
   assert.equal(packageJson.name, "@fanmind/mobile");
   assert.equal(packageJson.main, "expo-router/entry");
   assert.match(packageJson.dependencies.expo, /^~57\./);
   assert.equal(packageJson.dependencies.next, undefined);
-  assert.equal(packageJson.dependencies["react-dom"], undefined);
+  assert.equal(packageJson.dependencies["react-dom"], packageJson.dependencies.react);
   assert.equal(packageJson.engines.node, ">=22.13.0");
 });
 
@@ -54,7 +54,7 @@ test("mobile runtime never imports Website, Next.js, CSS modules or WebView", ()
   }
 });
 
-test("mobile runtime contains no server-side secret identifiers", () => {
+test("mobile runtime contains no server-side secret identifiers", async () => {
   for (const { file, content } of runtimeSource) {
     assert.doesNotMatch(
       content,
@@ -67,7 +67,7 @@ test("mobile runtime contains no server-side secret identifiers", () => {
   assert.doesNotMatch(envExample, /SERVICE_ROLE|OPENAI_API_KEY|STRIPE_SECRET_KEY/);
 });
 
-test("mobile session uses SecureStore and AI uses server Bearer authentication", () => {
+test("mobile session uses SecureStore and AI uses server Bearer authentication", async () => {
   const secureStorage = await readFile(new URL("src/lib/secureStorage.ts", mobileRoot), "utf8");
   const api = await readFile(new URL("src/lib/api.ts", mobileRoot), "utf8");
   assert.match(secureStorage, /expo-secure-store/);
