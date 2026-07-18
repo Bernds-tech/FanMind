@@ -28,7 +28,6 @@ def regex_replace_once(text: str, pattern: str, replacement: str, label: str) ->
     return updated
 
 
-# Package UI consumes the central policy instead of hardcoded AI cards.
 path = "src/app/settings/AccountSections.tsx"
 text = read(path)
 import_line = 'import { AI_TIER_IDS, formatAiTierPrice, getAiTierConfig } from "@/config/aiTiers.mjs";\n'
@@ -90,8 +89,6 @@ text = regex_replace_once(
 )
 write(path, text)
 
-
-# Operations tests include the central AI tier policy.
 path = "package.json"
 package = json.loads(read(path))
 script = package["scripts"]["test:operations"]
@@ -100,8 +97,6 @@ if test_file not in script:
     package["scripts"]["test:operations"] = f"{script} {test_file}"
 write(path, json.dumps(package, ensure_ascii=False, indent=2) + "\n")
 
-
-# Product-truth checks follow the central policy rather than UI literals.
 path = "scripts/verify-product-truth.mjs"
 text = read(path)
 if '"src/config/aiTiers.mjs",' not in text:
@@ -166,8 +161,6 @@ requireText(
 text = replace_once(text, old_checks, new_checks, "truth AI tier checks")
 write(path, text)
 
-
-# Source of Truth documents the technical policy and explicit unknowns.
 path = "docs/SOURCE_OF_TRUTH.md"
 text = read(path)
 marker = "#### Zentrale technische KI-Stufen-Policy"
@@ -185,13 +178,11 @@ if marker not in text:
     text = replace_once(text, "### Betreiber- und Steuerstatus\n", block + "### Betreiber- und Steuerstatus\n", "Source of Truth AI tier policy")
 write(path, text)
 
-
-# Reader and contributor instructions stay synchronized.
 path = "README.md"
 text = read(path)
 reader_line = "- Zentrale KI-Stufen-Policy: `src/config/aiTiers.mjs` führt Standard, Plus und Ultra; Plus/Ultra bleiben bis zur Modell-, Kontingent- und Billing-Freigabe nicht automatisch buchbar.\n"
 if reader_line not in text:
-    anchor = "- KI-Stufen: KI Standard ist in 312 €/Monat enthalten; KI Plus kostet zusätzlich 100 €/Monat; KI Ultra kostet zusätzlich 200 €/Monat.\n"
+    anchor = "- KI Ultra: zusätzlich `200 €/Monat`.\n"
     text = replace_once(text, anchor, anchor + reader_line, "README AI tier policy")
 write(path, text)
 
