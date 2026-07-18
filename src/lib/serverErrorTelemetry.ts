@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 export type ServerErrorRequest = {
   path?: string;
   method?: string;
-  headers?: Record<string, string | string[]>;
 };
 
 export type ServerErrorContext = {
@@ -56,6 +55,28 @@ function safeDigest(value: unknown): string | null {
   return SAFE_DIGEST_PATTERN.test(candidate) ? candidate : null;
 }
 
+function safeErrorDigest(error: unknown): string | null {
+  if (typeof error !== "object" || error === null) return null;
+  try {
+    return safeDigest((error as { digest?: unknown }).digest);
+  } catch {
+    return null;
+  }
+}
+
+function safeErrorName(error: unknown): string {
+  if (error instanceof Error && error.name.trim()) return error.name.trim().slice(0, 80);
+  if (typeof error !== "object" || error === null) return "Error";
+  try {
+    const candidate = (error as { name?: unknown }).name;
+    return typeof candidate === "string" && candidate.trim()
+      ? candidate.trim().slice(0, 80)
+      : "Error";
+  } catch {
+    return "Error";
+  }
+}
+
 export function normalizeRoutePath(routePath: unknown, requestPath: unknown): string {
   const primary = typeof routePath === "string" ? routePath : "";
   const fallback = typeof requestPath === "string" ? requestPath : "";
@@ -94,17 +115,17 @@ function releaseCommit(env: NodeJS.ProcessEnv): string | null {
 }
 
 export function buildServerErrorRecord(
-  error: Error & { digest?: string },
+  error: unknown,
   request: ServerErrorRequest,
   context: ServerErrorContext,
   env: NodeJS.ProcessEnv = process.env,
 ): ServerErrorRecord {
-  const digest = safeDigest(error?.digest);
+  const digest = safeErrorDigest(error);
   const routePath = normalizeRoutePath(context.routePath, request.path);
   const routeType = normalizeRouteType(context.routeType);
   const routerKind = normalizeRouterKind(context.routerKind);
   const httpMethod = normalizeMethod(request.method);
-  const errorName = typeof error?.name === "string" && error.name.trim() ? error.name.trim().slice(0, 80) : "Error";
+  const errorName = safeErrorName(error);
   const fingerprintInput = digest
     ? `digest:${digest}`
     : `name:${errorName}|route:${routePath}|type:${routeType}|router:${routerKind}`;
@@ -217,7 +238,7 @@ function safeFailureCode(error: unknown): string {
 }
 
 export async function captureServerRequestError(
-  error: Error & { digest?: string },
+  error: unknown,
   request: ServerErrorRequest,
   context: ServerErrorContext,
   env: NodeJS.ProcessEnv = process.env,
