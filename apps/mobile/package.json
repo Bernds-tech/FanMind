@@ -16,8 +16,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.110.5",
     "expo": "~57.0.7",
-    "expo-clipboard": "~57.0.1",
-    "expo-constants": "~57.0.2",
+    "expo-clipboard": "~57.0.0",
     "expo-linking": "~57.0.3",
     "expo-router": "~57.0.7",
     "expo-secure-store": "~57.0.1",
@@ -31,5 +30,8 @@
   "devDependencies": {
     "@types/react": "^19.2.14",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }
