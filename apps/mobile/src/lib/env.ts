@@ -24,8 +24,8 @@ function requirePublicKey(value: string | undefined): string {
   if (!raw || raw.length < 20) {
     throw new Error("EXPO_PUBLIC_SUPABASE_ANON_KEY ist nicht gesetzt.");
   }
-  if (/service_role|sk_live_|sk_test_|OPENAI/i.test(raw)) {
-    throw new Error("In der Mobile-App ist nur der öffentliche Supabase-Anon-Key erlaubt.");
+  if (raw.startsWith("sb_secret_")) {
+    throw new Error("In der Mobile-App ist nur ein öffentlicher Supabase-Schlüssel erlaubt.");
   }
   return raw;
 }
