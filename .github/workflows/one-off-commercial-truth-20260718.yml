@@ -1,0 +1,83 @@
+name: One-off commercial truth 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'fix/commercial-truth-starter-ai-legal-20260718' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/commercial-truth-starter-ai-legal-20260718
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply commercial truth
+        id: apply
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/one-off/apply-commercial-truth-20260718.py > /tmp/commercial-truth.log 2>&1
+          status=$?
+          cat /tmp/commercial-truth.log
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Report failure
+        if: steps.apply.outputs.status != '0'
+        shell: bash
+        run: |
+          {
+            echo '## Commercial-Truth-Integration fehlgeschlagen'
+            echo
+            echo '```text'
+            tail -n 200 /tmp/commercial-truth.log
+            echo '```'
+          } > /tmp/commercial-truth-comment.md
+          gh pr comment 572 --repo "$GITHUB_REPOSITORY" --body-file /tmp/commercial-truth-comment.md
+
+      - name: Stop after failure
+        if: steps.apply.outputs.status != '0'
+        run: exit 1
+
+      - name: Validate patch
+        run: git diff --check
+
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/app/register/RegisterClient.tsx \
+            src/app/settings/AccountSections.tsx \
+            src/config/plans.ts \
+            src/app/landing-v2/page.tsx \
+            src/app/billing/start/page.tsx \
+            src/app/impressum/page.tsx \
+            src/app/agb/page.tsx \
+            src/app/zahlungsbedingungen/page.tsx \
+            docs/SOURCE_OF_TRUTH.md \
+            scripts/verify-product-truth.mjs
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+            exit 0
+          fi
+          git commit -m "fix: apply starter, AI add-on and legal commercial truth"
+          git push origin HEAD:fix/commercial-truth-starter-ai-legal-20260718
