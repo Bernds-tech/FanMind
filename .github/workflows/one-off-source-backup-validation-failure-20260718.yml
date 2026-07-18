@@ -1,0 +1,30 @@
+name: One-off source backup validation failure 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'feat/safe-backup-verification-job-20260718' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/safe-backup-verification-job-20260718
+      - name: Mark failed source validations
+        run: python3 scripts/one-off/mark-source-backup-failed-on-verification-20260718.py
+      - name: Validate worker syntax
+        run: node --check scripts/operations/backup-worker.mjs
+      - name: Commit worker hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/operations/backup-worker.mjs
+          git diff --cached --quiet && exit 0
+          git commit -m "Mark source backup invalid after failed verification"
+          git push origin HEAD:feat/safe-backup-verification-job-20260718
