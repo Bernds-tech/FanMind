@@ -1,3 +1,8 @@
+import {
+  NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+  evaluateEnvironmentBoundary,
+} from "./environmentBoundaryPolicy.mjs";
+
 const WRITE_ACKNOWLEDGEMENT = "I_UNDERSTAND_TEST_MODE_ONLY";
 
 function clean(value) {
@@ -45,6 +50,9 @@ export function evaluateReferralSandboxConfiguration(
   );
   const productionHostname = hostname === "fanmind.ch" || hostname === "www.fanmind.ch";
   const acknowledgement = clean(environment.FANMIND_REFERRAL_SANDBOX_ACK);
+  const environmentBoundary = allowWrite
+    ? evaluateEnvironmentBoundary(environment, { allowWrite: true })
+    : null;
 
   if (keyMode === "missing") {
     errors.push("STRIPE_SECRET_KEY fehlt.");
@@ -85,6 +93,12 @@ export function evaluateReferralSandboxConfiguration(
         "Schreibender Sandbox-Test verlangt eine gültige nicht-produktive NEXT_PUBLIC_APP_URL.",
       );
     }
+    for (const boundaryError of environmentBoundary?.errors ?? []) {
+      errors.push(`Umgebungsgrenze: ${boundaryError}`);
+    }
+    for (const boundaryWarning of environmentBoundary?.warnings ?? []) {
+      warnings.push(`Umgebungsgrenze: ${boundaryWarning}`);
+    }
   } else if (billingEnabled) {
     errors.push(
       "Read-only Preflight verlangt FANMIND_ENABLE_REFERRAL_BILLING=false.",
@@ -107,9 +121,13 @@ export function evaluateReferralSandboxConfiguration(
     billingEnabled,
     productionHostname,
     hostnameConfigured: Boolean(hostname),
+    environmentBoundaryOk: environmentBoundary?.ok ?? null,
     errors,
     warnings,
   };
 }
 
-export { WRITE_ACKNOWLEDGEMENT };
+export {
+  NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+  WRITE_ACKNOWLEDGEMENT,
+};
