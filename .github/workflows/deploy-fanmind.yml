@@ -104,6 +104,7 @@ jobs:
           sudo install -o root -g root -m 0750 scripts/operations/enqueue-backup-job.mjs /usr/local/lib/fanmind-ops/enqueue-backup-job.mjs
           sudo install -o root -g root -m 0750 scripts/operations/backup-retention.mjs /usr/local/lib/fanmind-ops/backup-retention.mjs
           sudo install -o root -g root -m 0750 scripts/operations/verify-backup-artifact.mjs /usr/local/lib/fanmind-ops/verify-backup-artifact.mjs
+          sudo install -o root -g root -m 0750 scripts/operations/operations-monitor.mjs /usr/local/lib/fanmind-ops/operations-monitor.mjs
           sudo install -o root -g root -m 0750 scripts/operations/run-demo-cleanup.mjs /usr/local/lib/fanmind-ops/run-demo-cleanup.mjs
           sudo install -o root -g root -m 0750 scripts/operations/deploy-isolated-release.sh /usr/local/lib/fanmind-ops/deploy-isolated-release.sh
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
@@ -114,6 +115,8 @@ jobs:
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-server_config.timer /etc/systemd/system/fanmind-backup-server_config.timer
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-full.timer /etc/systemd/system/fanmind-backup-full.timer
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-retention.timer /etc/systemd/system/fanmind-backup-retention.timer
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-operations-monitor.service /etc/systemd/system/fanmind-operations-monitor.service
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-operations-monitor.timer /etc/systemd/system/fanmind-operations-monitor.timer
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-demo-cleanup.service /etc/systemd/system/fanmind-demo-cleanup.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-demo-cleanup.timer /etc/systemd/system/fanmind-demo-cleanup.timer
           sudo systemctl daemon-reload
@@ -124,6 +127,12 @@ jobs:
             sudo systemctl restart fanmind-backup-worker.service
           else
             echo "Backup worker is not active; not starting it."
+          fi
+
+          if sudo systemctl is-enabled --quiet fanmind-operations-monitor.timer; then
+            sudo systemctl restart fanmind-operations-monitor.timer
+          else
+            echo "Operations monitor installed but intentionally not enabled yet."
           fi
 
           if sudo systemctl is-enabled --quiet fanmind-demo-cleanup.timer; then
