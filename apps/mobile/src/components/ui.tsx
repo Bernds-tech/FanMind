@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontSize: typography.heading,
-    fontWeight: "850",
+    fontWeight: "800",
   },
   primaryButton: {
     minHeight: 50,
