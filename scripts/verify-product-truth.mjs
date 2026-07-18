@@ -204,8 +204,8 @@ requireText(
 );
 requireText(
   "src/app/settings/AccountSections.tsx",
-  "höherer Zusatzpreis als KI Plus",
-  "KI Ultra muss als höherpreisige Erweiterung oberhalb von KI Plus beschrieben werden.",
+  'price: "+200 €/Monat"',
+  "KI Ultra muss mit dem freigegebenen Zusatzpreis ausgewiesen werden.",
 );
 requireText(
   "docs/SOURCE_OF_TRUTH.md",
