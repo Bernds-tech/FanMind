@@ -1,0 +1,35 @@
+{
+  "name": "@fanmind/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "doctor": "expo-doctor",
+    "export:android": "expo export --platform android --output-dir dist-android",
+    "check": "npm run typecheck && npm run doctor"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.5",
+    "expo": "~57.0.7",
+    "expo-clipboard": "~57.0.1",
+    "expo-constants": "~57.0.2",
+    "expo-linking": "~57.0.3",
+    "expo-router": "~57.0.7",
+    "expo-secure-store": "~57.0.1",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2",
+    "react-native-url-polyfill": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "typescript": "^5.9.3"
+  }
+}
