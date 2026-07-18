@@ -159,12 +159,7 @@ const sections: ReferralSection[] = [
     title: "Programmstatus und Änderungen",
     content: (
       <p>
-        Die technische Grundlage ist vorbereitet; die produktive automatische
-        Rabattverrechnung bleibt bis zum erfolgreichen Stripe-Sandbox-Lifecycle-Test,
-        zur steuerlichen Prüfung und zur ausdrücklichen Production-Freigabe
-        deaktiviert. FanMind darf das Programm für die Zukunft anpassen, pausieren
-        oder schließen, soweit bestehende wirksame Abrechnungsstände und zwingende
-        gesetzliche Vorgaben beachtet werden.
+        Die technische Grundlage ist vorbereitet; die produktive automatische Rabattverrechnung bleibt bis zum erfolgreichen Stripe-Sandbox-Lifecycle-Test, zur steuerlichen Prüfung und zur ausdrücklichen Production-Freigabe deaktiviert. FanMind darf das Programm für die Zukunft anpassen, pausieren oder schließen, soweit bestehende wirksame Abrechnungsstände und zwingende gesetzliche Vorgaben beachtet werden.
       </p>
     ),
   },
