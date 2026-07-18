@@ -77,10 +77,9 @@ function safeErrorName(error: unknown): string {
   }
 }
 
-export function normalizeRoutePath(routePath: unknown, requestPath: unknown): string {
+export function normalizeRoutePath(routePath: unknown, _requestPath: unknown): string {
   const primary = typeof routePath === "string" ? routePath : "";
-  const fallback = typeof requestPath === "string" ? requestPath : "";
-  const raw = primary || fallback || "/unknown";
+  const raw = primary || "/unknown";
   const withoutQuery = raw.split("?", 1)[0].split("#", 1)[0];
   const normalized = withoutQuery
     .replace(/[^A-Za-z0-9_./\-[\]]+/g, "_")
