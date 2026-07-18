@@ -55,7 +55,7 @@ jobs:
             trap - EXIT
           else
             echo "Using legacy in-place deployment because isolated release deployment is disabled."
-            git reset --hard "$RELEASE_COMMIT"
+            git reset --hard origin/main
 
             npm ci --no-audit --no-fund
             npm run verify:truth
