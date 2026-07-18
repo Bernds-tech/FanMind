@@ -58,7 +58,21 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Typecheck independent mobile app
-        run: npm run typecheck
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee mobile-typecheck-report.txt
+
+      - name: Upload mobile typecheck report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-typecheck-report
+          path: apps/mobile/mobile-typecheck-report.txt
+          if-no-files-found: error
+          retention-days: 5
 
       - name: Validate Expo configuration
         id: doctor
@@ -113,6 +127,10 @@ jobs:
           path: apps/mobile/dist-android
           if-no-files-found: error
           retention-days: 5
+
+      - name: Enforce mobile typecheck result
+        if: steps.typecheck.outcome != 'success'
+        run: exit 1
 
       - name: Enforce Expo Doctor result
         if: steps.doctor.outcome != 'success'
