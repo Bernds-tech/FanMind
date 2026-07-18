@@ -8,6 +8,10 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeHostname(value) {
+  return clean(value).toLowerCase().replace(/\.+$/, "");
+}
+
 function parseUrl(value) {
   const raw = clean(value);
   if (!raw) return null;
@@ -31,7 +35,7 @@ function normalizeProjectRef(value) {
 function supabaseProjectRefFromUrl(value) {
   const url = parseUrl(value);
   if (!url) return null;
-  const hostname = url.hostname.toLowerCase();
+  const hostname = normalizeHostname(url.hostname);
   const match = hostname.match(/^([a-z0-9]{8,40})\.supabase\.co$/);
   return match ? match[1] : null;
 }
@@ -42,11 +46,12 @@ function appTarget(environment) {
       ?? environment.NEXT_PUBLIC_SITE_URL
       ?? environment.FANMIND_APP_URL,
   );
+  const hostname = url ? normalizeHostname(url.hostname) : null;
   return {
     configured: Boolean(url),
-    hostname: url?.hostname.toLowerCase() ?? null,
+    hostname,
     secure: url?.protocol === "https:",
-    production: url ? PRODUCTION_HOSTNAMES.has(url.hostname.toLowerCase()) : false,
+    production: hostname ? PRODUCTION_HOSTNAMES.has(hostname) : false,
   };
 }
 
@@ -167,6 +172,7 @@ export function evaluateEnvironmentBoundary(
 
 export {
   NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+  normalizeHostname,
   normalizeRuntimeEnvironment,
   supabaseProjectRefFromUrl,
 };
