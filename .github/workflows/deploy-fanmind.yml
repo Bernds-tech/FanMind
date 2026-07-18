@@ -25,25 +25,87 @@ jobs:
         run: |
           set -euo pipefail
 
-          cd /var/www/fanmind
+          SOURCE_DIR="/var/www/fanmind"
+          cd "$SOURCE_DIR"
 
           echo "Deploying FanMind from origin/main on Exoscale..."
           git fetch --prune origin main
-          git reset --hard origin/main
 
-          RELEASE_COMMIT="$(git rev-parse HEAD)"
+          RELEASE_COMMIT="$(git rev-parse origin/main)"
           if [[ ! "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Invalid release commit from git rev-parse HEAD." >&2
+            echo "Invalid release commit from origin/main." >&2
             exit 1
           fi
           export FANMIND_RELEASE_COMMIT="$RELEASE_COMMIT"
+
+          ISOLATED_DEPLOY_ENABLED="false"
+          if grep -Eq '^[[:space:]]*FANMIND_ENABLE_ISOLATED_RELEASE_DEPLOY[[:space:]]*=[[:space:]]*true[[:space:]]*$' .env.production; then
+            ISOLATED_DEPLOY_ENABLED="true"
+          fi
+
+          if [ "$ISOLATED_DEPLOY_ENABLED" = "true" ]; then
+            echo "Using opt-in isolated release deployment."
+            DEPLOY_SCRIPT="$(mktemp /tmp/fanmind-isolated-deploy.XXXXXX.sh)"
+            trap 'rm -f "$DEPLOY_SCRIPT"' EXIT
+            git show "$RELEASE_COMMIT:scripts/operations/deploy-isolated-release.sh" > "$DEPLOY_SCRIPT"
+            chmod 0700 "$DEPLOY_SCRIPT"
+            FANMIND_SOURCE_DIR="$SOURCE_DIR" \
+              bash "$DEPLOY_SCRIPT" "$RELEASE_COMMIT"
+            rm -f "$DEPLOY_SCRIPT"
+            trap - EXIT
+          else
+            echo "Using legacy in-place deployment because isolated release deployment is disabled."
+            git reset --hard origin/main
+
+            npm ci --no-audit --no-fund
+            npm run verify:truth
+            npm run lint
+            npm run test:operations
+            npm run build
+
+            pm2 delete fanmind >/dev/null 2>&1 || true
+            FANMIND_RELEASE_COMMIT="$RELEASE_COMMIT" NODE_ENV=production \
+              pm2 start npm --name fanmind --cwd "$SOURCE_DIR" -- start
+            pm2 save
+
+            sudo nginx -t
+
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsSL --max-time 15 https://fanmind.ch/login -o /dev/null; then
+                echo "Health check passed."
+                break
+              fi
+
+              if [ "$attempt" = "10" ]; then
+                echo "Health check failed after 10 attempts." >&2
+                curl -I https://fanmind.ch/login || true
+                curl -L https://fanmind.ch/login -o /dev/null -w 'HTTP_STATUS=%{http_code}\n' || true
+                exit 1
+              fi
+
+              echo "Application not ready yet, retrying..."
+              sleep 3
+            done
+
+            FANMIND_SMOKE_BASE_URL="https://fanmind.ch" \
+              FANMIND_EXPECTED_RELEASE_COMMIT="$RELEASE_COMMIT" \
+              npm run smoke:public
+          fi
+
+          cd "$SOURCE_DIR"
+          if [ "$(git rev-parse HEAD)" != "$RELEASE_COMMIT" ]; then
+            echo "Source checkout is not synchronized after deployment." >&2
+            exit 1
+          fi
 
           sudo install -d -o root -g root -m 0700 /usr/local/lib/fanmind-ops
           sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh
           sudo install -o root -g root -m 0750 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs
           sudo install -o root -g root -m 0750 scripts/operations/enqueue-backup-job.mjs /usr/local/lib/fanmind-ops/enqueue-backup-job.mjs
           sudo install -o root -g root -m 0750 scripts/operations/backup-retention.mjs /usr/local/lib/fanmind-ops/backup-retention.mjs
+          sudo install -o root -g root -m 0750 scripts/operations/verify-backup-artifact.mjs /usr/local/lib/fanmind-ops/verify-backup-artifact.mjs
           sudo install -o root -g root -m 0750 scripts/operations/run-demo-cleanup.mjs /usr/local/lib/fanmind-ops/run-demo-cleanup.mjs
+          sudo install -o root -g root -m 0750 scripts/operations/deploy-isolated-release.sh /usr/local/lib/fanmind-ops/deploy-isolated-release.sh
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-enqueue@.service /etc/systemd/system/fanmind-backup-enqueue@.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-retention.service /etc/systemd/system/fanmind-backup-retention.service
@@ -55,37 +117,6 @@ jobs:
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-demo-cleanup.service /etc/systemd/system/fanmind-demo-cleanup.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-demo-cleanup.timer /etc/systemd/system/fanmind-demo-cleanup.timer
           sudo systemctl daemon-reload
-
-          npm ci --no-audit --no-fund
-          npm run verify:truth
-          npm run lint
-          npm run build
-
-          pm2 restart fanmind --update-env
-          pm2 save
-
-          sudo nginx -t
-
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsSL --max-time 15 https://fanmind.ch/login -o /dev/null; then
-              echo "Health check passed."
-              break
-            fi
-
-            if [ "$attempt" = "10" ]; then
-              echo "Health check failed after 10 attempts." >&2
-              curl -I https://fanmind.ch/login || true
-              curl -L https://fanmind.ch/login -o /dev/null -w 'HTTP_STATUS=%{http_code}\n' || true
-              exit 1
-            fi
-
-            echo "Application not ready yet, retrying..."
-            sleep 3
-          done
-
-          FANMIND_SMOKE_BASE_URL="https://fanmind.ch" \
-          FANMIND_EXPECTED_RELEASE_COMMIT="$RELEASE_COMMIT" \
-          npm run smoke:public
 
           sudo /usr/local/lib/fanmind-ops/write-backup-release-env.sh "$RELEASE_COMMIT"
 
