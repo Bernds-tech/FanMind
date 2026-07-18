@@ -46,7 +46,7 @@ type StarterOptionCopy = {
   badge?: string;
 };
 
-const ACTIVE_REGISTER_PLANS: RegisterPlanId[] = ["pilot", "starter"];
+const ACTIVE_REGISTER_PLANS: RegisterPlanId[] = ["starter"];
 
 function firstParamValue(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
@@ -89,17 +89,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
       {
         label: "1",
         badge: "Active",
-        title: "Start Pilot / Setup",
-        price: "€990 one-time · 1 test month",
-        description: "Guided setup month. No automatic renewal.",
-        bullets: ["no commitment", "no automatic renewal"],
-        href: registerPlanHref("pilot", language),
-        cta: "Start Pilot / Setup",
-      },
-      {
-        label: "2",
-        badge: "Active",
-        title: "Start Starter",
+        title: "Choose Starter",
         price: "€312/month",
         description: "Two options for your productive start.",
         bullets: ["Starter Flex: €990 setup", "Starter 12 months: €0 setup"],
@@ -143,17 +133,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
     {
       label: "1",
       badge: "Aktiv",
-      title: "Pilot / Setup starten",
-      price: "990 € einmalig · 1 Testmonat",
-      description: "Geführter Setup-Monat. Keine automatische Verlängerung.",
-      bullets: ["keine Bindung", "keine automatische Verlängerung"],
-      href: registerPlanHref("pilot", language),
-      cta: "Pilot / Setup starten",
-    },
-    {
-      label: "2",
-      badge: "Aktiv",
-      title: "Starter starten",
+      title: "Starter wählen",
       price: "312 €/Monat",
       description: "Zwei Optionen für deinen Produktivstart.",
       bullets: ["Starter Flex: 990 € Setup", "Starter 12 Monate: 0 € Setup"],
@@ -200,15 +180,15 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
         id: "starter_paid_setup",
         title: "Starter Flex",
         price: "€990 setup + €312/month",
-        description: "Cancel anytime",
-        bullets: ["one-time setup", "cancel monthly"],
+        description: "Cancel any time at the end of the paid billing month",
+        bullets: ["€990 one-time setup", "full current month remains payable"],
       },
       {
         id: "starter_no_setup_commitment",
         title: "Starter 12 months",
         price: "€0 setup + €312/month",
-        description: "12-month commitment",
-        bullets: ["no setup fee", "12-month term"],
+        description: "12-month minimum term, then renews monthly",
+        bullets: ["no setup fee", "monthly renewal after month 12"],
       },
     ];
   }
@@ -218,15 +198,15 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
       id: "starter_paid_setup",
       title: "Starter Flex",
       price: "990 € Setup + 312 €/Monat",
-      description: "Jederzeit kündbar",
-      bullets: ["einmalige Einrichtung", "monatlich kündbar"],
+      description: "Jederzeit zum Ende des bezahlten Abrechnungsmonats kündbar",
+      bullets: ["990 € einmalige Einrichtung", "laufender Monat wird vollständig bezahlt"],
     },
     {
       id: "starter_no_setup_commitment",
       title: "Starter 12 Monate",
       price: "0 € Setup + 312 €/Monat",
-      description: "12 Monate Bindung",
-      bullets: ["keine Einrichtungsgebühr", "12 Monate Laufzeit"],
+      description: "12 Monate Mindestlaufzeit, danach monatliche Verlängerung",
+      bullets: ["keine Einrichtungsgebühr", "nach 12 Monaten monatlich verlängerbar"],
     },
   ];
 }

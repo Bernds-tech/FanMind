@@ -20,10 +20,7 @@ const sections: TermsSection[] = [
     content: (
       <>
         <p>
-          Vertragspartner ist FanMind, ein Projekt von Gerhard Novy und Bernd Guggenberger,
-          Turnerstraße 18, 2345 Brunn am Gebirge, Österreich. FanMind wird vertreten durch
-          Gerhard Novy und Bernd Guggenberger; die Beteiligungsverhältnisse betragen Gerhard Novy
-          50&nbsp;% und Bernd Guggenberger 50&nbsp;%.
+          Vertragspartner ist Bernd Guggenberger, Einzelunternehmen unter der Geschäftsbezeichnung FanMind, Turnerstraße 18, 2345 Brunn am Gebirge, Österreich. Inhaber und vertretungsberechtigt ist Bernd Guggenberger.
         </p>
         <p>
           FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Fan-, Kunden- und
@@ -47,9 +44,7 @@ const sections: TermsSection[] = [
           Creator-Teams, Agenturen, Clubs, Vereine, Organisationen und Pilotkunden.
         </p>
         <p>
-          FanMind richtet sich aktuell primär an B2B-Nutzer. Falls eine Nutzung durch Verbraucher
-          zugelassen wird, sind Verbraucherinformationen, Widerrufsrechte und besondere gesetzliche
-          Pflichten gesondert zu prüfen und bereitzustellen.
+          FanMind richtet sich ausschließlich an Unternehmer, Unternehmen, Vereine, Organisationen, Creator-Teams und selbstständig beruflich Tätige. Ein Vertragsabschluss durch Verbraucher ist nicht vorgesehen.
         </p>
         <p>Abweichende individuelle Vereinbarungen gehen diesen Bedingungen vor.</p>
       </>
@@ -132,9 +127,7 @@ const sections: TermsSection[] = [
           Analysefunktionen bereitstellen. KI-Ausgaben sind Entwürfe und Hilfestellungen.
         </p>
         <p>
-          Nutzer müssen KI-Ausgaben vor Verwendung prüfen. FanMind übernimmt keine Garantie für
-          Richtigkeit, Vollständigkeit, rechtliche Zulässigkeit, wirtschaftliche Wirkung oder
-          Angemessenheit von KI-Ausgaben.
+          Nutzer müssen KI-Ausgaben vor Verwendung prüfen. FanMind garantiert keine fehlerfreien KI-Antworten und übernimmt keine Garantie für Richtigkeit, Vollständigkeit, Aktualität, rechtliche Zulässigkeit, wirtschaftliche Wirkung oder Angemessenheit von KI-Ausgaben.
         </p>
         <p>
           KI-Ausgaben dürfen nicht ungeprüft für rechtlich, medizinisch, finanziell oder sonstig
@@ -228,7 +221,7 @@ const sections: TermsSection[] = [
           Demo-Modus verwendet wird. FanMind kann Demo- oder Testzugänge zeitlich beschränken,
           ändern oder deaktivieren.
         </p>
-        <p>Der Pilot endet ohne automatische Verlängerung, sofern nichts anderes vereinbart ist.</p>
+        <p>Öffentliche Demo- und Testzugänge sind keine entgeltlichen Pakete. Produktive Kunden wählen Starter Flex oder Starter 12 Monate.</p>
       </>
     ),
   },
@@ -239,13 +232,14 @@ const sections: TermsSection[] = [
         <p>
           Es gelten die auf der Website oder im Angebot angegebenen Preise und Pakete. Ergänzende
           Informationen stehen unter <Link href="/zahlungsbedingungen">/zahlungsbedingungen</Link>.
-          Alle Preise verstehen sich zuzüglich gesetzlicher Umsatzsteuer, sofern nicht anders
-          angegeben.
+          Derzeit wird keine Umsatzsteuer ausgewiesen. Die jeweilige steuerliche Behandlung wird auf Angebot, Checkout und Rechnung transparent ausgewiesen.
         </p>
         <ul>
-          <li><strong>Pilot / Setup:</strong> 990 € einmalig, 1 Testmonat, keine automatische Verlängerung.</li>
-          <li><strong>Starter Flex:</strong> 990 € Setup + 312 €/Monat, monatlich kündbar, sofern nichts anderes vereinbart.</li>
-          <li><strong>Starter 12 Monate:</strong> 0 € Setup + 312 €/Monat, 12 Monate Laufzeit.</li>
+          <li><strong>Starter Flex:</strong> 990 € einmalige Einrichtung + 312 €/Monat; jederzeit zum Ende des laufenden, bereits bezahlten Abrechnungsmonats kündbar.</li>
+          <li><strong>Starter 12 Monate:</strong> 0 € Setup + 312 €/Monat; 12 Monate Mindestlaufzeit, danach Verlängerung um jeweils einen Monat.</li>
+          <li><strong>KI Standard:</strong> in der Starter-Grundgebühr enthalten.</li>
+          <li><strong>KI Plus:</strong> zusätzlich 100 €/Monat.</li>
+          <li><strong>KI Ultra:</strong> zusätzlich 200 €/Monat.</li>
           <li><strong>Growth / Agency:</strong> Coming Soon, auf Anfrage oder individuelles Angebot.</li>
         </ul>
         <p>
@@ -261,9 +255,7 @@ const sections: TermsSection[] = [
     content: (
       <>
         <p>
-          Die Laufzeit richtet sich nach dem gebuchten Paket oder individuellen Angebot. Pilot endet
-          ohne automatische Verlängerung. Starter Flex ist monatlich kündbar, sofern nichts anderes
-          vereinbart. Starter 12 Monate läuft für 12 Monate.
+          Die Laufzeit richtet sich nach dem gebuchten Paket oder individuellen Angebot. Starter Flex kann jederzeit gekündigt werden; die Kündigung wirkt zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats. Starter 12 Monate hat eine Mindestlaufzeit von zwölf Monaten und verlängert sich danach jeweils um einen Monat, sofern nicht gekündigt wird.
         </p>
         <p>
           Kündigungen müssen in Textform erfolgen, sofern kein anderer Prozess bereitgestellt wird.

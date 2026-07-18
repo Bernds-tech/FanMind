@@ -710,34 +710,19 @@ const landingFooterColumns = [
 
 const pricingPlans = [
   {
-    icon: "🚀",
-    name: "Pilot / Setup",
-    eyebrow: "Geführter Testmonat",
-    audience: "Für Teams, die FanMind mit einem echten Workflow gemeinsam einrichten und prüfen möchten.",
-    pricePrefix: "",
-    price: "990 € einmalig · zzgl. USt.",
-    cadence: "1 Testmonat · kein Abo · keine automatische Verlängerung",
-    cta: "Pilot anfragen",
-    href: "/register?plan=pilot",
-    tone: "purple",
-    featured: false,
-    status: "Aktiv",
-    features: ["Begleiteter Setup-/Pilotmonat", "Demo-Workspace mit realistischem Produkt-Workflow", "Kontakte/Fans, CSV-Import, Notizen und Kontaktwissen testen", "Follow-ups und KI-Antwortvorschläge prüfen", "Externe Social-Integrationen klar als Roadmap/Beta markiert", "Endet ohne automatische Verlängerung"],
-  },
-  {
     icon: "♙",
     name: "Starter Flex",
     eyebrow: "Monatlich kündbar",
     audience: "Für kleine Teams, die produktiv starten und flexibel bleiben möchten.",
     pricePrefix: "",
-    price: "990 € Setup + 312 €/Monat · zzgl. USt.",
-    cadence: "monatlich kündbar",
+    price: "990 € Setup + 312 €/Monat",
+    cadence: "jederzeit zum Ende des bezahlten Monats kündbar",
     cta: "Registrieren",
     href: "/register?plan=starter-flex",
     tone: "blue",
     featured: false,
     status: "Aktiv",
-    features: ["Ein produktiver Workspace", "Kontakte/Fans und manuelle Kontaktpflege", "CSV-Import, Notizen und Kontaktwissen", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Kommunikationsübersicht", "Kein automatischer Versand"],
+    features: ["Ein produktiver Workspace", "Kontakte/Fans und manuelle Kontaktpflege", "CSV-Import, Notizen und Kontaktwissen", "Follow-ups & Aufgaben inklusive /followups", "KI Standard enthalten", "KI Plus +100 €/Monat · KI Ultra +200 €/Monat", "Kein automatischer Versand"],
   },
   {
     icon: "◎",
@@ -745,14 +730,14 @@ const pricingPlans = [
     eyebrow: "Setup inklusive",
     audience: "Für Teams, die FanMind langfristiger einführen und die Setup-Gebühr sparen möchten.",
     pricePrefix: "",
-    price: "0 € Setup + 312 €/Monat · zzgl. USt.",
-    cadence: "12 Monate Laufzeit",
+    price: "0 € Setup + 312 €/Monat",
+    cadence: "12 Monate Mindestlaufzeit · danach monatliche Verlängerung",
     cta: "Registrieren",
     href: "/register?plan=starter-12",
     tone: "green",
     featured: true,
     status: "Aktiv",
-    features: ["Ein produktiver Workspace", "Setup ohne separate Setup-Gebühr", "Kontakte/Fans, CSV-Import und Kontaktwissen", "Follow-ups & Aufgaben inklusive /followups", "KI-Antwortvorschläge und Kommunikationsübersicht", "Externe Integrationen nur Beta/Roadmap"],
+    features: ["Ein produktiver Workspace", "Setup ohne separate Setup-Gebühr", "Kontakte/Fans, CSV-Import und Kontaktwissen", "Follow-ups & Aufgaben inklusive /followups", "KI Standard enthalten", "KI Plus +100 €/Monat · KI Ultra +200 €/Monat", "Externe Integrationen nur Beta/Roadmap"],
   },
   {
     icon: "↗",
@@ -835,7 +820,7 @@ const pricingProofs = [
   {
     icon: "▣",
     title: "Sicherer Zahlungsprozess",
-    text: "Pilot und Starter bleiben transparent mit zzgl. USt. und klaren Laufzeiten.",
+    text: "Starter-Preise, Laufzeiten und die derzeitige umsatzsteuerfreie Abrechnung werden transparent dargestellt.",
     tone: "green",
   },
 ];
@@ -1050,7 +1035,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             className={styles.demoSecondary}
             href="#kontakt"
           >
-            <span>♙</span> {t("Pilot anfragen")}
+            <span>♙</span> {t("Starter wählen")}
           </a>
         </section>
 
@@ -1143,7 +1128,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <span>▶</span> {t("Kostenlos testen")}
           </a>
           <a className={styles.outlineButton} href="#kontakt">
-            <span>♙</span> {t("Pilot anfragen")}
+            <span>♙</span> {t("Starter wählen")}
           </a>
         </div>
       </section>

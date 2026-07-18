@@ -70,9 +70,9 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 
 | Paket | Status | Preis / Logik |
 | --- | --- | --- |
-| Pilot / Setup | aktiv | 990 € einmalig, 1 Testmonat, keine automatische Verlängerung |
-| Starter Flex | aktiv | 990 € Setup + 312 €/Monat, monatlich kündbar |
-| Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat, 12 Monate Laufzeit |
+| Öffentliche Demo | aktiv | kostenloser temporärer Demo-Zugang; kein entgeltliches Paket |
+| Starter Flex | aktiv | 990 € Einrichtung + 312 €/Monat; jederzeit zum Ende des bezahlten Abrechnungsmonats kündbar |
+| Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat; 12 Monate Mindestlaufzeit, danach monatliche Verlängerung |
 | Internes/Beta Live-Testabo | optional öffentlich / intern | 1 € pro Tag via Stripe Live (`internal_daily_test`), öffentlich nur bei `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true`, sonst admin-only; keine Referral-/Rabatt-Automation |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht produktiv als Vollversion freigeschaltet |
@@ -86,10 +86,22 @@ Begründung für 312 €/Monat: FanMind ist kein Billig-Tool und der Aufwand lie
 KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete. Sie sind KI-Leistungsstufen innerhalb eines gebuchten FanMind-Pakets:
 
 - **KI Standard** ist im Basispaket enthalten und deckt den normalen Antwort-, Kontaktwissen- und Follow-up-Workflow ab.
-- **KI Plus** ist eine separat berechnete Erweiterung mit leistungsstärkerer KI, höherem Kontingent und größerem Gesprächskontext.
-- **KI Ultra** ist eine höherpreisige Premium-Erweiterung mit der stärksten freigegebenen Modellklasse, den höchsten Kontingenten und erweitertem Funktionsumfang.
+- **KI Plus** kostet zusätzlich 100 €/Monat und ist eine separat berechnete Erweiterung mit leistungsstärkerer KI, höherem Kontingent und größerem Gesprächskontext.
+- **KI Ultra** kostet zusätzlich 200 €/Monat und ist die Premium-Erweiterung mit der stärksten freigegebenen Modellklasse, den höchsten Kontingenten und erweitertem Funktionsumfang.
 - Plus und Ultra dürfen erst automatisch buchbar werden, wenn Zusatzpreise, Kontingente, Modellklassen, Wechsel/Kündigung und Stripe-Subscription-Items freigegeben sind.
 - Für alle Stufen gilt: keine automatische Sendung; der Mensch prüft und sendet final selbst.
+
+
+### Betreiber- und Steuerstatus
+
+- Vertragspartner ist Bernd Guggenberger, Einzelunternehmen unter der Geschäftsbezeichnung FanMind.
+- Geschäftsanschrift: Turnerstraße 18, 2345 Brunn am Gebirge, Österreich.
+- Inhaber und vertretungsberechtigt: Bernd Guggenberger.
+- Zuständige Gewerbebehörde: Bezirkshauptmannschaft Mödling.
+- Öffentliche Kontaktadresse: kontakt@fanmind.ch; Telefon +43 676 5367236.
+- Der Zusatz `e.U.` darf erst nach bestätigter Firmenbucheintragung samt Firmenbuchnummer und Firmenbuchgericht verwendet werden.
+- Derzeit wird keine Umsatzsteuer ausgewiesen; die konkrete steuerliche Behandlung muss auf Angebot, Checkout und Rechnung konsistent erscheinen.
+- Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat, nicht auf Einrichtung oder KI-Add-ons.
 
 ### Verbindliche öffentliche Terminologie und Plattform-Logos
 

@@ -77,24 +77,13 @@ type AddOnCard = {
 
 const BASE_PACKAGE_CARDS: PackageCard[] = [
   {
-    key: "pilot_only",
-    name: "Pilot / Setup",
-    price: "990 € einmalig",
-    description:
-      "Für Erstprüfung, Setup und Pilotstart mit einem sicheren Testmonat.",
-    features: ["1 Testmonat", "keine Bindung", "Setup- und Pilotprüfung"],
-    badge: "Verfügbar",
-    planId: "pilot",
-    commercialOption: "pilot_only",
-    requestMode: "checkout_if_unpaid",
-  },
-  {
     key: "starter_paid_setup",
     name: "Starter Flex",
     price: "990 € Setup + 312 €/Monat",
-    description: "Für laufende FanMind-Nutzung ohne feste Laufzeitbindung.",
+    description: "Für laufende FanMind-Nutzung ohne Mindestlaufzeit; Kündigung zum Ende des bezahlten Abrechnungsmonats.",
     features: [
-      "monatlich kündbar",
+      "jederzeit zum Monatsende kündbar",
+      "laufender Monat vollständig zahlbar",
       "produktiver CRM-Kern",
       "Copy-&-Open Workflow",
     ],
@@ -110,7 +99,8 @@ const BASE_PACKAGE_CARDS: PackageCard[] = [
     description:
       "Für Nutzer, die fix starten und Setup-Kosten vermeiden wollen.",
     features: [
-      "12 Monate Bindung",
+      "12 Monate Mindestlaufzeit",
+      "danach Verlängerung um jeweils einen Monat",
       "produktiver CRM-Kern",
       "Planungssicherheit",
     ],
@@ -158,13 +148,14 @@ const ADD_ON_CARDS: AddOnCard[] = [
     name: "KI Plus",
     purpose:
       "Kostenpflichtige Erweiterung mit leistungsstärkerer KI, mehr Nutzung und größerem Gesprächskontext.",
-    status: "Coming Soon",
-    price: "Zusatzpreis wird vor Freigabe festgelegt",
+    status: "Auf Anfrage",
+    price: "+100 €/Monat",
     features: [
       "leistungsstärkere Modellklasse",
       "höheres KI-Kontingent",
       "größerer Gesprächskontext",
       "weiterhin manuelle Freigabe",
+      "nicht referral-rabattfähig",
     ],
     showComingSoonMark: true,
   },
@@ -173,13 +164,14 @@ const ADD_ON_CARDS: AddOnCard[] = [
     name: "KI Ultra",
     purpose:
       "Höherpreisige Premium-Erweiterung mit der stärksten freigegebenen KI, den höchsten Kontingenten und erweitertem Funktionsumfang.",
-    status: "Coming Soon",
-    price: "höherer Zusatzpreis als KI Plus",
+    status: "Auf Anfrage",
+    price: "+200 €/Monat",
     features: [
       "stärkste freigegebene Modellklasse",
       "höchstes KI-Kontingent",
       "größter Gesprächskontext",
       "keine automatische Sendung",
+      "nicht referral-rabattfähig",
     ],
     showComingSoonMark: true,
   },

@@ -316,6 +316,30 @@ requireText(
   "Der verpflichtende Turnstile-Modus muss automatisiert auf unvollständige Konfiguration getestet werden.",
 );
 
+requireText(
+  "src/app/impressum/page.tsx",
+  "Bernd Guggenberger, Einzelunternehmen – Geschäftsbezeichnung FanMind",
+  "Das Impressum muss den bestätigten Einzelunternehmer als Vertragspartner nennen.",
+);
+requireText(
+  "src/app/settings/AccountSections.tsx",
+  'price: "+100 €/Monat"',
+  "KI Plus muss mit dem freigegebenen Zusatzpreis ausgewiesen werden.",
+);
+requireText(
+  "src/app/settings/AccountSections.tsx",
+  'price: "+200 €/Monat"',
+  "KI Ultra muss mit dem freigegebenen Zusatzpreis ausgewiesen werden.",
+);
+forbid(
+  /Pilot \/ Setup starten|990 € einmalig · 1 Testmonat/iu,
+  "Das entgeltliche Pilot-Paket wurde abgeschafft und darf öffentlich nicht erneut erscheinen.",
+);
+forbid(
+  /FanMind e\.U\./u,
+  "Der Zusatz e.U. darf ohne bestätigte Firmenbucheintragung nicht veröffentlicht werden.",
+);
+
 forbidIn(
   "src/app/landing-v2/page.tsx",
   /(?:Fan-Analyse-Report|Memory|\bMVP\b|DSGVO-konform)/iu,

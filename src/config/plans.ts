@@ -75,7 +75,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   contact_detail: "Kontaktdetailseite",
   sandra_demo: "Sandra M. Demo",
   ai_replies: "KI-Antwortvorschläge",
-  memory: "Memory / Fan-Gedächtnis",
+  memory: "Kontaktwissen",
   followups: "Follow-ups",
   csv_import: "CSV-Import",
   roadmap: "Roadmap",
@@ -160,16 +160,16 @@ const growthUpgradeTargets: Partial<Record<FeatureKey, PlanId>> = {
 export const PLANS: Record<PlanId, PlanConfig> = {
   pilot: {
     id: "pilot",
-    name: "Pilot / Setup",
-    badge: "Aktiv / verfügbar",
-    priceLabel: "990 € einmalig · 1 Testmonat · keine Bindung",
+    name: "Interne Demo",
+    badge: "Nicht öffentlich buchbar",
+    priceLabel: "Nur interner Demo-/Legacy-Zugang",
     mode: "demo",
     maxProfiles: 0,
     maxContacts: null,
     contactsLabel: "Demo-Daten",
     description:
-      "Geführter Setup-/Pilotmonat als echter Testmonat: 990 € einmalig, ohne Abo, ohne automatische Verlängerung, ohne Bindung und ohne produktive externe Social-Integrationen.",
-    primaryAction: "Pilot anfragen",
+      "Interner Demo-/Legacy-Zugang. Kein öffentlich buchbares Paket; produktive Kunden wählen Starter Flex oder Starter 12 Monate.",
+    primaryAction: "Demo starten",
     upgradePlan: "starter",
     featureConfig: featureConfig({
       login: "active",
@@ -199,13 +199,13 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     id: "starter",
     name: "Starter",
     badge: "Produktiver MVP-Workspace",
-    priceLabel: "Starter Flex: 990 € Setup + 312 €/Monat · jederzeit kündbar; Starter 12 Monate: 0 € Setup + 312 €/Monat · 12 Monate Bindung",
+    priceLabel: "Starter Flex: 990 € Setup + 312 €/Monat · zum Monatsende kündbar; Starter 12 Monate: 0 € Setup + 312 €/Monat · 12 Monate Mindestlaufzeit, danach monatlich",
     mode: "production",
     maxProfiles: 1,
     maxContacts: 1000,
     contactsLabel: "bis 1.000 Kontakte",
     description:
-      "Produktiver MVP-Workspace für ein Profil mit zwei Starter-Optionen: Starter Flex mit 990 € Setup plus 312 €/Monat, jederzeit kündbar, oder Starter 12 Monate mit 0 € Setup plus 312 €/Monat und 12 Monate Bindung; externe Social-Integrationen bleiben Roadmap/Preview bis zur technischen und rechtlichen Freigabe.",
+      "Produktiver Workspace für ein Profil mit zwei Starter-Optionen: Starter Flex mit 990 € Setup plus 312 €/Monat und Kündigung zum Ende des bezahlten Monats; Starter 12 Monate mit 0 € Setup plus 312 €/Monat, 12 Monaten Mindestlaufzeit und anschließender monatlicher Verlängerung.",
     primaryAction: "Starter wählen",
     upgradePlan: "growth",
     featureConfig: featureConfig({
