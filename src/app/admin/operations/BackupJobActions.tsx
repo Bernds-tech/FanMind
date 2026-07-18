@@ -20,7 +20,10 @@ export function BackupJobActions() {
       : `${label}-Backup wirklich einreihen? Die Web-App startet keinen Shell-Befehl; nur der externe Worker verarbeitet den Job.`;
     if (!confirm(confirmation)) return;
     setBusy(jobType); setMessage("");
-    const response = await fetch("/api/admin/operations/backup-jobs", { method:"POST", headers:{ "Content-Type":"application/json", "Idempotency-Key": `manual:${jobType}:${new Date().toISOString().slice(0,10)}` }, body:JSON.stringify({ jobType }) });
+    const idempotencyKey = jobType === "verify_backup"
+      ? `manual:${jobType}:${globalThis.crypto.randomUUID()}`
+      : `manual:${jobType}:${new Date().toISOString().slice(0,10)}`;
+    const response = await fetch("/api/admin/operations/backup-jobs", { method:"POST", headers:{ "Content-Type":"application/json", "Idempotency-Key": idempotencyKey }, body:JSON.stringify({ jobType }) });
     const body = await response.json().catch(() => ({}));
     setMessage(response.ok ? (body.message ?? "Job wurde eingereiht") : (body.error ?? "Job konnte nicht eingereiht werden"));
     setBusy("");
