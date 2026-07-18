@@ -101,11 +101,17 @@ path = "scripts/verify-product-truth.mjs"
 text = read(path)
 text = replace_once(
     text,
-    '''  "src/app/avv/page.tsx",
+    '''  "src/app/datenschutz/page.tsx",
+  "src/app/impressum/page.tsx",
+  "src/app/avv/page.tsx",
+  "tests/referral-policy.test.mjs",
 ''',
-    '''  "src/app/avv/page.tsx",
+    '''  "src/app/datenschutz/page.tsx",
+  "src/app/impressum/page.tsx",
+  "src/app/avv/page.tsx",
   "src/app/referral-bedingungen/page.tsx",
   "src/app/settings/referral/page.tsx",
+  "tests/referral-policy.test.mjs",
 ''',
     "truth checked referral pages",
 )
