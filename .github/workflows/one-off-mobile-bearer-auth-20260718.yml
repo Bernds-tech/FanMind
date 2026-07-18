@@ -1,0 +1,32 @@
+name: One-off mobile Bearer auth 20260718
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'feat/mobile-app-foundation-20260718' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mobile-app-foundation-20260718
+      - name: Add mobile Bearer support
+        run: python3 scripts/one-off/add-mobile-bearer-auth-20260718.py
+      - name: Validate changed server files
+        run: |
+          npm ci --no-audit --no-fund
+          npm run lint
+      - name: Commit generated server changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/supabase/server.ts src/lib/workspaceAuthorization.ts src/app/api/ai/reply-suggestions/route.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "Allow secure mobile Bearer sessions for AI"
+          git push origin HEAD:feat/mobile-app-foundation-20260718
