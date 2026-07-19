@@ -193,7 +193,7 @@ export default function ProductShowcaseSection({
               </div>
               <div className={styles.tagCloud}>
                 <span>buyer</span>
-                <span>premium_interessiert</span>
+                <span>{t("premium_interessiert")}</span>
                 <span>event</span>
                 <span>Mia Active Club</span>
               </div>

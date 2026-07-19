@@ -112,7 +112,6 @@ export const landingEnglishCopy: Record<string, string> = {
   "jederzeit zum Ende des bezahlten Monats kündbar": "cancel at any time at the end of the paid month",
   "Kontakte/Fans und manuelle Kontaktpflege": "Contacts/fans and manual contact management",
   "CSV-Import, Notizen und Kontaktwissen": "CSV import, notes and contact knowledge",
-  "KI Plus +100 €/Monat · KI Ultra +200 €/Monat": "AI Plus +€100/month · AI Ultra +€200/month",
   "Kein automatischer Versand": "No automatic sending",
   "Für Teams, die FanMind langfristiger einführen und die Setup-Gebühr sparen möchten.": "For teams that want to introduce FanMind for the long term and save the setup fee.",
   "12 Monate Mindestlaufzeit · danach monatliche Verlängerung": "12-month minimum term · monthly renewal thereafter",
