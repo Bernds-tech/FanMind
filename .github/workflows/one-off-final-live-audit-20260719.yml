@@ -1,0 +1,41 @@
+name: One-off final live readiness audit 20260719
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  live-readiness:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify deployed main commit and public go-live truth
+        env:
+          FANMIND_GO_LIVE_BASE_URL: https://fanmind.ch
+          FANMIND_EXPECTED_RELEASE_COMMIT: ${{ github.event.pull_request.base.sha }}
+          FANMIND_GO_LIVE_REPORT_PATH: final-live-readiness-report.json
+        run: npm run smoke:go-live:public
+
+      - name: Upload live readiness report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-live-readiness-report
+          path: final-live-readiness-report.json
+          if-no-files-found: warn
+          retention-days: 14
