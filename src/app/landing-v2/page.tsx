@@ -967,7 +967,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
             <a className={styles.badge} href="#produkt-showcase">
-              <span>NEU</span> {t("Die intelligente Fan-Management Plattform")}
+              <span>{t("NEU")}</span> {t("Die intelligente Fan-Management Plattform")}
             </a>
             <h1>
               {t("Dein KI-gestütztes")} <span>{t("Fan-CRM für Nachrichten, Erinnerungen")}</span> {t("und")} {" "}
@@ -1373,7 +1373,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <span>{t("Empfohlen")}</span>
                 </div>
                 <ul>
-                  <li>hohes Kaufinteresse</li>
+                  <li>{t("hohes Kaufinteresse")}</li>
                   <li>{t("positiver Verlauf")}</li>
                   <li>{t("Early-Bird relevant")}</li>
                   <li>{t("hohe Relevanz")}</li>
@@ -1393,7 +1393,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <h3>{t("Demo-Ergebnis: klarer nächster Schritt, besseres Timing")}</h3>
             <div className={`${styles.sandraFlowCard} ${styles.sandraResultCard}`}>
               <div className={styles.sandraConversionPanel}>
-                <strong>Demo-Signal</strong>
+                <strong>{t("Demo-Signal")}</strong>
                 <span>9,4 %</span>
                 <em>{t("↑ +1,2 % vs. letzter Zeitraum")}</em>
                 <div aria-hidden="true" />
