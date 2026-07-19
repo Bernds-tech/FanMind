@@ -56,6 +56,16 @@ test("plaintext environment stays shared and releases are retained safely", asyn
   assert.doesNotMatch(script, /cat .*\.env\.production/);
 });
 
+test("current release link is updated atomically with the required privilege", async () => {
+  const script = await readFile(scriptPath, "utf8");
+  const removeTempLink = position(script, 'sudo rm -f -- "${CURRENT_LINK}.new"');
+  const createTempLink = position(script, 'sudo ln -s "$RELEASE_DIR" "${CURRENT_LINK}.new"');
+  const replaceCurrentLink = position(script, 'sudo mv -Tf "${CURRENT_LINK}.new" "$CURRENT_LINK"');
+
+  assert.ok(removeTempLink < createTempLink);
+  assert.ok(createTempLink < replaceCurrentLink);
+});
+
 test("production workflow keeps isolated deployment explicitly disabled by default", async () => {
   const workflow = await readFile(workflowPath, "utf8");
   assert.match(workflow, /ISOLATED_DEPLOY_ENABLED="false"/);
