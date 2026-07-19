@@ -15,11 +15,22 @@ import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components
 import { FooterInquiryForm } from "@/components/landing/FooterInquiryForm";
 import styles from "./landing-v2.module.css";
 
-export const metadata: Metadata = {
-  title: "FanMind | KI-CRM für Creator, Clubs und Events",
-  description:
-    "FanMind bündelt Kontakte, Gespräche, Kontaktwissen und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
+type LandingMetadataProps = {
+  searchParams?: Promise<{ lang?: string | string[] }>;
 };
+
+export async function generateMetadata({ searchParams }: LandingMetadataProps): Promise<Metadata> {
+  const params = await searchParams;
+  const language = getFanMindLanguage(params?.lang);
+  const t = createFanMindTranslator(language);
+
+  return {
+    title: t("FanMind | KI-CRM für Creator, Clubs und Events"),
+    description: t(
+      "FanMind bündelt Kontakte, Gespräche, Kontaktwissen und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
+    ),
+  };
+}
 
 const LANDING_ROADMAP_HREF = "#roadmap";
 
@@ -970,7 +981,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <span>NEU</span> {t("Die intelligente Fan-Management Plattform")}
             </a>
             <h1>
-              {t("Dein KI-gestütztes")} <span>Fan-CRM für Nachrichten, Erinnerungen</span> {t("und")} {" "}
+              {t("Dein KI-gestütztes")} <span>{t("Fan-CRM für Nachrichten, Erinnerungen")}</span> {t("und")} {" "}
               <span>Follow-ups.</span>
             </h1>
             <p>{t("FanMind bündelt Kontakte, Gesprächskontext und KI-Antwortvorschläge in einem manuellen Workflow. Du prüfst, kopierst und sendest selbst – ohne automatische Sendefunktion.")}</p>
@@ -1226,7 +1237,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div className={styles.sandraUseCaseHeader}>
             <span className={styles.sandraUseCaseBadge}>{t("Demo-Workflow mit Beispieldaten")}</span>
             <h2 id="sandra-use-case-title">
-              {t("Aus Anfrage wird")} <span>ein nächster Schritt.</span>
+              {t("Aus Anfrage wird")} <span>{t("ein nächster Schritt.")}</span>
             </h2>
             <p>{t("Produktvorschau mit Beispieldaten: FanMind zeigt, wie Kontakte, Kontaktwissen, KI-Vorschläge und manuelle Follow-ups zusammenarbeiten.")}</p>
           </div>
@@ -1411,9 +1422,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 </div>
               </div>
             </div>
-            <p>
-              Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.
-            </p>
+            <p>{t("Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.")}</p>
           </article>
         </div>
 
@@ -2022,7 +2031,21 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <h3>{t("Beratung anfragen")}</h3>
               <p>{t("Wir prüfen deinen Use Case und zeigen dir, wie FanMind in deinem Workflow eingesetzt werden kann.")}</p>
             </div>
-            <FooterInquiryForm />
+            <FooterInquiryForm
+              copy={{
+                emailLabel: t("E-Mail-Adresse"),
+                emailPlaceholder: t("deine@email.ch"),
+                nameLabel: t("Name optional"),
+                namePlaceholder: t("Dein Name"),
+                messageLabel: t("Kurze Nachricht / Use Case optional"),
+                messagePlaceholder: t("Wobei soll FanMind euch unterstützen?"),
+                submitting: t("Wird gesendet ..."),
+                submit: t("Beratung anfragen"),
+                note: t("Persönliche Anfrage statt automatischem Newsletter."),
+                success: t("Danke, wir melden uns bei dir."),
+                error: t("Anfrage konnte gerade nicht gesendet werden. Bitte schreibe direkt an kontakt@fanmind.ch."),
+              }}
+            />
           </div>
         </div>
 

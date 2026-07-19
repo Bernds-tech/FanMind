@@ -1,3 +1,5 @@
+import { landingEnglishCopy } from "./landingEnglishCopy";
+
 export type FanMindLanguage = "de" | "en";
 
 export const fanmindLanguages: FanMindLanguage[] = ["de", "en"];
@@ -99,7 +101,7 @@ export const fanmindCopy = {
   },
 } as const;
 
-const englishCopy: Record<string, string> = {
+const sharedEnglishCopy: Record<string, string> = {
   "Produkt": "Product",
   "Funktionen": "Features",
   "CSV-Import & Kontaktwissen": "CSV import & contact knowledge",
@@ -598,6 +600,11 @@ const englishCopy: Record<string, string> = {
   "Bündelt fällige Aktionen nach Priorität, Owner und nächstem Schritt.": "Bundles due actions by priority, owner and next step.",
   "Kampagnen & Analytics": "Campaigns & analytics",
   "Als Vorschau sichtbar: Inhalte planen und Roadmap-Auswertungen prüfen.": "Visible as preview: plan content and review roadmap reporting.",
+};
+
+const englishCopy: Record<string, string> = {
+  ...sharedEnglishCopy,
+  ...landingEnglishCopy,
 };
 
 export function createFanMindTranslator(language: FanMindLanguage) {
