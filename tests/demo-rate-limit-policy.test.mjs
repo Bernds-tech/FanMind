@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const protectionPath = "src/lib/demoProtection.ts";
 const runbookPath = "docs/operations/public-demo-protection-runbook.md";
+const envExamplePath = ".env.example";
 
 async function read(path) {
   return readFile(path, "utf8");
@@ -32,6 +33,7 @@ test("public demo restart limits preserve short-term and capacity protection", a
 
 test("production demo runbook matches the controlled restart policy", async () => {
   const runbook = await read(runbookPath);
+  const envExample = await read(envExamplePath);
 
   assert.match(runbook, /FANMIND_DEMO_MAX_PER_IP_10_MIN=1/u);
   assert.match(runbook, /FANMIND_DEMO_MAX_PER_IP_DAY=10/u);
@@ -39,4 +41,8 @@ test("production demo runbook matches the controlled restart policy", async () =
   assert.match(runbook, /FANMIND_DEMO_MAX_ACTIVE=50/u);
   assert.match(runbook, /legitime Neustarts/u);
   assert.match(runbook, /Keine Roh-IP-Adresse wird gespeichert/u);
+  assert.match(envExample, /FANMIND_DEMO_MAX_PER_IP_10_MIN=1/u);
+  assert.match(envExample, /FANMIND_DEMO_MAX_PER_IP_DAY=10/u);
+  assert.match(envExample, /FANMIND_DEMO_MAX_PER_BROWSER_DAY=5/u);
+  assert.match(envExample, /FANMIND_DEMO_MAX_ACTIVE=50/u);
 });
