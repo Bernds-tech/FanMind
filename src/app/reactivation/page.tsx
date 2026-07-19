@@ -56,15 +56,15 @@ function ReactivationWorkspace({
       userLabel={userLabel}
       planLabel={workspace.plan_id}
       planMeta={workspace.role}
-      planStatus="Coming Soon"
+      planStatus="Roadmap"
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
         title: "Reaktivierung",
-        subtitle: "Willkommen zurück, Pilot Test 👋",
+        subtitle: "Vorbereitete Roadmap-Ansicht für manuelle Rückgewinnung",
         searchPlaceholder: "Suche nach Name, Tag, Status ...",
-        primaryActionLabel: "Coming Soon",
+        primaryActionLabel: "Roadmap",
         primaryActionHref: "#reactivation-preview",
       }}
       contactCount={contactCount}
@@ -78,21 +78,22 @@ function ReactivationWorkspace({
       >
         <div className={dashboardStyles.moduleHeader}>
           <div>
-            <p className={dashboardStyles.eyebrow}>Coming Soon</p>
+            <p className={dashboardStyles.eyebrow}>Roadmap</p>
             <h2 id="reactivation-title">Reaktivierung vorbereiten</h2>
           </div>
           <span>Coming Soon</span>
         </div>
         <p className={dashboardStyles.moduleText}>
-          Reaktivierungslogik ist im MVP noch nicht aktiv. Später werden hier
-          inaktive Fans, manuelle nächste Schritte und sichere
-          Kontaktvorschläge vorbereitet.
+          Die Reaktivierungslogik ist noch nicht produktiv aktiv. Geplant sind
+          nachvollziehbare Hinweise auf länger inaktive Kontakte sowie manuell
+          geprüfte nächste Schritte. FanMind sendet dabei niemals automatisch.
         </p>
         <div className={dashboardStyles.emptyState}>
-          <strong>Noch keine Reaktivierungslogik aktiv.</strong>
+          <strong>Noch keine Reaktivierungsfälle aktiv.</strong>
           <p>
-            FanMind startet hier keine automatische Kontaktaufnahme und zeigt
-            keine erfundenen Reaktivierungsfälle.
+            Diese Ansicht zeigt bewusst keine erfundenen Fälle und startet keine
+            automatische Kontaktaufnahme. Bis zur Freigabe bleibt sie eine klar
+            gekennzeichnete Roadmap-Vorschau.
           </p>
         </div>
       </section>
