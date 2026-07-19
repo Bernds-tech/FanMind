@@ -2,7 +2,6 @@ import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -27,22 +26,21 @@ import {
   getContact,
   listContactMemories,
 } from "@/lib/data";
+import { addLocalDaysDate } from "@/lib/localDate";
 import { useAuth } from "@/providers/AuthProvider";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 import type { Contact, ContactMemory, ReplySuggestions } from "@/types";
 
-function addDaysIso(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 export default function ContactDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const contactId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { session } = useAuth();
-  const { workspace } = useWorkspace();
+  const {
+    workspace,
+    loading: workspaceLoading,
+    error: workspaceError,
+  } = useWorkspace();
   const [contact, setContact] = useState<Contact | null>(null);
   const [memories, setMemories] = useState<ContactMemory[]>([]);
   const [incomingMessage, setIncomingMessage] = useState("");
@@ -57,7 +55,22 @@ export default function ContactDetailScreen() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!workspace?.id || !contactId) return;
+    if (!contactId) {
+      setContact(null);
+      setMemories([]);
+      setError("Kontakt-ID fehlt.");
+      setLoading(false);
+      return;
+    }
+
+    if (!workspace?.id) {
+      setContact(null);
+      setMemories([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const [contactResult, memoriesResult] = await Promise.all([
       getContact(workspace.id, contactId),
@@ -121,13 +134,38 @@ export default function ContactDetailScreen() {
     const result = await createFollowup({
       workspaceId: workspace.id,
       contactId: contact.id,
-      dueDate: addDaysIso(days),
+      dueDate: addLocalDaysDate(days),
       reason: suggestions.suggested_followup.reason || "Kontakt erneut ansprechen",
       priority: "normal",
     });
     setError(result);
     if (!result) setNotice(`Follow-up in ${days} Tagen wurde gespeichert.`);
     setFollowupBusy(false);
+  }
+
+  if (workspaceLoading) {
+    return (
+      <Screen scroll={false}>
+        <LoadingState label="Workspace wird geladen…" />
+      </Screen>
+    );
+  }
+
+  if (!workspace) {
+    return (
+      <Screen
+        title="Kontakt"
+        right={<SecondaryButton onPress={() => router.back()}>Zurück</SecondaryButton>}
+      >
+        <EmptyState
+          title="Noch kein Workspace"
+          description={
+            workspaceError ??
+            "Schließe zuerst das FanMind-Onboarding ab, damit Kontakte geöffnet werden können."
+          }
+        />
+      </Screen>
+    );
   }
 
   if (loading) {
@@ -244,7 +282,9 @@ export default function ContactDetailScreen() {
                   <StatusPill>{option.tone}</StatusPill>
                 </View>
                 <Text style={mobileStyles.body}>{option.text}</Text>
-                <SecondaryButton onPress={() => void copy(option.text)}>Antwort kopieren</SecondaryButton>
+                <SecondaryButton onPress={() => void copy(option.text)}>
+                  Antwort kopieren
+                </SecondaryButton>
               </View>
             ))}
           </Card>
