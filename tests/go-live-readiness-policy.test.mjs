@@ -28,7 +28,11 @@ test("roadmap separates completed technical foundations from external staging wo
 test("final go-live preflight remains read-only and verifies public truth", async () => {
   const script = await read(smokeScriptPath);
 
-  assert.match(script, /method:\s*"POST"/u, "sentinel");
+  assert.doesNotMatch(script, /method:\s*"(?:POST|PUT|PATCH|DELETE)"/u);
+  assert.match(script, /\/api\/version/);
+  assert.match(script, /\/api\/health/);
+  assert.match(script, /299 €\/Monat/);
+  assert.match(script, /Pilot anfragen/);
 });
 
 test("final readiness workflow runs only after a successful deploy or manual dispatch", async () => {
