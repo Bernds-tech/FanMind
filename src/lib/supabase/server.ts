@@ -610,8 +610,10 @@ export async function updateSupabaseServerUserMetadata(metadata: Record<string, 
   }
 }
 
-export async function getSupabaseServerUser(): Promise<SupabaseServerUserResponse> {
-  const accessToken = await getAccessToken();
+export async function getSupabaseServerUser(
+  accessTokenOverride?: string,
+): Promise<SupabaseServerUserResponse> {
+  const accessToken = accessTokenOverride ?? (await getAccessToken());
 
   if (!accessToken) {
     return { data: { user: null }, error: null };
@@ -805,8 +807,9 @@ export async function updateTaxMasterDataSettings(
 
 export async function getUserWorkspaceDashboard(
   user: SupabaseServerUser,
+  accessTokenOverride?: string,
 ): Promise<WorkspaceDashboardResult> {
-  const accessToken = await getAccessToken();
+  const accessToken = accessTokenOverride ?? (await getAccessToken());
 
   if (!accessToken) {
     return workspaceDashboardError(
@@ -1748,8 +1751,9 @@ async function getWorkspaceContactWithToken(
 export async function getWorkspaceContact(
   workspaceId: string,
   contactId: string,
+  accessTokenOverride?: string,
 ): Promise<ContactDetailResult> {
-  const accessToken = await getAccessToken();
+  const accessToken = accessTokenOverride ?? (await getAccessToken());
 
   if (!accessToken) {
     return contactDetailError(

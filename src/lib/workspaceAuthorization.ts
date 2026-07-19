@@ -51,18 +51,22 @@ export function assertResourceInWorkspace(
   }
 }
 
-export async function getAuthorizedWorkspaceForCurrentUser(): Promise<AuthorizedWorkspaceContext | null> {
-  const { data, error } = await getSupabaseServerUser();
+export async function getAuthorizedWorkspaceForCurrentUser(
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext | null> {
+  const { data, error } = await getSupabaseServerUser(accessToken);
   if (error || !data.user) return null;
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserWorkspaceDashboard(data.user, accessToken);
   if (!workspaceResult.workspace) return null;
 
   return { user: data.user, workspace: workspaceResult.workspace };
 }
 
-export async function requireAuthorizedWorkspace(): Promise<AuthorizedWorkspaceContext> {
-  const { data } = await getSupabaseServerUser();
+export async function requireAuthorizedWorkspace(
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext> {
+  const { data } = await getSupabaseServerUser(accessToken);
   if (!data.user) {
     throw new WorkspaceAuthorizationError(
       "Keine aktive User-Session gefunden.",
@@ -70,7 +74,7 @@ export async function requireAuthorizedWorkspace(): Promise<AuthorizedWorkspaceC
     );
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserWorkspaceDashboard(data.user, accessToken);
   if (!workspaceResult.workspace) {
     throw new WorkspaceAuthorizationError(
       workspaceResult.error?.message ?? "Kein autorisierter Workspace gefunden.",
@@ -84,9 +88,14 @@ export async function requireAuthorizedWorkspace(): Promise<AuthorizedWorkspaceC
 
 export async function requireContactInAuthorizedWorkspace(
   contactId: string,
+  accessToken?: string,
 ): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
-  const context = await requireAuthorizedWorkspace();
-  const contactResult = await getWorkspaceContact(context.workspace.id, contactId);
+  const context = await requireAuthorizedWorkspace(accessToken);
+  const contactResult = await getWorkspaceContact(
+    context.workspace.id,
+    contactId,
+    accessToken,
+  );
   if (contactResult.error) throw contactResult.error;
   assertResourceInWorkspace(contactResult.contact, context.workspace.id, "Kontakt");
   return { ...context, contact: contactResult.contact as ContactRow };

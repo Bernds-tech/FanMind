@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import {
+  BearerAccessTokenError,
+  getOptionalBearerAccessToken,
+} from "@/lib/requestAccessToken";
+import {
   requireContactInAuthorizedWorkspace,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
@@ -161,9 +165,22 @@ export async function POST(request: NextRequest) {
   let authorizationContext: Awaited<
     ReturnType<typeof requireContactInAuthorizedWorkspace>
   >;
+  let accessToken: string | undefined;
 
   try {
-    authorizationContext = await requireContactInAuthorizedWorkspace(contactId);
+    accessToken = getOptionalBearerAccessToken(request);
+  } catch (error) {
+    if (error instanceof BearerAccessTokenError) {
+      return jsonError("Bitte melde dich in der FanMind-App erneut an.", 401);
+    }
+    return jsonError("Mobile Sitzung konnte nicht geprüft werden.", 401);
+  }
+
+  try {
+    authorizationContext = await requireContactInAuthorizedWorkspace(
+      contactId,
+      accessToken,
+    );
   } catch (error) {
     if (error instanceof WorkspaceAuthorizationError) {
       if (error.code === "unauthenticated") {

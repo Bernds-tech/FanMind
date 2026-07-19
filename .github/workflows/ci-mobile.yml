@@ -1,0 +1,132 @@
+name: FanMind Mobile CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/**"
+      - "src/lib/requestAccessToken.ts"
+      - "src/lib/workspaceAuthorization.ts"
+      - "src/lib/supabase/server.ts"
+      - "src/app/api/ai/reply-suggestions/route.ts"
+      - ".github/workflows/ci-mobile.yml"
+  push:
+    branches:
+      - "feat/mobile-**"
+    paths:
+      - "apps/mobile/**"
+      - "src/lib/requestAccessToken.ts"
+      - "src/lib/workspaceAuthorization.ts"
+      - "src/lib/supabase/server.ts"
+      - "src/app/api/ai/reply-suggestions/route.ts"
+      - ".github/workflows/ci-mobile.yml"
+
+concurrency:
+  group: fanmind-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-mobile:
+    name: Typecheck, doctor and Android bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://exampleproject.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key-1234567890
+      EXPO_PUBLIC_FANMIND_API_URL: https://fanmind.ch
+      EXPO_NO_TELEMETRY: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck independent mobile app
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee mobile-typecheck-report.txt
+
+      - name: Upload mobile typecheck report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-typecheck-report
+          path: apps/mobile/mobile-typecheck-report.txt
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Validate Expo configuration
+        id: doctor
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run doctor 2>&1 | tee expo-doctor-report.txt
+
+      - name: Upload Expo Doctor report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-expo-doctor-report
+          path: apps/mobile/expo-doctor-report.txt
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Build Android JavaScript bundle
+        run: npm run export:android
+
+      - name: Enforce mobile boundary
+        id: boundary
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run boundary 2>&1 | tee mobile-boundary-report.txt
+
+      - name: Upload mobile boundary report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-boundary-report
+          path: apps/mobile/mobile-boundary-report.txt
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Upload Android bundle report
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-android-bundle
+          path: apps/mobile/dist-android
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Enforce mobile typecheck result
+        if: steps.typecheck.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce Expo Doctor result
+        if: steps.doctor.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce mobile boundary result
+        if: steps.boundary.outcome != 'success'
+        run: exit 1
