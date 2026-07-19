@@ -1,0 +1,190 @@
+name: One-off complete English landing 20260719
+
+on:
+  push:
+    branches:
+      - fix/complete-english-landing-20260719
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+      FANMIND_PUBLIC_DEMO_ENABLED: false
+      FANMIND_ENABLE_REFERRAL_BILLING: false
+      FANMIND_ENABLE_TELEGRAM_SEND: false
+      FANMIND_ADMIN_EMAILS: admin@example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/complete-english-landing-20260719
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Wire complete English copy and localized metadata
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          copy_path = Path('src/lib/fanmindCopy.ts')
+          copy_text = copy_path.read_text(encoding='utf-8')
+
+          old = 'export type FanMindLanguage = "de" | "en";'
+          new = 'import { landingEnglishCopy } from "./landingEnglishCopy";\n\nexport type FanMindLanguage = "de" | "en";'
+          if copy_text.count(old) != 1:
+              raise SystemExit(f'fanmindCopy import anchor count={copy_text.count(old)}')
+          copy_text = copy_text.replace(old, new, 1)
+
+          old = 'const englishCopy: Record<string, string> = {'
+          new = 'const baseEnglishCopy: Record<string, string> = {'
+          if copy_text.count(old) != 1:
+              raise SystemExit(f'englishCopy declaration count={copy_text.count(old)}')
+          copy_text = copy_text.replace(old, new, 1)
+
+          old = '\n};\n\nexport function createFanMindTranslator(language: FanMindLanguage) {'
+          new = '\n};\n\nconst englishCopy: Record<string, string> = {\n  ...baseEnglishCopy,\n  ...landingEnglishCopy,\n};\n\nexport function createFanMindTranslator(language: FanMindLanguage) {'
+          if copy_text.count(old) != 1:
+              raise SystemExit(f'englishCopy closing anchor count={copy_text.count(old)}')
+          copy_text = copy_text.replace(old, new, 1)
+          copy_path.write_text(copy_text, encoding='utf-8')
+
+          page_path = Path('src/app/landing-v2/page.tsx')
+          page_text = page_path.read_text(encoding='utf-8')
+          old = '''export const metadata: Metadata = {
+  title: "FanMind | KI-CRM für Creator, Clubs und Events",
+  description:
+    "FanMind bündelt Kontakte, Gespräche, Kontaktwissen und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
+};'''
+          new = '''type LandingV2Props = {
+  searchParams?: Promise<{ lang?: string | string[] }>;
+};
+
+export async function generateMetadata({ searchParams }: LandingV2Props): Promise<Metadata> {
+  const params = await searchParams;
+  const language = getFanMindLanguage(params?.lang);
+
+  if (language === "en") {
+    return {
+      title: "FanMind | AI CRM for creators, clubs and events",
+      description:
+        "FanMind brings contacts, conversations, contact knowledge and follow-ups together for smarter fan relationships. External integrations remain clearly marked as coming soon until technical and legal approval.",
+    };
+  }
+
+  return {
+    title: "FanMind | KI-CRM für Creator, Clubs und Events",
+    description:
+      "FanMind bündelt Kontakte, Gespräche, Kontaktwissen und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
+  };
+}'''
+          if page_text.count(old) != 1:
+              raise SystemExit(f'metadata block count={page_text.count(old)}')
+          page_text = page_text.replace(old, new, 1)
+
+          duplicate = '''type LandingV2Props = {
+  searchParams?: Promise<{ lang?: string | string[] }>;
+};
+
+'''
+          if page_text.count(duplicate) != 2:
+              raise SystemExit(f'LandingV2Props count after metadata replacement={page_text.count(duplicate)}')
+          first = page_text.find(duplicate)
+          second = page_text.find(duplicate, first + len(duplicate))
+          page_text = page_text[:second] + page_text[second + len(duplicate):]
+          page_path.write_text(page_text, encoding='utf-8')
+          PY
+      - run: npm ci --no-audit --no-fund
+      - run: npm run verify:truth
+      - run: npm run lint
+      - run: npm run test:operations
+      - run: npm run build
+      - name: Start application
+        run: |
+          FANMIND_RELEASE_COMMIT="$(git rev-parse HEAD)" npm start > /tmp/fanmind-english-fix.log 2>&1 &
+          echo $! > /tmp/fanmind-english-fix.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS 'http://127.0.0.1:3000/?lang=en' -o /tmp/fanmind-en.html; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/fanmind-english-fix.log
+          exit 1
+      - name: Audit visible English runtime copy
+        run: |
+          mkdir -p docs/audits
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import re
+
+          class TextParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.skip = 0
+                  self.nodes = []
+              def handle_starttag(self, tag, attrs):
+                  if tag in {"script", "style", "svg"}:
+                      self.skip += 1
+              def handle_endtag(self, tag):
+                  if tag in {"script", "style", "svg"} and self.skip:
+                      self.skip -= 1
+              def handle_data(self, data):
+                  if self.skip:
+                      return
+                  value = " ".join(data.split())
+                  if value:
+                      self.nodes.append(value)
+
+          parser = TextParser()
+          parser.feed(Path('/tmp/fanmind-en.html').read_text(encoding='utf-8'))
+
+          markers = re.compile(
+              r"[äöüÄÖÜß]|\b(?:dein|deine|deinen|deinem|für|und|oder|heute|morgen|"
+              r"kostenlos|testen|kontakte|kontakt|manuell|manuelle|nächste|nächsten|"
+              r"vorschlag|vorschläge|verfügbar|keine|kein|kampagnen|nachrichten|"
+              r"erinnerungen|antworten|prüfung|freigabe|beispieldaten|einmalig|"
+              r"monat|monate|jederzeit|kündbar|einrichtung|aktiv|bereit|inaktiv|"
+              r"später|auswertung|übersicht|wichtig|interessen|historie|speichern|"
+              r"vorbereiten|senden|versand|nachfassaktionen|wachstumssignale)\b",
+              re.IGNORECASE,
+          )
+
+          seen = set()
+          matches = []
+          for node in parser.nodes:
+              if markers.search(node) and node not in seen:
+                  seen.add(node)
+                  matches.append(node)
+
+          lines = [f"GERMAN_NODE_COUNT={len(matches)}"]
+          lines.extend(f"GERMAN_NODE_{index:03d}={node}" for index, node in enumerate(matches, 1))
+          Path('docs/audits/english-landing-runtime-audit-after-fix-20260719.txt').write_text(
+              "\n".join(lines) + "\n",
+              encoding='utf-8',
+          )
+          print("\n".join(lines))
+          PY
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f /tmp/fanmind-english-fix.pid ]; then
+            kill "$(cat /tmp/fanmind-english-fix.pid)" 2>/dev/null || true
+          fi
+      - name: Commit fix and remove one-off workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-off-complete-english-landing-20260719.yml
+          git add src/lib/landingEnglishCopy.ts src/lib/fanmindCopy.ts src/app/landing-v2/page.tsx docs/audits/english-landing-runtime-audit-after-fix-20260719.txt
+          git commit -m "Complete English landing page localization"
+          git push origin HEAD:fix/complete-english-landing-20260719
