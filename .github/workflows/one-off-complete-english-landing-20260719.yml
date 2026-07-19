@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - fix/complete-english-landing-20260719
-  pull_request:
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -41,37 +38,45 @@ jobs:
           copy_path = Path('src/lib/fanmindCopy.ts')
           copy_text = copy_path.read_text(encoding='utf-8')
 
-          old = 'export type FanMindLanguage = "de" | "en";'
-          new = 'import { landingEnglishCopy } from "./landingEnglishCopy";\n\nexport type FanMindLanguage = "de" | "en";'
-          if copy_text.count(old) != 1:
-              raise SystemExit(f'fanmindCopy import anchor count={copy_text.count(old)}')
-          copy_text = copy_text.replace(old, new, 1)
+          import_line = 'import { landingEnglishCopy } from "./landingEnglishCopy";'
+          if import_line not in copy_text:
+              anchor = 'export type FanMindLanguage = "de" | "en";'
+              if anchor not in copy_text:
+                  raise SystemExit('FanMind language anchor missing')
+              copy_text = copy_text.replace(anchor, f'{import_line}\n\n{anchor}', 1)
 
-          old = 'const englishCopy: Record<string, string> = {'
-          new = 'const baseEnglishCopy: Record<string, string> = {'
-          if copy_text.count(old) != 1:
-              raise SystemExit(f'englishCopy declaration count={copy_text.count(old)}')
-          copy_text = copy_text.replace(old, new, 1)
+          if 'const baseEnglishCopy: Record<string, string> = {' not in copy_text:
+              anchor = 'const englishCopy: Record<string, string> = {'
+              if anchor not in copy_text:
+                  raise SystemExit('English copy declaration missing')
+              copy_text = copy_text.replace(
+                  anchor,
+                  'const baseEnglishCopy: Record<string, string> = {',
+                  1,
+              )
 
-          old = '\n};\n\nexport function createFanMindTranslator(language: FanMindLanguage) {'
-          new = '\n};\n\nconst englishCopy: Record<string, string> = {\n  ...baseEnglishCopy,\n  ...landingEnglishCopy,\n};\n\nexport function createFanMindTranslator(language: FanMindLanguage) {'
-          if copy_text.count(old) != 1:
-              raise SystemExit(f'englishCopy closing anchor count={copy_text.count(old)}')
-          copy_text = copy_text.replace(old, new, 1)
+          if '...landingEnglishCopy,' not in copy_text:
+              anchor = '\n};\n\nexport function createFanMindTranslator(language: FanMindLanguage) {'
+              if anchor not in copy_text:
+                  raise SystemExit('English copy closing anchor missing')
+              replacement = '\n};\n\nconst englishCopy: Record<string, string> = {\n  ...baseEnglishCopy,\n  ...landingEnglishCopy,\n};\n\nexport function createFanMindTranslator(language: FanMindLanguage) {'
+              copy_text = copy_text.replace(anchor, replacement, 1)
+
           copy_path.write_text(copy_text, encoding='utf-8')
 
           page_path = Path('src/app/landing-v2/page.tsx')
           page_text = page_path.read_text(encoding='utf-8')
-          old = '''export const metadata: Metadata = {
+          if 'export async function generateMetadata' not in page_text:
+              old = '''export const metadata: Metadata = {
   title: "FanMind | KI-CRM für Creator, Clubs und Events",
   description:
     "FanMind bündelt Kontakte, Gespräche, Kontaktwissen und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
 };'''
-          new = '''type LandingV2Props = {
+              new = '''type LandingMetadataProps = {
   searchParams?: Promise<{ lang?: string | string[] }>;
 };
 
-export async function generateMetadata({ searchParams }: LandingV2Props): Promise<Metadata> {
+export async function generateMetadata({ searchParams }: LandingMetadataProps): Promise<Metadata> {
   const params = await searchParams;
   const language = getFanMindLanguage(params?.lang);
 
@@ -89,20 +94,10 @@ export async function generateMetadata({ searchParams }: LandingV2Props): Promis
       "FanMind bündelt Kontakte, Gespräche, Kontaktwissen und Follow-ups für smarte Fan-Beziehungen; externe Integrationen bleiben bis zur technischen und rechtlichen Freigabe klar als Coming Soon markiert.",
   };
 }'''
-          if page_text.count(old) != 1:
-              raise SystemExit(f'metadata block count={page_text.count(old)}')
-          page_text = page_text.replace(old, new, 1)
+              if old not in page_text:
+                  raise SystemExit('Landing metadata block missing')
+              page_text = page_text.replace(old, new, 1)
 
-          duplicate = '''type LandingV2Props = {
-  searchParams?: Promise<{ lang?: string | string[] }>;
-};
-
-'''
-          if page_text.count(duplicate) != 2:
-              raise SystemExit(f'LandingV2Props count after metadata replacement={page_text.count(duplicate)}')
-          first = page_text.find(duplicate)
-          second = page_text.find(duplicate, first + len(duplicate))
-          page_text = page_text[:second] + page_text[second + len(duplicate):]
           page_path.write_text(page_text, encoding='utf-8')
           PY
       - run: npm ci --no-audit --no-fund
@@ -150,7 +145,6 @@ export async function generateMetadata({ searchParams }: LandingV2Props): Promis
 
           parser = TextParser()
           parser.feed(Path('/tmp/fanmind-en.html').read_text(encoding='utf-8'))
-
           markers = re.compile(
               r"[äöüÄÖÜß]|\b(?:dein|deine|deinen|deinem|für|und|oder|heute|morgen|"
               r"kostenlos|testen|kontakte|kontakt|manuell|manuelle|nächste|nächsten|"
@@ -161,14 +155,12 @@ export async function generateMetadata({ searchParams }: LandingV2Props): Promis
               r"vorbereiten|senden|versand|nachfassaktionen|wachstumssignale)\b",
               re.IGNORECASE,
           )
-
           seen = set()
           matches = []
           for node in parser.nodes:
               if markers.search(node) and node not in seen:
                   seen.add(node)
                   matches.append(node)
-
           lines = [f"GERMAN_NODE_COUNT={len(matches)}"]
           lines.extend(f"GERMAN_NODE_{index:03d}={node}" for index, node in enumerate(matches, 1))
           Path('docs/audits/english-landing-runtime-audit-after-fix-20260719.txt').write_text(
