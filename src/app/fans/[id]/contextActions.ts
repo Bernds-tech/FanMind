@@ -19,20 +19,27 @@ function localeFromForm(formData: FormData): "de" | "en" {
   return formValue(formData, "lang") === "en" ? "en" : "de";
 }
 
-function contactPath(contactId: string, locale: "de" | "en", notice: string): string {
+function contactPath(
+  contactId: string,
+  locale: "de" | "en",
+  notice: string,
+  hash = "contact-knowledge",
+): string {
   const params = new URLSearchParams({ notice });
   if (locale === "en") params.set("lang", "en");
-  return `/fans/${encodeURIComponent(contactId)}?${params.toString()}#contact-knowledge`;
+  return `/fans/${encodeURIComponent(contactId)}?${params.toString()}#${hash}`;
 }
 
 function serviceRoleKey(): string | null {
   return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || null;
 }
 
-async function mutateMemory(input: {
+async function mutateWorkspaceScopedEntry(input: {
   workspaceId: string;
   contactId: string;
-  memoryId: string;
+  table: "memories" | "followups";
+  entryId: string;
+  entryLabel: string;
   method: "PATCH" | "DELETE";
   values?: Record<string, unknown>;
 }): Promise<{ ok: boolean; error?: string }> {
@@ -40,12 +47,12 @@ async function mutateMemory(input: {
   if (!key) {
     return {
       ok: false,
-      error: "Serverberechtigung für Kontaktwissen ist nicht konfiguriert.",
+      error: `${input.entryLabel} kann nicht geändert werden: Serverberechtigung ist nicht konfiguriert.`,
     };
   }
 
-  const url = new URL(getSupabaseRestUrl("memories"));
-  url.searchParams.set("id", `eq.${input.memoryId}`);
+  const url = new URL(getSupabaseRestUrl(input.table));
+  url.searchParams.set("id", `eq.${input.entryId}`);
   url.searchParams.set("workspace_id", `eq.${input.workspaceId}`);
   url.searchParams.set("contact_id", `eq.${input.contactId}`);
   url.searchParams.set("select", "id");
@@ -58,22 +65,27 @@ async function mutateMemory(input: {
         "Content-Type": "application/json",
         Prefer: "return=representation",
       },
-      body: input.method === "PATCH" ? JSON.stringify(input.values ?? {}) : undefined,
+      body:
+        input.method === "PATCH"
+          ? JSON.stringify(input.values ?? {})
+          : undefined,
       cache: "no-store",
     });
 
     if (!response.ok) {
       return {
         ok: false,
-        error: `Kontaktwissen konnte nicht geändert werden (${response.status}).`,
+        error: `${input.entryLabel} konnte nicht geändert werden (${response.status}).`,
       };
     }
 
-    const rows = (await response.json().catch(() => [])) as Array<{ id?: string }>;
-    if (!rows.some((row) => row.id === input.memoryId)) {
+    const rows = (await response.json().catch(() => [])) as Array<{
+      id?: string;
+    }>;
+    if (!rows.some((row) => row.id === input.entryId)) {
       return {
         ok: false,
-        error: "Der Eintrag wurde im autorisierten Workspace nicht gefunden.",
+        error: `${input.entryLabel} wurde im autorisierten Workspace nicht gefunden.`,
       };
     }
 
@@ -84,7 +96,7 @@ async function mutateMemory(input: {
       error:
         error instanceof Error
           ? error.message
-          : "Kontaktwissen konnte nicht geändert werden.",
+          : `${input.entryLabel} konnte nicht geändert werden.`,
     };
   }
 }
@@ -106,10 +118,12 @@ export async function updateManualMemory(formData: FormData) {
     ? rawImportance
     : "normal";
   const type = MEMORY_TYPES.has(rawType) ? rawType : "note";
-  const result = await mutateMemory({
+  const result = await mutateWorkspaceScopedEntry({
+    table: "memories",
+    entryId: memoryId,
+    entryLabel: "Kontaktwissen",
     workspaceId: workspace.id,
     contactId,
-    memoryId,
     method: "PATCH",
     values: { content, importance, type },
   });
@@ -133,10 +147,12 @@ export async function deleteManualMemory(formData: FormData) {
   }
 
   const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
-  const result = await mutateMemory({
+  const result = await mutateWorkspaceScopedEntry({
+    table: "memories",
+    entryId: memoryId,
+    entryLabel: "Kontaktwissen",
     workspaceId: workspace.id,
     contactId,
-    memoryId,
     method: "DELETE",
   });
 
@@ -147,4 +163,38 @@ export async function deleteManualMemory(formData: FormData) {
   revalidatePath(`/fans/${contactId}`);
   revalidatePath("/dashboard");
   redirect(contactPath(contactId, locale, "knowledge_deleted"));
+}
+
+
+export async function deleteManualFollowup(formData: FormData) {
+  const contactId = formValue(formData, "contact_id");
+  const followupId = formValue(formData, "followup_id");
+  const locale = localeFromForm(formData);
+
+  if (!contactId || !followupId) {
+    redirect(
+      contactPath(contactId, locale, "followup_delete_invalid", "followups"),
+    );
+  }
+
+  const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const result = await mutateWorkspaceScopedEntry({
+    table: "followups",
+    entryId: followupId,
+    entryLabel: "Follow-up",
+    workspaceId: workspace.id,
+    contactId,
+    method: "DELETE",
+  });
+
+  if (!result.ok) {
+    redirect(
+      contactPath(contactId, locale, "followup_delete_failed", "followups"),
+    );
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/followups");
+  redirect(contactPath(contactId, locale, "followup_deleted", "followups"));
 }
