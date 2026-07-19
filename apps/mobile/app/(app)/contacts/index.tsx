@@ -11,7 +11,6 @@ import {
 import { router } from "expo-router";
 
 import {
-  Card,
   EmptyState,
   LoadingState,
   Screen,
@@ -54,7 +53,11 @@ function ContactRow({ contact }: { contact: Contact }) {
 }
 
 export default function ContactsScreen() {
-  const { workspace, loading: workspaceLoading } = useWorkspace();
+  const {
+    workspace,
+    loading: workspaceLoading,
+    error: workspaceError,
+  } = useWorkspace();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -63,7 +66,14 @@ export default function ContactsScreen() {
 
   const load = useCallback(
     async (isRefresh = false) => {
-      if (!workspace?.id) return;
+      if (!workspace?.id) {
+        setContacts([]);
+        setError(null);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       isRefresh ? setRefreshing(true) : setLoading(true);
       const result = await listContacts(workspace.id, search);
       setContacts(result.contacts);
@@ -79,10 +89,27 @@ export default function ContactsScreen() {
     return () => clearTimeout(timer);
   }, [load]);
 
-  if (workspaceLoading || (loading && !workspace)) {
+  if (workspaceLoading) {
     return (
       <Screen scroll={false}>
         <LoadingState label="Kontakte werden geladen…" />
+      </Screen>
+    );
+  }
+
+  if (!workspace) {
+    return (
+      <Screen
+        title="Kontakte"
+        subtitle="Suche, öffne und verstehe deinen Fan-Kontext"
+      >
+        <EmptyState
+          title="Noch kein Workspace"
+          description={
+            workspaceError ??
+            "Schließe zuerst das FanMind-Onboarding ab, damit Kontakte geladen werden können."
+          }
+        />
       </Screen>
     );
   }
@@ -124,7 +151,11 @@ export default function ContactsScreen() {
           ListEmptyComponent={
             <EmptyState
               title="Keine Kontakte gefunden"
-              description={search ? "Passe deine Suche an." : "Importiere oder erstelle Kontakte im FanMind-Arbeitsbereich."}
+              description={
+                search
+                  ? "Passe deine Suche an."
+                  : "Importiere oder erstelle Kontakte im FanMind-Arbeitsbereich."
+              }
             />
           }
         />
@@ -160,5 +191,10 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 3 },
   name: { color: colors.text, fontSize: typography.body, fontWeight: "900" },
   meta: { color: colors.textMuted, fontSize: typography.small },
-  summary: { color: colors.textMuted, fontSize: typography.small, lineHeight: 18, marginTop: 3 },
+  summary: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    lineHeight: 18,
+    marginTop: 3,
+  },
 });
