@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BillingCheckoutButton } from "@/components/BillingCheckoutButton";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { AI_TIER_IDS, formatAiTierPrice, getAiTierConfig } from "@/config/aiTiers.mjs";
@@ -14,42 +13,17 @@ import type {
 } from "@/lib/supabase/server";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import type { FanMindBrightness } from "@/lib/userPreferences";
+import { AccountTabs, SETTINGS_ACCOUNT_TABS, type SettingsAccountPage } from "./AccountTabs";
+export type { SettingsAccountPage } from "./AccountTabs";
 import { SettingsPreferenceForm } from "./SettingsPreferenceForm";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import profileStyles from "./profile/profile.module.css";
-export type SettingsAccountPage = "profile" | "package" | "invoices";
 export type ProfileField = {
   label: string;
   value: string;
   source: "real" | "placeholder";
   group: "personal" | "workspace" | "tax";
 };
-
-export const SETTINGS_ACCOUNT_TABS: Array<{
-  key: SettingsAccountPage;
-  label: string;
-  href: string;
-  meta: string;
-}> = [
-  {
-    key: "profile",
-    label: "Profil",
-    href: "/settings/profile",
-    meta: "Profil & Workspace",
-  },
-  {
-    key: "package",
-    label: "Paket",
-    href: "/settings/package",
-    meta: "Status & Optionen",
-  },
-  {
-    key: "invoices",
-    label: "Rechnungen",
-    href: "/settings/invoices",
-    meta: "Archiv & PDF",
-  },
-];
 
 const EMPTY_VALUE = "Noch nicht hinterlegt";
 
@@ -253,9 +227,10 @@ function getMainPackageCancellationHref(
 export function getSettingsAccountPageTitle(
   activePage: SettingsAccountPage,
 ): string {
-  if (activePage === "profile") return "Profil";
-  if (activePage === "package") return "Paket";
-  return "Rechnungen";
+  return (
+    SETTINGS_ACCOUNT_TABS.find((item) => item.key === activePage)?.label ??
+    "Profil"
+  );
 }
 
 export function getSettingsAccountPageHref(
@@ -323,27 +298,12 @@ export function getProfileFields(
 
 export function SettingsHeaderBar({
   activePage,
+  locale = "de",
 }: {
   activePage: SettingsAccountPage;
+  locale?: FanMindLanguage;
 }) {
-  return (
-    <nav
-      className={profileStyles.profileTabs}
-      aria-label="Profil-, Paket- und Rechnungsseiten"
-    >
-      {SETTINGS_ACCOUNT_TABS.map((item) => (
-        <Link
-          key={item.key}
-          className={`${profileStyles.profileTab} ${activePage === item.key ? profileStyles.profileTabActive : ""}`}
-          href={item.href}
-          aria-current={activePage === item.key ? "page" : undefined}
-        >
-          <span>{item.label}</span>
-          <small>{item.meta}</small>
-        </Link>
-      ))}
-    </nav>
-  );
+  return <AccountTabs activePage={activePage} locale={locale} />;
 }
 
 function formatMoney(cents?: number | null): string {
