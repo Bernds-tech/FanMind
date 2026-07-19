@@ -8,15 +8,18 @@ The isolated release path builds a complete release in a separate directory whil
 
 ## Status
 
-The isolated path is **opt-in and disabled by default**.
+The isolated path is **active on Production since 2026-07-19**.
 
-If the following line is absent or not exactly `true`, the workflow uses the existing in-place deployment:
+Production uses:
 
 ```text
 FANMIND_ENABLE_ISOLATED_RELEASE_DEPLOY=true
+FANMIND_RELEASE_RETENTION_COUNT=4
 ```
 
-Merging the deployment code alone does not activate it.
+The first controlled activation exposed a permission problem while atomically updating `/var/www/fanmind-current`; PR #586 corrected the privileged symlink update. Deploy FanMind run #407 then completed successfully for commit `c61ee5668e52af1bcbd454028820614d730d2bc8`, including Product Truth, lint, operations tests, build, PM2 switch, public smoke tests and release-link update.
+
+If the isolated-deploy flag is absent or not exactly `true`, the workflow falls back to the legacy in-place path.
 
 ## Directories
 
@@ -67,63 +70,28 @@ npm run build
 - Release cleanup is restricted to direct children of the configured release root.
 - The active and immediately previous PM2 working directories are not removed.
 - No database migration, Stripe change, secret change or referral activation is performed.
+- The current-release symlink is updated atomically with the privileges required for root-managed `/var/www`.
 
-## First Production activation
+## Production verification
 
-Do not activate during an unrelated release. Use a controlled maintenance window.
-
-### Preconditions
-
-- current Production version, server HEAD and `origin/main` are synchronized;
-- PM2 is online and stable;
-- nginx configuration is valid;
-- disk has enough free space for at least two complete dependency/build trees;
-- recent encrypted backup and checksum pair exist;
-- backup worker and demo cleanup status have been checked;
-- GitHub Actions self-hosted runner is online;
-- somebody can remain connected to the server during the first switch.
-
-### Activate
-
-Back up `.env.production` without printing it, then add or update only:
-
-```text
-FANMIND_ENABLE_ISOLATED_RELEASE_DEPLOY=true
-FANMIND_RELEASE_RETENTION_COUNT=4
-```
-
-Restarting PM2 is not necessary merely to let the deployment workflow read the switch. Trigger `Deploy FanMind` manually from GitHub Actions.
-
-### Observe
-
-Watch:
+After a deployment, verify:
 
 ```bash
 pm2 status
-pm2 logs fanmind --lines 100
-```
-
-Confirm the PM2 working directory after success:
-
-```bash
 pm2 jlist | node -e '
 let b="";process.stdin.on("data",c=>b+=c);process.stdin.on("end",()=>{
  const p=JSON.parse(b).find(x=>x.name==="fanmind");
  console.log(p?.pm2_env?.pm_cwd ?? "unknown");
 });'
+curl -fsS https://fanmind.ch/api/version
+curl -fsS -o /dev/null -w 'LOGIN_HTTP=%{http_code}\n' https://fanmind.ch/login
+sudo nginx -t
 ```
 
-Expected path:
+Expected PM2 path:
 
 ```text
 /var/www/fanmind-releases/<deployed-commit>
-```
-
-Also verify:
-
-```bash
-curl -fsS https://fanmind.ch/api/version
-curl -fsS -o /dev/null -w 'LOGIN_HTTP=%{http_code}\n' https://fanmind.ch/login
 ```
 
 ## Disable or return to legacy deployment
@@ -144,8 +112,4 @@ Do not guess a path. Confirm the directory contains `package.json` and `.next/re
 
 ## Retention
 
-Default retention is four release directories. The active and previous working directories are protected even if this temporarily exceeds the requested count. Retention applies only after a successful release.
-
-## Remaining acceptance step
-
-The code and CI can prove ordering, syntax and rollback guardrails. The Operations issue remains open until the first opt-in Production deployment has been observed and the PM2 working directory, live commit and public checks have been documented.
+Production retains four release directories. The active and previous working directories are protected even if this temporarily exceeds the requested count. Retention applies only after a successful release.
