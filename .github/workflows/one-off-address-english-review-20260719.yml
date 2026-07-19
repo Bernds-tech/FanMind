@@ -1,0 +1,66 @@
+name: One-off address English landing review 20260719
+
+on:
+  push:
+    branches:
+      - fix/english-landing-complete-v2-20260719
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+      FANMIND_PUBLIC_DEMO_ENABLED: false
+      FANMIND_ENABLE_REFERRAL_BILLING: false
+      FANMIND_ENABLE_TELEGRAM_SEND: false
+      FANMIND_ADMIN_EMAILS: admin@example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/english-landing-complete-v2-20260719
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Remove duplicated AI price copy and localize sample tag
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          map_path = Path('src/lib/landingEnglishCopy.ts')
+          map_text = map_path.read_text(encoding='utf-8')
+          price_line = '  "KI Plus +100 €/Monat · KI Ultra +200 €/Monat": "AI Plus +€100/month · AI Ultra +€200/month",\n'
+          count = map_text.count(price_line)
+          if count != 1:
+              raise SystemExit(f'Expected one duplicated AI price entry, found {count}')
+          map_path.write_text(map_text.replace(price_line, '', 1), encoding='utf-8')
+
+          showcase_path = Path('src/components/landing/ProductShowcaseSection.tsx')
+          showcase = showcase_path.read_text(encoding='utf-8')
+          old = '<span>premium_interessiert</span>'
+          new = '<span>{t("premium_interessiert")}</span>'
+          if showcase.count(old) != 1:
+              raise SystemExit(f'Expected one premium tag, found {showcase.count(old)}')
+          showcase_path.write_text(showcase.replace(old, new, 1), encoding='utf-8')
+          PY
+      - run: npm ci --no-audit --no-fund
+      - run: npm run verify:truth
+      - run: npm run lint
+      - run: npm run test:operations
+      - run: npm run build
+      - name: Commit cleanup and remove one-off workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-off-address-english-review-20260719.yml
+          git add src/lib/landingEnglishCopy.ts src/components/landing/ProductShowcaseSection.tsx
+          git commit -m "Address English landing review feedback"
+          git push origin HEAD:fix/english-landing-complete-v2-20260719
