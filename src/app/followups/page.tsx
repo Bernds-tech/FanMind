@@ -20,9 +20,10 @@ import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
+import { FollowupStatusForm } from "./FollowupStatusForm";
 
 type FollowupsPageProps = {
-  searchParams?: Promise<{ status?: string | string[]; lang?: string | string[] }>;
+  searchParams?: Promise<{ status?: string | string[]; notice?: string | string[]; lang?: string | string[] }>;
 };
 
 async function logout() {
@@ -34,7 +35,7 @@ async function logout() {
 export default async function FollowupsPage({ searchParams }: FollowupsPageProps) {
   const params = await searchParams;
   const requestedStatus = getSingleParam(params?.status);
-  const status = requestedStatus === "done" ? "done" : "open";
+  const status = requestedStatus === "done" || requestedStatus === "completed" ? "completed" : "open";
   const { data } = await getSupabaseServerUser();
 
   if (!data.user) redirect("/login");
@@ -75,6 +76,7 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
         openFollowupCount={openFollowupCountResult.count}
         dueFollowupCount={countDueOrOverdueOpenFollowups(openFollowupsResult.followups)}
         activeStatus={status}
+        notice={getSingleParam(params?.notice)}
         userEmail={data.user.email}
       />
     </main>
@@ -100,6 +102,7 @@ function FollowupsWorkspace({
   openFollowupCount,
   dueFollowupCount,
   activeStatus,
+  notice,
   userEmail,
 }: {
   workspace: WorkspaceDashboardRow;
@@ -111,7 +114,8 @@ function FollowupsWorkspace({
   followupsError?: string;
   openFollowupCount: number;
   dueFollowupCount: number;
-  activeStatus: "open" | "done";
+  activeStatus: "open" | "completed";
+  notice?: string;
   userEmail: string | null | undefined;
 }) {
   const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigationForUser("followups", userEmail, locale, dueFollowupCount);
@@ -143,7 +147,7 @@ function FollowupsWorkspace({
         <div className={dashboardStyles.moduleHeader}>
           <div>
             <p className={dashboardStyles.eyebrow}>{locale === "en" ? "Manual tasks" : "Manuelle Aufgaben"}</p>
-            <h2>{activeStatus === "done" ? (locale === "en" ? "Done" : "Erledigt") : (locale === "en" ? "Open" : "Offen")}</h2>
+            <h2>{activeStatus === "completed" ? (locale === "en" ? "Done" : "Erledigt") : (locale === "en" ? "Open" : "Offen")}</h2>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Link className={dashboardStyles.secondaryButton} href="/followups?status=open">{locale === "en" ? "Open" : "Offen"}</Link>
@@ -151,6 +155,7 @@ function FollowupsWorkspace({
           </div>
         </div>
         {contactsError ? <p className={dashboardStyles.error}><strong>{contactsError}</strong></p> : null}
+        {notice ? <p style={{ border: "1px solid #86efac", borderRadius: 12, padding: "10px 12px", color: "#166534", background: "#f0fdf4" }}><strong>{formatFollowupNotice(notice, locale)}</strong></p> : null}
         {followupsError ? <p className={dashboardStyles.error}><strong>{followupsError}</strong></p> : null}
         {followups.length ? (
           <div style={{ overflowX: "auto" }}>
@@ -163,6 +168,7 @@ function FollowupsWorkspace({
                   <th>{locale === "en" ? "Priority" : "Priorität"}</th>
                   <th>Status</th>
                   <th>Link</th>
+                  <th>Aktion</th>
                 </tr>
               </thead>
               <tbody>
@@ -176,6 +182,7 @@ function FollowupsWorkspace({
                       <td>{followup.priority ?? "normal"}</td>
                       <td>{followup.status ?? "open"}</td>
                       <td><Link href={`/fans/${followup.contact_id}`}>{locale === "en" ? "Open fan" : "Fan öffnen"}</Link></td>
+                      <td><FollowupStatusForm contactId={followup.contact_id} followup={followup} locale={locale} returnTo="followups" /></td>
                     </tr>
                   );
                 })}
@@ -199,4 +206,13 @@ function getSingleParam(value: string | string[] | undefined): string | undefine
 function getUserDisplayName(metadata: Record<string, unknown> | undefined, fallback: string): string {
   const displayName = metadata?.display_name ?? metadata?.full_name;
   return typeof displayName === "string" && displayName.trim() ? displayName.trim() : fallback;
+}
+
+
+function formatFollowupNotice(value: string, locale: FanMindLanguage): string {
+  if (value === "followup_completed") return locale === "en" ? "Follow-up was marked as completed." : "Follow-up wurde als erledigt markiert.";
+  if (value === "followup_reopened") return locale === "en" ? "Follow-up was reopened." : "Follow-up wurde wieder geöffnet.";
+  if (value === "followup_status_invalid") return locale === "en" ? "Follow-up could not be identified." : "Follow-up konnte nicht eindeutig erkannt werden.";
+  if (value === "followup_status_failed") return locale === "en" ? "Follow-up could not be changed. It may have already been deleted or belongs to another workspace." : "Follow-up konnte nicht geändert werden. Es wurde möglicherweise bereits gelöscht oder gehört zu einem anderen Workspace.";
+  return value;
 }

@@ -30,6 +30,19 @@ function contactPath(
   return `/fans/${encodeURIComponent(contactId)}?${params.toString()}#${hash}`;
 }
 
+function followupsPath(
+  locale: "de" | "en",
+  status: "open" | "completed",
+  notice: string,
+): string {
+  const params = new URLSearchParams({
+    notice,
+    status: status === "completed" ? "done" : "open",
+  });
+  if (locale === "en") params.set("lang", "en");
+  return `/followups?${params.toString()}`;
+}
+
 function serviceRoleKey(): string | null {
   return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || null;
 }
@@ -165,6 +178,55 @@ export async function deleteManualMemory(formData: FormData) {
   redirect(contactPath(contactId, locale, "knowledge_deleted"));
 }
 
+export async function updateManualFollowupStatus(formData: FormData) {
+  const contactId = formValue(formData, "contact_id");
+  const followupId = formValue(formData, "followup_id");
+  const locale = localeFromForm(formData);
+  const returnTo =
+    formValue(formData, "return_to") === "followups"
+      ? "followups"
+      : "contact";
+  const nextStatus =
+    formValue(formData, "next_status") === "open" ? "open" : "completed";
+
+  const redirectFailure = (notice: string) => {
+    if (returnTo === "followups") {
+      redirect(followupsPath(locale, nextStatus, notice));
+    }
+    redirect(contactPath(contactId, locale, notice, "followups"));
+  };
+  const redirectSuccess = () => {
+    const notice = nextStatus === "completed" ? "followup_completed" : "followup_reopened";
+    if (returnTo === "followups") {
+      redirect(followupsPath(locale, nextStatus, notice));
+    }
+    redirect(contactPath(contactId, locale, notice, "followups"));
+  };
+
+  if (!contactId || !followupId) {
+    redirectFailure("followup_status_invalid");
+  }
+
+  const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const result = await mutateWorkspaceScopedEntry({
+    table: "followups",
+    entryId: followupId,
+    entryLabel: "Follow-up",
+    workspaceId: workspace.id,
+    contactId,
+    method: "PATCH",
+    values: { status: nextStatus },
+  });
+
+  if (!result.ok) {
+    redirectFailure("followup_status_failed");
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/followups");
+  redirectSuccess();
+}
 
 export async function deleteManualFollowup(formData: FormData) {
   const contactId = formValue(formData, "contact_id");
