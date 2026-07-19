@@ -1,12 +1,49 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "@/app/landing-v2/landing-v2.module.css";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
-export function FooterInquiryForm() {
+type FooterInquiryFormProps = {
+  language?: FanMindLanguage;
+};
+
+export function FooterInquiryForm({ language = "de" }: FooterInquiryFormProps) {
   const [state, setState] = useState<SubmitState>("idle");
+  const copy =
+    language === "en"
+      ? {
+          emailLabel: "Email address",
+          emailPlaceholder: "you@example.com",
+          nameLabel: "Name optional",
+          namePlaceholder: "Your name",
+          messageLabel: "Short message / use case optional",
+          messagePlaceholder: "How should FanMind support your team?",
+          companyLabel: "Company",
+          submitting: "Sending ...",
+          submit: "Request consultation",
+          note: "A personal inquiry instead of an automated newsletter.",
+          success: "Thank you. We will contact you shortly.",
+          error:
+            "The inquiry could not be sent right now. Please email kontakt@fanmind.ch directly.",
+        }
+      : {
+          emailLabel: "E-Mail-Adresse",
+          emailPlaceholder: "deine@email.ch",
+          nameLabel: "Name optional",
+          namePlaceholder: "Dein Name",
+          messageLabel: "Kurze Nachricht / Use Case optional",
+          messagePlaceholder: "Wobei soll FanMind euch unterstützen?",
+          companyLabel: "Firma",
+          submitting: "Wird gesendet ...",
+          submit: "Beratung anfragen",
+          note: "Persönliche Anfrage statt automatischem Newsletter.",
+          success: "Danke, wir melden uns bei dir.",
+          error:
+            "Anfrage konnte gerade nicht gesendet werden. Bitte schreibe direkt an kontakt@fanmind.ch.",
+        };
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,27 +81,52 @@ export function FooterInquiryForm() {
   return (
     <form className={styles.footerInquiryForm} onSubmit={onSubmit} noValidate>
       <label className={styles.footerInquiryField}>
-        <span>E-Mail-Adresse</span>
-        <input type="email" name="email" placeholder="deine@email.ch" autoComplete="email" required />
+        <span>{copy.emailLabel}</span>
+        <input
+          type="email"
+          name="email"
+          placeholder={copy.emailPlaceholder}
+          autoComplete="email"
+          required
+        />
       </label>
       <label className={styles.footerInquiryField}>
-        <span>Name optional</span>
-        <input type="text" name="name" placeholder="Dein Name" autoComplete="name" />
+        <span>{copy.nameLabel}</span>
+        <input
+          type="text"
+          name="name"
+          placeholder={copy.namePlaceholder}
+          autoComplete="name"
+        />
       </label>
-      <label className={`${styles.footerInquiryField} ${styles.footerInquiryMessage}`}>
-        <span>Kurze Nachricht / Use Case optional</span>
-        <textarea name="message" placeholder="Wobei soll FanMind euch unterstützen?" rows={3} />
+      <label
+        className={`${styles.footerInquiryField} ${styles.footerInquiryMessage}`}
+      >
+        <span>{copy.messageLabel}</span>
+        <textarea
+          name="message"
+          placeholder={copy.messagePlaceholder}
+          rows={3}
+        />
       </label>
       <label className={styles.footerInquiryHoneypot} aria-hidden="true">
-        Firma
+        {copy.companyLabel}
         <input type="text" name="company" tabIndex={-1} autoComplete="off" />
       </label>
-      <button className={styles.landingFooterCta} type="submit" disabled={state === "submitting"}>
-        {state === "submitting" ? "Wird gesendet ..." : "Beratung anfragen"} <span>→</span>
+      <button
+        className={styles.landingFooterCta}
+        type="submit"
+        disabled={state === "submitting"}
+      >
+        {state === "submitting" ? copy.submitting : copy.submit} <span>→</span>
       </button>
-      <small>Persönliche Anfrage statt automatischem Newsletter.</small>
-      {state === "success" ? <p className={styles.footerInquirySuccess}>Danke, wir melden uns bei dir.</p> : null}
-      {state === "error" ? <p className={styles.footerInquiryError}>Anfrage konnte gerade nicht gesendet werden. Bitte schreibe direkt an kontakt@fanmind.ch.</p> : null}
+      <small>{copy.note}</small>
+      {state === "success" ? (
+        <p className={styles.footerInquirySuccess}>{copy.success}</p>
+      ) : null}
+      {state === "error" ? (
+        <p className={styles.footerInquiryError}>{copy.error}</p>
+      ) : null}
     </form>
   );
 }

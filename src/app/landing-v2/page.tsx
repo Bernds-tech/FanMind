@@ -967,10 +967,10 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
             <a className={styles.badge} href="#produkt-showcase">
-              <span>NEU</span> {t("Die intelligente Fan-Management Plattform")}
+              <span>{t("NEU")}</span> {t("Die intelligente Fan-Management Plattform")}
             </a>
             <h1>
-              {t("Dein KI-gestütztes")} <span>Fan-CRM für Nachrichten, Erinnerungen</span> {t("und")} {" "}
+              {t("Dein KI-gestütztes")} <span>{t("Fan-CRM für Nachrichten, Erinnerungen")}</span> {t("und")} {" "}
               <span>Follow-ups.</span>
             </h1>
             <p>{t("FanMind bündelt Kontakte, Gesprächskontext und KI-Antwortvorschläge in einem manuellen Workflow. Du prüfst, kopierst und sendest selbst – ohne automatische Sendefunktion.")}</p>
@@ -1226,7 +1226,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           <div className={styles.sandraUseCaseHeader}>
             <span className={styles.sandraUseCaseBadge}>{t("Demo-Workflow mit Beispieldaten")}</span>
             <h2 id="sandra-use-case-title">
-              {t("Aus Anfrage wird")} <span>ein nächster Schritt.</span>
+              {t("Aus Anfrage wird")} <span>{t("ein nächster Schritt.")}</span>
             </h2>
             <p>{t("Produktvorschau mit Beispieldaten: FanMind zeigt, wie Kontakte, Kontaktwissen, KI-Vorschläge und manuelle Follow-ups zusammenarbeiten.")}</p>
           </div>
@@ -1373,7 +1373,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <span>{t("Empfohlen")}</span>
                 </div>
                 <ul>
-                  <li>hohes Kaufinteresse</li>
+                  <li>{t("hohes Kaufinteresse")}</li>
                   <li>{t("positiver Verlauf")}</li>
                   <li>{t("Early-Bird relevant")}</li>
                   <li>{t("hohe Relevanz")}</li>
@@ -1393,7 +1393,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
             <h3>{t("Demo-Ergebnis: klarer nächster Schritt, besseres Timing")}</h3>
             <div className={`${styles.sandraFlowCard} ${styles.sandraResultCard}`}>
               <div className={styles.sandraConversionPanel}>
-                <strong>Demo-Signal</strong>
+                <strong>{t("Demo-Signal")}</strong>
                 <span>9,4 %</span>
                 <em>{t("↑ +1,2 % vs. letzter Zeitraum")}</em>
                 <div aria-hidden="true" />
@@ -1411,9 +1411,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 </div>
               </div>
             </div>
-            <p>
-              Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.
-            </p>
+            <p>{t("Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.")}</p>
           </article>
         </div>
 
@@ -2022,7 +2020,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
               <h3>{t("Beratung anfragen")}</h3>
               <p>{t("Wir prüfen deinen Use Case und zeigen dir, wie FanMind in deinem Workflow eingesetzt werden kann.")}</p>
             </div>
-            <FooterInquiryForm />
+            <FooterInquiryForm language={language} />
           </div>
         </div>
 
