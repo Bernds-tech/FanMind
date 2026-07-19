@@ -259,10 +259,10 @@ export async function claimPublicDemoStart(input: {
       1,
       20,
     ),
-    p_max_per_ip_day: positiveInt("FANMIND_DEMO_MAX_PER_IP_DAY", 5, 100),
+    p_max_per_ip_day: positiveInt("FANMIND_DEMO_MAX_PER_IP_DAY", 10, 100),
     p_max_per_browser_day: positiveInt(
       "FANMIND_DEMO_MAX_PER_BROWSER_DAY",
-      2,
+      5,
       30,
     ),
     p_max_active: positiveInt("FANMIND_DEMO_MAX_ACTIVE", 50, 2000),
