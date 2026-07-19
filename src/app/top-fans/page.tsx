@@ -14,6 +14,7 @@ import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
+import { TopFanToggleForm } from "../fans/TopFanToggleForm";
 
 type TopFansWorkspaceProps = {
   workspace: WorkspaceDashboardRow;
@@ -67,10 +68,10 @@ function TopFansList({ contacts }: { contacts: ContactRow[] }) {
   if (!contacts.length) {
     return (
       <div className={dashboardStyles.emptyState}>
-        <strong>Noch keine Fans vorhanden.</strong>
+        <strong>Noch keine Top Fans markiert.</strong>
         <p>
-          Sobald echte Kontakte im Workspace gespeichert sind, können sie hier
-          als einfache MVP-Liste erscheinen. Es wird kein Ranking simuliert.
+          Markiere Kontakte manuell als Top Fan. FanMind zeigt hier kein
+          automatisches Scoring und kein Ranking.
         </p>
       </div>
     );
@@ -84,6 +85,7 @@ function TopFansList({ contacts }: { contacts: ContactRow[] }) {
             <th>Name</th>
             <th>Quelle/Kanal</th>
             <th>Status</th>
+            <th>Markierung</th>
             <th>Tags</th>
             <th>Erstellt am</th>
           </tr>
@@ -104,6 +106,15 @@ function TopFansList({ contacts }: { contacts: ContactRow[] }) {
                 </span>
               </td>
               <td>{contact.status ?? "Neu"}</td>
+              <td>
+                <span className={dashboardStyles.sourceChip}>Top Fan</span>
+                <TopFanToggleForm
+                  compact
+                  contactId={contact.id}
+                  isTopFan={contact.is_top_fan}
+                  returnTo="/top-fans#top-fans-list"
+                />
+              </td>
               <td>
                 {contact.tags?.length ? (
                   <span className={dashboardStyles.tagList}>
@@ -170,9 +181,9 @@ function TopFansWorkspace({
           <span>{contacts.length ? "Echte Daten" : "MVP-Vorschau"}</span>
         </div>
         <p className={dashboardStyles.moduleText}>
-          Diese MVP-Ansicht zeigt ausschließlich echte gespeicherte Kontakte aus
-          dem aktuellen Workspace. Eine Scoring- oder Ranking-Logik wird noch
-          nicht vorgetäuscht.
+          Diese MVP-Ansicht zeigt ausschließlich manuell markierte Kontakte aus
+          dem aktuellen Workspace. Eine Scoring- oder Ranking-Logik wird nicht
+          vorgetäuscht.
         </p>
         {contactsError ? (
           <p className={dashboardStyles.error}>
@@ -204,6 +215,9 @@ export default async function TopFansPage() {
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
+  const topFanContacts = (contactsResult?.contacts ?? []).filter((contact) =>
+    Boolean(contact.is_top_fan),
+  );
   const openFollowupCountResult = workspace
     ? await getOpenFollowupCount(workspace.id)
     : null;
@@ -217,7 +231,7 @@ export default async function TopFansPage() {
             data.user.user_metadata,
             workspace.name,
           )}
-          contacts={contactsResult?.contacts ?? []}
+          contacts={topFanContacts}
           openFollowupCount={openFollowupCountResult?.count ?? 0}
           userEmail={data.user.email}
           contactsError={contactsResult?.error?.message}

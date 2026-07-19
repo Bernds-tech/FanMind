@@ -114,6 +114,7 @@ export type ContactRow = {
   tags: string[] | null;
   summary: string | null;
   internal_notes: string | null;
+  is_top_fan: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -521,7 +522,7 @@ type SupabaseFilterValue = string | number | boolean | null;
 const WORKSPACE_COLUMNS =
   "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,stripe_checkout_session_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url,test_access_flags,organization_name,street_address,postal_code,city,country,vat_id,tax_number,company_register_number,company_register_court";
 const CONTACT_COLUMNS =
-  "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,created_at,updated_at";
+  "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,is_top_fan,created_at,updated_at";
 const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
 const CONTACT_REPLY_TARGET_COLUMNS =
@@ -1867,6 +1868,39 @@ export async function createWorkspaceContactServer(
   if (!contactResult.data) {
     return contactCreateError(
       "Kontakt konnte nicht aktualisiert werden: keine Zeile geändert. Prüfe workspace_id/RLS.",
+    );
+  }
+
+  return { contact: contactResult.data, error: null };
+}
+
+export async function updateContactTopFanMarkServer(input: {
+  workspaceId: string;
+  contactId: string;
+  isTopFan: boolean;
+}): Promise<ContactUpdateResult> {
+  const workspaceError = assertContactWorkspaceInput(input.workspaceId);
+  if (workspaceError) return contactUpdateError(workspaceError.message);
+
+  const accessToken = getContactServiceAccessToken();
+  if (!accessToken) {
+    return contactUpdateError(missingContactServiceRoleError().message);
+  }
+
+  const contactResult = await postgrestUpdate<ContactRow>(
+    "contacts",
+    { is_top_fan: input.isTopFan },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.contactId],
+    ],
+    { select: CONTACT_COLUMNS, single: true },
+  );
+
+  if (contactResult.error) {
+    return contactUpdateError(
+      `Top-Fan-Markierung konnte nicht aktualisiert werden: ${contactResult.error.message}`,
     );
   }
 

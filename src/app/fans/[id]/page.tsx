@@ -53,6 +53,7 @@ import {
 import { AiReplySuggestions, type ReplyMode } from "./AiReplySuggestions";
 import { FanContextPanel } from "./FanContextPanel";
 import { FanActionMenu } from "./FanActionMenu";
+import { TopFanToggleForm } from "../TopFanToggleForm";
 import {
   saveFacebookReplyTarget,
   syncFacebookChatForContact,
@@ -377,6 +378,9 @@ function FanDetailContent({
             <h2>
               {contact.display_name || contact.handle || "Unbenannter Fan"}
             </h2>
+            {contact.is_top_fan ? (
+              <span className={styles.topFanBadge}>Top Fan</span>
+            ) : null}
           </div>
           {demoConnectionsDisabled ? (
             <span className={styles.demoModeBadge}>
@@ -384,9 +388,16 @@ function FanDetailContent({
               <small>{wt(locale, "Externe Verbindungen deaktiviert")}</small>
             </span>
           ) : null}
-          <FanActionMenu
-            fanName={contact.display_name || contact.handle || "Fan"}
-          />
+          <div className={styles.headerActions}>
+            <TopFanToggleForm
+              contactId={contact.id}
+              isTopFan={contact.is_top_fan}
+              returnTo={`/fans/${contact.id}`}
+            />
+            <FanActionMenu
+              fanName={contact.display_name || contact.handle || "Fan"}
+            />
+          </div>
         </div>
         <dl className={styles.headerMetrics}>
           <div className={styles.metric}>
@@ -1674,6 +1685,10 @@ function formatNotice(value: string, locale: FanMindLanguage = "de"): string {
     return "Konversation wartet auf Antwort im Originalkanal.";
   if (value === "open") return "Konversation wieder geöffnet.";
   if (value === "priority_saved") return "Priorität gespeichert.";
+  if (value === "top_fan_marked") return "Kontakt wurde als Top Fan markiert.";
+  if (value === "top_fan_removed") return "Top-Fan-Markierung wurde entfernt.";
+  if (value === "top_fan_save_failed") return "Top-Fan-Markierung konnte nicht gespeichert werden.";
+  if (value === "top_fan_forbidden") return "Kontakt wurde im aktuellen Workspace nicht gefunden.";
   if (value === "notes_saved")
     return locale === "en"
       ? "Saved: Notes were updated."

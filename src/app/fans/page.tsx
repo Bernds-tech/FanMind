@@ -25,6 +25,7 @@ import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import { archiveFan, createFan, mergeFanContacts, updateFan } from "./actions";
+import { TopFanToggleForm } from "./TopFanToggleForm";
 import {
   PLATFORM_OPTIONS,
   formatPlatformLabel,
@@ -78,6 +79,7 @@ type FanGroup = {
   latestCreatedAt: string | null;
   nextFollowup: FollowupRow | null;
   hasUnseenMessages: boolean;
+  isTopFan: boolean;
 };
 
 const statusLabels: Record<string, string> = {
@@ -406,6 +408,7 @@ function FansTable({ fanGroups, locale }: { fanGroups: FanGroup[]; locale: FanMi
           <tr>
             <th>{wt(locale, "Name")}</th>
             <th>{wt(locale, "Status")}</th>
+            <th>Top Fan</th>
             <th>{wt(locale, "Kanäle")}</th>
             <th>{wt(locale, "Tags")}</th>
             <th>{wt(locale, "Angelegt")}</th>
@@ -436,6 +439,17 @@ function FansTable({ fanGroups, locale }: { fanGroups: FanGroup[]; locale: FanMi
                 <span className={styles.statusBadge}>
                   {formatStatus(group.primaryContact.status)}
                 </span>
+              </td>
+              <td>
+                <span className={group.isTopFan ? styles.topFanBadge : styles.mutedText}>
+                  {group.isTopFan ? "Top Fan" : "—"}
+                </span>
+                <TopFanToggleForm
+                  compact
+                  contactId={group.primaryContact.id}
+                  isTopFan={group.primaryContact.is_top_fan}
+                  returnTo="/fans#fans-list"
+                />
               </td>
               <td>{renderPlatformBadges(group.platforms)}</td>
               <td>
@@ -872,6 +886,7 @@ function groupContactsByFan(
         hasUnseenMessages: sortedContacts.some((contact) =>
           unseenContactIds.has(contact.id),
         ),
+        isTopFan: Boolean(primaryContact.is_top_fan),
       };
     })
     .sort((left, right) => {
@@ -898,6 +913,11 @@ function formatNotice(
     contacts_merged: "Fans wurden zusammengeführt.",
     fan_update_failed:
       "Kanäle konnten nicht aktualisiert werden. Bitte erneut versuchen oder Admin prüfen.",
+    top_fan_marked: "Kontakt wurde als Top Fan markiert.",
+    top_fan_removed: "Top-Fan-Markierung wurde entfernt.",
+    top_fan_save_failed: "Top-Fan-Markierung konnte nicht gespeichert werden.",
+    top_fan_forbidden: "Kontakt wurde im aktuellen Workspace nicht gefunden.",
+    top_fan_unknown_contact: "Kontakt-ID fehlt oder ist unbekannt.",
     contacts_merge_failed: noticeError
       ? `Fans konnten nicht zusammengeführt werden: ${noticeError}`
       : "Fans konnten nicht zusammengeführt werden. Bitte Ziel-Fan prüfen und erneut versuchen.",
