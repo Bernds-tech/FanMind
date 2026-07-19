@@ -1,0 +1,64 @@
+name: One-off localize final raw landing copy 20260719
+
+on:
+  push:
+    branches:
+      - fix/english-landing-complete-v2-20260719
+
+permissions:
+  contents: write
+
+jobs:
+  localize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+      FANMIND_PUBLIC_DEMO_ENABLED: false
+      FANMIND_ENABLE_REFERRAL_BILLING: false
+      FANMIND_ENABLE_TELEGRAM_SEND: false
+      FANMIND_ADMIN_EMAILS: admin@example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/english-landing-complete-v2-20260719
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Route final raw text through translator
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/app/landing-v2/page.tsx')
+          text = path.read_text(encoding='utf-8')
+          replacements = [
+              ('<span>NEU</span>', '<span>{t("NEU")}</span>'),
+              ('<li>hohes Kaufinteresse</li>', '<li>{t("hohes Kaufinteresse")}</li>'),
+              ('<strong>Demo-Signal</strong>', '<strong>{t("Demo-Signal")}</strong>'),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one occurrence, found {count}: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+      - run: npm ci --no-audit --no-fund
+      - run: npm run verify:truth
+      - run: npm run lint
+      - run: npm run test:operations
+      - run: npm run build
+      - name: Commit and remove one-off workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-off-localize-final-raw-landing-20260719.yml
+          git add src/app/landing-v2/page.tsx
+          git commit -m "Localize final raw English landing copy"
+          git push origin HEAD:fix/english-landing-complete-v2-20260719
