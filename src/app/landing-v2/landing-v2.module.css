@@ -2969,9 +2969,6 @@
     right: -8px;
     width: 210px;
   }
-  .heroFeatureGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .showcaseStage {
     grid-template-columns:
       minmax(240px, 270px)
@@ -9154,6 +9151,10 @@
 
   .dashboardWrap {
     transform: none;
+  }
+
+  .heroFeatureGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
