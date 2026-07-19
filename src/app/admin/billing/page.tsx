@@ -29,7 +29,8 @@ function statusClass(status?: string | null) {
 
 function overviewStatusLabel(workspace: AdminBillingWorkspace) {
   if (workspace.billing_status) return getBillingStatusLabel(workspace.billing_status);
-  if (workspace.plan_id === "pilot" || workspace.plan_id === "starter") return "Zahlung offen";
+  if (workspace.plan_id === "pilot") return "Demo/Kostenlos";
+  if (workspace.plan_id === "starter") return "Zahlung offen";
   return "Unbekannt";
 }
 
@@ -62,7 +63,7 @@ function sortByDateDesc(left: AdminBillingWorkspace, right: AdminBillingWorkspac
 }
 
 function planLabel(planId?: string | null) {
-  if (planId === "pilot") return "Pilot";
+  if (planId === "pilot") return "Interne Demo";
   if (planId === "starter") return "Starter";
   if (planId === "growth") return "Growth";
   if (planId === "agency") return "Agency";
@@ -70,7 +71,7 @@ function planLabel(planId?: string | null) {
 }
 
 function compactOptionLabel(option?: string | null) {
-  if (option === "pilot") return "Pilot / Setup";
+  if (option === "pilot") return "Legacy-/Demo-Zugang";
   if (option === "starter_flex" || option === "starter_no_setup_commitment") return "Starter Flex";
   if (option === "starter_12m" || option === "starter_paid_setup") return "Starter 12 Monate";
   const label = getCommercialOptionLabel(option ?? "");
@@ -113,10 +114,10 @@ const matrixFeatures: Array<{ key: FeatureKey; label: string }> = [
   { key: "contacts", label: "Kontakte / Fans" },
   { key: "contact_detail", label: "Manuelle Kontakte" },
   { key: "csv_import", label: "CSV-Import" },
-  { key: "memory", label: "AI-Infos / Fan-Gedächtnis" },
+  { key: "memory", label: "Kontaktwissen" },
   { key: "ai_replies", label: "KI-Antwortvorschläge" },
   { key: "followups", label: "Follow-ups" },
-  { key: "analytics", label: "Fan-Analyse-Report" },
+  { key: "analytics", label: "Kommunikationsübersicht" },
   { key: "roadmap", label: "Kanäle-Roadmap" },
   { key: "basic_segments", label: "Segmente" },
   { key: "campaigns", label: "Kampagnen" },
@@ -151,11 +152,11 @@ function matrixChipClass(label: string) {
 }
 
 function PackagesContent() {
-  const activePackages = packagePlanIds.filter((planId) => planId === "pilot" || planId === "starter").length;
+  const activePackages = packagePlanIds.filter((planId) => planId === "starter").length;
   const hiddenFeatures = packagePlanIds.reduce((count, planId) => count + Object.values(PLANS[planId].featureConfig).filter((feature) => feature.status === "hidden" || feature.visibility === "hidden").length, 0);
   const comingSoonFeatures = packagePlanIds.reduce((count, planId) => count + Object.values(PLANS[planId].featureConfig).filter((feature) => feature.status === "coming_soon" || feature.status === "preview").length, 0);
   const packageCards = [
-    { id: "pilot" as PlanId, icon: "P", title: "Pilot / Setup", price: "990 € einmalig", meta: ["1 Testmonat", "keine Bindung", "keine automatische Verlängerung"], status: "Aktiv", tone: styles.packagePilot },
+    { id: "pilot" as PlanId, icon: "D", title: "Interne Demo / Legacy", price: "Nicht öffentlich buchbar", meta: ["kostenloser Demo-/Legacy-Zugang", "keine normale Kundenbuchung"], status: "Intern", tone: styles.packagePilot },
     { id: "starter" as PlanId, icon: "S", title: "Starter", price: "312 €/Monat", meta: ["Starter Flex: 990 € Setup + 312 €/Monat", "Starter 12 Monate: 0 € Setup + 312 €/Monat"], status: "Aktiv", tone: styles.packageStarter },
     { id: "growth" as PlanId, icon: "G", title: "Growth", price: "Coming Soon", meta: ["Vorschau / Roadmap", "noch nicht produktiv buchbar"], status: "Coming Soon", tone: styles.packageGrowth },
     { id: "agency" as PlanId, icon: "A", title: "Agency", price: "Coming Soon", meta: ["Roadmap / Agenturen", "noch nicht produktiv buchbar"], status: "Coming Soon", tone: styles.packageAgency },
@@ -165,7 +166,7 @@ function PackagesContent() {
 
   return <>
     <section className={styles.crmKpiGrid} aria-label="Paket- und Feature-Kennzahlen">
-      <StatCard icon="◆" label="Aktive Pakete" value={activePackages} hint="Pilot und Starter verfügbar" trend="Aus Plan-Konfiguration" tone={styles.toneGreen} />
+      <StatCard icon="◆" label="Aktive Pakete" value={activePackages} hint="Starter öffentlich verfügbar" trend="Aus Plan-Konfiguration" tone={styles.toneGreen} />
       <StatCard icon="◌" label="Versteckte Features" value={hiddenFeatures} hint="Hidden Status/Sichtbarkeit" trend="Keine UI-Secrets" tone={styles.toneRed} />
       <StatCard icon="↗" label="Coming Soon Features" value={comingSoonFeatures} hint="Preview oder Coming Soon" trend="Roadmap ehrlich markiert" tone={styles.toneAmber} />
       <StatCard icon="⇄" label="Upgrade-Regeln" value="4" hint="Nur Status-Übersicht" trend="Keine Engine geändert" tone={styles.toneCyan} />
