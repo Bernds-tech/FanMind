@@ -4398,8 +4398,11 @@ export async function getWorkspaceFollowups(
     );
   }
 
+  const normalizedStatus = status === "done" ? "completed" : status;
   const filters: Array<[string, string]> = [["workspace_id", workspaceId]];
-  if (status) filters.push(["status", status]);
+  if (normalizedStatus && normalizedStatus !== "completed") {
+    filters.push(["status", normalizedStatus]);
+  }
 
   const followupsResult = await postgrestSelect<FollowupRow[]>(
     "followups",
@@ -4417,7 +4420,18 @@ export async function getWorkspaceFollowups(
     );
   }
 
-  return { followups: followupsResult.data ?? [], error: null };
+  const followups = followupsResult.data ?? [];
+  if (normalizedStatus === "completed") {
+    return {
+      followups: followups.filter(
+        (followup) =>
+          followup.status === "completed" || followup.status === "done",
+      ),
+      error: null,
+    };
+  }
+
+  return { followups, error: null };
 }
 
 export async function createTemporaryDemoWorkspace(input: {

@@ -21,6 +21,7 @@ import {
   deleteManualMemory,
   updateManualMemory,
 } from "./contextActions";
+import { FollowupStatusForm } from "@/app/followups/FollowupStatusForm";
 import { FanAnalysisReport } from "./FanAnalysisReport";
 import styles from "./fan-detail.module.css";
 import polishStyles from "./fan-context-polish.module.css";
@@ -561,6 +562,12 @@ function CompactFollowupList({
                 {locale === "en" ? "Due" : "Fällig"}:{" "}
                 {formatDate(followup.due_date, locale)}
               </small>
+              <FollowupStatusForm
+                contactId={contactId}
+                followup={followup}
+                locale={locale}
+                returnTo="contact"
+              />
               <form
                 action={deleteManualFollowup}
                 onSubmit={(event: FormEvent<HTMLFormElement>) => {

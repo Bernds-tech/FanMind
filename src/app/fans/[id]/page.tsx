@@ -1688,6 +1688,22 @@ function formatNotice(value: string, locale: FanMindLanguage = "de"): string {
       : "Notizen konnten nicht gespeichert werden. Bitte erneut versuchen.";
   if (value === "analysis_saved")
     return "Kommunikationsübersicht wurde aktualisiert.";
+  if (value === "followup_completed")
+    return locale === "en"
+      ? "Follow-up was marked as completed."
+      : "Follow-up wurde als erledigt markiert.";
+  if (value === "followup_reopened")
+    return locale === "en"
+      ? "Follow-up was reopened."
+      : "Follow-up wurde wieder geöffnet.";
+  if (value === "followup_status_failed")
+    return locale === "en"
+      ? "Follow-up could not be changed. It may have already been deleted or belongs to another workspace."
+      : "Follow-up konnte nicht geändert werden. Es wurde möglicherweise bereits gelöscht oder gehört zu einem anderen Workspace.";
+  if (value === "followup_status_invalid")
+    return locale === "en"
+      ? "Follow-up could not be identified."
+      : "Follow-up konnte nicht eindeutig erkannt werden.";
   if (value === "followup_deleted")
     return locale === "en"
       ? "Follow-up was deleted."
