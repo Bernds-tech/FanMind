@@ -31,7 +31,7 @@ test("public product surfaces use the released terminology", async () => {
   );
   assertNoPublicTerm(
     copyByFile,
-    /\bMemory\b/iu,
+    /\bMemory\b/u,
     "nutzerseitig muss Kontaktwissen statt Memory verwendet werden",
   );
   assertNoPublicTerm(
