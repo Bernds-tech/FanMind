@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - release/final-go-live-readiness-20260719
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
