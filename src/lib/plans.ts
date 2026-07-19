@@ -215,7 +215,7 @@ export function getOnboardingSteps(planId: PlanId): OnboardingStep[] {
   const commonSteps: OnboardingStep[] = [
     {
       title: "Workspace prüfen",
-      description: "Dashboard, Kontakte und Fan-Gedächtnis für dein Paket vorbereiten.",
+      description: "Dashboard, Kontakte und Kontaktwissen für dein Paket vorbereiten.",
       featureKey: "dashboard",
     },
     {
@@ -255,7 +255,7 @@ export function getOnboardingSteps(planId: PlanId): OnboardingStep[] {
       },
       {
         title: "CSV-Import starten",
-        description: "Kontakte strukturiert importieren und Memory-Felder prüfen.",
+        description: "Kontakte strukturiert importieren und Felder fürs Kontaktwissen prüfen.",
         featureKey: "csv_import",
       },
       ...commonSteps,

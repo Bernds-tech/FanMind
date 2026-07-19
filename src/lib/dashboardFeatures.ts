@@ -118,7 +118,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
   {
     key: "contacts",
     label: "Kontakte",
-    description: "Pilot nutzt Demo-Kontakte; Starter arbeitet produktiv mit dem Kontaktbestand.",
+    description: "Der Demo-Zugang nutzt Beispieldaten; Starter arbeitet produktiv mit dem Kontaktbestand.",
     route: "/fans",
     ctaLabel: "Kontakte ansehen",
     ...access(demo(), active(), active(), demo()),
@@ -126,14 +126,14 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
   {
     key: "contact_detail",
     label: "Kontaktdetail",
-    description: "Detailansicht für einen Kontakt mit Kontext, Memory und Follow-up-Vorbereitung.",
+    description: "Detailansicht für einen Kontakt mit Kontext, Kontaktwissen und Follow-up-Vorbereitung.",
     route: "/dashboard#contact-detail",
     ...access(demo("main"), active("main"), active("main"), demo("main")),
   },
   {
     key: "sandra_demo",
     label: "Sandra M. Demo",
-    description: "Sicherer Demo-Fan für Pilot, KI-Demo, Memory-Demo und Follow-up-Demo.",
+    description: "Sicherer Demo-Kontakt für KI-, Kontaktwissen- und Follow-up-Demos.",
     route: "/dashboard#sandra-demo",
     ctaLabel: "Demo öffnen",
     ...access(active("main"), hidden(), hidden(), demo("main")),
@@ -147,7 +147,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
   },
   {
     key: "memory",
-    label: "Memory / Fan-Gedächtnis",
+    label: "Kontaktwissen",
     description: "Merkt relevante Kontaktinformationen für bessere manuelle Antworten und Follow-ups.",
     route: "/dashboard#memory",
     ...access(demo("main"), active("main"), active("main"), demo("main")),
@@ -162,7 +162,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
   {
     key: "csv_import",
     label: "CSV-Import",
-    description: "Pilot sieht den Import als Vorschau; Starter kann CSV-Daten produktiv vorbereiten.",
+    description: "Der Demo-Zugang zeigt den Import als Vorschau; Starter kann CSV-Daten produktiv vorbereiten.",
     route: "/dashboard#csv-import",
     ctaLabel: "Import prüfen",
     ...access(preview("starter"), active(), active(), demo()),
@@ -228,7 +228,7 @@ export const DASHBOARD_FEATURES: DashboardFeatureDefinition[] = [
 export function getCommercialOptionLabel(commercialOption: CommercialOption | ProductiveCommercialOption | string): string {
   switch (commercialOption) {
     case "pilot_only":
-      return "Pilot / Setup · 990 € einmalig · 1 Monat testen · keine Bindung";
+      return "Interner Legacy-/Demo-Zugang · nicht öffentlich buchbar";
     case "starter_paid_setup":
       return "Starter Flex · 990 € Einrichtung + 312 €/Monat · monatlich kündbar";
     case "starter_no_setup_commitment":

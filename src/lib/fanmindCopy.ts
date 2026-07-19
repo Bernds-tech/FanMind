@@ -39,7 +39,7 @@ export const fanmindCopy = {
       registerPrompt: "Noch keinen Zugang?",
       registerLink: "Registrieren",
       landing: "Zur Startseite",
-      notice: "Facebook Messenger kann angebunden werden. Antworten werden manuell geprüft und extern gesendet; kein automatisches Senden.",
+      notice: "Facebook Messenger befindet sich in technischer Vorbereitung. Antworten werden manuell geprüft und im Originalkanal selbst gesendet; kein automatisches Senden.",
     },
     register: {
       title: "Zugang vormerken",
@@ -79,7 +79,7 @@ export const fanmindCopy = {
       registerPrompt: "No access yet?",
       registerLink: "Sign up",
       landing: "Back to homepage",
-      notice: "Facebook Messenger can be connected. Replies are reviewed manually and sent externally; no automatic sending.",
+      notice: "Facebook Messenger is in technical preparation. Replies are reviewed manually and sent by the user in the original channel; no automatic sending.",
     },
     register: {
       title: "Request access",
