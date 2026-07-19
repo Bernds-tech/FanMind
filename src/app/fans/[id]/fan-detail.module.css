@@ -122,6 +122,17 @@
   gap: 10px;
   min-width: 0;
 }
+
+.copilot {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: calc(100dvh - 94px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
 .card {
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 16px;
@@ -331,6 +342,12 @@
   .workbenchGrid {
     grid-template-columns: 1fr;
   }
+
+  .copilot {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
   .headerMetrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -517,9 +534,8 @@
 }
 
 .replyCard {
-  position: sticky;
-  bottom: 10px;
-  z-index: 1;
+  position: static;
+  z-index: auto;
 }
 
 .replyBox textarea {
