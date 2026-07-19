@@ -1,6 +1,6 @@
 # Public Demo Protection – Production Runbook
 
-Stand: 2026-07-13
+Stand: 2026-07-19
 
 ## Ziel
 
@@ -60,13 +60,15 @@ FANMIND_PUBLIC_DEMO_ENABLED=false
 FANMIND_DEMO_RATE_LIMIT_SECRET=<mindestens 32 zufällige Zeichen>
 FANMIND_DEMO_CLEANUP_SECRET=<mindestens 32 zufällige Zeichen>
 FANMIND_DEMO_MAX_PER_IP_10_MIN=1
-FANMIND_DEMO_MAX_PER_IP_DAY=5
-FANMIND_DEMO_MAX_PER_BROWSER_DAY=2
+FANMIND_DEMO_MAX_PER_IP_DAY=10
+FANMIND_DEMO_MAX_PER_BROWSER_DAY=5
 FANMIND_DEMO_MAX_ACTIVE=50
 FANMIND_DEMO_MAX_AI_REQUESTS=5
 FANMIND_DEMO_MAX_CONTACTS=30
 FANMIND_DEMO_CLEANUP_LIMIT=25
 ```
+
+Die kontrollierten Tageslimits erlauben legitime Neustarts nach einer abgelaufenen Demo oder während eines internen Smoke-Tests. Der Abuse-Schutz bleibt erhalten: höchstens ein neuer Start je IP innerhalb von zehn Minuten, getrennte Browser- und IP-Tageslimits, globales Aktiv-Limit, HMAC-Pseudonymisierung und automatisches Cleanup.
 
 Turnstile ist zusätzlich zum Datenbank-Rate-Limit vorbereitet. Solange die Schlüssel noch nicht eingerichtet sind, bleibt der verpflichtende Modus aus:
 
@@ -164,9 +166,10 @@ Abnahme:
 1. Erster Demo-Start erzeugt genau einen temporären User und Workspace.
 2. Sofortiger zweiter Start derselben IP erhält `429` und `Retry-After`.
 3. Ein bereits eingeloggter temporärer Demo-Nutzer wird wiederverwendet.
-4. Nach Ablauf wird der Datensatz vom Timer beansprucht und vollständig gelöscht.
-5. `demo_start_sessions` erhält den Status `deleted`.
-6. Keine Roh-IP-Adresse wird gespeichert.
+4. Nach Ablauf kann derselbe Browser im Rahmen der Tageslimits kontrolliert eine neue Demo starten.
+5. Nach Ablauf wird der alte Datensatz vom Timer beansprucht und vollständig gelöscht.
+6. `demo_start_sessions` erhält für den alten Lauf den Status `deleted`.
+7. Keine Roh-IP-Adresse wird gespeichert.
 
 ## 7. Not-Aus
 
