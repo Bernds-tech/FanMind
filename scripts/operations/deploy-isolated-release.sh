@@ -211,8 +211,9 @@ if ! git reset --hard "$RELEASE_COMMIT"; then
   fail "source checkout could not be synchronized"
 fi
 
-ln -sfn "$RELEASE_DIR" "${CURRENT_LINK}.new"
-mv -Tf "${CURRENT_LINK}.new" "$CURRENT_LINK"
+sudo rm -f -- "${CURRENT_LINK}.new"
+sudo ln -s "$RELEASE_DIR" "${CURRENT_LINK}.new"
+sudo mv -Tf "${CURRENT_LINK}.new" "$CURRENT_LINK"
 pm2 save
 SWITCHED=0
 
