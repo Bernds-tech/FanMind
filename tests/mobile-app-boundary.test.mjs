@@ -20,7 +20,9 @@ async function sourceFiles(directory) {
   const output = [];
   for (const entry of entries) {
     const path = join(directory, entry.name);
-    if (entry.isDirectory()) output.push(...await sourceFiles(path));
+    if (entry.isDirectory() && entry.name !== "node_modules") {
+      output.push(...await sourceFiles(path));
+    }
     else if (/\.(?:ts|tsx|js|json)$/.test(entry.name)) output.push(path);
   }
   return output;

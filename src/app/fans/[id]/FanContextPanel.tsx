@@ -17,6 +17,7 @@ import {
   saveManualMemory,
 } from "../actions";
 import {
+  deleteManualFollowup,
   deleteManualMemory,
   updateManualMemory,
 } from "./contextActions";
@@ -508,7 +509,11 @@ function ManualFollowupCard({
           </button>
         </form>
       </DisclosureButton>
-      <CompactFollowupList followups={sortedFollowups} locale={locale} />
+      <CompactFollowupList
+        contactId={contactId}
+        followups={sortedFollowups}
+        locale={locale}
+      />
     </PanelCard>
   );
 }
@@ -529,9 +534,11 @@ function DisclosureButton({
 }
 
 function CompactFollowupList({
+  contactId,
   followups,
   locale,
 }: {
+  contactId: string;
   followups: FollowupRow[];
   locale: FanMindLanguage;
 }) {
@@ -549,9 +556,28 @@ function CompactFollowupList({
               </span>
             </div>
             <p className={polishStyles.knowledgeContent}>{followup.reason}</p>
-            <small className={polishStyles.compactHint}>
-              {locale === "en" ? "Due" : "Fällig"}: {formatDate(followup.due_date, locale)}
-            </small>
+            <div className={polishStyles.knowledgeHeader}>
+              <small className={polishStyles.compactHint}>
+                {locale === "en" ? "Due" : "Fällig"}:{" "}
+                {formatDate(followup.due_date, locale)}
+              </small>
+              <form
+                action={deleteManualFollowup}
+                onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                  const confirmed = window.confirm(
+                    "Dieses Follow-up wirklich löschen?",
+                  );
+                  if (!confirmed) event.preventDefault();
+                }}
+              >
+                <input name="contact_id" type="hidden" value={contactId} />
+                <input name="followup_id" type="hidden" value={followup.id} />
+                <input name="lang" type="hidden" value={locale} />
+                <button className={polishStyles.deleteButton} type="submit">
+                  {locale === "en" ? "Delete" : "Löschen"}
+                </button>
+              </form>
+            </div>
           </article>
         ))
       ) : (
