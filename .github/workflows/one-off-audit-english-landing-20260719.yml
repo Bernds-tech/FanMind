@@ -4,15 +4,13 @@ on:
   push:
     branches:
       - audit/english-landing-20260719
-  pull_request:
-    branches:
-      - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
@@ -25,6 +23,9 @@ jobs:
       FANMIND_ADMIN_EMAILS: admin@example.com
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: audit/english-landing-20260719
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -43,8 +44,9 @@ jobs:
           done
           cat /tmp/fanmind-english-audit.log
           exit 1
-      - name: List likely German text nodes on English page
+      - name: Persist likely German text nodes on English page
         run: |
+          mkdir -p docs/audits
           python3 - <<'PY'
           from html.parser import HTMLParser
           from pathlib import Path
@@ -89,9 +91,13 @@ jobs:
                   seen.add(node)
                   matches.append(node)
 
-          print(f"GERMAN_NODE_COUNT={len(matches)}")
-          for index, node in enumerate(matches, 1):
-              print(f"GERMAN_NODE_{index:03d}={node}")
+          lines = [f"GERMAN_NODE_COUNT={len(matches)}"]
+          lines.extend(f"GERMAN_NODE_{index:03d}={node}" for index, node in enumerate(matches, 1))
+          Path('docs/audits/english-landing-runtime-audit-20260719.txt').write_text(
+              "\n".join(lines) + "\n",
+              encoding='utf-8',
+          )
+          print("\n".join(lines))
           PY
       - name: Stop application
         if: always()
@@ -99,3 +105,11 @@ jobs:
           if [ -f /tmp/fanmind-english-audit.pid ]; then
             kill "$(cat /tmp/fanmind-english-audit.pid)" 2>/dev/null || true
           fi
+      - name: Commit audit result and remove one-off workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-off-audit-english-landing-20260719.yml
+          git add docs/audits/english-landing-runtime-audit-20260719.txt
+          git commit -m "Record English landing runtime audit"
+          git push origin HEAD:audit/english-landing-20260719
