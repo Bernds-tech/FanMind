@@ -1,0 +1,58 @@
+name: One-off sync demo limit example 20260719
+
+on:
+  push:
+    branches:
+      - fix/public-demo-restart-limits-20260719
+    paths:
+      - .github/workflows/one-off-sync-demo-limit-example-20260719.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync-example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/public-demo-restart-limits-20260719
+          fetch-depth: 0
+
+      - name: Synchronize example and remove one-off workflow
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          env_path = Path('.env.example')
+          text = env_path.read_text(encoding='utf-8')
+          text = text.replace('FANMIND_DEMO_MAX_PER_IP_DAY=5', 'FANMIND_DEMO_MAX_PER_IP_DAY=10')
+          text = text.replace('FANMIND_DEMO_MAX_PER_BROWSER_DAY=2', 'FANMIND_DEMO_MAX_PER_BROWSER_DAY=5')
+          env_path.write_text(text, encoding='utf-8')
+
+          test_path = Path('tests/demo-rate-limit-policy.test.mjs')
+          test = test_path.read_text(encoding='utf-8')
+          test = test.replace(
+              'const runbookPath = "docs/operations/public-demo-protection-runbook.md";',
+              'const runbookPath = "docs/operations/public-demo-protection-runbook.md";\nconst envExamplePath = ".env.example";',
+          )
+          test = test.replace(
+              '  const runbook = await read(runbookPath);',
+              '  const runbook = await read(runbookPath);\n  const envExample = await read(envExamplePath);',
+          )
+          test = test.replace(
+              '  assert.match(runbook, /Keine Roh-IP-Adresse wird gespeichert/u);',
+              '  assert.match(runbook, /Keine Roh-IP-Adresse wird gespeichert/u);\n  assert.match(envExample, /FANMIND_DEMO_MAX_PER_IP_10_MIN=1/u);\n  assert.match(envExample, /FANMIND_DEMO_MAX_PER_IP_DAY=10/u);\n  assert.match(envExample, /FANMIND_DEMO_MAX_PER_BROWSER_DAY=5/u);\n  assert.match(envExample, /FANMIND_DEMO_MAX_ACTIVE=50/u);',
+          )
+          test_path.write_text(test, encoding='utf-8')
+
+          Path('.github/workflows/one-off-sync-demo-limit-example-20260719.yml').unlink()
+          PY
+
+          git config user.name "fanmind-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add .env.example tests/demo-rate-limit-policy.test.mjs .github/workflows/one-off-sync-demo-limit-example-20260719.yml
+          git commit -m "Synchronize public demo limit configuration"
+          git push origin HEAD:fix/public-demo-restart-limits-20260719
