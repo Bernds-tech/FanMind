@@ -34,36 +34,50 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('src/app/landing-v2/page.tsx')
           text = path.read_text(encoding='utf-8')
-          replacements = [
-              (
-                  '<span>Fan-CRM für Nachrichten, Erinnerungen</span>',
-                  '<span>{t("Fan-CRM für Nachrichten, Erinnerungen")}</span>',
-              ),
-              (
-                  '<span>ein nächster Schritt.</span>',
-                  '<span>{t("ein nächster Schritt.")}</span>',
-              ),
-              (
-                  '''            <p>
-              Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.
-            </p>''',
-                  '''            <p>
-              {t("Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.")}
-            </p>''',
-              ),
-              (
-                  '<FooterInquiryForm />',
-                  '<FooterInquiryForm language={language} />',
-              ),
+
+          text = text.replace(
+              '<span>Fan-CRM für Nachrichten, Erinnerungen</span>',
+              '<span>{t("Fan-CRM für Nachrichten, Erinnerungen")}</span>',
+          )
+          text = text.replace(
+              '<span>ein nächster Schritt.</span>',
+              '<span>{t("ein nächster Schritt.")}</span>',
+          )
+          text = re.sub(
+              r'<p>\s*Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden\.\s*</p>',
+              '<p>{t("Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.")}</p>',
+              text,
+              count=1,
+          )
+          text = text.replace(
+              '<FooterInquiryForm />',
+              '<FooterInquiryForm language={language} />',
+          )
+
+          forbidden = [
+              '<span>Fan-CRM für Nachrichten, Erinnerungen</span>',
+              '<span>ein nächster Schritt.</span>',
+              'Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.\n             </p>',
+              '<FooterInquiryForm />',
           ]
-          for old, new in replacements:
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f'Expected exactly one occurrence, found {count}: {old}')
-              text = text.replace(old, new, 1)
+          remaining = [value for value in forbidden if value in text]
+          if remaining:
+              raise SystemExit(f'Remaining unlocalized anchors: {remaining}')
+
+          required = [
+              't("Fan-CRM für Nachrichten, Erinnerungen")',
+              't("ein nächster Schritt.")',
+              't("Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.")',
+              '<FooterInquiryForm language={language} />',
+          ]
+          missing = [value for value in required if value not in text]
+          if missing:
+              raise SystemExit(f'Missing localized anchors: {missing}')
+
           path.write_text(text, encoding='utf-8')
           PY
       - run: npm ci --no-audit --no-fund
@@ -125,8 +139,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/one-off-audit-english-v2-20260719.yml
-          git rm .github/workflows/one-off-finish-english-landing-v2-20260719.yml
+          git rm -f .github/workflows/one-off-audit-english-v2-20260719.yml
+          git rm -f .github/workflows/one-off-finish-english-landing-v2-20260719.yml
           git add src/app/landing-v2/page.tsx src/components/landing/FooterInquiryForm.tsx src/app/page.tsx src/lib/fanmindCopyComplete.ts src/lib/landingEnglishCopy.ts tsconfig.json
           git commit -m "Finish complete English landing localization"
           git push origin HEAD:fix/english-landing-complete-v2-20260719
