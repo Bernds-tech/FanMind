@@ -1266,3 +1266,16 @@
 .mergeLink:hover {
   text-decoration: underline;
 }
+
+.topFanBadge {
+  align-items: center;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  border-radius: 999px;
+  color: #92400e;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: 0.45rem;
+  padding: 0.25rem 0.55rem;
+}

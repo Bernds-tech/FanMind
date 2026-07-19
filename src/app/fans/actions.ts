@@ -22,6 +22,7 @@ import {
   getWorkspaceContacts,
   getWorkspaceConversations,
   updateWorkspaceContactServer,
+  updateContactTopFanMarkServer,
   updateContactInternalNotesServer,
   upsertContactReplyTarget,
   upsertFanAnalysisReport,
@@ -71,6 +72,44 @@ export type CsvImportActionState = {
   skippedDuplicates: number;
   skippedInvalid: number;
 };
+
+export async function updateTopFanMark(formData: FormData) {
+  const contactId = formValue(formData, "contact_id");
+  const isTopFan = formValue(formData, "is_top_fan") === "true";
+  const returnTo = sanitizeFanReturnTo(formValue(formData, "return_to") || `/fans/${contactId}`);
+
+  if (!contactId) {
+    redirect(`${returnTo}?notice=top_fan_unknown_contact`);
+  }
+
+  let workspaceId: string;
+  try {
+    const { workspace, contact } = await requireContactInAuthorizedWorkspace(contactId);
+    workspaceId = workspace.id;
+    if (contact.workspace_id !== workspace.id) {
+      redirect(`${returnTo}?notice=top_fan_forbidden`);
+    }
+  } catch {
+    redirect(`${returnTo}?notice=top_fan_forbidden`);
+  }
+
+  const result = await updateContactTopFanMarkServer({
+    workspaceId,
+    contactId,
+    isTopFan,
+  });
+
+  if (result.error) {
+    redirect(`${returnTo}?notice=top_fan_save_failed`);
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  revalidatePath("/fans");
+  revalidatePath("/top-fans");
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}notice=${isTopFan ? "top_fan_marked" : "top_fan_removed"}`);
+}
 
 export async function importCsvContacts(
   _previousState: CsvImportActionState,
@@ -1247,6 +1286,14 @@ function formatActionPlatformList(platforms: PlatformValue[]): string {
 
 function getActionTime(value: string | null): number {
   return value ? new Date(value).getTime() : 0;
+}
+
+function sanitizeFanReturnTo(value: string): string {
+  if (value.startsWith("/fans/") || value.startsWith("/fans?") || value === "/fans" || value.startsWith("/top-fans")) {
+    return value;
+  }
+
+  return "/fans";
 }
 
 function formValue(formData: FormData, key: string): string {

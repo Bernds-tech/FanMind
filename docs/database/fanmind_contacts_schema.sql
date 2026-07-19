@@ -14,6 +14,8 @@ create table if not exists public.contacts (
   status text default 'new',
   tags text[] default '{}',
   summary text,
+  internal_notes text,
+  is_top_fan boolean not null default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
