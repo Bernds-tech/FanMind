@@ -102,9 +102,9 @@ export const roadmapPhases: RoadmapPhase[] = [
     availability: "upcoming",
     items: [
       { label: "Operations-Grundlage", state: "done", status: "Produktiv aktiv" },
-      { label: "Produktions- und Testdaten trennen", state: "partial", status: "Policy aktiv · Staging offen" },
+      { label: "Produktions- und Testdaten trennen", state: "partial", status: "Technik fertig · externe Ressourcen offen" },
       { label: "Release-Checks", state: "done", status: "Automatisch aktiv" },
-      { label: "Umgebungs-Governance", state: "partial", status: "Fail-closed aktiv · Staging offen" },
+      { label: "Umgebungs-Governance", state: "done", status: "Fail-closed aktiv" },
     ],
   },
 

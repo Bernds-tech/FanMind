@@ -92,10 +92,13 @@ export const landingEnglishCopySupplement: Record<string, string> = {
   "Produktiv aktiv": "Active in production",
   "Produktions- und Testdaten trennen": "Separate production and test data",
   "Policy aktiv · Staging offen": "Policy active · staging pending",
+  "Technik fertig · externe Ressourcen offen":
+    "Technical package complete · external resources pending",
   "Release-Checks": "Release checks",
   "Automatisch aktiv": "Automatically active",
   "Umgebungs-Governance": "Environment governance",
   "Fail-closed aktiv · Staging offen": "Fail-closed active · staging pending",
+  "Fail-closed aktiv": "Fail-closed active",
   "Segmente & Listen": "Segments & lists",
   "Segment-Ansichten": "Segment views",
   Vorbereitet: "Prepared",

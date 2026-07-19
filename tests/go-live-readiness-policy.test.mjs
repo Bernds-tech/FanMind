@@ -16,13 +16,13 @@ async function read(path) {
   return readFile(path, "utf8");
 }
 
-test("roadmap separates completed technical foundations from external staging work", async () => {
+test("roadmap separates completed technical foundations from external staging resources", async () => {
   const roadmap = await read(roadmapPath);
 
   assert.match(roadmap, /label: "Operations-Grundlage", state: "done", status: "Produktiv aktiv"/);
   assert.match(roadmap, /label: "Release-Checks", state: "done", status: "Automatisch aktiv"/);
-  assert.match(roadmap, /label: "Produktions- und Testdaten trennen", state: "partial", status: "Policy aktiv · Staging offen"/);
-  assert.match(roadmap, /label: "Umgebungs-Governance", state: "partial", status: "Fail-closed aktiv · Staging offen"/);
+  assert.match(roadmap, /label: "Produktions- und Testdaten trennen", state: "partial", status: "Technik fertig · externe Ressourcen offen"/);
+  assert.match(roadmap, /label: "Umgebungs-Governance", state: "done", status: "Fail-closed aktiv"/);
 });
 
 test("final go-live preflight remains read-only and verifies public truth", async () => {
