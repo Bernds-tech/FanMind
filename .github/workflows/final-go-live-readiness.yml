@@ -23,10 +23,28 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     steps:
+      - name: Resolve actual deployed release commit
+        id: release
+        env:
+          REQUESTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          LIVE_COMMIT="$(curl -fsS --max-time 15 https://fanmind.ch/api/version | python3 -c 'import json,sys; print(json.load(sys.stdin).get("releaseCommit", ""))')"
+          if [[ ! "$LIVE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Production returned no valid release commit." >&2
+            exit 1
+          fi
+          if [ -n "${REQUESTED_COMMIT:-}" ] && [ "$LIVE_COMMIT" != "$REQUESTED_COMMIT" ]; then
+            echo "Production commit $LIVE_COMMIT does not match requested commit $REQUESTED_COMMIT." >&2
+            exit 1
+          fi
+          echo "commit=$LIVE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "Readiness checks target deployed commit $LIVE_COMMIT."
+
       - name: Checkout deployed revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ steps.release.outputs.commit }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -40,7 +58,7 @@ jobs:
       - name: Run final public go-live preflight
         env:
           FANMIND_GO_LIVE_BASE_URL: https://fanmind.ch
-          FANMIND_EXPECTED_RELEASE_COMMIT: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.expected_commit }}
+          FANMIND_EXPECTED_RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
           FANMIND_GO_LIVE_REPORT_PATH: final-go-live-readiness-report.json
         run: npm run smoke:go-live:public
 
