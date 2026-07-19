@@ -1,0 +1,119 @@
+name: One-off sync production demo limits 20260719
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-off-sync-production-demo-limits-20260719.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fanmind-production-demo-limit-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-production-demo-limits:
+    name: Sync production demo limits
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+
+    steps:
+      - name: Wait for the matching production release
+        run: |
+          set -euo pipefail
+          EXPECTED_COMMIT="$GITHUB_SHA"
+          LIVE_COMMIT=""
+
+          for attempt in $(seq 1 120); do
+            LIVE_COMMIT="$(curl -fsS --max-time 15 https://fanmind.ch/api/version 2>/dev/null | node -e '
+              let body = "";
+              process.stdin.on("data", chunk => body += chunk);
+              process.stdin.on("end", () => {
+                try {
+                  const payload = JSON.parse(body);
+                  process.stdout.write(payload.releaseCommit || "");
+                } catch {
+                  process.stdout.write("");
+                }
+              });
+            ' || true)"
+
+            if [ "$LIVE_COMMIT" = "$EXPECTED_COMMIT" ]; then
+              echo "Matching production release is live."
+              exit 0
+            fi
+
+            echo "Waiting for production deploy ($attempt/120)..."
+            sleep 5
+          done
+
+          echo "Production did not reach the expected commit." >&2
+          echo "expected=$EXPECTED_COMMIT live=${LIVE_COMMIT:-unknown}" >&2
+          exit 1
+
+      - name: Back up and synchronize non-secret demo limits
+        run: |
+          set -euo pipefail
+          ENV_FILE="/var/www/fanmind/.env.production"
+          STAMP="$(date +%Y%m%d-%H%M%S)"
+          BACKUP_DIR="/var/backups/fanmind/pre-demo-limit-sync"
+
+          sudo test -f "$ENV_FILE"
+          sudo install -d -o root -g root -m 0700 "$BACKUP_DIR"
+          sudo install -o root -g root -m 0600 "$ENV_FILE" "$BACKUP_DIR/env-production-$STAMP.backup"
+
+          sudo python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('/var/www/fanmind/.env.production')
+          text = path.read_text(encoding='utf-8')
+          settings = {
+              'FANMIND_DEMO_MAX_PER_IP_DAY': '10',
+              'FANMIND_DEMO_MAX_PER_BROWSER_DAY': '5',
+          }
+
+          for key, value in settings.items():
+              pattern = rf'(?m)^[ \t]*{re.escape(key)}[ \t]*=.*$'
+              replacement = f'{key}={value}'
+              if re.search(pattern, text):
+                  text = re.sub(pattern, replacement, text)
+              else:
+                  if text and not text.endswith('\n'):
+                      text += '\n'
+                  text += replacement + '\n'
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          echo "Configured non-secret demo limits:"
+          sudo grep -E '^FANMIND_DEMO_MAX_PER_(IP_DAY|BROWSER_DAY)=' "$ENV_FILE"
+
+      - name: Restart FanMind with synchronized environment
+        run: |
+          set -euo pipefail
+          pm2 restart fanmind --update-env
+          pm2 save
+
+          for attempt in $(seq 1 20); do
+            if curl -fsS --max-time 15 https://fanmind.ch/api/health >/tmp/fanmind-demo-limit-health.json; then
+              node -e '
+                const fs = require("fs");
+                const payload = JSON.parse(fs.readFileSync("/tmp/fanmind-demo-limit-health.json", "utf8"));
+                if (payload.status !== "healthy") process.exit(1);
+                console.log(`FanMind health=${payload.status}`);
+              '
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "FanMind health check failed after environment synchronization." >&2
+          exit 1
