@@ -7,6 +7,7 @@ const rootPagePath = "src/app/page.tsx";
 const footerFormPath = "src/components/landing/FooterInquiryForm.tsx";
 const wrapperPath = "src/lib/fanmindCopyComplete.ts";
 const translationPath = "src/lib/landingEnglishCopy.ts";
+const supplementPath = "src/lib/landingEnglishCopySupplement.ts";
 const tsconfigPath = "tsconfig.json";
 
 async function read(path) {
@@ -14,14 +15,25 @@ async function read(path) {
 }
 
 test("English landing uses the complete translation wrapper", async () => {
-  const [wrapper, translations, tsconfig] = await Promise.all([
+  const [wrapper, translations, supplement, tsconfig] = await Promise.all([
     read(wrapperPath),
     read(translationPath),
+    read(supplementPath),
     read(tsconfigPath),
   ]);
 
-  assert.match(wrapper, /landingEnglishCopy\[text\] \?\? baseTranslate\(text\)/);
-  assert.match(tsconfig, /"@\/lib\/fanmindCopy"\s*:\s*\[\s*"\.\/src\/lib\/fanmindCopyComplete\.ts"/);
+  assert.match(wrapper, /landingEnglishCopySupplement\[text\]/);
+  assert.match(wrapper, /landingEnglishCopy\[text\]/);
+  assert.match(wrapper, /baseTranslate\(text\)/);
+  assert.ok(
+    wrapper.indexOf("landingEnglishCopySupplement[text]") <
+      wrapper.indexOf("landingEnglishCopy[text]"),
+    "The supplement must take precedence over the base landing copy",
+  );
+  assert.match(
+    tsconfig,
+    /"@\/lib\/fanmindCopy"\s*:\s*\[\s*"\.\/src\/lib\/fanmindCopyComplete\.ts"/,
+  );
 
   const requiredTranslations = [
     '"Dein KI-gestütztes": "Your AI-powered"',
@@ -32,8 +44,20 @@ test("English landing uses the complete translation wrapper", async () => {
   ];
 
   for (const translation of requiredTranslations) {
-    assert.ok(translations.includes(translation), `Missing translation: ${translation}`);
+    assert.ok(
+      translations.includes(translation),
+      `Missing translation: ${translation}`,
+    );
   }
+
+  assert.match(supplement, /AI_TIER_CONFIG/);
+  assert.match(supplement, /combinedAiPriceGerman/);
+  assert.match(supplement, /combinedAiPriceEnglish/);
+  assert.doesNotMatch(
+    supplement,
+    /AI Plus \+€100\/month · AI Ultra \+€200\/month/,
+    "AI add-on prices must be derived from the canonical tier configuration",
+  );
 });
 
 test("remaining static landing copy is passed through the translator", async () => {
@@ -54,7 +78,10 @@ test("remaining static landing copy is passed through the translator", async () 
 
   assert.match(footerForm, /language === "en"/);
   assert.match(footerForm, /Request consultation/);
-  assert.match(footerForm, /A personal inquiry instead of an automated newsletter/);
+  assert.match(
+    footerForm,
+    /A personal inquiry instead of an automated newsletter/,
+  );
 
   assert.match(rootPage, /export async function generateMetadata/);
   assert.match(rootPage, /FanMind \| AI CRM for creators, clubs and events/);
