@@ -108,7 +108,7 @@ function AccountWorkspace({ workspace, user, activePage, userDisplayName, contac
       locale={locale}
     >
       <div className={profileStyles.profileStack}>
-        <SettingsHeaderBar activePage={activePage} />
+        <SettingsHeaderBar activePage={activePage} locale={locale} />
         {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} logoutAction={logout} preferencesAction={saveAppearancePreferences} locale={locale} brightness={brightness} preferencesError={preferencesError} personalAction={savePersonalProfileData} workspaceAction={saveWorkspaceMasterData} taxAction={saveTaxMasterData} profileSaved={profileSaved} workspaceSaved={workspaceSaved} taxSaved={taxSaved} personalError={personalError} workspaceError={workspaceError} taxError={taxError} /> : null}
         {activePage === "package" ? <PackageSettingsSection workspace={workspace} /> : null}
         {activePage === "invoices" ? <InvoicesSettingsSection invoices={invoices} invoiceError={invoiceError} taxNote={taxNote} /> : null}

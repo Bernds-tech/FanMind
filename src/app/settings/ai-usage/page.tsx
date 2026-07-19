@@ -18,6 +18,7 @@ import {
   type WorkspaceAiUsageIndicator,
 } from "@/lib/workspaceAiUsage";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { AccountTabs } from "../AccountTabs";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
@@ -38,14 +39,6 @@ const FEATURE_LABELS: Record<string, { de: string; en: string }> = {
   followup_suggestion: { de: "Follow-up-Vorschlag", en: "Follow-up suggestion" },
   campaign_draft_preview: { de: "Kampagnenentwurf (Vorschau)", en: "Campaign draft (preview)" },
 };
-
-const ACCOUNT_TABS = [
-  { href: "/settings/profile", de: "Profil", en: "Profile", metaDe: "Profil & Workspace", metaEn: "Profile & workspace" },
-  { href: "/settings/package", de: "Paket", en: "Package", metaDe: "Status & Optionen", metaEn: "Status & options" },
-  { href: "/settings/invoices", de: "Rechnungen", en: "Invoices", metaDe: "Archiv & PDF", metaEn: "Archive & PDF" },
-  { href: "/settings/ai-usage", de: "KI-Nutzung", en: "AI usage", metaDe: "Aktionen & Schätzwerte", metaEn: "Actions & estimates" },
-  { href: "/settings/referral", de: "Empfehlungen", en: "Recommendations", metaDe: "Link & Rabatt", metaEn: "Link & discount" },
-];
 
 function text(locale: FanMindLanguage, de: string, en: string): string {
   return locale === "en" ? en : de;
@@ -222,22 +215,7 @@ export default async function AiUsageSettingsPage() {
         locale={locale}
       >
         <div className={styles.stack}>
-          <nav className={styles.accountTabs} aria-label={text(locale, "Kontobereiche", "Account areas")}>
-            {ACCOUNT_TABS.map((tab) => {
-              const active = tab.href === "/settings/ai-usage";
-              return (
-                <Link
-                  className={active ? styles.accountTabActive : styles.accountTab}
-                  href={tab.href}
-                  key={tab.href}
-                  aria-current={active ? "page" : undefined}
-                >
-                  <span>{locale === "en" ? tab.en : tab.de}</span>
-                  <small>{locale === "en" ? tab.metaEn : tab.metaDe}</small>
-                </Link>
-              );
-            })}
-          </nav>
+          <AccountTabs activePage="aiUsage" locale={locale} />
 
           {usageResult.error || !summary || !indicator || !indicatorText ? (
             <section className={styles.noticeCard} aria-labelledby="ai-usage-unavailable-title">

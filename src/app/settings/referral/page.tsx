@@ -16,6 +16,7 @@ import {
   type WorkspaceReferral,
 } from "@/lib/referrals";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
+import { AccountTabs } from "../AccountTabs";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import { ReferralCopyButton } from "../ReferralCopyButton";
@@ -27,13 +28,6 @@ async function logout() {
   await signOutSupabaseServerSession();
   redirect("/");
 }
-
-const accountTabs = [
-  { href: "/settings/profile", label: "Profil", meta: "Profil & Workspace" },
-  { href: "/settings/package", label: "Paket", meta: "Status & Optionen" },
-  { href: "/settings/invoices", label: "Rechnungen", meta: "Archiv & PDF" },
-  { href: "/settings/referral", label: "Empfehlungen", meta: "Link & Rabatt" },
-];
 
 export default async function ReferralSettingsPage() {
   const { data } = await getSupabaseServerUser();
@@ -122,25 +116,7 @@ export default async function ReferralSettingsPage() {
         locale={locale}
       >
         <div className={styles.stack}>
-          <nav className={styles.accountTabs} aria-label="Kontobereiche">
-            {accountTabs.map((tab) => (
-              <Link
-                className={
-                  tab.href === "/settings/referral"
-                    ? styles.accountTabActive
-                    : styles.accountTab
-                }
-                href={tab.href}
-                key={tab.href}
-                aria-current={
-                  tab.href === "/settings/referral" ? "page" : undefined
-                }
-              >
-                <span>{tab.label}</span>
-                <small>{tab.meta}</small>
-              </Link>
-            ))}
-          </nav>
+          <AccountTabs activePage="referral" locale={locale} />
 
           <section className={styles.hero} aria-labelledby="referral-title">
             <div>
