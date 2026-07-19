@@ -78,55 +78,34 @@ function isHiddenProductNavigationItem(item: WorkspaceNavLink): boolean {
 }
 
 function SidebarItem({
-  label,
-  icon,
-  active = false,
-  badge,
-  disabled = false,
-  href,
-}: WorkspaceNavLink) {
+  item,
+  collapsed = false,
+}: {
+  item: WorkspaceNavLink;
+  collapsed?: boolean;
+}) {
+  const { label, icon, active = false, badge, disabled = false, href } = item;
   const iconName = icon ?? resolveFanMindFunctionIcon(href, label);
+  const itemClassName = `${active ? styles.navItemActive : styles.navItem} ${
+    collapsed ? styles.navItemCollapsed : ""
+  }`;
 
   return (
     <a
       aria-disabled={disabled || undefined}
-      className={active ? styles.navItemActive : styles.navItem}
+      aria-label={collapsed ? label : undefined}
+      className={itemClassName}
       href={href}
       title={label}
       tabIndex={disabled ? -1 : undefined}
     >
       <span className={styles.navItemLead}>
         <FanMindFunctionIcon name={iconName} />
-        <span>{label}</span>
+        <span className={collapsed ? styles.navItemLabelCollapsed : undefined}>
+          {label}
+        </span>
       </span>
       {badge ? <small>{badge}</small> : null}
-    </a>
-  );
-}
-
-function CollapsedSidebarItem({
-  label,
-  icon,
-  active = false,
-  badge,
-  disabled = false,
-  href,
-}: WorkspaceNavLink) {
-  const iconName = icon ?? resolveFanMindFunctionIcon(href, label);
-
-  return (
-    <a
-      aria-disabled={disabled || undefined}
-      aria-label={label}
-      className={active ? styles.compactNavItemActive : styles.compactNavItem}
-      href={href}
-      title={label}
-      tabIndex={disabled ? -1 : undefined}
-    >
-      <span aria-hidden="true" className={styles.compactNavIcon}>
-        <FanMindFunctionIcon name={iconName} size={21} />
-      </span>
-      {badge ? <small className={styles.compactNavBadge}>{badge}</small> : null}
     </a>
   );
 }
@@ -194,7 +173,7 @@ export function WorkspaceShell({
 
             <nav className={styles.compactNavList} aria-label="Workspace Navigation kompakt">
               {compactNavigation.map((item) => (
-                <CollapsedSidebarItem key={item.label} {...item} />
+                <SidebarItem key={item.label} item={item} collapsed />
               ))}
             </nav>
 
@@ -228,14 +207,14 @@ export function WorkspaceShell({
               <nav className={styles.navList} aria-label={wt(locale, "Hauptnavigation")}>
                 <span className={styles.navSectionLabel}>{wt(locale, "Navigation")}</span>
                 {visibleMainNavigation.map((item) => (
-                  <SidebarItem key={item.label} {...item} />
+                  <SidebarItem key={item.label} item={item} />
                 ))}
               </nav>
 
               <nav className={styles.navList} aria-label="Workspace Navigation">
                 <span className={styles.navSectionLabel}>{wt(locale, "Workspace")}</span>
                 {visibleSettingsNavigation.map((item) => (
-                  <SidebarItem key={item.label} {...item} />
+                  <SidebarItem key={item.label} item={item} />
                 ))}
               </nav>
 
@@ -245,14 +224,7 @@ export function WorkspaceShell({
               >
                 <span>{wt(locale, "Gespeicherte Ansichten")}</span>
                 {visibleSavedViews.map((item) => (
-                  <a key={item.label} href={item.href}>
-                    <span className={styles.savedViewLead}>
-                      <FanMindFunctionIcon
-                        name={item.icon ?? resolveFanMindFunctionIcon(item.href, item.label)}
-                      />
-                      <span>{item.label}</span>
-                    </span>
-                  </a>
+                  <SidebarItem key={item.label} item={item} />
                 ))}
               </section>
             </div>
