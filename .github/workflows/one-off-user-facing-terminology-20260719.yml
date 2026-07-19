@@ -1,0 +1,151 @@
+name: One-off user-facing terminology cleanup 20260719
+
+on:
+  push:
+    branches:
+      - fix/user-facing-terminology-20260719
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/user-facing-terminology-20260719
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Apply exact terminology replacements
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              "src/lib/plans.ts": [
+                  (
+                      "Dashboard, Kontakte und Fan-Gedächtnis für dein Paket vorbereiten.",
+                      "Dashboard, Kontakte und Kontaktwissen für dein Paket vorbereiten.",
+                  ),
+                  (
+                      "Kontakte strukturiert importieren und Memory-Felder prüfen.",
+                      "Kontakte strukturiert importieren und Felder fürs Kontaktwissen prüfen.",
+                  ),
+              ],
+              "src/lib/dashboardFeatures.ts": [
+                  (
+                      "Pilot nutzt Demo-Kontakte; Starter arbeitet produktiv mit dem Kontaktbestand.",
+                      "Der Demo-Zugang nutzt Beispieldaten; Starter arbeitet produktiv mit dem Kontaktbestand.",
+                  ),
+                  (
+                      "Detailansicht für einen Kontakt mit Kontext, Memory und Follow-up-Vorbereitung.",
+                      "Detailansicht für einen Kontakt mit Kontext, Kontaktwissen und Follow-up-Vorbereitung.",
+                  ),
+                  (
+                      "Sicherer Demo-Fan für Pilot, KI-Demo, Memory-Demo und Follow-up-Demo.",
+                      "Sicherer Demo-Kontakt für KI-, Kontaktwissen- und Follow-up-Demos.",
+                  ),
+                  (
+                      'label: "Memory / Fan-Gedächtnis",',
+                      'label: "Kontaktwissen",',
+                  ),
+                  (
+                      "Pilot sieht den Import als Vorschau; Starter kann CSV-Daten produktiv vorbereiten.",
+                      "Der Demo-Zugang zeigt den Import als Vorschau; Starter kann CSV-Daten produktiv vorbereiten.",
+                  ),
+                  (
+                      'return "Pilot / Setup · 990 € einmalig · 1 Monat testen · keine Bindung";',
+                      'return "Interner Legacy-/Demo-Zugang · nicht öffentlich buchbar";',
+                  ),
+              ],
+              "src/lib/fanmindCopy.ts": [
+                  (
+                      "Facebook Messenger kann angebunden werden. Antworten werden manuell geprüft und extern gesendet; kein automatisches Senden.",
+                      "Facebook Messenger befindet sich in technischer Vorbereitung. Antworten werden manuell geprüft und im Originalkanal selbst gesendet; kein automatisches Senden.",
+                  ),
+                  (
+                      "Facebook Messenger can be connected. Replies are reviewed manually and sent externally; no automatic sending.",
+                      "Facebook Messenger is in technical preparation. Replies are reviewed manually and sent by the user in the original channel; no automatic sending.",
+                  ),
+              ],
+              "src/app/admin/billing/page.tsx": [
+                  (
+                      'if (workspace.plan_id === "pilot" || workspace.plan_id === "starter") return "Zahlung offen";',
+                      'if (workspace.plan_id === "pilot") return "Demo/Kostenlos";\n  if (workspace.plan_id === "starter") return "Zahlung offen";',
+                  ),
+                  (
+                      'if (planId === "pilot") return "Pilot";',
+                      'if (planId === "pilot") return "Interne Demo";',
+                  ),
+                  (
+                      'if (option === "pilot") return "Pilot / Setup";',
+                      'if (option === "pilot") return "Legacy-/Demo-Zugang";',
+                  ),
+                  (
+                      '{ key: "memory", label: "AI-Infos / Fan-Gedächtnis" },',
+                      '{ key: "memory", label: "Kontaktwissen" },',
+                  ),
+                  (
+                      '{ key: "analytics", label: "Fan-Analyse-Report" },',
+                      '{ key: "analytics", label: "Kommunikationsübersicht" },',
+                  ),
+                  (
+                      'const activePackages = packagePlanIds.filter((planId) => planId === "pilot" || planId === "starter").length;',
+                      'const activePackages = packagePlanIds.filter((planId) => planId === "starter").length;',
+                  ),
+                  (
+                      '{ id: "pilot" as PlanId, icon: "P", title: "Pilot / Setup", price: "990 € einmalig", meta: ["1 Testmonat", "keine Bindung", "keine automatische Verlängerung"], status: "Aktiv", tone: styles.packagePilot },',
+                      '{ id: "pilot" as PlanId, icon: "D", title: "Interne Demo / Legacy", price: "Nicht öffentlich buchbar", meta: ["kostenloser Demo-/Legacy-Zugang", "keine normale Kundenbuchung"], status: "Intern", tone: styles.packagePilot },',
+                  ),
+                  (
+                      'hint="Pilot und Starter verfügbar"',
+                      'hint="Starter öffentlich verfügbar"',
+                  ),
+              ],
+          }
+
+          for filename, changes in replacements.items():
+              path = Path(filename)
+              text = path.read_text(encoding="utf-8")
+              for old, new in changes:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(
+                          f"{filename}: expected exactly one occurrence of {old!r}, found {count}"
+                      )
+                  text = text.replace(old, new, 1)
+              path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify product truth
+        run: npm run verify:truth
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Operations tests
+        run: npm run test:operations
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit cleanup and remove one-off workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-off-user-facing-terminology-20260719.yml
+          git add src/lib/plans.ts src/lib/dashboardFeatures.ts src/lib/fanmindCopy.ts src/app/admin/billing/page.tsx
+          git commit -m "Nutzerseitige Produktterminologie vereinheitlichen"
+          git push origin HEAD:fix/user-facing-terminology-20260719
