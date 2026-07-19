@@ -10,7 +10,7 @@ import styles from "./ProductShowcaseSection.module.css";
 const benefits = [
   [
     "♙",
-    "Persönlicher Fan-Kontext",
+    "Persönlicher Kontaktkontext",
     "Interaktionen, Tags und Notizen bleiben sichtbar, bevor dein Team antwortet.",
   ],
   [
@@ -21,7 +21,7 @@ const benefits = [
   [
     "▤",
     "CSV-Import & Notizen",
-    "Bestehende Fans können in den MVP-Workflow übernommen und ergänzt werden.",
+    "Bestehende Kontakte können in den aktuellen Workflow übernommen und ergänzt werden.",
   ],
   [
     "↗",
@@ -33,8 +33,8 @@ const benefits = [
 const featureCards = [
   [
     "🧠",
-    "Fan-Gedächtnis",
-    "Merkt sich Kaufhistorie, Interessen, Notizen und Interaktionsverlauf pro Fan.",
+    "Kontaktwissen",
+    "Speichert Kaufhistorie, Interessen, Notizen und Interaktionsverlauf pro Kontakt.",
   ],
   [
     "✦",
@@ -107,7 +107,7 @@ export default function ProductShowcaseSection({
           </h2>
           <p>
             {t(
-              "FanMind verbindet Fans, Fan-Gedächtnis, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind aktuell als Vorschau markiert.",
+              "FanMind verbindet Kontakte, Kontaktwissen, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind aktuell als Vorschau markiert.",
             )}
           </p>
         </header>
@@ -115,7 +115,7 @@ export default function ProductShowcaseSection({
         <div className={styles.stage}>
           <aside
             className={styles.leftColumn}
-            aria-label="Fan-Gedächtnis, KI-Vorschläge und Kampagnenvorschau"
+            aria-label="Kontaktwissen, KI-Vorschläge und Kampagnenvorschau"
           >
             <article
               id="fan-gedaechtnis"
@@ -123,14 +123,14 @@ export default function ProductShowcaseSection({
             >
               <div className={styles.cardTop}>
                 <span className={styles.iconBubble}>🧠</span>
-                <strong>{t("Fan-Gedächtnis")}</strong>
+                <strong>{t("Kontaktwissen")}</strong>
                 <em>{t("Buyer")}</em>
               </div>
               <div className={styles.profileRow}>
                 <span className={styles.avatar}>SM</span>
                 <div>
                   <b>Sandra M.</b>
-                  <small>{t("Fan seit 12.03.2025")}</small>
+                  <small>{t("Kontakt seit 12.03.2025")}</small>
                 </div>
               </div>
               <div className={styles.tabRow}>
