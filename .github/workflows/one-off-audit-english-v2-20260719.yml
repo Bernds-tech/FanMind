@@ -84,12 +84,23 @@ jobs:
           for node in parser.nodes:
               if markers.search(node) and node not in seen:
                   seen.append(node)
-          print(f"GERMAN_NODE_COUNT={len(seen)}")
-          for index, node in enumerate(seen, 1):
-              print(f"GERMAN_NODE_{index:03d}={node}")
-          if seen:
-              raise SystemExit(f"English landing still contains {len(seen)} likely German visible text nodes")
+          lines = [f"GERMAN_NODE_COUNT={len(seen)}"]
+          lines.extend(f"GERMAN_NODE_{index:03d}={node}" for index, node in enumerate(seen, 1))
+          Path('/tmp/english-landing-v2-audit.txt').write_text("\n".join(lines) + "\n", encoding='utf-8')
+          print("\n".join(lines))
           PY
+      - name: Upload runtime audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: english-landing-v2-runtime-audit
+          path: /tmp/english-landing-v2-audit.txt
+          retention-days: 7
+      - name: Enforce complete English runtime copy
+        run: |
+          if ! grep -qx 'GERMAN_NODE_COUNT=0' /tmp/english-landing-v2-audit.txt; then
+            cat /tmp/english-landing-v2-audit.txt
+            exit 1
+          fi
       - name: Stop application
         if: always()
         run: |
