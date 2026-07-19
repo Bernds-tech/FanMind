@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/complete-english-landing-20260719
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
