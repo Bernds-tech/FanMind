@@ -1,0 +1,193 @@
+#!/usr/bin/env node
+
+import { writeFile } from "node:fs/promises";
+
+const baseUrl = (process.env.FANMIND_GO_LIVE_BASE_URL || "https://fanmind.ch").replace(/\/$/, "");
+const expectedCommit = process.env.FANMIND_EXPECTED_RELEASE_COMMIT?.trim() || "";
+const reportPath = process.env.FANMIND_GO_LIVE_REPORT_PATH?.trim() || "";
+const attempts = Number(process.env.FANMIND_GO_LIVE_ATTEMPTS || 5);
+const delayMs = Number(process.env.FANMIND_GO_LIVE_DELAY_MS || 3000);
+const timeoutMs = Number(process.env.FANMIND_GO_LIVE_TIMEOUT_MS || 15000);
+
+const results = [];
+const failures = [];
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function addResult(name, ok, detail) {
+  results.push({ name, ok, detail });
+  const prefix = ok ? "GO_LIVE_OK" : "GO_LIVE_ERROR";
+  const line = `${prefix} ${name}: ${detail}`;
+  if (ok) console.log(line);
+  else {
+    console.error(line);
+    failures.push(line);
+  }
+}
+
+async function request(path) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        cache: "no-store",
+        redirect: "follow",
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: { "User-Agent": "FanMind-Final-Go-Live-Preflight/1.0" },
+      });
+
+      if (response.status < 200 || response.status >= 400) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await sleep(delayMs);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("unknown request error");
+}
+
+function visibleText(html) {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function assertText(name, text, { includes = [], excludes = [] }) {
+  const normalizedText = text.toLocaleLowerCase("de");
+
+  for (const value of includes) {
+    if (!normalizedText.includes(value.toLocaleLowerCase("de"))) {
+      addResult(name, false, `Pflichttext fehlt: ${value}`);
+      return;
+    }
+  }
+
+  for (const value of excludes) {
+    if (normalizedText.includes(value.toLocaleLowerCase("de"))) {
+      addResult(name, false, `veralteter Text gefunden: ${value}`);
+      return;
+    }
+  }
+
+  addResult(name, true, "öffentliche Produktwahrheit bestätigt");
+}
+
+const publicRoutes = [
+  "/",
+  "/?lang=en",
+  "/login",
+  "/register",
+  "/roadmap",
+  "/impressum",
+  "/datenschutz",
+  "/avv",
+  "/agb",
+  "/zahlungsbedingungen",
+  "/referral-bedingungen",
+];
+
+const pageHtml = new Map();
+
+for (const route of publicRoutes) {
+  try {
+    const response = await request(route);
+    pageHtml.set(route, await response.text());
+    addResult(`route ${route}`, true, `HTTP ${response.status}`);
+  } catch (error) {
+    addResult(`route ${route}`, false, error instanceof Error ? error.message : "unknown error");
+  }
+}
+
+try {
+  const response = await request("/api/version");
+  const payload = await response.json();
+  const liveCommit = typeof payload?.releaseCommit === "string" ? payload.releaseCommit : "";
+
+  if (!liveCommit || liveCommit === "unknown") {
+    addResult("release commit", false, "kein gültiger Release-Commit");
+  } else if (expectedCommit && liveCommit !== expectedCommit) {
+    addResult("release commit", false, `${liveCommit} statt ${expectedCommit}`);
+  } else {
+    addResult("release commit", true, liveCommit);
+  }
+
+  addResult(
+    "production environment",
+    payload?.environment === "production",
+    payload?.environment === "production" ? "production" : `unerwartet: ${String(payload?.environment)}`,
+  );
+} catch (error) {
+  addResult("version endpoint", false, error instanceof Error ? error.message : "unknown error");
+}
+
+try {
+  const response = await request("/api/health");
+  const payload = await response.json();
+  const checks = Array.isArray(payload?.checks) ? payload.checks : [];
+  const unhealthy = checks.filter((check) => check?.status !== "healthy");
+
+  if (payload?.status !== "healthy") {
+    addResult("health", false, `Gesamtstatus ${String(payload?.status)}`);
+  } else if (!checks.length) {
+    addResult("health", false, "keine veröffentlichten Komponentenprüfungen vorhanden");
+  } else if (unhealthy.length) {
+    addResult("health", false, `${unhealthy.length} Komponente(n) nicht healthy`);
+  } else {
+    addResult("health", true, `${checks.length} veröffentlichte Komponenten healthy`);
+  }
+} catch (error) {
+  addResult("health endpoint", false, error instanceof Error ? error.message : "unknown error");
+}
+
+const germanLanding = visibleText(pageHtml.get("/") || "");
+const englishLanding = visibleText(pageHtml.get("/?lang=en") || "");
+const registerPage = visibleText(pageHtml.get("/register") || "");
+
+assertText("deutsche Landingpage", germanLanding, {
+  includes: ["Kontaktwissen", "Keine automatische Sendefunktion"],
+  excludes: ["Fan-Gedächtnis", "Pilot anfragen", "299 €/Monat"],
+});
+
+assertText("englische Landingpage", englishLanding, {
+  includes: ["Your AI-powered", "contact knowledge", "no automatic sending"],
+  excludes: ["Dein KI-gestütztes", "Kostenlos testen", "Produktvorschau für dein"],
+});
+
+assertText("Registrierung und Preis", registerPage, {
+  includes: ["312"],
+  excludes: ["299", "Pilot / Setup", "Pilot anfragen"],
+});
+
+const report = {
+  checkedAt: new Date().toISOString(),
+  baseUrl,
+  expectedCommit: expectedCommit || null,
+  success: failures.length === 0,
+  results,
+};
+
+if (reportPath) {
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+}
+
+if (failures.length) {
+  console.error(`Final go-live preflight failed with ${failures.length} error(s).`);
+  process.exit(1);
+}
+
+console.log(`Final go-live preflight passed with ${results.length} checks on ${baseUrl}.`);
