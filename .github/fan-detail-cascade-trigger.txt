@@ -1,1 +1,0 @@
-Trigger the final fan detail cascade correction.

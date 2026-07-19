@@ -13,15 +13,16 @@ test("fan detail AI composer stays in normal flow and cannot overlap the message
   assert.doesNotMatch(replyRule, /bottom:/u);
 });
 
-test("fan context rail remains visible on desktop and returns to normal flow on narrow screens", async () => {
+test("the final desktop copilot rule is sticky and the single-column breakpoint resets it", async () => {
   const css = await readFile(cssPath, "utf8");
+  const productionLayout = css.indexOf("/* Fan detail production layout");
+  const stickyRule = css.indexOf(".copilot {\n  position: sticky;", productionLayout);
+  const responsiveReset = css.indexOf("@media (max-width: 1240px)", stickyRule);
 
-  assert.match(
-    css,
-    /\.copilot\s*\{[\s\S]*?position:\s*sticky;[\s\S]*?top:\s*0;[\s\S]*?max-height:\s*calc\(100dvh - 94px\);[\s\S]*?overflow-y:\s*auto;/u,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*1080px\)[\s\S]*?\.copilot\s*\{[\s\S]*?position:\s*static;[\s\S]*?max-height:\s*none;[\s\S]*?overflow:\s*visible;/u,
-  );
+  assert.notEqual(productionLayout, -1);
+  assert.ok(stickyRule > productionLayout);
+  assert.ok(responsiveReset > stickyRule);
+  assert.match(css.slice(stickyRule, responsiveReset), /top:\s*0;[\s\S]*?align-self:\s*start;[\s\S]*?max-height:\s*calc\(100dvh - 94px\);[\s\S]*?overflow-y:\s*auto;/u);
+  assert.match(css.slice(responsiveReset), /\.copilot\s*\{[\s\S]*?position:\s*static;[\s\S]*?max-height:\s*none;[\s\S]*?overflow:\s*visible;/u);
+  assert.doesNotMatch(css.slice(stickyRule, responsiveReset), /position:\s*static/u);
 });
