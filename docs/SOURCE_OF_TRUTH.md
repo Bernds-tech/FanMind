@@ -11,7 +11,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 FanMind ist:
 
 - ein CRM-Kern für Kontakte/Fans;
-- ein Arbeitsbereich für Nachrichtenkontext, Memory und Follow-ups;
+- ein Arbeitsbereich für Nachrichtenkontext, Kontaktwissen und Follow-ups;
 - ein serverseitiger KI-Assistent für Antwortvorschläge;
 - ein Copy-&-Open-Assistent: Antwort vorbereiten, kopieren, Originalkanal öffnen, Mensch sendet selbst;
 - ein System mit ehrlicher Roadmap für Integrationen, Kampagnen, Analytics und Automationen.
@@ -25,13 +25,13 @@ FanMind ist nicht:
 - eine Kampagnenversand-Maschine;
 - eine vollständige Enterprise-Rollen-/Analytics-/Payment-Suite.
 
-## 2. Aktiver MVP-/CRM-Kern
+## 2. Aktiver CRM-Kern
 
 Aktiv bzw. produktnah im aktuellen Stand:
 
 - Landingpage und Roadmap
 - Login
-- Registrierung für Pilot und Starter
+- Registrierung für Starter; kostenlose temporäre Demo getrennt
 - temporärer Demo-Workspace
 - geschütztes Dashboard
 - Fans/Kontakte
@@ -39,10 +39,10 @@ Aktiv bzw. produktnah im aktuellen Stand:
 - CSV-Import
 - manuelle Kontaktpflege
 - gespeicherter Nachrichten-/Conversation-Kontext
-- Memory
+- Kontaktwissen
 - Follow-ups
 - serverseitige KI-Antwortvorschläge
-- Memory-Vorschlag aus KI-Ausgabe
+- Kontaktwissen-Vorschlag aus KI-Ausgabe
 - Follow-up-Vorschlag aus KI-Ausgabe
 - Kopieren von Antwortvorschlägen
 - Admin-/Billing-Grundlagen
@@ -58,11 +58,19 @@ Aktueller Roadmap-Stand für Phase 4:
 
 - Phase-4-Karte heißt kompakt „Verkaufsstart vorbereitet“ und hat den Status „Finaler Smoke-Test“.
 - Stripe-Live-Schritte: erledigt.
-- Abrechnung & Admin-Basis: erledigt / Feinschliff.
-- Profil/Paket/Rechnungen: erledigt / Feinschliff.
-- Sales-Unterlagen: nächster Schritt.
+- Abrechnung & Admin-Basis: erledigt.
+- Profil/Paket/Rechnungen: erledigt.
+- Sales-Unterlagen: vorbereitet.
 - Produktionsfreigabe: finaler Smoke-Test.
 - Offen sichtbar bleiben der finale Go-Live-Smoke-Test und die Steuerberater-Bestätigung.
+
+Aktueller Roadmap-Stand für Phase 5:
+
+- Operations-Grundlage: produktiv aktiv.
+- Release-Checks: automatisch aktiv.
+- Produktions-/Testtrennung: Fail-closed-Policy, Preflight und Staging-Vorlage sind aktiv; ein separates Supabase-/Stripe-/DNS-Staging bleibt extern einzurichten.
+- Umgebungs-Governance: schreibende Tests sind außerhalb eindeutig identifizierter Staging-/Testumgebungen blockiert.
+- Staging-Infrastruktur ist Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests, aber kein Grund, den read-only Produktions-Smoke-Test zu verzögern.
 
 ## 3. Kommerzielle Wahrheit
 
@@ -159,7 +167,7 @@ Der Demo-Pfad ist fest. Er darf optisch anders umgesetzt sein, aber fachlich ble
 8. letzte eingehende Nachricht als KI-Kontext verwenden.
 9. KI-Antwortvorschläge erzeugen.
 10. Antwort kopieren.
-11. Memory-Vorschlag speichern.
+11. Kontaktwissen-Vorschlag speichern.
 12. Follow-up-Vorschlag speichern.
 13. Follow-up-Liste und/oder Roadmap zeigen.
 14. Abschlussfrage stellen: „Wäre dieser Ablauf für eure Agentur / euer Team nützlich?“
@@ -311,3 +319,13 @@ Pflichtdateien für Synchronisierung:
 - `docs/AI_COST_MONITORING.md`, wenn KI/Kosten betroffen sind
 - `docs/REFERRAL_PROGRAM.md`, wenn Referral/Rabatte betroffen sind
 - Landingpage/Legal/Pricing-Code, wenn öffentliche Aussagen betroffen sind
+
+## 12. Technische Go-Live-Freigabe
+
+- Automatischer öffentlicher Preflight: `npm run smoke:go-live:public`.
+- Nach jedem erfolgreichen Production-Deploy startet der Workflow `FanMind Final Go-Live Readiness` und prüft Routen, Health, Release-Commit, Preise und öffentliche Produktwahrheit.
+- Der vollständige manuelle Ablauf steht in `docs/operations/FINAL_GO_LIVE_SMOKE_TEST.md`.
+- Sales-One-Pager, Demo-Skript und Einwandbehandlung stehen unter `docs/sales/`.
+- Technische Freigabe und externe Steuer-/Rechtsfreigabe werden getrennt dokumentiert.
+- Referral-Billing, KI Plus/Ultra Auto-Buchung und schreibende Staging-Tests bleiben bis zu ihrer separaten Freigabe deaktiviert.
+
