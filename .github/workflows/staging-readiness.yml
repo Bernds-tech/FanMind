@@ -1,0 +1,64 @@
+name: FanMind Staging Readiness
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-readiness:
+    runs-on: ubuntu-24.04
+    environment: staging
+    env:
+      FANMIND_RUNTIME_ENVIRONMENT: staging
+      NEXT_PUBLIC_APP_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FANMIND_STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.FANMIND_STAGING_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      FANMIND_TARGET_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_STAGING_SUPABASE_PROJECT_REF }}
+      FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF }}
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
+      FANMIND_NON_PRODUCTION_WRITE_ACK: ''
+      STRIPE_SECRET_KEY: ${{ secrets.FANMIND_STAGING_STRIPE_SECRET_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.FANMIND_STAGING_STRIPE_WEBHOOK_SECRET }}
+      OPENAI_API_KEY: ${{ secrets.FANMIND_STAGING_OPENAI_API_KEY }}
+      FANMIND_ENABLE_REFERRAL_BILLING: 'false'
+      FANMIND_PUBLIC_DEMO_ENABLED: 'false'
+      FANMIND_ENABLE_TELEGRAM_SEND: 'false'
+      FANMIND_OPERATIONS_EMAIL_ENABLED: 'false'
+      FANMIND_SERVER_ERROR_EMAIL_ENABLED: 'false'
+      FANMIND_ADMIN_EMAILS: staging-admin@example.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify staging boundary and secrets
+        run: npm run staging:preflight
+
+      - name: Verify commercial and product truth
+        run: npm run verify:truth
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Operations tests
+        run: npm run test:operations
+
+      - name: Production-compatible build
+        run: npm run build
+
+      - name: Read-only staging route smoke
+        env:
+          FANMIND_SMOKE_BASE_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
+        run: npm run smoke:public
