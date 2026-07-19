@@ -9,6 +9,7 @@ import {
   type FanMindLanguage,
 } from "./fanmindCopy";
 import { landingEnglishCopy } from "./landingEnglishCopy";
+import { landingEnglishCopySupplement } from "./landingEnglishCopySupplement";
 
 export {
   fanmindCopy,
@@ -25,6 +26,10 @@ export function createFanMindTranslator(language: FanMindLanguage) {
 
   return (text: string) => {
     if (language !== "en") return text;
-    return landingEnglishCopy[text] ?? baseTranslate(text);
+    return (
+      landingEnglishCopySupplement[text] ??
+      landingEnglishCopy[text] ??
+      baseTranslate(text)
+    );
   };
 }
