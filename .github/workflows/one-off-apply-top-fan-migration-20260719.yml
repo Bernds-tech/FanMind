@@ -1,0 +1,117 @@
+name: One-off apply Top-Fan migration 20260719
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-off-apply-top-fan-migration-20260719.yml
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: fanmind-production-top-fan-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply and verify Top-Fan schema
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+
+    steps:
+      - name: Apply idempotent database migration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          SOURCE_DIR="/var/www/fanmind"
+          WORKER_ENV="/etc/fanmind-backup/worker.env"
+          MIGRATION_PATH="supabase/migrations/20260719120000_add_contact_top_fan_marker.sql"
+          TEMP_SQL="$(mktemp /tmp/fanmind-top-fan-migration.XXXXXX.sql)"
+          trap 'rm -f "$TEMP_SQL"' EXIT
+
+          sudo test -r "$WORKER_ENV"
+          set -a
+          source <(sudo cat "$WORKER_ENV")
+          set +a
+
+          : "${FANMIND_BACKUP_DB_HOST:?missing database host}"
+          : "${FANMIND_BACKUP_DB_PORT:?missing database port}"
+          : "${FANMIND_BACKUP_DB_NAME:?missing database name}"
+          : "${FANMIND_BACKUP_DB_USER:?missing database user}"
+          : "${FANMIND_BACKUP_PGPASSFILE:?missing pgpass file}"
+
+          PSQL_BIN="${FANMIND_PG_DUMP_BIN%/pg_dump}/psql"
+          if [ ! -x "$PSQL_BIN" ]; then
+            PSQL_BIN="/usr/lib/postgresql/17/bin/psql"
+          fi
+          test -x "$PSQL_BIN"
+
+          cd "$SOURCE_DIR"
+          git fetch --prune origin main
+          git show "$GITHUB_SHA:$MIGRATION_PATH" > "$TEMP_SQL"
+
+          export PGPASSFILE="$FANMIND_BACKUP_PGPASSFILE"
+          "$PSQL_BIN" \
+            --host="$FANMIND_BACKUP_DB_HOST" \
+            --port="$FANMIND_BACKUP_DB_PORT" \
+            --username="$FANMIND_BACKUP_DB_USER" \
+            --dbname="$FANMIND_BACKUP_DB_NAME" \
+            --set=ON_ERROR_STOP=1 \
+            --file="$TEMP_SQL"
+
+          COLUMN_OK="$("$PSQL_BIN" \
+            --host="$FANMIND_BACKUP_DB_HOST" \
+            --port="$FANMIND_BACKUP_DB_PORT" \
+            --username="$FANMIND_BACKUP_DB_USER" \
+            --dbname="$FANMIND_BACKUP_DB_NAME" \
+            --tuples-only --no-align \
+            --command="select count(*) from information_schema.columns where table_schema='public' and table_name='contacts' and column_name='is_top_fan' and data_type='boolean' and is_nullable='NO';")"
+
+          INDEX_OK="$("$PSQL_BIN" \
+            --host="$FANMIND_BACKUP_DB_HOST" \
+            --port="$FANMIND_BACKUP_DB_PORT" \
+            --username="$FANMIND_BACKUP_DB_USER" \
+            --dbname="$FANMIND_BACKUP_DB_NAME" \
+            --tuples-only --no-align \
+            --command="select count(*) from pg_indexes where schemaname='public' and tablename='contacts' and indexname='contacts_workspace_top_fan_created_at_idx';")"
+
+          test "$COLUMN_OK" = "1"
+          test "$INDEX_OK" = "1"
+          echo "Top-Fan schema migration verified."
+
+      - name: Document production verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh issue comment 614 \
+            --repo "$GITHUB_REPOSITORY" \
+            --body "## Production-Nachweis\n\n- Migration \`20260719120000_add_contact_top_fan_marker.sql\` wurde produktiv und idempotent angewendet.\n- Spalte \`public.contacts.is_top_fan\` ist als \`boolean not null default false\` vorhanden.\n- Index \`contacts_workspace_top_fan_created_at_idx\` ist vorhanden.\n- Keine Kontaktwerte wurden automatisch als Top Fan gesetzt."
+
+      - name: Remove completed one-off workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PATH_TO_DELETE=".github/workflows/one-off-apply-top-fan-migration-20260719.yml"
+          FILE_SHA="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/$GITHUB_REPOSITORY/contents/$PATH_TO_DELETE?ref=main" \
+            --jq '.sha')"
+
+          gh api \
+            --method DELETE \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/$GITHUB_REPOSITORY/contents/$PATH_TO_DELETE" \
+            -f message='Remove completed Top-Fan migration workflow' \
+            -f sha="$FILE_SHA" \
+            -f branch='main'
