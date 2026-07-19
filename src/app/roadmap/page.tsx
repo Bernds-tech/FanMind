@@ -16,12 +16,12 @@ type RoadmapItem = {
 };
 
 const available: RoadmapItem[] = [
-  { featureKey: "login", note: "Login und Registrierung sind MVP-Bestandteil." },
+  { featureKey: "login", note: "Login und Registrierung sind Bestandteil der aktuellen Version." },
   { featureKey: "dashboard", note: "Das geschützte Dashboard ist aktiv." },
   { featureKey: "contacts", note: "Kontakte und Follower werden zentral gepflegt." },
   { featureKey: "contact_detail", note: "Kontaktdetails mit Verlauf und Kontext sind aktiv." },
   { featureKey: "ai_replies", note: "Serverseitige KI-Antwortvorschläge sind im Kern verfügbar." },
-  { featureKey: "memory", note: "Memory / Fan-Gedächtnis ist aktiv." },
+  { featureKey: "memory", note: "Kontaktwissen ist aktiv." },
   { featureKey: "followups", note: "Follow-ups und nächste manuelle Aktionen sind aktiv." },
   { featureKey: "csv_import", note: "CSV-Import ist ab Starter produktiv verfügbar." },
 ];
@@ -33,9 +33,9 @@ const inProgress: RoadmapItem[] = [
 
 const comingSoon: RoadmapItem[] = [
   { featureKey: "campaigns", note: "Kampagnen werden vorbereitet, aber nicht als vollständiger Versand gebaut." },
-  { featureKey: "analytics", note: "Analytics bleibt im MVP begrenzt und wird nicht als vollständige Suite behauptet." },
+  { featureKey: "analytics", note: "Analytics ist in der aktuellen Version nicht als vollständige Suite aktiv." },
   { featureKey: "team_roles", note: "Enterprise-Rollen und Rechte sind nicht produktiv aktiv." },
-  { featureKey: "integrations", note: "Instagram, TikTok, WhatsApp, Facebook und X/Twitter sind nicht integriert." },
+  { featureKey: "integrations", note: "Instagram, TikTok, WhatsApp, Facebook und X/Twitter sind nicht allgemein als produktive Vollintegration freigegeben." },
 ];
 
 const later: RoadmapItem[] = [];

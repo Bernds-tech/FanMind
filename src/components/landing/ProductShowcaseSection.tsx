@@ -3,14 +3,13 @@ import FeatureStatusLabel from "@/components/FeatureStatusLabel";
 import {
   createFanMindTranslator,
   type FanMindLanguage,
-  localizeFanMindValue,
 } from "@/lib/fanmindCopy";
 import styles from "./ProductShowcaseSection.module.css";
 
 const benefits = [
   [
     "♙",
-    "Persönlicher Fan-Kontext",
+    "Persönlicher Kontaktkontext",
     "Interaktionen, Tags und Notizen bleiben sichtbar, bevor dein Team antwortet.",
   ],
   [
@@ -21,7 +20,7 @@ const benefits = [
   [
     "▤",
     "CSV-Import & Notizen",
-    "Bestehende Fans können in den MVP-Workflow übernommen und ergänzt werden.",
+    "Bestehende Kontakte können in den aktuellen Workflow übernommen und ergänzt werden.",
   ],
   [
     "↗",
@@ -30,11 +29,34 @@ const benefits = [
   ],
 ];
 
+const benefitsEn = [
+  [
+    "♙",
+    "Personal contact context",
+    "Interactions, tags and notes stay visible before your team replies.",
+  ],
+  [
+    "☆",
+    "Reviewed tasks",
+    "Prioritized tasks show which manual step should be reviewed next.",
+  ],
+  [
+    "▤",
+    "CSV import & notes",
+    "Existing contacts can be imported into the current workflow and supplemented.",
+  ],
+  [
+    "↗",
+    "Reviewed next steps",
+    "Follow-ups and prepared drafts remain transparently traceable.",
+  ],
+];
+
 const featureCards = [
   [
     "🧠",
-    "Fan-Gedächtnis",
-    "Merkt sich Kaufhistorie, Interessen, Notizen und Interaktionsverlauf pro Fan.",
+    "Kontaktwissen",
+    "Speichert Kaufhistorie, Interessen, Notizen und Interaktionsverlauf pro Kontakt.",
   ],
   [
     "✦",
@@ -50,6 +72,29 @@ const featureCards = [
     "☑",
     "Follow-up Queue",
     "Bündelt fällige Aktionen nach Priorität, Owner und nächstem Schritt.",
+  ],
+];
+
+const featureCardsEn = [
+  [
+    "🧠",
+    "Contact knowledge",
+    "Stores purchase history, interests, notes and interaction history for each contact.",
+  ],
+  [
+    "✦",
+    "AI reply suggestions",
+    "Provides suitable drafts – a human reviews, edits and approves them.",
+  ],
+  [
+    "▣",
+    "Clearly marked roadmap",
+    "Campaigns, analytics and external channels remain separated as roadmap or beta items.",
+  ],
+  [
+    "☑",
+    "Follow-up queue",
+    "Groups due actions by priority, owner and next step.",
   ],
 ];
 
@@ -85,8 +130,8 @@ export default function ProductShowcaseSection({
   language?: FanMindLanguage;
 }) {
   const t = createFanMindTranslator(language);
-  const localizedBenefits = localizeFanMindValue(benefits, t);
-  const localizedFeatureCards = localizeFanMindValue(featureCards, t);
+  const localizedBenefits = language === "en" ? benefitsEn : benefits;
+  const localizedFeatureCards = language === "en" ? featureCardsEn : featureCards;
 
   return (
     <section
@@ -106,16 +151,20 @@ export default function ProductShowcaseSection({
             <span>{t("Fan-Management mit Beispieldaten.")}</span>
           </h2>
           <p>
-            {t(
-              "FanMind verbindet Fans, Fan-Gedächtnis, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind aktuell als Vorschau markiert.",
-            )}
+            {language === "en"
+              ? "FanMind brings contacts, contact knowledge, AI suggestions, follow-ups and CSV import together in a controlled workspace. Campaigns and analytics are currently marked as previews."
+              : "FanMind verbindet Kontakte, Kontaktwissen, KI-Vorschläge, Follow-ups und CSV-Import in einer kontrollierten Arbeitsfläche. Kampagnen und Analytics sind aktuell als Vorschau markiert."}
           </p>
         </header>
 
         <div className={styles.stage}>
           <aside
             className={styles.leftColumn}
-            aria-label="Fan-Gedächtnis, KI-Vorschläge und Kampagnenvorschau"
+            aria-label={
+              language === "en"
+                ? "Contact knowledge, AI suggestions and campaign preview"
+                : "Kontaktwissen, KI-Vorschläge und Kampagnenvorschau"
+            }
           >
             <article
               id="fan-gedaechtnis"
@@ -123,14 +172,18 @@ export default function ProductShowcaseSection({
             >
               <div className={styles.cardTop}>
                 <span className={styles.iconBubble}>🧠</span>
-                <strong>{t("Fan-Gedächtnis")}</strong>
+                <strong>{language === "en" ? "Contact knowledge" : "Kontaktwissen"}</strong>
                 <em>{t("Buyer")}</em>
               </div>
               <div className={styles.profileRow}>
                 <span className={styles.avatar}>SM</span>
                 <div>
                   <b>Sandra M.</b>
-                  <small>{t("Fan seit 12.03.2025")}</small>
+                  <small>
+                    {language === "en"
+                      ? "Contact since 12 March 2025"
+                      : "Kontakt seit 12.03.2025"}
+                  </small>
                 </div>
               </div>
               <div className={styles.tabRow}>
