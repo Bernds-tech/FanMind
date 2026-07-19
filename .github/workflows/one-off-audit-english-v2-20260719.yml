@@ -22,6 +22,21 @@ jobs:
       FANMIND_ADMIN_EMAILS: admin@example.com
     steps:
       - uses: actions/checkout@v4
+      - name: Capture source context for remaining strings
+        run: |
+          {
+            grep -n -C 4 -F 'Fan-CRM für Nachrichten, Erinnerungen' src/app/landing-v2/page.tsx || true
+            grep -n -C 4 -F 'ein nächster Schritt.' src/app/landing-v2/page.tsx || true
+            grep -n -C 4 -F 'Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden.' src/app/landing-v2/page.tsx || true
+            grep -n -C 4 -F 'Persönliche Anfrage statt automatischem Newsletter.' src/app/landing-v2/page.tsx || true
+          } > /tmp/english-landing-v2-source-context.txt
+          cat /tmp/english-landing-v2-source-context.txt
+      - name: Upload source context
+        uses: actions/upload-artifact@v4
+        with:
+          name: english-landing-v2-source-context
+          path: /tmp/english-landing-v2-source-context.txt
+          retention-days: 7
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
