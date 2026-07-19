@@ -68,15 +68,17 @@ function visibleText(html) {
 }
 
 function assertText(name, text, { includes = [], excludes = [] }) {
+  const normalizedText = text.toLocaleLowerCase("de");
+
   for (const value of includes) {
-    if (!text.includes(value)) {
+    if (!normalizedText.includes(value.toLocaleLowerCase("de"))) {
       addResult(name, false, `Pflichttext fehlt: ${value}`);
       return;
     }
   }
 
   for (const value of excludes) {
-    if (text.includes(value)) {
+    if (normalizedText.includes(value.toLocaleLowerCase("de"))) {
       addResult(name, false, `veralteter Text gefunden: ${value}`);
       return;
     }
@@ -141,6 +143,8 @@ try {
 
   if (payload?.status !== "healthy") {
     addResult("health", false, `Gesamtstatus ${String(payload?.status)}`);
+  } else if (!checks.length) {
+    addResult("health", false, "keine veröffentlichten Komponentenprüfungen vorhanden");
   } else if (unhealthy.length) {
     addResult("health", false, `${unhealthy.length} Komponente(n) nicht healthy`);
   } else {
@@ -155,7 +159,7 @@ const englishLanding = visibleText(pageHtml.get("/?lang=en") || "");
 const registerPage = visibleText(pageHtml.get("/register") || "");
 
 assertText("deutsche Landingpage", germanLanding, {
-  includes: ["Kontaktwissen", "keine automatische Sendefunktion"],
+  includes: ["Kontaktwissen", "Keine automatische Sendefunktion"],
   excludes: ["Fan-Gedächtnis", "Pilot anfragen", "299 €/Monat"],
 });
 
