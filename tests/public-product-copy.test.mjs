@@ -53,3 +53,17 @@ test("public product surfaces keep contact knowledge visible", async () => {
   assert.match(combined, /Kontaktwissen/u);
   assert.match(combined, /keine Nachrichten automatisch|keine automatische Sendefunktion/iu);
 });
+
+test("public login does not render internal Sandra demo fallback guidance", async () => {
+  const loginPage = await readFile("src/app/login/page.tsx", "utf8");
+
+  assert.doesNotMatch(
+    loginPage,
+    /Du kannst den kontrollierten Sandra-Demo-Zugang über \/login\?demo=1 nutzen\./u,
+  );
+  assert.doesNotMatch(
+    loginPage,
+    /Bitte nutze \/login\?demo=1 als Fallback\./u,
+  );
+  assert.doesNotMatch(loginPage, /Sandra-Demo-Fallback öffnen/u);
+});

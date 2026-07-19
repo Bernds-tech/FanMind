@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, use, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   createSupabaseBrowserClient,
   syncSupabaseSessionForServer,
@@ -106,7 +105,6 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const copy = fanmindCopy[language].login;
   const registerHref = localizedPath("/register", language);
   const forgotPasswordHref = localizedPath("/forgot-password", language);
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -140,6 +138,11 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     setTurnstileResetSignal((current) => current + 1);
   }
 
+  const demoStartFallbackMessage =
+    language === "en"
+      ? "The demo limit has been reached. Please use your existing demo or try again later."
+      : "Das Demo-Limit wurde erreicht. Bitte nutze deine bestehende Demo oder versuche es später erneut.";
+
   async function handleDemoStart() {
     setError(null);
 
@@ -171,20 +174,14 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
 
       if (!response.ok) {
         resetTurnstile();
-        setError(
-          `${payload?.error ?? "Die Demo konnte gerade nicht vorbereitet werden."} Du kannst den kontrollierten Sandra-Demo-Zugang über /login?demo=1 nutzen.`,
-        );
+        setError(payload?.error ?? demoStartFallbackMessage);
         return;
       }
 
       window.location.assign(payload?.redirectTo ?? LOGIN_TARGET);
-    } catch (startError) {
+    } catch {
       resetTurnstile();
-      setError(
-        startError instanceof Error
-          ? startError.message
-          : "Die Demo konnte gerade nicht vorbereitet werden. Bitte nutze /login?demo=1 als Fallback.",
-      );
+      setError(demoStartFallbackMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -449,25 +446,6 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                   ? "Try for free"
                   : "Kostenlos testen"}
             </button>
-
-            {error && (
-              <p className={styles.notice}>
-                <button
-                  className={styles.secondaryButton}
-                  type="button"
-                  onClick={() =>
-                    router.push(
-                      withReturnTo(
-                        localizedPath("/login", language, "?demo=1"),
-                        returnTo,
-                      ),
-                    )
-                  }
-                >
-                  Sandra-Demo-Fallback öffnen
-                </button>
-              </p>
-            )}
 
             <p className={styles.notice}>{copy.notice}</p>
 
