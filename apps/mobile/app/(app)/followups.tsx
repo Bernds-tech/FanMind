@@ -72,7 +72,11 @@ function FollowupRow({
 }
 
 export default function FollowupsScreen() {
-  const { workspace, loading: workspaceLoading } = useWorkspace();
+  const {
+    workspace,
+    loading: workspaceLoading,
+    error: workspaceError,
+  } = useWorkspace();
   const [followups, setFollowups] = useState<Followup[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,7 +85,14 @@ export default function FollowupsScreen() {
 
   const load = useCallback(
     async (refresh = false) => {
-      if (!workspace?.id) return;
+      if (!workspace?.id) {
+        setFollowups([]);
+        setError(null);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       refresh ? setRefreshing(true) : setLoading(true);
       const result = await listFollowups(workspace.id);
       setFollowups(result.followups);
@@ -105,7 +116,32 @@ export default function FollowupsScreen() {
     setBusyId(null);
   }
 
-  if (workspaceLoading || loading) {
+  if (workspaceLoading) {
+    return (
+      <Screen scroll={false}>
+        <LoadingState label="Follow-ups werden geladen…" />
+      </Screen>
+    );
+  }
+
+  if (!workspace) {
+    return (
+      <Screen
+        title="Follow-ups"
+        subtitle="Offene Aufgaben und Rückmeldungen auf einen Blick"
+      >
+        <EmptyState
+          title="Noch kein Workspace"
+          description={
+            workspaceError ??
+            "Schließe zuerst das FanMind-Onboarding ab, damit Follow-ups geladen werden können."
+          }
+        />
+      </Screen>
+    );
+  }
+
+  if (loading) {
     return (
       <Screen scroll={false}>
         <LoadingState label="Follow-ups werden geladen…" />
