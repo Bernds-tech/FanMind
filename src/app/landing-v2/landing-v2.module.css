@@ -10780,3 +10780,70 @@
     scroll-margin-top: 110px;
   }
 }
+
+/* Issue #619/#621 follow-up: keep the full desktop hero layout tied to
+   actual usable CSS width, not browser-specific intrinsic sizing. */
+.landingHeaderRoot .header {
+  grid-template-columns: minmax(180px, 274px) minmax(0, 1fr) auto;
+  min-height: 50px;
+  height: auto;
+}
+
+.landingHeaderRoot .nav,
+.landingHeaderRoot .headerActions,
+.hero,
+.hero > *,
+.heroCopy,
+.dashboardWrap,
+.dashboardImage,
+.heroFeatureGrid,
+.heroFeatureCard {
+  min-width: 0;
+}
+
+.hero {
+  grid-template-columns: minmax(390px, 0.76fr) minmax(0, 1.24fr);
+}
+
+.heroCopy {
+  max-width: 620px;
+}
+
+.dashboardWrap {
+  justify-self: end;
+  max-width: 920px;
+}
+
+@media (max-width: 1100px) {
+  .landingHeaderRoot + .page {
+    padding-top: 122px;
+  }
+
+  .landingHeaderRoot .header {
+    grid-template-columns: 1fr auto;
+  }
+
+  .landingHeaderRoot .nav {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardWrap {
+    justify-self: center;
+    transform: none;
+  }
+
+  .heroFeatureGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .landingHeaderRoot .header {
+    min-height: 0;
+  }
+}
