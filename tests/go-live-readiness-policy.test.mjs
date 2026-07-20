@@ -52,3 +52,14 @@ test("sales and final smoke documents preserve product guardrails", async () => 
   assert.match(combined, /Referral-Billing.*deaktiviert/us);
   assert.match(combined, /Stripe-Webhook 200/u);
 });
+
+test("phase 4 is marked done for sales launch and no longer waits for tax advisor confirmation", async () => {
+  const roadmap = await read(roadmapPath);
+
+  assert.match(roadmap, /title: "Erledigt \/ Verkaufsstart freigegeben"/u);
+  assert.match(roadmap, /status: "Erledigt \/ Verkaufsstart freigegeben"/u);
+  assert.match(roadmap, /availability: "done"/u);
+  assert.match(roadmap, /label: "Produktionsfreigabe", state: "done", status: "Erledigt"/u);
+  assert.match(roadmap, /label: "Finaler Go-Live-Smoke-Test", state: "done", status: "Erledigt"/u);
+  assert.doesNotMatch(roadmap, /Steuerberater-Bestätigung/u);
+});
