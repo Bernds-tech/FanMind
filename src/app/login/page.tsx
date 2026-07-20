@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, use, useEffect, useRef, useState } from "react";
+import { FormEvent, use, useCallback, useEffect, useRef, useState } from "react";
 import {
   createSupabaseBrowserClient,
   syncSupabaseSessionForServer,
@@ -112,6 +112,9 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+  const demoConfirmStartRef = useRef<HTMLButtonElement>(null);
+  const demoTriggerRef = useRef<HTMLButtonElement>(null);
+  const [isDemoConfirmOpen, setIsDemoConfirmOpen] = useState(false);
 
   const invalidCredentialsMessage =
     language === "en"
@@ -142,6 +145,61 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     language === "en"
       ? "The demo limit has been reached. Please use your existing demo or try again later."
       : "Das Demo-Limit wurde erreicht. Bitte nutze deine bestehende Demo oder versuche es später erneut.";
+
+  const demoConfirmCopy =
+    language === "en"
+      ? {
+          title: "Start the demo now?",
+          notice:
+            "Your demo access lasts 60 minutes. After it expires, another demo start may not be immediately available due to our protection limits.",
+          start: "Start demo",
+          cancel: "Cancel",
+          close: "Close demo confirmation",
+        }
+      : {
+          title: "Demo jetzt starten?",
+          notice:
+            "Dein Demo-Zugang läuft 60 Minuten. Nach Ablauf kann ein neuer Demo-Start aufgrund unserer Schutzlimits möglicherweise nicht sofort verfügbar sein.",
+          start: "Demo starten",
+          cancel: "Abbrechen",
+          close: "Demo-Bestätigung schließen",
+        };
+
+  function openDemoConfirm() {
+    setError(null);
+
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError(
+        language === "en"
+          ? "Please confirm bot protection before starting the public demo."
+          : "Bitte bestätige den Bot-Schutz, bevor du die öffentliche Demo startest.",
+      );
+      return;
+    }
+
+    setIsDemoConfirmOpen(true);
+  }
+
+  const closeDemoConfirm = useCallback(() => {
+    if (isSubmitting) return;
+    setIsDemoConfirmOpen(false);
+    window.setTimeout(() => demoTriggerRef.current?.focus(), 0);
+  }, [isSubmitting]);
+
+  useEffect(() => {
+    if (!isDemoConfirmOpen) return;
+    demoConfirmStartRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeDemoConfirm();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closeDemoConfirm, isDemoConfirmOpen]);
 
   async function handleDemoStart() {
     setError(null);
@@ -178,6 +236,7 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         return;
       }
 
+      setIsDemoConfirmOpen(false);
       window.location.assign(payload?.redirectTo ?? LOGIN_TARGET);
     } catch {
       resetTurnstile();
@@ -433,7 +492,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             <button
               className={styles.secondaryButton}
               type="button"
-              onClick={handleDemoStart}
+              ref={demoTriggerRef}
+              onClick={openDemoConfirm}
               disabled={
                 isSubmitting || Boolean(TURNSTILE_SITE_KEY && !turnstileToken)
               }
@@ -446,6 +506,54 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
                   ? "Try for free"
                   : "Kostenlos testen"}
             </button>
+
+            {isDemoConfirmOpen && (
+              <div className={styles.dialogBackdrop} onMouseDown={closeDemoConfirm}>
+                <section
+                  className={styles.demoDialog}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="demo-confirm-title"
+                  aria-describedby="demo-confirm-description"
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  <button
+                    className={styles.dialogCloseButton}
+                    type="button"
+                    aria-label={demoConfirmCopy.close}
+                    onClick={closeDemoConfirm}
+                    disabled={isSubmitting}
+                  >
+                    ×
+                  </button>
+                  <h2 id="demo-confirm-title">{demoConfirmCopy.title}</h2>
+                  <p id="demo-confirm-description">{demoConfirmCopy.notice}</p>
+                  <div className={styles.dialogActions}>
+                    <button
+                      ref={demoConfirmStartRef}
+                      className={styles.dialogPrimaryButton}
+                      type="button"
+                      onClick={handleDemoStart}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting
+                        ? language === "en"
+                          ? "Preparing demo…"
+                          : "Demo wird vorbereitet…"
+                        : demoConfirmCopy.start}
+                    </button>
+                    <button
+                      className={styles.dialogSecondaryButton}
+                      type="button"
+                      onClick={closeDemoConfirm}
+                      disabled={isSubmitting}
+                    >
+                      {demoConfirmCopy.cancel}
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
 
             <p className={styles.notice}>{copy.notice}</p>
 
