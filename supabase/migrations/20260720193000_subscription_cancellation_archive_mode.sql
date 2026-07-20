@@ -22,3 +22,31 @@ create index if not exists subscription_audit_log_workspace_created_idx
   on public.subscription_audit_log(workspace_id, created_at desc);
 
 alter table public.subscription_audit_log enable row level security;
+
+create or replace function public.fanmind_enforce_archive_mode()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.billing_status in ('cancelled', 'expired') then
+    new.archive_mode := true;
+    new.channel_sync_enabled := false;
+    new.ai_features_enabled := false;
+    if new.cancellation_effective_at is null then
+      new.cancellation_effective_at := now();
+    end if;
+  elsif new.billing_status = 'active' and old.billing_status in ('cancelled', 'expired') then
+    new.archive_mode := false;
+    new.channel_sync_enabled := true;
+    new.ai_features_enabled := true;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists fanmind_workspace_archive_mode_trigger on public.workspaces;
+create trigger fanmind_workspace_archive_mode_trigger
+before insert or update of billing_status on public.workspaces
+for each row execute function public.fanmind_enforce_archive_mode();
