@@ -36,6 +36,7 @@ const checkedFiles = [
   "src/components/WorkspaceShell.tsx",
   "src/components/LegalTopHeader.tsx",
   "src/app/settings/AccountSections.tsx",
+  "src/app/settings/AccountTabs.tsx",
   "src/app/settings/ai-usage/page.tsx",
   "src/app/fans/[id]/page.tsx",
   "src/app/agb/page.tsx",
@@ -443,7 +444,7 @@ requireText(
   "Die Nutzeransicht muss den Zustand ohne Vertragsgrenze offenlegen.",
 );
 requireText(
-  "src/lib/workspaceNavigation.ts",
+  "src/app/settings/AccountTabs.tsx",
   'href: "/settings/ai-usage"',
   "KI-Nutzung muss im geschützten Kontobereich erreichbar sein.",
 );

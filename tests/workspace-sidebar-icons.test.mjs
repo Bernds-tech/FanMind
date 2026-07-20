@@ -30,8 +30,6 @@ test("workspace navigation keeps the canonical sidebar order and icon keys", asy
     ["Follow-ups", "followups"],
     ["Kanäle", "channels"],
     ["Profil & Konto", "profile"],
-    ["KI-Nutzung", "usage"],
-    ["Empfehlungen", "referral"],
     ["Top Fans", "topFans"],
     ["Reaktivierung", "reactivation"],
   ];
@@ -46,4 +44,15 @@ test("workspace navigation keeps the canonical sidebar order and icon keys", asy
     assert.ok(iconIndex > labelIndex, `${label} must keep icon key ${icon}`);
     previousIndex = labelIndex;
   }
+});
+
+test("workspace account shortcuts stay out of expanded and collapsed sidebar navigation", async () => {
+  const navigation = await readFile(navigationPath, "utf8");
+
+  assert.doesNotMatch(navigation, /label: locale === "en" \? "AI usage" : "KI-Nutzung"/u);
+  assert.doesNotMatch(navigation, /href: "\/settings\/ai-usage"/u);
+  assert.doesNotMatch(navigation, /icon: "usage"/u);
+  assert.doesNotMatch(navigation, /label: locale === "en" \? "Recommendations" : "Empfehlungen"/u);
+  assert.doesNotMatch(navigation, /href: "\/settings\/referral"/u);
+  assert.doesNotMatch(navigation, /icon: "referral"/u);
 });

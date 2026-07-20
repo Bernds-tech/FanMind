@@ -85,18 +85,6 @@ export function getWorkspaceNavigation(
         icon: "profile",
         active: activeRoute === "settings",
       },
-      {
-        label: locale === "en" ? "AI usage" : "KI-Nutzung",
-        href: "/settings/ai-usage",
-        icon: "usage",
-        active: activeRoute === "aiUsage",
-      },
-      {
-        label: locale === "en" ? "Recommendations" : "Empfehlungen",
-        href: "/settings/referral",
-        icon: "referral",
-        active: activeRoute === "referral",
-      },
       ...(showAdminArea
         ? [
             {
