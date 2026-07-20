@@ -9,14 +9,17 @@ export function isTemporaryDemoUser(user: Pick<SupabaseServerUser, "user_metadat
   return user?.user_metadata?.fanmind_demo === true && user.user_metadata.demo_type === "temporary";
 }
 
-export function isDemoWorkspace(workspace: { billing_status?: string | null; name?: string | null } | null | undefined): boolean {
+export function isExplicitDemoWorkspace(workspace: { name?: string | null } | null | undefined): boolean {
   const workspaceName = (workspace?.name ?? "").trim();
   return (
-    workspace?.billing_status === "demo_free" ||
     workspaceName === DEMO_WORKSPACE_NAME ||
     workspaceName === TEMPORARY_DEMO_WORKSPACE_NAME ||
     workspaceName === LEGACY_TEMPORARY_DEMO_WORKSPACE_NAME
   );
+}
+
+export function isDemoWorkspace(workspace: { billing_status?: string | null; name?: string | null } | null | undefined): boolean {
+  return workspace?.billing_status === "demo_free" || isExplicitDemoWorkspace(workspace);
 }
 
 export function isPublicDemoWorkspace({
