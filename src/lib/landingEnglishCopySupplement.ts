@@ -74,6 +74,8 @@ export const landingEnglishCopySupplement: Record<string, string> = {
   "Beta / in Vorbereitung": "Beta / in preparation",
   Pflicht: "Required",
   "Verkaufsstart vorbereitet": "Sales launch prepared",
+  "Verkaufsstart freigegeben": "Sales launch approved",
+  "Erledigt / Verkaufsstart freigegeben": "Completed / sales launch approved",
   "Finaler Smoke-Test": "Final smoke test",
   "Stripe-Live-Schritte": "Stripe live steps",
   Erledigt: "Done",
