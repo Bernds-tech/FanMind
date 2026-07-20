@@ -608,3 +608,123 @@
   font-weight: 750;
   text-decoration: none;
 }
+
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(1, 5, 16, 0.76);
+  backdrop-filter: blur(10px);
+}
+
+.demoDialog {
+  position: relative;
+  width: min(440px, 100%);
+  border: 1px solid rgba(0, 200, 255, 0.42);
+  border-radius: 22px;
+  padding: 26px;
+  color: #f7fbff;
+  background: linear-gradient(145deg, rgba(5, 13, 32, 0.98), rgba(12, 8, 35, 0.98));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), 0 0 48px rgba(0, 149, 255, 0.22);
+}
+
+.demoDialog h2 {
+  margin: 0;
+  padding-right: 34px;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: -0.7px;
+}
+
+.demoDialog p {
+  margin: 12px 0 0;
+  color: #d9e7f8;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.dialogCloseButton {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(128, 166, 217, 0.46);
+  border-radius: 999px;
+  color: #ffffff;
+  background: rgba(4, 14, 34, 0.74);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dialogPrimaryButton,
+.dialogSecondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dialogPrimaryButton {
+  flex: 1;
+  border: 0;
+  color: #ffffff;
+  background: linear-gradient(100deg, #0875ff 0%, #2755ff 45%, #8f25ff 100%);
+  box-shadow: 0 12px 28px rgba(79, 55, 255, 0.38);
+}
+
+.dialogSecondaryButton {
+  border: 1px solid rgba(126, 154, 198, 0.52);
+  color: #eef7ff;
+  background: rgba(4, 14, 34, 0.76);
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.dialogPrimaryButton:focus-visible,
+.dialogSecondaryButton:focus-visible,
+.dialogCloseButton:focus-visible {
+  outline: 3px solid #85eaff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(0, 200, 255, 0.16);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dialogPrimaryButton:disabled,
+.dialogSecondaryButton:disabled,
+.dialogCloseButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .dialogActions {
+    flex-direction: column;
+  }
+
+  .dialogPrimaryButton,
+  .dialogSecondaryButton {
+    width: 100%;
+    min-height: 54px;
+  }
+}
