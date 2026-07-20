@@ -5,6 +5,18 @@ import { canManageSubscription, computeCancellationEffectiveAt } from "@/lib/sub
 
 export const dynamic = "force-dynamic";
 
+type CancellableWorkspace = {
+  id: string;
+  owner_user_id: string;
+  commercial_option?: string | null;
+  commitment_months?: number | null;
+  billing_updated_at?: string | null;
+  billing_last_payment_at?: string | null;
+  stripe_subscription_id?: string | null;
+  current_period_end?: string | null;
+  commitment_started_at?: string | null;
+};
+
 async function updateStripeSubscription(subscriptionId: string, effectiveAt: string) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("PAYMENT_PROVIDER_NOT_CONFIGURED");
@@ -43,7 +55,7 @@ export async function POST() {
   const { data } = await getSupabaseServerUser();
   if (!data.user) return NextResponse.json({ error: "Bitte melde dich erneut an." }, { status: 401 });
   const result = await getUserWorkspaceDashboard(data.user);
-  const workspace = result.workspace;
+  const workspace = result.workspace as CancellableWorkspace | null;
   if (!workspace || !canManageSubscription(workspace, data.user.id)) {
     return NextResponse.json({ error: "Nur der Workspace-Owner kann das Abo verwalten." }, { status: 403 });
   }
