@@ -14,6 +14,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Kommerzielle Wahrheit: Starter-Grundgebühr `312 €/Monat`.
 - Starter Flex: `990 € einmalige Einrichtung + 312 €/Monat`; jederzeit zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats kündbar.
 - Starter 12 Monate: `0 € Setup + 312 €/Monat`; zwölf Monate Mindestlaufzeit, danach Verlängerung um jeweils einen Monat.
+- Starter-Abos können unter `/settings/package` zum serverseitig berechneten Vertragsende vorgemerkt und vor Wirksamkeit zurückgenommen werden; Account-Löschung bleibt ein separater DSGVO-Prozess.
 - KI Standard: in der Starter-Grundgebühr enthalten.
 - KI Plus: zusätzlich `100 €/Monat`.
 - KI Ultra: zusätzlich `200 €/Monat`.
@@ -94,7 +95,7 @@ npm run build
 | `/fans/[id]` | Kontaktdetail, Verlauf, KI, Kontaktwissen und Follow-ups | aktiv |
 | `/followups` | Follow-up-Übersicht | aktiv |
 | `/settings/profile` | Profil und Workspace-Basisdaten | aktiv |
-| `/settings/package` | Starter-Paket, KI-Add-ons und Kündigungsanfrage | aktiv |
+| `/settings/package` | Starter-Paket, KI-Add-ons und sichere Self-Service-Kündigung zum Vertragsende | aktiv |
 | `/settings/invoices` | Rechnungsarchiv | aktiv |
 | `/settings/referral` | Referral-Code, Status und Rabattübersicht | aktiv; Billing-Verrechnung separat freizugeben |
 | `/referral-bedingungen` | öffentliche Referral-Teilnahmebedingungen | aktiv; automatische Rabattverrechnung weiterhin deaktiviert |

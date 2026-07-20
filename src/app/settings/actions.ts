@@ -10,6 +10,9 @@ import {
   updateTaxMasterDataSettings,
   updateWorkspaceMasterDataSettings,
 } from "@/lib/supabase/server";
+import { getSupabaseRestUrl } from "@/lib/supabase/config";
+import { resolveSubscriptionCancellation } from "@/lib/subscriptionCancellation";
+import { updateStripeSubscriptionCancellation } from "@/lib/stripeBilling";
 import { FANMIND_LOCALE_COOKIE, localeCookieOptions } from "@/lib/workspaceLocale";
 import {
   FANMIND_BRIGHTNESS_COOKIE,
@@ -140,3 +143,93 @@ export async function saveTaxMasterData(formData: FormData) {
   redirectProfileResult("tax_saved", "tax_error", result.error);
 }
 
+
+
+function redirectPackageResult(key: "cancel_error" | "cancel_saved", value: string): never {
+  redirect(`/settings/package?${key}=${encodeURIComponent(value)}`);
+}
+
+async function servicePatch(table: string, id: string, body: Record<string, unknown>) {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return { error: new Error("Supabase Service Role ist serverseitig nicht konfiguriert.") };
+  const response = await fetch(`${getSupabaseRestUrl(table)}?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify(body),
+  });
+  return response.ok ? { error: null } : { error: new Error(await response.text()) };
+}
+
+async function auditSubscriptionChange(input: { userId: string; email?: string; workspaceId: string; action: string; outcome: string; metadata: Record<string, unknown> }) {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return;
+  await fetch(getSupabaseRestUrl("operations_audit_log"), {
+    method: "POST",
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ actor_user_id: input.userId, actor_email: input.email ?? null, action: input.action, target_table: "workspaces", target_id: input.workspaceId, severity: "info", outcome: input.outcome, metadata: input.metadata }),
+  }).catch(() => undefined);
+}
+
+async function getOwnerWorkspaceOrRedirect() {
+  const { data } = await getSupabaseServerUser();
+  if (!data.user) redirect("/login");
+  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspace = workspaceResult.workspace;
+  if (!workspace) redirectPackageResult("cancel_error", workspaceResult.error?.message ?? "Workspace konnte nicht geladen werden.");
+  if (workspace.owner_user_id !== data.user.id && workspace.role !== "owner") redirectPackageResult("cancel_error", "Nur Workspace-Owner dürfen das Abo verwalten.");
+  return { user: data.user, workspace };
+}
+
+export async function requestSubscriptionCancellation() {
+  const { user, workspace } = await getOwnerWorkspaceOrRedirect();
+  const policy = resolveSubscriptionCancellation(workspace);
+  if (!policy.canSelfService || !workspace.stripe_subscription_id) redirectPackageResult("cancel_error", "Dieses Paket kann nicht per Self-Service gekündigt werden.");
+
+  const stripe = await updateStripeSubscriptionCancellation({
+    subscriptionId: workspace.stripe_subscription_id,
+    cancelAtPeriodEnd: policy.stripeCancelAtPeriodEnd,
+    cancelAt: policy.requiresCancelAtTimestamp ? policy.effectiveEndAt : null,
+    workspaceId: workspace.id,
+    action: "request",
+  });
+  if (stripe.error) {
+    await auditSubscriptionChange({ userId: user.id, email: user.email, workspaceId: workspace.id, action: "subscription_cancellation_request", outcome: "failure", metadata: { error: stripe.error } });
+    redirectPackageResult("cancel_error", stripe.error);
+  }
+  const now = new Date().toISOString();
+  const result = await servicePatch("workspaces", workspace.id, {
+    subscription_cancel_requested_at: now,
+    subscription_cancel_requested_by_user_id: user.id,
+    subscription_cancel_at_period_end: policy.stripeCancelAtPeriodEnd,
+    subscription_effective_end_at: policy.effectiveEndAt,
+    subscription_cancellation_revoked_at: null,
+    billing_admin_note: `Kündigung zum Vertragsende vorgemerkt: ${policy.effectiveEndAt}`,
+    billing_updated_by_user_id: user.id,
+  });
+  await auditSubscriptionChange({ userId: user.id, email: user.email, workspaceId: workspace.id, action: "subscription_cancellation_request", outcome: result.error ? "failure" : "success", metadata: { effectiveEndAt: policy.effectiveEndAt, stripeCancelAtPeriodEnd: policy.stripeCancelAtPeriodEnd } });
+  if (result.error) redirectPackageResult("cancel_error", result.error.message);
+  redirectPackageResult("cancel_saved", "Kündigung wurde zum Vertragsende vorgemerkt.");
+}
+
+export async function revokeSubscriptionCancellation() {
+  const { user, workspace } = await getOwnerWorkspaceOrRedirect();
+  if (!workspace.subscription_cancel_requested_at || !workspace.stripe_subscription_id) redirectPackageResult("cancel_error", "Es ist keine Kündigung vorgemerkt.");
+  if (workspace.subscription_effective_end_at && Date.parse(workspace.subscription_effective_end_at) <= Date.now()) redirectPackageResult("cancel_error", "Die Kündigung kann nach Vertragsende nicht zurückgenommen werden.");
+  const stripe = await updateStripeSubscriptionCancellation({ subscriptionId: workspace.stripe_subscription_id, cancelAtPeriodEnd: false, cancelAt: null, workspaceId: workspace.id, action: "revoke" });
+  if (stripe.error) {
+    await auditSubscriptionChange({ userId: user.id, email: user.email, workspaceId: workspace.id, action: "subscription_cancellation_revoke", outcome: "failure", metadata: { error: stripe.error } });
+    redirectPackageResult("cancel_error", stripe.error);
+  }
+  const result = await servicePatch("workspaces", workspace.id, {
+    subscription_cancel_requested_at: null,
+    subscription_cancel_requested_by_user_id: null,
+    subscription_cancel_at_period_end: false,
+    subscription_effective_end_at: null,
+    subscription_cancellation_revoked_at: new Date().toISOString(),
+    billing_admin_note: "Kündigung zurückgenommen.",
+    billing_updated_by_user_id: user.id,
+  });
+  await auditSubscriptionChange({ userId: user.id, email: user.email, workspaceId: workspace.id, action: "subscription_cancellation_revoke", outcome: result.error ? "failure" : "success", metadata: {} });
+  if (result.error) redirectPackageResult("cancel_error", result.error.message);
+  redirectPackageResult("cancel_saved", "Kündigung wurde zurückgenommen.");
+}

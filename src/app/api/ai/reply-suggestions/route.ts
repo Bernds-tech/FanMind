@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { isWorkspaceArchivedAfterSubscriptionEnd } from "@/lib/subscriptionCancellation";
 import {
   BearerAccessTokenError,
   getOptionalBearerAccessToken,
@@ -246,6 +247,9 @@ export async function POST(request: NextRequest) {
   }
 
   const { contact, workspace, user } = authorizationContext;
+  if (isWorkspaceArchivedAfterSubscriptionEnd(workspace)) {
+    return jsonError("Workspace ist nach Vertragsende im Archiv-/Lesemodus; KI-Vorschläge sind deaktiviert.", 403);
+  }
   const model = getFanMindAiModel();
   const startedAt = Date.now();
   const contactContext = {

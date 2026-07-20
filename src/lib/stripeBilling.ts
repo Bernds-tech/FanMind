@@ -384,3 +384,41 @@ export async function updateWorkspaceBillingDefensively(
     );
   }
 }
+
+export async function updateStripeSubscriptionCancellation(input: {
+  subscriptionId: string;
+  cancelAtPeriodEnd: boolean;
+  cancelAt?: string | null;
+  workspaceId: string;
+  action: "request" | "revoke";
+}): Promise<{ error?: string; subscription?: Record<string, unknown> }> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) return { error: "Stripe ist serverseitig noch nicht konfiguriert." };
+
+  const params = new URLSearchParams();
+  params.set("cancel_at_period_end", input.cancelAtPeriodEnd ? "true" : "false");
+  if (input.action === "request" && input.cancelAt) {
+    params.set("cancel_at", String(Math.floor(Date.parse(input.cancelAt) / 1000)));
+  }
+  if (input.action === "revoke") {
+    params.set("cancel_at", "");
+  }
+  params.set("metadata[workspace_id]", input.workspaceId);
+  params.set("metadata[fanmind_cancellation_action]", input.action);
+
+  const response = await fetch(
+    `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(input.subscriptionId)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
+      cache: "no-store",
+    },
+  );
+  const json = (await response.json().catch(() => ({}))) as Record<string, unknown> & { error?: { message?: string } };
+  if (!response.ok) return { error: json.error?.message ?? "Stripe-Subscription konnte nicht aktualisiert werden." };
+  return { subscription: json };
+}

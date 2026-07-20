@@ -45,6 +45,7 @@ Aktiv beziehungsweise produktnah:
   - `/settings/profile` für Profil und Workspace-Basisdaten;
   - `/settings/package` für Paket, Status, Betrag, Setup und kontrollierte Paketoptionen;
   - `/settings/invoices` für eigene Stripe-Rechnungen mit Öffnen- und PDF-Links;
+  - Self-Service-Kündigung für Starter-Abos zum serverseitig erzwungenen Vertragsende mit separatem Account-/DSGVO-Löschprozess;
 - Admin-only Asset-Upload in den Supabase-Storage-Bucket `fanmind-assets`;
 - Legal-Seiten, Zahlungsbedingungen und AVV-Anforderungsseite;
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag ausschließlich für klar markierte interne Test-Workspaces; kein Referral-Rabatt.
@@ -82,6 +83,8 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 | Öffentliche Demo | aktiv | kostenloser temporärer Demo-Zugang; kein entgeltliches Paket |
 | Starter Flex | aktiv | 990 € Einrichtung + 312 €/Monat; Kündigung zum Ende des laufenden bezahlten Abrechnungsmonats |
 | Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat; 12 Monate Mindestlaufzeit, danach monatliche Verlängerung |
+
+Starter-Abos können unter `/settings/package` sicher zum Vertragsende gekündigt werden. Starter Flex endet frühestens zum bezahlten Periodenende; Starter 12 Monate frühestens zum Ende der Mindestlaufzeit. Nach Vertragsende bleiben Account, Login, CRM-Historie, Rechnungen und Export sichtbar; neue Nachrichten, Channel-Sync, externe Ingress-Webhooks, KI-Vorschläge, KI-Analysen und kostenpflichtige Hintergrundverarbeitung sind fail-closed zu deaktivieren.
 | Internes Live-Testabo | intern | 1 € pro Tag; ausschließlich klar markierter Test-Workspace; keine Referral-Automation |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht als Vollversion freigeschaltet |

@@ -68,9 +68,18 @@ function subscriptionStatusFields(object: StripeObject) {
     billing_status: billingStatus,
     stripe_customer_id: stringField(object, "customer"),
     stripe_subscription_id: stringField(object, "id"),
+    billing_contract_started_at: stripeTs(numberField(object, "created")),
+    billing_current_period_end_at: stripeTs(numberField(object, "current_period_end")),
+    billing_next_invoice_at: stripeTs(numberField(object, "current_period_end")),
+    subscription_cancel_at_period_end: Boolean(object.cancel_at_period_end),
+    subscription_effective_end_at: stripeTs(numberField(object, "cancel_at")) ?? (object.cancel_at_period_end ? stripeTs(numberField(object, "current_period_end")) : undefined),
+    subscription_cancel_requested_at: object.cancel_at_period_end || numberField(object, "cancel_at") ? nowIso() : undefined,
+    workspace_access_mode: status === "canceled" ? "archived_readonly" : undefined,
     billing_note: status ? `Stripe-Subscription-Status: ${status}` : undefined,
   };
 }
+
+function nowIso() { return new Date().toISOString(); }
 
 function invoiceFields(object: StripeObject) {
   return {
@@ -250,6 +259,7 @@ export async function POST(request: NextRequest) {
     await update({
       billing_status: "active",
       billing_last_payment_at: now,
+      workspace_access_mode: "active",
       billing_last_payment_failed_at: null,
       billing_retry_count: 0,
       billing_next_retry_at: null,
@@ -292,6 +302,7 @@ export async function POST(request: NextRequest) {
     await update({
       billing_status: "active",
       billing_last_payment_at: now,
+      workspace_access_mode: "active",
       billing_last_payment_failed_at: null,
       billing_retry_count: 0,
       billing_next_retry_at: null,
@@ -322,6 +333,7 @@ export async function POST(request: NextRequest) {
       ...invoiceFields(object),
       billing_status: "active",
       billing_last_payment_at: now,
+      workspace_access_mode: "active",
       billing_last_payment_failed_at: null,
       billing_retry_count: 0,
       billing_next_retry_at: null,
@@ -379,6 +391,8 @@ export async function POST(request: NextRequest) {
   if (event.type === "customer.subscription.deleted") {
     await update({
       billing_status: "cancelled",
+      workspace_access_mode: "archived_readonly",
+      subscription_effective_end_at: now,
       stripe_customer_id: stringField(object, "customer"),
       stripe_subscription_id: stringField(object, "id"),
       billing_note: "Stripe-Subscription wurde beendet.",
