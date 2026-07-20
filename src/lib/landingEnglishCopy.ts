@@ -89,7 +89,6 @@ export const landingEnglishCopy: Record<string, string> = {
   "Fan-Import & Datenqualität": "Contact import & data quality",
   "Technische & rechtliche Prüfung": "Technical & legal review",
   "Nächster Schritt": "Next step",
-  "Steuerberater-Bestätigung": "Tax advisor confirmation",
   "Produktions- und Testdaten trennen": "Separate production and test data",
   "Weitere Social-Kanäle": "Additional social channels",
   "Später": "Later",

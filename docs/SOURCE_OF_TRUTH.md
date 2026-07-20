@@ -54,14 +54,14 @@ Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-C
 
 ## 3. Roadmap- und Go-Live-Stand
 
-### Phase 4 – Verkaufsstart vorbereitet
+### Phase 4 – Erledigt / Verkaufsstart freigegeben
 
 - Stripe-Live-Schritte: erledigt.
 - Abrechnung & Admin-Basis: erledigt.
 - Profil/Paket/Rechnungen: erledigt.
 - Sales-Unterlagen: vorbereitet unter `docs/sales/`.
-- Produktionsfreigabe: finaler Go-Live-Smoke-Test.
-- Extern offen: Steuer- und Rechtsfreigabe.
+- Produktionsfreigabe: erledigt.
+- Finaler Go-Live-Smoke-Test: erledigt.
 
 ### Phase 5 – Produktion und Testumgebung
 
@@ -111,7 +111,7 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - Kontakt: kontakt@fanmind.ch, +43 676 5367236.
 - Angebot ausschließlich für B2B-Unternehmer.
 - `FanMind e.U.` darf erst nach bestätigter Firmenbucheintragung verwendet werden.
-- Derzeit wird keine Umsatzsteuer ausgewiesen; die externe Steuerfreigabe bleibt verpflichtend.
+- Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung folgen dem dokumentierten Kleinunternehmer-Steuermodus.
 
 ## 5. Verbindliche Terminologie
 

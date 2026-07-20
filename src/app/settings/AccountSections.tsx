@@ -442,6 +442,7 @@ export function ProfileSettingsSection({
         </div>
         <p className={profileStyles.headerCopy}>FanMind speichert Konto-, Workspace-, Rechnungs-/Billing- und CRM-Daten. Externe Nachrichteninhalte können je nach Integration live vom jeweiligen Kanal abgerufen werden und sind nicht pauschal Teil eines lokalen FanMind-Datenexports, sofern sie nicht dauerhaft gespeichert werden.</p>
         <div className={profileStyles.actionRowSplit}>
+          <a className={profileStyles.mailButton} href="/settings/profile/data-export">PDF-Datenauskunft herunterladen</a>
           <a className={profileStyles.mailButton} href="mailto:kontakt@fanmind.ch?subject=DSGVO-Datenauskunft%20FanMind&body=Bitte%20startet%20einen%20sicheren%20Datenauskunfts-Flow%20fuer%20mein%20FanMind-Konto.">DSGVO-Datenauskunft anfordern</a>
           <form action={logoutAction}><button type="submit" className={dashboardStyles.secondaryButton}>Abmelden</button></form>
         </div>

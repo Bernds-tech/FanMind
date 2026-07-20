@@ -56,3 +56,10 @@ test("workspace account shortcuts stay out of expanded and collapsed sidebar nav
   assert.doesNotMatch(navigation, /href: "\/settings\/referral"/u);
   assert.doesNotMatch(navigation, /icon: "referral"/u);
 });
+
+test("collapsed sidebar centers the shared SVG icons", async () => {
+  const css = await readFile("src/app/dashboard/dashboard.module.css", "utf8");
+
+  assert.match(css, /\.navItemCollapsed \.navItemLead \{[^}]*align-items: center;[^}]*justify-content: center;[^}]*gap: 0;/su);
+  assert.match(css, /\.navItemCollapsed \.navItemLead > svg \{[^}]*display: block;[^}]*margin: auto;/su);
+});
