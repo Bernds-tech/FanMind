@@ -6,6 +6,8 @@ import {
   shouldShowBillingCheckoutAction,
 } from "@/lib/billing";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
+import { getBillingStatusLabel } from "@/lib/billing";
+import { resolveSubscriptionCancellation } from "@/lib/subscriptionCancellation";
 import type { CustomerInvoiceSummary } from "@/lib/customerBilling";
 import type {
   SupabaseServerUser,
@@ -200,24 +202,6 @@ function getAddOnRequestHref(
       `Add-on: ${addOn.name}`,
       `Aktion: ${actionLabel}`,
       "Bitte prüft die Abrechnung manuell. Es soll keine automatische Abbuchung ohne bestätigten Flow erfolgen.",
-    ].join("\n"),
-  );
-
-  return `mailto:kontakt@fanmind.ch?subject=${subject}&body=${body}`;
-}
-
-function getMainPackageCancellationHref(
-  workspace: WorkspaceDashboardRow,
-): string {
-  const subject = encodeURIComponent(
-    `FanMind Paket kündigen: ${workspace.name}`,
-  );
-  const body = encodeURIComponent(
-    [
-      `Workspace: ${workspace.name}`,
-      `Aktuelles Paket: ${getPlanLabel(workspace)}`,
-      `Commercial Option: ${getCommercialOptionLabel(workspace.commercial_option)}`,
-      "Ich bestätige, dass ich eine Kündigung des Hauptpakets anfragen möchte. Bitte prüft Laufzeit, offene Rechnungen und den sicheren Billing-Prozess.",
     ].join("\n"),
   );
 
@@ -469,16 +453,58 @@ export function ProfileSettingsSection({
 
 export function PackageSettingsSection({
   workspace,
+  cancelAction,
+  revokeCancelAction,
+  cancelError,
+  cancelSaved,
 }: {
   workspace: WorkspaceDashboardRow;
+  cancelAction: () => Promise<void>;
+  revokeCancelAction: () => Promise<void>;
+  cancelError?: string | null;
+  cancelSaved?: string | null;
 }) {
   const packageCards = getPackageCards(workspace);
+  const cancellation = resolveSubscriptionCancellation(workspace);
+  const hasCancellation = Boolean(workspace.subscription_cancel_requested_at);
 
   return (
     <section aria-labelledby="package-profile-title">
       <h2 id="package-profile-title" className={profileStyles.visuallyHidden}>
         Hauptpakete und Add-ons
       </h2>
+      <div className={profileStyles.managementCard} aria-labelledby="subscription-management-title">
+        <div className={profileStyles.cardHeader}>
+          <div>
+            <p className={dashboardStyles.eyebrow}>Abo verwalten</p>
+            <h3 id="subscription-management-title">Vertrag & Kündigung</h3>
+          </div>
+          <span className={hasCancellation ? profileStyles.warningChip : profileStyles.statusChip}>{hasCancellation ? "Kündigung vorgemerkt" : getBillingStatusLabel(workspace.billing_status)}</span>
+        </div>
+        {cancelError ? <p className={dashboardStyles.error}>{cancelError}</p> : null}
+        {cancelSaved ? <p className={profileStyles.successNotice}>{cancelSaved}</p> : null}
+        <dl className={profileStyles.subscriptionGrid}>
+          <div><dt>Aktuelles Paket</dt><dd>{cancellation.currentPackage}</dd></div>
+          <div><dt>Vertragsstatus</dt><dd>{hasCancellation ? "Kündigung vorgemerkt" : getBillingStatusLabel(workspace.billing_status)}</dd></div>
+          <div><dt>Mindestlaufzeit</dt><dd>{formatDate(cancellation.minimumTermEndsAt)}</dd></div>
+          <div><dt>Nächstes Abrechnungsdatum</dt><dd>{formatDate(cancellation.nextBillingAt)}</dd></div>
+          <div><dt>Mögliches Kündigungsdatum</dt><dd>{formatDate(cancellation.possibleCancellationAt)}</dd></div>
+          <div><dt>Wirksames Vertragsende</dt><dd>{formatDate(workspace.subscription_effective_end_at ?? cancellation.effectiveEndAt)}</dd></div>
+        </dl>
+        <p className={profileStyles.headerCopy}>Account und Login bleiben erhalten. Keine sofortige Abschaltung während bezahlter oder gebundener Zeiträume; nach Vertragsende wird der Workspace in einen Archiv-/Lesemodus versetzt.</p>
+        {hasCancellation ? (
+          <form action={revokeCancelAction} className={profileStyles.actionRow}>
+            <button type="submit" className={profileStyles.packageButton}>Kündigung zurücknehmen</button>
+          </form>
+        ) : (
+          <details className={profileStyles.cancelBox}>
+            <summary>Zum Vertragsende kündigen</summary>
+            <p>Bestätigung: FanMind kündigt dieses Abo zum wirksamen Vertragsende {formatDate(cancellation.effectiveEndAt)}. Der Account wird nicht gelöscht; DSGVO-Löschung ist ein separater Prozess.</p>
+            <form action={cancelAction}><button type="submit" className={profileStyles.dangerButton} disabled={!cancellation.canSelfService}>Zum Vertragsende kündigen</button></form>
+          </details>
+        )}
+      </div>
+
       <div className={profileStyles.packageCardGrid}>
         {packageCards.map((card) => {
           const isCurrent = card.badge === "Aktuell";
@@ -543,20 +569,6 @@ export function PackageSettingsSection({
                       Aktuell
                     </span>
                   )}
-                  <details className={profileStyles.cancelBox}>
-                    <summary>Paket kündigen</summary>
-                    <p>
-                      Bestätigung erforderlich: Die Kündigung wird nur als
-                      Anfrage vorbereitet und ändert keine Datenbank- oder
-                      Stripe-Daten automatisch.
-                    </p>
-                    <a
-                      className={profileStyles.dangerButton}
-                      href={getMainPackageCancellationHref(workspace)}
-                    >
-                      Kündigung bestätigen &amp; anfragen
-                    </a>
-                  </details>
                 </>
               ) : (
                 <a
