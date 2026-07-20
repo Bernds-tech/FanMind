@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 19. Juli 2026
+Stand: 20. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -53,14 +53,15 @@ Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-C
 
 ## 3. Roadmap- und Go-Live-Stand
 
-### Phase 4 – Verkaufsstart vorbereitet
+### Phase 4 – Erledigt / Verkaufsstart freigegeben
 
 - Stripe-Live-Schritte: erledigt.
 - Abrechnung & Admin-Basis: erledigt.
 - Profil/Paket/Rechnungen: erledigt.
 - Sales-Unterlagen: vorbereitet unter `docs/sales/`.
-- Produktionsfreigabe: finaler Go-Live-Smoke-Test.
-- Extern offen: Steuer- und Rechtsfreigabe.
+- Produktionsfreigabe: erledigt.
+- Finaler Go-Live-Smoke-Test: erledigt.
+- Phase-4-Status: Erledigt / Verkaufsstart freigegeben.
 
 ### Phase 5 – Produktion und Testumgebung
 

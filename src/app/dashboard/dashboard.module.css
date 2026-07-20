@@ -378,6 +378,25 @@
   padding-top: 8px;
 }
 
+
+.compactSidebarScrollArea {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.compactSidebarScrollArea .compactNavList + .compactNavList {
+  margin-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  padding-top: 14px;
+}
+
+.compactSavedViews {
+  margin-bottom: 14px;
+}
+
 .compactSidebarFooter {
   display: grid;
   justify-items: center;
@@ -2312,6 +2331,7 @@
   .navItemCollapsed {
     width: 100%;
   }
+
 
   .compactSidebarFooter {
     grid-auto-flow: column;

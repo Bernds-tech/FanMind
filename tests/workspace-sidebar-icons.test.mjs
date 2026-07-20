@@ -16,6 +16,8 @@ test("workspace sidebar uses one nav item renderer for expanded and collapsed ic
   assert.doesNotMatch(shell, /function CollapsedSidebarItem\(/u);
   assert.doesNotMatch(shell, /styles\.compactNav(?:Item|Icon|Badge)/u);
   assert.match(shell, /<SidebarItem key=\{item\.label\} item=\{item\} collapsed \/>/u);
+  assert.match(shell, /compactSidebarScrollArea/u);
+  assert.doesNotMatch(shell, /compactNavigation = \[\.\.\.visibleMainNavigation, \.\.\.visibleSettingsNavigation, \.\.\.visibleSavedViews\]/u);
 
   const iconUsages = shell.match(/<FanMindFunctionIcon\b/g) ?? [];
   assert.equal(iconUsages.length, 1, "icons must be rendered only by the shared SidebarItem component");
@@ -55,4 +57,18 @@ test("workspace account shortcuts stay out of expanded and collapsed sidebar nav
   assert.doesNotMatch(navigation, /label: locale === "en" \? "Recommendations" : "Empfehlungen"/u);
   assert.doesNotMatch(navigation, /href: "\/settings\/referral"/u);
   assert.doesNotMatch(navigation, /icon: "referral"/u);
+});
+
+
+test("collapsed sidebar preserves expanded navigation groups", async () => {
+  const shell = await readShell();
+
+  const mainIndex = shell.indexOf("visibleMainNavigation.map");
+  const settingsIndex = shell.indexOf("visibleSettingsNavigation.map");
+  const savedIndex = shell.indexOf("visibleSavedViews.map");
+
+  assert.ok(mainIndex !== -1 && settingsIndex !== -1 && savedIndex !== -1, "collapsed sidebar must render all expanded groups");
+  assert.ok(mainIndex < settingsIndex, "settings group must stay after main navigation");
+  assert.ok(settingsIndex < savedIndex, "saved views group must stay after workspace settings");
+  assert.match(shell, /compactSavedViews/u, "saved views need their own compact group spacing");
 });

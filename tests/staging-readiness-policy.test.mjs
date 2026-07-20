@@ -43,6 +43,6 @@ test("roadmap only checks work that is actually complete", async () => {
   assert.match(roadmap, /label: "Release-Checks", state: "done", status: "Automatisch aktiv"/);
   assert.match(roadmap, /label: "Umgebungs-Governance", state: "done", status: "Fail-closed aktiv"/);
   assert.match(roadmap, /label: "Produktions- und Testdaten trennen", state: "partial", status: "Technik fertig · externe Ressourcen offen"/);
-  assert.match(roadmap, /label: "Finaler Go-Live-Smoke-Test", state: "planned", status: "Offen"/);
-  assert.match(roadmap, /label: "Steuerberater-Bestätigung", state: "planned", status: "Extern offen"/);
+  assert.match(roadmap, /label: "Finaler Go-Live-Smoke-Test", state: "done", status: "Erledigt"/);
+  assert.doesNotMatch(roadmap, /Steuerberater-Best.tigung|Tax advisor confirmation/u);
 });

@@ -148,7 +148,6 @@ export function WorkspaceShell({
   const visibleSavedViews = savedViews.filter(
     (item) => !isHiddenProductNavigationItem(item),
   );
-  const compactNavigation = [...visibleMainNavigation, ...visibleSettingsNavigation, ...visibleSavedViews];
 
   return (
     <div className={`${styles.dashboardShell} ${sidebarCollapsed ? styles.dashboardShellCollapsed : ""}`}>
@@ -171,11 +170,25 @@ export function WorkspaceShell({
               </button>
             </div>
 
-            <nav className={styles.compactNavList} aria-label="Workspace Navigation kompakt">
-              {compactNavigation.map((item) => (
-                <SidebarItem key={item.label} item={item} collapsed />
-              ))}
-            </nav>
+            <div className={styles.compactSidebarScrollArea}>
+              <nav className={styles.compactNavList} aria-label="Workspace Navigation kompakt">
+                {visibleMainNavigation.map((item) => (
+                  <SidebarItem key={item.label} item={item} collapsed />
+                ))}
+              </nav>
+
+              <nav className={styles.compactNavList} aria-label="Workspace Navigation kompakt Workspace">
+                {visibleSettingsNavigation.map((item) => (
+                  <SidebarItem key={item.label} item={item} collapsed />
+                ))}
+              </nav>
+
+              <nav className={`${styles.compactNavList} ${styles.compactSavedViews}`} aria-label="Gespeicherte Ansichten kompakt">
+                {visibleSavedViews.map((item) => (
+                  <SidebarItem key={item.label} item={item} collapsed />
+                ))}
+              </nav>
+            </div>
 
             <div className={styles.compactSidebarFooter}>
               <a
