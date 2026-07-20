@@ -1,4 +1,4 @@
-import { isDemoWorkspace } from "@/lib/demoMode";
+import { isExplicitDemoWorkspace } from "@/lib/demoMode";
 import { getTaxMode, SMALL_BUSINESS_INVOICE_NOTE } from "@/lib/stripeBilling";
 import type { WorkspaceDashboardRow } from "@/lib/supabase/server";
 
@@ -59,16 +59,15 @@ function sortInvoicesNewestFirst(
   });
 }
 
-function getDemoInvoicesForFreeWorkspace(
+function getDemoInvoicesForExplicitDemoWorkspace(
   workspace: Pick<
     WorkspaceDashboardRow,
     "billing_status" | "name" | "commercial_option" | "stripe_customer_id"
   >,
-  allowStripeCustomer = false,
 ): CustomerInvoiceSummary[] {
   if (
-    !isDemoWorkspace(workspace) ||
-    (workspace.stripe_customer_id && !allowStripeCustomer)
+    !isExplicitDemoWorkspace(workspace) ||
+    Boolean(workspace.stripe_customer_id)
   )
     return [];
 
@@ -144,7 +143,7 @@ export async function listCustomerInvoicesForWorkspace(
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!workspace.stripe_customer_id)
     return {
-      invoices: getDemoInvoicesForFreeWorkspace(workspace),
+      invoices: getDemoInvoicesForExplicitDemoWorkspace(workspace),
       error: null,
     };
   if (!secretKey)
@@ -199,7 +198,7 @@ export async function listCustomerInvoicesForWorkspace(
   return {
     invoices: invoices.length
       ? sortInvoicesNewestFirst(invoices)
-      : getDemoInvoicesForFreeWorkspace(workspace, true),
+      : [],
     error: null,
   };
 }
