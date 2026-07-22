@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_ENV_FILE = "/var/www/fanmind/.env.production";
 const DEFAULT_CLEANUP_URL = "https://fanmind.ch/api/demo/cleanup";
 const DEFAULT_LIMIT = 25;
+const CLEANUP_ERROR_CODE_PATTERN = /^[a-z0-9_:-]{1,100}$/u;
 
 export function parseEnvText(text) {
   const values = new Map();
@@ -25,6 +26,19 @@ export function parseEnvText(text) {
     values.set(key, value);
   }
   return values;
+}
+
+export function normalizeCleanupErrorCodes(value) {
+  if (!Array.isArray(value)) return [];
+  return [
+    ...new Set(
+      value.flatMap((entry) => {
+        if (typeof entry !== "string") return [];
+        const code = entry.trim().toLowerCase();
+        return CLEANUP_ERROR_CODE_PATTERN.test(code) ? [code] : [];
+      }),
+    ),
+  ].slice(0, 10);
 }
 
 export async function runDemoCleanup({
@@ -75,17 +89,28 @@ export async function runDemoCleanup({
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    const code = payload && typeof payload.code === "string" ? payload.code : "unknown";
+    const [code = "unknown"] = normalizeCleanupErrorCodes([payload?.code]);
     throw new Error(`FanMind demo cleanup failed (${response.status}, ${code}).`);
   }
 
   const claimed = Number(payload?.claimed ?? 0);
   const deleted = Number(payload?.deleted ?? 0);
   const failed = Number(payload?.failed ?? 0);
-  log(`FanMind demo cleanup: claimed=${claimed} deleted=${deleted} failed=${failed}`);
+  const errorCodes = normalizeCleanupErrorCodes(payload?.errorCodes);
+  const codeSuffix = errorCodes.length
+    ? ` error_codes=${errorCodes.join(",")}`
+    : "";
+  log(
+    `FanMind demo cleanup: claimed=${claimed} deleted=${deleted} failed=${failed}${codeSuffix}`,
+  );
 
   if (failed > 0 || payload?.ok === false) {
-    throw new Error(`FanMind demo cleanup completed with ${failed} failed item(s).`);
+    const errorSuffix = errorCodes.length
+      ? ` Error codes: ${errorCodes.join(",")}.`
+      : "";
+    throw new Error(
+      `FanMind demo cleanup completed with ${failed} failed item(s).${errorSuffix}`,
+    );
   }
 
   return { skipped: false, ok: true, claimed, deleted, failed };
