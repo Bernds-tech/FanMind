@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { writeFile } from "node:fs/promises";
+import { evaluatePublicHealth } from "./public-health-policy.mjs";
 import {
   PUBLIC_PRODUCT_TRUTH_RULES,
   evaluatePublicProductTruth,
@@ -114,17 +115,10 @@ try {
 try {
   const response = await request("/api/health");
   const payload = await response.json();
-  const checks = Array.isArray(payload?.checks) ? payload.checks : [];
-  const unhealthy = checks.filter((check) => check?.status !== "healthy");
-
-  if (payload?.status !== "healthy") {
-    addResult("health", false, `Gesamtstatus ${String(payload?.status)}`);
-  } else if (!checks.length) {
-    addResult("health", false, "keine veröffentlichten Komponentenprüfungen vorhanden");
-  } else if (unhealthy.length) {
-    addResult("health", false, `${unhealthy.length} Komponente(n) nicht healthy`);
-  } else {
-    addResult("health", true, `${checks.length} veröffentlichte Komponenten healthy`);
+  const health = evaluatePublicHealth(payload);
+  addResult("health", health.ok, health.detail);
+  for (const warning of health.warnings) {
+    console.warn(`GO_LIVE_WARNING health: ${warning}`);
   }
 } catch (error) {
   addResult("health endpoint", false, error instanceof Error ? error.message : "unknown error");
