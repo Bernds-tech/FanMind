@@ -1,6 +1,11 @@
 name: FanMind P0 Production Runtime Audit
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/p0-production-runtime-audit.yml"
   push:
     branches:
       - p0/completion-20260722
