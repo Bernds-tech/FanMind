@@ -1,0 +1,59 @@
+name: FanMind P0 Post-Merge Production Audit
+
+on:
+  push:
+    branches:
+      - p0/completion-20260722
+    paths:
+      - ".github/workflows/p0-post-merge-production-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 20
+    steps:
+      - name: Checkout audited P0 code
+        uses: actions/checkout@v4
+
+      - name: Wait for expected production release
+        shell: bash
+        env:
+          EXPECTED_COMMIT: 2a64398a0826cd0e808b465b838dd4ed8308407a
+          BASE_URL: https://fanmind.ch
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            live_commit="$(curl -fsSL --max-time 15 "$BASE_URL/api/version" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const x=JSON.parse(s);process.stdout.write(x.releaseCommit||"")})' || true)"
+            echo "P0_RELEASE_WAIT attempt=${attempt}/40 live=${live_commit:-unavailable} expected=$EXPECTED_COMMIT"
+            if [[ "$live_commit" == "$EXPECTED_COMMIT" ]]; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Expected release did not become live within the audit window." >&2
+          exit 1
+
+      - name: Run final read-only go-live preflight
+        env:
+          FANMIND_GO_LIVE_BASE_URL: https://fanmind.ch
+          FANMIND_EXPECTED_RELEASE_COMMIT: 2a64398a0826cd0e808b465b838dd4ed8308407a
+        run: npm run smoke:go-live:public
+
+      - name: Record server and live release state
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "SERVER_HEAD=$(git -C /var/www/fanmind rev-parse HEAD)"
+          echo "ORIGIN_MAIN=$(git -C /var/www/fanmind rev-parse origin/main)"
+          curl -fsSL --max-time 15 https://fanmind.ch/api/version
+          echo
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health
+          echo
