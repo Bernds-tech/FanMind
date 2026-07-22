@@ -1,3 +1,14 @@
+import {
+  buildDocumentPDFBytes,
+  detectFallbackLangs,
+  initNodeCompression,
+  loadFontData,
+  registerFonts,
+  type DocumentBlock,
+  type FontEntry,
+  type FontLoader,
+} from "pdfnative";
+
 export type DataDisclosureLocale = "de" | "en";
 
 export type DataDisclosurePdfInput = {
@@ -42,9 +53,6 @@ export type DataDisclosurePdfInput = {
   }>;
 };
 
-const PAGE_LINE_LIMIT = 47;
-const PDF_LINE_WIDTH = 88;
-
 const copy = {
   de: {
     title: "FanMind PDF-Datenauskunft",
@@ -87,6 +95,7 @@ const copy = {
     note: "Hinweis: Externe Kanalinhalte sind nur enthalten, soweit sie in FanMind dauerhaft gespeichert wurden. Secrets, Tokens, Sitzungsdaten, Stripe-IDs und Daten anderer Workspaces werden nicht exportiert.",
     page: "Seite",
     months: "Monate",
+    subject: "Authentifizierte Datenauskunft für das eigene FanMind-Konto und den autorisierten Workspace.",
   },
   en: {
     title: "FanMind PDF data disclosure",
@@ -129,30 +138,29 @@ const copy = {
     note: "Note: External channel content is included only when it has been stored permanently in FanMind. Secrets, tokens, session data, Stripe IDs and data from other workspaces are not exported.",
     page: "Page",
     months: "months",
+    subject: "Authenticated data disclosure for the user's own FanMind account and authorized workspace.",
   },
 } as const;
 
-function escapePdfText(value: string) {
-  return value.replace(/[\\()]/g, "\\$&").replace(/[\r\n]+/g, " ");
-}
+type DisclosureCopy = (typeof copy)[DataDisclosureLocale];
+type DisclosureContact = DataDisclosurePdfInput["contacts"][number];
 
-function sanitizeLine(value: string, fallback = "-") {
-  const normalized = value
-    .replace(/[–—]/g, "-")
-    .replace(/€/g, "EUR")
-    .replace(/[“”]/g, '"')
-    .replace(/[’]/g, "'")
-    .replace(/·/g, "-")
-    .replace(/[^\x20-\x7e\xa0-\xff]/g, "?")
+function normalizeLine(value: string | null | undefined, fallback = "-"): string {
+  const normalized = (value ?? "")
+    .normalize("NFC")
+    .replace(/[\r\n\t]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return normalized || fallback;
 }
 
-function formatDate(value: Date | string | null | undefined, locale: DataDisclosureLocale) {
+function formatDate(
+  value: Date | string | null | undefined,
+  locale: DataDisclosureLocale,
+): string {
   if (!value) return "-";
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return sanitizeLine(String(value));
+  if (Number.isNaN(date.getTime())) return normalizeLine(String(value));
   return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "de-AT", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -160,7 +168,10 @@ function formatDate(value: Date | string | null | undefined, locale: DataDisclos
   }).format(date);
 }
 
-function formatMoney(cents: number | null | undefined, locale: DataDisclosureLocale) {
+function formatMoney(
+  cents: number | null | undefined,
+  locale: DataDisclosureLocale,
+): string {
   if (typeof cents !== "number" || !Number.isFinite(cents)) return "-";
   return new Intl.NumberFormat(locale === "en" ? "en-GB" : "de-AT", {
     style: "currency",
@@ -168,81 +179,42 @@ function formatMoney(cents: number | null | undefined, locale: DataDisclosureLoc
   }).format(cents / 100);
 }
 
-function wrapLine(value: string, width = PDF_LINE_WIDTH): string[] {
-  const text = sanitizeLine(value);
-  if (text.length <= width) return [text];
-
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of words) {
-    if (word.length > width) {
-      if (current) {
-        lines.push(current);
-        current = "";
-      }
-      for (let index = 0; index < word.length; index += width) {
-        lines.push(word.slice(index, index + width));
-      }
-      continue;
-    }
-
-    const next = current ? `${current} ${word}` : word;
-    if (next.length > width) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = next;
-    }
-  }
-
-  if (current) lines.push(current);
-  return lines;
-}
-
-function pushField(lines: string[], label: string, value: string | null | undefined) {
-  lines.push(...wrapLine(`${label}: ${sanitizeLine(value ?? "")}`));
-}
-
-function pushOptionalField(
-  lines: string[],
+function fieldLine(
   label: string,
   value: string | null | undefined,
-) {
-  if (typeof value !== "string" || !value.trim()) return;
-  pushField(lines, label, value);
+  fallback = "-",
+): string {
+  return `${label}: ${normalizeLine(value, fallback)}`;
 }
 
-export function buildDataDisclosurePdfLines(input: DataDisclosurePdfInput): string[] {
-  const locale = input.locale === "en" ? "en" : "de";
-  const text = copy[locale];
-  const lines: string[] = [
-    text.title,
-    `${text.generated}: ${formatDate(input.generatedAt, locale)}`,
-    "",
-    text.account,
-  ];
+function optionalFieldLine(
+  label: string,
+  value: string | null | undefined,
+): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  return fieldLine(label, value);
+}
 
-  pushField(lines, text.userId, input.user.id);
-  pushField(lines, text.email, input.user.email);
-  pushField(lines, text.name, input.user.displayName);
-  lines.push("", text.workspace);
-  pushField(lines, text.workspaceId, input.workspace.id);
-  pushField(lines, text.name, input.workspace.name);
-  pushField(lines, text.plan, input.workspace.planId);
-  pushField(lines, text.commercialOption, input.workspace.commercialOption);
-  pushField(lines, text.billingStatus, input.workspace.billingStatus);
-  pushField(lines, text.setupFee, formatMoney(input.workspace.setupFeeCents, locale));
-  pushField(lines, text.monthlyFee, formatMoney(input.workspace.monthlyFeeCents, locale));
-  pushField(
-    lines,
-    text.commitment,
-    typeof input.workspace.commitmentMonths === "number"
-      ? `${input.workspace.commitmentMonths} ${text.months}`
-      : "-",
-  );
-  pushOptionalField(lines, text.organization, input.workspace.organizationName);
+function compact(values: Array<string | null>): string[] {
+  return values.filter((value): value is string => Boolean(value));
+}
+
+function buildAccountFieldLines(
+  input: DataDisclosurePdfInput,
+  text: DisclosureCopy,
+): string[] {
+  return [
+    fieldLine(text.userId, input.user.id),
+    fieldLine(text.email, input.user.email),
+    fieldLine(text.name, input.user.displayName),
+  ];
+}
+
+function buildWorkspaceFieldLines(
+  input: DataDisclosurePdfInput,
+  text: DisclosureCopy,
+  locale: DataDisclosureLocale,
+): string[] {
   const address = [
     input.workspace.streetAddress,
     [input.workspace.postalCode, input.workspace.city].filter(Boolean).join(" "),
@@ -250,118 +222,363 @@ export function buildDataDisclosurePdfLines(input: DataDisclosurePdfInput): stri
   ]
     .filter((value) => typeof value === "string" && value.trim())
     .join(", ");
-  pushOptionalField(lines, text.address, address);
-  pushOptionalField(lines, text.vatId, input.workspace.vatId);
-  pushOptionalField(lines, text.taxNumber, input.workspace.taxNumber);
-  pushOptionalField(lines, text.registerNumber, input.workspace.companyRegisterNumber);
-  pushOptionalField(lines, text.registerCourt, input.workspace.companyRegisterCourt);
-  pushOptionalField(
-    lines,
-    text.currentPeriodEnd,
-    input.workspace.billingCurrentPeriodEndAt
-      ? formatDate(input.workspace.billingCurrentPeriodEndAt, locale)
-      : null,
-  );
-  pushOptionalField(
-    lines,
-    text.minimumTermEnd,
-    input.workspace.billingMinimumTermEndsAt
-      ? formatDate(input.workspace.billingMinimumTermEndsAt, locale)
-      : null,
-  );
-  pushOptionalField(
-    lines,
-    text.cancellationRequested,
-    input.workspace.subscriptionCancelRequestedAt
-      ? formatDate(input.workspace.subscriptionCancelRequestedAt, locale)
-      : null,
-  );
-  pushOptionalField(
-    lines,
-    text.effectiveEnd,
-    input.workspace.subscriptionEffectiveEndAt
-      ? formatDate(input.workspace.subscriptionEffectiveEndAt, locale)
-      : null,
-  );
-  pushOptionalField(lines, text.accessMode, input.workspace.workspaceAccessMode);
 
-  lines.push("", text.contacts, `${text.activeContacts}: ${input.contacts.length}`);
+  return compact([
+    fieldLine(text.workspaceId, input.workspace.id),
+    fieldLine(text.name, input.workspace.name),
+    fieldLine(text.plan, input.workspace.planId),
+    fieldLine(text.commercialOption, input.workspace.commercialOption),
+    fieldLine(text.billingStatus, input.workspace.billingStatus),
+    fieldLine(text.setupFee, formatMoney(input.workspace.setupFeeCents, locale)),
+    fieldLine(text.monthlyFee, formatMoney(input.workspace.monthlyFeeCents, locale)),
+    fieldLine(
+      text.commitment,
+      typeof input.workspace.commitmentMonths === "number"
+        ? `${input.workspace.commitmentMonths} ${text.months}`
+        : "-",
+    ),
+    optionalFieldLine(text.organization, input.workspace.organizationName),
+    optionalFieldLine(text.address, address),
+    optionalFieldLine(text.vatId, input.workspace.vatId),
+    optionalFieldLine(text.taxNumber, input.workspace.taxNumber),
+    optionalFieldLine(text.registerNumber, input.workspace.companyRegisterNumber),
+    optionalFieldLine(text.registerCourt, input.workspace.companyRegisterCourt),
+    optionalFieldLine(
+      text.currentPeriodEnd,
+      input.workspace.billingCurrentPeriodEndAt
+        ? formatDate(input.workspace.billingCurrentPeriodEndAt, locale)
+        : null,
+    ),
+    optionalFieldLine(
+      text.minimumTermEnd,
+      input.workspace.billingMinimumTermEndsAt
+        ? formatDate(input.workspace.billingMinimumTermEndsAt, locale)
+        : null,
+    ),
+    optionalFieldLine(
+      text.cancellationRequested,
+      input.workspace.subscriptionCancelRequestedAt
+        ? formatDate(input.workspace.subscriptionCancelRequestedAt, locale)
+        : null,
+    ),
+    optionalFieldLine(
+      text.effectiveEnd,
+      input.workspace.subscriptionEffectiveEndAt
+        ? formatDate(input.workspace.subscriptionEffectiveEndAt, locale)
+        : null,
+    ),
+    optionalFieldLine(text.accessMode, input.workspace.workspaceAccessMode),
+  ]);
+}
 
-  if (!input.contacts.length) {
-    lines.push(text.noContacts);
-  }
+function buildContactFieldLines(
+  contact: DisclosureContact,
+  text: DisclosureCopy,
+  locale: DataDisclosureLocale,
+): string[] {
+  return compact([
+    optionalFieldLine(text.handle, contact.handle),
+    optionalFieldLine(text.source, contact.sourcePlatform),
+    optionalFieldLine(text.language, contact.language),
+    optionalFieldLine(text.status, contact.status),
+    contact.tags?.length ? fieldLine(text.tags, contact.tags.join(", ")) : null,
+    optionalFieldLine(text.summary, contact.summary),
+    optionalFieldLine(text.notes, contact.internalNotes),
+    contact.createdAt
+      ? fieldLine(text.created, formatDate(contact.createdAt, locale))
+      : null,
+    contact.updatedAt
+      ? fieldLine(text.updated, formatDate(contact.updatedAt, locale))
+      : null,
+  ]);
+}
+
+export function buildDataDisclosurePdfLines(
+  input: DataDisclosurePdfInput,
+): string[] {
+  const locale: DataDisclosureLocale = input.locale === "en" ? "en" : "de";
+  const text = copy[locale];
+  const lines = [
+    text.title,
+    `${text.generated}: ${formatDate(input.generatedAt, locale)}`,
+    "",
+    text.account,
+    ...buildAccountFieldLines(input, text),
+    "",
+    text.workspace,
+    ...buildWorkspaceFieldLines(input, text, locale),
+    "",
+    text.contacts,
+    `${text.activeContacts}: ${input.contacts.length}`,
+  ];
+
+  if (!input.contacts.length) lines.push(text.noContacts);
 
   input.contacts.forEach((contact, index) => {
-    lines.push("", `${index + 1}. ${sanitizeLine(contact.displayName)}`);
-    pushOptionalField(lines, text.handle, contact.handle);
-    pushOptionalField(lines, text.source, contact.sourcePlatform);
-    pushOptionalField(lines, text.language, contact.language);
-    pushOptionalField(lines, text.status, contact.status);
-    if (contact.tags?.length) pushField(lines, text.tags, contact.tags.join(", "));
-    pushOptionalField(lines, text.summary, contact.summary);
-    pushOptionalField(lines, text.notes, contact.internalNotes);
-    if (contact.createdAt) {
-      pushField(lines, text.created, formatDate(contact.createdAt, locale));
-    }
-    if (contact.updatedAt) {
-      pushField(lines, text.updated, formatDate(contact.updatedAt, locale));
-    }
+    lines.push(
+      "",
+      `${index + 1}. ${normalizeLine(contact.displayName)}`,
+      ...buildContactFieldLines(contact, text, locale),
+    );
   });
 
-  lines.push("", ...wrapLine(text.note));
+  lines.push("", text.note);
   return lines;
 }
 
-function buildContentStream(lines: string[], pageNumber: number, pageCount: number, locale: DataDisclosureLocale) {
-  const pageLabel = copy[locale].page;
-  const commands = ["BT", "/F1 10 Tf", "50 790 Td", "14 TL"];
-  lines.forEach((line, index) => {
-    commands.push(`${index === 0 ? "" : "T*"} (${escapePdfText(line)}) Tj`);
+function buildDataDisclosureBlocks(
+  input: DataDisclosurePdfInput,
+  locale: DataDisclosureLocale,
+  text: DisclosureCopy,
+): DocumentBlock[] {
+  const blocks: DocumentBlock[] = [
+    {
+      type: "paragraph",
+      text: `${text.generated}: ${formatDate(input.generatedAt, locale)}`,
+      fontSize: 9,
+      lineHeight: 12,
+    },
+    { type: "spacer", height: 8 },
+    { type: "heading", text: text.account, level: 2 },
+    {
+      type: "list",
+      items: buildAccountFieldLines(input, text),
+      style: "bullet",
+      fontSize: 9,
+    },
+    { type: "spacer", height: 6 },
+    { type: "heading", text: text.workspace, level: 2 },
+    {
+      type: "list",
+      items: buildWorkspaceFieldLines(input, text, locale),
+      style: "bullet",
+      fontSize: 9,
+    },
+    { type: "spacer", height: 6 },
+    { type: "heading", text: text.contacts, level: 2 },
+    {
+      type: "paragraph",
+      text: `${text.activeContacts}: ${input.contacts.length}`,
+      fontSize: 9,
+      lineHeight: 12,
+    },
+  ];
+
+  if (!input.contacts.length) {
+    blocks.push({
+      type: "paragraph",
+      text: text.noContacts,
+      fontSize: 9,
+      lineHeight: 12,
+    });
+  }
+
+  input.contacts.forEach((contact, index) => {
+    blocks.push({
+      type: "heading",
+      text: `${index + 1}. ${normalizeLine(contact.displayName)}`,
+      level: 3,
+    });
+    const contactFields = buildContactFieldLines(contact, text, locale);
+    if (contactFields.length) {
+      blocks.push({
+        type: "list",
+        items: contactFields,
+        style: "bullet",
+        fontSize: 9,
+      });
+    }
   });
-  commands.push("ET", "BT", "/F1 9 Tf", "50 38 Td");
-  commands.push(`(${escapePdfText(`${pageLabel} ${pageNumber} / ${pageCount}`)}) Tj`);
-  commands.push("ET");
-  return commands.join("\n");
+
+  blocks.push(
+    { type: "spacer", height: 8 },
+    {
+      type: "paragraph",
+      text: text.note,
+      fontSize: 8,
+      lineHeight: 11,
+    },
+  );
+  return blocks;
 }
 
-export function createDataDisclosurePdf(input: DataDisclosurePdfInput): Uint8Array {
-  const locale = input.locale === "en" ? "en" : "de";
-  const lines = buildDataDisclosurePdfLines(input);
-  const pages = Array.from(
-    { length: Math.max(1, Math.ceil(lines.length / PAGE_LINE_LIMIT)) },
-    (_, index) => lines.slice(index * PAGE_LINE_LIMIT, (index + 1) * PAGE_LINE_LIMIT),
+const asFontLoader = (loader: () => Promise<unknown>): FontLoader =>
+  loader as FontLoader;
+
+const DATA_DISCLOSURE_FONT_LOADERS = {
+  latin: asFontLoader(() => import("pdfnative/fonts/noto-sans-data.js")),
+  th: asFontLoader(() => import("pdfnative/fonts/noto-thai-data.js")),
+  ja: asFontLoader(() => import("pdfnative/fonts/noto-jp-data.js")),
+  zh: asFontLoader(() => import("pdfnative/fonts/noto-sc-data.js")),
+  ko: asFontLoader(() => import("pdfnative/fonts/noto-kr-data.js")),
+  el: asFontLoader(() => import("pdfnative/fonts/noto-greek-data.js")),
+  hi: asFontLoader(() => import("pdfnative/fonts/noto-devanagari-data.js")),
+  tr: asFontLoader(() => import("pdfnative/fonts/noto-turkish-data.js")),
+  vi: asFontLoader(() => import("pdfnative/fonts/noto-vietnamese-data.js")),
+  pl: asFontLoader(() => import("pdfnative/fonts/noto-polish-data.js")),
+  ar: asFontLoader(() => import("pdfnative/fonts/noto-arabic-data.js")),
+  he: asFontLoader(() => import("pdfnative/fonts/noto-hebrew-data.js")),
+  ru: asFontLoader(() => import("pdfnative/fonts/noto-cyrillic-data.js")),
+  ka: asFontLoader(() => import("pdfnative/fonts/noto-georgian-data.js")),
+  hy: asFontLoader(() => import("pdfnative/fonts/noto-armenian-data.js")),
+  bn: asFontLoader(() => import("pdfnative/fonts/noto-bengali-data.js")),
+  ta: asFontLoader(() => import("pdfnative/fonts/noto-tamil-data.js")),
+  te: asFontLoader(() => import("pdfnative/fonts/noto-telugu-data.js")),
+  am: asFontLoader(() => import("pdfnative/fonts/noto-ethiopic-data.js")),
+  si: asFontLoader(() => import("pdfnative/fonts/noto-sinhala-data.js")),
+  bo: asFontLoader(() => import("pdfnative/fonts/noto-tibetan-data.js")),
+  km: asFontLoader(() => import("pdfnative/fonts/noto-khmer-data.js")),
+  my: asFontLoader(() => import("pdfnative/fonts/noto-myanmar-data.js")),
+  math: asFontLoader(() => import("pdfnative/fonts/noto-sans-math-data.js")),
+  emoji: asFontLoader(() => import("pdfnative/fonts/noto-emoji-data.js")),
+} satisfies Record<string, FontLoader>;
+
+type DataDisclosureFontLanguage = keyof typeof DATA_DISCLOSURE_FONT_LOADERS;
+
+const DATA_DISCLOSURE_FONT_ORDER: DataDisclosureFontLanguage[] = [
+  "latin",
+  "th",
+  "ja",
+  "zh",
+  "ko",
+  "el",
+  "hi",
+  "tr",
+  "vi",
+  "pl",
+  "ar",
+  "he",
+  "ru",
+  "ka",
+  "hy",
+  "bn",
+  "ta",
+  "te",
+  "am",
+  "si",
+  "bo",
+  "km",
+  "my",
+  "math",
+  "emoji",
+];
+
+const SCRIPT_PATTERNS: Partial<
+  Record<DataDisclosureFontLanguage, RegExp>
+> = {
+  th: /[\u0E00-\u0E7F]/u,
+  ja: /[\u3040-\u30FF]/u,
+  zh: /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/u,
+  ko: /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/u,
+  el: /[\u0370-\u03FF\u1F00-\u1FFF]/u,
+  hi: /[\u0900-\u097F\uA8E0-\uA8FF]/u,
+  tr: /[ĞğİıŞş₺]/u,
+  vi: /[\u1E00-\u1EFFĂăÂâĐđÊêÔôƠơƯư]/u,
+  pl: /[ĄąĆćĘęŁłŃńŚśŹźŻż]/u,
+  ar: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/u,
+  he: /[\u0590-\u05FF]/u,
+  ru: /[\u0400-\u052F]/u,
+  ka: /[\u10A0-\u10FF\u2D00-\u2D2F]/u,
+  hy: /[\u0530-\u058F\uFB13-\uFB17]/u,
+  bn: /[\u0980-\u09FF]/u,
+  ta: /[\u0B80-\u0BFF]/u,
+  te: /[\u0C00-\u0C7F]/u,
+  am: /[\u1200-\u137F\u1380-\u139F\u2D80-\u2DDF]/u,
+  si: /[\u0D80-\u0DFF]/u,
+  bo: /[\u0F00-\u0FFF]/u,
+  km: /[\u1780-\u17FF\u19E0-\u19FF]/u,
+  my: /[\u1000-\u109F\uAA60-\uAA7F\uA9E0-\uA9FF]/u,
+  math: /[\u2200-\u22FF\u27C0-\u27EF\u2980-\u29FF\u2A00-\u2AFF]/u,
+  emoji: /\p{Extended_Pictographic}/u,
+};
+
+let disclosureFontsRegistered = false;
+
+function registerDataDisclosureFonts(): void {
+  if (disclosureFontsRegistered) return;
+  registerFonts(DATA_DISCLOSURE_FONT_LOADERS);
+  disclosureFontsRegistered = true;
+}
+
+function detectDataDisclosureLanguages(
+  texts: string[],
+): DataDisclosureFontLanguage[] {
+  const detected = detectFallbackLangs(texts, "latin");
+  const combined = texts.join("\n");
+
+  for (const [language, pattern] of Object.entries(SCRIPT_PATTERNS) as Array<
+    [DataDisclosureFontLanguage, RegExp]
+  >) {
+    if (pattern.test(combined)) detected.add(language);
+  }
+
+  return DATA_DISCLOSURE_FONT_ORDER.filter(
+    (language) => language === "latin" || detected.has(language),
   );
+}
 
-  const objects: string[] = [];
-  const pageRefs = pages.map((_, index) => `${4 + index * 2} 0 R`);
-  objects.push("<< /Type /Catalog /Pages 2 0 R >>");
-  objects.push(`<< /Type /Pages /Kids [${pageRefs.join(" ")}] /Count ${pages.length} >>`);
-  objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+async function loadDataDisclosureFontEntries(
+  texts: string[],
+): Promise<FontEntry[]> {
+  registerDataDisclosureFonts();
+  const languages = detectDataDisclosureLanguages(texts);
+  const entries: FontEntry[] = [];
 
-  pages.forEach((pageLines, index) => {
-    const pageObjectNumber = 4 + index * 2;
-    const contentObjectNumber = pageObjectNumber + 1;
-    const content = buildContentStream(pageLines, index + 1, pages.length, locale);
-    objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`,
-    );
-    objects.push(
-      `<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}\nendstream`,
-    );
-  });
+  for (const language of languages) {
+    const fontData = await loadFontData(language);
+    if (!fontData) {
+      throw new Error(
+        `PDF-Datenauskunft konnte nicht erstellt werden: Unicode-Schrift ${language} fehlt.`,
+      );
+    }
+    entries.push({
+      fontData,
+      fontRef: `/F${3 + entries.length}`,
+      lang: language,
+    });
+  }
 
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-  objects.forEach((object, index) => {
-    offsets.push(Buffer.byteLength(pdf, "latin1"));
-    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
-  });
-  const xrefOffset = Buffer.byteLength(pdf, "latin1");
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  pdf += offsets
-    .slice(1)
-    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
-    .join("");
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
-  return new Uint8Array(Buffer.from(pdf, "latin1"));
+  return entries;
+}
+
+export async function createDataDisclosurePdf(
+  input: DataDisclosurePdfInput,
+): Promise<Uint8Array> {
+  const locale: DataDisclosureLocale = input.locale === "en" ? "en" : "de";
+  const text = copy[locale];
+  const lines = buildDataDisclosurePdfLines(input);
+  const blocks = buildDataDisclosureBlocks(input, locale, text);
+  const fontEntries = await loadDataDisclosureFontEntries(lines);
+
+  await initNodeCompression();
+
+  return buildDocumentPDFBytes(
+    {
+      title: text.title,
+      blocks,
+      fontEntries,
+      metadata: {
+        author: "FanMind",
+        subject: text.subject,
+        keywords: "FanMind, data disclosure, GDPR, DSGVO, CRM",
+      },
+    },
+    {
+      tagged: "pdfa2u",
+      normalize: "NFC",
+      compress: true,
+      creationDate: input.generatedAt,
+      margins: { t: 50, r: 50, b: 58, l: 50 },
+      maxBlocks: Math.max(100_000, blocks.length + 100),
+      footerTemplate: {
+        left: "FanMind",
+        right: `${text.page} {page} / {pages}`,
+        fontSize: 8,
+      },
+      viewerPreferences: {
+        pageLayout: "oneColumn",
+        displayDocTitle: true,
+      },
+    },
+  );
 }
