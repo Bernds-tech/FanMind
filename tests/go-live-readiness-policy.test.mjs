@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
+import {
+  REQUIRED_PUBLIC_HEALTH_COMPONENTS,
+  evaluatePublicHealth,
+} from "../scripts/public-health-policy.mjs";
 
 const roadmapPath = "src/config/roadmap.ts";
 const smokeScriptPath = "scripts/final-go-live-preflight.mjs";
 const deploySmokePath = "scripts/smoke-public-routes.mjs";
 const truthPolicyPath = "scripts/public-product-truth.mjs";
+const healthPolicyPath = "scripts/public-health-policy.mjs";
 const workflowPath = ".github/workflows/final-go-live-readiness.yml";
 const deployWorkflowPath = ".github/workflows/deploy-fanmind.yml";
 const runbookPath = "docs/operations/FINAL_GO_LIVE_SMOKE_TEST.md";
@@ -19,6 +24,13 @@ async function read(path) {
   return readFile(path, "utf8");
 }
 
+function healthyRequiredChecks() {
+  return REQUIRED_PUBLIC_HEALTH_COMPONENTS.map((component) => ({
+    component,
+    status: "healthy",
+  }));
+}
+
 test("roadmap separates completed technical foundations from external staging resources", async () => {
   const roadmap = await read(roadmapPath);
 
@@ -28,11 +40,12 @@ test("roadmap separates completed technical foundations from external staging re
   assert.match(roadmap, /label: "Umgebungs-Governance", state: "done", status: "Fail-closed aktiv"/);
 });
 
-test("go-live and deploy smoke gates share the same read-only live product truth policy", async () => {
-  const [goLive, deploySmoke, truthPolicy, deployWorkflow] = await Promise.all([
+test("go-live and deploy smoke gates share live truth and blocking-only health policies", async () => {
+  const [goLive, deploySmoke, truthPolicy, healthPolicy, deployWorkflow] = await Promise.all([
     read(smokeScriptPath),
     read(deploySmokePath),
     read(truthPolicyPath),
+    read(healthPolicyPath),
     read(deployWorkflowPath),
   ]);
 
@@ -40,10 +53,14 @@ test("go-live and deploy smoke gates share the same read-only live product truth
   assert.doesNotMatch(deploySmoke, /method:\s*"(?:POST|PUT|PATCH|DELETE)"/u);
   assert.match(goLive, /public-product-truth\.mjs/u);
   assert.match(deploySmoke, /public-product-truth\.mjs/u);
+  assert.match(goLive, /public-health-policy\.mjs/u);
+  assert.match(deploySmoke, /public-health-policy\.mjs/u);
   assert.match(deploySmoke, /\/api\/version/u);
   assert.match(deploySmoke, /\/api\/health/u);
   assert.match(deploySmoke, /live German product truth/u);
   assert.match(deployWorkflow, /npm run smoke:public/u);
+  assert.match(healthPolicy, /OPTIONAL_PUBLIC_HEALTH_COMPONENTS/u);
+  assert.match(healthPolicy, /email_config/u);
 
   for (const required of [
     "Starter Flex",
@@ -67,6 +84,43 @@ test("go-live and deploy smoke gates share the same read-only live product truth
   ]) {
     assert.match(truthPolicy, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
   }
+});
+
+test("optional email configuration never blocks an otherwise healthy production release", () => {
+  const result = evaluatePublicHealth({
+    status: "degraded",
+    checks: [
+      ...healthyRequiredChecks(),
+      { component: "email_config", status: "unknown" },
+    ],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.errors.length, 0);
+  assert.match(result.detail, /Pflichtkomponenten healthy/u);
+  assert.match(result.warnings.join(" "), /email_config.*unknown/u);
+});
+
+test("missing or unhealthy required components block deployment", () => {
+  const missing = evaluatePublicHealth({
+    status: "healthy",
+    checks: healthyRequiredChecks().filter(
+      (check) => check.component !== "supabase_database",
+    ),
+  });
+  assert.equal(missing.ok, false);
+  assert.match(missing.errors.join(" "), /Pflichtkomponente fehlt: supabase_database/u);
+
+  const unhealthy = evaluatePublicHealth({
+    status: "degraded",
+    checks: healthyRequiredChecks().map((check) =>
+      check.component === "openai_config"
+        ? { ...check, status: "unavailable" }
+        : check,
+    ),
+  });
+  assert.equal(unhealthy.ok, false);
+  assert.match(unhealthy.errors.join(" "), /openai_config ist unavailable/u);
 });
 
 test("final readiness workflow runs only after a successful deploy or manual dispatch", async () => {
