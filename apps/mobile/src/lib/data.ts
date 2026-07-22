@@ -1,4 +1,8 @@
 import { supabase } from "@/lib/supabase";
+import {
+  CANONICAL_COMPLETED_FOLLOWUP_STATUS,
+  COMPLETED_FOLLOWUP_FILTER,
+} from "@/lib/followupStatus";
 import type {
   Contact,
   ContactMemory,
@@ -167,7 +171,7 @@ export async function listFollowups(
     .from("followups")
     .select(`${FOLLOWUP_COLUMNS},contact:contacts(id,display_name,handle)`)
     .eq("workspace_id", workspaceId)
-    .neq("status", "done")
+    .not("status", "in", COMPLETED_FOLLOWUP_FILTER)
     .order("due_date", { ascending: true, nullsFirst: false })
     .limit(200);
   if (result.error) {
@@ -202,7 +206,7 @@ export async function completeFollowup(
 ): Promise<string | null> {
   const result = await supabase
     .from("followups")
-    .update({ status: "done" })
+    .update({ status: CANONICAL_COMPLETED_FOLLOWUP_STATUS })
     .eq("workspace_id", workspaceId)
     .eq("id", followupId);
   return result.error ? "Follow-up konnte nicht abgeschlossen werden." : null;
@@ -222,7 +226,7 @@ export async function loadDashboardCounts(workspaceId: string): Promise<{
       .from("followups")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
-      .neq("status", "done"),
+      .not("status", "in", COMPLETED_FOLLOWUP_FILTER),
   ]);
   if (contactsResult.error || followupsResult.error) {
     return { contacts: 0, followups: 0, error: "Kennzahlen konnten nicht geladen werden." };
