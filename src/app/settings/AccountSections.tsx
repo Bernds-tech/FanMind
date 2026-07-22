@@ -306,7 +306,6 @@ function formatDate(value?: string | null): string {
 export function ProfileSettingsSection({
   fields,
   hasOnlyRealValues,
-  logoutAction,
   preferencesAction,
   locale,
   brightness,
@@ -323,7 +322,6 @@ export function ProfileSettingsSection({
 }: {
   fields: ProfileField[];
   hasOnlyRealValues: boolean;
-  logoutAction: () => Promise<void>;
   preferencesAction: (formData: FormData) => void;
   personalAction: (formData: FormData) => void;
   workspaceAction: (formData: FormData) => void;
@@ -435,16 +433,14 @@ export function ProfileSettingsSection({
       <section className={profileStyles.compactCard} aria-labelledby="gdpr-profile-title">
         <div className={profileStyles.cardHeader}>
           <div>
-            <p className={dashboardStyles.eyebrow}>DSGVO</p>
-            <h2 id="gdpr-profile-title">Datenauskunft</h2>
+            <p className={dashboardStyles.eyebrow}>{locale === "en" ? "Privacy" : "DSGVO"}</p>
+            <h2 id="gdpr-profile-title">{locale === "en" ? "Data disclosure" : "Datenauskunft"}</h2>
           </div>
           <span className={profileStyles.warningChip}>Sicherer Flow</span>
         </div>
-        <p className={profileStyles.headerCopy}>FanMind speichert Konto-, Workspace-, Rechnungs-/Billing- und CRM-Daten. Externe Nachrichteninhalte können je nach Integration live vom jeweiligen Kanal abgerufen werden und sind nicht pauschal Teil eines lokalen FanMind-Datenexports, sofern sie nicht dauerhaft gespeichert werden.</p>
+        <p className={profileStyles.headerCopy}>{locale === "en" ? "The PDF summarizes the account, authorized workspace, contract details and all contacts visible in FanMind. External channel content is included only when it has been stored permanently in FanMind. Secrets, tokens and data from other workspaces are excluded." : "Die PDF fasst Konto, autorisierten Workspace, Vertragsdaten und alle in FanMind sichtbaren Kontakte zusammen. Externe Kanalinhalte sind nur enthalten, wenn sie dauerhaft in FanMind gespeichert wurden. Secrets, Tokens und Daten anderer Workspaces sind ausgeschlossen."}</p>
         <div className={profileStyles.actionRowSplit}>
-          <a className={profileStyles.mailButton} href="/settings/profile/data-export">PDF-Datenauskunft herunterladen</a>
-          <a className={profileStyles.mailButton} href="mailto:kontakt@fanmind.ch?subject=DSGVO-Datenauskunft%20FanMind&body=Bitte%20startet%20einen%20sicheren%20Datenauskunfts-Flow%20fuer%20mein%20FanMind-Konto.">DSGVO-Datenauskunft anfordern</a>
-          <form action={logoutAction}><button type="submit" className={dashboardStyles.secondaryButton}>Abmelden</button></form>
+          <a className={profileStyles.mailButton} href={`/settings/profile/data-export?lang=${locale}`}>{locale === "en" ? "Download PDF data disclosure" : "PDF-Datenauskunft herunterladen"}</a>
         </div>
       </section>
     </div>

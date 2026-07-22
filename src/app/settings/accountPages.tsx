@@ -111,7 +111,7 @@ function AccountWorkspace({ workspace, user, activePage, userDisplayName, contac
     >
       <div className={profileStyles.profileStack}>
         <SettingsHeaderBar activePage={activePage} locale={locale} />
-        {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} logoutAction={logout} preferencesAction={saveAppearancePreferences} locale={locale} brightness={brightness} preferencesError={preferencesError} personalAction={savePersonalProfileData} workspaceAction={saveWorkspaceMasterData} taxAction={saveTaxMasterData} profileSaved={profileSaved} workspaceSaved={workspaceSaved} taxSaved={taxSaved} personalError={personalError} workspaceError={workspaceError} taxError={taxError} /> : null}
+        {activePage === "profile" ? <ProfileSettingsSection fields={fields} hasOnlyRealValues={hasOnlyRealValues} preferencesAction={saveAppearancePreferences} locale={locale} brightness={brightness} preferencesError={preferencesError} personalAction={savePersonalProfileData} workspaceAction={saveWorkspaceMasterData} taxAction={saveTaxMasterData} profileSaved={profileSaved} workspaceSaved={workspaceSaved} taxSaved={taxSaved} personalError={personalError} workspaceError={workspaceError} taxError={taxError} /> : null}
         {activePage === "package" ? <PackageSettingsSection workspace={workspace} cancelAction={requestSubscriptionCancellation} revokeCancelAction={revokeSubscriptionCancellation} cancelError={cancelError} cancelSaved={cancelSaved} /> : null}
         {activePage === "invoices" ? <InvoicesSettingsSection invoices={invoices} invoiceError={invoiceError} taxNote={taxNote} /> : null}
       </div>
