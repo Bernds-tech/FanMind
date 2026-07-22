@@ -1,0 +1,33 @@
+name: FanMind P0 Production Runtime Audit
+
+on:
+  push:
+    branches:
+      - p0/completion-20260722
+    paths:
+      - ".github/workflows/p0-production-runtime-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 5
+    steps:
+      - name: Read-only runtime and release audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "NODE_VERSION=$(node --version)"
+          echo "NPM_VERSION=$(npm --version)"
+          echo "PM2_VERSION=$(pm2 --version)"
+          echo "SERVER_HEAD=$(git -C /var/www/fanmind rev-parse HEAD)"
+          echo "ORIGIN_MAIN=$(git -C /var/www/fanmind rev-parse origin/main)"
+          curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const x=JSON.parse(s);console.log(`LIVE_RELEASE=${x.releaseCommit}`);console.log(`LIVE_ENVIRONMENT=${x.environment}`)})'
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const x=JSON.parse(s);console.log(`LIVE_HEALTH=${x.status}`);for(const c of x.checks||[])console.log(`HEALTH_COMPONENT=${c.component}:${c.status}`)})'
