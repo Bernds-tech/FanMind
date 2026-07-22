@@ -1,0 +1,52 @@
+name: FanMind P0 Mobile Lock Refresh
+
+on:
+  push:
+    branches:
+      - p0/completion-20260722
+    paths:
+      - ".github/workflows/p0-mobile-lock-refresh.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout P0 branch
+        uses: actions/checkout@v4
+        with:
+          ref: p0/completion-20260722
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Refresh package lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Validate clean installation and Expo versions
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run doctor
+          npm run boundary
+
+      - name: Commit refreshed lockfile
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile/package-lock.json
+          git commit -m "Refresh Mobile Expo SDK 57 lockfile"
+          git push origin HEAD:p0/completion-20260722
