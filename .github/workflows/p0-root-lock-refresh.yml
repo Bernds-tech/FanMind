@@ -1,0 +1,44 @@
+name: FanMind P0 Root Lock Refresh
+
+on:
+  push:
+    branches:
+      - p0/completion-20260722
+    paths:
+      - ".github/workflows/p0-root-lock-refresh.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout P0 branch
+        uses: actions/checkout@v4
+        with:
+          ref: p0/completion-20260722
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+
+      - name: Refresh root package lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Validate reproducible install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Commit refreshed lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --check
+          git add package-lock.json
+          git diff --cached --quiet && { echo "Lockfile did not change" >&2; exit 1; }
+          git commit -m "Refresh root lockfile for Unicode PDF support"
+          git push origin HEAD:p0/completion-20260722
