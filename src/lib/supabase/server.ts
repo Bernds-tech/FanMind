@@ -29,6 +29,11 @@ import type { PlanId } from "@/config/plans";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
 import {
+  DEMO_CLEANUP_DELETE_STEPS,
+  type DemoCleanupDeleteErrorCode,
+  type DemoCleanupFilterColumn,
+} from "@/lib/demoCleanupPolicy";
+import {
   getSupabaseAuthUrl,
   getSupabaseHeaders,
   getSupabaseRestUrl,
@@ -4861,51 +4866,112 @@ export async function ensureUserWorkspace(
 }
 
 
-async function deleteWorkspaceRows(table: string, workspaceId: string, accessToken: string, optional = false): Promise<Error | null> {
-  const result = await postgrestDelete(table, accessToken, [["workspace_id", workspaceId]]);
+async function deleteTemporaryDemoRows(
+  table: string,
+  filterColumn: DemoCleanupFilterColumn,
+  workspaceId: string,
+  accessToken: string,
+  optional = false,
+): Promise<Error | null> {
+  const result = await postgrestDelete(table, accessToken, [
+    [filterColumn, workspaceId],
+  ]);
   if (!result.error) return null;
+
   const message = result.error.message.toLowerCase();
-  if (optional && (message.includes("does not exist") || message.includes("schema cache") || message.includes("relation"))) return null;
+  if (
+    optional &&
+    (message.includes("does not exist") ||
+      message.includes("schema cache") ||
+      message.includes("relation"))
+  ) {
+    return null;
+  }
+
   return result.error;
 }
 
-export async function deleteExpiredTemporaryDemo(user: SupabaseServerUser, workspace: WorkspaceDashboardRow | WorkspaceBackfillRow): Promise<{ deleted: boolean; error: Error | null }> {
+export type TemporaryDemoDeleteResult = {
+  deleted: boolean;
+  error: Error | null;
+  errorCode: DemoCleanupDeleteErrorCode | null;
+};
+
+function temporaryDemoDeleteFailure(
+  errorCode: DemoCleanupDeleteErrorCode,
+  error: Error,
+): TemporaryDemoDeleteResult {
+  return { deleted: false, error, errorCode };
+}
+
+export async function deleteExpiredTemporaryDemo(
+  user: SupabaseServerUser,
+  workspace: WorkspaceDashboardRow | WorkspaceBackfillRow,
+): Promise<TemporaryDemoDeleteResult> {
   const accessToken = getServiceAccessToken();
-  if (!accessToken) return { deleted: false, error: new Error("SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.") };
-  if ((user.email ?? "").toLowerCase() === DEMO_EMAIL || !isTemporaryDemoUser(user)) {
-    return { deleted: false, error: new Error("Löschung abgebrochen: User ist nicht eindeutig temporär.") };
-  }
-  if (workspace.owner_user_id !== user.id || workspace.name !== TEMPORARY_DEMO_WORKSPACE_NAME) {
-    return { deleted: false, error: new Error("Löschung abgebrochen: Workspace gehört nicht eindeutig zum temporären Demo-User.") };
-  }
-
-  const tables: Array<[string, boolean]> = [
-    ["conversation_messages", false],
-    ["conversations", false],
-    ["memories", false],
-    ["followups", false],
-    ["contact_reply_targets", true],
-    ["conversation_summaries", true],
-    ["contact_ai_profiles", true],
-    ["fan_analysis_reports", true],
-    ["contacts", false],
-    ["workspace_members", false],
-    ["workspaces", false],
-  ];
-
-  for (const [table, optional] of tables) {
-    const error = await deleteWorkspaceRows(table, workspace.id, accessToken, optional);
-    if (error) return { deleted: false, error };
+  if (!accessToken) {
+    return temporaryDemoDeleteFailure(
+      "demo_cleanup_not_configured",
+      new Error(
+        "SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.",
+      ),
+    );
   }
 
-  const authDelete = await fetch(getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(user.id)}`), {
-    method: "DELETE",
-    headers: getSupabaseHeaders(accessToken),
-    cache: "no-store",
-  });
-  if (!authDelete.ok) return { deleted: false, error: await parseSupabaseServerError(authDelete) };
+  if (
+    (user.email ?? "").toLowerCase() === DEMO_EMAIL ||
+    !isTemporaryDemoUser(user)
+  ) {
+    return temporaryDemoDeleteFailure(
+      "demo_identity_not_temporary",
+      new Error(
+        "Löschung abgebrochen: User ist nicht eindeutig temporär.",
+      ),
+    );
+  }
+
+  if (
+    workspace.owner_user_id !== user.id ||
+    workspace.name !== TEMPORARY_DEMO_WORKSPACE_NAME
+  ) {
+    return temporaryDemoDeleteFailure(
+      "demo_workspace_identity_mismatch",
+      new Error(
+        "Löschung abgebrochen: Workspace gehört nicht eindeutig zum temporären Demo-User.",
+      ),
+    );
+  }
+
+  for (const step of DEMO_CLEANUP_DELETE_STEPS) {
+    const error = await deleteTemporaryDemoRows(
+      step.table,
+      step.filterColumn,
+      workspace.id,
+      accessToken,
+      step.optional,
+    );
+    if (error) {
+      return temporaryDemoDeleteFailure(step.errorCode, error);
+    }
+  }
+
+  const authDelete = await fetch(
+    getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(user.id)}`),
+    {
+      method: "DELETE",
+      headers: getSupabaseHeaders(accessToken),
+      cache: "no-store",
+    },
+  );
+  if (!authDelete.ok) {
+    return temporaryDemoDeleteFailure(
+      "demo_delete_auth_user_failed",
+      await parseSupabaseServerError(authDelete),
+    );
+  }
+
   await signOutSupabaseServerSession();
-  return { deleted: true, error: null };
+  return { deleted: true, error: null, errorCode: null };
 }
 
 async function parseSupabaseServerError(response: Response): Promise<Error> {
