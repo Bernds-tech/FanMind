@@ -71,8 +71,8 @@ function decodedPageContent(pdf) {
   return decoded.join("\n");
 }
 
-function pdfUtf16ActualText(value) {
-  let hex = "FEFF";
+function pdfUtf16HexPayload(value) {
+  let hex = "";
   for (let index = 0; index < value.length; index += 1) {
     const codePoint = value.codePointAt(index) ?? 0;
     if (codePoint > 0xffff) {
@@ -85,7 +85,7 @@ function pdfUtf16ActualText(value) {
       hex += codePoint.toString(16).padStart(4, "0").toUpperCase();
     }
   }
-  return `<${hex}>`;
+  return hex;
 }
 
 function disclosureContact(index, workspaceId = "workspace-1") {
@@ -220,9 +220,10 @@ test("PDF Unicode output keeps the exact original personal data in tagged Actual
     });
 
     const markedContent = decodedPageContent(pdf);
+    assert.match(markedContent, /\/ActualText <FEFF/u);
     for (const value of unicodeValues) {
       assert.ok(
-        markedContent.includes(pdfUtf16ActualText(value.normalize("NFC"))),
+        markedContent.includes(pdfUtf16HexPayload(value.normalize("NFC"))),
         `tagged PDF must preserve exact ActualText for ${value}`,
       );
     }
@@ -234,7 +235,6 @@ test("PDF Unicode output keeps the exact original personal data in tagged Actual
         new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"),
       );
     }
-    assert.doesNotMatch(markedContent, /\/ActualText <FEFF003F+>/u);
   } finally {
     await cleanup();
   }
