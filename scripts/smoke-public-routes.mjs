@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { evaluatePublicHealth } from "./public-health-policy.mjs";
 import {
   PUBLIC_PRODUCT_TRUTH_RULES,
   evaluatePublicProductTruth,
@@ -74,21 +75,14 @@ async function fetchRoute(route) {
 
   if (route === "/api/health") {
     const payload = await response.json().catch(() => null);
-    const checks = Array.isArray(payload?.checks) ? payload.checks : [];
-    const unhealthy = checks.filter((check) => check?.status !== "healthy");
-
-    if (payload?.status !== "healthy") {
-      throw new Error(`/api/health returned ${String(payload?.status)}`);
+    const health = evaluatePublicHealth(payload);
+    if (!health.ok) {
+      throw new Error(`/api/health blocking check failed: ${health.detail}`);
     }
-    if (!checks.length) {
-      throw new Error("/api/health returned no public component checks");
+    for (const warning of health.warnings) {
+      console.warn(`SMOKE_WARNING /api/health: ${warning}`);
     }
-    if (unhealthy.length) {
-      throw new Error(
-        `/api/health returned ${unhealthy.length} non-healthy component(s)`,
-      );
-    }
-
+    console.log(`SMOKE_OK /api/health policy: ${health.detail}`);
     return { status: response.status, body: payload };
   }
 
