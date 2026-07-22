@@ -110,6 +110,25 @@ export const roadmapPhases: RoadmapPhase[] = [
   {
     number: "06",
     phase: "Phase 6",
+    icon: "rocket",
+    title: "Mobile-App für Android & iOS",
+    status: "App-Kern vorhanden · interne Builds offen",
+    statusIcon: "◷",
+    tone: "cyan",
+    availability: "upcoming",
+    items: [
+      { label: "Eigenständiger Expo-/React-Native-App-Kern", state: "done", status: "Vorhanden" },
+      { label: "Login, Dashboard, Kontakte, Kontaktwissen, KI und Follow-ups", state: "done", status: "Phase A erledigt" },
+      { label: "Web-/Mobile-Follow-up-Status synchronisiert", state: "done", status: "completed + Legacy done" },
+      { label: "Signierter interner Android-Build", state: "partial", status: "EAS-/Signing-Einrichtung offen" },
+      { label: "iOS-TestFlight", state: "planned", status: "Apple-Konto und Signing offen" },
+      { label: "Passwort-Reset, Kontaktbearbeitung, Offline und Push", state: "planned", status: "Nächste Mobile-Phase" },
+    ],
+  },
+
+  {
+    number: "07",
+    phase: "Phase 7",
     icon: "integrations",
     title: "Weitere Social-Kanäle",
     status: "Später",
@@ -125,8 +144,8 @@ export const roadmapPhases: RoadmapPhase[] = [
   },
 
   {
-    number: "07",
-    phase: "Phase 7",
+    number: "08",
+    phase: "Phase 8",
     icon: "campaign",
     title: "Segmente & Listen",
     status: "In Arbeit",
@@ -142,8 +161,8 @@ export const roadmapPhases: RoadmapPhase[] = [
   },
 
   {
-    number: "08",
-    phase: "Phase 8",
+    number: "09",
+    phase: "Phase 9",
     icon: "campaign",
     title: "Kampagnen-Vorbereitung",
     status: "In Arbeit",
@@ -159,8 +178,8 @@ export const roadmapPhases: RoadmapPhase[] = [
   },
 
   {
-    number: "09",
-    phase: "Phase 9",
+    number: "10",
+    phase: "Phase 10",
     icon: "analytics",
     title: "Analytics & Reichweitenerkennung",
     status: "In Kürze",
@@ -177,8 +196,8 @@ export const roadmapPhases: RoadmapPhase[] = [
   },
 
   {
-    number: "10",
-    phase: "Phase 10",
+    number: "11",
+    phase: "Phase 11",
     icon: "analytics",
     title: "Team & Rollen/Rechte",
     status: "Später",
@@ -193,8 +212,8 @@ export const roadmapPhases: RoadmapPhase[] = [
   },
 
   {
-    number: "11",
-    phase: "Phase 11",
+    number: "12",
+    phase: "Phase 12",
     icon: "rocket",
     title: "Multi-Workspace / Agency",
     status: "Später",
@@ -209,8 +228,8 @@ export const roadmapPhases: RoadmapPhase[] = [
   },
 
   {
-    number: "12",
-    phase: "Phase 12",
+    number: "13",
+    phase: "Phase 13",
     icon: "campaign",
     title: "Kostenpflichtige KI-Erweiterungen",
     status: "Später",
@@ -227,8 +246,8 @@ export const roadmapPhases: RoadmapPhase[] = [
   },
 
   {
-    number: "13",
-    phase: "Phase 13",
+    number: "14",
+    phase: "Phase 14",
     icon: "analytics",
     title: "Datenschutz & Kontrolle",
     status: "Später",

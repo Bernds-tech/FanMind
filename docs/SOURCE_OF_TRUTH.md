@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 19. Juli 2026
+Stand: 22. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -14,7 +14,8 @@ FanMind ist:
 - ein Arbeitsbereich für Nachrichtenkontext, Kontaktwissen und Follow-ups;
 - ein serverseitiger KI-Assistent für Antwortvorschläge;
 - ein Copy-&-Open-Assistent: Antwort vorbereiten, kopieren, Originalkanal öffnen, Mensch sendet selbst;
-- ein System mit klarer Roadmap für Integrationen, Kampagnen, Analytics und spätere Erweiterungen.
+- ein System mit klarer Roadmap für Integrationen, Kampagnen, Analytics und spätere Erweiterungen;
+- ein eigenständiger nativer Mobile-App-Kern für Android und iOS, nicht als WebView-Hülle.
 
 FanMind ist nicht:
 
@@ -40,6 +41,7 @@ Aktiv beziehungsweise produktnah:
 - serverseitige KI-Antwortvorschläge;
 - Kontaktwissen- und Follow-up-Vorschläge aus der KI-Ausgabe;
 - Kopieren von Antwortvorschlägen ohne automatische Sendung;
+- eigenständiger React-Native-/Expo-App-Kern mit Login, Dashboard, Kontakten, Kontaktwissen, KI und Follow-ups;
 - Admin-, Billing-, Operations- und Backup-Grundlagen;
 - getrennte kompakte Konto-Seiten:
   - `/settings/profile` für Profil und Workspace-Basisdaten;
@@ -52,7 +54,33 @@ Aktiv beziehungsweise produktnah:
 
 Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-Checkout bleibt gesperrt. Die kostenlose Demo ist kein entgeltliches Paket.
 
-## 3. Roadmap- und Go-Live-Stand
+## 3. Eigenständige Mobile-App
+
+Der Mobile-App-Kern liegt unter `apps/mobile` und wird unabhängig von der Next.js-Website gebaut und veröffentlicht. Er ist keine eingebettete Website und importiert keine Website-CSS- oder Next.js-UI-Komponenten.
+
+Aktiv im App-Kern:
+
+- native Supabase-E-Mail-/Passwort-Anmeldung;
+- verschlüsselte Sitzung über `expo-secure-store`;
+- geschützte Expo-Router-Navigation;
+- Dashboard, Kontaktliste, Suche und Kontaktdetail;
+- Kontaktwissen;
+- Bearer-authentifizierte serverseitige KI-Antwortvorschläge;
+- Antwort kopieren, Kontaktwissen und Follow-up speichern;
+- offene Follow-ups anzeigen und mit dem kanonischen Status `completed` abschließen; bestehende `done`-Altdaten bleiben lesekompatibel;
+- separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze und Android-JavaScript-Bundle.
+
+Noch nicht als ausgelieferte Store-App freigegeben:
+
+- EAS-Projekt und Signing Credentials;
+- signierter interner Android-Build;
+- Apple Developer / App Store Connect und TestFlight;
+- Passwort-Reset/Deep Links, Kontaktanlage/-bearbeitung, Offline-Lese-Cache und Push-Grundlage;
+- realer End-to-End-Gerätetest auf Android und iOS.
+
+Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-Ingestion, externe Kanal-Credentials oder automatische Kommunikation aus. Verbindliche Architekturdetails stehen in `apps/mobile/README.md` und `docs/mobile/ARCHITECTURE.md`.
+
+## 4. Roadmap- und Go-Live-Stand
 
 ### Phase 4 – Erledigt / Verkaufsstart freigegeben
 
@@ -74,7 +102,7 @@ Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-C
 
 Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.
 
-## 4. Kommerzielle Wahrheit
+## 5. Kommerzielle Wahrheit
 
 Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` dürfen nicht wieder eingeführt werden.
 
@@ -113,7 +141,7 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - `FanMind e.U.` darf erst nach bestätigter Firmenbucheintragung verwendet werden.
 - Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung folgen dem dokumentierten Kleinunternehmer-Steuermodus.
 
-## 5. Verbindliche Terminologie
+## 6. Verbindliche Terminologie
 
 - Deutsch: **KI**; Englisch: **AI**.
 - Nutzerseitig: **Kontaktwissen**, nicht Memory oder Fan-Gedächtnis.
@@ -123,7 +151,7 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - Plattformlogos verwenden die gemeinsame `PlatformLogo`-Komponente.
 - Funktionssymbole verwenden die gemeinsame `FanMindFunctionIcon`-Registry.
 
-## 6. Referral Growth Window
+## 7. Referral Growth Window
 
 Die technische Policy ist vorbereitet, die produktive automatische Verrechnung bleibt deaktiviert.
 
@@ -143,7 +171,7 @@ Vor Aktivierung erforderlich:
 - Missbrauchsschutz;
 - Rechts- und Steuerfreigabe der Teilnahmebedingungen.
 
-## 7. Gefrorener Demo-Pfad
+## 8. Gefrorener Demo-Pfad
 
 1. Landingpage öffnen.
 2. Login oder kostenlose Demo starten.
@@ -161,7 +189,7 @@ Vor Aktivierung erforderlich:
 
 Das vollständige Sales-Skript steht in `docs/sales/FANMIND_DEMO_SCRIPT.md`.
 
-## 8. Integrationsstatus
+## 9. Integrationsstatus
 
 Aktiv im Standardprodukt:
 
@@ -190,7 +218,7 @@ Pflichtsatz:
 
 > Geplante Integrationen werden erst nach technischer und rechtlicher Prüfung umgesetzt. FanMind sendet keine Nachrichten automatisch. Der Mensch prüft, kopiert und sendet final selbst im Originalkanal.
 
-## 9. Security, RLS und Umgebungsgrenzen
+## 10. Security, RLS und Umgebungsgrenzen
 
 - keine Secrets im Repository;
 - OpenAI- und Supabase-Service-Role-Keys nur serverseitig;
@@ -202,7 +230,7 @@ Pflichtsatz:
 - schreibende Staging-/Testläufe benötigen alle Bedingungen aus `docs/operations/ENVIRONMENT_SEPARATION.md`;
 - kein Restore gegen Production.
 
-## 10. Datenbank-Source-of-Truth
+## 11. Datenbank-Source-of-Truth
 
 Verbindliche Quellen:
 
@@ -221,7 +249,7 @@ Relevante Objekte umfassen unter anderem:
 
 Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfen aus Kompatibilitätsgründen bestehen bleiben, sind aber keine öffentliche Terminologie.
 
-## 11. KI und Kostenbeobachtung
+## 12. KI und Kostenbeobachtung
 
 - serverseitige Endpunkte;
 - kein API-Key im Browser;
@@ -234,7 +262,7 @@ Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfe
 
 Details: `docs/AI_COST_MONITORING.md`.
 
-## 12. Finale technische Go-Live-Freigabe
+## 13. Finale technische Go-Live-Freigabe
 
 - automatischer read-only Preflight: `npm run smoke:go-live:public`;
 - permanenter Workflow `FanMind Final Go-Live Readiness` nach erfolgreichem Production-Deploy;
@@ -243,7 +271,7 @@ Details: `docs/AI_COST_MONITORING.md`.
 - technische Freigabe und externe Steuer-/Rechtsfreigabe werden getrennt dokumentiert;
 - Referral-Billing, KI Plus/Ultra Auto-Buchung und schreibende Staging-Tests bleiben bis zur separaten Freigabe deaktiviert.
 
-## 13. Reader-Synchronisierung
+## 14. Reader-Synchronisierung
 
 Bei Änderungen an Preis, Paketen, Referral, aktivem Scope, Demo, Integrationen, Billing, KI, Datenbank, Security oder öffentlichen Versprechen müssen mindestens geprüft werden:
 
@@ -251,4 +279,5 @@ Bei Änderungen an Preis, Paketen, Referral, aktivem Scope, Demo, Integrationen,
 - `README.md`;
 - `AGENTS.md`;
 - `docs/database/fanmind_current_schema.md`;
+- `apps/mobile/README.md` und `docs/mobile/ARCHITECTURE.md` bei Mobile- oder Backend-Vertragsänderungen;
 - relevante Security-, KI-, Referral-, Landingpage- und Legal-Dateien.

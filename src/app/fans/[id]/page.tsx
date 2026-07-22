@@ -31,6 +31,7 @@ import {
   type WorkspaceVoiceProfileRow,
 } from "@/lib/supabase/server";
 import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+import { isOpenFollowupStatus } from "@/lib/followupStatus";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
@@ -363,8 +364,8 @@ function FanDetailContent({
         locale,
       )
     : [];
-  const openFollowups = followups.filter(
-    (followup) => followup.status !== "done",
+  const openFollowups = followups.filter((followup) =>
+    isOpenFollowupStatus(followup.status),
   );
 
   return (

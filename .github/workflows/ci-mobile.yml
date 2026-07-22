@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - "feat/mobile-**"
+      - "p0/**"
     paths:
       - "apps/mobile/**"
       - "src/lib/requestAccessToken.ts"
@@ -55,7 +56,19 @@ jobs:
           cache-dependency-path: apps/mobile/package-lock.json
 
       - name: Install mobile dependencies
-        run: npm ci --no-audit --no-fund
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci --no-audit --no-fund 2>&1 | tee mobile-install-report.txt
+
+      - name: Upload mobile install report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-install-report
+          path: apps/mobile/mobile-install-report.txt
+          if-no-files-found: error
+          retention-days: 5
 
       - name: Typecheck independent mobile app
         id: typecheck
@@ -92,7 +105,21 @@ jobs:
           retention-days: 5
 
       - name: Build Android JavaScript bundle
-        run: npm run export:android
+        id: android_bundle
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run export:android 2>&1 | tee mobile-android-export-report.txt
+
+      - name: Upload Android export report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-android-export-report
+          path: apps/mobile/mobile-android-export-report.txt
+          if-no-files-found: error
+          retention-days: 5
 
       - name: Enforce mobile boundary
         id: boundary
@@ -111,7 +138,8 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-      - name: Upload Android bundle report
+      - name: Upload Android bundle artifact
+        if: always() && steps.android_bundle.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: fanmind-mobile-android-bundle
@@ -120,13 +148,17 @@ jobs:
           retention-days: 5
 
       - name: Enforce mobile typecheck result
-        if: steps.typecheck.outcome != 'success'
+        if: always() && steps.typecheck.outcome != 'success'
         run: exit 1
 
       - name: Enforce Expo Doctor result
-        if: steps.doctor.outcome != 'success'
+        if: always() && steps.doctor.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce Android bundle result
+        if: always() && steps.android_bundle.outcome != 'success'
         run: exit 1
 
       - name: Enforce mobile boundary result
-        if: steps.boundary.outcome != 'success'
+        if: always() && steps.boundary.outcome != 'success'
         run: exit 1

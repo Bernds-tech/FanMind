@@ -1,12 +1,13 @@
 # FanMind
 
-FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan-/Kontaktbeziehungen. Der aktive Kern umfasst Login, temporären Demo-Workspace, Dashboard, Kontakte, Kontaktdetail, CSV-Import, serverseitige KI-Antwortvorschläge, Kontaktwissen, Follow-ups und Roadmap.
+FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan-/Kontaktbeziehungen. Der aktive Web-Kern umfasst Login, temporären Demo-Workspace, Dashboard, Kontakte, Kontaktdetail, CSV-Import, serverseitige KI-Antwortvorschläge, Kontaktwissen, Follow-ups und Roadmap. Zusätzlich besteht unter `apps/mobile` ein eigenständiger nativer Android-/iOS-App-Kern.
 
 ## Schnellentscheidung / Reader-Stand
 
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
+- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Dashboard, Kontakten, Kontaktwissen, KI-Antwortvorschlägen und Follow-ups; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Öffentliche Registrierung: ausschließlich Starter Flex und Starter 12 Monate.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
 - Admin-only: interne Testzugänge und das Stripe-Testabo `internal_daily_test` bleiben ausdrücklich intern. Der normale Registrierungsflow zeigt sie nicht öffentlich.
@@ -60,6 +61,7 @@ Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markie
 
 - Framework: Next.js `16.2.7`
 - UI: React `19.2.4`
+- Mobile: React Native / Expo unter `apps/mobile` mit eigener Navigation, CI und Releasegrenze
 - Sprache: TypeScript
 - Auth und Daten: Supabase Auth / Supabase PostgREST
 - KI: serverseitige OpenAI Responses API
@@ -81,6 +83,27 @@ npm run lint
 npm run test:operations
 npm run build
 ```
+
+## Mobile-App
+
+Die Mobile-App ist ein eigener Produktstream und keine eingebettete Website. Web und Mobile teilen ausschließlich freigegebene, RLS-geschützte Backend-Verträge und die serverseitige KI-API.
+
+Bereits vorhanden:
+
+- native E-Mail-/Passwort-Anmeldung und sichere Gerätesitzung;
+- Dashboard, Kontaktliste, Suche und Kontaktdetail;
+- Kontaktwissen und serverseitige KI-Antwortvorschläge;
+- Antwort kopieren, Kontaktwissen und Follow-up speichern;
+- offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
+- separate Mobile-CI, Expo Doctor, TypeScript-Check und Android-JavaScript-Bundle.
+
+Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
+
+- EAS-Projekt, Signing Credentials und signierter interner Android-Build;
+- Apple Developer / App Store Connect und iOS-TestFlight;
+- Passwort-Reset/Deep Links, Kontakt anlegen/bearbeiten, Offline-Lese-Cache und Push-Grundlage.
+
+Verbindliche Details: `apps/mobile/README.md` und `docs/mobile/ARCHITECTURE.md`.
 
 ## Wichtige Routen
 
@@ -209,4 +232,4 @@ Nach dem Deployment werden öffentliche Kernrouten und der tatsächlich ausgelie
 
 ## Dokumentations-Synchronisierung
 
-Wenn Preise, Pakete, Referral-Logik, aktiver Scope, Demo-Pfad, Billing, KI-Leistungsstufen, Datenbank, Security oder öffentliche Versprechen geändert werden, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und die betroffenen Legal-/Pricing-Dateien im selben PR geprüft und synchronisiert werden.
+Wenn Preise, Pakete, Referral-Logik, aktiver Scope, Demo-Pfad, Billing, KI-Leistungsstufen, Datenbank, Security, Mobile-Verträge oder öffentliche Versprechen geändert werden, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md`, `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und die betroffenen Legal-/Pricing-Dateien im selben PR geprüft und synchronisiert werden.

@@ -89,6 +89,40 @@ test("no automatic sending is present in the mobile product", () => {
   assert.doesNotMatch(allSource, /sendMessage\(|\/send-message|automatisch senden/i);
 });
 
+test("mobile uses completed as canonical follow-up status and still hides legacy done rows", async () => {
+  const data = await readFile(new URL("src/lib/data.ts", mobileRoot), "utf8");
+  const statusPolicy = await readFile(
+    new URL("src/lib/followupStatus.ts", mobileRoot),
+    "utf8",
+  );
+
+  assert.match(statusPolicy, /CANONICAL_COMPLETED_FOLLOWUP_STATUS = "completed"/u);
+  assert.match(statusPolicy, /LEGACY_COMPLETED_FOLLOWUP_STATUS = "done"/u);
+  assert.match(data, /\.not\("status", "in", COMPLETED_FOLLOWUP_FILTER\)/u);
+  assert.match(data, /update\(\{ status: CANONICAL_COMPLETED_FOLLOWUP_STATUS \}\)/u);
+  assert.doesNotMatch(data, /\.neq\("status", "done"\)/u);
+  assert.doesNotMatch(data, /update\(\{ status: "done" \}\)/u);
+});
+
+test("Mobile is an explicit active product stream in all central readers and the roadmap", async () => {
+  const [readme, sourceOfTruth, agents, roadmap] = await Promise.all([
+    readFile(new URL("../README.md", import.meta.url), "utf8"),
+    readFile(new URL("../docs/SOURCE_OF_TRUTH.md", import.meta.url), "utf8"),
+    readFile(new URL("../AGENTS.md", import.meta.url), "utf8"),
+    readFile(new URL("../src/config/roadmap.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(readme, /## Mobile-App/u);
+  assert.match(readme, /signierte interne Builds und Store-Verteilung bleiben separat abzunehmen/u);
+  assert.match(sourceOfTruth, /## 3\. Eigenständige Mobile-App/u);
+  assert.match(sourceOfTruth, /kanonischen Status `completed`/u);
+  assert.match(agents, /## Mobile product boundary/u);
+  assert.match(agents, /canonical completed follow-up status is `completed`/u);
+  assert.match(roadmap, /title: "Mobile-App für Android & iOS"/u);
+  assert.match(roadmap, /Signierter interner Android-Build/u);
+  assert.match(roadmap, /iOS-TestFlight/u);
+});
+
 test("Web and Mobile have separate compiler and CI boundaries", () => {
   assert.match(webTsconfig, /"apps\/mobile"/);
   assert.match(webEslint, /apps\/mobile\/\*\*/);
