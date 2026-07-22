@@ -30,16 +30,20 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+          import textwrap
 
           server_path = Path("src/lib/supabase/server.ts")
           server = server_path.read_text(encoding="utf-8")
           import_anchor = 'import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";\n'
-          policy_import = '''import {
-            DEMO_CLEANUP_DELETE_STEPS,
-            type DemoCleanupDeleteErrorCode,
-            type DemoCleanupFilterColumn,
-          } from "@/lib/demoCleanupPolicy";
-          '''
+          policy_import = textwrap.dedent(
+            """\
+            import {
+              DEMO_CLEANUP_DELETE_STEPS,
+              type DemoCleanupDeleteErrorCode,
+              type DemoCleanupFilterColumn,
+            } from "@/lib/demoCleanupPolicy";
+            """
+          )
           if policy_import not in server:
             if import_anchor not in server:
               raise SystemExit("demoMode import anchor not found")
@@ -54,135 +58,134 @@ jobs:
           if end < 0:
             raise SystemExit("demo cleanup replacement end marker not found")
 
-          replacement = '''async function deleteTemporaryDemoRows(
-            table: string,
-            filterColumn: DemoCleanupFilterColumn,
-            workspaceId: string,
-            accessToken: string,
-            optional = false,
-          ): Promise<Error | null> {
-            const result = await postgrestDelete(table, accessToken, [
-              [filterColumn, workspaceId],
-            ]);
-            if (!result.error) return null;
+          replacement = textwrap.dedent(
+            """\
+            async function deleteTemporaryDemoRows(
+              table: string,
+              filterColumn: DemoCleanupFilterColumn,
+              workspaceId: string,
+              accessToken: string,
+              optional = false,
+            ): Promise<Error | null> {
+              const result = await postgrestDelete(table, accessToken, [
+                [filterColumn, workspaceId],
+              ]);
+              if (!result.error) return null;
 
-            const message = result.error.message.toLowerCase();
-            if (
-              optional &&
-              (message.includes("does not exist") ||
-                message.includes("schema cache") ||
-                message.includes("relation"))
-            ) {
-              return null;
-            }
-
-            return result.error;
-          }
-
-          export type TemporaryDemoDeleteResult = {
-            deleted: boolean;
-            error: Error | null;
-            errorCode: DemoCleanupDeleteErrorCode | null;
-          };
-
-          function temporaryDemoDeleteFailure(
-            errorCode: DemoCleanupDeleteErrorCode,
-            error: Error,
-          ): TemporaryDemoDeleteResult {
-            return { deleted: false, error, errorCode };
-          }
-
-          export async function deleteExpiredTemporaryDemo(
-            user: SupabaseServerUser,
-            workspace: WorkspaceDashboardRow | WorkspaceBackfillRow,
-          ): Promise<TemporaryDemoDeleteResult> {
-            const accessToken = getServiceAccessToken();
-            if (!accessToken) {
-              return temporaryDemoDeleteFailure(
-                "demo_cleanup_not_configured",
-                new Error(
-                  "SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.",
-                ),
-              );
-            }
-
-            if (
-              (user.email ?? "").toLowerCase() === DEMO_EMAIL ||
-              !isTemporaryDemoUser(user)
-            ) {
-              return temporaryDemoDeleteFailure(
-                "demo_identity_not_temporary",
-                new Error(
-                  "Löschung abgebrochen: User ist nicht eindeutig temporär.",
-                ),
-              );
-            }
-
-            if (
-              workspace.owner_user_id !== user.id ||
-              workspace.name !== TEMPORARY_DEMO_WORKSPACE_NAME
-            ) {
-              return temporaryDemoDeleteFailure(
-                "demo_workspace_identity_mismatch",
-                new Error(
-                  "Löschung abgebrochen: Workspace gehört nicht eindeutig zum temporären Demo-User.",
-                ),
-              );
-            }
-
-            for (const step of DEMO_CLEANUP_DELETE_STEPS) {
-              const error = await deleteTemporaryDemoRows(
-                step.table,
-                step.filterColumn,
-                workspace.id,
-                accessToken,
-                step.optional,
-              );
-              if (error) {
-                return temporaryDemoDeleteFailure(step.errorCode, error);
+              const message = result.error.message.toLowerCase();
+              if (
+                optional &&
+                (message.includes("does not exist") ||
+                  message.includes("schema cache") ||
+                  message.includes("relation"))
+              ) {
+                return null;
               }
+
+              return result.error;
             }
 
-            const authDelete = await fetch(
-              getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(user.id)}`),
-              {
-                method: "DELETE",
-                headers: getSupabaseHeaders(accessToken),
-                cache: "no-store",
-              },
-            );
-            if (!authDelete.ok) {
-              return temporaryDemoDeleteFailure(
-                "demo_delete_auth_user_failed",
-                await parseSupabaseServerError(authDelete),
+            export type TemporaryDemoDeleteResult = {
+              deleted: boolean;
+              error: Error | null;
+              errorCode: DemoCleanupDeleteErrorCode | null;
+            };
+
+            function temporaryDemoDeleteFailure(
+              errorCode: DemoCleanupDeleteErrorCode,
+              error: Error,
+            ): TemporaryDemoDeleteResult {
+              return { deleted: false, error, errorCode };
+            }
+
+            export async function deleteExpiredTemporaryDemo(
+              user: SupabaseServerUser,
+              workspace: WorkspaceDashboardRow | WorkspaceBackfillRow,
+            ): Promise<TemporaryDemoDeleteResult> {
+              const accessToken = getServiceAccessToken();
+              if (!accessToken) {
+                return temporaryDemoDeleteFailure(
+                  "demo_cleanup_not_configured",
+                  new Error(
+                    "SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert.",
+                  ),
+                );
+              }
+
+              if (
+                (user.email ?? "").toLowerCase() === DEMO_EMAIL ||
+                !isTemporaryDemoUser(user)
+              ) {
+                return temporaryDemoDeleteFailure(
+                  "demo_identity_not_temporary",
+                  new Error(
+                    "Löschung abgebrochen: User ist nicht eindeutig temporär.",
+                  ),
+                );
+              }
+
+              if (
+                workspace.owner_user_id !== user.id ||
+                workspace.name !== TEMPORARY_DEMO_WORKSPACE_NAME
+              ) {
+                return temporaryDemoDeleteFailure(
+                  "demo_workspace_identity_mismatch",
+                  new Error(
+                    "Löschung abgebrochen: Workspace gehört nicht eindeutig zum temporären Demo-User.",
+                  ),
+                );
+              }
+
+              for (const step of DEMO_CLEANUP_DELETE_STEPS) {
+                const error = await deleteTemporaryDemoRows(
+                  step.table,
+                  step.filterColumn,
+                  workspace.id,
+                  accessToken,
+                  step.optional,
+                );
+                if (error) {
+                  return temporaryDemoDeleteFailure(step.errorCode, error);
+                }
+              }
+
+              const authDelete = await fetch(
+                getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(user.id)}`),
+                {
+                  method: "DELETE",
+                  headers: getSupabaseHeaders(accessToken),
+                  cache: "no-store",
+                },
               );
-            }
+              if (!authDelete.ok) {
+                return temporaryDemoDeleteFailure(
+                  "demo_delete_auth_user_failed",
+                  await parseSupabaseServerError(authDelete),
+                );
+              }
 
-            await signOutSupabaseServerSession();
-            return { deleted: true, error: null, errorCode: null };
-          }
-          '''
+              await signOutSupabaseServerSession();
+              return { deleted: true, error: null, errorCode: null };
+            }
+            """
+          )
 
           server = server[:start] + replacement + server[end:]
           server_path.write_text(server, encoding="utf-8")
 
           route_path = Path("src/app/api/demo/cleanup/route.ts")
           route = route_path.read_text(encoding="utf-8")
-          old_route = '''  if (!deletion.deleted || deletion.error) {
-            return finalizeCandidate(candidate, false, "demo_delete_failed");
-          }
-          '''
-          new_route = '''  if (!deletion.deleted || deletion.error) {
-            return finalizeCandidate(
-              candidate,
-              false,
-              deletion.errorCode ?? "demo_delete_failed",
-            );
-          }
-          '''
-          if old_route not in route:
-            raise SystemExit("cleanup route deletion block not found")
-          route_path.write_text(route.replace(old_route, new_route, 1), encoding="utf-8")
+          old_line = '    return finalizeCandidate(candidate, false, "demo_delete_failed");'
+          new_line = (
+            '    return finalizeCandidate(\n'
+            '      candidate,\n'
+            '      false,\n'
+            '      deletion.errorCode ?? "demo_delete_failed",\n'
+            '    );'
+          )
+          if old_line not in route:
+            raise SystemExit("cleanup route deletion line not found")
+          route_path.write_text(route.replace(old_line, new_line, 1), encoding="utf-8")
           PY
 
           git diff --check
