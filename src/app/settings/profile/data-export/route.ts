@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import {
+  DataDisclosureExportError,
+  getAllWorkspaceContactsForDisclosure,
+} from "@/lib/dataDisclosureExport";
+import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
-  getWorkspaceContacts,
 } from "@/lib/supabase/server";
 import { createDataDisclosurePdf } from "@/lib/dataDisclosurePdf";
 
@@ -29,15 +32,27 @@ export async function GET(request: Request) {
     return new NextResponse("Workspace nicht gefunden.", { status: 404 });
   }
 
-  const contactsResult = await getWorkspaceContacts(workspace.id);
-  if (contactsResult.error) {
-    return new NextResponse("Datenauskunft konnte nicht erstellt werden.", {
-      status: 500,
+  let contacts: Awaited<
+    ReturnType<typeof getAllWorkspaceContactsForDisclosure>
+  >;
+  try {
+    contacts = await getAllWorkspaceContactsForDisclosure(workspace.id);
+  } catch (error) {
+    const message =
+      error instanceof DataDisclosureExportError
+        ? error.message
+        : "Datenauskunft konnte nicht vollständig erstellt werden.";
+    return new NextResponse(message, {
+      status: error instanceof DataDisclosureExportError ? 409 : 500,
+      headers: {
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
   }
 
   const locale = new URL(request.url).searchParams.get("lang") === "en" ? "en" : "de";
-  const pdf = createDataDisclosurePdf({
+  const pdf = await createDataDisclosurePdf({
     generatedAt: new Date(),
     locale,
     user: {
@@ -69,7 +84,7 @@ export async function GET(request: Request) {
       subscriptionEffectiveEndAt: workspace.subscription_effective_end_at,
       workspaceAccessMode: workspace.workspace_access_mode,
     },
-    contacts: contactsResult.contacts.map((contact) => ({
+    contacts: contacts.map((contact) => ({
       displayName: contact.display_name,
       handle: contact.handle,
       sourcePlatform: contact.source_platform,
