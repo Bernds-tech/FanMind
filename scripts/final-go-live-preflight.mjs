@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 import { writeFile } from "node:fs/promises";
+import {
+  PUBLIC_PRODUCT_TRUTH_RULES,
+  evaluatePublicProductTruth,
+  visibleText,
+} from "./public-product-truth.mjs";
 
 const baseUrl = (process.env.FANMIND_GO_LIVE_BASE_URL || "https://fanmind.ch").replace(/\/$/, "");
 const expectedCommit = process.env.FANMIND_EXPECTED_RELEASE_COMMIT?.trim() || "";
@@ -53,38 +58,9 @@ async function request(path) {
   throw lastError instanceof Error ? lastError : new Error("unknown request error");
 }
 
-function visibleText(html) {
-  return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function assertText(name, text, { includes = [], excludes = [] }) {
-  const normalizedText = text.toLocaleLowerCase("de");
-
-  for (const value of includes) {
-    if (!normalizedText.includes(value.toLocaleLowerCase("de"))) {
-      addResult(name, false, `Pflichttext fehlt: ${value}`);
-      return;
-    }
-  }
-
-  for (const value of excludes) {
-    if (normalizedText.includes(value.toLocaleLowerCase("de"))) {
-      addResult(name, false, `veralteter Text gefunden: ${value}`);
-      return;
-    }
-  }
-
-  addResult(name, true, "öffentliche Produktwahrheit bestätigt");
+function assertText(name, text, rules) {
+  const result = evaluatePublicProductTruth(text, rules);
+  addResult(name, result.ok, result.detail);
 }
 
 const publicRoutes = [
@@ -158,20 +134,21 @@ const germanLanding = visibleText(pageHtml.get("/") || "");
 const englishLanding = visibleText(pageHtml.get("/?lang=en") || "");
 const registerPage = visibleText(pageHtml.get("/register") || "");
 
-assertText("deutsche Landingpage", germanLanding, {
-  includes: ["Kontaktwissen", "Keine automatische Sendefunktion"],
-  excludes: ["Fan-Gedächtnis", "Pilot anfragen", "299 €/Monat"],
-});
-
-assertText("englische Landingpage", englishLanding, {
-  includes: ["Your AI-powered", "contact knowledge", "no automatic sending"],
-  excludes: ["Dein KI-gestütztes", "Kostenlos testen", "Produktvorschau für dein"],
-});
-
-assertText("Registrierung und Preis", registerPage, {
-  includes: ["312"],
-  excludes: ["299", "Pilot / Setup", "Pilot anfragen"],
-});
+assertText(
+  "deutsche Landingpage",
+  germanLanding,
+  PUBLIC_PRODUCT_TRUTH_RULES.germanLanding,
+);
+assertText(
+  "englische Landingpage",
+  englishLanding,
+  PUBLIC_PRODUCT_TRUTH_RULES.englishLanding,
+);
+assertText(
+  "Registrierung und Preis",
+  registerPage,
+  PUBLIC_PRODUCT_TRUTH_RULES.registration,
+);
 
 const report = {
   checkedAt: new Date().toISOString(),
