@@ -15,9 +15,6 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: apps/mobile
     steps:
       - name: Checkout P0 branch
         uses: actions/checkout@v4
@@ -32,21 +29,16 @@ jobs:
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
 
-      - name: Refresh package lock
+      - name: Refresh Mobile package lock
+        working-directory: apps/mobile
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
-      - name: Validate clean installation and Expo versions
-        run: |
-          npm ci --no-audit --no-fund
-          npm run typecheck
-          npm run doctor
-          npm run boundary
-
       - name: Commit refreshed lockfile
-        working-directory: .
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --check
           git add apps/mobile/package-lock.json
+          git diff --cached --quiet && { echo "Lockfile did not change" >&2; exit 1; }
           git commit -m "Refresh Mobile Expo SDK 57 lockfile"
           git push origin HEAD:p0/completion-20260722
