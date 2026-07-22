@@ -89,6 +89,21 @@ test("no automatic sending is present in the mobile product", () => {
   assert.doesNotMatch(allSource, /sendMessage\(|\/send-message|automatisch senden/i);
 });
 
+test("mobile uses completed as canonical follow-up status and still hides legacy done rows", async () => {
+  const data = await readFile(new URL("src/lib/data.ts", mobileRoot), "utf8");
+  const statusPolicy = await readFile(
+    new URL("src/lib/followupStatus.ts", mobileRoot),
+    "utf8",
+  );
+
+  assert.match(statusPolicy, /CANONICAL_COMPLETED_FOLLOWUP_STATUS = "completed"/u);
+  assert.match(statusPolicy, /LEGACY_COMPLETED_FOLLOWUP_STATUS = "done"/u);
+  assert.match(data, /\.not\("status", "in", COMPLETED_FOLLOWUP_FILTER\)/u);
+  assert.match(data, /update\(\{ status: CANONICAL_COMPLETED_FOLLOWUP_STATUS \}\)/u);
+  assert.doesNotMatch(data, /\.neq\("status", "done"\)/u);
+  assert.doesNotMatch(data, /update\(\{ status: "done" \}\)/u);
+});
+
 test("Web and Mobile have separate compiler and CI boundaries", () => {
   assert.match(webTsconfig, /"apps\/mobile"/);
   assert.match(webEslint, /apps\/mobile\/\*\*/);
