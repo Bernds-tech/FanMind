@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   audit:
@@ -47,13 +48,63 @@ jobs:
           FANMIND_EXPECTED_RELEASE_COMMIT: 2a64398a0826cd0e808b465b838dd4ed8308407a
         run: npm run smoke:go-live:public
 
-      - name: Record server and live release state
+      - name: Post successful Production evidence to P0 tracker
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_COMMIT: 2a64398a0826cd0e808b465b838dd4ed8308407a
         run: |
           set -euo pipefail
-          echo "SERVER_HEAD=$(git -C /var/www/fanmind rev-parse HEAD)"
-          echo "ORIGIN_MAIN=$(git -C /var/www/fanmind rev-parse origin/main)"
-          curl -fsSL --max-time 15 https://fanmind.ch/api/version
-          echo
-          curl -fsSL --max-time 15 https://fanmind.ch/api/health
-          echo
+          server_head="$(git -C /var/www/fanmind rev-parse HEAD)"
+          origin_main="$(git -C /var/www/fanmind rev-parse origin/main)"
+          version_json="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version)"
+          health_json="$(curl -fsSL --max-time 15 https://fanmind.ch/api/health)"
+          live_commit="$(printf '%s' "$version_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>process.stdout.write(JSON.parse(s).releaseCommit||""))')"
+          environment="$(printf '%s' "$version_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>process.stdout.write(JSON.parse(s).environment||""))')"
+          health_status="$(printf '%s' "$health_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>process.stdout.write(JSON.parse(s).status||""))')"
+          health_components="$(printf '%s' "$health_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const x=JSON.parse(s);process.stdout.write((x.checks||[]).map(c=>`${c.component}=${c.status}`).join(", "))})')"
+
+          cat > p0-production-comment.md <<EOF
+          ## P0 Production-Abnahme erfolgreich
+
+          - Merge-Commit: \`$EXPECTED_COMMIT\`
+          - Server-HEAD: \`$server_head\`
+          - \`origin/main\`: \`$origin_main\`
+          - Live-Release über \`/api/version\`: \`$live_commit\`
+          - Environment: \`$environment\`
+          - Health: \`$health_status\`
+          - Komponenten: $health_components
+          - Finaler read-only Go-Live-Preflight: erfolgreich
+          - Geprüft: öffentliche Kernrouten, deutsche und englische Landingpage, Registrierung, aktuelle Preise/Terminologie und keine automatische Sendefunktion
+          - Audit-Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+
+          node -e 'const fs=require("fs"); process.stdout.write(JSON.stringify({body:fs.readFileSync("p0-production-comment.md","utf8")}))' > p0-production-comment.json
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/640/comments" \
+            --data-binary @p0-production-comment.json
+
+      - name: Post failed Production audit to P0 tracker
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > p0-production-failure.md <<EOF
+          ## P0 Production-Abnahme fehlgeschlagen
+
+          Der read-only Post-Merge-Audit konnte nicht erfolgreich abgeschlossen werden. Es wurde kein Erfolg behauptet und kein weiterer Merge vorgenommen.
+
+          Audit-Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+          node -e 'const fs=require("fs"); process.stdout.write(JSON.stringify({body:fs.readFileSync("p0-production-failure.md","utf8")}))' > p0-production-failure.json
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/640/comments" \
+            --data-binary @p0-production-failure.json
