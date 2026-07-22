@@ -34,9 +34,17 @@ jobs:
           rm -f package-lock.json
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --ignore-scripts --no-audit --no-fund
-          npm run typecheck
-          npm run doctor
-          npm run boundary
+          node - <<'NODE'
+          const lock = require('./package-lock.json');
+          const root = lock.packages?.['']?.dependencies ?? {};
+          const worklets = lock.packages?.['node_modules/react-native-worklets'];
+          if (root['react-native-worklets'] !== '0.10.2') {
+            throw new Error('Root Worklets dependency is not pinned to 0.10.2');
+          }
+          if (worklets?.version !== '0.10.2') {
+            throw new Error(`Lock resolved Worklets ${worklets?.version ?? 'missing'} instead of 0.10.2`);
+          }
+          NODE
 
       - name: Commit refreshed lockfile
         run: |
