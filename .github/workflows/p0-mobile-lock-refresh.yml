@@ -1,0 +1,58 @@
+name: FanMind P0 Mobile Lock Refresh
+
+on:
+  push:
+    branches:
+      - p0/completion-20260722
+    paths:
+      - ".github/workflows/p0-mobile-lock-refresh.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout P0 branch
+        uses: actions/checkout@v4
+        with:
+          ref: p0/completion-20260722
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+
+      - name: Recreate and validate Mobile dependency lock
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          rm -f package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+          node - <<'NODE'
+          const lock = require('./package-lock.json');
+          const root = lock.packages?.['']?.dependencies ?? {};
+          const worklets = lock.packages?.['node_modules/react-native-worklets'];
+          if (root['react-native-worklets'] !== '0.10.0') {
+            throw new Error('Root Worklets dependency is not pinned to 0.10.0');
+          }
+          if (worklets?.version !== '0.10.0') {
+            throw new Error(`Lock resolved Worklets ${worklets?.version ?? 'missing'} instead of 0.10.0`);
+          }
+          NODE
+
+      - name: Commit refreshed lockfile
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --check
+          git add apps/mobile/package-lock.json
+          git diff --cached --quiet && { echo "Mobile lockfile did not change" >&2; exit 1; }
+          git commit -m "Refresh Mobile lockfile for Expo-compatible Worklets"
+          git push origin HEAD:p0/completion-20260722
