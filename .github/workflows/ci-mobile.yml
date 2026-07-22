@@ -56,8 +56,6 @@ jobs:
           cache-dependency-path: apps/mobile/package-lock.json
 
       - name: Install mobile dependencies
-        id: install
-        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
@@ -73,7 +71,6 @@ jobs:
           retention-days: 5
 
       - name: Typecheck independent mobile app
-        if: steps.install.outcome == 'success'
         id: typecheck
         continue-on-error: true
         shell: bash
@@ -82,7 +79,7 @@ jobs:
           npm run typecheck 2>&1 | tee mobile-typecheck-report.txt
 
       - name: Upload mobile typecheck report
-        if: always() && steps.install.outcome == 'success'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fanmind-mobile-typecheck-report
@@ -91,7 +88,6 @@ jobs:
           retention-days: 5
 
       - name: Validate Expo configuration
-        if: steps.install.outcome == 'success'
         id: doctor
         continue-on-error: true
         shell: bash
@@ -100,7 +96,7 @@ jobs:
           npm run doctor 2>&1 | tee expo-doctor-report.txt
 
       - name: Upload Expo Doctor report
-        if: always() && steps.install.outcome == 'success'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fanmind-mobile-expo-doctor-report
@@ -109,11 +105,23 @@ jobs:
           retention-days: 5
 
       - name: Build Android JavaScript bundle
-        if: steps.install.outcome == 'success'
-        run: npm run export:android
+        id: android_bundle
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run export:android 2>&1 | tee mobile-android-export-report.txt
+
+      - name: Upload Android export report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-mobile-android-export-report
+          path: apps/mobile/mobile-android-export-report.txt
+          if-no-files-found: error
+          retention-days: 5
 
       - name: Enforce mobile boundary
-        if: steps.install.outcome == 'success'
         id: boundary
         continue-on-error: true
         shell: bash
@@ -122,7 +130,7 @@ jobs:
           npm run boundary 2>&1 | tee mobile-boundary-report.txt
 
       - name: Upload mobile boundary report
-        if: always() && steps.install.outcome == 'success'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fanmind-mobile-boundary-report
@@ -130,8 +138,8 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-      - name: Upload Android bundle report
-        if: steps.install.outcome == 'success'
+      - name: Upload Android bundle artifact
+        if: always() && steps.android_bundle.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: fanmind-mobile-android-bundle
@@ -139,18 +147,18 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-      - name: Enforce mobile install result
-        if: always() && steps.install.outcome != 'success'
-        run: exit 1
-
       - name: Enforce mobile typecheck result
-        if: always() && steps.install.outcome == 'success' && steps.typecheck.outcome != 'success'
+        if: always() && steps.typecheck.outcome != 'success'
         run: exit 1
 
       - name: Enforce Expo Doctor result
-        if: always() && steps.install.outcome == 'success' && steps.doctor.outcome != 'success'
+        if: always() && steps.doctor.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce Android bundle result
+        if: always() && steps.android_bundle.outcome != 'success'
         run: exit 1
 
       - name: Enforce mobile boundary result
-        if: always() && steps.install.outcome == 'success' && steps.boundary.outcome != 'success'
+        if: always() && steps.boundary.outcome != 'success'
         run: exit 1
