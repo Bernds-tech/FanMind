@@ -4,7 +4,10 @@ import { readFile } from "node:fs/promises";
 
 const roadmapPath = "src/config/roadmap.ts";
 const smokeScriptPath = "scripts/final-go-live-preflight.mjs";
+const deploySmokePath = "scripts/smoke-public-routes.mjs";
+const truthPolicyPath = "scripts/public-product-truth.mjs";
 const workflowPath = ".github/workflows/final-go-live-readiness.yml";
+const deployWorkflowPath = ".github/workflows/deploy-fanmind.yml";
 const runbookPath = "docs/operations/FINAL_GO_LIVE_SMOKE_TEST.md";
 const salesFiles = [
   "docs/sales/FANMIND_SALES_ONE_PAGER.md",
@@ -25,14 +28,45 @@ test("roadmap separates completed technical foundations from external staging re
   assert.match(roadmap, /label: "Umgebungs-Governance", state: "done", status: "Fail-closed aktiv"/);
 });
 
-test("final go-live preflight remains read-only and verifies public truth", async () => {
-  const script = await read(smokeScriptPath);
+test("go-live and deploy smoke gates share the same read-only live product truth policy", async () => {
+  const [goLive, deploySmoke, truthPolicy, deployWorkflow] = await Promise.all([
+    read(smokeScriptPath),
+    read(deploySmokePath),
+    read(truthPolicyPath),
+    read(deployWorkflowPath),
+  ]);
 
-  assert.doesNotMatch(script, /method:\s*"(?:POST|PUT|PATCH|DELETE)"/u);
-  assert.match(script, /\/api\/version/);
-  assert.match(script, /\/api\/health/);
-  assert.match(script, /299 €\/Monat/);
-  assert.match(script, /Pilot anfragen/);
+  assert.doesNotMatch(goLive, /method:\s*"(?:POST|PUT|PATCH|DELETE)"/u);
+  assert.doesNotMatch(deploySmoke, /method:\s*"(?:POST|PUT|PATCH|DELETE)"/u);
+  assert.match(goLive, /public-product-truth\.mjs/u);
+  assert.match(deploySmoke, /public-product-truth\.mjs/u);
+  assert.match(deploySmoke, /\/api\/version/u);
+  assert.match(deploySmoke, /\/api\/health/u);
+  assert.match(deploySmoke, /live German product truth/u);
+  assert.match(deployWorkflow, /npm run smoke:public/u);
+
+  for (const required of [
+    "Starter Flex",
+    "990 € Setup + 312 €/Monat",
+    "Starter 12 Monate",
+    "0 € Setup + 312 €/Monat",
+    "Kontaktwissen",
+  ]) {
+    assert.match(truthPolicy, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
+  }
+
+  for (const forbidden of [
+    "Fan-Gedächtnis",
+    "Pilot anfragen",
+    "Pilot / Setup",
+    "299 €/Monat",
+    "499 €/Monat",
+    "Agency ab 990 €/Monat",
+    "zzgl. USt.",
+    "MVP-Workspace",
+  ]) {
+    assert.match(truthPolicy, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
+  }
 });
 
 test("final readiness workflow runs only after a successful deploy or manual dispatch", async () => {
