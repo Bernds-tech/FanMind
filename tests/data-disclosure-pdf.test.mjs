@@ -1,30 +1,57 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  extractText,
+  initNodeDecompression_parser as initNodeDecompression,
+} from "pdfnative";
 import ts from "typescript";
 
 const routePath = "src/app/settings/profile/data-export/route.ts";
 const pdfPath = "src/lib/dataDisclosurePdf.ts";
+const paginationPath = "src/lib/dataDisclosurePagination.ts";
 const sectionPath = "src/app/settings/AccountSections.tsx";
 
-async function loadPdfModule() {
-  const source = await readFile(pdfPath, "utf8");
+async function loadTypeScriptModule(path, prefix) {
+  const source = await readFile(path, "utf8");
   const output = ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.ES2022,
       target: ts.ScriptTarget.ES2022,
       strict: true,
     },
-    fileName: pdfPath,
+    fileName: path,
   }).outputText;
-  const directory = await mkdtemp(join(tmpdir(), "fanmind-pdf-test-"));
-  const modulePath = join(directory, "dataDisclosurePdf.mjs");
+  const directory = await mkdtemp(join(process.cwd(), `.${prefix}-`));
+  const modulePath = join(directory, `${prefix}.mjs`);
   await writeFile(modulePath, output, "utf8");
   const module = await import(`${pathToFileURL(modulePath).href}?t=${Date.now()}`);
   return { module, cleanup: () => rm(directory, { recursive: true, force: true }) };
+}
+
+function extractedText(pdf) {
+  return extractText(pdf)
+    .map((page) => page.text)
+    .join("\n");
+}
+
+function disclosureContact(index, workspaceId = "workspace-1") {
+  return {
+    id: `contact-${index}`,
+    workspace_id: workspaceId,
+    display_name: `Kontakt ${index}`,
+    handle: `@kontakt_${index}`,
+    source_platform: "manual",
+    language: index % 2 ? "en" : "de",
+    status: "active",
+    tags: ["vip"],
+    summary: `Zusammenfassung ${index}`,
+    internal_notes: `Notiz ${index}`,
+    created_at: "2026-07-01T10:00:00.000Z",
+    updated_at: "2026-07-20T12:00:00.000Z",
+  };
 }
 
 test("profile offers one localized protected PDF download without legacy mail or logout actions", async () => {
@@ -43,7 +70,8 @@ test("profile offers one localized protected PDF download without legacy mail or
 
   assert.match(route, /getSupabaseServerUser\(\)/u);
   assert.match(route, /getUserWorkspaceDashboard\(data\.user\)/u);
-  assert.match(route, /getWorkspaceContacts\(workspace\.id\)/u);
+  assert.match(route, /getAllWorkspaceContactsForDisclosure\(workspace\.id\)/u);
+  assert.match(route, /await createDataDisclosurePdf\(/u);
   assert.match(route, /Content-Type": "application\/pdf"/u);
   assert.match(route, /Cache-Control": "private, no-store"/u);
   assert.match(route, /X-Content-Type-Options": "nosniff"/u);
@@ -54,8 +82,9 @@ test("profile offers one localized protected PDF download without legacy mail or
   );
 });
 
-test("PDF generator emits all contacts across multiple valid page objects without silent truncation", async () => {
-  const { module, cleanup } = await loadPdfModule();
+test("PDF generator emits all contacts across multiple PDF/A-2u pages without silent truncation", async () => {
+  await initNodeDecompression();
+  const { module, cleanup } = await loadTypeScriptModule(pdfPath, "fanmind-pdf-test");
   try {
     const contacts = Array.from({ length: 140 }, (_, index) => ({
       displayName: `Kontakt ${index + 1}`,
@@ -70,7 +99,7 @@ test("PDF generator emits all contacts across multiple valid page objects withou
       updatedAt: "2026-07-20T12:00:00.000Z",
     }));
 
-    const pdf = module.createDataDisclosurePdf({
+    const pdf = await module.createDataDisclosurePdf({
       generatedAt: new Date("2026-07-22T12:00:00.000Z"),
       locale: "de",
       user: {
@@ -92,36 +121,135 @@ test("PDF generator emits all contacts across multiple valid page objects withou
       contacts,
     });
 
-    const body = Buffer.from(pdf).toString("latin1");
-    const pageObjects = body.match(/\/Type \/Page\b/g) ?? [];
-    assert.match(body, /^%PDF-1\.4/u);
-    assert.match(body, /FanMind PDF-Datenauskunft/u);
-    assert.match(body, /CRM-Kontakte/u);
-    assert.match(body, /Kontakt 140/u);
-    assert.match(body, /Seite 1 \/ /u);
-    assert.ok(pageObjects.length > 2, "large disclosure must span multiple PDF pages");
-    assert.match(body, new RegExp(`/Count ${pageObjects.length}\\b`, "u"));
-    assert.doesNotMatch(body, /Weitere Kontakte|nicht im kompakten PDF gelistet/u);
-    assert.match(body, /%%EOF/u);
+    const pages = extractText(pdf);
+    const text = pages.map((page) => page.text).join("\n");
+    assert.equal(Buffer.from(pdf).subarray(0, 8).toString("ascii"), "%PDF-1.7");
+    assert.match(text, /FanMind PDF-Datenauskunft/u);
+    assert.match(text, /CRM-Kontakte/u);
+    assert.match(text, /Kontakt 140/u);
+    assert.match(text, /Seite 1 \/ /u);
+    assert.ok(pages.length > 2, "large disclosure must span multiple PDF pages");
+    assert.doesNotMatch(text, /Weitere Kontakte|nicht im kompakten PDF gelistet/u);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("PDF Unicode round trip preserves stored non-Latin personal data", async () => {
+  await initNodeDecompression();
+  const { module, cleanup } = await loadTypeScriptModule(pdfPath, "fanmind-pdf-unicode");
+  try {
+    const unicodeValues = [
+      "Мария Иванова",
+      "Αθηνά Παπαδοπούλου",
+      "李小龍",
+      "Łukasz Żółć",
+      "مرحبا بالعالم",
+      "Fan 🎉",
+    ];
+    const pdf = await module.createDataDisclosurePdf({
+      generatedAt: new Date("2026-07-22T12:00:00.000Z"),
+      locale: "en",
+      user: { id: "unicode-user", displayName: unicodeValues[0] },
+      workspace: { id: "unicode-workspace", name: unicodeValues[1] },
+      contacts: unicodeValues.slice(2).map((value, index) => ({
+        displayName: value,
+        handle: `@unicode_${index}`,
+        summary: `Stored value: ${value}`,
+      })),
+    });
+
+    const text = extractedText(pdf).normalize("NFC");
+    for (const value of unicodeValues) {
+      assert.match(text, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
+    }
+    assert.doesNotMatch(text, /Stored value: \?+/u);
   } finally {
     await cleanup();
   }
 });
 
 test("empty exports stay honest and English output uses English section labels", async () => {
-  const { module, cleanup } = await loadPdfModule();
+  await initNodeDecompression();
+  const { module, cleanup } = await loadTypeScriptModule(pdfPath, "fanmind-pdf-empty");
   try {
-    const pdf = module.createDataDisclosurePdf({
+    const pdf = await module.createDataDisclosurePdf({
       generatedAt: new Date("2026-07-22T12:00:00.000Z"),
       locale: "en",
       user: { id: "user-empty" },
       workspace: { id: "workspace-empty", name: "Empty Workspace" },
       contacts: [],
     });
-    const body = Buffer.from(pdf).toString("latin1");
-    assert.match(body, /FanMind PDF data disclosure/u);
-    assert.match(body, /No contacts are stored in this workspace\./u);
-    assert.match(body, /Page 1 \/ 1/u);
+    const text = extractedText(pdf);
+    assert.match(text, /FanMind PDF data disclosure/u);
+    assert.match(text, /No contacts are stored in this workspace\./u);
+    assert.match(text, /Page 1 \/ 1/u);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("contact pagination exports more than the PostgREST row cap in stable order", async () => {
+  const { module, cleanup } = await loadTypeScriptModule(
+    paginationPath,
+    "fanmind-disclosure-pagination",
+  );
+  try {
+    const rows = Array.from({ length: 1_201 }, (_, index) =>
+      disclosureContact(index + 1),
+    );
+    const requests = [];
+    const contacts = await module.collectAllDisclosureContacts({
+      workspaceId: "workspace-1",
+      pageSize: 500,
+      maxRows: 2_000,
+      fetchPage: async ({ offset, limit }) => {
+        requests.push({ offset, limit });
+        return rows.slice(offset, offset + limit);
+      },
+    });
+
+    assert.equal(contacts.length, 1_201);
+    assert.equal(contacts.at(-1).id, "contact-1201");
+    assert.deepEqual(requests, [
+      { offset: 0, limit: 500 },
+      { offset: 500, limit: 500 },
+      { offset: 1_000, limit: 500 },
+    ]);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("contact pagination fails closed instead of truncating or crossing workspace boundaries", async () => {
+  const { module, cleanup } = await loadTypeScriptModule(
+    paginationPath,
+    "fanmind-disclosure-pagination-guard",
+  );
+  try {
+    const fourRows = Array.from({ length: 4 }, (_, index) =>
+      disclosureContact(index + 1),
+    );
+    await assert.rejects(
+      () =>
+        module.collectAllDisclosureContacts({
+          workspaceId: "workspace-1",
+          pageSize: 2,
+          maxRows: 3,
+          fetchPage: async ({ offset, limit }) =>
+            fourRows.slice(offset, offset + limit),
+        }),
+      /mehr als 3 Kontakte.*ohne Datenabschneidung/u,
+    );
+
+    await assert.rejects(
+      () =>
+        module.collectAllDisclosureContacts({
+          workspaceId: "workspace-1",
+          fetchPage: async () => [disclosureContact(1, "foreign-workspace")],
+        }),
+      /nicht zum autorisierten Workspace/u,
+    );
   } finally {
     await cleanup();
   }
