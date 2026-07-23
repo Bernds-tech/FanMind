@@ -43,7 +43,8 @@ test("public inquiries use the shared limiter before persistence and fail closed
   assert.match(source, /\{ error: "SERVICE_UNAVAILABLE" \}, \{ status: 503 \}/u);
   assert.match(source, /\{ error: "RATE_LIMITED" \}, \{ status: 429 \}/u);
   assert.ok(
-    source.indexOf("await consumeSharedRateLimit") < source.indexOf("createPilotInquiry"),
+    source.indexOf("await consumeSharedRateLimit")
+      < source.indexOf("const { inquiry, error } = await createPilotInquiry"),
   );
   assert.doesNotMatch(source, /\bcheckRateLimit\b/u);
 });
