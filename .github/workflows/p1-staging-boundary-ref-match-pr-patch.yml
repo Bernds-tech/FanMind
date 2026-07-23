@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: p1/staging-boundary-ref-match-20260723
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Execute deterministic patch embedded in trusted helper
         shell: bash
@@ -37,18 +37,34 @@ jobs:
           from pathlib import Path
           import subprocess
           import sys
-          import textwrap
 
           helper = Path('.github/workflows/p1-staging-boundary-ref-match-patch.yml')
-          source = helper.read_text(encoding='utf-8')
-          start_marker = "python - <<'PY'\n"
-          end_marker = "\n          PY\n"
-          if start_marker not in source or end_marker not in source:
-              raise SystemExit('embedded_patch_markers_missing')
-          embedded = source.split(start_marker, 1)[1].split(end_marker, 1)[0]
+          lines = helper.read_text(encoding='utf-8').splitlines()
+          start = next((index + 1 for index, line in enumerate(lines) if line.strip() == "python - <<'PY'"), None)
+          if start is None:
+              raise SystemExit('embedded_patch_start_missing')
+          end = next((index for index in range(start, len(lines)) if lines[index].strip() == 'PY'), None)
+          if end is None:
+              raise SystemExit('embedded_patch_end_missing')
+
+          embedded_lines = lines[start:end]
+          non_empty = [line for line in embedded_lines if line.strip()]
+          if not non_empty:
+              raise SystemExit('embedded_patch_empty')
+          indent = min(len(line) - len(line.lstrip()) for line in non_empty)
+          embedded = '\n'.join(line[indent:] if len(line) >= indent else '' for line in embedded_lines) + '\n'
           patch_path = Path('/tmp/fanmind-staging-boundary-patch.py')
-          patch_path.write_text(textwrap.dedent(embedded), encoding='utf-8')
-          subprocess.run([sys.executable, str(patch_path)], check=True)
+          patch_path.write_text(embedded, encoding='utf-8')
+          completed = subprocess.run(
+              [sys.executable, str(patch_path)],
+              text=True,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+          )
+          if completed.stdout:
+              print(completed.stdout[-4000:])
+          if completed.returncode != 0:
+              raise SystemExit(completed.returncode)
           PY
           git diff --check
 
