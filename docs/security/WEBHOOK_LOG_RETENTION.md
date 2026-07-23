@@ -22,12 +22,13 @@ Der read-only Production-Audit für Issue `#695` hat bestätigt:
 - `meta_webhook_events` existiert, enthielt beim Audit aber keine Zeilen;
 - `server_error_events` und `server_error_groups` waren nicht deployt;
 - nginx besitzt bereits Logrotate;
-- PM2 besaß keine eigene Logrotate-Regel;
 - journald besaß keine explizite Größen- oder Zeitgrenze;
 - bestehender Code konnte Rohpayloads, Nachrichtentext, externe IDs und freie Fehlermeldungen in Diagnosepfade übernehmen;
 - fehlende Meta-/Telegram-Secrets wurden in Production nicht konsequent fail-closed behandelt.
 
-Es gab deshalb keine bestehende Production-Altlast, die vor der Codehärtung gelöscht werden musste.
+Der gezielte Nachaudit `#699` / Run `30043749121` bestätigte zusätzlich, dass das etablierte PM2-Modul `pm2-logrotate` bereits online war. Seine produktive Konfiguration beträgt 10 MiB, 14 Rotationen, Kompression und tägliche Rotation. Eine im ersten Retention-Rollout zusätzlich installierte systemweite PM2-Regel war daher redundant und wurde über `#700` wieder entfernt.
+
+Es gab keine bestehende Production-Altlast in `meta_webhook_events`, die vor der Codehärtung gelöscht werden musste.
 
 ## Webhook-Authentifizierungsgrenze
 
@@ -150,48 +151,63 @@ Systemd-Dateien:
 - `fanmind-webhook-retention.service`;
 - `fanmind-webhook-retention.timer`.
 
-Das Deployment installiert beide Dateien, aktiviert den Timer aber nicht automatisch. Aktivierung ist erst nach Backup, Migration, Rechteprüfung, Dry-Run und begrenztem Production-Lauf zulässig.
+Das Deployment installiert beide Dateien. Der Timer wurde erst nach Backup, Migration, Rechteprüfung, Dry-Run und einem begrenzten Production-Execute kontrolliert aktiviert.
 
 ## PM2- und journald-Grenzen
 
-Repository-Vorlagen:
+### PM2
 
-- `ops/logrotate/fanmind-pm2`;
-- `ops/systemd/journald-fanmind.conf`.
+Der **einzige PM2-Rotationsmechanismus** ist das bereits etablierte Modul `pm2-logrotate` unter dem PM2-Home des Production-Benutzers.
 
-PM2-Logs:
+Verbindlicher, read-only bestätigter Stand:
 
-- täglich oder spätestens bei 20 MiB;
+- maximale Loggröße: 10 MiB;
 - 14 Rotationen;
-- Kompression und verzögerte Kompression;
-- `copytruncate`, damit der laufende PM2-Prozess nicht unterbrochen wird;
-- Dateirechte `0640`, Owner `ubuntu`.
+- Kompression aktiv;
+- tägliche Rotation;
+- Modulstatus `online`.
 
-journald:
+Die Datei `/etc/logrotate.d/fanmind-pm2` muss abwesend sein. Eine zweite systemweite `copytruncate`-Regel für dieselben PM2-Logs ist verboten, weil zwei voneinander unabhängige Rotationsmechanismen zu konkurrierenden Umbenennungen, mehrfacher Kompression oder unvorhersehbarem Retention-Verhalten führen können.
+
+Das bestehende PM2-Modul darf durch normale FanMind-Deployments weder deinstalliert noch still umkonfiguriert werden. Änderungen an Größe, Anzahl, Kompression oder Intervall benötigen einen eigenen Operations-Review.
+
+### journald
+
+Repository-Vorlage:
+
+```text
+ops/systemd/journald-fanmind.conf
+```
+
+Verbindlicher Stand:
 
 - Kompression aktiv;
 - `SystemMaxUse=512M`;
 - `RuntimeMaxUse=128M`;
 - `MaxRetentionSec=14day`.
 
-Die journald-Grenze ist hostweit. Sie wird deshalb nicht still durch ein normales Anwendungsdeployment aktiviert. Installation, `systemd-analyze cat-config`, Dienstneustart und anschließende Health-Prüfung erfolgen in einem eigenen kontrollierten Operations-Schritt.
+Die journald-Grenze ist hostweit. Installation, `systemd-analyze cat-config`, Dienstneustart und anschließende Health-Prüfung erfolgten in einem kontrollierten Operations-Schritt.
 
 ## Production-Rollout
 
-1. Fach-PR vollständig grün prüfen und mergen.
-2. Exakten Release und gesunde Anwendung bestätigen.
-3. Frisches verschlüsseltes Datenbank-Backup erzeugen.
-4. `.age`-/`.sha256`-Paar checksum-only verifizieren.
-5. Migration mit `psql -v ON_ERROR_STOP=1` anwenden.
-6. Constraint, Funktionen und Rollenrechte prüfen.
-7. Synthetische minimierte Diagnosezeile anlegen.
-8. Rohwert-Inserts müssen durch die Constraint scheitern.
-9. Dry-Run ausführen und ausschließlich Aggregatwerte prüfen.
-10. Begrenzten Execute-Lauf ausführen; synthetische Probezeile muss entfernt werden.
-11. Worker-Timer aktivieren und einmal kontrolliert starten.
-12. PM2-Logrotate und journald-Drop-in getrennt installieren und validieren.
-13. `/api/version`, `/api/health`, Landingpage, Login und Registrierung prüfen.
-14. Meta und Telegram mit fehlender/falscher Signatur read-only beziehungsweise ohne gültige Payload prüfen; es darf keine Diagnose- oder CRM-Zeile entstehen.
+Der initiale Rollout wurde über den nicht gemergten Operations-PR `#698` und Run `30043045085` ausgeführt:
+
+1. Fach-PR vollständig grün geprüft und gemergt.
+2. Exakten Release und gesunde Anwendung bestätigt.
+3. Frisches verschlüsseltes Datenbank-Backup erzeugt.
+4. `.age`-/`.age.sha256`-Paar checksum-only verifiziert.
+5. Migration mit `psql -v ON_ERROR_STOP=1` angewendet.
+6. Constraint, Funktionen und Rollenrechte geprüft.
+7. Synthetische minimierte Diagnosezeile angelegt.
+8. Rohwert-Insert durch die Constraint abgelehnt.
+9. Dry-Run mit exakt einem Kandidaten ausgeführt.
+10. Begrenzten Execute-Lauf ausgeführt und Probezeile entfernt.
+11. Worker-Timer aktiviert und kontrolliert gestartet.
+12. journald-Drop-in installiert und validiert.
+13. `/api/version`, `/api/health`, Landingpage, Login und Registrierung geprüft.
+14. Meta und Telegram mit falschen Credentials geprüft; es entstand keine Diagnose- oder CRM-Seitenwirkung.
+
+Der anschließende read-only Nachaudit `#699` erkannte die bereits vorhandene PM2-Modulrotation. Die redundante systemweite PM2-Regel wurde deshalb über `#700` kontrolliert entfernt; `pm2-logrotate` blieb online und unverändert.
 
 ## Rollback
 
@@ -205,9 +221,11 @@ Bei einem Codeproblem:
 
 Bei einem Host-Konfigurationsproblem:
 
-1. PM2-Logrotate-Datei beziehungsweise journald-Drop-in aus dem vorab erzeugten Backup wiederherstellen oder entfernen.
-2. Konfiguration syntaktisch prüfen.
-3. betroffenen Dienst kontrolliert neu laden beziehungsweise starten.
-4. FanMind-Health und Kernrouten erneut prüfen.
+1. Das bestehende PM2-Modul nicht deinstallieren oder verändern.
+2. Sicherstellen, dass `/etc/logrotate.d/fanmind-pm2` abwesend bleibt.
+3. Das journald-Drop-in aus dem vorab erzeugten Backup wiederherstellen oder gezielt entfernen.
+4. Konfiguration syntaktisch prüfen.
+5. betroffenen Dienst kontrolliert neu laden beziehungsweise starten.
+6. FanMind-Health und Kernrouten erneut prüfen.
 
 Die Migration wird nicht durch ein unkontrolliertes `DROP TABLE` zurückgerollt. CRM- und Billing-Daten werden niemals als Teil dieses Rollbacks gelöscht.
