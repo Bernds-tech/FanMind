@@ -28,12 +28,15 @@ jobs:
         with:
           ref: p1/staging-boundary-ref-match-20260723
           fetch-depth: 1
+          show-progress: false
 
       - name: Execute deterministic patch embedded in trusted helper
+        id: patch_run
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          python - <<'PY'
+          set +e
+          python - <<'PY' > staging-boundary-patch.log 2>&1
           from pathlib import Path
           import subprocess
           import sys
@@ -62,16 +65,31 @@ jobs:
               stderr=subprocess.STDOUT,
           )
           if completed.stdout:
-              print(completed.stdout[-4000:])
-          if completed.returncode != 0:
-              raise SystemExit(completed.returncode)
+              print(completed.stdout)
+          raise SystemExit(completed.returncode)
           PY
-          git diff --check
+          status=$?
+          printf '%s\n' "$status" > staging-boundary-patch.status
+          tail -n 80 staging-boundary-patch.log || true
+          exit "$status"
+
+      - name: Upload bounded patch diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-staging-boundary-patch-diagnostic
+          path: |
+            staging-boundary-patch.log
+            staging-boundary-patch.status
+          if-no-files-found: error
+          retention-days: 2
 
       - name: Commit staging boundary hardening
+        if: steps.patch_run.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
+          git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
@@ -85,3 +103,9 @@ jobs:
           git diff --cached --quiet && { echo "Patch produced no changes" >&2; exit 1; }
           git commit -m "Bind staging Supabase target ref to project URL"
           git push origin HEAD:p1/staging-boundary-ref-match-20260723
+
+      - name: Enforce patch result
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.patch_run.outcome }}" = "success"
