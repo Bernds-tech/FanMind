@@ -1,0 +1,127 @@
+name: FanMind P1 Offsite Retention Planner Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-offsite-retention-plan-verify.yml"
+
+concurrency:
+  group: fanmind-p1-offsite-retention-plan-verify
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/offsite-retention-planner-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 15
+    env:
+      REPORT_PATH: fanmind-offsite-retention-plan-verification.txt
+    steps:
+      - name: Checkout trusted planner branch
+        uses: actions/checkout@v4
+        with:
+          ref: p1/offsite-retention-planner-20260723
+
+      - name: Run permanent planner against Production inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          sudo -n env \
+            FANMIND_BACKUP_ENV_FILE=/etc/fanmind-backup/worker.env \
+            /usr/bin/node scripts/operations/offsite-backup-retention-plan.mjs --dry-run \
+            2>&1 | tee "$REPORT_PATH"
+
+      - name: Enforce read-only planner contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$REPORT_PATH" node <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync(process.env.REPORT, 'utf8');
+          const lines = source.split(/\r?\n/).filter(Boolean);
+          const single = key => {
+            const prefix = `${key}=`;
+            const matches = lines.filter(line => line.startsWith(prefix));
+            return matches.length ? matches.at(-1).slice(prefix.length) : null;
+          };
+          const all = key => {
+            const prefix = `${key}=`;
+            return lines.filter(line => line.startsWith(prefix)).map(line => line.slice(prefix.length));
+          };
+          const integer = key => {
+            const value = Number(single(key));
+            if (!Number.isInteger(value) || value < 0) throw new Error(`${key}_invalid`);
+            return value;
+          };
+          const requireEqual = (key, expected) => {
+            const actual = single(key);
+            console.log(`ASSERT_${key}=${actual === expected ? 'ok' : 'failed'}|actual:${actual ?? 'missing'}`);
+            if (actual !== expected) throw new Error(`${key}_mismatch`);
+          };
+
+          requireEqual('OFFSITE_RETENTION_MODE', 'read_only_dry_run');
+          requireEqual('OFFSITE_REMOTE_IDENTIFIER_REDACTED', 'true');
+          requireEqual('OFFSITE_ORPHAN_PAIR_COUNT', '0');
+          requireEqual('OFFSITE_UNRECOGNIZED_PAIR_COUNT', '0');
+          requireEqual('OFFSITE_LATEST_PER_TYPE_PROTECTED', 'true');
+          requireEqual('OFFSITE_RETENTION_PLAN_STRUCTURALLY_SAFE', 'true');
+          requireEqual('OFFSITE_RETENTION_EXECUTION_AVAILABLE', 'false');
+          requireEqual('OFFSITE_REMOTE_DELETE_EXECUTED', 'false');
+          requireEqual('OFFSITE_RETENTION_DRY_RUN_RESULT', 'success');
+
+          const complete = integer('OFFSITE_COMPLETE_PAIR_COUNT');
+          const keep = integer('OFFSITE_KEEP_PAIR_COUNT');
+          const candidates = integer('OFFSITE_DELETION_CANDIDATE_PAIR_COUNT');
+          if (complete <= 0 || keep <= 0 || keep + candidates !== complete) {
+            throw new Error('offsite_pair_count_contract_failed');
+          }
+          console.log(`ASSERT_OFFSITE_COUNTS=ok|complete:${complete}|keep:${keep}|candidate:${candidates}`);
+
+          const types = all('OFFSITE_RETENTION_TYPE');
+          const expectedTypes = new Set(['database', 'storage', 'server_config', 'full']);
+          for (const value of types) {
+            const type = value.split('|')[0];
+            expectedTypes.delete(type);
+            if (!/\|latest_protected:true$/.test(value)) {
+              throw new Error(`latest_not_protected_${type}`);
+            }
+          }
+          if (expectedTypes.size > 0 || types.length !== 4) {
+            throw new Error('offsite_type_summary_incomplete');
+          }
+
+          if (/fanmind-(?:database|storage|server-config|full)-\d{13}/u.test(source)) {
+            throw new Error('backup_filename_leaked');
+          }
+          if (/deletefile|\bpurge\b|\bsync\b|\bmoveto\b|\bcopyto\b/u.test(source)) {
+            throw new Error('remote_mutation_command_observed');
+          }
+
+          console.log('OFFSITE_RETENTION_PLANNER_PRODUCTION_RESULT=success');
+          NODE
+
+      - name: Upload sanitized planner verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-offsite-retention-plan-verification
+          path: fanmind-offsite-retention-plan-verification.txt
+          if-no-files-found: error
+          retention-days: 7
