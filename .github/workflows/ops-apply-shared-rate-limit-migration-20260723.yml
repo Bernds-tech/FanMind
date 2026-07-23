@@ -1,0 +1,512 @@
+name: FanMind P1 Apply Shared Rate Limit Migration
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-apply-shared-rate-limit-migration-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-apply-shared-rate-limit-migration-20260723
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/apply-shared-rate-limit-migration-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 35
+    env:
+      EXPECTED_RELEASE: cff00dcd80995794fe87895706c9fbec992687ea
+      REPORT_PATH: fanmind-shared-rate-limit-migration-report.txt
+      MIGRATION_RELATIVE_PATH: supabase/migrations/20260723102000_shared_rate_limits.sql
+
+    steps:
+      - name: Checkout trusted migration branch
+        uses: actions/checkout@v4
+        with:
+          ref: ops/apply-shared-rate-limit-migration-20260723
+          fetch-depth: 1
+
+      - name: Wait for exact foundation release and healthy Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'MIGRATION_AUDIT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          for attempt in $(seq 1 80); do
+            live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    try {
+                      const payload = JSON.parse(input);
+                      const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                      process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                    } catch {
+                      process.stdout.write("missing");
+                    }
+                  });
+                ' || true)"
+            server_head="$(git -C /var/www/fanmind rev-parse HEAD 2>/dev/null || true)"
+            origin_main="$(git -C /var/www/fanmind rev-parse origin/main 2>/dev/null || true)"
+
+            if [[ "$live_release" == "$EXPECTED_RELEASE" \
+              && "$server_head" == "$EXPECTED_RELEASE" \
+              && "$origin_main" == "$EXPECTED_RELEASE" ]]; then
+              if curl -fsSL --max-time 15 https://fanmind.ch/api/health \
+                | node -e '
+                    let input = "";
+                    process.stdin.on("data", chunk => input += chunk);
+                    process.stdin.on("end", () => {
+                      try {
+                        const payload = JSON.parse(input);
+                        const components = payload.components && typeof payload.components === "object"
+                          ? Object.values(payload.components)
+                          : [];
+                        const ok = payload.status === "healthy"
+                          && components.every(component => component?.status === "healthy");
+                        process.exit(ok ? 0 : 1);
+                      } catch {
+                        process.exit(1);
+                      }
+                    });
+                  '; then
+                echo 'FOUNDATION_RELEASE_SYNC=ok' | tee -a "$report"
+                echo 'FOUNDATION_PUBLIC_HEALTH=healthy' | tee -a "$report"
+                exit 0
+              fi
+            fi
+
+            sleep 10
+          done
+
+          echo 'FOUNDATION_RELEASE_SYNC=failed' | tee -a "$report"
+          exit 1
+
+      - name: Create and checksum-verify a fresh encrypted database backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          marker="$RUNNER_TEMP/fanmind-shared-limit-backup-marker-${GITHUB_RUN_ID}"
+          touch "$marker"
+
+          sudo -n systemctl is-active --quiet fanmind-backup-worker.service
+          sudo -n systemctl start fanmind-backup-enqueue@backup_database.service
+          echo 'PRE_MIGRATION_DATABASE_BACKUP_ENQUEUED=yes' | tee -a "$report"
+
+          artifact=""
+          for attempt in $(seq 1 90); do
+            artifact="$(sudo -n find /var/backups/fanmind -maxdepth 1 -type f \
+              -name 'fanmind-database-*.dump.age' -newer "$marker" \
+              -printf '%T@ %p\n' 2>/dev/null \
+              | sort -nr | head -n 1 | cut -d' ' -f2- || true)"
+            if [[ -n "$artifact" && -f "${artifact}.sha256" ]]; then
+              break
+            fi
+            sleep 10
+          done
+
+          rm -f "$marker"
+          if [[ -z "$artifact" || ! -f "${artifact}.sha256" ]]; then
+            echo 'PRE_MIGRATION_DATABASE_BACKUP_PAIR=missing' | tee -a "$report"
+            exit 1
+          fi
+
+          sudo -n env \
+            BACKUP_ARTIFACT="$artifact" \
+            BACKUP_CHECKSUM="${artifact}.sha256" \
+            /usr/bin/node --input-type=module <<'NODE' | tee -a "$report"
+          import { createHash } from 'node:crypto';
+          import { createReadStream } from 'node:fs';
+          import { readFile, stat } from 'node:fs/promises';
+          import { basename } from 'node:path';
+
+          const artifact = process.env.BACKUP_ARTIFACT;
+          const checksum = process.env.BACKUP_CHECKSUM;
+          if (!artifact || !checksum) throw new Error('backup_paths_missing');
+
+          const expectedLine = (await readFile(checksum, 'utf8')).trim();
+          const match = expectedLine.match(/^([0-9a-f]{64})\s+\*?(.+)$/i);
+          if (!match || basename(match[2]) !== basename(artifact)) {
+            throw new Error('backup_checksum_file_invalid');
+          }
+
+          const hash = createHash('sha256');
+          await new Promise((resolve, reject) => {
+            createReadStream(artifact)
+              .on('data', chunk => hash.update(chunk))
+              .on('error', reject)
+              .on('end', resolve);
+          });
+          if (hash.digest('hex') !== match[1].toLowerCase()) {
+            throw new Error('backup_checksum_mismatch');
+          }
+
+          const metadata = await stat(artifact);
+          console.log('PRE_MIGRATION_DATABASE_BACKUP_PAIR=complete');
+          console.log('PRE_MIGRATION_DATABASE_BACKUP_CHECKSUM=ok');
+          console.log(`PRE_MIGRATION_DATABASE_BACKUP_SIZE_BYTES=${metadata.size}`);
+          NODE
+
+      - name: Apply additive shared rate limit migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          migration="$GITHUB_WORKSPACE/$MIGRATION_RELATIVE_PATH"
+          test -f "$migration"
+
+          sudo -n env MIGRATION_FILE="$migration" /usr/bin/node --input-type=module <<'NODE' | tee -a "$report"
+          import { accessSync, constants, readFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+
+          function parseEnv(text) {
+            const values = new Map();
+            for (const rawLine of text.split(/\r?\n/)) {
+              const line = rawLine.trim();
+              if (!line || line.startsWith('#') || !line.includes('=')) continue;
+              const separator = line.indexOf('=');
+              const key = line.slice(0, separator).trim();
+              let value = line.slice(separator + 1).trim();
+              if (
+                value.length >= 2
+                && ((value.startsWith('"') && value.endsWith('"'))
+                  || (value.startsWith("'") && value.endsWith("'")))
+              ) {
+                value = value.slice(1, -1);
+              }
+              values.set(key, value);
+            }
+            return values;
+          }
+
+          const config = parseEnv(readFileSync('/etc/fanmind-backup/worker.env', 'utf8'));
+          const required = name => {
+            const value = config.get(name) || '';
+            if (!value) throw new Error(`${name}_missing`);
+            return value;
+          };
+          const candidates = ['/usr/bin/psql', '/usr/lib/postgresql/17/bin/psql'];
+          const psql = candidates.find(candidate => {
+            try {
+              accessSync(candidate, constants.X_OK);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+          if (!psql) throw new Error('psql_missing');
+
+          const migration = process.env.MIGRATION_FILE;
+          if (!migration) throw new Error('migration_file_missing');
+          const result = spawnSync(
+            psql,
+            [
+              '--host', required('FANMIND_BACKUP_DB_HOST'),
+              '--port', config.get('FANMIND_BACKUP_DB_PORT') || '5432',
+              '--username', required('FANMIND_BACKUP_DB_USER'),
+              '--dbname', required('FANMIND_BACKUP_DB_NAME'),
+              '-v', 'ON_ERROR_STOP=1',
+              '-f', migration,
+            ],
+            {
+              env: {
+                ...process.env,
+                PGPASSFILE: required('FANMIND_BACKUP_PGPASSFILE'),
+              },
+              encoding: 'utf8',
+              stdio: ['ignore', 'ignore', 'pipe'],
+              timeout: 120000,
+            },
+          );
+          if (result.error || result.status !== 0) {
+            throw new Error('shared_rate_limit_migration_failed');
+          }
+          console.log('SHARED_RATE_LIMIT_MIGRATION=applied');
+          NODE
+
+      - name: Verify privileges and atomic concurrent behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+
+          sudo -n /usr/bin/node --input-type=module <<'NODE' | tee -a "$report"
+          import { randomBytes } from 'node:crypto';
+          import { accessSync, constants, readFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+
+          function parseEnv(text) {
+            const values = new Map();
+            for (const rawLine of text.split(/\r?\n/)) {
+              const line = rawLine.trim();
+              if (!line || line.startsWith('#') || !line.includes('=')) continue;
+              const separator = line.indexOf('=');
+              const key = line.slice(0, separator).trim();
+              let value = line.slice(separator + 1).trim();
+              if (
+                value.length >= 2
+                && ((value.startsWith('"') && value.endsWith('"'))
+                  || (value.startsWith("'") && value.endsWith("'")))
+              ) {
+                value = value.slice(1, -1);
+              }
+              values.set(key, value);
+            }
+            return values;
+          }
+
+          const dbConfig = parseEnv(readFileSync('/etc/fanmind-backup/worker.env', 'utf8'));
+          const appConfig = parseEnv(readFileSync('/var/www/fanmind/.env.production', 'utf8'));
+          const required = (config, name) => {
+            const value = config.get(name) || '';
+            if (!value) throw new Error(`${name}_missing`);
+            return value;
+          };
+          const psql = ['/usr/bin/psql', '/usr/lib/postgresql/17/bin/psql'].find(candidate => {
+            try {
+              accessSync(candidate, constants.X_OK);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+          if (!psql) throw new Error('psql_missing');
+
+          function psqlQuery(sql) {
+            const result = spawnSync(
+              psql,
+              [
+                '--host', required(dbConfig, 'FANMIND_BACKUP_DB_HOST'),
+                '--port', dbConfig.get('FANMIND_BACKUP_DB_PORT') || '5432',
+                '--username', required(dbConfig, 'FANMIND_BACKUP_DB_USER'),
+                '--dbname', required(dbConfig, 'FANMIND_BACKUP_DB_NAME'),
+                '-v', 'ON_ERROR_STOP=1',
+                '-Atc', sql,
+              ],
+              {
+                env: {
+                  ...process.env,
+                  PGPASSFILE: required(dbConfig, 'FANMIND_BACKUP_PGPASSFILE'),
+                },
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+                timeout: 30000,
+              },
+            );
+            if (result.error || result.status !== 0) throw new Error('psql_verification_failed');
+            return String(result.stdout || '').trim();
+          }
+
+          const privilegeJson = psqlQuery(`
+            select json_build_object(
+              'table_exists', to_regclass('public.shared_rate_limit_buckets') is not null,
+              'rls_enabled', coalesce((
+                select c.relrowsecurity
+                  from pg_class c
+                  join pg_namespace n on n.oid = c.relnamespace
+                 where n.nspname = 'public'
+                   and c.relname = 'shared_rate_limit_buckets'
+              ), false),
+              'service_consume', has_function_privilege('service_role', 'public.consume_shared_rate_limit(text,text,integer,integer)', 'EXECUTE'),
+              'anon_consume', has_function_privilege('anon', 'public.consume_shared_rate_limit(text,text,integer,integer)', 'EXECUTE'),
+              'authenticated_consume', has_function_privilege('authenticated', 'public.consume_shared_rate_limit(text,text,integer,integer)', 'EXECUTE'),
+              'service_cleanup', has_function_privilege('service_role', 'public.cleanup_shared_rate_limit_buckets(integer)', 'EXECUTE'),
+              'anon_table_select', has_table_privilege('anon', 'public.shared_rate_limit_buckets', 'SELECT'),
+              'authenticated_table_select', has_table_privilege('authenticated', 'public.shared_rate_limit_buckets', 'SELECT')
+            )::text;
+          `);
+          const privileges = JSON.parse(privilegeJson);
+          const privilegesOk = privileges.table_exists === true
+            && privileges.rls_enabled === true
+            && privileges.service_consume === true
+            && privileges.anon_consume === false
+            && privileges.authenticated_consume === false
+            && privileges.service_cleanup === true
+            && privileges.anon_table_select === false
+            && privileges.authenticated_table_select === false;
+          if (!privilegesOk) throw new Error('shared_rate_limit_privileges_invalid');
+          console.log('SHARED_RATE_LIMIT_TABLE=present');
+          console.log('SHARED_RATE_LIMIT_RLS=enabled');
+          console.log('SHARED_RATE_LIMIT_SERVICE_ROLE=allowed');
+          console.log('SHARED_RATE_LIMIT_PUBLIC_ROLES=denied');
+
+          const baseUrl = required(appConfig, 'NEXT_PUBLIC_SUPABASE_URL').replace(/\/$/, '');
+          const serviceKey = required(appConfig, 'SUPABASE_SERVICE_ROLE_KEY');
+          const anonKey = required(appConfig, 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
+          const probeHash = randomBytes(32).toString('hex');
+          const scope = 'migration_probe';
+          const endpoint = `${baseUrl}/rest/v1/rpc/consume_shared_rate_limit`;
+          const body = {
+            p_scope: scope,
+            p_subject_hash: probeHash,
+            p_window_seconds: 60,
+            p_max_requests: 10,
+          };
+
+          async function call(key) {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                apikey: key,
+                Authorization: `Bearer ${key}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(body),
+              signal: AbortSignal.timeout(8000),
+            });
+            const payload = await response.json().catch(() => null);
+            return { response, payload };
+          }
+
+          async function waitForSchema() {
+            for (let attempt = 1; attempt <= 30; attempt += 1) {
+              const result = await call(serviceKey).catch(() => null);
+              if (result?.response.ok) return result;
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            throw new Error('postgrest_schema_not_ready');
+          }
+
+          let probeCreated = false;
+          try {
+            const first = await waitForSchema();
+            probeCreated = true;
+            const remainingCalls = await Promise.all(
+              Array.from({ length: 24 }, () => call(serviceKey)),
+            );
+            const all = [first, ...remainingCalls];
+            if (all.some(result => !result.response.ok)) {
+              throw new Error('shared_rate_limit_rpc_failed');
+            }
+            const rows = all.map(result => Array.isArray(result.payload) ? result.payload[0] : result.payload);
+            const allowedCount = rows.filter(row => row?.allowed === true).length;
+            const counts = rows.map(row => Number(row?.current_count));
+            const uniqueCounts = new Set(counts);
+            const resetValues = new Set(rows.map(row => String(row?.reset_at || '')));
+            if (
+              allowedCount !== 10
+              || counts.some(value => !Number.isInteger(value) || value < 1)
+              || Math.max(...counts) !== 25
+              || uniqueCounts.size !== 25
+              || resetValues.size !== 1
+            ) {
+              throw new Error('shared_rate_limit_atomicity_failed');
+            }
+
+            const anonymous = await call(anonKey);
+            if (anonymous.response.ok) {
+              throw new Error('shared_rate_limit_anon_execute_allowed');
+            }
+
+            console.log('SHARED_RATE_LIMIT_PARALLEL_CALLS=25');
+            console.log('SHARED_RATE_LIMIT_ALLOWED_CALLS=10');
+            console.log('SHARED_RATE_LIMIT_MAX_COUNT=25');
+            console.log('SHARED_RATE_LIMIT_LOST_INCREMENTS=0');
+            console.log('SHARED_RATE_LIMIT_ANON_RPC=denied');
+          } finally {
+            if (probeCreated && /^[0-9a-f]{64}$/.test(probeHash)) {
+              psqlQuery(`delete from public.shared_rate_limit_buckets where scope = 'migration_probe' and subject_hash = '${probeHash}';`);
+            }
+          }
+
+          const remainingProbeRows = Number(psqlQuery(
+            "select count(*) from public.shared_rate_limit_buckets where scope = 'migration_probe';",
+          ));
+          if (remainingProbeRows !== 0) throw new Error('migration_probe_cleanup_failed');
+          console.log('SHARED_RATE_LIMIT_PROBE_ROWS=0');
+          NODE
+
+      - name: Install dedicated server-only HMAC secret without output
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+
+          sudo -n /usr/bin/node --input-type=module <<'NODE' | tee -a "$report"
+          import { randomBytes } from 'node:crypto';
+          import { chmod, chown, readFile, rename, stat, writeFile } from 'node:fs/promises';
+
+          const file = '/var/www/fanmind/.env.production';
+          const metadata = await stat(file);
+          const source = await readFile(file, 'utf8');
+          const lines = source.split(/\r?\n/);
+          const matching = lines.filter(line => /^\s*FANMIND_SHARED_RATE_LIMIT_SECRET\s*=/.test(line));
+          const current = matching.length === 1
+            ? matching[0].slice(matching[0].indexOf('=') + 1).trim().replace(/^(["'])(.*)\1$/, '$2')
+            : '';
+
+          if (matching.length === 1 && current.length >= 32 && !/replace|placeholder|example/i.test(current)) {
+            console.log('SHARED_RATE_LIMIT_SECRET=preserved');
+            process.exit(0);
+          }
+
+          const retained = lines.filter(line => !/^\s*FANMIND_SHARED_RATE_LIMIT_SECRET\s*=/.test(line));
+          while (retained.length && retained.at(-1) === '') retained.pop();
+          const secret = randomBytes(48).toString('base64url');
+          const updated = `${retained.join('\n')}\nFANMIND_SHARED_RATE_LIMIT_SECRET=${secret}\n`;
+          const temporary = `${file}.shared-rate-limit-${process.pid}.tmp`;
+          await writeFile(temporary, updated, { mode: metadata.mode & 0o777 });
+          await chmod(temporary, metadata.mode & 0o777);
+          await chown(temporary, metadata.uid, metadata.gid);
+          await rename(temporary, file);
+          console.log('SHARED_RATE_LIMIT_SECRET=created');
+          NODE
+
+      - name: Confirm application remains healthy after migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+
+          live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version \
+            | node -e '
+                let input = "";
+                process.stdin.on("data", chunk => input += chunk);
+                process.stdin.on("end", () => {
+                  const payload = JSON.parse(input);
+                  process.stdout.write(payload.releaseCommit || "missing");
+                });
+              ')"
+          test "$live_release" = "$EXPECTED_RELEASE"
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health \
+            | node -e '
+                let input = "";
+                process.stdin.on("data", chunk => input += chunk);
+                process.stdin.on("end", () => {
+                  const payload = JSON.parse(input);
+                  const components = Object.values(payload.components || {});
+                  process.exit(payload.status === "healthy" && components.every(item => item?.status === "healthy") ? 0 : 1);
+                });
+              '
+          echo 'POST_MIGRATION_PUBLIC_HEALTH=healthy' | tee -a "$report"
+          echo 'SHARED_RATE_LIMIT_PHASE_A_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-shared-rate-limit-migration-report
+          path: fanmind-shared-rate-limit-migration-report.txt
+          if-no-files-found: error
+          retention-days: 14
