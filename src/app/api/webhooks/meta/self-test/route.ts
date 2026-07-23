@@ -6,34 +6,40 @@ import {
   getWorkspaceSocialConnections,
 } from "@/lib/supabase/server";
 import { processMetaWebhookPayload } from "@/lib/metaWebhook";
+import { normalizeWebhookErrorCode } from "@/lib/webhookSecurityPolicy.mjs";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   const { data } = await getSupabaseServerUser();
-  if (!data.user) return Response.json({ ok: false, error: "Nicht angemeldet." }, { status: 401 });
+  if (!data.user) {
+    return Response.json(
+      { ok: false, error: "Nicht angemeldet." },
+      { status: 401 },
+    );
+  }
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   const workspace = workspaceResult.workspace;
-  if (!workspace) return Response.json({ ok: false, error: "Kein Workspace gefunden." }, { status: 403 });
-
-  const storageHealth = await checkMetaWebhookStorageHealth();
-  if (!storageHealth.serviceRoleConfigured) {
+  if (!workspace) {
     return Response.json(
-      { ok: false, error: "Service-Role-Key fehlt: SUPABASE_SERVICE_ROLE_KEY ist serverseitig nicht konfiguriert." },
-      { status: 503 },
+      { ok: false, error: "Kein Workspace gefunden." },
+      { status: 403 },
     );
   }
-  if (!storageHealth.tableReadable) {
+
+  const storageHealth = await checkMetaWebhookStorageHealth();
+  if (!storageHealth.serviceRoleConfigured || !storageHealth.tableReadable) {
     return Response.json(
-      { ok: false, error: `Meta-Webhook-Tabelle fehlt oder ist nicht lesbar: ${storageHealth.error?.message ?? "public.meta_webhook_events konnte nicht gelesen werden."}` },
+      { ok: false, error: "Webhook-Diagnose ist nicht verfügbar." },
       { status: 503 },
     );
   }
 
   const connectionsResult = await getWorkspaceSocialConnections(workspace.id);
   const facebookConnection = connectionsResult.connections.find(
-    (connection) => connection.platform === "facebook" && connection.status === "connected",
+    (connection) =>
+      connection.platform === "facebook" && connection.status === "connected",
   );
   const pageId = facebookConnection?.page_id ?? `fanmind-self-test-${workspace.id}`;
   const senderId = `fanmind-self-test-sender-${Date.now()}`;
@@ -60,19 +66,22 @@ export async function POST() {
   };
 
   const result = await processMetaWebhookPayload(payload);
+  const errorCode = result.errorCode
+    ? normalizeWebhookErrorCode(result.errorCode)
+    : null;
   revalidatePath("/channels");
 
   return Response.json(
     {
-      ok: !result.error,
+      ok: !errorCode,
       workspace_id: workspace.id,
       page_id: pageId,
       event_type: "messages",
-      status: result.error ? "error" : result.saved ? "stored" : "ignored",
-      error: result.error ?? null,
+      status: errorCode ? "error" : result.saved ? "stored" : "ignored",
+      error: errorCode ? "processing_failed" : null,
       saved: result.saved,
       skipped: result.skipped,
     },
-    { status: result.error ? 500 : 200 },
+    { status: errorCode ? 500 : 200 },
   );
 }
