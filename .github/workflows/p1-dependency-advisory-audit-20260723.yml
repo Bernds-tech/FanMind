@@ -1,0 +1,119 @@
+name: FanMind P1 Dependency Advisory Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-dependency-advisory-audit-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-dependency-advisory-audit-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/p1-supply-chain-20260723'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout trusted audit branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: audit/p1-supply-chain-20260723
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+
+      - name: Install root and mobile lockfiles reproducibly
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund > "$RUNNER_TEMP/root-ci.log" 2>&1
+          npm --prefix apps/mobile ci --no-audit --no-fund > "$RUNNER_TEMP/mobile-ci.log" 2>&1
+
+      - name: Produce sanitized advisory inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npm audit --omit=dev --json > "$RUNNER_TEMP/root-audit.json" 2>/dev/null
+          root_status=$?
+          npm --prefix apps/mobile audit --omit=dev --json > "$RUNNER_TEMP/mobile-audit.json" 2>/dev/null
+          mobile_status=$?
+          set -e
+
+          ROOT_AUDIT="$RUNNER_TEMP/root-audit.json" \
+          MOBILE_AUDIT="$RUNNER_TEMP/mobile-audit.json" \
+          ROOT_STATUS="$root_status" \
+          MOBILE_STATUS="$mobile_status" \
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function fixSummary(value) {
+            if (value === false || value == null) return 'none';
+            if (value === true) return 'available';
+            if (typeof value === 'object') {
+              const name = typeof value.name === 'string' ? value.name : 'package';
+              const version = typeof value.version === 'string' ? value.version : 'unknown';
+              const major = value.isSemVerMajor === true ? 'major' : 'nonmajor';
+              return `${name}@${version}:${major}`;
+            }
+            return 'unknown';
+          }
+
+          function viaSummary(via) {
+            if (!Array.isArray(via)) return 'none';
+            return via.map(item => {
+              if (typeof item === 'string') return `dependency:${item}`;
+              const source = item && typeof item.source !== 'undefined' ? String(item.source) : 'advisory';
+              const title = item && typeof item.title === 'string'
+                ? item.title.replace(/[^a-zA-Z0-9 ._:/()-]/g, '_').slice(0, 120)
+                : 'untitled';
+              return `${source}:${title}`;
+            }).join(';') || 'none';
+          }
+
+          function summarize(label, file, status) {
+            const payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const vulnerabilities = payload?.vulnerabilities && typeof payload.vulnerabilities === 'object'
+              ? payload.vulnerabilities
+              : {};
+            const lines = [`${label}_AUDIT_EXIT=${status}`];
+            const entries = Object.entries(vulnerabilities)
+              .sort(([a], [b]) => a.localeCompare(b));
+            lines.push(`${label}_VULNERABLE_PACKAGE_COUNT=${entries.length}`);
+            for (const [name, item] of entries) {
+              lines.push(
+                `${label}_VULNERABILITY=${name}|severity:${item?.severity ?? 'unknown'}|direct:${item?.isDirect === true}|range:${String(item?.range ?? 'unknown').replace(/[^a-zA-Z0-9 .<>=|~^*-]/g, '_').slice(0, 100)}|fix:${fixSummary(item?.fixAvailable)}|via:${viaSummary(item?.via)}`,
+              );
+            }
+            return lines;
+          }
+
+          const lines = [
+            `AUDIT_UTC=${new Date().toISOString()}`,
+            ...summarize('ROOT', process.env.ROOT_AUDIT, process.env.ROOT_STATUS),
+            ...summarize('MOBILE', process.env.MOBILE_AUDIT, process.env.MOBILE_STATUS),
+          ];
+          fs.writeFileSync('fanmind-dependency-advisory-audit.txt', `${lines.join('\n')}\n`, { mode: 0o644 });
+          process.stdout.write(`${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload sanitized advisory report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-p1-dependency-advisory-audit
+          path: fanmind-dependency-advisory-audit.txt
+          if-no-files-found: error
+          retention-days: 7
