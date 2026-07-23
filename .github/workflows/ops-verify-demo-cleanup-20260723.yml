@@ -29,13 +29,13 @@ jobs:
       - exoscale
       - linux
       - x64
-    timeout-minutes: 25
+    timeout-minutes: 15
     env:
       EXPECTED_RELEASE: 91ac1b3240f1a2c773638acface54668049d49f9
-      VERIFY_STATE_PATH: /var/tmp/fanmind-demo-cleanup-verify-${{ github.run_id }}.json
+      VERIFY_SINCE_UTC: 2026-07-23T06:15:00Z
       VERIFY_REPORT_PATH: fanmind-demo-cleanup-production-verification.txt
     steps:
-      - name: Wait for exact release and validate health
+      - name: Validate exact deployed release and public health
         shell: bash
         run: |
           set -euo pipefail
@@ -47,33 +47,17 @@ jobs:
             printf 'VERIFY_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE"
 
-            release=""
-            for attempt in $(seq 1 60); do
-              release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
-                | node -e '
-                    let input = "";
-                    process.stdin.on("data", chunk => input += chunk);
-                    process.stdin.on("end", () => {
-                      try {
-                        const payload = JSON.parse(input);
-                        const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
-                        process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
-                      } catch {
-                        process.stdout.write("missing");
-                      }
-                    });
-                  ' || true)"
-
-              if [[ "$release" == "$EXPECTED_RELEASE" ]]; then
-                printf 'DEPLOY_MATCH_ATTEMPT=%s\n' "$attempt"
-                break
-              fi
-
-              printf 'DEPLOY_WAIT_ATTEMPT=%s|release=%s\n' "$attempt" "${release:-missing}"
-              sleep 10
-            done
-
-            printf 'LIVE_RELEASE=%s\n' "${release:-missing}"
+            release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    const payload = JSON.parse(input);
+                    const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                    process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                  });
+                ')"
+            printf 'LIVE_RELEASE=%s\n' "$release"
             if [[ "$release" != "$EXPECTED_RELEASE" ]]; then
               echo 'DEPLOY_RESULT=expected_release_not_live'
               exit 1
@@ -110,172 +94,7 @@ jobs:
           NODE
           rm -f "$health_file"
 
-      - name: Verify the single exact cleanup candidate before write
-        shell: bash
-        run: |
-          set -euo pipefail
-          set -o pipefail
-          report="$GITHUB_WORKSPACE/$VERIFY_REPORT_PATH"
-
-          sudo -n node - "$VERIFY_STATE_PATH" <<'NODE' | tee -a "$report"
-          const fs = require('node:fs');
-
-          function sanitize(value, max = 120) {
-            return String(value || 'unknown').replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, max);
-          }
-
-          function parseEnv(text) {
-            const values = new Map();
-            for (const rawLine of text.split(/\r?\n/)) {
-              const line = rawLine.trim();
-              if (!line || line.startsWith('#') || !line.includes('=')) continue;
-              const separator = line.indexOf('=');
-              const key = line.slice(0, separator).trim();
-              let value = line.slice(separator + 1).trim();
-              if (
-                value.length >= 2 &&
-                ((value.startsWith('"') && value.endsWith('"')) ||
-                  (value.startsWith("'") && value.endsWith("'")))
-              ) {
-                value = value.slice(1, -1);
-              }
-              values.set(key, value);
-            }
-            return values;
-          }
-
-          async function main() {
-            const statePath = process.argv[2];
-            const env = parseEnv(fs.readFileSync('/var/www/fanmind/.env.production', 'utf8'));
-            const baseUrl = (env.get('NEXT_PUBLIC_SUPABASE_URL') || '').replace(/\/$/, '');
-            const serviceKey = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-            if (!baseUrl || !serviceKey) throw new Error('required_server_configuration_missing');
-
-            const headers = {
-              apikey: serviceKey,
-              Authorization: `Bearer ${serviceKey}`,
-              'Content-Type': 'application/json',
-            };
-
-            async function getJson(url) {
-              const response = await fetch(url, {
-                method: 'GET',
-                headers,
-                cache: 'no-store',
-                signal: AbortSignal.timeout(12000),
-              });
-              if (!response.ok) throw new Error(`read_http_${response.status}`);
-              return response.json();
-            }
-
-            const now = new Date();
-            const sessionsUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
-            sessionsUrl.searchParams.set(
-              'select',
-              'id,status,error_code,auth_user_id,workspace_id,expires_at',
-            );
-            sessionsUrl.searchParams.set('status', 'in.(active,expired,cleanup_failed)');
-            sessionsUrl.searchParams.set('expires_at', `lte.${now.toISOString()}`);
-            sessionsUrl.searchParams.set('order', 'expires_at.asc');
-            sessionsUrl.searchParams.set('limit', '10');
-
-            const sessions = await getJson(sessionsUrl);
-            if (!Array.isArray(sessions)) throw new Error('claimable_session_payload_invalid');
-            console.log(`PREFLIGHT_CLAIMABLE_COUNT=${sessions.length}`);
-            if (sessions.length !== 1) throw new Error('claimable_session_count_not_exactly_one');
-
-            const session = sessions[0];
-            if (session?.status !== 'cleanup_failed') throw new Error('candidate_status_not_cleanup_failed');
-            if (
-              typeof session.id !== 'string' ||
-              typeof session.auth_user_id !== 'string' ||
-              typeof session.workspace_id !== 'string'
-            ) {
-              throw new Error('candidate_identity_incomplete');
-            }
-            const expiresAt = Date.parse(session.expires_at);
-            if (!Number.isFinite(expiresAt) || expiresAt > now.getTime()) {
-              throw new Error('candidate_not_expired');
-            }
-
-            const userResponse = await fetch(
-              `${baseUrl}/auth/v1/admin/users/${encodeURIComponent(session.auth_user_id)}`,
-              {
-                method: 'GET',
-                headers,
-                cache: 'no-store',
-                signal: AbortSignal.timeout(12000),
-              },
-            );
-            if (userResponse.status !== 200) throw new Error(`auth_user_http_${userResponse.status}`);
-            const userPayload = await userResponse.json();
-            const user = userPayload?.user || userPayload;
-            if (!user || user.id !== session.auth_user_id) throw new Error('auth_user_identity_mismatch');
-
-            const metadata = user.user_metadata && typeof user.user_metadata === 'object'
-              ? user.user_metadata
-              : {};
-            const isTemporary = metadata.fanmind_demo === true && metadata.demo_type === 'temporary';
-            const isStaticDemo = String(user.email || '').trim().toLowerCase() === 'sandra.m@fanmind.ch';
-            if (!isTemporary || isStaticDemo) throw new Error('auth_user_not_safe_temporary_demo');
-
-            const workspaceUrl = new URL(`${baseUrl}/rest/v1/workspaces`);
-            workspaceUrl.searchParams.set('select', 'id,name,owner_user_id');
-            workspaceUrl.searchParams.set('id', `eq.${session.workspace_id}`);
-            workspaceUrl.searchParams.set('limit', '1');
-            const workspaces = await getJson(workspaceUrl);
-            if (!Array.isArray(workspaces) || workspaces.length !== 1) {
-              throw new Error('workspace_identity_missing');
-            }
-            const workspace = workspaces[0];
-            const workspaceSafe =
-              workspace.id === session.workspace_id &&
-              workspace.owner_user_id === session.auth_user_id &&
-              workspace.name === 'FanMind Demo Workspace';
-            if (!workspaceSafe) throw new Error('workspace_identity_not_safe_temporary_demo');
-
-            fs.writeFileSync(
-              statePath,
-              JSON.stringify({
-                sessionId: session.id,
-                authUserId: session.auth_user_id,
-                workspaceId: session.workspace_id,
-              }),
-              { mode: 0o600 },
-            );
-
-            console.log('PREFLIGHT_SESSION_STATUS=cleanup_failed');
-            console.log('PREFLIGHT_TEMPORARY_USER=true');
-            console.log('PREFLIGHT_STATIC_DEMO=false');
-            console.log('PREFLIGHT_WORKSPACE_IDENTITY=true');
-            console.log('PREFLIGHT_RESULT=approved_single_candidate');
-          }
-
-          main().catch(error => {
-            console.error('PREFLIGHT_RESULT=blocked');
-            console.error(`PREFLIGHT_REASON=${sanitize(error instanceof Error ? error.message : error)}`);
-            process.exit(1);
-          });
-          NODE
-
-      - name: Run one controlled demo cleanup service cycle
-        shell: bash
-        run: |
-          set -euo pipefail
-          set -o pipefail
-          report="$GITHUB_WORKSPACE/$VERIFY_REPORT_PATH"
-          {
-            printf 'CONTROLLED_CLEANUP_START_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            if sudo -n systemctl start fanmind-demo-cleanup.service; then
-              echo 'CONTROLLED_CLEANUP_START=completed'
-            else
-              echo 'CONTROLLED_CLEANUP_START=failed'
-              exit 1
-            fi
-          } | tee -a "$report"
-
-      - name: Verify exact postconditions and service result
-        if: always()
+      - name: Verify automatic cleanup completion read-only
         shell: bash
         run: |
           set -euo pipefail
@@ -291,9 +110,21 @@ jobs:
               | sed 's/^/DEMO_SERVICE_/'
           } | tee -a "$report"
 
-          sudo -n journalctl -u fanmind-demo-cleanup.service --since '20 minutes ago' --no-pager -o cat > "$log_file"
+          service_result="$(sudo -n systemctl show fanmind-demo-cleanup.service --property=Result --value)"
+          service_exit="$(sudo -n systemctl show fanmind-demo-cleanup.service --property=ExecMainStatus --value)"
+          if [[ "$service_result" != "success" || "$service_exit" != "0" ]]; then
+            echo 'DEMO_SERVICE_VERIFICATION=failed' | tee -a "$report"
+            exit 1
+          fi
+          echo 'DEMO_SERVICE_VERIFICATION=success' | tee -a "$report"
 
-          sudo -n node - "$VERIFY_STATE_PATH" "$log_file" <<'NODE' | tee -a "$report"
+          sudo -n journalctl \
+            -u fanmind-demo-cleanup.service \
+            --since "$VERIFY_SINCE_UTC" \
+            --no-pager \
+            -o cat > "$log_file"
+
+          sudo -n node - "$log_file" "$VERIFY_SINCE_UTC" <<'NODE' | tee -a "$report"
           const fs = require('node:fs');
 
           function sanitize(value, max = 120) {
@@ -321,10 +152,8 @@ jobs:
           }
 
           async function main() {
-            const statePath = process.argv[2];
-            const logPath = process.argv[3];
-            if (!fs.existsSync(statePath)) throw new Error('verification_state_missing');
-            const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+            const logPath = process.argv[2];
+            const sinceUtc = process.argv[3];
             const env = parseEnv(fs.readFileSync('/var/www/fanmind/.env.production', 'utf8'));
             const baseUrl = (env.get('NEXT_PUBLIC_SUPABASE_URL') || '').replace(/\/$/, '');
             const serviceKey = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -347,51 +176,53 @@ jobs:
               return response.json();
             }
 
-            const sessionUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
-            sessionUrl.searchParams.set('select', 'status,error_code,auth_user_id,workspace_id');
-            sessionUrl.searchParams.set('id', `eq.${state.sessionId}`);
-            sessionUrl.searchParams.set('limit', '1');
-            const sessions = await getJson(sessionUrl);
-            const session = Array.isArray(sessions) ? sessions[0] : null;
-            const sessionDeleted = Boolean(
-              session &&
-              session.status === 'deleted' &&
-              session.error_code == null &&
-              session.auth_user_id == null &&
-              session.workspace_id == null
-            );
-
-            const workspaceUrl = new URL(`${baseUrl}/rest/v1/workspaces`);
-            workspaceUrl.searchParams.set('select', 'id');
-            workspaceUrl.searchParams.set('id', `eq.${state.workspaceId}`);
-            workspaceUrl.searchParams.set('limit', '1');
-            const workspaces = await getJson(workspaceUrl);
-            const workspaceMissing = Array.isArray(workspaces) && workspaces.length === 0;
-
-            const authResponse = await fetch(
-              `${baseUrl}/auth/v1/admin/users/${encodeURIComponent(state.authUserId)}`,
-              {
+            async function exactCount(url) {
+              const response = await fetch(url, {
                 method: 'GET',
-                headers,
+                headers: { ...headers, Prefer: 'count=exact' },
                 cache: 'no-store',
                 signal: AbortSignal.timeout(12000),
-              },
-            );
-            const authUserMissing = authResponse.status === 404;
+              });
+              if (!response.ok) throw new Error(`count_http_${response.status}`);
+              const contentRange = response.headers.get('content-range') || '';
+              const total = Number(contentRange.split('/').at(-1));
+              if (!Number.isFinite(total)) throw new Error('count_header_invalid');
+              return total;
+            }
+
+            const now = new Date();
+            const claimableUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
+            claimableUrl.searchParams.set('select', 'id');
+            claimableUrl.searchParams.set('status', 'in.(active,expired,cleanup_failed)');
+            claimableUrl.searchParams.set('expires_at', `lte.${now.toISOString()}`);
+            claimableUrl.searchParams.set('limit', '1');
+            const claimableCount = await exactCount(claimableUrl);
 
             const failedUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
             failedUrl.searchParams.set('select', 'id');
             failedUrl.searchParams.set('status', 'eq.cleanup_failed');
             failedUrl.searchParams.set('limit', '1');
-            const failedResponse = await fetch(failedUrl, {
-              method: 'GET',
-              headers: { ...headers, Prefer: 'count=exact' },
-              cache: 'no-store',
-              signal: AbortSignal.timeout(12000),
-            });
-            if (!failedResponse.ok) throw new Error(`failed_count_http_${failedResponse.status}`);
-            const contentRange = failedResponse.headers.get('content-range') || '';
-            const cleanupFailedCount = Number(contentRange.split('/').at(-1));
+            const cleanupFailedCount = await exactCount(failedUrl);
+
+            const deletedUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
+            deletedUrl.searchParams.set(
+              'select',
+              'status,error_code,auth_user_id,workspace_id,cleanup_completed_at,updated_at',
+            );
+            deletedUrl.searchParams.set('status', 'eq.deleted');
+            deletedUrl.searchParams.set('cleanup_completed_at', `gte.${sinceUtc}`);
+            deletedUrl.searchParams.set('order', 'cleanup_completed_at.asc');
+            deletedUrl.searchParams.set('limit', '10');
+            const deletedRows = await getJson(deletedUrl);
+            if (!Array.isArray(deletedRows)) throw new Error('deleted_session_payload_invalid');
+
+            const safelyDeletedRows = deletedRows.filter(row =>
+              row?.status === 'deleted' &&
+              row?.error_code == null &&
+              row?.auth_user_id == null &&
+              row?.workspace_id == null &&
+              typeof row?.cleanup_completed_at === 'string'
+            );
 
             const logLines = fs.readFileSync(logPath, 'utf8').split(/\r?\n/);
             const summaries = [];
@@ -416,37 +247,36 @@ jobs:
               latest.errorCodes === ''
             );
 
-            console.log(`POSTFLIGHT_SUMMARY_COUNT=${summaries.length}`);
-            console.log(`POSTFLIGHT_LATEST_CLAIMED=${latest?.claimed ?? 'missing'}`);
-            console.log(`POSTFLIGHT_LATEST_DELETED=${latest?.deleted ?? 'missing'}`);
-            console.log(`POSTFLIGHT_LATEST_FAILED=${latest?.failed ?? 'missing'}`);
-            console.log(`POSTFLIGHT_LATEST_ERROR_CODES=${latest?.errorCodes || 'none'}`);
-            console.log(`TARGET_SESSION_DELETED=${sessionDeleted}`);
-            console.log(`TARGET_WORKSPACE_MISSING=${workspaceMissing}`);
-            console.log(`TARGET_AUTH_USER_MISSING=${authUserMissing}`);
-            console.log(`CLEANUP_FAILED_SESSION_COUNT=${Number.isFinite(cleanupFailedCount) ? cleanupFailedCount : 'unknown'}`);
+            console.log(`AUTOMATIC_CLEANUP_SUMMARY_COUNT=${summaries.length}`);
+            console.log(`AUTOMATIC_CLEANUP_LATEST_CLAIMED=${latest?.claimed ?? 'missing'}`);
+            console.log(`AUTOMATIC_CLEANUP_LATEST_DELETED=${latest?.deleted ?? 'missing'}`);
+            console.log(`AUTOMATIC_CLEANUP_LATEST_FAILED=${latest?.failed ?? 'missing'}`);
+            console.log(`AUTOMATIC_CLEANUP_LATEST_ERROR_CODES=${latest?.errorCodes || 'none'}`);
+            console.log(`RECENT_DELETED_SESSION_COUNT=${deletedRows.length}`);
+            console.log(`RECENT_SAFE_DELETED_SESSION_COUNT=${safelyDeletedRows.length}`);
+            console.log(`CLAIMABLE_EXPIRED_SESSION_COUNT=${claimableCount}`);
+            console.log(`CLEANUP_FAILED_SESSION_COUNT=${cleanupFailedCount}`);
 
             if (
               !summaryOk ||
-              !sessionDeleted ||
-              !workspaceMissing ||
-              !authUserMissing ||
+              deletedRows.length < 1 ||
+              safelyDeletedRows.length !== deletedRows.length ||
+              claimableCount !== 0 ||
               cleanupFailedCount !== 0
             ) {
-              throw new Error('cleanup_postconditions_failed');
+              throw new Error('automatic_cleanup_postconditions_failed');
             }
 
-            console.log('POSTFLIGHT_RESULT=success');
+            console.log('AUTOMATIC_CLEANUP_RESULT=success');
           }
 
           main().catch(error => {
-            console.error('POSTFLIGHT_RESULT=failed');
-            console.error(`POSTFLIGHT_REASON=${sanitize(error instanceof Error ? error.message : error)}`);
+            console.error('AUTOMATIC_CLEANUP_RESULT=failed');
+            console.error(`AUTOMATIC_CLEANUP_REASON=${sanitize(error instanceof Error ? error.message : error)}`);
             process.exit(1);
           });
           NODE
 
-          sudo -n rm -f "$VERIFY_STATE_PATH"
           rm -f "$log_file"
 
       - name: Upload sanitized production verification
