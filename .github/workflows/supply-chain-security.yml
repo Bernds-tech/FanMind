@@ -1,0 +1,103 @@
+name: FanMind Supply Chain Security
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/**"
+      - "package.json"
+      - "package-lock.json"
+      - "apps/mobile/package.json"
+      - "apps/mobile/package-lock.json"
+      - "scripts/security/**"
+      - "scripts/verify-actions-pinned.mjs"
+      - "tests/dependency-audit-policy.test.mjs"
+      - "tests/github-actions-supply-chain.test.mjs"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/**"
+      - "package.json"
+      - "package-lock.json"
+      - "apps/mobile/package.json"
+      - "apps/mobile/package-lock.json"
+      - "scripts/security/**"
+      - "scripts/verify-actions-pinned.mjs"
+      - "tests/dependency-audit-policy.test.mjs"
+      - "tests/github-actions-supply-chain.test.mjs"
+  schedule:
+    - cron: "47 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: fanmind-supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit-and-sbom:
+    name: Immutable Actions, dependency audit and CycloneDX SBOM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile/package-lock.json
+
+      - name: Install web dependencies reproducibly
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Mobile dependencies reproducibly
+        run: npm ci --prefix apps/mobile --no-audit --no-fund
+
+      - name: Enforce immutable GitHub Action references
+        run: npm run verify:actions-pinned
+
+      - name: Enforce bounded dependency audit policy
+        id: dependency_audit
+        continue-on-error: true
+        run: npm run security:audit -- --report dependency-audit-report.json
+
+      - name: Upload redacted dependency audit report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-dependency-audit-report
+          path: dependency-audit-report.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Generate and validate CycloneDX SBOMs
+        id: sbom
+        continue-on-error: true
+        run: npm run security:sbom -- --output-dir sbom-artifacts
+
+      - name: Upload short-lived CycloneDX SBOMs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-cyclonedx-sbom
+          path: sbom-artifacts
+          if-no-files-found: error
+          include-hidden-files: false
+          retention-days: 7
+
+      - name: Enforce dependency audit result
+        if: always() && steps.dependency_audit.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce SBOM result
+        if: always() && steps.sbom.outcome != 'success'
+        run: exit 1
