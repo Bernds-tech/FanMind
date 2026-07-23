@@ -7,13 +7,25 @@ on:
     paths:
       - ".github/workflows/p1-supply-chain-hardening-patch-20260723.yml"
       - "scripts/security/supply-chain-hardening-patch-temp.mjs"
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-supply-chain-hardening-patch-20260723.yml"
+      - "scripts/security/supply-chain-hardening-patch-temp.mjs"
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      (github.event_name == 'push' || github.head_ref == 'p1/supply-chain-hardening-20260723')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
