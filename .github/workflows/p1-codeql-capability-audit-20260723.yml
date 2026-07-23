@@ -1,0 +1,52 @@
+name: FanMind P1 CodeQL Capability Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-codeql-capability-audit-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-codeql-capability-audit-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/p1-supply-chain-20260723-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout trusted audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: audit/p1-supply-chain-20260723-v2
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Initialize CodeQL capability audit
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Install reproducible root dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install reproducible Mobile dependencies
+        run: npm ci --prefix apps/mobile --no-audit --no-fund
+
+      - name: Analyze JavaScript and TypeScript
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
