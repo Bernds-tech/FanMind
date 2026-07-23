@@ -100,10 +100,11 @@ done
 
 for unit in "${units[@]}"; do
   [[ "$unit" == *.timer ]] || continue
-  next="$(systemctl show "$unit" --property=NextElapseUSecRealtime --value --no-pager 2>/dev/null || true)"
+  next_realtime="$(systemctl show "$unit" --property=NextElapseUSecRealtime --value --no-pager 2>/dev/null || true)"
+  next_monotonic="$(systemctl show "$unit" --property=NextElapseUSecMonotonic --value --no-pager 2>/dev/null || true)"
   last="$(systemctl show "$unit" --property=LastTriggerUSec --value --no-pager 2>/dev/null || true)"
-  printf 'SYSTEMD_TIMER=%s|next=%s|last=%s\n' \
-    "$unit" "${next:-unknown}" "${last:-unknown}"
+  printf 'SYSTEMD_TIMER=%s|next_realtime=%s|next_monotonic=%s|last=%s\n' \
+    "$unit" "${next_realtime:-unknown}" "${next_monotonic:-unknown}" "${last:-unknown}"
 done
 
 inventory="$(mktemp)"
