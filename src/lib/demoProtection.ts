@@ -4,6 +4,7 @@ import {
   getSupabaseHeaders,
   getSupabaseRestUrl,
 } from "@/lib/supabase/config";
+import { getTrustedClientIpValue } from "@/lib/clientIpPolicy.mjs";
 import { resolveDemoTurnstilePolicy } from "@/lib/demoTurnstilePolicy.mjs";
 
 export const DEMO_BROWSER_COOKIE = "fanmind_demo_browser";
@@ -97,12 +98,7 @@ export function demoCleanupAuthorized(authorization: string | null): boolean {
 }
 
 export function getTrustedClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "unknown"
-  );
+  return getTrustedClientIpValue(request.headers, "unknown");
 }
 
 export function hashDemoIdentifier(
