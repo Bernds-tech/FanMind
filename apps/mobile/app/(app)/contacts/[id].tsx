@@ -194,7 +194,16 @@ export default function ContactDetailScreen() {
     <Screen
       title={contact.display_name}
       subtitle={`${contact.handle || "ohne Handle"} · ${contact.source_platform || "manuell"}`}
-      right={<SecondaryButton onPress={() => router.back()}>Zurück</SecondaryButton>}
+      right={
+        <View style={styles.headerActions}>
+          <SecondaryButton
+            onPress={() => router.push(`/(app)/contacts/${contact.id}/edit`)}
+          >
+            Bearbeiten
+          </SecondaryButton>
+          <SecondaryButton onPress={() => router.back()}>Zurück</SecondaryButton>
+        </View>
+      }
     >
       <View style={styles.pills}>
         <StatusPill tone="accent">{contact.status || "neu"}</StatusPill>
@@ -317,6 +326,12 @@ export default function ContactDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: spacing.sm,
+  },
   pills: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   memoryRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   memoryDot: {
