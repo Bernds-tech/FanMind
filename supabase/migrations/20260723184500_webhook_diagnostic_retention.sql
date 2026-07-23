@@ -26,6 +26,7 @@ begin
         and text is null
         and message_text is null
         and message_id is null
+        and raw_payload is not null
         and jsonb_typeof(raw_payload) = 'object'
         and octet_length(raw_payload::text) <= 16384
         and status ~ '^[a-z][a-z0-9_]{0,63}$'
@@ -54,7 +55,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_cutoff timestamptz := clock_timestamp() - make_interval(days => p_retention_days);
+  v_cutoff timestamptz;
   v_candidates integer := 0;
   v_deleted integer := 0;
   v_has_more boolean := false;
@@ -72,6 +73,8 @@ begin
       errcode = '22023',
       message = 'invalid_webhook_retention_limit';
   end if;
+
+  v_cutoff := clock_timestamp() - make_interval(days => p_retention_days);
 
   select count(*)::integer
     into v_candidates
@@ -132,7 +135,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_cutoff timestamptz := clock_timestamp() - make_interval(days => p_retention_days);
+  v_cutoff timestamptz;
   v_candidates integer := 0;
   v_deleted integer := 0;
   v_has_more boolean := false;
@@ -150,6 +153,8 @@ begin
       errcode = '22023',
       message = 'invalid_server_error_retention_limit';
   end if;
+
+  v_cutoff := clock_timestamp() - make_interval(days => p_retention_days);
 
   if to_regclass('public.server_error_events') is null then
     return query select false, 0, 0, false, v_cutoff;
