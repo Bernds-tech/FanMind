@@ -44,20 +44,20 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const RECOVERY_EVENT_TIMEOUT_MS = 5000;
-const MAX_HANDLED_RECOVERY_URLS = 8;
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus>("idle");
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
-  const handledRecoveryUrls = useRef(new Set<string>());
-  const activeRecoveryUrl = useRef<string | null>(null);
+  const recoveryAttemptActive = useRef(false);
+  const recoveryLinkHandled = useRef(false);
   const recoveryEventResolver = useRef<(() => void) | null>(null);
 
   const clearRecoveryState = useCallback(() => {
     recoveryEventResolver.current = null;
-    activeRecoveryUrl.current = null;
+    recoveryAttemptActive.current = false;
+    recoveryLinkHandled.current = false;
     setRecoveryStatus("idle");
     setRecoveryError(null);
   }, []);
@@ -82,10 +82,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const handleRecoveryUrl = useCallback(
     async (url: string) => {
-      if (
-        handledRecoveryUrls.current.has(url) ||
-        activeRecoveryUrl.current === url
-      ) {
+      if (recoveryAttemptActive.current || recoveryLinkHandled.current) {
         return;
       }
 
@@ -106,7 +103,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      activeRecoveryUrl.current = url;
+      recoveryAttemptActive.current = true;
       setRecoveryStatus("processing");
       setRecoveryError(null);
 
@@ -128,18 +125,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setRecoveryStatus("ready");
         }
 
-        if (handledRecoveryUrls.current.size >= MAX_HANDLED_RECOVERY_URLS) {
-          handledRecoveryUrls.current.clear();
-        }
-        handledRecoveryUrls.current.add(url);
+        // Only a non-sensitive boolean is retained for duplicate suppression.
+        // Recovery URLs can contain credentials and must never be cached in state or refs.
+        recoveryLinkHandled.current = true;
       } catch {
         recoveryEventResolver.current = null;
+        recoveryLinkHandled.current = false;
         setRecoveryStatus("error");
         setRecoveryError(
           "Der Wiederherstellungslink konnte nicht bestätigt werden. Fordere bitte einen neuen Link an.",
         );
       } finally {
-        activeRecoveryUrl.current = null;
+        recoveryAttemptActive.current = false;
       }
     },
     [waitForPasswordRecoveryEvent],
