@@ -85,9 +85,17 @@ jobs:
           const timers = all('SYSTEMD_TIMER');
           const timersStable =
             timers.length > 0 &&
-            timers.every(value => /^fanmind-[a-z0-9_@.-]+\.timer\|next=[^|]+\|last=.+$/i.test(value));
+            timers.every(value =>
+              /^fanmind-[a-z0-9_@.-]+\.timer\|next_realtime=[^|]+\|next_monotonic=[^|]+\|last=.+$/i.test(value),
+            );
+          const relativeScheduleObserved = timers.some(value =>
+            /\|next_monotonic=(?!unknown(?:\||$))[^|]+\|/i.test(value),
+          );
           console.log(`ASSERT_SYSTEMD_TIMERS=${timersStable ? 'ok' : 'failed'}|count:${timers.length}`);
-          if (!timersStable) throw new Error('systemd_timer_output_invalid');
+          console.log(`ASSERT_RELATIVE_TIMER_SCHEDULE=${relativeScheduleObserved ? 'ok' : 'failed'}`);
+          if (!timersStable || !relativeScheduleObserved) {
+            throw new Error('systemd_timer_output_invalid');
+          }
 
           const windows = all('BACKUP_WORKER_WINDOW');
           const windowSet = new Set(windows);
