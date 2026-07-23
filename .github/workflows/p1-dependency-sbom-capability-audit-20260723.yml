@@ -1,0 +1,142 @@
+name: FanMind P1 Dependency and SBOM Capability Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-dependency-sbom-capability-audit-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-dependency-sbom-capability-audit-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/p1-supply-chain-20260723-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      REPORT_PATH: fanmind-p1-dependency-sbom-capability-audit.txt
+    steps:
+      - name: Checkout trusted audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: audit/p1-supply-chain-20260723-v2
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install root and Mobile dependencies reproducibly
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm ci --prefix apps/mobile --no-audit --no-fund
+
+      - name: Evaluate audit and SBOM capabilities without exposing advisory details
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE' | tee "$REPORT_PATH"
+          const { execFileSync, spawnSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+
+          function runAudit(cwd, omitDev) {
+            const args = ['audit', '--json'];
+            if (omitDev) args.push('--omit=dev');
+            const result = spawnSync('npm', args, {
+              cwd,
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+              timeout: 120000,
+            });
+            let payload;
+            try {
+              payload = JSON.parse(result.stdout || '{}');
+            } catch {
+              throw new Error('audit_json_invalid');
+            }
+            const vulnerabilities = payload?.metadata?.vulnerabilities || {};
+            return {
+              total: Number(vulnerabilities.total || 0),
+              critical: Number(vulnerabilities.critical || 0),
+              high: Number(vulnerabilities.high || 0),
+              moderate: Number(vulnerabilities.moderate || 0),
+              low: Number(vulnerabilities.low || 0),
+            };
+          }
+
+          function runSbom(cwd, filename) {
+            const target = path.join(os.tmpdir(), filename);
+            const result = spawnSync('npm', ['sbom', '--sbom-format=cyclonedx'], {
+              cwd,
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+              timeout: 120000,
+            });
+            if (result.error || result.status !== 0) throw new Error('sbom_generation_failed');
+            fs.writeFileSync(target, result.stdout, { mode: 0o600 });
+            const payload = JSON.parse(result.stdout);
+            const valid = payload?.bomFormat === 'CycloneDX'
+              && typeof payload?.specVersion === 'string'
+              && Array.isArray(payload?.components);
+            fs.rmSync(target, { force: true });
+            if (!valid) throw new Error('sbom_invalid');
+            return {
+              format: payload.bomFormat,
+              specVersion: payload.specVersion,
+              componentCount: payload.components.length,
+            };
+          }
+
+          const rootProd = runAudit(process.cwd(), true);
+          const rootAll = runAudit(process.cwd(), false);
+          const mobileAll = runAudit(path.join(process.cwd(), 'apps/mobile'), false);
+          const rootSbom = runSbom(process.cwd(), 'fanmind-root-audit.cdx.json');
+          const mobileSbom = runSbom(path.join(process.cwd(), 'apps/mobile'), 'fanmind-mobile-audit.cdx.json');
+
+          console.log(`AUDIT_UTC=${new Date().toISOString()}`);
+          console.log(`ROOT_PROD_AUDIT_TOTAL=${rootProd.total}`);
+          console.log(`ROOT_PROD_AUDIT_HIGH=${rootProd.high}`);
+          console.log(`ROOT_PROD_AUDIT_CRITICAL=${rootProd.critical}`);
+          console.log(`ROOT_ALL_AUDIT_TOTAL=${rootAll.total}`);
+          console.log(`ROOT_ALL_AUDIT_HIGH=${rootAll.high}`);
+          console.log(`ROOT_ALL_AUDIT_CRITICAL=${rootAll.critical}`);
+          console.log(`MOBILE_ALL_AUDIT_TOTAL=${mobileAll.total}`);
+          console.log(`MOBILE_ALL_AUDIT_HIGH=${mobileAll.high}`);
+          console.log(`MOBILE_ALL_AUDIT_CRITICAL=${mobileAll.critical}`);
+          console.log(`ROOT_SBOM_FORMAT=${rootSbom.format}`);
+          console.log(`ROOT_SBOM_SPEC_VERSION=${rootSbom.specVersion}`);
+          console.log(`ROOT_SBOM_COMPONENT_COUNT=${rootSbom.componentCount}`);
+          console.log(`MOBILE_SBOM_FORMAT=${mobileSbom.format}`);
+          console.log(`MOBILE_SBOM_SPEC_VERSION=${mobileSbom.specVersion}`);
+          console.log(`MOBILE_SBOM_COMPONENT_COUNT=${mobileSbom.componentCount}`);
+          console.log('ADVISORY_DETAILS_REDACTED=true');
+          console.log('SBOM_TEMPORARY_FILES_REMOVED=true');
+          console.log('DEPENDENCY_SBOM_CAPABILITY_RESULT=success');
+          NODE
+
+      - name: Upload sanitized capability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-p1-dependency-sbom-capability-audit
+          path: fanmind-p1-dependency-sbom-capability-audit.txt
+          if-no-files-found: error
+          retention-days: 7
