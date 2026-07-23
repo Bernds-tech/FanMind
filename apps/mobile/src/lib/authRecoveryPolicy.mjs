@@ -80,7 +80,7 @@ function parseMobileAuthRecoveryUrl(rawUrl) {
     if (accessToken.length > 8192 || refreshToken.length > 8192) {
       throw new MobileAuthRecoveryPolicyError("invalid_tokens");
     }
-    if (type && type !== "recovery") {
+    if (type !== "recovery") {
       throw new MobileAuthRecoveryPolicyError("invalid_type");
     }
     return {
