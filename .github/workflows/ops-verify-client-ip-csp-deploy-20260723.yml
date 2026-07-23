@@ -1,0 +1,249 @@
+name: FanMind P1 Verify Deployed Client IP and CSP
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-verify-client-ip-csp-deploy-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-verify-client-ip-csp-deploy-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/verify-client-ip-csp-deploy-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 20
+    env:
+      EXPECTED_RELEASE: 1b370db563a0a3c976a755c88ba5ccc2326d4a4f
+      REPORT_PATH: fanmind-client-ip-csp-production-verification.txt
+    steps:
+      - name: Wait for exact release and validate public health
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+
+          release=""
+          for attempt in $(seq 1 60); do
+            release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    try {
+                      const payload = JSON.parse(input);
+                      const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                      process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                    } catch {
+                      process.stdout.write("missing");
+                    }
+                  });
+                ' || true)"
+            if [[ "$release" == "$EXPECTED_RELEASE" ]]; then
+              printf 'DEPLOY_MATCH_ATTEMPT=%s\n' "$attempt" | tee -a "$report"
+              break
+            fi
+            sleep 10
+          done
+
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+          printf 'LIVE_RELEASE=%s\n' "${release:-missing}" | tee -a "$report"
+          if [[ "$release" != "$EXPECTED_RELEASE" ]]; then
+            echo 'DEPLOY_RESULT=expected_release_not_live' | tee -a "$report"
+            exit 1
+          fi
+          echo 'DEPLOY_RESULT=exact_release_live' | tee -a "$report"
+
+          server_head="$(git -C /var/www/fanmind rev-parse HEAD)"
+          origin_main="$(git -C /var/www/fanmind rev-parse origin/main)"
+          printf 'SERVER_HEAD=%s\n' "$server_head" | tee -a "$report"
+          printf 'ORIGIN_MAIN=%s\n' "$origin_main" | tee -a "$report"
+          if [[ "$server_head" != "$EXPECTED_RELEASE" || "$origin_main" != "$EXPECTED_RELEASE" ]]; then
+            echo 'SERVER_SYNC=failed' | tee -a "$report"
+            exit 1
+          fi
+          echo 'SERVER_SYNC=ok' | tee -a "$report"
+
+          health_file="$RUNNER_TEMP/fanmind-health-${GITHUB_RUN_ID}.json"
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health > "$health_file"
+          HEALTH_FILE="$health_file" node <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.env.HEALTH_FILE, 'utf8'));
+          const checks = Array.isArray(payload.checks) ? payload.checks : [];
+          const status = typeof payload.status === 'string' ? payload.status : 'missing';
+          console.log(`LIVE_HEALTH=${status}`);
+          for (const check of checks) {
+            const component = String(check?.component || 'unknown').replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, 80);
+            const componentStatus = String(check?.status || 'missing').replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, 40);
+            console.log(`HEALTH_COMPONENT=${component}:${componentStatus}`);
+          }
+          if (status !== 'healthy' || checks.length === 0 || checks.some(check => check?.status !== 'healthy')) {
+            process.exitCode = 1;
+          }
+          NODE
+          rm -f "$health_file"
+
+      - name: Verify live security headers and public routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          headers="$RUNNER_TEMP/fanmind-live-headers-${GITHUB_RUN_ID}.txt"
+          curl -fsSIL --max-time 20 https://fanmind.ch/login > "$headers"
+
+          LIVE_HEADERS_FILE="$headers" node <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+          const raw = fs.readFileSync(process.env.LIVE_HEADERS_FILE, 'utf8');
+          const blocks = raw.split(/\r?\n\r?\n/).filter(Boolean);
+          const finalBlock = [...blocks].reverse().find(block => /^HTTP\//im.test(block)) || '';
+          const headers = new Map();
+          for (const line of finalBlock.split(/\r?\n/).slice(1)) {
+            const index = line.indexOf(':');
+            if (index < 1) continue;
+            const name = line.slice(0, index).trim().toLowerCase();
+            const value = line.slice(index + 1).trim();
+            headers.set(name, headers.has(name) ? `${headers.get(name)}, ${value}` : value);
+          }
+
+          const csp = headers.get('content-security-policy') || '';
+          const cspReportOnly = headers.get('content-security-policy-report-only') || '';
+          const hsts = headers.get('strict-transport-security') || '';
+          const permissions = headers.get('permissions-policy') || '';
+          const checks = {
+            csp_enforced: Boolean(csp),
+            csp_report_only_removed: !cspReportOnly,
+            csp_frame_ancestors: /(?:^|;)\s*frame-ancestors\s+'none'(?:;|$)/i.test(csp),
+            csp_base_uri: /(?:^|;)\s*base-uri\s+'self'(?:;|$)/i.test(csp),
+            csp_object_src: /(?:^|;)\s*object-src\s+'none'(?:;|$)/i.test(csp),
+            csp_form_action: /(?:^|;)\s*form-action\s+'self'(?:;|$)/i.test(csp),
+            x_frame_options: /^DENY$/i.test(headers.get('x-frame-options') || ''),
+            nosniff: /^nosniff$/i.test(headers.get('x-content-type-options') || ''),
+            referrer: /^strict-origin-when-cross-origin$/i.test(headers.get('referrer-policy') || ''),
+            hsts: Boolean(hsts) && /includeSubDomains/i.test(hsts),
+            camera_disabled: /camera=\(\)/i.test(permissions),
+            microphone_disabled: /microphone=\(\)/i.test(permissions),
+            geolocation_disabled: /geolocation=\(\)/i.test(permissions),
+            coop: /^same-origin$/i.test(headers.get('cross-origin-opener-policy') || ''),
+          };
+          for (const [name, value] of Object.entries(checks)) {
+            console.log(`HEADER_ASSERT=${name}:${value ? 'ok' : 'failed'}`);
+          }
+          if (Object.values(checks).some(value => !value)) process.exit(1);
+          console.log('LIVE_SECURITY_HEADERS=success');
+          NODE
+          rm -f "$headers"
+
+          for path in / /login /register /api/version /api/health; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "https://fanmind.ch${path}")"
+            safe_path="$(printf '%s' "$path" | tr '/-' '__')"
+            printf 'PUBLIC_ROUTE=%s:%s\n' "${safe_path:-root}" "$status" | tee -a "$report"
+            case "$status" in
+              2*|3*) ;;
+              *) exit 1 ;;
+            esac
+          done
+
+      - name: Verify canonical client identity behavior from deployed main
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          cd /var/www/fanmind
+          /usr/bin/node --input-type=module <<'NODE' | tee -a "$report"
+          import {
+            getLastForwardedForIp,
+            resolveTrustedClientIp,
+          } from './src/lib/clientIpPolicy.mjs';
+
+          const headers = values => ({
+            get(name) {
+              return values[String(name).toLowerCase()] ?? null;
+            },
+          });
+
+          const canonical = resolveTrustedClientIp(headers({
+            'x-real-ip': '203.0.113.77',
+            'x-forwarded-for': '198.51.100.22, 203.0.113.77',
+            'cf-connecting-ip': '192.0.2.66',
+          }));
+          const fallback = resolveTrustedClientIp(headers({
+            'x-real-ip': 'invalid',
+            'x-forwarded-for': '198.51.100.10, 203.0.113.30',
+          }));
+          const cfOnly = resolveTrustedClientIp(headers({
+            'cf-connecting-ip': '203.0.113.88',
+          }));
+          const malformed = getLastForwardedForIp('198.51.100.1, not-an-ip, 203.0.113.2');
+
+          const checks = {
+            x_real_ip_canonical:
+              canonical.ip === '203.0.113.77' && canonical.source === 'x-real-ip',
+            xff_last_hop_only:
+              fallback.ip === '203.0.113.30' && fallback.source === 'x-forwarded-for-last',
+            cf_header_ignored: cfOnly.ip === null && cfOnly.source === 'none',
+            malformed_chain_rejected: malformed === null,
+          };
+          for (const [name, value] of Object.entries(checks)) {
+            console.log(`CLIENT_IP_ASSERT=${name}:${value ? 'ok' : 'failed'}`);
+          }
+          if (Object.values(checks).some(value => !value)) process.exit(1);
+          console.log('CLIENT_IP_POLICY_PRODUCTION_VERIFICATION=success');
+          NODE
+
+      - name: Verify nginx trust baseline remained unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          config="$RUNNER_TEMP/fanmind-nginx-${GITHUB_RUN_ID}.txt"
+          sudo -n nginx -T > "$config" 2>/dev/null
+          NGINX_CONFIG_FILE="$config" node <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+          const source = fs.readFileSync(process.env.NGINX_CONFIG_FILE, 'utf8').replace(/#[^\n]*/g, ' ');
+          const values = name => {
+            const pattern = new RegExp(`(?:^|\\n)\\s*proxy_set_header\\s+${name}\\s+([^;]+);`, 'gi');
+            return [...source.matchAll(pattern)].map(match => match[1].trim());
+          };
+          const checks = {
+            x_real_ip_remote_addr:
+              values('X-Real-IP').length > 0 && values('X-Real-IP').every(value => value === '$remote_addr'),
+            xff_proxy_append:
+              values('X-Forwarded-For').length > 0 && values('X-Forwarded-For').every(value => value === '$proxy_add_x_forwarded_for'),
+            cf_not_established: values('CF-Connecting-IP').length === 0,
+            no_real_ip_header: !/(?:^|\n)\s*real_ip_header\s+/i.test(source),
+            no_proxy_protocol: !/listen\s+[^;]*\bproxy_protocol\b/i.test(source),
+          };
+          for (const [name, value] of Object.entries(checks)) {
+            console.log(`NGINX_TRUST_ASSERT=${name}:${value ? 'ok' : 'failed'}`);
+          }
+          if (Object.values(checks).some(value => !value)) process.exit(1);
+          console.log('NGINX_CLIENT_IP_TRUST_BASELINE=success');
+          NODE
+          rm -f "$config"
+
+      - name: Upload sanitized Production verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-client-ip-csp-production-verification
+          path: fanmind-client-ip-csp-production-verification.txt
+          if-no-files-found: error
+          retention-days: 7
