@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPilotInquiry, isValidInquiryEmail, normalizeInquiryText } from "@/lib/inquiries";
 import { sendPilotInquiryNotification } from "@/lib/inquiryNotifications";
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/rateLimit";
+import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
 
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 5;
@@ -27,7 +28,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, notificationSent: false });
   }
 
-  if (!checkRateLimit(`inquiry:${getClientIp(request)}`, { maxRequests: MAX_REQUESTS_PER_WINDOW, windowMs: WINDOW_MS }).allowed) {
+  let rateLimit;
+  try {
+    rateLimit = await consumeSharedRateLimit({
+      scope: "inquiry_ip",
+      subject: getClientIp(request),
+      maxRequests: MAX_REQUESTS_PER_WINDOW,
+      windowMs: WINDOW_MS,
+    });
+  } catch {
+    console.error("FanMind inquiry rate limit unavailable.");
+    return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
+  }
+
+  if (!rateLimit.allowed) {
     return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
   }
 
@@ -49,7 +63,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "INQUIRY_SAVE_FAILED" }, { status: 500 });
   }
 
-  const notification = await sendPilotInquiryNotification(inquiry).catch(() => ({ sent: false, provider: "resend", error: "NOTIFICATION_FAILED" }));
+  const notification = await sendPilotInquiryNotification(inquiry).catch(() => ({
+    sent: false,
+    provider: "resend",
+    error: "NOTIFICATION_FAILED",
+  }));
   if (notification.error) {
     console.error("FanMind inquiry notification could not be sent.");
   }

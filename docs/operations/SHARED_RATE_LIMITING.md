@@ -2,9 +2,9 @@
 
 ## Zweck
 
-KI-Antwortvorschläge und öffentliche Anfragen dürfen vor einem PM2-Cluster- oder Mehrinstanzbetrieb nicht mehr auf prozesslokale JavaScript-Maps angewiesen sein. Die gemeinsame Rate-Limit-Grundlage verwendet deshalb einen atomaren PostgreSQL-Fixed-Window-Zähler in Supabase.
+KI-Antwortvorschläge und öffentliche Anfragen dürfen nicht auf prozesslokale JavaScript-Maps angewiesen sein. FanMind verwendet deshalb einen atomaren PostgreSQL-Fixed-Window-Zähler in Supabase.
 
-Der öffentliche Demo-Start bleibt unverändert auf seiner bereits vorhandenen, eigenen Supabase-RPC-Policy. Er wird nicht doppelt neu gebaut.
+Der öffentliche Demo-Start bleibt unverändert auf seiner bereits vorhandenen eigenen Supabase-RPC-Policy. Er wird nicht doppelt neu gebaut.
 
 ## Datenschutz- und Sicherheitsmodell
 
@@ -53,43 +53,75 @@ supabase/migrations/20260723102000_shared_rate_limits.sql
 
 RLS ist auf der Tabelle aktiv. `PUBLIC`, `anon` und `authenticated` besitzen weder Tabellenrechte noch Ausführungsrechte auf den beiden Funktionen.
 
-## Zweiphasiger Production-Rollout
+## Phase A — produktiv abgeschlossen
 
-### Phase A: Datenbank-Grundlage
+Foundation-PR: `#667`  
+Foundation-Commit: `cff00dcd80995794fe87895706c9fbec992687ea`  
+Migrations-/Verifikationslauf: `30000453708`
 
-1. Foundation-PR mit Migration, Policy-Helper, Tests und diesem Runbook mergen.
-2. Exakten Production-Release und gesunden App-Status bestätigen.
-3. Ein frisches verschlüsseltes Datenbank-Backup einreihen.
-4. Das neue `.age`-/`.age.sha256`-Paar checksum-only verifizieren.
-5. Migration mit `psql -v ON_ERROR_STOP=1` über die bestehende Backup-DB-Verbindung anwenden.
-6. Rechte redigiert prüfen.
-7. Den RPC mit einem zufälligen synthetischen HMAC-Hash parallel aufrufen:
-   - exakt `max_requests` Aufrufe müssen erlaubt sein;
-   - alle weiteren Aufrufe müssen abgelehnt werden;
-   - der höchste Zähler muss der Anzahl aller Aufrufe entsprechen;
-   - es darf keine verlorenen Inkremente geben.
-8. Den synthetischen Probe-Bucket entfernen.
-9. Einen dedizierten `FANMIND_SHARED_RATE_LIMIT_SECRET` in `.env.production` setzen, ohne ihn auszugeben.
-10. Anwendung noch nicht auf Shared Limiting umstellen.
+Vor der Migration wurde ein neues verschlüsseltes Datenbank-Backup erstellt. Das vollständige `.age`-/`.age.sha256`-Paar wurde checksum-only verifiziert. Anschließend wurden Migration und Rechte geprüft.
 
-### Phase B: Endpunkte aktivieren
+Der reale Production-Paralleltest bestätigte:
 
-1. Separaten kleinen PR für KI- und Inquiry-Endpunkt erstellen.
-2. Bestehende Grenzwerte beibehalten:
-   - KI-Antwortvorschläge: 20 Anfragen je 10 Minuten pro Nutzer-/IP-Identität;
-   - öffentliche Anfrage: 5 Anfragen je 10 Minuten pro IP-Identität.
-3. Bei nicht erreichbarer Shared-Infrastruktur fail-closed reagieren:
-   - KI: keine OpenAI-Anfrage ausführen, generische 503-Antwort;
-   - Inquiry: keine Anfrage speichern oder E-Mail senden, generische 503-Antwort.
-4. 429-Verhalten und verständliche Meldungen beibehalten.
-5. Product Truth, Lint, Operations-Tests und Build vollständig grün ausführen.
-6. Nach Merge Production-Release, Health, RPC und tatsächlichen Inquiry-429-Pfad verifizieren.
+- 25 konkurrierende RPC-Aufrufe;
+- exakt 10 erlaubte Aufrufe bei `max_requests=10`;
+- höchster Zähler 25;
+- 25 unterschiedliche fortlaufende Zählerstände;
+- keine verlorenen Inkremente;
+- anonymer RPC-Zugriff abgelehnt;
+- alle synthetischen Probezeilen anschließend entfernt;
+- dedizierter serverseitiger HMAC-Secret ohne Ausgabe erzeugt;
+- Anwendung nach der Migration weiterhin gesund.
 
-Erst nach Phase B ist #664 abgeschlossen. Vorher darf kein PM2-Cluster- oder Mehrinstanzbetrieb aktiviert werden.
+## Phase B — Endpunktvertrag
+
+### KI-Antwortvorschläge
+
+- Scope: `ai_reply_user_ip`;
+- Identität: serverseitig gebundene Kombination aus autorisierter User-ID und kanonischer Client-IP;
+- Maximum: 20 Anfragen;
+- Fenster: 10 Minuten;
+- bei Überschreitung: HTTP 429 mit verständlicher Meldung;
+- bei fehlender Konfiguration, nicht erreichbarem RPC oder ungültiger Antwort: generische HTTP-503-Antwort;
+- bei Infrastrukturfehler wird keine OpenAI-Anfrage ausgeführt;
+- bestehende Workspace-/Kontakt-Autorisierung und AI-Usage-Messung bleiben erhalten.
+
+### Öffentliche Anfrage
+
+- Scope: `inquiry_ip`;
+- Identität: kanonische Client-IP;
+- Maximum: 5 Anfragen;
+- Fenster: 10 Minuten;
+- Honeypot-Antwort bleibt vor dem Limiter, damit Bots keine Seiteneffekte auslösen;
+- bei Überschreitung: HTTP 429 `RATE_LIMITED`;
+- bei Shared-Limit-Ausfall: HTTP 503 `SERVICE_UNAVAILABLE`;
+- bei Infrastrukturfehler wird weder eine Anfrage gespeichert noch eine E-Mail gesendet.
+
+### Gemeinsame Regeln
+
+- `src/lib/rateLimit.ts` enthält nur noch die kanonische Client-IP-Auflösung und keinerlei Bucket-Map;
+- beide Endpunkte verwenden `await consumeSharedRateLimit(...)`;
+- `shared_rate_limit_config` ist eine blockierende öffentliche Health-Komponente;
+- die Health-Prüfung validiert den serverseitigen Secret mit mindestens 32 Zeichen, gibt ihn aber nie aus;
+- Public-Demo-Limits bleiben getrennt und unverändert;
+- PM2-Cluster-/Mehrinstanzbetrieb darf erst nach erfolgreicher Production-Abnahme dieser Phase aktiviert werden.
+
+## Production-Abnahme für Phase B
+
+Die Abnahme muss mindestens nachweisen:
+
+1. `/api/version`, Server-HEAD und `origin/main` entsprechen exakt dem Merge-Commit.
+2. `/api/health` enthält `shared_rate_limit_config=healthy`; alle Pflichtkomponenten sind gesund.
+3. Deployed Source enthält keine Nutzung des alten `checkRateLimit` und keine prozesslokale Bucket-Map.
+4. Ein synthetischer direkter Shared-Limit-Aufruf funktioniert und hinterlässt keine Probezeile.
+5. Der echte Inquiry-Endpunkt liefert innerhalb eines frischen Testfensters fünfmal den erwarteten Validierungsstatus und beim sechsten Aufruf HTTP 429.
+6. Die verwendeten ungültigen synthetischen Daten erzeugen keinen Inquiry-Datensatz und keine Benachrichtigungs-E-Mail.
+7. Landingpage, Login, Registrierung, Version und Health bleiben erreichbar.
+8. Es werden keine rohe IP-Adresse, keine HMAC-Werte, keine User-ID und keine Secrets in Artefakten oder Issues ausgegeben.
 
 ## Migration anwenden
 
-Auf Production nur nach einem frischen, verifizierten Datenbank-Backup und ohne Ausgabe der DB-Konfiguration:
+Die Migration ist bereits angewendet. Der folgende Ablauf bleibt als Wiederholungs- und Recovery-Referenz dokumentiert. Er darf nur nach einem frischen verifizierten Datenbank-Backup und ohne Ausgabe der DB-Konfiguration verwendet werden:
 
 ```bash
 set -a
@@ -108,46 +140,22 @@ psql \
 
 Kein `set -x`. Keine ENV-Werte oder Verbindungsparameter in CI-/Issue-Ausgaben übernehmen.
 
-## Verifikation
-
-Die Production-Abnahme muss mindestens nachweisen:
-
-- Tabelle vorhanden und RLS aktiv;
-- Primärschlüssel über Scope, Hash, Fensterbeginn und Fensterlänge;
-- `service_role` darf beide Funktionen ausführen;
-- `PUBLIC`, `anon` und `authenticated` dürfen sie nicht ausführen;
-- Paralleltest verliert keine Inkremente;
-- Hash-Spalte enthält ausschließlich 64-stellige Kleinbuchstaben-Hexwerte;
-- keine rohe Identität wird gespeichert oder ausgegeben;
-- Probezeilen werden danach entfernt;
-- Anwendung bleibt vor und nach der Migration gesund.
-
 ## Rollback
 
-### Vor Aktivierung der Endpunkte
-
-Die neue Tabelle und Funktionen sind additiv und werden von der laufenden Anwendung nicht verwendet. Bei einem Befund:
-
-1. Endpunkt-Aktivierung nicht mergen.
-2. Migration nicht erneut ausführen.
-3. Ursache in einem kleinen Folge-PR korrigieren.
-4. Tabelle nicht vorschnell löschen; zuerst prüfen, ob Probe-Buckets entfernt und keine Anwendungspfade aktiv sind.
-
-### Nach Aktivierung der Endpunkte
-
-Bei einem Anwendungsausfall:
+Bei einem Anwendungsausfall nach Endpunkt-Aktivierung:
 
 1. Route-PR auf den vorherigen Release zurückrollen.
 2. Health und Kernrouten prüfen.
 3. Datenbank-Grundlage bestehen lassen; sie ist additiv und enthält nur pseudonymisierte kurzlebige Buckets.
-4. Erst nach Ursachenanalyse erneut aktivieren.
+4. Die neue Tabelle nicht während aktiver Shared-Limit-Nutzung entfernen.
+5. Erst nach Ursachenanalyse erneut aktivieren.
 
-Ein vollständiges Datenbank-Rollback wäre nur nach gesonderter Prüfung zulässig. Die Tabelle darf nicht während aktiver Shared-Limit-Nutzung entfernt werden.
+Ein vollständiges Datenbank-Rollback wäre nur nach gesonderter Prüfung zulässig. Die additive Migration wird nicht allein wegen eines Route-Rollbacks rückgängig gemacht.
 
 ## Bewusste Grenzen
 
 - kein Redis-Zwang für den aktuellen Stand;
-- kein PM2-Cluster vor abgeschlossener Phase B;
 - keine Änderung an Preisen, KI-Modellen, Kontingenten oder Workspace-Autorisierung;
 - kein Umbau des Public-Demo-RPC;
-- keine automatische Production-Migration allein durch Merge oder Deployment.
+- keine Rohidentitäten in Tabellen oder Logs;
+- keine automatische Datenbankmigration allein durch Merge oder Deployment.
