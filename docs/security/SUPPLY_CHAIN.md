@@ -13,7 +13,7 @@ Aktuell geprüfte Pins:
 | Action | Commit-SHA | lesbarer Versionshinweis |
 | --- | --- | --- |
 | `actions/checkout` | `11d5960a326750d5838078e36cf38b85af677262` | `v4` |
-| `actions/setup-node` | `49933ea5288caeca8642d1e84afbd3f7d6820020` | `v4` |
+| `actions/setup-node` | `48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e` | `v6.4.0` |
 | `actions/upload-artifact` | `ea165f8d65b6e75b540449e92b4886f43607fa02` | `v4` |
 | `github/codeql-action` | `0daab03d71ff584ef619d027a3fd9146679c5d84` | `v3.35.3` |
 
@@ -41,18 +41,35 @@ Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:
 
 ### Aktueller geprüfter Zustand vom 23. Juli 2026
 
-Nach dem Update auf Next.js `16.2.11` und `eslint-config-next` `16.2.11` verbleiben im Root-Production-Baum:
+Nach dem Update auf Next.js `16.2.11` und `eslint-config-next` `16.2.11` wurde der Registry-Stand in Run `30025574639` erneut read-only geprüft. npm meldet jetzt im Root-Production-Baum:
 
 - `0` kritische Befunde;
-- `2` hohe Befunde;
-- `1` moderater Befund;
+- `3` hohe Befunde;
+- `0` moderate Befunde;
 - ausschließlich die geprüften Pakete `next`, `postcss` und `sharp`.
 
-Der aktuelle Registry-Stand bietet dafür noch keinen vollständig kompatiblen automatischen Fix. Die Ausnahme läuft spätestens am **7. August 2026, 00:00 UTC** ab. Danach schlägt das Gate automatisch fehl, sofern die Befunde nicht verschwunden sind. Neue Paketnamen, zusätzliche hohe/moderate Befunde oder jeder kritische Befund schlagen sofort fehl.
+Die Änderung gegenüber dem ersten Review ist keine neue Paketgruppe: Der zuvor moderate PostCSS-Reststand wird inzwischen als hoch bewertet und der aktuelle sharp/libvips-Befund ist ebenfalls hoch. `next` fasst die beiden transitiven Pakete als direkten Framework-Befund zusammen.
+
+Der Audit hat außerdem bestätigt:
+
+- npm-`latest` für `next` ist weiterhin `16.2.11`;
+- es existiert keine neuere gemeinsam verfügbare stabile `16.2.x`-Version von `next` und `eslint-config-next`;
+- npm bietet keinen kompatiblen Patch-Kandidaten ohne Major-/Downgrade-Eingriff;
+- die von npm ausgewiesene automatische Alternative würde auf einen ungeeigneten alten Next.js-Majorstand zurückgehen und wird nicht verwendet.
+
+Der Reviewvertrag wurde deshalb nicht zeitlich verlängert und nicht auf weitere Pakete ausgedehnt. Er akzeptiert bis **7. August 2026, 00:00 UTC** ausschließlich:
+
+- exakt `next`, `postcss` und `sharp`;
+- höchstens drei hohe Befunde;
+- keinen moderaten Befund;
+- keinen kritischen Befund;
+- exakt Next.js und `eslint-config-next` `16.2.11`.
+
+Ein vierter hoher Befund, jeder moderate oder kritische Befund, ein neuer Paketname, ein anderer Frameworkstand oder das Ablaufdatum lässt das Gate fail-closed fehlschlagen. Issue `#676` verfolgt weiterhin den ersten kompatiblen vollständigen Fix; die Ausnahme wird danach entfernt.
 
 Der Mobile-Baum darf moderate oder niedrige transitive Befunde enthalten, aber weder hohe noch kritische Befunde. Der aktuelle Audit-Nachweis meldete keine hohen oder kritischen Mobile-Befunde.
 
-Diese Ausnahme ist keine pauschale Akzeptanz zukünftiger Advisories. Sie ist auf Paketnamen, Schweregrad-Budget, exakte Framework-Version und Ablaufdatum gebunden.
+Diese Ausnahme ist keine pauschale Akzeptanz zukünftiger Advisories. Sie ist auf Paketnamen, Schweregrad-Budget, exakte Framework-Version, einen konkreten Reviewlauf und ein unverändertes Ablaufdatum gebunden.
 
 ## CodeQL / SAST
 
