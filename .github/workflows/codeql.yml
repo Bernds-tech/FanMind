@@ -31,13 +31,13 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@418723a8019a2579741295f1309b4ce2bd0e4418 # v3
+        uses: github/codeql-action/init@0daab03d71ff584ef619d027a3fd9146679c5d84 # v3.35.3
         with:
           languages: javascript-typescript
           queries: security-extended
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@49933ea5288ca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
           cache: npm
@@ -52,6 +52,6 @@ jobs:
         run: npm ci --prefix apps/mobile --no-audit --no-fund
 
       - name: Analyze JavaScript and TypeScript
-        uses: github/codeql-action/analyze@418723a8019a2579741295f1309b4ce2bd0e4418 # v3
+        uses: github/codeql-action/analyze@0daab03d71ff584ef619d027a3fd9146679c5d84 # v3.35.3
         with:
           category: "/language:javascript-typescript"
