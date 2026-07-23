@@ -8,6 +8,7 @@ import {
 } from "@/lib/secureStorageRegistry.mjs";
 
 const CHUNK_SIZE = 1800;
+const MAX_SESSION_CHUNKS = 64;
 const COUNT_SUFFIX = ":count";
 const REGISTRY_KEY = "fanmind:secure-storage-registry:v1";
 const SECURE_OPTIONS = {
@@ -21,7 +22,9 @@ function chunkKey(key: string, index: number): string {
 async function readChunkCount(key: string): Promise<number> {
   const value = await SecureStore.getItemAsync(`${key}${COUNT_SUFFIX}`);
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= MAX_SESSION_CHUNKS
+    ? parsed
+    : 0;
 }
 
 async function readRegistry(): Promise<string[]> {
@@ -104,19 +107,44 @@ export const secureSessionStorage: SupportedStorage = {
   async setItem(key: string, value: string): Promise<void> {
     await removeChunks(key);
     const chunkCount = Math.max(1, Math.ceil(value.length / CHUNK_SIZE));
+    if (chunkCount > MAX_SESSION_CHUNKS) {
+      throw new Error("Sichere FanMind-Sitzung überschreitet die lokale Speichergrenze.");
+    }
     const chunks = Array.from(
       { length: chunkCount },
       (_, index) => value.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE),
     );
-    for (const [index, chunk] of chunks.entries()) {
-      await SecureStore.setItemAsync(chunkKey(key, index), chunk, SECURE_OPTIONS);
-    }
-    await SecureStore.setItemAsync(
-      `${key}${COUNT_SUFFIX}`,
-      String(chunks.length),
-      SECURE_OPTIONS,
-    );
+
+    // Register first and persist the expected count before the chunks. If any
+    // subsequent write fails, the cleanup path can still find every expected
+    // chunk and the registry keeps failed cleanup work retryable.
     await registerKey(key);
+    try {
+      await SecureStore.setItemAsync(
+        `${key}${COUNT_SUFFIX}`,
+        String(chunks.length),
+        SECURE_OPTIONS,
+      );
+      for (const [index, chunk] of chunks.entries()) {
+        await SecureStore.setItemAsync(chunkKey(key, index), chunk, SECURE_OPTIONS);
+      }
+    } catch (error) {
+      let chunksRemoved = false;
+      try {
+        await removeChunks(key);
+        chunksRemoved = true;
+      } catch {
+        // Keep the key registered so a later logout can retry the purge.
+      }
+      if (chunksRemoved) {
+        try {
+          await unregisterKey(key);
+        } catch {
+          // A stale registry entry is safer than unregistered session data.
+        }
+      }
+      throw error;
+    }
   },
 
   async removeItem(key: string): Promise<void> {
