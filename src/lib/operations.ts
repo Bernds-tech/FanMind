@@ -36,6 +36,14 @@ export async function runOperationsHealthChecks(admin = false) {
 
   checks.push(publicCheck("stripe_config", envFlag("STRIPE_SECRET_KEY"), process.env.STRIPE_SECRET_KEY ? "Stripe server configuration present" : "Stripe server configuration missing"));
   checks.push(publicCheck("openai_config", envFlag("OPENAI_API_KEY"), process.env.OPENAI_API_KEY ? "OpenAI server configuration present" : "OpenAI server configuration missing"));
+  const sharedRateLimitConfigured = (process.env.FANMIND_SHARED_RATE_LIMIT_SECRET?.trim().length ?? 0) >= 32;
+  checks.push(publicCheck(
+    "shared_rate_limit_config",
+    sharedRateLimitConfigured ? "healthy" : "unavailable",
+    sharedRateLimitConfigured
+      ? "Shared rate-limit server configuration present"
+      : "Shared rate-limit server configuration missing",
+  ));
   checks.push(publicCheck("email_config", process.env.RESEND_API_KEY || process.env.SMTP_HOST ? "healthy" : "unknown", process.env.RESEND_API_KEY || process.env.SMTP_HOST ? "Email server configuration present" : "Email server configuration missing"));
 
   const worst = checks.some((c) => c.status === "unavailable") ? "unavailable" : checks.some((c) => c.status === "degraded") ? "degraded" : checks.some((c) => c.status === "unknown") ? "degraded" : "healthy";
