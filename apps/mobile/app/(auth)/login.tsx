@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -13,6 +14,7 @@ import {
   Card,
   PrimaryButton,
   Screen,
+  SecondaryButton,
   mobileStyles,
 } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
@@ -79,6 +81,9 @@ export default function LoginScreen() {
           <PrimaryButton busy={busy} onPress={() => void submit()}>
             Anmelden
           </PrimaryButton>
+          <SecondaryButton onPress={() => router.push("/(auth)/forgot-password")}>
+            Passwort vergessen?
+          </SecondaryButton>
           <Text style={styles.securityText}>
             Die Sitzung wird verschlüsselt im sicheren Gerätespeicher gehalten. Service-Role-
             und KI-Schlüssel befinden sich nicht in der App.
