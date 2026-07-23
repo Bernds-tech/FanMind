@@ -1,55 +1,110 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { processMetaWebhookPayload } from "@/lib/metaWebhook";
+import {
+  normalizeWebhookErrorCode,
+  validateMetaHmacSignature,
+  validateMetaVerifyToken,
+} from "@/lib/webhookSecurityPolicy.mjs";
 
 export const dynamic = "force-dynamic";
+
+const MAX_WEBHOOK_BODY_BYTES = 1_000_000;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
   const verifyToken = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
+  const validation = validateMetaVerifyToken({
+    configuredToken: getWebhookVerifyToken(),
+    receivedToken: verifyToken,
+  });
 
-  if (
-    mode === "subscribe" &&
-    verifyToken &&
-    verifyToken === getWebhookVerifyToken() &&
-    challenge
-  ) {
+  if (validation.errorCode === "verify_token_not_configured") {
+    console.error("Meta webhook verification unavailable", {
+      errorCode: validation.errorCode,
+    });
+    return Response.json(
+      { received: false, error: "webhook_unavailable" },
+      { status: 503 },
+    );
+  }
+
+  if (mode === "subscribe" && validation.ok && challenge) {
     return new Response(challenge, {
       status: 200,
-      headers: { "Content-Type": "text/plain" },
+      headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
     });
   }
 
-  return new Response("Forbidden", { status: 403 });
+  return Response.json(
+    { received: false, error: "verification_failed" },
+    { status: 403 },
+  );
 }
 
 export async function POST(request: Request) {
-  const rawBody = await request.text();
-
-  if (
-    !isValidMetaSignature(rawBody, request.headers.get("x-hub-signature-256"))
-  ) {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_WEBHOOK_BODY_BYTES) {
     return Response.json(
-      { received: false, error: "Invalid signature" },
-      { status: 403 },
+      { received: false, error: "invalid_payload" },
+      { status: 413 },
+    );
+  }
+
+  const rawBody = await request.text();
+  if (Buffer.byteLength(rawBody, "utf8") > MAX_WEBHOOK_BODY_BYTES) {
+    return Response.json(
+      { received: false, error: "invalid_payload" },
+      { status: 413 },
+    );
+  }
+
+  const signature = validateMetaHmacSignature({
+    rawBody,
+    signatureHeader: request.headers.get("x-hub-signature-256"),
+    configuredSecret: getWebhookAppSecret(),
+  });
+
+  if (!signature.ok) {
+    const errorCode = normalizeWebhookErrorCode(signature.errorCode);
+    if (errorCode === "secret_not_configured") {
+      console.error("Meta webhook signature validation unavailable", {
+        errorCode,
+      });
+    }
+    return Response.json(
+      {
+        received: false,
+        error:
+          errorCode === "secret_not_configured"
+            ? "webhook_unavailable"
+            : "invalid_signature",
+      },
+      { status: errorCode === "secret_not_configured" ? 503 : 403 },
     );
   }
 
   let payload: unknown;
-
   try {
     payload = rawBody ? JSON.parse(rawBody) : null;
   } catch {
-    return Response.json({ received: false, error: "Invalid JSON" }, { status: 400 });
+    return Response.json(
+      { received: false, error: "invalid_json" },
+      { status: 400 },
+    );
   }
 
   const result = await processMetaWebhookPayload(payload);
+  const errorCode = result.errorCode
+    ? normalizeWebhookErrorCode(result.errorCode)
+    : null;
 
-  if (result.error) {
-    console.error("Meta webhook could not save minimized event", {
+  if (errorCode) {
+    console.error("Meta webhook processing failed", {
       eventCount: result.eventCount,
-      error: result.error,
+      saved: result.saved,
+      skipped: result.skipped,
+      errorCode,
     });
   } else {
     console.info("Meta webhook processed", {
@@ -61,41 +116,26 @@ export async function POST(request: Request) {
 
   return Response.json(
     {
-      received: !result.error,
+      received: !errorCode,
       saved: result.saved,
       skipped: result.skipped,
-      error: result.error ?? null,
+      error: errorCode ? "processing_failed" : null,
     },
-    { status: result.error ? 500 : 200 },
-  );
-}
-
-function isValidMetaSignature(
-  rawBody: string,
-  signatureHeader: string | null,
-): boolean {
-  const appSecret = getWebhookAppSecret();
-
-  if (!appSecret) return true;
-  if (!signatureHeader?.startsWith("sha256=")) return false;
-
-  const expected = createHmac("sha256", appSecret)
-    .update(rawBody)
-    .digest("hex");
-  const received = signatureHeader.slice("sha256=".length);
-  const expectedBuffer = Buffer.from(expected, "hex");
-  const receivedBuffer = Buffer.from(received, "hex");
-
-  return (
-    expectedBuffer.length === receivedBuffer.length &&
-    timingSafeEqual(expectedBuffer, receivedBuffer)
+    { status: errorCode ? 500 : 200 },
   );
 }
 
 function getWebhookVerifyToken(): string | undefined {
-  return process.env.FACEBOOK_WEBHOOK_VERIFY_TOKEN ?? process.env.META_WEBHOOK_VERIFY_TOKEN;
+  return (
+    process.env.FACEBOOK_WEBHOOK_VERIFY_TOKEN ??
+    process.env.META_WEBHOOK_VERIFY_TOKEN
+  );
 }
 
 function getWebhookAppSecret(): string | undefined {
-  return process.env.FACEBOOK_APP_SECRET ?? process.env.META_WEBHOOK_APP_SECRET ?? process.env.META_APP_SECRET;
+  return (
+    process.env.FACEBOOK_APP_SECRET ??
+    process.env.META_WEBHOOK_APP_SECRET ??
+    process.env.META_APP_SECRET
+  );
 }

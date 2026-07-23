@@ -14,6 +14,7 @@ import {
 } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/facebookIntegration";
 import { syncFacebookMessengerConversationForContact } from "@/app/channels/facebookWebhookActions";
+import { buildMetaWebhookDiagnosticPayload } from "@/lib/webhookSecurityPolicy.mjs";
 
 export type MetaWebhookEvent = {
   eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
@@ -53,7 +54,7 @@ export type MetaWebhookProcessResult = {
   saved: boolean;
   skipped: boolean;
   eventCount: number;
-  error?: string;
+  errorCode?: string;
 };
 
 export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
@@ -206,7 +207,7 @@ export async function processMetaWebhookPayload(
   const events = extractMetaWebhookEvents(payload);
   let saved = 0;
   let skipped = 0;
-  let firstError: string | undefined;
+  let firstErrorCode: string | undefined;
 
   for (const event of events) {
     const receivedAt = new Date().toISOString();
@@ -217,29 +218,28 @@ export async function processMetaWebhookPayload(
         )
       : { connection: null, error: null };
 
-    if (connection.error) firstError ??= connection.error.message;
+    if (connection.error) firstErrorCode ??= "connection_lookup_failed";
 
     if (!connection.connection) {
       const fallbackWorkspace = await findMetaWebhookFallbackWorkspaceId();
       if (fallbackWorkspace.error)
-        firstError ??= fallbackWorkspace.error.message;
+        firstErrorCode ??= "fallback_workspace_failed";
 
       const debugResult = await createMetaWebhookDebugEvent({
         workspaceId: fallbackWorkspace.workspaceId,
         platform: event.sourcePlatform,
         eventType: event.eventType,
-        pageId: event.pageId,
-        senderId: event.senderId,
-        recipientId: event.recipientId,
-        messageText: formatDebugMessageText(event),
-        rawPayload: event.rawEvent,
-        status: event.pageId ? "ignored_unmapped_page" : "ignored",
-        errorReason: event.pageId
-          ? "Page-ID konnte keiner Meta-Verbindung zugeordnet werden."
-          : "Keine Page-ID im Meta-Event erkannt.",
+        pageId: null,
+        senderId: null,
+        recipientId: null,
+        messageText: null,
+        rawPayload: buildMetaWebhookDiagnosticPayload(event),
+        status: event.pageId ? "ignored_unmapped_page" : "ignored_missing_page",
+        errorReason: event.pageId ? "unmapped_page" : "page_identifier_missing",
+        messageId: null,
         receivedAt,
       });
-      if (debugResult.error) firstError ??= debugResult.error.message;
+      if (debugResult.error) firstErrorCode ??= "diagnostic_persist_failed";
       skipped += 1;
       continue;
     }
@@ -304,8 +304,8 @@ export async function processMetaWebhookPayload(
         });
         if (result.error) {
           status = "error";
-          errorReason = result.error.message;
-          firstError ??= result.error.message;
+          errorReason = "message_persist_failed";
+          firstErrorCode ??= "message_persist_failed";
         } else {
           status =
             event.eventType === "feed" || event.eventType === "feed_comment"
@@ -327,20 +327,17 @@ export async function processMetaWebhookPayload(
                 fanSenderId: event.senderId,
               });
             if (!syncResult.ok && syncResult.error)
-              firstError ??= syncResult.error;
+              firstErrorCode ??= "conversation_sync_failed";
           }
         }
       } else {
         status = "ignored";
-        errorReason =
-          event.eventType === "feed" || event.eventType === "feed_comment"
-            ? "Feed/comment-Event ohne Kommentartext."
-            : "Message-Event ohne Nachrichtentext.";
+        errorReason = "content_missing";
         skipped += 1;
       }
     } else {
       status = "ignored";
-      errorReason = "Unbekannter Meta-Event-Typ.";
+      errorReason = "unsupported_event";
       skipped += 1;
     }
 
@@ -349,17 +346,17 @@ export async function processMetaWebhookPayload(
       platform: event.sourcePlatform,
       socialConnectionId: connection.connection.id,
       eventType: event.eventType,
-      pageId: event.pageId,
-      senderId: event.senderId,
-      recipientId: event.recipientId,
-      messageText: formatDebugMessageText(event),
-      rawPayload: event.rawEvent,
+      pageId: null,
+      senderId: null,
+      recipientId: null,
+      messageText: null,
+      rawPayload: buildMetaWebhookDiagnosticPayload(event),
       status: formatDebugStatus(status, event),
       errorReason,
-      messageId,
+      messageId: null,
       receivedAt,
     });
-    if (debugResult.error) firstError ??= debugResult.error.message;
+    if (debugResult.error) firstErrorCode ??= "diagnostic_persist_failed";
   }
 
   return {
@@ -367,7 +364,7 @@ export async function processMetaWebhookPayload(
     saved: saved > 0,
     skipped: skipped > 0,
     eventCount: events.length,
-    error: firstError,
+    errorCode: firstErrorCode,
   };
 }
 
@@ -509,25 +506,14 @@ function extractMessengerAttachments(
   return normalizeMessageAttachments(attachments);
 }
 
-function normalizeMesessageText(event: MetaWebhookEvent): string | null {
-  const directionLabel =
-    event.eventType === "messages"
-      ? `${event.direction === "outbound" ? "message_echoes / outbound" : "messages / inbound"}: `
-      : "";
-  if (!event.attachments?.length)
-    return event.content ? `${directionLabel}${event.content}` : null;
-  return `${directionLabel}Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
-}
-
 function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function formatDebugStatus(baseStatus: string, event: MetaWebhookEvent): string {
-  if (!event.attachments?.length) return baseStatus;
-  return `${baseStatus} · Attachment: ${event.attachments.map((attachment) => attachment.type).join(", ")} · Text: ${event.content ?? "Anhang empfangen"}`;
-}
-
-function formatDebugMessageText(event: MetaWebhookEvent): string | null {
-  return normalizeMesessageText(event);
+  const normalized = baseStatus.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+  const safeBase = /^[a-z][a-z0-9_]{0,47}$/.test(normalized)
+    ? normalized
+    : "processing_failed";
+  return event.attachments?.length ? `${safeBase}_with_attachments` : safeBase;
 }

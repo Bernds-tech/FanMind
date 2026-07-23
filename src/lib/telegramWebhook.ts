@@ -12,7 +12,6 @@ export type TelegramIncomingMessage = {
   messageText: string;
   receivedAt: string;
   messageId: string | null;
-  rawUpdate?: unknown;
 };
 
 export type TelegramWebhookProcessResult = {
@@ -20,7 +19,7 @@ export type TelegramWebhookProcessResult = {
   saved: boolean;
   skipped: boolean;
   reason?: "unsupported" | "empty_text" | "no_workspace";
-  error?: string;
+  errorCode?: "workspace_not_configured" | "message_persist_failed";
 };
 
 export async function processTelegramWebhookUpdate(
@@ -29,11 +28,21 @@ export async function processTelegramWebhookUpdate(
   const mapped = mapTelegramTextMessage(update);
 
   if (!mapped) {
-    return { received: true, saved: false, skipped: true, reason: "unsupported" };
+    return {
+      received: true,
+      saved: false,
+      skipped: true,
+      reason: "unsupported",
+    };
   }
 
   if (!mapped.messageText.trim()) {
-    return { received: true, saved: false, skipped: true, reason: "empty_text" };
+    return {
+      received: true,
+      saved: false,
+      skipped: true,
+      reason: "empty_text",
+    };
   }
 
   const workspace = await findTelegramWebhookWorkspaceId();
@@ -43,7 +52,7 @@ export async function processTelegramWebhookUpdate(
       saved: false,
       skipped: true,
       reason: "no_workspace",
-      error: workspace.error?.message ?? "Kein Workspace für Telegram-Webhooks gefunden.",
+      errorCode: "workspace_not_configured",
     };
   }
 
@@ -67,7 +76,12 @@ export async function processTelegramWebhookUpdate(
   });
 
   if (saved.error) {
-    return { received: true, saved: false, skipped: false, error: saved.error.message };
+    return {
+      received: true,
+      saved: false,
+      skipped: false,
+      errorCode: "message_persist_failed",
+    };
   }
 
   return { received: true, saved: true, skipped: false };
@@ -87,9 +101,17 @@ export function mapTelegramTextMessage(
   const externalUserId = numberOrString(from?.id);
   const chatId = numberOrString(chat?.id);
   const username = stringValue(from?.username) ?? stringValue(chat?.username);
-  const displayName = buildDisplayName(from, chat, username, externalUserId, chatId);
+  const displayName = buildDisplayName(
+    from,
+    chat,
+    username,
+    externalUserId,
+    chatId,
+  );
   const date = numberOrString(message.date);
-  const receivedAt = date ? new Date(Number(date) * 1000).toISOString() : new Date().toISOString();
+  const receivedAt = date
+    ? new Date(Number(date) * 1000).toISOString()
+    : new Date().toISOString();
 
   return {
     platform: "telegram",
@@ -100,7 +122,6 @@ export function mapTelegramTextMessage(
     messageText: text,
     receivedAt,
     messageId: numberOrString(message.message_id),
-    rawUpdate: update,
   };
 }
 
@@ -115,7 +136,12 @@ function buildDisplayName(
   const lastName = stringValue(from?.last_name);
   const title = stringValue(chat?.title);
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
-  return fullName || title || (username ? `@${username}` : null) || `Telegram Nutzer ${externalUserId ?? chatId ?? "unbekannt"}`;
+  return (
+    fullName ||
+    title ||
+    (username ? `@${username}` : null) ||
+    `Telegram Nutzer ${externalUserId ?? chatId ?? "unbekannt"}`
+  );
 }
 
 function firstRecord(...values: unknown[]): Record<string, unknown> | null {
