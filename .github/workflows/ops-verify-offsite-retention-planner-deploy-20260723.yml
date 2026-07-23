@@ -1,13 +1,9 @@
 name: FanMind P1 Verify Deployed Offsite Retention Planner
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
+      - ops/verify-offsite-retention-planner-deploy-20260723
     paths:
       - ".github/workflows/ops-verify-offsite-retention-planner-deploy-20260723.yml"
 
@@ -20,9 +16,6 @@ permissions:
 
 jobs:
   verify:
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.head_ref == 'ops/verify-offsite-retention-planner-deploy-20260723'
     runs-on:
       - self-hosted
       - fanmind-prod
