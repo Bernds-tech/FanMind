@@ -1,0 +1,123 @@
+name: FanMind P1 Audit Output Hardening Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-audit-output-hardening-verify.yml"
+
+concurrency:
+  group: fanmind-p1-audit-output-hardening-verify
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/audit-output-hardening-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 15
+    env:
+      AUDIT_REPORT_PATH: fanmind-audit-output-hardening-verification.txt
+    steps:
+      - name: Checkout trusted audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: p1/audit-output-hardening-20260723
+
+      - name: Run hardened read-only audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          bash scripts/operations/read-only-production-audit.sh 2>&1 | tee "$AUDIT_REPORT_PATH"
+
+      - name: Enforce hardened output contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT="$AUDIT_REPORT_PATH" node <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync(process.env.REPORT, 'utf8');
+          const lines = source.split(/\r?\n/).filter(Boolean);
+
+          const single = key => {
+            const prefix = `${key}=`;
+            const matches = lines.filter(line => line.startsWith(prefix));
+            return matches.length ? matches.at(-1).slice(prefix.length) : null;
+          };
+          const all = key => {
+            const prefix = `${key}=`;
+            return lines.filter(line => line.startsWith(prefix)).map(line => line.slice(prefix.length));
+          };
+          const requireEqual = (key, expected) => {
+            const actual = single(key);
+            console.log(`ASSERT_${key}=${actual === expected ? 'ok' : 'failed'}|actual:${actual ?? 'missing'}`);
+            if (actual !== expected) throw new Error(`${key}_mismatch`);
+          };
+
+          requireEqual('AUDIT_RESULT', 'success');
+          requireEqual('LIVE_ENVIRONMENT', 'production');
+          requireEqual('LIVE_HEALTH', 'healthy');
+          requireEqual('PM2_STATUS', 'online');
+          requireEqual('PM2_UNSTABLE_RESTARTS', '0');
+          requireEqual('NGINX_CONFIG', 'ok');
+          requireEqual('BACKUP_ORPHAN_PAIR_COUNT', '0');
+          requireEqual('BACKUP_VERIFY_OK', 'true');
+          requireEqual('BACKUP_VERIFY_MODE', 'checksum_only');
+          requireEqual('BACKUP_VERIFY_TYPE', 'full');
+          requireEqual('BACKUP_WORKER_24H_FAILURE_EVENT_COUNT', '0');
+          requireEqual('BACKUP_WORKER_24H_FAILURE_FREE', 'true');
+
+          const timers = all('SYSTEMD_TIMER');
+          const timersStable =
+            timers.length > 0 &&
+            timers.every(value => /^fanmind-[a-z0-9_@.-]+\.timer\|next=[^|]+\|last=.+$/i.test(value));
+          console.log(`ASSERT_SYSTEMD_TIMERS=${timersStable ? 'ok' : 'failed'}|count:${timers.length}`);
+          if (!timersStable) throw new Error('systemd_timer_output_invalid');
+
+          const windows = all('BACKUP_WORKER_WINDOW');
+          const windowSet = new Set(windows);
+          const windowsOk = windowSet.has('24h') && windowSet.has('14d') && windowSet.size === 2;
+          console.log(`ASSERT_BACKUP_WORKER_WINDOWS=${windowsOk ? 'ok' : 'failed'}|values:${[...windowSet].join(',')}`);
+          if (!windowsOk) throw new Error('backup_worker_windows_invalid');
+
+          const workerEvents = all('BACKUP_WORKER_EVENT');
+          const requiredEvents = [
+            '24h|claim_failed:0',
+            '24h|job_failed:0',
+            '24h|job_rejected:0',
+            '24h|fatal:0',
+          ];
+          const recentEventsOk = requiredEvents.every(value => workerEvents.includes(value));
+          console.log(`ASSERT_BACKUP_WORKER_RECENT_EVENTS=${recentEventsOk ? 'ok' : 'failed'}`);
+          if (!recentEventsOk) throw new Error('backup_worker_recent_events_unhealthy');
+
+          if (/SYSTEMD_TIMER=(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/.test(source)) {
+            throw new Error('localized_timer_column_detected');
+          }
+
+          console.log('AUDIT_OUTPUT_HARDENING_RESULT=success');
+          NODE
+
+      - name: Upload sanitized hardened audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-audit-output-hardening-verification
+          path: fanmind-audit-output-hardening-verification.txt
+          if-no-files-found: error
+          retention-days: 7
