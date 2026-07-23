@@ -51,10 +51,24 @@ if (!boundary.supabaseProjectIdentified || !boundary.productionProjectIdentified
   errors.push("Staging- und Production-Supabase-Projektreferenz müssen identifiziert sein.");
 }
 
+if (!boundary.supabaseUrlProjectIdentified) {
+  errors.push("Staging benötigt eine standardisierte Supabase-Projekt-URL mit erkennbarer Projektreferenz.");
+}
+
+if (!boundary.supabaseExplicitProjectIdentified) {
+  errors.push("FANMIND_TARGET_SUPABASE_PROJECT_REF muss als explizite Staging-Zielbestätigung gesetzt sein.");
+}
+
+if (boundary.supabaseTargetRefMismatch || !boundary.supabaseTargetRefMatchesUrl) {
+  errors.push("Supabase-URL und explizite Staging-Zielreferenz müssen exakt übereinstimmen.");
+}
+
 if (boundary.supabaseProductionMatch) {
   errors.push("Staging darf nicht das Production-Supabase-Projekt verwenden.");
 }
 
+configured("FANMIND_TARGET_SUPABASE_PROJECT_REF");
+configured("FANMIND_PRODUCTION_SUPABASE_PROJECT_REF");
 configured("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 configured("SUPABASE_SERVICE_ROLE_KEY");
 configured("STRIPE_SECRET_KEY", { prefix: "sk_test_" });
@@ -75,6 +89,13 @@ if (value("FANMIND_NON_PRODUCTION_WRITE_ACK")) {
 console.log("STAGING_RUNTIME=staging");
 console.log(`STAGING_APP_TARGET=${boundary.appConfigured && !boundary.appProduction ? "separate" : "invalid"}`);
 console.log(`STAGING_SUPABASE_TARGET=${boundary.supabaseProjectIdentified && !boundary.supabaseProductionMatch ? "separate" : "invalid"}`);
+console.log(
+  `STAGING_SUPABASE_REF_BINDING=${
+    boundary.supabaseTargetRefMatchesUrl && !boundary.supabaseTargetRefMismatch
+      ? "matching"
+      : "invalid"
+  }`,
+);
 console.log(`STAGING_STRIPE_MODE=${value("STRIPE_SECRET_KEY").startsWith("sk_test_") ? "test" : "invalid"}`);
 console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");
 
