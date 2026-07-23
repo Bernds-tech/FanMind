@@ -1,0 +1,168 @@
+name: FanMind P1 Verify Supply Chain Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-verify-supply-chain-deploy-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-verify-supply-chain-deploy-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/verify-supply-chain-deploy-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 25
+    env:
+      EXPECTED_RELEASE: 231a438fe13710967c387a052a845fca4a780e29
+      REPORT_PATH: fanmind-supply-chain-production-verification.txt
+      DEPLOY_ROOT: /var/www/fanmind
+
+    steps:
+      - name: Wait for exact release and validate public health
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'VERIFICATION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          for attempt in $(seq 1 90); do
+            live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    try {
+                      const payload = JSON.parse(input);
+                      const release = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                      process.stdout.write(/^[0-9a-f]{40}$/.test(release) ? release : "missing");
+                    } catch {
+                      process.stdout.write("missing");
+                    }
+                  });
+                ' || true)"
+            server_head="$(git -C "$DEPLOY_ROOT" rev-parse HEAD 2>/dev/null || true)"
+            origin_main="$(git -C "$DEPLOY_ROOT" rev-parse origin/main 2>/dev/null || true)"
+
+            if [[ "$live_release" == "$EXPECTED_RELEASE" \
+              && "$server_head" == "$EXPECTED_RELEASE" \
+              && "$origin_main" == "$EXPECTED_RELEASE" ]]; then
+              health_file="$RUNNER_TEMP/fanmind-supply-chain-health-${GITHUB_RUN_ID}.json"
+              if curl -fsSL --max-time 15 https://fanmind.ch/api/health > "$health_file"; then
+                if HEALTH_FILE="$health_file" DEPLOY_ROOT="$DEPLOY_ROOT" node --input-type=module <<'NODE' | tee -a "$report"
+          import { readFile } from 'node:fs/promises';
+          import { pathToFileURL } from 'node:url';
+
+          const payload = JSON.parse(await readFile(process.env.HEALTH_FILE, 'utf8'));
+          const policy = await import(
+            `${pathToFileURL(`${process.env.DEPLOY_ROOT}/scripts/public-health-policy.mjs`).href}?verify=${Date.now()}`
+          );
+          const evaluation = policy.evaluatePublicHealth(payload);
+          if (!evaluation.ok) process.exit(1);
+          console.log(`PUBLIC_HEALTH_REQUIRED_COUNT=${policy.REQUIRED_PUBLIC_HEALTH_COMPONENTS.length}`);
+          console.log(`PUBLIC_HEALTH_WARNING_COUNT=${evaluation.warnings.length}`);
+          console.log('PUBLIC_HEALTH_REQUIRED_COMPONENTS=healthy');
+          NODE
+                then
+                  rm -f "$health_file"
+                  echo 'RELEASE_SYNC=ok' | tee -a "$report"
+                  exit 0
+                fi
+              fi
+              rm -f "$health_file"
+            fi
+
+            sleep 10
+          done
+
+          echo 'RELEASE_SYNC=failed' | tee -a "$report"
+          exit 1
+
+      - name: Verify deployed immutable supply-chain controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          cd "$DEPLOY_ROOT"
+
+          node scripts/verify-actions-pinned.mjs | tee -a "$report"
+
+          node <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const requiredFiles = [
+            '.github/dependabot.yml',
+            '.github/workflows/codeql.yml',
+            '.github/workflows/supply-chain-security.yml',
+            'scripts/verify-actions-pinned.mjs',
+            'scripts/security/verify-dependency-audit.mjs',
+            'scripts/security/generate-sbom.mjs',
+            'tests/dependency-audit-policy.test.mjs',
+            'tests/github-actions-supply-chain.test.mjs',
+            'docs/security/SUPPLY_CHAIN.md',
+          ];
+          const missing = requiredFiles.filter(file => !fs.existsSync(file));
+          const obsoletePresent = fs.existsSync(
+            '.github/workflows/one-off-apply-top-fan-migration-20260719.yml',
+          );
+          const workflowNames = fs.readdirSync('.github/workflows')
+            .filter(name => /\.ya?ml$/i.test(name));
+          const temporary = workflowNames.filter(name =>
+            /^(?:p0|p1|ops|audit)-/i.test(name),
+          );
+          const nextVersion = manifest?.dependencies?.next;
+          const eslintNextVersion = manifest?.devDependencies?.['eslint-config-next'];
+          const ok = missing.length === 0
+            && !obsoletePresent
+            && temporary.length === 0
+            && nextVersion === '16.2.11'
+            && eslintNextVersion === '16.2.11';
+          console.log(`SUPPLY_CHAIN_REQUIRED_FILES=${missing.length === 0 ? 'present' : 'missing'}`);
+          console.log(`SUPPLY_CHAIN_TEMPORARY_WORKFLOW_COUNT=${temporary.length}`);
+          console.log(`OBSOLETE_TOP_FAN_WORKFLOW=${obsoletePresent ? 'present' : 'absent'}`);
+          console.log(`NEXT_VERSION=${nextVersion || 'missing'}`);
+          console.log(`ESLINT_CONFIG_NEXT_VERSION=${eslintNextVersion || 'missing'}`);
+          console.log(`SUPPLY_CHAIN_DEPLOYED_STATE=${ok ? 'valid' : 'invalid'}`);
+          if (!ok) process.exit(1);
+          NODE
+
+      - name: Verify public core routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          for route in / /login /register /api/version /api/health; do
+            status="$(curl -fsSL --max-time 15 -o /dev/null -w '%{http_code}' "https://fanmind.ch${route}")"
+            test "$status" = "200"
+          done
+          echo 'PUBLIC_CORE_ROUTES=healthy' | tee -a "$report"
+          echo 'SUPPLY_CHAIN_PRODUCTION_VERIFICATION=success' | tee -a "$report"
+
+      - name: Upload sanitized production verification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-supply-chain-production-verification
+          path: fanmind-supply-chain-production-verification.txt
+          if-no-files-found: error
+          retention-days: 14
