@@ -40,6 +40,10 @@ import {
   SUPABASE_ACCESS_TOKEN_COOKIE,
   SUPABASE_REFRESH_TOKEN_COOKIE,
 } from "./config";
+import {
+  minimizeWebhookDiagnosticPayload,
+  normalizeWebhookErrorCode,
+} from "@/lib/webhookSecurityPolicy.mjs";
 
 export type SupabaseServerUser = {
   id: string;
@@ -1370,6 +1374,23 @@ export async function createMetaWebhookDebugEvent(input: {
     };
   }
 
+  const normalizedStatus = String(input.status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .slice(0, 64);
+  const status = /^[a-z][a-z0-9_]{0,63}$/.test(normalizedStatus)
+    ? normalizedStatus
+    : "processing_failed";
+  const errorReason = input.errorReason
+    ? normalizeWebhookErrorCode(input.errorReason)
+    : null;
+  const minimized = minimizeWebhookDiagnosticPayload(input.rawPayload);
+  const rawPayload =
+    minimized && typeof minimized === "object" && !Array.isArray(minimized)
+      ? minimized
+      : { schema_version: 1, provider_shape: minimized };
+
   const result = await postgrestRequest<MetaWebhookEventRow>(
     "meta_webhook_events",
     "POST",
@@ -1379,15 +1400,15 @@ export async function createMetaWebhookDebugEvent(input: {
       platform: input.platform ?? "facebook",
       source: "meta_webhook",
       event_type: input.eventType,
-      page_id: normalizeOptionalText(input.pageId),
-      sender_id: normalizeOptionalText(input.senderId),
-      recipient_id: normalizeOptionalText(input.recipientId),
-      text: normalizeOptionalText(input.messageText),
-      message_text: normalizeOptionalText(input.messageText),
-      raw_payload: input.rawPayload ?? {},
-      status: input.status,
-      error_reason: normalizeOptionalText(input.errorReason),
-      message_id: input.messageId ?? null,
+      page_id: null,
+      sender_id: null,
+      recipient_id: null,
+      text: null,
+      message_text: null,
+      raw_payload: rawPayload,
+      status,
+      error_reason: errorReason,
+      message_id: null,
       received_at: input.receivedAt ?? new Date().toISOString(),
     },
     serviceAccessToken,
@@ -1395,14 +1416,11 @@ export async function createMetaWebhookDebugEvent(input: {
   );
 
   if (result.error) {
-    console.error("Meta webhook debug event insert failed", {
+    console.error("Meta webhook diagnostic insert failed", {
       table: "meta_webhook_events",
-      workspaceId: input.workspaceId ?? null,
-      socialConnectionId: input.socialConnectionId ?? null,
       eventType: input.eventType,
-      pageId: input.pageId ?? null,
-      status: input.status,
-      error: result.error.message,
+      status,
+      errorCode: "diagnostic_persist_failed",
     });
     return { event: null, error: result.error };
   }
