@@ -37,7 +37,29 @@ jobs:
         shell: bash
         run: |
           set +e
-          python scripts/operations/staging-boundary-ref-match-patch-temp.py > staging-boundary-patch.log 2>&1
+          python - <<'PY' > staging-boundary-patch.log 2>&1
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          source_path = Path('scripts/operations/staging-boundary-ref-match-patch-temp.py')
+          source = source_path.read_text(encoding='utf-8')
+          old = '''def block(value: str) -> str:\n    return dedent(value).lstrip("\\n")\n'''
+          new = '''def block(value: str) -> str:\n    lines = value.lstrip("\\n").splitlines(keepends=True)\n    return "".join(line[4:] if line.startswith("    ") else line for line in lines)\n'''
+          if old not in source:
+              raise SystemExit('temporary_patch_block_helper_missing')
+          patched_path = Path('/tmp/fanmind-staging-boundary-patch.py')
+          patched_path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          completed = subprocess.run(
+              [sys.executable, str(patched_path)],
+              text=True,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+          )
+          if completed.stdout:
+              print(completed.stdout)
+          raise SystemExit(completed.returncode)
+          PY
           status=$?
           printf '%s\n' "$status" > staging-boundary-patch.status
           tail -n 80 staging-boundary-patch.log || true
