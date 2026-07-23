@@ -1,0 +1,452 @@
+name: FanMind P1 Verify Demo Cleanup After Fix
+
+on:
+  push:
+    branches:
+      - ops/verify-demo-cleanup-20260723
+    paths:
+      - ".github/workflows/ops-verify-demo-cleanup-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-verify-demo-cleanup-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 25
+    env:
+      EXPECTED_RELEASE: 91ac1b3240f1a2c773638acface54668049d49f9
+      VERIFY_STATE_PATH: /var/tmp/fanmind-demo-cleanup-verify-${{ github.run_id }}.json
+      VERIFY_REPORT_PATH: fanmind-demo-cleanup-production-verification.txt
+    steps:
+      - name: Wait for exact release and validate health
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          report="$GITHUB_WORKSPACE/$VERIFY_REPORT_PATH"
+          : > "$report"
+
+          {
+            printf 'VERIFY_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE"
+
+            release=""
+            for attempt in $(seq 1 60); do
+              release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+                | node -e '
+                    let input = "";
+                    process.stdin.on("data", chunk => input += chunk);
+                    process.stdin.on("end", () => {
+                      try {
+                        const payload = JSON.parse(input);
+                        const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                        process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                      } catch {
+                        process.stdout.write("missing");
+                      }
+                    });
+                  ' || true)"
+
+              if [[ "$release" == "$EXPECTED_RELEASE" ]]; then
+                printf 'DEPLOY_MATCH_ATTEMPT=%s\n' "$attempt"
+                break
+              fi
+
+              printf 'DEPLOY_WAIT_ATTEMPT=%s|release=%s\n' "$attempt" "${release:-missing}"
+              sleep 10
+            done
+
+            printf 'LIVE_RELEASE=%s\n' "${release:-missing}"
+            if [[ "$release" != "$EXPECTED_RELEASE" ]]; then
+              echo 'DEPLOY_RESULT=expected_release_not_live'
+              exit 1
+            fi
+            echo 'DEPLOY_RESULT=exact_release_live'
+
+            server_head="$(git -C /var/www/fanmind rev-parse HEAD)"
+            origin_main="$(git -C /var/www/fanmind rev-parse origin/main)"
+            printf 'SERVER_HEAD=%s\n' "$server_head"
+            printf 'ORIGIN_MAIN=%s\n' "$origin_main"
+            if [[ "$server_head" != "$EXPECTED_RELEASE" || "$origin_main" != "$EXPECTED_RELEASE" ]]; then
+              echo 'SERVER_SYNC=failed'
+              exit 1
+            fi
+            echo 'SERVER_SYNC=ok'
+          } | tee -a "$report"
+
+          health_file="$RUNNER_TEMP/fanmind-health-${GITHUB_RUN_ID}.json"
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health > "$health_file"
+          HEALTH_FILE="$health_file" node <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.env.HEALTH_FILE, 'utf8'));
+          const checks = Array.isArray(payload.checks) ? payload.checks : [];
+          const status = typeof payload.status === 'string' ? payload.status : 'missing';
+          console.log(`LIVE_HEALTH=${status}`);
+          for (const check of checks) {
+            const component = String(check?.component || 'unknown').replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, 80);
+            const componentStatus = String(check?.status || 'missing').replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, 40);
+            console.log(`HEALTH_COMPONENT=${component}:${componentStatus}`);
+          }
+          if (status !== 'healthy' || checks.length === 0 || checks.some(check => check?.status !== 'healthy')) {
+            process.exitCode = 1;
+          }
+          NODE
+          rm -f "$health_file"
+
+      - name: Verify the single exact cleanup candidate before write
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          report="$GITHUB_WORKSPACE/$VERIFY_REPORT_PATH"
+
+          sudo -n node - "$VERIFY_STATE_PATH" <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+
+          function sanitize(value, max = 120) {
+            return String(value || 'unknown').replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, max);
+          }
+
+          function parseEnv(text) {
+            const values = new Map();
+            for (const rawLine of text.split(/\r?\n/)) {
+              const line = rawLine.trim();
+              if (!line || line.startsWith('#') || !line.includes('=')) continue;
+              const separator = line.indexOf('=');
+              const key = line.slice(0, separator).trim();
+              let value = line.slice(separator + 1).trim();
+              if (
+                value.length >= 2 &&
+                ((value.startsWith('"') && value.endsWith('"')) ||
+                  (value.startsWith("'") && value.endsWith("'")))
+              ) {
+                value = value.slice(1, -1);
+              }
+              values.set(key, value);
+            }
+            return values;
+          }
+
+          async function main() {
+            const statePath = process.argv[2];
+            const env = parseEnv(fs.readFileSync('/var/www/fanmind/.env.production', 'utf8'));
+            const baseUrl = (env.get('NEXT_PUBLIC_SUPABASE_URL') || '').replace(/\/$/, '');
+            const serviceKey = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+            if (!baseUrl || !serviceKey) throw new Error('required_server_configuration_missing');
+
+            const headers = {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+              'Content-Type': 'application/json',
+            };
+
+            async function getJson(url) {
+              const response = await fetch(url, {
+                method: 'GET',
+                headers,
+                cache: 'no-store',
+                signal: AbortSignal.timeout(12000),
+              });
+              if (!response.ok) throw new Error(`read_http_${response.status}`);
+              return response.json();
+            }
+
+            const now = new Date();
+            const sessionsUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
+            sessionsUrl.searchParams.set(
+              'select',
+              'id,status,error_code,auth_user_id,workspace_id,expires_at',
+            );
+            sessionsUrl.searchParams.set('status', 'in.(active,expired,cleanup_failed)');
+            sessionsUrl.searchParams.set('expires_at', `lte.${now.toISOString()}`);
+            sessionsUrl.searchParams.set('order', 'expires_at.asc');
+            sessionsUrl.searchParams.set('limit', '10');
+
+            const sessions = await getJson(sessionsUrl);
+            if (!Array.isArray(sessions)) throw new Error('claimable_session_payload_invalid');
+            console.log(`PREFLIGHT_CLAIMABLE_COUNT=${sessions.length}`);
+            if (sessions.length !== 1) throw new Error('claimable_session_count_not_exactly_one');
+
+            const session = sessions[0];
+            if (session?.status !== 'cleanup_failed') throw new Error('candidate_status_not_cleanup_failed');
+            if (
+              typeof session.id !== 'string' ||
+              typeof session.auth_user_id !== 'string' ||
+              typeof session.workspace_id !== 'string'
+            ) {
+              throw new Error('candidate_identity_incomplete');
+            }
+            const expiresAt = Date.parse(session.expires_at);
+            if (!Number.isFinite(expiresAt) || expiresAt > now.getTime()) {
+              throw new Error('candidate_not_expired');
+            }
+
+            const userResponse = await fetch(
+              `${baseUrl}/auth/v1/admin/users/${encodeURIComponent(session.auth_user_id)}`,
+              {
+                method: 'GET',
+                headers,
+                cache: 'no-store',
+                signal: AbortSignal.timeout(12000),
+              },
+            );
+            if (userResponse.status !== 200) throw new Error(`auth_user_http_${userResponse.status}`);
+            const userPayload = await userResponse.json();
+            const user = userPayload?.user || userPayload;
+            if (!user || user.id !== session.auth_user_id) throw new Error('auth_user_identity_mismatch');
+
+            const metadata = user.user_metadata && typeof user.user_metadata === 'object'
+              ? user.user_metadata
+              : {};
+            const isTemporary = metadata.fanmind_demo === true && metadata.demo_type === 'temporary';
+            const isStaticDemo = String(user.email || '').trim().toLowerCase() === 'sandra.m@fanmind.ch';
+            if (!isTemporary || isStaticDemo) throw new Error('auth_user_not_safe_temporary_demo');
+
+            const workspaceUrl = new URL(`${baseUrl}/rest/v1/workspaces`);
+            workspaceUrl.searchParams.set('select', 'id,name,owner_user_id');
+            workspaceUrl.searchParams.set('id', `eq.${session.workspace_id}`);
+            workspaceUrl.searchParams.set('limit', '1');
+            const workspaces = await getJson(workspaceUrl);
+            if (!Array.isArray(workspaces) || workspaces.length !== 1) {
+              throw new Error('workspace_identity_missing');
+            }
+            const workspace = workspaces[0];
+            const workspaceSafe =
+              workspace.id === session.workspace_id &&
+              workspace.owner_user_id === session.auth_user_id &&
+              workspace.name === 'FanMind Demo Workspace';
+            if (!workspaceSafe) throw new Error('workspace_identity_not_safe_temporary_demo');
+
+            fs.writeFileSync(
+              statePath,
+              JSON.stringify({
+                sessionId: session.id,
+                authUserId: session.auth_user_id,
+                workspaceId: session.workspace_id,
+              }),
+              { mode: 0o600 },
+            );
+
+            console.log('PREFLIGHT_SESSION_STATUS=cleanup_failed');
+            console.log('PREFLIGHT_TEMPORARY_USER=true');
+            console.log('PREFLIGHT_STATIC_DEMO=false');
+            console.log('PREFLIGHT_WORKSPACE_IDENTITY=true');
+            console.log('PREFLIGHT_RESULT=approved_single_candidate');
+          }
+
+          main().catch(error => {
+            console.error('PREFLIGHT_RESULT=blocked');
+            console.error(`PREFLIGHT_REASON=${sanitize(error instanceof Error ? error.message : error)}`);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Run one controlled demo cleanup service cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          report="$GITHUB_WORKSPACE/$VERIFY_REPORT_PATH"
+          {
+            printf 'CONTROLLED_CLEANUP_START_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if sudo -n systemctl start fanmind-demo-cleanup.service; then
+              echo 'CONTROLLED_CLEANUP_START=completed'
+            else
+              echo 'CONTROLLED_CLEANUP_START=failed'
+              exit 1
+            fi
+          } | tee -a "$report"
+
+      - name: Verify exact postconditions and service result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          report="$GITHUB_WORKSPACE/$VERIFY_REPORT_PATH"
+          log_file="$RUNNER_TEMP/fanmind-demo-cleanup-${GITHUB_RUN_ID}.log"
+
+          {
+            sudo -n systemctl show fanmind-demo-cleanup.service \
+              --property=ActiveState,SubState,Result,ExecMainStatus,ExecMainStartTimestamp,ExecMainExitTimestamp \
+              --no-pager \
+              | sort \
+              | sed 's/^/DEMO_SERVICE_/'
+          } | tee -a "$report"
+
+          sudo -n journalctl -u fanmind-demo-cleanup.service --since '20 minutes ago' --no-pager -o cat > "$log_file"
+
+          sudo -n node - "$VERIFY_STATE_PATH" "$log_file" <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+
+          function sanitize(value, max = 120) {
+            return String(value || 'unknown').replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, max);
+          }
+
+          function parseEnv(text) {
+            const values = new Map();
+            for (const rawLine of text.split(/\r?\n/)) {
+              const line = rawLine.trim();
+              if (!line || line.startsWith('#') || !line.includes('=')) continue;
+              const separator = line.indexOf('=');
+              const key = line.slice(0, separator).trim();
+              let value = line.slice(separator + 1).trim();
+              if (
+                value.length >= 2 &&
+                ((value.startsWith('"') && value.endsWith('"')) ||
+                  (value.startsWith("'") && value.endsWith("'")))
+              ) {
+                value = value.slice(1, -1);
+              }
+              values.set(key, value);
+            }
+            return values;
+          }
+
+          async function main() {
+            const statePath = process.argv[2];
+            const logPath = process.argv[3];
+            if (!fs.existsSync(statePath)) throw new Error('verification_state_missing');
+            const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+            const env = parseEnv(fs.readFileSync('/var/www/fanmind/.env.production', 'utf8'));
+            const baseUrl = (env.get('NEXT_PUBLIC_SUPABASE_URL') || '').replace(/\/$/, '');
+            const serviceKey = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+            if (!baseUrl || !serviceKey) throw new Error('required_server_configuration_missing');
+
+            const headers = {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+              'Content-Type': 'application/json',
+            };
+
+            async function getJson(url) {
+              const response = await fetch(url, {
+                method: 'GET',
+                headers,
+                cache: 'no-store',
+                signal: AbortSignal.timeout(12000),
+              });
+              if (!response.ok) throw new Error(`read_http_${response.status}`);
+              return response.json();
+            }
+
+            const sessionUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
+            sessionUrl.searchParams.set('select', 'status,error_code,auth_user_id,workspace_id');
+            sessionUrl.searchParams.set('id', `eq.${state.sessionId}`);
+            sessionUrl.searchParams.set('limit', '1');
+            const sessions = await getJson(sessionUrl);
+            const session = Array.isArray(sessions) ? sessions[0] : null;
+            const sessionDeleted = Boolean(
+              session &&
+              session.status === 'deleted' &&
+              session.error_code == null &&
+              session.auth_user_id == null &&
+              session.workspace_id == null
+            );
+
+            const workspaceUrl = new URL(`${baseUrl}/rest/v1/workspaces`);
+            workspaceUrl.searchParams.set('select', 'id');
+            workspaceUrl.searchParams.set('id', `eq.${state.workspaceId}`);
+            workspaceUrl.searchParams.set('limit', '1');
+            const workspaces = await getJson(workspaceUrl);
+            const workspaceMissing = Array.isArray(workspaces) && workspaces.length === 0;
+
+            const authResponse = await fetch(
+              `${baseUrl}/auth/v1/admin/users/${encodeURIComponent(state.authUserId)}`,
+              {
+                method: 'GET',
+                headers,
+                cache: 'no-store',
+                signal: AbortSignal.timeout(12000),
+              },
+            );
+            const authUserMissing = authResponse.status === 404;
+
+            const failedUrl = new URL(`${baseUrl}/rest/v1/demo_start_sessions`);
+            failedUrl.searchParams.set('select', 'id');
+            failedUrl.searchParams.set('status', 'eq.cleanup_failed');
+            failedUrl.searchParams.set('limit', '1');
+            const failedResponse = await fetch(failedUrl, {
+              method: 'GET',
+              headers: { ...headers, Prefer: 'count=exact' },
+              cache: 'no-store',
+              signal: AbortSignal.timeout(12000),
+            });
+            if (!failedResponse.ok) throw new Error(`failed_count_http_${failedResponse.status}`);
+            const contentRange = failedResponse.headers.get('content-range') || '';
+            const cleanupFailedCount = Number(contentRange.split('/').at(-1));
+
+            const logLines = fs.readFileSync(logPath, 'utf8').split(/\r?\n/);
+            const summaries = [];
+            for (const line of logLines) {
+              const match = line.match(
+                /FanMind demo cleanup: claimed=(\d+) deleted=(\d+) failed=(\d+)(?: error_codes=([a-z0-9_,:-]+))?/
+              );
+              if (!match) continue;
+              summaries.push({
+                claimed: Number(match[1]),
+                deleted: Number(match[2]),
+                failed: Number(match[3]),
+                errorCodes: match[4] || '',
+              });
+            }
+            const latest = summaries.at(-1) || null;
+            const summaryOk = Boolean(
+              latest &&
+              latest.claimed === 1 &&
+              latest.deleted === 1 &&
+              latest.failed === 0 &&
+              latest.errorCodes === ''
+            );
+
+            console.log(`POSTFLIGHT_SUMMARY_COUNT=${summaries.length}`);
+            console.log(`POSTFLIGHT_LATEST_CLAIMED=${latest?.claimed ?? 'missing'}`);
+            console.log(`POSTFLIGHT_LATEST_DELETED=${latest?.deleted ?? 'missing'}`);
+            console.log(`POSTFLIGHT_LATEST_FAILED=${latest?.failed ?? 'missing'}`);
+            console.log(`POSTFLIGHT_LATEST_ERROR_CODES=${latest?.errorCodes || 'none'}`);
+            console.log(`TARGET_SESSION_DELETED=${sessionDeleted}`);
+            console.log(`TARGET_WORKSPACE_MISSING=${workspaceMissing}`);
+            console.log(`TARGET_AUTH_USER_MISSING=${authUserMissing}`);
+            console.log(`CLEANUP_FAILED_SESSION_COUNT=${Number.isFinite(cleanupFailedCount) ? cleanupFailedCount : 'unknown'}`);
+
+            if (
+              !summaryOk ||
+              !sessionDeleted ||
+              !workspaceMissing ||
+              !authUserMissing ||
+              cleanupFailedCount !== 0
+            ) {
+              throw new Error('cleanup_postconditions_failed');
+            }
+
+            console.log('POSTFLIGHT_RESULT=success');
+          }
+
+          main().catch(error => {
+            console.error('POSTFLIGHT_RESULT=failed');
+            console.error(`POSTFLIGHT_REASON=${sanitize(error instanceof Error ? error.message : error)}`);
+            process.exit(1);
+          });
+          NODE
+
+          sudo -n rm -f "$VERIFY_STATE_PATH"
+          rm -f "$log_file"
+
+      - name: Upload sanitized production verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-demo-cleanup-production-verification
+          path: fanmind-demo-cleanup-production-verification.txt
+          if-no-files-found: error
+          retention-days: 7
