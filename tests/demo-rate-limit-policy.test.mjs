@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const protectionPath = "src/lib/demoProtection.ts";
+const clientIpPolicyPath = "src/lib/clientIpPolicy.mjs";
 const runbookPath = "docs/operations/public-demo-protection-runbook.md";
 const envExamplePath = ".env.example";
 
@@ -29,6 +30,27 @@ test("public demo restart limits preserve short-term and capacity protection", a
     protection,
     /FANMIND_DEMO_MAX_ACTIVE",\s*50,\s*2000/u,
   );
+});
+
+test("public demo and endpoint rate limits share the canonical client IP policy", async () => {
+  const [protection, clientIpPolicy] = await Promise.all([
+    read(protectionPath),
+    read(clientIpPolicyPath),
+  ]);
+
+  assert.match(
+    protection,
+    /getTrustedClientIpValue\(request\.headers, "unknown"\)/u,
+  );
+  assert.doesNotMatch(protection, /headers\.get\("cf-connecting-ip"\)/u);
+  assert.doesNotMatch(
+    protection,
+    /headers\.get\("x-forwarded-for"\).*split\(","\)\[0\]/su,
+  );
+  assert.match(clientIpPolicy, /headers, "x-real-ip"/u);
+  assert.match(clientIpPolicy, /getLastForwardedForIp/u);
+  assert.match(clientIpPolicy, /return normalized\.at\(-1\)/u);
+  assert.doesNotMatch(clientIpPolicy, /cf-connecting-ip/iu);
 });
 
 test("production demo runbook matches the controlled restart policy", async () => {
