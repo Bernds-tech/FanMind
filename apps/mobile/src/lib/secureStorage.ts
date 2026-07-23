@@ -39,6 +39,9 @@ async function writeRegistry(keys: string[]): Promise<void> {
 
 async function registerKey(key: string): Promise<void> {
   const keys = addSecureStorageRegistryKey(await readRegistry(), key);
+  if (!keys.includes(key)) {
+    throw new Error("SecureStore-Schlüssel konnte nicht sicher registriert werden.");
+  }
   await writeRegistry(keys);
 }
 
@@ -59,9 +62,21 @@ async function removeChunks(key: string): Promise<void> {
 
 export async function clearSecureSessionStorage(): Promise<void> {
   const keys = await readRegistry();
+  const failedKeys: string[] = [];
+
   for (const key of keys) {
-    await removeChunks(key);
+    try {
+      await removeChunks(key);
+    } catch {
+      failedKeys.push(key);
+    }
   }
+
+  if (failedKeys.length > 0) {
+    await writeRegistry(failedKeys);
+    throw new Error("Nicht alle sicheren FanMind-Schlüssel konnten entfernt werden.");
+  }
+
   await SecureStore.deleteItemAsync(REGISTRY_KEY);
 }
 
@@ -79,6 +94,10 @@ export const secureSessionStorage: SupportedStorage = {
       await unregisterKey(key);
       return null;
     }
+
+    // Existing installations created before the registry was introduced are
+    // enrolled on first successful read so the next logout can purge them.
+    await registerKey(key);
     return chunks.join("");
   },
 
