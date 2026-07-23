@@ -18,7 +18,7 @@ Der Audit gibt ausschließlich die folgenden Kategorien aus:
 - HTTP-Status des lokalen und öffentlichen Login-Endpunkts;
 - Root-Dateisystembelegung, verfügbarer Arbeitsspeicher und Reboot-Hinweis;
 - Namen und Aktivierungsstatus der `fanmind-*`-systemd-Units;
-- stabile Timer-Metadaten je konkreter `fanmind-*.timer`-Unit über `NextElapseUSecRealtime` und `LastTriggerUSec`;
+- stabile Timer-Metadaten je konkreter `fanmind-*.timer`-Unit über `NextElapseUSecRealtime`, `NextElapseUSecMonotonic` und `LastTriggerUSec`;
 - Anzahl und Aktualität verschlüsselter Backup-/Prüfsummen-Paare;
 - checksum-only-Verifikation des neuesten verschlüsselten Vollbackups;
 - bei aktivierter Offsite-Konfiguration nur Erreichbarkeit, Objekt-/Paaranzahlen und der neueste Vollbackup-Dateiname;
@@ -62,10 +62,10 @@ bash scripts/operations/read-only-production-audit.sh
 
 ## systemd- und Worker-Ausgabe
 
-Die Timer-Ausgabe wird nicht aus lokalisierten Spalten von `systemctl list-timers` abgeleitet. Für jede konkrete Timer-Unit werden ausschließlich stabile Properties gelesen:
+Die Timer-Ausgabe wird nicht aus lokalisierten Spalten von `systemctl list-timers` abgeleitet. Für jede konkrete Timer-Unit werden ausschließlich stabile Properties gelesen. Kalender-Timer nutzen typischerweise `next_realtime`; relative Timer wie `OnUnitActiveSec` können stattdessen nur `next_monotonic` liefern:
 
 ```text
-SYSTEMD_TIMER=<unit>|next=<timestamp>|last=<timestamp>
+SYSTEMD_TIMER=<unit>|next_realtime=<timestamp-or-unknown>|next_monotonic=<value-or-unknown>|last=<timestamp-or-unknown>
 ```
 
 Die Backup-Worker-Ausgabe verwendet eine feste Ereignis-Whitelist und zwei Zeitfenster:
