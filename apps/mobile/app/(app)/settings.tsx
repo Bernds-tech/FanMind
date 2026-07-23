@@ -71,9 +71,19 @@ export default function SettingsScreen() {
         <Text style={mobileStyles.muted}>• Keine eingebettete Website als Haupt-App</Text>
       </Card>
 
+      <Card>
+        <SectionTitle eyebrow="Lokale Daten">Sicheres Abmelden</SectionTitle>
+        <Text style={mobileStyles.muted}>
+          Beim Abmelden beendet FanMind die lokale Supabase-Sitzung, entfernt alle registrierten
+          FanMind-Schlüssel aus SecureStore und leert den geladenen Workspace-Zustand. Kontakte
+          und Kontaktwissen bleiben geschützt im Server-Workspace und werden nicht als Offline-
+          Kopie auf dem Gerät behalten.
+        </Text>
+      </Card>
+
       {error ? <Text style={mobileStyles.error}>{error}</Text> : null}
       <PrimaryButton busy={busy} onPress={() => void logout()}>
-        Sicher abmelden
+        Sicher abmelden und lokale Daten entfernen
       </PrimaryButton>
     </Screen>
   );
