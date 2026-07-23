@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/rateLimit";
+import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
 import { isWorkspaceArchivedAfterSubscriptionEnd } from "@/lib/subscriptionCancellation";
 import {
   BearerAccessTokenError,
@@ -199,10 +200,20 @@ export async function POST(request: NextRequest) {
     return jsonError("Kontakt konnte nicht autorisiert geladen werden.", 404);
   }
 
-  const rateLimit = checkRateLimit(
-    `ai-reply:${authorizationContext.user.id}:${getClientIp(request)}`,
-    { maxRequests: AI_RATE_LIMIT_MAX, windowMs: AI_RATE_LIMIT_WINDOW_MS },
-  );
+  let rateLimit;
+  try {
+    rateLimit = await consumeSharedRateLimit({
+      scope: "ai_reply_user_ip",
+      subject: `${authorizationContext.user.id}:${getClientIp(request)}`,
+      maxRequests: AI_RATE_LIMIT_MAX,
+      windowMs: AI_RATE_LIMIT_WINDOW_MS,
+    });
+  } catch {
+    return jsonError(
+      "Antwortvorschläge konnten gerade nicht erzeugt werden.",
+      503,
+    );
+  }
 
   if (!rateLimit.allowed) {
     return jsonError("Zu viele KI-Anfragen. Bitte versuche es später erneut.", 429);
