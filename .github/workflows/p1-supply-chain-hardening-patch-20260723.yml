@@ -42,14 +42,38 @@ jobs:
           node-version: 22.13.1
           cache: npm
 
-      - name: Pin workflows, remove obsolete one-off and patch Next.js
+      - name: Pin workflows, remove obsolete one-off and patch manifest
         shell: bash
         run: |
           set -euo pipefail
           node scripts/security/supply-chain-hardening-patch-temp.mjs
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          npm audit --omit=dev --audit-level=high
           git diff --check
+
+      - name: Refresh root lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          git diff --check
+
+      - name: Verify high and critical production advisories are cleared
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npm audit --omit=dev --audit-level=high --json > root-audit-after-patch.json 2>/dev/null
+          status=$?
+          set -e
+          AUDIT_STATUS="$status" node <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('root-audit-after-patch.json', 'utf8'));
+          const values = payload?.metadata?.vulnerabilities ?? {};
+          const critical = Number(values.critical ?? 0);
+          const high = Number(values.high ?? 0);
+          console.log(`ROOT_AUDIT_CRITICAL=${critical}`);
+          console.log(`ROOT_AUDIT_HIGH=${high}`);
+          if (critical !== 0 || high !== 0 || Number(process.env.AUDIT_STATUS) !== 0) process.exit(1);
+          NODE
 
       - name: Commit deterministic hardening changes
         shell: bash
