@@ -78,6 +78,24 @@ test("Mobile recovery accepts only the FanMind reset route and bounded credentia
       error instanceof MobileAuthRecoveryPolicyError &&
       error.code === "partial_tokens",
   );
+  assert.throws(
+    () =>
+      parseMobileAuthRecoveryUrl(
+        "fanmind://reset-password#access_token=a&refresh_token=r",
+      ),
+    (error) =>
+      error instanceof MobileAuthRecoveryPolicyError &&
+      error.code === "invalid_type",
+  );
+  assert.throws(
+    () =>
+      parseMobileAuthRecoveryUrl(
+        "fanmind://reset-password#access_token=a&refresh_token=r&type=signup",
+      ),
+    (error) =>
+      error instanceof MobileAuthRecoveryPolicyError &&
+      error.code === "invalid_type",
+  );
 });
 
 test("Mobile recovery email and password rules are normalized without enumeration", () => {
@@ -182,14 +200,17 @@ test("SecureStore purge enrolls legacy sessions and retains failed keys for retr
   assert.match(source, /throw new Error\("Nicht alle sicheren FanMind-Schlüssel/u);
 });
 
-test("AuthProvider handles PKCE and token recovery without logging credentials", async () => {
+test("AuthProvider requires recovery confirmation and never logs credentials", async () => {
   const source = await read("apps/mobile/src/providers/AuthProvider.tsx");
 
   assert.match(source, /resetPasswordForEmail/u);
   assert.match(source, /MOBILE_PASSWORD_RECOVERY_REDIRECT/u);
   assert.match(source, /exchangeCodeForSession/u);
   assert.match(source, /supabase\.auth\.setSession/u);
+  assert.match(source, /waitForPasswordRecoveryEvent/u);
   assert.match(source, /event === "PASSWORD_RECOVERY"/u);
+  assert.match(source, /recoveryEventResolver\.current\?\.\(\)/u);
+  assert.match(source, /password_recovery_event_missing/u);
   assert.match(source, /recoveryStatus !== "ready"/u);
   assert.match(source, /supabase\.auth\.updateUser/u);
   assert.match(source, /clearSecureSessionStorage/u);
