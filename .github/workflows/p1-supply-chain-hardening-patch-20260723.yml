@@ -57,6 +57,8 @@ jobs:
           git diff --check
 
       - name: Verify high and critical production advisories are cleared
+        id: audit
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -70,10 +72,40 @@ jobs:
           const values = payload?.metadata?.vulnerabilities ?? {};
           const critical = Number(values.critical ?? 0);
           const high = Number(values.high ?? 0);
-          console.log(`ROOT_AUDIT_CRITICAL=${critical}`);
-          console.log(`ROOT_AUDIT_HIGH=${high}`);
+          const moderate = Number(values.moderate ?? 0);
+          const entries = Object.entries(payload?.vulnerabilities ?? {})
+            .sort(([a], [b]) => a.localeCompare(b));
+          const lines = [
+            `ROOT_AUDIT_EXIT=${process.env.AUDIT_STATUS}`,
+            `ROOT_AUDIT_CRITICAL=${critical}`,
+            `ROOT_AUDIT_HIGH=${high}`,
+            `ROOT_AUDIT_MODERATE=${moderate}`,
+          ];
+          for (const [name, item] of entries) {
+            const fix = item?.fixAvailable && typeof item.fixAvailable === 'object'
+              ? `${item.fixAvailable.name ?? 'package'}@${item.fixAvailable.version ?? 'unknown'}`
+              : item?.fixAvailable === true
+                ? 'available'
+                : 'none';
+            lines.push(`${name}|severity:${item?.severity ?? 'unknown'}|direct:${item?.isDirect === true}|fix:${fix}`);
+          }
+          fs.writeFileSync('root-audit-after-patch-summary.txt', `${lines.join('\n')}\n`, { mode: 0o644 });
+          process.stdout.write(`${lines.join('\n')}\n`);
           if (critical !== 0 || high !== 0 || Number(process.env.AUDIT_STATUS) !== 0) process.exit(1);
           NODE
+
+      - name: Upload bounded post-patch audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-root-audit-after-security-patch
+          path: root-audit-after-patch-summary.txt
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Enforce audit result
+        if: steps.audit.outcome != 'success'
+        run: exit 1
 
       - name: Commit deterministic hardening changes
         shell: bash
