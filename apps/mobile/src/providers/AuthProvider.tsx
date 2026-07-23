@@ -43,6 +43,8 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const RECOVERY_EVENT_TIMEOUT_MS = 5000;
+const MAX_HANDLED_RECOVERY_URLS = 8;
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
@@ -50,55 +52,98 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus>("idle");
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const handledRecoveryUrls = useRef(new Set<string>());
+  const activeRecoveryUrl = useRef<string | null>(null);
+  const recoveryEventResolver = useRef<(() => void) | null>(null);
 
   const clearRecoveryState = useCallback(() => {
+    recoveryEventResolver.current = null;
+    activeRecoveryUrl.current = null;
     setRecoveryStatus("idle");
     setRecoveryError(null);
   }, []);
 
-  const handleRecoveryUrl = useCallback(async (url: string) => {
-    if (handledRecoveryUrls.current.has(url)) return;
+  const waitForPasswordRecoveryEvent = useCallback(() => {
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const settle = (confirmed: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        recoveryEventResolver.current = null;
+        resolve(confirmed);
+      };
+      const timer = setTimeout(
+        () => settle(false),
+        RECOVERY_EVENT_TIMEOUT_MS,
+      );
+      recoveryEventResolver.current = () => settle(true);
+    });
+  }, []);
 
-    let parsed;
-    try {
-      parsed = parseMobileAuthRecoveryUrl(url);
-    } catch (error) {
+  const handleRecoveryUrl = useCallback(
+    async (url: string) => {
       if (
-        error instanceof MobileAuthRecoveryPolicyError &&
-        (error.code === "invalid_scheme" || error.code === "invalid_route")
+        handledRecoveryUrls.current.has(url) ||
+        activeRecoveryUrl.current === url
       ) {
         return;
       }
-      setRecoveryStatus("error");
-      setRecoveryError(
-        "Der Wiederherstellungslink ist ungültig oder abgelaufen. Fordere bitte einen neuen Link an.",
-      );
-      return;
-    }
 
-    handledRecoveryUrls.current.add(url);
-    setRecoveryStatus("processing");
-    setRecoveryError(null);
-
-    try {
-      if (parsed.mode === "pkce") {
-        const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.setSession({
-          access_token: parsed.accessToken,
-          refresh_token: parsed.refreshToken,
-        });
-        if (error) throw error;
+      let parsed;
+      try {
+        parsed = parseMobileAuthRecoveryUrl(url);
+      } catch (error) {
+        if (
+          error instanceof MobileAuthRecoveryPolicyError &&
+          (error.code === "invalid_scheme" || error.code === "invalid_route")
+        ) {
+          return;
+        }
+        setRecoveryStatus("error");
+        setRecoveryError(
+          "Der Wiederherstellungslink ist ungültig oder abgelaufen. Fordere bitte einen neuen Link an.",
+        );
+        return;
       }
-      setRecoveryStatus("ready");
-    } catch {
-      setRecoveryStatus("error");
-      setRecoveryError(
-        "Der Wiederherstellungslink konnte nicht bestätigt werden. Fordere bitte einen neuen Link an.",
-      );
-    }
-  }, []);
+
+      activeRecoveryUrl.current = url;
+      setRecoveryStatus("processing");
+      setRecoveryError(null);
+
+      try {
+        if (parsed.mode === "pkce") {
+          const recoveryEvent = waitForPasswordRecoveryEvent();
+          const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
+          if (error) throw error;
+          const confirmed = await recoveryEvent;
+          if (!confirmed) {
+            throw new Error("password_recovery_event_missing");
+          }
+        } else {
+          const { error } = await supabase.auth.setSession({
+            access_token: parsed.accessToken,
+            refresh_token: parsed.refreshToken,
+          });
+          if (error) throw error;
+          setRecoveryStatus("ready");
+        }
+
+        if (handledRecoveryUrls.current.size >= MAX_HANDLED_RECOVERY_URLS) {
+          handledRecoveryUrls.current.clear();
+        }
+        handledRecoveryUrls.current.add(url);
+      } catch {
+        recoveryEventResolver.current = null;
+        setRecoveryStatus("error");
+        setRecoveryError(
+          "Der Wiederherstellungslink konnte nicht bestätigt werden. Fordere bitte einen neuen Link an.",
+        );
+      } finally {
+        activeRecoveryUrl.current = null;
+      }
+    },
+    [waitForPasswordRecoveryEvent],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -113,6 +158,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setSession(nextSession);
         setLoading(false);
         if (event === "PASSWORD_RECOVERY") {
+          recoveryEventResolver.current?.();
           setRecoveryStatus("ready");
           setRecoveryError(null);
         }
@@ -130,6 +176,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     return () => {
       mounted = false;
+      recoveryEventResolver.current = null;
       subscription.subscription.unsubscribe();
       appStateSubscription.remove();
       supabase.auth.stopAutoRefresh();
