@@ -1,0 +1,185 @@
+name: FanMind P1 Verify Mobile Phase B Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-verify-mobile-phase-b-deploy-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-verify-mobile-phase-b-deploy-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/verify-mobile-phase-b-deploy-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 30
+    env:
+      EXPECTED_RELEASE: 372310d8683c4e4192fa8dfdb3e089cd6c2858c2
+      REPORT_PATH: fanmind-mobile-phase-b-production-verification.txt
+
+    steps:
+      - name: Wait for exact release and healthy Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'VERIFICATION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          for attempt in $(seq 1 90); do
+            live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    try {
+                      const payload = JSON.parse(input);
+                      const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                      process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                    } catch {
+                      process.stdout.write("missing");
+                    }
+                  });
+                ' || true)"
+            server_head="$(git -C /var/www/fanmind rev-parse HEAD 2>/dev/null || true)"
+            origin_main="$(git -C /var/www/fanmind rev-parse origin/main 2>/dev/null || true)"
+
+            if [[ "$live_release" == "$EXPECTED_RELEASE" \
+              && "$server_head" == "$EXPECTED_RELEASE" \
+              && "$origin_main" == "$EXPECTED_RELEASE" ]]; then
+              if curl -fsSL --max-time 15 https://fanmind.ch/api/health \
+                | node -e '
+                    let input = "";
+                    process.stdin.on("data", chunk => input += chunk);
+                    process.stdin.on("end", () => {
+                      try {
+                        const payload = JSON.parse(input);
+                        const checks = Array.isArray(payload.checks) ? payload.checks : [];
+                        const byComponent = new Map(checks.map(check => [check?.component, check]));
+                        const required = [
+                          "application",
+                          "supabase_config",
+                          "supabase_database",
+                          "supabase_storage",
+                          "stripe_config",
+                          "openai_config",
+                          "shared_rate_limit_config",
+                        ];
+                        process.exit(required.every(
+                          component => byComponent.get(component)?.status === "healthy",
+                        ) ? 0 : 1);
+                      } catch {
+                        process.exit(1);
+                      }
+                    });
+                  '; then
+                echo 'RELEASE_SYNC=ok' | tee -a "$report"
+                echo 'PUBLIC_REQUIRED_HEALTHY_COUNT=7' | tee -a "$report"
+                break
+              fi
+            fi
+
+            if [[ "$attempt" == "90" ]]; then
+              echo 'RELEASE_SYNC=failed' | tee -a "$report"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Verify deployed Mobile Phase B source and security boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          root=/var/www/fanmind
+
+          test -f "$root/apps/mobile/app/(auth)/forgot-password.tsx"
+          test -f "$root/apps/mobile/app/(auth)/reset-password.tsx"
+          test -f "$root/apps/mobile/app/(app)/contacts/new.tsx"
+          test -f "$root/apps/mobile/app/(app)/contacts/[id]/edit.tsx"
+          test -f "$root/docs/mobile/BETA_RELEASE.md"
+
+          grep -Fq 'MOBILE_PASSWORD_RECOVERY_REDIRECT' "$root/apps/mobile/src/providers/AuthProvider.tsx"
+          grep -Fq 'waitForPasswordRecoveryEvent' "$root/apps/mobile/src/providers/AuthProvider.tsx"
+          grep -Fq 'event === "PASSWORD_RECOVERY"' "$root/apps/mobile/src/providers/AuthProvider.tsx"
+          grep -Fq 'recoveryAttemptActive' "$root/apps/mobile/src/providers/AuthProvider.tsx"
+          grep -Fq 'recoveryLinkHandled' "$root/apps/mobile/src/providers/AuthProvider.tsx"
+          ! grep -Eq 'handledRecoveryUrls|activeRecoveryUrl|console\.(log|warn|error)' "$root/apps/mobile/src/providers/AuthProvider.tsx"
+
+          grep -Fq 'const MAX_SESSION_CHUNKS = 64' "$root/apps/mobile/src/lib/secureStorage.ts"
+          grep -Fq 'await registerKey(key);' "$root/apps/mobile/src/lib/secureStorage.ts"
+          grep -Fq 'Keep the key registered so a later logout can retry the purge' "$root/apps/mobile/src/lib/secureStorage.ts"
+          grep -Fq 'const failedKeys: string[] = []' "$root/apps/mobile/src/lib/secureStorage.ts"
+
+          grep -Fq 'export async function createContact' "$root/apps/mobile/src/lib/data.ts"
+          grep -Fq 'export async function updateContact' "$root/apps/mobile/src/lib/data.ts"
+          grep -Fq '.eq("workspace_id", input.workspaceId)' "$root/apps/mobile/src/lib/data.ts"
+          grep -Fq '.eq("id", input.contactId)' "$root/apps/mobile/src/lib/data.ts"
+          grep -Fq 'duplicateContactExists' "$root/apps/mobile/src/lib/data.ts"
+
+          grep -Fq '"requireCommit": true' "$root/apps/mobile/eas.json"
+          grep -Fq '"distribution": "internal"' "$root/apps/mobile/eas.json"
+          grep -Fq '"buildType": "apk"' "$root/apps/mobile/eas.json"
+
+          if git -C "$root" grep -n -E 'SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET' -- \
+            'apps/mobile/app/**' 'apps/mobile/src/**' 'apps/mobile/app.json' 'apps/mobile/eas.json' >/dev/null; then
+            echo 'MOBILE_SECRET_BOUNDARY=failed' | tee -a "$report"
+            exit 1
+          fi
+
+          if git -C "$root" grep -n -E '(^|[[:space:]])(eas|npx eas-cli[^[:space:]]*)[[:space:]]+(build|submit)' -- '.github/workflows/*.yml' '.github/workflows/*.yaml' >/dev/null; then
+            echo 'MOBILE_BINARY_RELEASE_BOUNDARY=failed' | tee -a "$report"
+            exit 1
+          fi
+
+          if git -C "$root" ls-files | grep -E '\.(apk|aab|ipa|jks|keystore|p8|p12|mobileprovision)$' >/dev/null; then
+            echo 'MOBILE_SIGNING_ARTIFACT_BOUNDARY=failed' | tee -a "$report"
+            exit 1
+          fi
+
+          echo 'MOBILE_RECOVERY_SOURCE=present' | tee -a "$report"
+          echo 'MOBILE_RECOVERY_URL_RETENTION=absent' | tee -a "$report"
+          echo 'MOBILE_CONTACT_CREATE_EDIT=present' | tee -a "$report"
+          echo 'MOBILE_WORKSPACE_RLS_FILTERS=present' | tee -a "$report"
+          echo 'MOBILE_SECURESTORE_PURGE=rollback_safe' | tee -a "$report"
+          echo 'MOBILE_SECRET_BOUNDARY=clean' | tee -a "$report"
+          echo 'MOBILE_BINARY_RELEASED_BY_WEB_DEPLOY=no' | tee -a "$report"
+          echo 'MOBILE_SIGNING_ARTIFACTS_IN_GIT=none' | tee -a "$report"
+
+      - name: Verify public Web routes remain healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          for route in / /login /register /api/version /api/health; do
+            curl -fsSL --max-time 15 "https://fanmind.ch${route}" -o /dev/null
+          done
+          echo 'PUBLIC_CORE_ROUTES=healthy' | tee -a "$report"
+          echo 'MOBILE_PHASE_B_PRODUCTION_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized Production verification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-mobile-phase-b-production-verification
+          path: fanmind-mobile-phase-b-production-verification.txt
+          if-no-files-found: error
+          retention-days: 14
