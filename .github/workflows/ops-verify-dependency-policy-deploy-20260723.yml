@@ -1,0 +1,178 @@
+name: FanMind P1 Verify Dependency Policy Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-verify-dependency-policy-deploy-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-verify-dependency-policy-deploy-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/verify-dependency-policy-deploy-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 30
+    env:
+      EXPECTED_RELEASE: c842353e34acc5ce6568b8068e5c7f106b5abb7e
+      REPORT_PATH: fanmind-dependency-policy-production-verification.txt
+
+    steps:
+      - name: Wait for exact release and healthy Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'VERIFICATION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          for attempt in $(seq 1 90); do
+            live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    try {
+                      const payload = JSON.parse(input);
+                      const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                      process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                    } catch {
+                      process.stdout.write("missing");
+                    }
+                  });
+                ' || true)"
+            server_head="$(git -C /var/www/fanmind rev-parse HEAD 2>/dev/null || true)"
+            origin_main="$(git -C /var/www/fanmind rev-parse origin/main 2>/dev/null || true)"
+
+            if [[ "$live_release" == "$EXPECTED_RELEASE" \
+              && "$server_head" == "$EXPECTED_RELEASE" \
+              && "$origin_main" == "$EXPECTED_RELEASE" ]]; then
+              curl -fsSL --max-time 15 https://fanmind.ch/api/health \
+                | node -e '
+                    let input = "";
+                    process.stdin.on("data", chunk => input += chunk);
+                    process.stdin.on("end", () => {
+                      try {
+                        const payload = JSON.parse(input);
+                        const components = Object.values(payload.components || {});
+                        const ok = payload.status === "healthy"
+                          && components.length === 7
+                          && components.every(component => component?.status === "healthy");
+                        process.exit(ok ? 0 : 1);
+                      } catch {
+                        process.exit(1);
+                      }
+                    });
+                  '
+              echo 'RELEASE_SYNC=ok' | tee -a "$report"
+              echo 'PUBLIC_REQUIRED_HEALTHY_COUNT=7' | tee -a "$report"
+              break
+            fi
+
+            if [[ "$attempt" == "90" ]]; then
+              echo 'RELEASE_SYNC=failed' | tee -a "$report"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Verify deployed fail-closed dependency policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          source_file="/var/www/fanmind/scripts/security/verify-dependency-audit.mjs"
+          test -f "$source_file"
+
+          node - "$source_file" <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+          const source = fs.readFileSync(process.argv[2], 'utf8');
+          const required = [
+            'const ROOT_REVIEW_EXCEPTION_EXPIRES_AT = "2026-08-07T00:00:00.000Z";',
+            'const ROOT_REVIEW_SOURCE_RUN = "30025574639";',
+            'const ROOT_REVIEWED_FRAMEWORK_VERSION = "16.2.11";',
+            'const ROOT_REVIEW_HIGH_MAXIMUM = 3;',
+            'const ROOT_REVIEW_MODERATE_MAXIMUM = 0;',
+            '"next",',
+            '"postcss",',
+            '"sharp",',
+          ];
+          if (required.some(value => !source.includes(value))) {
+            process.exit(1);
+          }
+          if (!source.includes('root.critical === 0')) process.exit(1);
+          if (!source.includes('root_unreviewed_vulnerability_package_present')) process.exit(1);
+          if (!source.includes('root_review_exception_expired')) process.exit(1);
+          console.log('DEPLOYED_REVIEW_SOURCE_RUN=30025574639');
+          console.log('DEPLOYED_ROOT_HIGH_MAXIMUM=3');
+          console.log('DEPLOYED_ROOT_MODERATE_MAXIMUM=0');
+          console.log('DEPLOYED_ROOT_CRITICAL_MAXIMUM=0');
+          console.log('DEPLOYED_REVIEW_PACKAGE_SET=next,postcss,sharp');
+          console.log('DEPLOYED_REVIEW_EXCEPTION_EXPIRES=2026-08-07T00:00:00.000Z');
+          console.log('DEPLOYED_POLICY_FAIL_CLOSED=yes');
+          NODE
+
+          audit_report="$RUNNER_TEMP/fanmind-dependency-audit-${GITHUB_RUN_ID}.json"
+          audit_output="$RUNNER_TEMP/fanmind-dependency-audit-${GITHUB_RUN_ID}.txt"
+          (
+            cd /var/www/fanmind
+            /usr/bin/node scripts/security/verify-dependency-audit.mjs --report "$audit_report"
+          ) > "$audit_output"
+
+          node - "$audit_report" <<'NODE' | tee -a "$report"
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const result = payload?.result;
+          if (!result?.ok) process.exit(1);
+          if (result.root.critical !== 0) process.exit(1);
+          if (result.root.high > 3) process.exit(1);
+          if (result.root.moderate !== 0) process.exit(1);
+          if (result.mobile.critical !== 0 || result.mobile.high !== 0) process.exit(1);
+          if (result.root.reviewSourceRun !== '30025574639') process.exit(1);
+          console.log(`LIVE_ROOT_AUDIT_CRITICAL=${result.root.critical}`);
+          console.log(`LIVE_ROOT_AUDIT_HIGH=${result.root.high}`);
+          console.log(`LIVE_ROOT_AUDIT_MODERATE=${result.root.moderate}`);
+          console.log(`LIVE_MOBILE_AUDIT_CRITICAL=${result.mobile.critical}`);
+          console.log(`LIVE_MOBILE_AUDIT_HIGH=${result.mobile.high}`);
+          console.log('LIVE_DEPENDENCY_POLICY=success');
+          NODE
+
+          rm -f "$audit_report" "$audit_output"
+
+      - name: Verify public core routes remain healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          for route in / /login /register /api/version /api/health; do
+            curl -fsSL --max-time 15 "https://fanmind.ch${route}" -o /dev/null
+          done
+          echo 'PUBLIC_CORE_ROUTES=healthy' | tee -a "$report"
+          echo 'DEPENDENCY_POLICY_PRODUCTION_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized production verification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-dependency-policy-production-verification
+          path: fanmind-dependency-policy-production-verification.txt
+          if-no-files-found: error
+          retention-days: 14
