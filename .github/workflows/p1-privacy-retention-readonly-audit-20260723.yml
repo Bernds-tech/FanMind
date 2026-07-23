@@ -83,7 +83,14 @@ jobs:
           report="$GITHUB_WORKSPACE/$REPORT_PATH"
 
           sudo -n env REPORT_PATH="$report" /usr/bin/node --input-type=module <<'NODE'
-          import { accessSync, constants, readFileSync, readdirSync, statSync, appendFileSync } from 'node:fs';
+          import {
+            accessSync,
+            appendFileSync,
+            constants,
+            readFileSync,
+            readdirSync,
+            statSync,
+          } from 'node:fs';
           import { spawnSync } from 'node:child_process';
 
           const reportPath = process.env.REPORT_PATH;
@@ -113,12 +120,6 @@ jobs:
             return values;
           }
 
-          function required(config, name) {
-            const value = config.get(name) || '';
-            if (!value) throw new Error(`${name}_missing`);
-            return value;
-          }
-
           function command(binary, args, options = {}) {
             const result = spawnSync(binary, args, {
               encoding: 'utf8',
@@ -132,24 +133,38 @@ jobs:
 
           const appEnv = parseEnv(readFileSync(`${sourceRoot}/.env.production`, 'utf8'));
           const workerEnv = parseEnv(readFileSync('/etc/fanmind-backup/worker.env', 'utf8'));
-          emit('RUNTIME_ENVIRONMENT', appEnv.get('NODE_ENV') === 'production' ? 'production' : 'unexpected');
+          const runtime = appEnv.get('FANMIND_RUNTIME_ENVIRONMENT') || appEnv.get('NODE_ENV') || 'missing';
+          emit('RUNTIME_ENVIRONMENT', runtime === 'production' ? 'production' : 'not_explicit');
           emit('META_SIGNATURE_SECRET', (appEnv.get('FACEBOOK_APP_SECRET') || appEnv.get('META_WEBHOOK_APP_SECRET')) ? 'configured' : 'missing');
           emit('TELEGRAM_WEBHOOK_SECRET', appEnv.get('TELEGRAM_WEBHOOK_SECRET') ? 'configured' : 'missing');
           emit('SERVER_ERROR_TRACKING', appEnv.get('FANMIND_SERVER_ERROR_TRACKING_ENABLED') === 'true' ? 'enabled' : 'disabled');
 
+          const databaseNames = [
+            'FANMIND_BACKUP_DB_HOST',
+            'FANMIND_BACKUP_DB_USER',
+            'FANMIND_BACKUP_DB_NAME',
+            'FANMIND_BACKUP_PGPASSFILE',
+          ];
+          const databaseConfigReady = databaseNames.every(name => Boolean(workerEnv.get(name)));
+          emit('DATABASE_AUDIT_CONFIG', databaseConfigReady ? 'ready' : 'incomplete');
+
           const psql = ['/usr/bin/psql', '/usr/lib/postgresql/17/bin/psql'].find(candidate => {
             try { accessSync(candidate, constants.X_OK); return true; } catch { return false; }
           });
-          if (!psql) throw new Error('psql_missing');
+          emit('PSQL_AVAILABLE', psql ? 'yes' : 'no');
 
-          function query(sql) {
+          let databaseQueryCount = 0;
+          let databaseQueryFailures = 0;
+          function query(label, sql) {
+            if (!psql || !databaseConfigReady) return null;
+            databaseQueryCount += 1;
             const result = spawnSync(
               psql,
               [
-                '--host', required(workerEnv, 'FANMIND_BACKUP_DB_HOST'),
+                '--host', workerEnv.get('FANMIND_BACKUP_DB_HOST'),
                 '--port', workerEnv.get('FANMIND_BACKUP_DB_PORT') || '5432',
-                '--username', required(workerEnv, 'FANMIND_BACKUP_DB_USER'),
-                '--dbname', required(workerEnv, 'FANMIND_BACKUP_DB_NAME'),
+                '--username', workerEnv.get('FANMIND_BACKUP_DB_USER'),
+                '--dbname', workerEnv.get('FANMIND_BACKUP_DB_NAME'),
                 '-v', 'ON_ERROR_STOP=1',
                 '-Atc', sql,
               ],
@@ -159,35 +174,72 @@ jobs:
                 timeout: 30000,
                 env: {
                   ...process.env,
-                  PGPASSFILE: required(workerEnv, 'FANMIND_BACKUP_PGPASSFILE'),
+                  PGPASSFILE: workerEnv.get('FANMIND_BACKUP_PGPASSFILE'),
                 },
               },
             );
-            if (result.error || result.status !== 0) throw new Error('database_query_failed');
+            if (result.error || result.status !== 0) {
+              databaseQueryFailures += 1;
+              emit(`DB_${label}_QUERY`, 'failed');
+              return null;
+            }
+            emit(`DB_${label}_QUERY`, 'success');
             return String(result.stdout || '').trim();
           }
 
-          const databaseJson = query(`
+          const tableStateText = query('TABLE_STATE', `
             select json_build_object(
               'meta_table', to_regclass('public.meta_webhook_events') is not null,
-              'meta_total', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events) end,
-              'meta_older_14d', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where received_at < now() - interval '14 days') end,
-              'meta_older_30d', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where received_at < now() - interval '30 days') end,
-              'meta_raw_nonempty', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where raw_payload <> '{}'::jsonb) end,
-              'meta_message_text', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where message_text is not null or text is not null) end,
-              'meta_external_ids', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where sender_id is not null or recipient_id is not null) end,
-              'meta_sensitive_key_rows', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where raw_payload::text ~* '\"(access[_-]?token|refresh[_-]?token|secret|password|authorization|cookie|email|phone|recipient|sender)\"[[:space:]]*:') end,
-              'meta_max_raw_bytes', case when to_regclass('public.meta_webhook_events') is null then 0 else coalesce((select max(octet_length(raw_payload::text)) from public.meta_webhook_events), 0) end,
               'server_event_table', to_regclass('public.server_error_events') is not null,
-              'server_event_total', case when to_regclass('public.server_error_events') is null then 0 else (select count(*) from public.server_error_events) end,
-              'server_event_older_30d', case when to_regclass('public.server_error_events') is null then 0 else (select count(*) from public.server_error_events where created_at < now() - interval '30 days') end,
-              'server_group_total', case when to_regclass('public.server_error_groups') is null then 0 else (select count(*) from public.server_error_groups) end,
+              'server_group_table', to_regclass('public.server_error_groups') is not null,
               'server_cleanup_rpc', to_regprocedure('public.cleanup_server_error_events(integer)') is not null,
               'meta_cleanup_rpc', to_regprocedure('public.cleanup_meta_webhook_events(integer,integer)') is not null
             )::text;
           `);
-          const database = JSON.parse(databaseJson);
-          for (const [key, value] of Object.entries(database)) emit(`DB_${key.toUpperCase()}`, value);
+          let tableState = {};
+          if (tableStateText) {
+            tableState = JSON.parse(tableStateText);
+            for (const [key, value] of Object.entries(tableState)) emit(`DB_${key.toUpperCase()}`, value);
+          }
+
+          if (tableState.meta_table === true) {
+            const metaText = query('META_COUNTS', `
+              select json_build_object(
+                'total', count(*),
+                'older_14d', count(*) filter (where received_at < now() - interval '14 days'),
+                'older_30d', count(*) filter (where received_at < now() - interval '30 days'),
+                'raw_nonempty', count(*) filter (where raw_payload <> '{}'::jsonb),
+                'message_text', count(*) filter (where message_text is not null or text is not null),
+                'external_ids', count(*) filter (where sender_id is not null or recipient_id is not null),
+                'sensitive_key_rows', count(*) filter (
+                  where raw_payload::text ~* '\"(access[_-]?token|refresh[_-]?token|secret|password|authorization|cookie|email|phone|recipient|sender)\"[[:space:]]*:'
+                ),
+                'max_raw_bytes', coalesce(max(octet_length(raw_payload::text)), 0)
+              )::text
+              from public.meta_webhook_events;
+            `);
+            if (metaText) {
+              const meta = JSON.parse(metaText);
+              for (const [key, value] of Object.entries(meta)) emit(`DB_META_${key.toUpperCase()}`, value);
+            }
+          }
+
+          if (tableState.server_event_table === true) {
+            const serverText = query('SERVER_COUNTS', `
+              select json_build_object(
+                'event_total', count(*),
+                'event_older_30d', count(*) filter (where created_at < now() - interval '30 days'),
+                'group_total', (select count(*) from public.server_error_groups)
+              )::text
+              from public.server_error_events;
+            `);
+            if (serverText) {
+              const server = JSON.parse(serverText);
+              for (const [key, value] of Object.entries(server)) emit(`DB_SERVER_${key.toUpperCase()}`, value);
+            }
+          }
+          emit('DATABASE_QUERY_COUNT', databaseQueryCount);
+          emit('DATABASE_QUERY_FAILURES', databaseQueryFailures);
 
           const metaSource = readFileSync(`${sourceRoot}/src/lib/supabase/server.ts`, 'utf8');
           const metaRoute = readFileSync(`${sourceRoot}/src/app/api/webhooks/meta/route.ts`, 'utf8');
