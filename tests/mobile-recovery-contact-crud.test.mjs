@@ -194,13 +194,21 @@ test("SecureStore purge enrolls legacy sessions and retains failed keys for retr
     source,
     /Existing installations created before the registry was introduced[\s\S]*await registerKey\(key\)/u,
   );
+  assert.match(source, /const MAX_SESSION_CHUNKS = 64/u);
+  assert.match(source, /parsed <= MAX_SESSION_CHUNKS/u);
   assert.match(source, /const failedKeys: string\[\] = \[\]/u);
   assert.match(source, /failedKeys\.push\(key\)/u);
   assert.match(source, /await writeRegistry\(failedKeys\)/u);
   assert.match(source, /throw new Error\("Nicht alle sicheren FanMind-Schlüssel/u);
+  assert.match(
+    source,
+    /await registerKey\(key\);[\s\S]*setItemAsync\([\s\S]*COUNT_SUFFIX[\s\S]*for \(const \[index, chunk\] of chunks\.entries\(\)\)/u,
+  );
+  assert.match(source, /Keep the key registered so a later logout can retry the purge/u);
+  assert.match(source, /A stale registry entry is safer than unregistered session data/u);
 });
 
-test("AuthProvider requires recovery confirmation and never logs credentials", async () => {
+test("AuthProvider requires recovery confirmation without retaining or logging credentials", async () => {
   const source = await read("apps/mobile/src/providers/AuthProvider.tsx");
 
   assert.match(source, /resetPasswordForEmail/u);
@@ -214,6 +222,10 @@ test("AuthProvider requires recovery confirmation and never logs credentials", a
   assert.match(source, /recoveryStatus !== "ready"/u);
   assert.match(source, /supabase\.auth\.updateUser/u);
   assert.match(source, /clearSecureSessionStorage/u);
+  assert.match(source, /recoveryAttemptActive/u);
+  assert.match(source, /recoveryLinkHandled/u);
+  assert.doesNotMatch(source, /handledRecoveryUrls|activeRecoveryUrl/u);
+  assert.doesNotMatch(source, /new Set<string>|\.add\(url\)/u);
   assert.doesNotMatch(source, /console\.(?:log|warn|error)/u);
 });
 
