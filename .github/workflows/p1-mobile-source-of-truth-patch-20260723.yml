@@ -1,0 +1,46 @@
+name: FanMind P1 Mobile Source of Truth Patch
+
+on:
+  push:
+    branches:
+      - p1/mobile-recovery-contact-crud-20260723
+    paths:
+      - ".github/workflows/p1-mobile-source-of-truth-patch-20260723.yml"
+      - "scripts/operations/mobile-source-of-truth-patch-temp.py"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted Mobile branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/mobile-recovery-contact-crud-20260723
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Patch Source of Truth and remove one-off helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/operations/mobile-source-of-truth-patch-temp.py
+          rm -f \
+            scripts/operations/mobile-source-of-truth-patch-temp.py \
+            .github/workflows/p1-mobile-source-of-truth-patch-20260723.yml
+          git diff --check
+
+      - name: Commit synchronized Mobile documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/SOURCE_OF_TRUTH.md scripts/operations .github/workflows
+          git diff --cached --quiet && { echo "Source of Truth patch produced no changes" >&2; exit 1; }
+          git commit -m "Synchronize Mobile Phase B product truth"
+          git push origin HEAD:p1/mobile-recovery-contact-crud-20260723
