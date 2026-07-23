@@ -1,0 +1,71 @@
+name: FanMind P1 Staging Boundary Ref Match PR Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-staging-boundary-ref-match-pr-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/staging-boundary-ref-match-20260723' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted internal branch
+        uses: actions/checkout@v4
+        with:
+          ref: p1/staging-boundary-ref-match-20260723
+          fetch-depth: 0
+
+      - name: Execute deterministic patch embedded in trusted helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import sys
+          import textwrap
+
+          helper = Path('.github/workflows/p1-staging-boundary-ref-match-patch.yml')
+          source = helper.read_text(encoding='utf-8')
+          start_marker = "python - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          if start_marker not in source or end_marker not in source:
+              raise SystemExit('embedded_patch_markers_missing')
+          embedded = source.split(start_marker, 1)[1].split(end_marker, 1)[0]
+          patch_path = Path('/tmp/fanmind-staging-boundary-patch.py')
+          patch_path.write_text(textwrap.dedent(embedded), encoding='utf-8')
+          subprocess.run([sys.executable, str(patch_path)], check=True)
+          PY
+          git diff --check
+
+      - name: Commit staging boundary hardening
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/lib/environmentBoundaryPolicy.mjs \
+            scripts/environment-boundary-preflight.mjs \
+            scripts/staging-readiness-preflight.mjs \
+            tests/environment-boundary-policy.test.mjs \
+            tests/staging-readiness-policy.test.mjs \
+            docs/operations/STAGING_PROVISIONING.md \
+            .env.staging.example
+          git diff --cached --quiet && { echo "Patch produced no changes" >&2; exit 1; }
+          git commit -m "Bind staging Supabase target ref to project URL"
+          git push origin HEAD:p1/staging-boundary-ref-match-20260723
