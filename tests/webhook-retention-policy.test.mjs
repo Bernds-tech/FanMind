@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -12,6 +18,15 @@ import {
 const migrationPath =
   "supabase/migrations/20260723184500_webhook_diagnostic_retention.sql";
 
+async function exists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 test("retention migration is bounded, service-role only and cannot delete CRM data", async () => {
   const source = await readFile(migrationPath, "utf8");
 
@@ -22,7 +37,10 @@ test("retention migration is bounded, service-role only and cannot delete CRM da
   assert.match(source, /p_retention_days > 365/u);
   assert.match(source, /meta_webhook_events_minimized_diagnostic_check/u);
   assert.match(source, /not valid/u);
-  assert.match(source, /page_id is null[\s\S]*message_text is null[\s\S]*message_id is null/u);
+  assert.match(
+    source,
+    /page_id is null[\s\S]*message_text is null[\s\S]*message_id is null/u,
+  );
   assert.match(source, /jsonb_typeof\(raw_payload\) = 'object'/u);
   assert.match(
     source,
@@ -49,13 +67,18 @@ test("retention migration is bounded, service-role only and cannot delete CRM da
 test("optional server-error retention reports an absent table without creating it", async () => {
   const source = await readFile(migrationPath, "utf8");
 
-  assert.match(source, /to_regclass\('public\.server_error_events'\) is null/u);
+  assert.match(
+    source,
+    /to_regclass\('public\.server_error_events'\) is null/u,
+  );
   assert.match(source, /return query select false, 0, 0, false/u);
   assert.doesNotMatch(source, /create table[^;]*server_error_events/iu);
 });
 
 test("retention worker emits aggregates only and defaults to dry-run", async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "fanmind-webhook-retention-"));
+  const directory = await mkdtemp(
+    path.join(os.tmpdir(), "fanmind-webhook-retention-"),
+  );
   const envFile = path.join(directory, ".env.production");
   const serviceKey = "service-role-test-key-that-must-never-be-logged";
   const baseUrl = "https://exampleproject.supabase.co";
@@ -187,18 +210,20 @@ test("systemd timer stays install-only until migration verification", async () =
   );
 });
 
-test("PM2 and journald retention templates are finite and conservative", async () => {
-  const [logrotate, journald] = await Promise.all([
-    readFile("ops/logrotate/fanmind-pm2", "utf8"),
+test("PM2 has one rotation mechanism and journald remains bounded", async () => {
+  const [journald, runbook] = await Promise.all([
     readFile("ops/systemd/journald-fanmind.conf", "utf8"),
+    readFile("docs/security/WEBHOOK_LOG_RETENTION.md", "utf8"),
   ]);
 
-  assert.match(logrotate, /daily/u);
-  assert.match(logrotate, /size 20M/u);
-  assert.match(logrotate, /rotate 14/u);
-  assert.match(logrotate, /compress/u);
-  assert.match(logrotate, /copytruncate/u);
-  assert.match(logrotate, /su ubuntu ubuntu/u);
+  assert.equal(await exists("ops/logrotate/fanmind-pm2"), false);
+  assert.match(runbook, /einziger PM2-Rotationsmechanismus/u);
+  assert.match(runbook, /`pm2-logrotate`/u);
+  assert.match(runbook, /10 MiB/u);
+  assert.match(runbook, /14 Rotationen/u);
+  assert.match(runbook, /täglich/u);
+  assert.match(runbook, /\/etc\/logrotate\.d\/fanmind-pm2[\s\S]*muss abwesend/u);
+  assert.doesNotMatch(runbook, /ops\/logrotate\/fanmind-pm2/u);
 
   assert.match(journald, /SystemMaxUse=512M/u);
   assert.match(journald, /RuntimeMaxUse=128M/u);
