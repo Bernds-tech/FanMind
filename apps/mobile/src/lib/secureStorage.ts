@@ -1,8 +1,18 @@
 import * as SecureStore from "expo-secure-store";
 import type { SupportedStorage } from "@supabase/supabase-js";
 
+import {
+  addSecureStorageRegistryKey,
+  normalizeSecureStorageRegistry,
+  removeSecureStorageRegistryKey,
+} from "@/lib/secureStorageRegistry.mjs";
+
 const CHUNK_SIZE = 1800;
 const COUNT_SUFFIX = ":count";
+const REGISTRY_KEY = "fanmind:secure-storage-registry:v1";
+const SECURE_OPTIONS = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+} as const;
 
 function chunkKey(key: string, index: number): string {
   return `${key}:chunk:${index}`;
@@ -14,6 +24,29 @@ async function readChunkCount(key: string): Promise<number> {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
 }
 
+async function readRegistry(): Promise<string[]> {
+  const raw = await SecureStore.getItemAsync(REGISTRY_KEY);
+  return normalizeSecureStorageRegistry(raw);
+}
+
+async function writeRegistry(keys: string[]): Promise<void> {
+  if (!keys.length) {
+    await SecureStore.deleteItemAsync(REGISTRY_KEY);
+    return;
+  }
+  await SecureStore.setItemAsync(REGISTRY_KEY, JSON.stringify(keys), SECURE_OPTIONS);
+}
+
+async function registerKey(key: string): Promise<void> {
+  const keys = addSecureStorageRegistryKey(await readRegistry(), key);
+  await writeRegistry(keys);
+}
+
+async function unregisterKey(key: string): Promise<void> {
+  const keys = removeSecureStorageRegistryKey(await readRegistry(), key);
+  await writeRegistry(keys);
+}
+
 async function removeChunks(key: string): Promise<void> {
   const count = await readChunkCount(key);
   await Promise.all(
@@ -22,6 +55,14 @@ async function removeChunks(key: string): Promise<void> {
     ),
   );
   await SecureStore.deleteItemAsync(`${key}${COUNT_SUFFIX}`);
+}
+
+export async function clearSecureSessionStorage(): Promise<void> {
+  const keys = await readRegistry();
+  for (const key of keys) {
+    await removeChunks(key);
+  }
+  await SecureStore.deleteItemAsync(REGISTRY_KEY);
 }
 
 export const secureSessionStorage: SupportedStorage = {
@@ -35,6 +76,7 @@ export const secureSessionStorage: SupportedStorage = {
     );
     if (chunks.some((chunk) => chunk === null)) {
       await removeChunks(key);
+      await unregisterKey(key);
       return null;
     }
     return chunks.join("");
@@ -42,23 +84,24 @@ export const secureSessionStorage: SupportedStorage = {
 
   async setItem(key: string, value: string): Promise<void> {
     await removeChunks(key);
+    const chunkCount = Math.max(1, Math.ceil(value.length / CHUNK_SIZE));
     const chunks = Array.from(
-      { length: Math.ceil(value.length / CHUNK_SIZE) },
+      { length: chunkCount },
       (_, index) => value.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE),
     );
     for (const [index, chunk] of chunks.entries()) {
-      await SecureStore.setItemAsync(chunkKey(key, index), chunk, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      });
+      await SecureStore.setItemAsync(chunkKey(key, index), chunk, SECURE_OPTIONS);
     }
     await SecureStore.setItemAsync(
       `${key}${COUNT_SUFFIX}`,
       String(chunks.length),
-      { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY },
+      SECURE_OPTIONS,
     );
+    await registerKey(key);
   },
 
   async removeItem(key: string): Promise<void> {
     await removeChunks(key);
+    await unregisterKey(key);
   },
 };
