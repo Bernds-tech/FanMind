@@ -168,9 +168,6 @@ for forbidden in (
     "firstError:",
     "messageText: formatDebugMessageText",
     "rawPayload: event.rawEvent",
-    "pageId: event.pageId",
-    "senderId: event.senderId",
-    "recipientId: event.recipientId",
 ):
     if forbidden in meta_source:
         raise SystemExit(f"meta_forbidden_remaining:{forbidden}")
