@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { getTrustedClientIpValue } from "@/lib/clientIpPolicy.mjs";
 
 export type RateLimitOptions = {
   maxRequests: number;
@@ -19,9 +20,13 @@ type Bucket = {
 const buckets = new Map<string, Bucket>();
 
 /**
- * Lightweight in-memory rate limit for MVP abuse/cost protection.
- * This is process-local and resets on deploy/restart; replace with Redis or
- * a Supabase-backed counter before scaling across multiple server instances.
+ * Lightweight in-memory rate limit for the current single-process Production
+ * topology. The canonical client identity is resolved centrally and cannot be
+ * selected from the client-controlled first X-Forwarded-For hop.
+ *
+ * Buckets are still process-local and reset on deploy/restart. Replace this
+ * counter with the atomic shared limiter tracked in #664 before PM2 cluster or
+ * multi-instance scale-out.
  */
 export function checkRateLimit(key: string, options: RateLimitOptions): RateLimitResult {
   const now = Date.now();
@@ -42,9 +47,5 @@ export function checkRateLimit(key: string, options: RateLimitOptions): RateLimi
 }
 
 export function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "anonymous"
-  );
+  return getTrustedClientIpValue(request.headers, "anonymous");
 }
