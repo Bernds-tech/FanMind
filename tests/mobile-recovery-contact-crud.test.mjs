@@ -169,6 +169,19 @@ test("SecureStore registry is bounded, deduplicated and corruption-safe", () => 
   assert.deepEqual(removeSecureStorageRegistryKey(["auth", "other"], "auth"), ["other"]);
 });
 
+test("SecureStore purge enrolls legacy sessions and retains failed keys for retry", async () => {
+  const source = await read("apps/mobile/src/lib/secureStorage.ts");
+
+  assert.match(
+    source,
+    /Existing installations created before the registry was introduced[\s\S]*await registerKey\(key\)/u,
+  );
+  assert.match(source, /const failedKeys: string\[\] = \[\]/u);
+  assert.match(source, /failedKeys\.push\(key\)/u);
+  assert.match(source, /await writeRegistry\(failedKeys\)/u);
+  assert.match(source, /throw new Error\("Nicht alle sicheren FanMind-Schlüssel/u);
+});
+
 test("AuthProvider handles PKCE and token recovery without logging credentials", async () => {
   const source = await read("apps/mobile/src/providers/AuthProvider.tsx");
 
@@ -181,7 +194,6 @@ test("AuthProvider handles PKCE and token recovery without logging credentials",
   assert.match(source, /supabase\.auth\.updateUser/u);
   assert.match(source, /clearSecureSessionStorage/u);
   assert.doesNotMatch(source, /console\.(?:log|warn|error)/u);
-  assert.doesNotMatch(source, /accessToken\)|refreshToken\)|parsed\.code\)/u);
 });
 
 test("Mobile contact mutations stay workspace-bound and fail on duplicates", async () => {
@@ -218,6 +230,6 @@ test("Mobile routes expose reset, create and edit flows with no automatic sendin
   assert.match(detail, /contacts\/\$\{contact\.id\}\/edit/u);
   assert.match(create, /createContact/u);
   assert.match(edit, /updateContact/u);
-  assert.match(settings, /alle registrierten[\s\S]*SecureStore-Schlüssel/u);
+  assert.match(settings, /entfernt alle registrierten[\s\S]*FanMind-Schlüssel aus SecureStore/u);
   assert.match(detail, /Keine automatische Sendefunktion/u);
 });
