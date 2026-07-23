@@ -1,0 +1,446 @@
+name: FanMind P1 Staging Boundary Ref Match Patch
+
+on:
+  push:
+    branches:
+      - p1/staging-boundary-ref-match-20260723
+    paths:
+      - ".github/workflows/p1-staging-boundary-ref-match-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted branch
+        uses: actions/checkout@v4
+        with:
+          ref: p1/staging-boundary-ref-match-20260723
+          fetch-depth: 0
+
+      - name: Patch fail-closed staging target binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          def replace_once(path, old, new, label):
+              source = path.read_text(encoding="utf-8")
+              if old not in source:
+                  raise SystemExit(f"missing anchor: {label}")
+              path.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+          policy_path = Path("src/lib/environmentBoundaryPolicy.mjs")
+          replace_once(
+              policy_path,
+              '''function clean(value) {
+            return typeof value === "string" ? value.trim() : "";
+          }
+          ''',
+              '''function clean(value) {
+            return typeof value === "string" ? value.trim() : "";
+          }
+
+          function firstNonEmpty(...values) {
+            for (const value of values) {
+              const candidate = clean(value);
+              if (candidate) return candidate;
+            }
+            return "";
+          }
+          ''',
+              "firstNonEmpty",
+          )
+          replace_once(
+              policy_path,
+              '''  const url = parseUrl(
+            environment.NEXT_PUBLIC_APP_URL
+              ?? environment.NEXT_PUBLIC_SITE_URL
+              ?? environment.FANMIND_APP_URL,
+          );
+          ''',
+              '''  const url = parseUrl(
+            firstNonEmpty(
+              environment.NEXT_PUBLIC_APP_URL,
+              environment.NEXT_PUBLIC_SITE_URL,
+              environment.FANMIND_APP_URL,
+            ),
+          );
+          ''',
+              "app target fallback",
+          )
+          replace_once(
+              policy_path,
+              '''function supabaseTarget(environment) {
+            const url = parseUrl(environment.NEXT_PUBLIC_SUPABASE_URL);
+            const extractedRef = supabaseProjectRefFromUrl(environment.NEXT_PUBLIC_SUPABASE_URL);
+            const explicitRef = normalizeProjectRef(environment.FANMIND_TARGET_SUPABASE_PROJECT_REF);
+            const projectRef = extractedRef ?? explicitRef;
+            const productionRef = normalizeProjectRef(
+              environment.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF,
+            );
+            return {
+              configured: Boolean(url),
+              secure: url?.protocol === "https:",
+              projectRef,
+              productionRef,
+              productionMatch: Boolean(projectRef && productionRef && projectRef === productionRef),
+              standardProjectUrl: Boolean(extractedRef),
+            };
+          }
+          ''',
+              '''function supabaseTarget(environment) {
+            const rawUrl = clean(environment.NEXT_PUBLIC_SUPABASE_URL);
+            const url = parseUrl(rawUrl);
+            const urlProjectRef = supabaseProjectRefFromUrl(rawUrl);
+            const explicitProjectRef = normalizeProjectRef(
+              environment.FANMIND_TARGET_SUPABASE_PROJECT_REF,
+            );
+            const projectRef = urlProjectRef ?? explicitProjectRef;
+            const productionRef = normalizeProjectRef(
+              environment.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF,
+            );
+            const targetRefMismatch = Boolean(
+              urlProjectRef &&
+                explicitProjectRef &&
+                urlProjectRef !== explicitProjectRef,
+            );
+            return {
+              configured: Boolean(url),
+              secure: url?.protocol === "https:",
+              urlProjectRef,
+              explicitProjectRef,
+              projectRef,
+              productionRef,
+              productionMatch: Boolean(projectRef && productionRef && projectRef === productionRef),
+              targetRefMismatch,
+              targetRefMatchesUrl: Boolean(
+                urlProjectRef &&
+                  explicitProjectRef &&
+                  urlProjectRef === explicitProjectRef,
+              ),
+              standardProjectUrl: Boolean(urlProjectRef),
+            };
+          }
+          ''',
+              "supabase target",
+          )
+          replace_once(
+              policy_path,
+              '''  if (!supabase.configured) {
+            errors.push("NEXT_PUBLIC_SUPABASE_URL fehlt oder ist ungültig.");
+          } else if (!supabase.secure) {
+            errors.push("Supabase-Ziel-URLs müssen HTTPS verwenden.");
+          }
+          ''',
+              '''  if (!supabase.configured) {
+            errors.push("NEXT_PUBLIC_SUPABASE_URL fehlt oder ist ungültig.");
+          } else if (!supabase.secure) {
+            errors.push("Supabase-Ziel-URLs müssen HTTPS verwenden.");
+          }
+          if (supabase.targetRefMismatch) {
+            errors.push(
+              "NEXT_PUBLIC_SUPABASE_URL und FANMIND_TARGET_SUPABASE_PROJECT_REF müssen dasselbe Supabase-Projekt benennen.",
+            );
+          }
+          ''',
+              "supabase mismatch error",
+          )
+          replace_once(
+              policy_path,
+              '''    if (!supabase.projectRef) {
+              errors.push("Schreibtests verlangen eine eindeutig erkennbare Ziel-Supabase-Projektreferenz.");
+            }
+          ''',
+              '''    if (!supabase.projectRef) {
+              errors.push("Schreibtests verlangen eine eindeutig erkennbare Ziel-Supabase-Projektreferenz.");
+            }
+            if (!supabase.explicitProjectRef) {
+              errors.push(
+                "Schreibtests verlangen FANMIND_TARGET_SUPABASE_PROJECT_REF als explizite Zielbestätigung.",
+              );
+            }
+          ''',
+              "write explicit target ref",
+          )
+          replace_once(
+              policy_path,
+              '''    supabaseConfigured: supabase.configured,
+            supabaseProjectIdentified: Boolean(supabase.projectRef),
+            productionProjectIdentified: Boolean(supabase.productionRef),
+          ''',
+              '''    supabaseConfigured: supabase.configured,
+            supabaseProjectIdentified: Boolean(supabase.projectRef),
+            supabaseUrlProjectIdentified: Boolean(supabase.urlProjectRef),
+            supabaseExplicitProjectIdentified: Boolean(supabase.explicitProjectRef),
+            supabaseTargetRefMismatch: supabase.targetRefMismatch,
+            supabaseTargetRefMatchesUrl: supabase.targetRefMatchesUrl,
+            productionProjectIdentified: Boolean(supabase.productionRef),
+          ''',
+              "boundary result fields",
+          )
+
+          preflight_path = Path("scripts/environment-boundary-preflight.mjs")
+          replace_once(
+              preflight_path,
+              '''console.log(`SUPABASE_TARGET=${result.supabaseProjectIdentified ? "identified" : "unknown"}`);
+          console.log(`PRODUCTION_SUPABASE_REFERENCE=${result.productionProjectIdentified ? "identified" : "missing"}`);
+          console.log(`SUPABASE_MATCHES_PRODUCTION=${result.supabaseProductionMatch ? "yes" : "no"}`);
+          ''',
+              '''console.log(`SUPABASE_TARGET=${result.supabaseProjectIdentified ? "identified" : "unknown"}`);
+          console.log(`SUPABASE_URL_PROJECT_REF=${result.supabaseUrlProjectIdentified ? "identified" : "missing"}`);
+          console.log(`SUPABASE_EXPLICIT_TARGET_REF=${result.supabaseExplicitProjectIdentified ? "identified" : "missing"}`);
+          console.log(
+            `SUPABASE_TARGET_REF_MATCHES_URL=${
+              result.supabaseTargetRefMismatch
+                ? "no"
+                : result.supabaseTargetRefMatchesUrl
+                  ? "yes"
+                  : "unknown"
+            }`,
+          );
+          console.log(`PRODUCTION_SUPABASE_REFERENCE=${result.productionProjectIdentified ? "identified" : "missing"}`);
+          console.log(`SUPABASE_MATCHES_PRODUCTION=${result.supabaseProductionMatch ? "yes" : "no"}`);
+          ''',
+              "redacted preflight output",
+          )
+
+          staging_path = Path("scripts/staging-readiness-preflight.mjs")
+          replace_once(
+              staging_path,
+              '''if (!boundary.supabaseProjectIdentified || !boundary.productionProjectIdentified) {
+            errors.push("Staging- und Production-Supabase-Projektreferenz müssen identifiziert sein.");
+          }
+
+          if (boundary.supabaseProductionMatch) {
+          ''',
+              '''if (!boundary.supabaseProjectIdentified || !boundary.productionProjectIdentified) {
+            errors.push("Staging- und Production-Supabase-Projektreferenz müssen identifiziert sein.");
+          }
+
+          if (!boundary.supabaseUrlProjectIdentified) {
+            errors.push("Staging benötigt eine standardisierte Supabase-Projekt-URL mit erkennbarer Projektreferenz.");
+          }
+
+          if (!boundary.supabaseExplicitProjectIdentified) {
+            errors.push("FANMIND_TARGET_SUPABASE_PROJECT_REF muss als explizite Staging-Zielbestätigung gesetzt sein.");
+          }
+
+          if (boundary.supabaseTargetRefMismatch || !boundary.supabaseTargetRefMatchesUrl) {
+            errors.push("Supabase-URL und explizite Staging-Zielreferenz müssen exakt übereinstimmen.");
+          }
+
+          if (boundary.supabaseProductionMatch) {
+          ''',
+              "staging ref checks",
+          )
+          replace_once(
+              staging_path,
+              '''configured("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+          configured("SUPABASE_SERVICE_ROLE_KEY");
+          ''',
+              '''configured("FANMIND_TARGET_SUPABASE_PROJECT_REF");
+          configured("FANMIND_PRODUCTION_SUPABASE_PROJECT_REF");
+          configured("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+          configured("SUPABASE_SERVICE_ROLE_KEY");
+          ''',
+              "staging configured refs",
+          )
+          replace_once(
+              staging_path,
+              '''console.log(`STAGING_SUPABASE_TARGET=${boundary.supabaseProjectIdentified && !boundary.supabaseProductionMatch ? "separate" : "invalid"}`);
+          console.log(`STAGING_STRIPE_MODE=${value("STRIPE_SECRET_KEY").startsWith("sk_test_") ? "test" : "invalid"}`);
+          ''',
+              '''console.log(`STAGING_SUPABASE_TARGET=${boundary.supabaseProjectIdentified && !boundary.supabaseProductionMatch ? "separate" : "invalid"}`);
+          console.log(
+            `STAGING_SUPABASE_REF_BINDING=${
+              boundary.supabaseTargetRefMatchesUrl && !boundary.supabaseTargetRefMismatch
+                ? "matching"
+                : "invalid"
+            }`,
+          );
+          console.log(`STAGING_STRIPE_MODE=${value("STRIPE_SECRET_KEY").startsWith("sk_test_") ? "test" : "invalid"}`);
+          ''',
+              "staging output",
+          )
+
+          env_test_path = Path("tests/environment-boundary-policy.test.mjs")
+          env_test_source = env_test_path.read_text(encoding="utf-8")
+          test_anchor = '''test("preflight output never prints actual URLs, project refs or secret values", () => {
+          '''
+          new_tests = '''test("app target skips an empty primary URL and uses the first configured fallback", () => {
+            const result = evaluateEnvironmentBoundary({
+              ...stagingEnvironment,
+              NEXT_PUBLIC_APP_URL: "   ",
+              NEXT_PUBLIC_SITE_URL: "https://staging-fallback.fanmind.example",
+            });
+
+            assert.equal(result.ok, true);
+            assert.equal(result.appConfigured, true);
+            assert.equal(result.appProduction, false);
+            assert.equal(result.appSecure, true);
+          });
+
+          test("Supabase URL and explicit target reference must identify the same project", () => {
+            const matching = evaluateEnvironmentBoundary(stagingEnvironment);
+            assert.equal(matching.ok, true);
+            assert.equal(matching.supabaseUrlProjectIdentified, true);
+            assert.equal(matching.supabaseExplicitProjectIdentified, true);
+            assert.equal(matching.supabaseTargetRefMatchesUrl, true);
+            assert.equal(matching.supabaseTargetRefMismatch, false);
+
+            const mismatchedEnvironment = {
+              ...stagingEnvironment,
+              FANMIND_TARGET_SUPABASE_PROJECT_REF: "differentref123",
+            };
+            const readOnly = evaluateEnvironmentBoundary(mismatchedEnvironment);
+            assert.equal(readOnly.ok, false);
+            assert.equal(readOnly.supabaseTargetRefMismatch, true);
+            assert.equal(readOnly.supabaseTargetRefMatchesUrl, false);
+            assert.match(readOnly.errors.join("\\n"), /dasselbe Supabase-Projekt/);
+
+            const write = evaluateEnvironmentBoundary(
+              {
+                ...mismatchedEnvironment,
+                FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+                FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+              },
+              { allowWrite: true },
+            );
+            assert.equal(write.ok, false);
+            assert.equal(write.supabaseTargetRefMismatch, true);
+          });
+
+          test("write mode requires an explicit target reference even for a standard Supabase URL", () => {
+            const result = evaluateEnvironmentBoundary(
+              {
+                ...stagingEnvironment,
+                FANMIND_TARGET_SUPABASE_PROJECT_REF: "",
+                FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+                FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+              },
+              { allowWrite: true },
+            );
+
+            assert.equal(result.ok, false);
+            assert.equal(result.supabaseUrlProjectIdentified, true);
+            assert.equal(result.supabaseExplicitProjectIdentified, false);
+            assert.match(result.errors.join("\\n"), /explizite Zielbestätigung/);
+          });
+
+          '''
+          if test_anchor not in env_test_source:
+              raise SystemExit("missing anchor: environment tests")
+          env_test_path.write_text(
+              env_test_source.replace(test_anchor, new_tests + test_anchor, 1),
+              encoding="utf-8",
+          )
+
+          staging_test_path = Path("tests/staging-readiness-policy.test.mjs")
+          replace_once(
+              staging_test_path,
+              '''  assert.match(script, /FANMIND_ENABLE_REFERRAL_BILLING/);
+            assert.match(script, /STAGING_READINESS=OK/);
+          ''',
+              '''  assert.match(script, /FANMIND_ENABLE_REFERRAL_BILLING/);
+            assert.match(script, /FANMIND_TARGET_SUPABASE_PROJECT_REF/);
+            assert.match(script, /Supabase-URL und explizite Staging-Zielreferenz müssen exakt übereinstimmen/);
+            assert.match(script, /STAGING_SUPABASE_REF_BINDING/);
+            assert.match(script, /STAGING_READINESS=OK/);
+          ''',
+              "staging policy assertions",
+          )
+          replace_once(
+              staging_test_path,
+              '''  assert.match(runbook, /keine Live-Kunden/);
+            assert.match(runbook, /ersetzt nicht die externen Ressourcen/);
+          ''',
+              '''  assert.match(runbook, /keine Live-Kunden/);
+            assert.match(runbook, /exakt der Projektreferenz in der Supabase-URL entsprechen/);
+            assert.match(runbook, /ersetzt nicht die externen Ressourcen/);
+          ''',
+              "staging runbook assertions",
+          )
+
+          runbook_path = Path("docs/operations/STAGING_PROVISIONING.md")
+          replace_once(
+              runbook_path,
+              '''   - eigenes Auth, Datenbank, Storage und Service-Role-Key;
+             - ausschließlich synthetische Kontakte, Nachrichten und Dateien;
+          ''',
+              '''   - eigenes Auth, Datenbank, Storage und Service-Role-Key;
+             - `FANMIND_TARGET_SUPABASE_PROJECT_REF` muss exakt der Projektreferenz in der Supabase-URL entsprechen;
+             - Abweichungen zwischen URL und expliziter Zielreferenz werden fail-closed abgelehnt;
+             - ausschließlich synthetische Kontakte, Nachrichten und Dateien;
+          ''',
+              "runbook supabase binding",
+          )
+          replace_once(
+              runbook_path,
+              '''2. `.env.staging.example` außerhalb von Git befüllen;
+          3. alle Schreibschalter auf `false` lassen;
+          ''',
+              '''2. `.env.staging.example` außerhalb von Git befüllen;
+          3. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
+          4. alle Schreibschalter auf `false` lassen;
+          ''',
+              "runbook safe sequence",
+          )
+          runbook_source = runbook_path.read_text(encoding="utf-8")
+          runbook_source = runbook_source.replace("4. `npm run staging:preflight` ausführen;", "5. `npm run staging:preflight` ausführen;")
+          runbook_source = runbook_source.replace("5. Workflow `FanMind Staging Readiness` manuell starten;", "6. Workflow `FanMind Staging Readiness` manuell starten;")
+          runbook_source = runbook_source.replace("6. erst für einen ausdrücklich beschriebenen Testfall", "7. erst für einen ausdrücklich beschriebenen Testfall")
+          runbook_source = runbook_source.replace("7. nach dem Test Schreibfreigabe", "8. nach dem Test Schreibfreigabe")
+          runbook_source = runbook_source.replace("8. synthetische Testdaten", "9. synthetische Testdaten")
+          runbook_path.write_text(runbook_source, encoding="utf-8")
+          replace_once(
+              runbook_path,
+              '''- Supabase-Projekt nachweislich von Production getrennt ist;
+          - Stripe Test Mode verwendet wird;
+          ''',
+              '''- Supabase-Projekt nachweislich von Production getrennt ist;
+          - URL-Projektreferenz und explizite Staging-Zielreferenz exakt übereinstimmen;
+          - Stripe Test Mode verwendet wird;
+          ''',
+              "runbook release criteria",
+          )
+
+          template_path = Path(".env.staging.example")
+          replace_once(
+              template_path,
+              '''# Required comparison values for any write-enabled test.
+          FANMIND_TARGET_SUPABASE_PROJECT_REF=stagingprojectref
+          ''',
+              '''# Required comparison values for any write-enabled test.
+          # The target ref must exactly equal the project subdomain in NEXT_PUBLIC_SUPABASE_URL.
+          FANMIND_TARGET_SUPABASE_PROJECT_REF=stagingprojectref
+          ''',
+              "staging template ref binding",
+          )
+          PY
+
+          git diff --check
+
+      - name: Commit staging boundary hardening
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/lib/environmentBoundaryPolicy.mjs \
+            scripts/environment-boundary-preflight.mjs \
+            scripts/staging-readiness-preflight.mjs \
+            tests/environment-boundary-policy.test.mjs \
+            tests/staging-readiness-policy.test.mjs \
+            docs/operations/STAGING_PROVISIONING.md \
+            .env.staging.example
+          git diff --cached --quiet && { echo "Patch produced no changes" >&2; exit 1; }
+          git commit -m "Bind staging Supabase target ref to project URL"
+          git push origin HEAD:p1/staging-boundary-ref-match-20260723
