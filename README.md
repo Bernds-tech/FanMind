@@ -7,7 +7,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
-- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Dashboard, Kontakten, Kontaktwissen, KI-Antwortvorschlägen und Follow-ups; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
+- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, Follow-ups und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Öffentliche Registrierung: ausschließlich Starter Flex und Starter 12 Monate.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
 - Admin-only: interne Testzugänge und das Stripe-Testabo `internal_daily_test` bleiben ausdrücklich intern. Der normale Registrierungsflow zeigt sie nicht öffentlich.
@@ -59,7 +59,7 @@ Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markie
 
 ## Technik
 
-- Framework: Next.js `16.2.7`
+- Framework: Next.js `16.2.11`
 - UI: React `19.2.4`
 - Mobile: React Native / Expo unter `apps/mobile` mit eigener Navigation, CI und Releasegrenze
 - Sprache: TypeScript
@@ -91,19 +91,24 @@ Die Mobile-App ist ein eigener Produktstream und keine eingebettete Website. Web
 Bereits vorhanden:
 
 - native E-Mail-/Passwort-Anmeldung und sichere Gerätesitzung;
+- PKCE-basierte Passwort-Recovery über `fanmind://reset-password` mit strikter Callback-Validierung;
 - Dashboard, Kontaktliste, Suche und Kontaktdetail;
+- Kontakte in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS;
 - Kontaktwissen und serverseitige KI-Antwortvorschläge;
 - Antwort kopieren, Kontaktwissen und Follow-up speichern;
 - offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
+- sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
 - separate Mobile-CI, Expo Doctor, TypeScript-Check und Android-JavaScript-Bundle.
 
 Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
 
+- Supabase-Redirect-Freigabe und realer E-Mail-/Gerätetest für `fanmind://reset-password`;
 - EAS-Projekt, Signing Credentials und signierter interner Android-Build;
 - Apple Developer / App Store Connect und iOS-TestFlight;
-- Passwort-Reset/Deep Links, Kontakt anlegen/bearbeiten, Offline-Lese-Cache und Push-Grundlage.
+- Offline-Lese-Cache, Push-Grundlage und Account-/Datenlöschprozess;
+- reale Android-/iOS-Gerätetests.
 
-Verbindliche Details: `apps/mobile/README.md` und `docs/mobile/ARCHITECTURE.md`.
+Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.
 
 ## Wichtige Routen
 
@@ -232,4 +237,4 @@ Nach dem Deployment werden öffentliche Kernrouten und der tatsächlich ausgelie
 
 ## Dokumentations-Synchronisierung
 
-Wenn Preise, Pakete, Referral-Logik, aktiver Scope, Demo-Pfad, Billing, KI-Leistungsstufen, Datenbank, Security, Mobile-Verträge oder öffentliche Versprechen geändert werden, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md`, `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und die betroffenen Legal-/Pricing-Dateien im selben PR geprüft und synchronisiert werden.
+Wenn Preise, Pakete, Referral-Logik, aktiver Scope, Demo-Pfad, Billing, KI-Leistungsstufen, Datenbank, Security, Mobile-Verträge oder öffentliche Versprechen geändert werden, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md`, `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md`, `docs/mobile/BETA_RELEASE.md` und die betroffenen Legal-/Pricing-Dateien im selben PR geprüft und synchronisiert werden.
