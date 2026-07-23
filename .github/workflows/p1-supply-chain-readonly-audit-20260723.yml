@@ -1,0 +1,236 @@
+name: FanMind P1 Supply Chain Read-only Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-supply-chain-readonly-audit-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-supply-chain-readonly-audit-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/p1-supply-chain-20260723'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      REPORT_PATH: fanmind-supply-chain-audit.txt
+
+    steps:
+      - name: Checkout trusted audit branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: audit/p1-supply-chain-20260723
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+
+      - name: Inventory workflows, action references and permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPORT_PATH="$REPORT_PATH" node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+
+          const root = path.join(process.cwd(), '.github', 'workflows');
+          const report = process.env.REPORT_PATH;
+          const files = fs.readdirSync(root)
+            .filter(name => /\.ya?ml$/i.test(name))
+            .sort();
+          const refs = [];
+          const missingPermissions = [];
+          const writePermissions = [];
+          const pullRequestTarget = [];
+          const reusableRemote = [];
+
+          for (const name of files) {
+            const source = fs.readFileSync(path.join(root, name), 'utf8');
+            const lines = source.split(/\r?\n/);
+            const topLevelPermissions = lines.some(line => /^permissions\s*:/u.test(line));
+            if (!topLevelPermissions) missingPermissions.push(name);
+            if (/^\s*pull_request_target\s*:/mu.test(source)) pullRequestTarget.push(name);
+
+            for (let index = 0; index < lines.length; index += 1) {
+              const line = lines[index];
+              const useMatch = line.match(/^\s*(?:-\s*)?uses\s*:\s*["']?([^\s"']+)["']?\s*(?:#.*)?$/u);
+              if (useMatch) {
+                const value = useMatch[1];
+                if (value.startsWith('./')) continue;
+                const at = value.lastIndexOf('@');
+                const ownerAction = at > 0 ? value.slice(0, at) : value;
+                const ref = at > 0 ? value.slice(at + 1) : '';
+                const immutable = /^[0-9a-f]{40}$/u.test(ref);
+                refs.push({ file: name, line: index + 1, action: ownerAction, ref, immutable });
+                if (ownerAction.includes('/.github/workflows/')) reusableRemote.push(name);
+              }
+              const permissionMatch = line.match(/^\s+([a-zA-Z][a-zA-Z0-9_-]*)\s*:\s*write\s*(?:#.*)?$/u);
+              if (permissionMatch) {
+                writePermissions.push({ file: name, permission: permissionMatch[1] });
+              }
+            }
+          }
+
+          const uniqueRefs = [...new Map(refs.map(item => [`${item.action}@${item.ref}`, item])).values()]
+            .sort((a, b) => `${a.action}@${a.ref}`.localeCompare(`${b.action}@${b.ref}`));
+          const mutable = uniqueRefs.filter(item => !item.immutable);
+          const pinned = uniqueRefs.filter(item => item.immutable);
+          const lines = [
+            `AUDIT_UTC=${new Date().toISOString()}`,
+            `WORKFLOW_FILE_COUNT=${files.length}`,
+            `WORKFLOW_FILES=${files.join(',')}`,
+            `EXTERNAL_ACTION_REFERENCE_COUNT=${refs.length}`,
+            `UNIQUE_EXTERNAL_ACTION_COUNT=${uniqueRefs.length}`,
+            `PINNED_EXTERNAL_ACTION_COUNT=${pinned.length}`,
+            `MUTABLE_EXTERNAL_ACTION_COUNT=${mutable.length}`,
+            `MISSING_TOP_LEVEL_PERMISSIONS_COUNT=${missingPermissions.length}`,
+            `MISSING_TOP_LEVEL_PERMISSIONS_FILES=${missingPermissions.join(',') || 'none'}`,
+            `WRITE_PERMISSION_DECLARATION_COUNT=${writePermissions.length}`,
+            `WRITE_PERMISSION_DECLARATIONS=${writePermissions.map(item => `${item.file}:${item.permission}`).join(',') || 'none'}`,
+            `PULL_REQUEST_TARGET_COUNT=${pullRequestTarget.length}`,
+            `PULL_REQUEST_TARGET_FILES=${pullRequestTarget.join(',') || 'none'}`,
+            `REMOTE_REUSABLE_WORKFLOW_COUNT=${new Set(reusableRemote).size}`,
+          ];
+
+          for (const item of uniqueRefs) {
+            lines.push(`ACTION_REF=${item.action}@${item.ref}|immutable:${item.immutable}`);
+          }
+          lines.push(`MUTABLE_ACTION_REFS=${mutable.map(item => `${item.action}@${item.ref}`).join(',') || 'none'}`);
+          lines.push(`WORKFLOW_INVENTORY_SHA256=${crypto.createHash('sha256').update(files.map(name => `${name}\n${fs.readFileSync(path.join(root, name), 'utf8')}`).join('\n')).digest('hex')}`);
+
+          fs.writeFileSync(report, `${lines.join('\n')}\n`, { mode: 0o644 });
+          process.stdout.write(`${lines.join('\n')}\n`);
+          NODE
+
+      - name: Verify reproducible root and mobile installs
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'NODE_VERSION=%s\n' "$(node --version)" | tee -a "$REPORT_PATH"
+          printf 'NPM_VERSION=%s\n' "$(npm --version)" | tee -a "$REPORT_PATH"
+
+          if npm ci --no-audit --no-fund > "$RUNNER_TEMP/root-npm-ci.log" 2>&1; then
+            echo 'ROOT_NPM_CI=success' | tee -a "$REPORT_PATH"
+          else
+            echo 'ROOT_NPM_CI=failed' | tee -a "$REPORT_PATH"
+            exit 1
+          fi
+
+          if npm --prefix apps/mobile ci --no-audit --no-fund > "$RUNNER_TEMP/mobile-npm-ci.log" 2>&1; then
+            echo 'MOBILE_NPM_CI=success' | tee -a "$REPORT_PATH"
+          else
+            echo 'MOBILE_NPM_CI=failed' | tee -a "$REPORT_PATH"
+            exit 1
+          fi
+
+      - name: Collect production dependency audit summaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npm audit --omit=dev --json > "$RUNNER_TEMP/root-audit.json" 2>/dev/null
+          root_status=$?
+          npm --prefix apps/mobile audit --omit=dev --json > "$RUNNER_TEMP/mobile-audit.json" 2>/dev/null
+          mobile_status=$?
+          set -e
+
+          REPORT_PATH="$REPORT_PATH" \
+          ROOT_AUDIT="$RUNNER_TEMP/root-audit.json" \
+          MOBILE_AUDIT="$RUNNER_TEMP/mobile-audit.json" \
+          ROOT_STATUS="$root_status" \
+          MOBILE_STATUS="$mobile_status" \
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function summarize(label, file, exitStatus) {
+            let payload;
+            try {
+              payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+            } catch {
+              return [
+                `${label}_NPM_AUDIT_JSON=invalid`,
+                `${label}_NPM_AUDIT_EXIT=${exitStatus}`,
+              ];
+            }
+            const vulnerabilities = payload?.metadata?.vulnerabilities ?? {};
+            const dependencies = payload?.metadata?.dependencies ?? {};
+            return [
+              `${label}_NPM_AUDIT_JSON=valid`,
+              `${label}_NPM_AUDIT_EXIT=${exitStatus}`,
+              `${label}_AUDIT_CRITICAL=${Number(vulnerabilities.critical ?? 0)}`,
+              `${label}_AUDIT_HIGH=${Number(vulnerabilities.high ?? 0)}`,
+              `${label}_AUDIT_MODERATE=${Number(vulnerabilities.moderate ?? 0)}`,
+              `${label}_AUDIT_LOW=${Number(vulnerabilities.low ?? 0)}`,
+              `${label}_AUDIT_TOTAL=${Number(vulnerabilities.total ?? 0)}`,
+              `${label}_PRODUCTION_DEPENDENCIES=${Number(dependencies.prod ?? dependencies.total ?? 0)}`,
+            ];
+          }
+
+          const lines = [
+            ...summarize('ROOT', process.env.ROOT_AUDIT, process.env.ROOT_STATUS),
+            ...summarize('MOBILE', process.env.MOBILE_AUDIT, process.env.MOBILE_STATUS),
+          ];
+          fs.appendFileSync(process.env.REPORT_PATH, `${lines.join('\n')}\n`);
+          process.stdout.write(`${lines.join('\n')}\n`);
+          NODE
+
+      - name: Generate and validate CycloneDX SBOMs
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm sbom --sbom-format=cyclonedx > fanmind-root-sbom.cdx.json
+          (
+            cd apps/mobile
+            npm sbom --sbom-format=cyclonedx > "$GITHUB_WORKSPACE/fanmind-mobile-sbom.cdx.json"
+          )
+
+          REPORT_PATH="$REPORT_PATH" node <<'NODE'
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+
+          function inspect(label, file) {
+            const raw = fs.readFileSync(file);
+            const payload = JSON.parse(raw.toString('utf8'));
+            if (payload?.bomFormat !== 'CycloneDX' || !Array.isArray(payload.components)) {
+              throw new Error(`${label}_sbom_invalid`);
+            }
+            return [
+              `${label}_SBOM=valid`,
+              `${label}_SBOM_COMPONENT_COUNT=${payload.components.length}`,
+              `${label}_SBOM_SIZE_BYTES=${raw.length}`,
+              `${label}_SBOM_SHA256=${crypto.createHash('sha256').update(raw).digest('hex')}`,
+            ];
+          }
+
+          const lines = [
+            ...inspect('ROOT', 'fanmind-root-sbom.cdx.json'),
+            ...inspect('MOBILE', 'fanmind-mobile-sbom.cdx.json'),
+          ];
+          fs.appendFileSync(process.env.REPORT_PATH, `${lines.join('\n')}\n`);
+          process.stdout.write(`${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload sanitized audit and SBOM evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-p1-supply-chain-readonly-audit
+          path: |
+            fanmind-supply-chain-audit.txt
+            fanmind-root-sbom.cdx.json
+            fanmind-mobile-sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 14
