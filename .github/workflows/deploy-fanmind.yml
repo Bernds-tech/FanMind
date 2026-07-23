@@ -10,6 +10,9 @@ concurrency:
   group: fanmind-production-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to Exoscale production
