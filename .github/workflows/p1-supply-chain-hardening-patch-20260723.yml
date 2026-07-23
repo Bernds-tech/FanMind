@@ -1,0 +1,51 @@
+name: FanMind P1 Supply Chain Hardening Patch
+
+on:
+  push:
+    branches:
+      - p1/supply-chain-hardening-20260723
+    paths:
+      - ".github/workflows/p1-supply-chain-hardening-patch-20260723.yml"
+      - "scripts/security/supply-chain-hardening-patch-temp.mjs"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted hardening branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/supply-chain-hardening-20260723
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.13.1
+          cache: npm
+
+      - name: Pin workflows, remove obsolete one-off and patch Next.js
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/security/supply-chain-hardening-patch-temp.mjs
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high
+          git diff --check
+
+      - name: Commit deterministic hardening changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows package.json package-lock.json
+          git diff --cached --quiet && { echo "Hardening patch produced no changes" >&2; exit 1; }
+          git commit -m "Pin Actions and update Next.js security patch"
+          git push origin HEAD:p1/supply-chain-hardening-20260723
