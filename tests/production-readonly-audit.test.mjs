@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const auditScriptPath = "scripts/operations/read-only-production-audit.sh";
+const execFileAsync = promisify(execFile);
 
 async function readAuditScript() {
   return readFile(auditScriptPath, "utf8");
 }
+
+test("production audit is valid bash", async () => {
+  await execFileAsync("bash", ["-n", auditScriptPath]);
+});
 
 test("production audit exposes only read-only runtime and backup checks", async () => {
   const source = await readAuditScript();
