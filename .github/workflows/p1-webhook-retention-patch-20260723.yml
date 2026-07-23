@@ -36,11 +36,31 @@ jobs:
           show-progress: false
 
       - name: Apply reviewed diagnostic minimization patch
+        id: patch
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          python3 scripts/security/webhook-retention-patch-temp.py
-          git diff --check
+          set -o pipefail
+          python3 scripts/security/webhook-retention-patch-temp.py 2>&1 | tee webhook-retention-patch-report.txt
+          status=${PIPESTATUS[0]}
+          if [ "$status" = "0" ]; then
+            git diff --check 2>&1 | tee -a webhook-retention-patch-report.txt
+            status=${PIPESTATUS[0]}
+          fi
+          exit "$status"
+
+      - name: Upload bounded patch report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-webhook-retention-patch-report
+          path: webhook-retention-patch-report.txt
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Enforce patch result
+        if: steps.patch.outcome != 'success'
+        run: exit 1
 
       - name: Commit minimized webhook diagnostics
         shell: bash
