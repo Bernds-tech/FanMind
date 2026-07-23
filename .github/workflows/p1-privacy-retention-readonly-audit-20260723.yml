@@ -1,0 +1,249 @@
+name: FanMind P1 Privacy Retention Read-only Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-privacy-retention-readonly-audit-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-privacy-retention-readonly-audit-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/p1-privacy-retention-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 25
+    env:
+      EXPECTED_RELEASE: 372310d8683c4e4192fa8dfdb3e089cd6c2858c2
+      REPORT_PATH: fanmind-p1-privacy-retention-readonly-audit.txt
+
+    steps:
+      - name: Wait for exact release and healthy Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'AUDIT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          for attempt in $(seq 1 60); do
+            live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    try {
+                      const payload = JSON.parse(input);
+                      const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                      process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                    } catch {
+                      process.stdout.write("missing");
+                    }
+                  });
+                ' || true)"
+            server_head="$(git -C /var/www/fanmind rev-parse HEAD 2>/dev/null || true)"
+            origin_main="$(git -C /var/www/fanmind rev-parse origin/main 2>/dev/null || true)"
+
+            if [[ "$live_release" == "$EXPECTED_RELEASE" \
+              && "$server_head" == "$EXPECTED_RELEASE" \
+              && "$origin_main" == "$EXPECTED_RELEASE" ]]; then
+              echo 'RELEASE_SYNC=ok' | tee -a "$report"
+              break
+            fi
+
+            if [[ "$attempt" == "60" ]]; then
+              echo 'RELEASE_SYNC=failed' | tee -a "$report"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Audit webhook, database and host retention without reading content
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+
+          sudo -n env REPORT_PATH="$report" /usr/bin/node --input-type=module <<'NODE'
+          import { accessSync, constants, readFileSync, readdirSync, statSync, appendFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+
+          const reportPath = process.env.REPORT_PATH;
+          const sourceRoot = '/var/www/fanmind';
+
+          function emit(key, value) {
+            const line = `${key}=${value}`;
+            process.stdout.write(`${line}\n`);
+            appendFileSync(reportPath, `${line}\n`, { encoding: 'utf8' });
+          }
+
+          function parseEnv(text) {
+            const values = new Map();
+            for (const rawLine of String(text).split(/\r?\n/)) {
+              const line = rawLine.trim();
+              if (!line || line.startsWith('#') || !line.includes('=')) continue;
+              const separator = line.indexOf('=');
+              const key = line.slice(0, separator).trim();
+              let value = line.slice(separator + 1).trim();
+              if (
+                value.length >= 2
+                && ((value.startsWith('"') && value.endsWith('"'))
+                  || (value.startsWith("'") && value.endsWith("'")))
+              ) value = value.slice(1, -1);
+              values.set(key, value);
+            }
+            return values;
+          }
+
+          function required(config, name) {
+            const value = config.get(name) || '';
+            if (!value) throw new Error(`${name}_missing`);
+            return value;
+          }
+
+          function command(binary, args, options = {}) {
+            const result = spawnSync(binary, args, {
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+              timeout: options.timeout ?? 30000,
+              env: options.env ?? process.env,
+            });
+            if (result.error || result.status !== 0) return null;
+            return String(result.stdout || '').trim();
+          }
+
+          const appEnv = parseEnv(readFileSync(`${sourceRoot}/.env.production`, 'utf8'));
+          const workerEnv = parseEnv(readFileSync('/etc/fanmind-backup/worker.env', 'utf8'));
+          emit('RUNTIME_ENVIRONMENT', appEnv.get('NODE_ENV') === 'production' ? 'production' : 'unexpected');
+          emit('META_SIGNATURE_SECRET', (appEnv.get('FACEBOOK_APP_SECRET') || appEnv.get('META_WEBHOOK_APP_SECRET')) ? 'configured' : 'missing');
+          emit('TELEGRAM_WEBHOOK_SECRET', appEnv.get('TELEGRAM_WEBHOOK_SECRET') ? 'configured' : 'missing');
+          emit('SERVER_ERROR_TRACKING', appEnv.get('FANMIND_SERVER_ERROR_TRACKING_ENABLED') === 'true' ? 'enabled' : 'disabled');
+
+          const psql = ['/usr/bin/psql', '/usr/lib/postgresql/17/bin/psql'].find(candidate => {
+            try { accessSync(candidate, constants.X_OK); return true; } catch { return false; }
+          });
+          if (!psql) throw new Error('psql_missing');
+
+          function query(sql) {
+            const result = spawnSync(
+              psql,
+              [
+                '--host', required(workerEnv, 'FANMIND_BACKUP_DB_HOST'),
+                '--port', workerEnv.get('FANMIND_BACKUP_DB_PORT') || '5432',
+                '--username', required(workerEnv, 'FANMIND_BACKUP_DB_USER'),
+                '--dbname', required(workerEnv, 'FANMIND_BACKUP_DB_NAME'),
+                '-v', 'ON_ERROR_STOP=1',
+                '-Atc', sql,
+              ],
+              {
+                encoding: 'utf8',
+                stdio: ['ignore', 'pipe', 'ignore'],
+                timeout: 30000,
+                env: {
+                  ...process.env,
+                  PGPASSFILE: required(workerEnv, 'FANMIND_BACKUP_PGPASSFILE'),
+                },
+              },
+            );
+            if (result.error || result.status !== 0) throw new Error('database_query_failed');
+            return String(result.stdout || '').trim();
+          }
+
+          const databaseJson = query(`
+            select json_build_object(
+              'meta_table', to_regclass('public.meta_webhook_events') is not null,
+              'meta_total', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events) end,
+              'meta_older_14d', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where received_at < now() - interval '14 days') end,
+              'meta_older_30d', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where received_at < now() - interval '30 days') end,
+              'meta_raw_nonempty', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where raw_payload <> '{}'::jsonb) end,
+              'meta_message_text', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where message_text is not null or text is not null) end,
+              'meta_external_ids', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where sender_id is not null or recipient_id is not null) end,
+              'meta_sensitive_key_rows', case when to_regclass('public.meta_webhook_events') is null then 0 else (select count(*) from public.meta_webhook_events where raw_payload::text ~* '\"(access[_-]?token|refresh[_-]?token|secret|password|authorization|cookie|email|phone|recipient|sender)\"[[:space:]]*:') end,
+              'meta_max_raw_bytes', case when to_regclass('public.meta_webhook_events') is null then 0 else coalesce((select max(octet_length(raw_payload::text)) from public.meta_webhook_events), 0) end,
+              'server_event_table', to_regclass('public.server_error_events') is not null,
+              'server_event_total', case when to_regclass('public.server_error_events') is null then 0 else (select count(*) from public.server_error_events) end,
+              'server_event_older_30d', case when to_regclass('public.server_error_events') is null then 0 else (select count(*) from public.server_error_events where created_at < now() - interval '30 days') end,
+              'server_group_total', case when to_regclass('public.server_error_groups') is null then 0 else (select count(*) from public.server_error_groups) end,
+              'server_cleanup_rpc', to_regprocedure('public.cleanup_server_error_events(integer)') is not null,
+              'meta_cleanup_rpc', to_regprocedure('public.cleanup_meta_webhook_events(integer,integer)') is not null
+            )::text;
+          `);
+          const database = JSON.parse(databaseJson);
+          for (const [key, value] of Object.entries(database)) emit(`DB_${key.toUpperCase()}`, value);
+
+          const metaSource = readFileSync(`${sourceRoot}/src/lib/supabase/server.ts`, 'utf8');
+          const metaRoute = readFileSync(`${sourceRoot}/src/app/api/webhooks/meta/route.ts`, 'utf8');
+          const telegramRoute = readFileSync(`${sourceRoot}/src/app/api/integrations/telegram/webhook/route.ts`, 'utf8');
+          emit('SOURCE_META_RAW_PAYLOAD_WRITE', /raw_payload:\s*input\.rawPayload/u.test(metaSource) ? 'present' : 'absent');
+          emit('SOURCE_META_MESSAGE_DUPLICATION', /message_text:\s*normalizeOptionalText\(input\.messageText\)/u.test(metaSource) ? 'present' : 'absent');
+          emit('SOURCE_META_FREE_ERROR_LOG', /error:\s*result\.error\.message/u.test(metaSource) ? 'present' : 'absent');
+          emit('SOURCE_META_SECRET_MISSING_ACCEPTS', /if \(!appSecret\) return true/u.test(metaRoute) ? 'yes' : 'no');
+          emit('SOURCE_TELEGRAM_SECRET_MISSING_ACCEPTS', /if \(configuredSecret\)/u.test(telegramRoute) ? 'yes' : 'no');
+          emit('SOURCE_TELEGRAM_FREE_ERROR_LOG', /error:\s*result\.error/u.test(telegramRoute) ? 'present' : 'absent');
+
+          const cleanupUsage = command('/usr/bin/git', ['-C', sourceRoot, 'grep', '-l', 'cleanup_server_error_events', '--', ':!supabase/migrations/**']);
+          emit('SERVER_ERROR_CLEANUP_CALLER_COUNT', cleanupUsage ? cleanupUsage.split(/\r?\n/).filter(Boolean).length : 0);
+
+          const journalUsage = command('/usr/bin/journalctl', ['--disk-usage']);
+          emit('JOURNAL_DISK_USAGE_REPORTED', journalUsage ? 'yes' : 'no');
+          const journaldConfig = readFileSync('/etc/systemd/journald.conf', 'utf8');
+          emit('JOURNAL_MAX_RETENTION_CONFIGURED', /^\s*MaxRetentionSec\s*=\s*\S+/mu.test(journaldConfig) ? 'yes' : 'no');
+          emit('JOURNAL_MAX_USE_CONFIGURED', /^\s*SystemMaxUse\s*=\s*\S+/mu.test(journaldConfig) ? 'yes' : 'no');
+
+          function aggregateDirectory(directory, pattern) {
+            try {
+              const files = readdirSync(directory).filter(name => pattern.test(name));
+              let bytes = 0;
+              for (const name of files) {
+                try {
+                  const metadata = statSync(`${directory}/${name}`);
+                  if (metadata.isFile()) bytes += metadata.size;
+                } catch {}
+              }
+              return { count: files.length, bytes };
+            } catch {
+              return { count: 0, bytes: 0 };
+            }
+          }
+          const nginxLogs = aggregateDirectory('/var/log/nginx', /\.log(?:\.\d+)?(?:\.gz)?$/u);
+          const pm2Home = appEnv.get('PM2_HOME') || '/home/ubuntu/.pm2';
+          const pm2Logs = aggregateDirectory(`${pm2Home}/logs`, /\.log$/u);
+          emit('NGINX_LOG_FILE_COUNT', nginxLogs.count);
+          emit('NGINX_LOG_BYTES', nginxLogs.bytes);
+          emit('PM2_LOG_FILE_COUNT', pm2Logs.count);
+          emit('PM2_LOG_BYTES', pm2Logs.bytes);
+          emit('NGINX_LOGROTATE_CONFIG', (() => { try { accessSync('/etc/logrotate.d/nginx'); return 'present'; } catch { return 'missing'; } })());
+          emit('PM2_LOGROTATE_CONFIG', (() => { try { accessSync('/etc/logrotate.d/pm2'); return 'present'; } catch { return 'missing'; } })());
+
+          emit('AUDIT_READ_ONLY', 'true');
+          emit('PAYLOAD_VALUES_READ_OR_OUTPUT', 'false');
+          emit('SECRETS_OUTPUT', 'false');
+          emit('PRIVACY_RETENTION_AUDIT_RESULT', 'success');
+          NODE
+
+      - name: Upload sanitized audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-p1-privacy-retention-readonly-audit
+          path: fanmind-p1-privacy-retention-readonly-audit.txt
+          if-no-files-found: error
+          retention-days: 7
