@@ -14,10 +14,12 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - PKCE-basierte Passwort-Recovery mit kompatiblem Token-Fallback;
 - Recovery-Route `fanmind://reset-password`;
 - neues Passwort nur nach bestätigter Recovery-Sitzung;
+- keine dauerhafte Speicherung vollständiger Recovery-URLs im React-Zustand oder in Refs;
 - Kontaktanlage und Kontaktbearbeitung;
 - Workspace-Filter plus Supabase RLS bei jeder Kontaktmutation;
 - minimale Duplikatprüfung für Handle plus Quelle;
 - lokaler Logout-Purge für registrierte FanMind-SecureStore-Schlüssel;
+- begrenzte und rollback-sichere SecureStore-Schreibfolge;
 - getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-Export und Architekturgrenze;
 - `development`, `preview` und `production` in `apps/mobile/eas.json`.
 
@@ -33,8 +35,9 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
    - einen PKCE-`code`; oder
    - ein vollständiges Paar aus `access_token` und `refresh_token` für kompatible bestehende Links.
 6. Gemischte, unvollständige, überlange oder fremde Links werden abgelehnt.
-7. Tokens, Codes und vollständige Callback-URLs werden nicht protokolliert.
-8. Erst nach einer bestätigten Recovery-Sitzung kann `updateUser({ password })` ausgeführt werden.
+7. Tokens, Codes und vollständige Callback-URLs werden weder protokolliert noch zur Duplikaterkennung im Speicher behalten; dafür werden ausschließlich nicht sensible Boolean-Flags verwendet.
+8. Ein PKCE-Code muss zusätzlich durch das Supabase-Ereignis `PASSWORD_RECOVERY` bestätigt werden.
+9. Erst nach einer bestätigten Recovery-Sitzung kann `updateUser({ password })` ausgeführt werden.
 
 ### Einmalig in Supabase einzurichten
 
@@ -98,6 +101,15 @@ Dieser Mehrnutzer-Negativtest bleibt an das separate Staging aus #643 gebunden u
 3. Recovery-Zustand zurücksetzen;
 4. Session im React-Kontext auf `null` setzen;
 5. Workspace-Zustand sofort leeren.
+
+Zusätzliche Speichergrenzen:
+
+- eine Sitzung darf höchstens 64 SecureStore-Chunks verwenden;
+- der Schlüssel wird vor dem Schreiben der Chunks registriert;
+- die erwartete Chunkzahl wird vor den Chunks gespeichert, damit Teilfehler auffindbar bleiben;
+- bei einem Schreibfehler wird sofort ein Rollback versucht;
+- nicht vollständig löschbare Schlüssel bleiben registriert und werden beim nächsten Purge erneut versucht;
+- ein Registry-Eintrag wird lieber zu lange behalten, als Sitzungsdaten unregistriert zurückzulassen.
 
 Die aktuelle App besitzt noch keinen Offline-Kontaktcache. Wenn ein solcher Cache später ergänzt wird, muss er denselben zentralen Purge-Vertrag verwenden und durch einen eigenen Regressionstest abgedeckt werden.
 
