@@ -16,7 +16,10 @@ test("production audit exposes only read-only runtime and backup checks", async 
   assert.match(source, /--artifact "\$latest_full" --json/u);
   assert.match(source, /BACKUP_VERIFY_MODE/u);
   assert.match(source, /BACKUP_VERIFY_TYPE/u);
-  assert.match(source, /rclone --config "\$config" lsf/u);
+  assert.match(
+    source,
+    /sudo -n "\$rclone_bin" --config "\$config" lsf "\$\{remote\}:\$\{remote_path\}" --files-only --recursive/u,
+  );
   assert.match(source, /journalctl -u fanmind-backup-worker\.service/u);
   assert.match(source, /pm2 jlist \| PM2_APP_NAME="\$PM2_APP_NAME" node -e/u);
   assert.match(source, /read_config_value\(\)/u);
@@ -40,6 +43,7 @@ test("production audit exposes only read-only runtime and backup checks", async 
   assert.doesNotMatch(source, /curl[^\n]*\s-X\s*(?:POST|PUT|PATCH|DELETE)\b/iu);
   assert.doesNotMatch(source, /\bsource\s+["']?\$?env_file\b/u);
   assert.doesNotMatch(source, /\bcat\s+[^\n]*worker\.env/u);
+  assert.doesNotMatch(source, /sudo\s+-n\s+bash\b/u);
   assert.doesNotMatch(source, /BACKUP_VERIFY_CHECKSUM/u);
 });
 
