@@ -14,7 +14,7 @@ require_command() {
   }
 }
 
-for command in node npm pm2 git curl systemctl awk find sort cut df; do
+for command in node npm pm2 git curl systemctl journalctl sudo awk find sort cut df date grep basename mktemp head; do
   require_command "$command"
 done
 
@@ -98,12 +98,18 @@ for unit in "${units[@]}"; do
   printf 'SYSTEMD_UNIT=%s|active=%s|enabled=%s\n' "$unit" "${active:-unknown}" "${enabled:-unknown}"
 done
 
-systemctl list-timers 'fanmind-*' --all --no-legend 2>/dev/null \
-  | awk 'NF {print "SYSTEMD_TIMER="$1"|NEXT="$2" "$3"|LAST="$4" "$5"|UNIT="$(NF-1)}' \
-  || true
+for unit in "${units[@]}"; do
+  [[ "$unit" == *.timer ]] || continue
+  next_realtime="$(systemctl show "$unit" --property=NextElapseUSecRealtime --value --no-pager 2>/dev/null || true)"
+  next_monotonic="$(systemctl show "$unit" --property=NextElapseUSecMonotonic --value --no-pager 2>/dev/null || true)"
+  last="$(systemctl show "$unit" --property=LastTriggerUSec --value --no-pager 2>/dev/null || true)"
+  printf 'SYSTEMD_TIMER=%s|next_realtime=%s|next_monotonic=%s|last=%s\n' \
+    "$unit" "${next_realtime:-unknown}" "${next_monotonic:-unknown}" "${last:-unknown}"
+done
 
 inventory="$(mktemp)"
-cleanup_files=("$inventory")
+worker_log="$(mktemp)"
+cleanup_files=("$inventory" "$worker_log")
 cleanup() {
   rm -f "${cleanup_files[@]}"
 }
@@ -257,27 +263,56 @@ NODE
   fi
 fi
 
-sudo -n journalctl -u fanmind-backup-worker.service --since '14 days ago' --no-pager -o cat \
-  | node -e '
-    let input = "";
-    process.stdin.on("data", chunk => input += chunk);
-    process.stdin.on("end", () => {
-      const counts = new Map();
-      let parsed = 0;
-      for (const line of input.split(/\r?\n/)) {
-        try {
-          const payload = JSON.parse(line);
-          if (typeof payload.event === "string") {
-            counts.set(payload.event, (counts.get(payload.event) || 0) + 1);
-            parsed += 1;
-          }
-        } catch {}
-      }
-      console.log(`BACKUP_WORKER_STRUCTURED_EVENT_COUNT=${parsed}`);
-      for (const [event, count] of [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-        console.log(`BACKUP_WORKER_EVENT=${event}:${count}`);
-      }
-    });
-  '
+sudo -n journalctl -u fanmind-backup-worker.service --since '14 days ago' --no-pager -o cat > "$worker_log"
+
+WORKER_LOG="$worker_log" node <<'NODE'
+const fs = require('node:fs');
+const now = Date.now();
+const windows = [
+  { name: '24h', since: now - 24 * 60 * 60 * 1000 },
+  { name: '14d', since: now - 14 * 24 * 60 * 60 * 1000 },
+];
+const eventNames = [
+  'worker_start',
+  'worker_stop',
+  'sigterm_received',
+  'claim_failed',
+  'job_claimed',
+  'job_failed',
+  'job_rejected',
+  'fatal',
+];
+const failureEvents = new Set(['claim_failed', 'job_failed', 'job_rejected', 'fatal']);
+const rows = [];
+for (const line of fs.readFileSync(process.env.WORKER_LOG, 'utf8').split(/\r?\n/)) {
+  try {
+    const payload = JSON.parse(line);
+    const timestamp = Date.parse(payload.ts);
+    if (!Number.isFinite(timestamp) || !eventNames.includes(payload.event)) continue;
+    rows.push({ event: payload.event, timestamp });
+  } catch {}
+}
+
+console.log(`BACKUP_WORKER_STRUCTURED_EVENT_COUNT=${rows.length}`);
+for (const window of windows) {
+  const counts = new Map(eventNames.map(event => [event, 0]));
+  for (const row of rows) {
+    if (row.timestamp < window.since) continue;
+    counts.set(row.event, (counts.get(row.event) || 0) + 1);
+  }
+
+  console.log(`BACKUP_WORKER_WINDOW=${window.name}`);
+  for (const event of eventNames) {
+    console.log(`BACKUP_WORKER_EVENT=${window.name}|${event}:${counts.get(event) || 0}`);
+  }
+
+  if (window.name === '24h') {
+    const failureCount = [...failureEvents]
+      .reduce((total, event) => total + (counts.get(event) || 0), 0);
+    console.log(`BACKUP_WORKER_24H_FAILURE_EVENT_COUNT=${failureCount}`);
+    console.log(`BACKUP_WORKER_24H_FAILURE_FREE=${failureCount === 0}`);
+  }
+}
+NODE
 
 echo "AUDIT_RESULT=success"

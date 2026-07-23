@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const auditScriptPath = "scripts/operations/read-only-production-audit.sh";
+const execFileAsync = promisify(execFile);
 
 async function readAuditScript() {
   return readFile(auditScriptPath, "utf8");
 }
+
+test("production audit is valid bash", async () => {
+  await execFileAsync("bash", ["-n", auditScriptPath]);
+});
 
 test("production audit exposes only read-only runtime and backup checks", async () => {
   const source = await readAuditScript();
@@ -45,6 +52,34 @@ test("production audit exposes only read-only runtime and backup checks", async 
   assert.doesNotMatch(source, /\bcat\s+[^\n]*worker\.env/u);
   assert.doesNotMatch(source, /sudo\s+-n\s+bash\b/u);
   assert.doesNotMatch(source, /BACKUP_VERIFY_CHECKSUM/u);
+});
+
+test("production audit uses stable timer properties instead of localized timer columns", async () => {
+  const source = await readAuditScript();
+
+  assert.match(source, /systemctl show "\$unit" --property=NextElapseUSecRealtime --value/u);
+  assert.match(source, /systemctl show "\$unit" --property=NextElapseUSecMonotonic --value/u);
+  assert.match(source, /systemctl show "\$unit" --property=LastTriggerUSec --value/u);
+  assert.match(
+    source,
+    /SYSTEMD_TIMER=%s\|next_realtime=%s\|next_monotonic=%s\|last=%s/u,
+  );
+  assert.doesNotMatch(source, /systemctl list-timers/u);
+});
+
+test("production audit reports backup worker events by bounded time window without raw failures", async () => {
+  const source = await readAuditScript();
+
+  assert.match(source, /\{ name: '24h', since:/u);
+  assert.match(source, /\{ name: '14d', since:/u);
+  assert.match(source, /BACKUP_WORKER_WINDOW=\$\{window\.name\}/u);
+  assert.match(source, /BACKUP_WORKER_EVENT=\$\{window\.name\}\|\$\{event\}:/u);
+  assert.match(source, /BACKUP_WORKER_24H_FAILURE_EVENT_COUNT/u);
+  assert.match(source, /BACKUP_WORKER_24H_FAILURE_FREE/u);
+
+  assert.doesNotMatch(source, /payload\.job_id/u);
+  assert.doesNotMatch(source, /payload\.error/u);
+  assert.doesNotMatch(source, /error_message/u);
 });
 
 test("production audit never logs backup configuration values or raw PM2 payloads", async () => {
