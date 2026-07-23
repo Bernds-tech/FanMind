@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ROOT_REVIEWED_AT,
+  ROOT_REVIEWED_FRAMEWORK_VERSION,
   ROOT_REVIEW_EXCEPTION_EXPIRES_AT,
+  ROOT_REVIEW_HIGH_MAXIMUM,
+  ROOT_REVIEW_MODERATE_MAXIMUM,
+  ROOT_REVIEW_SOURCE_RUN,
   evaluateDependencyAudit,
 } from "../scripts/security/verify-dependency-audit.mjs";
 import { validateCycloneDx } from "../scripts/security/generate-sbom.mjs";
@@ -39,26 +44,32 @@ function auditPayload({
 test("reviewed root advisories pass only inside the bounded review window", () => {
   const beforeExpiry = evaluateDependencyAudit({
     rootPayload: auditPayload({
-      high: 2,
-      moderate: 1,
+      high: 3,
       packages: ["next", "postcss", "sharp"],
     }),
     mobilePayload: auditPayload({ moderate: 10, packages: ["mobile-transitive"] }),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T12:00:00Z"),
+    now: new Date("2026-07-23T17:00:00Z"),
   });
 
   assert.equal(beforeExpiry.ok, true);
   assert.equal(beforeExpiry.root.reviewedExceptionCurrent, true);
+  assert.equal(beforeExpiry.root.highMaximum, ROOT_REVIEW_HIGH_MAXIMUM);
+  assert.equal(beforeExpiry.root.moderateMaximum, ROOT_REVIEW_MODERATE_MAXIMUM);
   assert.equal(
     beforeExpiry.root.reviewedExceptionExpiresAt,
     ROOT_REVIEW_EXCEPTION_EXPIRES_AT,
   );
+  assert.equal(beforeExpiry.root.reviewedAt, ROOT_REVIEWED_AT);
+  assert.equal(beforeExpiry.root.reviewSourceRun, ROOT_REVIEW_SOURCE_RUN);
+  assert.equal(
+    beforeExpiry.root.reviewedFrameworkVersion,
+    ROOT_REVIEWED_FRAMEWORK_VERSION,
+  );
 
   const afterExpiry = evaluateDependencyAudit({
     rootPayload: auditPayload({
-      high: 2,
-      moderate: 1,
+      high: 3,
       packages: ["next", "postcss", "sharp"],
     }),
     mobilePayload: auditPayload({ moderate: 10, packages: ["mobile-transitive"] }),
@@ -68,6 +79,39 @@ test("reviewed root advisories pass only inside the bounded review window", () =
 
   assert.equal(afterExpiry.ok, false);
   assert.match(afterExpiry.errors.join("\n"), /root_review_exception_expired/u);
+});
+
+test("reviewed root budget rejects a fourth high or any moderate finding", () => {
+  const highFailure = evaluateDependencyAudit({
+    rootPayload: auditPayload({
+      high: 4,
+      packages: ["next", "postcss", "sharp"],
+    }),
+    mobilePayload: auditPayload(),
+    rootManifest: patchedManifest,
+    now: new Date("2026-07-23T17:00:00Z"),
+  });
+  assert.equal(highFailure.ok, false);
+  assert.match(
+    highFailure.errors.join("\n"),
+    /root_high_vulnerability_budget_exceeded/u,
+  );
+
+  const moderateFailure = evaluateDependencyAudit({
+    rootPayload: auditPayload({
+      high: 2,
+      moderate: 1,
+      packages: ["next", "postcss", "sharp"],
+    }),
+    mobilePayload: auditPayload(),
+    rootManifest: patchedManifest,
+    now: new Date("2026-07-23T17:00:00Z"),
+  });
+  assert.equal(moderateFailure.ok, false);
+  assert.match(
+    moderateFailure.errors.join("\n"),
+    /root_moderate_vulnerability_budget_exceeded/u,
+  );
 });
 
 test("a fully clean audit passes after the review window", () => {
@@ -87,7 +131,7 @@ test("unreviewed root packages and high or critical Mobile findings fail closed"
     rootPayload: auditPayload({ high: 1, packages: ["unreviewed-package"] }),
     mobilePayload: auditPayload(),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T12:00:00Z"),
+    now: new Date("2026-07-23T17:00:00Z"),
   });
   assert.equal(rootFailure.ok, false);
   assert.match(
@@ -99,7 +143,7 @@ test("unreviewed root packages and high or critical Mobile findings fail closed"
     rootPayload: auditPayload(),
     mobilePayload: auditPayload({ high: 1, packages: ["mobile-high"] }),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T12:00:00Z"),
+    now: new Date("2026-07-23T17:00:00Z"),
   });
   assert.equal(mobileFailure.ok, false);
   assert.match(
@@ -116,7 +160,7 @@ test("framework and eslint configuration must stay on the reviewed patch", () =>
       dependencies: { next: "16.2.7" },
       devDependencies: { "eslint-config-next": "16.2.7" },
     },
-    now: new Date("2026-07-23T12:00:00Z"),
+    now: new Date("2026-07-23T17:00:00Z"),
   });
 
   assert.equal(result.ok, false);
