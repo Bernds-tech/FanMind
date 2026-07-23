@@ -1,0 +1,54 @@
+name: FanMind P1 Webhook Retention Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-webhook-retention-patch-20260723.yml"
+      - "scripts/security/webhook-retention-patch-temp.py"
+
+concurrency:
+  group: fanmind-p1-webhook-retention-patch-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/webhook-log-retention-20260723' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/webhook-log-retention-20260723
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Apply reviewed diagnostic minimization patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/security/webhook-retention-patch-temp.py
+          git diff --check
+
+      - name: Commit minimized webhook diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/metaWebhook.ts src/lib/supabase/server.ts
+          git diff --cached --quiet && { echo "Webhook patch produced no changes" >&2; exit 1; }
+          git commit -m "Minimize persisted webhook diagnostics"
+          git push origin HEAD:p1/webhook-log-retention-20260723
