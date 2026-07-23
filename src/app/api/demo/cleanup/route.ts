@@ -184,7 +184,11 @@ async function cleanupCandidate(
     workspaceResult.value! as WorkspaceBackfillRow,
   );
   if (!deletion.deleted || deletion.error) {
-    return finalizeCandidate(candidate, false, "demo_delete_failed");
+    return finalizeCandidate(
+      candidate,
+      false,
+      deletion.errorCode ?? "demo_delete_failed",
+    );
   }
 
   return finalizeCandidate(candidate, true);
