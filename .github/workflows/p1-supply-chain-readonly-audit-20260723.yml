@@ -1,0 +1,192 @@
+name: FanMind P1 Supply Chain Read-only Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-supply-chain-readonly-audit-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-supply-chain-readonly-audit-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/p1-supply-chain-20260723-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      REPORT_PATH: fanmind-p1-supply-chain-readonly-audit.txt
+    steps:
+      - name: Checkout trusted audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: audit/p1-supply-chain-20260723-v2
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Inventory workflows, external actions and existing gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE' | tee "$REPORT_PATH"
+          const { execFileSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const workflowDir = '.github/workflows';
+          const files = fs.readdirSync(workflowDir)
+            .filter(name => /\.ya?ml$/i.test(name))
+            .sort();
+          const references = [];
+          let missingPermissions = 0;
+
+          for (const file of files) {
+            const source = fs.readFileSync(path.join(workflowDir, file), 'utf8');
+            if (!/(?:^|\n)permissions\s*:/m.test(source)) missingPermissions += 1;
+            for (const rawLine of source.split(/\r?\n/)) {
+              const match = rawLine.match(/^\s*-?\s*uses:\s*["']?([^"'#\s]+)["']?/);
+              if (!match) continue;
+              references.push({ file, value: match[1] });
+            }
+          }
+
+          function resolveRef(value) {
+            if (value.startsWith('./') || value.startsWith('docker://')) {
+              return { kind: value.startsWith('./') ? 'local' : 'docker', resolved: 'not_applicable' };
+            }
+            const separator = value.lastIndexOf('@');
+            if (separator <= 0) return { kind: 'invalid', resolved: 'unresolved' };
+            const repository = value.slice(0, separator);
+            const ref = value.slice(separator + 1);
+            if (/^[0-9a-f]{40}$/i.test(ref)) return { kind: 'pinned', resolved: ref.toLowerCase() };
+            const remote = `https://github.com/${repository}.git`;
+            const candidates = [
+              `refs/tags/${ref}^{}`,
+              `refs/tags/${ref}`,
+              `refs/heads/${ref}`,
+            ];
+            for (const candidate of candidates) {
+              try {
+                const output = execFileSync('git', ['ls-remote', remote, candidate], {
+                  encoding: 'utf8',
+                  stdio: ['ignore', 'pipe', 'ignore'],
+                  timeout: 20000,
+                }).trim();
+                const sha = output.split(/\s+/)[0] || '';
+                if (/^[0-9a-f]{40}$/i.test(sha)) {
+                  return { kind: 'mutable', resolved: sha.toLowerCase() };
+                }
+              } catch {
+                // Try the next safe ref form.
+              }
+            }
+            return { kind: 'mutable', resolved: 'unresolved' };
+          }
+
+          const unique = new Map();
+          for (const reference of references) {
+            const current = unique.get(reference.value) || { files: new Set() };
+            current.files.add(reference.file);
+            unique.set(reference.value, current);
+          }
+
+          const mappings = [];
+          for (const [value, metadata] of [...unique.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+            const resolution = resolveRef(value);
+            mappings.push({
+              value,
+              files: [...metadata.files].sort(),
+              kind: resolution.kind,
+              resolved: resolution.resolved,
+            });
+          }
+
+          const mutable = mappings.filter(item => item.kind === 'mutable');
+          const unresolved = mappings.filter(item => item.resolved === 'unresolved');
+          const pinned = mappings.filter(item => item.kind === 'pinned');
+          const local = mappings.filter(item => item.kind === 'local');
+
+          const exists = file => fs.existsSync(file);
+          const rootPackage = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const mobilePackage = exists('apps/mobile/package.json')
+            ? JSON.parse(fs.readFileSync('apps/mobile/package.json', 'utf8'))
+            : null;
+          const rootScripts = Object.keys(rootPackage.scripts || {});
+          const mobileScripts = Object.keys(mobilePackage?.scripts || {});
+          const securityFiles = [
+            '.github/dependabot.yml',
+            '.github/dependabot.yaml',
+            '.github/workflows/codeql.yml',
+            '.github/workflows/codeql.yaml',
+            '.github/workflows/security.yml',
+            '.github/workflows/security.yaml',
+          ].filter(exists);
+
+          console.log(`AUDIT_UTC=${new Date().toISOString()}`);
+          console.log(`WORKFLOW_FILE_COUNT=${files.length}`);
+          console.log(`WORKFLOW_MISSING_EXPLICIT_PERMISSIONS_COUNT=${missingPermissions}`);
+          console.log(`ACTION_REFERENCE_COUNT=${references.length}`);
+          console.log(`UNIQUE_ACTION_REFERENCE_COUNT=${mappings.length}`);
+          console.log(`ACTION_PINNED_UNIQUE_COUNT=${pinned.length}`);
+          console.log(`ACTION_MUTABLE_UNIQUE_COUNT=${mutable.length}`);
+          console.log(`ACTION_LOCAL_UNIQUE_COUNT=${local.length}`);
+          console.log(`ACTION_UNRESOLVED_UNIQUE_COUNT=${unresolved.length}`);
+          for (const item of mappings) {
+            console.log(
+              `ACTION_REF=${item.value}|kind:${item.kind}|resolved:${item.resolved}|files:${item.files.join(',')}`,
+            );
+          }
+          console.log(`ROOT_PACKAGE_LOCK=${exists('package-lock.json') ? 'present' : 'missing'}`);
+          console.log(`MOBILE_PACKAGE_LOCK=${exists('apps/mobile/package-lock.json') ? 'present' : 'missing'}`);
+          console.log(`ROOT_NPM_AUDIT_SCRIPT=${rootScripts.some(name => /audit|security/i.test(name)) ? 'present' : 'missing'}`);
+          console.log(`ROOT_SBOM_SCRIPT=${rootScripts.some(name => /sbom/i.test(name)) ? 'present' : 'missing'}`);
+          console.log(`MOBILE_NPM_AUDIT_SCRIPT=${mobileScripts.some(name => /audit|security/i.test(name)) ? 'present' : 'missing'}`);
+          console.log(`MOBILE_SBOM_SCRIPT=${mobileScripts.some(name => /sbom/i.test(name)) ? 'present' : 'missing'}`);
+          console.log(`DEPENDABOT_CONFIG=${securityFiles.some(file => /dependabot/i.test(file)) ? 'present' : 'missing'}`);
+          console.log(`CODEQL_WORKFLOW=${securityFiles.some(file => /codeql/i.test(file)) ? 'present' : 'missing'}`);
+          console.log(`SECURITY_FILE_COUNT=${securityFiles.length}`);
+          console.log(`NPM_VERSION=${process.env.npm_config_user_agent?.split(' ')[0] || 'unknown'}`);
+          console.log('SECRETS_WERE_NOT_READ=true');
+
+          if (unresolved.length > 0) {
+            console.error('SUPPLY_CHAIN_AUDIT_RESULT=failed_unresolved_action_refs');
+            process.exit(1);
+          }
+          console.log('SUPPLY_CHAIN_AUDIT_RESULT=success');
+          NODE
+
+      - name: Verify npm SBOM capability without generating repository output
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npm help sbom >/dev/null 2>&1; then
+            echo 'NPM_SBOM_CAPABILITY=available' | tee -a "$REPORT_PATH"
+          else
+            echo 'NPM_SBOM_CAPABILITY=missing' | tee -a "$REPORT_PATH"
+          fi
+
+      - name: Upload sanitized audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fanmind-p1-supply-chain-readonly-audit
+          path: fanmind-p1-supply-chain-readonly-audit.txt
+          if-no-files-found: error
+          retention-days: 7
