@@ -10,6 +10,7 @@ on:
       - reopened
     paths:
       - ".github/workflows/p1-staging-boundary-ref-match-pr-patch.yml"
+      - "scripts/operations/staging-boundary-ref-match-patch-temp.py"
 
 permissions:
   contents: write
@@ -30,66 +31,17 @@ jobs:
           fetch-depth: 1
           show-progress: false
 
-      - name: Execute deterministic patch embedded in trusted helper
-        id: patch_run
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          python - <<'PY' > staging-boundary-patch.log 2>&1
-          from pathlib import Path
-          import subprocess
-          import sys
-
-          helper = Path('.github/workflows/p1-staging-boundary-ref-match-patch.yml')
-          lines = helper.read_text(encoding='utf-8').splitlines()
-          start = next((index + 1 for index, line in enumerate(lines) if line.strip() == "python - <<'PY'"), None)
-          if start is None:
-              raise SystemExit('embedded_patch_start_missing')
-          end = next((index for index in range(start, len(lines)) if lines[index].strip() == 'PY'), None)
-          if end is None:
-              raise SystemExit('embedded_patch_end_missing')
-
-          embedded_lines = lines[start:end]
-          non_empty = [line for line in embedded_lines if line.strip()]
-          if not non_empty:
-              raise SystemExit('embedded_patch_empty')
-          indent = min(len(line) - len(line.lstrip()) for line in non_empty)
-          embedded = '\n'.join(line[indent:] if len(line) >= indent else '' for line in embedded_lines) + '\n'
-          patch_path = Path('/tmp/fanmind-staging-boundary-patch.py')
-          patch_path.write_text(embedded, encoding='utf-8')
-          completed = subprocess.run(
-              [sys.executable, str(patch_path)],
-              text=True,
-              stdout=subprocess.PIPE,
-              stderr=subprocess.STDOUT,
-          )
-          if completed.stdout:
-              print(completed.stdout)
-          raise SystemExit(completed.returncode)
-          PY
-          status=$?
-          printf '%s\n' "$status" > staging-boundary-patch.status
-          tail -n 80 staging-boundary-patch.log || true
-          exit "$status"
-
-      - name: Upload bounded patch diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fanmind-staging-boundary-patch-diagnostic
-          path: |
-            staging-boundary-patch.log
-            staging-boundary-patch.status
-          if-no-files-found: error
-          retention-days: 2
-
-      - name: Commit staging boundary hardening
-        if: steps.patch_run.outcome == 'success'
+      - name: Apply fail-closed staging target binding
         shell: bash
         run: |
           set -euo pipefail
+          python scripts/operations/staging-boundary-ref-match-patch-temp.py
           git diff --check
+
+      - name: Commit staging boundary hardening
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
@@ -103,9 +55,3 @@ jobs:
           git diff --cached --quiet && { echo "Patch produced no changes" >&2; exit 1; }
           git commit -m "Bind staging Supabase target ref to project URL"
           git push origin HEAD:p1/staging-boundary-ref-match-20260723
-
-      - name: Enforce patch result
-        if: always()
-        shell: bash
-        run: |
-          test "${{ steps.patch_run.outcome }}" = "success"
