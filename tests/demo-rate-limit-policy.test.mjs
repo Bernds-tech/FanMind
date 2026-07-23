@@ -47,10 +47,13 @@ test("public demo and endpoint rate limits share the canonical client IP policy"
     protection,
     /headers\.get\("x-forwarded-for"\).*split\(","\)\[0\]/su,
   );
-  assert.match(clientIpPolicy, /headers, "x-real-ip"/u);
+  assert.match(clientIpPolicy, /headerValue\(headers, "x-real-ip"\)/u);
   assert.match(clientIpPolicy, /getLastForwardedForIp/u);
   assert.match(clientIpPolicy, /return normalized\.at\(-1\)/u);
-  assert.doesNotMatch(clientIpPolicy, /cf-connecting-ip/iu);
+  assert.doesNotMatch(
+    clientIpPolicy,
+    /headerValue\(headers, "cf-connecting-ip"\)/u,
+  );
 });
 
 test("production demo runbook matches the controlled restart policy", async () => {
