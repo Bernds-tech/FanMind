@@ -1,0 +1,171 @@
+name: FanMind P1 Supply Chain Finalize
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-supply-chain-finalize-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-supply-chain-finalize-20260723
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: write
+  issues: write
+  packages: read
+  security-events: write
+
+jobs:
+  finalize:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/supply-chain-hardening-20260723' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: https://fanmind.ch
+      NEXT_PUBLIC_SITE_URL: https://fanmind.ch
+      FANMIND_PUBLIC_DEMO_ENABLED: "false"
+      FANMIND_ENABLE_REFERRAL_BILLING: "false"
+      FANMIND_ENABLE_TELEGRAM_SEND: "false"
+      FANMIND_ADMIN_EMAILS: admin@example.com
+      EXPO_PUBLIC_SUPABASE_URL: https://exampleproject.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key-1234567890
+      EXPO_PUBLIC_FANMIND_API_URL: https://fanmind.ch
+      EXPO_NO_TELEMETRY: "1"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout trusted hardening branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/supply-chain-hardening-20260723
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@0daab03d71ff584ef619d027a3fd9146679c5d84 # v3.35.3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile/package-lock.json
+
+      - name: Normalize setup-node references in the reviewed branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f scripts/security/fix-setup-node-pin-temp.mjs ]; then
+            node scripts/security/fix-setup-node-pin-temp.mjs
+          else
+            python3 - <<'PY'
+          from pathlib import Path
+          replacement = "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0"
+          for path in Path('.github/workflows').glob('*.y*ml'):
+              source = path.read_text(encoding='utf-8')
+              import re
+              updated = re.sub(r"actions/setup-node@[^\s#\"']+(?:\s+#\s*[^\r\n]*)?", replacement, source)
+              if updated != source:
+                  path.write_text(updated, encoding='utf-8')
+          PY
+          fi
+          git diff --check
+
+      - name: Install web and Mobile dependencies reproducibly
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm ci --prefix apps/mobile --no-audit --no-fund
+
+      - name: Run complete product, operations and Mobile gates
+        run: |
+          set -euo pipefail
+          npm run verify:truth
+          npm run lint
+          npm run test:operations
+          npm run build
+          npm run --prefix apps/mobile typecheck
+          npm run --prefix apps/mobile doctor
+          npm run --prefix apps/mobile export:android
+          npm run --prefix apps/mobile boundary
+
+      - name: Run dependency audit and CycloneDX SBOM gates
+        run: |
+          set -euo pipefail
+          npm run security:audit -- --report dependency-audit-report.json
+          npm run security:sbom -- --output-dir sbom-artifacts
+
+      - name: Analyze JavaScript and TypeScript
+        uses: github/codeql-action/analyze@0daab03d71ff584ef619d027a3fd9146679c5d84 # v3.35.3
+        with:
+          category: "/language:javascript-typescript-p1-finalize"
+
+      - name: Record successful finalization evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const audit = JSON.parse(fs.readFileSync('dependency-audit-report.json', 'utf8'));
+          const sbom = JSON.parse(fs.readFileSync('sbom-artifacts/sbom-summary.json', 'utf8'));
+          const lines = [
+            '## P1 Supply-Chain Finalization',
+            '',
+            `- UTC: ${new Date().toISOString()}`,
+            `- Validated branch commit: \`${process.env.GITHUB_SHA}\``,
+            `- Workflow run: \`${process.env.GITHUB_RUN_ID}\``,
+            '- Product Truth and immutable Action policy: success',
+            '- Lint, Operations tests and Production build: success',
+            '- Mobile typecheck, Expo Doctor, Android export and boundary: success',
+            '- CodeQL extraction, analysis and SARIF upload: success',
+            `- Root audit: critical ${audit.result.root.critical}, high ${audit.result.root.high}, moderate ${audit.result.root.moderate}`,
+            `- Mobile audit: critical ${audit.result.mobile.critical}, high ${audit.result.mobile.high}`,
+            `- Reviewed root exception expires: ${audit.result.root.reviewedExceptionExpiresAt}`,
+            `- CycloneDX Web components: ${sbom.web.componentCount}`,
+            `- CycloneDX Mobile components: ${sbom.mobile.componentCount}`,
+            '',
+            'No secrets, environment values, advisory bodies or customer data were included.',
+          ];
+          fs.writeFileSync('supply-chain-finalization.md', `${lines.join('\n')}\n`, { mode: 0o600 });
+          NODE
+          cat supply-chain-finalization.md
+          gh issue comment 671 --repo "$GITHUB_REPOSITORY" --body-file supply-chain-finalization.md
+
+      - name: Remove all completed one-off validation helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/p1-fix-setup-node-pin-20260723.yml \
+            .github/workflows/p1-supply-chain-final-validation-20260723.yml \
+            .github/workflows/p1-supply-chain-gate-record-20260723.yml \
+            .github/workflows/p1-supply-chain-finalize-20260723.yml \
+            scripts/security/fix-setup-node-pin-temp.mjs
+          git diff --check
+
+      - name: Commit final reviewed supply-chain state
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows docs/security/SUPPLY_CHAIN.md scripts/security
+          git diff --cached --quiet && { echo "No finalization changes" >&2; exit 1; }
+          git commit -m "Finalize immutable Action pins and remove one-off gates"
+          git push origin HEAD:p1/supply-chain-hardening-20260723
