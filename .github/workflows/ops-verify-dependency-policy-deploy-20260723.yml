@@ -65,26 +65,37 @@ jobs:
             if [[ "$live_release" == "$EXPECTED_RELEASE" \
               && "$server_head" == "$EXPECTED_RELEASE" \
               && "$origin_main" == "$EXPECTED_RELEASE" ]]; then
-              curl -fsSL --max-time 15 https://fanmind.ch/api/health \
+              if curl -fsSL --max-time 15 https://fanmind.ch/api/health \
                 | node -e '
                     let input = "";
                     process.stdin.on("data", chunk => input += chunk);
                     process.stdin.on("end", () => {
                       try {
                         const payload = JSON.parse(input);
-                        const components = Object.values(payload.components || {});
-                        const ok = payload.status === "healthy"
-                          && components.length === 7
-                          && components.every(component => component?.status === "healthy");
+                        const checks = Array.isArray(payload.checks) ? payload.checks : [];
+                        const byComponent = new Map(checks.map(check => [check?.component, check]));
+                        const required = [
+                          "application",
+                          "supabase_config",
+                          "supabase_database",
+                          "supabase_storage",
+                          "stripe_config",
+                          "openai_config",
+                          "shared_rate_limit_config",
+                        ];
+                        const ok = required.every(
+                          component => byComponent.get(component)?.status === "healthy",
+                        );
                         process.exit(ok ? 0 : 1);
                       } catch {
                         process.exit(1);
                       }
                     });
-                  '
-              echo 'RELEASE_SYNC=ok' | tee -a "$report"
-              echo 'PUBLIC_REQUIRED_HEALTHY_COUNT=7' | tee -a "$report"
-              break
+                  '; then
+                echo 'RELEASE_SYNC=ok' | tee -a "$report"
+                echo 'PUBLIC_REQUIRED_HEALTHY_COUNT=7' | tee -a "$report"
+                break
+              fi
             fi
 
             if [[ "$attempt" == "90" ]]; then
