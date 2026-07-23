@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   patch:
@@ -101,7 +101,7 @@ jobs:
             `ROOT_AUDIT_MODERATE=${moderate}`,
             `ROOT_NEXT_VERSION=${manifest?.dependencies?.next ?? 'missing'}`,
             `ROOT_REVIEWED_ADVISORY_PACKAGES=${names.join(',') || 'none'}`,
-            `ROOT_REVIEW_EXCEPTION_EXPIRES=2026-08-07`,
+            'ROOT_REVIEW_EXCEPTION_EXPIRES=2026-08-07',
             `ROOT_REVIEWED_EXCEPTION=${reviewed ? 'accepted' : 'rejected'}`,
           ];
           for (const [name, item] of entries) {
@@ -125,13 +125,28 @@ jobs:
         if: steps.audit.outcome != 'success'
         run: exit 1
 
-      - name: Commit deterministic hardening changes
+      - name: Stage deterministic patch output
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows package.json package-lock.json
-          git diff --cached --quiet && { echo "Hardening patch produced no changes" >&2; exit 1; }
-          git commit -m "Pin Actions and update Next.js security patch"
-          git push origin HEAD:p1/supply-chain-hardening-20260723
+          output="supply-chain-patch-output"
+          rm -rf "$output"
+          mkdir -p "$output/.github/workflows"
+          for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$workflow" ] || continue
+            name="$(basename "$workflow")"
+            [ "$name" = "p1-supply-chain-hardening-patch-20260723.yml" ] && continue
+            cp "$workflow" "$output/.github/workflows/$name"
+          done
+          cp package.json package-lock.json "$output/"
+          printf '%s\n' '.github/workflows/one-off-apply-top-fan-migration-20260719.yml' > "$output/deleted-files.txt"
+          find "$output" -type f -exec chmod 0644 {} +
+
+      - name: Upload deterministic patch output
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-supply-chain-hardening-patch-output
+          path: supply-chain-patch-output
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 3
