@@ -58,8 +58,12 @@ test("production audit uses stable timer properties instead of localized timer c
   const source = await readAuditScript();
 
   assert.match(source, /systemctl show "\$unit" --property=NextElapseUSecRealtime --value/u);
+  assert.match(source, /systemctl show "\$unit" --property=NextElapseUSecMonotonic --value/u);
   assert.match(source, /systemctl show "\$unit" --property=LastTriggerUSec --value/u);
-  assert.match(source, /SYSTEMD_TIMER=%s\|next=%s\|last=%s/u);
+  assert.match(
+    source,
+    /SYSTEMD_TIMER=%s\|next_realtime=%s\|next_monotonic=%s\|last=%s/u,
+  );
   assert.doesNotMatch(source, /systemctl list-timers/u);
 });
 
