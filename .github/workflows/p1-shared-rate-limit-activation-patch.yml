@@ -1,0 +1,43 @@
+name: FanMind P1 Shared Rate Limit Activation Patch
+
+on:
+  push:
+    branches:
+      - p1/shared-rate-limit-activation-20260723
+    paths:
+      - ".github/workflows/p1-shared-rate-limit-activation-patch.yml"
+      - "scripts/operations/shared-rate-limit-activation-patch-temp.py"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted activation branch
+        uses: actions/checkout@v4
+        with:
+          ref: p1/shared-rate-limit-activation-20260723
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Route AI endpoint through shared limiter
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/operations/shared-rate-limit-activation-patch-temp.py
+          git diff --check
+
+      - name: Commit endpoint activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/api/ai/reply-suggestions/route.ts
+          git diff --cached --quiet && { echo "Activation patch produced no changes" >&2; exit 1; }
+          git commit -m "Use atomic shared rate limit for AI replies"
+          git push origin HEAD:p1/shared-rate-limit-activation-20260723
