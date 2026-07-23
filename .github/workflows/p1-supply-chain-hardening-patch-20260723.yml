@@ -1,12 +1,6 @@
 name: FanMind P1 Supply Chain Hardening Patch
 
 on:
-  push:
-    branches:
-      - p1/supply-chain-hardening-20260723
-    paths:
-      - ".github/workflows/p1-supply-chain-hardening-patch-20260723.yml"
-      - "scripts/security/supply-chain-hardening-patch-temp.mjs"
   pull_request:
     branches:
       - main
@@ -18,14 +12,19 @@ on:
       - ".github/workflows/p1-supply-chain-hardening-patch-20260723.yml"
       - "scripts/security/supply-chain-hardening-patch-temp.mjs"
 
+concurrency:
+  group: fanmind-p1-supply-chain-hardening-patch-20260723
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
 jobs:
   patch:
     if: >-
-      github.actor != 'github-actions[bot]' &&
-      (github.event_name == 'push' || github.head_ref == 'p1/supply-chain-hardening-20260723')
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/supply-chain-hardening-20260723' &&
+      github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -49,14 +48,20 @@ jobs:
           node scripts/security/supply-chain-hardening-patch-temp.mjs
           git diff --check
 
-      - name: Refresh root lockfile
+      - name: Refresh root lockfile and apply compatible audit fixes
         shell: bash
         run: |
           set -euo pipefail
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          set +e
+          npm audit fix --package-lock-only --omit=dev --ignore-scripts --no-fund
+          fix_status=$?
+          set -e
+          printf 'NPM_AUDIT_FIX_EXIT=%s\n' "$fix_status"
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           git diff --check
 
-      - name: Verify only the reviewed current Next.js advisory set remains
+      - name: Verify only bounded reviewed advisories remain
         id: audit
         continue-on-error: true
         shell: bash
@@ -77,16 +82,16 @@ jobs:
           const entries = Object.entries(payload?.vulnerabilities ?? {})
             .sort(([a], [b]) => a.localeCompare(b));
           const names = entries.map(([name]) => name);
-          const expectedNames = ['next', 'postcss', 'sharp'];
-          const exactNames = JSON.stringify(names) === JSON.stringify(expectedNames);
+          const allowedNames = new Set(['next', 'postcss', 'sharp']);
+          const onlyReviewedNames = names.every(name => allowedNames.has(name));
           const packagePinned = manifest?.dependencies?.next === '16.2.11'
             && manifest?.devDependencies?.['eslint-config-next'] === '16.2.11';
           const expiry = Date.parse('2026-08-07T00:00:00Z');
           const withinReviewWindow = Date.now() < expiry;
           const reviewed = critical === 0
-            && high === 2
-            && moderate === 1
-            && exactNames
+            && high <= 2
+            && moderate <= 1
+            && onlyReviewedNames
             && packagePinned
             && withinReviewWindow;
           const lines = [
