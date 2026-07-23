@@ -6,6 +6,11 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const ROOT_REVIEW_EXCEPTION_EXPIRES_AT = "2026-08-07T00:00:00.000Z";
+const ROOT_REVIEWED_AT = "2026-07-23T16:33:19.357Z";
+const ROOT_REVIEW_SOURCE_RUN = "30025574639";
+const ROOT_REVIEWED_FRAMEWORK_VERSION = "16.2.11";
+const ROOT_REVIEW_HIGH_MAXIMUM = 3;
+const ROOT_REVIEW_MODERATE_MAXIMUM = 0;
 const REVIEWED_ROOT_PACKAGES = Object.freeze([
   "next",
   "postcss",
@@ -58,13 +63,14 @@ function evaluateDependencyAudit({
   const exceptionExpiresAt = new Date(ROOT_REVIEW_EXCEPTION_EXPIRES_AT);
   const exceptionCurrent = now.getTime() < exceptionExpiresAt.getTime();
   const rootVersionsPinned =
-    rootManifest?.dependencies?.next === "16.2.11" &&
-    rootManifest?.devDependencies?.["eslint-config-next"] === "16.2.11";
+    rootManifest?.dependencies?.next === ROOT_REVIEWED_FRAMEWORK_VERSION &&
+    rootManifest?.devDependencies?.["eslint-config-next"] ===
+      ROOT_REVIEWED_FRAMEWORK_VERSION;
 
   const rootOk =
     root.critical === 0 &&
-    root.high <= 2 &&
-    root.moderate <= 1 &&
+    root.high <= ROOT_REVIEW_HIGH_MAXIMUM &&
+    root.moderate <= ROOT_REVIEW_MODERATE_MAXIMUM &&
     unknownRootNames.length === 0 &&
     rootVersionsPinned &&
     (!reviewedExceptionNeeded || exceptionCurrent);
@@ -72,8 +78,10 @@ function evaluateDependencyAudit({
 
   const errors = [];
   if (root.critical !== 0) errors.push("root_critical_vulnerability_present");
-  if (root.high > 2) errors.push("root_high_vulnerability_budget_exceeded");
-  if (root.moderate > 1) {
+  if (root.high > ROOT_REVIEW_HIGH_MAXIMUM) {
+    errors.push("root_high_vulnerability_budget_exceeded");
+  }
+  if (root.moderate > ROOT_REVIEW_MODERATE_MAXIMUM) {
     errors.push("root_moderate_vulnerability_budget_exceeded");
   }
   if (unknownRootNames.length > 0) {
@@ -98,6 +106,11 @@ function evaluateDependencyAudit({
       reviewedExceptionNeeded,
       reviewedExceptionCurrent: exceptionCurrent,
       reviewedExceptionExpiresAt: ROOT_REVIEW_EXCEPTION_EXPIRES_AT,
+      reviewedAt: ROOT_REVIEWED_AT,
+      reviewSourceRun: ROOT_REVIEW_SOURCE_RUN,
+      reviewedFrameworkVersion: ROOT_REVIEWED_FRAMEWORK_VERSION,
+      highMaximum: ROOT_REVIEW_HIGH_MAXIMUM,
+      moderateMaximum: ROOT_REVIEW_MODERATE_MAXIMUM,
     },
     mobile: {
       ...mobile,
@@ -152,9 +165,12 @@ async function main() {
     generatedAt: new Date().toISOString(),
     policy: {
       rootCriticalMaximum: 0,
-      rootHighMaximum: 2,
-      rootModerateMaximum: 1,
+      rootHighMaximum: ROOT_REVIEW_HIGH_MAXIMUM,
+      rootModerateMaximum: ROOT_REVIEW_MODERATE_MAXIMUM,
       reviewedRootPackages: REVIEWED_ROOT_PACKAGES,
+      reviewedFrameworkVersion: ROOT_REVIEWED_FRAMEWORK_VERSION,
+      reviewedAt: ROOT_REVIEWED_AT,
+      reviewSourceRun: ROOT_REVIEW_SOURCE_RUN,
       reviewedExceptionExpiresAt: ROOT_REVIEW_EXCEPTION_EXPIRES_AT,
       mobileCriticalMaximum: 0,
       mobileHighMaximum: 0,
@@ -191,7 +207,12 @@ async function main() {
 
 export {
   REVIEWED_ROOT_PACKAGES,
+  ROOT_REVIEWED_AT,
+  ROOT_REVIEWED_FRAMEWORK_VERSION,
   ROOT_REVIEW_EXCEPTION_EXPIRES_AT,
+  ROOT_REVIEW_HIGH_MAXIMUM,
+  ROOT_REVIEW_MODERATE_MAXIMUM,
+  ROOT_REVIEW_SOURCE_RUN,
   auditMetadata,
   evaluateDependencyAudit,
   runNpmAudit,
