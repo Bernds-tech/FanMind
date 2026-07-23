@@ -23,6 +23,8 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 2. **Supabase Staging**
    - neues eigenes Supabase-Projekt;
    - eigenes Auth, Datenbank, Storage und Service-Role-Key;
+   - `FANMIND_TARGET_SUPABASE_PROJECT_REF` muss exakt der Projektreferenz in der Supabase-URL entsprechen;
+   - Abweichungen zwischen URL und expliziter Zielreferenz werden fail-closed abgelehnt;
    - ausschließlich synthetische Kontakte, Nachrichten und Dateien;
    - Production-Projektreferenz nur als Vergleichswert, niemals Production-Schlüssel hinterlegen.
 
@@ -47,12 +49,13 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 
 1. externe Ressourcen erstellen;
 2. `.env.staging.example` außerhalb von Git befüllen;
-3. alle Schreibschalter auf `false` lassen;
-4. `npm run staging:preflight` ausführen;
-5. Workflow `FanMind Staging Readiness` manuell starten;
-6. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
-7. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
-8. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
+3. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
+4. alle Schreibschalter auf `false` lassen;
+5. `npm run staging:preflight` ausführen;
+6. Workflow `FanMind Staging Readiness` manuell starten;
+7. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
+8. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
+9. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
 
 ## Freigabekriterien
 
@@ -60,6 +63,7 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 
 - eigener HTTPS-Host erreichbar ist;
 - Supabase-Projekt nachweislich von Production getrennt ist;
+- URL-Projektreferenz und explizite Staging-Zielreferenz exakt übereinstimmen;
 - Stripe Test Mode verwendet wird;
 - GitHub-Workflow vollständig grün ist;
 - keine realen Kundendaten vorhanden sind;

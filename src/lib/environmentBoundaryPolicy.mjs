@@ -8,6 +8,14 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    const candidate = clean(value);
+    if (candidate) return candidate;
+  }
+  return "";
+}
+
 function normalizeHostname(value) {
   return clean(value).toLowerCase().replace(/\.+$/, "");
 }
@@ -42,9 +50,11 @@ function supabaseProjectRefFromUrl(value) {
 
 function appTarget(environment) {
   const url = parseUrl(
-    environment.NEXT_PUBLIC_APP_URL
-      ?? environment.NEXT_PUBLIC_SITE_URL
-      ?? environment.FANMIND_APP_URL,
+    firstNonEmpty(
+      environment.NEXT_PUBLIC_APP_URL,
+      environment.NEXT_PUBLIC_SITE_URL,
+      environment.FANMIND_APP_URL,
+    ),
   );
   const hostname = url ? normalizeHostname(url.hostname) : null;
   return {
@@ -56,20 +66,36 @@ function appTarget(environment) {
 }
 
 function supabaseTarget(environment) {
-  const url = parseUrl(environment.NEXT_PUBLIC_SUPABASE_URL);
-  const extractedRef = supabaseProjectRefFromUrl(environment.NEXT_PUBLIC_SUPABASE_URL);
-  const explicitRef = normalizeProjectRef(environment.FANMIND_TARGET_SUPABASE_PROJECT_REF);
-  const projectRef = extractedRef ?? explicitRef;
+  const rawUrl = clean(environment.NEXT_PUBLIC_SUPABASE_URL);
+  const url = parseUrl(rawUrl);
+  const urlProjectRef = supabaseProjectRefFromUrl(rawUrl);
+  const explicitProjectRef = normalizeProjectRef(
+    environment.FANMIND_TARGET_SUPABASE_PROJECT_REF,
+  );
+  const projectRef = urlProjectRef ?? explicitProjectRef;
   const productionRef = normalizeProjectRef(
     environment.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF,
+  );
+  const targetRefMismatch = Boolean(
+    urlProjectRef
+      && explicitProjectRef
+      && urlProjectRef !== explicitProjectRef,
   );
   return {
     configured: Boolean(url),
     secure: url?.protocol === "https:",
+    urlProjectRef,
+    explicitProjectRef,
     projectRef,
     productionRef,
     productionMatch: Boolean(projectRef && productionRef && projectRef === productionRef),
-    standardProjectUrl: Boolean(extractedRef),
+    targetRefMismatch,
+    targetRefMatchesUrl: Boolean(
+      urlProjectRef
+        && explicitProjectRef
+        && urlProjectRef === explicitProjectRef,
+    ),
+    standardProjectUrl: Boolean(urlProjectRef),
   };
 }
 
@@ -99,6 +125,11 @@ export function evaluateEnvironmentBoundary(
     errors.push("NEXT_PUBLIC_SUPABASE_URL fehlt oder ist ungültig.");
   } else if (!supabase.secure) {
     errors.push("Supabase-Ziel-URLs müssen HTTPS verwenden.");
+  }
+  if (supabase.targetRefMismatch) {
+    errors.push(
+      "NEXT_PUBLIC_SUPABASE_URL und FANMIND_TARGET_SUPABASE_PROJECT_REF müssen dasselbe Supabase-Projekt benennen.",
+    );
   }
 
   if (runtimeEnvironment === "production" && app.configured && !app.production) {
@@ -132,6 +163,11 @@ export function evaluateEnvironmentBoundary(
     if (!supabase.projectRef) {
       errors.push("Schreibtests verlangen eine eindeutig erkennbare Ziel-Supabase-Projektreferenz.");
     }
+    if (!supabase.explicitProjectRef) {
+      errors.push(
+        "Schreibtests verlangen FANMIND_TARGET_SUPABASE_PROJECT_REF als explizite Zielbestätigung.",
+      );
+    }
     if (!supabase.productionRef) {
       errors.push("Schreibtests verlangen FANMIND_PRODUCTION_SUPABASE_PROJECT_REF zum Vergleich.");
     }
@@ -163,6 +199,10 @@ export function evaluateEnvironmentBoundary(
     appSecure: app.secure,
     supabaseConfigured: supabase.configured,
     supabaseProjectIdentified: Boolean(supabase.projectRef),
+    supabaseUrlProjectIdentified: Boolean(supabase.urlProjectRef),
+    supabaseExplicitProjectIdentified: Boolean(supabase.explicitProjectRef),
+    supabaseTargetRefMismatch: supabase.targetRefMismatch,
+    supabaseTargetRefMatchesUrl: supabase.targetRefMatchesUrl,
     productionProjectIdentified: Boolean(supabase.productionRef),
     supabaseProductionMatch: supabase.productionMatch,
     errors,

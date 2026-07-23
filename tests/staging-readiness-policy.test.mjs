@@ -18,6 +18,9 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   assert.match(script, /sk_test_/);
   assert.match(script, /FANMIND_ENABLE_NON_PRODUCTION_WRITES/);
   assert.match(script, /FANMIND_ENABLE_REFERRAL_BILLING/);
+  assert.match(script, /FANMIND_TARGET_SUPABASE_PROJECT_REF/);
+  assert.match(script, /Supabase-URL und explizite Staging-Zielreferenz müssen exakt übereinstimmen/);
+  assert.match(script, /STAGING_SUPABASE_REF_BINDING/);
   assert.match(script, /STAGING_READINESS=OK/);
 
   assert.match(workflow, /environment: staging/);
@@ -32,6 +35,7 @@ test("staging runbook forbids production data and documents external dependencie
 
   assert.match(runbook, /ausschließlich synthetische Kontakte/);
   assert.match(runbook, /keine Live-Kunden/);
+  assert.match(runbook, /exakt der Projektreferenz in der Supabase-URL entsprechen/);
   assert.match(runbook, /ersetzt nicht die externen Ressourcen/);
   assert.match(runbook, /Produktions- und Testdaten trennen/);
 });

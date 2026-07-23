@@ -161,6 +161,66 @@ test("Supabase refs are parsed only from standard project URLs", () => {
   assert.equal(supabaseProjectRefFromUrl("not-a-url"), null);
 });
 
+test("app target skips an empty primary URL and uses the first configured fallback", () => {
+  const result = evaluateEnvironmentBoundary({
+    ...stagingEnvironment,
+    NEXT_PUBLIC_APP_URL: "   ",
+    NEXT_PUBLIC_SITE_URL: "https://staging-fallback.fanmind.example",
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.appConfigured, true);
+  assert.equal(result.appProduction, false);
+  assert.equal(result.appSecure, true);
+});
+
+test("Supabase URL and explicit target reference must identify the same project", () => {
+  const matching = evaluateEnvironmentBoundary(stagingEnvironment);
+  assert.equal(matching.ok, true);
+  assert.equal(matching.supabaseUrlProjectIdentified, true);
+  assert.equal(matching.supabaseExplicitProjectIdentified, true);
+  assert.equal(matching.supabaseTargetRefMatchesUrl, true);
+  assert.equal(matching.supabaseTargetRefMismatch, false);
+
+  const mismatchedEnvironment = {
+    ...stagingEnvironment,
+    FANMIND_TARGET_SUPABASE_PROJECT_REF: "differentref123",
+  };
+  const readOnly = evaluateEnvironmentBoundary(mismatchedEnvironment);
+  assert.equal(readOnly.ok, false);
+  assert.equal(readOnly.supabaseTargetRefMismatch, true);
+  assert.equal(readOnly.supabaseTargetRefMatchesUrl, false);
+  assert.match(readOnly.errors.join("\n"), /dasselbe Supabase-Projekt/);
+
+  const write = evaluateEnvironmentBoundary(
+    {
+      ...mismatchedEnvironment,
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+      FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+    },
+    { allowWrite: true },
+  );
+  assert.equal(write.ok, false);
+  assert.equal(write.supabaseTargetRefMismatch, true);
+});
+
+test("write mode requires an explicit target reference even for a standard Supabase URL", () => {
+  const result = evaluateEnvironmentBoundary(
+    {
+      ...stagingEnvironment,
+      FANMIND_TARGET_SUPABASE_PROJECT_REF: "",
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+      FANMIND_NON_PRODUCTION_WRITE_ACK: NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT,
+    },
+    { allowWrite: true },
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.supabaseUrlProjectIdentified, true);
+  assert.equal(result.supabaseExplicitProjectIdentified, false);
+  assert.match(result.errors.join("\n"), /explizite Zielbestätigung/);
+});
+
 test("preflight output never prints actual URLs, project refs or secret values", () => {
   assert.match(preflightSource, /SECRETS_WURDEN_NICHT_AUSGEGEBEN=true/);
   assert.doesNotMatch(preflightSource, /console\.log\([^\n]*(?:NEXT_PUBLIC_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY)/);
