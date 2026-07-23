@@ -23,6 +23,9 @@ const WEBHOOK_ERROR_CODES = Object.freeze([
   "invalid_payload",
   "unsupported_event",
   "empty_content",
+  "content_missing",
+  "unmapped_page",
+  "page_identifier_missing",
   "workspace_not_configured",
   "workspace_lookup_failed",
   "connection_lookup_failed",
@@ -85,7 +88,12 @@ function evaluateWebhookSecret({
 
 function timingSafeTextEqual(left, right) {
   if (typeof left !== "string" || typeof right !== "string") return false;
-  if (!left || !right || left.length > MAX_SECRET_LENGTH || right.length > MAX_SECRET_LENGTH) {
+  if (
+    !left ||
+    !right ||
+    left.length > MAX_SECRET_LENGTH ||
+    right.length > MAX_SECRET_LENGTH
+  ) {
     return false;
   }
   const leftBuffer = Buffer.from(left, "utf8");
@@ -111,7 +119,10 @@ function validateStaticWebhookSecret({
   if (!evaluation.configured && !isProductionRuntime(environment)) {
     return { ok: true, errorCode: null };
   }
-  if (!evaluation.secret || !timingSafeTextEqual(evaluation.secret, receivedSecret)) {
+  if (
+    !evaluation.secret ||
+    !timingSafeTextEqual(evaluation.secret, receivedSecret)
+  ) {
     return { ok: false, errorCode: "invalid_signature" };
   }
   return { ok: true, errorCode: null };
@@ -145,12 +156,8 @@ function validateMetaHmacSignature({
     .update(typeof rawBody === "string" ? rawBody : "")
     .digest("hex");
   const received = signatureHeader.slice("sha256=".length);
-  return {
-    ok: timingSafeTextEqual(expected, received),
-    errorCode: timingSafeTextEqual(expected, received)
-      ? null
-      : "invalid_signature",
-  };
+  const ok = timingSafeTextEqual(expected, received);
+  return { ok, errorCode: ok ? null : "invalid_signature" };
 }
 
 function validateMetaVerifyToken({
@@ -167,16 +174,13 @@ function validateMetaVerifyToken({
         : "invalid_verify_token",
     };
   }
-  return {
-    ok: timingSafeTextEqual(normalized, receivedToken),
-    errorCode: timingSafeTextEqual(normalized, receivedToken)
-      ? null
-      : "invalid_verify_token",
-  };
+  const ok = timingSafeTextEqual(normalized, receivedToken);
+  return { ok, errorCode: ok ? null : "invalid_verify_token" };
 }
 
 function normalizeWebhookErrorCode(value, fallback = "processing_failed") {
-  const candidate = typeof value === "string" ? value.trim().toLowerCase() : "";
+  const candidate =
+    typeof value === "string" ? value.trim().toLowerCase() : "";
   if (
     candidate.length <= MAX_SAFE_CODE_LENGTH &&
     /^[a-z][a-z0-9_]*$/u.test(candidate) &&
@@ -184,7 +188,9 @@ function normalizeWebhookErrorCode(value, fallback = "processing_failed") {
   ) {
     return candidate;
   }
-  return WEBHOOK_ERROR_CODE_SET.has(fallback) ? fallback : "processing_failed";
+  return WEBHOOK_ERROR_CODE_SET.has(fallback)
+    ? fallback
+    : "processing_failed";
 }
 
 function classifyDiagnosticString(key) {
@@ -208,7 +214,9 @@ function minimizeWebhookDiagnosticPayload(value, options = {}, state = {}) {
   if (value === null || value === undefined) return null;
   if (depth >= maxDepth) return "[truncated]";
   if (typeof value === "string") return classifyDiagnosticString(key);
-  if (typeof value === "number") return Number.isFinite(value) ? "[number]" : null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? "[number]" : null;
+  }
   if (typeof value === "boolean") return value;
   if (typeof value === "bigint") return "[number]";
   if (Array.isArray(value)) {
@@ -238,10 +246,13 @@ function minimizeWebhookDiagnosticPayload(value, options = {}, state = {}) {
 }
 
 function buildMetaWebhookDiagnosticPayload(event) {
-  const attachments = Array.isArray(event?.attachments) ? event.attachments : [];
+  const attachments = Array.isArray(event?.attachments)
+    ? event.attachments
+    : [];
   return {
     schema_version: 1,
-    platform: event?.sourcePlatform === "instagram" ? "instagram" : "facebook",
+    platform:
+      event?.sourcePlatform === "instagram" ? "instagram" : "facebook",
     event_type:
       typeof event?.eventType === "string" ? event.eventType : "unknown",
     message_type:
@@ -249,7 +260,9 @@ function buildMetaWebhookDiagnosticPayload(event) {
     direction:
       event?.direction === "outbound" ? "outbound" : "inbound",
     message_kind:
-      typeof event?.messageKind === "string" ? event.messageKind : "unknown",
+      typeof event?.messageKind === "string"
+        ? event.messageKind
+        : "unknown",
     has_text: Boolean(
       typeof event?.content === "string" && event.content.trim().length,
     ),
