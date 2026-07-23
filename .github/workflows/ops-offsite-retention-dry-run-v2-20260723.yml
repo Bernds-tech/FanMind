@@ -47,6 +47,8 @@ jobs:
           sudo -n /usr/bin/node \
             "$GITHUB_WORKSPACE/scripts/operations/offsite-retention-dry-run-temp-20260723.mjs" \
             "$report"
+          sudo -n chown "$(id -u):$(id -g)" "$report"
+          chmod 0600 "$report"
 
       - name: Upload redacted dry-run evidence
         if: always()
