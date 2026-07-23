@@ -1,0 +1,141 @@
+name: FanMind P1 Audit PM2 Log Rotation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-audit-pm2-logrotate-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-audit-pm2-logrotate-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'audit/pm2-logrotate-post-retention-20260723'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 10
+    env:
+      EXPECTED_RELEASE: be4ddb644f8d8708dfaa18eaf8ae4064da6b59dd
+      REPORT_PATH: fanmind-pm2-logrotate-audit.txt
+
+    steps:
+      - name: Checkout trusted audit branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: audit/pm2-logrotate-post-retention-20260723
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Audit PM2 module and system log rotation without reading application logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'AUDIT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              process.stdout.write(String(payload.releaseCommit || ""));
+            });
+          ')"
+          server_head="$(git -C /var/www/fanmind rev-parse HEAD)"
+          origin_main="$(git -C /var/www/fanmind rev-parse origin/main)"
+          test "$live_release" = "$EXPECTED_RELEASE"
+          test "$server_head" = "$EXPECTED_RELEASE"
+          test "$origin_main" = "$EXPECTED_RELEASE"
+          echo 'RELEASE_SYNC=ok' | tee -a "$report"
+
+          pm2_binary="$(sudo -n -u ubuntu bash -lc 'command -v pm2')"
+          test -x "$pm2_binary"
+          sudo -n -u ubuntu env PM2_HOME=/home/ubuntu/.pm2 "$pm2_binary" jlist \
+            | node -e '
+                let input = "";
+                process.stdin.on("data", chunk => input += chunk);
+                process.stdin.on("end", () => {
+                  const rows = JSON.parse(input);
+                  const module = rows.find(row => row?.name === "pm2-logrotate");
+                  const app = rows.find(row => row?.name === "fanmind");
+                  const lines = [
+                    `PM2_FANMIND_PRESENT=${Boolean(app)}`,
+                    `PM2_FANMIND_STATUS=${app?.pm2_env?.status === "online" ? "online" : "not_online"}`,
+                    `PM2_LOGROTATE_MODULE_PRESENT=${Boolean(module)}`,
+                    `PM2_LOGROTATE_MODULE_STATUS=${module?.pm2_env?.status === "online" ? "online" : "not_online"}`,
+                  ];
+                  process.stdout.write(`${lines.join("\n")}\n`);
+                });
+              ' | tee -a "$report"
+
+          sudo -n /usr/bin/node --input-type=module <<'NODE' | tee -a "$report"
+          import { readFile } from 'node:fs/promises';
+          let config = {};
+          try {
+            config = JSON.parse(await readFile('/home/ubuntu/.pm2/module_conf.json', 'utf8'));
+          } catch {
+            config = {};
+          }
+          const moduleConfig = config?.['pm2-logrotate'] && typeof config['pm2-logrotate'] === 'object'
+            ? config['pm2-logrotate']
+            : {};
+          const safe = (value) => String(value ?? 'missing').replace(/[\r\n]/g, '_').slice(0, 64);
+          console.log(`PM2_LOGROTATE_MAX_SIZE=${safe(moduleConfig.max_size)}`);
+          console.log(`PM2_LOGROTATE_RETAIN=${safe(moduleConfig.retain)}`);
+          console.log(`PM2_LOGROTATE_COMPRESS=${safe(moduleConfig.compress)}`);
+          console.log(`PM2_LOGROTATE_INTERVAL=${safe(moduleConfig.rotateInterval)}`);
+          NODE
+
+          if sudo -n test -f /etc/logrotate.d/fanmind-pm2; then
+            echo 'SYSTEM_PM2_LOGROTATE_FILE=present' | tee -a "$report"
+          else
+            echo 'SYSTEM_PM2_LOGROTATE_FILE=absent' | tee -a "$report"
+          fi
+          if sudo -n test -f /etc/systemd/journald.conf.d/90-fanmind-retention.conf; then
+            echo 'JOURNALD_FANMIND_DROPIN=present' | tee -a "$report"
+          else
+            echo 'JOURNALD_FANMIND_DROPIN=absent' | tee -a "$report"
+          fi
+          sudo -n systemctl is-active --quiet systemd-journald.service
+          echo 'JOURNALD_STATUS=active' | tee -a "$report"
+
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              const checks = Array.isArray(payload.checks) ? payload.checks : [];
+              const required = new Set(["application","supabase_config","supabase_database","supabase_storage","stripe_config","openai_config","shared_rate_limit_config"]);
+              const healthy = checks.filter(item => required.has(item.component));
+              process.exit(healthy.length === required.size && healthy.every(item => item.status === "healthy") ? 0 : 1);
+            });
+          '
+          echo 'PUBLIC_REQUIRED_HEALTH=healthy' | tee -a "$report"
+          echo 'PM2_LOGROTATE_AUDIT_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-pm2-logrotate-audit
+          path: fanmind-pm2-logrotate-audit.txt
+          if-no-files-found: error
+          retention-days: 7
