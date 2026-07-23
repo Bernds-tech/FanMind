@@ -15,7 +15,7 @@ Aktuell geprüfte Pins:
 | `actions/checkout` | `11d5960a326750d5838078e36cf38b85af677262` | `v4` |
 | `actions/setup-node` | `49933ea5288caeca8642d1e84afbd3f7d6820020` | `v4` |
 | `actions/upload-artifact` | `ea165f8d65b6e75b540449e92b4886f43607fa02` | `v4` |
-| `github/codeql-action` | `418723a8019a2579741295f1309b4ce2bd0e4418` | `v3` |
+| `github/codeql-action` | `0daab03d71ff584ef619d027a3fd9146679c5d84` | `v3.35.3` |
 
 Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:`-Block. `permissions: write-all` ist verboten. Schreibrechte werden nur für den konkreten Zweck vergeben, beispielsweise `security-events: write` für CodeQL oder `issues: write` für den Uptime-Alarm.
 
