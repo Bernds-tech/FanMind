@@ -47,6 +47,16 @@ Neither surface may import UI code from the other. Backend contracts are shared 
 
 A malformed Authorization header fails with 401 and never falls back to a Web cookie.
 
+### Password recovery
+
+- Supabase Auth uses the PKCE flow in Mobile.
+- The only accepted recovery route is `fanmind://reset-password`.
+- The callback parser accepts either one PKCE code or one complete access-/refresh-token pair, never a mixture or partial pair.
+- Foreign schemes, foreign routes, provider errors, excessive lengths and ambiguous credentials fail closed.
+- Recovery codes, tokens and complete callback URLs are never logged.
+- `updateUser({ password })` is reachable only while the AuthProvider holds a confirmed recovery state and session.
+- Supabase must externally allow the exact recovery redirect before a real e-mail/device test can pass.
+
 ## Secret boundary
 
 Allowed in the compiled app:
@@ -75,6 +85,15 @@ Mobile uses direct Supabase queries only for tables already protected by RLS:
 
 All queries include the current `workspace_id` even though RLS remains the final authorization layer.
 
+Contact create and update additionally:
+
+- validate and normalize every field before the request;
+- insert `workspace_id` explicitly;
+- update by both `workspace_id` and contact `id`;
+- reject missing authorized update rows;
+- perform a minimal handle-plus-source duplicate check in the current workspace;
+- never use a service-role credential in Mobile.
+
 Server-only functions remain server-only:
 
 - AI provider calls;
@@ -84,17 +103,35 @@ Server-only functions remain server-only:
 - webhook ingestion;
 - external channel credentials.
 
-## Initial native route map
+## Secure local state
+
+The SecureStore adapter maintains a bounded registry of FanMind-owned storage keys. A safe local logout:
+
+1. ends the local Supabase session;
+2. removes every registered key and all chunks;
+3. clears the registry;
+4. resets the React session and recovery state;
+5. immediately clears the WorkspaceProvider state.
+
+There is currently no offline contact cache. A future cache must register with the same purge contract before it is allowed into a beta build.
+
+## Native route map
 
 ```text
 /
-├── (auth)/login
+├── (auth)
+│   ├── login
+│   ├── forgot-password
+│   └── reset-password       Deep link: fanmind://reset-password
 └── (app)
     ├── index                 Dashboard
-    ├── contacts/index        Contact search/list
-    ├── contacts/[id]         Contact knowledge and AI workflow
+    ├── contacts
+    │   ├── index             Contact search/list and create entry point
+    │   ├── new               Create contact
+    │   ├── [id]              Contact knowledge and AI workflow
+    │   └── [id]/edit         Edit contact
     ├── followups             Open tasks
-    └── settings              Session and architecture boundary
+    └── settings              Session, purge and architecture boundary
 ```
 
 ## Product constraints
@@ -104,6 +141,7 @@ Server-only functions remain server-only:
 - Saving contact knowledge or a follow-up requires a user action.
 - Coming-Soon integrations are not shown as active.
 - Mobile does not execute billing, referral or social-channel write automation.
+- A source/platform field on a contact is metadata, not an active external integration.
 
 ## Release boundary
 
@@ -116,20 +154,33 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 5. Android JavaScript bundle export;
 6. explicit internal-device test before EAS distribution.
 
-## Next implementation phases
+## Implementation phases
 
-### Phase B
+### Phase B — repository implementation
 
-- create/edit contacts;
-- password reset and deep-link callback;
-- offline read cache with explicit logout purge;
-- push registration and follow-up reminders;
-- EAS project, credentials and internal builds;
-- final app icon and splash assets.
+- [x] create/edit contacts;
+- [x] password reset and deep-link callback;
+- [x] strict local SecureStore and workspace purge;
+- [x] EAS profiles and beta handoff documented;
+- [ ] offline read cache with the central purge contract;
+- [ ] push registration and follow-up reminders;
+- [ ] final app icon and splash assets.
+
+### Phase B — external verification
+
+- [ ] allow `fanmind://reset-password` in the correct Supabase Auth project;
+- [ ] real password-recovery e-mail/device test;
+- [ ] EAS project ID and credentials;
+- [ ] signed Android preview build;
+- [ ] signed iOS preview/TestFlight build;
+- [ ] real Android and iOS device test records.
 
 ### Phase C
 
 - approved channel integrations;
 - richer native message timeline;
 - biometric session unlock;
+- account-/data-deletion flow required for store readiness;
 - store release automation after legal and account setup.
+
+The detailed external handoff and test sequence is maintained in `docs/mobile/BETA_RELEASE.md`.

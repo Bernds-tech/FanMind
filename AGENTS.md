@@ -42,7 +42,7 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - Canonical product and implementation truth lives in `docs/SOURCE_OF_TRUTH.md`.
 - README is the reader-friendly project overview and must match `docs/SOURCE_OF_TRUTH.md`.
 - Database/RLS truth lives in `docs/database/fanmind_current_schema.md` plus the Supabase migrations under `supabase/migrations/`.
-- Mobile product and architecture truth lives in `apps/mobile/README.md` and `docs/mobile/ARCHITECTURE.md`; Web and Mobile share backend contracts deliberately but never UI code.
+- Mobile product, architecture and beta handoff truth lives in `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` and `docs/mobile/BETA_RELEASE.md`; Web and Mobile share backend contracts deliberately but never UI code.
 - Security/RLS/Secrets checks live in `docs/SECURITY_RLS_SECRETS_CHECK.md`.
 - AI usage/cost monitoring requirements live in `docs/AI_COST_MONITORING.md`.
 - Canonical AI tier policy lives in `src/config/aiTiers.mjs`; do not duplicate prices, referral eligibility, auto-send rules or automatic-booking readiness across UI files.
@@ -58,7 +58,7 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - Referral Growth Window truth: planned until FanMind reaches 2.000 active paying customers/workspaces. During the open window, each active referred paying customer/workspace gives the referrer 5 % discount on ongoing FanMind costs; maximum 20 active referrals count per referrer; after the 2.000 cap closes the window, existing active discounts remain but no new additional discount percentages are earned unless the window is explicitly reopened.
 - The frozen sales/demo flow is: landing page -> login/demo -> dashboard -> fans/contacts -> CSV import or Sandra/demo contact -> contact detail -> existing/latest inbound message -> AI reply suggestions -> copy answer -> save memory -> save follow-up -> follow-up list / roadmap.
 - Active CRM core: login, registration, protected dashboard, contacts/fans, contact detail, CSV import, server-side AI reply suggestions, contact knowledge, follow-ups, roadmap, admin/billing groundwork, Stripe test checkout, legal pages, and temporary demo workspace.
-- Active Mobile Phase A: independent Expo/React-Native app with native login, secure session persistence, dashboard, contacts, contact knowledge, server-side AI reply suggestions and follow-ups. Signed internal builds and store distribution remain separate release steps.
+- Active Mobile Phase B repository scope: independent Expo/React-Native app with native login, PKCE password recovery, secure session persistence and local purge, dashboard, contact list/search/create/edit/detail, contact knowledge, server-side AI reply suggestions and follow-ups. Supabase redirect approval, signed internal builds, real-device verification and store distribution remain separate external release steps.
 - Position FanMind as a Copy-&-Open assistant, not as a bot. AI prepares replies; the human reviews, copies, opens the original channel if needed, and sends manually.
 - Any in-app sending flow, including Telegram, must be disabled, hidden, feature-flagged, or explicitly documented as a separate validated pilot before it appears in a normal Gerhard/Sales demo.
 
@@ -83,6 +83,9 @@ Build FanMind as a real CRM core, not as a slide/demo shell. The active product 
 - Mobile source lives under `apps/mobile` with its own package, navigation, UI primitives, CI and release cadence.
 - Never turn the Mobile app into a WebView wrapper or import Next.js routes, Website CSS or Website UI components.
 - Mobile may contain only public Supabase configuration and the FanMind API base URL; service-role, OpenAI, Stripe, webhook and backup secrets remain server-only.
+- Mobile password recovery accepts only `fanmind://reset-password`, must validate PKCE/token callbacks fail-closed and must never log recovery codes, tokens or complete callback URLs.
+- Mobile contact create/update must include the current `workspace_id`, rely on RLS as final authorization and never use a service-role key.
+- Local logout must purge every registered FanMind SecureStore key and clear session, recovery and workspace state; future offline caches must join the same purge contract.
 - The canonical completed follow-up status is `completed`; `done` remains read-compatible only for historical rows.
 - Mobile does not perform billing, referral reconciliation, admin operations, webhook ingestion, external channel credential handling or automatic sending.
 - A Web merge cannot publish a mobile binary. EAS builds, signing, Android internal testing and iOS TestFlight require explicit separate verification.

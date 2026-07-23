@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 22. Juli 2026
+Stand: 23. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -41,7 +41,7 @@ Aktiv beziehungsweise produktnah:
 - serverseitige KI-Antwortvorschläge;
 - Kontaktwissen- und Follow-up-Vorschläge aus der KI-Ausgabe;
 - Kopieren von Antwortvorschlägen ohne automatische Sendung;
-- eigenständiger React-Native-/Expo-App-Kern mit Login, Dashboard, Kontakten, Kontaktwissen, KI und Follow-ups;
+- eigenständiger React-Native-/Expo-App-Kern mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI und Follow-ups;
 - Admin-, Billing-, Operations- und Backup-Grundlagen;
 - getrennte kompakte Konto-Seiten:
   - `/settings/profile` für Profil und Workspace-Basisdaten;
@@ -61,9 +61,11 @@ Der Mobile-App-Kern liegt unter `apps/mobile` und wird unabhängig von der Next.
 Aktiv im App-Kern:
 
 - native Supabase-E-Mail-/Passwort-Anmeldung;
-- verschlüsselte Sitzung über `expo-secure-store`;
+- PKCE-basierte Passwort-Recovery über `fanmind://reset-password` mit strikter Callback-Validierung;
+- verschlüsselte Sitzung über `expo-secure-store` und zentralen lokalen Purge beim Abmelden;
 - geschützte Expo-Router-Navigation;
 - Dashboard, Kontaktliste, Suche und Kontaktdetail;
+- Kontakt in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS;
 - Kontaktwissen;
 - Bearer-authentifizierte serverseitige KI-Antwortvorschläge;
 - Antwort kopieren, Kontaktwissen und Follow-up speichern;
@@ -72,13 +74,14 @@ Aktiv im App-Kern:
 
 Noch nicht als ausgelieferte Store-App freigegeben:
 
+- Supabase-Redirect-Freigabe und realer E-Mail-/Gerätetest für `fanmind://reset-password`;
 - EAS-Projekt und Signing Credentials;
 - signierter interner Android-Build;
 - Apple Developer / App Store Connect und TestFlight;
-- Passwort-Reset/Deep Links, Kontaktanlage/-bearbeitung, Offline-Lese-Cache und Push-Grundlage;
+- Offline-Lese-Cache, Push-Grundlage und Account-/Datenlöschprozess;
 - realer End-to-End-Gerätetest auf Android und iOS.
 
-Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-Ingestion, externe Kanal-Credentials oder automatische Kommunikation aus. Verbindliche Architekturdetails stehen in `apps/mobile/README.md` und `docs/mobile/ARCHITECTURE.md`.
+Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-Ingestion, externe Kanal-Credentials oder automatische Kommunikation aus. Verbindliche Architektur- und Beta-Details stehen in `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.
 
 ## 4. Roadmap- und Go-Live-Stand
 
@@ -279,5 +282,5 @@ Bei Änderungen an Preis, Paketen, Referral, aktivem Scope, Demo, Integrationen,
 - `README.md`;
 - `AGENTS.md`;
 - `docs/database/fanmind_current_schema.md`;
-- `apps/mobile/README.md` und `docs/mobile/ARCHITECTURE.md` bei Mobile- oder Backend-Vertragsänderungen;
+- `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md` bei Mobile- oder Backend-Vertragsänderungen;
 - relevante Security-, KI-, Referral-, Landingpage- und Legal-Dateien.

@@ -1,8 +1,19 @@
 import * as SecureStore from "expo-secure-store";
 import type { SupportedStorage } from "@supabase/supabase-js";
 
+import {
+  addSecureStorageRegistryKey,
+  normalizeSecureStorageRegistry,
+  removeSecureStorageRegistryKey,
+} from "@/lib/secureStorageRegistry.mjs";
+
 const CHUNK_SIZE = 1800;
+const MAX_SESSION_CHUNKS = 64;
 const COUNT_SUFFIX = ":count";
+const REGISTRY_KEY = "fanmind:secure-storage-registry:v1";
+const SECURE_OPTIONS = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+} as const;
 
 function chunkKey(key: string, index: number): string {
   return `${key}:chunk:${index}`;
@@ -11,7 +22,35 @@ function chunkKey(key: string, index: number): string {
 async function readChunkCount(key: string): Promise<number> {
   const value = await SecureStore.getItemAsync(`${key}${COUNT_SUFFIX}`);
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= MAX_SESSION_CHUNKS
+    ? parsed
+    : 0;
+}
+
+async function readRegistry(): Promise<string[]> {
+  const raw = await SecureStore.getItemAsync(REGISTRY_KEY);
+  return normalizeSecureStorageRegistry(raw);
+}
+
+async function writeRegistry(keys: string[]): Promise<void> {
+  if (!keys.length) {
+    await SecureStore.deleteItemAsync(REGISTRY_KEY);
+    return;
+  }
+  await SecureStore.setItemAsync(REGISTRY_KEY, JSON.stringify(keys), SECURE_OPTIONS);
+}
+
+async function registerKey(key: string): Promise<void> {
+  const keys = addSecureStorageRegistryKey(await readRegistry(), key);
+  if (!keys.includes(key)) {
+    throw new Error("SecureStore-Schlüssel konnte nicht sicher registriert werden.");
+  }
+  await writeRegistry(keys);
+}
+
+async function unregisterKey(key: string): Promise<void> {
+  const keys = removeSecureStorageRegistryKey(await readRegistry(), key);
+  await writeRegistry(keys);
 }
 
 async function removeChunks(key: string): Promise<void> {
@@ -22,6 +61,26 @@ async function removeChunks(key: string): Promise<void> {
     ),
   );
   await SecureStore.deleteItemAsync(`${key}${COUNT_SUFFIX}`);
+}
+
+export async function clearSecureSessionStorage(): Promise<void> {
+  const keys = await readRegistry();
+  const failedKeys: string[] = [];
+
+  for (const key of keys) {
+    try {
+      await removeChunks(key);
+    } catch {
+      failedKeys.push(key);
+    }
+  }
+
+  if (failedKeys.length > 0) {
+    await writeRegistry(failedKeys);
+    throw new Error("Nicht alle sicheren FanMind-Schlüssel konnten entfernt werden.");
+  }
+
+  await SecureStore.deleteItemAsync(REGISTRY_KEY);
 }
 
 export const secureSessionStorage: SupportedStorage = {
@@ -35,30 +94,61 @@ export const secureSessionStorage: SupportedStorage = {
     );
     if (chunks.some((chunk) => chunk === null)) {
       await removeChunks(key);
+      await unregisterKey(key);
       return null;
     }
+
+    // Existing installations created before the registry was introduced are
+    // enrolled on first successful read so the next logout can purge them.
+    await registerKey(key);
     return chunks.join("");
   },
 
   async setItem(key: string, value: string): Promise<void> {
     await removeChunks(key);
+    const chunkCount = Math.max(1, Math.ceil(value.length / CHUNK_SIZE));
+    if (chunkCount > MAX_SESSION_CHUNKS) {
+      throw new Error("Sichere FanMind-Sitzung überschreitet die lokale Speichergrenze.");
+    }
     const chunks = Array.from(
-      { length: Math.ceil(value.length / CHUNK_SIZE) },
+      { length: chunkCount },
       (_, index) => value.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE),
     );
-    for (const [index, chunk] of chunks.entries()) {
-      await SecureStore.setItemAsync(chunkKey(key, index), chunk, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      });
+
+    // Register first and persist the expected count before the chunks. If any
+    // subsequent write fails, the cleanup path can still find every expected
+    // chunk and the registry keeps failed cleanup work retryable.
+    await registerKey(key);
+    try {
+      await SecureStore.setItemAsync(
+        `${key}${COUNT_SUFFIX}`,
+        String(chunks.length),
+        SECURE_OPTIONS,
+      );
+      for (const [index, chunk] of chunks.entries()) {
+        await SecureStore.setItemAsync(chunkKey(key, index), chunk, SECURE_OPTIONS);
+      }
+    } catch (error) {
+      let chunksRemoved = false;
+      try {
+        await removeChunks(key);
+        chunksRemoved = true;
+      } catch {
+        // Keep the key registered so a later logout can retry the purge.
+      }
+      if (chunksRemoved) {
+        try {
+          await unregisterKey(key);
+        } catch {
+          // A stale registry entry is safer than unregistered session data.
+        }
+      }
+      throw error;
     }
-    await SecureStore.setItemAsync(
-      `${key}${COUNT_SUFFIX}`,
-      String(chunks.length),
-      { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY },
-    );
   },
 
   async removeItem(key: string): Promise<void> {
     await removeChunks(key);
+    await unregisterKey(key);
   },
 };

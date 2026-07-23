@@ -3,6 +3,11 @@ import {
   CANONICAL_COMPLETED_FOLLOWUP_STATUS,
   COMPLETED_FOLLOWUP_FILTER,
 } from "@/lib/followupStatus";
+import {
+  normalizeContactDraft,
+  type ContactDraft,
+  type NormalizedContactDraft,
+} from "@/lib/contactDraftPolicy.mjs";
 import type {
   Contact,
   ContactMemory,
@@ -125,6 +130,124 @@ export async function getContact(
     .maybeSingle();
   if (result.error || !result.data) {
     return { contact: null, error: "Kontakt konnte nicht geladen werden." };
+  }
+  return { contact: result.data as Contact, error: null };
+}
+
+async function duplicateContactExists(input: {
+  workspaceId: string;
+  draft: NormalizedContactDraft;
+  excludeContactId?: string;
+}): Promise<{ duplicate: boolean; error: string | null }> {
+  if (!input.draft.handle) return { duplicate: false, error: null };
+
+  let query = supabase
+    .from("contacts")
+    .select("id")
+    .eq("workspace_id", input.workspaceId)
+    .ilike("handle", input.draft.handle)
+    .eq("source_platform", input.draft.source_platform)
+    .limit(1);
+  if (input.excludeContactId) {
+    query = query.neq("id", input.excludeContactId);
+  }
+
+  const result = await query;
+  if (result.error) {
+    return {
+      duplicate: false,
+      error: "Die Duplikatprüfung konnte nicht abgeschlossen werden.",
+    };
+  }
+  return { duplicate: (result.data?.length ?? 0) > 0, error: null };
+}
+
+function contactValidationMessage(errors: string[]): string {
+  if (errors.includes("display_name")) {
+    return "Bitte gib einen Kontaktnamen mit höchstens 160 Zeichen ein.";
+  }
+  if (errors.includes("status")) {
+    return "Bitte wähle einen gültigen Kontaktstatus.";
+  }
+  if (errors.includes("language")) {
+    return "Bitte verwende einen Sprachcode wie de, en oder de-ch.";
+  }
+  if (errors.includes("tags")) {
+    return "Bitte verwende höchstens 20 kurze Tags.";
+  }
+  return "Bitte prüfe die Kontaktfelder und ihre maximale Länge.";
+}
+
+export async function createContact(input: {
+  workspaceId: string;
+  draft: ContactDraft;
+}): Promise<{ contact: Contact | null; error: string | null }> {
+  const normalized = normalizeContactDraft(input.draft);
+  if (!normalized.ok || !normalized.value) {
+    return { contact: null, error: contactValidationMessage(normalized.errors) };
+  }
+
+  const duplicate = await duplicateContactExists({
+    workspaceId: input.workspaceId,
+    draft: normalized.value,
+  });
+  if (duplicate.error) return { contact: null, error: duplicate.error };
+  if (duplicate.duplicate) {
+    return {
+      contact: null,
+      error: "Ein Kontakt mit diesem Handle und dieser Quelle existiert bereits.",
+    };
+  }
+
+  const result = await supabase
+    .from("contacts")
+    .insert({
+      workspace_id: input.workspaceId,
+      ...normalized.value,
+    })
+    .select(CONTACT_COLUMNS)
+    .single();
+  if (result.error || !result.data) {
+    return { contact: null, error: "Kontakt konnte nicht angelegt werden." };
+  }
+  return { contact: result.data as Contact, error: null };
+}
+
+export async function updateContact(input: {
+  workspaceId: string;
+  contactId: string;
+  draft: ContactDraft;
+}): Promise<{ contact: Contact | null; error: string | null }> {
+  const normalized = normalizeContactDraft(input.draft);
+  if (!normalized.ok || !normalized.value) {
+    return { contact: null, error: contactValidationMessage(normalized.errors) };
+  }
+
+  const duplicate = await duplicateContactExists({
+    workspaceId: input.workspaceId,
+    draft: normalized.value,
+    excludeContactId: input.contactId,
+  });
+  if (duplicate.error) return { contact: null, error: duplicate.error };
+  if (duplicate.duplicate) {
+    return {
+      contact: null,
+      error: "Ein anderer Kontakt mit diesem Handle und dieser Quelle existiert bereits.",
+    };
+  }
+
+  const result = await supabase
+    .from("contacts")
+    .update(normalized.value)
+    .eq("workspace_id", input.workspaceId)
+    .eq("id", input.contactId)
+    .select(CONTACT_COLUMNS)
+    .maybeSingle();
+  if (result.error || !result.data) {
+    return {
+      contact: null,
+      error: "Kontakt konnte nicht gespeichert werden oder gehört nicht zu deinem Workspace.",
+    };
   }
   return { contact: result.data as Contact, error: null };
 }

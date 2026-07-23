@@ -14,6 +14,7 @@ import {
   EmptyState,
   LoadingState,
   Screen,
+  SecondaryButton,
   StatusPill,
   mobileStyles,
 } from "@/components/ui";
@@ -119,6 +120,11 @@ export default function ContactsScreen() {
       title="Kontakte"
       subtitle="Suche, öffne und verstehe deinen Fan-Kontext"
       scroll={false}
+      right={
+        <SecondaryButton onPress={() => router.push("/(app)/contacts/new")}>
+          Neu
+        </SecondaryButton>
+      }
     >
       <TextInput
         value={search}
@@ -154,7 +160,7 @@ export default function ContactsScreen() {
               description={
                 search
                   ? "Passe deine Suche an."
-                  : "Importiere oder erstelle Kontakte im FanMind-Arbeitsbereich."
+                  : "Lege den ersten Kontakt direkt in der App an."
               }
             />
           }

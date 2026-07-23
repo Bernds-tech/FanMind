@@ -24,15 +24,17 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 
 - native E-Mail-/Passwort-Anmeldung;
 - verschlüsselte, in Chunks gespeicherte Supabase-Sitzung über `expo-secure-store`;
+- PKCE-basierte Passwort-Recovery über `fanmind://reset-password`;
 - geschützte App-Navigation;
 - Dashboard mit Kontakt- und Follow-up-Kennzahlen;
 - Kontaktliste und Suche;
+- Kontakt in Mobile anlegen und bearbeiten;
 - Kontaktdetail mit Profil und Kontaktwissen;
 - KI-Antwortvorschläge über Bearer-authentifizierte FanMind-API;
 - Kontaktwissen aus KI-Vorschlag speichern;
 - Follow-up aus KI-Vorschlag speichern;
 - offene Follow-ups anzeigen und abschließen;
-- sichere lokale Abmeldung.
+- sichere lokale Abmeldung mit Purge registrierter FanMind-SecureStore-Schlüssel und Workspace-Zustand.
 
 ## Sicherheitsgrenzen
 
@@ -55,6 +57,8 @@ Verboten in App, EAS-Update und Repository:
 
 Die Datenzugriffe laufen direkt über Supabase und müssen durch RLS auf den angemeldeten Nutzer beziehungsweise dessen Workspace begrenzt sein. KI-Aufrufe gehen ausschließlich an den FanMind-Server; der OpenAI-Key bleibt serverseitig.
 
+Recovery-Codes, Zugriffstokens, Refresh-Tokens und vollständige Callback-URLs dürfen weder protokolliert noch in Tickets oder Screenshots übernommen werden.
+
 ## Lokale Einrichtung
 
 ```bash
@@ -65,11 +69,11 @@ npm run check
 npm start
 ```
 
-Für einen realen Development Build:
+Für einen internen Build nach der externen EAS-Einrichtung:
 
 ```bash
-npx eas-cli build --profile development --platform android
-npx eas-cli build --profile development --platform ios
+npx eas-cli@latest build --profile preview --platform android
+npx eas-cli@latest build --profile preview --platform ios
 ```
 
 Vor einem EAS-Build müssen EAS-Projekt-ID, Signierung und Store-Konten bewusst eingerichtet werden. Diese Werte werden nicht erfunden oder aus der Web-Anwendung übernommen.
@@ -79,9 +83,12 @@ Vor einem EAS-Build müssen EAS-Projekt-ID, Signierung und Store-Konten bewusst 
 ```text
 Name: FanMind
 Deep-Link-Schema: fanmind://
+Recovery-Route: fanmind://reset-password
 iOS Bundle Identifier: ch.fanmind.app
 Android Package: ch.fanmind.app
 ```
+
+Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist des richtigen Projekts freigegeben werden. Details und Negativtests stehen in `docs/mobile/BETA_RELEASE.md`.
 
 ## Release-Unabhängigkeit
 
@@ -93,10 +100,12 @@ Android Package: ch.fanmind.app
 
 ## Nächste Mobile-Schritte
 
-1. EAS-Projekt und interne Development Builds einrichten.
-2. App-Icon und Splashscreen aus dem final bestätigten FanMind-Branding erzeugen.
-3. Passwort-Reset/Deep-Link-Flow ergänzen.
-4. Kontakt anlegen und bearbeiten.
-5. Offline-Lese-Cache mit klarer Datenlöschung ergänzen.
-6. Push-Grundlage für Follow-ups vorbereiten.
-7. Android-internen Test und iOS-TestFlight durchführen.
+1. Supabase-Redirect `fanmind://reset-password` extern freigeben und Recovery auf einem realen Gerät testen.
+2. EAS-Projekt, Signing Credentials und interne Preview-Builds einrichten.
+3. App-Icon und Splashscreen aus dem final bestätigten FanMind-Branding erzeugen.
+4. Offline-Lese-Cache mit klarer Datenlöschung ergänzen.
+5. Push-Grundlage für Follow-ups vorbereiten.
+6. Account-/Datenlöschprozess für Store-Anforderungen ergänzen.
+7. Android Internal Testing und iOS TestFlight durchführen.
+
+Die Produkt- und Release-Checkliste für diese Schritte steht in `docs/mobile/BETA_RELEASE.md`.

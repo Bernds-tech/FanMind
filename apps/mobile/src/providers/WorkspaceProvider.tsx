@@ -31,6 +31,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     if (!session?.user.id) {
       setWorkspace(null);
       setError(null);
+      setLoading(false);
       return;
     }
     setLoading(true);
