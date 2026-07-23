@@ -5,6 +5,7 @@ export const REQUIRED_PUBLIC_HEALTH_COMPONENTS = Object.freeze([
   "supabase_storage",
   "stripe_config",
   "openai_config",
+  "shared_rate_limit_config",
 ]);
 
 export const OPTIONAL_PUBLIC_HEALTH_COMPONENTS = Object.freeze([
