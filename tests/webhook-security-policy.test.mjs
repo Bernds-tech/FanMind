@@ -135,8 +135,14 @@ test("recursive diagnostic minimization removes text, identifiers and credential
   assert.match(serialized, /\[identifier_present\]/u);
   assert.match(serialized, /\[text_present\]/u);
   assert.match(serialized, /\[redacted\]/u);
-  assert.match(serialized, /\[url_present\]/u);
+  assert.match(serialized, /\[truncated\]/u);
   assert.equal(minimized.nested.profile.enabled, true);
+  assert.deepEqual(
+    minimizeWebhookDiagnosticPayload({
+      url: "https://example.invalid/private.jpg",
+    }),
+    { url: "[url_present]" },
+  );
 });
 
 test("Meta diagnostic payload keeps only aggregate shape and presence flags", () => {
