@@ -32,11 +32,11 @@ test("CodeQL uses the reviewed pinned action and writes only security events", a
 
   assert.match(
     source,
-    /github\/codeql-action\/init@418723a8019a2579741295f1309b4ce2bd0e4418/u,
+    /github\/codeql-action\/init@0daab03d71ff584ef619d027a3fd9146679c5d84/u,
   );
   assert.match(
     source,
-    /github\/codeql-action\/analyze@418723a8019a2579741295f1309b4ce2bd0e4418/u,
+    /github\/codeql-action\/analyze@0daab03d71ff584ef619d027a3fd9146679c5d84/u,
   );
   assert.match(source, /queries: security-extended/u);
   assert.match(source, /security-events: write/u);
