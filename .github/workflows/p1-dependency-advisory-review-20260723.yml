@@ -1,0 +1,192 @@
+name: FanMind P1 Dependency Advisory Resolution Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-dependency-advisory-review-20260723.yml"
+
+concurrency:
+  group: fanmind-p1-dependency-advisory-review-20260723
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/dependency-advisory-review-20260723'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      REPORT_PATH: fanmind-p1-dependency-advisory-resolution.txt
+
+    steps:
+      - name: Checkout trusted advisory branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/dependency-advisory-review-20260723
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install current tree reproducibly
+        run: npm ci --no-audit --no-fund
+
+      - name: Evaluate compatible framework and lockfile fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE' | tee "$REPORT_PATH"
+          const { execFileSync, spawnSync } = require('node:child_process');
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+
+          function npmJson(args, cwd = process.cwd()) {
+            const result = spawnSync('npm', args, {
+              cwd,
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+              timeout: 180000,
+              maxBuffer: 32 * 1024 * 1024,
+            });
+            if (result.error || ![0, 1].includes(result.status ?? -1)) {
+              throw new Error(`npm_command_failed:${args[0]}`);
+            }
+            try {
+              return JSON.parse(result.stdout || '{}');
+            } catch {
+              throw new Error(`npm_json_invalid:${args[0]}`);
+            }
+          }
+
+          function auditSummary(payload) {
+            const values = payload?.metadata?.vulnerabilities || {};
+            const vulnerabilities = payload?.vulnerabilities && typeof payload.vulnerabilities === 'object'
+              ? payload.vulnerabilities
+              : {};
+            return {
+              critical: Number(values.critical || 0),
+              high: Number(values.high || 0),
+              moderate: Number(values.moderate || 0),
+              low: Number(values.low || 0),
+              total: Number(values.total || 0),
+              packages: Object.entries(vulnerabilities)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, item]) => ({
+                  name,
+                  severity: String(item?.severity || 'unknown'),
+                  direct: item?.isDirect === true,
+                  range: String(item?.range || 'unknown').replace(/[|\r\n]/g, '_'),
+                  fix: item?.fixAvailable === true
+                    ? 'available'
+                    : item?.fixAvailable && typeof item.fixAvailable === 'object'
+                      ? `${String(item.fixAvailable.name || name)}@${String(item.fixAvailable.version || 'unknown')}|major:${Boolean(item.fixAvailable.isSemVerMajor)}`
+                      : 'none',
+                  via: Array.isArray(item?.via)
+                    ? item.via.map(entry => typeof entry === 'string'
+                      ? entry
+                      : `GHSA:${String(entry?.source || 'unknown')}|title:${String(entry?.title || 'unknown').replace(/[|\r\n]/g, '_')}`)
+                    : [],
+                })),
+            };
+          }
+
+          function stableVersions(values) {
+            return (Array.isArray(values) ? values : [])
+              .filter(value => /^\d+\.\d+\.\d+$/.test(String(value)))
+              .sort((a, b) => {
+                const left = String(a).split('.').map(Number);
+                const right = String(b).split('.').map(Number);
+                for (let index = 0; index < 3; index += 1) {
+                  if (left[index] !== right[index]) return left[index] - right[index];
+                }
+                return 0;
+              });
+          }
+
+          function makeCandidateDirectory(label) {
+            const directory = fs.mkdtempSync(path.join(os.tmpdir(), `fanmind-${label}-`));
+            fs.copyFileSync('package.json', path.join(directory, 'package.json'));
+            fs.copyFileSync('package-lock.json', path.join(directory, 'package-lock.json'));
+            return directory;
+          }
+
+          function evaluateCandidate(version) {
+            const directory = makeCandidateDirectory(`next-${version.replace(/[^0-9.]/g, '_')}`);
+            const install = spawnSync(
+              'npm',
+              ['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund', `next@${version}`, `eslint-config-next@${version}`],
+              { cwd: directory, encoding: 'utf8', stdio: ['ignore', 'ignore', 'ignore'], timeout: 180000 },
+            );
+            if (install.error || install.status !== 0) {
+              fs.rmSync(directory, { recursive: true, force: true });
+              return { version, install: 'failed', audit: null };
+            }
+            const audit = auditSummary(npmJson(['audit', '--omit=dev', '--json'], directory));
+            fs.rmSync(directory, { recursive: true, force: true });
+            return { version, install: 'success', audit };
+          }
+
+          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const currentVersion = String(manifest?.dependencies?.next || 'missing');
+          const currentAudit = auditSummary(npmJson(['audit', '--omit=dev', '--json']));
+          const nextVersions = stableVersions(npmJson(['view', 'next', 'versions', '--json']));
+          const eslintVersions = new Set(stableVersions(npmJson(['view', 'eslint-config-next', 'versions', '--json'])));
+          const sameMinor = nextVersions.filter(version => version.startsWith('16.2.') && eslintVersions.has(version));
+          const newerSameMinor = sameMinor.filter(version => {
+            const currentPatch = Number(currentVersion.split('.')[2] || -1);
+            return Number(version.split('.')[2]) > currentPatch;
+          });
+          const latestSameMinor = newerSameMinor.at(-1) || null;
+          const distTags = npmJson(['view', 'next', 'dist-tags', '--json']);
+          const latestStable = typeof distTags?.latest === 'string' ? distTags.latest : null;
+
+          const candidates = [...new Set([latestSameMinor, latestStable]
+            .filter(Boolean)
+            .filter(version => version !== currentVersion)
+            .filter(version => eslintVersions.has(version)))];
+          const evaluations = candidates.map(evaluateCandidate);
+
+          console.log(`AUDIT_UTC=${new Date().toISOString()}`);
+          console.log(`CURRENT_NEXT_VERSION=${currentVersion}`);
+          console.log(`CURRENT_ROOT_CRITICAL=${currentAudit.critical}`);
+          console.log(`CURRENT_ROOT_HIGH=${currentAudit.high}`);
+          console.log(`CURRENT_ROOT_MODERATE=${currentAudit.moderate}`);
+          console.log(`CURRENT_ROOT_TOTAL=${currentAudit.total}`);
+          for (const item of currentAudit.packages) {
+            console.log(`CURRENT_VULNERABILITY=${item.name}|severity:${item.severity}|direct:${item.direct}|range:${item.range}|fix:${item.fix}|via:${item.via.join(',') || 'unknown'}`);
+          }
+          console.log(`LATEST_MATCHING_16_2=${latestSameMinor || 'none'}`);
+          console.log(`NPM_LATEST_STABLE=${latestStable || 'unknown'}`);
+          console.log(`CANDIDATE_COUNT=${evaluations.length}`);
+          for (const result of evaluations) {
+            console.log(`CANDIDATE=${result.version}|install:${result.install}|critical:${result.audit?.critical ?? 'unknown'}|high:${result.audit?.high ?? 'unknown'}|moderate:${result.audit?.moderate ?? 'unknown'}|packages:${result.audit?.packages.map(item => item.name).join(',') || 'unknown'}`);
+          }
+          const safe = evaluations.find(result => result.install === 'success' && result.audit.critical === 0 && result.audit.high === 0) || null;
+          console.log(`SAFE_COMPATIBLE_CANDIDATE=${safe?.version || 'none'}`);
+          console.log('SECRETS_WERE_NOT_READ=true');
+          console.log('DEPENDENCY_RESOLUTION_AUDIT=success');
+          NODE
+
+      - name: Upload sanitized advisory evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-p1-dependency-advisory-resolution
+          path: fanmind-p1-dependency-advisory-resolution.txt
+          if-no-files-found: error
+          retention-days: 7
