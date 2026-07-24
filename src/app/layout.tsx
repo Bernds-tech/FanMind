@@ -14,6 +14,7 @@ import "./landing-header-visibility.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(fanMindSiteUrl),
+  referrer: "strict-origin-when-cross-origin",
   title: {
     default: fanMindTitle,
     template: "%s | FanMind",
