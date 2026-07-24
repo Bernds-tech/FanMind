@@ -48,6 +48,7 @@ jobs:
           set -euo pipefail
           report="$GITHUB_WORKSPACE/$REPORT_PATH"
           state="$RUNNER_TEMP/fanmind-pm2-state-before.json"
+          pm2_snapshot="$RUNNER_TEMP/fanmind-pm2-jlist-before.json"
           : > "$report"
           printf 'PM2_ACTIVATION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
           printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
@@ -62,26 +63,26 @@ jobs:
           test "$(git -C /var/www/fanmind rev-parse origin/main)" = "$EXPECTED_RELEASE"
           test "$(systemctl is-enabled pm2-ubuntu.service)" = enabled
 
-          pm2 jlist | EXPECTED_RELEASE="$EXPECTED_RELEASE" STATE_PATH="$state" node <<'NODE'
+          umask 077
+          pm2 jlist > "$pm2_snapshot"
+          EXPECTED_RELEASE="$EXPECTED_RELEASE" STATE_PATH="$state" PM2_SNAPSHOT="$pm2_snapshot" node --input-type=module <<'NODE'
           import fs from 'node:fs';
-          let input = '';
-          process.stdin.on('data', chunk => input += chunk);
-          process.stdin.on('end', () => {
-            const rows = JSON.parse(input).filter(item => item?.name === 'fanmind');
-            if (rows.length !== 1) process.exit(1);
-            const row = rows[0];
-            const value = {
-              pid: Number(row.pid || 0),
-              restarts: Number(row?.pm2_env?.restart_time),
-              status: String(row?.pm2_env?.status || ''),
-              cwdMatches: String(row?.pm2_env?.pm_cwd || '') === `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`,
-            };
-            if (value.pid < 1 || !Number.isInteger(value.restarts) || value.restarts < 0 || value.status !== 'online' || !value.cwdMatches) {
-              process.exit(1);
-            }
-            fs.writeFileSync(process.env.STATE_PATH, JSON.stringify(value), { mode: 0o600 });
-          });
+          const rows = JSON.parse(fs.readFileSync(process.env.PM2_SNAPSHOT, 'utf8'))
+            .filter(item => item?.name === 'fanmind');
+          if (rows.length !== 1) process.exit(1);
+          const row = rows[0];
+          const value = {
+            pid: Number(row.pid || 0),
+            restarts: Number(row?.pm2_env?.restart_time),
+            status: String(row?.pm2_env?.status || ''),
+            cwdMatches: String(row?.pm2_env?.pm_cwd || '') === `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`,
+          };
+          if (value.pid < 1 || !Number.isInteger(value.restarts) || value.restarts < 0 || value.status !== 'online' || !value.cwdMatches) {
+            process.exit(1);
+          }
+          fs.writeFileSync(process.env.STATE_PATH, JSON.stringify(value), { mode: 0o600 });
           NODE
+          rm -f "$pm2_snapshot"
           echo 'PM2_PRE_ACTIVATION_APP=healthy' | tee -a "$report"
 
       - name: Start enabled PM2 startup service without restarting the app
@@ -108,12 +109,14 @@ jobs:
           set -euo pipefail
           report="$GITHUB_WORKSPACE/$REPORT_PATH"
           state="$RUNNER_TEMP/fanmind-pm2-state-before.json"
-
-          before="$(cat "$state")"
-          after="$(pm2 jlist)"
-          BEFORE="$before" AFTER="$after" EXPECTED_RELEASE="$EXPECTED_RELEASE" node <<'NODE' | tee -a "$report"
-          const before = JSON.parse(process.env.BEFORE || '{}');
-          const rows = JSON.parse(process.env.AFTER || '[]').filter(item => item?.name === 'fanmind');
+          after_snapshot="$RUNNER_TEMP/fanmind-pm2-jlist-after.json"
+          umask 077
+          pm2 jlist > "$after_snapshot"
+          BEFORE_PATH="$state" AFTER_PATH="$after_snapshot" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE' | tee -a "$report"
+          import fs from 'node:fs';
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE_PATH, 'utf8'));
+          const rows = JSON.parse(fs.readFileSync(process.env.AFTER_PATH, 'utf8'))
+            .filter(item => item?.name === 'fanmind');
           if (rows.length !== 1) throw new Error('pm2_fanmind_count_invalid');
           const row = rows[0];
           const after = {
@@ -132,6 +135,7 @@ jobs:
             throw new Error('pm2_app_changed_during_service_adoption');
           }
           NODE
+          rm -f "$after_snapshot"
 
           curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
             let input="";
