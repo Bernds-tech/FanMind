@@ -1,0 +1,35 @@
+export type FanMindMarketingConsent = "unset" | "denied" | "granted";
+
+export type MetaPixelActiveEventName = "PageView";
+export type MetaPixelPreparedEventName =
+  | "ViewContent"
+  | "Lead"
+  | "CompleteRegistration"
+  | "Contact"
+  | "Schedule"
+  | "StartTrial"
+  | "Purchase";
+export type MetaPixelEventName =
+  | MetaPixelActiveEventName
+  | MetaPixelPreparedEventName;
+
+export const FANMIND_MARKETING_CONSENT_COOKIE: string;
+export const FANMIND_MARKETING_CONSENT_MAX_AGE_SECONDS: number;
+export const META_PIXEL_SCRIPT_URL: string;
+export const META_PIXEL_ACTIVE_EVENTS: readonly MetaPixelActiveEventName[];
+export const META_PIXEL_PREPARED_EVENTS: readonly MetaPixelPreparedEventName[];
+export const META_PIXEL_STANDARD_EVENTS: readonly MetaPixelEventName[];
+
+export function normalizeMarketingConsent(
+  value: unknown,
+): FanMindMarketingConsent;
+export function normalizeMetaPixelId(value: unknown): string | null;
+export function isMetaPixelEnabled(input: {
+  pixelId: unknown;
+  consent: unknown;
+}): boolean;
+export function isSupportedMetaPixelEvent(
+  eventName: unknown,
+): eventName is MetaPixelEventName;
+export function normalizeMetaPixelRoute(pathname: unknown): string;
+export function buildMetaPixelBootstrap(value: unknown): string | null;
