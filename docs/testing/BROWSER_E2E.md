@@ -14,7 +14,8 @@ Sie schützt die kritischen öffentlichen FanMind-Flows auf echter Browser-Ebene
 - öffentlicher Account-Löschressourcenpfad mit direktem authentifiziertem Gesamtprozess;
 - Starter-Paketwahrheit und Roadmap-Abgrenzung der Vorschau-Pakete;
 - Weiterleitung geschützter Routen zum Login;
-- Desktop- und Mobile-Viewport ohne horizontales Überlaufen.
+- Desktop- und Mobile-Viewport ohne horizontales Überlaufen;
+- consent-gesteuerten Meta Pixel: ohne Consent kein Script, gleichwertiges Ablehnen/Akzeptieren, genau eine Initialisierung, deduplizierte `PageView`-Events bei Client-Navigation sowie fail-closed blockierte geschützte Routen, unsichere Querywerte und geschützte same-origin Referrer.
 
 Der Gerhard-Demo-Kern bleibt unverändert: Login, Dashboard, Kontakte, Kontaktdetail, serverseitige KI-Vorschläge, Kontaktwissen, Follow-ups und ehrliche Roadmap. Browser-E2E erweitert FanMind nicht um Social-Vollintegrationen, Scraping oder automatisches Senden.
 
@@ -59,7 +60,9 @@ Der automatische Lauf:
 - speichert kein Kontaktwissen und kein Follow-up;
 - nutzt ausschließlich synthetische E-Mail-Adressen;
 - fängt Login-Fehler und Passwort-Recovery vollständig im Browser ab;
-- enthält keine echten Production-Secrets oder Kundendaten.
+- enthält keine echten Production-Secrets oder Kundendaten;
+- fängt das Meta-Script vollständig synthetisch ab und baut im CI-Lauf keine echte Verbindung zu Meta auf;
+- prüft, dass keine Conversion-Events oder Eventparameter gesendet werden.
 
 Die Testartefakte werden sieben Tage aufbewahrt. Videos sind deaktiviert. Traces und Screenshots entstehen nur bei Fehlern. Passwörter, Tokens, vollständige Recovery-URLs und Response-Bodies dürfen nicht in Testnamen, Logs oder Artefakten ausgegeben werden.
 
@@ -67,9 +70,9 @@ Die Testartefakte werden sieben Tage aufbewahrt. Videos sind deaktiviert. Traces
 
 ```bash
 npm ci
-npm run build
+NEXT_PUBLIC_META_PIXEL_ID=2069553844439892 npm run build
 npx playwright install chromium
-npm run test:e2e
+NEXT_PUBLIC_META_PIXEL_ID=2069553844439892 npm run test:e2e
 ```
 
 Alternativer lokaler Port:

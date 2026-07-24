@@ -26,6 +26,8 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3100
+      # Keep the long public identifier quoted; YAML must not coerce it to scientific notation.
+      NEXT_PUBLIC_META_PIXEL_ID: "2069553844439892"
       FANMIND_PUBLIC_DEMO_ENABLED: "false"
       FANMIND_ENABLE_REFERRAL_BILLING: "false"
       FANMIND_ENABLE_TELEGRAM_SEND: "false"
