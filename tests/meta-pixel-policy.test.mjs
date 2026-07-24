@@ -99,7 +99,10 @@ test("Meta Pixel is limited to explicit public routes and harmless URL values", 
     false,
   );
   assert.equal(
-    isMetaPixelPageViewAllowed({ pathname: "/register", search: "plan=custom-person" }),
+    isMetaPixelPageViewAllowed({
+      pathname: "/register",
+      search: "plan=custom-person",
+    }),
     false,
   );
 });
@@ -197,6 +200,7 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(manager, /isMetaPixelReferrerAllowed/u);
   assert.match(manager, /locationHash/u);
   assert.match(manager, /documentReferrer/u);
+  assert.match(manager, /queueMicrotask\(syncLocationContext\)/u);
   assert.match(manager, /!pixelConfigured/u);
   assert.match(manager, /!routeEligible/u);
   assert.match(manager, /revokeMetaPixelConsent/u);
@@ -229,7 +233,8 @@ test("event helper accepts no arbitrary payload and no conversions are wired", a
     helper,
     /trackMetaPixelEvent\(eventName: MetaPixelEventName\): boolean/u,
   );
-  assert.doesNotMatch(helper, /parameters|customData|userData/u);
+  assert.doesNotMatch(helper, /trackMetaPixelEvent\([^)]*,/u);
+  assert.doesNotMatch(helper, /customData|userData/u);
   assert.doesNotMatch(
     repositorySources.join("\n"),
     /trackMetaPixelEvent\("(?:ViewContent|Lead|CompleteRegistration|Contact|Schedule|StartTrial|Purchase)"\)/u,
@@ -249,12 +254,15 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(privacy, /marketing-messung/u);
   assert.match(privacy, /Meta Pixel/u);
   assert.match(privacy, /ausdrücklicher Einwilligung/u);
-  assert.match(runbook, /Nur `PageView`/u);
+  assert.match(runbook, /\| `PageView` \|/u);
   assert.match(runbook, /Öffentliche Routengrenze/u);
   assert.match(runbook, /same-origin/iu);
   assert.match(runbook, /keine Conversions API/iu);
   assert.match(runbook, /kein erweitertes Matching/iu);
-  assert.match(runbook, /Die Codeintegration allein bedeutet nicht, dass der Pixel bereits auf Production aktiv ist/u);
+  assert.match(
+    runbook,
+    /Die Codeintegration allein bedeutet nicht, dass der Pixel bereits auf Production aktiv ist/u,
+  );
 });
 
 test("browser E2E uses a synthetic Meta script and proves consent-gated PageView", async () => {
