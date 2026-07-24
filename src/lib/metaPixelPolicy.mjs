@@ -63,6 +63,14 @@ const ROUTE_QUERY_KEYS = Object.freeze({
   "/zahlungsbedingungen": new Set(["lang"]),
   "/referral-bedingungen": new Set(["lang"]),
 });
+const ROUTE_HASH_VALUES = Object.freeze({
+  "/impressum": new Set(["top"]),
+  "/datenschutz": new Set(["top", "marketing-messung"]),
+  "/agb": new Set(["top"]),
+  "/avv": new Set(["top"]),
+  "/zahlungsbedingungen": new Set(["top"]),
+  "/referral-bedingungen": new Set(["top"]),
+});
 
 export function normalizeMarketingConsent(value) {
   const normalized = String(value ?? "")
@@ -100,9 +108,18 @@ export function isMetaPixelPublicRoute(pathname) {
   return META_PIXEL_PUBLIC_ROUTES.includes(normalizeMetaPixelRoute(pathname));
 }
 
-export function isMetaPixelPageViewAllowed({ pathname, search = "" }) {
+export function isMetaPixelPageViewAllowed({
+  pathname,
+  search = "",
+  hash = "",
+}) {
   const route = normalizeMetaPixelRoute(pathname);
   if (!isMetaPixelPublicRoute(route)) return false;
+
+  const rawHash = String(hash ?? "").trim().replace(/^#/u, "");
+  if (rawHash && !(ROUTE_HASH_VALUES[route] ?? new Set()).has(rawHash)) {
+    return false;
+  }
 
   const rawSearch = String(search ?? "").trim().replace(/^\?/u, "");
   if (!rawSearch) return true;
