@@ -1,0 +1,252 @@
+name: FanMind P1 Adopt Existing PM2 Daemon Into systemd
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-adopt-existing-pm2-daemon-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-adopt-existing-pm2-daemon-20260724
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  adopt:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 15
+    env:
+      EXPECTED_RELEASE: 6b8ba61a1786651713b2507340dc7b673811159d
+      REPORT_PATH: fanmind-pm2-systemd-adoption.txt
+
+    steps:
+      - name: Checkout trusted reboot branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Verify exact release, unit contract and one existing PM2 daemon
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          state="$RUNNER_TEMP/fanmind-pm2-adoption-before.json"
+          process_snapshot="$RUNNER_TEMP/fanmind-processes-before.txt"
+          pm2_snapshot="$RUNNER_TEMP/fanmind-pm2-before.json"
+          : > "$report"
+          printf 'PM2_SYSTEMD_ADOPTION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => process.stdout.write(JSON.parse(input).releaseCommit || "missing"));
+          ')"
+          test "$live_release" = "$EXPECTED_RELEASE"
+          test "$(git -C /var/www/fanmind rev-parse HEAD)" = "$EXPECTED_RELEASE"
+          test "$(git -C /var/www/fanmind rev-parse origin/main)" = "$EXPECTED_RELEASE"
+          test "$(readlink -f /var/www/fanmind-current)" = "/var/www/fanmind-releases/$EXPECTED_RELEASE"
+
+          test "$(systemctl is-enabled pm2-ubuntu.service)" = enabled
+          test "$(systemctl show pm2-ubuntu.service -p Type --value)" = forking
+          test "$(systemctl show pm2-ubuntu.service -p User --value)" = ubuntu
+          pid_file="$(systemctl show pm2-ubuntu.service -p PIDFile --value)"
+          test "$pid_file" = /home/ubuntu/.pm2/pm2.pid
+          exec_start="$(systemctl show pm2-ubuntu.service -p ExecStart --value)"
+          [[ "$exec_start" == *resurrect* ]]
+
+          umask 077
+          ps -eo pid=,user=,args= > "$process_snapshot"
+          pm2 jlist > "$pm2_snapshot"
+          PROCESS_SNAPSHOT="$process_snapshot" PM2_SNAPSHOT="$pm2_snapshot" STATE_PATH="$state" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const processRows = fs.readFileSync(process.env.PROCESS_SNAPSHOT, 'utf8')
+            .split(/\r?\n/u)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(line => {
+              const match = line.match(/^(\d+)\s+(\S+)\s+(.+)$/u);
+              return match ? { pid: Number(match[1]), user: match[2], args: match[3] } : null;
+            })
+            .filter(Boolean);
+          const daemons = processRows.filter(row =>
+            row.user === 'ubuntu' &&
+            /PM2/iu.test(row.args) &&
+            /God Daemon/iu.test(row.args) &&
+            row.args.includes('/home/ubuntu/.pm2'),
+          );
+          if (daemons.length !== 1 || daemons[0].pid < 2) {
+            throw new Error('pm2_daemon_contract_invalid');
+          }
+
+          const apps = JSON.parse(fs.readFileSync(process.env.PM2_SNAPSHOT, 'utf8'))
+            .filter(item => item?.name === 'fanmind');
+          if (apps.length !== 1) throw new Error('pm2_fanmind_count_invalid');
+          const app = apps[0];
+          const value = {
+            daemonPid: daemons[0].pid,
+            appPid: Number(app.pid || 0),
+            restarts: Number(app?.pm2_env?.restart_time),
+            status: String(app?.pm2_env?.status || ''),
+            cwdMatches:
+              String(app?.pm2_env?.pm_cwd || '') ===
+              `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`,
+          };
+          if (
+            value.appPid < 1 ||
+            !Number.isInteger(value.restarts) ||
+            value.restarts < 0 ||
+            value.status !== 'online' ||
+            !value.cwdMatches
+          ) {
+            throw new Error('pm2_fanmind_state_invalid');
+          }
+          fs.writeFileSync(process.env.STATE_PATH, JSON.stringify(value), {
+            mode: 0o600,
+          });
+          NODE
+          rm -f "$process_snapshot" "$pm2_snapshot"
+
+          echo 'PM2_DAEMON_COUNT=1' | tee -a "$report"
+          echo 'PM2_DAEMON_USER=ubuntu' | tee -a "$report"
+          echo 'PM2_UNIT_CONTRACT=valid' | tee -a "$report"
+          echo 'PM2_APP_PRE_ADOPTION=healthy' | tee -a "$report"
+
+      - name: Restore only the missing PID file and adopt the existing daemon
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          state="$RUNNER_TEMP/fanmind-pm2-adoption-before.json"
+          daemon_pid="$(node -e 'const fs=require("fs");process.stdout.write(String(JSON.parse(fs.readFileSync(process.argv[1],"utf8")).daemonPid));' "$state")"
+          test "$daemon_pid" -gt 1
+          test -d "/proc/$daemon_pid"
+          test "$(stat -c %U "/proc/$daemon_pid")" = ubuntu
+
+          process_args="$(tr '\0' ' ' < "/proc/$daemon_pid/cmdline")"
+          [[ "$process_args" == *PM2* ]]
+          [[ "$process_args" == *"God Daemon"* ]]
+          [[ "$process_args" == *"/home/ubuntu/.pm2"* ]]
+
+          pid_file="$(systemctl show pm2-ubuntu.service -p PIDFile --value)"
+          test "$pid_file" = /home/ubuntu/.pm2/pm2.pid
+          if [ -s "$pid_file" ]; then
+            existing="$(tr -d '[:space:]' < "$pid_file")"
+            test "$existing" = "$daemon_pid"
+            echo 'PM2_PIDFILE_ACTION=preserved' | tee -a "$report"
+          else
+            temp="/home/ubuntu/.pm2/.pm2.pid.fanmind-${GITHUB_RUN_ID}.tmp"
+            rm -f "$temp"
+            printf '%s\n' "$daemon_pid" > "$temp"
+            chmod 0644 "$temp"
+            chown ubuntu:ubuntu "$temp"
+            mv -f "$temp" "$pid_file"
+            echo 'PM2_PIDFILE_ACTION=restored' | tee -a "$report"
+          fi
+          test "$(tr -d '[:space:]' < "$pid_file")" = "$daemon_pid"
+          test "$(stat -c %U:%G "$pid_file")" = ubuntu:ubuntu
+
+          sudo -n systemctl reset-failed pm2-ubuntu.service
+          sudo -n systemctl start pm2-ubuntu.service
+          for attempt in $(seq 1 30); do
+            if systemctl is-active --quiet pm2-ubuntu.service; then
+              break
+            fi
+            sleep 1
+          done
+          systemctl is-active --quiet pm2-ubuntu.service
+          main_pid="$(systemctl show pm2-ubuntu.service -p MainPID --value)"
+          test "$main_pid" = "$daemon_pid"
+          echo 'PM2_SYSTEMD_SERVICE=active' | tee -a "$report"
+          echo 'PM2_SYSTEMD_MAIN_PID_MATCH=yes' | tee -a "$report"
+
+      - name: Prove adoption caused no application restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          state="$RUNNER_TEMP/fanmind-pm2-adoption-before.json"
+
+          verify_app() {
+            local snapshot="$1"
+            umask 077
+            pm2 jlist > "$snapshot"
+            BEFORE_PATH="$state" SNAPSHOT_PATH="$snapshot" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE'
+            import fs from 'node:fs';
+            const before = JSON.parse(fs.readFileSync(process.env.BEFORE_PATH, 'utf8'));
+            const rows = JSON.parse(fs.readFileSync(process.env.SNAPSHOT_PATH, 'utf8'))
+              .filter(item => item?.name === 'fanmind');
+            if (rows.length !== 1) throw new Error('pm2_fanmind_count_invalid');
+            const row = rows[0];
+            const current = {
+              appPid: Number(row.pid || 0),
+              restarts: Number(row?.pm2_env?.restart_time),
+              status: String(row?.pm2_env?.status || ''),
+              cwdMatches:
+                String(row?.pm2_env?.pm_cwd || '') ===
+                `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`,
+            };
+            if (
+              current.status !== 'online' ||
+              !current.cwdMatches ||
+              current.appPid !== before.appPid ||
+              current.restarts !== before.restarts
+            ) {
+              throw new Error('pm2_app_changed_during_adoption');
+            }
+            NODE
+            rm -f "$snapshot"
+          }
+
+          verify_app "$RUNNER_TEMP/fanmind-pm2-after-adoption-1.json"
+          sleep 30
+          systemctl is-active --quiet pm2-ubuntu.service
+          verify_app "$RUNNER_TEMP/fanmind-pm2-after-adoption-2.json"
+
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              const checks = Array.isArray(payload.checks) ? payload.checks : [];
+              process.exit(
+                payload.status === "healthy" &&
+                checks.length >= 7 &&
+                checks.every(item => item?.status === "healthy")
+                  ? 0
+                  : 1,
+              );
+            });
+          '
+          echo 'PM2_APP_PID_UNCHANGED=yes' | tee -a "$report"
+          echo 'PM2_APP_RESTART_COUNT_UNCHANGED=yes' | tee -a "$report"
+          echo 'PM2_SYSTEMD_STABLE_30_SECONDS=yes' | tee -a "$report"
+          echo 'PUBLIC_HEALTH_AFTER_ADOPTION=healthy' | tee -a "$report"
+          echo 'PM2_SYSTEMD_ADOPTION_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized PM2 adoption evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-pm2-systemd-adoption
+          path: fanmind-pm2-systemd-adoption.txt
+          if-no-files-found: error
+          retention-days: 14
