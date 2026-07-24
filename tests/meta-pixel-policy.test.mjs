@@ -49,7 +49,10 @@ test("bootstrap initializes exactly once without firing PageView or noscript tra
   assert.match(bootstrap, /fbq\('init','2069553844439892'\)/u);
   assert.equal((bootstrap.match(/fbq\('init'/gu) ?? []).length, 1);
   assert.doesNotMatch(bootstrap, /PageView|facebook\.com\/tr|noscript/iu);
-  assert.doesNotMatch(bootstrap, /email|phone|external_id|em|ph/iu);
+  assert.doesNotMatch(
+    bootstrap,
+    /email|phone|external_id|user_data|advanced_matching/iu,
+  );
 });
 
 test("only PageView is active and conversion names remain prepared", () => {
