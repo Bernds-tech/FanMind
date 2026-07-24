@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_ENV_FILE = "/var/www/fanmind/.env.production";
 const REQUEST_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const PROCESSABLE_STATUSES = new Set(["pending", "blocked"]);
+const PROCESSABLE_STATUSES = new Set(["pending", "blocked", "processing"]);
 
 export class AccountDeletionProcessorError extends Error {
   constructor(code) {
@@ -128,7 +128,7 @@ async function getDeletionRequest(fetchImpl, config, requestId) {
     "account_deletion_requests",
     new URLSearchParams({
       select:
-        "id,user_id,workspace_id,notification_email,request_source,status,requires_ownership_transfer,requires_subscription_resolution,requested_at,processing_deadline_at",
+        "id,user_id,workspace_id,notification_email,request_source,status,requires_ownership_transfer,requires_subscription_resolution,requested_at,processing_deadline_at,completion_notification_sent_at",
       id: `eq.${requestId}`,
       limit: "1",
     }).toString(),
@@ -138,19 +138,30 @@ async function getDeletionRequest(fetchImpl, config, requestId) {
   return rows[0];
 }
 
-async function getAuthUser(fetchImpl, config, userId) {
-  const { response, payload } = await requestJson(
-    fetchImpl,
+async function getAuthUser(
+  fetchImpl,
+  config,
+  userId,
+  { allowMissing = false } = {},
+) {
+  const response = await fetchImpl(
     `${config.supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`,
-    { headers: serviceHeaders(config.serviceKey) },
-    "auth_user_lookup_failed",
-  );
+    {
+      headers: serviceHeaders(config.serviceKey),
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    },
+  ).catch(() => null);
+  if (!response) {
+    throw new AccountDeletionProcessorError("auth_user_lookup_failed");
+  }
+  if (allowMissing && response.status === 404) return null;
+  const payload = await response.json().catch(() => null);
   if (!response.ok || !payload || typeof payload !== "object") {
     throw new AccountDeletionProcessorError("auth_user_lookup_failed");
   }
   return payload.user ?? payload;
 }
-
 async function getOwnedWorkspaces(fetchImpl, config, userId) {
   return restSelect(
     fetchImpl,
@@ -353,11 +364,114 @@ async function updateBlockedState(fetchImpl, config, request, eligibility) {
   );
 }
 
+function enforceExecutionGates(env, requestId, confirmation) {
+  if (env.FANMIND_ACCOUNT_DELETION_EXECUTION_ENABLED !== "true") {
+    throw new AccountDeletionProcessorError("execution_gate_disabled");
+  }
+  if (confirmation !== requestId) {
+    throw new AccountDeletionProcessorError("execution_confirmation_invalid");
+  }
+  return requireValue(env, "FANMIND_ACCOUNT_DELETION_HASH_SECRET", 32);
+}
+
+async function markCompletionNotificationSent(
+  fetchImpl,
+  config,
+  request,
+  sentAt,
+) {
+  await restPatch(
+    fetchImpl,
+    config,
+    "account_deletion_requests",
+    new URLSearchParams({
+      id: `eq.${request.id}`,
+      status: "eq.processing",
+      select: "id,status,completion_notification_sent_at",
+    }).toString(),
+    {
+      completion_notification_sent_at: sentAt,
+      last_error_code: null,
+    },
+    "completion_notification_record_failed",
+  );
+}
+
+async function finalizeDeletedAccount({
+  fetchImpl,
+  env,
+  config,
+  request,
+  userId,
+  hashSecret,
+  log,
+}) {
+  await verifyDeletion(fetchImpl, config, userId);
+  const notificationEmail = String(request.notification_email ?? "")
+    .trim()
+    .toLowerCase();
+  if (!notificationEmail) {
+    throw new AccountDeletionProcessorError("completion_email_missing");
+  }
+
+  let completion = request.completion_notification_sent_at
+    ? { sent: true, errorCode: null }
+    : await sendCompletionEmail(
+        fetchImpl,
+        env,
+        notificationEmail,
+        request.id,
+      );
+  let notificationSentAt = request.completion_notification_sent_at || null;
+  if (completion.sent && !notificationSentAt) {
+    notificationSentAt = new Date().toISOString();
+    await markCompletionNotificationSent(
+      fetchImpl,
+      config,
+      request,
+      notificationSentAt,
+    );
+  }
+
+  const completedAt = new Date().toISOString();
+  const finalStatus = completion.sent
+    ? "completed"
+    : "completed_notification_pending";
+  await restPatch(
+    fetchImpl,
+    config,
+    "account_deletion_requests",
+    new URLSearchParams({
+      id: `eq.${request.id}`,
+      status: "eq.processing",
+      select: "id,status",
+    }).toString(),
+    {
+      user_id: null,
+      workspace_id: null,
+      user_reference_hash: userReferenceHash(userId, hashSecret),
+      status: finalStatus,
+      completed_at: completedAt,
+      completion_notification_sent_at: notificationSentAt,
+      notification_email: completion.sent ? null : notificationEmail,
+      requires_ownership_transfer: false,
+      requires_subscription_resolution: false,
+      last_error_code: completion.errorCode,
+    },
+    "completion_record_failed",
+  );
+
+  log(`ACCOUNT_DELETION_COMPLETION_NOTIFICATION_SENT=${completion.sent}`);
+  log(`ACCOUNT_DELETION_RESULT=${finalStatus}`);
+  return finalStatus;
+}
+
 export async function processAccountDeletion({
   env,
   requestId,
   execute = false,
   confirmation = null,
+  resume = false,
   fetchImpl = fetch,
   log = console.log,
   now = new Date(),
@@ -378,7 +492,42 @@ export async function processAccountDeletion({
     throw new AccountDeletionProcessorError("request_identity_missing");
   }
 
-  const authUser = await getAuthUser(fetchImpl, config, request.user_id);
+  const resuming = request.status === "processing";
+  if (resuming && execute && !resume) {
+    throw new AccountDeletionProcessorError("request_resume_required");
+  }
+
+  const authUser = await getAuthUser(fetchImpl, config, request.user_id, {
+    allowMissing: resuming,
+  });
+  log(`ACCOUNT_DELETION_MODE=${execute ? "execute" : "dry_run"}`);
+  log(`ACCOUNT_DELETION_REQUEST_STATUS=${request.status}`);
+  log(`ACCOUNT_DELETION_RESUME=${resuming}`);
+
+  if (!authUser) {
+    log("ACCOUNT_DELETION_RECOVERY_STATE=auth_user_already_absent");
+    if (!execute) {
+      await verifyDeletion(fetchImpl, config, request.user_id);
+      log("ACCOUNT_DELETION_RESULT=dry_run_resume_ready");
+      return {
+        executed: false,
+        resumeRequired: true,
+        eligibility: null,
+      };
+    }
+    const hashSecret = enforceExecutionGates(env, requestId, confirmation);
+    const finalStatus = await finalizeDeletedAccount({
+      fetchImpl,
+      env,
+      config,
+      request,
+      userId: request.user_id,
+      hashSecret,
+      log,
+    });
+    return { executed: true, resumed: true, eligibility: null, finalStatus };
+  }
+
   const workspaces = await getOwnedWorkspaces(
     fetchImpl,
     config,
@@ -392,10 +541,7 @@ export async function processAccountDeletion({
     config,
     now,
   });
-  await updateBlockedState(fetchImpl, config, request, eligibility);
 
-  log(`ACCOUNT_DELETION_MODE=${execute ? "execute" : "dry_run"}`);
-  log(`ACCOUNT_DELETION_REQUEST_STATUS=${eligibility.eligible ? "pending" : "blocked"}`);
   log(`ACCOUNT_DELETION_OWNED_WORKSPACE_COUNT=${eligibility.ownedWorkspaceCount}`);
   log(`ACCOUNT_DELETION_OTHER_MEMBER_COUNT=${eligibility.otherMemberCount}`);
   log(
@@ -405,82 +551,50 @@ export async function processAccountDeletion({
 
   if (!execute) {
     log("ACCOUNT_DELETION_RESULT=dry_run_success");
-    return { executed: false, eligibility };
+    return { executed: false, resumeRequired: resuming, eligibility };
   }
 
-  if (env.FANMIND_ACCOUNT_DELETION_EXECUTION_ENABLED !== "true") {
-    throw new AccountDeletionProcessorError("execution_gate_disabled");
-  }
-  if (confirmation !== requestId) {
-    throw new AccountDeletionProcessorError("execution_confirmation_invalid");
-  }
+  const hashSecret = enforceExecutionGates(env, requestId, confirmation);
   if (!eligibility.eligible) {
+    if (!resuming) {
+      await updateBlockedState(fetchImpl, config, request, eligibility);
+    }
     throw new AccountDeletionProcessorError("request_blocked");
   }
-  const hashSecret = requireValue(
-    env,
-    "FANMIND_ACCOUNT_DELETION_HASH_SECRET",
-    32,
-  );
-  const notificationEmail = String(request.notification_email ?? "")
-    .trim()
-    .toLowerCase();
 
-  await restPatch(
-    fetchImpl,
-    config,
-    "account_deletion_requests",
-    new URLSearchParams({
-      id: `eq.${request.id}`,
-      user_id: `eq.${request.user_id}`,
-      select: "id,status",
-    }).toString(),
-    {
-      status: "processing",
-      processing_started_at: now.toISOString(),
-      last_error_code: null,
-    },
-    "request_update_failed",
-  );
+  if (!resuming) {
+    await restPatch(
+      fetchImpl,
+      config,
+      "account_deletion_requests",
+      new URLSearchParams({
+        id: `eq.${request.id}`,
+        user_id: `eq.${request.user_id}`,
+        status: "in.(pending,blocked)",
+        select: "id,status",
+      }).toString(),
+      {
+        status: "processing",
+        processing_started_at: now.toISOString(),
+        requires_ownership_transfer: false,
+        requires_subscription_resolution: false,
+        last_error_code: null,
+      },
+      "request_update_failed",
+    );
+  }
 
   await deleteAuthUser(fetchImpl, config, request.user_id);
-  await verifyDeletion(fetchImpl, config, request.user_id);
-  const completion = await sendCompletionEmail(
+  const finalStatus = await finalizeDeletedAccount({
     fetchImpl,
     env,
-    notificationEmail,
-    request.id,
-  );
-  const completedAt = new Date().toISOString();
-  const finalStatus = completion.sent
-    ? "completed"
-    : "completed_notification_pending";
-  await restPatch(
-    fetchImpl,
     config,
-    "account_deletion_requests",
-    new URLSearchParams({
-      id: `eq.${request.id}`,
-      select: "id,status",
-    }).toString(),
-    {
-      user_id: null,
-      workspace_id: null,
-      user_reference_hash: userReferenceHash(request.user_id, hashSecret),
-      status: finalStatus,
-      completed_at: completedAt,
-      completion_notification_sent_at: completion.sent ? completedAt : null,
-      notification_email: completion.sent ? null : notificationEmail,
-      requires_ownership_transfer: false,
-      requires_subscription_resolution: false,
-      last_error_code: completion.errorCode,
-    },
-    "completion_record_failed",
-  );
-
-  log(`ACCOUNT_DELETION_COMPLETION_NOTIFICATION_SENT=${completion.sent}`);
-  log(`ACCOUNT_DELETION_RESULT=${finalStatus}`);
-  return { executed: true, eligibility, finalStatus };
+    request: { ...request, status: "processing" },
+    userId: request.user_id,
+    hashSecret,
+    log,
+  });
+  return { executed: true, resumed: resuming, eligibility, finalStatus };
 }
 
 async function main() {
@@ -490,6 +604,7 @@ async function main() {
     DEFAULT_ENV_FILE;
   const requestId = parseArgument("--request-id") || "";
   const execute = hasFlag("--execute");
+  const resume = hasFlag("--resume");
   const confirmation = parseArgument("--confirm");
   const env = parseEnvText(await readFile(envFile, "utf8"));
   await processAccountDeletion({
@@ -497,6 +612,7 @@ async function main() {
     requestId,
     execute,
     confirmation,
+    resume,
   });
 }
 

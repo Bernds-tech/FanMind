@@ -20,7 +20,7 @@ Der Prozess löscht nicht nur den App-Zugang und ist keine bloße Deaktivierung.
 4. FanMind legt idempotent höchstens eine aktive Löschanfrage an.
 5. Die sichtbare maximale Bearbeitungsfrist beträgt 30 Tage.
 6. Die App führt nach erfolgreicher Aufnahme sofort den vorhandenen sicheren Logout-/SecureStore-Purge aus.
-7. Solange der Status `pending` oder `blocked` ist, kann der Nutzer nach erneuter Anmeldung mit `LÖSCHANFRAGE ABBRECHEN` widerrufen.
+7. Solange der Status `pending` oder `blocked` ist, kann der Nutzer nach erneuter Anmeldung mit `LÖSCHANFRAGE ABBRECHEN` widerrufen. Die widerrufene Queue-Zeile wird vollständig entfernt, damit keine rohe User-ID aus einer alten Anfrage zurückbleibt.
 8. Ab Status `processing` ist kein automatischer Widerruf mehr möglich.
 
 Temporäre Demo-Accounts verwenden weiterhin ihre separate automatische Ablaufbereinigung und können keine parallele Löschanfrage anlegen.
@@ -98,6 +98,8 @@ sudo -n env FANMIND_ENV_FILE=/var/www/fanmind/.env.production \
   --request-id=<UUID> \
   --execute \
   --confirm=<dieselbe UUID>
+
+Bei einem unterbrochenen Lauf mit Status `processing` ist zusätzlich `--resume` erforderlich. Der Resume-Pfad prüft zuerst, ob der Auth-User noch existiert. Ist er bereits gelöscht, werden ausschließlich die Post-Delete-Verifikation, die Abschlussbenachrichtigung und die Pseudonymisierung sicher fortgesetzt.
 ```
 
 Der Processor:

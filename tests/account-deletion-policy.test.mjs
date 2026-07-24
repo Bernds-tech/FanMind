@@ -419,7 +419,7 @@ test("deployment installs the processor but no timer or automatic execution exis
   assert.match(deploy, /process-account-deletion\.mjs/u);
   assert.doesNotMatch(deploy, /process-account-deletion\.mjs --execute/u);
   assert.doesNotMatch(deploy, /fanmind-account-deletion\.timer/u);
-  assert.match(processor, /PROCESSABLE_STATUSES = new Set\(\["pending", "blocked"\]\)/u);
+  assert.match(processor, /PROCESSABLE_STATUSES = new Set\(\["pending", "blocked", "processing"\]\)/u);
   assert.match(processor, /FANMIND_ACCOUNT_DELETION_EXECUTION_ENABLED/u);
   assert.match(processor, /confirmation !== requestId/u);
   assert.match(processor, /createHmac\("sha256"/u);
