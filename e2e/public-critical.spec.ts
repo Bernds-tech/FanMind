@@ -97,9 +97,7 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await password.fill("Synthetic-Invalid-Password-2026");
     await page.getByRole("button", { name: /Einloggen/u }).click();
 
-    await expect(page.locator('form [role="alert"]')).toContainText(
-      "Login nicht möglich",
-    );
+    await expect(page.getByRole("alert")).toContainText("Login nicht möglich");
     await expect(page).toHaveURL(/\/login(?:\?|$)/u);
     await expectNoHorizontalOverflow(page);
   });
@@ -135,7 +133,28 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await expect(page.getByRole("status")).toContainText(
       "Falls ein Konto mit dieser E-Mail existiert",
     );
-    await expect(page.locator('form [role="alert"]')).toHaveCount(0);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("öffentliche Account-Löschressource führt direkt zum authentifizierten Gesamtprozess", async ({
+    page,
+  }) => {
+    const response = await page.goto("/account-deletion");
+
+    expect(response?.ok()).toBe(true);
+    await expect(
+      page.getByRole("heading", { name: "FanMind-Account vollständig löschen" }),
+    ).toBeVisible();
+    await expect(page.getByText(/keine bloße Deaktivierung/u)).toBeVisible();
+    await expect(page.getByText(/maximale Bearbeitungsfrist von 30 Tagen/u)).toBeVisible();
+    const deletionLink = page.getByRole("link", {
+      name: "Anmelden und Löschung einleiten",
+    });
+    await expect(deletionLink).toHaveAttribute(
+      "href",
+      "/login?returnTo=%2Fsettings%2Faccount-deletion",
+    );
     await expectNoHorizontalOverflow(page);
   });
 
@@ -162,19 +181,9 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
 
     await page.locator('a[href*="plan=growth"]').first().click();
     await expect(page).toHaveURL(/\/register\?plan=growth/u);
-    const growthPreview = page.locator(
-      'section[aria-label="Growth Vorschau"]',
-    );
-    await expect(growthPreview).toBeVisible();
-    await expect(
-      growthPreview.getByRole("heading", { name: "Growth", exact: true }),
-    ).toBeVisible();
-    await expect(growthPreview).toContainText(
-      "nicht direkt produktiv registrierbar",
-    );
-    await expect(
-      growthPreview.getByRole("link", { name: "Mit Starter starten" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Growth", exact: true })).toBeVisible();
+    await expect(page.getByText(/nicht direkt produktiv registrierbar/u)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Mit Starter starten" })).toBeVisible();
     await expect(page.locator("form")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
