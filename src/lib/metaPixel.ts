@@ -1,5 +1,6 @@
 import {
   isMetaPixelPageViewAllowed,
+  isMetaPixelReferrerAllowed,
   isSupportedMetaPixelEvent,
   normalizeMarketingConsent,
   normalizeMetaPixelId,
@@ -37,6 +38,10 @@ function currentPageIsEligible(): boolean {
       pathname: window.location.pathname,
       search: window.location.search,
       hash: window.location.hash,
+    }) &&
+    isMetaPixelReferrerAllowed({
+      referrer: document.referrer,
+      origin: window.location.origin,
     })
   );
 }
