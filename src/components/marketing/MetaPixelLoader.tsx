@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Script from "next/script";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   buildMetaPixelBootstrap,
   normalizeMetaPixelId,
@@ -16,6 +16,8 @@ import {
 
 export function MetaPixelLoader({ pixelId }: { pixelId: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const normalizedPixelId = normalizeMetaPixelId(pixelId);
   const bootstrap = useMemo(
     () => buildMetaPixelBootstrap(normalizedPixelId),
@@ -25,8 +27,8 @@ export function MetaPixelLoader({ pixelId }: { pixelId: string }) {
 
   useEffect(() => {
     if (!ready || !normalizedPixelId) return;
-    trackMetaPixelPageView(pathname);
-  }, [normalizedPixelId, pathname, ready]);
+    trackMetaPixelPageView({ pathname, search });
+  }, [normalizedPixelId, pathname, ready, search]);
 
   if (!normalizedPixelId || !bootstrap) return null;
 
