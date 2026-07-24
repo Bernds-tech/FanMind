@@ -1,4 +1,5 @@
 import {
+  isMetaPixelPageViewAllowed,
   isSupportedMetaPixelEvent,
   normalizeMarketingConsent,
   normalizeMetaPixelId,
@@ -27,6 +28,26 @@ declare global {
 
 function inBrowser(): boolean {
   return typeof window !== "undefined" && typeof document !== "undefined";
+}
+
+function currentPageIsEligible(): boolean {
+  return (
+    inBrowser() &&
+    isMetaPixelPageViewAllowed({
+      pathname: window.location.pathname,
+      search: window.location.search,
+    })
+  );
+}
+
+function pageViewKey(pathname: unknown, search: unknown): string {
+  const route = normalizeMetaPixelRoute(pathname);
+  const parameters = new URLSearchParams(
+    String(search ?? "").trim().replace(/^\?/u, ""),
+  );
+  parameters.sort();
+  const query = parameters.toString();
+  return query ? `${route}?${query}` : route;
 }
 
 export function setFanMindMarketingConsent(
@@ -82,6 +103,7 @@ export function trackMetaPixelEvent(eventName: MetaPixelEventName): boolean {
     !inBrowser() ||
     window.__fanmindMarketingConsent !== "granted" ||
     typeof window.fbq !== "function" ||
+    !currentPageIsEligible() ||
     !isSupportedMetaPixelEvent(eventName)
   ) {
     return false;
@@ -93,11 +115,14 @@ export function trackMetaPixelEvent(eventName: MetaPixelEventName): boolean {
   return true;
 }
 
-export function trackMetaPixelPageView(pathname: unknown): boolean {
-  if (!inBrowser()) return false;
-  const route = normalizeMetaPixelRoute(pathname);
-  if (window.__fanmindMetaPixelLastRoute === route) return false;
+export function trackMetaPixelPageView(input: {
+  pathname: unknown;
+  search?: unknown;
+}): boolean {
+  if (!inBrowser() || !isMetaPixelPageViewAllowed(input)) return false;
+  const routeKey = pageViewKey(input.pathname, input.search);
+  if (window.__fanmindMetaPixelLastRoute === routeKey) return false;
   if (!trackMetaPixelEvent("PageView")) return false;
-  window.__fanmindMetaPixelLastRoute = route;
+  window.__fanmindMetaPixelLastRoute = routeKey;
   return true;
 }
