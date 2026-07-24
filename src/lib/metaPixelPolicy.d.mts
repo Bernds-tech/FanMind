@@ -37,5 +37,6 @@ export function isMetaPixelPublicRoute(pathname: unknown): boolean;
 export function isMetaPixelPageViewAllowed(input: {
   pathname: unknown;
   search?: unknown;
+  hash?: unknown;
 }): boolean;
 export function buildMetaPixelBootstrap(value: unknown): string | null;
