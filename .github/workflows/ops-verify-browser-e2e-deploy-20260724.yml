@@ -1,0 +1,245 @@
+name: FanMind P1 Verify Browser E2E Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-verify-browser-e2e-deploy-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-verify-browser-e2e-deploy-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/verify-browser-e2e-deploy-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 30
+    env:
+      EXPECTED_RELEASE: 79274f41fe065921161fa5623e57bb295420e220
+      SOURCE_DIR: /var/www/fanmind
+      REPORT_PATH: fanmind-browser-e2e-production-verification.txt
+
+    steps:
+      - name: Wait for exact release and verify deployed browser controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          REPORT_FILE="$report" node --input-type=module <<'NODE'
+          import { appendFile, readFile, access } from 'node:fs/promises';
+          import { execFileSync, spawnSync } from 'node:child_process';
+          import { join } from 'node:path';
+          import { pathToFileURL } from 'node:url';
+
+          const expected = process.env.EXPECTED_RELEASE;
+          const source = process.env.SOURCE_DIR;
+          const report = process.env.REPORT_FILE;
+          if (!/^[0-9a-f]{40}$/.test(expected || '') || !source || !report) {
+            throw new Error('verification_configuration_invalid');
+          }
+
+          async function emit(key, value) {
+            const line = `${key}=${value}`;
+            console.log(line);
+            await appendFile(report, `${line}\n`, { mode: 0o644 });
+          }
+
+          function gitValue(ref) {
+            return execFileSync('/usr/bin/git', ['-C', source, 'rev-parse', ref], {
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'ignore'],
+              timeout: 10000,
+            }).trim();
+          }
+
+          async function fetchJson(pathname) {
+            const response = await fetch(`https://fanmind.ch${pathname}`, {
+              redirect: 'follow',
+              signal: AbortSignal.timeout(15000),
+              cache: 'no-store',
+            });
+            const payload = await response.json().catch(() => null);
+            return { response, payload };
+          }
+
+          async function evaluateHealth() {
+            const result = await fetchJson('/api/health');
+            if (!result.response.ok || !result.payload) return null;
+            const policy = await import(
+              `${pathToFileURL(join(source, 'scripts/public-health-policy.mjs')).href}?browser=${Date.now()}`
+            );
+            const required = policy.REQUIRED_PUBLIC_HEALTH_COMPONENTS;
+            const checks = Array.isArray(result.payload.checks) ? result.payload.checks : [];
+            const evaluation = policy.evaluatePublicHealth(result.payload);
+            return {
+              requiredCount: required.length,
+              ok:
+                result.payload.status === 'healthy'
+                && evaluation.ok === true
+                && required.length === 7
+                && required.every(component =>
+                  checks.some(check => check?.component === component && check?.status === 'healthy')
+                ),
+            };
+          }
+
+          let synchronized = false;
+          for (let attempt = 1; attempt <= 90; attempt += 1) {
+            try {
+              const version = await fetchJson('/api/version');
+              const live = version.response.ok ? version.payload?.releaseCommit : '';
+              const head = gitValue('HEAD');
+              const origin = gitValue('origin/main');
+              const health = await evaluateHealth();
+              if (
+                live === expected
+                && head === expected
+                && origin === expected
+                && health?.ok
+              ) {
+                synchronized = true;
+                await emit('RELEASE_SYNC', 'ok');
+                await emit('PUBLIC_REQUIRED_HEALTHY_COUNT', health.requiredCount);
+                break;
+              }
+            } catch {
+              // Retry without exposing response bodies or configuration.
+            }
+            await new Promise(resolve => setTimeout(resolve, 10000));
+          }
+          if (!synchronized) throw new Error('release_sync_timeout');
+
+          const packageJson = JSON.parse(await readFile(join(source, 'package.json'), 'utf8'));
+          const packageLock = JSON.parse(await readFile(join(source, 'package-lock.json'), 'utf8'));
+          if (
+            packageJson.devDependencies?.['@playwright/test'] !== '1.60.0'
+            || packageLock.packages?.['node_modules/@playwright/test']?.version !== '1.60.0'
+          ) {
+            throw new Error('playwright_version_mismatch');
+          }
+          await emit('PLAYWRIGHT_VERSION', '1.60.0');
+          await emit('PLAYWRIGHT_LOCKFILE', 'synchronized');
+
+          const requiredFiles = [
+            '.github/workflows/browser-e2e.yml',
+            '.github/workflows/browser-e2e-staging.yml',
+            'playwright.config.mts',
+            'playwright.staging.config.mts',
+            'e2e/public-critical.spec.ts',
+            'e2e-staging/readonly-critical.spec.ts',
+            'tests/browser-e2e-policy.test.mjs',
+            'docs/testing/BROWSER_E2E.md',
+          ];
+          for (const relative of requiredFiles) {
+            await access(join(source, relative));
+          }
+          await emit('DEPLOYED_BROWSER_E2E_FILES', requiredFiles.length);
+
+          const absentFiles = [
+            '.github/workflows/p1-browser-e2e-lockfile-patch-20260724.yml',
+          ];
+          for (const relative of absentFiles) {
+            try {
+              await access(join(source, relative));
+              throw new Error('temporary_e2e_helper_present');
+            } catch (error) {
+              if (error?.message === 'temporary_e2e_helper_present') throw error;
+              if (error?.code !== 'ENOENT') throw error;
+            }
+          }
+          await emit('TEMPORARY_BROWSER_HELPERS', 'absent');
+
+          const pinCheck = spawnSync('/usr/bin/node', ['scripts/verify-actions-pinned.mjs'], {
+            cwd: source,
+            encoding: 'utf8',
+            stdio: ['ignore', 'ignore', 'ignore'],
+            timeout: 30000,
+          });
+          if (pinCheck.error || pinCheck.status !== 0) {
+            throw new Error('deployed_action_pin_policy_failed');
+          }
+          await emit('DEPLOYED_ACTION_PIN_POLICY', 'success');
+
+          const policyTest = spawnSync(
+            '/usr/bin/node',
+            ['--test', 'tests/browser-e2e-policy.test.mjs'],
+            {
+              cwd: source,
+              encoding: 'utf8',
+              stdio: ['ignore', 'ignore', 'ignore'],
+              timeout: 60000,
+            },
+          );
+          if (policyTest.error || policyTest.status !== 0) {
+            throw new Error('deployed_browser_policy_test_failed');
+          }
+          await emit('DEPLOYED_BROWSER_POLICY_TEST', 'success');
+
+          const publicSpec = await readFile(join(source, 'e2e/public-critical.spec.ts'), 'utf8');
+          const testCount = [...publicSpec.matchAll(/\btest\("/g)].length;
+          if (testCount !== 7) throw new Error('public_browser_test_count_invalid');
+          await emit('PUBLIC_BROWSER_TEST_CASES', testCount);
+          await emit('PUBLIC_BROWSER_PROJECTS', 2);
+          await emit('PUBLIC_BROWSER_EXECUTIONS', testCount * 2);
+
+          const stagingConfig = await readFile(
+            join(source, 'playwright.staging.config.mts'),
+            'utf8',
+          );
+          const stagingWorkflow = await readFile(
+            join(source, '.github/workflows/browser-e2e-staging.yml'),
+            'utf8',
+          );
+          if (
+            !stagingConfig.includes('fanmind-staging-readonly')
+            || !stagingConfig.includes('fanmind.ch')
+            || !stagingConfig.includes('trace: "off"')
+            || !stagingWorkflow.includes('workflow_dispatch:')
+            || !stagingWorkflow.includes('environment: staging')
+            || stagingWorkflow.includes('pull_request:')
+          ) {
+            throw new Error('staging_readonly_boundary_invalid');
+          }
+          await emit('STAGING_BROWSER_GATE', 'prepared_not_executed');
+          await emit('STAGING_BROWSER_PRODUCTION_TARGET', 'rejected');
+
+          for (const pathname of ['/', '/login', '/register', '/forgot-password', '/api/version', '/api/health']) {
+            const response = await fetch(`https://fanmind.ch${pathname}`, {
+              redirect: 'follow',
+              signal: AbortSignal.timeout(15000),
+              cache: 'no-store',
+            });
+            if (!response.ok) throw new Error('public_core_route_failed');
+          }
+          const finalHealth = await evaluateHealth();
+          if (!finalHealth?.ok) throw new Error('post_verification_health_failed');
+          await emit('PUBLIC_CORE_ROUTES', 'healthy');
+          await emit('POST_VERIFICATION_PUBLIC_HEALTH', 'healthy');
+          await emit('BROWSER_E2E_PRODUCTION_VERIFICATION', 'success');
+          NODE
+
+      - name: Upload sanitized Production evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-browser-e2e-production-verification
+          path: fanmind-browser-e2e-production-verification.txt
+          if-no-files-found: error
+          retention-days: 14
