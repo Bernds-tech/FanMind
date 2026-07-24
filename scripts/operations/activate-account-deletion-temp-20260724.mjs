@@ -585,7 +585,7 @@ async function applyAndVerifyMigration() {
       to_regclass('public.account_deletion_requests') is not null,
       c.relrowsecurity,
       (select count(*) = 0 from pg_policies where schemaname = 'public' and tablename = 'account_deletion_requests'),
-      not has_table_privilege('public', 'public.account_deletion_requests', 'select'),
+      (select count(*) = 0 from information_schema.role_table_grants where table_schema = 'public' and table_name = 'account_deletion_requests' and grantee = 'PUBLIC'),
       not has_table_privilege('anon', 'public.account_deletion_requests', 'select'),
       not has_table_privilege('authenticated', 'public.account_deletion_requests', 'select'),
       has_table_privilege('service_role', 'public.account_deletion_requests', 'select'),
