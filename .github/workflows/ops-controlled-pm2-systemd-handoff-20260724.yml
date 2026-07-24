@@ -13,7 +13,7 @@ on:
 
 concurrency:
   group: fanmind-p1-controlled-pm2-systemd-handoff-20260724
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -42,7 +42,8 @@ jobs:
           fetch-depth: 1
           show-progress: false
 
-      - name: Verify exact release and handoff prerequisites
+      - name: Verify exact release and determine whether handoff is still needed
+        id: preflight
         shell: bash
         run: |
           set -euo pipefail
@@ -89,32 +90,63 @@ jobs:
             exit 1
           fi
 
-          pm2 jlist > "$RUNNER_TEMP/fanmind-pm2-before-handoff.json"
-          SNAPSHOT="$RUNNER_TEMP/fanmind-pm2-before-handoff.json" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE'
+          snapshot="$RUNNER_TEMP/fanmind-pm2-preflight.json"
+          pm2 jlist > "$snapshot"
+          SNAPSHOT="$snapshot" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE' | tee -a "$report"
           import fs from 'node:fs';
           const rows = JSON.parse(fs.readFileSync(process.env.SNAPSHOT, 'utf8'))
             .filter(item => item?.name === 'fanmind');
-          if (rows.length !== 1) throw new Error('fanmind_process_count_invalid');
-          const app = rows[0];
-          if (
-            app?.pm2_env?.status !== 'online' ||
-            String(app?.pm2_env?.pm_cwd || '') !== `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}` ||
-            Number(app.pid || 0) < 2
-          ) {
-            throw new Error('fanmind_process_state_invalid');
-          }
+          const app = rows.length === 1 ? rows[0] : null;
+          const cwd = String(app?.pm2_env?.pm_cwd || '');
+          const expected = `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`;
+          const status = String(app?.pm2_env?.status || 'unknown');
+          const restartCount = Number(app?.pm2_env?.restart_time);
+          const healthy = rows.length === 1
+            && status === 'online'
+            && cwd === expected
+            && Number(app?.pid || 0) > 1
+            && Number.isInteger(restartCount)
+            && restartCount >= 0;
+          console.log(`PM2_APP_COUNT=${rows.length}`);
+          console.log(`PM2_APP_STATUS=${status === 'online' ? 'online' : 'not_online'}`);
+          console.log(`PM2_APP_CWD=${cwd === expected ? 'expected_release' : cwd === '/var/www/fanmind' ? 'source_checkout' : 'other'}`);
+          console.log(`PM2_APP_RESTART_COUNT_VALID=${Number.isInteger(restartCount) && restartCount >= 0 ? 'yes' : 'no'}`);
+          console.log(`PM2_APP_PRE_HANDOFF=${healthy ? 'healthy' : 'invalid'}`);
+          if (!healthy) process.exit(1);
           NODE
-          rm -f "$RUNNER_TEMP/fanmind-pm2-before-handoff.json"
+          rm -f "$snapshot"
 
-          pm2 save >/dev/null
-          test -s /home/ubuntu/.pm2/dump.pm2
+          managed=no
+          if systemctl is-active --quiet pm2-ubuntu.service; then
+            main_pid="$(systemctl show pm2-ubuntu.service -p MainPID --value)"
+            if [ "$main_pid" -gt 1 ] \
+              && [ -s /home/ubuntu/.pm2/pm2.pid ] \
+              && [ "$(tr -d '[:space:]' < /home/ubuntu/.pm2/pm2.pid)" = "$main_pid" ] \
+              && [ -d "/proc/$main_pid" ] \
+              && [ "$(stat -c %U "/proc/$main_pid")" = ubuntu ]; then
+              managed=yes
+            fi
+          fi
+
+          if [ "$managed" = yes ]; then
+            echo 'needs_handoff=no' >> "$GITHUB_OUTPUT"
+            echo 'PM2_SYSTEMD_HANDOFF_REQUIRED=no' | tee -a "$report"
+            echo 'PM2_SYSTEMD_SERVICE=active' | tee -a "$report"
+            echo 'PM2_SYSTEMD_MAIN_PID_MATCH=yes' | tee -a "$report"
+          else
+            pm2 save >/dev/null
+            test -s /home/ubuntu/.pm2/dump.pm2
+            echo 'needs_handoff=yes' >> "$GITHUB_OUTPUT"
+            echo 'PM2_SYSTEMD_HANDOFF_REQUIRED=yes' | tee -a "$report"
+            echo 'PM2_DUMP_SAVED=yes' | tee -a "$report"
+          fi
           echo 'RELEASE_AND_HEALTH_PRE_HANDOFF=healthy' | tee -a "$report"
-          echo 'PM2_DUMP_SAVED=yes' | tee -a "$report"
           echo 'PM2_SYSTEMD_CONTRACT=valid' | tee -a "$report"
           echo 'SELF_HOSTED_RUNNER=active' | tee -a "$report"
           echo 'PACKAGE_MANAGER_ACTIVITY=absent' | tee -a "$report"
 
       - name: Hand the saved PM2 process list to systemd
+        if: steps.preflight.outputs.needs_handoff == 'yes'
         shell: bash
         run: |
           set -euo pipefail
@@ -145,44 +177,14 @@ jobs:
             sleep 1
           done
           systemctl is-active --quiet pm2-ubuntu.service
-
-          main_pid="$(systemctl show pm2-ubuntu.service -p MainPID --value)"
-          test "$main_pid" -gt 1
-          test -s /home/ubuntu/.pm2/pm2.pid
-          test "$(tr -d '[:space:]' < /home/ubuntu/.pm2/pm2.pid)" = "$main_pid"
-          test -d "/proc/$main_pid"
-          test "$(stat -c %U "/proc/$main_pid")" = ubuntu
-
           echo 'PM2_OLD_DAEMON_STOP=complete' | tee -a "$report"
-          echo 'PM2_SYSTEMD_SERVICE=active' | tee -a "$report"
-          echo 'PM2_SYSTEMD_MAIN_PID_MATCH=yes' | tee -a "$report"
+          echo 'PM2_SYSTEMD_HANDOFF_ACTION=performed' | tee -a "$report"
 
-      - name: Verify resurrected FanMind app and public recovery
+      - name: Verify systemd ownership, resurrected app and public recovery
         shell: bash
         run: |
           set -euo pipefail
           report="$GITHUB_WORKSPACE/$REPORT_PATH"
-
-          verify_app() {
-            local snapshot="$1"
-            pm2 jlist > "$snapshot"
-            SNAPSHOT="$snapshot" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE'
-            import fs from 'node:fs';
-            const rows = JSON.parse(fs.readFileSync(process.env.SNAPSHOT, 'utf8'))
-              .filter(item => item?.name === 'fanmind');
-            if (rows.length !== 1) throw new Error('fanmind_process_count_invalid');
-            const app = rows[0];
-            if (
-              app?.pm2_env?.status !== 'online' ||
-              String(app?.pm2_env?.pm_cwd || '') !== `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}` ||
-              Number(app.pid || 0) < 2 ||
-              !Number.isInteger(Number(app?.pm2_env?.restart_time))
-            ) {
-              throw new Error('fanmind_process_state_invalid');
-            }
-            NODE
-            rm -f "$snapshot"
-          }
 
           for attempt in $(seq 1 60); do
             if curl -fsSL --max-time 10 https://fanmind.ch/api/health -o /dev/null 2>/dev/null; then
@@ -191,7 +193,42 @@ jobs:
             sleep 2
           done
 
-          verify_app "$RUNNER_TEMP/fanmind-pm2-after-handoff-1.json"
+          systemctl is-active --quiet pm2-ubuntu.service
+          main_pid="$(systemctl show pm2-ubuntu.service -p MainPID --value)"
+          test "$main_pid" -gt 1
+          test -s /home/ubuntu/.pm2/pm2.pid
+          test "$(tr -d '[:space:]' < /home/ubuntu/.pm2/pm2.pid)" = "$main_pid"
+          test -d "/proc/$main_pid"
+          test "$(stat -c %U "/proc/$main_pid")" = ubuntu
+
+          verify_app() {
+            local snapshot="$1"
+            pm2 jlist > "$snapshot"
+            SNAPSHOT="$snapshot" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE' | tee -a "$report"
+            import fs from 'node:fs';
+            const rows = JSON.parse(fs.readFileSync(process.env.SNAPSHOT, 'utf8'))
+              .filter(item => item?.name === 'fanmind');
+            const app = rows.length === 1 ? rows[0] : null;
+            const cwd = String(app?.pm2_env?.pm_cwd || '');
+            const expected = `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`;
+            const status = String(app?.pm2_env?.status || 'unknown');
+            const restartCount = Number(app?.pm2_env?.restart_time);
+            const healthy = rows.length === 1
+              && status === 'online'
+              && cwd === expected
+              && Number(app?.pid || 0) > 1
+              && Number.isInteger(restartCount)
+              && restartCount >= 0;
+            console.log(`PM2_FINAL_APP_COUNT=${rows.length}`);
+            console.log(`PM2_FINAL_APP_STATUS=${status === 'online' ? 'online' : 'not_online'}`);
+            console.log(`PM2_FINAL_APP_CWD=${cwd === expected ? 'expected_release' : cwd === '/var/www/fanmind' ? 'source_checkout' : 'other'}`);
+            console.log(`PM2_FINAL_RESTART_COUNT_VALID=${Number.isInteger(restartCount) && restartCount >= 0 ? 'yes' : 'no'}`);
+            if (!healthy) process.exit(1);
+            NODE
+            rm -f "$snapshot"
+          }
+
+          verify_app "$RUNNER_TEMP/fanmind-pm2-final-1.json"
           test "$(curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e '
             let input="";
             process.stdin.on("data", chunk => input += chunk);
@@ -218,10 +255,12 @@ jobs:
 
           sleep 60
           systemctl is-active --quiet pm2-ubuntu.service
-          verify_app "$RUNNER_TEMP/fanmind-pm2-after-handoff-2.json"
+          verify_app "$RUNNER_TEMP/fanmind-pm2-final-2.json"
           curl -fsSL --max-time 15 https://fanmind.ch/api/health -o /dev/null
           pm2 save >/dev/null
 
+          echo 'PM2_SYSTEMD_SERVICE=active' | tee -a "$report"
+          echo 'PM2_SYSTEMD_MAIN_PID_MATCH=yes' | tee -a "$report"
           echo 'PM2_APP_RESURRECTED=healthy' | tee -a "$report"
           echo 'PM2_RELEASE_CWD=correct' | tee -a "$report"
           echo 'PM2_SYSTEMD_STABLE_60_SECONDS=yes' | tee -a "$report"
