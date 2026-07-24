@@ -7,6 +7,7 @@ import {
   FANMIND_MARKETING_CONSENT_MAX_AGE_SECONDS,
   isMetaPixelEnabled,
   normalizeMarketingConsent,
+  normalizeMetaPixelId,
   type FanMindMarketingConsent,
 } from "@/lib/metaPixelPolicy.mjs";
 import {
@@ -87,6 +88,7 @@ export function MarketingConsentManager({
     normalizedInitialConsent === "unset",
   );
   const copy = COPY[locale];
+  const pixelConfigured = normalizeMetaPixelId(pixelId) !== null;
   const pixelEnabled = useMemo(
     () => isMetaPixelEnabled({ pixelId, consent }),
     [consent, pixelId],
@@ -110,6 +112,8 @@ export function MarketingConsentManager({
     setConsent("granted");
     setPanelOpen(false);
   }
+
+  if (!pixelConfigured) return null;
 
   return (
     <>
