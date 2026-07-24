@@ -85,6 +85,7 @@ export function MarketingConsentManager({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
+  const [locationHash, setLocationHash] = useState<string | null>(null);
   const normalizedInitialConsent = normalizeMarketingConsent(initialConsent);
   const [consent, setConsent] = useState<FanMindMarketingConsent>(
     normalizedInitialConsent,
@@ -94,7 +95,13 @@ export function MarketingConsentManager({
   );
   const copy = COPY[locale];
   const pixelConfigured = normalizeMetaPixelId(pixelId) !== null;
-  const routeEligible = isMetaPixelPageViewAllowed({ pathname, search });
+  const routeEligible =
+    locationHash !== null &&
+    isMetaPixelPageViewAllowed({
+      pathname,
+      search,
+      hash: locationHash,
+    });
   const pixelEnabled = useMemo(
     () => isMetaPixelEnabled({ pixelId, consent }) && routeEligible,
     [consent, pixelId, routeEligible],
@@ -105,8 +112,17 @@ export function MarketingConsentManager({
   }, [consent]);
 
   useEffect(() => {
-    if (pixelConfigured && !routeEligible) revokeMetaPixelConsent();
-  }, [pixelConfigured, routeEligible]);
+    const syncHash = () => setLocationHash(window.location.hash);
+    syncHash();
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, []);
+
+  useEffect(() => {
+    if (pixelConfigured && locationHash !== null && !routeEligible) {
+      revokeMetaPixelConsent();
+    }
+  }, [locationHash, pixelConfigured, routeEligible]);
 
   function chooseDenied() {
     persistConsent("denied");
@@ -123,11 +139,13 @@ export function MarketingConsentManager({
     setPanelOpen(false);
   }
 
-  if (!pixelConfigured || !routeEligible) return null;
+  if (!pixelConfigured || !routeEligible || locationHash === null) return null;
 
   return (
     <>
-      {pixelEnabled ? <MetaPixelLoader pixelId={pixelId} /> : null}
+      {pixelEnabled ? (
+        <MetaPixelLoader pixelId={pixelId} hash={locationHash} />
+      ) : null}
 
       {panelOpen ? (
         <section
