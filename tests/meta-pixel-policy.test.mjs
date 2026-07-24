@@ -107,9 +107,16 @@ test("Meta Pixel is limited to explicit public routes and harmless URL values", 
   );
 });
 
-test("same-origin protected referrers are blocked while external attribution remains possible", () => {
+test("same-origin protected referrers and detailed external referrers are blocked", () => {
   assert.equal(
     isMetaPixelReferrerAllowed({ referrer: "", origin: "https://fanmind.ch" }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelReferrerAllowed({
+      referrer: "https://search.example/",
+      origin: "https://fanmind.ch",
+    }),
     true,
   );
   assert.equal(
@@ -117,7 +124,7 @@ test("same-origin protected referrers are blocked while external attribution rem
       referrer: "https://search.example/result?q=fanmind",
       origin: "https://fanmind.ch",
     }),
-    true,
+    false,
   );
   assert.equal(
     isMetaPixelReferrerAllowed({
@@ -177,6 +184,7 @@ test("root layout mounts one global consent manager and reads only public config
   assert.match(layout, /MarketingConsentManager/u);
   assert.match(layout, /FANMIND_MARKETING_CONSENT_COOKIE/u);
   assert.match(layout, /NEXT_PUBLIC_META_PIXEL_ID/u);
+  assert.match(layout, /referrer: "strict-origin-when-cross-origin"/u);
   assert.match(layout, /<Suspense fallback=\{null\}>/u);
   assert.equal((layout.match(/<MarketingConsentManager/gu) ?? []).length, 1);
   assert.doesNotMatch(
@@ -203,6 +211,7 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(manager, /queueMicrotask\(syncLocationContext\)/u);
   assert.match(manager, /!pixelConfigured/u);
   assert.match(manager, /!routeEligible/u);
+  assert.match(manager, /consent === "unset"/u);
   assert.match(manager, /revokeMetaPixelConsent/u);
   assert.match(manager, /SameSite=Lax/u);
   assert.match(loader, /strategy="afterInteractive"/u);
