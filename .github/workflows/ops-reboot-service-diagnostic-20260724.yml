@@ -1,0 +1,99 @@
+name: FanMind P1 Reboot Service Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-reboot-service-diagnostic-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-reboot-service-diagnostic-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 10
+    env:
+      REPORT_PATH: fanmind-reboot-service-diagnostic.txt
+
+    steps:
+      - name: Checkout trusted reboot branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Inspect PM2 startup and FanMind timers read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'SERVICE_DIAGNOSTIC_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+
+          mapfile -t pm2_units < <(
+            systemctl list-unit-files --type=service --no-legend 'pm2-*.service' 2>/dev/null |
+              awk 'NF {print $1}' |
+              sort -u
+          )
+          test "${#pm2_units[@]}" -ge 1
+          echo "PM2_UNIT_COUNT=${#pm2_units[@]}" | tee -a "$report"
+          for unit in "${pm2_units[@]}"; do
+            safe_unit="${unit//[^a-zA-Z0-9_.@-]/_}"
+            enabled="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
+            active="$(systemctl is-active "$unit" 2>/dev/null || true)"
+            user="$(systemctl show "$unit" -p User --value 2>/dev/null || true)"
+            main_pid="$(systemctl show "$unit" -p MainPID --value 2>/dev/null || true)"
+            fragment="$(systemctl show "$unit" -p FragmentPath --value 2>/dev/null || true)"
+            exec_start="$(systemctl show "$unit" -p ExecStart --value 2>/dev/null || true)"
+            echo "PM2_UNIT_NAME=$safe_unit" | tee -a "$report"
+            echo "PM2_UNIT_ENABLED=${enabled:-unknown}" | tee -a "$report"
+            echo "PM2_UNIT_ACTIVE=${active:-unknown}" | tee -a "$report"
+            echo "PM2_UNIT_USER_MATCH=$([ "$user" = ubuntu ] && echo yes || echo no)" | tee -a "$report"
+            echo "PM2_UNIT_MAIN_PID_PRESENT=$([ "${main_pid:-0}" -gt 0 ] 2>/dev/null && echo yes || echo no)" | tee -a "$report"
+            echo "PM2_UNIT_FRAGMENT_STANDARD=$([[ "$fragment" == /etc/systemd/system/* ]] && echo yes || echo no)" | tee -a "$report"
+            echo "PM2_UNIT_EXECSTART_RESURRECT=$([[ "$exec_start" == *resurrect* ]] && echo yes || echo no)" | tee -a "$report"
+          done
+
+          mapfile -t timer_units < <(
+            systemctl list-unit-files --type=timer --no-legend 'fanmind-*.timer' 2>/dev/null |
+              awk 'NF {print $1}' |
+              sort -u
+          )
+          test "${#timer_units[@]}" -ge 8
+          echo "FANMIND_TIMER_COUNT=${#timer_units[@]}" | tee -a "$report"
+          for unit in "${timer_units[@]}"; do
+            safe_unit="${unit//[^a-zA-Z0-9_.@-]/_}"
+            enabled="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
+            active="$(systemctl is-active "$unit" 2>/dev/null || true)"
+            echo "FANMIND_TIMER=$safe_unit|enabled:${enabled:-unknown}|active:${active:-unknown}" | tee -a "$report"
+          done
+
+          echo 'SERVICE_DIAGNOSTIC_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized service diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-reboot-service-diagnostic
+          path: fanmind-reboot-service-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 7
