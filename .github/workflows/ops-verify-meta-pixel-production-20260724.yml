@@ -193,7 +193,7 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Install Chromium only
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Verify real Production consent and PageView transport
         run: |
