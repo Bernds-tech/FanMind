@@ -162,9 +162,9 @@ export function MarketingConsentManager({
 
   if (
     !pixelConfigured ||
-    !routeEligible ||
     locationHash === null ||
-    documentReferrer === null
+    documentReferrer === null ||
+    (!routeEligible && consent === "unset")
   ) {
     return null;
   }
