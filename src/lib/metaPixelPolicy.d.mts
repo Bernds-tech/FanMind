@@ -19,6 +19,7 @@ export const META_PIXEL_SCRIPT_URL: string;
 export const META_PIXEL_ACTIVE_EVENTS: readonly MetaPixelActiveEventName[];
 export const META_PIXEL_PREPARED_EVENTS: readonly MetaPixelPreparedEventName[];
 export const META_PIXEL_STANDARD_EVENTS: readonly MetaPixelEventName[];
+export const META_PIXEL_PUBLIC_ROUTES: readonly string[];
 
 export function normalizeMarketingConsent(
   value: unknown,
@@ -32,4 +33,9 @@ export function isSupportedMetaPixelEvent(
   eventName: unknown,
 ): eventName is MetaPixelEventName;
 export function normalizeMetaPixelRoute(pathname: unknown): string;
+export function isMetaPixelPublicRoute(pathname: unknown): boolean;
+export function isMetaPixelPageViewAllowed(input: {
+  pathname: unknown;
+  search?: unknown;
+}): boolean;
 export function buildMetaPixelBootstrap(value: unknown): string | null;
