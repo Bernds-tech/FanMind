@@ -36,10 +36,11 @@ Die Integration sitzt genau einmal in der zentralen Web-App-Struktur:
 4. `MetaPixelLoader` wird nur bei `granted`, einer gültigen Pixel-ID und einer freigegebenen öffentlichen URL gerendert.
 5. Das Meta-Bootstrap-Script wird über `next/script` mit `afterInteractive` genau einmal geladen.
 6. Vor der Initialisierung wird Metas automatische Konfiguration mit `autoConfig=false` für diesen Pixel deaktiviert; nur FanMinds geprüfte Event-Hilfe darf Events auslösen.
-7. Der Bootstrap initialisiert nur den Pixel. `PageView` wird getrennt und dedupliziert über den sicheren App-Router-Pfad samt freigegebener Query ausgelöst.
-7. Bei Widerruf werden weitere FanMind-Events blockiert, Meta-Consent auf `revoke` gesetzt und bekannte First-Party-Meta-Cookies (`_fbp`, `_fbc`) für den aktuellen Host entfernt.
-8. Beim Wechsel auf geschützte oder nicht freigegebene URLs wird Meta-Consent vorsorglich widerrufen und kein FanMind-Event ausgelöst.
-9. Das dynamisch erzeugte Meta-Script erhält `referrerPolicy='no-referrer'`; zusätzlich blockiert FanMind jeden same-origin Referrer, der von einer geschützten, dynamischen oder anderweitig nicht freigegebenen FanMind-URL stammt.
+7. Der Bootstrap initialisiert den Pixel und sendet anschließend ausschließlich ein browserinternes Readiness-Signal ohne Nutz- oder Kundendaten. Dadurch hängt die Event-Aktivierung nicht von einem unzuverlässigen Callback eines Inline-Scripts ab.
+8. `PageView` wird getrennt und dedupliziert über den sicheren App-Router-Pfad samt freigegebener Query ausgelöst.
+9. Bei Widerruf werden weitere FanMind-Events blockiert, Meta-Consent auf `revoke` gesetzt und bekannte First-Party-Meta-Cookies (`_fbp`, `_fbc`) für den aktuellen Host entfernt.
+10. Beim Wechsel auf geschützte oder nicht freigegebene URLs wird Meta-Consent vorsorglich widerrufen und kein FanMind-Event ausgelöst.
+11. Das dynamisch erzeugte Meta-Script erhält `referrerPolicy='no-referrer'`; zusätzlich blockiert FanMind jeden same-origin Referrer, der von einer geschützten, dynamischen oder anderweitig nicht freigegebenen FanMind-URL stammt.
 
 Es gibt bewusst kein ungegate-tes `noscript`-Bild, weil dieses auch ohne JavaScript und ohne ausdrückliche Marketing-Einwilligung eine Meta-Anfrage auslösen würde.
 
@@ -102,7 +103,7 @@ Die Ablehnen- und Akzeptieren-Aktionen werden gleichwertig im Banner angeboten. 
 NEXT_PUBLIC_META_PIXEL_ID=2069553844439892
 ```
 
-Die Pixel-ID ist eine öffentliche technische Kennung und kein Secret. Trotzdem wird sie zentral über ENV konfiguriert, damit lokale Entwicklung, Staging und Production getrennt bleiben.
+Die Pixel-ID ist eine öffentliche technische Kennung und kein Secret. Trotzdem wird sie zentral über ENV konfiguriert, damit lokale Entwicklung, Staging und Production getrennt bleiben. In YAML-Dateien muss die lange Nummer als String in Anführungszeichen stehen, damit sie nicht in wissenschaftliche Notation umgewandelt wird.
 
 Fail-closed-Verhalten:
 
@@ -153,9 +154,9 @@ Nicht aktiviert:
 - kein Advanced Matching beziehungsweise kein erweitertes Matching;
 - keine automatische Übergabe von Nutzerfeldern;
 - keine Conversions API;
-- serverseitiges Meta-Tracking;
-- automatische Conversion-Erkennung;
-- benutzerdefinierte Conversion-Events.
+- kein serverseitiges Meta-Tracking;
+- keine automatische Conversion-Erkennung;
+- keine benutzerdefinierten Conversion-Events.
 
 ## Lokale und CI-Prüfung
 
@@ -174,7 +175,7 @@ Browser-E2E setzt die öffentliche Test-ID nur im CI-Build und fängt `connect.f
 1. ohne Consent kein Meta-Script und kein `PageView`;
 2. `Nur notwendige` hält das Script deaktiviert;
 3. `Marketing erlauben` lädt genau ein Script;
-4. genau eine `init`-Queue-Anweisung mit `2069553844439892`;
+4. genau eine `autoConfig=false`- und eine `init`-Queue-Anweisung mit `2069553844439892`;
 5. genau ein initiales `PageView`;
 6. genau ein weiteres `PageView` nach echter Client-Navigation;
 7. kein doppeltes `PageView` beim erneuten Öffnen/Bestätigen derselben Auswahl;
