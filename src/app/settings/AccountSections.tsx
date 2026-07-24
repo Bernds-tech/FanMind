@@ -441,6 +441,7 @@ export function ProfileSettingsSection({
         <p className={profileStyles.headerCopy}>{locale === "en" ? "The PDF summarizes the account, authorized workspace, contract details and all contacts visible in FanMind. External channel content is included only when it has been stored permanently in FanMind. Secrets, tokens and data from other workspaces are excluded." : "Die PDF fasst Konto, autorisierten Workspace, Vertragsdaten und alle in FanMind sichtbaren Kontakte zusammen. Externe Kanalinhalte sind nur enthalten, wenn sie dauerhaft in FanMind gespeichert wurden. Secrets, Tokens und Daten anderer Workspaces sind ausgeschlossen."}</p>
         <div className={profileStyles.actionRowSplit}>
           <a className={profileStyles.mailButton} href={`/settings/profile/data-export?lang=${locale}`}>{locale === "en" ? "Download PDF data disclosure" : "PDF-Datenauskunft herunterladen"}</a>
+          <a className={profileStyles.mailButton} href="/settings/account-deletion">{locale === "en" ? "Delete account and data" : "Account und Daten löschen"}</a>
         </div>
       </section>
     </div>

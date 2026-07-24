@@ -7,11 +7,7 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_ENV_FILE = "/var/www/fanmind/.env.production";
 const REQUEST_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const TERMINAL_STATUSES = new Set([
-  "completed",
-  "completed_notification_pending",
-  "cancelled",
-]);
+const PROCESSABLE_STATUSES = new Set(["pending", "blocked"]);
 
 export class AccountDeletionProcessorError extends Error {
   constructor(code) {
@@ -375,7 +371,7 @@ export async function processAccountDeletion({
   const serviceKey = requireValue(env, "SUPABASE_SERVICE_ROLE_KEY", 20);
   const config = { supabaseUrl, serviceKey };
   const request = await getDeletionRequest(fetchImpl, config, requestId);
-  if (TERMINAL_STATUSES.has(request.status)) {
+  if (!PROCESSABLE_STATUSES.has(request.status)) {
     throw new AccountDeletionProcessorError("request_not_processable");
   }
   if (!request.user_id) {

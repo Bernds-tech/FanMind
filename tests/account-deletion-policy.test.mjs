@@ -293,15 +293,17 @@ test("Mobile settings make deletion easy to find and accepted requests trigger s
 });
 
 test("public Web resource links directly into the authenticated deletion flow", async () => {
-  const [publicPage, protectedPage] = await Promise.all([
+  const [publicPage, protectedPage, profileSettings] = await Promise.all([
     readFile("src/app/account-deletion/page.tsx", "utf8"),
     readFile("src/app/settings/account-deletion/page.tsx", "utf8"),
+    readFile("src/app/settings/AccountSections.tsx", "utf8"),
   ]);
   assert.match(publicPage, /FanMind-Account vollständig löschen/u);
   assert.match(publicPage, /returnTo=%2Fsettings%2Faccount-deletion/u);
   assert.match(publicPage, /30 Tagen/u);
   assert.match(protectedPage, /getSupabaseServerUser/u);
   assert.match(protectedPage, /AccountDeletionClient/u);
+  assert.match(profileSettings, /href="\/settings\/account-deletion"/u);
 });
 
 test("manual processor defaults to redacted dry-run and performs no deletion", async () => {
@@ -417,6 +419,7 @@ test("deployment installs the processor but no timer or automatic execution exis
   assert.match(deploy, /process-account-deletion\.mjs/u);
   assert.doesNotMatch(deploy, /process-account-deletion\.mjs --execute/u);
   assert.doesNotMatch(deploy, /fanmind-account-deletion\.timer/u);
+  assert.match(processor, /PROCESSABLE_STATUSES = new Set\(\["pending", "blocked"\]\)/u);
   assert.match(processor, /FANMIND_ACCOUNT_DELETION_EXECUTION_ENABLED/u);
   assert.match(processor, /confirmation !== requestId/u);
   assert.match(processor, /createHmac\("sha256"/u);

@@ -11,6 +11,7 @@ Sie schützt die kritischen öffentlichen FanMind-Flows auf echter Browser-Ebene
 - Passwort-Sichtbarkeit;
 - Demo-Bestätigungsdialog ohne Demo-Erzeugung;
 - enumeration-sicherer Passwort-Reset mit vollständig synthetischer Supabase-Antwort;
+- öffentlicher Account-Löschressourcenpfad mit direktem authentifiziertem Gesamtprozess;
 - Starter-Paketwahrheit und Roadmap-Abgrenzung der Vorschau-Pakete;
 - Weiterleitung geschützter Routen zum Login;
 - Desktop- und Mobile-Viewport ohne horizontales Überlaufen.
