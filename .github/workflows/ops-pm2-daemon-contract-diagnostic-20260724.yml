@@ -1,0 +1,109 @@
+name: FanMind P1 PM2 Daemon Contract Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-pm2-daemon-contract-diagnostic-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-pm2-daemon-contract-diagnostic-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 10
+    env:
+      EXPECTED_RELEASE: 6b8ba61a1786651713b2507340dc7b673811159d
+      REPORT_PATH: fanmind-pm2-daemon-contract-diagnostic.txt
+
+    steps:
+      - name: Checkout trusted reboot branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Inspect PM2 daemon and unit contract read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'PM2_DAEMON_CONTRACT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+
+          pid_file="$(systemctl show pm2-ubuntu.service -p PIDFile --value)"
+          exec_start="$(systemctl show pm2-ubuntu.service -p ExecStart --value)"
+          echo "PM2_UNIT_ENABLED=$([ "$(systemctl is-enabled pm2-ubuntu.service 2>/dev/null || true)" = enabled ] && echo yes || echo no)" | tee -a "$report"
+          echo "PM2_UNIT_TYPE_FORKING=$([ "$(systemctl show pm2-ubuntu.service -p Type --value)" = forking ] && echo yes || echo no)" | tee -a "$report"
+          echo "PM2_UNIT_USER_UBUNTU=$([ "$(systemctl show pm2-ubuntu.service -p User --value)" = ubuntu ] && echo yes || echo no)" | tee -a "$report"
+          echo "PM2_UNIT_PIDFILE_EXPECTED=$([ "$pid_file" = /home/ubuntu/.pm2/pm2.pid ] && echo yes || echo no)" | tee -a "$report"
+          echo "PM2_UNIT_PIDFILE_EXISTS=$([ -s "$pid_file" ] && echo yes || echo no)" | tee -a "$report"
+          echo "PM2_UNIT_EXECSTART_RESURRECT=$([[ "$exec_start" == *resurrect* ]] && echo yes || echo no)" | tee -a "$report"
+
+          ps -eo pid=,user=,args= | node <<'NODE' | tee -a "$report"
+          let input = '';
+          process.stdin.on('data', chunk => input += chunk);
+          process.stdin.on('end', () => {
+            const rows = input.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+              const match = line.match(/^(\d+)\s+(\S+)\s+(.+)$/);
+              return match ? { pid: Number(match[1]), user: match[2], args: match[3] } : null;
+            }).filter(Boolean);
+            const ubuntu = rows.filter(row => row.user === 'ubuntu');
+            const pm2 = ubuntu.filter(row => /PM2/iu.test(row.args));
+            const god = ubuntu.filter(row => /God Daemon/iu.test(row.args));
+            const home = ubuntu.filter(row => row.args.includes('/home/ubuntu/.pm2'));
+            const combined = ubuntu.filter(row => /PM2/iu.test(row.args) && /God Daemon/iu.test(row.args) && row.args.includes('/home/ubuntu/.pm2'));
+            console.log(`UBUNTU_PROCESS_COUNT=${ubuntu.length}`);
+            console.log(`PM2_TEXT_PROCESS_COUNT=${pm2.length}`);
+            console.log(`PM2_GOD_DAEMON_TEXT_COUNT=${god.length}`);
+            console.log(`PM2_HOME_TEXT_PROCESS_COUNT=${home.length}`);
+            console.log(`PM2_COMBINED_DAEMON_COUNT=${combined.length}`);
+            console.log(`PM2_COMBINED_DAEMON_PID_VALID=${combined.length === 1 && combined[0].pid > 1 ? 'yes' : 'no'}`);
+            console.log(`PM2_COMBINED_DAEMON_PROC_OWNER_UBUNTU=${combined.length === 1 ? 'candidate' : 'no'}`);
+          });
+          NODE
+
+          pgrep -u ubuntu -f 'PM2' >/tmp/fanmind-pm2-pids.txt 2>/dev/null || true
+          broad_count="$(awk 'NF {count++} END {print count+0}' /tmp/fanmind-pm2-pids.txt)"
+          rm -f /tmp/fanmind-pm2-pids.txt
+          echo "PM2_PGREP_BROAD_COUNT=$broad_count" | tee -a "$report"
+
+          pm2 jlist | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const rows = JSON.parse(input).filter(item => item?.name === "fanmind");
+              const ok = rows.length === 1 && rows[0]?.pm2_env?.status === "online" && Number(rows[0]?.pid || 0) > 0;
+              process.exit(ok ? 0 : 1);
+            });
+          '
+          echo 'PM2_CLI_FANMIND_APP=healthy' | tee -a "$report"
+          echo 'PM2_DAEMON_CONTRACT_DIAGNOSTIC_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized PM2 daemon contract diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-pm2-daemon-contract-diagnostic
+          path: fanmind-pm2-daemon-contract-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 7
