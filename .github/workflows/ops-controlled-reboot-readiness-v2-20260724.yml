@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   audit:
+    # Re-run only after the earlier transient apt/unattended-upgrades window.
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
