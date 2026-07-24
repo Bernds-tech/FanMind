@@ -111,6 +111,7 @@ jobs:
           sudo install -o root -g root -m 0750 scripts/operations/operations-monitor.mjs /usr/local/lib/fanmind-ops/operations-monitor.mjs
           sudo install -o root -g root -m 0750 scripts/operations/run-demo-cleanup.mjs /usr/local/lib/fanmind-ops/run-demo-cleanup.mjs
           sudo install -o root -g root -m 0750 scripts/operations/webhook-diagnostic-retention.mjs /usr/local/lib/fanmind-ops/webhook-diagnostic-retention.mjs
+          sudo install -o root -g root -m 0750 scripts/operations/process-account-deletion.mjs /usr/local/lib/fanmind-ops/process-account-deletion.mjs
           sudo install -o root -g root -m 0750 scripts/operations/deploy-isolated-release.sh /usr/local/lib/fanmind-ops/deploy-isolated-release.sh
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-enqueue@.service /etc/systemd/system/fanmind-backup-enqueue@.service
