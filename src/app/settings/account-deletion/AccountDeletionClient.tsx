@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import styles from "./account-deletion.module.css";
 
 const REQUEST_PHRASE = "KONTO LÖSCHEN";
@@ -92,7 +92,7 @@ export function AccountDeletionClient({
     [request.status],
   );
 
-  async function submitDeletionRequest(event: React.FormEvent<HTMLFormElement>) {
+  async function submitDeletionRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError(null);
@@ -118,7 +118,7 @@ export function AccountDeletionClient({
     }
   }
 
-  async function cancelDeletionRequest(event: React.FormEvent<HTMLFormElement>) {
+  async function cancelDeletionRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!request.id) return;
     setBusy(true);

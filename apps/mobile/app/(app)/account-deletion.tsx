@@ -388,12 +388,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   warningText: {
-    color: colors.yellow,
+    color: colors.amber,
     fontSize: typography.small,
     lineHeight: 20,
   },
   warningCard: {
-    borderColor: colors.yellow,
+    borderColor: colors.amber,
   },
   dangerCard: {
     borderColor: colors.red,
