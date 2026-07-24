@@ -1,0 +1,32 @@
+name: FanMind P1 Activate Account Deletion Requests
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-activate-account-deletion-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-activate-account-deletion-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cancel-superseded:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/activate-account-deletion-20260724'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Record superseded activation cancellation
+        run: |
+          echo 'SUPERSEDED_ACCOUNT_DELETION_ACTIVATION_CANCELLED=yes'
+          echo 'DATABASE_OR_CUSTOMER_MUTATION=none'
