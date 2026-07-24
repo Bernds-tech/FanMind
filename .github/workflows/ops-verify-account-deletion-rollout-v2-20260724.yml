@@ -54,6 +54,9 @@ jobs:
             /usr/bin/node \
             "$GITHUB_WORKSPACE/scripts/operations/verify-account-deletion-rollout-v2-temp-20260724.mjs" \
             "$report"
+          sudo -n chown "$(id -u):$(id -g)" "$report"
+          chmod 0600 "$report"
+          test -r "$report"
 
       - name: Upload sanitized rollout evidence
         if: always()
