@@ -8,6 +8,7 @@ import {
   FANMIND_MARKETING_CONSENT_MAX_AGE_SECONDS,
   isMetaPixelEnabled,
   isMetaPixelPageViewAllowed,
+  isMetaPixelReferrerAllowed,
   normalizeMarketingConsent,
   normalizeMetaPixelId,
   type FanMindMarketingConsent,
@@ -86,6 +87,7 @@ export function MarketingConsentManager({
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const [locationHash, setLocationHash] = useState<string | null>(null);
+  const [documentReferrer, setDocumentReferrer] = useState<string | null>(null);
   const normalizedInitialConsent = normalizeMarketingConsent(initialConsent);
   const [consent, setConsent] = useState<FanMindMarketingConsent>(
     normalizedInitialConsent,
@@ -97,10 +99,15 @@ export function MarketingConsentManager({
   const pixelConfigured = normalizeMetaPixelId(pixelId) !== null;
   const routeEligible =
     locationHash !== null &&
+    documentReferrer !== null &&
     isMetaPixelPageViewAllowed({
       pathname,
       search,
       hash: locationHash,
+    }) &&
+    isMetaPixelReferrerAllowed({
+      referrer: documentReferrer,
+      origin: typeof window === "undefined" ? "" : window.location.origin,
     });
   const pixelEnabled = useMemo(
     () => isMetaPixelEnabled({ pixelId, consent }) && routeEligible,
@@ -113,16 +120,22 @@ export function MarketingConsentManager({
 
   useEffect(() => {
     const syncHash = () => setLocationHash(window.location.hash);
+    setDocumentReferrer(document.referrer);
     syncHash();
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
 
   useEffect(() => {
-    if (pixelConfigured && locationHash !== null && !routeEligible) {
+    if (
+      pixelConfigured &&
+      locationHash !== null &&
+      documentReferrer !== null &&
+      !routeEligible
+    ) {
       revokeMetaPixelConsent();
     }
-  }, [locationHash, pixelConfigured, routeEligible]);
+  }, [documentReferrer, locationHash, pixelConfigured, routeEligible]);
 
   function chooseDenied() {
     persistConsent("denied");
@@ -139,7 +152,14 @@ export function MarketingConsentManager({
     setPanelOpen(false);
   }
 
-  if (!pixelConfigured || !routeEligible || locationHash === null) return null;
+  if (
+    !pixelConfigured ||
+    !routeEligible ||
+    locationHash === null ||
+    documentReferrer === null
+  ) {
+    return null;
+  }
 
   return (
     <>
