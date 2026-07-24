@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { MarketingConsentManager } from "@/components/marketing/MarketingConsentManager";
+import {
+  FANMIND_MARKETING_CONSENT_COOKIE,
+  normalizeMarketingConsent,
+} from "@/lib/metaPixelPolicy.mjs";
 import { FANMIND_LOCALE_COOKIE, normalizeWorkspaceLocale } from "@/lib/workspaceLocale";
 import { FANMIND_BRIGHTNESS_COOKIE, getThemeClass, normalizeFanMindBrightness } from "@/lib/userPreferences";
 import { fanMindDescription, fanMindOgAlt, fanMindSiteUrl, fanMindTitle } from "./brandMetadata";
@@ -55,6 +60,10 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const locale = normalizeWorkspaceLocale(cookieStore.get(FANMIND_LOCALE_COOKIE)?.value);
   const brightness = normalizeFanMindBrightness(cookieStore.get(FANMIND_BRIGHTNESS_COOKIE)?.value);
+  const marketingConsent = normalizeMarketingConsent(
+    cookieStore.get(FANMIND_MARKETING_CONSENT_COOKIE)?.value,
+  );
+  const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ?? "";
 
   return (
     <html lang={locale} className={getThemeClass(brightness)} style={{ "--fanmind-brightness-filter": String(brightness / 80), "--fanmind-dimmer": String(brightness), "--fanmind-dimmer-bg-lift": String(Math.max(0, (brightness - 80) / 40)) } as Record<string, string>} suppressHydrationWarning>
@@ -65,6 +74,11 @@ export default async function RootLayout({
           }}
         />
         {children}
+        <MarketingConsentManager
+          initialConsent={marketingConsent}
+          pixelId={metaPixelId}
+          locale={locale}
+        />
       </body>
     </html>
   );
