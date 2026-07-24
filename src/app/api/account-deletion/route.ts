@@ -38,6 +38,57 @@ function errorResponse(code: string, status: number, message: string) {
   return response({ ok: false, code, error: message }, status);
 }
 
+function addHttpOrigin(origins: Set<string>, value: string | undefined) {
+  const candidate = value?.trim();
+  if (!candidate) return;
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      origins.add(parsed.origin);
+    }
+  } catch {
+    // Invalid optional configuration is ignored here; deployment preflights own it.
+  }
+}
+
+function assertTrustedMutationOrigin(
+  request: Request,
+  accessToken: string | undefined,
+) {
+  // Mobile sends an explicit bearer token and does not rely on browser cookies.
+  if (accessToken) return;
+
+  const originHeader = request.headers.get("origin")?.trim();
+  if (!originHeader) {
+    throw new AccountDeletionServiceError("invalid_request_origin");
+  }
+
+  let origin: string;
+  try {
+    const parsed = new URL(originHeader);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("invalid_protocol");
+    }
+    origin = parsed.origin;
+  } catch {
+    throw new AccountDeletionServiceError("invalid_request_origin");
+  }
+
+  const allowedOrigins = new Set<string>();
+  addHttpOrigin(allowedOrigins, new URL(request.url).origin);
+  addHttpOrigin(allowedOrigins, process.env.NEXT_PUBLIC_APP_URL);
+  addHttpOrigin(allowedOrigins, process.env.NEXT_PUBLIC_SITE_URL);
+  addHttpOrigin(allowedOrigins, process.env.FANMIND_APP_URL);
+  if (!allowedOrigins.has(origin)) {
+    throw new AccountDeletionServiceError("invalid_request_origin");
+  }
+
+  const fetchSite = request.headers.get("sec-fetch-site")?.trim().toLowerCase();
+  if (fetchSite && !["same-origin", "same-site", "none"].includes(fetchSite)) {
+    throw new AccountDeletionServiceError("invalid_request_origin");
+  }
+}
+
 async function authenticate(request: Request) {
   let accessToken: string | undefined;
   try {
@@ -90,6 +141,13 @@ function mapError(error: unknown) {
         "Bitte melde dich erneut an, um die Account-Löschung zu verwalten.",
       );
     }
+    if (error.code === "invalid_request_origin") {
+      return errorResponse(
+        "invalid_request_origin",
+        403,
+        "Die Löschanfrage muss aus dem angemeldeten FanMind-Bereich gestartet werden.",
+      );
+    }
     if (error.code === "request_not_found") {
       return errorResponse(
         "request_not_found",
@@ -131,6 +189,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const context = await authenticate(request);
+    assertTrustedMutationOrigin(request, context.accessToken);
     if (isTemporaryDemoUser(context.user)) {
       return errorResponse(
         "temporary_demo_managed_automatically",
@@ -181,13 +240,14 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const { user } = await authenticate(request);
+    const context = await authenticate(request);
+    assertTrustedMutationOrigin(request, context.accessToken);
     const payload = (await request.json().catch(() => null)) as
       | { requestId?: unknown; confirmation?: unknown }
       | null;
     const validated = validateAccountDeletionCancellation(payload);
     const deletionRequest = await cancelAccountDeletionRequest({
-      userId: user.id,
+      userId: context.user.id,
       requestId: validated.requestId,
     });
     return response({
