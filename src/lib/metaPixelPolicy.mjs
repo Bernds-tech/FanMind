@@ -21,7 +21,48 @@ export const META_PIXEL_STANDARD_EVENTS = Object.freeze([
   ...META_PIXEL_PREPARED_EVENTS,
 ]);
 
+export const META_PIXEL_PUBLIC_ROUTES = Object.freeze([
+  "/",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/roadmap",
+  "/landing-v2",
+  "/account-deletion",
+  "/impressum",
+  "/datenschutz",
+  "/agb",
+  "/avv",
+  "/zahlungsbedingungen",
+  "/referral-bedingungen",
+]);
+
 const PIXEL_ID_PATTERN = /^[0-9]{5,32}$/u;
+const SAFE_QUERY_VALUES = Object.freeze({
+  lang: new Set(["de", "en"]),
+  plan: new Set([
+    "starter",
+    "starter_paid_setup",
+    "starter_no_setup_commitment",
+    "growth",
+    "agency",
+  ]),
+});
+const ROUTE_QUERY_KEYS = Object.freeze({
+  "/": new Set(["lang"]),
+  "/login": new Set(["lang"]),
+  "/register": new Set(["lang", "plan"]),
+  "/forgot-password": new Set(["lang"]),
+  "/roadmap": new Set(["lang"]),
+  "/landing-v2": new Set(["lang"]),
+  "/account-deletion": new Set(["lang"]),
+  "/impressum": new Set(["lang"]),
+  "/datenschutz": new Set(["lang"]),
+  "/agb": new Set(["lang"]),
+  "/avv": new Set(["lang"]),
+  "/zahlungsbedingungen": new Set(["lang"]),
+  "/referral-bedingungen": new Set(["lang"]),
+});
 
 export function normalizeMarketingConsent(value) {
   const normalized = String(value ?? "")
@@ -53,6 +94,27 @@ export function normalizeMetaPixelRoute(pathname) {
   const value = String(pathname ?? "").trim();
   if (!value.startsWith("/") || value.startsWith("//")) return "/";
   return value.replace(/\/{2,}/gu, "/") || "/";
+}
+
+export function isMetaPixelPublicRoute(pathname) {
+  return META_PIXEL_PUBLIC_ROUTES.includes(normalizeMetaPixelRoute(pathname));
+}
+
+export function isMetaPixelPageViewAllowed({ pathname, search = "" }) {
+  const route = normalizeMetaPixelRoute(pathname);
+  if (!isMetaPixelPublicRoute(route)) return false;
+
+  const rawSearch = String(search ?? "").trim().replace(/^\?/u, "");
+  if (!rawSearch) return true;
+
+  const allowedKeys = ROUTE_QUERY_KEYS[route] ?? new Set();
+  const parameters = new URLSearchParams(rawSearch);
+  for (const [key, value] of parameters.entries()) {
+    if (!allowedKeys.has(key)) return false;
+    const allowedValues = SAFE_QUERY_VALUES[key];
+    if (!allowedValues?.has(value)) return false;
+  }
+  return true;
 }
 
 export function buildMetaPixelBootstrap(value) {
