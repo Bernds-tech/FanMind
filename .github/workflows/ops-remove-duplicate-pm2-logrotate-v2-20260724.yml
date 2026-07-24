@@ -1,0 +1,62 @@
+name: FanMind P1 Remove Duplicate PM2 Logrotate Rule V2
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-remove-duplicate-pm2-logrotate-v2-20260724.yml"
+      - "scripts/operations/remove-duplicate-pm2-logrotate-temp-20260724.mjs"
+
+concurrency:
+  group: fanmind-p1-remove-duplicate-pm2-logrotate-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/remove-duplicate-pm2-logrotate-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 30
+    env:
+      EXPECTED_RELEASE: f14d71544ec721fc820e588c76e077b0912fa58b
+      SOURCE_DIR: /var/www/fanmind
+      REPORT_PATH: fanmind-pm2-logrotate-cleanup-report.txt
+
+    steps:
+      - name: Checkout trusted operations branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/remove-duplicate-pm2-logrotate-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Remove redundant rule and verify unchanged runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          node \
+            "$GITHUB_WORKSPACE/scripts/operations/remove-duplicate-pm2-logrotate-temp-20260724.mjs" \
+            "$GITHUB_WORKSPACE/$REPORT_PATH"
+
+      - name: Upload sanitized cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-pm2-logrotate-cleanup-report
+          path: fanmind-pm2-logrotate-cleanup-report.txt
+          if-no-files-found: error
+          retention-days: 14
