@@ -39,4 +39,8 @@ export function isMetaPixelPageViewAllowed(input: {
   search?: unknown;
   hash?: unknown;
 }): boolean;
+export function isMetaPixelReferrerAllowed(input: {
+  referrer: unknown;
+  origin: unknown;
+}): boolean;
 export function buildMetaPixelBootstrap(value: unknown): string | null;
