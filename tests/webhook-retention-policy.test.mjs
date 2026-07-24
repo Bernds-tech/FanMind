@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -187,18 +187,27 @@ test("systemd timer stays install-only until migration verification", async () =
   );
 });
 
-test("PM2 and journald retention templates are finite and conservative", async () => {
-  const [logrotate, journald] = await Promise.all([
-    readFile("ops/logrotate/fanmind-pm2", "utf8"),
+test("pm2-logrotate is the only PM2 rotation source and journald stays finite", async () => {
+  const [runbook, journald, deploy] = await Promise.all([
+    readFile("docs/security/WEBHOOK_LOG_RETENTION.md", "utf8"),
     readFile("ops/systemd/journald-fanmind.conf", "utf8"),
+    readFile(".github/workflows/deploy-fanmind.yml", "utf8"),
   ]);
 
-  assert.match(logrotate, /daily/u);
-  assert.match(logrotate, /size 20M/u);
-  assert.match(logrotate, /rotate 14/u);
-  assert.match(logrotate, /compress/u);
-  assert.match(logrotate, /copytruncate/u);
-  assert.match(logrotate, /su ubuntu ubuntu/u);
+  await assert.rejects(
+    access("ops/logrotate/fanmind-pm2"),
+    (error) => error && typeof error === "object" && error.code === "ENOENT",
+  );
+
+  assert.match(runbook, /einzige zulässige PM2-Logrotationsquelle[\s\S]*`pm2-logrotate`/u);
+  assert.match(runbook, /maximale Dateigröße: 10 MiB/u);
+  assert.match(runbook, /Aufbewahrung: 14 Rotationen/u);
+  assert.match(runbook, /Kompression: aktiv/u);
+  assert.match(runbook, /keine Production-Datei `\/etc\/logrotate\.d\/fanmind-pm2`/u);
+  assert.match(runbook, /niemals gleichzeitig ein PM2-Modul und eine systemweite Logrotate-Regel/u);
+
+  assert.doesNotMatch(deploy, /ops\/logrotate\/fanmind-pm2/u);
+  assert.doesNotMatch(deploy, /\/etc\/logrotate\.d\/fanmind-pm2/u);
 
   assert.match(journald, /SystemMaxUse=512M/u);
   assert.match(journald, /RuntimeMaxUse=128M/u);
