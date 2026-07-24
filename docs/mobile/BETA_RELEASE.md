@@ -20,6 +20,9 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - minimale Duplikatprüfung für Handle plus Quelle;
 - lokaler Logout-Purge für registrierte FanMind-SecureStore-Schlüssel;
 - begrenzte und rollback-sichere SecureStore-Schreibfolge;
+- vollständige Account-Löschanfrage in Mobile sowie öffentlicher Webressourcenpfad;
+- authentifizierter Status/Widerruf und service-role-only Request-Queue;
+- manueller Dry-Run-first Account-Löschprocessor ohne Timer;
 - getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-Export und Architekturgrenze;
 - `development`, `preview` und `production` in `apps/mobile/eas.json`.
 
@@ -181,7 +184,7 @@ Die anschließende Übertragung benötigt echte Store-Konten. EAS Submit lädt B
 - Android Internal Testing und iOS TestFlight;
 - Offline-Lese-Cache mit Purge-Vertrag;
 - Push-Grundlage für Follow-ups;
-- Account-/Datenlöschprozess in der App;
+- realer Account-Löschantrag/Widerruf auf signiertem Android-/iOS-Gerät;
 - reale Android-/iOS-Gerätetestprotokolle;
 - Store-Datenschutzangaben, Screenshots und Metadaten.
 

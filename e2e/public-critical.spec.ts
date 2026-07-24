@@ -139,6 +139,27 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test("öffentliche Account-Löschressource führt direkt zum authentifizierten Gesamtprozess", async ({
+    page,
+  }) => {
+    const response = await page.goto("/account-deletion");
+
+    expect(response?.ok()).toBe(true);
+    await expect(
+      page.getByRole("heading", { name: "FanMind-Account vollständig löschen" }),
+    ).toBeVisible();
+    await expect(page.getByText(/bloße Deaktivierung ist nicht/iu)).toBeVisible();
+    await expect(page.getByText(/maximale Bearbeitungsfrist.*30 Tage/iu)).toBeVisible();
+    const deletionLink = page.getByRole("link", {
+      name: "Anmelden und Löschung einleiten",
+    });
+    await expect(deletionLink).toHaveAttribute(
+      "href",
+      "/login?returnTo=%2Fsettings%2Faccount-deletion",
+    );
+    await expectNoHorizontalOverflow(page);
+  });
+
   test("Starter-Registrierung zeigt echte Optionen und grenzt Roadmap-Pakete ab", async ({
     page,
   }) => {
