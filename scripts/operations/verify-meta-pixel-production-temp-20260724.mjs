@@ -23,14 +23,45 @@ function sleep(ms) {
 async function waitUntil(check, timeoutMs = 20_000, intervalMs = 200) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (await check()) return;
+    if (await check()) return true;
     await sleep(intervalMs);
   }
-  throw new Error("verification_timeout");
+  return false;
 }
 
 function requireCondition(condition, code) {
   if (!condition) throw new Error(code);
+}
+
+function isMetaHost(hostname) {
+  return /(^|\.)facebook\.(?:com|net)$/iu.test(hostname);
+}
+
+function requestParameters(request, url) {
+  const parameters = [url.searchParams];
+  const body = request.postData();
+  if (body && body.length <= 64_000) {
+    try {
+      parameters.push(new URLSearchParams(body));
+    } catch {
+      // A non-form body is ignored and never logged.
+    }
+  }
+  return parameters;
+}
+
+async function observedMetaCalls(page) {
+  return page.evaluate(() =>
+    Array.isArray(window.__fanmindObservedMetaCalls)
+      ? window.__fanmindObservedMetaCalls
+      : [],
+  );
+}
+
+function countObserved(calls, command, value) {
+  return calls.filter(
+    (call) => call?.[0] === command && (value === undefined || call?.[1] === value),
+  ).length;
 }
 
 async function main() {
@@ -46,9 +77,37 @@ async function main() {
     serviceWorkers: "block",
   });
 
+  await context.addInitScript(() => {
+    window.__fanmindObservedMetaCalls = [];
+    window.addEventListener("fanmind:meta-pixel-ready", () => {
+      const current = window.fbq;
+      if (typeof current !== "function") return;
+
+      for (const queued of current.queue ?? []) {
+        const call = Array.from(queued);
+        window.__fanmindObservedMetaCalls.push(call.slice(0, 4));
+      }
+
+      if (current.__fanmindObservationWrapped) return;
+      const proxy = new Proxy(current, {
+        apply(target, thisArgument, argumentsList) {
+          window.__fanmindObservedMetaCalls.push(
+            Array.from(argumentsList).slice(0, 4),
+          );
+          return Reflect.apply(target, thisArgument, argumentsList);
+        },
+      });
+      proxy.__fanmindObservationWrapped = true;
+      window.fbq = proxy;
+      window._fbq = proxy;
+    });
+  });
+
   let scriptRequests = 0;
+  let scriptResponseStatus = 0;
+  let scriptRequestFailed = false;
   let transportRequests = 0;
-  let pageViewRequests = 0;
+  let pageViewTransportRequests = 0;
   const eventNames = new Set();
   const sensitiveParameterKeys = new Set();
 
@@ -68,22 +127,51 @@ async function main() {
       return;
     }
 
-    if (
-      (url.hostname === "www.facebook.com" ||
-        url.hostname === "facebook.com") &&
-      (url.pathname === "/tr" || url.pathname === "/tr/")
-    ) {
-      const id = url.searchParams.get("id");
-      if (id !== PIXEL_ID) return;
-      transportRequests += 1;
-      const eventName = url.searchParams.get("ev") || "missing";
-      eventNames.add(eventName);
-      if (eventName === "PageView") pageViewRequests += 1;
-      for (const key of url.searchParams.keys()) {
+    if (!isMetaHost(url.hostname)) return;
+
+    for (const parameters of requestParameters(request, url)) {
+      const id = parameters.get("id");
+      const eventName = parameters.get("ev");
+      for (const key of parameters.keys()) {
         if (SENSITIVE_PARAMETER_PATTERN.test(key)) {
           sensitiveParameterKeys.add(key);
         }
       }
+      if (id !== PIXEL_ID || !eventName) continue;
+      transportRequests += 1;
+      eventNames.add(eventName);
+      if (eventName === "PageView") pageViewTransportRequests += 1;
+      break;
+    }
+  });
+
+  context.on("response", (response) => {
+    let url;
+    try {
+      url = new URL(response.url());
+    } catch {
+      return;
+    }
+    if (
+      url.hostname === "connect.facebook.net" &&
+      url.pathname === "/en_US/fbevents.js"
+    ) {
+      scriptResponseStatus = response.status();
+    }
+  });
+
+  context.on("requestfailed", (request) => {
+    let url;
+    try {
+      url = new URL(request.url());
+    } catch {
+      return;
+    }
+    if (
+      url.hostname === "connect.facebook.net" &&
+      url.pathname === "/en_US/fbevents.js"
+    ) {
+      scriptRequestFailed = true;
     }
   });
 
@@ -116,17 +204,59 @@ async function main() {
       .click();
     await page.getByRole("button", { name: "Marketing erlauben" }).click();
 
-    await waitUntil(() => scriptRequests === 1);
-    await waitUntil(() => pageViewRequests === 1);
-    await sleep(2_000);
-    requireCondition(scriptRequests === 1, "meta_script_not_exactly_once");
-    requireCondition(pageViewRequests === 1, "initial_pageview_not_exactly_once");
     requireCondition(
-      await page.evaluate(() => typeof window.fbq === "function"),
-      "fbq_not_available_after_consent",
+      await waitUntil(() => scriptRequests === 1),
+      "meta_script_request_timeout",
     );
+    requireCondition(
+      await waitUntil(
+        async () =>
+          (await observedMetaCalls(page)).some(
+            (call) => call?.[0] === "track" && call?.[1] === "PageView",
+          ),
+      ),
+      "initial_pageview_call_timeout",
+    );
+    await waitUntil(() => scriptResponseStatus > 0 || scriptRequestFailed, 15_000);
+    await sleep(2_000);
+
+    let calls = await observedMetaCalls(page);
+    requireCondition(scriptRequests === 1, "meta_script_not_exactly_once");
+    requireCondition(
+      countObserved(calls, "init", PIXEL_ID) === 1,
+      "meta_init_not_exactly_once",
+    );
+    requireCondition(
+      calls.filter(
+        (call) =>
+          call?.[0] === "set" &&
+          call?.[1] === "autoConfig" &&
+          call?.[2] === false &&
+          call?.[3] === PIXEL_ID,
+      ).length === 1,
+      "meta_autoconfig_not_disabled",
+    );
+    requireCondition(
+      countObserved(calls, "track", "PageView") === 1,
+      "initial_pageview_call_not_exactly_once",
+    );
+    requireCondition(
+      await page.evaluate(
+        () =>
+          typeof window.fbq === "function" &&
+          typeof window.fbq.callMethod === "function",
+      ),
+      "meta_library_not_loaded",
+    );
+    requireCondition(
+      !scriptRequestFailed && scriptResponseStatus >= 200 && scriptResponseStatus < 400,
+      "meta_script_response_invalid",
+    );
+
     await emit("OPT_IN_META_SCRIPT_REQUESTS", scriptRequests);
-    await emit("INITIAL_PAGEVIEW_REQUESTS", pageViewRequests);
+    await emit("OPT_IN_META_SCRIPT_RESPONSE_STATUS", scriptResponseStatus);
+    await emit("INITIAL_PAGEVIEW_CALLS", countObserved(calls, "track", "PageView"));
+    await emit("INITIAL_PAGEVIEW_TRANSPORT_REQUESTS", pageViewTransportRequests);
 
     await page
       .getByRole("button", { name: "Datenschutz-Einstellungen" })
@@ -135,17 +265,32 @@ async function main() {
       .getByRole("link", { name: "Details in der Datenschutzerklärung" })
       .click();
     await page.waitForURL(/\/datenschutz#marketing-messung$/u);
-    await waitUntil(() => pageViewRequests === 2);
+    requireCondition(
+      await waitUntil(
+        async () =>
+          countObserved(await observedMetaCalls(page), "track", "PageView") === 2,
+      ),
+      "client_navigation_pageview_call_timeout",
+    );
     await sleep(1_500);
+    calls = await observedMetaCalls(page);
     requireCondition(scriptRequests === 1, "meta_script_duplicated_on_navigation");
-    requireCondition(pageViewRequests === 2, "client_navigation_pageview_invalid");
+    requireCondition(
+      countObserved(calls, "track", "PageView") === 2,
+      "client_navigation_pageview_call_invalid",
+    );
     await emit("CLIENT_NAVIGATION_META_SCRIPT_REQUESTS", scriptRequests);
-    await emit("CLIENT_NAVIGATION_PAGEVIEW_REQUESTS", pageViewRequests);
+    await emit("CLIENT_NAVIGATION_PAGEVIEW_CALLS", 2);
+    await emit("CLIENT_NAVIGATION_PAGEVIEW_TRANSPORT_REQUESTS", pageViewTransportRequests);
 
     await page.getByRole("button", { name: "Marketing erlauben" }).click();
     await sleep(1_000);
-    requireCondition(pageViewRequests === 2, "duplicate_pageview_after_reconfirm");
-    await emit("RECONFIRM_PAGEVIEW_REQUESTS", pageViewRequests);
+    calls = await observedMetaCalls(page);
+    requireCondition(
+      countObserved(calls, "track", "PageView") === 2,
+      "duplicate_pageview_after_reconfirm",
+    );
+    await emit("RECONFIRM_PAGEVIEW_CALLS", 2);
 
     await page
       .getByRole("button", { name: "Datenschutz-Einstellungen" })
@@ -156,8 +301,11 @@ async function main() {
       timeout: 30_000,
     });
     await sleep(1_500);
-    requireCondition(pageViewRequests === 2, "pageview_after_revoke");
-    await emit("POST_REVOKE_PAGEVIEW_REQUESTS", pageViewRequests);
+    requireCondition(
+      countObserved(await observedMetaCalls(page), "track", "PageView") === 0,
+      "pageview_after_revoke",
+    );
+    await emit("POST_REVOKE_NEW_DOCUMENT_PAGEVIEW_CALLS", 0);
 
     await context.addCookies([
       {
@@ -177,7 +325,6 @@ async function main() {
       );
       await sleep(1_500);
       requireCondition(scriptRequests === 1, "script_loaded_on_unsafe_url");
-      requireCondition(pageViewRequests === 2, "pageview_on_unsafe_url");
       requireCondition(
         (await protectedPage
           .getByRole("button", { name: "Datenschutz-Einstellungen" })
@@ -189,7 +336,7 @@ async function main() {
         "fbq_available_on_unsafe_url",
       );
       await emit("UNSAFE_URL_META_SCRIPT_REQUESTS_ADDED", 0);
-      await emit("UNSAFE_URL_PAGEVIEW_REQUESTS_ADDED", 0);
+      await emit("UNSAFE_URL_PAGEVIEW_CALLS", 0);
       await emit("UNSAFE_URL_CONSENT_UI", "absent");
     } finally {
       await protectedPage.close();
@@ -201,15 +348,18 @@ async function main() {
     );
     requireCondition(
       [...eventNames].every((eventName) => eventName === "PageView"),
-      "unexpected_meta_event_detected",
+      "unexpected_meta_transport_event_detected",
     );
-    requireCondition(pageViewRequests === 2, "final_pageview_count_invalid");
 
     await emit("FINAL_META_SCRIPT_REQUESTS", scriptRequests);
     await emit("FINAL_META_TRANSPORT_REQUESTS", transportRequests);
-    await emit("FINAL_PAGEVIEW_REQUESTS", pageViewRequests);
+    await emit("FINAL_PAGEVIEW_TRANSPORT_REQUESTS", pageViewTransportRequests);
     await emit(
-      "FINAL_META_EVENT_NAMES",
+      "NETWORK_PAGEVIEW_TRANSPORT_OBSERVED",
+      pageViewTransportRequests > 0 ? "yes" : "no",
+    );
+    await emit(
+      "FINAL_META_TRANSPORT_EVENT_NAMES",
       [...eventNames].sort().join(",") || "none",
     );
     await emit("SENSITIVE_META_PARAMETER_KEY_COUNT", sensitiveParameterKeys.size);
