@@ -1,0 +1,54 @@
+name: FanMind P1 Account Deletion Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-account-deletion-patch-20260724.yml"
+      - "scripts/operations/account-deletion-patch-temp-20260724.mjs"
+
+concurrency:
+  group: fanmind-p1-account-deletion-patch-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/account-deletion-foundation-20260724' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted account deletion branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/account-deletion-foundation-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Apply deterministic source and documentation fixes
+        run: |
+          set -euo pipefail
+          node scripts/operations/account-deletion-patch-temp-20260724.mjs
+          git diff --check
+
+      - name: Commit branch fixes
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile/app/'(app)'/account-deletion.tsx \
+            src/app/settings/account-deletion/AccountDeletionClient.tsx \
+            docs/mobile/BETA_RELEASE.md
+          git diff --cached --quiet && { echo "No patch changes" >&2; exit 1; }
+          git commit -m "Fix account deletion Mobile types and sync release runbook"
+          git push origin HEAD:p1/account-deletion-foundation-20260724
