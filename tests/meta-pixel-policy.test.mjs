@@ -6,8 +6,11 @@ import {
   FANMIND_MARKETING_CONSENT_COOKIE,
   META_PIXEL_ACTIVE_EVENTS,
   META_PIXEL_PREPARED_EVENTS,
+  META_PIXEL_PUBLIC_ROUTES,
   buildMetaPixelBootstrap,
   isMetaPixelEnabled,
+  isMetaPixelPageViewAllowed,
+  isMetaPixelPublicRoute,
   normalizeMarketingConsent,
   normalizeMetaPixelId,
   normalizeMetaPixelRoute,
@@ -38,6 +41,50 @@ test("Meta Pixel ID and consent fail closed", () => {
   );
   assert.equal(
     isMetaPixelEnabled({ pixelId: "", consent: "granted" }),
+    false,
+  );
+});
+
+test("Meta Pixel is limited to explicit public routes and harmless query values", () => {
+  assert.ok(META_PIXEL_PUBLIC_ROUTES.includes("/"));
+  assert.ok(META_PIXEL_PUBLIC_ROUTES.includes("/login"));
+  assert.ok(META_PIXEL_PUBLIC_ROUTES.includes("/datenschutz"));
+  assert.equal(isMetaPixelPublicRoute("/fans/contact-123"), false);
+  assert.equal(isMetaPixelPublicRoute("/dashboard"), false);
+  assert.equal(isMetaPixelPublicRoute("/settings/profile"), false);
+  assert.equal(isMetaPixelPublicRoute("/reset-password"), false);
+
+  assert.equal(
+    isMetaPixelPageViewAllowed({ pathname: "/", search: "" }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({ pathname: "/", search: "?lang=en" }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({
+      pathname: "/register",
+      search: "plan=growth&lang=de",
+    }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({
+      pathname: "/login",
+      search: "returnTo=%2Ffans%2Fcontact-123",
+    }),
+    false,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({
+      pathname: "/",
+      search: "email=person%40example.com",
+    }),
+    false,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({ pathname: "/register", search: "plan=custom-person" }),
     false,
   );
 });
@@ -76,6 +123,7 @@ test("root layout mounts one global consent manager and reads only public config
   assert.match(layout, /MarketingConsentManager/u);
   assert.match(layout, /FANMIND_MARKETING_CONSENT_COOKIE/u);
   assert.match(layout, /NEXT_PUBLIC_META_PIXEL_ID/u);
+  assert.match(layout, /<Suspense fallback=\{null\}>/u);
   assert.equal((layout.match(/<MarketingConsentManager/gu) ?? []).length, 1);
   assert.doesNotMatch(
     layout,
@@ -83,7 +131,7 @@ test("root layout mounts one global consent manager and reads only public config
   );
 });
 
-test("consent controls gate loading and allow later withdrawal", async () => {
+test("consent controls gate loading, protected routes and later withdrawal", async () => {
   const [manager, loader, helper] = await Promise.all([
     source("src/components/marketing/MarketingConsentManager.tsx"),
     source("src/components/marketing/MetaPixelLoader.tsx"),
@@ -94,10 +142,14 @@ test("consent controls gate loading and allow later withdrawal", async () => {
   assert.match(manager, /Marketing erlauben/u);
   assert.match(manager, /Datenschutz-Einstellungen/u);
   assert.match(manager, /isMetaPixelEnabled/u);
+  assert.match(manager, /isMetaPixelPageViewAllowed/u);
+  assert.match(manager, /!pixelConfigured \|\| !routeEligible/u);
   assert.match(manager, /revokeMetaPixelConsent/u);
   assert.match(manager, /SameSite=Lax/u);
   assert.match(loader, /strategy="afterInteractive"/u);
-  assert.match(loader, /trackMetaPixelPageView\(pathname\)/u);
+  assert.match(loader, /useSearchParams/u);
+  assert.match(loader, /trackMetaPixelPageView\(\{ pathname, search \}\)/u);
+  assert.match(helper, /currentPageIsEligible/u);
   assert.match(helper, /__fanmindMetaPixelLastRoute/u);
   assert.match(helper, /window\.fbq\("consent", "revoke"\)/u);
   assert.match(helper, /expireFirstPartyMetaCookie\("_fbp"\)/u);
@@ -141,6 +193,7 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(privacy, /Meta Pixel/u);
   assert.match(privacy, /ausdrücklicher Einwilligung/u);
   assert.match(runbook, /Nur `PageView`/u);
+  assert.match(runbook, /öffentlichen/u);
   assert.match(runbook, /keine Conversions API/iu);
   assert.match(runbook, /kein erweitertes Matching/iu);
   assert.match(runbook, /Die Codeintegration allein bedeutet nicht, dass der Pixel bereits auf Production aktiv ist/u);
