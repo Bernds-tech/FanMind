@@ -21,7 +21,8 @@ permissions:
 
 jobs:
   audit:
-    # Re-run only after the earlier transient apt/unattended-upgrades window.
+    # A resident updater process alone is not sufficient to block a reboot;
+    # actual apt/dpkg locks and active apt systemd jobs are fail-closed gates.
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
