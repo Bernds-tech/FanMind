@@ -147,7 +147,13 @@ export function isMetaPixelReferrerAllowed({ referrer, origin }) {
     return false;
   }
 
-  if (referrerUrl.origin !== currentOrigin) return true;
+  if (referrerUrl.origin !== currentOrigin) {
+    return (
+      referrerUrl.pathname === "/" &&
+      !referrerUrl.search &&
+      !referrerUrl.hash
+    );
+  }
   return isMetaPixelPageViewAllowed({
     pathname: referrerUrl.pathname,
     search: referrerUrl.search,
