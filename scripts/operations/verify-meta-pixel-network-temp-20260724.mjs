@@ -30,6 +30,7 @@ let runtimeState = {
   queueLength: -1,
   markerMatches: false,
 };
+let manualPostLoadPageViewObserved = false;
 
 async function emit(key, value) {
   const line = `${key}=${value}`;
@@ -90,6 +91,10 @@ async function emitDiagnostics() {
   await emit("FBQ_LOADED", runtimeState.loaded ? "yes" : "no");
   await emit("FBQ_QUEUE_LENGTH", runtimeState.queueLength);
   await emit("FBQ_PIXEL_MARKER_MATCH", runtimeState.markerMatches ? "yes" : "no");
+  await emit(
+    "POST_LOAD_MANUAL_PAGEVIEW_TRANSPORT_OBSERVED",
+    manualPostLoadPageViewObserved ? "yes" : "no",
+  );
 }
 
 async function main() {
@@ -203,8 +208,8 @@ async function main() {
       "script_response_timeout",
     );
 
-    const initialTransportObserved = await waitUntil(() => pageViewRequests >= 1);
-    await sleep(1_500);
+    let initialTransportObserved = await waitUntil(() => pageViewRequests >= 1, 10_000);
+    await sleep(1_000);
     runtimeState = await page.evaluate((pixelId) => ({
       fbqType: typeof window.fbq,
       callMethodType: typeof window.fbq?.callMethod,
@@ -212,8 +217,18 @@ async function main() {
       queueLength: Array.isArray(window.fbq?.queue) ? window.fbq.queue.length : -1,
       markerMatches: window.__fanmindMetaPixelId === pixelId,
     }), PIXEL_ID);
-    await emitDiagnostics();
 
+    if (!initialTransportObserved && runtimeState.callMethodType === "function") {
+      const beforeManual = pageViewRequests;
+      await page.evaluate(() => window.fbq?.("track", "PageView"));
+      manualPostLoadPageViewObserved = await waitUntil(
+        () => pageViewRequests > beforeManual,
+        10_000,
+      );
+      initialTransportObserved = false;
+    }
+
+    await emitDiagnostics();
     requireCondition(initialTransportObserved, "initial_pageview_transport_timeout");
     requireCondition(scriptRequests === 1, "script_request_not_exactly_once");
     requireCondition(pageViewRequests === 1, "initial_pageview_not_exactly_once");
