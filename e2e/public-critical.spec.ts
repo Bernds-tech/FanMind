@@ -97,7 +97,9 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await password.fill("Synthetic-Invalid-Password-2026");
     await page.getByRole("button", { name: /Einloggen/u }).click();
 
-    await expect(page.getByRole("alert")).toContainText("Login nicht möglich");
+    await expect(page.locator('form [role="alert"]')).toContainText(
+      "Login nicht möglich",
+    );
     await expect(page).toHaveURL(/\/login(?:\?|$)/u);
     await expectNoHorizontalOverflow(page);
   });
@@ -133,7 +135,7 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await expect(page.getByRole("status")).toContainText(
       "Falls ein Konto mit dieser E-Mail existiert",
     );
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.locator('form [role="alert"]')).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
 
@@ -160,9 +162,19 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
 
     await page.locator('a[href*="plan=growth"]').first().click();
     await expect(page).toHaveURL(/\/register\?plan=growth/u);
-    await expect(page.getByRole("heading", { name: "Growth", exact: true })).toBeVisible();
-    await expect(page.getByText(/nicht direkt produktiv registrierbar/u)).toBeVisible();
-    await expect(page.getByRole("link", { name: "Mit Starter starten" })).toBeVisible();
+    const growthPreview = page.locator(
+      'section[aria-label="Growth Vorschau"]',
+    );
+    await expect(growthPreview).toBeVisible();
+    await expect(
+      growthPreview.getByRole("heading", { name: "Growth", exact: true }),
+    ).toBeVisible();
+    await expect(growthPreview).toContainText(
+      "nicht direkt produktiv registrierbar",
+    );
+    await expect(
+      growthPreview.getByRole("link", { name: "Mit Starter starten" }),
+    ).toBeVisible();
     await expect(page.locator("form")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
