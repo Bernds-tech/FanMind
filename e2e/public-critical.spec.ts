@@ -81,7 +81,7 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
   }) => {
     await context.clearCookies();
     let metaScriptRequests = 0;
-    await page.route(
+    await context.route(
       "https://connect.facebook.net/en_US/fbevents.js",
       async (route) => {
         metaScriptRequests += 1;
@@ -161,6 +161,23 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await page.goto("/register");
     expect(metaScriptRequests).toBe(1);
     await expectNoHorizontalOverflow(page);
+
+    await context.clearCookies();
+    await context.addCookies([
+      {
+        name: "fanmind_marketing_consent",
+        value: "granted",
+        url: E2E_BASE_URL,
+        sameSite: "Lax",
+      },
+    ]);
+    const unsafePage = await context.newPage();
+    await unsafePage.goto(
+      "/login?returnTo=%2Ffans%2Fsynthetic-contact-reference",
+    );
+    expect(metaScriptRequests).toBe(1);
+    expect(await unsafePage.evaluate(() => typeof window.fbq)).toBe("undefined");
+    await unsafePage.close();
   });
 
   test("englische Landingpage bleibt übersetzt und manuell freigegeben", async ({ page }) => {

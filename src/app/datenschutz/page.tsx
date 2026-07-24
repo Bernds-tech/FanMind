@@ -153,7 +153,8 @@ const sections: PrivacySection[] = [
       <>
         <p>
           FanMind kann den Meta Pixel von Meta Platforms Ireland Limited einsetzen, um nach
-          ausdrücklicher Marketing-Einwilligung Seitenaufrufe auf <code>fanmind.ch</code> zu messen.
+          ausdrücklicher Marketing-Einwilligung ausschließlich Seitenaufrufe freigegebener
+          öffentlicher Seiten auf <code>fanmind.ch</code> zu messen.
           Dafür wird das Script <code>connect.facebook.net/en_US/fbevents.js</code> erst nach der
           Einwilligung geladen. Im aktuell freigegebenen Stand wird ausschließlich das Standardevent
           <code>PageView</code> ohne zusätzliche Eventparameter ausgelöst.
@@ -169,6 +170,8 @@ const sections: PrivacySection[] = [
         <p>
           FanMind übermittelt über diese Integration keine E-Mail-Adressen, Namen, Telefonnummern,
           Account-, Workspace-, Kontakt-, CRM-, Nachrichten-, Prompt-, KI- oder Zahlungsinhalte.
+          Geschützte CRM-, Admin-, Einstellungen-, Billing- und dynamische Kontaktrouten sowie
+          unsichere Query- oder Fragmentwerte sind von der Pixel-Ausführung ausgeschlossen.
           Erweitertes Matching, automatische Nutzerzuordnung, Conversions API und serverseitiges
           Meta-Tracking sind nicht aktiviert. Die vorbereiteten Eventnamen für spätere
           Conversion-Messungen werden ohne gesonderte fachliche und datenschutzrechtliche Prüfung
