@@ -1,0 +1,131 @@
+name: FanMind P1 PM2 systemd Post-Handoff Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-pm2-systemd-post-handoff-diagnostic-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-pm2-systemd-post-handoff-diagnostic-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 10
+    env:
+      EXPECTED_RELEASE: 6b8ba61a1786651713b2507340dc7b673811159d
+      REPORT_PATH: fanmind-pm2-systemd-post-handoff-diagnostic.txt
+
+    steps:
+      - name: Checkout trusted operations branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Capture only redacted PM2 and systemd contract state
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'PM2_DIAGNOSTIC_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          service_state="$(systemctl is-active pm2-ubuntu.service 2>/dev/null || true)"
+          unit_enabled="$(systemctl is-enabled pm2-ubuntu.service 2>/dev/null || true)"
+          unit_type="$(systemctl show pm2-ubuntu.service -p Type --value 2>/dev/null || true)"
+          unit_user="$(systemctl show pm2-ubuntu.service -p User --value 2>/dev/null || true)"
+          main_pid="$(systemctl show pm2-ubuntu.service -p MainPID --value 2>/dev/null || printf 0)"
+          pid_file="$(systemctl show pm2-ubuntu.service -p PIDFile --value 2>/dev/null || true)"
+          pidfile_exists=no
+          pidfile_matches=no
+          proc_exists=no
+          proc_user_match=no
+          if [ "$pid_file" = /home/ubuntu/.pm2/pm2.pid ] && [ -s "$pid_file" ]; then
+            pidfile_exists=yes
+            recorded_pid="$(tr -d '[:space:]' < "$pid_file")"
+            if [ "$recorded_pid" = "$main_pid" ]; then pidfile_matches=yes; fi
+          fi
+          if [[ "$main_pid" =~ ^[0-9]+$ ]] && [ "$main_pid" -gt 1 ] && [ -d "/proc/$main_pid" ]; then
+            proc_exists=yes
+            if [ "$(stat -c %U "/proc/$main_pid" 2>/dev/null || true)" = ubuntu ]; then proc_user_match=yes; fi
+          fi
+
+          snapshot="$RUNNER_TEMP/fanmind-pm2-post-handoff.json"
+          pm2 jlist > "$snapshot"
+          SNAPSHOT="$snapshot" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE' | tee -a "$report"
+          import fs from 'node:fs';
+          const rows = JSON.parse(fs.readFileSync(process.env.SNAPSHOT, 'utf8'))
+            .filter(item => item?.name === 'fanmind');
+          const app = rows.length === 1 ? rows[0] : null;
+          const cwd = String(app?.pm2_env?.pm_cwd || '');
+          const expected = `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`;
+          const restartCount = Number(app?.pm2_env?.restart_time);
+          console.log(`PM2_APP_COUNT=${rows.length}`);
+          console.log(`PM2_APP_STATUS=${app?.pm2_env?.status === 'online' ? 'online' : 'not_online'}`);
+          console.log(`PM2_APP_CWD=${cwd === expected ? 'expected_release' : cwd === '/var/www/fanmind' ? 'source_checkout' : 'other'}`);
+          console.log(`PM2_APP_PID_VALID=${Number(app?.pid || 0) > 1 ? 'yes' : 'no'}`);
+          console.log(`PM2_APP_RESTART_COUNT_VALID=${Number.isInteger(restartCount) && restartCount >= 0 ? 'yes' : 'no'}`);
+          NODE
+          rm -f "$snapshot"
+
+          public_health=unhealthy
+          public_release=other
+          if curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              const checks = Array.isArray(payload.checks) ? payload.checks : [];
+              process.exit(payload.status === "healthy" && checks.length >= 7 && checks.every(item => item?.status === "healthy") ? 0 : 1);
+            });
+          '; then public_health=healthy; fi
+          live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => process.stdout.write(JSON.parse(input).releaseCommit || "missing"));
+          ' 2>/dev/null || true)"
+          if [ "$live_release" = "$EXPECTED_RELEASE" ]; then public_release=expected; fi
+
+          echo "PM2_SYSTEMD_ACTIVE=$([ "$service_state" = active ] && printf yes || printf no)" | tee -a "$report"
+          echo "PM2_SYSTEMD_ENABLED=$([ "$unit_enabled" = enabled ] && printf yes || printf no)" | tee -a "$report"
+          echo "PM2_SYSTEMD_TYPE=$([ "$unit_type" = forking ] && printf valid || printf invalid)" | tee -a "$report"
+          echo "PM2_SYSTEMD_USER=$([ "$unit_user" = ubuntu ] && printf valid || printf invalid)" | tee -a "$report"
+          echo "PM2_SYSTEMD_MAIN_PID_VALID=$([[ "$main_pid" =~ ^[0-9]+$ ]] && [ "$main_pid" -gt 1 ] && printf yes || printf no)" | tee -a "$report"
+          echo "PM2_PIDFILE_EXISTS=$pidfile_exists" | tee -a "$report"
+          echo "PM2_PIDFILE_MATCHES_MAIN_PID=$pidfile_matches" | tee -a "$report"
+          echo "PM2_MAIN_PID_PROC_EXISTS=$proc_exists" | tee -a "$report"
+          echo "PM2_MAIN_PID_USER_MATCH=$proc_user_match" | tee -a "$report"
+          echo "PUBLIC_HEALTH=$public_health" | tee -a "$report"
+          echo "PUBLIC_RELEASE=$public_release" | tee -a "$report"
+          echo 'PROCESS_ARGUMENTS_OR_IDENTIFIERS_PRINTED=false' | tee -a "$report"
+          echo 'PM2_POST_HANDOFF_DIAGNOSTIC_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized PM2 diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-pm2-systemd-post-handoff-diagnostic
+          path: fanmind-pm2-systemd-post-handoff-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 7
