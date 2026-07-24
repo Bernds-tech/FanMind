@@ -149,11 +149,16 @@ test("same-origin protected referrers and detailed external referrers are blocke
   );
 });
 
-test("bootstrap initializes exactly once without firing PageView or noscript tracking", () => {
+test("bootstrap initializes exactly once, disables automatic events and does not fire PageView", () => {
   const bootstrap = buildMetaPixelBootstrap(PIXEL_ID);
   assert.equal(typeof bootstrap, "string");
   assert.match(bootstrap, /connect\.facebook\.net\/en_US\/fbevents\.js/u);
+  assert.match(
+    bootstrap,
+    /fbq\('set','autoConfig',false,'2069553844439892'\)/u,
+  );
   assert.match(bootstrap, /fbq\('init','2069553844439892'\)/u);
+  assert.match(bootstrap, /__fanmindMetaPixelId==='2069553844439892'/u);
   assert.match(bootstrap, /referrerPolicy='no-referrer'/u);
   assert.equal((bootstrap.match(/fbq\('init'/gu) ?? []).length, 1);
   assert.doesNotMatch(bootstrap, /PageView|facebook\.com\/tr|noscript/iu);
@@ -210,8 +215,7 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(manager, /documentReferrer/u);
   assert.match(manager, /queueMicrotask\(syncLocationContext\)/u);
   assert.match(manager, /!pixelConfigured/u);
-  assert.match(manager, /!routeEligible/u);
-  assert.match(manager, /consent === "unset"/u);
+  assert.match(manager, /\|\|\s*!routeEligible/u);
   assert.match(manager, /revokeMetaPixelConsent/u);
   assert.match(manager, /SameSite=Lax/u);
   assert.match(loader, /strategy="afterInteractive"/u);
@@ -285,6 +289,7 @@ test("browser E2E uses a synthetic Meta script and proves consent-gated PageView
   assert.match(spec, /Marketing erlauben/u);
   assert.match(spec, /Nur notwendige/u);
   assert.match(spec, /2069553844439892/u);
+  assert.match(spec, /autoConfig/u);
   assert.match(spec, /PageView/u);
   assert.match(spec, /returnTo=%2Ffans%2Fsynthetic-contact-reference/u);
   assert.match(spec, /Datenschutz-Einstellungen/u);
