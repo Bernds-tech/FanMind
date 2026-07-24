@@ -1,0 +1,146 @@
+name: FanMind P1 Set Telegram Send Disabled
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-set-telegram-send-disabled-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-set-telegram-send-disabled-20260724
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 15
+    env:
+      EXPECTED_RELEASE: 6b8ba61a1786651713b2507340dc7b673811159d
+      REPORT_PATH: fanmind-telegram-send-disabled.txt
+
+    steps:
+      - name: Checkout trusted operations branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Verify exact release and healthy Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'TELEGRAM_SEND_FLAG_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+          test "$(curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => process.stdout.write(JSON.parse(input).releaseCommit || "missing"));
+          ')" = "$EXPECTED_RELEASE"
+          test "$(git -C /var/www/fanmind rev-parse HEAD)" = "$EXPECTED_RELEASE"
+          test "$(git -C /var/www/fanmind rev-parse origin/main)" = "$EXPECTED_RELEASE"
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              const checks = Array.isArray(payload.checks) ? payload.checks : [];
+              process.exit(payload.status === "healthy" && checks.length >= 7 && checks.every(item => item?.status === "healthy") ? 0 : 1);
+            });
+          '
+          echo 'PRE_CHANGE_RELEASE_AND_HEALTH=healthy' | tee -a "$report"
+
+      - name: Atomically set the explicit disabled flag without exposing ENV values
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          sudo -n env ENV_FILE=/var/www/fanmind/.env.production /usr/bin/node --input-type=module <<'NODE' | tee -a "$report"
+          import { randomBytes } from 'node:crypto';
+          import { chmod, chown, readFile, rename, stat, writeFile } from 'node:fs/promises';
+
+          const file = process.env.ENV_FILE;
+          const metadata = await stat(file);
+          const source = await readFile(file, 'utf8');
+          const lines = source.split(/\r?\n/u);
+          const retained = lines.filter(line => !/^\s*FANMIND_ENABLE_TELEGRAM_SEND\s*=/u.test(line));
+          while (retained.length && retained.at(-1) === '') retained.pop();
+          const updated = `${retained.join('\n')}\nFANMIND_ENABLE_TELEGRAM_SEND=false\n`;
+          const temporary = `${file}.telegram-send-${randomBytes(8).toString('hex')}.tmp`;
+          await writeFile(temporary, updated, { mode: metadata.mode & 0o777, flag: 'wx' });
+          await chmod(temporary, metadata.mode & 0o777);
+          await chown(temporary, metadata.uid, metadata.gid);
+          await rename(temporary, file);
+
+          const verify = await readFile(file, 'utf8');
+          const matches = verify.split(/\r?\n/u)
+            .filter(line => /^\s*FANMIND_ENABLE_TELEGRAM_SEND\s*=/u.test(line));
+          if (matches.length !== 1 || matches[0].trim() !== 'FANMIND_ENABLE_TELEGRAM_SEND=false') {
+            throw new Error('telegram_send_flag_verification_failed');
+          }
+          console.log('FANMIND_ENABLE_TELEGRAM_SEND=valid_false');
+          console.log('OTHER_ENV_VALUES_PRINTED=false');
+          console.log('ENV_FILE_METADATA_PRESERVED=yes');
+          NODE
+
+      - name: Restart only FanMind with the updated environment and verify recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          pm2 restart fanmind --update-env >/dev/null
+          pm2 save >/dev/null
+          for attempt in $(seq 1 60); do
+            if curl -fsSL --max-time 10 https://fanmind.ch/api/health -o /dev/null 2>/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          test "$(curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => process.stdout.write(JSON.parse(input).releaseCommit || "missing"));
+          ')" = "$EXPECTED_RELEASE"
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              const checks = Array.isArray(payload.checks) ? payload.checks : [];
+              process.exit(payload.status === "healthy" && checks.length >= 7 && checks.every(item => item?.status === "healthy") ? 0 : 1);
+            });
+          '
+          for route in / /login /register /forgot-password /api/version /api/health; do
+            curl -fsSL --max-time 15 "https://fanmind.ch${route}" -o /dev/null
+          done
+          echo 'FANMIND_APP_RESTARTED_WITH_UPDATED_ENV=yes' | tee -a "$report"
+          echo 'POST_CHANGE_RELEASE_AND_HEALTH=healthy' | tee -a "$report"
+          echo 'PUBLIC_CORE_ROUTES=healthy' | tee -a "$report"
+          echo 'TELEGRAM_SEND_DISABLED_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized flag evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-telegram-send-disabled
+          path: fanmind-telegram-send-disabled.txt
+          if-no-files-found: error
+          retention-days: 7
