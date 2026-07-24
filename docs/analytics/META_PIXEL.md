@@ -2,7 +2,7 @@
 
 ## Zweck und Scope
 
-FanMind integriert den Meta Pixel ausschließlich als optionale Marketing-Messung für die öffentliche Website und die vorhandene Web-Anwendung. Das ist keine Produkt-Analytics-Suite und keine Social-Media-Vollintegration.
+FanMind integriert den Meta Pixel ausschließlich als optionale Marketing-Messung für freigegebene öffentliche Seiten. Das ist keine Produkt-Analytics-Suite, keine CRM-Telemetrie und keine Social-Media-Vollintegration.
 
 Meta-Zuordnung:
 
@@ -32,12 +32,48 @@ Die Integration sitzt genau einmal in der zentralen Web-App-Struktur:
 
 1. `src/app/layout.tsx` liest nur den Consent-Cookie und die öffentliche Pixel-ID.
 2. `MarketingConsentManager` verwaltet `unset`, `denied` und `granted`.
-3. `MetaPixelLoader` wird nur bei `granted` und einer gültigen Pixel-ID gerendert.
-4. Das Meta-Bootstrap-Script wird über `next/script` mit `afterInteractive` genau einmal geladen.
-5. Der Bootstrap initialisiert nur den Pixel. `PageView` wird getrennt und dedupliziert über den App-Router-Pfad ausgelöst.
-6. Bei Widerruf werden weitere FanMind-Events blockiert, Meta-Consent auf `revoke` gesetzt und bekannte First-Party-Meta-Cookies (`_fbp`, `_fbc`) für den aktuellen Host entfernt.
+3. Consent-UI und Loader werden nur auf explizit freigegebenen öffentlichen Routen mit unsensitiven Querywerten gerendert.
+4. `MetaPixelLoader` wird nur bei `granted`, einer gültigen Pixel-ID und einer freigegebenen öffentlichen URL gerendert.
+5. Das Meta-Bootstrap-Script wird über `next/script` mit `afterInteractive` genau einmal geladen.
+6. Der Bootstrap initialisiert nur den Pixel. `PageView` wird getrennt und dedupliziert über den sicheren App-Router-Pfad samt freigegebener Query ausgelöst.
+7. Bei Widerruf werden weitere FanMind-Events blockiert, Meta-Consent auf `revoke` gesetzt und bekannte First-Party-Meta-Cookies (`_fbp`, `_fbc`) für den aktuellen Host entfernt.
+8. Beim Wechsel auf geschützte oder nicht freigegebene URLs wird Meta-Consent vorsorglich widerrufen und kein FanMind-Event ausgelöst.
 
 Es gibt bewusst kein ungegate-tes `noscript`-Bild, weil dieses auch ohne JavaScript und ohne ausdrückliche Marketing-Einwilligung eine Meta-Anfrage auslösen würde.
+
+## Öffentliche Routengrenze
+
+Der Pixel darf ausschließlich auf dieser technischen Allowlist geladen werden:
+
+- `/`
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/roadmap`
+- `/landing-v2`
+- `/account-deletion`
+- `/impressum`
+- `/datenschutz`
+- `/agb`
+- `/avv`
+- `/zahlungsbedingungen`
+- `/referral-bedingungen`
+
+Ausdrücklich ausgeschlossen sind unter anderem:
+
+- `/dashboard`, `/fans`, `/fans/[id]`, `/inbox`, `/followups`;
+- sämtliche `/settings/*`- und `/admin/*`-Seiten;
+- Billing-, Checkout-, Erfolgs- und Rechnungsseiten;
+- Onboarding und Workspace-Setup;
+- Passwort-Recovery-Callbacks wie `/reset-password`;
+- jede unbekannte oder dynamische Route.
+
+Querystrings sind standardmäßig blockiert. Zulässig sind ausschließlich:
+
+- `lang=de|en` auf der jeweiligen öffentlichen Route;
+- `plan=starter|starter_paid_setup|starter_no_setup_commitment|growth|agency` auf `/register`.
+
+Parameter wie E-Mail, Referral-Code, `returnTo`, Kontakt-/Workspace-ID, Session-/Recovery-Wert oder freie Kampagnenparameter verhindern das Laden und Tracking vollständig. Damit gelangen keine CRM-IDs oder sensiblen Callback-URLs allein durch einen `PageView` an Meta.
 
 ## Consent-Vertrag
 
@@ -54,9 +90,9 @@ Eigenschaften:
 - auf HTTPS zusätzlich `Secure`;
 - maximale Lebensdauer 180 Tage;
 - kein Tracking bei fehlendem, ungültigem oder abgelehntem Consent;
-- jederzeit über den dauerhaft sichtbaren Button `Datenschutz-Einstellungen` änderbar.
+- jederzeit über den auf freigegebenen öffentlichen Seiten sichtbaren Button `Datenschutz-Einstellungen` änderbar.
 
-Die Ablehnen- und Akzeptieren-Aktionen werden gleichwertig im Banner angeboten. Ohne Auswahl bleibt der Pixel aus.
+Die Ablehnen- und Akzeptieren-Aktionen werden gleichwertig im Banner angeboten. Ohne Auswahl bleibt der Pixel aus. Geschützte CRM-Seiten zeigen bewusst kein Marketing-Consent-UI, weil dort weder Script noch Events geladen werden.
 
 ## Environment
 
@@ -71,7 +107,8 @@ Fail-closed-Verhalten:
 - leer oder nicht gesetzt: Pixel vollständig deaktiviert;
 - nicht ausschließlich numerisch oder außerhalb der erwarteten Länge: Pixel vollständig deaktiviert;
 - gültige ID, aber kein Consent: Pixel vollständig deaktiviert;
-- gültige ID und `granted`: Pixel aktiv.
+- gültige ID und `granted`, aber geschützte/unsichere URL: Pixel vollständig deaktiviert;
+- gültige ID, `granted` und freigegebene öffentliche URL: Pixel aktiv.
 
 `NEXT_PUBLIC_*`-Werte werden beim Next.js-Build in den Client-Build übernommen. Eine Änderung in `.env.production` benötigt deshalb einen neuen Production-Build/Deploy.
 
@@ -81,7 +118,7 @@ Fail-closed-Verhalten:
 
 | Event | Auslöser | Parameter |
 | --- | --- | --- |
-| `PageView` | erste Seite nach Einwilligung und danach genau einmal je neuem App-Router-Pfad | keine |
+| `PageView` | erste freigegebene öffentliche Seite nach Einwilligung und danach genau einmal je neuem sicheren App-Router-Pfad/Queryzustand | keine |
 
 ### Nur vorbereitet, nicht verdrahtet
 
@@ -93,7 +130,7 @@ Fail-closed-Verhalten:
 - `StartTrial`
 - `Purchase`
 
-Diese Namen sind in einer wiederverwendbaren Event-Hilfsfunktion typisiert und allowlist-basiert. Im aktuellen Stand ruft keine Produktaktion diese Conversion-Events auf. Vor jeder späteren Verdrahtung müssen Ereignisdefinition, Consent, Datenminimierung und fachliche Wahrheit separat geprüft werden.
+Diese Namen sind in einer wiederverwendbaren Event-Hilfsfunktion typisiert und allowlist-basiert. Im aktuellen Stand ruft keine Produktaktion diese Conversion-Events auf. Vor jeder späteren Verdrahtung müssen Ereignisdefinition, Consent, Datenminimierung, öffentliche Routengrenze und fachliche Wahrheit separat geprüft werden.
 
 Insbesondere wird `Purchase` nicht allein wegen eines Seitenaufrufs, Checkout-Starts oder internen Testabos gesendet. Ein späteres Purchase-Event benötigt einen bestätigten Zahlungsabschluss und eine eigene Billing-/Datenschutzabnahme.
 
@@ -139,7 +176,8 @@ Browser-E2E setzt die öffentliche Test-ID nur im CI-Build und fängt `connect.f
 5. genau ein initiales `PageView`;
 6. genau ein weiteres `PageView` nach echter Client-Navigation;
 7. kein doppeltes `PageView` beim erneuten Öffnen/Bestätigen derselben Auswahl;
-8. Widerruf blockiert weitere Events.
+8. Widerruf blockiert weitere Events;
+9. Policy-Tests blockieren geschützte Routen, dynamische CRM-Pfade und unsichere Querystrings.
 
 ## Production-Abnahme im Browser
 
@@ -152,8 +190,9 @@ Nach Merge, gesetzter Production-ENV und erneutem Build:
 5. Datenschutz-Einstellungen öffnen und `Marketing erlauben` wählen.
 6. Prüfen, dass `fbevents.js` genau einmal geladen wird.
 7. In der Konsole ausschließlich technisch prüfen, dass `window.fbq` existiert; keine Queue- oder Kundendaten protokollieren.
-8. Über einen internen Next-Link zu `/login` navigieren und doppelte `PageView`-Aufrufe ausschließen.
-9. Consent widerrufen und bestätigen, dass weitere Navigationen keine FanMind-Events an Meta senden.
+8. Über einen internen Next-Link zu `/login` ohne `returnTo` navigieren und genau ein weiteres, nicht doppeltes `PageView` prüfen.
+9. Eine geschützte Route öffnen und im Netzwerk bestätigen, dass FanMind dafür kein `PageView` sendet.
+10. Consent widerrufen und bestätigen, dass weitere Navigationen keine FanMind-Events an Meta senden.
 
 ## Meta Events Manager / Test Events
 
@@ -164,10 +203,10 @@ Nach der kontrollierten Production-Aktivierung:
 3. `Test Events` beziehungsweise die aktuelle Diagnoseansicht öffnen.
 4. `https://fanmind.ch` in einem frischen Browserfenster öffnen.
 5. Marketing-Einwilligung erteilen.
-6. ein `PageView` für den initialen Pfad prüfen.
-7. über eine echte Client-Navigation einen zweiten Pfad öffnen und genau ein weiteres `PageView` prüfen.
+6. ein `PageView` für den initialen öffentlichen Pfad prüfen.
+7. über eine sichere öffentliche Client-Navigation einen zweiten Pfad öffnen und genau ein weiteres `PageView` prüfen.
 8. Eventdetails auf das Fehlen von E-Mail, Namen, CRM-, Kontakt-, Nachrichten- und Advanced-Matching-Daten prüfen.
-9. Die Meta Pixel Helper Browser-Erweiterung kann ergänzend verwendet werden, ersetzt aber nicht Netzwerk- und Consent-Prüfung.
+9. Die Meta Pixel Helper Browser-Erweiterung kann ergänzend verwendet werden, ersetzt aber nicht Netzwerk-, Routengrenz- und Consent-Prüfung.
 
 Keine Screenshots oder Tickets dürfen Tokens, Session-Cookies, Kundeninhalte oder vollständige Browser-Netzwerk-Response-Bodies enthalten.
 
@@ -176,7 +215,7 @@ Keine Screenshots oder Tickets dürfen Tokens, Session-Cookies, Kundeninhalte od
 - technische und rechtliche Schlussprüfung des aktualisierten Datenschutztexts;
 - `NEXT_PUBLIC_META_PIXEL_ID=2069553844439892` kontrolliert in `/var/www/fanmind/.env.production` setzen;
 - Production neu bauen und deployen;
-- Consent-/Widerruf-/PageView-Abnahme gemäß diesem Runbook;
+- Consent-/Widerruf-/PageView-/Routengrenz-Abnahme gemäß diesem Runbook;
 - Test-Events-Nachweis im richtigen Meta Dataset;
 - erst danach Issue #710 schließen.
 
