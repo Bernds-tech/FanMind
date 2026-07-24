@@ -37,6 +37,14 @@ type AccountDeletionRequestRow = {
   last_error_code: string | null;
 };
 
+type OwnedWorkspaceDeletionRow = {
+  id: string;
+  owner_user_id: string;
+  billing_status: string | null;
+  stripe_subscription_id: string | null;
+  subscription_effective_end_at: string | null;
+};
+
 const DELETION_COLUMNS = [
   "id",
   "user_id",
@@ -109,6 +117,34 @@ export async function getActiveAccountDeletionRequest(
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+async function getOwnedWorkspaceDeletionRows(
+  userId: string,
+): Promise<OwnedWorkspaceDeletionRow[]> {
+  const url = `${getSupabaseRestUrl(
+    "workspaces",
+  )}?select=id,owner_user_id,billing_status,stripe_subscription_id,subscription_effective_end_at&owner_user_id=eq.${encodeURIComponent(
+    userId,
+  )}&order=created_at.asc&limit=101`;
+  const response = await serviceFetch(
+    url,
+    { headers: serviceHeaders() },
+    "workspace_inventory_failed",
+  );
+  if (!response.ok) {
+    throw new AccountDeletionServiceError("workspace_inventory_failed");
+  }
+  const rows = (await response.json().catch(() => null)) as
+    | OwnedWorkspaceDeletionRow[]
+    | null;
+  if (!Array.isArray(rows)) {
+    throw new AccountDeletionServiceError("workspace_inventory_failed");
+  }
+  if (rows.length > 100) {
+    throw new AccountDeletionServiceError("workspace_inventory_too_large");
+  }
+  return rows;
+}
+
 async function countOtherWorkspaceMembers(
   workspaceId: string,
   userId: string,
@@ -142,26 +178,28 @@ async function countOtherWorkspaceMembers(
 
 export async function getAccountDeletionBlockers(input: {
   user: SupabaseServerUser;
-  workspace: WorkspaceDashboardRow | null;
 }): Promise<{
   requiresOwnershipTransfer: boolean;
   requiresSubscriptionResolution: boolean;
 }> {
-  const ownsWorkspace = Boolean(
-    input.workspace &&
-      (input.workspace.owner_user_id === input.user.id ||
-        input.workspace.role === "owner"),
-  );
-  const otherMembers =
-    ownsWorkspace && input.workspace
-      ? await countOtherWorkspaceMembers(input.workspace.id, input.user.id)
-      : 0;
+  const ownedWorkspaces = await getOwnedWorkspaceDeletionRows(input.user.id);
+  let requiresOwnershipTransfer = false;
+  let subscriptionBlocked = false;
+
+  for (const workspace of ownedWorkspaces) {
+    if (!requiresOwnershipTransfer) {
+      const otherMembers = await countOtherWorkspaceMembers(
+        workspace.id,
+        input.user.id,
+      );
+      requiresOwnershipTransfer = otherMembers > 0;
+    }
+    subscriptionBlocked ||= requiresSubscriptionResolution(workspace);
+  }
+
   return {
-    requiresOwnershipTransfer: ownsWorkspace && otherMembers > 0,
-    requiresSubscriptionResolution:
-      ownsWorkspace && input.workspace
-        ? requiresSubscriptionResolution(input.workspace)
-        : false,
+    requiresOwnershipTransfer,
+    requiresSubscriptionResolution: subscriptionBlocked,
   };
 }
 
@@ -191,6 +229,30 @@ async function patchDeletionRequest(
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+async function eraseCancellableDeletionRequest(
+  requestId: string,
+  userId: string,
+): Promise<boolean> {
+  const url = `${getSupabaseRestUrl(
+    "account_deletion_requests",
+  )}?id=eq.${encodeURIComponent(requestId)}&user_id=eq.${encodeURIComponent(
+    userId,
+  )}&status=${encodeURIComponent("in.(pending,blocked)")}&select=id`;
+  const response = await serviceFetch(
+    url,
+    {
+      method: "DELETE",
+      headers: serviceHeaders("return=representation"),
+    },
+    "request_update_failed",
+  );
+  if (!response.ok) throw new AccountDeletionServiceError("request_update_failed");
+  const rows = (await response.json().catch(() => null)) as
+    | Array<{ id?: string }>
+    | null;
+  return Boolean(Array.isArray(rows) && rows.some((row) => row.id === requestId));
+}
+
 export async function createAccountDeletionRequest(input: {
   user: SupabaseServerUser;
   workspace: WorkspaceDashboardRow | null;
@@ -201,10 +263,7 @@ export async function createAccountDeletionRequest(input: {
   const existing = await getActiveAccountDeletionRequest(input.user.id);
   if (existing) return publicAccountDeletionStatus(existing);
 
-  const blockers = await getAccountDeletionBlockers({
-    user: input.user,
-    workspace: input.workspace,
-  });
+  const blockers = await getAccountDeletionBlockers({ user: input.user });
   const requestedAt = new Date();
   const processingDeadlineAt = getAccountDeletionDeadline(requestedAt).toISOString();
   const initialStatus =
@@ -290,12 +349,10 @@ export async function cancelAccountDeletionRequest(input: {
   if (active.status === "processing") {
     throw new AccountDeletionServiceError("request_already_processing");
   }
-  const updated = await patchDeletionRequest(active.id, input.userId, {
-    status: "cancelled",
-    cancelled_at: new Date().toISOString(),
-    notification_email: null,
-    last_error_code: null,
-  });
-  if (!updated) throw new AccountDeletionServiceError("request_update_failed");
-  return publicAccountDeletionStatus(updated);
+  const erased = await eraseCancellableDeletionRequest(
+    active.id,
+    input.userId,
+  );
+  if (!erased) throw new AccountDeletionServiceError("request_update_failed");
+  return publicAccountDeletionStatus(null);
 }
