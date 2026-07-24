@@ -1,0 +1,59 @@
+name: FanMind P1 Controlled Reboot Readiness Audit V2
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-controlled-reboot-readiness-v2-20260724.yml"
+      - "scripts/operations/controlled-reboot-readiness-temp-20260724.mjs"
+
+concurrency:
+  group: fanmind-p1-controlled-reboot-readiness-v2-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 20
+    env:
+      EXPECTED_RELEASE: 6b8ba61a1786651713b2507340dc7b673811159d
+      REPORT_PATH: fanmind-controlled-reboot-readiness.txt
+
+    steps:
+      - name: Checkout trusted reboot branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Run read-only fail-closed readiness audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/operations/controlled-reboot-readiness-temp-20260724.mjs "$REPORT_PATH"
+
+      - name: Upload sanitized reboot readiness evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-controlled-reboot-readiness
+          path: fanmind-controlled-reboot-readiness.txt
+          if-no-files-found: error
+          retention-days: 14
