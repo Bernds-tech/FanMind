@@ -1,0 +1,305 @@
+name: FanMind P1 Remove Duplicate PM2 Logrotate Rule
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-remove-duplicate-pm2-logrotate-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-remove-duplicate-pm2-logrotate-20260724
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/remove-duplicate-pm2-logrotate-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 30
+    env:
+      EXPECTED_RELEASE: f14d71544ec721fc820e588c76e077b0912fa58b
+      REPORT_PATH: fanmind-pm2-logrotate-cleanup-report.txt
+      SOURCE_DIR: /var/www/fanmind
+      SYSTEM_PM2_RULE: /etc/logrotate.d/fanmind-pm2
+
+    steps:
+      - name: Wait for exact release and healthy Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'AUDIT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          for attempt in $(seq 1 90); do
+            live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null \
+              | node -e '
+                  let input = "";
+                  process.stdin.on("data", chunk => input += chunk);
+                  process.stdin.on("end", () => {
+                    try {
+                      const payload = JSON.parse(input);
+                      const value = typeof payload.releaseCommit === "string" ? payload.releaseCommit : "";
+                      process.stdout.write(/^[0-9a-f]{40}$/.test(value) ? value : "missing");
+                    } catch {
+                      process.stdout.write("missing");
+                    }
+                  });
+                ' || true)"
+            server_head="$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)"
+            origin_main="$(git -C "$SOURCE_DIR" rev-parse origin/main 2>/dev/null || true)"
+
+            if [[ "$live_release" == "$EXPECTED_RELEASE" \
+              && "$server_head" == "$EXPECTED_RELEASE" \
+              && "$origin_main" == "$EXPECTED_RELEASE" ]]; then
+              if curl -fsSL --max-time 15 https://fanmind.ch/api/health \
+                | SOURCE_DIR="$SOURCE_DIR" node --input-type=module <<'NODE'
+          import { pathToFileURL } from 'node:url';
+
+          let input = '';
+          process.stdin.on('data', chunk => input += chunk);
+          process.stdin.on('end', async () => {
+            try {
+              const payload = JSON.parse(input);
+              const policy = await import(
+                `${pathToFileURL(`${process.env.SOURCE_DIR}/scripts/public-health-policy.mjs`).href}?audit=${Date.now()}`
+              );
+              const evaluation = policy.evaluatePublicHealth(payload);
+              const required = policy.REQUIRED_PUBLIC_HEALTH_COMPONENTS;
+              const checks = Array.isArray(payload.checks) ? payload.checks : [];
+              const healthyRequired = required.every(component =>
+                checks.some(check => check?.component === component && check?.status === 'healthy')
+              );
+              process.exit(
+                payload.status === 'healthy'
+                  && evaluation.ok
+                  && healthyRequired
+                  && required.length === 7
+                  ? 0
+                  : 1
+              );
+            } catch {
+              process.exit(1);
+            }
+          });
+          NODE
+              then
+                echo 'RELEASE_SYNC=ok' | tee -a "$report"
+                echo 'PUBLIC_REQUIRED_HEALTHY_COUNT=7' | tee -a "$report"
+                break
+              fi
+            fi
+
+            if [[ "$attempt" == "90" ]]; then
+              echo 'RELEASE_SYNC=failed' | tee -a "$report"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Snapshot redacted PM2 and journald state
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          before="$RUNNER_TEMP/fanmind-pm2-before-${GITHUB_RUN_ID}.json"
+          journal_before="$RUNNER_TEMP/fanmind-journald-before-${GITHUB_RUN_ID}.sha256"
+
+          pm2 jlist > "$RUNNER_TEMP/pm2-jlist-before-${GITHUB_RUN_ID}.json"
+          PM2_JLIST="$RUNNER_TEMP/pm2-jlist-before-${GITHUB_RUN_ID}.json" \
+            PM2_CONF="$HOME/.pm2/module_conf.json" \
+            STATE_OUT="$before" \
+            node --input-type=module <<'NODE' | tee -a "$report"
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const processes = JSON.parse(await readFile(process.env.PM2_JLIST, 'utf8'));
+          const moduleProcess = processes.find(item => item?.name === 'pm2-logrotate');
+          const appProcess = processes.find(item => item?.name === 'fanmind');
+          if (moduleProcess?.pm2_env?.status !== 'online' || appProcess?.pm2_env?.status !== 'online') {
+            throw new Error('pm2_process_not_online');
+          }
+
+          const configPayload = JSON.parse(await readFile(process.env.PM2_CONF, 'utf8'));
+          const config = configPayload?.['pm2-logrotate'];
+          if (!config || typeof config !== 'object') throw new Error('pm2_logrotate_config_missing');
+          const maxSize = String(config.max_size ?? '').trim().toUpperCase();
+          const retain = Number(config.retain);
+          const compress = config.compress === true || String(config.compress).toLowerCase() === 'true';
+          const rotateInterval = String(config.rotateInterval ?? '').trim();
+          if (maxSize !== '10M' || retain !== 14 || !compress || rotateInterval !== '0 0 * * *') {
+            throw new Error('pm2_logrotate_config_unexpected');
+          }
+
+          const state = {
+            appRestartTime: Number(appProcess.pm2_env?.restart_time ?? -1),
+            appPid: Number(appProcess.pid ?? -1),
+            moduleRestartTime: Number(moduleProcess.pm2_env?.restart_time ?? -1),
+            maxSize,
+            retain,
+            compress,
+            rotateInterval,
+          };
+          if (!Number.isInteger(state.appRestartTime) || state.appRestartTime < 0 || !Number.isInteger(state.appPid) || state.appPid <= 0) {
+            throw new Error('pm2_app_state_invalid');
+          }
+          await writeFile(process.env.STATE_OUT, `${JSON.stringify(state)}\n`, { mode: 0o600 });
+          console.log('PM2_APP_STATUS=online');
+          console.log('PM2_LOGROTATE_STATUS=online');
+          console.log('PM2_LOGROTATE_MAX_SIZE=10M');
+          console.log('PM2_LOGROTATE_RETAIN=14');
+          console.log('PM2_LOGROTATE_COMPRESS=true');
+          console.log('PM2_LOGROTATE_SCHEDULE=daily');
+          NODE
+
+          sudo -n bash -c '
+            set -euo pipefail
+            files=()
+            while IFS= read -r -d "" file; do files+=("$file"); done < <(find /etc/systemd/journald.conf.d -maxdepth 1 -type f -iname "*fanmind*" -print0 2>/dev/null | sort -z)
+            ((${#files[@]} > 0))
+            for file in "${files[@]}"; do sha256sum "$file"; done | sha256sum | awk "{print \$1}"
+          ' > "$journal_before"
+          echo 'JOURNALD_FANMIND_POLICY=present' | tee -a "$report"
+
+          if sudo -n test -f "$SYSTEM_PM2_RULE"; then
+            echo 'SYSTEM_PM2_RULE_BEFORE=present' | tee -a "$report"
+          else
+            echo 'SYSTEM_PM2_RULE_BEFORE=already_absent' | tee -a "$report"
+          fi
+
+          before_matches="$(sudo -n grep -RIl --fixed-strings '/home/ubuntu/.pm2/logs' /etc/logrotate.d 2>/dev/null | wc -l | tr -d ' ')"
+          if [[ "$before_matches" -gt 1 ]]; then
+            echo 'SYSTEM_PM2_RULE_MATCHES_BEFORE=unexpected_multiple' | tee -a "$report"
+            exit 1
+          fi
+          echo "SYSTEM_PM2_RULE_MATCHES_BEFORE=$before_matches" | tee -a "$report"
+
+      - name: Remove only the redundant system PM2 rule
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          sudo -n rm -f -- "$SYSTEM_PM2_RULE"
+          sudo -n test ! -e "$SYSTEM_PM2_RULE"
+
+          after_matches="$(sudo -n grep -RIl --fixed-strings '/home/ubuntu/.pm2/logs' /etc/logrotate.d 2>/dev/null | wc -l | tr -d ' ')"
+          test "$after_matches" = "0"
+          echo 'SYSTEM_PM2_RULE_AFTER=absent' | tee -a "$report"
+          echo 'SYSTEM_PM2_RULE_MATCHES_AFTER=0' | tee -a "$report"
+          echo 'LOG_FILES_READ_OR_DELETED=false' | tee -a "$report"
+
+      - name: Verify PM2 module, app and journald remained unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          before="$RUNNER_TEMP/fanmind-pm2-before-${GITHUB_RUN_ID}.json"
+          journal_before="$RUNNER_TEMP/fanmind-journald-before-${GITHUB_RUN_ID}.sha256"
+          after="$RUNNER_TEMP/fanmind-pm2-after-${GITHUB_RUN_ID}.json"
+          journal_after="$RUNNER_TEMP/fanmind-journald-after-${GITHUB_RUN_ID}.sha256"
+
+          pm2 jlist > "$RUNNER_TEMP/pm2-jlist-after-${GITHUB_RUN_ID}.json"
+          PM2_JLIST="$RUNNER_TEMP/pm2-jlist-after-${GITHUB_RUN_ID}.json" \
+            PM2_CONF="$HOME/.pm2/module_conf.json" \
+            BEFORE_STATE="$before" \
+            STATE_OUT="$after" \
+            node --input-type=module <<'NODE' | tee -a "$report"
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const before = JSON.parse(await readFile(process.env.BEFORE_STATE, 'utf8'));
+          const processes = JSON.parse(await readFile(process.env.PM2_JLIST, 'utf8'));
+          const moduleProcess = processes.find(item => item?.name === 'pm2-logrotate');
+          const appProcess = processes.find(item => item?.name === 'fanmind');
+          const configPayload = JSON.parse(await readFile(process.env.PM2_CONF, 'utf8'));
+          const config = configPayload?.['pm2-logrotate'];
+          const after = {
+            appRestartTime: Number(appProcess?.pm2_env?.restart_time ?? -1),
+            appPid: Number(appProcess?.pid ?? -1),
+            moduleRestartTime: Number(moduleProcess?.pm2_env?.restart_time ?? -1),
+            maxSize: String(config?.max_size ?? '').trim().toUpperCase(),
+            retain: Number(config?.retain),
+            compress: config?.compress === true || String(config?.compress).toLowerCase() === 'true',
+            rotateInterval: String(config?.rotateInterval ?? '').trim(),
+            appStatus: appProcess?.pm2_env?.status,
+            moduleStatus: moduleProcess?.pm2_env?.status,
+          };
+          if (
+            after.appStatus !== 'online'
+            || after.moduleStatus !== 'online'
+            || after.appRestartTime !== before.appRestartTime
+            || after.appPid !== before.appPid
+            || after.moduleRestartTime !== before.moduleRestartTime
+            || after.maxSize !== before.maxSize
+            || after.retain !== before.retain
+            || after.compress !== before.compress
+            || after.rotateInterval !== before.rotateInterval
+          ) {
+            throw new Error('pm2_state_changed');
+          }
+          await writeFile(process.env.STATE_OUT, `${JSON.stringify(after)}\n`, { mode: 0o600 });
+          console.log('FANMIND_PM2_RESTART_COUNT_UNCHANGED=yes');
+          console.log('FANMIND_PM2_PID_UNCHANGED=yes');
+          console.log('PM2_LOGROTATE_MODULE_UNCHANGED=yes');
+          console.log('PM2_LOGROTATE_CONFIG_UNCHANGED=yes');
+          NODE
+
+          sudo -n bash -c '
+            set -euo pipefail
+            files=()
+            while IFS= read -r -d "" file; do files+=("$file"); done < <(find /etc/systemd/journald.conf.d -maxdepth 1 -type f -iname "*fanmind*" -print0 2>/dev/null | sort -z)
+            ((${#files[@]} > 0))
+            for file in "${files[@]}"; do sha256sum "$file"; done | sha256sum | awk "{print \$1}"
+          ' > "$journal_after"
+          cmp -s "$journal_before" "$journal_after"
+          echo 'JOURNALD_CONFIG_UNCHANGED=yes' | tee -a "$report"
+
+      - name: Verify public core routes and final health
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          for route in / /login /register /api/version /api/health; do
+            status="$(curl -sS -L --max-time 15 -o /dev/null -w '%{http_code}' "https://fanmind.ch${route}")"
+            [[ "$status" =~ ^2[0-9][0-9]$ ]]
+          done
+
+          live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version \
+            | node -e '
+                let input = "";
+                process.stdin.on("data", chunk => input += chunk);
+                process.stdin.on("end", () => {
+                  const payload = JSON.parse(input);
+                  process.stdout.write(payload.releaseCommit || "missing");
+                });
+              ')"
+          test "$live_release" = "$EXPECTED_RELEASE"
+          test "$(git -C "$SOURCE_DIR" rev-parse HEAD)" = "$EXPECTED_RELEASE"
+          test "$(git -C "$SOURCE_DIR" rev-parse origin/main)" = "$EXPECTED_RELEASE"
+
+          echo 'PUBLIC_CORE_ROUTES=healthy' | tee -a "$report"
+          echo 'POST_CLEANUP_RELEASE_SYNC=ok' | tee -a "$report"
+          echo 'POST_CLEANUP_PUBLIC_HEALTH=healthy' | tee -a "$report"
+          echo 'PM2_LOGROTATE_CLEANUP_RESULT=success' | tee -a "$report"
+
+      - name: Upload sanitized cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-pm2-logrotate-cleanup-report
+          path: fanmind-pm2-logrotate-cleanup-report.txt
+          if-no-files-found: error
+          retention-days: 14
