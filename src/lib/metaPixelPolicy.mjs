@@ -5,6 +5,7 @@ export const FANMIND_MARKETING_CONSENT_MAX_AGE_SECONDS =
 
 export const META_PIXEL_SCRIPT_URL =
   "https://connect.facebook.net/en_US/fbevents.js";
+export const META_PIXEL_READY_EVENT = "fanmind:meta-pixel-ready";
 
 export const META_PIXEL_ACTIVE_EVENTS = Object.freeze(["PageView"]);
 export const META_PIXEL_PREPARED_EVENTS = Object.freeze([
@@ -165,5 +166,5 @@ export function buildMetaPixelBootstrap(value) {
   const pixelId = normalizeMetaPixelId(value);
   if (!pixelId) return null;
 
-  return `!function(f,b,e,v,n,t,s){if(!f.fbq){n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.referrerPolicy='no-referrer';t.src=v;t.setAttribute('data-fanmind-meta-pixel','true');s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}if(f.__fanmindMetaPixelId&&f.__fanmindMetaPixelId!=='${pixelId}')return;if(f.__fanmindMetaPixelId==='${pixelId}')return;f.fbq('set','autoConfig',false,'${pixelId}');f.fbq('init','${pixelId}');f.__fanmindMetaPixelId='${pixelId}'}(window,document,'script','${META_PIXEL_SCRIPT_URL}');`;
+  return `!function(f,b,e,v,n,t,s){if(!f.fbq){n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.referrerPolicy='no-referrer';t.src=v;t.setAttribute('data-fanmind-meta-pixel','true');s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}if(f.__fanmindMetaPixelId&&f.__fanmindMetaPixelId!=='${pixelId}')return;if(f.__fanmindMetaPixelId==='${pixelId}')return;f.fbq('set','autoConfig',false,'${pixelId}');f.fbq('init','${pixelId}');f.__fanmindMetaPixelId='${pixelId}';f.dispatchEvent(new Event('${META_PIXEL_READY_EVENT}'))}(window,document,'script','${META_PIXEL_SCRIPT_URL}');`;
 }
