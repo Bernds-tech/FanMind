@@ -36,6 +36,7 @@ function currentPageIsEligible(): boolean {
     isMetaPixelPageViewAllowed({
       pathname: window.location.pathname,
       search: window.location.search,
+      hash: window.location.hash,
     })
   );
 }
@@ -118,6 +119,7 @@ export function trackMetaPixelEvent(eventName: MetaPixelEventName): boolean {
 export function trackMetaPixelPageView(input: {
   pathname: unknown;
   search?: unknown;
+  hash?: unknown;
 }): boolean {
   if (!inBrowser() || !isMetaPixelPageViewAllowed(input)) return false;
   const routeKey = pageViewKey(input.pathname, input.search);
