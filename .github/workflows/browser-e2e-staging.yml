@@ -1,0 +1,76 @@
+name: FanMind Browser E2E Staging Read-only
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: fanmind-browser-e2e-staging-readonly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  staging-readonly:
+    name: Synthetic login and contact read-only flow
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: staging
+    env:
+      FANMIND_E2E_STAGING_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
+      FANMIND_E2E_STAGING_ACK: fanmind-staging-readonly
+      FANMIND_E2E_STAGING_EMAIL: ${{ secrets.FANMIND_STAGING_E2E_EMAIL }}
+      FANMIND_E2E_STAGING_PASSWORD: ${{ secrets.FANMIND_STAGING_E2E_PASSWORD }}
+      FANMIND_E2E_STAGING_CONTACT_LABEL: ${{ vars.FANMIND_STAGING_E2E_CONTACT_LABEL }}
+      CI: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22.13.1
+          cache: npm
+
+      - name: Validate staging boundary without outputting values
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const raw = process.env.FANMIND_E2E_STAGING_URL || '';
+          const email = process.env.FANMIND_E2E_STAGING_EMAIL || '';
+          const password = process.env.FANMIND_E2E_STAGING_PASSWORD || '';
+          let target;
+          try {
+            target = new URL(raw);
+          } catch {
+            throw new Error('staging_e2e_target_invalid');
+          }
+          const host = target.hostname.toLowerCase();
+          const synthetic = /staging|synthetic|test/i.test(email);
+          if (
+            target.protocol !== 'https:'
+            || host === 'fanmind.ch'
+            || host === 'www.fanmind.ch'
+            || !host.includes('staging')
+            || process.env.FANMIND_E2E_STAGING_ACK !== 'fanmind-staging-readonly'
+            || !email
+            || !password
+            || !synthetic
+          ) {
+            throw new Error('staging_e2e_boundary_rejected');
+          }
+          console.log('STAGING_E2E_BOUNDARY=accepted');
+          console.log('STAGING_E2E_CREDENTIALS=synthetic_present');
+          NODE
+
+      - name: Install dependencies reproducibly
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium only
+        run: npx playwright install --with-deps chromium
+
+      - name: Run read-only authenticated staging flow
+        run: npm run test:e2e:staging
