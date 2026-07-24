@@ -11,6 +11,7 @@ on:
     paths:
       - ".github/workflows/ops-verify-meta-pixel-production-20260724.yml"
       - "scripts/operations/verify-meta-pixel-production-temp-20260724.mjs"
+      - "scripts/operations/verify-meta-pixel-network-temp-20260724.mjs"
 
 concurrency:
   group: fanmind-p1-verify-meta-pixel-production-20260724
@@ -136,6 +137,7 @@ jobs:
           test -f /var/www/fanmind/src/lib/metaPixelPolicy.mjs
           test -f /var/www/fanmind/docs/analytics/META_PIXEL.md
           test ! -e /var/www/fanmind/scripts/operations/verify-meta-pixel-production-temp-20260724.mjs
+          test ! -e /var/www/fanmind/scripts/operations/verify-meta-pixel-network-temp-20260724.mjs
           git -C /var/www/fanmind grep -q "autoConfig',false" -- src/lib/metaPixelPolicy.mjs
           git -C /var/www/fanmind grep -q 'META_PIXEL_ACTIVE_EVENTS = Object.freeze(\["PageView"\])' -- src/lib/metaPixelPolicy.mjs
           git -C /var/www/fanmind grep -q 'NEXT_PUBLIC_META_PIXEL_ID' -- src/app/layout.tsx
@@ -143,7 +145,7 @@ jobs:
           echo 'DEPLOYED_META_PIXEL_COMPONENTS=present' | tee -a "$report"
           echo 'DEPLOYED_META_PIXEL_AUTOCONFIG=disabled' | tee -a "$report"
           echo 'DEPLOYED_META_PIXEL_ACTIVE_EVENT=PageView' | tee -a "$report"
-          echo 'TEMPORARY_VERIFIER_DEPLOYED=absent' | tee -a "$report"
+          echo 'TEMPORARY_VERIFIERS_DEPLOYED=absent' | tee -a "$report"
 
       - name: Verify public routes remain healthy
         shell: bash
@@ -195,7 +197,7 @@ jobs:
       - name: Install Chromium only
         run: npx playwright install chromium
 
-      - name: Verify real Production consent and PageView transport
+      - name: Verify Production consent, PageView calls and route boundaries
         run: |
           set -euo pipefail
           node scripts/operations/verify-meta-pixel-production-temp-20260724.mjs "$REPORT_PATH"
@@ -206,5 +208,49 @@ jobs:
         with:
           name: fanmind-meta-pixel-production-browser
           path: fanmind-meta-pixel-production-browser.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  network:
+    needs: release
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/verify-meta-pixel-production-20260724'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      REPORT_PATH: fanmind-meta-pixel-network-verification.txt
+
+    steps:
+      - name: Checkout trusted verification branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/verify-meta-pixel-production-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies reproducibly
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium only
+        run: npx playwright install chromium
+
+      - name: Verify uninstrumented real Meta PageView transport
+        run: |
+          set -euo pipefail
+          node scripts/operations/verify-meta-pixel-network-temp-20260724.mjs "$REPORT_PATH"
+
+      - name: Upload sanitized network evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-meta-pixel-network-verification
+          path: fanmind-meta-pixel-network-verification.txt
           if-no-files-found: error
           retention-days: 7
