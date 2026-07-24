@@ -123,10 +123,22 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     ).toHaveLength(1);
     expect(
       calls.filter(
+        ([command, setting, enabled, pixelId]) =>
+          command === "set" &&
+          setting === "autoConfig" &&
+          enabled === false &&
+          pixelId === META_PIXEL_ID,
+      ),
+    ).toHaveLength(1);
+    expect(
+      calls.filter(
         ([command, value]) => command === "track" && value === "PageView",
       ),
     ).toHaveLength(1);
-    expect(calls.every((call) => call.length === 2)).toBe(true);
+    const eventCalls = calls.filter(([command]) =>
+      ["init", "track", "consent"].includes(String(command)),
+    );
+    expect(eventCalls.every((call) => call.length === 2)).toBe(true);
 
     await page.getByRole("link", { name: "Login" }).first().click();
     await expect(page).toHaveURL(/\/login(?:\?|$)/u);
@@ -146,6 +158,15 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     expect(
       calls.filter(
         ([command, value]) => command === "init" && value === META_PIXEL_ID,
+      ),
+    ).toHaveLength(1);
+    expect(
+      calls.filter(
+        ([command, setting, enabled, pixelId]) =>
+          command === "set" &&
+          setting === "autoConfig" &&
+          enabled === false &&
+          pixelId === META_PIXEL_ID,
       ),
     ).toHaveLength(1);
     expect(
@@ -177,6 +198,9 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     );
     expect(metaScriptRequests).toBe(1);
     expect(await unsafePage.evaluate(() => typeof window.fbq)).toBe("undefined");
+    await expect(
+      unsafePage.getByRole("button", { name: "Datenschutz-Einstellungen" }),
+    ).toHaveCount(0);
     await unsafePage.close();
   });
 
