@@ -50,7 +50,7 @@ Aktiv beziehungsweise produktnah:
   - Self-Service-Kündigung für Starter-Abos zum serverseitig erzwungenen Vertragsende mit separatem Account-/DSGVO-Löschprozess;
 - Admin-only Asset-Upload in den Supabase-Storage-Bucket `fanmind-assets`;
 - Legal-Seiten, Zahlungsbedingungen und AVV-Anforderungsseite;
-- consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: nur `PageView`, keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-Daten, kein Advanced Matching und keine Conversions API; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
+- consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: nur `PageView`, keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag ausschließlich für klar markierte interne Test-Workspaces; kein Referral-Rabatt.
 
 Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-Checkout bleibt gesperrt. Die kostenlose Demo ist kein entgeltliches Paket.

@@ -38,6 +38,7 @@ Die Integration sitzt genau einmal in der zentralen Web-App-Struktur:
 6. Der Bootstrap initialisiert nur den Pixel. `PageView` wird getrennt und dedupliziert über den sicheren App-Router-Pfad samt freigegebener Query ausgelöst.
 7. Bei Widerruf werden weitere FanMind-Events blockiert, Meta-Consent auf `revoke` gesetzt und bekannte First-Party-Meta-Cookies (`_fbp`, `_fbc`) für den aktuellen Host entfernt.
 8. Beim Wechsel auf geschützte oder nicht freigegebene URLs wird Meta-Consent vorsorglich widerrufen und kein FanMind-Event ausgelöst.
+9. Das dynamisch erzeugte Meta-Script erhält `referrerPolicy='no-referrer'`; zusätzlich blockiert FanMind jeden same-origin Referrer, der von einer geschützten, dynamischen oder anderweitig nicht freigegebenen FanMind-URL stammt.
 
 Es gibt bewusst kein ungegate-tes `noscript`-Bild, weil dieses auch ohne JavaScript und ohne ausdrückliche Marketing-Einwilligung eine Meta-Anfrage auslösen würde.
 
@@ -73,7 +74,7 @@ Querystrings sind standardmäßig blockiert. Zulässig sind ausschließlich:
 - `lang=de|en` auf der jeweiligen öffentlichen Route;
 - `plan=starter|starter_paid_setup|starter_no_setup_commitment|growth|agency` auf `/register`.
 
-Parameter wie E-Mail, Referral-Code, `returnTo`, Kontakt-/Workspace-ID, Session-/Recovery-Wert oder freie Kampagnenparameter verhindern das Laden und Tracking vollständig. Damit gelangen keine CRM-IDs oder sensiblen Callback-URLs allein durch einen `PageView` an Meta.
+Parameter wie E-Mail, Referral-Code, `returnTo`, Kontakt-/Workspace-ID, Session-/Recovery-Wert oder freie Kampagnenparameter verhindern das Laden und Tracking vollständig. Damit gelangen keine CRM-IDs oder sensiblen Callback-URLs allein durch einen `PageView` an Meta. Ein same-origin Referrer aus einer solchen geschützten oder unsicheren FanMind-URL blockiert den Pixel ebenfalls; externe Referrer bleiben für die normale Marketing-Attribution zulässig.
 
 ## Consent-Vertrag
 

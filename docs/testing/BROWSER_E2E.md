@@ -15,7 +15,7 @@ Sie schützt die kritischen öffentlichen FanMind-Flows auf echter Browser-Ebene
 - Starter-Paketwahrheit und Roadmap-Abgrenzung der Vorschau-Pakete;
 - Weiterleitung geschützter Routen zum Login;
 - Desktop- und Mobile-Viewport ohne horizontales Überlaufen;
-- consent-gesteuerten Meta Pixel: ohne Consent kein Script, gleichwertiges Ablehnen/Akzeptieren, genau eine Initialisierung, deduplizierte `PageView`-Events bei Client-Navigation sowie fail-closed blockierte geschützte Routen und unsichere Querywerte.
+- consent-gesteuerten Meta Pixel: ohne Consent kein Script, gleichwertiges Ablehnen/Akzeptieren, genau eine Initialisierung, deduplizierte `PageView`-Events bei Client-Navigation sowie fail-closed blockierte geschützte Routen, unsichere Querywerte und geschützte same-origin Referrer.
 
 Der Gerhard-Demo-Kern bleibt unverändert: Login, Dashboard, Kontakte, Kontaktdetail, serverseitige KI-Vorschläge, Kontaktwissen, Follow-ups und ehrliche Roadmap. Browser-E2E erweitert FanMind nicht um Social-Vollintegrationen, Scraping oder automatisches Senden.
 

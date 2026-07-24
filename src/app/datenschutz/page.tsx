@@ -171,7 +171,8 @@ const sections: PrivacySection[] = [
           FanMind übermittelt über diese Integration keine E-Mail-Adressen, Namen, Telefonnummern,
           Account-, Workspace-, Kontakt-, CRM-, Nachrichten-, Prompt-, KI- oder Zahlungsinhalte.
           Geschützte CRM-, Admin-, Einstellungen-, Billing- und dynamische Kontaktrouten sowie
-          unsichere Query- oder Fragmentwerte sind von der Pixel-Ausführung ausgeschlossen.
+          unsichere Query- oder Fragmentwerte sind von der Pixel-Ausführung ausgeschlossen. Gleiches
+          gilt für same-origin Referrer aus solchen geschützten oder nicht freigegebenen FanMind-Seiten.
           Erweitertes Matching, automatische Nutzerzuordnung, Conversions API und serverseitiges
           Meta-Tracking sind nicht aktiviert. Die vorbereiteten Eventnamen für spätere
           Conversion-Messungen werden ohne gesonderte fachliche und datenschutzrechtliche Prüfung
