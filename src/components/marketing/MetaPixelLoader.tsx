@@ -15,13 +15,7 @@ import {
   trackMetaPixelPageView,
 } from "@/lib/metaPixel";
 
-export function MetaPixelLoader({
-  pixelId,
-  hash,
-}: {
-  pixelId: string;
-  hash: string;
-}) {
+export function MetaPixelLoader({ pixelId }: { pixelId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
@@ -58,8 +52,12 @@ export function MetaPixelLoader({
 
   useEffect(() => {
     if (!ready || !normalizedPixelId) return;
-    trackMetaPixelPageView({ pathname, search, hash });
-  }, [hash, normalizedPixelId, pathname, ready, search]);
+    trackMetaPixelPageView({
+      pathname,
+      search,
+      hash: window.location.hash,
+    });
+  }, [normalizedPixelId, pathname, ready, search]);
 
   if (!normalizedPixelId || !bootstrap) return null;
 
