@@ -1,0 +1,289 @@
+name: FanMind P1 Controlled Reboot Readiness Audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-controlled-reboot-readiness-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-controlled-reboot-readiness-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 20
+    env:
+      EXPECTED_RELEASE: 6b8ba61a1786651713b2507340dc7b673811159d
+      REPORT_PATH: fanmind-controlled-reboot-readiness.txt
+
+    steps:
+      - name: Checkout trusted reboot branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Verify exact Production release and public health
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'READINESS_AUDIT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              process.stdout.write(payload.releaseCommit || "missing");
+            });
+          ')"
+          server_head="$(git -C /var/www/fanmind rev-parse HEAD)"
+          origin_main="$(git -C /var/www/fanmind rev-parse origin/main)"
+          test "$live_release" = "$EXPECTED_RELEASE"
+          test "$server_head" = "$EXPECTED_RELEASE"
+          test "$origin_main" = "$EXPECTED_RELEASE"
+
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              const components = Object.values(payload.components || {});
+              process.exit(
+                payload.status === "healthy" &&
+                components.length >= 7 &&
+                components.every(item => item?.status === "healthy")
+                  ? 0
+                  : 1,
+              );
+            });
+          '
+
+          echo 'PRODUCTION_RELEASE_SYNC=ok' | tee -a "$report"
+          echo 'PRODUCTION_REQUIRED_HEALTH=healthy' | tee -a "$report"
+
+      - name: Audit host, PM2, startup services and timers read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+
+          sudo -n true
+          sudo -n nginx -t >/dev/null 2>&1
+          systemctl is-active --quiet nginx.service
+          systemctl is-active --quiet fanmind-backup-worker.service
+
+          if ps -eo comm= | grep -Eq '^(apt|apt-get|dpkg|unattended-upgr)$'; then
+            echo 'PACKAGE_MANAGER_ACTIVITY=busy' | tee -a "$report"
+            exit 1
+          fi
+          echo 'PACKAGE_MANAGER_ACTIVITY=idle' | tee -a "$report"
+
+          reboot_required=no
+          reboot_package_count=0
+          if sudo -n test -f /run/reboot-required; then
+            reboot_required=yes
+          fi
+          if sudo -n test -f /run/reboot-required.pkgs; then
+            reboot_package_count="$(sudo -n awk 'NF {count++} END {print count+0}' /run/reboot-required.pkgs)"
+          fi
+          echo "REBOOT_REQUIRED=$reboot_required" | tee -a "$report"
+          echo "REBOOT_REQUIRED_PACKAGE_COUNT=$reboot_package_count" | tee -a "$report"
+
+          cpu_count="$(nproc)"
+          load_one="$(awk '{print $1}' /proc/loadavg)"
+          available_kib="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
+          root_available_kib="$(df -Pk / | awk 'NR==2 {print $4}')"
+          node -e '
+            const cpu = Number(process.argv[1]);
+            const load = Number(process.argv[2]);
+            const mem = Number(process.argv[3]);
+            const disk = Number(process.argv[4]);
+            if (!Number.isFinite(cpu) || cpu < 1) process.exit(1);
+            if (!Number.isFinite(load) || load > Math.max(cpu * 4, 8)) process.exit(1);
+            if (!Number.isFinite(mem) || mem < 262144) process.exit(1);
+            if (!Number.isFinite(disk) || disk < 2097152) process.exit(1);
+          ' "$cpu_count" "$load_one" "$available_kib" "$root_available_kib"
+          echo 'HOST_CAPACITY=ready' | tee -a "$report"
+          echo 'NGINX_CONFIGURATION=valid' | tee -a "$report"
+          echo 'NGINX_SERVICE=active' | tee -a "$report"
+          echo 'BACKUP_WORKER_SERVICE=active' | tee -a "$report"
+
+          current_release="$(readlink -f /var/www/fanmind-current)"
+          test "$current_release" = "/var/www/fanmind-releases/$EXPECTED_RELEASE"
+          echo 'CURRENT_RELEASE_LINK=matching' | tee -a "$report"
+
+          pm2_json="$(pm2 jlist)"
+          PM2_JSON="$pm2_json" EXPECTED_RELEASE="$EXPECTED_RELEASE" node <<'NODE' | tee -a "$report"
+          const list = JSON.parse(process.env.PM2_JSON || '[]');
+          const rows = list.filter(item => item?.name === 'fanmind');
+          if (rows.length !== 1) throw new Error('pm2_fanmind_count_invalid');
+          const row = rows[0];
+          const cwd = String(row?.pm2_env?.pm_cwd || '');
+          const status = String(row?.pm2_env?.status || '');
+          const pid = Number(row?.pid || 0);
+          const restarts = Number(row?.pm2_env?.restart_time);
+          if (status !== 'online' || pid < 1 || !Number.isInteger(restarts) || restarts < 0) {
+            throw new Error('pm2_fanmind_state_invalid');
+          }
+          if (cwd !== `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`) {
+            throw new Error('pm2_cwd_release_mismatch');
+          }
+          console.log('PM2_FANMIND_PROCESS_COUNT=1');
+          console.log('PM2_FANMIND_STATUS=online');
+          console.log('PM2_FANMIND_CWD_RELEASE=matching');
+          console.log(`PM2_FANMIND_RESTART_COUNT=${restarts}`);
+          console.log('PM2_FANMIND_PID_PRESENT=yes');
+          NODE
+          test -s /home/ubuntu/.pm2/dump.pm2
+          echo 'PM2_DUMP=present' | tee -a "$report"
+
+          pm2_unit_count="$(systemctl list-unit-files --type=service --no-legend 'pm2-*.service' 2>/dev/null | awk '$2 == "enabled" {count++} END {print count+0}')"
+          pm2_active_count="$(systemctl list-units --type=service --state=active --no-legend 'pm2-*.service' 2>/dev/null | awk 'NF {count++} END {print count+0}')"
+          test "$pm2_unit_count" -ge 1
+          test "$pm2_active_count" -ge 1
+          echo "PM2_STARTUP_ENABLED_COUNT=$pm2_unit_count" | tee -a "$report"
+          echo "PM2_STARTUP_ACTIVE_COUNT=$pm2_active_count" | tee -a "$report"
+
+          runner_enabled_count="$(systemctl list-unit-files --type=service --no-legend 'actions.runner.*.service' 2>/dev/null | awk '$2 == "enabled" {count++} END {print count+0}')"
+          runner_active_count="$(systemctl list-units --type=service --state=active --no-legend 'actions.runner.*.service' 2>/dev/null | awk 'NF {count++} END {print count+0}')"
+          test "$runner_enabled_count" -ge 1
+          test "$runner_active_count" -ge 1
+          echo "GITHUB_RUNNER_STARTUP_ENABLED_COUNT=$runner_enabled_count" | tee -a "$report"
+          echo "GITHUB_RUNNER_ACTIVE_COUNT=$runner_active_count" | tee -a "$report"
+
+          timer_unit_count="$(systemctl list-unit-files --type=timer --no-legend 'fanmind-*.timer' 2>/dev/null | awk 'NF {count++} END {print count+0}')"
+          timer_enabled_count="$(systemctl list-unit-files --type=timer --no-legend 'fanmind-*.timer' 2>/dev/null | awk '$2 == "enabled" {count++} END {print count+0}')"
+          timer_active_count="$(systemctl list-units --type=timer --state=active --no-legend 'fanmind-*.timer' 2>/dev/null | awk 'NF {count++} END {print count+0}')"
+          test "$timer_unit_count" -ge 8
+          test "$timer_active_count" -ge "$timer_enabled_count"
+          echo "FANMIND_TIMER_UNIT_COUNT=$timer_unit_count" | tee -a "$report"
+          echo "FANMIND_TIMER_ENABLED_COUNT=$timer_enabled_count" | tee -a "$report"
+          echo "FANMIND_TIMER_ACTIVE_COUNT=$timer_active_count" | tee -a "$report"
+          echo 'HOST_REBOOT_READINESS=ready' | tee -a "$report"
+
+      - name: Audit latest backups and operation queue read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          sudo -n env REPORT_PATH="$report" /usr/bin/node --input-type=module <<'NODE'
+          import { appendFile, readFile, stat } from 'node:fs/promises';
+
+          function parseEnv(text) {
+            const values = new Map();
+            for (const rawLine of text.split(/\r?\n/)) {
+              const line = rawLine.trim();
+              if (!line || line.startsWith('#') || !line.includes('=')) continue;
+              const split = line.indexOf('=');
+              const key = line.slice(0, split).trim();
+              let value = line.slice(split + 1).trim();
+              if (value.length >= 2 && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) {
+                value = value.slice(1, -1);
+              }
+              values.set(key, value);
+            }
+            return values;
+          }
+
+          const config = parseEnv(await readFile('/etc/fanmind-backup/worker.env', 'utf8'));
+          const required = name => {
+            const value = config.get(name) || '';
+            if (!value) throw new Error(`${name}_missing`);
+            return value;
+          };
+          const base = required('NEXT_PUBLIC_SUPABASE_URL').replace(/\/$/, '');
+          const key = required('SUPABASE_SERVICE_ROLE_KEY');
+          const headers = { apikey: key, Authorization: `Bearer ${key}` };
+          async function query(path) {
+            const response = await fetch(`${base}/rest/v1/${path}`, {
+              headers,
+              signal: AbortSignal.timeout(15000),
+            });
+            if (!response.ok) throw new Error('supabase_read_failed');
+            return response.json();
+          }
+
+          const [fullRows, configRows, activeJobs] = await Promise.all([
+            query('backup_runs?select=backup_type,status,validation_status,offsite_status,storage_reference,checksum_reference,started_at,finished_at&backup_type=eq.full&order=started_at.desc&limit=1'),
+            query('backup_runs?select=backup_type,status,validation_status,offsite_status,storage_reference,checksum_reference,started_at,finished_at&backup_type=eq.server_config&order=started_at.desc&limit=1'),
+            query('admin_operation_jobs?select=job_type,status,requested_at&status=in.(queued,running)&order=requested_at.asc&limit=100'),
+          ]);
+
+          const validate = async (rows, label, maxAgeHours) => {
+            const row = Array.isArray(rows) ? rows[0] : null;
+            if (!row) throw new Error(`${label}_backup_missing`);
+            const timestamp = Date.parse(row.finished_at || row.started_at || '');
+            const ageHours = (Date.now() - timestamp) / 3600000;
+            if (!Number.isFinite(ageHours) || ageHours < 0 || ageHours > maxAgeHours) {
+              throw new Error(`${label}_backup_stale`);
+            }
+            if (!['succeeded', 'offsite_pending', 'degraded', 'completed'].includes(row.status)) {
+              throw new Error(`${label}_backup_status_invalid`);
+            }
+            if (row.validation_status !== 'passed') throw new Error(`${label}_backup_validation_invalid`);
+            if (config.get('FANMIND_BACKUP_OFFSITE_ENABLED') === 'true' && row.offsite_status !== 'uploaded') {
+              throw new Error(`${label}_backup_offsite_invalid`);
+            }
+            if (typeof row.storage_reference !== 'string' || typeof row.checksum_reference !== 'string') {
+              throw new Error(`${label}_backup_paths_missing`);
+            }
+            const artifact = await stat(row.storage_reference);
+            const checksum = await stat(row.checksum_reference);
+            if (!artifact.isFile() || artifact.size < 1 || !checksum.isFile() || checksum.size < 1) {
+              throw new Error(`${label}_backup_pair_invalid`);
+            }
+            return Math.floor(ageHours);
+          };
+
+          const fullAge = await validate(fullRows, 'full', 72);
+          const configAge = await validate(configRows, 'server_config', 72);
+          const running = activeJobs.filter(job => job.status === 'running').length;
+          if (running !== 0) throw new Error('backup_job_running');
+
+          const lines = [
+            `LATEST_FULL_BACKUP_AGE_HOURS=${fullAge}`,
+            'LATEST_FULL_BACKUP_VALIDATION=passed',
+            'LATEST_FULL_BACKUP_OFFSITE=ready',
+            `LATEST_SERVER_CONFIG_BACKUP_AGE_HOURS=${configAge}`,
+            'LATEST_SERVER_CONFIG_BACKUP_VALIDATION=passed',
+            'LATEST_SERVER_CONFIG_BACKUP_OFFSITE=ready',
+            `ACTIVE_BACKUP_JOB_COUNT=${activeJobs.length}`,
+            'RUNNING_BACKUP_JOB_COUNT=0',
+            'BACKUP_READINESS=ready',
+            'BACKUP_PATHS_AND_CREDENTIALS_WERE_NOT_PRINTED=true',
+          ];
+          await appendFile(process.env.REPORT_PATH, `${lines.join('\n')}\n`, { mode: 0o644 });
+          process.stdout.write(`${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload sanitized reboot readiness evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-controlled-reboot-readiness
+          path: fanmind-controlled-reboot-readiness.txt
+          if-no-files-found: error
+          retention-days: 14
