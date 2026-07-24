@@ -1,0 +1,76 @@
+name: FanMind P1 Browser E2E Lockfile Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - "package.json"
+      - ".github/workflows/p1-browser-e2e-lockfile-patch-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-browser-e2e-lockfile-patch-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/browser-e2e-critical-flows-20260724' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted E2E branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/browser-e2e-critical-flows-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22.13.1
+          cache: npm
+
+      - name: Refresh lockfile without install scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          node <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          if (manifest.devDependencies?.['@playwright/test'] !== '1.60.0') {
+            throw new Error('playwright_manifest_version_invalid');
+          }
+          if (lock.packages?.['node_modules/@playwright/test']?.version !== '1.60.0') {
+            throw new Error('playwright_lock_version_invalid');
+          }
+          if (!lock.packages?.['node_modules/playwright'] || !lock.packages?.['node_modules/playwright-core']) {
+            throw new Error('playwright_runtime_lock_entries_missing');
+          }
+          console.log('PLAYWRIGHT_LOCKFILE_VERSION=1.60.0');
+          console.log('PLAYWRIGHT_LOCKFILE_RESULT=success');
+          NODE
+          git diff --check
+
+      - name: Commit deterministic lockfile update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git diff --cached --quiet && { echo "Lockfile already current"; exit 0; }
+          git commit -m "Lock Playwright browser E2E dependencies"
+          git push origin HEAD:p1/browser-e2e-critical-flows-20260724
