@@ -10,7 +10,7 @@ on:
       - reopened
     paths:
       - ".github/workflows/ops-remove-duplicate-pm2-logrotate-v2-20260724.yml"
-      - "scripts/operations/remove-duplicate-pm2-logrotate-temp-20260724.mjs"
+      - "scripts/operations/remove-duplicate-pm2-logrotate-temp-v3-20260724.mjs"
 
 concurrency:
   group: fanmind-p1-remove-duplicate-pm2-logrotate-20260724
@@ -52,7 +52,7 @@ jobs:
           : > "$report"
           set +e
           node \
-            "$GITHUB_WORKSPACE/scripts/operations/remove-duplicate-pm2-logrotate-temp-20260724.mjs" \
+            "$GITHUB_WORKSPACE/scripts/operations/remove-duplicate-pm2-logrotate-temp-v3-20260724.mjs" \
             "$report"
           status=$?
           set -e
