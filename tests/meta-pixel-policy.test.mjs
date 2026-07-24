@@ -262,7 +262,7 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(stagingExample, /NEXT_PUBLIC_META_PIXEL_ID=/u);
   assert.match(privacy, /marketing-messung/u);
   assert.match(privacy, /Meta Pixel/u);
-  assert.match(privacy, /ausdrücklicher Einwilligung/u);
+  assert.match(privacy, /ausdrücklichen (?:Marketing-)?Einwilligung/u);
   assert.match(runbook, /\| `PageView` \|/u);
   assert.match(runbook, /Öffentliche Routengrenze/u);
   assert.match(runbook, /same-origin/iu);
@@ -280,7 +280,7 @@ test("browser E2E uses a synthetic Meta script and proves consent-gated PageView
     source("e2e/public-critical.spec.ts"),
   ]);
 
-  assert.match(workflow, /NEXT_PUBLIC_META_PIXEL_ID: 2069553844439892/u);
+  assert.match(workflow, /NEXT_PUBLIC_META_PIXEL_ID: "2069553844439892"/u);
   assert.match(spec, /connect\.facebook\.net\/en_US\/fbevents\.js/u);
   assert.match(spec, /Marketing erlauben/u);
   assert.match(spec, /Nur notwendige/u);
