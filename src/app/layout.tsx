@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 import { MarketingConsentManager } from "@/components/marketing/MarketingConsentManager";
 import {
   FANMIND_MARKETING_CONSENT_COOKIE,
@@ -74,11 +75,13 @@ export default async function RootLayout({
           }}
         />
         {children}
-        <MarketingConsentManager
-          initialConsent={marketingConsent}
-          pixelId={metaPixelId}
-          locale={locale}
-        />
+        <Suspense fallback={null}>
+          <MarketingConsentManager
+            initialConsent={marketingConsent}
+            pixelId={metaPixelId}
+            locale={locale}
+          />
+        </Suspense>
       </body>
     </html>
   );
