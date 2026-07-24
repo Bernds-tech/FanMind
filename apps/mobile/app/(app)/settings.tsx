@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 
 import {
   BrandMark,
   Card,
   PrimaryButton,
   Screen,
+  SecondaryButton,
   SectionTitle,
   StatusPill,
   mobileStyles,
@@ -15,6 +17,7 @@ import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { colors, spacing, typography } from "@/theme/tokens";
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { session, signOut } = useAuth();
   const { workspace } = useWorkspace();
   const [busy, setBusy] = useState(false);
@@ -81,6 +84,19 @@ export default function SettingsScreen() {
         </Text>
       </Card>
 
+      <Card style={styles.dangerCard}>
+        <SectionTitle eyebrow="Datenschutz">Account und Daten löschen</SectionTitle>
+        <Text style={mobileStyles.muted}>
+          Leite die vollständige Löschung des FanMind-Logins und der zugehörigen
+          nicht aufbewahrungspflichtigen Daten ein. Dieser Prozess ist von einer
+          Abo-Kündigung getrennt, zeigt den Bearbeitungsstatus und ist leicht
+          auffindbar, ohne Support-E-Mail oder Telefonanruf.
+        </Text>
+        <SecondaryButton onPress={() => router.push("/(app)/account-deletion")}>
+          Vollständige Account-Löschung verwalten
+        </SecondaryButton>
+      </Card>
+
       {error ? <Text style={mobileStyles.error}>{error}</Text> : null}
       <PrimaryButton busy={busy} onPress={() => void logout()}>
         Sicher abmelden und lokale Daten entfernen
@@ -101,4 +117,5 @@ const styles = StyleSheet.create({
   },
   label: { color: colors.textMuted, fontSize: typography.small },
   value: { flex: 1, color: colors.text, fontSize: typography.small, fontWeight: "800", textAlign: "right" },
+  dangerCard: { borderColor: colors.red },
 });
