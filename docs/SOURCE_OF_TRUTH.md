@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 23. Juli 2026
+Stand: 24. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -50,6 +50,7 @@ Aktiv beziehungsweise produktnah:
   - Self-Service-Kündigung für Starter-Abos zum serverseitig erzwungenen Vertragsende mit separatem Account-/DSGVO-Löschprozess;
 - Admin-only Asset-Upload in den Supabase-Storage-Bucket `fanmind-assets`;
 - Legal-Seiten, Zahlungsbedingungen und AVV-Anforderungsseite;
+- consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: nur `PageView`, keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag ausschließlich für klar markierte interne Test-Workspaces; kein Referral-Rabatt.
 
 Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-Checkout bleibt gesperrt. Die kostenlose Demo ist kein entgeltliches Paket.
@@ -204,6 +205,7 @@ Aktiv im Standardprodukt:
 Vorbereitet / Beta / nicht allgemein live verkaufen:
 
 - Meta-, Facebook- und Instagram-Grundlagen;
+- Meta Pixel als consent-gesteuerte Marketing-Messung mit ausschließlich `PageView` auf freigegebenen öffentlichen Seiten; geschützte und dynamische CRM-Routen sowie unsichere Query-/Fragmentwerte sind fail-closed ausgeschlossen; Conversion-Events bleiben vorbereitet und unverknüpft, bis sie einzeln freigegeben sind;
 - Facebook-Reply-Target- und Messenger-Hilfen;
 - Telegram-Webhook- und Bot-Grundlagen;
 - Stripe Checkout für Starter.

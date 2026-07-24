@@ -1,5 +1,8 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+const E2E_BASE_URL = "http://127.0.0.1:3100";
+const META_PIXEL_ID = "2069553844439892";
+
 async function expectNoHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(
     () =>
@@ -37,7 +40,25 @@ async function fulfillCorsJson(
   });
 }
 
+async function metaQueue(page: Page): Promise<unknown[][]> {
+  return page.evaluate(() => {
+    const queue = window.fbq?.queue ?? [];
+    return Array.from(queue, (entry) => Array.from(entry as ArrayLike<unknown>));
+  });
+}
+
 test.describe("öffentliche kritische FanMind-Flows", () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addCookies([
+      {
+        name: "fanmind_marketing_consent",
+        value: "denied",
+        url: E2E_BASE_URL,
+        sameSite: "Lax",
+      },
+    ]);
+  });
+
   test("deutsche Landingpage zeigt aktive Kernfunktion und Human-in-the-loop-Grenze", async ({
     page,
   }) => {
@@ -52,6 +73,142 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await expect(page.getByRole("link", { name: "Login" }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /Registrieren|Zugang/u }).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
+  });
+
+  test("Meta Pixel bleibt ohne Consent aus und sendet deduplizierte PageViews erst nach Opt-in", async ({
+    context,
+    page,
+  }) => {
+    await context.clearCookies();
+    let metaScriptRequests = 0;
+    await context.route(
+      "https://connect.facebook.net/en_US/fbevents.js",
+      async (route) => {
+        metaScriptRequests += 1;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/javascript",
+          body: "window.__fanmindSyntheticMetaScriptLoaded=true;",
+        });
+      },
+    );
+
+    const response = await page.goto("/");
+    expect(response?.ok()).toBe(true);
+    await expect(
+      page.getByRole("button", { name: "Nur notwendige" }),
+    ).toBeVisible();
+    expect(metaScriptRequests).toBe(0);
+    expect(await page.evaluate(() => typeof window.fbq)).toBe("undefined");
+
+    await page.getByRole("button", { name: "Nur notwendige" }).click();
+    await expect(
+      page.getByRole("button", { name: "Datenschutz-Einstellungen" }),
+    ).toBeVisible();
+    expect(metaScriptRequests).toBe(0);
+
+    await page
+      .getByRole("button", { name: "Datenschutz-Einstellungen" })
+      .click();
+    await page.getByRole("button", { name: "Marketing erlauben" }).click();
+
+    await expect.poll(() => metaScriptRequests).toBe(1);
+    await expect.poll(async () => {
+      const current = await metaQueue(page);
+      return current.filter(
+        ([command, value]) => command === "track" && value === "PageView",
+      ).length;
+    }).toBe(1);
+
+    let calls = await metaQueue(page);
+    expect(
+      calls.filter(
+        ([command, value]) => command === "init" && value === META_PIXEL_ID,
+      ),
+    ).toHaveLength(1);
+    expect(
+      calls.filter(
+        ([command, setting, enabled, pixelId]) =>
+          command === "set" &&
+          setting === "autoConfig" &&
+          enabled === false &&
+          pixelId === META_PIXEL_ID,
+      ),
+    ).toHaveLength(1);
+    expect(
+      calls.filter(
+        ([command, value]) => command === "track" && value === "PageView",
+      ),
+    ).toHaveLength(1);
+    const eventCalls = calls.filter(([command]) =>
+      ["init", "track", "consent"].includes(String(command)),
+    );
+    expect(eventCalls.every((call) => call.length === 2)).toBe(true);
+
+    await page
+      .getByRole("button", { name: "Datenschutz-Einstellungen" })
+      .click();
+    await page
+      .getByRole("link", { name: "Details in der Datenschutzerklärung" })
+      .click();
+    await expect(page).toHaveURL(/\/datenschutz#marketing-messung$/u);
+    await expect.poll(async () => {
+      const current = await metaQueue(page);
+      return current.filter(
+        ([command, value]) => command === "track" && value === "PageView",
+      ).length;
+    }).toBe(2);
+
+    await page.getByRole("button", { name: "Marketing erlauben" }).click();
+    calls = await metaQueue(page);
+    expect(metaScriptRequests).toBe(1);
+    expect(
+      calls.filter(
+        ([command, value]) => command === "init" && value === META_PIXEL_ID,
+      ),
+    ).toHaveLength(1);
+    expect(
+      calls.filter(
+        ([command, setting, enabled, pixelId]) =>
+          command === "set" &&
+          setting === "autoConfig" &&
+          enabled === false &&
+          pixelId === META_PIXEL_ID,
+      ),
+    ).toHaveLength(1);
+    expect(
+      calls.filter(
+        ([command, value]) => command === "track" && value === "PageView",
+      ),
+    ).toHaveLength(2);
+
+    await page
+      .getByRole("button", { name: "Datenschutz-Einstellungen" })
+      .click();
+    await page.getByRole("button", { name: "Nur notwendige" }).click();
+    await page.goto("/register");
+    expect(metaScriptRequests).toBe(1);
+    await expectNoHorizontalOverflow(page);
+
+    await context.clearCookies();
+    await context.addCookies([
+      {
+        name: "fanmind_marketing_consent",
+        value: "granted",
+        url: E2E_BASE_URL,
+        sameSite: "Lax",
+      },
+    ]);
+    const unsafePage = await context.newPage();
+    await unsafePage.goto(
+      "/login?returnTo=%2Ffans%2Fsynthetic-contact-reference",
+    );
+    expect(metaScriptRequests).toBe(1);
+    expect(await unsafePage.evaluate(() => typeof window.fbq)).toBe("undefined");
+    await expect(
+      unsafePage.getByRole("button", { name: "Datenschutz-Einstellungen" }),
+    ).toHaveCount(0);
+    await unsafePage.close();
   });
 
   test("englische Landingpage bleibt übersetzt und manuell freigegeben", async ({ page }) => {

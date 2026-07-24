@@ -84,6 +84,20 @@ npm run test:operations
 npm run build
 ```
 
+## Optionale Marketing-Messung
+
+FanMind besitzt eine zentral im Next.js-Root-Layout eingebundene, consent-gesteuerte Meta-Pixel-Struktur für eine eng begrenzte Allowlist öffentlicher Seiten. Sie ist keine Produkt-Analytics-Suite, läuft nicht auf geschützten CRM-/Admin-/Billing-Seiten und bleibt ohne gültige öffentliche Pixel-ID vollständig deaktiviert.
+
+- Konfiguration: `NEXT_PUBLIC_META_PIXEL_ID`;
+- Production-Dataset: `FanMind Dataset`, Pixel-ID `2069553844439892`;
+- aktives Event: ausschließlich `PageView`, dedupliziert je freigegebenem öffentlichen App-Router-Pfad und unsensitivem Queryzustand;
+- vorbereitet, aber nicht mit Produktaktionen verbunden: `ViewContent`, `Lead`, `CompleteRegistration`, `Contact`, `Schedule`, `StartTrial`, `Purchase`;
+- kein Laden vor ausdrücklicher Marketing-Einwilligung;
+- keine E-Mail, Namen, CRM-, Kontakt-, Nachrichten-, KI- oder Zahlungsdaten; geschützte same-origin Referrer werden blockiert;
+- kein Advanced Matching, keine Conversions API und kein serverseitiges Meta-Tracking.
+
+Die Codeintegration allein aktiviert den Pixel nicht auf Production. Nach gesetzter ENV ist ein neuer Build erforderlich; Consent, Widerruf, genau ein initiales PageView und deduplizierte Client-Navigationen werden gemäß `docs/analytics/META_PIXEL.md` kontrolliert abgenommen.
+
 ## Mobile-App
 
 Die Mobile-App ist ein eigener Produktstream und keine eingebettete Website. Web und Mobile teilen ausschließlich freigegebene, RLS-geschützte Backend-Verträge und die serverseitige KI-API.
