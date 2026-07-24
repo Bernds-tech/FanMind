@@ -293,5 +293,5 @@ test("browser E2E uses a synthetic Meta script and proves consent-gated PageView
   assert.match(spec, /PageView/u);
   assert.match(spec, /returnTo=%2Ffans%2Fsynthetic-contact-reference/u);
   assert.match(spec, /Datenschutz-Einstellungen/u);
-  assert.doesNotMatch(spec, /facebook\.com\/tr/u);
+  assert.equal(spec.includes("facebook.com/tr"), false);
 });
