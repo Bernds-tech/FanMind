@@ -10,6 +10,27 @@ const REPORT_PATH = process.argv[2] || "fanmind-meta-pixel-network-verification.
 const SENSITIVE_PARAMETER_PATTERN =
   /^(?:em|ph|fn|ln|db|ge|ct|st|zp|country|external_id|user_data|ud\[|cd\[)/iu;
 
+let scriptRequests = 0;
+let scriptResponseStatus = 0;
+let pageViewRequests = 0;
+let transportRequests = 0;
+let metaNonScriptRequests = 0;
+let metaRequestFailures = 0;
+let consoleErrorCount = 0;
+let pageErrorCount = 0;
+const eventNames = new Set();
+const sensitiveParameterKeys = new Set();
+const metaRequestPaths = new Set();
+const metaRequestMethods = new Set();
+const metaParameterKeys = new Set();
+let runtimeState = {
+  fbqType: "unknown",
+  callMethodType: "unknown",
+  loaded: false,
+  queueLength: -1,
+  markerMatches: false,
+};
+
 async function emit(key, value) {
   const line = `${key}=${value}`;
   process.stdout.write(`${line}\n`);
@@ -50,6 +71,27 @@ function parameterSets(request, url) {
   return sets;
 }
 
+async function emitDiagnostics() {
+  await emit("REAL_META_SCRIPT_REQUESTS", scriptRequests);
+  await emit("REAL_META_SCRIPT_RESPONSE_STATUS", scriptResponseStatus);
+  await emit("REAL_META_NON_SCRIPT_REQUESTS", metaNonScriptRequests);
+  await emit("REAL_META_REQUEST_FAILURES", metaRequestFailures);
+  await emit("REAL_META_TRANSPORT_REQUESTS", transportRequests);
+  await emit("REAL_PAGEVIEW_TRANSPORT_REQUESTS", pageViewRequests);
+  await emit("REAL_META_EVENT_NAMES", [...eventNames].sort().join(",") || "none");
+  await emit("REAL_META_REQUEST_PATHS", [...metaRequestPaths].sort().join(",") || "none");
+  await emit("REAL_META_REQUEST_METHODS", [...metaRequestMethods].sort().join(",") || "none");
+  await emit("REAL_META_PARAMETER_KEYS", [...metaParameterKeys].sort().join(",") || "none");
+  await emit("SENSITIVE_META_PARAMETER_KEY_COUNT", sensitiveParameterKeys.size);
+  await emit("BROWSER_CONSOLE_ERROR_COUNT", consoleErrorCount);
+  await emit("BROWSER_PAGE_ERROR_COUNT", pageErrorCount);
+  await emit("FBQ_TYPE", runtimeState.fbqType);
+  await emit("FBQ_CALL_METHOD_TYPE", runtimeState.callMethodType);
+  await emit("FBQ_LOADED", runtimeState.loaded ? "yes" : "no");
+  await emit("FBQ_QUEUE_LENGTH", runtimeState.queueLength);
+  await emit("FBQ_PIXEL_MARKER_MATCH", runtimeState.markerMatches ? "yes" : "no");
+}
+
 async function main() {
   await writeFile(REPORT_PATH, "", { mode: 0o600 });
   await emit("NETWORK_VERIFICATION_UTC", new Date().toISOString());
@@ -70,13 +112,6 @@ async function main() {
     timezoneId: "Europe/Zurich",
   });
 
-  let scriptRequests = 0;
-  let scriptResponseStatus = 0;
-  let pageViewRequests = 0;
-  let transportRequests = 0;
-  const eventNames = new Set();
-  const sensitiveParameterKeys = new Set();
-
   context.on("request", (request) => {
     let url;
     try {
@@ -94,8 +129,13 @@ async function main() {
     }
     if (!isMetaHost(url.hostname)) return;
 
+    metaNonScriptRequests += 1;
+    metaRequestPaths.add(`${url.hostname}${url.pathname}`);
+    metaRequestMethods.add(request.method());
+
     for (const parameters of parameterSets(request, url)) {
       for (const key of parameters.keys()) {
+        metaParameterKeys.add(key);
         if (SENSITIVE_PARAMETER_PATTERN.test(key)) {
           sensitiveParameterKeys.add(key);
         }
@@ -107,6 +147,15 @@ async function main() {
       eventNames.add(eventName);
       if (eventName === "PageView") pageViewRequests += 1;
       break;
+    }
+  });
+
+  context.on("requestfailed", (request) => {
+    try {
+      const url = new URL(request.url());
+      if (isMetaHost(url.hostname)) metaRequestFailures += 1;
+    } catch {
+      // Ignore malformed URLs.
     }
   });
 
@@ -126,6 +175,13 @@ async function main() {
   });
 
   const page = await context.newPage();
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrorCount += 1;
+  });
+  page.on("pageerror", () => {
+    pageErrorCount += 1;
+  });
+
   try {
     const response = await page.goto(`${BASE_URL}/`, {
       waitUntil: "domcontentloaded",
@@ -146,11 +202,19 @@ async function main() {
       await waitUntil(() => scriptResponseStatus >= 200 && scriptResponseStatus < 400),
       "script_response_timeout",
     );
-    requireCondition(
-      await waitUntil(() => pageViewRequests >= 1),
-      "initial_pageview_transport_timeout",
-    );
+
+    const initialTransportObserved = await waitUntil(() => pageViewRequests >= 1);
     await sleep(1_500);
+    runtimeState = await page.evaluate((pixelId) => ({
+      fbqType: typeof window.fbq,
+      callMethodType: typeof window.fbq?.callMethod,
+      loaded: window.fbq?.loaded === true,
+      queueLength: Array.isArray(window.fbq?.queue) ? window.fbq.queue.length : -1,
+      markerMatches: window.__fanmindMetaPixelId === pixelId,
+    }), PIXEL_ID);
+    await emitDiagnostics();
+
+    requireCondition(initialTransportObserved, "initial_pageview_transport_timeout");
     requireCondition(scriptRequests === 1, "script_request_not_exactly_once");
     requireCondition(pageViewRequests === 1, "initial_pageview_not_exactly_once");
 
@@ -177,12 +241,6 @@ async function main() {
       "unexpected_event_detected",
     );
 
-    await emit("REAL_META_SCRIPT_REQUESTS", scriptRequests);
-    await emit("REAL_META_SCRIPT_RESPONSE_STATUS", scriptResponseStatus);
-    await emit("REAL_META_TRANSPORT_REQUESTS", transportRequests);
-    await emit("REAL_PAGEVIEW_TRANSPORT_REQUESTS", pageViewRequests);
-    await emit("REAL_META_EVENT_NAMES", [...eventNames].sort().join(","));
-    await emit("SENSITIVE_META_PARAMETER_KEY_COUNT", sensitiveParameterKeys.size);
     await emit("ADVANCED_MATCHING_OBSERVED", "no");
     await emit("CONVERSION_EVENTS_OBSERVED", "no");
     await emit("REQUEST_VALUES_WERE_NOT_LOGGED", "true");
