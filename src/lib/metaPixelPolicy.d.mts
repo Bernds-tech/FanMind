@@ -16,6 +16,7 @@ export type MetaPixelEventName =
 export const FANMIND_MARKETING_CONSENT_COOKIE: string;
 export const FANMIND_MARKETING_CONSENT_MAX_AGE_SECONDS: number;
 export const META_PIXEL_SCRIPT_URL: string;
+export const META_PIXEL_READY_EVENT: string;
 export const META_PIXEL_ACTIVE_EVENTS: readonly MetaPixelActiveEventName[];
 export const META_PIXEL_PREPARED_EVENTS: readonly MetaPixelPreparedEventName[];
 export const META_PIXEL_STANDARD_EVENTS: readonly MetaPixelEventName[];
