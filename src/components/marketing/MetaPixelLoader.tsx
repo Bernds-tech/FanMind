@@ -33,7 +33,6 @@ export function MetaPixelLoader({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setReady(false);
     if (!normalizedPixelId) return;
 
     const activatePixel = () => {
