@@ -82,8 +82,8 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     const response = await page.goto("/login");
     expect(response?.ok()).toBe(true);
 
-    const email = page.getByLabel("E-Mail", { exact: true });
-    const password = page.getByLabel("Passwort", { exact: true });
+    const email = page.locator('input[name="email"]');
+    const password = page.locator('input[name="password"]');
     await expect(email).toBeVisible();
     await expect(password).toHaveAttribute("type", "password");
 
@@ -125,7 +125,9 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     );
 
     await page.goto("/forgot-password");
-    await page.getByLabel("E-Mail", { exact: true }).fill("e2e.recovery@example.com");
+    await page
+      .locator('input[name="email"]')
+      .fill("e2e.recovery@example.com");
     await page.getByRole("button", { name: "Link senden" }).click();
 
     await expect(page.getByRole("status")).toContainText(
@@ -149,7 +151,7 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     const yearly = page.locator(
       'input[type="radio"][value="starter_no_setup_commitment"]',
     );
-    await yearly.check();
+    await page.locator("label").filter({ has: yearly }).click();
     await expect(yearly).toBeChecked();
 
     const terms = page.locator('input[name="paymentTermsAccepted"]');
