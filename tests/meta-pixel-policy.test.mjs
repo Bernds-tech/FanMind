@@ -45,7 +45,7 @@ test("Meta Pixel ID and consent fail closed", () => {
   );
 });
 
-test("Meta Pixel is limited to explicit public routes and harmless query values", () => {
+test("Meta Pixel is limited to explicit public routes and harmless URL values", () => {
   assert.ok(META_PIXEL_PUBLIC_ROUTES.includes("/"));
   assert.ok(META_PIXEL_PUBLIC_ROUTES.includes("/login"));
   assert.ok(META_PIXEL_PUBLIC_ROUTES.includes("/datenschutz"));
@@ -55,7 +55,7 @@ test("Meta Pixel is limited to explicit public routes and harmless query values"
   assert.equal(isMetaPixelPublicRoute("/reset-password"), false);
 
   assert.equal(
-    isMetaPixelPageViewAllowed({ pathname: "/", search: "" }),
+    isMetaPixelPageViewAllowed({ pathname: "/", search: "", hash: "" }),
     true,
   );
   assert.equal(
@@ -68,6 +68,20 @@ test("Meta Pixel is limited to explicit public routes and harmless query values"
       search: "plan=growth&lang=de",
     }),
     true,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({
+      pathname: "/datenschutz",
+      hash: "#marketing-messung",
+    }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({
+      pathname: "/datenschutz",
+      hash: "#email-person@example.com",
+    }),
+    false,
   );
   assert.equal(
     isMetaPixelPageViewAllowed({
@@ -131,7 +145,7 @@ test("root layout mounts one global consent manager and reads only public config
   );
 });
 
-test("consent controls gate loading, protected routes and later withdrawal", async () => {
+test("consent controls gate loading, protected URLs and later withdrawal", async () => {
   const [manager, loader, helper] = await Promise.all([
     source("src/components/marketing/MarketingConsentManager.tsx"),
     source("src/components/marketing/MetaPixelLoader.tsx"),
@@ -143,13 +157,15 @@ test("consent controls gate loading, protected routes and later withdrawal", asy
   assert.match(manager, /Datenschutz-Einstellungen/u);
   assert.match(manager, /isMetaPixelEnabled/u);
   assert.match(manager, /isMetaPixelPageViewAllowed/u);
+  assert.match(manager, /locationHash/u);
   assert.match(manager, /!pixelConfigured \|\| !routeEligible/u);
   assert.match(manager, /revokeMetaPixelConsent/u);
   assert.match(manager, /SameSite=Lax/u);
   assert.match(loader, /strategy="afterInteractive"/u);
   assert.match(loader, /useSearchParams/u);
-  assert.match(loader, /trackMetaPixelPageView\(\{ pathname, search \}\)/u);
+  assert.match(loader, /trackMetaPixelPageView\(\{ pathname, search, hash \}\)/u);
   assert.match(helper, /currentPageIsEligible/u);
+  assert.match(helper, /window\.location\.hash/u);
   assert.match(helper, /__fanmindMetaPixelLastRoute/u);
   assert.match(helper, /window\.fbq\("consent", "revoke"\)/u);
   assert.match(helper, /expireFirstPartyMetaCookie\("_fbp"\)/u);
@@ -193,7 +209,7 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(privacy, /Meta Pixel/u);
   assert.match(privacy, /ausdrücklicher Einwilligung/u);
   assert.match(runbook, /Nur `PageView`/u);
-  assert.match(runbook, /öffentlichen/u);
+  assert.match(runbook, /Öffentliche Routengrenze/u);
   assert.match(runbook, /keine Conversions API/iu);
   assert.match(runbook, /kein erweitertes Matching/iu);
   assert.match(runbook, /Die Codeintegration allein bedeutet nicht, dass der Pixel bereits auf Production aktiv ist/u);
