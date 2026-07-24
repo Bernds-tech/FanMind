@@ -1,0 +1,67 @@
+name: FanMind P1 Activate Account Deletion Requests
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-activate-account-deletion-20260724.yml"
+      - "scripts/operations/activate-account-deletion-temp-20260724.mjs"
+
+concurrency:
+  group: fanmind-p1-activate-account-deletion-20260724
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  activate:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/activate-account-deletion-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 60
+    env:
+      EXPECTED_RELEASE: 0292750f4f69633923a9081dbbe3613f6e6301ea
+      REPORT_PATH: fanmind-account-deletion-activation-report.txt
+
+    steps:
+      - name: Checkout trusted activation branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/activate-account-deletion-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Back up, migrate and verify account deletion request infrastructure
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          sudo -n env \
+            EXPECTED_RELEASE="$EXPECTED_RELEASE" \
+            GITHUB_RUN_ID="$GITHUB_RUN_ID" \
+            /usr/bin/node \
+            "$GITHUB_WORKSPACE/scripts/operations/activate-account-deletion-temp-20260724.mjs" \
+            "$report"
+          test -r "$report"
+          cat "$report"
+
+      - name: Upload sanitized activation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-account-deletion-activation-report
+          path: fanmind-account-deletion-activation-report.txt
+          if-no-files-found: error
+          retention-days: 14
