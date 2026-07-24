@@ -35,7 +35,8 @@ Die Integration sitzt genau einmal in der zentralen Web-App-Struktur:
 3. Consent-UI und Loader werden nur auf explizit freigegebenen öffentlichen Routen mit unsensitiven Querywerten gerendert.
 4. `MetaPixelLoader` wird nur bei `granted`, einer gültigen Pixel-ID und einer freigegebenen öffentlichen URL gerendert.
 5. Das Meta-Bootstrap-Script wird über `next/script` mit `afterInteractive` genau einmal geladen.
-6. Der Bootstrap initialisiert nur den Pixel. `PageView` wird getrennt und dedupliziert über den sicheren App-Router-Pfad samt freigegebener Query ausgelöst.
+6. Vor der Initialisierung wird Metas automatische Konfiguration mit `autoConfig=false` für diesen Pixel deaktiviert; nur FanMinds geprüfte Event-Hilfe darf Events auslösen.
+7. Der Bootstrap initialisiert nur den Pixel. `PageView` wird getrennt und dedupliziert über den sicheren App-Router-Pfad samt freigegebener Query ausgelöst.
 7. Bei Widerruf werden weitere FanMind-Events blockiert, Meta-Consent auf `revoke` gesetzt und bekannte First-Party-Meta-Cookies (`_fbp`, `_fbc`) für den aktuellen Host entfernt.
 8. Beim Wechsel auf geschützte oder nicht freigegebene URLs wird Meta-Consent vorsorglich widerrufen und kein FanMind-Event ausgelöst.
 9. Das dynamisch erzeugte Meta-Script erhält `referrerPolicy='no-referrer'`; zusätzlich blockiert FanMind jeden same-origin Referrer, der von einer geschützten, dynamischen oder anderweitig nicht freigegebenen FanMind-URL stammt.
@@ -149,9 +150,9 @@ Die Event-Hilfsfunktion akzeptiert im aktuellen Stand absichtlich kein freies Pa
 
 Nicht aktiviert:
 
-- Advanced Matching;
-- automatische Übergabe von Nutzerfeldern;
-- Conversions API;
+- kein Advanced Matching beziehungsweise kein erweitertes Matching;
+- keine automatische Übergabe von Nutzerfeldern;
+- keine Conversions API;
 - serverseitiges Meta-Tracking;
 - automatische Conversion-Erkennung;
 - benutzerdefinierte Conversion-Events.

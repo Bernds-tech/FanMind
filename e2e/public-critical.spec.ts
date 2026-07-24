@@ -113,7 +113,12 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await page.getByRole("button", { name: "Marketing erlauben" }).click();
 
     await expect.poll(() => metaScriptRequests).toBe(1);
-    await expect.poll(async () => (await metaQueue(page)).length).toBeGreaterThan(0);
+    await expect.poll(async () => {
+      const current = await metaQueue(page);
+      return current.filter(
+        ([command, value]) => command === "track" && value === "PageView",
+      ).length;
+    }).toBe(1);
 
     let calls = await metaQueue(page);
     expect(
