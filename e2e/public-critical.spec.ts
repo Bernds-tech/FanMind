@@ -148,8 +148,8 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await expect(
       page.getByRole("heading", { name: "FanMind-Account vollständig löschen" }),
     ).toBeVisible();
-    await expect(page.getByText(/keine bloße Deaktivierung/iu)).toBeVisible();
-    await expect(page.getByText(/maximale Bearbeitungsfrist von 30 Tagen/u)).toBeVisible();
+    await expect(page.getByText(/bloße Deaktivierung ist nicht/iu)).toBeVisible();
+    await expect(page.getByText(/maximale Bearbeitungsfrist.*30 Tage/iu)).toBeVisible();
     const deletionLink = page.getByRole("link", {
       name: "Anmelden und Löschung einleiten",
     });
