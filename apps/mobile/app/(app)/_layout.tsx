@@ -79,6 +79,7 @@ export default function AppLayout() {
           tabBarIcon: ({ focused }) => <TabGlyph label="04" focused={focused} />,
         }}
       />
+      <Tabs.Screen name="account-deletion" options={{ href: null }} />
     </Tabs>
   );
 }
