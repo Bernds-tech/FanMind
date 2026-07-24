@@ -172,7 +172,7 @@ export function MarketingConsentManager({
   return (
     <>
       {pixelEnabled ? (
-        <MetaPixelLoader pixelId={pixelId} hash={locationHash} />
+        <MetaPixelLoader pixelId={pixelId} />
       ) : null}
 
       {panelOpen ? (

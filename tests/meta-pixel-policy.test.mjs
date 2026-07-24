@@ -220,7 +220,7 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(manager, /SameSite=Lax/u);
   assert.match(loader, /strategy="afterInteractive"/u);
   assert.match(loader, /useSearchParams/u);
-  assert.match(loader, /trackMetaPixelPageView\(\{ pathname, search, hash \}\)/u);
+  assert.match(loader, /hash: window\.location\.hash/u);
   assert.match(helper, /currentPageIsEligible/u);
   assert.match(helper, /window\.location\.hash/u);
   assert.match(helper, /document\.referrer/u);

@@ -145,8 +145,13 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     );
     expect(eventCalls.every((call) => call.length === 2)).toBe(true);
 
-    await page.getByRole("link", { name: "Login" }).first().click();
-    await expect(page).toHaveURL(/\/login(?:\?|$)/u);
+    await page
+      .getByRole("button", { name: "Datenschutz-Einstellungen" })
+      .click();
+    await page
+      .getByRole("link", { name: "Details in der Datenschutzerklärung" })
+      .click();
+    await expect(page).toHaveURL(/\/datenschutz#marketing-messung$/u);
     await expect.poll(async () => {
       const current = await metaQueue(page);
       return current.filter(
@@ -154,9 +159,6 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
       ).length;
     }).toBe(2);
 
-    await page
-      .getByRole("button", { name: "Datenschutz-Einstellungen" })
-      .click();
     await page.getByRole("button", { name: "Marketing erlauben" }).click();
     calls = await metaQueue(page);
     expect(metaScriptRequests).toBe(1);

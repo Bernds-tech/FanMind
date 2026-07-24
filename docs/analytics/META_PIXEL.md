@@ -193,7 +193,7 @@ Nach Merge, gesetzter Production-ENV und erneutem Build:
 5. Datenschutz-Einstellungen öffnen und `Marketing erlauben` wählen.
 6. Prüfen, dass `fbevents.js` genau einmal geladen wird.
 7. In der Konsole ausschließlich technisch prüfen, dass `window.fbq` existiert; keine Queue- oder Kundendaten protokollieren.
-8. Über einen internen Next-Link zu `/login` ohne `returnTo` navigieren und genau ein weiteres, nicht doppeltes `PageView` prüfen.
+8. Über den internen Next-Link zur Datenschutzseite navigieren und genau ein weiteres, nicht doppeltes `PageView` prüfen.
 9. Eine geschützte Route öffnen und im Netzwerk bestätigen, dass FanMind dafür kein `PageView` sendet.
 10. Consent widerrufen und bestätigen, dass weitere Navigationen keine FanMind-Events an Meta senden.
 
