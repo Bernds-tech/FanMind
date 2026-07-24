@@ -119,11 +119,19 @@ export function MarketingConsentManager({
   }, [consent]);
 
   useEffect(() => {
-    const syncHash = () => setLocationHash(window.location.hash);
-    setDocumentReferrer(document.referrer);
-    syncHash();
-    window.addEventListener("hashchange", syncHash);
-    return () => window.removeEventListener("hashchange", syncHash);
+    let active = true;
+    const syncLocationContext = () => {
+      if (!active) return;
+      setDocumentReferrer(document.referrer);
+      setLocationHash(window.location.hash);
+    };
+
+    queueMicrotask(syncLocationContext);
+    window.addEventListener("hashchange", syncLocationContext);
+    return () => {
+      active = false;
+      window.removeEventListener("hashchange", syncLocationContext);
+    };
   }, []);
 
   useEffect(() => {
