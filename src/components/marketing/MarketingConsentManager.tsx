@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   FANMIND_MARKETING_CONSENT_COOKIE,
   FANMIND_MARKETING_CONSENT_MAX_AGE_SECONDS,
   isMetaPixelEnabled,
+  isMetaPixelPageViewAllowed,
   normalizeMarketingConsent,
   normalizeMetaPixelId,
   type FanMindMarketingConsent,
@@ -41,7 +43,7 @@ const COPY: Record<FanMindLocale, ConsentCopy> = {
     description:
       "FanMind lädt den Meta Pixel erst, wenn du Marketing ausdrücklich erlaubst. Ohne Zustimmung wird keine Verbindung zu Meta aufgebaut.",
     limitation:
-      "Aktiv ist ausschließlich PageView. FanMind sendet keine E-Mail-Adressen, Namen, CRM-, Kontakt- oder Nachrichteninhalte und verwendet kein erweitertes Matching.",
+      "Aktiv ist ausschließlich PageView auf freigegebenen öffentlichen Seiten. FanMind sendet keine E-Mail-Adressen, Namen, CRM-, Kontakt- oder Nachrichteninhalte und verwendet kein erweitertes Matching.",
     privacy: "Details in der Datenschutzerklärung",
     reject: "Nur notwendige",
     accept: "Marketing erlauben",
@@ -56,7 +58,7 @@ const COPY: Record<FanMindLocale, ConsentCopy> = {
     description:
       "FanMind loads Meta Pixel only after you explicitly allow marketing. Without consent, no connection to Meta is established.",
     limitation:
-      "Only PageView is active. FanMind does not send email addresses, names, CRM, contact or message content and does not use advanced matching.",
+      "Only PageView on approved public pages is active. FanMind does not send email addresses, names, CRM, contact or message content and does not use advanced matching.",
     privacy: "Details in the privacy policy",
     reject: "Necessary only",
     accept: "Allow marketing",
@@ -80,6 +82,9 @@ export function MarketingConsentManager({
   pixelId: string;
   locale: FanMindLocale;
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
   const normalizedInitialConsent = normalizeMarketingConsent(initialConsent);
   const [consent, setConsent] = useState<FanMindMarketingConsent>(
     normalizedInitialConsent,
@@ -89,14 +94,19 @@ export function MarketingConsentManager({
   );
   const copy = COPY[locale];
   const pixelConfigured = normalizeMetaPixelId(pixelId) !== null;
+  const routeEligible = isMetaPixelPageViewAllowed({ pathname, search });
   const pixelEnabled = useMemo(
-    () => isMetaPixelEnabled({ pixelId, consent }),
-    [consent, pixelId],
+    () => isMetaPixelEnabled({ pixelId, consent }) && routeEligible,
+    [consent, pixelId, routeEligible],
   );
 
   useEffect(() => {
     setFanMindMarketingConsent(consent);
   }, [consent]);
+
+  useEffect(() => {
+    if (pixelConfigured && !routeEligible) revokeMetaPixelConsent();
+  }, [pixelConfigured, routeEligible]);
 
   function chooseDenied() {
     persistConsent("denied");
@@ -113,7 +123,7 @@ export function MarketingConsentManager({
     setPanelOpen(false);
   }
 
-  if (!pixelConfigured) return null;
+  if (!pixelConfigured || !routeEligible) return null;
 
   return (
     <>
