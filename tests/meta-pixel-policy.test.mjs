@@ -11,6 +11,7 @@ import {
   isMetaPixelEnabled,
   isMetaPixelPageViewAllowed,
   isMetaPixelPublicRoute,
+  isMetaPixelReferrerAllowed,
   normalizeMarketingConsent,
   normalizeMetaPixelId,
   normalizeMetaPixelRoute,
@@ -103,11 +104,47 @@ test("Meta Pixel is limited to explicit public routes and harmless URL values", 
   );
 });
 
+test("same-origin protected referrers are blocked while external attribution remains possible", () => {
+  assert.equal(
+    isMetaPixelReferrerAllowed({ referrer: "", origin: "https://fanmind.ch" }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelReferrerAllowed({
+      referrer: "https://search.example/result?q=fanmind",
+      origin: "https://fanmind.ch",
+    }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelReferrerAllowed({
+      referrer: "https://fanmind.ch/roadmap?lang=de",
+      origin: "https://fanmind.ch",
+    }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelReferrerAllowed({
+      referrer: "https://fanmind.ch/fans/contact-123",
+      origin: "https://fanmind.ch",
+    }),
+    false,
+  );
+  assert.equal(
+    isMetaPixelReferrerAllowed({
+      referrer: "https://fanmind.ch/login?returnTo=%2Ffans%2Fcontact-123",
+      origin: "https://fanmind.ch",
+    }),
+    false,
+  );
+});
+
 test("bootstrap initializes exactly once without firing PageView or noscript tracking", () => {
   const bootstrap = buildMetaPixelBootstrap(PIXEL_ID);
   assert.equal(typeof bootstrap, "string");
   assert.match(bootstrap, /connect\.facebook\.net\/en_US\/fbevents\.js/u);
   assert.match(bootstrap, /fbq\('init','2069553844439892'\)/u);
+  assert.match(bootstrap, /referrerPolicy='no-referrer'/u);
   assert.equal((bootstrap.match(/fbq\('init'/gu) ?? []).length, 1);
   assert.doesNotMatch(bootstrap, /PageView|facebook\.com\/tr|noscript/iu);
   assert.doesNotMatch(
@@ -157,8 +194,11 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(manager, /Datenschutz-Einstellungen/u);
   assert.match(manager, /isMetaPixelEnabled/u);
   assert.match(manager, /isMetaPixelPageViewAllowed/u);
+  assert.match(manager, /isMetaPixelReferrerAllowed/u);
   assert.match(manager, /locationHash/u);
-  assert.match(manager, /!pixelConfigured \|\| !routeEligible/u);
+  assert.match(manager, /documentReferrer/u);
+  assert.match(manager, /!pixelConfigured/u);
+  assert.match(manager, /!routeEligible/u);
   assert.match(manager, /revokeMetaPixelConsent/u);
   assert.match(manager, /SameSite=Lax/u);
   assert.match(loader, /strategy="afterInteractive"/u);
@@ -166,6 +206,7 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(loader, /trackMetaPixelPageView\(\{ pathname, search, hash \}\)/u);
   assert.match(helper, /currentPageIsEligible/u);
   assert.match(helper, /window\.location\.hash/u);
+  assert.match(helper, /document\.referrer/u);
   assert.match(helper, /__fanmindMetaPixelLastRoute/u);
   assert.match(helper, /window\.fbq\("consent", "revoke"\)/u);
   assert.match(helper, /expireFirstPartyMetaCookie\("_fbp"\)/u);
@@ -210,6 +251,7 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(privacy, /ausdrücklicher Einwilligung/u);
   assert.match(runbook, /Nur `PageView`/u);
   assert.match(runbook, /Öffentliche Routengrenze/u);
+  assert.match(runbook, /same-origin/iu);
   assert.match(runbook, /keine Conversions API/iu);
   assert.match(runbook, /kein erweitertes Matching/iu);
   assert.match(runbook, /Die Codeintegration allein bedeutet nicht, dass der Pixel bereits auf Production aktiv ist/u);
@@ -227,6 +269,7 @@ test("browser E2E uses a synthetic Meta script and proves consent-gated PageView
   assert.match(spec, /Nur notwendige/u);
   assert.match(spec, /2069553844439892/u);
   assert.match(spec, /PageView/u);
+  assert.match(spec, /returnTo=%2Ffans%2Fsynthetic-contact-reference/u);
   assert.match(spec, /Datenschutz-Einstellungen/u);
   assert.doesNotMatch(spec, /facebook\.com\/tr/u);
 });
