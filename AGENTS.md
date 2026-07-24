@@ -106,6 +106,7 @@ Do not build or present as active unless explicitly requested, tested and legall
 - No fake live integrations, fake customers, fake testimonials or fake production numbers
 
 Social integrations, analytics, campaign logic, referral automation and automation must remain clearly marked as Roadmap, Coming Soon, Beta / in preparation, or later pilot-feedback work unless the user explicitly changes scope. Meta channels may be prepared, but must not be presented as generally live until technically and legally tested.
+- The consent-gated Meta Pixel is an explicitly scoped marketing-measurement exception, not a product analytics suite: only `PageView` is active, the script must not load before consent, and no PII, CRM data, advanced matching, Conversions API or server-side Meta tracking may be added without a separate reviewed scope.
 
 ## Security, RLS and secrets rules
 

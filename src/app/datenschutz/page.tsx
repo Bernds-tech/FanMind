@@ -136,9 +136,51 @@ const sections: PrivacySection[] = [
           Sicherheit und stabile Bereitstellung.
         </p>
         <p>
-          Derzeit setzen wir keine nicht notwendigen Analyse- oder Marketing-Cookies ein.
+          Optionale Marketing-Messung wird erst nach einer ausdrücklichen Einwilligung aktiviert.
+          Die Auswahl wird im Cookie <code>fanmind_marketing_consent</code> gespeichert und kann
+          jederzeit über die dauerhaft erreichbaren Datenschutz-Einstellungen geändert werden.
+          Ohne Einwilligung lädt FanMind keinen Meta Pixel und baut hierfür keine Verbindung zu Meta
+          auf.
         </p>
-        {/* TODO: Analytics/Tracking regelmäßig prüfen. */}
+      </>
+    ),
+  },
+  {
+    id: "marketing-messung",
+    icon: "◉",
+    title: "Optionale Marketing-Messung mit Meta Pixel",
+    content: (
+      <>
+        <p>
+          FanMind kann den Meta Pixel von Meta Platforms Ireland Limited einsetzen, um nach
+          ausdrücklicher Marketing-Einwilligung Seitenaufrufe auf <code>fanmind.ch</code> zu messen.
+          Dafür wird das Script <code>connect.facebook.net/en_US/fbevents.js</code> erst nach der
+          Einwilligung geladen. Im aktuell freigegebenen Stand wird ausschließlich das Standardevent
+          <code>PageView</code> ohne zusätzliche Eventparameter ausgelöst.
+        </p>
+        <p>
+          Zweck ist die grundlegende Messung der Wirksamkeit von FanMind-Marketing. Rechtsgrundlage
+          ist die Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO. Dabei können technisch bedingt unter
+          anderem IP-Adresse, Browser- und Geräteinformationen, Referrer, aufgerufener Pfad,
+          Zeitstempel sowie von Meta gesetzte Kennungen verarbeitet werden. Eine Verarbeitung durch
+          Meta außerhalb der EU/des EWR kann nicht ausgeschlossen werden und richtet sich nach den
+          anwendbaren Meta-Datenschutz- und Transferregelungen.
+        </p>
+        <p>
+          FanMind übermittelt über diese Integration keine E-Mail-Adressen, Namen, Telefonnummern,
+          Account-, Workspace-, Kontakt-, CRM-, Nachrichten-, Prompt-, KI- oder Zahlungsinhalte.
+          Erweitertes Matching, automatische Nutzerzuordnung, Conversions API und serverseitiges
+          Meta-Tracking sind nicht aktiviert. Die vorbereiteten Eventnamen für spätere
+          Conversion-Messungen werden ohne gesonderte fachliche und datenschutzrechtliche Prüfung
+          nicht ausgelöst.
+        </p>
+        <p>
+          Die Einwilligung kann jederzeit über den Button
+          <strong> Datenschutz-Einstellungen</strong> mit Wirkung für die Zukunft widerrufen werden.
+          FanMind blockiert danach weitere Pixel-Events und entfernt die bekannten, für den aktuellen
+          Host zugänglichen First-Party-Meta-Cookies <code>_fbp</code> und <code>_fbc</code>. Bereits
+          bei Meta verarbeitete Daten werden durch den lokalen Widerruf nicht rückwirkend gelöscht.
+        </p>
       </>
     ),
   },
@@ -421,7 +463,7 @@ const sections: PrivacySection[] = [
           <li>OpenAI für KI-Antwortvorschläge und Analysefunktionen, soweit ausgelöst.</li>
           <li>Stripe für Zahlungsabwicklung, soweit Checkout produktiv aktiviert ist.</li>
           <li>E-Mail-Dienstleister, soweit aktiv.</li>
-          <li>Meta/Facebook, Telegram, WhatsApp oder andere Plattformanbieter nur, soweit Nutzer einen Kanal produktiv verbindet oder eine Integration produktiv freigegeben ist.</li>
+          <li>Meta/Facebook für den consent-gesteuerten Meta Pixel ausschließlich nach ausdrücklicher Marketing-Einwilligung sowie für Kanäle nur, soweit ein Nutzer sie produktiv verbindet oder eine Integration produktiv freigegeben ist.</li>
           <li>GitHub/GitHub Actions für Code und Deployment, nicht als regulärer Empfänger von Workspace-Inhalten.</li>
           <li>Steuerberatung, Buchhaltung, Rechtsberatung, Behörden oder Gerichte, soweit erforderlich.</li>
         </ul>
@@ -459,6 +501,7 @@ const sections: PrivacySection[] = [
     content: (
       <ul>
         <li>Website- und Serverlogs werden kurzfristig gespeichert, soweit nicht Sicherheitsvorfälle eine längere Speicherung erfordern.</li>
+        <li>Die Marketing-Consent-Auswahl wird höchstens 180 Tage gespeichert und kann jederzeit geändert werden. Meta-Pixel-Daten entstehen bei FanMind erst nach Einwilligung; für eine weitere Verarbeitung bei Meta gelten die dortigen Aufbewahrungsregeln.</li>
         <li>Account- und Workspace-Daten werden für die Dauer des Nutzerkontos, Vertrags oder Pilotzugangs gespeichert.</li>
         <li>Kontakt-, Fan-, Nachrichten-, Memory- und Follow-up-Daten bleiben für die Dauer des Workspace oder bis zur Löschung durch Nutzer oder Kunde gespeichert, soweit keine Pflichten entgegenstehen.</li>
         <li>KI-Ausgaben und Analyseberichte werden gespeichert, solange sie im Workspace vorhanden sind oder für Nachvollziehbarkeit, Support und Produktfunktion erforderlich sind.</li>

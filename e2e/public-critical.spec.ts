@@ -54,7 +54,6 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
         name: "fanmind_marketing_consent",
         value: "denied",
         url: E2E_BASE_URL,
-        path: "/",
         sameSite: "Lax",
       },
     ]);
