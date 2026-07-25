@@ -14,7 +14,8 @@
           "configureAndroidBackup": true,
           "faceIDPermission": "FanMind schützt deine sichere App-Sitzung."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

@@ -164,7 +164,8 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] strict local SecureStore and workspace purge;
 - [x] EAS profiles and beta handoff documented;
 - [x] bounded offline read cache with the central purge contract;
-- [ ] push registration and follow-up reminders;
+- [x] native notification configuration and fail-closed follow-up response routing;
+- [ ] push permission, token registration and server-side follow-up delivery;
 - [ ] final app icon and splash assets.
 
 ### Phase B — external verification
