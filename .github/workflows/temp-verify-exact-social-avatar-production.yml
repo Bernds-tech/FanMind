@@ -1,0 +1,204 @@
+name: Temporary Read-only Production Exact Social Avatar Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production-avatar:
+    name: Verify exact deployed social avatar read-only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      BASE_URL: https://fanmind.ch
+      EXPECTED_COMMIT: 292719d03f436b98e0848b2644682de60b4c58f6
+      ICON_REVISION: fanmind-social-avatar-exact-20260725
+      ICON_PATH: /assets/fanmind-social-avatar.png
+
+    steps:
+      - name: Checkout verifier and canonical asset
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Wait for the exact merged release without changing Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          matched=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 15 \
+              -H 'Cache-Control: no-cache' \
+              "$BASE_URL/api/version?verify=$GITHUB_RUN_ID-$attempt" \
+              -o /tmp/fanmind-version.json; then
+              live_commit="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              payload = json.loads(Path('/tmp/fanmind-version.json').read_text(encoding='utf-8'))
+          except Exception:
+              print('')
+          else:
+              value = payload.get('releaseCommit', '')
+              print(value if isinstance(value, str) else '')
+          PY
+              )"
+              if [ "$live_commit" = "$EXPECTED_COMMIT" ]; then
+                matched=true
+                echo "Expected exact-social-avatar release is active."
+                break
+              fi
+            fi
+            echo "Production is not yet on the expected release (attempt ${attempt}/60)."
+            sleep 15
+          done
+
+          if [ "$matched" != "true" ]; then
+            echo "Expected release was not observed inside the bounded wait window." >&2
+            exit 1
+          fi
+
+      - name: Fetch public HTML and exact icon asset using GET only
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 \
+            -H 'Cache-Control: no-cache' \
+            "$BASE_URL/?verify=$GITHUB_RUN_ID" \
+            -o /tmp/fanmind-landing.html
+          curl -fsSL --max-time 30 \
+            -H 'Cache-Control: no-cache' \
+            -D /tmp/fanmind-avatar-headers.txt \
+            "$BASE_URL$ICON_PATH?v=$ICON_REVISION&verify=$GITHUB_RUN_ID" \
+            -o /tmp/fanmind-production-avatar.png
+
+      - name: Verify release, metadata and byte-identical PNG contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          python3 - <<'PY'
+          import hashlib
+          import html as html_module
+          import json
+          import os
+          import re
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from urllib.parse import parse_qs, urlparse
+
+          expected_commit = os.environ['EXPECTED_COMMIT']
+          icon_revision = os.environ['ICON_REVISION']
+          icon_path = os.environ['ICON_PATH']
+          version = json.loads(Path('/tmp/fanmind-version.json').read_text(encoding='utf-8'))
+          page_html = Path('/tmp/fanmind-landing.html').read_text(encoding='utf-8', errors='strict')
+          headers = Path('/tmp/fanmind-avatar-headers.txt').read_text(encoding='utf-8', errors='replace')
+          production_icon = Path('/tmp/fanmind-production-avatar.png').read_bytes()
+          repository_icon = Path('public/assets/fanmind-social-avatar.png').read_bytes()
+
+          class LinkParser(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.links = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() != 'link':
+                      return
+                  values = {key.lower(): value or '' for key, value in attrs}
+                  rel = values.get('rel', '').strip().lower()
+                  href = html_module.unescape(values.get('href', '')).strip()
+                  if rel and href:
+                      self.links.append({'rel': rel, 'href': href})
+
+          parser = LinkParser()
+          parser.feed(page_html)
+
+          def is_exact_asset(href):
+              parsed = urlparse(href)
+              return parsed.path == icon_path and parse_qs(parsed.query).get('v') == [icon_revision]
+
+          icon_links = [
+              link for link in parser.links
+              if 'icon' in link['rel']
+          ]
+          exact_links = [link for link in icon_links if is_exact_asset(link['href'])]
+          competing_links = [
+              link for link in icon_links
+              if any(path in urlparse(link['href']).path for path in ('/favicon.ico', '/icon', '/apple-icon'))
+          ]
+
+          release_matches = version.get('releaseCommit') == expected_commit
+          expected_asset_present = len(exact_links) >= 2
+          no_competing_sources = len(competing_links) == 0
+          png_signature_valid = production_icon[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
+          width = int.from_bytes(production_icon[16:20], 'big') if len(production_icon) >= 24 else 0
+          height = int.from_bytes(production_icon[20:24], 'big') if len(production_icon) >= 24 else 0
+          dimensions_valid = (width, height) == (96, 96)
+          content_type_valid = bool(
+              re.search(r'(?im)^content-type:\s*image/png(?:;|\s|$)', headers)
+          )
+          byte_identical = production_icon == repository_icon
+
+          report = {
+              'expected_release_commit': expected_commit,
+              'live_release_commit': version.get('releaseCommit'),
+              'live_release_matches': release_matches,
+              'icon_links': icon_links,
+              'exact_asset_link_count': len(exact_links),
+              'exact_asset_present': expected_asset_present,
+              'competing_icon_sources': competing_links,
+              'no_competing_icon_sources': no_competing_sources,
+              'png_signature_valid': png_signature_valid,
+              'icon_content_type_valid': content_type_valid,
+              'icon_width': width,
+              'icon_height': height,
+              'icon_dimensions_valid': dimensions_valid,
+              'production_sha256': hashlib.sha256(production_icon).hexdigest(),
+              'repository_sha256': hashlib.sha256(repository_icon).hexdigest(),
+              'production_asset_byte_identical_to_repository': byte_identical,
+              'production_requests': 'GET only',
+              'production_data_mutated': False,
+          }
+          Path('verification/production-exact-social-avatar-report.json').write_text(
+              json.dumps(report, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(report, indent=2, sort_keys=True))
+
+          failures = []
+          if not release_matches:
+              failures.append('release_commit_mismatch')
+          if not expected_asset_present:
+              failures.append('exact_asset_metadata_missing')
+          if not no_competing_sources:
+              failures.append('competing_icon_source_present')
+          if not png_signature_valid:
+              failures.append('asset_is_not_png')
+          if not dimensions_valid:
+              failures.append(f'asset_dimensions_invalid:{width}x{height}')
+          if not content_type_valid:
+              failures.append('asset_content_type_invalid')
+          if not byte_identical:
+              failures.append('production_asset_not_byte_identical')
+
+          if failures:
+              raise SystemExit(';'.join(failures))
+
+          print('Production exact social-avatar icon verified read-only and byte-identical.')
+          PY
+
+      - name: Upload redacted production verification report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-production-exact-social-avatar-verification
+          path: verification/production-exact-social-avatar-report.json
+          if-no-files-found: warn
+          include-hidden-files: false
+          retention-days: 7
