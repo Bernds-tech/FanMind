@@ -64,7 +64,7 @@ test.describe("FanMind workspace sidebar visual contract", () => {
   test("keeps every icon on one stable left rail while only labels collapse", async ({
     page,
   }, testInfo) => {
-    await page.goto("/__sidebar-preview", { waitUntil: "networkidle" });
+    await page.goto("/sidebar-preview-e2e", { waitUntil: "networkidle" });
     await expect(page.locator('[data-sidebar-state="expanded"]')).toBeVisible();
     await expect(page.getByTestId("sidebar-preview-content")).toBeVisible();
 
