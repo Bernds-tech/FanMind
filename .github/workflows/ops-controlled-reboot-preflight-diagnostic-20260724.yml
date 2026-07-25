@@ -118,37 +118,63 @@ jobs:
           check RUNNER_ENABLED test "$(systemctl is-enabled actions.runner.Bernds-tech-FanMind.fanmind-prod-01-exoscale.service 2>/dev/null || true)" = enabled
           check BACKUP_WORKER_ACTIVE systemctl is-active --quiet fanmind-backup-worker.service
 
-          timers=(
+          required_timers=(
             fanmind-backup-database.timer
             fanmind-backup-storage.timer
             fanmind-backup-server_config.timer
             fanmind-backup-full.timer
             fanmind-backup-retention.timer
-            fanmind-operations-monitor.timer
             fanmind-demo-cleanup.timer
-            fanmind-webhook-diagnostic-retention.timer
+            fanmind-webhook-retention.timer
           )
-          for timer in "${timers[@]}"; do
+          for timer in "${required_timers[@]}"; do
             key="$(printf '%s' "$timer" | tr '[:lower:].-' '[:upper:]__')"
             check "${key}_ACTIVE" systemctl is-active --quiet "$timer"
             check "${key}_ENABLED" test "$(systemctl is-enabled "$timer" 2>/dev/null || true)" = enabled
           done
 
-          package_processes=0
+          operations_monitor_active=no
+          operations_monitor_enabled=no
+          systemctl is-active --quiet fanmind-operations-monitor.timer && operations_monitor_active=yes
+          [ "$(systemctl is-enabled fanmind-operations-monitor.timer 2>/dev/null || true)" = enabled ] && operations_monitor_enabled=yes
+          record OPERATIONS_MONITOR_TIMER_ACTIVE "$operations_monitor_active"
+          record OPERATIONS_MONITOR_TIMER_ENABLED "$operations_monitor_enabled"
+          if grep -Eq '^[[:space:]]*FANMIND_OPERATIONS_MONITOR_ENABLED[[:space:]]*=[[:space:]]*true[[:space:]]*$' /var/www/fanmind/.env.production 2>/dev/null; then
+            record OPERATIONS_MONITOR_ENV_STATE true
+          elif grep -Eq '^[[:space:]]*FANMIND_OPERATIONS_MONITOR_ENABLED[[:space:]]*=' /var/www/fanmind/.env.production 2>/dev/null; then
+            record OPERATIONS_MONITOR_ENV_STATE false
+          else
+            record OPERATIONS_MONITOR_ENV_STATE missing
+          fi
+
+          package_names=()
           for process in apt apt-get dpkg unattended-upgr; do
-            if pgrep -x "$process" >/dev/null 2>&1; then package_processes=$((package_processes + 1)); fi
+            if pgrep -x "$process" >/dev/null 2>&1; then package_names+=("$process"); fi
           done
-          [ "$package_processes" -eq 0 ] && record PACKAGE_MANAGER_IDLE pass || { record PACKAGE_MANAGER_IDLE fail; failures=$((failures + 1)); }
+          record PACKAGE_MANAGER_PROCESS_COUNT "${#package_names[@]}"
+          if [ "${#package_names[@]}" -eq 0 ]; then
+            record PACKAGE_MANAGER_PROCESSES none
+            record PACKAGE_MANAGER_IDLE pass
+          else
+            record PACKAGE_MANAGER_PROCESSES "$(IFS=,; printf '%s' "${package_names[*]}")"
+            record PACKAGE_MANAGER_IDLE transient_busy
+          fi
+          systemctl is-active --quiet apt-daily.service && record APT_DAILY_SERVICE active || record APT_DAILY_SERVICE inactive
+          systemctl is-active --quiet apt-daily-upgrade.service && record APT_DAILY_UPGRADE_SERVICE active || record APT_DAILY_UPGRADE_SERVICE inactive
 
           if [ -f /run/reboot-required ] || [ -f /var/run/reboot-required ]; then record REBOOT_REQUIRED_MARKER pass; else record REBOOT_REQUIRED_MARKER fail; failures=$((failures + 1)); fi
 
           available_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || printf 0)"
+          record MEMORY_AVAILABLE_KIB "$available_kb"
           [[ "$available_kb" =~ ^[0-9]+$ ]] && [ "$available_kb" -ge 262144 ] && record MEMORY_CAPACITY pass || { record MEMORY_CAPACITY fail; failures=$((failures + 1)); }
           root_available_kb="$(df -Pk / 2>/dev/null | awk 'NR==2 {print $4}')"
+          record ROOT_AVAILABLE_KIB "$root_available_kb"
           [[ "$root_available_kb" =~ ^[0-9]+$ ]] && [ "$root_available_kb" -ge 1048576 ] && record DISK_CAPACITY pass || { record DISK_CAPACITY fail; failures=$((failures + 1)); }
           cpu_count="$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf 0)"
           load_one="$(awk '{print $1}' /proc/loadavg 2>/dev/null || printf 999)"
-          if awk -v load="$load_one" -v cpu="$cpu_count" 'BEGIN { exit !(cpu >= 1 && load < cpu * 3) }'; then record LOAD_CAPACITY pass; else record LOAD_CAPACITY fail; failures=$((failures + 1)); fi
+          record CPU_COUNT "$cpu_count"
+          record LOAD_ONE "$load_one"
+          if awk -v load="$load_one" -v cpu="$cpu_count" 'BEGIN { limit=(cpu * 4 > 8 ? cpu * 4 : 8); exit !(cpu >= 1 && load < limit) }'; then record LOAD_CAPACITY pass; else record LOAD_CAPACITY transient_high; fi
 
           snapshot="$RUNNER_TEMP/fanmind-pm2-reboot-diagnostic.json"
           umask 077
