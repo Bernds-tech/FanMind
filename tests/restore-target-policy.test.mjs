@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import {
+  access,
   chmod,
+  mkdir,
   mkdtemp,
   readFile,
   rm,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 
@@ -58,18 +60,15 @@ function safeEnvironment(overrides = {}) {
 }
 
 test("isolated restore target passes only with both boundaries and exact target binding", () => {
-  const result = evaluateRestoreTarget(
-    safeEnvironment({
-      PGHOST: "Restore-DB.Internal.",
-      PGPORT: "05432",
-    }),
-  );
+  const result = evaluateRestoreTarget(safeEnvironment());
 
   assert.equal(result.ok, true);
   assert.equal(result.environmentBoundaryOk, true);
   assert.equal(result.restoreEnabled, true);
   assert.equal(result.acknowledgementConfirmed, true);
   assert.equal(result.targetConfirmed, true);
+  assert.equal(result.actualTargetCanonical, true);
+  assert.equal(result.productionHostSeparated, true);
   assert.equal(result.productionSeparated, true);
   assert.equal(result.hiddenTargetOverridesClear, true);
 });
@@ -77,6 +76,13 @@ test("isolated restore target passes only with both boundaries and exact target 
 test("restore target normalization accepts canonical hosts and valid ports only", () => {
   assert.equal(normalizeHost("DB.Example.COM."), "db.example.com");
   assert.equal(normalizeHost("[2001:db8::1]"), "2001:db8::1");
+  assert.equal(
+    normalizeHost("2001:0db8:0:0:0:0:0:1"),
+    "2001:db8::1",
+  );
+  assert.equal(normalizeHost("127.1"), null);
+  assert.equal(normalizeHost("127.000.000.001"), null);
+  assert.equal(normalizeHost("0x7f.1"), null);
   assert.equal(normalizeHost("db-one,db-two"), null);
   assert.equal(normalizeHost("postgresql://db.example.com"), null);
   assert.equal(normalizePort("05432"), "5432");
@@ -117,8 +123,72 @@ test("exact Production database tuple is always rejected", () => {
 
   assert.equal(result.ok, false);
   assert.equal(result.targetConfirmed, true);
+  assert.equal(result.productionHostSeparated, false);
   assert.equal(result.productionSeparated, false);
-  assert.match(result.errors.join("\n"), /Production-Datenbank/);
+  assert.match(result.errors.join("\n"), /Production-Datenbankhost/);
+});
+
+test("every target on the Production database host is rejected independently of tuple fields", () => {
+  const result = evaluateRestoreTarget(
+    safeEnvironment({
+      PGHOST: "db.production.internal",
+      PGPORT: "7432",
+      PGDATABASE: "fanmind_restore_isolated",
+      PGUSER: "restore_only_operator",
+      FANMIND_RESTORE_TARGET_DB_HOST: "db.production.internal",
+      FANMIND_RESTORE_TARGET_DB_PORT: "7432",
+      FANMIND_RESTORE_TARGET_DB_NAME: "fanmind_restore_isolated",
+      FANMIND_RESTORE_TARGET_DB_USER: "restore_only_operator",
+    }),
+  );
+
+  assert.equal(result.targetConfirmed, true);
+  assert.equal(result.productionHostSeparated, false);
+  assert.equal(result.productionSeparated, false);
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join("\n"), /Production-Datenbankhost/);
+});
+
+test("equivalent numeric Production endpoints cannot bypass host separation", () => {
+  const cases = [
+    ["127.1", "127.0.0.1"],
+    ["127.000.000.001", "127.0.0.1"],
+    ["2001:db8::1", "2001:0db8:0:0:0:0:0:1"],
+  ];
+
+  for (const [actualHost, productionHost] of cases) {
+    const result = evaluateRestoreTarget(
+      safeEnvironment({
+        PGHOST: actualHost,
+        FANMIND_RESTORE_TARGET_DB_HOST: actualHost,
+        FANMIND_PRODUCTION_DB_HOST: productionHost,
+      }),
+    );
+    assert.equal(result.ok, false, `${actualHost} -> ${productionHost}`);
+    assert.equal(
+      result.productionSeparated,
+      false,
+      `${actualHost} -> ${productionHost}`,
+    );
+  }
+});
+
+test("actual pg_restore values must already equal their canonical checked form", () => {
+  const cases = [
+    ["PGHOST", "Restore-DB.Internal."],
+    ["PGPORT", "05432"],
+    ["PGDATABASE", "fanmind_restore "],
+    ["PGUSER", " restore_operator"],
+  ];
+
+  for (const [name, value] of cases) {
+    const result = evaluateRestoreTarget(safeEnvironment({ [name]: value }));
+    assert.equal(result.targetConfirmed, true, name);
+    assert.equal(result.actualTargetValid, true, name);
+    assert.equal(result.actualTargetCanonical, false, name);
+    assert.equal(result.ok, false, name);
+    assert.match(result.errors.join("\n"), /bereits kanonisch/, name);
+  }
 });
 
 test("every actual pg_restore target field must match the explicit confirmation", () => {
@@ -235,6 +305,7 @@ test("CLI reports only redacted gate state", async () => {
 
   assert.match(output, /ENVIRONMENT_BOUNDARY=ok/);
   assert.match(output, /RESTORE_TARGET=confirmed/);
+  assert.match(output, /RESTORE_INPUT=canonical/);
   assert.match(output, /PRODUCTION_TARGET=separate/);
   assert.match(output, /LIBPQ_TARGET_OVERRIDES=clear/);
   assert.match(output, /DATABASE_PASSWORD_SOURCE=passfile/);
@@ -253,6 +324,43 @@ test("CLI reports only redacted gate state", async () => {
   }
 });
 
+test("failing CLI output remains redacted", async () => {
+  const sensitiveValues = [
+    "sensitive-restore-host.internal",
+    "sensitive_restore_database",
+    "sensitive_restore_user",
+    "/sensitive/passfiles/restore.pgpass",
+    "sensitive-database-password",
+  ];
+  const environment = {
+    ...process.env,
+    ...safeEnvironment({
+      PGHOST: sensitiveValues[0],
+      PGDATABASE: sensitiveValues[1],
+      PGUSER: sensitiveValues[2],
+      PGPASSFILE: sensitiveValues[3],
+      PGPASSWORD: sensitiveValues[4],
+    }),
+  };
+
+  await assert.rejects(
+    execFileAsync(process.execPath, [scriptPath], { env: environment }),
+    (error) => {
+      const output = `${String(error.stdout)}\n${String(error.stderr)}`;
+      assert.match(output, /RESTORE_TARGET_BOUNDARY=OK|RESTORE_ERROR=/);
+      assert.doesNotMatch(output, /RESTORE_TARGET_BOUNDARY=OK/);
+      assert.match(output, /SECRETS_WURDEN_NICHT_AUSGEGEBEN=true/);
+      for (const value of sensitiveValues) {
+        assert.doesNotMatch(
+          output,
+          new RegExp(value.replaceAll(".", "\\.").replaceAll("/", "\\/")),
+        );
+      }
+      return true;
+    },
+  );
+});
+
 test("restore runner freezes the checked target and passes only explicit connection arguments", async () => {
   const root = await mkdtemp(join(tmpdir(), "fanmind-restore-runner-test-"));
   try {
@@ -260,13 +368,23 @@ test("restore runner freezes the checked target and passes only explicit connect
     const fakeRestorePath = join(root, "fake-pg-restore.sh");
     const capturePath = join(root, "capture.txt");
     const passfilePath = join(root, "restore.pgpass");
+    const listMarkerPath = join(root, "list-validated.txt");
     await writeFile(dumpPath, "synthetic-dump");
+    await chmod(dumpPath, 0o600);
     await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o600);
     await writeFile(
       fakeRestorePath,
       [
         "#!/usr/bin/env bash",
         "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+        "  exit 0",
+        "fi",
+        "write_dump_path=\"${@: -1}\"",
+        "list_dump_path=\"$(cat \"$FANMIND_TEST_LIST_MARKER_PATH\")\"",
+        "[[ \"$list_dump_path\" == \"$write_dump_path\" ]]",
         "{",
         "  printf 'ARGS='",
         "  printf '%q ' \"$@\"",
@@ -279,6 +397,7 @@ test("restore runner freezes the checked target and passes only explicit connect
         "  printf 'PGSERVICE_SET=%s\\n' \"${PGSERVICE+x}\"",
         "  printf 'PGSERVICEFILE_SET=%s\\n' \"${PGSERVICEFILE+x}\"",
         "  printf 'PGPASSWORD_SET=%s\\n' \"${PGPASSWORD+x}\"",
+        "  printf 'PGPASSFILE=%s\\n' \"$PGPASSFILE\"",
         "} > \"$FANMIND_TEST_CAPTURE_PATH\"",
         "",
       ].join("\n"),
@@ -294,6 +413,7 @@ test("restore runner freezes the checked target and passes only explicit connect
           ...safeEnvironment({ PGPASSFILE: passfilePath }),
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_CAPTURE_PATH: capturePath,
+          FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
         },
       },
     );
@@ -301,11 +421,21 @@ test("restore runner freezes the checked target and passes only explicit connect
     const capture = await readFile(capturePath, "utf8");
 
     assert.match(output, /RESTORE_TARGET_BOUNDARY=OK/);
+    const validatedSnapshotPath = (await readFile(listMarkerPath, "utf8")).trim();
+    assert.match(validatedSnapshotPath, /fanmind-restore\.[^/]+\/database\.dump$/u);
+    assert.doesNotMatch(validatedSnapshotPath, new RegExp(dumpPath.replaceAll(".", "\\.")));
     assert.match(
       capture,
-      /ARGS=--no-owner --no-privileges --exit-on-error --no-password --host restore-db\.internal --port 5432 --username restore_operator --dbname fanmind_restore /,
+      /ARGS=--no-owner --no-privileges --exit-on-error --single-transaction --no-password --host restore-db\.internal --port 5432 --username restore_operator --dbname fanmind_restore /,
     );
-    assert.match(capture, new RegExp(`${dumpPath.replaceAll(".", "\\.")}\\s`));
+    assert.doesNotMatch(capture, new RegExp(`${dumpPath.replaceAll(".", "\\.")}\\s`));
+    assert.match(capture, /fanmind-restore\.[^/]+\/database\.dump\s/u);
+    const snapshotPassfileMatch = capture.match(/^PGPASSFILE=(.+)$/mu);
+    assert.ok(snapshotPassfileMatch);
+    const snapshotPassfilePath = snapshotPassfileMatch[1];
+    assert.match(snapshotPassfilePath, /fanmind-restore\.[^/]+\/restore\.pgpass$/u);
+    assert.notEqual(snapshotPassfilePath, passfilePath);
+    assert.equal(dirname(snapshotPassfilePath), dirname(validatedSnapshotPath));
     for (const name of [
       "PGHOST",
       "PGPORT",
@@ -318,6 +448,226 @@ test("restore runner freezes the checked target and passes only explicit connect
     ]) {
       assert.match(capture, new RegExp(`${name}_SET=\\n`));
     }
+    await assert.rejects(access(dirname(validatedSnapshotPath)), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner rejects permissive passfiles before invoking pg_restore", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-passfile-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const invokedPath = join(root, "invoked.txt");
+    await writeFile(dumpPath, "synthetic-dump");
+    await chmod(dumpPath, 0o600);
+    await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o644);
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "printf 'invoked\\n' > \"$FANMIND_TEST_INVOKED_PATH\"",
+        "",
+      ].join("\n"),
+    );
+    await chmod(fakeRestorePath, 0o755);
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_INVOKED_PATH: invokedPath,
+        },
+      }),
+      (error) => {
+        assert.match(String(error.stderr), /passfile_permissions_too_open/);
+        return true;
+      },
+    );
+    await assert.rejects(readFile(invokedPath, "utf8"), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner rejects a passfile owned by another user before invoking pg_restore", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-passfile-owner-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeBinDirectory = join(root, "bin");
+    const fakeStatPath = join(fakeBinDirectory, "stat");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const invokedPath = join(root, "invoked.txt");
+    await mkdir(fakeBinDirectory, { recursive: true });
+    await writeFile(dumpPath, "synthetic-dump");
+    await chmod(dumpPath, 0o600);
+    await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o600);
+    await writeFile(
+      fakeStatPath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "printf '1 2 999999 600 81a0\\n'",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "printf 'invoked\\n' > \"$FANMIND_TEST_INVOKED_PATH\"",
+        "",
+      ].join("\n"),
+    );
+    await chmod(fakeStatPath, 0o755);
+    await chmod(fakeRestorePath, 0o755);
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          PATH: `${fakeBinDirectory}:${process.env.PATH ?? ""}`,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_INVOKED_PATH: invokedPath,
+        },
+      }),
+      (error) => {
+        const output = `${String(error.stdout)}\n${String(error.stderr)}`;
+        assert.match(output, /passfile_owner_mismatch/);
+        assert.doesNotMatch(output, new RegExp(passfilePath.replaceAll(".", "\\.")));
+        return true;
+      },
+    );
+    await assert.rejects(readFile(invokedPath, "utf8"), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner rejects a source path swapped after it was opened", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-source-swap-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeBinDirectory = join(root, "bin");
+    const fakeStatPath = join(fakeBinDirectory, "stat");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const statStatePath = join(root, "stat-state.txt");
+    const invokedPath = join(root, "invoked.txt");
+    await mkdir(fakeBinDirectory, { recursive: true });
+    await writeFile(dumpPath, "synthetic-dump");
+    await chmod(dumpPath, 0o600);
+    await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o600);
+    await writeFile(
+      fakeStatPath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "count=0",
+        "[[ ! -f \"$FANMIND_TEST_STAT_STATE_PATH\" ]] || read -r count < \"$FANMIND_TEST_STAT_STATE_PATH\"",
+        "count=$((count + 1))",
+        "printf '%s\\n' \"$count\" > \"$FANMIND_TEST_STAT_STATE_PATH\"",
+        "if [[ \"$count\" -eq 1 ]]; then",
+        "  printf '1 2 %s 600 81a0\\n' \"$(id -u)\"",
+        "else",
+        "  printf '1 3 81a0\\n'",
+        "fi",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "printf 'invoked\\n' > \"$FANMIND_TEST_INVOKED_PATH\"",
+        "",
+      ].join("\n"),
+    );
+    await chmod(fakeStatPath, 0o755);
+    await chmod(fakeRestorePath, 0o755);
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          PATH: `${fakeBinDirectory}:${process.env.PATH ?? ""}`,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_INVOKED_PATH: invokedPath,
+          FANMIND_TEST_STAT_STATE_PATH: statStatePath,
+        },
+      }),
+      (error) => {
+        assert.match(
+          `${String(error.stdout)}\n${String(error.stderr)}`,
+          /passfile_path_changed_during_open/,
+        );
+        return true;
+      },
+    );
+    await assert.rejects(readFile(invokedPath, "utf8"), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner validates the dump archive before any write invocation", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-archive-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-invalid.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const writeInvokedPath = join(root, "write-invoked.txt");
+    const listMarkerPath = join(root, "list-attempted.txt");
+    await writeFile(dumpPath, "invalid-synthetic-dump");
+    await chmod(dumpPath, 0o600);
+    await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o600);
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+        "  exit 1",
+        "fi",
+        "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_INVOKED_PATH\"",
+        "",
+      ].join("\n"),
+    );
+    await chmod(fakeRestorePath, 0o755);
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_WRITE_INVOKED_PATH: writeInvokedPath,
+          FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
+        },
+      }),
+      (error) => {
+        assert.match(String(error.stderr), /dump_archive_validation_failed/);
+        return true;
+      },
+    );
+    await assert.rejects(readFile(writeInvokedPath, "utf8"), /ENOENT/);
+    const failedSnapshotPath = (await readFile(listMarkerPath, "utf8")).trim();
+    await assert.rejects(access(dirname(failedSnapshotPath)), /ENOENT/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -347,8 +697,23 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runbook, /RESTORE_TARGET_BOUNDARY=OK/);
   assert.match(runbook, /PGHOSTADDR/);
   assert.match(runbook, /Connection-String/);
-  assert.ok(runner.indexOf("restore-target-preflight.mjs") < runner.indexOf("exec env"));
+  assert.match(runbook, /target host differs from the Production database host/);
+  assert.match(
+    runbook,
+    /dump and passfile must be regular, non-symlink files owned by the operator/,
+  );
+  assert.match(runbook, /pg_restore --list/);
+  assert.ok(runner.indexOf("restore-target-preflight.mjs") < runner.indexOf("--list"));
+  assert.ok(runner.indexOf("--list") < runner.indexOf("--single-transaction"));
   assert.match(runner, /readonly PGHOST PGPORT PGDATABASE PGUSER/);
+  assert.match(runner, /owner_uid/);
+  assert.match(runner, /path_changed_during_open/);
+  assert.match(runner, /source_label}_permissions_too_open/);
+  assert.match(runner, /dump_symlink_forbidden/);
+  assert.match(runner, /passfile_symlink_forbidden/);
+  assert.match(runner, /snapshot_dump/);
+  assert.match(runner, /snapshot_passfile/);
+  assert.match(runner, /--single-transaction/);
   assert.match(runner, /-u PGHOSTADDR/);
   assert.match(runner, /-u PGSERVICE/);
   assert.match(runner, /-u PGSERVICEFILE/);

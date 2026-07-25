@@ -187,7 +187,7 @@ npm run restore:preflight
 npm run restore:database:drill -- /sicherer/pfad/fanmind-database-<timestamp>.dump
 ```
 
-Der Restore-Preflight bindet die tatsächlichen `PGHOST`-, `PGPORT`-, `PGDATABASE`- und `PGUSER`-Werte an eine unabhängig dokumentierte Zielbestätigung und vergleicht den vollständigen Zielsatz mit Production. Der Runner wiederholt diese Prüfung unmittelbar vor `pg_restore`; ein erfolgreicher allgemeiner `environment:preflight:write` allein reicht für einen Restore ausdrücklich nicht aus.
+Der Restore-Preflight bindet die tatsächlichen kanonischen `PGHOST`-, `PGPORT`-, `PGDATABASE`- und `PGUSER`-Werte an eine unabhängig dokumentierte Zielbestätigung und sperrt jeden Treffer auf dem Production-Datenbankhost unabhängig von Port, Datenbank oder Benutzer. Numerische IPv4-/IPv6-Adressen werden kanonisiert; mehrdeutige Legacy-IPv4-Formen sind gesperrt. Der Runner öffnet geschützte Nicht-Symlink-Quellen einmal, prüft Eigentümer und Rechte, erstellt private Dump-/Passfile-Snapshots und verwendet genau diese Dateien für `pg_restore --list` und den transaktionalen Restore. Ein erfolgreicher allgemeiner `environment:preflight:write` allein reicht ausdrücklich nicht aus.
 
 Ein Restore-Drill darf erst beginnen, wenn:
 
