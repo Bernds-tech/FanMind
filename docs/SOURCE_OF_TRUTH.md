@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 24. Juli 2026
+Stand: 25. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -72,6 +72,8 @@ Aktiv im App-Kern:
 - Antwort kopieren, Kontaktwissen und Follow-up speichern;
 - offene Follow-ups anzeigen und mit dem kanonischen Status `completed` abschließen; bestehende `done`-Altdaten bleiben lesekompatibel;
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
+- native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
+- nativer Splashscreen mit bestätigter FanMind-Wortmarke sowie vorbereitete deutsche/englische Store-Metadaten;
 - separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze und Android-JavaScript-Bundle.
 
 Noch nicht als ausgelieferte Store-App freigegeben:
@@ -80,7 +82,8 @@ Noch nicht als ausgelieferte Store-App freigegeben:
 - EAS-Projekt und Signing Credentials;
 - signierter interner Android-Build;
 - Apple Developer / App Store Connect und TestFlight;
-- Push-Grundlage, finales Branding und Store-Unterlagen;
+- finales App-Icon, Push-Berechtigung, Token-Registrierung und echte Zustellung;
+- finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;
 - realer End-to-End-Gerätetest auf Android und iOS.
 
 Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-Ingestion, externe Kanal-Credentials oder automatische Kommunikation aus. Verbindliche Architektur- und Beta-Details stehen in `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.

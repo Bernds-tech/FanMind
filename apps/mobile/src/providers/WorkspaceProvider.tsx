@@ -13,12 +13,18 @@ import { loadWorkspace } from "@/lib/data";
 import { useAuth } from "@/providers/AuthProvider";
 import type { Workspace } from "@/types";
 
+export type WorkspaceRefreshResult = {
+  workspace: Workspace | null;
+  error: string | null;
+  transportUnavailable: boolean;
+};
+
 type WorkspaceContextValue = {
   workspace: Workspace | null;
   loading: boolean;
   error: string | null;
   transportUnavailable: boolean;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<WorkspaceRefreshResult | null>;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -42,11 +48,21 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       setError(null);
       setTransportUnavailable(false);
       setLoading(false);
-      return;
+      return {
+        workspace: null,
+        error: null,
+        transportUnavailable: false,
+      };
     }
     setLoading(true);
     const result = await loadWorkspace(userId);
-    if (activeUserId.current !== userId) return;
+    if (activeUserId.current !== userId) return null;
+
+    const refreshResult: WorkspaceRefreshResult = {
+      workspace: result.workspace,
+      error: result.error,
+      transportUnavailable: result.offlineEligible,
+    };
 
     if (result.workspace) {
       setWorkspace(result.workspace);
@@ -58,6 +74,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       setTransportUnavailable(result.offlineEligible);
     }
     setLoading(false);
+    return refreshResult;
   }, [session?.user.id]);
 
   useEffect(() => {

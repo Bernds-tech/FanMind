@@ -116,6 +116,8 @@ export const landingEnglishCopySupplement: Record<string, string> = {
   "24 h · maximal 50 · nur lesen": "24 h · up to 50 · read-only",
   "Push für Follow-up-Erinnerungen": "Push for follow-up reminders",
   "Nächste Mobile-Phase": "Next mobile phase",
+  "Konfiguration und Routing fertig · Zustellung offen":
+    "Configuration and routing ready · Delivery pending",
   "Segmente & Listen": "Segments & lists",
   "Segment-Ansichten": "Segment views",
   Vorbereitet: "Prepared",

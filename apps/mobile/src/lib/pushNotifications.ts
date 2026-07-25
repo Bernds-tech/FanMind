@@ -1,10 +1,9 @@
 import * as Notifications from "expo-notifications";
-import { router } from "expo-router";
 import { Platform } from "react-native";
 
 import {
-  FOLLOWUP_NOTIFICATION_ROUTE,
-  parseFollowupNotificationData,
+  createFollowupNotificationIntent,
+  type FollowupNotificationIntent,
 } from "@/lib/pushNotificationPolicy.mjs";
 
 export const FOLLOWUP_NOTIFICATION_CHANNEL_ID = "followup-reminders";
@@ -23,20 +22,35 @@ export async function configureNotificationChannel() {
   );
 }
 
-export function handleNotificationResponse(
+export function parseNotificationResponse(
   response: Notifications.NotificationResponse,
-) {
-  const data = parseFollowupNotificationData(
-    response.notification.request.content.data,
+) : FollowupNotificationIntent | null {
+  return createFollowupNotificationIntent(
+    {
+      actionIdentifier: response.actionIdentifier,
+      requestIdentifier: response.notification.request.identifier,
+      data: response.notification.request.content.data,
+    },
+    Notifications.DEFAULT_ACTION_IDENTIFIER,
   );
-  if (!data) return false;
-
-  router.push(FOLLOWUP_NOTIFICATION_ROUTE);
-  return true;
 }
 
-export function registerNotificationResponseListener() {
+export function registerNotificationResponseListener(
+  onIntent: (intent: FollowupNotificationIntent) => void,
+) {
   return Notifications.addNotificationResponseReceivedListener(
-    handleNotificationResponse,
+    (response) => {
+      const intent = parseNotificationResponse(response);
+      if (intent) onIntent(intent);
+    },
   );
+}
+
+export function getLastNotificationIntent(): FollowupNotificationIntent | null {
+  const response = Notifications.getLastNotificationResponse();
+  return response ? parseNotificationResponse(response) : null;
+}
+
+export function clearLastNotificationIntent(): void {
+  Notifications.clearLastNotificationResponse();
 }

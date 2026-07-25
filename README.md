@@ -113,6 +113,8 @@ Bereits vorhanden:
 - offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
 - verschlüsselte, höchstens 24 Stunden alte Offline-Übersicht mit maximal 50 Kontakten; nur Name, Handle, Plattform, Status und Änderungszeit, ausschließlich lesbar;
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
+- native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, sicherem Login-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
+- nativer Splashscreen mit bestätigter FanMind-Wortmarke und vorbereitete deutsche/englische Store-Metadaten;
 - separate Mobile-CI, Expo Doctor, TypeScript-Check und Android-JavaScript-Bundle.
 
 Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
@@ -120,7 +122,8 @@ Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
 - Supabase-Redirect-Freigabe und realer E-Mail-/Gerätetest für `fanmind://reset-password`;
 - EAS-Projekt, Signing Credentials und signierter interner Android-Build;
 - Apple Developer / App Store Connect und iOS-TestFlight;
-- Push-Grundlage, finales App-Icon/Splashscreen und Store-Unterlagen;
+- finales App-Icon sowie Push-Berechtigung, Token-Registrierung und echte Zustellung;
+- finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;
 - reale Android-/iOS-Gerätetests.
 
 Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.
