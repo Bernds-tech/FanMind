@@ -12,6 +12,8 @@ import { fanMindDescription, fanMindOgAlt, fanMindSiteUrl, fanMindTitle } from "
 import "./globals.css";
 import "./landing-header-visibility.css";
 
+const browserIconRevision = "fanmind-round-social-20260725";
+
 export const metadata: Metadata = {
   metadataBase: new URL(fanMindSiteUrl),
   referrer: "strict-origin-when-cross-origin",
@@ -49,8 +51,27 @@ export const metadata: Metadata = {
     ],
   },
   icons: {
-    icon: [{ url: "/icon", type: "image/png", sizes: "64x64" }],
-    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+    icon: [
+      {
+        url: `/icon?v=${browserIconRevision}`,
+        type: "image/png",
+        sizes: "96x96",
+      },
+    ],
+    shortcut: [
+      {
+        url: `/icon?v=${browserIconRevision}`,
+        type: "image/png",
+        sizes: "96x96",
+      },
+    ],
+    apple: [
+      {
+        url: `/apple-icon?v=${browserIconRevision}`,
+        type: "image/png",
+        sizes: "180x180",
+      },
+    ],
   },
 };
 
