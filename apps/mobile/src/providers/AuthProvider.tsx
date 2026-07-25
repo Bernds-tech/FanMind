@@ -22,7 +22,12 @@ import {
   parseMobileAuthRecoveryUrl,
   validateNewPassword,
 } from "@/lib/authRecoveryPolicy.mjs";
-import { clearSecureSessionStorage } from "@/lib/secureStorage";
+import {
+  activateOfflineReadCacheOwner,
+  disableOfflineReadCacheWrites,
+  resumeOfflineReadCacheOwner,
+} from "@/lib/offlineReadCache";
+import { clearSecureLocalStorage } from "@/lib/secureStorage";
 import { supabase } from "@/lib/supabase";
 
 type RecoveryStatus = "idle" | "processing" | "ready" | "error";
@@ -110,18 +115,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         if (parsed.mode === "pkce") {
           const recoveryEvent = waitForPasswordRecoveryEvent();
-          const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(parsed.code);
           if (error) throw error;
           const confirmed = await recoveryEvent;
           if (!confirmed) {
             throw new Error("password_recovery_event_missing");
           }
+          resumeOfflineReadCacheOwner(data.session?.user.id ?? null);
         } else {
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token: parsed.accessToken,
             refresh_token: parsed.refreshToken,
           });
           if (error) throw error;
+          resumeOfflineReadCacheOwner(data.session?.user.id ?? null);
           setRecoveryStatus("ready");
         }
 
@@ -146,12 +153,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
+      activateOfflineReadCacheOwner(data.session?.user.id ?? null);
       setSession(data.session ?? null);
       setLoading(false);
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
+        activateOfflineReadCacheOwner(nextSession?.user.id ?? null);
         setSession(nextSession);
         setLoading(false);
         if (event === "PASSWORD_RECOVERY") {
@@ -200,10 +209,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!normalizedEmail || password.length < 8) {
       return "Bitte gib eine gültige E-Mail-Adresse und dein Passwort ein.";
     }
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password,
     });
+    if (!error) {
+      resumeOfflineReadCacheOwner(data.session?.user.id ?? null);
+    }
     return error ? "Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten." : null;
   }, []);
 
@@ -252,18 +264,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signOut = useCallback(async () => {
     let failed = false;
     try {
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-      failed = Boolean(error);
+      await disableOfflineReadCacheWrites();
     } catch {
       failed = true;
     }
 
     try {
-      await clearSecureSessionStorage();
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      failed = failed || Boolean(error);
     } catch {
       failed = true;
     }
 
+    try {
+      await clearSecureLocalStorage();
+    } catch {
+      failed = true;
+    }
+
+    activateOfflineReadCacheOwner(null);
     setSession(null);
     clearRecoveryState();
     if (failed) {

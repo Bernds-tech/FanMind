@@ -78,9 +78,9 @@ export default function SettingsScreen() {
         <SectionTitle eyebrow="Lokale Daten">Sicheres Abmelden</SectionTitle>
         <Text style={mobileStyles.muted}>
           Beim Abmelden beendet FanMind die lokale Supabase-Sitzung, entfernt alle registrierten
-          FanMind-Schlüssel aus SecureStore und leert den geladenen Workspace-Zustand. Kontakte
-          und Kontaktwissen bleiben geschützt im Server-Workspace und werden nicht als Offline-
-          Kopie auf dem Gerät behalten.
+          FanMind-Schlüssel aus SecureStore und leert den geladenen Workspace-Zustand. Dazu gehört
+          auch die verschlüsselte, höchstens 24 Stunden alte Offline-Kontaktübersicht. Kontaktwissen,
+          Nachrichten, KI-Inhalte und interne Notizen werden nicht offline gespeichert.
         </Text>
       </Card>
 

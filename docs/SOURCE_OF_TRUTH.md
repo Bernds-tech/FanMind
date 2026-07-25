@@ -71,6 +71,7 @@ Aktiv im App-Kern:
 - Bearer-authentifizierte serverseitige KI-Antwortvorschläge;
 - Antwort kopieren, Kontaktwissen und Follow-up speichern;
 - offene Follow-ups anzeigen und mit dem kanonischen Status `completed` abschließen; bestehende `done`-Altdaten bleiben lesekompatibel;
+- verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
 - separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze und Android-JavaScript-Bundle.
 
 Noch nicht als ausgelieferte Store-App freigegeben:
@@ -79,7 +80,7 @@ Noch nicht als ausgelieferte Store-App freigegeben:
 - EAS-Projekt und Signing Credentials;
 - signierter interner Android-Build;
 - Apple Developer / App Store Connect und TestFlight;
-- Offline-Lese-Cache, Push-Grundlage und Account-/Datenlöschprozess;
+- Push-Grundlage, finales Branding und Store-Unterlagen;
 - realer End-to-End-Gerätetest auf Android und iOS.
 
 Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-Ingestion, externe Kanal-Credentials oder automatische Kommunikation aus. Verbindliche Architektur- und Beta-Details stehen in `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.

@@ -21,6 +21,18 @@ export type Contact = {
   updated_at: string | null;
 };
 
+export type ContactListItem = Pick<
+  Contact,
+  | "id"
+  | "workspace_id"
+  | "display_name"
+  | "handle"
+  | "source_platform"
+  | "status"
+  | "summary"
+  | "updated_at"
+>;
+
 export type ContactMemory = {
   id: string;
   workspace_id: string;

@@ -107,13 +107,14 @@ Server-only functions remain server-only:
 
 The SecureStore adapter maintains a bounded registry of FanMind-owned storage keys. A safe local logout:
 
-1. ends the local Supabase session;
-2. removes every registered key and all chunks;
-3. clears the registry;
-4. resets the React session and recovery state;
-5. immediately clears the WorkspaceProvider state.
+1. stops and drains pending offline-cache writes;
+2. ends the local Supabase session;
+3. removes every registered key and all chunks;
+4. clears the registry;
+5. resets the React session and recovery state;
+6. immediately clears the WorkspaceProvider state.
 
-There is currently no offline contact cache. A future cache must register with the same purge contract before it is allowed into a beta build.
+The one encrypted offline read cache is registered with that same purge contract. It is account- and workspace-bound, expires after 24 hours, contains at most 50 contacts and is limited to 80,000 UTF-8 bytes before SecureStore chunking. Only workspace name plus contact ID, workspace ID, display name, handle, source/platform, status and update time are retained. Contact knowledge, summaries, messages, AI content, internal notes, follow-ups and credentials are excluded. The UI exposes the cache only after a transport-level failure and remains read-only; authentication, RLS and server errors fail closed.
 
 ## Native route map
 
@@ -162,7 +163,7 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] password reset and deep-link callback;
 - [x] strict local SecureStore and workspace purge;
 - [x] EAS profiles and beta handoff documented;
-- [ ] offline read cache with the central purge contract;
+- [x] bounded offline read cache with the central purge contract;
 - [ ] push registration and follow-up reminders;
 - [ ] final app icon and splash assets.
 

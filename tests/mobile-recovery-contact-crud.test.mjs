@@ -185,14 +185,15 @@ test("SecureStore registry is bounded, deduplicated and corruption-safe", () => 
   assert.deepEqual(addSecureStorageRegistryKey(["auth"], "other"), ["auth", "other"]);
   assert.deepEqual(addSecureStorageRegistryKey(["auth"], "auth"), ["auth"]);
   assert.deepEqual(removeSecureStorageRegistryKey(["auth", "other"], "auth"), ["other"]);
+  assert.deepEqual(addSecureStorageRegistryKey(["auth"], "invalid:key"), ["auth"]);
 });
 
-test("SecureStore purge enrolls legacy sessions and retains failed keys for retry", async () => {
+test("SecureStore purge enrolls valid keys and retains failed keys for retry", async () => {
   const source = await read("apps/mobile/src/lib/secureStorage.ts");
 
   assert.match(
     source,
-    /Existing installations created before the registry was introduced[\s\S]*await registerKey\(key\)/u,
+    /Existing valid keys that predate registry enrollment[\s\S]*await registerKey\(key\)/u,
   );
   assert.match(source, /const MAX_SESSION_CHUNKS = 64/u);
   assert.match(source, /parsed <= MAX_SESSION_CHUNKS/u);
@@ -202,10 +203,10 @@ test("SecureStore purge enrolls legacy sessions and retains failed keys for retr
   assert.match(source, /throw new Error\("Nicht alle sicheren FanMind-Schlüssel/u);
   assert.match(
     source,
-    /await registerKey\(key\);[\s\S]*setItemAsync\([\s\S]*COUNT_SUFFIX[\s\S]*for \(const \[index, chunk\] of chunks\.entries\(\)\)/u,
+    /await registerKey\(key\);[\s\S]*setItemAsync\([\s\S]*secureStoreCountKey\(key\)[\s\S]*for \(const \[index, chunk\] of chunks\.entries\(\)\)/u,
   );
   assert.match(source, /Keep the key registered so a later logout can retry the purge/u);
-  assert.match(source, /A stale registry entry is safer than unregistered session data/u);
+  assert.match(source, /A stale registry entry is safer than unregistered local data/u);
 });
 
 test("AuthProvider requires recovery confirmation without retaining or logging credentials", async () => {
@@ -221,7 +222,7 @@ test("AuthProvider requires recovery confirmation without retaining or logging c
   assert.match(source, /password_recovery_event_missing/u);
   assert.match(source, /recoveryStatus !== "ready"/u);
   assert.match(source, /supabase\.auth\.updateUser/u);
-  assert.match(source, /clearSecureSessionStorage/u);
+  assert.match(source, /clearSecureLocalStorage/u);
   assert.match(source, /recoveryAttemptActive/u);
   assert.match(source, /recoveryLinkHandled/u);
   assert.doesNotMatch(source, /handledRecoveryUrls|activeRecoveryUrl/u);

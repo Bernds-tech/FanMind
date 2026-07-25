@@ -34,6 +34,7 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - Kontaktwissen aus KI-Vorschlag speichern;
 - Follow-up aus KI-Vorschlag speichern;
 - offene Follow-ups anzeigen und abschließen;
+- verschlüsselte, maximal 24 Stunden alte Offline-Kontaktübersicht mit höchstens 50 Einträgen im Nur-Lesen-Modus;
 - sichere lokale Abmeldung mit Purge registrierter FanMind-SecureStore-Schlüssel und Workspace-Zustand.
 
 ## Sicherheitsgrenzen
@@ -59,15 +60,19 @@ Die Datenzugriffe laufen direkt über Supabase und müssen durch RLS auf den ang
 
 Recovery-Codes, Zugriffstokens, Refresh-Tokens und vollständige Callback-URLs dürfen weder protokolliert noch in Tickets oder Screenshots übernommen werden.
 
+Die Offline-Übersicht wird ausschließlich nach einem erfolgreichen, ungefilterten Online-Abruf erneuert. Sie enthält nur User-/Workspace-Bindung, Workspace-Name sowie Kontakt-ID, Name, Handle, Plattform, Status und Änderungszeit. Kontaktwissen, Zusammenfassungen, Nachrichten, KI-Inhalte, interne Notizen, Follow-ups und Zugangsdaten sind ausgeschlossen. Ein Fallback ist nur bei einem echten Transportausfall erlaubt; Auth-, RLS- und Serverfehler dürfen nie mit Cache-Daten verdeckt werden.
+
 ## Lokale Einrichtung
 
 ```bash
 cd apps/mobile
 cp .env.example .env.local
-npm install
+npm ci
 npm run check
-npm start
+npx expo start --go
 ```
+
+Für den aktuellen Expo-SDK-57-Stand muss auf Android die [offizielle Expo-Go-Version 57.0.2](https://github.com/expo/expo-go-releases/releases/tag/Expo-Go-57.0.2) installiert sein. Rechner und Telefon müssen im selben WLAN sein; anschließend wird der QR-Code aus dem Terminal mit Expo Go gescannt. Falls das lokale Netzwerk die Verbindung blockiert, kann nach Installation von `@expo/ngrok` mit `npx expo start --go --tunnel` gestartet werden. Ohne separates Staging darf dafür ausschließlich ein Testkonto verwendet werden.
 
 Für einen internen Build nach der externen EAS-Einrichtung:
 
@@ -103,9 +108,8 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 1. Supabase-Redirect `fanmind://reset-password` extern freigeben und Recovery auf einem realen Gerät testen.
 2. EAS-Projekt, Signing Credentials und interne Preview-Builds einrichten.
 3. App-Icon und Splashscreen aus dem final bestätigten FanMind-Branding erzeugen.
-4. Offline-Lese-Cache mit klarer Datenlöschung ergänzen.
-5. Push-Grundlage für Follow-ups vorbereiten.
-6. Account-/Datenlöschprozess für Store-Anforderungen ergänzen.
-7. Android Internal Testing und iOS TestFlight durchführen.
+4. Push-Grundlage für Follow-ups vorbereiten.
+5. Android Internal Testing und iOS TestFlight durchführen.
+6. Store-Unterlagen, Datenschutzangaben und reale Gerätetestprotokolle abschließen.
 
 Die Produkt- und Release-Checkliste für diese Schritte steht in `docs/mobile/BETA_RELEASE.md`.

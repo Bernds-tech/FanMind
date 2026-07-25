@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AppState,
   FlatList,
   Pressable,
   RefreshControl,
@@ -19,18 +20,54 @@ import {
   mobileStyles,
 } from "@/components/ui";
 import { listContacts } from "@/lib/data";
+import {
+  readOfflineReadCache,
+  removeOfflineReadCache,
+  writeOfflineReadCache,
+} from "@/lib/offlineReadCache";
+import {
+  OFFLINE_READ_CACHE_MAX_AGE_MS,
+  filterOfflineContacts,
+} from "@/lib/offlineReadCachePolicy.mjs";
+import { useAuth } from "@/providers/AuthProvider";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
-import type { Contact } from "@/types";
+import type { ContactListItem } from "@/types";
 
-function ContactRow({ contact }: { contact: Contact }) {
+function formatCachedAt(value: number | null): string {
+  if (!value) return "unbekannt";
+  return new Date(value).toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function ContactRow({
+  contact,
+  disabled,
+}: {
+  contact: ContactListItem;
+  disabled: boolean;
+}) {
   const platform = contact.source_platform || "manuell";
   return (
     <Pressable
       onPress={() => router.push(`/(app)/contacts/${contact.id}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.row,
+        pressed && styles.rowPressed,
+        disabled && styles.rowDisabled,
+      ]}
       accessibilityRole="button"
-      accessibilityLabel={`${contact.display_name} öffnen`}
+      accessibilityState={{ disabled }}
+      accessibilityLabel={
+        disabled
+          ? `${contact.display_name}, offline gespeichert`
+          : `${contact.display_name} öffnen`
+      }
     >
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{contact.display_name.slice(0, 2).toUpperCase()}</Text>
@@ -54,41 +91,187 @@ function ContactRow({ contact }: { contact: Contact }) {
 }
 
 export default function ContactsScreen() {
+  const { session } = useAuth();
   const {
     workspace,
     loading: workspaceLoading,
     error: workspaceError,
+    refresh: refreshWorkspace,
+    transportUnavailable,
   } = useWorkspace();
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<ContactListItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usingCache, setUsingCache] = useState(false);
+  const [contactTransportUnavailable, setContactTransportUnavailable] =
+    useState(false);
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
+  const [cachedWorkspaceName, setCachedWorkspaceName] = useState<string | null>(
+    null,
+  );
+  const loadSequence = useRef(0);
+  const cachedContacts = useRef<ContactListItem[]>([]);
 
   const load = useCallback(
     async (isRefresh = false) => {
-      if (!workspace?.id) {
+      const sequence = ++loadSequence.current;
+      const userId = session?.user.id;
+      if (!userId) {
         setContacts([]);
         setError(null);
+        setUsingCache(false);
+        setContactTransportUnavailable(false);
+        setCachedAt(null);
+        setCachedWorkspaceName(null);
+        cachedContacts.current = [];
         setLoading(false);
         setRefreshing(false);
         return;
       }
 
       isRefresh ? setRefreshing(true) : setLoading(true);
+      if (usingCache && !isRefresh) {
+        setContacts(filterOfflineContacts(cachedContacts.current, search));
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      if (!workspace?.id) {
+        if (transportUnavailable) {
+          const cached = await readOfflineReadCache(userId);
+          if (sequence !== loadSequence.current) return;
+          if (cached) {
+            cachedContacts.current = cached.contacts;
+            setContacts(filterOfflineContacts(cached.contacts, search));
+            setError(null);
+            setUsingCache(true);
+            setContactTransportUnavailable(true);
+            setCachedAt(cached.cachedAt);
+            setCachedWorkspaceName(cached.workspaceName);
+          } else {
+            cachedContacts.current = [];
+            setContacts([]);
+            setError("FanMind ist offline und es ist noch kein gültiger Kontaktstand gespeichert.");
+            setUsingCache(false);
+            setContactTransportUnavailable(true);
+            setCachedAt(null);
+            setCachedWorkspaceName(null);
+          }
+        } else {
+          void removeOfflineReadCache(userId);
+          cachedContacts.current = [];
+          setContacts([]);
+          setError(null);
+          setUsingCache(false);
+          setContactTransportUnavailable(false);
+          setCachedAt(null);
+          setCachedWorkspaceName(null);
+        }
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       const result = await listContacts(workspace.id, search);
-      setContacts(result.contacts);
-      setError(result.error);
+      if (sequence !== loadSequence.current) return;
+
+      if (!result.error) {
+        cachedContacts.current = [];
+        setContacts(result.contacts);
+        setError(null);
+        setUsingCache(false);
+        setContactTransportUnavailable(false);
+        setCachedAt(null);
+        setCachedWorkspaceName(null);
+        if (!search.trim()) {
+          void writeOfflineReadCache({
+            userId,
+            workspaceId: workspace.id,
+            workspaceName: workspace.name,
+            contacts: result.contacts,
+          });
+        }
+      } else if (result.offlineEligible) {
+        const cached = await readOfflineReadCache(userId, workspace.id);
+        if (sequence !== loadSequence.current) return;
+        if (cached) {
+          cachedContacts.current = cached.contacts;
+          setContacts(filterOfflineContacts(cached.contacts, search));
+          setError(null);
+          setUsingCache(true);
+          setContactTransportUnavailable(true);
+          setCachedAt(cached.cachedAt);
+          setCachedWorkspaceName(cached.workspaceName);
+        } else {
+          cachedContacts.current = [];
+          setContacts([]);
+          setError(result.error);
+          setUsingCache(false);
+          setContactTransportUnavailable(true);
+          setCachedAt(null);
+          setCachedWorkspaceName(null);
+        }
+      } else {
+        void removeOfflineReadCache(userId);
+        cachedContacts.current = [];
+        setContacts([]);
+        setError(result.error);
+        setUsingCache(false);
+        setContactTransportUnavailable(false);
+        setCachedAt(null);
+        setCachedWorkspaceName(null);
+      }
       setLoading(false);
       setRefreshing(false);
     },
-    [search, workspace?.id],
+    [
+      search,
+      session?.user.id,
+      transportUnavailable,
+      usingCache,
+      workspace?.id,
+      workspace?.name,
+    ],
   );
 
   useEffect(() => {
     const timer = setTimeout(() => void load(), 250);
     return () => clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    if (!usingCache || cachedAt === null) return;
+    const userId = session?.user.id;
+    const expiresAt = cachedAt + OFFLINE_READ_CACHE_MAX_AGE_MS;
+    const expireCachedView = () => {
+      if (Date.now() < expiresAt) return;
+      loadSequence.current += 1;
+      cachedContacts.current = [];
+      setContacts([]);
+      setError(
+        "Der gespeicherte Kontaktstand ist abgelaufen. Stelle eine Verbindung her, um ihn zu erneuern.",
+      );
+      setUsingCache(false);
+      setContactTransportUnavailable(true);
+      setCachedAt(null);
+      setCachedWorkspaceName(null);
+      if (userId) void removeOfflineReadCache(userId);
+    };
+    const expiryTimer = setTimeout(
+      expireCachedView,
+      Math.max(0, expiresAt - Date.now()),
+    );
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") expireCachedView();
+    });
+    expireCachedView();
+    return () => {
+      clearTimeout(expiryTimer);
+      appStateSubscription.remove();
+    };
+  }, [cachedAt, session?.user.id, usingCache]);
 
   if (workspaceLoading) {
     return (
@@ -98,15 +281,29 @@ export default function ContactsScreen() {
     );
   }
 
-  if (!workspace) {
+  if (!workspace && transportUnavailable && loading) {
+    return (
+      <Screen scroll={false}>
+        <LoadingState label="Gespeicherter Kontaktstand wird geprüft…" />
+      </Screen>
+    );
+  }
+
+  if (!workspace && !usingCache) {
+    const offlineUnavailable = transportUnavailable || contactTransportUnavailable;
     return (
       <Screen
         title="Kontakte"
-        subtitle="Suche, öffne und verstehe deinen Fan-Kontext"
+        subtitle={
+          offlineUnavailable
+            ? "Offline-Kontaktübersicht nicht verfügbar"
+            : "Suche, öffne und verstehe deinen Fan-Kontext"
+        }
       >
         <EmptyState
-          title="Noch kein Workspace"
+          title={offlineUnavailable ? "Keine gültigen Offline-Daten" : "Noch kein Workspace"}
           description={
+            error ??
             workspaceError ??
             "Schließe zuerst das FanMind-Onboarding ab, damit Kontakte geladen werden können."
           }
@@ -115,21 +312,52 @@ export default function ContactsScreen() {
     );
   }
 
+  const offlineReadOnly = usingCache || contactTransportUnavailable;
+
   return (
     <Screen
       title="Kontakte"
-      subtitle="Suche, öffne und verstehe deinen Fan-Kontext"
+      subtitle={
+        cachedWorkspaceName
+          ? `Gespeicherter Stand für ${cachedWorkspaceName}`
+          : "Suche, öffne und verstehe deinen Fan-Kontext"
+      }
       scroll={false}
       right={
-        <SecondaryButton onPress={() => router.push("/(app)/contacts/new")}>
+        <SecondaryButton
+          disabled={offlineReadOnly}
+          onPress={() => router.push("/(app)/contacts/new")}
+        >
           Neu
         </SecondaryButton>
       }
     >
+      {usingCache ? (
+        <View style={styles.offlineBanner}>
+          <StatusPill tone="warning">Offline · nur lesen</StatusPill>
+          <Text style={mobileStyles.muted}>
+            Stand {formatCachedAt(cachedAt)} Uhr. Bis zu 50 zuletzt geladene Kontakte sind lokal
+            geschützt verfügbar. Details und Änderungen bleiben bis zur nächsten Verbindung
+            gesperrt.
+          </Text>
+        </View>
+      ) : contactTransportUnavailable ? (
+        <View style={styles.offlineBanner}>
+          <StatusPill tone="warning">Offline · keine lokalen Daten</StatusPill>
+          <Text style={mobileStyles.muted}>
+            Es ist kein gültiger gespeicherter Kontaktstand verfügbar. Stelle eine Verbindung
+            her, um die Kontaktübersicht zu laden. Änderungen bleiben bis dahin gesperrt.
+          </Text>
+        </View>
+      ) : null}
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Name, Handle oder Zusammenfassung suchen"
+        placeholder={
+          offlineReadOnly
+            ? "Name, Handle oder Plattform suchen"
+            : "Name, Handle, Plattform oder Zusammenfassung suchen"
+        }
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         autoCorrect={false}
@@ -143,14 +371,18 @@ export default function ContactsScreen() {
         <FlatList
           data={contacts}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ContactRow contact={item} />}
+          renderItem={({ item }) => (
+            <ContactRow contact={item} disabled={offlineReadOnly} />
+          )}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => void load(true)}
+              onRefresh={() => {
+                void refreshWorkspace().then(() => load(true));
+              }}
               tintColor={colors.cyan}
             />
           }
@@ -160,7 +392,9 @@ export default function ContactsScreen() {
               description={
                 search
                   ? "Passe deine Suche an."
-                  : "Lege den ersten Kontakt direkt in der App an."
+                  : offlineReadOnly
+                    ? "Im letzten gespeicherten Stand sind keine Kontakte enthalten."
+                    : "Lege den ersten Kontakt direkt in der App an."
               }
             />
           }
@@ -183,6 +417,15 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   rowPressed: { opacity: 0.72, transform: [{ scale: 0.995 }] },
+  rowDisabled: { opacity: 0.72 },
+  offlineBanner: {
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.amber,
+    borderRadius: radius.md,
+    backgroundColor: "rgba(255, 189, 89, 0.08)",
+    padding: spacing.md,
+  },
   avatar: {
     width: 46,
     height: 46,

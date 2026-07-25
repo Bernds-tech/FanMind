@@ -120,9 +120,11 @@ export const roadmapPhases: RoadmapPhase[] = [
       { label: "Eigenständiger Expo-/React-Native-App-Kern", state: "done", status: "Vorhanden" },
       { label: "Login, Dashboard, Kontakte, Kontaktwissen, KI und Follow-ups", state: "done", status: "Phase A erledigt" },
       { label: "Web-/Mobile-Follow-up-Status synchronisiert", state: "done", status: "completed + Legacy done" },
+      { label: "Passwort-Reset und Kontaktbearbeitung", state: "done", status: "Im App-Kern vorhanden" },
+      { label: "Verschlüsselte Offline-Kontaktübersicht", state: "done", status: "24 h · maximal 50 · nur lesen" },
       { label: "Signierter interner Android-Build", state: "partial", status: "EAS-/Signing-Einrichtung offen" },
       { label: "iOS-TestFlight", state: "planned", status: "Apple-Konto und Signing offen" },
-      { label: "Passwort-Reset, Kontaktbearbeitung, Offline und Push", state: "planned", status: "Nächste Mobile-Phase" },
+      { label: "Push für Follow-up-Erinnerungen", state: "planned", status: "Nächste Mobile-Phase" },
     ],
   },
 

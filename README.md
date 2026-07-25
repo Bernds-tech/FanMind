@@ -7,7 +7,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
-- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, Follow-ups und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
+- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Öffentliche Registrierung: ausschließlich Starter Flex und Starter 12 Monate.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
 - Admin-only: interne Testzugänge und das Stripe-Testabo `internal_daily_test` bleiben ausdrücklich intern. Der normale Registrierungsflow zeigt sie nicht öffentlich.
@@ -60,7 +60,7 @@ Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markie
 ## Technik
 
 - Framework: Next.js `16.2.11`
-- UI: React `19.2.4`
+- UI: React `19.2.8`
 - Mobile: React Native / Expo unter `apps/mobile` mit eigener Navigation, CI und Releasegrenze
 - Sprache: TypeScript
 - Auth und Daten: Supabase Auth / Supabase PostgREST
@@ -111,6 +111,7 @@ Bereits vorhanden:
 - Kontaktwissen und serverseitige KI-Antwortvorschläge;
 - Antwort kopieren, Kontaktwissen und Follow-up speichern;
 - offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
+- verschlüsselte, höchstens 24 Stunden alte Offline-Übersicht mit maximal 50 Kontakten; nur Name, Handle, Plattform, Status und Änderungszeit, ausschließlich lesbar;
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
 - separate Mobile-CI, Expo Doctor, TypeScript-Check und Android-JavaScript-Bundle.
 
@@ -119,7 +120,7 @@ Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
 - Supabase-Redirect-Freigabe und realer E-Mail-/Gerätetest für `fanmind://reset-password`;
 - EAS-Projekt, Signing Credentials und signierter interner Android-Build;
 - Apple Developer / App Store Connect und iOS-TestFlight;
-- Offline-Lese-Cache, Push-Grundlage und Account-/Datenlöschprozess;
+- Push-Grundlage, finales App-Icon/Splashscreen und Store-Unterlagen;
 - reale Android-/iOS-Gerätetests.
 
 Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.
