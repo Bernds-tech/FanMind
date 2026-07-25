@@ -4,7 +4,6 @@ export const fanMindBrowserIconBrand = {
   ring: "rgba(226, 244, 255, 0.94)",
   ringAccent: "rgba(37, 181, 255, 0.78)",
   innerBorder: "rgba(255, 255, 255, 0.12)",
-  glow: "rgba(29, 120, 255, 0.42)",
   fan: "#f8fdff",
   mind: "#1478ff",
   wordFan: "#f8fdff",
@@ -16,7 +15,7 @@ type FanMindBrowserIconMarkProps = {
 };
 
 export function FanMindBrowserIconMark({ size }: FanMindBrowserIconMarkProps) {
-  const discSize = Math.round(size * 0.92);
+  const discSize = Math.round(size * 0.9);
   const ringWidth = Math.max(1, Math.round(size * 0.024));
   const innerRingWidth = Math.max(1, Math.round(size * 0.012));
   const monogramSize = Math.round(size * 0.49);
@@ -47,7 +46,7 @@ export function FanMindBrowserIconMark({ size }: FanMindBrowserIconMarkProps) {
           borderRadius: "999px",
           border: `${ringWidth}px solid ${fanMindBrowserIconBrand.ring}`,
           background: fanMindBrowserIconBrand.disc,
-          boxShadow: `0 0 0 ${innerRingWidth}px ${fanMindBrowserIconBrand.ringAccent}, inset 0 0 0 ${innerRingWidth}px ${fanMindBrowserIconBrand.innerBorder}, 0 0 ${Math.max(4, Math.round(size * 0.18))}px ${fanMindBrowserIconBrand.glow}`,
+          boxShadow: `0 0 0 ${innerRingWidth}px ${fanMindBrowserIconBrand.ringAccent}, inset 0 0 0 ${innerRingWidth}px ${fanMindBrowserIconBrand.innerBorder}`,
         }}
       >
         <div
