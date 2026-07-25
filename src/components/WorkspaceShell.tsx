@@ -197,7 +197,7 @@ export function WorkspaceShell({
               aria-hidden={sidebarCollapsed}
             >
               <FanMindLogo
-                href="/dashboard"
+                href={sidebarCollapsed ? undefined : "/dashboard"}
                 ariaLabel="FanMind Dashboard"
                 subtitle="Multi-Channel CRM"
               />
