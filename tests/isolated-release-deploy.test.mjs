@@ -45,6 +45,38 @@ test("failed health or smoke checks invoke rollback before failure", async () =>
   assert.match(script, /unexpected failure after PM2 switched to the new release/);
 });
 
+test("every production start and smoke gate is bound to the production runtime", async () => {
+  const [script, workflow] = await Promise.all([
+    readFile(scriptPath, "utf8"),
+    readFile(workflowPath, "utf8"),
+  ]);
+
+  assert.match(
+    script,
+    /FANMIND_RELEASE_COMMIT="\$commit"[\s\S]*?FANMIND_RUNTIME_ENVIRONMENT=production[\s\S]*?pm2 start npm --name "\$APP_NAME" --cwd "\$cwd" -- start/,
+  );
+  assert.match(
+    script,
+    /FANMIND_RELEASE_COMMIT="\$rollback_commit"[\s\S]*?FANMIND_RUNTIME_ENVIRONMENT=production[\s\S]*?pm2 start npm --name "\$APP_NAME" --cwd "\$PREVIOUS_CWD" -- start/,
+  );
+  assert.match(
+    script,
+    /FANMIND_RELEASE_COMMIT="\$\{PREVIOUS_COMMIT:-unknown\}"[\s\S]*?FANMIND_RUNTIME_ENVIRONMENT=production[\s\S]*?pm2 start npm --name "\$APP_NAME" --cwd "\$SOURCE_DIR" -- start/,
+  );
+  assert.match(
+    script,
+    /FANMIND_EXPECTED_RELEASE_COMMIT="\$RELEASE_COMMIT"[\s\S]*?FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=production[\s\S]*?npm run smoke:public/,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_RELEASE_COMMIT="\$RELEASE_COMMIT"[\s\S]*?FANMIND_RUNTIME_ENVIRONMENT=production[\s\S]*?pm2 start npm --name fanmind --cwd "\$SOURCE_DIR" -- start/,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_EXPECTED_RELEASE_COMMIT="\$RELEASE_COMMIT"[\s\S]*?FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=production[\s\S]*?npm run smoke:public/,
+  );
+});
+
 test("plaintext environment stays shared and releases are retained safely", async () => {
   const script = await readFile(scriptPath, "utf8");
   assert.match(
@@ -83,7 +115,7 @@ test("production workflow keeps isolated deployment explicitly disabled by defau
 test("rollback failures fall through to the next safe target and live version lookup is optional", async () => {
   const script = await readFile(scriptPath, "utf8");
   assert.match(script, /PREVIOUS_COMMIT="\$\(read_live_commit \|\| true\)"/);
-  assert.match(script, /if FANMIND_RELEASE_COMMIT="\$rollback_commit"[\s\S]*pm2 start npm --name "\$APP_NAME" --cwd "\$PREVIOUS_CWD" -- start; then/);
+  assert.match(script, /if FANMIND_RELEASE_COMMIT="\$rollback_commit"[\s\S]*FANMIND_RUNTIME_ENVIRONMENT=production[\s\S]*pm2 start npm --name "\$APP_NAME" --cwd "\$PREVIOUS_CWD" -- start; then/);
   assert.match(script, /previous cwd could not be started; trying source checkout fallback/);
   assert.match(script, /source checkout fallback could not be started/);
   assert.match(script, /manual intervention required/);

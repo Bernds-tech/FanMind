@@ -10,6 +10,8 @@ import {
 
 const baseUrl = (process.env.FANMIND_GO_LIVE_BASE_URL || "https://fanmind.ch").replace(/\/$/, "");
 const expectedCommit = process.env.FANMIND_EXPECTED_RELEASE_COMMIT?.trim() || "";
+const expectedRuntimeEnvironment =
+  process.env.FANMIND_EXPECTED_RUNTIME_ENVIRONMENT?.trim() || "";
 const reportPath = process.env.FANMIND_GO_LIVE_REPORT_PATH?.trim() || "";
 const attempts = Number(process.env.FANMIND_GO_LIVE_ATTEMPTS || 5);
 const delayMs = Number(process.env.FANMIND_GO_LIVE_DELAY_MS || 3000);
@@ -108,6 +110,15 @@ try {
     payload?.environment === "production",
     payload?.environment === "production" ? "production" : `unerwartet: ${String(payload?.environment)}`,
   );
+  if (expectedRuntimeEnvironment) {
+    addResult(
+      "runtime environment",
+      payload?.runtimeEnvironment === expectedRuntimeEnvironment,
+      payload?.runtimeEnvironment === expectedRuntimeEnvironment
+        ? expectedRuntimeEnvironment
+        : `unerwartet: ${String(payload?.runtimeEnvironment)}`,
+    );
+  }
 } catch (error) {
   addResult("version endpoint", false, error instanceof Error ? error.message : "unknown error");
 }
@@ -148,6 +159,7 @@ const report = {
   checkedAt: new Date().toISOString(),
   baseUrl,
   expectedCommit: expectedCommit || null,
+  expectedRuntimeEnvironment: expectedRuntimeEnvironment || null,
   success: failures.length === 0,
   results,
 };

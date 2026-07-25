@@ -13,6 +13,7 @@ Ausführen:
 ```bash
 FANMIND_GO_LIVE_BASE_URL=https://fanmind.ch \
 FANMIND_EXPECTED_RELEASE_COMMIT=<main-commit> \
+FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=production \
 npm run smoke:go-live:public
 ```
 
@@ -21,7 +22,7 @@ Geprüft werden:
 - Landingpage Deutsch und Englisch;
 - Login und Registrierung;
 - Roadmap und öffentliche Rechtsseiten;
-- `/api/version` mit exaktem Release-Commit;
+- `/api/version` mit exaktem Release-Commit und `runtimeEnvironment=production`;
 - `/api/health` und alle veröffentlichten Komponenten;
 - öffentliche Starter-Preise;
 - Ausschluss alter 299-€- und Pilot-CTAs;

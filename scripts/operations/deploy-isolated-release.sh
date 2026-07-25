@@ -68,7 +68,9 @@ start_pm2_release() {
   local commit="$2"
   [[ -f "$cwd/package.json" ]] || return 1
   pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
-  FANMIND_RELEASE_COMMIT="$commit" NODE_ENV=production \
+  FANMIND_RELEASE_COMMIT="$commit" \
+    FANMIND_RUNTIME_ENVIRONMENT=production \
+    NODE_ENV=production \
     pm2 start npm --name "$APP_NAME" --cwd "$cwd" -- start
 }
 
@@ -83,7 +85,9 @@ rollback() {
     if [[ ! "$rollback_commit" =~ ^[0-9a-f]{40}$ ]]; then
       rollback_commit="unknown"
     fi
-    if FANMIND_RELEASE_COMMIT="$rollback_commit" NODE_ENV=production \
+    if FANMIND_RELEASE_COMMIT="$rollback_commit" \
+      FANMIND_RUNTIME_ENVIRONMENT=production \
+      NODE_ENV=production \
       pm2 start npm --name "$APP_NAME" --cwd "$PREVIOUS_CWD" -- start; then
       pm2 save
       log "rollback completed to previous cwd"
@@ -93,7 +97,9 @@ rollback() {
   fi
 
   if [[ -f "$SOURCE_DIR/package.json" ]] && [[ -d "$SOURCE_DIR/.next" ]]; then
-    if FANMIND_RELEASE_COMMIT="${PREVIOUS_COMMIT:-unknown}" NODE_ENV=production \
+    if FANMIND_RELEASE_COMMIT="${PREVIOUS_COMMIT:-unknown}" \
+      FANMIND_RUNTIME_ENVIRONMENT=production \
+      NODE_ENV=production \
       pm2 start npm --name "$APP_NAME" --cwd "$SOURCE_DIR" -- start; then
       pm2 save
       log "rollback completed to source checkout fallback"
@@ -200,6 +206,7 @@ fi
 cd "$RELEASE_DIR"
 if ! FANMIND_SMOKE_BASE_URL="$BASE_URL" \
   FANMIND_EXPECTED_RELEASE_COMMIT="$RELEASE_COMMIT" \
+  FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=production \
   npm run smoke:public; then
   rollback "public smoke test failed" || true
   fail "new release failed public smoke test"
