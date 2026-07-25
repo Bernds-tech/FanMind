@@ -122,7 +122,7 @@ For a standalone server-config backup, it validates gzip/tar structure and safe 
 - no DNS, webhook or application configuration pointing at Production;
 - written target identifier in the drill record.
 
-Decrypt the standalone database part into a protected temporary directory. Use a dedicated TCP endpoint and an absolute path to a protected `PGPASSFILE`; do not put the database password in `PGPASSWORD`.
+Decrypt the standalone database part into a protected temporary directory. Both the dump and passfile must be regular, non-symlink files owned by the operator with no group/world permissions. Use a dedicated TCP endpoint and an absolute path to the protected `PGPASSFILE`; do not put the database password in `PGPASSWORD`.
 
 Set the actual libpq target and independently confirmed comparison metadata in the same protected shell:
 
@@ -154,7 +154,9 @@ The command is read-only and does not decrypt or restore anything. It fails unle
 
 - the shared write boundary confirms `staging` or `test` and a Supabase project distinct from Production;
 - `PGHOST`, `PGPORT`, `PGDATABASE` and `PGUSER` exactly match the separately written restore target;
-- the complete target tuple differs from the Production tuple;
+- the actual four `PG*` values are already canonical: normalized lower-case host without trailing dot, decimal port without leading zeros, and database/user without surrounding whitespace;
+- the target host differs from the Production database host, independently of port, database or user;
+- canonical IPv4/IPv6 spellings are enforced; legacy numeric IPv4 forms are rejected;
 - no `PGHOSTADDR`, `PGSERVICE` or `PGSERVICEFILE` can silently redirect libpq;
 - `PGDATABASE` is a plain database name, not a URI or libpq Connection-String;
 - shared Supabase-Pooler are blocked, while a direct `db.<project-ref>.supabase.co` host must match the confirmed non-Production project;
@@ -175,7 +177,9 @@ npm run restore:database:drill -- \
   /secure/work/fanmind-database-<timestamp>.dump
 ```
 
-The runner repeats the target preflight, makes the four checked `PG*` values read-only inside its process, removes libpq target overrides from the `pg_restore` environment and supplies host, port, user and database as explicit arguments. It accepts exactly one readable dump path and never derives the independent target confirmation from the active `PG*` values.
+The runner opens the protected non-symlink dump and passfile once, verifies their ownership and permissions, and copies those open file objects into a new operator-private snapshot directory. The supplied paths are not reopened afterwards. It repeats the target preflight against the private passfile copy, rejects any non-canonical active target value and makes the four checked `PG*` values read-only inside its process. Before the write-mode call it validates the private dump snapshot with a target-free `pg_restore --list`; the restore then uses that exact same snapshot with `--single-transaction`. A failed archive check stops the runner before any write, and a restore error rolls back the single transaction. Host, port, user and database are supplied as explicit arguments while hidden libpq target overrides are removed. The runner accepts exactly one readable dump path and never derives the independent target confirmation from the active `PG*` values.
+
+The host policy canonicalizes literal IPv4 and IPv6 addresses and rejects legacy numeric IPv4 spellings. It does not perform DNS resolution. The recorded Production and isolated target identities must therefore use their real canonical endpoints, never aliases or CNAMEs; endpoint isolation remains an explicit operator precondition.
 
 After the drill, clear the one-time gates:
 

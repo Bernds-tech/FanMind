@@ -13,6 +13,10 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function rawString(value) {
+  return typeof value === "string" ? value : "";
+}
+
 function normalizeHost(value) {
   let candidate = clean(value).toLowerCase();
   if (!candidate) return null;
@@ -22,10 +26,30 @@ function normalizeHost(value) {
   }
 
   candidate = candidate.replace(/\.+$/, "");
-  if (isIP(candidate)) return candidate;
+  const addressFamily = isIP(candidate);
+  if (addressFamily === 4) return candidate;
+  if (addressFamily === 6) {
+    try {
+      return new URL(`http://[${candidate}]/`).hostname.slice(1, -1);
+    } catch {
+      return null;
+    }
+  }
 
   const labels = candidate.split(".");
   if (!labels.length || labels.some((label) => !HOST_LABEL.test(label))) {
+    return null;
+  }
+
+  try {
+    const parsedHostname = new URL(`http://${candidate}/`).hostname.toLowerCase();
+    if (isIP(parsedHostname)) {
+      // WHATWG accepts legacy numeric IPv4 spellings such as 127.1,
+      // 0127.0.0.1 or 0x7f.1. libpq/libc may resolve them to the same
+      // endpoint as a canonical address, so they are intentionally rejected.
+      return null;
+    }
+  } catch {
     return null;
   }
 
@@ -46,11 +70,17 @@ function normalizeIdentifier(value) {
 }
 
 function databaseTarget(environment, names) {
+  const input = {
+    host: rawString(environment[names.host]),
+    port: rawString(environment[names.port]),
+    database: rawString(environment[names.database]),
+    user: rawString(environment[names.user]),
+  };
   const raw = {
-    host: clean(environment[names.host]),
-    port: clean(environment[names.port]),
-    database: clean(environment[names.database]),
-    user: clean(environment[names.user]),
+    host: clean(input.host),
+    port: clean(input.port),
+    database: clean(input.database),
+    user: clean(input.user),
   };
   const normalized = {
     host: normalizeHost(raw.host),
@@ -60,10 +90,18 @@ function databaseTarget(environment, names) {
   };
   const complete = Object.values(raw).every(Boolean);
   const valid = complete && Object.values(normalized).every(Boolean);
+  const canonical = Boolean(
+    valid
+    && input.host === normalized.host
+    && input.port === normalized.port
+    && input.database === normalized.database
+    && input.user === normalized.user
+  );
 
   return {
     complete,
     valid,
+    canonical,
     host: normalized.host,
     signature: valid
       ? [
@@ -147,6 +185,10 @@ export function evaluateRestoreTarget(environment = {}) {
     errors.push(
       "PG*-Zielwerte müssen einfache Host-, Port-, Datenbank- und Benutzerwerte sein; Connection-Strings und Mehrfach-Hosts sind verboten.",
     );
+  } else if (!actualTarget.canonical) {
+    errors.push(
+      "PGHOST, PGPORT, PGDATABASE und PGUSER müssen bereits kanonisch und ohne führende oder nachgestellte Zeichen gesetzt sein.",
+    );
   }
   if (!expectedTarget.complete) {
     errors.push(
@@ -170,16 +212,19 @@ export function evaluateRestoreTarget(environment = {}) {
     );
   }
 
-  const productionSeparated =
+  const productionHostSeparated = Boolean(
     actualTarget.valid
     && productionTarget.valid
-    && !sameTarget(actualTarget, productionTarget);
-  if (
-    actualTarget.valid
-    && productionTarget.valid
-    && !productionSeparated
-  ) {
-    errors.push("Das pg_restore-Ziel entspricht exakt der Production-Datenbank.");
+    && actualTarget.host !== productionTarget.host
+  );
+  const productionSeparated = Boolean(
+    productionHostSeparated
+    && !sameTarget(actualTarget, productionTarget)
+  );
+  if (actualTarget.valid && productionTarget.valid && !productionHostSeparated) {
+    errors.push(
+      "Das pg_restore-Ziel verwendet den Production-Datenbankhost und ist nicht isoliert.",
+    );
   }
   if (sharedSupabasePooler) {
     errors.push(
@@ -217,11 +262,13 @@ export function evaluateRestoreTarget(environment = {}) {
     environmentBoundaryOk: environmentBoundary.ok,
     actualTargetComplete: actualTarget.complete,
     actualTargetValid: actualTarget.valid,
+    actualTargetCanonical: actualTarget.canonical,
     expectedTargetComplete: expectedTarget.complete,
     expectedTargetValid: expectedTarget.valid,
     productionTargetComplete: productionTarget.complete,
     productionTargetValid: productionTarget.valid,
     targetConfirmed,
+    productionHostSeparated,
     productionSeparated,
     directSupabaseProjectBound: Boolean(
       !directSupabaseMatch

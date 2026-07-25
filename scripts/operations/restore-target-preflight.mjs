@@ -19,6 +19,9 @@ console.log(
   `RESTORE_TARGET=${result.targetConfirmed ? "confirmed" : "invalid"}`,
 );
 console.log(
+  `RESTORE_INPUT=${result.actualTargetCanonical ? "canonical" : "blocked"}`,
+);
+console.log(
   `PRODUCTION_TARGET=${result.productionSeparated ? "separate" : "blocked"}`,
 );
 console.log(
