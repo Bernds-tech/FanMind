@@ -6,6 +6,13 @@ on:
       - p1/product-truth-followups-whatsapp-20260725
     paths:
       - .github/workflows/temp-product-truth-followups-whatsapp.yml
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
