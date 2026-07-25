@@ -8,8 +8,10 @@ import {
   type ContactDraft,
   type NormalizedContactDraft,
 } from "@/lib/contactDraftPolicy.mjs";
+import { isOfflineEligibleStatus } from "@/lib/offlineReadCachePolicy.mjs";
 import type {
   Contact,
+  ContactListItem,
   ContactMemory,
   Followup,
   Workspace,
@@ -17,6 +19,8 @@ import type {
 
 const CONTACT_COLUMNS =
   "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,created_at,updated_at";
+const CONTACT_LIST_COLUMNS =
+  "id,workspace_id,display_name,handle,source_platform,status,summary,updated_at";
 const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
 const FOLLOWUP_COLUMNS =
@@ -33,6 +37,7 @@ function message(error: unknown, fallback: string): string {
 export async function loadWorkspace(userId: string): Promise<{
   workspace: Workspace | null;
   error: string | null;
+  offlineEligible: boolean;
 }> {
   const ownerResult = await supabase
     .from("workspaces")
@@ -45,12 +50,14 @@ export async function loadWorkspace(userId: string): Promise<{
     return {
       workspace: null,
       error: message(ownerResult.error, "Workspace konnte nicht geladen werden."),
+      offlineEligible: isOfflineEligibleStatus(ownerResult.status),
     };
   }
   if (ownerResult.data) {
     return {
       workspace: { ...ownerResult.data, role: "owner" } as Workspace,
       error: null,
+      offlineEligible: false,
     };
   }
 
@@ -60,10 +67,18 @@ export async function loadWorkspace(userId: string): Promise<{
     .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
-  if (membershipResult.error || !membershipResult.data) {
+  if (membershipResult.error) {
+    return {
+      workspace: null,
+      error: "Workspace konnte nicht geladen werden.",
+      offlineEligible: isOfflineEligibleStatus(membershipResult.status),
+    };
+  }
+  if (!membershipResult.data) {
     return {
       workspace: null,
       error: "Kein FanMind-Workspace gefunden. Bitte schließe zuerst das Onboarding im Web ab.",
+      offlineEligible: false,
     };
   }
 
@@ -77,6 +92,7 @@ export async function loadWorkspace(userId: string): Promise<{
     return {
       workspace: null,
       error: "Der zugeordnete Workspace konnte nicht geladen werden.",
+      offlineEligible: isOfflineEligibleStatus(workspaceResult.status),
     };
   }
   return {
@@ -85,16 +101,21 @@ export async function loadWorkspace(userId: string): Promise<{
       role: membershipResult.data.role ?? "member",
     } as Workspace,
     error: null,
+    offlineEligible: false,
   };
 }
 
 export async function listContacts(
   workspaceId: string,
   search = "",
-): Promise<{ contacts: Contact[]; error: string | null }> {
+): Promise<{
+  contacts: ContactListItem[];
+  error: string | null;
+  offlineEligible: boolean;
+}> {
   let query = supabase
     .from("contacts")
-    .select(CONTACT_COLUMNS)
+    .select(CONTACT_LIST_COLUMNS)
     .eq("workspace_id", workspaceId)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .limit(250);
@@ -103,18 +124,22 @@ export async function listContacts(
   if (term) {
     const escaped = term.replace(/[%_,]/g, "");
     query = query.or(
-      `display_name.ilike.%${escaped}%,handle.ilike.%${escaped}%,summary.ilike.%${escaped}%`,
+      `display_name.ilike.%${escaped}%,handle.ilike.%${escaped}%,source_platform.ilike.%${escaped}%,summary.ilike.%${escaped}%`,
     );
   }
 
   const result = await query;
   if (result.error) {
-    return { contacts: [], error: "Kontakte konnten nicht geladen werden." };
+    return {
+      contacts: [],
+      error: "Kontakte konnten nicht geladen werden.",
+      offlineEligible: isOfflineEligibleStatus(result.status),
+    };
   }
   const contacts = (result.data ?? []).filter(
     (contact) => String(contact.status ?? "").toLowerCase() !== "archived",
-  ) as Contact[];
-  return { contacts, error: null };
+  ) as ContactListItem[];
+  return { contacts, error: null, offlineEligible: false };
 }
 
 export async function getContact(

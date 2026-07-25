@@ -24,6 +24,10 @@
 # production
 /build
 
+# Expo local state and generated bundles
+/apps/mobile/.expo/
+/apps/mobile/dist-android/
+
 # misc
 .DS_Store
 *.pem

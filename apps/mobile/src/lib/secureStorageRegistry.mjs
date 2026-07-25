@@ -1,12 +1,17 @@
+import {
+  MAX_SECURE_STORAGE_LOGICAL_KEY_LENGTH,
+  SECURE_STORE_KEY_PATTERN,
+} from "./secureStorageKeyPolicy.mjs";
+
 const MAX_SECURE_STORAGE_KEYS = 32;
-const MAX_SECURE_STORAGE_KEY_LENGTH = 240;
+const MAX_SECURE_STORAGE_KEY_LENGTH = MAX_SECURE_STORAGE_LOGICAL_KEY_LENGTH;
 
 function validKey(value) {
   return (
     typeof value === "string" &&
     value.length > 0 &&
     value.length <= MAX_SECURE_STORAGE_KEY_LENGTH &&
-    !/[\r\n\0]/u.test(value)
+    SECURE_STORE_KEY_PATTERN.test(value)
   );
 }
 

@@ -19,7 +19,7 @@ Der Prozess löscht nicht nur den App-Zugang und ist keine bloße Deaktivierung.
    - exakt die Phrase `KONTO LÖSCHEN`.
 4. FanMind legt idempotent höchstens eine aktive Löschanfrage an.
 5. Die sichtbare maximale Bearbeitungsfrist beträgt 30 Tage.
-6. Die App führt nach erfolgreicher Aufnahme sofort den vorhandenen sicheren Logout-/SecureStore-Purge aus.
+6. Die App führt nach erfolgreicher Aufnahme sofort den vorhandenen sicheren Logout-/SecureStore-Purge einschließlich der verschlüsselten Offline-Kontaktübersicht aus.
 7. Solange der Status `pending` oder `blocked` ist, kann der Nutzer nach erneuter Anmeldung mit `LÖSCHANFRAGE ABBRECHEN` widerrufen. Die widerrufene Queue-Zeile wird vollständig entfernt, damit keine rohe User-ID aus einer alten Anfrage zurückbleibt.
 8. Ab Status `processing` ist kein automatischer Widerruf mehr möglich.
 
@@ -185,7 +185,7 @@ Nach einem signierten internen Build:
 
 - Mobile: `Konto` → `Account und Daten löschen` muss leicht auffindbar sein;
 - Antrag mit synthetischem Testkonto auf realem Gerät prüfen;
-- sichere lokale Abmeldung und SecureStore-Purge prüfen;
+- sichere lokale Abmeldung und SecureStore-Purge einschließlich Offline-Kontaktübersicht prüfen;
 - Webressource ohne installierte App öffnen;
 - Widerruf nach erneuter Anmeldung prüfen;
 - Google Play Data Safety und App Store Datenschutz-/Reviewangaben mit exakt diesem veröffentlichten Prozess befüllen.

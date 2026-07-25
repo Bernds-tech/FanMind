@@ -18,8 +18,10 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - Kontaktanlage und Kontaktbearbeitung;
 - Workspace-Filter plus Supabase RLS bei jeder Kontaktmutation;
 - minimale Duplikatprüfung für Handle plus Quelle;
+- verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit 24-Stunden-Ablauf, maximal 50 Kontakten und Nur-Lesen-Oberfläche;
 - lokaler Logout-Purge für registrierte FanMind-SecureStore-Schlüssel;
-- begrenzte und rollback-sichere SecureStore-Schreibfolge;
+- Expo-konforme SecureStore-Schlüssel ohne Doppelpunkte sowie serialisierte Speicherzugriffe;
+- begrenzte, serialisierte SecureStore-Schreibfolge mit Cleanup bei Teilfehlern;
 - vollständige Account-Löschanfrage in Mobile sowie öffentlicher Webressourcenpfad;
 - authentifizierter Status/Widerruf und service-role-only Request-Queue;
 - manueller Dry-Run-first Account-Löschprocessor ohne Timer;
@@ -99,22 +101,37 @@ Dieser Mehrnutzer-Negativtest bleibt an das separate Staging aus #643 gebunden u
 
 `Sicher abmelden und lokale Daten entfernen` führt folgende Schritte aus:
 
-1. lokale Supabase-Sitzung beenden;
-2. alle von FanMind registrierten SecureStore-Schlüssel und deren Chunks entfernen;
-3. Recovery-Zustand zurücksetzen;
-4. Session im React-Kontext auf `null` setzen;
-5. Workspace-Zustand sofort leeren.
+1. neue Offline-Schreibvorgänge sperren und bereits gestartete Cache-Vorgänge abwarten;
+2. lokale Supabase-Sitzung beenden;
+3. alle von FanMind registrierten SecureStore-Schlüssel und deren Chunks einschließlich Offline-Cache entfernen;
+4. Recovery-Zustand zurücksetzen;
+5. Session im React-Kontext auf `null` setzen;
+6. Workspace-Zustand sofort leeren.
 
 Zusätzliche Speichergrenzen:
 
 - eine Sitzung darf höchstens 64 SecureStore-Chunks verwenden;
 - der Schlüssel wird vor dem Schreiben der Chunks registriert;
 - die erwartete Chunkzahl wird vor den Chunks gespeichert, damit Teilfehler auffindbar bleiben;
-- bei einem Schreibfehler wird sofort ein Rollback versucht;
+- bei einem Schreibfehler werden angelegte Teilstände sofort entfernt;
 - nicht vollständig löschbare Schlüssel bleiben registriert und werden beim nächsten Purge erneut versucht;
 - ein Registry-Eintrag wird lieber zu lange behalten, als Sitzungsdaten unregistriert zurückzulassen.
 
-Die aktuelle App besitzt noch keinen Offline-Kontaktcache. Wenn ein solcher Cache später ergänzt wird, muss er denselben zentralen Purge-Vertrag verwenden und durch einen eigenen Regressionstest abgedeckt werden.
+Der Offline-Cache verwendet exakt einen registrierten SecureStore-Schlüssel und wird nur nach einem erfolgreichen, ungefilterten Online-Abruf geschrieben. Er enthält höchstens 50 Kontakte, ist maximal 24 Stunden gültig und speichert nur Workspace-Name sowie Kontakt-ID, Workspace-ID, Name, Handle, Plattform, Status und Änderungszeit. Kontaktwissen, Zusammenfassungen, Nachrichten, KI-Inhalte, interne Notizen, Follow-ups und Zugangsdaten werden nicht übernommen. Nur ein Transportstatus `0` darf den Nur-Lesen-Fallback aktivieren; Auth-, RLS- und Serverfehler löschen beziehungsweise verwerfen den Cache fail-closed.
+
+## Android-Vorabtest mit Expo Go
+
+Der noch unsignierte App-Kern kann bereits auf einem Android-Telefon geprüft werden:
+
+1. die [offizielle Expo-Go-Version 57.0.2](https://github.com/expo/expo-go-releases/releases/tag/Expo-Go-57.0.2) für SDK 57 installieren;
+2. auf dem Rechner Node.js `>=22.13.0` und Git bereitstellen;
+3. Repository klonen, in `apps/mobile` wechseln und `npm ci` ausführen;
+4. `.env.example` nach `.env.local` kopieren und ausschließlich die öffentlichen Supabase-URL, den öffentlichen Anon-/Publishable-Key und `https://fanmind.ch` als API-URL eintragen;
+5. `npm run check` und danach `npx expo start --go` ausführen;
+6. Rechner und Telefon in dasselbe WLAN bringen und den QR-Code mit Expo Go scannen;
+7. falls das lokale Netzwerk blockiert, `@expo/ngrok` installieren und `npx expo start --go --tunnel` verwenden.
+
+Solange echtes Staging fehlt, darf dieser Vorabtest nur mit einem eigens dafür vorgesehenen Testkonto erfolgen. Expo Go ersetzt keinen signierten Beta-Build: finales Icon/Splashscreen, eigenständige Installation, verlässliche Deep Links, Push und Store-Verhalten müssen später mit dem signierten APK/AAB geprüft werden.
 
 ## EAS-Konfiguration
 
@@ -182,7 +199,6 @@ Die anschließende Übertragung benötigt echte Store-Konten. EAS Submit lädt B
 - echter Recovery-E-Mail-/Gerätetest nach Supabase-Redirect-Freigabe;
 - EAS-Projekt-ID und Signing Credentials;
 - Android Internal Testing und iOS TestFlight;
-- Offline-Lese-Cache mit Purge-Vertrag;
 - Push-Grundlage für Follow-ups;
 - realer Account-Löschantrag/Widerruf auf signiertem Android-/iOS-Gerät;
 - reale Android-/iOS-Gerätetestprotokolle;

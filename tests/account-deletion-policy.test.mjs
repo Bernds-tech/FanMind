@@ -285,7 +285,7 @@ test("Mobile settings make deletion easy to find and accepted requests trigger s
   assert.match(screen, /MOBILE_ACCOUNT_DELETION_CONFIRMATION_PHRASE/u);
   assert.match(screen, /https:\/\/fanmind\.ch\/account-deletion/u);
   assert.match(client, /Authorization: `Bearer \$\{accessToken\}`/u);
-  assert.match(authProvider, /clearSecureSessionStorage/u);
+  assert.match(authProvider, /clearSecureLocalStorage/u);
   assert.doesNotMatch(
     `${settings}\n${screen}\n${client}`,
     /SUPABASE_SERVICE_ROLE_KEY|RESEND_API_KEY|STRIPE_SECRET_KEY/u,
