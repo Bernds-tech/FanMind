@@ -12,7 +12,8 @@ import { fanMindDescription, fanMindOgAlt, fanMindSiteUrl, fanMindTitle } from "
 import "./globals.css";
 import "./landing-header-visibility.css";
 
-const browserIconRevision = "fanmind-round-social-20260725";
+const browserIconRevision = "fanmind-social-avatar-exact-20260725";
+const browserIconAsset = `/assets/fanmind-social-avatar.png?v=${browserIconRevision}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(fanMindSiteUrl),
@@ -53,23 +54,23 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: `/icon?v=${browserIconRevision}`,
+        url: browserIconAsset,
         type: "image/png",
         sizes: "96x96",
       },
     ],
     shortcut: [
       {
-        url: `/icon?v=${browserIconRevision}`,
+        url: browserIconAsset,
         type: "image/png",
         sizes: "96x96",
       },
     ],
     apple: [
       {
-        url: `/apple-icon?v=${browserIconRevision}`,
+        url: browserIconAsset,
         type: "image/png",
-        sizes: "180x180",
+        sizes: "96x96",
       },
     ],
   },

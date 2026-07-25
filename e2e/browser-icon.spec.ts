@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("serves the cache-busted round FanMind browser icon with transparent corners", async ({
+test("serves the exact cache-busted sidebar social avatar as browser icon", async ({
   page,
   request,
 }) => {
@@ -13,9 +13,13 @@ test("serves the cache-busted round FanMind browser icon with transparent corner
   );
 
   expect(iconHrefs.some((href) => href.includes("/favicon.ico"))).toBe(false);
+  expect(iconHrefs.some((href) => /\/icon(?:\?|$)/u.test(href))).toBe(false);
+  expect(iconHrefs.some((href) => /\/apple-icon(?:\?|$)/u.test(href))).toBe(false);
 
   const expectedIconHref = iconHrefs.find((href) =>
-    href.includes("/icon?v=fanmind-round-social-20260725"),
+    href.includes(
+      "/assets/fanmind-social-avatar.png?v=fanmind-social-avatar-exact-20260725",
+    ),
   );
   expect(expectedIconHref).toBeDefined();
 
@@ -60,5 +64,5 @@ test("serves the cache-busted round FanMind browser icon with transparent corner
   expect(samples.bottomLeft).toBeLessThanOrEqual(8);
   expect(samples.bottomRight).toBeLessThanOrEqual(8);
   expect(samples.center).toBeGreaterThanOrEqual(245);
-  expect(samples.upperRing).toBeGreaterThanOrEqual(200);
+  expect(samples.upperRing).toBeGreaterThanOrEqual(180);
 });
