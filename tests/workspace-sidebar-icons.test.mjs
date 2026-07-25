@@ -3,23 +3,29 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const shellPath = "src/components/WorkspaceShell.tsx";
+const sidebarCssPath = "src/components/WorkspaceSidebar.module.css";
 const navigationPath = "src/lib/workspaceNavigation.ts";
+const socialAvatarPath = "public/assets/fanmind-social-avatar.png";
 
 async function readShell() {
   return readFile(shellPath, "utf8");
 }
 
-test("workspace sidebar uses one nav item renderer for expanded and collapsed icons", async () => {
+test("workspace sidebar uses one DOM tree for expanded and collapsed navigation", async () => {
   const shell = await readShell();
 
+  assert.match(shell, /import sidebarStyles from "\.\/WorkspaceSidebar\.module\.css"/u);
   assert.match(shell, /function SidebarItem\(/u);
-  assert.doesNotMatch(shell, /function CollapsedSidebarItem\(/u);
-  assert.doesNotMatch(shell, /styles\.compactNav(?:Item|Icon|Badge)/u);
-  assert.match(shell, /<SidebarItem key=\{item\.label\} item=\{item\} collapsed \/>/u);
-
-  const iconUsages = shell.match(/<FanMindFunctionIcon\b/g) ?? [];
-  assert.equal(iconUsages.length, 1, "icons must be rendered only by the shared SidebarItem component");
-  assert.doesNotMatch(shell, /<FanMindFunctionIcon[^>]*size=/u, "collapsed navigation must not override the shared icon size");
+  assert.equal((shell.match(/<aside\b/gu) ?? []).length, 1);
+  assert.equal((shell.match(/<FanMindFunctionIcon\b/gu) ?? []).length, 1);
+  assert.equal(
+    (shell.match(/collapsed=\{sidebarCollapsed\}/gu) ?? []).length,
+    3,
+    "every navigation group must use the same item renderer and state",
+  );
+  assert.doesNotMatch(shell, /compactNavigation|compactNavList|compactSidebarFooter/u);
+  assert.doesNotMatch(shell, /sidebarCollapsed\s*\?\s*\(\s*<>/u);
+  assert.match(shell, /data-sidebar-state=\{sidebarCollapsed \? "collapsed" : "expanded"\}/u);
 });
 
 test("workspace navigation keeps the canonical sidebar order and icon keys", async () => {
@@ -57,9 +63,72 @@ test("workspace account shortcuts stay out of expanded and collapsed sidebar nav
   assert.doesNotMatch(navigation, /icon: "referral"/u);
 });
 
-test("collapsed sidebar centers the shared SVG icons", async () => {
-  const css = await readFile("src/app/dashboard/dashboard.module.css", "utf8");
+test("collapsed sidebar preserves the same left icon rail and group geometry", async () => {
+  const css = await readFile(sidebarCssPath, "utf8");
 
-  assert.match(css, /\.navItemCollapsed \.navItemLead \{[^}]*align-items: center;[^}]*justify-content: center;[^}]*gap: 0;/su);
-  assert.match(css, /\.navItemCollapsed \.navItemLead > svg \{[^}]*display: block;[^}]*margin: auto;/su);
+  assert.match(css, /--sidebar-inline-gutter: 14px;/u);
+  assert.match(css, /--sidebar-icon-rail: 44px;/u);
+  assert.match(
+    css,
+    /\.sidebar \{[\s\S]*padding: 16px var\(--sidebar-inline-gutter\);/u,
+  );
+  assert.match(
+    css,
+    /\.sidebarCollapsed \{[\s\S]*width: var\(--sidebar-collapsed-width\);[\s\S]*max-width: var\(--sidebar-collapsed-width\);[\s\S]*\}/u,
+  );
+  assert.doesNotMatch(
+    css,
+    /\.sidebarCollapsed \{[^}]*padding/u,
+    "collapsed state must not move the shared left gutter",
+  );
+  assert.match(
+    css,
+    /\.navItemLead \{[\s\S]*grid-template-columns: var\(--sidebar-icon-rail\) minmax\(0, 1fr\);/u,
+  );
+  assert.match(
+    css,
+    /\.navIconSlot \{[\s\S]*width: var\(--sidebar-icon-rail\);[\s\S]*place-items: center;/u,
+  );
+  assert.match(
+    css,
+    /\.sidebarCollapsed \.navSectionLabel \{[\s\S]*opacity: 0;[\s\S]*\}/u,
+    "section labels must become invisible without removing their geometry",
+  );
+  assert.doesNotMatch(css, /justify-items: center;[\s\S]*compactNav/u);
+});
+
+test("collapsed branding uses the supplied circular FanMind social avatar", async () => {
+  const [shell, avatar] = await Promise.all([
+    readShell(),
+    readFile(socialAvatarPath),
+  ]);
+
+  assert.match(shell, /src="\/assets\/fanmind-social-avatar\.png"/u);
+  assert.match(shell, /className=\{sidebarStyles\.brandAvatar\}/u);
+  assert.doesNotMatch(shell, /compactBrandFan|compactBrandMind/u);
+
+  assert.deepEqual(
+    [...avatar.subarray(0, 8)],
+    [137, 80, 78, 71, 13, 10, 26, 10],
+    "social avatar must remain a PNG",
+  );
+  assert.equal(avatar.readUInt32BE(16), 96);
+  assert.equal(avatar.readUInt32BE(20), 96);
+});
+
+test("profile and logout actions remain present in both sidebar states", async () => {
+  const shell = await readShell();
+  const css = await readFile(sidebarCssPath, "utf8");
+
+  assert.match(shell, /userMiniCardCollapsed/u);
+  assert.match(shell, /logoutButtonCollapsed/u);
+  assert.match(shell, /aria-label=\{logoutLabel\}/u);
+  assert.match(
+    css,
+    /\.userMiniCardCollapsed \.userMiniCardCopy \{[\s\S]*opacity: 0;/u,
+  );
+  assert.match(
+    css,
+    /\.logoutButtonCollapsed \.logoutLabel \{[\s\S]*opacity: 0;/u,
+  );
 });
