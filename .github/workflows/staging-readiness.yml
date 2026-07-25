@@ -61,4 +61,5 @@ jobs:
       - name: Read-only staging route smoke
         env:
           FANMIND_SMOKE_BASE_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
+          FANMIND_EXPECTED_RELEASE_COMMIT: ${{ github.sha }}
         run: npm run smoke:public

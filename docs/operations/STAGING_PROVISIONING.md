@@ -52,10 +52,11 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 3. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
 4. alle Schreibschalter auf `false` lassen;
 5. `npm run staging:preflight` ausführen;
-6. Workflow `FanMind Staging Readiness` manuell starten;
-7. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
-8. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
-9. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
+6. den ausgewählten Git-Commit auf Staging deployen;
+7. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell starten;
+8. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
+9. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
+10. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
 
 ## Freigabekriterien
 
@@ -66,6 +67,7 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 - URL-Projektreferenz und explizite Staging-Zielreferenz exakt übereinstimmen;
 - Stripe Test Mode verwendet wird;
 - GitHub-Workflow vollständig grün ist;
+- `/api/version` exakt den Commit ausliefert, auf dem der Readiness-Workflow gestartet wurde;
 - keine realen Kundendaten vorhanden sind;
 - Read-only- und Write-Preflight wie vorgesehen fail-closed reagieren;
 - ein Test-Webhook erfolgreich verarbeitet wurde.
