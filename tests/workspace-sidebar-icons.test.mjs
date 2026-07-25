@@ -33,6 +33,11 @@ test("workspace sidebar uses one DOM tree for expanded and collapsed navigation"
   assert.doesNotMatch(shell, /compactNavigation|compactNavList|compactSidebarFooter/u);
   assert.doesNotMatch(shell, /sidebarCollapsed\s*\?\s*\(\s*<>/u);
   assert.match(shell, /data-sidebar-state=\{sidebarCollapsed \? "collapsed" : "expanded"\}/u);
+  assert.match(
+    shell,
+    /href=\{sidebarCollapsed \? undefined : "\/dashboard"\}/u,
+    "the hidden expanded wordmark must leave the tab order immediately",
+  );
 });
 
 test("workspace navigation keeps the canonical sidebar order and icon keys", async () => {
