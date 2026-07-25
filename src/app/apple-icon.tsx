@@ -1,10 +1,10 @@
 import { ImageResponse } from "next/og";
 
-import { FanMindAppIconMark } from "@/lib/fanmindAppIcon";
+import { FanMindBrowserIconMark } from "@/lib/fanmindBrowserIcon";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
 export default function AppleIcon() {
-  return new ImageResponse(<FanMindAppIconMark size={size.width} />, size);
+  return new ImageResponse(<FanMindBrowserIconMark size={size.width} />, size);
 }
