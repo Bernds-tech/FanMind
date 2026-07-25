@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState, type ReactNode } from "react";
-import styles from "../app/dashboard/dashboard.module.css";
+import dashboardStyles from "../app/dashboard/dashboard.module.css";
+import sidebarStyles from "./WorkspaceSidebar.module.css";
 import { FanMindLogo } from "./FanMindLogo";
 import {
   FanMindFunctionIcon,
@@ -86,8 +88,9 @@ function SidebarItem({
 }) {
   const { label, icon, active = false, badge, disabled = false, href } = item;
   const iconName = icon ?? resolveFanMindFunctionIcon(href, label);
-  const itemClassName = `${active ? styles.navItemActive : styles.navItem} ${
-    collapsed ? styles.navItemCollapsed : ""
+  const badgeKind = badge && /^\d+$/u.test(badge) ? "count" : "status";
+  const itemClassName = `${active ? sidebarStyles.navItemActive : sidebarStyles.navItem} ${
+    collapsed ? sidebarStyles.navItemCollapsed : ""
   }`;
 
   return (
@@ -96,17 +99,35 @@ function SidebarItem({
       aria-label={collapsed ? label : undefined}
       className={itemClassName}
       href={href}
-      title={label}
+      title={collapsed ? label : undefined}
       tabIndex={disabled ? -1 : undefined}
+      data-sidebar-link={label}
     >
-      <span className={styles.navItemLead}>
-        <FanMindFunctionIcon name={iconName} />
-        <span className={collapsed ? styles.navItemLabelCollapsed : undefined}>
-          {label}
+      <span className={sidebarStyles.navItemLead}>
+        <span className={sidebarStyles.navIconSlot} aria-hidden="true">
+          <FanMindFunctionIcon name={iconName} />
         </span>
+        <span className={sidebarStyles.navItemLabel}>{label}</span>
       </span>
-      {badge ? <small>{badge}</small> : null}
+      {badge ? (
+        <small
+          className={sidebarStyles.navItemBadge}
+          data-badge-kind={badgeKind}
+          aria-label={`${label}: ${badge}`}
+        >
+          {badge}
+        </small>
+      ) : null}
     </a>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M10 5H6.8A2.8 2.8 0 0 0 4 7.8v8.4A2.8 2.8 0 0 0 6.8 19H10" />
+      <path d="m14 8 4 4-4 4M18 12H9" />
+    </svg>
   );
 }
 
@@ -148,115 +169,172 @@ export function WorkspaceShell({
   const visibleSavedViews = savedViews.filter(
     (item) => !isHiddenProductNavigationItem(item),
   );
-  const compactNavigation = [...visibleMainNavigation, ...visibleSettingsNavigation, ...visibleSavedViews];
+  const toggleLabel = sidebarCollapsed
+    ? wt(locale, "Sidebar ausklappen")
+    : wt(locale, "Sidebar einklappen");
+  const logoutLabel = wt(locale, "Abmelden");
 
   return (
-    <div className={`${styles.dashboardShell} ${sidebarCollapsed ? styles.dashboardShellCollapsed : ""}`}>
-      <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.sidebarCollapsed : ""}`} aria-label="FanMind Navigation">
-        {sidebarCollapsed ? (
-          <>
-            <div className={styles.sidebarRailTop}>
-              <div className={styles.compactBrand} aria-label="FanMind" title="FanMind">
-                <span className={styles.compactBrandFan}>F</span>
-                <span className={styles.compactBrandMind}>M</span>
-              </div>
-              <button
-                type="button"
-                className={`${styles.sidebarToggle} ${styles.sidebarToggleCompact}`}
-                onClick={toggleSidebar}
-                aria-label={wt(locale, "Sidebar ausklappen")}
-                title={wt(locale, "Sidebar ausklappen")}
-              >
-                →
-              </button>
-            </div>
-
-            <nav className={styles.compactNavList} aria-label="Workspace Navigation kompakt">
-              {compactNavigation.map((item) => (
-                <SidebarItem key={item.label} item={item} collapsed />
-              ))}
-            </nav>
-
-            <div className={styles.compactSidebarFooter}>
-              <a
-                className={styles.compactCircleAction}
-                aria-label={`Profil von ${userLabel} öffnen`}
-                href={profileHref}
-                title={`${userLabel} (${workspaceName})`}
-              >
-                <span aria-hidden="true">{getInitials(userLabel)}</span>
-              </a>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.logoBlock}>
-              <FanMindLogo subtitle="Multi-Channel CRM" />
-            </div>
-            <button
-              type="button"
-              className={styles.sidebarToggle}
-              onClick={toggleSidebar}
-              aria-label={wt(locale, "Sidebar einklappen")}
-              title={wt(locale, "Sidebar einklappen")}
+    <div
+      className={`${dashboardStyles.dashboardShell} ${
+        sidebarCollapsed ? dashboardStyles.dashboardShellCollapsed : ""
+      }`}
+      data-sidebar-state={sidebarCollapsed ? "collapsed" : "expanded"}
+    >
+      <aside
+        className={`${sidebarStyles.sidebar} ${
+          sidebarCollapsed ? sidebarStyles.sidebarCollapsed : ""
+        }`}
+        aria-label="FanMind Navigation"
+      >
+        <div className={sidebarStyles.sidebarTop}>
+          <div className={sidebarStyles.brandSlot}>
+            <div
+              className={sidebarStyles.brandExpanded}
+              aria-hidden={sidebarCollapsed}
             >
-              ←
+              <FanMindLogo
+                href="/dashboard"
+                ariaLabel="FanMind Dashboard"
+                subtitle="Multi-Channel CRM"
+              />
+            </div>
+            <a
+              className={sidebarStyles.brandCollapsed}
+              aria-label="FanMind Dashboard"
+              aria-hidden={!sidebarCollapsed}
+              href="/dashboard"
+              tabIndex={sidebarCollapsed ? undefined : -1}
+              title="FanMind"
+            >
+              <Image
+                alt=""
+                className={sidebarStyles.brandAvatar}
+                height={48}
+                priority
+                src="/assets/fanmind-social-avatar.png"
+                width={48}
+              />
+            </a>
+          </div>
+
+          <button
+            type="button"
+            className={sidebarStyles.sidebarToggle}
+            onClick={toggleSidebar}
+            aria-controls="fanmind-workspace-navigation"
+            aria-expanded={!sidebarCollapsed}
+            aria-label={toggleLabel}
+            title={toggleLabel}
+          >
+            <span className={sidebarStyles.sidebarToggleIcon} aria-hidden="true">
+              {sidebarCollapsed ? "→" : "←"}
+            </span>
+            <span className={sidebarStyles.sidebarToggleLabel}>{toggleLabel}</span>
+          </button>
+        </div>
+
+        <div
+          className={sidebarStyles.sidebarScrollArea}
+          id="fanmind-workspace-navigation"
+        >
+          <nav
+            className={sidebarStyles.navList}
+            aria-label={wt(locale, "Hauptnavigation")}
+          >
+            <span
+              className={sidebarStyles.navSectionLabel}
+              aria-hidden={sidebarCollapsed}
+            >
+              {wt(locale, "Navigation")}
+            </span>
+            {visibleMainNavigation.map((item) => (
+              <SidebarItem
+                key={item.label}
+                item={item}
+                collapsed={sidebarCollapsed}
+              />
+            ))}
+          </nav>
+
+          <nav
+            className={sidebarStyles.navList}
+            aria-label="Workspace Navigation"
+          >
+            <span
+              className={sidebarStyles.navSectionLabel}
+              aria-hidden={sidebarCollapsed}
+            >
+              {wt(locale, "Workspace")}
+            </span>
+            {visibleSettingsNavigation.map((item) => (
+              <SidebarItem
+                key={item.label}
+                item={item}
+                collapsed={sidebarCollapsed}
+              />
+            ))}
+          </nav>
+
+          <section
+            className={`${sidebarStyles.navList} ${sidebarStyles.savedViews}`}
+            aria-label={wt(locale, "Gespeicherte Ansichten")}
+          >
+            <span
+              className={sidebarStyles.navSectionLabel}
+              aria-hidden={sidebarCollapsed}
+            >
+              {wt(locale, "Gespeicherte Ansichten")}
+            </span>
+            {visibleSavedViews.map((item) => (
+              <SidebarItem
+                key={item.label}
+                item={item}
+                collapsed={sidebarCollapsed}
+              />
+            ))}
+          </section>
+        </div>
+
+        <div className={sidebarStyles.sidebarFooter}>
+          <a
+            className={`${sidebarStyles.userMiniCard} ${
+              sidebarCollapsed ? sidebarStyles.userMiniCardCollapsed : ""
+            }`}
+            aria-label={wt(locale, "Nutzerprofil öffnen")}
+            href={profileHref}
+            title={sidebarCollapsed ? `${userLabel} (${workspaceName})` : undefined}
+          >
+            <div className={sidebarStyles.avatarMark}>{getInitials(userLabel)}</div>
+            <div className={sidebarStyles.userMiniCardCopy} aria-hidden={sidebarCollapsed}>
+              <span>{wt(locale, "Nutzerkarte")}</span>
+              <strong>{userLabel}</strong>
+              <p>{workspaceName}</p>
+            </div>
+          </a>
+          <form action={logoutAction} className={sidebarStyles.logoutForm}>
+            <button
+              type="submit"
+              className={`${sidebarStyles.logoutButton} ${
+                sidebarCollapsed ? sidebarStyles.logoutButtonCollapsed : ""
+              }`}
+              aria-label={logoutLabel}
+              title={sidebarCollapsed ? logoutLabel : undefined}
+            >
+              <span className={sidebarStyles.logoutIcon}>
+                <LogoutIcon />
+              </span>
+              <span className={sidebarStyles.logoutLabel}>{logoutLabel}</span>
             </button>
-
-            <div className={styles.sidebarScrollArea}>
-              <nav className={styles.navList} aria-label={wt(locale, "Hauptnavigation")}>
-                <span className={styles.navSectionLabel}>{wt(locale, "Navigation")}</span>
-                {visibleMainNavigation.map((item) => (
-                  <SidebarItem key={item.label} item={item} />
-                ))}
-              </nav>
-
-              <nav className={styles.navList} aria-label="Workspace Navigation">
-                <span className={styles.navSectionLabel}>{wt(locale, "Workspace")}</span>
-                {visibleSettingsNavigation.map((item) => (
-                  <SidebarItem key={item.label} item={item} />
-                ))}
-              </nav>
-
-              <section
-                className={styles.savedViews}
-                aria-label={wt(locale, "Gespeicherte Ansichten")}
-              >
-                <span>{wt(locale, "Gespeicherte Ansichten")}</span>
-                {visibleSavedViews.map((item) => (
-                  <SidebarItem key={item.label} item={item} />
-                ))}
-              </section>
-            </div>
-
-            <div className={styles.sidebarFooter}>
-              <a
-                className={styles.userMiniCard}
-                aria-label={wt(locale, "Nutzerprofil öffnen")}
-                href={profileHref}
-              >
-                <div className={styles.avatarMark}>{getInitials(userLabel)}</div>
-                <div>
-                  <span>{wt(locale, "Nutzerkarte")}</span>
-                  <strong>{userLabel}</strong>
-                  <p>{workspaceName}</p>
-                </div>
-              </a>
-              <form action={logoutAction}>
-                <button type="submit" className={styles.logoutButton}>
-                  {wt(locale, "Abmelden")}
-                </button>
-              </form>
-            </div>
-          </>
-        )}
+          </form>
+        </div>
       </aside>
 
       <div
-        className={`${styles.dashboardContent} ${styles.dashboardContentStart}`}
+        className={`${dashboardStyles.dashboardContent} ${dashboardStyles.dashboardContentStart}`}
       >
         <WorkspaceHeader {...header} locale={locale} />
-        <div className={styles.dashboardScrollArea}>
+        <div className={dashboardStyles.dashboardScrollArea}>
           {showStats ? (
             <WorkspaceKpiStrip
               contactCount={contactCount}
