@@ -51,7 +51,7 @@ test("serves the cache-busted round FanMind browser icon with transparent corner
       bottomLeft: alphaAt(0, canvas.height - 1),
       bottomRight: alphaAt(canvas.width - 1, canvas.height - 1),
       center: alphaAt(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2)),
-      upperRing: alphaAt(Math.floor(canvas.width / 2), 4),
+      upperRing: alphaAt(Math.floor(canvas.width / 2), 6),
     };
   }, `data:image/png;base64,${png.toString("base64")}`);
 
