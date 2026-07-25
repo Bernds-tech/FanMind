@@ -1,0 +1,77 @@
+name: FanMind P1 Sidebar Accessibility Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-sidebar-accessibility-patch-20260725.yml"
+
+concurrency:
+  group: fanmind-p1-sidebar-accessibility-patch-20260725
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/sidebar-consistency-social-avatar-20260725' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout trusted sidebar branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/sidebar-consistency-social-avatar-20260725
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Keep hidden expanded brand out of the tab order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/components/WorkspaceShell.tsx')
+          source = path.read_text(encoding='utf-8')
+          old = '''              <FanMindLogo
+                href="/dashboard"
+                ariaLabel="FanMind Dashboard"
+'''
+          new = '''              <FanMindLogo
+                href={sidebarCollapsed ? undefined : "/dashboard"}
+                ariaLabel="FanMind Dashboard"
+'''
+          if source.count(old) != 1:
+              raise SystemExit(f'brand_href_anchor_count_{source.count(old)}')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
+          git diff --check
+
+      - name: Validate targeted sidebar regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          node --test tests/workspace-sidebar-icons.test.mjs
+          npm run lint
+
+      - name: Commit accessibility correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/WorkspaceShell.tsx
+          git diff --cached --quiet && { echo 'Accessibility patch produced no changes' >&2; exit 1; }
+          git commit -m "Keep hidden sidebar brand out of keyboard navigation"
+          git push origin HEAD:p1/sidebar-consistency-social-avatar-20260725
