@@ -1,0 +1,129 @@
+name: FanMind P1 Fix Mobile brace-expansion Advisory
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-fix-mobile-brace-expansion-20260725.yml"
+
+concurrency:
+  group: fanmind-p1-fix-mobile-brace-expansion-20260725
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/mobile-high-advisory-20260725' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://exampleproject.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key-1234567890
+      EXPO_PUBLIC_FANMIND_API_URL: https://fanmind.ch
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - name: Checkout trusted advisory branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/mobile-high-advisory-20260725
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install current Mobile dependencies reproducibly
+        run: npm ci --prefix apps/mobile --no-audit --no-fund
+
+      - name: Apply only the non-major npm audit lockfile fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp apps/mobile/package-lock.json "$RUNNER_TEMP/mobile-lock-before.json"
+          cp apps/mobile/package.json "$RUNNER_TEMP/mobile-package-before.json"
+
+          npm audit fix --prefix apps/mobile --package-lock-only --no-fund
+
+          cmp -s apps/mobile/package.json "$RUNNER_TEMP/mobile-package-before.json"
+          test ! -e package-lock.json.tmp
+          git diff --check
+          test -n "$(git diff -- apps/mobile/package-lock.json)"
+          test -z "$(git diff --name-only -- . ':!apps/mobile/package-lock.json')"
+
+          BEFORE="$RUNNER_TEMP/mobile-lock-before.json" AFTER="apps/mobile/package-lock.json" node <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE, 'utf8'));
+          const after = JSON.parse(fs.readFileSync(process.env.AFTER, 'utf8'));
+          const beforePackages = before.packages || {};
+          const afterPackages = after.packages || {};
+          const keys = [...new Set([...Object.keys(beforePackages), ...Object.keys(afterPackages)])].sort();
+          const changed = keys.filter((key) => JSON.stringify(beforePackages[key]) !== JSON.stringify(afterPackages[key]));
+          if (JSON.stringify(changed) !== JSON.stringify(['node_modules/brace-expansion'])) {
+            throw new Error(`unexpected_lockfile_package_changes:${changed.join(',')}`);
+          }
+          const previous = String(beforePackages['node_modules/brace-expansion']?.version || '');
+          const current = String(afterPackages['node_modules/brace-expansion']?.version || '');
+          if (previous !== '5.0.7' || current !== '5.0.8') {
+            throw new Error(`unexpected_brace_expansion_transition:${previous}->${current}`);
+          }
+          console.log(`BRACE_EXPANSION_PREVIOUS=${previous}`);
+          console.log(`BRACE_EXPANSION_CURRENT=${current}`);
+          console.log('LOCKFILE_CHANGED_PACKAGE_COUNT=1');
+          NODE
+
+      - name: Reinstall and enforce zero high or critical Mobile findings
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf apps/mobile/node_modules
+          npm ci --prefix apps/mobile --no-audit --no-fund
+          set +e
+          npm audit --prefix apps/mobile --json > "$RUNNER_TEMP/mobile-audit-after.json"
+          audit_status=$?
+          set -e
+          AUDIT_STATUS="$audit_status" node <<'NODE'
+          const fs = require('node:fs');
+          const audit = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/mobile-audit-after.json', 'utf8'));
+          const counts = audit?.metadata?.vulnerabilities || {};
+          const high = Number(counts.high || 0);
+          const critical = Number(counts.critical || 0);
+          console.log(`MOBILE_AUDIT_CRITICAL=${critical}`);
+          console.log(`MOBILE_AUDIT_HIGH=${high}`);
+          console.log(`MOBILE_AUDIT_MODERATE=${Number(counts.moderate || 0)}`);
+          if (high !== 0 || critical !== 0) throw new Error('mobile_high_or_critical_remaining');
+          NODE
+          rm -f "$RUNNER_TEMP/mobile-audit-after.json"
+
+      - name: Validate Expo compatibility and Android bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run --prefix apps/mobile typecheck
+          npm run --prefix apps/mobile doctor
+          npm run --prefix apps/mobile export:android
+          npm run --prefix apps/mobile boundary
+
+      - name: Commit the single-package lockfile patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile/package-lock.json
+          git diff --cached --quiet && { echo 'No lockfile change to commit' >&2; exit 1; }
+          git commit -m "Patch Mobile brace-expansion to 5.0.8"
+          git push origin HEAD:p1/mobile-high-advisory-20260725
