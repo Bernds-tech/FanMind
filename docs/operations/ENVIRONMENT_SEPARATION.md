@@ -180,6 +180,15 @@ Referral-Schreibtests benötigen zusätzlich zu den bestehenden Stripe-/Referral
 
 ## Restore-Drill
 
+Ein Datenbank-Restore benötigt zusätzlich zur gemeinsamen Schreibgrenze den zweistufigen Zielschutz aus `docs/operations/RESTORE_DRILL.md`:
+
+```bash
+npm run restore:preflight
+npm run restore:database:drill -- /sicherer/pfad/fanmind-database-<timestamp>.dump
+```
+
+Der Restore-Preflight bindet die tatsächlichen `PGHOST`-, `PGPORT`-, `PGDATABASE`- und `PGUSER`-Werte an eine unabhängig dokumentierte Zielbestätigung und vergleicht den vollständigen Zielsatz mit Production. Der Runner wiederholt diese Prüfung unmittelbar vor `pg_restore`; ein erfolgreicher allgemeiner `environment:preflight:write` allein reicht für einen Restore ausdrücklich nicht aus.
+
 Ein Restore-Drill darf erst beginnen, wenn:
 
 - der gemeinsame Schreib-Preflight grün ist;
