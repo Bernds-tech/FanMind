@@ -6,6 +6,8 @@ const shellPath = "src/components/WorkspaceShell.tsx";
 const sidebarCssPath = "src/components/WorkspaceSidebar.module.css";
 const navigationPath = "src/lib/workspaceNavigation.ts";
 const socialAvatarPath = "public/assets/fanmind-social-avatar.png";
+const previewPath = "src/app/sidebar-preview-e2e/page.tsx";
+const browserWorkflowPath = ".github/workflows/browser-e2e.yml";
 
 async function readShell() {
   return readFile(shellPath, "utf8");
@@ -131,4 +133,21 @@ test("profile and logout actions remain present in both sidebar states", async (
     css,
     /\.logoutButtonCollapsed \.logoutLabel \{[\s\S]*opacity: 0;/u,
   );
+});
+
+test("synthetic sidebar preview is enabled only inside the browser E2E job", async () => {
+  const [preview, workflow] = await Promise.all([
+    readFile(previewPath, "utf8"),
+    readFile(browserWorkflowPath, "utf8"),
+  ]);
+
+  assert.match(preview, /import \{ notFound \} from "next\/navigation"/u);
+  assert.match(preview, /export const dynamic = "force-dynamic"/u);
+  assert.match(
+    preview,
+    /process\.env\.FANMIND_ENABLE_SIDEBAR_PREVIEW_E2E !== "true"/u,
+  );
+  assert.match(preview, /notFound\(\)/u);
+  assert.match(workflow, /FANMIND_ENABLE_SIDEBAR_PREVIEW_E2E: "true"/u);
+  assert.doesNotMatch(preview, /NEXT_PUBLIC_FANMIND_ENABLE_SIDEBAR_PREVIEW_E2E/u);
 });
