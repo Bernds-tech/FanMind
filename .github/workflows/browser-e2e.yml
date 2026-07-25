@@ -31,6 +31,7 @@ jobs:
       FANMIND_PUBLIC_DEMO_ENABLED: "false"
       FANMIND_ENABLE_REFERRAL_BILLING: "false"
       FANMIND_ENABLE_TELEGRAM_SEND: "false"
+      FANMIND_ENABLE_SIDEBAR_PREVIEW_E2E: "true"
       FANMIND_ADMIN_EMAILS: admin@example.com
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:3100
       CI: "1"
