@@ -16,7 +16,7 @@ Meta-Zuordnung:
 
 Vor der Implementierung wurde der aktuelle Stand geprüft:
 
-- Next.js `16.2.11` mit App Router unter `src/app`;
+- Next.js `16.2.12` mit App Router unter `src/app`;
 - genau ein Web-Root-Layout unter `src/app/layout.tsx`;
 - kein bestehendes Meta-, Google-, Vercel-Analytics-, Plausible- oder vergleichbares Browser-Tracking;
 - vorhandene Telemetrie ist datensparsame serverseitige Fehler-/Operations-Telemetrie und kein Marketing-Tracking;

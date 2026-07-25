@@ -1,20 +1,20 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  REVIEWED_ROOT_PACKAGES,
   ROOT_REVIEWED_AT,
   ROOT_REVIEWED_FRAMEWORK_VERSION,
-  ROOT_REVIEW_EXCEPTION_EXPIRES_AT,
   ROOT_REVIEW_HIGH_MAXIMUM,
   ROOT_REVIEW_MODERATE_MAXIMUM,
-  ROOT_REVIEW_SOURCE_RUN,
   evaluateDependencyAudit,
 } from "../scripts/security/verify-dependency-audit.mjs";
 import { validateCycloneDx } from "../scripts/security/generate-sbom.mjs";
 
 const patchedManifest = {
-  dependencies: { next: "16.2.11" },
-  devDependencies: { "eslint-config-next": "16.2.11" },
+  dependencies: { next: "16.2.12" },
+  devDependencies: { "eslint-config-next": "16.2.12" },
 };
 
 function auditPayload({
@@ -41,55 +41,32 @@ function auditPayload({
   };
 }
 
-test("reviewed root advisories pass only inside the bounded review window", () => {
-  const beforeExpiry = evaluateDependencyAudit({
-    rootPayload: auditPayload({
-      high: 3,
-      packages: ["next", "postcss", "sharp"],
-    }),
+test("clean root audit passes without a review exception", () => {
+  const result = evaluateDependencyAudit({
+    rootPayload: auditPayload(),
     mobilePayload: auditPayload({ moderate: 10, packages: ["mobile-transitive"] }),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T17:00:00Z"),
   });
 
-  assert.equal(beforeExpiry.ok, true);
-  assert.equal(beforeExpiry.root.reviewedExceptionCurrent, true);
-  assert.equal(beforeExpiry.root.highMaximum, ROOT_REVIEW_HIGH_MAXIMUM);
-  assert.equal(beforeExpiry.root.moderateMaximum, ROOT_REVIEW_MODERATE_MAXIMUM);
+  assert.equal(result.ok, true);
+  assert.deepEqual(REVIEWED_ROOT_PACKAGES, []);
+  assert.equal(result.root.highMaximum, ROOT_REVIEW_HIGH_MAXIMUM);
+  assert.equal(result.root.moderateMaximum, ROOT_REVIEW_MODERATE_MAXIMUM);
+  assert.equal(result.root.reviewedAt, ROOT_REVIEWED_AT);
   assert.equal(
-    beforeExpiry.root.reviewedExceptionExpiresAt,
-    ROOT_REVIEW_EXCEPTION_EXPIRES_AT,
-  );
-  assert.equal(beforeExpiry.root.reviewedAt, ROOT_REVIEWED_AT);
-  assert.equal(beforeExpiry.root.reviewSourceRun, ROOT_REVIEW_SOURCE_RUN);
-  assert.equal(
-    beforeExpiry.root.reviewedFrameworkVersion,
+    result.root.reviewedFrameworkVersion,
     ROOT_REVIEWED_FRAMEWORK_VERSION,
   );
-
-  const afterExpiry = evaluateDependencyAudit({
-    rootPayload: auditPayload({
-      high: 3,
-      packages: ["next", "postcss", "sharp"],
-    }),
-    mobilePayload: auditPayload({ moderate: 10, packages: ["mobile-transitive"] }),
-    rootManifest: patchedManifest,
-    now: new Date("2026-08-08T00:00:00Z"),
-  });
-
-  assert.equal(afterExpiry.ok, false);
-  assert.match(afterExpiry.errors.join("\n"), /root_review_exception_expired/u);
 });
 
-test("reviewed root budget rejects a fourth high or any moderate finding", () => {
+test("every root high, moderate or unreviewed package fails closed", () => {
   const highFailure = evaluateDependencyAudit({
     rootPayload: auditPayload({
-      high: 4,
-      packages: ["next", "postcss", "sharp"],
+      high: 1,
+      packages: ["next"],
     }),
     mobilePayload: auditPayload(),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T17:00:00Z"),
   });
   assert.equal(highFailure.ok, false);
   assert.match(
@@ -99,39 +76,22 @@ test("reviewed root budget rejects a fourth high or any moderate finding", () =>
 
   const moderateFailure = evaluateDependencyAudit({
     rootPayload: auditPayload({
-      high: 2,
       moderate: 1,
-      packages: ["next", "postcss", "sharp"],
+      packages: ["postcss"],
     }),
     mobilePayload: auditPayload(),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T17:00:00Z"),
   });
   assert.equal(moderateFailure.ok, false);
   assert.match(
     moderateFailure.errors.join("\n"),
     /root_moderate_vulnerability_budget_exceeded/u,
   );
-});
 
-test("a fully clean audit passes after the review window", () => {
-  const result = evaluateDependencyAudit({
-    rootPayload: auditPayload(),
-    mobilePayload: auditPayload({ moderate: 3, packages: ["mobile-transitive"] }),
-    rootManifest: patchedManifest,
-    now: new Date("2026-09-01T00:00:00Z"),
-  });
-
-  assert.equal(result.ok, true);
-  assert.equal(result.root.reviewedExceptionNeeded, false);
-});
-
-test("unreviewed root packages and high or critical Mobile findings fail closed", () => {
   const rootFailure = evaluateDependencyAudit({
-    rootPayload: auditPayload({ high: 1, packages: ["unreviewed-package"] }),
+    rootPayload: auditPayload({ low: 1, packages: ["unreviewed-package"] }),
     mobilePayload: auditPayload(),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T17:00:00Z"),
   });
   assert.equal(rootFailure.ok, false);
   assert.match(
@@ -139,16 +99,39 @@ test("unreviewed root packages and high or critical Mobile findings fail closed"
     /root_unreviewed_vulnerability_package_present/u,
   );
 
-  const mobileFailure = evaluateDependencyAudit({
+  const metadataOnlyFailure = evaluateDependencyAudit({
+    rootPayload: auditPayload({ low: 1 }),
+    mobilePayload: auditPayload(),
+    rootManifest: patchedManifest,
+  });
+  assert.equal(metadataOnlyFailure.ok, false);
+  assert.match(
+    metadataOnlyFailure.errors.join("\n"),
+    /root_vulnerability_present/u,
+  );
+});
+
+test("high or critical Mobile findings fail while moderate findings remain allowed", () => {
+  const mobileHighFailure = evaluateDependencyAudit({
     rootPayload: auditPayload(),
     mobilePayload: auditPayload({ high: 1, packages: ["mobile-high"] }),
     rootManifest: patchedManifest,
-    now: new Date("2026-07-23T17:00:00Z"),
   });
-  assert.equal(mobileFailure.ok, false);
+  assert.equal(mobileHighFailure.ok, false);
   assert.match(
-    mobileFailure.errors.join("\n"),
+    mobileHighFailure.errors.join("\n"),
     /mobile_high_vulnerability_present/u,
+  );
+
+  const mobileCriticalFailure = evaluateDependencyAudit({
+    rootPayload: auditPayload(),
+    mobilePayload: auditPayload({ critical: 1, packages: ["mobile-critical"] }),
+    rootManifest: patchedManifest,
+  });
+  assert.equal(mobileCriticalFailure.ok, false);
+  assert.match(
+    mobileCriticalFailure.errors.join("\n"),
+    /mobile_critical_vulnerability_present/u,
   );
 });
 
@@ -160,7 +143,6 @@ test("framework and eslint configuration must stay on the reviewed patch", () =>
       dependencies: { next: "16.2.7" },
       devDependencies: { "eslint-config-next": "16.2.7" },
     },
-    now: new Date("2026-07-23T17:00:00Z"),
   });
 
   assert.equal(result.ok, false);
@@ -168,6 +150,49 @@ test("framework and eslint configuration must stay on the reviewed patch", () =>
     result.errors.join("\n"),
     /root_framework_security_patch_missing/u,
   );
+});
+
+test("reviewed overrides stay narrow and resolve to the patched production tree", async () => {
+  const manifest = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const lock = JSON.parse(
+    await readFile(new URL("../package-lock.json", import.meta.url), "utf8"),
+  );
+
+  assert.deepEqual(manifest.overrides, {
+    "brace-expansion@>=5.0.0 <5.0.8": "5.0.8",
+    "js-yaml@>=4.0.0 <4.3.0": "4.3.0",
+    "next@16.2.12": {
+      postcss: "8.5.23",
+      sharp: "0.35.3",
+    },
+  });
+  assert.equal(lock.packages["node_modules/next"].version, "16.2.12");
+  assert.equal(lock.packages["node_modules/postcss"].version, "8.5.23");
+  assert.equal(lock.packages["node_modules/sharp"].version, "0.35.3");
+  assert.equal(
+    lock.packages[
+      "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion"
+    ].version,
+    "5.0.8",
+  );
+  assert.equal(lock.packages["node_modules/js-yaml"].version, "4.3.0");
+});
+
+test("reviewed Sharp override can process an image with the Production runtime", async () => {
+  const { default: sharp } = await import("sharp");
+  const input = Buffer.from([255, 0, 0, 255]);
+  const { info } = await sharp(input, {
+    raw: { width: 1, height: 1, channels: 4 },
+  })
+    .resize(2, 2)
+    .png()
+    .toBuffer({ resolveWithObject: true });
+
+  assert.equal(info.format, "png");
+  assert.equal(info.width, 2);
+  assert.equal(info.height, 2);
 });
 
 test("CycloneDX validation accepts only structured component inventories", () => {
