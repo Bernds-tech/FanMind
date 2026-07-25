@@ -38,39 +38,48 @@ Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:
 - sämtliche Mobile-Abhängigkeiten über `npm audit --json`;
 - ausschließlich strukturierte Zähler und Paketnamen, keine Roh-Advisory-Ausgabe;
 - exakte Next.js-/ESLint-Config-Patchstände;
-- einen zeitlich begrenzten, expliziten Review-Ausnahmevertrag.
+- einen vollständig sauberen Root-Production-Baum ohne Review-Ausnahme.
 
-### Aktueller geprüfter Zustand vom 23. Juli 2026
+### Aktueller geprüfter Zustand vom 25. Juli 2026
 
-Nach dem Update auf Next.js `16.2.11` und `eslint-config-next` `16.2.11` wurde der Registry-Stand in Run `30025574639` erneut read-only geprüft. npm meldet jetzt im Root-Production-Baum:
+Am 25. Juli wurde Next.js `16.2.12` mit passendem `eslint-config-next`
+verfügbar. Gleichzeitig standen korrigierte Versionen für die beiden
+Production-Transitivabhängigkeiten `postcss` und `sharp` bereit. FanMind
+verwendet jetzt:
+
+- Next.js und `eslint-config-next` exakt `16.2.12`;
+- `postcss` `8.5.23`;
+- `sharp` `0.35.3`.
+
+Die beiden Production-Korrekturen werden ausschließlich unter
+`next@16.2.12` als npm-Overrides erzwungen, weil Next.js selbst weiterhin
+ältere Abhängigkeitsbereiche deklariert. Ein dauerhafter Test verarbeitet mit
+der aufgelösten Sharp-Version ein echtes Bild, zusätzlich zum vollständigen
+Next.js-Production-Build.
+
+Im reinen Entwickler-Werkzeugbaum wurden außerdem die innerhalb ihrer
+Parent-Ranges verfügbaren Korrekturen `brace-expansion` `5.0.8` und `js-yaml`
+`4.3.0` eingezogen. Der weiterhin von npm gemeldete
+`brace-expansion`-1.x-Werkzeugbefund ist nicht Bestandteil des
+Root-Production-Baums und wird nicht als behoben dargestellt.
+
+Der reproduzierte Root-Production-Audit meldet danach:
 
 - `0` kritische Befunde;
-- `3` hohe Befunde;
+- `0` hohe Befunde;
 - `0` moderate Befunde;
-- ausschließlich die geprüften Pakete `next`, `postcss` und `sharp`.
+- `0` niedrige Befunde;
+- keine Root-Paket-Ausnahme.
 
-Die Änderung gegenüber dem ersten Review ist keine neue Paketgruppe: Der zuvor moderate PostCSS-Reststand wird inzwischen als hoch bewertet und der aktuelle sharp/libvips-Befund ist ebenfalls hoch. `next` fasst die beiden transitiven Pakete als direkten Framework-Befund zusammen.
+Der vorherige, bis 7. August befristete Production-Reviewvertrag ist entfernt.
+Das Gate akzeptiert im Root-Production-Baum jetzt ausschließlich einen
+vollständig sauberen Audit und exakt Next.js sowie `eslint-config-next`
+`16.2.12`. Jeder neue Production-Paketname oder Befund lässt die Prüfung
+fail-closed fehlschlagen.
 
-Der Audit hat außerdem bestätigt:
-
-- npm-`latest` für `next` ist weiterhin `16.2.11`;
-- es existiert keine neuere gemeinsam verfügbare stabile `16.2.x`-Version von `next` und `eslint-config-next`;
-- npm bietet keinen kompatiblen Patch-Kandidaten ohne Major-/Downgrade-Eingriff;
-- die von npm ausgewiesene automatische Alternative würde auf einen ungeeigneten alten Next.js-Majorstand zurückgehen und wird nicht verwendet.
-
-Der Reviewvertrag wurde deshalb nicht zeitlich verlängert und nicht auf weitere Pakete ausgedehnt. Er akzeptiert bis **7. August 2026, 00:00 UTC** ausschließlich:
-
-- exakt `next`, `postcss` und `sharp`;
-- höchstens drei hohe Befunde;
-- keinen moderaten Befund;
-- keinen kritischen Befund;
-- exakt Next.js und `eslint-config-next` `16.2.11`.
-
-Ein vierter hoher Befund, jeder moderate oder kritische Befund, ein neuer Paketname, ein anderer Frameworkstand oder das Ablaufdatum lässt das Gate fail-closed fehlschlagen. Issue `#676` verfolgt weiterhin den ersten kompatiblen vollständigen Fix; die Ausnahme wird danach entfernt.
-
-Der Mobile-Baum darf moderate oder niedrige transitive Befunde enthalten, aber weder hohe noch kritische Befunde. Der aktuelle Audit-Nachweis meldete keine hohen oder kritischen Mobile-Befunde.
-
-Diese Ausnahme ist keine pauschale Akzeptanz zukünftiger Advisories. Sie ist auf Paketnamen, Schweregrad-Budget, exakte Framework-Version, einen konkreten Reviewlauf und ein unverändertes Ablaufdatum gebunden.
+Der Mobile-Baum darf weiterhin moderate oder niedrige transitive Befunde
+enthalten, aber weder hohe noch kritische Befunde. Der aktuelle
+Audit-Nachweis meldet keine hohen oder kritischen Mobile-Befunde.
 
 ## CodeQL / SAST
 
