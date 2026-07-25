@@ -145,14 +145,19 @@ jobs:
                   if all(needle in article['text'] for needle in needles)
               ]
 
+          def has_coming_soon_mark(article):
+              return any(
+                  image.get('alt') == 'Coming Soon' or
+                  'coming-soon-badge' in image.get('src', '')
+                  for image in article['images']
+              )
+
           def assert_active_card(label, *needles):
               matches = matching_articles(*needles)
               if not matches:
                   raise SystemExit(f'{label}_article_missing')
-              for article in matches:
-                  for image in article['images']:
-                      if image.get('alt') == 'Coming Soon' or 'coming-soon-badge' in image.get('src', ''):
-                          raise SystemExit(f'{label}_incorrect_coming_soon_badge')
+              if any(has_coming_soon_mark(article) for article in matches):
+                  raise SystemExit(f'{label}_incorrect_coming_soon_badge')
 
           assert_active_card('manual_followups', 'Manuelle Follow-ups')
           assert_active_card('followups_function', '4. Follow-ups', 'Alle Follow-ups')
@@ -164,7 +169,7 @@ jobs:
           )
           if not whatsapp_cards:
               raise SystemExit('whatsapp_card_missing')
-          if not any('Coming Soon' in article['text'] and 'Beta' not in article['text'] for article in whatsapp_cards):
+          if not any(has_coming_soon_mark(article) and 'Beta' not in article['text'] for article in whatsapp_cards):
               raise SystemExit('whatsapp_not_coming_soon')
 
           new_beta = 'Facebook und Instagram werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.'
@@ -186,7 +191,7 @@ jobs:
               'manual_followups_without_coming_soon_badge': True,
               'followups_function_without_coming_soon_badge': True,
               'followups_step_without_coming_soon_badge': True,
-              'whatsapp_status': 'Coming Soon',
+              'whatsapp_coming_soon_mark_present': True,
               'whatsapp_beta_wording_absent': True,
               'production_data_mutated': False,
           }
