@@ -28,18 +28,34 @@ Die Sidebar-spezifischen Styles liegen bewusst getrennt von den Dashboard-Inhalt
 
 ```text
 src/components/WorkspaceSidebar.module.css
+src/components/WorkspaceSidebarResponsive.module.css
 ```
+
+Das erste Modul enthält die gemeinsame Sidebar-Geometrie und Zustände. Das zweite Modul kapselt ausschließlich den dunklen, deckenden Sidebar-Untergrund und das Verhalten auf schmalen Web-Viewports.
 
 Gemeinsame Layoutkonstanten:
 
 ```text
-expanded width: 236px
+expanded width desktop: 236px
+expanded width narrow: maximal 320px
 collapsed width: 76px
 left/right gutter: 14px
 icon rail: 44px
 ```
 
 Da der seitliche Gutter in beiden Zuständen gleich bleibt, springt die Icon-Achse beim Umschalten nicht.
+
+## Schmale Viewports
+
+Bis 960 Pixel bleibt die Sidebar eine feste vertikale Navigation wie in der bereitgestellten Instagram-Webreferenz:
+
+- expanded liegt sie als deckendes dunkles Overlay über dem Inhalt;
+- collapsed reserviert das Layout exakt für die 76-Pixel-Icon-Schiene;
+- der Inhaltsbereich beginnt collapsed rechts neben der Schiene und liegt nicht darunter;
+- expanded ist maximal 320 Pixel breit und lässt auf kleinen Geräten einen schmalen Teil des Inhalts als Kontext sichtbar;
+- Icons, Gruppen, Badge-Anker und Zeilenpositionen bleiben zwischen expanded und collapsed unverändert.
+
+Die Sidebar wird deshalb nicht in eine zweite mobile Top-Navigation umgebaut. Web und Mobile-App bleiben getrennte Oberflächen; die native App unter `apps/mobile` verwendet ihre eigene Navigation.
 
 ## Branding
 
@@ -104,9 +120,11 @@ Die Variable ist bewusst nicht öffentlich, nicht als `NEXT_PUBLIC_*` definiert 
 - gemeinsame Item-Renderer für alle Gruppen;
 - unveränderte Navigationsreihenfolge;
 - identische linke Gutter- und Icon-Schiene;
+- den deckenden dunklen Sidebar-Untergrund;
+- den Overlay-/Rail-Vertrag für schmale Viewports;
 - das runde PNG-Avatar-Asset;
 - Profil und Logout in beiden Zuständen;
 - das Fehlen der früheren separaten Kompaktnavigation;
 - die serverseitige 404-Grenze des synthetischen Preview-Screens.
 
-`e2e/sidebar-preview.spec.ts` misst expanded und collapsed im echten Chromium-Browser. Es vergleicht Icon-Mittelpunkte, Zeilenpositionen, Breiten, horizontales Overflow, sichtbare Aktionen und das gerenderte Avatar-Asset. Screenshots werden nur als kurzlebige CI-Abnahmebelege erzeugt.
+`e2e/sidebar-preview.spec.ts` misst expanded und collapsed im echten Chromium-Browser. Es vergleicht Icon-Mittelpunkte, Zeilenpositionen, Breiten, Inhaltskante, horizontales Overflow, sichtbare Aktionen und das gerenderte Avatar-Asset. Screenshots werden nur als kurzlebige CI-Abnahmebelege erzeugt.
