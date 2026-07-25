@@ -15,7 +15,7 @@ Aktuell geprüfte Pins:
 | `actions/checkout` | `11d5960a326750d5838078e36cf38b85af677262` | `v4` |
 | `actions/setup-node` | `48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e` | `v6.4.0` |
 | `actions/upload-artifact` | `ea165f8d65b6e75b540449e92b4886f43607fa02` | `v4` |
-| `github/codeql-action` | `0daab03d71ff584ef619d027a3fd9146679c5d84` | `v3.35.3` |
+| `github/codeql-action` | `e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81` | `v4.37.3` |
 
 Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:`-Block. `permissions: write-all` ist verboten. Schreibrechte werden nur für den konkreten Zweck vergeben, beispielsweise `security-events: write` für CodeQL oder `issues: write` für den Uptime-Alarm.
 
@@ -25,9 +25,10 @@ Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:
 2. Release-/Changelog und Repository-Eigentümer prüfen.
 3. Das Ziel-Tag read-only auf den vollständigen Commit-SHA auflösen.
 4. SHA im Workflow ersetzen und den lesbaren Versionskommentar beibehalten.
-5. `npm run verify:actions-pinned` ausführen.
-6. FanMind CI, betroffene Fach-CI und Supply-Chain-CI vollständig grün abwarten.
-7. Keine Action direkt auf `main` aktualisieren und keine unbekannte Drittanbieter-Action ungeprüft aufnehmen.
+5. Bei Actions, die in einem Workflow als zusammengehöriges Paar verwendet werden, alle Varianten gemeinsam aktualisieren; für CodeQL bedeutet das mindestens `init` und `analyze` auf denselben Release-Commit.
+6. `npm run verify:actions-pinned` ausführen.
+7. FanMind CI, betroffene Fach-CI und Supply-Chain-CI vollständig grün abwarten.
+8. Keine Action direkt auf `main` aktualisieren und keine unbekannte Drittanbieter-Action ungeprüft aufnehmen.
 
 ## Dependency-Audit
 
@@ -73,14 +74,14 @@ Diese Ausnahme ist keine pauschale Akzeptanz zukünftiger Advisories. Sie ist au
 
 ## CodeQL / SAST
 
-`.github/workflows/codeql.yml` analysiert JavaScript und TypeScript mit der gepinnten CodeQL-v3-Action und `security-extended`:
+`.github/workflows/codeql.yml` analysiert JavaScript und TypeScript mit der unveränderlich gepinnten CodeQL-v4-Action `4.37.3` und `security-extended`:
 
 - bei Pull Requests gegen `main`;
 - bei Pushes auf `main`;
 - wöchentlich;
 - manuell über `workflow_dispatch`.
 
-Der Workflow besitzt nur `contents: read`, `actions: read`, `packages: read` und `security-events: write`. Die CodeQL-Fähigkeit einschließlich Extraktion, Analyse und SARIF-Upload wurde vor Aktivierung erfolgreich im Repository geprüft.
+`init` und `analyze` werden immer gemeinsam auf exakt denselben CodeQL-Release-Commit aktualisiert. Der Workflow besitzt nur `contents: read`, `actions: read`, `packages: read` und `security-events: write`. Die CodeQL-Fähigkeit einschließlich Extraktion, Analyse und SARIF-Upload wird bei jedem Action-Update erneut im Pull Request ausgeführt.
 
 Ein CodeQL-Alarm wird nicht durch Abschalten der Query, pauschales Ignorieren oder Entfernen des Workflows gelöst. Echte Befunde werden in kleinen Folge-PRs behoben oder mit konkreter, zeitlich begrenzter Begründung dokumentiert.
 
