@@ -78,6 +78,24 @@ PageView auf freigegebenen öffentlichen Seiten nach Marketing-Einwilligung
 
 CRM-, Kontakt-, Nachrichten-, KI-, Workspace- oder Profildaten werden durch diesen UI-Umbau nicht an Meta übertragen.
 
+## Synthetischer Browser-Abnahmescreen
+
+Der no-write Screen unter
+
+```text
+/sidebar-preview-e2e
+```
+
+enthält ausschließlich synthetische UI-Daten für die Playwright-Geometrie- und Screenshot-Abnahme. Er ist serverseitig fail-closed geschützt und antwortet außerhalb des Browser-E2E-Jobs mit `404`.
+
+Nur der CI-Workflow setzt:
+
+```text
+FANMIND_ENABLE_SIDEBAR_PREVIEW_E2E=true
+```
+
+Die Variable ist bewusst nicht öffentlich, nicht als `NEXT_PUBLIC_*` definiert und wird in Production nicht gesetzt. Damit entsteht durch den Testscreen keine zusätzliche öffentliche Produkt-, Demo- oder Trackingroute.
+
 ## Regressionen
 
 `tests/workspace-sidebar-icons.test.mjs` prüft unter anderem:
@@ -88,4 +106,7 @@ CRM-, Kontakt-, Nachrichten-, KI-, Workspace- oder Profildaten werden durch dies
 - identische linke Gutter- und Icon-Schiene;
 - das runde PNG-Avatar-Asset;
 - Profil und Logout in beiden Zuständen;
-- das Fehlen der früheren separaten Kompaktnavigation.
+- das Fehlen der früheren separaten Kompaktnavigation;
+- die serverseitige 404-Grenze des synthetischen Preview-Screens.
+
+`e2e/sidebar-preview.spec.ts` misst expanded und collapsed im echten Chromium-Browser. Es vergleicht Icon-Mittelpunkte, Zeilenpositionen, Breiten, horizontales Overflow, sichtbare Aktionen und das gerenderte Avatar-Asset. Screenshots werden nur als kurzlebige CI-Abnahmebelege erzeugt.
