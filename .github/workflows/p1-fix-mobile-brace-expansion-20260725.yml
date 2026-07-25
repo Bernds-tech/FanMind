@@ -56,7 +56,15 @@ jobs:
           cp apps/mobile/package-lock.json "$RUNNER_TEMP/mobile-lock-before.json"
           cp apps/mobile/package.json "$RUNNER_TEMP/mobile-package-before.json"
 
+          set +e
           npm audit fix --prefix apps/mobile --package-lock-only --no-fund
+          audit_fix_status=$?
+          set -e
+          if [ "$audit_fix_status" -ne 0 ] && [ "$audit_fix_status" -ne 1 ]; then
+            echo "Unexpected npm audit fix status: $audit_fix_status" >&2
+            exit 1
+          fi
+          echo "NPM_AUDIT_FIX_STATUS=$audit_fix_status"
 
           cmp -s apps/mobile/package.json "$RUNNER_TEMP/mobile-package-before.json"
           test ! -e package-lock.json.tmp
