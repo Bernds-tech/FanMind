@@ -130,6 +130,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npm ci --prefix apps/mobile --no-audit --no-fund
           npm run security:audit -- --report react-patch-audit.json
           npm run security:sbom -- --output-dir react-patch-sbom
           node - <<'NODE'
