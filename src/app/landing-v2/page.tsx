@@ -68,7 +68,6 @@ const features = [
     title: "Manuelle Follow-ups",
     text: "Nächste Schritte bleiben sichtbar, priorisiert und bewusst manuell steuerbar.",
     tone: "orange",
-    showComingSoonMark: true,
   },
   {
     icon: "▥",
@@ -149,7 +148,6 @@ const functionCards = [
     cta: "Alle Follow-ups",
     href: "#follow-ups",
     tone: "cyan",
-    showComingSoonMark: true,
   },
   {
     icon: "📣",
@@ -279,7 +277,6 @@ const sixStepCards = [
     ],
     cta: "Alle Follow-ups anzeigen",
     href: "#follow-ups",
-    showComingSoonMark: true,
   },
   {
     step: "5",
@@ -351,7 +348,7 @@ const integrationChannels = [
   { platform: "tiktok", title: "TikTok", text: "Kommentare und Handles als geprüfter Roadmap-Kanal.", status: "Coming Soon", tone: "purple" },
   { platform: "youtube", title: "YouTube", text: "Community- und Kommentar-Kontext für spätere Workflows.", status: "Roadmap", tone: "pink" },
   { platform: "facebook", title: "Facebook", text: "Seiten- und Profilkontakte vorbereitet, nicht produktiv angebunden.", status: "Beta / in Vorbereitung", tone: "blue" },
-  { platform: "whatsapp", title: "WhatsApp", text: "Chat-Kontext für spätere Synchronisation vorbereitet.", status: "Beta / in Vorbereitung", tone: "green" },
+  { platform: "whatsapp", title: "WhatsApp", text: "Chat-Kontext für spätere Synchronisation vorbereitet.", status: "Coming Soon", tone: "green" },
   { platform: "telegram", title: "Telegram", text: "Community-Nachrichten als geplanter Kanal.", status: "Coming Soon", tone: "cyan" },
   { platform: "snapchat", title: "Snapchat", text: "Creator-Kontakte als späterer Social-Kanal.", status: "Roadmap", tone: "yellow" },
   { platform: "linkedin", title: "LinkedIn", text: "Business-Kontakte und Nachrichten für spätere Prüfung.", status: "Roadmap", tone: "blue" },
@@ -423,7 +420,7 @@ const integrationActions = [
   {
     icon: "☑",
     title: "Follow-ups",
-    status: "Coming Soon",
+    status: "Aktiv",
     text: "Nachfassaktionen vorbereiten.",
   },
   {
@@ -450,13 +447,13 @@ const integrationBenefits = [
   {
     icon: "◷",
     title: "Beta / vorbereitet",
-    text: "Facebook, Instagram und WhatsApp werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.",
+    text: "Facebook und Instagram werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.",
     tone: "purple",
   },
   {
     icon: "▣",
     title: "Coming Soon",
-    text: "TikTok, X, Discord, Kampagnen, Analytics/Reichweite sowie Rollen/Rechte bleiben Roadmap.",
+    text: "WhatsApp, TikTok, X, Discord, Kampagnen, Analytics/Reichweite sowie Rollen/Rechte bleiben Roadmap.",
     tone: "green",
   },
   {
