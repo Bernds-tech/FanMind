@@ -335,6 +335,8 @@ const englishCopy: Record<string, string> = {
   "Impressum": "Legal notice",
   "AGB": "Terms",
   "Nach oben": "Back to top",
+  "Facebook und Instagram werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.": "Facebook and Instagram are shown only as prepared beta workflows; there is no full production integration.",
+  "WhatsApp, TikTok, X, Discord, Kampagnen, Analytics/Reichweite sowie Rollen/Rechte bleiben Roadmap.": "WhatsApp, TikTok, X, Discord, campaigns, analytics and reach, and roles and permissions remain on the roadmap.",
 
   "Alle Kanäle im Blick": "All channels in view",
   "Kontaktpunkte, Gesprächsnotizen und Kanal-Kontext werden zentral dokumentiert – dein Team behält alles nachvollziehbar im Blick.": "Contact points, conversation notes and channel context are documented centrally – your team keeps everything transparent.",

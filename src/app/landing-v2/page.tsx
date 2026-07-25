@@ -68,7 +68,6 @@ const features = [
     title: "Manuelle Follow-ups",
     text: "Nächste Schritte bleiben sichtbar, priorisiert und bewusst manuell steuerbar.",
     tone: "orange",
-    showComingSoonMark: true,
   },
   {
     icon: "▥",
@@ -149,7 +148,6 @@ const functionCards = [
     cta: "Alle Follow-ups",
     href: "#follow-ups",
     tone: "cyan",
-    showComingSoonMark: true,
   },
   {
     icon: "📣",
@@ -279,7 +277,6 @@ const sixStepCards = [
     ],
     cta: "Alle Follow-ups anzeigen",
     href: "#follow-ups",
-    showComingSoonMark: true,
   },
   {
     step: "5",
@@ -351,7 +348,7 @@ const integrationChannels = [
   { platform: "tiktok", title: "TikTok", text: "Kommentare und Handles als geprüfter Roadmap-Kanal.", status: "Coming Soon", tone: "purple" },
   { platform: "youtube", title: "YouTube", text: "Community- und Kommentar-Kontext für spätere Workflows.", status: "Roadmap", tone: "pink" },
   { platform: "facebook", title: "Facebook", text: "Seiten- und Profilkontakte vorbereitet, nicht produktiv angebunden.", status: "Beta / in Vorbereitung", tone: "blue" },
-  { platform: "whatsapp", title: "WhatsApp", text: "Chat-Kontext für spätere Synchronisation vorbereitet.", status: "Beta / in Vorbereitung", tone: "green" },
+  { platform: "whatsapp", title: "WhatsApp", text: "Chat-Kontext für spätere Synchronisation vorbereitet.", status: "Coming Soon", tone: "green" },
   { platform: "telegram", title: "Telegram", text: "Community-Nachrichten als geplanter Kanal.", status: "Coming Soon", tone: "cyan" },
   { platform: "snapchat", title: "Snapchat", text: "Creator-Kontakte als späterer Social-Kanal.", status: "Roadmap", tone: "yellow" },
   { platform: "linkedin", title: "LinkedIn", text: "Business-Kontakte und Nachrichten für spätere Prüfung.", status: "Roadmap", tone: "blue" },
@@ -423,7 +420,7 @@ const integrationActions = [
   {
     icon: "☑",
     title: "Follow-ups",
-    status: "Coming Soon",
+    status: "Aktiv",
     text: "Nachfassaktionen vorbereiten.",
   },
   {
@@ -450,13 +447,13 @@ const integrationBenefits = [
   {
     icon: "◷",
     title: "Beta / vorbereitet",
-    text: "Facebook, Instagram und WhatsApp werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.",
+    text: "Facebook und Instagram werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.",
     tone: "purple",
   },
   {
     icon: "▣",
     title: "Coming Soon",
-    text: "TikTok, X, Discord, Kampagnen, Analytics/Reichweite sowie Rollen/Rechte bleiben Roadmap.",
+    text: "WhatsApp, TikTok, X, Discord, Kampagnen, Analytics/Reichweite sowie Rollen/Rechte bleiben Roadmap.",
     tone: "green",
   },
   {
@@ -1096,7 +1093,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <div className={styles.solutionFlow}>
           {localizedFunctionCards.map((card) => {
-            const showComingSoonMark = card.showComingSoonMark || isComingSoonStatus(card.status);
+            const showComingSoonMark =
+    isComingSoonStatus(card.status) ||
+    ("showComingSoonMark" in card && card.showComingSoonMark === true);
 
             return (
               <article
@@ -1157,7 +1156,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.processTrack} aria-label="FanMind Prozesslinie">
           {localizedSixStepCards.map((step, index) => (
             <article
-              className={`${styles.processStep} ${step.showComingSoonMark || isComingSoonStatus(step.badge) ? styles.cardWithComingSoon : ""}`}
+              className={`${styles.processStep} ${("showComingSoonMark" in step && step.showComingSoonMark === true) || isComingSoonStatus(step.badge) ? styles.cardWithComingSoon : ""}`}
               data-tone={step.tone}
               key={step.title}
             >
@@ -1172,7 +1171,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <div className={styles.stepCardTitle}>
                   <span><FanMindFunctionIcon name={resolveFanMindFunctionIcon(step.icon, step.title)} /></span>
                   <strong>{step.cardTitle}</strong>
-                  {step.badge && !step.showComingSoonMark && (
+                  {step.badge && !("showComingSoonMark" in step && step.showComingSoonMark === true) && (
                     <FeatureStatusLabel variant={statusVariantFromLabel(step.badge) ?? "preview"}>{step.badge}</FeatureStatusLabel>
                   )}
                 </div>
@@ -1194,7 +1193,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <span>→</span>
                 </a>
               </div>
-              {step.showComingSoonMark || isComingSoonStatus(step.badge) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
+              {("showComingSoonMark" in step && step.showComingSoonMark === true) || isComingSoonStatus(step.badge) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
             </article>
           ))}
         </div>
