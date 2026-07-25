@@ -12,6 +12,14 @@ const packageJson = JSON.parse(await readFile(new URL("package.json", mobileRoot
 const appConfig = JSON.parse(await readFile(new URL("app.json", mobileRoot), "utf8"));
 const mobileCi = await readFile(new URL("../.github/workflows/ci-mobile.yml", import.meta.url), "utf8");
 const mobileReadme = await readFile(new URL("README.md", mobileRoot), "utf8");
+const mobileBetaRelease = await readFile(
+  new URL("../docs/mobile/BETA_RELEASE.md", import.meta.url),
+  "utf8",
+);
+const mobileStoreListing = await readFile(
+  new URL("../docs/mobile/STORE_LISTING.md", import.meta.url),
+  "utf8",
+);
 const webTsconfig = await readFile(new URL("../tsconfig.json", import.meta.url), "utf8");
 const webEslint = await readFile(new URL("../eslint.config.mjs", import.meta.url), "utf8");
 
@@ -49,6 +57,34 @@ test("Android, iOS and deep-link identities are independent and explicit", () =>
   assert.equal(appConfig.expo.ios.bundleIdentifier, "ch.fanmind.app");
   assert.equal(appConfig.expo.android.package, "ch.fanmind.app");
   assert.equal(appConfig.expo.userInterfaceStyle, "dark");
+});
+
+test("mobile uses the confirmed wordmark only for the native splashscreen", () => {
+  const splashPlugin = appConfig.expo.plugins.find(
+    (plugin) => Array.isArray(plugin) && plugin[0] === "expo-splash-screen",
+  );
+
+  assert.ok(splashPlugin);
+  assert.equal(packageJson.dependencies["expo-splash-screen"], "~57.0.5");
+  assert.equal(splashPlugin[1].image, "./assets/branding/fanmind-wordmark.png");
+  assert.equal(splashPlugin[1].dark.image, "./assets/branding/fanmind-wordmark.png");
+  assert.equal(splashPlugin[1].resizeMode, "contain");
+  assert.equal(splashPlugin[1].imageWidth, 300);
+  assert.equal(appConfig.expo.icon, undefined);
+  assert.equal(appConfig.expo.android.adaptiveIcon.foregroundImage, undefined);
+  assert.match(mobileBetaRelease, /Wortmarke ist ausdrücklich \*\*kein\*\* Store-App-Icon/u);
+  assert.match(mobileStoreListing, /hochauflösendes bestätigtes rundes\/quadratisches App-Icon/u);
+});
+
+test("store metadata remains human-controlled and contains no integration promise", () => {
+  assert.match(mobileStoreListing, /Du prüfst jeden Vorschlag selbst/u);
+  assert.match(mobileStoreListing, /not an auto-sending bot/u);
+  assert.match(mobileStoreListing, /https:\/\/fanmind\.ch\/datenschutz/u);
+  assert.match(mobileStoreListing, /https:\/\/fanmind\.ch\/account-deletion/u);
+  assert.doesNotMatch(
+    mobileStoreListing,
+    /aktive (?:Instagram|TikTok|WhatsApp|Facebook|Discord)-Integration/iu,
+  );
 });
 
 test("mobile runtime never imports Website, Next.js, CSS modules or WebView", () => {

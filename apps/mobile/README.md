@@ -36,6 +36,7 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - offene Follow-ups anzeigen und abschließen;
 - verschlüsselte, maximal 24 Stunden alte Offline-Kontaktübersicht mit höchstens 50 Einträgen im Nur-Lesen-Modus;
 - native Push-Konfigurationsgrundlage mit streng validierter Navigation zu Follow-ups, noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
+- nativer heller und dunkler Splashscreen mit der bestätigten FanMind-Wortmarke;
 - sichere lokale Abmeldung mit Purge registrierter FanMind-SecureStore-Schlüssel und Workspace-Zustand.
 
 ## Sicherheitsgrenzen
@@ -108,9 +109,9 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 
 1. Supabase-Redirect `fanmind://reset-password` extern freigeben und Recovery auf einem realen Gerät testen.
 2. EAS-Projekt, Signing Credentials und interne Preview-Builds einrichten.
-3. App-Icon und Splashscreen aus dem final bestätigten FanMind-Branding erzeugen.
+3. Hochauflösendes rundes App-Icon aus dem final bestätigten FanMind-Branding bereitstellen; die Wortmarke ist bereits als nativer Splashscreen eingebunden.
 4. Push-Berechtigung, Token-Registrierung und serverseitige Zustellung in einem signierten Development-/Preview-Build umsetzen und testen.
 5. Android Internal Testing und iOS TestFlight durchführen.
-6. Store-Unterlagen, Datenschutzangaben und reale Gerätetestprotokolle abschließen.
+6. Die vorbereiteten Store-Texte, Datenschutzangaben und Screenshot-Matrix nach realen Gerätetests final abnehmen.
 
-Die Produkt- und Release-Checkliste für diese Schritte steht in `docs/mobile/BETA_RELEASE.md`.
+Die Produkt- und Release-Checkliste für diese Schritte steht in `docs/mobile/BETA_RELEASE.md`; die vorbereiteten Store-Metadaten stehen in `docs/mobile/STORE_LISTING.md`.
