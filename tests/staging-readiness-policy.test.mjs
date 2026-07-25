@@ -62,6 +62,10 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/);
   assert.match(workflow, /FANMIND_ENABLE_REFERRAL_BILLING: 'false'/);
   assert.match(workflow, /npm run staging:preflight/);
+  assert.match(
+    workflow,
+    /FANMIND_EXPECTED_RELEASE_COMMIT: \$\{\{ github\.sha \}\}/,
+  );
   assert.match(workflow, /npm run smoke:public/);
 });
 
