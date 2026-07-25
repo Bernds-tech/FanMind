@@ -1,4 +1,7 @@
+import { notFound } from "next/navigation";
 import { WorkspaceShell, type WorkspaceNavLink } from "@/components/WorkspaceShell";
+
+export const dynamic = "force-dynamic";
 
 async function previewLogout() {
   "use server";
@@ -24,6 +27,10 @@ const savedViews: WorkspaceNavLink[] = [
 ];
 
 export default function SidebarPreviewPage() {
+  if (process.env.FANMIND_ENABLE_SIDEBAR_PREVIEW_E2E !== "true") {
+    notFound();
+  }
+
   return (
     <WorkspaceShell
       workspaceName="FanMind"
