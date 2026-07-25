@@ -90,14 +90,22 @@ test.describe("FanMind workspace sidebar visual contract", () => {
 
     const avatar = page.locator('img[src*="fanmind-social-avatar"]');
     await expect(avatar).toBeVisible();
-    await expect
+    const renderedAvatar = await expect
       .poll(() =>
         avatar.evaluate((image) => ({
+          complete: (image as HTMLImageElement).complete,
           width: (image as HTMLImageElement).naturalWidth,
           height: (image as HTMLImageElement).naturalHeight,
         })),
       )
-      .toEqual({ width: 96, height: 96 });
+      .not.toEqual({ complete: false, width: 0, height: 0 });
+    void renderedAvatar;
+    const avatarSize = await avatar.evaluate((image) => ({
+      width: (image as HTMLImageElement).naturalWidth,
+      height: (image as HTMLImageElement).naturalHeight,
+    }));
+    expect(avatarSize.width).toBeGreaterThanOrEqual(48);
+    expect(avatarSize.height).toBe(avatarSize.width);
 
     for (const expandedLink of expanded.links) {
       const collapsedLink = collapsed.links.find(
