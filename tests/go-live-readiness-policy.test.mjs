@@ -59,6 +59,10 @@ test("go-live and deploy smoke gates share live truth and blocking-only health p
   assert.match(deploySmoke, /\/api\/health/u);
   assert.match(deploySmoke, /live German product truth/u);
   assert.match(deployWorkflow, /npm run smoke:public/u);
+  assert.match(
+    deployWorkflow,
+    /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=production/u,
+  );
   assert.match(healthPolicy, /OPTIONAL_PUBLIC_HEALTH_COMPONENTS/u);
   assert.match(healthPolicy, /email_config/u);
 
@@ -124,11 +128,19 @@ test("missing or unhealthy required components block deployment", () => {
 });
 
 test("final readiness workflow runs only after a successful deploy or manual dispatch", async () => {
-  const workflow = await read(workflowPath);
+  const [workflow, preflight, runbook] = await Promise.all([
+    read(workflowPath),
+    read(smokeScriptPath),
+    read(runbookPath),
+  ]);
 
   assert.match(workflow, /workflows:\s*\n\s*- Deploy FanMind/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(workflow, /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT: production/u);
   assert.match(workflow, /npm run smoke:go-live:public/);
+  assert.match(preflight, /payload\?\.runtimeEnvironment === expectedRuntimeEnvironment/u);
+  assert.match(runbook, /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=production/u);
+  assert.match(runbook, /runtimeEnvironment=production/u);
 });
 
 test("sales and final smoke documents preserve product guardrails", async () => {
