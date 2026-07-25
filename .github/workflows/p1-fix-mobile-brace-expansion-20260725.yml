@@ -49,49 +49,67 @@ jobs:
       - name: Install current Mobile dependencies reproducibly
         run: npm ci --prefix apps/mobile --no-audit --no-fund
 
-      - name: Apply only the non-major npm audit lockfile fix
+      - name: Replace only the exact vulnerable lockfile entry
         shell: bash
         run: |
           set -euo pipefail
           cp apps/mobile/package-lock.json "$RUNNER_TEMP/mobile-lock-before.json"
           cp apps/mobile/package.json "$RUNNER_TEMP/mobile-package-before.json"
 
-          set +e
-          npm audit fix --prefix apps/mobile --package-lock-only --no-fund
-          audit_fix_status=$?
-          set -e
-          if [ "$audit_fix_status" -ne 0 ] && [ "$audit_fix_status" -ne 1 ]; then
-            echo "Unexpected npm audit fix status: $audit_fix_status" >&2
-            exit 1
-          fi
-          echo "NPM_AUDIT_FIX_STATUS=$audit_fix_status"
+          metadata_dir="$RUNNER_TEMP/brace-expansion-5.0.8"
+          mkdir -p "$metadata_dir"
+          cat > "$metadata_dir/package.json" <<'JSON'
+          {
+            "name": "fanmind-brace-expansion-metadata",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "brace-expansion": "5.0.8"
+            }
+          }
+          JSON
+          npm install --prefix "$metadata_dir" --package-lock-only --ignore-scripts --no-audit --no-fund
+
+          BEFORE="$RUNNER_TEMP/mobile-lock-before.json" TARGET="apps/mobile/package-lock.json" SOURCE="$metadata_dir/package-lock.json" node <<'NODE'
+          const fs = require('node:fs');
+          const before = JSON.parse(fs.readFileSync(process.env.BEFORE, 'utf8'));
+          const target = JSON.parse(fs.readFileSync(process.env.TARGET, 'utf8'));
+          const source = JSON.parse(fs.readFileSync(process.env.SOURCE, 'utf8'));
+          const key = 'node_modules/brace-expansion';
+          const previous = target.packages?.[key];
+          const replacement = source.packages?.[key];
+          if (String(previous?.version || '') !== '5.0.7') {
+            throw new Error(`unexpected_previous_brace_expansion:${String(previous?.version || '')}`);
+          }
+          if (String(replacement?.version || '') !== '5.0.8') {
+            throw new Error(`invalid_replacement_brace_expansion:${String(replacement?.version || '')}`);
+          }
+          const dependencyNames = Object.keys(replacement.dependencies || {}).sort();
+          for (const dependencyName of dependencyNames) {
+            if (!target.packages?.[`node_modules/${dependencyName}`]) {
+              throw new Error(`replacement_dependency_missing:${dependencyName}`);
+            }
+          }
+          target.packages[key] = replacement;
+          fs.writeFileSync(process.env.TARGET, JSON.stringify(target, null, 2) + '\n');
+
+          const beforePackages = before.packages || {};
+          const afterPackages = target.packages || {};
+          const keys = [...new Set([...Object.keys(beforePackages), ...Object.keys(afterPackages)])].sort();
+          const changed = keys.filter((packageKey) => JSON.stringify(beforePackages[packageKey]) !== JSON.stringify(afterPackages[packageKey]));
+          if (JSON.stringify(changed) !== JSON.stringify([key])) {
+            throw new Error(`unexpected_lockfile_package_changes:${changed.join(',')}`);
+          }
+          console.log('BRACE_EXPANSION_PREVIOUS=5.0.7');
+          console.log('BRACE_EXPANSION_CURRENT=5.0.8');
+          console.log('LOCKFILE_CHANGED_PACKAGE_COUNT=1');
+          console.log(`REPLACEMENT_DEPENDENCY_COUNT=${dependencyNames.length}`);
+          NODE
 
           cmp -s apps/mobile/package.json "$RUNNER_TEMP/mobile-package-before.json"
-          test ! -e package-lock.json.tmp
           git diff --check
           test -n "$(git diff -- apps/mobile/package-lock.json)"
           test -z "$(git diff --name-only -- . ':!apps/mobile/package-lock.json')"
-
-          BEFORE="$RUNNER_TEMP/mobile-lock-before.json" AFTER="apps/mobile/package-lock.json" node <<'NODE'
-          const fs = require('node:fs');
-          const before = JSON.parse(fs.readFileSync(process.env.BEFORE, 'utf8'));
-          const after = JSON.parse(fs.readFileSync(process.env.AFTER, 'utf8'));
-          const beforePackages = before.packages || {};
-          const afterPackages = after.packages || {};
-          const keys = [...new Set([...Object.keys(beforePackages), ...Object.keys(afterPackages)])].sort();
-          const changed = keys.filter((key) => JSON.stringify(beforePackages[key]) !== JSON.stringify(afterPackages[key]));
-          if (JSON.stringify(changed) !== JSON.stringify(['node_modules/brace-expansion'])) {
-            throw new Error(`unexpected_lockfile_package_changes:${changed.join(',')}`);
-          }
-          const previous = String(beforePackages['node_modules/brace-expansion']?.version || '');
-          const current = String(afterPackages['node_modules/brace-expansion']?.version || '');
-          if (previous !== '5.0.7' || current !== '5.0.8') {
-            throw new Error(`unexpected_brace_expansion_transition:${previous}->${current}`);
-          }
-          console.log(`BRACE_EXPANSION_PREVIOUS=${previous}`);
-          console.log(`BRACE_EXPANSION_CURRENT=${current}`);
-          console.log('LOCKFILE_CHANGED_PACKAGE_COUNT=1');
-          NODE
 
       - name: Reinstall and enforce zero high or critical Mobile findings
         shell: bash
