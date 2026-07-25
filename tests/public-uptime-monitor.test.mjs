@@ -61,6 +61,69 @@ test("health and version payload validators enforce public production truth", ()
   );
 });
 
+test("version validation binds an expected release to its runtime environment", () => {
+  const stagingPayload = {
+    application: "fanmind",
+    releaseCommit: RELEASE_COMMIT,
+    environment: "production",
+    runtimeEnvironment: "staging",
+  };
+
+  assert.doesNotThrow(() =>
+    validateVersionPayload(stagingPayload, {
+      expectedCommit: RELEASE_COMMIT,
+      expectedRuntimeEnvironment: "staging",
+    }),
+  );
+  assert.throws(
+    () =>
+      validateVersionPayload(stagingPayload, {
+        expectedCommit: "b".repeat(40),
+        expectedRuntimeEnvironment: "staging",
+      }),
+    /version_release_mismatch/,
+  );
+  assert.throws(
+    () =>
+      validateVersionPayload(stagingPayload, {
+        expectedCommit: RELEASE_COMMIT,
+        expectedRuntimeEnvironment: "production",
+      }),
+    /version_runtime_environment_mismatch/,
+  );
+  for (const runtimeEnvironment of ["unknown", undefined]) {
+    assert.throws(
+      () =>
+        validateVersionPayload(
+          { ...stagingPayload, runtimeEnvironment },
+          {
+            expectedCommit: RELEASE_COMMIT,
+            expectedRuntimeEnvironment: "staging",
+          },
+        ),
+      /version_runtime_environment_mismatch/,
+    );
+  }
+  assert.throws(
+    () =>
+      validateVersionPayload(
+        { ...stagingPayload, environment: "staging" },
+        {
+          expectedCommit: RELEASE_COMMIT,
+          expectedRuntimeEnvironment: "staging",
+        },
+      ),
+    /version_environment_mismatch/,
+  );
+  assert.throws(
+    () =>
+      validateVersionPayload(stagingPayload, {
+        expectedRuntimeEnvironment: "preview",
+      }),
+    /invalid_expected_runtime_environment/,
+  );
+});
+
 test("monitor passes healthy public routes and records the release commit", async () => {
   const { server, baseUrl } = await startServer((request, response) => {
     if (request.url === "/api/health") {

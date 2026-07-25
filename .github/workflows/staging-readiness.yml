@@ -62,4 +62,5 @@ jobs:
         env:
           FANMIND_SMOKE_BASE_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
           FANMIND_EXPECTED_RELEASE_COMMIT: ${{ github.sha }}
+          FANMIND_EXPECTED_RUNTIME_ENVIRONMENT: staging
         run: npm run smoke:public

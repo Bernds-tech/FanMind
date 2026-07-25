@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { evaluatePublicHealth } from "./public-health-policy.mjs";
+import { validateVersionPayload } from "./monitor-public-uptime.mjs";
 import {
   PUBLIC_PRODUCT_TRUTH_RULES,
   evaluatePublicProductTruth,
@@ -14,6 +15,8 @@ const baseUrl = (
 ).replace(/\/$/, "");
 
 const expectedCommit = process.env.FANMIND_EXPECTED_RELEASE_COMMIT?.trim() || "";
+const expectedRuntimeEnvironment =
+  process.env.FANMIND_EXPECTED_RUNTIME_ENVIRONMENT?.trim() || "";
 const routes = [
   "/",
   "/?lang=en",
@@ -52,23 +55,10 @@ async function fetchRoute(route) {
 
   if (route === "/api/version") {
     const payload = await response.json().catch(() => null);
-    const liveCommit = payload?.releaseCommit;
-
-    if (!liveCommit || liveCommit === "unknown") {
-      throw new Error("/api/version returned no deployed release commit");
-    }
-
-    if (expectedCommit && liveCommit !== expectedCommit) {
-      throw new Error(
-        `/api/version returned ${liveCommit}, expected ${expectedCommit}`,
-      );
-    }
-
-    if (payload?.environment !== "production") {
-      throw new Error(
-        `/api/version returned unexpected environment ${String(payload?.environment)}`,
-      );
-    }
+    validateVersionPayload(payload, {
+      expectedCommit,
+      expectedRuntimeEnvironment,
+    });
 
     return { status: response.status, body: payload };
   }

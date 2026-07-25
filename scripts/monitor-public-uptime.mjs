@@ -59,7 +59,7 @@ export function validateHealthPayload(payload) {
   };
 }
 
-export function validateVersionPayload(payload) {
+export function validateVersionPayload(payload, expectations = {}) {
   if (!payload || typeof payload !== "object") {
     throw monitorError("invalid_version_payload");
   }
@@ -69,9 +69,39 @@ export function validateVersionPayload(payload) {
   if (!COMMIT_PATTERN.test(String(payload.releaseCommit ?? ""))) {
     throw monitorError("invalid_release_commit");
   }
+  const expectedCommit = String(expectations.expectedCommit ?? "")
+    .trim()
+    .toLowerCase();
+  if (expectedCommit && !COMMIT_PATTERN.test(expectedCommit)) {
+    throw monitorError("invalid_expected_release_commit");
+  }
+  if (expectedCommit && payload.releaseCommit !== expectedCommit) {
+    throw monitorError("version_release_mismatch");
+  }
   if (payload.environment !== "production") {
     throw monitorError("version_environment_mismatch", {
       environment: payload.environment ?? null,
+    });
+  }
+  const expectedRuntimeEnvironment = String(
+    expectations.expectedRuntimeEnvironment ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  if (
+    expectedRuntimeEnvironment
+    && !["production", "staging", "test", "development"].includes(
+      expectedRuntimeEnvironment,
+    )
+  ) {
+    throw monitorError("invalid_expected_runtime_environment");
+  }
+  if (
+    expectedRuntimeEnvironment
+    && payload.runtimeEnvironment !== expectedRuntimeEnvironment
+  ) {
+    throw monitorError("version_runtime_environment_mismatch", {
+      runtimeEnvironment: payload.runtimeEnvironment ?? null,
     });
   }
   return {
