@@ -53,6 +53,18 @@ test("English landing uses the complete translation wrapper", async () => {
   assert.match(supplement, /AI_TIER_CONFIG/);
   assert.match(supplement, /combinedAiPriceGerman/);
   assert.match(supplement, /combinedAiPriceEnglish/);
+  for (const roadmapTranslation of [
+    '"Passwort-Reset und Kontaktbearbeitung": "Password reset and contact editing"',
+    '"Im App-Kern vorhanden": "Available in the app core"',
+    '"Verschlüsselte Offline-Kontaktübersicht": "Encrypted offline contact overview"',
+    '"24 h · maximal 50 · nur lesen": "24 h · up to 50 · read-only"',
+    '"Push für Follow-up-Erinnerungen": "Push for follow-up reminders"',
+  ]) {
+    assert.ok(
+      supplement.includes(roadmapTranslation),
+      `Missing roadmap translation: ${roadmapTranslation}`,
+    );
+  }
   assert.doesNotMatch(
     supplement,
     /AI Plus \+€100\/month · AI Ultra \+€200\/month/,
