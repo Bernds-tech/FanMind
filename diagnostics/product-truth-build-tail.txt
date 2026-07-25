@@ -1,0 +1,33 @@
+BUILD_EXIT_STATUS=1
+--- LAST 160 BUILD LINES ---
+
+> fanmind-temp@0.1.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+▲ Next.js 16.2.11 (Turbopack)
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 6.6s
+  Running TypeScript ...
+Failed to type check.
+
+./src/app/landing-v2/page.tsx:1096:45
+Type error: Property 'showComingSoonMark' does not exist on type '{ href: string; icon: string; title: string; text: string; body: string; cta: string; tone: string; status?: undefined; hideStatusLabel?: undefined; } | { href: string; icon: string; title: string; status: string; ... 4 more ...; tone: string; }'.
+  Property 'showComingSoonMark' does not exist on type '{ href: string; icon: string; title: string; text: string; body: string; cta: string; tone: string; status?: undefined; hideStatusLabel?: undefined; }'.
+
+  [90m1094 |[0m ...      <div className={styles.solutionFlow}>
+  [90m1095 |[0m ...        {localizedFunctionCards.map((card) => {
+[31m[1m>[0m [90m1096 |[0m ...          [36mconst[0m showComingSoonMark = card.showComingSoonMark || isComingSoonStatus(ca...
+  [90m     |[0m                                              [31m[1m^[0m
+  [90m1097 |[0m ...
+  [90m1098 |[0m ...          [36mreturn[0m (
+  [90m1099 |[0m ...            <article
+Next.js build worker exited with code: 1 and signal: null
