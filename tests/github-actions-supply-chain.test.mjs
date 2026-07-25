@@ -4,6 +4,8 @@ import test from "node:test";
 
 import { scanWorkflowPolicy } from "../scripts/verify-actions-pinned.mjs";
 
+const CODEQL_V4_37_3_SHA = "e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81";
+
 async function exists(path) {
   try {
     await access(path);
@@ -27,17 +29,18 @@ test("all GitHub workflows use immutable external Action references and explicit
   );
 });
 
-test("CodeQL uses the reviewed pinned action and writes only security events", async () => {
+test("CodeQL init and analyze use the same reviewed v4.37.3 commit and minimal permissions", async () => {
   const source = await readFile(".github/workflows/codeql.yml", "utf8");
+  const initMatch = source.match(
+    /github\/codeql-action\/init@([0-9a-f]{40})\s+#\s+v4\.37\.3/u,
+  );
+  const analyzeMatch = source.match(
+    /github\/codeql-action\/analyze@([0-9a-f]{40})\s+#\s+v4\.37\.3/u,
+  );
 
-  assert.match(
-    source,
-    /github\/codeql-action\/init@0daab03d71ff584ef619d027a3fd9146679c5d84/u,
-  );
-  assert.match(
-    source,
-    /github\/codeql-action\/analyze@0daab03d71ff584ef619d027a3fd9146679c5d84/u,
-  );
+  assert.equal(initMatch?.[1], CODEQL_V4_37_3_SHA);
+  assert.equal(analyzeMatch?.[1], CODEQL_V4_37_3_SHA);
+  assert.equal(initMatch?.[1], analyzeMatch?.[1]);
   assert.match(source, /queries: security-extended/u);
   assert.match(source, /security-events: write/u);
   assert.match(source, /contents: read/u);
