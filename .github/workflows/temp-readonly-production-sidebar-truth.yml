@@ -1,0 +1,207 @@
+name: Temporary Read-only Production Sidebar and Product Truth Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    name: Verify deployed release, health and public truth
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_COMMIT: ab2238125d216c8ae7258b83a2372e05ed93e918
+      BASE_URL: https://fanmind.ch
+
+    steps:
+      - name: Wait for expected release without changing Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          matched=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 15 "$BASE_URL/api/version" -o /tmp/fanmind-version.json; then
+              live_commit="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              payload = json.loads(Path('/tmp/fanmind-version.json').read_text(encoding='utf-8'))
+          except Exception:
+              print('')
+          else:
+              value = payload.get('releaseCommit', '')
+              print(value if isinstance(value, str) else '')
+          PY
+              )"
+              if [ "$live_commit" = "$EXPECTED_COMMIT" ]; then
+                matched=true
+                echo "Expected Production release is active."
+                break
+              fi
+            fi
+            echo "Production release is not yet the expected commit (attempt ${attempt}/60)."
+            sleep 15
+          done
+
+          if [ "$matched" != "true" ]; then
+            echo "Expected Production release was not observed within the bounded wait window." >&2
+            exit 1
+          fi
+
+      - name: Fetch public health and landing page read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 20 "$BASE_URL/api/health" -o /tmp/fanmind-health.json
+          curl -fsSL --max-time 30 "$BASE_URL/" -o /tmp/fanmind-landing.html
+
+      - name: Verify required health components and public product truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          python3 - <<'PY'
+          import json
+          import os
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          expected_commit = os.environ['EXPECTED_COMMIT']
+          version = json.loads(Path('/tmp/fanmind-version.json').read_text(encoding='utf-8'))
+          health = json.loads(Path('/tmp/fanmind-health.json').read_text(encoding='utf-8'))
+          html = Path('/tmp/fanmind-landing.html').read_text(encoding='utf-8', errors='strict')
+
+          if version.get('releaseCommit') != expected_commit:
+              raise SystemExit('release_commit_mismatch')
+
+          required_components = [
+              'application',
+              'supabase_config',
+              'supabase_database',
+              'supabase_storage',
+              'stripe_config',
+              'openai_config',
+              'shared_rate_limit_config',
+          ]
+          checks = {
+              item.get('component'): item.get('status')
+              for item in health.get('checks', [])
+              if isinstance(item, dict) and isinstance(item.get('component'), str)
+          }
+          unhealthy = {
+              component: checks.get(component, 'missing')
+              for component in required_components
+              if checks.get(component) != 'healthy'
+          }
+          if unhealthy:
+              raise SystemExit('required_health_not_healthy:' + ','.join(sorted(unhealthy)))
+
+          class ArticleParser(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.active = []
+                  self.articles = []
+                  self.page_parts = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag == 'article':
+                      self.active.append({'parts': [], 'images': []})
+                  if tag == 'img' and self.active:
+                      values = dict(attrs)
+                      image = {
+                          'alt': values.get('alt', ''),
+                          'src': values.get('src', ''),
+                      }
+                      for article in self.active:
+                          article['images'].append(image)
+
+              def handle_data(self, data):
+                  self.page_parts.append(data)
+                  for article in self.active:
+                      article['parts'].append(data)
+
+              def handle_endtag(self, tag):
+                  if tag == 'article' and self.active:
+                      article = self.active.pop()
+                      article['text'] = ' '.join(' '.join(article.pop('parts')).split())
+                      self.articles.append(article)
+
+          parser = ArticleParser()
+          parser.feed(html)
+          page_text = ' '.join(' '.join(parser.page_parts).split())
+
+          def matching_articles(*needles):
+              return [
+                  article
+                  for article in parser.articles
+                  if all(needle in article['text'] for needle in needles)
+              ]
+
+          def assert_active_card(label, *needles):
+              matches = matching_articles(*needles)
+              if not matches:
+                  raise SystemExit(f'{label}_article_missing')
+              for article in matches:
+                  for image in article['images']:
+                      if image.get('alt') == 'Coming Soon' or 'coming-soon-badge' in image.get('src', ''):
+                          raise SystemExit(f'{label}_incorrect_coming_soon_badge')
+
+          assert_active_card('manual_followups', 'Manuelle Follow-ups')
+          assert_active_card('followups_function', '4. Follow-ups', 'Alle Follow-ups')
+          assert_active_card('followups_step', '4. Follow-up planen', 'Alle Follow-ups anzeigen')
+
+          whatsapp_cards = matching_articles(
+              'WhatsApp',
+              'Chat-Kontext für spätere Synchronisation vorbereitet.',
+          )
+          if not whatsapp_cards:
+              raise SystemExit('whatsapp_card_missing')
+          if not any('Coming Soon' in article['text'] and 'Beta' not in article['text'] for article in whatsapp_cards):
+              raise SystemExit('whatsapp_not_coming_soon')
+
+          new_beta = 'Facebook und Instagram werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.'
+          new_roadmap = 'WhatsApp, TikTok, X, Discord, Kampagnen, Analytics/Reichweite sowie Rollen/Rechte bleiben Roadmap.'
+          old_beta = 'Facebook, Instagram und WhatsApp werden nur als vorbereitete Beta-Workflows gezeigt; keine produktive Vollintegration.'
+
+          if new_beta not in page_text:
+              raise SystemExit('new_beta_summary_missing')
+          if new_roadmap not in page_text:
+              raise SystemExit('new_whatsapp_roadmap_summary_missing')
+          if old_beta in page_text:
+              raise SystemExit('old_whatsapp_beta_summary_present')
+
+          report = {
+              'expected_release_commit': expected_commit,
+              'live_release_matches': True,
+              'required_health_components': {name: checks[name] for name in required_components},
+              'sidebar_release_included_by_commit': True,
+              'manual_followups_without_coming_soon_badge': True,
+              'followups_function_without_coming_soon_badge': True,
+              'followups_step_without_coming_soon_badge': True,
+              'whatsapp_status': 'Coming Soon',
+              'whatsapp_beta_wording_absent': True,
+              'production_data_mutated': False,
+          }
+          Path('verification/production-sidebar-truth-report.json').write_text(
+              json.dumps(report, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print('Production release, health, Follow-ups and WhatsApp status verified read-only.')
+          PY
+
+      - name: Upload redacted verification report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-production-sidebar-truth-verification
+          path: verification/production-sidebar-truth-report.json
+          if-no-files-found: warn
+          retention-days: 7
