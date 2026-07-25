@@ -68,6 +68,7 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 - Stripe Test Mode verwendet wird;
 - GitHub-Workflow vollständig grün ist;
 - `/api/version` exakt den Commit ausliefert, auf dem der Readiness-Workflow gestartet wurde;
+- `/api/version` zusätzlich `runtimeEnvironment=staging` ausliefert und damit die aktive Staging-Runtime bestätigt;
 - keine realen Kundendaten vorhanden sind;
 - Read-only- und Write-Preflight wie vorgesehen fail-closed reagieren;
 - ein Test-Webhook erfolgreich verarbeitet wurde.

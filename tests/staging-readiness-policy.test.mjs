@@ -9,6 +9,8 @@ const scriptPath = "scripts/staging-readiness-preflight.mjs";
 const workflowPath = ".github/workflows/staging-readiness.yml";
 const runbookPath = "docs/operations/STAGING_PROVISIONING.md";
 const roadmapPath = "src/config/roadmap.ts";
+const versionRoutePath = "src/app/api/version/route.ts";
+const smokePath = "scripts/smoke-public-routes.mjs";
 
 const stagingSecrets = {
   anon: "anon_value_1234567890",
@@ -47,7 +49,12 @@ async function read(path) {
 }
 
 test("staging readiness remains fail-closed and test-mode only", async () => {
-  const [script, workflow] = await Promise.all([read(scriptPath), read(workflowPath)]);
+  const [script, workflow, versionRoute, smoke] = await Promise.all([
+    read(scriptPath),
+    read(workflowPath),
+    read(versionRoutePath),
+    read(smokePath),
+  ]);
 
   assert.match(script, /FANMIND_RUNTIME_ENVIRONMENT muss staging sein/);
   assert.match(script, /sk_test_/);
@@ -66,7 +73,13 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
     workflow,
     /FANMIND_EXPECTED_RELEASE_COMMIT: \$\{\{ github\.sha \}\}/,
   );
+  assert.match(workflow, /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT: staging/);
   assert.match(workflow, /npm run smoke:public/);
+  assert.match(versionRoute, /FANMIND_RUNTIME_ENVIRONMENT/);
+  assert.match(versionRoute, /KNOWN_RUNTIME_ENVIRONMENTS/);
+  assert.match(versionRoute, /runtimeEnvironment/);
+  assert.match(smoke, /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT/);
+  assert.match(smoke, /validateVersionPayload/);
 });
 
 test("staging readiness accepts an exact URL-to-target binding without exposing values", async () => {
@@ -121,6 +134,7 @@ test("staging runbook forbids production data and documents external dependencie
   assert.match(runbook, /ausschließlich synthetische Kontakte/);
   assert.match(runbook, /keine Live-Kunden/);
   assert.match(runbook, /exakt der Projektreferenz in der Supabase-URL entsprechen/);
+  assert.match(runbook, /runtimeEnvironment.*staging/);
   assert.match(runbook, /ersetzt nicht die externen Ressourcen/);
   assert.match(runbook, /Produktions- und Testdaten trennen/);
 });
