@@ -30,8 +30,8 @@
   "dependencies": {
     "next": "16.2.11",
     "pdfnative": "1.6.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@playwright/test": "1.60.0",
