@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, type ReactNode } from "react";
 import dashboardStyles from "../app/dashboard/dashboard.module.css";
 import sidebarStyles from "./WorkspaceSidebar.module.css";
+import responsiveStyles from "./WorkspaceSidebarResponsive.module.css";
 import { FanMindLogo } from "./FanMindLogo";
 import {
   FanMindFunctionIcon,
@@ -176,13 +177,15 @@ export function WorkspaceShell({
 
   return (
     <div
-      className={`${dashboardStyles.dashboardShell} ${
-        sidebarCollapsed ? dashboardStyles.dashboardShellCollapsed : ""
+      className={`${dashboardStyles.dashboardShell} ${responsiveStyles.shell} ${
+        sidebarCollapsed
+          ? `${dashboardStyles.dashboardShellCollapsed} ${responsiveStyles.shellCollapsed}`
+          : ""
       }`}
       data-sidebar-state={sidebarCollapsed ? "collapsed" : "expanded"}
     >
       <aside
-        className={`${sidebarStyles.sidebar} ${
+        className={`${sidebarStyles.sidebar} ${responsiveStyles.sidebarSurface} ${
           sidebarCollapsed ? sidebarStyles.sidebarCollapsed : ""
         }`}
         aria-label="FanMind Navigation"
@@ -331,7 +334,7 @@ export function WorkspaceShell({
       </aside>
 
       <div
-        className={`${dashboardStyles.dashboardContent} ${dashboardStyles.dashboardContentStart}`}
+        className={`${dashboardStyles.dashboardContent} ${dashboardStyles.dashboardContentStart} ${responsiveStyles.content}`}
       >
         <WorkspaceHeader {...header} locale={locale} />
         <div className={dashboardStyles.dashboardScrollArea}>
