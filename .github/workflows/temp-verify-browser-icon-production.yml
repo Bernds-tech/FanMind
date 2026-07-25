@@ -80,10 +80,13 @@ jobs:
           set -euo pipefail
           mkdir -p verification
           python3 - <<'PY'
+          import html as html_module
           import json
           import os
           import re
+          from html.parser import HTMLParser
           from pathlib import Path
+          from urllib.parse import parse_qs, urlparse
 
           expected_commit = os.environ['EXPECTED_COMMIT']
           icon_revision = os.environ['ICON_REVISION']
@@ -92,32 +95,52 @@ jobs:
           headers = Path('/tmp/fanmind-icon-headers.txt').read_text(encoding='utf-8', errors='replace')
           icon = Path('/tmp/fanmind-icon.png').read_bytes()
 
-          if version.get('releaseCommit') != expected_commit:
-              raise SystemExit('release_commit_mismatch')
+          class IconLinkParser(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.icon_hrefs = []
 
-          expected_href = f'/icon?v={icon_revision}'
-          if expected_href not in html and expected_href.replace('&', '&amp;') not in html:
-              raise SystemExit('cache_busted_icon_href_missing')
-          if '/favicon.ico' in html:
-              raise SystemExit('obsolete_favicon_href_present')
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() != 'link':
+                      return
+                  values = {key.lower(): value or '' for key, value in attrs}
+                  rel_tokens = {token.lower() for token in values.get('rel', '').split()}
+                  if 'icon' in rel_tokens:
+                      href = html_module.unescape(values.get('href', '')).strip()
+                      if href:
+                          self.icon_hrefs.append(href)
 
-          if b'PNG\r\n\x1a\n' != icon[:8]:
-              raise SystemExit('icon_is_not_png')
-          width = int.from_bytes(icon[16:20], 'big')
-          height = int.from_bytes(icon[20:24], 'big')
-          if (width, height) != (96, 96):
-              raise SystemExit(f'icon_dimensions_invalid:{width}x{height}')
-          if not re.search(r'(?im)^content-type:\s*image/png(?:;|\s|$)', headers):
-              raise SystemExit('icon_content_type_invalid')
+          parser = IconLinkParser()
+          parser.feed(html)
+
+          def is_expected_icon_href(href):
+              parsed = urlparse(href)
+              return parsed.path.endswith('/icon') and parse_qs(parsed.query).get('v') == [icon_revision]
+
+          release_matches = version.get('releaseCommit') == expected_commit
+          expected_icon_href_present = any(is_expected_icon_href(href) for href in parser.icon_hrefs)
+          obsolete_favicon_href_present = any('/favicon.ico' in href for href in parser.icon_hrefs)
+          png_signature_valid = icon[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
+          width = int.from_bytes(icon[16:20], 'big') if len(icon) >= 24 else 0
+          height = int.from_bytes(icon[20:24], 'big') if len(icon) >= 24 else 0
+          dimensions_valid = (width, height) == (96, 96)
+          content_type_valid = bool(
+              re.search(r'(?im)^content-type:\s*image/png(?:;|\s|$)', headers)
+          )
 
           report = {
               'expected_release_commit': expected_commit,
-              'live_release_matches': True,
-              'cache_busted_icon_href_present': True,
-              'obsolete_favicon_href_present': False,
-              'icon_content_type': 'image/png',
+              'live_release_commit': version.get('releaseCommit'),
+              'live_release_matches': release_matches,
+              'icon_link_count': len(parser.icon_hrefs),
+              'icon_hrefs': parser.icon_hrefs,
+              'cache_busted_icon_href_present': expected_icon_href_present,
+              'obsolete_favicon_href_present': obsolete_favicon_href_present,
+              'png_signature_valid': png_signature_valid,
+              'icon_content_type_valid': content_type_valid,
               'icon_width': width,
               'icon_height': height,
+              'icon_dimensions_valid': dimensions_valid,
               'production_requests': 'GET only',
               'production_data_mutated': False,
           }
@@ -125,6 +148,25 @@ jobs:
               json.dumps(report, indent=2, sort_keys=True) + '\n',
               encoding='utf-8',
           )
+          print(json.dumps(report, indent=2, sort_keys=True))
+
+          failures = []
+          if not release_matches:
+              failures.append('release_commit_mismatch')
+          if not expected_icon_href_present:
+              failures.append('cache_busted_icon_href_missing')
+          if obsolete_favicon_href_present:
+              failures.append('obsolete_favicon_href_present')
+          if not png_signature_valid:
+              failures.append('icon_is_not_png')
+          if not dimensions_valid:
+              failures.append(f'icon_dimensions_invalid:{width}x{height}')
+          if not content_type_valid:
+              failures.append('icon_content_type_invalid')
+
+          if failures:
+              raise SystemExit(';'.join(failures))
+
           print('Production browser icon verified read-only.')
           PY
 
