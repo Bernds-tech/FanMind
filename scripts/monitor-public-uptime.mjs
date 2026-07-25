@@ -145,6 +145,7 @@ async function fetchWithRetry(url, options) {
 export async function runPublicUptimeChecks(input = {}) {
   const baseUrl = normalizeBaseUrl(input.baseUrl ?? "https://fanmind.ch");
   const checks = input.checks ?? DEFAULT_PUBLIC_CHECKS;
+  const expectedRuntimeEnvironment = input.expectedRuntimeEnvironment ?? "";
   const timeoutMs = input.timeoutMs ?? 15000;
   const attempts = input.attempts ?? 3;
   const retryDelayMs = input.retryDelayMs ?? 1500;
@@ -170,7 +171,9 @@ export async function runPublicUptimeChecks(input = {}) {
       if (check.kind === "health") {
         details = validateHealthPayload(await parseJsonSafely(response));
       } else if (check.kind === "version") {
-        details = validateVersionPayload(await parseJsonSafely(response));
+        details = validateVersionPayload(await parseJsonSafely(response), {
+          expectedRuntimeEnvironment,
+        });
       } else {
         await response.arrayBuffer();
       }
@@ -219,6 +222,17 @@ function parseCli(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--base-url") options.baseUrl = argv[++index];
+    else if (value === "--expected-runtime-environment") {
+      const expectedRuntimeEnvironment = argv[index + 1];
+      if (
+        !expectedRuntimeEnvironment
+        || expectedRuntimeEnvironment.startsWith("--")
+      ) {
+        throw monitorError("missing_argument_value", { argument: value });
+      }
+      options.expectedRuntimeEnvironment = expectedRuntimeEnvironment;
+      index += 1;
+    }
     else if (value === "--timeout-ms") options.timeoutMs = Number(argv[++index]);
     else if (value === "--attempts") options.attempts = Number(argv[++index]);
     else if (value === "--json") options.json = true;
@@ -232,7 +246,7 @@ function usage() {
   return `FanMind public uptime monitor
 
 Usage:
-  node scripts/monitor-public-uptime.mjs [--base-url https://fanmind.ch] [--json]
+  node scripts/monitor-public-uptime.mjs [--base-url https://fanmind.ch] [--expected-runtime-environment production] [--json]
 
 The monitor performs read-only GET requests against public FanMind routes.`;
 }

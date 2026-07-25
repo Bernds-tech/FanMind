@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createServer } from "node:http";
+import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 
 import {
   runPublicUptimeChecks,
@@ -138,6 +140,7 @@ test("monitor passes healthy public routes and records the release commit", asyn
           application: "fanmind",
           releaseCommit: RELEASE_COMMIT,
           environment: "production",
+          runtimeEnvironment: "production",
         }),
       );
       return;
@@ -152,6 +155,7 @@ test("monitor passes healthy public routes and records the release commit", asyn
       timeoutMs: 2000,
       attempts: 1,
       retryDelayMs: 1,
+      expectedRuntimeEnvironment: "production",
     });
     assert.equal(report.ok, true);
     assert.equal(report.failed, 0);
@@ -182,6 +186,7 @@ test("monitor reports a route failure without hiding successful checks", async (
           application: "fanmind",
           releaseCommit: RELEASE_COMMIT,
           environment: "production",
+          runtimeEnvironment: "production",
         }),
       );
       return;
@@ -196,6 +201,7 @@ test("monitor reports a route failure without hiding successful checks", async (
       timeoutMs: 2000,
       attempts: 1,
       retryDelayMs: 1,
+      expectedRuntimeEnvironment: "production",
     });
     assert.equal(report.ok, false);
     assert.equal(report.failed, 1);
@@ -206,6 +212,77 @@ test("monitor reports a route failure without hiding successful checks", async (
   } finally {
     await closeServer(server);
   }
+});
+
+test("production uptime fails when the live runtime boundary is missing", async () => {
+  const { server, baseUrl } = await startServer((request, response) => {
+    response.writeHead(200, {
+      "Content-Type":
+        request.url?.startsWith("/api/") ? "application/json" : "text/html",
+    });
+    if (request.url === "/api/health") {
+      response.end(JSON.stringify({ status: "healthy", scope: "public" }));
+    } else if (request.url === "/api/version") {
+      response.end(
+        JSON.stringify({
+          application: "fanmind",
+          releaseCommit: RELEASE_COMMIT,
+          environment: "production",
+          runtimeEnvironment: "unknown",
+        }),
+      );
+    } else {
+      response.end("ok");
+    }
+  });
+
+  try {
+    const report = await runPublicUptimeChecks({
+      baseUrl,
+      timeoutMs: 2000,
+      attempts: 1,
+      retryDelayMs: 1,
+      expectedRuntimeEnvironment: "production",
+    });
+    assert.equal(report.ok, false);
+    assert.equal(report.failed, 1);
+    const version = report.results.find((result) => result.name === "version");
+    assert.equal(version.ok, false);
+    assert.equal(version.error, "version_runtime_environment_mismatch");
+    assert.deepEqual(version.errorDetails, {
+      runtimeEnvironment: "unknown",
+    });
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("scheduled and manual Production uptime checks require the runtime boundary", async () => {
+  const [workflow, packageJson, runbook] = await Promise.all([
+    readFile(".github/workflows/uptime-fanmind.yml", "utf8"),
+    readFile("package.json", "utf8"),
+    readFile("docs/operations/UPTIME_MONITOR.md", "utf8"),
+  ]);
+
+  for (const source of [workflow, packageJson, runbook]) {
+    assert.match(source, /--expected-runtime-environment production/u);
+  }
+  assert.match(runbook, /runtimeEnvironment=production/u);
+});
+
+test("runtime expectation CLI flag fails closed without a value", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "scripts/monitor-public-uptime.mjs",
+      "--expected-runtime-environment",
+      "--help",
+    ],
+    { encoding: "utf8" },
+  );
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /missing_argument_value/u);
 });
 
 test("monitor rejects non-HTTPS remote base URLs", async () => {
