@@ -1,0 +1,191 @@
+name: FanMind P1 Controlled Reboot Preflight Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-controlled-reboot-preflight-diagnostic-20260724.yml"
+
+concurrency:
+  group: fanmind-p1-controlled-reboot-preflight-diagnostic-20260724
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 15
+    env:
+      EXPECTED_RELEASE: 6b8ba61a1786651713b2507340dc7b673811159d
+      REPORT_PATH: fanmind-controlled-reboot-preflight-diagnostic.txt
+    steps:
+      - name: Checkout trusted operations branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/controlled-ubuntu-reboot-20260724
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Record every preflight contract without mutation
+        id: diagnostic
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          failures=0
+
+          record() {
+            printf '%s=%s\n' "$1" "$2" | tee -a "$report"
+          }
+
+          check() {
+            local key="$1"
+            shift
+            if "$@" >/dev/null 2>&1; then
+              record "$key" pass
+            else
+              record "$key" fail
+              failures=$((failures + 1))
+            fi
+          }
+
+          record DIAGNOSTIC_UTC "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          record EXPECTED_RELEASE "$EXPECTED_RELEASE"
+
+          live_release="$(curl -fsSL --max-time 15 https://fanmind.ch/api/version 2>/dev/null | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              try { process.stdout.write(JSON.parse(input).releaseCommit || "missing"); }
+              catch { process.stdout.write("invalid"); }
+            });
+          ' 2>/dev/null || printf unavailable)"
+          [ "$live_release" = "$EXPECTED_RELEASE" ] && record LIVE_RELEASE pass || { record LIVE_RELEASE fail; failures=$((failures + 1)); }
+          check SERVER_HEAD test "$(git -C /var/www/fanmind rev-parse HEAD 2>/dev/null || true)" = "$EXPECTED_RELEASE"
+          check ORIGIN_MAIN test "$(git -C /var/www/fanmind rev-parse origin/main 2>/dev/null || true)" = "$EXPECTED_RELEASE"
+          check CURRENT_RELEASE_LINK test "$(readlink -f /var/www/fanmind-current 2>/dev/null || true)" = "/var/www/fanmind-releases/$EXPECTED_RELEASE"
+
+          if curl -fsSL --max-time 15 https://fanmind.ch/api/health 2>/dev/null | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              try {
+                const payload = JSON.parse(input);
+                const checks = Array.isArray(payload.checks) ? payload.checks : [];
+                process.exit(payload.status === "healthy" && checks.length >= 7 && checks.every(item => item?.status === "healthy") ? 0 : 1);
+              } catch { process.exit(1); }
+            });
+          '; then
+            record PUBLIC_HEALTH pass
+          else
+            record PUBLIC_HEALTH fail
+            failures=$((failures + 1))
+          fi
+
+          check NGINX_CONFIG sudo -n nginx -t
+          check NGINX_ACTIVE systemctl is-active --quiet nginx.service
+          check PM2_UNIT_ACTIVE systemctl is-active --quiet pm2-ubuntu.service
+          check PM2_UNIT_ENABLED test "$(systemctl is-enabled pm2-ubuntu.service 2>/dev/null || true)" = enabled
+          check PM2_UNIT_USER test "$(systemctl show pm2-ubuntu.service -p User --value 2>/dev/null || true)" = ubuntu
+          check PM2_UNIT_TYPE test "$(systemctl show pm2-ubuntu.service -p Type --value 2>/dev/null || true)" = forking
+
+          main_pid="$(systemctl show pm2-ubuntu.service -p MainPID --value 2>/dev/null || printf 0)"
+          if [[ "$main_pid" =~ ^[0-9]+$ ]] && [ "$main_pid" -gt 1 ]; then record PM2_MAIN_PID pass; else record PM2_MAIN_PID fail; failures=$((failures + 1)); fi
+          check PM2_PIDFILE_PRESENT test -s /home/ubuntu/.pm2/pm2.pid
+          pidfile_value="$(tr -d '[:space:]' < /home/ubuntu/.pm2/pm2.pid 2>/dev/null || true)"
+          [ -n "$main_pid" ] && [ "$pidfile_value" = "$main_pid" ] && record PM2_PIDFILE_MATCH pass || { record PM2_PIDFILE_MATCH fail; failures=$((failures + 1)); }
+          [ -n "$main_pid" ] && [ -d "/proc/$main_pid" ] && record PM2_PROCESS_PRESENT pass || { record PM2_PROCESS_PRESENT fail; failures=$((failures + 1)); }
+          process_owner="$(stat -c %U "/proc/$main_pid" 2>/dev/null || true)"
+          [ "$process_owner" = ubuntu ] && record PM2_PROCESS_OWNER pass || { record PM2_PROCESS_OWNER fail; failures=$((failures + 1)); }
+
+          check RUNNER_ACTIVE systemctl is-active --quiet actions.runner.Bernds-tech-FanMind.fanmind-prod-01-exoscale.service
+          check RUNNER_ENABLED test "$(systemctl is-enabled actions.runner.Bernds-tech-FanMind.fanmind-prod-01-exoscale.service 2>/dev/null || true)" = enabled
+          check BACKUP_WORKER_ACTIVE systemctl is-active --quiet fanmind-backup-worker.service
+
+          timers=(
+            fanmind-backup-database.timer
+            fanmind-backup-storage.timer
+            fanmind-backup-server_config.timer
+            fanmind-backup-full.timer
+            fanmind-backup-retention.timer
+            fanmind-operations-monitor.timer
+            fanmind-demo-cleanup.timer
+            fanmind-webhook-diagnostic-retention.timer
+          )
+          for timer in "${timers[@]}"; do
+            key="$(printf '%s' "$timer" | tr '[:lower:].-' '[:upper:]__')"
+            check "${key}_ACTIVE" systemctl is-active --quiet "$timer"
+            check "${key}_ENABLED" test "$(systemctl is-enabled "$timer" 2>/dev/null || true)" = enabled
+          done
+
+          package_processes=0
+          for process in apt apt-get dpkg unattended-upgr; do
+            if pgrep -x "$process" >/dev/null 2>&1; then package_processes=$((package_processes + 1)); fi
+          done
+          [ "$package_processes" -eq 0 ] && record PACKAGE_MANAGER_IDLE pass || { record PACKAGE_MANAGER_IDLE fail; failures=$((failures + 1)); }
+
+          if [ -f /run/reboot-required ] || [ -f /var/run/reboot-required ]; then record REBOOT_REQUIRED_MARKER pass; else record REBOOT_REQUIRED_MARKER fail; failures=$((failures + 1)); fi
+
+          available_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo 2>/dev/null || printf 0)"
+          [[ "$available_kb" =~ ^[0-9]+$ ]] && [ "$available_kb" -ge 262144 ] && record MEMORY_CAPACITY pass || { record MEMORY_CAPACITY fail; failures=$((failures + 1)); }
+          root_available_kb="$(df -Pk / 2>/dev/null | awk 'NR==2 {print $4}')"
+          [[ "$root_available_kb" =~ ^[0-9]+$ ]] && [ "$root_available_kb" -ge 1048576 ] && record DISK_CAPACITY pass || { record DISK_CAPACITY fail; failures=$((failures + 1)); }
+          cpu_count="$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf 0)"
+          load_one="$(awk '{print $1}' /proc/loadavg 2>/dev/null || printf 999)"
+          if awk -v load="$load_one" -v cpu="$cpu_count" 'BEGIN { exit !(cpu >= 1 && load < cpu * 3) }'; then record LOAD_CAPACITY pass; else record LOAD_CAPACITY fail; failures=$((failures + 1)); fi
+
+          snapshot="$RUNNER_TEMP/fanmind-pm2-reboot-diagnostic.json"
+          umask 077
+          if pm2 jlist > "$snapshot" 2>/dev/null && SNAPSHOT="$snapshot" EXPECTED_RELEASE="$EXPECTED_RELEASE" node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const rows = JSON.parse(fs.readFileSync(process.env.SNAPSHOT, 'utf8')).filter(item => item?.name === 'fanmind');
+          const app = rows.length === 1 ? rows[0] : null;
+          const expected = `/var/www/fanmind-releases/${process.env.EXPECTED_RELEASE}`;
+          const valid = rows.length === 1
+            && app?.pm2_env?.status === 'online'
+            && String(app?.pm2_env?.pm_cwd || '') === expected
+            && Number(app?.pid || 0) > 1
+            && Number.isInteger(Number(app?.pm2_env?.restart_time));
+          process.exit(valid ? 0 : 1);
+          NODE
+          then
+            record PM2_APP_CONTRACT pass
+          else
+            record PM2_APP_CONTRACT fail
+            failures=$((failures + 1))
+          fi
+          rm -f "$snapshot"
+          check PM2_DUMP_PRESENT test -s /home/ubuntu/.pm2/dump.pm2
+
+          record FAILURE_COUNT "$failures"
+          if [ "$failures" -eq 0 ]; then
+            record CONTROLLED_REBOOT_PREFLIGHT_DIAGNOSTIC success
+          else
+            record CONTROLLED_REBOOT_PREFLIGHT_DIAGNOSTIC failed
+          fi
+          exit "$([ "$failures" -eq 0 ] && printf 0 || printf 1)"
+
+      - name: Upload sanitized diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-controlled-reboot-preflight-diagnostic
+          path: fanmind-controlled-reboot-preflight-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 7
