@@ -1,0 +1,102 @@
+name: FanMind P1 Mobile Lockfile Fix Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/p1-mobile-lockfile-fix-diagnostic-20260725.yml"
+
+concurrency:
+  group: fanmind-p1-mobile-lockfile-fix-diagnostic-20260725
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'p1/mobile-high-advisory-20260725'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      REPORT_PATH: fanmind-mobile-lockfile-fix-diagnostic.json
+    steps:
+      - name: Checkout trusted advisory branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: p1/mobile-high-advisory-20260725
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Inspect exact non-force audit-fix result without committing
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp apps/mobile/package-lock.json "$RUNNER_TEMP/mobile-lock-before.json"
+          cp apps/mobile/package.json "$RUNNER_TEMP/mobile-package-before.json"
+
+          set +e
+          npm audit fix --prefix apps/mobile --package-lock-only --no-fund > "$RUNNER_TEMP/mobile-audit-fix.stdout" 2> "$RUNNER_TEMP/mobile-audit-fix.stderr"
+          audit_fix_status=$?
+          set -e
+
+          AUDIT_FIX_STATUS="$audit_fix_status" BEFORE_LOCK="$RUNNER_TEMP/mobile-lock-before.json" AFTER_LOCK="apps/mobile/package-lock.json" BEFORE_PACKAGE="$RUNNER_TEMP/mobile-package-before.json" AFTER_PACKAGE="apps/mobile/package.json" node <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const beforeLock = JSON.parse(fs.readFileSync(process.env.BEFORE_LOCK, 'utf8'));
+          const afterLock = JSON.parse(fs.readFileSync(process.env.AFTER_LOCK, 'utf8'));
+          const beforePackage = fs.readFileSync(process.env.BEFORE_PACKAGE, 'utf8');
+          const afterPackage = fs.readFileSync(process.env.AFTER_PACKAGE, 'utf8');
+          const beforePackages = beforeLock.packages || {};
+          const afterPackages = afterLock.packages || {};
+          const keys = [...new Set([...Object.keys(beforePackages), ...Object.keys(afterPackages)])].sort();
+          const changedPackageKeys = keys.filter((key) => JSON.stringify(beforePackages[key]) !== JSON.stringify(afterPackages[key]));
+          const changedFilesResult = cp.spawnSync('git', ['diff', '--name-only'], { encoding: 'utf8' });
+          const changedFiles = String(changedFilesResult.stdout || '').split(/\r?\n/u).filter(Boolean).sort();
+          const report = {
+            generatedAt: new Date().toISOString(),
+            auditFixStatus: Number(process.env.AUDIT_FIX_STATUS || -1),
+            packageJsonChanged: beforePackage !== afterPackage,
+            changedFiles,
+            changedPackageKeys,
+            braceExpansion: {
+              before: String(beforePackages['node_modules/brace-expansion']?.version || ''),
+              after: String(afterPackages['node_modules/brace-expansion']?.version || ''),
+            },
+            stdoutIncluded: false,
+            stderrIncluded: false,
+            advisoryBodiesIncluded: false,
+            environmentValuesRead: false,
+          };
+          fs.writeFileSync(process.env.REPORT_PATH, JSON.stringify(report, null, 2) + '\n', { mode: 0o600 });
+          console.log(`AUDIT_FIX_STATUS=${report.auditFixStatus}`);
+          console.log(`PACKAGE_JSON_CHANGED=${report.packageJsonChanged}`);
+          console.log(`CHANGED_FILE_COUNT=${report.changedFiles.length}`);
+          console.log(`CHANGED_PACKAGE_KEY_COUNT=${report.changedPackageKeys.length}`);
+          console.log(`BRACE_EXPANSION_TRANSITION=${report.braceExpansion.before}->${report.braceExpansion.after}`);
+          NODE
+
+          rm -f "$RUNNER_TEMP/mobile-audit-fix.stdout" "$RUNNER_TEMP/mobile-audit-fix.stderr"
+          git reset --hard HEAD >/dev/null
+
+      - name: Upload sanitized lockfile diagnostic
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-mobile-lockfile-fix-diagnostic
+          path: fanmind-mobile-lockfile-fix-diagnostic.json
+          if-no-files-found: error
+          retention-days: 7
