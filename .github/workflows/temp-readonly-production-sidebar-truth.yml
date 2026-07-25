@@ -161,7 +161,7 @@ jobs:
 
           assert_active_card('manual_followups', 'Manuelle Follow-ups')
           assert_active_card('followups_function', '4. Follow-ups', 'Alle Follow-ups')
-          assert_active_card('followups_step', '4. Follow-up planen', 'Alle Follow-ups anzeigen')
+          assert_active_card('followups_step', 'Follow-up planen', 'Alle Follow-ups anzeigen')
 
           whatsapp_cards = matching_articles(
               'WhatsApp',
