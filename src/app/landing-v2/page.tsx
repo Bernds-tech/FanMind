@@ -1093,7 +1093,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
 
         <div className={styles.solutionFlow}>
           {localizedFunctionCards.map((card) => {
-            const showComingSoonMark = card.showComingSoonMark || isComingSoonStatus(card.status);
+            const showComingSoonMark =
+    isComingSoonStatus(card.status) ||
+    ("showComingSoonMark" in card && card.showComingSoonMark === true);
 
             return (
               <article
@@ -1154,7 +1156,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         <div className={styles.processTrack} aria-label="FanMind Prozesslinie">
           {localizedSixStepCards.map((step, index) => (
             <article
-              className={`${styles.processStep} ${step.showComingSoonMark || isComingSoonStatus(step.badge) ? styles.cardWithComingSoon : ""}`}
+              className={`${styles.processStep} ${("showComingSoonMark" in step && step.showComingSoonMark === true) || isComingSoonStatus(step.badge) ? styles.cardWithComingSoon : ""}`}
               data-tone={step.tone}
               key={step.title}
             >
@@ -1169,7 +1171,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                 <div className={styles.stepCardTitle}>
                   <span><FanMindFunctionIcon name={resolveFanMindFunctionIcon(step.icon, step.title)} /></span>
                   <strong>{step.cardTitle}</strong>
-                  {step.badge && !step.showComingSoonMark && (
+                  {step.badge && !("showComingSoonMark" in step && step.showComingSoonMark === true) && (
                     <FeatureStatusLabel variant={statusVariantFromLabel(step.badge) ?? "preview"}>{step.badge}</FeatureStatusLabel>
                   )}
                 </div>
@@ -1191,7 +1193,7 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
                   <span>→</span>
                 </a>
               </div>
-              {step.showComingSoonMark || isComingSoonStatus(step.badge) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
+              {("showComingSoonMark" in step && step.showComingSoonMark === true) || isComingSoonStatus(step.badge) ? <ComingSoonMark size="medium" className={styles.comingSoonImage} /> : null}
             </article>
           ))}
         </div>
