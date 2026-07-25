@@ -34,10 +34,16 @@ async function sidebarGeometry(page: Page) {
     });
 
     const shell = document.querySelector<HTMLElement>("[data-sidebar-state]");
+    const content = shell?.children.item(1) as HTMLElement | null;
     const consent = document.querySelector("[data-fanmind-marketing-consent]");
+    const sidebarStyle = getComputedStyle(sidebar);
     return {
       state: shell?.dataset.sidebarState ?? "missing",
       sidebarWidth: sidebar.getBoundingClientRect().width,
+      sidebarPosition: sidebarStyle.position,
+      sidebarBackgroundColor: sidebarStyle.backgroundColor,
+      sidebarBackgroundImage: sidebarStyle.backgroundImage,
+      contentLeft: content?.getBoundingClientRect().left ?? -1,
       pageScrollWidth: document.documentElement.scrollWidth,
       pageClientWidth: document.documentElement.clientWidth,
       consentPresent: Boolean(consent),
@@ -68,10 +74,24 @@ test.describe("FanMind workspace sidebar visual contract", () => {
     await expect(page.locator('[data-sidebar-state="expanded"]')).toBeVisible();
     await expect(page.getByTestId("sidebar-preview-content")).toBeVisible();
 
+    const viewport = page.viewportSize();
+    if (!viewport) throw new Error("viewport_missing");
+    const narrowViewport = viewport.width <= 960;
+
     const expanded = await sidebarGeometry(page);
     expect(expanded.state).toBe("expanded");
-    expect(expanded.sidebarWidth).toBeGreaterThanOrEqual(235);
-    expect(expanded.sidebarWidth).toBeLessThanOrEqual(237);
+    if (narrowViewport) {
+      const expectedExpandedWidth = Math.min(320, viewport.width - (viewport.width <= 520 ? 32 : 48));
+      expect(expanded.sidebarWidth).toBeCloseTo(expectedExpandedWidth, 0);
+      expect(expanded.contentLeft).toBeCloseTo(0, 0);
+    } else {
+      expect(expanded.sidebarWidth).toBeGreaterThanOrEqual(235);
+      expect(expanded.sidebarWidth).toBeLessThanOrEqual(237);
+      expect(expanded.contentLeft).toBeGreaterThanOrEqual(235);
+    }
+    expect(expanded.sidebarPosition).toBe("fixed");
+    expect(expanded.sidebarBackgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(expanded.sidebarBackgroundImage).not.toBe("none");
     expect(expanded.pageScrollWidth).toBeLessThanOrEqual(expanded.pageClientWidth + 1);
     expect(expanded.consentPresent).toBe(false);
     await expect(page.locator('img[src*="fanmind-social-avatar"]')).toBeHidden();
@@ -85,12 +105,15 @@ test.describe("FanMind workspace sidebar visual contract", () => {
     expect(collapsed.state).toBe("collapsed");
     expect(collapsed.sidebarWidth).toBeGreaterThanOrEqual(75);
     expect(collapsed.sidebarWidth).toBeLessThanOrEqual(77);
+    expect(collapsed.contentLeft).toBeGreaterThanOrEqual(75);
+    expect(collapsed.sidebarPosition).toBe("fixed");
+    expect(collapsed.sidebarBackgroundColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(collapsed.pageScrollWidth).toBeLessThanOrEqual(collapsed.pageClientWidth + 1);
     expect(collapsed.consentPresent).toBe(false);
 
     const avatar = page.locator('img[src*="fanmind-social-avatar"]');
     await expect(avatar).toBeVisible();
-    const renderedAvatar = await expect
+    await expect
       .poll(() =>
         avatar.evaluate((image) => ({
           complete: (image as HTMLImageElement).complete,
@@ -99,7 +122,6 @@ test.describe("FanMind workspace sidebar visual contract", () => {
         })),
       )
       .not.toEqual({ complete: false, width: 0, height: 0 });
-    void renderedAvatar;
     const avatarSize = await avatar.evaluate((image) => ({
       width: (image as HTMLImageElement).naturalWidth,
       height: (image as HTMLImageElement).naturalHeight,
