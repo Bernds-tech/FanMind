@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const shellPath = "src/components/WorkspaceShell.tsx";
 const sidebarCssPath = "src/components/WorkspaceSidebar.module.css";
+const responsiveCssPath = "src/components/WorkspaceSidebarResponsive.module.css";
 const navigationPath = "src/lib/workspaceNavigation.ts";
 const socialAvatarPath = "public/assets/fanmind-social-avatar.png";
 const previewPath = "src/app/sidebar-preview-e2e/page.tsx";
@@ -17,6 +18,10 @@ test("workspace sidebar uses one DOM tree for expanded and collapsed navigation"
   const shell = await readShell();
 
   assert.match(shell, /import sidebarStyles from "\.\/WorkspaceSidebar\.module\.css"/u);
+  assert.match(
+    shell,
+    /import responsiveStyles from "\.\/WorkspaceSidebarResponsive\.module\.css"/u,
+  );
   assert.match(shell, /function SidebarItem\(/u);
   assert.equal((shell.match(/<aside\b/gu) ?? []).length, 1);
   assert.equal((shell.match(/<FanMindFunctionIcon\b/gu) ?? []).length, 1);
@@ -97,6 +102,38 @@ test("collapsed sidebar preserves the same left icon rail and group geometry", a
     "section labels must become invisible without removing their geometry",
   );
   assert.doesNotMatch(css, /justify-items: center;[\s\S]*compactNav/u);
+});
+
+test("narrow web viewports use a dark fixed overlay and reserve the collapsed rail", async () => {
+  const [shell, responsiveCss] = await Promise.all([
+    readShell(),
+    readFile(responsiveCssPath, "utf8"),
+  ]);
+
+  assert.match(shell, /responsiveStyles\.shell/u);
+  assert.match(shell, /responsiveStyles\.shellCollapsed/u);
+  assert.match(shell, /responsiveStyles\.sidebarSurface/u);
+  assert.match(shell, /responsiveStyles\.content/u);
+  assert.match(
+    responsiveCss,
+    /\.sidebarSurface \{[\s\S]*linear-gradient\(180deg,[\s\S]*#020617 !important;/u,
+  );
+  assert.match(
+    responsiveCss,
+    /@media \(max-width: 960px\) \{[\s\S]*\.shell \{[\s\S]*grid-template-columns: 0 minmax\(0, 1fr\) !important;/u,
+  );
+  assert.match(
+    responsiveCss,
+    /\.shellCollapsed \{[\s\S]*grid-template-columns: 76px minmax\(0, 1fr\) !important;/u,
+  );
+  assert.match(
+    responsiveCss,
+    /\.content \{[\s\S]*grid-column: 2 !important;[\s\S]*min-width: 0;/u,
+  );
+  assert.match(
+    responsiveCss,
+    /--sidebar-width: min\(320px, calc\(100vw - 48px\)\);/u,
+  );
 });
 
 test("collapsed branding uses the supplied circular FanMind social avatar", async () => {
