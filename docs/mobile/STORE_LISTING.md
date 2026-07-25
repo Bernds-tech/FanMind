@@ -1,0 +1,133 @@
+# FanMind Mobile - vorbereitete Store-Unterlagen
+
+## Status und Grenzen
+
+Dieses Dokument bereitet die Metadaten für Google Play und Apple App Store vor.
+Es veröffentlicht keine App und bestätigt keine Angaben in den Store-Portalen.
+Texte, Screenshots und Datenschutzdeklarationen werden erst nach einem
+signierten Build und realen Android-/iOS-Gerätetests final freigegeben.
+
+Die App ist ein menschlich kontrollierter CRM- und Antwortassistent. Sie sendet
+keine Nachrichten automatisch und behauptet keine aktiven externen
+Social-Media-Integrationen.
+
+## Identität
+
+| Feld | Wert |
+|---|---|
+| App-Name | FanMind |
+| Untertitel / Kurzbeschreibung DE | KI-CRM für Kontakte und Follow-ups |
+| Subtitle / Short description EN | AI CRM for contacts and follow-ups |
+| Android Package | `ch.fanmind.app` |
+| iOS Bundle Identifier | `ch.fanmind.app` |
+| Website | `https://fanmind.ch` |
+| Support | `mailto:kontakt@fanmind.ch` |
+| Datenschutz | `https://fanmind.ch/datenschutz` |
+| Account-Löschung | `https://fanmind.ch/account-deletion` |
+
+## Google Play - Kurzbeschreibung
+
+```text
+Kontakte, Fan-Gedächtnis, KI-Antwortvorschläge und Follow-ups an einem Ort.
+```
+
+## Google Play und Apple - Beschreibung DE
+
+```text
+FanMind ist dein mobiler Arbeitsbereich für Kontakte, Fan-Gedächtnis,
+KI-gestützte Antwortvorschläge und Follow-ups.
+
+Mit FanMind kannst du:
+
+• Kontakte suchen, anlegen und bearbeiten
+• wichtige Informationen im Fan-Gedächtnis festhalten
+• eingehende Nachrichten als Kontext verwenden
+• mehrere passende Antwortvorschläge erstellen lassen
+• Follow-ups planen und erledigen
+• eine begrenzte, verschlüsselte Kontaktübersicht offline lesen
+
+FanMind ist kein automatisch sendender Bot. Du prüfst jeden Vorschlag selbst,
+kopierst ihn und sendest die endgültige Nachricht bewusst im ursprünglichen
+Kanal. Externe Social-Media-Kanäle werden derzeit nicht automatisch
+synchronisiert.
+
+Für die Nutzung ist ein FanMind-Konto erforderlich.
+```
+
+## Google Play und Apple - Description EN
+
+```text
+FanMind is your mobile workspace for contacts, contact memory, AI-assisted reply
+suggestions and follow-ups.
+
+With FanMind, you can:
+
+• search, create and edit contacts
+• retain important information in contact memory
+• use an incoming message as context
+• generate several relevant reply suggestions
+• plan and complete follow-ups
+• read a limited encrypted contact overview while offline
+
+FanMind is not an auto-sending bot. You review every suggestion, copy it and
+deliberately send the final message in the original channel. External social
+media channels are not automatically synchronized at this time.
+
+A FanMind account is required.
+```
+
+## Suchbegriffe für Apple
+
+```text
+CRM,Kontakte,Follow-up,Antworten,KI,Creator,Fans,Memory
+```
+
+Diese Begriffe sind vor Einreichung gegen die dann gültigen Store-Limits und
+Richtlinien zu prüfen.
+
+## Screenshot-Matrix
+
+Screenshots dürfen nur aus einem synthetischen Test-Workspace stammen. Keine
+echten Kundendaten, E-Mail-Adressen, Tokens, Recovery-Links oder externen
+Nachrichten dürfen sichtbar sein.
+
+| Reihenfolge | Screen | Kernaussage |
+|---:|---|---|
+| 1 | Dashboard | Dein mobiler FanMind-Arbeitsbereich |
+| 2 | Kontaktliste | Kontakte schnell finden und pflegen |
+| 3 | Kontaktdetail | Wissen und Kontext an einem Ort |
+| 4 | KI-Antwortvorschläge | Mehrere Vorschläge, du entscheidest |
+| 5 | Follow-ups | Offene Aufgaben im Blick behalten |
+| 6 | Offline-Kontaktübersicht | Begrenzter, verschlüsselter Nur-Lesen-Zugriff |
+
+Benötigt werden mindestens ein aktueller Android- und ein aktueller
+iPhone-Screenshot-Satz aus signierten Builds. Tablet-Screenshots werden nur
+erstellt, wenn die konkrete Store-Konfiguration sie verlangt.
+
+## Datenschutzdeklaration - Prüfmatrix
+
+Die folgenden Punkte sind eine technische Vorbereitung, keine rechtliche
+Freigabe. Vor Einreichung müssen sie anhand des signierten Builds, des realen
+Backends und der aktuellen Store-Fragebögen gemeinsam mit Datenschutz/Recht
+bestätigt werden.
+
+| Bereich | Technischer Stand | Vor Store-Einreichung |
+|---|---|---|
+| Konto | E-Mail-Login über Supabase | Zweck, Verknüpfung und Löschweg bestätigen |
+| Kontakte | Workspace-gebundene CRM-Daten mit RLS | Kategorien und Nutzerbezug im Portal bestätigen |
+| KI | Kontext geht authentifiziert an FanMind; OpenAI-Key bleibt serverseitig | Unterauftragsverarbeitung und Regionen final bestätigen |
+| Offline | Verschlüsselte, begrenzte Kontaktübersicht in SecureStore | Gerätespeicherung in den Fragebögen korrekt deklarieren |
+| Push | Nur Grundlage; noch kein Token-Upload und kein Versand | Erst nach echter Implementierung neu bewerten |
+| Tracking | Kein Mobile-Werbe-SDK und kein Mobile-Meta-Pixel | Vor jedem Release erneut über Dependency-Audit prüfen |
+| Löschen | In-App-Anfrage und öffentliche Löschseite vorhanden | Realen End-to-End-Test dokumentieren |
+
+## Vor Einreichung zwingend offen
+
+- hochauflösendes bestätigtes rundes/quadratisches App-Icon;
+- EAS-Projekt-ID und Signing Credentials;
+- signierter Android- und iOS-Build;
+- reale Gerätetests für Login, Recovery, Deep Links, Offline und Account-Löschung;
+- Push-Entscheidung und gegebenenfalls erneute Datenschutzbewertung;
+- finale Screenshots aus synthetischem Test-Workspace;
+- externe Datenschutz-/Rechtsprüfung der Store-Angaben;
+- Google-Play- und App-Store-Konten samt realen IDs.

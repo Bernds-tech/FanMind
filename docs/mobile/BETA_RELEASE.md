@@ -26,6 +26,7 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - authentifizierter Status/Widerruf und service-role-only Request-Queue;
 - manueller Dry-Run-first Account-Löschprocessor ohne Timer;
 - getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-Export und Architekturgrenze;
+- native Splashscreen-Konfiguration für hellen und dunklen Modus mit der bestätigten FanMind-Wortmarke;
 - `development`, `preview` und `production` in `apps/mobile/eas.json`.
 
 ## Passwort-Recovery
@@ -193,15 +194,33 @@ npx eas-cli@latest build --platform android --profile production
 
 Die anschließende Übertragung benötigt echte Store-Konten. EAS Submit lädt Binärdateien hoch, ersetzt aber keine Store-Texte, Screenshots, Datenschutzangaben oder Review-Freigaben.
 
+## Branding und Store-Unterlagen
+
+Die bestätigte FanMind-Wortmarke liegt unverändert unter
+`apps/mobile/assets/branding/fanmind-wordmark.png` und wird über das
+`expo-splash-screen`-Config-Plugin nativ eingebunden. Heller und dunkler
+Systemmodus verwenden bewusst denselben dunklen Marken-Hintergrund. Die Quelle
+ist 754 × 252 Pixel groß und wird mit 300 Pixel Bildbreite ausschließlich
+verkleinert, nicht hochskaliert.
+
+Die Wortmarke ist ausdrücklich **kein** Store-App-Icon. Android Adaptive Icon,
+Android Legacy Icon und iOS App Icon bleiben ohne eine bestätigte hochauflösende
+runde beziehungsweise quadratische Quelle offen. Das vorhandene 96 × 96 Pixel
+große Social-Avatar-Asset darf dafür nicht hochskaliert werden.
+
+Vorbereitete deutsche und englische Store-Texte, URLs, Screenshot-Slots und die
+noch manuell in den Store-Portalen zu bestätigenden Datenschutzangaben stehen in
+`docs/mobile/STORE_LISTING.md`.
+
 ## Noch offen nach diesem Block
 
-- finale App-Icons und Splashscreen aus bestätigtem Branding;
+- finale App-Icons aus einer bestätigten hochauflösenden runden/quadratischen Quelle;
 - echter Recovery-E-Mail-/Gerätetest nach Supabase-Redirect-Freigabe;
 - EAS-Projekt-ID und Signing Credentials;
 - Android Internal Testing und iOS TestFlight;
-- Push-Grundlage für Follow-ups;
+- Push-Berechtigung, Token-Registrierung und echte Follow-up-Zustellung im signierten Build;
 - realer Account-Löschantrag/Widerruf auf signiertem Android-/iOS-Gerät;
 - reale Android-/iOS-Gerätetestprotokolle;
-- Store-Datenschutzangaben, Screenshots und Metadaten.
+- Store-Datenschutzangaben und Screenshots final abnehmen; Metadaten sind vorbereitet.
 
 Diese Punkte bleiben sichtbar offen und dürfen nicht allein aufgrund der vorhandenen Konfigurationsdateien als abgeschlossen markiert werden.

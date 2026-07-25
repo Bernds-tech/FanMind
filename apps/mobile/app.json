@@ -15,7 +15,20 @@
           "faceIDPermission": "FanMind schützt deine sichere App-Sitzung."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#020712",
+          "image": "./assets/branding/fanmind-wordmark.png",
+          "imageWidth": 300,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#020712",
+            "image": "./assets/branding/fanmind-wordmark.png"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
