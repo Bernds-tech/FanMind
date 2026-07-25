@@ -1,0 +1,131 @@
+name: FanMind P1 Verify Mobile Advisory Release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-verify-mobile-advisory-release-20260725.yml"
+
+concurrency:
+  group: fanmind-p1-verify-mobile-advisory-release-20260725
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/verify-mobile-advisory-release-20260725'
+    runs-on:
+      - self-hosted
+      - fanmind-prod
+      - exoscale
+      - linux
+      - x64
+    timeout-minutes: 30
+    env:
+      EXPECTED_RELEASE: 7912781fd460baa18aae3bbd0cfa009b91237e57
+      REPORT_PATH: fanmind-mobile-advisory-production-verification.txt
+    steps:
+      - name: Checkout trusted verification branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ops/verify-mobile-advisory-release-20260725
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Wait for exact release and verify deployed patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'VERIFICATION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+          printf 'EXPECTED_RELEASE=%s\n' "$EXPECTED_RELEASE" | tee -a "$report"
+
+          sudo -n true
+          git -C /var/www/fanmind fetch --prune origin main >/dev/null 2>&1
+
+          synchronized=no
+          for attempt in $(seq 1 180); do
+            live_release="$(curl -fsSL --max-time 12 https://fanmind.ch/api/version 2>/dev/null | node -e '
+              let input="";
+              process.stdin.on("data", chunk => input += chunk);
+              process.stdin.on("end", () => {
+                try { process.stdout.write(JSON.parse(input).releaseCommit || "missing"); }
+                catch { process.stdout.write("invalid"); }
+              });
+            ' 2>/dev/null || printf unavailable)"
+            server_head="$(git -C /var/www/fanmind rev-parse HEAD 2>/dev/null || true)"
+            origin_main="$(git -C /var/www/fanmind rev-parse origin/main 2>/dev/null || true)"
+            current_release="$(readlink -f /var/www/fanmind-current 2>/dev/null || true)"
+            if [ "$live_release" = "$EXPECTED_RELEASE" ] && \
+               [ "$server_head" = "$EXPECTED_RELEASE" ] && \
+               [ "$origin_main" = "$EXPECTED_RELEASE" ] && \
+               [ "$current_release" = "/var/www/fanmind-releases/$EXPECTED_RELEASE" ]; then
+              synchronized=yes
+              break
+            fi
+            if [ $((attempt % 18)) -eq 0 ]; then
+              git -C /var/www/fanmind fetch --prune origin main >/dev/null 2>&1 || true
+            fi
+            sleep 5
+          done
+          test "$synchronized" = yes
+
+          curl -fsSL --max-time 15 https://fanmind.ch/api/health | node -e '
+            let input="";
+            process.stdin.on("data", chunk => input += chunk);
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(input);
+              const checks = Array.isArray(payload.checks) ? payload.checks : [];
+              process.exit(payload.status === "healthy" && checks.length >= 7 && checks.every(item => item?.status === "healthy") ? 0 : 1);
+            });
+          '
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = '/var/www/fanmind/apps/mobile/package-lock.json';
+          const lock = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const row = lock?.packages?.['node_modules/brace-expansion'];
+          if (String(row?.version || '') !== '5.0.8') throw new Error('brace_expansion_not_deployed');
+          if (String(row?.resolved || '') !== 'https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.8.tgz') {
+            throw new Error('brace_expansion_registry_reference_invalid');
+          }
+          if (!String(row?.integrity || '').startsWith('sha512-')) throw new Error('brace_expansion_integrity_missing');
+          console.log('DEPLOYED_BRACE_EXPANSION_VERSION=5.0.8');
+          console.log('DEPLOYED_BRACE_EXPANSION_INTEGRITY=present');
+          NODE
+
+          for route in / /login /register /forgot-password /account-deletion /datenschutz /roadmap /api/version /api/health; do
+            curl -fsSL --max-time 15 "https://fanmind.ch${route}" -o /dev/null
+          done
+
+          systemctl is-active --quiet nginx.service
+          systemctl is-active --quiet pm2-ubuntu.service
+          systemctl is-active --quiet fanmind-backup-worker.service
+
+          printf '%s\n' \
+            'RELEASE_SYNC=exact' \
+            'PUBLIC_REQUIRED_HEALTHY_COUNT=7' \
+            'DEPLOYED_BRACE_EXPANSION_VERSION=5.0.8' \
+            'PUBLIC_CORE_ROUTES=healthy' \
+            'NGINX_PM2_BACKUP_WORKER=active' \
+            'CUSTOMER_BILLING_CRM_OR_DATABASE_MUTATION=none' \
+            'MOBILE_ADVISORY_PRODUCTION_VERIFICATION=success' \
+            | tee -a "$report"
+
+      - name: Upload sanitized verification evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-mobile-advisory-production-verification
+          path: fanmind-mobile-advisory-production-verification.txt
+          if-no-files-found: error
+          retention-days: 7
