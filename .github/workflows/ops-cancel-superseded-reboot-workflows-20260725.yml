@@ -1,0 +1,81 @@
+name: FanMind P1 Cancel Superseded Reboot Workflows
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - ".github/workflows/ops-cancel-superseded-reboot-workflows-20260725.yml"
+
+concurrency:
+  group: fanmind-p1-cancel-superseded-reboot-workflows-20260725
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'ops/controlled-ubuntu-reboot-20260724'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPORT_PATH: fanmind-cancel-superseded-reboot-workflows.txt
+    steps:
+      - name: Cancel every queued or running superseded operation
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$GITHUB_WORKSPACE/$REPORT_PATH"
+          : > "$report"
+          printf 'CANCELLATION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
+
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/$GITHUB_REPOSITORY/actions/runs?branch=ops%2Fcontrolled-ubuntu-reboot-20260724&per_page=100" \
+            > "$RUNNER_TEMP/fanmind-reboot-runs.json"
+
+          node <<'NODE' > "$RUNNER_TEMP/fanmind-reboot-cancel-ids.txt"
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/fanmind-reboot-runs.json', 'utf8'));
+          const names = new Set([
+            'FanMind P1 Controlled PM2 systemd Handoff',
+            'FanMind P1 Controlled Ubuntu Reboot Execute',
+            'FanMind P1 PM2 systemd Post-Handoff Diagnostic',
+            'FanMind P1 Production AI ENV Audit',
+            'FanMind P1 Set Telegram Send Disabled',
+          ]);
+          const rows = Array.isArray(payload.workflow_runs) ? payload.workflow_runs : [];
+          for (const row of rows) {
+            if (names.has(row?.name) && ['queued', 'in_progress', 'pending', 'waiting', 'requested'].includes(String(row?.status || ''))) {
+              console.log(String(row.id));
+            }
+          }
+          NODE
+
+          count=0
+          while IFS= read -r run_id; do
+            [ -n "$run_id" ] || continue
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/cancel" >/dev/null 2>&1 || true
+            count=$((count + 1))
+          done < "$RUNNER_TEMP/fanmind-reboot-cancel-ids.txt"
+
+          rm -f "$RUNNER_TEMP/fanmind-reboot-runs.json" "$RUNNER_TEMP/fanmind-reboot-cancel-ids.txt"
+          printf 'SUPERSEDED_RUN_CANCEL_REQUEST_COUNT=%s\n' "$count" | tee -a "$report"
+          echo 'SUPERSEDED_REBOOT_WORKFLOW_CANCELLATION=complete' | tee -a "$report"
+
+      - name: Upload bounded cancellation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-cancel-superseded-reboot-workflows
+          path: fanmind-cancel-superseded-reboot-workflows.txt
+          if-no-files-found: error
+          retention-days: 3
