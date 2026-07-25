@@ -38,7 +38,7 @@ jobs:
           : > "$report"
           printf 'CANCELLATION_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$report"
 
-          gh api --paginate \
+          gh api \
             -H 'Accept: application/vnd.github+json' \
             "/repos/$GITHUB_REPOSITORY/actions/runs?branch=ops%2Fcontrolled-ubuntu-reboot-20260724&per_page=100" \
             > "$RUNNER_TEMP/fanmind-reboot-runs.json"
