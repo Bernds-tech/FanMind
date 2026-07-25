@@ -37,6 +37,7 @@ jobs:
           set +e
           node scripts/monitor-public-uptime.mjs \
             --base-url https://fanmind.ch \
+            --expected-runtime-environment production \
             --timeout-ms 15000 \
             --attempts 3 \
             --json > uptime-report.json

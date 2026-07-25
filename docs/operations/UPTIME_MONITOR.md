@@ -15,7 +15,7 @@ It complements deployment-time checks. A successful deployment does not prove th
 - `/api/health`
 - `/api/version`
 
-Page routes must return HTTP 200. `/api/health` must return `status=healthy` and `scope=public`. `/api/version` must identify FanMind, the Production environment and a 40-character release commit.
+Page routes must return HTTP 200. `/api/health` must return `status=healthy` and `scope=public`. `/api/version` must identify FanMind, the Production environment, `runtimeEnvironment=production` and a 40-character release commit.
 
 ## Frequency and retries
 
@@ -60,6 +60,7 @@ Structured output:
 ```bash
 node scripts/monitor-public-uptime.mjs \
   --base-url https://fanmind.ch \
+  --expected-runtime-environment production \
   --json
 ```
 

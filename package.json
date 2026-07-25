@@ -15,7 +15,7 @@
     "test:e2e:staging": "playwright test --config=playwright.staging.config.mts",
     "smoke:public": "node scripts/smoke-public-routes.mjs",
     "smoke:go-live:public": "node scripts/final-go-live-preflight.mjs",
-    "uptime:check": "node scripts/monitor-public-uptime.mjs --base-url https://fanmind.ch",
+    "uptime:check": "node scripts/monitor-public-uptime.mjs --base-url https://fanmind.ch --expected-runtime-environment production",
     "operations:check": "node scripts/operations/operations-monitor.mjs",
     "environment:preflight": "node scripts/environment-boundary-preflight.mjs",
     "environment:preflight:write": "node scripts/environment-boundary-preflight.mjs --allow-write",
