@@ -124,7 +124,7 @@ export const roadmapPhases: RoadmapPhase[] = [
       { label: "Verschlüsselte Offline-Kontaktübersicht", state: "done", status: "24 h · maximal 50 · nur lesen" },
       { label: "Signierter interner Android-Build", state: "partial", status: "EAS-/Signing-Einrichtung offen" },
       { label: "iOS-TestFlight", state: "planned", status: "Apple-Konto und Signing offen" },
-      { label: "Push für Follow-up-Erinnerungen", state: "planned", status: "Nächste Mobile-Phase" },
+      { label: "Push für Follow-up-Erinnerungen", state: "partial", status: "Konfiguration und Routing fertig · Zustellung offen" },
     ],
   },
 

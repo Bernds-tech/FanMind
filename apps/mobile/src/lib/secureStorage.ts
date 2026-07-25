@@ -12,6 +12,18 @@ import {
   secureStoreChunkKey,
   secureStoreCountKey,
 } from "@/lib/secureStorageKeyPolicy.mjs";
+import {
+  migrateLegacySecureStorageValue,
+  purgeLegacySecureStorageValueIfPresent,
+} from "@/lib/secureStorageLegacyMigration.mjs";
+import {
+  LEGACY_SECURE_STORAGE_REGISTRY_KEY,
+  parseLegacySecureStorageRegistry,
+} from "@/lib/secureStorageLegacyPolicy.mjs";
+import {
+  deleteLegacySecureStoreValue,
+  readLegacySecureStoreValue,
+} from "@/lib/legacySecureStoreNative";
 import { createSerialOperationQueue } from "@/lib/serialOperationQueue.mjs";
 import { splitUtf8String } from "@/lib/utf8StoragePolicy.mjs";
 
@@ -51,6 +63,21 @@ async function writeRegistry(keys: string[]): Promise<void> {
   );
 }
 
+async function readLegacyRegistry() {
+  const raw = await readLegacySecureStoreValue(
+    LEGACY_SECURE_STORAGE_REGISTRY_KEY,
+  );
+  return parseLegacySecureStorageRegistry(raw);
+}
+
+async function purgeLegacyKeyIfPresent(key: string): Promise<void> {
+  await purgeLegacySecureStorageValueIfPresent({
+    key,
+    readValue: readLegacySecureStoreValue,
+    deleteValue: deleteLegacySecureStoreValue,
+  });
+}
+
 async function registerKey(key: string): Promise<void> {
   assertSecureStorageLogicalKey(key);
   const keys = addSecureStorageRegistryKey(await readRegistry(), key);
@@ -76,29 +103,70 @@ async function removeChunks(key: string): Promise<void> {
 }
 
 async function clearSecureLocalStorageInternal(): Promise<void> {
-  const keys = await readRegistry();
+  const currentKeys = await readRegistry();
+  const legacyRegistry = await readLegacyRegistry();
+  if (!legacyRegistry.valid) {
+    throw new Error(
+      "Die alte sichere FanMind-Registry konnte nicht bestätigt werden.",
+    );
+  }
+
+  const keys = [...new Set([...currentKeys, ...legacyRegistry.keys])];
   const failedKeys: string[] = [];
+  let legacyPurgeFailed = false;
 
   for (const key of keys) {
+    let failed = false;
     try {
       await removeChunks(key);
     } catch {
+      failed = true;
+    }
+    try {
+      await purgeLegacyKeyIfPresent(key);
+    } catch {
+      failed = true;
+      if (legacyRegistry.keys.includes(key)) {
+        legacyPurgeFailed = true;
+      }
+    }
+    if (failed) {
       failedKeys.push(key);
     }
   }
 
-  if (failedKeys.length > 0) {
-    await writeRegistry(failedKeys);
-    throw new Error("Nicht alle sicheren FanMind-Schlüssel konnten entfernt werden.");
+  await writeRegistry(failedKeys);
+
+  if (
+    legacyRegistry.present &&
+    !legacyPurgeFailed &&
+    failedKeys.every((key) => !legacyRegistry.keys.includes(key))
+  ) {
+    try {
+      await deleteLegacySecureStoreValue(
+        LEGACY_SECURE_STORAGE_REGISTRY_KEY,
+      );
+    } catch {
+      legacyPurgeFailed = true;
+    }
   }
 
-  await SecureStore.deleteItemAsync(SECURE_STORAGE_REGISTRY_KEY);
+  if (failedKeys.length > 0 || legacyPurgeFailed) {
+    throw new Error("Nicht alle sicheren FanMind-Schlüssel konnten entfernt werden.");
+  }
 }
 
 async function getItemInternal(key: string): Promise<string | null> {
   assertSecureStorageLogicalKey(key);
   const count = await readChunkCount(key);
-  if (!count) return null;
+  if (!count) {
+    return migrateLegacySecureStorageValue({
+      key,
+      readValue: readLegacySecureStoreValue,
+      deleteValue: deleteLegacySecureStoreValue,
+      writeCurrentValue: (value) => setItemInternal(key, value, false),
+    });
+  }
   const chunks = await Promise.all(
     Array.from({ length: count }, (_, index) =>
       SecureStore.getItemAsync(chunkKey(key, index)),
@@ -107,16 +175,24 @@ async function getItemInternal(key: string): Promise<string | null> {
   if (chunks.some((chunk) => chunk === null)) {
     await removeChunks(key);
     await unregisterKey(key);
+    await purgeLegacyKeyIfPresent(key);
     return null;
   }
 
   // Existing valid keys that predate registry enrollment are added on first
   // successful read so the next logout can purge them.
   await registerKey(key);
+  // A valid v2 value always wins. Any older duplicate is removed only after
+  // the current value has been confirmed.
+  await purgeLegacyKeyIfPresent(key);
   return chunks.join("");
 }
 
-async function setItemInternal(key: string, value: string): Promise<void> {
+async function setItemInternal(
+  key: string,
+  value: string,
+  purgeLegacy = true,
+): Promise<void> {
   assertSecureStorageLogicalKey(key);
   await removeChunks(key);
   const chunks = splitUtf8String(value, CHUNK_SIZE_BYTES);
@@ -156,11 +232,16 @@ async function setItemInternal(key: string, value: string): Promise<void> {
     }
     throw error;
   }
+
+  if (purgeLegacy) {
+    await purgeLegacyKeyIfPresent(key);
+  }
 }
 
 async function removeItemInternal(key: string): Promise<void> {
   assertSecureStorageLogicalKey(key);
   await removeChunks(key);
+  await purgeLegacyKeyIfPresent(key);
   await unregisterKey(key);
 }
 

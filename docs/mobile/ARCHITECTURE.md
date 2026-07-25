@@ -116,6 +116,8 @@ The SecureStore adapter maintains a bounded registry of FanMind-owned storage ke
 
 The one encrypted offline read cache is registered with that same purge contract. It is account- and workspace-bound, expires after 24 hours, contains at most 50 contacts and is limited to 80,000 UTF-8 bytes before SecureStore chunking. Only workspace name plus contact ID, workspace ID, display name, handle, source/platform, status and update time are retained. Contact knowledge, summaries, messages, AI content, internal notes, follow-ups and credentials are excluded. The UI exposes the cache only after a transport-level failure and remains read-only; authentication, RLS and server errors fail closed.
 
+Upgrades probe the former colon-delimited v1 SecureStore namespace through a read/delete-only native compatibility bridge. A complete legacy value is registered and written into the current v2 namespace before v1 is removed. Partial values are never returned, the current v2 value always wins, and logout retains retry metadata whenever either namespace cannot be fully purged.
+
 ## Native route map
 
 ```text
@@ -165,8 +167,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] EAS profiles and beta handoff documented;
 - [x] bounded offline read cache with the central purge contract;
 - [x] native notification configuration and fail-closed follow-up response routing;
+- [x] native wordmark splashscreen and prepared store metadata;
 - [ ] push permission, token registration and server-side follow-up delivery;
-- [ ] final app icon and splash assets.
+- [ ] final app icon from a confirmed high-resolution square source.
 
 ### Phase B — external verification
 

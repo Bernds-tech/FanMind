@@ -28,19 +28,19 @@ Social-Media-Integrationen.
 ## Google Play - Kurzbeschreibung
 
 ```text
-Kontakte, Fan-Gedächtnis, KI-Antwortvorschläge und Follow-ups an einem Ort.
+Kontakte, Kontaktwissen, KI-Antwortvorschläge und Follow-ups an einem Ort.
 ```
 
 ## Google Play und Apple - Beschreibung DE
 
 ```text
-FanMind ist dein mobiler Arbeitsbereich für Kontakte, Fan-Gedächtnis,
+FanMind ist dein mobiler Arbeitsbereich für Kontakte, Kontaktwissen,
 KI-gestützte Antwortvorschläge und Follow-ups.
 
 Mit FanMind kannst du:
 
 • Kontakte suchen, anlegen und bearbeiten
-• wichtige Informationen im Fan-Gedächtnis festhalten
+• wichtige Informationen als Kontaktwissen festhalten
 • eingehende Nachrichten als Kontext verwenden
 • mehrere passende Antwortvorschläge erstellen lassen
 • Follow-ups planen und erledigen
@@ -79,7 +79,7 @@ A FanMind account is required.
 ## Suchbegriffe für Apple
 
 ```text
-CRM,Kontakte,Follow-up,Antworten,KI,Creator,Fans,Memory
+CRM,Kontakte,Follow-up,Antworten,KI,Creator,Fans,Kontaktwissen
 ```
 
 Diese Begriffe sind vor Einreichung gegen die dann gültigen Store-Limits und

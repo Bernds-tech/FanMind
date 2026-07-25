@@ -19,6 +19,10 @@ import {
   StatusPill,
   mobileStyles,
 } from "@/components/ui";
+import {
+  createContactLoadSequence,
+  resolveContactLoadTarget,
+} from "@/lib/contactRefreshPolicy.mjs";
 import { listContacts } from "@/lib/data";
 import {
   readOfflineReadCache,
@@ -30,7 +34,10 @@ import {
   filterOfflineContacts,
 } from "@/lib/offlineReadCachePolicy.mjs";
 import { useAuth } from "@/providers/AuthProvider";
-import { useWorkspace } from "@/providers/WorkspaceProvider";
+import {
+  useWorkspace,
+  type WorkspaceRefreshResult,
+} from "@/providers/WorkspaceProvider";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 import type { ContactListItem } from "@/types";
 
@@ -111,14 +118,17 @@ export default function ContactsScreen() {
   const [cachedWorkspaceName, setCachedWorkspaceName] = useState<string | null>(
     null,
   );
-  const loadSequence = useRef(0);
+  const loadSequence = useRef(createContactLoadSequence());
   const cachedContacts = useRef<ContactListItem[]>([]);
 
   const load = useCallback(
-    async (isRefresh = false) => {
-      const sequence = ++loadSequence.current;
+    async (
+      isRefresh = false,
+      refreshResult?: WorkspaceRefreshResult,
+    ) => {
       const userId = session?.user.id;
       if (!userId) {
+        loadSequence.current.invalidate();
         setContacts([]);
         setError(null);
         setUsingCache(false);
@@ -138,10 +148,19 @@ export default function ContactsScreen() {
         setRefreshing(false);
         return;
       }
-      if (!workspace?.id) {
-        if (transportUnavailable) {
+      const sequence = loadSequence.current.begin();
+      const {
+        workspace: activeWorkspace,
+        transportUnavailable: activeTransportUnavailable,
+      } = resolveContactLoadTarget(
+        { workspace, transportUnavailable },
+        refreshResult,
+      );
+
+      if (!activeWorkspace?.id) {
+        if (activeTransportUnavailable) {
           const cached = await readOfflineReadCache(userId);
-          if (sequence !== loadSequence.current) return;
+          if (!loadSequence.current.isCurrent(sequence)) return;
           if (cached) {
             cachedContacts.current = cached.contacts;
             setContacts(filterOfflineContacts(cached.contacts, search));
@@ -174,8 +193,8 @@ export default function ContactsScreen() {
         return;
       }
 
-      const result = await listContacts(workspace.id, search);
-      if (sequence !== loadSequence.current) return;
+      const result = await listContacts(activeWorkspace.id, search);
+      if (!loadSequence.current.isCurrent(sequence)) return;
 
       if (!result.error) {
         cachedContacts.current = [];
@@ -188,14 +207,14 @@ export default function ContactsScreen() {
         if (!search.trim()) {
           void writeOfflineReadCache({
             userId,
-            workspaceId: workspace.id,
-            workspaceName: workspace.name,
+            workspaceId: activeWorkspace.id,
+            workspaceName: activeWorkspace.name,
             contacts: result.contacts,
           });
         }
       } else if (result.offlineEligible) {
-        const cached = await readOfflineReadCache(userId, workspace.id);
-        if (sequence !== loadSequence.current) return;
+        const cached = await readOfflineReadCache(userId, activeWorkspace.id);
+        if (!loadSequence.current.isCurrent(sequence)) return;
         if (cached) {
           cachedContacts.current = cached.contacts;
           setContacts(filterOfflineContacts(cached.contacts, search));
@@ -247,7 +266,7 @@ export default function ContactsScreen() {
     const expiresAt = cachedAt + OFFLINE_READ_CACHE_MAX_AGE_MS;
     const expireCachedView = () => {
       if (Date.now() < expiresAt) return;
-      loadSequence.current += 1;
+      loadSequence.current.invalidate();
       cachedContacts.current = [];
       setContacts([]);
       setError(
@@ -272,6 +291,16 @@ export default function ContactsScreen() {
       appStateSubscription.remove();
     };
   }, [cachedAt, session?.user.id, usingCache]);
+
+  const refreshOnline = useCallback(async () => {
+    setRefreshing(true);
+    const result = await refreshWorkspace();
+    if (!result) {
+      setRefreshing(false);
+      return;
+    }
+    await load(true, result);
+  }, [load, refreshWorkspace]);
 
   if (workspaceLoading) {
     return (
@@ -381,7 +410,7 @@ export default function ContactsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => {
-                void refreshWorkspace().then(() => load(true));
+                void refreshOnline();
               }}
               tintColor={colors.cyan}
             />

@@ -21,11 +21,13 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit 24-Stunden-Ablauf, maximal 50 Kontakten und Nur-Lesen-Oberfläche;
 - lokaler Logout-Purge für registrierte FanMind-SecureStore-Schlüssel;
 - Expo-konforme SecureStore-Schlüssel ohne Doppelpunkte sowie serialisierte Speicherzugriffe;
+- einmalige, fail-closed Migration beziehungsweise Bereinigung der früheren v1-SecureStore-Schlüssel beim App-Upgrade;
 - begrenzte, serialisierte SecureStore-Schreibfolge mit Cleanup bei Teilfehlern;
 - vollständige Account-Löschanfrage in Mobile sowie öffentlicher Webressourcenpfad;
 - authentifizierter Status/Widerruf und service-role-only Request-Queue;
 - manueller Dry-Run-first Account-Löschprocessor ohne Timer;
 - getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-Export und Architekturgrenze;
+- native Push-Konfigurationsgrundlage mit minimal validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; keine Berechtigungsabfrage, Token-Registrierung oder Zustellung;
 - native Splashscreen-Konfiguration für hellen und dunklen Modus mit der bestätigten FanMind-Wortmarke;
 - `development`, `preview` und `production` in `apps/mobile/eas.json`.
 
