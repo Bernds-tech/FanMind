@@ -1,0 +1,139 @@
+name: Temporary Read-only Production Browser Icon Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production-icon:
+    name: Verify deployed release and browser icon read-only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      BASE_URL: https://fanmind.ch
+      EXPECTED_COMMIT: 9c5e4d3c24a90e13e0448ea1394639854758f673
+      ICON_REVISION: fanmind-round-social-20260725
+
+    steps:
+      - name: Wait for the exact merged release without changing Production
+        shell: bash
+        run: |
+          set -euo pipefail
+          matched=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 15 \
+              -H 'Cache-Control: no-cache' \
+              "$BASE_URL/api/version?verify=$GITHUB_RUN_ID-$attempt" \
+              -o /tmp/fanmind-version.json; then
+              live_commit="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              payload = json.loads(Path('/tmp/fanmind-version.json').read_text(encoding='utf-8'))
+          except Exception:
+              print('')
+          else:
+              value = payload.get('releaseCommit', '')
+              print(value if isinstance(value, str) else '')
+          PY
+              )"
+              if [ "$live_commit" = "$EXPECTED_COMMIT" ]; then
+                matched=true
+                echo "Expected browser-icon release is active."
+                break
+              fi
+            fi
+            echo "Production is not yet on the expected release (attempt ${attempt}/60)."
+            sleep 15
+          done
+
+          if [ "$matched" != "true" ]; then
+            echo "Expected release was not observed inside the bounded wait window." >&2
+            exit 1
+          fi
+
+      - name: Fetch public HTML and icon using cache-busting GET requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 \
+            -H 'Cache-Control: no-cache' \
+            "$BASE_URL/?verify=$GITHUB_RUN_ID" \
+            -o /tmp/fanmind-landing.html
+          curl -fsSL --max-time 30 \
+            -H 'Cache-Control: no-cache' \
+            -D /tmp/fanmind-icon-headers.txt \
+            "$BASE_URL/icon?v=$ICON_REVISION&verify=$GITHUB_RUN_ID" \
+            -o /tmp/fanmind-icon.png
+
+      - name: Verify release, metadata and PNG contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          expected_commit = os.environ['EXPECTED_COMMIT']
+          icon_revision = os.environ['ICON_REVISION']
+          version = json.loads(Path('/tmp/fanmind-version.json').read_text(encoding='utf-8'))
+          html = Path('/tmp/fanmind-landing.html').read_text(encoding='utf-8', errors='strict')
+          headers = Path('/tmp/fanmind-icon-headers.txt').read_text(encoding='utf-8', errors='replace')
+          icon = Path('/tmp/fanmind-icon.png').read_bytes()
+
+          if version.get('releaseCommit') != expected_commit:
+              raise SystemExit('release_commit_mismatch')
+
+          expected_href = f'/icon?v={icon_revision}'
+          if expected_href not in html and expected_href.replace('&', '&amp;') not in html:
+              raise SystemExit('cache_busted_icon_href_missing')
+          if '/favicon.ico' in html:
+              raise SystemExit('obsolete_favicon_href_present')
+
+          if b'PNG\r\n\x1a\n' != icon[:8]:
+              raise SystemExit('icon_is_not_png')
+          width = int.from_bytes(icon[16:20], 'big')
+          height = int.from_bytes(icon[20:24], 'big')
+          if (width, height) != (96, 96):
+              raise SystemExit(f'icon_dimensions_invalid:{width}x{height}')
+          if not re.search(r'(?im)^content-type:\s*image/png(?:;|\s|$)', headers):
+              raise SystemExit('icon_content_type_invalid')
+
+          report = {
+              'expected_release_commit': expected_commit,
+              'live_release_matches': True,
+              'cache_busted_icon_href_present': True,
+              'obsolete_favicon_href_present': False,
+              'icon_content_type': 'image/png',
+              'icon_width': width,
+              'icon_height': height,
+              'production_requests': 'GET only',
+              'production_data_mutated': False,
+          }
+          Path('verification/production-browser-icon-report.json').write_text(
+              json.dumps(report, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print('Production browser icon verified read-only.')
+          PY
+
+      - name: Upload redacted production verification report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-production-browser-icon-verification
+          path: verification/production-browser-icon-report.json
+          if-no-files-found: warn
+          include-hidden-files: false
+          retention-days: 7
