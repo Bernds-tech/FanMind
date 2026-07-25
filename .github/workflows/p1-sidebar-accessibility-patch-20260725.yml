@@ -1,13 +1,9 @@
 name: FanMind P1 Sidebar Accessibility Patch
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
+      - p1/sidebar-consistency-social-avatar-20260725
     paths:
       - ".github/workflows/p1-sidebar-accessibility-patch-20260725.yml"
 
@@ -20,10 +16,7 @@ permissions:
 
 jobs:
   patch:
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.head_ref == 'p1/sidebar-consistency-social-avatar-20260725' &&
-      github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -46,11 +39,11 @@ jobs:
           old = '''              <FanMindLogo
                 href="/dashboard"
                 ariaLabel="FanMind Dashboard"
-'''
+          '''
           new = '''              <FanMindLogo
                 href={sidebarCollapsed ? undefined : "/dashboard"}
                 ariaLabel="FanMind Dashboard"
-'''
+          '''
           if source.count(old) != 1:
               raise SystemExit(f'brand_href_anchor_count_{source.count(old)}')
           path.write_text(source.replace(old, new, 1), encoding='utf-8')
