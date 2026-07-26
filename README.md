@@ -8,9 +8,9 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
 - Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
-- Öffentliche Registrierung: Starter Flex und Starter 12 Monate; während der Fertigstellungsphase zusätzlich der klar als Beta markierte 1-€/Tag-Test, solange `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true` gesetzt ist.
+- Öffentliche Registrierung: Starter Flex und Starter 12 Monate; während der Fertigstellungsphase zusätzlich der klar als Beta markierte 1-€/Tag-Test, solange der geschützte Admin-Schalter unter `/admin/settings` aktiv ist.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
-- Beta-/Testzugang: Das Stripe-Testabo `internal_daily_test` ist während der Fertigstellungsphase gezielt im Registrierungsflow sichtbar, kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es wird zum Verkaufsstart nach Abschluss der acht Abschlussblöcke durch `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=false` wieder geschlossen.
+- Beta-/Testzugang: Das Stripe-Testabo `internal_daily_test` ist während der Fertigstellungsphase gezielt im Registrierungsflow sichtbar, kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es wird im Adminbereich zum Verkaufsstart nach Abschluss der acht Abschlussblöcke wieder geschlossen; bestehende Abos bleiben davon unberührt.
 - Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist der aktuelle Default. Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung müssen dieselbe steuerliche Behandlung zeigen.
 - Kommerzielle Wahrheit: Starter-Grundgebühr `312 €/Monat`.
 - Starter Flex: `990 € einmalige Einrichtung + 312 €/Monat`; jederzeit zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats kündbar.

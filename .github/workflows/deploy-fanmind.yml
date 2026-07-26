@@ -31,6 +31,16 @@ jobs:
           SOURCE_DIR="/var/www/fanmind"
           cd "$SOURCE_DIR"
 
+          # Seed the approved pre-sales beta once. The admin switch owns the
+          # value afterwards, so deploys never overwrite an explicit admin choice.
+          RUNTIME_SETTINGS_FILE="$SOURCE_DIR/.fanmind-runtime-settings.json"
+          if [ ! -e "$RUNTIME_SETTINGS_FILE" ]; then
+            RUNTIME_SETTINGS_TMP="$(mktemp "$SOURCE_DIR/.fanmind-runtime-settings.XXXXXX")"
+            printf '{"publicDailyTestPlanEnabled":true}\n' > "$RUNTIME_SETTINGS_TMP"
+            chmod 0600 "$RUNTIME_SETTINGS_TMP"
+            mv "$RUNTIME_SETTINGS_TMP" "$RUNTIME_SETTINGS_FILE"
+          fi
+
           echo "Deploying FanMind from origin/main on Exoscale..."
           git fetch --prune origin main
 

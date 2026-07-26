@@ -1,3 +1,4 @@
+import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import RegisterClient from "./RegisterClient";
 
 type RegisterPageProps = {
@@ -11,15 +12,12 @@ type RegisterPageProps = {
 };
 
 export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const enablePublicDailyTestPlan = await getPublicDailyTestPlanEnabled();
+
   return (
     <RegisterClient
       searchParams={searchParams}
-      // Der 1-€/Tag-Beta-Test bleibt während der Fertigstellungsphase gezielt
-      // per serverseitigem Production-Schalter verfügbar. Ohne exaktes "true"
-      // bleibt die Registrierung fail-closed; zum Verkaufsstart wird abgeschaltet.
-      enablePublicDailyTestPlan={
-        process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"
-      }
+      enablePublicDailyTestPlan={enablePublicDailyTestPlan}
     />
   );
 }
