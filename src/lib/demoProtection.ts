@@ -45,6 +45,12 @@ type DemoCleanupRow = {
   workspace_id: string | null;
 };
 
+type DemoStartResourceRow = {
+  id: string;
+  auth_user_id: string | null;
+  workspace_id: string | null;
+};
+
 type TurnstileResponse = {
   success?: boolean;
   hostname?: string;
@@ -280,6 +286,136 @@ export async function claimPublicDemoStart(input: {
     activeCount: row?.active_count ?? 0,
     error: null,
   };
+}
+
+export async function recordPublicDemoStartResources(input: {
+  reservationId: string;
+  authUserId: string;
+  workspaceId?: string | null;
+}): Promise<boolean> {
+  const key = serviceRoleKey();
+  if (!key || !input.reservationId || !input.authUserId) return false;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const url = new URL(getSupabaseRestUrl("demo_start_sessions"));
+      url.searchParams.set("id", `eq.${input.reservationId}`);
+      url.searchParams.set("status", "eq.reserved");
+      if (input.workspaceId) {
+        url.searchParams.set("auth_user_id", `eq.${input.authUserId}`);
+        url.searchParams.set(
+          "or",
+          `(workspace_id.is.null,workspace_id.eq.${input.workspaceId})`,
+        );
+      } else {
+        url.searchParams.set(
+          "or",
+          `(auth_user_id.is.null,auth_user_id.eq.${input.authUserId})`,
+        );
+      }
+      url.searchParams.set("select", "id,auth_user_id,workspace_id");
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          ...getSupabaseHeaders(key),
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          auth_user_id: input.authUserId,
+          ...(input.workspaceId
+            ? { workspace_id: input.workspaceId }
+            : {}),
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(12000),
+      });
+      if (!response.ok) continue;
+
+      const rows = (await response.json().catch(() => [])) as
+        DemoStartResourceRow[];
+      const row = rows[0];
+      if (
+        rows.length === 1 &&
+        row?.id === input.reservationId &&
+        row.auth_user_id === input.authUserId &&
+        (!input.workspaceId || row.workspace_id === input.workspaceId)
+      ) {
+        return true;
+      }
+    } catch {
+      // A second bounded attempt covers an ambiguous transient response.
+    }
+  }
+
+  return false;
+}
+
+export async function queuePublicDemoCleanup(input: {
+  reservationId: string;
+  errorCode: string;
+  authUserId?: string | null;
+}): Promise<boolean> {
+  const key = serviceRoleKey();
+  if (!key || !input.reservationId) return false;
+  const errorCode =
+    input.errorCode
+      .toLowerCase()
+      .replace(/[^a-z0-9:_-]/g, "_")
+      .slice(0, 200) || "cleanup_failed";
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const url = new URL(getSupabaseRestUrl("demo_start_sessions"));
+      url.searchParams.set("id", `eq.${input.reservationId}`);
+      url.searchParams.set(
+        "status",
+        "in.(reserved,active,failed,cleanup_failed)",
+      );
+      if (input.authUserId) {
+        url.searchParams.set(
+          "or",
+          `(auth_user_id.is.null,auth_user_id.eq.${input.authUserId})`,
+        );
+      }
+      url.searchParams.set("select", "id,auth_user_id,workspace_id");
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          ...getSupabaseHeaders(key),
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          status: "cleanup_failed",
+          expires_at: new Date().toISOString(),
+          cleanup_started_at: null,
+          error_code: errorCode,
+          ...(input.authUserId
+            ? { auth_user_id: input.authUserId }
+            : {}),
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(12000),
+      });
+      if (!response.ok) continue;
+
+      const rows = (await response.json().catch(() => [])) as
+        DemoStartResourceRow[];
+      const row = rows[0];
+      if (
+        rows.length === 1 &&
+        row?.id === input.reservationId &&
+        (!input.authUserId || row.auth_user_id === input.authUserId)
+      ) {
+        return true;
+      }
+    } catch {
+      // A second bounded attempt covers an ambiguous transient response.
+    }
+  }
+
+  return false;
 }
 
 export async function activatePublicDemoStart(input: {

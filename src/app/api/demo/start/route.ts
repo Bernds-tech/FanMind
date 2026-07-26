@@ -19,6 +19,8 @@ import {
   getTrustedClientIp,
   hashDemoIdentifier,
   publicDemoEnabled,
+  queuePublicDemoCleanup,
+  recordPublicDemoStartResources,
   verifyDemoTurnstile,
 } from "@/lib/demoProtection";
 import {
@@ -125,7 +127,54 @@ async function cleanupCreatedDemo(input: {
       },
     },
     { ...input.workspace, role: "owner" },
+    {
+      authUserId: input.userId,
+      workspaceId: input.workspace.id,
+    },
   );
+}
+
+async function deleteCreatedDemoAuthUser(
+  userId: string,
+  serviceRoleKey: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(userId)}`),
+      {
+        method: "DELETE",
+        headers: getSupabaseHeaders(serviceRoleKey),
+        cache: "no-store",
+        signal: AbortSignal.timeout(12000),
+      },
+    );
+    return response.ok || response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
+async function settleFailedDemoStart(input: {
+  reservationId: string;
+  errorCode: string;
+  cleanupSucceeded: boolean;
+  authUserId?: string | null;
+}): Promise<void> {
+  if (input.cleanupSucceeded) {
+    await failPublicDemoStart(input.reservationId, input.errorCode);
+    return;
+  }
+
+  const queued = await queuePublicDemoCleanup({
+    reservationId: input.reservationId,
+    errorCode: input.errorCode,
+    authUserId: input.authUserId,
+  });
+  if (!queued) {
+    console.error("Public demo cleanup could not be queued", {
+      code: "demo_cleanup_queue_failed",
+    });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -345,19 +394,79 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const authResourceRecorded = await recordPublicDemoStartResources({
+    reservationId,
+    authUserId: userId,
+  });
+  if (!authResourceRecorded) {
+    const authDeleted = await deleteCreatedDemoAuthUser(
+      userId,
+      serviceRoleKey,
+    );
+    await settleFailedDemoStart({
+      reservationId,
+      errorCode: "auth_user_record_failed",
+      cleanupSucceeded: authDeleted,
+      authUserId: authDeleted ? null : userId,
+    });
+    return demoJson(
+      {
+        error: "Demo-User konnte nicht sicher registriert werden.",
+        code: "auth_user_record_failed",
+      },
+      500,
+      browserToken,
+    );
+  }
+
   const workspaceResult = await createTemporaryDemoWorkspace({
     userId,
     userEmail: email,
     locale,
   });
 
+  if (workspaceResult.workspace) {
+    const workspaceResourceRecorded =
+      await recordPublicDemoStartResources({
+        reservationId,
+        authUserId: userId,
+        workspaceId: workspaceResult.workspace.id,
+      });
+    if (!workspaceResourceRecorded) {
+      const cleanup = await cleanupCreatedDemo({
+        userId,
+        email,
+        workspace: workspaceResult.workspace,
+      });
+      await settleFailedDemoStart({
+        reservationId,
+        errorCode: "workspace_record_failed",
+        cleanupSucceeded: cleanup.deleted && !cleanup.error,
+      });
+      return demoJson(
+        {
+          error: "Demo-Workspace konnte nicht sicher registriert werden.",
+          code: "workspace_record_failed",
+        },
+        500,
+        browserToken,
+      );
+    }
+  }
+
   if (workspaceResult.error || !workspaceResult.workspace) {
-    await fetch(getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(userId)}`), {
-      method: "DELETE",
-      headers: getSupabaseHeaders(serviceRoleKey),
-      cache: "no-store",
-    }).catch(() => undefined);
-    await failPublicDemoStart(reservationId, "workspace_create_failed");
+    const cleanupSucceeded = workspaceResult.workspace
+      ? await cleanupCreatedDemo({
+          userId,
+          email,
+          workspace: workspaceResult.workspace,
+        }).then((cleanup) => cleanup.deleted && !cleanup.error)
+      : await deleteCreatedDemoAuthUser(userId, serviceRoleKey);
+    await settleFailedDemoStart({
+      reservationId,
+      errorCode: "workspace_create_failed",
+      cleanupSucceeded,
+    });
 
     return demoJson(
       {
@@ -382,12 +491,16 @@ export async function POST(request: NextRequest) {
   );
 
   if (!tokenResponse.ok) {
-    await cleanupCreatedDemo({
+    const cleanup = await cleanupCreatedDemo({
       userId,
       email,
       workspace: workspaceResult.workspace,
     });
-    await failPublicDemoStart(reservationId, "session_create_failed");
+    await settleFailedDemoStart({
+      reservationId,
+      errorCode: "session_create_failed",
+      cleanupSucceeded: cleanup.deleted && !cleanup.error,
+    });
 
     return demoJson(
       {
@@ -401,12 +514,16 @@ export async function POST(request: NextRequest) {
 
   const session = (await tokenResponse.json()) as SupabaseTokenResponse;
   if (!session.access_token) {
-    await cleanupCreatedDemo({
+    const cleanup = await cleanupCreatedDemo({
       userId,
       email,
       workspace: workspaceResult.workspace,
     });
-    await failPublicDemoStart(reservationId, "session_access_token_missing");
+    await settleFailedDemoStart({
+      reservationId,
+      errorCode: "session_access_token_missing",
+      cleanupSucceeded: cleanup.deleted && !cleanup.error,
+    });
 
     return demoJson(
       {
@@ -426,12 +543,16 @@ export async function POST(request: NextRequest) {
   });
 
   if (!activated) {
-    await cleanupCreatedDemo({
+    const cleanup = await cleanupCreatedDemo({
       userId,
       email,
       workspace: workspaceResult.workspace,
     });
-    await failPublicDemoStart(reservationId, "reservation_activation_failed");
+    await settleFailedDemoStart({
+      reservationId,
+      errorCode: "reservation_activation_failed",
+      cleanupSucceeded: cleanup.deleted && !cleanup.error,
+    });
 
     return demoJson(
       {

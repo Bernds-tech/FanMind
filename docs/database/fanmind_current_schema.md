@@ -7,8 +7,10 @@ Dieses Dokument ersetzt die alte Lesart von `docs/database/fanmind_mvp_schema.sq
 Die aktuelle Datenbankwahrheit ergibt sich aus:
 
 1. den Supabase-Migrationen unter `supabase/migrations/`,
-2. den tatsächlich verwendeten Queries und Typen in `src/lib/supabase/server.ts`,
-3. dieser Dokumentation.
+2. den einzeln freizugebenden Contract-Schritten unter
+   `supabase/controlled/`,
+3. den tatsächlich verwendeten Queries und Typen in `src/lib/supabase/server.ts`,
+4. dieser Dokumentation.
 
 ## 1. Grundprinzip
 
@@ -55,6 +57,11 @@ Wichtige Felder laut aktuellem Code:
 - `monthly_fee_cents`
 - `commitment_months`
 - `billing_status`
+- `billing_provider`
+- `payment_collection_method`
+- `payment_terms_version`
+- `payment_terms_accepted_at`
+- `payment_terms_accepted_by_user_id`
 - `billing_suspended_at`
 - `billing_suspended_reason`
 - `billing_manual_override`
@@ -70,6 +77,9 @@ Wichtige Felder laut aktuellem Code:
 - `stripe_customer_id`
 - `stripe_subscription_id`
 - `stripe_checkout_session_id`
+- `stripe_payment_intent_id`
+- `stripe_mandate_id`
+- `billing_note`
 - `last_invoice_id`
 - `last_invoice_status`
 - `last_invoice_amount_due_cents`
@@ -90,8 +100,19 @@ RLS-Erwartung:
 
 - Owner darf eigenen Workspace lesen.
 - Workspace-Mitglieder dürfen ihren Workspace lesen.
-- Owner darf Workspace mutieren, soweit im MVP nötig.
-- Billing-/Admin-Felder dürfen nicht durch normale Nutzer frei manipulierbar sein.
+- Owner darf ausschließlich Name, Organisations-/Adress- und Steuerstammdaten
+  direkt mutieren.
+- Neue öffentliche Starter-Workspaces und die Owner-Membership entstehen
+  atomar über `ensure_current_user_workspace(...)`; Plan, Preis, Billing und
+  Zahlungsannahme werden dort serverseitig abgeleitet.
+- Direkter `INSERT` sowie table-level `UPDATE` für `authenticated` werden mit
+  `supabase/controlled/20260726121000_workspace_server_owned_columns.sql`
+  entzogen. Nur zehn
+  ausdrücklich freigegebene Stammdatenspalten behalten ein Spaltenrecht.
+- Billing-, Stripe-, Invoice-, Subscription-, Owner- und
+  `test_access_flags`-Felder bleiben serververwaltet.
+- Der Production-Rollout ist erst nach dem zweiphasigen Runbook
+  `docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md` abgeschlossen.
 
 ### `workspace_members`
 
@@ -472,6 +493,22 @@ RLS-/Security-Erwartung:
 - Kostenfreie interne Testzugänge nutzen eine admin-only Markierung auf `workspaces` (`billing_status = demo_free`, `billing_manual_override = true`, `billing_admin_note` enthält „Interner Testzugang“) und serverseitige `test_access_flags` (`admin`, `demo`, `internal`, `test`, `billing_disabled`, `mail_confirmed`, `no_expiry`, `ai_maintenance`). Normale Kunden behalten den Default `{}` und werden davon nicht beeinflusst.
 - Das interne Stripe-Live-Testabo nutzt dieselben Billing-Felder mit `commercial_option = internal_daily_test`, `test_access_flags.stripe_live_daily_test = true`, `STRIPE_PRICE_INTERNAL_DAILY_TEST` und Stripe-Webhook-Updates für Checkout-Session, Subscription, letzte Zahlung und Rechnungsstatus. Es ist admin-only, kostet 1 € pro Tag, ist kündbar/deaktivierbar und löst keine Referral- oder Rabatt-Automation aus.
 - Stripe-Webhooks müssen Signatur prüfen.
+- Vor jedem Stripe-Billing-PATCH wird das Workspace-Ziel per Service Role
+  gegen eine temporäre Demo-Session und die feste Sandra-Auth-Identität
+  geprüft. Diese beiden serverseitigen Identitäten blockieren Demo-Ziele
+  unabhängig von Stripe-Referenz oder direkter Objekt-Metadaten-ID;
+  owner-veränderbare Status-, Commercial- und Testflag-Felder sind vor dem
+  kontrollierten Spalten-Contract kein alleiniger Ablehnungsgrund.
+- Stripe-Referenz-, Guard-, Auth-, Session- und PATCH-Infrastrukturfehler
+  werden nicht wie „nicht gefunden“ oder ein Demo-Block bestätigt, sondern
+  lösen einen Stripe-Retry aus. Nur erfolgreiche Nulltreffer aller vorhandenen
+  Referenzen gelten als nicht zugeordnet; doppelte Referenzzeilen oder
+  widersprüchliche Customer-/Subscription-/Payment-Intent-Ziele lösen
+  ebenfalls einen Retry aus. Erst ein PATCH mit exakt einer zurückgegebenen
+  erwarteten Workspace-ID darf die Referral-Synchronisierung starten; ein
+  Nullzeilen-Update startet sie nur dann nicht erneut, wenn eine nachgelagerte
+  Service-Role-Abfrage exakt `manual_suspended` bestätigt. Fehlende Zeile,
+  `NULL`, anderer Status und Lesefehler bleiben retryable.
 - Stripe-IDs nicht unnötig im Client anzeigen.
 
 ## 9. KI-Usage-Tabelle
@@ -516,6 +553,14 @@ Wenn Tabellen, Spalten oder RLS-Policies geändert werden:
 3. `docs/database/fanmind_current_schema.md` aktualisieren.
 4. `docs/SECURITY_RLS_SECRETS_CHECK.md` prüfen.
 5. README und `docs/SOURCE_OF_TRUTH.md` nur anpassen, wenn sich Produktwahrheit oder Demo-/Billing-/Integrationslogik ändert.
+
+Workspace-RPC und Spaltenrechte werden gemäß
+`docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md` deploy-before-migrate als
+Expand-/Contract-Rollout ausgerollt. Der kompatible App-Brückenstand setzt
+keine Step-A-Spalte voraus und wiederholt nur einen exakt daran gescheiterten
+Insert mit dem älteren kommerziellen Core. Der Contract-Schritt liegt
+außerhalb `supabase/migrations`; ein Web-Deploy oder generisches
+`supabase db push` wendet ihn nicht an.
 
 ## 11. Bekannte Altlast
 

@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 25. Juli 2026
+Stand: 26. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -246,6 +246,7 @@ Verbindliche Quellen:
 
 - `docs/database/fanmind_current_schema.md`;
 - `supabase/migrations/`;
+- `supabase/controlled/` für einzeln freizugebende Contract-Schritte;
 - `src/lib/supabase/server.ts`.
 
 Relevante Objekte umfassen unter anderem:
@@ -273,11 +274,14 @@ Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfe
   Kostenschutz, keine Standard-/Plus-/Ultra-Monatskontingente;
 - der Vertragsende-Check an den beiden produktiven KI-Pfaden ist
   Lifecycle-Verhalten, keine autoritative Billing-Freigabe;
-- **Blocker vor Standard-/Plus-/Ultra-Aktivierung:** Die dokumentierte
-  `workspaces_update_owner`-Policy schränkt Änderungen an Billing-, Stripe-,
-  Subscription- und `test_access_flags`-Spalten nicht ein. Entitlements müssen
-  zuerst aus einer server-eigenen Quelle stammen oder diese Spalten technisch
-  gegen normale Workspace-Owner geschützt werden;
+- **Rollout-Blocker vor Standard-/Plus-/Ultra-Aktivierung:** atomare
+  Starter-Workspace-Erstellung und exakte Spaltenrechte sind technisch
+  vorbereitet. Erst Production-Preflight, Anwendung der additiven Migration
+  und des separat kontrollierten Contract-Schritts sowie die
+  positive/negative Abnahme gemäß
+  `docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md` belegen, dass normale
+  Workspace-Owner Billing-, Stripe-, Subscription- und
+  `test_access_flags`-Felder nicht mehr direkt ändern können;
 - keine automatische Sendefunktion.
 
 Details: `docs/AI_COST_MONITORING.md`.

@@ -19,32 +19,35 @@ export function isExplicitDemoWorkspace(workspace: { name?: string | null } | nu
 }
 
 export function isDemoWorkspace(workspace: { billing_status?: string | null; name?: string | null } | null | undefined): boolean {
-  return workspace?.billing_status === "demo_free" || isExplicitDemoWorkspace(workspace);
+  return workspace?.billing_status === "demo_free";
 }
 
 export function isPublicDemoWorkspace({
   userEmail,
-  workspaceName,
+  workspaceBillingStatus,
   user,
 }: {
   userEmail?: string | null;
-  workspaceName?: string | null;
+  workspaceBillingStatus?: string | null;
   user?: Pick<SupabaseServerUser, "user_metadata"> | null;
 }): boolean {
   return (
     (userEmail ?? "").trim().toLowerCase() === DEMO_WORKSPACE_EMAIL ||
-    isDemoWorkspace({ billing_status: null, name: workspaceName }) ||
+    isDemoWorkspace({ billing_status: workspaceBillingStatus }) ||
     isTemporaryDemoUser(user)
   );
 }
 
 export function areDemoConnectionsDisabled(
   user: Pick<SupabaseServerUser, "email" | "user_metadata"> | null | undefined,
-  workspace: Pick<WorkspaceDashboardRow, "name"> | null | undefined,
+  workspace:
+    | Pick<WorkspaceDashboardRow, "name" | "billing_status">
+    | null
+    | undefined,
 ): boolean {
   return isPublicDemoWorkspace({
     userEmail: user?.email,
-    workspaceName: workspace?.name,
+    workspaceBillingStatus: workspace?.billing_status,
     user,
   });
 }

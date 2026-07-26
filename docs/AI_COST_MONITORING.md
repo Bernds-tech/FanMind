@@ -36,9 +36,8 @@ Aktueller MVP-Schutz:
 
 Nächster Schritt:
 
-- Billing-, Stripe-, Subscription- und interne Testfelder zuerst gegen direkte
-  Änderungen durch normale Workspace-Owner schützen oder Entitlements aus
-  einer separaten server-eigenen Quelle lesen;
+- den vorbereiteten atomaren Workspace-RPC und die exakten Spaltenrechte nach
+  Production-Preflight zweiphasig anwenden und positiv/negativ abnehmen;
 - verbindliche Standard-/Plus-/Ultra-Modelle und Monatskontingente schriftlich
   freigeben;
 - Workspace-Entitlement und Stripe-Add-on-Lifecycle erst im getrennten Staging
@@ -51,12 +50,16 @@ noch eine automatische Nachberechnung. KI Plus und KI Ultra bleiben
 unverändert nicht automatisch buchbar.
 
 Der bestehende Vertragsende-Check an den produktiven KI-Pfaden ist
-Lifecycle-Verhalten und keine autoritative Billing-Freigabe. Die dokumentierte
-`workspaces_update_owner`-Policy begrenzt aktuell nicht, welche Workspace-
-Spalten ein Owner ändern darf. Deshalb dürfen `billing_status`, Stripe-IDs,
-Subscription-Felder und `test_access_flags` erst nach einer gesonderten
-Spaltenrechte-/RLS-Härtung oder mit einer server-eigenen Entitlement-Quelle als
-Autorisierungsnachweis verwendet werden.
+Lifecycle-Verhalten und keine autoritative Billing-Freigabe. RPC,
+deploy-before-migrate App-Kompatibilität mit exaktem Missing-RPC- und
+Missing-Spalten-Fallback sowie die exakte Zehn-Spalten-Allowlist sind
+vorbereitet. Erst die vollständig
+abgenommene Production-Anwendung der additiven Spalten-/RPC-Migration und des
+separat kontrollierten Contract-Schritts gemäß
+`docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md` belegt die
+server-eigene Feldgrenze. Bis dahin dürfen `billing_status`, Stripe-IDs,
+Subscription-Felder und `test_access_flags` nicht als autoritativer
+Entitlement-Nachweis verwendet werden.
 
 ## 3. Grundformel
 
@@ -268,6 +271,7 @@ einschließlich einer server-eigenen Autorisierungsquelle.
 - [x] UI markiert Werte als geschätzt.
 - [x] Keine Secrets oder Prompt-Texte landen im Usage-Log.
 - [x] RLS verhindert fremde Workspace-Daten.
-- [ ] Billing-/Stripe-/Subscription-/Testzugangsfelder sind gegen direkte
-      Änderungen durch normale Workspace-Owner geschützt.
+- [ ] Beide Workspace-Härtungsmigrationen sind in Production angewendet und
+      Billing-/Stripe-/Subscription-/Testzugangsfelder mit Owner-JWT negativ
+      abgenommen.
 - [x] `README.md`, `AGENTS.md` und `docs/SOURCE_OF_TRUTH.md` bleiben synchron.
