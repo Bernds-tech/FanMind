@@ -51,6 +51,20 @@ test("a cached rerender cannot invalidate an in-flight explicit refresh", () => 
   assert.equal(sequence.isCurrent(pending), false);
 });
 
+test("a changed search invalidates pending loads but a cached rerender does not", () => {
+  const sequence = createContactLoadSequence("");
+  const pending = sequence.begin();
+
+  assert.equal(sequence.updateSearch(""), false);
+  assert.equal(sequence.isCurrent(pending), true);
+  assert.equal(sequence.updateSearch("sandra"), true);
+  assert.equal(sequence.isCurrent(pending), false);
+
+  const replacement = sequence.begin();
+  assert.equal(sequence.updateSearch("sandra"), false);
+  assert.equal(sequence.isCurrent(replacement), true);
+});
+
 test("contacts pass the exact refresh result and sequence cached loads safely", async () => {
   const source = await readFile(
     new URL(
@@ -70,4 +84,5 @@ test("contacts pass the exact refresh result and sequence cached loads safely", 
     source.indexOf("if (usingCache && !isRefresh)") <
       source.indexOf("loadSequence.current.begin()"),
   );
+  assert.match(source, /loadSequence\.current\.updateSearch\(value\)/u);
 });

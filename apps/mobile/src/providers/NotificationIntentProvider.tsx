@@ -81,12 +81,6 @@ export function NotificationIntentProvider({
     }
     if (decision !== "consume" || !pendingIntent) return;
 
-    try {
-      clearLastNotificationIntent();
-    } catch {
-      return;
-    }
-
     const responseIdentifier = pendingIntent.responseIdentifier;
     consumedIdentifiers.current = [
       ...consumedIdentifiers.current.filter(
@@ -98,6 +92,12 @@ export function NotificationIntentProvider({
     setPendingIntent((current) =>
       current?.responseIdentifier === responseIdentifier ? null : current,
     );
+    try {
+      clearLastNotificationIntent();
+    } catch {
+      // Native cleanup is best effort. In-memory consumption must still stop
+      // a stale native response from trapping navigation on Follow-ups.
+    }
   }, [loading, pendingIntent, router, segments, session]);
 
   const value = useMemo(() => ({ pendingIntent }), [pendingIntent]);

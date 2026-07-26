@@ -1,5 +1,6 @@
-function createContactLoadSequence() {
+function createContactLoadSequence(initialSearch = "") {
   let current = 0;
+  let search = initialSearch;
   return {
     begin() {
       current += 1;
@@ -10,6 +11,12 @@ function createContactLoadSequence() {
     },
     isCurrent(sequence) {
       return Number.isInteger(sequence) && sequence === current;
+    },
+    updateSearch(nextSearch) {
+      if (nextSearch === search) return false;
+      search = nextSearch;
+      current += 1;
+      return true;
     },
   };
 }

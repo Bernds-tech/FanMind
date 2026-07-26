@@ -13,6 +13,7 @@ export function inspectLegacySecureStorageValue(
 export function migrateLegacySecureStorageValue(
   input: LegacyStorageIo & {
     writeCurrentValue: (value: string) => Promise<void>;
+    returnValueWhenCleanupFails?: boolean;
   },
 ): Promise<string | null>;
 export function purgeLegacySecureStorageValue(

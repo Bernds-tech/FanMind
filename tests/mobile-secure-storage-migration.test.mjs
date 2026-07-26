@@ -4,8 +4,10 @@ import test from "node:test";
 
 import {
   migrateLegacySecureStorageValue,
+  purgeLegacySecureStorageValueIfPresent,
 } from "../apps/mobile/src/lib/secureStorageLegacyMigration.mjs";
 import {
+  createSecureStoragePurgePlan,
   LEGACY_SECURE_STORAGE_MAX_CHUNKS,
   LEGACY_SECURE_STORAGE_PURGE_MAX_CHUNKS,
   LEGACY_SECURE_STORAGE_REGISTRY_KEY,
@@ -41,6 +43,24 @@ function ioFor(store, operations, failDeleteKey = null) {
     deleteValue: async (key) => {
       operations.push(`delete:${key}`);
       if (key === failDeleteKey) throw new Error("injected delete failure");
+      store.delete(key);
+    },
+  };
+}
+
+function ioWithOneDeleteFailure(store, operations, failDeleteKey) {
+  let failed = false;
+  return {
+    readValue: async (key) => {
+      operations.push(`read:${key}`);
+      return store.get(key) ?? null;
+    },
+    deleteValue: async (key) => {
+      operations.push(`delete:${key}`);
+      if (key === failDeleteKey && !failed) {
+        failed = true;
+        throw new Error("injected one-time delete failure");
+      }
       store.delete(key);
     },
   };
@@ -200,6 +220,59 @@ test("legacy deletion failure retains v2 result and retry metadata", async () =>
   );
 });
 
+test("a confirmed v2 migration remains readable when legacy cleanup must retry", async () => {
+  const failedKey = legacySecureStoreChunkKey(LOGICAL_KEY, 1);
+  const store = legacyStore(2, ["session-", "value"]);
+  const operations = [];
+  let currentValue = null;
+
+  const migrated = await migrateLegacySecureStorageValue({
+    key: LOGICAL_KEY,
+    ...ioFor(store, operations, failedKey),
+    writeCurrentValue: async (value) => {
+      operations.push("write-current");
+      currentValue = value;
+    },
+    returnValueWhenCleanupFails: true,
+  });
+
+  assert.equal(migrated, "session-value");
+  assert.equal(currentValue, "session-value");
+  assert.equal(store.get(failedKey), "value");
+  assert.ok(
+    operations.indexOf("write-current") <
+      operations.findIndex((operation) => operation.startsWith("delete:")),
+  );
+});
+
+test("legacy chunk cleanup keeps its count until a failed deletion can retry", async () => {
+  const countKey = legacySecureStoreCountKey(LOGICAL_KEY);
+  const failedKey = legacySecureStoreChunkKey(LOGICAL_KEY, 1);
+  const store = legacyStore(2, ["session-", "value"]);
+  const operations = [];
+  const io = ioWithOneDeleteFailure(store, operations, failedKey);
+
+  const migrated = await migrateLegacySecureStorageValue({
+    key: LOGICAL_KEY,
+    ...io,
+    writeCurrentValue: async () => undefined,
+    returnValueWhenCleanupFails: true,
+  });
+
+  assert.equal(migrated, "session-value");
+  assert.equal(store.get(countKey), "2");
+  assert.equal(store.get(failedKey), "value");
+
+  await purgeLegacySecureStorageValueIfPresent({
+    key: LOGICAL_KEY,
+    ...io,
+  });
+
+  assert.equal(store.has(countKey), false);
+  assert.equal(store.has(legacySecureStoreChunkKey(LOGICAL_KEY, 0)), false);
+  assert.equal(store.has(failedKey), false);
+});
+
 test("legacy registry and native bridge reject ambiguous cleanup targets", async () => {
   assert.deepEqual(parseLegacySecureStorageRegistry(null), {
     present: false,
@@ -213,6 +286,18 @@ test("legacy registry and native bridge reject ambiguous cleanup targets", async
     false,
   );
   assert.equal(parseLegacySecureStorageRegistry("{").valid, false);
+  assert.deepEqual(
+    createSecureStoragePurgePlan(
+      [LOGICAL_KEY],
+      parseLegacySecureStorageRegistry("{"),
+    ),
+    {
+      keys: [LOGICAL_KEY],
+      legacyRegistryPresent: true,
+      legacyRegistryValid: false,
+      trustedLegacyKeys: [],
+    },
+  );
 
   const [bridge, storage] = await Promise.all([
     readFile(
@@ -233,4 +318,41 @@ test("legacy registry and native bridge reject ambiguous cleanup targets", async
   assert.match(storage, /migrateLegacySecureStorageValue/);
   assert.match(storage, /purgeLegacySecureStorageValueIfPresent/);
   assert.match(storage, /writeCurrentValue: \(value\) => setItemInternal\(key, value, false\)/);
+  assert.match(storage, /returnValueWhenCleanupFails: true/u);
+
+  const clearCurrentKeys = storage.indexOf(
+    "const currentKeys = await readRegistry()",
+  );
+  const writeCurrentRetryRegistry = storage.indexOf(
+    "await writeRegistry(failedKeys)",
+  );
+  const rejectInvalidLegacyRegistry = storage.indexOf(
+    "if (!legacyRegistryValid)",
+  );
+  assert.ok(clearCurrentKeys >= 0);
+  assert.ok(writeCurrentRetryRegistry > clearCurrentKeys);
+  assert.ok(rejectInvalidLegacyRegistry > writeCurrentRetryRegistry);
+
+  const incompleteCurrentValue = storage.indexOf(
+    "if (chunks.some((chunk) => chunk === null))",
+  );
+  const recoverLegacyValue = storage.indexOf(
+    "const recovered = await migrateLegacySecureStorageValue",
+    incompleteCurrentValue,
+  );
+  const validCurrentValue = storage.indexOf(
+    "// Existing valid keys",
+    incompleteCurrentValue,
+  );
+  assert.ok(incompleteCurrentValue >= 0);
+  assert.ok(recoverLegacyValue > incompleteCurrentValue);
+  assert.ok(recoverLegacyValue < validCurrentValue);
+  assert.doesNotMatch(
+    storage.slice(incompleteCurrentValue, validCurrentValue),
+    /purgeLegacyKeyIfPresent/u,
+  );
+  assert.match(
+    storage.slice(validCurrentValue),
+    /try \{[\s\S]*purgeLegacyKeyIfPresent\(key\)[\s\S]*catch \{/u,
+  );
 });

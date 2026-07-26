@@ -14,3 +14,16 @@ export function parseLegacySecureStorageRegistry(raw: unknown): {
   valid: boolean;
   keys: string[];
 };
+export function createSecureStoragePurgePlan(
+  currentKeys: string[],
+  legacyRegistry: {
+    present: boolean;
+    valid: boolean;
+    keys: string[];
+  },
+): {
+  keys: string[];
+  legacyRegistryPresent: boolean;
+  legacyRegistryValid: boolean;
+  trustedLegacyKeys: string[];
+};

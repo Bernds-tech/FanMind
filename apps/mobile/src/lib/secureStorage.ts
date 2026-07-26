@@ -17,6 +17,7 @@ import {
   purgeLegacySecureStorageValueIfPresent,
 } from "@/lib/secureStorageLegacyMigration.mjs";
 import {
+  createSecureStoragePurgePlan,
   LEGACY_SECURE_STORAGE_REGISTRY_KEY,
   parseLegacySecureStorageRegistry,
 } from "@/lib/secureStorageLegacyPolicy.mjs";
@@ -105,15 +106,14 @@ async function removeChunks(key: string): Promise<void> {
 async function clearSecureLocalStorageInternal(): Promise<void> {
   const currentKeys = await readRegistry();
   const legacyRegistry = await readLegacyRegistry();
-  if (!legacyRegistry.valid) {
-    throw new Error(
-      "Die alte sichere FanMind-Registry konnte nicht bestätigt werden.",
-    );
-  }
-
-  const keys = [...new Set([...currentKeys, ...legacyRegistry.keys])];
+  const {
+    keys,
+    legacyRegistryPresent,
+    legacyRegistryValid,
+    trustedLegacyKeys,
+  } = createSecureStoragePurgePlan(currentKeys, legacyRegistry);
   const failedKeys: string[] = [];
-  let legacyPurgeFailed = false;
+  let legacyPurgeFailed = !legacyRegistryValid;
 
   for (const key of keys) {
     let failed = false;
@@ -126,7 +126,7 @@ async function clearSecureLocalStorageInternal(): Promise<void> {
       await purgeLegacyKeyIfPresent(key);
     } catch {
       failed = true;
-      if (legacyRegistry.keys.includes(key)) {
+      if (trustedLegacyKeys.includes(key)) {
         legacyPurgeFailed = true;
       }
     }
@@ -138,9 +138,10 @@ async function clearSecureLocalStorageInternal(): Promise<void> {
   await writeRegistry(failedKeys);
 
   if (
-    legacyRegistry.present &&
+    legacyRegistryPresent &&
     !legacyPurgeFailed &&
-    failedKeys.every((key) => !legacyRegistry.keys.includes(key))
+    legacyRegistryValid &&
+    failedKeys.every((key) => !trustedLegacyKeys.includes(key))
   ) {
     try {
       await deleteLegacySecureStoreValue(
@@ -149,6 +150,12 @@ async function clearSecureLocalStorageInternal(): Promise<void> {
     } catch {
       legacyPurgeFailed = true;
     }
+  }
+
+  if (!legacyRegistryValid) {
+    throw new Error(
+      "Die alte sichere FanMind-Registry konnte nicht bestätigt werden. Aktuelle sichere Daten wurden unabhängig davon verarbeitet.",
+    );
   }
 
   if (failedKeys.length > 0 || legacyPurgeFailed) {
@@ -165,6 +172,7 @@ async function getItemInternal(key: string): Promise<string | null> {
       readValue: readLegacySecureStoreValue,
       deleteValue: deleteLegacySecureStoreValue,
       writeCurrentValue: (value) => setItemInternal(key, value, false),
+      returnValueWhenCleanupFails: true,
     });
   }
   const chunks = await Promise.all(
@@ -174,17 +182,28 @@ async function getItemInternal(key: string): Promise<string | null> {
   );
   if (chunks.some((chunk) => chunk === null)) {
     await removeChunks(key);
-    await unregisterKey(key);
-    await purgeLegacyKeyIfPresent(key);
-    return null;
+    const recovered = await migrateLegacySecureStorageValue({
+      key,
+      readValue: readLegacySecureStoreValue,
+      deleteValue: deleteLegacySecureStoreValue,
+      writeCurrentValue: (value) => setItemInternal(key, value, false),
+      returnValueWhenCleanupFails: true,
+    });
+    if (recovered === null) await unregisterKey(key);
+    return recovered;
   }
 
   // Existing valid keys that predate registry enrollment are added on first
   // successful read so the next logout can purge them.
   await registerKey(key);
   // A valid v2 value always wins. Any older duplicate is removed only after
-  // the current value has been confirmed.
-  await purgeLegacyKeyIfPresent(key);
+  // the current value has been confirmed. Cleanup remains retryable through
+  // the current registry and must never make the confirmed read unavailable.
+  try {
+    await purgeLegacyKeyIfPresent(key);
+  } catch {
+    // The registered current key lets logout retry legacy cleanup safely.
+  }
   return chunks.join("");
 }
 

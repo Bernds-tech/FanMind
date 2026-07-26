@@ -31,12 +31,20 @@ async function purgeLegacySecureStorageValue({
   deleteValue,
   chunkCount,
 }) {
-  const results = await Promise.allSettled(
-    legacyPhysicalKeys(key, chunkCount).map((physicalKey) =>
+  const [countKey, ...chunkKeys] = legacyPhysicalKeys(key, chunkCount);
+  const chunkResults = await Promise.allSettled(
+    chunkKeys.map((physicalKey) =>
       deleteValue(physicalKey),
     ),
   );
-  if (results.some((result) => result.status === "rejected")) {
+  if (chunkResults.some((result) => result.status === "rejected")) {
+    throw new Error(
+      "Alte sichere FanMind-Daten konnten nicht vollständig entfernt werden.",
+    );
+  }
+  try {
+    await deleteValue(countKey);
+  } catch {
     throw new Error(
       "Alte sichere FanMind-Daten konnten nicht vollständig entfernt werden.",
     );
@@ -100,6 +108,7 @@ async function migrateLegacySecureStorageValue({
   readValue,
   deleteValue,
   writeCurrentValue,
+  returnValueWhenCleanupFails = false,
 }) {
   const inspected = await inspectLegacySecureStorageValue({
     key,
@@ -109,11 +118,15 @@ async function migrateLegacySecureStorageValue({
   if (inspected.status !== "complete") return null;
 
   await writeCurrentValue(inspected.value);
-  await purgeLegacySecureStorageValue({
-    key,
-    deleteValue,
-    chunkCount: LEGACY_SECURE_STORAGE_MAX_CHUNKS,
-  });
+  try {
+    await purgeLegacySecureStorageValue({
+      key,
+      deleteValue,
+      chunkCount: LEGACY_SECURE_STORAGE_MAX_CHUNKS,
+    });
+  } catch (error) {
+    if (!returnValueWhenCleanupFails) throw error;
+  }
   return inspected.value;
 }
 

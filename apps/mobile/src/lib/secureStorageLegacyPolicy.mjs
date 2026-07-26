@@ -85,7 +85,18 @@ function parseLegacySecureStorageRegistry(raw) {
   };
 }
 
+function createSecureStoragePurgePlan(currentKeys, legacyRegistry) {
+  const trustedLegacyKeys = legacyRegistry.valid ? legacyRegistry.keys : [];
+  return {
+    keys: [...new Set([...currentKeys, ...trustedLegacyKeys])],
+    legacyRegistryPresent: legacyRegistry.present,
+    legacyRegistryValid: legacyRegistry.valid,
+    trustedLegacyKeys,
+  };
+}
+
 export {
+  createSecureStoragePurgePlan,
   LEGACY_SECURE_STORAGE_MAX_CHUNKS,
   LEGACY_SECURE_STORAGE_MAX_KEYS,
   LEGACY_SECURE_STORAGE_PURGE_MAX_CHUNKS,

@@ -181,4 +181,23 @@ test("mobile push foundation remains permissionless and delivery-free", async ()
   assert.match(provider, /MAX_CONSUMED_RESPONSE_IDENTIFIERS = 32/);
   assert.match(authLayout, /pendingIntent\?\.route \?\? "\/\(app\)"/);
   assert.match(indexRoute, /pendingIntent\?\.route \?\? "\/\(app\)"/);
+
+  const consumeIdentifier = provider.indexOf(
+    "const responseIdentifier = pendingIntent.responseIdentifier",
+  );
+  const clearNativeResponse = provider.indexOf(
+    "clearLastNotificationIntent()",
+    consumeIdentifier,
+  );
+  const consumeEffectEnd = provider.indexOf(
+    "}, [loading, pendingIntent, router, segments, session])",
+    clearNativeResponse,
+  );
+  assert.ok(consumeIdentifier >= 0);
+  assert.ok(clearNativeResponse > consumeIdentifier);
+  assert.ok(consumeEffectEnd > clearNativeResponse);
+  assert.doesNotMatch(
+    provider.slice(consumeIdentifier, consumeEffectEnd),
+    /catch\s*\{\s*return;/u,
+  );
 });
