@@ -16,6 +16,7 @@ import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
+import { trackMetaPixelEvent } from "@/lib/metaPixel";
 import styles from "./register.module.css";
 
 type RegisterPlanId = PlanId;
@@ -545,6 +546,7 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
 
       setSuccess(true);
       setAwaitingEmailConfirmation(!data.session);
+      trackMetaPixelEvent("CompleteRegistration");
 
       if (data.session?.user) {
         router.push("/billing/start");
