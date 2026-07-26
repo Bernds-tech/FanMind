@@ -148,7 +148,7 @@ export function AiPromptSettings({
     }));
   }
 
-  function addTemplate(template: (typeof TEMPLATES)[number]) {
+  function addTemplate(template: { name: string; instruction: string }) {
     if (settings.profiles.length >= 8) return;
     setStatus("");
     setSettings((current) => ({
