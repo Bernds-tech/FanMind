@@ -90,8 +90,8 @@ FanMind besitzt eine zentral im Next.js-Root-Layout eingebundene, consent-gesteu
 
 - Konfiguration: `NEXT_PUBLIC_META_PIXEL_ID`;
 - Production-Dataset: `FanMind Dataset`, Pixel-ID `2069553844439892`;
-- aktives Event: ausschließlich `PageView`, dedupliziert je freigegebenem öffentlichen App-Router-Pfad und unsensitivem Queryzustand;
-- vorbereitet, aber nicht mit Produktaktionen verbunden: `ViewContent`, `Lead`, `CompleteRegistration`, `Contact`, `Schedule`, `StartTrial`, `Purchase`;
+- aktive Events: `PageView`, dedupliziert je freigegebenem öffentlichen App-Router-Pfad und unsensitivem Queryzustand, sowie parameterloses `CompleteRegistration` nach erfolgreicher Konto-/Workspace-Erstellung;
+- vorbereitet, aber nicht mit Produktaktionen verbunden: `ViewContent`, `Lead`, `Contact`, `Schedule`, `StartTrial`, `Purchase`;
 - kein Laden vor ausdrücklicher Marketing-Einwilligung;
 - keine E-Mail, Namen, CRM-, Kontakt-, Nachrichten-, KI- oder Zahlungsdaten; geschützte same-origin Referrer werden blockiert;
 - kein Advanced Matching, keine Conversions API und kein serverseitiges Meta-Tracking.

@@ -122,18 +122,18 @@ Fail-closed-Verhalten:
 | Event | Auslöser | Parameter |
 | --- | --- | --- |
 | `PageView` | erste freigegebene öffentliche Seite nach Einwilligung und danach genau einmal je neuem sicheren App-Router-Pfad/Queryzustand | keine |
+| `CompleteRegistration` | erfolgreiche FanMind-Konto- und Workspace-Registrierung auf der öffentlichen Registrierungsseite; unabhängig von Checkout oder Zahlung | keine |
 
 ### Nur vorbereitet, nicht verdrahtet
 
 - `ViewContent`
 - `Lead`
-- `CompleteRegistration`
 - `Contact`
 - `Schedule`
 - `StartTrial`
 - `Purchase`
 
-Diese Namen sind in einer wiederverwendbaren Event-Hilfsfunktion typisiert und allowlist-basiert. Im aktuellen Stand ruft keine Produktaktion diese Conversion-Events auf. Vor jeder späteren Verdrahtung müssen Ereignisdefinition, Consent, Datenminimierung, öffentliche Routengrenze und fachliche Wahrheit separat geprüft werden.
+Diese Namen sind in einer wiederverwendbaren Event-Hilfsfunktion typisiert und allowlist-basiert. Im aktuellen Stand ruft ausschließlich eine erfolgreich abgeschlossene Registrierung `CompleteRegistration` auf. Vor jeder weiteren Verdrahtung müssen Ereignisdefinition, Consent, Datenminimierung, öffentliche Routengrenze und fachliche Wahrheit separat geprüft werden.
 
 Insbesondere wird `Purchase` nicht allein wegen eines Seitenaufrufs, Checkout-Starts oder internen Testabos gesendet. Ein späteres Purchase-Event benötigt einen bestätigten Zahlungsabschluss und eine eigene Billing-/Datenschutzabnahme.
 
@@ -208,8 +208,9 @@ Nach der kontrollierten Production-Aktivierung:
 5. Marketing-Einwilligung erteilen.
 6. ein `PageView` für den initialen öffentlichen Pfad prüfen.
 7. über eine sichere öffentliche Client-Navigation einen zweiten Pfad öffnen und genau ein weiteres `PageView` prüfen.
-8. Eventdetails auf das Fehlen von E-Mail, Namen, CRM-, Kontakt-, Nachrichten- und Advanced-Matching-Daten prüfen.
-9. Die Meta Pixel Helper Browser-Erweiterung kann ergänzend verwendet werden, ersetzt aber nicht Netzwerk-, Routengrenz- und Consent-Prüfung.
+8. Eine neue Testregistrierung ohne Zahlungsabschluss durchführen und genau ein `CompleteRegistration` prüfen.
+9. Eventdetails auf das Fehlen von E-Mail, Namen, CRM-, Kontakt-, Nachrichten-, Billing- und Advanced-Matching-Daten prüfen.
+10. Die Meta Pixel Helper Browser-Erweiterung kann ergänzend verwendet werden, ersetzt aber nicht Netzwerk-, Routengrenz- und Consent-Prüfung.
 
 Keine Screenshots oder Tickets dürfen Tokens, Session-Cookies, Kundeninhalte oder vollständige Browser-Netzwerk-Response-Bodies enthalten.
 

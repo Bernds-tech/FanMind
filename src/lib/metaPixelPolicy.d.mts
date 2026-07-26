@@ -1,10 +1,11 @@
 export type FanMindMarketingConsent = "unset" | "denied" | "granted";
 
-export type MetaPixelActiveEventName = "PageView";
+export type MetaPixelActiveEventName =
+  | "PageView"
+  | "CompleteRegistration";
 export type MetaPixelPreparedEventName =
   | "ViewContent"
   | "Lead"
-  | "CompleteRegistration"
   | "Contact"
   | "Schedule"
   | "StartTrial"

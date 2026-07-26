@@ -168,12 +168,14 @@ test("bootstrap initializes exactly once, disables automatic events and does not
   );
 });
 
-test("only PageView is active and conversion names remain prepared", () => {
-  assert.deepEqual([...META_PIXEL_ACTIVE_EVENTS], ["PageView"]);
+test("PageView and completed registration are active while other conversions remain prepared", () => {
+  assert.deepEqual([...META_PIXEL_ACTIVE_EVENTS], [
+    "PageView",
+    "CompleteRegistration",
+  ]);
   assert.deepEqual([...META_PIXEL_PREPARED_EVENTS], [
     "ViewContent",
     "Lead",
-    "CompleteRegistration",
     "Contact",
     "Schedule",
     "StartTrial",
@@ -234,8 +236,9 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   );
 });
 
-test("event helper accepts no arbitrary payload and no conversions are wired", async () => {
+test("event helper accepts no arbitrary payload and only completed registration is wired", async () => {
   const helper = await source("src/lib/metaPixel.ts");
+  const register = await source("src/app/register/RegisterClient.tsx");
   const repositorySources = await Promise.all([
     source("src/app/layout.tsx"),
     source("src/components/marketing/MarketingConsentManager.tsx"),
@@ -248,9 +251,14 @@ test("event helper accepts no arbitrary payload and no conversions are wired", a
   );
   assert.doesNotMatch(helper, /trackMetaPixelEvent\([^)]*,/u);
   assert.doesNotMatch(helper, /customData|userData/u);
+  assert.equal(
+    (register.match(/trackMetaPixelEvent\("CompleteRegistration"\)/gu) ?? []).length,
+    1,
+  );
+  assert.match(register, /setSuccess\(true\);[\s\S]*trackMetaPixelEvent\("CompleteRegistration"\)/u);
   assert.doesNotMatch(
-    repositorySources.join("\n"),
-    /trackMetaPixelEvent\("(?:ViewContent|Lead|CompleteRegistration|Contact|Schedule|StartTrial|Purchase)"\)/u,
+    `${repositorySources.join("\n")}\n${register}`,
+    /trackMetaPixelEvent\("(?:ViewContent|Lead|Contact|Schedule|StartTrial|Purchase)"\)/u,
   );
 });
 
