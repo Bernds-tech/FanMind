@@ -82,3 +82,41 @@ Die Prüfung gibt ausschließlich feste Codes aus:
 - `base_price`
 
 Konkrete Konfigurationswerte werden nie ausgegeben.
+
+## Workspace-Entitlement
+
+`resolveWorkspaceAiTierEntitlement(...)` in `src/config/aiTiers.mjs` ist der
+gemeinsame fail-closed Vertrag für die später serverseitig geladenen
+Workspace-Entitlements.
+
+Ohne gespeicherten Zustand bleibt KI Standard enthalten und wirksam. Ein
+kostenpflichtiges Plus-/Ultra-Entitlement wird nur wirksam, wenn alle
+folgenden Nachweise gleichzeitig vorliegen:
+
+- die Entitlement-Daten stammen aus einem serververwalteten Speicher;
+- Lifecycle-Status ist `active`;
+- Quelle ist Stripe;
+- das Stripe-Subscription-Item wurde serverseitig verknüpft;
+- `effectiveAt` ist gültig und nicht in der Zukunft;
+- ein optionales `expiresAt` ist gültig und noch nicht erreicht;
+- die vollständige zentrale Tier-Readiness ist positiv.
+
+Fehlt ein Nachweis, ist die wirksame Stufe Standard. Die Funktion gibt nur
+feste Rückfallcodes zurück:
+
+- `unknown_tier`
+- `server_owned`
+- `lifecycle_status`
+- `source`
+- `stripe_item`
+- `effective_at`
+- `not_started`
+- `expires_at`
+- `expired`
+- `tier_readiness`
+
+Konkrete Stripe-IDs werden dem Resolver nur als bereits serverseitig
+bestätigtes Ja/Nein übergeben und weder zurückgegeben noch geloggt. Die
+Einführung eines persistenten Entitlement-Speichers, dessen Stripe-Lifecycle
+und die Verdrahtung mit produktiven KI-Pfaden bleiben ein eigener
+deploy-before-migrate Staging-Schritt.

@@ -7,8 +7,10 @@ import {
   assertAiTierPolicy,
   evaluateAiTierReadiness,
   formatAiTierPrice,
+  getAiTierRuntimeReadinessFromEnvironment,
   getAiTierTotalMonthlyCents,
   isAiTierAutomaticallyBookable,
+  resolveWorkspaceAiTierEntitlement,
 } from "../src/config/aiTiers.mjs";
 
 test("approved AI tier prices and package totals remain stable", () => {
@@ -112,4 +114,149 @@ test("readiness command reports only stable status and blocker codes", () => {
   assert.match(result.stdout, /AI_TIER_READINESS=PASS/u);
   assert.doesNotMatch(result.stdout, /DO_NOT_PRINT/u);
   assert.equal(result.stderr, "");
+});
+
+test("workspace entitlement defaults to included Standard without stored state", () => {
+  assert.deepEqual(resolveWorkspaceAiTierEntitlement(), {
+    requestedTierId: null,
+    effectiveTierId: "standard",
+    entitlementStatus: "included",
+    fellBackToStandard: false,
+    fallbackReasons: [],
+    readinessBlockers: [],
+  });
+
+  assert.deepEqual(
+    resolveWorkspaceAiTierEntitlement({
+      tierId: "standard",
+      status: "canceled",
+      source: "client",
+    }),
+    {
+      requestedTierId: "standard",
+      effectiveTierId: "standard",
+      entitlementStatus: "included",
+      fellBackToStandard: false,
+      fallbackReasons: [],
+      readinessBlockers: [],
+    },
+  );
+});
+
+test("workspace entitlement rejects unknown and client-controlled paid tiers", () => {
+  const now = new Date("2026-07-26T12:00:00.000Z");
+  const unknown = resolveWorkspaceAiTierEntitlement(
+    { tierId: "enterprise" },
+    {},
+    now,
+  );
+  assert.equal(unknown.effectiveTierId, "standard");
+  assert.equal(unknown.fellBackToStandard, true);
+  assert.deepEqual(unknown.fallbackReasons, ["unknown_tier"]);
+
+  const clientClaim = resolveWorkspaceAiTierEntitlement(
+    {
+      tierId: "plus",
+      status: "active",
+      source: "stripe",
+      effectiveAt: "2026-07-01T00:00:00.000Z",
+      stripeSubscriptionItemLinked: true,
+      serverOwned: false,
+    },
+    {
+      stripePriceConfigured: true,
+      workspaceContractConfirmed: true,
+    },
+    now,
+  );
+  assert.equal(clientClaim.effectiveTierId, "standard");
+  assert.ok(clientClaim.fallbackReasons.includes("server_owned"));
+  assert.ok(clientClaim.fallbackReasons.includes("tier_readiness"));
+});
+
+test("paid entitlement lifecycle and time boundaries fail closed", () => {
+  const runtime = {
+    stripePriceConfigured: true,
+    workspaceContractConfirmed: true,
+  };
+  const base = {
+    tierId: "ultra",
+    status: "active",
+    source: "stripe",
+    effectiveAt: "2026-07-01T00:00:00.000Z",
+    expiresAt: null,
+    stripeSubscriptionItemLinked: true,
+    serverOwned: true,
+  };
+  const now = new Date("2026-07-26T12:00:00.000Z");
+
+  for (const [override, reason] of [
+    [{ status: "paused" }, "lifecycle_status"],
+    [{ source: "manual" }, "source"],
+    [{ stripeSubscriptionItemLinked: false }, "stripe_item"],
+    [{ effectiveAt: null }, "effective_at"],
+    [{ effectiveAt: "2026-08-01T00:00:00.000Z" }, "not_started"],
+    [{ expiresAt: "invalid" }, "expires_at"],
+    [{ expiresAt: "2026-07-26T12:00:00.000Z" }, "expired"],
+  ]) {
+    const entitlement = resolveWorkspaceAiTierEntitlement(
+      { ...base, ...override },
+      runtime,
+      now,
+    );
+    assert.equal(entitlement.effectiveTierId, "standard");
+    assert.ok(entitlement.fallbackReasons.includes(reason));
+  }
+});
+
+test("current Plus and Ultra entitlements remain blocked by canonical readiness", () => {
+  const environment = {
+    STRIPE_PRICE_AI_PLUS: "price_plus_DO_NOT_PRINT",
+    STRIPE_PRICE_AI_ULTRA: "price_ultra_DO_NOT_PRINT",
+    FANMIND_AI_TIER_WORKSPACE_CONTRACT_CONFIRMED: "true",
+  };
+  const now = new Date("2026-07-26T12:00:00.000Z");
+
+  for (const tierId of ["plus", "ultra"]) {
+    const entitlement = resolveWorkspaceAiTierEntitlement(
+      {
+        tierId,
+        status: "active",
+        source: "stripe",
+        effectiveAt: "2026-07-01T00:00:00.000Z",
+        stripeSubscriptionItemLinked: true,
+        serverOwned: true,
+      },
+      getAiTierRuntimeReadinessFromEnvironment(tierId, environment),
+      now,
+    );
+
+    assert.equal(entitlement.effectiveTierId, "standard");
+    assert.equal(entitlement.fellBackToStandard, true);
+    assert.deepEqual(entitlement.fallbackReasons, ["tier_readiness"]);
+    assert.ok(entitlement.readinessBlockers.includes("public_status"));
+    assert.ok(entitlement.readinessBlockers.includes("billing_status"));
+    assert.ok(entitlement.readinessBlockers.includes("booking_flag"));
+    assert.ok(entitlement.readinessBlockers.includes("model_class"));
+    assert.doesNotMatch(JSON.stringify(entitlement), /DO_NOT_PRINT/u);
+  }
+});
+
+test("workspace entitlement rejects an invalid evaluation instant", () => {
+  assert.throws(
+    () =>
+      resolveWorkspaceAiTierEntitlement(
+        {
+          tierId: "plus",
+          status: "active",
+          source: "stripe",
+          effectiveAt: "2026-07-01T00:00:00.000Z",
+          stripeSubscriptionItemLinked: true,
+          serverOwned: true,
+        },
+        {},
+        "not-a-date",
+      ),
+    /now must be a valid instant/u,
+  );
 });

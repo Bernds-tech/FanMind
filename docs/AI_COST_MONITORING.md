@@ -56,6 +56,13 @@ Die maschinenprüfbare Readiness-Matrix steht in
 `Standard = READY` und `Plus/Ultra = BLOCKED`, ohne konkrete Stripe-IDs,
 Modelle, Limits oder Secrets auszugeben.
 
+Der kanonische Entitlement-Resolver liegt ebenfalls in
+`src/config/aiTiers.mjs`. Er aktiviert keine Stufe aus Browserdaten und fällt
+bei fehlendem, unbekanntem, pausiertem, künftigem, abgelaufenem oder nicht
+vollständig freigegebenem Plus-/Ultra-Zustand auf KI Standard zurück. Seine
+Rückgabe enthält ausschließlich feste Zustands- und Blocker-Codes, keine
+Stripe-Referenz, kein Modell und kein Kontingent.
+
 Der bestehende Vertragsende-Check an den produktiven KI-Pfaden ist
 Lifecycle-Verhalten und keine autoritative Billing-Freigabe. RPC,
 deploy-before-migrate App-Kompatibilität mit exaktem Missing-RPC- und
