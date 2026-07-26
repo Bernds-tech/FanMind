@@ -45,6 +45,7 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - Mobile product, architecture and beta handoff truth lives in `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` and `docs/mobile/BETA_RELEASE.md`; Web and Mobile share backend contracts deliberately but never UI code.
 - Security/RLS/Secrets checks live in `docs/SECURITY_RLS_SECRETS_CHECK.md`.
 - AI usage/cost monitoring requirements live in `docs/AI_COST_MONITORING.md`.
+- Workspace company-prompt and reply-profile requirements live in `docs/AI_PROMPT_PROFILES.md`; browsers may send only a selected profile ID to reply generation, while prompt contents are loaded server-side after Workspace authorization.
 - Canonical AI tier policy lives in `src/config/aiTiers.mjs`; do not duplicate prices, referral eligibility, auto-send rules or automatic-booking readiness across UI files.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
@@ -72,6 +73,7 @@ Build FanMind as a real CRM core, not as a slide/demo shell. The active product 
 - Contact detail page
 - CSV import
 - Server-side AI reply suggestions
+- Workspace company prompt plus up to eight bounded reply profiles, with owner/admin-only mutation and server-side prompt resolution
 - Contact knowledge
 - Follow-ups
 - Honest roadmap with clear active/in-progress/coming-soon status
@@ -112,6 +114,7 @@ Social integrations, analytics, campaign logic, referral automation and automati
 ## Security, RLS and secrets rules
 
 - Use `OPENAI_API_KEY` only server-side.
+- Workspace-authored AI prompts may shape tone and grounded business guidance only; they must never override safety, truthfulness, privacy, schema, tenant, billing or manual-send boundaries, and their full contents must never enter usage logs.
 - Never expose API keys in browser code, logs, screenshots, commits, client bundles, public env vars or documentation examples.
 - Supabase anon key may be public; Supabase service-role key must stay server-only.
 - `FANMIND_ADMIN_EMAILS` is the only admin source. No hardcoded real admin email fallback.
