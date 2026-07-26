@@ -107,7 +107,7 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 - isolierter Release-Deploy, Health, Version, Public Smoke, Product Truth, Lint, Operations-Tests, Build und Sprachprüfung sind aktiv.
 - Produktions- und Testdaten-Trennung: Fail-closed-Policy, Preflight, Staging-Vorlage und ein ausschließlich manuell auslösbarer, commit-genauer Deploy-Workflow für einen getrennten `fanmind-staging`-Runner sind implementiert.
 - Umgebungs-Governance: schreibende Remote-Tests sind außerhalb eindeutig identifizierter Staging- oder Testumgebungen blockiert.
-- Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
+- Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert; der tatsächliche Restore-, RLS-, Storage- und Cleanup-Nachweis bleibt bis zum Lauf im getrennten Staging offen.\n- Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
 
 Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.
 
