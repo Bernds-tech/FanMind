@@ -216,8 +216,18 @@ forbidIn(
 );
 requireText(
   "src/app/register/page.tsx",
-  "enablePublicDailyTestPlan={false}",
-  "Das 1-€/Tag-Testabo muss aus der öffentlichen Registrierung entfernt bleiben.",
+  'process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"',
+  "Das 1-€/Tag-Beta-Testabo muss über einen expliziten fail-closed Server-Schalter kontrolliert werden.",
+);
+requireText(
+  ".env.example",
+  "FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=false",
+  "Die Beispielkonfiguration muss das 1-€/Tag-Beta-Testabo standardmäßig geschlossen halten.",
+);
+requireText(
+  "README.md",
+  "zum Verkaufsstart nach Abschluss der acht Abschlussblöcke",
+  "README muss den verbindlichen Abschaltzeitpunkt des 1-€/Tag-Beta-Testabos dokumentieren.",
 );
 requireText(
   "src/lib/stripeBilling.ts",
