@@ -136,6 +136,9 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - **KI Plus** kostet zusätzlich 100 €/Monat und bleibt bis zur Freigabe der Modelle, Kontingente und Billing-Items Coming Soon.
 - **KI Ultra** kostet zusätzlich 200 €/Monat und bleibt bis zur Freigabe der Modelle, Kontingente und Billing-Items Coming Soon.
 - `src/config/aiTiers.mjs` ist die technische Source of Truth.
+- `npm run ai:tiers:readiness` gleicht Status, Modelle, Kontingente,
+  Stripe-Items und den bestätigten Workspace-Contract redigiert ab; aktuell
+  muss Standard bereit und Plus/Ultra blockiert sein.
 - Einrichtung und KI-Add-ons sind nicht referral-rabattfähig.
 - Keine KI-Stufe aktiviert automatische Sendung.
 - Nicht festgelegte Modelle oder Limits bleiben `null` und dürfen nicht erfunden werden.
