@@ -54,7 +54,7 @@ function toPublicSettings(
   });
   return {
     companyPrompt: normalized.companyPrompt,
-    profiles: [...normalized.profiles],
+    profiles: normalized.profiles.map((profile) => ({ ...profile })),
     updatedAt: row.updated_at,
   };
 }
