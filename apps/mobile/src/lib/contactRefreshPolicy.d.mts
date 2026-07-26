@@ -1,7 +1,8 @@
-export function createContactLoadSequence(): {
+export function createContactLoadSequence(initialSearch?: string): {
   begin(): number;
   invalidate(): void;
   isCurrent(sequence: number): boolean;
+  updateSearch(nextSearch: string): boolean;
 };
 
 type ContactLoadTarget<TWorkspace> = {

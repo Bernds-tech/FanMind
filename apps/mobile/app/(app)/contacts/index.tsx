@@ -381,7 +381,10 @@ export default function ContactsScreen() {
       ) : null}
       <TextInput
         value={search}
-        onChangeText={setSearch}
+        onChangeText={(value) => {
+          loadSequence.current.updateSearch(value);
+          setSearch(value);
+        }}
         placeholder={
           offlineReadOnly
             ? "Name, Handle oder Plattform suchen"
