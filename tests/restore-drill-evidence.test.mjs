@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -104,6 +104,29 @@ test("pass evidence rejects Production modification, retained issues and incompl
       );
     },
   );
+});
+
+test("symbolic-link evidence is rejected before reading the target", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-evidence-link-"));
+  try {
+    const targetPath = join(root, "never-print-target.json");
+    const linkPath = join(root, "evidence.json");
+    await writeFile(targetPath, JSON.stringify(validEvidence()));
+    await chmod(targetPath, 0o600);
+    await symlink(targetPath, linkPath);
+
+    await assert.rejects(
+      execFileAsync(process.execPath, [verifierPath, "--input", linkPath]),
+      (error) => {
+        const output = `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
+        assert.match(output, /RESTORE_EVIDENCE_ERROR=input_not_regular_file/);
+        assert.doesNotMatch(output, /never-print-target/);
+        return true;
+      },
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("unreadable input reports a fixed code without echoing the path", async () => {
