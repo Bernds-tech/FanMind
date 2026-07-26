@@ -24,6 +24,9 @@ const checkedFiles = [
   "src/lib/workspaceNavigation.ts",
   "src/lib/fanmindCopy.ts",
   "src/app/register/page.tsx",
+  "src/lib/runtimeProductSettings.ts",
+  "src/app/admin/settings/page.tsx",
+  "src/app/api/admin/settings/daily-test-plan/route.ts",
   "src/app/register/RegisterClient.tsx",
   "src/app/login/page.tsx",
   "src/app/landing-v2/page.tsx",
@@ -217,8 +220,23 @@ forbidIn(
 );
 requireText(
   "src/app/register/page.tsx",
-  'process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"',
-  "Das 1-€/Tag-Beta-Testabo muss über einen expliziten fail-closed Server-Schalter kontrolliert werden.",
+  "getPublicDailyTestPlanEnabled",
+  "Die Registrierung muss den serverseitigen, admin-gesteuerten 1-€/Tag-Schalter auswerten.",
+);
+requireText(
+  "src/lib/runtimeProductSettings.ts",
+  "publicDailyTestPlanEnabled",
+  "Die Laufzeitkonfiguration muss den 1-€/Tag-Schalter persistent speichern.",
+);
+requireText(
+  "src/app/api/admin/settings/daily-test-plan/route.ts",
+  "requirePlatformAdmin",
+  "Nur Plattform-Admins dürfen den 1-€/Tag-Schalter ändern.",
+);
+requireText(
+  "src/app/admin/settings/page.tsx",
+  "1-€/Tag-Beta-Abo",
+  "Der Adminbereich muss den 1-€/Tag-Schalter sichtbar anbieten.",
 );
 requireText(
   ".env.example",
@@ -227,8 +245,8 @@ requireText(
 );
 requireText(
   ".github/workflows/deploy-fanmind.yml",
-  "FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true",
-  "Der Production-Deploy muss den ausdrücklich freigegebenen 1-€/Tag-Beta-Test während der Fertigstellungsphase aktiv halten.",
+  "publicDailyTestPlanEnabled",
+  "Der Production-Deploy muss den initial aktiven Beta-Zustand einmalig und ohne Überschreiben späterer Admin-Entscheidungen anlegen.",
 );
 requireText(
   "README.md",
