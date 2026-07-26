@@ -106,6 +106,19 @@ test("pass evidence rejects Production modification, retained issues and incompl
   );
 });
 
+test("unreadable input reports a fixed code without echoing the path", async () => {
+  const missingPath = join(tmpdir(), "never-print-internal-evidence-path.json");
+  await assert.rejects(
+    execFileAsync(process.execPath, [verifierPath, "--input", missingPath]),
+    (error) => {
+      const output = `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
+      assert.match(output, /RESTORE_EVIDENCE_ERROR=input_read_failed/);
+      assert.doesNotMatch(output, /never-print-internal-evidence-path/);
+      return true;
+    },
+  );
+});
+
 test("restore runbook requires the machine-checked evidence gate", async () => {
   const source = await import("node:fs/promises").then(({ readFile }) => readFile(runbookPath, "utf8"));
 
