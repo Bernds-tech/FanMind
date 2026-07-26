@@ -122,6 +122,9 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
       `docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md` geschlossen.
 - [ ] `pilot_inquiries` oder vergleichbare Anfrage-Tabellen sind serverseitig schreibbar und nicht öffentlich lesbar.
 - [ ] Stripe-Referenzen sind nicht unnötig im Client sichtbar.
+- [ ] `npm run ai:tiers:readiness` meldet `PASS`; die Ausgabe enthält nur
+      READY/BLOCKED und feste Blocker-Codes, niemals Stripe-IDs, Modelle,
+      Limits oder Secrets.
 
 ## 6. RLS-Testfälle
 

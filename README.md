@@ -20,6 +20,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - KI Plus: zusätzlich `100 €/Monat`.
 - KI Ultra: zusätzlich `200 €/Monat`.
 - Zentrale KI-Stufen-Policy: `src/config/aiTiers.mjs` führt Standard, Plus und Ultra; Plus/Ultra bleiben bis zur Modell-, Kontingent- und Billing-Freigabe nicht automatisch buchbar.
+- Redigierte KI-Stufen-Prüfung: `npm run ai:tiers:readiness` bestätigt aktuell Standard als bereit sowie Plus/Ultra als blockiert, ohne konkrete Stripe-IDs, Modelle, Limits oder Secrets auszugeben.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
 - FanMind ist kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert und sendet final selbst.

@@ -38,6 +38,8 @@ Nächster Schritt:
 
 - den vorbereiteten atomaren Workspace-RPC und die exakten Spaltenrechte nach
   Production-Preflight zweiphasig anwenden und positiv/negativ abnehmen;
+- `npm run ai:tiers:readiness` als redigierte gemeinsame Freigabeprüfung für
+  Policy, Kontingente, Stripe-Items und Workspace-Contract verwenden;
 - verbindliche Standard-/Plus-/Ultra-Modelle und Monatskontingente schriftlich
   freigeben;
 - Workspace-Entitlement und Stripe-Add-on-Lifecycle erst im getrennten Staging
@@ -48,6 +50,11 @@ Die technischen Limits in diesem Abschnitt sind ausschließlich Missbrauchs-,
 Verfügbarkeits- und Kostenschutz. Sie sind weder vertragliche Monatskontingente
 noch eine automatische Nachberechnung. KI Plus und KI Ultra bleiben
 unverändert nicht automatisch buchbar.
+
+Die maschinenprüfbare Readiness-Matrix steht in
+`docs/operations/AI_TIER_READINESS.md`. Im aktuellen Stand bestätigt sie
+`Standard = READY` und `Plus/Ultra = BLOCKED`, ohne konkrete Stripe-IDs,
+Modelle, Limits oder Secrets auszugeben.
 
 Der bestehende Vertragsende-Check an den produktiven KI-Pfaden ist
 Lifecycle-Verhalten und keine autoritative Billing-Freigabe. RPC,

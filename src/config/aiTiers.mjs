@@ -98,17 +98,61 @@ export function getAiTierTotalMonthlyCents(tierId, baseMonthlyFeeCents) {
   return baseMonthlyFeeCents + getAiTierConfig(tierId).monthlyAddOnCents;
 }
 
-export function isAiTierAutomaticallyBookable(tierId) {
+function isPositiveInteger(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
+export function evaluateAiTierReadiness(
+  tierId,
+  {
+    stripePriceConfigured = false,
+    workspaceContractConfirmed = false,
+  } = {},
+) {
   const tier = getAiTierConfig(tierId);
-  if (tier.includedInBase) return false;
-  return Boolean(
-    tier.automaticallyBookable &&
-      tier.billingStatus === "enabled" &&
-      tier.modelClass &&
-      Number.isInteger(tier.monthlyRequestLimit) &&
-      Number.isInteger(tier.monthlyTokenLimit) &&
-      Number.isInteger(tier.contextMessageLimit),
-  );
+  const blockers = [];
+
+  if (tier.automaticSendingEnabled) blockers.push("automatic_sending");
+  if (tier.addOnReferralDiscountEligible) blockers.push("referral_discount");
+
+  if (tier.includedInBase) {
+    if (tier.monthlyAddOnCents !== 0) blockers.push("base_price");
+    if (tier.publicStatus !== "Aktiv") blockers.push("public_status");
+    if (tier.billingStatus !== "included") blockers.push("billing_status");
+    if (tier.automaticallyBookable) blockers.push("booking_flag");
+  } else {
+    if (tier.publicStatus !== "Aktiv") blockers.push("public_status");
+    if (tier.billingStatus !== "enabled") blockers.push("billing_status");
+    if (!tier.automaticallyBookable) blockers.push("booking_flag");
+    if (typeof tier.modelClass !== "string" || tier.modelClass.trim() === "") {
+      blockers.push("model_class");
+    }
+    if (!isPositiveInteger(tier.monthlyRequestLimit)) {
+      blockers.push("monthly_request_limit");
+    }
+    if (!isPositiveInteger(tier.monthlyTokenLimit)) {
+      blockers.push("monthly_token_limit");
+    }
+    if (!isPositiveInteger(tier.contextMessageLimit)) {
+      blockers.push("context_message_limit");
+    }
+    if (stripePriceConfigured !== true) blockers.push("stripe_price");
+    if (workspaceContractConfirmed !== true) {
+      blockers.push("workspace_contract");
+    }
+  }
+
+  return Object.freeze({
+    tierId: tier.id,
+    publicStatus: tier.publicStatus,
+    ready: blockers.length === 0,
+    automaticallyBookable: !tier.includedInBase && blockers.length === 0,
+    blockers: Object.freeze(blockers),
+  });
+}
+
+export function isAiTierAutomaticallyBookable(tierId, runtime = {}) {
+  return evaluateAiTierReadiness(tierId, runtime).automaticallyBookable;
 }
 
 export function assertAiTierPolicy() {

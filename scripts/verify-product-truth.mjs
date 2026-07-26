@@ -9,6 +9,7 @@ const checkedFiles = [
   ".env.example",
   ".github/workflows/deploy-fanmind.yml",
   "src/config/aiTiers.mjs",
+  "scripts/operations/verify-ai-tier-readiness.mjs",
   "src/lib/aiPromptPolicy.mjs",
   "src/lib/workspaceAiPrompts.ts",
   "src/app/api/ai/prompt-settings/route.ts",
@@ -61,6 +62,7 @@ const checkedFiles = [
   "tests/ai-usage-policy.test.mjs",
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
+  "docs/operations/AI_TIER_READINESS.md",
 ];
 
 const documentationFiles = new Set([
@@ -306,6 +308,16 @@ requireText(
   "tests/ai-tier-policy.test.mjs",
   "Plus and Ultra cannot be automatically booked before models, limits and billing are approved",
   "Die nicht freigegebene Auto-Buchung von Plus/Ultra muss automatisiert getestet werden.",
+);
+requireText(
+  "scripts/operations/verify-ai-tier-readiness.mjs",
+  "AI_TIER_READINESS=PASS",
+  "Die KI-Stufen müssen eine redigierte gemeinsame Readiness-Prüfung besitzen.",
+);
+requireText(
+  "docs/operations/AI_TIER_READINESS.md",
+  "AI_TIER_STANDARD=READY blockers=none",
+  "Das Runbook muss den aktuellen Standard-/Plus-/Ultra-Vertrag dokumentieren.",
 );
 requireText(
   "docs/SOURCE_OF_TRUTH.md",
