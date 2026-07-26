@@ -122,7 +122,7 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 | Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat; 12 Monate Mindestlaufzeit, danach monatliche Verlängerung |
 
 Starter-Abos können unter `/settings/package` sicher zum Vertragsende gekündigt werden. Starter Flex endet frühestens zum bezahlten Periodenende; Starter 12 Monate frühestens zum Ende der Mindestlaufzeit. Nach Vertragsende bleiben Account, Login, CRM-Historie, Rechnungen und Export sichtbar; neue Nachrichten, Channel-Sync, externe Ingress-Webhooks, KI-Vorschläge, KI-Analysen und kostenpflichtige Hintergrundverarbeitung sind fail-closed zu deaktivieren.
-| Internes Live-Testabo | intern | 1 € pro Tag; ausschließlich klar markierter Test-Workspace; keine Referral-Automation |
+| Internes Live-Testabo | temporärer Beta-Test während der Fertigstellungsphase | 1 € pro Tag; klar markierter Test-Workspace; täglich kündbar; keine Referral-Automation; per `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true` im Registrierungsflow sichtbar und zum Verkaufsstart nach Abschluss aller acht Abschlussblöcke wieder auf `false` setzen |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht als Vollversion freigeschaltet |
 | Enterprise / Custom | später | individuelle Prüfung |
