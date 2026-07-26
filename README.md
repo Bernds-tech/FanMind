@@ -146,7 +146,7 @@ Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und
 | `/settings/invoices` | Rechnungsarchiv | aktiv |
 | `/settings/referral` | Referral-Code, Status und Rabattübersicht | aktiv; Billing-Verrechnung separat freizugeben |
 | `/referral-bedingungen` | öffentliche Referral-Teilnahmebedingungen | aktiv; automatische Rabattverrechnung weiterhin deaktiviert |
-| `/settings/ai-usage` | monatliche KI-Nutzungsanzeige | aktiv |
+| `/settings/ai-usage` | monatliche KI-Nutzungsanzeige sowie Unternehmens-Prompt und Antwortprofile | aktiv |
 | `/billing/start` | Starter-Checkout | aktiv; Legacy-Pilot-Checkout gesperrt |
 | `/admin/...` | Admin- und Billing-Grundlagen | admin-only |
 | `/api/ai/reply-suggestions` | serverseitiger KI-Endpunkt | aktiv |
@@ -233,11 +233,15 @@ Production-Preflight und Abnahme stehen in
   KI-Kontingente.
 - Ausgaben sind strukturiert.
 - KI-Nutzung wird je Workspace gemessen.
+- Ein Workspace-Unternehmens-Prompt und bis zu acht auswählbare Antwortprofile steuern Ton, Wortwahl und belegte nächste Schritte; der Browser sendet an die KI-Route nur die Profil-ID, die Prompttexte werden serverseitig geladen.
+- Sicherheits-, Wahrheits-, Datenschutz-, Schema- und Manuell-Senden-Regeln haben immer Vorrang vor Workspace-Prompts.
 - Es gibt keine automatische Sendefunktion.
 - Nutzer müssen KI-Ausgaben vor Verwendung prüfen.
 - FanMind garantiert keine fehlerfreien, vollständigen oder aktuellen KI-Antworten.
 
 Provider-Preise bleiben serverseitig konfigurierbar und werden nicht als statische UI-Wahrheit hartcodiert.
+
+Details zur Promptverwaltung: `docs/AI_PROMPT_PROFILES.md`.
 
 ## Harte Stop-Regeln
 
