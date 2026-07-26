@@ -10,7 +10,10 @@ import {
   AI_ANALYSIS_RATE_LIMIT_MAX,
   AI_ANALYSIS_RATE_LIMIT_WINDOW_MS,
   AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT,
+  AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT,
   AI_REPLY_INPUT_CHAR_LIMIT,
+  AI_REPLY_PROMPT_PROFILE_CHAR_LIMIT,
+  AI_REPLY_PROMPT_PROFILE_NAME_CHAR_LIMIT,
   AI_REPLY_OUTPUT_TOKEN_LIMIT,
   AI_REPLY_RESPONSE_MODE_CHAR_LIMIT,
   buildBoundedFanAnalysisPayload,
@@ -114,6 +117,9 @@ test("reply context bounds trusted contact fields and returns exact usage size",
     incomingMessage: "i".repeat(4_000),
     responseMode: "m".repeat(80),
     responseInstruction: "r".repeat(1_000),
+    companyPrompt: "c".repeat(AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT),
+    promptProfileName: "n".repeat(AI_REPLY_PROMPT_PROFILE_NAME_CHAR_LIMIT),
+    promptProfilePrompt: "q".repeat(AI_REPLY_PROMPT_PROFILE_CHAR_LIMIT),
     analysisReport: "a".repeat(12_000),
   });
 
@@ -125,6 +131,9 @@ test("reply context bounds trusted contact fields and returns exact usage size",
   assert.equal(result.context.summary?.length, 2_000);
   assert.equal(result.context.analysisReport?.length, AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT);
   assert.equal(result.context.responseMode.length, AI_REPLY_RESPONSE_MODE_CHAR_LIMIT);
+  assert.equal(result.context.companyPrompt?.length, AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT);
+  assert.equal(result.context.promptProfileName?.length, AI_REPLY_PROMPT_PROFILE_NAME_CHAR_LIMIT);
+  assert.equal(result.context.promptProfilePrompt?.length, AI_REPLY_PROMPT_PROFILE_CHAR_LIMIT);
 });
 
 test("reply context rejects escape-heavy input above the serialized budget", () => {

@@ -9,7 +9,14 @@ const checkedFiles = [
   ".env.example",
   ".github/workflows/deploy-fanmind.yml",
   "src/config/aiTiers.mjs",
+  "src/lib/aiPromptPolicy.mjs",
+  "src/lib/workspaceAiPrompts.ts",
+  "src/app/api/ai/prompt-settings/route.ts",
+  "src/app/api/ai/reply-suggestions/route.ts",
+  "src/app/settings/ai-usage/AiPromptSettings.tsx",
   "tests/ai-tier-policy.test.mjs",
+  "tests/ai-prompt-policy.test.mjs",
+  "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
   "src/config/plans.ts",
   "src/lib/plans.ts",
@@ -481,6 +488,33 @@ requireText(
   "src/app/settings/AccountTabs.tsx",
   'href: "/settings/ai-usage"',
   "KI-Nutzung muss im geschützten Kontobereich erreichbar sein.",
+);
+
+// Workspace-Unternehmens-Prompt und Antwortprofile.
+requireText(
+  "src/lib/aiPromptPolicy.mjs",
+  "AI_PROMPT_PROFILE_MAX_COUNT = 8",
+  "Ein Workspace darf höchstens acht Antwortprofile speichern.",
+);
+requireText(
+  "src/app/settings/ai-usage/AiPromptSettings.tsx",
+  "Unternehmens-Prompt & Antwortprofile",
+  "Die KI-Nutzungsseite muss die Promptverwaltung sichtbar anbieten.",
+);
+requireText(
+  "src/app/api/ai/prompt-settings/route.ts",
+  "workspace.owner_user_id === context.user.id",
+  "Nur Owner oder Plattform-Admin dürfen Workspace-Prompts ändern.",
+);
+requireText(
+  "src/app/api/ai/reply-suggestions/route.ts",
+  "getWorkspaceAiPromptContext",
+  "Antwortvorschläge müssen Workspace-Prompts serverseitig laden.",
+);
+requireText(
+  "docs/SOURCE_OF_TRUTH.md",
+  "Workspace-Unternehmens-Prompt",
+  "Die Source of Truth muss die aktive Promptverwaltung dokumentieren.",
 );
 
 // Gemeinsame Funktionssymbole und Kanal-Logos.

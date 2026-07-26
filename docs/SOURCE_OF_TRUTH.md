@@ -255,7 +255,7 @@ Relevante Objekte umfassen unter anderem:
 - `profiles`, `workspaces`, `workspace_members`;
 - `contacts`, `memories`, `followups`;
 - `conversations`, `conversation_messages`, `conversation_summaries`;
-- `contact_ai_profiles`, `workspace_voice_profiles`, `fan_analysis_reports`;
+- `contact_ai_profiles`, `workspace_voice_profiles`, `workspace_ai_prompt_settings`, `fan_analysis_reports`;
 - `contact_reply_targets`, `social_connections`, `meta_webhook_events`;
 - Billing-, Referral-, Inquiry-, Operations- und Backup-Tabellen laut aktueller Migrationen.
 
@@ -264,6 +264,9 @@ Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfe
 ## 12. KI und Kostenbeobachtung
 
 - serverseitige Endpunkte;
+- Workspace-Unternehmens-Prompt plus bis zu acht Antwortprofile unter `/settings/ai-usage`; Prompttexte werden nach Workspace-/Kontakt-Autorisierung serverseitig geladen, der Browser übergibt an die Antwort-Route nur die gewählte Profil-ID;
+- Owner-/Admin-geschützte Prompt-Mutationen, RLS-gebundene Speicherung und feste Grenzen von 3.000 Zeichen global sowie 1.500 Zeichen je Profil;
+- Workspace-Prompts steuern nur Stil und belegte Geschäftshinweise; Sicherheits-, Wahrheits-, Datenschutz-, Schema- und Manuell-Senden-Regeln bleiben höherrangig;
 - kein API-Key im Browser;
 - begrenzte Eingabelänge, begrenzte Datenbank-Kontextzeilen,
   Provider-Ausgabe und gemeinsame fail-closed Kurzzeit-Rate-Limits;
@@ -285,7 +288,7 @@ Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfe
   `test_access_flags`-Felder nicht mehr direkt ändern können;
 - keine automatische Sendefunktion.
 
-Details: `docs/AI_COST_MONITORING.md`.
+Details: `docs/AI_COST_MONITORING.md` und `docs/AI_PROMPT_PROFILES.md`.
 
 ## 13. Finale technische Go-Live-Freigabe
 

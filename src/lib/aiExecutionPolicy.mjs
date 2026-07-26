@@ -8,6 +8,9 @@ export const AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT = 12_000;
 export const AI_REPLY_INPUT_CHAR_LIMIT = 40_000;
 export const AI_REPLY_OUTPUT_TOKEN_LIMIT = 2_048;
 export const AI_REPLY_RESPONSE_MODE_CHAR_LIMIT = 80;
+export const AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT = 3_000;
+export const AI_REPLY_PROMPT_PROFILE_NAME_CHAR_LIMIT = 80;
+export const AI_REPLY_PROMPT_PROFILE_CHAR_LIMIT = 1_500;
 
 const AI_ANALYSIS_MESSAGE_CONTEXT_CHAR_LIMIT = 21_000;
 const AI_ANALYSIS_MEMORY_CONTEXT_CHAR_LIMIT = 7_000;
@@ -261,6 +264,21 @@ export function buildBoundedReplySuggestionContext(input) {
       "Freundlich",
     responseInstruction:
       normalizeNullableText(input?.responseInstruction, 1_000),
+    companyPrompt:
+      normalizeNullableText(
+        input?.companyPrompt,
+        AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT,
+      ),
+    promptProfileName:
+      normalizeNullableText(
+        input?.promptProfileName,
+        AI_REPLY_PROMPT_PROFILE_NAME_CHAR_LIMIT,
+      ),
+    promptProfilePrompt:
+      normalizeNullableText(
+        input?.promptProfilePrompt,
+        AI_REPLY_PROMPT_PROFILE_CHAR_LIMIT,
+      ),
     analysisReport:
       normalizeNullableText(
         input?.analysisReport,

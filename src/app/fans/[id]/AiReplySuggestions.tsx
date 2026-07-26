@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { wt } from "@/lib/workspaceCopy";
@@ -10,6 +10,13 @@ import dashboardStyles from "../../dashboard/dashboard.module.css";
 import styles from "./fan-detail.module.css";
 
 export type ReplyMode = { id: string; label: string; prompt: string };
+
+type PromptProfileOption = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+};
 
 type ReplySuggestion = { tone: string; label: string; text: string };
 type SuggestedMemory = {
@@ -64,6 +71,36 @@ export function AiReplySuggestions({
     [activeModeId, modes],
   );
   const [replyInstruction, setReplyInstruction] = useState("");
+  const [promptProfiles, setPromptProfiles] = useState<PromptProfileOption[]>([]);
+  const [selectedPromptProfileId, setSelectedPromptProfileId] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/ai/prompt-settings", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json().catch(() => null)) as {
+          settings?: { profiles?: PromptProfileOption[] };
+        } | null;
+      })
+      .then((data) => {
+        if (!active) return;
+        const profiles = (data?.settings?.profiles ?? []).filter(
+          (profile) => profile.isActive,
+        );
+        setPromptProfiles(profiles);
+        const preferred =
+          profiles.find((profile) => profile.isDefault) ?? profiles[0];
+        setSelectedPromptProfileId(preferred?.id ?? "");
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
   const [suggestions, setSuggestions] = useState<AiSuggestionsResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -115,6 +152,7 @@ export function AiReplySuggestions({
           incomingMessage: contact.latestInboundMessage ?? "",
           responseMode: `${mode.label}: ${mode.prompt}`,
           responseInstruction: replyInstruction.trim(),
+          promptProfileId: selectedPromptProfileId || undefined,
           analysisReport: contact.analysisReport,
         }),
       });
@@ -309,6 +347,29 @@ export function AiReplySuggestions({
             {mode.label}
           </button>
         ))}
+      </div>
+
+      <div className={styles.promptProfileBar}>
+        <label>
+          <span>{locale === "en" ? "Company reply profile" : "Unternehmens-Antwortprofil"}</span>
+          {promptProfiles.length ? (
+            <select
+              onChange={(event) => setSelectedPromptProfileId(event.target.value)}
+              value={selectedPromptProfileId}
+            >
+              {promptProfiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}{profile.isDefault ? (locale === "en" ? " · Default" : " · Standard") : ""}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <small>{locale === "en" ? "No custom profile is active yet." : "Noch kein eigenes Profil aktiv."}</small>
+          )}
+        </label>
+        <a href="/settings/ai-usage">
+          {locale === "en" ? "Manage prompts" : "Prompts verwalten"}
+        </a>
       </div>
 
       <label className={styles.replyBox}>

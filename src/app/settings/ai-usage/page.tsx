@@ -23,6 +23,7 @@ import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
+import { AiPromptSettings } from "./AiPromptSettings";
 import styles from "./ai-usage.module.css";
 
 async function logout() {
@@ -216,6 +217,8 @@ export default async function AiUsageSettingsPage() {
       >
         <div className={styles.stack}>
           <AccountTabs activePage="aiUsage" locale={locale} />
+
+          <AiPromptSettings locale={locale} />
 
           {usageResult.error || !summary || !indicator || !indicatorText ? (
             <section className={styles.noticeCard} aria-labelledby="ai-usage-unavailable-title">

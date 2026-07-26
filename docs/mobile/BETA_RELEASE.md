@@ -124,6 +124,10 @@ Zusätzliche Speichergrenzen:
 
 Der Offline-Cache verwendet exakt einen registrierten SecureStore-Schlüssel und wird nur nach einem erfolgreichen, ungefilterten Online-Abruf geschrieben. Er enthält höchstens 50 Kontakte, ist maximal 24 Stunden gültig und speichert nur Workspace-Name sowie Kontakt-ID, Workspace-ID, Name, Handle, Plattform, Status und Änderungszeit. Kontaktwissen, Zusammenfassungen, Nachrichten, KI-Inhalte, interne Notizen, Follow-ups und Zugangsdaten werden nicht übernommen. Nur ein Transportstatus `0` darf den Nur-Lesen-Fallback aktivieren; Auth-, RLS- und Serverfehler löschen beziehungsweise verwerfen den Cache fail-closed.
 
+## KI-Unternehmens-Prompt und Antwortprofile
+
+Die mobile Antwortvorschlagsfunktion übernimmt serverseitig den aktiven Workspace-Unternehmens-Prompt und das Standard-Antwortprofil. Die App speichert oder sendet keinen freien Prompttext und benötigt deshalb keine zusätzliche Secret-Konfiguration. Bearbeitung und situationsbezogene Profilauswahl erfolgen zunächst in der Web-Oberfläche; ohne Auswahl bleibt das aktive Standardprofil verbindlich. Sicherheits-, Wahrheits-, Datenschutz- und Manuell-Senden-Regeln haben immer Vorrang.
+
 ## Android-Vorabtest mit Expo Go
 
 Der noch unsignierte App-Kern kann bereits auf einem Android-Telefon geprüft werden:

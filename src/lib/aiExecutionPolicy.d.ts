@@ -39,6 +39,9 @@ export const AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT: 12000;
 export const AI_REPLY_INPUT_CHAR_LIMIT: 40000;
 export const AI_REPLY_OUTPUT_TOKEN_LIMIT: 2048;
 export const AI_REPLY_RESPONSE_MODE_CHAR_LIMIT: 80;
+export const AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT: 3000;
+export const AI_REPLY_PROMPT_PROFILE_NAME_CHAR_LIMIT: 80;
+export const AI_REPLY_PROMPT_PROFILE_CHAR_LIMIT: 1500;
 
 export function buildBoundedFanAnalysisPayload(input: {
   language?: unknown;
@@ -65,6 +68,9 @@ export type BoundedReplySuggestionContext = {
   incomingMessage: string;
   responseMode: string;
   responseInstruction: string | null;
+  companyPrompt: string | null;
+  promptProfileName: string | null;
+  promptProfilePrompt: string | null;
   analysisReport: string | null;
 };
 
