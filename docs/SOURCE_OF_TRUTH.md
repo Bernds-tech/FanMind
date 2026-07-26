@@ -233,6 +233,9 @@ Pflichtsatz:
 
 - keine Secrets im Repository;
 - OpenAI- und Supabase-Service-Role-Keys nur serverseitig;
+- KI-Prompt-Migrationen werden nicht durch den Web-Deploy angewendet; der
+  festgeschriebene Apply-/Postflight-Ablauf steht in
+  `docs/operations/AI_PROMPT_MIGRATION.md`;
 - `FANMIND_ADMIN_EMAILS` ist die einzige Admin-Quelle;
 - alle workspace-bezogenen Daten benötigen RLS und serverseitige Autorisierung;
 - jede Mutation prüft User, Workspace und Ressource;

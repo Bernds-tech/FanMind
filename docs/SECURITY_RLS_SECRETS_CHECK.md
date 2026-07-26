@@ -97,6 +97,8 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
 - [ ] `contact_ai_profiles`
 - [ ] `workspace_voice_profiles`
 - [ ] `workspace_ai_prompt_settings`
+  - kontrollierter Apply-/Postflight-Ablauf:
+    `docs/operations/AI_PROMPT_MIGRATION.md`
 - [ ] `fan_analysis_reports`
 - [ ] `contact_reply_targets`
 
