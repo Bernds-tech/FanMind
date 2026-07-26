@@ -108,6 +108,10 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
 ### Billing-/Inquiry-Tabellen
 
 - [ ] Billing-Felder an `workspaces` sind nur für Workspace-Owner/Admin sichtbar.
+- [ ] **Blocker:** Normale Workspace-Owner können Billing-, Stripe-,
+      Subscription- und `test_access_flags`-Spalten nicht direkt ändern. Die
+      Legacy-Policy `workspaces_update_owner` erfüllt diese Spaltengrenze ohne
+      zusätzliche Rechte-/Trigger-Härtung nicht.
 - [ ] `pilot_inquiries` oder vergleichbare Anfrage-Tabellen sind serverseitig schreibbar und nicht öffentlich lesbar.
 - [ ] Stripe-Referenzen sind nicht unnötig im Client sichtbar.
 
@@ -166,6 +170,8 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 - [ ] Checkout prüft Workspace und Commercial Option.
 - [ ] Webhook prüft Signatur.
 - [ ] Billing-Status darf nicht durch unautorisierte User verändert werden.
+- [ ] Stripe-IDs und interne Testflags stammen aus einer server-eigenen Quelle
+      und können nicht über die Workspace-Owner-Policy umgebogen werden.
 - [ ] Admin-Overrides sind admin-only.
 - [ ] UI verkauft Billing nicht als vollständige Payment-Plattform, sondern als Setup-/Zahlungsstart.
 

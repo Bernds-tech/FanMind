@@ -126,7 +126,13 @@ Social integrations, analytics, campaign logic, referral automation and automati
 - Prefer a configurable server-side AI model such as `FANMIND_AI_MODEL` with a safe fallback. Avoid hardcoding model IDs in multiple places.
 - Keep structured outputs for reply suggestions, memory suggestions and follow-up suggestions.
 - Limit input length, context size and request rate. The current MVP must protect OpenAI spend.
-- AI usage/cost observability should be added via a workspace/admin usage table before scaling: calls, estimated input tokens, estimated output tokens, model, feature, workspace, contact, status and estimated cost.
+- AI usage/cost observability is active through `ai_usage_events`, the
+  workspace usage view and the admin usage view: calls, estimated input/output
+  tokens, model, feature, workspace, contact, status and estimated cost.
+- Every productive AI entry point must use the canonical bounded-context and
+  output policy plus a shared fail-closed short-window rate limit before a
+  provider request. These are operational cost controls, not contractual
+  Standard/Plus/Ultra quotas.
 - Do not hardcode provider prices in UI copy. Keep model prices in server config and update them when provider pricing changes.
 
 ## Development expectations for Codex

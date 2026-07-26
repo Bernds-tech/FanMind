@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT,
+  AI_REPLY_OUTPUT_TOKEN_LIMIT,
+  AI_REPLY_RESPONSE_MODE_CHAR_LIMIT,
+  buildBoundedReplySuggestionContext,
+} from "@/lib/aiExecutionPolicy.mjs";
 import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import { getClientIp } from "@/lib/rateLimit";
 import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
@@ -200,28 +206,19 @@ export async function POST(request: NextRequest) {
     return jsonError("Kontakt konnte nicht autorisiert geladen werden.", 404);
   }
 
-  let rateLimit;
-  try {
-    rateLimit = await consumeSharedRateLimit({
-      scope: "ai_reply_user_ip",
-      subject: `${authorizationContext.user.id}:${getClientIp(request)}`,
-      maxRequests: AI_RATE_LIMIT_MAX,
-      windowMs: AI_RATE_LIMIT_WINDOW_MS,
-    });
-  } catch {
+  const { contact, workspace, user } = authorizationContext;
+  if (isWorkspaceArchivedAfterSubscriptionEnd(workspace)) {
     return jsonError(
-      "Antwortvorschläge konnten gerade nicht erzeugt werden.",
-      503,
+      "Workspace ist nach Vertragsende im Archiv-/Lesemodus; KI-Vorschläge sind deaktiviert.",
+      403,
     );
-  }
-
-  if (!rateLimit.allowed) {
-    return jsonError("Zu viele KI-Anfragen. Bitte versuche es später erneut.", 429);
   }
 
   const incomingMessage = normalizeString(payload.incomingMessage);
   const pastedChatContext = normalizeString(payload.pastedChatContext);
   const responseInstruction = normalizeString(payload.responseInstruction);
+  const responseMode = normalizeString(payload.responseMode);
+  const analysisReport = normalizeOptionalString(payload.analysisReport);
 
   if (!incomingMessage) {
     return jsonError("incomingMessage ist Pflicht.", 400);
@@ -248,6 +245,47 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (responseMode.length > AI_REPLY_RESPONSE_MODE_CHAR_LIMIT) {
+    return jsonError(
+      `responseMode darf maximal ${AI_REPLY_RESPONSE_MODE_CHAR_LIMIT} Zeichen enthalten.`,
+      400,
+    );
+  }
+
+  if (
+    analysisReport &&
+    analysisReport.length > AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT
+  ) {
+    return jsonError(
+      `analysisReport darf maximal ${AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT} Zeichen enthalten.`,
+      400,
+    );
+  }
+
+  let boundedContext: ReturnType<typeof buildBoundedReplySuggestionContext>;
+  try {
+    boundedContext = buildBoundedReplySuggestionContext({
+      contactId: contact.id,
+      displayName: contact.display_name,
+      handle: contact.handle,
+      sourcePlatform: contact.source_platform,
+      language: contact.language,
+      status: contact.status,
+      tags: contact.tags ?? [],
+      summary: contact.summary,
+      pastedChatContext,
+      incomingMessage,
+      responseMode,
+      responseInstruction,
+      analysisReport,
+    });
+  } catch {
+    return jsonError(
+      "Der KI-Kontext ist zu umfangreich. Bitte kürze den eingefügten Verlauf oder Analyse-Report.",
+      400,
+    );
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -257,27 +295,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { contact, workspace, user } = authorizationContext;
-  if (isWorkspaceArchivedAfterSubscriptionEnd(workspace)) {
-    return jsonError("Workspace ist nach Vertragsende im Archiv-/Lesemodus; KI-Vorschläge sind deaktiviert.", 403);
+  let rateLimit;
+  try {
+    rateLimit = await consumeSharedRateLimit({
+      scope: "ai_reply_user_ip",
+      subject: `${authorizationContext.user.id}:${getClientIp(request)}`,
+      maxRequests: AI_RATE_LIMIT_MAX,
+      windowMs: AI_RATE_LIMIT_WINDOW_MS,
+    });
+  } catch {
+    return jsonError(
+      "Antwortvorschläge konnten gerade nicht erzeugt werden.",
+      503,
+    );
   }
+
+  if (!rateLimit.allowed) {
+    return jsonError("Zu viele KI-Anfragen. Bitte versuche es später erneut.", 429);
+  }
+
   const model = getFanMindAiModel();
   const startedAt = Date.now();
-  const contactContext = {
-    contactId: contact.id,
-    displayName: contact.display_name || "Kontakt",
-    handle: contact.handle,
-    sourcePlatform: contact.source_platform,
-    language: contact.language || "de",
-    status: contact.status,
-    tags: contact.tags ?? [],
-    summary: contact.summary,
-    pastedChatContext,
-    incomingMessage,
-    responseMode: normalizeString(payload.responseMode) || "Freundlich",
-    responseInstruction: responseInstruction || null,
-    analysisReport: normalizeOptionalString(payload.analysisReport),
-  };
+  const { context: contactContext, inputChars } = boundedContext;
 
   try {
     const openAiResponse = await fetch(OPENAI_RESPONSES_URL, {
@@ -289,6 +328,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model,
         store: false,
+        max_output_tokens: AI_REPLY_OUTPUT_TOKEN_LIMIT,
         input: [
           {
             role: "system",
@@ -322,7 +362,7 @@ export async function POST(request: NextRequest) {
         contactId: contact.id,
         feature: "reply_suggestions",
         model,
-        inputChars: estimateJsonChars(contactContext),
+        inputChars,
         outputChars: 0,
         status: "error",
         errorCode: String(openAiResponse.status),
@@ -344,7 +384,7 @@ export async function POST(request: NextRequest) {
         contactId: contact.id,
         feature: "reply_suggestions",
         model,
-        inputChars: estimateJsonChars(contactContext),
+        inputChars,
         outputChars: 0,
         status: "error",
         errorCode: "missing_output",
@@ -365,7 +405,7 @@ export async function POST(request: NextRequest) {
       contactId: contact.id,
       feature: "reply_suggestions",
       model,
-      inputChars: estimateJsonChars(contactContext),
+      inputChars,
       outputChars: outputText.length,
       status: "ok",
       latencyMs: Date.now() - startedAt,
@@ -380,7 +420,7 @@ export async function POST(request: NextRequest) {
       contactId: contact.id,
       feature: "reply_suggestions",
       model,
-      inputChars: estimateJsonChars(contactContext),
+      inputChars,
       outputChars: 0,
       status: "error",
       errorCode:
@@ -465,8 +505,4 @@ function normalizeOptionalString(value: unknown): string | null {
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
-}
-
-function estimateJsonChars(value: unknown): number {
-  return JSON.stringify(value).length;
 }

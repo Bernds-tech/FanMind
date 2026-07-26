@@ -2,7 +2,9 @@
 
 ## Zweck
 
-KI-Antwortvorschläge und öffentliche Anfragen dürfen nicht auf prozesslokale JavaScript-Maps angewiesen sein. FanMind verwendet deshalb einen atomaren PostgreSQL-Fixed-Window-Zähler in Supabase.
+KI-Antwortvorschläge, Kommunikationsanalysen und öffentliche Anfragen dürfen
+nicht auf prozesslokale JavaScript-Maps angewiesen sein. FanMind verwendet
+deshalb einen atomaren PostgreSQL-Fixed-Window-Zähler in Supabase.
 
 Der öffentliche Demo-Start bleibt unverändert auf seiner bereits vorhandenen eigenen Supabase-RPC-Policy. Er wird nicht doppelt neu gebaut.
 
@@ -10,7 +12,8 @@ Der öffentliche Demo-Start bleibt unverändert auf seiner bereits vorhandenen e
 
 In `public.shared_rate_limit_buckets` werden ausschließlich gespeichert:
 
-- ein technischer Scope wie `ai_reply_user_ip` oder `inquiry_ip`;
+- ein technischer Scope wie `ai_reply_user_ip`,
+  `ai_analysis_workspace_user` oder `inquiry_ip`;
 - ein 64-stelliger HMAC-SHA256-Hash;
 - Fensterbeginn und Fensterlänge;
 - Zähler, Reset- und Ablaufzeit.
@@ -86,6 +89,21 @@ Der reale Production-Paralleltest bestätigte:
 - bei Infrastrukturfehler wird keine OpenAI-Anfrage ausgeführt;
 - bestehende Workspace-/Kontakt-Autorisierung und AI-Usage-Messung bleiben erhalten.
 
+### Kommunikationsanalyse
+
+- Scope: `ai_analysis_workspace_user`;
+- Identität: serverseitig gebundene Kombination aus autorisierter Workspace-
+  und User-ID;
+- Maximum: 10 Analysen;
+- Fenster: 10 Minuten;
+- bei Überschreitung: verständliche generische Meldung im Server-Action-State;
+- bei fehlender Konfiguration, nicht erreichbarem RPC oder ungültiger Antwort:
+  generische Fehlermeldung;
+- bei Infrastrukturfehler werden weder Nachrichten-/Kontaktwissen-Kontext
+  geladen noch eine OpenAI-Anfrage ausgeführt;
+- der bekannte Vertragsende-Zustand wird als Lifecycle-Verhalten vor dem
+  Limiter geprüft; er ist keine vollständige Billing-Autorisierung.
+
 ### Öffentliche Anfrage
 
 - Scope: `inquiry_ip`;
@@ -100,7 +118,8 @@ Der reale Production-Paralleltest bestätigte:
 ### Gemeinsame Regeln
 
 - `src/lib/rateLimit.ts` enthält nur noch die kanonische Client-IP-Auflösung und keinerlei Bucket-Map;
-- beide Endpunkte verwenden `await consumeSharedRateLimit(...)`;
+- alle drei Endpunkte beziehungsweise Server-Actions verwenden
+  `await consumeSharedRateLimit(...)`;
 - `shared_rate_limit_config` ist eine blockierende öffentliche Health-Komponente;
 - die Health-Prüfung validiert den serverseitigen Secret mit mindestens 32 Zeichen, gibt ihn aber nie aus;
 - Public-Demo-Limits bleiben getrennt und unverändert;

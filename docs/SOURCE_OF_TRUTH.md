@@ -263,11 +263,21 @@ Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfe
 
 - serverseitige Endpunkte;
 - kein API-Key im Browser;
-- begrenzte Eingabelänge und Rate Limits;
+- begrenzte Eingabelänge, begrenzte Datenbank-Kontextzeilen,
+  Provider-Ausgabe und gemeinsame fail-closed Kurzzeit-Rate-Limits;
 - strukturierte Ausgabe;
 - Usage-Logging und geschätzte Token-/Kostenwerte;
 - Admin-Dashboard `/admin/ai-usage`;
 - optionale Soft-Hinweise sind weder vertragliche Kontingente noch automatische Sperren;
+- technische Aufruf-/Kontext-/Ausgabegrenzen sind Missbrauchs- und
+  Kostenschutz, keine Standard-/Plus-/Ultra-Monatskontingente;
+- der Vertragsende-Check an den beiden produktiven KI-Pfaden ist
+  Lifecycle-Verhalten, keine autoritative Billing-Freigabe;
+- **Blocker vor Standard-/Plus-/Ultra-Aktivierung:** Die dokumentierte
+  `workspaces_update_owner`-Policy schränkt Änderungen an Billing-, Stripe-,
+  Subscription- und `test_access_flags`-Spalten nicht ein. Entitlements müssen
+  zuerst aus einer server-eigenen Quelle stammen oder diese Spalten technisch
+  gegen normale Workspace-Owner geschützt werden;
 - keine automatische Sendefunktion.
 
 Details: `docs/AI_COST_MONITORING.md`.

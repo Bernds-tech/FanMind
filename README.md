@@ -215,7 +215,9 @@ Workspace-scoped Daten müssen per RLS und serverseitiger Autorisierung geschüt
 
 - KI läuft serverseitig.
 - API-Keys werden nicht im Browser verwendet.
-- Eingaben werden begrenzt und rate-limitiert.
+- Eingaben, geladene Kontextzeilen, Ausgaben und Aufrufraten werden technisch
+  begrenzt; diese Missbrauchs- und Kostengrenzen sind keine vertraglichen
+  KI-Kontingente.
 - Ausgaben sind strukturiert.
 - KI-Nutzung wird je Workspace gemessen.
 - Es gibt keine automatische Sendefunktion.

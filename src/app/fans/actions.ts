@@ -1,6 +1,5 @@
 "use server";
 
-import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -16,8 +15,6 @@ import {
   archiveWorkspaceContact,
   archiveWorkspaceContactServer,
   mergeWorkspaceContacts,
-  getContactConversationMessages,
-  getContactMemories,
   getWorkspaceContact,
   getWorkspaceContacts,
   getWorkspaceConversations,
@@ -25,7 +22,6 @@ import {
   updateContactTopFanMarkServer,
   updateContactInternalNotesServer,
   upsertContactReplyTarget,
-  upsertFanAnalysisReport,
   type ContactRow,
   type ContactUpdateResult,
 } from "@/lib/supabase/server";
@@ -50,19 +46,6 @@ import { isAllowedManualFacebookThreadUrl } from "@/lib/sourceContext";
 type SuggestedSaveResult = {
   ok: boolean;
   message: string;
-};
-
-export type FanAnalysisActionState = {
-  ok: boolean;
-  message: string;
-  generatedAt?: string;
-  report?: {
-    report_json: Record<string, unknown> | null;
-    summary: string | null;
-    source_message_count: number | null;
-    generated_at: string | null;
-    updated_at?: string | null;
-  } | null;
 };
 
 export type CsvImportActionState = {
@@ -274,258 +257,6 @@ export async function saveContactInternalNotes(formData: FormData) {
   revalidatePath("/fans");
   refresh();
   redirect(`/fans/${contactId}?notice=notes_saved${langParam}`);
-}
-
-export async function analyzeFan(
-  _previousState: FanAnalysisActionState,
-  formData: FormData,
-): Promise<FanAnalysisActionState> {
-  const { workspace, user } = await requireAuthorizedWorkspace();
-  const contactId = formValue(formData, "contact_id");
-  await ensureContactInWorkspace(workspace.id, contactId);
-
-  const locale = formValue(formData, "locale") === "en" ? "en" : "de";
-
-  const [contactResult, messagesResult, memoriesResult] = await Promise.all([
-    getWorkspaceContact(workspace.id, contactId),
-    getContactConversationMessages(workspace.id, contactId),
-    getContactMemories(workspace.id, contactId),
-  ]);
-
-  if (contactResult.error) {
-    return { ok: false, message: contactResult.error.message };
-  }
-  if (messagesResult.error) {
-    return { ok: false, message: messagesResult.error.message };
-  }
-  if (memoriesResult.error) {
-    return { ok: false, message: memoriesResult.error.message };
-  }
-
-  const sourceMessages = messagesResult.messages.slice(-50).map((message) => ({
-    direction: message.direction,
-    channel: message.source_platform ?? "unbekannter Kanal",
-    origin:
-      message.source_type ?? message.message_type ?? "unbekannter Ursprung",
-    author: message.author_label ?? message.original_author_label ?? null,
-    text: message.content || message.original_text_excerpt || "",
-    mediaHint: message.attachments?.length
-      ? `Medien/Anhänge vorhanden (${message.attachments.length}); nur als Hinweis nutzen, keine Bildanalyse.`
-      : null,
-    createdAt: message.created_at,
-  }));
-
-  const contactContext = {
-    displayName: contactResult.contact?.display_name ?? null,
-    handle: contactResult.contact?.handle ?? null,
-    sourcePlatform: contactResult.contact?.source_platform ?? null,
-    contactLanguage: contactResult.contact?.language ?? null,
-    status: contactResult.contact?.status ?? null,
-    tags: contactResult.contact?.tags ?? [],
-    summary: contactResult.contact?.summary ?? null,
-    internalNotes: contactResult.contact?.internal_notes ?? "",
-  };
-  const memories = memoriesResult.memories.slice(0, 20).map((memory) => ({
-    type: memory.type,
-    content: memory.content,
-    importance: memory.importance,
-    createdAt: memory.created_at,
-  }));
-
-  const lowDataHint =
-    sourceMessages.length < 3
-      ? locale === "en"
-        ? "Not enough saved messages yet for a complete analysis. Use the message history or manual messages to improve the analysis."
-        : "Noch zu wenig gespeicherte Nachrichten für eine vollständige Analyse. Nutze den Nachrichtenverlauf oder manuelle Nachrichten, um die Analyse zu verbessern."
-      : "";
-  const fallback = {
-    kurzprofil:
-      lowDataHint ||
-      "Aus dem bisherigen Austausch ableitbarer vorsichtiger Kommunikationsüberblick.",
-    kommunikationsstil:
-      "Nur aus expliziten Nachrichten ableiten; vorsichtig formulieren und weitere Nachrichten berücksichtigen.",
-    stimmung:
-      "Aus den vorhandenen Nachrichten nicht sicher bestimmbar; höchstens als möglicher Eindruck formulieren.",
-    interessen_trigger:
-      "Nur ausdrücklich genannte Themen, Kanalhinweise und Ursprünge berücksichtigen.",
-    kauf_reaktion:
-      "Keine harte Prognose; mögliche Reaktion hängt vom nächsten manuellen Kontakt und Kontext ab.",
-    antwortstil:
-      "Freundlich, klar, respektvoll und ohne Druck antworten. Keine automatische Sendung auslösen.",
-    no_gos:
-      "Keine Diagnosen, keine sensiblen Eigenschaften als Tatsache, keine psychologischen Gewissheiten und keine Bildanalyse behaupten.",
-    spirituell:
-      "Aus dem Chat kein belastbarer Hinweis auf spirituelle Interessen oder Motive; Fokus liegt auf Organisation, Entscheidungssicherheit und konkreten Buchungsdetails.",
-    language: locale,
-  };
-
-  let report = fallback;
-  const model = getFanMindAiModel();
-  const apiKey = process.env.OPENAI_API_KEY;
-  const aiInputPayload = {
-    language: locale,
-    contact: contactContext,
-    memories,
-    messages: sourceMessages,
-  };
-  const aiInputChars = JSON.stringify(aiInputPayload).length;
-  let userMessage = lowDataHint;
-
-  if (!apiKey) {
-    userMessage =
-      "OPENAI_API_KEY ist serverseitig nicht gesetzt. FanMind hat deshalb einen einfachen Kurzreport ohne KI-Aufruf gespeichert.";
-  } else if (sourceMessages.length >= 3) {
-    const latencyStartedAt = Date.now();
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        store: false,
-        input: [
-          {
-            role: "system",
-            content:
-              locale === "en"
-                ? "Create a careful fan analysis report in English. Use only the provided contact data, stored messages, notes, and memories. Do not state medical, psychological, diagnostic, protected, or sensitive attributes as facts. Use cautious wording such as seems, based on the chat, possible hint, could indicate. Keep every section detailed but readable and fitted to the actual conversation. Media may only be mentioned as a hint; do not analyze images. Fill spiritual/energetic notes only if the chat supports it; otherwise write that there is no reliable indication and the focus is practical context. Return only valid JSON with keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell, language."
-                : "Erzeuge einen vorsichtigen Fan-Analyse-Report auf Deutsch. Nutze ausschließlich die gelieferten Kontaktdaten, gespeicherten Nachrichten, Notizen und Memories. Keine medizinischen, psychologischen oder diagnostischen Aussagen als Tatsache, keine geschützten Merkmale, keine sensiblen Eigenschaften als Tatsache. Nutze vorsichtige Formulierungen wie wirkt/könnte/möglicher Hinweis/aus dem Chat ableitbar. Jeder Abschnitt soll ausführlich, klar lesbar und passend zur tatsächlichen Kommunikation sein. Medien nur als Hinweis erwähnen, keine Bildanalyse. Spirituelle/energetische Hinweise nur ausfüllen, wenn der Chat dafür Hinweise enthält; sonst klar schreiben, dass kein belastbarer Hinweis vorliegt und der Fokus auf praktischem Kontext liegt. Gib nur valides JSON mit Keys kurzprofil, kommunikationsstil, stimmung, interessen_trigger, kauf_reaktion, antwortstil, no_gos, spirituell, language zurück.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify(aiInputPayload),
-          },
-        ],
-      }),
-    });
-    const data = (await response.json().catch(() => null)) as {
-      error?: { message?: string };
-      output_text?: string;
-      output?: Array<{ content?: Array<{ text?: string }> }>;
-    } | null;
-    const text =
-      data?.output_text ??
-      data?.output
-        ?.flatMap((o) => o.content ?? [])
-        .map((c) => c.text)
-        .find(Boolean);
-    if (!response.ok) {
-      await recordAiUsageEvent({
-        workspaceId: workspace.id,
-        userId: user.id,
-        contactId,
-        feature: "fan_analysis",
-        model,
-        inputChars: aiInputChars,
-        outputChars: text?.length ?? 0,
-        status: "error",
-        errorCode: String(response.status),
-        latencyMs: Date.now() - latencyStartedAt,
-        sourceRoute: "src/app/fans/actions.ts#analyzeFan",
-      });
-      return {
-        ok: false,
-        message:
-          data?.error?.message ||
-          "OpenAI konnte den Fan-Analyse-Report gerade nicht erstellen.",
-      };
-    }
-    if (!text) {
-      await recordAiUsageEvent({
-        workspaceId: workspace.id,
-        userId: user.id,
-        contactId,
-        feature: "fan_analysis",
-        model,
-        inputChars: aiInputChars,
-        outputChars: 0,
-        status: "error",
-        errorCode: "missing_output",
-        latencyMs: Date.now() - latencyStartedAt,
-        sourceRoute: "src/app/fans/actions.ts#analyzeFan",
-      });
-      return {
-        ok: false,
-        message:
-          "OpenAI hat keinen auswertbaren Fan-Analyse-Report zurückgegeben.",
-      };
-    }
-    try {
-      report = { ...fallback, ...JSON.parse(text) };
-    } catch {
-      await recordAiUsageEvent({
-        workspaceId: workspace.id,
-        userId: user.id,
-        contactId,
-        feature: "fan_analysis",
-        model,
-        inputChars: aiInputChars,
-        outputChars: text.length,
-        status: "error",
-        errorCode: "invalid_json",
-        latencyMs: Date.now() - latencyStartedAt,
-        sourceRoute: "src/app/fans/actions.ts#analyzeFan",
-      });
-      return {
-        ok: false,
-        message:
-          "OpenAI hat keinen gültigen JSON-Report zurückgegeben. Bitte erneut versuchen.",
-      };
-    }
-    await recordAiUsageEvent({
-      workspaceId: workspace.id,
-      userId: user.id,
-      contactId,
-      feature: "fan_analysis",
-      model,
-      inputChars: aiInputChars,
-      outputChars: text.length,
-      status: "ok",
-      latencyMs: Date.now() - latencyStartedAt,
-      sourceRoute: "src/app/fans/actions.ts#analyzeFan",
-    });
-    userMessage = "Fan-Analyse-Report wurde gespeichert und aktualisiert.";
-  } else {
-    userMessage =
-      locale === "en"
-        ? `${lowDataHint} FanMind saved a simple low-data interim report.`
-        : `${lowDataHint} FanMind hat einen einfachen Kurzreport gespeichert.`;
-  }
-
-  const result = await upsertFanAnalysisReport({
-    workspaceId: workspace.id,
-    contactId,
-    reportJson: report,
-    summary: report.kurzprofil,
-    model:
-      apiKey && sourceMessages.length >= 3
-        ? model
-        : apiKey
-          ? "fallback-low-message-count"
-          : "fallback-no-api-key",
-    sourceMessageCount: sourceMessages.length,
-  });
-  if (result.error) return { ok: false, message: result.error.message };
-  revalidatePath(`/fans/${contactId}`);
-  return {
-    ok: true,
-    message: userMessage,
-    generatedAt: result.report?.generated_at ?? undefined,
-    report: result.report
-      ? {
-          report_json: result.report.report_json as Record<
-            string,
-            unknown
-          > | null,
-          summary: result.report.summary,
-          source_message_count: result.report.source_message_count,
-          generated_at: result.report.generated_at,
-          updated_at: result.report.updated_at,
-        }
-      : null,
-  };
 }
 
 export async function saveSuggestedMemory(input: {
