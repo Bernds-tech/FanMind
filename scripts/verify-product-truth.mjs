@@ -12,6 +12,7 @@ const checkedFiles = [
   "src/lib/aiPromptPolicy.mjs",
   "src/lib/workspaceAiPrompts.ts",
   "src/app/api/ai/prompt-settings/route.ts",
+  "src/app/api/ai/reply-suggestions/route.ts",
   "src/app/settings/ai-usage/AiPromptSettings.tsx",
   "tests/ai-tier-policy.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
