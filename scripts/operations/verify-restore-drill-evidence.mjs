@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { open, lstat } from "node:fs/promises";
+import { constants } from "node:fs";\nimport { open } from "node:fs/promises";
 
 const MAX_EVIDENCE_BYTES = 16 * 1024;
 const PASS_FIELDS = [
@@ -50,25 +50,36 @@ function isIsoUtc(value) {
 }
 
 async function readStableEvidence(path) {
-  const before = await lstat(path);
-  if (!before.isFile() || before.isSymbolicLink()) {
-    throw new Error("input_not_regular_file");
-  }
-  if ((before.mode & 0o022) !== 0) {
-    throw new Error("input_permissions_too_open");
-  }
-  if (before.size <= 0 || before.size > MAX_EVIDENCE_BYTES) {
-    throw new Error("input_size_invalid");
+  let handle;
+  try {
+    handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (error?.code === "ELOOP") throw new Error("input_not_regular_file");
+    throw error;
   }
 
-  const handle = await open(path, "r");
   try {
-    const opened = await handle.stat();
-    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino) {
-      throw new Error("input_changed_during_open");
+    const opened = await handle.stat({ bigint: true });
+    if (!opened.isFile()) {
+      throw new Error("input_not_regular_file");
     }
+    if ((opened.mode & 0o022n) !== 0n) {
+      throw new Error("input_permissions_too_open");
+    }
+    if (opened.size <= 0n || opened.size > BigInt(MAX_EVIDENCE_BYTES)) {
+      throw new Error("input_size_invalid");
+    }
+
     const text = await handle.readFile("utf8");
-    if (Buffer.byteLength(text, "utf8") !== opened.size) {
+    const afterRead = await handle.stat({ bigint: true });
+    if (
+      afterRead.dev !== opened.dev
+      || afterRead.ino !== opened.ino
+      || afterRead.size !== opened.size
+      || afterRead.mtimeNs !== opened.mtimeNs
+      || afterRead.ctimeNs !== opened.ctimeNs
+      || BigInt(Buffer.byteLength(text, "utf8")) !== opened.size
+    ) {
       throw new Error("input_changed_during_read");
     }
     return text;
