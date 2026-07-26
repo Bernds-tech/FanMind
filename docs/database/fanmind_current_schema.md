@@ -350,6 +350,27 @@ RLS-Erwartung:
 
 - Nur eigener Workspace, ggf. User-spezifisch eingeschränkt.
 
+### `workspace_ai_prompt_settings`
+
+Zweck: Workspace-weiter Unternehmens-Prompt und bis zu acht auswählbare Antwortprofile für KI-Antwortvorschläge.
+
+Wichtige Felder:
+
+- `workspace_id`
+- `company_prompt`
+- `profiles`
+- `updated_by_user_id`
+- `updated_at`
+- `created_at`
+
+RLS-/Security-Erwartung:
+
+- Lesen nur im eigenen Workspace.
+- Schreiben ausschließlich serverseitig nach Owner-/Admin-Prüfung und Mutation-Origin-Prüfung.
+- `company_prompt` maximal 3.000 Zeichen; `profiles` ist ein JSON-Array mit maximal acht servervalidierten Profilen.
+- Keine Passwörter, Tokens oder unnötigen personenbezogenen Daten speichern.
+- Prompttexte werden nicht in `ai_usage_events` kopiert.
+
 ### `fan_analysis_reports`
 
 Zweck: gespeicherte Fan-Analyse-Reports.
