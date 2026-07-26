@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { trackMetaPixelEvent } from "@/lib/metaPixel";
 import styles from "@/app/landing-v2/landing-v2.module.css";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
@@ -74,6 +75,7 @@ export function FooterInquiryForm({ language = "de" }: FooterInquiryFormProps) {
       return;
     }
 
+    trackMetaPixelEvent("Lead");
     form.reset();
     setState("success");
   }

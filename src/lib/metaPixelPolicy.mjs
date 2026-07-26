@@ -10,10 +10,10 @@ export const META_PIXEL_READY_EVENT = "fanmind:meta-pixel-ready";
 export const META_PIXEL_ACTIVE_EVENTS = Object.freeze([
   "PageView",
   "CompleteRegistration",
+  "Lead",
 ]);
 export const META_PIXEL_PREPARED_EVENTS = Object.freeze([
   "ViewContent",
-  "Lead",
   "Contact",
   "Schedule",
   "StartTrial",

@@ -168,14 +168,14 @@ test("bootstrap initializes exactly once, disables automatic events and does not
   );
 });
 
-test("PageView and completed registration are active while other conversions remain prepared", () => {
+test("PageView, completed registration and successful inquiries are active while other conversions remain prepared", () => {
   assert.deepEqual([...META_PIXEL_ACTIVE_EVENTS], [
     "PageView",
     "CompleteRegistration",
+    "Lead",
   ]);
   assert.deepEqual([...META_PIXEL_PREPARED_EVENTS], [
     "ViewContent",
-    "Lead",
     "Contact",
     "Schedule",
     "StartTrial",
@@ -236,9 +236,10 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   );
 });
 
-test("event helper accepts no arbitrary payload and only completed registration is wired", async () => {
+test("event helper accepts no arbitrary payload and only approved conversions are wired", async () => {
   const helper = await source("src/lib/metaPixel.ts");
   const register = await source("src/app/register/RegisterClient.tsx");
+  const inquiryForm = await source("src/components/landing/FooterInquiryForm.tsx");
   const repositorySources = await Promise.all([
     source("src/app/layout.tsx"),
     source("src/components/marketing/MarketingConsentManager.tsx"),
@@ -256,9 +257,17 @@ test("event helper accepts no arbitrary payload and only completed registration 
     1,
   );
   assert.match(register, /setSuccess\(true\);[\s\S]*trackMetaPixelEvent\("CompleteRegistration"\)/u);
+  assert.equal(
+    (inquiryForm.match(/trackMetaPixelEvent\("Lead"\)/gu) ?? []).length,
+    1,
+  );
+  assert.match(
+    inquiryForm,
+    /if \(!response\?\.ok\)[\s\S]*return;[\s\S]*trackMetaPixelEvent\("Lead"\);[\s\S]*form\.reset\(\)/u,
+  );
   assert.doesNotMatch(
-    `${repositorySources.join("\n")}\n${register}`,
-    /trackMetaPixelEvent\("(?:ViewContent|Lead|Contact|Schedule|StartTrial|Purchase)"\)/u,
+    `${repositorySources.join("\n")}\n${register}\n${inquiryForm}`,
+    /trackMetaPixelEvent\("(?:ViewContent|Contact|Schedule|StartTrial|Purchase)"\)/u,
   );
 });
 
@@ -276,6 +285,7 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(privacy, /Meta Pixel/u);
   assert.match(privacy, /ausdrücklichen (?:Marketing-)?Einwilligung/u);
   assert.match(runbook, /\| `PageView` \|/u);
+  assert.match(runbook, /\| `Lead` \|/u);
   assert.match(runbook, /Öffentliche Routengrenze/u);
   assert.match(runbook, /same-origin/iu);
   assert.match(runbook, /keine Conversions API/iu);
