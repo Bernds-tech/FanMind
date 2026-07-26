@@ -14,9 +14,12 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   return (
     <RegisterClient
       searchParams={searchParams}
-      // Das interne 1-€/Tag-Testabo bleibt admin-/test-only. Die öffentliche
-      // Registrierung bietet ausschließlich Starter Flex und Starter 12 Monate an.
-      enablePublicDailyTestPlan={false}
+      // Der 1-€/Tag-Beta-Test bleibt während der Fertigstellungsphase gezielt
+      // per serverseitigem Production-Schalter verfügbar. Ohne exaktes "true"
+      // bleibt die Registrierung fail-closed; zum Verkaufsstart wird abgeschaltet.
+      enablePublicDailyTestPlan={
+        process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"
+      }
     />
   );
 }

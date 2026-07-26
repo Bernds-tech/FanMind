@@ -8,9 +8,9 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
 - Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
-- Öffentliche Registrierung: ausschließlich Starter Flex und Starter 12 Monate.
+- Öffentliche Registrierung: Starter Flex und Starter 12 Monate; während der Fertigstellungsphase zusätzlich der klar als Beta markierte 1-€/Tag-Test, solange `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true` gesetzt ist.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
-- Admin-only: interne Testzugänge und das Stripe-Testabo `internal_daily_test` bleiben ausdrücklich intern. Der normale Registrierungsflow zeigt sie nicht öffentlich.
+- Beta-/Testzugang: Das Stripe-Testabo `internal_daily_test` ist während der Fertigstellungsphase gezielt im Registrierungsflow sichtbar, kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es wird zum Verkaufsstart nach Abschluss der acht Abschlussblöcke durch `FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=false` wieder geschlossen.
 - Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist der aktuelle Default. Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung müssen dieselbe steuerliche Behandlung zeigen.
 - Kommerzielle Wahrheit: Starter-Grundgebühr `312 €/Monat`.
 - Starter Flex: `990 € einmalige Einrichtung + 312 €/Monat`; jederzeit zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats kündbar.
@@ -164,7 +164,7 @@ Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und
 | KI Standard | aktiv | in 312 €/Monat enthalten |
 | KI Plus | freigegebener Preis, technische Add-on-Aktivierung separat | +100 €/Monat |
 | KI Ultra | freigegebener Preis, technische Add-on-Aktivierung separat | +200 €/Monat |
-| Internes Live-Testabo | admin-/test-only | 1 €/Tag; nicht öffentlich registrierbar |
+| Internes Live-Testabo | temporär als Beta-Test verfügbar | 1 €/Tag; täglich kündbar; nur während der Fertigstellungsphase, zum Verkaufsstart wieder deaktivieren |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht produktiv buchbar |
 | Enterprise / Custom | später | individuelle Prüfung |

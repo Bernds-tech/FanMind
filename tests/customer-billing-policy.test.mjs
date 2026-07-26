@@ -116,3 +116,20 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
   assert.match(stripeBillingSource, /paymentMethodTypes: \["card"\]/);
   assert.match(stripeBillingSource, /paymentCollectionMethod: "card"/);
 });
+
+
+test("daily test registration is controlled by an explicit fail-closed server flag", () => {
+  const registerPageSource = fs.readFileSync("src/app/register/page.tsx", "utf8");
+  const registerClientSource = fs.readFileSync("src/app/register/RegisterClient.tsx", "utf8");
+
+  assert.match(
+    registerPageSource,
+    /process\.env\.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"/,
+  );
+  assert.doesNotMatch(registerPageSource, /enablePublicDailyTestPlan=\{false\}/);
+  assert.match(
+    registerClientSource,
+    /enablePublicDailyTestPlan && selectedPlanId === "pilot" && requestedTestPlan === "daily"/,
+  );
+  assert.match(registerClientSource, /commercialOption = isDailyTestPlanSelected \? "internal_daily_test"/);
+});
