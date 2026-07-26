@@ -69,6 +69,26 @@ test("settings keep one bounded company prompt and at most eight profiles", () =
 
 test("profile names, instructions and identifiers fail closed", () => {
   assert.throws(
+    () => normalizeAiPromptSettings(null),
+    /settings_invalid/u,
+  );
+  assert.throws(
+    () => normalizeAiPromptSettings({ companyPrompt: 123, profiles: [] }),
+    /company_prompt_invalid/u,
+  );
+  assert.throws(
+    () =>
+      normalizeAiPromptSettings({
+        companyPrompt: "",
+        profiles: "invalid",
+      }),
+    /profiles_invalid/u,
+  );
+  assert.deepEqual(
+    normalizeAiPromptSettings({ companyPrompt: "", profiles: [] }),
+    { companyPrompt: "", profiles: [] },
+  );
+  assert.throws(
     () => normalizeAiPromptSettings({ profiles: [profile({ name: "" })] }),
     /profile_name_invalid/u,
   );

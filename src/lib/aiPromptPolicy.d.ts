@@ -17,10 +17,10 @@ export type AiPromptSettings = {
 };
 
 export type AiPromptContext = {
-  companyPrompt: string;
+  companyPrompt: string | null;
   profileId: string | null;
-  profileName: string;
-  profileInstruction: string;
+  profileName: string | null;
+  profilePrompt: string | null;
 };
 
 export class AiPromptPolicyError extends Error {
