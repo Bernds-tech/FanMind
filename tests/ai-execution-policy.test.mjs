@@ -211,7 +211,7 @@ test("productive AI entry points enforce lifecycle guards, limits and output bud
 
   assert.doesNotMatch(legacyActions, /export async function analyzeFan\(/u);
   assert.doesNotMatch(legacyActions, /\bspirituell\b|energetic/u);
-  assert.doesNotMatch(legacyActions, /api\.openai\.com\/v1\/responses/u);
+  assert.equal(legacyActions.includes("api.openai.com/v1/responses"), false);
   assert.match(
     analysisAction,
     /getRecentContactConversationMessages\([\s\S]*AI_ANALYSIS_MESSAGE_ROW_LIMIT/u,
