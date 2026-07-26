@@ -31,6 +31,7 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - Kontakt in Mobile anlegen und bearbeiten;
 - Kontaktdetail mit Profil und Kontaktwissen;
 - KI-Antwortvorschläge über Bearer-authentifizierte FanMind-API;
+- serverseitig angewendeter Workspace-Unternehmens-Prompt und Standard-Antwortprofil; die Mobile-App überträgt keinen freien Prompttext;
 - Kontaktwissen aus KI-Vorschlag speichern;
 - Follow-up aus KI-Vorschlag speichern;
 - offene Follow-ups anzeigen und abschließen;
