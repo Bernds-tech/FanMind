@@ -43,6 +43,8 @@ Neither surface may import UI code from the other. Backend contracts are shared 
 3. Contact, memory and follow-up access uses the user JWT and Supabase RLS.
 4. The AI endpoint receives the same user JWT in a strict `Authorization: Bearer` header.
 5. The server validates the JWT with Supabase, resolves the authorized workspace and confirms contact ownership.
+6. The server loads the workspace company prompt and the active default reply profile after authorization. Mobile never receives or transmits raw workspace prompt text; a future selector may send only a stored profile ID.
+7. Workspace prompt instructions cannot override truthfulness, privacy, schema, cost, authorization or manual-send rules.
 6. Existing Web requests continue to use the secure FanMind cookies when no Bearer header is present.
 
 A malformed Authorization header fails with 401 and never falls back to a Web cookie.
