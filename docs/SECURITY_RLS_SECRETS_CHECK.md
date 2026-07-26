@@ -96,6 +96,7 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
 - [ ] `conversation_summaries`
 - [ ] `contact_ai_profiles`
 - [ ] `workspace_voice_profiles`
+- [ ] `workspace_ai_prompt_settings`
 - [ ] `fan_analysis_reports`
 - [ ] `contact_reply_targets`
 
@@ -144,6 +145,7 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 ## 7. API- und Server-Action-Check
 
 - [ ] `/api/ai/reply-suggestions` prüft Kontakt im Workspace.
+- [ ] `/api/ai/prompt-settings` prüft Workspace-Mitgliedschaft, Owner-/Admin-Mutation und vertrauenswürdigen Origin.
 - [ ] `/api/demo/start` nutzt Service Role nur serverseitig.
 - [ ] `/api/inquiries` validiert, rate-limitiert und speichert serverseitig.
 - [ ] `/api/billing/checkout` prüft Session, Workspace und Plan/Commercial Option.
@@ -159,6 +161,10 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 - [ ] Inputlängen sind begrenzt.
 - [ ] Rate Limit ist aktiv.
 - [ ] Prompt verbietet automatische Sendung und falsche Integrationsbehauptungen.
+- [ ] Workspace-Unternehmens-Prompt und Antwortprofile werden erst nach Workspace-Autorisierung serverseitig geladen.
+- [ ] Nur Workspace-Owner oder Plattform-Admins dürfen Prompt-Einstellungen ändern; Mitglieder bleiben lesend.
+- [ ] Freier Prompttext erscheint weder in KI-Usage-Logs noch im Browser-Request an die Antwort-API.
+- [ ] Workspace-Prompts können Sicherheits-, Wahrheits-, Datenschutz-, Schema-, Kosten- oder Manuell-Senden-Regeln nicht überschreiben.
 - [ ] Ausgabe ist strukturiert.
 - [ ] Fehlertexte geben keine internen Details/Secrets aus.
 - [ ] Model-ID ist idealerweise serverseitig konfigurierbar, nicht breit hardcodiert.
