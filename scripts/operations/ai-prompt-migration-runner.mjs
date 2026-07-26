@@ -3,7 +3,6 @@
 import {
   closeSync,
   constants,
-  lstatSync,
   mkdtempSync,
   openSync,
   readFileSync,
@@ -272,18 +271,6 @@ function privatePassfileSnapshot() {
   let sourceDescriptor;
   let snapshotDirectory;
   try {
-    const initial = lstatSync(sourcePath);
-    if (
-      !initial.isFile() ||
-      initial.isSymbolicLink() ||
-      (initial.mode & 0o777) !== 0o600 ||
-      initial.size < 1 ||
-      initial.size > MAX_PASSFILE_BYTES ||
-      (typeof process.getuid === "function" && initial.uid !== process.getuid())
-    ) {
-      fail("passfile_invalid");
-    }
-
     sourceDescriptor = openSync(
       sourcePath,
       constants.O_RDONLY | constants.O_NOFOLLOW,
@@ -291,12 +278,12 @@ function privatePassfileSnapshot() {
     const opened = fstatSync(sourceDescriptor);
     if (
       !opened.isFile() ||
-      opened.dev !== initial.dev ||
-      opened.ino !== initial.ino ||
-      opened.size !== initial.size ||
-      opened.mtimeMs !== initial.mtimeMs
+      (opened.mode & 0o777) !== 0o600 ||
+      opened.size < 1 ||
+      opened.size > MAX_PASSFILE_BYTES ||
+      (typeof process.getuid === "function" && opened.uid !== process.getuid())
     ) {
-      fail("passfile_changed");
+      fail("passfile_invalid");
     }
 
     const content = Buffer.alloc(opened.size);
@@ -313,6 +300,18 @@ function privatePassfileSnapshot() {
       offset += bytesRead;
     }
 
+    const settled = fstatSync(sourceDescriptor);
+    if (
+      settled.dev !== opened.dev ||
+      settled.ino !== opened.ino ||
+      settled.size !== opened.size ||
+      settled.mtimeMs !== opened.mtimeMs ||
+      settled.ctimeMs !== opened.ctimeMs
+    ) {
+      content.fill(0);
+      fail("passfile_changed");
+    }
+
     snapshotDirectory = mkdtempSync(join(tmpdir(), "fanmind-ai-migration-"));
     const snapshotPath = join(snapshotDirectory, "pgpass");
     writeFileSync(snapshotPath, content, { mode: 0o600, flag: "wx" });
@@ -324,6 +323,14 @@ function privatePassfileSnapshot() {
       error.message.startsWith("AI_PROMPT_MIGRATION_ERROR=")
     ) {
       throw error;
+    }
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ELOOP"
+    ) {
+      fail("passfile_invalid");
     }
     fail("passfile_read_failed");
   } finally {

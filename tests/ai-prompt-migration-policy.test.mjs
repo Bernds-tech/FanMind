@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
@@ -191,6 +198,22 @@ test("mismatched targets, redirect variables and unsafe passfiles fail closed", 
     await assert.rejects(
       execFileAsync(process.execPath, [runnerPath, "--verify"], {
         env: environment,
+      }),
+      (error) => {
+        assert.match(
+          `${error.stdout ?? ""}\n${error.stderr ?? ""}`,
+          /AI_PROMPT_MIGRATION_ERROR=passfile_invalid/,
+        );
+        return true;
+      },
+    );
+
+    await chmod(passfile, 0o600);
+    const linkedPassfile = `${passfile}.link`;
+    await symlink(passfile, linkedPassfile);
+    await assert.rejects(
+      execFileAsync(process.execPath, [runnerPath, "--verify"], {
+        env: { ...environment, PGPASSFILE: linkedPassfile },
       }),
       (error) => {
         assert.match(
