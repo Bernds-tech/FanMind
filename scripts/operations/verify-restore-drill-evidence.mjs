@@ -87,7 +87,12 @@ let payload;
 try {
   payload = JSON.parse(await readStableEvidence(args[1]));
 } catch (error) {
-  fail(error instanceof SyntaxError ? "input_json_invalid" : (error?.message || "input_read_failed"));
+  const safeCode = error instanceof SyntaxError
+    ? "input_json_invalid"
+    : typeof error?.message === "string" && /^[a-z_]+$/.test(error.message)
+      ? error.message
+      : "input_read_failed";
+  fail(safeCode);
   process.exit(1);
 }
 
