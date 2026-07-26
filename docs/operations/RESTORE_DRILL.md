@@ -237,25 +237,23 @@ Do not paste or log their contents. Compare permissions and file presence agains
 
 ## 7. Evidence record
 
-Record the following without secrets:
+Record the result as a protected JSON file and validate it before marking the drill complete:
 
-```text
-Drill date:
-Operator:
-Source artifact basename:
-Outer SHA-256:
-Backup type:
-Production commit from manifest:
-Verifier result:
-Disposable DB/project identifier:
-Database restore result:
-Storage sample result:
-RLS verification result:
-Cleanup completed:
-Issues found:
+```bash
+npm run restore:evidence:verify -- --input /secure/evidence/fanmind-restore-drill.json
 ```
 
-Attach only redacted command output. Never attach decrypted files, credentials or `.env` values.
+Required final line:
+
+```text
+RESTORE_DRILL_EVIDENCE=PASS
+```
+
+The record uses a fixed, fail-closed schema: UTC start/end time, `staging` or `test`, full-backup artifact basename, outer SHA-256, Production commit, a SHA-256 of the independently documented disposable target identity, explicit `passed` results for verifier, database restore, core schema checks, RLS, Storage sample, server-config inspection and cleanup, plus explicit `false` values for Production modification, customer-data export and secret recording. Passing evidence requires an empty issue-code list.
+
+Store only `targetIdentitySha256`; record no raw target values. The evidence file contains keine Hostnamen, Datenbanknamen, Benutzernamen, Passwörter, Schlüssel, Kundendaten oder freie Notizfelder. The verifier accepts only the documented keys, reads one stable regular file, prints status codes only and never echoes record values.
+
+Attach only the validated redacted evidence and bounded status output. Never attach decrypted files, credentials or `.env` values.
 
 ## 8. Pass criteria
 

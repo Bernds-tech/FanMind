@@ -57,7 +57,7 @@ Bei der Validierung eines Vollbackups muss das zentrale Manifest `production_com
 
 ## Restore
 
-Restore ist absichtlich nicht in der Web-App implementiert. Ein Restore-Test bleibt ein offener Phase-5-Abschlussblock und muss separat auf einer Testumgebung dokumentiert werden.
+Restore ist absichtlich nicht in der Web-App implementiert. Ein Restore-Test bleibt ein offener Phase-5-Abschlussblock und muss separat auf einer Testumgebung dokumentiert werden. Das redigierte Abschlussprotokoll wird mit `npm run restore:evidence:verify -- --input <datei>` fail-closed geprüft; dieser Validator ersetzt den tatsächlichen isolierten Restore nicht.
 
 ## Retention
 
