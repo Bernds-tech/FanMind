@@ -320,6 +320,16 @@ requireText(
   "Das Runbook muss den aktuellen Standard-/Plus-/Ultra-Vertrag dokumentieren.",
 );
 requireText(
+  "src/config/aiTiers.mjs",
+  "resolveWorkspaceAiTierEntitlement",
+  "Die zentrale KI-Tier-Policy muss den fail-closed Workspace-Entitlement-Vertrag besitzen.",
+);
+requireText(
+  "tests/ai-tier-policy.test.mjs",
+  "workspace entitlement rejects unknown and client-controlled paid tiers",
+  "Client-kontrollierte oder unbekannte KI-Entitlements müssen automatisiert auf Standard zurückfallen.",
+);
+requireText(
   "docs/SOURCE_OF_TRUTH.md",
   "KI Plus** kostet zusätzlich 100 €/Monat",
   "Die Source of Truth muss den KI-Plus-Preis dokumentieren.",

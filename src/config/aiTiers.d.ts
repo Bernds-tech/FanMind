@@ -1,6 +1,12 @@
 export type AiTierId = "standard" | "plus" | "ultra";
 export type AiTierPublicStatus = "Aktiv" | "Coming Soon";
 export type AiTierBillingStatus = "included" | "not_configured" | "enabled";
+export type AiTierEntitlementStatus =
+  | "active"
+  | "pending"
+  | "paused"
+  | "canceled"
+  | "expired";
 
 export type AiTierConfig = Readonly<{
   id: AiTierId;
@@ -42,7 +48,39 @@ export type AiTierReadiness = Readonly<{
   blockers: readonly AiTierReadinessBlocker[];
 }>;
 
+export type WorkspaceAiTierEntitlementInput = Readonly<{
+  tierId?: unknown;
+  status?: unknown;
+  source?: unknown;
+  effectiveAt?: unknown;
+  expiresAt?: unknown;
+  stripeSubscriptionItemLinked?: unknown;
+  serverOwned?: unknown;
+}>;
+
+export type AiTierEntitlementFallbackReason =
+  | "unknown_tier"
+  | "server_owned"
+  | "lifecycle_status"
+  | "source"
+  | "stripe_item"
+  | "effective_at"
+  | "not_started"
+  | "expires_at"
+  | "expired"
+  | "tier_readiness";
+
+export type WorkspaceAiTierEntitlement = Readonly<{
+  requestedTierId: AiTierId | null;
+  effectiveTierId: AiTierId;
+  entitlementStatus: "included" | "active";
+  fellBackToStandard: boolean;
+  fallbackReasons: readonly AiTierEntitlementFallbackReason[];
+  readinessBlockers: readonly AiTierReadinessBlocker[];
+}>;
+
 export const AI_TIER_IDS: readonly AiTierId[];
+export const AI_TIER_ENTITLEMENT_STATUSES: readonly AiTierEntitlementStatus[];
 export const AI_TIER_CONFIG: Readonly<Record<AiTierId, AiTierConfig>>;
 export function getAiTierConfig(tierId: AiTierId): AiTierConfig;
 export function formatAiTierPrice(tierOrId: AiTierConfig | AiTierId): string;
@@ -59,4 +97,13 @@ export function evaluateAiTierReadiness(
   tierId: AiTierId,
   runtime?: AiTierRuntimeReadiness,
 ): AiTierReadiness;
+export function getAiTierRuntimeReadinessFromEnvironment(
+  tierId: AiTierId,
+  environment?: Readonly<Record<string, string | undefined>>,
+): AiTierRuntimeReadiness;
+export function resolveWorkspaceAiTierEntitlement(
+  entitlement?: WorkspaceAiTierEntitlementInput,
+  runtime?: AiTierRuntimeReadiness,
+  now?: Date | string | number,
+): WorkspaceAiTierEntitlement;
 export function assertAiTierPolicy(): true;

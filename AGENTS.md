@@ -47,6 +47,10 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - AI usage/cost monitoring requirements live in `docs/AI_COST_MONITORING.md`.
 - Workspace company-prompt and reply-profile requirements live in `docs/AI_PROMPT_PROFILES.md`; browsers may send only a selected profile ID to reply generation, while prompt contents are loaded server-side after Workspace authorization.
 - Canonical AI tier policy lives in `src/config/aiTiers.mjs`; do not duplicate prices, referral eligibility, auto-send rules or automatic-booking readiness across UI files.
+- The same file owns the fail-closed Workspace AI entitlement resolver:
+  missing, unknown, client-controlled, inactive, future, expired or not fully
+  ready Plus/Ultra state must resolve to Standard and must not expose Stripe
+  references, models or quotas.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

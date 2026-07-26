@@ -1,4 +1,16 @@
 export const AI_TIER_IDS = Object.freeze(["standard", "plus", "ultra"]);
+export const AI_TIER_ENTITLEMENT_STATUSES = Object.freeze([
+  "active",
+  "pending",
+  "paused",
+  "canceled",
+  "expired",
+]);
+
+const AI_TIER_STRIPE_PRICE_ENV = Object.freeze({
+  plus: "STRIPE_PRICE_AI_PLUS",
+  ultra: "STRIPE_PRICE_AI_ULTRA",
+});
 
 function freezeTier(tier) {
   return Object.freeze({
@@ -102,6 +114,44 @@ function isPositiveInteger(value) {
   return Number.isInteger(value) && value > 0;
 }
 
+function hasConfiguredStripePrice(value) {
+  return typeof value === "string" && /^price_[A-Za-z0-9_]+$/u.test(value);
+}
+
+function normalizedInstant(value) {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const normalized = value.trim();
+  const timestamp = Date.parse(normalized);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function nowTimestamp(value) {
+  const timestamp =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === "number"
+        ? value
+        : Date.parse(String(value));
+  if (!Number.isFinite(timestamp)) {
+    throw new TypeError("now must be a valid instant");
+  }
+  return timestamp;
+}
+
+export function getAiTierRuntimeReadinessFromEnvironment(
+  tierId,
+  environment = process.env,
+) {
+  const priceEnvironmentName = AI_TIER_STRIPE_PRICE_ENV[tierId];
+  return Object.freeze({
+    stripePriceConfigured:
+      typeof priceEnvironmentName === "string" &&
+      hasConfiguredStripePrice(environment?.[priceEnvironmentName]),
+    workspaceContractConfirmed:
+      environment?.FANMIND_AI_TIER_WORKSPACE_CONTRACT_CONFIRMED === "true",
+  });
+}
+
 export function evaluateAiTierReadiness(
   tierId,
   {
@@ -153,6 +203,110 @@ export function evaluateAiTierReadiness(
 
 export function isAiTierAutomaticallyBookable(tierId, runtime = {}) {
   return evaluateAiTierReadiness(tierId, runtime).automaticallyBookable;
+}
+
+export function resolveWorkspaceAiTierEntitlement(
+  entitlement = {},
+  runtime = {},
+  now = new Date(),
+) {
+  const rawTierId =
+    typeof entitlement?.tierId === "string"
+      ? entitlement.tierId.trim().toLowerCase()
+      : "";
+  const requestedTierId = AI_TIER_IDS.includes(rawTierId) ? rawTierId : null;
+  const fallbackReasons = [];
+  const readinessBlockers = [];
+
+  if (!rawTierId) {
+    return Object.freeze({
+      requestedTierId: null,
+      effectiveTierId: "standard",
+      entitlementStatus: "included",
+      fellBackToStandard: false,
+      fallbackReasons: Object.freeze([]),
+      readinessBlockers: Object.freeze([]),
+    });
+  }
+
+  if (!requestedTierId) {
+    fallbackReasons.push("unknown_tier");
+  } else if (requestedTierId === "standard") {
+    return Object.freeze({
+      requestedTierId,
+      effectiveTierId: "standard",
+      entitlementStatus: "included",
+      fellBackToStandard: false,
+      fallbackReasons: Object.freeze([]),
+      readinessBlockers: Object.freeze([]),
+    });
+  } else {
+    const status =
+      typeof entitlement.status === "string"
+        ? entitlement.status.trim().toLowerCase()
+        : "";
+    const source =
+      typeof entitlement.source === "string"
+        ? entitlement.source.trim().toLowerCase()
+        : "";
+
+    if (entitlement.serverOwned !== true) {
+      fallbackReasons.push("server_owned");
+    }
+    if (status !== "active") {
+      fallbackReasons.push("lifecycle_status");
+    }
+    if (source !== "stripe") {
+      fallbackReasons.push("source");
+    }
+    if (entitlement.stripeSubscriptionItemLinked !== true) {
+      fallbackReasons.push("stripe_item");
+    }
+
+    const effectiveAt = normalizedInstant(entitlement.effectiveAt);
+    const expiresAt =
+      entitlement.expiresAt == null || entitlement.expiresAt === ""
+        ? null
+        : normalizedInstant(entitlement.expiresAt);
+    const currentTimestamp = nowTimestamp(now);
+
+    if (effectiveAt === null) {
+      fallbackReasons.push("effective_at");
+    } else if (effectiveAt > currentTimestamp) {
+      fallbackReasons.push("not_started");
+    }
+    if (
+      entitlement.expiresAt != null &&
+      entitlement.expiresAt !== "" &&
+      expiresAt === null
+    ) {
+      fallbackReasons.push("expires_at");
+    } else if (expiresAt !== null && expiresAt <= currentTimestamp) {
+      fallbackReasons.push("expired");
+    }
+
+    const readiness = evaluateAiTierReadiness(requestedTierId, runtime);
+    readinessBlockers.push(...readiness.blockers);
+    if (!readiness.ready) {
+      fallbackReasons.push("tier_readiness");
+    }
+  }
+
+  const effectiveTierId =
+    requestedTierId && fallbackReasons.length === 0
+      ? requestedTierId
+      : "standard";
+
+  return Object.freeze({
+    requestedTierId,
+    effectiveTierId,
+    entitlementStatus:
+      effectiveTierId === "standard" ? "included" : "active",
+    fellBackToStandard:
+      rawTierId !== "standard" && effectiveTierId === "standard",
+    fallbackReasons: Object.freeze(fallbackReasons),
+    readinessBlockers: Object.freeze(readinessBlockers),
+  });
 }
 
 export function assertAiTierPolicy() {
