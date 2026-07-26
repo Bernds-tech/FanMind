@@ -122,10 +122,16 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   const registerPageSource = fs.readFileSync("src/app/register/page.tsx", "utf8");
   const registerClientSource = fs.readFileSync("src/app/register/RegisterClient.tsx", "utf8");
 
-  assert.match(
-    registerPageSource,
-    /process\.env\.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true"/,
-  );
+  const runtimeSettingsSource = fs.readFileSync("src/lib/runtimeProductSettings.ts", "utf8");
+  const adminRouteSource = fs.readFileSync("src/app/api/admin/settings/daily-test-plan/route.ts", "utf8");
+  const deploySource = fs.readFileSync(".github/workflows/deploy-fanmind.yml", "utf8");
+
+  assert.match(registerPageSource, /getPublicDailyTestPlanEnabled/);
+  assert.match(runtimeSettingsSource, /publicDailyTestPlanEnabled/);
+  assert.match(runtimeSettingsSource, /rename\(temporaryPath, settingsPath\)/);
+  assert.match(adminRouteSource, /requirePlatformAdmin/);
+  assert.match(deploySource, /if \[ ! -e "\$RUNTIME_SETTINGS_FILE" \]/);
+  assert.doesNotMatch(deploySource, /sed -i.*FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN/);
   assert.doesNotMatch(registerPageSource, /enablePublicDailyTestPlan=\{false\}/);
   assert.match(
     registerClientSource,
