@@ -7,11 +7,13 @@ export const META_PIXEL_SCRIPT_URL =
   "https://connect.facebook.net/en_US/fbevents.js";
 export const META_PIXEL_READY_EVENT = "fanmind:meta-pixel-ready";
 
-export const META_PIXEL_ACTIVE_EVENTS = Object.freeze(["PageView"]);
+export const META_PIXEL_ACTIVE_EVENTS = Object.freeze([
+  "PageView",
+  "CompleteRegistration",
+]);
 export const META_PIXEL_PREPARED_EVENTS = Object.freeze([
   "ViewContent",
   "Lead",
-  "CompleteRegistration",
   "Contact",
   "Schedule",
   "StartTrial",
