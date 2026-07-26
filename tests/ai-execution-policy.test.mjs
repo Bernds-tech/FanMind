@@ -230,10 +230,10 @@ test("productive AI entry points enforce lifecycle guards, limits and output bud
   );
   assert.match(
     sourceOfTruth,
-    /Blocker vor Standard-\/Plus-\/Ultra-Aktivierung[\s\S]*workspaces_update_owner/u,
+    /Rollout-Blocker vor Standard-\/Plus-\/Ultra-Aktivierung[\s\S]*WORKSPACE_SERVER_OWNED_FIELDS/u,
   );
   assert.match(
     securityChecklist,
-    /Blocker:[\s\S]*Legacy-Policy `workspaces_update_owner`/u,
+    /Rollout-Blocker:[\s\S]*20260726120000_workspace_provisioning_rpc\.sql[\s\S]*20260726121000_workspace_server_owned_columns\.sql/u,
   );
 });

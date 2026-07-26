@@ -35,6 +35,21 @@ test("public demo workspace keeps demo invoices", () => {
   assert.ok(invoices.some((invoice) => invoice.number === "Demo-Rechnung 0001"));
 });
 
+test("a user-editable demo-like workspace name never grants demo invoice behavior", () => {
+  const workspace = {
+    billing_status: "active",
+    name: "FanMind Demo Workspace",
+    commercial_option: "starter_paid_setup",
+    stripe_customer_id: null,
+  };
+
+  assert.equal(shouldShowDemoInvoicesForWorkspace(workspace), false);
+  assert.deepEqual(
+    listPolicyInvoiceResult({ workspace, stripeInvoices: null }),
+    [],
+  );
+});
+
 test("real Stripe customer without invoices shows an empty invoice state", () => {
   const workspace = {
     billing_status: "active",

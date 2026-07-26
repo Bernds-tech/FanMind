@@ -66,6 +66,7 @@ function getDemoInvoicesForExplicitDemoWorkspace(
   >,
 ): CustomerInvoiceSummary[] {
   if (
+    workspace.billing_status !== "demo_free" ||
     !isExplicitDemoWorkspace(workspace) ||
     Boolean(workspace.stripe_customer_id)
   )

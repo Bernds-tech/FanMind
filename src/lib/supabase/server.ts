@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   getMessageKindFromAttachments,
   normalizeMessageAttachments,
@@ -44,6 +45,12 @@ import {
   minimizeWebhookDiagnosticPayload,
   normalizeWebhookErrorCode,
 } from "@/lib/webhookSecurityPolicy.mjs";
+import {
+  isMissingWorkspaceExpandColumn,
+  isMissingWorkspaceProvisioningRpc,
+  WORKSPACE_PROVISIONING_RPC,
+  type WorkspaceProvisioningRpcRow,
+} from "@/lib/workspaceProvisioning";
 
 export type SupabaseServerUser = {
   id: string;
@@ -70,6 +77,8 @@ export type WorkspaceBackfillRow = {
   monthly_fee_cents: number;
   commitment_months: 0 | 12;
   billing_status?: string | null;
+  billing_provider?: string | null;
+  payment_collection_method?: string | null;
   billing_suspended_at?: string | null;
   billing_suspended_reason?: string | null;
   billing_manual_override?: boolean | null;
@@ -94,6 +103,9 @@ export type WorkspaceBackfillRow = {
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   stripe_checkout_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
+  stripe_mandate_id?: string | null;
+  billing_note?: string | null;
   last_invoice_id?: string | null;
   last_invoice_status?: string | null;
   last_invoice_amount_due_cents?: number | null;
@@ -539,7 +551,7 @@ type PostgrestCountResult = {
 type SupabaseFilterValue = string | number | boolean | null;
 
 const WORKSPACE_COLUMNS =
-  "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_contract_started_at,billing_current_period_end_at,billing_next_invoice_at,billing_minimum_term_ends_at,subscription_cancel_requested_at,subscription_cancel_requested_by_user_id,subscription_cancel_at_period_end,subscription_effective_end_at,subscription_cancellation_revoked_at,workspace_access_mode,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,stripe_checkout_session_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url,test_access_flags,organization_name,street_address,postal_code,city,country,vat_id,tax_number,company_register_number,company_register_court";
+  "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_provider,payment_collection_method,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_contract_started_at,billing_current_period_end_at,billing_next_invoice_at,billing_minimum_term_ends_at,subscription_cancel_requested_at,subscription_cancel_requested_by_user_id,subscription_cancel_at_period_end,subscription_effective_end_at,subscription_cancellation_revoked_at,workspace_access_mode,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url,test_access_flags,organization_name,street_address,postal_code,city,country,vat_id,tax_number,company_register_number,company_register_court";
 const CONTACT_COLUMNS =
   "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,is_top_fan,created_at,updated_at";
 const MEMORY_COLUMNS =
@@ -568,6 +580,93 @@ const DEFAULT_WORKSPACE_NAME = "FanMind Workspace";
 const DEMO_EMAIL = "sandra.m@fanmind.ch";
 const DEMO_WORKSPACE_NAME = "Sandra M. Demo Workspace";
 const DEMO_CONTACT_HANDLE = "@sandra-demo";
+const TEMPORARY_DEMO_ACCESS_FLAG = "temporary_demo";
+const FIXED_DEMO_SEED_VERSION_FLAG = "fixed_demo_seed_version";
+const FIXED_DEMO_SEED_VERSION = "2026-07-26-v1";
+
+function deterministicServerUuid(scope: string): string {
+  const digest = createHash("sha256")
+    .update(`fanmind:${scope}`)
+    .digest("hex");
+  const variant = ((Number.parseInt(digest[16] ?? "0", 16) & 0x3) | 0x8)
+    .toString(16);
+  return [
+    digest.slice(0, 8),
+    digest.slice(8, 12),
+    `8${digest.slice(13, 16)}`,
+    `${variant}${digest.slice(17, 20)}`,
+    digest.slice(20, 32),
+  ].join("-");
+}
+
+function deterministicFixedDemoWorkspaceId(userId: string): string {
+  return deterministicServerUuid(`fixed-demo-workspace:${userId}`);
+}
+
+function deterministicDemoSeedId(
+  workspaceId: string,
+  resource: string,
+  discriminator: string,
+): string {
+  return deterministicServerUuid(
+    `demo-seed:${JSON.stringify([workspaceId, resource, discriminator])}`,
+  );
+}
+
+function demoProtectedCanonicalValues(
+  userId: string,
+  testAccessFlags: Record<string, boolean | string>,
+) {
+  return {
+    billing_status: "demo_free",
+    billing_provider: "manual",
+    payment_collection_method: "none",
+    billing_manual_override: false,
+    billing_suspended_at: null,
+    billing_suspended_reason: null,
+    billing_last_payment_failed_at: null,
+    billing_last_payment_at: null,
+    billing_retry_count: 0,
+    billing_next_retry_at: null,
+    billing_grace_until: null,
+    billing_admin_note: null,
+    billing_contract_started_at: null,
+    billing_current_period_end_at: null,
+    billing_next_invoice_at: null,
+    billing_minimum_term_ends_at: null,
+    subscription_cancel_requested_at: null,
+    subscription_cancel_requested_by_user_id: null,
+    subscription_cancel_at_period_end: false,
+    subscription_effective_end_at: null,
+    subscription_cancellation_revoked_at: null,
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    last_invoice_id: null,
+    last_invoice_status: null,
+    last_invoice_amount_due_cents: null,
+    last_invoice_amount_paid_cents: null,
+    last_invoice_hosted_url: null,
+    last_invoice_pdf_url: null,
+    test_access_flags: testAccessFlags,
+    workspace_access_mode: "active",
+    billing_updated_at: new Date().toISOString(),
+    billing_updated_by_user_id: userId,
+  };
+}
+
+function temporaryDemoCanonicalValues(userId: string) {
+  return {
+    name: TEMPORARY_DEMO_WORKSPACE_NAME,
+    plan_id: "pilot",
+    commercial_option: "pilot_only",
+    setup_fee_cents: 0,
+    monthly_fee_cents: 0,
+    commitment_months: 0,
+    ...demoProtectedCanonicalValues(userId, {
+      [TEMPORARY_DEMO_ACCESS_FLAG]: true,
+    }),
+  };
+}
 
 function getServiceAccessToken(): string | undefined {
   return process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -711,6 +810,7 @@ export type TaxMasterDataUpdateInput = {
 async function getAuthorizedWorkspaceSettingsAccess(
   user: SupabaseServerUser,
   workspaceId: string,
+  ownerOnly = false,
 ): Promise<{ accessToken: string | null; error: Error | null }> {
   const accessToken = await getAccessToken();
 
@@ -729,7 +829,10 @@ async function getAuthorizedWorkspaceSettingsAccess(
 
   if (membership.error) return { accessToken: null, error: new Error(`Workspace-Berechtigung konnte nicht geprüft werden: ${membership.error.message}`) };
   const role = membership.data?.role?.toLowerCase();
-  if (!role || !["owner", "admin", "manager"].includes(role)) {
+  const authorized = ownerOnly
+    ? role === "owner"
+    : Boolean(role && ["owner", "admin", "manager"].includes(role));
+  if (!authorized) {
     return { accessToken: null, error: new Error("Du bist für das Speichern dieser Workspace-Stammdaten nicht berechtigt.") };
   }
 
@@ -774,7 +877,11 @@ export async function updateWorkspaceMasterDataSettings(
   workspaceId: string,
   input: WorkspaceMasterDataUpdateInput,
 ): Promise<{ error: Error | null }> {
-  const { accessToken, error } = await getAuthorizedWorkspaceSettingsAccess(user, workspaceId);
+  const { accessToken, error } = await getAuthorizedWorkspaceSettingsAccess(
+    user,
+    workspaceId,
+    true,
+  );
   if (error || !accessToken) return { error };
 
   const workspaceResult = await postgrestUpdate(
@@ -805,7 +912,11 @@ export async function updateTaxMasterDataSettings(
   workspaceId: string,
   input: TaxMasterDataUpdateInput,
 ): Promise<{ error: Error | null }> {
-  const { accessToken, error } = await getAuthorizedWorkspaceSettingsAccess(user, workspaceId);
+  const { accessToken, error } = await getAuthorizedWorkspaceSettingsAccess(
+    user,
+    workspaceId,
+    true,
+  );
   if (error || !accessToken) return { error };
 
   const workspaceResult = await postgrestUpdate(
@@ -837,6 +948,20 @@ export async function getUserWorkspaceDashboard(
     );
   }
 
+  if (user.email?.trim().toLowerCase() === DEMO_EMAIL) {
+    const fixedDemo = await ensureFixedSandraDemoWorkspace(user);
+    if (fixedDemo.error || !fixedDemo.workspace) {
+      return workspaceDashboardError(
+        fixedDemo.error?.message ??
+          "Der feste Demo-Workspace konnte nicht sicher geladen werden.",
+      );
+    }
+    return {
+      workspace: { ...fixedDemo.workspace, role: "owner" },
+      error: null,
+    };
+  }
+
   const ownerWorkspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
     "workspaces",
     accessToken,
@@ -853,10 +978,28 @@ export async function getUserWorkspaceDashboard(
   }
 
   if (ownerWorkspaceResult.data) {
-    const workspace = { ...ownerWorkspaceResult.data, role: "owner" };
+    let workspaceRow = ownerWorkspaceResult.data;
+    if (isTemporaryDemoUser(user)) {
+      const normalizedDemo = await normalizeTemporaryDemoWorkspace(
+        user,
+        workspaceRow,
+      );
+      if (normalizedDemo.error || !normalizedDemo.workspace) {
+        return workspaceDashboardError(
+          normalizedDemo.error?.message ??
+            "Temporärer Demo-Workspace konnte nicht sicher geladen werden.",
+        );
+      }
+      workspaceRow = normalizedDemo.workspace;
+    }
+
+    const workspace = { ...workspaceRow, role: "owner" };
     const expiryState = getTemporaryDemoExpiryState(user);
     if (expiryState.isTemporaryDemo && expiryState.isExpired) {
-      const deleted = await deleteExpiredTemporaryDemo(user, workspace);
+      const deleted = await deleteExpiredTemporaryDemo(user, workspace, {
+        authUserId: user.id,
+        workspaceId: workspace.id,
+      });
       if (deleted.error) console.error("Temporary demo cleanup failed", deleted.error);
       return workspaceDashboardError("TEMPORARY_DEMO_DELETED");
     }
@@ -4586,13 +4729,8 @@ export async function createTemporaryDemoWorkspace(input: {
     "workspaces",
     "POST",
     {
-      name: TEMPORARY_DEMO_WORKSPACE_NAME,
+      ...temporaryDemoCanonicalValues(input.userId),
       owner_user_id: input.userId,
-      plan_id: "pilot",
-      commercial_option: "pilot_only",
-      setup_fee_cents: 0,
-      monthly_fee_cents: 0,
-      commitment_months: 0,
     },
     accessToken,
     { select: WORKSPACE_COLUMNS, single: true },
@@ -4606,41 +4744,271 @@ export async function createTemporaryDemoWorkspace(input: {
     email: input.userEmail,
     display_name: locale === "en" ? "Demo User" : "Demo Nutzer",
   }, accessToken, { upsert: true });
-  if (profileResult.error) return workspaceBackfillError(profileResult.error.message);
+  if (profileResult.error) {
+    return {
+      workspace: workspaceResult.data,
+      error: profileResult.error,
+      created: true,
+    };
+  }
 
   const memberResult = await postgrestRequest("workspace_members", "POST", {
     workspace_id: workspaceResult.data.id,
     user_id: input.userId,
     role: "owner",
   }, accessToken);
-  if (memberResult.error) return workspaceBackfillError(memberResult.error.message);
+  if (memberResult.error) {
+    return {
+      workspace: workspaceResult.data,
+      error: memberResult.error,
+      created: true,
+    };
+  }
 
   const seedError = await seedSandraDemoWorkspaceData(workspaceResult.data, accessToken, locale);
-  if (seedError) return workspaceBackfillError(seedError.message);
+  if (seedError) {
+    return {
+      workspace: workspaceResult.data,
+      error: seedError,
+      created: true,
+    };
+  }
 
   return { workspace: workspaceResult.data, error: null, created: true };
 }
 
-async function ensureSandraDemoWorkspaceData(
-  workspace: WorkspaceBackfillRow,
+async function normalizeTemporaryDemoWorkspace(
   user: SupabaseServerUser,
-  accessToken: string,
-): Promise<Error | null> {
-  const email = (user.email ?? stringMetadataValue(user.user_metadata, "email") ?? "").toLowerCase();
-  if (email !== DEMO_EMAIL) return null;
+  workspace: WorkspaceBackfillRow,
+): Promise<WorkspaceBackfillResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return workspaceBackfillError(
+      "Der temporäre Demo-Workspace kann ohne serverseitige Service Role nicht geprüft werden.",
+    );
+  }
 
-  if (workspace.name !== DEMO_WORKSPACE_NAME) {
+  if (
+    !isTemporaryDemoUser(user) ||
+    workspace.owner_user_id !== user.id
+  ) {
+    return workspaceBackfillError(
+      "Temporärer Demo-Workspace konnte nicht eindeutig zugeordnet werden.",
+    );
+  }
+
+  const sessionResult = await postgrestSelect<Array<{ id: string }>>(
+    "demo_start_sessions",
+    serviceAccessToken,
+    "id",
+    [
+      ["auth_user_id", user.id],
+      ["workspace_id", workspace.id],
+    ],
+    1,
+    false,
+  );
+  if (sessionResult.error || !sessionResult.data?.[0]?.id) {
+    return workspaceBackfillError(
+      sessionResult.error?.message ??
+        "Temporärer Demo-Workspace besitzt keine serverseitige Start-Zuordnung.",
+    );
+  }
+
+  const workspaceUpdate = await postgrestUpdate<WorkspaceBackfillRow>(
+    "workspaces",
+    temporaryDemoCanonicalValues(user.id),
+    serviceAccessToken,
+    [["id", workspace.id]],
+    { select: WORKSPACE_COLUMNS, single: true },
+  );
+  if (workspaceUpdate.error || !workspaceUpdate.data) {
+    return workspaceBackfillError(
+      workspaceUpdate.error?.message ??
+        "Temporärer Demo-Workspace konnte nicht normalisiert werden.",
+    );
+  }
+
+  return {
+    workspace: workspaceUpdate.data,
+    error: null,
+    created: false,
+  };
+}
+
+async function ensureFixedSandraDemoWorkspace(
+  user: SupabaseServerUser,
+): Promise<WorkspaceBackfillResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return workspaceBackfillError(
+      "Der feste Demo-Workspace kann ohne serverseitige Service Role nicht vorbereitet werden.",
+    );
+  }
+
+  const existingResult = await postgrestSelect<WorkspaceBackfillRow[]>(
+    "workspaces",
+    serviceAccessToken,
+    WORKSPACE_COLUMNS,
+    [["owner_user_id", user.id]],
+    2,
+    false,
+  );
+  if (existingResult.error) {
+    return workspaceBackfillError(
+      `Demo-Workspace konnte nicht gesucht werden: ${existingResult.error.message}`,
+    );
+  }
+
+  const existingRows = existingResult.data ?? [];
+  if (existingRows.length > 1) {
+    return workspaceBackfillError(
+      "Demo-Workspace konnte nicht eindeutig zugeordnet werden.",
+    );
+  }
+
+  const seedIsCurrent =
+    existingRows[0]?.test_access_flags?.[FIXED_DEMO_SEED_VERSION_FLAG] ===
+    FIXED_DEMO_SEED_VERSION;
+  const fixedSeedFlags: Record<string, boolean | string> = seedIsCurrent
+    ? { [FIXED_DEMO_SEED_VERSION_FLAG]: FIXED_DEMO_SEED_VERSION }
+    : {};
+  const canonicalValues = {
+    name: DEMO_WORKSPACE_NAME,
+    plan_id: "pilot",
+    commercial_option: "pilot_only",
+    setup_fee_cents: 0,
+    monthly_fee_cents: 0,
+    commitment_months: 0,
+    ...demoProtectedCanonicalValues(user.id, fixedSeedFlags),
+  };
+
+  let workspace = existingRows[0] ?? null;
+  let created = false;
+
+  if (workspace) {
     const workspaceUpdate = await postgrestUpdate<WorkspaceBackfillRow>(
       "workspaces",
-      { name: DEMO_WORKSPACE_NAME, plan_id: "pilot", commercial_option: "pilot_only", setup_fee_cents: 0, monthly_fee_cents: 0, commitment_months: 0 },
-      accessToken,
+      canonicalValues,
+      serviceAccessToken,
       [["id", workspace.id]],
       { select: WORKSPACE_COLUMNS, single: true },
     );
-    if (workspaceUpdate.error) return workspaceUpdate.error;
+    if (workspaceUpdate.error || !workspaceUpdate.data) {
+      return workspaceBackfillError(
+        workspaceUpdate.error?.message ??
+          "Demo-Workspace konnte nicht normalisiert werden.",
+      );
+    }
+    workspace = workspaceUpdate.data;
+  } else {
+    const workspaceInsert = await postgrestRequest<WorkspaceBackfillRow>(
+      "workspaces",
+      "POST",
+      {
+        ...canonicalValues,
+        id: deterministicFixedDemoWorkspaceId(user.id),
+        owner_user_id: user.id,
+      },
+      serviceAccessToken,
+      { select: WORKSPACE_COLUMNS, single: true },
+    );
+    if (workspaceInsert.error || !workspaceInsert.data) {
+      const concurrentResult = await postgrestSelect<WorkspaceBackfillRow[]>(
+        "workspaces",
+        serviceAccessToken,
+        WORKSPACE_COLUMNS,
+        [["owner_user_id", user.id]],
+        2,
+        false,
+      );
+      const concurrentRows = concurrentResult.data ?? [];
+      if (
+        concurrentResult.error ||
+        concurrentRows.length !== 1
+      ) {
+        return workspaceBackfillError(
+          workspaceInsert.error?.message ??
+            concurrentResult.error?.message ??
+            "Demo-Workspace konnte nicht angelegt werden.",
+        );
+      }
+
+      const concurrentUpdate = await postgrestUpdate<WorkspaceBackfillRow>(
+        "workspaces",
+        canonicalValues,
+        serviceAccessToken,
+        [["id", concurrentRows[0].id]],
+        { select: WORKSPACE_COLUMNS, single: true },
+      );
+      if (concurrentUpdate.error || !concurrentUpdate.data) {
+        return workspaceBackfillError(
+          concurrentUpdate.error?.message ??
+            "Parallel angelegter Demo-Workspace konnte nicht normalisiert werden.",
+        );
+      }
+      workspace = concurrentUpdate.data;
+    } else {
+      workspace = workspaceInsert.data;
+      created = true;
+    }
   }
 
-  return seedSandraDemoWorkspaceData(workspace, accessToken, "de");
+  const memberResult = await postgrestRequest(
+    "workspace_members",
+    "POST",
+    {
+      workspace_id: workspace.id,
+      user_id: user.id,
+      role: "owner",
+    },
+    serviceAccessToken,
+    {
+      upsert: true,
+      onConflict: "workspace_id,user_id",
+    },
+  );
+  if (memberResult.error) {
+    return workspaceBackfillError(
+      `Demo-Workspace-Mitgliedschaft konnte nicht vorbereitet werden: ${memberResult.error.message}`,
+    );
+  }
+
+  if (!seedIsCurrent) {
+    const seedError = await seedSandraDemoWorkspaceData(
+      workspace,
+      serviceAccessToken,
+      "de",
+    );
+    if (seedError) {
+      return workspaceBackfillError(
+        `Demo-Workspace konnte nicht vorbereitet werden: ${seedError.message}`,
+      );
+    }
+
+    const seedMarkerUpdate = await postgrestUpdate<WorkspaceBackfillRow>(
+      "workspaces",
+      {
+        test_access_flags: {
+          [FIXED_DEMO_SEED_VERSION_FLAG]: FIXED_DEMO_SEED_VERSION,
+        },
+        billing_updated_at: new Date().toISOString(),
+        billing_updated_by_user_id: user.id,
+      },
+      serviceAccessToken,
+      [["id", workspace.id]],
+      { select: WORKSPACE_COLUMNS, single: true },
+    );
+    if (seedMarkerUpdate.error || !seedMarkerUpdate.data) {
+      return workspaceBackfillError(
+        seedMarkerUpdate.error?.message ??
+          "Demo-Seed konnte nicht als vollständig markiert werden.",
+      );
+    }
+    workspace = seedMarkerUpdate.data;
+  }
+
+  return { workspace, error: null, created };
 }
 
 type DemoFanSeed = {
@@ -4742,47 +5110,282 @@ async function seedSandraDemoWorkspaceData(workspace: Pick<WorkspaceBackfillRow,
   return null;
 }
 
-async function seedDemoFan(workspaceId: string, accessToken: string, seed: DemoFanSeed): Promise<Error | null> {
-  const existingContact = await postgrestSelect<ContactRow>("contacts", accessToken, CONTACT_COLUMNS, [["workspace_id", workspaceId], ["handle", seed.handle]], 1, true);
+async function seedDemoFan(
+  workspaceId: string,
+  accessToken: string,
+  seed: DemoFanSeed,
+): Promise<Error | null> {
+  const existingContact = await postgrestSelect<ContactRow>(
+    "contacts",
+    accessToken,
+    CONTACT_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["handle", seed.handle],
+    ],
+    1,
+    true,
+  );
   if (existingContact.error) return existingContact.error;
+
   let contact = existingContact.data;
   if (!contact) {
-    const createdContact = await postgrestRequest<ContactRow>("contacts", "POST", { workspace_id: workspaceId, display_name: seed.displayName, handle: seed.handle, source_platform: seed.platform, language: seed.locale ?? "de", status: "active", tags: seed.tags, summary: seed.summary, internal_notes: seed.notes ?? null }, accessToken, { select: CONTACT_COLUMNS, single: true });
+    const contactId = deterministicDemoSeedId(
+      workspaceId,
+      "contact",
+      seed.handle,
+    );
+    const createdContact = await postgrestRequest<ContactRow>(
+      "contacts",
+      "POST",
+      {
+        id: contactId,
+        workspace_id: workspaceId,
+        display_name: seed.displayName,
+        handle: seed.handle,
+        source_platform: seed.platform,
+        language: seed.locale ?? "de",
+        status: "active",
+        tags: seed.tags,
+        summary: seed.summary,
+        internal_notes: seed.notes ?? null,
+      },
+      accessToken,
+      {
+        select: CONTACT_COLUMNS,
+        single: true,
+        upsert: true,
+        onConflict: "id",
+      },
+    );
     if (createdContact.error) return createdContact.error;
     contact = createdContact.data;
   }
-  if (!contact?.id) return new Error("Demo-Kontakt konnte nicht erstellt werden.");
+  if (!contact?.id) {
+    return new Error("Demo-Kontakt konnte nicht erstellt werden.");
+  }
 
-  const memories = await postgrestSelect<MemoryRow[]>("memories", accessToken, MEMORY_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contact.id]], undefined, false);
+  const memories = await postgrestSelect<MemoryRow[]>(
+    "memories",
+    accessToken,
+    MEMORY_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contact.id],
+    ],
+    undefined,
+    false,
+  );
   if (memories.error) return memories.error;
   if (!(memories.data ?? []).some((memory) => memory.content === seed.memory)) {
-    const memory = await postgrestRequest<MemoryRow>("memories", "POST", { workspace_id: workspaceId, contact_id: contact.id, type: "preference", content: seed.memory, importance: seed.followup?.priority === "high" ? "high" : "medium" }, accessToken, { select: MEMORY_COLUMNS, single: true });
+    const memory = await postgrestRequest<MemoryRow>(
+      "memories",
+      "POST",
+      {
+        id: deterministicDemoSeedId(
+          workspaceId,
+          "memory",
+          seed.handle,
+        ),
+        workspace_id: workspaceId,
+        contact_id: contact.id,
+        type: "preference",
+        content: seed.memory,
+        importance: seed.followup?.priority === "high" ? "high" : "medium",
+      },
+      accessToken,
+      {
+        select: MEMORY_COLUMNS,
+        single: true,
+        upsert: true,
+        onConflict: "id",
+      },
+    );
     if (memory.error) return memory.error;
   }
 
   if (seed.followup) {
-    const followups = await postgrestSelect<FollowupRow[]>("followups", accessToken, FOLLOWUP_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contact.id]], undefined, false);
+    const followups = await postgrestSelect<FollowupRow[]>(
+      "followups",
+      accessToken,
+      FOLLOWUP_COLUMNS,
+      [
+        ["workspace_id", workspaceId],
+        ["contact_id", contact.id],
+      ],
+      undefined,
+      false,
+    );
     if (followups.error) return followups.error;
-    if (!(followups.data ?? []).some((followup) => followup.status === "open")) {
-      const followup = await postgrestRequest<FollowupRow>("followups", "POST", { workspace_id: workspaceId, contact_id: contact.id, due_date: new Date(Date.now() + seed.followup.daysFromNow * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), priority: seed.followup.priority, reason: seed.followup.reason, status: "open" }, accessToken, { select: FOLLOWUP_COLUMNS, single: true });
+    if (
+      !(followups.data ?? []).some(
+        (followup) => followup.status === "open",
+      )
+    ) {
+      const followup = await postgrestRequest<FollowupRow>(
+        "followups",
+        "POST",
+        {
+          id: deterministicDemoSeedId(
+            workspaceId,
+            "followup",
+            seed.handle,
+          ),
+          workspace_id: workspaceId,
+          contact_id: contact.id,
+          due_date: new Date(
+            Date.now() +
+              seed.followup.daysFromNow * 24 * 60 * 60 * 1000,
+          )
+            .toISOString()
+            .slice(0, 10),
+          priority: seed.followup.priority,
+          reason: seed.followup.reason,
+          status: "open",
+        },
+        accessToken,
+        {
+          select: FOLLOWUP_COLUMNS,
+          single: true,
+          upsert: true,
+          onConflict: "id",
+        },
+      );
       if (followup.error) return followup.error;
     }
   }
 
-  const conversations = await postgrestSelect<ConversationRow[]>("conversations", accessToken, CONVERSATION_COLUMNS, [["workspace_id", workspaceId], ["contact_id", contact.id]], undefined, false);
+  const conversations = await postgrestSelect<ConversationRow[]>(
+    "conversations",
+    accessToken,
+    CONVERSATION_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contact.id],
+    ],
+    undefined,
+    false,
+  );
   if (conversations.error) return conversations.error;
-  if (conversations.data?.length) return null;
 
-  const lastInbound = [...seed.conversation].reverse().find((message) => message.direction === "inbound") ?? seed.conversation.at(-1);
-  const conversation = await postgrestRequest<ConversationRow>("conversations", "POST", { workspace_id: workspaceId, contact_id: contact.id, status: "open", priority: seed.followup?.priority ?? "medium", source_platform: seed.platform, source_type: seed.platform === "email" ? "email" : "dm", ai_status: "partial", next_step: "Antwort vorbereiten", last_message_preview: lastInbound?.text ?? seed.summary, last_inbound_at: new Date().toISOString(), original_author_label: seed.displayName, original_text_excerpt: lastInbound?.text ?? seed.summary }, accessToken, { select: CONVERSATION_COLUMNS, single: true });
-  if (conversation.error) return conversation.error;
-  if (!conversation.data) return new Error("Demo-Conversation konnte nicht erstellt werden.");
+  const lastInbound =
+    [...seed.conversation]
+      .reverse()
+      .find((message) => message.direction === "inbound") ??
+    seed.conversation.at(-1);
+  const conversationId = deterministicDemoSeedId(
+    workspaceId,
+    "conversation",
+    seed.handle,
+  );
+  let conversation =
+    conversations.data?.find((row) => row.id === conversationId) ??
+    conversations.data?.[0] ??
+    null;
+  if (!conversation) {
+    const createdConversation = await postgrestRequest<ConversationRow>(
+      "conversations",
+      "POST",
+      {
+        id: conversationId,
+        workspace_id: workspaceId,
+        contact_id: contact.id,
+        status: "open",
+        priority: seed.followup?.priority ?? "medium",
+        source_platform: seed.platform,
+        source_type: seed.platform === "email" ? "email" : "dm",
+        ai_status: "partial",
+        next_step: "Antwort vorbereiten",
+        last_message_preview: lastInbound?.text ?? seed.summary,
+        last_inbound_at: new Date().toISOString(),
+        original_author_label: seed.displayName,
+        original_text_excerpt: lastInbound?.text ?? seed.summary,
+      },
+      accessToken,
+      {
+        select: CONVERSATION_COLUMNS,
+        single: true,
+        upsert: true,
+        onConflict: "id",
+      },
+    );
+    if (createdConversation.error) return createdConversation.error;
+    conversation = createdConversation.data;
+  }
+  if (!conversation) {
+    return new Error("Demo-Conversation konnte nicht erstellt werden.");
+  }
+
+  const existingMessages = await postgrestSelect<ConversationMessageRow[]>(
+    "conversation_messages",
+    accessToken,
+    CONVERSATION_MESSAGE_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["conversation_id", conversation.id],
+      ["contact_id", contact.id],
+    ],
+    undefined,
+    false,
+  );
+  if (existingMessages.error) return existingMessages.error;
+  const existingMessageKeys = new Set(
+    (existingMessages.data ?? []).map(
+      (message) => `${message.direction}\u0000${message.content}`,
+    ),
+  );
 
   const baseTime = Date.now() - seed.conversation.length * 11 * 60 * 1000;
   for (const [index, item] of seed.conversation.entries()) {
-    const createdAt = new Date(baseTime + index * 11 * 60 * 1000).toISOString();
-    const message = await postgrestRequest<ConversationMessageRow>("conversation_messages", "POST", { workspace_id: workspaceId, conversation_id: conversation.data.id, contact_id: contact.id, direction: item.direction, message_type: item.messageType ?? (item.platform === "email" || seed.platform === "email" ? "email" : "dm"), source_platform: item.platform ?? seed.platform, source_type: item.sourceType ?? (item.platform === "email" || seed.platform === "email" ? "email" : "dm"), author_label: item.direction === "inbound" ? seed.displayName : "FanMind Team", original_author_label: item.direction === "inbound" ? seed.displayName : "FanMind Team", original_text_excerpt: item.text, content: item.text, message_kind: "text", created_at: createdAt }, accessToken, { select: CONVERSATION_MESSAGE_COLUMNS, single: true });
+    const messageKey = `${item.direction}\u0000${item.text}`;
+    if (existingMessageKeys.has(messageKey)) continue;
+
+    const createdAt = new Date(
+      baseTime + index * 11 * 60 * 1000,
+    ).toISOString();
+    const message = await postgrestRequest<ConversationMessageRow>(
+      "conversation_messages",
+      "POST",
+      {
+        id: deterministicDemoSeedId(
+          workspaceId,
+          "conversation-message",
+          `${seed.handle}:${index}`,
+        ),
+        workspace_id: workspaceId,
+        conversation_id: conversation.id,
+        contact_id: contact.id,
+        direction: item.direction,
+        message_type:
+          item.messageType ??
+          (item.platform === "email" || seed.platform === "email"
+            ? "email"
+            : "dm"),
+        source_platform: item.platform ?? seed.platform,
+        source_type:
+          item.sourceType ??
+          (item.platform === "email" || seed.platform === "email"
+            ? "email"
+            : "dm"),
+        author_label:
+          item.direction === "inbound" ? seed.displayName : "FanMind Team",
+        original_author_label:
+          item.direction === "inbound" ? seed.displayName : "FanMind Team",
+        original_text_excerpt: item.text,
+        content: item.text,
+        message_kind: "text",
+        created_at: createdAt,
+      },
+      accessToken,
+      {
+        select: CONVERSATION_MESSAGE_COLUMNS,
+        single: true,
+        upsert: true,
+        onConflict: "id",
+      },
+    );
     if (message.error) return message.error;
+    existingMessageKeys.add(messageKey);
   }
   return null;
 }
@@ -4827,6 +5430,10 @@ export async function ensureUserWorkspace(
     );
   }
 
+  if (user.email?.trim().toLowerCase() === DEMO_EMAIL) {
+    return ensureFixedSandraDemoWorkspace(user);
+  }
+
   const ownerWorkspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
     "workspaces",
     accessToken,
@@ -4845,63 +5452,173 @@ export async function ensureUserWorkspace(
   let workspace = ownerWorkspaceResult.data;
   let created = false;
 
-  if (workspace) {
-    const repairValues: Record<string, unknown> = {};
-    if (!workspace.billing_status) repairValues.billing_status = getInitialBillingStatus(workspaceTerms.planId, workspaceTerms.commercialOption);
-    if (!workspace.plan_id) repairValues.plan_id = workspaceTerms.planId;
-    if (!workspace.commercial_option) repairValues.commercial_option = workspaceTerms.commercialOption;
-    if (workspace.setup_fee_cents == null) repairValues.setup_fee_cents = workspaceTerms.setupFeeCents;
-    if (workspace.monthly_fee_cents == null) repairValues.monthly_fee_cents = workspaceTerms.monthlyFeeCents;
-    if (workspace.commitment_months == null) repairValues.commitment_months = workspaceTerms.commitmentMonths;
-    repairValues.billing_provider = getBillingProvider();
-    repairValues.payment_collection_method = getPaymentCollectionMethod(workspace.plan_id ?? workspaceTerms.planId, workspace.commercial_option ?? workspaceTerms.commercialOption);
-    repairValues.billing_updated_at = new Date().toISOString();
-
-    const repairedWorkspaceResult = await postgrestUpdate<WorkspaceBackfillRow>(
-      "workspaces",
-      repairValues,
-      accessToken,
-      [["id", workspace.id]],
-      { select: WORKSPACE_COLUMNS, single: true },
+  if (workspace && isTemporaryDemoUser(user)) {
+    const normalizedDemo = await normalizeTemporaryDemoWorkspace(
+      user,
+      workspace,
     );
-
-    if (!repairedWorkspaceResult.error && repairedWorkspaceResult.data) {
-      workspace = repairedWorkspaceResult.data;
+    if (normalizedDemo.error || !normalizedDemo.workspace) {
+      return workspaceBackfillError(
+        normalizedDemo.error?.message ??
+          "Temporärer Demo-Workspace konnte nicht sicher vorbereitet werden.",
+      );
     }
+    workspace = normalizedDemo.workspace;
   }
 
   if (!workspace) {
-    const insertWorkspaceResult = await postgrestRequest<WorkspaceBackfillRow>(
-      "workspaces",
+    const paymentTermsAccepted =
+      user.user_metadata?.payment_terms_accepted === true &&
+      stringMetadataValue(
+        user.user_metadata,
+        "payment_terms_version",
+      ) === PAYMENT_TERMS_VERSION;
+    const rpcResult = await postgrestRequest<WorkspaceProvisioningRpcRow>(
+      `rpc/${WORKSPACE_PROVISIONING_RPC}`,
       "POST",
       {
-        name: workspaceName,
-        owner_user_id: user.id,
-        plan_id: workspaceTerms.planId,
-        commercial_option: workspaceTerms.commercialOption,
-        setup_fee_cents: workspaceTerms.setupFeeCents,
-        monthly_fee_cents: workspaceTerms.monthlyFeeCents,
-        commitment_months: workspaceTerms.commitmentMonths,
-        billing_status: getInitialBillingStatus(workspaceTerms.planId, workspaceTerms.commercialOption),
-        billing_provider: getBillingProvider(),
-        payment_collection_method: getPaymentCollectionMethod(workspaceTerms.planId, workspaceTerms.commercialOption),
-        payment_terms_version: stringMetadataValue(user.user_metadata, "payment_terms_version") ?? PAYMENT_TERMS_VERSION,
-        payment_terms_accepted_at: stringMetadataValue(user.user_metadata, "payment_terms_accepted_at") ?? new Date().toISOString(),
-        payment_terms_accepted_by_user_id: user.id,
-        billing_updated_at: new Date().toISOString(),
+        p_workspace_name: workspaceName,
+        p_commercial_option: workspaceTerms.commercialOption,
+        p_payment_terms_accepted: paymentTermsAccepted,
       },
       accessToken,
-      { select: WORKSPACE_COLUMNS, single: true },
+      {
+        select: "workspace_id,created",
+        single: true,
+      },
     );
 
-    if (insertWorkspaceResult.error) {
+    if (
+      rpcResult.error &&
+      !isMissingWorkspaceProvisioningRpc(rpcResult.error)
+    ) {
       return workspaceBackfillError(
-        `Workspace konnte nicht angelegt werden: ${insertWorkspaceResult.error.message}`,
+        `Workspace konnte nicht sicher angelegt werden: ${rpcResult.error.message}`,
       );
     }
 
-    workspace = insertWorkspaceResult.data;
-    created = true;
+    if (!rpcResult.error) {
+      if (!rpcResult.data?.workspace_id) {
+        return workspaceBackfillError(
+          "Die sichere Workspace-Einrichtung hat keinen Workspace zurückgegeben.",
+        );
+      }
+
+      const provisionedWorkspaceResult =
+        await postgrestSelect<WorkspaceBackfillRow>(
+          "workspaces",
+          accessToken,
+          WORKSPACE_COLUMNS,
+          [["id", rpcResult.data.workspace_id]],
+          1,
+          true,
+        );
+      if (
+        provisionedWorkspaceResult.error ||
+        !provisionedWorkspaceResult.data
+      ) {
+        return workspaceBackfillError(
+          provisionedWorkspaceResult.error?.message ??
+            "Der sicher eingerichtete Workspace konnte nicht geladen werden.",
+        );
+      }
+
+      workspace = provisionedWorkspaceResult.data;
+      created = rpcResult.data.created;
+    }
+
+    // Compatibility bridge for the deploy-before-migrate rollout. Only an
+    // exact missing-RPC/schema-cache result reaches this legacy path.
+    if (!workspace) {
+      const fullInsertWorkspaceResult =
+        await postgrestRequest<WorkspaceBackfillRow>(
+          "workspaces",
+          "POST",
+          {
+            name: workspaceName,
+            owner_user_id: user.id,
+            plan_id: workspaceTerms.planId,
+            commercial_option: workspaceTerms.commercialOption,
+            setup_fee_cents: workspaceTerms.setupFeeCents,
+            monthly_fee_cents: workspaceTerms.monthlyFeeCents,
+            commitment_months: workspaceTerms.commitmentMonths,
+            billing_status: getInitialBillingStatus(
+              workspaceTerms.planId,
+              workspaceTerms.commercialOption,
+            ),
+            billing_provider: getBillingProvider(),
+            payment_collection_method: getPaymentCollectionMethod(
+              workspaceTerms.planId,
+              workspaceTerms.commercialOption,
+            ),
+            payment_terms_version:
+              stringMetadataValue(
+                user.user_metadata,
+                "payment_terms_version",
+              ) ?? PAYMENT_TERMS_VERSION,
+            payment_terms_accepted_at:
+              stringMetadataValue(
+                user.user_metadata,
+                "payment_terms_accepted_at",
+              ) ?? new Date().toISOString(),
+            payment_terms_accepted_by_user_id: user.id,
+            billing_updated_at: new Date().toISOString(),
+            billing_updated_by_user_id: user.id,
+          },
+          accessToken,
+          { select: WORKSPACE_COLUMNS, single: true },
+        );
+
+      if (
+        fullInsertWorkspaceResult.error &&
+        !isMissingWorkspaceExpandColumn(fullInsertWorkspaceResult.error)
+      ) {
+        return workspaceBackfillError(
+          `Workspace konnte nicht angelegt werden: ${fullInsertWorkspaceResult.error.message}`,
+        );
+      }
+
+      let bridgeWorkspace = fullInsertWorkspaceResult.data;
+      if (fullInsertWorkspaceResult.error) {
+        const coreInsertWorkspaceResult =
+          await postgrestRequest<WorkspaceBackfillRow>(
+            "workspaces",
+            "POST",
+            {
+              name: workspaceName,
+              owner_user_id: user.id,
+              plan_id: workspaceTerms.planId,
+              commercial_option: workspaceTerms.commercialOption,
+              setup_fee_cents: workspaceTerms.setupFeeCents,
+              monthly_fee_cents: workspaceTerms.monthlyFeeCents,
+              commitment_months: workspaceTerms.commitmentMonths,
+              billing_status: getInitialBillingStatus(
+                workspaceTerms.planId,
+                workspaceTerms.commercialOption,
+              ),
+              billing_provider: getBillingProvider(),
+              payment_collection_method: getPaymentCollectionMethod(
+                workspaceTerms.planId,
+                workspaceTerms.commercialOption,
+              ),
+              billing_updated_at: new Date().toISOString(),
+              billing_updated_by_user_id: user.id,
+            },
+            accessToken,
+            { select: WORKSPACE_COLUMNS, single: true },
+          );
+
+        if (coreInsertWorkspaceResult.error) {
+          return workspaceBackfillError(
+            `Workspace konnte nicht angelegt werden: ${coreInsertWorkspaceResult.error.message}`,
+          );
+        }
+        bridgeWorkspace = coreInsertWorkspaceResult.data;
+      }
+
+      workspace = bridgeWorkspace;
+      created = true;
+    }
   }
 
   if (!workspace?.id) {
@@ -4947,12 +5664,7 @@ export async function ensureUserWorkspace(
     }
   }
 
-  const demoSeedError = await ensureSandraDemoWorkspaceData(workspace, user, accessToken);
-  if (demoSeedError) {
-    return workspaceBackfillError(`Demo-Workspace konnte nicht vorbereitet werden: ${demoSeedError.message}`);
-  }
-
-  return { workspace: user.email?.toLowerCase() === DEMO_EMAIL ? { ...workspace, name: DEMO_WORKSPACE_NAME, plan_id: "pilot", commercial_option: "pilot_only", setup_fee_cents: 0, monthly_fee_cents: 0, commitment_months: 0 } : workspace, error: null, created };
+  return { workspace, error: null, created };
 }
 
 
@@ -4994,9 +5706,16 @@ function temporaryDemoDeleteFailure(
   return { deleted: false, error, errorCode };
 }
 
-export async function deleteExpiredTemporaryDemo(
-  user: SupabaseServerUser,
-  workspace: WorkspaceDashboardRow | WorkspaceBackfillRow,
+type TemporaryDemoServerIdentity = {
+  authUserId: string | null;
+  workspaceId: string | null;
+};
+
+async function deleteServerVerifiedTemporaryDemo(
+  user: SupabaseServerUser | null,
+  workspace: WorkspaceDashboardRow | WorkspaceBackfillRow | null,
+  serverIdentity: TemporaryDemoServerIdentity,
+  signOutCurrentSession: boolean,
 ): Promise<TemporaryDemoDeleteResult> {
   const accessToken = getServiceAccessToken();
   if (!accessToken) {
@@ -5008,10 +5727,7 @@ export async function deleteExpiredTemporaryDemo(
     );
   }
 
-  if (
-    (user.email ?? "").toLowerCase() === DEMO_EMAIL ||
-    !isTemporaryDemoUser(user)
-  ) {
+  if ((user?.email ?? "").toLowerCase() === DEMO_EMAIL) {
     return temporaryDemoDeleteFailure(
       "demo_identity_not_temporary",
       new Error(
@@ -5021,8 +5737,15 @@ export async function deleteExpiredTemporaryDemo(
   }
 
   if (
-    workspace.owner_user_id !== user.id ||
-    workspace.name !== TEMPORARY_DEMO_WORKSPACE_NAME
+    (!serverIdentity.authUserId && !serverIdentity.workspaceId) ||
+    (user && serverIdentity.authUserId !== user.id) ||
+    (workspace &&
+      (serverIdentity.workspaceId !== workspace.id ||
+        (serverIdentity.authUserId !== null &&
+          workspace.owner_user_id !== serverIdentity.authUserId) ||
+        (user && workspace.owner_user_id !== user.id) ||
+        workspace.billing_status !== "demo_free" ||
+        workspace.test_access_flags?.[TEMPORARY_DEMO_ACCESS_FLAG] !== true))
   ) {
     return temporaryDemoDeleteFailure(
       "demo_workspace_identity_mismatch",
@@ -5032,36 +5755,68 @@ export async function deleteExpiredTemporaryDemo(
     );
   }
 
-  for (const step of DEMO_CLEANUP_DELETE_STEPS) {
-    const error = await deleteTemporaryDemoRows(
-      step.table,
-      step.filterColumn,
-      workspace.id,
-      accessToken,
-      step.optional,
-    );
-    if (error) {
-      return temporaryDemoDeleteFailure(step.errorCode, error);
+  if (workspace) {
+    for (const step of DEMO_CLEANUP_DELETE_STEPS) {
+      const error = await deleteTemporaryDemoRows(
+        step.table,
+        step.filterColumn,
+        workspace.id,
+        accessToken,
+        step.optional,
+      );
+      if (error) {
+        return temporaryDemoDeleteFailure(step.errorCode, error);
+      }
     }
   }
 
-  const authDelete = await fetch(
-    getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(user.id)}`),
-    {
-      method: "DELETE",
-      headers: getSupabaseHeaders(accessToken),
-      cache: "no-store",
-    },
-  );
-  if (!authDelete.ok) {
-    return temporaryDemoDeleteFailure(
-      "demo_delete_auth_user_failed",
-      await parseSupabaseServerError(authDelete),
+  if (user) {
+    const authDelete = await fetch(
+      getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(user.id)}`),
+      {
+        method: "DELETE",
+        headers: getSupabaseHeaders(accessToken),
+        cache: "no-store",
+      },
     );
+    if (!authDelete.ok && authDelete.status !== 404) {
+      return temporaryDemoDeleteFailure(
+        "demo_delete_auth_user_failed",
+        await parseSupabaseServerError(authDelete),
+      );
+    }
   }
 
-  await signOutSupabaseServerSession();
+  if (signOutCurrentSession) {
+    await signOutSupabaseServerSession();
+  }
   return { deleted: true, error: null, errorCode: null };
+}
+
+export async function deleteExpiredTemporaryDemo(
+  user: SupabaseServerUser,
+  workspace: WorkspaceDashboardRow | WorkspaceBackfillRow,
+  serverIdentity: TemporaryDemoServerIdentity,
+): Promise<TemporaryDemoDeleteResult> {
+  return deleteServerVerifiedTemporaryDemo(
+    user,
+    workspace,
+    serverIdentity,
+    true,
+  );
+}
+
+export async function finishClaimedTemporaryDemoCleanup(
+  user: SupabaseServerUser | null,
+  workspace: WorkspaceDashboardRow | WorkspaceBackfillRow | null,
+  serverIdentity: TemporaryDemoServerIdentity,
+): Promise<TemporaryDemoDeleteResult> {
+  return deleteServerVerifiedTemporaryDemo(
+    user,
+    workspace,
+    serverIdentity,
+    false,
+  );
 }
 
 async function parseSupabaseServerError(response: Response): Promise<Error> {

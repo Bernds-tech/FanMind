@@ -11,7 +11,7 @@ import {
   getSupabaseRestUrl,
 } from "@/lib/supabase/config";
 import {
-  deleteExpiredTemporaryDemo,
+  finishClaimedTemporaryDemoCleanup,
   type SupabaseServerUser,
   type WorkspaceBackfillRow,
 } from "@/lib/supabase/server";
@@ -28,7 +28,7 @@ type CleanupRequestBody = {
 
 type WorkspaceIdentity = Pick<
   WorkspaceBackfillRow,
-  "id" | "name" | "owner_user_id"
+  "id" | "name" | "owner_user_id" | "billing_status" | "test_access_flags"
 >;
 
 type AdminUserPayload = SupabaseServerUser & {
@@ -99,7 +99,10 @@ async function fetchWorkspaceIdentity(
 ): Promise<FetchRecordResult<WorkspaceIdentity>> {
   try {
     const url = new URL(getSupabaseRestUrl("workspaces"));
-    url.searchParams.set("select", "id,name,owner_user_id");
+    url.searchParams.set(
+      "select",
+      "id,name,owner_user_id,billing_status,test_access_flags",
+    );
     url.searchParams.set("id", `eq.${workspaceId}`);
     url.searchParams.set("limit", "1");
 
@@ -155,13 +158,22 @@ async function cleanupCandidate(
   if (!candidate.authUserId && !candidate.workspaceId) {
     return finalizeCandidate(candidate, true);
   }
-  if (!candidate.authUserId || !candidate.workspaceId) {
-    return finalizeCandidate(candidate, false, "incomplete_cleanup_identity");
-  }
 
   const [userResult, workspaceResult] = await Promise.all([
-    fetchAdminUser(candidate.authUserId, key),
-    fetchWorkspaceIdentity(candidate.workspaceId, key),
+    candidate.authUserId
+      ? fetchAdminUser(candidate.authUserId, key)
+      : Promise.resolve({
+          value: null,
+          missing: true,
+          error: null,
+        } satisfies FetchRecordResult<SupabaseServerUser>),
+    candidate.workspaceId
+      ? fetchWorkspaceIdentity(candidate.workspaceId, key)
+      : Promise.resolve({
+          value: null,
+          missing: true,
+          error: null,
+        } satisfies FetchRecordResult<WorkspaceIdentity>),
   ]);
 
   if (userResult.error || workspaceResult.error) {
@@ -175,13 +187,14 @@ async function cleanupCandidate(
   if (userResult.missing && workspaceResult.missing) {
     return finalizeCandidate(candidate, true);
   }
-  if (userResult.missing || workspaceResult.missing) {
-    return finalizeCandidate(candidate, false, "orphaned_demo_identity");
-  }
 
-  const deletion = await deleteExpiredTemporaryDemo(
-    userResult.value!,
-    workspaceResult.value! as WorkspaceBackfillRow,
+  const deletion = await finishClaimedTemporaryDemoCleanup(
+    userResult.value,
+    workspaceResult.value as WorkspaceBackfillRow | null,
+    {
+      authUserId: candidate.authUserId,
+      workspaceId: candidate.workspaceId,
+    },
   );
   if (!deletion.deleted || deletion.error) {
     return finalizeCandidate(

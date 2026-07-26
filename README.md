@@ -207,9 +207,22 @@ Die aktuelle Datenbankwahrheit steht in:
 
 - `docs/database/fanmind_current_schema.md`
 - `supabase/migrations/`
+- `supabase/controlled/` für einzeln freizugebende Contract-Schritte
 - `src/lib/supabase/server.ts`
 
 Workspace-scoped Daten müssen per RLS und serverseitiger Autorisierung geschützt sein. Vor echten Kundendaten ist `docs/SECURITY_RLS_SECRETS_CHECK.md` abzuarbeiten.
+
+Die Härtung serververwalteter Workspace-Felder wird deploy-before-migrate als
+Expand-/Contract-Rollout ausgerollt: Der App-Brückenstand fällt ausschließlich
+bei einem exakt fehlenden RPC auf den bisherigen Insert-Pfad und bei einer
+exakt fehlenden Step-A-Spalte auf den älteren kommerziellen Core zurück.
+Allgemeine Reads und Demo-Updates setzen diese Spalten nicht voraus. Danach
+folgen Production-Preflight, additive Spalten-/RPC-Migration und
+Schema-Nachweis. Der abschließende Privileg-Entzug liegt absichtlich als
+kontrollierter SQL-Schritt außerhalb des automatischen Migration-Sets. Ein
+normaler Web-Deploy wendet beides nicht automatisch an; verbindlicher
+Production-Preflight und Abnahme stehen in
+`docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md`.
 
 ## KI und Kostenkontrolle
 

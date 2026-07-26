@@ -1,6 +1,21 @@
 import crypto from "node:crypto";
-import { getSupabaseRestUrl } from "@/lib/supabase/config";
+import {
+  getSupabaseAuthUrl,
+  getSupabaseRestUrl,
+} from "@/lib/supabase/config";
 import type { PlanId } from "@/config/plans";
+import {
+  STRIPE_BILLING_ALLOWED,
+  STRIPE_BILLING_BLOCKED,
+  STRIPE_BILLING_RETRYABLE_ERROR,
+  STRIPE_BILLING_UPDATED,
+  STRIPE_BILLING_ZERO_ROWS,
+  stripeBillingManualSuspensionDecision,
+  stripeBillingPatchDecision,
+  stripeBillingWorkspaceDecision,
+  type StripeBillingUpdateDecision,
+  type StripeBillingWorkspaceDecision,
+} from "@/lib/stripeWorkspacePolicy.mjs";
 
 export type CheckoutCommercialOption =
   | "pilot_only"
@@ -49,6 +64,11 @@ export type StripeWorkspaceReferences = {
   subscriptionId?: string;
   paymentIntentId?: string;
 };
+
+export type StripeWorkspaceResolution =
+  | { status: "found"; workspaceId: string }
+  | { status: "not_found" }
+  | { status: "retryable_error" };
 
 export function getTaxMode(): TaxMode {
   return process.env.FANMIND_TAX_MODE === "stripe_tax"
@@ -305,50 +325,256 @@ export function verifyStripeSignature(
 
 export async function findWorkspaceIdByStripeReferences(
   references: StripeWorkspaceReferences,
-): Promise<string | null> {
+): Promise<StripeWorkspaceResolution> {
+  const lookups = (
+    [
+      ["stripe_customer_id", references.customerId],
+      ["stripe_subscription_id", references.subscriptionId],
+      ["stripe_payment_intent_id", references.paymentIntentId],
+    ] as Array<[string, string | undefined]>
+  ).filter((entry): entry is [string, string] => Boolean(entry[1]));
+  if (lookups.length === 0) return { status: "not_found" };
+
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) return null;
-  const lookups: Array<[string, string | undefined]> = [
-    ["stripe_customer_id", references.customerId],
-    ["stripe_subscription_id", references.subscriptionId],
-    ["stripe_payment_intent_id", references.paymentIntentId],
-  ];
+  if (!serviceKey) return { status: "retryable_error" };
+
+  const matchedWorkspaceIds = new Set<string>();
   for (const [column, value] of lookups) {
-    if (!value) continue;
     try {
-      const url = `${getSupabaseRestUrl("workspaces")}?select=id&${column}=eq.${encodeURIComponent(value)}&limit=1`;
+      const url = `${getSupabaseRestUrl("workspaces")}?select=id&${column}=eq.${encodeURIComponent(value)}&limit=2`;
       const response = await fetch(url, {
         headers: {
           apikey: serviceKey,
           Authorization: `Bearer ${serviceKey}`,
         },
+        cache: "no-store",
+        signal: AbortSignal.timeout(12000),
       });
       if (!response.ok) {
-        console.warn("Stripe workspace lookup skipped", column, response.status);
-        continue;
+        console.warn(
+          "Stripe workspace lookup unavailable",
+          column,
+          response.status,
+        );
+        return { status: "retryable_error" };
       }
-      const rows = (await response.json().catch(() => [])) as Array<{
-        id?: string;
-      }>;
-      const id = rows[0]?.id;
-      if (typeof id === "string" && id) return id;
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        return { status: "retryable_error" };
+      }
+      if (!Array.isArray(payload)) return { status: "retryable_error" };
+      if (payload.length === 0) continue;
+      if (payload.length !== 1) return { status: "retryable_error" };
+      const id = (payload[0] as { id?: unknown } | undefined)?.id;
+      if (typeof id !== "string" || !id) {
+        return { status: "retryable_error" };
+      }
+      matchedWorkspaceIds.add(id);
+      if (matchedWorkspaceIds.size > 1) {
+        return { status: "retryable_error" };
+      }
     } catch (error) {
       console.warn(
-        "Stripe workspace lookup skipped",
+        "Stripe workspace lookup unavailable",
         column,
         error instanceof Error ? error.message : "unknown error",
       );
+      return { status: "retryable_error" };
     }
   }
-  return null;
+  const [workspaceId] = matchedWorkspaceIds;
+  if (matchedWorkspaceIds.size === 1 && workspaceId) {
+    return { status: "found", workspaceId };
+  }
+  return { status: "not_found" };
+}
+
+type StripeBillingWorkspaceRow = {
+  id?: string;
+  owner_user_id?: string | null;
+};
+
+async function isStripeBillingTargetAllowed(
+  workspaceId: string,
+  serviceKey: string,
+): Promise<StripeBillingWorkspaceDecision> {
+  try {
+    const serviceHeaders = {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    };
+    const workspaceUrl = new URL(getSupabaseRestUrl("workspaces"));
+    workspaceUrl.searchParams.set("select", "id,owner_user_id");
+    workspaceUrl.searchParams.set("id", `eq.${workspaceId}`);
+    workspaceUrl.searchParams.set("limit", "1");
+    const workspaceResponse = await fetch(workspaceUrl, {
+      headers: serviceHeaders,
+      cache: "no-store",
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!workspaceResponse.ok) {
+      console.warn(
+        "Stripe billing workspace guard unavailable",
+        workspaceResponse.status,
+      );
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+    let workspaceRows: StripeBillingWorkspaceRow[];
+    try {
+      const payload = await workspaceResponse.json();
+      if (!Array.isArray(payload)) return STRIPE_BILLING_RETRYABLE_ERROR;
+      workspaceRows = payload as StripeBillingWorkspaceRow[];
+    } catch {
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+    const workspace = workspaceRows[0];
+    if (
+      workspaceRows.length !== 1 ||
+      !workspace ||
+      workspace.id !== workspaceId ||
+      typeof workspace.owner_user_id !== "string" ||
+      !workspace.owner_user_id
+    ) {
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+
+    const sessionUrl = new URL(getSupabaseRestUrl("demo_start_sessions"));
+    sessionUrl.searchParams.set("select", "id");
+    sessionUrl.searchParams.set("workspace_id", `eq.${workspaceId}`);
+    sessionUrl.searchParams.set("limit", "1");
+    const sessionResponse = await fetch(sessionUrl, {
+      headers: serviceHeaders,
+      cache: "no-store",
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!sessionResponse.ok) {
+      console.warn(
+        "Stripe billing demo-session guard unavailable",
+        sessionResponse.status,
+      );
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+    let sessionRows: Array<{ id?: string }>;
+    try {
+      const payload = await sessionResponse.json();
+      if (!Array.isArray(payload)) return STRIPE_BILLING_RETRYABLE_ERROR;
+      sessionRows = payload as Array<{ id?: string }>;
+    } catch {
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+
+    const ownerResponse = await fetch(
+      getSupabaseAuthUrl(
+        `/admin/users/${encodeURIComponent(workspace.owner_user_id)}`,
+      ),
+      {
+        headers: serviceHeaders,
+        cache: "no-store",
+        signal: AbortSignal.timeout(12000),
+      },
+    );
+    if (!ownerResponse.ok) {
+      console.warn(
+        "Stripe billing owner guard unavailable",
+        ownerResponse.status,
+      );
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+    let ownerPayload:
+      | {
+          user?: { id?: string; email?: string | null };
+          id?: string;
+          email?: string | null;
+        }
+      | null;
+    try {
+      ownerPayload = (await ownerResponse.json()) as typeof ownerPayload;
+    } catch {
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+    const owner = ownerPayload?.user ?? ownerPayload;
+    if (
+      owner?.id !== workspace.owner_user_id ||
+      typeof owner.email !== "string" ||
+      !owner.email.trim()
+    ) {
+      return STRIPE_BILLING_RETRYABLE_ERROR;
+    }
+
+    return stripeBillingWorkspaceDecision({
+      workspace,
+      ownerEmail: owner.email,
+      hasTemporaryDemoSession: sessionRows.length > 0,
+    });
+  } catch (error) {
+    console.warn(
+      "Stripe billing workspace guard unavailable",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return STRIPE_BILLING_RETRYABLE_ERROR;
+  }
+}
+
+async function verifyManualSuspendedBillingState(
+  workspaceId: string,
+  serviceKey: string,
+): Promise<StripeBillingUpdateDecision> {
+  try {
+    const statusUrl = new URL(getSupabaseRestUrl("workspaces"));
+    statusUrl.searchParams.set("select", "id,billing_status");
+    statusUrl.searchParams.set("id", `eq.${workspaceId}`);
+    statusUrl.searchParams.set("limit", "1");
+    const response = await fetch(statusUrl, {
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(12000),
+    });
+    let rows: unknown = [];
+    let bodyParsed = true;
+    try {
+      rows = await response.json();
+    } catch {
+      bodyParsed = false;
+    }
+    return stripeBillingManualSuspensionDecision({
+      responseOk: response.ok,
+      bodyParsed,
+      rows,
+      workspaceId,
+    });
+  } catch (error) {
+    console.warn(
+      "Stripe billing manual-suspension check unavailable",
+      error instanceof Error ? error.message : "unknown error",
+    );
+    return STRIPE_BILLING_RETRYABLE_ERROR;
+  }
 }
 
 export async function updateWorkspaceBillingDefensively(
   workspaceId: string | undefined,
   fields: Record<string, string | number | boolean | null | undefined>,
-): Promise<void> {
+): Promise<StripeBillingUpdateDecision> {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!workspaceId || !serviceKey) return;
+  if (!workspaceId || !serviceKey) return STRIPE_BILLING_RETRYABLE_ERROR;
+  const targetDecision = await isStripeBillingTargetAllowed(
+    workspaceId,
+    serviceKey,
+  );
+  if (targetDecision === STRIPE_BILLING_BLOCKED) {
+    console.warn("Stripe billing update blocked by workspace policy");
+    return STRIPE_BILLING_BLOCKED;
+  }
+  if (targetDecision !== STRIPE_BILLING_ALLOWED) {
+    console.warn("Stripe billing update guard unavailable");
+    return STRIPE_BILLING_RETRYABLE_ERROR;
+  }
   const body = Object.fromEntries(
     Object.entries({
       ...fields,
@@ -357,31 +583,67 @@ export async function updateWorkspaceBillingDefensively(
     }).filter(([, value]) => value !== undefined),
   );
   try {
-    const manualGuard =
-      fields.billing_status && fields.billing_status !== "manual_suspended"
-        ? "&billing_status=not.eq.manual_suspended"
-        : "";
-    const response = await fetch(
-      `${getSupabaseRestUrl("workspaces")}?id=eq.${encodeURIComponent(workspaceId)}${manualGuard}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: serviceKey,
-          Authorization: `Bearer ${serviceKey}`,
-          "Content-Type": "application/json",
-          Prefer: "return=minimal",
-        },
-        body: JSON.stringify(body),
-      },
-    );
-    if (!response.ok) {
-      console.warn("Stripe billing update skipped", response.status);
+    const manualGuardApplied =
+      typeof fields.billing_status === "string" &&
+      fields.billing_status !== "manual_suspended";
+    const updateUrl = new URL(getSupabaseRestUrl("workspaces"));
+    updateUrl.searchParams.set("id", `eq.${workspaceId}`);
+    updateUrl.searchParams.set("select", "id");
+    if (manualGuardApplied) {
+      updateUrl.searchParams.set(
+        "billing_status",
+        "not.eq.manual_suspended",
+      );
     }
+    const response = await fetch(updateUrl, {
+      method: "PATCH",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: AbortSignal.timeout(12000),
+    });
+    let responseRows: unknown = [];
+    let bodyParsed = true;
+    try {
+      responseRows = await response.json();
+    } catch {
+      bodyParsed = false;
+    }
+    const updateDecision = stripeBillingPatchDecision({
+      responseOk: response.ok,
+      bodyParsed,
+      rows: responseRows,
+      workspaceId,
+    });
+    if (updateDecision === STRIPE_BILLING_ZERO_ROWS) {
+      const zeroRowDecision = manualGuardApplied
+        ? await verifyManualSuspendedBillingState(workspaceId, serviceKey)
+        : STRIPE_BILLING_RETRYABLE_ERROR;
+      console.warn(
+        zeroRowDecision === STRIPE_BILLING_BLOCKED
+          ? "Stripe billing update blocked by verified manual suspension"
+          : "Stripe billing zero-row update needs retry",
+      );
+      return zeroRowDecision;
+    }
+    if (updateDecision !== STRIPE_BILLING_UPDATED) {
+      console.warn(
+        "Stripe billing update unavailable",
+        response.status,
+      );
+    }
+    return updateDecision;
   } catch (error) {
     console.warn(
-      "Stripe billing update skipped",
+      "Stripe billing update unavailable",
       error instanceof Error ? error.message : "unknown error",
     );
+    return STRIPE_BILLING_RETRYABLE_ERROR;
   }
 }
 

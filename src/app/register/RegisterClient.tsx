@@ -6,6 +6,12 @@ import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib
 import { getRegistrationCommercialTerms, isPlanId, resolvePlanId, type CommercialOption, type ProductiveCommercialOption } from "@/lib/plans";
 import { PAYMENT_TERMS_VERSION, getBillingProvider, getInitialBillingStatus, getPaymentCollectionMethod, requiresPaymentTermsAcceptance } from "@/lib/billing";
 import type { PlanId } from "@/config/plans";
+import {
+  isMissingWorkspaceExpandColumn,
+  isMissingWorkspaceProvisioningRpc,
+  WORKSPACE_PROVISIONING_RPC,
+  type WorkspaceProvisioningRpcRow,
+} from "@/lib/workspaceProvisioning";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
@@ -278,34 +284,38 @@ async function prepareUserWorkspace(
   let workspace = existingWorkspace;
 
   if (!workspace) {
-    const { data: insertedWorkspace, error: workspaceError } = await supabase
-      .from("workspaces")
-      .insert({
-        name: workspaceName || displayName || "FanMind Workspace",
-        owner_user_id: userId,
-        plan_id: planId,
-        commercial_option: commercialTerms.commercialOption,
-        setup_fee_cents: commercialTerms.setupFeeCents,
-        monthly_fee_cents: commercialTerms.monthlyFeeCents,
-        commitment_months: commercialTerms.commitmentMonths,
-        billing_status: getInitialBillingStatus(planId, commercialTerms.commercialOption),
-        billing_provider: getBillingProvider(),
-        payment_collection_method: getPaymentCollectionMethod(planId, commercialTerms.commercialOption),
-        payment_terms_version: PAYMENT_TERMS_VERSION,
-        payment_terms_accepted_at: new Date().toISOString(),
-        payment_terms_accepted_by_user_id: userId,
-        billing_updated_at: new Date().toISOString(),
-      })
-      .select<WorkspaceRow>("id")
-      .single();
+    const rpcResult = await supabase.rpc<WorkspaceProvisioningRpcRow>(
+      WORKSPACE_PROVISIONING_RPC,
+      {
+        p_workspace_name:
+          workspaceName || displayName || "FanMind Workspace",
+        p_commercial_option: commercialTerms.commercialOption,
+        p_payment_terms_accepted: true,
+      },
+    );
 
-    if (workspaceError) {
-      const likelyMissingBillingColumn = /billing_|payment_|column|schema cache/i.test(workspaceError.message);
-      if (!likelyMissingBillingColumn) {
-        return workspaceSetupError(workspaceError.message);
+    if (rpcResult.error && !isMissingWorkspaceProvisioningRpc(rpcResult.error)) {
+      return workspaceSetupError(rpcResult.error.message);
+    }
+
+    if (!rpcResult.error) {
+      if (!rpcResult.data?.workspace_id) {
+        return workspaceSetupError(
+          language === "en"
+            ? "Workspace provisioning returned no workspace."
+            : "Die Workspace-Einrichtung hat keinen Workspace zurückgegeben.",
+        );
       }
 
-      const { data: fallbackWorkspace, error: fallbackWorkspaceError } = await supabase
+      workspace = { id: rpcResult.data.workspace_id };
+    }
+
+    // Compatibility bridge for deployments where the additive RPC migration
+    // has not been applied yet. Once the RPC exists, every other error remains
+    // fail-closed and this direct legacy path is unreachable.
+    if (!workspace) {
+      const { data: insertedWorkspace, error: workspaceError } =
+        await supabase
         .from("workspaces")
         .insert({
           name: workspaceName || displayName || "FanMind Workspace",
@@ -315,16 +325,63 @@ async function prepareUserWorkspace(
           setup_fee_cents: commercialTerms.setupFeeCents,
           monthly_fee_cents: commercialTerms.monthlyFeeCents,
           commitment_months: commercialTerms.commitmentMonths,
+          billing_status: getInitialBillingStatus(
+            planId,
+            commercialTerms.commercialOption,
+          ),
+          billing_provider: getBillingProvider(),
+          payment_collection_method: getPaymentCollectionMethod(
+            planId,
+            commercialTerms.commercialOption,
+          ),
+          payment_terms_version: PAYMENT_TERMS_VERSION,
+          payment_terms_accepted_at: new Date().toISOString(),
+          payment_terms_accepted_by_user_id: userId,
+          billing_updated_at: new Date().toISOString(),
+          billing_updated_by_user_id: userId,
         })
         .select<WorkspaceRow>("id")
         .single();
 
-      if (fallbackWorkspaceError) {
-        return workspaceSetupError(fallbackWorkspaceError.message);
+      if (workspaceError) {
+        if (!isMissingWorkspaceExpandColumn(workspaceError)) {
+          return workspaceSetupError(workspaceError.message);
+        }
+
+        const { data: coreWorkspace, error: coreWorkspaceError } =
+          await supabase
+            .from("workspaces")
+            .insert({
+              name: workspaceName || displayName || "FanMind Workspace",
+              owner_user_id: userId,
+              plan_id: planId,
+              commercial_option: commercialTerms.commercialOption,
+              setup_fee_cents: commercialTerms.setupFeeCents,
+              monthly_fee_cents: commercialTerms.monthlyFeeCents,
+              commitment_months: commercialTerms.commitmentMonths,
+              billing_status: getInitialBillingStatus(
+                planId,
+                commercialTerms.commercialOption,
+              ),
+              billing_provider: getBillingProvider(),
+              payment_collection_method: getPaymentCollectionMethod(
+                planId,
+                commercialTerms.commercialOption,
+              ),
+              billing_updated_at: new Date().toISOString(),
+              billing_updated_by_user_id: userId,
+            })
+            .select<WorkspaceRow>("id")
+            .single();
+
+        if (coreWorkspaceError) {
+          return workspaceSetupError(coreWorkspaceError.message);
+        }
+
+        workspace = coreWorkspace;
+      } else {
+        workspace = insertedWorkspace;
       }
-      workspace = fallbackWorkspace;
-    } else {
-      workspace = insertedWorkspace;
     }
   }
 
@@ -475,8 +532,8 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
 
         if (workspaceError) {
           setError(language === "en"
-            ? `Registration succeeded, but profile/workspace setup failed: ${workspaceError.message}. Please check the RLS policies from docs/database/fanmind_mvp_schema.sql.`
-            : `Registrierung erfolgreich, aber Profil/Workspace konnte noch nicht angelegt werden: ${workspaceError.message}. Bitte prüfe die RLS-Policies aus docs/database/fanmind_mvp_schema.sql.`);
+            ? `Registration succeeded, but profile/workspace setup failed: ${workspaceError.message}. Please check the current workspace provisioning rollout.`
+            : `Registrierung erfolgreich, aber Profil/Workspace konnte noch nicht angelegt werden: ${workspaceError.message}. Bitte prüfe den aktuellen Workspace-Provisioning-Rollout.`);
           return;
         }
       }

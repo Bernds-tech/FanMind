@@ -13,6 +13,10 @@ import {
 const cleanupPolicyPath = "src/lib/demoCleanupPolicy.ts";
 const supabaseServerPath = "src/lib/supabase/server.ts";
 const cleanupRoutePath = "src/app/api/demo/cleanup/route.ts";
+const demoStartRoutePath = "src/app/api/demo/start/route.ts";
+const demoProtectionPath = "src/lib/demoProtection.ts";
+const workspaceMigrationPath =
+  "supabase/migrations/20260726120000_workspace_provisioning_rpc.sql";
 
 test("parseEnvText reads quoted and unquoted values without comments", () => {
   const values = parseEnvText(`
@@ -62,14 +66,109 @@ test("temporary demo cleanup deletes the workspace by primary key and preserves 
     server,
     /postgrestDelete\(table, accessToken, \[\s*\[filterColumn, workspaceId\],?\s*\]\)/su,
   );
-  assert.match(server, /!isTemporaryDemoUser\(user\)/u);
   assert.match(
     server,
-    /workspace\.owner_user_id !== user\.id \|\|\s*workspace\.name !== TEMPORARY_DEMO_WORKSPACE_NAME/su,
+    /serverIdentity\.authUserId !== user\.id[\s\S]*serverIdentity\.workspaceId !== workspace\.id[\s\S]*workspace\.owner_user_id !== serverIdentity\.authUserId[\s\S]*workspace\.billing_status !== "demo_free"[\s\S]*TEMPORARY_DEMO_ACCESS_FLAG/su,
+  );
+  assert.doesNotMatch(
+    server,
+    /workspace\.name !== TEMPORARY_DEMO_WORKSPACE_NAME/su,
+  );
+  assert.match(
+    route,
+    /id,name,owner_user_id,billing_status,test_access_flags/u,
+  );
+  assert.match(
+    route,
+    /authUserId: candidate\.authUserId[\s\S]*workspaceId: candidate\.workspaceId/u,
+  );
+  assert.match(route, /finishClaimedTemporaryDemoCleanup/u);
+  assert.doesNotMatch(route, /orphaned_demo_identity/u);
+  assert.doesNotMatch(route, /incomplete_cleanup_identity/u);
+  assert.match(
+    route,
+    /candidate\.authUserId\s*\?\s*fetchAdminUser[\s\S]*candidate\.workspaceId\s*\?\s*fetchWorkspaceIdentity/u,
+  );
+  assert.match(
+    server,
+    /type TemporaryDemoServerIdentity = \{\s*authUserId: string \| null;\s*workspaceId: string \| null;\s*\}/u,
+  );
+  assert.match(
+    server,
+    /if \(workspace\)[\s\S]*if \(user\)/u,
+  );
+  assert.match(
+    server,
+    /export async function finishClaimedTemporaryDemoCleanup\([\s\S]*deleteServerVerifiedTemporaryDemo\([\s\S]*false/u,
   );
   assert.match(
     route,
     /deletion\.errorCode \?\? "demo_delete_failed"/u,
+  );
+});
+
+test("pre-activation resources and stale cleanup leases remain recoverable", async () => {
+  const [startRoute, protection, migration] = await Promise.all([
+    readFile(demoStartRoutePath, "utf8"),
+    readFile(demoProtectionPath, "utf8"),
+    readFile(workspaceMigrationPath, "utf8"),
+  ]);
+
+  const userCreatedAt = startRoute.indexOf(
+    "const userId = createdUser.id ?? createdUser.user?.id",
+  );
+  const authRecordedAt = startRoute.indexOf(
+    "recordPublicDemoStartResources({",
+    userCreatedAt,
+  );
+  const workspaceCreatedAt = startRoute.indexOf(
+    "createTemporaryDemoWorkspace({",
+    authRecordedAt,
+  );
+  const workspaceRecordedAt = startRoute.indexOf(
+    "workspaceId: workspaceResult.workspace.id",
+    workspaceCreatedAt,
+  );
+  const tokenCreatedAt = startRoute.indexOf(
+    'getSupabaseAuthUrl("/token?grant_type=password")',
+    workspaceRecordedAt,
+  );
+
+  assert.ok(userCreatedAt >= 0, "Auth user creation result missing");
+  assert.ok(
+    userCreatedAt < authRecordedAt &&
+      authRecordedAt < workspaceCreatedAt &&
+      workspaceCreatedAt < workspaceRecordedAt &&
+      workspaceRecordedAt < tokenCreatedAt,
+    "resource IDs must be persisted before later demo-start stages",
+  );
+  assert.match(
+    protection,
+    /export async function recordPublicDemoStartResources\([\s\S]*status", "eq\.reserved"[\s\S]*method: "PATCH"[\s\S]*Prefer: "return=representation"/u,
+  );
+  assert.match(
+    startRoute,
+    /settleFailedDemoStart\([\s\S]*cleanupSucceeded[\s\S]*authUserId[\s\S]*queuePublicDemoCleanup/u,
+  );
+  assert.match(
+    protection,
+    /export async function queuePublicDemoCleanup\([\s\S]*authUserId\?: string \| null[\s\S]*status: "cleanup_failed"[\s\S]*cleanup_started_at: null[\s\S]*auth_user_id: input\.authUserId[\s\S]*row\.auth_user_id === input\.authUserId/u,
+  );
+  assert.match(
+    startRoute,
+    /errorCode: "auth_user_record_failed"[\s\S]*authUserId: authDeleted \? null : userId/u,
+  );
+  assert.match(
+    migration,
+    /create or replace function public\.fail_public_demo_start[\s\S]*auth_user_id is not null or workspace_id is not null[\s\S]*then 'cleanup_failed'/u,
+  );
+  assert.match(
+    migration,
+    /create or replace function public\.claim_expired_demo_cleanup[\s\S]*'reserved'[\s\S]*session\.status = 'failed'[\s\S]*auth_user_id is not null[\s\S]*workspace_id is not null[\s\S]*status = 'cleanup_pending'[\s\S]*interval '15 minutes'/u,
+  );
+  assert.match(
+    migration,
+    /cleanup_started_at = statement_timestamp\(\)/u,
   );
 });
 

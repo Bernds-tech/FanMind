@@ -9,7 +9,13 @@ import {
   findWorkspaceIdByStripeReferences,
   updateWorkspaceBillingDefensively,
   verifyStripeSignature,
+  type StripeWorkspaceResolution,
 } from "@/lib/stripeBilling";
+import {
+  STRIPE_BILLING_BLOCKED,
+  STRIPE_BILLING_RETRYABLE_ERROR,
+  STRIPE_BILLING_UPDATED,
+} from "@/lib/stripeWorkspacePolicy.mjs";
 
 type StripeObject = Record<string, unknown>;
 type StripeEvent = {
@@ -17,6 +23,13 @@ type StripeEvent = {
   type?: string;
   data?: { object?: StripeObject };
 };
+
+class StripeWebhookRetryableError extends Error {
+  constructor() {
+    super("stripe_webhook_billing_update_retryable");
+    this.name = "StripeWebhookRetryableError";
+  }
+}
 
 function objectField(
   object: StripeObject | undefined,
@@ -147,19 +160,17 @@ function workspaceIdFromObject(object: StripeObject): string | undefined {
 
 async function resolveWorkspaceId(
   object: StripeObject,
-): Promise<string | undefined> {
+): Promise<StripeWorkspaceResolution> {
   const direct = workspaceIdFromObject(object);
-  if (direct) return direct;
-  return (
-    (await findWorkspaceIdByStripeReferences({
-      customerId:
-        stripeId(object.customer) ?? objectIdWithPrefix(object, "cus_"),
-      subscriptionId:
-        stripeId(object.subscription) ?? objectIdWithPrefix(object, "sub_"),
-      paymentIntentId:
-        stripeId(object.payment_intent) ?? objectIdWithPrefix(object, "pi_"),
-    })) ?? undefined
-  );
+  if (direct) return { status: "found", workspaceId: direct };
+  return findWorkspaceIdByStripeReferences({
+    customerId:
+      stripeId(object.customer) ?? objectIdWithPrefix(object, "cus_"),
+    subscriptionId:
+      stripeId(object.subscription) ?? objectIdWithPrefix(object, "sub_"),
+    paymentIntentId:
+      stripeId(object.payment_intent) ?? objectIdWithPrefix(object, "pi_"),
+  });
 }
 
 async function updateOrWarn(input: {
@@ -169,8 +180,15 @@ async function updateOrWarn(input: {
   fields: Record<string, string | number | boolean | null | undefined>;
   referralBillingStatus?: string | null;
 }): Promise<void> {
-  const workspaceId = await resolveWorkspaceId(input.object);
-  if (!workspaceId) {
+  const workspaceResolution = await resolveWorkspaceId(input.object);
+  if (workspaceResolution.status === "retryable_error") {
+    console.error("Stripe webhook workspace lookup needs retry", {
+      eventType: input.eventType,
+      eventId: input.eventId,
+    });
+    throw new StripeWebhookRetryableError();
+  }
+  if (workspaceResolution.status === "not_found") {
     console.warn("Stripe webhook without workspace mapping", {
       eventType: input.eventType,
       eventId: input.eventId,
@@ -178,8 +196,29 @@ async function updateOrWarn(input: {
     });
     return;
   }
+  const workspaceId = workspaceResolution.workspaceId;
 
-  await updateWorkspaceBillingDefensively(workspaceId, input.fields);
+  const billingUpdateDecision = await updateWorkspaceBillingDefensively(
+    workspaceId,
+    input.fields,
+  );
+  if (billingUpdateDecision === STRIPE_BILLING_BLOCKED) {
+    console.warn("Stripe webhook workspace update blocked", {
+      eventType: input.eventType,
+      eventId: input.eventId,
+    });
+    return;
+  }
+  if (billingUpdateDecision === STRIPE_BILLING_RETRYABLE_ERROR) {
+    console.error("Stripe webhook workspace update needs retry", {
+      eventType: input.eventType,
+      eventId: input.eventId,
+    });
+    throw new StripeWebhookRetryableError();
+  }
+  if (billingUpdateDecision !== STRIPE_BILLING_UPDATED) {
+    throw new StripeWebhookRetryableError();
+  }
   const billingStatus =
     input.referralBillingStatus ??
     (typeof input.fields.billing_status === "string"

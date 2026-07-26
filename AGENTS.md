@@ -116,6 +116,13 @@ Social integrations, analytics, campaign logic, referral automation and automati
 - Supabase anon key may be public; Supabase service-role key must stay server-only.
 - `FANMIND_ADMIN_EMAILS` is the only admin source. No hardcoded real admin email fallback.
 - RLS must be enabled and verified for workspace-scoped tables before any pilot customer data is used.
+- Normal Workspace-Owner may directly update only the ten documented
+  organization/address/tax master-data columns. Workspace creation and
+  commercial fields must follow the two-phase RPC/privilege rollout in
+  `docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md`. The final contract SQL
+  stays under `supabase/controlled/` and must never be folded into a generic
+  migration push; never reintroduce a broad authenticated `INSERT` or
+  table-level `UPDATE` grant.
 - Every protected API route must authorize the current user against the workspace and resource it reads or mutates.
 - Referral data must be workspace-scoped; users must not see other users' referral economics except through admin-only views.
 - Keep human-in-the-loop messaging: FanMind can draft and suggest, but must not automatically send messages.

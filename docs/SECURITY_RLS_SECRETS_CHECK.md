@@ -108,10 +108,15 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
 ### Billing-/Inquiry-Tabellen
 
 - [ ] Billing-Felder an `workspaces` sind nur für Workspace-Owner/Admin sichtbar.
-- [ ] **Blocker:** Normale Workspace-Owner können Billing-, Stripe-,
-      Subscription- und `test_access_flags`-Spalten nicht direkt ändern. Die
-      Legacy-Policy `workspaces_update_owner` erfüllt diese Spaltengrenze ohne
-      zusätzliche Rechte-/Trigger-Härtung nicht.
+- [ ] **Rollout-Blocker:** RPC, App-Kompatibilität und exakte
+      Workspace-Spaltenrechte sind in
+      `supabase/migrations/20260726120000_workspace_provisioning_rpc.sql` und
+      `supabase/controlled/20260726121000_workspace_server_owned_columns.sql`
+      vorbereitet. Der Contract-Schritt liegt absichtlich außerhalb des
+      automatischen Migration-Sets. Der
+      Blocker ist erst nach Production-Preflight, Anwendung beider Schritte und
+      positiver/negativer Abnahme gemäß
+      `docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md` geschlossen.
 - [ ] `pilot_inquiries` oder vergleichbare Anfrage-Tabellen sind serverseitig schreibbar und nicht öffentlich lesbar.
 - [ ] Stripe-Referenzen sind nicht unnötig im Client sichtbar.
 
@@ -123,6 +128,14 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 - [ ] User A sieht keine Kontakte von User B.
 - [ ] User A kann keine Memories/Follow-ups/Conversations anderer Workspaces lesen.
 - [ ] User A kann keine Kontakt-ID aus anderem Workspace mutieren.
+- [ ] Owner kann keinen Workspace direkt anlegen oder upserten.
+- [ ] Owner kann Plan-, Preis-, Billing-, Stripe-, Invoice-, Subscription-,
+      Owner- und `test_access_flags`-Spalten weder einzeln noch in einem
+      gemischten PATCH mit erlaubten Stammdaten ändern.
+- [ ] Owner kann exakt die zehn dokumentierten Workspace-Stammdatenfelder
+      ändern; fremde Workspace-Zeilen bleiben durch RLS gesperrt.
+- [ ] `ensure_current_user_workspace(...)` ist idempotent, concurrency-sicher,
+      Starter-only und erzeugt Workspace plus Owner-Membership atomar.
 - [ ] User ohne Session wird auf Login geleitet oder bekommt 401.
 - [ ] Nicht-Admin wird aus Adminbereich auf Dashboard geleitet.
 - [ ] Temporärer Demo-User kann keine echten externen Verbindungen benutzen.
@@ -172,6 +185,21 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 - [ ] Billing-Status darf nicht durch unautorisierte User verändert werden.
 - [ ] Stripe-IDs und interne Testflags stammen aus einer server-eigenen Quelle
       und können nicht über die Workspace-Owner-Policy umgebogen werden.
+- [ ] Stripe-Webhooks laden das Ziel vor jedem Billing-PATCH serverseitig und
+      lehnen feste sowie temporäre Demo-Workspaces einschließlich alter
+      direkter `workspace_id`-Metadaten fail-closed ab.
+- [ ] Der Demo-Block stützt sich vor dem kontrollierten Spalten-Contract nur
+      auf feste Auth-Identität oder serverseitige `demo_start_sessions`, nicht
+      allein auf owner-veränderbare Workspace-Status- oder Testflag-Felder.
+- [ ] Stripe-Referenz-/Guard-/Auth-/Session-/PATCH-Fehler liefern Stripe einen
+      Retry-Fehler; nur erfolgreich bestätigte Referenz-Nulltreffer gelten als
+      nicht zugeordnet. Doppelte oder widersprüchliche Stripe-Referenzziele
+      scheitern ebenfalls retry-fail-closed. Ein bewusstes Demo- oder
+      `manual_suspended`-Block dagegen startet keine Referral-Synchronisierung;
+      letzterer muss nach einem Nullzeilen-PATCH nochmals exakt per Service
+      Role bestätigt werden, andernfalls bleibt das Event retryable.
+- [ ] Ein Webhook-PATCH gibt exakt die erwartete Workspace-ID zurück, bevor
+      Referral-Status oder Stripe-Rabatt synchronisiert werden.
 - [ ] Admin-Overrides sind admin-only.
 - [ ] UI verkauft Billing nicht als vollständige Payment-Plattform, sondern als Setup-/Zahlungsstart.
 

@@ -12,7 +12,11 @@ export function isExplicitDemoInvoiceWorkspace(workspace) {
 }
 
 export function shouldShowDemoInvoicesForWorkspace(workspace) {
-  return !workspace?.stripe_customer_id && isExplicitDemoInvoiceWorkspace(workspace);
+  return (
+    workspace?.billing_status === "demo_free" &&
+    !workspace?.stripe_customer_id &&
+    isExplicitDemoInvoiceWorkspace(workspace)
+  );
 }
 
 function numberField(source, key) {

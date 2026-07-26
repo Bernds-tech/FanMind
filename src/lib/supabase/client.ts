@@ -273,6 +273,42 @@ async function postgrestSelect<T>(table: string, accessToken: string | undefined
   }
 }
 
+async function postgrestRpc<T>(
+  functionName: string,
+  values: Record<string, unknown>,
+  accessToken: string | undefined,
+): Promise<SupabaseMutationResponse<T>> {
+  try {
+    const response = await fetch(
+      getSupabaseRestUrl(`rpc/${functionName}`),
+      {
+        method: "POST",
+        headers: getSupabaseHeaders(accessToken),
+        body: JSON.stringify(values),
+      },
+    );
+
+    if (!response.ok) {
+      return { data: null, error: await parseSupabaseError(response) };
+    }
+
+    const payload = (await response.json()) as T | T[];
+
+    return {
+      data: Array.isArray(payload) ? (payload[0] ?? null) : payload,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error:
+        error instanceof Error
+          ? error
+          : new Error("Unbekannter Supabase-Fehler."),
+    };
+  }
+}
+
 function createSelectQuery<T>(table: string, columns: string, getAccessToken: () => string | undefined): SelectQuery<T> {
   const filters: [string, SupabaseFilterValue][] = [];
   let limitCount: number | undefined;
@@ -367,6 +403,12 @@ export function createSupabaseBrowserClient() {
           return createInsertResult(table, values, getAccessToken);
         },
       };
+    },
+    rpc<T = Record<string, unknown>>(
+      functionName: string,
+      values: Record<string, unknown>,
+    ) {
+      return postgrestRpc<T>(functionName, values, getAccessToken());
     },
   };
 }

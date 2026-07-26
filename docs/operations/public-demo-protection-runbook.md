@@ -1,6 +1,6 @@
 # Public Demo Protection – Production Runbook
 
-Stand: 2026-07-19
+Stand: 2026-07-26
 
 ## Ziel
 
@@ -21,6 +21,22 @@ In Supabase Production im SQL Editor den vollständigen Inhalt dieser Datei ausf
 ```text
 supabase/migrations/20260713180000_public_demo_abuse_protection.sql
 ```
+
+Der aktuelle Cleanup-Vertrag wird zusätzlich mit dem additiven Expand-Schritt
+A aus `docs/operations/WORKSPACE_SERVER_OWNED_FIELDS.md` aktualisiert:
+
+```text
+supabase/migrations/20260726120000_workspace_provisioning_rpc.sql
+```
+
+Diese zweite Datei macht vor Aktivierung gespeicherte Auth-Ressourcen,
+reservierte sowie fehlgeschlagene Rollbacks und mehr als 15 Minuten alte
+`cleanup_pending`-Leases erneut claimbar. Ihr Backfill normalisiert die
+Workspace-Identität für `reserved`, `active`, `expired`, `failed`,
+`cleanup_pending` und `cleanup_failed`. Sie muss nach dem kompatiblen
+App-Brückenstand und vor der erneuten Freigabe der öffentlichen Demo mit
+abgenommen werden. Ressourcenfreie `failed`-Auditzeilen werden nicht erneut
+geclaimt.
 
 Danach prüfen:
 
@@ -170,6 +186,10 @@ Abnahme:
 5. Nach Ablauf wird der alte Datensatz vom Timer beansprucht und vollständig gelöscht.
 6. `demo_start_sessions` erhält für den alten Lauf den Status `deleted`.
 7. Keine Roh-IP-Adresse wird gespeichert.
+8. Ein absichtlich vor Aktivierung abgebrochener Start wird nach Ablauf
+   vollständig gelöscht.
+9. Ein absichtlich veralteter `cleanup_pending`-Lease wird erneut beansprucht;
+   ein frischer Lease nicht.
 
 ## 7. Not-Aus
 
