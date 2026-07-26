@@ -225,6 +225,11 @@ requireText(
   "Die Beispielkonfiguration muss das 1-€/Tag-Beta-Testabo standardmäßig geschlossen halten.",
 );
 requireText(
+  ".github/workflows/deploy-fanmind.yml",
+  "FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true",
+  "Der Production-Deploy muss den ausdrücklich freigegebenen 1-€/Tag-Beta-Test während der Fertigstellungsphase aktiv halten.",
+);
+requireText(
   "README.md",
   "zum Verkaufsstart nach Abschluss der acht Abschlussblöcke",
   "README muss den verbindlichen Abschaltzeitpunkt des 1-€/Tag-Beta-Testabos dokumentieren.",
