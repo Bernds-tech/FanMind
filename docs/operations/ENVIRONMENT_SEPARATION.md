@@ -165,6 +165,8 @@ Erlaubt:
 
 ## Deployment-Grenze
 
+Der manuelle Staging-Deploy liegt in `.github/workflows/deploy-staging.yml`. Er läuft ausschließlich auf einem separat mit `fanmind-staging` gekennzeichneten Self-Hosted Runner, verwendet `/var/www/fanmind-staging/.env.production` mit ausschließlich Staging-Werten und darf niemals auf dem Production-Runner oder im Production-Pfad laufen. Er akzeptiert nur einen exakten, von `origin/main` erreichbaren Commit und führt vor dem separaten PM2-Start den Staging-Preflight aus.
+
 Der bestehende Production-Deploy darf niemals setzen:
 
 ```text

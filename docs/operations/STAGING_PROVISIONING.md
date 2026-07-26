@@ -11,6 +11,7 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 - sichere Vorlage `.env.staging.example`;
 - zusätzlicher Baseline-Check `npm run staging:preflight`;
 - manueller GitHub-Workflow `FanMind Staging Readiness`;
+- manueller, commit-genauer Deploy-Workflow `Deploy FanMind Staging` für einen ausschließlich mit `fanmind-staging` gekennzeichneten Self-Hosted Runner;
 - Policy-Tests, die Production-Ziele und unvollständige Freigaben blockieren.
 
 ## Extern einmalig einzurichten
@@ -34,7 +35,13 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
    - Stripe-Testkarten und Testprodukte;
    - keine Live-Kunden, Live-Zahlungsmittel oder Live-Subscription-IDs.
 
-4. **GitHub Environment `staging`**
+4. **Staging-Runtime und Runner**
+   - eigener Self-Hosted Runner mit dem exklusiven Label `fanmind-staging`, niemals der Production-Runner;
+   - eigener Checkout unter `/var/www/fanmind-staging`;
+   - eigene, nicht versionierte `/var/www/fanmind-staging/.env.production` mit Dateimodus `0600` und ausschließlich Staging-Werten;
+   - eigener PM2-Prozess `fanmind-staging` und eigener nginx-vHost;
+
+5. **GitHub Environment `staging`**
    - Variable `FANMIND_STAGING_APP_URL`;
    - Variable `FANMIND_STAGING_SUPABASE_PROJECT_REF`;
    - Variable `FANMIND_PRODUCTION_SUPABASE_PROJECT_REF`;
@@ -52,11 +59,12 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 3. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
 4. alle Schreibschalter auf `false` lassen;
 5. `npm run staging:preflight` ausführen;
-6. den ausgewählten Git-Commit auf Staging deployen;
-7. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell starten;
-8. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
-9. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
-10. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
+6. den manuellen Workflow `Deploy FanMind Staging` auf dem ausgewählten, von `main` erreichbaren Commit mit der Bestätigung `deploy-staging-only` starten;
+7. der Workflow muss Preflight, Product Truth, Lint, Operations-Tests, Build, separaten PM2-Start, Health und commit-genauen Public Smoke erfolgreich abschließen;
+8. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell starten;
+9. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
+10. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
+11. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
 
 ## Freigabekriterien
 
@@ -75,4 +83,4 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 
 ## Nicht als erledigt markieren
 
-Das Vorhandensein der Policy, Vorlage und dieses Runbooks ersetzt nicht die externen Ressourcen. Der Roadmap-Punkt `Produktions- und Testdaten trennen` bleibt deshalb teilweise offen, bis Host, Supabase und Stripe Test Mode tatsächlich bereitstehen.
+Das Vorhandensein der Policy, Vorlage, Deploy-Automation und dieses Runbooks ersetzt nicht die externen Ressourcen. Der Roadmap-Punkt `Produktions- und Testdaten trennen` bleibt deshalb teilweise offen, bis Host, Supabase und Stripe Test Mode tatsächlich bereitstehen.

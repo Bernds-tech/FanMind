@@ -1,0 +1,112 @@
+name: Deploy FanMind Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type deploy-staging-only to confirm the isolated staging deployment'
+        required: true
+        type: string
+
+concurrency:
+  group: fanmind-staging-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    name: Deploy exact main commit to isolated staging
+    if: ${{ inputs.confirmation == 'deploy-staging-only' }}
+    environment: staging
+    runs-on:
+      - self-hosted
+      - fanmind-staging
+      - exoscale
+      - linux
+      - x64
+
+    steps:
+      - name: Deploy on isolated staging host
+        env:
+          EXPECTED_RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          SOURCE_DIR="/var/www/fanmind-staging"
+          ENV_FILE="$SOURCE_DIR/.env.production"
+
+          if [ ! -d "$SOURCE_DIR/.git" ]; then
+            echo "Staging source checkout is missing." >&2
+            exit 1
+          fi
+          if [ ! -f "$ENV_FILE" ] || [ -L "$ENV_FILE" ]; then
+            echo "Staging environment file is missing or unsafe." >&2
+            exit 1
+          fi
+          if [ "$(stat -c '%a' "$ENV_FILE")" != "600" ]; then
+            echo "Staging environment file must have mode 600." >&2
+            exit 1
+          fi
+          if [[ ! "$EXPECTED_RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid staging release commit." >&2
+            exit 1
+          fi
+
+          cd "$SOURCE_DIR"
+          case "$(git remote get-url origin)" in
+            git@github.com:Bernds-tech/FanMind.git|https://github.com/Bernds-tech/FanMind.git) ;;
+            *)
+              echo "Unexpected staging repository origin." >&2
+              exit 1
+              ;;
+          esac
+
+          git fetch --prune origin main
+          if ! git cat-file -e "$EXPECTED_RELEASE_COMMIT^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$EXPECTED_RELEASE_COMMIT"
+          fi
+          if ! git merge-base --is-ancestor "$EXPECTED_RELEASE_COMMIT" origin/main; then
+            echo "Staging accepts only commits reachable from origin/main." >&2
+            exit 1
+          fi
+
+          git reset --hard "$EXPECTED_RELEASE_COMMIT"
+
+          set -a
+          # The staging host deliberately uses Next.js production mode with
+          # staging-only values in this untracked, mode-0600 file.
+          . "$ENV_FILE"
+          set +a
+
+          npm ci --no-audit --no-fund
+          npm run staging:preflight
+          npm run verify:truth
+          npm run lint
+          npm run test:operations
+          npm run build
+
+          pm2 delete fanmind-staging >/dev/null 2>&1 || true
+          FANMIND_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT"             FANMIND_RUNTIME_ENVIRONMENT=staging             NODE_ENV=production             pm2 start npm --name fanmind-staging --cwd "$SOURCE_DIR" -- start
+          pm2 save
+          sudo nginx -t
+
+          STAGING_BASE_URL="${NEXT_PUBLIC_APP_URL%/}"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsSL --max-time 15 "$STAGING_BASE_URL/api/health" -o /dev/null; then
+              break
+            fi
+            if [ "$attempt" = "10" ]; then
+              echo "Staging health check failed after 10 attempts." >&2
+              exit 1
+            fi
+            sleep 3
+          done
+
+          FANMIND_SMOKE_BASE_URL="$STAGING_BASE_URL"             FANMIND_EXPECTED_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT"             FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=staging             npm run smoke:public
+
+          if [ "$(git rev-parse HEAD)" != "$EXPECTED_RELEASE_COMMIT" ]; then
+            echo "Staging checkout is not synchronized after deployment." >&2
+            exit 1
+          fi

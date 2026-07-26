@@ -269,6 +269,8 @@ sudo nginx -t
 
 Nach dem Deployment werden öffentliche Kernrouten und der tatsächlich ausgelieferte Commit geprüft.
 
+Ein getrenntes Staging wird ausschließlich manuell über `.github/workflows/deploy-staging.yml` auf einem eigenen `fanmind-staging`-Runner ausgerollt. Der Workflow akzeptiert nur einen von `main` erreichbaren Commit, verlangt den Staging-Preflight und startet den separaten PM2-Prozess `fanmind-staging`. Host, Supabase-Staging-Projekt, Stripe-Testmodus, nginx-vHost und synthetische Testdaten bleiben externe Voraussetzungen.
+
 ## Dokumentations-Synchronisierung
 
 Wenn Preise, Pakete, Referral-Logik, aktiver Scope, Demo-Pfad, Billing, KI-Leistungsstufen, Datenbank, Security, Mobile-Verträge oder öffentliche Versprechen geändert werden, müssen `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md`, `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md`, `docs/mobile/BETA_RELEASE.md` und die betroffenen Legal-/Pricing-Dateien im selben PR geprüft und synchronisiert werden.
