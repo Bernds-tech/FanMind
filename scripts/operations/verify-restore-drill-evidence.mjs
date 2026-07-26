@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { constants } from "node:fs";\nimport { open } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open } from "node:fs/promises";
 
 const MAX_EVIDENCE_BYTES = 16 * 1024;
 const PASS_FIELDS = [
