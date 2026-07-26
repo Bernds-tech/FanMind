@@ -36,7 +36,7 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - offene Follow-ups anzeigen und abschließen;
 - verschlüsselte, maximal 24 Stunden alte Offline-Kontaktübersicht mit höchstens 50 Einträgen im Nur-Lesen-Modus;
 - native Push-Konfigurationsgrundlage mit streng validierter Navigation zu Follow-ups, noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
-- nativer heller und dunkler Splashscreen mit der bestätigten FanMind-Wortmarke;
+- nativer Splashscreen mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
 - sichere lokale Abmeldung mit Purge registrierter FanMind-SecureStore-Schlüssel und Workspace-Zustand.
 
 ## Sicherheitsgrenzen
@@ -71,19 +71,75 @@ cd apps/mobile
 cp .env.example .env.local
 npm ci
 npm run check
-npx expo start --go
+npm run start:go
 ```
 
 Für den aktuellen Expo-SDK-57-Stand muss auf Android die [offizielle Expo-Go-Version 57.0.2](https://github.com/expo/expo-go-releases/releases/tag/Expo-Go-57.0.2) installiert sein. Rechner und Telefon müssen im selben WLAN sein; anschließend wird der QR-Code aus dem Terminal mit Expo Go gescannt. Falls das lokale Netzwerk die Verbindung blockiert, kann nach Installation von `@expo/ngrok` mit `npx expo start --go --tunnel` gestartet werden. Ohne separates Staging darf dafür ausschließlich ein Testkonto verwendet werden.
 
-Für einen internen Build nach der externen EAS-Einrichtung:
+Expo Go bleibt nur der begrenzte Vorabtest. Der normale Startbefehl zielt auf
+den eigenen Development-Client:
 
 ```bash
+npm run start
+# identisch:
+npm run start:dev-client
+```
+
+Der Development-Client enthält die echten nativen FanMind-Module und ist damit
+die Grundlage für Push-, Deep-Link- und Store-nahe Tests. Nach Änderungen an
+`app.json` oder nativen Abhängigkeiten wird die generierte Android- und
+iOS-Konfiguration isoliert geprüft:
+
+```bash
+npm run native:prebuild:check
+```
+
+Mit lokal eingerichtetem Android Studio beziehungsweise Xcode kann anschließend
+ohne Expo-Konto kompiliert werden:
+
+```bash
+npm run android
+npm run ios
+```
+
+Der iOS-Befehl benötigt macOS und Xcode. Die generierten Verzeichnisse
+`android/` und `ios/` werden bei diesem Continuous-Native-Generation-Ansatz
+nicht committed.
+
+Die getrennte Native-CI führt denselben CNG-Vertrag anschließend bis zur echten
+Kompilierung weiter: ein Android-Debug-APK ohne Release-Credentials und eine
+codesign-freie iOS-Simulator-App. Beide Artefakte sind ausdrücklich nur
+Build-Nachweise, keine signierten Beta- oder Store-Pakete.
+
+## EAS-Profile
+
+Die Profile binden ihre öffentlichen Werte ausdrücklich an getrennte
+EAS-Umgebungen:
+
+| Profil | Umgebung | Zweck |
+|---|---|---|
+| `development` | `development` | signierbarer interner Development-Client |
+| `native-validation` | `development` | Android-Debug-/iOS-Simulator-Prüfung ohne Release-/Store-Credentials |
+| `preview` | `preview` | signierter interner Beta-Build |
+| `production` | `production` | späterer Store-Build |
+
+`withoutCredentials=true` bedeutet ausschließlich, dass das Validierungsprofil
+keine verwalteten Release-/Store-Credentials anfordert. Das Android-Debug-APK
+wird dennoch mit einem lokalen Debug-Key signiert; es ist kein Release-Artefakt.
+Ein EAS-Cloud-Build braucht außerdem weiterhin ein Expo-Konto und eine echte,
+per `eas init` erzeugte Projekt-ID. Das Repository enthält bewusst keine
+EAS-Projekt-ID, Apple-Team-ID, Store-ID oder Schlüsseldatei.
+
+Nach der externen EAS-Einrichtung:
+
+```bash
+npx eas-cli@latest build --profile native-validation --platform android
+npx eas-cli@latest build --profile native-validation --platform ios
 npx eas-cli@latest build --profile preview --platform android
 npx eas-cli@latest build --profile preview --platform ios
 ```
 
-Vor einem EAS-Build müssen EAS-Projekt-ID, Signierung und Store-Konten bewusst eingerichtet werden. Diese Werte werden nicht erfunden oder aus der Web-Anwendung übernommen.
+Vor einem signierten EAS-Build müssen EAS-Projekt-ID, Signierung und Store-Konten bewusst eingerichtet werden. Diese Werte werden nicht erfunden oder aus der Web-Anwendung übernommen.
 
 ## App-Identität
 
@@ -108,7 +164,7 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 ## Nächste Mobile-Schritte
 
 1. Supabase-Redirect `fanmind://reset-password` extern freigeben und Recovery auf einem realen Gerät testen.
-2. EAS-Projekt, Signing Credentials und interne Preview-Builds einrichten.
+2. EAS-Projekt, öffentliche Development-/Preview-/Production-Umgebungen, Signing Credentials und interne Preview-Builds einrichten.
 3. Hochauflösendes rundes App-Icon aus dem final bestätigten FanMind-Branding bereitstellen; die Wortmarke ist bereits als nativer Splashscreen eingebunden.
 4. Push-Berechtigung, Token-Registrierung und serverseitige Zustellung in einem signierten Development-/Preview-Build umsetzen und testen.
 5. Android Internal Testing und iOS TestFlight durchführen.

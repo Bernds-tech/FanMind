@@ -32,9 +32,9 @@ permissions:
 
 jobs:
   validate-mobile:
-    name: Typecheck, doctor and Android bundle
+    name: Typecheck, doctor, native prebuild and JS bundles
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: apps/mobile
@@ -121,6 +121,40 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
+      - name: Build iOS JavaScript bundle
+        id: ios_bundle
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run export:ios 2>&1 | tee mobile-ios-export-report.txt
+
+      - name: Upload iOS export report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-mobile-ios-export-report
+          path: apps/mobile/mobile-ios-export-report.txt
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Verify Android and iOS native prebuild
+        id: native_prebuild
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run native:prebuild:check 2>&1 | tee mobile-native-prebuild-report.txt
+
+      - name: Upload native prebuild report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-mobile-native-prebuild-report
+          path: apps/mobile/mobile-native-prebuild-report.txt
+          if-no-files-found: error
+          retention-days: 5
+
       - name: Enforce mobile boundary
         id: boundary
         continue-on-error: true
@@ -138,12 +172,21 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-      - name: Upload Android bundle artifact
+      - name: Upload Android JavaScript export artifact
         if: always() && steps.android_bundle.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: fanmind-mobile-android-bundle
+          name: fanmind-mobile-android-javascript-export
           path: apps/mobile/dist-android
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Upload iOS JavaScript export artifact
+        if: always() && steps.ios_bundle.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fanmind-mobile-ios-javascript-export
+          path: apps/mobile/dist-ios
           if-no-files-found: error
           retention-days: 5
 
@@ -155,8 +198,16 @@ jobs:
         if: always() && steps.doctor.outcome != 'success'
         run: exit 1
 
-      - name: Enforce Android bundle result
+      - name: Enforce Android JavaScript export result
         if: always() && steps.android_bundle.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce iOS JavaScript export result
+        if: always() && steps.ios_bundle.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce native prebuild result
+        if: always() && steps.native_prebuild.outcome != 'success'
         run: exit 1
 
       - name: Enforce mobile boundary result

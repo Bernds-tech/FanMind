@@ -6,18 +6,32 @@
   },
   "build": {
     "development": {
+      "developmentClient": true,
       "distribution": "internal",
+      "environment": "development",
+      "node": "22.13.1",
       "android": {
         "buildType": "apk"
       }
     },
+    "native-validation": {
+      "extends": "development",
+      "withoutCredentials": true,
+      "ios": {
+        "simulator": true
+      }
+    },
     "preview": {
       "distribution": "internal",
+      "environment": "preview",
+      "node": "22.13.1",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "environment": "production",
+      "node": "22.13.1",
       "autoIncrement": true
     }
   },

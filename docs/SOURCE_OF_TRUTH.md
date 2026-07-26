@@ -74,7 +74,8 @@ Aktiv im App-Kern:
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
 - native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke sowie vorbereitete deutsche/englische Store-Metadaten;
-- separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze und Android-JavaScript-Bundle.
+- eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
+- separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze, Android-/iOS-JavaScript-Bundles, isoliertem Native-Prebuild sowie echtem Android-Debug-APK und codesign-freier iOS-Simulator-App als reine Build-Nachweise.
 
 Noch nicht als ausgelieferte Store-App freigegeben:
 

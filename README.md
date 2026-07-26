@@ -115,7 +115,8 @@ Bereits vorhanden:
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
 - native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, sicherem Login-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke und vorbereitete deutsche/englische Store-Metadaten;
-- separate Mobile-CI, Expo Doctor, TypeScript-Check und Android-JavaScript-Bundle.
+- eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
+- separate Mobile-CI, Expo Doctor, TypeScript-Check, Android-/iOS-JavaScript-Bundles, isolierter Native-Prebuild sowie echtes Android-Debug-APK und codesign-freie iOS-Simulator-App als reine Build-Nachweise.
 
 Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
 

@@ -21,7 +21,7 @@ Mobile owns its own:
 - design tokens and UI primitives;
 - Android package and iOS bundle identifier;
 - EAS build profiles;
-- CI pipeline and Android bundle artifact;
+- JavaScript export artifacts plus credential-separated native build evidence;
 - native session persistence;
 - release cadence and store distribution.
 
@@ -154,8 +154,10 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 2. separate Mobile CI;
 3. mobile TypeScript check;
 4. Expo Doctor;
-5. Android JavaScript bundle export;
-6. explicit internal-device test before EAS distribution.
+5. Android and iOS JavaScript bundle exports;
+6. isolated Android-/iOS-Native-Prebuild mit Identity-, Deep-Link-, SecureStore-, Splashscreen- und Secret-Grenzen;
+7. Android-Debug-APK mit lokalem Debug-Key ohne Release-/Store-Credentials und codesign-freie iOS-Simulator-App in der Native-CI;
+8. explicit internal-device test before EAS distribution.
 
 ## Implementation phases
 
@@ -165,6 +167,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] password reset and deep-link callback;
 - [x] strict local SecureStore and workspace purge;
 - [x] EAS profiles and beta handoff documented;
+- [x] SDK-compatible Development-Client and explicit EAS environments;
+- [x] credential-free Android/iOS native configuration verification;
+- [x] Android debug with a local debug key and code-signing-free iOS Simulator native compilation in CI, both without release/store credentials;
 - [x] bounded offline read cache with the central purge contract;
 - [x] native notification configuration and fail-closed follow-up response routing;
 - [x] native wordmark splashscreen and prepared store metadata;
