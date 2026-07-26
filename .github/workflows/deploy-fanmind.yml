@@ -31,6 +31,15 @@ jobs:
           SOURCE_DIR="/var/www/fanmind"
           cd "$SOURCE_DIR"
 
+          # Temporary pre-sales beta: keep the approved 1 EUR/day lifecycle test
+          # reachable until all eight completion blocks are finished. Remove this
+          # block and set the flag to false before the real sales launch.
+          if grep -Eq '^[[:space:]]*FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN[[:space:]]*=' .env.production; then
+            sed -i -E 's/^[[:space:]]*FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN[[:space:]]*=.*/FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true/' .env.production
+          else
+            printf '\nFANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true\n' >> .env.production
+          fi
+
           echo "Deploying FanMind from origin/main on Exoscale..."
           git fetch --prune origin main
 
