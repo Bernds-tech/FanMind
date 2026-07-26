@@ -54,7 +54,9 @@ function toPublicSettings(
   });
   return {
     companyPrompt: normalized.companyPrompt,
-    profiles: normalized.profiles.map((profile) => ({ ...profile })),
+    profiles: normalized.profiles.map(
+      (profile: WorkspaceAiPromptProfile) => ({ ...profile }),
+    ),
     updatedAt: row.updated_at,
   };
 }
