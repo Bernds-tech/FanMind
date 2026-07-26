@@ -1,10 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import {
-  getContactConversationMessages,
-  getContactMemories,
+  AI_ANALYSIS_MEMORY_ROW_LIMIT,
+  AI_ANALYSIS_MESSAGE_ROW_LIMIT,
+  AI_ANALYSIS_OUTPUT_TOKEN_LIMIT,
+  AI_ANALYSIS_RATE_LIMIT_MAX,
+  AI_ANALYSIS_RATE_LIMIT_WINDOW_MS,
+  buildBoundedFanAnalysisPayload,
+} from "@/lib/aiExecutionPolicy.mjs";
+import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
+import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
+import { isWorkspaceArchivedAfterSubscriptionEnd } from "@/lib/subscriptionCancellation";
+import {
+  getRecentContactConversationMessages,
+  getRecentContactMemories,
   upsertFanAnalysisReport,
 } from "@/lib/supabase/server";
 import { requireContactInAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
@@ -251,9 +261,57 @@ export async function analyzeFanCommunication(
 
   const { workspace, user, contact } =
     await requireContactInAuthorizedWorkspace(contactId);
+  // Lifecycle guard only. Billing authorization requires server-owned
+  // entitlement state before Standard/Plus/Ultra can be activated.
+  if (isWorkspaceArchivedAfterSubscriptionEnd(workspace)) {
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "This workspace is read-only after the subscription ended."
+          : "Dieser Workspace ist nach Vertragsende im Lesemodus.",
+    };
+  }
+
+  let rateLimit;
+  try {
+    rateLimit = await consumeSharedRateLimit({
+      scope: "ai_analysis_workspace_user",
+      subject: `${workspace.id}:${user.id}`,
+      maxRequests: AI_ANALYSIS_RATE_LIMIT_MAX,
+      windowMs: AI_ANALYSIS_RATE_LIMIT_WINDOW_MS,
+    });
+  } catch {
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "The communication overview cannot be started safely right now."
+          : "Die Kommunikationsübersicht kann gerade nicht sicher gestartet werden.",
+    };
+  }
+
+  if (!rateLimit.allowed) {
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "Too many AI analyses. Please try again later."
+          : "Zu viele KI-Analysen. Bitte versuche es später erneut.",
+    };
+  }
+
   const [messagesResult, memoriesResult] = await Promise.all([
-    getContactConversationMessages(workspace.id, contactId),
-    getContactMemories(workspace.id, contactId),
+    getRecentContactConversationMessages(
+      workspace.id,
+      contactId,
+      AI_ANALYSIS_MESSAGE_ROW_LIMIT,
+    ),
+    getRecentContactMemories(
+      workspace.id,
+      contactId,
+      AI_ANALYSIS_MEMORY_ROW_LIMIT,
+    ),
   ]);
 
   if (messagesResult.error) {
@@ -263,21 +321,50 @@ export async function analyzeFanCommunication(
     return { ok: false, message: memoriesResult.error.message };
   }
 
-  const sourceMessages = messagesResult.messages.slice(-50).map((message) => ({
-    direction: message.direction,
-    channel: message.source_platform ?? "manual",
-    origin: message.source_type ?? message.message_type ?? "unknown",
-    author: message.author_label ?? message.original_author_label ?? null,
-    text: message.content || message.original_text_excerpt || "",
-    mediaPresent: Boolean(message.attachments?.length),
-    createdAt: message.created_at,
-  }));
-  const contactKnowledge = memoriesResult.memories.slice(0, 20).map((memory) => ({
-    type: memory.type,
-    content: memory.content,
-    importance: memory.importance,
-    createdAt: memory.created_at,
-  }));
+  let boundedInput: ReturnType<typeof buildBoundedFanAnalysisPayload>;
+  try {
+    boundedInput = buildBoundedFanAnalysisPayload({
+      language: locale,
+      analysisMode: mode,
+      additionalInstruction: instruction,
+      contact: {
+        displayName: contact.display_name,
+        handle: contact.handle,
+        sourcePlatform: contact.source_platform,
+        contactLanguage: contact.language,
+        status: contact.status,
+        tags: contact.tags ?? [],
+        summary: contact.summary,
+        internalNotes: contact.internal_notes ?? "",
+      },
+      contactKnowledge: memoriesResult.memories.map((memory) => ({
+        type: memory.type,
+        content: memory.content,
+        importance: memory.importance,
+        createdAt: memory.created_at,
+      })),
+      messages: messagesResult.messages.map((message) => ({
+        direction: message.direction,
+        channel: message.source_platform ?? "manual",
+        origin: message.source_type ?? message.message_type ?? "unknown",
+        author: message.author_label ?? message.original_author_label ?? null,
+        text: message.content || message.original_text_excerpt || "",
+        mediaPresent: Boolean(message.attachments?.length),
+        createdAt: message.created_at,
+      })),
+    });
+  } catch {
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "The communication context could not be prepared safely."
+          : "Der Kommunikationskontext konnte nicht sicher vorbereitet werden.",
+    };
+  }
+
+  const { payload, inputChars } = boundedInput;
+  const sourceMessages = payload.messages;
   const lowDataHint =
     sourceMessages.length < 3
       ? locale === "en"
@@ -285,24 +372,6 @@ export async function analyzeFanCommunication(
         : "Es ist erst wenig Nachrichtenkontext vorhanden."
       : "";
   const fallback = fallbackReport(locale, mode, lowDataHint);
-  const payload = {
-    language: locale,
-    analysisMode: mode,
-    additionalInstruction: instruction || null,
-    contact: {
-      displayName: contact.display_name,
-      handle: contact.handle,
-      sourcePlatform: contact.source_platform,
-      contactLanguage: contact.language,
-      status: contact.status,
-      tags: contact.tags ?? [],
-      summary: contact.summary,
-      internalNotes: contact.internal_notes ?? "",
-    },
-    contactKnowledge,
-    messages: sourceMessages,
-  };
-  const inputChars = JSON.stringify(payload).length;
   const model = getFanMindAiModel();
   const apiKey = process.env.OPENAI_API_KEY;
   const startedAt = Date.now();
@@ -325,6 +394,7 @@ export async function analyzeFanCommunication(
         body: JSON.stringify({
           model,
           store: false,
+          max_output_tokens: AI_ANALYSIS_OUTPUT_TOKEN_LIMIT,
           input: [
             {
               role: "system",
@@ -365,10 +435,9 @@ export async function analyzeFanCommunication(
         return {
           ok: false,
           message:
-            responseBody?.error?.message ||
-            (locale === "en"
+            locale === "en"
               ? "The communication overview could not be created."
-              : "Die Kommunikationsübersicht konnte nicht erstellt werden."),
+              : "Die Kommunikationsübersicht konnte nicht erstellt werden.",
         };
       }
 

@@ -42,6 +42,11 @@ Leere Werte bedeuten Messung ohne Hinweisgrenze. Konfigurierte Werte erzeugen fo
 
 Keiner dieser Zustände blockiert KI-Aufrufe oder verändert Rechnungen.
 
+Davon getrennt schützen technische Kurzzeit-, Kontext- und Ausgabegrenzen den
+Dienst vor Missbrauch und unkontrollierten Providerkosten. Diese
+Betriebsgrenzen sind keine vertraglichen KI-Standard-/Plus-/Ultra-Kontingente
+und erzeugen keine Nachberechnung.
+
 ## Datenschutz und Berechtigung
 
 - Die Seite ist nur nach Authentifizierung erreichbar.

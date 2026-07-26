@@ -16,17 +16,47 @@ Aktueller MVP-Schutz:
 
 - KI läuft serverseitig.
 - `OPENAI_API_KEY` ist server-only.
-- Inputlängen sind begrenzt.
+- Inputlängen, geladene Nachrichten-/Memory-Zeilen und serialisierte
+  Gesamtkontexte sind begrenzt.
+- Kommunikationsanalysen laden höchstens 50 aktuelle Nachrichten und 20
+  aktuelle Memories; dynamische Analyse- und Antwortkontexte bleiben jeweils
+  unter 40.000 serialisierten Zeichen.
+- Ein übergebener Analyse-Report für Antwortvorschläge ist auf 12.000 Zeichen
+  begrenzt.
 - Antwortvorschläge nutzen strukturierte Ausgabe.
-- Rate Limit ist vorhanden.
+- Provider-Ausgaben sind auf 2.048 Tokens je Aufruf begrenzt.
+- Antwortvorschläge verwenden das gemeinsame Limit von 20 Aufrufen je
+  User/IP in 10 Minuten.
+- Kommunikationsanalysen verwenden ein separates gemeinsames Limit von 10
+  Aufrufen je Workspace/User in 10 Minuten.
+- Ausfall der gemeinsamen Limit-Infrastruktur stoppt den Provider-Aufruf.
+- Usage-Events, geschätzte Tokens/Kosten, Admin- und Workspace-Anzeige sind
+  implementiert.
 - Keine automatische Sendefunktion.
 
 Nächster Schritt:
 
-- Usage-Events loggen.
-- Token grob schätzen oder Provider-Usage übernehmen, sofern verfügbar.
-- Kosten je Modell über serverseitige Konfiguration berechnen.
-- Adminbereich mit Verbrauchsanzeige ergänzen.
+- Billing-, Stripe-, Subscription- und interne Testfelder zuerst gegen direkte
+  Änderungen durch normale Workspace-Owner schützen oder Entitlements aus
+  einer separaten server-eigenen Quelle lesen;
+- verbindliche Standard-/Plus-/Ultra-Modelle und Monatskontingente schriftlich
+  freigeben;
+- Workspace-Entitlement und Stripe-Add-on-Lifecycle erst im getrennten Staging
+  implementieren und testen;
+- Provider-Usage übernehmen, sofern zuverlässig verfügbar.
+
+Die technischen Limits in diesem Abschnitt sind ausschließlich Missbrauchs-,
+Verfügbarkeits- und Kostenschutz. Sie sind weder vertragliche Monatskontingente
+noch eine automatische Nachberechnung. KI Plus und KI Ultra bleiben
+unverändert nicht automatisch buchbar.
+
+Der bestehende Vertragsende-Check an den produktiven KI-Pfaden ist
+Lifecycle-Verhalten und keine autoritative Billing-Freigabe. Die dokumentierte
+`workspaces_update_owner`-Policy begrenzt aktuell nicht, welche Workspace-
+Spalten ein Owner ändern darf. Deshalb dürfen `billing_status`, Stripe-IDs,
+Subscription-Felder und `test_access_flags` erst nach einer gesonderten
+Spaltenrechte-/RLS-Härtung oder mit einer server-eigenen Entitlement-Quelle als
+Autorisierungsnachweis verwendet werden.
 
 ## 3. Grundformel
 
@@ -61,9 +91,10 @@ Regel:
 - Code berechnet mit serverseitigen Preisen.
 - Doku sagt nicht `fixer Preis pro Request`, sondern erklärt die Formel.
 
-## 5. Vorgeschlagene Tabelle `ai_usage_events`
+## 5. Aktive Tabelle `ai_usage_events`
 
-Für den Ausbau sollte eine Tabelle oder gleichwertige Storage-Struktur mit diesen Feldern entstehen:
+Die Migration `supabase/migrations/20260706120000_ai_usage_events.sql` stellt
+die Tabelle mit folgenden Feldern bereit:
 
 - `id`
 - `workspace_id`
@@ -96,7 +127,7 @@ Mögliche Feature-Werte:
 
 ## 6. RLS für `ai_usage_events`
 
-Erwartung:
+Aktiver Vertrag:
 
 - Workspace-Owner sieht eigene Usage.
 - Workspace-Member sehen nur eigene Workspace-Usage, falls später erlaubt.
@@ -120,10 +151,10 @@ Sobald Provider-Usage-Werte verfügbar sind, sollen echte Werte bevorzugt gespei
 
 ## 8. Wo Usage geloggt werden soll
 
-MVP-Priorität:
+Aktiv instrumentiert:
 
 1. `/api/ai/reply-suggestions`
-2. Fan-Analyse in `src/app/fans/actions.ts`
+2. Kommunikationsanalyse in `src/app/fans/[id]/analysisActions.ts`
 3. spätere Conversation-Summaries
 4. spätere Kampagnen-/Segment-Entwürfe
 
@@ -143,38 +174,36 @@ Für jeden KI-Call speichern:
 - Latenz
 - Route / Feature-Quelle
 
-## 9. Adminbereich: gewünschte Anzeigen
+## 9. Aktive und offene Anzeigen
 
-Globale Admin-Übersicht:
+Der Adminbereich zeigt derzeit:
 
-- KI-Kosten geschätzt heute
-- KI-Kosten geschätzt diese Woche
-- KI-Kosten geschätzt dieser Monat
-- Anfragen heute / Monat
-- Top Workspaces nach Kosten
-- Top Features nach Kosten
+- KI-Kosten und Tokens geschätzt für den gewählten Zeitraum;
+- Anfragen und Fehler;
+- Workspaces nach geschätzten Kosten;
+- Features nach geschätzten Kosten;
+- durchschnittliche geschätzte Kosten pro Request;
+- letzte Usage-Events ohne Prompt-/Antwortvolltexte.
+
+Noch offen:
+
+- Tages-/Wochen-Schnellansichten;
+- Kosten relativ zur Kontaktanzahl;
+- Modellverteilung;
+- explizite Spike-/Budgetwarnungen.
+
+Die Workspace-Nutzeransicht zeigt:
+
+- KI-Nutzung im aktuellen Kalendermonat;
+- geschätzte Eingabe-/Ausgabe-/Gesamttokens;
+- Aufteilung nach Funktion und letzte Ereignisse;
+- optionale, rein informative Soft-Hinweisgrenzen.
+
+Später möglich:
+
 - Fehlerquote
-- Durchschnittliche Kosten pro Request
-- Modellverteilung
-
-Workspace-Detail im Adminbereich:
-
-- Workspace-Name
-- Plan / Commercial Option
-- Anzahl Fans/Kontakte
-- KI-Anfragen im Zeitraum
-- geschätzte Kosten im Zeitraum
-- Kosten pro Fan
-- Kosten pro 100 Fans
-- Kosten pro 1.000 Fans
-- letzte KI-Anfragen
-- Warnstatus: ok / auffällig / Budget überschritten
-
-Kundenansicht optional:
-
-- KI-Nutzung im aktuellen Monat
-- ungefährer Verbrauch
-- Hinweis, falls Limit erreicht wird
+- Warnstatus bei ungewöhnlichem Verbrauch;
+- verbindliche Kontingentanzeige erst nach Tier-Freigabe.
 
 ## 10. Budget- und Warnlogik
 
@@ -213,26 +242,32 @@ Warum: Ein Workspace mit 10.000 Fans darf absolut mehr kosten als ein Workspace 
 - Keine Kundendaten im Usage-Log speichern, nur Mengen/Metadaten.
 - Kein Prompt-/Antwortvolltext in Usage-Events speichern, sofern nicht explizit und datenschutzrechtlich geprüft.
 
-## 13. Minimaler Codex-Task für Umsetzung
+## 13. Umsetzungsstand
 
-Wenn dieses Feature gebaut wird, soll Codex klein starten:
+Erledigt:
 
-1. Tabelle/Migration `ai_usage_events` erstellen.
-2. Server-Helper `recordAiUsageEvent(...)` bauen.
-3. `/api/ai/reply-suggestions` instrumentieren.
-4. Fan-Analyse instrumentieren.
-5. Admin-Seite `KI-Verbrauch` bauen.
-6. Nur geschätzte Werte anzeigen, klar als geschätzt markiert.
-7. Keine Preise im Client hardcoden.
-8. Security-/RLS-/Secrets-Check aktualisieren.
+1. Tabelle/Migration `ai_usage_events`;
+2. Server-Helper `recordAiUsageEvent(...)`;
+3. Instrumentierung von Antwortvorschlägen und Kommunikationsanalyse;
+4. Admin- und Workspace-Nutzungsanzeige;
+5. geschätzte, klar gekennzeichnete Tokens/Kosten;
+6. serverseitige Providerpreise;
+7. fail-closed Kurzzeit-Rate-Limits sowie Datenbank-, Kontext- und
+   Ausgabegrenzen.
+
+Offen bleiben echte Provider-Tokenwerte, Kosten pro Kontakt, Budgetwarnungen
+und die vertragliche Standard-/Plus-/Ultra-Entitlement-/Billing-Logik
+einschließlich einer server-eigenen Autorisierungsquelle.
 
 ## 14. Akzeptanzkriterien
 
-- [ ] KI-Calls werden serverseitig als Usage-Events gespeichert.
-- [ ] Workspace-Zuordnung ist vorhanden.
-- [ ] Admin sieht Verbrauch je Workspace.
+- [x] KI-Calls werden serverseitig als Usage-Events gespeichert.
+- [x] Workspace-Zuordnung ist vorhanden.
+- [x] Admin sieht Verbrauch je Workspace.
 - [ ] Admin sieht Kosten pro Fan und pro 100/1.000 Fans.
-- [ ] UI markiert Werte als geschätzt.
-- [ ] Keine Secrets oder Prompt-Texte landen im Usage-Log.
-- [ ] RLS verhindert fremde Workspace-Daten.
-- [ ] `README.md`, `AGENTS.md` und `docs/SOURCE_OF_TRUTH.md` bleiben synchron.
+- [x] UI markiert Werte als geschätzt.
+- [x] Keine Secrets oder Prompt-Texte landen im Usage-Log.
+- [x] RLS verhindert fremde Workspace-Daten.
+- [ ] Billing-/Stripe-/Subscription-/Testzugangsfelder sind gegen direkte
+      Änderungen durch normale Workspace-Owner geschützt.
+- [x] `README.md`, `AGENTS.md` und `docs/SOURCE_OF_TRUTH.md` bleiben synchron.

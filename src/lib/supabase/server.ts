@@ -2636,6 +2636,42 @@ export async function getContactMemories(
   return { memories: memoriesResult.data ?? [], error: null };
 }
 
+export async function getRecentContactMemories(
+  workspaceId: string,
+  contactId: string,
+  limit: number,
+): Promise<MemoriesResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return memoriesError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const boundedLimit = Math.max(1, Math.min(Math.trunc(limit), 100));
+  const memoriesResult = await postgrestSelect<MemoryRow[]>(
+    "memories",
+    accessToken,
+    MEMORY_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contactId],
+    ],
+    boundedLimit,
+    false,
+    "created_at.desc",
+  );
+
+  if (memoriesResult.error) {
+    return memoriesError(
+      `Memories konnten nicht geladen werden: ${withOptionalSchemaHint(memoriesResult.error.message, "memories")}`,
+    );
+  }
+
+  return { memories: memoriesResult.data ?? [], error: null };
+}
+
 export async function createContactMemory(
   input: CreateMemoryInput,
 ): Promise<MemoryCreateResult> {
@@ -2743,6 +2779,42 @@ export async function getContactConversationMessages(
   }
 
   return { messages: result.data ?? [], error: null };
+}
+
+export async function getRecentContactConversationMessages(
+  workspaceId: string,
+  contactId: string,
+  limit: number,
+): Promise<ConversationMessagesResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationMessagesError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const boundedLimit = Math.max(1, Math.min(Math.trunc(limit), 100));
+  const result = await postgrestSelect<ConversationMessageRow[]>(
+    "conversation_messages",
+    accessToken,
+    CONVERSATION_MESSAGE_COLUMNS,
+    [
+      ["workspace_id", workspaceId],
+      ["contact_id", contactId],
+    ],
+    boundedLimit,
+    false,
+    "created_at.desc",
+  );
+
+  if (result.error) {
+    return conversationMessagesError(
+      `Nachrichten konnten nicht geladen werden: ${withOptionalSchemaHint(result.error.message, "conversation_messages")}`,
+    );
+  }
+
+  return { messages: [...(result.data ?? [])].reverse(), error: null };
 }
 
 
