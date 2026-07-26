@@ -200,7 +200,8 @@ Die Workspace-Nutzeransicht zeigt:
 - KI-Nutzung im aktuellen Kalendermonat;
 - geschätzte Eingabe-/Ausgabe-/Gesamttokens;
 - Aufteilung nach Funktion und letzte Ereignisse;
-- optionale, rein informative Soft-Hinweisgrenzen.
+- optionale, rein informative Soft-Hinweisgrenzen;
+- Workspace-Unternehmens-Prompt und bis zu acht Antwortprofile zur Qualitätssteuerung, ohne Promptvolltexte in Usage-Events zu speichern.
 
 Später möglich:
 
@@ -244,6 +245,7 @@ Warum: Ein Workspace mit 10.000 Fans darf absolut mehr kosten als ein Workspace 
 - Keine Providerpreise hardcodiert im Client.
 - Keine Kundendaten im Usage-Log speichern, nur Mengen/Metadaten.
 - Kein Prompt-/Antwortvolltext in Usage-Events speichern, sofern nicht explizit und datenschutzrechtlich geprüft.
+- Workspace-Prompts werden ausschließlich als begrenzter KI-Eingabekontext verwendet und nie in Kosten-/Usage-Logs ausgegeben.
 
 ## 13. Umsetzungsstand
 
@@ -256,7 +258,8 @@ Erledigt:
 5. geschätzte, klar gekennzeichnete Tokens/Kosten;
 6. serverseitige Providerpreise;
 7. fail-closed Kurzzeit-Rate-Limits sowie Datenbank-, Kontext- und
-   Ausgabegrenzen.
+   Ausgabegrenzen;
+8. Workspace-Unternehmens-Prompt und auswählbare, begrenzte Antwortprofile mit serverseitiger Profilauflösung.
 
 Offen bleiben echte Provider-Tokenwerte, Kosten pro Kontakt, Budgetwarnungen
 und die vertragliche Standard-/Plus-/Ultra-Entitlement-/Billing-Logik
