@@ -170,7 +170,11 @@ export function AiPromptSettings({
 
   function addEmptyProfile() {
     if (settings.profiles.length >= 8) return;
-    addTemplate({ name: "Eigenes Profil", instruction: " " });
+    addTemplate({
+      name: "Eigenes Profil",
+      instruction:
+        "Beschreibe hier, wie FanMind in dieser Situation antworten soll.",
+    });
   }
 
   function removeProfile(index: number) {
