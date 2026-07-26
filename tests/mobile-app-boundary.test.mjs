@@ -67,7 +67,7 @@ test("mobile uses the confirmed wordmark only for the native splashscreen", () =
   assert.ok(splashPlugin);
   assert.equal(packageJson.dependencies["expo-splash-screen"], "~57.0.5");
   assert.equal(splashPlugin[1].image, "./assets/branding/fanmind-wordmark.png");
-  assert.equal(splashPlugin[1].dark.image, "./assets/branding/fanmind-wordmark.png");
+  assert.equal(splashPlugin[1].dark, undefined);
   assert.equal(splashPlugin[1].resizeMode, "contain");
   assert.equal(splashPlugin[1].imageWidth, 300);
   assert.equal(appConfig.expo.icon, undefined);
@@ -165,6 +165,8 @@ test("Web and Mobile have separate compiler and CI boundaries", () => {
   assert.match(mobileCi, /FanMind Mobile CI/);
   assert.match(mobileCi, /working-directory: apps\/mobile/);
   assert.match(mobileCi, /Build Android JavaScript bundle/);
+  assert.match(mobileCi, /Build iOS JavaScript bundle/);
+  assert.match(mobileCi, /Verify Android and iOS native prebuild/);
   assert.match(mobileReadme, /keine umverpackte Website/i);
   assert.match(mobileReadme, /eigene Releases/i);
 });

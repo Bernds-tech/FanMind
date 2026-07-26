@@ -8,6 +8,8 @@
     "userInterfaceStyle": "dark",
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      "expo-system-ui",
       [
         "expo-secure-store",
         {
@@ -22,11 +24,7 @@
           "backgroundColor": "#020712",
           "image": "./assets/branding/fanmind-wordmark.png",
           "imageWidth": 300,
-          "resizeMode": "contain",
-          "dark": {
-            "backgroundColor": "#020712",
-            "image": "./assets/branding/fanmind-wordmark.png"
-          }
+          "resizeMode": "contain"
         }
       ]
     ],

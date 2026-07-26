@@ -26,10 +26,12 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - vollständige Account-Löschanfrage in Mobile sowie öffentlicher Webressourcenpfad;
 - authentifizierter Status/Widerruf und service-role-only Request-Queue;
 - manueller Dry-Run-first Account-Löschprocessor ohne Timer;
-- getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-Export und Architekturgrenze;
+- eigener SDK-57-Development-Client über `expo-dev-client`;
+- getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-/iOS-JavaScript-Export, isoliertem nativen Android-/iOS-Prebuild, echtem Android-Debug-APK, codesign-freier iOS-Simulator-App und Architekturgrenze;
 - native Push-Konfigurationsgrundlage mit minimal validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; keine Berechtigungsabfrage, Token-Registrierung oder Zustellung;
-- native Splashscreen-Konfiguration für hellen und dunklen Modus mit der bestätigten FanMind-Wortmarke;
-- `development`, `preview` und `production` in `apps/mobile/eas.json`.
+- konfliktfreie native Splashscreen-Konfiguration mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
+- explizite EAS-Umgebungen für `development`, `preview` und `production`;
+- Android-Debug-/iOS-Simulator-Validierung ohne Release-/Store-Credentials, die ausdrücklich kein signierter Beta-Build ist.
 
 ## Passwort-Recovery
 
@@ -130,21 +132,69 @@ Der noch unsignierte App-Kern kann bereits auf einem Android-Telefon geprüft we
 2. auf dem Rechner Node.js `>=22.13.0` und Git bereitstellen;
 3. Repository klonen, in `apps/mobile` wechseln und `npm ci` ausführen;
 4. `.env.example` nach `.env.local` kopieren und ausschließlich die öffentlichen Supabase-URL, den öffentlichen Anon-/Publishable-Key und `https://fanmind.ch` als API-URL eintragen;
-5. `npm run check` und danach `npx expo start --go` ausführen;
+5. `npm run check` und danach `npm run start:go` ausführen;
 6. Rechner und Telefon in dasselbe WLAN bringen und den QR-Code mit Expo Go scannen;
 7. falls das lokale Netzwerk blockiert, `@expo/ngrok` installieren und `npx expo start --go --tunnel` verwenden.
 
-Solange echtes Staging fehlt, darf dieser Vorabtest nur mit einem eigens dafür vorgesehenen Testkonto erfolgen. Expo Go ersetzt keinen signierten Beta-Build: finales Icon/Splashscreen, eigenständige Installation, verlässliche Deep Links, Push und Store-Verhalten müssen später mit dem signierten APK/AAB geprüft werden.
+Solange echtes Staging fehlt, darf dieser Vorabtest nur mit einem eigens dafür vorgesehenen Testkonto erfolgen. Expo Go ersetzt keinen signierten Beta-Build: finales Icon/Splashscreen, eigenständige Installation, verlässliche Deep Links, Push und Store-Verhalten müssen später mit dem signierten APK/AAB geprüft werden. Für native Funktionen ist der eigene Development-Client verbindlich; der Standardbefehl `npm run start` startet deshalb mit `--dev-client`.
 
 ## EAS-Konfiguration
 
 Vorhandene Profile in `apps/mobile/eas.json`:
 
-- `development`: interne Distribution; Android APK;
-- `preview`: interne Distribution; Android APK;
-- `production`: Store-Build mit automatischer Buildnummer;
+- `development`: echter Development-Client, interne Distribution, Android APK, EAS-Umgebung `development`;
+- `native-validation`: erbt `development`, überspringt Signing-Credentials und erzeugt auf iOS ausschließlich einen Simulator-Build;
+- `preview`: interne signierte Beta-Distribution, Android APK, EAS-Umgebung `preview`;
+- `production`: Store-Build mit automatischer Buildnummer und EAS-Umgebung `production`;
+- alle Profile verwenden Node.js `22.13.1`;
 - EAS CLI mindestens `19.1.0`;
 - Build nur aus einem Commit (`requireCommit=true`).
+
+Die öffentliche App-Konfiguration wird in EAS je Umgebung mit exakt diesen
+Namen angelegt, aber nicht mit geratenen Werten im Repository:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL
+EXPO_PUBLIC_SUPABASE_ANON_KEY
+EXPO_PUBLIC_FANMIND_API_URL
+```
+
+`EXPO_PUBLIC_*`-Werte werden in die App eingebettet und dürfen daher niemals
+Service-Role-, OpenAI-, Stripe- oder andere Server-Secrets enthalten.
+
+### Native-Prüfung ohne Release-/Store-Credentials
+
+Der lokale Prebuild-Nachweis benötigt weder EAS-Login noch Signing:
+
+```bash
+cd apps/mobile
+npm run native:prebuild:check
+```
+
+Er generiert Android und iOS in einem temporären Verzeichnis, prüft Package- und
+Bundle-ID, Deep-Link-Schema, SecureStore-Backup-Regeln, Verschlüsselungsangabe,
+dunkles App-Theme, Splashscreen und das Fehlen serverseitiger Secret-Bezeichner
+und entfernt den temporären Stand anschließend.
+
+Die GitHub-Native-CI generiert danach frische native Projekte, kompiliert
+`assembleDebug` auf Android mit dem lokalen Standard-Debug-Key und baut mit
+`CODE_SIGNING_ALLOWED=NO` eine iOS-Simulator-App. Die Artefakte heißen
+ausdrücklich `not-for-release`, verwenden keine Release-/Store-Credentials und
+belegen weder Play-Internal-Testing noch TestFlight.
+
+Nach `eas init` kann zusätzlich das credentialfreie EAS-Profil verwendet werden:
+
+```bash
+cd apps/mobile
+npx eas-cli@latest build --platform android --profile native-validation
+npx eas-cli@latest build --platform ios --profile native-validation
+```
+
+Das Android-Artefakt ist ein nicht mit Production-/Store-Credentials signierter
+Debug-Validierungsbuild; das iOS-Artefakt läuft nur im Simulator. Beides ist
+**kein signierter Beta-Build**, keine TestFlight-Freigabe und keine
+Store-Einreichung. Auch diese Cloud-Builds brauchen ein Expo-Konto und eine
+echte EAS-Projekt-ID.
 
 ### Einmalige externe Einrichtung
 
@@ -152,12 +202,13 @@ Noch nicht durch Code erledigt:
 
 1. Expo-Organisation beziehungsweise Expo-Konto festlegen.
 2. In `apps/mobile` `eas init` ausführen und die echte EAS-Projekt-ID in die Expo-Konfiguration schreiben lassen.
-3. Android-Keystore kontrolliert durch EAS erzeugen oder einen bestätigten bestehenden Keystore hinterlegen.
-4. Für iOS ein bezahltes Apple-Developer-Konto bereitstellen.
-5. Für interne iOS-Ad-hoc-Builds Testgeräte registrieren.
-6. App in App Store Connect und Google Play Console anlegen.
-7. App Store Connect App-ID und Google-Service-Account erst danach in die Submit-Konfiguration aufnehmen.
-8. Zugriff auf interne Build-URLs im Expo-Projekt auf authentifizierte Teammitglieder begrenzen.
+3. In EAS die drei Umgebungen `development`, `preview` und `production` mit den jeweils richtigen öffentlichen FanMind-Werten anlegen.
+4. Android-Keystore kontrolliert durch EAS erzeugen oder einen bestätigten bestehenden Keystore hinterlegen.
+5. Für iOS ein bezahltes Apple-Developer-Konto bereitstellen.
+6. Für interne iOS-Ad-hoc-Builds Testgeräte registrieren.
+7. App in App Store Connect und Google Play Console anlegen.
+8. App Store Connect App-ID und Google-Service-Account erst danach in die Submit-Konfiguration aufnehmen.
+9. Zugriff auf interne Build-URLs im Expo-Projekt auf authentifizierte Teammitglieder begrenzen.
 
 Keine erfundene EAS-Projekt-ID, Apple-Team-ID, App-Store-ID oder Google-Service-Account-Datei eintragen.
 
@@ -200,10 +251,11 @@ Die anschließende Übertragung benötigt echte Store-Konten. EAS Submit lädt B
 
 Die bestätigte FanMind-Wortmarke liegt unverändert unter
 `apps/mobile/assets/branding/fanmind-wordmark.png` und wird über das
-`expo-splash-screen`-Config-Plugin nativ eingebunden. Heller und dunkler
-Systemmodus verwenden bewusst denselben dunklen Marken-Hintergrund. Die Quelle
-ist 754 × 252 Pixel groß und wird mit 300 Pixel Bildbreite ausschließlich
-verkleinert, nicht hochskaliert.
+`expo-splash-screen`-Config-Plugin nativ eingebunden. Das über
+`expo-system-ui` verbindlich dunkle App-Theme verwendet genau eine
+Splashscreen-Variante, damit iOS keine widersprüchlichen Interface-Style-Werte
+generiert. Die Quelle ist 754 × 252 Pixel groß und wird mit 300 Pixel
+Bildbreite ausschließlich verkleinert, nicht hochskaliert.
 
 Die Wortmarke ist ausdrücklich **kein** Store-App-Icon. Android Adaptive Icon,
 Android Legacy Icon und iOS App Icon bleiben ohne eine bestätigte hochauflösende
@@ -219,6 +271,7 @@ noch manuell in den Store-Portalen zu bestätigenden Datenschutzangaben stehen i
 - finale App-Icons aus einer bestätigten hochauflösenden runden/quadratischen Quelle;
 - echter Recovery-E-Mail-/Gerätetest nach Supabase-Redirect-Freigabe;
 - EAS-Projekt-ID und Signing Credentials;
+- reale öffentliche EAS-Werte in getrennten Development-/Preview-/Production-Umgebungen;
 - Android Internal Testing und iOS TestFlight;
 - Push-Berechtigung, Token-Registrierung und echte Follow-up-Zustellung im signierten Build;
 - realer Account-Löschantrag/Widerruf auf signiertem Android-/iOS-Gerät;
