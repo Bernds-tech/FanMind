@@ -31,13 +31,14 @@ jobs:
           SOURCE_DIR="/var/www/fanmind"
           cd "$SOURCE_DIR"
 
-          # Temporary pre-sales beta: keep the approved 1 EUR/day lifecycle test
-          # reachable until all eight completion blocks are finished. Remove this
-          # block and set the flag to false before the real sales launch.
-          if grep -Eq '^[[:space:]]*FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN[[:space:]]*=' .env.production; then
-            sed -i -E 's/^[[:space:]]*FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN[[:space:]]*=.*/FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true/' .env.production
-          else
-            printf '\nFANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=true\n' >> .env.production
+          # Seed the approved pre-sales beta once. The admin switch owns the
+          # value afterwards, so deploys never overwrite an explicit admin choice.
+          RUNTIME_SETTINGS_FILE="$SOURCE_DIR/.fanmind-runtime-settings.json"
+          if [ ! -e "$RUNTIME_SETTINGS_FILE" ]; then
+            RUNTIME_SETTINGS_TMP="$(mktemp "$SOURCE_DIR/.fanmind-runtime-settings.XXXXXX")"
+            printf '{"publicDailyTestPlanEnabled":true}\n' > "$RUNTIME_SETTINGS_TMP"
+            chmod 0600 "$RUNTIME_SETTINGS_TMP"
+            mv "$RUNTIME_SETTINGS_TMP" "$RUNTIME_SETTINGS_FILE"
           fi
 
           echo "Deploying FanMind from origin/main on Exoscale..."
