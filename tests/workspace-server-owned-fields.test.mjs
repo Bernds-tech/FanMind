@@ -224,6 +224,14 @@ test("Stripe webhook verifies the target before PATCH and referral sync", async 
   );
   assert.match(
     billing,
+    /isMissingWorkspaceExpandColumn\(new Error\(errorMessage\)\)[\s\S]*withoutWorkspaceExpandColumns\(body\)[\s\S]*stripeBillingPatchDecision/u,
+  );
+  assert.match(
+    billing,
+    /PostgREST rejects the complete PATCH[\s\S]*Retry[\s\S]*already-deployed billing columns/u,
+  );
+  assert.match(
+    billing,
     /verifyManualSuspendedBillingState[\s\S]*select", "id,billing_status"[\s\S]*stripeBillingManualSuspensionDecision/u,
   );
   assert.match(
@@ -330,6 +338,10 @@ test("app-first bridge and expand migration preserve the rollout boundary", asyn
   assert.match(
     runbook,
     /RPC-kompatiblen App-Brückenstand deployen[\s\S]*Production-Preflight[\s\S]*additive Migration[\s\S]*PostgREST-Schema-Cache nachweisen/u,
+  );
+  assert.match(
+    runbook,
+    /Postconditions müssen erfolgreich sein, bevor der Rollout über[\s\S]*Schritt A hinaus fortgesetzt und Schritt B freigegeben wird[\s\S]*App-Brückenstand[\s\S]*bereits vor Schritt A deployt/u,
   );
   const compatibilityDeployIndex = runbook.indexOf(
     "den RPC-kompatiblen App-Brückenstand deployen",
