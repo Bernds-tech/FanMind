@@ -1,6 +1,7 @@
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
+  getUserWorkspaceMembershipDashboard,
   getWorkspaceContact,
   type ContactRow,
   type SupabaseServerUser,
@@ -84,6 +85,43 @@ export async function requireAuthorizedWorkspace(
 
   assertWorkspaceId(workspaceResult.workspace.id);
   return { user: data.user, workspace: workspaceResult.workspace };
+}
+
+export async function requireAuthorizedWorkspaceMember(
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext> {
+  const { data } = await getSupabaseServerUser(accessToken);
+  if (!data.user) {
+    throw new WorkspaceAuthorizationError(
+      "Keine aktive User-Session gefunden.",
+      "unauthenticated",
+    );
+  }
+
+  const ownerWorkspaceResult = await getUserWorkspaceDashboard(
+    data.user,
+    accessToken,
+  );
+  if (ownerWorkspaceResult.workspace) {
+    assertWorkspaceId(ownerWorkspaceResult.workspace.id);
+    return { user: data.user, workspace: ownerWorkspaceResult.workspace };
+  }
+
+  const memberWorkspaceResult = await getUserWorkspaceMembershipDashboard(
+    data.user,
+    accessToken,
+  );
+  if (!memberWorkspaceResult.workspace) {
+    throw new WorkspaceAuthorizationError(
+      memberWorkspaceResult.error?.message ??
+        ownerWorkspaceResult.error?.message ??
+        "Kein autorisierter Workspace gefunden.",
+      "workspace_missing",
+    );
+  }
+
+  assertWorkspaceId(memberWorkspaceResult.workspace.id);
+  return { user: data.user, workspace: memberWorkspaceResult.workspace };
 }
 
 export async function requireContactInAuthorizedWorkspace(

@@ -68,9 +68,21 @@ function normalizedProfile(profile, assignIds) {
 }
 
 export function normalizeAiPromptSettings(input, { assignIds = false } = {}) {
-  const source =
-    input && typeof input === "object" && !Array.isArray(input) ? input : {};
-  const rawProfiles = Array.isArray(source.profiles) ? source.profiles : [];
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new AiPromptPolicyError("settings_invalid");
+  }
+  const source = input;
+  if (
+    Object.hasOwn(source, "companyPrompt") &&
+    typeof source.companyPrompt !== "string"
+  ) {
+    throw new AiPromptPolicyError("company_prompt_invalid");
+  }
+  if (Object.hasOwn(source, "profiles") && !Array.isArray(source.profiles)) {
+    throw new AiPromptPolicyError("profiles_invalid");
+  }
+
+  const rawProfiles = source.profiles ?? [];
   if (rawProfiles.length > AI_PROMPT_PROFILE_MAX_COUNT) {
     throw new AiPromptPolicyError("too_many_profiles");
   }

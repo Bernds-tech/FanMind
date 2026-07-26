@@ -5,8 +5,11 @@ import test from "node:test";
 const files = {
   migration: "supabase/migrations/20260726213000_workspace_ai_prompt_settings.sql",
   policy: "src/lib/aiPromptPolicy.mjs",
+  policyTypes: "src/lib/aiPromptPolicy.d.ts",
   storage: "src/lib/workspaceAiPrompts.ts",
   settingsRoute: "src/app/api/ai/prompt-settings/route.ts",
+  workspaceAuthorization: "src/lib/workspaceAuthorization.ts",
+  supabaseServer: "src/lib/supabase/server.ts",
   settingsUi: "src/app/settings/ai-usage/AiPromptSettings.tsx",
   settingsPage: "src/app/settings/ai-usage/page.tsx",
   replyUi: "src/app/fans/[id]/AiReplySuggestions.tsx",
@@ -53,7 +56,7 @@ test("workspace prompt storage is tenant-scoped and mutations remain server-only
 test("only owner/admin can save bounded prompts from a trusted mutation origin", async () => {
   const source = await sources();
 
-  assert.match(source.settingsRoute, /requireAuthorizedWorkspace/u);
+  assert.match(source.settingsRoute, /requireAuthorizedWorkspaceMember/u);
   assert.match(
     source.settingsRoute,
     /workspace\.owner_user_id === context\.user\.id/u,
@@ -64,6 +67,42 @@ test("only owner/admin can save bounded prompts from a trusted mutation origin",
   assert.match(source.policy, /AI_COMPANY_PROMPT_MAX_CHARS = 3_000/u);
   assert.match(source.policy, /AI_PROMPT_PROFILE_MAX_CHARS = 1_500/u);
   assert.match(source.policy, /AI_PROMPT_PROFILE_MAX_COUNT = 8/u);
+  assert.match(
+    source.settingsRoute,
+    /Object\.hasOwn\(candidate, "companyPrompt"\)[\s\S]*Object\.hasOwn\(candidate, "profiles"\)[\s\S]*typeof candidate\.companyPrompt === "string"[\s\S]*Array\.isArray\(candidate\.profiles\)/u,
+  );
+  assert.match(source.settingsRoute, /if \(!isPromptSettingsPayload\(payload\)\)/u);
+});
+
+test("workspace members can read prompt settings without receiving mutation rights", async () => {
+  const source = await sources();
+
+  assert.match(
+    source.workspaceAuthorization,
+    /getUserWorkspaceMembershipDashboard/u,
+  );
+  assert.match(
+    source.supabaseServer,
+    /postgrestSelect<WorkspaceMemberRow>\(\s*"workspace_members"[\s\S]*\[\["user_id", user\.id\]\]/u,
+  );
+  assert.match(
+    source.supabaseServer,
+    /postgrestSelect<WorkspaceBackfillRow>\(\s*"workspaces"[\s\S]*\[\["id", membershipResult\.data\.workspace_id\]\]/u,
+  );
+  assert.match(
+    source.settingsRoute,
+    /if \(!canManage\(context\)\)[\s\S]*workspace_owner_required/u,
+  );
+});
+
+test("prompt context types match the nullable runtime contract", async () => {
+  const source = await sources();
+
+  assert.match(source.policyTypes, /companyPrompt: string \| null/u);
+  assert.match(source.policyTypes, /profileId: string \| null/u);
+  assert.match(source.policyTypes, /profileName: string \| null/u);
+  assert.match(source.policyTypes, /profilePrompt: string \| null/u);
+  assert.doesNotMatch(source.policyTypes, /profileInstruction/u);
 });
 
 test("reply generation accepts only a profile id and loads prompt content server-side", async () => {

@@ -1011,6 +1011,65 @@ export async function getUserWorkspaceDashboard(
   );
 }
 
+export async function getUserWorkspaceMembershipDashboard(
+  user: SupabaseServerUser,
+  accessTokenOverride?: string,
+): Promise<WorkspaceDashboardResult> {
+  const accessToken = accessTokenOverride ?? (await getAccessToken());
+
+  if (!accessToken) {
+    return workspaceDashboardError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const membershipResult = await postgrestSelect<WorkspaceMemberRow>(
+    "workspace_members",
+    accessToken,
+    "id,workspace_id,role",
+    [["user_id", user.id]],
+    1,
+    true,
+    "id.asc",
+  );
+
+  if (membershipResult.error) {
+    return workspaceDashboardError(
+      `Workspace-Mitgliedschaft konnte nicht geprüft werden: ${membershipResult.error.message}`,
+    );
+  }
+  if (!membershipResult.data) {
+    return workspaceDashboardError(
+      "Keine Workspace-Mitgliedschaft gefunden.",
+    );
+  }
+
+  const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
+    "workspaces",
+    accessToken,
+    WORKSPACE_COLUMNS,
+    [["id", membershipResult.data.workspace_id]],
+    1,
+    true,
+  );
+
+  if (workspaceResult.error || !workspaceResult.data) {
+    return workspaceDashboardError(
+      workspaceResult.error
+        ? `Workspace konnte nicht geladen werden: ${workspaceResult.error.message}`
+        : "Workspace konnte nicht geladen werden.",
+    );
+  }
+
+  return {
+    workspace: {
+      ...workspaceResult.data,
+      role: membershipResult.data.role,
+    },
+    error: null,
+  };
+}
+
 export async function getWorkspaceSocialConnections(
   workspaceId: string,
 ): Promise<SocialConnectionsResult> {

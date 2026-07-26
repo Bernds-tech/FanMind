@@ -8,7 +8,7 @@ import {
   getOptionalBearerAccessToken,
 } from "@/lib/requestAccessToken";
 import {
-  requireAuthorizedWorkspace,
+  requireAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
 import {
@@ -87,7 +87,7 @@ async function authenticate(request: Request) {
     }
     throw error;
   }
-  const context = await requireAuthorizedWorkspace(accessToken);
+  const context = await requireAuthorizedWorkspaceMember(accessToken);
   return { ...context, accessToken };
 }
 
@@ -95,6 +95,26 @@ function canManage(context: Awaited<ReturnType<typeof authenticate>>) {
   return (
     context.workspace.owner_user_id === context.user.id ||
     isPlatformAdminEmail(context.user.email)
+  );
+}
+
+type PromptSettingsPayload = {
+  companyPrompt: string;
+  profiles: unknown[];
+};
+
+function isPromptSettingsPayload(
+  value: unknown,
+): value is PromptSettingsPayload {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    Object.hasOwn(candidate, "companyPrompt") &&
+    Object.hasOwn(candidate, "profiles") &&
+    typeof candidate.companyPrompt === "string" &&
+    Array.isArray(candidate.profiles)
   );
 }
 
@@ -182,10 +202,8 @@ export async function PUT(request: Request) {
       );
     }
 
-    const payload = (await request.json().catch(() => null)) as
-      | { companyPrompt?: unknown; profiles?: unknown }
-      | null;
-    if (!payload) {
+    const payload = (await request.json().catch(() => null)) as unknown;
+    if (!isPromptSettingsPayload(payload)) {
       return response(
         { ok: false, code: "invalid_payload", error: "Ungültige Eingabe." },
         400,
