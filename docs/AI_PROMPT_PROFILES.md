@@ -53,4 +53,6 @@ Die additive Migration
 Bearbeitung angewendet sein. Fehlt die Tabelle, bleibt die bestehende
 Antwortgenerierung funktionsfähig, verwendet aber keine eigenen
 Workspace-Prompts; die Einstellungsseite meldet die Promptverwaltung als
-nicht verfügbar.
+nicht verfügbar. Prüfung, kontrollierte Anwendung und Postflight sind unter
+`docs/operations/AI_PROMPT_MIGRATION.md` beschrieben; ein Web-Deploy wendet
+die Migration niemals automatisch an.
