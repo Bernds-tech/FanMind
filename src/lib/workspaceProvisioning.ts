@@ -6,7 +6,7 @@ export type WorkspaceProvisioningRpcRow = {
   created: boolean;
 };
 
-const WORKSPACE_EXPAND_COLUMNS = [
+export const WORKSPACE_EXPAND_COLUMNS = [
   "payment_terms_version",
   "payment_terms_accepted_at",
   "payment_terms_accepted_by_user_id",
@@ -15,6 +15,15 @@ const WORKSPACE_EXPAND_COLUMNS = [
   "stripe_mandate_id",
   "billing_note",
 ] as const;
+
+export function withoutWorkspaceExpandColumns<T>(
+  values: Record<string, T>,
+): Record<string, T> {
+  const expandColumns = new Set<string>(WORKSPACE_EXPAND_COLUMNS);
+  return Object.fromEntries(
+    Object.entries(values).filter(([column]) => !expandColumns.has(column)),
+  );
+}
 
 export function isMissingWorkspaceProvisioningRpc(
   error: Error | null | undefined,

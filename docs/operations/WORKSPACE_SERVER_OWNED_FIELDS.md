@@ -211,7 +211,10 @@ psql "$SUPABASE_DB_URL" \
 ```
 
 Danach PostgRESTs Schema-Cache gemäß Supabase-Betriebsweg neu laden. Alle
-folgenden Postconditions müssen vor dem App-Deploy erfolgreich sein.
+folgenden Postconditions müssen erfolgreich sein, bevor der Rollout über
+Schritt A hinaus fortgesetzt und Schritt B freigegeben wird. Der
+RPC-kompatible App-Brückenstand wurde gemäß der verbindlichen Reihenfolge
+bereits vor Schritt A deployt.
 
 ### Postcondition: Indizes
 

@@ -5,6 +5,10 @@ import {
 } from "@/lib/supabase/config";
 import type { PlanId } from "@/config/plans";
 import {
+  isMissingWorkspaceExpandColumn,
+  withoutWorkspaceExpandColumns,
+} from "@/lib/workspaceProvisioning";
+import {
   STRIPE_BILLING_ALLOWED,
   STRIPE_BILLING_BLOCKED,
   STRIPE_BILLING_RETRYABLE_ERROR,
@@ -595,29 +599,51 @@ export async function updateWorkspaceBillingDefensively(
         "not.eq.manual_suspended",
       );
     }
-    const response = await fetch(updateUrl, {
-      method: "PATCH",
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
-      body: JSON.stringify(body),
-      cache: "no-store",
-      signal: AbortSignal.timeout(12000),
-    });
-    let responseRows: unknown = [];
-    let bodyParsed = true;
-    try {
-      responseRows = await response.json();
-    } catch {
-      bodyParsed = false;
+    const patch = async (patchBody: Record<string, unknown>) => {
+      const response = await fetch(updateUrl, {
+        method: "PATCH",
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(patchBody),
+        cache: "no-store",
+        signal: AbortSignal.timeout(12000),
+      });
+      let responseRows: unknown = [];
+      let bodyParsed = true;
+      try {
+        responseRows = await response.json();
+      } catch {
+        bodyParsed = false;
+      }
+      return { response, responseRows, bodyParsed };
+    };
+    let patchResult = await patch(body);
+    const errorMessage =
+      patchResult.bodyParsed &&
+      patchResult.responseRows &&
+      typeof patchResult.responseRows === "object" &&
+      "message" in patchResult.responseRows &&
+      typeof patchResult.responseRows.message === "string"
+        ? patchResult.responseRows.message
+        : "";
+    if (
+      !patchResult.response.ok &&
+      isMissingWorkspaceExpandColumn(new Error(errorMessage))
+    ) {
+      // Deploy-before-migrate bridge: PostgREST rejects the complete PATCH
+      // atomically when Step A columns are not yet in its schema cache. Retry
+      // once with only the already-deployed billing columns so Stripe state is
+      // still persisted during the compatibility window.
+      patchResult = await patch(withoutWorkspaceExpandColumns(body));
     }
     const updateDecision = stripeBillingPatchDecision({
-      responseOk: response.ok,
-      bodyParsed,
-      rows: responseRows,
+      responseOk: patchResult.response.ok,
+      bodyParsed: patchResult.bodyParsed,
+      rows: patchResult.responseRows,
       workspaceId,
     });
     if (updateDecision === STRIPE_BILLING_ZERO_ROWS) {
@@ -634,7 +660,7 @@ export async function updateWorkspaceBillingDefensively(
     if (updateDecision !== STRIPE_BILLING_UPDATED) {
       console.warn(
         "Stripe billing update unavailable",
-        response.status,
+        patchResult.response.status,
       );
     }
     return updateDecision;
