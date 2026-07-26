@@ -7,6 +7,7 @@ const root = process.cwd();
 
 const checkedFiles = [
   ".env.example",
+  ".github/workflows/deploy-fanmind.yml",
   "src/config/aiTiers.mjs",
   "tests/ai-tier-policy.test.mjs",
   "README.md",
