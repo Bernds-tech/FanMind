@@ -12,7 +12,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Production server: Exoscale instance `fanmind-prod-01`
 - Production SSH user: `ubuntu`
 - Production path: `/var/www/fanmind`
-- Process manager: PM2 process named `fanmind`
+- Process manager: one PM2 cluster worker named `fanmind`, loaded from the stable `/var/www/fanmind-current` release symlink
 - Reverse proxy: nginx
 - Environment file on server: `/var/www/fanmind/.env.production`
 - GitHub deployment workflow: `.github/workflows/deploy-fanmind.yml`
@@ -27,12 +27,10 @@ The deployment workflow deploys `main` on the Exoscale server with:
 ```bash
 cd /var/www/fanmind
 git fetch --prune origin main
-git reset --hard origin/main
-npm ci --no-audit --no-fund
-npm run build
-pm2 restart fanmind --update-env
-pm2 save
-sudo nginx -t
+RELEASE_COMMIT="$(git rev-parse origin/main)"
+export FANMIND_RELEASE_COMMIT="$RELEASE_COMMIT"
+FANMIND_SOURCE_DIR=/var/www/fanmind \
+  bash scripts/operations/deploy-isolated-release.sh "$RELEASE_COMMIT"
 ```
 
 Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase keys, OpenAI keys, Stripe keys, runner tokens, and snapshot URLs out of GitHub.

@@ -8,7 +8,9 @@ The isolated release path builds a complete release in a separate directory whil
 
 ## Status
 
-The isolated path is **active on Production since 2026-07-19**.
+The isolated path is **active on Production since 2026-07-19**. The rolling
+PM2 release contract was added after a short nginx `502` was observed during
+the former delete/start switch.
 
 Production uses:
 
@@ -31,7 +33,7 @@ If the isolated-deploy flag is absent or not exactly `true`, the workflow falls 
   Immutable built application release
 
 /var/www/fanmind-current
-  Symlink to the last successful isolated release
+  Atomic symlink used as the stable PM2 working directory
 ```
 
 The release directory receives the exact Git tree for the expected `origin/main` commit. `.env.production` is linked from the protected source checkout and is never copied into Git or logs.
@@ -54,15 +56,29 @@ npm run build
 
 6. Validate Next.js build metadata and nginx configuration.
 7. Read the current PM2 working directory and current live release commit.
-8. Switch PM2 to the built release directory.
-9. Test `/login` and the full public smoke suite.
-10. On failure, restore the previous PM2 working directory and release commit.
-11. After a successful smoke test, synchronize `/var/www/fanmind` to the deployed commit.
-12. Update `/var/www/fanmind-current` and retain a limited number of release directories.
+8. Atomically point `/var/www/fanmind-current` at the built release.
+9. Reload the single PM2 cluster worker through the stable symlink. PM2 starts
+   the replacement worker before draining the old worker.
+10. Verify that exactly one `fanmind` process is online in `cluster_mode`, uses
+    the stable symlink as `pm_cwd`, and carries the exact release commit.
+11. Test `/login` and the full public smoke suite.
+12. On failure, restore the previous symlink target and release commit through
+    the same rolling mechanism. The old legacy start remains only as a
+    fail-safe fallback.
+13. After a successful smoke test, synchronize `/var/www/fanmind` to the deployed commit.
+14. Retain a limited number of release directories.
 
 ## Safety properties
 
-- The old application remains available throughout dependency installation and build.
+- The old application remains available throughout dependency installation,
+  build and every steady-state release switch.
+- Production keeps one steady-state Next.js worker. PM2 briefly overlaps the
+  old and new worker only while reloading, so nginx never loses its upstream.
+- The one-time transition from the legacy fork process to the rolling cluster
+  contract may still require a controlled delete/start. Every later isolated
+  deploy is required to use `pm2 reload` without deleting the live process.
+- Next.js receives up to 30 seconds to drain in-flight requests, matching its
+  documented graceful-shutdown guidance.
 - The target commit must still equal `origin/main` immediately before building.
 - The new PM2 process starts only from a completed release directory.
 - Login and public route checks must succeed before the release is accepted.
@@ -91,8 +107,11 @@ sudo nginx -t
 Expected PM2 path:
 
 ```text
-/var/www/fanmind-releases/<deployed-commit>
+/var/www/fanmind-current
 ```
+
+Expected PM2 mode: `cluster_mode`, one online process, with
+`FANMIND_RELEASE_COMMIT` equal to `/api/version`.
 
 ## Disable or return to legacy deployment
 
