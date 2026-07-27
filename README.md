@@ -33,6 +33,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   zu 100/200 Euro pro Monat sowie einen synthetischen Workspace mit
   unterschiedlichem Owner und Member. Er aktiviert keine Schreibfreigabe,
   liest keine Entitlement-Daten und wendet keine Migration an.
+- Restore-Ressourcencheck: ein manueller, nur auf `main` ausführbarer
+  checksum-only Workflow prüft auf einem getrennten `fanmind-restore`-Runner
+  das isolierte Ziel und das verschlüsselte Full-Backup. Er verbindet sich
+  nicht mit PostgreSQL, entschlüsselt keine Daten und aktiviert keine
+  Schreibfreigabe; der echte Restore-Drill bleibt extern offen.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.

@@ -115,6 +115,53 @@ For a standalone server-config backup, it validates gzip/tar structure and safe 
 
 ## 4. Database restore drill
 
+### Read-only resource readiness before the drill
+
+Before enabling either restore write gate, run the manual GitHub workflow
+`FanMind Restore Drill Resource Readiness` from `main`. It is bound to the
+GitHub Environment `restore-drill` and an isolated self-hosted runner carrying
+the exclusive label `fanmind-restore`.
+
+The workflow requires the confirmation
+`verify-isolated-restore-resources`. It verifies only:
+
+- the Staging/Test application and Supabase project are distinct from
+  Production;
+- the independently recorded restore database target uses a host distinct from
+  the Production database host;
+- direct Supabase database hosts match the confirmed isolated project;
+- no active `PG*` connection target, password or passfile can redirect the
+  check;
+- the selected encrypted `fanmind-full-*.tar.gz.age` artifact and its adjacent
+  checksum are regular, non-symlink files with a matching SHA-256.
+
+It does not connect to PostgreSQL, decrypt the backup, inspect customer data,
+enable `FANMIND_ENABLE_NON_PRODUCTION_WRITES`, enable
+`FANMIND_ENABLE_RESTORE_DRILL`, or invoke `pg_restore`. Required final line:
+
+```text
+RESTORE_DRILL_RESOURCE_READINESS=PASS
+```
+
+One-time external setup for the GitHub Environment `restore-drill`:
+
+- variables `FANMIND_RESTORE_APP_URL`,
+  `FANMIND_RESTORE_SUPABASE_PROJECT_REF`,
+  `FANMIND_PRODUCTION_SUPABASE_PROJECT_REF`,
+  `FANMIND_RESTORE_TARGET_DB_PORT`, `FANMIND_RESTORE_TARGET_DB_NAME`,
+  `FANMIND_PRODUCTION_DB_PORT` and `FANMIND_PRODUCTION_DB_NAME`;
+- secrets `FANMIND_RESTORE_SUPABASE_URL`,
+  `FANMIND_RESTORE_TARGET_DB_HOST`, `FANMIND_RESTORE_TARGET_DB_USER`,
+  `FANMIND_PRODUCTION_DB_HOST`, `FANMIND_PRODUCTION_DB_USER` and
+  `FANMIND_RESTORE_ARTIFACT_PATH`;
+- an isolated host with a checked-out repository, Node.js and read-only access
+  to the transferred encrypted artifact pair, registered only as
+  `fanmind-restore`.
+
+This readiness result does not count as a restore drill. Content verification,
+the transactional database restore, RLS checks, Storage sample, server-config
+inspection and cleanup evidence remain mandatory.
+
 ### Preconditions
 
 - isolated PostgreSQL instance or separate Supabase test project;

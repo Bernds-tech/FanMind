@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   access,
   chmod,
@@ -15,7 +16,9 @@ import { promisify } from "node:util";
 import test from "node:test";
 
 import {
+  RESTORE_READINESS_CONFIRMATION,
   RESTORE_TARGET_ACKNOWLEDGEMENT,
+  evaluateRestoreReadiness,
   evaluateRestoreTarget,
   normalizeHost,
   normalizePort,
@@ -23,6 +26,10 @@ import {
 
 const execFileAsync = promisify(execFile);
 const scriptPath = "scripts/operations/restore-target-preflight.mjs";
+const readinessScriptPath =
+  "scripts/operations/restore-drill-resource-readiness.mjs";
+const readinessWorkflowPath =
+  ".github/workflows/restore-drill-resource-readiness.yml";
 const runnerPath = "scripts/operations/run-database-restore-drill.sh";
 const runbookPath = "docs/operations/RESTORE_DRILL.md";
 const packagePath = "package.json";
@@ -58,6 +65,137 @@ function safeEnvironment(overrides = {}) {
     ...overrides,
   };
 }
+
+function safeReadinessEnvironment(overrides = {}) {
+  return safeEnvironment({
+    FANMIND_ENABLE_NON_PRODUCTION_WRITES: "false",
+    FANMIND_NON_PRODUCTION_WRITE_ACK: "",
+    FANMIND_ENABLE_RESTORE_DRILL: "false",
+    FANMIND_RESTORE_TARGET_ACK: "",
+    FANMIND_RESTORE_READINESS_CONFIRM: RESTORE_READINESS_CONFIRMATION,
+    PGHOST: "",
+    PGPORT: "",
+    PGDATABASE: "",
+    PGUSER: "",
+    PGPASSFILE: "",
+    ...overrides,
+  });
+}
+
+test("read-only restore readiness confirms isolation without enabling a restore", () => {
+  const result = evaluateRestoreReadiness(safeReadinessEnvironment());
+
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, "isolated-restore-readiness");
+  assert.equal(result.environmentBoundaryOk, true);
+  assert.equal(result.targetConfirmed, true);
+  assert.equal(result.productionHostSeparated, true);
+  assert.equal(result.hiddenTargetOverridesClear, true);
+
+  const unsafe = evaluateRestoreReadiness(
+    safeReadinessEnvironment({
+      FANMIND_RUNTIME_ENVIRONMENT: "production",
+      NEXT_PUBLIC_APP_URL: "https://fanmind.ch",
+      NEXT_PUBLIC_SUPABASE_URL:
+        "https://productionref123.supabase.co",
+      FANMIND_TARGET_SUPABASE_PROJECT_REF: "productionref123",
+      FANMIND_ENABLE_RESTORE_DRILL: "true",
+      FANMIND_RESTORE_TARGET_ACK: RESTORE_TARGET_ACKNOWLEDGEMENT,
+      FANMIND_RESTORE_TARGET_DB_HOST: "db.production.internal",
+    }),
+  );
+  assert.equal(unsafe.ok, false);
+  assert.ok(unsafe.errors.includes("runtime_environment"));
+  assert.ok(unsafe.errors.includes("production_boundary"));
+  assert.ok(unsafe.errors.includes("restore_write_gate"));
+  assert.ok(unsafe.errors.includes("production_database_target"));
+
+  const incomplete = evaluateRestoreReadiness(
+    safeReadinessEnvironment({
+      FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: "",
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: "",
+    }),
+  );
+  assert.equal(incomplete.ok, false);
+  assert.ok(incomplete.errors.includes("production_boundary"));
+  assert.ok(incomplete.errors.includes("non_production_write_gate"));
+});
+
+test("restore resource runner verifies only the encrypted full-backup checksum", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-readiness-"));
+  try {
+    const secretMarker = "never-print-restore-resource";
+    const artifactPath = join(
+      root,
+      "fanmind-full-20260727T120000Z.tar.gz.age",
+    );
+    const content = Buffer.from(`encrypted-${secretMarker}`);
+    const digest = createHash("sha256").update(content).digest("hex");
+    await writeFile(artifactPath, content);
+    await writeFile(
+      `${artifactPath}.sha256`,
+      `${digest}  fanmind-full-20260727T120000Z.tar.gz.age\n`,
+    );
+    const before = await readFile(artifactPath);
+
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [readinessScriptPath],
+      {
+        env: {
+          ...process.env,
+          ...safeReadinessEnvironment({
+            FANMIND_RESTORE_ARTIFACT_PATH: artifactPath,
+          }),
+        },
+      },
+    );
+    const output = `${stdout}\n${stderr}`;
+
+    assert.match(output, /RESTORE_READINESS_MODE=checksum_only/);
+    assert.match(output, /RESTORE_READINESS_DATABASE_CONNECTION=not_attempted/);
+    assert.match(output, /RESTORE_READINESS_DECRYPTION=not_attempted/);
+    assert.match(output, /RESTORE_READINESS_WRITES=disabled/);
+    assert.match(output, /RESTORE_DRILL_RESOURCE_READINESS=PASS/);
+    assert.doesNotMatch(output, new RegExp(secretMarker));
+    assert.doesNotMatch(output, new RegExp(digest));
+    assert.doesNotMatch(output, /fanmind-full-20260727/);
+    assert.deepEqual(await readFile(artifactPath), before);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("manual restore readiness workflow is main-only and write-disabled", async () => {
+  const [workflow, runbook, packageSource] = await Promise.all([
+    readFile(readinessWorkflowPath, "utf8"),
+    readFile(runbookPath, "utf8"),
+    readFile(packagePath, "utf8"),
+  ]);
+  const packageJson = JSON.parse(packageSource);
+
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(
+    workflow,
+    /inputs\.confirmation == 'verify-isolated-restore-resources'/,
+  );
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /runs-on: \[self-hosted, fanmind-restore, linux, x64\]/);
+  assert.match(workflow, /environment: restore-drill/);
+  assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/);
+  assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'false'/);
+  assert.match(workflow, /npm run restore:resources:preflight/);
+  assert.doesNotMatch(
+    workflow,
+    /restore:database:drill|pg_restore|--identity|FANMIND_BACKUP_AGE_IDENTITY/,
+  );
+  assert.equal(
+    packageJson.scripts["restore:resources:preflight"],
+    "node scripts/operations/restore-drill-resource-readiness.mjs",
+  );
+  assert.match(runbook, /FanMind Restore Drill Resource Readiness/);
+  assert.match(runbook, /RESTORE_DRILL_RESOURCE_READINESS=PASS/);
+});
 
 test("isolated restore target passes only with both boundaries and exact target binding", () => {
   const result = evaluateRestoreTarget(safeEnvironment());
