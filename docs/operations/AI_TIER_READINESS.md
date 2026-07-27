@@ -116,7 +116,11 @@ feste Rückfallcodes zurück:
 - `tier_readiness`
 
 Konkrete Stripe-IDs werden dem Resolver nur als bereits serverseitig
-bestätigtes Ja/Nein übergeben und weder zurückgegeben noch geloggt. Die
-Einführung eines persistenten Entitlement-Speichers, dessen Stripe-Lifecycle
-und die Verdrahtung mit produktiven KI-Pfaden bleiben ein eigener
-deploy-before-migrate Staging-Schritt.
+bestätigtes Ja/Nein übergeben und weder zurückgegeben noch geloggt.
+
+Der persistente server-only Speicher, die additive Migration und der
+redigierende Loader sind nun als deploy-before-migrate-Brücke vorbereitet.
+Sie sind noch nicht auf Staging oder Production angewendet und noch nicht mit
+Stripe-Webhooks oder produktiven KI-Pfaden verdrahtet. Die verbindliche
+Rollout-Reihenfolge und negative Berechtigungsabnahme stehen in
+`docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`.

@@ -10,12 +10,16 @@ const checkedFiles = [
   ".github/workflows/deploy-fanmind.yml",
   "src/config/aiTiers.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
+  "src/lib/workspaceAiTierStorage.mjs",
+  "src/lib/workspaceAiTierEntitlements.ts",
+  "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
   "src/lib/aiPromptPolicy.mjs",
   "src/lib/workspaceAiPrompts.ts",
   "src/app/api/ai/prompt-settings/route.ts",
   "src/app/api/ai/reply-suggestions/route.ts",
   "src/app/settings/ai-usage/AiPromptSettings.tsx",
   "tests/ai-tier-policy.test.mjs",
+  "tests/ai-tier-entitlement-storage.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
   "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
@@ -63,6 +67,7 @@ const checkedFiles = [
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
   "docs/operations/AI_TIER_READINESS.md",
+  "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
 ];
 
 const documentationFiles = new Set([
@@ -328,6 +333,36 @@ requireText(
   "tests/ai-tier-policy.test.mjs",
   "workspace entitlement rejects unknown and client-controlled paid tiers",
   "Client-kontrollierte oder unbekannte KI-Entitlements müssen automatisiert auf Standard zurückfallen.",
+);
+requireText(
+  "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
+  "force row level security",
+  "Der persistente KI-Stufenspeicher muss RLS auch für den Tabellenowner erzwingen.",
+);
+requireText(
+  "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
+  "workspace_ai_tier_entitlement_policy_boundary_failed",
+  "Die Migration muss bei einer Browser-exponierenden RLS-Policy transaktional abbrechen.",
+);
+requireText(
+  "src/lib/workspaceAiTierStorage.mjs",
+  "stripeSubscriptionItemLinked: true",
+  "Der Storage-Mapper darf nur eine validierte, redigierte Item-Verknüpfung an den Resolver geben.",
+);
+requireText(
+  "src/lib/workspaceAiTierEntitlements.ts",
+  'url.searchParams.set("limit", "2")',
+  "Der serverseitige KI-Stufenloader muss mehrdeutige Workspace-Zeilen erkennen können.",
+);
+requireText(
+  "tests/ai-tier-entitlement-storage.test.mjs",
+  "storage row is reduced to the redacted resolver contract",
+  "Die Redaction persistenter KI-Stufen muss automatisiert getestet werden.",
+);
+requireText(
+  "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
+  "Plus und Ultra bleiben",
+  "Das Runbook muss den weiterhin blockierten Plus-/Ultra-Status offenlegen.",
 );
 requireText(
   "docs/SOURCE_OF_TRUTH.md",

@@ -144,6 +144,11 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   serververwaltetem, aktivem Stripe-Lifecycle, verknüpftem Subscription-Item,
   gültigem Zeitraum und vollständig positiver zentraler Readiness wirksam;
   jeder andere Zustand fällt auf Standard zurück.
+- Die server-only Tabelle `workspace_ai_tier_entitlements` und ihr redigierender
+  Loader sind als deploy-before-migrate-Brücke vorbereitet. Die Migration ist
+  noch nicht auf Staging oder Production angewendet und weder Stripe-Webhooks
+  noch produktive KI-Routen verwenden sie; Plus/Ultra bleiben deshalb
+  blockiert.
 - Einrichtung und KI-Add-ons sind nicht referral-rabattfähig.
 - Keine KI-Stufe aktiviert automatische Sendung.
 - Nicht festgelegte Modelle oder Limits bleiben `null` und dürfen nicht erfunden werden.

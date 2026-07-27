@@ -350,6 +350,40 @@ RLS-Erwartung:
 
 - Nur eigener Workspace, ggf. User-spezifisch eingeschränkt.
 
+### `workspace_ai_tier_entitlements` (Migration vorbereitet)
+
+Zweck: serververwaltete Source of Truth für genau ein optionales KI-Add-on
+eines Workspaces. Eine fehlende Zeile bedeutet KI Standard.
+
+Wichtige Felder:
+
+- `workspace_id`
+- `tier_id` (`plus` oder `ultra`)
+- `status`
+- `source` (ausschließlich `stripe`)
+- `stripe_subscription_id`
+- `stripe_subscription_item_id`
+- `stripe_price_id`
+- `effective_at`
+- `expires_at`
+- `last_stripe_event_id`
+- `last_stripe_event_created_at`
+- `created_at`
+- `updated_at`
+
+RLS-/Privilege-Erwartung:
+
+- RLS und `FORCE ROW LEVEL SECURITY` sind aktiv.
+- Es existiert keine Browser-Policy.
+- `public`, `anon` und `authenticated` besitzen weder Tabellen- noch
+  Spaltenrechte.
+- Nur `service_role` darf lesen und mutieren.
+- Stripe-Referenzen werden niemals an Browser oder den KI-Resolver
+  weitergegeben.
+- Fehlende, mehrdeutige oder ungültige Daten fallen auf KI Standard zurück.
+- Die Migration `20260727090000_workspace_ai_tier_entitlements.sql` ist noch
+  nicht auf Staging oder Production angewendet.
+
 ### `workspace_ai_prompt_settings`
 
 Zweck: Workspace-weiter Unternehmens-Prompt und bis zu acht auswählbare Antwortprofile für KI-Antwortvorschläge.
