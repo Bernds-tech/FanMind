@@ -8,13 +8,16 @@ const root = process.cwd();
 const checkedFiles = [
   ".env.example",
   ".github/workflows/deploy-fanmind.yml",
+  ".github/workflows/ai-tier-staging-acceptance.yml",
   "package.json",
   "src/config/aiTiers.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
+  "scripts/operations/ai-tier-staging-acceptance.mjs",
   "src/lib/workspaceAiTierStorage.mjs",
   "src/lib/workspaceAiTierEntitlements.ts",
   "src/lib/aiTierStripeLifecycle.mjs",
+  "src/lib/aiTierStagingAcceptancePolicy.mjs",
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
   "src/lib/aiPromptPolicy.mjs",
   "src/lib/workspaceAiPrompts.ts",
@@ -25,6 +28,7 @@ const checkedFiles = [
   "tests/ai-tier-entitlement-storage.test.mjs",
   "tests/ai-tier-entitlement-migration-policy.test.mjs",
   "tests/ai-tier-stripe-lifecycle.test.mjs",
+  "tests/ai-tier-staging-acceptance.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
   "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
@@ -405,6 +409,31 @@ requireText(
   "tests/ai-tier-stripe-lifecycle.test.mjs",
   "duplicate and stale events cannot overwrite newer entitlement state",
   "Doppelte und verspätete KI-Add-on-Events müssen automatisiert geprüft werden.",
+);
+requireText(
+  "package.json",
+  '"ai:tiers:staging:run": "node scripts/operations/ai-tier-staging-acceptance.mjs --run"',
+  "Die kontrollierte KI-Stufen-Staging-Abnahme muss explizit aufrufbar sein.",
+);
+requireText(
+  ".github/workflows/ai-tier-staging-acceptance.yml",
+  "FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY",
+  "Der KI-Stufen-Abnahmeworkflow muss die unabhängige Nicht-Production-Schreibbestätigung verlangen.",
+);
+requireText(
+  ".github/workflows/ai-tier-staging-acceptance.yml",
+  "npm run db:ai-tier-entitlements:verify",
+  "Der KI-Stufen-Abnahmeworkflow muss die angewendete Migration read-only verifizieren.",
+);
+forbidIn(
+  ".github/workflows/ai-tier-staging-acceptance.yml",
+  /db:ai-tier-entitlements:apply|sk_live_|https:\/\/fanmind\.ch/iu,
+  "Der KI-Stufen-Abnahmeworkflow darf weder Migrationen anwenden noch Production-Ziele enthalten.",
+);
+requireText(
+  "scripts/operations/ai-tier-staging-acceptance.mjs",
+  "AI_TIER_STAGING_TRANSACTION=ROLLED_BACK",
+  "Der KI-Stufen-Abnahmerunner muss den rollback-only Datenbanknachweis melden.",
 );
 requireText(
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",

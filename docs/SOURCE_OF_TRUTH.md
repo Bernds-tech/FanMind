@@ -160,6 +160,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Subscription-Wechsel und beschädigte Perioden stoppen fail-closed. Die
   produktive Webhook-/Datenbank-Verdrahtung bleibt bis zur Staging-Abnahme
   aus.
+- Ein manueller, rollback-only Staging-Abnahmeworkflow ist vorbereitet. Er
+  prüft bei bereits angewendeter Staging-Migration beide aktiven
+  Stripe-Testpreise, Owner-/Member-Sperren, Service-Role-CRUD sowie
+  Duplikat-/Reihenfolgeverhalten, gibt keine internen IDs aus und wendet
+  selbst keine Migration an. Der echte Lauf bleibt bis zur Bereitstellung der
+  externen Staging-Ressourcen offen.
 - Einrichtung und KI-Add-ons sind nicht referral-rabattfähig.
 - Keine KI-Stufe aktiviert automatische Sendung.
 - Nicht festgelegte Modelle oder Limits bleiben `null` und dürfen nicht erfunden werden.
