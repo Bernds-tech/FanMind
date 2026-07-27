@@ -120,6 +120,28 @@ Nach einem kontrollierten Staging-Apply:
 Der Ablauf ist als manueller, rollback-only Workflow vorbereitet:
 `FanMind AI Tier Staging Acceptance`.
 
+Vor der Migration kann `FanMind AI Tier Staging Resource Readiness` manuell
+von `main` im GitHub-Environment `staging` ausgeführt werden. Der Workflow
+verlangt die Bestätigung `verify-ai-tier-staging-resources` und lässt
+`FANMIND_ENABLE_NON_PRODUCTION_WRITES=false` sowie den Write-Acknowledge leer.
+Er prüft ausschließlich:
+
+- getrennte Supabase-Projektreferenz und gebundenen Datenbankhost;
+- einen synthetischen Workspace mit unterschiedlichem Owner und Mitglied;
+- aktive, monatliche Stripe-Testpreise in EUR zu 100 beziehungsweise 200 Euro;
+- die private, eigentümergeführte Datenbank-Passwortdatei.
+
+Die Workspace-Abfrage läuft in einer expliziten Read-only-Transaktion. Der
+Ressourcencheck liest keine Entitlement-Zeilen, wendet keine Migration an und
+startet weder Migration noch Abnahme. Erfolgreiche Ausgabe:
+
+```text
+AI_TIER_STAGING_STRIPE_CATALOG=PASS
+AI_TIER_STAGING_SYNTHETIC_WORKSPACE=PASS
+AI_TIER_STAGING_RESOURCE_MODE=READ_ONLY
+AI_TIER_STAGING_RESOURCE_READINESS=PASS
+```
+
 Die Migration davor ist als eigener manueller Workflow
 `FanMind AI Tier Staging Migration` vorbereitet. Er läuft ausschließlich vom
 Branch `main` im GitHub-Environment `staging`, verlangt als Eingabe
@@ -152,6 +174,9 @@ AI_TIER_STAGING_ACCEPTANCE=PASS
 `npm run ai:tiers:staging:check` prüft den lokalen Vertrag offline. Nur
 `npm run ai:tiers:staging:run` mit echten, getrennten Staging-Ressourcen darf
 als Abnahme gelten.
+
+`npm run ai:tiers:staging:preflight` ist ausschließlich der vorgelagerte
+Read-only-Ressourcennachweis und ersetzt weder Migration noch Abnahme.
 
 ## Postflight-SQL
 

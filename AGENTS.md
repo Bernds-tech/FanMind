@@ -69,6 +69,10 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   proof. Keep its independent write gates, synthetic owner/member workspace,
   Stripe Test Mode catalog verification, redacted output and private
   `PGPASSFILE`; never turn it into an automatic migration or Production job.
+- Its separate resource-readiness mode is strictly read-only and may run
+  before the migration. Keep it main-only, Staging-bound and write-disabled;
+  it may verify only the Stripe Test catalog plus the synthetic owner/member
+  workspace and must not inspect entitlement rows or apply SQL.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

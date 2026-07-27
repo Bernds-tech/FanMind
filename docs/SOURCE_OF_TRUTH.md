@@ -176,6 +176,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Duplikat-/Reihenfolgeverhalten, gibt keine internen IDs aus und wendet
   selbst keine Migration an. Der echte Lauf bleibt bis zur Bereitstellung der
   externen Staging-Ressourcen offen.
+- Davor steht ein eigener manueller, strikt read-only Ressourcencheck auf
+  `main` und im GitHub-Environment `staging`. Er bestätigt die getrennte
+  Supabase-/Datenbankbindung, zwei aktive Stripe-Testpreise zu 100/200 Euro
+  pro Monat und einen synthetischen Workspace mit unterschiedlichem Owner und
+  Member. Schreibfreigaben bleiben aus; Entitlement-Zeilen und Migrationen
+  werden nicht berührt.
 - Einrichtung und KI-Add-ons sind nicht referral-rabattfähig.
 - Keine KI-Stufe aktiviert automatische Sendung.
 - Nicht festgelegte Modelle oder Limits bleiben `null` und dürfen nicht erfunden werden.
