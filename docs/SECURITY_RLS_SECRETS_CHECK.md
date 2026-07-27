@@ -99,6 +99,10 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
 - [ ] `workspace_ai_prompt_settings`
   - kontrollierter Apply-/Postflight-Ablauf:
     `docs/operations/AI_PROMPT_MIGRATION.md`
+- [ ] `workspace_ai_tier_entitlements`
+  - ausschließlich `service_role`, keine Browser-Policy oder Browserrechte;
+  - checksum-gebundener Apply-/Postflight-Ablauf:
+    `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`
 - [ ] `fan_analysis_reports`
 - [ ] `contact_reply_targets`
 

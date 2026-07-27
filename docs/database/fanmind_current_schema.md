@@ -383,6 +383,10 @@ RLS-/Privilege-Erwartung:
 - Fehlende, mehrdeutige oder ungültige Daten fallen auf KI Standard zurück.
 - Die Migration `20260727090000_workspace_ai_tier_entitlements.sql` ist noch
   nicht auf Staging oder Production angewendet.
+- Offline-Checksum-Prüfung sowie zielgebundener Read-only-Postflight und
+  expliziter Apply stehen über
+  `scripts/operations/ai-tier-entitlement-migration-runner.mjs` bereit; ein
+  Web-Deploy führt keinen dieser Datenbankschritte aus.
 
 ### `workspace_ai_prompt_settings`
 

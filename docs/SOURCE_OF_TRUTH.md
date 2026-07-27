@@ -149,6 +149,10 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   noch nicht auf Staging oder Production angewendet und weder Stripe-Webhooks
   noch produktive KI-Routen verwenden sie; Plus/Ultra bleiben deshalb
   blockiert.
+- Der checksum-gebundene Entitlement-Migrationsrunner besitzt getrennte
+  Offline-Check-, Read-only-Verify- und explizite Apply-Modi. Merge und
+  Web-Deploy wenden die Migration nicht automatisch an; Staging-Abnahme bleibt
+  vor jedem Production-Schritt verpflichtend.
 - Einrichtung und KI-Add-ons sind nicht referral-rabattfähig.
 - Keine KI-Stufe aktiviert automatische Sendung.
 - Nicht festgelegte Modelle oder Limits bleiben `null` und dürfen nicht erfunden werden.
@@ -249,6 +253,9 @@ Pflichtsatz:
 - KI-Prompt-Migrationen werden nicht durch den Web-Deploy angewendet; der
   festgeschriebene Apply-/Postflight-Ablauf steht in
   `docs/operations/AI_PROMPT_MIGRATION.md`;
+- die KI-Stufen-Speichermigration wird ebenfalls nicht durch den Web-Deploy
+  angewendet; ihr checksum-gebundener Apply-/Postflight-Ablauf steht in
+  `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`;
 - `FANMIND_ADMIN_EMAILS` ist die einzige Admin-Quelle;
 - alle workspace-bezogenen Daten benötigen RLS und serverseitige Autorisierung;
 - jede Mutation prüft User, Workspace und Ressource;

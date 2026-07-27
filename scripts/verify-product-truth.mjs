@@ -8,8 +8,10 @@ const root = process.cwd();
 const checkedFiles = [
   ".env.example",
   ".github/workflows/deploy-fanmind.yml",
+  "package.json",
   "src/config/aiTiers.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
+  "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "src/lib/workspaceAiTierStorage.mjs",
   "src/lib/workspaceAiTierEntitlements.ts",
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
@@ -20,6 +22,7 @@ const checkedFiles = [
   "src/app/settings/ai-usage/AiPromptSettings.tsx",
   "tests/ai-tier-policy.test.mjs",
   "tests/ai-tier-entitlement-storage.test.mjs",
+  "tests/ai-tier-entitlement-migration-policy.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
   "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
@@ -66,6 +69,8 @@ const checkedFiles = [
   "tests/ai-usage-policy.test.mjs",
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
+  "docs/database/fanmind_current_schema.md",
+  "docs/SECURITY_RLS_SECRETS_CHECK.md",
   "docs/operations/AI_TIER_READINESS.md",
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
 ];
@@ -363,6 +368,31 @@ requireText(
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
   "Plus und Ultra bleiben",
   "Das Runbook muss den weiterhin blockierten Plus-/Ultra-Status offenlegen.",
+);
+requireText(
+  "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
+  "06c83aacd98eebc1655023ed40132322eb4c38c2d10b46ef626c339ab5b076b9",
+  "Die KI-Stufen-Speichermigration muss an den geprüften SHA-256 gebunden sein.",
+);
+requireText(
+  "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
+  "AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS",
+  "Der KI-Stufen-Speicher benötigt einen getrennten Metadaten-Postflight.",
+);
+requireText(
+  "package.json",
+  "db:ai-tier-entitlements:check",
+  "Die Offline-Prüfung der KI-Stufen-Speichermigration muss als fester Befehl verfügbar sein.",
+);
+requireText(
+  "tests/ai-tier-entitlement-migration-policy.test.mjs",
+  "verify binds the target and runs only the read-only metadata postflight",
+  "Zielbindung und read-only Postflight müssen automatisiert getestet werden.",
+);
+requireText(
+  "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
+  "keine automatische Production-Migration",
+  "Das Runbook muss automatische Production-Migrationen ausdrücklich ausschließen.",
 );
 requireText(
   "docs/SOURCE_OF_TRUTH.md",

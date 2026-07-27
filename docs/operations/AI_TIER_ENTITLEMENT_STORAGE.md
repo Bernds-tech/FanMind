@@ -15,6 +15,9 @@ Production angewendet. Der Speicher ist noch nicht mit Stripe-Webhooks,
 Checkout oder produktiven KI-Endpunkten verdrahtet. Plus und Ultra bleiben
 dadurch weiterhin blockiert.
 
+Der checksum-gebundene Runner bereitet ausschließlich einen kontrollierten
+manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatische Production-Migration.
+
 ## Sicherheitsvertrag
 
 - Nur `plus` oder `ultra` dürfen gespeichert werden; Standard benötigt keine
@@ -54,6 +57,60 @@ dadurch weiterhin blockiert.
 9. Produktive KI-Endpunkte werden erst in einem weiteren PR auf den Speicher
    verdrahtet, wenn Modelle, Kontingente, Stripe-Prices und zentrale
    Readiness vollständig freigegeben sind.
+
+## Kontrollierter Migrationsrunner
+
+Der Runner arbeitet in drei Modi:
+
+1. `npm run db:ai-tier-entitlements:check` prüft offline den festgeschriebenen
+   SHA-256 sowie SQL-, RLS-, Rechte-, Constraint-, Index- und
+   Triggerverträge. Das ist der Default und benötigt keine Datenbank.
+2. `npm run db:ai-tier-entitlements:verify` führt ausschließlich einen
+   `READ ONLY`-Postflight gegen das explizit gebundene Ziel aus.
+3. `npm run db:ai-tier-entitlements:apply` wendet genau die festgeschriebene
+   Migration einmal an und verlangt danach denselben Postflight.
+
+Die Verbindung wird nie als URL oder Prozessargument übergeben. Erforderlich
+sind `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` und eine absolute,
+eigentümergeführte `PGPASSFILE` mit Modus `0600`. Der Runner erstellt einen
+privaten Snapshot der Passfile, sperrt alternative libpq-Umleitungen und
+entfernt den Snapshot nach dem Lauf.
+
+Vor jedem schreibenden Lauf müssen Zielumgebung, Supabase-Projektreferenz und
+Datenbankhost unabhängig gebunden werden. Staging muss ausdrücklich eine
+andere Projektreferenz als Production verwenden. Ein Production-Apply
+verlangt zusätzlich einen Change-Verweis und die exakte Bestätigung:
+
+```bash
+export FANMIND_AI_TIER_ENTITLEMENT_MIGRATION_CONFIRM=apply-workspace-ai-tier-entitlements
+npm run db:ai-tier-entitlements:apply
+```
+
+Erfolgreich ist der Datenbankschritt nur mit:
+
+```text
+AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS
+```
+
+Der Postflight liest keine Workspace-, Stripe- oder Kundendatensätze. Er prüft
+nur PostgreSQL-Metadaten zu Tabelle, RLS/`FORCE RLS`, fehlenden
+Browser-Policies, Tabellen- und Spaltenrechten, Constraints, Indizes, Trigger
+und Triggerfunktion.
+
+## Synthetische Staging-Abnahme
+
+Nach einem kontrollierten Staging-Apply:
+
+1. Postflight erneut mit `npm run db:ai-tier-entitlements:verify` ausführen.
+2. Als normaler Owner und als Mitglied nachweisen, dass `SELECT`, `INSERT`,
+   `UPDATE` und `DELETE` blockiert bleiben.
+3. Mit Service Role genau einen vollständig synthetischen Plus-Datensatz
+   anlegen, lesen, ändern und löschen.
+4. Nachweisen, dass der Loader keine Stripe-Referenz zurückgibt.
+5. Null Zeilen, zwei Zeilen und beschädigte Werte müssen fail-closed auf KI
+   Standard fallen.
+6. Plus und Ultra bleiben trotz erfolgreicher Speichermigration blockiert,
+   solange Readiness, Stripe-Lifecycle, Modelle und Kontingente fehlen.
 
 ## Postflight-SQL
 
@@ -99,7 +156,7 @@ Erwartet:
 
 ## Noch ausdrücklich offen
 
-- sichere, checksum-gebundene Ausführung der Migration;
+- kontrollierte Ausführung und Abnahme zuerst auf echtem Staging;
 - echte Staging-Datenbank und Stripe-Testprodukt;
 - Price-Allowlist für Plus und Ultra;
 - Stripe-Webhook-Lifecycle und Ereignisreihenfolge;
