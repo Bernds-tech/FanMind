@@ -8,6 +8,7 @@ const root = process.cwd();
 const checkedFiles = [
   ".env.example",
   ".github/workflows/deploy-fanmind.yml",
+  ".github/workflows/ai-tier-staging-migration.yml",
   ".github/workflows/ai-tier-staging-acceptance.yml",
   "package.json",
   "src/config/aiTiers.mjs",
@@ -414,6 +415,26 @@ requireText(
   "package.json",
   '"ai:tiers:staging:run": "node scripts/operations/ai-tier-staging-acceptance.mjs --run"',
   "Die kontrollierte KI-Stufen-Staging-Abnahme muss explizit aufrufbar sein.",
+);
+requireText(
+  ".github/workflows/ai-tier-staging-migration.yml",
+  "github.ref == 'refs/heads/main'",
+  "Der KI-Stufen-Migrationsworkflow muss auf den geprüften main-Branch begrenzt sein.",
+);
+requireText(
+  ".github/workflows/ai-tier-staging-migration.yml",
+  "FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY",
+  "Der KI-Stufen-Migrationsworkflow muss die unabhängige Nicht-Production-Schreibbestätigung verlangen.",
+);
+requireText(
+  ".github/workflows/ai-tier-staging-migration.yml",
+  "npm run db:ai-tier-entitlements:apply",
+  "Der KI-Stufen-Migrationsworkflow muss den checksum-gebundenen Runner verwenden.",
+);
+forbidIn(
+  ".github/workflows/ai-tier-staging-migration.yml",
+  /FANMIND_RUNTIME_ENVIRONMENT: production|FANMIND_PRODUCTION_CHANGE_TICKET|sk_live_|https:\/\/fanmind\.ch|ai:tiers:staging:run/iu,
+  "Der KI-Stufen-Migrationsworkflow darf weder Production-Ziele noch die Abnahme automatisch starten.",
 );
 requireText(
   ".github/workflows/ai-tier-staging-acceptance.yml",

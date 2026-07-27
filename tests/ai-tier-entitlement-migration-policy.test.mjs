@@ -20,6 +20,8 @@ const runbookPath =
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md";
 const migrationPath =
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql";
+const stagingWorkflowPath =
+  ".github/workflows/ai-tier-staging-migration.yml";
 
 async function withFakeDatabase(callback, overrides = {}) {
   const root = await mkdtemp(
@@ -232,6 +234,111 @@ test("apply runs the pinned migration once and the postflight once", async () =>
         /synthetic-password|productionref123/u,
       );
     },
+  );
+});
+
+test("staging apply requires both non-production write gates", async () => {
+  await withFakeDatabase(async ({ environment, callLog }) => {
+    const staging = {
+      ...environment,
+      FANMIND_RUNTIME_ENVIRONMENT: "staging",
+      NEXT_PUBLIC_SUPABASE_URL:
+        "https://stagingref12345.supabase.co",
+      FANMIND_TARGET_SUPABASE_PROJECT_REF: "stagingref12345",
+      FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: "productionref123",
+      FANMIND_PRODUCTION_CHANGE_TICKET: "",
+    };
+
+    for (const override of [
+      {},
+      { FANMIND_ENABLE_NON_PRODUCTION_WRITES: "false" },
+      {
+        FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+        FANMIND_NON_PRODUCTION_WRITE_ACK: "yes",
+      },
+    ]) {
+      await assert.rejects(
+        execFileAsync(process.execPath, [runnerPath, "--apply"], {
+          env: { ...staging, ...override },
+        }),
+        (error) => {
+          const output = `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
+          assert.match(
+            output,
+            /AI_TIER_ENTITLEMENT_MIGRATION_ERROR=staging_write_acknowledgement_invalid/u,
+          );
+          assert.doesNotMatch(
+            output,
+            /stagingref12345|productionref123|db\.synthetic|synthetic-password/u,
+          );
+          return true;
+        },
+      );
+    }
+
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [runnerPath, "--apply"],
+      {
+        env: {
+          ...staging,
+          FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
+          FANMIND_NON_PRODUCTION_WRITE_ACK:
+            "I_UNDERSTAND_NON_PRODUCTION_ONLY",
+        },
+      },
+    );
+    assert.match(
+      `${stdout}\n${stderr}`,
+      /AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS/u,
+    );
+    assert.equal(
+      (await readFile(callLog, "utf8")).trim().split("\n").length,
+      2,
+    );
+  });
+});
+
+test("manual staging workflow is main-only, target-bound and independently confirmed", async () => {
+  const workflow = await readFile(stagingWorkflowPath, "utf8");
+
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/u);
+  assert.match(
+    workflow,
+    /inputs\.confirmation == 'apply-workspace-ai-tier-entitlements'/u,
+  );
+  assert.match(workflow, /environment: staging/u);
+  assert.match(
+    workflow,
+    /FANMIND_RUNTIME_ENVIRONMENT: staging/u,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY/u,
+  );
+  assert.match(
+    workflow,
+    /npm run db:ai-tier-entitlements:check/u,
+  );
+  assert.match(
+    workflow,
+    /npm run db:ai-tier-entitlements:apply/u,
+  );
+  assert.equal(
+    workflow.match(
+      /^          PGPASSFILE: \$\{\{ runner\.temp \}\}\/fanmind-ai-tier-staging-migration\.pgpass$/gmu,
+    )?.length,
+    3,
+  );
+  assert.match(workflow, /rm -f "\$PGPASSFILE"/u);
+  assert.doesNotMatch(
+    workflow,
+    /FANMIND_RUNTIME_ENVIRONMENT: production|FANMIND_PRODUCTION_CHANGE_TICKET|sk_live_|https:\/\/fanmind\.ch|ai:tiers:staging:run/iu,
   );
 });
 
