@@ -214,6 +214,16 @@ test("manual workflow is staging-only and never applies a migration", async () =
     workflow,
     /FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY/u,
   );
+  assert.doesNotMatch(
+    workflow,
+    /^      PGPASSFILE: \$\{\{ runner\.temp \}\}/mu,
+  );
+  assert.equal(
+    workflow.match(
+      /^          PGPASSFILE: \$\{\{ runner\.temp \}\}\/fanmind-ai-tier-staging\.pgpass$/gmu,
+    )?.length,
+    4,
+  );
   assert.match(
     workflow,
     /npm run db:ai-tier-entitlements:verify/u,

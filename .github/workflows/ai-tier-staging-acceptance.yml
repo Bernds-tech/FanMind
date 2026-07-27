@@ -39,7 +39,6 @@ jobs:
       PGPORT: ${{ vars.FANMIND_STAGING_DB_PORT }}
       PGDATABASE: ${{ vars.FANMIND_STAGING_DB_NAME }}
       PGUSER: ${{ secrets.FANMIND_STAGING_DB_USER }}
-      PGPASSFILE: ${{ runner.temp }}/fanmind-ai-tier-staging.pgpass
 
     steps:
       - name: Checkout
@@ -57,6 +56,7 @@ jobs:
       - name: Prepare private database password file
         env:
           FANMIND_STAGING_DB_PASSWORD: ${{ secrets.FANMIND_STAGING_DB_PASSWORD }}
+          PGPASSFILE: ${{ runner.temp }}/fanmind-ai-tier-staging.pgpass
         run: |
           set -euo pipefail
           umask 077
@@ -77,11 +77,17 @@ jobs:
           chmod 600 "$PGPASSFILE"
 
       - name: Verify applied migration metadata
+        env:
+          PGPASSFILE: ${{ runner.temp }}/fanmind-ai-tier-staging.pgpass
         run: npm run db:ai-tier-entitlements:verify
 
       - name: Run transactional staging acceptance
+        env:
+          PGPASSFILE: ${{ runner.temp }}/fanmind-ai-tier-staging.pgpass
         run: npm run ai:tiers:staging:run
 
       - name: Remove private database password file
         if: ${{ always() }}
+        env:
+          PGPASSFILE: ${{ runner.temp }}/fanmind-ai-tier-staging.pgpass
         run: rm -f "$PGPASSFILE"
