@@ -57,6 +57,10 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   resolver input before use. Do not wire it to production AI or Stripe paths
   before the staged rollout in
   `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`.
+- Its SQL is checksum-pinned by
+  `scripts/operations/ai-tier-entitlement-migration-runner.mjs`. A normal
+  merge or Web deploy must never apply it; use the documented offline check,
+  target-bound read-only verification and separately approved apply flow.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
