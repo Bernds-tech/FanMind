@@ -65,6 +65,17 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
 - signierte Builds, Store-Konten, TestFlight und Google-Play-Internal-Testing bleiben klar von bereits vorhandenem Code getrennt;
 - der ursprüngliche MVP-Arbeitsauftrag bleibt als historische Scope-Grundlage erhalten, während aktuelle Preise, Terminologie und Produktfreigaben aus `docs/SOURCE_OF_TRUTH.md` gelten.
 
+### Restore-Drill-Vorbereitung
+
+- Zielgrenze, transaktionaler Datenbank-Runner und redigierter Evidence-Validator sind implementiert;
+- ein manueller, `main`-gebundener Ressourcencheck prüft auf einem exklusiven
+  `fanmind-restore`-Runner nur die isolierte Zielidentität und die Prüfsumme
+  eines verschlüsselten Full-Backups;
+- der Ressourcencheck verbindet sich nicht mit PostgreSQL, entschlüsselt
+  nichts und aktiviert keine Schreibfreigabe;
+- der tatsächliche Restore-, RLS-, Storage-, Server-Konfigurations- und
+  Cleanup-Nachweis bleibt ausdrücklich extern offen.
+
 ## Noch nicht als P0-Codeabschluss auszugeben
 
 Diese Punkte benötigen einen eigenen externen oder produktiven Nachweis und dürfen nicht durch eine reine Codeänderung als erledigt markiert werden:

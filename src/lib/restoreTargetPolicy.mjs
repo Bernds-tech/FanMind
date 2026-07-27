@@ -5,6 +5,8 @@ import { evaluateEnvironmentBoundary } from "./environmentBoundaryPolicy.mjs";
 
 const RESTORE_TARGET_ACKNOWLEDGEMENT =
   "I_UNDERSTAND_EMPTY_DISPOSABLE_DATABASE_ONLY";
+const RESTORE_READINESS_CONFIRMATION =
+  "verify-isolated-restore-resources";
 const SIMPLE_DATABASE_IDENTIFIER = /^[A-Za-z0-9_.-]{1,128}$/;
 const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const DIRECT_SUPABASE_HOST = /^db\.([a-z0-9]{8,40})\.supabase\.co$/;
@@ -116,6 +118,115 @@ function databaseTarget(environment, names) {
 
 function sameTarget(left, right) {
   return Boolean(left.valid && right.valid && left.signature === right.signature);
+}
+
+export function evaluateRestoreReadiness(environment = {}) {
+  const errors = [];
+  const boundary = evaluateEnvironmentBoundary(environment, {
+    allowWrite: false,
+  });
+  const runtimeAllowed = new Set(["staging", "test"]).has(
+    boundary.runtimeEnvironment,
+  );
+  const target = databaseTarget(environment, {
+    host: "FANMIND_RESTORE_TARGET_DB_HOST",
+    port: "FANMIND_RESTORE_TARGET_DB_PORT",
+    database: "FANMIND_RESTORE_TARGET_DB_NAME",
+    user: "FANMIND_RESTORE_TARGET_DB_USER",
+  });
+  const production = databaseTarget(environment, {
+    host: "FANMIND_PRODUCTION_DB_HOST",
+    port: "FANMIND_PRODUCTION_DB_PORT",
+    database: "FANMIND_PRODUCTION_DB_NAME",
+    user: "FANMIND_PRODUCTION_DB_USER",
+  });
+  const targetSupabaseProjectRef = clean(
+    environment.FANMIND_TARGET_SUPABASE_PROJECT_REF,
+  ).toLowerCase();
+  const directSupabaseMatch = target.host?.match(DIRECT_SUPABASE_HOST);
+  const sharedSupabasePooler = Boolean(
+    target.host?.endsWith(".pooler.supabase.com"),
+  );
+  const productionHostSeparated = Boolean(
+    target.valid
+      && production.valid
+      && target.host !== production.host,
+  );
+  const hiddenTargetOverridesClear = [
+    "PGHOST",
+    "PGPORT",
+    "PGDATABASE",
+    "PGUSER",
+    "PGPASSWORD",
+    "PGPASSFILE",
+    "PGHOSTADDR",
+    "PGSERVICE",
+    "PGSERVICEFILE",
+  ].every((name) => !clean(environment[name]));
+
+  errors.push(...boundary.errors.map(() => "environment_boundary"));
+  if (!runtimeAllowed) errors.push("runtime_environment");
+  if (
+    boundary.appProduction
+    || boundary.supabaseProductionMatch
+    || !boundary.productionProjectIdentified
+    || !boundary.supabaseTargetRefMatchesUrl
+  ) {
+    errors.push("production_boundary");
+  }
+  if (
+    clean(environment.FANMIND_ENABLE_NON_PRODUCTION_WRITES) !== "false"
+    || clean(environment.FANMIND_NON_PRODUCTION_WRITE_ACK)
+  ) {
+    errors.push("non_production_write_gate");
+  }
+  if (
+    clean(environment.FANMIND_RESTORE_READINESS_CONFIRM)
+    !== RESTORE_READINESS_CONFIRMATION
+  ) {
+    errors.push("readiness_confirmation");
+  }
+  if (
+    clean(environment.FANMIND_ENABLE_RESTORE_DRILL) !== "false"
+    || clean(environment.FANMIND_RESTORE_TARGET_ACK)
+  ) {
+    errors.push("restore_write_gate");
+  }
+  if (!target.complete || !target.valid || !target.canonical) {
+    errors.push("restore_target");
+  }
+  if (!production.complete || !production.valid || !production.canonical) {
+    errors.push("production_comparison");
+  }
+  if (!productionHostSeparated || sameTarget(target, production)) {
+    errors.push("production_database_target");
+  }
+  if (sharedSupabasePooler) errors.push("shared_supabase_pooler");
+  if (
+    directSupabaseMatch
+    && directSupabaseMatch[1] !== targetSupabaseProjectRef
+  ) {
+    errors.push("supabase_database_binding");
+  }
+  if (!hiddenTargetOverridesClear) errors.push("libpq_target_override");
+
+  return Object.freeze({
+    ok: errors.length === 0,
+    mode: "isolated-restore-readiness",
+    runtimeAllowed,
+    environmentBoundaryOk: boundary.ok,
+    targetConfirmed: target.complete && target.valid && target.canonical,
+    productionComparisonConfirmed:
+      production.complete && production.valid && production.canonical,
+    productionHostSeparated,
+    directSupabaseProjectBound: Boolean(
+      !directSupabaseMatch
+      || directSupabaseMatch[1] === targetSupabaseProjectRef,
+    ),
+    sharedSupabasePooler,
+    hiddenTargetOverridesClear,
+    errors: Object.freeze([...new Set(errors)]),
+  });
 }
 
 export function evaluateRestoreTarget(environment = {}) {
@@ -285,6 +396,7 @@ export function evaluateRestoreTarget(environment = {}) {
 }
 
 export {
+  RESTORE_READINESS_CONFIRMATION,
   RESTORE_TARGET_ACKNOWLEDGEMENT,
   normalizeHost,
   normalizePort,

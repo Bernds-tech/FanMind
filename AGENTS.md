@@ -73,6 +73,10 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   before the migration. Keep it main-only, Staging-bound and write-disabled;
   it may verify only the Stripe Test catalog plus the synthetic owner/member
   workspace and must not inspect entitlement rows or apply SQL.
+- Restore resource readiness is also strictly read-only. Keep it main-only,
+  bound to the separate `restore-drill` environment and exclusive
+  `fanmind-restore` runner, checksum-only and write-disabled. It must never
+  connect to PostgreSQL, decrypt a backup or invoke the restore runner.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
