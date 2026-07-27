@@ -24,6 +24,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Serverseitiger Entitlement-Vertrag: fehlende, unbekannte, client-kontrollierte, pausierte, nicht gestartete, abgelaufene oder unvollständig freigegebene Plus-/Ultra-Zustände fallen immer auf KI Standard zurück.
 - Persistenter Entitlement-Speicher: server-only Tabelle und redigierender Loader sind als deploy-before-migrate-Brücke vorbereitet; Migration, Stripe-Lifecycle und produktive KI-Verdrahtung sind noch nicht freigegeben, daher bleiben Plus/Ultra blockiert.
 - Kontrollierter Entitlement-Migrationspfad: `npm run db:ai-tier-entitlements:check` prüft die festgeschriebene Migration offline; `verify` und `apply` sind explizit zielgebunden und führen niemals automatisch durch einen Web-Deploy aus.
+- Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
 - FanMind ist kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert und sendet final selbst.

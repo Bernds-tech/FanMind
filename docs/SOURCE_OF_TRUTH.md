@@ -153,6 +153,13 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Offline-Check-, Read-only-Verify- und explizite Apply-Modi. Merge und
   Web-Deploy wenden die Migration nicht automatisch an; Staging-Abnahme bleibt
   vor jedem Production-Schritt verpflichtend.
+- Der vorbereitete serverseitige Stripe-Lifecycle-Vertrag akzeptiert nur
+  zwei vollständige, unterschiedliche Price-IDs, genau ein passendes
+  Subscription-Item und ein zuvor verifiziertes Workspace-Ziel. Doppelte und
+  ältere Events werden nicht erneut angewendet; Zeitkollisionen,
+  Subscription-Wechsel und beschädigte Perioden stoppen fail-closed. Die
+  produktive Webhook-/Datenbank-Verdrahtung bleibt bis zur Staging-Abnahme
+  aus.
 - Einrichtung und KI-Add-ons sind nicht referral-rabattfähig.
 - Keine KI-Stufe aktiviert automatische Sendung.
 - Nicht festgelegte Modelle oder Limits bleiben `null` und dürfen nicht erfunden werden.

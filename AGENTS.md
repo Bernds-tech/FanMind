@@ -61,6 +61,11 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   `scripts/operations/ai-tier-entitlement-migration-runner.mjs`. A normal
   merge or Web deploy must never apply it; use the documented offline check,
   target-bound read-only verification and separately approved apply flow.
+- The prepared Stripe add-on policy in
+  `src/lib/aiTierStripeLifecycle.mjs` is not a live billing integration. Keep
+  its workspace target, distinct Price allowlist, single-item, event-order
+  and idempotency checks fail-closed; never log its internal Stripe mutation.
+  Do not wire it to the webhook or database before isolated Staging approval.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

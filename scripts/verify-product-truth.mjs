@@ -14,6 +14,7 @@ const checkedFiles = [
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "src/lib/workspaceAiTierStorage.mjs",
   "src/lib/workspaceAiTierEntitlements.ts",
+  "src/lib/aiTierStripeLifecycle.mjs",
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
   "src/lib/aiPromptPolicy.mjs",
   "src/lib/workspaceAiPrompts.ts",
@@ -23,6 +24,7 @@ const checkedFiles = [
   "tests/ai-tier-policy.test.mjs",
   "tests/ai-tier-entitlement-storage.test.mjs",
   "tests/ai-tier-entitlement-migration-policy.test.mjs",
+  "tests/ai-tier-stripe-lifecycle.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
   "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
@@ -388,6 +390,21 @@ requireText(
   "tests/ai-tier-entitlement-migration-policy.test.mjs",
   "verify binds the target and runs only the read-only metadata postflight",
   "Zielbindung und read-only Postflight müssen automatisiert getestet werden.",
+);
+requireText(
+  "src/lib/aiTierStripeLifecycle.mjs",
+  "event_order_conflict",
+  "Der KI-Add-on-Lifecycle muss gleichzeitige Stripe-Events fail-closed behandeln.",
+);
+requireText(
+  "src/lib/aiTierStripeLifecycle.mjs",
+  "ambiguous_price_items",
+  "Der KI-Add-on-Lifecycle darf nie mehrere passende Add-on-Items akzeptieren.",
+);
+requireText(
+  "tests/ai-tier-stripe-lifecycle.test.mjs",
+  "duplicate and stale events cannot overwrite newer entitlement state",
+  "Doppelte und verspätete KI-Add-on-Events müssen automatisiert geprüft werden.",
 );
 requireText(
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",

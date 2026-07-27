@@ -49,9 +49,11 @@ manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatisch
 6. Nachweisen, dass null Zeilen KI Standard ergeben, exakt eine gültige Zeile
    redigiert wird und zwei beziehungsweise beschädigte Zeilen fail-closed
    sind.
-7. Erst danach einen separaten Stripe-Lifecycle-PR bauen. Er muss Event-
-   Signatur, Workspace-Ziel, Price-Allowlist, Item-Zuordnung, Ereignis-
-   Reihenfolge und idempotente Updates prüfen.
+7. Der vorbereitete Stripe-Lifecycle-Vertrag in
+   `src/lib/aiTierStripeLifecycle.mjs` muss mit synthetischen Stripe-Events
+   abgenommen werden. Er prüft Workspace-Ziel, Price-Allowlist,
+   Item-Zuordnung, Ereignisreihenfolge und idempotente Wiederholungen. Er ist
+   noch nicht mit dem produktiven Webhook oder der Datenbank verdrahtet.
 8. Erst nach grüner Staging-Abnahme darf die Migration kontrolliert auf
    Production angewendet werden.
 9. Produktive KI-Endpunkte werden erst in einem weiteren PR auf den Speicher
@@ -158,8 +160,9 @@ Erwartet:
 
 - kontrollierte Ausführung und Abnahme zuerst auf echtem Staging;
 - echte Staging-Datenbank und Stripe-Testprodukt;
-- Price-Allowlist für Plus und Ultra;
-- Stripe-Webhook-Lifecycle und Ereignisreihenfolge;
+- atomare Datenbankanwendung des vorbereiteten Price-Allowlist- und
+  Stripe-Lifecycle-Vertrags;
+- produktive Webhook-Verdrahtung nach Stripe-Testmode-Abnahme;
 - konkrete Modelle und Monatskontingente;
 - Verdrahtung mit Antwortvorschlägen und Nutzungsgrenzen;
 - Production-Migration und Abnahme.
