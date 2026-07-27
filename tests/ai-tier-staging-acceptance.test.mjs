@@ -6,8 +6,10 @@ import test from "node:test";
 
 import {
   AI_TIER_STAGING_ACCEPTANCE_CONFIRMATION,
+  AI_TIER_STAGING_RESOURCE_CONFIRMATION,
   buildAiTierSyntheticLifecycleProof,
   evaluateAiTierStagingAcceptanceEnvironment,
+  evaluateAiTierStagingResourceEnvironment,
   isAiTierStagingWorkspaceId,
   validateAiTierStripeTestPrice,
 } from "../src/lib/aiTierStagingAcceptancePolicy.mjs";
@@ -17,6 +19,8 @@ const scriptPath =
   "scripts/operations/ai-tier-staging-acceptance.mjs";
 const workflowPath =
   ".github/workflows/ai-tier-staging-acceptance.yml";
+const resourceWorkflowPath =
+  ".github/workflows/ai-tier-staging-resource-readiness.yml";
 
 function stagingEnvironment(overrides = {}) {
   return {
@@ -38,6 +42,17 @@ function stagingEnvironment(overrides = {}) {
     STRIPE_PRICE_AI_ULTRA: "price_ultra_DO_NOT_PRINT",
     ...overrides,
   };
+}
+
+function stagingResourceEnvironment(overrides = {}) {
+  return stagingEnvironment({
+    FANMIND_ENABLE_NON_PRODUCTION_WRITES: "false",
+    FANMIND_NON_PRODUCTION_WRITE_ACK: "",
+    FANMIND_AI_TIER_STAGING_ACCEPTANCE_CONFIRM: "",
+    FANMIND_AI_TIER_STAGING_RESOURCE_CONFIRM:
+      AI_TIER_STAGING_RESOURCE_CONFIRMATION,
+    ...overrides,
+  });
 }
 
 function stripePrice({
@@ -90,6 +105,33 @@ test("staging acceptance environment requires all independent gates", () => {
   assert.ok(unsafe.errors.includes("production_target"));
   assert.ok(unsafe.errors.includes("write_acknowledgement"));
   assert.ok(unsafe.errors.includes("acceptance_confirmation"));
+  assert.ok(unsafe.errors.includes("stripe_test_mode"));
+  assert.doesNotMatch(JSON.stringify(unsafe), /DO_NOT_PRINT/u);
+});
+
+test("resource preflight requires staging identity without write gates", () => {
+  assert.deepEqual(
+    evaluateAiTierStagingResourceEnvironment(
+      stagingResourceEnvironment(),
+    ),
+    { ok: true, errors: [] },
+  );
+
+  const unsafe = evaluateAiTierStagingResourceEnvironment(
+    stagingResourceEnvironment({
+      FANMIND_RUNTIME_ENVIRONMENT: "production",
+      NEXT_PUBLIC_APP_URL: "https://fanmind.ch",
+      NEXT_PUBLIC_SUPABASE_URL:
+        "https://productionref123.supabase.co",
+      FANMIND_TARGET_SUPABASE_PROJECT_REF: "productionref123",
+      FANMIND_AI_TIER_STAGING_RESOURCE_CONFIRM: "",
+      STRIPE_SECRET_KEY: "sk_live_DO_NOT_PRINT",
+    }),
+  );
+  assert.equal(unsafe.ok, false);
+  assert.ok(unsafe.errors.includes("runtime_environment"));
+  assert.ok(unsafe.errors.includes("production_target"));
+  assert.ok(unsafe.errors.includes("resource_confirmation"));
   assert.ok(unsafe.errors.includes("stripe_test_mode"));
   assert.doesNotMatch(JSON.stringify(unsafe), /DO_NOT_PRINT/u);
 });
@@ -205,6 +247,7 @@ test("manual workflow is staging-only and never applies a migration", async () =
     workflow,
     /inputs\.confirmation == 'run-ai-tier-staging-acceptance'/u,
   );
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/u);
   assert.match(workflow, /environment: staging/u);
   assert.match(
     workflow,
@@ -249,5 +292,47 @@ test("manual workflow is staging-only and never applies a migration", async () =
   assert.doesNotMatch(
     script,
     /console\.(?:log|error)\([^\n]*(?:STRIPE_SECRET_KEY|STRIPE_PRICE_AI_|WORKSPACE_ID|ownerId|memberId)/u,
+  );
+});
+
+test("resource workflow proves external readiness without enabling writes", async () => {
+  const [workflow, script] = await Promise.all([
+    readFile(resourceWorkflowPath, "utf8"),
+    readFile(scriptPath, "utf8"),
+  ]);
+
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.match(
+    workflow,
+    /inputs\.confirmation == 'verify-ai-tier-staging-resources'/u,
+  );
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/u);
+  assert.match(workflow, /environment: staging/u);
+  assert.match(
+    workflow,
+    /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_NON_PRODUCTION_WRITE_ACK: ''/u,
+  );
+  assert.match(
+    workflow,
+    /npm run ai:tiers:staging:preflight/u,
+  );
+  assert.match(workflow, /rm -f "\$PGPASSFILE"/u);
+  assert.doesNotMatch(
+    workflow,
+    /db:ai-tier-entitlements:apply|ai:tiers:staging:run|sk_live_|fanmind\.ch/u,
+  );
+
+  assert.match(script, /set transaction read only/u);
+  assert.match(
+    script,
+    /AI_TIER_STAGING_RESOURCE_MODE=READ_ONLY/u,
+  );
+  assert.match(
+    script,
+    /AI_TIER_STAGING_RESOURCE_READINESS=PASS/u,
   );
 });

@@ -17,6 +17,7 @@ import { spawnSync } from "node:child_process";
 import {
   buildAiTierSyntheticLifecycleProof,
   evaluateAiTierStagingAcceptanceEnvironment,
+  evaluateAiTierStagingResourceEnvironment,
   isAiTierStagingWorkspaceId,
   validateAiTierStripeTestPrice,
 } from "../../src/lib/aiTierStagingAcceptancePolicy.mjs";
@@ -38,13 +39,50 @@ function clean(value) {
 }
 
 function modeFromArguments(argumentsList) {
-  const known = new Set(["--check", "--run"]);
+  const known = new Set(["--check", "--preflight", "--run"]);
   if (argumentsList.some((argument) => !known.has(argument))) {
     fail("argument_invalid");
   }
   const selected = argumentsList.filter((argument) => known.has(argument));
   if (selected.length > 1) fail("mode_ambiguous");
   return selected[0] ?? "--check";
+}
+
+function workspaceResourceSql(workspaceId) {
+  const workspace = sqlString(workspaceId, UUID_PATTERN);
+  return String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+select concat(
+  workspace.owner_user_id::text,
+  ':',
+  (
+    select member.user_id::text
+      from public.workspace_members as member
+     where member.workspace_id = workspace.id
+       and member.role = 'member'
+     order by member.created_at, member.user_id
+     limit 1
+  )
+)
+from public.workspaces as workspace
+where workspace.id = ${workspace};
+rollback;
+`;
+}
+
+function parseWorkspaceResourcePrincipals(output) {
+  const candidate = clean(output);
+  const match = /^([0-9a-f-]{36}):([0-9a-f-]{36})$/u.exec(candidate);
+  if (
+    !match ||
+    !UUID_PATTERN.test(match[1]) ||
+    !UUID_PATTERN.test(match[2]) ||
+    match[1] === match[2]
+  ) {
+    fail("synthetic_workspace_state");
+  }
 }
 
 function normalizedHost(value) {
@@ -537,6 +575,64 @@ async function runAcceptance(environment) {
   console.log("AI_TIER_STAGING_ACCEPTANCE=PASS");
 }
 
+async function runResourcePreflight(environment) {
+  const evaluation =
+    evaluateAiTierStagingResourceEnvironment(environment);
+  if (!evaluation.ok) fail("environment_invalid");
+  requireDatabaseTarget(environment);
+  ensurePsqlAvailable();
+
+  const lifecycle = buildAiTierSyntheticLifecycleProof(environment);
+  if (!lifecycle.ok || !lifecycle.mutation) fail("lifecycle_contract");
+  console.log("AI_TIER_STAGING_LIFECYCLE=PASS");
+
+  await Promise.all([
+    fetchStripePrice(
+      environment,
+      environment.STRIPE_PRICE_AI_PLUS,
+      10_000,
+    ),
+    fetchStripePrice(
+      environment,
+      environment.STRIPE_PRICE_AI_ULTRA,
+      20_000,
+    ),
+  ]);
+  console.log("AI_TIER_STAGING_STRIPE_CATALOG=PASS");
+
+  const workspaceId = clean(
+    environment.FANMIND_AI_TIER_STAGING_WORKSPACE_ID,
+  ).toLowerCase();
+  if (!isAiTierStagingWorkspaceId(workspaceId)) {
+    fail("synthetic_workspace");
+  }
+
+  const { snapshotDirectory, snapshotPath } =
+    privatePassfileSnapshot(environment);
+  try {
+    const principalResult = runPsql(
+      workspaceResourceSql(workspaceId),
+      environment,
+      snapshotPath,
+    );
+    if (
+      principalResult.error ||
+      principalResult.status !== 0 ||
+      !principalResult.stdout
+    ) {
+      fail("synthetic_workspace_state");
+    }
+    parseWorkspaceResourcePrincipals(principalResult.stdout);
+  } finally {
+    rmSync(snapshotDirectory, { recursive: true, force: true });
+  }
+
+  console.log("AI_TIER_STAGING_SYNTHETIC_WORKSPACE=PASS");
+  console.log("AI_TIER_STAGING_RESOURCE_MODE=READ_ONLY");
+  console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");
+  console.log("AI_TIER_STAGING_RESOURCE_READINESS=PASS");
+}
+
 async function main() {
   const mode = modeFromArguments(process.argv.slice(2));
   if (mode === "--check") {
@@ -553,6 +649,12 @@ async function main() {
     if (!proof.ok) fail("offline_contract");
     console.log("AI_TIER_STAGING_ACCEPTANCE_MODE=check");
     console.log("AI_TIER_STAGING_ACCEPTANCE_READY=YES");
+    return;
+  }
+
+  if (mode === "--preflight") {
+    console.log("AI_TIER_STAGING_ACCEPTANCE_MODE=preflight");
+    await runResourcePreflight(process.env);
     return;
   }
 

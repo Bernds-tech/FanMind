@@ -11,6 +11,8 @@ import {
 
 export const AI_TIER_STAGING_ACCEPTANCE_CONFIRMATION =
   "run-ai-tier-staging-acceptance";
+export const AI_TIER_STAGING_RESOURCE_CONFIRMATION =
+  "verify-ai-tier-staging-resources";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -57,6 +59,56 @@ export function evaluateAiTierStagingAcceptanceEnvironment(
     AI_TIER_STAGING_ACCEPTANCE_CONFIRMATION
   ) {
     errors.push("acceptance_confirmation");
+  }
+  if (
+    !isAiTierStagingWorkspaceId(
+      environment.FANMIND_AI_TIER_STAGING_WORKSPACE_ID,
+    )
+  ) {
+    errors.push("synthetic_workspace");
+  }
+  if (!STRIPE_SECRET_PATTERN.test(clean(environment.STRIPE_SECRET_KEY))) {
+    errors.push("stripe_test_mode");
+  }
+
+  const priceAllowlist =
+    getAiTierStripePriceAllowlistStatus(environment);
+  if (!priceAllowlist.ready) {
+    errors.push("stripe_price_allowlist");
+  }
+
+  return Object.freeze({
+    ok: errors.length === 0,
+    errors: Object.freeze([...new Set(errors)]),
+  });
+}
+
+export function evaluateAiTierStagingResourceEnvironment(
+  environment = {},
+) {
+  const errors = [];
+  const boundary = evaluateEnvironmentBoundary(environment, {
+    allowWrite: false,
+  });
+  errors.push(...boundary.errors.map(() => "environment_boundary"));
+
+  if (boundary.runtimeEnvironment !== "staging") {
+    errors.push("runtime_environment");
+  }
+  if (boundary.appProduction || boundary.supabaseProductionMatch) {
+    errors.push("production_target");
+  }
+  if (
+    !boundary.supabaseTargetRefMatchesUrl ||
+    boundary.supabaseTargetRefMismatch
+  ) {
+    errors.push("supabase_target_binding");
+  }
+  if (
+    clean(environment.FANMIND_AI_TIER_STAGING_RESOURCE_CONFIRM) !==
+    AI_TIER_STAGING_RESOURCE_CONFIRMATION
+  ) {
+    errors.push("resource_confirmation");
   }
   if (
     !isAiTierStagingWorkspaceId(

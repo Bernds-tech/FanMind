@@ -30,6 +30,7 @@
     "db:ai-tier-entitlements:apply": "node scripts/operations/ai-tier-entitlement-migration-runner.mjs --apply",
     "ai:tiers:readiness": "node scripts/operations/verify-ai-tier-readiness.mjs",
     "ai:tiers:staging:check": "node scripts/operations/ai-tier-staging-acceptance.mjs --check",
+    "ai:tiers:staging:preflight": "node scripts/operations/ai-tier-staging-acceptance.mjs --preflight",
     "ai:tiers:staging:run": "node scripts/operations/ai-tier-staging-acceptance.mjs --run",
     "referral:sandbox:preflight": "node scripts/referral-sandbox-preflight.mjs",
     "backup:verify": "node scripts/operations/verify-backup-artifact.mjs",
