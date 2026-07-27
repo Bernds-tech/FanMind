@@ -66,6 +66,11 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   its workspace target, distinct Price allowlist, single-item, event-order
   and idempotency checks fail-closed; never log its internal Stripe mutation.
   Do not wire it to the webhook or database before isolated Staging approval.
+- The manual AI-tier staging acceptance in
+  `scripts/operations/ai-tier-staging-acceptance.mjs` is a rollback-only
+  proof. Keep its independent write gates, synthetic owner/member workspace,
+  Stripe Test Mode catalog verification, redacted output and private
+  `PGPASSFILE`; never turn it into an automatic migration or Production job.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

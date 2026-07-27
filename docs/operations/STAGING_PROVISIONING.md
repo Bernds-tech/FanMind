@@ -51,6 +51,14 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
    - Secret `FANMIND_STAGING_STRIPE_SECRET_KEY`;
    - Secret `FANMIND_STAGING_STRIPE_WEBHOOK_SECRET`;
    - optionaler begrenzter Secret `FANMIND_STAGING_OPENAI_API_KEY`.
+   - Variable `FANMIND_AI_TIER_STAGING_WORKSPACE_ID` für einen ausschließlich
+     synthetischen Workspace mit einem Owner und mindestens einem Mitglied;
+   - Variablen `FANMIND_STAGING_STRIPE_PRICE_AI_PLUS` und
+     `FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA` für aktive EUR-Monatspreise im
+     Stripe Test Mode;
+   - Variablen `FANMIND_STAGING_DB_PORT` und `FANMIND_STAGING_DB_NAME`;
+   - Secrets `FANMIND_STAGING_DB_HOST`, `FANMIND_STAGING_DB_USER` und
+     `FANMIND_STAGING_DB_PASSWORD`; niemals eine Production-Verbindung.
 
 ## Sichere Reihenfolge
 
@@ -66,6 +74,36 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 10. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
 11. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
 
+## Kontrollierte KI-Stufen-Abnahme
+
+Der manuelle Workflow `FanMind AI Tier Staging Acceptance` ist vorbereitet,
+führt aber keine Migration aus. Vor seinem ersten Lauf muss die
+checksum-gebundene Entitlement-Migration separat und bewusst auf Staging
+angewendet worden sein.
+
+1. Einen synthetischen Staging-Workspace mit einem Owner und mindestens einem
+   weiteren Mitglied anlegen. Er darf noch keinen KI-Stufeneintrag besitzen.
+2. Zwei aktive Stripe-Testprodukte mit wiederkehrenden EUR-Monatspreisen
+   bereitstellen: Plus exakt 100 Euro, Ultra exakt 200 Euro.
+3. Die oben genannten Staging-Variablen und -Secrets im GitHub Environment
+   hinterlegen.
+4. Die Migration mit `db:ai-tier-entitlements:verify` read-only prüfen.
+5. Den manuellen Workflow mit der Bestätigung
+   `run-ai-tier-staging-acceptance` starten.
+6. Der Runner prüft den Stripe-Testkatalog read-only, simuliert doppelte,
+   verspätete und kollidierende Lifecycle-Ereignisse und testet für Owner und
+   Mitglied `SELECT`, `INSERT`, `UPDATE` und `DELETE` als verbotene
+   Browserzugriffe.
+7. Der erlaubte Service-Role-Insert-/Read-/Update-/Delete-Nachweis läuft
+   ausschließlich in einer Datenbanktransaktion, die am Ende zurückgerollt
+   wird. Workspace-, Nutzer-, Price-, Subscription- und Event-IDs werden
+   nicht ausgegeben.
+
+Erst `AI_TIER_STAGING_ACCEPTANCE=PASS` zusammen mit
+`AI_TIER_STAGING_TRANSACTION=ROLLED_BACK` gilt als technischer Nachweis.
+Das beweist noch keine Production-Freigabe und aktiviert Plus oder Ultra
+nicht.
+
 ## Freigabekriterien
 
 Staging gilt erst als tatsächlich eingerichtet, wenn:
@@ -80,6 +118,9 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 - keine realen Kundendaten vorhanden sind;
 - Read-only- und Write-Preflight wie vorgesehen fail-closed reagieren;
 - ein Test-Webhook erfolgreich verarbeitet wurde.
+- die KI-Stufen-Abnahme bei angewendeter Staging-Migration vollständig grün
+  ist, bevor der Entitlement-Speicher mit Webhook oder produktiver KI
+  verdrahtet wird.
 
 ## Nicht als erledigt markieren
 

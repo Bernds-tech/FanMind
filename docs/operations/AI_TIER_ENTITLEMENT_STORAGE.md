@@ -114,6 +114,33 @@ Nach einem kontrollierten Staging-Apply:
 6. Plus und Ultra bleiben trotz erfolgreicher Speichermigration blockiert,
    solange Readiness, Stripe-Lifecycle, Modelle und Kontingente fehlen.
 
+Der Ablauf ist als manueller, rollback-only Workflow vorbereitet:
+`FanMind AI Tier Staging Acceptance`.
+
+Er verlangt zusätzlich zur allgemeinen Nicht-Production-Schreibfreigabe die
+exakte Bestätigung `run-ai-tier-staging-acceptance`, einen leeren
+synthetischen Workspace mit echtem Owner und Mitglied, Stripe Test Mode,
+unterschiedliche Plus-/Ultra-Prices und eine private `PGPASSFILE`.
+
+Der Workflow wendet keine Migration an. Er führt zuerst den read-only
+Postflight aus, prüft danach beide Stripe-Testpreise gegen 100 beziehungsweise
+200 Euro pro Monat, beweist die Browserrollen-Sperre für alle vier
+Datenoperationen und führt den Service-Role-CRUD ausschließlich in einer
+zurückgerollten Transaktion aus. Erfolgreiche Ausgabe:
+
+```text
+AI_TIER_STAGING_STRIPE_CATALOG=PASS
+AI_TIER_STAGING_LIFECYCLE=PASS
+AI_TIER_STAGING_BROWSER_BOUNDARY=PASS
+AI_TIER_STAGING_SERVICE_ROLE_CRUD=PASS
+AI_TIER_STAGING_TRANSACTION=ROLLED_BACK
+AI_TIER_STAGING_ACCEPTANCE=PASS
+```
+
+`npm run ai:tiers:staging:check` prüft den lokalen Vertrag offline. Nur
+`npm run ai:tiers:staging:run` mit echten, getrennten Staging-Ressourcen darf
+als Abnahme gelten.
+
 ## Postflight-SQL
 
 Die folgenden Abfragen dürfen nur Tabellenmetadaten liefern, keine Stripe-

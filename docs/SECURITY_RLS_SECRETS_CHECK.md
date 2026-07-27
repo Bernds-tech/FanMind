@@ -103,6 +103,11 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
   - ausschließlich `service_role`, keine Browser-Policy oder Browserrechte;
   - checksum-gebundener Apply-/Postflight-Ablauf:
     `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`
+  - vor Production manuellen Workflow `FanMind AI Tier Staging Acceptance`
+    auf getrenntem Staging ausführen; nur
+    `AI_TIER_STAGING_ACCEPTANCE=PASS` zusammen mit
+    `AI_TIER_STAGING_TRANSACTION=ROLLED_BACK` als technischen Nachweis
+    akzeptieren.
 - [ ] `fan_analysis_reports`
 - [ ] `contact_reply_targets`
 

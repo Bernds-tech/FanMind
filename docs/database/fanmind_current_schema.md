@@ -387,6 +387,10 @@ RLS-/Privilege-Erwartung:
   expliziter Apply stehen über
   `scripts/operations/ai-tier-entitlement-migration-runner.mjs` bereit; ein
   Web-Deploy führt keinen dieser Datenbankschritte aus.
+- Die anschließende Owner-/Member-RLS-, Service-Role-CRUD- und
+  Stripe-Testkatalog-Abnahme ist als manueller rollback-only Workflow
+  vorbereitet. Sie wendet keine Migration an und darf nur gegen ein getrenntes
+  Staging mit synthetischem Workspace laufen.
 
 ### `workspace_ai_prompt_settings`
 
