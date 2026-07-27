@@ -24,6 +24,8 @@ const MIGRATION_PATH = resolve(
 const EXPECTED_MIGRATION_SHA256 =
   "06c83aacd98eebc1655023ed40132322eb4c38c2d10b46ef626c339ab5b076b9";
 const APPLY_CONFIRMATION = "apply-workspace-ai-tier-entitlements";
+const NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT =
+  "I_UNDERSTAND_NON_PRODUCTION_ONLY";
 const MAX_PASSFILE_BYTES = 64 * 1024;
 
 const POSTFLIGHT_SQL = String.raw`
@@ -464,6 +466,15 @@ function runDatabaseMode(mode, migrationSql) {
       APPLY_CONFIRMATION
   ) {
     fail("apply_confirmation_invalid");
+  }
+  if (
+    mode === "--apply" &&
+    runtime === "staging" &&
+    (process.env.FANMIND_ENABLE_NON_PRODUCTION_WRITES !== "true" ||
+      process.env.FANMIND_NON_PRODUCTION_WRITE_ACK !==
+        NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT)
+  ) {
+    fail("staging_write_acknowledgement_invalid");
   }
   if (
     mode === "--apply" &&

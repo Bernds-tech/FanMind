@@ -87,10 +87,17 @@ angewendet worden sein.
    bereitstellen: Plus exakt 100 Euro, Ultra exakt 200 Euro.
 3. Die oben genannten Staging-Variablen und -Secrets im GitHub Environment
    hinterlegen.
-4. Die Migration mit `db:ai-tier-entitlements:verify` read-only prüfen.
-5. Den manuellen Workflow mit der Bestätigung
+4. Den manuellen Workflow `FanMind AI Tier Staging Migration` auf `main` mit
+   der Bestätigung `apply-workspace-ai-tier-entitlements` starten. Er prüft
+   die festgeschriebene Checksumme, bindet Supabase-Projektreferenz und
+   Datenbankhost unabhängig, wendet die Migration genau einmal an und verlangt
+   danach den read-only Metadaten-Postflight.
+5. Erst nach
+   `AI_TIER_ENTITLEMENT_MIGRATION_APPLY=completed` und
+   `AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS` den manuellen
+   Abnahmeworkflow mit der Bestätigung
    `run-ai-tier-staging-acceptance` starten.
-6. Der Runner prüft den Stripe-Testkatalog read-only, simuliert doppelte,
+6. Der Abnahmerunner prüft den Stripe-Testkatalog read-only, simuliert doppelte,
    verspätete und kollidierende Lifecycle-Ereignisse und testet für Owner und
    Mitglied `SELECT`, `INSERT`, `UPDATE` und `DELETE` als verbotene
    Browserzugriffe.

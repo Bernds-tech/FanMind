@@ -157,6 +157,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Offline-Check-, Read-only-Verify- und explizite Apply-Modi. Merge und
   Web-Deploy wenden die Migration nicht automatisch an; Staging-Abnahme bleibt
   vor jedem Production-Schritt verpflichtend.
+- Der manuelle Workflow `FanMind AI Tier Staging Migration` bindet den
+  schreibenden Apply zusätzlich an `main`, das GitHub-Environment `staging`,
+  zwei unabhängige Nicht-Production-Schreibfreigaben, getrennte
+  Supabase-Projekt-/Datenbankziele und eine private Passwortdatei. Er endet
+  mit dem read-only Metadaten-Postflight und startet weder die rollback-only
+  Abnahme noch einen Production-Schritt automatisch.
 - Der vorbereitete serverseitige Stripe-Lifecycle-Vertrag akzeptiert nur
   zwei vollständige, unterschiedliche Price-IDs, genau ein passendes
   Subscription-Item und ein zuvor verifiziertes Workspace-Ziel. Doppelte und

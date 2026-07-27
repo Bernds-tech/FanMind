@@ -80,8 +80,11 @@ entfernt den Snapshot nach dem Lauf.
 
 Vor jedem schreibenden Lauf müssen Zielumgebung, Supabase-Projektreferenz und
 Datenbankhost unabhängig gebunden werden. Staging muss ausdrücklich eine
-andere Projektreferenz als Production verwenden. Ein Production-Apply
-verlangt zusätzlich einen Change-Verweis und die exakte Bestätigung:
+andere Projektreferenz als Production verwenden. Ein Staging-Apply verlangt
+zusätzlich `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true`,
+`FANMIND_NON_PRODUCTION_WRITE_ACK=I_UNDERSTAND_NON_PRODUCTION_ONLY` und die
+exakte Migrationsbestätigung. Ein Production-Apply verlangt zusätzlich einen
+Change-Verweis und dieselbe exakte Migrationsbestätigung:
 
 ```bash
 export FANMIND_AI_TIER_ENTITLEMENT_MIGRATION_CONFIRM=apply-workspace-ai-tier-entitlements
@@ -116,6 +119,15 @@ Nach einem kontrollierten Staging-Apply:
 
 Der Ablauf ist als manueller, rollback-only Workflow vorbereitet:
 `FanMind AI Tier Staging Acceptance`.
+
+Die Migration davor ist als eigener manueller Workflow
+`FanMind AI Tier Staging Migration` vorbereitet. Er läuft ausschließlich vom
+Branch `main` im GitHub-Environment `staging`, verlangt als Eingabe
+`apply-workspace-ai-tier-entitlements`, führt zuerst den checksum-gebundenen
+Offline-Check und danach genau einen zielgebundenen Apply samt read-only
+Postflight aus. Die Passwortdatei wird nur im privaten Runner-Temp-Verzeichnis
+erzeugt und anschließend immer entfernt. Der Workflow startet weder die
+Abnahme noch eine Production-Migration automatisch.
 
 Er verlangt zusätzlich zur allgemeinen Nicht-Production-Schreibfreigabe die
 exakte Bestätigung `run-ai-tier-staging-acceptance`, einen leeren
