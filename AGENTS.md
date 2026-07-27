@@ -51,6 +51,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   missing, unknown, client-controlled, inactive, future, expired or not fully
   ready Plus/Ultra state must resolve to Standard and must not expose Stripe
   references, models or quotas.
+- Persistent paid-tier state belongs only in
+  `workspace_ai_tier_entitlements`. It is service-role-only, a missing row
+  means Standard, and its Stripe references must be reduced to the redacted
+  resolver input before use. Do not wire it to production AI or Stripe paths
+  before the staged rollout in
+  `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
