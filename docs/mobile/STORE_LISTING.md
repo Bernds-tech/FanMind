@@ -7,6 +7,11 @@ Es veröffentlicht keine App und bestätigt keine Angaben in den Store-Portalen.
 Texte, Screenshots und Datenschutzdeklarationen werden erst nach einem
 signierten Build und realen Android-/iOS-Gerätetests final freigegeben.
 
+Die portalnahe technische Datenschutzvorlage mit getrennten Apple- und
+Google-Taxonomien steht in
+`docs/mobile/STORE_PRIVACY_DECLARATIONS.md`. Sie bleibt bis zur Prüfung des
+signierten Builds sowie zur externen Datenschutz-/Rechtsfreigabe ein Entwurf.
+
 Die App ist ein menschlich kontrollierter CRM- und Antwortassistent. Sie sendet
 keine Nachrichten automatisch und behauptet keine aktiven externen
 Social-Media-Integrationen.
@@ -127,6 +132,16 @@ bestätigt werden.
 | Tracking | Kein Mobile-Werbe-SDK und kein Mobile-Meta-Pixel | Vor jedem Release erneut über Dependency-Audit prüfen |
 | Löschen | In-App-Anfrage und öffentliche Löschseite vorhanden | Realen End-to-End-Test dokumentieren |
 
+Der iOS-Native-Prebuild erzeugt ein eigenes `PrivacyInfo.xcprivacy` mit den
+Required-Reason-APIs der installierten Expo-/React-Native-Bibliotheken,
+`NSPrivacyTracking=false` und ohne Tracking-Domains. Das Manifest ersetzt die
+App-Privacy-Antworten in App Store Connect nicht.
+
+Der Android-Native-Prebuild wird fail-closed gegen `compileSdk=36` und
+`targetSdk=36` geprüft. Damit ist die Codebasis auf die von Google Play ab
+31. August 2026 verlangte Android-16-Zielstufe vorbereitet; ein signiertes AAB
+und die Portalprüfung bleiben trotzdem erforderlich.
+
 ## Vor Einreichung zwingend offen
 
 - visuelle App-Icon-Abnahme unter realen Android-/iOS-Masken;
@@ -137,3 +152,5 @@ bestätigt werden.
 - finale Screenshots aus synthetischem Test-Workspace;
 - externe Datenschutz-/Rechtsprüfung der Store-Angaben;
 - Google-Play- und App-Store-Konten samt realen IDs.
+- Apple-TestFlight-/Store-Scan des signierten Binaries auf zusätzliche
+  Required-Reason-Hinweise.

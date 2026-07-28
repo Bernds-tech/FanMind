@@ -326,7 +326,16 @@ Android-/iOS-Masken bleibt an den ersten signierten Build gebunden.
 
 Vorbereitete deutsche und englische Store-Texte, URLs, Screenshot-Slots und die
 noch manuell in den Store-Portalen zu bestätigenden Datenschutzangaben stehen in
-`docs/mobile/STORE_LISTING.md`.
+`docs/mobile/STORE_LISTING.md`. Die getrennte technische Vorlage für Apple App
+Privacy und Google Play Data Safety steht in
+`docs/mobile/STORE_PRIVACY_DECLARATIONS.md`; sie bleibt bis zur Prüfung des
+signierten Builds und zur externen Datenschutz-/Rechtsfreigabe ein Entwurf.
+
+Der iOS-Prebuild erzeugt zusätzlich ein eigenes `PrivacyInfo.xcprivacy` mit den
+Required-Reason-APIs der installierten Expo-/React-Native-Bibliotheken, ohne
+Tracking-Domains. Der Android-Prebuild wird gegen `compileSdk=36` und
+`targetSdk=36` geprüft. Beides ist ein technischer Store-Readiness-Nachweis,
+aber weder eine App-Privacy-Portalantwort noch ein signierter Store-Build.
 
 ## Noch offen nach diesem Block
 

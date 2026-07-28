@@ -142,6 +142,10 @@ Bereits vorhanden:
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständige
   1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive Icon sowie
   vorbereitete deutsche/englische Store-Metadaten;
+- iOS-Privacy-Manifest mit den Required-Reason-APIs der installierten nativen
+  Bibliotheken, ohne Tracking-Domains, sowie fail-closed Android-API-36-Prüfung;
+- getrennte technische Entwürfe für Apple App Privacy und Google Play Data
+  Safety; externe Datenschutz-/Rechts- und Portalabnahme bleibt offen;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI, Expo Doctor, TypeScript-Check, Android-/iOS-JavaScript-Bundles, isolierter Native-Prebuild sowie echtes Android-Debug-APK und codesign-freie iOS-Simulator-App als reine Build-Nachweise.
 

@@ -156,7 +156,9 @@ try {
     secureStoreBackupRules,
     secureStoreDataExtractionRules,
     iosInfoPlist,
+    iosPrivacyManifest,
     iosProject,
+    reactNativeAndroidVersions,
   ] = await Promise.all([
     readFile(join(projectRoot, "package.json"), "utf8").then(JSON.parse),
     readFile(join(generatedProject, "package.json"), "utf8").then(JSON.parse),
@@ -242,11 +244,25 @@ try {
     ),
     readFile(join(generatedProject, "ios", "FanMind", "Info.plist"), "utf8"),
     readFile(
+      join(generatedProject, "ios", "FanMind", "PrivacyInfo.xcprivacy"),
+      "utf8",
+    ),
+    readFile(
       join(
         generatedProject,
         "ios",
         "FanMind.xcodeproj",
         "project.pbxproj",
+      ),
+      "utf8",
+    ),
+    readFile(
+      join(
+        generatedProject,
+        "node_modules",
+        "react-native",
+        "gradle",
+        "libs.versions.toml",
       ),
       "utf8",
     ),
@@ -265,6 +281,10 @@ try {
 
   assert.match(androidGradle, /namespace 'ch\.fanmind\.app'/u);
   assert.match(androidGradle, /applicationId 'ch\.fanmind\.app'/u);
+  assert.match(androidGradle, /compileSdk rootProject\.ext\.compileSdkVersion/u);
+  assert.match(androidGradle, /targetSdkVersion rootProject\.ext\.targetSdkVersion/u);
+  assert.match(reactNativeAndroidVersions, /^compileSdk = "36"$/mu);
+  assert.match(reactNativeAndroidVersions, /^targetSdk = "36"$/mu);
   assert.match(androidManifest, /android:scheme="fanmind"/u);
   assert.match(androidManifest, /android:allowBackup="true"/u);
   assert.match(
@@ -282,6 +302,10 @@ try {
   );
   assert.match(androidStyles, /Theme\.App\.SplashScreen/u);
   assert.match(androidStyles, /Theme\.AppCompat\.DayNight\.NoActionBar/u);
+  assert.doesNotMatch(
+    androidManifest,
+    /android\.permission\.(?:READ_CONTACTS|WRITE_CONTACTS|ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|CAMERA|RECORD_AUDIO|READ_MEDIA_IMAGES|READ_MEDIA_VIDEO)/u,
+  );
   assert.match(
     secureStoreBackupRules,
     /<exclude domain="sharedpref" path="SecureStore"\/>/u,
@@ -304,6 +328,40 @@ try {
     /<key>UIUserInterfaceStyle<\/key>\s*<string>Dark<\/string>/u,
   );
   assert.match(iosInfoPlist, /Expo Dev Launcher uses the local network/u);
+  assert.doesNotMatch(
+    iosInfoPlist,
+    /NS(?:Camera|Contacts|Location|Microphone|PhotoLibrary)UsageDescription/u,
+  );
+  assert.match(
+    iosPrivacyManifest,
+    /<key>NSPrivacyTracking<\/key>\s*<false\/>/u,
+  );
+  assert.match(
+    iosPrivacyManifest,
+    /<key>NSPrivacyTrackingDomains<\/key>\s*(?:<array\/>|<array>\s*<\/array>)/u,
+  );
+  assert.match(
+    iosPrivacyManifest,
+    /<key>NSPrivacyCollectedDataTypes<\/key>\s*(?:<array\/>|<array>\s*<\/array>)/u,
+  );
+  for (const value of [
+    "NSPrivacyAccessedAPICategoryUserDefaults",
+    "NSPrivacyAccessedAPICategoryFileTimestamp",
+    "NSPrivacyAccessedAPICategorySystemBootTime",
+    "NSPrivacyAccessedAPICategoryDiskSpace",
+    "CA92.1",
+    "0A2A.1",
+    "3B52.1",
+    "C617.1",
+    "35F9.1",
+    "85F4.1",
+    "E174.1",
+  ]) {
+    assert.match(
+      iosPrivacyManifest,
+      new RegExp(`<string>${value.replace(".", "\\.")}</string>`, "u"),
+    );
+  }
 
   await Promise.all([
     access(

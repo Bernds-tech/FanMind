@@ -40,6 +40,10 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - nativer Splashscreen mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
 - eigenständiges deckendes 1024×1024-App-Icon für iOS/Legacy-Android und
   transparentes, maskensicher skaliertes Android-Adaptive-Foreground;
+- iOS-Privacy-Manifest mit den Required-Reason-APIs der installierten nativen
+  Bibliotheken, ohne Tracking-Domains, sowie fail-closed Android-API-36-Prüfung;
+- technische, noch extern zu prüfende Vorlagen für Apple App Privacy und
+  Google Play Data Safety;
 - sichere lokale Abmeldung mit Purge registrierter FanMind-SecureStore-Schlüssel und Workspace-Zustand.
 
 ## Sicherheitsgrenzen
@@ -205,6 +209,11 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
    Geräten visuell abnehmen.
 5. Push-Berechtigung, Token-Registrierung und serverseitige Zustellung in einem signierten Development-/Preview-Build umsetzen und testen.
 6. Android Internal Testing und iOS TestFlight durchführen.
-7. Die vorbereiteten Store-Texte, Datenschutzangaben und Screenshot-Matrix nach realen Gerätetests final abnehmen.
+7. Die vorbereiteten Store-Texte, technischen Datenschutzentwürfe und
+   Screenshot-Matrix nach realen Gerätetests sowie externer
+   Datenschutz-/Rechtsprüfung final abnehmen.
 
-Die Produkt- und Release-Checkliste für diese Schritte steht in `docs/mobile/BETA_RELEASE.md`; die vorbereiteten Store-Metadaten stehen in `docs/mobile/STORE_LISTING.md`.
+Die Produkt- und Release-Checkliste für diese Schritte steht in
+`docs/mobile/BETA_RELEASE.md`; die vorbereiteten Store-Metadaten stehen in
+`docs/mobile/STORE_LISTING.md`, die portalnahe Datenschutzvorlage in
+`docs/mobile/STORE_PRIVACY_DECLARATIONS.md`.

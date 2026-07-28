@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 26. Juli 2026
+Stand: 28. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -77,6 +77,10 @@ Aktiv im App-Kern:
   hochauflösendes FanMind-App-Icon für iOS/Legacy-Android, sicher skaliertes
   Android-Adaptive-Foreground sowie vorbereitete deutsche/englische
   Store-Metadaten;
+- iOS-Privacy-Manifest mit den Required-Reason-APIs der installierten nativen
+  Bibliotheken, ohne Tracking-Domains, fail-closed Android-API-36-Nachweis und
+  getrennte technische Entwürfe für Apple App Privacy sowie Google Play Data
+  Safety;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze, Android-/iOS-JavaScript-Bundles, isoliertem Native-Prebuild sowie echtem Android-Debug-APK und codesign-freier iOS-Simulator-App als reine Build-Nachweise.
 - manueller, `main`-gebundener Read-only-Ressourcencheck für die externe

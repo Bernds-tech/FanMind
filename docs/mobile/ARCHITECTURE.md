@@ -157,7 +157,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 3. mobile TypeScript check;
 4. Expo Doctor;
 5. Android and iOS JavaScript bundle exports;
-6. isolated Android-/iOS-Native-Prebuild mit Identity-, Deep-Link-, SecureStore-, Splashscreen- und Secret-Grenzen;
+6. isolated Android-/iOS-Native-Prebuild mit Identity-, Deep-Link-,
+   SecureStore-, Splashscreen-, Privacy-Manifest-, Android-API-36-,
+   Berechtigungs- und Secret-Grenzen;
 7. Android-Debug-APK mit lokalem Debug-Key ohne Release-/Store-Credentials und codesign-freie iOS-Simulator-App in der Native-CI;
 8. main-only read-only EAS resource verification before any signed build;
 9. explicit internal-device test before EAS distribution.
@@ -180,6 +182,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] native wordmark splashscreen and prepared store metadata;
 - [x] dedicated opaque 1024×1024 iOS/legacy icon plus safe-zone Android
       adaptive foreground from editable vector sources;
+- [x] app-owned iOS required-reason privacy manifest, no tracking domains and
+      fail-closed Android compile/target API 36 verification;
+- [x] separate technical Apple App Privacy and Google Play Data Safety drafts;
 - [ ] push permission, token registration and server-side follow-up delivery;
 
 ### Phase B — external verification
@@ -199,7 +204,8 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - approved channel integrations;
 - richer native message timeline;
 - biometric session unlock;
-- account-/data-deletion flow required for store readiness;
+- externally approved store privacy declarations and signed-binary portal
+  submission;
 - store release automation after legal and account setup.
 
 The detailed external handoff and test sequence is maintained in `docs/mobile/BETA_RELEASE.md`.
