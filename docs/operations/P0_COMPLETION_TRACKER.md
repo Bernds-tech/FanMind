@@ -44,6 +44,12 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
 - Web-Kontaktdetail, Zähler und Mobile-Listen verwenden dieselbe Statuswahrheit;
 - Regressionstest verhindert eine erneute Abweichung zwischen Web und Mobile;
 - Expo-SDK-57-Abhängigkeiten werden exakt und reproduzierbar gelockt; transitive Worklets-Versionen dürfen nicht unkontrolliert auf eine inkompatible Veröffentlichung springen.
+- ein manueller, nur von `main` startbarer Read-only-EAS-Ressourcencheck ist
+  vorbereitet und an getrennte geschützte Mobile-Environments gebunden;
+- der Check bestätigt Projekt-/Owner-Bindung, App-Identität und ausschließlich
+  öffentliche Clientwerte, ohne Build, Submit, Update oder Signing-Zugriff;
+- der externe Lauf, signierte Android-/iOS-Builds und Store-Verteilung bleiben
+  offen.
 
 ### PDF-Datenauskunft
 

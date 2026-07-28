@@ -76,11 +76,17 @@ Aktiv im App-Kern:
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke sowie vorbereitete deutsche/englische Store-Metadaten;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze, Android-/iOS-JavaScript-Bundles, isoliertem Native-Prebuild sowie echtem Android-Debug-APK und codesign-freier iOS-Simulator-App als reine Build-Nachweise.
+- manueller, `main`-gebundener Read-only-Ressourcencheck für die externe
+  EAS-Projektbindung, App-Identität und getrennte öffentliche
+  Development-/Preview-/Production-Konfiguration; ohne Build, Submit, Update
+  oder Signing-Credentials.
 
 Noch nicht als ausgelieferte Store-App freigegeben:
 
 - Supabase-Redirect-Freigabe und realer E-Mail-/Gerätetest für `fanmind://reset-password`;
-- EAS-Projekt und Signing Credentials;
+- EAS-Projekt, Expo-Token, geschützte Mobile-Environments und erstmaliger
+  externer Read-only-Ressourcencheck;
+- Signing Credentials;
 - signierter interner Android-Build;
 - Apple Developer / App Store Connect und TestFlight;
 - finales App-Icon, Push-Berechtigung, Token-Registrierung und echte Zustellung;
@@ -112,6 +118,13 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 - Produktions- und Testdaten-Trennung: Fail-closed-Policy, Preflight, Staging-Vorlage und ein ausschließlich manuell auslösbarer, commit-genauer Deploy-Workflow für einen getrennten `fanmind-staging`-Runner sind implementiert.
 - Umgebungs-Governance: schreibende Remote-Tests sind außerhalb eindeutig identifizierter Staging- oder Testumgebungen blockiert.
 - Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert. Ein eigener manueller `main`-gebundener Read-only-Ressourcencheck prüft auf einem getrennten `fanmind-restore`-Runner den isolierten Zielhost und die Prüfsumme eines verschlüsselten Full-Backups, ohne Datenbankverbindung, Entschlüsselung oder Schreibfreigabe. Der tatsächliche Restore-, RLS-, Storage- und Cleanup-Nachweis bleibt bis zum externen Lauf offen.
+- Mobile-Release: Ein eigener manueller `main`-gebundener
+  Read-only-Ressourcencheck ist vorbereitet. Er prüft pro geschützter
+  `mobile-development`-, `mobile-preview`- oder `mobile-production`-Umgebung
+  nur die EAS-Projektbindung, die native App-Identität und die drei erlaubten
+  öffentlichen Clientwerte. Build, Submit, Update und Signing bleiben
+  deaktiviert; der tatsächliche EAS-Lauf und signierte Builds bleiben extern
+  offen.
 - Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
 
 Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.

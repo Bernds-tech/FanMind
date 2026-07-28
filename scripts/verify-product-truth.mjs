@@ -10,11 +10,13 @@ const checkedFiles = [
   ".github/workflows/deploy-fanmind.yml",
   ".github/workflows/ai-tier-staging-migration.yml",
   ".github/workflows/ai-tier-staging-acceptance.yml",
+  ".github/workflows/mobile-release-resource-readiness.yml",
   "package.json",
   "src/config/aiTiers.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
+  "scripts/operations/mobile-release-resource-readiness.mjs",
   "src/lib/workspaceAiTierStorage.mjs",
   "src/lib/workspaceAiTierEntitlements.ts",
   "src/lib/aiTierStripeLifecycle.mjs",
@@ -33,6 +35,11 @@ const checkedFiles = [
   "tests/ai-prompt-policy.test.mjs",
   "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
+  "AGENTS.md",
+  "apps/mobile/README.md",
+  "docs/mobile/ARCHITECTURE.md",
+  "docs/mobile/BETA_RELEASE.md",
+  "docs/operations/P0_COMPLETION_TRACKER.md",
   "src/config/plans.ts",
   "src/lib/plans.ts",
   "src/lib/billing.ts",
@@ -330,6 +337,21 @@ requireText(
   "scripts/operations/verify-ai-tier-readiness.mjs",
   "AI_TIER_READINESS=PASS",
   "Die KI-Stufen müssen eine redigierte gemeinsame Readiness-Prüfung besitzen.",
+);
+requireText(
+  ".github/workflows/mobile-release-resource-readiness.yml",
+  "eas-cli@21.2.0 env:exec",
+  "Der Mobile-Release-Ressourcencheck muss die gepinnte EAS-Umgebung ausschließlich read-only laden.",
+);
+requireText(
+  "scripts/operations/mobile-release-resource-readiness.mjs",
+  "MOBILE_RELEASE_RESOURCE_READINESS=PASS",
+  "Der Mobile-Release-Ressourcencheck muss einen redigierten gemeinsamen PASS-Vertrag besitzen.",
+);
+requireText(
+  "docs/mobile/BETA_RELEASE.md",
+  "Dieser Vorabcheck ist vorbereitet, aber noch nicht extern ausgeführt.",
+  "Das Mobile-Runbook muss den weiterhin offenen externen EAS-Nachweis ehrlich dokumentieren.",
 );
 requireText(
   "docs/operations/AI_TIER_READINESS.md",

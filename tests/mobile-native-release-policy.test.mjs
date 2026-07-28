@@ -36,6 +36,70 @@ const betaRelease = await readFile(
   new URL("../docs/mobile/BETA_RELEASE.md", import.meta.url),
   "utf8",
 );
+const releaseReadinessWorkflow = await readFile(
+  new URL(
+    "../.github/workflows/mobile-release-resource-readiness.yml",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const releaseReadinessScript = await readFile(
+  new URL(
+    "../scripts/operations/mobile-release-resource-readiness.mjs",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const { evaluateMobileReleaseResources } = await import(
+  "../scripts/operations/mobile-release-resource-readiness.mjs"
+);
+
+const easProjectId = "123e4567-e89b-42d3-a456-426614174000";
+const previewProjectRef = "abcdefghijklmnopqrst";
+const productionProjectRef = "uvwxyzabcdefghijklmn";
+const publicAnonJwt = [
+  Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString(
+    "base64url",
+  ),
+  Buffer.from(JSON.stringify({ role: "anon" })).toString("base64url"),
+  "test-signature",
+].join(".");
+
+function linkedAppConfig() {
+  return {
+    expo: {
+      ...appConfig.expo,
+      owner: "bernds-tech",
+      extra: {
+        ...appConfig.expo.extra,
+        eas: {
+          projectId: easProjectId,
+        },
+      },
+    },
+  };
+}
+
+function releaseEnvironment(overrides = {}) {
+  return {
+    FANMIND_MOBILE_RELEASE_ENVIRONMENT: "preview",
+    FANMIND_MOBILE_RELEASE_RESOURCE_CONFIRM:
+      "verify-mobile-release-resources",
+    FANMIND_MOBILE_EXPECTED_EAS_OWNER: "bernds-tech",
+    FANMIND_MOBILE_EXPECTED_EAS_PROJECT_ID: easProjectId,
+    FANMIND_MOBILE_EXPECTED_SUPABASE_PROJECT_REF: previewProjectRef,
+    FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: productionProjectRef,
+    FANMIND_MOBILE_EXPECTED_API_ORIGIN: "https://preview.fanmind.ch",
+    FANMIND_PRODUCTION_API_ORIGIN: "https://fanmind.ch",
+    FANMIND_ENABLE_MOBILE_EAS_BUILD: "false",
+    FANMIND_ENABLE_MOBILE_EAS_SUBMIT: "false",
+    FANMIND_ENABLE_MOBILE_EAS_UPDATE: "false",
+    EXPO_PUBLIC_SUPABASE_URL: `https://${previewProjectRef}.supabase.co`,
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: publicAnonJwt,
+    EXPO_PUBLIC_FANMIND_API_URL: "https://preview.fanmind.ch",
+    ...overrides,
+  };
+}
 
 test("Mobile has an explicit SDK-compatible development-client workflow", () => {
   assert.equal(packageJson.dependencies["expo-dev-client"], "~57.0.9");
@@ -142,4 +206,143 @@ test("Mobile CI proves Android and iOS config without claiming release-signed bi
   assert.match(mobileReadme, /keine\s+EAS-Projekt-ID/u);
   assert.match(betaRelease, /native-validation/u);
   assert.match(betaRelease, /Expo-Konto und eine\s+echte EAS-Projekt-ID/u);
+});
+
+test("read-only Mobile release readiness accepts isolated preview and exact production resources", () => {
+  const preview = evaluateMobileReleaseResources({
+    appConfig: linkedAppConfig(),
+    environment: releaseEnvironment(),
+  });
+  assert.deepEqual(preview, {
+    environment: "preview",
+    projectBinding: "verified",
+    appIdentity: "verified",
+    publicEnvironment: "verified",
+    writeGates: "disabled",
+  });
+
+  const production = evaluateMobileReleaseResources({
+    appConfig: linkedAppConfig(),
+    environment: releaseEnvironment({
+      FANMIND_MOBILE_RELEASE_ENVIRONMENT: "production",
+      FANMIND_MOBILE_EXPECTED_SUPABASE_PROJECT_REF: productionProjectRef,
+      FANMIND_MOBILE_EXPECTED_API_ORIGIN: "https://fanmind.ch",
+      EXPO_PUBLIC_SUPABASE_URL:
+        `https://${productionProjectRef}.supabase.co`,
+      EXPO_PUBLIC_FANMIND_API_URL: "https://fanmind.ch",
+    }),
+  });
+  assert.equal(production.environment, "production");
+  assert.equal(production.publicEnvironment, "verified");
+});
+
+test("Mobile release readiness fails closed on missing EAS binding, production crossover, secret-like public values and write gates", () => {
+  assert.throws(
+    () =>
+      evaluateMobileReleaseResources({
+        appConfig,
+        environment: releaseEnvironment(),
+      }),
+    { code: "eas_project_binding_invalid" },
+  );
+  assert.throws(
+    () =>
+      evaluateMobileReleaseResources({
+        appConfig: linkedAppConfig(),
+        environment: releaseEnvironment({
+          FANMIND_MOBILE_EXPECTED_SUPABASE_PROJECT_REF:
+            productionProjectRef,
+          EXPO_PUBLIC_SUPABASE_URL:
+            `https://${productionProjectRef}.supabase.co`,
+        }),
+      }),
+    { code: "production_crossover" },
+  );
+  assert.throws(
+    () =>
+      evaluateMobileReleaseResources({
+        appConfig: linkedAppConfig(),
+        environment: releaseEnvironment({
+          EXPO_PUBLIC_SUPABASE_ANON_KEY:
+            ["sb", "secret", "synthetic-mobile-fixture"].join("_"),
+        }),
+      }),
+    { code: "public_environment_secret_like" },
+  );
+  assert.throws(
+    () =>
+      evaluateMobileReleaseResources({
+        appConfig: linkedAppConfig(),
+        environment: releaseEnvironment({
+          FANMIND_ENABLE_MOBILE_EAS_BUILD: "true",
+        }),
+      }),
+    { code: "release_write_gate_enabled" },
+  );
+  assert.throws(
+    () =>
+      evaluateMobileReleaseResources({
+        appConfig: linkedAppConfig(),
+        environment: releaseEnvironment({
+          EXPO_PUBLIC_UNREVIEWED_VALUE: "unexpected",
+        }),
+      }),
+    { code: "public_environment_invalid" },
+  );
+  assert.doesNotMatch(
+    releaseReadinessScript,
+    /console\.(?:log|error)\([^)]*(?:EXPECTED_EAS|PROJECT_ID|SUPABASE_URL|ANON_KEY|API_URL)/u,
+  );
+});
+
+test("manual Mobile release resource workflow is main-only, environment-bound and cannot build, submit or update", () => {
+  assert.match(releaseReadinessWorkflow, /^\s*workflow_dispatch:/mu);
+  assert.doesNotMatch(releaseReadinessWorkflow, /^\s*(?:push|pull_request):/mu);
+  assert.match(
+    releaseReadinessWorkflow,
+    /github\.ref == 'refs\/heads\/main'/u,
+  );
+  assert.match(
+    releaseReadinessWorkflow,
+    /inputs\.confirmation == 'verify-mobile-release-resources'/u,
+  );
+  assert.match(
+    releaseReadinessWorkflow,
+    /name: mobile-\$\{\{ inputs\.release_environment \}\}/u,
+  );
+  assert.match(releaseReadinessWorkflow, /permissions:\s*\n\s+contents: read/u);
+  assert.match(releaseReadinessWorkflow, /eas-cli@21\.2\.0 project:info/u);
+  assert.match(releaseReadinessWorkflow, /eas-cli@21\.2\.0 env:exec/u);
+  assert.match(
+    releaseReadinessWorkflow,
+    /FANMIND_ENABLE_MOBILE_EAS_BUILD: 'false'/u,
+  );
+  assert.match(
+    releaseReadinessWorkflow,
+    /FANMIND_ENABLE_MOBILE_EAS_SUBMIT: 'false'/u,
+  );
+  assert.match(
+    releaseReadinessWorkflow,
+    /FANMIND_ENABLE_MOBILE_EAS_UPDATE: 'false'/u,
+  );
+  assert.doesNotMatch(
+    releaseReadinessWorkflow,
+    /eas(?:-cli@[\d.]+)?\s+(?:build|submit|update|project:init|init)\b/u,
+  );
+  assert.doesNotMatch(
+    releaseReadinessWorkflow,
+    /credentials|keystore|ascAppId|appleTeamId|service[_-]?role/iu,
+  );
+  assert.match(
+    releaseReadinessWorkflow,
+    /project:info >"\$REPORT_PATH" 2>&1/u,
+  );
+  assert.match(
+    releaseReadinessWorkflow,
+    /--non-interactive >"\$REPORT_PATH" 2>&1/u,
+  );
+  assert.doesNotMatch(
+    releaseReadinessWorkflow,
+    /\bcat\s+"\$REPORT_PATH"|\becho\s+"\$(?:cat|<)/u,
+  );
 });

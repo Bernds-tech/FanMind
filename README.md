@@ -38,6 +38,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   das isolierte Ziel und das verschlüsselte Full-Backup. Er verbindet sich
   nicht mit PostgreSQL, entschlüsselt keine Daten und aktiviert keine
   Schreibfreigabe; der echte Restore-Drill bleibt extern offen.
+- Mobile-Release-Ressourcencheck: ein manueller, nur auf `main` ausführbarer
+  Read-only-Workflow prüft je geschützter Development-/Preview-/Production-
+  Umgebung die EAS-Projektbindung, App-Identität und ausschließlich öffentliche
+  Client-Konfiguration. Er verwendet weder Build, Submit noch Update und lädt
+  keine Signing Credentials; der externe Lauf und signierte Builds bleiben
+  offen.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
@@ -140,7 +146,9 @@ Bereits vorhanden:
 Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
 
 - Supabase-Redirect-Freigabe und realer E-Mail-/Gerätetest für `fanmind://reset-password`;
-- EAS-Projekt, Signing Credentials und signierter interner Android-Build;
+- EAS-Projekt, Expo-Token, getrennte öffentliche EAS-Umgebungen und erstmaliger
+  Read-only-Ressourcencheck;
+- Signing Credentials und signierter interner Android-Build;
 - Apple Developer / App Store Connect und iOS-TestFlight;
 - finales App-Icon sowie Push-Berechtigung, Token-Registrierung und echte Zustellung;
 - finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;

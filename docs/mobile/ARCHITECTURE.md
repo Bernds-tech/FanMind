@@ -159,7 +159,8 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 5. Android and iOS JavaScript bundle exports;
 6. isolated Android-/iOS-Native-Prebuild mit Identity-, Deep-Link-, SecureStore-, Splashscreen- und Secret-Grenzen;
 7. Android-Debug-APK mit lokalem Debug-Key ohne Release-/Store-Credentials und codesign-freie iOS-Simulator-App in der Native-CI;
-8. explicit internal-device test before EAS distribution.
+8. main-only read-only EAS resource verification before any signed build;
+9. explicit internal-device test before EAS distribution.
 
 ## Implementation phases
 
@@ -172,6 +173,8 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] SDK-compatible Development-Client and explicit EAS environments;
 - [x] credential-free Android/iOS native configuration verification;
 - [x] Android debug with a local debug key and code-signing-free iOS Simulator native compilation in CI, both without release/store credentials;
+- [x] main-only read-only EAS project/public-environment resource check
+      prepared without build, submit, update or signing access;
 - [x] bounded offline read cache with the central purge contract;
 - [x] native notification configuration and fail-closed follow-up response routing;
 - [x] native wordmark splashscreen and prepared store metadata;
@@ -183,6 +186,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [ ] allow `fanmind://reset-password` in the correct Supabase Auth project;
 - [ ] real password-recovery e-mail/device test;
 - [ ] EAS project ID and credentials;
+- [ ] protected `mobile-development`, `mobile-preview` and
+      `mobile-production` environments plus successful read-only resource
+      checks;
 - [ ] signed Android preview build;
 - [ ] signed iOS preview/TestFlight build;
 - [ ] real Android and iOS device test records.

@@ -166,6 +166,47 @@ EXPO_PUBLIC_FANMIND_API_URL
 `EXPO_PUBLIC_*`-Werte werden in die App eingebettet und dürfen daher niemals
 Service-Role-, OpenAI-, Stripe- oder andere Server-Secrets enthalten.
 
+### Read-only Ressourcenprüfung vor Build und Signing
+
+Der manuelle GitHub-Workflow
+`.github/workflows/mobile-release-resource-readiness.yml` ist die vorgelagerte,
+nicht schreibende Abnahme. Er akzeptiert nur den geprüften `main`-Stand und die
+Bestätigung `verify-mobile-release-resources`. Je Auswahl verwendet er ein
+eigenes geschütztes GitHub-Environment:
+
+- `development` → `mobile-development`;
+- `preview` → `mobile-preview`;
+- `production` → `mobile-production`.
+
+Einmalig je GitHub-Environment zu hinterlegen:
+
+```text
+Secret: EXPO_TOKEN
+Variable: FANMIND_MOBILE_EAS_OWNER
+Variable: FANMIND_MOBILE_EAS_PROJECT_ID
+Variable: FANMIND_MOBILE_SUPABASE_PROJECT_REF
+Variable: FANMIND_PRODUCTION_SUPABASE_PROJECT_REF
+Variable: FANMIND_MOBILE_API_ORIGIN
+```
+
+Die EAS-Umgebung selbst enthält ausschließlich die drei freigegebenen
+`EXPO_PUBLIC_*`-Werte. Der Prüfer verlangt die echte, per `eas init`
+geschriebene Owner-/Projektbindung in `app.json`, `ch.fanmind.app` für Android
+und iOS sowie `fanmind` als Schema. Development und Preview dürfen weder den
+Production-Supabase-Ref noch `https://fanmind.ch` verwenden; Production muss
+exakt auf beide bestätigten Production-Ziele zeigen.
+
+Die EAS CLI ist auf `21.2.0` gepinnt. Der Workflow führt nur `project:info` und
+`env:exec` aus. Die Schalter für EAS Build, Submit und Update stehen zwingend
+auf `false`; Signing Credentials, Keystore, Apple-Team- oder Store-IDs werden
+nicht geladen. Die Ausgabe enthält nur redigierte Statuscodes, niemals
+EAS-Projekt-ID, Owner, URL oder Key-Werte.
+
+Dieser Vorabcheck ist vorbereitet, aber noch nicht extern ausgeführt. Ein
+grüner Lauf bestätigt nur Ressourcenbindung und öffentliche
+Client-Konfiguration. Er erzeugt kein Binary und belegt weder Signing, Android
+Internal Testing noch TestFlight.
+
 ### Native-Prüfung ohne Release-/Store-Credentials
 
 Der lokale Prebuild-Nachweis benötigt weder EAS-Login noch Signing:
@@ -207,12 +248,16 @@ Noch nicht durch Code erledigt:
 1. Expo-Organisation beziehungsweise Expo-Konto festlegen.
 2. In `apps/mobile` `eas init` ausführen und die echte EAS-Projekt-ID in die Expo-Konfiguration schreiben lassen.
 3. In EAS die drei Umgebungen `development`, `preview` und `production` mit den jeweils richtigen öffentlichen FanMind-Werten anlegen.
-4. Android-Keystore kontrolliert durch EAS erzeugen oder einen bestätigten bestehenden Keystore hinterlegen.
-5. Für iOS ein bezahltes Apple-Developer-Konto bereitstellen.
-6. Für interne iOS-Ad-hoc-Builds Testgeräte registrieren.
-7. App in App Store Connect und Google Play Console anlegen.
-8. App Store Connect App-ID und Google-Service-Account erst danach in die Submit-Konfiguration aufnehmen.
-9. Zugriff auf interne Build-URLs im Expo-Projekt auf authentifizierte Teammitglieder begrenzen.
+4. `EXPO_TOKEN` und die erwarteten Projekt-/Zielvariablen in den drei
+   geschützten GitHub-Environments hinterlegen.
+5. Den Read-only-Ressourcencheck zuerst für Development und Preview, danach
+   separat für Production ausführen.
+6. Android-Keystore kontrolliert durch EAS erzeugen oder einen bestätigten bestehenden Keystore hinterlegen.
+7. Für iOS ein bezahltes Apple-Developer-Konto bereitstellen.
+8. Für interne iOS-Ad-hoc-Builds Testgeräte registrieren.
+9. App in App Store Connect und Google Play Console anlegen.
+10. App Store Connect App-ID und Google-Service-Account erst danach in die Submit-Konfiguration aufnehmen.
+11. Zugriff auf interne Build-URLs im Expo-Projekt auf authentifizierte Teammitglieder begrenzen.
 
 Keine erfundene EAS-Projekt-ID, Apple-Team-ID, App-Store-ID oder Google-Service-Account-Datei eintragen.
 
@@ -275,6 +320,8 @@ noch manuell in den Store-Portalen zu bestätigenden Datenschutzangaben stehen i
 - finale App-Icons aus einer bestätigten hochauflösenden runden/quadratischen Quelle;
 - echter Recovery-E-Mail-/Gerätetest nach Supabase-Redirect-Freigabe;
 - EAS-Projekt-ID und Signing Credentials;
+- Expo-Token, geschützte Mobile-Environments und drei erfolgreiche
+  Read-only-Ressourcenchecks;
 - reale öffentliche EAS-Werte in getrennten Development-/Preview-/Production-Umgebungen;
 - Android Internal Testing und iOS TestFlight;
 - Push-Berechtigung, Token-Registrierung und echte Follow-up-Zustellung im signierten Build;
