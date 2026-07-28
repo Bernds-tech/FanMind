@@ -1,6 +1,6 @@
 # FanMind P0-Abschluss-Tracker
 
-Stand: 22. Juli 2026
+Stand: 28. Juli 2026
 
 GitHub-Issue [#640](https://github.com/Bernds-tech/FanMind/issues/640) ist der laufende, verbindliche Arbeits- und Nachweis-Tracker. Dieses Dokument hält die dauerhafte Repository-Zusammenfassung fest, damit bereits erledigte Arbeit nicht erneut umgesetzt wird.
 
@@ -51,6 +51,11 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
 - eigenständige 1024×1024-Icon-Quellen und getrennte PNG-Verträge für
   iOS/Legacy-Android sowie Android Adaptive Icon sind im Native-Prebuild
   abgesichert; die visuelle Abnahme bleibt beim signierten Realgeräte-Build;
+- iOS-Privacy-Manifest, fehlende Tracking-Domains, minimale native
+  Berechtigungen und Android API 36 werden im isolierten Prebuild geprüft;
+- getrennte technische Entwürfe für Apple App Privacy und Google Play Data
+  Safety sind vorbereitet, bleiben aber bis zum signierten Build und zur
+  externen Datenschutz-/Rechtsfreigabe unveröffentlicht;
 - der externe Lauf, signierte Android-/iOS-Builds und Store-Verteilung bleiben
   offen.
 
