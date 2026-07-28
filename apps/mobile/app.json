@@ -3,6 +3,7 @@
     "name": "FanMind",
     "slug": "fanmind-mobile",
     "version": "0.1.0",
+    "icon": "./assets/branding/fanmind-app-icon.png",
     "orientation": "portrait",
     "scheme": "fanmind",
     "userInterfaceStyle": "dark",
@@ -41,6 +42,7 @@
     "android": {
       "package": "ch.fanmind.app",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/branding/fanmind-adaptive-icon.png",
         "backgroundColor": "#06142c"
       },
       "predictiveBackGestureEnabled": true

@@ -23,6 +23,22 @@ const mobileStoreListing = await readFile(
 const webTsconfig = await readFile(new URL("../tsconfig.json", import.meta.url), "utf8");
 const webEslint = await readFile(new URL("../eslint.config.mjs", import.meta.url), "utf8");
 
+async function pngHeader(relativePath) {
+  const image = await readFile(new URL(relativePath, mobileRoot));
+  assert.deepEqual(
+    [...image.subarray(0, 8)],
+    [137, 80, 78, 71, 13, 10, 26, 10],
+    `${relativePath} must be a PNG`,
+  );
+  assert.equal(image.subarray(12, 16).toString("ascii"), "IHDR");
+  return {
+    width: image.readUInt32BE(16),
+    height: image.readUInt32BE(20),
+    bitDepth: image[24],
+    colorType: image[25],
+  };
+}
+
 async function sourceFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const output = [];
@@ -59,7 +75,7 @@ test("Android, iOS and deep-link identities are independent and explicit", () =>
   assert.equal(appConfig.expo.userInterfaceStyle, "dark");
 });
 
-test("mobile uses the confirmed wordmark only for the native splashscreen", () => {
+test("mobile keeps the wordmark on the splashscreen and uses dedicated high-resolution app icons", async () => {
   const splashPlugin = appConfig.expo.plugins.find(
     (plugin) => Array.isArray(plugin) && plugin[0] === "expo-splash-screen",
   );
@@ -70,10 +86,26 @@ test("mobile uses the confirmed wordmark only for the native splashscreen", () =
   assert.equal(splashPlugin[1].dark, undefined);
   assert.equal(splashPlugin[1].resizeMode, "contain");
   assert.equal(splashPlugin[1].imageWidth, 300);
-  assert.equal(appConfig.expo.icon, undefined);
-  assert.equal(appConfig.expo.android.adaptiveIcon.foregroundImage, undefined);
-  assert.match(mobileBetaRelease, /Wortmarke ist ausdrücklich \*\*kein\*\* Store-App-Icon/u);
-  assert.match(mobileStoreListing, /hochauflösendes bestätigtes rundes\/quadratisches App-Icon/u);
+  assert.equal(
+    appConfig.expo.icon,
+    "./assets/branding/fanmind-app-icon.png",
+  );
+  assert.equal(
+    appConfig.expo.android.adaptiveIcon.foregroundImage,
+    "./assets/branding/fanmind-adaptive-icon.png",
+  );
+  assert.equal(appConfig.expo.android.adaptiveIcon.backgroundColor, "#06142c");
+
+  assert.deepEqual(
+    await pngHeader("assets/branding/fanmind-app-icon.png"),
+    { width: 1024, height: 1024, bitDepth: 8, colorType: 2 },
+  );
+  assert.deepEqual(
+    await pngHeader("assets/branding/fanmind-adaptive-icon.png"),
+    { width: 1024, height: 1024, bitDepth: 8, colorType: 6 },
+  );
+  assert.match(mobileBetaRelease, /eigenständige 1024 × 1024 Pixel große Icon-Quelle/u);
+  assert.match(mobileStoreListing, /finale FanMind-App-Icon ist vorbereitet/u);
 });
 
 test("store metadata remains human-controlled and contains no integration promise", () => {

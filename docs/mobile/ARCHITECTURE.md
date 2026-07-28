@@ -178,8 +178,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] bounded offline read cache with the central purge contract;
 - [x] native notification configuration and fail-closed follow-up response routing;
 - [x] native wordmark splashscreen and prepared store metadata;
+- [x] dedicated opaque 1024×1024 iOS/legacy icon plus safe-zone Android
+      adaptive foreground from editable vector sources;
 - [ ] push permission, token registration and server-side follow-up delivery;
-- [ ] final app icon from a confirmed high-resolution square source.
 
 ### Phase B — external verification
 

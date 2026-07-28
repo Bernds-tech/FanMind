@@ -73,7 +73,10 @@ Aktiv im App-Kern:
 - offene Follow-ups anzeigen und mit dem kanonischen Status `completed` abschließen; bestehende `done`-Altdaten bleiben lesekompatibel;
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
 - native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
-- nativer Splashscreen mit bestätigter FanMind-Wortmarke sowie vorbereitete deutsche/englische Store-Metadaten;
+- nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständiges
+  hochauflösendes FanMind-App-Icon für iOS/Legacy-Android, sicher skaliertes
+  Android-Adaptive-Foreground sowie vorbereitete deutsche/englische
+  Store-Metadaten;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze, Android-/iOS-JavaScript-Bundles, isoliertem Native-Prebuild sowie echtem Android-Debug-APK und codesign-freier iOS-Simulator-App als reine Build-Nachweise.
 - manueller, `main`-gebundener Read-only-Ressourcencheck für die externe
@@ -89,7 +92,8 @@ Noch nicht als ausgelieferte Store-App freigegeben:
 - Signing Credentials;
 - signierter interner Android-Build;
 - Apple Developer / App Store Connect und TestFlight;
-- finales App-Icon, Push-Berechtigung, Token-Registrierung und echte Zustellung;
+- visuelle App-Icon-Abnahme im signierten Build sowie Push-Berechtigung,
+  Token-Registrierung und echte Zustellung;
 - finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;
 - realer End-to-End-Gerätetest auf Android und iOS.
 

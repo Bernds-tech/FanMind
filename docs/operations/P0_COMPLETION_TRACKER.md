@@ -48,6 +48,9 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
   vorbereitet und an getrennte geschützte Mobile-Environments gebunden;
 - der Check bestätigt Projekt-/Owner-Bindung, App-Identität und ausschließlich
   öffentliche Clientwerte, ohne Build, Submit, Update oder Signing-Zugriff;
+- eigenständige 1024×1024-Icon-Quellen und getrennte PNG-Verträge für
+  iOS/Legacy-Android sowie Android Adaptive Icon sind im Native-Prebuild
+  abgesichert; die visuelle Abnahme bleibt beim signierten Realgeräte-Build;
 - der externe Lauf, signierte Android-/iOS-Builds und Store-Verteilung bleiben
   offen.
 

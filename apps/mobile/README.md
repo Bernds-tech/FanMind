@@ -38,6 +38,8 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - verschlüsselte, maximal 24 Stunden alte Offline-Kontaktübersicht mit höchstens 50 Einträgen im Nur-Lesen-Modus;
 - native Push-Konfigurationsgrundlage mit streng validierter Navigation zu Follow-ups, noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
 - nativer Splashscreen mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
+- eigenständiges deckendes 1024×1024-App-Icon für iOS/Legacy-Android und
+  transparentes, maskensicher skaliertes Android-Adaptive-Foreground;
 - sichere lokale Abmeldung mit Purge registrierter FanMind-SecureStore-Schlüssel und Workspace-Zustand.
 
 ## Sicherheitsgrenzen
@@ -199,7 +201,8 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
    Umgebungen einrichten und den Read-only-Ressourcencheck je Umgebung
    ausführen.
 3. Signing Credentials und interne Preview-Builds einrichten.
-4. Hochauflösendes rundes App-Icon aus dem final bestätigten FanMind-Branding bereitstellen; die Wortmarke ist bereits als nativer Splashscreen eingebunden.
+4. App-Icon und Splashscreen in signierten Android-/iOS-Builds auf realen
+   Geräten visuell abnehmen.
 5. Push-Berechtigung, Token-Registrierung und serverseitige Zustellung in einem signierten Development-/Preview-Build umsetzen und testen.
 6. Android Internal Testing und iOS TestFlight durchführen.
 7. Die vorbereiteten Store-Texte, Datenschutzangaben und Screenshot-Matrix nach realen Gerätetests final abnehmen.
