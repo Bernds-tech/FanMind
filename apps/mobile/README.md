@@ -112,6 +112,36 @@ Kompilierung weiter: ein Android-Debug-APK ohne Release-Credentials und eine
 codesign-freie iOS-Simulator-App. Beide Artefakte sind ausdrücklich nur
 Build-Nachweise, keine signierten Beta- oder Store-Pakete.
 
+## Read-only EAS-Ressourcencheck
+
+Vor dem ersten signierten Build ist ein eigener manueller GitHub-Workflow
+vorbereitet: `FanMind Mobile Release Resource Readiness`. Er läuft nur von
+`main` und bindet die Auswahl an ein geschütztes GitHub-Environment:
+
+| Auswahl | GitHub-Environment |
+|---|---|
+| `development` | `mobile-development` |
+| `preview` | `mobile-preview` |
+| `production` | `mobile-production` |
+
+Der Workflow verwendet die exakt gepinnte EAS CLI `21.2.0` ausschließlich für
+`project:info` und `env:exec`. Er prüft die echte EAS-Owner-/Projektbindung,
+beide nativen App-IDs, das Deep-Link-Schema sowie genau diese drei öffentlichen
+EAS-Werte:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL
+EXPO_PUBLIC_SUPABASE_ANON_KEY
+EXPO_PUBLIC_FANMIND_API_URL
+```
+
+Development und Preview müssen von Production getrennte Supabase- und
+API-Ziele verwenden; Production muss exakt auf die bestätigten
+Production-Ziele zeigen. Build, Submit und Update sind technisch ausgeschaltet,
+Signing Credentials werden nicht geladen und konkrete Projekt-, URL- oder
+Key-Werte werden nicht ausgegeben. Der vorbereitete Workflow zählt erst nach
+echter EAS-Einrichtung und erfolgreichem externem Lauf als Nachweis.
+
 ## EAS-Profile
 
 Die Profile binden ihre öffentlichen Werte ausdrücklich an getrennte
@@ -165,10 +195,13 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 ## Nächste Mobile-Schritte
 
 1. Supabase-Redirect `fanmind://reset-password` extern freigeben und Recovery auf einem realen Gerät testen.
-2. EAS-Projekt, öffentliche Development-/Preview-/Production-Umgebungen, Signing Credentials und interne Preview-Builds einrichten.
-3. Hochauflösendes rundes App-Icon aus dem final bestätigten FanMind-Branding bereitstellen; die Wortmarke ist bereits als nativer Splashscreen eingebunden.
-4. Push-Berechtigung, Token-Registrierung und serverseitige Zustellung in einem signierten Development-/Preview-Build umsetzen und testen.
-5. Android Internal Testing und iOS TestFlight durchführen.
-6. Die vorbereiteten Store-Texte, Datenschutzangaben und Screenshot-Matrix nach realen Gerätetests final abnehmen.
+2. EAS-Projekt, Expo-Token und geschützte Development-/Preview-/Production-
+   Umgebungen einrichten und den Read-only-Ressourcencheck je Umgebung
+   ausführen.
+3. Signing Credentials und interne Preview-Builds einrichten.
+4. Hochauflösendes rundes App-Icon aus dem final bestätigten FanMind-Branding bereitstellen; die Wortmarke ist bereits als nativer Splashscreen eingebunden.
+5. Push-Berechtigung, Token-Registrierung und serverseitige Zustellung in einem signierten Development-/Preview-Build umsetzen und testen.
+6. Android Internal Testing und iOS TestFlight durchführen.
+7. Die vorbereiteten Store-Texte, Datenschutzangaben und Screenshot-Matrix nach realen Gerätetests final abnehmen.
 
 Die Produkt- und Release-Checkliste für diese Schritte steht in `docs/mobile/BETA_RELEASE.md`; die vorbereiteten Store-Metadaten stehen in `docs/mobile/STORE_LISTING.md`.

@@ -77,6 +77,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   bound to the separate `restore-drill` environment and exclusive
   `fanmind-restore` runner, checksum-only and write-disabled. It must never
   connect to PostgreSQL, decrypt a backup or invoke the restore runner.
+- Mobile release resource readiness is strictly read-only. Keep it main-only,
+  bound to the selected protected `mobile-development`, `mobile-preview` or
+  `mobile-production` environment and pinned to the reviewed EAS CLI version.
+  It may use only `project:info` and `env:exec` to confirm the linked project,
+  app identity and public client environment; it must never build, submit,
+  update, load signing credentials or imply that a signed binary exists.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
