@@ -33,7 +33,11 @@ test("iOS privacy manifest config matches the installed native SDK reasons", asy
   });
 });
 test("native prebuild enforces store API, privacy and least-permission boundaries", async () => {
-  const source = await read("apps/mobile/scripts/check-native-prebuild.mjs");
+  const [source, appConfigSource] = await Promise.all([
+    read("apps/mobile/scripts/check-native-prebuild.mjs"),
+    read("apps/mobile/app.json"),
+  ]);
+  const appConfig = JSON.parse(appConfigSource);
 
   assert.match(source, /PrivacyInfo\.xcprivacy/u);
   assert.match(source, /\^compileSdk = "36"\$/u);
@@ -45,7 +49,14 @@ test("native prebuild enforces store API, privacy and least-permission boundarie
   assert.match(source, /READ_CONTACTS\|WRITE_CONTACTS/u);
   assert.match(source, /ACCESS_FINE_LOCATION\|ACCESS_COARSE_LOCATION/u);
   assert.match(source, /CAMERA\|RECORD_AUDIO/u);
+  assert.match(source, /READ_EXTERNAL_STORAGE/u);
+  assert.match(source, /WRITE_EXTERNAL_STORAGE/u);
+  assert.match(source, /tools:node="remove"/u);
   assert.match(source, /READ_MEDIA_IMAGES\|READ_MEDIA_VIDEO/u);
+  assert.deepEqual(appConfig.expo.android?.blockedPermissions, [
+    "android.permission.READ_EXTERNAL_STORAGE",
+    "android.permission.WRITE_EXTERNAL_STORAGE",
+  ]);
   assert.match(
     source,
     /NS\(\?:Camera\|Contacts\|Location\|Microphone\|PhotoLibrary\)UsageDescription/u,
@@ -72,6 +83,9 @@ test("store privacy draft stays synchronized with the current mobile boundary", 
   assert.match(privacyDraft, /Noch keine Push-Token-Registrierung/u);
   assert.match(privacyDraft, /Apple App Privacy/u);
   assert.match(privacyDraft, /Google Play Data Safety/u);
+  assert.match(privacyDraft, /Contact Info – Name \| Ja/u);
+  assert.match(privacyDraft, /Personal info – Name \| Ja/u);
+  assert.match(privacyDraft, /In-app search history \| Ja/u);
   assert.match(privacyDraft, /Push-Aktivierungsgrenze/u);
   assert.match(storeListing, /STORE_PRIVACY_DECLARATIONS\.md/u);
 

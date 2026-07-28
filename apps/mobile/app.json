@@ -74,6 +74,10 @@
     },
     "android": {
       "package": "ch.fanmind.app",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/branding/fanmind-adaptive-icon.png",
         "backgroundColor": "#06142c"

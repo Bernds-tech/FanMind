@@ -306,6 +306,33 @@ try {
     androidManifest,
     /android\.permission\.(?:READ_CONTACTS|WRITE_CONTACTS|ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|CAMERA|RECORD_AUDIO|READ_MEDIA_IMAGES|READ_MEDIA_VIDEO)/u,
   );
+  assert.deepEqual(appConfig.expo.android?.blockedPermissions, [
+    "android.permission.READ_EXTERNAL_STORAGE",
+    "android.permission.WRITE_EXTERNAL_STORAGE",
+  ]);
+  for (const permission of [
+    "READ_EXTERNAL_STORAGE",
+    "WRITE_EXTERNAL_STORAGE",
+  ]) {
+    const permissionReference = new RegExp(
+      `android:name="android\\.permission\\.${permission}"`,
+      "gu",
+    );
+    const removalDeclaration = new RegExp(
+      `<uses-permission android:name="android\\.permission\\.${permission}" tools:node="remove"\\s*/>`,
+      "u",
+    );
+    assert.equal(
+      androidManifest.match(permissionReference)?.length,
+      1,
+      `${permission} must appear exactly once as a removal declaration.`,
+    );
+    assert.match(
+      androidManifest,
+      removalDeclaration,
+      `${permission} must be removed from the merged Android manifest.`,
+    );
+  }
   assert.match(
     secureStoreBackupRules,
     /<exclude domain="sharedpref" path="SecureStore"\/>/u,

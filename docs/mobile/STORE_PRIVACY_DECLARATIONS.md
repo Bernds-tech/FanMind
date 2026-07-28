@@ -80,6 +80,7 @@ Processor-/Aufbewahrungsgrenzen bleiben extern zu bestätigen.
 | Apple-Datentyp | Entwurf | Mit Nutzer verknüpft | Tracking | Zweck / technische Begründung |
 |---|---:|---:|---:|---|
 | Contact Info – Email Address | Ja | Ja | Nein | Login, Account Management und App Functionality |
+| Contact Info – Name | Ja | Ja | Nein | Pflichtfeld `display_name` für nutzererstellte CRM-Kontakte; Speicherung im autorisierten Workspace für App Functionality |
 | Identifiers – User ID | Ja | Ja | Nein | Supabase-User, Workspace-Autorisierung und Account Management |
 | User Content – Other User Content | Ja | Ja | Nein | CRM-Kontakte, Handles, Zusammenfassungen, interne Notizen, Kontaktwissen und Follow-up-Gründe |
 | User Content – Emails or Text Messages | Prüfen / vorsorglich Ja | Ja | Nein | Nur vom Nutzer eingefügter Kontext für KI-Vorschläge; `store: false`, aber Übermittlung an FanMind und OpenAI muss final bewertet werden |
@@ -112,10 +113,12 @@ oder Tracking.
 | Google-Datentyp | Erhebung | Teilen | Zweck | Hinweis |
 |---|---:|---:|---|---|
 | Personal info – Email address | Ja | Vorläufig Nein | App functionality, Account management | Für Login erforderlich |
+| Personal info – Name | Ja | Vorläufig Nein | App functionality | Pflichtfeld `display_name` für nutzererstellte CRM-Kontakte im autorisierten Workspace |
 | Personal info – User IDs | Ja | Vorläufig Nein | App functionality, Account management | User-/Workspace-Autorisierung |
 | App activity – Other user-generated content | Ja | Vorläufig Nein | App functionality | CRM-Inhalte, Kontaktwissen und Follow-ups |
 | Messages – Other messages | Prüfen / vorsorglich Ja | Vorläufig Nein | App functionality | Vom Nutzer eingefügter KI-Kontext; ephemerale Verarbeitung im Portal exakt kennzeichnen |
 | App activity – App interactions | Prüfen / vorsorglich Ja | Vorläufig Nein | Analytics nur als betriebliche KI-Nutzungs-/Kostenmessung, App functionality | Keine Mobile-Werbeanalytik; keine Inhaltsvolltexte im Usage-Event |
+| App activity – In-app search history | Ja | Vorläufig Nein | App functionality | Online-Suchbegriffe werden für die Kontaktabfrage an Supabase/PostgREST übertragen, aber nicht als eigene Suchhistorie gespeichert |
 | Device or other IDs | Nein | Nein | – | Noch keine Push-Token-Registrierung |
 | Contacts | Nein | Nein | – | Kein Geräteadressbuchzugriff |
 | Diagnostics | Nein | Nein | – | Kein Mobile-Crash-/Performance-SDK |
