@@ -328,6 +328,28 @@ try {
         "image@3x.png",
       ),
     ),
+    access(
+      join(
+        generatedProject,
+        "android",
+        "app",
+        "src",
+        "main",
+        "res",
+        "mipmap-xxxhdpi",
+        "ic_launcher_foreground.webp",
+      ),
+    ),
+    access(
+      join(
+        generatedProject,
+        "ios",
+        "FanMind",
+        "Images.xcassets",
+        "AppIcon.appiconset",
+        "App-Icon-1024x1024@1x.png",
+      ),
+    ),
   ]);
 
   const generatedNativeFiles = [

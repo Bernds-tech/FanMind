@@ -25,6 +25,12 @@ Social-Media-Integrationen.
 | Datenschutz | `https://fanmind.ch/datenschutz` |
 | Account-Löschung | `https://fanmind.ch/account-deletion` |
 
+Das finale FanMind-App-Icon ist vorbereitet: eine vollständig deckende
+1024×1024-PNG für iOS/Legacy-Android und ein transparentes, maskensicher
+skaliertes Android-Adaptive-Foreground. Das Querlogo bleibt ausschließlich
+Wortmarke und Splashscreen. Vor Einreichung wird die Darstellung aus signierten
+Builds auf realen Android- und iOS-Geräten visuell bestätigt.
+
 ## Google Play - Kurzbeschreibung
 
 ```text
@@ -123,7 +129,7 @@ bestätigt werden.
 
 ## Vor Einreichung zwingend offen
 
-- hochauflösendes bestätigtes rundes/quadratisches App-Icon;
+- visuelle App-Icon-Abnahme unter realen Android-/iOS-Masken;
 - EAS-Projekt-ID und Signing Credentials;
 - signierter Android- und iOS-Build;
 - reale Gerätetests für Login, Recovery, Deep Links, Offline und Account-Löschung;

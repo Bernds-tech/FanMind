@@ -30,6 +30,9 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-/iOS-JavaScript-Export, isoliertem nativen Android-/iOS-Prebuild, echtem Android-Debug-APK, codesign-freier iOS-Simulator-App und Architekturgrenze;
 - native Push-Konfigurationsgrundlage mit minimal validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; keine Berechtigungsabfrage, Token-Registrierung oder Zustellung;
 - konfliktfreie native Splashscreen-Konfiguration mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
+- getrennte 1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive
+  Icon aus einer eigenständigen Vektorquelle; keine Hochskalierung des
+  96×96-Social-Avatars;
 - explizite EAS-Umgebungen für `development`, `preview` und `production`;
 - Android-Debug-/iOS-Simulator-Validierung ohne Release-/Store-Credentials, die ausdrücklich kein signierter Beta-Build ist.
 
@@ -140,7 +143,7 @@ Der noch unsignierte App-Kern kann bereits auf einem Android-Telefon geprüft we
 6. Rechner und Telefon in dasselbe WLAN bringen und den QR-Code mit Expo Go scannen;
 7. falls das lokale Netzwerk blockiert, `@expo/ngrok` installieren und `npx expo start --go --tunnel` verwenden.
 
-Solange echtes Staging fehlt, darf dieser Vorabtest nur mit einem eigens dafür vorgesehenen Testkonto erfolgen. Expo Go ersetzt keinen signierten Beta-Build: finales Icon/Splashscreen, eigenständige Installation, verlässliche Deep Links, Push und Store-Verhalten müssen später mit dem signierten APK/AAB geprüft werden. Für native Funktionen ist der eigene Development-Client verbindlich; der Standardbefehl `npm run start` startet deshalb mit `--dev-client`.
+Solange echtes Staging fehlt, darf dieser Vorabtest nur mit einem eigens dafür vorgesehenen Testkonto erfolgen. Expo Go ersetzt keinen signierten Beta-Build: konfigurierte App-Icons und Splashscreen, eigenständige Installation, verlässliche Deep Links, Push und Store-Verhalten müssen später mit dem signierten APK/AAB geprüft werden. Für native Funktionen ist der eigene Development-Client verbindlich; der Standardbefehl `npm run start` startet deshalb mit `--dev-client`.
 
 ## EAS-Konfiguration
 
@@ -306,10 +309,20 @@ Splashscreen-Variante, damit iOS keine widersprüchlichen Interface-Style-Werte
 generiert. Die Quelle ist 754 × 252 Pixel groß und wird mit 300 Pixel
 Bildbreite ausschließlich verkleinert, nicht hochskaliert.
 
-Die Wortmarke ist ausdrücklich **kein** Store-App-Icon. Android Adaptive Icon,
-Android Legacy Icon und iOS App Icon bleiben ohne eine bestätigte hochauflösende
-runde beziehungsweise quadratische Quelle offen. Das vorhandene 96 × 96 Pixel
-große Social-Avatar-Asset darf dafür nicht hochskaliert werden.
+Die Wortmarke bleibt ausdrücklich **vom Store-App-Icon getrennt**. Für das
+App-Icon besteht eine eigenständige 1024 × 1024 Pixel große Icon-Quelle mit dem
+bereits in FanMind verwendeten weißen `F` und cyan-blauen `M`. Daraus sind zwei
+native PNG-Verträge erzeugt:
+
+- `fanmind-app-icon.png`: vollständig deckend für iOS und Legacy-Android;
+- `fanmind-adaptive-icon.png`: transparentes, innerhalb der Android-Safe-Zone
+  skaliertes Foreground bei festem dunklem Hintergrund.
+
+Die bearbeitbaren SVG-Quellen liegen im selben Branding-Ordner. Das vorhandene
+96 × 96 Pixel große Social-Avatar-Asset wurde nicht hochskaliert. Der isolierte
+Native-Prebuild muss sowohl das iOS-AppIcon-Set als auch Androids Adaptive
+Foreground tatsächlich erzeugen. Die visuelle Abnahme unter realen
+Android-/iOS-Masken bleibt an den ersten signierten Build gebunden.
 
 Vorbereitete deutsche und englische Store-Texte, URLs, Screenshot-Slots und die
 noch manuell in den Store-Portalen zu bestätigenden Datenschutzangaben stehen in
@@ -317,7 +330,7 @@ noch manuell in den Store-Portalen zu bestätigenden Datenschutzangaben stehen i
 
 ## Noch offen nach diesem Block
 
-- finale App-Icons aus einer bestätigten hochauflösenden runden/quadratischen Quelle;
+- visuelle Abnahme der vorbereiteten App-Icons in signierten Android-/iOS-Builds;
 - echter Recovery-E-Mail-/Gerätetest nach Supabase-Redirect-Freigabe;
 - EAS-Projekt-ID und Signing Credentials;
 - Expo-Token, geschützte Mobile-Environments und drei erfolgreiche

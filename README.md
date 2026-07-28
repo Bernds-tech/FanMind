@@ -139,7 +139,9 @@ Bereits vorhanden:
 - verschlüsselte, höchstens 24 Stunden alte Offline-Übersicht mit maximal 50 Kontakten; nur Name, Handle, Plattform, Status und Änderungszeit, ausschließlich lesbar;
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
 - native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, sicherem Login-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
-- nativer Splashscreen mit bestätigter FanMind-Wortmarke und vorbereitete deutsche/englische Store-Metadaten;
+- nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständige
+  1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive Icon sowie
+  vorbereitete deutsche/englische Store-Metadaten;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI, Expo Doctor, TypeScript-Check, Android-/iOS-JavaScript-Bundles, isolierter Native-Prebuild sowie echtes Android-Debug-APK und codesign-freie iOS-Simulator-App als reine Build-Nachweise.
 
@@ -150,7 +152,8 @@ Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
   Read-only-Ressourcencheck;
 - Signing Credentials und signierter interner Android-Build;
 - Apple Developer / App Store Connect und iOS-TestFlight;
-- finales App-Icon sowie Push-Berechtigung, Token-Registrierung und echte Zustellung;
+- visuelle Icon-Abnahme im signierten Build sowie Push-Berechtigung,
+  Token-Registrierung und echte Zustellung;
 - finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;
 - reale Android-/iOS-Gerätetests.
 
