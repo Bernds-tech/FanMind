@@ -2,13 +2,13 @@
 
 Stand: Juli 2026
 
-Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch durch Gerhard, Bernd, Steuerberatung oder Rechtsberatung verbindlich freigegeben werden müssen. Es ist keine Rechtsberatung und ersetzt keine unterzeichneten Vertragsunterlagen.
+Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch durch Bernd, Steuerberatung oder Rechtsberatung verbindlich freigegeben werden müssen. Es ist keine Rechtsberatung und ersetzt keine unterzeichneten Vertragsunterlagen.
 
 ## Öffentlich bestätigt
 
 - Marke/Produkt: FanMind
-- Projektverantwortliche und Ansprechpartner: Gerhard Novy und Bernd Guggenberger
-- Beteiligungsverhältnis: 50 % / 50 %
+- Betreiber und Vertragspartner: Bernd Guggenberger, Einzelunternehmen unter der Geschäftsbezeichnung FanMind
+- Inhaber und vertretungsberechtigt: Bernd Guggenberger
 - Anschrift: Turnerstraße 18, 2345 Brunn am Gebirge, Österreich
 - Allgemeine Kontaktadresse: `kontakt@fanmind.ch`
 - Website: `https://fanmind.ch`
@@ -18,8 +18,7 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
 
 ## Noch verbindlich zu entscheiden oder zu prüfen
 
-- [ ] tatsächliche Rechtsform und vollständige juristische Bezeichnung
-- [ ] Vertretungsregelung und Zeichnungsbefugnis
+- [ ] etwaiger künftiger Rechtsformzusatz nach einer bestätigten Firmenbucheintragung
 - [ ] Zuordnung und Veröffentlichung der korrekten UID
 - [ ] etwaige Firmenbuchnummer und Firmenbuchgericht
 - [ ] finale AGB-Fassung für Pilot, Starter Flex und Starter 12 Monate
@@ -40,7 +39,7 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
 
 ## Definition of Done
 
-- [ ] Gerhard und Bernd bestätigen Rechtsträger und Vertretungsregelung schriftlich.
+- [x] Betreiber, Vertragspartner und Vertretungsregelung sind in der kanonischen Produktwahrheit festgelegt.
 - [ ] Steuerberatung bestätigt UID-/Register-/Rechnungsangaben.
 - [ ] Rechtsprüfung bestätigt Impressum, AGB, Zahlungsbedingungen, Referral-Bedingungen, Datenschutz und AVV.
 - [ ] Die freigegebenen Werte werden zentral dokumentiert und auf allen öffentlichen Seiten konsistent verwendet.
