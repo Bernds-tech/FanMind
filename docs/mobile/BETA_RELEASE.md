@@ -28,7 +28,10 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - manueller Dry-Run-first Account-Löschprocessor ohne Timer;
 - eigener SDK-57-Development-Client über `expo-dev-client`;
 - getrennte Mobile-CI mit TypeScript, Expo Doctor, Android-/iOS-JavaScript-Export, isoliertem nativen Android-/iOS-Prebuild, echtem Android-Debug-APK, codesign-freier iOS-Simulator-App und Architekturgrenze;
-- native Push-Konfigurationsgrundlage mit minimal validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; keine Berechtigungsabfrage, Token-Registrierung oder Zustellung;
+- native Push-Grundlage mit minimal validierter Follow-up-Navigation,
+  Auth-Handoff, Einmalverarbeitung und ausdrücklichem Opt-in für eine
+  verschlüsselte, service-role-only Ein-Gerät-Registrierung; Migration,
+  Serverkey, reale Registrierung und Zustellung bleiben deaktiviert;
 - konfliktfreie native Splashscreen-Konfiguration mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
 - getrennte 1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive
   Icon aus einer eigenständigen Vektorquelle; keine Hochskalierung des
@@ -346,7 +349,9 @@ aber weder eine App-Privacy-Portalantwort noch ein signierter Store-Build.
   Read-only-Ressourcenchecks;
 - reale öffentliche EAS-Werte in getrennten Development-/Preview-/Production-Umgebungen;
 - Android Internal Testing und iOS TestFlight;
-- Push-Berechtigung, Token-Registrierung und echte Follow-up-Zustellung im signierten Build;
+- Push-Migration und dedizierten Serverkey kontrolliert aktivieren, danach
+  Berechtigung und Token-Registrierung im signierten Build real abnehmen;
+- echte Follow-up-Zustellung erst nach gesonderter Staging-/Datenschutzprüfung;
 - realer Account-Löschantrag/Widerruf auf signiertem Android-/iOS-Gerät;
 - reale Android-/iOS-Gerätetestprotokolle;
 - Store-Datenschutzangaben und Screenshots final abnehmen; Metadaten sind vorbereitet.

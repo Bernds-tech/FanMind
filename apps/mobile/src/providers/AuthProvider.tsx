@@ -27,6 +27,7 @@ import {
   disableOfflineReadCacheWrites,
   resumeOfflineReadCacheOwner,
 } from "@/lib/offlineReadCache";
+import { bestEffortDisableMobilePushRegistration } from "@/lib/mobilePushRegistration";
 import { clearSecureLocalStorage } from "@/lib/secureStorage";
 import { supabase } from "@/lib/supabase";
 
@@ -263,6 +264,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(async () => {
     let failed = false;
+    const activeAccessToken = session?.access_token;
+    if (activeAccessToken) {
+      await bestEffortDisableMobilePushRegistration(activeAccessToken);
+    }
+
     try {
       await disableOfflineReadCacheWrites();
     } catch {
@@ -290,7 +296,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         "Die lokale Sitzung wurde beendet, aber die sichere Datenbereinigung konnte nicht vollständig bestätigt werden.",
       );
     }
-  }, [clearRecoveryState]);
+  }, [clearRecoveryState, session?.access_token]);
 
   const value = useMemo(
     () => ({

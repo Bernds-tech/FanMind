@@ -36,7 +36,9 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - Follow-up aus KI-Vorschlag speichern;
 - offene Follow-ups anzeigen und abschließen;
 - verschlüsselte, maximal 24 Stunden alte Offline-Kontaktübersicht mit höchstens 50 Einträgen im Nur-Lesen-Modus;
-- native Push-Konfigurationsgrundlage mit streng validierter Navigation zu Follow-ups, noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
+- native Push-Grundlage mit streng validierter Navigation zu Follow-ups sowie
+  ausdrücklichem Opt-in für eine verschlüsselte, kontogebundene
+  Ein-Gerät-Registrierung; serverseitiger Versand bleibt deaktiviert;
 - nativer Splashscreen mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
 - eigenständiges deckendes 1024×1024-App-Icon für iOS/Legacy-Android und
   transparentes, maskensicher skaliertes Android-Adaptive-Foreground;
@@ -207,7 +209,9 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 3. Signing Credentials und interne Preview-Builds einrichten.
 4. App-Icon und Splashscreen in signierten Android-/iOS-Builds auf realen
    Geräten visuell abnehmen.
-5. Push-Berechtigung, Token-Registrierung und serverseitige Zustellung in einem signierten Development-/Preview-Build umsetzen und testen.
+5. die vorbereitete Push-Berechtigung und Token-Registrierung nach kontrollierter
+   Migration/Secret-Konfiguration in einem signierten Development-/Preview-Build
+   testen; serverseitige Zustellung erst danach separat implementieren und abnehmen.
 6. Android Internal Testing und iOS TestFlight durchführen.
 7. Die vorbereiteten Store-Texte, technischen Datenschutzentwürfe und
    Screenshot-Matrix nach realen Gerätetests sowie externer

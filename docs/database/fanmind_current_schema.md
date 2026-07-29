@@ -607,6 +607,28 @@ RLS-Erwartung:
 - Admin-Aggregation läuft ausschließlich nach `requirePlatformAdmin()` über serverseitige Service-Role-Abfragen.
 - Normale User sehen keine anderen Workspaces.
 
+### Mobile Push Registrations
+
+`supabase/migrations/20260729120000_mobile_push_registrations.sql` bereitet
+eine service-role-only Tabelle für genau eine aktive Beta-Geräteregistrierung
+pro Auth-Nutzer vor:
+
+- `user_id` und `workspace_id` sind kaskadierend an Auth-Nutzer und Workspace
+  gebunden;
+- `expo_token_ciphertext` enthält ausschließlich AES-256-GCM-Ciphertext;
+- `expo_token_hash` ist ein keyed HMAC für Eindeutigkeit und Konfliktschutz;
+- `platform` ist auf `android` oder `ios` begrenzt;
+- `expires_at` liegt höchstens 31 Tage nach `last_seen_at`;
+- `anon` und `authenticated` besitzen keinerlei Tabellenrechte;
+- Löschung des Auth-Nutzers oder Workspace entfernt die Registrierung
+  kaskadierend.
+
+Der normale Web-Deploy wendet diese Migration nicht an. Ohne getrennte
+Migration, `FANMIND_PUSH_TOKEN_ENCRYPTION_KEY`, signierten Build und reale
+Geräteabnahme bleibt die Registrierung nicht verfügbar. Die Migration enthält
+keinen Versandjob; serverseitige Follow-up-Zustellung bleibt separat
+deaktiviert.
+
 ## 10. Migrations- und Reader-Regel
 
 Wenn Tabellen, Spalten oder RLS-Policies geändert werden:
