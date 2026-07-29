@@ -15,6 +15,8 @@ PREVIOUS_CWD=""
 PREVIOUS_COMMIT=""
 PREVIOUS_EXEC_MODE=""
 PREVIOUS_LINK_TARGET=""
+AVAILABILITY_LOG=""
+AVAILABILITY_PID=""
 
 log() {
   printf '[fanmind-release] %s\n' "$*"
@@ -27,6 +29,78 @@ fail() {
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "required command missing: $1"
+}
+
+stop_availability_probe() {
+  if [[ -n "$AVAILABILITY_PID" ]]; then
+    kill "$AVAILABILITY_PID" >/dev/null 2>&1 || true
+    wait "$AVAILABILITY_PID" >/dev/null 2>&1 || true
+    AVAILABILITY_PID=""
+  fi
+}
+
+start_availability_probe() {
+  AVAILABILITY_LOG="$(mktemp)"
+  chmod 0600 "$AVAILABILITY_LOG"
+  (
+    while true; do
+      status_code="000"
+      if response_code="$(
+        curl -sS -o /dev/null -w '%{http_code}' --max-time 2 \
+          "$BASE_URL/api/version" 2>/dev/null
+      )"; then
+        if [[ "$response_code" =~ ^[0-9]{3}$ ]]; then
+          status_code="$response_code"
+        fi
+      fi
+      printf '%s\n' "$status_code" >> "$AVAILABILITY_LOG"
+      sleep 0.25
+    done
+  ) &
+  AVAILABILITY_PID=$!
+}
+
+verify_availability_probe() {
+  [[ -r "$AVAILABILITY_LOG" ]] || return 1
+
+  local sample_count
+  local failed_count
+  for _ in 1 2 3 4 5 6 7 8; do
+    sample_count="$(wc -l < "$AVAILABILITY_LOG" | tr -d '[:space:]')"
+    if [[ "$sample_count" =~ ^[0-9]+$ ]] && (( sample_count >= 2 )); then
+      break
+    fi
+    sleep 0.25
+  done
+  stop_availability_probe
+  sample_count="$(wc -l < "$AVAILABILITY_LOG" | tr -d '[:space:]')"
+  failed_count="$(awk '$0 != "200" { failures += 1 } END { print failures + 0 }' "$AVAILABILITY_LOG")"
+  log "release switch availability: samples=${sample_count:-0} non_200=${failed_count:-0}"
+
+  [[ "$sample_count" =~ ^[0-9]+$ ]] \
+    && (( sample_count >= 2 )) \
+    && [[ "$failed_count" == "0" ]]
+}
+
+verify_built_deployment_id() {
+  local release_dir="$1"
+  local expected_commit="$2"
+  FANMIND_REQUIRED_DEPLOYMENT_ID="$expected_commit" \
+    node -e '
+      const fs = require("node:fs");
+      const path = process.argv[1];
+      let payload;
+      try {
+        payload = JSON.parse(fs.readFileSync(path, "utf8"));
+      } catch {
+        process.exit(1);
+      }
+      process.exit(
+        payload?.config?.deploymentId === process.env.FANMIND_REQUIRED_DEPLOYMENT_ID
+          ? 0
+          : 1,
+      );
+    ' "$release_dir/.next/required-server-files.json"
 }
 
 is_safe_release_path() {
@@ -215,6 +289,10 @@ rollback() {
 }
 
 cleanup() {
+  stop_availability_probe
+  if [[ -n "$AVAILABILITY_LOG" ]] && [[ -f "$AVAILABILITY_LOG" ]]; then
+    rm -f -- "$AVAILABILITY_LOG"
+  fi
   if [[ -n "$TEMP_RELEASE" ]] && [[ -d "$TEMP_RELEASE" ]]; then
     rm -rf -- "$TEMP_RELEASE"
   fi
@@ -236,7 +314,7 @@ trap on_exit EXIT
 [[ -d "$SOURCE_DIR/.git" ]] || fail "source checkout not found"
 [[ -r "$SOURCE_DIR/.env.production" ]] || fail "source production environment file not readable"
 
-for command in git tar npm node pm2 curl sudo readlink; do
+for command in git tar npm node pm2 curl sudo readlink mktemp awk wc tr sleep; do
   require_command "$command"
 done
 
@@ -278,7 +356,7 @@ if [[ ! -d "$RELEASE_DIR" ]]; then
   npm run verify:truth
   npm run lint
   npm run test:operations
-  npm run build
+  NEXT_DEPLOYMENT_ID="$RELEASE_COMMIT" npm run build
   [[ -f ".next/required-server-files.json" ]] || fail "required Next.js build metadata missing"
   [[ -f "$PM2_CONFIG_RELATIVE_PATH" ]] || fail "PM2 production configuration missing"
 
@@ -286,7 +364,12 @@ if [[ ! -d "$RELEASE_DIR" ]]; then
   TEMP_RELEASE=""
 fi
 
+verify_built_deployment_id "$RELEASE_DIR" "$RELEASE_COMMIT" \
+  || fail "Next.js deployment ID is not bound to the release commit"
+
 sudo nginx -t
+
+start_availability_probe
 
 if ! switch_current_link "$RELEASE_DIR"; then
   fail "current release link could not be switched"
@@ -335,6 +418,11 @@ if ! FANMIND_SMOKE_BASE_URL="$BASE_URL" \
   npm run smoke:public; then
   rollback "public smoke test failed" || true
   fail "new release failed public smoke test"
+fi
+
+if ! verify_availability_probe; then
+  rollback "release switch availability probe detected an outage" || true
+  fail "new release caused a public availability gap"
 fi
 
 cd "$SOURCE_DIR"
