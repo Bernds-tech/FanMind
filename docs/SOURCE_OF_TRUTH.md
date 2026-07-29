@@ -74,8 +74,11 @@ Aktiv im App-Kern:
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
 - native Push-Grundlage mit validierter Follow-up-Navigation, Auth-Handoff,
   Einmalverarbeitung und ausdrücklichem Opt-in für eine verschlüsselte,
-  kontogebundene Ein-Gerät-Registrierung; die Migration, Serverkey-Aktivierung,
-  echte Geräteabnahme und Zustellung bleiben getrennt deaktiviert;
+  kontogebundene Ein-Gerät-Registrierung für Owner oder autorisierte
+  Workspace-Mitglieder. Öffentliche Demo-Workspaces, ungebundene Requests und
+  nicht serverseitig freigegebene EAS-Projekte werden abgelehnt; die Migration,
+  Serverkey-Aktivierung, echte Geräteabnahme und Zustellung bleiben getrennt
+  deaktiviert;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständiges
   hochauflösendes FanMind-App-Icon für iOS/Legacy-Android, sicher skaliertes
   Android-Adaptive-Foreground sowie vorbereitete deutsche/englische
@@ -88,8 +91,9 @@ Aktiv im App-Kern:
 - separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze, Android-/iOS-JavaScript-Bundles, isoliertem Native-Prebuild sowie echtem Android-Debug-APK und codesign-freier iOS-Simulator-App als reine Build-Nachweise.
 - manueller, `main`-gebundener Read-only-Ressourcencheck für die externe
   EAS-Projektbindung, App-Identität und getrennte öffentliche
-  Development-/Preview-/Production-Konfiguration; ohne Build, Submit, Update
-  oder Signing-Credentials.
+  Development-/Preview-/Production-Konfiguration. Die geschützten
+  Owner-/Projektwerte ergänzen die statische Expo-Konfiguration erst bei der
+  Laufzeitauswertung; ohne Build, Submit, Update oder Signing-Credentials.
 - separater manueller, `main`- und Environment-gebundener Queue-Ablauf für
   genau einen signierten internen Development- oder Preview-Build; erst nach
   demselben Ressourcencheck, mit eingefrorenen vorhandenen Credentials und
@@ -146,8 +150,12 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   `development` oder `preview`, Android oder iOS, prüft zuerst Projektbindung
   und öffentliche Umgebung, friert bestehende Credentials ein und reiht genau
   einen Build ohne Warten ein. Ohne externe EAS-Einrichtung und vorher
-  vorhandene Signing-Credentials schlägt er fail-closed fehl; ein grüner
-  Queue-Lauf ist noch kein erfolgreicher Binär-, Geräte- oder Store-Nachweis.
+  vorhandene Signing-Credentials schlägt er vor dem Queue-Versuch fail-closed
+  fehl. Nach begonnenem EAS-Aufruf wird eine fehlende oder ungültige
+  Queue-Antwort als nicht automatisch wiederholbarer, unklarer Zustand
+  ausgewiesen und muss zuerst direkt im geschützten EAS-Projekt geprüft werden;
+  auch ein bestätigter Queue-Lauf ist noch kein erfolgreicher Binär-, Geräte-
+  oder Store-Nachweis.
 - Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
 
 Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.

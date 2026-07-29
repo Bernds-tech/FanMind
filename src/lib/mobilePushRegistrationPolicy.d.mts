@@ -6,6 +6,8 @@ export const MOBILE_PUSH_ACTIONS: Readonly<{
 export const MOBILE_PUSH_REGISTRATION_DAYS: 30;
 export const MOBILE_PUSH_CLIENT_HEADER: "mobile";
 export const MOBILE_PUSH_MAX_REQUEST_BYTES: 4096;
+export const MOBILE_PUSH_EAS_PROJECT_ID_ENV:
+  "FANMIND_MOBILE_PUSH_EAS_PROJECT_ID";
 
 export class MobilePushRegistrationPolicyError extends Error {
   readonly code: string;
@@ -23,6 +25,11 @@ export type MobilePushAction =
     };
 
 export function validateMobilePushAction(value: unknown): MobilePushAction;
+export function validateExpectedMobilePushProjectId(
+  projectId: string,
+  environment?: Record<string, unknown>,
+): string;
+export function readBoundedMobilePushJson(request: Request): Promise<unknown>;
 export function publicMobilePushStatus(
   row:
     | {

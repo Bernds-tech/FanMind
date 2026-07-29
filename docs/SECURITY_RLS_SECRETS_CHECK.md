@@ -37,6 +37,13 @@ Diese Werte dürfen niemals in Client-Code, Logs, Screenshots, README-Beispielen
 - Runner-/Deployment-Tokens
 - echte Admin-E-Mail-Listen in nicht geschützten Kontexten
 
+### Server-only Zielbindungen
+
+`FANMIND_MOBILE_PUSH_EAS_PROJECT_ID` ist kein Schlüssel, muss aber
+serverseitig aus bestätigter Konfiguration stammen. Sie darf nie aus dem
+Mobile-Request übernommen werden und muss exakt mit der freigegebenen
+EAS-Projekt-ID übereinstimmen.
+
 ### Public ENV
 
 Diese Werte dürfen öffentlich sein, müssen aber trotzdem korrekt gesetzt sein:

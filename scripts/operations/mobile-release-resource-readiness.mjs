@@ -1,10 +1,19 @@
 #!/usr/bin/env node
 
+import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const APP_CONFIG_URL = new URL("../../apps/mobile/app.json", import.meta.url);
+const APP_CONFIG_JSON_URL = new URL(
+  "../../apps/mobile/app.json",
+  import.meta.url,
+);
+const APP_CONFIG_MODULE_URL = new URL(
+  "../../apps/mobile/app.config.js",
+  import.meta.url,
+);
+const require = createRequire(import.meta.url);
 const ALLOWED_ENVIRONMENTS = new Set(["development", "preview", "production"]);
 const ALLOWED_PUBLIC_KEYS = new Set([
   "EXPO_PUBLIC_FANMIND_API_URL",
@@ -224,7 +233,16 @@ export function evaluateMobileReleaseResources({
 export async function verifyMobileReleaseResources(environment = process.env) {
   let appConfig;
   try {
-    appConfig = JSON.parse(await readFile(APP_CONFIG_URL, "utf8"));
+    const staticConfig = JSON.parse(
+      await readFile(APP_CONFIG_JSON_URL, "utf8"),
+    );
+    const configFactory = require(fileURLToPath(APP_CONFIG_MODULE_URL));
+    appConfig = {
+      expo: configFactory({
+        config: staticConfig.expo,
+        environment,
+      }),
+    };
   } catch {
     fail("app_config_invalid");
   }

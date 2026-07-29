@@ -145,10 +145,13 @@ EXPO_PUBLIC_FANMIND_API_URL
 
 Development und Preview müssen von Production getrennte Supabase- und
 API-Ziele verwenden; Production muss exakt auf die bestätigten
-Production-Ziele zeigen. Build, Submit und Update sind technisch ausgeschaltet,
-Signing Credentials werden nicht geladen und konkrete Projekt-, URL- oder
-Key-Werte werden nicht ausgegeben. Der vorbereitete Workflow zählt erst nach
-echter EAS-Einrichtung und erfolgreichem externem Lauf als Nachweis.
+Production-Ziele zeigen. Die geschützten GitHub-Variablen für Owner und
+Projekt-ID werden ausschließlich bei der Expo-Konfigurationsauswertung durch
+`app.config.js` ergänzt; `app.json` bleibt frei von echten EAS-Bindungen.
+Build, Submit und Update sind technisch ausgeschaltet, Signing Credentials
+werden nicht geladen und konkrete Projekt-, URL- oder Key-Werte werden nicht
+ausgegeben. Der vorbereitete Workflow zählt erst nach echter EAS-Einrichtung
+und erfolgreichem externem Lauf als Nachweis.
 
 ## Kontrollierter signierter interner Build
 
@@ -166,9 +169,13 @@ Projekt-ID, URLs und öffentliche Clientwerte werden nicht ausgegeben.
 
 Der Ablauf erzeugt oder verändert keine Signing-Credentials und ruft weder
 Submit noch Update auf. Vorhandene gültige Credentials sind daher externe
-Voraussetzung. Ein grüner Workflow bestätigt nur, dass genau ein Build für den
-geprüften Commit eingereiht wurde; Erfolg, Installation, Push, Recovery,
-Android Internal Testing und TestFlight bleiben gesondert abzunehmen.
+Voraussetzung. Nur eine vollständig validierte EAS-Antwort bestätigt, dass
+genau ein Build für den geprüften Commit eingereiht wurde. Ist der
+Queue-Aufruf oder seine Antwort unklar, wird der Lauf ausdrücklich als
+`indeterminate-do-not-retry` markiert und darf erst nach direkter Prüfung des
+geschützten EAS-Projekts erneut gestartet werden. Erfolg, Installation, Push,
+Recovery, Android Internal Testing und TestFlight bleiben gesondert
+abzunehmen.
 
 ## EAS-Profile
 
@@ -186,8 +193,9 @@ EAS-Umgebungen:
 keine verwalteten Release-/Store-Credentials anfordert. Das Android-Debug-APK
 wird dennoch mit einem lokalen Debug-Key signiert; es ist kein Release-Artefakt.
 Ein EAS-Cloud-Build braucht außerdem weiterhin ein Expo-Konto und eine echte,
-per `eas init` erzeugte Projekt-ID. Das Repository enthält bewusst keine
-EAS-Projekt-ID, Apple-Team-ID, Store-ID oder Schlüsseldatei.
+per `eas init` erzeugte Projekt-ID. Das Repository enthält bewusst keine feste
+EAS-Projekt-ID, Apple-Team-ID, Store-ID oder Schlüsseldatei; die Projektbindung
+wird aus dem jeweils geschützten GitHub-Environment dynamisch ergänzt.
 
 Nach der externen EAS-Einrichtung:
 

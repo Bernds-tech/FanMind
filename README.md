@@ -10,8 +10,10 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Mobile-Signing-Gate: ein manueller `main`-gebundener Ablauf kann nach
   erfolgreichem Ressourcencheck genau einen credential-frozen internen
-  Development-/Preview-Build einreihen; Build-Abschluss, Gerätetest und
-  Store-Verteilung bleiben externe Nachweise.
+  Development-/Preview-Build einreihen. Eine unklare Queue-Antwort darf nicht
+  automatisch wiederholt werden, sondern muss zuerst direkt im geschützten
+  EAS-Projekt geprüft werden; Build-Abschluss, Gerätetest und Store-Verteilung
+  bleiben externe Nachweise.
 - Öffentliche Registrierung: Starter Flex und Starter 12 Monate; während der Fertigstellungsphase zusätzlich der klar als Beta markierte 1-€/Tag-Test, solange der geschützte Admin-Schalter unter `/admin/settings` aktiv ist.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
 - Beta-/Testzugang: Das Stripe-Testabo `internal_daily_test` ist während der Fertigstellungsphase gezielt im Registrierungsflow sichtbar, kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es wird im Adminbereich zum Verkaufsstart nach Abschluss der acht Abschlussblöcke wieder geschlossen; bestehende Abos bleiben davon unberührt.
@@ -45,9 +47,10 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Mobile-Release-Ressourcencheck: ein manueller, nur auf `main` ausführbarer
   Read-only-Workflow prüft je geschützter Development-/Preview-/Production-
   Umgebung die EAS-Projektbindung, App-Identität und ausschließlich öffentliche
-  Client-Konfiguration. Er verwendet weder Build, Submit noch Update und lädt
-  keine Signing Credentials; der externe Lauf und signierte Builds bleiben
-  offen.
+  Client-Konfiguration. Geschützte Owner-/Projektvariablen ergänzen die
+  statische App-Konfiguration erst bei der Expo-Auswertung. Der Workflow
+  verwendet weder Build, Submit noch Update und lädt keine Signing Credentials;
+  der externe Lauf und signierte Builds bleiben offen.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
@@ -144,7 +147,9 @@ Bereits vorhanden:
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
 - native Push-Grundlage mit validierter Follow-up-Navigation, sicherem
   Login-Handoff, ausdrücklichem Nutzer-Opt-in und vorbereiteter verschlüsselter
-  Ein-Gerät-Registrierung; serverseitige Zustellung bleibt deaktiviert;
+  Ein-Gerät-Registrierung für Owner oder autorisierte Workspace-Mitglieder;
+  öffentliche Demo-Workspaces und nicht freigegebene EAS-Projekte werden
+  abgelehnt, serverseitige Zustellung bleibt deaktiviert;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständige
   1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive Icon sowie
   vorbereitete deutsche/englische Store-Metadaten;

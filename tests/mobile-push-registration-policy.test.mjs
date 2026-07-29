@@ -4,10 +4,13 @@ import test from "node:test";
 
 import {
   MOBILE_PUSH_ACTIONS,
+  MOBILE_PUSH_EAS_PROJECT_ID_ENV,
   MOBILE_PUSH_MAX_REQUEST_BYTES,
   MOBILE_PUSH_REGISTRATION_DAYS,
   MobilePushRegistrationPolicyError,
   publicMobilePushStatus,
+  readBoundedMobilePushJson,
+  validateExpectedMobilePushProjectId,
   validateMobilePushAction,
 } from "../src/lib/mobilePushRegistrationPolicy.mjs";
 import {
@@ -85,6 +88,105 @@ test("mobile push registration rejects extra, malformed and data-rich input", ()
       (error) => error instanceof MobilePushRegistrationPolicyError,
     );
   }
+});
+
+test("mobile push request reader enforces its limit while consuming chunked bodies", async () => {
+  const acceptedBody = JSON.stringify({ action: "status" });
+  const accepted = new Request("https://fanmind.ch/api/mobile/push-registration", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(acceptedBody.slice(0, 7)));
+        controller.enqueue(new TextEncoder().encode(acceptedBody.slice(7)));
+        controller.close();
+      },
+    }),
+    duplex: "half",
+  });
+  assert.deepEqual(await readBoundedMobilePushJson(accepted), {
+    action: "status",
+  });
+
+  const oversized = new Request(
+    "https://fanmind.ch/api/mobile/push-registration",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new Uint8Array(MOBILE_PUSH_MAX_REQUEST_BYTES - 4),
+          );
+          controller.enqueue(new Uint8Array(5));
+          controller.close();
+        },
+      }),
+      duplex: "half",
+    },
+  );
+  await assert.rejects(
+    () => readBoundedMobilePushJson(oversized),
+    (error) =>
+      error instanceof MobilePushRegistrationPolicyError &&
+      error.code === "request_too_large",
+  );
+});
+
+test("mobile push request reader rejects false lengths and encoded bodies", async () => {
+  for (const headers of [
+    {
+      "Content-Type": "application/json",
+      "Content-Length": String(MOBILE_PUSH_MAX_REQUEST_BYTES + 1),
+    },
+    {
+      "Content-Type": "application/json",
+      "Content-Length": "999",
+    },
+    {
+      "Content-Type": "application/json",
+      "Content-Encoding": "gzip",
+    },
+  ]) {
+    const request = new Request(
+      "https://fanmind.ch/api/mobile/push-registration",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action: "status" }),
+      },
+    );
+    await assert.rejects(
+      () => readBoundedMobilePushJson(request),
+      (error) => error instanceof MobilePushRegistrationPolicyError,
+    );
+  }
+});
+
+test("mobile push registration accepts only the server-approved EAS project", () => {
+  const environment = {
+    [MOBILE_PUSH_EAS_PROJECT_ID_ENV]: PROJECT_ID.toUpperCase(),
+  };
+  assert.equal(
+    validateExpectedMobilePushProjectId(PROJECT_ID, environment),
+    PROJECT_ID,
+  );
+  assert.throws(
+    () =>
+      validateExpectedMobilePushProjectId(
+        "123e4567-e89b-42d3-a456-426614174000",
+        environment,
+      ),
+    { code: "push_project_mismatch" },
+  );
+  assert.throws(
+    () => validateExpectedMobilePushProjectId(PROJECT_ID, {}),
+    { code: "push_project_not_configured" },
+  );
 });
 
 test("public status is redacted, expiry-aware and delivery-disabled", () => {
@@ -253,8 +355,10 @@ test("server registration is service-role-only, one-device and delivery-free", a
 
   assert.match(route, /getOptionalBearerAccessToken/u);
   assert.match(route, /x-fanmind-client/u);
-  assert.match(route, /MOBILE_PUSH_MAX_REQUEST_BYTES/u);
-  assert.match(route, /isTemporaryDemoUser/u);
+  assert.match(route, /readBoundedMobilePushJson/u);
+  assert.match(route, /requireAuthorizedWorkspaceMember/u);
+  assert.match(route, /isPublicDemoWorkspace/u);
+  assert.match(route, /validateExpectedMobilePushProjectId/u);
   assert.match(route, /Cache-Control": "private, no-store"/u);
   assert.doesNotMatch(route, /console\.(?:log|error|warn)/u);
 
@@ -263,6 +367,8 @@ test("server registration is service-role-only, one-device and delivery-free", a
   assert.match(service, /resolution=merge-duplicates,return=representation/u);
   assert.match(service, /expires_at=lte/u);
   assert.match(service, /removeExpiredUserRegistration/u);
+  assert.match(service, /workspace_id=eq\./u);
+  assert.match(service, /workspace_id=neq\./u);
   assert.doesNotMatch(service, /console\.(?:log|error|warn)/u);
 
   assert.match(mobile, /requestPermissionsAsync/u);
@@ -270,10 +376,14 @@ test("server registration is service-role-only, one-device and delivery-free", a
   assert.match(mobile, /AbortController/u);
   assert.match(mobile, /1_500/u);
   assert.match(mobile, /X-FanMind-Client": "mobile"/u);
+  assert.ok(
+    mobile.indexOf("response.json()") < mobile.indexOf("clearTimeout(timeout)"),
+  );
   assert.match(settings, /Push auf diesem Gerät vorbereiten/u);
   assert.match(settings, /serverseitige Zustellung ist noch deaktiviert/u);
   assert.match(auth, /bestEffortDisableMobilePushRegistration/u);
   assert.match(envExample, /FANMIND_PUSH_TOKEN_ENCRYPTION_KEY=/u);
+  assert.match(envExample, /FANMIND_MOBILE_PUSH_EAS_PROJECT_ID=/u);
 
   for (const source of [route, service, mobile, settings, auth]) {
     assert.doesNotMatch(source, /scheduleNotificationAsync/u);

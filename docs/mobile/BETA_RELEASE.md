@@ -196,11 +196,14 @@ Variable: FANMIND_MOBILE_API_ORIGIN
 ```
 
 Die EAS-Umgebung selbst enthält ausschließlich die drei freigegebenen
-`EXPO_PUBLIC_*`-Werte. Der Prüfer verlangt die echte, per `eas init`
-geschriebene Owner-/Projektbindung in `app.json`, `ch.fanmind.app` für Android
-und iOS sowie `fanmind` als Schema. Development und Preview dürfen weder den
-Production-Supabase-Ref noch `https://fanmind.ch` verwenden; Production muss
-exakt auf beide bestätigten Production-Ziele zeigen.
+`EXPO_PUBLIC_*`-Werte. Die echte, zuvor über `eas init` bestätigte Owner- und
+Projektbindung liegt als geschützte Variable im jeweiligen GitHub-Environment.
+`apps/mobile/app.config.js` ergänzt sie erst bei der Expo-Auswertung; die
+statische `app.json` bleibt frei von echten EAS-IDs. Der Prüfer verlangt
+zusätzlich `ch.fanmind.app` für Android und iOS sowie `fanmind` als Schema.
+Development und Preview dürfen weder den Production-Supabase-Ref noch
+`https://fanmind.ch` verwenden; Production muss exakt auf beide bestätigten
+Production-Ziele zeigen.
 
 Die EAS CLI ist auf `21.2.0` gepinnt. Der Workflow führt nur `project:info` und
 `env:exec` aus. Die Schalter für EAS Build, Submit und Update stehen zwingend
@@ -236,10 +239,13 @@ Credential-Erzeugung sind ausgeschlossen.
 
 Die EAS-Antwort wird aus einer privaten temporären Datei nur auf genau einen
 passenden Commit, Plattform und Profil geprüft. ID und URL werden weder
-ausgegeben noch als GitHub-Artefakt gespeichert. Ein grüner Lauf bedeutet
-ausschließlich „Build eingereiht“; erst der separat überprüfte EAS-Endstatus
-und die Installation auf einem realen Gerät belegen einen erfolgreichen
-signierten Build.
+ausgegeben noch als GitHub-Artefakt gespeichert. Nur die vollständig validierte
+Antwort bedeutet „Build eingereiht“. Scheitert der Queue-Aufruf oder ist seine
+Antwort ungültig, wird der Lauf als `indeterminate-do-not-retry` ausgewiesen
+und darf nicht wiederholt werden, bevor das geschützte EAS-Projekt direkt auf
+einen bereits angelegten Build geprüft wurde. Erst der separat überprüfte
+EAS-Endstatus und die Installation auf einem realen Gerät belegen einen
+erfolgreichen signierten Build.
 
 ### Native-Prüfung ohne Release-/Store-Credentials
 
@@ -280,7 +286,10 @@ echte EAS-Projekt-ID.
 Noch nicht durch Code erledigt:
 
 1. Expo-Organisation beziehungsweise Expo-Konto festlegen.
-2. In `apps/mobile` `eas init` ausführen und die echte EAS-Projekt-ID in die Expo-Konfiguration schreiben lassen.
+2. In einer kontrollierten lokalen Arbeitskopie `eas init` ausführen, Owner
+   und echte EAS-Projekt-ID bestätigen und anschließend ausschließlich als
+   geschützte GitHub-Environment-Variablen hinterlegen; keine feste ID in
+   `app.json` committen.
 3. In EAS die drei Umgebungen `development`, `preview` und `production` mit den jeweils richtigen öffentlichen FanMind-Werten anlegen.
 4. `EXPO_TOKEN` und die erwarteten Projekt-/Zielvariablen in den drei
    geschützten GitHub-Environments hinterlegen.

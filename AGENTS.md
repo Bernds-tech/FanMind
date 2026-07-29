@@ -88,7 +88,9 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   verification. Keep it main-only, environment-protected, credential-frozen
   and non-interactive; it must never target `production`, submit, update,
   create credentials, print build identifiers or imply that a queued build
-  finished successfully.
+  finished successfully. Once the queue request starts, an invalid or missing
+  response is indeterminate and must not be presented as safely retryable
+  before the protected EAS project is inspected.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
@@ -131,7 +133,14 @@ Build FanMind as a real CRM core, not as a slide/demo shell. The active product 
 - Mobile contact create/update must include the current `workspace_id`, rely on RLS as final authorization and never use a service-role key.
 - Local logout must stop and drain cache writes, purge every registered FanMind SecureStore key and clear session, recovery and workspace state.
 - The Mobile offline cache is read-only, account/workspace-bound, limited to 50 contacts and 24 hours, and may retain only workspace name plus contact identity/list metadata. It must never retain summaries, contact knowledge, messages, AI content, internal notes, follow-ups or credentials, and may be shown only for transport failures—not auth, RLS or server errors.
-- Mobile push registration is explicit opt-in only, accepts one active device per authenticated non-demo user, stores Expo tokens only encrypted in the service-role-only table and removes the registration best-effort before local logout. The prepared route must remain delivery-free until the migration, dedicated encryption key, signed-build test, privacy review and Staging acceptance are complete.
+- Mobile push registration is explicit opt-in only, accepts one active device
+  per authenticated non-public-demo user including authorized Workspace
+  members, binds every operation to the resolved Workspace and every new token
+  to the server-approved EAS project, stores Expo tokens only encrypted in the
+  service-role-only table and removes the registration best-effort before local
+  logout. Keep request bodies stream-bounded. The prepared route must remain
+  delivery-free until the migration, dedicated encryption key, signed-build
+  test, privacy review and Staging acceptance are complete.
 - The canonical completed follow-up status is `completed`; `done` remains read-compatible only for historical rows.
 - Mobile does not perform billing, referral reconciliation, admin operations, webhook ingestion, external channel credential handling or automatic sending.
 - A Web merge cannot publish a mobile binary. EAS builds, signing, Android internal testing and iOS TestFlight require explicit separate verification.
