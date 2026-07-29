@@ -56,7 +56,11 @@ test("release is built and verified before PM2 switches away from the live cwd",
   const truth = position(script, "npm run verify:truth");
   const lint = position(script, "npm run lint");
   const tests = position(script, "npm run test:operations");
-  const build = position(script, "npm run build");
+  const build = position(script, 'NEXT_DEPLOYMENT_ID="$RELEASE_COMMIT" npm run build');
+  const deploymentId = position(
+    script,
+    'verify_built_deployment_id "$RELEASE_DIR" "$RELEASE_COMMIT"',
+  );
   const switchLink = position(script, 'switch_current_link "$RELEASE_DIR"');
   const switchProcess = script.lastIndexOf(
     'reload_pm2_cluster "$RELEASE_DIR/$PM2_CONFIG_RELATIVE_PATH"',
@@ -68,8 +72,52 @@ test("release is built and verified before PM2 switches away from the live cwd",
   assert.ok(truth < lint);
   assert.ok(lint < tests);
   assert.ok(tests < build);
-  assert.ok(build < switchLink);
+  assert.ok(build < deploymentId);
+  assert.ok(deploymentId < switchLink);
   assert.ok(switchLink < switchProcess);
+});
+
+test("rolling deployment binds Next.js version-skew protection to the exact release", async () => {
+  const [script, runbook] = await Promise.all([
+    readFile(scriptPath, "utf8"),
+    readFile("docs/operations/ISOLATED_RELEASE_DEPLOY.md", "utf8"),
+  ]);
+
+  assert.match(
+    script,
+    /NEXT_DEPLOYMENT_ID="\$RELEASE_COMMIT" npm run build/u,
+  );
+  assert.match(
+    script,
+    /payload\?\.config\?\.deploymentId === process\.env\.FANMIND_REQUIRED_DEPLOYMENT_ID/u,
+  );
+  assert.match(
+    runbook,
+    /Next\.js deployment identifier/u,
+  );
+  assert.match(runbook, /version skew/iu);
+});
+
+test("release switch is continuously probed without retaining response data", async () => {
+  const script = await readFile(scriptPath, "utf8");
+  const probeStart = position(script, "start_availability_probe");
+  const switchLink = position(script, 'switch_current_link "$RELEASE_DIR"');
+  const probeVerify = script.lastIndexOf("verify_availability_probe");
+
+  assert.ok(probeStart < switchLink);
+  assert.ok(switchLink < probeVerify);
+  assert.match(script, /"\$BASE_URL\/api\/version"/u);
+  assert.match(script, /chmod 0600 "\$AVAILABILITY_LOG"/u);
+  assert.match(script, /\$0 != "200"/u);
+  assert.match(script, /sample_count >= 2/u);
+  assert.match(
+    script,
+    /rollback "release switch availability probe detected an outage"/u,
+  );
+  assert.doesNotMatch(
+    script,
+    /AVAILABILITY_LOG[\s\S]{0,160}(?:response body|Authorization|Cookie)/iu,
+  );
 });
 
 test("failed health or smoke checks invoke rollback before failure", async () => {
@@ -294,7 +342,7 @@ fs.writeFileSync(statePath, JSON.stringify(state));
 set -euo pipefail
 if [[ "\${1:-}" == "run" ]] && [[ "\${2:-}" == "build" ]]; then
   mkdir -p .next
-  printf '{}\\n' > .next/required-server-files.json
+  printf '{"config":{"deploymentId":"%s"}}\\n' "$NEXT_DEPLOYMENT_ID" > .next/required-server-files.json
 fi
 `,
   );
@@ -302,6 +350,19 @@ fi
     join(fakeBin, "curl"),
     `#!/usr/bin/env bash
 set -euo pipefail
+if [[ "$*" == *"%{http_code}"* ]]; then
+  if [[ -n "\${FAKE_AVAILABILITY_FAIL_AFTER_FIRST:-}" ]]; then
+    if [[ ! -e "$FAKE_AVAILABILITY_FAIL_AFTER_FIRST" ]]; then
+      printf 'first\\n' > "$FAKE_AVAILABILITY_FAIL_AFTER_FIRST"
+    elif [[ ! -e "\${FAKE_AVAILABILITY_FAIL_AFTER_FIRST}.failed" ]]; then
+      printf 'failed\\n' > "\${FAKE_AVAILABILITY_FAIL_AFTER_FIRST}.failed"
+      printf '502'
+      exit 0
+    fi
+  fi
+  printf '200'
+  exit 0
+fi
 if [[ "$*" == *"/api/version"* ]]; then
   printf '{"releaseCommit":"%s"}\\n' "$FAKE_LIVE_COMMIT"
 fi
@@ -386,6 +447,34 @@ fi
   const rolledBackState = JSON.parse(await readFile(pm2State, "utf8"));
   assert.equal(
     rolledBackState.processes[0].pm2_env.FANMIND_RELEASE_COMMIT,
+    secondCommit,
+  );
+
+  const availabilityFailureMarker = join(root, "fail-availability-after-first");
+  const unavailableDeploy = spawnSync("bash", [deployScript, thirdCommit], {
+    encoding: "utf8",
+    env: {
+      ...baseEnv,
+      FAKE_LIVE_COMMIT: secondCommit,
+      FAKE_AVAILABILITY_FAIL_AFTER_FIRST: availabilityFailureMarker,
+    },
+  });
+  assert.notEqual(unavailableDeploy.status, 0);
+  assert.match(
+    unavailableDeploy.stdout,
+    /release switch availability: samples=\d+ non_200=1/u,
+  );
+  assert.match(
+    unavailableDeploy.stdout,
+    /rolling rollback completed to previous release/u,
+  );
+  assert.equal(await readlink(currentLink), join(releaseRoot, secondCommit));
+
+  const availabilityRolledBackState = JSON.parse(
+    await readFile(pm2State, "utf8"),
+  );
+  assert.equal(
+    availabilityRolledBackState.processes[0].pm2_env.FANMIND_RELEASE_COMMIT,
     secondCommit,
   );
 });

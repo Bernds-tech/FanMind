@@ -51,22 +51,29 @@ npm ci --no-audit --no-fund
 npm run verify:truth
 npm run lint
 npm run test:operations
-npm run build
+NEXT_DEPLOYMENT_ID="$RELEASE_COMMIT" npm run build
 ```
 
-6. Validate Next.js build metadata and nginx configuration.
-7. Read the current PM2 working directory and current live release commit.
-8. Atomically point `/var/www/fanmind-current` at the built release.
-9. Reload the single PM2 cluster worker through the stable symlink. PM2 starts
+6. Verify that the resulting Next.js server metadata contains the exact
+   40-character release commit as its deployment identifier. This activates
+   Next.js version-skew protection for the rolling transition.
+7. Validate Next.js build metadata and nginx configuration.
+8. Read the current PM2 working directory and current live release commit.
+9. Start a private, temporary public availability probe against `/api/version`.
+10. Atomically point `/var/www/fanmind-current` at the built release.
+11. Reload the single PM2 cluster worker through the stable symlink. PM2 starts
    the replacement worker before draining the old worker.
-10. Verify that exactly one `fanmind` process is online in `cluster_mode`, uses
+12. Verify that exactly one `fanmind` process is online in `cluster_mode`, uses
     the stable symlink as `pm_cwd`, and carries the exact release commit.
-11. Test `/login` and the full public smoke suite.
-12. On failure, restore the previous symlink target and release commit through
+13. Test `/login` and the full public smoke suite.
+14. Stop the availability probe and require at least two successful samples
+    with no non-`200` response during the switch. The probe stores only HTTP
+    status codes in a mode-`0600` temporary file and deletes it on exit.
+15. On failure, restore the previous symlink target and release commit through
     the same rolling mechanism. The old legacy start remains only as a
     fail-safe fallback.
-13. After a successful smoke test, synchronize `/var/www/fanmind` to the deployed commit.
-14. Retain a limited number of release directories.
+16. After a successful smoke test, synchronize `/var/www/fanmind` to the deployed commit.
+17. Retain a limited number of release directories.
 
 ## Safety properties
 
@@ -79,6 +86,12 @@ npm run build
   deploy is required to use `pm2 reload` without deleting the live process.
 - Next.js receives up to 30 seconds to drain in-flight requests, matching its
   documented graceful-shutdown guidance.
+- Each build uses the release commit as its Next.js deployment identifier, so
+  browsers detect version skew during the rolling overlap and perform a hard
+  navigation instead of mixing incompatible client navigation responses.
+- A release is rejected and rolled back if the public transition probe sees
+  any non-`200` response. The probe records neither bodies nor URLs, cookies,
+  headers, tokens or other request data.
 - The target commit must still equal `origin/main` immediately before building.
 - The new PM2 process starts only from a completed release directory.
 - Login and public route checks must succeed before the release is accepted.

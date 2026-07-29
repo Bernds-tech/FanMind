@@ -130,11 +130,14 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 
 - Operations-Grundlage: produktiv aktiv.
 - Release-Checks: automatisch aktiv.
-- isolierter Release-Deploy mit atomischem Release-Symlink und PM2-Rolling-Reload,
-  Health, Version, Public Smoke, Product Truth, Lint, Operations-Tests, Build
-  und Sprachprüfung sind aktiv. Der steady-state Deploy löscht den laufenden
-  PM2-Prozess nicht mehr; die einmalige Fork-zu-Cluster-Umstellung bleibt ein
-  kontrollierter Übergang.
+- isolierter Release-Deploy mit atomischem Release-Symlink, PM2-Rolling-Reload,
+  commit-gebundener Next.js-Deployment-ID und öffentlicher
+  Übergangs-Verfügbarkeitsprüfung, Health, Version, Public Smoke, Product
+  Truth, Lint, Operations-Tests, Build und Sprachprüfung sind aktiv. Der
+  steady-state Deploy löscht den laufenden PM2-Prozess nicht mehr; ein
+  nicht-`200` während des Release-Wechsels verwirft den neuen Stand und löst
+  den Rolling-Rollback aus. Die einmalige Fork-zu-Cluster-Umstellung bleibt
+  ein kontrollierter Übergang.
 - Produktions- und Testdaten-Trennung: Fail-closed-Policy, Preflight, Staging-Vorlage und ein ausschließlich manuell auslösbarer, commit-genauer Deploy-Workflow für einen getrennten `fanmind-staging`-Runner sind implementiert.
 - Umgebungs-Governance: schreibende Remote-Tests sind außerhalb eindeutig identifizierter Staging- oder Testumgebungen blockiert.
 - Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert. Ein eigener manueller `main`-gebundener Read-only-Ressourcencheck prüft auf einem getrennten `fanmind-restore`-Runner den isolierten Zielhost und die Prüfsumme eines verschlüsselten Full-Backups, ohne Datenbankverbindung, Entschlüsselung oder Schreibfreigabe. Der tatsächliche Restore-, RLS-, Storage- und Cleanup-Nachweis bleibt bis zum externen Lauf offen.
