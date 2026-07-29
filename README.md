@@ -138,7 +138,9 @@ Bereits vorhanden:
 - offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
 - verschlüsselte, höchstens 24 Stunden alte Offline-Übersicht mit maximal 50 Kontakten; nur Name, Handle, Plattform, Status und Änderungszeit, ausschließlich lesbar;
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
-- native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, sicherem Login-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
+- native Push-Grundlage mit validierter Follow-up-Navigation, sicherem
+  Login-Handoff, ausdrücklichem Nutzer-Opt-in und vorbereiteter verschlüsselter
+  Ein-Gerät-Registrierung; serverseitige Zustellung bleibt deaktiviert;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständige
   1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive Icon sowie
   vorbereitete deutsche/englische Store-Metadaten;
@@ -156,8 +158,8 @@ Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
   Read-only-Ressourcencheck;
 - Signing Credentials und signierter interner Android-Build;
 - Apple Developer / App Store Connect und iOS-TestFlight;
-- visuelle Icon-Abnahme im signierten Build sowie Push-Berechtigung,
-  Token-Registrierung und echte Zustellung;
+- visuelle Icon-Abnahme sowie reale Push-Berechtigungs-/Registrierungsabnahme
+  im signierten Build; erst danach echte serverseitige Zustellung;
 - finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;
 - reale Android-/iOS-Gerätetests.
 

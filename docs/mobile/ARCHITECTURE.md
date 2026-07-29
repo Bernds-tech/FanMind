@@ -185,7 +185,10 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] app-owned iOS required-reason privacy manifest, no tracking domains and
       fail-closed Android compile/target API 36 verification;
 - [x] separate technical Apple App Privacy and Google Play Data Safety drafts;
-- [ ] push permission, token registration and server-side follow-up delivery;
+- [x] explicit push-permission opt-in and encrypted, service-role-only
+      one-device token registration prepared without delivery activation;
+- [ ] controlled push migration/key activation, signed-device registration
+      proof and server-side follow-up delivery;
 
 ### Phase B — external verification
 

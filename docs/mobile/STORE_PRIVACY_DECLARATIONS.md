@@ -1,6 +1,6 @@
 # FanMind Mobile – technische Vorlage für Store-Datenschutzangaben
 
-Stand: 28. Juli 2026
+Stand: 29. Juli 2026
 
 ## Status
 
@@ -39,8 +39,10 @@ Die aktuelle Mobile-App:
   Cross-App-Tracking;
 - greift nicht auf das Geräteadressbuch, Standort, Kamera, Mikrofon oder die
   Medienbibliothek zu;
-- fordert noch keine Push-Berechtigung an, registriert keinen Push-Token und
-  versendet keine Push-Nachricht;
+- fordert eine Push-Berechtigung ausschließlich nach ausdrücklichem Opt-in an
+  und bereitet die verschlüsselte, kontogebundene Registrierung eines
+  Expo-Push-Tokens vor; Migration, Serverkey und Zustellung bleiben bis zur
+  externen Abnahme deaktiviert;
 - führt kein Mobile-Billing aus;
 - bietet die Account-Löschanfrage in der App und zusätzlich öffentlich unter
   `https://fanmind.ch/account-deletion` an;
@@ -86,7 +88,7 @@ Processor-/Aufbewahrungsgrenzen bleiben extern zu bestätigen.
 | User Content – Emails or Text Messages | Prüfen / vorsorglich Ja | Ja | Nein | Nur vom Nutzer eingefügter Kontext für KI-Vorschläge; `store: false`, aber Übermittlung an FanMind und OpenAI muss final bewertet werden |
 | Usage Data – Product Interaction | Prüfen / vorsorglich Ja | Ja | Nein | KI-Nutzungsmetadaten wie Feature, Status und geschätzte Tokens; keine Prompt- oder Antwortvolltexte im Usage-Event |
 | Diagnostics – Crash / Performance Data | Nein | – | Nein | Kein Mobile-Crash-/Performance-SDK im aktuellen Build |
-| Identifiers – Device ID | Nein | – | Nein | Noch keine Push-Token-Registrierung oder Geräte-ID-Erfassung |
+| Identifiers – Device ID | Ja | Ja | Nein | Optionaler Expo-Push-Token nach ausdrücklichem Opt-in; verschlüsselt, ein aktives Gerät pro Konto, 30-Tage-Ablauf; Zustellung noch deaktiviert |
 | Contacts | Nein | – | Nein | Kein Zugriff auf das Geräteadressbuch; CRM-Kontakte sind nutzererstellte Workspace-Daten |
 | Purchases / Financial Info | Nein | – | Nein | Kein Billing in der Mobile-App |
 | Location, Photos, Audio, Browsing History | Nein | – | Nein | Keine entsprechenden Berechtigungen oder Funktionen |
@@ -119,7 +121,7 @@ oder Tracking.
 | Messages – Other messages | Prüfen / vorsorglich Ja | Vorläufig Nein | App functionality | Vom Nutzer eingefügter KI-Kontext; ephemerale Verarbeitung im Portal exakt kennzeichnen |
 | App activity – App interactions | Prüfen / vorsorglich Ja | Vorläufig Nein | Analytics nur als betriebliche KI-Nutzungs-/Kostenmessung, App functionality | Keine Mobile-Werbeanalytik; keine Inhaltsvolltexte im Usage-Event |
 | App activity – In-app search history | Ja | Vorläufig Nein | App functionality | Online-Suchbegriffe werden für die Kontaktabfrage an Supabase/PostgREST übertragen, aber nicht als eigene Suchhistorie gespeichert |
-| Device or other IDs | Nein | Nein | – | Noch keine Push-Token-Registrierung |
+| Device or other IDs | Ja | Vorläufig Nein | App functionality | Optionaler Expo-Push-Token nach ausdrücklichem Opt-in; verschlüsselt, kontogebunden und ohne aktive Zustellung |
 | Contacts | Nein | Nein | – | Kein Geräteadressbuchzugriff |
 | Diagnostics | Nein | Nein | – | Kein Mobile-Crash-/Performance-SDK |
 | Financial info / Purchase history | Nein | Nein | – | Kein Mobile-Billing |
@@ -133,11 +135,12 @@ im Auftrag von FanMind gelten.
 
 ## Push-Aktivierungsgrenze
 
-Vor der späteren Push-Aktivierung muss diese Vorlage erneut geöffnet werden.
-Mindestens neu zu prüfen sind:
+Die Token-Registrierung ist im Code vorbereitet, aber noch nicht migriert oder
+für reale Geräte freigegeben. Vor der späteren Zustellungsaktivierung muss diese
+Vorlage erneut geöffnet werden. Mindestens zu prüfen sind:
 
 - Device or other IDs / Device ID wegen Expo- beziehungsweise nativer
-  Push-Token;
+  Push-Token sind bereits vorsorglich als Erhebung eingeordnet;
 - Empfängerbindung, Zweck, Aufbewahrung und Token-Löschung bei Logout oder
   Account-Löschung;
 - Expo, FCM und APNs als beteiligte Dienste;
@@ -145,7 +148,8 @@ Mindestens neu zu prüfen sind:
 - keine Kontakt-, Nachrichten- oder CRM-Inhalte im Push-Payload;
 - echte Zustellung nur aus einem signierten Build.
 
-Die aktuelle Push-Grundlage allein löst diese Angaben noch nicht aus.
+Die aktuelle Vorbereitung ist keine Portal-Freigabe und kein Nachweis einer
+echten Zustellung.
 
 ## Portal-Freigabeprotokoll
 

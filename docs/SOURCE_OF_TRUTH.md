@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 28. Juli 2026
+Stand: 29. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -72,7 +72,10 @@ Aktiv im App-Kern:
 - Antwort kopieren, Kontaktwissen und Follow-up speichern;
 - offene Follow-ups anzeigen und mit dem kanonischen Status `completed` abschließen; bestehende `done`-Altdaten bleiben lesekompatibel;
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
-- native Push-Konfigurationsgrundlage mit validierter Follow-up-Navigation, Auth-Handoff und Einmalverarbeitung; noch ohne Berechtigungsabfrage, Token-Registrierung oder Versand;
+- native Push-Grundlage mit validierter Follow-up-Navigation, Auth-Handoff,
+  Einmalverarbeitung und ausdrücklichem Opt-in für eine verschlüsselte,
+  kontogebundene Ein-Gerät-Registrierung; die Migration, Serverkey-Aktivierung,
+  echte Geräteabnahme und Zustellung bleiben getrennt deaktiviert;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständiges
   hochauflösendes FanMind-App-Icon für iOS/Legacy-Android, sicher skaliertes
   Android-Adaptive-Foreground sowie vorbereitete deutsche/englische
@@ -96,8 +99,9 @@ Noch nicht als ausgelieferte Store-App freigegeben:
 - Signing Credentials;
 - signierter interner Android-Build;
 - Apple Developer / App Store Connect und TestFlight;
-- visuelle App-Icon-Abnahme im signierten Build sowie Push-Berechtigung,
-  Token-Registrierung und echte Zustellung;
+- visuelle App-Icon-Abnahme sowie reale Push-Berechtigungs- und
+  Registrierungsabnahme im signierten Build; echte Zustellung erst nach
+  separater Server-/Staging-Freigabe;
 - finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;
 - realer End-to-End-Gerätetest auf Android und iOS.
 

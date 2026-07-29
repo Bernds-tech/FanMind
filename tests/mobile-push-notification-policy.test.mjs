@@ -138,12 +138,19 @@ test("notification intent waits for auth and is consumed only at follow-ups", ()
   assert.equal(decide({ pendingIntent: null }), "wait");
 });
 
-test("mobile push foundation remains permissionless and delivery-free", async () => {
-  const [appConfig, source, provider, authLayout, indexRoute] =
+test("mobile push navigation remains payload-minimal and delivery-free", async () => {
+  const [appConfig, source, registration, provider, authLayout, indexRoute] =
     await Promise.all([
     readFile(new URL("../apps/mobile/app.json", import.meta.url), "utf8"),
     readFile(
       new URL("../apps/mobile/src/lib/pushNotifications.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../apps/mobile/src/lib/mobilePushRegistration.ts",
+        import.meta.url,
+      ),
       "utf8",
     ),
     readFile(
@@ -171,6 +178,9 @@ test("mobile push foundation remains permissionless and delivery-free", async ()
   assert.doesNotMatch(source, /router\.(?:push|replace)/);
   assert.doesNotMatch(source, /requestPermissionsAsync/);
   assert.doesNotMatch(source, /getExpoPushTokenAsync/);
+  assert.match(registration, /requestPermissionsAsync/);
+  assert.match(registration, /getExpoPushTokenAsync\(\{\s*projectId/u);
+  assert.doesNotMatch(registration, /scheduleNotificationAsync/);
   assert.doesNotMatch(source, /scheduleNotificationAsync/);
   assert.ok(
     provider.indexOf(

@@ -64,10 +64,12 @@ test("native prebuild enforces store API, privacy and least-permission boundarie
 });
 
 test("store privacy draft stays synchronized with the current mobile boundary", async () => {
-  const [privacyDraft, storeListing, pushSource, aiRoute] = await Promise.all([
+  const [privacyDraft, storeListing, pushSource, registrationSource, aiRoute] =
+    await Promise.all([
     read("docs/mobile/STORE_PRIVACY_DECLARATIONS.md"),
     read("docs/mobile/STORE_LISTING.md"),
     read("apps/mobile/src/lib/pushNotifications.ts"),
+    read("apps/mobile/src/lib/mobilePushRegistration.ts"),
     read("src/app/api/ai/reply-suggestions/route.ts"),
   ]);
 
@@ -80,7 +82,13 @@ test("store privacy draft stays synchronized with the current mobile boundary", 
   assert.match(privacyDraft, /https:\/\/fanmind\.ch\/account-deletion/u);
   assert.match(privacyDraft, /kein Mobile-Werbe-SDK/u);
   assert.match(privacyDraft, /greift nicht auf das Geräteadressbuch/u);
-  assert.match(privacyDraft, /Noch keine Push-Token-Registrierung/u);
+  assert.match(
+    privacyDraft,
+    /fordert eine Push-Berechtigung ausschließlich nach ausdrücklichem Opt-in/u,
+  );
+  assert.match(privacyDraft, /Identifiers – Device ID \| Ja \| Ja \| Nein/u);
+  assert.match(privacyDraft, /Device or other IDs \| Ja \| Vorläufig Nein/u);
+  assert.match(privacyDraft, /Zustellung noch deaktiviert/u);
   assert.match(privacyDraft, /Apple App Privacy/u);
   assert.match(privacyDraft, /Google Play Data Safety/u);
   assert.match(privacyDraft, /Contact Info – Name \| Ja/u);
@@ -91,6 +99,9 @@ test("store privacy draft stays synchronized with the current mobile boundary", 
 
   assert.doesNotMatch(pushSource, /requestPermissionsAsync/u);
   assert.doesNotMatch(pushSource, /getExpoPushTokenAsync/u);
+  assert.match(registrationSource, /requestPermissionsAsync/u);
+  assert.match(registrationSource, /getExpoPushTokenAsync/u);
+  assert.doesNotMatch(registrationSource, /scheduleNotificationAsync/u);
   assert.match(aiRoute, /store:\s*false/u);
 
   await Promise.all([

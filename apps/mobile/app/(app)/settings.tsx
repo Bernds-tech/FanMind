@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -12,6 +12,12 @@ import {
   StatusPill,
   mobileStyles,
 } from "@/components/ui";
+import {
+  disableMobilePushRegistration,
+  enableMobilePushRegistration,
+  getMobilePushRegistrationStatus,
+  type MobilePushRegistrationStatus,
+} from "@/lib/mobilePushRegistration";
 import { useAuth } from "@/providers/AuthProvider";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { colors, spacing, typography } from "@/theme/tokens";
@@ -22,6 +28,51 @@ export default function SettingsScreen() {
   const { workspace } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] =
+    useState<MobilePushRegistrationStatus | null>(null);
+
+  const loadPushStatus = useCallback(async () => {
+    const accessToken = session?.access_token;
+    if (!accessToken) return;
+    setPushError(null);
+    const result = await getMobilePushRegistrationStatus(accessToken);
+    if (result.status) setPushStatus(result.status);
+    else setPushError(result.error);
+  }, [session?.access_token]);
+
+  useEffect(() => {
+    void loadPushStatus();
+  }, [loadPushStatus]);
+
+  async function enablePush() {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setPushError("Bitte melde dich erneut an.");
+      return;
+    }
+    setPushBusy(true);
+    setPushError(null);
+    const result = await enableMobilePushRegistration(accessToken);
+    if (result.status) setPushStatus(result.status);
+    else setPushError(result.error);
+    setPushBusy(false);
+  }
+
+  async function disablePush() {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setPushError("Bitte melde dich erneut an.");
+      return;
+    }
+    setPushBusy(true);
+    setPushError(null);
+    const result = await disableMobilePushRegistration(accessToken);
+    if (result.status) setPushStatus(result.status);
+    else setPushError(result.error);
+    setPushBusy(false);
+  }
 
   async function logout() {
     setBusy(true);
@@ -72,6 +123,43 @@ export default function SettingsScreen() {
         <Text style={mobileStyles.muted}>• Kein OpenAI-Key in der App</Text>
         <Text style={mobileStyles.muted}>• Keine automatische Sendefunktion</Text>
         <Text style={mobileStyles.muted}>• Keine eingebettete Website als Haupt-App</Text>
+      </Card>
+
+      <Card>
+        <View style={mobileStyles.rowBetween}>
+          <SectionTitle eyebrow="Beta-Vorbereitung">
+            Follow-up-Push
+          </SectionTitle>
+          <StatusPill tone={pushStatus?.enabled ? "good" : "neutral"}>
+            {pushStatus?.enabled ? "Gerät registriert" : "Nicht aktiv"}
+          </StatusPill>
+        </View>
+        <Text style={mobileStyles.body}>
+          Push wird nur nach deiner ausdrücklichen Freigabe vorbereitet. FanMind
+          speichert das Geräte-Token ausschließlich verschlüsselt und bindet es an
+          dein angemeldetes Konto.
+        </Text>
+        <Text style={mobileStyles.muted}>
+          Die serverseitige Zustellung ist noch deaktiviert, bis ein signierter
+          Build, Staging und echte Android-/iOS-Gerätetests abgenommen sind. Es
+          werden keine Nachrichten an Kontakte gesendet.
+        </Text>
+        {pushError ? <Text style={mobileStyles.error}>{pushError}</Text> : null}
+        {pushStatus?.enabled ? (
+          <SecondaryButton
+            disabled={pushBusy}
+            onPress={() => void disablePush()}
+          >
+            Push-Registrierung entfernen
+          </SecondaryButton>
+        ) : (
+          <PrimaryButton
+            busy={pushBusy}
+            onPress={() => void enablePush()}
+          >
+            Push auf diesem Gerät vorbereiten
+          </PrimaryButton>
+        )}
       </Card>
 
       <Card>
