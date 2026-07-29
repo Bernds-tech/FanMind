@@ -28,7 +28,9 @@ const sections: PrivacySection[] = [
         </p>
         <address className={styles.addressBlock}>
           <strong>FanMind</strong>
-          <span>Ein Projekt von Gerhard Novy und Bernd Guggenberger</span>
+          <span>
+            Bernd Guggenberger, Einzelunternehmen – Geschäftsbezeichnung FanMind
+          </span>
           <span>Turnerstraße 18</span>
           <span>2345 Brunn am Gebirge</span>
           <span>Österreich</span>
@@ -40,16 +42,14 @@ const sections: PrivacySection[] = [
           </span>
         </address>
         <p>
-          Vertreten durch Gerhard Novy und Bernd Guggenberger. Die Beteiligungsverhältnisse
-          betragen Gerhard Novy 50&nbsp;% und Bernd Guggenberger 50&nbsp;%. Die Anbieter- und
-          Betreiberangaben ergeben sich ergänzend aus dem <Link href="/impressum">Impressum</Link>.
+          Inhaber und vertretungsberechtigt ist Bernd Guggenberger. Die
+          vollständigen Anbieter- und Betreiberangaben ergeben sich ergänzend
+          aus dem <Link href="/impressum">Impressum</Link>.
         </p>
         <p>
           Datenschutzanfragen können an <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>
           gerichtet werden.
         </p>
-        {/* TODO: Rechtsform final prüfen. */}
-        {/* TODO: Vertretungsbefugnis final prüfen. */}
         {/* TODO: UID/FN nur übernehmen, wenn sie zum FanMind-Betreiber gehören. */}
         {/* TODO: privacy@fanmind.ch nur anzeigen, wenn aktiv und überwacht. */}
       </>

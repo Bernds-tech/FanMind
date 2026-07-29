@@ -83,6 +83,7 @@ const checkedFiles = [
   "tests/ai-usage-policy.test.mjs",
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
+  "docs/LEGAL_COMPLETION_STATUS.md",
   "docs/database/fanmind_current_schema.md",
   "docs/SECURITY_RLS_SECRETS_CHECK.md",
   "docs/operations/AI_TIER_READINESS.md",
@@ -562,6 +563,16 @@ requireText(
   "Das Impressum muss den bestätigten Einzelunternehmer nennen.",
 );
 requireText(
+  "src/app/datenschutz/page.tsx",
+  "Bernd Guggenberger, Einzelunternehmen – Geschäftsbezeichnung FanMind",
+  "Die Datenschutzerklärung muss denselben bestätigten Betreiber wie das Impressum nennen.",
+);
+requireText(
+  "docs/LEGAL_COMPLETION_STATUS.md",
+  "Betreiber und Vertragspartner: Bernd Guggenberger, Einzelunternehmen unter der Geschäftsbezeichnung FanMind",
+  "Der rechtliche Abschlussstatus muss den kanonischen Betreiber nennen.",
+);
+requireText(
   "src/app/impressum/page.tsx",
   "Bezirkshauptmannschaft Mödling",
   "Das Impressum muss die zuständige Gewerbebehörde nennen.",
@@ -782,6 +793,16 @@ forbidIn(
   "src/app/impressum/page.tsx",
   /Ein Projekt von Gerhard Novy|Beteiligungsverhältnisse|50&nbsp;%|\[BITTE FINAL EINTRAGEN|TODO:/iu,
   "Das Impressum enthält alte Betreiberangaben oder interne Platzhalter.",
+);
+forbidIn(
+  "src/app/datenschutz/page.tsx",
+  /Ein Projekt von Gerhard Novy|Vertreten durch Gerhard Novy|Beteiligungsverhältnisse|50&nbsp;%/iu,
+  "Die Datenschutzerklärung enthält alte Betreiber- oder Beteiligungsangaben.",
+);
+forbidIn(
+  "docs/LEGAL_COMPLETION_STATUS.md",
+  /Gerhard Novy|Beteiligungsverhältnis: 50 % \/ 50 %/iu,
+  "Der rechtliche Abschlussstatus enthält alte Betreiber- oder Beteiligungsangaben.",
 );
 forbidIn(
   "src/app/avv/page.tsx",
