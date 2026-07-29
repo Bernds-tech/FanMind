@@ -50,9 +50,27 @@ const releaseReadinessScript = await readFile(
   ),
   "utf8",
 );
+const signedBuildWorkflow = await readFile(
+  new URL(
+    "../.github/workflows/mobile-signed-internal-build.yml",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const signedBuildScript = await readFile(
+  new URL(
+    "../scripts/operations/mobile-signed-build-preflight.mjs",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const { evaluateMobileReleaseResources } = await import(
   "../scripts/operations/mobile-release-resource-readiness.mjs"
 );
+const {
+  evaluateMobileSignedBuildGate,
+  evaluateQueuedMobileBuild,
+} = await import("../scripts/operations/mobile-signed-build-preflight.mjs");
 
 const easProjectId = "123e4567-e89b-42d3-a456-426614174000";
 const previewProjectRef = "abcdefghijklmnopqrst";
@@ -97,6 +115,23 @@ function releaseEnvironment(overrides = {}) {
     EXPO_PUBLIC_SUPABASE_URL: `https://${previewProjectRef}.supabase.co`,
     EXPO_PUBLIC_SUPABASE_ANON_KEY: publicAnonJwt,
     EXPO_PUBLIC_FANMIND_API_URL: "https://preview.fanmind.ch",
+    ...overrides,
+  };
+}
+
+function signedBuildEnvironment(overrides = {}) {
+  const releaseCommit = "a".repeat(40);
+  return {
+    GITHUB_REF: "refs/heads/main",
+    GITHUB_SHA: releaseCommit,
+    FANMIND_MOBILE_EXPECTED_RELEASE_COMMIT: releaseCommit,
+    FANMIND_MOBILE_RELEASE_ENVIRONMENT: "preview",
+    FANMIND_MOBILE_BUILD_PROFILE: "preview",
+    FANMIND_MOBILE_BUILD_PLATFORM: "android",
+    FANMIND_MOBILE_SIGNED_BUILD_CONFIRM: "queue-one-signed-mobile-build",
+    FANMIND_ENABLE_MOBILE_EAS_BUILD: "true",
+    FANMIND_ENABLE_MOBILE_EAS_SUBMIT: "false",
+    FANMIND_ENABLE_MOBILE_EAS_UPDATE: "false",
     ...overrides,
   };
 }
@@ -344,5 +379,137 @@ test("manual Mobile release resource workflow is main-only, environment-bound an
   assert.doesNotMatch(
     releaseReadinessWorkflow,
     /\bcat\s+"\$REPORT_PATH"|\becho\s+"\$(?:cat|<)/u,
+  );
+});
+
+test("signed Mobile build gate accepts only one exact internal main build", () => {
+  assert.deepEqual(
+    evaluateMobileSignedBuildGate(signedBuildEnvironment()),
+    {
+      releaseEnvironment: "preview",
+      buildProfile: "preview",
+      platform: "android",
+      releaseCommit: "verified",
+      submit: "disabled",
+      update: "disabled",
+    },
+  );
+
+  const queued = evaluateQueuedMobileBuild({
+    environment: signedBuildEnvironment(),
+    buildOutput: [
+      {
+        id: "123e4567-e89b-42d3-a456-426614174000",
+        platform: "ANDROID",
+        buildProfile: "preview",
+        gitCommitHash: "a".repeat(40),
+      },
+    ],
+  });
+  assert.equal(queued.queue, "accepted");
+  assert.equal(queued.releaseCommit, "verified");
+});
+
+test("signed Mobile build gate blocks production, ref/profile drift, commit drift and release writes", () => {
+  for (const environment of [
+    signedBuildEnvironment({ GITHUB_REF: "refs/heads/feature" }),
+    signedBuildEnvironment({
+      FANMIND_MOBILE_RELEASE_ENVIRONMENT: "production",
+      FANMIND_MOBILE_BUILD_PROFILE: "production",
+    }),
+    signedBuildEnvironment({ FANMIND_MOBILE_BUILD_PROFILE: "development" }),
+    signedBuildEnvironment({
+      FANMIND_MOBILE_EXPECTED_RELEASE_COMMIT: "b".repeat(40),
+    }),
+    signedBuildEnvironment({ FANMIND_ENABLE_MOBILE_EAS_BUILD: "false" }),
+    signedBuildEnvironment({ FANMIND_ENABLE_MOBILE_EAS_SUBMIT: "true" }),
+    signedBuildEnvironment({ FANMIND_ENABLE_MOBILE_EAS_UPDATE: "true" }),
+  ]) {
+    assert.throws(() => evaluateMobileSignedBuildGate(environment));
+  }
+
+  for (const buildOutput of [
+    [
+      {
+        id: "123e4567-e89b-42d3-a456-426614174000",
+        platform: "IOS",
+        buildProfile: "preview",
+        gitCommitHash: "a".repeat(40),
+      },
+    ],
+    [
+      {
+        id: "123e4567-e89b-42d3-a456-426614174000",
+        platform: "ANDROID",
+        buildProfile: "preview",
+        gitCommitHash: "b".repeat(40),
+      },
+    ],
+    [],
+    [
+      {
+        id: "123e4567-e89b-42d3-a456-426614174000",
+        platform: "ANDROID",
+        buildProfile: "preview",
+        gitCommitHash: "a".repeat(40),
+      },
+      {
+        id: "223e4567-e89b-42d3-a456-426614174000",
+        platform: "ANDROID",
+        buildProfile: "preview",
+        gitCommitHash: "a".repeat(40),
+      },
+    ],
+    [
+      {
+        id: "not-a-build-id",
+        platform: "ANDROID",
+        buildProfile: "preview",
+        gitCommitHash: "a".repeat(40),
+      },
+    ],
+  ]) {
+    assert.throws(() =>
+      evaluateQueuedMobileBuild({
+        environment: signedBuildEnvironment(),
+        buildOutput,
+      }),
+    );
+  }
+});
+
+test("manual signed Mobile workflow is internal-only, credential-frozen and never submits", () => {
+  assert.match(signedBuildWorkflow, /^\s*workflow_dispatch:/mu);
+  assert.doesNotMatch(signedBuildWorkflow, /^\s*(?:push|pull_request):/mu);
+  assert.match(signedBuildWorkflow, /github\.ref == 'refs\/heads\/main'/u);
+  assert.match(
+    signedBuildWorkflow,
+    /inputs\.confirmation == 'queue-one-signed-mobile-build'/u,
+  );
+  assert.match(
+    signedBuildWorkflow,
+    /name: mobile-\$\{\{ inputs\.build_environment \}\}/u,
+  );
+  assert.match(signedBuildWorkflow, /permissions:\s*\n\s+contents: read/u);
+  assert.match(signedBuildWorkflow, /eas-cli@21\.2\.0 project:info/u);
+  assert.match(signedBuildWorkflow, /eas-cli@21\.2\.0 env:exec/u);
+  assert.match(signedBuildWorkflow, /eas-cli@21\.2\.0 build/u);
+  assert.match(signedBuildWorkflow, /--freeze-credentials/u);
+  assert.match(signedBuildWorkflow, /--no-wait/u);
+  assert.match(signedBuildWorkflow, /--json/u);
+  assert.equal((signedBuildWorkflow.match(/umask 077/gu) ?? []).length, 3);
+  assert.doesNotMatch(
+    signedBuildWorkflow,
+    /eas(?:-cli@[\d.]+)?\s+(?:submit|update|credentials|build:submit)\b/u,
+  );
+  assert.doesNotMatch(signedBuildWorkflow, /--auto-submit/u);
+  assert.doesNotMatch(signedBuildWorkflow, /\bproduction\b/u);
+  assert.doesNotMatch(
+    signedBuildWorkflow,
+    /\bcat\s+"\$(?:JSON|LOG)_PATH"|\becho\s+"\$(?:cat|<)/u,
+  );
+  assert.doesNotMatch(
+    signedBuildScript,
+    /console\.(?:log|error)\([^)]*(?:EXPO_TOKEN|PROJECT_ID|build\?\.id|JSON_PATH)/u,
   );
 });

@@ -150,6 +150,26 @@ Signing Credentials werden nicht geladen und konkrete Projekt-, URL- oder
 Key-Werte werden nicht ausgegeben. Der vorbereitete Workflow zählt erst nach
 echter EAS-Einrichtung und erfolgreichem externem Lauf als Nachweis.
 
+## Kontrollierter signierter interner Build
+
+Nach einem grünen Read-only-Ressourcencheck kann der getrennte manuelle
+GitHub-Workflow `FanMind Mobile Signed Internal Build` genau einen Build
+einreihen. Er läuft nur von `main`, akzeptiert ausschließlich
+`development` oder `preview` sowie genau eine Plattform und verwendet dasselbe
+geschützte `mobile-development`- beziehungsweise `mobile-preview`-Environment.
+
+Vor dem Build wiederholt er Projekt- und Client-Umgebungsprüfung. Der EAS-Aufruf
+ist nicht interaktiv, verwendet die gepinnte CLI `21.2.0`, setzt
+`--freeze-credentials`, wartet nicht auf den Cloud-Build und schreibt die
+JSON-Antwort nur in eine temporäre, anschließend gelöschte Datei. Build-ID,
+Projekt-ID, URLs und öffentliche Clientwerte werden nicht ausgegeben.
+
+Der Ablauf erzeugt oder verändert keine Signing-Credentials und ruft weder
+Submit noch Update auf. Vorhandene gültige Credentials sind daher externe
+Voraussetzung. Ein grüner Workflow bestätigt nur, dass genau ein Build für den
+geprüften Commit eingereiht wurde; Erfolg, Installation, Push, Recovery,
+Android Internal Testing und TestFlight bleiben gesondert abzunehmen.
+
 ## EAS-Profile
 
 Die Profile binden ihre öffentlichen Werte ausdrücklich an getrennte

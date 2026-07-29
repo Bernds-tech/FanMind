@@ -213,6 +213,34 @@ grüner Lauf bestätigt nur Ressourcenbindung und öffentliche
 Client-Konfiguration. Er erzeugt kein Binary und belegt weder Signing, Android
 Internal Testing noch TestFlight.
 
+### Manuell freigegebener signierter interner Build
+
+Der nachgelagerte Workflow
+`.github/workflows/mobile-signed-internal-build.yml` ist die kontrollierte
+Brücke vom Read-only-Nachweis zu genau einem EAS-Build. Er kann ausschließlich
+auf `main` mit der Bestätigung `queue-one-signed-mobile-build` gestartet werden
+und erlaubt nur:
+
+- Environment/Profil `development` oder `preview`;
+- Plattform `android` oder `ios`;
+- genau den ausgelösten `main`-Commit;
+- bereits vorhandene, mit `--freeze-credentials` unverändert verwendete
+  Signing-Credentials.
+
+Der Workflow wiederholt `project:info` und die redigierte
+`env:exec`-Ressourcenprüfung, bevor der Build-Schalter nur für die zwei
+Build-Steps geöffnet wird. Danach führt er `eas build` mit gepinnter CLI,
+`--non-interactive`, `--no-wait`, `--json` und `--freeze-credentials` aus.
+Submit, Update, Production-Profil, automatische Store-Übertragung und
+Credential-Erzeugung sind ausgeschlossen.
+
+Die EAS-Antwort wird aus einer privaten temporären Datei nur auf genau einen
+passenden Commit, Plattform und Profil geprüft. ID und URL werden weder
+ausgegeben noch als GitHub-Artefakt gespeichert. Ein grüner Lauf bedeutet
+ausschließlich „Build eingereiht“; erst der separat überprüfte EAS-Endstatus
+und die Installation auf einem realen Gerät belegen einen erfolgreichen
+signierten Build.
+
 ### Native-Prüfung ohne Release-/Store-Credentials
 
 Der lokale Prebuild-Nachweis benötigt weder EAS-Login noch Signing:
