@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import test from "node:test";
 
 import {
@@ -14,7 +15,10 @@ import { validateCycloneDx } from "../scripts/security/generate-sbom.mjs";
 
 const patchedManifest = {
   dependencies: { next: "16.2.12" },
-  devDependencies: { "eslint-config-next": "16.2.12" },
+  devDependencies: {
+    eslint: "9.39.5",
+    "eslint-config-next": "16.2.12",
+  },
 };
 
 function auditPayload({
@@ -161,6 +165,7 @@ test("reviewed overrides stay narrow and resolve to the patched production tree"
   );
 
   assert.deepEqual(manifest.overrides, {
+    "brace-expansion@>=1.0.0 <1.1.17": "1.1.17",
     "brace-expansion@>=5.0.0 <5.0.8": "5.0.8",
     "js-yaml@>=4.0.0 <4.3.0": "4.3.0",
     "next@16.2.12": {
@@ -168,16 +173,30 @@ test("reviewed overrides stay narrow and resolve to the patched production tree"
       sharp: "0.35.3",
     },
   });
+  assert.equal(manifest.devDependencies.eslint, "9.39.5");
+  assert.equal(lock.packages["node_modules/eslint"].version, "9.39.5");
   assert.equal(lock.packages["node_modules/next"].version, "16.2.12");
   assert.equal(lock.packages["node_modules/postcss"].version, "8.5.23");
   assert.equal(lock.packages["node_modules/sharp"].version, "0.35.3");
-  assert.equal(
-    lock.packages[
-      "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion"
-    ].version,
-    "5.0.8",
-  );
+  assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.8");
+  for (const dependencyPath of [
+    "node_modules/@eslint/config-array/node_modules/brace-expansion",
+    "node_modules/@eslint/eslintrc/node_modules/brace-expansion",
+    "node_modules/eslint-config-next/node_modules/brace-expansion",
+    "node_modules/eslint/node_modules/brace-expansion",
+  ]) {
+    assert.equal(lock.packages[dependencyPath].version, "1.1.17");
+  }
   assert.equal(lock.packages["node_modules/js-yaml"].version, "4.3.0");
+});
+
+test("legacy ESLint brace expansion enforces the reviewed output bound", () => {
+  const requireFromEslint = createRequire(
+    new URL("../node_modules/eslint/package.json", import.meta.url),
+  );
+  const expand = requireFromEslint("brace-expansion");
+
+  assert.deepEqual(expand("{a,b}{c,d}", { maxLength: 4 }), ["ac", "ad"]);
 });
 
 test("reviewed Sharp override can process an image with the Production runtime", async () => {
