@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload mobile install report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-install-report
           path: apps/mobile/mobile-install-report.txt
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload mobile typecheck report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-typecheck-report
           path: apps/mobile/mobile-typecheck-report.txt
@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload Expo Doctor report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-expo-doctor-report
           path: apps/mobile/expo-doctor-report.txt
@@ -114,7 +114,7 @@ jobs:
 
       - name: Upload Android export report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-android-export-report
           path: apps/mobile/mobile-android-export-report.txt
@@ -131,7 +131,7 @@ jobs:
 
       - name: Upload iOS export report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-ios-export-report
           path: apps/mobile/mobile-ios-export-report.txt
@@ -148,7 +148,7 @@ jobs:
 
       - name: Upload native prebuild report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-native-prebuild-report
           path: apps/mobile/mobile-native-prebuild-report.txt
@@ -165,7 +165,7 @@ jobs:
 
       - name: Upload mobile boundary report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-boundary-report
           path: apps/mobile/mobile-boundary-report.txt
@@ -174,7 +174,7 @@ jobs:
 
       - name: Upload Android JavaScript export artifact
         if: always() && steps.android_bundle.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-android-javascript-export
           path: apps/mobile/dist-android
@@ -183,7 +183,7 @@ jobs:
 
       - name: Upload iOS JavaScript export artifact
         if: always() && steps.ios_bundle.outcome == 'success'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-mobile-ios-javascript-export
           path: apps/mobile/dist-ios
