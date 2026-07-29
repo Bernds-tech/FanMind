@@ -90,6 +90,10 @@ Aktiv im App-Kern:
   EAS-Projektbindung, App-Identität und getrennte öffentliche
   Development-/Preview-/Production-Konfiguration; ohne Build, Submit, Update
   oder Signing-Credentials.
+- separater manueller, `main`- und Environment-gebundener Queue-Ablauf für
+  genau einen signierten internen Development- oder Preview-Build; erst nach
+  demselben Ressourcencheck, mit eingefrorenen vorhandenen Credentials und
+  ohne Submit, Update, Production-Profil oder Ausgabe von Build-IDs/URLs.
 
 Noch nicht als ausgelieferte Store-App freigegeben:
 
@@ -137,6 +141,13 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   öffentlichen Clientwerte. Build, Submit, Update und Signing bleiben
   deaktiviert; der tatsächliche EAS-Lauf und signierte Builds bleiben extern
   offen.
+- Mobile-Signing: Ein getrennter manueller Workflow ist als kontrollierte
+  Brücke zum ersten signierten internen Build vorbereitet. Er akzeptiert nur
+  `development` oder `preview`, Android oder iOS, prüft zuerst Projektbindung
+  und öffentliche Umgebung, friert bestehende Credentials ein und reiht genau
+  einen Build ohne Warten ein. Ohne externe EAS-Einrichtung und vorher
+  vorhandene Signing-Credentials schlägt er fail-closed fehl; ein grüner
+  Queue-Lauf ist noch kein erfolgreicher Binär-, Geräte- oder Store-Nachweis.
 - Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
 
 Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.

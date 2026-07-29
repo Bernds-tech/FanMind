@@ -83,6 +83,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   It may use only `project:info` and `env:exec` to confirm the linked project,
   app identity and public client environment; it must never build, submit,
   update, load signing credentials or imply that a signed binary exists.
+- The separate signed internal Mobile build workflow may queue exactly one
+  `development` or `preview` EAS build only after the same read-only resource
+  verification. Keep it main-only, environment-protected, credential-frozen
+  and non-interactive; it must never target `production`, submit, update,
+  create credentials, print build identifiers or imply that a queued build
+  finished successfully.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

@@ -1,0 +1,136 @@
+name: FanMind Mobile Signed Internal Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_environment:
+        description: 'Internal EAS environment and matching build profile'
+        required: true
+        type: choice
+        options:
+          - development
+          - preview
+      platform:
+        description: 'Create exactly one signed internal build'
+        required: true
+        type: choice
+        options:
+          - android
+          - ios
+      confirmation:
+        description: 'Type queue-one-signed-mobile-build to authorize one EAS build'
+        required: true
+        type: string
+
+concurrency:
+  group: fanmind-mobile-signed-${{ inputs.build_environment }}-${{ inputs.platform }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  queue-signed-internal-build:
+    name: Queue one signed internal EAS build without submission
+    if: >-
+      ${{
+        github.ref == 'refs/heads/main' &&
+        inputs.confirmation == 'queue-one-signed-mobile-build'
+      }}
+    runs-on: ubuntu-24.04
+    environment:
+      name: mobile-${{ inputs.build_environment }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      FANMIND_MOBILE_RELEASE_ENVIRONMENT: ${{ inputs.build_environment }}
+      FANMIND_MOBILE_BUILD_PROFILE: ${{ inputs.build_environment }}
+      FANMIND_MOBILE_BUILD_PLATFORM: ${{ inputs.platform }}
+      FANMIND_MOBILE_SIGNED_BUILD_CONFIRM: queue-one-signed-mobile-build
+      FANMIND_MOBILE_EXPECTED_RELEASE_COMMIT: ${{ github.sha }}
+      FANMIND_MOBILE_RELEASE_RESOURCE_CONFIRM: verify-mobile-release-resources
+      FANMIND_MOBILE_EXPECTED_EAS_OWNER: ${{ vars.FANMIND_MOBILE_EAS_OWNER }}
+      FANMIND_MOBILE_EXPECTED_EAS_PROJECT_ID: ${{ vars.FANMIND_MOBILE_EAS_PROJECT_ID }}
+      FANMIND_MOBILE_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_MOBILE_SUPABASE_PROJECT_REF }}
+      FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF }}
+      FANMIND_MOBILE_EXPECTED_API_ORIGIN: ${{ vars.FANMIND_MOBILE_API_ORIGIN }}
+      FANMIND_PRODUCTION_API_ORIGIN: https://fanmind.ch
+      FANMIND_ENABLE_MOBILE_EAS_BUILD: 'false'
+      FANMIND_ENABLE_MOBILE_EAS_SUBMIT: 'false'
+      FANMIND_ENABLE_MOBILE_EAS_UPDATE: 'false'
+      EXPO_NO_TELEMETRY: '1'
+
+    steps:
+      - name: Checkout reviewed main commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install Mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify existing EAS project binding
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          umask 077
+          REPORT_PATH="$RUNNER_TEMP/fanmind-mobile-signed-project-info.txt"
+          trap 'rm -f "$REPORT_PATH"' EXIT
+          if ! npx --yes eas-cli@21.2.0 project:info >"$REPORT_PATH" 2>&1; then
+            echo "MOBILE_SIGNED_BUILD_ERROR=eas_project_lookup_failed" >&2
+            exit 1
+          fi
+          echo "MOBILE_SIGNED_BUILD_EAS_PROJECT=linked"
+
+      - name: Verify selected public environment before build
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          umask 077
+          REPORT_PATH="$RUNNER_TEMP/fanmind-mobile-signed-environment.txt"
+          trap 'rm -f "$REPORT_PATH"' EXIT
+          if ! npx --yes eas-cli@21.2.0 env:exec \
+            "${{ inputs.build_environment }}" \
+            "node ../../scripts/operations/mobile-release-resource-readiness.mjs" \
+            --non-interactive >"$REPORT_PATH" 2>&1; then
+            echo "MOBILE_SIGNED_BUILD_ERROR=public_environment_check_failed" >&2
+            exit 1
+          fi
+          if ! grep -qx 'MOBILE_RELEASE_RESOURCE_READINESS=PASS' "$REPORT_PATH"; then
+            echo "MOBILE_SIGNED_BUILD_ERROR=public_environment_check_incomplete" >&2
+            exit 1
+          fi
+          echo "MOBILE_SIGNED_BUILD_PUBLIC_ENVIRONMENT=verified"
+
+      - name: Authorize exactly one signed internal build
+        env:
+          FANMIND_ENABLE_MOBILE_EAS_BUILD: 'true'
+        run: node scripts/operations/mobile-signed-build-preflight.mjs
+
+      - name: Queue signed internal build without submit or update
+        working-directory: apps/mobile
+        env:
+          FANMIND_ENABLE_MOBILE_EAS_BUILD: 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          JSON_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build.json"
+          LOG_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build.log"
+          trap 'rm -f "$JSON_PATH" "$LOG_PATH"' EXIT
+          if ! npx --yes eas-cli@21.2.0 build \
+            --platform "${{ inputs.platform }}" \
+            --profile "${{ inputs.build_environment }}" \
+            --freeze-credentials \
+            --non-interactive \
+            --no-wait \
+            --json >"$JSON_PATH" 2>"$LOG_PATH"; then
+            echo "MOBILE_SIGNED_BUILD_ERROR=build_queue_failed" >&2
+            exit 1
+          fi
+          node ../../scripts/operations/mobile-signed-build-preflight.mjs \
+            "$JSON_PATH"

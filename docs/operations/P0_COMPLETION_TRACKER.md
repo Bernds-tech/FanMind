@@ -48,6 +48,10 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
   vorbereitet und an getrennte geschützte Mobile-Environments gebunden;
 - der Check bestätigt Projekt-/Owner-Bindung, App-Identität und ausschließlich
   öffentliche Clientwerte, ohne Build, Submit, Update oder Signing-Zugriff;
+- ein getrenntes manuelles Gate kann nach derselben Ressourcenprüfung genau
+  einen credential-frozen Development-/Preview-Build auf Android oder iOS
+  einreihen; Production, Submit, Update und Credential-Erzeugung bleiben
+  blockiert, und der Queue-Nachweis gilt nicht als fertiges Binary;
 - eigenständige 1024×1024-Icon-Quellen und getrennte PNG-Verträge für
   iOS/Legacy-Android sowie Android Adaptive Icon sind im Native-Prebuild
   abgesichert; die visuelle Abnahme bleibt beim signierten Realgeräte-Build;
