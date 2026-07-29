@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { scanWorkflowPolicy } from "../scripts/verify-actions-pinned.mjs";
 
 const CODEQL_V4_37_3_SHA = "e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81";
+const HOSTED_CHECKOUT_V7_0_1_SHA =
+  "3d3c42e5aac5ba805825da76410c181273ba90b1";
+const RESTORE_CHECKOUT_V4_SHA =
+  "11d5960a326750d5838078e36cf38b85af677262";
+const RESTORE_WORKFLOW = "restore-drill-resource-readiness.yml";
 
 async function exists(path) {
   try {
@@ -25,6 +30,66 @@ test("all GitHub workflows use immutable external Action references and explicit
     result.references
       .filter((reference) => reference.kind === "external")
       .every((reference) => /^[0-9a-f]{40}$/u.test(reference.ref)),
+    true,
+  );
+});
+
+test("hosted checkout uses v7 while the isolated restore runner stays on v4", async () => {
+  const workflowFiles = (await readdir(".github/workflows"))
+    .filter((file) => /\.ya?ml$/u.test(file))
+    .sort();
+  const checkoutWorkflows = [];
+
+  for (const file of workflowFiles) {
+    const source = await readFile(`.github/workflows/${file}`, "utf8");
+    const checkoutShas = [
+      ...source.matchAll(/actions\/checkout@([0-9a-f]{40})/gu),
+    ].map((match) => match[1]);
+
+    if (checkoutShas.length > 0) {
+      checkoutWorkflows.push({
+        file,
+        source,
+        checkoutShas,
+        selfHosted: /\bruns-on:\s*\[[^\]]*\bself-hosted\b[^\]]*\]/u.test(
+          source,
+        ),
+      });
+    }
+  }
+
+  const selfHostedWorkflows = checkoutWorkflows.filter(
+    (workflow) => workflow.selfHosted,
+  );
+  assert.deepEqual(
+    selfHostedWorkflows.map((workflow) => workflow.file),
+    [RESTORE_WORKFLOW],
+  );
+  assert.deepEqual(selfHostedWorkflows[0]?.checkoutShas, [
+    RESTORE_CHECKOUT_V4_SHA,
+  ]);
+  assert.match(
+    selfHostedWorkflows[0]?.source ?? "",
+    /runs-on:\s*\[self-hosted, fanmind-restore, linux, x64\]/u,
+  );
+
+  const hostedWorkflows = checkoutWorkflows.filter(
+    (workflow) => !workflow.selfHosted,
+  );
+  assert.equal(hostedWorkflows.length, 16);
+  assert.equal(
+    hostedWorkflows.reduce(
+      (count, workflow) => count + workflow.checkoutShas.length,
+      0,
+    ),
+    17,
+  );
+  assert.equal(
+    hostedWorkflows.every((workflow) =>
+      workflow.checkoutShas.every(
+        (checkoutSha) => checkoutSha === HOSTED_CHECKOUT_V7_0_1_SHA,
+      ),
+    ),
     true,
   );
 });
