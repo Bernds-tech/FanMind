@@ -52,7 +52,7 @@ test("public Browser E2E workflow is immutable, Chromium-only and read-only", as
   );
   assert.match(
     source,
-    /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/u,
+    /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/u,
   );
   assert.match(source, /permissions:\s*\n\s*contents: read/u);
   assert.doesNotMatch(source, /contents: write|write-all/u);
