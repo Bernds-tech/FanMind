@@ -50,11 +50,10 @@ async function callPushApi(
   status: MobilePushRegistrationStatus | null;
   error: string | null;
 }> {
-  let response: Response;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    response = await fetch(
+    const response = await fetch(
       `${environment.apiUrl}/api/mobile/push-registration`,
       {
         method: "POST",
@@ -63,6 +62,18 @@ async function callPushApi(
         signal: controller.signal,
       },
     );
+    const payload = (await response.json().catch(() => null)) as
+      | PushResponsePayload
+      | null;
+    if (!response.ok || !payload?.status) {
+      return {
+        status: null,
+        error:
+          payload?.error ??
+          "Die Push-Einstellung konnte gerade nicht sicher verarbeitet werden.",
+      };
+    }
+    return { status: payload.status, error: null };
   } catch {
     return {
       status: null,
@@ -71,18 +82,6 @@ async function callPushApi(
   } finally {
     clearTimeout(timeout);
   }
-  const payload = (await response.json().catch(() => null)) as
-    | PushResponsePayload
-    | null;
-  if (!response.ok || !payload?.status) {
-    return {
-      status: null,
-      error:
-        payload?.error ??
-        "Die Push-Einstellung konnte gerade nicht sicher verarbeitet werden.",
-    };
-  }
-  return { status: payload.status, error: null };
 }
 
 export function getMobilePushRegistrationStatus(accessToken: string) {

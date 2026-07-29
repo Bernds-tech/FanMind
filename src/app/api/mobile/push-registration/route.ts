@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { isTemporaryDemoUser } from "@/lib/demoMode";
+import { isPublicDemoWorkspace } from "@/lib/demoMode";
 import {
   MOBILE_PUSH_CLIENT_HEADER,
-  MOBILE_PUSH_MAX_REQUEST_BYTES,
   MobilePushRegistrationPolicyError,
+  readBoundedMobilePushJson,
+  validateExpectedMobilePushProjectId,
   validateMobilePushAction,
 } from "@/lib/mobilePushRegistrationPolicy.mjs";
 import {
@@ -18,9 +19,9 @@ import {
   getOptionalBearerAccessToken,
 } from "@/lib/requestAccessToken";
 import {
-  getSupabaseServerUser,
-  getUserWorkspaceDashboard,
-} from "@/lib/supabase/server";
+  requireAuthorizedWorkspaceMember,
+  WorkspaceAuthorizationError,
+} from "@/lib/workspaceAuthorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,56 +60,60 @@ async function authenticateMobile(request: Request) {
     throw new MobilePushRegistrationServiceError("unauthenticated");
   }
 
-  const { data } = await getSupabaseServerUser(accessToken);
-  if (!data.user) {
-    throw new MobilePushRegistrationServiceError("unauthenticated");
+  let context;
+  try {
+    context = await requireAuthorizedWorkspaceMember(accessToken);
+  } catch (error) {
+    if (error instanceof WorkspaceAuthorizationError) {
+      throw new MobilePushRegistrationServiceError(
+        error.code === "unauthenticated"
+          ? "unauthenticated"
+          : "workspace_required",
+      );
+    }
+    throw error;
   }
-  const workspaceResult = await getUserWorkspaceDashboard(data.user, accessToken);
-  if (!workspaceResult.workspace) {
-    throw new MobilePushRegistrationServiceError("workspace_required");
-  }
-  if (isTemporaryDemoUser(data.user)) {
-    throw new MobilePushRegistrationServiceError("temporary_demo_not_allowed");
+  if (
+    isPublicDemoWorkspace({
+      userEmail: context.user.email,
+      workspaceBillingStatus: context.workspace.billing_status,
+      user: context.user,
+    })
+  ) {
+    throw new MobilePushRegistrationServiceError("public_demo_not_allowed");
   }
 
-  return {
-    user: data.user,
-    workspace: workspaceResult.workspace,
-  };
-}
-
-async function readPayload(request: Request) {
-  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
-  if (!contentType.startsWith("application/json")) {
-    throw new MobilePushRegistrationPolicyError("invalid_content_type");
-  }
-  const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (
-    Number.isFinite(contentLength) &&
-    contentLength > MOBILE_PUSH_MAX_REQUEST_BYTES
-  ) {
-    throw new MobilePushRegistrationPolicyError("request_too_large");
-  }
-  const raw = await request.text();
-  if (
-    Buffer.byteLength(raw, "utf8") === 0 ||
-    Buffer.byteLength(raw, "utf8") > MOBILE_PUSH_MAX_REQUEST_BYTES
-  ) {
-    throw new MobilePushRegistrationPolicyError("request_too_large");
-  }
-  return JSON.parse(raw);
+  return context;
 }
 
 function mapError(error: unknown) {
-  if (
-    error instanceof MobilePushRegistrationPolicyError ||
-    error instanceof SyntaxError
-  ) {
-    const code =
-      error instanceof MobilePushRegistrationPolicyError
-        ? error.code
-        : "invalid_request";
-    return errorResponse(code, 400, "Bitte prüfe die Push-Einstellungen.");
+  if (error instanceof MobilePushRegistrationPolicyError) {
+    if (error.code === "push_project_not_configured") {
+      return errorResponse(
+        error.code,
+        503,
+        "Die Push-Vorbereitung ist serverseitig noch nicht freigegeben.",
+      );
+    }
+    if (error.code === "push_project_mismatch") {
+      return errorResponse(
+        error.code,
+        403,
+        "Dieser FanMind-Build ist für Push-Erinnerungen nicht freigegeben.",
+      );
+    }
+    return errorResponse(
+      error.code,
+      400,
+      "Bitte prüfe die Push-Einstellungen.",
+    );
+  }
+  if (error instanceof SyntaxError) {
+    return errorResponse(
+      "invalid_request",
+      400,
+      "Bitte prüfe die Push-Einstellungen.",
+    );
   }
   if (error instanceof MobilePushRegistrationServiceError) {
     if (error.code === "unauthenticated") {
@@ -123,7 +128,7 @@ function mapError(error: unknown) {
     }
     if (
       error.code === "workspace_required" ||
-      error.code === "temporary_demo_not_allowed"
+      error.code === "public_demo_not_allowed"
     ) {
       return errorResponse(
         error.code,
@@ -149,16 +154,20 @@ function mapError(error: unknown) {
 export async function POST(request: Request) {
   try {
     const { user, workspace } = await authenticateMobile(request);
-    const input = validateMobilePushAction(await readPayload(request));
+    const input = validateMobilePushAction(
+      await readBoundedMobilePushJson(request),
+    );
+    const scope = { userId: user.id, workspaceId: workspace.id };
 
     if (input.action === "status") {
-      const status = await getMobilePushRegistrationStatus(user.id);
+      const status = await getMobilePushRegistrationStatus(scope);
       return response({ ok: true, status });
     }
     if (input.action === "unregister") {
-      const status = await unregisterMobilePushToken(user.id);
+      const status = await unregisterMobilePushToken(scope);
       return response({ ok: true, status });
     }
+    validateExpectedMobilePushProjectId(input.projectId);
 
     const status = await registerMobilePushToken({
       userId: user.id,

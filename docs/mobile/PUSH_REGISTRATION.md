@@ -3,15 +3,24 @@
 ## Ziel und Grenze
 
 FanMind bereitet Push-Erinnerungen ausschließlich als ausdrückliches Opt-in
-für angemeldete, nicht temporäre Nutzer vor. Dieser Stand registriert höchstens
-ein Android- oder iOS-Gerät pro Konto. Er sendet keine Push-Nachricht und
-aktiviert keinen Timer, Worker oder Expo-Delivery-Aufruf.
+für angemeldete Nutzer außerhalb aller öffentlichen Demo-Workspaces vor. Dieser
+Stand registriert höchstens ein Android- oder iOS-Gerät pro Konto. Er sendet
+keine Push-Nachricht und aktiviert keinen Timer, Worker oder
+Expo-Delivery-Aufruf.
 
 ## Sicherheitsvertrag
 
 - Mobile verwendet nur den eigenen Supabase-Bearer-Token.
 - Die API akzeptiert ausschließlich `X-FanMind-Client: mobile`.
-- Demo-Nutzer und Nutzer ohne bestätigten Workspace werden abgelehnt.
+- Öffentliche Demo-Workspaces und Nutzer ohne bestätigten Owner- oder
+  Mitglieds-Workspace werden abgelehnt.
+- Status, Registrierung und Widerruf werden immer an User und aktuell
+  autorisierten Workspace gebunden; alte Workspace-Bindungen werden
+  ausdrücklich bereinigt oder bei einer neuen Registrierung ersetzt.
+- Request-Bodies werden auch ohne `Content-Length` beim Streamen hart auf
+  4096 Byte begrenzt.
+- Eine neue Registrierung akzeptiert nur die serverseitig über
+  `FANMIND_MOBILE_PUSH_EAS_PROJECT_ID` freigegebene EAS-Projekt-ID.
 - Expo-Push-Token werden vor jeder Persistenz mit einem dedizierten
   32-Byte-Key per AES-256-GCM verschlüsselt.
 - Ein keyed HMAC verhindert doppelte Token, ohne Tokenwerte auszugeben.
@@ -36,10 +45,12 @@ Registrierungstest sind getrennt erforderlich:
    kontrolliert anwenden.
 3. einen eigenen zufälligen 32-Byte-Key als
    `FANMIND_PUSH_TOKEN_ENCRYPTION_KEY` ausschließlich serverseitig setzen.
-4. EAS-Projekt-ID und öffentliche Mobile-Umgebung über den bestehenden
+4. dieselbe bestätigte EAS-Projekt-ID serverseitig als
+   `FANMIND_MOBILE_PUSH_EAS_PROJECT_ID` setzen.
+5. EAS-Projekt-ID und öffentliche Mobile-Umgebung über den bestehenden
    Read-only-Ressourcencheck bestätigen.
-5. signierten Development-/Preview-Build verwenden.
-6. Opt-in, Ablehnung, Registrierung, erneute Registrierung, Opt-out, Logout,
+6. signierten Development-/Preview-Build verwenden.
+7. Opt-in, Ablehnung, Registrierung, erneute Registrierung, Opt-out, Logout,
    Konto-/Workspace-Trennung und 30-Tage-Ablauf mit Testkonten prüfen.
 
 Keine Secret- oder Tokenwerte in Logs, Screenshots, Issues oder Chat kopieren.

@@ -18,6 +18,10 @@ type MobilePushRegistrationRow = {
   status: "active";
   expires_at: string;
 };
+type MobilePushRegistrationScope = {
+  userId: string;
+  workspaceId: string;
+};
 
 const COLUMNS =
   "id,user_id,workspace_id,platform,expo_project_id,status,expires_at";
@@ -85,11 +89,16 @@ async function removeExpiredTokenHash(tokenHash: string, nowIso: string) {
   }
 }
 
-async function removeExpiredUserRegistration(userId: string, nowIso: string) {
+async function removeExpiredUserRegistration(
+  scope: MobilePushRegistrationScope,
+  nowIso: string,
+) {
   const url = `${getSupabaseRestUrl(
     "mobile_push_registrations",
   )}?user_id=eq.${encodeURIComponent(
-    userId,
+    scope.userId,
+  )}&workspace_id=eq.${encodeURIComponent(
+    scope.workspaceId,
   )}&expires_at=lte.${encodeURIComponent(nowIso)}`;
   const response = await serviceFetch(
     url,
@@ -104,12 +113,36 @@ async function removeExpiredUserRegistration(userId: string, nowIso: string) {
   }
 }
 
-export async function getMobilePushRegistrationStatus(userId: string) {
+async function removeStaleUserRegistrations(
+  scope: MobilePushRegistrationScope,
+) {
+  const url = `${getSupabaseRestUrl(
+    "mobile_push_registrations",
+  )}?user_id=eq.${encodeURIComponent(
+    scope.userId,
+  )}&workspace_id=neq.${encodeURIComponent(scope.workspaceId)}`;
+  const response = await serviceFetch(
+    url,
+    {
+      method: "DELETE",
+      headers: serviceHeaders("return=minimal"),
+    },
+    "registration_cleanup_failed",
+  );
+  if (!response.ok) {
+    throw new MobilePushRegistrationServiceError("registration_cleanup_failed");
+  }
+}
+
+export async function getMobilePushRegistrationStatus(
+  scope: MobilePushRegistrationScope,
+) {
+  await removeStaleUserRegistrations(scope);
   const url = `${getSupabaseRestUrl(
     "mobile_push_registrations",
   )}?select=${encodeURIComponent(COLUMNS)}&user_id=eq.${encodeURIComponent(
-    userId,
-  )}&limit=1`;
+    scope.userId,
+  )}&workspace_id=eq.${encodeURIComponent(scope.workspaceId)}&limit=1`;
   const response = await serviceFetch(
     url,
     { headers: serviceHeaders() },
@@ -125,7 +158,7 @@ export async function getMobilePushRegistrationStatus(userId: string) {
   const now = new Date();
   const status = publicMobilePushStatus(row, now);
   if (row && !status.enabled) {
-    await removeExpiredUserRegistration(userId, now.toISOString());
+    await removeExpiredUserRegistration(scope, now.toISOString());
   }
   return status;
 }
@@ -190,10 +223,15 @@ export async function registerMobilePushToken(input: {
   return publicMobilePushStatus(rows[0]);
 }
 
-export async function unregisterMobilePushToken(userId: string) {
+export async function unregisterMobilePushToken(
+  scope: MobilePushRegistrationScope,
+) {
+  await removeStaleUserRegistrations(scope);
   const url = `${getSupabaseRestUrl(
     "mobile_push_registrations",
-  )}?user_id=eq.${encodeURIComponent(userId)}`;
+  )}?user_id=eq.${encodeURIComponent(
+    scope.userId,
+  )}&workspace_id=eq.${encodeURIComponent(scope.workspaceId)}`;
   const response = await serviceFetch(
     url,
     {

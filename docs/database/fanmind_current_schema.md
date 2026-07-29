@@ -624,9 +624,12 @@ pro Auth-Nutzer vor:
   kaskadierend.
 
 Der normale Web-Deploy wendet diese Migration nicht an. Ohne getrennte
-Migration, `FANMIND_PUSH_TOKEN_ENCRYPTION_KEY`, signierten Build und reale
-Geräteabnahme bleibt die Registrierung nicht verfügbar. Die Migration enthält
-keinen Versandjob; serverseitige Follow-up-Zustellung bleibt separat
+Migration, `FANMIND_PUSH_TOKEN_ENCRYPTION_KEY`, serverseitig gebundene
+`FANMIND_MOBILE_PUSH_EAS_PROJECT_ID`, signierten Build und reale Geräteabnahme
+bleibt die Registrierung nicht verfügbar. Service-Abfragen binden Status und
+Widerruf an `user_id` plus aktuell autorisierte `workspace_id`; eine neue
+Registrierung ersetzt die höchstens eine alte User-Bindung. Die Migration
+enthält keinen Versandjob; serverseitige Follow-up-Zustellung bleibt separat
 deaktiviert.
 
 ## 10. Migrations- und Reader-Regel

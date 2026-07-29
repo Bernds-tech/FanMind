@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 const mobileRoot = new URL("../apps/mobile/", import.meta.url);
+const require = createRequire(import.meta.url);
 const packageJson = JSON.parse(
   await readFile(new URL("package.json", mobileRoot), "utf8"),
 );
 const appConfig = JSON.parse(
   await readFile(new URL("app.json", mobileRoot), "utf8"),
+);
+const dynamicAppConfig = require(
+  fileURLToPath(new URL("app.config.js", mobileRoot)),
 );
 const easConfig = JSON.parse(
   await readFile(new URL("eas.json", mobileRoot), "utf8"),
@@ -197,6 +203,43 @@ test("credential-free validation profiles cannot be mistaken for signed betas", 
   assert.match(betaRelease, /kein signierter Beta-Build/iu);
 });
 
+test("protected environment values add the exact EAS binding at config evaluation time", () => {
+  const ownerKey = "FANMIND_MOBILE_EXPECTED_EAS_OWNER";
+  const projectKey = "FANMIND_MOBILE_EXPECTED_EAS_PROJECT_ID";
+  const previousOwner = process.env[ownerKey];
+  const previousProjectId = process.env[projectKey];
+  try {
+    delete process.env[ownerKey];
+    delete process.env[projectKey];
+    assert.equal(dynamicAppConfig({ config: appConfig.expo }).owner, undefined);
+
+    process.env[ownerKey] = "bernds-tech";
+    process.env[projectKey] = easProjectId.toUpperCase();
+    const linked = dynamicAppConfig({ config: appConfig.expo });
+    assert.equal(linked.owner, "bernds-tech");
+    assert.equal(linked.extra.eas.projectId, easProjectId);
+    assert.equal(linked.ios.bundleIdentifier, "ch.fanmind.app");
+    assert.equal(linked.android.package, "ch.fanmind.app");
+
+    delete process.env[projectKey];
+    assert.throws(
+      () => dynamicAppConfig({ config: appConfig.expo }),
+      /FANMIND_MOBILE_EAS_BINDING_INVALID/u,
+    );
+  } finally {
+    if (previousOwner === undefined) {
+      delete process.env[ownerKey];
+    } else {
+      process.env[ownerKey] = previousOwner;
+    }
+    if (previousProjectId === undefined) {
+      delete process.env[projectKey];
+    } else {
+      process.env[projectKey] = previousProjectId;
+    }
+  }
+});
+
 test("native configuration is regenerated in isolation and checked on both platforms", () => {
   assert.equal(packageJson.scripts["export:ios"], "expo export --platform ios --output-dir dist-ios");
   assert.equal(
@@ -238,7 +281,7 @@ test("Mobile CI proves Android and iOS config without claiming release-signed bi
   );
 
   assert.match(mobileReadme, /Development-Client/u);
-  assert.match(mobileReadme, /keine\s+EAS-Projekt-ID/u);
+  assert.match(mobileReadme, /keine feste\s+EAS-Projekt-ID/u);
   assert.match(betaRelease, /native-validation/u);
   assert.match(betaRelease, /Expo-Konto und eine\s+echte EAS-Projekt-ID/u);
 });
@@ -328,6 +371,7 @@ test("Mobile release readiness fails closed on missing EAS binding, production c
     releaseReadinessScript,
     /console\.(?:log|error)\([^)]*(?:EXPECTED_EAS|PROJECT_ID|SUPABASE_URL|ANON_KEY|API_URL)/u,
   );
+  assert.match(releaseReadinessScript, /app\.config\.js/u);
 });
 
 test("manual Mobile release resource workflow is main-only, environment-bound and cannot build, submit or update", () => {
@@ -497,6 +541,19 @@ test("manual signed Mobile workflow is internal-only, credential-frozen and neve
   assert.match(signedBuildWorkflow, /--freeze-credentials/u);
   assert.match(signedBuildWorkflow, /--no-wait/u);
   assert.match(signedBuildWorkflow, /--json/u);
+  assert.match(
+    signedBuildWorkflow,
+    /MOBILE_SIGNED_BUILD_QUEUE=indeterminate-do-not-retry/u,
+  );
+  assert.match(
+    signedBuildWorkflow,
+    /Do not rerun this workflow until the EAS dashboard/u,
+  );
+  assert.match(signedBuildWorkflow, /if \[\[ "\$QUEUE_EXIT" -ne 0 \]\]/u);
+  assert.match(
+    signedBuildWorkflow,
+    /if ! node \.\.\/\.\.\/scripts\/operations\/mobile-signed-build-preflight\.mjs/u,
+  );
   assert.equal((signedBuildWorkflow.match(/umask 077/gu) ?? []).length, 3);
   assert.doesNotMatch(
     signedBuildWorkflow,

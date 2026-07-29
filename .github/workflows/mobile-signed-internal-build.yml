@@ -122,15 +122,31 @@ jobs:
           JSON_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build.json"
           LOG_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build.log"
           trap 'rm -f "$JSON_PATH" "$LOG_PATH"' EXIT
-          if ! npx --yes eas-cli@21.2.0 build \
+          mark_indeterminate() {
+            echo "::warning title=EAS queue state indeterminate::Do not rerun this workflow until the EAS dashboard confirms whether the build was queued."
+            echo "MOBILE_SIGNED_BUILD_QUEUE=indeterminate-do-not-retry"
+            {
+              echo "### Signed Mobile build"
+              echo
+              echo "Queue status is indeterminate. Do not rerun this workflow until the protected EAS project has been checked manually."
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+          set +e
+          npx --yes eas-cli@21.2.0 build \
             --platform "${{ inputs.platform }}" \
             --profile "${{ inputs.build_environment }}" \
             --freeze-credentials \
             --non-interactive \
             --no-wait \
-            --json >"$JSON_PATH" 2>"$LOG_PATH"; then
-            echo "MOBILE_SIGNED_BUILD_ERROR=build_queue_failed" >&2
-            exit 1
+            --json >"$JSON_PATH" 2>"$LOG_PATH"
+          QUEUE_EXIT=$?
+          set -e
+          if [[ "$QUEUE_EXIT" -ne 0 ]]; then
+            mark_indeterminate
+            exit 0
           fi
-          node ../../scripts/operations/mobile-signed-build-preflight.mjs \
-            "$JSON_PATH"
+          if ! node ../../scripts/operations/mobile-signed-build-preflight.mjs \
+            "$JSON_PATH"; then
+            mark_indeterminate
+            exit 0
+          fi
