@@ -98,6 +98,42 @@ test("rolling deployment binds Next.js version-skew protection to the exact rele
   assert.match(runbook, /version skew/iu);
 });
 
+test("production Next.js config accepts only a full release commit as deployment ID", () => {
+  const releaseCommit = "1".repeat(40);
+  const configProbe = `
+    import configModule from "next/dist/server/config.js";
+    const loadConfig = configModule.default;
+    const config = await loadConfig("phase-production-build", process.cwd(), { silent: true });
+    if (config.deploymentId !== process.env.NEXT_DEPLOYMENT_ID) process.exit(9);
+  `;
+
+  const accepted = spawnSync(
+    process.execPath,
+    ["--input-type=module", "-e", configProbe],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { ...process.env, NEXT_DEPLOYMENT_ID: releaseCommit },
+    },
+  );
+  assert.equal(accepted.status, 0, accepted.stderr || accepted.stdout);
+
+  const rejected = spawnSync(
+    process.execPath,
+    ["--input-type=module", "-e", configProbe],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { ...process.env, NEXT_DEPLOYMENT_ID: "not-a-release-commit" },
+    },
+  );
+  assert.notEqual(rejected.status, 0);
+  assert.match(
+    `${rejected.stderr}\n${rejected.stdout}`,
+    /NEXT_DEPLOYMENT_ID must be a full lowercase Git commit SHA/u,
+  );
+});
+
 test("release switch is continuously probed without retaining response data", async () => {
   const script = await readFile(scriptPath, "utf8");
   const probeStart = position(script, "start_availability_probe");
