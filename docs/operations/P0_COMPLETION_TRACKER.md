@@ -89,6 +89,11 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
   Retention-Werten zurückfällt;
 - Anbieter-Verträge, Regionen, Drittlandgrundlagen, finale Fristen und
   Rechts-/Steuerfreigabe bleiben ausdrücklich externe Nachweise.
+- Ein strukturiertes externes Freigaberegister benennt pro UID-/Registerwert,
+  Fachfreigabe und Anbieter den erforderlichen konto- und versionsbezogenen
+  Nachweis. Der normale Check validiert die Struktur; ein getrenntes
+  fail-closed Vollständigkeitsgate verhindert, dass fehlende externe Belege
+  als Abschluss ausgegeben werden.
 
 ### Restore-Drill-Vorbereitung
 

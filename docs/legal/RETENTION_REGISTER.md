@@ -53,6 +53,20 @@ identifizierbar zu halten. Maßgebliche Prüfeinstiege sind insbesondere
 | Vertrags-, Rechnungs- und Steuerdaten | solange gesetzliche Aufbewahrungs- und Nachweispflichten gelten | Steuerberatung bestätigt konkrete österreichische Frist und Beginn |
 | Anbieter-Konto- und Zahlungsdaten | Anbieterregeln sowie gesetzliche Pflichten, soweit der Anbieter eigenständig Verantwortlicher ist | Rollen, Fristen und Löschmöglichkeiten je produktivem Konto |
 
+## Konkreter Freigabevorschlag
+
+`EXTERNAL_APPROVAL_REGISTER.md` enthält nun einen entscheidungsreifen
+Fristenvorschlag für CRM-Daten, Support-/Vertragsanfragen, KI-Kostenereignisse,
+Steuerbelege und Backups. Diese Werte sind noch keine öffentliche Zusage und
+werden erst nach Bernds Entscheidung sowie Rechts-/Steuerbestätigung von hier
+in Code, Datenschutzerklärung und AVV übernommen.
+
+Für steuerrelevante Bücher, Aufzeichnungen und zugehörige Belege nennt
+[§ 132 BAO](https://www.ris.bka.gv.at/eli/bgbl/1961/194/P132/NOR12056847)
+grundsätzlich sieben Jahre ab dem gesetzlichen Fristbeginn und bei relevanten
+anhängigen Verfahren gegebenenfalls länger. Welche FanMind-Datensätze darunter
+fallen, muss die Steuerberatung verbindlich abgrenzen.
+
 ## Produktions- und Rechtsabschluss
 
 Vor echtem Drittpersonen-Onboarding müssen mindestens folgende Nachweise
@@ -68,6 +82,10 @@ zusammengeführt werden:
    belegt;
 7. Abgleich der freigegebenen Werte mit `/datenschutz`, AVV und
    Kundenvertrag.
+
+Der externe Status wird strukturell mit
+`npm run legal:evidence:check` validiert. Vor echtem Drittpersonen-Onboarding
+muss zusätzlich `npm run legal:evidence:require-complete` erfolgreich sein.
 
 Bis diese Punkte bestätigt sind, darf weder dieses Register noch die
 öffentliche Datenschutzerklärung als pauschale DSGVO-Konformitätsgarantie
