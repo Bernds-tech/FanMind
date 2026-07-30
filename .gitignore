@@ -34,6 +34,7 @@
 # misc
 .DS_Store
 *.pem
+/docs/legal/private-evidence/
 
 # debug
 npm-debug.log*

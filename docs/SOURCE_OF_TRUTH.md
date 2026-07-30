@@ -299,6 +299,15 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - Eine öffentliche Anbieter-DPA ist nur Prüfeinstieg. Wirksame Annahme,
   kontobezogene Unterauftragsliste, Region und Transfergrundlage müssen je
   aktivem FanMind-Konto extern bestätigt werden.
+- `docs/legal/EXTERNAL_APPROVAL_REGISTER.md` definiert dafür jetzt die
+  zuständige Fachprüfung, den konto- und versionsbezogenen Mindestbeleg, den
+  Fristenvorschlag und den AVV-Unterschriftsweg. Das zugehörige JSON enthält
+  nur Status und spätere SHA-256-Beweis-Hashes; private Vertragsunterlagen
+  bleiben außerhalb von GitHub.
+- `npm run legal:evidence:check` validiert die Registerstruktur. Der
+  absichtlich strengere Check `npm run legal:evidence:require-complete` muss
+  vor echtem Drittpersonen-Onboarding grün sein und bleibt bis zu den realen
+  externen Freigaben rot.
 - Die technische Vorbereitung ersetzt weder Rechts-/Steuerberatung noch eine
   unterschriebene AVV oder den isolierten Backup-Lösch-/Restore-Nachweis.
 

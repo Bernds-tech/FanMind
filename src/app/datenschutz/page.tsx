@@ -449,6 +449,13 @@ const sections: PrivacySection[] = [
           werden, soweit dies für Betrieb, Registrierung, Support oder Benachrichtigungen
           erforderlich ist. Im Code ist Resend als optionaler Dienst für Pilot-Anfragen vorbereitet.
         </p>
+        <p>
+          Soweit Resend tatsächlich konfiguriert ist, kann die Versandregion der Domain gewählt
+          werden. Nach den aktuellen Anbieterangaben werden Konto-, E-Mail-Metadaten, Logs und
+          API-Aufzeichnungen jedoch unabhängig von dieser Senderegion in den USA gespeichert.
+          Eine EU-Senderegion ist daher kein Nachweis für EU-Datenspeicherung; DPA,
+          Unterauftragsliste und Transfergrundlage werden kontobezogen geprüft.
+        </p>
       </>
     ),
   },

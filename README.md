@@ -81,6 +81,13 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   technischen Löschkriterien konsistent. Anbieter-DPAs, Regionen,
   Drittlandgrundlagen, steuerliche Fristen und die finale Rechtsfreigabe
   bleiben externe Abschlussnachweise.
+- Ein externes Freigaberegister ordnet UID-/Registerstatus,
+  Rechts-/Steuerprüfung, Anbieter-DPAs, Regionen, Transfers, finale Fristen
+  und AVV-Annahme konkreten Nachweisen zu. `npm run legal:evidence:check`
+  validiert die Struktur; `npm run legal:evidence:require-complete` ist das
+  absichtlich fail-closed gesetzte Gate vor echtem Drittpersonen-Onboarding.
+  Vertrauliche Belege bleiben außerhalb von GitHub, im Register stehen später
+  nur SHA-256-Prüfsummen.
 
 ## Betreiber
 

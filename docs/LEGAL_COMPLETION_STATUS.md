@@ -29,6 +29,8 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
 - [ ] rechtsgeprüfte und unterzeichnungsfähige AVV aus der Arbeitsfassung
 - [x] technische Anbieterliste mit Zweck, Aktivierungsstatus und offiziellen
       DPA-Prüfeinstiegen vorbereitet
+- [x] maschinenlesbares externes Freigaberegister mit fail-closed
+      Vollständigkeitsprüfung und privater Beweis-Hash-Regel vorbereitet
 - [ ] kontobezogen bestätigte Unterauftragsverarbeiter,
       Verarbeitungsregionen und wirksam akzeptierte Anbieter-DPAs
 - [ ] Drittland-/Transfergrundlagen, soweit relevant
@@ -45,6 +47,13 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
 - `docs/legal/RETENTION_REGISTER.md` trennt implementierte technische Grenzen
   von noch offenen rechtlichen Entscheidungen und externen
   Produktionsnachweisen.
+- `docs/legal/EXTERNAL_APPROVAL_REGISTER.md` ordnet UID-/Registerwerte,
+  Rechts-/Steuerfreigaben, Anbieter-DPAs, Regionen, Transfers, Fristen und den
+  AVV-Unterschriftsweg einem konkreten Nachweis zu.
+- `docs/legal/external-approval-evidence.json` speichert keine vertraulichen
+  Vertragsunterlagen, sondern nur Status und später deren SHA-256-Beweis-Hash.
+  `npm run legal:evidence:require-complete` bleibt bis zum realen externen
+  Abschluss absichtlich rot.
 - Die Datenschutzerklärung nennt die aktuell verdrahteten parameterlosen
   Meta-Events `PageView`, `CompleteRegistration` und `Lead` konsistent mit
   Code und Produktwahrheit.
@@ -69,6 +78,8 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
       konsistent verwendet.
 - [x] CI verhindert alte Kontaktadressen, veraltete Preise, widersprüchliche
       Meta-Events und öffentliche Platzhalter.
+- [x] CI validiert das externe Rechts-/Steuer-/Anbieterregister und verhindert
+      bestätigte Statuswerte ohne Beweis-Hash.
 - [x] Production-Smoke-Test prüft `/impressum`, `/datenschutz`, `/avv`,
       `/agb` und `/zahlungsbedingungen`.
 - [ ] Extern freigegebene UID-, Register-, Anbieter-, Transfer-, Steuer- und

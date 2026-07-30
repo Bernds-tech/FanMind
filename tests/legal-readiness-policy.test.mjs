@@ -97,6 +97,10 @@ test("public retention statements map to implemented technical boundaries", asyn
     privacy,
     /eine vollständig ausgeführte zeitliche Offsite-Löschregel bleibt vor Vertragsfreigabe nachzuweisen/u,
   );
+  assert.match(
+    privacy,
+    /Eine EU-Senderegion ist daher kein Nachweis für EU-Datenspeicherung/u,
+  );
 });
 
 test("AVV working draft covers Article 28 annexes without claiming signature readiness", async () => {
@@ -137,6 +141,48 @@ test("AVV working draft covers Article 28 annexes without claiming signature rea
     status,
     /-\s*\[ \]\s*rechtsgeprüfte und unterzeichnungsfähige AVV/iu,
   );
+});
+
+test("external legal evidence stays account-specific and fail-closed", async () => {
+  const [register, evidence, verifier, packageSource, gitignore] =
+    await Promise.all([
+      source("docs/legal/EXTERNAL_APPROVAL_REGISTER.md"),
+      source("docs/legal/external-approval-evidence.json"),
+      source("scripts/verify-legal-external-evidence.mjs"),
+      source("package.json"),
+      source(".gitignore"),
+    ]);
+
+  const parsed = JSON.parse(evidence);
+  assert.equal(parsed.schemaVersion, 1);
+  assert.equal(parsed.operator.legalName, "Bernd Guggenberger");
+  assert.equal(parsed.operator.legalForm, "Einzelunternehmen");
+  assert.equal(parsed.operator.vatId.status, "pending");
+  assert.equal(parsed.approvals.legalReview.status, "pending");
+  assert.equal(parsed.approvals.taxReview.status, "pending");
+  assert.equal(parsed.approvals.customerDpa.status, "pending");
+  assert.deepEqual(
+    parsed.providers.map(({ id }) => id),
+    ["exoscale", "supabase", "openai", "stripe", "meta", "resend"],
+  );
+  for (const provider of parsed.providers) {
+    assert.equal(provider.dpa.status, "pending");
+    assert.equal(provider.dataLocation.status, "pending");
+    assert.equal(provider.transferAssessment.status, "pending");
+  }
+
+  assert.match(register, /Supabase[\s\S]*PandaDoc/iu);
+  assert.match(register, /Resend[\s\S]*US-Speicher/iu);
+  assert.match(register, /Wer die AVV unterschreibt/u);
+  assert.match(register, /Steuerberatung[\s\S]*Rechts-\/Datenschutzberatung/u);
+  assert.match(register, /SHA-256-Prüfsumme/u);
+  assert.match(verifier, /--require-complete/u);
+  assert.match(verifier, /LEGAL_EXTERNAL_EVIDENCE_READY/u);
+  assert.match(
+    packageSource,
+    /"legal:evidence:require-complete":\s*"node scripts\/verify-legal-external-evidence\.mjs --require-complete"/u,
+  );
+  assert.match(gitignore, /\/docs\/legal\/private-evidence\//u);
 });
 
 test("both production release checks include every public legal route", async () => {

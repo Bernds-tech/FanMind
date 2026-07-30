@@ -166,12 +166,12 @@ Teil der extern zu prüfenden Vertragsfassung.
 
 | Dienst | Technischer Zweck | Aktueller technischer Status | Vor Vertragsfreigabe extern zu bestätigen |
 | --- | --- | --- | --- |
-| Exoscale / Akenes SA | Produktionshosting, Server und lokale Erzeugung verschlüsselter Backups | produktiver Host dokumentiert | Konto-DPA, konkrete Zone/Region und getrenntes Offsite-Ziel |
-| Supabase | Authentifizierung, PostgreSQL, RLS, REST und Storage | produktiv erforderlich | unterzeichnete DPA, Projektregion und aktuelle Unterauftragsliste |
-| OpenAI Ireland Ltd. | manuell ausgelöste KI-Vorschläge und Analysen | produktiv erforderlich, API serverseitig, `store: false` | gültige DPA, Transfergrundlage und aktuelle Unterauftragsliste |
-| Stripe Payments Europe, Limited | Checkout, Abonnement und Abrechnung | produktiver Konfigurationspfad vorhanden | Rollen je Datenfluss, Konto-DPA, Transfergrundlage und Service-Provider-Liste |
-| Meta Platforms Ireland Limited | consent-gesteuerte öffentliche Marketing-Messung | nur nach Einwilligung; keine CRM-/Prompt-/Zahlungsinhalte | Rollenverteilung, Business-Tools-Bedingungen und Transfergrundlage |
-| Resend / Plus Five Five, Inc. | optionale transaktionale E-Mail | Codepfad optional | tatsächliche Aktivierung, Konto-DPA, Absenderregion und Unterauftragsliste |
+| Exoscale / Akenes SA | Produktionshosting, Server und lokale Erzeugung verschlüsselter Backups | produktiver Host dokumentiert | im Konto gespeichertes DPA-Annahmedatum, konkrete Compute-Zone sowie Region und Anbieter des getrennten Offsite-Ziels |
+| Supabase | Authentifizierung, PostgreSQL, RLS, REST und Storage | produktiv erforderlich | über den Dashboard-Legal-Bereich angeforderte und unterzeichnete PandaDoc-DPA, Projektregion und aktuelle Unterauftragsliste |
+| OpenAI Ireland Ltd. | manuell ausgelöste KI-Vorschläge und Analysen | produktiv erforderlich, API serverseitig, `store: false` | kontobezogener DPA-/Vertragsnachweis, Region des tatsächlich verwendeten API-Projekts, Transfergrundlage und aktuelle Unterauftragsliste |
+| Stripe Payments Europe, Limited | Checkout, Abonnement und Abrechnung | produktiver Konfigurationspfad vorhanden | Konto-Vertragspartner, Rollen je Datenfluss, DPA-Fassung, globale Transfergrundlagen und aktuelle Service-Provider-Liste; keine erfundene einzelne Speicherregion |
+| Meta Platforms Ireland Limited | consent-gesteuerte öffentliche Marketing-Messung | nur nach Einwilligung; keine CRM-/Prompt-/Zahlungsinhalte | Business-/Pixel-Eigentümer, akzeptierte Business-Tools-Bedingungen, Rollenverteilung und Transfergrundlage |
+| Resend / Plus Five Five, Inc. | optionale transaktionale E-Mail | Codepfad optional; aktiver Produktionsanbieter noch zu belegen | tatsächliche Aktivierung, DPA-Nachweis, Senderegion, US-Speicherung von Konto-/E-Mail-Metadaten, Unterauftragsliste und Transfergrundlage |
 
 GitHub und GitHub Actions verarbeiten Quellcode und Deployment-Metadaten, sind
 aber nicht als regulärer Empfänger von Workspace-Inhalten vorgesehen. Wird
@@ -189,6 +189,11 @@ Aktuelle offizielle Anbieter-Unterlagen als Prüfeinstieg:
 Ein öffentlicher Link belegt noch nicht, dass das jeweilige FanMind-Konto die
 richtige Fassung wirksam abgeschlossen hat.
 
+Das konto- und versionsbezogene Nachweisverfahren steht in
+[`EXTERNAL_APPROVAL_REGISTER.md`](EXTERNAL_APPROVAL_REGISTER.md). Signierte
+Dokumente und Konto-Screenshots bleiben außerhalb von GitHub; das
+maschinenlesbare Register übernimmt nur Status, Datum und Beweis-Hash.
+
 ## 12. Noch erforderliche Abschlussentscheidungen
 
 1. finale Kunden- und Betreiberangaben in der Vertragsurkunde;
@@ -200,3 +205,15 @@ richtige Fassung wirksam abgeschlossen hat.
 5. isolierter Restore-/Lösch-Nachweis für verschlüsselte Backups;
 6. Unterschrift beziehungsweise wirksame elektronische Annahme durch beide
    Parteien.
+
+## 13. Empfohlener Prüf- und Unterschriftsweg
+
+Die Steuerberatung bestätigt Betreiber-/UID-/Registerangaben,
+Rechnungsdarstellung und steuerliche Aufbewahrungsfristen. Die
+unterzeichnungsfähige AVV sollte zusätzlich durch Rechts- beziehungsweise
+qualifizierte Datenschutzberatung aus dieser Arbeitsfassung erstellt werden.
+
+Nach externer Freigabe unterschreibt oder akzeptiert Bernd Guggenberger für
+FanMind. Der jeweilige B2B-Kunde unterschreibt oder akzeptiert für seine
+Organisation. Eine Steuerberaterin oder ein Steuerberater ist nicht allein
+durch die fachliche Prüfung Vertragspartei der Kunden-AVV.

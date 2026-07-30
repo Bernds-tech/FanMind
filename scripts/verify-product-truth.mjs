@@ -101,6 +101,9 @@ const checkedFiles = [
   "docs/LEGAL_COMPLETION_STATUS.md",
   "docs/legal/AVV_WORKING_DRAFT.md",
   "docs/legal/RETENTION_REGISTER.md",
+  "docs/legal/EXTERNAL_APPROVAL_REGISTER.md",
+  "docs/legal/external-approval-evidence.json",
+  "scripts/verify-legal-external-evidence.mjs",
   "docs/database/fanmind_current_schema.md",
   "docs/SECURITY_RLS_SECRETS_CHECK.md",
   "docs/operations/AI_TIER_READINESS.md",
@@ -997,6 +1000,11 @@ requireText(
   "src/app/datenschutz/page.tsx",
   "Bestätigte Account-Löschanfragen haben ein reguläres Bearbeitungsziel von höchstens 30 Tagen",
   "Die Datenschutzerklärung muss das transparente Account-Löschziel nennen.",
+);
+requireText(
+  "src/app/datenschutz/page.tsx",
+  "Eine EU-Senderegion ist daher kein Nachweis für EU-Datenspeicherung",
+  "Die Datenschutzerklärung muss Resend-Senderegion und US-Datenspeicherung auseinanderhalten.",
 );
 forbidIn(
   "docs/LEGAL_COMPLETION_STATUS.md",
