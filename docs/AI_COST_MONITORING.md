@@ -240,6 +240,13 @@ Warnstufen:
 - 100 Prozent Budget: weitere KI-Anfragen je nach Plan blockieren oder drosseln
 - ungewöhnlicher Spike: Admin-Warnung
 
+Eine datierte, nicht aktivierende Standard-/Plus-/Ultra-Arbeitsempfehlung mit
+dual begrenzten Monatsanfragen und Tokens, Kontextgrenzen sowie konservativen
+Providerkostenszenarien steht in
+`docs/operations/AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md`. Sie wird mit
+`npm run ai:tiers:recommendation` reproduzierbar geprüft, ist aber kein
+vertragliches Kontingent und wird von produktiven KI-Pfaden nicht importiert.
+
 ## 11. Zusammenhang mit Fan-Anzahl
 
 Kosten sollen im Adminbereich relativ zur Fan-Anzahl gezeigt werden.
@@ -274,6 +281,8 @@ Erledigt:
 7. fail-closed Kurzzeit-Rate-Limits sowie Datenbank-, Kontext- und
    Ausgabegrenzen;
 8. Workspace-Unternehmens-Prompt und auswählbare, begrenzte Antwortprofile mit serverseitiger Profilauflösung.
+9. nicht aktivierende, datierte KI-Stufen-Kosten-/Kontingentempfehlung samt
+   reproduzierbarem Offline-Rechner.
 
 Offen bleiben echte Provider-Tokenwerte, Kosten pro Kontakt, Budgetwarnungen
 und die vertragliche Standard-/Plus-/Ultra-Entitlement-/Billing-Logik

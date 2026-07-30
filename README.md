@@ -27,6 +27,10 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - KI Ultra: zusätzlich `200 €/Monat`.
 - Zentrale KI-Stufen-Policy: `src/config/aiTiers.mjs` führt Standard, Plus und Ultra; Plus/Ultra bleiben bis zur Modell-, Kontingent- und Billing-Freigabe nicht automatisch buchbar.
 - Redigierte KI-Stufen-Prüfung: `npm run ai:tiers:readiness` bestätigt aktuell Standard als bereit sowie Plus/Ultra als blockiert, ohne konkrete Stripe-IDs, Modelle, Limits oder Secrets auszugeben.
+- Nicht aktivierende KI-Stufen-Arbeitsempfehlung:
+  `npm run ai:tiers:recommendation` prüft die datierte Modellklassen-,
+  Kontingent- und Kostenmatrix offline; produktive KI-Pfade importieren sie
+  nicht und Plus/Ultra bleiben blockiert.
 - Serverseitiger Entitlement-Vertrag: fehlende, unbekannte, client-kontrollierte, pausierte, nicht gestartete, abgelaufene oder unvollständig freigegebene Plus-/Ultra-Zustände fallen immer auf KI Standard zurück.
 - Persistenter Entitlement-Speicher: server-only Tabelle und redigierender Loader sind als deploy-before-migrate-Brücke vorbereitet; Migration, Stripe-Lifecycle und produktive KI-Verdrahtung sind noch nicht freigegeben, daher bleiben Plus/Ultra blockiert.
 - Kontrollierter Entitlement-Migrationspfad: `npm run db:ai-tier-entitlements:check` prüft die festgeschriebene Migration offline; `verify` und `apply` sind explizit zielgebunden und führen niemals automatisch durch einen Web-Deploy aus. Der manuelle, ausschließlich auf `main` und das GitHub-Environment `staging` begrenzte Workflow `FanMind AI Tier Staging Migration` bereitet den echten Staging-Apply samt Postflight vor.

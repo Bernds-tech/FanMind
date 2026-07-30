@@ -44,6 +44,28 @@ serverseitigen Konfiguration hinterlegt.
 | Automatische Sendung | nein | nein | nein |
 | Referral-Rabatt | nein | nein | nein |
 
+## Nicht aktivierende Arbeitsempfehlung
+
+Damit die offenen Felder nicht nur abstrakt beschrieben bleiben, liegt eine
+datierte, rechnerisch prüfbare Arbeitsempfehlung vor. Sie ersetzt keinen
+`UNENTSCHIEDEN`-Wert und besitzt keine Aktivierungswirkung.
+
+| Entscheidung | KI Standard | KI Plus | KI Ultra |
+| --- | --- | --- | --- |
+| Modellklasse | effizient / hohes Volumen | ausgewogen | Frontier |
+| Anfragen/Monat | 750 | 1.500 | 2.000 |
+| Tokens/Monat | 3.000.000 | 6.000.000 | 8.000.000 |
+| Gesprächskontext | 20 Nachrichten | 50 Nachrichten | 100 Nachrichten |
+| Verhalten bei 80 % | Workspace-Hinweis + Admin-Warnung | Workspace-Hinweis + Admin-Warnung | Workspace-Hinweis + Admin-Warnung |
+| Verhalten bei 100 % | fail-closed bis Monatsreset | fail-closed bis Monatsreset | fail-closed bis Monatsreset |
+| Nachberechnung/Overage | keine automatische Nachberechnung | keine automatische Nachberechnung | keine automatische Nachberechnung |
+| Automatisch buchbar | nein | erst nach allen Freigabekriterien | erst nach allen Freigabekriterien |
+
+Herleitung, datierter Preis-Snapshot, konservative Kostenszenarien und der
+reproduzierbare Check stehen in
+`AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md`. Die aktive zentrale Policy behält
+für alle noch nicht beschlossenen Modell-/Kontingentfelder weiterhin `null`.
+
 ## Paketwechsel und Abrechnung
 
 Vor technischer Aktivierung müssen zusätzlich diese Regeln eindeutig
@@ -65,13 +87,16 @@ beschlossen sein:
 1. Zielgruppe und Nutzen je Stufe festlegen.
 2. Modellklassen und serverseitige Provider-Zuordnung freigeben.
 3. Reale Kostenmessung aus `ai_usage_events` auswerten.
-4. Monatskontingente und Kontextgrenzen mit Kostenpuffer beschließen.
-5. Verhalten bei 80 % und 100 % sowie Overage festlegen.
-6. Upgrade-, Downgrade-, Kündigungs- und Prorationsregeln beschließen.
-7. Rechtliche, steuerliche und öffentliche Texte prüfen.
-8. Getrennte Stripe-Test-Prices für Plus und Ultra bereitstellen.
-9. Staging-Migration und rollback-only Akzeptanz vollständig grün nachweisen.
-10. Erst danach zentrale Policy, Billing und öffentliche Anzeige in einem
+4. Die nicht aktivierende Arbeitsmatrix mit realen Median-/P90-/P95-Werten
+   und einem repräsentativen Qualitäts-Eval prüfen.
+5. Monatskontingente und Kontextgrenzen mit mindestens 30 Prozent
+   Kostenpuffer beschließen.
+6. Verhalten bei 80 % und 100 % sowie Overage festlegen.
+7. Upgrade-, Downgrade-, Kündigungs- und Prorationsregeln beschließen.
+8. Rechtliche, steuerliche und öffentliche Texte prüfen.
+9. Getrennte Stripe-Test-Prices für Plus und Ultra bereitstellen.
+10. Staging-Migration und rollback-only Akzeptanz vollständig grün nachweisen.
+11. Erst danach zentrale Policy, Billing und öffentliche Anzeige in einem
     separat geprüften Aktivierungs-PR umstellen.
 
 ## Technische Freigabekriterien
