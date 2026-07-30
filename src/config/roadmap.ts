@@ -121,6 +121,7 @@ export const roadmapPhases: RoadmapPhase[] = [
       { label: "Login, Dashboard, Kontakte, Kontaktwissen, KI und Follow-ups", state: "done", status: "Phase A erledigt" },
       { label: "Web-/Mobile-Follow-up-Status synchronisiert", state: "done", status: "completed + Legacy done" },
       { label: "Passwort-Reset und Kontaktbearbeitung", state: "done", status: "Im App-Kern vorhanden" },
+      { label: "Antwort kopieren und nativ teilen", state: "done", status: "Nur gewählter Text · Versand manuell" },
       { label: "Verschlüsselte Offline-Kontaktübersicht", state: "done", status: "24 h · maximal 50 · nur lesen" },
       { label: "Signierter interner Android-Build", state: "partial", status: "EAS-/Signing-Einrichtung offen" },
       { label: "iOS-TestFlight", state: "planned", status: "Apple-Konto und Signing offen" },

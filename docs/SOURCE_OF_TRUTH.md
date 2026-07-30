@@ -69,7 +69,9 @@ Aktiv im App-Kern:
 - Kontakt in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS;
 - Kontaktwissen;
 - Bearer-authentifizierte serverseitige KI-Antwortvorschläge;
-- Antwort kopieren, Kontaktwissen und Follow-up speichern;
+- Antwort kopieren oder ausschließlich den ausgewählten Antworttext an die
+  native Android-/iOS-Teilen-Auswahl übergeben; Zielwahl und finaler Versand
+  bleiben beim Menschen;
 - offene Follow-ups anzeigen und mit dem kanonischen Status `completed` abschließen; bestehende `done`-Altdaten bleiben lesekompatibel;
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
 - native Push-Grundlage mit validierter Follow-up-Navigation, Auth-Handoff,

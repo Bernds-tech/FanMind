@@ -7,7 +7,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
-- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
+- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Mobile-Signing-Gate: ein manueller `main`-gebundener Ablauf kann nach
   erfolgreichem Ressourcencheck genau einen credential-frozen internen
   Development-/Preview-Build einreihen. Eine unklare Queue-Antwort darf nicht
@@ -141,7 +141,9 @@ Bereits vorhanden:
 - Dashboard, Kontaktliste, Suche und Kontaktdetail;
 - Kontakte in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS;
 - Kontaktwissen und serverseitige KI-Antwortvorschläge;
-- Antwort kopieren, Kontaktwissen und Follow-up speichern;
+- Antwort kopieren oder ausschließlich den ausgewählten Antworttext über die
+  native Android-/iOS-Teilen-Auswahl weitergeben; FanMind wählt weder Ziel noch
+  Empfänger und sendet nicht selbst;
 - offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
 - verschlüsselte, höchstens 24 Stunden alte Offline-Übersicht mit maximal 50 Kontakten; nur Name, Handle, Plattform, Status und Änderungszeit, ausschließlich lesbar;
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
