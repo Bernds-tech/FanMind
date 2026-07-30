@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { createHash, randomBytes } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { access, constants, mkdir, mkdtemp, open, readFile, realpath, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { access, constants, mkdir, mkdtemp, readFile, realpath, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { hostname, tmpdir } from 'node:os';
 import { join, basename, dirname, relative, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
+import { pipeline } from 'node:stream/promises';
 import { pathToFileURL } from 'node:url';
 import { verifyBackupArtifact } from './verify-backup-artifact.mjs';
 
@@ -36,24 +37,10 @@ function __setBackupWorkerTestHooks(hooks = {}) { fsHooks = { rename, ...hooks }
 async function pathExists(file) { try { await access(file, constants.F_OK); return true; } catch { return false; } }
 async function assertNoFinalCollision(...files) { for (const file of files) { if (await pathExists(file)) throw new Error('backup_destination_exists'); } }
 async function copyToPrivateTemp(source, target) {
-  const handle = await open(target, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
-  await new Promise((resolve, reject) => {
-    const input = createReadStream(source);
-    const output = createWriteStream(null, { fd: handle.fd, autoClose:false, mode:0o600 });
-    let settled = false;
-    const done = (error) => {
-      if (settled) return;
-      settled = true;
-      input.destroy();
-      output.destroy();
-      if (error) reject(error);
-      else resolve();
-    };
-    input.on('error', done);
-    output.on('error', done);
-    output.on('finish', () => done());
-    input.pipe(output);
-  }).finally(() => handle.close().catch(error => { if (error?.code !== 'EBADF') throw error; }));
+  await pipeline(
+    createReadStream(source),
+    createWriteStream(target, { flags:'wx', mode:0o600 }),
+  );
 }
 async function existsReadable(file) { await access(file, constants.R_OK); return file; }
 async function insert(table, row) { return (await api(restUrl(table), { method:'POST', body:JSON.stringify(row) }))[0]; }
