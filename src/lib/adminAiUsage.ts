@@ -3,7 +3,11 @@ import {
   calculateAiCostPerContactMetrics,
   parsePostgrestExactCount,
 } from "@/lib/aiUsageCostMetrics.mjs";
-import { aggregateAiUsageByModel } from "@/lib/aiUsageDashboardMetrics.mjs";
+import {
+  aggregateAiUsageByModel,
+  calculateAiBudgetIndicator,
+  calculateAiUsageSpikeIndicator,
+} from "@/lib/aiUsageDashboardMetrics.mjs";
 
 export type AdminAiUsageEvent = {
   id: string;
@@ -50,11 +54,74 @@ export type AdminAiUsageSummary = {
   byFeature: Array<{ feature: string; requests: number; estimatedCostCents: number; errorRequests: number }>;
   byModel: Array<{ model: string; requests: number; estimatedCostCents: number; inputTokens: number; outputTokens: number; errorRequests: number }>;
   recentEvents: AdminAiUsageEvent[];
+  periodStart: string;
+  periodEnd: string;
+  truncated: boolean;
+  previousPeriodTruncated: boolean;
+  budgetIndicator: ReturnType<typeof calculateAiBudgetIndicator>;
+  spikeIndicator: ReturnType<typeof calculateAiUsageSpikeIndicator>;
 };
 
 const COLUMNS = "id,workspace_id,feature,model,input_chars,output_chars,estimated_input_tokens,estimated_output_tokens,estimated_total_tokens,estimated_cost_cents,currency,status,error_code,latency_ms,source_route,created_at";
+const ADMIN_USAGE_PAGE_SIZE = 1_000;
+const MAX_ADMIN_USAGE_EVENTS = 10_000;
 
 function serviceKey() { return process.env.SUPABASE_SERVICE_ROLE_KEY; }
+
+function positiveNumber(value: string | undefined, fallback: number | null): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function estimatedCost(events: AdminAiUsageEvent[]): number {
+  return events.reduce(
+    (sum, event) => sum + Math.max(0, Number(event.estimated_cost_cents) || 0),
+    0,
+  );
+}
+
+function currentUtcMonthStart(now: Date): Date {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+async function loadAdminUsageEvents(
+  input: { periodStart: string; periodEnd: string },
+  key: string,
+): Promise<{ events: AdminAiUsageEvent[]; truncated: boolean }> {
+  const events: AdminAiUsageEvent[] = [];
+
+  for (
+    let offset = 0;
+    offset < MAX_ADMIN_USAGE_EVENTS;
+    offset += ADMIN_USAGE_PAGE_SIZE
+  ) {
+    const usageUrl = new URL(getSupabaseRestUrl("ai_usage_events"));
+    usageUrl.searchParams.set("select", COLUMNS);
+    usageUrl.searchParams.set("created_at", `gte.${input.periodStart}`);
+    usageUrl.searchParams.append("created_at", `lt.${input.periodEnd}`);
+    usageUrl.searchParams.set("order", "created_at.desc");
+    usageUrl.searchParams.set("limit", String(ADMIN_USAGE_PAGE_SIZE));
+    usageUrl.searchParams.set("offset", String(offset));
+    const response = await fetch(usageUrl, {
+      headers: getSupabaseHeaders(key),
+      cache: "no-store",
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `KI-Verbrauch konnte nicht geladen werden (${response.status}). Migration evtl. noch nicht live.`,
+      );
+    }
+
+    const page = (await response.json()) as AdminAiUsageEvent[];
+    events.push(...page);
+    if (page.length < ADMIN_USAGE_PAGE_SIZE) {
+      return { events, truncated: false };
+    }
+  }
+
+  return { events, truncated: true };
+}
 
 async function loadWorkspaceContactCounts(
   workspaceIds: string[],
@@ -96,19 +163,48 @@ async function loadWorkspaceContactCounts(
   return counts;
 }
 
-export async function getAdminAiUsageSummary(days = 30): Promise<{ summary: AdminAiUsageSummary | null; error: string | null }> {
+export async function getAdminAiUsageSummary(days = 30, now = new Date()): Promise<{ summary: AdminAiUsageSummary | null; error: string | null }> {
   const key = serviceKey();
   if (!key) return { summary: null, error: "Supabase Service Role ist nicht konfiguriert." };
-  const since = new Date(Date.now() - Math.max(1, Math.min(days, 365)) * 24 * 60 * 60 * 1000).toISOString();
+  const selectedDays = Math.max(1, Math.min(days, 365));
+  const periodEnd = now;
+  const periodStart = new Date(
+    periodEnd.getTime() - selectedDays * 24 * 60 * 60 * 1000,
+  );
+  const previousPeriodStart = new Date(
+    periodStart.getTime() - selectedDays * 24 * 60 * 60 * 1000,
+  );
+  const monthlyBudgetCents = positiveNumber(
+    process.env.FANMIND_AI_ADMIN_MONTHLY_BUDGET_CENTS,
+    null,
+  );
   try {
-    const usageUrl = new URL(getSupabaseRestUrl("ai_usage_events"));
-    usageUrl.searchParams.set("select", COLUMNS);
-    usageUrl.searchParams.set("created_at", `gte.${since}`);
-    usageUrl.searchParams.set("order", "created_at.desc");
-    usageUrl.searchParams.set("limit", "1000");
-    const usageResponse = await fetch(usageUrl, { headers: getSupabaseHeaders(key), cache: "no-store" });
-    if (!usageResponse.ok) return { summary: null, error: `KI-Verbrauch konnte nicht geladen werden (${usageResponse.status}). Migration evtl. noch nicht live.` };
-    const events = await usageResponse.json() as AdminAiUsageEvent[];
+    const [currentPeriod, previousPeriod, monthlyPeriod] = await Promise.all([
+      loadAdminUsageEvents(
+        {
+          periodStart: periodStart.toISOString(),
+          periodEnd: periodEnd.toISOString(),
+        },
+        key,
+      ),
+      loadAdminUsageEvents(
+        {
+          periodStart: previousPeriodStart.toISOString(),
+          periodEnd: periodStart.toISOString(),
+        },
+        key,
+      ),
+      monthlyBudgetCents === null
+        ? Promise.resolve({ events: [] as AdminAiUsageEvent[], truncated: false })
+        : loadAdminUsageEvents(
+            {
+              periodStart: currentUtcMonthStart(now).toISOString(),
+              periodEnd: periodEnd.toISOString(),
+            },
+            key,
+          ),
+    ]);
+    const events = currentPeriod.events;
     const workspaceIds = [...new Set(events.map((event) => event.workspace_id))];
     const workspaces = new Map<string, WorkspaceRow>();
     const contactCountsPromise = loadWorkspaceContactCounts(workspaceIds, key);
@@ -157,6 +253,33 @@ export async function getAdminAiUsageSummary(days = 30): Promise<{ summary: Admi
       };
     });
 
-    return { summary: { totalRequests: events.length, totalEstimatedCostCents: events.reduce((sum, event) => sum + Number(event.estimated_cost_cents ?? 0), 0), totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? "USD", byWorkspace: workspaceSummaries.sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byModel: aggregateAiUsageByModel(events), recentEvents: events.slice(0, 25) }, error: null };
+    const totalEstimatedCostCents = estimatedCost(events);
+    const budgetIndicator = calculateAiBudgetIndicator({
+      currentCostCents: estimatedCost(monthlyPeriod.events),
+      budgetCents: monthlyBudgetCents,
+      truncated: monthlyPeriod.truncated,
+    });
+    const spikeIndicator = calculateAiUsageSpikeIndicator({
+      currentRequests: events.length,
+      previousRequests: previousPeriod.events.length,
+      currentCostCents: totalEstimatedCostCents,
+      previousCostCents: estimatedCost(previousPeriod.events),
+      ratioThreshold: positiveNumber(
+        process.env.FANMIND_AI_ADMIN_SPIKE_RATIO,
+        2,
+      ),
+      minRequests: positiveNumber(
+        process.env.FANMIND_AI_ADMIN_SPIKE_MIN_REQUESTS,
+        10,
+      ),
+      minCostCents: positiveNumber(
+        process.env.FANMIND_AI_ADMIN_SPIKE_MIN_COST_CENTS,
+        100,
+      ),
+      currentTruncated: currentPeriod.truncated,
+      previousTruncated: previousPeriod.truncated,
+    });
+
+    return { summary: { totalRequests: events.length, totalEstimatedCostCents, totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? (process.env.FANMIND_AI_USAGE_CURRENCY?.trim() || "USD"), byWorkspace: workspaceSummaries.sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byModel: aggregateAiUsageByModel(events), recentEvents: events.slice(0, 25), periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), truncated: currentPeriod.truncated, previousPeriodTruncated: previousPeriod.truncated, budgetIndicator, spikeIndicator }, error: null };
   } catch (error) { return { summary: null, error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
 }

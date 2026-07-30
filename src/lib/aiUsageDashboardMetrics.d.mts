@@ -17,7 +17,52 @@ export type AiUsageModelSummary = {
   errorRequests: number;
 };
 
+export type AiBudgetIndicator = {
+  configured: boolean;
+  level:
+    | "unconfigured"
+    | "incomplete"
+    | "normal"
+    | "observe"
+    | "warning"
+    | "attention";
+  currentCostCents: number;
+  budgetCents: number | null;
+  usageRatio: number | null;
+  usagePercent: number | null;
+  blocking: false;
+};
+
+export type AiUsageSpikeIndicator = {
+  level: "incomplete" | "insufficient_basis" | "normal" | "warning";
+  currentRequests: number;
+  previousRequests: number;
+  currentCostCents: number;
+  previousCostCents: number;
+  requestRatio: number | null;
+  costRatio: number | null;
+  ratioThreshold: number;
+  triggeredBy: Array<"requests" | "cost">;
+  blocking: false;
+};
+
 export function normalizeAdminAiUsageDays(value: unknown): number;
 export function aggregateAiUsageByModel(
   events: AiUsageModelEvent[],
 ): AiUsageModelSummary[];
+export function calculateAiBudgetIndicator(input: {
+  currentCostCents?: number | null;
+  budgetCents?: number | null;
+  truncated?: boolean;
+}): AiBudgetIndicator;
+export function calculateAiUsageSpikeIndicator(input: {
+  currentRequests?: number | null;
+  previousRequests?: number | null;
+  currentCostCents?: number | null;
+  previousCostCents?: number | null;
+  ratioThreshold?: number | null;
+  minRequests?: number | null;
+  minCostCents?: number | null;
+  currentTruncated?: boolean;
+  previousTruncated?: boolean;
+}): AiUsageSpikeIndicator;
