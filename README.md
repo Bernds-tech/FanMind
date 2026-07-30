@@ -307,18 +307,29 @@ Nicht als aktiv bauen oder verkaufen, sofern nicht ausdrücklich freigegeben und
 
 Deployments auf `main` laufen über `.github/workflows/deploy-fanmind.yml` auf dem Self-Hosted Runner:
 
-```bash
-cd /var/www/fanmind
-git fetch --prune origin main
-git reset --hard origin/main
-npm ci --no-audit --no-fund
-npm run build
-pm2 restart fanmind --update-env
-pm2 save
-sudo nginx -t
-```
+Der auf Production aktive isolierte Release-Pfad:
 
-Nach dem Deployment werden öffentliche Kernrouten und der tatsächlich ausgelieferte Commit geprüft.
+1. löst den exakten 40-stelligen Commit von `origin/main` auf;
+2. führt `scripts/operations/deploy-isolated-release.sh` commitgebunden in
+   einem neuen unveränderlichen Release-Verzeichnis aus;
+3. prüft Product Truth, Lint, Operations-Tests, Next.js-Production-Build,
+   Build-Metadaten und nginx, während das bisherige Release weiterläuft;
+4. schaltet `/var/www/fanmind-current` atomar auf den neuen Stand und lädt den
+   einzelnen PM2-Cluster-Worker rollierend neu;
+5. verlangt die exakte Release-ID über `/api/version`, gesunde öffentliche
+   Kernrouten und eine lückenlose `200`-Verfügbarkeitsprobe;
+6. rollt bei einem Fehler auf das zuvor aktive Release zurück.
+
+Der frühere In-Place-Pfad ist nur noch ein ausdrücklich deaktivierbarer
+Notfall-Fallback. Der verbindliche Ablauf und die Rollback-Grenzen stehen in
+`docs/operations/ISOLATED_RELEASE_DEPLOY.md`.
+
+Nach jedem erfolgreichen Production-Deploy sowie täglich um 04:17 UTC läuft
+zusätzlich der Workflow `FanMind Production Read-only Audit`. Er verwendet nur
+die zuvor root-owned installierten Auditdateien, prüft Release/Runtime,
+acht Health-Komponenten, PM2, nginx, Login, Hostressourcen, lokale und
+Offsite-Backup-Paare sowie Backup-Worker-Fehler und nimmt keine
+Service-, Datenbank-, Restore- oder Remote-Mutation vor.
 
 Ein getrenntes Staging wird ausschließlich manuell über `.github/workflows/deploy-staging.yml` auf einem eigenen `fanmind-staging`-Runner ausgerollt. Der Workflow akzeptiert nur einen von `main` erreichbaren Commit, verlangt den Staging-Preflight und startet den separaten PM2-Prozess `fanmind-staging`. Host, Supabase-Staging-Projekt, Stripe-Testmodus, nginx-vHost und synthetische Testdaten bleiben externe Voraussetzungen.
 

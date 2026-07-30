@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 29. Juli 2026
+Stand: 30. Juli 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -132,6 +132,17 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 
 - Operations-Grundlage: produktiv aktiv.
 - Release-Checks: automatisch aktiv.
+- Production-Audit: Ein dauerhaft installierter, commitgebundener und
+  fail-closed Read-only-Audit läuft nach jedem erfolgreichen
+  Production-Deploy sowie täglich um 04:17 UTC. Er prüft ohne
+  Repository-Checkout und ohne Artifact-Upload den exakten Release,
+  Production-Runtime, alle acht öffentlichen Health-Komponenten, PM2, nginx,
+  Login, Hostressourcen, lokale und Offsite-Backup-Paare, das aktuelle
+  Vollbackup checksum-only und Backup-Worker-Fehler. Audit und
+  Ergebnis-Verifier liegen getrennt vom root-only Operationsverzeichnis
+  root-owned unter `/usr/local/lib/fanmind-audit`; Service-Restarts,
+  Datenbankverbindungen, Entschlüsselung, Restore und Remote-Mutationen sind
+  ausgeschlossen.
 - isolierter Release-Deploy mit atomischem Release-Symlink, PM2-Rolling-Reload,
   commit-gebundener Next.js-Deployment-ID und öffentlicher
   Übergangs-Verfügbarkeitsprüfung, Health, Version, Public Smoke, Product
