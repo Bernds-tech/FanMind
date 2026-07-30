@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
 import {
   chmod,
-  lstat,
   mkdtemp,
+  open,
   readFile,
   rm,
   symlink,
@@ -97,6 +98,25 @@ function evidence(fullBytes, runnerBytes, targetId, overrides = {}) {
 async function privateFile(path, content) {
   await writeFile(path, content, { mode: 0o600 });
   await chmod(path, 0o600);
+}
+
+async function readPrivateRegularFile(path, encoding) {
+  const handle = await open(
+    path,
+    fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW,
+  );
+  try {
+    const metadata = await handle.stat();
+    assert.equal(metadata.isFile(), true);
+    assert.equal(metadata.mode & 0o777, 0o600);
+    assert.equal(metadata.nlink, 1);
+    return {
+      content: await handle.readFile({ encoding }),
+      metadata,
+    };
+  } finally {
+    await handle.close();
+  }
 }
 
 async function withReceiptSet(callback) {
@@ -208,10 +228,8 @@ test("atomic writer creates one exact private runner receipt", async () => {
       { env: environment },
     );
     assert.match(stdout, /RESTORE_RUNNER_RECEIPT=PASS/u);
-    const metadata = await lstat(outputPath);
-    assert.equal(metadata.mode & 0o777, 0o600);
-    assert.equal(metadata.nlink, 1);
-    const record = JSON.parse(await readFile(outputPath, "utf8"));
+    const output = await readPrivateRegularFile(outputPath, "utf8");
+    const record = JSON.parse(output.content);
     assert.equal(record.fullBackupReceiptSha256, sha(fullBytes));
     assert.equal(record.emptyTargetObjectCount, 0);
     assert.equal(record.singleTransaction, true);

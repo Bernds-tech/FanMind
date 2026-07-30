@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
 import {
   chmod,
-  lstat,
   mkdtemp,
   mkdir,
+  open,
   readFile,
   rm,
   symlink,
@@ -39,6 +40,25 @@ function hash(content) {
 async function writeExecutable(path, lines) {
   await writeFile(path, `${lines.join("\n")}\n`);
   await chmod(path, 0o755);
+}
+
+async function readPrivateRegularFile(path, encoding) {
+  const handle = await open(
+    path,
+    fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW,
+  );
+  try {
+    const metadata = await handle.stat();
+    assert.equal(metadata.isFile(), true);
+    assert.equal(metadata.mode & 0o777, 0o600);
+    assert.equal(metadata.nlink, 1);
+    return {
+      content: await handle.readFile({ encoding }),
+      metadata,
+    };
+  } finally {
+    await handle.close();
+  }
 }
 
 test("checksum parser accepts standard sha256sum format", () => {
@@ -281,17 +301,13 @@ test("full verification creates an exact private dump and cryptographic receipt"
     });
     assert.equal(result.contentValidation.restoreDump, "created");
     assert.equal(result.contentValidation.restoreReceipt, "created");
-    assert.equal(await readFile(dumpOutputPath, "utf8"), databaseClear);
-    const [dumpMetadata, receiptMetadata] = await Promise.all([
-      lstat(dumpOutputPath),
-      lstat(receiptOutputPath),
+    const [dumpFile, receiptFile] = await Promise.all([
+      readPrivateRegularFile(dumpOutputPath, "utf8"),
+      readPrivateRegularFile(receiptOutputPath, "utf8"),
     ]);
-    assert.equal(dumpMetadata.mode & 0o777, 0o600);
-    assert.equal(receiptMetadata.mode & 0o777, 0o600);
-    assert.equal(dumpMetadata.nlink, 1);
-    assert.equal(receiptMetadata.nlink, 1);
+    assert.equal(dumpFile.content, databaseClear);
 
-    const receipt = JSON.parse(await readFile(receiptOutputPath, "utf8"));
+    const receipt = JSON.parse(receiptFile.content);
     assert.deepEqual(Object.keys(receipt), [
       "schemaVersion",
       "createdAt",
