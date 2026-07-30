@@ -169,6 +169,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 ### Phase B — repository implementation
 
 - [x] create/edit contacts;
+- [x] copy replies or hand only the selected reply text to the native
+      Android/iOS share sheet; FanMind selects no recipient or channel and
+      performs no send;
 - [x] password reset and deep-link callback;
 - [x] strict local SecureStore and workspace purge;
 - [x] EAS profiles and beta handoff documented;

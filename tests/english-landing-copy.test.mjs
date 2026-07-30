@@ -56,6 +56,8 @@ test("English landing uses the complete translation wrapper", async () => {
   for (const roadmapTranslation of [
     '"Passwort-Reset und Kontaktbearbeitung": "Password reset and contact editing"',
     '"Im App-Kern vorhanden": "Available in the app core"',
+    '"Antwort kopieren und nativ teilen": "Copy and natively share replies"',
+    '"Nur gewählter Text · Versand manuell": "Selected text only · manual sending"',
     '"Verschlüsselte Offline-Kontaktübersicht": "Encrypted offline contact overview"',
     '"24 h · maximal 50 · nur lesen": "24 h · up to 50 · read-only"',
     '"Push für Follow-up-Erinnerungen": "Push for follow-up reminders"',

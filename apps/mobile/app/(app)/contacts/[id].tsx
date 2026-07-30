@@ -2,6 +2,7 @@ import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -27,6 +28,7 @@ import {
   listContactMemories,
 } from "@/lib/data";
 import { addLocalDaysDate } from "@/lib/localDate";
+import { createReplyShareContent } from "@/lib/replySharePolicy.mjs";
 import { useAuth } from "@/providers/AuthProvider";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
@@ -51,6 +53,7 @@ export default function ContactDetailScreen() {
   const [aiBusy, setAiBusy] = useState(false);
   const [memoryBusy, setMemoryBusy] = useState(false);
   const [followupBusy, setFollowupBusy] = useState(false);
+  const [sharingReplyIndex, setSharingReplyIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -108,6 +111,27 @@ export default function ContactDetailScreen() {
   async function copy(text: string) {
     await Clipboard.setStringAsync(text);
     setNotice("Antwort wurde kopiert. Prüfe sie vor dem Versand.");
+  }
+
+  async function shareReply(text: string, index: number) {
+    setSharingReplyIndex(index);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await Share.share(createReplyShareContent(text), {
+        dialogTitle: "Antwort manuell teilen",
+      });
+      setNotice(
+        result.action === Share.dismissedAction
+          ? "Teilen wurde abgebrochen."
+          : "Antwort wurde an die Teilen-Auswahl übergeben. Du wählst und sendest final selbst.",
+      );
+    } catch {
+      setError("Antwort konnte nicht an die Teilen-Auswahl übergeben werden.");
+    } finally {
+      setSharingReplyIndex(null);
+    }
   }
 
   async function saveMemory() {
@@ -291,9 +315,17 @@ export default function ContactDetailScreen() {
                   <StatusPill>{option.tone}</StatusPill>
                 </View>
                 <Text style={mobileStyles.body}>{option.text}</Text>
-                <SecondaryButton onPress={() => void copy(option.text)}>
-                  Antwort kopieren
-                </SecondaryButton>
+                <View style={styles.replyActions}>
+                  <SecondaryButton onPress={() => void copy(option.text)}>
+                    Antwort kopieren
+                  </SecondaryButton>
+                  <SecondaryButton
+                    disabled={sharingReplyIndex !== null}
+                    onPress={() => void shareReply(option.text, index)}
+                  >
+                    {sharingReplyIndex === index ? "Teilen…" : "Nativ teilen"}
+                  </SecondaryButton>
+                </View>
               </View>
             ))}
           </Card>
@@ -356,6 +388,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.backgroundRaised,
     padding: spacing.lg,
+  },
+  replyActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
   },
   replyLabel: { color: colors.text, fontSize: typography.body, fontWeight: "900" },
 });

@@ -4,6 +4,11 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  createReplyShareContent,
+  ReplySharePolicyError,
+} from "../apps/mobile/src/lib/replySharePolicy.mjs";
+
 const root = new URL("../", import.meta.url);
 const mobileRoot = new URL("../apps/mobile/", import.meta.url);
 const rootPath = fileURLToPath(root);
@@ -155,6 +160,39 @@ test("no automatic sending is present in the mobile product", () => {
   const allSource = runtimeSource.map(({ content }) => content).join("\n");
   assert.match(allSource, /Keine automatische Sendefunktion/);
   assert.doesNotMatch(allSource, /sendMessage\(|\/send-message|automatisch senden/i);
+});
+
+test("native reply sharing exposes only the selected text and remains user-controlled", async () => {
+  assert.deepEqual(createReplyShareContent("  Hallo Sandra!  "), {
+    message: "Hallo Sandra!",
+  });
+  assert.throws(
+    () => createReplyShareContent("   "),
+    (error) =>
+      error instanceof ReplySharePolicyError && error.code === "empty_reply",
+  );
+  assert.throws(
+    () => createReplyShareContent({ message: "unsafe" }),
+    (error) =>
+      error instanceof ReplySharePolicyError && error.code === "invalid_reply",
+  );
+
+  const detail = await readFile(
+    new URL("app/(app)/contacts/[id].tsx", mobileRoot),
+    "utf8",
+  );
+  const sharePolicy = await readFile(
+    new URL("src/lib/replySharePolicy.mjs", mobileRoot),
+    "utf8",
+  );
+
+  assert.match(detail, /Share\.share\(createReplyShareContent\(text\)/u);
+  assert.match(detail, /Du wählst und sendest final selbst/u);
+  assert.match(detail, /Nativ teilen/u);
+  assert.doesNotMatch(
+    sharePolicy,
+    /contact|workspace|handle|memory|note|token|url|title|subject/iu,
+  );
 });
 
 test("mobile uses completed as canonical follow-up status and still hides legacy done rows", async () => {

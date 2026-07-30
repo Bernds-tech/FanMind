@@ -16,6 +16,10 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
 - neues Passwort nur nach bestätigter Recovery-Sitzung;
 - keine dauerhafte Speicherung vollständiger Recovery-URLs im React-Zustand oder in Refs;
 - Kontaktanlage und Kontaktbearbeitung;
+- Antwortvorschläge kopieren oder über die native Android-/iOS-Teilen-Auswahl
+  weitergeben; der Share-Payload enthält ausschließlich den ausgewählten
+  Antworttext, niemals Kontakt-, Workspace-, Kontext-, Notiz- oder
+  Zugangsdaten, und FanMind führt keinen Versand aus;
 - Workspace-Filter plus Supabase RLS bei jeder Kontaktmutation;
 - minimale Duplikatprüfung für Handle plus Quelle;
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit 24-Stunden-Ablauf, maximal 50 Kontakten und Nur-Lesen-Oberfläche;
