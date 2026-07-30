@@ -207,6 +207,13 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Modell-, Kontingent-, Overage- und Wechselentscheidungen ohne
   Aktivierungswirkung. Solange die Matrix nicht vollständig schriftlich
   freigegeben ist, bleiben Plus und Ultra fail-closed.
+- `docs/operations/AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md` und
+  `src/config/aiTierRecommendation.mjs` liefern dazu eine datierte,
+  reproduzierbare Arbeitsempfehlung mit Kosten-Szenarien. Sie werden von
+  produktiven KI-Pfaden nicht importiert, ersetzen keine schriftliche
+  Entscheidung und aktivieren keine Stufe.
+- `npm run ai:tiers:recommendation` prüft diese Arbeitsmatrix offline und
+  redigiert; die aktive Policy behält bis zur Freigabe ihre `null`-Felder.
 - Der gemeinsame serverseitige Entitlement-Resolver in `src/config/aiTiers.mjs`
   behandelt KI Standard als sicheren Default. Plus/Ultra werden nur bei
   serververwaltetem, aktivem Stripe-Lifecycle, verknüpftem Subscription-Item,

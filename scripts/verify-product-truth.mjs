@@ -13,7 +13,9 @@ const checkedFiles = [
   ".github/workflows/mobile-release-resource-readiness.yml",
   "package.json",
   "src/config/aiTiers.mjs",
+  "src/config/aiTierRecommendation.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
+  "scripts/operations/verify-ai-tier-recommendation.mjs",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
   "scripts/operations/mobile-release-resource-readiness.mjs",
@@ -28,6 +30,7 @@ const checkedFiles = [
   "src/app/api/ai/reply-suggestions/route.ts",
   "src/app/settings/ai-usage/AiPromptSettings.tsx",
   "tests/ai-tier-policy.test.mjs",
+  "tests/ai-tier-recommendation.test.mjs",
   "tests/ai-tier-entitlement-storage.test.mjs",
   "tests/ai-tier-entitlement-migration-policy.test.mjs",
   "tests/ai-tier-stripe-lifecycle.test.mjs",
@@ -87,6 +90,7 @@ const checkedFiles = [
   "docs/database/fanmind_current_schema.md",
   "docs/SECURITY_RLS_SECRETS_CHECK.md",
   "docs/operations/AI_TIER_READINESS.md",
+  "docs/operations/AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md",
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
 ];
 
@@ -338,6 +342,21 @@ requireText(
   "scripts/operations/verify-ai-tier-readiness.mjs",
   "AI_TIER_READINESS=PASS",
   "Die KI-Stufen müssen eine redigierte gemeinsame Readiness-Prüfung besitzen.",
+);
+requireText(
+  "src/config/aiTierRecommendation.mjs",
+  'AI_TIER_RECOMMENDATION_STATUS = "advisory"',
+  "Die KI-Stufen-Arbeitsempfehlung muss ausdrücklich ohne Aktivierungswirkung bleiben.",
+);
+requireText(
+  "scripts/operations/verify-ai-tier-recommendation.mjs",
+  "AI_TIER_RECOMMENDATION=PASS activation=none",
+  "Die KI-Stufen-Arbeitsempfehlung muss einen reproduzierbaren Offline-Check besitzen.",
+);
+requireText(
+  "tests/ai-tier-recommendation.test.mjs",
+  "AI tier recommendation is advisory and cannot activate paid tiers",
+  "Die Trennung zwischen Arbeitsempfehlung und aktiver Paid-Tier-Policy muss automatisiert geprüft werden.",
 );
 requireText(
   ".github/workflows/mobile-release-resource-readiness.yml",
