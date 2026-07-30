@@ -196,20 +196,19 @@ Für jeden KI-Call speichern:
 Der Adminbereich zeigt derzeit:
 
 - KI-Kosten und Tokens geschätzt für den gewählten Zeitraum;
+- validierte Schnellansichten für 24 Stunden sowie 7, 30 und 90 Tage;
 - Anfragen und Fehler;
 - Workspaces nach geschätzten Kosten;
 - exakte Kontakt-/Fan-Anzahl je ausgewertetem Workspace sowie geschätzte
   Kosten pro Fan und pro 100/1.000 Fans; bei fehlender oder leerer Fan-Basis
   bewusst keine erfundene Verhältniszahl;
 - Features nach geschätzten Kosten;
+- Modelle nach geschätzten Kosten, Anfragen, Tokens und Fehlern;
 - durchschnittliche geschätzte Kosten pro Request;
 - letzte Usage-Events ohne Prompt-/Antwortvolltexte.
 
 Noch offen:
 
-- Tages-/Wochen-Schnellansichten;
-- Kosten relativ zur Kontaktanzahl;
-- Modellverteilung;
 - explizite Spike-/Budgetwarnungen.
 
 Die Workspace-Nutzeransicht zeigt:
@@ -287,7 +286,9 @@ Erledigt:
 9. nicht aktivierende, datierte KI-Stufen-Kosten-/Kontingentempfehlung samt
    reproduzierbarem Offline-Rechner;
 10. exakte, paginationsunabhängige Admin-Kontaktzählung und geschätzte
-    KI-Kosten pro Fan sowie pro 100/1.000 Fans.
+    KI-Kosten pro Fan sowie pro 100/1.000 Fans;
+11. validierte Admin-Schnellansichten für 24 Stunden sowie 7, 30 und 90 Tage
+    und eine Modellverteilung mit Kosten-, Token- und Fehlerwerten.
 
 Offen bleiben echte Provider-Tokenwerte, Budgetwarnungen und die vertragliche
 Standard-/Plus-/Ultra-Entitlement-/Billing-Logik
