@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   ADMIN_AI_USAGE_DAY_RANGES,
   aggregateAiUsageByModel,
+  aggregateAiUsageTokenDistributionByFeature,
   calculateAiBudgetIndicator,
   calculateAiUsageSpikeIndicator,
   normalizeAdminAiUsageDays,
@@ -65,6 +66,104 @@ test("model summaries aggregate requests, costs, tokens, and errors deterministi
         errorRequests: 1,
       },
     ],
+  );
+});
+
+test("feature token distributions expose deterministic nearest-rank P50, P90 and P95", () => {
+  const replySamples = Array.from({ length: 10 }, (_, index) => {
+    const totalTokens = (index + 1) * 10;
+    return {
+      feature: "reply_suggestions",
+      estimated_input_tokens: totalTokens - 1,
+      estimated_output_tokens: 1,
+      estimated_total_tokens: totalTokens,
+      status: "ok",
+    };
+  });
+
+  assert.deepEqual(
+    aggregateAiUsageTokenDistributionByFeature([
+      ...replySamples,
+      {
+        feature: "fan_analysis",
+        estimated_input_tokens: 80,
+        estimated_output_tokens: 20,
+        estimated_total_tokens: 100,
+        status: "ok",
+      },
+      {
+        feature: "fan_analysis",
+        estimated_input_tokens: 160,
+        estimated_output_tokens: 40,
+        estimated_total_tokens: 200,
+        status: "ok",
+      },
+    ]),
+    [
+      {
+        feature: "reply_suggestions",
+        sampleCount: 10,
+        p50: { inputTokens: 49, outputTokens: 1, totalTokens: 50 },
+        p90: { inputTokens: 89, outputTokens: 1, totalTokens: 90 },
+        p95: { inputTokens: 99, outputTokens: 1, totalTokens: 100 },
+      },
+      {
+        feature: "fan_analysis",
+        sampleCount: 2,
+        p50: { inputTokens: 80, outputTokens: 20, totalTokens: 100 },
+        p90: { inputTokens: 160, outputTokens: 40, totalTokens: 200 },
+        p95: { inputTokens: 160, outputTokens: 40, totalTokens: 200 },
+      },
+    ],
+  );
+});
+
+test("feature token distributions exclude errors, zero usage and inconsistent samples", () => {
+  const invalidSamples = [
+    {
+      feature: "reply_suggestions",
+      estimated_input_tokens: 10,
+      estimated_output_tokens: 2,
+      estimated_total_tokens: 12,
+      status: "error",
+    },
+    {
+      feature: "reply_suggestions",
+      estimated_input_tokens: 0,
+      estimated_output_tokens: 0,
+      estimated_total_tokens: 0,
+      status: "ok",
+    },
+    {
+      feature: "reply_suggestions",
+      estimated_input_tokens: 10,
+      estimated_output_tokens: 2,
+      estimated_total_tokens: 13,
+      status: "ok",
+    },
+    {
+      feature: "reply_suggestions",
+      estimated_input_tokens: -1,
+      estimated_output_tokens: 2,
+      estimated_total_tokens: 1,
+      status: "ok",
+    },
+    {
+      feature: "reply_suggestions",
+      estimated_input_tokens: 1.5,
+      estimated_output_tokens: 2,
+      estimated_total_tokens: 3.5,
+      status: "ok",
+    },
+  ];
+
+  assert.deepEqual(
+    aggregateAiUsageTokenDistributionByFeature(invalidSamples),
+    [],
+  );
+  assert.throws(
+    () => aggregateAiUsageTokenDistributionByFeature(null),
+    /events must be an array/u,
   );
 });
 
@@ -152,9 +251,10 @@ test("admin spike indicators compare equal periods without escalating low-volume
 });
 
 test("admin AI usage exposes quick views and model distribution without stale open claims", async () => {
-  const [source, page, monitoring] = await Promise.all([
+  const [source, page, styles, monitoring] = await Promise.all([
     readFile("src/lib/adminAiUsage.ts", "utf8"),
     readFile("src/app/admin/ai-usage/page.tsx", "utf8"),
+    readFile("src/app/admin/billing/adminBilling.module.css", "utf8"),
     readFile("docs/AI_COST_MONITORING.md", "utf8"),
   ]);
 
@@ -163,12 +263,19 @@ test("admin AI usage exposes quick views and model distribution without stale op
   assert.match(source, /MAX_ADMIN_USAGE_EVENTS/u);
   assert.match(source, /calculateAiBudgetIndicator/u);
   assert.match(source, /calculateAiUsageSpikeIndicator/u);
+  assert.match(source, /aggregateAiUsageTokenDistributionByFeature/u);
   assert.match(page, /ADMIN_AI_USAGE_DAY_RANGES/u);
   assert.match(page, /aria-current/u);
   assert.match(page, /Verbrauch pro Modell/u);
   assert.match(page, /Ø Kosten\/Anfrage/u);
   assert.match(page, /Monatsbudget/u);
   assert.match(page, /Spike-Vergleich/u);
+  assert.match(page, /Token-Verteilung pro Feature/u);
+  assert.match(page, /P50 Tokens/u);
+  assert.match(page, /P90 Tokens/u);
+  assert.match(page, /P95 Tokens/u);
+  assert.match(page, /styles\.tokenDistributionTable/u);
+  assert.match(styles, /\.tokenDistributionTable/u);
   const openDisplaySection =
     monitoring.match(/Noch offen:\n\n(?<items>[\s\S]*?)\n\nDie Workspace-Nutzeransicht/u)
       ?.groups?.items ?? "";

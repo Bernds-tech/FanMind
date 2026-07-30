@@ -17,6 +17,28 @@ export type AiUsageModelSummary = {
   errorRequests: number;
 };
 
+export type AiUsageTokenDistributionEvent = {
+  feature?: string | null;
+  estimated_input_tokens?: number | null;
+  estimated_output_tokens?: number | null;
+  estimated_total_tokens?: number | null;
+  status?: string | null;
+};
+
+export type AiUsageTokenPercentile = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
+
+export type AiUsageTokenDistributionSummary = {
+  feature: string;
+  sampleCount: number;
+  p50: AiUsageTokenPercentile;
+  p90: AiUsageTokenPercentile;
+  p95: AiUsageTokenPercentile;
+};
+
 export type AiBudgetIndicator = {
   configured: boolean;
   level:
@@ -50,6 +72,9 @@ export function normalizeAdminAiUsageDays(value: unknown): number;
 export function aggregateAiUsageByModel(
   events: AiUsageModelEvent[],
 ): AiUsageModelSummary[];
+export function aggregateAiUsageTokenDistributionByFeature(
+  events: AiUsageTokenDistributionEvent[],
+): AiUsageTokenDistributionSummary[];
 export function calculateAiBudgetIndicator(input: {
   currentCostCents?: number | null;
   budgetCents?: number | null;

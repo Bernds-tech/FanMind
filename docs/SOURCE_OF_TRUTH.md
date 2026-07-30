@@ -220,9 +220,13 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   bleibt die Verhältnisanzeige leer statt eine scheinpräzise Zahl zu erfinden.
   Der Zeitraum ist auf validierte Schnellansichten für 24 Stunden sowie 7, 30
   und 90 Tage begrenzt; zusätzlich werden Anfragen, geschätzte Kosten, Tokens
-  und Fehler je verwendetem Modell aggregiert. Die Auswertung lädt aktuelle
-  und vorherige gleich lange Zeiträume stabil paginiert bis jeweils 10.000
-  Ereignisse. Optionale interne Monatsbudget- und Spike-Hinweise sind rein
+  und Fehler je verwendetem Modell aggregiert. Erfolgreiche, konsistente
+  Usage-Ereignisse werden je Feature zusätzlich als nearest-rank P50-, P90-
+  und P95-Verteilung für Input-, Output- und Gesamttokens ausgewertet; Fehler,
+  Null-Usage und widersprüchliche Werte zählen nicht zur Stichprobe. Die
+  Auswertung lädt aktuelle und vorherige gleich lange Zeiträume stabil
+  paginiert bis jeweils 10.000 Ereignisse. Optionale interne Monatsbudget- und
+  Spike-Hinweise sind rein
   beobachtend: ohne Budgetkonfiguration oder bei begrenzten Daten behaupten
   sie weder Quote noch Entwarnung, blockieren keine KI-Anfrage und ändern
   weder Billing noch KI-Stufe.

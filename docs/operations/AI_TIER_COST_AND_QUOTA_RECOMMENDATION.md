@@ -94,8 +94,10 @@ AI_TIER_RECOMMENDATION=PASS activation=none
 
 1. Mindestens vier vollständige Wochen reale, datenschutzkonforme
    `ai_usage_events` je relevantem Workspace-Segment auswerten.
-2. Median, P90 und P95 für Input-, Output- und Gesamt-Tokens pro Feature
-   bestimmen.
+2. Die in `/admin/ai-usage` vorbereiteten nearest-rank P50-, P90- und
+   P95-Werte für Input-, Output- und Gesamt-Tokens je Feature über diesen
+   vollständigen Zeitraum prüfen; Stichprobengröße, Schätz-Fallbacks und eine
+   mögliche 10.000-Ereignis-Begrenzung ausdrücklich berücksichtigen.
 3. Antwortqualität der drei Modellklassen auf einem repräsentativen,
    anonymisierten Eval-Set vergleichen.
 4. Kostenrechnung mit aktuellen Providerpreisen, Wechselkurs, Steuern,
