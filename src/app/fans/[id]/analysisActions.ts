@@ -54,6 +54,11 @@ type OpenAiResponse = {
   output_text?: string;
   output?: Array<{ content?: Array<{ text?: string }> }>;
   error?: { message?: string };
+  usage?: {
+    input_tokens?: unknown;
+    output_tokens?: unknown;
+    total_tokens?: unknown;
+  };
 };
 
 const analysisSchema = {
@@ -431,6 +436,7 @@ export async function analyzeFanCommunication(
           errorCode: response.ok ? "missing_output" : String(response.status),
           latencyMs: Date.now() - startedAt,
           sourceRoute: "src/app/fans/[id]/analysisActions.ts#analyzeFanCommunication",
+          providerUsage: responseBody?.usage,
         });
         return {
           ok: false,
@@ -453,6 +459,7 @@ export async function analyzeFanCommunication(
         status: "ok",
         latencyMs: Date.now() - startedAt,
         sourceRoute: "src/app/fans/[id]/analysisActions.ts#analyzeFanCommunication",
+        providerUsage: responseBody?.usage,
       });
       userMessage =
         locale === "en"

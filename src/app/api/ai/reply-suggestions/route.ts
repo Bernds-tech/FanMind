@@ -76,6 +76,11 @@ type OpenAiResponse = {
   error?: {
     message?: string;
   };
+  usage?: {
+    input_tokens?: unknown;
+    output_tokens?: unknown;
+    total_tokens?: unknown;
+  };
 };
 
 const replySuggestionsSchema = {
@@ -378,6 +383,7 @@ export async function POST(request: NextRequest) {
         errorCode: String(openAiResponse.status),
         latencyMs: Date.now() - startedAt,
         sourceRoute: "/api/ai/reply-suggestions",
+        providerUsage: responseBody?.usage,
       });
       return jsonError(
         "Antwortvorschläge konnten gerade nicht erzeugt werden.",
@@ -400,6 +406,7 @@ export async function POST(request: NextRequest) {
         errorCode: "missing_output",
         latencyMs: Date.now() - startedAt,
         sourceRoute: "/api/ai/reply-suggestions",
+        providerUsage: responseBody?.usage,
       });
       return jsonError(
         "Antwortvorschläge konnten gerade nicht erzeugt werden.",
@@ -420,6 +427,7 @@ export async function POST(request: NextRequest) {
       status: "ok",
       latencyMs: Date.now() - startedAt,
       sourceRoute: "/api/ai/reply-suggestions",
+      providerUsage: responseBody?.usage,
     });
 
     return NextResponse.json(normalizeSuggestions(suggestions));

@@ -152,19 +152,27 @@ Aktiver Vertrag:
 - Inserts laufen serverseitig über gesicherte Route, Server Action oder Service Role.
 - Normale User sehen keine anderen Workspaces.
 
-## 7. Token-Schätzung
+## 7. Provider-Tokens und Schätz-Fallback
 
-Solange keine exakten Tokenzahlen vom Provider zuverlässig übernommen werden, kann FanMind grob schätzen:
+Die beiden produktiven OpenAI-Responses-Pfade übernehmen vollständige,
+konsistente Provider-Usage mit `input_tokens`, `output_tokens` und
+`total_tokens`. Die Summe wird nur akzeptiert, wenn alle Werte
+nichtnegative sichere Ganzzahlen sind und `total_tokens` exakt der Summe aus
+Input und Output entspricht.
+
+Fehlen diese Werte, sind sie ungültig oder entsteht der Fehler vor einer
+Provider-Antwort, schätzt FanMind weiterhin:
 
 `estimated_tokens = ceil(text_length / 4)`
 
-Das ist nur eine Näherung. Für Admin-Anzeigen muss dann stehen:
+Bestehende Spaltennamen `estimated_*` bleiben zur Schema-Kompatibilität
+erhalten. Da historische und Fallback-Ereignisse Näherungen enthalten und
+auch die konfigurierten Kostenwerte keine Provider-Rechnung ersetzen, bleiben
+Admin-Anzeigen konservativ gekennzeichnet:
 
 - `geschätzt`
 - `basierend auf Zeichenlänge`
 - `nicht abrechnungsgenau`
-
-Sobald Provider-Usage-Werte verfügbar sind, sollen echte Werte bevorzugt gespeichert werden.
 
 ## 8. Wo Usage geloggt werden soll
 
@@ -311,12 +319,15 @@ Erledigt:
     und eine Modellverteilung mit Kosten-, Token- und Fehlerwerten;
 12. paginationssichere Admin-Zeiträume und rein beobachtende Monatsbudget-/
     Spike-Hinweise, die bei fehlender Konfiguration oder begrenzten Daten
-    keine Quote, Sperre oder falsche Entwarnung behaupten.
+    keine Quote, Sperre oder falsche Entwarnung behaupten;
+13. vollständige und konsistente Tokenwerte der OpenAI Responses API werden
+    in beiden produktiven KI-Pfaden bevorzugt gespeichert; fehlende oder
+    ungültige Usage fällt ohne Einfluss auf den Nutzerfluss auf die
+    Zeichenlängen-Schätzung zurück.
 
-Offen bleiben echte Provider-Tokenwerte, ein bestätigter interner
-Production-Budgetwert und die vertragliche Standard-/Plus-/Ultra-
-Entitlement-/Billing-Logik einschließlich einer server-eigenen
-Autorisierungsquelle.
+Offen bleiben ein bestätigter interner Production-Budgetwert und die
+vertragliche Standard-/Plus-/Ultra-Entitlement-/Billing-Logik einschließlich
+einer server-eigenen Autorisierungsquelle.
 
 ## 14. Akzeptanzkriterien
 
@@ -327,6 +338,8 @@ Autorisierungsquelle.
 - [x] Admin sieht rein beobachtende Budget-/Spike-Hinweise ohne automatische
       Sperre oder erfundene Quote.
 - [x] UI markiert Werte als geschätzt.
+- [x] Vollständige Provider-Tokenwerte werden bevorzugt und ungültige oder
+      fehlende Usage fällt sicher auf die Zeichenlängen-Schätzung zurück.
 - [x] Keine Secrets oder Prompt-Texte landen im Usage-Log.
 - [x] RLS verhindert fremde Workspace-Daten.
 - [ ] Beide Workspace-Härtungsmigrationen sind in Production angewendet und

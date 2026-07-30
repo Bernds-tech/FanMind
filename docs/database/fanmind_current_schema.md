@@ -576,7 +576,7 @@ RLS-/Security-Erwartung:
 
 ## 9. KI-Usage-Tabelle
 
-`ai_usage_events` ist das aktive serverseitige Kosten-/Usage-Observability-Log für KI-Aufrufe. Es speichert keine Prompt- oder Antwortvolltexte, sondern nur Zähler, Modell, Feature, Status und geschätzte Kosten.
+`ai_usage_events` ist das aktive serverseitige Kosten-/Usage-Observability-Log für KI-Aufrufe. Es speichert keine Prompt- oder Antwortvolltexte, sondern nur Zähler, Modell, Feature, Status und geschätzte Kosten. Die bestehenden `estimated_*_tokens`-Spalten enthalten bei vollständiger und konsistenter OpenAI-Responses-Usage die echten Provider-Zähler; bei fehlender oder ungültiger Usage bleiben sie die begrenzte Zeichenlängen-Schätzung. Die Spaltennamen bleiben aus Kompatibilitätsgründen bestehen.
 
 Spalten:
 

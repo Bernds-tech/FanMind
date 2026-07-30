@@ -1,4 +1,5 @@
 import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
+import { normalizeOpenAiResponseUsage } from "@/lib/aiUsageProviderMetrics.mjs";
 
 export type AiUsageFeature = "reply_suggestions" | "fan_analysis" | "conversation_summary" | "memory_suggestion" | "followup_suggestion" | "campaign_draft_preview";
 export type AiUsageStatus = "ok" | "error" | "skipped";
@@ -16,6 +17,7 @@ export type RecordAiUsageEventInput = {
   latencyMs?: number | null;
   sourceRoute?: string | null;
   provider?: string;
+  providerUsage?: unknown;
 };
 
 const DEFAULT_CURRENCY = "USD";
@@ -48,8 +50,13 @@ export async function recordAiUsageEvent(input: RecordAiUsageEventInput): Promis
 
   const inputChars = Math.max(0, Math.round(input.inputChars));
   const outputChars = Math.max(0, Math.round(input.outputChars ?? 0));
-  const estimatedInputTokens = estimateTokensFromChars(inputChars);
-  const estimatedOutputTokens = estimateTokensFromChars(outputChars);
+  const providerUsage = normalizeOpenAiResponseUsage(input.providerUsage);
+  const recordedInputTokens =
+    providerUsage?.inputTokens ?? estimateTokensFromChars(inputChars);
+  const recordedOutputTokens =
+    providerUsage?.outputTokens ?? estimateTokensFromChars(outputChars);
+  const recordedTotalTokens =
+    providerUsage?.totalTokens ?? recordedInputTokens + recordedOutputTokens;
 
   const body = {
     workspace_id: input.workspaceId,
@@ -60,10 +67,14 @@ export async function recordAiUsageEvent(input: RecordAiUsageEventInput): Promis
     provider: input.provider ?? "openai",
     input_chars: inputChars,
     output_chars: outputChars,
-    estimated_input_tokens: estimatedInputTokens,
-    estimated_output_tokens: estimatedOutputTokens,
-    estimated_total_tokens: estimatedInputTokens + estimatedOutputTokens,
-    estimated_cost_cents: estimateAiCostCents(estimatedInputTokens, estimatedOutputTokens, input.model),
+    estimated_input_tokens: recordedInputTokens,
+    estimated_output_tokens: recordedOutputTokens,
+    estimated_total_tokens: recordedTotalTokens,
+    estimated_cost_cents: estimateAiCostCents(
+      recordedInputTokens,
+      recordedOutputTokens,
+      input.model,
+    ),
     currency: process.env.FANMIND_AI_USAGE_CURRENCY?.trim() || DEFAULT_CURRENCY,
     status: input.status,
     error_code: input.errorCode ?? null,

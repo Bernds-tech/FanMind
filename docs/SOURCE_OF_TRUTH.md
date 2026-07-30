@@ -406,7 +406,9 @@ Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfe
 - begrenzte Eingabelänge, begrenzte Datenbank-Kontextzeilen,
   Provider-Ausgabe und gemeinsame fail-closed Kurzzeit-Rate-Limits;
 - strukturierte Ausgabe;
-- Usage-Logging und geschätzte Token-/Kostenwerte;
+- Usage-Logging mit bevorzugten vollständigen OpenAI-Responses-Tokenwerten
+  sowie sicherem Zeichenlängen-Schätz-Fallback; Kosten und gemischte
+  historische Werte bleiben konservativ als geschätzt gekennzeichnet;
 - Admin-Dashboard `/admin/ai-usage`;
 - optionale Soft-Hinweise sind weder vertragliche Kontingente noch automatische Sperren;
 - technische Aufruf-/Kontext-/Ausgabegrenzen sind Missbrauchs- und
