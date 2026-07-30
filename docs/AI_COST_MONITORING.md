@@ -198,6 +198,9 @@ Der Adminbereich zeigt derzeit:
 - KI-Kosten und Tokens geschätzt für den gewählten Zeitraum;
 - Anfragen und Fehler;
 - Workspaces nach geschätzten Kosten;
+- exakte Kontakt-/Fan-Anzahl je ausgewertetem Workspace sowie geschätzte
+  Kosten pro Fan und pro 100/1.000 Fans; bei fehlender oder leerer Fan-Basis
+  bewusst keine erfundene Verhältniszahl;
 - Features nach geschätzten Kosten;
 - durchschnittliche geschätzte Kosten pro Request;
 - letzte Usage-Events ohne Prompt-/Antwortvolltexte.
@@ -282,10 +285,12 @@ Erledigt:
    Ausgabegrenzen;
 8. Workspace-Unternehmens-Prompt und auswählbare, begrenzte Antwortprofile mit serverseitiger Profilauflösung.
 9. nicht aktivierende, datierte KI-Stufen-Kosten-/Kontingentempfehlung samt
-   reproduzierbarem Offline-Rechner.
+   reproduzierbarem Offline-Rechner;
+10. exakte, paginationsunabhängige Admin-Kontaktzählung und geschätzte
+    KI-Kosten pro Fan sowie pro 100/1.000 Fans.
 
-Offen bleiben echte Provider-Tokenwerte, Kosten pro Kontakt, Budgetwarnungen
-und die vertragliche Standard-/Plus-/Ultra-Entitlement-/Billing-Logik
+Offen bleiben echte Provider-Tokenwerte, Budgetwarnungen und die vertragliche
+Standard-/Plus-/Ultra-Entitlement-/Billing-Logik
 einschließlich einer server-eigenen Autorisierungsquelle.
 
 ## 14. Akzeptanzkriterien
@@ -293,7 +298,7 @@ einschließlich einer server-eigenen Autorisierungsquelle.
 - [x] KI-Calls werden serverseitig als Usage-Events gespeichert.
 - [x] Workspace-Zuordnung ist vorhanden.
 - [x] Admin sieht Verbrauch je Workspace.
-- [ ] Admin sieht Kosten pro Fan und pro 100/1.000 Fans.
+- [x] Admin sieht Kosten pro Fan und pro 100/1.000 Fans.
 - [x] UI markiert Werte als geschätzt.
 - [x] Keine Secrets oder Prompt-Texte landen im Usage-Log.
 - [x] RLS verhindert fremde Workspace-Daten.

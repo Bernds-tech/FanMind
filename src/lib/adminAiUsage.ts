@@ -1,4 +1,8 @@
 import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
+import {
+  calculateAiCostPerContactMetrics,
+  parsePostgrestExactCount,
+} from "@/lib/aiUsageCostMetrics.mjs";
 
 export type AdminAiUsageEvent = {
   id: string;
@@ -21,6 +25,19 @@ export type AdminAiUsageEvent = {
 
 type WorkspaceRow = { id: string; name: string | null; plan_id: string | null; commercial_option: string | null };
 
+export type AdminAiUsageWorkspaceSummary = {
+  workspaceId: string;
+  workspaceName: string;
+  requests: number;
+  estimatedCostCents: number;
+  inputTokens: number;
+  outputTokens: number;
+  contactCount: number | null;
+  estimatedCostPerFanCents: number | null;
+  estimatedCostPerHundredFansCents: number | null;
+  estimatedCostPerThousandFansCents: number | null;
+};
+
 export type AdminAiUsageSummary = {
   totalRequests: number;
   totalEstimatedCostCents: number;
@@ -28,7 +45,7 @@ export type AdminAiUsageSummary = {
   totalOutputTokens: number;
   errorRequests: number;
   currency: string;
-  byWorkspace: Array<{ workspaceId: string; workspaceName: string; requests: number; estimatedCostCents: number; inputTokens: number; outputTokens: number }>;
+  byWorkspace: AdminAiUsageWorkspaceSummary[];
   byFeature: Array<{ feature: string; requests: number; estimatedCostCents: number; errorRequests: number }>;
   recentEvents: AdminAiUsageEvent[];
 };
@@ -36,6 +53,46 @@ export type AdminAiUsageSummary = {
 const COLUMNS = "id,workspace_id,feature,model,input_chars,output_chars,estimated_input_tokens,estimated_output_tokens,estimated_total_tokens,estimated_cost_cents,currency,status,error_code,latency_ms,source_route,created_at";
 
 function serviceKey() { return process.env.SUPABASE_SERVICE_ROLE_KEY; }
+
+async function loadWorkspaceContactCounts(
+  workspaceIds: string[],
+  key: string,
+): Promise<Map<string, number | null>> {
+  const counts = new Map<string, number | null>();
+  let cursor = 0;
+  const workerCount = Math.min(8, workspaceIds.length);
+
+  async function loadNext() {
+    while (cursor < workspaceIds.length) {
+      const workspaceId = workspaceIds[cursor];
+      cursor += 1;
+      const url = new URL(getSupabaseRestUrl("contacts"));
+      url.searchParams.set("select", "id");
+      url.searchParams.set("workspace_id", `eq.${workspaceId}`);
+      try {
+        const response = await fetch(url, {
+          headers: {
+            ...getSupabaseHeaders(key),
+            Range: "0-0",
+            Prefer: "count=exact",
+          },
+          cache: "no-store",
+        });
+        counts.set(
+          workspaceId,
+          response.ok
+            ? parsePostgrestExactCount(response.headers.get("content-range"))
+            : null,
+        );
+      } catch {
+        counts.set(workspaceId, null);
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => loadNext()));
+  return counts;
+}
 
 export async function getAdminAiUsageSummary(days = 30): Promise<{ summary: AdminAiUsageSummary | null; error: string | null }> {
   const key = serviceKey();
@@ -52,6 +109,7 @@ export async function getAdminAiUsageSummary(days = 30): Promise<{ summary: Admi
     const events = await usageResponse.json() as AdminAiUsageEvent[];
     const workspaceIds = [...new Set(events.map((event) => event.workspace_id))];
     const workspaces = new Map<string, WorkspaceRow>();
+    const contactCountsPromise = loadWorkspaceContactCounts(workspaceIds, key);
     if (workspaceIds.length) {
       const workspaceUrl = new URL(getSupabaseRestUrl("workspaces"));
       workspaceUrl.searchParams.set("select", "id,name,plan_id,commercial_option");
@@ -61,17 +119,42 @@ export async function getAdminAiUsageSummary(days = 30): Promise<{ summary: Admi
         for (const workspace of await workspaceResponse.json() as WorkspaceRow[]) workspaces.set(workspace.id, workspace);
       }
     }
+    const contactCounts = await contactCountsPromise;
 
-    const byWorkspace = new Map<string, { workspaceId: string; workspaceName: string; requests: number; estimatedCostCents: number; inputTokens: number; outputTokens: number }>();
+    const byWorkspace = new Map<string, AdminAiUsageWorkspaceSummary>();
     const byFeature = new Map<string, { feature: string; requests: number; estimatedCostCents: number; errorRequests: number }>();
     for (const event of events) {
       const cost = Number(event.estimated_cost_cents ?? 0);
-      const workspace = byWorkspace.get(event.workspace_id) ?? { workspaceId: event.workspace_id, workspaceName: workspaces.get(event.workspace_id)?.name ?? event.workspace_id, requests: 0, estimatedCostCents: 0, inputTokens: 0, outputTokens: 0 };
+      const workspace = byWorkspace.get(event.workspace_id) ?? {
+        workspaceId: event.workspace_id,
+        workspaceName: workspaces.get(event.workspace_id)?.name ?? event.workspace_id,
+        requests: 0,
+        estimatedCostCents: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        contactCount: contactCounts.get(event.workspace_id) ?? null,
+        estimatedCostPerFanCents: null,
+        estimatedCostPerHundredFansCents: null,
+        estimatedCostPerThousandFansCents: null,
+      };
       workspace.requests += 1; workspace.estimatedCostCents += cost; workspace.inputTokens += event.estimated_input_tokens; workspace.outputTokens += event.estimated_output_tokens; byWorkspace.set(event.workspace_id, workspace);
       const feature = byFeature.get(event.feature) ?? { feature: event.feature, requests: 0, estimatedCostCents: 0, errorRequests: 0 };
       feature.requests += 1; feature.estimatedCostCents += cost; if (event.status === "error") feature.errorRequests += 1; byFeature.set(event.feature, feature);
     }
 
-    return { summary: { totalRequests: events.length, totalEstimatedCostCents: events.reduce((sum, event) => sum + Number(event.estimated_cost_cents ?? 0), 0), totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? "USD", byWorkspace: [...byWorkspace.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), recentEvents: events.slice(0, 25) }, error: null };
+    const workspaceSummaries = [...byWorkspace.values()].map((workspace) => {
+      const metrics = calculateAiCostPerContactMetrics(
+        workspace.estimatedCostCents,
+        workspace.contactCount,
+      );
+      return {
+        ...workspace,
+        estimatedCostPerFanCents: metrics.perFanCents,
+        estimatedCostPerHundredFansCents: metrics.perHundredFansCents,
+        estimatedCostPerThousandFansCents: metrics.perThousandFansCents,
+      };
+    });
+
+    return { summary: { totalRequests: events.length, totalEstimatedCostCents: events.reduce((sum, event) => sum + Number(event.estimated_cost_cents ?? 0), 0), totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? "USD", byWorkspace: workspaceSummaries.sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), recentEvents: events.slice(0, 25) }, error: null };
   } catch (error) { return { summary: null, error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
 }
