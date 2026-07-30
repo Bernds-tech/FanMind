@@ -50,6 +50,8 @@ const checkedFiles = [
   "src/lib/referrals.ts",
   "src/lib/referralPolicy.mjs",
   "src/lib/aiUsagePolicy.mjs",
+  "src/lib/aiUsage.ts",
+  "src/lib/aiUsageProviderMetrics.mjs",
   "src/lib/aiUsageCostMetrics.mjs",
   "src/lib/aiUsageDashboardMetrics.mjs",
   "src/lib/adminAiUsage.ts",
@@ -60,6 +62,7 @@ const checkedFiles = [
   "src/lib/workspaceNavigation.ts",
   "src/lib/fanmindCopy.ts",
   "src/app/register/page.tsx",
+  "src/app/fans/[id]/analysisActions.ts",
   "src/lib/runtimeProductSettings.ts",
   "src/app/admin/settings/page.tsx",
   "src/app/api/admin/settings/daily-test-plan/route.ts",
@@ -408,6 +411,31 @@ requireText(
   "tests/ai-usage-dashboard-metrics.test.mjs",
   "remain observational and fail honest when unconfigured",
   "Nicht konfigurierte oder begrenzte Budgetdaten müssen ehrlich getestet werden.",
+);
+requireText(
+  "src/lib/aiUsageProviderMetrics.mjs",
+  "totalTokens !== inputTokens + outputTokens",
+  "Provider-Tokenwerte müssen vollständig und in sich konsistent validiert werden.",
+);
+requireText(
+  "src/lib/aiUsage.ts",
+  "normalizeOpenAiResponseUsage(input.providerUsage)",
+  "Das Usage-Log muss vollständige Provider-Tokenwerte vor der Schätzung bevorzugen.",
+);
+requireText(
+  "src/app/api/ai/reply-suggestions/route.ts",
+  "providerUsage: responseBody?.usage",
+  "Antwortvorschläge müssen die OpenAI-Responses-Usage an das Usage-Log weiterreichen.",
+);
+requireText(
+  "src/app/fans/[id]/analysisActions.ts",
+  "providerUsage: responseBody?.usage",
+  "Die Kommunikationsanalyse muss die OpenAI-Responses-Usage an das Usage-Log weiterreichen.",
+);
+requireText(
+  "tests/ai-usage-policy.test.mjs",
+  "productive Responses paths forward provider usage and retain the estimate fallback",
+  "Provider-Tokenübernahme und Schätz-Fallback müssen automatisiert geprüft werden.",
 );
 requireText(
   "src/config/aiTierRecommendation.mjs",

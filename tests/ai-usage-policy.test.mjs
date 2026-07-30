@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { normalizeOpenAiResponseUsage } from "../src/lib/aiUsageProviderMetrics.mjs";
 import {
   calculateAiUsageIndicator,
   normalizeAiUsageThreshold,
@@ -70,4 +72,80 @@ test("one configured threshold is sufficient and negative usage is normalized", 
   assert.equal(tokenOnly.usagePercent, 80);
   assert.equal(tokenOnly.requestWarning, null);
   assert.equal(tokenOnly.tokenWarning, 100_000);
+});
+
+test("normalizes complete OpenAI Responses token usage", () => {
+  assert.deepEqual(
+    normalizeOpenAiResponseUsage({
+      input_tokens: 123,
+      output_tokens: 45,
+      total_tokens: 168,
+      input_tokens_details: { cached_tokens: 20 },
+    }),
+    {
+      inputTokens: 123,
+      outputTokens: 45,
+      totalTokens: 168,
+    },
+  );
+
+  assert.deepEqual(
+    normalizeOpenAiResponseUsage({
+      input_tokens: 0,
+      output_tokens: 0,
+      total_tokens: 0,
+    }),
+    {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    },
+  );
+});
+
+test("rejects missing, malformed or inconsistent provider usage", () => {
+  const invalidValues = [
+    null,
+    [],
+    {},
+    { input_tokens: 10, output_tokens: 2 },
+    { input_tokens: -1, output_tokens: 2, total_tokens: 1 },
+    { input_tokens: 1.5, output_tokens: 2, total_tokens: 3.5 },
+    { input_tokens: "1", output_tokens: 2, total_tokens: 3 },
+    { input_tokens: 1, output_tokens: 2, total_tokens: 4 },
+    {
+      input_tokens: Number.MAX_SAFE_INTEGER + 1,
+      output_tokens: 0,
+      total_tokens: Number.MAX_SAFE_INTEGER + 1,
+    },
+  ];
+
+  for (const value of invalidValues) {
+    assert.equal(normalizeOpenAiResponseUsage(value), null);
+  }
+});
+
+test("productive Responses paths forward provider usage and retain the estimate fallback", async () => {
+  const [usageRecorder, replyRoute, analysisAction] = await Promise.all([
+    readFile("src/lib/aiUsage.ts", "utf8"),
+    readFile("src/app/api/ai/reply-suggestions/route.ts", "utf8"),
+    readFile("src/app/fans/[id]/analysisActions.ts", "utf8"),
+  ]);
+
+  assert.match(usageRecorder, /normalizeOpenAiResponseUsage\(input\.providerUsage\)/u);
+  assert.match(
+    usageRecorder,
+    /providerUsage\?\.inputTokens \?\? estimateTokensFromChars\(inputChars\)/u,
+  );
+  assert.match(
+    usageRecorder,
+    /providerUsage\?\.outputTokens \?\? estimateTokensFromChars\(outputChars\)/u,
+  );
+  assert.ok(
+    (replyRoute.match(/providerUsage: responseBody\?\.usage/gu) ?? []).length >= 3,
+  );
+  assert.ok(
+    (analysisAction.match(/providerUsage: responseBody\?\.usage/gu) ?? [])
+      .length >= 2,
+  );
 });
