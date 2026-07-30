@@ -1,0 +1,81 @@
+name: FanMind Read-only Production Audit
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy FanMind
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type run-read-only-production-audit'
+        required: true
+        type: string
+      expected_commit:
+        description: 'Exact 40-character main commit expected on Production'
+        required: true
+        type: string
+  schedule:
+    - cron: '17 4 * * *'
+
+concurrency:
+  group: fanmind-production-readonly-audit
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Verify installed Production runtime without writes
+    if: >-
+      ${{
+        github.event_name == 'schedule' ||
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main'
+        ) ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref == 'refs/heads/main' &&
+          inputs.confirmation == 'run-read-only-production-audit'
+        )
+      }}
+    runs-on: [self-hosted, fanmind-prod, exoscale, linux, x64]
+    environment: production
+    timeout-minutes: 15
+    env:
+      EXPECTED_COMMIT: >-
+        ${{
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.head_sha ||
+          github.event_name == 'workflow_dispatch' &&
+          inputs.expected_commit ||
+          github.sha
+        }}
+
+    steps:
+      - name: Run installed root-owned audit and verify redacted result
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Expected Production commit is invalid." >&2
+            exit 1
+          fi
+
+          test -x /usr/local/lib/fanmind-ops/read-only-production-audit.sh
+          test -r /usr/local/lib/fanmind-ops/verify-production-audit-output.mjs
+
+          AUDIT_OUTPUT="$(mktemp "$RUNNER_TEMP/fanmind-production-audit.XXXXXX")"
+          trap 'rm -f "$AUDIT_OUTPUT"' EXIT
+
+          /usr/local/lib/fanmind-ops/read-only-production-audit.sh \
+            > "$AUDIT_OUTPUT"
+          node \
+            /usr/local/lib/fanmind-ops/verify-production-audit-output.mjs \
+            "$AUDIT_OUTPUT" \
+            "$EXPECTED_COMMIT"
