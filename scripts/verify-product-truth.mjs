@@ -640,9 +640,34 @@ requireText(
   "README muss die Einstellung des entgeltlichen Pilot-Checkouts dokumentieren.",
 );
 requireText(
+  "README.md",
+  "scripts/operations/deploy-isolated-release.sh",
+  "README muss den aktiven isolierten Production-Release-Pfad dokumentieren.",
+);
+requireText(
+  "README.md",
+  "/var/www/fanmind-current",
+  "README muss den stabilen atomaren Production-Release-Symlink dokumentieren.",
+);
+requireText(
+  "README.md",
+  "FanMind Production Read-only Audit",
+  "README muss den dauerhaften read-only Production-Audit dokumentieren.",
+);
+forbidIn(
+  "README.md",
+  /git reset --hard origin\/main|pm2 (?:restart|delete) fanmind/iu,
+  "README darf den alten In-Place-Deploy nicht als aktuellen Production-Ablauf anleiten.",
+);
+requireText(
   "docs/SOURCE_OF_TRUTH.md",
   "Öffentliche Demo | aktiv | kostenloser temporärer Demo-Zugang; kein entgeltliches Paket",
   "Die Source of Truth muss die kostenlose Demo statt eines Pilot-Pakets dokumentieren.",
+);
+requireText(
+  "docs/SOURCE_OF_TRUTH.md",
+  "Production-Audit: Ein dauerhaft installierter, commitgebundener und",
+  "Die Source of Truth muss den automatisierten Production-Audit dokumentieren.",
 );
 
 // KI-Nutzungsanzeige.
