@@ -33,6 +33,7 @@ curl -fsSL --max-time 15 "$PUBLIC_BASE_URL/api/version" | node -e '
     const payload = JSON.parse(input);
     console.log(`LIVE_RELEASE=${payload.releaseCommit || "missing"}`);
     console.log(`LIVE_ENVIRONMENT=${payload.environment || "missing"}`);
+    console.log(`LIVE_RUNTIME_ENVIRONMENT=${payload.runtimeEnvironment || "missing"}`);
   });
 '
 

@@ -121,6 +121,9 @@ jobs:
           sudo install -o root -g root -m 0750 scripts/operations/backup-retention.mjs /usr/local/lib/fanmind-ops/backup-retention.mjs
           sudo install -o root -g root -m 0750 scripts/operations/offsite-backup-retention-plan.mjs /usr/local/lib/fanmind-ops/offsite-backup-retention-plan.mjs
           sudo install -o root -g root -m 0750 scripts/operations/verify-backup-artifact.mjs /usr/local/lib/fanmind-ops/verify-backup-artifact.mjs
+          sudo install -o root -g root -m 0755 scripts/operations/read-only-production-audit.sh /usr/local/lib/fanmind-ops/read-only-production-audit.sh
+          sudo install -o root -g root -m 0755 scripts/operations/verify-production-audit-output.mjs /usr/local/lib/fanmind-ops/verify-production-audit-output.mjs
+          sudo install -o root -g root -m 0644 scripts/public-health-policy.mjs /usr/local/lib/public-health-policy.mjs
           sudo install -o root -g root -m 0750 scripts/operations/operations-monitor.mjs /usr/local/lib/fanmind-ops/operations-monitor.mjs
           sudo install -o root -g root -m 0750 scripts/operations/run-demo-cleanup.mjs /usr/local/lib/fanmind-ops/run-demo-cleanup.mjs
           sudo install -o root -g root -m 0750 scripts/operations/webhook-diagnostic-retention.mjs /usr/local/lib/fanmind-ops/webhook-diagnostic-retention.mjs

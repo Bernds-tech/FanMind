@@ -12,6 +12,7 @@ Der Audit gibt ausschließlich die folgenden Kategorien aus:
 
 - Zeitpunkt und sichere Runtime-Versionen;
 - Server-HEAD, `origin/main`, öffentlicher Release-Commit und Environment;
+- explizite öffentliche Runtime-Umgebung aus `/api/version`;
 - öffentlicher Health-Gesamtstatus und veröffentlichte Komponentenstatus;
 - ausgewählte PM2-Metadaten: Status, Restart-Zähler, instabile Restarts, Uptime, CWD, Ausführungsmodus und Memory;
 - Ergebnis von `nginx -t`;
@@ -136,6 +137,38 @@ Ein `REBOOT_REQUIRED=true` ist kein automatischer Neustartauftrag. Der Neustart 
 ## GitHub-Actions-Sicherheitsregel
 
 Production-nahe Self-Hosted Runner dürfen nicht dauerhaft beliebigen Pull-Request-Code ausführen. Ein temporärer Audit-Workflow darf deshalb nur auf einem vertrauenswürdigen internen Branch verwendet und muss vor dem Merge entfernt werden. Dauerhafte Automation muss ausschließlich Code aus dem geschützten `main`-Stand ausführen oder einen bereits auf dem Server installierten, root-eigenen Audit verwenden.
+
+Der dauerhafte Workflow `.github/workflows/production-readonly-audit.yml` folgt
+der zweiten Variante:
+
+- der normale Production-Deploy installiert Audit, Ergebnis-Verifier und die
+  gemeinsame Public-Health-Policy root-owned unter `/usr/local/lib`;
+- der Audit-Workflow checkt keinen Repository-Code aus und führt ausschließlich
+  diese installierte Version aus;
+- nach einem erfolgreichen `Deploy FanMind` wird der exakt deployte Commit
+  automatisch geprüft;
+- ein täglicher Lauf um 04:17 UTC vergleicht Production mit dem dann aktuellen
+  `main`-Commit und schafft ein weiteres stabiles Zeitfenster;
+- ein manueller Lauf ist ausschließlich auf `main` mit
+  `run-read-only-production-audit` und einem exakten 40-stelligen erwarteten
+  Commit möglich;
+- Rohdaten bleiben in einer temporären Runner-Datei und werden nach dem Lauf
+  gelöscht. Es wird kein Audit-Artefakt hochgeladen;
+- nur die redigierte, maschinengeprüfte Zusammenfassung erscheint im
+  Workflow-Log.
+
+Der fail-closed Ergebnis-Verifier kann außerhalb des Workflows so verwendet
+werden:
+
+```bash
+npm run production:audit:verify -- \
+  /sicherer/pfad/audit-output.txt \
+  <erwarteter-40-stelliger-main-commit>
+```
+
+Er lehnt unter anderem Commit- oder Runtime-Drift, ungesunde Pflichtkomponenten,
+PM2-/nginx-Fehler, veraltete oder verwaiste Backup-Paare, Offsite-Abweichungen
+und Backup-Worker-Fehler im 24-Stunden-Fenster ab.
 
 ## Dokumentation eines Laufs
 
