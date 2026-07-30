@@ -34,6 +34,8 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Admin-Kostenvergleich: Die KI-Verbrauchsansicht zählt Kontakte/Fans je
   Workspace exakt und zeigt die geschätzten Kosten pro Fan sowie pro
   100/1.000 Fans; fehlende oder leere Fan-Basen bleiben ohne Scheinwert.
+  Validierte Schnellansichten decken 24 Stunden sowie 7, 30 und 90 Tage ab;
+  die Modellverteilung zeigt Anfragen, geschätzte Kosten, Tokens und Fehler.
 - Serverseitiger Entitlement-Vertrag: fehlende, unbekannte, client-kontrollierte, pausierte, nicht gestartete, abgelaufene oder unvollständig freigegebene Plus-/Ultra-Zustände fallen immer auf KI Standard zurück.
 - Persistenter Entitlement-Speicher: server-only Tabelle und redigierender Loader sind als deploy-before-migrate-Brücke vorbereitet; Migration, Stripe-Lifecycle und produktive KI-Verdrahtung sind noch nicht freigegeben, daher bleiben Plus/Ultra blockiert.
 - Kontrollierter Entitlement-Migrationspfad: `npm run db:ai-tier-entitlements:check` prüft die festgeschriebene Migration offline; `verify` und `apply` sind explizit zielgebunden und führen niemals automatisch durch einen Web-Deploy aus. Der manuelle, ausschließlich auf `main` und das GitHub-Environment `staging` begrenzte Workflow `FanMind AI Tier Staging Migration` bereitet den echten Staging-Apply samt Postflight vor.

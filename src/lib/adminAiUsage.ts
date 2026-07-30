@@ -3,6 +3,7 @@ import {
   calculateAiCostPerContactMetrics,
   parsePostgrestExactCount,
 } from "@/lib/aiUsageCostMetrics.mjs";
+import { aggregateAiUsageByModel } from "@/lib/aiUsageDashboardMetrics.mjs";
 
 export type AdminAiUsageEvent = {
   id: string;
@@ -47,6 +48,7 @@ export type AdminAiUsageSummary = {
   currency: string;
   byWorkspace: AdminAiUsageWorkspaceSummary[];
   byFeature: Array<{ feature: string; requests: number; estimatedCostCents: number; errorRequests: number }>;
+  byModel: Array<{ model: string; requests: number; estimatedCostCents: number; inputTokens: number; outputTokens: number; errorRequests: number }>;
   recentEvents: AdminAiUsageEvent[];
 };
 
@@ -155,6 +157,6 @@ export async function getAdminAiUsageSummary(days = 30): Promise<{ summary: Admi
       };
     });
 
-    return { summary: { totalRequests: events.length, totalEstimatedCostCents: events.reduce((sum, event) => sum + Number(event.estimated_cost_cents ?? 0), 0), totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? "USD", byWorkspace: workspaceSummaries.sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), recentEvents: events.slice(0, 25) }, error: null };
+    return { summary: { totalRequests: events.length, totalEstimatedCostCents: events.reduce((sum, event) => sum + Number(event.estimated_cost_cents ?? 0), 0), totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? "USD", byWorkspace: workspaceSummaries.sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byModel: aggregateAiUsageByModel(events), recentEvents: events.slice(0, 25) }, error: null };
   } catch (error) { return { summary: null, error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
 }

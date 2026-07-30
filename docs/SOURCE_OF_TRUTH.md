@@ -218,6 +218,9 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   PostgREST-Count-Header, unabhängig von Zeilen-Pagination, und zeigt
   geschätzte Kosten pro Fan sowie pro 100/1.000 Fans. Ohne positive Fan-Basis
   bleibt die Verhältnisanzeige leer statt eine scheinpräzise Zahl zu erfinden.
+  Der Zeitraum ist auf validierte Schnellansichten für 24 Stunden sowie 7, 30
+  und 90 Tage begrenzt; zusätzlich werden Anfragen, geschätzte Kosten, Tokens
+  und Fehler je verwendetem Modell aggregiert.
 - Der gemeinsame serverseitige Entitlement-Resolver in `src/config/aiTiers.mjs`
   behandelt KI Standard als sicheren Default. Plus/Ultra werden nur bei
   serververwaltetem, aktivem Stripe-Lifecycle, verknüpftem Subscription-Item,

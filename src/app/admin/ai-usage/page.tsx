@@ -1,5 +1,9 @@
 import { requirePlatformAdmin } from "@/lib/admin";
 import { getAdminAiUsageSummary } from "@/lib/adminAiUsage";
+import {
+  ADMIN_AI_USAGE_DAY_RANGES,
+  normalizeAdminAiUsageDays,
+} from "@/lib/aiUsageDashboardMetrics.mjs";
 import { AdminBillingShell } from "../billing/AdminBillingShell";
 import { AdminTabs } from "../billing/AdminTabs";
 import styles from "../billing/adminBilling.module.css";
@@ -12,18 +16,22 @@ function date(value: string) { return new Date(value).toLocaleString("de-DE"); }
 export default async function AdminAiUsagePage({ searchParams }: Props) {
   const user = await requirePlatformAdmin();
   const params = await searchParams;
-  const days = Number(params.days ?? 30) || 30;
+  const days = normalizeAdminAiUsageDays(params.days);
   const { summary, error } = await getAdminAiUsageSummary(days);
 
   return <AdminBillingShell user={user} title="KI-Verbrauch" subtitle="Workspace-, Feature- und Zeitraum-Auswertung ohne Prompt- oder Antwortvolltexte.">
     <div className={styles.adminStack}>
     <AdminTabs activeTab="ai-usage" />
     <section className={styles.hero}><span className={styles.eyebrow}>Admin · geschätzt</span><h1>KI-Verbrauch</h1><p>Workspace-, Feature- und Zeitraum-Auswertung. Alle Token- und Kostenwerte sind geschätzt, basieren auf Zeichenlänge und sind nicht abrechnungsgenau.</p></section>
+    <nav className={styles.sectionNav} aria-label="Auswertungszeitraum">
+      {ADMIN_AI_USAGE_DAY_RANGES.map((range) => <a key={range} href={`/admin/ai-usage?days=${range}`} className={range === days ? styles.buttonPrimary : styles.buttonSecondary} aria-current={range === days ? "page" : undefined}>{range === 1 ? "24 Stunden" : `${range} Tage`}</a>)}
+    </nav>
     {error ? <div className={styles.emptyState}>{error}</div> : null}
     {summary ? <>
-      <section className={styles.kpiGrid}><div className={styles.kpiCard}><span>Anfragen</span><strong>{summary.totalRequests}</strong><small>letzte {days} Tage</small></div><div className={styles.kpiCard}><span>Kosten geschätzt</span><strong>{money(summary.totalEstimatedCostCents, summary.currency)}</strong><small>serverseitig berechnet</small></div><div className={styles.kpiCard}><span>Tokens geschätzt</span><strong>{(summary.totalInputTokens + summary.totalOutputTokens).toLocaleString("de-DE")}</strong><small>Input + Output</small></div><div className={styles.kpiCard}><span>Fehler</span><strong>{summary.errorRequests}</strong><small>Status error</small></div></section>
+      <section className={styles.kpiGrid}><div className={styles.kpiCard}><span>Anfragen</span><strong>{summary.totalRequests}</strong><small>{days === 1 ? "letzte 24 Stunden" : `letzte ${days} Tage`}</small></div><div className={styles.kpiCard}><span>Kosten geschätzt</span><strong>{money(summary.totalEstimatedCostCents, summary.currency)}</strong><small>serverseitig berechnet</small></div><div className={styles.kpiCard}><span>Ø Kosten/Anfrage</span><strong>{summary.totalRequests ? money(summary.totalEstimatedCostCents / summary.totalRequests, summary.currency) : "—"}</strong><small>geschätzter Mittelwert</small></div><div className={styles.kpiCard}><span>Tokens geschätzt</span><strong>{(summary.totalInputTokens + summary.totalOutputTokens).toLocaleString("de-DE")}</strong><small>Input + Output</small></div><div className={styles.kpiCard}><span>Fehler</span><strong>{summary.errorRequests}</strong><small>Status error</small></div></section>
       <section className={styles.dashboardBottomGrid}><article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Workspaces</span><h2>Verbrauch pro Workspace</h2></div></div><div className={styles.compactTable}><div className={styles.compactTableHead}><span>Workspace</span><span>Anfragen</span><span>Kosten geschätzt</span><span>Tokens</span><span>Kosten/Fan</span></div>{summary.byWorkspace.map((row) => <div className={styles.compactTableRow} key={row.workspaceId}><span title={row.workspaceId}><strong>{row.workspaceName}</strong><small>{row.contactCount === null ? "Kontakte nicht verfügbar" : `${row.contactCount.toLocaleString("de-DE")} Kontakte/Fans`}</small></span><span>{row.requests}</span><span>{money(row.estimatedCostCents, summary.currency)}</span><span>{(row.inputTokens + row.outputTokens).toLocaleString("de-DE")}</span><span>{row.estimatedCostPerFanCents === null ? "—" : money(row.estimatedCostPerFanCents, summary.currency)}<small>{row.estimatedCostPerHundredFansCents === null || row.estimatedCostPerThousandFansCents === null ? "keine Fan-Basis" : `${money(row.estimatedCostPerHundredFansCents, summary.currency)} /100 Fans · ${money(row.estimatedCostPerThousandFansCents, summary.currency)} /1.000 Fans`}</small></span></div>)}</div></article>
       <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Features</span><h2>Verbrauch pro Feature</h2></div></div><div className={styles.compactTable}><div className={styles.compactTableHead}><span>Feature</span><span>Anfragen</span><span>Kosten geschätzt</span><span>Fehler</span></div>{summary.byFeature.map((row) => <div className={styles.compactTableRow} key={row.feature}><span>{row.feature}</span><span>{row.requests}</span><span>{money(row.estimatedCostCents, summary.currency)}</span><span>{row.errorRequests}</span></div>)}</div></article></section>
+      <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Modelle</span><h2>Verbrauch pro Modell</h2></div></div><div className={styles.compactTable}><div className={styles.compactTableHead}><span>Modell</span><span>Anfragen</span><span>Kosten geschätzt</span><span>Tokens</span><span>Fehler</span></div>{summary.byModel.map((row) => <div className={styles.compactTableRow} key={row.model}><span><strong>{row.model}</strong></span><span>{row.requests}</span><span>{money(row.estimatedCostCents, summary.currency)}</span><span>{(row.inputTokens + row.outputTokens).toLocaleString("de-DE")}<small>{row.inputTokens.toLocaleString("de-DE")} Input · {row.outputTokens.toLocaleString("de-DE")} Output</small></span><span>{row.errorRequests}</span></div>)}</div></article>
       <article className={styles.card}><div className={styles.cardHeader}><div><span className={styles.eyebrow}>Letzte Events</span><h2>Keine Prompt- oder Antwortvolltexte gespeichert</h2></div></div><div className={styles.compactTable}><div className={styles.compactTableHead}><span>Zeit</span><span>Workspace</span><span>Feature</span><span>Status</span><span>Latenz</span></div>{summary.recentEvents.map((event) => <div className={styles.compactTableRow} key={event.id}><span>{date(event.created_at)}</span><span>{event.workspace_id}</span><span>{event.feature}<small>{event.model}</small></span><span>{event.status}{event.error_code ? ` · ${event.error_code}` : ""}</span><span>{event.latency_ms ?? "—"} ms</span></div>)}</div></article>
     </> : null}
     </div>

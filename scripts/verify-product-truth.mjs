@@ -51,6 +51,7 @@ const checkedFiles = [
   "src/lib/referralPolicy.mjs",
   "src/lib/aiUsagePolicy.mjs",
   "src/lib/aiUsageCostMetrics.mjs",
+  "src/lib/aiUsageDashboardMetrics.mjs",
   "src/lib/adminAiUsage.ts",
   "src/app/admin/ai-usage/page.tsx",
   "src/lib/demoTurnstilePolicy.mjs",
@@ -88,6 +89,7 @@ const checkedFiles = [
   "tests/referral-policy.test.mjs",
   "tests/ai-usage-policy.test.mjs",
   "tests/ai-usage-cost-metrics.test.mjs",
+  "tests/ai-usage-dashboard-metrics.test.mjs",
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
   "docs/LEGAL_COMPLETION_STATUS.md",
@@ -361,6 +363,26 @@ requireText(
   "tests/ai-usage-cost-metrics.test.mjs",
   "without inventing zero-contact values",
   "Fehlende oder leere Fan-Basen dürfen keine scheinpräzisen Kostenverhältnisse erzeugen.",
+);
+requireText(
+  "src/lib/aiUsageDashboardMetrics.mjs",
+  "ADMIN_AI_USAGE_DAY_RANGES",
+  "Die Admin-KI-Auswertung muss feste, validierte Schnellzeiträume verwenden.",
+);
+requireText(
+  "src/lib/adminAiUsage.ts",
+  "aggregateAiUsageByModel",
+  "Die Admin-KI-Auswertung muss Usage je Modell serverseitig aggregieren.",
+);
+requireText(
+  "src/app/admin/ai-usage/page.tsx",
+  "Verbrauch pro Modell",
+  "Die Admin-KI-Auswertung muss die Modellverteilung sichtbar machen.",
+);
+requireText(
+  "tests/ai-usage-dashboard-metrics.test.mjs",
+  "accepts only the documented quick ranges",
+  "Schnellzeiträume und Modellverteilung müssen automatisiert geprüft werden.",
 );
 requireText(
   "src/config/aiTierRecommendation.mjs",
