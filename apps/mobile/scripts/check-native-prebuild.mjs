@@ -428,6 +428,18 @@ try {
     access(
       join(
         generatedProject,
+        "android",
+        "app",
+        "src",
+        "main",
+        "res",
+        "drawable-xxxhdpi",
+        "notification_icon.png",
+      ),
+    ),
+    access(
+      join(
+        generatedProject,
         "ios",
         "FanMind",
         "Images.xcassets",

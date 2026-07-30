@@ -73,6 +73,15 @@ jobs:
           fi
 
           git reset --hard "$EXPECTED_RELEASE_COMMIT"
+          git clean -fdx -e .env.production
+          if [ "$(git rev-parse HEAD)" != "$EXPECTED_RELEASE_COMMIT" ]; then
+            echo "Staging checkout does not match the triggering commit." >&2
+            exit 1
+          fi
+          if ! git diff --quiet -- || ! git diff --cached --quiet --; then
+            echo "Staging tracked tree is not clean after synchronization." >&2
+            exit 1
+          fi
 
           set -a
           # The staging host deliberately uses Next.js production mode with
@@ -85,10 +94,32 @@ jobs:
           npm run verify:truth
           npm run lint
           npm run test:operations
-          npm run build
+          NEXT_DEPLOYMENT_ID="$EXPECTED_RELEASE_COMMIT" npm run build
+
+          FANMIND_REQUIRED_DEPLOYMENT_ID="$EXPECTED_RELEASE_COMMIT" \
+            node -e '
+              const fs = require("node:fs");
+              let payload;
+              try {
+                payload = JSON.parse(
+                  fs.readFileSync(".next/required-server-files.json", "utf8"),
+                );
+              } catch {
+                process.exit(1);
+              }
+              process.exit(
+                payload?.config?.deploymentId
+                  === process.env.FANMIND_REQUIRED_DEPLOYMENT_ID
+                  ? 0
+                  : 1,
+              );
+            '
 
           pm2 delete fanmind-staging >/dev/null 2>&1 || true
-          FANMIND_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT"             FANMIND_RUNTIME_ENVIRONMENT=staging             NODE_ENV=production             pm2 start npm --name fanmind-staging --cwd "$SOURCE_DIR" -- start
+          FANMIND_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT" \
+            FANMIND_RUNTIME_ENVIRONMENT=staging \
+            NODE_ENV=production \
+            pm2 start npm --name fanmind-staging --cwd "$SOURCE_DIR" -- start
           pm2 save
           sudo nginx -t
 
@@ -104,7 +135,10 @@ jobs:
             sleep 3
           done
 
-          FANMIND_SMOKE_BASE_URL="$STAGING_BASE_URL"             FANMIND_EXPECTED_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT"             FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=staging             npm run smoke:public
+          FANMIND_SMOKE_BASE_URL="$STAGING_BASE_URL" \
+            FANMIND_EXPECTED_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT" \
+            FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=staging \
+            npm run smoke:public
 
           if [ "$(git rev-parse HEAD)" != "$EXPECTED_RELEASE_COMMIT" ]; then
             echo "Staging checkout is not synchronized after deployment." >&2

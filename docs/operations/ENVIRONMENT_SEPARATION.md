@@ -165,7 +165,16 @@ Erlaubt:
 
 ## Deployment-Grenze
 
-Der manuelle Staging-Deploy liegt in `.github/workflows/deploy-staging.yml`. Er läuft ausschließlich auf einem separat mit `fanmind-staging` gekennzeichneten Self-Hosted Runner, verwendet `/var/www/fanmind-staging/.env.production` mit ausschließlich Staging-Werten und darf niemals auf dem Production-Runner oder im Production-Pfad laufen. Er akzeptiert nur einen exakten, von `origin/main` erreichbaren Commit und führt vor dem separaten PM2-Start den Staging-Preflight aus.
+Der manuelle Staging-Deploy liegt in `.github/workflows/deploy-staging.yml`. Er
+läuft ausschließlich auf einem separat mit `fanmind-staging` gekennzeichneten
+Self-Hosted Runner, verwendet
+`/var/www/fanmind-staging/.env.production` mit ausschließlich Staging-Werten
+und darf niemals auf dem Production-Runner oder im Production-Pfad laufen. Er
+deployt den unveränderlichen Commit, der den Workflow ausgelöst hat, sofern er
+von `origin/main` erreichbar ist. Vor Installation und Build entfernt er alte
+ignorierte oder unversionierte Build-Dateien mit Ausnahme der geschützten
+`.env.production`, bindet den Next.js Deployment-Identifier an diesen Commit
+und führt vor dem separaten PM2-Start den Staging-Preflight aus.
 
 Der bestehende Production-Deploy darf niemals setzen:
 

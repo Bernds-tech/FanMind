@@ -19,10 +19,20 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.match(workflow, /- fanmind-staging/);
   assert.match(workflow, /SOURCE_DIR="\/var\/www\/fanmind-staging"/);
   assert.match(workflow, /ENV_FILE="\$SOURCE_DIR\/\.env\.production"/);
+  assert.match(workflow, /EXPECTED_RELEASE_COMMIT: \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /\[ -L "\$ENV_FILE" \]/);
   assert.match(workflow, /stat -c '%a'.*!= "600"/);
   assert.match(workflow, /git merge-base --is-ancestor "\$EXPECTED_RELEASE_COMMIT" origin\/main/);
   assert.match(workflow, /git reset --hard "\$EXPECTED_RELEASE_COMMIT"/);
+  assert.match(workflow, /git clean -fdx -e \.env\.production/);
+  assert.match(
+    workflow,
+    /NEXT_DEPLOYMENT_ID="\$EXPECTED_RELEASE_COMMIT" npm run build/u,
+  );
+  assert.match(
+    workflow,
+    /payload\?\.config\?\.deploymentId[\s\S]*FANMIND_REQUIRED_DEPLOYMENT_ID/u,
+  );
   assert.match(workflow, /npm run staging:preflight/);
   assert.match(workflow, /npm run verify:truth/);
   assert.match(workflow, /npm run test:operations/);
@@ -34,6 +44,7 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.doesNotMatch(workflow, /--name fanmind(?:\s|")/);
   assert.doesNotMatch(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES=true/);
   assert.doesNotMatch(workflow, /https:\/\/fanmind\.ch/);
+  assert.doesNotMatch(workflow, /git reset --hard origin\/main/);
 });
 
 test("staging documentation keeps external provisioning and deployment boundaries honest", async () => {

@@ -25,11 +25,25 @@ jobs:
 
     steps:
       - name: Deploy on fanmind-prod-01
+        env:
+          EXPECTED_RELEASE_COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
 
           SOURCE_DIR="/var/www/fanmind"
           cd "$SOURCE_DIR"
+
+          if [[ ! "$EXPECTED_RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid triggering release commit." >&2
+            exit 1
+          fi
+          case "$(git remote get-url origin)" in
+            git@github.com:Bernds-tech/FanMind.git|https://github.com/Bernds-tech/FanMind.git) ;;
+            *)
+              echo "Unexpected Production repository origin." >&2
+              exit 1
+              ;;
+          esac
 
           # Seed the approved pre-sales beta once. The admin switch owns the
           # value afterwards, so deploys never overwrite an explicit admin choice.
@@ -41,14 +55,17 @@ jobs:
             mv "$RUNTIME_SETTINGS_TMP" "$RUNTIME_SETTINGS_FILE"
           fi
 
-          echo "Deploying FanMind from origin/main on Exoscale..."
+          echo "Deploying the exact triggering FanMind commit on Exoscale..."
           git fetch --prune origin main
 
-          RELEASE_COMMIT="$(git rev-parse origin/main)"
-          if [[ ! "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Invalid release commit from origin/main." >&2
+          if ! git cat-file -e "$EXPECTED_RELEASE_COMMIT^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$EXPECTED_RELEASE_COMMIT"
+          fi
+          if ! git merge-base --is-ancestor "$EXPECTED_RELEASE_COMMIT" origin/main; then
+            echo "Production accepts only the triggering commit when it is reachable from origin/main." >&2
             exit 1
           fi
+          RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT"
           export FANMIND_RELEASE_COMMIT="$RELEASE_COMMIT"
 
           ISOLATED_DEPLOY_ENABLED="false"
@@ -68,7 +85,7 @@ jobs:
             trap - EXIT
           else
             echo "Using legacy in-place deployment because isolated release deployment is disabled."
-            git reset --hard origin/main
+            git reset --hard "$RELEASE_COMMIT"
 
             npm ci --no-audit --no-fund
             npm run verify:truth

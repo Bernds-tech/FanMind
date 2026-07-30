@@ -104,12 +104,20 @@ test('deployment workflow records a verified release only after either deploymen
     return index;
   };
 
-  const fetchIndex = indexOfRequired('git fetch --prune origin main');
-  const releaseCommitIndex = indexOfRequired('RELEASE_COMMIT="$(git rev-parse origin/main)"');
+  const expectedCommitIndex = indexOfRequired(
+    'EXPECTED_RELEASE_COMMIT: ${{ github.sha }}',
+  );
   const commitValidationIndex = indexOfRequired('^[0-9a-f]{40}$');
+  const fetchIndex = indexOfRequired('git fetch --prune origin main');
+  const ancestryIndex = indexOfRequired(
+    'git merge-base --is-ancestor "$EXPECTED_RELEASE_COMMIT" origin/main',
+  );
+  const releaseCommitIndex = indexOfRequired(
+    'RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT"',
+  );
   const isolatedGateIndex = indexOfRequired('ISOLATED_DEPLOY_ENABLED="false"');
   const isolatedDeployIndex = indexOfRequired('bash "$DEPLOY_SCRIPT" "$RELEASE_COMMIT"');
-  const resetIndex = indexOfRequired('git reset --hard origin/main');
+  const resetIndex = indexOfRequired('git reset --hard "$RELEASE_COMMIT"');
   const npmCiIndex = indexOfRequired('npm ci --no-audit --no-fund');
   const buildIndex = indexOfRequired('npm run build');
   const pm2StartIndex = indexOfRequired('pm2 start npm --name fanmind --cwd "$SOURCE_DIR" -- start');
@@ -124,9 +132,11 @@ test('deployment workflow records a verified release only after either deploymen
   const workerRestartIndex = indexOfRequired('sudo systemctl restart fanmind-backup-worker.service');
   const inactiveWorkerMessageIndex = indexOfRequired('Backup worker is not active; not starting it.');
 
-  assert.ok(fetchIndex < releaseCommitIndex, 'origin/main is fetched before the target commit is resolved');
-  assert.ok(releaseCommitIndex < commitValidationIndex, 'the target commit is validated before deployment selection');
-  assert.ok(commitValidationIndex < isolatedGateIndex, 'deployment mode is selected only after commit validation');
+  assert.ok(expectedCommitIndex < commitValidationIndex);
+  assert.ok(commitValidationIndex < fetchIndex);
+  assert.ok(fetchIndex < ancestryIndex);
+  assert.ok(ancestryIndex < releaseCommitIndex);
+  assert.ok(releaseCommitIndex < isolatedGateIndex, 'deployment mode is selected only after exact commit binding');
   assert.ok(isolatedGateIndex < isolatedDeployIndex, 'isolated deployment remains behind its explicit gate');
   assert.ok(isolatedGateIndex < resetIndex, 'legacy reset remains in the disabled branch');
   assert.ok(resetIndex < npmCiIndex);

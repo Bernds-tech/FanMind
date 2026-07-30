@@ -103,6 +103,27 @@ The tool:
 - validates the Production commit metadata;
 - removes temporary plaintext automatically.
 
+For a database restore drill, use a private operator-owned directory with no
+group or world permissions and opt in to both new outputs in the same
+verification:
+
+```bash
+node scripts/operations/verify-backup-artifact.mjs \
+  --artifact /secure/input/fanmind-full-<13-digit-timestamp>.tar.gz.age \
+  --identity /secure/keys/fanmind-backup.agekey \
+  --restore-dump-output /secure/work/verified-database.dump \
+  --restore-receipt-output /secure/evidence/full-backup-receipt.json \
+  --json
+```
+
+Both output paths must be absolute and absent. The verifier decrypts the
+database part selected by the validated central manifest, validates it with
+`pg_restore --list`, hashes the exact plaintext dump and publishes the dump
+plus receipt as new mode-`0600` files without overwriting. The receipt binds
+the exact outer artifact SHA-256, 40-character Production commit, encrypted
+database-part SHA-256 and plaintext database-dump SHA-256. If any validation
+or publication fails, no receipt is accepted.
+
 For a standalone database backup, content verification runs:
 
 ```text
@@ -169,7 +190,14 @@ inspection and cleanup evidence remain mandatory.
 - no DNS, webhook or application configuration pointing at Production;
 - written target identifier in the drill record.
 
-Decrypt the standalone database part into a protected temporary directory. Both the dump and passfile must be regular, non-symlink files owned by the operator with no group/world permissions. Use a dedicated TCP endpoint and an absolute path to the protected `PGPASSFILE`; do not put the database password in `PGPASSWORD`.
+Decrypt and verify the full backup on the isolated host. The content verifier
+must create a private full-backup receipt that binds the encrypted database
+part and the exact decrypted database dump by SHA-256. A free environment
+variable or a manually copied expected dump hash is not accepted. Both
+receipts, the dump and the passfile must be regular, non-symlink files owned by
+the operator with exact private permissions. Use a dedicated TCP endpoint and
+an absolute path to the protected `PGPASSFILE`; do not put the database
+password in `PGPASSWORD`.
 
 Set the actual libpq target and independently confirmed comparison metadata in the same protected shell:
 
@@ -192,6 +220,11 @@ export FANMIND_PRODUCTION_DB_USER=<production-comparison-user>
 
 export FANMIND_ENABLE_RESTORE_DRILL=true
 export FANMIND_RESTORE_TARGET_ACK=I_UNDERSTAND_EMPTY_DISPOSABLE_DATABASE_ONLY
+export FANMIND_RESTORE_DRILL_ID=2026-07-30-restore-001
+export FANMIND_RESTORE_DISPOSABLE_TARGET_ID=<new-random-uuid-v4>
+export FANMIND_RESTORE_PRODUCTION_COMMIT=<exact-40-character-source-commit>
+export FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH=<private-receipt-path>
+export FANMIND_RESTORE_RUNNER_RECEIPT_PATH=<new-private-output-path>
 unset PGPASSWORD PGHOSTADDR PGSERVICE PGSERVICEFILE
 
 npm run restore:preflight
@@ -224,7 +257,30 @@ npm run restore:database:drill -- \
   /secure/work/fanmind-database-<timestamp>.dump
 ```
 
-The runner opens the protected non-symlink dump and passfile once, verifies their ownership and permissions, and copies those open file objects into a new operator-private snapshot directory. The supplied paths are not reopened afterwards. It repeats the target preflight against the private passfile copy, rejects any non-canonical active target value and makes the four checked `PG*` values read-only inside its process. Before the write-mode call it validates the private dump snapshot with a target-free `pg_restore --list`; the restore then uses that exact same snapshot with `--single-transaction`. A failed archive check stops the runner before any write, and a restore error rolls back the single transaction. Host, port, user and database are supplied as explicit arguments while hidden libpq target overrides are removed. The runner accepts exactly one readable dump path and never derives the independent target confirmation from the active `PG*` values.
+The runner opens the protected non-symlink dump, full-backup receipt and
+passfile once, verifies their ownership and permissions, and copies the dump
+receipt and passfile file objects into a new operator-private snapshot
+directory. The supplied paths are not trusted again afterwards. It verifies
+that the private dump hash equals the hash bound into the full-backup receipt
+and that the receipt names the exact Production commit. A separately supplied
+free expected hash is forbidden.
+
+It repeats the target preflight against the private passfile copy, rejects any
+non-canonical active target value and makes the four checked `PG*` values
+read-only inside its process. Before the write-mode call it validates the
+private dump snapshot with a target-free `pg_restore --list` and queries the
+target with `psql` to prove that no non-system objects exist. A nonzero,
+ambiguous or unreadable result stops the runner before `pg_restore`.
+
+The restore then uses that exact same snapshot with
+`--single-transaction`. A failed archive check stops the runner before any
+write, and a restore error rolls back the single transaction. Host, port, user
+and database are supplied as explicit arguments while hidden libpq target
+overrides are removed. Only after the successful restore does the
+commit-bound runner create a new private, atomic runner receipt. It binds the
+drill ID, opaque disposable-target UUID, empty-target observation, exact
+full-backup receipt bytes, database hashes, timestamps and successful
+single-transaction result. A pre-existing output or symlink fails closed.
 
 The host policy canonicalizes literal IPv4 and IPv6 addresses and rejects legacy numeric IPv4 spellings. It does not perform DNS resolution. The recorded Production and isolated target identities must therefore use their real canonical endpoints, never aliases or CNAMEs; endpoint isolation remains an explicit operator precondition.
 
@@ -284,10 +340,14 @@ Do not paste or log their contents. Compare permissions and file presence agains
 
 ## 7. Evidence record
 
-Record the result as a protected JSON file and validate it before marking the drill complete:
+Record the result as a protected JSON file and validate it together with the
+exact two private receipts before marking the drill complete:
 
 ```bash
-npm run restore:evidence:verify -- --input /secure/evidence/fanmind-restore-drill.json
+npm run restore:evidence:verify -- \
+  --input /secure/evidence/fanmind-restore-drill.json \
+  --full-receipt /secure/evidence/full-backup-receipt.json \
+  --runner-receipt /secure/evidence/restore-runner-receipt.json
 ```
 
 Required final line:
@@ -296,11 +356,74 @@ Required final line:
 RESTORE_DRILL_EVIDENCE=PASS
 ```
 
-The record uses a fixed, fail-closed schema: UTC start/end time, `staging` or `test`, full-backup artifact basename, outer SHA-256, Production commit, a SHA-256 of the independently documented disposable target identity, explicit `passed` results for verifier, database restore, core schema checks, RLS, Storage sample, server-config inspection and cleanup, plus explicit `false` values for Production modification, customer-data export and secret recording. Passing evidence requires an empty issue-code list.
+Use this exact schema and replace only the bounded placeholder values:
 
-Store only `targetIdentitySha256`; record no raw target values. The evidence file contains keine Hostnamen, Datenbanknamen, Benutzernamen, Passwörter, Schlüssel, Kundendaten oder freie Notizfelder. The verifier accepts only the documented keys, reads one stable regular file, prints status codes only and never echoes record values.
+```json
+{
+  "schemaVersion": 4,
+  "drillId": "2026-07-30-restore-001",
+  "startedAt": "2026-07-30T08:00:00Z",
+  "completedAt": "2026-07-30T08:30:00Z",
+  "environment": "staging",
+  "sourceArtifactBasename": "fanmind-full-1785398400000.tar.gz.age",
+  "outerSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "productionCommit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "fullBackupReceiptSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "restoreRunnerReceiptSha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "databasePartEncryptedSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "databaseDumpSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "disposableTargetId": "123e4567-e89b-42d3-a456-426614174000",
+  "verifier": "passed",
+  "coreSchemaChecks": "passed",
+  "rlsVerification": "passed",
+  "storageSample": "passed",
+  "serverConfigInspection": "passed",
+  "cleanup": "passed",
+  "productionModified": false,
+  "customerDataRecordedInEvidence": false,
+  "secretsRecorded": false,
+  "issues": []
+}
+```
 
-Attach only the validated redacted evidence and bounded status output. Never attach decrypted files, credentials or `.env` values.
+The UTC timestamps must be real calendar instants, and the full-backup
+basename must use the worker's exact 13-digit millisecond format. Duplicate
+JSON member names are rejected before parsing. Calculate
+`fullBackupReceiptSha256` over the exact receipt bytes. Copy
+`databasePartEncryptedSha256` and `databaseDumpSha256` from that receipt.
+Calculate `restoreRunnerReceiptSha256` over the exact runner-receipt bytes.
+The verifier requires those hashes, `drillId`, `disposableTargetId` and the
+evidence timestamp envelope to match the runner receipt. It accepts database
+restore and empty-target success only from that machine-generated receipt;
+schema v3 and a `databaseRestore: "passed"`, das manuell behauptet wird, fail
+closed.
+
+Generate `disposableTargetId` as a new random UUID v4 for this drill. Keep the
+private mapping from that opaque ID to the actual disposable host/database in
+the protected operator record, never in the attachable evidence. A real
+Production backup necessarily transfers customer data into the controlled
+disposable restore target; the narrower
+`customerDataRecordedInEvidence: false` assertion means that none of those
+contents or identifiers were copied into the redacted evidence.
+
+The evidence file and both receipts contain keine Hostnamen, Datenbanknamen,
+Benutzernamen, Passwörter, Schlüssel, Kundendaten oder freie Notizfelder. The
+verifier accepts only the documented evidence and receipt keys, reads stable
+private regular files, binds the artifact basename, outer SHA-256, Production
+commit, database-part SHA-256, restored-dump SHA-256, empty-target observation
+and transactional restore result, prints status codes only and never echoes
+record values.
+
+On success the verifier also prints:
+
+```text
+RESTORE_EVIDENCE_SHA256=<sha256-of-the-exact-validated-json-bytes>
+```
+
+Immediately before attachment, calculate `sha256sum` over the exact file and
+require it to equal `RESTORE_EVIDENCE_SHA256`. Attach only those validated
+bytes, the matching digest and bounded status output. Never attach decrypted
+files, credentials or `.env` values.
 
 ## 8. Pass criteria
 

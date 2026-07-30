@@ -32,6 +32,34 @@ test("iOS privacy manifest config matches the installed native SDK reasons", asy
     NSPrivacyAccessedAPICategoryUserDefaults: ["CA92.1"],
   });
 });
+
+test("Android notification branding is white, transparent and channel-bound", async () => {
+  const [appConfigSource, iconSource, notificationSource] = await Promise.all([
+    read("apps/mobile/app.json"),
+    read("apps/mobile/assets/branding/fanmind-notification-icon-source.svg"),
+    read("apps/mobile/src/lib/pushNotifications.ts"),
+  ]);
+  const appConfig = JSON.parse(appConfigSource);
+  const notificationPlugin = appConfig.expo.plugins.find(
+    (plugin) => Array.isArray(plugin) && plugin[0] === "expo-notifications",
+  );
+
+  assert.ok(notificationPlugin);
+  assert.deepEqual(notificationPlugin[1], {
+    icon: "./assets/branding/fanmind-notification-icon.png",
+    color: "#149EF2",
+    defaultChannel: "followup-reminders",
+  });
+  assert.match(iconSource, /width="96" height="96" viewBox="0 0 96 96"/u);
+  assert.match(iconSource, /fill="#ffffff"/u);
+  assert.doesNotMatch(iconSource, /<rect|fill="#(?:0{6}|149EF2)"/u);
+  assert.match(
+    notificationSource,
+    /FOLLOWUP_NOTIFICATION_CHANNEL_ID = "followup-reminders"/u,
+  );
+  assert.match(notificationSource, /lightColor: "#149EF2"/u);
+});
+
 test("native prebuild enforces store API, privacy and least-permission boundaries", async () => {
   const [source, appConfigSource] = await Promise.all([
     read("apps/mobile/scripts/check-native-prebuild.mjs"),
