@@ -1,12 +1,20 @@
 #!/usr/bin/env node
 
-import { constants } from "node:fs";
-import { open } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import {
+  parseFullBackupRestoreReceipt,
+  readStablePrivateFile,
+  sha256Bytes,
+} from "./verify-full-backup-restore-receipt.mjs";
 
 const MAX_EVIDENCE_BYTES = 16 * 1024;
+const SHA256 = /^[0-9a-f]{64}$/u;
+const COMMIT = /^[0-9a-f]{40}$/u;
+const UUID_V4 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+const FULL_BACKUP_BASENAME = /^fanmind-full-\d{13}\.tar\.gz\.age$/u;
 const PASS_FIELDS = [
   "verifier",
-  "databaseRestore",
   "coreSchemaChecks",
   "rlsVerification",
   "storageSample",
@@ -15,10 +23,10 @@ const PASS_FIELDS = [
 ];
 const BOOLEAN_FALSE_FIELDS = [
   "productionModified",
-  "customerDataExported",
+  "customerDataRecordedInEvidence",
   "secretsRecorded",
 ];
-const REQUIRED_KEYS = [
+const EVIDENCE_KEYS = [
   "schemaVersion",
   "drillId",
   "startedAt",
@@ -27,157 +35,306 @@ const REQUIRED_KEYS = [
   "sourceArtifactBasename",
   "outerSha256",
   "productionCommit",
-  "targetIdentitySha256",
+  "fullBackupReceiptSha256",
+  "restoreRunnerReceiptSha256",
+  "databasePartEncryptedSha256",
+  "databaseDumpSha256",
+  "disposableTargetId",
   ...PASS_FIELDS,
   ...BOOLEAN_FALSE_FIELDS,
   "issues",
 ].sort();
+const RUNNER_KEYS = [
+  "schemaVersion",
+  "drillId",
+  "startedAt",
+  "completedAt",
+  "sourceArtifactBasename",
+  "outerSha256",
+  "productionCommit",
+  "fullBackupReceiptSha256",
+  "databasePartEncryptedSha256",
+  "databaseDumpSha256",
+  "disposableTargetId",
+  "emptyTargetObservedAt",
+  "emptyTargetObjectCount",
+  "databaseRestore",
+  "singleTransaction",
+].sort();
+
+function fixedError(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+}
+
+function fieldCode(field) {
+  return field.replace(/[A-Z]/gu, (letter) => `_${letter.toLowerCase()}`);
+}
 
 function fail(code) {
   console.error(`RESTORE_EVIDENCE_ERROR=${code}`);
 }
 
-function isPlainObject(value) {
-  return Boolean(value)
-    && typeof value === "object"
-    && !Array.isArray(value)
-    && Object.getPrototypeOf(value) === Object.prototype;
+function assertNoDuplicateMembers(text, label) {
+  const seen = new Set();
+  const member = /"((?:\\.|[^"\\])*)"\s*:/gu;
+  for (const match of text.matchAll(member)) {
+    let key;
+    try {
+      key = JSON.parse(`"${match[1]}"`);
+    } catch {
+      throw fixedError(`${label}_json_invalid`);
+    }
+    if (seen.has(key)) throw fixedError(`${label}_duplicate_member`);
+    seen.add(key);
+  }
+}
+
+function parseFlatRecord(bytes, label) {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    assertNoDuplicateMembers(text, label);
+    const value = JSON.parse(text);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw fixedError(`${label}_record_invalid`);
+    }
+    return value;
+  } catch (error) {
+    if (error?.code) throw error;
+    throw fixedError(`${label}_json_invalid`);
+  }
+}
+
+function exactKeys(record, expected, label) {
+  const keys = Object.keys(record).sort();
+  if (
+    keys.length !== expected.length ||
+    keys.some((key, index) => key !== expected[index])
+  ) {
+    throw fixedError(`${label}_keys_invalid`);
+  }
 }
 
 function isIsoUtc(value) {
-  return typeof value === "string"
-    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)
-    && Number.isFinite(Date.parse(value));
+  return (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/u.test(value) &&
+    Number.isFinite(Date.parse(value))
+  );
 }
 
-async function readStableEvidence(path) {
-  let handle;
-  try {
-    handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-  } catch (error) {
-    if (error?.code === "ELOOP") throw new Error("input_not_regular_file");
-    throw error;
-  }
-
-  try {
-    const opened = await handle.stat({ bigint: true });
-    if (!opened.isFile()) {
-      throw new Error("input_not_regular_file");
-    }
-    if ((opened.mode & 0o022n) !== 0n) {
-      throw new Error("input_permissions_too_open");
-    }
-    if (opened.size <= 0n || opened.size > BigInt(MAX_EVIDENCE_BYTES)) {
-      throw new Error("input_size_invalid");
-    }
-
-    const text = await handle.readFile("utf8");
-    const afterRead = await handle.stat({ bigint: true });
-    if (
-      afterRead.dev !== opened.dev
-      || afterRead.ino !== opened.ino
-      || afterRead.size !== opened.size
-      || afterRead.mtimeNs !== opened.mtimeNs
-      || afterRead.ctimeNs !== opened.ctimeNs
-      || BigInt(Buffer.byteLength(text, "utf8")) !== opened.size
-    ) {
-      throw new Error("input_changed_during_read");
-    }
-    return text;
-  } finally {
-    await handle.close();
-  }
-}
-
-const args = process.argv.slice(2);
-if (args.length !== 2 || args[0] !== "--input" || !args[1] || args[1].startsWith("-")) {
-  fail("usage_requires_single_input");
-  process.exit(1);
-}
-
-let payload;
-try {
-  payload = JSON.parse(await readStableEvidence(args[1]));
-} catch (error) {
-  const safeCode = error instanceof SyntaxError
-    ? "input_json_invalid"
-    : typeof error?.message === "string" && /^[a-z_]+$/.test(error.message)
-      ? error.message
-      : "input_read_failed";
-  fail(safeCode);
-  process.exit(1);
-}
-
-const errors = [];
-const addError = (code) => {
-  if (!errors.includes(code)) errors.push(code);
-};
-
-if (!isPlainObject(payload)) {
-  addError("record_must_be_object");
-} else {
-  const keys = Object.keys(payload).sort();
-  if (keys.length !== REQUIRED_KEYS.length || keys.some((key, index) => key !== REQUIRED_KEYS[index])) {
-    addError("record_keys_invalid");
-  }
-
-  if (payload.schemaVersion !== 1) addError("schema_version_invalid");
-  if (
-    typeof payload.drillId !== "string"
-    || !/^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]{0,47}$/.test(payload.drillId)
-  ) {
-    addError("drill_id_invalid");
-  }
-  if (!isIsoUtc(payload.startedAt) || !isIsoUtc(payload.completedAt)) {
-    addError("timestamps_invalid");
-  } else if (Date.parse(payload.completedAt) < Date.parse(payload.startedAt)) {
-    addError("timestamp_order_invalid");
-  }
-  if (!["staging", "test"].includes(payload.environment)) {
-    addError("environment_invalid");
+function parseRunnerReceipt(bytes) {
+  const receipt = parseFlatRecord(bytes, "runner_receipt");
+  exactKeys(receipt, RUNNER_KEYS, "runner_receipt");
+  if (receipt.schemaVersion !== 1) {
+    throw fixedError("runner_receipt_schema_invalid");
   }
   if (
-    typeof payload.sourceArtifactBasename !== "string"
-    || payload.sourceArtifactBasename.length > 160
-    || !/^fanmind-full-[a-zA-Z0-9._-]+\.tar\.gz\.age$/.test(payload.sourceArtifactBasename)
+    typeof receipt.drillId !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]{0,47}$/u.test(receipt.drillId)
   ) {
-    addError("artifact_basename_invalid");
+    throw fixedError("runner_receipt_drill_id_invalid");
   }
-
-  for (const field of ["outerSha256", "targetIdentitySha256"]) {
-    if (typeof payload[field] !== "string" || !/^[0-9a-f]{64}$/.test(payload[field])) {
-      addError(`${field}_invalid`);
+  for (const field of ["startedAt", "completedAt", "emptyTargetObservedAt"]) {
+    if (!isIsoUtc(receipt[field])) {
+      throw fixedError(`runner_receipt_${fieldCode(field)}_invalid`);
     }
   }
-  if (typeof payload.productionCommit !== "string" || !/^[0-9a-f]{40}$/.test(payload.productionCommit)) {
-    addError("production_commit_invalid");
+  if (
+    Date.parse(receipt.emptyTargetObservedAt) < Date.parse(receipt.startedAt) ||
+    Date.parse(receipt.completedAt) < Date.parse(receipt.emptyTargetObservedAt)
+  ) {
+    throw fixedError("runner_receipt_timestamp_order_invalid");
   }
+  if (!FULL_BACKUP_BASENAME.test(receipt.sourceArtifactBasename)) {
+    throw fixedError("runner_receipt_artifact_invalid");
+  }
+  if (!COMMIT.test(receipt.productionCommit)) {
+    throw fixedError("runner_receipt_commit_invalid");
+  }
+  for (const field of [
+    "outerSha256",
+    "fullBackupReceiptSha256",
+    "databasePartEncryptedSha256",
+    "databaseDumpSha256",
+  ]) {
+    if (!SHA256.test(receipt[field])) {
+      throw fixedError(`runner_receipt_${fieldCode(field)}_invalid`);
+    }
+  }
+  if (!UUID_V4.test(receipt.disposableTargetId)) {
+    throw fixedError("runner_receipt_target_id_invalid");
+  }
+  if (receipt.emptyTargetObjectCount !== 0) {
+    throw fixedError("runner_receipt_target_not_empty");
+  }
+  if (receipt.databaseRestore !== "passed") {
+    throw fixedError("runner_receipt_restore_not_passed");
+  }
+  if (receipt.singleTransaction !== true) {
+    throw fixedError("runner_receipt_transaction_invalid");
+  }
+  return receipt;
+}
 
+function validateEvidence(evidence) {
+  exactKeys(evidence, EVIDENCE_KEYS, "evidence");
+  if (evidence.schemaVersion !== 4) {
+    throw fixedError("evidence_schema_invalid");
+  }
+  if (
+    typeof evidence.drillId !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]{0,47}$/u.test(evidence.drillId)
+  ) {
+    throw fixedError("evidence_drill_id_invalid");
+  }
+  if (!isIsoUtc(evidence.startedAt) || !isIsoUtc(evidence.completedAt)) {
+    throw fixedError("evidence_timestamps_invalid");
+  }
+  if (Date.parse(evidence.completedAt) < Date.parse(evidence.startedAt)) {
+    throw fixedError("evidence_timestamp_order_invalid");
+  }
+  if (!["staging", "test"].includes(evidence.environment)) {
+    throw fixedError("evidence_environment_invalid");
+  }
+  if (!FULL_BACKUP_BASENAME.test(evidence.sourceArtifactBasename)) {
+    throw fixedError("evidence_artifact_invalid");
+  }
+  if (!COMMIT.test(evidence.productionCommit)) {
+    throw fixedError("evidence_commit_invalid");
+  }
+  for (const field of [
+    "outerSha256",
+    "fullBackupReceiptSha256",
+    "restoreRunnerReceiptSha256",
+    "databasePartEncryptedSha256",
+    "databaseDumpSha256",
+  ]) {
+    if (!SHA256.test(evidence[field])) {
+      throw fixedError(`evidence_${fieldCode(field)}_invalid`);
+    }
+  }
+  if (!UUID_V4.test(evidence.disposableTargetId)) {
+    throw fixedError("evidence_target_id_invalid");
+  }
   for (const field of PASS_FIELDS) {
-    if (payload[field] !== "passed") addError(`${field}_not_passed`);
+    if (evidence[field] !== "passed") {
+      throw fixedError(`evidence_${fieldCode(field)}_not_passed`);
+    }
   }
   for (const field of BOOLEAN_FALSE_FIELDS) {
-    if (payload[field] !== false) addError(`${field}_must_be_false`);
-  }
-
-  if (!Array.isArray(payload.issues)) {
-    addError("issues_invalid");
-  } else {
-    if (payload.issues.length !== 0) addError("issues_must_be_empty_for_pass");
-    if (payload.issues.some((item) => typeof item !== "string" || !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(item))) {
-      addError("issue_code_invalid");
+    if (evidence[field] !== false) {
+      throw fixedError(`evidence_${fieldCode(field)}_must_be_false`);
     }
   }
+  if (!Array.isArray(evidence.issues) || evidence.issues.length !== 0) {
+    throw fixedError("evidence_issues_invalid");
+  }
 }
 
-console.log(`RESTORE_EVIDENCE_SCHEMA=${errors.length ? "invalid" : "valid"}`);
-console.log(`RESTORE_EVIDENCE_SECRETS_RECORDED=${payload?.secretsRecorded === false ? "false" : "blocked"}`);
-console.log(`RESTORE_EVIDENCE_PRODUCTION_MODIFIED=${payload?.productionModified === false ? "false" : "blocked"}`);
+function bindReceipts(evidence, fullReceipt, fullDigest, runner, runnerDigest) {
+  const shared = [
+    "sourceArtifactBasename",
+    "outerSha256",
+    "productionCommit",
+    "databasePartEncryptedSha256",
+    "databaseDumpSha256",
+  ];
+  for (const field of shared) {
+    if (
+      evidence[field] !== fullReceipt[field] ||
+      evidence[field] !== runner[field]
+    ) {
+      throw fixedError(`receipt_binding_${fieldCode(field)}_mismatch`);
+    }
+  }
+  if (
+    evidence.fullBackupReceiptSha256 !== fullDigest ||
+    runner.fullBackupReceiptSha256 !== fullDigest
+  ) {
+    throw fixedError("full_receipt_sha_mismatch");
+  }
+  if (evidence.restoreRunnerReceiptSha256 !== runnerDigest) {
+    throw fixedError("runner_receipt_sha_mismatch");
+  }
+  if (
+    evidence.drillId !== runner.drillId ||
+    evidence.disposableTargetId !== runner.disposableTargetId
+  ) {
+    throw fixedError("runner_identity_binding_mismatch");
+  }
+  if (
+    Date.parse(evidence.startedAt) > Date.parse(runner.startedAt) ||
+    Date.parse(evidence.completedAt) < Date.parse(runner.completedAt)
+  ) {
+    throw fixedError("runner_timestamp_envelope_mismatch");
+  }
+}
 
-if (errors.length) {
-  for (const code of errors) fail(code);
+function parseArgs(argv) {
+  const args = {};
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (value === "--input") args.input = argv[++index];
+    else if (value === "--full-receipt") args.fullReceipt = argv[++index];
+    else if (value === "--runner-receipt") args.runnerReceipt = argv[++index];
+    else throw fixedError("usage_invalid");
+  }
+  if (
+    !args.input ||
+    !args.fullReceipt ||
+    !args.runnerReceipt ||
+    Object.values(args).some(
+      (value) => typeof value !== "string" || value.startsWith("-"),
+    )
+  ) {
+    throw fixedError("usage_invalid");
+  }
+  return args;
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const [evidenceBytes, fullBytes, runnerBytes] = await Promise.all([
+    readStablePrivateFile(args.input, "evidence", MAX_EVIDENCE_BYTES),
+    readStablePrivateFile(args.fullReceipt, "full_backup_receipt"),
+    readStablePrivateFile(args.runnerReceipt, "runner_receipt"),
+  ]);
+  try {
+    const evidence = parseFlatRecord(evidenceBytes, "evidence");
+    const fullReceipt = parseFullBackupRestoreReceipt(fullBytes);
+    const runner = parseRunnerReceipt(runnerBytes);
+    validateEvidence(evidence);
+    bindReceipts(
+      evidence,
+      fullReceipt,
+      sha256Bytes(fullBytes),
+      runner,
+      sha256Bytes(runnerBytes),
+    );
+    console.log("RESTORE_EVIDENCE_SCHEMA=valid");
+    console.log("RESTORE_EVIDENCE_SECRETS_RECORDED=false");
+    console.log("RESTORE_EVIDENCE_PRODUCTION_MODIFIED=false");
+    console.log("RESTORE_DRILL_EVIDENCE=PASS");
+    console.log(
+      `RESTORE_EVIDENCE_SHA256=${createHash("sha256")
+        .update(evidenceBytes)
+        .digest("hex")}`,
+    );
+  } finally {
+    evidenceBytes.fill(0);
+    fullBytes.fill(0);
+    runnerBytes.fill(0);
+  }
+}
+
+main().catch((error) => {
+  const code =
+    typeof error?.code === "string" && /^[a-z0-9_]+$/u.test(error.code)
+      ? error.code
+      : "evidence_verification_failed";
+  fail(code);
   console.error("RESTORE_DRILL_EVIDENCE=FAIL");
-  process.exit(1);
-}
-
-console.log("RESTORE_DRILL_EVIDENCE=PASS");
+  process.exitCode = 1;
+});

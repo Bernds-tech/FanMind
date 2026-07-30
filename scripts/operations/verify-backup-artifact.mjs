@@ -1,21 +1,34 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
 import {
   access,
+  chmod,
   constants,
+  copyFile,
+  link,
+  lstat,
   mkdtemp,
-  readFile,
+  open,
+  realpath,
   rm,
-  stat,
+  unlink,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join, normalize, relative, resolve, sep } from "node:path";
+import {
+  basename,
+  dirname,
+  join,
+  normalize,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const GIT_SHA_PATTERN = /^(?:[a-f0-9]{40}|unknown)$/;
+const FULL_BACKUP_BASENAME = /^fanmind-full-\d{13}\.tar\.gz\.age$/u;
 const BACKUP_TYPES = new Set(["database", "storage", "server_config", "full"]);
 
 function verifierError(code, details = {}) {
@@ -37,7 +50,11 @@ export function parseChecksumLine(line) {
 export function assertSafeArchiveEntry(entry) {
   const value = String(entry).replace(/^\.\//, "");
   if (!value || value === ".") return true;
-  if (value.startsWith("/") || value.includes("\\")) {
+  if (
+    value.startsWith("/") ||
+    value.includes("\\") ||
+    /[\u0000-\u001f\u007f]/u.test(value)
+  ) {
     throw verifierError("unsafe_archive_entry", { entry });
   }
   const normalized = normalize(value);
@@ -61,14 +78,87 @@ export function detectBackupType(fileName) {
 }
 
 export async function sha256File(file) {
+  let handle;
+  try {
+    handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (error?.code === "ELOOP") throw verifierError("file_not_regular");
+    throw verifierError("file_not_readable");
+  }
+
+  const buffer = Buffer.allocUnsafe(1024 * 1024);
   const hash = createHash("sha256");
-  await new Promise((resolvePromise, reject) => {
-    createReadStream(file)
-      .on("data", (chunk) => hash.update(chunk))
-      .on("error", reject)
-      .on("end", resolvePromise);
-  });
-  return hash.digest("hex");
+  try {
+    const before = await handle.stat({ bigint: true });
+    if (!before.isFile()) throw verifierError("file_not_regular");
+    let offset = 0n;
+    while (offset < before.size) {
+      const requested = Number(
+        before.size - offset > BigInt(buffer.length)
+          ? BigInt(buffer.length)
+          : before.size - offset,
+      );
+      const { bytesRead } = await handle.read(
+        buffer,
+        0,
+        requested,
+        Number(offset),
+      );
+      if (bytesRead <= 0) throw verifierError("file_read_failed");
+      hash.update(buffer.subarray(0, bytesRead));
+      offset += BigInt(bytesRead);
+    }
+    const after = await handle.stat({ bigint: true });
+    if (
+      after.dev !== before.dev ||
+      after.ino !== before.ino ||
+      after.size !== before.size ||
+      after.mtimeNs !== before.mtimeNs ||
+      after.ctimeNs !== before.ctimeNs ||
+      offset !== before.size
+    ) {
+      throw verifierError("file_changed_during_read");
+    }
+    return hash.digest("hex");
+  } finally {
+    buffer.fill(0);
+    await handle.close();
+  }
+}
+
+async function readStableRegularFile(file, maxBytes) {
+  let handle;
+  try {
+    handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (error?.code === "ELOOP") throw verifierError("file_not_regular");
+    throw verifierError("file_not_readable");
+  }
+  try {
+    const before = await handle.stat({ bigint: true });
+    if (
+      !before.isFile() ||
+      before.size <= 0n ||
+      before.size > BigInt(maxBytes)
+    ) {
+      throw verifierError("file_size_invalid");
+    }
+    const bytes = await handle.readFile();
+    const after = await handle.stat({ bigint: true });
+    if (
+      after.dev !== before.dev ||
+      after.ino !== before.ino ||
+      after.size !== before.size ||
+      after.mtimeNs !== before.mtimeNs ||
+      after.ctimeNs !== before.ctimeNs ||
+      BigInt(bytes.length) !== before.size
+    ) {
+      throw verifierError("file_changed_during_read");
+    }
+    return bytes;
+  } finally {
+    await handle.close();
+  }
 }
 
 function run(command, args, options = {}) {
@@ -113,7 +203,18 @@ async function assertReadable(file) {
 export async function verifyChecksumPair(artifactPath, checksumPath = `${artifactPath}.sha256`) {
   await assertReadable(artifactPath);
   await assertReadable(checksumPath);
-  const checksum = parseChecksumLine(await readFile(checksumPath, "utf8"));
+  const checksumBytes = await readStableRegularFile(checksumPath, 4096);
+  let checksum;
+  try {
+    checksum = parseChecksumLine(
+      new TextDecoder("utf-8", { fatal: true }).decode(checksumBytes),
+    );
+  } catch (error) {
+    if (error?.code) throw error;
+    throw verifierError("invalid_checksum_file");
+  } finally {
+    checksumBytes.fill(0);
+  }
   if (checksum.fileName !== basename(artifactPath)) {
     throw verifierError("checksum_filename_mismatch", {
       expected: basename(artifactPath),
@@ -127,7 +228,8 @@ export async function verifyChecksumPair(artifactPath, checksumPath = `${artifac
       actual,
     });
   }
-  const fileStat = await stat(artifactPath);
+  const fileStat = await lstat(artifactPath);
+  if (!fileStat.isFile()) throw verifierError("file_not_regular");
   return {
     artifact: basename(artifactPath),
     checksum: actual,
@@ -136,18 +238,78 @@ export async function verifyChecksumPair(artifactPath, checksumPath = `${artifac
 }
 
 async function listTarEntries(file, tarBin = "tar") {
-  const { stdout } = await run(tarBin, ["-tzf", file]);
+  const { stdout } = await run(tarBin, [
+    "--list",
+    "--gzip",
+    "--quoting-style=escape",
+    "--file",
+    file,
+  ]);
   const entries = stdout
     .split("\n")
     .map((entry) => entry.trim())
     .filter(Boolean);
   for (const entry of entries) assertSafeArchiveEntry(entry);
+
+  const { stdout: verbose } = await run(tarBin, [
+    "--list",
+    "--verbose",
+    "--numeric-owner",
+    "--gzip",
+    "--quoting-style=escape",
+    "--file",
+    file,
+  ]);
+  const verboseEntries = verbose.split("\n").filter(Boolean);
+  if (verboseEntries.length !== entries.length) {
+    throw verifierError("archive_listing_mismatch");
+  }
+  for (const line of verboseEntries) {
+    if (line[0] !== "-" && line[0] !== "d") {
+      throw verifierError("unsafe_archive_entry_type");
+    }
+  }
   return entries;
 }
 
+async function assertExtractedEntries(root, entries) {
+  const canonicalRoot = await realpath(root);
+  for (const entry of entries) {
+    const clean = String(entry).replace(/^\.\//, "").replace(/\/$/u, "");
+    if (!clean || clean === ".") continue;
+    const candidate = safeManifestPath(root, clean);
+    const metadata = await lstat(candidate).catch(() => {
+      throw verifierError("archive_entry_missing_after_extract");
+    });
+    if (!metadata.isFile() && !metadata.isDirectory()) {
+      throw verifierError("unsafe_extracted_entry_type");
+    }
+    if (metadata.isFile() && metadata.nlink !== 1) {
+      throw verifierError("unsafe_extracted_link_count");
+    }
+    const canonical = await realpath(candidate);
+    const rel = relative(canonicalRoot, canonical);
+    if (rel === ".." || rel.startsWith(`..${sep}`)) {
+      throw verifierError("archive_entry_escape_after_extract");
+    }
+  }
+}
+
 async function extractTar(file, destination, tarBin = "tar") {
-  await listTarEntries(file, tarBin);
-  await run(tarBin, ["-xzf", file, "-C", destination]);
+  const entries = await listTarEntries(file, tarBin);
+  await run(tarBin, [
+    "--extract",
+    "--gzip",
+    "--no-same-owner",
+    "--no-same-permissions",
+    "--delay-directory-restore",
+    "--file",
+    file,
+    "--directory",
+    destination,
+  ]);
+  await assertExtractedEntries(destination, entries);
+  return entries;
 }
 
 function safeManifestPath(root, manifestPath) {
@@ -159,6 +321,128 @@ function safeManifestPath(root, manifestPath) {
     throw verifierError("manifest_path_escape", { manifestPath });
   }
   return candidate;
+}
+
+async function assertSafeExtractedRegularFile(root, file) {
+  const [rootCanonical, metadata, canonical] = await Promise.all([
+    realpath(root),
+    lstat(file).catch(() => {
+      throw verifierError("manifest_file_missing");
+    }),
+    realpath(file).catch(() => {
+      throw verifierError("manifest_file_missing");
+    }),
+  ]);
+  if (!metadata.isFile() || metadata.nlink !== 1) {
+    throw verifierError("manifest_file_not_regular");
+  }
+  const rel = relative(rootCanonical, canonical);
+  if (rel === ".." || rel.startsWith(`..${sep}`)) {
+    throw verifierError("manifest_path_escape");
+  }
+}
+
+async function assertPrivateOutputTarget(outputPath) {
+  if (outputPath !== resolve(outputPath)) {
+    throw verifierError("restore_output_path_not_absolute");
+  }
+  const parent = dirname(outputPath);
+  const [metadata, canonicalParent] = await Promise.all([
+    lstat(parent).catch(() => {
+      throw verifierError("restore_output_directory_unavailable");
+    }),
+    realpath(parent).catch(() => {
+      throw verifierError("restore_output_directory_unavailable");
+    }),
+  ]);
+  if (!metadata.isDirectory() || canonicalParent !== parent) {
+    throw verifierError("restore_output_directory_unsafe");
+  }
+  if (metadata.uid !== process.getuid()) {
+    throw verifierError("restore_output_directory_owner_mismatch");
+  }
+  if ((metadata.mode & 0o077) !== 0) {
+    throw verifierError("restore_output_directory_permissions_invalid");
+  }
+  try {
+    await lstat(outputPath);
+    throw verifierError("restore_output_already_exists");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
+
+async function publishPrivateCopy(sourcePath, outputPath) {
+  await assertPrivateOutputTarget(outputPath);
+  const temporaryPath = join(
+    dirname(outputPath),
+    `.${basename(outputPath)}.${randomUUID()}.tmp`,
+  );
+  try {
+    await copyFile(sourcePath, temporaryPath, constants.COPYFILE_EXCL);
+    await chmod(temporaryPath, 0o600);
+    const handle = await open(temporaryPath, constants.O_RDONLY);
+    try {
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await link(temporaryPath, outputPath);
+  } finally {
+    await unlink(temporaryPath).catch(() => undefined);
+  }
+}
+
+async function publishPrivateBytes(bytes, outputPath) {
+  await assertPrivateOutputTarget(outputPath);
+  const temporaryPath = join(
+    dirname(outputPath),
+    `.${basename(outputPath)}.${randomUUID()}.tmp`,
+  );
+  let handle;
+  try {
+    handle = await open(
+      temporaryPath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
+    await handle.writeFile(bytes);
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await link(temporaryPath, outputPath);
+  } finally {
+    await handle?.close().catch(() => undefined);
+    await unlink(temporaryPath).catch(() => undefined);
+  }
+}
+
+async function publishRestoreOutputs({
+  clearDatabasePath,
+  dumpOutputPath,
+  receiptOutputPath,
+  receipt,
+}) {
+  await Promise.all([
+    assertPrivateOutputTarget(dumpOutputPath),
+    assertPrivateOutputTarget(receiptOutputPath),
+  ]);
+  if (dumpOutputPath === receiptOutputPath) {
+    throw verifierError("restore_output_paths_must_differ");
+  }
+
+  let dumpPublished = false;
+  try {
+    await publishPrivateCopy(clearDatabasePath, dumpOutputPath);
+    dumpPublished = true;
+    await publishPrivateBytes(
+      Buffer.from(`${JSON.stringify(receipt)}\n`, "utf8"),
+      receiptOutputPath,
+    );
+  } catch (error) {
+    if (dumpPublished) await unlink(dumpOutputPath).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function verifyStorageManifest(root, manifest) {
@@ -180,8 +464,8 @@ export async function verifyStorageManifest(root, manifest) {
     if (seen.has(entry.path)) throw verifierError("duplicate_storage_manifest_path");
     seen.add(entry.path);
     const file = safeManifestPath(root, entry.path);
-    await assertReadable(file);
-    const fileStat = await stat(file);
+    await assertSafeExtractedRegularFile(root, file);
+    const fileStat = await lstat(file);
     const actualHash = await sha256File(file);
     if (fileStat.size !== entry.size) {
       throw verifierError("storage_file_size_mismatch", { path: entry.path });
@@ -226,6 +510,7 @@ export async function verifyFullManifest(root, manifest) {
     throw verifierError("full_manifest_part_count_mismatch");
   }
   const foundTypes = new Set();
+  let databasePart = null;
   for (const part of manifest.parts) {
     if (
       !part ||
@@ -247,11 +532,21 @@ export async function verifyFullManifest(root, manifest) {
     foundTypes.add(part.manifest.backup_type);
     const artifact = safeManifestPath(root, part.file);
     const checksum = safeManifestPath(root, part.checksum_file);
+    await Promise.all([
+      assertSafeExtractedRegularFile(root, artifact),
+      assertSafeExtractedRegularFile(root, checksum),
+    ]);
     const result = await verifyChecksumPair(artifact, checksum);
     if (result.checksum !== part.sha256 || result.sizeBytes !== part.size_bytes) {
       throw verifierError("full_manifest_part_mismatch", {
         backupType: part.manifest.backup_type,
       });
+    }
+    if (part.manifest.backup_type === "database") {
+      databasePart = {
+        file: part.file,
+        encryptedSha256: part.sha256,
+      };
     }
   }
   for (const requiredType of ["server_config", "database", "storage"]) {
@@ -263,6 +558,7 @@ export async function verifyFullManifest(root, manifest) {
     productionCommit: manifest.production_commit,
     partCount: manifest.parts.length,
     partTypes: [...foundTypes].sort(),
+    databasePart,
   };
 }
 
@@ -274,20 +570,86 @@ async function validateDecryptedArtifact(clearFile, type, options) {
 
   const extractRoot = await mkdtemp(join(tmpdir(), "fanmind-backup-content-"));
   try {
-    const entries = await listTarEntries(clearFile, options.tarBin);
     if (type === "server_config") {
+      const entries = await listTarEntries(clearFile, options.tarBin);
       return { tarEntries: entries.length, archive: "valid" };
     }
     await extractTar(clearFile, extractRoot, options.tarBin);
     const manifestPath = join(extractRoot, "manifest.json");
-    const manifest = JSON.parse(await readFile(manifestPath, "utf8").catch(() => {
-      throw verifierError(`${type}_manifest_missing`);
-    }));
+    await assertSafeExtractedRegularFile(extractRoot, manifestPath).catch(
+      (error) => {
+        if (error?.code === "manifest_file_missing") {
+          throw verifierError(`${type}_manifest_missing`);
+        }
+        throw error;
+      },
+    );
+    const manifestBytes = await readStableRegularFile(
+      manifestPath,
+      4 * 1024 * 1024,
+    );
+    let manifest;
+    try {
+      manifest = JSON.parse(
+        new TextDecoder("utf-8", { fatal: true }).decode(manifestBytes),
+      );
+    } catch {
+      throw verifierError(`${type}_manifest_invalid`);
+    } finally {
+      manifestBytes.fill(0);
+    }
     if (type === "storage") {
       return verifyStorageManifest(extractRoot, manifest);
     }
     if (type === "full") {
-      return verifyFullManifest(extractRoot, manifest);
+      const validation = await verifyFullManifest(extractRoot, manifest);
+      if (!options.restoreOutputs) return validation;
+      if (!/^[a-f0-9]{40}$/u.test(validation.productionCommit)) {
+        throw verifierError("restore_receipt_production_commit_invalid");
+      }
+
+      const databasePartPath = safeManifestPath(
+        extractRoot,
+        validation.databasePart.file,
+      );
+      await assertSafeExtractedRegularFile(extractRoot, databasePartPath);
+      const clearDatabasePath = join(extractRoot, ".database-restore.dump");
+      await run(options.ageBin, [
+        "--decrypt",
+        "--identity",
+        options.identityPath,
+        "--output",
+        clearDatabasePath,
+        databasePartPath,
+      ]);
+      await chmod(clearDatabasePath, 0o600);
+      const databaseMetadata = await lstat(clearDatabasePath);
+      if (!databaseMetadata.isFile() || databaseMetadata.nlink !== 1) {
+        throw verifierError("decrypted_database_not_regular");
+      }
+      await run(options.pgRestoreBin, ["--list", clearDatabasePath]);
+      const databaseDumpSha256 = await sha256File(clearDatabasePath);
+      const receipt = {
+        schemaVersion: 1,
+        createdAt: new Date().toISOString(),
+        sourceArtifactBasename: options.sourceArtifactBasename,
+        outerSha256: options.outerSha256,
+        productionCommit: validation.productionCommit,
+        databasePartEncryptedSha256:
+          validation.databasePart.encryptedSha256,
+        databaseDumpSha256,
+        verifier: "passed",
+      };
+      await publishRestoreOutputs({
+        clearDatabasePath,
+        ...options.restoreOutputs,
+        receipt,
+      });
+      return {
+        ...validation,
+        restoreDump: "created",
+        restoreReceipt: "created",
+      };
     }
     throw verifierError("unsupported_backup_type", { type });
   } finally {
@@ -298,6 +660,45 @@ async function validateDecryptedArtifact(clearFile, type, options) {
 export async function verifyBackupArtifact(input) {
   const artifactPath = resolve(input.artifactPath);
   const type = input.type ?? detectBackupType(artifactPath);
+  const restoreOutputRequested = Boolean(
+    input.restoreDumpOutputPath || input.restoreReceiptOutputPath,
+  );
+  if (
+    restoreOutputRequested &&
+    (!input.restoreDumpOutputPath || !input.restoreReceiptOutputPath)
+  ) {
+    throw verifierError("restore_outputs_must_be_paired");
+  }
+  if (restoreOutputRequested && (!input.identityPath || type !== "full")) {
+    throw verifierError("restore_outputs_require_decrypted_full_backup");
+  }
+  if (
+    restoreOutputRequested &&
+    !FULL_BACKUP_BASENAME.test(basename(artifactPath))
+  ) {
+    throw verifierError("restore_receipt_artifact_name_invalid");
+  }
+  const restoreOutputs = restoreOutputRequested
+    ? {
+        dumpOutputPath: resolve(input.restoreDumpOutputPath),
+        receiptOutputPath: resolve(input.restoreReceiptOutputPath),
+      }
+    : null;
+  if (restoreOutputs) {
+    if (
+      input.restoreDumpOutputPath !== restoreOutputs.dumpOutputPath ||
+      input.restoreReceiptOutputPath !== restoreOutputs.receiptOutputPath
+    ) {
+      throw verifierError("restore_output_path_not_absolute");
+    }
+    await Promise.all([
+      assertPrivateOutputTarget(restoreOutputs.dumpOutputPath),
+      assertPrivateOutputTarget(restoreOutputs.receiptOutputPath),
+    ]);
+    if (restoreOutputs.dumpOutputPath === restoreOutputs.receiptOutputPath) {
+      throw verifierError("restore_output_paths_must_differ");
+    }
+  }
   const checksumResult = await verifyChecksumPair(
     artifactPath,
     input.checksumPath ? resolve(input.checksumPath) : `${artifactPath}.sha256`,
@@ -324,8 +725,13 @@ export async function verifyBackupArtifact(input) {
       artifactPath,
     ]);
     result.contentValidation = await validateDecryptedArtifact(clearFile, type, {
+      ageBin: input.ageBin ?? "age",
+      identityPath: resolve(input.identityPath),
       pgRestoreBin: input.pgRestoreBin ?? "/usr/lib/postgresql/17/bin/pg_restore",
       tarBin: input.tarBin ?? "tar",
+      restoreOutputs,
+      sourceArtifactBasename: basename(artifactPath),
+      outerSha256: checksumResult.checksum,
     });
     return result;
   } finally {
@@ -344,6 +750,11 @@ function parseCli(argv) {
     else if (value === "--age-bin") options.ageBin = argv[++index];
     else if (value === "--pg-restore-bin") options.pgRestoreBin = argv[++index];
     else if (value === "--tar-bin") options.tarBin = argv[++index];
+    else if (value === "--restore-dump-output") {
+      options.restoreDumpOutputPath = argv[++index];
+    } else if (value === "--restore-receipt-output") {
+      options.restoreReceiptOutputPath = argv[++index];
+    }
     else if (value === "--json") options.json = true;
     else if (value === "--help") options.help = true;
     else throw verifierError("unknown_argument", { argument: value });
@@ -364,10 +775,16 @@ Options:
   --age-bin PATH        age executable; default: age
   --pg-restore-bin PATH pg_restore executable
   --tar-bin PATH        tar executable; default: tar
+  --restore-dump-output PATH
+                        Private new plaintext dump output (full + identity only)
+  --restore-receipt-output PATH
+                        Private new cryptographic receipt (paired with dump)
   --json                JSON output
 
 Without --identity the verifier performs a non-destructive checksum-only check.
-It never restores data and never writes into the backup directory.`;
+It never restores data and never writes into the backup directory. Restore
+outputs are opt-in, never overwrite files and require private output
+directories.`;
 }
 
 async function main() {

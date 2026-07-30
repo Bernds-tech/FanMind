@@ -361,6 +361,9 @@ native PNG-Verträge erzeugt:
 - `fanmind-app-icon.png`: vollständig deckend für iOS und Legacy-Android;
 - `fanmind-adaptive-icon.png`: transparentes, innerhalb der Android-Safe-Zone
   skaliertes Foreground bei festem dunklem Hintergrund.
+- `fanmind-notification-icon.png`: weißes, transparentes Android-Small-Icon
+  für den festen Kanal `followup-reminders`; die System-Akzentfarbe ist
+  `#149EF2`.
 
 Die bearbeitbaren SVG-Quellen liegen im selben Branding-Ordner. Das vorhandene
 96 × 96 Pixel große Social-Avatar-Asset wurde nicht hochskaliert. Der isolierte

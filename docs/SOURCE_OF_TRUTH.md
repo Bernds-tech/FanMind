@@ -203,6 +203,10 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - `npm run ai:tiers:readiness` gleicht Status, Modelle, Kontingente,
   Stripe-Items und den bestätigten Workspace-Contract redigiert ab; aktuell
   muss Standard bereit und Plus/Ultra blockiert sein.
+- `docs/operations/AI_TIER_DECISION_PROPOSAL.md` bündelt die noch offenen
+  Modell-, Kontingent-, Overage- und Wechselentscheidungen ohne
+  Aktivierungswirkung. Solange die Matrix nicht vollständig schriftlich
+  freigegeben ist, bleiben Plus und Ultra fail-closed.
 - Der gemeinsame serverseitige Entitlement-Resolver in `src/config/aiTiers.mjs`
   behandelt KI Standard als sicheren Default. Plus/Ultra werden nur bei
   serververwaltetem, aktivem Stripe-Lifecycle, verknüpftem Subscription-Item,

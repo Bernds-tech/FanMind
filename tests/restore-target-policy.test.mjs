@@ -82,6 +82,55 @@ function safeReadinessEnvironment(overrides = {}) {
   });
 }
 
+async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
+  const receiptPath = join(root, "full-backup-receipt.json");
+  const runnerReceiptPath = join(root, "restore-runner-receipt.json");
+  const fakePsqlPath = join(root, "fake-psql.sh");
+  const dumpBytes = await readFile(dumpPath);
+  const dumpSha256 = createHash("sha256").update(dumpBytes).digest("hex");
+  const fullReceipt = {
+    schemaVersion: 1,
+    createdAt: "2026-07-30T07:55:00Z",
+    sourceArtifactBasename: "fanmind-full-1785398400000.tar.gz.age",
+    outerSha256: "a".repeat(64),
+    productionCommit: "b".repeat(40),
+    databasePartEncryptedSha256: "d".repeat(64),
+    databaseDumpSha256: dumpSha256,
+    verifier: "passed",
+  };
+  await writeFile(receiptPath, `${JSON.stringify(fullReceipt)}\n`);
+  await chmod(receiptPath, 0o600);
+  await writeFile(
+    fakePsqlPath,
+    [
+      "#!/usr/bin/env bash",
+      "set -Eeuo pipefail",
+      "if [[ -n \"${FANMIND_TEST_EMPTY_QUERY_MARKER_PATH:-}\" ]]; then",
+      "  {",
+      "    printf 'ARGS='",
+      "    printf '%q ' \"$@\"",
+      "    printf '\\nPGPASSFILE=%s\\n' \"$PGPASSFILE\"",
+      "  } > \"$FANMIND_TEST_EMPTY_QUERY_MARKER_PATH\"",
+      "fi",
+      "printf '%s\\n' \"${FANMIND_TEST_EMPTY_TARGET_RESULT:-0}\"",
+      "",
+    ].join("\n"),
+  );
+  await chmod(fakePsqlPath, 0o755);
+
+  return {
+    FANMIND_OPERATIONAL_TEST_MODE: "restore-runner-test",
+    FANMIND_PSQL_BIN: fakePsqlPath,
+    FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH: receiptPath,
+    FANMIND_RESTORE_RUNNER_RECEIPT_PATH: runnerReceiptPath,
+    FANMIND_RESTORE_DRILL_ID: "2026-07-30-restore-001",
+    FANMIND_RESTORE_DISPOSABLE_TARGET_ID:
+      "123e4567-e89b-42d3-a456-426614174000",
+    FANMIND_RESTORE_PRODUCTION_COMMIT: "b".repeat(40),
+    ...overrides,
+  };
+}
+
 test("read-only restore readiness confirms isolation without enabling a restore", () => {
   const result = evaluateRestoreReadiness(safeReadinessEnvironment());
 
@@ -507,6 +556,7 @@ test("restore runner freezes the checked target and passes only explicit connect
     const capturePath = join(root, "capture.txt");
     const passfilePath = join(root, "restore.pgpass");
     const listMarkerPath = join(root, "list-validated.txt");
+    const emptyQueryMarkerPath = join(root, "empty-query.txt");
     await writeFile(dumpPath, "synthetic-dump");
     await chmod(dumpPath, 0o600);
     await writeFile(passfilePath, "synthetic-password-file");
@@ -520,6 +570,7 @@ test("restore runner freezes the checked target and passes only explicit connect
         "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
         "  exit 0",
         "fi",
+        "[[ -s \"$FANMIND_TEST_EMPTY_QUERY_MARKER_PATH\" ]]",
         "write_dump_path=\"${@: -1}\"",
         "list_dump_path=\"$(cat \"$FANMIND_TEST_LIST_MARKER_PATH\")\"",
         "[[ \"$list_dump_path\" == \"$write_dump_path\" ]]",
@@ -541,6 +592,7 @@ test("restore runner freezes the checked target and passes only explicit connect
       ].join("\n"),
     );
     await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath);
 
     const { stdout, stderr } = await execFileAsync(
       "bash",
@@ -549,14 +601,17 @@ test("restore runner freezes the checked target and passes only explicit connect
         env: {
           ...process.env,
           ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_CAPTURE_PATH: capturePath,
           FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
+          FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: emptyQueryMarkerPath,
         },
       },
     );
     const output = `${stdout}\n${stderr}`;
     const capture = await readFile(capturePath, "utf8");
+    const emptyQueryCapture = await readFile(emptyQueryMarkerPath, "utf8");
 
     assert.match(output, /RESTORE_TARGET_BOUNDARY=OK/);
     const validatedSnapshotPath = (await readFile(listMarkerPath, "utf8")).trim();
@@ -568,6 +623,10 @@ test("restore runner freezes the checked target and passes only explicit connect
     );
     assert.doesNotMatch(capture, new RegExp(`${dumpPath.replaceAll(".", "\\.")}\\s`));
     assert.match(capture, /fanmind-restore\.[^/]+\/database\.dump\s/u);
+    assert.match(
+      emptyQueryCapture,
+      /ARGS=--no-psqlrc --no-align --tuples-only --quiet --set ON_ERROR_STOP=1 --no-password --host restore-db\.internal --port 5432 --username restore_operator --dbname fanmind_restore --command /u,
+    );
     const snapshotPassfileMatch = capture.match(/^PGPASSFILE=(.+)$/mu);
     assert.ok(snapshotPassfileMatch);
     const snapshotPassfilePath = snapshotPassfileMatch[1];
@@ -586,7 +645,102 @@ test("restore runner freezes the checked target and passes only explicit connect
     ]) {
       assert.match(capture, new RegExp(`${name}_SET=\\n`));
     }
+    const runnerReceipt = JSON.parse(
+      await readFile(
+        runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH,
+        "utf8",
+      ),
+    );
+    assert.equal(runnerReceipt.databaseRestore, "passed");
+    assert.equal(runnerReceipt.emptyTargetObjectCount, 0);
+    assert.equal(runnerReceipt.singleTransaction, true);
     await assert.rejects(access(dirname(validatedSnapshotPath)), /ENOENT/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner proves an empty target before writing or creating a receipt", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-empty-target-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const writeInvokedPath = join(root, "write-invoked.txt");
+    await writeFile(dumpPath, "synthetic-dump");
+    await chmod(dumpPath, 0o600);
+    await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o600);
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then exit 0; fi",
+        "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_INVOKED_PATH\"",
+        "",
+      ].join("\n"),
+    );
+    await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+      FANMIND_TEST_EMPTY_TARGET_RESULT: "1",
+    });
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_WRITE_INVOKED_PATH: writeInvokedPath,
+        },
+      }),
+      (error) => {
+        assert.match(String(error.stderr), /restore_target_not_empty/u);
+        return true;
+      },
+    );
+    await assert.rejects(readFile(writeInvokedPath, "utf8"), /ENOENT/u);
+    await assert.rejects(
+      readFile(
+        runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH,
+        "utf8",
+      ),
+      /ENOENT/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner binary overrides require the exact test-only gate", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-override-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    await writeFile(dumpPath, "synthetic-dump");
+    await chmod(dumpPath, 0o600);
+    await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o600);
+    await writeFile(fakeRestorePath, "#!/usr/bin/env bash\nexit 0\n");
+    await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+      FANMIND_OPERATIONAL_TEST_MODE: "",
+    });
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+        },
+      }),
+      /operational_binary_override_forbidden/u,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -613,12 +767,14 @@ test("restore runner rejects permissive passfiles before invoking pg_restore", a
       ].join("\n"),
     );
     await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath);
 
     await assert.rejects(
       execFileAsync("bash", [runnerPath, dumpPath], {
         env: {
           ...process.env,
           ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_INVOKED_PATH: invokedPath,
         },
@@ -653,6 +809,10 @@ test("restore runner rejects a passfile owned by another user before invoking pg
       [
         "#!/usr/bin/env bash",
         "set -Eeuo pipefail",
+        "target=\"${@: -1}\"",
+        "if [[ \"$target\" != /proc/self/fd/* ]]; then",
+        "  exec /usr/bin/stat \"$@\"",
+        "fi",
         "printf '1 2 999999 600 81a0\\n'",
         "",
       ].join("\n"),
@@ -668,12 +828,14 @@ test("restore runner rejects a passfile owned by another user before invoking pg
     );
     await chmod(fakeStatPath, 0o755);
     await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath);
 
     await assert.rejects(
       execFileAsync("bash", [runnerPath, dumpPath], {
         env: {
           ...process.env,
           ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
           PATH: `${fakeBinDirectory}:${process.env.PATH ?? ""}`,
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_INVOKED_PATH: invokedPath,
@@ -712,6 +874,10 @@ test("restore runner rejects a source path swapped after it was opened", async (
       [
         "#!/usr/bin/env bash",
         "set -Eeuo pipefail",
+        "target=\"${@: -1}\"",
+        "if [[ \"$target\" != /proc/self/fd/* && \"$target\" != \"$PGPASSFILE\" ]]; then",
+        "  exec /usr/bin/stat \"$@\"",
+        "fi",
         "count=0",
         "[[ ! -f \"$FANMIND_TEST_STAT_STATE_PATH\" ]] || read -r count < \"$FANMIND_TEST_STAT_STATE_PATH\"",
         "count=$((count + 1))",
@@ -735,12 +901,14 @@ test("restore runner rejects a source path swapped after it was opened", async (
     );
     await chmod(fakeStatPath, 0o755);
     await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath);
 
     await assert.rejects(
       execFileAsync("bash", [runnerPath, dumpPath], {
         env: {
           ...process.env,
           ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
           PATH: `${fakeBinDirectory}:${process.env.PATH ?? ""}`,
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_INVOKED_PATH: invokedPath,
@@ -787,12 +955,14 @@ test("restore runner validates the dump archive before any write invocation", as
       ].join("\n"),
     );
     await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath);
 
     await assert.rejects(
       execFileAsync("bash", [runnerPath, dumpPath], {
         env: {
           ...process.env,
           ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_WRITE_INVOKED_PATH: writeInvokedPath,
           FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
@@ -838,11 +1008,12 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runbook, /target host differs from the Production database host/);
   assert.match(
     runbook,
-    /dump and passfile must be regular, non-symlink files owned by the operator/,
+    /receipts, the dump and the passfile must be regular, non-symlink files owned by\s+the operator/u,
   );
   assert.match(runbook, /pg_restore --list/);
   assert.ok(runner.indexOf("restore-target-preflight.mjs") < runner.indexOf("--list"));
-  assert.ok(runner.indexOf("--list") < runner.indexOf("--single-transaction"));
+  assert.ok(runner.indexOf("--list") < runner.indexOf("empty_target_sql"));
+  assert.ok(runner.indexOf("empty_target_sql") < runner.indexOf("--single-transaction"));
   assert.match(runner, /readonly PGHOST PGPORT PGDATABASE PGUSER/);
   assert.match(runner, /owner_uid/);
   assert.match(runner, /path_changed_during_open/);
@@ -851,6 +1022,11 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runner, /passfile_symlink_forbidden/);
   assert.match(runner, /snapshot_dump/);
   assert.match(runner, /snapshot_passfile/);
+  assert.match(runner, /snapshot_full_receipt/);
+  assert.match(runner, /verify-full-backup-restore-receipt\.mjs/);
+  assert.match(runner, /restore-runner-receipt\.mjs/);
+  assert.match(runner, /restore_target_not_empty/);
+  assert.match(runner, /FANMIND_OPERATIONAL_TEST_MODE/);
   assert.match(runner, /--single-transaction/);
   assert.match(runner, /-u PGHOSTADDR/);
   assert.match(runner, /-u PGSERVICE/);

@@ -40,8 +40,10 @@ The release directory receives the exact Git tree for the expected `origin/main`
 
 ## Deployment sequence
 
-1. Fetch `origin/main` without modifying the live source checkout.
-2. Resolve and validate the full 40-character commit.
+1. Read and validate the exact 40-character commit that triggered the GitHub
+   Actions run.
+2. Fetch `origin/main` without modifying the live source checkout and require
+   that the triggering commit is still reachable from it.
 3. Export the target Git tree into a temporary release directory.
 4. Link the existing protected `.env.production`.
 5. Run:
@@ -92,7 +94,9 @@ NEXT_DEPLOYMENT_ID="$RELEASE_COMMIT" npm run build
 - A release is rejected and rolled back if the public transition probe sees
   any non-`200` response. The probe records neither bodies nor URLs, cookies,
   headers, tokens or other request data.
-- The target commit must still equal `origin/main` immediately before building.
+- The target is always the immutable commit that triggered the workflow. A
+  later `main` update cannot silently replace it; the target must remain
+  reachable from `origin/main` immediately before building.
 - The new PM2 process starts only from a completed release directory.
 - Login and public route checks must succeed before the release is accepted.
 - Unexpected failures after the PM2 switch trigger rollback through the EXIT trap.

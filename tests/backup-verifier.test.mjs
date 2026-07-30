@@ -1,22 +1,64 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
+import {
+  chmod,
+  mkdtemp,
+  mkdir,
+  open,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { promisify } from "node:util";
 
 import {
   assertSafeArchiveEntry,
   detectBackupType,
   parseChecksumLine,
   sha256File,
+  verifyBackupArtifact,
   verifyChecksumPair,
   verifyFullManifest,
   verifyStorageManifest,
 } from "../scripts/operations/verify-backup-artifact.mjs";
+import {
+  verifyFullBackupRestoreReceipt,
+} from "../scripts/operations/verify-full-backup-restore-receipt.mjs";
+
+const execFileAsync = promisify(execFile);
 
 function hash(content) {
   return createHash("sha256").update(content).digest("hex");
+}
+
+async function writeExecutable(path, lines) {
+  await writeFile(path, `${lines.join("\n")}\n`);
+  await chmod(path, 0o755);
+}
+
+async function readPrivateRegularFile(path, encoding) {
+  const handle = await open(
+    path,
+    fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW,
+  );
+  try {
+    const metadata = await handle.stat();
+    assert.equal(metadata.isFile(), true);
+    assert.equal(metadata.mode & 0o777, 0o600);
+    assert.equal(metadata.nlink, 1);
+    return {
+      content: await handle.readFile({ encoding }),
+      metadata,
+    };
+  } finally {
+    await handle.close();
+  }
 }
 
 test("checksum parser accepts standard sha256sum format", () => {
@@ -156,6 +198,207 @@ test("sha256 helper returns the exact file digest", async () => {
     const content = Buffer.from("known-value");
     await writeFile(file, content);
     assert.equal(await sha256File(file), hash(content));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("full verification creates an exact private dump and cryptographic receipt", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-full-receipt-test-"));
+  try {
+    const fullRoot = join(root, "full");
+    await mkdir(fullRoot, { mode: 0o700 });
+    const databaseClear = "synthetic-database-dump";
+    const definitions = [
+      ["server_config", "fanmind-server-config-1785398300000.tar.gz.age", "server"],
+      ["database", "fanmind-database-1785398301000.dump.age", "database-encrypted"],
+      ["storage", "fanmind-storage-1785398302000.tar.gz.age", "storage"],
+    ];
+    const parts = [];
+    for (const [backupType, file, content] of definitions) {
+      const encrypted = Buffer.from(content);
+      const digest = hash(encrypted);
+      await writeFile(join(fullRoot, file), encrypted);
+      await writeFile(
+        join(fullRoot, `${file}.sha256`),
+        `${digest}  ${file}\n`,
+      );
+      parts.push({
+        file,
+        checksum_file: `${file}.sha256`,
+        sha256: digest,
+        size_bytes: encrypted.length,
+        manifest: { backup_type: backupType },
+      });
+    }
+    await writeFile(
+      join(fullRoot, "manifest.json"),
+      `${JSON.stringify({
+        production_commit: "b".repeat(40),
+        parts,
+      })}\n`,
+    );
+
+    const artifact = join(
+      root,
+      "fanmind-full-1785398400000.tar.gz.age",
+    );
+    const clearFullArchive = `${artifact}.clear`;
+    await execFileAsync("tar", [
+      "-czf",
+      clearFullArchive,
+      "-C",
+      fullRoot,
+      ".",
+    ]);
+    const outerEncrypted = Buffer.from("synthetic-outer-encrypted-backup");
+    await writeFile(artifact, outerEncrypted);
+    await writeFile(
+      `${artifact}.sha256`,
+      `${hash(outerEncrypted)}  ${basename(artifact)}\n`,
+    );
+
+    const identityPath = join(root, "identity.agekey");
+    const fakeAgePath = join(root, "fake-age.sh");
+    const fakePgRestorePath = join(root, "fake-pg-restore.sh");
+    const dumpOutputPath = join(root, "verified-database.dump");
+    const receiptOutputPath = join(root, "full-backup-receipt.json");
+    await writeFile(identityPath, "synthetic-test-identity", { mode: 0o600 });
+    await writeExecutable(fakeAgePath, [
+      "#!/usr/bin/env bash",
+      "set -Eeuo pipefail",
+      "output=''",
+      "input=''",
+      "while [[ \"$#\" -gt 0 ]]; do",
+      "  case \"$1\" in",
+      "    --decrypt) shift ;;",
+      "    --identity) shift 2 ;;",
+      "    --output) output=\"$2\"; shift 2 ;;",
+      "    *) input=\"$1\"; shift ;;",
+      "  esac",
+      "done",
+      "case \"$(basename -- \"$input\")\" in",
+      "  fanmind-full-*) cp -- \"${input}.clear\" \"$output\" ;;",
+      `  fanmind-database-*) printf '%s' '${databaseClear}' > "$output" ;;`,
+      "  *) exit 9 ;;",
+      "esac",
+      "chmod 0600 \"$output\"",
+    ]);
+    await writeExecutable(fakePgRestorePath, [
+      "#!/usr/bin/env bash",
+      "set -Eeuo pipefail",
+      "[[ \"${1:-}\" == \"--list\" ]]",
+      "[[ -s \"${2:-}\" ]]",
+    ]);
+
+    const result = await verifyBackupArtifact({
+      artifactPath: artifact,
+      identityPath,
+      ageBin: fakeAgePath,
+      pgRestoreBin: fakePgRestorePath,
+      restoreDumpOutputPath: dumpOutputPath,
+      restoreReceiptOutputPath: receiptOutputPath,
+    });
+    assert.equal(result.contentValidation.restoreDump, "created");
+    assert.equal(result.contentValidation.restoreReceipt, "created");
+    const [dumpFile, receiptFile] = await Promise.all([
+      readPrivateRegularFile(dumpOutputPath, "utf8"),
+      readPrivateRegularFile(receiptOutputPath, "utf8"),
+    ]);
+    assert.equal(dumpFile.content, databaseClear);
+
+    const receipt = JSON.parse(receiptFile.content);
+    assert.deepEqual(Object.keys(receipt), [
+      "schemaVersion",
+      "createdAt",
+      "sourceArtifactBasename",
+      "outerSha256",
+      "productionCommit",
+      "databasePartEncryptedSha256",
+      "databaseDumpSha256",
+      "verifier",
+    ]);
+    assert.equal(receipt.sourceArtifactBasename, basename(artifact));
+    assert.equal(receipt.outerSha256, hash(outerEncrypted));
+    assert.equal(receipt.productionCommit, "b".repeat(40));
+    assert.equal(
+      receipt.databasePartEncryptedSha256,
+      parts.find((part) => part.manifest.backup_type === "database").sha256,
+    );
+    assert.equal(receipt.databaseDumpSha256, hash(databaseClear));
+    await verifyFullBackupRestoreReceipt({
+      receiptPath: receiptOutputPath,
+      dumpPath: dumpOutputPath,
+      expectedProductionCommit: "b".repeat(40),
+    });
+
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath,
+        ageBin: fakeAgePath,
+        pgRestoreBin: fakePgRestorePath,
+        restoreDumpOutputPath: dumpOutputPath,
+        restoreReceiptOutputPath: receiptOutputPath,
+      }),
+      /restore_output_already_exists/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("content verification rejects symbolic-link archive members before extraction", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-archive-type-test-"));
+  try {
+    const archiveRoot = join(root, "archive");
+    await mkdir(archiveRoot, { mode: 0o700 });
+    await writeFile(join(archiveRoot, "regular.txt"), "safe");
+    await symlink("regular.txt", join(archiveRoot, "linked.txt"));
+    const artifact = join(
+      root,
+      "fanmind-server-config-1785398400000.tar.gz.age",
+    );
+    await execFileAsync("tar", [
+      "-czf",
+      `${artifact}.clear`,
+      "-C",
+      archiveRoot,
+      ".",
+    ]);
+    const encrypted = Buffer.from("synthetic-encrypted-config");
+    await writeFile(artifact, encrypted);
+    await writeFile(
+      `${artifact}.sha256`,
+      `${hash(encrypted)}  ${basename(artifact)}\n`,
+    );
+    const identityPath = join(root, "identity.agekey");
+    const fakeAgePath = join(root, "fake-age.sh");
+    await writeFile(identityPath, "synthetic-test-identity", { mode: 0o600 });
+    await writeExecutable(fakeAgePath, [
+      "#!/usr/bin/env bash",
+      "set -Eeuo pipefail",
+      "output=''",
+      "input=''",
+      "while [[ \"$#\" -gt 0 ]]; do",
+      "  case \"$1\" in",
+      "    --decrypt) shift ;;",
+      "    --identity) shift 2 ;;",
+      "    --output) output=\"$2\"; shift 2 ;;",
+      "    *) input=\"$1\"; shift ;;",
+      "  esac",
+      "done",
+      "cp -- \"${input}.clear\" \"$output\"",
+    ]);
+
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath,
+        ageBin: fakeAgePath,
+      }),
+      /unsafe_archive_entry_type/u,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

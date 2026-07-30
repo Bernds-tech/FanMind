@@ -9,6 +9,7 @@ fail() {
 snapshot_dir=""
 snapshot_dump=""
 snapshot_passfile=""
+snapshot_full_receipt=""
 
 cleanup_snapshot() {
   set +e
@@ -16,6 +17,8 @@ cleanup_snapshot() {
     || unlink -- "$snapshot_dump"
   [[ -z "$snapshot_passfile" || ! -e "$snapshot_passfile" ]] \
     || unlink -- "$snapshot_passfile"
+  [[ -z "$snapshot_full_receipt" || ! -e "$snapshot_full_receipt" ]] \
+    || unlink -- "$snapshot_full_receipt"
   [[ -z "$snapshot_dir" || ! -d "$snapshot_dir" ]] \
     || rmdir -- "$snapshot_dir"
 }
@@ -60,6 +63,36 @@ validate_open_source() {
     || fail "${source_label}_path_changed_during_open"
 }
 
+validate_output_path() {
+  local output_path="$1"
+  local output_parent output_canonical metadata owner_uid permissions mode
+  local mode_value permission_value
+
+  [[ "$output_path" = /* ]] || fail "runner_receipt_path_must_be_absolute"
+  [[ ! -e "$output_path" && ! -L "$output_path" ]] \
+    || fail "runner_receipt_already_exists"
+  output_parent="$(dirname -- "$output_path")"
+  [[ ! -L "$output_parent" && -d "$output_parent" ]] \
+    || fail "runner_receipt_directory_unsafe"
+  output_canonical="$(realpath -- "$output_parent")" \
+    || fail "runner_receipt_directory_unavailable"
+  [[ "$output_parent" == "$output_canonical" ]] \
+    || fail "runner_receipt_directory_unsafe"
+  metadata="$(stat -Lc '%u %a %f' -- "$output_parent")" \
+    || fail "runner_receipt_directory_unavailable"
+  read -r owner_uid permissions mode <<< "$metadata"
+  [[ "$owner_uid" == "$(id -u)" ]] \
+    || fail "runner_receipt_directory_owner_mismatch"
+  [[ "$permissions" =~ ^[0-7]{3,4}$ && "$mode" =~ ^[0-9a-fA-F]+$ ]] \
+    || fail "runner_receipt_directory_metadata_invalid"
+  mode_value=$((16#$mode))
+  (( (mode_value & 0170000) == 0040000 )) \
+    || fail "runner_receipt_directory_unsafe"
+  permission_value=$((8#$permissions))
+  (( (permission_value & 077) == 0 )) \
+    || fail "runner_receipt_directory_permissions_invalid"
+}
+
 [[ "$#" -eq 1 ]] || fail "exactly_one_dump_path_required"
 
 dump_path="$1"
@@ -72,10 +105,46 @@ dump_path="$1"
 : "${PGDATABASE:?PGDATABASE is required}"
 : "${PGUSER:?PGUSER is required}"
 : "${PGPASSFILE:?PGPASSFILE is required}"
+: "${FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH:?FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH is required}"
+: "${FANMIND_RESTORE_RUNNER_RECEIPT_PATH:?FANMIND_RESTORE_RUNNER_RECEIPT_PATH is required}"
+: "${FANMIND_RESTORE_DRILL_ID:?FANMIND_RESTORE_DRILL_ID is required}"
+: "${FANMIND_RESTORE_DISPOSABLE_TARGET_ID:?FANMIND_RESTORE_DISPOSABLE_TARGET_ID is required}"
+: "${FANMIND_RESTORE_PRODUCTION_COMMIT:?FANMIND_RESTORE_PRODUCTION_COMMIT is required}"
 
 [[ "$PGPASSFILE" = /* ]] || fail "passfile_path_must_be_absolute"
 [[ ! -L "$PGPASSFILE" ]] || fail "passfile_symlink_forbidden"
 [[ -f "$PGPASSFILE" && -r "$PGPASSFILE" ]] || fail "passfile_not_readable"
+[[ "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" = /* ]] \
+  || fail "full_backup_receipt_path_must_be_absolute"
+[[ ! -L "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" ]] \
+  || fail "full_backup_receipt_symlink_forbidden"
+[[ -f "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" \
+  && -r "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" ]] \
+  || fail "full_backup_receipt_not_readable"
+[[ "$FANMIND_RESTORE_DRILL_ID" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]{0,47}$ ]] \
+  || fail "restore_drill_id_invalid"
+[[ "$FANMIND_RESTORE_DISPOSABLE_TARGET_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] \
+  || fail "restore_disposable_target_id_invalid"
+[[ "$FANMIND_RESTORE_PRODUCTION_COMMIT" =~ ^[0-9a-f]{40}$ ]] \
+  || fail "restore_production_commit_invalid"
+validate_output_path "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH"
+
+operational_test_mode="${FANMIND_OPERATIONAL_TEST_MODE:-}"
+pg_restore_override="${FANMIND_PG_RESTORE_BIN:-}"
+psql_override="${FANMIND_PSQL_BIN:-}"
+if [[ -n "$pg_restore_override" || -n "$psql_override" ]]; then
+  [[ "$operational_test_mode" == "restore-runner-test" ]] \
+    || fail "operational_binary_override_forbidden"
+fi
+[[ -z "$operational_test_mode" || "$operational_test_mode" == "restore-runner-test" ]] \
+  || fail "operational_test_mode_invalid"
+
+pg_restore_bin="${pg_restore_override:-/usr/lib/postgresql/17/bin/pg_restore}"
+psql_bin="${psql_override:-/usr/lib/postgresql/17/bin/psql}"
+[[ "$pg_restore_bin" = /* && -x "$pg_restore_bin" ]] \
+  || fail "pg_restore_not_executable"
+[[ "$psql_bin" = /* && -x "$psql_bin" ]] \
+  || fail "psql_not_executable"
 
 exec {passfile_fd}<"$PGPASSFILE" || fail "passfile_open_failed"
 passfile_fd_path="/proc/self/fd/$passfile_fd"
@@ -85,19 +154,31 @@ exec {dump_fd}<"$dump_path" || fail "dump_open_failed"
 dump_fd_path="/proc/self/fd/$dump_fd"
 validate_open_source "dump" "$dump_path" "$dump_fd_path"
 
+exec {full_receipt_fd}<"$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" \
+  || fail "full_backup_receipt_open_failed"
+full_receipt_fd_path="/proc/self/fd/$full_receipt_fd"
+validate_open_source \
+  "full_backup_receipt" \
+  "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" \
+  "$full_receipt_fd_path"
+
 umask 077
 snapshot_dir="$(mktemp -d -- "${TMPDIR:-/tmp}/fanmind-restore.XXXXXX")" \
   || fail "snapshot_directory_create_failed"
 trap cleanup_snapshot EXIT
 snapshot_dump="$snapshot_dir/database.dump"
 snapshot_passfile="$snapshot_dir/restore.pgpass"
+snapshot_full_receipt="$snapshot_dir/full-backup-receipt.json"
 
 cp -- "$dump_fd_path" "$snapshot_dump" || fail "dump_snapshot_failed"
 cp -- "$passfile_fd_path" "$snapshot_passfile" || fail "passfile_snapshot_failed"
-chmod 0400 "$snapshot_dump" || fail "dump_snapshot_permissions_failed"
-chmod 0600 "$snapshot_passfile" || fail "passfile_snapshot_permissions_failed"
+cp -- "$full_receipt_fd_path" "$snapshot_full_receipt" \
+  || fail "full_backup_receipt_snapshot_failed"
+chmod 0600 "$snapshot_dump" "$snapshot_passfile" "$snapshot_full_receipt" \
+  || fail "snapshot_permissions_failed"
 exec {dump_fd}<&-
 exec {passfile_fd}<&-
+exec {full_receipt_fd}<&-
 
 PGPASSFILE="$snapshot_passfile"
 export PGPASSFILE
@@ -105,11 +186,18 @@ readonly PGHOST PGPORT PGDATABASE PGUSER PGPASSFILE
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "$script_dir/../.." && pwd)"
-pg_restore_bin="${FANMIND_PG_RESTORE_BIN:-/usr/lib/postgresql/17/bin/pg_restore}"
-
-[[ -x "$pg_restore_bin" ]] || fail "pg_restore_not_executable"
-
 cd "$repo_root"
+
+FANMIND_RESTORE_STARTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+  || fail "started_timestamp_failed"
+export FANMIND_RESTORE_STARTED_AT
+
+node scripts/operations/verify-full-backup-restore-receipt.mjs \
+  --receipt "$snapshot_full_receipt" \
+  --dump "$snapshot_dump" \
+  >/dev/null \
+  || fail "full_backup_receipt_verification_failed"
+
 node scripts/operations/restore-target-preflight.mjs
 
 if ! env \
@@ -122,6 +210,7 @@ if ! env \
   -u PGSERVICEFILE \
   -u PGPASSWORD \
   -u PGPASSFILE \
+  -u PGOPTIONS \
   "$pg_restore_bin" \
   --list \
   "$snapshot_dump" \
@@ -130,7 +219,78 @@ then
   fail "dump_archive_validation_failed"
 fi
 
-env \
+empty_target_sql="
+WITH user_objects AS (
+  SELECT c.oid
+    FROM pg_catalog.pg_class AS c
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+     AND n.nspname !~ '^pg_toast'
+     AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+  UNION ALL
+  SELECT p.oid
+    FROM pg_catalog.pg_proc AS p
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+     AND n.nspname !~ '^pg_toast'
+  UNION ALL
+  SELECT t.oid
+    FROM pg_catalog.pg_type AS t
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace
+   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+     AND n.nspname !~ '^pg_toast'
+     AND t.typtype IN ('d', 'e', 'r')
+  UNION ALL
+  SELECT e.oid
+    FROM pg_catalog.pg_extension AS e
+   WHERE e.extname <> 'plpgsql'
+  UNION ALL
+  SELECT n.oid
+    FROM pg_catalog.pg_namespace AS n
+   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'public')
+     AND n.nspname !~ '^pg_toast'
+)
+SELECT COUNT(*)::text FROM user_objects;
+"
+
+if ! empty_target_result="$(
+  env \
+    -u PGHOST \
+    -u PGPORT \
+    -u PGDATABASE \
+    -u PGUSER \
+    -u PGHOSTADDR \
+    -u PGSERVICE \
+    -u PGSERVICEFILE \
+    -u PGPASSWORD \
+    -u PGOPTIONS \
+    PGPASSFILE="$snapshot_passfile" \
+    "$psql_bin" \
+    --no-psqlrc \
+    --no-align \
+    --tuples-only \
+    --quiet \
+    --set ON_ERROR_STOP=1 \
+    --no-password \
+    --host "$PGHOST" \
+    --port "$PGPORT" \
+    --username "$PGUSER" \
+    --dbname "$PGDATABASE" \
+    --command "$empty_target_sql" \
+    2>/dev/null
+)"
+then
+  fail "empty_target_query_failed"
+fi
+[[ "$empty_target_result" == "0" ]] || fail "restore_target_not_empty"
+
+FANMIND_RESTORE_EMPTY_TARGET_OBSERVED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+  || fail "empty_target_timestamp_failed"
+FANMIND_RESTORE_EMPTY_TARGET_OBJECT_COUNT="0"
+export FANMIND_RESTORE_EMPTY_TARGET_OBSERVED_AT
+export FANMIND_RESTORE_EMPTY_TARGET_OBJECT_COUNT
+
+if ! env \
   -u PGHOST \
   -u PGPORT \
   -u PGDATABASE \
@@ -139,6 +299,8 @@ env \
   -u PGSERVICE \
   -u PGSERVICEFILE \
   -u PGPASSWORD \
+  -u PGOPTIONS \
+  PGPASSFILE="$snapshot_passfile" \
   "$pg_restore_bin" \
   --no-owner \
   --no-privileges \
@@ -149,4 +311,17 @@ env \
   --port "$PGPORT" \
   --username "$PGUSER" \
   --dbname "$PGDATABASE" \
-  "$snapshot_dump"
+  "$snapshot_dump" \
+  >/dev/null 2>&1
+then
+  fail "database_restore_failed"
+fi
+
+FANMIND_RESTORE_COMPLETED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+  || fail "completed_timestamp_failed"
+export FANMIND_RESTORE_COMPLETED_AT
+
+node scripts/operations/restore-runner-receipt.mjs \
+  --full-receipt "$snapshot_full_receipt" \
+  --dump "$snapshot_dump" \
+  --output "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH"

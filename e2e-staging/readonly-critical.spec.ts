@@ -1,20 +1,65 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const stagingEmail = process.env.FANMIND_E2E_STAGING_EMAIL?.trim() || "";
-const stagingPassword = process.env.FANMIND_E2E_STAGING_PASSWORD || "";
-const stagingContactLabel =
-  process.env.FANMIND_E2E_STAGING_CONTACT_LABEL?.trim() || "";
+type SyntheticFixture = {
+  email: string;
+  password: string;
+  workspaceId: string;
+  contactId: string;
+};
 
-function requireSyntheticCredentials() {
-  if (!stagingEmail || !stagingPassword) {
-    throw new Error("staging_e2e_credentials_missing");
+type AuthSession = {
+  accessToken: string;
+  anonKey: string;
+};
+
+const appOrigin = new URL(
+  process.env.FANMIND_E2E_STAGING_URL?.trim() || "",
+).origin;
+const supabaseTarget = new URL(
+  process.env.FANMIND_E2E_STAGING_SUPABASE_URL?.trim() || "",
+);
+const supabaseOrigin = supabaseTarget.origin;
+const uuid =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+
+const primary: SyntheticFixture = {
+  email: process.env.FANMIND_E2E_STAGING_EMAIL?.trim() || "",
+  password: process.env.FANMIND_E2E_STAGING_PASSWORD || "",
+  workspaceId: process.env.FANMIND_E2E_STAGING_WORKSPACE_ID?.trim() || "",
+  contactId: process.env.FANMIND_E2E_STAGING_CONTACT_ID?.trim() || "",
+};
+
+const secondary: SyntheticFixture = {
+  email:
+    process.env.FANMIND_E2E_STAGING_SECONDARY_EMAIL?.trim() || "",
+  password: process.env.FANMIND_E2E_STAGING_SECONDARY_PASSWORD || "",
+  workspaceId:
+    process.env.FANMIND_E2E_STAGING_SECONDARY_WORKSPACE_ID?.trim() || "",
+  contactId:
+    process.env.FANMIND_E2E_STAGING_SECONDARY_CONTACT_ID?.trim() || "",
+};
+
+function requireSyntheticFixtures() {
+  const fixtures = [primary, secondary];
+  const identifiers = fixtures.flatMap(({ workspaceId, contactId }) => [
+    workspaceId,
+    contactId,
+  ]);
+
+  for (const fixture of fixtures) {
+    if (!fixture.email || !fixture.password) {
+      throw new Error("staging_e2e_credentials_missing");
+    }
+    if (!/staging|synthetic|test/iu.test(fixture.email)) {
+      throw new Error("staging_e2e_email_not_marked_synthetic");
+    }
   }
   if (
-    !stagingEmail.toLowerCase().includes("staging") &&
-    !stagingEmail.toLowerCase().includes("synthetic") &&
-    !stagingEmail.toLowerCase().includes("test")
+    primary.email.toLowerCase() === secondary.email.toLowerCase() ||
+    identifiers.some((value) => !uuid.test(value)) ||
+    new Set(identifiers).size !== identifiers.length
   ) {
-    throw new Error("staging_e2e_email_not_marked_synthetic");
+    throw new Error("staging_e2e_fixture_boundary_rejected");
   }
 }
 
@@ -25,62 +70,163 @@ async function installReadOnlyNetworkGuard(page: Page) {
     const request = route.request();
     const method = request.method().toUpperCase();
     const url = new URL(request.url());
+    const sameApp = url.origin === appOrigin;
+    const sameSupabase = url.origin === supabaseOrigin;
     const isRead = ["GET", "HEAD", "OPTIONS"].includes(method);
     const isAuthSessionExchange =
-      method === "POST" && url.pathname.endsWith("/auth/v1/token");
+      sameSupabase &&
+      method === "POST" &&
+      url.pathname === "/auth/v1/token" &&
+      url.searchParams.get("grant_type") === "password";
+    const isExplicitLogout =
+      sameSupabase &&
+      method === "POST" &&
+      url.pathname === "/auth/v1/logout";
 
-    if (!isRead && !isAuthSessionExchange) {
-      blockedWrites.push(`${method}:${url.pathname}`);
-      await route.abort("blockedbyclient");
+    if (
+      (isRead && (sameApp || sameSupabase)) ||
+      isAuthSessionExchange ||
+      isExplicitLogout
+    ) {
+      await route.continue();
       return;
     }
 
-    await route.continue();
+    blockedWrites.push(`${method}:${url.origin}:${url.pathname}`);
+    await route.abort("blockedbyclient");
   });
 
   return blockedWrites;
 }
 
-test("synthetischer Staging-Nutzer erreicht Dashboard, Kontakte und Detail read-only", async ({
-  page,
-}) => {
-  requireSyntheticCredentials();
-  const blockedWrites = await installReadOnlyNetworkGuard(page);
+async function login(page: Page, fixture: SyntheticFixture): Promise<AuthSession> {
+  const authResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === supabaseOrigin &&
+      url.pathname === "/auth/v1/token" &&
+      url.searchParams.get("grant_type") === "password"
+    );
+  });
 
   await page.goto("/login");
-  await page.getByLabel("E-Mail", { exact: true }).fill(stagingEmail);
-  await page.getByLabel("Passwort", { exact: true }).fill(stagingPassword);
+  await page.getByLabel("E-Mail", { exact: true }).fill(fixture.email);
+  await page.getByLabel("Passwort", { exact: true }).fill(fixture.password);
   await page.getByRole("button", { name: /Einloggen/u }).click();
 
-  await expect(page).toHaveURL(/\/dashboard(?:\?|$)/u);
-  await expect(page.locator("main")).toBeVisible();
+  const response = await authResponse;
+  expect(response.ok()).toBe(true);
+  expect(new URL(response.url()).origin).toBe(supabaseOrigin);
+  const payload = (await response.json()) as { access_token?: unknown };
+  const accessToken =
+    typeof payload.access_token === "string" ? payload.access_token : "";
+  const anonKey = response.request().headers().apikey || "";
+  if (!accessToken || !anonKey) {
+    throw new Error("staging_e2e_session_boundary_missing");
+  }
 
-  const contactsLink = page.locator('a[href="/fans"]').first();
-  await expect(contactsLink).toBeVisible();
-  await contactsLink.click();
+  await expect(page).toHaveURL(/\/dashboard(?:\?|$)/u);
+  return { accessToken, anonKey };
+}
+
+async function readContacts(
+  page: Page,
+  session: AuthSession,
+  fixture: SyntheticFixture,
+  peer: SyntheticFixture,
+) {
+  const url = new URL("/rest/v1/contacts", supabaseOrigin);
+  url.searchParams.set(
+    "id",
+    `in.(${fixture.contactId},${peer.contactId})`,
+  );
+  url.searchParams.set("select", "id,workspace_id");
+  const response = await page.request.get(url.toString(), {
+    headers: {
+      apikey: session.anonKey,
+      Authorization: `Bearer ${session.accessToken}`,
+      Accept: "application/json",
+    },
+  });
+  expect(response.ok()).toBe(true);
+  const rows = (await response.json()) as Array<{
+    id?: unknown;
+    workspace_id?: unknown;
+  }>;
+  expect(rows).toEqual([
+    {
+      id: fixture.contactId,
+      workspace_id: fixture.workspaceId,
+    },
+  ]);
+}
+
+async function closeAndClearBrowserSession(
+  page: Page,
+  session: AuthSession,
+) {
+  const logoutUrl = new URL("/auth/v1/logout", supabaseOrigin);
+  const logoutResponse = await page.request.post(logoutUrl.toString(), {
+    headers: {
+      apikey: session.anonKey,
+      Authorization: `Bearer ${session.accessToken}`,
+    },
+  });
+  expect(logoutResponse.ok()).toBe(true);
+
+  await page.goto("/login");
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  await page.context().clearCookies();
+}
+
+test.beforeEach(() => {
+  requireSyntheticFixtures();
+});
+
+test("synthetischer Staging-Nutzer erreicht Dashboard und Kontaktliste ohne Geschäftsdatenschreibzugriff", async ({
+  page,
+}) => {
+  const blockedWrites = await installReadOnlyNetworkGuard(page);
+  await login(page, primary);
+
+  await expect(page.locator("main")).toBeVisible();
+  await page.locator('a[href="/fans"]').first().click();
   await expect(page).toHaveURL(/\/fans(?:\?|$)/u);
   await expect(page.locator("main")).toBeVisible();
 
-  if (stagingContactLabel) {
-    await page
-      .getByRole("link", { name: new RegExp(stagingContactLabel, "iu") })
-      .first()
-      .click();
-  } else {
-    const firstSyntheticContact = page
-      .locator('a[href^="/fans/"]:not([href="/fans/import"])')
-      .first();
-    await expect(firstSyntheticContact).toBeVisible();
-    await firstSyntheticContact.click();
-  }
+  expect(blockedWrites).toEqual([]);
+});
 
-  await expect(page).toHaveURL(/\/fans\/[^/?#]+/u);
-  await expect(page.locator("main")).toBeVisible();
-  await expect(
-    page.getByText(
-      /Keine automatische Sendefunktion|Mensch prüft|sendet final selbst/iu,
-    ).first(),
-  ).toBeVisible();
+test("zwei synthetische Workspaces dürfen über RLS nur den jeweils eigenen Kontakt lesen", async ({
+  page,
+}) => {
+  const blockedWrites = await installReadOnlyNetworkGuard(page);
+  const primarySession = await login(page, primary);
+  await readContacts(page, primarySession, primary, secondary);
+
+  await closeAndClearBrowserSession(page, primarySession);
+  const secondarySession = await login(page, secondary);
+  await readContacts(page, secondarySession, secondary, primary);
+
+  expect(blockedWrites).toEqual([]);
+});
+
+test("normaler synthetischer Nutzer bleibt aus Admin gesperrt und nach Logout ohne Sitzung", async ({
+  page,
+}) => {
+  const blockedWrites = await installReadOnlyNetworkGuard(page);
+  await login(page, primary);
+
+  await page.goto("/admin");
+  await expect(page).not.toHaveURL(/\/admin(?:\/|\?|$)/u);
+
+  await page.goto("/logout");
+  await expect(page).toHaveURL(/\/login(?:\?|$)/u);
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/login(?:\?|$)/u);
 
   expect(blockedWrites).toEqual([]);
 });

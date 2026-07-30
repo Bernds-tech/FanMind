@@ -102,6 +102,12 @@ test("manual staging workflow uses the staging environment and never uploads ses
   assert.match(source, /environment: staging/u);
   assert.match(source, /FANMIND_STAGING_E2E_EMAIL/u);
   assert.match(source, /FANMIND_STAGING_E2E_PASSWORD/u);
+  assert.match(source, /FANMIND_STAGING_E2E_SECONDARY_EMAIL/u);
+  assert.match(source, /FANMIND_STAGING_E2E_SECONDARY_PASSWORD/u);
+  assert.match(source, /FANMIND_STAGING_E2E_WORKSPACE_ID/u);
+  assert.match(source, /FANMIND_STAGING_E2E_CONTACT_ID/u);
+  assert.match(source, /FANMIND_E2E_STAGING_SUPABASE_URL/u);
+  assert.match(source, /FANMIND_E2E_STAGING_PRODUCTION_SUPABASE_REF/u);
   assert.match(source, /permissions:\s*\n\s*contents: read/u);
   assert.doesNotMatch(source, /upload-artifact/u);
   assert.doesNotMatch(source, /contents: write|write-all/u);
@@ -109,11 +115,17 @@ test("manual staging workflow uses the staging environment and never uploads ses
   assert.match(source, /npm run test:e2e:staging/u);
 });
 
-test("authenticated staging spec allows only session exchange plus reads", async () => {
+test("authenticated staging spec allows only session exchange, logout and exact-origin reads", async () => {
   const source = await read("e2e-staging/readonly-critical.spec.ts");
 
   assert.match(source, /isAuthSessionExchange/u);
-  assert.match(source, /url\.pathname\.endsWith\("\/auth\/v1\/token"\)/u);
+  assert.match(source, /url\.pathname === "\/auth\/v1\/token"/u);
+  assert.match(source, /isExplicitLogout/u);
+  assert.match(source, /url\.pathname === "\/auth\/v1\/logout"/u);
+  assert.match(source, /closeAndClearBrowserSession/u);
+  assert.match(source, /page\.request\.post\(logoutUrl\.toString\(\)/u);
+  assert.match(source, /url\.origin === supabaseOrigin/u);
+  assert.match(source, /url\.origin === appOrigin/u);
   assert.match(source, /\["GET", "HEAD", "OPTIONS"\]/u);
   assert.match(source, /route\.abort\("blockedbyclient"\)/u);
   assert.match(source, /blockedWrites[\s\S]*toEqual\(\[\]\)/u);
@@ -122,6 +134,20 @@ test("authenticated staging spec allows only session exchange plus reads", async
     /\/api\/demo\/start|\/api\/ai|signUp|\.insert\(|\.update\(|\.delete\(/u,
   );
   assert.doesNotMatch(source, /console\.(?:log|warn|error)/u);
+});
+
+test("authenticated staging spec proves bidirectional contact RLS, admin denial and logout", async () => {
+  const source = await read("e2e-staging/readonly-critical.spec.ts");
+
+  assert.match(source, /primarySession[\s\S]*readContacts/u);
+  assert.match(source, /secondarySession[\s\S]*readContacts/u);
+  assert.match(source, /id,workspace_id/u);
+  assert.match(source, /rows\)\.toEqual\(\[/u);
+  assert.match(source, /page\.goto\("\/admin"\)/u);
+  assert.match(source, /not\.toHaveURL\(\/\\\/admin/u);
+  assert.match(source, /page\.goto\("\/logout"\)/u);
+  assert.match(source, /page\.goto\("\/dashboard"\)/u);
+  assert.doesNotMatch(source, /service.role|SERVICE_ROLE/iu);
 });
 
 test("browser E2E runbook preserves existing test layers and external staging truth", async () => {

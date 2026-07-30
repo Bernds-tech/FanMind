@@ -109,10 +109,16 @@ Dieser Lauf ist bewusst nur manuell und nutzt das GitHub Environment `staging`. 
 
 ### Erforderliche Staging-Werte
 
-GitHub Environment Variable:
+GitHub Environment Variables:
 
 ```text
 FANMIND_STAGING_APP_URL
+NEXT_PUBLIC_SUPABASE_URL
+FANMIND_PRODUCTION_SUPABASE_PROJECT_REF
+FANMIND_STAGING_E2E_WORKSPACE_ID
+FANMIND_STAGING_E2E_CONTACT_ID
+FANMIND_STAGING_E2E_SECONDARY_WORKSPACE_ID
+FANMIND_STAGING_E2E_SECONDARY_CONTACT_ID
 ```
 
 GitHub Environment Secrets:
@@ -120,15 +126,15 @@ GitHub Environment Secrets:
 ```text
 FANMIND_STAGING_E2E_EMAIL
 FANMIND_STAGING_E2E_PASSWORD
+FANMIND_STAGING_E2E_SECONDARY_EMAIL
+FANMIND_STAGING_E2E_SECONDARY_PASSWORD
 ```
 
-Optionale Variable:
-
-```text
-FANMIND_STAGING_E2E_CONTACT_LABEL
-```
-
-Der Nutzer und der Kontakt müssen ausdrücklich synthetische Testdaten sein. Die E-Mail-Adresse muss im Namen `staging`, `synthetic` oder `test` enthalten.
+Beide Nutzer, Workspaces und Kontakte müssen getrennte, ausdrücklich
+synthetische Testdaten sein. Beide E-Mail-Adressen müssen im Namen `staging`,
+`synthetic` oder `test` enthalten. Die vier UUIDs sind Pflichtwerte und dürfen
+sich nicht wiederholen. Der erwartete Supabase-Ursprung muss exakt zum
+Staging-Projekt gehören und vom dokumentierten Production-Projekt abweichen.
 
 ### Fail-closed Zielgrenze
 
@@ -137,17 +143,22 @@ Die Staging-Konfiguration akzeptiert ausschließlich:
 - HTTPS;
 - einen Hostnamen mit `staging`;
 - niemals `fanmind.ch` oder `www.fanmind.ch`;
+- ausschließlich den exakt bestätigten Staging-Supabase-Ursprung;
 - die feste Bestätigung `fanmind-staging-readonly`;
-- vorhandene synthetische Zugangsdaten.
+- zwei vollständige synthetische Zugangsdaten- und Fixture-Sätze.
 
 Der Staging-Test erlaubt nur:
 
-- Auth-Session-Austausch;
-- GET-, HEAD- und OPTIONS-Anfragen;
+- Auth-Session-Austausch und expliziten Logout am bestätigten Supabase-Ursprung;
+- GET-, HEAD- und OPTIONS-Anfragen ausschließlich am App- oder
+  Staging-Supabase-Ursprung;
 - Login;
 - Dashboard lesen;
 - Kontaktliste lesen;
-- ein synthetisches Kontaktdetail lesen.
+- den jeweils eigenen synthetischen Kontakt direkt über RLS lesen;
+- den fremden synthetischen Kontakt in beide Richtungen als unsichtbar
+  nachweisen;
+- Admin-Sperre und gelöschte Sitzung nach Logout nachweisen.
 
 Jede andere POST-, PATCH-, PUT- oder DELETE-Anfrage wird browserseitig blockiert. Insbesondere sind Registrierung, Demo-Erzeugung, KI-Aufrufe, Kontaktmutation, Kontaktwissen, Follow-ups, Billing und Referral-Aktionen nicht Bestandteil dieses read-only Laufs.
 

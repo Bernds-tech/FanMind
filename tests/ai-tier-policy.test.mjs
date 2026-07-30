@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -259,4 +260,22 @@ test("workspace entitlement rejects an invalid evaluation instant", () => {
       ),
     /now must be a valid instant/u,
   );
+});
+
+test("decision proposal cannot be mistaken for a paid-tier activation", async () => {
+  const [proposal, readiness, truth] = await Promise.all([
+    readFile("docs/operations/AI_TIER_DECISION_PROPOSAL.md", "utf8"),
+    readFile("docs/operations/AI_TIER_READINESS.md", "utf8"),
+    readFile("docs/SOURCE_OF_TRUTH.md", "utf8"),
+  ]);
+
+  assert.match(proposal, /keine Freigabe/iu);
+  assert.match(proposal, /UNENTSCHIEDEN/u);
+  assert.match(proposal, /KI Plus[\s\S]*100 €/u);
+  assert.match(proposal, /KI Ultra[\s\S]*200 €/u);
+  assert.match(proposal, /keine automatische Sendung/iu);
+  assert.match(proposal, /keinen Referral-Rabatt/iu);
+  assert.match(proposal, /Stripe-Entitlements[\s\S]*weder aktiviert noch angewendet/iu);
+  assert.match(readiness, /AI_TIER_DECISION_PROPOSAL\.md/u);
+  assert.match(truth, /AI_TIER_DECISION_PROPOSAL\.md/u);
 });

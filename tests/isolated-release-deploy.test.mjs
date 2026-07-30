@@ -562,8 +562,37 @@ test("production workflow keeps isolated deployment explicitly disabled by defau
     workflow,
     /Using legacy in-place deployment because isolated release deployment is disabled/,
   );
-  assert.match(workflow, /git reset --hard origin\/main/);
+  assert.match(workflow, /git reset --hard "\$RELEASE_COMMIT"/);
   assert.match(workflow, /pm2 start npm --name fanmind --cwd "\$SOURCE_DIR" -- start/);
+});
+
+test("production deploy is pinned to the immutable triggering commit", async () => {
+  const [workflow, script, runbook] = await Promise.all([
+    readFile(workflowPath, "utf8"),
+    readFile(scriptPath, "utf8"),
+    readFile("docs/operations/ISOLATED_RELEASE_DEPLOY.md", "utf8"),
+  ]);
+
+  assert.match(workflow, /EXPECTED_RELEASE_COMMIT: \$\{\{ github\.sha \}\}/u);
+  assert.match(workflow, /RELEASE_COMMIT="\$EXPECTED_RELEASE_COMMIT"/u);
+  assert.match(
+    workflow,
+    /git merge-base --is-ancestor "\$EXPECTED_RELEASE_COMMIT" origin\/main/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /RELEASE_COMMIT="\$\(git rev-parse origin\/main\)"/u,
+  );
+  assert.doesNotMatch(workflow, /git reset --hard origin\/main/u);
+  assert.match(
+    script,
+    /git merge-base --is-ancestor "\$RELEASE_COMMIT" origin\/main/u,
+  );
+  assert.doesNotMatch(
+    script,
+    /git rev-parse origin\/main.*==.*RELEASE_COMMIT/u,
+  );
+  assert.match(runbook, /immutable commit that triggered the workflow/iu);
 });
 
 test("rollback failures fall through to the next safe target and live version lookup is optional", async () => {

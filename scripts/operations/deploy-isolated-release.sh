@@ -331,7 +331,11 @@ log "previous PM2 mode: ${PREVIOUS_EXEC_MODE:-unknown}"
 
 cd "$SOURCE_DIR"
 git fetch --prune origin main
-[[ "$(git rev-parse origin/main)" == "$RELEASE_COMMIT" ]] || fail "origin/main moved away from expected commit"
+if ! git cat-file -e "$RELEASE_COMMIT^{commit}" 2>/dev/null; then
+  git fetch --no-tags origin "$RELEASE_COMMIT"
+fi
+git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main \
+  || fail "release commit is not reachable from origin/main"
 
 sudo install -d -o "$(id -u)" -g "$(id -g)" -m 0755 "$RELEASE_ROOT"
 RELEASE_DIR="$RELEASE_ROOT/$RELEASE_COMMIT"

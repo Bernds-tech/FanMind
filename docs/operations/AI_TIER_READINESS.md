@@ -25,6 +25,10 @@ AI_TIER_READINESS=PASS
 übereinstimmen. Es aktiviert kein Add-on, verändert keinen Workspace und
 führt keinen Stripe-Aufruf aus.
 
+Die noch offenen fachlichen Beschlüsse sind ohne Aktivierungswirkung in
+`docs/operations/AI_TIER_DECISION_PROPOSAL.md` gebündelt. Solange dort
+`UNENTSCHIEDEN`-Werte stehen, bleiben Plus und Ultra blockiert.
+
 ## Standard
 
 KI Standard ist als enthaltene Leistung bereit, wenn:
