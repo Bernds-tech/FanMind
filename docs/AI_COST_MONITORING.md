@@ -205,11 +205,15 @@ Der Adminbereich zeigt derzeit:
 - Features nach geschätzten Kosten;
 - Modelle nach geschätzten Kosten, Anfragen, Tokens und Fehlern;
 - durchschnittliche geschätzte Kosten pro Request;
+- rein beobachtende Monatsbudget- und Spike-Hinweise ohne automatische Sperre;
+- bis zu 10.000 stabil paginierte Ereignisse je aktuellem, vorherigem und
+  optionalem Monatsbudget-Zeitraum; eine erreichte Obergrenze wird sichtbar
+  und verhindert eine falsche Entwarnung;
 - letzte Usage-Events ohne Prompt-/Antwortvolltexte.
 
 Noch offen:
 
-- explizite Spike-/Budgetwarnungen.
+- ein vom Betreiber bestätigter interner Monatsbudgetwert für Production.
 
 Die Workspace-Nutzeransicht zeigt:
 
@@ -227,20 +231,36 @@ Später möglich:
 
 ## 10. Budget- und Warnlogik
 
-Empfohlene Budgetfelder später:
+Aktive optionale Admin-Konfiguration:
 
-- globales Monatsbudget
-- Workspace-Monatsbudget
-- Tageslimit pro Workspace
-- Request-Limit pro User
-- Max-Kontextgröße pro Feature
+- `FANMIND_AI_ADMIN_MONTHLY_BUDGET_CENTS`: internes globales Monatsbudget in
+  Minor Units; leer bedeutet ausschließlich Messung;
+- `FANMIND_AI_ADMIN_SPIKE_RATIO`: Vergleichsfaktor für zwei gleich lange
+  Zeiträume, standardmäßig `2`;
+- `FANMIND_AI_ADMIN_SPIKE_MIN_REQUESTS`: Mindestvolumen gegen Kleinstmengen-
+  Rauschen, standardmäßig `10`;
+- `FANMIND_AI_ADMIN_SPIKE_MIN_COST_CENTS`: Mindestkosten für einen
+  kostenbasierten Spike, standardmäßig `100`.
 
 Warnstufen:
 
 - 50 Prozent Budget: intern beobachten
 - 80 Prozent Budget: Admin-Hinweis
-- 100 Prozent Budget: weitere KI-Anfragen je nach Plan blockieren oder drosseln
-- ungewöhnlicher Spike: Admin-Warnung
+- 100 Prozent Budget: dringender Admin-Hinweis;
+- ungewöhnlicher Spike: Admin-Warnung, wenn das Mindestvolumen erreicht ist.
+
+Diese Hinweise sind rein beobachtend. Sie ändern kein Kundenkontingent,
+blockieren keine KI-Anfrage, lösen keine Abrechnung aus und aktivieren weder
+KI Plus noch KI Ultra. Ist das Monatsbudget leer oder ist eine
+10.000-Ereignis-Obergrenze erreicht, zeigt die Oberfläche ehrlich
+`nicht konfiguriert` beziehungsweise `Auswertung begrenzt`.
+
+Spätere, gesondert freizugebende Felder:
+
+- Workspace-Monatsbudget;
+- Tageslimit pro Workspace;
+- Request-Limit pro User;
+- Max-Kontextgröße pro Feature.
 
 Eine datierte, nicht aktivierende Standard-/Plus-/Ultra-Arbeitsempfehlung mit
 dual begrenzten Monatsanfragen und Tokens, Kontextgrenzen sowie konservativen
@@ -288,11 +308,15 @@ Erledigt:
 10. exakte, paginationsunabhängige Admin-Kontaktzählung und geschätzte
     KI-Kosten pro Fan sowie pro 100/1.000 Fans;
 11. validierte Admin-Schnellansichten für 24 Stunden sowie 7, 30 und 90 Tage
-    und eine Modellverteilung mit Kosten-, Token- und Fehlerwerten.
+    und eine Modellverteilung mit Kosten-, Token- und Fehlerwerten;
+12. paginationssichere Admin-Zeiträume und rein beobachtende Monatsbudget-/
+    Spike-Hinweise, die bei fehlender Konfiguration oder begrenzten Daten
+    keine Quote, Sperre oder falsche Entwarnung behaupten.
 
-Offen bleiben echte Provider-Tokenwerte, Budgetwarnungen und die vertragliche
-Standard-/Plus-/Ultra-Entitlement-/Billing-Logik
-einschließlich einer server-eigenen Autorisierungsquelle.
+Offen bleiben echte Provider-Tokenwerte, ein bestätigter interner
+Production-Budgetwert und die vertragliche Standard-/Plus-/Ultra-
+Entitlement-/Billing-Logik einschließlich einer server-eigenen
+Autorisierungsquelle.
 
 ## 14. Akzeptanzkriterien
 
@@ -300,6 +324,8 @@ einschließlich einer server-eigenen Autorisierungsquelle.
 - [x] Workspace-Zuordnung ist vorhanden.
 - [x] Admin sieht Verbrauch je Workspace.
 - [x] Admin sieht Kosten pro Fan und pro 100/1.000 Fans.
+- [x] Admin sieht rein beobachtende Budget-/Spike-Hinweise ohne automatische
+      Sperre oder erfundene Quote.
 - [x] UI markiert Werte als geschätzt.
 - [x] Keine Secrets oder Prompt-Texte landen im Usage-Log.
 - [x] RLS verhindert fremde Workspace-Daten.

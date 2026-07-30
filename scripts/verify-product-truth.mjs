@@ -385,6 +385,31 @@ requireText(
   "Schnellzeiträume und Modellverteilung müssen automatisiert geprüft werden.",
 );
 requireText(
+  ".env.example",
+  "FANMIND_AI_ADMIN_MONTHLY_BUDGET_CENTS=",
+  "Das optionale interne KI-Monatsbudget muss serverseitig dokumentiert sein.",
+);
+requireText(
+  ".env.example",
+  "FANMIND_AI_ADMIN_SPIKE_RATIO=2",
+  "Der beobachtende KI-Spike-Vergleich muss nachvollziehbar konfigurierbar sein.",
+);
+requireText(
+  "src/lib/adminAiUsage.ts",
+  "MAX_ADMIN_USAGE_EVENTS = 10_000",
+  "Admin-KI-Zeiträume müssen paginiert und mit sichtbarer Obergrenze geladen werden.",
+);
+requireText(
+  "src/app/admin/ai-usage/page.tsx",
+  "Beobachtung ohne Sperre",
+  "Budget- und Spike-Hinweise dürfen keine automatische Sperre behaupten.",
+);
+requireText(
+  "tests/ai-usage-dashboard-metrics.test.mjs",
+  "remain observational and fail honest when unconfigured",
+  "Nicht konfigurierte oder begrenzte Budgetdaten müssen ehrlich getestet werden.",
+);
+requireText(
   "src/config/aiTierRecommendation.mjs",
   'AI_TIER_RECOMMENDATION_STATUS = "advisory"',
   "Die KI-Stufen-Arbeitsempfehlung muss ausdrücklich ohne Aktivierungswirkung bleiben.",

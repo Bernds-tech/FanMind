@@ -201,12 +201,17 @@ test('cross-device rename failure is avoided by copy/verify/finalize placement',
   assert.match(await readFile(placed.checksumFinal, 'utf8'), new RegExp(result.sha256));
 });
 
-test('successful copy keeps exact destination content and sha256', async () => {
-  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-copy-ok-'));
-  const { result } = await makePlacedPairFixture(tmp, 'ok.dump.age', 'exact-payload');
-  const placed = await worker.placeBackupPair(result);
-  assert.equal(await readFile(placed.final, 'utf8'), 'exact-payload');
-  assert.equal((await readFile(placed.checksumFinal, 'utf8')).trim().split(/\s+/)[0], result.sha256);
+test('repeated exclusive copies keep exact destination content, mode and sha256', async () => {
+  for (let index = 0; index < 20; index += 1) {
+    const tmp = await mkdtemp(join(tmpdir(), 'fanmind-copy-ok-'));
+    const payload = `exact-payload-${index}`;
+    const { result } = await makePlacedPairFixture(tmp, `ok-${index}.dump.age`, payload);
+    const placed = await worker.placeBackupPair(result);
+    assert.equal(await readFile(placed.final, 'utf8'), payload);
+    assert.equal((await readFile(placed.checksumFinal, 'utf8')).trim().split(/\s+/)[0], result.sha256);
+    assert.equal((await stat(placed.final)).mode & 0o777, 0o600);
+    assert.equal((await stat(placed.checksumFinal)).mode & 0o777, 0o600);
+  }
 });
 
 test('checksum mismatch cleans temporary destination files', async () => {
