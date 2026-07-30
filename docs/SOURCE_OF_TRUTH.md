@@ -214,6 +214,10 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Entscheidung und aktivieren keine Stufe.
 - `npm run ai:tiers:recommendation` prüft diese Arbeitsmatrix offline und
   redigiert; die aktive Policy behält bis zur Freigabe ihre `null`-Felder.
+- Die Admin-KI-Auswertung zählt Kontakte je Workspace über exakte
+  PostgREST-Count-Header, unabhängig von Zeilen-Pagination, und zeigt
+  geschätzte Kosten pro Fan sowie pro 100/1.000 Fans. Ohne positive Fan-Basis
+  bleibt die Verhältnisanzeige leer statt eine scheinpräzise Zahl zu erfinden.
 - Der gemeinsame serverseitige Entitlement-Resolver in `src/config/aiTiers.mjs`
   behandelt KI Standard als sicheren Default. Plus/Ultra werden nur bei
   serververwaltetem, aktivem Stripe-Lifecycle, verknüpftem Subscription-Item,

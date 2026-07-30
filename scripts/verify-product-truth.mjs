@@ -50,6 +50,9 @@ const checkedFiles = [
   "src/lib/referrals.ts",
   "src/lib/referralPolicy.mjs",
   "src/lib/aiUsagePolicy.mjs",
+  "src/lib/aiUsageCostMetrics.mjs",
+  "src/lib/adminAiUsage.ts",
+  "src/app/admin/ai-usage/page.tsx",
   "src/lib/demoTurnstilePolicy.mjs",
   "src/lib/demoProtection.ts",
   "src/lib/workspaceAiUsage.ts",
@@ -84,6 +87,7 @@ const checkedFiles = [
   "src/app/settings/referral/page.tsx",
   "tests/referral-policy.test.mjs",
   "tests/ai-usage-policy.test.mjs",
+  "tests/ai-usage-cost-metrics.test.mjs",
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
   "docs/LEGAL_COMPLETION_STATUS.md",
@@ -342,6 +346,21 @@ requireText(
   "scripts/operations/verify-ai-tier-readiness.mjs",
   "AI_TIER_READINESS=PASS",
   "Die KI-Stufen müssen eine redigierte gemeinsame Readiness-Prüfung besitzen.",
+);
+requireText(
+  "src/lib/adminAiUsage.ts",
+  'Prefer: "count=exact"',
+  "Die Admin-KI-Auswertung muss Kontakte/Fans paginationsunabhängig exakt zählen.",
+);
+requireText(
+  "src/app/admin/ai-usage/page.tsx",
+  "Kosten/Fan",
+  "Die Admin-KI-Auswertung muss geschätzte Kosten relativ zur Fan-Basis anzeigen.",
+);
+requireText(
+  "tests/ai-usage-cost-metrics.test.mjs",
+  "without inventing zero-contact values",
+  "Fehlende oder leere Fan-Basen dürfen keine scheinpräzisen Kostenverhältnisse erzeugen.",
 );
 requireText(
   "src/config/aiTierRecommendation.mjs",
