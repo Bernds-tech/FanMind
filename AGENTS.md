@@ -42,6 +42,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - Database/RLS truth lives in `docs/database/fanmind_current_schema.md` plus the Supabase migrations under `supabase/migrations/`.
 - Mobile product, architecture and beta handoff truth lives in `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` and `docs/mobile/BETA_RELEASE.md`; Web and Mobile share backend contracts deliberately but never UI code.
 - Security/RLS/Secrets checks live in `docs/SECURITY_RLS_SECRETS_CHECK.md`.
+- Legal completion, the non-signature-ready AVV working draft and the
+  technical retention inventory live in `docs/LEGAL_COMPLETION_STATUS.md`,
+  `docs/legal/AVV_WORKING_DRAFT.md` and
+  `docs/legal/RETENTION_REGISTER.md`. Keep implemented technical boundaries
+  separate from external legal, tax, provider-contract, region and transfer
+  approval.
 - AI usage/cost monitoring requirements live in `docs/AI_COST_MONITORING.md`.
 - Workspace company-prompt and reply-profile requirements live in `docs/AI_PROMPT_PROFILES.md`; browsers may send only a selected profile ID to reply generation, while prompt contents are loaded server-side after Workspace authorization.
 - Canonical AI tier policy lives in `src/config/aiTiers.mjs`; do not duplicate prices, referral eligibility, auto-send rules or automatic-booking readiness across UI files.

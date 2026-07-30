@@ -19,6 +19,8 @@ const checkedFiles = [
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
   "scripts/operations/mobile-release-resource-readiness.mjs",
+  "scripts/final-go-live-preflight.mjs",
+  "scripts/smoke-public-routes.mjs",
   "src/lib/workspaceAiTierStorage.mjs",
   "src/lib/workspaceAiTierEntitlements.ts",
   "src/lib/aiTierStripeLifecycle.mjs",
@@ -97,6 +99,8 @@ const checkedFiles = [
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
   "docs/LEGAL_COMPLETION_STATUS.md",
+  "docs/legal/AVV_WORKING_DRAFT.md",
+  "docs/legal/RETENTION_REGISTER.md",
   "docs/database/fanmind_current_schema.md",
   "docs/SECURITY_RLS_SECRETS_CHECK.md",
   "docs/operations/AI_TIER_READINESS.md",
@@ -111,7 +115,6 @@ const documentationFiles = new Set([
 ]);
 const contents = new Map();
 const errors = [];
-const warnings = [];
 
 for (const file of checkedFiles) {
   try {
@@ -144,10 +147,6 @@ function forbidRuntime(pattern, explanation) {
 
 function forbidIn(file, pattern, explanation) {
   if (pattern.test(content(file))) errors.push(`${file}: ${explanation}`);
-}
-
-function warnIn(file, pattern, explanation) {
-  if (pattern.test(content(file))) warnings.push(`${file}: ${explanation}`);
 }
 
 // Alte oder widersprüchliche öffentliche Wahrheit.
@@ -961,8 +960,43 @@ forbidIn(
 );
 forbidIn(
   "src/app/datenschutz/page.tsx",
-  /Ein Projekt von Gerhard Novy|Vertreten durch Gerhard Novy|Beteiligungsverhältnisse|50&nbsp;%/iu,
-  "Die Datenschutzerklärung enthält alte Betreiber- oder Beteiligungsangaben.",
+  /Ein Projekt von Gerhard Novy|Vertreten durch Gerhard Novy|Beteiligungsverhältnisse|50&nbsp;%|TODO:|\[BITTE FINAL EINTRAGEN/iu,
+  "Die Datenschutzerklärung enthält alte Betreiberangaben oder interne Platzhalter.",
+);
+forbidIn(
+  "src/app/datenschutz/page.tsx",
+  /ausschließlich das Standardevent\s*<code>PageView<\/code>/iu,
+  "Die Datenschutzerklärung darf die aktiven Meta-Events nicht auf PageView verkürzen.",
+);
+forbidIn(
+  "src/app/datenschutz/page.tsx",
+  /\b(?:Memory|Memories|Fan-Analyse)\b/iu,
+  "Die Datenschutzerklärung muss die aktuelle Kontaktwissen-Terminologie verwenden.",
+);
+requireText(
+  "src/app/datenschutz/page.tsx",
+  "<code>CompleteRegistration</code> erst nach erfolgreicher Konto- und Workspace-Erstellung",
+  "Die Datenschutzerklärung muss das aktive parameterlose Registrierungsereignis korrekt erklären.",
+);
+requireText(
+  "src/app/datenschutz/page.tsx",
+  "<code>Lead</code> erst nach serverseitig angenommener Beratungsanfrage",
+  "Die Datenschutzerklärung muss das aktive parameterlose Lead-Ereignis korrekt erklären.",
+);
+requireText(
+  "src/app/datenschutz/page.tsx",
+  "Alle drei Events werden ohne zusätzliche FanMind-Eventparameter übermittelt.",
+  "Die Datenschutzerklärung muss die Datenminimierung aller aktiven Meta-Events nennen.",
+);
+requireText(
+  "src/app/datenschutz/page.tsx",
+  "Minimierte Webhook- und Serverfehler-Diagnosen werden standardmäßig nach 30 Tagen gelöscht.",
+  "Die Datenschutzerklärung muss die implementierte Diagnose-Retention nennen.",
+);
+requireText(
+  "src/app/datenschutz/page.tsx",
+  "Bestätigte Account-Löschanfragen haben ein reguläres Bearbeitungsziel von höchstens 30 Tagen",
+  "Die Datenschutzerklärung muss das transparente Account-Löschziel nennen.",
 );
 forbidIn(
   "docs/LEGAL_COMPLETION_STATUS.md",
@@ -989,15 +1023,44 @@ requireText(
   '{ href: "/avv", label: "AVV", key: "avv" }',
   "Die Rechtsnavigation muss die AVV direkt verlinken.",
 );
-
-warnIn(
-  "src/app/datenschutz/page.tsx",
-  /TODO:\s*(OpenAI-Vertrag|DPA|Transfergrundlagen)/iu,
-  "Rechtliche Abschlussprüfung ist noch dokumentiert offen.",
+requireText(
+  "docs/legal/AVV_WORKING_DRAFT.md",
+  "Diese Arbeitsfassung bereitet die technischen und fachlichen Anlagen einer",
+  "Die AVV-Arbeitsfassung muss ihren nicht unterschriftsreifen Status klar begrenzen.",
+);
+requireText(
+  "docs/legal/AVV_WORKING_DRAFT.md",
+  "## 12. Noch erforderliche Abschlussentscheidungen",
+  "Die AVV-Arbeitsfassung muss verbleibende externe Abschlussentscheidungen ausweisen.",
+);
+requireText(
+  "docs/legal/RETENTION_REGISTER.md",
+  "## Fachliche Daten mit Kriterien statt erfundener Endfrist",
+  "Das Retention-Register muss implementierte Grenzen von offenen Entscheidungen trennen.",
+);
+requireText(
+  "docs/LEGAL_COMPLETION_STATUS.md",
+  "- [x] Production-Smoke-Test prüft `/impressum`, `/datenschutz`, `/avv`,",
+  "Der Legal-Abschlussstatus muss den vorhandenen Production-Smoke-Nachweis korrekt führen.",
 );
 
-for (const warning of warnings) {
-  console.warn(`TRUTH_WARNING: ${warning}`);
+for (const file of [
+  "scripts/final-go-live-preflight.mjs",
+  "scripts/smoke-public-routes.mjs",
+]) {
+  for (const route of [
+    '"/impressum"',
+    '"/datenschutz"',
+    '"/avv"',
+    '"/agb"',
+    '"/zahlungsbedingungen"',
+  ]) {
+    requireText(
+      file,
+      route,
+      `Der öffentliche Release-Check muss die Rechtsroute ${route} prüfen.`,
+    );
+  }
 }
 
 if (errors.length) {
@@ -1009,5 +1072,5 @@ if (errors.length) {
 }
 
 console.log(
-  `Product truth verified across ${checkedFiles.length} checked files (${warnings.length} warning(s)).`,
+  `Product truth verified across ${checkedFiles.length} checked files (0 warning(s)).`,
 );
