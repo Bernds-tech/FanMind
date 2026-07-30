@@ -66,6 +66,14 @@ reproduzierbare Check stehen in
 `AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md`. Die aktive zentrale Policy behält
 für alle noch nicht beschlossenen Modell-/Kontingentfelder weiterhin `null`.
 
+Die geschützte Adminansicht `/admin/ai-usage` stellt die reale
+Entscheidungsgrundlage technisch bereit: Für erfolgreiche, konsistente
+Usage-Ereignisse zeigt sie je Feature Stichprobengröße sowie nearest-rank P50,
+P90 und P95 für Input-, Output- und Gesamttokens. Historische Fallbackwerte
+können geschätzt sein; bei erreichter 10.000-Ereignis-Grenze gilt die
+Verteilung ausdrücklich nur für die geladene Stichprobe. Diese Beobachtung
+füllt keinen `UNENTSCHIEDEN`-Wert automatisch aus.
+
 ## Paketwechsel und Abrechnung
 
 Vor technischer Aktivierung müssen zusätzlich diese Regeln eindeutig

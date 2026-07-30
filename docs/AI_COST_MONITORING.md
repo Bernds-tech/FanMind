@@ -211,6 +211,9 @@ Der Adminbereich zeigt derzeit:
   Kosten pro Fan und pro 100/1.000 Fans; bei fehlender oder leerer Fan-Basis
   bewusst keine erfundene Verhältniszahl;
 - Features nach geschätzten Kosten;
+- P50-, P90- und P95-Tokenverteilungen je Feature für erfolgreiche,
+  konsistente Ereignisse; Input, Output, Gesamtwert und Stichprobengröße
+  bleiben getrennt sichtbar;
 - Modelle nach geschätzten Kosten, Anfragen, Tokens und Fehlern;
 - durchschnittliche geschätzte Kosten pro Request;
 - rein beobachtende Monatsbudget- und Spike-Hinweise ohne automatische Sperre;
@@ -323,7 +326,12 @@ Erledigt:
 13. vollständige und konsistente Tokenwerte der OpenAI Responses API werden
     in beiden produktiven KI-Pfaden bevorzugt gespeichert; fehlende oder
     ungültige Usage fällt ohne Einfluss auf den Nutzerfluss auf die
-    Zeichenlängen-Schätzung zurück.
+    Zeichenlängen-Schätzung zurück;
+14. die Adminansicht berechnet für erfolgreiche, konsistente Events je Feature
+    reproduzierbare nearest-rank P50-, P90- und P95-Werte für Input-, Output-
+    und Gesamttokens. Fehler, Null-Usage und widersprüchliche Werte werden
+    ausgeschlossen; bei erreichter Ereignisobergrenze wird die Auswertung
+    ausdrücklich nur als geladene Stichprobe bezeichnet.
 
 Offen bleiben ein bestätigter interner Production-Budgetwert und die
 vertragliche Standard-/Plus-/Ultra-Entitlement-/Billing-Logik einschließlich
@@ -340,6 +348,9 @@ einer server-eigenen Autorisierungsquelle.
 - [x] UI markiert Werte als geschätzt.
 - [x] Vollständige Provider-Tokenwerte werden bevorzugt und ungültige oder
       fehlende Usage fällt sicher auf die Zeichenlängen-Schätzung zurück.
+- [x] Admin sieht je KI-Feature P50, P90 und P95 der erfolgreichen
+      konsistenten Tokenereignisse ohne daraus automatisch Kontingente oder
+      Paid-Tier-Freigaben abzuleiten.
 - [x] Keine Secrets oder Prompt-Texte landen im Usage-Log.
 - [x] RLS verhindert fremde Workspace-Daten.
 - [ ] Beide Workspace-Härtungsmigrationen sind in Production angewendet und

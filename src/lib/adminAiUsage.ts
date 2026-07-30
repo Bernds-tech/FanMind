@@ -5,6 +5,7 @@ import {
 } from "@/lib/aiUsageCostMetrics.mjs";
 import {
   aggregateAiUsageByModel,
+  aggregateAiUsageTokenDistributionByFeature,
   calculateAiBudgetIndicator,
   calculateAiUsageSpikeIndicator,
 } from "@/lib/aiUsageDashboardMetrics.mjs";
@@ -52,6 +53,9 @@ export type AdminAiUsageSummary = {
   currency: string;
   byWorkspace: AdminAiUsageWorkspaceSummary[];
   byFeature: Array<{ feature: string; requests: number; estimatedCostCents: number; errorRequests: number }>;
+  byFeatureTokenDistribution: ReturnType<
+    typeof aggregateAiUsageTokenDistributionByFeature
+  >;
   byModel: Array<{ model: string; requests: number; estimatedCostCents: number; inputTokens: number; outputTokens: number; errorRequests: number }>;
   recentEvents: AdminAiUsageEvent[];
   periodStart: string;
@@ -280,6 +284,6 @@ export async function getAdminAiUsageSummary(days = 30, now = new Date()): Promi
       previousTruncated: previousPeriod.truncated,
     });
 
-    return { summary: { totalRequests: events.length, totalEstimatedCostCents, totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? (process.env.FANMIND_AI_USAGE_CURRENCY?.trim() || "USD"), byWorkspace: workspaceSummaries.sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byModel: aggregateAiUsageByModel(events), recentEvents: events.slice(0, 25), periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), truncated: currentPeriod.truncated, previousPeriodTruncated: previousPeriod.truncated, budgetIndicator, spikeIndicator }, error: null };
+    return { summary: { totalRequests: events.length, totalEstimatedCostCents, totalInputTokens: events.reduce((sum, event) => sum + event.estimated_input_tokens, 0), totalOutputTokens: events.reduce((sum, event) => sum + event.estimated_output_tokens, 0), errorRequests: events.filter((event) => event.status === "error").length, currency: events[0]?.currency ?? (process.env.FANMIND_AI_USAGE_CURRENCY?.trim() || "USD"), byWorkspace: workspaceSummaries.sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeature: [...byFeature.values()].sort((a, b) => b.estimatedCostCents - a.estimatedCostCents), byFeatureTokenDistribution: aggregateAiUsageTokenDistributionByFeature(events), byModel: aggregateAiUsageByModel(events), recentEvents: events.slice(0, 25), periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString(), truncated: currentPeriod.truncated, previousPeriodTruncated: previousPeriod.truncated, budgetIndicator, spikeIndicator }, error: null };
   } catch (error) { return { summary: null, error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
 }

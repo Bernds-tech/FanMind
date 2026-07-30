@@ -56,6 +56,7 @@ const checkedFiles = [
   "src/lib/aiUsageDashboardMetrics.mjs",
   "src/lib/adminAiUsage.ts",
   "src/app/admin/ai-usage/page.tsx",
+  "src/app/admin/billing/adminBilling.module.css",
   "src/lib/demoTurnstilePolicy.mjs",
   "src/lib/demoProtection.ts",
   "src/lib/workspaceAiUsage.ts",
@@ -99,6 +100,7 @@ const checkedFiles = [
   "docs/database/fanmind_current_schema.md",
   "docs/SECURITY_RLS_SECRETS_CHECK.md",
   "docs/operations/AI_TIER_READINESS.md",
+  "docs/operations/AI_TIER_DECISION_PROPOSAL.md",
   "docs/operations/AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md",
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
 ];
@@ -411,6 +413,31 @@ requireText(
   "tests/ai-usage-dashboard-metrics.test.mjs",
   "remain observational and fail honest when unconfigured",
   "Nicht konfigurierte oder begrenzte Budgetdaten müssen ehrlich getestet werden.",
+);
+requireText(
+  "src/lib/aiUsageDashboardMetrics.mjs",
+  "aggregateAiUsageTokenDistributionByFeature",
+  "Die Admin-KI-Auswertung muss Tokenverteilungen je Feature reproduzierbar aggregieren.",
+);
+requireText(
+  "src/app/admin/ai-usage/page.tsx",
+  "Token-Verteilung pro Feature",
+  "Die Admin-KI-Auswertung muss P50, P90 und P95 als Entscheidungsgrundlage sichtbar machen.",
+);
+requireText(
+  "src/app/admin/billing/adminBilling.module.css",
+  ".tokenDistributionTable",
+  "Die Tokenverteilung muss auf breiten und mobilen Ansichten lesbar bleiben.",
+);
+requireText(
+  "tests/ai-usage-dashboard-metrics.test.mjs",
+  "feature token distributions expose deterministic nearest-rank P50, P90 and P95",
+  "Tokenperzentile und ihre Stichprobengrenzen müssen automatisiert geprüft werden.",
+);
+requireText(
+  "docs/operations/AI_TIER_DECISION_PROPOSAL.md",
+  "füllt keinen `UNENTSCHIEDEN`-Wert automatisch aus",
+  "Die Tokenverteilung darf keine fachliche KI-Stufen-Freigabe vortäuschen.",
 );
 requireText(
   "src/lib/aiUsageProviderMetrics.mjs",

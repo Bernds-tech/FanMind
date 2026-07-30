@@ -208,6 +208,10 @@
 .compactTableRow { min-height: 44px; border-radius: 11px; padding: 7px; }
 .compactTableRow > span { font-size: 10.5px; }
 .compactTableRow small { margin-top: 2px; max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tokenDistributionTable .compactTableHead,
+.tokenDistributionTable .compactTableRow { grid-template-columns: minmax(145px,1.15fr) minmax(72px,.48fr) repeat(3,minmax(128px,1fr)); }
+.tokenDistributionTable .compactTableRow small { max-width: none; }
+@media (max-width: 820px) { .tokenDistributionTable .compactTableRow { grid-template-columns:1fr; } }
 .workspaceLink { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .textLink { display: inline-flex; margin-top: 8px; font-size: 11px; }
 .quickActionList, .statusList, .roadmapList, .workspaceDirectory { gap: 6px; }
