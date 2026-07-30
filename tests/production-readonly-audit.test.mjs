@@ -225,26 +225,38 @@ test("permanent Production audit runs installed root-owned code only", async () 
   assert.match(workflow, /environment: production/u);
   assert.match(
     workflow,
-    /^\s+\/usr\/local\/lib\/fanmind-ops\/read-only-production-audit\.sh \\/mu,
+    /^\s+\/usr\/local\/lib\/fanmind-audit\/read-only-production-audit\.sh \\/mu,
   );
   assert.match(
     workflow,
-    /\/usr\/local\/lib\/fanmind-ops\/verify-production-audit-output\.mjs/u,
+    /\/usr\/local\/lib\/fanmind-audit\/verify-production-audit-output\.mjs/u,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_AUDIT_VERIFIER_PATH=\/usr\/local\/lib\/fanmind-ops\/verify-backup-artifact\.mjs/u,
   );
   assert.match(workflow, /trap 'rm -f "\$AUDIT_OUTPUT"' EXIT/u);
   assert.doesNotMatch(workflow, /actions\/checkout|upload-artifact/u);
   assert.doesNotMatch(
     workflow,
-    /sudo -n \/usr\/local\/lib\/fanmind-ops\/read-only-production-audit\.sh/u,
+    /sudo -n \/usr\/local\/lib\/fanmind-audit\/read-only-production-audit\.sh/u,
   );
 
   assert.match(
     deploy,
-    /sudo install -o root -g root -m 0755 scripts\/operations\/read-only-production-audit\.sh \/usr\/local\/lib\/fanmind-ops\/read-only-production-audit\.sh/u,
+    /sudo install -d -o root -g root -m 0700 \/usr\/local\/lib\/fanmind-ops/u,
   );
   assert.match(
     deploy,
-    /sudo install -o root -g root -m 0755 scripts\/operations\/verify-production-audit-output\.mjs \/usr\/local\/lib\/fanmind-ops\/verify-production-audit-output\.mjs/u,
+    /sudo install -d -o root -g root -m 0755 \/usr\/local\/lib\/fanmind-audit/u,
+  );
+  assert.match(
+    deploy,
+    /sudo install -o root -g root -m 0755 scripts\/operations\/read-only-production-audit\.sh \/usr\/local\/lib\/fanmind-audit\/read-only-production-audit\.sh/u,
+  );
+  assert.match(
+    deploy,
+    /sudo install -o root -g root -m 0755 scripts\/operations\/verify-production-audit-output\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-production-audit-output\.mjs/u,
   );
   assert.match(deploy, /scripts\/public-health-policy\.mjs \/usr\/local\/lib\/public-health-policy\.mjs/u);
 

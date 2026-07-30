@@ -141,8 +141,13 @@ Production-nahe Self-Hosted Runner dürfen nicht dauerhaft beliebigen Pull-Reque
 Der dauerhafte Workflow `.github/workflows/production-readonly-audit.yml` folgt
 der zweiten Variante:
 
-- der normale Production-Deploy installiert Audit, Ergebnis-Verifier und die
-  gemeinsame Public-Health-Policy root-owned unter `/usr/local/lib`;
+- der normale Production-Deploy installiert Audit und Ergebnis-Verifier
+  root-owned in das ausschließlich dafür bestimmte, für den Runner nur
+  les- und traversierbare Verzeichnis `/usr/local/lib/fanmind-audit`; die
+  gemeinsame Public-Health-Policy bleibt root-owned unter `/usr/local/lib`;
+- das allgemeine Operationsverzeichnis `/usr/local/lib/fanmind-ops` bleibt
+  unverändert root-only mit Modus `0700`. Der Audit übergibt den dort
+  geschützten checksum-only Backup-Verifier ausschließlich an `sudo -n node`;
 - der Audit-Workflow checkt keinen Repository-Code aus und führt ausschließlich
   diese installierte Version aus;
 - nach einem erfolgreichen `Deploy FanMind` wird der exakt deployte Commit

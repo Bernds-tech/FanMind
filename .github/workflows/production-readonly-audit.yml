@@ -67,15 +67,22 @@ jobs:
             exit 1
           fi
 
-          test -x /usr/local/lib/fanmind-ops/read-only-production-audit.sh
-          test -r /usr/local/lib/fanmind-ops/verify-production-audit-output.mjs
+          if [[ ! -x /usr/local/lib/fanmind-audit/read-only-production-audit.sh ]]; then
+            echo "Installed Production audit is unavailable." >&2
+            exit 1
+          fi
+          if [[ ! -r /usr/local/lib/fanmind-audit/verify-production-audit-output.mjs ]]; then
+            echo "Installed Production audit verifier is unavailable." >&2
+            exit 1
+          fi
 
           AUDIT_OUTPUT="$(mktemp "$RUNNER_TEMP/fanmind-production-audit.XXXXXX")"
           trap 'rm -f "$AUDIT_OUTPUT"' EXIT
 
-          /usr/local/lib/fanmind-ops/read-only-production-audit.sh \
+          FANMIND_AUDIT_VERIFIER_PATH=/usr/local/lib/fanmind-ops/verify-backup-artifact.mjs \
+          /usr/local/lib/fanmind-audit/read-only-production-audit.sh \
             > "$AUDIT_OUTPUT"
           node \
-            /usr/local/lib/fanmind-ops/verify-production-audit-output.mjs \
+            /usr/local/lib/fanmind-audit/verify-production-audit-output.mjs \
             "$AUDIT_OUTPUT" \
             "$EXPECTED_COMMIT"
