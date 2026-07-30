@@ -284,7 +284,20 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(privacy, /marketing-messung/u);
   assert.match(privacy, /Meta Pixel/u);
   assert.match(privacy, /ausdrücklichen (?:Marketing-)?Einwilligung/u);
+  assert.match(
+    privacy,
+    /<code>PageView<\/code>[\s\S]*<code>CompleteRegistration<\/code>[\s\S]*<code>Lead<\/code>/u,
+  );
+  assert.match(
+    privacy,
+    /Alle drei Events werden ohne zusätzliche FanMind-Eventparameter übermittelt\./u,
+  );
+  assert.doesNotMatch(
+    privacy,
+    /ausschließlich das Standardevent\s*<code>PageView<\/code>/u,
+  );
   assert.match(runbook, /\| `PageView` \|/u);
+  assert.match(runbook, /\| `CompleteRegistration` \|/u);
   assert.match(runbook, /\| `Lead` \|/u);
   assert.match(runbook, /Öffentliche Routengrenze/u);
   assert.match(runbook, /same-origin/iu);

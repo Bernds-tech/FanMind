@@ -74,6 +74,13 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - FanMind ist kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert und sendet final selbst.
 - FanMind garantiert keine fehlerfreien KI-Antworten.
 - Externe Integrationen dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
+- Legal-Readiness: Eine klar als nicht unterschriftsreif begrenzte
+  AVV-Arbeitsfassung und ein technisches Retention-Register bündeln Rollen,
+  Datenarten, Personengruppen, TOM, Anbieter sowie im Code belegte Fristen.
+  Die Datenschutzerklärung nennt die aktiven parameterlosen Meta-Events und
+  technischen Löschkriterien konsistent. Anbieter-DPAs, Regionen,
+  Drittlandgrundlagen, steuerliche Fristen und die finale Rechtsfreigabe
+  bleiben externe Abschlussnachweise.
 
 ## Betreiber
 

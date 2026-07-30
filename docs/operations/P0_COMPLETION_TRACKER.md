@@ -82,6 +82,13 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
 - Mobile wird in `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und der Roadmap als eigener aktiver Produktstream geführt;
 - signierte Builds, Store-Konten, TestFlight und Google-Play-Internal-Testing bleiben klar von bereits vorhandenem Code getrennt;
 - der ursprüngliche MVP-Arbeitsauftrag bleibt als historische Scope-Grundlage erhalten, während aktuelle Preise, Terminologie und Produktfreigaben aus `docs/SOURCE_OF_TRUTH.md` gelten.
+- eine nicht unterschriftsreife AVV-Arbeitsfassung und ein technisches
+  Retention-Register bündeln die intern belegbaren Datenschutzgrundlagen;
+- Product-Truth-CI verhindert, dass die Datenschutzerklärung hinter den
+  consent-gesteuerten Meta-Events oder den bestätigten technischen
+  Retention-Werten zurückfällt;
+- Anbieter-Verträge, Regionen, Drittlandgrundlagen, finale Fristen und
+  Rechts-/Steuerfreigabe bleiben ausdrücklich externe Nachweise.
 
 ### Restore-Drill-Vorbereitung
 

@@ -284,6 +284,24 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - `FanMind e.U.` darf erst nach bestätigter Firmenbucheintragung verwendet werden.
 - Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung folgen dem dokumentierten Kleinunternehmer-Steuermodus.
 
+### Datenschutz- und AVV-Readiness
+
+- `docs/legal/AVV_WORKING_DRAFT.md` enthält eine ausdrücklich nicht
+  unterschriftsreife Arbeitsfassung mit Rollen, Verarbeitung, Datenarten,
+  Personengruppen, TOM, Unterstützung, Löschung und technischer Anbieterliste.
+- `docs/legal/RETENTION_REGISTER.md` trennt implementierte technische
+  Grenzen von noch offenen rechtlichen, steuerlichen und geschäftlichen
+  Endfristen.
+- Die öffentliche Datenschutzerklärung nennt die aktiven, consent-gesteuerten
+  und parameterlosen Meta-Events `PageView`, `CompleteRegistration` und
+  `Lead` sowie die im Code belegten Demo-, Consent-, Diagnose-, Log-, Mobile-,
+  Account-Lösch- und Backup-Kriterien.
+- Eine öffentliche Anbieter-DPA ist nur Prüfeinstieg. Wirksame Annahme,
+  kontobezogene Unterauftragsliste, Region und Transfergrundlage müssen je
+  aktivem FanMind-Konto extern bestätigt werden.
+- Die technische Vorbereitung ersetzt weder Rechts-/Steuerberatung noch eine
+  unterschriebene AVV oder den isolierten Backup-Lösch-/Restore-Nachweis.
+
 ## 6. Verbindliche Terminologie
 
 - Deutsch: **KI**; Englisch: **AI**.

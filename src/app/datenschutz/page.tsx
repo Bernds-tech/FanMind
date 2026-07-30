@@ -50,8 +50,6 @@ const sections: PrivacySection[] = [
           Datenschutzanfragen können an <a href="mailto:kontakt@fanmind.ch">kontakt@fanmind.ch</a>
           gerichtet werden.
         </p>
-        {/* TODO: UID/FN nur übernehmen, wenn sie zum FanMind-Betreiber gehören. */}
-        {/* TODO: privacy@fanmind.ch nur anzeigen, wenn aktiv und überwacht. */}
       </>
     ),
   },
@@ -64,11 +62,11 @@ const sections: PrivacySection[] = [
         <p>
           Diese Datenschutzerklärung beschreibt, wie FanMind personenbezogene Daten im Zusammenhang
           mit der Website, Registrierung, Demo- und Login-Funktionen, geschützten Workspaces,
-          Kontaktverwaltung, CSV-Import, KI-Vorschlägen, Memory, Notizen, Follow-ups, Roadmap,
+          Kontaktverwaltung, CSV-Import, KI-Vorschlägen, Kontaktwissen, Notizen, Follow-ups, Roadmap,
           Support sowie gegebenenfalls Zahlungs- und Abrechnungsprozessen verarbeitet.
         </p>
         <p>
-          FanMind ist ein KI-gestützter Antwort- und Memory-Assistent für Fan-, Kunden- und
+          FanMind ist ein KI-gestütztes CRM und ein Copy-&-Open-Assistent für Fan-, Kunden- und
           Community-Beziehungen. FanMind unterstützt Nutzerinnen und Nutzer dabei, Kontakte zu
           verwalten, Kontextinformationen zu speichern, KI-gestützte Antwortvorschläge zu erstellen
           und Follow-ups manuell zu organisieren. FanMind ist kein Bot und versendet keine
@@ -110,10 +108,11 @@ const sections: PrivacySection[] = [
         <p>
           Zwecke sind die Auslieferung der Website, Sicherheit, Fehleranalyse,
           Missbrauchsprävention und Stabilität. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO.
-          Die Speicherung erfolgt nur so lange, wie dies erforderlich ist; in der Regel kurzfristig,
-          bei Sicherheitsvorfällen länger, soweit erforderlich.
+          Minimierte Webhook- und Serverfehler-Diagnosen werden im technischen Standard höchstens
+          30 Tage vorgehalten. PM2-Anwendungslogs werden täglich rotiert und in höchstens 14
+          Rotationen gehalten; journald ist auf höchstens 14 Tage begrenzt. Bei einem bestätigten
+          Sicherheitsvorfall kann eine gesonderte, erforderliche Beweissicherung länger bestehen.
         </p>
-        {/* TODO: konkrete Log-Retention vom Server/Hosting prüfen. */}
       </>
     ),
   },
@@ -137,10 +136,10 @@ const sections: PrivacySection[] = [
         </p>
         <p>
           Optionale Marketing-Messung wird erst nach einer ausdrücklichen Einwilligung aktiviert.
-          Die Auswahl wird im Cookie <code>fanmind_marketing_consent</code> gespeichert und kann
-          jederzeit über die dauerhaft erreichbaren Datenschutz-Einstellungen geändert werden.
-          Ohne Einwilligung lädt FanMind keinen Meta Pixel und baut hierfür keine Verbindung zu Meta
-          auf.
+          Die Auswahl wird im Cookie <code>fanmind_marketing_consent</code> höchstens 180 Tage
+          gespeichert. Sie kann jederzeit über die dauerhaft erreichbaren
+          Datenschutz-Einstellungen geändert werden. Ohne Einwilligung lädt FanMind keinen Meta
+          Pixel und baut hierfür keine Verbindung zu Meta auf.
         </p>
       </>
     ),
@@ -153,11 +152,14 @@ const sections: PrivacySection[] = [
       <>
         <p>
           FanMind kann den Meta Pixel von Meta Platforms Ireland Limited einsetzen, um nach
-          ausdrücklicher Marketing-Einwilligung ausschließlich Seitenaufrufe freigegebener
-          öffentlicher Seiten auf <code>fanmind.ch</code> zu messen.
+          ausdrücklicher Marketing-Einwilligung Vorgänge auf freigegebenen öffentlichen Seiten
+          von <code>fanmind.ch</code> zu messen.
           Dafür wird das Script <code>connect.facebook.net/en_US/fbevents.js</code> erst nach der
-          Einwilligung geladen. Im aktuell freigegebenen Stand wird ausschließlich das Standardevent
-          <code>PageView</code> ohne zusätzliche Eventparameter ausgelöst.
+          Einwilligung geladen. Im aktuell freigegebenen Stand werden das Standardevent
+          <code>PageView</code> für zulässige öffentliche Seitenaufrufe,
+          <code>CompleteRegistration</code> erst nach erfolgreicher Konto- und Workspace-Erstellung
+          und <code>Lead</code> erst nach serverseitig angenommener Beratungsanfrage ausgelöst.
+          Alle drei Events werden ohne zusätzliche FanMind-Eventparameter übermittelt.
         </p>
         <p>
           Zweck ist die grundlegende Messung der Wirksamkeit von FanMind-Marketing. Rechtsgrundlage
@@ -224,8 +226,11 @@ const sections: PrivacySection[] = [
           Demo-Modus genutzt wird.
         </p>
         <p>
-          Echte Account-Verbindungen sind im Demo-Modus deaktiviert, soweit dies technisch so
-          umgesetzt ist. Zwecke sind Produktdemonstration, Testzugang und Missbrauchsschutz.
+          Der aktuelle temporäre Demo-Zugang ist auf eine Stunde begrenzt und wird danach zur
+          Bereinigung vorgemerkt. Ein pseudonymer Browser-Schutz-Cookie kann zur
+          Missbrauchsprävention bis zu 30 Tage bestehen. Echte Account-Verbindungen sind im
+          Demo-Modus deaktiviert. Zwecke sind Produktdemonstration, Testzugang und
+          Missbrauchsschutz.
         </p>
       </>
     ),
@@ -300,15 +305,15 @@ const sections: PrivacySection[] = [
     ),
   },
   {
-    id: "memory",
+    id: "kontaktwissen",
     icon: "◷",
-    title: "Memory, Notizen und Follow-ups",
+    title: "Kontaktwissen, Notizen und Follow-ups",
     content: (
       <>
         <p>
-          Memory-Einträge können Inhalt, Typ, Wichtigkeit, Kontaktbezug und Zeitstempel enthalten.
-          Follow-ups können Grund, Fälligkeitsdatum, Priorität, Status, Kontaktbezug und
-          Zeitstempel enthalten.
+          Kontaktwissen-Einträge können Inhalt, Typ, Wichtigkeit, Kontaktbezug und Zeitstempel
+          enthalten. Follow-ups können Grund, Fälligkeitsdatum, Priorität, Status, Kontaktbezug
+          und Zeitstempel enthalten.
         </p>
         <p>
           Zwecke sind Erinnerung, Beziehungskontext, manuelle Nachverfolgung und strukturierte
@@ -330,14 +335,14 @@ const sections: PrivacySection[] = [
           Nachricht, gewünschter Antwortmodus und vorhandener Analysebericht verarbeitet werden.
         </p>
         <p>
-          Bei Fan-Analysen können Kontaktdaten, interne Notizen, Memories, gespeicherte
+          Bei Kontaktanalysen können Kontaktdaten, interne Notizen, Kontaktwissen, gespeicherte
           Nachrichten oder Kontexte, ausgewählte Nachrichtenhistorie, Anhänge nur als Hinweis und
           ein generierter Analysebericht verarbeitet werden. Es wird keine Bildanalyse behauptet.
         </p>
         <p>
           Der OpenAI API-Key wird nur serverseitig verwendet und darf niemals im Browser erscheinen.
-          KI-Anfragen verwenden <code>store: false</code>, soweit im Code so umgesetzt.
-          Eingabelängen werden begrenzt. KI-Funktionen liefern Vorschläge, Entwürfe,
+          Produktive KI-Anfragen verwenden <code>store: false</code>. Eingabelängen werden
+          begrenzt. KI-Funktionen liefern Vorschläge, Entwürfe,
           Zusammenfassungen und Analysen; es findet keine automatische Entscheidung mit rechtlicher
           Wirkung und keine automatische Nachrichtenversendung statt. Nutzer prüfen und verwenden
           Vorschläge eigenverantwortlich.
@@ -347,7 +352,6 @@ const sections: PrivacySection[] = [
           Vertrags oder Funktionsumfangs ist, sowie Art. 6 Abs. 1 lit. f DSGVO für Sicherheit,
           Fehleranalyse, Missbrauchsprävention und Qualitätssicherung.
         </p>
-        {/* TODO: OpenAI-Vertrag/DPA und Transfergrundlagen prüfen. */}
       </>
     ),
   },
@@ -416,8 +420,6 @@ const sections: PrivacySection[] = [
           Rechtsgrundlagen sind Art. 6 Abs. 1 lit. b DSGVO für Vertrag und Zahlung sowie Art. 6
           Abs. 1 lit. c DSGVO für gesetzliche Aufbewahrungs- und Steuerpflichten.
         </p>
-        {/* TODO: Stripe nur ausgeben, wenn produktiv aktiviert oder als optional/vorbereitet sauber formuliert. */}
-        {/* TODO: Stripe-Vertrags-/Transfergrundlagen prüfen. */}
       </>
     ),
   },
@@ -447,7 +449,6 @@ const sections: PrivacySection[] = [
           werden, soweit dies für Betrieb, Registrierung, Support oder Benachrichtigungen
           erforderlich ist. Im Code ist Resend als optionaler Dienst für Pilot-Anfragen vorbereitet.
         </p>
-        {/* TODO: Resend/E-Mail-Anbieter prüfen. */}
       </>
     ),
   },
@@ -471,9 +472,6 @@ const sections: PrivacySection[] = [
           <li>GitHub/GitHub Actions für Code und Deployment, nicht als regulärer Empfänger von Workspace-Inhalten.</li>
           <li>Steuerberatung, Buchhaltung, Rechtsberatung, Behörden oder Gerichte, soweit erforderlich.</li>
         </ul>
-        {/* TODO: Exoscale Region/DPA prüfen. */}
-        {/* TODO: Supabase Region/DPA prüfen. */}
-        {/* TODO: E-Mail-Anbieter prüfen. */}
       </>
     ),
   },
@@ -487,14 +485,11 @@ const sections: PrivacySection[] = [
           Einige Dienstleister können Daten außerhalb der EU/des EWR verarbeiten. Eine Übermittlung
           erfolgt nur, soweit hierfür eine datenschutzrechtliche Grundlage besteht, zum Beispiel ein
           Angemessenheitsbeschluss, Standardvertragsklauseln oder sonstige geeignete Garantien.
-          Konkrete Anbieter und Transfergrundlagen werden entsprechend der tatsächlich eingesetzten
-          Dienste berücksichtigt.
+          Für aktive Anbieter werden Vertragsfassung, Rollen, Verarbeitungsregion,
+          Unterauftragsverarbeiter und Transfergrundlage vor echtem Drittpersonen-Onboarding
+          anhand des jeweiligen FanMind-Kontos geprüft. Eine bloß öffentlich verfügbare
+          Anbieter-DPA ersetzt diesen kontobezogenen Nachweis nicht.
         </p>
-        {/* TODO: Supabase-Projektregion prüfen. */}
-        {/* TODO: OpenAI DPA/Transfergrundlagen prüfen. */}
-        {/* TODO: Stripe-Vertrags-/Transfergrundlagen prüfen. */}
-        {/* TODO: Exoscale-Region prüfen. */}
-        {/* TODO: E-Mail-Anbieter prüfen. */}
       </>
     ),
   },
@@ -504,16 +499,16 @@ const sections: PrivacySection[] = [
     title: "Speicherdauer",
     content: (
       <ul>
-        <li>Website- und Serverlogs werden kurzfristig gespeichert, soweit nicht Sicherheitsvorfälle eine längere Speicherung erfordern.</li>
+        <li>Minimierte Webhook- und Serverfehler-Diagnosen werden standardmäßig nach 30 Tagen gelöscht. PM2-Anwendungslogs werden täglich rotiert und in höchstens 14 Rotationen gehalten; journald ist auf 14 Tage begrenzt.</li>
         <li>Die Marketing-Consent-Auswahl wird höchstens 180 Tage gespeichert und kann jederzeit geändert werden. Meta-Pixel-Daten entstehen bei FanMind erst nach Einwilligung; für eine weitere Verarbeitung bei Meta gelten die dortigen Aufbewahrungsregeln.</li>
-        <li>Account- und Workspace-Daten werden für die Dauer des Nutzerkontos, Vertrags oder Pilotzugangs gespeichert.</li>
-        <li>Kontakt-, Fan-, Nachrichten-, Memory- und Follow-up-Daten bleiben für die Dauer des Workspace oder bis zur Löschung durch Nutzer oder Kunde gespeichert, soweit keine Pflichten entgegenstehen.</li>
+        <li>Temporäre öffentliche Demo-Zugänge laufen nach einer Stunde ab und werden zur Bereinigung vorgemerkt. Der pseudonyme Browser-Schutz-Cookie bleibt höchstens 30 Tage bestehen.</li>
+        <li>Account- und Workspace-Daten werden für die Dauer des Nutzerkontos, Vertrags oder freigegebenen Zugangs gespeichert. Bestätigte Account-Löschanfragen haben ein reguläres Bearbeitungsziel von höchstens 30 Tagen; laufende Verträge, notwendige Eigentumsübertragung oder gesetzliche Pflichten können einzelne Schritte begründet blockieren.</li>
+        <li>Kontakt-, Fan-, Nachrichten-, Kontaktwissen- und Follow-up-Daten bleiben für die Dauer des Workspace oder bis zur Löschung durch Nutzer oder Kunde gespeichert, soweit keine Pflichten entgegenstehen.</li>
         <li>KI-Ausgaben und Analyseberichte werden gespeichert, solange sie im Workspace vorhanden sind oder für Nachvollziehbarkeit, Support und Produktfunktion erforderlich sind.</li>
-        <li>Demo-Daten werden je nach Demo-Modus temporär oder öffentlich verarbeitet; Nutzer sollen keine echten personenbezogenen Daten in öffentliche Demos eingeben.</li>
+        <li>Die verschlüsselte Mobile-Offline-Kontaktübersicht ist auf 50 Einträge und 24 Stunden begrenzt. Die vorbereitete, noch zustellungsfreie Mobile-Push-Registrierung läuft 30 Tage nach der letzten bestätigten Aktivität ab.</li>
         <li>Zahlungs- und Rechnungsdaten werden gemäß gesetzlichen Aufbewahrungspflichten gespeichert.</li>
-        <li>Backups werden im Rahmen regulärer Backup-Zyklen vorgehalten.</li>
-        {/* TODO: konkrete Backup-Löschfrist eintragen. */}
-        {/* TODO: konkrete Log-Retention prüfen. */}
+        <li>Verschlüsselte lokale Backups werden zählerbasiert gehalten: je ein täglicher, wöchentlicher und monatlicher Stand für Datenbank, Storage und Serverkonfiguration sowie je ein wöchentlicher und monatlicher Full-Stand. Für Offsite-Backups ist dieselbe Auswahl derzeit nur als read-only Löschplan geprüft; eine vollständig ausgeführte zeitliche Offsite-Löschregel bleibt vor Vertragsfreigabe nachzuweisen.</li>
+        <li>Wo noch keine verbindliche Endfrist festgelegt ist, gelten Zweckfortfall, veranlasste Löschung, Vertragsende und gesetzliche Pflichten als Kriterien. Die konkreten Fristen für CRM-, Support-, Rechnungs-, Vertrags- und KI-Kostenereignisse werden vor echtem Drittpersonen-Onboarding rechts- beziehungsweise steuerfachlich bestätigt.</li>
       </ul>
     ),
   },
@@ -533,7 +528,6 @@ const sections: PrivacySection[] = [
           Protokollierung sicherheitsrelevanter Ereignisse, Backups und regelmäßige technische
           Prüfung.
         </p>
-        {/* TODO: konkrete Backup-Löschfristen, RLS-Abdeckung und Token-Verschlüsselung regelmäßig technisch prüfen. */}
       </>
     ),
   },
