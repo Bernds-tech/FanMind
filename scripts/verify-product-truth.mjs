@@ -11,6 +11,7 @@ const checkedFiles = [
   ".github/workflows/ai-tier-staging-migration.yml",
   ".github/workflows/ai-tier-staging-acceptance.yml",
   ".github/workflows/mobile-release-resource-readiness.yml",
+  ".github/workflows/mobile-signed-internal-build.yml",
   "package.json",
   "src/config/aiTiers.mjs",
   "src/config/aiTierRecommendation.mjs",
@@ -19,6 +20,8 @@ const checkedFiles = [
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
   "scripts/operations/mobile-release-resource-readiness.mjs",
+  "scripts/operations/mobile-signed-build-completion.mjs",
+  "tests/mobile-native-release-policy.test.mjs",
   "scripts/final-go-live-preflight.mjs",
   "scripts/smoke-public-routes.mjs",
   "src/lib/workspaceAiTierStorage.mjs",
@@ -492,6 +495,21 @@ requireText(
   "scripts/operations/mobile-release-resource-readiness.mjs",
   "MOBILE_RELEASE_RESOURCE_READINESS=PASS",
   "Der Mobile-Release-Ressourcencheck muss einen redigierten gemeinsamen PASS-Vertrag besitzen.",
+);
+requireText(
+  ".github/workflows/mobile-signed-internal-build.yml",
+  "eas-cli@21.2.0 build:view",
+  "Der signierte Mobile-Build muss seinen EAS-Endstatus read-only prüfen.",
+);
+requireText(
+  "scripts/operations/mobile-signed-build-completion.mjs",
+  "MOBILE_SIGNED_BUILD_COMPLETION_VERIFICATION=PASS",
+  "Die Mobile-Build-Abschlussprüfung muss einen redigierten PASS-Vertrag besitzen.",
+);
+requireText(
+  "tests/mobile-native-release-policy.test.mjs",
+  "signed Mobile completion fails closed on identity drift",
+  "Die Mobile-Build-Abschlussprüfung muss Ziel-, Status- und Artefaktdrift automatisiert sperren.",
 );
 requireText(
   "docs/mobile/BETA_RELEASE.md",

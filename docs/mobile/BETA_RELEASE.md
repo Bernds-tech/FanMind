@@ -235,8 +235,8 @@ und erlaubt nur:
   Signing-Credentials.
 
 Der Workflow wiederholt `project:info` und die redigierte
-`env:exec`-Ressourcenprüfung, bevor der Build-Schalter nur für die zwei
-Build-Steps geöffnet wird. Danach führt er `eas build` mit gepinnter CLI,
+`env:exec`-Ressourcenprüfung, bevor der Build-Schalter nur für die Build-Schritte
+geöffnet wird. Danach führt er `eas build` mit gepinnter CLI,
 `--non-interactive`, `--no-wait`, `--json` und `--freeze-credentials` aus.
 Submit, Update, Production-Profil, automatische Store-Übertragung und
 Credential-Erzeugung sind ausgeschlossen.
@@ -244,12 +244,15 @@ Credential-Erzeugung sind ausgeschlossen.
 Die EAS-Antwort wird aus einer privaten temporären Datei nur auf genau einen
 passenden Commit, Plattform und Profil geprüft. ID und URL werden weder
 ausgegeben noch als GitHub-Artefakt gespeichert. Nur die vollständig validierte
-Antwort bedeutet „Build eingereiht“. Scheitert der Queue-Aufruf oder ist seine
-Antwort ungültig, wird der Lauf als `indeterminate-do-not-retry` ausgewiesen
-und darf nicht wiederholt werden, bevor das geschützte EAS-Projekt direkt auf
-einen bereits angelegten Build geprüft wurde. Erst der separat überprüfte
-EAS-Endstatus und die Installation auf einem realen Gerät belegen einen
-erfolgreichen signierten Build.
+Antwort bedeutet „Build eingereiht“. Danach liest derselbe Ablauf den
+EAS-Endstatus mit `build:view --json`, ohne Build-ID oder URL auszugeben. Nur
+derselbe Commit, dieselbe Plattform, dasselbe Profil, interne Distribution,
+Status `FINISHED`, ein gültiger Abschlusszeitpunkt und ein vorhandenes
+HTTPS-Artefakt ergeben den redigierten Abschlussnachweis. Scheitert der
+Queue-Aufruf, bleibt die Abschlussprüfung unklar oder ist eine Antwort
+ungültig, wird der Lauf als `indeterminate-do-not-retry` ausgewiesen und darf
+nicht wiederholt werden, bevor das geschützte EAS-Projekt direkt geprüft wurde.
+Die Installation auf einem realen Gerät bleibt ein eigener Nachweis.
 
 ### Native-Prüfung ohne Release-/Store-Credentials
 

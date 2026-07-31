@@ -93,10 +93,13 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   `development` or `preview` EAS build only after the same read-only resource
   verification. Keep it main-only, environment-protected, credential-frozen
   and non-interactive; it must never target `production`, submit, update,
-  create credentials, print build identifiers or imply that a queued build
-  finished successfully. Once the queue request starts, an invalid or missing
-  response is indeterminate and must not be presented as safely retryable
-  before the protected EAS project is inspected.
+  create credentials or print build identifiers or artifact URLs. After a
+  validated queue response it may poll only `build:view --json` and may report
+  completion only when the exact commit, platform, profile, internal
+  distribution, terminal success and HTTPS artifact all match. Once the queue
+  request starts, an invalid or missing queue/completion response is
+  indeterminate and must not be presented as safely retryable before the
+  protected EAS project is inspected.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

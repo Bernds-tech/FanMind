@@ -70,6 +70,13 @@ const signedBuildScript = await readFile(
   ),
   "utf8",
 );
+const signedBuildCompletionScript = await readFile(
+  new URL(
+    "../scripts/operations/mobile-signed-build-completion.mjs",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const { evaluateMobileReleaseResources } = await import(
   "../scripts/operations/mobile-release-resource-readiness.mjs"
 );
@@ -77,6 +84,9 @@ const {
   evaluateMobileSignedBuildGate,
   evaluateQueuedMobileBuild,
 } = await import("../scripts/operations/mobile-signed-build-preflight.mjs");
+const { evaluateMobileSignedBuildCompletion } = await import(
+  "../scripts/operations/mobile-signed-build-completion.mjs"
+);
 
 const easProjectId = "123e4567-e89b-42d3-a456-426614174000";
 const previewProjectRef = "abcdefghijklmnopqrst";
@@ -138,6 +148,30 @@ function signedBuildEnvironment(overrides = {}) {
     FANMIND_ENABLE_MOBILE_EAS_BUILD: "true",
     FANMIND_ENABLE_MOBILE_EAS_SUBMIT: "false",
     FANMIND_ENABLE_MOBILE_EAS_UPDATE: "false",
+    ...overrides,
+  };
+}
+
+function queuedBuild(overrides = {}) {
+  return {
+    id: "123e4567-e89b-42d3-a456-426614174000",
+    platform: "ANDROID",
+    buildProfile: "preview",
+    gitCommitHash: "a".repeat(40),
+    ...overrides,
+  };
+}
+
+function completedBuild(overrides = {}) {
+  return {
+    ...queuedBuild(),
+    status: "FINISHED",
+    distribution: "INTERNAL",
+    completedAt: "2026-07-31T13:00:00.000Z",
+    artifacts: {
+      applicationArchiveUrl:
+        "https://expo.dev/artifacts/eas/synthetic-internal-build.apk",
+    },
     ...overrides,
   };
 }
@@ -454,6 +488,79 @@ test("signed Mobile build gate accepts only one exact internal main build", () =
   assert.equal(queued.releaseCommit, "verified");
 });
 
+test("signed Mobile completion binds the exact queued internal artifact without exposing its identifier", () => {
+  assert.deepEqual(
+    evaluateMobileSignedBuildCompletion({
+      queueOutput: [queuedBuild()],
+      completionOutput: completedBuild(),
+      environment: signedBuildEnvironment(),
+    }),
+    {
+      state: "verified",
+      platform: "android",
+      buildProfile: "preview",
+      releaseCommit: "verified",
+      distribution: "internal",
+      artifact: "available",
+    },
+  );
+
+  const pending = evaluateMobileSignedBuildCompletion({
+    queueOutput: [queuedBuild()],
+    completionOutput: completedBuild({
+      status: "IN_PROGRESS",
+      completedAt: null,
+      artifacts: {},
+    }),
+    environment: signedBuildEnvironment(),
+  });
+  assert.equal(pending.state, "pending");
+  assert.equal(pending.artifact, "not-ready");
+
+  const failed = evaluateMobileSignedBuildCompletion({
+    queueOutput: [queuedBuild()],
+    completionOutput: completedBuild({
+      status: "ERRORED",
+      completedAt: "2026-07-31T13:00:00.000Z",
+      artifacts: {},
+    }),
+    environment: signedBuildEnvironment(),
+  });
+  assert.equal(failed.state, "failed");
+  assert.equal(failed.artifact, "unavailable");
+
+  assert.doesNotMatch(
+    signedBuildCompletionScript,
+    /console\.(?:log|error)\([^)]*(?:\.id|ArchiveUrl|buildUrl|completionOutput|queueOutput)/u,
+  );
+});
+
+test("signed Mobile completion fails closed on identity drift, non-internal distribution, unknown state and unsafe artifact", () => {
+  for (const completionOutput of [
+    completedBuild({ id: "223e4567-e89b-42d3-a456-426614174000" }),
+    completedBuild({ platform: "IOS" }),
+    completedBuild({ buildProfile: "development" }),
+    completedBuild({ gitCommitHash: "b".repeat(40) }),
+    completedBuild({ distribution: "STORE" }),
+    completedBuild({ status: "UNKNOWN" }),
+    completedBuild({ completedAt: "not-a-timestamp" }),
+    completedBuild({
+      artifacts: { applicationArchiveUrl: "http://example.test/build.apk" },
+    }),
+    completedBuild({
+      artifacts: { applicationArchiveUrl: "https://example.test/build.apk#fragment" },
+    }),
+  ]) {
+    assert.throws(() =>
+      evaluateMobileSignedBuildCompletion({
+        queueOutput: [queuedBuild()],
+        completionOutput,
+        environment: signedBuildEnvironment(),
+      }),
+    );
+  }
+});
+
 test("signed Mobile build gate blocks production, ref/profile drift, commit drift and release writes", () => {
   for (const environment of [
     signedBuildEnvironment({ GITHUB_REF: "refs/heads/feature" }),
@@ -538,6 +645,7 @@ test("manual signed Mobile workflow is internal-only, credential-frozen and neve
   assert.match(signedBuildWorkflow, /eas-cli@21\.2\.0 project:info/u);
   assert.match(signedBuildWorkflow, /eas-cli@21\.2\.0 env:exec/u);
   assert.match(signedBuildWorkflow, /eas-cli@21\.2\.0 build/u);
+  assert.match(signedBuildWorkflow, /eas-cli@21\.2\.0 build:view/u);
   assert.match(signedBuildWorkflow, /--freeze-credentials/u);
   assert.match(signedBuildWorkflow, /--no-wait/u);
   assert.match(signedBuildWorkflow, /--json/u);
@@ -554,6 +662,16 @@ test("manual signed Mobile workflow is internal-only, credential-frozen and neve
     signedBuildWorkflow,
     /if ! node \.\.\/\.\.\/scripts\/operations\/mobile-signed-build-preflight\.mjs/u,
   );
+  assert.match(
+    signedBuildWorkflow,
+    /scripts\/operations\/mobile-signed-build-completion\.mjs/u,
+  );
+  assert.match(signedBuildWorkflow, /MOBILE_SIGNED_BUILD_COMPLETION=verified/u);
+  assert.match(signedBuildWorkflow, /MOBILE_SIGNED_BUILD_ARTIFACT=available/u);
+  assert.match(signedBuildWorkflow, /timeout-minutes: 90/u);
+  assert.match(signedBuildWorkflow, /timeout 10m npx --yes eas-cli@21\.2\.0 build/u);
+  assert.match(signedBuildWorkflow, /timeout 10s npx --yes eas-cli@21\.2\.0 build:view/u);
+  assert.match(signedBuildWorkflow, /sleep 30/u);
   assert.equal((signedBuildWorkflow.match(/umask 077/gu) ?? []).length, 3);
   assert.doesNotMatch(
     signedBuildWorkflow,
@@ -568,5 +686,9 @@ test("manual signed Mobile workflow is internal-only, credential-frozen and neve
   assert.doesNotMatch(
     signedBuildScript,
     /console\.(?:log|error)\([^)]*(?:EXPO_TOKEN|PROJECT_ID|build\?\.id|JSON_PATH)/u,
+  );
+  assert.doesNotMatch(
+    signedBuildWorkflow,
+    /\bcat\s+"\$(?:JSON|LOG|COMPLETION|VERIFICATION)_PATH"|\becho\s+"\$(?:cat|<)/u,
   );
 });

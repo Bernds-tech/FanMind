@@ -99,7 +99,10 @@ Aktiv im App-Kern:
 - separater manueller, `main`- und Environment-gebundener Queue-Ablauf für
   genau einen signierten internen Development- oder Preview-Build; erst nach
   demselben Ressourcencheck, mit eingefrorenen vorhandenen Credentials und
-  ohne Submit, Update, Production-Profil oder Ausgabe von Build-IDs/URLs.
+  ohne Submit, Update, Production-Profil oder Ausgabe von Build-IDs/URLs. Nach
+  einer validierten Queue-Antwort bindet eine read-only `build:view`-Prüfung
+  den Endstatus und das interne HTTPS-Artefakt an denselben Commit, dieselbe
+  Plattform und dasselbe Profil.
 
 Noch nicht als ausgelieferte Store-App freigegeben:
 
@@ -165,12 +168,15 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   Brücke zum ersten signierten internen Build vorbereitet. Er akzeptiert nur
   `development` oder `preview`, Android oder iOS, prüft zuerst Projektbindung
   und öffentliche Umgebung, friert bestehende Credentials ein und reiht genau
-  einen Build ohne Warten ein. Ohne externe EAS-Einrichtung und vorher
+  einen Build ohne blockierenden Queue-Aufruf ein. Anschließend prüft er den
+  EAS-Endstatus read-only und akzeptiert nur ein erfolgreich abgeschlossenes
+  internes HTTPS-Artefakt für exakt denselben Commit, dieselbe Plattform und
+  dasselbe Profil. Ohne externe EAS-Einrichtung und vorher
   vorhandene Signing-Credentials schlägt er vor dem Queue-Versuch fail-closed
   fehl. Nach begonnenem EAS-Aufruf wird eine fehlende oder ungültige
-  Queue-Antwort als nicht automatisch wiederholbarer, unklarer Zustand
+  Queue- oder Abschlussantwort als nicht automatisch wiederholbarer, unklarer Zustand
   ausgewiesen und muss zuerst direkt im geschützten EAS-Projekt geprüft werden;
-  auch ein bestätigter Queue-Lauf ist noch kein erfolgreicher Binär-, Geräte-
+  auch ein bestätigtes internes Artefakt ist noch kein Geräte-, Push-, Recovery-
   oder Store-Nachweis.
 - Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
 
