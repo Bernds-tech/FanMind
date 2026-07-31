@@ -23,6 +23,14 @@ FANMIND_OPERATIONS_MONITOR_ENABLED=true
 
 Der Timer wird durch das Deployment nicht automatisch aktiviert.
 
+Der nicht geheime Monitorcode wird root-owned unter
+`/usr/local/lib/fanmind-monitor/operations-monitor.mjs` installiert. Das
+Verzeichnis ist mit `0755` nur les- und durchlaufbar und die Datei mit `0644`
+nicht direkt ausführbar, damit die gehärteten systemd-Services sie als
+unprivilegierter Benutzer `ubuntu` ausschließlich über `/usr/bin/node` lesen
+können. Root-only Operations- und Aktivierungsscripte bleiben getrennt unter
+`/usr/local/lib/fanmind-ops` mit Verzeichnismodus `0700` geschützt.
+
 Auch E-Mails bleiben separat deaktiviert:
 
 ```text
@@ -155,6 +163,8 @@ FANMIND_OPERATIONS_EMAIL_ENABLED=false
 - keine Secrets in UI, Datenbank oder Logs;
 - E-Mail nur bei neuer kritischer Eskalation und optional bei Entwarnung;
 - systemd-Service ohne Root-Rechte und mit eingeschränktem Dateisystemzugriff;
+- eigener root-owned Monitor-Runtime-Pfad, der für `ubuntu` nur les- und
+  durchlaufbar ist; root-only Aktivierungscode bleibt davon getrennt;
 - kein automatisches Aktivieren durch Deployment.
 - kein E-Mail-Versand durch Probe oder Timer-Aktivierung;
 - Aktivierung nur auf `main`, auf dem Production-Runner und gebunden an den

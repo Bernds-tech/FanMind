@@ -151,6 +151,7 @@ test("monitor source never reads customer content tables or logs environment val
 
 test("systemd monitor is hardened and timer stays opt-in", () => {
   assert.match(service, /User=ubuntu/);
+  assert.match(service, /ExecStart=\/usr\/bin\/node \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
   assert.match(service, /NoNewPrivileges=true/);
   assert.match(service, /PrivateTmp=true/);
   assert.match(service, /ProtectSystem=strict/);
@@ -163,8 +164,11 @@ test("systemd monitor is hardened and timer stays opt-in", () => {
   assert.match(probeService, /Environment=FANMIND_OPERATIONS_MONITOR_ENABLED=true/);
   assert.match(probeService, /Environment=FANMIND_OPERATIONS_EMAIL_ENABLED=false/);
   assert.match(probeService, /Environment=FANMIND_OPERATIONS_REQUIRE_HEALTHY=true/);
+  assert.match(probeService, /ExecStart=\/usr\/bin\/node \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
   assert.match(probeService, /NoNewPrivileges=true/);
   assert.match(probeService, /ProtectSystem=strict/);
+  assert.doesNotMatch(service, /fanmind-ops\/operations-monitor\.mjs/);
+  assert.doesNotMatch(probeService, /fanmind-ops\/operations-monitor\.mjs/);
   assert.doesNotMatch(probeService, /\[Install\]/);
 });
 
@@ -197,8 +201,11 @@ test("Production control is main-only, release-bound and runs installed root-own
   assert.doesNotMatch(enableScript, /set -x|printenv|cat "\$ENV_FILE"|source "\$ENV_FILE"/);
 
   assert.match(deployment, /scripts\/operations\/enable-operations-monitor\.sh \/usr\/local\/lib\/fanmind-ops\/enable-operations-monitor\.sh/);
+  assert.match(deployment, /install -d -o root -g root -m 0755 \/usr\/local\/lib\/fanmind-monitor/);
+  assert.match(deployment, /install -o root -g root -m 0644 scripts\/operations\/operations-monitor\.mjs \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
   assert.match(deployment, /scripts\/operations\/verify-operations-monitor-probe-log\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-operations-monitor-probe-log\.mjs/);
   assert.match(deployment, /ops\/systemd\/fanmind-operations-monitor-probe\.service \/etc\/systemd\/system\/fanmind-operations-monitor-probe\.service/);
+  assert.doesNotMatch(deployment, /scripts\/operations\/operations-monitor\.mjs \/usr\/local\/lib\/fanmind-ops\/operations-monitor\.mjs/);
 });
 
 test("migration allows only metadata components and keeps monitor notifications indexed", () => {
