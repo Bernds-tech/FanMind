@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 const root = process.cwd();
 
 const checkedFiles = [
+  ".gitignore",
   ".env.example",
   ".github/workflows/deploy-fanmind.yml",
   ".github/workflows/ai-tier-staging-migration.yml",
@@ -17,6 +18,8 @@ const checkedFiles = [
   "src/config/aiTierRecommendation.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
   "scripts/operations/verify-ai-tier-recommendation.mjs",
+  "scripts/operations/ai-reply-quality-eval.mjs",
+  "tests/ai-reply-quality-eval.test.mjs",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
   "scripts/operations/mobile-release-resource-readiness.mjs",
@@ -114,6 +117,7 @@ const checkedFiles = [
   "docs/operations/AI_TIER_READINESS.md",
   "docs/operations/AI_TIER_DECISION_PROPOSAL.md",
   "docs/operations/AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md",
+  "docs/operations/AI_REPLY_QUALITY_EVAL.md",
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
 ];
 
@@ -485,6 +489,31 @@ requireText(
   "tests/ai-tier-recommendation.test.mjs",
   "AI tier recommendation is advisory and cannot activate paid tiers",
   "Die Trennung zwischen Arbeitsempfehlung und aktiver Paid-Tier-Policy muss automatisiert geprüft werden.",
+);
+requireText(
+  "scripts/operations/ai-reply-quality-eval.mjs",
+  "AI_REPLY_QUALITY_EVAL_ACTIVATION=none",
+  "Der Antwortqualitäts-Eval darf keine KI-Stufe aktivieren.",
+);
+requireText(
+  ".gitignore",
+  "/docs/operations/private-ai-evals/",
+  "Private KI-Eval-Ergebnisse müssen vollständig aus Git ausgeschlossen bleiben.",
+);
+requireText(
+  "package.json",
+  "ai:reply-quality:eval",
+  "Der private Antwortqualitäts-Eval muss als fester Offline-Befehl verfügbar sein.",
+);
+requireText(
+  "tests/ai-reply-quality-eval.test.mjs",
+  "quality evaluation rejects raw content and incomplete coverage",
+  "Der Antwortqualitäts-Eval muss Rohtext und unvollständige Abdeckung fail-closed ablehnen.",
+);
+requireText(
+  "docs/operations/AI_REPLY_QUALITY_EVAL.md",
+  "Prompts und Antworten bleiben außerhalb von Git",
+  "Das Qualitäts-Eval-Runbook muss die private Rohdaten-Grenze festhalten.",
 );
 requireText(
   ".github/workflows/mobile-release-resource-readiness.yml",

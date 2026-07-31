@@ -96,7 +96,8 @@ beschlossen sein:
 2. Modellklassen und serverseitige Provider-Zuordnung freigeben.
 3. Reale Kostenmessung aus `ai_usage_events` auswerten.
 4. Die nicht aktivierende Arbeitsmatrix mit realen Median-/P90-/P95-Werten
-   und einem repräsentativen Qualitäts-Eval prüfen.
+   und dem repräsentativen, verblindeten Qualitäts-Eval aus
+   `AI_REPLY_QUALITY_EVAL.md` prüfen.
 5. Monatskontingente und Kontextgrenzen mit mindestens 30 Prozent
    Kostenpuffer beschließen.
 6. Verhalten bei 80 % und 100 % sowie Overage festlegen.

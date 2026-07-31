@@ -49,6 +49,11 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   separate from external legal, tax, provider-contract, region and transfer
   approval.
 - AI usage/cost monitoring requirements live in `docs/AI_COST_MONITORING.md`.
+- AI reply-quality evaluation requirements live in
+  `docs/operations/AI_REPLY_QUALITY_EVAL.md`. Keep prompts, replies, reviewer
+  identities and tier-to-provider-model mappings outside Git. The repository
+  may process only the bounded numeric review result under the ignored private
+  directory, and a structurally valid result must never activate a tier.
 - Workspace company-prompt and reply-profile requirements live in `docs/AI_PROMPT_PROFILES.md`; browsers may send only a selected profile ID to reply generation, while prompt contents are loaded server-side after Workspace authorization.
 - Canonical AI tier policy lives in `src/config/aiTiers.mjs`; do not duplicate prices, referral eligibility, auto-send rules or automatic-booking readiness across UI files.
 - The same file owns the fail-closed Workspace AI entitlement resolver:
