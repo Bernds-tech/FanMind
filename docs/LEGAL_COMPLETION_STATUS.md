@@ -57,6 +57,10 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
 - `npm run legal:evidence:hash` erzeugt aus einer privaten, nicht verlinkten
   Belegdatei ausschließlich die registrierbare SHA-256-Referenz. Der Befehl
   gibt weder Pfad noch Inhalt aus und verändert den Freigabestatus nicht.
+- `npm run legal:evidence:handoff` erzeugt die aktuell offene 27-Control-
+  Aufgabenliste nach Zuständigkeit. Sie gibt keine Werte, Pfade,
+  Kontokennungen, Beleginhalte oder vorhandenen Hashes aus und verändert das
+  Register nicht.
 - Die Datenschutzerklärung nennt die aktuell verdrahteten parameterlosen
   Meta-Events `PageView`, `CompleteRegistration` und `Lead` konsistent mit
   Code und Produktwahrheit.

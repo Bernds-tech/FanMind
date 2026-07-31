@@ -90,6 +90,10 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   nur SHA-256-Prüfsummen. `npm run legal:evidence:hash` erzeugt eine solche
   Referenz ausschließlich aus einer lokalen, privaten Belegdatei, ohne Inhalt
   oder Pfad auszugeben und ohne den Registerstatus automatisch zu ändern.
+  `npm run legal:evidence:handoff` erzeugt daraus eine datensparsame,
+  zuständigkeitsbezogene Liste der noch offenen Controls und Belegarten, ohne
+  Werte, Pfade, Kontokennungen, vorhandene Hashes oder abgeschlossene Controls
+  auszugeben und ohne einen Status zu verändern.
 
 ## Betreiber
 

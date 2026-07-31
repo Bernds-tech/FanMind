@@ -104,6 +104,8 @@ const checkedFiles = [
   "docs/legal/EXTERNAL_APPROVAL_REGISTER.md",
   "docs/legal/external-approval-evidence.json",
   "scripts/verify-legal-external-evidence.mjs",
+  "scripts/legal/external-evidence-handoff.mjs",
+  "tests/legal-external-evidence-handoff.test.mjs",
   "docs/database/fanmind_current_schema.md",
   "docs/SECURITY_RLS_SECRETS_CHECK.md",
   "docs/operations/AI_TIER_READINESS.md",
@@ -1050,6 +1052,16 @@ requireText(
   "docs/LEGAL_COMPLETION_STATUS.md",
   "- [x] Production-Smoke-Test prüft `/impressum`, `/datenschutz`, `/avv`,",
   "Der Legal-Abschlussstatus muss den vorhandenen Production-Smoke-Nachweis korrekt führen.",
+);
+requireText(
+  "scripts/legal/external-evidence-handoff.mjs",
+  "LEGAL_EXTERNAL_EVIDENCE_PRIVATE_CONTENT_OUTPUT=false",
+  "Der externe Legal-Handoff muss Fehler ohne private Inhalte ausgeben.",
+);
+requireText(
+  "tests/legal-external-evidence-handoff.test.mjs",
+  "formatted handoff omits values, evidence references and completed controls",
+  "Der Legal-Handoff muss seine Datensparsamkeit automatisiert prüfen.",
 );
 
 for (const file of [
