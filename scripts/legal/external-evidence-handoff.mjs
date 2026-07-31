@@ -63,8 +63,35 @@ function requireControl(control, id) {
   return control;
 }
 
+function hasValidCompletionEvidence(control) {
+  if (control.status === "pending") return false;
+  if (
+    typeof control.evidenceRef !== "string"
+    || !/^sha256:[a-f0-9]{64}$/u.test(control.evidenceRef)
+  ) {
+    return false;
+  }
+
+  if (control.status !== "confirmed") return true;
+  for (const key of ["confirmedAt", "approvedAt", "acceptedAt"]) {
+    if (
+      key in control
+      && !/^\d{4}-\d{2}-\d{2}$/u.test(String(control[key]))
+    ) {
+      return false;
+    }
+  }
+  if (
+    "value" in control
+    && (typeof control.value !== "string" || control.value.trim().length === 0)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 function collectTask(tasks, control, task) {
-  if (control.status === "pending") tasks.push(task);
+  if (!hasValidCompletionEvidence(control)) tasks.push(task);
 }
 
 export function buildExternalEvidenceHandoff(evidence) {

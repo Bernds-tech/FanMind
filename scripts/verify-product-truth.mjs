@@ -1063,6 +1063,11 @@ requireText(
   "formatted handoff omits values, evidence references and completed controls",
   "Der Legal-Handoff muss seine Datensparsamkeit automatisiert prüfen.",
 );
+requireText(
+  "tests/legal-external-evidence-handoff.test.mjs",
+  "invalid completion evidence keeps controls in the external handoff",
+  "Der Legal-Handoff darf unvollständig belegte Abschlussstatus nicht ausblenden.",
+);
 
 for (const file of [
   "scripts/final-go-live-preflight.mjs",

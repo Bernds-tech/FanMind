@@ -69,6 +69,30 @@ test("formatted handoff omits values, evidence references and completed controls
   assert.match(output, /Anbieterkonten \(11\)/u);
 });
 
+test("invalid completion evidence keeps controls in the external handoff", async () => {
+  const evidence = await currentEvidence();
+  evidence.operator.vatId = {
+    status: "confirmed",
+    value: "SENSITIVE-VALUE",
+    confirmedAt: null,
+    evidenceRef: "sha256:invalid",
+  };
+  evidence.providers[0].dpa = {
+    status: "not_applicable",
+    documentVersion: "SENSITIVE-VERSION",
+    acceptedAt: null,
+    evidenceRef: null,
+  };
+
+  const handoff = buildExternalEvidenceHandoff(evidence);
+  const output = formatExternalEvidenceHandoff(handoff);
+
+  assert.equal(handoff.pendingControls, 27);
+  assert.match(output, /operator\.vatId/u);
+  assert.match(output, /provider\.exoscale\.dpa/u);
+  assert.doesNotMatch(output, /SENSITIVE|sha256:|evidenceRef|acceptedAt/iu);
+});
+
 test("handoff fails closed for unknown, duplicate or malformed providers", async () => {
   const evidence = await currentEvidence();
   evidence.providers[0].id = "unknown-provider";
