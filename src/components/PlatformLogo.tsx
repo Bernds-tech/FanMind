@@ -1,3 +1,4 @@
+import Image from "next/image";
 import styles from "./PlatformLogo.module.css";
 
 export type PlatformLogoSize = "sm" | "md" | "lg";
@@ -289,7 +290,16 @@ const platformLogoAssets: Partial<Record<NormalizedPlatform, string>> = {
 function PlatformSvg({ platform }: { platform: NormalizedPlatform }) {
   const assetSrc = platformLogoAssets[platform];
   if (assetSrc) {
-    return <img className={styles.assetIcon} src={assetSrc} alt="" aria-hidden="true" />;
+    return (
+      <Image
+        className={styles.assetIcon}
+        src={assetSrc}
+        width={56}
+        height={56}
+        alt=""
+        aria-hidden="true"
+      />
+    );
   }
 
   if (platform === "facebook")

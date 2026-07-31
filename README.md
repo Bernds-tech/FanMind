@@ -87,7 +87,9 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   validiert die Struktur; `npm run legal:evidence:require-complete` ist das
   absichtlich fail-closed gesetzte Gate vor echtem Drittpersonen-Onboarding.
   Vertrauliche Belege bleiben außerhalb von GitHub, im Register stehen später
-  nur SHA-256-Prüfsummen.
+  nur SHA-256-Prüfsummen. `npm run legal:evidence:hash` erzeugt eine solche
+  Referenz ausschließlich aus einer lokalen, privaten Belegdatei, ohne Inhalt
+  oder Pfad auszugeben und ohne den Registerstatus automatisch zu ändern.
 
 ## Betreiber
 

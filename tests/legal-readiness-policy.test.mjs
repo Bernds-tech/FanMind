@@ -144,11 +144,12 @@ test("AVV working draft covers Article 28 annexes without claiming signature rea
 });
 
 test("external legal evidence stays account-specific and fail-closed", async () => {
-  const [register, evidence, verifier, packageSource, gitignore] =
+  const [register, evidence, verifier, hasher, packageSource, gitignore] =
     await Promise.all([
       source("docs/legal/EXTERNAL_APPROVAL_REGISTER.md"),
       source("docs/legal/external-approval-evidence.json"),
       source("scripts/verify-legal-external-evidence.mjs"),
+      source("scripts/legal/hash-external-evidence.mjs"),
       source("package.json"),
       source(".gitignore"),
     ]);
@@ -178,6 +179,12 @@ test("external legal evidence stays account-specific and fail-closed", async () 
   assert.match(register, /SHA-256-Prüfsumme/u);
   assert.match(verifier, /--require-complete/u);
   assert.match(verifier, /LEGAL_EXTERNAL_EVIDENCE_READY/u);
+  assert.match(hasher, /O_NOFOLLOW/u);
+  assert.match(hasher, /LEGAL_EXTERNAL_EVIDENCE_PRIVATE_CONTENT_OUTPUT=false/u);
+  assert.match(
+    packageSource,
+    /"legal:evidence:hash":\s*"node scripts\/legal\/hash-external-evidence\.mjs"/u,
+  );
   assert.match(
     packageSource,
     /"legal:evidence:require-complete":\s*"node scripts\/verify-legal-external-evidence\.mjs --require-complete"/u,

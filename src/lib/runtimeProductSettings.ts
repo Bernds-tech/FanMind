@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { chmod, readFile, rename, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import path from "node:path";
 
 type RuntimeProductSettings = {
   publicDailyTestPlanEnabled: boolean;
@@ -15,7 +15,10 @@ function getSettingsPath(): string {
   if (configured) return configured;
   return process.env.NODE_ENV === "production"
     ? "/var/www/fanmind/.fanmind-runtime-settings.json"
-    : join(process.cwd(), ".fanmind-runtime-settings.json");
+    : path.join(
+        /* turbopackIgnore: true */ process.cwd(),
+        ".fanmind-runtime-settings.json",
+      );
 }
 
 function environmentFallback(): boolean {
@@ -24,7 +27,12 @@ function environmentFallback(): boolean {
 
 export async function getPublicDailyTestPlanEnabled(): Promise<boolean> {
   try {
-    const payload = JSON.parse(await readFile(getSettingsPath(), "utf8")) as Partial<RuntimeProductSettings>;
+    const payload = JSON.parse(
+      await readFile(
+        /* turbopackIgnore: true */ getSettingsPath(),
+        "utf8",
+      ),
+    ) as Partial<RuntimeProductSettings>;
     return payload.publicDailyTestPlanEnabled === true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return environmentFallback();
