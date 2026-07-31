@@ -38,6 +38,7 @@ jobs:
         inputs.confirmation == 'queue-one-signed-mobile-build'
       }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
     environment:
       name: mobile-${{ inputs.build_environment }}
     env:
@@ -121,7 +122,10 @@ jobs:
           umask 077
           JSON_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build.json"
           LOG_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build.log"
-          trap 'rm -f "$JSON_PATH" "$LOG_PATH"' EXIT
+          COMPLETION_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build-completion.json"
+          COMPLETION_LOG_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build-completion.log"
+          VERIFICATION_PATH="$RUNNER_TEMP/fanmind-mobile-signed-build-verification.txt"
+          trap 'rm -f "$JSON_PATH" "$LOG_PATH" "$COMPLETION_PATH" "$COMPLETION_LOG_PATH" "$VERIFICATION_PATH"' EXIT
           mark_indeterminate() {
             echo "::warning title=EAS queue state indeterminate::Do not rerun this workflow until the EAS dashboard confirms whether the build was queued."
             echo "MOBILE_SIGNED_BUILD_QUEUE=indeterminate-do-not-retry"
@@ -131,8 +135,17 @@ jobs:
               echo "Queue status is indeterminate. Do not rerun this workflow until the protected EAS project has been checked manually."
             } >> "$GITHUB_STEP_SUMMARY"
           }
+          mark_completion_indeterminate() {
+            echo "::warning title=EAS completion state indeterminate::Do not queue another build until the EAS dashboard confirms the existing build state."
+            echo "MOBILE_SIGNED_BUILD_COMPLETION=indeterminate-do-not-requeue"
+            {
+              echo "### Signed Mobile build"
+              echo
+              echo "The queue response was valid, but the completion state could not be proven. Do not queue another build until the protected EAS project has been checked manually."
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
           set +e
-          npx --yes eas-cli@21.2.0 build \
+          timeout 10m npx --yes eas-cli@21.2.0 build \
             --platform "${{ inputs.platform }}" \
             --profile "${{ inputs.build_environment }}" \
             --freeze-credentials \
@@ -143,10 +156,74 @@ jobs:
           set -e
           if [[ "$QUEUE_EXIT" -ne 0 ]]; then
             mark_indeterminate
-            exit 0
+            exit 1
           fi
           if ! node ../../scripts/operations/mobile-signed-build-preflight.mjs \
             "$JSON_PATH"; then
             mark_indeterminate
-            exit 0
+            exit 1
           fi
+
+          if ! BUILD_ID="$(node --input-type=module - "$JSON_PATH" <<'NODE'
+          import { readFile } from "node:fs/promises";
+
+          const parsed = JSON.parse(await readFile(process.argv[2], "utf8"));
+          const records = Array.isArray(parsed) ? parsed : [parsed];
+          const id = records.length === 1 ? String(records[0]?.id ?? "") : "";
+          if (!/^[0-9a-f-]{36}$/iu.test(id)) process.exit(1);
+          process.stdout.write(id);
+          NODE
+          )"; then
+            mark_completion_indeterminate
+            exit 1
+          fi
+
+          for attempt in $(seq 1 100); do
+            rm -f "$COMPLETION_PATH" "$COMPLETION_LOG_PATH" "$VERIFICATION_PATH"
+            set +e
+            timeout 10s npx --yes eas-cli@21.2.0 build:view "$BUILD_ID" --json \
+              >"$COMPLETION_PATH" 2>"$COMPLETION_LOG_PATH"
+            VIEW_EXIT=$?
+            set -e
+            if [[ "$VIEW_EXIT" -eq 0 ]]; then
+              set +e
+              node ../../scripts/operations/mobile-signed-build-completion.mjs \
+                --queue "$JSON_PATH" \
+                --completion "$COMPLETION_PATH" \
+                >"$VERIFICATION_PATH" 2>&1
+              VERIFY_EXIT=$?
+              set -e
+              if grep -qx 'MOBILE_SIGNED_BUILD_COMPLETION_VERIFICATION=PASS' \
+                "$VERIFICATION_PATH"; then
+                echo "MOBILE_SIGNED_BUILD_COMPLETION=verified"
+                echo "MOBILE_SIGNED_BUILD_ARTIFACT=available"
+                echo "MOBILE_SIGNED_BUILD_SUBMIT=disabled"
+                echo "MOBILE_SIGNED_BUILD_UPDATE=disabled"
+                echo "SECRETS_WURDEN_NICHT_AUSGEGEBEN=true"
+                {
+                  echo "### Signed Mobile build"
+                  echo
+                  echo "The exact reviewed commit finished one signed internal build and exposes an EAS artifact. Submit and Update remained disabled."
+                } >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+              if grep -qx 'MOBILE_SIGNED_BUILD_COMPLETION_VERIFICATION=TERMINAL_FAILURE' \
+                "$VERIFICATION_PATH"; then
+                echo "MOBILE_SIGNED_BUILD_COMPLETION=failed" >&2
+                echo "SECRETS_WURDEN_NICHT_AUSGEGEBEN=true" >&2
+                exit 1
+              fi
+              if [[ "$VERIFY_EXIT" -ne 0 ]] || ! grep -qx \
+                'MOBILE_SIGNED_BUILD_COMPLETION_VERIFICATION=PENDING' \
+                "$VERIFICATION_PATH"; then
+                mark_completion_indeterminate
+                exit 1
+              fi
+            fi
+            if [[ "$attempt" -lt 100 ]]; then
+              sleep 30
+            fi
+          done
+
+          mark_completion_indeterminate
+          exit 1

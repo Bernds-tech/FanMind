@@ -166,19 +166,23 @@ geschützte `mobile-development`- beziehungsweise `mobile-preview`-Environment.
 
 Vor dem Build wiederholt er Projekt- und Client-Umgebungsprüfung. Der EAS-Aufruf
 ist nicht interaktiv, verwendet die gepinnte CLI `21.2.0`, setzt
-`--freeze-credentials`, wartet nicht auf den Cloud-Build und schreibt die
-JSON-Antwort nur in eine temporäre, anschließend gelöschte Datei. Build-ID,
-Projekt-ID, URLs und öffentliche Clientwerte werden nicht ausgegeben.
+`--freeze-credentials`, reiht den Cloud-Build zunächst mit `--no-wait` ein und
+schreibt alle JSON-Antworten nur in temporäre, anschließend gelöschte Dateien.
+Danach fragt derselbe Ablauf den Build mit dem read-only Befehl `build:view`
+ab. Er akzeptiert ausschließlich den erfolgreichen Endstatus, interne
+Distribution und ein HTTPS-Artefakt für exakt denselben Commit, dieselbe
+Plattform und dasselbe Profil. Build-ID, Projekt-ID, URLs und öffentliche
+Clientwerte werden nicht ausgegeben.
 
 Der Ablauf erzeugt oder verändert keine Signing-Credentials und ruft weder
 Submit noch Update auf. Vorhandene gültige Credentials sind daher externe
 Voraussetzung. Nur eine vollständig validierte EAS-Antwort bestätigt, dass
-genau ein Build für den geprüften Commit eingereiht wurde. Ist der
-Queue-Aufruf oder seine Antwort unklar, wird der Lauf ausdrücklich als
+genau ein Build für den geprüften Commit eingereiht wurde; erst die getrennt
+validierte Abschlussantwort bestätigt das fertige interne Artefakt. Ist der
+Queue-Aufruf, die Statusprüfung oder ihre Antwort unklar, wird der Lauf ausdrücklich als
 `indeterminate-do-not-retry` markiert und darf erst nach direkter Prüfung des
-geschützten EAS-Projekts erneut gestartet werden. Erfolg, Installation, Push,
-Recovery, Android Internal Testing und TestFlight bleiben gesondert
-abzunehmen.
+geschützten EAS-Projekts erneut gestartet werden. Installation, Push, Recovery,
+Android Internal Testing und TestFlight bleiben gesondert abzunehmen.
 
 ## EAS-Profile
 

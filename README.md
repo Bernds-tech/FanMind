@@ -10,10 +10,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Mobile-Signing-Gate: ein manueller `main`-gebundener Ablauf kann nach
   erfolgreichem Ressourcencheck genau einen credential-frozen internen
-  Development-/Preview-Build einreihen. Eine unklare Queue-Antwort darf nicht
-  automatisch wiederholt werden, sondern muss zuerst direkt im geschützten
-  EAS-Projekt geprüft werden; Build-Abschluss, Gerätetest und Store-Verteilung
-  bleiben externe Nachweise.
+  Development-/Preview-Build einreihen und dessen EAS-Endstatus read-only bis
+  zum erfolgreichen internen HTTPS-Artefakt prüfen. Eine unklare Queue- oder
+  Abschlussantwort darf nicht automatisch wiederholt werden, sondern muss
+  zuerst direkt im geschützten EAS-Projekt geprüft werden; Gerätetest und
+  Store-Verteilung bleiben externe Nachweise.
 - Öffentliche Registrierung: Starter Flex und Starter 12 Monate; während der Fertigstellungsphase zusätzlich der klar als Beta markierte 1-€/Tag-Test, solange der geschützte Admin-Schalter unter `/admin/settings` aktiv ist.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
 - Beta-/Testzugang: Das Stripe-Testabo `internal_daily_test` ist während der Fertigstellungsphase gezielt im Registrierungsflow sichtbar, kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es wird im Adminbereich zum Verkaufsstart nach Abschluss der acht Abschlussblöcke wieder geschlossen; bestehende Abos bleiben davon unberührt.
@@ -68,6 +69,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   statische App-Konfiguration erst bei der Expo-Auswertung. Der Workflow
   verwendet weder Build, Submit noch Update und lädt keine Signing Credentials;
   der externe Lauf und signierte Builds bleiben offen.
+- Mobile-Build-Abschluss: Der getrennte signierte Build-Ablauf prüft nach
+  exakt einer validierten Queue-Antwort mit `build:view` denselben Commit,
+  Plattform, Profil, interne Distribution, erfolgreichen EAS-Endstatus und
+  das vorhandene HTTPS-Artefakt. Build-ID und URL bleiben privat; Submit,
+  Update, Gerätetest und Store-Verteilung werden dadurch nicht ausgeführt.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
@@ -198,6 +204,10 @@ Bereits vorhanden:
   Safety; externe Datenschutz-/Rechts- und Portalabnahme bleibt offen;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI, Expo Doctor, TypeScript-Check, Android-/iOS-JavaScript-Bundles, isolierter Native-Prebuild sowie echtes Android-Debug-APK und codesign-freie iOS-Simulator-App als reine Build-Nachweise.
+- kontrollierter signierter EAS-Workflow mit redigierter Abschlussprüfung für
+  exakten Commit, Plattform, Profil, interne Distribution, erfolgreichen
+  Endstatus und vorhandenes internes HTTPS-Artefakt; der reale externe Lauf
+  steht noch aus.
 
 Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
 
