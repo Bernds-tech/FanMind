@@ -18,6 +18,7 @@ const COMPONENT_LABELS = {
   backup_freshness: "Backup-Aktualität",
   backup_worker: "Backup-Worker",
 };
+const CHECK_STATUSES = new Set(["healthy", "unknown", "degraded", "unavailable"]);
 
 function log(level, event, meta = {}) {
   console.log(JSON.stringify({ ts: new Date().toISOString(), level, event, version: VERSION, ...redact(meta) }));
@@ -35,12 +36,38 @@ function monitorEnabled(env = process.env) {
   return env.FANMIND_OPERATIONS_MONITOR_ENABLED === "true";
 }
 
+function healthGateFailureCode(checks) {
+  const unhealthy = checks
+    .filter((item) => item?.status !== "healthy")
+    .map((item) => {
+      const component = Object.hasOwn(COMPONENT_LABELS, item?.component)
+        ? item.component
+        : "unknown_component";
+      const status = CHECK_STATUSES.has(item?.status) ? item.status : "unknown";
+      return `${component}:${status}`;
+    })
+    .sort();
+  return unhealthy.length > 0
+    ? `operations_monitor_health_gate_failed|${unhealthy.join(",")}`
+    : null;
+}
+
 function requireHealthyChecks(checks, env = process.env) {
   if (env.FANMIND_OPERATIONS_REQUIRE_HEALTHY !== "true") return;
-  const unhealthyCount = checks.filter((item) => item?.status !== "healthy").length;
-  if (unhealthyCount > 0) {
-    throw new Error(`operations_monitor_health_gate_failed_${unhealthyCount}`);
+  const failureCode = healthGateFailureCode(checks);
+  if (failureCode) throw new Error(failureCode);
+}
+
+function operationsErrorCode(error) {
+  const value = clampText(error?.message, 400);
+  if (
+    /^operations_monitor_health_gate_failed\|(?:[a-z_]+:(?:unknown|degraded|unavailable))(?:,[a-z_]+:(?:unknown|degraded|unavailable))*$/u.test(value) ||
+    value === "operations_monitor_supabase_config_missing" ||
+    /^operations_store_[1-5][0-9]{2}$/u.test(value)
+  ) {
+    return value;
   }
+  return "operations_monitor_failed";
 }
 
 function positiveNumber(value, fallback) {
@@ -530,7 +557,7 @@ async function runMonitor(env = process.env) {
 const direct = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (direct) {
   runMonitor().catch((error) => {
-    log("error", "monitor_failed", { error_code: clampText(error?.message, 120) });
+    log("error", "monitor_failed", { error_code: operationsErrorCode(error) });
     process.exitCode = 1;
   });
 }
@@ -542,8 +569,10 @@ export {
   classifyBackupFreshness,
   classifyPercent,
   classifyRemainingDays,
+  healthGateFailureCode,
   monitorEnabled,
   notificationTransition,
+  operationsErrorCode,
   operationsEmailConfig,
   parsePm2Status,
   requireHealthyChecks,
