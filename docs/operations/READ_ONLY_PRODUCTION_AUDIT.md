@@ -148,6 +148,10 @@ der zweiten Variante:
 - das allgemeine Operationsverzeichnis `/usr/local/lib/fanmind-ops` bleibt
   unverändert root-only mit Modus `0700`. Der Audit übergibt den dort
   geschützten checksum-only Backup-Verifier ausschließlich an `sudo -n node`;
+- der nicht geheime Operations-Monitor liegt getrennt root-owned unter
+  `/usr/local/lib/fanmind-monitor` (`0755` Verzeichnis, `0644` Script), damit
+  ausschließlich seine unprivilegierten `ubuntu`-Services ihn über
+  `/usr/bin/node` lesen können; Aktivierungscode bleibt root-only;
 - der Audit-Workflow checkt keinen Repository-Code aus und führt ausschließlich
   diese installierte Version aus;
 - nach einem erfolgreichen `Deploy FanMind` wird der exakt deployte Commit
