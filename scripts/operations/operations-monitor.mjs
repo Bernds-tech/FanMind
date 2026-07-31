@@ -35,6 +35,14 @@ function monitorEnabled(env = process.env) {
   return env.FANMIND_OPERATIONS_MONITOR_ENABLED === "true";
 }
 
+function requireHealthyChecks(checks, env = process.env) {
+  if (env.FANMIND_OPERATIONS_REQUIRE_HEALTHY !== "true") return;
+  const unhealthyCount = checks.filter((item) => item?.status !== "healthy").length;
+  if (unhealthyCount > 0) {
+    throw new Error(`operations_monitor_health_gate_failed_${unhealthyCount}`);
+  }
+}
+
 function positiveNumber(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -508,6 +516,7 @@ async function runMonitor(env = process.env) {
   }
   supabaseConfig(env);
   const checks = await collectChecks(env);
+  requireHealthyChecks(checks, env);
   const previous = await latestEvents(checks.map((item) => item.component), env);
   const results = [];
   for (const item of checks) {
@@ -537,5 +546,6 @@ export {
   notificationTransition,
   operationsEmailConfig,
   parsePm2Status,
+  requireHealthyChecks,
   runMonitor,
 };
