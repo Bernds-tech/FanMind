@@ -20,6 +20,11 @@ const checkedFiles = [
   "scripts/operations/verify-ai-tier-recommendation.mjs",
   "scripts/operations/ai-reply-quality-eval.mjs",
   "tests/ai-reply-quality-eval.test.mjs",
+  "scripts/operations/run-database-restore-drill.sh",
+  "scripts/operations/restore-database-postcheck-receipt.mjs",
+  "scripts/operations/verify-restore-drill-evidence.mjs",
+  "tests/restore-drill-evidence.test.mjs",
+  "docs/operations/RESTORE_DRILL.md",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
   "scripts/operations/mobile-release-resource-readiness.mjs",
@@ -193,6 +198,61 @@ forbidRuntime(
 forbidRuntime(
   /FanMind e\.U\./u,
   "Der Zusatz e.U. darf ohne bestätigte Firmenbucheintragung nicht veröffentlicht werden.",
+);
+
+// Restore evidence must bind schema and RLS success to the machine postcheck.
+requireText(
+  "package.json",
+  '"restore:database:postcheck": "node scripts/operations/restore-database-postcheck-receipt.mjs"',
+  "Der Restore-Postcheck muss als fester Operations-Befehl registriert sein.",
+);
+for (const table of [
+  "contacts",
+  "followups",
+  "memories",
+  "workspace_members",
+  "workspaces",
+]) {
+  requireText(
+    "scripts/operations/restore-database-postcheck-receipt.mjs",
+    `"${table}"`,
+    `Der Datenbank-Postcheck muss die Kerntabelle ${table} fest prüfen.`,
+  );
+}
+requireText(
+  "scripts/operations/run-database-restore-drill.sh",
+  "fanmind_required_restore_tables",
+  "Der Restore-Runner muss den festen Post-Restore-Katalogcheck ausführen.",
+);
+requireText(
+  "scripts/operations/run-database-restore-drill.sh",
+  "FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH",
+  "Der Restore-Runner muss einen getrennten privaten Postcheck-Beleg verlangen.",
+);
+requireText(
+  "scripts/operations/verify-restore-drill-evidence.mjs",
+  "evidence.schemaVersion !== 5",
+  "Der Restore-Evidence-Validator muss ausschließlich Schema 5 akzeptieren.",
+);
+requireText(
+  "scripts/operations/verify-restore-drill-evidence.mjs",
+  "databasePostcheckReceiptSha256",
+  "Der Restore-Evidence-Validator muss den Postcheck-Beleg per SHA-256 binden.",
+);
+requireText(
+  "tests/restore-drill-evidence.test.mjs",
+  "database postcheck hash, identity, counts and timestamps are bound",
+  "Die Postcheck-Bindung muss automatisiert regressionsgeprüft sein.",
+);
+requireText(
+  "docs/operations/RESTORE_DRILL.md",
+  "`coreSchemaChecks: \"passed\"` or manual",
+  "Das Runbook muss manuelle Kernschema-Freigaben ausdrücklich ablehnen.",
+);
+requireText(
+  "docs/operations/RESTORE_DRILL.md",
+  "manual `rlsVerification: \"passed\"`",
+  "Das Runbook muss manuelle RLS-Freigaben ausdrücklich ablehnen.",
 );
 
 // Starter-Preise und zentrale Billing-Werte.

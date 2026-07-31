@@ -65,32 +65,33 @@ validate_open_source() {
 
 validate_output_path() {
   local output_path="$1"
+  local output_label="$2"
   local output_parent output_canonical metadata owner_uid permissions mode
   local mode_value permission_value
 
-  [[ "$output_path" = /* ]] || fail "runner_receipt_path_must_be_absolute"
+  [[ "$output_path" = /* ]] || fail "${output_label}_path_must_be_absolute"
   [[ ! -e "$output_path" && ! -L "$output_path" ]] \
-    || fail "runner_receipt_already_exists"
+    || fail "${output_label}_already_exists"
   output_parent="$(dirname -- "$output_path")"
   [[ ! -L "$output_parent" && -d "$output_parent" ]] \
-    || fail "runner_receipt_directory_unsafe"
+    || fail "${output_label}_directory_unsafe"
   output_canonical="$(realpath -- "$output_parent")" \
-    || fail "runner_receipt_directory_unavailable"
+    || fail "${output_label}_directory_unavailable"
   [[ "$output_parent" == "$output_canonical" ]] \
-    || fail "runner_receipt_directory_unsafe"
+    || fail "${output_label}_directory_unsafe"
   metadata="$(stat -Lc '%u %a %f' -- "$output_parent")" \
-    || fail "runner_receipt_directory_unavailable"
+    || fail "${output_label}_directory_unavailable"
   read -r owner_uid permissions mode <<< "$metadata"
   [[ "$owner_uid" == "$(id -u)" ]] \
-    || fail "runner_receipt_directory_owner_mismatch"
+    || fail "${output_label}_directory_owner_mismatch"
   [[ "$permissions" =~ ^[0-7]{3,4}$ && "$mode" =~ ^[0-9a-fA-F]+$ ]] \
-    || fail "runner_receipt_directory_metadata_invalid"
+    || fail "${output_label}_directory_metadata_invalid"
   mode_value=$((16#$mode))
   (( (mode_value & 0170000) == 0040000 )) \
-    || fail "runner_receipt_directory_unsafe"
+    || fail "${output_label}_directory_unsafe"
   permission_value=$((8#$permissions))
   (( (permission_value & 077) == 0 )) \
-    || fail "runner_receipt_directory_permissions_invalid"
+    || fail "${output_label}_directory_permissions_invalid"
 }
 
 [[ "$#" -eq 1 ]] || fail "exactly_one_dump_path_required"
@@ -107,6 +108,7 @@ dump_path="$1"
 : "${PGPASSFILE:?PGPASSFILE is required}"
 : "${FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH:?FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH is required}"
 : "${FANMIND_RESTORE_RUNNER_RECEIPT_PATH:?FANMIND_RESTORE_RUNNER_RECEIPT_PATH is required}"
+: "${FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH:?FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH is required}"
 : "${FANMIND_RESTORE_DRILL_ID:?FANMIND_RESTORE_DRILL_ID is required}"
 : "${FANMIND_RESTORE_DISPOSABLE_TARGET_ID:?FANMIND_RESTORE_DISPOSABLE_TARGET_ID is required}"
 : "${FANMIND_RESTORE_PRODUCTION_COMMIT:?FANMIND_RESTORE_PRODUCTION_COMMIT is required}"
@@ -127,7 +129,12 @@ dump_path="$1"
   || fail "restore_disposable_target_id_invalid"
 [[ "$FANMIND_RESTORE_PRODUCTION_COMMIT" =~ ^[0-9a-f]{40}$ ]] \
   || fail "restore_production_commit_invalid"
-validate_output_path "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH"
+[[ "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH" != "$FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH" ]] \
+  || fail "restore_receipt_paths_must_be_distinct"
+validate_output_path "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH" "runner_receipt"
+validate_output_path \
+  "$FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH" \
+  "database_postcheck_receipt"
 
 operational_test_mode="${FANMIND_OPERATIONAL_TEST_MODE:-}"
 pg_restore_override="${FANMIND_PG_RESTORE_BIN:-}"
@@ -325,3 +332,74 @@ node scripts/operations/restore-runner-receipt.mjs \
   --full-receipt "$snapshot_full_receipt" \
   --dump "$snapshot_dump" \
   --output "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH"
+
+postcheck_sql="
+WITH fanmind_required_restore_tables(table_name) AS (
+  VALUES
+    ('contacts'),
+    ('followups'),
+    ('memories'),
+    ('workspace_members'),
+    ('workspaces')
+)
+SELECT required.table_name,
+       CASE WHEN target.oid IS NULL THEN '0' ELSE '1' END,
+       CASE WHEN COALESCE(target.relrowsecurity, false) THEN '1' ELSE '0' END,
+       COALESCE(policies.policy_count, 0)::text
+  FROM fanmind_required_restore_tables AS required
+  LEFT JOIN LATERAL (
+    SELECT c.oid, c.relrowsecurity
+      FROM pg_catalog.pg_class AS c
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public'
+       AND c.relname = required.table_name
+       AND c.relkind IN ('r', 'p')
+  ) AS target ON true
+  LEFT JOIN LATERAL (
+    SELECT COUNT(*)::integer AS policy_count
+      FROM pg_catalog.pg_policy AS p
+     WHERE p.polrelid = target.oid
+  ) AS policies ON true
+ ORDER BY required.table_name;
+"
+
+if ! postcheck_result="$(
+  env \
+    -u PGHOST \
+    -u PGPORT \
+    -u PGDATABASE \
+    -u PGUSER \
+    -u PGHOSTADDR \
+    -u PGSERVICE \
+    -u PGSERVICEFILE \
+    -u PGPASSWORD \
+    -u PGOPTIONS \
+    PGPASSFILE="$snapshot_passfile" \
+    "$psql_bin" \
+    --no-psqlrc \
+    --no-align \
+    --tuples-only \
+    --quiet \
+    --field-separator '|' \
+    --set ON_ERROR_STOP=1 \
+    --no-password \
+    --host "$PGHOST" \
+    --port "$PGPORT" \
+    --username "$PGUSER" \
+    --dbname "$PGDATABASE" \
+    --command "$postcheck_sql" \
+    2>/dev/null
+)"
+then
+  fail "database_postcheck_query_failed"
+fi
+
+FANMIND_RESTORE_POSTCHECKED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+  || fail "postcheck_timestamp_failed"
+export FANMIND_RESTORE_POSTCHECKED_AT
+
+printf '%s\n' "$postcheck_result" \
+  | node scripts/operations/restore-database-postcheck-receipt.mjs \
+      --runner-receipt "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH" \
+      --output "$FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH" \
+  || fail "database_postcheck_receipt_failed"

@@ -15,8 +15,6 @@ const UUID_V4 =
 const FULL_BACKUP_BASENAME = /^fanmind-full-\d{13}\.tar\.gz\.age$/u;
 const PASS_FIELDS = [
   "verifier",
-  "coreSchemaChecks",
-  "rlsVerification",
   "storageSample",
   "serverConfigInspection",
   "cleanup",
@@ -37,6 +35,7 @@ const EVIDENCE_KEYS = [
   "productionCommit",
   "fullBackupReceiptSha256",
   "restoreRunnerReceiptSha256",
+  "databasePostcheckReceiptSha256",
   "databasePartEncryptedSha256",
   "databaseDumpSha256",
   "disposableTargetId",
@@ -60,6 +59,19 @@ const RUNNER_KEYS = [
   "emptyTargetObjectCount",
   "databaseRestore",
   "singleTransaction",
+].sort();
+const DATABASE_POSTCHECK_KEYS = [
+  "schemaVersion",
+  "drillId",
+  "checkedAt",
+  "productionCommit",
+  "disposableTargetId",
+  "restoreRunnerReceiptSha256",
+  "requiredTableCount",
+  "existingTableCount",
+  "rlsEnabledTableCount",
+  "policyCoveredTableCount",
+  "databasePostcheck",
 ].sort();
 
 function fixedError(code) {
@@ -178,9 +190,51 @@ function parseRunnerReceipt(bytes) {
   return receipt;
 }
 
+function parseDatabasePostcheckReceipt(bytes) {
+  const receipt = parseFlatRecord(bytes, "database_postcheck_receipt");
+  exactKeys(receipt, DATABASE_POSTCHECK_KEYS, "database_postcheck_receipt");
+  if (receipt.schemaVersion !== 1) {
+    throw fixedError("database_postcheck_receipt_schema_invalid");
+  }
+  if (
+    typeof receipt.drillId !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]{0,47}$/u.test(receipt.drillId)
+  ) {
+    throw fixedError("database_postcheck_receipt_drill_id_invalid");
+  }
+  if (!isIsoUtc(receipt.checkedAt)) {
+    throw fixedError("database_postcheck_receipt_timestamp_invalid");
+  }
+  if (!COMMIT.test(receipt.productionCommit)) {
+    throw fixedError("database_postcheck_receipt_commit_invalid");
+  }
+  if (!UUID_V4.test(receipt.disposableTargetId)) {
+    throw fixedError("database_postcheck_receipt_target_id_invalid");
+  }
+  if (!SHA256.test(receipt.restoreRunnerReceiptSha256)) {
+    throw fixedError("database_postcheck_receipt_runner_sha_invalid");
+  }
+  for (const field of [
+    "requiredTableCount",
+    "existingTableCount",
+    "rlsEnabledTableCount",
+    "policyCoveredTableCount",
+  ]) {
+    if (receipt[field] !== 5) {
+      throw fixedError(
+        `database_postcheck_receipt_${fieldCode(field)}_invalid`,
+      );
+    }
+  }
+  if (receipt.databasePostcheck !== "passed") {
+    throw fixedError("database_postcheck_receipt_not_passed");
+  }
+  return receipt;
+}
+
 function validateEvidence(evidence) {
   exactKeys(evidence, EVIDENCE_KEYS, "evidence");
-  if (evidence.schemaVersion !== 4) {
+  if (evidence.schemaVersion !== 5) {
     throw fixedError("evidence_schema_invalid");
   }
   if (
@@ -208,6 +262,7 @@ function validateEvidence(evidence) {
     "outerSha256",
     "fullBackupReceiptSha256",
     "restoreRunnerReceiptSha256",
+    "databasePostcheckReceiptSha256",
     "databasePartEncryptedSha256",
     "databaseDumpSha256",
   ]) {
@@ -272,6 +327,34 @@ function bindReceipts(evidence, fullReceipt, fullDigest, runner, runnerDigest) {
   }
 }
 
+function bindDatabasePostcheck(
+  evidence,
+  runner,
+  runnerDigest,
+  postcheck,
+  postcheckDigest,
+) {
+  if (evidence.databasePostcheckReceiptSha256 !== postcheckDigest) {
+    throw fixedError("database_postcheck_receipt_sha_mismatch");
+  }
+  if (postcheck.restoreRunnerReceiptSha256 !== runnerDigest) {
+    throw fixedError("database_postcheck_runner_sha_mismatch");
+  }
+  if (
+    postcheck.drillId !== runner.drillId ||
+    postcheck.disposableTargetId !== runner.disposableTargetId ||
+    postcheck.productionCommit !== runner.productionCommit
+  ) {
+    throw fixedError("database_postcheck_identity_binding_mismatch");
+  }
+  if (
+    Date.parse(postcheck.checkedAt) < Date.parse(runner.completedAt) ||
+    Date.parse(evidence.completedAt) < Date.parse(postcheck.checkedAt)
+  ) {
+    throw fixedError("database_postcheck_timestamp_envelope_mismatch");
+  }
+}
+
 function parseArgs(argv) {
   const args = {};
   for (let index = 0; index < argv.length; index += 1) {
@@ -279,12 +362,15 @@ function parseArgs(argv) {
     if (value === "--input") args.input = argv[++index];
     else if (value === "--full-receipt") args.fullReceipt = argv[++index];
     else if (value === "--runner-receipt") args.runnerReceipt = argv[++index];
-    else throw fixedError("usage_invalid");
+    else if (value === "--database-postcheck-receipt") {
+      args.databasePostcheckReceipt = argv[++index];
+    } else throw fixedError("usage_invalid");
   }
   if (
     !args.input ||
     !args.fullReceipt ||
     !args.runnerReceipt ||
+    !args.databasePostcheckReceipt ||
     Object.values(args).some(
       (value) => typeof value !== "string" || value.startsWith("-"),
     )
@@ -296,15 +382,21 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const [evidenceBytes, fullBytes, runnerBytes] = await Promise.all([
+  const [evidenceBytes, fullBytes, runnerBytes, postcheckBytes] =
+    await Promise.all([
     readStablePrivateFile(args.input, "evidence", MAX_EVIDENCE_BYTES),
     readStablePrivateFile(args.fullReceipt, "full_backup_receipt"),
     readStablePrivateFile(args.runnerReceipt, "runner_receipt"),
+    readStablePrivateFile(
+      args.databasePostcheckReceipt,
+      "database_postcheck_receipt",
+    ),
   ]);
   try {
     const evidence = parseFlatRecord(evidenceBytes, "evidence");
     const fullReceipt = parseFullBackupRestoreReceipt(fullBytes);
     const runner = parseRunnerReceipt(runnerBytes);
+    const postcheck = parseDatabasePostcheckReceipt(postcheckBytes);
     validateEvidence(evidence);
     bindReceipts(
       evidence,
@@ -313,7 +405,17 @@ async function main() {
       runner,
       sha256Bytes(runnerBytes),
     );
+    bindDatabasePostcheck(
+      evidence,
+      runner,
+      sha256Bytes(runnerBytes),
+      postcheck,
+      sha256Bytes(postcheckBytes),
+    );
     console.log("RESTORE_EVIDENCE_SCHEMA=valid");
+    console.log("RESTORE_DATABASE_POSTCHECK_TABLES=5");
+    console.log("RESTORE_DATABASE_POSTCHECK_RLS=5");
+    console.log("RESTORE_DATABASE_POSTCHECK_POLICIES=5");
     console.log("RESTORE_EVIDENCE_SECRETS_RECORDED=false");
     console.log("RESTORE_EVIDENCE_PRODUCTION_MODIFIED=false");
     console.log("RESTORE_DRILL_EVIDENCE=PASS");
@@ -326,6 +428,7 @@ async function main() {
     evidenceBytes.fill(0);
     fullBytes.fill(0);
     runnerBytes.fill(0);
+    postcheckBytes.fill(0);
   }
 }
 

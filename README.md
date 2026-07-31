@@ -66,7 +66,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   checksum-only Workflow prüft auf einem getrennten `fanmind-restore`-Runner
   das isolierte Ziel und das verschlüsselte Full-Backup. Er verbindet sich
   nicht mit PostgreSQL, entschlüsselt keine Daten und aktiviert keine
-  Schreibfreigabe; der echte Restore-Drill bleibt extern offen.
+  Schreibfreigabe. Der getrennte transaktionale Restore-Runner erzeugt nach
+  einem echten isolierten Restore zusätzlich nur bei 5/5 vorhandenen
+  Kerntabellen, 5/5 aktivierter RLS und 5/5 Policy-Abdeckung einen privaten,
+  SHA-gebundenen Datenbank-Postcheck-Beleg; der echte externe Restore-Drill
+  bleibt offen.
 - Mobile-Release-Ressourcencheck: ein manueller, nur auf `main` ausführbarer
   Read-only-Workflow prüft je geschützter Development-/Preview-/Production-
   Umgebung die EAS-Projektbindung, App-Identität und ausschließlich öffentliche

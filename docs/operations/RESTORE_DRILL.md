@@ -225,6 +225,7 @@ export FANMIND_RESTORE_DISPOSABLE_TARGET_ID=<new-random-uuid-v4>
 export FANMIND_RESTORE_PRODUCTION_COMMIT=<exact-40-character-source-commit>
 export FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH=<private-receipt-path>
 export FANMIND_RESTORE_RUNNER_RECEIPT_PATH=<new-private-output-path>
+export FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH=<new-private-postcheck-output-path>
 unset PGPASSWORD PGHOSTADDR PGSERVICE PGSERVICEFILE
 
 npm run restore:preflight
@@ -282,6 +283,16 @@ drill ID, opaque disposable-target UUID, empty-target observation, exact
 full-backup receipt bytes, database hashes, timestamps and successful
 single-transaction result. A pre-existing output or symlink fails closed.
 
+Immediately after that receipt is written, the same frozen target and private
+passfile snapshot are used for a catalog-only post-restore query. It checks
+exactly `workspaces`, `workspace_members`, `contacts`, `memories` and
+`followups`: every table must exist in `public`, have RLS enabled and have at
+least one PostgreSQL policy. Only a 5/5/5 result creates the separate private
+`database-postcheck-receipt.json`. The receipt binds its timestamp, drill ID,
+opaque disposable-target UUID and Production commit to the exact runner
+receipt SHA-256. A missing table, disabled RLS, missing policy, changed
+identity, pre-existing output or unsafe output directory fails closed.
+
 The host policy canonicalizes literal IPv4 and IPv6 addresses and rejects legacy numeric IPv4 spellings. It does not perform DNS resolution. The recorded Production and isolated target identities must therefore use their real canonical endpoints, never aliases or CNAMEs; endpoint isolation remains an explicit operator precondition.
 
 After the drill, clear the one-time gates:
@@ -293,19 +304,10 @@ export FANMIND_ENABLE_NON_PRODUCTION_WRITES=false
 unset FANMIND_NON_PRODUCTION_WRITE_ACK
 ```
 
-Post-restore checks:
+The runner now records the core database postcheck automatically. Do not copy
+`coreSchemaChecks: "passed"` or `rlsVerification: "passed"` into the final
+evidence manually; schema 5 rejects both fields. Additionally verify:
 
-```sql
-select count(*) from public.workspaces;
-select count(*) from public.contacts;
-select count(*) from public.followups;
-select count(*) from public.memories;
-```
-
-Also verify:
-
-- expected schemas and tables exist;
-- RLS remains enabled on protected customer tables;
 - no Production webhook or secret values were restored into application runtime configuration;
 - test logins and test data access remain isolated.
 
@@ -341,13 +343,14 @@ Do not paste or log their contents. Compare permissions and file presence agains
 ## 7. Evidence record
 
 Record the result as a protected JSON file and validate it together with the
-exact two private receipts before marking the drill complete:
+exact three private receipts before marking the drill complete:
 
 ```bash
 npm run restore:evidence:verify -- \
   --input /secure/evidence/fanmind-restore-drill.json \
   --full-receipt /secure/evidence/full-backup-receipt.json \
-  --runner-receipt /secure/evidence/restore-runner-receipt.json
+  --runner-receipt /secure/evidence/restore-runner-receipt.json \
+  --database-postcheck-receipt /secure/evidence/database-postcheck-receipt.json
 ```
 
 Required final line:
@@ -360,7 +363,7 @@ Use this exact schema and replace only the bounded placeholder values:
 
 ```json
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "drillId": "2026-07-30-restore-001",
   "startedAt": "2026-07-30T08:00:00Z",
   "completedAt": "2026-07-30T08:30:00Z",
@@ -370,12 +373,11 @@ Use this exact schema and replace only the bounded placeholder values:
   "productionCommit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "fullBackupReceiptSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
   "restoreRunnerReceiptSha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "databasePostcheckReceiptSha256": "9999999999999999999999999999999999999999999999999999999999999999",
   "databasePartEncryptedSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "databaseDumpSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "disposableTargetId": "123e4567-e89b-42d3-a456-426614174000",
   "verifier": "passed",
-  "coreSchemaChecks": "passed",
-  "rlsVerification": "passed",
   "storageSample": "passed",
   "serverConfigInspection": "passed",
   "cleanup": "passed",
@@ -392,10 +394,14 @@ JSON member names are rejected before parsing. Calculate
 `fullBackupReceiptSha256` over the exact receipt bytes. Copy
 `databasePartEncryptedSha256` and `databaseDumpSha256` from that receipt.
 Calculate `restoreRunnerReceiptSha256` over the exact runner-receipt bytes.
-The verifier requires those hashes, `drillId`, `disposableTargetId` and the
-evidence timestamp envelope to match the runner receipt. It accepts database
-restore and empty-target success only from that machine-generated receipt;
-schema v3 and a `databaseRestore: "passed"`, das manuell behauptet wird, fail
+Calculate `databasePostcheckReceiptSha256` over the exact database-postcheck
+receipt bytes. The verifier requires all three hashes, `drillId`,
+`disposableTargetId`, Production commit and the evidence timestamp envelope to
+match the runner and postcheck receipts. It accepts database restore and
+empty-target success only from the machine-generated runner receipt and core
+schema/RLS/policy success only from the machine-generated postcheck receipt.
+Schema v4, a manually asserted `databaseRestore: "passed"`, manual
+`coreSchemaChecks: "passed"` or manual `rlsVerification: "passed"` fail
 closed.
 
 Generate `disposableTargetId` as a new random UUID v4 for this drill. Keep the
@@ -406,13 +412,15 @@ disposable restore target; the narrower
 `customerDataRecordedInEvidence: false` assertion means that none of those
 contents or identifiers were copied into the redacted evidence.
 
-The evidence file and both receipts contain keine Hostnamen, Datenbanknamen,
+The evidence file and all three receipts contain keine Hostnamen, Datenbanknamen,
 Benutzernamen, Passwörter, Schlüssel, Kundendaten oder freie Notizfelder. The
 verifier accepts only the documented evidence and receipt keys, reads stable
 private regular files, binds the artifact basename, outer SHA-256, Production
 commit, database-part SHA-256, restored-dump SHA-256, empty-target observation
 and transactional restore result, prints status codes only and never echoes
-record values.
+record values. The database postcheck receipt exposes only the fixed counts
+5/5/5 and the hashes and opaque identities required for binding; it records no
+table contents or policy expressions.
 
 On success the verifier also prints:
 
@@ -432,7 +440,8 @@ A restore drill passes when:
 - the transferred encrypted artifact matches its SHA-256;
 - decryption and structural validation succeed;
 - a database dump restores into an isolated empty target without errors;
-- core table checks complete;
+- the machine-bound database postcheck proves 5/5 required tables, 5/5 RLS
+  enablement and 5/5 policy coverage;
 - representative Storage objects validate after upload/download in a test bucket;
 - server-config archive contents are present and readable in isolation;
 - all plaintext temporary files and disposable targets are removed;
