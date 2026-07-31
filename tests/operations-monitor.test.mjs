@@ -1,17 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 
 const monitor = await import("../scripts/operations/operations-monitor.mjs");
 const source = await readFile(new URL("../scripts/operations/operations-monitor.mjs", import.meta.url), "utf8");
 const service = await readFile(new URL("../ops/systemd/fanmind-operations-monitor.service", import.meta.url), "utf8");
+const probeService = await readFile(new URL("../ops/systemd/fanmind-operations-monitor-probe.service", import.meta.url), "utf8");
 const timer = await readFile(new URL("../ops/systemd/fanmind-operations-monitor.timer", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260718190000_operations_monitor_components.sql", import.meta.url), "utf8");
+const productionControl = await readFile(new URL("../.github/workflows/operations-monitor-production-control.yml", import.meta.url), "utf8");
+const deployment = await readFile(new URL("../.github/workflows/deploy-fanmind.yml", import.meta.url), "utf8");
+const enableScriptPath = "scripts/operations/enable-operations-monitor.sh";
+const enableScript = await readFile(new URL("../scripts/operations/enable-operations-monitor.sh", import.meta.url), "utf8");
+const execFileAsync = promisify(execFile);
 
 test("operations monitor remains disabled unless explicitly enabled", () => {
   assert.equal(monitor.monitorEnabled({}), false);
   assert.equal(monitor.monitorEnabled({ FANMIND_OPERATIONS_MONITOR_ENABLED: "false" }), false);
   assert.equal(monitor.monitorEnabled({ FANMIND_OPERATIONS_MONITOR_ENABLED: "true" }), true);
+});
+
+test("the production probe can require every collected check to stay healthy", () => {
+  assert.doesNotThrow(() => monitor.requireHealthyChecks([{ status: "healthy" }], { FANMIND_OPERATIONS_REQUIRE_HEALTHY: "true" }));
+  assert.throws(
+    () => monitor.requireHealthyChecks([{ status: "healthy" }, { status: "degraded" }], { FANMIND_OPERATIONS_REQUIRE_HEALTHY: "true" }),
+    /operations_monitor_health_gate_failed_1/,
+  );
+  assert.doesNotThrow(() => monitor.requireHealthyChecks([{ status: "degraded" }], {}));
 });
 
 test("disk and memory thresholds distinguish normal, warning and critical states", () => {
@@ -104,6 +121,44 @@ test("systemd monitor is hardened and timer stays opt-in", () => {
   assert.match(service, /RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6/);
   assert.match(timer, /OnUnitActiveSec=10min/);
   assert.doesNotMatch(service, /FANMIND_OPERATIONS_MONITOR_ENABLED=true/);
+
+  assert.match(probeService, /Type=oneshot/);
+  assert.match(probeService, /Environment=FANMIND_OPERATIONS_MONITOR_ENABLED=true/);
+  assert.match(probeService, /Environment=FANMIND_OPERATIONS_EMAIL_ENABLED=false/);
+  assert.match(probeService, /Environment=FANMIND_OPERATIONS_REQUIRE_HEALTHY=true/);
+  assert.match(probeService, /NoNewPrivileges=true/);
+  assert.match(probeService, /ProtectSystem=strict/);
+  assert.doesNotMatch(probeService, /\[Install\]/);
+});
+
+test("Production control is main-only, release-bound and runs installed root-owned code", async () => {
+  await execFileAsync("bash", ["-n", enableScriptPath]);
+
+  assert.match(productionControl, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(productionControl, /environment: production/);
+  assert.match(productionControl, /runs-on: \[self-hosted, fanmind-prod, exoscale, linux, x64\]/);
+  assert.match(productionControl, /probe-operations-monitor-production/);
+  assert.match(productionControl, /activate-operations-monitor-production/);
+  assert.match(productionControl, /EXPECTED_COMMIT[\s\S]*REVIEWED_COMMIT/);
+  assert.match(productionControl, /read-only-production-audit\.sh/);
+  assert.match(productionControl, /fanmind-operations-monitor-probe\.service/);
+  assert.match(productionControl, /\/usr\/local\/lib\/fanmind-ops\/enable-operations-monitor\.sh/);
+  assert.doesNotMatch(productionControl, /actions\/checkout|source .*\.env\.production|cat .*\.env\.production/);
+
+  assert.match(enableScript, /\[\[ "\$\(id -u\)" -eq 0 \]\]/);
+  assert.match(enableScript, /release_commit_mismatch/);
+  assert.match(enableScript, /environment_file_size_invalid/);
+  assert.match(enableScript, /--max-filesize 16384/);
+  assert.match(enableScript, /FANMIND_OPERATIONS_MONITOR_ENABLED=true/);
+  assert.match(enableScript, /FANMIND_OPERATIONS_EMAIL_ENABLED=false/);
+  assert.match(enableScript, /cp --preserve=mode,ownership,timestamps/);
+  assert.match(enableScript, /systemctl enable --now "\$TIMER_UNIT"/);
+  assert.match(enableScript, /read-only-production-audit\.sh/);
+  assert.match(enableScript, /verify-production-audit-output\.mjs/);
+  assert.doesNotMatch(enableScript, /set -x|printenv|cat "\$ENV_FILE"|source "\$ENV_FILE"/);
+
+  assert.match(deployment, /scripts\/operations\/enable-operations-monitor\.sh \/usr\/local\/lib\/fanmind-ops\/enable-operations-monitor\.sh/);
+  assert.match(deployment, /ops\/systemd\/fanmind-operations-monitor-probe\.service \/etc\/systemd\/system\/fanmind-operations-monitor-probe\.service/);
 });
 
 test("migration allows only metadata components and keeps monitor notifications indexed", () => {

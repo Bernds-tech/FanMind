@@ -95,6 +95,26 @@ Danach prüfen:
 5. Ein künstlich abgesenkter Disk-Warnwert erzeugt genau eine Warnung.
 6. Nach Rückstellung wird dieselbe Meldung gelöst.
 
+Der dauerhafte GitHub-Workflow `FanMind Operations Monitor Production Control`
+führt diese Abnahme auf `main` reproduzierbar aus. Die Aktion `probe` startet
+nur den gehärteten Einmal-Service
+`fanmind-operations-monitor-probe.service`. Er erzwingt den Monitor für genau
+diesen Lauf, hält E-Mail-Versand ausdrücklich ausgeschaltet und bricht ab,
+sobald eine der geprüften Komponenten nicht `healthy` ist. Vor und nach dem
+Einmallauf wird der installierte read-only Production-Audit gegen den exakt
+bestätigten Release-Commit ausgeführt.
+
+Die Aktion `activate` verlangt zusätzlich die exakte Bestätigung
+`activate-operations-monitor-production`. Erst nach einem erfolgreichen Probe
+setzt das installierte, root-eigene Kontrollscript atomar ausschließlich
+`FANMIND_OPERATIONS_MONITOR_ENABLED=true` und
+`FANMIND_OPERATIONS_EMAIL_ENABLED=false`, aktiviert den Zehn-Minuten-Timer und
+führt den normalen Service einmal aus. Noch innerhalb des atomaren
+Aktivierungsblocks muss außerdem der vollständige installierte Production-Audit
+grün bleiben. Bei einem Fehler werden Environment-Datei und vorheriger
+Timerzustand wiederhergestellt. Der Workflow checkt keinen Branch-Code aus und
+gibt keine Environment-Werte aus.
+
 ## Timer kontrolliert aktivieren
 
 Erst nach erfolgreichem manuellen Test:
@@ -129,3 +149,9 @@ FANMIND_OPERATIONS_EMAIL_ENABLED=false
 - E-Mail nur bei neuer kritischer Eskalation und optional bei Entwarnung;
 - systemd-Service ohne Root-Rechte und mit eingeschränktem Dateisystemzugriff;
 - kein automatisches Aktivieren durch Deployment.
+- kein E-Mail-Versand durch Probe oder Timer-Aktivierung;
+- Aktivierung nur auf `main`, auf dem Production-Runner und gebunden an den
+  exakten bereits ausgelieferten Commit;
+- vor jeder Aktivierung ein vollständiger read-only Production-Audit und ein
+  vollständig gesunder Einmallauf;
+- atomarer Environment-Update mit Rückfall auf Datei- und Timer-Ausgangszustand.
