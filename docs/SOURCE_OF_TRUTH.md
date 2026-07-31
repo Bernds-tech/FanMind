@@ -220,6 +220,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Entscheidung und aktivieren keine Stufe.
 - `npm run ai:tiers:recommendation` prüft diese Arbeitsmatrix offline und
   redigiert; die aktive Policy behält bis zur Freigabe ihre `null`-Felder.
+- `npm run ai:reply-quality:eval` prüft ein privates, von Git ausgeschlossenes
+  Ergebnis eines verblindeten Antwortqualitäts-Evals. Der Prüfer akzeptiert
+  keine Prompt- oder Antworttexte, Reviewer-Identitäten, Kontaktwerte oder
+  Provider-Modellnamen, gibt nur aggregierte Basiswerte je KI-Stufe aus und
+  meldet immer `activation=none`. Ein valides Ergebnis füllt keinen
+  `UNENTSCHIEDEN`-Wert und aktiviert weder Plus noch Ultra.
 - Die Admin-KI-Auswertung zählt Kontakte je Workspace über exakte
   PostgREST-Count-Header, unabhängig von Zeilen-Pagination, und zeigt
   geschätzte Kosten pro Fan sowie pro 100/1.000 Fans. Ohne positive Fan-Basis

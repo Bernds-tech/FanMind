@@ -99,7 +99,9 @@ AI_TIER_RECOMMENDATION=PASS activation=none
    vollständigen Zeitraum prüfen; Stichprobengröße, Schätz-Fallbacks und eine
    mögliche 10.000-Ereignis-Begrenzung ausdrücklich berücksichtigen.
 3. Antwortqualität der drei Modellklassen auf einem repräsentativen,
-   anonymisierten Eval-Set vergleichen.
+   anonymisierten und verblindeten Eval-Set vergleichen. Der datensparsame
+   Offline-Vertrag und der nicht aktivierende Prüfbefehl sind in
+   `AI_REPLY_QUALITY_EVAL.md` beschrieben.
 4. Kostenrechnung mit aktuellen Providerpreisen, Wechselkurs, Steuern,
    Fehlerrate und mindestens 30 Prozent Sicherheitspuffer wiederholen.
 5. Produkt-, Billing-, Rechts- und Steuerentscheidungen schriftlich

@@ -32,6 +32,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   `npm run ai:tiers:recommendation` prüft die datierte Modellklassen-,
   Kontingent- und Kostenmatrix offline; produktive KI-Pfade importieren sie
   nicht und Plus/Ultra bleiben blockiert.
+- Privater Antwortqualitäts-Eval: `npm run ai:reply-quality:eval` validiert
+  ausschließlich numerische Blindbewertungen aus dem von Git ausgeschlossenen
+  Eval-Verzeichnis. Prompts, Antworten, Fall-IDs, Reviewer und Provider-
+  Modellzuordnungen werden nicht ausgegeben; ein gültiges Ergebnis besitzt
+  ausdrücklich keine Aktivierungswirkung.
 - Admin-Kostenvergleich: Die KI-Verbrauchsansicht zählt Kontakte/Fans je
   Workspace exakt und zeigt die geschätzten Kosten pro Fan sowie pro
   100/1.000 Fans; fehlende oder leere Fan-Basen bleiben ohne Scheinwert.
