@@ -85,6 +85,10 @@ function safeReadinessEnvironment(overrides = {}) {
 async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
   const receiptPath = join(root, "full-backup-receipt.json");
   const runnerReceiptPath = join(root, "restore-runner-receipt.json");
+  const databasePostcheckReceiptPath = join(
+    root,
+    "database-postcheck-receipt.json",
+  );
   const fakePsqlPath = join(root, "fake-psql.sh");
   const dumpBytes = await readFile(dumpPath);
   const dumpSha256 = createHash("sha256").update(dumpBytes).digest("hex");
@@ -105,6 +109,10 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
     [
       "#!/usr/bin/env bash",
       "set -Eeuo pipefail",
+      "if [[ \"$*\" == *fanmind_required_restore_tables* ]]; then",
+      "  printf '%s\\n' \"$FANMIND_TEST_POSTCHECK_RESULT\"",
+      "  exit 0",
+      "fi",
       "if [[ -n \"${FANMIND_TEST_EMPTY_QUERY_MARKER_PATH:-}\" ]]; then",
       "  {",
       "    printf 'ARGS='",
@@ -123,10 +131,19 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
     FANMIND_PSQL_BIN: fakePsqlPath,
     FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH: receiptPath,
     FANMIND_RESTORE_RUNNER_RECEIPT_PATH: runnerReceiptPath,
+    FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH:
+      databasePostcheckReceiptPath,
     FANMIND_RESTORE_DRILL_ID: "2026-07-30-restore-001",
     FANMIND_RESTORE_DISPOSABLE_TARGET_ID:
       "123e4567-e89b-42d3-a456-426614174000",
     FANMIND_RESTORE_PRODUCTION_COMMIT: "b".repeat(40),
+    FANMIND_TEST_POSTCHECK_RESULT: [
+      "contacts|1|1|4",
+      "followups|1|1|3",
+      "memories|1|1|3",
+      "workspace_members|1|1|2",
+      "workspaces|1|1|2",
+    ].join("\n"),
     ...overrides,
   };
 }
@@ -654,6 +671,16 @@ test("restore runner freezes the checked target and passes only explicit connect
     assert.equal(runnerReceipt.databaseRestore, "passed");
     assert.equal(runnerReceipt.emptyTargetObjectCount, 0);
     assert.equal(runnerReceipt.singleTransaction, true);
+    const databasePostcheckReceipt = JSON.parse(
+      await readFile(
+        runnerEnvironment.FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH,
+        "utf8",
+      ),
+    );
+    assert.equal(databasePostcheckReceipt.databasePostcheck, "passed");
+    assert.equal(databasePostcheckReceipt.existingTableCount, 5);
+    assert.equal(databasePostcheckReceipt.rlsEnabledTableCount, 5);
+    assert.equal(databasePostcheckReceipt.policyCoveredTableCount, 5);
     await assert.rejects(access(dirname(validatedSnapshotPath)), /ENOENT/);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -705,6 +732,59 @@ test("restore runner proves an empty target before writing or creating a receipt
     await assert.rejects(
       readFile(
         runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH,
+        "utf8",
+      ),
+      /ENOENT/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner fails closed when a required table has no policy", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-postcheck-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    await writeFile(dumpPath, "synthetic-dump");
+    await chmod(dumpPath, 0o600);
+    await writeFile(passfilePath, "synthetic-password-file");
+    await chmod(passfilePath, 0o600);
+    await writeFile(
+      fakeRestorePath,
+      "#!/usr/bin/env bash\nset -Eeuo pipefail\nexit 0\n",
+    );
+    await chmod(fakeRestorePath, 0o755);
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+      FANMIND_TEST_POSTCHECK_RESULT: [
+        "contacts|1|1|4",
+        "followups|1|1|3",
+        "memories|1|1|0",
+        "workspace_members|1|1|2",
+        "workspaces|1|1|2",
+      ].join("\n"),
+    });
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+        },
+      }),
+      (error) => {
+        const output = `${String(error.stdout)}\n${String(error.stderr)}`;
+        assert.match(output, /postcheck_policy_missing/u);
+        assert.match(output, /database_postcheck_receipt_failed/u);
+        return true;
+      },
+    );
+    await assert.rejects(
+      readFile(
+        runnerEnvironment.FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH,
         "utf8",
       ),
       /ENOENT/u,
@@ -999,6 +1079,10 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
     packageJson.scripts["restore:database:drill"],
     "bash scripts/operations/run-database-restore-drill.sh",
   );
+  assert.equal(
+    packageJson.scripts["restore:database:postcheck"],
+    "node scripts/operations/restore-database-postcheck-receipt.mjs",
+  );
   assert.match(packageJson.scripts["test:operations"], /restore-target-policy\.test\.mjs/);
   assert.ok(preflightPosition >= 0);
   assert.ok(runnerPosition > preflightPosition);
@@ -1025,6 +1109,10 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runner, /snapshot_full_receipt/);
   assert.match(runner, /verify-full-backup-restore-receipt\.mjs/);
   assert.match(runner, /restore-runner-receipt\.mjs/);
+  assert.match(runner, /restore-database-postcheck-receipt\.mjs/);
+  assert.match(runner, /fanmind_required_restore_tables/u);
+  assert.match(runner, /pg_catalog\.pg_policy/u);
+  assert.match(runner, /FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH/u);
   assert.match(runner, /restore_target_not_empty/);
   assert.match(runner, /FANMIND_OPERATIONAL_TEST_MODE/);
   assert.match(runner, /--single-transaction/);

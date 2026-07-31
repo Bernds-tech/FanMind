@@ -17,11 +17,26 @@ import { promisify } from "node:util";
 import test from "node:test";
 
 const execFileAsync = promisify(execFile);
+const execFileWithInput = (file, args, options, input) =>
+  new Promise((resolve, reject) => {
+    const child = execFile(file, args, options, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+        return;
+      }
+      resolve({ stdout, stderr });
+    });
+    child.stdin.end(input);
+  });
 const verifierPath = "scripts/operations/verify-restore-drill-evidence.mjs";
 const receiptVerifierPath =
   "scripts/operations/verify-full-backup-restore-receipt.mjs";
 const receiptWriterPath =
   "scripts/operations/restore-runner-receipt.mjs";
+const databasePostcheckWriterPath =
+  "scripts/operations/restore-database-postcheck-receipt.mjs";
 const runbookPath = "docs/operations/RESTORE_DRILL.md";
 
 const sha = (value) =>
@@ -64,10 +79,34 @@ function runnerReceipt(fullBytes, targetId, overrides = {}) {
   };
 }
 
-function evidence(fullBytes, runnerBytes, targetId, overrides = {}) {
+function databasePostcheckReceipt(runnerBytes, targetId, overrides = {}) {
+  const runner = JSON.parse(runnerBytes);
+  return {
+    schemaVersion: 1,
+    drillId: runner.drillId,
+    checkedAt: "2026-07-30T08:25:00Z",
+    productionCommit: runner.productionCommit,
+    disposableTargetId: targetId,
+    restoreRunnerReceiptSha256: sha(runnerBytes),
+    requiredTableCount: 5,
+    existingTableCount: 5,
+    rlsEnabledTableCount: 5,
+    policyCoveredTableCount: 5,
+    databasePostcheck: "passed",
+    ...overrides,
+  };
+}
+
+function evidence(
+  fullBytes,
+  runnerBytes,
+  postcheckBytes,
+  targetId,
+  overrides = {},
+) {
   const full = JSON.parse(fullBytes);
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     drillId: "2026-07-30-restore-001",
     startedAt: "2026-07-30T08:00:00Z",
     completedAt: "2026-07-30T08:30:00Z",
@@ -77,13 +116,12 @@ function evidence(fullBytes, runnerBytes, targetId, overrides = {}) {
     productionCommit: full.productionCommit,
     fullBackupReceiptSha256: sha(fullBytes),
     restoreRunnerReceiptSha256: sha(runnerBytes),
+    databasePostcheckReceiptSha256: sha(postcheckBytes),
     databasePartEncryptedSha256:
       full.databasePartEncryptedSha256,
     databaseDumpSha256: full.databaseDumpSha256,
     disposableTargetId: targetId,
     verifier: "passed",
-    coreSchemaChecks: "passed",
-    rlsVerification: "passed",
     storageSample: "passed",
     serverConfigInspection: "passed",
     cleanup: "passed",
@@ -128,19 +166,24 @@ async function withReceiptSet(callback) {
     const runnerBytes = `${JSON.stringify(
       runnerReceipt(fullBytes, targetId),
     )}\n`;
+    const postcheckBytes = `${JSON.stringify(
+      databasePostcheckReceipt(runnerBytes, targetId),
+    )}\n`;
     const evidenceBytes = `${JSON.stringify(
-      evidence(fullBytes, runnerBytes, targetId),
+      evidence(fullBytes, runnerBytes, postcheckBytes, targetId),
     )}\n`;
     const paths = {
       root,
       full: join(root, "full-receipt.json"),
       runner: join(root, "runner-receipt.json"),
+      postcheck: join(root, "database-postcheck-receipt.json"),
       evidence: join(root, "evidence.json"),
       dump: join(root, "database.dump"),
     };
     await Promise.all([
       privateFile(paths.full, fullBytes),
       privateFile(paths.runner, runnerBytes),
+      privateFile(paths.postcheck, postcheckBytes),
       privateFile(paths.evidence, evidenceBytes),
       privateFile(paths.dump, "synthetic-database-dump"),
     ]);
@@ -149,6 +192,7 @@ async function withReceiptSet(callback) {
       targetId,
       fullBytes,
       runnerBytes,
+      postcheckBytes,
       evidenceBytes,
     });
   } finally {
@@ -165,6 +209,8 @@ function verifierArguments(paths) {
     paths.full,
     "--runner-receipt",
     paths.runner,
+    "--database-postcheck-receipt",
+    paths.postcheck,
   ];
 }
 
@@ -253,7 +299,70 @@ test("atomic writer creates one exact private runner receipt", async () => {
   });
 });
 
-test("valid schema v4 binds both receipts without echoing identifiers", async () => {
+test("database postcheck writer requires five tables with RLS and policies", async () => {
+  await withReceiptSet(async ({ paths, targetId, runnerBytes }) => {
+    const outputPath = join(paths.root, "new-database-postcheck-receipt.json");
+    const validPostcheck = [
+      "contacts|1|1|4",
+      "followups|1|1|3",
+      "memories|1|1|3",
+      "workspace_members|1|1|2",
+      "workspaces|1|1|2",
+      "",
+    ].join("\n");
+    const environment = {
+      ...process.env,
+      FANMIND_RESTORE_DRILL_ID: "2026-07-30-restore-001",
+      FANMIND_RESTORE_DISPOSABLE_TARGET_ID: targetId,
+      FANMIND_RESTORE_PRODUCTION_COMMIT: "b".repeat(40),
+      FANMIND_RESTORE_POSTCHECKED_AT: "2026-07-30T08:25:00Z",
+    };
+    const { stdout } = await execFileWithInput(
+      process.execPath,
+      [
+        databasePostcheckWriterPath,
+        "--runner-receipt",
+        paths.runner,
+        "--output",
+        outputPath,
+      ],
+      { env: environment },
+      validPostcheck,
+    );
+    assert.match(stdout, /RESTORE_DATABASE_POSTCHECK_RECEIPT=PASS/u);
+    const output = await readPrivateRegularFile(outputPath, "utf8");
+    const record = JSON.parse(output.content);
+    assert.equal(record.restoreRunnerReceiptSha256, sha(runnerBytes));
+    assert.equal(record.existingTableCount, 5);
+    assert.equal(record.rlsEnabledTableCount, 5);
+    assert.equal(record.policyCoveredTableCount, 5);
+
+    for (const [line, code] of [
+      ["contacts|0|0|0", "postcheck_table_missing"],
+      ["contacts|1|0|4", "postcheck_rls_disabled"],
+      ["contacts|1|1|0", "postcheck_policy_missing"],
+    ]) {
+      const invalidOutput = join(paths.root, `${code}.json`);
+      await assert.rejects(
+        execFileWithInput(
+          process.execPath,
+          [
+            databasePostcheckWriterPath,
+            "--runner-receipt",
+            paths.runner,
+            "--output",
+            invalidOutput,
+          ],
+          { env: environment },
+          validPostcheck.replace("contacts|1|1|4", line),
+        ),
+        new RegExp(code, "u"),
+      );
+    }
+  });
+});
+
+test("valid schema v5 binds all receipts without echoing identifiers", async () => {
   await withReceiptSet(async ({ paths, evidenceBytes }) => {
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
@@ -275,7 +384,7 @@ test("valid schema v4 binds both receipts without echoing identifiers", async ()
   });
 });
 
-test("runner receipt is mandatory at the evidence CLI boundary", async () => {
+test("runner and database postcheck receipts are mandatory at the evidence CLI boundary", async () => {
   await withReceiptSet(async ({ paths }) => {
     await assert.rejects(
       execFileAsync(process.execPath, [
@@ -296,14 +405,14 @@ test("runner receipt is mandatory at the evidence CLI boundary", async () => {
   });
 });
 
-test("schema v3 and a manual databaseRestore assertion fail closed", async () => {
+test("schema v4 and manual database assertions fail closed", async () => {
   await withReceiptSet(
-    async ({ paths, fullBytes, runnerBytes, targetId }) => {
+    async ({ paths, fullBytes, runnerBytes, postcheckBytes, targetId }) => {
       await privateFile(
         paths.evidence,
         `${JSON.stringify(
-          evidence(fullBytes, runnerBytes, targetId, {
-            schemaVersion: 3,
+          evidence(fullBytes, runnerBytes, postcheckBytes, targetId, {
+            schemaVersion: 4,
           }),
         )}\n`,
       );
@@ -312,9 +421,15 @@ test("schema v3 and a manual databaseRestore assertion fail closed", async () =>
         /evidence_schema_invalid/u,
       );
 
-      const manual = evidence(fullBytes, runnerBytes, targetId);
+      const manual = evidence(
+        fullBytes,
+        runnerBytes,
+        postcheckBytes,
+        targetId,
+      );
       manual.databaseRestore = "passed";
-      manual.schemaVersion = 4;
+      manual.coreSchemaChecks = "passed";
+      manual.rlsVerification = "passed";
       await privateFile(paths.evidence, `${JSON.stringify(manual)}\n`);
       await assert.rejects(
         execFileAsync(process.execPath, verifierArguments(paths)),
@@ -333,11 +448,11 @@ test("runner receipt SHA, IDs, backup hashes and timestamp envelope are bound", 
   ];
   for (const [field, value, code] of cases) {
     await withReceiptSet(
-      async ({ paths, fullBytes, runnerBytes, targetId }) => {
+      async ({ paths, fullBytes, runnerBytes, postcheckBytes, targetId }) => {
         await privateFile(
           paths.evidence,
           `${JSON.stringify(
-            evidence(fullBytes, runnerBytes, targetId, {
+            evidence(fullBytes, runnerBytes, postcheckBytes, targetId, {
               [field]: value,
             }),
           )}\n`,
@@ -351,6 +466,70 @@ test("runner receipt SHA, IDs, backup hashes and timestamp envelope are bound", 
   }
 });
 
+test("database postcheck hash, identity, counts and timestamps are bound", async () => {
+  const cases = [
+    [
+      "restoreRunnerReceiptSha256",
+      "0".repeat(64),
+      "database_postcheck_runner_sha_mismatch",
+    ],
+    [
+      "disposableTargetId",
+      "223e4567-e89b-42d3-a456-426614174000",
+      "database_postcheck_identity_binding_mismatch",
+    ],
+    [
+      "policyCoveredTableCount",
+      4,
+      "database_postcheck_receipt_policy_covered_table_count_invalid",
+    ],
+    [
+      "checkedAt",
+      "2026-07-30T08:19:00Z",
+      "database_postcheck_timestamp_envelope_mismatch",
+    ],
+  ];
+  for (const [field, value, code] of cases) {
+    await withReceiptSet(
+      async ({ paths, fullBytes, runnerBytes, targetId }) => {
+        const badPostcheckBytes = `${JSON.stringify(
+          databasePostcheckReceipt(runnerBytes, targetId, {
+            [field]: value,
+          }),
+        )}\n`;
+        await privateFile(paths.postcheck, badPostcheckBytes);
+        await privateFile(
+          paths.evidence,
+          `${JSON.stringify(
+            evidence(fullBytes, runnerBytes, badPostcheckBytes, targetId),
+          )}\n`,
+        );
+        await assert.rejects(
+          execFileAsync(process.execPath, verifierArguments(paths)),
+          new RegExp(code, "u"),
+        );
+      },
+    );
+  }
+
+  await withReceiptSet(
+    async ({ paths, fullBytes, runnerBytes, postcheckBytes, targetId }) => {
+      await privateFile(
+        paths.evidence,
+        `${JSON.stringify(
+          evidence(fullBytes, runnerBytes, postcheckBytes, targetId, {
+            databasePostcheckReceiptSha256: "0".repeat(64),
+          }),
+        )}\n`,
+      );
+      await assert.rejects(
+        execFileAsync(process.execPath, verifierArguments(paths)),
+        /database_postcheck_receipt_sha_mismatch/u,
+      );
+    },
+  );
+});
+
 test("nonzero empty target and non-transactional restore receipts fail", async () => {
   for (const [field, value, code] of [
     ["emptyTargetObjectCount", 1, "runner_receipt_target_not_empty"],
@@ -358,7 +537,7 @@ test("nonzero empty target and non-transactional restore receipts fail", async (
     ["databaseRestore", "failed", "runner_receipt_restore_not_passed"],
   ]) {
     await withReceiptSet(
-      async ({ paths, fullBytes, targetId, runnerBytes }) => {
+      async ({ paths, fullBytes, targetId, runnerBytes, postcheckBytes }) => {
         const badRunnerBytes = `${JSON.stringify(
           runnerReceipt(fullBytes, targetId, { [field]: value }),
         )}\n`;
@@ -366,7 +545,7 @@ test("nonzero empty target and non-transactional restore receipts fail", async (
         await privateFile(
           paths.evidence,
           `${JSON.stringify(
-            evidence(fullBytes, badRunnerBytes, targetId, {
+            evidence(fullBytes, badRunnerBytes, postcheckBytes, targetId, {
               restoreRunnerReceiptSha256: sha(badRunnerBytes),
             }),
           )}\n`,
@@ -383,11 +562,11 @@ test("nonzero empty target and non-transactional restore receipts fail", async (
 
 test("duplicate and unexpected receipt or evidence members stay redacted", async () => {
   await withReceiptSet(
-    async ({ paths, fullBytes, runnerBytes, targetId }) => {
+    async ({ paths, fullBytes, runnerBytes, postcheckBytes, targetId }) => {
       const secret = "never-print-this-secret-value";
       await privateFile(
         paths.evidence,
-        `{"schemaVersion":4,"schemaVersion":4,"secret":"${secret}"}\n`,
+        `{"schemaVersion":5,"schemaVersion":5,"secret":"${secret}"}\n`,
       );
       await assert.rejects(
         execFileAsync(process.execPath, verifierArguments(paths)),
@@ -402,7 +581,12 @@ test("duplicate and unexpected receipt or evidence members stay redacted", async
       await privateFile(
         paths.evidence,
         `${JSON.stringify({
-          ...evidence(fullBytes, runnerBytes, targetId),
+          ...evidence(
+            fullBytes,
+            runnerBytes,
+            postcheckBytes,
+            targetId,
+          ),
           databasePassword: secret,
         })}\n`,
       );
@@ -419,7 +603,7 @@ test("duplicate and unexpected receipt or evidence members stay redacted", async
   );
 });
 
-test("evidence and both receipts require private regular files", async () => {
+test("evidence and all three receipts require private regular files", async () => {
   await withReceiptSet(async ({ paths }) => {
     await chmod(paths.evidence, 0o644);
     await assert.rejects(
@@ -427,6 +611,13 @@ test("evidence and both receipts require private regular files", async () => {
       /evidence_permissions_invalid/u,
     );
     await chmod(paths.evidence, 0o600);
+
+    await chmod(paths.postcheck, 0o644);
+    await assert.rejects(
+      execFileAsync(process.execPath, verifierArguments(paths)),
+      /database_postcheck_receipt_permissions_invalid/u,
+    );
+    await chmod(paths.postcheck, 0o600);
 
     const target = join(paths.root, "full-target.json");
     await privateFile(target, await readFile(paths.full));
@@ -439,11 +630,14 @@ test("evidence and both receipts require private regular files", async () => {
   });
 });
 
-test("restore runbook requires receipt-bound schema v4 evidence", async () => {
+test("restore runbook requires receipt-bound schema v5 evidence", async () => {
   const source = await readFile(runbookPath, "utf8");
-  assert.match(source, /schemaVersion.*4/su);
+  assert.match(source, /schemaVersion.*5/su);
   assert.match(source, /restoreRunnerReceiptSha256/u);
+  assert.match(source, /databasePostcheckReceiptSha256/u);
+  assert.match(source, /database-postcheck-receipt/u);
   assert.match(source, /fullBackupReceiptSha256/u);
   assert.match(source, /RESTORE_EVIDENCE_SHA256/u);
-  assert.match(source, /databaseRestore.*(?:manuell|manually)/su);
+  assert.match(source, /coreSchemaChecks.*(?:manuell|manually)/su);
+  assert.match(source, /rlsVerification.*(?:manuell|manually)/su);
 });

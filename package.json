@@ -44,6 +44,7 @@
     "restore:resources:preflight": "node scripts/operations/restore-drill-resource-readiness.mjs",
     "restore:preflight": "node scripts/operations/restore-target-preflight.mjs",
     "restore:database:drill": "bash scripts/operations/run-database-restore-drill.sh",
+    "restore:database:postcheck": "node scripts/operations/restore-database-postcheck-receipt.mjs",
     "restore:evidence:verify": "node scripts/operations/verify-restore-drill-evidence.mjs",
     "mobile:release:resources:preflight": "node scripts/operations/mobile-release-resource-readiness.mjs",
     "mobile:signed-build:preflight": "node scripts/operations/mobile-signed-build-preflight.mjs",
