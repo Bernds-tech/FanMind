@@ -65,10 +65,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          PROBE_LOG="$(mktemp "$RUNNER_TEMP/fanmind-monitor-probe.XXXXXX")"
+          NOT_BEFORE="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          trap 'rm -f "$PROBE_LOG"' EXIT
           sudo -n systemctl daemon-reload
-          sudo -n systemctl start fanmind-operations-monitor-probe.service
-          [[ "$(sudo -n systemctl show fanmind-operations-monitor-probe.service --property=Result --value --no-pager)" == "success" ]]
-          [[ "$(sudo -n systemctl show fanmind-operations-monitor-probe.service --property=ExecMainStatus --value --no-pager)" == "0" ]]
+
+          set +e
+          sudo -n systemctl start fanmind-operations-monitor-probe.service >/dev/null 2>&1
+          start_status="$?"
+          set -e
+
+          service_result="$(sudo -n systemctl show fanmind-operations-monitor-probe.service --property=Result --value --no-pager)"
+          exec_status="$(sudo -n systemctl show fanmind-operations-monitor-probe.service --property=ExecMainStatus --value --no-pager)"
+          if [[ "$start_status" -ne 0 || "$service_result" != "success" || "$exec_status" != "0" ]]; then
+            sudo -n journalctl \
+              -u fanmind-operations-monitor-probe.service \
+              --since "$NOT_BEFORE" \
+              --no-pager \
+              -o cat > "$PROBE_LOG"
+            echo "OPERATIONS_MONITOR_PROBE=failed"
+            if ! node /usr/local/lib/fanmind-audit/verify-operations-monitor-probe-log.mjs \
+              "$PROBE_LOG" \
+              "$NOT_BEFORE"; then
+              echo "OPERATIONS_MONITOR_PROBE_DIAGNOSIS=unavailable"
+            fi
+            exit 1
+          fi
           echo "OPERATIONS_MONITOR_PROBE=success"
           echo "OPERATIONS_MONITOR_PROBE_EMAIL_ENABLED=false"
 

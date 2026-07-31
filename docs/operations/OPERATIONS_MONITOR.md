@@ -104,6 +104,13 @@ sobald eine der geprüften Komponenten nicht `healthy` ist. Vor und nach dem
 Einmallauf wird der installierte read-only Production-Audit gegen den exakt
 bestätigten Release-Commit ausgeführt.
 
+Schlägt der Einmallauf fehl, liest der Workflow nur das seit Beginn dieses
+Laufs entstandene systemd-Journal. Ein root-owned Verifier gibt daraus
+ausschließlich einen fest erlaubten Diagnosecode sowie betroffene technische
+Komponenten mit `unknown`, `degraded` oder `unavailable` aus. Freitext,
+Environment-Werte, technische Zusammenfassungen und andere Journalzeilen
+werden nicht in das GitHub-Log übernommen.
+
 Die Aktion `activate` verlangt zusätzlich die exakte Bestätigung
 `activate-operations-monitor-production`. Erst nach einem erfolgreichen Probe
 setzt das installierte, root-eigene Kontrollscript atomar ausschließlich

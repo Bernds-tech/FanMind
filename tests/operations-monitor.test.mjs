@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
 const monitor = await import("../scripts/operations/operations-monitor.mjs");
+const probeLogVerifier = await import("../scripts/operations/verify-operations-monitor-probe-log.mjs");
 const source = await readFile(new URL("../scripts/operations/operations-monitor.mjs", import.meta.url), "utf8");
 const service = await readFile(new URL("../ops/systemd/fanmind-operations-monitor.service", import.meta.url), "utf8");
 const probeService = await readFile(new URL("../ops/systemd/fanmind-operations-monitor-probe.service", import.meta.url), "utf8");
@@ -25,10 +26,46 @@ test("operations monitor remains disabled unless explicitly enabled", () => {
 test("the production probe can require every collected check to stay healthy", () => {
   assert.doesNotThrow(() => monitor.requireHealthyChecks([{ status: "healthy" }], { FANMIND_OPERATIONS_REQUIRE_HEALTHY: "true" }));
   assert.throws(
-    () => monitor.requireHealthyChecks([{ status: "healthy" }, { status: "degraded" }], { FANMIND_OPERATIONS_REQUIRE_HEALTHY: "true" }),
-    /operations_monitor_health_gate_failed_1/,
+    () => monitor.requireHealthyChecks([{ component: "application", status: "healthy" }, { component: "pm2", status: "degraded" }], { FANMIND_OPERATIONS_REQUIRE_HEALTHY: "true" }),
+    /operations_monitor_health_gate_failed\|pm2:degraded/,
   );
   assert.doesNotThrow(() => monitor.requireHealthyChecks([{ status: "degraded" }], {}));
+});
+
+test("the probe journal verifier exposes only allowlisted technical status", () => {
+  const notBefore = "2026-07-31T20:52:11.000Z";
+  const source = [
+    "unrelated journal text",
+    JSON.stringify({
+      ts: "2026-07-31T20:52:12.000Z",
+      level: "error",
+      event: "monitor_failed",
+      version: "fanmind-operations-monitor-1",
+      error_code: "operations_monitor_health_gate_failed|pm2:unavailable,backup_worker:degraded",
+      secret: "must-not-be-output",
+    }),
+  ].join("\n");
+  const result = probeLogVerifier.verifyOperationsMonitorProbeLog(source, notBefore);
+  assert.deepEqual(result, {
+    diagnosis: "health_gate",
+    checks: ["backup_worker:degraded", "pm2:unavailable"],
+  });
+  const output = probeLogVerifier.formatOperationsMonitorProbeDiagnostic(result);
+  assert.equal(
+    output,
+    "OPERATIONS_MONITOR_PROBE_DIAGNOSIS=health_gate\n" +
+      "OPERATIONS_MONITOR_UNHEALTHY_CHECK=backup_worker:degraded\n" +
+      "OPERATIONS_MONITOR_UNHEALTHY_CHECK=pm2:unavailable\n",
+  );
+  assert.doesNotMatch(output, /secret|must-not-be-output/u);
+});
+
+test("the monitor log replaces unexpected exception text with a generic code", () => {
+  assert.equal(monitor.operationsErrorCode(new Error("token=should-never-appear")), "operations_monitor_failed");
+  assert.equal(
+    monitor.operationsErrorCode(new Error("operations_monitor_health_gate_failed|host_disk:degraded")),
+    "operations_monitor_health_gate_failed|host_disk:degraded",
+  );
 });
 
 test("disk and memory thresholds distinguish normal, warning and critical states", () => {
@@ -142,8 +179,10 @@ test("Production control is main-only, release-bound and runs installed root-own
   assert.match(productionControl, /EXPECTED_COMMIT[\s\S]*REVIEWED_COMMIT/);
   assert.match(productionControl, /read-only-production-audit\.sh/);
   assert.match(productionControl, /fanmind-operations-monitor-probe\.service/);
+  assert.match(productionControl, /verify-operations-monitor-probe-log\.mjs/);
+  assert.match(productionControl, /journalctl[\s\S]*--since "\$NOT_BEFORE"/);
   assert.match(productionControl, /\/usr\/local\/lib\/fanmind-ops\/enable-operations-monitor\.sh/);
-  assert.doesNotMatch(productionControl, /actions\/checkout|source .*\.env\.production|cat .*\.env\.production/);
+  assert.doesNotMatch(productionControl, /actions\/checkout|source .*\.env\.production|cat .*\.env\.production|journalctl.*(?:tail|head|grep)/);
 
   assert.match(enableScript, /\[\[ "\$\(id -u\)" -eq 0 \]\]/);
   assert.match(enableScript, /release_commit_mismatch/);
@@ -158,6 +197,7 @@ test("Production control is main-only, release-bound and runs installed root-own
   assert.doesNotMatch(enableScript, /set -x|printenv|cat "\$ENV_FILE"|source "\$ENV_FILE"/);
 
   assert.match(deployment, /scripts\/operations\/enable-operations-monitor\.sh \/usr\/local\/lib\/fanmind-ops\/enable-operations-monitor\.sh/);
+  assert.match(deployment, /scripts\/operations\/verify-operations-monitor-probe-log\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-operations-monitor-probe-log\.mjs/);
   assert.match(deployment, /ops\/systemd\/fanmind-operations-monitor-probe\.service \/etc\/systemd\/system\/fanmind-operations-monitor-probe\.service/);
 });
 
