@@ -263,7 +263,6 @@ export async function processMetaWebhookPayload(
         ? "stored"
         : "received";
     let errorReason: string | null = null;
-    let messageId: string | null = null;
 
     if (
       event.eventType === "messages" ||
@@ -311,7 +310,6 @@ export async function processMetaWebhookPayload(
             event.eventType === "feed" || event.eventType === "feed_comment"
               ? "feed_comment_stored"
               : "stored";
-          messageId = result.message?.id ?? null;
           saved += 1;
 
           if (

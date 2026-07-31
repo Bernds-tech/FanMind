@@ -308,6 +308,11 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   absichtlich strengere Check `npm run legal:evidence:require-complete` muss
   vor echtem Drittpersonen-Onboarding grün sein und bleibt bis zu den realen
   externen Freigaben rot.
+- `npm run legal:evidence:hash` liest ausschließlich private, lokal
+  zugriffsbeschränkte Belegdateien unter dem von Git ausgeschlossenen
+  Evidenzverzeichnis und gibt nur die registrierbare SHA-256-Referenz aus.
+  Registeränderung, fachliche Freigabe und Vertragsannahme bleiben getrennte
+  manuelle Schritte.
 - Die technische Vorbereitung ersetzt weder Rechts-/Steuerberatung noch eine
   unterschriebene AVV oder den isolierten Backup-Lösch-/Restore-Nachweis.
 

@@ -26,6 +26,30 @@ Befehl `npm run legal:evidence:require-complete` bleibt so lange rot, bis jeder
 erforderliche externe Nachweis bestätigt oder fachlich als nicht anwendbar
 belegt ist. Das ist ein bewusstes Go-live-Gate.
 
+### Private Belege sicher hashen
+
+Der lokale Hash-Befehl liest genau eine Datei aus dem von Git ausgeschlossenen
+Verzeichnis `docs/legal/private-evidence/`. Er akzeptiert nur ein privates
+Verzeichnis mit Modus `0700` sowie eine reguläre, nicht verlinkte Datei des
+aktuellen Systembenutzers mit Modus `0600` und höchstens 25 MiB. Weder
+Dateiname, Pfad noch Inhalt werden ausgegeben:
+
+```bash
+install -d -m 700 docs/legal/private-evidence
+install -m 600 /sicherer/pfad/exoscale-dpa.pdf \
+  docs/legal/private-evidence/exoscale-dpa.pdf
+npm run legal:evidence:hash -- \
+  --control provider.exoscale.dpa \
+  --file exoscale-dpa.pdf
+```
+
+Die ausgegebene `LEGAL_EXTERNAL_EVIDENCE_REF=sha256:...` wird erst nach
+inhaltlicher Prüfung zusammen mit Status, Fassung und Datum manuell in
+`external-approval-evidence.json` übernommen. Der Befehl verändert das
+Register nicht, akzeptiert keine erfundenen Control-IDs und nimmt keine
+Vertragsannahme vor. Derselbe Beleg darf mehrere Controls nur dann stützen,
+wenn die fachliche Prüfung tatsächlich alle betreffenden Aussagen abdeckt.
+
 ## 1. Betreiber-, UID- und Registerangaben
 
 Bereits durch Bernd für den Projektstand bestätigt:
@@ -136,7 +160,8 @@ Restore-/Löschtest erfolgen.
 1. Bernd bestätigt UID-/Registerstatus und die vorgeschlagenen Fristen.
 2. Steuerberatung bestätigt Stammdaten, Steuermodus, Rechnungsangaben und
    steuerliche Frist.
-3. Anbieter-Konten liefern DPA-/Regions-/Transferbelege; nur Hashes werden
+3. Anbieter-Konten liefern DPA-/Regions-/Transferbelege; diese werden privat
+   mit `npm run legal:evidence:hash` gehasht und nur die geprüften Hashes
    registriert.
 4. Rechts-/Datenschutzberatung prüft die exakt versionierten öffentlichen
    Texte und macht die AVV unterschriftsfähig.

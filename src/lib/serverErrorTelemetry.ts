@@ -77,7 +77,7 @@ function safeErrorName(error: unknown): string {
   }
 }
 
-export function normalizeRoutePath(routePath: unknown, _requestPath: unknown): string {
+export function normalizeRoutePath(routePath: unknown): string {
   const primary = typeof routePath === "string" ? routePath : "";
   const raw = primary || "/unknown";
   const withoutQuery = raw.split("?", 1)[0].split("#", 1)[0];
@@ -120,7 +120,7 @@ export function buildServerErrorRecord(
   env: NodeJS.ProcessEnv = process.env,
 ): ServerErrorRecord {
   const digest = safeErrorDigest(error);
-  const routePath = normalizeRoutePath(context.routePath, request.path);
+  const routePath = normalizeRoutePath(context.routePath);
   const routeType = normalizeRouteType(context.routeType);
   const routerKind = normalizeRouterKind(context.routerKind);
   const httpMethod = normalizeMethod(request.method);

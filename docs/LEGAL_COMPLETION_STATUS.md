@@ -54,6 +54,9 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
   Vertragsunterlagen, sondern nur Status und später deren SHA-256-Beweis-Hash.
   `npm run legal:evidence:require-complete` bleibt bis zum realen externen
   Abschluss absichtlich rot.
+- `npm run legal:evidence:hash` erzeugt aus einer privaten, nicht verlinkten
+  Belegdatei ausschließlich die registrierbare SHA-256-Referenz. Der Befehl
+  gibt weder Pfad noch Inhalt aus und verändert den Freigabestatus nicht.
 - Die Datenschutzerklärung nennt die aktuell verdrahteten parameterlosen
   Meta-Events `PageView`, `CompleteRegistration` und `Lead` konsistent mit
   Code und Produktwahrheit.

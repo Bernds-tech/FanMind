@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import type { FeatureKey } from "@/config/plans";
 import { roadmapNotes, roadmapPhases } from "@/config/roadmap";
-import { shouldShowFeature } from "@/lib/plans";
 import { createFanMindTranslator, getFanMindLanguage, landingPath, localizedPath, localizeFanMindValue, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
@@ -172,42 +170,6 @@ const functionCards = [
     tone: "green",
   },
 ];
-
-const menuItems: Array<{ label: string; icon: string; featureKey: FeatureKey }> = [
-  { label: "Dashboard", icon: "⌂", featureKey: "dashboard" },
-  { label: "Kontakte", icon: "♙", featureKey: "contacts" },
-  { label: "Kanäle", icon: "▣", featureKey: "contacts" },
-  { label: "Segmente", icon: "◌", featureKey: "basic_segments" },
-  { label: "Follow-ups", icon: "◴", featureKey: "followups" },
-  { label: "Kampagnen (Roadmap)", icon: "☆", featureKey: "campaigns" },
-  { label: "Analytics (Roadmap)", icon: "▥", featureKey: "analytics" },
-  { label: "KI Insights", icon: "✧", featureKey: "ai_replies" },
-  { label: "Einstellungen", icon: "⚙", featureKey: "dashboard" },
-];
-
-const visibleLandingMenuItems = menuItems.filter((item) =>
-  shouldShowFeature("growth", item.featureKey, "landing"),
-);
-
-function getLandingMenuHref(featureKey: FeatureKey, index: number) {
-  if (featureKey === "campaigns" || featureKey === "analytics") {
-    return LANDING_ROADMAP_HREF;
-  }
-
-  if (featureKey === "contacts") {
-    return "#kontakte";
-  }
-
-  if (featureKey === "followups") {
-    return "#follow-ups";
-  }
-
-  if (featureKey === "ai_replies") {
-    return "#ki";
-  }
-
-  return index === 0 ? "#screens" : "#produkt-showcase";
-}
 
 const sixStepCards = [
   {
@@ -835,32 +797,6 @@ function isComingSoonStatus(status?: string) {
 function isReadyStatus(status?: string) {
   return Boolean(status && ["Bereit", "Verfügbar", "Aktiv", "Active"].includes(status));
 }
-function MetricCard({
-  label,
-  value,
-  change,
-  color,
-}: {
-  label: string;
-  value: string;
-  change: string;
-  color: string;
-}) {
-  return (
-    <div
-      className={styles.metricCard}
-      style={{ "--accent": color } as React.CSSProperties}
-    >
-      <div className={styles.metricIcon}>⌁</div>
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{change}</small>
-      </div>
-    </div>
-  );
-}
-
 function LandingHeader({
   language,
   loginHref,
@@ -922,7 +858,6 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const localizedProblemCards = localizeFanMindValue(problemCards, t);
   const localizedSolutionBenefits = localizeFanMindValue(solutionBenefits, t);
   const localizedFunctionCards = localizeFanMindValue(functionCards, t).map((card) => ({ ...card, href: card.href === LANDING_ROADMAP_HREF ? roadmapHref : card.href }));
-  const localizedMenuItems = localizeFanMindValue(visibleLandingMenuItems, t);
   const localizedSixStepCards = localizeFanMindValue(sixStepCards, t).map((card) => ({ ...card, href: card.href === LANDING_ROADMAP_HREF ? roadmapHref : card.href }));
   const localizedSixStepBenefits = localizeFanMindValue(sixStepBenefits, t);
   const localizedIntegrationMarqueeRows = localizeFanMindValue(integrationMarqueeRows, t);
