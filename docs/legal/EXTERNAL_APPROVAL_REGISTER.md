@@ -26,6 +26,13 @@ Befehl `npm run legal:evidence:require-complete` bleibt so lange rot, bis jeder
 erforderliche externe Nachweis bestätigt oder fachlich als nicht anwendbar
 belegt ist. Das ist ein bewusstes Go-live-Gate.
 
+`npm run legal:evidence:handoff` erzeugt aus demselben Register eine
+reproduzierbare, nach Zuständigkeit gruppierte Aufgabenliste für Bernd,
+Steuerberatung, Rechts-/Datenschutzberatung und die Anbieter-Konten. Sie zeigt
+nur offene Control-IDs und die benötigte Belegart. Werte, Beweis-Hashes,
+Dateipfade, Kontokennungen und bereits abgeschlossene Controls werden nicht
+ausgegeben. Der Handoff verändert keinen Status und ersetzt keine Prüfung.
+
 ### Private Belege sicher hashen
 
 Der lokale Hash-Befehl liest genau eine Datei aus dem von Git ausgeschlossenen

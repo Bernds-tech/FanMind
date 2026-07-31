@@ -313,6 +313,11 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Evidenzverzeichnis und gibt nur die registrierbare SHA-256-Referenz aus.
   Registeränderung, fachliche Freigabe und Vertragsannahme bleiben getrennte
   manuelle Schritte.
+- `npm run legal:evidence:handoff` leitet aus demselben Register ausschließlich
+  die offenen Control-IDs und benötigten Belegarten ab und gruppiert sie nach
+  externer Zuständigkeit. Werte, Beleg-Hashes, Pfade, Kontokennungen und
+  abgeschlossene Controls bleiben aus der Ausgabe ausgeschlossen; der Befehl
+  besitzt keine Freigabe- oder Aktivierungswirkung.
 - Die technische Vorbereitung ersetzt weder Rechts-/Steuerberatung noch eine
   unterschriebene AVV oder den isolierten Backup-Lösch-/Restore-Nachweis.
 
