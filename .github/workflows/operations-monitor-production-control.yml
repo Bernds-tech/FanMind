@@ -4,15 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Run the one-shot probe or activate the ten-minute Production timer"
+        description: "Run the one-shot probe, warning/critical/recovery lifecycle, or activate the timer"
         required: true
         default: probe
         type: choice
         options:
           - probe
+          - lifecycle
           - activate
       confirmation:
-        description: "Type probe-operations-monitor-production or activate-operations-monitor-production"
+        description: "Type the action-specific Production confirmation"
         required: true
         type: string
       expected_commit:
@@ -35,6 +36,7 @@ jobs:
         github.ref == 'refs/heads/main' &&
         (
           (inputs.action == 'probe' && inputs.confirmation == 'probe-operations-monitor-production') ||
+          (inputs.action == 'lifecycle' && inputs.confirmation == 'lifecycle-operations-monitor-production') ||
           (inputs.action == 'activate' && inputs.confirmation == 'activate-operations-monitor-production')
         )
       }}
@@ -102,6 +104,40 @@ jobs:
           sudo -n /usr/local/lib/fanmind-ops/enable-operations-monitor.sh \
             "$EXPECTED_COMMIT" \
             "activate-operations-monitor-production"
+
+      - name: Prove warning critical and recovery lifecycle without email
+        if: ${{ inputs.action == 'lifecycle' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIFECYCLE_LOG="$(mktemp "$RUNNER_TEMP/fanmind-monitor-lifecycle.XXXXXX")"
+          NOT_BEFORE="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          trap 'rm -f "$LIFECYCLE_LOG"' EXIT
+
+          set +e
+          sudo -n systemctl start fanmind-operations-monitor-lifecycle.service >/dev/null 2>&1
+          start_status="$?"
+          set -e
+
+          service_result="$(sudo -n systemctl show fanmind-operations-monitor-lifecycle.service --property=Result --value --no-pager)"
+          exec_status="$(sudo -n systemctl show fanmind-operations-monitor-lifecycle.service --property=ExecMainStatus --value --no-pager)"
+          if [[ "$start_status" -ne 0 || "$service_result" != "success" || "$exec_status" != "0" ]]; then
+            sudo -n journalctl \
+              -u fanmind-operations-monitor-lifecycle.service \
+              --since "$NOT_BEFORE" \
+              --no-pager \
+              -o cat > "$LIFECYCLE_LOG"
+            if ! node /usr/local/lib/fanmind-audit/verify-operations-monitor-lifecycle-log.mjs \
+              "$LIFECYCLE_LOG" \
+              "$NOT_BEFORE"; then
+              echo "OPERATIONS_MONITOR_LIFECYCLE=failed"
+              echo "OPERATIONS_MONITOR_LIFECYCLE_ERROR=diagnosis_unavailable"
+            fi
+            exit 1
+          fi
+          echo "OPERATIONS_MONITOR_LIFECYCLE=success"
+          echo "OPERATIONS_MONITOR_LIFECYCLE_TRANSITIONS=warning,critical,recovered"
+          echo "OPERATIONS_MONITOR_LIFECYCLE_EMAIL_ENABLED=false"
 
       - name: Verify installed Production runtime after control action
         shell: bash

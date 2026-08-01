@@ -1,5 +1,5 @@
 [Unit]
-Description=FanMind one-shot operations monitor production probe
+Description=FanMind email-disabled operations monitor lifecycle acceptance
 After=network-online.target
 Wants=network-online.target
 
@@ -10,8 +10,9 @@ Group=ubuntu
 EnvironmentFile=-/var/www/fanmind/.env.production
 Environment=FANMIND_OPERATIONS_MONITOR_ENABLED=true
 Environment=FANMIND_OPERATIONS_EMAIL_ENABLED=false
-Environment=FANMIND_OPERATIONS_REQUIRE_HEALTHY=true
-ExecStart=/usr/bin/flock --exclusive --wait 120 /run/lock/fanmind-operations-monitor.lock /usr/bin/node /usr/local/lib/fanmind-monitor/operations-monitor.mjs
+Environment=FANMIND_OPERATIONS_REQUIRE_HEALTHY=false
+Environment=FANMIND_OPERATIONS_LIFECYCLE_ACCEPTANCE_ACK=operations-monitor-production-lifecycle
+ExecStart=/usr/bin/flock --exclusive --wait 120 /run/lock/fanmind-operations-monitor.lock /usr/bin/node /usr/local/lib/fanmind-monitor/operations-monitor-lifecycle.mjs
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true

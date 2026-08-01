@@ -77,6 +77,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   `main`-, environment-, runner- and release-bound workflow, the existing
   protected backup database connection, read-only audits before and after,
   and allowlist-redacted results.
+- Production already has that migration and the ten-minute monitor timer
+  enabled while operations email remains disabled. Keep timer, probe and the
+  fixed `operations_monitor` warning/critical/recovery acceptance on one
+  exclusive host lock. The lifecycle acceptance must remain main-, release-
+  and Production-bound, must never synthesize a real host component, and must
+  prove email as audited `noop` before it can pass.
 - The prepared Stripe add-on policy in
   `src/lib/aiTierStripeLifecycle.mjs` is not a live billing integration. Keep
   its workspace target, distinct Price allowlist, single-item, event-order

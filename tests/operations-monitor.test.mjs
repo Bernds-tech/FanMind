@@ -5,12 +5,15 @@ import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
 const monitor = await import("../scripts/operations/operations-monitor.mjs");
+const lifecycle = await import("../scripts/operations/operations-monitor-lifecycle.mjs");
 const probeLogVerifier = await import("../scripts/operations/verify-operations-monitor-probe-log.mjs");
+const lifecycleLogVerifier = await import("../scripts/operations/verify-operations-monitor-lifecycle-log.mjs");
 const migrationLogVerifier = await import("../scripts/operations/verify-operations-monitor-migration-log.mjs");
 const migrationRunner = await import("../scripts/operations/operations-monitor-migration-runner.mjs");
 const source = await readFile(new URL("../scripts/operations/operations-monitor.mjs", import.meta.url), "utf8");
 const service = await readFile(new URL("../ops/systemd/fanmind-operations-monitor.service", import.meta.url), "utf8");
 const probeService = await readFile(new URL("../ops/systemd/fanmind-operations-monitor-probe.service", import.meta.url), "utf8");
+const lifecycleService = await readFile(new URL("../ops/systemd/fanmind-operations-monitor-lifecycle.service", import.meta.url), "utf8");
 const timer = await readFile(new URL("../ops/systemd/fanmind-operations-monitor.timer", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260718190000_operations_monitor_components.sql", import.meta.url), "utf8");
 const productionControl = await readFile(new URL("../.github/workflows/operations-monitor-production-control.yml", import.meta.url), "utf8");
@@ -21,6 +24,65 @@ const packageJson = JSON.parse(await readFile(new URL("../package.json", import.
 const enableScriptPath = "scripts/operations/enable-operations-monitor.sh";
 const enableScript = await readFile(new URL("../scripts/operations/enable-operations-monitor.sh", import.meta.url), "utf8");
 const execFileAsync = promisify(execFile);
+
+function lifecycleFetchStore() {
+  const events = [];
+  const notifications = [];
+  const audits = [];
+  let sequence = 0;
+  const timestamp = () => new Date(Date.now() + (++sequence * 10)).toISOString();
+  const response = (payload, status = 200) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => payload,
+  });
+  const parseBody = (init) => JSON.parse(String(init?.body ?? "{}"));
+
+  const fetchImpl = async (input, init = {}) => {
+    const url = new URL(String(input));
+    const table = url.pathname.split("/").pop();
+    const method = String(init.method ?? "GET").toUpperCase();
+    if (table === "system_health_events") {
+      if (method === "POST") {
+        const row = { id: `event-${sequence + 1}`, created_at: timestamp(), ...parseBody(init) };
+        events.push(row);
+        return response([row], 201);
+      }
+      const component = url.searchParams.get("component")?.replace(/^eq\./u, "");
+      return response([...events].reverse().filter((row) => !component || row.component === component));
+    }
+    if (table === "admin_notifications") {
+      if (method === "POST") {
+        const row = { id: `notification-${sequence + 1}`, created_at: timestamp(), ...parseBody(init) };
+        notifications.push(row);
+        return response([row], 201);
+      }
+      if (method === "PATCH") {
+        const id = url.searchParams.get("id")?.replace(/^eq\./u, "");
+        const row = notifications.find((item) => item.id === id);
+        if (!row) return response({ code: "not_found" }, 404);
+        Object.assign(row, parseBody(init));
+        return response([row]);
+      }
+      const activeOnly = url.searchParams.has("status");
+      const rows = [...notifications].reverse().filter((row) =>
+        !activeOnly || ["open", "read", "acknowledged"].includes(row.status)
+      );
+      return response(rows);
+    }
+    if (table === "operations_audit_log") {
+      if (method === "POST") {
+        const row = { id: `audit-${sequence + 1}`, created_at: timestamp(), ...parseBody(init) };
+        audits.push(row);
+        return response([row], 201);
+      }
+      return response([...audits].reverse().slice(0, 10));
+    }
+    return response({ code: "unexpected_table" }, 404);
+  };
+
+  return { audits, events, fetchImpl, notifications };
+}
 
 test("operations monitor remains disabled unless explicitly enabled", () => {
   assert.equal(monitor.monitorEnabled({}), false);
@@ -70,6 +132,87 @@ test("the monitor log replaces unexpected exception text with a generic code", (
   assert.equal(
     monitor.operationsErrorCode(new Error("operations_monitor_health_gate_failed|host_disk:degraded")),
     "operations_monitor_health_gate_failed|host_disk:degraded",
+  );
+});
+
+test("the lifecycle log verifier exposes only one allowlisted failure code", () => {
+  const notBefore = "2026-08-01T09:30:00.000Z";
+  const source = [
+    "unrelated journal text",
+    JSON.stringify({
+      ts: "2026-08-01T09:30:01.000Z",
+      level: "error",
+      event: "lifecycle_failed",
+      version: "fanmind-operations-monitor-lifecycle-1",
+      error_code: "operations_monitor_lifecycle_recovery_state",
+      secret: "must-not-be-output",
+    }),
+  ].join("\n");
+  const result = lifecycleLogVerifier.verifyOperationsMonitorLifecycleLog(source, notBefore);
+  assert.deepEqual(result, {
+    status: "failed",
+    errorCode: "operations_monitor_lifecycle_recovery_state",
+  });
+  const output = lifecycleLogVerifier.formatOperationsMonitorLifecycleDiagnostic(result);
+  assert.equal(
+    output,
+    "OPERATIONS_MONITOR_LIFECYCLE=failed\n" +
+      "OPERATIONS_MONITOR_LIFECYCLE_ERROR=operations_monitor_lifecycle_recovery_state\n",
+  );
+  assert.doesNotMatch(output, /secret|must-not-be-output/u);
+});
+
+test("email-disabled lifecycle opens one warning, escalates it and resolves the same notification", async () => {
+  const store = lifecycleFetchStore();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = store.fetchImpl;
+  try {
+    const result = await monitor.runLifecycleAcceptance({
+      FANMIND_OPERATIONS_LIFECYCLE_ACCEPTANCE_ACK: "operations-monitor-production-lifecycle",
+      FANMIND_OPERATIONS_MONITOR_ENABLED: "true",
+      FANMIND_OPERATIONS_EMAIL_ENABLED: "false",
+      NEXT_PUBLIC_SUPABASE_URL: "https://synthetic.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "test-only-service-role",
+    });
+    assert.deepEqual(result, {
+      component: "operations_monitor",
+      transitions: ["warning", "critical", "recovered"],
+      emailEnabled: false,
+    });
+    assert.deepEqual(store.events.map((row) => row.status), [
+      "healthy",
+      "degraded",
+      "unavailable",
+      "healthy",
+    ]);
+    assert.equal(store.notifications.length, 1);
+    assert.equal(store.notifications[0].status, "resolved");
+    assert.equal(store.notifications[0].severity, "resolved");
+    assert.deepEqual(store.audits.map((row) => [row.outcome, row.metadata.reason]), [
+      ["noop", "disabled"],
+      ["noop", "disabled"],
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("lifecycle acceptance requires explicit email-off and a fixed acknowledgement", async () => {
+  await assert.rejects(
+    monitor.runLifecycleAcceptance({}),
+    /operations_monitor_lifecycle_contract/u,
+  );
+  await assert.rejects(
+    monitor.runLifecycleAcceptance({
+      FANMIND_OPERATIONS_LIFECYCLE_ACCEPTANCE_ACK: "operations-monitor-production-lifecycle",
+      FANMIND_OPERATIONS_MONITOR_ENABLED: "true",
+      FANMIND_OPERATIONS_EMAIL_ENABLED: "true",
+    }),
+    /operations_monitor_lifecycle_email_not_disabled/u,
+  );
+  assert.equal(
+    lifecycle.lifecycleErrorCode(new Error("private-value-must-not-escape")),
+    "operations_monitor_failed",
   );
 });
 
@@ -190,11 +333,12 @@ test("monitor source never reads customer content tables or logs environment val
 
 test("systemd monitor is hardened and timer stays opt-in", () => {
   assert.match(service, /User=ubuntu/);
-  assert.match(service, /ExecStart=\/usr\/bin\/node \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
+  assert.match(service, /ExecStart=\/usr\/bin\/flock --exclusive --wait 120 \/run\/lock\/fanmind-operations-monitor\.lock \/usr\/bin\/node \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
   assert.match(service, /NoNewPrivileges=true/);
   assert.match(service, /PrivateTmp=true/);
   assert.match(service, /ProtectSystem=strict/);
   assert.match(service, /ProtectHome=read-only/);
+  assert.match(service, /ReadWritePaths=\/run\/lock/);
   assert.match(service, /RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6/);
   assert.match(timer, /OnUnitActiveSec=10min/);
   assert.doesNotMatch(service, /FANMIND_OPERATIONS_MONITOR_ENABLED=true/);
@@ -203,12 +347,20 @@ test("systemd monitor is hardened and timer stays opt-in", () => {
   assert.match(probeService, /Environment=FANMIND_OPERATIONS_MONITOR_ENABLED=true/);
   assert.match(probeService, /Environment=FANMIND_OPERATIONS_EMAIL_ENABLED=false/);
   assert.match(probeService, /Environment=FANMIND_OPERATIONS_REQUIRE_HEALTHY=true/);
-  assert.match(probeService, /ExecStart=\/usr\/bin\/node \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
+  assert.match(probeService, /ExecStart=\/usr\/bin\/flock --exclusive --wait 120 \/run\/lock\/fanmind-operations-monitor\.lock \/usr\/bin\/node \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
   assert.match(probeService, /NoNewPrivileges=true/);
   assert.match(probeService, /ProtectSystem=strict/);
   assert.doesNotMatch(service, /fanmind-ops\/operations-monitor\.mjs/);
   assert.doesNotMatch(probeService, /fanmind-ops\/operations-monitor\.mjs/);
   assert.doesNotMatch(probeService, /\[Install\]/);
+
+  assert.match(lifecycleService, /Type=oneshot/);
+  assert.match(lifecycleService, /User=ubuntu/);
+  assert.match(lifecycleService, /FANMIND_OPERATIONS_LIFECYCLE_ACCEPTANCE_ACK=operations-monitor-production-lifecycle/);
+  assert.match(lifecycleService, /FANMIND_OPERATIONS_EMAIL_ENABLED=false/);
+  assert.match(lifecycleService, /ExecStart=\/usr\/bin\/flock --exclusive --wait 120 \/run\/lock\/fanmind-operations-monitor\.lock \/usr\/bin\/node \/usr\/local\/lib\/fanmind-monitor\/operations-monitor-lifecycle\.mjs/);
+  assert.match(lifecycleService, /ReadWritePaths=\/run\/lock/);
+  assert.doesNotMatch(lifecycleService, /\[Install\]/);
 });
 
 test("Production control is main-only, release-bound and runs installed root-owned code", async () => {
@@ -218,11 +370,16 @@ test("Production control is main-only, release-bound and runs installed root-own
   assert.match(productionControl, /environment: production/);
   assert.match(productionControl, /runs-on: \[self-hosted, fanmind-prod, exoscale, linux, x64\]/);
   assert.match(productionControl, /probe-operations-monitor-production/);
+  assert.match(productionControl, /lifecycle-operations-monitor-production/);
   assert.match(productionControl, /activate-operations-monitor-production/);
   assert.match(productionControl, /EXPECTED_COMMIT[\s\S]*REVIEWED_COMMIT/);
   assert.match(productionControl, /read-only-production-audit\.sh/);
   assert.match(productionControl, /fanmind-operations-monitor-probe\.service/);
   assert.match(productionControl, /verify-operations-monitor-probe-log\.mjs/);
+  assert.match(productionControl, /fanmind-operations-monitor-lifecycle\.service/);
+  assert.match(productionControl, /verify-operations-monitor-lifecycle-log\.mjs/);
+  assert.match(productionControl, /OPERATIONS_MONITOR_LIFECYCLE_TRANSITIONS=warning,critical,recovered/);
+  assert.match(productionControl, /OPERATIONS_MONITOR_LIFECYCLE_EMAIL_ENABLED=false/);
   assert.match(productionControl, /journalctl[\s\S]*--since "\$NOT_BEFORE"/);
   assert.match(productionControl, /\/usr\/local\/lib\/fanmind-ops\/enable-operations-monitor\.sh/);
   assert.doesNotMatch(productionControl, /actions\/checkout|source .*\.env\.production|cat .*\.env\.production|journalctl.*(?:tail|head|grep)/);
@@ -251,7 +408,11 @@ test("Production control is main-only, release-bound and runs installed root-own
   assert.match(deployment, /install -d -o root -g root -m 0755 \/usr\/local\/lib\/fanmind-monitor/);
   assert.match(deployment, /install -o root -g root -m 0644 scripts\/operations\/operations-monitor\.mjs \/usr\/local\/lib\/fanmind-monitor\/operations-monitor\.mjs/);
   assert.match(deployment, /scripts\/operations\/verify-operations-monitor-probe-log\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-operations-monitor-probe-log\.mjs/);
+  assert.match(deployment, /scripts\/operations\/verify-operations-monitor-lifecycle-log\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-operations-monitor-lifecycle-log\.mjs/);
+  assert.match(deployment, /scripts\/operations\/operations-monitor-lifecycle\.mjs \/usr\/local\/lib\/fanmind-monitor\/operations-monitor-lifecycle\.mjs/);
   assert.match(deployment, /ops\/systemd\/fanmind-operations-monitor-probe\.service \/etc\/systemd\/system\/fanmind-operations-monitor-probe\.service/);
+  assert.match(deployment, /ops\/systemd\/fanmind-operations-monitor-lifecycle\.service \/etc\/systemd\/system\/fanmind-operations-monitor-lifecycle\.service/);
+  assert.match(deployment, /test -x \/usr\/bin\/flock/);
   assert.doesNotMatch(deployment, /scripts\/operations\/operations-monitor\.mjs \/usr\/local\/lib\/fanmind-ops\/operations-monitor\.mjs/);
 });
 

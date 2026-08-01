@@ -37,6 +37,15 @@ Auch E-Mails bleiben separat deaktiviert:
 FANMIND_OPERATIONS_EMAIL_ENABLED=false
 ```
 
+## Aktueller Production-Stand
+
+Die festgeschriebene Komponenten-Migration wurde am 1. August 2026 über den
+getrennten Production-Lauf angewendet und anschließend unabhängig read-only
+verifiziert. Der Zehn-Minuten-Timer ist auf dem Release
+`d6725d71145dc26584281f669fbcd4511d912126` kontrolliert aktiviert; Operations-
+E-Mails bleiben deaktiviert. Ein normaler Deploy installiert weiterhin nur
+Code und Units und kann weder die Migration anwenden noch E-Mail aktivieren.
+
 ## Production-Konfiguration
 
 Empfohlene Startwerte in `/var/www/fanmind/.env.production`:
@@ -111,6 +120,10 @@ Der Monitor schreibt ausschließlich technische Metadaten in:
 
 Pro Komponente wird höchstens eine aktive Monitor-Meldung geführt. Wiederholte unveränderte Fehler erzeugen keine E-Mail-Flut. Bei Eskalation wird die bestehende Meldung wieder geöffnet; bei Erholung wird sie als gelöst markiert.
 
+Regulärer Timer, manueller Probe und synthetische Lifecycle-Abnahme verwenden
+dasselbe exklusive Laufzeit-Lock unter `/run/lock`. Dadurch kann kein manueller
+Abnahmelauf mit dem Zehn-Minuten-Lauf um dieselbe Meldung konkurrieren.
+
 ## Manueller Test vor Aktivierung
 
 ```bash
@@ -158,6 +171,18 @@ einem Fehler werden Environment-Datei und vorheriger Timerzustand
 wiederhergestellt. Der Workflow checkt keinen Branch-Code aus und gibt keine
 Environment-Werte aus.
 
+Die getrennte Aktion `lifecycle` verlangt die exakte Bestätigung
+`lifecycle-operations-monitor-production`. Nach einem vollständig gesunden
+Probe erzeugt sie ausschließlich für die technische Komponente
+`operations_monitor` die feste Folge Warnung, Kritisch und Recovery. Sie prüft
+dabei, dass genau eine Meldung geöffnet, dieselbe Meldung eskaliert und danach
+gelöst wird. Die beiden erwarteten E-Mail-Versuche müssen als `noop` mit dem
+Grund `disabled` im Audit stehen; ein erfolgreicher Versand lässt den Lauf
+scheitern. Die synthetischen Ereignisse sind in ihren Metadaten ausdrücklich
+als Abnahme markiert und enthalten keine Host-, Kunden- oder Secretwerte. Bei
+jedem Fehler versucht der Lauf, eine noch aktive synthetische Meldung zu lösen,
+und gibt GitHub nur einen allowlist-gefilterten Diagnosecode aus.
+
 ## Timer kontrolliert aktivieren
 
 Erst nach erfolgreichem manuellen Test:
@@ -198,6 +223,10 @@ FANMIND_OPERATIONS_EMAIL_ENABLED=false
 - Schema-Apply nur über den checksum-, Production- und Release-gebundenen
   Einmallauf mit read-only Vorher-/Nachher-Audit;
 - kein E-Mail-Versand durch Probe oder Timer-Aktivierung;
+- kein E-Mail-Versand durch die synthetische Lifecycle-Abnahme;
+- gemeinsames exklusives Lock für Timer, Probe und Lifecycle-Abnahme;
+- synthetische Zustände ausschließlich auf der reservierten technischen
+  Komponente `operations_monitor`, niemals auf echten Hostsignalen;
 - Aktivierung nur auf `main`, auf dem Production-Runner und gebunden an den
   exakten bereits ausgelieferten Commit;
 - vor jeder Aktivierung ein vollständiger read-only Production-Audit und ein

@@ -2,11 +2,14 @@
 import { statfs } from "node:fs/promises";
 import { freemem, totalmem, uptime } from "node:os";
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import tls from "node:tls";
 import { pathToFileURL } from "node:url";
 
 const VERSION = "fanmind-operations-monitor-1";
 const SOURCE = "operations_monitor";
+const LIFECYCLE_ACCEPTANCE_ACK = "operations-monitor-production-lifecycle";
+const LIFECYCLE_COMPONENT = "operations_monitor";
 const ACTIVE_NOTIFICATION_STATUSES = "open,read,acknowledged";
 const STATUS_RANK = { healthy: 0, unknown: 1, degraded: 2, unavailable: 3 };
 const COMPONENT_LABELS = {
@@ -17,6 +20,7 @@ const COMPONENT_LABELS = {
   ssl_certificate: "TLS-Zertifikat",
   backup_freshness: "Backup-Aktualität",
   backup_worker: "Backup-Worker",
+  operations_monitor: "Operations-Monitor-Abnahme",
 };
 const CHECK_STATUSES = new Set(["healthy", "unknown", "degraded", "unavailable"]);
 
@@ -422,6 +426,28 @@ async function activeNotification(component, env = process.env) {
   return Array.isArray(rows) ? rows[0] ?? null : null;
 }
 
+async function lifecycleSnapshot(env = process.env) {
+  const reference = `monitor:${LIFECYCLE_COMPONENT}`;
+  const [events, notifications] = await Promise.all([
+    rest(
+      "system_health_events",
+      `?select=status,severity,created_at,metadata&component=eq.${LIFECYCLE_COMPONENT}&order=created_at.desc&limit=1`,
+      {},
+      env,
+    ),
+    rest(
+      "admin_notifications",
+      `?select=id,status,severity,created_at,metadata&source=eq.${SOURCE}&technical_reference=eq.${encodeURIComponent(reference)}&order=created_at.desc&limit=1`,
+      {},
+      env,
+    ),
+  ]);
+  return {
+    event: Array.isArray(events) ? events[0] ?? null : null,
+    notification: Array.isArray(notifications) ? notifications[0] ?? null : null,
+  };
+}
+
 function notificationCopy(checkResult, recovered = false) {
   const label = COMPONENT_LABELS[checkResult.component] || checkResult.component;
   if (recovered) {
@@ -523,7 +549,13 @@ async function syncCheck(checkResult, previousEvent, env = process.env) {
           severity: checkResult.severity,
           outcome: result.sent ? "success" : "noop",
           technical_reference: reference,
-          metadata: { component: checkResult.component, reason: result.reason },
+          metadata: {
+            component: checkResult.component,
+            reason: result.reason,
+            acceptance: checkResult.metadata?.acceptance,
+            acceptance_run_id: checkResult.metadata?.acceptance_run_id,
+            stage: checkResult.metadata?.stage,
+          },
         }),
       }, env).catch(() => {});
     } catch (error) {
@@ -534,6 +566,197 @@ async function syncCheck(checkResult, previousEvent, env = process.env) {
     }
   }
   return plan;
+}
+
+function lifecycleCheck(status, stage, acceptanceRunId = null) {
+  const copy = {
+    warning: "Synthetische Monitor-Abnahme: Warnzustand.",
+    critical: "Synthetische Monitor-Abnahme: kritischer Zustand.",
+    recovery: "Synthetische Monitor-Abnahme: Normalzustand wiederhergestellt.",
+    cleanup: "Synthetische Monitor-Abnahme: Ausgangszustand wiederhergestellt.",
+  };
+  return check(
+    LIFECYCLE_COMPONENT,
+    status,
+    copy[stage] ?? "Synthetische Monitor-Abnahme.",
+    {
+      acceptance: "warning-critical-recovery",
+      acceptance_run_id: acceptanceRunId,
+      stage,
+    },
+  );
+}
+
+function lifecycleFail(code) {
+  throw new Error(`operations_monitor_lifecycle_${code}`);
+}
+
+function assertLifecycleSnapshot(snapshot, {
+  eventStatus,
+  eventSeverity,
+  eventStage,
+  notificationId = null,
+  notificationStatus,
+  notificationSeverity,
+  failureCode,
+}) {
+  const event = snapshot?.event;
+  const notification = snapshot?.notification;
+  if (
+    event?.status !== eventStatus ||
+    event?.severity !== eventSeverity ||
+    event?.metadata?.acceptance !== "warning-critical-recovery" ||
+    event?.metadata?.stage !== eventStage ||
+    notification?.status !== notificationStatus ||
+    notification?.severity !== notificationSeverity ||
+    notification?.metadata?.component !== LIFECYCLE_COMPONENT ||
+    notification?.metadata?.status !== eventStatus ||
+    (notificationId && notification?.id !== notificationId)
+  ) {
+    lifecycleFail(failureCode);
+  }
+}
+
+async function lifecycleEmailAudits(acceptanceRunId, env = process.env) {
+  const reference = `monitor:${LIFECYCLE_COMPONENT}`;
+  const rows = await rest(
+    "operations_audit_log",
+    `?select=outcome,created_at,metadata&action=eq.operations_monitor_email&technical_reference=eq.${encodeURIComponent(reference)}&order=created_at.desc&limit=20`,
+    {},
+    env,
+  );
+  return Array.isArray(rows)
+    ? rows.filter((row) => row?.metadata?.acceptance_run_id === acceptanceRunId)
+    : rows;
+}
+
+async function recoverLifecycleNotification(env) {
+  const previous = await latestEvents([LIFECYCLE_COMPONENT], env);
+  const active = await activeNotification(LIFECYCLE_COMPONENT, env);
+  if (active || previous.get(LIFECYCLE_COMPONENT)?.status !== "healthy") {
+    await syncCheck(
+      lifecycleCheck("healthy", "cleanup"),
+      previous.get(LIFECYCLE_COMPONENT),
+      env,
+    );
+  }
+  if (await activeNotification(LIFECYCLE_COMPONENT, env)) {
+    lifecycleFail("cleanup_failed");
+  }
+}
+
+async function runLifecycleAcceptance(env = process.env) {
+  if (
+    env.FANMIND_OPERATIONS_LIFECYCLE_ACCEPTANCE_ACK !== LIFECYCLE_ACCEPTANCE_ACK ||
+    env.FANMIND_OPERATIONS_MONITOR_ENABLED !== "true"
+  ) {
+    lifecycleFail("contract");
+  }
+  if (
+    env.FANMIND_OPERATIONS_EMAIL_ENABLED !== "false" ||
+    operationsEmailConfig(env).enabled
+  ) {
+    lifecycleFail("email_not_disabled");
+  }
+
+  const acceptanceEnv = {
+    ...env,
+    FANMIND_OPERATIONS_MONITOR_ENABLED: "true",
+    FANMIND_OPERATIONS_EMAIL_ENABLED: "false",
+    FANMIND_OPERATIONS_REQUIRE_HEALTHY: "false",
+  };
+  supabaseConfig(acceptanceEnv);
+
+  let started = false;
+  try {
+    await recoverLifecycleNotification(acceptanceEnv);
+    const acceptanceRunId = randomUUID();
+    started = true;
+
+    let previous = await latestEvents([LIFECYCLE_COMPONENT], acceptanceEnv);
+    await syncCheck(
+      lifecycleCheck("degraded", "warning", acceptanceRunId),
+      previous.get(LIFECYCLE_COMPONENT),
+      acceptanceEnv,
+    );
+    const warning = await lifecycleSnapshot(acceptanceEnv);
+    assertLifecycleSnapshot(warning, {
+      eventStatus: "degraded",
+      eventSeverity: "warning",
+      eventStage: "warning",
+      notificationStatus: "open",
+      notificationSeverity: "warning",
+      failureCode: "warning_state",
+    });
+    const notificationId = warning.notification.id;
+
+    previous = await latestEvents([LIFECYCLE_COMPONENT], acceptanceEnv);
+    await syncCheck(
+      lifecycleCheck("unavailable", "critical", acceptanceRunId),
+      previous.get(LIFECYCLE_COMPONENT),
+      acceptanceEnv,
+    );
+    const critical = await lifecycleSnapshot(acceptanceEnv);
+    assertLifecycleSnapshot(critical, {
+      eventStatus: "unavailable",
+      eventSeverity: "critical",
+      eventStage: "critical",
+      notificationId,
+      notificationStatus: "open",
+      notificationSeverity: "critical",
+      failureCode: "critical_state",
+    });
+
+    previous = await latestEvents([LIFECYCLE_COMPONENT], acceptanceEnv);
+    await syncCheck(
+      lifecycleCheck("healthy", "recovery", acceptanceRunId),
+      previous.get(LIFECYCLE_COMPONENT),
+      acceptanceEnv,
+    );
+    const recovery = await lifecycleSnapshot(acceptanceEnv);
+    assertLifecycleSnapshot(recovery, {
+      eventStatus: "healthy",
+      eventSeverity: "info",
+      eventStage: "recovery",
+      notificationId,
+      notificationStatus: "resolved",
+      notificationSeverity: "resolved",
+      failureCode: "recovery_state",
+    });
+    if (await activeNotification(LIFECYCLE_COMPONENT, acceptanceEnv)) {
+      lifecycleFail("recovery_state");
+    }
+
+    const audits = await lifecycleEmailAudits(acceptanceRunId, acceptanceEnv);
+    if (
+      !Array.isArray(audits) ||
+      audits.length !== 2 ||
+      audits.map((row) => row?.metadata?.stage).sort().join(",") !== "critical,recovery" ||
+      audits.some((row) =>
+        row?.outcome !== "noop" ||
+        row?.metadata?.component !== LIFECYCLE_COMPONENT ||
+        row?.metadata?.acceptance !== "warning-critical-recovery" ||
+        row?.metadata?.reason !== "disabled"
+      )
+    ) {
+      lifecycleFail("email_audit");
+    }
+
+    return {
+      component: LIFECYCLE_COMPONENT,
+      transitions: ["warning", "critical", "recovered"],
+      emailEnabled: false,
+    };
+  } catch (error) {
+    if (started) {
+      try {
+        await recoverLifecycleNotification(acceptanceEnv);
+      } catch {
+        lifecycleFail("cleanup_failed");
+      }
+    }
+    throw error;
+  }
 }
 
 async function runMonitor(env = process.env) {
@@ -576,5 +799,6 @@ export {
   operationsEmailConfig,
   parsePm2Status,
   requireHealthyChecks,
+  runLifecycleAcceptance,
   runMonitor,
 };
