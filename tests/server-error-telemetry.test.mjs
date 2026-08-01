@@ -128,6 +128,11 @@ test("schema stores metadata only, denies browser roles and rate-limits notifica
   assert.match(migration, /interval '10 minutes'/);
   assert.match(migration, /p_cooldown_minutes/);
   assert.match(migration, /last_notified_severity/);
+  assert.match(
+    migration,
+    /on conflict on constraint server_error_groups_pkey do update set/,
+  );
+  assert.doesNotMatch(migration, /on conflict \(fingerprint\)/);
   assert.match(migration, /cleanup_server_error_events/);
   assert.doesNotMatch(migration, /error_message|stack_trace|request_headers|request_body|query_string|cookie/i);
 });

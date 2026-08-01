@@ -131,7 +131,7 @@ begin
     p_fingerprint, p_digest, p_route_path, p_route_type, p_router_kind, p_http_method, p_environment, p_release_commit,
     now(), now(), 1, 'open', null
   )
-  on conflict (fingerprint) do update set
+  on conflict on constraint server_error_groups_pkey do update set
     last_seen_at = now(),
     occurrence_count = public.server_error_groups.occurrence_count + 1,
     digest = excluded.digest,

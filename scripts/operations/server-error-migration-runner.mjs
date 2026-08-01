@@ -22,7 +22,7 @@ const VERSION = "fanmind-server-error-migration-1";
 const MIGRATION_ID = "20260718203000_privacy_server_error_tracking";
 const MIGRATION_FILE_NAME = `${MIGRATION_ID}.sql`;
 const EXPECTED_MIGRATION_SHA256 =
-  "d5147551e017617a00ceb237f277ebf7be278e3f422b0eaa107e34ae10f217f7";
+  "de48786613b33bc7d592d018c365cff5ca1417f18176e47c964d9d6a796f3cef";
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const INSTALLED_MIGRATION_PATH = join(SCRIPT_DIRECTORY, MIGRATION_FILE_NAME);
 const SOURCE_MIGRATION_PATH = resolve(
