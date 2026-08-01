@@ -26,6 +26,8 @@ function validAuditOutput(overrides = {}) {
     PM2_RESTARTS: "12",
     PM2_UNSTABLE_RESTARTS: "0",
     PM2_UPTIME_SECONDS: "7200",
+    SERVER_ERROR_TRACKING_ENABLED: "true",
+    SERVER_ERROR_EMAIL_ENABLED: "false",
     NGINX_CONFIG: "ok",
     LOCAL_LOGIN_HTTP: "200",
     PUBLIC_LOGIN_HTTP: "200",
@@ -86,6 +88,8 @@ function validAuditOutput(overrides = {}) {
     "PM2_CWD=/var/www/fanmind-current",
     "PM2_EXEC_MODE=cluster_mode",
     "PM2_MEMORY_BYTES=100000000",
+    `SERVER_ERROR_TRACKING_ENABLED=${values.SERVER_ERROR_TRACKING_ENABLED}`,
+    `SERVER_ERROR_EMAIL_ENABLED=${values.SERVER_ERROR_EMAIL_ENABLED}`,
     `NGINX_CONFIG=${values.NGINX_CONFIG}`,
     `LOCAL_LOGIN_HTTP=${values.LOCAL_LOGIN_HTTP}`,
     `PUBLIC_LOGIN_HTTP=${values.PUBLIC_LOGIN_HTTP}`,
@@ -137,6 +141,14 @@ test("production audit exposes only read-only runtime and backup checks", async 
   assert.match(source, /pm2 jlist \| PM2_APP_NAME="\$PM2_APP_NAME" node -e/u);
   assert.match(source, /read_config_value\(\)/u);
   assert.match(source, /LIVE_RUNTIME_ENVIRONMENT/u);
+  assert.match(source, /FANMIND_AUDIT_PRODUCTION_ENV_PATH/u);
+  assert.match(source, /MAX_ENV_BYTES = 64 \* 1024/u);
+  assert.match(source, /fs\.constants\.O_NOFOLLOW/u);
+  assert.match(source, /fs\.realpathSync\(filePath\)/u);
+  assert.match(source, /entries\.length !== 1/u);
+  assert.match(source, /\['true', 'false'\]\.includes\(entries\[0\]\)/u);
+  assert.match(source, /SERVER_ERROR_TRACKING_ENABLED/u);
+  assert.match(source, /SERVER_ERROR_EMAIL_ENABLED/u);
 
   assert.doesNotMatch(source, /--identity\b/u);
   assert.doesNotMatch(source, /\bage\s+(?:--decrypt|-d)\b/u);
@@ -159,6 +171,8 @@ test("production audit exposes only read-only runtime and backup checks", async 
   assert.doesNotMatch(source, /\bcat\s+[^\n]*worker\.env/u);
   assert.doesNotMatch(source, /sudo\s+-n\s+bash\b/u);
   assert.doesNotMatch(source, /BACKUP_VERIFY_CHECKSUM/u);
+  assert.doesNotMatch(source, /console\.log\(`FANMIND_/u);
+  assert.doesNotMatch(source, /console\.log\(source\)/u);
 });
 
 test("production audit output verifier accepts one complete redacted pass", () => {
@@ -170,6 +184,8 @@ test("production audit output verifier accepts one complete redacted pass", () =
   assert.equal(result.releaseCommit, expectedCommit);
   assert.equal(result.healthComponentCount, 8);
   assert.equal(result.pm2Restarts, 12);
+  assert.equal(result.serverErrorTrackingEnabled, true);
+  assert.equal(result.serverErrorEmailEnabled, false);
   assert.equal(result.backupCompletePairCount, 7);
   assert.equal(result.offsiteCompletePairCount, 38);
 });
@@ -206,6 +222,30 @@ test("production audit output verifier fails closed on drift and degraded safegu
         expectedCommit,
       ),
     /production_audit_backup_worker_failures_present/u,
+  );
+  assert.throws(
+    () =>
+      verifyProductionAuditOutput(
+        validAuditOutput({ SERVER_ERROR_TRACKING_ENABLED: "false" }),
+        expectedCommit,
+      ),
+    /production_audit_server_error_tracking_disabled/u,
+  );
+  assert.throws(
+    () =>
+      verifyProductionAuditOutput(
+        validAuditOutput({ SERVER_ERROR_EMAIL_ENABLED: "true" }),
+        expectedCommit,
+      ),
+    /production_audit_server_error_email_enabled/u,
+  );
+  assert.throws(
+    () =>
+      verifyProductionAuditOutput(
+        `${validAuditOutput()}SERVER_ERROR_TRACKING_ENABLED=true\n`,
+        expectedCommit,
+      ),
+    /production_audit_server_error_tracking_enabled_cardinality_invalid/u,
   );
 });
 
@@ -308,6 +348,7 @@ test("production audit never logs backup configuration values or raw PM2 payload
   assert.doesNotMatch(source, /echo\s+.*FANMIND_BACKUP_RCLONE_REMOTE/u);
   assert.doesNotMatch(source, /echo\s+.*SUPABASE_SERVICE_ROLE_KEY/u);
   assert.doesNotMatch(source, /echo\s+.*DATABASE_URL/u);
+  assert.doesNotMatch(source, /echo\s+.*\.env\.production/u);
   assert.doesNotMatch(source, /console\.log\([^\n]*JSON\.stringify\(rows/u);
   assert.doesNotMatch(source, /console\.log\([^\n]*processRow\.pm2_env/u);
 });

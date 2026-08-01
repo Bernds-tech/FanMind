@@ -6,6 +6,7 @@ BACKUP_ROOT="${FANMIND_AUDIT_BACKUP_ROOT:-/var/backups/fanmind}"
 PUBLIC_BASE_URL="${FANMIND_AUDIT_PUBLIC_BASE_URL:-https://fanmind.ch}"
 PM2_APP_NAME="${FANMIND_AUDIT_PM2_APP_NAME:-fanmind}"
 VERIFIER_PATH="${FANMIND_AUDIT_VERIFIER_PATH:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/verify-backup-artifact.mjs}"
+PRODUCTION_ENV_PATH="${FANMIND_AUDIT_PRODUCTION_ENV_PATH:-$APP_ROOT/.env.production}"
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -69,6 +70,95 @@ pm2 jlist | PM2_APP_NAME="$PM2_APP_NAME" node -e '
     console.log(`PM2_MEMORY_BYTES=${processRow.monit && Number.isFinite(processRow.monit.memory) ? processRow.monit.memory : "unknown"}`);
   });
 '
+
+sudo -n node - "$PRODUCTION_ENV_PATH" <<'NODE'
+const fs = require('node:fs');
+const path = require('node:path');
+
+const MAX_ENV_BYTES = 64 * 1024;
+const fields = [
+  ['FANMIND_SERVER_ERROR_TRACKING_ENABLED', 'SERVER_ERROR_TRACKING_ENABLED'],
+  ['FANMIND_SERVER_ERROR_EMAIL_ENABLED', 'SERVER_ERROR_EMAIL_ENABLED'],
+];
+
+function fail(code) {
+  throw new Error(`production_env_${code}`);
+}
+
+let descriptor;
+try {
+  const [filePath] = process.argv.slice(2);
+  if (
+    typeof filePath !== 'string' ||
+    !filePath.startsWith('/') ||
+    filePath.includes('\0') ||
+    path.resolve(filePath) !== filePath
+  ) {
+    fail('path_invalid');
+  }
+
+  const realPath = fs.realpathSync(filePath);
+  if (realPath !== filePath) fail('path_alias_invalid');
+
+  descriptor = fs.openSync(
+    filePath,
+    fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW,
+  );
+  const before = fs.fstatSync(descriptor);
+  if (!before.isFile()) fail('type_invalid');
+  if (before.size < 1 || before.size > MAX_ENV_BYTES) fail('size_invalid');
+
+  const source = fs.readFileSync(descriptor, 'utf8');
+  const after = fs.fstatSync(descriptor);
+  if (
+    after.dev !== before.dev ||
+    after.ino !== before.ino ||
+    after.size !== before.size ||
+    after.mtimeMs !== before.mtimeMs ||
+    Buffer.byteLength(source, 'utf8') !== before.size
+  ) {
+    fail('changed_during_read');
+  }
+
+  const values = new Map(fields.map(([key]) => [key, []]));
+  for (const line of source.split(/\r?\n/u)) {
+    const match = line.match(
+      /^\s*(?:export\s+)?([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/u,
+    );
+    if (!match || !values.has(match[1])) continue;
+
+    let value = match[2];
+    if (
+      value.length >= 2 &&
+      ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'")))
+    ) {
+      value = value.slice(1, -1);
+    }
+    values.get(match[1]).push(value);
+  }
+
+  for (const [key, outputKey] of fields) {
+    const entries = values.get(key);
+    if (entries.length !== 1) fail('flag_cardinality_invalid');
+    if (!['true', 'false'].includes(entries[0])) fail('flag_value_invalid');
+    console.log(`${outputKey}=${entries[0]}`);
+  }
+} catch (error) {
+  const message = error instanceof Error ? error.message : '';
+  const code = /^production_env_[a-z0-9_]+$/u.test(message)
+    ? message
+    : 'production_env_unavailable';
+  console.error(`AUDIT_ERROR=${code}`);
+  process.exitCode = 1;
+} finally {
+  if (descriptor !== undefined) {
+    try {
+      fs.closeSync(descriptor);
+    } catch {}
+  }
+}
+NODE
 
 if sudo -n nginx -t >/dev/null 2>&1; then
   echo "NGINX_CONFIG=ok"

@@ -157,8 +157,17 @@ FANMIND_SERVER_ERROR_EMAIL_ENABLED=false
   [`30706456013`, Versuch 2](https://github.com/Bernds-tech/FanMind/actions/runs/30706456013/attempts/2)
   bestätigte danach unveränderte 40 Restarts, 2.213 Sekunden kontinuierliche
   Uptime, denselben Release-Commit, 8/8 Health sowie 7 lokale und 71 externe
-  vollständige Backup-Paare. Da kein weiterer Prozess-Reload stattfand, blieb
-  die bei Aktivierung nachgewiesene E-Mail-freie Laufzeitkonfiguration aktiv.
+  vollständige Backup-Paare. Dieser historische Lauf leitete die unverändert
+  E-Mail-freie Laufzeitkonfiguration noch aus dem Aktivierungsnachweis und dem
+  ausgebliebenen weiteren Prozess-Reload ab.
+
+Der dauerhaft installierte read-only Production-Audit schließt diese
+Nachweislücke inzwischen direkt: Er liest aus der geschützten Production-ENV
+ausschließlich die beiden allowlisteten Booleschen Serverfehler-Schalter,
+lehnt fehlende, doppelte, ungültige, zu große oder symlinkartige ENV-Dateien
+fail-closed ab und veröffentlicht nur die normalisierten Wahrheitswerte. Ein
+Audit-Pass verlangt `SERVER_ERROR_TRACKING_ENABLED=true` und
+`SERVER_ERROR_EMAIL_ENABLED=false`.
 
 ## Aufbewahrung
 
