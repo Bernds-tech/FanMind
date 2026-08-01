@@ -6,13 +6,18 @@ import { promisify } from "node:util";
 
 const monitor = await import("../scripts/operations/operations-monitor.mjs");
 const probeLogVerifier = await import("../scripts/operations/verify-operations-monitor-probe-log.mjs");
+const migrationLogVerifier = await import("../scripts/operations/verify-operations-monitor-migration-log.mjs");
+const migrationRunner = await import("../scripts/operations/operations-monitor-migration-runner.mjs");
 const source = await readFile(new URL("../scripts/operations/operations-monitor.mjs", import.meta.url), "utf8");
 const service = await readFile(new URL("../ops/systemd/fanmind-operations-monitor.service", import.meta.url), "utf8");
 const probeService = await readFile(new URL("../ops/systemd/fanmind-operations-monitor-probe.service", import.meta.url), "utf8");
 const timer = await readFile(new URL("../ops/systemd/fanmind-operations-monitor.timer", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260718190000_operations_monitor_components.sql", import.meta.url), "utf8");
 const productionControl = await readFile(new URL("../.github/workflows/operations-monitor-production-control.yml", import.meta.url), "utf8");
+const migrationControl = await readFile(new URL("../.github/workflows/operations-monitor-production-migration.yml", import.meta.url), "utf8");
+const migrationService = await readFile(new URL("../ops/systemd/fanmind-operations-monitor-migration@.service", import.meta.url), "utf8");
 const deployment = await readFile(new URL("../.github/workflows/deploy-fanmind.yml", import.meta.url), "utf8");
+const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const enableScriptPath = "scripts/operations/enable-operations-monitor.sh";
 const enableScript = await readFile(new URL("../scripts/operations/enable-operations-monitor.sh", import.meta.url), "utf8");
 const execFileAsync = promisify(execFile);
@@ -66,6 +71,40 @@ test("the monitor log replaces unexpected exception text with a generic code", (
     monitor.operationsErrorCode(new Error("operations_monitor_health_gate_failed|host_disk:degraded")),
     "operations_monitor_health_gate_failed|host_disk:degraded",
   );
+});
+
+test("the migration diagnostic exposes only allowlisted schema status", () => {
+  const notBefore = "2026-08-01T06:00:00.000Z";
+  const source = [
+    "unrelated systemd text",
+    JSON.stringify({
+      ts: "2026-08-01T06:00:01.000Z",
+      version: "fanmind-operations-monitor-migration-1",
+      level: "error",
+      event: "migration_failed",
+      action: "apply",
+      error_code: "schema_not_ready",
+      secret: "must-not-be-output",
+    }),
+  ].join("\n");
+  const result = migrationLogVerifier.verifyOperationsMonitorMigrationLog(
+    source,
+    notBefore,
+    "apply",
+  );
+  assert.deepEqual(result, {
+    action: "apply",
+    status: "failed",
+    errorCode: "schema_not_ready",
+  });
+  const output = migrationLogVerifier.formatOperationsMonitorMigrationDiagnostic(result);
+  assert.equal(
+    output,
+    "OPERATIONS_MONITOR_MIGRATION_ACTION=apply\n" +
+      "OPERATIONS_MONITOR_MIGRATION_RESULT=failed\n" +
+      "OPERATIONS_MONITOR_MIGRATION_ERROR=schema_not_ready\n",
+  );
+  assert.doesNotMatch(output, /secret|must-not-be-output/u);
 });
 
 test("disk and memory thresholds distinguish normal, warning and critical states", () => {
@@ -206,6 +245,46 @@ test("Production control is main-only, release-bound and runs installed root-own
   assert.match(deployment, /scripts\/operations\/verify-operations-monitor-probe-log\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-operations-monitor-probe-log\.mjs/);
   assert.match(deployment, /ops\/systemd\/fanmind-operations-monitor-probe\.service \/etc\/systemd\/system\/fanmind-operations-monitor-probe\.service/);
   assert.doesNotMatch(deployment, /scripts\/operations\/operations-monitor\.mjs \/usr\/local\/lib\/fanmind-ops\/operations-monitor\.mjs/);
+});
+
+test("Production monitor migration is checksum-pinned, transactional and separately controlled", async () => {
+  const checkedMigration = migrationRunner.verifyOperationsMonitorMigrationSource();
+  assert.match(checkedMigration, /^begin;/mu);
+  assert.equal(
+    packageJson.scripts["db:operations-monitor:check"],
+    "node scripts/operations/operations-monitor-migration-runner.mjs",
+  );
+
+  assert.match(migration, /^begin;/mu);
+  assert.match(migration, /set local lock_timeout = '5s'/u);
+  assert.match(migration, /set local statement_timeout = '60s'/u);
+  assert.match(migration, /commit;\s*$/u);
+
+  assert.match(migrationControl, /github\.ref == 'refs\/heads\/main'/u);
+  assert.match(migrationControl, /environment: production/u);
+  assert.match(migrationControl, /runs-on: \[self-hosted, fanmind-prod, exoscale, linux, x64\]/u);
+  assert.match(migrationControl, /operations-monitor-components-production-verify/u);
+  assert.match(migrationControl, /operations-monitor-components-production-apply/u);
+  assert.match(migrationControl, /EXPECTED_COMMIT[\s\S]*REVIEWED_COMMIT/u);
+  assert.match(migrationControl, /read-only-production-audit\.sh/u);
+  assert.match(migrationControl, /fanmind-operations-monitor-migration@\$\{MIGRATION_ACTION\}\.service/u);
+  assert.match(migrationControl, /verify-operations-monitor-migration-log\.mjs/u);
+  assert.doesNotMatch(migrationControl, /actions\/checkout|source .*\.env\.production|cat .*\.env\.production|printenv/u);
+
+  assert.match(migrationService, /User=root/u);
+  assert.match(migrationService, /EnvironmentFile=\/var\/www\/fanmind\/\.env\.production/u);
+  assert.match(migrationService, /EnvironmentFile=\/etc\/fanmind-backup\/worker\.env/u);
+  assert.match(migrationService, /EnvironmentFile=\/etc\/fanmind-backup\/release\.env/u);
+  assert.match(migrationService, /ExecStart=\/usr\/bin\/node \/usr\/local\/lib\/fanmind-ops\/operations-monitor-migration-runner\.mjs --%i operations-monitor-components-production-%i/u);
+  assert.match(migrationService, /NoNewPrivileges=true/u);
+  assert.match(migrationService, /ProtectSystem=strict/u);
+  assert.match(migrationService, /CapabilityBoundingSet=/u);
+  assert.doesNotMatch(migrationService, /\[Install\]/u);
+
+  assert.match(deployment, /scripts\/operations\/operations-monitor-migration-runner\.mjs \/usr\/local\/lib\/fanmind-ops\/operations-monitor-migration-runner\.mjs/u);
+  assert.match(deployment, /-m 0600 supabase\/migrations\/20260718190000_operations_monitor_components\.sql \/usr\/local\/lib\/fanmind-ops\/20260718190000_operations_monitor_components\.sql/u);
+  assert.match(deployment, /scripts\/operations\/verify-operations-monitor-migration-log\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-operations-monitor-migration-log\.mjs/u);
+  assert.match(deployment, /ops\/systemd\/fanmind-operations-monitor-migration@\.service \/etc\/systemd\/system\/fanmind-operations-monitor-migration@\.service/u);
 });
 
 test("migration allows only metadata components and keeps monitor notifications indexed", () => {

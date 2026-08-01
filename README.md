@@ -387,6 +387,14 @@ acht Health-Komponenten, PM2, nginx, Login, Hostressourcen, lokale und
 Offsite-Backup-Paare sowie Backup-Worker-Fehler und nimmt keine
 Service-, Datenbank-, Restore- oder Remote-Mutation vor.
 
+Die für den Operations Monitor benötigte Constraint-Erweiterung bleibt von
+diesem Deploy getrennt. Ein eigener manueller Production-Workflow kann die
+festgeschriebene Migration zunächst read-only verifizieren und nach exakter
+Freigabe transaktional anwenden. Er ist an `main`, den ausgelieferten Commit,
+die geschützte Production-Umgebung und die vorhandene root-only
+Datenbankverbindung gebunden; Zugangsdaten und SQL-Fehlertext werden nicht in
+GitHub-Logs ausgegeben.
+
 Ein getrenntes Staging wird ausschließlich manuell über `.github/workflows/deploy-staging.yml` auf einem eigenen `fanmind-staging`-Runner ausgerollt. Der Workflow akzeptiert nur einen von `main` erreichbaren Commit, verlangt den Staging-Preflight und startet den separaten PM2-Prozess `fanmind-staging`. Host, Supabase-Staging-Projekt, Stripe-Testmodus, nginx-vHost und synthetische Testdaten bleiben externe Voraussetzungen.
 
 ## Dokumentations-Synchronisierung

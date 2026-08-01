@@ -70,6 +70,13 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   `scripts/operations/ai-tier-entitlement-migration-runner.mjs`. A normal
   merge or Web deploy must never apply it; use the documented offline check,
   target-bound read-only verification and separately approved apply flow.
+- The Operations Monitor component constraint is separately checksum-pinned
+  by `scripts/operations/operations-monitor-migration-runner.mjs`. A normal
+  merge or Web deploy must only install that root-owned runner and SQL; it must
+  never apply the migration. Production verify/apply must use the manual,
+  `main`-, environment-, runner- and release-bound workflow, the existing
+  protected backup database connection, read-only audits before and after,
+  and allowlist-redacted results.
 - The prepared Stripe add-on policy in
   `src/lib/aiTierStripeLifecycle.mjs` is not a live billing integration. Keep
   its workspace target, distinct Price allowlist, single-item, event-order

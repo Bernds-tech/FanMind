@@ -135,6 +135,14 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 
 - Operations-Grundlage: produktiv aktiv.
 - Release-Checks: automatisch aktiv.
+- Operations-Monitor-Schema: Ein getrennter manueller Production-Workflow ist
+  vorbereitet, um ausschließlich die SHA-256-gebundene
+  Komponenten-Constraint-Migration read-only zu verifizieren oder nach
+  exakter Freigabe transaktional anzuwenden. Der normale Web-Deploy führt
+  keine Datenbankmigration aus. Der Lauf ist an `main`, Production-Runner,
+  ausgelieferten Commit, Supabase-Projektreferenz und die bestehende
+  geschützte Backup-Datenbankverbindung gebunden; Vorher-/Nachher-Audit und
+  allowlist-redigierte Ergebnisse bleiben Pflicht.
 - Production-Audit: Ein dauerhaft installierter, commitgebundener und
   fail-closed Read-only-Audit läuft nach jedem erfolgreichen
   Production-Deploy sowie täglich um 04:17 UTC. Er prüft ohne
