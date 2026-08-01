@@ -280,4 +280,5 @@ Ein Release ist für Pilotkunden sicherer, wenn alle Aussagen wahr sind:
 - [x] Code, Schema und Acceptance speichern keine Fehlermeldungen, Stacks, Header, Query-Parameter, Bodies, IP-Adressen oder Kundendaten.
 - [x] Fehlende Route-Schablone wird als `/unknown` gespeichert und fällt nie auf den realen Request-Pfad zurück.
 - [x] Kontrollweg hält E-Mail aus, nutzt nur eine reservierte technische Fingerprint-Referenz und entfernt alle synthetischen Zeilen wieder.
-- [ ] Migration auf Production verifizieren/anwenden und Tracking rollback-gesichert aktivieren; E-Mail bleibt separat gesperrt.
+- [x] Migration auf Production kontrolliert repariert und unabhängig verifiziert; Tracking rollback-gesichert aktiviert, E-Mail bleibt separat gesperrt.
+- [x] Stabiles Betriebsfenster nach Aktivierungs-Reload mit unveränderten 40 PM2-Restarts, 2.213 Sekunden Uptime, 8/8 Health und deaktivierter E-Mail belegt.
