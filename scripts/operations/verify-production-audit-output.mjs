@@ -180,6 +180,16 @@ export function verifyProductionAuditOutput(source, expectedCommit) {
     fail("pm2_unstable_restarts");
   }
   const pm2UptimeSeconds = integer(values, "PM2_UPTIME_SECONDS");
+  const serverErrorTrackingEnabled =
+    single(values, "SERVER_ERROR_TRACKING_ENABLED") === "true";
+  if (!serverErrorTrackingEnabled) {
+    fail("server_error_tracking_disabled");
+  }
+  const serverErrorEmailEnabled =
+    single(values, "SERVER_ERROR_EMAIL_ENABLED") === "true";
+  if (serverErrorEmailEnabled) {
+    fail("server_error_email_enabled");
+  }
   if (single(values, "NGINX_CONFIG") !== "ok") fail("nginx_invalid");
   const localLoginHttp = httpStatus(values, "LOCAL_LOGIN_HTTP");
   const publicLoginHttp = httpStatus(values, "PUBLIC_LOGIN_HTTP");
@@ -254,6 +264,8 @@ export function verifyProductionAuditOutput(source, expectedCommit) {
     healthComponentCount,
     pm2Restarts,
     pm2UptimeSeconds,
+    serverErrorTrackingEnabled,
+    serverErrorEmailEnabled,
     localLoginHttp,
     publicLoginHttp,
     diskUsedPercent,
@@ -274,6 +286,12 @@ export function printProductionAuditSummary(summary) {
   console.log(`PRODUCTION_HEALTH_COMPONENTS=${summary.healthComponentCount}`);
   console.log(`PRODUCTION_PM2_RESTARTS=${summary.pm2Restarts}`);
   console.log(`PRODUCTION_PM2_UPTIME_SECONDS=${summary.pm2UptimeSeconds}`);
+  console.log(
+    `PRODUCTION_SERVER_ERROR_TRACKING_ENABLED=${summary.serverErrorTrackingEnabled}`,
+  );
+  console.log(
+    `PRODUCTION_SERVER_ERROR_EMAIL_ENABLED=${summary.serverErrorEmailEnabled}`,
+  );
   console.log(`PRODUCTION_DISK_USED_PERCENT=${summary.diskUsedPercent}`);
   console.log(`PRODUCTION_MEMORY_AVAILABLE_KIB=${summary.memoryAvailableKiB}`);
   console.log(`PRODUCTION_REBOOT_REQUIRED=${summary.rebootRequired}`);

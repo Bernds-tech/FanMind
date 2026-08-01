@@ -15,6 +15,7 @@ Der Audit gibt ausschließlich die folgenden Kategorien aus:
 - explizite öffentliche Runtime-Umgebung aus `/api/version`;
 - öffentlicher Health-Gesamtstatus und veröffentlichte Komponentenstatus;
 - ausgewählte PM2-Metadaten: Status, Restart-Zähler, instabile Restarts, Uptime, CWD, Ausführungsmodus und Memory;
+- ausschließlich die normalisierten Booleschen Zustände des Server-Fehlertrackings und seiner getrennten E-Mail-Alarmierung;
 - Ergebnis von `nginx -t`;
 - HTTP-Status des lokalen und öffentlichen Login-Endpunkts;
 - Root-Dateisystembelegung, verfügbarer Arbeitsspeicher und Reboot-Hinweis;
@@ -38,6 +39,7 @@ Das Skript führt ausdrücklich **nicht** aus:
 - keine POST-/PUT-/PATCH-/DELETE-Anfrage;
 - keine Ausgabe von `.env.production`, `worker.env`, Tokens, Keys, Passwörtern, Remote-Namen, Remote-Pfaden oder Backup-Inhalten;
 - keine Ausgabe des vollständigen PM2-JSON oder der PM2-Environment-Map;
+- keine Ausgabe der Production-ENV, ihrer übrigen Schlüssel, Werte oder ihres Pfads;
 - keine Ausgabe von Backup-Job-IDs, Worker-Fehlertexten, Pfaden aus Fehlern oder vollständigen Journalzeilen.
 
 Die wenigen `sudo -n`-Aufrufe sind auf lesende Prüfungen beschränkt: `nginx -t`, Dateisystem-Inventar, checksum-only-Verifier, read-only Offsite-Listing und Journal-Auswertung. Ein fehlendes non-interactive Recht führt zum Abbruch oder zu einem klaren `unavailable`-Status; das Skript fordert kein Passwort interaktiv an.
@@ -60,6 +62,29 @@ FANMIND_AUDIT_PUBLIC_BASE_URL=https://fanmind.ch \
 FANMIND_AUDIT_PM2_APP_NAME=fanmind \
 bash scripts/operations/read-only-production-audit.sh
 ```
+
+## Server-Fehler-Schalter
+
+Der Audit liest aus der geschützten Production-ENV ausschließlich die beiden
+allowlisteten Schlüssel `FANMIND_SERVER_ERROR_TRACKING_ENABLED` und
+`FANMIND_SERVER_ERROR_EMAIL_ENABLED`. Er akzeptiert nur eine absolute,
+kanonische reguläre Datei, folgt keinen Symlinks, begrenzt die Datei auf 64 KiB
+und verlangt jeden Schlüssel genau einmal mit dem normalisierten Wert `true`
+oder `false`. Eine fehlende, doppelte, ungültige, während des Lesens veränderte
+oder zu große Datei lässt den Audit fail-closed abbrechen.
+
+Im Roh-Audit erscheinen ausschließlich:
+
+```text
+SERVER_ERROR_TRACKING_ENABLED=true
+SERVER_ERROR_EMAIL_ENABLED=false
+```
+
+Der Ergebnis-Verifier verlangt genau diese Kombination. Seine redigierte
+Zusammenfassung veröffentlicht nur
+`PRODUCTION_SERVER_ERROR_TRACKING_ENABLED=true` und
+`PRODUCTION_SERVER_ERROR_EMAIL_ENABLED=false`; andere ENV-Werte werden weder
+ausgewertet noch ausgegeben.
 
 ## systemd- und Worker-Ausgabe
 
@@ -124,6 +149,7 @@ Für einen belastbaren Operations-Pass müssen zusätzlich gelten:
 - `LIVE_ENVIRONMENT=production`;
 - `LIVE_HEALTH=healthy` und alle Pflichtkomponenten sind gesund;
 - `PM2_STATUS=online` und `PM2_UNSTABLE_RESTARTS=0`;
+- `SERVER_ERROR_TRACKING_ENABLED=true` und `SERVER_ERROR_EMAIL_ENABLED=false`;
 - nginx-Konfiguration ist gültig;
 - lokaler und öffentlicher Login antworten mit 2xx/3xx;
 - Backup-Root ist verfügbar;
@@ -186,6 +212,7 @@ In #524 und #644 werden nur die redigierten Felder dokumentiert:
 - Audit-Zeitpunkt und Run-ID;
 - Release-Synchronität;
 - Health-, PM2-, nginx-, Disk-/RAM- und Reboot-Status;
+- die beiden normalisierten Server-Fehlertracking-/E-Mail-Schalter;
 - systemd-/Timer-Gesamtbild;
 - Backup-Paaranzahlen, Alter und checksum-only-Ergebnis;
 - Offsite-Erreichbarkeit/Paarstatus;
