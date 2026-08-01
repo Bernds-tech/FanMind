@@ -1,6 +1,10 @@
 -- FanMind privacy-sparing server error tracking.
 -- Stores no error message, stack, headers, query parameters, request body, customer content or credentials.
 
+begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
+
 create table if not exists public.server_error_events (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -233,3 +237,5 @@ $$;
 
 revoke all on function public.cleanup_server_error_events(integer) from public, anon, authenticated;
 grant execute on function public.cleanup_server_error_events(integer) to service_role;
+
+commit;
