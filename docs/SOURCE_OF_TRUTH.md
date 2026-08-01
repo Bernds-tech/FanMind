@@ -144,6 +144,15 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   Warnung-Kritisch-Recovery-Abnahme auf der reservierten technischen
   Komponente `operations_monitor` ausführen. Timer, Probe und Lifecycle teilen
   ein exklusives Host-Lock; GitHub erhält nur allowlist-redigierte Ergebnisse.
+- Server-Fehlertelemetrie: Der datensparsame Next.js-Hook, die RLS-geschützte
+  Aggregation und das Admin-Operations-Reader-Modul sind implementiert. Ein
+  eigener manueller Production-Control-Weg prüft oder appliziert die
+  SHA-256-gebundene Migration, beweist Warnung, Kritisch und vollständiges
+  Cleanup ausschließlich mit einer reservierten technischen Fingerprint-
+  Referenz und kann danach den Tracking-Schalter rollback-gesichert setzen.
+  Der normale Web-Deploy wendet keine Migration an und aktiviert nichts;
+  kritische E-Mail bleibt in jedem Kontrollmodus ausdrücklich deaktiviert.
+  Eine öffentliche Fehler-Teststrecke existiert nicht.
 - Production-Audit: Ein dauerhaft installierter, commitgebundener und
   fail-closed Read-only-Audit läuft nach jedem erfolgreichen
   Production-Deploy sowie täglich um 04:17 UTC. Er prüft ohne

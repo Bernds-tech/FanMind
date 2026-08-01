@@ -41,7 +41,7 @@ Nicht gespeichert werden:
 - Kontakt-, Nachrichten-, Prompt-, KI- oder Zahlungsinhalte;
 - IP-Adresse oder Browserkennung.
 
-## Migration
+## Migration und kontrollierter Production-Weg
 
 Vor Aktivierung manuell anwenden:
 
@@ -49,7 +49,7 @@ Vor Aktivierung manuell anwenden:
 supabase/migrations/20260718203000_privacy_server_error_tracking.sql
 ```
 
-Die Migration legt an:
+Die Migration ist transaktional, SHA-256-gebunden und legt an:
 
 - `server_error_events` für minimale Ereignismetadaten;
 - `server_error_groups` für Aggregation und Cooldown;
@@ -57,6 +57,13 @@ Die Migration legt an:
 - `cleanup_server_error_events(...)` für die Ereignisaufbewahrung.
 
 RLS ist aktiv. `PUBLIC`, `anon` und `authenticated` erhalten keine Tabellen- oder RPC-Rechte.
+
+Der normale Web-Deploy installiert nur den root-eigenen Runner, die gepinnte
+SQL-Datei, Ergebnisverifier und gehärtete systemd-Units. Er wendet die
+Migration niemals an und ändert die Schalter nicht. Der ausschließlich
+manuelle Workflow `.github/workflows/server-error-production-control.yml`
+bindet jeden Schritt an `main`, das geschützte `production`-Environment, den
+Production-Runner und den exakt live ausgelieferten Commit.
 
 ## Alarmierung
 
@@ -93,21 +100,32 @@ Die E-Mail enthält nur Referenz, Anzahl, Release-Kurzcommit und Link zum Operat
 
 ## Kontrollierte Aktivierung
 
-1. Migration in Supabase Production anwenden.
-2. Tabellen, RLS und Funktionsrechte prüfen.
-3. Deployment vollständig abschließen.
-4. In `.env.production` zunächst nur setzen:
+1. Workflow mit `action=verify` und der Bestätigung
+   `server-error-tracking-production-verify` ausführen.
+2. Nur bei `schema_not_ready` mit `action=apply` und der Bestätigung
+   `server-error-tracking-production-apply` transaktional anwenden.
+3. `verify` unabhängig wiederholen; Tabellen, exakte Spalten, RLS,
+   Browser-Sperren, Indizes, `security definer`/`search_path` und
+   service-role-only Funktionsrechte müssen grün sein.
+4. Mit `action=accept` und
+   `accept-server-error-tracking-production` zwei reservierte synthetische
+   Ereignisse prüfen. Der Lauf muss Warnung, Kritisch, genau eine generische
+   Admin-Meldung und das vollständige Cleanup belegen; echte Routen,
+   Fehlermeldungen und Kundendaten sind ausgeschlossen.
+5. Erst mit `action=activate` und
+   `activate-server-error-tracking-production` rollback-gesichert setzen:
 
 ```text
 FANMIND_SERVER_ERROR_TRACKING_ENABLED=true
 FANMIND_SERVER_ERROR_EMAIL_ENABLED=false
 ```
 
-5. PM2 kontrolliert neu starten.
-6. Einen absichtlich ausgelösten Fehler ausschließlich in einer sicheren internen Testroute oder Testumgebung prüfen.
-7. Kontrollieren, dass weder Fehlermeldung noch Stack, Header, Query oder Inhalt in Supabase gespeichert wurden.
-8. Admin-Meldung und Gruppierung prüfen.
-9. Erst danach E-Mail separat aktivieren und einen kontrollierten Schwellenwerttest durchführen.
+6. PM2 wird kontrolliert rollierend neu geladen; Release, `/api/health` und
+   der vollständige Production-Audit müssen danach unverändert grün sein.
+7. Die E-Mail-freie Storage-Abnahme wird nach Aktivierung wiederholt. Es gibt
+   bewusst keinen öffentlichen oder dauerhaft erreichbaren Fehler-Endpunkt.
+8. E-Mail bleibt eine spätere, getrennte Freigabe und ist nicht Bestandteil
+   dieses Aktivierungswegs.
 
 ## Aufbewahrung
 

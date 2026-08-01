@@ -273,10 +273,11 @@ Ein Release ist für Pilotkunden sicherer, wenn alle Aussagen wahr sind:
 
 ## Serverfehler-Telemetrie
 
-- [ ] Migration `20260718203000_privacy_server_error_tracking.sql` kontrolliert angewendet.
-- [ ] RLS für `server_error_events` und `server_error_groups` aktiv.
-- [ ] Keine Rechte für `PUBLIC`, `anon` oder `authenticated`.
-- [ ] `record_server_error_event(...)` und `cleanup_server_error_events(...)` nur für `service_role` ausführbar.
-- [ ] Keine Fehlermeldungen, Stacks, Header, Query-Parameter, Bodies, IP-Adressen oder Kundendaten gespeichert.
-- [ ] Fehlende Route-Schablone wird als `/unknown` gespeichert und fällt nie auf den realen Request-Pfad zurück.
-- [ ] `FANMIND_SERVER_ERROR_TRACKING_ENABLED` und E-Mail-Schalter erst nach kontrolliertem Test aktivieren.
+- [x] Migration `20260718203000_privacy_server_error_tracking.sql` ist transaktional und checksum-gepinnt; Anwendung bleibt ein separater Production-Schritt.
+- [x] Postflight prüft RLS für `server_error_events` und `server_error_groups`.
+- [x] Postflight sperrt Tabellen- und Funktionsrechte für `PUBLIC`, `anon` und `authenticated`.
+- [x] `record_server_error_event(...)` und `cleanup_server_error_events(...)` werden als `security definer`, festem `search_path` und service-role-only geprüft.
+- [x] Code, Schema und Acceptance speichern keine Fehlermeldungen, Stacks, Header, Query-Parameter, Bodies, IP-Adressen oder Kundendaten.
+- [x] Fehlende Route-Schablone wird als `/unknown` gespeichert und fällt nie auf den realen Request-Pfad zurück.
+- [x] Kontrollweg hält E-Mail aus, nutzt nur eine reservierte technische Fingerprint-Referenz und entfernt alle synthetischen Zeilen wieder.
+- [ ] Migration auf Production verifizieren/anwenden und Tracking rollback-gesichert aktivieren; E-Mail bleibt separat gesperrt.

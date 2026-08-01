@@ -83,6 +83,15 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   exclusive host lock. The lifecycle acceptance must remain main-, release-
   and Production-bound, must never synthesize a real host component, and must
   prove email as audited `noop` before it can pass.
+- Server-error tracking has a separate checksum-pinned Production control
+  path. A normal Web deploy may install its root-owned runner, SQL and
+  hardened units but must never apply the migration or enable tracking.
+  Verify/apply/accept/activate actions must stay `main`-, Production-target-
+  and release-bound, use the protected backup database identity, redact all
+  diagnostics, prove warning/critical/cleanup only with a reserved synthetic
+  fingerprint and keep `FANMIND_SERVER_ERROR_EMAIL_ENABLED=false`. Never add
+  a public error-trigger route or include messages, stacks, headers, query,
+  bodies, IP addresses, CRM content or secrets in acceptance output.
 - The prepared Stripe add-on policy in
   `src/lib/aiTierStripeLifecycle.mjs` is not a live billing integration. Keep
   its workspace target, distinct Price allowlist, single-item, event-order
