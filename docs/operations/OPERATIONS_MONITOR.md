@@ -150,9 +150,13 @@ setzt das installierte, root-eigene Kontrollscript atomar ausschließlich
 `FANMIND_OPERATIONS_EMAIL_ENABLED=false`, aktiviert den Zehn-Minuten-Timer und
 führt den normalen Service einmal aus. Noch innerhalb des atomaren
 Aktivierungsblocks muss außerdem der vollständige installierte Production-Audit
-grün bleiben. Bei einem Fehler werden Environment-Datei und vorheriger
-Timerzustand wiederhergestellt. Der Workflow checkt keinen Branch-Code aus und
-gibt keine Environment-Werte aus.
+grün bleiben. Dieser Abschluss-Audit läuft ausdrücklich als Production-Benutzer
+`ubuntu`, damit er denselben PM2-Kontext wie die regulären Production-Audits
+prüft. Seine ungefilterte Fehlerausgabe bleibt in einer lokalen temporären Datei;
+GitHub erhält bei einem Fehler nur einen begrenzten technischen Statuscode. Bei
+einem Fehler werden Environment-Datei und vorheriger Timerzustand
+wiederhergestellt. Der Workflow checkt keinen Branch-Code aus und gibt keine
+Environment-Werte aus.
 
 ## Timer kontrolliert aktivieren
 

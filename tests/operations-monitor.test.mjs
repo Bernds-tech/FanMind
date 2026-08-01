@@ -237,6 +237,14 @@ test("Production control is main-only, release-bound and runs installed root-own
   assert.match(enableScript, /systemctl enable --now "\$TIMER_UNIT"/);
   assert.match(enableScript, /read-only-production-audit\.sh/);
   assert.match(enableScript, /verify-production-audit-output\.mjs/);
+  assert.match(enableScript, /AUDIT_USER="ubuntu"/);
+  assert.match(
+    enableScript,
+    /sudo -n -u "\$AUDIT_USER" -H[\s\S]*read-only-production-audit\.sh/u,
+  );
+  assert.match(enableScript, /> "\$audit_file" 2>&1/u);
+  assert.match(enableScript, /post_activation_audit_failed/u);
+  assert.match(enableScript, /post_activation_audit_verification_failed/u);
   assert.doesNotMatch(enableScript, /set -x|printenv|cat "\$ENV_FILE"|source "\$ENV_FILE"/);
 
   assert.match(deployment, /scripts\/operations\/enable-operations-monitor\.sh \/usr\/local\/lib\/fanmind-ops\/enable-operations-monitor\.sh/);
