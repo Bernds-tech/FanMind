@@ -18,7 +18,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const VERSION = "fanmind-server-error-migration-1";
+const VERSION = "fanmind-server-error-migration-2";
 const MIGRATION_ID = "20260718203000_privacy_server_error_tracking";
 const MIGRATION_FILE_NAME = `${MIGRATION_ID}.sql`;
 const EXPECTED_MIGRATION_SHA256 =
@@ -253,6 +253,60 @@ end
 $verify$;
 
 select 'SERVER_ERROR_MIGRATION_POSTFLIGHT=PASS';
+rollback;
+`;
+
+const FIXED_CONFLICT_PREFLIGHT_SQL = String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+
+do $verify$
+declare
+  record_function oid := to_regprocedure('public.record_server_error_event(text,text,text,text,text,text,text,text,integer,integer)');
+  record_definition text;
+begin
+  if record_function is null then
+    raise exception 'function_missing';
+  end if;
+  select regexp_replace(lower(pg_get_functiondef(record_function)), '\s+', ' ', 'g')
+    into record_definition;
+  if position('on conflict on constraint server_error_groups_pkey do update set' in record_definition) = 0
+     or position('on conflict (fingerprint) do update set' in record_definition) > 0
+  then
+    raise exception 'conflict_contract_invalid';
+  end if;
+end
+$verify$;
+
+select 'SERVER_ERROR_MIGRATION_CONFLICT_FIX=PASS';
+rollback;
+`;
+
+const LEGACY_CONFLICT_PREFLIGHT_SQL = String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+
+do $verify$
+declare
+  record_function oid := to_regprocedure('public.record_server_error_event(text,text,text,text,text,text,text,text,integer,integer)');
+  record_definition text;
+begin
+  if record_function is null then
+    raise exception 'function_missing';
+  end if;
+  select regexp_replace(lower(pg_get_functiondef(record_function)), '\s+', ' ', 'g')
+    into record_definition;
+  if position('on conflict (fingerprint) do update set' in record_definition) = 0
+     or position('on conflict on constraint server_error_groups_pkey do update set' in record_definition) > 0
+  then
+    raise exception 'legacy_conflict_contract_invalid';
+  end if;
+end
+$verify$;
+
+select 'SERVER_ERROR_MIGRATION_LEGACY_CONFLICT=PASS';
 rollback;
 `;
 
@@ -536,6 +590,18 @@ function ensurePsqlAvailable() {
   if (result.error || result.status !== 0) fail("psql_unavailable");
 }
 
+export function serverErrorMigrationApplyPlan({
+  schemaReady,
+  fixedConflictReady,
+  legacyConflictReady,
+  schemaAbsent,
+}) {
+  if (schemaReady && fixedConflictReady) return "already_applied";
+  if (schemaReady && !fixedConflictReady && legacyConflictReady) return "repair";
+  if (!schemaReady && schemaAbsent) return "apply";
+  return "reject";
+}
+
 function runDatabaseMode(mode, migrationSql) {
   if (typeof process.getuid !== "function" || process.getuid() !== 0) fail("root_required");
   verifyReleaseBinding();
@@ -549,18 +615,35 @@ function runDatabaseMode(mode, migrationSql) {
     }
 
     const currentPostflight = runPsql(POSTFLIGHT_SQL, target, snapshotPath);
+    const schemaReady = psqlPassed(
+      currentPostflight,
+      "SERVER_ERROR_MIGRATION_POSTFLIGHT=PASS",
+    );
+    const fixedConflict = schemaReady
+      ? runPsql(FIXED_CONFLICT_PREFLIGHT_SQL, target, snapshotPath)
+      : null;
+    const fixedConflictReady = Boolean(
+      fixedConflict && psqlPassed(fixedConflict, "SERVER_ERROR_MIGRATION_CONFLICT_FIX=PASS"),
+    );
     if (mode === "--verify") {
-      if (!psqlPassed(currentPostflight, "SERVER_ERROR_MIGRATION_POSTFLIGHT=PASS")) {
+      if (!schemaReady || !fixedConflictReady) {
         fail("schema_not_ready");
       }
       return "verified";
     }
-    if (psqlPassed(currentPostflight, "SERVER_ERROR_MIGRATION_POSTFLIGHT=PASS")) {
-      return "already_applied";
-    }
 
-    const existenceProbe = runPsql(
-      String.raw`\set ON_ERROR_STOP on
+    const legacyConflict = schemaReady && !fixedConflictReady
+      ? runPsql(LEGACY_CONFLICT_PREFLIGHT_SQL, target, snapshotPath)
+      : null;
+    const legacyConflictReady = Boolean(
+      legacyConflict && psqlPassed(
+        legacyConflict,
+        "SERVER_ERROR_MIGRATION_LEGACY_CONFLICT=PASS",
+      ),
+    );
+    const existenceProbe = !schemaReady
+      ? runPsql(
+        String.raw`\set ON_ERROR_STOP on
 begin;
 set transaction read only;
 select case
@@ -570,20 +653,35 @@ select case
   else 'SERVER_ERROR_MIGRATION_SCHEMA=PRESENT'
 end;
 rollback;`,
-      target,
-      snapshotPath,
+        target,
+        snapshotPath,
+      )
+      : null;
+    const schemaAbsent = Boolean(
+      existenceProbe && psqlPassed(existenceProbe, "SERVER_ERROR_MIGRATION_SCHEMA=ABSENT"),
     );
-    if (!psqlPassed(existenceProbe, "SERVER_ERROR_MIGRATION_SCHEMA=ABSENT")) {
+    const applyPlan = serverErrorMigrationApplyPlan({
+      schemaReady,
+      fixedConflictReady,
+      legacyConflictReady,
+      schemaAbsent,
+    });
+    if (applyPlan === "already_applied") return applyPlan;
+    if (applyPlan === "reject") {
       fail("existing_schema_invalid");
     }
 
     const apply = runPsql(migrationSql, target, snapshotPath);
     if (apply.error || apply.status !== 0) fail("apply_failed");
     const postflight = runPsql(POSTFLIGHT_SQL, target, snapshotPath);
-    if (!psqlPassed(postflight, "SERVER_ERROR_MIGRATION_POSTFLIGHT=PASS")) {
+    const conflictPostflight = runPsql(FIXED_CONFLICT_PREFLIGHT_SQL, target, snapshotPath);
+    if (
+      !psqlPassed(postflight, "SERVER_ERROR_MIGRATION_POSTFLIGHT=PASS") ||
+      !psqlPassed(conflictPostflight, "SERVER_ERROR_MIGRATION_CONFLICT_FIX=PASS")
+    ) {
       fail("postflight_failed");
     }
-    return "applied";
+    return applyPlan === "repair" ? "repaired" : "applied";
   } finally {
     rmSync(snapshotDirectory, { recursive: true, force: true });
   }

@@ -3,10 +3,10 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
-const VERSION = "fanmind-server-error-migration-1";
+const VERSION = "fanmind-server-error-migration-2";
 const MAX_INPUT_BYTES = 65536;
 const ACTIONS = new Set(["verify", "apply"]);
-const SUCCESS_STATUSES = new Set(["verified", "applied", "already_applied"]);
+const SUCCESS_STATUSES = new Set(["verified", "applied", "repaired", "already_applied"]);
 const ERROR_CODES = new Set([
   "apply_confirmation_invalid",
   "apply_failed",
@@ -84,7 +84,7 @@ export function verifyServerErrorMigrationLog(source, notBefore, action) {
     ) {
       if (
         (action === "verify" && payload.status !== "verified") ||
-        (action === "apply" && !["applied", "already_applied"].includes(payload.status))
+        (action === "apply" && !["applied", "repaired", "already_applied"].includes(payload.status))
       ) {
         continue;
       }

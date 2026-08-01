@@ -180,6 +180,42 @@ test("Production server-error migration is transactional, checksum-pinned and me
     ]),
     "--verify",
   );
+  assert.equal(
+    migrationRunner.serverErrorMigrationApplyPlan({
+      schemaReady: true,
+      fixedConflictReady: true,
+      legacyConflictReady: false,
+      schemaAbsent: false,
+    }),
+    "already_applied",
+  );
+  assert.equal(
+    migrationRunner.serverErrorMigrationApplyPlan({
+      schemaReady: true,
+      fixedConflictReady: false,
+      legacyConflictReady: true,
+      schemaAbsent: false,
+    }),
+    "repair",
+  );
+  assert.equal(
+    migrationRunner.serverErrorMigrationApplyPlan({
+      schemaReady: false,
+      fixedConflictReady: false,
+      legacyConflictReady: false,
+      schemaAbsent: true,
+    }),
+    "apply",
+  );
+  assert.equal(
+    migrationRunner.serverErrorMigrationApplyPlan({
+      schemaReady: true,
+      fixedConflictReady: false,
+      legacyConflictReady: false,
+      schemaAbsent: false,
+    }),
+    "reject",
+  );
 });
 
 test("migration diagnostics expose only allowlisted Production status", () => {
@@ -189,7 +225,7 @@ test("migration diagnostics expose only allowlisted Production status", () => {
     "private database output that must be ignored",
     JSON.stringify({
       ts: now,
-      version: "fanmind-server-error-migration-1",
+      version: "fanmind-server-error-migration-2",
       level: "error",
       event: "migration_failed",
       action: "verify",
@@ -210,6 +246,20 @@ test("migration diagnostics expose only allowlisted Production status", () => {
   const formatted = migrationLogVerifier.formatServerErrorMigrationDiagnostic(result);
   assert.match(formatted, /SERVER_ERROR_MIGRATION_ERROR=schema_not_ready/u);
   assert.doesNotMatch(formatted, /private database output|must-not-pass/u);
+
+  const repaired = migrationLogVerifier.verifyServerErrorMigrationLog(
+    JSON.stringify({
+      ts: now,
+      version: "fanmind-server-error-migration-2",
+      level: "info",
+      event: "migration_status",
+      action: "apply",
+      status: "repaired",
+    }),
+    notBefore,
+    "apply",
+  );
+  assert.deepEqual(repaired, { action: "apply", status: "repaired", errorCode: null });
 });
 
 test("email-disabled Production acceptance proves warning critical and cleanup", async () => {
