@@ -79,6 +79,30 @@ Vor Aktivierung Migration anwenden:
 supabase/migrations/20260718190000_operations_monitor_components.sql
 ```
 
+Ein normaler Merge oder Web-Deploy wendet diese Migration niemals an. Der
+getrennte Workflow `FanMind Operations Monitor Production Migration` besitzt
+zwei manuelle Aktionen:
+
+- `verify` prüft das bereits installierte Schema ausschließlich read-only;
+- `apply` wendet genau die SHA-256-gebundene Migration einmalig an und führt
+  danach denselben read-only Postflight aus.
+
+Der lokale Offline-Vertrag wird vor Veröffentlichung mit
+`npm run db:operations-monitor:check` geprüft. Dieser Befehl besitzt keinen
+Datenbankzugriff und keine Apply-Option.
+
+Beide Aktionen sind auf `main`, das geschützte GitHub-Environment
+`production`, den Production-Runner und den exakt ausgelieferten Release-
+Commit begrenzt. Der root-eigene Runner nutzt die vorhandene geschützte
+Backup-Datenbankverbindung, bindet sie an die öffentliche Supabase-
+Projektreferenz und übergibt weder Passwort noch Connection-URL an GitHub.
+Die SQL-Datei ist als `0600 root:root` installiert, per SHA-256 festgeschrieben
+und enthält eine einzige Transaktion mit Lock- und Statement-Timeout. Vor dem
+Apply müssen Tabellen, RLS, fehlende Browser-Policies/-Rechte und bestehende
+Komponentenwerte den Basisvertrag erfüllen. Danach werden der exakte
+Komponenten-Constraint und beide Indizes geprüft. GitHub erhält nur einen
+allowlist-gefilterten technischen Ergebniscode.
+
 Der Monitor schreibt ausschließlich technische Metadaten in:
 
 - `system_health_events`;
@@ -166,6 +190,9 @@ FANMIND_OPERATIONS_EMAIL_ENABLED=false
 - eigener root-owned Monitor-Runtime-Pfad, der für `ubuntu` nur les- und
   durchlaufbar ist; root-only Aktivierungscode bleibt davon getrennt;
 - kein automatisches Aktivieren durch Deployment.
+- keine automatische Datenbankmigration durch Deployment;
+- Schema-Apply nur über den checksum-, Production- und Release-gebundenen
+  Einmallauf mit read-only Vorher-/Nachher-Audit;
 - kein E-Mail-Versand durch Probe oder Timer-Aktivierung;
 - Aktivierung nur auf `main`, auf dem Production-Runner und gebunden an den
   exakten bereits ausgelieferten Commit;
