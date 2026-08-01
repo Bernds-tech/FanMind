@@ -4,6 +4,7 @@ set -euo pipefail
 ENV_FILE="/var/www/fanmind/.env.production"
 TIMER_UNIT="fanmind-operations-monitor.timer"
 SERVICE_UNIT="fanmind-operations-monitor.service"
+AUDIT_USER="ubuntu"
 EXPECTED_COMMIT="${1:-}"
 CONFIRMATION="${2:-}"
 
@@ -101,11 +102,17 @@ systemctl start "$SERVICE_UNIT"
 [[ "$(systemctl is-active "$TIMER_UNIT")" == "active" ]] || fail "timer_not_active"
 [[ "$(systemctl show "$SERVICE_UNIT" --property=Result --value --no-pager)" == "success" ]] || fail "service_result_failed"
 
-FANMIND_AUDIT_VERIFIER_PATH=/usr/local/lib/fanmind-ops/verify-backup-artifact.mjs \
-  /usr/local/lib/fanmind-audit/read-only-production-audit.sh > "$audit_file"
-/usr/bin/node /usr/local/lib/fanmind-audit/verify-production-audit-output.mjs \
+if ! sudo -n -u "$AUDIT_USER" -H \
+  env FANMIND_AUDIT_VERIFIER_PATH=/usr/local/lib/fanmind-ops/verify-backup-artifact.mjs \
+  /usr/local/lib/fanmind-audit/read-only-production-audit.sh \
+  > "$audit_file" 2>&1; then
+  fail "post_activation_audit_failed"
+fi
+if ! /usr/bin/node /usr/local/lib/fanmind-audit/verify-production-audit-output.mjs \
   "$audit_file" \
-  "$EXPECTED_COMMIT"
+  "$EXPECTED_COMMIT"; then
+  fail "post_activation_audit_verification_failed"
+fi
 
 activated=true
 echo "OPERATIONS_MONITOR_ACTIVATION=success"
