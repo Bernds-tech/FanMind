@@ -134,6 +134,7 @@ jobs:
           sudo install -d -o root -g root -m 0700 /usr/local/lib/fanmind-ops
           sudo install -d -o root -g root -m 0755 /usr/local/lib/fanmind-audit
           sudo install -d -o root -g root -m 0755 /usr/local/lib/fanmind-monitor
+          test -x /usr/bin/flock
           sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh
           sudo install -o root -g root -m 0750 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs
           sudo install -o root -g root -m 0750 scripts/operations/enqueue-backup-job.mjs /usr/local/lib/fanmind-ops/enqueue-backup-job.mjs
@@ -143,9 +144,11 @@ jobs:
           sudo install -o root -g root -m 0755 scripts/operations/read-only-production-audit.sh /usr/local/lib/fanmind-audit/read-only-production-audit.sh
           sudo install -o root -g root -m 0755 scripts/operations/verify-production-audit-output.mjs /usr/local/lib/fanmind-audit/verify-production-audit-output.mjs
           sudo install -o root -g root -m 0755 scripts/operations/verify-operations-monitor-probe-log.mjs /usr/local/lib/fanmind-audit/verify-operations-monitor-probe-log.mjs
+          sudo install -o root -g root -m 0755 scripts/operations/verify-operations-monitor-lifecycle-log.mjs /usr/local/lib/fanmind-audit/verify-operations-monitor-lifecycle-log.mjs
           sudo install -o root -g root -m 0755 scripts/operations/verify-operations-monitor-migration-log.mjs /usr/local/lib/fanmind-audit/verify-operations-monitor-migration-log.mjs
           sudo install -o root -g root -m 0644 scripts/public-health-policy.mjs /usr/local/lib/public-health-policy.mjs
           sudo install -o root -g root -m 0644 scripts/operations/operations-monitor.mjs /usr/local/lib/fanmind-monitor/operations-monitor.mjs
+          sudo install -o root -g root -m 0644 scripts/operations/operations-monitor-lifecycle.mjs /usr/local/lib/fanmind-monitor/operations-monitor-lifecycle.mjs
           sudo install -o root -g root -m 0750 scripts/operations/enable-operations-monitor.sh /usr/local/lib/fanmind-ops/enable-operations-monitor.sh
           sudo install -o root -g root -m 0750 scripts/operations/operations-monitor-migration-runner.mjs /usr/local/lib/fanmind-ops/operations-monitor-migration-runner.mjs
           sudo install -o root -g root -m 0600 supabase/migrations/20260718190000_operations_monitor_components.sql /usr/local/lib/fanmind-ops/20260718190000_operations_monitor_components.sql
@@ -163,6 +166,7 @@ jobs:
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-retention.timer /etc/systemd/system/fanmind-backup-retention.timer
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-operations-monitor.service /etc/systemd/system/fanmind-operations-monitor.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-operations-monitor-probe.service /etc/systemd/system/fanmind-operations-monitor-probe.service
+          sudo install -o root -g root -m 0644 ops/systemd/fanmind-operations-monitor-lifecycle.service /etc/systemd/system/fanmind-operations-monitor-lifecycle.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-operations-monitor.timer /etc/systemd/system/fanmind-operations-monitor.timer
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-operations-monitor-migration@.service /etc/systemd/system/fanmind-operations-monitor-migration@.service
           sudo install -o root -g root -m 0644 ops/systemd/fanmind-demo-cleanup.service /etc/systemd/system/fanmind-demo-cleanup.service

@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 30. Juli 2026
+Stand: 1. August 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -135,14 +135,15 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 
 - Operations-Grundlage: produktiv aktiv.
 - Release-Checks: automatisch aktiv.
-- Operations-Monitor-Schema: Ein getrennter manueller Production-Workflow ist
-  vorbereitet, um ausschließlich die SHA-256-gebundene
-  Komponenten-Constraint-Migration read-only zu verifizieren oder nach
-  exakter Freigabe transaktional anzuwenden. Der normale Web-Deploy führt
-  keine Datenbankmigration aus. Der Lauf ist an `main`, Production-Runner,
-  ausgelieferten Commit, Supabase-Projektreferenz und die bestehende
-  geschützte Backup-Datenbankverbindung gebunden; Vorher-/Nachher-Audit und
-  allowlist-redigierte Ergebnisse bleiben Pflicht.
+- Operations-Monitor: Die SHA-256-gebundene Komponenten-Constraint-Migration
+  wurde am 1. August 2026 kontrolliert auf Production angewendet und
+  unabhängig read-only verifiziert. Der Zehn-Minuten-Timer ist aktiv,
+  Operations-E-Mail bleibt deaktiviert. Ein normaler Web-Deploy führt
+  weiterhin keine Datenbankmigration aus. Der manuelle Production-Control-
+  Workflow kann nach gesundem Probe zusätzlich eine feste, E-Mail-freie
+  Warnung-Kritisch-Recovery-Abnahme auf der reservierten technischen
+  Komponente `operations_monitor` ausführen. Timer, Probe und Lifecycle teilen
+  ein exklusives Host-Lock; GitHub erhält nur allowlist-redigierte Ergebnisse.
 - Production-Audit: Ein dauerhaft installierter, commitgebundener und
   fail-closed Read-only-Audit läuft nach jedem erfolgreichen
   Production-Deploy sowie täglich um 04:17 UTC. Er prüft ohne
