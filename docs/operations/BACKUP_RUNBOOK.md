@@ -19,10 +19,12 @@ Automatische Backups verwenden age Public-Key-Verschlüsselung. Auf Production l
    3. `20260711161500_disable_verify_backup_until_safe_validation.sql`
    4. `20260711170000_grant_backup_worker_rpc_service_role.sql`
 2. Vor der Worker-Installation bestätigen: `service_role` hat `EXECUTE` auf `public.claim_admin_backup_job(text, integer)`, `PUBLIC`, `anon` und `authenticated` nicht; `service_role` hat außerdem `USAGE` auf Schema `public` für den PostgREST-RPC-Lookup.
-3. Erst danach Worker installieren und starten.
-4. Als Platform-Admin unter `/admin/operations` einen Backup-Job einreihen.
-5. Logs mit `journalctl` prüfen.
-6. `backup_runs` und In-App-Benachrichtigung prüfen.
+3. Erst danach Worker und sicheren Backup-Verifier gemeinsam installieren.
+4. Anschließend `20260718173000_enable_safe_backup_verification.sql` prüfen und anwenden; diese Migration aktiviert ausschließlich den nun vorhandenen festen Jobtyp `verify_backup`.
+5. Worker starten.
+6. Als Platform-Admin unter `/admin/operations` einen Backup-Job und getrennt **Letztes Backup prüfen** einreihen.
+7. Logs mit `journalctl` prüfen.
+8. `backup_runs`, Verification-Lauf, In-App-Benachrichtigung und Audit-Eintrag prüfen.
 
 
 ## Leerlaufprüfung nach Start
@@ -73,4 +75,11 @@ Full backups are complete only when one encrypted `fanmind-full-*.tar.gz.age` an
 
 The server configuration backup deliberately uses Option A: `/etc/fanmind-backup` is included as `sensitive_encrypted_config` because it contains the operational material required to understand and rebuild backup automation. Never log or publish its contents; verify only encrypted artifacts and checksums on Production.
 
-`verify_backup` remains a later hardening item and is not an active job type in this PR. No Production migration or worker installation is performed by Codex. The service-role permission follow-up must be the final migration before installing the worker; otherwise PostgREST calls made with `SUPABASE_SERVICE_ROLE_KEY` can be unable to execute `claim_admin_backup_job` and queued jobs will not be claimed.
+`verify_backup` was intentionally disabled in the original Phase 5 worker PR.
+The later safe verifier and migration
+`20260718173000_enable_safe_backup_verification.sql` re-enable only the fixed
+job type after the verifier is installed. The browser cannot provide paths or
+free parameters; the worker selects the eligible backup run, stays below
+`FANMIND_BACKUP_ROOT` and performs checksum-only validation without decryption.
+The first real job from `/admin/operations` remains a separate Production
+acceptance step.

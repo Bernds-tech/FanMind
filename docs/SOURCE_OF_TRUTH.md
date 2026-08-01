@@ -145,14 +145,19 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   Komponente `operations_monitor` ausführen. Timer, Probe und Lifecycle teilen
   ein exklusives Host-Lock; GitHub erhält nur allowlist-redigierte Ergebnisse.
 - Server-Fehlertelemetrie: Der datensparsame Next.js-Hook, die RLS-geschützte
-  Aggregation und das Admin-Operations-Reader-Modul sind implementiert. Ein
-  eigener manueller Production-Control-Weg prüft oder appliziert die
-  SHA-256-gebundene Migration, beweist Warnung, Kritisch und vollständiges
-  Cleanup ausschließlich mit einer reservierten technischen Fingerprint-
-  Referenz und kann danach den Tracking-Schalter rollback-gesichert setzen.
-  Der normale Web-Deploy wendet keine Migration an und aktiviert nichts;
-  kritische E-Mail bleibt in jedem Kontrollmodus ausdrücklich deaktiviert.
-  Eine öffentliche Fehler-Teststrecke existiert nicht.
+  Aggregation und das Admin-Operations-Reader-Modul sind implementiert. Die
+  SHA-256-gebundene Migration wurde am 1. August 2026 auf Production für den
+  exakt erkannten Legacy-Zustand kontrolliert repariert und unabhängig
+  verifiziert. Die reservierte E-Mail-freie Folge Warnung, Kritisch und
+  vollständiges Cleanup war vor und nach der rollback-gesicherten Aktivierung
+  erfolgreich. Auf Release `04f2a472c57559393dd2d9c89575edf0ce8141ba` ist
+  Tracking aktiv; kritische E-Mail bleibt deaktiviert. Der normale Web-Deploy
+  wendet keine Migration an und aktiviert keinen Schalter für eine neue
+  Umgebung. Eine öffentliche Fehler-Teststrecke existiert nicht. Der getrennte
+  read-only Betriebsfenster-Nachweis vom 1. August 2026 bestätigte nach dem
+  erwarteten Aktivierungs-Reload unveränderte 40 PM2-Restarts, 2.213 Sekunden
+  kontinuierliche Uptime, 8/8 Health, denselben Release-Commit, gesunde lokale
+  und externe Backups sowie die unverändert E-Mail-freie laufende Instanz.
 - Production-Audit: Ein dauerhaft installierter, commitgebundener und
   fail-closed Read-only-Audit läuft nach jedem erfolgreichen
   Production-Deploy sowie täglich um 04:17 UTC. Er prüft ohne

@@ -6,9 +6,9 @@ FanMind erfasst unerwartete serverseitige Next.js-Fehler datensparsam, gruppiert
 
 Die Integration verwendet `src/instrumentation.ts` und den Next.js-Hook `onRequestError` ausschließlich im Node.js-Runtime-Pfad.
 
-## Standardzustand
+## Standard- und Production-Zustand
 
-Nach dem Merge bleibt die Erfassung deaktiviert:
+Repository-Vorlagen und neue Umgebungen bleiben fail-closed deaktiviert:
 
 ```text
 FANMIND_SERVER_ERROR_TRACKING_ENABLED=false
@@ -16,6 +16,19 @@ FANMIND_SERVER_ERROR_EMAIL_ENABLED=false
 ```
 
 Die Supabase-Migration wird nicht automatisch angewendet.
+
+Auf Production wurde die Migration am 1. August 2026 kontrolliert repariert und
+unabhängig verifiziert. Seit dem E-Mail-freien Aktivierungslauf
+[`30708776759`](https://github.com/Bernds-tech/FanMind/actions/runs/30708776759)
+gilt auf dem Release `04f2a472c57559393dd2d9c89575edf0ce8141ba`:
+
+```text
+FANMIND_SERVER_ERROR_TRACKING_ENABLED=true
+FANMIND_SERVER_ERROR_EMAIL_ENABLED=false
+```
+
+Der normale Web-Deploy leitet daraus keine automatische Aktivierung für andere
+Umgebungen ab. E-Mail bleibt eine getrennte, nicht freigegebene Entscheidung.
 
 ## Gespeicherte Felder
 
@@ -126,6 +139,26 @@ FANMIND_SERVER_ERROR_EMAIL_ENABLED=false
    bewusst keinen öffentlichen oder dauerhaft erreichbaren Fehler-Endpunkt.
 8. E-Mail bleibt eine spätere, getrennte Freigabe und ist nicht Bestandteil
    dieses Aktivierungswegs.
+
+## Production-Abnahme am 1. August 2026
+
+- der bekannte Legacy-Zustand der bereits registrierten Migration wurde
+  ausschließlich für die exakt erkannte alte Konfliktform transaktional
+  repariert;
+- ein unabhängiger Verify bestätigte Schema, RLS, Indizes, Funktionen und
+  service-role-only Rechte;
+- die reservierte Acceptance-Folge `warning -> critical -> cleanup` war vor
+  und nach Aktivierung vollständig erfolgreich;
+- Tracking wurde rollback-gesichert aktiviert, E-Mail blieb deaktiviert;
+- der abschließende Production-Audit meldete 8/8 gesunde Komponenten;
+- der Aktivierungs-Reload erhöhte den erwarteten PM2-Restart-Zähler von 39 auf
+  40;
+- der gesonderte read-only Betriebsfenster-Audit
+  [`30706456013`, Versuch 2](https://github.com/Bernds-tech/FanMind/actions/runs/30706456013/attempts/2)
+  bestätigte danach unveränderte 40 Restarts, 2.213 Sekunden kontinuierliche
+  Uptime, denselben Release-Commit, 8/8 Health sowie 7 lokale und 71 externe
+  vollständige Backup-Paare. Da kein weiterer Prozess-Reload stattfand, blieb
+  die bei Aktivierung nachgewiesene E-Mail-freie Laufzeitkonfiguration aktiv.
 
 ## Aufbewahrung
 

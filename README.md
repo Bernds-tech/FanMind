@@ -397,6 +397,16 @@ abnehmen. Timer, Probe und Lifecycle teilen ein exklusives Laufzeit-Lock.
 Zugangsdaten, SQL-Fehlertext und ungefilterte Journalzeilen werden nicht in
 GitHub-Logs ausgegeben.
 
+Die datenschutzsparsame Server-Fehlertelemetrie wurde am 1. August 2026 auf dem
+Release `04f2a472c57559393dd2d9c89575edf0ce8141ba` kontrolliert repariert,
+unabhängig verifiziert, E-Mail-frei abgenommen und rollback-gesichert aktiviert.
+Sie speichert weder Fehlermeldungen noch Stacks, Header, Queryparameter, Bodies,
+IP-Adressen oder Kundendaten. Kritische E-Mails bleiben deaktiviert; ein
+öffentlicher Fehler-Testendpunkt existiert nicht. Der getrennte read-only
+Abschlussaudit vom 1. August 2026 belegte bei unveränderten 40 PM2-Restarts
+2.213 Sekunden kontinuierliche Uptime, 8/8 gesunde Komponenten, denselben
+Release-Commit sowie weiterhin gesunde lokale und externe Backups.
+
 Ein getrenntes Staging wird ausschließlich manuell über `.github/workflows/deploy-staging.yml` auf einem eigenen `fanmind-staging`-Runner ausgerollt. Der Workflow akzeptiert nur einen von `main` erreichbaren Commit, verlangt den Staging-Preflight und startet den separaten PM2-Prozess `fanmind-staging`. Host, Supabase-Staging-Projekt, Stripe-Testmodus, nginx-vHost und synthetische Testdaten bleiben externe Voraussetzungen.
 
 ## Dokumentations-Synchronisierung

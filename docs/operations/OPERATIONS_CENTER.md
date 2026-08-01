@@ -6,16 +6,27 @@
 
 Die Oberfläche zeigt jetzt echte Metadaten aus `backup_runs` und `admin_operation_jobs`: Status, Startzeit, Größe, SHA256, Offsite-Status, Worker, Lease und Ergebnisreferenz. Platform-Admins können Server-Konfigurations-, Datenbank-, Storage- und Vollbackups einreihen. Die API führt niemals ein Backup direkt aus, sondern schreibt nur einen allowlist-geprüften Job.
 
-## Manuelle Schritte nach Merge
+## Aktueller Production-Stand
 
-1. Migration `supabase/migrations/20260711143000_phase_5_backup_worker.sql` prüfen und manuell anwenden.
-2. age-Empfänger und PGPASSFILE auf Production unter `/etc/fanmind-backup/` konfigurieren.
-3. Worker-Dateien nach `/usr/local/lib/fanmind-ops/` installieren.
-4. systemd-Service aktivieren.
-5. Optional rclone-Offsite konfigurieren.
+Backup-Worker, verschlüsselte lokale Backups, Offsite-Übertragung, Retention,
+read-only Production-Audit, isolierter Release-Deploy und Operations-Monitor
+sind produktiv eingerichtet. Die datenschutzsparsame Server-Fehlertelemetrie
+ist seit dem 1. August 2026 aktiv und durch ein getrenntes stabiles
+30-Minuten-Betriebsfenster abgenommen; Operations- und Serverfehler-E-Mails
+bleiben getrennt deaktiviert.
 
-Externe E-Mail-Alarmierung, Sentry/Fehlertracking, Deployment-/Rollback-Umbau, Production/Test-Trennung und Restore-Test bleiben offen.
+Extern beziehungsweise separat offen bleiben der echte isolierte Restore-Drill,
+getrennte Staging-Ressourcen, eine ausdrücklich freizugebende E-Mail-Abnahme und
+die Remote-Retention mit Löschwirkung. Ein Restore bleibt außerhalb der
+Web-Oberfläche.
 
 ## Verify backup scope
 
-The Operations Center can enqueue server-config, database, storage and full backups only. `verify_backup` was removed until validation can be implemented strictly by `backup_runs.id`, with server-side path resolution under `FANMIND_BACKUP_ROOT`, symlink/path-traversal protection and checksum/manifest validation without decrypting Production data.
+The Operations Center can enqueue server-config, database, storage and full
+backups. It can also enqueue the fixed `verify_backup` job. The server selects
+the newest eligible `backup_runs.id`; the browser cannot provide a path,
+artifact or shell parameter. The verifier resolves both references below
+`FANMIND_BACKUP_ROOT`, rejects symlinks and traversal, validates checksum, size
+and manifest metadata and never decrypts Production data. The first real
+checksum-only job from `/admin/operations` remains a separate Production
+acceptance step.
