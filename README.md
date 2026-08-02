@@ -26,8 +26,8 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - KI Standard: in der Starter-Grundgebühr enthalten.
 - KI Plus: zusätzlich `100 €/Monat`.
 - KI Ultra: zusätzlich `200 €/Monat`.
-- Zentrale KI-Stufen-Policy: `src/config/aiTiers.mjs` führt Standard, Plus und Ultra; Plus/Ultra bleiben bis zur Modell-, Kontingent- und Billing-Freigabe nicht automatisch buchbar.
-- Redigierte KI-Stufen-Prüfung: `npm run ai:tiers:readiness` bestätigt aktuell Standard als bereit sowie Plus/Ultra als blockiert, ohne konkrete Stripe-IDs, Modelle, Limits oder Secrets auszugeben.
+- Zentrale KI-Stufen-Policy: `src/config/aiTiers.mjs` führt Standard, Plus und Ultra; Plus/Ultra bleiben bis zur Modell-/Fallback-, Kontingent-, Runtime-, Stripe-/Staging-, Qualitäts-/Kosten-, Rechts-/Steuer- und ausdrücklichen Production-Freigabe nicht automatisch buchbar.
+- Redigierte KI-Stufen-Prüfung: `npm run ai:tiers:readiness` bestätigt aktuell Standard als bereit sowie Plus/Ultra als blockiert. Stufenspezifische externe und technische Nachweise werden nur als feste Blocker-Codes ausgewertet; konkrete Stripe-IDs, Modelle, Limits, Beleg-IDs oder Secrets werden nicht ausgegeben.
 - Nicht aktivierende KI-Stufen-Arbeitsempfehlung:
   `npm run ai:tiers:recommendation` prüft die datierte Modellklassen-,
   Kontingent- und Kostenmatrix offline; produktive KI-Pfade importieren sie

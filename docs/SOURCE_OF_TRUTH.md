@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 1. August 2026
+Stand: 2. August 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -262,9 +262,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - **KI Plus** kostet zusätzlich 100 €/Monat und bleibt bis zur Freigabe der Modelle, Kontingente und Billing-Items Coming Soon.
 - **KI Ultra** kostet zusätzlich 200 €/Monat und bleibt bis zur Freigabe der Modelle, Kontingente und Billing-Items Coming Soon.
 - `src/config/aiTiers.mjs` ist die technische Source of Truth.
-- `npm run ai:tiers:readiness` gleicht Status, Modelle, Kontingente,
-  Stripe-Items und den bestätigten Workspace-Contract redigiert ab; aktuell
-  muss Standard bereit und Plus/Ultra blockiert sein.
+- `npm run ai:tiers:readiness` gleicht Status, Modell-/Fallback-Zuordnung,
+  Kontingente, Stripe-Items, Workspace-Contract, serverseitige
+  Kontingentdurchsetzung, Stripe-Lifecycle, Qualitäts-/Kostenfreigabe,
+  Staging-Akzeptanz, Recht/Steuer, Runtime-Integration und ausdrückliche
+  Production-Aktivierung stufenspezifisch und redigiert ab; aktuell muss
+  Standard bereit und Plus/Ultra blockiert sein.
 - `docs/operations/AI_TIER_DECISION_PROPOSAL.md` bündelt die noch offenen
   Modell-, Kontingent-, Overage- und Wechselentscheidungen ohne
   Aktivierungswirkung. Solange die Matrix nicht vollständig schriftlich
@@ -301,8 +304,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - Der gemeinsame serverseitige Entitlement-Resolver in `src/config/aiTiers.mjs`
   behandelt KI Standard als sicheren Default. Plus/Ultra werden nur bei
   serververwaltetem, aktivem Stripe-Lifecycle, verknüpftem Subscription-Item,
-  gültigem Zeitraum und vollständig positiver zentraler Readiness wirksam;
-  jeder andere Zustand fällt auf Standard zurück.
+  gültigem Zeitraum und vollständig positiver zentraler Readiness wirksam.
+  Die Readiness verlangt zusätzlich getrennte Provider-/Fallback-Modelle,
+  Kontingentdurchsetzung, Lifecycle-/Staging-/Qualitäts-/Kosten-/Rechts-/
+  Steuer-Nachweise, produktive Runtime-Integration und eine ausdrückliche
+  Production-Aktivierung je Stufe; jeder andere Zustand fällt auf Standard
+  zurück.
 - Die server-only Tabelle `workspace_ai_tier_entitlements` und ihr redigierender
   Loader sind als deploy-before-migrate-Brücke vorbereitet. Die Migration ist
   noch nicht auf Staging oder Production angewendet und weder Stripe-Webhooks

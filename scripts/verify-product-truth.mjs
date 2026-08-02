@@ -616,9 +616,19 @@ requireText(
   "Die zentrale KI-Tier-Policy muss den fail-closed Workspace-Entitlement-Vertrag besitzen.",
 );
 requireText(
+  "src/config/aiTiers.mjs",
+  'blockers.push("production_activation")',
+  "Eine bezahlte KI-Stufe darf ohne stufenspezifische Production-Aktivierung niemals bereit werden.",
+);
+requireText(
   "tests/ai-tier-policy.test.mjs",
   "workspace entitlement rejects unknown and client-controlled paid tiers",
   "Client-kontrollierte oder unbekannte KI-Entitlements müssen automatisiert auf Standard zurückfallen.",
+);
+requireText(
+  "tests/ai-tier-policy.test.mjs",
+  "paid tier activation evidence is tier-specific and redacted",
+  "KI-Stufen-Nachweise müssen stufenspezifisch bleiben und dürfen keine Runtime-Werte ausgeben.",
 );
 requireText(
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
