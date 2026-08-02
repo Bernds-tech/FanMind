@@ -62,23 +62,6 @@ function randomToken(byteLength = 24): string {
   return randomBytes(byteLength).toString("base64url");
 }
 
-async function parseError(response: Response): Promise<string> {
-  const payload = (await response.json().catch(() => null)) as {
-    message?: string;
-    msg?: string;
-    error_description?: string;
-    error?: string;
-  } | null;
-
-  return (
-    payload?.message ??
-    payload?.msg ??
-    payload?.error_description ??
-    payload?.error ??
-    "Demo konnte nicht vorbereitet werden."
-  );
-}
-
 function browserCookieOptions() {
   return {
     httpOnly: true,
@@ -272,7 +255,7 @@ export async function POST(request: NextRequest) {
   if (claim.error) {
     console.error("Public demo reservation failed", {
       decision: claim.decision,
-      error: claim.error,
+      code: "demo_reservation_failed",
     });
     return demoJson(
       {
@@ -371,7 +354,7 @@ export async function POST(request: NextRequest) {
     await failPublicDemoStart(reservationId, "auth_user_create_failed");
     return demoJson(
       {
-        error: await parseError(createUserResponse),
+        error: "Demo-User konnte nicht erstellt werden.",
         code: "auth_user_create_failed",
       },
       500,
@@ -470,9 +453,7 @@ export async function POST(request: NextRequest) {
 
     return demoJson(
       {
-        error:
-          workspaceResult.error?.message ??
-          "Demo-Workspace konnte nicht erstellt werden.",
+        error: "Demo-Workspace konnte nicht erstellt werden.",
         code: "workspace_create_failed",
       },
       500,
@@ -504,7 +485,7 @@ export async function POST(request: NextRequest) {
 
     return demoJson(
       {
-        error: await parseError(tokenResponse),
+        error: "Demo-Sitzung konnte nicht erstellt werden.",
         code: "session_create_failed",
       },
       500,

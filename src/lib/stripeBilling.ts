@@ -285,25 +285,27 @@ export async function createStripeCheckoutSession(input: {
     );
   }
 
-  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${secretKey}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params,
-  });
-  const json = (await response.json().catch(() => ({}))) as {
-    id?: string;
-    url?: string;
-    error?: { message?: string };
-  };
-  if (!response.ok) {
-    return {
-      error: json.error?.message ?? "Stripe Checkout konnte nicht gestartet werden.",
+  try {
+    const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
+      signal: AbortSignal.timeout(12000),
+    });
+    const json = (await response.json().catch(() => ({}))) as {
+      id?: string;
+      url?: string;
     };
+    if (!response.ok || !json.id || !json.url) {
+      return { error: "Stripe Checkout konnte nicht gestartet werden." };
+    }
+    return { id: json.id, url: json.url };
+  } catch {
+    return { error: "Stripe Checkout konnte nicht gestartet werden." };
   }
-  return { id: json.id, url: json.url };
 }
 
 export function verifyStripeSignature(
@@ -379,11 +381,11 @@ export async function findWorkspaceIdByStripeReferences(
       if (matchedWorkspaceIds.size > 1) {
         return { status: "retryable_error" };
       }
-    } catch (error) {
+    } catch {
       console.warn(
         "Stripe workspace lookup unavailable",
         column,
-        error instanceof Error ? error.message : "unknown error",
+        "request_failed",
       );
       return { status: "retryable_error" };
     }
@@ -513,10 +515,10 @@ async function isStripeBillingTargetAllowed(
       ownerEmail: owner.email,
       hasTemporaryDemoSession: sessionRows.length > 0,
     });
-  } catch (error) {
+  } catch {
     console.warn(
       "Stripe billing workspace guard unavailable",
-      error instanceof Error ? error.message : "unknown error",
+      "request_failed",
     );
     return STRIPE_BILLING_RETRYABLE_ERROR;
   }
@@ -552,10 +554,10 @@ async function verifyManualSuspendedBillingState(
       rows,
       workspaceId,
     });
-  } catch (error) {
+  } catch {
     console.warn(
       "Stripe billing manual-suspension check unavailable",
-      error instanceof Error ? error.message : "unknown error",
+      "request_failed",
     );
     return STRIPE_BILLING_RETRYABLE_ERROR;
   }
@@ -664,10 +666,10 @@ export async function updateWorkspaceBillingDefensively(
       );
     }
     return updateDecision;
-  } catch (error) {
+  } catch {
     console.warn(
       "Stripe billing update unavailable",
-      error instanceof Error ? error.message : "unknown error",
+      "request_failed",
     );
     return STRIPE_BILLING_RETRYABLE_ERROR;
   }
@@ -694,19 +696,29 @@ export async function updateStripeSubscriptionCancellation(input: {
   params.set("metadata[workspace_id]", input.workspaceId);
   params.set("metadata[fanmind_cancellation_action]", input.action);
 
-  const response = await fetch(
-    `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(input.subscriptionId)}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+  try {
+    const response = await fetch(
+      `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(input.subscriptionId)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params,
+        cache: "no-store",
+        signal: AbortSignal.timeout(12000),
       },
-      body: params,
-      cache: "no-store",
-    },
-  );
-  const json = (await response.json().catch(() => ({}))) as Record<string, unknown> & { error?: { message?: string } };
-  if (!response.ok) return { error: json.error?.message ?? "Stripe-Subscription konnte nicht aktualisiert werden." };
-  return { subscription: json };
+    );
+    const json = (await response.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
+    if (!response.ok) {
+      return { error: "Stripe-Subscription konnte nicht aktualisiert werden." };
+    }
+    return { subscription: json };
+  } catch {
+    return { error: "Stripe-Subscription konnte nicht aktualisiert werden." };
+  }
 }

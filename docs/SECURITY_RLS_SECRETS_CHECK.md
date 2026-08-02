@@ -58,6 +58,9 @@ Diese Werte dürfen öffentlich sein, müssen aber trotzdem korrekt gesetzt sein
 - [ ] `.env.local` ist nicht committed.
 - [ ] `.env.production` liegt nur auf dem Server und nicht in Git.
 - [ ] Keine echten Secrets in Issues, PRs, Screenshots, Logs oder Dokumentation.
+- [ ] API-Antworten und Runtime-Logs geben keine Rohfehler von Supabase,
+      Stripe, Storage, Telegram oder anderen Providern aus; Browsergrenzen
+      verwenden feste Fehlercodes und redigierte Meldungen.
 - [ ] `FANMIND_ADMIN_EMAILS` ist in Production gesetzt, wenn Adminbereich genutzt wird.
 - [ ] Es gibt keine hardcodierten echten Admin-E-Mail-Fallbacks.
 - [ ] Alle Service-Role-Zugriffe laufen serverseitig.
@@ -195,6 +198,8 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 - [ ] `/api/demo/start` nutzt Service Role nur serverseitig.
 - [ ] `/api/inquiries` validiert, rate-limitiert und speichert serverseitig.
 - [ ] `/api/billing/checkout` prüft Session, Workspace und Plan/Commercial Option.
+- [ ] Browserbasierte schreibende Routen prüfen den vertrauenswürdigen Origin
+      und begrenzen JSON-Request-Bodies vor dem Parsen.
 - [ ] `/api/stripe/webhook` prüft Stripe-Signatur.
 - [ ] `/api/webhooks/meta` prüft Meta-Signatur, sofern Secret gesetzt ist.
 - [ ] `/api/integrations/telegram/send-message` ist nicht Teil der Standarddemo und muss feature-geflaggt, admin-/pilot-only oder deaktiviert sein, sofern nicht explizit freigegeben.

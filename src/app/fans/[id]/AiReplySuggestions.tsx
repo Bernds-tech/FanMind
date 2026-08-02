@@ -607,6 +607,7 @@ export function AiReplySuggestions({
             <textarea
               value={telegramDraft}
               onChange={(event) => setTelegramDraft(event.target.value)}
+              maxLength={4096}
               placeholder="Geprüften Telegram-Antwortentwurf eingeben …"
               rows={5}
             />

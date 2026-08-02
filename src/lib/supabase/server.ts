@@ -1457,20 +1457,36 @@ export async function sendManualTelegramMessage(input: {
   workspaceId: string;
   contactId: string;
   text: string;
-}): Promise<{ message: ConversationMessageRow | null; error: Error | null }> {
+}): Promise<{
+  message: ConversationMessageRow | null;
+  error: Error | null;
+  errorCode:
+    | "telegram_not_configured"
+    | "invalid_text"
+    | "conversation_lookup_failed"
+    | "chat_not_found"
+    | "bot_blocked"
+    | "provider_unavailable"
+    | "provider_rejected"
+    | "message_persist_failed"
+    | null;
+}> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
     return {
       message: null,
-      error: new Error(
-        "Telegram-Bot-Token ist serverseitig nicht konfiguriert.",
-      ),
+      error: new Error("Telegram ist serverseitig nicht konfiguriert."),
+      errorCode: "telegram_not_configured",
     };
   }
 
   const text = input.text.trim();
-  if (!text) {
-    return { message: null, error: new Error("Antworttext ist erforderlich.") };
+  if (!text || text.length > 4096) {
+    return {
+      message: null,
+      error: new Error("Antworttext ist ungültig."),
+      errorCode: "invalid_text",
+    };
   }
 
   const conversationResult = await postgrestSelect<ConversationRow>(
@@ -1489,9 +1505,8 @@ export async function sendManualTelegramMessage(input: {
   if (conversationResult.error) {
     return {
       message: null,
-      error: new Error(
-        `Telegram-Konversation konnte nicht geladen werden: ${conversationResult.error.message}`,
-      ),
+      error: new Error("Telegram-Konversation konnte nicht geladen werden."),
+      errorCode: "conversation_lookup_failed",
     };
   }
 
@@ -1501,17 +1516,28 @@ export async function sendManualTelegramMessage(input: {
     return {
       message: null,
       error: new Error("Kein Telegram-Chat für diesen Kontakt gefunden."),
+      errorCode: "chat_not_found",
     };
   }
 
-  const telegramResponse = await fetch(
-    `https://api.telegram.org/bot${botToken}/sendMessage`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    },
-  );
+  let telegramResponse: Response;
+  try {
+    telegramResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text }),
+        signal: AbortSignal.timeout(12000),
+      },
+    );
+  } catch {
+    return {
+      message: null,
+      error: new Error("Telegram ist derzeit nicht erreichbar."),
+      errorCode: "provider_unavailable",
+    };
+  }
   const telegramData = (await telegramResponse.json().catch(() => null)) as {
     ok?: boolean;
     description?: string;
@@ -1521,12 +1547,16 @@ export async function sendManualTelegramMessage(input: {
   if (!telegramResponse.ok || !telegramData?.ok) {
     const description = telegramData?.description ?? "Telegram API Fehler";
     const lower = description.toLowerCase();
-    const safeMessage = lower.includes("bot was blocked")
-      ? "Telegram-Versand fehlgeschlagen: Bot wurde blockiert."
+    const errorCode = lower.includes("bot was blocked")
+      ? "bot_blocked"
       : lower.includes("chat not found")
-        ? "Telegram-Versand fehlgeschlagen: Chat nicht gefunden."
-        : `Telegram-Versand fehlgeschlagen: ${description}`;
-    return { message: null, error: new Error(safeMessage) };
+        ? "chat_not_found"
+        : "provider_rejected";
+    return {
+      message: null,
+      error: new Error("Telegram-Versand wurde vom Anbieter abgelehnt."),
+      errorCode,
+    };
   }
 
   const saved = await createMetaTestConversationMessage({
@@ -1547,7 +1577,13 @@ export async function sendManualTelegramMessage(input: {
     authorLabel: "FanMind Team",
   });
 
-  return { message: saved.message, error: saved.error };
+  return {
+    message: saved.message,
+    error: saved.error
+      ? new Error("Telegram-Nachricht konnte nicht dokumentiert werden.")
+      : null,
+    errorCode: saved.error ? "message_persist_failed" : null,
+  };
 }
 
 export async function createMetaWebhookDebugEvent(input: {
