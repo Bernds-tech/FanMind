@@ -5,6 +5,8 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  cleanupWorkerErrorCode,
+  normalizeCleanupCount,
   normalizeCleanupErrorCodes,
   parseEnvText,
   runDemoCleanup,
@@ -36,13 +38,34 @@ test("normalizeCleanupErrorCodes accepts only bounded machine-readable codes", (
     normalizeCleanupErrorCodes([
       "demo_delete_workspace_failed",
       "DEMO_DELETE_WORKSPACE_FAILED",
-      "cleanup:retry-1",
+      "demo_identity_not_temporary",
       "contains spaces",
+      "plausible_but_unknown_code",
       "secret=value",
       123,
       null,
     ]),
-    ["demo_delete_workspace_failed", "cleanup:retry-1"],
+    ["demo_delete_workspace_failed", "demo_identity_not_temporary"],
+  );
+});
+
+test("cleanup counts and worker exceptions are bounded before logging", () => {
+  assert.equal(normalizeCleanupCount(0), 0);
+  assert.equal(normalizeCleanupCount(100), 100);
+  assert.equal(normalizeCleanupCount(101), null);
+  assert.equal(normalizeCleanupCount("1"), null);
+  assert.equal(normalizeCleanupCount(Number.NaN), null);
+  assert.equal(
+    cleanupWorkerErrorCode(
+      Object.assign(new Error("token=live-secret"), {
+        code: "demo_cleanup_request_failed",
+      }),
+    ),
+    "demo_cleanup_request_failed",
+  );
+  assert.equal(
+    cleanupWorkerErrorCode(new Error("token=live-secret\nhttps://private.example")),
+    "demo_cleanup_failed",
   );
 });
 
@@ -200,6 +223,23 @@ test("runDemoCleanup skips safely when cleanup secret is missing", async () => {
   }
 });
 
+test("runDemoCleanup does not expose unreadable ENV paths or filesystem details", async () => {
+  const logs = [];
+  const sensitivePath = "/private/customer/token=live-secret/.env.production";
+  const result = await runDemoCleanup({
+    envFile: sensitivePath,
+    errorLog: (message) => logs.push(message),
+  });
+
+  assert.deepEqual(result, {
+    skipped: true,
+    ok: false,
+    reason: "env_unreadable",
+  });
+  assert.equal(logs.join("\n"), "FANMIND_DEMO_CLEANUP_SKIPPED=env_unreadable");
+  assert.doesNotMatch(logs.join("\n"), /private|token|live-secret|ENOENT/u);
+});
+
 test("runDemoCleanup sends a bearer secret and reports counts", async () => {
   const directory = await mkdtemp(join(tmpdir(), "fanmind-demo-cleanup-"));
   const envFile = join(directory, ".env.production");
@@ -273,12 +313,57 @@ test("runDemoCleanup reports only safe endpoint error codes", async () => {
         }),
         log: (message) => logs.push(message),
       }),
-      /completed with 1 failed item\(s\).*demo_delete_workspace_failed/u,
+      /demo_cleanup_items_failed/u,
     );
 
     const output = logs.join("\n");
     assert.match(output, /error_codes=demo_delete_workspace_failed/u);
     assert.doesNotMatch(output, /unsafe|secret=value/u);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("runDemoCleanup reduces network and malformed-response failures to fixed codes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "fanmind-demo-cleanup-"));
+  const envFile = join(directory, ".env.production");
+  await writeFile(
+    envFile,
+    `FANMIND_DEMO_CLEANUP_SECRET=${"c".repeat(64)}\n`,
+    "utf8",
+  );
+
+  try {
+    await assert.rejects(
+      runDemoCleanup({
+        envFile,
+        fetchImpl: async () => {
+          throw new Error("token=live-secret https://private.example/customer");
+        },
+      }),
+      (error) => {
+        assert.equal(error.message, "demo_cleanup_request_failed");
+        assert.doesNotMatch(error.message, /token|private|customer/u);
+        return true;
+      },
+    );
+
+    await assert.rejects(
+      runDemoCleanup({
+        envFile,
+        fetchImpl: async () => ({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ok: true,
+            claimed: "1",
+            deleted: 1,
+            failed: 0,
+          }),
+        }),
+      }),
+      /demo_cleanup_response_invalid/u,
+    );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

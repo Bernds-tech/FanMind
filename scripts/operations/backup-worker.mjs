@@ -11,8 +11,77 @@ import { verifyBackupArtifact } from './verify-backup-artifact.mjs';
 
 const VERSION = 'phase5-backup-worker-5';
 const JOBS = new Set(['backup_server_config','backup_database','backup_storage','backup_full','verify_backup']);
+const SAFE_BACKUP_WORKER_ERROR_CODES = new Set([
+  'archive_entry_escape_after_extract',
+  'archive_entry_missing_after_extract',
+  'archive_listing_mismatch',
+  'backup_artifact_outside_root',
+  'backup_checksum_outside_root',
+  'backup_checksum_pair_mismatch',
+  'backup_destination_exists',
+  'backup_run_sha256_mismatch',
+  'backup_run_size_mismatch',
+  'checksum_filename_mismatch',
+  'checksum_mismatch',
+  'duplicate_full_backup_part_type',
+  'duplicate_storage_manifest_path',
+  'file_changed_during_read',
+  'file_not_readable',
+  'file_not_regular',
+  'file_read_failed',
+  'file_size_invalid',
+  'full_manifest_missing',
+  'full_manifest_part_count_mismatch',
+  'full_manifest_part_mismatch',
+  'full_manifest_required_part_missing',
+  'invalid_backup_type',
+  'invalid_checksum_file',
+  'invalid_full_manifest_part',
+  'invalid_production_commit',
+  'invalid_storage_manifest_entry',
+  'job_type_not_allowed',
+  'manifest_file_missing',
+  'manifest_file_not_regular',
+  'manifest_path_escape',
+  'nested_full_backup_not_allowed',
+  'offsite_checksum_upload_failed_cleanup_failed',
+  'pm2_dump_file_unreadable',
+  'sha256_mismatch_after_copy',
+  'storage_bucket_mismatch',
+  'storage_download_failed',
+  'storage_downloaded_count_mismatch',
+  'storage_duplicate_object_path',
+  'storage_file_checksum_mismatch',
+  'storage_file_size_mismatch',
+  'storage_listed_count_mismatch',
+  'storage_manifest_files_missing',
+  'storage_manifest_missing',
+  'storage_object_count_mismatch',
+  'storage_pagination_guard_exceeded',
+  'storage_total_size_mismatch',
+  'stream_unavailable',
+  'unknown_backup_type',
+  'unsafe_archive_entry',
+  'unsafe_archive_entry_type',
+  'unsafe_extracted_entry_type',
+  'unsafe_extracted_link_count',
+  'unsupported_backup_type',
+  'verifiable_backup_not_found',
+  'verification_command_failed',
+]);
+const SAFE_BACKUP_WORKER_FALLBACK_CODES = new Set([
+  'backup_claim_failed',
+  'backup_worker_failed',
+  'notification_persist_failed',
+]);
 const STORAGE_PAGE_SIZE = Math.min(Math.max(Number(process.env.FANMIND_STORAGE_BACKUP_PAGE_SIZE || 1000), 1), 1000);
-const WORKER_ID = process.env.FANMIND_BACKUP_WORKER_ID || `fanmind-backup-${hostname() || 'worker'}-${process.pid}`;
+function normalizeWorkerId(value) {
+  const candidate = typeof value === 'string' ? value.trim() : '';
+  if (/^fanmind-[a-z0-9-]{1,64}-backup-worker$/u.test(candidate)) return candidate;
+  const host = String(hostname() || 'worker').toLowerCase().replace(/[^a-z0-9-]/gu, '-').slice(0, 48) || 'worker';
+  return `fanmind-${host}-${process.pid}-backup-worker`;
+}
+const WORKER_ID = normalizeWorkerId(process.env.FANMIND_BACKUP_WORKER_ID);
 const DEFAULT_BACKUP_POLL_MS = 30000;
 const DEFAULT_BACKUP_HEARTBEAT_MS = 300000;
 let stopping = false;
@@ -22,6 +91,20 @@ process.on('SIGINT', () => { stopping = true; log('info', 'sigint_received'); })
 function required(name) { const value = process.env[name]; if (!value) throw new Error(`${name}_missing`); return value; }
 function requireSupabaseUrl() { return required('NEXT_PUBLIC_SUPABASE_URL').replace(/\/$/,''); }
 function requireServiceKey() { return required('SUPABASE_SERVICE_ROLE_KEY'); }
+function backupWorkerErrorCode(error, fallback='backup_worker_failed') {
+  const code = typeof error?.code === 'string' ? error.code : '';
+  const message = error instanceof Error ? error.message : '';
+  for (const candidate of [code, message]) {
+    if (SAFE_BACKUP_WORKER_ERROR_CODES.has(candidate)) return candidate;
+  }
+  if (/^supabase_\d{3}$/u.test(message)) return 'supabase_request_failed';
+  if (/^[A-Z][A-Z0-9_]{1,100}_missing$/u.test(message)) return 'backup_configuration_missing';
+  if (/^[^\s]+_exit_-?\d+$/u.test(message)) return 'backup_process_failed';
+  if (/^(?:EACCES|EEXIST|EIO|EISDIR|ELOOP|EMFILE|ENOENT|ENOSPC|ENOTDIR|EPERM|EROFS|EXDEV)$/u.test(code)) return 'backup_filesystem_failed';
+  return SAFE_BACKUP_WORKER_FALLBACK_CODES.has(fallback)
+    ? fallback
+    : 'backup_worker_failed';
+}
 function log(level, event, meta = {}) { console.log(JSON.stringify({ ts:new Date().toISOString(), level, event, worker_id:WORKER_ID, ...redact(meta) })); }
 function redact(value) { return JSON.parse(JSON.stringify(value, (k, v) => /key|secret|password|token|pgpass|authorization|dump/i.test(k) ? '[redacted]' : v)); }
 function restUrl(table, query='') { return `${requireSupabaseUrl()}/rest/v1/${table}${query}`; }
@@ -45,7 +128,7 @@ async function copyToPrivateTemp(source, target) {
 async function existsReadable(file) { await access(file, constants.R_OK); return file; }
 async function insert(table, row) { return (await api(restUrl(table), { method:'POST', body:JSON.stringify(row) }))[0]; }
 async function patch(table, id, row) { return api(restUrl(table, `?id=eq.${encodeURIComponent(id)}`), { method:'PATCH', body:JSON.stringify(row) }); }
-async function notify(severity, title, message, source, technical_reference) { await insert('admin_notifications', { category:severity, severity, title, message, source, technical_reference, metadata:{ worker_id:WORKER_ID } }).catch(e => log('warn','notification_failed',{error:e.message})); }
+async function notify(severity, title, message, source, technical_reference) { await insert('admin_notifications', { category:severity, severity, title, message, source, technical_reference, metadata:{ worker_id:WORKER_ID } }).catch(e => log('warn','notification_failed',{error_code:backupWorkerErrorCode(e, 'notification_persist_failed')})); }
 async function audit(action, outcome, metadata={}) { await insert('operations_audit_log', { action, outcome, target_table:'admin_operation_jobs', severity: outcome === 'success' ? 'info' : 'warning', metadata }).catch(()=>{}); }
 async function heartbeat(status='healthy') { await insert('system_health_events', { component:'backup_worker', status, severity:status==='healthy'?'info':'warning', summary:`Backup worker heartbeat: ${status}`, technical_reference:WORKER_ID, metadata:{ version:VERSION } }).catch(()=>{}); }
 function parsePositiveInt(value, fallback) { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback; }
@@ -181,7 +264,7 @@ async function offsite(file) {
     checksum_reference:`${remote}:${remotePath}/${basename(file)}.sha256`,
   };
 }
-async function handle(job) { if (!JOBS.has(job.job_type)) throw new Error('job_type_not_allowed'); await patch('admin_operation_jobs', job.id, { status:'running', started_at:new Date().toISOString(), lease_until:new Date(Date.now()+900000).toISOString() }); if (job.job_type === 'verify_backup') { await verifyLatestBackup(job); return; } const tmp = await mkdtemp(join(tmpdir(), 'fanmind-backup-')); try { const start = Date.now(); let result; if (job.job_type === 'backup_server_config') result = await createServerConfig(tmp); else if (job.job_type === 'backup_database') result = await createDatabase(tmp); else if (job.job_type === 'backup_storage') result = await createStorage(tmp); else result = await createFull(tmp); const { final, checksumFinal } = await moveAndValidate(result); const off = await offsite(final).catch(e => ({ status:'failed', error:e.message })); const status = off.status === 'not_configured' ? 'offsite_pending' : off.status === 'failed' ? 'degraded' : 'succeeded'; const runRow = await insert('backup_runs', { backup_type: result.manifest.backup_type, status, severity: status === 'succeeded' ? 'info':'warning', finished_at:new Date().toISOString(), storage_reference:final, checksum_reference:checksumFinal, sha256:result.sha256, size_bytes:result.size_bytes, validation_status:'passed', offsite_status:off.status, offsite_reference:off.reference || null, job_id:job.id, worker_id:WORKER_ID, duration_ms:Date.now()-start, manifest:{...result.manifest, checksum_reference:checksumFinal, offsite_checksum_reference:off.checksum_reference || null} }); await patch('admin_operation_jobs', job.id, { status:'succeeded', finished_at:new Date().toISOString(), result_reference:runRow.id, lease_until:null }); await notify(status === 'succeeded' ? 'info':'warning', status === 'succeeded' ? 'Backup erfolgreich' : 'Backup lokal erfolgreich, Offsite ausstehend', `${job.job_type} wurde verarbeitet.`, 'backup_worker', runRow.id); await audit(job.job_type, 'success', { backup_run_id:runRow.id, offsite_status:off.status }); } finally { await rm(tmp, { recursive:true, force:true }); } }
-async function loop() { log('info','worker_start',{version:VERSION}); let lastHeartbeatAt = 0; while (!stopping) { const now = Date.now(); if (now - lastHeartbeatAt >= backupHeartbeatMs()) { await heartbeat(); lastHeartbeatAt = now; } const claimResponse = await rpc('claim_admin_backup_job', { p_worker_id:WORKER_ID, p_lease_seconds:900 }).catch(e => { log('warn','claim_failed',{error:e.message}); return null; }); const job = normalizeClaimedJob(claimResponse); if (!job) { if (isUnsupportedClaimedJob(claimResponse)) { const unsupportedJob = firstClaimResponseRow(claimResponse); const msg = 'job_type_not_allowed'; await patch('admin_operation_jobs', unsupportedJob.id, { status:'failed', finished_at:new Date().toISOString(), error_code:'job', error_message:msg, lease_until:null }).catch(()=>{}); log('warn','job_rejected',{job_id:unsupportedJob.id, job_type:unsupportedJob.job_type, error:msg}); } await sleep(backupPollMs()); continue; } log('info','job_claimed',{job_id:job.id, job_type:job.job_type}); try { await handle(job); } catch(e) { const msg = e instanceof Error ? e.message.replace(/[^a-zA-Z0-9_.:-]/g,'_').slice(0,160) : 'unknown_error'; await patch('admin_operation_jobs', job.id, { status:'failed', finished_at:new Date().toISOString(), error_code:msg.split('_')[0] || 'backup_failed', error_message:msg, lease_until:null }).catch(()=>{}); await notify('critical','Backup fehlgeschlagen', `${job.job_type} ist fehlgeschlagen.`, 'backup_worker', job.id); await audit(job.job_type, 'failure', { error_code:msg }); log('error','job_failed',{job_id:job.id,error:msg}); } } log('info','worker_stop'); }
-export { encryptedFinalize, createFull, createStorage, walkStorage, listStorage, placeBackupPair, moveAndValidate, offsite, createServerConfig, normalizeClaimedJob, backupPollMs, backupHeartbeatMs, validatedLocalBackupPair, verifyLatestBackup, __setBackupWorkerTestHooks, JOBS };
-if (import.meta.url === pathToFileURL(process.argv[1]).href) loop().catch(e => { log('error','fatal',{error:e.message}); process.exit(2); });
+async function handle(job) { if (!JOBS.has(job.job_type)) throw new Error('job_type_not_allowed'); await patch('admin_operation_jobs', job.id, { status:'running', started_at:new Date().toISOString(), lease_until:new Date(Date.now()+900000).toISOString() }); if (job.job_type === 'verify_backup') { await verifyLatestBackup(job); return; } const tmp = await mkdtemp(join(tmpdir(), 'fanmind-backup-')); try { const start = Date.now(); let result; if (job.job_type === 'backup_server_config') result = await createServerConfig(tmp); else if (job.job_type === 'backup_database') result = await createDatabase(tmp); else if (job.job_type === 'backup_storage') result = await createStorage(tmp); else result = await createFull(tmp); const { final, checksumFinal } = await moveAndValidate(result); const off = await offsite(final).catch(() => ({ status:'failed' })); const status = off.status === 'not_configured' ? 'offsite_pending' : off.status === 'failed' ? 'degraded' : 'succeeded'; const runRow = await insert('backup_runs', { backup_type: result.manifest.backup_type, status, severity: status === 'succeeded' ? 'info':'warning', finished_at:new Date().toISOString(), storage_reference:final, checksum_reference:checksumFinal, sha256:result.sha256, size_bytes:result.size_bytes, validation_status:'passed', offsite_status:off.status, offsite_reference:off.reference || null, job_id:job.id, worker_id:WORKER_ID, duration_ms:Date.now()-start, manifest:{...result.manifest, checksum_reference:checksumFinal, offsite_checksum_reference:off.checksum_reference || null} }); await patch('admin_operation_jobs', job.id, { status:'succeeded', finished_at:new Date().toISOString(), result_reference:runRow.id, lease_until:null }); await notify(status === 'succeeded' ? 'info':'warning', status === 'succeeded' ? 'Backup erfolgreich' : 'Backup lokal erfolgreich, Offsite ausstehend', `${job.job_type} wurde verarbeitet.`, 'backup_worker', runRow.id); await audit(job.job_type, 'success', { backup_run_id:runRow.id, offsite_status:off.status }); } finally { await rm(tmp, { recursive:true, force:true }); } }
+async function loop() { log('info','worker_start',{version:VERSION}); let lastHeartbeatAt = 0; while (!stopping) { const now = Date.now(); if (now - lastHeartbeatAt >= backupHeartbeatMs()) { await heartbeat(); lastHeartbeatAt = now; } const claimResponse = await rpc('claim_admin_backup_job', { p_worker_id:WORKER_ID, p_lease_seconds:900 }).catch(e => { log('warn','claim_failed',{error_code:backupWorkerErrorCode(e, 'backup_claim_failed')}); return null; }); const job = normalizeClaimedJob(claimResponse); if (!job) { if (isUnsupportedClaimedJob(claimResponse)) { const unsupportedJob = firstClaimResponseRow(claimResponse); const msg = 'job_type_not_allowed'; await patch('admin_operation_jobs', unsupportedJob.id, { status:'failed', finished_at:new Date().toISOString(), error_code:msg, error_message:msg, lease_until:null }).catch(()=>{}); log('warn','job_rejected',{job_id:unsupportedJob.id,error_code:msg}); } await sleep(backupPollMs()); continue; } log('info','job_claimed',{job_id:job.id, job_type:job.job_type}); try { await handle(job); } catch(e) { const errorCode = backupWorkerErrorCode(e); await patch('admin_operation_jobs', job.id, { status:'failed', finished_at:new Date().toISOString(), error_code:errorCode, error_message:errorCode, lease_until:null }).catch(()=>{}); await notify('critical','Backup fehlgeschlagen', `${job.job_type} ist fehlgeschlagen.`, 'backup_worker', job.id); await audit(job.job_type, 'failure', { error_code:errorCode }); log('error','job_failed',{job_id:job.id,error_code:errorCode}); } } log('info','worker_stop'); }
+export { encryptedFinalize, createFull, createStorage, walkStorage, listStorage, placeBackupPair, moveAndValidate, offsite, createServerConfig, normalizeClaimedJob, normalizeWorkerId, backupPollMs, backupHeartbeatMs, backupWorkerErrorCode, validatedLocalBackupPair, verifyLatestBackup, __setBackupWorkerTestHooks, JOBS };
+if (import.meta.url === pathToFileURL(process.argv[1]).href) loop().catch(e => { log('error','fatal',{error_code:backupWorkerErrorCode(e)}); process.exit(2); });

@@ -56,6 +56,58 @@ const serviceRoleGrantMigration = await readFile(new URL('../supabase/migrations
 const enableVerificationMigration = await readFile(new URL('../supabase/migrations/20260718173000_enable_safe_backup_verification.sql', import.meta.url), 'utf8');
 const rpcPermissionProof = await readFile(new URL('./backup-worker-rpc-permissions.sql', import.meta.url), 'utf8');
 
+test('backup worker persists and logs only fixed error codes', () => {
+  assert.equal(
+    worker.normalizeWorkerId('fanmind-prod-01-backup-worker'),
+    'fanmind-prod-01-backup-worker',
+  );
+  assert.match(
+    worker.normalizeWorkerId('token=live-secret'),
+    /^fanmind-[a-z0-9-]+-backup-worker$/u,
+  );
+  assert.doesNotMatch(
+    worker.normalizeWorkerId('token=live-secret'),
+    /token|live-secret/u,
+  );
+  assert.equal(
+    worker.backupWorkerErrorCode(new Error('invalid_checksum_file')),
+    'invalid_checksum_file',
+  );
+  assert.equal(
+    worker.backupWorkerErrorCode(new Error('supabase_503')),
+    'supabase_request_failed',
+  );
+  assert.equal(
+    worker.backupWorkerErrorCode(new Error('SUPABASE_SERVICE_ROLE_KEY_missing')),
+    'backup_configuration_missing',
+  );
+  assert.equal(
+    worker.backupWorkerErrorCode(new Error('/private/bin/secret-tool_exit_9')),
+    'backup_process_failed',
+  );
+  assert.equal(
+    worker.backupWorkerErrorCode(
+      Object.assign(new Error('/private/backups/customer.dump.age'), { code:'EACCES' }),
+    ),
+    'backup_filesystem_failed',
+  );
+  const sensitive = 'token=live-secret\nurl=https://private.example/customer';
+  assert.equal(
+    worker.backupWorkerErrorCode(new Error(sensitive)),
+    'backup_worker_failed',
+  );
+  assert.equal(
+    worker.backupWorkerErrorCode(new Error(sensitive), 'backup_claim_failed'),
+    'backup_claim_failed',
+  );
+  assert.equal(
+    worker.backupWorkerErrorCode(new Error(sensitive), sensitive),
+    'backup_worker_failed',
+  );
+  assert.doesNotMatch(workerSource, /error\s*:\s*e\.message/u);
+  assert.doesNotMatch(workerSource, /error_message\s*:\s*e\.message/u);
+});
+
 
 
 test('backup release env helper writes one root-only release commit line atomically', async () => {

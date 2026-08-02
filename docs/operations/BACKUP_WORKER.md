@@ -92,7 +92,7 @@ Nach erfolgreichem Deployment wird ein bereits aktiver `fanmind-backup-worker.se
 
 ## Sicherheit
 
-Der Worker nutzt `spawn(..., { shell:false })`, feste Jobtypen und feste Backup-Pfade. Browserdaten werden nicht als Shell-Argumente oder Dateipfade verwendet. Logs sind strukturiert und redigieren Key-/Secret-/Token-Felder. Restore ist nicht implementiert.
+Der Worker nutzt `spawn(..., { shell:false })`, feste Jobtypen und feste Backup-Pfade. Browserdaten werden nicht als Shell-Argumente oder Dateipfade verwendet. Logs sind strukturiert und redigieren Key-/Secret-/Token-Felder. Zusätzlich werden Exception-Texte niemals direkt in Journal, `admin_operation_jobs` oder `operations_audit_log` übernommen: bekannte interne Fehler werden auf eine feste Allowlist reduziert, Prozess-, Supabase-, Konfigurations- und Dateisystemfehler erhalten generische Codes und jeder unbekannte Wert wird `backup_worker_failed`. Auch eine ungültige konfigurierte Worker-ID fällt auf eine lokal abgeleitete, feste Kennung zurück. Restore ist nicht implementiert.
 
 ## Scheduling
 
@@ -120,6 +120,8 @@ sudo systemctl enable --now fanmind-backup-database.timer fanmind-backup-storage
 ```bash
 sudo FANMIND_BACKUP_ROOT=/var/backups/fanmind node /usr/local/lib/fanmind-ops/backup-retention.mjs --dry-run
 ```
+
+Der systemd-Abschluss schreibt bei Fehlern ausschließlich `BACKUP_RETENTION_ERROR=<fester_code>`. Rohe Dateisystem-, Pfad- oder Exception-Texte werden nicht in das Journal übernommen.
 
 ## Production-blocker fixes before installation (#538)
 
