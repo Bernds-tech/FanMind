@@ -14,6 +14,7 @@ const ACTIVE_NOTIFICATION_STATUSES = "open,read,acknowledged";
 const STATUS_RANK = { healthy: 0, unknown: 1, degraded: 2, unavailable: 3 };
 const COMPONENT_LABELS = {
   application: "FanMind-Anwendung",
+  nginx: "nginx-Reverse-Proxy",
   pm2: "FanMind-Prozess",
   host_disk: "Server-Speicherplatz",
   host_memory: "Server-Arbeitsspeicher",
@@ -298,6 +299,40 @@ async function checkPm2(env = process.env, commandRunner = runCommand) {
   }
 }
 
+function parseSystemdServiceStatus(output) {
+  const serviceStatus = clampText(output, 40).toLowerCase();
+  if (serviceStatus === "active") return { status: "healthy", serviceStatus };
+  if (["activating", "reloading"].includes(serviceStatus)) {
+    return { status: "degraded", serviceStatus };
+  }
+  if (["inactive", "failed", "deactivating"].includes(serviceStatus)) {
+    return { status: "unavailable", serviceStatus };
+  }
+  return { status: "unknown", serviceStatus: "unreadable" };
+}
+
+async function checkNginx(commandRunner = runCommand) {
+  try {
+    const output = await commandRunner("/usr/bin/systemctl", ["is-active", "nginx.service"]);
+    const parsed = parseSystemdServiceStatus(output);
+    return check(
+      "nginx",
+      parsed.status,
+      parsed.status === "healthy"
+        ? "nginx-Reverse-Proxy ist aktiv."
+        : "nginx-Reverse-Proxy ist nicht stabil aktiv.",
+      { service_status: parsed.serviceStatus },
+    );
+  } catch {
+    return check(
+      "nginx",
+      "unavailable",
+      "nginx-Reverse-Proxy-Status konnte nicht als aktiv bestätigt werden.",
+      { service_status: "unavailable" },
+    );
+  }
+}
+
 function tlsCertificate(hostname, port = 443, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     const socket = tls.connect({ host: hostname, port, servername: hostname, rejectUnauthorized: true });
@@ -398,6 +433,7 @@ async function collectChecks(env = process.env) {
     checkApplication(env),
     checkDisk(env),
     Promise.resolve(checkMemory(env)),
+    checkNginx(),
     checkPm2(env),
     checkSsl(env),
     checkBackupFreshness(env),
@@ -788,6 +824,7 @@ if (direct) {
 export {
   adminEmailRecipients,
   checkMemory,
+  checkNginx,
   classifyAgeHours,
   classifyBackupFreshness,
   classifyPercent,
@@ -798,6 +835,7 @@ export {
   operationsErrorCode,
   operationsEmailConfig,
   parsePm2Status,
+  parseSystemdServiceStatus,
   requireHealthyChecks,
   runLifecycleAcceptance,
   runMonitor,

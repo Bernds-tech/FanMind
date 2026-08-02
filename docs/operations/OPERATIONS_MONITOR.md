@@ -5,6 +5,8 @@
 Der Operations Monitor erzeugt datensparsame Betriebsereignisse und Admin-Meldungen für:
 
 - öffentliche Erreichbarkeit von `/api/health`;
+- aktiver Zustand des nginx-Reverse-Proxys über einen unprivilegierten,
+  read-only `systemctl is-active`-Aufruf;
 - PM2-Status des Prozesses `fanmind`;
 - Disk- und RAM-Auslastung;
 - verbleibende Gültigkeit des TLS-Zertifikats;
@@ -12,6 +14,11 @@ Der Operations Monitor erzeugt datensparsame Betriebsereignisse und Admin-Meldun
 - Alter des letzten Backup-Worker-Heartbeats.
 
 Er liest keine Kontakte, Nachrichten, Prompts, KI-Ausgaben oder Zahlungsdaten.
+Der nginx-Check speichert ausschließlich den normalisierten Dienstzustand und
+liest weder nginx-Konfiguration noch Journal. Ein isolierter CPU-Momentwert
+wird bewusst nicht als Zehn-Minuten-Alarm verwendet: Anwendung, PM2, RAM und
+Disk liefern die belastbaren Hostsignale, ohne kurzzeitige Lastspitzen als
+scheinbaren Ausfall zu melden.
 
 ## Standardzustand
 
