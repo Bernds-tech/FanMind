@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "../billing/adminBilling.module.css";
 
 const actions = [
@@ -12,6 +13,7 @@ const actions = [
 ] as const;
 
 export function BackupJobActions() {
+  const router = useRouter();
   const [message, setMessage] = useState<string>("");
   const [busy, setBusy] = useState<string>("");
   async function enqueue(jobType: string, label: string) {
@@ -23,10 +25,16 @@ export function BackupJobActions() {
     const idempotencyKey = jobType === "verify_backup"
       ? `manual:${jobType}:${globalThis.crypto.randomUUID()}`
       : `manual:${jobType}:${new Date().toISOString().slice(0,10)}`;
-    const response = await fetch("/api/admin/operations/backup-jobs", { method:"POST", headers:{ "Content-Type":"application/json", "Idempotency-Key": idempotencyKey }, body:JSON.stringify({ jobType }) });
-    const body = await response.json().catch(() => ({}));
-    setMessage(response.ok ? (body.message ?? "Job wurde eingereiht") : (body.error ?? "Job konnte nicht eingereiht werden"));
-    setBusy("");
+    try {
+      const response = await fetch("/api/admin/operations/backup-jobs", { method:"POST", headers:{ "Content-Type":"application/json", "Idempotency-Key": idempotencyKey }, body:JSON.stringify({ jobType }) });
+      const body = await response.json().catch(() => ({})) as { message?: string; error?: string };
+      setMessage(response.ok ? (body.message ?? "Job wurde eingereiht") : (body.error ?? "Job konnte nicht eingereiht werden"));
+      if (response.ok) router.refresh();
+    } catch {
+      setMessage("Job konnte nicht eingereiht werden");
+    } finally {
+      setBusy("");
+    }
   }
   return <div className={styles.actions}>{actions.map(([jobType, label]) => <button key={jobType} type="button" className={styles.buttonSecondary} disabled={Boolean(busy)} onClick={() => enqueue(jobType, label)}>{busy === jobType ? "Wird eingereiht…" : jobType === "verify_backup" ? label : `${label} anfordern`}</button>)}{message ? <p className={styles.emptyState}>{message}</p> : null}</div>;
 }

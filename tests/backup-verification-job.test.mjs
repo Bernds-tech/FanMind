@@ -19,6 +19,8 @@ const workerSource = await readFile(new URL("../scripts/operations/backup-worker
 const migration = await readFile(new URL("../supabase/migrations/20260718173000_enable_safe_backup_verification.sql", import.meta.url), "utf8");
 const operationsSource = await readFile(new URL("../src/lib/backupOperations.ts", import.meta.url), "utf8");
 const uiSource = await readFile(new URL("../src/app/admin/operations/BackupJobActions.tsx", import.meta.url), "utf8");
+const pageSource = await readFile(new URL("../src/app/admin/operations/page.tsx", import.meta.url), "utf8");
+const autoRefreshSource = await readFile(new URL("../src/app/admin/operations/OperationsAutoRefresh.tsx", import.meta.url), "utf8");
 
 test("safe verification job is allowlisted end to end", () => {
   assert.equal(worker.JOBS.has("verify_backup"), true);
@@ -30,6 +32,21 @@ test("safe verification job is allowlisted end to end", () => {
 test("each manual verification can enqueue a fresh latest-backup check", () => {
   assert.match(uiSource, /verify_backup[\s\S]*crypto\.randomUUID\(\)/);
   assert.match(uiSource, /Idempotency-Key/);
+});
+
+test("active operations jobs refresh server data without background or idle polling", () => {
+  assert.match(uiSource, /useRouter/);
+  assert.match(uiSource, /if \(response\.ok\) router\.refresh\(\)/);
+  assert.match(uiSource, /catch \{[\s\S]*finally \{[\s\S]*setBusy\(""\)/);
+  assert.match(pageSource, /\["queued", "claimed", "running"\]/);
+  assert.match(pageSource, /OperationsAutoRefresh enabled=\{hasActiveJobs\}/);
+  assert.match(autoRefreshSource, /if \(!enabled\) return/);
+  assert.match(autoRefreshSource, /document\.visibilityState === "visible"/);
+  assert.match(autoRefreshSource, /setInterval\(refreshWhenVisible, REFRESH_INTERVAL_MS\)/);
+  assert.match(autoRefreshSource, /REFRESH_INTERVAL_MS = 15_000/);
+  assert.match(autoRefreshSource, /visibilitychange/);
+  assert.match(autoRefreshSource, /router\.refresh\(\)/);
+  assert.doesNotMatch(autoRefreshSource, /fetch\(/);
 });
 
 test("verification migration grants only service_role claim access", () => {

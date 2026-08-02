@@ -387,6 +387,12 @@ acht Health-Komponenten, PM2, nginx, Login, Hostressourcen, lokale und
 Offsite-Backup-Paare sowie Backup-Worker-Fehler und nimmt keine
 Service-, Datenbank-, Restore- oder Remote-Mutation vor.
 
+Das Admin Operations Center lädt seine serverseitigen Betriebsdaten nach einer
+erfolgreichen Job-Anforderung sofort neu. Solange ein Job `queued`, `claimed`
+oder `running` ist, aktualisiert die sichtbare Seite alle 15 Sekunden sowie beim
+Zurückkehren in den sichtbaren Tab. Bei erledigten Jobs und im Hintergrund
+findet kein Polling-Verkehr statt.
+
 Die für den Operations Monitor benötigte Constraint-Erweiterung bleibt von
 diesem Deploy getrennt. Sie wurde am 1. August 2026 kontrolliert angewendet und
 unabhängig read-only verifiziert; der Zehn-Minuten-Timer ist aktiv und
