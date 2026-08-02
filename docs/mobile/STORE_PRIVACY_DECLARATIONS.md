@@ -43,6 +43,10 @@ Die aktuelle Mobile-App:
   und bereitet die verschlüsselte, kontogebundene Registrierung eines
   Expo-Push-Tokens vor; Migration, Serverkey und Zustellung bleiben bis zur
   externen Abnahme deaktiviert;
+- besitzt für diese Migration einen checksum-gebundenen, strikt
+  Staging-only Kontrollpfad mit read-only Ressourcenprüfung und vollständig
+  zurückgerollter synthetischer Acceptance; er wurde noch nicht extern
+  ausgeführt und verarbeitet keine echten Push-Tokens;
 - führt kein Mobile-Billing aus;
 - bietet die Account-Löschanfrage in der App und zusätzlich öffentlich unter
   `https://fanmind.ch/account-deletion` an;

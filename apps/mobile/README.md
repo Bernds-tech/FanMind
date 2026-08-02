@@ -42,6 +42,10 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - native Push-Grundlage mit streng validierter Navigation zu Follow-ups sowie
   ausdrücklichem Opt-in für eine verschlüsselte, kontogebundene
   Ein-Gerät-Registrierung; serverseitiger Versand bleibt deaktiviert;
+- checksum-gebundener, strikt Staging-only Kontrollpfad für die vorbereitete
+  Push-Tabelle: read-only Ressourcenprüfung, separat bestätigter Apply und
+  rollback-only Acceptance ohne echte Tokens oder Zustellung; externe Läufe
+  stehen noch aus;
 - nativer Splashscreen mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
 - eigenständiges deckendes 1024×1024-App-Icon für iOS/Legacy-Android und
   transparentes, maskensicher skaliertes Android-Adaptive-Foreground;
@@ -156,6 +160,25 @@ werden nicht geladen und konkrete Projekt-, URL- oder Key-Werte werden nicht
 ausgegeben. Der vorbereitete Workflow zählt erst nach echter EAS-Einrichtung
 und erfolgreichem externem Lauf als Nachweis.
 
+## Staging-Kontrolle für Push-Registrierung
+
+Die Datenbankvorbereitung der Push-Registrierung ist bewusst vom EAS- und
+Signing-Ablauf getrennt. Drei manuelle Workflows sind vorbereitet:
+
+1. `FanMind Mobile Push Staging Resource Readiness` prüft ausschließlich
+   read-only den exakten, manuell bestätigten `main`-Commit, die getrennten
+   Staging-Ziele und synthetische Nicht-Demo-Owner/-Member/-Geräte;
+2. `FanMind Mobile Push Staging Migration` wendet nach eigener Bestätigung die
+   checksum-festgeschriebene Migration nur auf Staging an;
+3. `FanMind Mobile Push Staging Acceptance` prüft Browserverweigerung und
+   service-role CRUD vollständig innerhalb einer zurückgerollten Transaktion.
+
+Production-API, Production-Supabase und Production-DB-Host werden jeweils
+fail-closed ausgeschlossen. Kein Workflow erzeugt ein Expo-Token, sendet eine
+Push-Nachricht, aktiviert Delivery oder verändert EAS-/Signing-Ressourcen. Der
+normale Web-Deploy kann die Migration nicht anwenden. Details und geschützte
+Konfiguration: `docs/operations/MOBILE_PUSH_STAGING_CONTROL.md`.
+
 ## Kontrollierter signierter interner Build
 
 Nach einem grünen Read-only-Ressourcencheck kann der getrennte manuelle
@@ -244,9 +267,10 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 3. Signing Credentials und interne Preview-Builds einrichten.
 4. App-Icon und Splashscreen in signierten Android-/iOS-Builds auf realen
    Geräten visuell abnehmen.
-5. die vorbereitete Push-Berechtigung und Token-Registrierung nach kontrollierter
-   Migration/Secret-Konfiguration in einem signierten Development-/Preview-Build
-   testen; serverseitige Zustellung erst danach separat implementieren und abnehmen.
+5. den getrennten read-only Push-Ressourcencheck, Staging-Apply und die
+   rollback-only Acceptance durchführen; erst danach Migration/Secret-
+   Konfiguration in einem signierten Development-/Preview-Build real testen;
+   serverseitige Zustellung separat implementieren und abnehmen.
 6. Android Internal Testing und iOS TestFlight durchführen.
 7. Die vorbereiteten Store-Texte, technischen Datenschutzentwürfe und
    Screenshot-Matrix nach realen Gerätetests sowie externer

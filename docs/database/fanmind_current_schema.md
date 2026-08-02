@@ -632,6 +632,16 @@ Registrierung ersetzt die höchstens eine alte User-Bindung. Die Migration
 enthält keinen Versandjob; serverseitige Follow-up-Zustellung bleibt separat
 deaktiviert.
 
+Der vorbereitete Apply ist SHA-256-festgeschrieben und ausschließlich über
+den getrennten Staging-Pfad in
+`docs/operations/MOBILE_PUSH_STAGING_CONTROL.md` zulässig. Read-only
+Ressourcencheck, Migration und rollback-only Acceptance besitzen getrennte
+Bestätigungen, sind an `main`, den geprüften exakten Commit und das geschützte
+`staging`-Environment gebunden und vergleichen API-, Supabase- und DB-Ziel mit
+Production. Die Acceptance prüft Browser-Verweigerung sowie service-role CRUD
+mit synthetischen Nicht-Demo-Owner/-Member/-Gerätewerten und muss vollständigen
+Rollback und Cleanup belegen. Dieser Pfad wurde noch nicht extern ausgeführt.
+
 ## 10. Migrations- und Reader-Regel
 
 Wenn Tabellen, Spalten oder RLS-Policies geändert werden:

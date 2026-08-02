@@ -62,6 +62,9 @@ Diese Werte dürfen öffentlich sein, müssen aber trotzdem korrekt gesetzt sein
 - [ ] Es gibt keine hardcodierten echten Admin-E-Mail-Fallbacks.
 - [ ] Alle Service-Role-Zugriffe laufen serverseitig.
 - [ ] Browser-Code nutzt nur Supabase URL und Anon Key.
+- [ ] Jeder Mobile-Push-Staging-Workflow verwendet eine eigene absolute
+      PGPASS-Datei mit Modus `0600`, gibt keine SQL-Diagnosen aus und entfernt
+      die Datei auch nach Fehlern.
 
 ## 3. Auth und Session
 
@@ -121,6 +124,22 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
     `AI_TIER_STAGING_ACCEPTANCE=PASS` zusammen mit
     `AI_TIER_STAGING_TRANSACTION=ROLLED_BACK` als technischen Nachweis
     akzeptieren.
+- [ ] `mobile_push_registrations`
+  - ausschließlich `service_role`, keine Browser-Policy, keine Tabellen- oder
+    Spaltenrechte für `anon` oder `authenticated`;
+  - checksum-gebundener Staging-Kontrollpfad:
+    `docs/operations/MOBILE_PUSH_STAGING_CONTROL.md`;
+  - zuerst `FanMind Mobile Push Staging Resource Readiness` read-only für den
+    exakten geprüften `main`-Commit ausführen;
+  - Apply ausschließlich über `FanMind Mobile Push Staging Migration` und nur
+    akzeptieren, wenn `MOBILE_PUSH_REGISTRATION_MIGRATION_APPLY=completed` und
+    `MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS` gemeinsam vorliegen;
+  - danach `FanMind Mobile Push Staging Acceptance` mit synthetischem
+    Nicht-Demo-Owner und -Member ausführen; nur
+    `MOBILE_PUSH_STAGING_ACCEPTANCE=PASS`,
+    `MOBILE_PUSH_STAGING_TRANSACTION=ROLLED_BACK` und
+    `MOBILE_PUSH_STAGING_CLEANUP=PASS` gemeinsam akzeptieren;
+  - der Nachweis aktiviert weder echten Token-Upload noch Push-Zustellung.
 - [ ] `fan_analysis_reports`
 - [ ] `contact_reply_targets`
 

@@ -36,6 +36,11 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
   Auth-Handoff, Einmalverarbeitung und ausdrücklichem Opt-in für eine
   verschlüsselte, service-role-only Ein-Gerät-Registrierung; Migration,
   Serverkey, reale Registrierung und Zustellung bleiben deaktiviert;
+- checksum-gebundener, strikt Staging-only Push-Kontrollpfad mit getrenntem
+  read-only Ressourcencheck, separat bestätigtem Migrations-Apply und
+  rollback-only Acceptance für synthetische Nicht-Demo-Owner/-Member/-Geräte;
+  er wurde noch nicht extern ausgeführt und aktiviert weder Registrierung
+  noch Zustellung;
 - konfliktfreie native Splashscreen-Konfiguration mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
 - getrennte 1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive
   Icon aus einer eigenständigen Vektorquelle; keine Hochskalierung des
@@ -220,6 +225,29 @@ grüner Lauf bestätigt nur Ressourcenbindung und öffentliche
 Client-Konfiguration. Er erzeugt kein Binary und belegt weder Signing, Android
 Internal Testing noch TestFlight.
 
+### Getrennter Staging-Kontrollpfad für Push-Registrierung
+
+Die Datenbankvorbereitung für Push besitzt einen eigenen Kontrollpfad und ist
+nicht Teil des EAS-Ressourcenchecks oder eines Mobile-Builds:
+
+- `FanMind Mobile Push Staging Resource Readiness` prüft read-only den exakten
+  `main`-Commit, Staging-API, Staging-Supabase, Staging-DB und die
+  synthetischen Nicht-Demo-Ressourcen;
+- `FanMind Mobile Push Staging Migration` wendet ausschließlich die
+  festgeschriebene Migration
+  `20260729120000_mobile_push_registrations.sql` nach separater Bestätigung
+  auf Staging an und prüft RLS sowie die service-role-only Rechte;
+- `FanMind Mobile Push Staging Acceptance` lässt Browserzugriffe scheitern,
+  führt service-role CRUD nur mit synthetischen Werten aus, rollt vollständig
+  zurück und belegt den Cleanup.
+
+Jeder Workflow verlangt zusätzlich den manuell bestätigten exakten
+`main`-Commit und das geschützte GitHub-Environment `staging`. Production-API,
+Production-Supabase und Production-DB-Host sind ausdrücklich ausgeschlossen.
+Es werden keine echten Push-Tokens erzeugt oder ausgegeben und kein Expo-,
+FCM- oder APNs-Endpunkt aufgerufen. Das Runbook steht in
+`docs/operations/MOBILE_PUSH_STAGING_CONTROL.md`.
+
 ### Manuell freigegebener signierter interner Build
 
 Der nachgelagerte Workflow
@@ -397,6 +425,7 @@ aber weder eine App-Privacy-Portalantwort noch ein signierter Store-Build.
 - reale öffentliche EAS-Werte in getrennten Development-/Preview-/Production-Umgebungen;
 - Android Internal Testing und iOS TestFlight;
 - Push-Migration und dedizierten Serverkey kontrolliert aktivieren, danach
+  nach grünem Ressourcencheck, Apply und rollback-only Acceptance die
   Berechtigung und Token-Registrierung im signierten Build real abnehmen;
 - echte Follow-up-Zustellung erst nach gesonderter Staging-/Datenschutzprüfung;
 - realer Account-Löschantrag/Widerruf auf signiertem Android-/iOS-Gerät;

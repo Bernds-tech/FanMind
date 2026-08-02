@@ -190,6 +190,9 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [x] separate technical Apple App Privacy and Google Play Data Safety drafts;
 - [x] explicit push-permission opt-in and encrypted, service-role-only
       one-device token registration prepared without delivery activation;
+- [x] checksum-pinned, main-/reviewed-commit- and protected-Staging-bound
+      push resource, migration and rollback-only acceptance controls prepared;
+      Production targets, real tokens and every delivery action fail closed;
 - [ ] controlled push migration/key activation, signed-device registration
       proof and server-side follow-up delivery;
 
@@ -204,6 +207,8 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 - [ ] signed Android preview build;
 - [ ] signed iOS preview/TestFlight build;
 - [ ] real Android and iOS device test records.
+- [ ] successful external Mobile Push Staging resource, migration and
+      rollback-only acceptance runs before server-key activation;
 
 ### Phase C
 

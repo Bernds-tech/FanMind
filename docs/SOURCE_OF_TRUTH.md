@@ -81,6 +81,14 @@ Aktiv im App-Kern:
   nicht serverseitig freigegebene EAS-Projekte werden abgelehnt; die Migration,
   Serverkey-Aktivierung, echte Geräteabnahme und Zustellung bleiben getrennt
   deaktiviert;
+- checksum-festgeschriebener, strikt Staging-only Kontrollpfad für diese
+  Push-Tabelle: ein read-only Ressourcencheck, ein separat bestätigter
+  Migrations-Apply und eine rollback-only Acceptance sind vorbereitet. Jeder
+  Lauf ist an `main`, den manuell bestätigten exakten Commit und das geschützte
+  `staging`-Environment gebunden; Production-API, -Supabase und -DB-Host sind
+  ausgeschlossen. Die Acceptance verwendet nur synthetische Nicht-Demo-
+  Owner/-Member/-Geräte, prüft Browserverweigerung und service-role CRUD und
+  aktiviert weder echte Tokens noch Zustellung;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständiges
   hochauflösendes FanMind-App-Icon für iOS/Legacy-Android, sicher skaliertes
   Android-Adaptive-Foreground sowie vorbereitete deutsche/englische
@@ -214,6 +222,16 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   ausgewiesen und muss zuerst direkt im geschützten EAS-Projekt geprüft werden;
   auch ein bestätigtes internes Artefakt ist noch kein Geräte-, Push-, Recovery-
   oder Store-Nachweis.
+- Mobile-Push-Staging: Die Migration
+  `20260729120000_mobile_push_registrations.sql` ist mit ihrer SHA-256-Prüfsumme
+  festgeschrieben. Der getrennte Ressourcenworkflow liest nur Staging-Ziel und
+  synthetische Nicht-Demo-Principals und kann vor dem Apply laufen. Migration
+  und rollback-only Acceptance besitzen unterschiedliche Freigaben und einen
+  gemeinsamen exklusiven Staging-Schreib-Lock. Die Acceptance prüft `anon`,
+  Owner und Member als nicht schreibberechtigt, führt synthetisches
+  service-role CRUD vollständig transaktional aus und verlangt danach einen
+  leeren Cleanup-Nachweis. Kein normaler Deploy kann den Runner aufrufen; reale
+  Push-Registrierung, Serverkey und Delivery bleiben extern deaktiviert.
 - Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
 
 Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.

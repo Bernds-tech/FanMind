@@ -127,6 +127,16 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   request starts, an invalid or missing queue/completion response is
   indeterminate and must not be presented as safely retryable before the
   protected EAS project is inspected.
+- Mobile push registration has a separate checksum-pinned Staging control
+  path. Keep resource readiness read-only and separate from the explicitly
+  confirmed migration apply. Every workflow must remain `main`-, reviewed
+  commit- and protected `staging`-environment-bound and must compare API,
+  Supabase and database targets against Production. Acceptance may use only
+  dedicated synthetic non-demo owner/member/device identifiers, must prove
+  browser denial plus service-role-only CRUD inside a fully rolled-back
+  transaction and must prove cleanup. Never send a push, use a real Expo token,
+  enable delivery, expose SQL diagnostics or secrets, or let a normal Web
+  deploy invoke the migration runner.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

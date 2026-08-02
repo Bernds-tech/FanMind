@@ -83,6 +83,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Plattform, Profil, interne Distribution, erfolgreichen EAS-Endstatus und
   das vorhandene HTTPS-Artefakt. Build-ID und URL bleiben privat; Submit,
   Update, Gerätetest und Store-Verteilung werden dadurch nicht ausgeführt.
+- Mobile-Push-Staging-Kontrolle: Die vorbereitete Registrierungstabelle besitzt
+  jetzt getrennte manuelle Pfade für read-only Ressourcenprüfung,
+  checksum-gebundenen Staging-Apply und rollback-only Acceptance. Alle sind an
+  `main`, den manuell geprüften exakten Commit und das geschützte
+  `staging`-Environment gebunden; Production-Ziele, echte Push-Tokens und
+  Zustellung bleiben ausgeschlossen. Externe Läufe stehen noch aus.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
@@ -204,6 +210,10 @@ Bereits vorhanden:
   Ein-Gerät-Registrierung für Owner oder autorisierte Workspace-Mitglieder;
   öffentliche Demo-Workspaces und nicht freigegebene EAS-Projekte werden
   abgelehnt, serverseitige Zustellung bleibt deaktiviert;
+- strikt Staging-only Push-Kontrollpfad mit read-only Ressourcencheck,
+  separat bestätigtem checksum-Apply sowie rollback-only Browser-/service-role-
+  Abnahme für synthetische Nicht-Demo-Owner/-Member/-Geräte; kein echter Token
+  und keine Delivery-Aktivierung;
 - nativer Splashscreen mit bestätigter FanMind-Wortmarke, eigenständige
   1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive Icon sowie
   vorbereitete deutsche/englische Store-Metadaten;

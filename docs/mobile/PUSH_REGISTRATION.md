@@ -53,6 +53,29 @@ Registrierungstest sind getrennt erforderlich:
 7. Opt-in, Ablehnung, Registrierung, erneute Registrierung, Opt-out, Logout,
    Konto-/Workspace-Trennung und 30-Tage-Ablauf mit Testkonten prüfen.
 
+Für die Schritte 1 bis 5 ist jetzt ein eigener, checksum-gebundener und strikt
+Staging-only Kontrollpfad vorbereitet. Er trennt:
+
+1. den read-only Ressourcencheck
+   `FanMind Mobile Push Staging Resource Readiness`;
+2. den separat bestätigten Apply
+   `FanMind Mobile Push Staging Migration`;
+3. die rollback-only Abnahme
+   `FanMind Mobile Push Staging Acceptance`.
+
+Alle drei Workflows laufen nur von `main`, verlangen zusätzlich den exakten
+manuell geprüften Commit und verwenden das geschützte GitHub-Environment
+`staging`. API-Ursprung, Supabase-Ref und DB-Host werden jeweils gegen die
+bestätigten Production-Ziele geprüft. Die Acceptance nutzt einen synthetischen
+Nicht-Demo-Workspace mit unterschiedlichem Owner und Mitglied
+sowie eine synthetische Geräte-ID. Browserzugriffe müssen scheitern;
+service-role CRUD wird vollständig zurückgerollt und anschließend auf Cleanup
+geprüft. Weder echte Expo-Tokens noch Push-Versand, EAS-Builds oder
+Delivery-Aktivierung gehören zu diesem Ablauf.
+
+Verbindliches Runbook:
+`docs/operations/MOBILE_PUSH_STAGING_CONTROL.md`.
+
 Keine Secret- oder Tokenwerte in Logs, Screenshots, Issues oder Chat kopieren.
 Expo verlangt für Remote-Push unter aktuellem Android einen eigenen
 Development-/Preview-Build; Expo Go ist dafür nicht der Freigabenachweis.
