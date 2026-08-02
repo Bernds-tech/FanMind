@@ -10,6 +10,50 @@ const ROOT_REVIEWED_FRAMEWORK_VERSION = "16.2.12";
 const ROOT_REVIEW_HIGH_MAXIMUM = 0;
 const ROOT_REVIEW_MODERATE_MAXIMUM = 0;
 const REVIEWED_ROOT_PACKAGES = Object.freeze([]);
+const MOBILE_REVIEWED_AT = "2026-08-02T17:32:13.000Z";
+const MOBILE_REVIEW_EXPIRES_AT = "2026-09-02T00:00:00.000Z";
+const MOBILE_REVIEW_MODERATE_MAXIMUM = 38;
+const MOBILE_REVIEW_LOW_MAXIMUM = 0;
+const REVIEWED_MOBILE_PACKAGES = Object.freeze([
+  "@expo/cli",
+  "@expo/config",
+  "@expo/config-plugins",
+  "@expo/dom-webview",
+  "@expo/inline-modules",
+  "@expo/local-build-cache-provider",
+  "@expo/log-box",
+  "@expo/metro-config",
+  "@expo/metro-runtime",
+  "@expo/prebuild-config",
+  "@expo/router-server",
+  "@expo/ui",
+  "babel-preset-expo",
+  "expo",
+  "expo-application",
+  "expo-asset",
+  "expo-clipboard",
+  "expo-constants",
+  "expo-dev-client",
+  "expo-dev-launcher",
+  "expo-dev-menu",
+  "expo-dev-menu-interface",
+  "expo-file-system",
+  "expo-font",
+  "expo-glass-effect",
+  "expo-keep-awake",
+  "expo-linking",
+  "expo-manifests",
+  "expo-notifications",
+  "expo-router",
+  "expo-secure-store",
+  "expo-splash-screen",
+  "expo-status-bar",
+  "expo-symbols",
+  "expo-system-ui",
+  "expo-updates-interface",
+  "uuid",
+  "xcode",
+]);
 
 function parseArgument(name, fallback = null) {
   const exact = process.argv.findIndex((value) => value === name);
@@ -43,6 +87,7 @@ function evaluateDependencyAudit({
   rootPayload,
   mobilePayload,
   rootManifest,
+  now = new Date(),
 }) {
   const root = auditMetadata(rootPayload);
   const mobile = auditMetadata(mobilePayload);
@@ -52,6 +97,15 @@ function evaluateDependencyAudit({
   const unknownRootNames = rootNames.filter(
     (name) => !allowedRootNames.has(name),
   );
+  const allowedMobileNames = new Set(REVIEWED_MOBILE_PACKAGES);
+  const unknownMobileNames = mobileNames.filter(
+    (name) => !allowedMobileNames.has(name),
+  );
+  const reviewReference = now instanceof Date ? now : new Date(now);
+  const mobileReviewActive =
+    Number.isFinite(reviewReference.getTime())
+    && reviewReference.getTime() <= Date.parse(MOBILE_REVIEW_EXPIRES_AT);
+  const mobileReviewRequired = mobile.total > 0;
   const rootVersionsPinned =
     rootManifest?.dependencies?.next === ROOT_REVIEWED_FRAMEWORK_VERSION &&
     rootManifest?.devDependencies?.["eslint-config-next"] ===
@@ -64,7 +118,19 @@ function evaluateDependencyAudit({
     root.moderate <= ROOT_REVIEW_MODERATE_MAXIMUM &&
     unknownRootNames.length === 0 &&
     rootVersionsPinned;
-  const mobileOk = mobile.critical === 0 && mobile.high === 0;
+  const mobileOk =
+    mobile.critical === 0
+    && mobile.high === 0
+    && (
+      !mobileReviewRequired
+      || (
+        mobileReviewActive
+        && mobile.info === 0
+        && mobile.low <= MOBILE_REVIEW_LOW_MAXIMUM
+        && mobile.moderate <= MOBILE_REVIEW_MODERATE_MAXIMUM
+        && unknownMobileNames.length === 0
+      )
+    );
 
   const errors = [];
   if (root.total !== 0) errors.push("root_vulnerability_present");
@@ -83,6 +149,24 @@ function evaluateDependencyAudit({
     errors.push("mobile_critical_vulnerability_present");
   }
   if (mobile.high !== 0) errors.push("mobile_high_vulnerability_present");
+  if (
+    mobileReviewRequired
+    && mobile.moderate > MOBILE_REVIEW_MODERATE_MAXIMUM
+  ) {
+    errors.push("mobile_moderate_vulnerability_budget_exceeded");
+  }
+  if (mobileReviewRequired && mobile.low > MOBILE_REVIEW_LOW_MAXIMUM) {
+    errors.push("mobile_low_vulnerability_budget_exceeded");
+  }
+  if (mobileReviewRequired && mobile.info !== 0) {
+    errors.push("mobile_info_vulnerability_present");
+  }
+  if (mobileReviewRequired && unknownMobileNames.length > 0) {
+    errors.push("mobile_unreviewed_vulnerability_package_present");
+  }
+  if (mobileReviewRequired && !mobileReviewActive) {
+    errors.push("mobile_vulnerability_review_expired");
+  }
 
   return {
     ok: rootOk && mobileOk,
@@ -99,6 +183,13 @@ function evaluateDependencyAudit({
     mobile: {
       ...mobile,
       packages: mobileNames,
+      unknownPackages: unknownMobileNames,
+      reviewRequired: mobileReviewRequired,
+      reviewActive: mobileReviewActive,
+      reviewedAt: MOBILE_REVIEWED_AT,
+      reviewExpiresAt: MOBILE_REVIEW_EXPIRES_AT,
+      moderateMaximum: MOBILE_REVIEW_MODERATE_MAXIMUM,
+      lowMaximum: MOBILE_REVIEW_LOW_MAXIMUM,
     },
     errors,
   };
@@ -155,6 +246,11 @@ async function main() {
       reviewedAt: ROOT_REVIEWED_AT,
       mobileCriticalMaximum: 0,
       mobileHighMaximum: 0,
+      mobileModerateMaximum: MOBILE_REVIEW_MODERATE_MAXIMUM,
+      mobileLowMaximum: MOBILE_REVIEW_LOW_MAXIMUM,
+      reviewedMobilePackages: REVIEWED_MOBILE_PACKAGES,
+      mobileReviewedAt: MOBILE_REVIEWED_AT,
+      mobileReviewExpiresAt: MOBILE_REVIEW_EXPIRES_AT,
     },
     result: evaluation,
     advisoryDetailsIncluded: false,
@@ -171,7 +267,17 @@ async function main() {
   console.log(`DEPENDENCY_AUDIT_MOBILE_TOTAL=${evaluation.mobile.total}`);
   console.log(`DEPENDENCY_AUDIT_MOBILE_HIGH=${evaluation.mobile.high}`);
   console.log(`DEPENDENCY_AUDIT_MOBILE_CRITICAL=${evaluation.mobile.critical}`);
-  console.log("DEPENDENCY_AUDIT_REVIEW_EXCEPTION_ACTIVE=no");
+  console.log(
+    `DEPENDENCY_AUDIT_MOBILE_REVIEW_ACTIVE=${evaluation.mobile.reviewActive}`,
+  );
+  console.log(
+    `DEPENDENCY_AUDIT_MOBILE_REVIEW_EXPIRES_AT=${evaluation.mobile.reviewExpiresAt}`,
+  );
+  console.log(
+    `DEPENDENCY_AUDIT_REVIEW_EXCEPTION_ACTIVE=${
+      evaluation.mobile.reviewRequired ? "mobile_only" : "no"
+    }`,
+  );
   console.log(`DEPENDENCY_AUDIT_RESULT=${evaluation.ok ? "success" : "failed"}`);
 
   if (!evaluation.ok) {
@@ -183,6 +289,11 @@ async function main() {
 }
 
 export {
+  MOBILE_REVIEWED_AT,
+  MOBILE_REVIEW_EXPIRES_AT,
+  MOBILE_REVIEW_LOW_MAXIMUM,
+  MOBILE_REVIEW_MODERATE_MAXIMUM,
+  REVIEWED_MOBILE_PACKAGES,
   REVIEWED_ROOT_PACKAGES,
   ROOT_REVIEWED_AT,
   ROOT_REVIEWED_FRAMEWORK_VERSION,

@@ -97,6 +97,8 @@ Aktiv im App-Kern:
   Bibliotheken, ohne Tracking-Domains, fail-closed Android-API-36-Nachweis und
   getrennte technische Entwürfe für Apple App Privacy sowie Google Play Data
   Safety;
+- erster iOS-Store-Scope bewusst iPhone-only; iPad bleibt bis zu einer
+  separaten Layout-, Geräte- und Screenshot-Abnahme nicht freigegeben;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI mit TypeScript, Expo Doctor, Architekturgrenze, Android-/iOS-JavaScript-Bundles, isoliertem Native-Prebuild sowie echtem Android-Debug-APK und codesign-freier iOS-Simulator-App als reine Build-Nachweise.
 - manueller, `main`-gebundener Read-only-Ressourcencheck für die externe

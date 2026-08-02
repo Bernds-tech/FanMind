@@ -345,6 +345,16 @@ try {
   );
 
   assert.match(iosProject, /PRODUCT_BUNDLE_IDENTIFIER = "ch\.fanmind\.app";/u);
+  assert.match(
+    iosProject,
+    /TARGETED_DEVICE_FAMILY = 1;/u,
+    "The first iOS release must target iPhone only.",
+  );
+  assert.doesNotMatch(
+    iosProject,
+    /TARGETED_DEVICE_FAMILY = "?1,2"?;/u,
+    "iPad support requires a separate layout, device and screenshot acceptance.",
+  );
   assert.match(iosInfoPlist, /<string>fanmind<\/string>/u);
   assert.match(
     iosInfoPlist,

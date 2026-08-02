@@ -99,6 +99,7 @@ test("manual staging workflow uses the staging environment and never uploads ses
 
   assert.match(source, /workflow_dispatch:/u);
   assert.doesNotMatch(source, /pull_request:|push:/u);
+  assert.match(source, /if: github\.ref == 'refs\/heads\/main'/u);
   assert.match(source, /environment: staging/u);
   assert.match(source, /FANMIND_STAGING_E2E_EMAIL/u);
   assert.match(source, /FANMIND_STAGING_E2E_PASSWORD/u);
@@ -107,6 +108,11 @@ test("manual staging workflow uses the staging environment and never uploads ses
   assert.match(source, /FANMIND_STAGING_E2E_WORKSPACE_ID/u);
   assert.match(source, /FANMIND_STAGING_E2E_CONTACT_ID/u);
   assert.match(source, /FANMIND_E2E_STAGING_SUPABASE_URL/u);
+  assert.match(
+    source,
+    /FANMIND_E2E_STAGING_SUPABASE_URL: \$\{\{ secrets\.FANMIND_STAGING_SUPABASE_URL \}\}/u,
+  );
+  assert.doesNotMatch(source, /vars\.NEXT_PUBLIC_SUPABASE_URL/u);
   assert.match(source, /FANMIND_E2E_STAGING_PRODUCTION_SUPABASE_REF/u);
   assert.match(source, /permissions:\s*\n\s*contents: read/u);
   assert.doesNotMatch(source, /upload-artifact/u);
@@ -157,6 +163,9 @@ test("browser E2E runbook preserves existing test layers and external staging tr
   assert.match(source, /startet keine öffentliche Demo/u);
   assert.match(source, /niemals `fanmind\.ch`/u);
   assert.match(source, /Jede andere POST-, PATCH-, PUT- oder DELETE-Anfrage wird browserseitig blockiert/u);
-  assert.match(source, /erst ausgeführt, wenn die getrennten externen Staging-Ressourcen vorhanden sind/u);
+  assert.match(
+    source,
+    /erst ausgeführt, wenn die\s+getrennten externen Staging-Ressourcen vorhanden sind/u,
+  );
   assert.match(source, /niemals auf Production ausweichen/u);
 });

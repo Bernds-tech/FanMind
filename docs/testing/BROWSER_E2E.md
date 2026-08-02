@@ -105,7 +105,11 @@ Test:
 e2e-staging/readonly-critical.spec.ts
 ```
 
-Dieser Lauf ist bewusst nur manuell und nutzt das GitHub Environment `staging`. Er wird erst ausgeführt, wenn die getrennten externen Staging-Ressourcen vorhanden sind.
+Dieser Lauf ist bewusst nur manuell, ausschließlich auf `main` ausführbar und
+nutzt das GitHub Environment `staging`. Er wird erst ausgeführt, wenn die
+getrennten externen Staging-Ressourcen vorhanden sind. Den Supabase-Ursprung
+verwendet er unter demselben Secret-Namen wie Readiness, KI und Mobile-Push;
+eine zweite Variable mit demselben Wert ist nicht erforderlich.
 
 ### Erforderliche Staging-Werte
 
@@ -113,7 +117,6 @@ GitHub Environment Variables:
 
 ```text
 FANMIND_STAGING_APP_URL
-NEXT_PUBLIC_SUPABASE_URL
 FANMIND_PRODUCTION_SUPABASE_PROJECT_REF
 FANMIND_STAGING_E2E_WORKSPACE_ID
 FANMIND_STAGING_E2E_CONTACT_ID
@@ -124,6 +127,7 @@ FANMIND_STAGING_E2E_SECONDARY_CONTACT_ID
 GitHub Environment Secrets:
 
 ```text
+FANMIND_STAGING_SUPABASE_URL
 FANMIND_STAGING_E2E_EMAIL
 FANMIND_STAGING_E2E_PASSWORD
 FANMIND_STAGING_E2E_SECONDARY_EMAIL

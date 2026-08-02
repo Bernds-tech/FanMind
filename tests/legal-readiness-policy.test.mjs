@@ -155,21 +155,80 @@ test("external legal evidence stays account-specific and fail-closed", async () 
     ]);
 
   const parsed = JSON.parse(evidence);
+  const assertTransitionReady = (
+    control,
+    {
+      allowPendingValue = false,
+      requireValueWhenConfirmed = false,
+      requiredDateField,
+      requiredVersionField,
+    },
+  ) => {
+    assert.ok(["pending", "confirmed", "not_applicable"].includes(control.status));
+    if (control.status === "pending") {
+      assert.equal(control.evidenceRef, null);
+      if ("value" in control && !allowPendingValue) assert.equal(control.value, null);
+      return;
+    }
+    assert.match(control.evidenceRef, /^sha256:[a-f0-9]{64}$/u);
+    assert.match(control[requiredDateField], /^\d{4}-\d{2}-\d{2}$/u);
+    if (requiredVersionField) {
+      assert.equal(typeof control[requiredVersionField], "string");
+      assert.ok(control[requiredVersionField].trim().length > 0);
+    }
+    if (control.status === "confirmed" && requireValueWhenConfirmed) {
+      assert.equal(typeof control.value, "string");
+      assert.ok(control.value.trim().length > 0);
+    }
+  };
+
   assert.equal(parsed.schemaVersion, 1);
   assert.equal(parsed.operator.legalName, "Bernd Guggenberger");
   assert.equal(parsed.operator.legalForm, "Einzelunternehmen");
-  assert.equal(parsed.operator.vatId.status, "pending");
-  assert.equal(parsed.approvals.legalReview.status, "pending");
-  assert.equal(parsed.approvals.taxReview.status, "pending");
-  assert.equal(parsed.approvals.customerDpa.status, "pending");
+  for (const key of [
+    "vatId",
+    "companyRegisterNumber",
+    "companyRegisterCourt",
+    "gisaNumber",
+  ]) {
+    assertTransitionReady(parsed.operator[key], {
+      requireValueWhenConfirmed: true,
+      requiredDateField: "confirmedAt",
+    });
+  }
+  assertTransitionReady(parsed.operator.taxMode, {
+    allowPendingValue: true,
+    requireValueWhenConfirmed: true,
+    requiredDateField: "confirmedAt",
+  });
+  for (const key of [
+    "legalReview",
+    "taxReview",
+    "retentionDecision",
+    "customerDpa",
+  ]) {
+    assertTransitionReady(parsed.approvals[key], {
+      requiredDateField: "approvedAt",
+      requiredVersionField: "reviewedVersion",
+    });
+  }
   assert.deepEqual(
     parsed.providers.map(({ id }) => id),
     ["exoscale", "supabase", "openai", "stripe", "meta", "resend"],
   );
   for (const provider of parsed.providers) {
-    assert.equal(provider.dpa.status, "pending");
-    assert.equal(provider.dataLocation.status, "pending");
-    assert.equal(provider.transferAssessment.status, "pending");
+    assertTransitionReady(provider.dpa, {
+      requiredDateField: "acceptedAt",
+      requiredVersionField: "documentVersion",
+    });
+    assertTransitionReady(provider.dataLocation, {
+      requireValueWhenConfirmed: true,
+      requiredDateField: "confirmedAt",
+    });
+    assertTransitionReady(provider.transferAssessment, {
+      requiredDateField: "approvedAt",
+      requiredVersionField: "reviewedVersion",
+    });
   }
 
   assert.match(register, /Supabase[\s\S]*PandaDoc/iu);
@@ -178,6 +237,8 @@ test("external legal evidence stays account-specific and fail-closed", async () 
   assert.match(register, /Steuerberatung[\s\S]*Rechts-\/Datenschutzberatung/u);
   assert.match(register, /SHA-256-Prüfsumme/u);
   assert.match(verifier, /--require-complete/u);
+  assert.match(verifier, /requiredVersionField/u);
+  assert.match(verifier, /requiredDateField/u);
   assert.match(verifier, /LEGAL_EXTERNAL_EVIDENCE_READY/u);
   assert.match(hasher, /O_NOFOLLOW/u);
   assert.match(hasher, /LEGAL_EXTERNAL_EVIDENCE_PRIVATE_CONTENT_OUTPUT=false/u);

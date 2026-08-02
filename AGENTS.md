@@ -190,6 +190,8 @@ Build FanMind as a real CRM core, not as a slide/demo shell. The active product 
 - The canonical completed follow-up status is `completed`; `done` remains read-compatible only for historical rows.
 - Mobile does not perform billing, referral reconciliation, admin operations, webhook ingestion, external channel credential handling or automatic sending.
 - A Web merge cannot publish a mobile binary. EAS builds, signing, Android internal testing and iOS TestFlight require explicit separate verification.
+- The first iOS release is intentionally iPhone-only. Do not enable iPad support
+  until a separate layout, real-device and screenshot acceptance is complete.
 
 ## Hard stop rules
 

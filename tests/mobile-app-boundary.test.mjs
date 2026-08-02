@@ -76,6 +76,7 @@ test("mobile is a separate Expo package and not a Next application", () => {
 test("Android, iOS and deep-link identities are independent and explicit", () => {
   assert.equal(appConfig.expo.scheme, "fanmind");
   assert.equal(appConfig.expo.ios.bundleIdentifier, "ch.fanmind.app");
+  assert.equal(appConfig.expo.ios.supportsTablet, false);
   assert.equal(appConfig.expo.android.package, "ch.fanmind.app");
   assert.equal(appConfig.expo.userInterfaceStyle, "dark");
 });
@@ -122,6 +123,11 @@ test("store metadata remains human-controlled and contains no integration promis
     mobileStoreListing,
     /aktive (?:Instagram|TikTok|WhatsApp|Facebook|Discord)-Integration/iu,
   );
+  assert.match(
+    mobileStoreListing,
+    /im ersten\s+iOS-Release ausschließlich iPhone/iu,
+  );
+  assert.doesNotMatch(mobileStoreListing, /Tablet-Screenshots werden nur erstellt/iu);
 });
 
 test("mobile runtime never imports Website, Next.js, CSS modules or WebView", () => {

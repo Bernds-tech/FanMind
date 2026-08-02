@@ -219,6 +219,8 @@ Bereits vorhanden:
   vorbereitete deutsche/englische Store-Metadaten;
 - iOS-Privacy-Manifest mit den Required-Reason-APIs der installierten nativen
   Bibliotheken, ohne Tracking-Domains, sowie fail-closed Android-API-36-Prüfung;
+- erster iOS-Release bewusst iPhone-only; iPad erst nach separater Layout-,
+  Geräte- und Screenshot-Abnahme;
 - getrennte technische Entwürfe für Apple App Privacy und Google Play Data
   Safety; externe Datenschutz-/Rechts- und Portalabnahme bleibt offen;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
