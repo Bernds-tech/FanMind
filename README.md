@@ -422,7 +422,11 @@ kann nach einem gesunden Probe zusätzlich die feste, E-Mail-freie Folge
 Warnung, Kritisch und Recovery auf einer reservierten technischen Komponente
 abnehmen. Timer, Probe und Lifecycle teilen ein exklusives Laufzeit-Lock.
 Zugangsdaten, SQL-Fehlertext und ungefilterte Journalzeilen werden nicht in
-GitHub-Logs ausgegeben.
+GitHub-Logs ausgegeben. Der reguläre Lauf speichert außerdem den normalisierten
+Aktivzustand von `nginx.service` über einen unprivilegierten Read-only-Aufruf;
+nginx-Konfiguration und Journal werden dabei nicht gelesen. Ein CPU-
+Momentwert wird wegen des Fehlalarmrisikos nicht als eigener Zehn-Minuten-
+Alarm geführt.
 
 Die datenschutzsparsame Server-Fehlertelemetrie wurde am 1. August 2026 auf dem
 Release `04f2a472c57559393dd2d9c89575edf0ce8141ba` kontrolliert repariert,

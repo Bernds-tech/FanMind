@@ -324,6 +324,40 @@ test("PM2 parsing accepts only the configured online app", () => {
   assert.deepEqual(monitor.parsePm2Status("invalid"), { status: "unknown", processStatus: "unreadable" });
 });
 
+test("nginx monitoring stores only a normalized read-only service state", async () => {
+  const calls = [];
+  const active = await monitor.checkNginx(async (command, args) => {
+    calls.push([command, args]);
+    return "active\n";
+  });
+  assert.deepEqual(calls, [["/usr/bin/systemctl", ["is-active", "nginx.service"]]]);
+  assert.equal(active.component, "nginx");
+  assert.equal(active.status, "healthy");
+  assert.equal(active.severity, "info");
+  assert.deepEqual(active.metadata, { service_status: "active" });
+  assert.doesNotMatch(active.summary, /path|config|journal|secret/u);
+
+  assert.deepEqual(monitor.parseSystemdServiceStatus("activating\n"), {
+    status: "degraded",
+    serviceStatus: "activating",
+  });
+  assert.deepEqual(monitor.parseSystemdServiceStatus("failed\n"), {
+    status: "unavailable",
+    serviceStatus: "failed",
+  });
+  assert.deepEqual(monitor.parseSystemdServiceStatus("private-output\n"), {
+    status: "unknown",
+    serviceStatus: "unreadable",
+  });
+
+  const unavailable = await monitor.checkNginx(async () => {
+    throw new Error("private-command-error");
+  });
+  assert.equal(unavailable.status, "unavailable");
+  assert.deepEqual(unavailable.metadata, { service_status: "unavailable" });
+  assert.doesNotMatch(JSON.stringify(unavailable), /private-command-error/u);
+});
+
 test("monitor source never reads customer content tables or logs environment values", () => {
   assert.doesNotMatch(source, /rest\(["'](?:contacts|messages|contact_memories|ai_generations|workspace_members)/);
   assert.doesNotMatch(source, /console\.log\([^\n]*(?:process\.env|RESEND_API_KEY|SUPABASE_SERVICE_ROLE_KEY)/);
@@ -457,7 +491,7 @@ test("Production monitor migration is checksum-pinned, transactional and separat
 });
 
 test("migration allows only metadata components and keeps monitor notifications indexed", () => {
-  for (const component of ["host_disk", "host_memory", "ssl_certificate", "backup_freshness", "operations_monitor"]) {
+  for (const component of ["host_disk", "host_memory", "ssl_certificate", "backup_freshness", "operations_monitor", "nginx"]) {
     assert.match(migration, new RegExp(`'${component}'`));
   }
   assert.match(migration, /admin_notifications_active_monitor_idx/);

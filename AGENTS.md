@@ -88,7 +88,10 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   fixed `operations_monitor` warning/critical/recovery acceptance on one
   exclusive host lock. The lifecycle acceptance must remain main-, release-
   and Production-bound, must never synthesize a real host component, and must
-  prove email as audited `noop` before it can pass.
+  prove email as audited `noop` before it can pass. The regular monitor may
+  persist only the normalized read-only active state of `nginx.service`; it
+  must not read nginx configuration or journal output. Do not add a sampled
+  CPU alarm without a separate sustained-load design and acceptance.
 - Server-error tracking has a separate checksum-pinned Production control
   path. A normal Web deploy may install its root-owned runner, SQL and
   hardened units but must never apply the migration or enable tracking.

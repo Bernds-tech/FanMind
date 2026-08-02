@@ -167,6 +167,11 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   Warnung-Kritisch-Recovery-Abnahme auf der reservierten technischen
   Komponente `operations_monitor` ausführen. Timer, Probe und Lifecycle teilen
   ein exklusives Host-Lock; GitHub erhält nur allowlist-redigierte Ergebnisse.
+  Der reguläre Monitor persistiert zusätzlich den ausschließlich normalisierten
+  Aktivzustand von `nginx.service` über einen unprivilegierten Read-only-Aufruf.
+  nginx-Konfiguration und Journal bleiben ungelesen; ein einzelner CPU-
+  Momentwert wird wegen seines Fehlalarmrisikos nicht als eigener
+  Zehn-Minuten-Zustand geführt.
 - Server-Fehlertelemetrie: Der datensparsame Next.js-Hook, die RLS-geschützte
   Aggregation und das Admin-Operations-Reader-Modul sind implementiert. Die
   SHA-256-gebundene Migration wurde am 1. August 2026 auf Production für den
