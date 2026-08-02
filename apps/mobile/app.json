@@ -40,7 +40,7 @@
       "typedRoutes": true
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "ch.fanmind.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

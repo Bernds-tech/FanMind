@@ -210,6 +210,16 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(manager, /Nur notwendige/u);
   assert.match(manager, /Marketing erlauben/u);
   assert.match(manager, /Datenschutz-Einstellungen/u);
+  assert.match(
+    manager,
+    /PageView[\s\S]*CompleteRegistration[\s\S]*Lead[\s\S]*ohne zusätzliche Eventparameter/u,
+  );
+  assert.match(
+    manager,
+    /PageView[\s\S]*CompleteRegistration[\s\S]*Lead[\s\S]*without additional event parameters/u,
+  );
+  assert.doesNotMatch(manager, /Aktiv ist ausschließlich PageView/u);
+  assert.doesNotMatch(manager, /Only PageView on approved public pages is active/u);
   assert.match(manager, /isMetaPixelEnabled/u);
   assert.match(manager, /isMetaPixelPageViewAllowed/u);
   assert.match(manager, /isMetaPixelReferrerAllowed/u);

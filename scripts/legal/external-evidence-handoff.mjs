@@ -63,7 +63,14 @@ function requireControl(control, id) {
   return control;
 }
 
-function hasValidCompletionEvidence(control) {
+function hasValidCompletionEvidence(
+  control,
+  {
+    requireValueWhenConfirmed = false,
+    requiredDateField = null,
+    requiredVersionField = null,
+  } = {},
+) {
   if (control.status === "pending") return false;
   if (
     typeof control.evidenceRef !== "string"
@@ -72,17 +79,24 @@ function hasValidCompletionEvidence(control) {
     return false;
   }
 
-  if (control.status !== "confirmed") return true;
-  for (const key of ["confirmedAt", "approvedAt", "acceptedAt"]) {
-    if (
-      key in control
-      && !/^\d{4}-\d{2}-\d{2}$/u.test(String(control[key]))
-    ) {
-      return false;
-    }
+  if (
+    requiredDateField
+    && !/^\d{4}-\d{2}-\d{2}$/u.test(String(control[requiredDateField]))
+  ) {
+    return false;
   }
   if (
-    "value" in control
+    requiredVersionField
+    && (
+      typeof control[requiredVersionField] !== "string"
+      || control[requiredVersionField].trim().length === 0
+    )
+  ) {
+    return false;
+  }
+  if (
+    control.status === "confirmed"
+    && requireValueWhenConfirmed
     && (typeof control.value !== "string" || control.value.trim().length === 0)
   ) {
     return false;
@@ -90,8 +104,8 @@ function hasValidCompletionEvidence(control) {
   return true;
 }
 
-function collectTask(tasks, control, task) {
-  if (!hasValidCompletionEvidence(control)) tasks.push(task);
+function collectTask(tasks, control, task, options) {
+  if (!hasValidCompletionEvidence(control, options)) tasks.push(task);
 }
 
 export function buildExternalEvidenceHandoff(evidence) {
@@ -111,14 +125,20 @@ export function buildExternalEvidenceHandoff(evidence) {
     const id = `operator.${key}`;
     const control = requireControl(evidence.operator?.[key], id);
     totalControls += 1;
-    collectTask(tasks, control, { group, id, request });
+    collectTask(tasks, control, { group, id, request }, {
+      requireValueWhenConfirmed: true,
+      requiredDateField: "confirmedAt",
+    });
   }
 
   for (const [key, group, request] of approvalTasks) {
     const id = `approvals.${key}`;
     const control = requireControl(evidence.approvals?.[key], id);
     totalControls += 1;
-    collectTask(tasks, control, { group, id, request });
+    collectTask(tasks, control, { group, id, request }, {
+      requiredDateField: "approvedAt",
+      requiredVersionField: "reviewedVersion",
+    });
   }
 
   if (!Array.isArray(evidence.providers)) fail("handoff_providers_invalid");
@@ -146,15 +166,24 @@ export function buildExternalEvidenceHandoff(evidence) {
       fail(`handoff_provider_status_invalid_${providerId}`);
     }
 
-    for (const [key, group, request] of [
-      ["dpa", "provider", `${providerLabel}: kontobezogene DPA-Fassung und wirksame Annahme`],
-      ["dataLocation", "provider", `${providerLabel}: tatsächlich verwendete Produktionsregion beziehungsweise belastbare Datenstandortangabe`],
-      ["transferAssessment", "legal", `${providerLabel}: versionsbezogene Rollen-, Unterauftrags- und Transferprüfung`],
+    for (const [key, group, request, options] of [
+      ["dpa", "provider", `${providerLabel}: kontobezogene DPA-Fassung und wirksame Annahme`, {
+        requiredDateField: "acceptedAt",
+        requiredVersionField: "documentVersion",
+      }],
+      ["dataLocation", "provider", `${providerLabel}: tatsächlich verwendete Produktionsregion beziehungsweise belastbare Datenstandortangabe`, {
+        requireValueWhenConfirmed: true,
+        requiredDateField: "confirmedAt",
+      }],
+      ["transferAssessment", "legal", `${providerLabel}: versionsbezogene Rollen-, Unterauftrags- und Transferprüfung`, {
+        requiredDateField: "approvedAt",
+        requiredVersionField: "reviewedVersion",
+      }],
     ]) {
       const id = `provider.${providerId}.${key}`;
       const control = requireControl(provider[key], id);
       totalControls += 1;
-      collectTask(tasks, control, { group, id, request });
+      collectTask(tasks, control, { group, id, request }, options);
     }
   }
 

@@ -51,6 +51,8 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
   transparentes, maskensicher skaliertes Android-Adaptive-Foreground;
 - iOS-Privacy-Manifest mit den Required-Reason-APIs der installierten nativen
   Bibliotheken, ohne Tracking-Domains, sowie fail-closed Android-API-36-Prüfung;
+- bewusst iPhone-only gehaltener erster iOS-Release; iPad bleibt bis zu einer
+  separaten Layout-, Geräte- und Screenshot-Abnahme außerhalb des Beta-Scope;
 - technische, noch extern zu prüfende Vorlagen für Apple App Privacy und
   Google Play Data Safety;
 - sichere lokale Abmeldung mit Purge registrierter FanMind-SecureStore-Schlüssel und Workspace-Zustand.

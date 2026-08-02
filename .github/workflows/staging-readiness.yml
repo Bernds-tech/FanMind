@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   staging-readiness:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: staging
     env:

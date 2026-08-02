@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   staging-readonly:
+    if: github.ref == 'refs/heads/main'
     name: Synthetic login and contact read-only flow
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -19,7 +20,7 @@ jobs:
     env:
       FANMIND_E2E_STAGING_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
       FANMIND_E2E_STAGING_ACK: fanmind-staging-readonly
-      FANMIND_E2E_STAGING_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      FANMIND_E2E_STAGING_SUPABASE_URL: ${{ secrets.FANMIND_STAGING_SUPABASE_URL }}
       FANMIND_E2E_STAGING_PRODUCTION_SUPABASE_REF: ${{ vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF }}
       FANMIND_E2E_STAGING_WORKSPACE_ID: ${{ vars.FANMIND_STAGING_E2E_WORKSPACE_ID }}
       FANMIND_E2E_STAGING_CONTACT_ID: ${{ vars.FANMIND_STAGING_E2E_CONTACT_ID }}

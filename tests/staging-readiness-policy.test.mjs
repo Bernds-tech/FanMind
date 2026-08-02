@@ -66,6 +66,7 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   assert.match(script, /STAGING_READINESS=OK/);
 
   assert.match(workflow, /environment: staging/);
+  assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/u);
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/);
   assert.match(workflow, /FANMIND_ENABLE_REFERRAL_BILLING: 'false'/);
   assert.match(workflow, /npm run staging:preflight/);

@@ -188,6 +188,7 @@ test("Mobile has an explicit SDK-compatible development-client workflow", () => 
   assert.equal(packageJson.scripts.android, "expo run:android");
   assert.equal(packageJson.scripts.ios, "expo run:ios");
   assert.match(packageJson.scripts.check, /native:prebuild:check/u);
+  assert.equal(appConfig.expo.ios.supportsTablet, false);
 });
 
 test("EAS profiles bind every release class to an explicit environment", () => {
@@ -287,6 +288,8 @@ test("native configuration is regenerated in isolation and checked on both platf
   assert.match(nativeVerifier, /forbiddenNativeSecretIdentifiers/u);
   assert.match(nativeVerifier, /serverOnlyEnvironmentKeys/u);
   assert.match(nativeVerifier, /delete prebuildEnvironment\[key\]/u);
+  assert.match(nativeVerifier, /TARGETED_DEVICE_FAMILY = "1";/u);
+  assert.match(nativeVerifier, /iPad support requires a separate layout/u);
   assert.match(nativeVerifier, /await rm\(temporaryRoot/u);
 
   assert.match(gitignore, /\/apps\/mobile\/android\//u);

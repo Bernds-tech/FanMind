@@ -112,8 +112,9 @@ Nachrichten dürfen sichtbar sein.
 | 6 | Offline-Kontaktübersicht | Begrenzter, verschlüsselter Nur-Lesen-Zugriff |
 
 Benötigt werden mindestens ein aktueller Android- und ein aktueller
-iPhone-Screenshot-Satz aus signierten Builds. Tablet-Screenshots werden nur
-erstellt, wenn die konkrete Store-Konfiguration sie verlangt.
+iPhone-Screenshot-Satz aus signierten Builds. FanMind unterstützt im ersten
+iOS-Release ausschließlich iPhone. iPad wird erst in einer separaten Phase
+nach eigener Layout-, Geräte- und Screenshot-Abnahme freigegeben.
 
 ## Datenschutzdeklaration - Prüfmatrix
 

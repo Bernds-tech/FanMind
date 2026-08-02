@@ -4,6 +4,11 @@ import { createRequire } from "node:module";
 import test from "node:test";
 
 import {
+  MOBILE_REVIEWED_AT,
+  MOBILE_REVIEW_EXPIRES_AT,
+  MOBILE_REVIEW_LOW_MAXIMUM,
+  MOBILE_REVIEW_MODERATE_MAXIMUM,
+  REVIEWED_MOBILE_PACKAGES,
   REVIEWED_ROOT_PACKAGES,
   ROOT_REVIEWED_AT,
   ROOT_REVIEWED_FRAMEWORK_VERSION,
@@ -48,8 +53,12 @@ function auditPayload({
 test("clean root audit passes without a review exception", () => {
   const result = evaluateDependencyAudit({
     rootPayload: auditPayload(),
-    mobilePayload: auditPayload({ moderate: 10, packages: ["mobile-transitive"] }),
+    mobilePayload: auditPayload({
+      moderate: 10,
+      packages: [REVIEWED_MOBILE_PACKAGES[0]],
+    }),
     rootManifest: patchedManifest,
+    now: "2026-08-02T18:00:00.000Z",
   });
 
   assert.equal(result.ok, true);
@@ -61,6 +70,14 @@ test("clean root audit passes without a review exception", () => {
     result.root.reviewedFrameworkVersion,
     ROOT_REVIEWED_FRAMEWORK_VERSION,
   );
+  assert.equal(result.mobile.reviewActive, true);
+  assert.equal(result.mobile.reviewedAt, MOBILE_REVIEWED_AT);
+  assert.equal(result.mobile.reviewExpiresAt, MOBILE_REVIEW_EXPIRES_AT);
+  assert.equal(
+    result.mobile.moderateMaximum,
+    MOBILE_REVIEW_MODERATE_MAXIMUM,
+  );
+  assert.equal(result.mobile.lowMaximum, MOBILE_REVIEW_LOW_MAXIMUM);
 });
 
 test("every root high, moderate or unreviewed package fails closed", () => {
@@ -115,7 +132,7 @@ test("every root high, moderate or unreviewed package fails closed", () => {
   );
 });
 
-test("high or critical Mobile findings fail while moderate findings remain allowed", () => {
+test("high or critical Mobile findings fail while reviewed moderate findings stay bounded", () => {
   const mobileHighFailure = evaluateDependencyAudit({
     rootPayload: auditPayload(),
     mobilePayload: auditPayload({ high: 1, packages: ["mobile-high"] }),
@@ -136,6 +153,65 @@ test("high or critical Mobile findings fail while moderate findings remain allow
   assert.match(
     mobileCriticalFailure.errors.join("\n"),
     /mobile_critical_vulnerability_present/u,
+  );
+
+  const reviewedModerate = evaluateDependencyAudit({
+    rootPayload: auditPayload(),
+    mobilePayload: auditPayload({
+      moderate: MOBILE_REVIEW_MODERATE_MAXIMUM,
+      packages: [...REVIEWED_MOBILE_PACKAGES],
+    }),
+    rootManifest: patchedManifest,
+    now: "2026-08-02T18:00:00.000Z",
+  });
+  assert.equal(reviewedModerate.ok, true);
+  assert.deepEqual(reviewedModerate.mobile.unknownPackages, []);
+});
+
+test("new, excessive or expired Mobile findings fail closed", () => {
+  const unknown = evaluateDependencyAudit({
+    rootPayload: auditPayload(),
+    mobilePayload: auditPayload({
+      moderate: 1,
+      packages: ["new-mobile-advisory"],
+    }),
+    rootManifest: patchedManifest,
+    now: "2026-08-02T18:00:00.000Z",
+  });
+  assert.equal(unknown.ok, false);
+  assert.match(
+    unknown.errors.join("\n"),
+    /mobile_unreviewed_vulnerability_package_present/u,
+  );
+
+  const excessive = evaluateDependencyAudit({
+    rootPayload: auditPayload(),
+    mobilePayload: auditPayload({
+      moderate: MOBILE_REVIEW_MODERATE_MAXIMUM + 1,
+      packages: [REVIEWED_MOBILE_PACKAGES[0]],
+    }),
+    rootManifest: patchedManifest,
+    now: "2026-08-02T18:00:00.000Z",
+  });
+  assert.equal(excessive.ok, false);
+  assert.match(
+    excessive.errors.join("\n"),
+    /mobile_moderate_vulnerability_budget_exceeded/u,
+  );
+
+  const expired = evaluateDependencyAudit({
+    rootPayload: auditPayload(),
+    mobilePayload: auditPayload({
+      moderate: 1,
+      packages: [REVIEWED_MOBILE_PACKAGES[0]],
+    }),
+    rootManifest: patchedManifest,
+    now: "2026-09-02T00:00:00.001Z",
+  });
+  assert.equal(expired.ok, false);
+  assert.match(
+    expired.errors.join("\n"),
+    /mobile_vulnerability_review_expired/u,
   );
 });
 

@@ -20,6 +20,12 @@ sind nur Prüfeinstiege.
   Anbieter-IDs und personenbezogene Beratungsunterlagen werden **nicht** in
   GitHub gespeichert. `docs/legal/private-evidence/` ist vorsorglich von Git
   ausgeschlossen.
+- Jeder abgeschlossene Control benötigt zusätzlich sein tatsächliches
+  Bestätigungs-/Annahme-/Freigabedatum. Rechts-, Steuer-, AVV- und
+  Transferprüfungen werden an eine nichtleere `reviewedVersion`, Anbieter-DPAs
+  an eine nichtleere `documentVersion` gebunden. Datenstandorte und
+  Registerwerte benötigen bei `confirmed` den konkret bestätigten Wert. So
+  kann kein bloßer Hash ohne fachlich zuordenbare Fassung als Abschluss gelten.
 
 Mit `npm run legal:evidence:check` wird die Struktur geprüft. Der strengere
 Befehl `npm run legal:evidence:require-complete` bleibt so lange rot, bis jeder

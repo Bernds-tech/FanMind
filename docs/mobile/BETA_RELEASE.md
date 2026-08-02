@@ -374,6 +374,11 @@ npx eas-cli@latest build --platform android --profile production
 
 Die anschließende Übertragung benötigt echte Store-Konten. EAS Submit lädt Binärdateien hoch, ersetzt aber keine Store-Texte, Screenshots, Datenschutzangaben oder Review-Freigaben.
 
+Der erste iOS-Release ist bewusst iPhone-only. `supportsTablet=false` und der
+isolierte Native-Prebuild erzwingen `TARGETED_DEVICE_FAMILY = 1`. Eine spätere
+iPad-Freigabe benötigt eine eigene Layout-, Geräte- und Screenshot-Abnahme und
+wird nicht stillschweigend über denselben Beta-Nachweis mitbehauptet.
+
 ## Branding und Store-Unterlagen
 
 Die bestätigte FanMind-Wortmarke liegt unverändert unter
@@ -431,5 +436,7 @@ aber weder eine App-Privacy-Portalantwort noch ein signierter Store-Build.
 - realer Account-Löschantrag/Widerruf auf signiertem Android-/iOS-Gerät;
 - reale Android-/iOS-Gerätetestprotokolle;
 - Store-Datenschutzangaben und Screenshots final abnehmen; Metadaten sind vorbereitet.
+- iPad-Unterstützung erst in einer separaten späteren Phase mit eigener
+  Layout-, Geräte- und Screenshot-Abnahme aktivieren.
 
 Diese Punkte bleiben sichtbar offen und dürfen nicht allein aufgrund der vorhandenen Konfigurationsdateien als abgeschlossen markiert werden.

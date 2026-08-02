@@ -9,6 +9,7 @@ import {
   formatExternalEvidenceHandoff,
 } from "../scripts/legal/external-evidence-handoff.mjs";
 import { collectRegisteredControlIds } from "../scripts/legal/hash-external-evidence.mjs";
+import { validateExternalEvidence } from "../scripts/verify-legal-external-evidence.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -53,7 +54,7 @@ test("formatted handoff omits values, evidence references and completed controls
   evidence.providers[0].dpa = {
     status: "not_applicable",
     documentVersion: "SENSITIVE-VERSION",
-    acceptedAt: null,
+    acceptedAt: "2026-07-31",
     evidenceRef: `sha256:${"b".repeat(64)}`,
   };
 
@@ -67,6 +68,48 @@ test("formatted handoff omits values, evidence references and completed controls
   assert.doesNotMatch(output, /SENSITIVE|sha256:|evidenceRef|acceptedAt/iu);
   assert.match(output, /Rechts- und Datenschutzberatung \(7\)/u);
   assert.match(output, /Anbieterkonten \(11\)/u);
+});
+
+test("completed controls require their exact date and document version binding", async () => {
+  const evidence = await currentEvidence();
+  evidence.approvals.legalReview = {
+    status: "confirmed",
+    reviewedVersion: null,
+    approvedAt: "2026-08-02",
+    evidenceRef: `sha256:${"c".repeat(64)}`,
+  };
+
+  let handoff = buildExternalEvidenceHandoff(evidence);
+  assert.ok(
+    handoff.tasks.some(({ id }) => id === "approvals.legalReview"),
+  );
+
+  evidence.approvals.legalReview.reviewedVersion =
+    "legal-pages-and-avv@18b1b320";
+  handoff = buildExternalEvidenceHandoff(evidence);
+  assert.ok(
+    !handoff.tasks.some(({ id }) => id === "approvals.legalReview"),
+  );
+});
+
+test("the canonical verifier accepts valid confirmed transitions and rejects unversioned approvals", async () => {
+  const evidence = await currentEvidence();
+  evidence.approvals.legalReview = {
+    status: "confirmed",
+    reviewedVersion: "legal-pages-and-avv@18b1b320",
+    approvedAt: "2026-08-02",
+    evidenceRef: `sha256:${"d".repeat(64)}`,
+  };
+
+  const valid = validateExternalEvidence(evidence);
+  assert.equal(valid.completeCount, 1);
+  assert.equal(valid.incomplete.length, 26);
+
+  evidence.approvals.legalReview.reviewedVersion = null;
+  assert.throws(
+    () => validateExternalEvidence(evidence),
+    /approvals\.legalReview: reviewedVersion is required when completed/u,
+  );
 });
 
 test("invalid completion evidence keeps controls in the external handoff", async () => {
