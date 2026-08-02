@@ -1,15 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
+import {
+  isTrustedMutationRequest,
+  readBoundedJsonRequest,
+} from "@/lib/httpMutationPolicy.mjs";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 
+const MAX_CHECKOUT_BODY_BYTES = 4096;
+
 export async function POST(request: NextRequest) {
+  if (!isTrustedMutationRequest(request, [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.FANMIND_APP_URL,
+  ])) {
+    return NextResponse.json(
+      { error: "Die Zahlungsanfrage konnte nicht verifiziert werden.", code: "origin_forbidden" },
+      { status: 403 },
+    );
+  }
+
   const { data } = await getSupabaseServerUser();
   if (!data.user) return NextResponse.json({ error: "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an, um die Zahlung fortzusetzen." }, { status: 401 });
   if (isTemporaryDemoUser(data.user)) return NextResponse.json({ error: "Demo-User können keinen Checkout starten." }, { status: 403 });
 
-  const payload = await request.json().catch(() => ({})) as { planId?: string; commercialOption?: string };
-  if (!payload.planId || !payload.commercialOption) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
+  const parsedBody = await readBoundedJsonRequest(request, MAX_CHECKOUT_BODY_BYTES);
+  if (!parsedBody.ok) {
+    const tooLarge = parsedBody.reason === "payload_too_large";
+    return NextResponse.json(
+      {
+        error: tooLarge
+          ? "Die Zahlungsanfrage ist zu groß."
+          : "Die Zahlungsanfrage ist ungültig.",
+        code: tooLarge ? "payload_too_large" : "invalid_request",
+      },
+      { status: tooLarge ? 413 : 400 },
+    );
+  }
+  const payload = parsedBody.value as { planId?: string; commercialOption?: string } | null;
+  if (!payload?.planId || !payload.commercialOption) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
 
   if (payload.commercialOption === "internal_daily_test" && process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN !== "true") {
     return NextResponse.json({ error: "Das interne Live-Testabo kann nur im Adminbereich gestartet werden." }, { status: 403 });
@@ -25,13 +55,13 @@ export async function POST(request: NextRequest) {
   if (!plan) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  if (!workspaceResult.workspace) return NextResponse.json({ error: workspaceResult.error?.message ?? "Workspace konnte nicht geladen werden." }, { status: 400 });
+  if (!workspaceResult.workspace) return NextResponse.json({ error: "Workspace konnte nicht geladen werden.", code: "workspace_unavailable" }, { status: 400 });
   if (isDemoWorkspace(workspaceResult.workspace)) return NextResponse.json({ error: "Demo-Workspaces können keinen Checkout starten." }, { status: 403 });
   if (workspaceResult.workspace.plan_id !== plan.planId || workspaceResult.workspace.commercial_option !== plan.commercialOption) {
     return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
   }
 
   const session = await createStripeCheckoutSession({ plan, userId: data.user.id, workspaceId: workspaceResult.workspace.id, userEmail: data.user.email });
-  if (!session.url) return NextResponse.json({ error: session.error ?? "Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind." }, { status: 502 });
+  if (!session.url) return NextResponse.json({ error: "Die Zahlung konnte nicht gestartet werden. Bitte kontaktiere FanMind.", code: "checkout_unavailable" }, { status: 502 });
   return NextResponse.json({ url: session.url, sessionId: session.id });
 }

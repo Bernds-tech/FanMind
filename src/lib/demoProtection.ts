@@ -127,7 +127,7 @@ async function callDemoRpc<T>(
   if (!key) {
     return {
       rows: [],
-      error: "SUPABASE_SERVICE_ROLE_KEY ist nicht konfiguriert.",
+      error: "demo_rpc_not_configured",
     };
   }
 
@@ -140,10 +140,9 @@ async function callDemoRpc<T>(
       signal: AbortSignal.timeout(12000),
     });
     if (!response.ok) {
-      const detail = await response.text().catch(() => "");
       return {
         rows: [],
-        error: `${name} fehlgeschlagen (${response.status})${detail ? `: ${detail.slice(0, 250)}` : ""}`,
+        error: "demo_rpc_failed",
       };
     }
     const payload = (await response.json().catch(() => [])) as T[] | T | null;
@@ -151,10 +150,10 @@ async function callDemoRpc<T>(
       rows: Array.isArray(payload) ? payload : payload ? [payload] : [],
       error: null,
     };
-  } catch (error) {
+  } catch {
     return {
       rows: [],
-      error: error instanceof Error ? error.message : `${name} fehlgeschlagen.`,
+      error: "demo_rpc_failed",
     };
   }
 }
@@ -216,7 +215,7 @@ export async function verifyDemoTurnstile(input: {
     if (!response.ok || !result?.success) {
       return {
         ok: false,
-        error: `Bot-Schutz nicht bestätigt${result?.["error-codes"]?.length ? ` (${result["error-codes"].join(", ")})` : ""}.`,
+        error: "Bot-Schutz nicht bestätigt.",
       };
     }
 
