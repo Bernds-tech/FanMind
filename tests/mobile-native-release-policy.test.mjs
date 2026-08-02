@@ -288,7 +288,7 @@ test("native configuration is regenerated in isolation and checked on both platf
   assert.match(nativeVerifier, /forbiddenNativeSecretIdentifiers/u);
   assert.match(nativeVerifier, /serverOnlyEnvironmentKeys/u);
   assert.match(nativeVerifier, /delete prebuildEnvironment\[key\]/u);
-  assert.match(nativeVerifier, /TARGETED_DEVICE_FAMILY = 1;/u);
+  assert.match(nativeVerifier, /TARGETED_DEVICE_FAMILY = "1";/u);
   assert.match(nativeVerifier, /iPad support requires a separate layout/u);
   assert.match(nativeVerifier, /await rm\(temporaryRoot/u);
 
