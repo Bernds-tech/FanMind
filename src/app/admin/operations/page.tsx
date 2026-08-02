@@ -40,9 +40,9 @@ function badge(status: string) {
 
 function safeCommit() {
   return (
+    process.env.FANMIND_RELEASE_COMMIT ??
     process.env.VERCEL_GIT_COMMIT_SHA ??
     process.env.GITHUB_SHA ??
-    process.env.FANMIND_RELEASE_COMMIT ??
     "nicht gesetzt"
   );
 }
