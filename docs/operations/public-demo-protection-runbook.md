@@ -124,7 +124,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 
 Erwartung: `401`.
 
-Der Cleanup-Worker liest das Secret direkt aus `/var/www/fanmind/.env.production` und gibt es nicht aus.
+Der Cleanup-Worker liest das Secret direkt aus `/var/www/fanmind/.env.production` und gibt es nicht aus. Zulässige Löschfehler stammen aus einer festen Code-Allowlist; unbekannte Antwortcodes werden verworfen. Unlesbare ENV-Dateien, Netzwerkfehler, ungültige Zähler und sonstige unerwartete Exceptions erscheinen im systemd-Journal ausschließlich als feste `FANMIND_DEMO_CLEANUP_*`-Codes, nie mit Pfad, URL, Payload oder rohem Exception-Text.
 
 ## 4. Timer bewusst aktivieren
 

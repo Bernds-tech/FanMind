@@ -10,6 +10,7 @@ import {
   executeRetention,
   parseArtifactName,
   resolvePolicy,
+  retentionErrorCode,
   selectRetention,
 } from '../scripts/operations/backup-retention.mjs';
 
@@ -74,6 +75,27 @@ test('systemd retention service pins the agreed MVP policy', () => {
   assert.match(retentionService, /FANMIND_BACKUP_RETENTION_FULL_DAILY=0/);
   assert.match(retentionService, /FANMIND_BACKUP_RETENTION_FULL_WEEKLY=1/);
   assert.match(retentionService, /FANMIND_BACKUP_RETENTION_FULL_MONTHLY=1/);
+});
+
+test('retention journal output reduces unexpected details to fixed error codes', () => {
+  assert.equal(
+    retentionErrorCode(new Error('daily_must_be_non_negative_integer')),
+    'retention_configuration_invalid',
+  );
+  assert.equal(
+    retentionErrorCode(new Error('exactly_one_of_dry_run_or_execute_required')),
+    'exactly_one_of_dry_run_or_execute_required',
+  );
+  assert.equal(
+    retentionErrorCode(
+      Object.assign(new Error('/private/backups/customer.age'), { code:'EACCES' }),
+    ),
+    'retention_filesystem_failed',
+  );
+  assert.equal(
+    retentionErrorCode(new Error('token=live-secret\nhttps://private.example')),
+    'retention_failed',
+  );
 });
 
 test('database policy keeps three distinct restore points across day, week and month', () => {

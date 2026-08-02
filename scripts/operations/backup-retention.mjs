@@ -27,6 +27,21 @@ function parseNonNegativeInt(value, fallback, name) {
   return parsed;
 }
 
+function retentionErrorCode(error) {
+  const message = error instanceof Error ? error.message : '';
+  if (message === 'exactly_one_of_dry_run_or_execute_required') {
+    return message;
+  }
+  if (/^(?:daily|weekly|monthly|full_daily|full_weekly|full_monthly)_must_be_non_negative_integer$/u.test(message)) {
+    return 'retention_configuration_invalid';
+  }
+  const code = typeof error?.code === 'string' ? error.code : '';
+  if (/^(?:EACCES|EEXIST|EIO|EISDIR|ELOOP|EMFILE|ENOENT|ENOSPC|ENOTDIR|EPERM|EROFS|EXDEV)$/u.test(code)) {
+    return 'retention_filesystem_failed';
+  }
+  return 'retention_failed';
+}
+
 function parseArtifactName(name) {
   for (const pattern of ARTIFACT_PATTERNS) {
     const match = name.match(pattern.regex);
@@ -380,12 +395,13 @@ export {
   monthKey,
   parseArtifactName,
   resolvePolicy,
+  retentionErrorCode,
   selectRetention,
 };
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'retention_failed');
+    console.error(`BACKUP_RETENTION_ERROR=${retentionErrorCode(error)}`);
     process.exit(1);
   });
 }
