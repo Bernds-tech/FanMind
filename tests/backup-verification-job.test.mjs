@@ -17,11 +17,17 @@ await writeFile(process.env.FANMIND_BACKUP_PGPASSFILE, "localhost:*:*:*:x");
 const worker = await import("../scripts/operations/backup-worker.mjs");
 const workerSource = await readFile(new URL("../scripts/operations/backup-worker.mjs", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260718173000_enable_safe_backup_verification.sql", import.meta.url), "utf8");
+const migrationRunner = await import("../scripts/operations/backup-verification-migration-runner.mjs");
+const migrationLogVerifier = await import("../scripts/operations/verify-backup-verification-migration-log.mjs");
 const operationsSource = await readFile(new URL("../src/lib/backupOperations.ts", import.meta.url), "utf8");
 const routeSource = await readFile(new URL("../src/app/api/admin/operations/backup-jobs/route.ts", import.meta.url), "utf8");
 const uiSource = await readFile(new URL("../src/app/admin/operations/BackupJobActions.tsx", import.meta.url), "utf8");
 const pageSource = await readFile(new URL("../src/app/admin/operations/page.tsx", import.meta.url), "utf8");
 const autoRefreshSource = await readFile(new URL("../src/app/admin/operations/OperationsAutoRefresh.tsx", import.meta.url), "utf8");
+const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+const deployment = await readFile(new URL("../.github/workflows/deploy-fanmind.yml", import.meta.url), "utf8");
+const migrationWorkflow = await readFile(new URL("../.github/workflows/backup-verification-production-migration.yml", import.meta.url), "utf8");
+const migrationService = await readFile(new URL("../ops/systemd/fanmind-backup-verification-migration@.service", import.meta.url), "utf8");
 
 test("safe verification job is allowlisted end to end", () => {
   assert.equal(worker.JOBS.has("verify_backup"), true);
@@ -109,6 +115,73 @@ test("verification migration grants only service_role claim access", () => {
   assert.match(migration, /revoke all on function public\.claim_admin_backup_job\(text, integer\) from public, anon, authenticated;/i);
   assert.match(migration, /grant execute on function public\.claim_admin_backup_job\(text, integer\) to service_role;/i);
   assert.doesNotMatch(migration, /grant execute .* to (public|anon|authenticated)/i);
+});
+
+test("backup verification migration is checksum-pinned and wrapped transactionally", () => {
+  const checkedMigration = migrationRunner.verifyBackupVerificationMigrationSource();
+  const transaction = migrationRunner.wrapBackupVerificationMigration(checkedMigration);
+
+  assert.equal(checkedMigration, migration);
+  assert.equal(
+    packageJson.scripts["db:backup-verification:check"],
+    "node scripts/operations/backup-verification-migration-runner.mjs",
+  );
+  assert.match(transaction, /^\\set ON_ERROR_STOP on\nbegin;/u);
+  assert.match(transaction, /set local lock_timeout = '5s'/u);
+  assert.match(transaction, /set local statement_timeout = '60s'/u);
+  assert.match(transaction, /commit;\s*$/u);
+  assert.doesNotMatch(migration, /(?:insert|delete)\s+(?:into|from)?\s*public\./iu);
+  assert.doesNotMatch(migration, /drop\s+(?:table|schema|database)/iu);
+});
+
+test("Production backup verification migration has a separate guarded control path", () => {
+  assert.match(migrationWorkflow, /github\.ref == 'refs\/heads\/main'/u);
+  assert.match(migrationWorkflow, /environment: production/u);
+  assert.match(migrationWorkflow, /runs-on: \[self-hosted, fanmind-prod, exoscale, linux, x64\]/u);
+  assert.match(migrationWorkflow, /backup-verification-production-verify/u);
+  assert.match(migrationWorkflow, /backup-verification-production-apply/u);
+  assert.match(migrationWorkflow, /EXPECTED_COMMIT[\s\S]*REVIEWED_COMMIT/u);
+  assert.match(migrationWorkflow, /read-only-production-audit\.sh/u);
+  assert.match(migrationWorkflow, /fanmind-backup-verification-migration@\$\{MIGRATION_ACTION\}\.service/u);
+  assert.match(migrationWorkflow, /verify-backup-verification-migration-log\.mjs/u);
+  assert.doesNotMatch(migrationWorkflow, /actions\/checkout|source .*\.env\.production|cat .*\.env\.production|printenv/u);
+
+  assert.match(migrationService, /User=root/u);
+  assert.match(migrationService, /EnvironmentFile=\/var\/www\/fanmind\/\.env\.production/u);
+  assert.match(migrationService, /EnvironmentFile=\/etc\/fanmind-backup\/worker\.env/u);
+  assert.match(migrationService, /EnvironmentFile=\/etc\/fanmind-backup\/release\.env/u);
+  assert.match(migrationService, /backup-verification-migration-runner\.mjs --%i backup-verification-production-%i/u);
+  assert.match(migrationService, /NoNewPrivileges=true/u);
+  assert.match(migrationService, /ProtectSystem=strict/u);
+  assert.match(migrationService, /CapabilityBoundingSet=/u);
+  assert.doesNotMatch(migrationService, /\[Install\]/u);
+
+  assert.match(deployment, /backup-verification-migration-runner\.mjs \/usr\/local\/lib\/fanmind-ops\/backup-verification-migration-runner\.mjs/u);
+  assert.match(deployment, /-m 0600 supabase\/migrations\/20260718173000_enable_safe_backup_verification\.sql \/usr\/local\/lib\/fanmind-ops\/20260718173000_enable_safe_backup_verification\.sql/u);
+  assert.match(deployment, /verify-backup-verification-migration-log\.mjs \/usr\/local\/lib\/fanmind-audit\/verify-backup-verification-migration-log\.mjs/u);
+  assert.match(deployment, /fanmind-backup-verification-migration@\.service \/etc\/systemd\/system\/fanmind-backup-verification-migration@\.service/u);
+});
+
+test("migration diagnostics are allowlisted and action-bound", () => {
+  const now = new Date().toISOString();
+  const source = `${JSON.stringify({
+    ts: now,
+    version: "fanmind-backup-verification-migration-1",
+    level: "info",
+    event: "migration_status",
+    action: "apply",
+    status: "applied",
+  })}\n`;
+  const result = migrationLogVerifier.verifyBackupVerificationMigrationLog(source, now, "apply");
+  assert.deepEqual(result, { action:"apply", status:"applied", errorCode:null });
+  assert.match(
+    migrationLogVerifier.formatBackupVerificationMigrationDiagnostic(result),
+    /BACKUP_VERIFICATION_MIGRATION_RESULT=applied/u,
+  );
+  assert.throws(
+    () => migrationLogVerifier.verifyBackupVerificationMigrationLog(source, now, "verify"),
+    /diagnostic_missing/u,
+  );
 });
 
 test("local backup pair must remain inside configured backup root", async () => {

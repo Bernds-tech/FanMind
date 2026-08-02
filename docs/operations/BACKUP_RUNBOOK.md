@@ -20,7 +20,12 @@ Automatische Backups verwenden age Public-Key-Verschlüsselung. Auf Production l
    4. `20260711170000_grant_backup_worker_rpc_service_role.sql`
 2. Vor der Worker-Installation bestätigen: `service_role` hat `EXECUTE` auf `public.claim_admin_backup_job(text, integer)`, `PUBLIC`, `anon` und `authenticated` nicht; `service_role` hat außerdem `USAGE` auf Schema `public` für den PostgREST-RPC-Lookup.
 3. Erst danach Worker und sicheren Backup-Verifier gemeinsam installieren.
-4. Anschließend `20260718173000_enable_safe_backup_verification.sql` prüfen und anwenden; diese Migration aktiviert ausschließlich den nun vorhandenen festen Jobtyp `verify_backup`.
+4. Anschließend `20260718173000_enable_safe_backup_verification.sql` mit
+   `npm run db:backup-verification:check` offline prüfen. Production-`verify`
+   und der getrennt bestätigte, transaktionale Production-`apply` laufen nur
+   über `FanMind Backup Verification Production Migration`; ein Web-Deploy
+   wendet die Migration niemals automatisch an. Diese Migration aktiviert
+   ausschließlich den nun vorhandenen festen Jobtyp `verify_backup`.
 5. Worker starten.
 6. Als Platform-Admin unter `/admin/operations` einen Backup-Job und getrennt **Letztes Backup prüfen** einreihen.
 7. Logs mit `journalctl` prüfen.
