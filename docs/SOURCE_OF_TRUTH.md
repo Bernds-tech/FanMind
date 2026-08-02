@@ -142,6 +142,11 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   ausdrückliche Bestätigung und teilt ein serverseitiges atomares Limit von fünf
   Anforderungen je Platform-Admin in zehn Minuten. Die Limiter-Identität ist
   HMAC-SHA256-pseudonymisiert; bei fehlendem Limiter wird kein Job eingereiht.
+  Die notwendige `verify_backup`-Constraint-Erweiterung besitzt einen eigenen
+  checksum-, `main`-, Environment- und Release-gebundenen Production-
+  Verify/Apply-Ablauf mit read-only Vor-/Nachprüfung. Ein normaler Web-Deploy
+  installiert nur diesen root-owned Kontrollpfad und wendet die Migration
+  nicht automatisch an.
 - Release-Checks: automatisch aktiv.
 - Operations-Monitor: Die SHA-256-gebundene Komponenten-Constraint-Migration
   wurde am 1. August 2026 kontrolliert auf Production angewendet und

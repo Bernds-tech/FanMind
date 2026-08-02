@@ -21,6 +21,7 @@
     "smoke:go-live:public": "node scripts/final-go-live-preflight.mjs",
     "uptime:check": "node scripts/monitor-public-uptime.mjs --base-url https://fanmind.ch --expected-runtime-environment production",
     "operations:check": "node scripts/operations/operations-monitor.mjs",
+    "db:backup-verification:check": "node scripts/operations/backup-verification-migration-runner.mjs",
     "db:operations-monitor:check": "node scripts/operations/operations-monitor-migration-runner.mjs",
     "db:server-error-tracking:check": "node scripts/operations/server-error-migration-runner.mjs",
     "production:audit:verify": "node scripts/operations/verify-production-audit-output.mjs",

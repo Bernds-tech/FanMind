@@ -397,6 +397,10 @@ Alle manuellen Backup- und Checksum-Verifikationsanforderungen verlangen eine
 ausdrückliche Bestätigung und teilen ein serverseitiges atomares Limit von fünf
 Anforderungen je Platform-Admin in zehn Minuten. Die Limiter-Identität ist
 HMAC-SHA256-pseudonymisiert; bei fehlendem Limiter wird kein Job eingereiht.
+Die für `verify_backup` notwendige Constraint-Erweiterung besitzt einen
+eigenen checksum- und release-gebundenen Production-Verify/Apply-Ablauf. Ein
+normaler Web-Deploy installiert nur den root-owned Kontrollpfad und wendet die
+Datenbankmigration nicht automatisch an.
 
 Die für den Operations Monitor benötigte Constraint-Erweiterung bleibt von
 diesem Deploy getrennt. Sie wurde am 1. August 2026 kontrolliert angewendet und
