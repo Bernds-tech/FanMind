@@ -6,6 +6,7 @@ import {
 import { AdminBillingShell } from "../billing/AdminBillingShell";
 import { AdminTabs } from "../billing/AdminTabs";
 import { BackupJobActions } from "./BackupJobActions";
+import { OperationsAutoRefresh } from "./OperationsAutoRefresh";
 import { ServerErrorGroupsCard } from "./ServerErrorGroupsCard";
 import styles from "../billing/adminBilling.module.css";
 
@@ -61,6 +62,9 @@ export default async function AdminOperationsPage() {
     getOperationsOverviewData(),
   ]);
   const commit = safeCommit();
+  const hasActiveJobs = (data.jobs.data ?? []).some((job) =>
+    ["queued", "claimed", "running"].includes(String(job.status ?? "")),
+  );
 
   return (
     <AdminBillingShell
@@ -68,6 +72,7 @@ export default async function AdminOperationsPage() {
       title="Operations Center"
       subtitle="Sichere Grundlage für Healthchecks, Admin-Meldungen und Backup-Transparenz."
     >
+      <OperationsAutoRefresh enabled={hasActiveJobs} />
       <div className={styles.adminStack}>
         <AdminTabs activeTab="operations" />
 
