@@ -1,6 +1,6 @@
 # Entscheidungsvorlage für KI Standard, Plus und Ultra
 
-Stand: 30. Juli 2026
+Stand: 2. August 2026
 
 ## Zweck und Status
 
@@ -119,9 +119,16 @@ erfüllt sind:
   öffentliche Paketdarstellung stimmen exakt überein;
 - serverseitige Stripe-Prices sind getrennt, im richtigen Modus und für exakt
   100 €/200 € monatlich geprüft;
+- jede Stufe besitzt eine dedizierte serverseitige Provider-Modellzuordnung
+  und ein davon unterschiedliches, getestetes Fallback-Modell;
 - Workspace-Felder und Entitlements bleiben server-owned und RLS-/Rollen-Tests
   sind positiv und negativ grün;
 - Staging-Migration, Lifecycle-Reihenfolge, Idempotenz und Rollback sind grün;
+- Anfrage-/Tokenkontingente und Kontextgrenzen werden in jedem produktiven
+  KI-Einstiegspunkt serverseitig und fail-closed durchgesetzt;
+- Qualitäts-/Kosten-Eval, Rechts-/Steuerfreigabe, Staging-Akzeptanz,
+  produktive Runtime-Integration und ausdrückliche Production-Aktivierung
+  sind für Plus und Ultra jeweils separat bestätigt;
 - Kosten-, Missbrauchs-, Datenschutz- und manuelle Versandgrenzen bleiben
   wirksam;
 - `npm run ai:tiers:readiness` meldet die beabsichtigte Matrix ohne Secrets

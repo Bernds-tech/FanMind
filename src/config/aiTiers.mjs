@@ -12,6 +12,12 @@ const AI_TIER_STRIPE_PRICE_ENV = Object.freeze({
   ultra: "STRIPE_PRICE_AI_ULTRA",
 });
 
+function paidTierEnvironmentPrefix(tierId) {
+  return AI_TIER_STRIPE_PRICE_ENV[tierId]
+    ? `FANMIND_AI_TIER_${tierId.toUpperCase()}`
+    : null;
+}
+
 function freezeTier(tier) {
   return Object.freeze({
     ...tier,
@@ -118,6 +124,17 @@ function hasConfiguredStripePrice(value) {
   return typeof value === "string" && /^price_[A-Za-z0-9_]+$/u.test(value);
 }
 
+function hasConfiguredProviderModel(value) {
+  return (
+    typeof value === "string" &&
+    /^[a-z0-9][a-z0-9._:-]{2,127}$/u.test(value.trim())
+  );
+}
+
+function isExplicitlyConfirmed(value) {
+  return value === "true";
+}
+
 function normalizedInstant(value) {
   if (typeof value !== "string" || value.trim() === "") return null;
   const normalized = value.trim();
@@ -143,12 +160,61 @@ export function getAiTierRuntimeReadinessFromEnvironment(
   environment = process.env,
 ) {
   const priceEnvironmentName = AI_TIER_STRIPE_PRICE_ENV[tierId];
+  const prefix = paidTierEnvironmentPrefix(tierId);
+  const providerModel = prefix ? environment?.[`${prefix}_MODEL`]?.trim() : "";
+  const fallbackModel = prefix
+    ? environment?.[`${prefix}_FALLBACK_MODEL`]?.trim()
+    : "";
+  const providerModelConfigured = hasConfiguredProviderModel(providerModel);
+  const fallbackModelConfigured = hasConfiguredProviderModel(fallbackModel);
+
   return Object.freeze({
     stripePriceConfigured:
       typeof priceEnvironmentName === "string" &&
       hasConfiguredStripePrice(environment?.[priceEnvironmentName]),
     workspaceContractConfirmed:
       environment?.FANMIND_AI_TIER_WORKSPACE_CONTRACT_CONFIRMED === "true",
+    providerModelConfigured,
+    fallbackModelConfigured,
+    providerFallbackDistinct:
+      providerModelConfigured &&
+      fallbackModelConfigured &&
+      providerModel !== fallbackModel,
+    usageEnforcementConfirmed:
+      prefix != null &&
+      isExplicitlyConfirmed(
+        environment?.[`${prefix}_USAGE_ENFORCEMENT_CONFIRMED`],
+      ),
+    stripeLifecycleConfirmed:
+      prefix != null &&
+      isExplicitlyConfirmed(
+        environment?.[`${prefix}_STRIPE_LIFECYCLE_CONFIRMED`],
+      ),
+    qualityCostEvaluationConfirmed:
+      prefix != null &&
+      isExplicitlyConfirmed(
+        environment?.[`${prefix}_QUALITY_COST_EVALUATION_CONFIRMED`],
+      ),
+    stagingAcceptanceConfirmed:
+      prefix != null &&
+      isExplicitlyConfirmed(
+        environment?.[`${prefix}_STAGING_ACCEPTANCE_CONFIRMED`],
+      ),
+    legalTaxApprovalConfirmed:
+      prefix != null &&
+      isExplicitlyConfirmed(
+        environment?.[`${prefix}_LEGAL_TAX_APPROVAL_CONFIRMED`],
+      ),
+    runtimeIntegrationConfirmed:
+      prefix != null &&
+      isExplicitlyConfirmed(
+        environment?.[`${prefix}_RUNTIME_INTEGRATION_CONFIRMED`],
+      ),
+    productionActivationConfirmed:
+      prefix != null &&
+      isExplicitlyConfirmed(
+        environment?.[`${prefix}_PRODUCTION_ACTIVATION_CONFIRMED`],
+      ),
   });
 }
 
@@ -157,6 +223,16 @@ export function evaluateAiTierReadiness(
   {
     stripePriceConfigured = false,
     workspaceContractConfirmed = false,
+    providerModelConfigured = false,
+    fallbackModelConfigured = false,
+    providerFallbackDistinct = false,
+    usageEnforcementConfirmed = false,
+    stripeLifecycleConfirmed = false,
+    qualityCostEvaluationConfirmed = false,
+    stagingAcceptanceConfirmed = false,
+    legalTaxApprovalConfirmed = false,
+    runtimeIntegrationConfirmed = false,
+    productionActivationConfirmed = false,
   } = {},
 ) {
   const tier = getAiTierConfig(tierId);
@@ -189,6 +265,36 @@ export function evaluateAiTierReadiness(
     if (stripePriceConfigured !== true) blockers.push("stripe_price");
     if (workspaceContractConfirmed !== true) {
       blockers.push("workspace_contract");
+    }
+    if (providerModelConfigured !== true) blockers.push("provider_model");
+    if (fallbackModelConfigured !== true) blockers.push("fallback_model");
+    if (
+      providerModelConfigured === true &&
+      fallbackModelConfigured === true &&
+      providerFallbackDistinct !== true
+    ) {
+      blockers.push("provider_fallback_distinct");
+    }
+    if (usageEnforcementConfirmed !== true) {
+      blockers.push("usage_enforcement");
+    }
+    if (stripeLifecycleConfirmed !== true) {
+      blockers.push("stripe_lifecycle");
+    }
+    if (qualityCostEvaluationConfirmed !== true) {
+      blockers.push("quality_cost_evaluation");
+    }
+    if (stagingAcceptanceConfirmed !== true) {
+      blockers.push("staging_acceptance");
+    }
+    if (legalTaxApprovalConfirmed !== true) {
+      blockers.push("legal_tax_approval");
+    }
+    if (runtimeIntegrationConfirmed !== true) {
+      blockers.push("runtime_integration");
+    }
+    if (productionActivationConfirmed !== true) {
+      blockers.push("production_activation");
     }
   }
 

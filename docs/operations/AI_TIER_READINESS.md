@@ -1,6 +1,6 @@
 # KI-Stufen-Readiness
 
-Stand: 26. Juli 2026
+Stand: 2. August 2026
 
 ## Ziel
 
@@ -52,9 +52,20 @@ Ein kostenpflichtiges Add-on ist nur bereit, wenn gleichzeitig:
 - automatische Buchung in der zentralen Policy ausdrücklich freigegeben ist;
 - Modellklasse, Monatsanfragen, Monatstokens und Kontextgrenze positive,
   festgelegte Werte besitzen;
+- eine dedizierte serverseitige Provider-Modellzuordnung und ein davon
+  unterschiedliches Fallback-Modell bestätigt sind;
 - der zugehörige serverseitige Stripe-Price konfiguriert ist;
 - der Workspace-Contract nach der positiven und negativen Abnahme aus
   `WORKSPACE_SERVER_OWNED_FIELDS.md` bestätigt wurde;
+- die monatliche Anfrage-/Token-Durchsetzung in allen produktiven KI-Pfaden
+  fail-closed integriert und abgenommen ist;
+- der Stripe-Subscription-Item-Lifecycle einschließlich Fehler-, Wechsel- und
+  Kündigungsfällen im getrennten Staging bestätigt ist;
+- Qualitäts-Eval, Kosten-/Margenrechnung, Staging-Akzeptanz sowie Rechts- und
+  Steuerfreigabe je Stufe bestätigt sind;
+- Entitlement, Modellwahl, Kontextgrenze und Kontingentprüfung tatsächlich in
+  den produktiven KI-Pfaden integriert und negativ getestet sind;
+- die jeweilige Stufe ausdrücklich für Production freigegeben wurde;
 - automatische Sendung und Referral-Rabatt deaktiviert bleiben.
 
 Verwendete serverseitige Laufzeitwerte:
@@ -62,11 +73,28 @@ Verwendete serverseitige Laufzeitwerte:
 - `STRIPE_PRICE_AI_PLUS`
 - `STRIPE_PRICE_AI_ULTRA`
 - `FANMIND_AI_TIER_WORKSPACE_CONTRACT_CONFIRMED=true`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_MODEL`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_FALLBACK_MODEL`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_USAGE_ENFORCEMENT_CONFIRMED=true`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_STRIPE_LIFECYCLE_CONFIRMED=true`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_QUALITY_COST_EVALUATION_CONFIRMED=true`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_STAGING_ACCEPTANCE_CONFIRMED=true`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_LEGAL_TAX_APPROVAL_CONFIRMED=true`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_RUNTIME_INTEGRATION_CONFIRMED=true`
+- `FANMIND_AI_TIER_{PLUS|ULTRA}_PRODUCTION_ACTIVATION_CONFIRMED=true`
 
 Die Contract-Bestätigung darf erst nach dem dokumentierten Production-
 Preflight, beiden kontrollierten Datenbankschritten und den positiven sowie
 negativen Berechtigungstests gesetzt werden. Eine gesetzte Variable allein
 aktiviert weder Entitlements noch Checkout.
+
+Alle zusätzlichen Bestätigungen sind stufenspezifisch. Sie dürfen erst nach
+dem zugehörigen datierten Nachweis gesetzt werden; ein Plus-Nachweis gilt nie
+automatisch für Ultra. Die Readiness gibt nur boolesche Ergebnisse und feste
+Blocker-Codes aus, niemals Modellnamen, Stripe-IDs, externe Beleg-IDs oder
+Secrets. Auch vollständig gesetzte Runtime-Werte aktivieren nichts, solange
+die zentrale Policy die Stufe weiterhin als `Coming Soon`, nicht konfiguriert
+oder nicht automatisch buchbar führt.
 
 ## Blocker-Codes
 
@@ -81,6 +109,16 @@ Die Prüfung gibt ausschließlich feste Codes aus:
 - `context_message_limit`
 - `stripe_price`
 - `workspace_contract`
+- `provider_model`
+- `fallback_model`
+- `provider_fallback_distinct`
+- `usage_enforcement`
+- `stripe_lifecycle`
+- `quality_cost_evaluation`
+- `staging_acceptance`
+- `legal_tax_approval`
+- `runtime_integration`
+- `production_activation`
 - `automatic_sending`
 - `referral_discount`
 - `base_price`

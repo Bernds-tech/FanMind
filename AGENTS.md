@@ -60,6 +60,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   missing, unknown, client-controlled, inactive, future, expired or not fully
   ready Plus/Ultra state must resolve to Standard and must not expose Stripe
   references, models or quotas.
+- Paid-tier readiness must remain tier-specific and fail closed until distinct
+  server-side provider/fallback models, usage enforcement, Stripe lifecycle,
+  quality/cost evaluation, Staging acceptance, legal/tax approval, productive
+  runtime integration and explicit Production activation are all confirmed.
+  Readiness output may expose only fixed blocker codes, never the underlying
+  model, Stripe, evidence or secret values.
 - Persistent paid-tier state belongs only in
   `workspace_ai_tier_entitlements`. It is service-role-only, a missing row
   means Standard, and its Stripe references must be reduced to the redacted

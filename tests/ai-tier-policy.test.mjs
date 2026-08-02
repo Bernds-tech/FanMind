@@ -77,6 +77,16 @@ test("current tier readiness is explicit and fail-closed", () => {
     assert.ok(readiness.blockers.includes("monthly_request_limit"));
     assert.ok(readiness.blockers.includes("monthly_token_limit"));
     assert.ok(readiness.blockers.includes("context_message_limit"));
+    assert.ok(readiness.blockers.includes("provider_model"));
+    assert.ok(readiness.blockers.includes("fallback_model"));
+    assert.ok(!readiness.blockers.includes("provider_fallback_distinct"));
+    assert.ok(readiness.blockers.includes("usage_enforcement"));
+    assert.ok(readiness.blockers.includes("stripe_lifecycle"));
+    assert.ok(readiness.blockers.includes("quality_cost_evaluation"));
+    assert.ok(readiness.blockers.includes("staging_acceptance"));
+    assert.ok(readiness.blockers.includes("legal_tax_approval"));
+    assert.ok(readiness.blockers.includes("runtime_integration"));
+    assert.ok(readiness.blockers.includes("production_activation"));
     assert.ok(!readiness.blockers.includes("stripe_price"));
     assert.ok(!readiness.blockers.includes("workspace_contract"));
   }
@@ -88,6 +98,63 @@ test("current tier readiness is explicit and fail-closed", () => {
     }),
     false,
   );
+});
+
+test("paid tier activation evidence is tier-specific and redacted", () => {
+  const environment = {
+    STRIPE_PRICE_AI_PLUS: "price_plus_DO_NOT_PRINT",
+    FANMIND_AI_TIER_WORKSPACE_CONTRACT_CONFIRMED: "true",
+    FANMIND_AI_TIER_PLUS_MODEL: "model-plus-private",
+    FANMIND_AI_TIER_PLUS_FALLBACK_MODEL: "model-plus-fallback-private",
+    FANMIND_AI_TIER_PLUS_USAGE_ENFORCEMENT_CONFIRMED: "true",
+    FANMIND_AI_TIER_PLUS_STRIPE_LIFECYCLE_CONFIRMED: "true",
+    FANMIND_AI_TIER_PLUS_QUALITY_COST_EVALUATION_CONFIRMED: "true",
+    FANMIND_AI_TIER_PLUS_STAGING_ACCEPTANCE_CONFIRMED: "true",
+    FANMIND_AI_TIER_PLUS_LEGAL_TAX_APPROVAL_CONFIRMED: "true",
+    FANMIND_AI_TIER_PLUS_RUNTIME_INTEGRATION_CONFIRMED: "true",
+    FANMIND_AI_TIER_PLUS_PRODUCTION_ACTIVATION_CONFIRMED: "true",
+  };
+
+  const plus = getAiTierRuntimeReadinessFromEnvironment("plus", environment);
+  const ultra = getAiTierRuntimeReadinessFromEnvironment("ultra", environment);
+
+  assert.deepEqual(plus, {
+    stripePriceConfigured: true,
+    workspaceContractConfirmed: true,
+    providerModelConfigured: true,
+    fallbackModelConfigured: true,
+    providerFallbackDistinct: true,
+    usageEnforcementConfirmed: true,
+    stripeLifecycleConfirmed: true,
+    qualityCostEvaluationConfirmed: true,
+    stagingAcceptanceConfirmed: true,
+    legalTaxApprovalConfirmed: true,
+    runtimeIntegrationConfirmed: true,
+    productionActivationConfirmed: true,
+  });
+  assert.equal(ultra.stripePriceConfigured, false);
+  assert.equal(ultra.providerModelConfigured, false);
+  assert.equal(ultra.productionActivationConfirmed, false);
+  assert.doesNotMatch(JSON.stringify(plus), /model-plus/u);
+});
+
+test("configured paid tier provider and fallback models must be distinct", () => {
+  const environment = {
+    FANMIND_AI_TIER_PLUS_MODEL: "same-private-model",
+    FANMIND_AI_TIER_PLUS_FALLBACK_MODEL: "same-private-model",
+  };
+
+  const runtime = getAiTierRuntimeReadinessFromEnvironment(
+    "plus",
+    environment,
+  );
+  const readiness = evaluateAiTierReadiness("plus", runtime);
+
+  assert.equal(runtime.providerModelConfigured, true);
+  assert.equal(runtime.fallbackModelConfigured, true);
+  assert.equal(runtime.providerFallbackDistinct, false);
+  assert.ok(readiness.blockers.includes("provider_fallback_distinct"));
+  assert.doesNotMatch(JSON.stringify(readiness), /same-private-model/u);
 });
 
 test("readiness command reports only stable status and blocker codes", () => {
@@ -104,6 +171,12 @@ test("readiness command reports only stable status and blocker codes", () => {
         STRIPE_PRICE_AI_PLUS: fakePlusPrice,
         STRIPE_PRICE_AI_ULTRA: fakeUltraPrice,
         FANMIND_AI_TIER_WORKSPACE_CONTRACT_CONFIRMED: "true",
+        FANMIND_AI_TIER_PLUS_MODEL: "model-plus-private",
+        FANMIND_AI_TIER_PLUS_FALLBACK_MODEL:
+          "model-plus-fallback-private",
+        FANMIND_AI_TIER_ULTRA_MODEL: "model-ultra-private",
+        FANMIND_AI_TIER_ULTRA_FALLBACK_MODEL:
+          "model-ultra-fallback-private",
       },
     },
   );

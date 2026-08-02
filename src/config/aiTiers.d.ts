@@ -38,7 +38,17 @@ export type AiTierReadinessBlocker =
   | "monthly_token_limit"
   | "context_message_limit"
   | "stripe_price"
-  | "workspace_contract";
+  | "workspace_contract"
+  | "provider_model"
+  | "fallback_model"
+  | "provider_fallback_distinct"
+  | "usage_enforcement"
+  | "stripe_lifecycle"
+  | "quality_cost_evaluation"
+  | "staging_acceptance"
+  | "legal_tax_approval"
+  | "runtime_integration"
+  | "production_activation";
 
 export type AiTierReadiness = Readonly<{
   tierId: AiTierId;
@@ -88,6 +98,16 @@ export function getAiTierTotalMonthlyCents(tierId: AiTierId, baseMonthlyFeeCents
 export type AiTierRuntimeReadiness = Readonly<{
   stripePriceConfigured?: boolean;
   workspaceContractConfirmed?: boolean;
+  providerModelConfigured?: boolean;
+  fallbackModelConfigured?: boolean;
+  providerFallbackDistinct?: boolean;
+  usageEnforcementConfirmed?: boolean;
+  stripeLifecycleConfirmed?: boolean;
+  qualityCostEvaluationConfirmed?: boolean;
+  stagingAcceptanceConfirmed?: boolean;
+  legalTaxApprovalConfirmed?: boolean;
+  runtimeIntegrationConfirmed?: boolean;
+  productionActivationConfirmed?: boolean;
 }>;
 export function isAiTierAutomaticallyBookable(
   tierId: AiTierId,
