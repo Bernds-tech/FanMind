@@ -1,9 +1,13 @@
 import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 import { isPlatformAdminEmail } from "@/lib/admin";
+import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
 import type { SupabaseServerUser } from "@/lib/supabase/server";
 
 export const BACKUP_JOB_TYPES = ["backup_server_config", "backup_database", "backup_storage", "backup_full", "verify_backup"] as const;
 export type BackupJobType = typeof BACKUP_JOB_TYPES[number];
+
+const MANUAL_BACKUP_RATE_LIMIT_MAX = 5;
+const MANUAL_BACKUP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
 const JOB_TITLES: Record<BackupJobType, string> = {
   backup_server_config: "Server-Konfigurationsbackup anfordern",
@@ -35,6 +39,26 @@ export async function enqueueBackupJob(request: Request, user: SupabaseServerUse
   if (!isPlatformAdminEmail(user.email)) return { status:403, body:{ error:"forbidden" } };
   if (!safeOrigin(request)) return { status:403, body:{ error:"origin_forbidden" } };
   if (!isAllowedJobType(rawJobType)) return { status:400, body:{ error:"job_type_not_allowed" } };
+
+  let rateLimit;
+  try {
+    rateLimit = await consumeSharedRateLimit({
+      scope: "admin_backup_user",
+      subject: user.id,
+      maxRequests: MANUAL_BACKUP_RATE_LIMIT_MAX,
+      windowMs: MANUAL_BACKUP_RATE_LIMIT_WINDOW_MS,
+    });
+  } catch {
+    return { status:503, body:{ error:"operations_rate_limit_unavailable" } };
+  }
+  if (!rateLimit.allowed) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((rateLimit.resetAt - Date.now()) / 1000));
+    return {
+      status:429,
+      body:{ error:"backup_job_rate_limited" },
+      headers:{ "Retry-After": String(retryAfterSeconds) },
+    };
+  }
 
   const active = await rest<{ id:string }[]>("admin_operation_jobs", `?select=id&job_type=in.(backup_server_config,backup_database,backup_storage,backup_full,verify_backup)&status=in.(queued,claimed,running)&limit=1`);
   if (active.error) return { status:500, body:{ error:"operations_store_unavailable" } };
