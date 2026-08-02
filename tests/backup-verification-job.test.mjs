@@ -36,7 +36,19 @@ test("each manual verification can enqueue a fresh latest-backup check", () => {
 });
 
 test("every manual backup action is confirmed and atomically rate limited", () => {
-  assert.match(uiSource, /if \(!confirm\(confirmation\)\) return/u);
+  assert.doesNotMatch(uiSource, /(?:window\.)?confirm\(/u);
+  assert.match(uiSource, /role="dialog"/u);
+  assert.match(uiSource, /aria-modal="true"/u);
+  assert.match(uiSource, /aria-labelledby="backup-job-confirm-title"/u);
+  assert.match(uiSource, /aria-describedby="backup-job-confirm-description"/u);
+  assert.match(uiSource, /event\.key === "Escape"/u);
+  assert.match(uiSource, /confirmButtonRef\.current\?\.focus\(\)/u);
+  assert.match(uiSource, /onClick=\{closeConfirmation\}/u);
+  assert.match(uiSource, /Prüfung starten/u);
+  assert.match(uiSource, /kein Restore und keine Entschlüsselung/u);
+  assert.match(uiSource, /if \(!pendingAction \|\| submitLockRef\.current\) return/u);
+  assert.match(uiSource, /submitLockRef\.current = true/u);
+  assert.match(uiSource, /finally \{[\s\S]*submitLockRef\.current = false/u);
   assert.match(operationsSource, /import \{ consumeSharedRateLimit \} from "@\/lib\/sharedRateLimit"/u);
   assert.match(operationsSource, /scope: "admin_backup_user"[\s\S]*subject: user\.id/u);
   assert.match(operationsSource, /MANUAL_BACKUP_RATE_LIMIT_MAX = 5/u);
@@ -50,6 +62,17 @@ test("every manual backup action is confirmed and atomically rate limited", () =
   assert.match(operationsSource, /status:429[\s\S]*Retry-After/u);
   assert.match(routeSource, /"headers" in result \? result\.headers : undefined/u);
   assert.match(uiSource, /Es wurde kein Job eingereiht/u);
+});
+
+test("cancelling the in-page confirmation never calls the backup API", () => {
+  const closeBody = uiSource.match(
+    /const closeConfirmation = useCallback\(\(\) => \{(?<body>[\s\S]*?)\n  \}, \[busy\]\);/u,
+  )?.groups?.body ?? "";
+
+  assert.ok(closeBody, "Missing closeConfirmation callback.");
+  assert.doesNotMatch(closeBody, /fetch\(/u);
+  assert.match(closeBody, /setPendingAction\(null\)/u);
+  assert.match(uiSource, /disabled=\{Boolean\(busy\)\}/u);
 });
 
 test("active operations jobs refresh server data without background or idle polling", () => {

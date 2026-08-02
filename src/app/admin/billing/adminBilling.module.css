@@ -536,3 +536,114 @@
 .notificationItem p { margin:0; color:#b6c7dd; font-size:12px; line-height:1.4; }
 .operationsGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; }
 .operationsWide { grid-column:1 / -1; }
+
+.confirmationBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(1, 5, 16, .78);
+  backdrop-filter: blur(10px);
+}
+
+.confirmationDialog {
+  position: relative;
+  width: min(480px, 100%);
+  border: 1px solid rgba(103, 232, 249, .42);
+  border-radius: 22px;
+  padding: 26px;
+  color: #f8fafc;
+  background: linear-gradient(145deg, rgba(5, 13, 32, .99), rgba(12, 8, 35, .99));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .58), 0 0 48px rgba(14, 165, 233, .20);
+}
+
+.confirmationDialog h2 {
+  margin: 0;
+  padding-right: 34px;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1.12;
+  letter-spacing: -.7px;
+}
+
+.confirmationDialog p {
+  margin: 12px 0 0;
+  color: #d9e7f8;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.confirmationCloseButton {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(128, 166, 217, .46);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(4, 14, 34, .76);
+  cursor: pointer;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.confirmationActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.confirmationPrimaryButton,
+.confirmationSecondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.confirmationPrimaryButton {
+  flex: 1;
+  border: 0;
+  color: #fff;
+  background: linear-gradient(100deg, #0875ff 0%, #2755ff 45%, #8f25ff 100%);
+  box-shadow: 0 12px 28px rgba(79, 55, 255, .38);
+}
+
+.confirmationSecondaryButton {
+  border: 1px solid rgba(126, 154, 198, .52);
+  color: #eef7ff;
+  background: rgba(4, 14, 34, .78);
+}
+
+.confirmationPrimaryButton:focus-visible,
+.confirmationSecondaryButton:focus-visible,
+.confirmationCloseButton:focus-visible {
+  outline: 3px solid #85eaff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(0, 200, 255, .16);
+}
+
+.confirmationPrimaryButton:disabled,
+.confirmationSecondaryButton:disabled,
+.confirmationCloseButton:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+@media (max-width: 640px) {
+  .confirmationActions { flex-direction: column; }
+  .confirmationPrimaryButton,
+  .confirmationSecondaryButton { width: 100%; min-height: 52px; }
+}
