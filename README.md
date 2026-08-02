@@ -393,6 +393,11 @@ oder `running` ist, aktualisiert die sichtbare Seite alle 15 Sekunden sowie beim
 Zurückkehren in den sichtbaren Tab. Bei erledigten Jobs und im Hintergrund
 findet kein Polling-Verkehr statt.
 
+Alle manuellen Backup- und Checksum-Verifikationsanforderungen verlangen eine
+ausdrückliche Bestätigung und teilen ein serverseitiges atomares Limit von fünf
+Anforderungen je Platform-Admin in zehn Minuten. Die Limiter-Identität ist
+HMAC-SHA256-pseudonymisiert; bei fehlendem Limiter wird kein Job eingereiht.
+
 Die für den Operations Monitor benötigte Constraint-Erweiterung bleibt von
 diesem Deploy getrennt. Sie wurde am 1. August 2026 kontrolliert angewendet und
 unabhängig read-only verifiziert; der Zehn-Minuten-Timer ist aktiv und

@@ -12,6 +12,16 @@ const actions = [
   ["verify_backup", "Letztes Backup prüfen"],
 ] as const;
 
+function errorMessage(error: string | undefined) {
+  if (error === "backup_job_rate_limited") {
+    return "Zu viele manuelle Backup-Aktionen. Bitte warte kurz und versuche es erneut.";
+  }
+  if (error === "operations_rate_limit_unavailable") {
+    return "Die Sicherheitsprüfung ist gerade nicht verfügbar. Es wurde kein Job eingereiht.";
+  }
+  return error ?? "Job konnte nicht eingereiht werden";
+}
+
 export function BackupJobActions() {
   const router = useRouter();
   const [message, setMessage] = useState<string>("");
@@ -28,7 +38,7 @@ export function BackupJobActions() {
     try {
       const response = await fetch("/api/admin/operations/backup-jobs", { method:"POST", headers:{ "Content-Type":"application/json", "Idempotency-Key": idempotencyKey }, body:JSON.stringify({ jobType }) });
       const body = await response.json().catch(() => ({})) as { message?: string; error?: string };
-      setMessage(response.ok ? (body.message ?? "Job wurde eingereiht") : (body.error ?? "Job konnte nicht eingereiht werden"));
+      setMessage(response.ok ? (body.message ?? "Job wurde eingereiht") : errorMessage(body.error));
       if (response.ok) router.refresh();
     } catch {
       setMessage("Job konnte nicht eingereiht werden");

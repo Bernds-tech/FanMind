@@ -18,6 +18,7 @@ const worker = await import("../scripts/operations/backup-worker.mjs");
 const workerSource = await readFile(new URL("../scripts/operations/backup-worker.mjs", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260718173000_enable_safe_backup_verification.sql", import.meta.url), "utf8");
 const operationsSource = await readFile(new URL("../src/lib/backupOperations.ts", import.meta.url), "utf8");
+const routeSource = await readFile(new URL("../src/app/api/admin/operations/backup-jobs/route.ts", import.meta.url), "utf8");
 const uiSource = await readFile(new URL("../src/app/admin/operations/BackupJobActions.tsx", import.meta.url), "utf8");
 const pageSource = await readFile(new URL("../src/app/admin/operations/page.tsx", import.meta.url), "utf8");
 const autoRefreshSource = await readFile(new URL("../src/app/admin/operations/OperationsAutoRefresh.tsx", import.meta.url), "utf8");
@@ -32,6 +33,23 @@ test("safe verification job is allowlisted end to end", () => {
 test("each manual verification can enqueue a fresh latest-backup check", () => {
   assert.match(uiSource, /verify_backup[\s\S]*crypto\.randomUUID\(\)/);
   assert.match(uiSource, /Idempotency-Key/);
+});
+
+test("every manual backup action is confirmed and atomically rate limited", () => {
+  assert.match(uiSource, /if \(!confirm\(confirmation\)\) return/u);
+  assert.match(operationsSource, /import \{ consumeSharedRateLimit \} from "@\/lib\/sharedRateLimit"/u);
+  assert.match(operationsSource, /scope: "admin_backup_user"[\s\S]*subject: user\.id/u);
+  assert.match(operationsSource, /MANUAL_BACKUP_RATE_LIMIT_MAX = 5/u);
+  assert.match(operationsSource, /MANUAL_BACKUP_RATE_LIMIT_WINDOW_MS = 10 \* 60 \* 1000/u);
+  assert.ok(
+    operationsSource.indexOf("await consumeSharedRateLimit")
+      < operationsSource.indexOf("const active = await rest"),
+  );
+  assert.match(operationsSource, /operations_rate_limit_unavailable/u);
+  assert.match(operationsSource, /backup_job_rate_limited/u);
+  assert.match(operationsSource, /status:429[\s\S]*Retry-After/u);
+  assert.match(routeSource, /"headers" in result \? result\.headers : undefined/u);
+  assert.match(uiSource, /Es wurde kein Job eingereiht/u);
 });
 
 test("active operations jobs refresh server data without background or idle polling", () => {

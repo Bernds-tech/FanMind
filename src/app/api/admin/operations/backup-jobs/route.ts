@@ -8,5 +8,8 @@ export async function POST(request: Request) {
   let body: { jobType?: unknown } = {};
   try { body = await request.json(); } catch { return NextResponse.json({ error: "invalid_json" }, { status: 400 }); }
   const result = await enqueueBackupJob(request, data.user, body.jobType);
-  return NextResponse.json(result.body, { status: result.status });
+  return NextResponse.json(result.body, {
+    status: result.status,
+    headers: "headers" in result ? result.headers : undefined,
+  });
 }

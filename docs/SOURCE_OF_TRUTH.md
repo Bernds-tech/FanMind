@@ -137,7 +137,11 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   einer erfolgreichen Job-Anforderung sofort neue serverseitige Daten. Solange
   ein Job `queued`, `claimed` oder `running` ist, aktualisiert die sichtbare
   Seite alle 15 Sekunden sowie beim Zurückkehren in den sichtbaren Tab; bei
-  erledigten Jobs und im Hintergrund findet kein Polling-Verkehr statt.
+  erledigten Jobs und im Hintergrund findet kein Polling-Verkehr statt. Jede
+  manuelle Backup- oder Checksum-Verifikationsanforderung verlangt eine
+  ausdrückliche Bestätigung und teilt ein serverseitiges atomares Limit von fünf
+  Anforderungen je Platform-Admin in zehn Minuten. Die Limiter-Identität ist
+  HMAC-SHA256-pseudonymisiert; bei fehlendem Limiter wird kein Job eingereiht.
 - Release-Checks: automatisch aktiv.
 - Operations-Monitor: Die SHA-256-gebundene Komponenten-Constraint-Migration
   wurde am 1. August 2026 kontrolliert auf Production angewendet und
