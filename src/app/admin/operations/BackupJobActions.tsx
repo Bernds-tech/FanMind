@@ -27,15 +27,15 @@ export function BackupJobActions() {
   const [message, setMessage] = useState<string>("");
   const [busy, setBusy] = useState<string>("");
   const [pendingAction, setPendingAction] = useState<(typeof actions)[number] | null>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const submitLockRef = useRef(false);
 
   const closeConfirmation = useCallback(() => {
-    if (busy) return;
     setPendingAction(null);
     window.setTimeout(() => returnFocusRef.current?.focus(), 0);
-  }, [busy]);
+  }, []);
 
   useEffect(() => {
     if (!pendingAction) return;
@@ -45,6 +45,28 @@ export function BackupJobActions() {
       if (event.key === "Escape") {
         event.preventDefault();
         closeConfirmation();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const dialog = dialogRef.current;
+        const focusableElements = Array.from(
+          dialog?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ) ?? [],
+        );
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements.at(-1);
+        const activeElement = document.activeElement;
+
+        if (!dialog || !firstFocusable || !lastFocusable) return;
+        if (event.shiftKey && (activeElement === firstFocusable || !dialog.contains(activeElement))) {
+          event.preventDefault();
+          lastFocusable.focus();
+        } else if (!event.shiftKey && (activeElement === lastFocusable || !dialog.contains(activeElement))) {
+          event.preventDefault();
+          firstFocusable.focus();
+        }
       }
     }
 
@@ -117,9 +139,11 @@ export function BackupJobActions() {
           onMouseDown={closeConfirmation}
         >
           <section
+            ref={dialogRef}
             className={styles.confirmationDialog}
             role="dialog"
             aria-modal="true"
+            aria-busy={Boolean(busy)}
             aria-labelledby="backup-job-confirm-title"
             aria-describedby="backup-job-confirm-description"
             onMouseDown={(event) => event.stopPropagation()}
@@ -127,9 +151,8 @@ export function BackupJobActions() {
             <button
               className={styles.confirmationCloseButton}
               type="button"
-              aria-label="Backup-Aktion abbrechen"
+              aria-label={busy ? "Dialog schließen" : "Backup-Aktion abbrechen"}
               onClick={closeConfirmation}
-              disabled={Boolean(busy)}
             >
               ×
             </button>
@@ -161,9 +184,8 @@ export function BackupJobActions() {
                 className={styles.confirmationSecondaryButton}
                 type="button"
                 onClick={closeConfirmation}
-                disabled={Boolean(busy)}
               >
-                Abbrechen
+                {busy ? "Dialog schließen" : "Abbrechen"}
               </button>
             </div>
           </section>

@@ -41,7 +41,14 @@ test("every manual backup action is confirmed and atomically rate limited", () =
   assert.match(uiSource, /aria-modal="true"/u);
   assert.match(uiSource, /aria-labelledby="backup-job-confirm-title"/u);
   assert.match(uiSource, /aria-describedby="backup-job-confirm-description"/u);
+  assert.match(uiSource, /aria-busy=\{Boolean\(busy\)\}/u);
   assert.match(uiSource, /event\.key === "Escape"/u);
+  assert.match(uiSource, /event\.key === "Tab"/u);
+  assert.match(uiSource, /dialogRef\.current/u);
+  assert.match(uiSource, /querySelectorAll<HTMLElement>/u);
+  assert.match(uiSource, /event\.shiftKey/u);
+  assert.match(uiSource, /lastFocusable\.focus\(\)/u);
+  assert.match(uiSource, /firstFocusable\.focus\(\)/u);
   assert.match(uiSource, /confirmButtonRef\.current\?\.focus\(\)/u);
   assert.match(uiSource, /onClick=\{closeConfirmation\}/u);
   assert.match(uiSource, /Prüfung starten/u);
@@ -66,13 +73,19 @@ test("every manual backup action is confirmed and atomically rate limited", () =
 
 test("cancelling the in-page confirmation never calls the backup API", () => {
   const closeBody = uiSource.match(
-    /const closeConfirmation = useCallback\(\(\) => \{(?<body>[\s\S]*?)\n  \}, \[busy\]\);/u,
+    /const closeConfirmation = useCallback\(\(\) => \{(?<body>[\s\S]*?)\n  \}, \[\]\);/u,
   )?.groups?.body ?? "";
 
   assert.ok(closeBody, "Missing closeConfirmation callback.");
   assert.doesNotMatch(closeBody, /fetch\(/u);
+  assert.doesNotMatch(closeBody, /if \(busy\) return/u);
   assert.match(closeBody, /setPendingAction\(null\)/u);
-  assert.match(uiSource, /disabled=\{Boolean\(busy\)\}/u);
+  assert.match(uiSource, /aria-label=\{busy \? "Dialog schließen" : "Backup-Aktion abbrechen"\}/u);
+  assert.match(uiSource, /\{busy \? "Dialog schließen" : "Abbrechen"\}/u);
+  assert.doesNotMatch(
+    uiSource,
+    /aria-label=\{busy \? "Dialog schließen"[\s\S]{0,160}disabled=\{Boolean\(busy\)\}/u,
+  );
 });
 
 test("active operations jobs refresh server data without background or idle polling", () => {

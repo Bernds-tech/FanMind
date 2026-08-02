@@ -7,8 +7,11 @@
 Die Oberfläche zeigt jetzt echte Metadaten aus `backup_runs` und `admin_operation_jobs`: Status, Startzeit, Größe, SHA256, Offsite-Status, Worker, Lease und Ergebnisreferenz. Platform-Admins können Server-Konfigurations-, Datenbank-, Storage- und Vollbackups einreihen. Die API führt niemals ein Backup direkt aus, sondern schreibt nur einen allowlist-geprüften Job.
 
 Jede manuelle Backup-Aktion verlangt in einem zugänglichen FanMind-Dialog eine
-ausdrückliche Bestätigung; Abbrechen, Schließen oder Escape reiht keinen Job
-ein. Erst die Bestätigung durchläuft serverseitig das gemeinsame atomare
+ausdrückliche Bestätigung. Vor der Bestätigung bleiben Abbrechen, Schließen und
+Escape ohne API-Aufruf. Nach der Bestätigung kann der Dialog auch während einer
+laufenden Anfrage geschlossen werden; das bricht den bereits übermittelten
+Auftrag nicht ab und löst ihn nicht erneut aus. Tab und Shift+Tab bleiben im
+Dialog. Erst die Bestätigung durchläuft serverseitig das gemeinsame atomare
 Rate-Limit. Pro
 Platform-Admin sind höchstens fünf Anforderungen in zehn Minuten möglich; die
 persistierte Limiter-Identität ist ausschließlich HMAC-SHA256-pseudonymisiert.

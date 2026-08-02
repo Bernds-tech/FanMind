@@ -8,10 +8,12 @@ Der Job `verify_backup` prüft das neueste geeignete, lokal gespeicherte FanMind
 
 - Nur Platform-Admins können den Job über `/admin/operations` einreihen.
 - Jede manuelle Anforderung verlangt eine ausdrückliche Bestätigung im
-  zugänglichen FanMind-Dialog. Abbrechen, Schließen oder Escape bleibt ohne
-  API-Aufruf. Bestätigte Aktionen teilen das atomare Limit von fünf
-  Backup-Aktionen pro Platform-Admin und zehn Minuten; bei fehlendem Limiter
-  wird fail-closed kein Job eingereiht.
+  zugänglichen FanMind-Dialog. Vor der Bestätigung bleiben Abbrechen, Schließen
+  oder Escape ohne API-Aufruf; Tab und Shift+Tab bleiben im Dialog. Nach der
+  Bestätigung kann der Dialog geschlossen werden, ohne den bereits
+  übermittelten Auftrag abzubrechen oder erneut auszulösen. Bestätigte Aktionen
+  teilen das atomare Limit von fünf Backup-Aktionen pro Platform-Admin und zehn
+  Minuten; bei fehlendem Limiter wird fail-closed kein Job eingereiht.
 - Die Limiter-Identität wird zweckgebunden mit HMAC-SHA256 pseudonymisiert;
   E-Mail und User-ID werden dort nicht im Klartext gespeichert.
 - Die Web-App übermittelt ausschließlich den festen Jobtyp `verify_backup`.
