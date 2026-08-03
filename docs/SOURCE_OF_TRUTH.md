@@ -97,6 +97,10 @@ Aktiv im App-Kern:
   Bibliotheken, ohne Tracking-Domains, fail-closed Android-API-36-Nachweis und
   getrennte technische Entwürfe für Apple App Privacy sowie Google Play Data
   Safety;
+- fail-closed Store-Preflight für Apple-/Google-Zeichenlimits, bestätigte
+  Wortmarke, beide 1024×1024-Iconverträge, App-IDs, sechs synthetische
+  Screenshot-Slots, exakt EAS CLI `21.2.0` und eine ausschließlich interne
+  Android-Draft-Submission ohne Portalzugriff;
 - erster iOS-Store-Scope bewusst iPhone-only; iPad bleibt bis zu einer
   separaten Layout-, Geräte- und Screenshot-Abnahme nicht freigegeben;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;

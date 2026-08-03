@@ -223,6 +223,9 @@ Bereits vorhanden:
   Geräte- und Screenshot-Abnahme;
 - getrennte technische Entwürfe für Apple App Privacy und Google Play Data
   Safety; externe Datenschutz-/Rechts- und Portalabnahme bleibt offen;
+- fail-closed Store-Preflight für Apple-/Google-Zeichenlimits, bestätigte
+  Wortmarke, 1024×1024-Icons, App-IDs, Screenshot-Matrix, exakt gepinnte EAS
+  CLI `21.2.0` und ausschließlich interne Android-Draft-Submission;
 - eigener SDK-57-Development-Client sowie explizite EAS-Umgebungen;
 - separate Mobile-CI, Expo Doctor, TypeScript-Check, Android-/iOS-JavaScript-Bundles, isolierter Native-Prebuild sowie echtes Android-Debug-APK und codesign-freie iOS-Simulator-App als reine Build-Nachweise.
 - kontrollierter signierter EAS-Workflow mit redigierter Abschlussprüfung für

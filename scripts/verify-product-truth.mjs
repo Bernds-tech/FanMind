@@ -13,7 +13,9 @@ const checkedFiles = [
   ".github/workflows/ai-tier-staging-acceptance.yml",
   ".github/workflows/mobile-release-resource-readiness.yml",
   ".github/workflows/mobile-signed-internal-build.yml",
+  ".github/workflows/ci-mobile.yml",
   "package.json",
+  "apps/mobile/package.json",
   "src/config/aiTiers.mjs",
   "src/config/aiTierRecommendation.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
@@ -29,7 +31,9 @@ const checkedFiles = [
   "scripts/operations/ai-tier-staging-acceptance.mjs",
   "scripts/operations/mobile-release-resource-readiness.mjs",
   "scripts/operations/mobile-signed-build-completion.mjs",
+  "apps/mobile/scripts/check-store-readiness.mjs",
   "tests/mobile-native-release-policy.test.mjs",
+  "tests/mobile-store-privacy-policy.test.mjs",
   "scripts/final-go-live-preflight.mjs",
   "scripts/smoke-public-routes.mjs",
   "src/lib/workspaceAiTierStorage.mjs",
@@ -55,6 +59,7 @@ const checkedFiles = [
   "apps/mobile/README.md",
   "docs/mobile/ARCHITECTURE.md",
   "docs/mobile/BETA_RELEASE.md",
+  "docs/mobile/STORE_LISTING.md",
   "docs/operations/P0_COMPLETION_TRACKER.md",
   "src/config/plans.ts",
   "src/lib/plans.ts",
@@ -604,6 +609,26 @@ requireText(
   "tests/mobile-native-release-policy.test.mjs",
   "signed Mobile completion fails closed on identity drift",
   "Die Mobile-Build-Abschlussprüfung muss Ziel-, Status- und Artefaktdrift automatisiert sperren.",
+);
+requireText(
+  "apps/mobile/package.json",
+  '"store:check": "node scripts/check-store-readiness.mjs"',
+  "Der Mobile Store-Preflight muss als fester lokaler Befehl verfügbar sein.",
+);
+requireText(
+  ".github/workflows/ci-mobile.yml",
+  "npm run store:check",
+  "Die Mobile-CI muss Store-Texte, Branding und EAS-Profile fail-closed prüfen.",
+);
+requireText(
+  "apps/mobile/scripts/check-store-readiness.mjs",
+  "MOBILE_STORE_READINESS=PASS",
+  "Der Mobile Store-Preflight muss einen redigierten PASS-Vertrag besitzen.",
+);
+requireText(
+  "docs/mobile/STORE_LISTING.md",
+  "KI-CRM: Kontakte & Follow-ups",
+  "Der deutsche Apple-Untertitel muss innerhalb des aktuellen Zeichenlimits bleiben.",
 );
 requireText(
   "docs/mobile/BETA_RELEASE.md",

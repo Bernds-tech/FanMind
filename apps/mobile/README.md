@@ -232,10 +232,10 @@ wird aus dem jeweils geschützten GitHub-Environment dynamisch ergänzt.
 Nach der externen EAS-Einrichtung:
 
 ```bash
-npx eas-cli@latest build --profile native-validation --platform android
-npx eas-cli@latest build --profile native-validation --platform ios
-npx eas-cli@latest build --profile preview --platform android
-npx eas-cli@latest build --profile preview --platform ios
+npx eas-cli@21.2.0 build --profile native-validation --platform android
+npx eas-cli@21.2.0 build --profile native-validation --platform ios
+npx eas-cli@21.2.0 build --profile preview --platform android
+npx eas-cli@21.2.0 build --profile preview --platform ios
 ```
 
 Vor einem signierten EAS-Build müssen EAS-Projekt-ID, Signierung und Store-Konten bewusst eingerichtet werden. Diese Werte werden nicht erfunden oder aus der Web-Anwendung übernommen.
@@ -277,6 +277,10 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 7. Die vorbereiteten Store-Texte, technischen Datenschutzentwürfe und
    Screenshot-Matrix nach realen Gerätetests sowie externer
    Datenschutz-/Rechtsprüfung final abnehmen.
+
+Der lokale Befehl `npm run store:check` prüft davor ohne Portalzugriff die
+Zeichenlimits, App-IDs, Wortmarke, Icons, Screenshot-Matrix sowie die exakt
+gepinnte EAS- und sichere Internal-/Draft-Submit-Konfiguration.
 
 Die Produkt- und Release-Checkliste für diese Schritte steht in
 `docs/mobile/BETA_RELEASE.md`; die vorbereiteten Store-Metadaten stehen in

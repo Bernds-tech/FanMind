@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 19.1.0",
+    "version": "21.2.0",
     "requireCommit": true,
     "appVersionSource": "remote"
   },
@@ -8,6 +8,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "credentialsSource": "remote",
       "environment": "development",
       "node": "22.13.1",
       "android": {
@@ -23,6 +24,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "credentialsSource": "remote",
       "environment": "preview",
       "node": "22.13.1",
       "android": {
@@ -30,12 +32,24 @@
       }
     },
     "production": {
+      "distribution": "store",
+      "credentialsSource": "remote",
       "environment": "production",
       "node": "22.13.1",
       "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": true
+      },
+      "ios": {
+        "language": "de-DE",
+        "appName": "FanMind"
+      }
+    }
   }
 }

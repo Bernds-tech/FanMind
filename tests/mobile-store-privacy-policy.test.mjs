@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
+import {
+  evaluateStoreReadiness,
+  verifyStoreReadiness,
+} from "../apps/mobile/scripts/check-store-readiness.mjs";
+
 const read = (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -136,4 +141,71 @@ test("store privacy draft stays synchronized with the current mobile boundary", 
     access(new URL("../src/app/datenschutz/page.tsx", import.meta.url)),
     access(new URL("../src/app/account-deletion/page.tsx", import.meta.url)),
   ]);
+});
+
+test("store metadata, confirmed branding and EAS submission stay release-safe", async () => {
+  const result = await verifyStoreReadiness();
+
+  assert.deepEqual(result, {
+    localizations: 2,
+    screenshotSlots: 6,
+    easCli: "21.2.0",
+    submissionMode: "internal-draft",
+  });
+
+  const [appConfig, easConfig, listing, wordmark, appIcon, adaptiveIcon] =
+    await Promise.all([
+      read("apps/mobile/app.json").then(JSON.parse),
+      read("apps/mobile/eas.json").then(JSON.parse),
+      read("docs/mobile/STORE_LISTING.md"),
+      readFile(
+        new URL(
+          "../apps/mobile/assets/branding/fanmind-wordmark.png",
+          import.meta.url,
+        ),
+      ),
+      readFile(
+        new URL(
+          "../apps/mobile/assets/branding/fanmind-app-icon.png",
+          import.meta.url,
+        ),
+      ),
+      readFile(
+        new URL(
+          "../apps/mobile/assets/branding/fanmind-adaptive-icon.png",
+          import.meta.url,
+        ),
+      ),
+    ]);
+
+  assert.throws(
+    () =>
+      evaluateStoreReadiness({
+        appConfig,
+        easConfig,
+        listing: listing.replace(
+          "KI-CRM: Kontakte & Follow-ups",
+          "KI-CRM für Kontakte und Follow-ups",
+        ),
+        wordmark,
+        appIcon,
+        adaptiveIcon,
+      }),
+    /store_subtitle_de_length_invalid/u,
+  );
+  assert.throws(
+    () =>
+      evaluateStoreReadiness({
+        appConfig,
+        easConfig: {
+          ...easConfig,
+          submit: { production: {} },
+        },
+        listing,
+        wordmark,
+        appIcon,
+        adaptiveIcon,
+      }),
+    /store_submission_safety_contract_invalid/u,
+  );
 });

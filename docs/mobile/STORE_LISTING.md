@@ -21,8 +21,8 @@ Social-Media-Integrationen.
 | Feld | Wert |
 |---|---|
 | App-Name | FanMind |
-| Untertitel / Kurzbeschreibung DE | KI-CRM für Kontakte und Follow-ups |
-| Subtitle / Short description EN | AI CRM for contacts and follow-ups |
+| Untertitel / Kurzbeschreibung DE | KI-CRM: Kontakte & Follow-ups |
+| Subtitle / Short description EN | AI CRM: contacts & follow-ups |
 | Android Package | `ch.fanmind.app` |
 | iOS Bundle Identifier | `ch.fanmind.app` |
 | Website | `https://fanmind.ch` |
@@ -35,6 +35,32 @@ Das finale FanMind-App-Icon ist vorbereitet: eine vollständig deckende
 skaliertes Android-Adaptive-Foreground. Das Querlogo bleibt ausschließlich
 Wortmarke und Splashscreen. Vor Einreichung wird die Darstellung aus signierten
 Builds auf realen Android- und iOS-Geräten visuell bestätigt.
+
+`cd apps/mobile && npm run store:check` prüft diese Unterlagen vor jedem
+Mobile-Release fail-closed gegen die aktuellen Apple-/Google-Zeichenlimits,
+die App-IDs, sechs synthetische Screenshot-Slots, die bestätigte Wortmarke,
+beide 1024×1024-Iconverträge und die sicheren EAS-Profile. Der Check lädt
+nichts in ein Store-Portal hoch und benötigt keine Zugangsdaten.
+
+## Portal-Handoff
+
+| Feld | Vorbereiteter Wert | Externe Portalabnahme |
+|---|---|---|
+| Apple Hauptkategorie | Business | im App-Store-Connect-Datensatz bestätigen |
+| Apple Nebenkategorie | Productivity | im App-Store-Connect-Datensatz bestätigen |
+| Google-Play-Kategorie | Business | in der Play Console bestätigen |
+| Zielgruppe | B2B / Erwachsene | Alters- und Inhaltsfragebogen bestätigen |
+| Werbung in der App | Nein | Play-Console-Erklärung bestätigen |
+| Mobile In-App-Käufe | Nein | Store-Verträge gegen finalen Build bestätigen |
+| Login erforderlich | Ja | synthetischen Review-Zugang erst im Portal hinterlegen |
+| Android Erstverteilung | Internal Testing, Entwurf | signiertes AAB und Konto erforderlich |
+| iOS Erstverteilung | TestFlight, iPhone-only | Apple Developer/App Store Connect erforderlich |
+
+Die EAS-Submit-Vorbereitung bleibt absichtlich nicht automatisch: Android ist
+auf `internal` und `draft` begrenzt; iOS besitzt nur Sprache und App-Name.
+Service-Account, Apple-Team-ID, App-Store-ID, Submit-Schlüssel und
+Review-Zugangsdaten werden erst in den geschützten externen Konten ergänzt und
+niemals in Git committed.
 
 ## Google Play - Kurzbeschreibung
 

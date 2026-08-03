@@ -159,6 +159,10 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - The frozen sales/demo flow is: landing page -> login/demo -> dashboard -> fans/contacts -> CSV import or Sandra/demo contact -> contact detail -> existing/latest inbound message -> AI reply suggestions -> copy answer -> save memory -> save follow-up -> follow-up list / roadmap.
 - Active CRM core: login, registration, protected dashboard, contacts/fans, contact detail, CSV import, server-side AI reply suggestions, contact knowledge, follow-ups, roadmap, admin/billing groundwork, Stripe test checkout, legal pages, and temporary demo workspace.
 - Active Mobile Phase B repository scope: independent Expo/React-Native app with native login, PKCE password recovery, secure session persistence and local purge, dashboard, contact list/search/create/edit/detail, bounded encrypted offline contact overview, contact knowledge, server-side AI reply suggestions, user-controlled copy plus native sharing of only the selected reply text, follow-ups, an explicit opt-in push-registration preparation without delivery, a native wordmark splashscreen, distinct high-resolution iOS/Android app-icon assets, an iOS required-reason privacy manifest and Android API 36 verification. Store privacy drafts are technical preparation only; Supabase redirect approval, signed internal builds, push migration/secret activation, legal/portal approval, real-device verification and store distribution remain separate external release steps.
+- Mobile Store metadata, branding, native identities and EAS profiles must pass
+  `cd apps/mobile && npm run store:check`. Keep EAS CLI exactly pinned to the
+  reviewed version and keep Android submission internal/draft until the
+  protected Store account is explicitly used.
 - Position FanMind as a Copy-&-Open assistant, not as a bot. AI prepares replies; the human reviews, copies, opens the original channel if needed, and sends manually.
 - Any in-app sending flow, including Telegram, must be disabled, hidden, feature-flagged, or explicitly documented as a separate validated pilot before it appears in a normal Gerhard/Sales demo.
 
