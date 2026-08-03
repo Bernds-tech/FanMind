@@ -314,12 +314,18 @@ Wichtige Felder:
 - `risk_notes`
 - `confidence_score`
 - `source_message_count`
+- `source_from_at`
+- `source_to_at`
+- `review_status`
+- `reviewed_by`
+- `reviewed_at`
 - `updated_at`
 - `created_at`
 
 RLS-Erwartung:
 
-- Nur eigener Workspace.
+- Lesen nur im eigenen Workspace; generierte Reports werden ausschließlich
+  serverseitig geschrieben.
 - Keine sensiblen, diagnostischen oder geschützten Eigenschaften als harte Tatsachen speichern.
 
 ### `workspace_voice_profiles`
@@ -343,12 +349,21 @@ Wichtige Felder:
 - `sales_style`
 - `examples_count`
 - `confidence_score`
+- `source_from_at`
+- `source_to_at`
+- `source_scope` (fest `confirmed_manual_outbound`)
+- `review_status`
+- `reviewed_by`
+- `reviewed_at`
 - `updated_at`
 - `created_at`
 
 RLS-Erwartung:
 
-- Nur eigener Workspace, ggf. User-spezifisch eingeschränkt.
+- Lesen nur im eigenen Workspace, ggf. User-spezifisch eingeschränkt;
+  generierte Profile werden ausschließlich serverseitig geschrieben.
+- Lernquelle sind ausschließlich bestätigte manuelle ausgehende Nachrichten;
+  niemals KI-Entwürfe, Notizen oder eingehende Fan-Nachrichten.
 
 ### `workspace_ai_tier_entitlements` (Migration vorbereitet)
 
@@ -426,14 +441,146 @@ Wichtige Felder:
 - `summary`
 - `model`
 - `source_message_count`
+- `source_from_at`
+- `source_to_at`
+- `confidence_score`
+- `review_status`
+- `reviewed_by`
+- `reviewed_at`
 - `generated_at`
 - `created_at`
 - `updated_at`
 
 RLS-Erwartung:
 
-- Nur eigener Workspace.
+- Lesen nur im eigenen Workspace; generierte Reports werden ausschließlich
+  serverseitig geschrieben.
 - Reports müssen vorsichtig formuliert bleiben und dürfen keine geschützten/sensiblen Eigenschaften als Tatsachen speichern.
+- Quellenzeitraum, Stichprobengröße, Konfidenz und menschlicher Reviewstatus
+  müssen nachvollziehbar bleiben.
+
+### `workspace_analysis_settings` (Migration vorbereitet)
+
+Zweck: fail-closed Aktivierung von Fan-, Gesprächs-, Nutzer-Schreibstil- und
+Content-Analyse je Workspace.
+
+Wichtige Felder:
+
+- `workspace_id`
+- `fan_analysis_enabled`
+- `conversation_analysis_enabled`
+- `user_voice_analysis_enabled`
+- `content_insights_enabled`
+- `legal_basis_status`
+- `transparency_status`
+- `data_processing_agreement_status`
+- `retention_status`
+- `data_subject_rights_status`
+- `message_retention_days`
+- `analysis_retention_days`
+- `confirmed_by`
+- `confirmed_at`
+
+RLS-/Security-Erwartung:
+
+- alle Analysearten standardmäßig `false`;
+- Lesen nur im eigenen Workspace, Schreiben ausschließlich serverseitig nach
+  Owner-/Admin-Prüfung;
+- Aktivierung nur bei fünf bestätigten Rechts-/Datenschutzkontrollen und
+  dokumentierter bestätigender Person samt Zeitpunkt.
+
+### `communication_analysis_reports` (Migration vorbereitet)
+
+Zweck: vorsichtige, überprüfbare Analyse eines konkreten Gesprächs, getrennt
+von einem allgemeinen Kontaktbericht.
+
+Wichtige Felder:
+
+- `workspace_id`
+- `conversation_id`
+- `contact_id`
+- `report_json`
+- `source_message_count`
+- `source_from_at`
+- `source_to_at`
+- `confidence_score`
+- `review_status`
+- `reviewed_by`
+- `reviewed_at`
+- `model`
+- `generated_at`
+
+RLS-/Security-Erwartung:
+
+- Lesen nur im eigenen Workspace; Mutation serverseitig;
+- keine sensiblen oder diagnostischen Ableitungen;
+- korrigierbar, verwerfbar und löschbar.
+
+### `content_sources`
+
+Zweck: ein eigener Facebook-/Instagram-Post, Reel oder ein anderes
+unterstütztes Content-Objekt als stabiler Bezug für Gespräche und Metriken.
+
+Wichtige Felder:
+
+- `workspace_id`
+- `social_connection_id`
+- `source_platform`
+- `source_type`
+- `external_account_id`
+- `external_source_id`
+- `external_post_id`
+- `external_video_id`
+- `media_type`
+- `content_format`
+- `campaign_label`
+- `title`
+- `summary`
+- `caption_excerpt`
+- `permalink_url`
+- `published_at`
+- `metadata`
+
+RLS-/Security-Erwartung:
+
+- Lesen nur im eigenen Workspace; importierte Content-Objekte werden
+  ausschließlich serverseitig geschrieben;
+- keine Tokens, Login-Daten oder unnötigen privaten Profildaten in `metadata`;
+- jeder Conversation-/Fan-Kontext bleibt am konkreten Post/Thread statt an
+  einer vermischten Social-Sammlung.
+- Zusammengesetzte Fremdschlüssel erzwingen denselben Workspace für
+  Verbindung, Content, Kontakt und Conversation.
+
+### `content_metric_snapshots` (Migration vorbereitet)
+
+Zweck: normalisierte, zeitbezogene Snapshots für Reichweiten- und
+Postinganalysen eigener verbundener Meta-Konten.
+
+Wichtige Felder:
+
+- `workspace_id`
+- `social_connection_id`
+- `content_source_id`
+- `platform`
+- `external_account_id`
+- `external_content_id`
+- `measurement_window`
+- `reach`, `impressions`, `views`, `plays`
+- `likes`, `comments`, `shares`, `saves`
+- `link_clicks`, `profile_visits`, `follows`
+- `direct_messages`, `new_contacts`
+- `paid_reach`, `paid_impressions`
+- `source_metric_names`
+- `metric_payload_version`
+- `captured_at`
+
+RLS-/Security-Erwartung:
+
+- Lesen nur im eigenen Workspace, Schreiben ausschließlich serverseitig;
+- unbekannte, negative oder nicht numerische Metriken nicht speichern;
+- organische und bezahlte Werte getrennt auswerten;
+- keine vollständige Followerliste oder personenbezogene Reichweitenwerte
+  vortäuschen.
 
 ## 6. Reply Targets / Originalkanal-Kontext
 
@@ -464,7 +611,8 @@ RLS-Erwartung:
 
 ### `social_connections`
 
-Zweck: vorbereitete Social-/Meta-Verbindungen pro Workspace.
+Zweck: vorbereitete, mandantengetrennte Social-/Meta-Verbindungen pro
+Workspace. Jeder Kunde verbindet sein eigenes externes Geschäftskonto.
 
 Wichtige Felder:
 
@@ -496,13 +644,23 @@ Wichtige Felder:
 - `last_messenger_sync_skipped_count`
 - `last_messenger_sync_error`
 - `last_messenger_sync_outbound_at`
+- `oauth_login_type`
+- `external_account_type`
+- `token_expires_at`
+- `permissions_verified_at`
+- `analytics_enabled`
 - `created_at`
 - `updated_at`
 
 RLS-Erwartung:
 
-- Nur eigener Workspace oder Admin.
-- Token-Werte verschlüsseln.
+- Nur eigener Workspace oder Admin; normale Browserzugriffe sind read-only.
+- `page_access_token_encrypted` ist verschlüsselt und nur über Service Role
+  les-/schreibbar; Browser erhalten ausschließlich sichere Statusspalten.
+- Aktive `(platform, external_account_id)`-Bindungen sind global eindeutig,
+  damit ein externes Konto nicht zwei Workspaces zugeordnet werden kann.
+- OAuth, Callback und Trennung verlangen Owner-/Admin-Rolle; bei mehreren
+  verwalteten Seiten ist eine ausdrückliche Auswahl Pflicht.
 - Keine externen Login-Passwörter speichern.
 - Nicht als allgemein live verkaufen, solange nicht validiert.
 

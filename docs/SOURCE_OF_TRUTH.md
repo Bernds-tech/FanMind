@@ -15,6 +15,7 @@ FanMind ist:
 - ein serverseitiger KI-Assistent für Antwortvorschläge;
 - ein Copy-&-Open-Assistent: Antwort vorbereiten, kopieren, Originalkanal öffnen, Mensch sendet selbst;
 - ein System mit klarer Roadmap für Integrationen, Kampagnen, Analytics und spätere Erweiterungen;
+- ein System mit einer ausdrücklich freigegebenen, aber noch nicht produktiv aktivierten Grundlage für mandantengetrennte Facebook-/Instagram-Konten, eigene Content-Insights und vorsichtige Kommunikationsanalyse;
 - ein eigenständiger nativer Mobile-App-Kern für Android und iOS, nicht als WebView-Hülle.
 
 FanMind ist nicht:
@@ -464,7 +465,9 @@ Aktiv im Standardprodukt:
 
 Vorbereitet / Beta / nicht allgemein live verkaufen:
 
-- Meta-, Facebook- und Instagram-Grundlagen;
+- mandantengetrennte Meta-/Facebook-/Instagram-Grundlagen: jeder Kunde verbindet sein eigenes Geschäftskonto mit seinem eigenen Workspace; verschlüsselte Tokens bleiben serverseitig; eine externe Konto-ID darf nur einem aktiven Workspace gehören;
+- Facebook-Messenger-/Kommentar-Grundlage und Graph API `v25.0`; Instagram-Webhook-Grundlage; Instagram Business Login, explizite Mehrfachkontoauswahl, App Review und reale Ende-zu-Ende-Abnahme bleiben offen;
+- normalisierte Reichweiten-/Posting-Snapshots und vorsichtige Fan-, Gesprächs- und Nutzer-Schreibstilanalyse als fail-closed Datenmodell; alle Analysearten bleiben standardmäßig aus, bis Rechtsgrundlage, Transparenz, AVV/Anbieterprüfung und Aufbewahrung je Workspace bestätigt sind;
 - Meta Pixel als consent-gesteuerte Marketing-Messung ausschließlich mit parameterlosem `PageView` auf freigegebenen öffentlichen Seiten; geschützte und dynamische CRM-Routen sowie unsichere Query-/Fragmentwerte sind fail-closed ausgeschlossen; `CompleteRegistration`, `Lead` und weitere Conversion-Events bleiben vorbereitet und unverknüpft, bis sie einzeln fachlich und datenschutzrechtlich freigegeben sind;
 - Facebook-Reply-Target- und Messenger-Hilfen;
 - Telegram-Webhook- und Bot-Grundlagen;
@@ -473,8 +476,8 @@ Vorbereitet / Beta / nicht allgemein live verkaufen:
 Roadmap / Coming Soon:
 
 - WhatsApp, TikTok, X, Discord und weitere Kanäle;
-- vollständige Social-Synchronisation;
-- Kampagnen und Analytics;
+- vollständige Social-Synchronisation jenseits der ausdrücklich abgegrenzten Meta-Pilotfunktionen;
+- Kampagnen und vollständige Analytics-Suite; die abgegrenzte Meta-Content-Intelligence-Grundlage ist separat in `docs/integrations/META_CONTENT_INTELLIGENCE.md` definiert;
 - komplexe Rollen und Enterprise-Governance;
 - Referral-Billing-Automation;
 - KI Plus/Ultra Auto-Buchung.
@@ -498,6 +501,7 @@ Pflichtsatz:
 - jede Mutation prüft User, Workspace und Ressource;
 - Demo-Workspaces enthalten keine echten Kundendaten;
 - externe Plattform-Login-Daten werden nicht gespeichert;
+- Meta-Zugriffstokens sind verschlüsselt und ausschließlich serverseitig les-/schreibbar; Browser erhalten nur nicht geheime Statusfelder;
 - schreibende Staging-/Testläufe benötigen alle Bedingungen aus `docs/operations/ENVIRONMENT_SEPARATION.md`;
 - kein Restore gegen Production.
 
@@ -515,8 +519,8 @@ Relevante Objekte umfassen unter anderem:
 - `profiles`, `workspaces`, `workspace_members`;
 - `contacts`, `memories`, `followups`;
 - `conversations`, `conversation_messages`, `conversation_summaries`;
-- `contact_ai_profiles`, `workspace_voice_profiles`, `workspace_ai_prompt_settings`, `fan_analysis_reports`;
-- `contact_reply_targets`, `social_connections`, `meta_webhook_events`;
+- `contact_ai_profiles`, `workspace_voice_profiles`, `workspace_ai_prompt_settings`, `fan_analysis_reports`, `communication_analysis_reports`, `workspace_analysis_settings`;
+- `content_sources`, `content_metric_snapshots`, `contact_reply_targets`, `social_connections`, `meta_webhook_events`;
 - Billing-, Referral-, Inquiry-, Operations- und Backup-Tabellen laut aktueller Migrationen.
 
 Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfen aus Kompatibilitätsgründen bestehen bleiben, sind aber keine öffentliche Terminologie.

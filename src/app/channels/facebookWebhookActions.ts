@@ -35,7 +35,7 @@ import {
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
-  getWorkspaceSocialConnections,
+  getWorkspaceSocialConnectionsServer,
   createMetaWebhookConversationMessage,
   updateFacebookCommentFetchStatus,
   updateFacebookMessengerSyncStatus,
@@ -49,6 +49,7 @@ import {
   extractSelectedItemIdFromMetaUrl,
 } from "@/lib/sourceContext";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
+import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
 
 export type FacebookCommentFetchResult = {
   ok: boolean;
@@ -901,7 +902,13 @@ async function getCurrentFacebookConnection() {
         "Dieser Demo-Workspace ist öffentlich. Echte Kanalverbindungen und externe Bot-Tests sind hier deaktiviert.",
     };
   }
-  const connectionsResult = await getWorkspaceSocialConnections(
+  if (!canManageMetaConnections(workspaceResult.workspace.role)) {
+    return {
+      connection: null,
+      error: "Nur Workspace-Owner oder -Admins dürfen externe Konten verwalten.",
+    };
+  }
+  const connectionsResult = await getWorkspaceSocialConnectionsServer(
     workspaceResult.workspace.id,
   );
   if (connectionsResult.error)

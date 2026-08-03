@@ -46,7 +46,7 @@ type ChannelsWorkspaceProps = {
   contactCount: number;
   openFollowupCount: number;
   facebookConnection: SafeFacebookConnection | null;
-  facebookError?: boolean;
+  facebookError?: string | null;
   metaWebhookEvents: MetaWebhookEventRow[];
   metaWebhookError?: string | null;
   metaWebhookStorageHealth: {
@@ -145,6 +145,15 @@ function getUserDisplayName(
     : fallback;
 }
 
+function singleSearchParam(
+  value: string | string[] | undefined,
+): string | null {
+  if (typeof value === "string") return value;
+  return Array.isArray(value) && typeof value[0] === "string"
+    ? value[0]
+    : null;
+}
+
 export default async function ChannelsPage({
   searchParams,
 }: {
@@ -208,7 +217,7 @@ export default async function ChannelsPage({
             page_id: facebookConnection.page_id,
             webhook_subscribed: facebookConnection.webhook_subscribed,
             last_event_at: facebookConnection.last_event_at,
-            has_page_access_token: Boolean(facebookConnection.page_access_token_encrypted),
+            has_page_access_token: Boolean(facebookConnection.token_last_four),
             scopes: facebookConnection.scopes ?? [],
             last_comment_fetch_at: facebookConnection.last_comment_fetch_at,
             last_comment_fetch_count: facebookConnection.last_comment_fetch_count,
@@ -222,7 +231,7 @@ export default async function ChannelsPage({
             last_messenger_sync_error: facebookConnection.last_messenger_sync_error,
             last_messenger_sync_outbound_at: facebookConnection.last_messenger_sync_outbound_at,
           } : null}
-          facebookError={Boolean(params.facebook_error)}
+          facebookError={singleSearchParam(params.facebook_error)}
           metaWebhookEvents={metaWebhookEventsResult?.events ?? []}
           metaWebhookError={metaWebhookEventsResult?.error?.message ?? null}
           metaWebhookStorageHealth={{

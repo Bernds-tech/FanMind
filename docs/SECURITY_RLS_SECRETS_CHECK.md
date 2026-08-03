@@ -144,11 +144,19 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
     `MOBILE_PUSH_STAGING_CLEANUP=PASS` gemeinsam akzeptieren;
   - der Nachweis aktiviert weder echten Token-Upload noch Push-Zustellung.
 - [ ] `fan_analysis_reports`
+- [ ] `communication_analysis_reports`
+- [ ] `workspace_analysis_settings`
+- [ ] `content_sources`
+- [ ] `content_metric_snapshots`
 - [ ] `contact_reply_targets`
 
 ### Integrations-/Webhook-Tabellen
 
 - [ ] `social_connections`
+  - Browser darf `page_access_token_encrypted` weder selektieren noch mutieren;
+  - nur Owner/Admin dürfen OAuth starten, Callback abschließen oder trennen;
+  - `(platform, external_account_id)` ist für aktive Verbindungen global eindeutig;
+  - mehrere verwaltete Seiten verlangen eine ausdrückliche Auswahl;
 - [ ] `meta_webhook_events`
 - [ ] weitere Integrationstabellen, falls vorhanden
 

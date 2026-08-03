@@ -34,6 +34,7 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
 - [ ] kontobezogen bestätigte Unterauftragsverarbeiter,
       Verarbeitungsregionen und wirksam akzeptierte Anbieter-DPAs
 - [ ] Drittland-/Transfergrundlagen, soweit relevant
+- [ ] Meta-Kanalverarbeitung und Profiling/Kommunikationsanalyse: konkrete Rechtsgrundlage, transparente Betroffeneninformation, Widerspruch/Korrektur/Löschung, Meta-DPA/Transfers, Fristen und gegebenenfalls DSFA extern prüfen
 - [x] im Code belegte Aufbewahrungs-, Ablauf- und Löschgrenzen in einem
       technischen Retention-Register zusammengeführt
 - [ ] rechtlich und geschäftlich bestätigte Endfristen für CRM-, Support-,

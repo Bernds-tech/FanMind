@@ -1,10 +1,12 @@
 import {
   FACEBOOK_COMMENT_FEED_SCOPES,
+  FACEBOOK_INSIGHTS_OAUTH_SCOPES,
   FACEBOOK_MESSAGES_OAUTH_SCOPES,
   FACEBOOK_PAGES_MANAGE_ENGAGEMENT_SCOPE,
   FACEBOOK_PAGES_MESSAGING_SCOPE,
   FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE,
 } from "@/lib/facebookScopes";
+import { META_GRAPH_API_VERSION } from "@/lib/metaIntegrationPolicy.mjs";
 import {
   createCipheriv,
   createDecipheriv,
@@ -13,7 +15,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 
-const OAUTH_VERSION = "v20.0";
+const OAUTH_VERSION = META_GRAPH_API_VERSION;
 export const FACEBOOK_GRAPH_API_VERSION = OAUTH_VERSION;
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
@@ -30,7 +32,10 @@ export type FacebookOAuthState = {
   userId: string;
   nonce: string;
   issuedAt: number;
-  connectionType?: "facebook_messages" | "facebook_comments";
+  connectionType?:
+    | "facebook_messages"
+    | "facebook_comments"
+    | "facebook_insights";
 };
 
 export type FacebookPage = {
@@ -222,6 +227,14 @@ export function hasFacebookCommentFeedScopes(
   scopes: string[] | null | undefined,
 ): boolean {
   return FACEBOOK_COMMENT_FEED_SCOPES.every((scope) => scopes?.includes(scope));
+}
+
+export function hasFacebookInsightsScopes(
+  scopes: string[] | null | undefined,
+): boolean {
+  return FACEBOOK_INSIGHTS_OAUTH_SCOPES.every((scope) =>
+    scopes?.includes(scope),
+  );
 }
 
 export function hasRequiredFacebookPagePermissions(

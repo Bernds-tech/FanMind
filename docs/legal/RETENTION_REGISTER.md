@@ -48,6 +48,8 @@ identifizierbar zu halten. Maßgebliche Prüfeinstiege sind insbesondere
 | Account und Workspace | Dauer von Konto, Vertrag oder freigegebenem Zugang; danach bestätigter Lösch-/Rückgabeprozess | Nachlauf für Support, Streitfälle und abweichende Vertragsbeendigung |
 | Kontakte, Nachrichten, Kontaktwissen und Follow-ups | Dauer des Workspace oder frühere nutzer-/kundenveranlasste Löschung, soweit keine Pflicht entgegensteht | maximale Inaktivitätsfrist und Umgang mit Kunden-Backups |
 | KI-Ausgaben und Analyseberichte | solange im autorisierten Workspace fachlich gespeichert oder vom Nutzer gelöscht | maximale Nachlauf- oder Inaktivitätsfrist |
+| Meta-Nachrichten, Kommentare und Kommunikationsanalysen | Analyse technisch standardmäßig deaktiviert; Aktivierung verlangt bestätigte Nachrichten- und Analysefrist je Workspace | verbindliche Fristen, Löschworker, Verhalten nach Trennung und in Backups |
+| Meta-Content- und Reichweiten-Snapshots | nur normalisierte freigegebene Metriken eigener verbundener Konten; Sammlung standardmäßig deaktiviert | Snapshot-Dichte, maximale Historie und Löschfrist nach Kontentfernung |
 | KI-Kostenereignisse | minimierte Nutzungsmetrik ohne Prompt-/Antwortvolltext; noch keine automatische fachliche Löschfrist | Produktionsfrist für Abrechnung, Kostenanalyse und Missbrauchsschutz |
 | Support- und Vertragsanfragen | solange für Bearbeitung, Vertragsanbahnung und Nachweis erforderlich | reguläre Frist nach Abschluss oder letzter Kommunikation |
 | Vertrags-, Rechnungs- und Steuerdaten | solange gesetzliche Aufbewahrungs- und Nachweispflichten gelten | Steuerberatung bestätigt konkrete österreichische Frist und Beginn |
