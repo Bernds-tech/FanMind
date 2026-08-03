@@ -5,6 +5,8 @@ import test from "node:test";
 import { scanWorkflowPolicy } from "../scripts/verify-actions-pinned.mjs";
 
 const CODEQL_V4_37_4_SHA = "f205ea1c3313d32999d8d6a48b4f6530d4437b38";
+const SETUP_JAVA_V5_7_0_SHA =
+  "b6effb05e454b25005698d916606bdc6ffcbf961";
 const HOSTED_CHECKOUT_V7_0_1_SHA =
   "3d3c42e5aac5ba805825da76410c181273ba90b1";
 const RESTORE_CHECKOUT_V4_SHA =
@@ -95,7 +97,10 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
 });
 
 test("CodeQL init and analyze use the same reviewed v4.37.4 commit and minimal permissions", async () => {
-  const source = await readFile(".github/workflows/codeql.yml", "utf8");
+  const [source, reader] = await Promise.all([
+    readFile(".github/workflows/codeql.yml", "utf8"),
+    readFile("docs/security/SUPPLY_CHAIN.md", "utf8"),
+  ]);
   const initMatch = source.match(
     /github\/codeql-action\/init@([0-9a-f]{40})\s+#\s+v4\.37\.4/u,
   );
@@ -110,6 +115,35 @@ test("CodeQL init and analyze use the same reviewed v4.37.4 commit and minimal p
   assert.match(source, /security-events: write/u);
   assert.match(source, /contents: read/u);
   assert.doesNotMatch(source, /contents: write/u);
+  assert.match(
+    reader,
+    new RegExp(
+      `github/codeql-action[^\\n]+${CODEQL_V4_37_4_SHA}[^\\n]+v4\\.37\\.4`,
+      "u",
+    ),
+  );
+  assert.equal([...reader.matchAll(/4\.37\.4/gu)].length, 2);
+  assert.doesNotMatch(reader, /4\.37\.3/u);
+});
+
+test("native CI and supply-chain reader use the reviewed setup-java v5.7.0 commit", async () => {
+  const [workflow, reader] = await Promise.all([
+    readFile(".github/workflows/ci-mobile-native.yml", "utf8"),
+    readFile("docs/security/SUPPLY_CHAIN.md", "utf8"),
+  ]);
+  const setupJavaMatch = workflow.match(
+    /actions\/setup-java@([0-9a-f]{40})\s+#\s+v5\.7\.0/u,
+  );
+
+  assert.equal(setupJavaMatch?.[1], SETUP_JAVA_V5_7_0_SHA);
+  assert.match(
+    reader,
+    new RegExp(
+      `actions/setup-java[^\\n]+${SETUP_JAVA_V5_7_0_SHA}[^\\n]+v5\\.7\\.0`,
+      "u",
+    ),
+  );
+  assert.doesNotMatch(reader, /v5\.6\.0/u);
 });
 
 test("dependency audit and CycloneDX SBOM gates are persistent and short-lived", async () => {
