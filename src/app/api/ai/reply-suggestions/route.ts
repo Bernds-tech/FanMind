@@ -7,6 +7,10 @@ import {
 } from "@/lib/aiExecutionPolicy.mjs";
 import { getFanMindAiModel, recordAiUsageEvent } from "@/lib/aiUsage";
 import { getWorkspaceAiPromptContext } from "@/lib/workspaceAiPrompts";
+import {
+  isTrustedFanMindMutationRequest,
+  readBoundedJsonRequest,
+} from "@/lib/httpMutationPolicy.mjs";
 import { getClientIp } from "@/lib/rateLimit";
 import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
 import { isWorkspaceArchivedAfterSubscriptionEnd } from "@/lib/subscriptionCancellation";
@@ -26,6 +30,7 @@ const MAX_RESPONSE_INSTRUCTION_LENGTH = 1000;
 const AI_RATE_LIMIT_MAX = 20;
 const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const AI_TIMEOUT_MS = 25_000;
+const MAX_REPLY_SUGGESTION_BODY_BYTES = 64_000;
 const SAFETY_NOTE =
   "Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.";
 
@@ -164,9 +169,36 @@ const replySuggestionsSchema = {
 } as const;
 
 export async function POST(request: NextRequest) {
-  const payload = (await request.json().catch(() => null)) as
-    | ReplySuggestionRequest
-    | null;
+  let accessToken: string | undefined;
+  try {
+    accessToken = getOptionalBearerAccessToken(request);
+  } catch (error) {
+    if (error instanceof BearerAccessTokenError) {
+      return jsonError("Bitte melde dich in der FanMind-App erneut an.", 401);
+    }
+    return jsonError("Mobile Sitzung konnte nicht geprüft werden.", 401);
+  }
+
+  if (!accessToken && !isTrustedFanMindMutationRequest(request)) {
+    return jsonError(
+      "Die KI-Anfrage muss aus dem angemeldeten FanMind-Bereich erfolgen.",
+      403,
+    );
+  }
+
+  const parsedBody = await readBoundedJsonRequest(
+    request,
+    MAX_REPLY_SUGGESTION_BODY_BYTES,
+  );
+  if (!parsedBody.ok) {
+    return jsonError(
+      parsedBody.reason === "payload_too_large"
+        ? "Die KI-Anfrage ist zu groß."
+        : "Ungültiger JSON-Body.",
+      parsedBody.reason === "payload_too_large" ? 413 : 400,
+    );
+  }
+  const payload = parsedBody.value as ReplySuggestionRequest | null;
 
   if (!payload) {
     return jsonError("Ungültiger JSON-Body.", 400);
@@ -180,17 +212,6 @@ export async function POST(request: NextRequest) {
   let authorizationContext: Awaited<
     ReturnType<typeof requireContactInAuthorizedWorkspace>
   >;
-  let accessToken: string | undefined;
-
-  try {
-    accessToken = getOptionalBearerAccessToken(request);
-  } catch (error) {
-    if (error instanceof BearerAccessTokenError) {
-      return jsonError("Bitte melde dich in der FanMind-App erneut an.", 401);
-    }
-    return jsonError("Mobile Sitzung konnte nicht geprüft werden.", 401);
-  }
-
   try {
     authorizationContext = await requireContactInAuthorizedWorkspace(
       contactId,

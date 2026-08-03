@@ -1,6 +1,6 @@
 # FanMind Security-/RLS-/Secrets-Check
 
-Stand: Juli 2026
+Stand: 2. August 2026
 
 Dieser Check muss vor Pilotkundendaten, produktiver Integration-Aktivierung, Billing-Aktivierung oder größeren Deployments geprüft werden. Ziel ist, dass FanMind als echter CRM-Kern sicher betrieben wird und keine Secrets, Workspace-Daten oder Kundendaten falsch sichtbar werden.
 
@@ -198,8 +198,16 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 - [ ] `/api/demo/start` nutzt Service Role nur serverseitig.
 - [ ] `/api/inquiries` validiert, rate-limitiert und speichert serverseitig.
 - [ ] `/api/billing/checkout` prüft Session, Workspace und Plan/Commercial Option.
-- [ ] Browserbasierte schreibende Routen prüfen den vertrauenswürdigen Origin
-      und begrenzen JSON-Request-Bodies vor dem Parsen.
+- [ ] Cookie-authentifizierte Browsermutationen für Session, Logout, Demo,
+      Inquiry, Referral, Admin-Billing, Admin-Anfragen, Benachrichtigungen,
+      Backup-Jobs, Meta-Selbsttest und Facebook-Disconnect prüfen
+      `Origin` sowie `Sec-Fetch-Site` gegen die zentrale FanMind-Allowlist.
+- [ ] JSON- und Form-Request-Bodies werden vor dem Parsen bytegenau begrenzt;
+      auch chunked Streams werden beim ersten Überschreiten abgebrochen und
+      nicht erst vollständig in den Speicher geladen.
+- [ ] Mobile-/Service-Routen ohne Browser-Origin umgehen diese Grenze nur mit
+      einem separat validierten Bearer-/Service-Secret; externe Webhooks
+      verwenden weiterhin ihre jeweilige kryptographische Signaturprüfung.
 - [ ] `/api/stripe/webhook` prüft Stripe-Signatur.
 - [ ] `/api/webhooks/meta` prüft Meta-Signatur, sofern Secret gesetzt ist.
 - [ ] `/api/integrations/telegram/send-message` ist nicht Teil der Standarddemo und muss feature-geflaggt, admin-/pilot-only oder deaktiviert sein, sofern nicht explizit freigegeben.

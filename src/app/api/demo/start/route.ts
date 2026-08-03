@@ -1,6 +1,10 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  isTrustedFanMindMutationRequest,
+  readBoundedJsonRequest,
+} from "@/lib/httpMutationPolicy.mjs";
+import {
   SUPABASE_ACCESS_TOKEN_COOKIE,
   SUPABASE_REFRESH_TOKEN_COOKIE,
   getSupabaseAuthUrl,
@@ -36,6 +40,7 @@ import {
 const isProduction = process.env.NODE_ENV === "production";
 const DEMO_DURATION_MS = 60 * 60 * 1000;
 const DEMO_BROWSER_COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+const MAX_DEMO_START_BODY_BYTES = 4_000;
 
 type SupabaseAdminUserResponse = {
   id?: string;
@@ -161,7 +166,25 @@ async function settleFailedDemoStart(input: {
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => null)) as DemoStartBody | null;
+  if (!isTrustedFanMindMutationRequest(request)) {
+    return NextResponse.json(
+      { error: "Der Demo-Start konnte nicht verifiziert werden.", code: "origin_forbidden" },
+      { status: 403 },
+    );
+  }
+  const parsedBody = await readBoundedJsonRequest(request, MAX_DEMO_START_BODY_BYTES);
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      {
+        error: parsedBody.reason === "payload_too_large"
+          ? "Die Demo-Anfrage ist zu groß."
+          : "Die Demo-Anfrage ist ungültig.",
+        code: parsedBody.reason === "payload_too_large" ? "payload_too_large" : "invalid_request",
+      },
+      { status: parsedBody.reason === "payload_too_large" ? 413 : 400 },
+    );
+  }
+  const body = parsedBody.value as DemoStartBody | null;
   const locale = normalizeWorkspaceLocale(
     body?.locale ?? body?.lang ?? request.nextUrl.searchParams.get("lang"),
   );

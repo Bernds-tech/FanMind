@@ -952,8 +952,7 @@ export async function getUserWorkspaceDashboard(
     const fixedDemo = await ensureFixedSandraDemoWorkspace(user);
     if (fixedDemo.error || !fixedDemo.workspace) {
       return workspaceDashboardError(
-        fixedDemo.error?.message ??
-          "Der feste Demo-Workspace konnte nicht sicher geladen werden.",
+        "Der feste Demo-Workspace konnte nicht sicher geladen werden.",
       );
     }
     return {
@@ -973,7 +972,7 @@ export async function getUserWorkspaceDashboard(
 
   if (ownerWorkspaceResult.error) {
     return workspaceDashboardError(
-      `Workspace konnte nicht gesucht werden: ${ownerWorkspaceResult.error.message}`,
+      "Workspace konnte nicht geladen werden.",
     );
   }
 
@@ -986,8 +985,7 @@ export async function getUserWorkspaceDashboard(
       );
       if (normalizedDemo.error || !normalizedDemo.workspace) {
         return workspaceDashboardError(
-          normalizedDemo.error?.message ??
-            "Temporärer Demo-Workspace konnte nicht sicher geladen werden.",
+          "Temporärer Demo-Workspace konnte nicht sicher geladen werden.",
         );
       }
       workspaceRow = normalizedDemo.workspace;
@@ -1000,7 +998,11 @@ export async function getUserWorkspaceDashboard(
         authUserId: user.id,
         workspaceId: workspace.id,
       });
-      if (deleted.error) console.error("Temporary demo cleanup failed", deleted.error);
+      if (deleted.error) {
+        console.error("Temporary demo cleanup failed", {
+          code: deleted.errorCode ?? "temporary_demo_cleanup_failed",
+        });
+      }
       return workspaceDashboardError("TEMPORARY_DEMO_DELETED");
     }
     return { workspace, error: null };
@@ -1035,7 +1037,7 @@ export async function getUserWorkspaceMembershipDashboard(
 
   if (membershipResult.error) {
     return workspaceDashboardError(
-      `Workspace-Mitgliedschaft konnte nicht geprüft werden: ${membershipResult.error.message}`,
+      "Workspace-Mitgliedschaft konnte nicht geprüft werden.",
     );
   }
   if (!membershipResult.data) {
@@ -1055,9 +1057,7 @@ export async function getUserWorkspaceMembershipDashboard(
 
   if (workspaceResult.error || !workspaceResult.data) {
     return workspaceDashboardError(
-      workspaceResult.error
-        ? `Workspace konnte nicht geladen werden: ${workspaceResult.error.message}`
-        : "Workspace konnte nicht geladen werden.",
+      "Workspace konnte nicht geladen werden.",
     );
   }
 

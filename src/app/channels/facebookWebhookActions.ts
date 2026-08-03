@@ -880,9 +880,9 @@ async function getSafeTokenScopeNames(token: string | null): Promise<string[]> {
     return getFacebookGrantedScopeNames(
       await fetchFacebookTokenDiagnostics(token),
     );
-  } catch (error) {
+  } catch {
     console.error("Facebook token scope diagnostics failed", {
-      message: error instanceof Error ? error.message : "unknown",
+      code: "facebook_token_scope_diagnostics_failed",
     });
     return [];
   }
@@ -905,7 +905,10 @@ async function getCurrentFacebookConnection() {
     workspaceResult.workspace.id,
   );
   if (connectionsResult.error)
-    return { connection: null, error: connectionsResult.error.message };
+    return {
+      connection: null,
+      error: "Facebook-Verbindung konnte nicht geladen werden.",
+    };
   return {
     connection:
       connectionsResult.connections.find(

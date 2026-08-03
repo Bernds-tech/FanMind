@@ -20,9 +20,11 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
 } from "@/lib/supabase/server";
+import { readBoundedJsonRequest } from "@/lib/httpMutationPolicy.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const MAX_ACCOUNT_DELETION_BODY_BYTES = 4_000;
 
 function response(payload: Record<string, unknown>, status = 200) {
   return NextResponse.json(payload, {
@@ -205,7 +207,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = (await request.json().catch(() => null)) as
+    const parsedBody = await readBoundedJsonRequest(
+      request,
+      MAX_ACCOUNT_DELETION_BODY_BYTES,
+    );
+    if (!parsedBody.ok) {
+      return errorResponse(
+        parsedBody.reason === "payload_too_large"
+          ? "payload_too_large"
+          : "request_invalid",
+        parsedBody.reason === "payload_too_large" ? 413 : 400,
+        parsedBody.reason === "payload_too_large"
+          ? "Die Löschanfrage ist zu groß."
+          : "Bitte prüfe die Angaben.",
+      );
+    }
+    const payload = parsedBody.value as
       | {
           emailConfirmation?: unknown;
           confirmation?: unknown;
@@ -242,7 +259,22 @@ export async function DELETE(request: Request) {
   try {
     const context = await authenticate(request);
     assertTrustedMutationOrigin(request, context.accessToken);
-    const payload = (await request.json().catch(() => null)) as
+    const parsedBody = await readBoundedJsonRequest(
+      request,
+      MAX_ACCOUNT_DELETION_BODY_BYTES,
+    );
+    if (!parsedBody.ok) {
+      return errorResponse(
+        parsedBody.reason === "payload_too_large"
+          ? "payload_too_large"
+          : "request_invalid",
+        parsedBody.reason === "payload_too_large" ? 413 : 400,
+        parsedBody.reason === "payload_too_large"
+          ? "Die Widerrufsanfrage ist zu groß."
+          : "Bitte prüfe die Angaben.",
+      );
+    }
+    const payload = parsedBody.value as
       | { requestId?: unknown; confirmation?: unknown }
       | null;
     const validated = validateAccountDeletionCancellation(payload);

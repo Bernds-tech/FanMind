@@ -31,7 +31,7 @@ export async function listAdminBillingWorkspaces(): Promise<{ workspaces: AdminB
     const response = await fetch(url, { headers: getSupabaseHeaders(key), cache: "no-store" });
     if (!response.ok) return { workspaces: [], error: `Workspaces konnten nicht geladen werden (${response.status}). Migration evtl. noch nicht live.` };
     return { workspaces: await response.json() as AdminBillingWorkspace[], error: null };
-  } catch (error) { return { workspaces: [], error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
+  } catch { return { workspaces: [], error: "Workspaces konnten nicht geladen werden." }; }
 }
 
 export async function updateAdminBillingWorkspace(workspaceId: string, admin: SupabaseServerUser, values: Record<string, unknown>) {
@@ -59,7 +59,7 @@ export async function getAdminBillingWorkspace(workspaceId: string): Promise<{ w
     if (!response.ok) return { workspace: null, error: `Workspace konnte nicht geladen werden (${response.status}).` };
     const rows = await response.json() as AdminBillingWorkspace[];
     return { workspace: rows[0] ?? null, error: null };
-  } catch (error) { return { workspace: null, error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
+  } catch { return { workspace: null, error: "Workspace konnte nicht geladen werden." }; }
 }
 
 export type StripeInvoiceSummary = { id: string; status?: string | null; created?: string | null; subtotal?: number | null; total_tax_amounts?: number | null; total?: number | null; amount_due?: number | null; hosted_invoice_url?: string | null; invoice_pdf?: string | null };
@@ -69,8 +69,8 @@ export async function listStripeInvoicesForWorkspace(workspace: Pick<AdminBillin
   if (!secretKey || !workspace.stripe_customer_id) return { invoices: [], error: null };
   const params = new URLSearchParams({ customer: workspace.stripe_customer_id, limit: "10" });
   const response = await fetch(`https://api.stripe.com/v1/invoices?${params.toString()}`, { headers: { Authorization: `Bearer ${secretKey}` }, cache: "no-store" });
-  const json = await response.json().catch(() => ({})) as { data?: Array<Record<string, unknown>>; error?: { message?: string } };
-  if (!response.ok) return { invoices: [], error: json.error?.message ?? "Stripe-Rechnungen konnten nicht geladen werden." };
+  const json = await response.json().catch(() => ({})) as { data?: Array<Record<string, unknown>> };
+  if (!response.ok) return { invoices: [], error: "Stripe-Rechnungen konnten nicht geladen werden." };
   return { invoices: (json.data ?? []).map((invoice) => ({ id: String(invoice.id), status: typeof invoice.status === "string" ? invoice.status : null, created: typeof invoice.created === "number" ? new Date(invoice.created * 1000).toISOString() : null, subtotal: typeof invoice.subtotal === "number" ? invoice.subtotal : null, total_tax_amounts: Array.isArray(invoice.total_tax_amounts) ? invoice.total_tax_amounts.reduce((sum, tax) => sum + (typeof (tax as { amount?: unknown }).amount === "number" ? (tax as { amount: number }).amount : 0), 0) : null, total: typeof invoice.total === "number" ? invoice.total : null, amount_due: typeof invoice.amount_due === "number" ? invoice.amount_due : null, hosted_invoice_url: typeof invoice.hosted_invoice_url === "string" ? invoice.hosted_invoice_url : null, invoice_pdf: typeof invoice.invoice_pdf === "string" ? invoice.invoice_pdf : null })), error: null };
 }
 
@@ -108,8 +108,7 @@ export async function cancelInternalDailyTestSubscription(workspaceId: string, a
   if (secretKey && workspace.stripe_subscription_id) {
     const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(workspace.stripe_subscription_id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${secretKey}` }, cache: "no-store" });
     if (!response.ok) {
-      const json = await response.json().catch(() => ({})) as { error?: { message?: string } };
-      return { ok: false, status: response.status, error: json.error?.message ?? "Stripe-Subscription konnte nicht deaktiviert werden." };
+      return { ok: false, status: response.status, error: "Stripe-Subscription konnte nicht deaktiviert werden." };
     }
   }
   return updateAdminBillingWorkspace(workspaceId, admin, {
@@ -217,7 +216,7 @@ export async function listAdminBillingMembers(): Promise<{ members: AdminBilling
       members: rows.map((row) => ({ ...row, email: profiles.get(row.user_id)?.email ?? null, display_name: profiles.get(row.user_id)?.display_name ?? null })),
       error: null,
     };
-  } catch (error) { return { members: [], error: error instanceof Error ? error.message : "Unbekannter Fehler" }; }
+  } catch { return { members: [], error: "Workspace-Mitglieder konnten nicht geladen werden." }; }
 }
 
 export async function listWorkspaceContactCounts(): Promise<{ counts: Map<string, number>; error: string | null }> {

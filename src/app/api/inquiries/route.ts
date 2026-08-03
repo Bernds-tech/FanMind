@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPilotInquiry, isValidInquiryEmail, normalizeInquiryText } from "@/lib/inquiries";
 import { sendPilotInquiryNotification } from "@/lib/inquiryNotifications";
+import {
+  isTrustedFanMindMutationRequest,
+  readBoundedJsonRequest,
+} from "@/lib/httpMutationPolicy.mjs";
 import { getClientIp } from "@/lib/rateLimit";
 import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
 
@@ -10,6 +14,7 @@ const EMAIL_MAX_LENGTH = 254;
 const NAME_MAX_LENGTH = 160;
 const MESSAGE_MAX_LENGTH = 2000;
 const SOURCE_MAX_LENGTH = 120;
+const MAX_INQUIRY_BODY_BYTES = 8_000;
 
 type InquiryBody = {
   email?: unknown;
@@ -20,7 +25,17 @@ type InquiryBody = {
 };
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => null)) as InquiryBody | null;
+  if (!isTrustedFanMindMutationRequest(request)) {
+    return NextResponse.json({ error: "ORIGIN_FORBIDDEN" }, { status: 403 });
+  }
+  const parsedBody = await readBoundedJsonRequest(request, MAX_INQUIRY_BODY_BYTES);
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      { error: parsedBody.reason === "payload_too_large" ? "PAYLOAD_TOO_LARGE" : "VALIDATION_ERROR" },
+      { status: parsedBody.reason === "payload_too_large" ? 413 : 400 },
+    );
+  }
+  const body = parsedBody.value as InquiryBody | null;
   if (!body) return NextResponse.json({ error: "VALIDATION_ERROR" }, { status: 400 });
 
   const honeypot = normalizeInquiryText(body.company, 160);

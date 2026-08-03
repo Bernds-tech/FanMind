@@ -138,10 +138,10 @@ async function fetchRows<T>(
       };
     }
     return { rows: (await response.json()) as T[], error: null };
-  } catch (error) {
+  } catch {
     return {
       rows: [] as T[],
-      error: error instanceof Error ? error.message : "Unbekannter Fehler",
+      error: "Referral-Daten konnten nicht geladen werden.",
     };
   }
 }

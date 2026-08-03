@@ -12,14 +12,15 @@ import {
 } from "@/lib/adminAssets";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { getSupabaseServerUser } from "@/lib/supabase/server";
-import { isTrustedMutationRequest } from "@/lib/httpMutationPolicy.mjs";
+import {
+  isTrustedFanMindMutationRequest,
+  readBoundedFormDataRequest,
+} from "@/lib/httpMutationPolicy.mjs";
+
+const MAX_ADMIN_ASSET_FORM_BYTES = ADMIN_ASSET_MAX_BYTES + 64_000;
 
 export async function POST(request: NextRequest) {
-  if (!isTrustedMutationRequest(request, [
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.NEXT_PUBLIC_SITE_URL,
-    process.env.FANMIND_APP_URL,
-  ])) {
+  if (!isTrustedFanMindMutationRequest(request)) {
     return NextResponse.json(
       { error: "Die Upload-Anfrage konnte nicht verifiziert werden.", code: "origin_forbidden" },
       { status: 403 },
@@ -36,7 +37,22 @@ export async function POST(request: NextRequest) {
   const serviceToken = getAdminAssetServiceToken();
   if (!serviceToken) return NextResponse.json({ error: "Der Asset-Speicher ist serverseitig nicht vollständig konfiguriert.", code: "asset_storage_unavailable" }, { status: 500 });
 
-  const formData = await request.formData().catch(() => null);
+  const parsedBody = await readBoundedFormDataRequest(
+    request,
+    MAX_ADMIN_ASSET_FORM_BYTES,
+  );
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      {
+        error: parsedBody.reason === "payload_too_large"
+          ? "Die Upload-Anfrage ist zu groß."
+          : "Die Upload-Anfrage ist ungültig.",
+        code: parsedBody.reason === "payload_too_large" ? "payload_too_large" : "invalid_request",
+      },
+      { status: parsedBody.reason === "payload_too_large" ? 413 : 400 },
+    );
+  }
+  const formData = parsedBody.value;
   const file = formData?.get("file");
   const category = String(formData?.get("category") ?? "");
 
