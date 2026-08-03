@@ -25,11 +25,22 @@ import dashboardStyles from "../dashboard/dashboard.module.css";
 import { ChannelsGrid } from "./ChannelsGrid";
 import { getTelegramWebhookStatus, type TelegramWebhookStatus } from "@/lib/telegramStatus";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
+import { isInstagramOAuthConfigured } from "@/lib/instagramIntegration";
+import { isTokenEncryptionConfigured } from "@/lib/facebookIntegration";
 
 type SafeFacebookConnection = Pick<
   SocialConnectionRow,
   "page_name" | "page_id" | "webhook_subscribed" | "last_event_at" | "scopes" | "last_comment_fetch_at" | "last_comment_fetch_count" | "last_comment_fetch_error" | "last_messenger_sync_at" | "last_messenger_sync_checked_count" | "last_messenger_sync_imported_inbound_count" | "last_messenger_sync_imported_outbound_count" | "last_messenger_sync_imported_media_count" | "last_messenger_sync_skipped_count" | "last_messenger_sync_error" | "last_messenger_sync_outbound_at"
 > & { has_page_access_token: boolean };
+
+type SafeInstagramConnection = {
+  account_name: string | null;
+  account_id: string | null;
+  has_access_token: boolean;
+  scopes: string[] | null;
+  token_expires_at: string | null;
+  webhook_subscribed: boolean;
+};
 
 type FacebookLiveSetupStatus = {
   facebookAppIdConfigured: boolean;
@@ -47,6 +58,9 @@ type ChannelsWorkspaceProps = {
   openFollowupCount: number;
   facebookConnection: SafeFacebookConnection | null;
   facebookError?: string | null;
+  instagramConnection: SafeInstagramConnection | null;
+  instagramError?: string | null;
+  instagramOAuthConfigured: boolean;
   metaWebhookEvents: MetaWebhookEventRow[];
   metaWebhookError?: string | null;
   metaWebhookStorageHealth: {
@@ -78,6 +92,9 @@ function ChannelsWorkspace({
   openFollowupCount,
   facebookConnection,
   facebookError,
+  instagramConnection,
+  instagramError,
+  instagramOAuthConfigured,
   metaWebhookEvents,
   metaWebhookError,
   metaWebhookStorageHealth,
@@ -120,6 +137,9 @@ function ChannelsWorkspace({
       <ChannelsGrid
         facebookConnection={facebookConnection}
         facebookError={facebookError}
+        instagramConnection={instagramConnection}
+        instagramError={instagramError}
+        instagramOAuthConfigured={instagramOAuthConfigured}
         metaWebhookEvents={metaWebhookEvents}
         metaWebhookError={metaWebhookError}
         metaWebhookStorageHealth={metaWebhookStorageHealth}
@@ -200,6 +220,11 @@ export default async function ChannelsPage({
       (connection) =>
         connection.platform === "facebook" && connection.status === "connected",
     ) ?? null;
+  const instagramConnection =
+    socialConnectionsResult?.connections.find(
+      (connection) =>
+        connection.platform === "instagram" && connection.status === "connected",
+    ) ?? null;
 
   return (
     <main className={dashboardStyles.page}>
@@ -232,6 +257,16 @@ export default async function ChannelsPage({
             last_messenger_sync_outbound_at: facebookConnection.last_messenger_sync_outbound_at,
           } : null}
           facebookError={singleSearchParam(params.facebook_error)}
+          instagramConnection={instagramConnection ? {
+            account_name: instagramConnection.external_account_name ?? instagramConnection.page_name,
+            account_id: instagramConnection.external_account_id ?? instagramConnection.page_id,
+            has_access_token: Boolean(instagramConnection.token_last_four),
+            scopes: instagramConnection.scopes ?? [],
+            token_expires_at: instagramConnection.token_expires_at,
+            webhook_subscribed: instagramConnection.webhook_subscribed,
+          } : null}
+          instagramError={singleSearchParam(params.instagram_error)}
+          instagramOAuthConfigured={isInstagramOAuthConfigured() && isTokenEncryptionConfigured()}
           metaWebhookEvents={metaWebhookEventsResult?.events ?? []}
           metaWebhookError={metaWebhookEventsResult?.error?.message ?? null}
           metaWebhookStorageHealth={{

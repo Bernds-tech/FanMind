@@ -92,11 +92,11 @@ export const CHANNEL_SOURCE_CONFIGS: Record<
     mediaSupported: true,
     historySyncSupported: true,
     liveWebhookSupported: true,
-    defaultSyncLimit: 50,
+    defaultSyncLimit: 150,
     statusText:
       "Live verbunden, wenn Page/OAuth eingerichtet ist · kein automatisches Senden",
     statusHint:
-      "Messenger-DMs sind verbunden, wenn die Facebook-Page eingerichtet ist. Verlauf-Sync übernimmt bis zu 50 Nachrichten je Conversation. Antworten bleiben manuell; kein automatisches Senden.",
+      "Messenger-DMs sind verbunden, wenn die Facebook-Page eingerichtet ist. Der Erstabgleich übernimmt bis zu 150 aktuelle Nachrichten je Conversation; danach werden nur neue Ereignisse ergänzt. Antworten bleiben manuell; kein automatisches Senden.",
   },
   facebook_comments: {
     ...base,

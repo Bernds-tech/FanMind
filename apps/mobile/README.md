@@ -31,6 +31,10 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - Kontakt in Mobile anlegen und bearbeiten;
 - Kontaktdetail mit Profil und Kontaktwissen;
 - KI-Antwortvorschläge über Bearer-authentifizierte FanMind-API;
+- gespeicherter Gesprächsverlauf ausschließlich serverseitig aus dem
+  autorisierten Workspace; die App sendet keinen frei eingefügten
+  Verlaufsblock. Die effektive KI-Stufe begrenzt den Kontext auf 50/100/150
+  aktuelle Nachrichten;
 - serverseitig angewendeter Workspace-Unternehmens-Prompt und Standard-Antwortprofil; die Mobile-App überträgt keinen freien Prompttext;
 - Antwortvorschläge kopieren oder über die native Android-/iOS-Teilen-Auswahl
   bewusst weitergeben; ausschließlich der ausgewählte Antworttext wird

@@ -22,7 +22,10 @@ test("AI tier recommendation is advisory and cannot activate paid tiers", () => 
     assert.equal(AI_TIER_CONFIG[tierId].modelClass, null);
     assert.equal(AI_TIER_CONFIG[tierId].monthlyRequestLimit, null);
     assert.equal(AI_TIER_CONFIG[tierId].monthlyTokenLimit, null);
-    assert.equal(AI_TIER_CONFIG[tierId].contextMessageLimit, null);
+    assert.equal(
+      AI_TIER_CONFIG[tierId].contextMessageLimit,
+      tierId === "plus" ? 100 : 150,
+    );
   }
 });
 

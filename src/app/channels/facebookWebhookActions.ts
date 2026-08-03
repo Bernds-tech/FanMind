@@ -50,6 +50,10 @@ import {
 } from "@/lib/sourceContext";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
+import {
+  META_INCREMENTAL_CHAT_FETCH_LIMIT,
+  META_INITIAL_CHAT_BACKFILL_LIMIT,
+} from "@/lib/metaDataHandlingPolicy.mjs";
 
 export type FacebookCommentFetchResult = {
   ok: boolean;
@@ -63,8 +67,8 @@ export type FacebookCommentFetchResult = {
   tokenScopes?: string[];
 };
 
-const FACEBOOK_MESSENGER_SYNC_MESSAGE_LIMIT = 50;
-const FACEBOOK_MESSENGER_SYNC_CONVERSATION_LIMIT = 10;
+const FACEBOOK_MESSENGER_INCREMENTAL_CONVERSATION_LIMIT = 10;
+const FACEBOOK_MESSENGER_INITIAL_CONVERSATION_LIMIT = 25;
 
 export type FacebookMessengerSyncResult = SocialSyncResult & {
   syncedAt: string;
@@ -501,10 +505,17 @@ async function syncFacebookMessengerHistoryForConnection(
       ? workspaceContacts.find((entry) => entry.id === input.contactId)
       : null;
     const targetFanSenderId = input.fanSenderId ?? contact?.handle ?? null;
+    const initialSync = !connection.last_messenger_sync_at;
+    const messageFetchLimit = initialSync
+      ? META_INITIAL_CHAT_BACKFILL_LIMIT
+      : META_INCREMENTAL_CHAT_FETCH_LIMIT;
+    const conversationFetchLimit = initialSync
+      ? FACEBOOK_MESSENGER_INITIAL_CONVERSATION_LIMIT
+      : FACEBOOK_MESSENGER_INCREMENTAL_CONVERSATION_LIMIT;
     const conversations = await fetchFacebookMessengerConversations(
       connection.page_id,
       token,
-      FACEBOOK_MESSENGER_SYNC_CONVERSATION_LIMIT,
+      conversationFetchLimit,
     );
     let conversationsChecked = 0;
     let importedInbound = 0;
@@ -520,12 +531,21 @@ async function syncFacebookMessengerHistoryForConnection(
       );
       if (targetFanSenderId && fanParticipant?.id !== targetFanSenderId)
         continue;
+      if (
+        connection.last_messenger_sync_at &&
+        conversation.updatedTime &&
+        Date.parse(conversation.updatedTime) <=
+          Date.parse(connection.last_messenger_sync_at) - 5 * 60 * 1_000
+      ) {
+        continue;
+      }
       conversationsChecked += 1;
 
       const messages = await fetchFacebookMessengerConversationMessages(
         conversation.id,
         token,
-        FACEBOOK_MESSENGER_SYNC_MESSAGE_LIMIT,
+        messageFetchLimit,
+        connection.last_messenger_sync_at,
       );
       const chronologicalMessages = [...messages].sort(
         (a, b) =>
@@ -643,7 +663,7 @@ async function syncFacebookMessengerHistoryForConnection(
       importedMedia,
       skippedDuplicates,
       errors: [],
-      syncLimit: FACEBOOK_MESSENGER_SYNC_MESSAGE_LIMIT,
+      syncLimit: messageFetchLimit,
       lastSyncAt: syncedAt,
       error: null,
     };
@@ -673,7 +693,7 @@ function syncError(
     ...createEmptySocialSyncResult({
       ok: false,
       lastSyncAt: syncedAt,
-      syncLimit: FACEBOOK_MESSENGER_SYNC_MESSAGE_LIMIT,
+      syncLimit: META_INITIAL_CHAT_BACKFILL_LIMIT,
       error,
     }),
     syncedAt,

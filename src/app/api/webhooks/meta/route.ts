@@ -59,14 +59,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const signature = validateMetaHmacSignature({
-    rawBody,
-    signatureHeader: request.headers.get("x-hub-signature-256"),
-    configuredSecret: getWebhookAppSecret(),
-  });
-
-  if (!signature.ok) {
-    const errorCode = normalizeWebhookErrorCode(signature.errorCode);
+  const webhookSecrets = getWebhookAppSecrets();
+  if (!webhookSecrets.length) {
+    const errorCode = normalizeWebhookErrorCode("secret_not_configured");
     if (errorCode === "secret_not_configured") {
       console.error("Meta webhook signature validation unavailable", {
         errorCode,
@@ -75,12 +70,23 @@ export async function POST(request: Request) {
     return Response.json(
       {
         received: false,
-        error:
-          errorCode === "secret_not_configured"
-            ? "webhook_unavailable"
-            : "invalid_signature",
+        error: "webhook_unavailable",
       },
-      { status: errorCode === "secret_not_configured" ? 503 : 403 },
+      { status: 503 },
+    );
+  }
+
+  const signatureValid = webhookSecrets.some((configuredSecret) =>
+    validateMetaHmacSignature({
+      rawBody,
+      signatureHeader: request.headers.get("x-hub-signature-256"),
+      configuredSecret,
+    }).ok,
+  );
+  if (!signatureValid) {
+    return Response.json(
+      { received: false, error: "invalid_signature" },
+      { status: 403 },
     );
   }
 
@@ -132,10 +138,14 @@ function getWebhookVerifyToken(): string | undefined {
   );
 }
 
-function getWebhookAppSecret(): string | undefined {
-  return (
-    process.env.FACEBOOK_APP_SECRET ??
-    process.env.META_WEBHOOK_APP_SECRET ??
-    process.env.META_APP_SECRET
-  );
+function getWebhookAppSecrets(): string[] {
+  return [
+    process.env.FACEBOOK_APP_SECRET,
+    process.env.INSTAGRAM_APP_SECRET,
+    process.env.META_WEBHOOK_APP_SECRET,
+    process.env.META_APP_SECRET,
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .filter((value, index, values) => values.indexOf(value) === index);
 }

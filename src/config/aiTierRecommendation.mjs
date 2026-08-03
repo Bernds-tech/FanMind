@@ -1,3 +1,5 @@
+import { AI_TIER_CONTEXT_MESSAGE_LIMITS } from "./aiTiers.mjs";
+
 const TOKENS_PER_MILLION = 1_000_000;
 const INPUT_SHARE_BASIS_POINTS = 7_500;
 const BASIS_POINTS = 10_000;
@@ -28,7 +30,7 @@ export const AI_TIER_RECOMMENDATION = Object.freeze({
     providerModelRecommendation: "gpt-5.6-luna",
     monthlyRequestLimit: 750,
     monthlyTokenLimit: 3_000_000,
-    contextMessageLimit: 20,
+    contextMessageLimit: AI_TIER_CONTEXT_MESSAGE_LIMITS.standard,
     usagePolicy: {
       warningPercent: 80,
       hardStopPercent: 100,
@@ -46,7 +48,7 @@ export const AI_TIER_RECOMMENDATION = Object.freeze({
     providerModelRecommendation: "gpt-5.6-terra",
     monthlyRequestLimit: 1_500,
     monthlyTokenLimit: 6_000_000,
-    contextMessageLimit: 50,
+    contextMessageLimit: AI_TIER_CONTEXT_MESSAGE_LIMITS.plus,
     usagePolicy: {
       warningPercent: 80,
       hardStopPercent: 100,
@@ -64,7 +66,7 @@ export const AI_TIER_RECOMMENDATION = Object.freeze({
     providerModelRecommendation: "gpt-5.6-sol",
     monthlyRequestLimit: 2_000,
     monthlyTokenLimit: 8_000_000,
-    contextMessageLimit: 100,
+    contextMessageLimit: AI_TIER_CONTEXT_MESSAGE_LIMITS.ultra,
     usagePolicy: {
       warningPercent: 80,
       hardStopPercent: 100,

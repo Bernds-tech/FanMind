@@ -18,9 +18,12 @@ Aktueller MVP-Schutz:
 - `OPENAI_API_KEY` ist server-only.
 - Inputlängen, geladene Nachrichten-/Memory-Zeilen und serialisierte
   Gesamtkontexte sind begrenzt.
-- Kommunikationsanalysen laden höchstens 50 aktuelle Nachrichten und 20
-  aktuelle Memories; dynamische Analyse- und Antwortkontexte bleiben jeweils
-  unter 40.000 serialisierten Zeichen.
+- Kommunikationsanalysen und Antwortvorschläge verwenden die effektive,
+  ausschließlich serverseitig aufgelöste KI-Stufe: Standard 50, Plus 100 und
+  Ultra 150 aktuelle Nachrichten. Plus/Ultra fallen bis zur vollständigen
+  Aktivierungsfreigabe auf Standard zurück. Zusätzlich bleiben 20 aktuelle
+  Memories sowie serialisierte Analysekontexte unter 100.000 und
+  Antwortkontexte unter 80.000 Zeichen begrenzt.
 - Ein übergebener Analyse-Report für Antwortvorschläge ist auf 12.000 Zeichen
   begrenzt.
 - Antwortvorschläge nutzen strukturierte Ausgabe.

@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   AI_ANALYSIS_INPUT_CHAR_LIMIT,
+  AI_ANALYSIS_MAX_MESSAGE_ROW_LIMIT,
   AI_ANALYSIS_MEMORY_ROW_LIMIT,
   AI_ANALYSIS_MESSAGE_ROW_LIMIT,
   AI_ANALYSIS_OUTPUT_TOKEN_LIMIT,
@@ -74,6 +75,21 @@ test("analysis context is deterministic, bounded and prioritizes recent data", (
   assert.match(result.payload.contactKnowledge[0]?.content ?? "", /^memory-00:/u);
 });
 
+test("analysis context accepts the approved Ultra ceiling without changing storage", () => {
+  const result = buildBoundedFanAnalysisPayload({
+    messageLimit: 150,
+    messages: Array.from({ length: 200 }, (_, index) => ({
+      direction: "inbound",
+      text: `message-${index}`,
+    })),
+  });
+
+  assert.equal(AI_ANALYSIS_MAX_MESSAGE_ROW_LIMIT, 150);
+  assert.equal(result.payload.messages.length, 150);
+  assert.equal(result.payload.messages[0].text, "message-50");
+  assert.equal(result.payload.messages.at(-1).text, "message-199");
+});
+
 test("serialized budgets remain strict for escape-heavy content", () => {
   const escapeHeavy = "\"\n\t".repeat(10_000);
   const analysis = buildBoundedFanAnalysisPayload({
@@ -95,7 +111,8 @@ test("serialized budgets remain strict for escape-heavy content", () => {
     () =>
       buildBoundedReplySuggestionContext({
         incomingMessage: escapeHeavy.slice(0, 4_000),
-        pastedChatContext: escapeHeavy.slice(0, 12_000),
+        conversationContext: escapeHeavy.slice(0, 36_000),
+        messageLimit: 150,
         analysisReport: escapeHeavy.slice(0, 12_000),
         responseInstruction: escapeHeavy.slice(0, 1_000),
       }),
@@ -113,7 +130,8 @@ test("reply context bounds trusted contact fields and returns exact usage size",
     status: "active",
     tags: Array(40).fill("t".repeat(100)),
     summary: "s".repeat(5_000),
-    pastedChatContext: "p".repeat(12_000),
+    conversationContext: "p".repeat(36_000),
+    messageLimit: 150,
     incomingMessage: "i".repeat(4_000),
     responseMode: "m".repeat(80),
     responseInstruction: "r".repeat(1_000),
@@ -129,6 +147,7 @@ test("reply context bounds trusted contact fields and returns exact usage size",
   assert.equal(result.context.handle?.length, 160);
   assert.equal(result.context.tags.length, 20);
   assert.equal(result.context.summary?.length, 2_000);
+  assert.equal(result.context.conversationContext.length, 36_000);
   assert.equal(result.context.analysisReport?.length, AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT);
   assert.equal(result.context.responseMode.length, AI_REPLY_RESPONSE_MODE_CHAR_LIMIT);
   assert.equal(result.context.companyPrompt?.length, AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT);
@@ -141,7 +160,8 @@ test("reply context rejects escape-heavy input above the serialized budget", () 
     () =>
       buildBoundedReplySuggestionContext({
         contactId: "contact-1",
-        pastedChatContext: "\"".repeat(12_000),
+        conversationContext: "\"".repeat(36_000),
+        messageLimit: 150,
         incomingMessage: "\"".repeat(4_000),
         responseInstruction: "\"".repeat(1_000),
         analysisReport: "\"".repeat(12_000),
@@ -171,13 +191,20 @@ test("productive AI entry points enforce lifecycle guards, limits and output bud
   assert.equal(AI_ANALYSIS_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1_000);
   assert.equal(AI_ANALYSIS_OUTPUT_TOKEN_LIMIT, 2_048);
   assert.equal(AI_ANALYSIS_MESSAGE_ROW_LIMIT, 50);
+  assert.equal(AI_ANALYSIS_MAX_MESSAGE_ROW_LIMIT, 150);
   assert.equal(AI_ANALYSIS_MEMORY_ROW_LIMIT, 20);
   assert.equal(AI_REPLY_OUTPUT_TOKEN_LIMIT, 2_048);
   assert.equal(AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT, 12_000);
 
   assert.match(replyRoute, /isWorkspaceArchivedAfterSubscriptionEnd/u);
   assert.doesNotMatch(replyRoute, /evaluateAiExecutionGate/u);
-  assert.match(replyRoute, /AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT/u);
+  assert.match(replyRoute, /getResolvedWorkspaceAiTier/u);
+  assert.match(replyRoute, /getRecentContactConversationMessages/u);
+  assert.match(replyRoute, /getAiTierConfig/u);
+  assert.doesNotMatch(
+    replyRoute,
+    /payload\.(?:pastedChatContext|analysisReport)/u,
+  );
   assert.match(replyRoute, /buildBoundedReplySuggestionContext/u);
   assert.match(replyRoute, /max_output_tokens: AI_REPLY_OUTPUT_TOKEN_LIMIT/u);
   assert.ok(
@@ -223,7 +250,7 @@ test("productive AI entry points enforce lifecycle guards, limits and output bud
   assert.equal(legacyActions.includes("api.openai.com/v1/responses"), false);
   assert.match(
     analysisAction,
-    /getRecentContactConversationMessages\([\s\S]*AI_ANALYSIS_MESSAGE_ROW_LIMIT/u,
+    /getRecentContactConversationMessages\([\s\S]*contextMessageLimit/u,
   );
   assert.match(
     analysisAction,

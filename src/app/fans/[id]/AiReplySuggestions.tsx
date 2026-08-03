@@ -48,9 +48,7 @@ type Props = {
     status: string | null;
     tags: string[] | null;
     summary: string | null;
-    storedConversationContext?: string;
     latestInboundMessage?: string;
-    analysisReport?: string;
   };
   modes: ReplyMode[];
   locale?: FanMindLanguage;
@@ -141,19 +139,9 @@ export function AiReplySuggestions({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contactId: contact.contactId,
-          displayName: contact.displayName,
-          handle: contact.handle,
-          sourcePlatform: contact.sourcePlatform,
-          language: contact.language || locale,
-          status: contact.status,
-          tags: contact.tags ?? [],
-          summary: contact.summary,
-          pastedChatContext: contact.storedConversationContext ?? "",
-          incomingMessage: contact.latestInboundMessage ?? "",
           responseMode: `${mode.label}: ${mode.prompt}`,
           responseInstruction: replyInstruction.trim(),
           promptProfileId: selectedPromptProfileId || undefined,
-          analysisReport: contact.analysisReport,
         }),
       });
       const data = (await response.json().catch(() => null)) as

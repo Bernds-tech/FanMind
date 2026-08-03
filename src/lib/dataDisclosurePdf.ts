@@ -51,6 +51,15 @@ export type DataDisclosurePdfInput = {
     createdAt?: string | null;
     updatedAt?: string | null;
   }>;
+  storedDataSections?: Array<{
+    title: string;
+    countLabel: string;
+    emptyMessage: string;
+    entries: Array<{
+      title: string;
+      fields: string[];
+    }>;
+  }>;
 };
 
 const copy = {
@@ -92,7 +101,7 @@ const copy = {
     created: "Angelegt",
     updated: "Aktualisiert",
     noContacts: "Keine Kontakte im Workspace vorhanden.",
-    note: "Hinweis: Externe Kanalinhalte sind nur enthalten, soweit sie in FanMind dauerhaft gespeichert wurden. Secrets, Tokens, Sitzungsdaten, Stripe-IDs und Daten anderer Workspaces werden nicht exportiert.",
+    note: "Hinweis: Enthalten sind die in FanMind gespeicherten autorisierten Chats/Kommentare, eigenen Post-Caches, Metrik-Snapshots und Analyseprofile. Persönliche fremde Posts werden nicht gespiegelt. Secrets, Tokens, Sitzungsdaten, Stripe-IDs und Daten anderer Workspaces werden nicht exportiert.",
     page: "Seite",
     months: "Monate",
     subject: "Authentifizierte Datenauskunft für das eigene FanMind-Konto und den autorisierten Workspace.",
@@ -135,7 +144,7 @@ const copy = {
     created: "Created",
     updated: "Updated",
     noContacts: "No contacts are stored in this workspace.",
-    note: "Note: External channel content is included only when it has been stored permanently in FanMind. Secrets, tokens, session data, Stripe IDs and data from other workspaces are not exported.",
+    note: "Note: This export includes authorized chats/comments, owned post caches, metric snapshots and analysis profiles stored in FanMind. Third-party personal posts are not mirrored. Secrets, tokens, session data, Stripe IDs and data from other workspaces are excluded.",
     page: "Page",
     months: "months",
     subject: "Authenticated data disclosure for the user's own FanMind account and authorized workspace.",
@@ -322,6 +331,19 @@ export function buildDataDisclosurePdfLines(
     );
   });
 
+  for (const section of input.storedDataSections ?? []) {
+    lines.push("", normalizeLine(section.title));
+    lines.push(`${normalizeLine(section.countLabel)}: ${section.entries.length}`);
+    if (!section.entries.length) lines.push(normalizeLine(section.emptyMessage));
+    section.entries.forEach((entry, index) => {
+      lines.push(
+        "",
+        `${index + 1}. ${normalizeLine(entry.title)}`,
+        ...entry.fields.map((field) => normalizeLine(field)),
+      );
+    });
+  }
+
   lines.push("", text.note);
   return lines;
 }
@@ -389,6 +411,42 @@ function buildDataDisclosureBlocks(
       });
     }
   });
+
+  for (const section of input.storedDataSections ?? []) {
+    blocks.push(
+      { type: "spacer", height: 6 },
+      { type: "heading", text: normalizeLine(section.title), level: 2 },
+      {
+        type: "paragraph",
+        text: `${normalizeLine(section.countLabel)}: ${section.entries.length}`,
+        fontSize: 9,
+        lineHeight: 12,
+      },
+    );
+    if (!section.entries.length) {
+      blocks.push({
+        type: "paragraph",
+        text: normalizeLine(section.emptyMessage),
+        fontSize: 9,
+        lineHeight: 12,
+      });
+    }
+    section.entries.forEach((entry, index) => {
+      blocks.push({
+        type: "heading",
+        text: `${index + 1}. ${normalizeLine(entry.title)}`,
+        level: 3,
+      });
+      if (entry.fields.length) {
+        blocks.push({
+          type: "list",
+          items: entry.fields.map((field) => normalizeLine(field)),
+          style: "bullet",
+          fontSize: 9,
+        });
+      }
+    });
+  }
 
   blocks.push(
     { type: "spacer", height: 8 },

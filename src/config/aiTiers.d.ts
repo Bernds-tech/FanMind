@@ -90,6 +90,10 @@ export type WorkspaceAiTierEntitlement = Readonly<{
 }>;
 
 export const AI_TIER_IDS: readonly AiTierId[];
+export const AI_TIER_CONTEXT_MESSAGE_LIMITS: Readonly<
+  Record<AiTierId, 50 | 100 | 150>
+>;
+export const AI_MAX_CONTEXT_MESSAGE_LIMIT: 150;
 export const AI_TIER_ENTITLEMENT_STATUSES: readonly AiTierEntitlementStatus[];
 export const AI_TIER_CONFIG: Readonly<Record<AiTierId, AiTierConfig>>;
 export function getAiTierConfig(tierId: AiTierId): AiTierConfig;

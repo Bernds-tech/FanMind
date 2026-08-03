@@ -33,6 +33,12 @@ test("KI Standard remains included and Plus/Ultra remain separate add-ons", () =
   assert.equal(formatAiTierPrice("ultra"), "+200 €/Monat");
 });
 
+test("AI tiers use the approved server-side 50/100/150 conversation context", () => {
+  assert.equal(AI_TIER_CONFIG.standard.contextMessageLimit, 50);
+  assert.equal(AI_TIER_CONFIG.plus.contextMessageLimit, 100);
+  assert.equal(AI_TIER_CONFIG.ultra.contextMessageLimit, 150);
+});
+
 test("no AI add-on is referral-discount eligible or allowed to send automatically", () => {
   for (const tier of Object.values(AI_TIER_CONFIG)) {
     assert.equal(tier.addOnReferralDiscountEligible, false);
@@ -76,7 +82,7 @@ test("current tier readiness is explicit and fail-closed", () => {
     assert.ok(readiness.blockers.includes("model_class"));
     assert.ok(readiness.blockers.includes("monthly_request_limit"));
     assert.ok(readiness.blockers.includes("monthly_token_limit"));
-    assert.ok(readiness.blockers.includes("context_message_limit"));
+    assert.ok(!readiness.blockers.includes("context_message_limit"));
     assert.ok(readiness.blockers.includes("provider_model"));
     assert.ok(readiness.blockers.includes("fallback_model"));
     assert.ok(!readiness.blockers.includes("provider_fallback_distinct"));

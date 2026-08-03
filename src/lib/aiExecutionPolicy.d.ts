@@ -31,12 +31,13 @@ export type BoundedFanAnalysisPayload = {
 
 export const AI_ANALYSIS_RATE_LIMIT_MAX: 10;
 export const AI_ANALYSIS_RATE_LIMIT_WINDOW_MS: 600000;
-export const AI_ANALYSIS_INPUT_CHAR_LIMIT: 40000;
+export const AI_ANALYSIS_INPUT_CHAR_LIMIT: 100000;
 export const AI_ANALYSIS_OUTPUT_TOKEN_LIMIT: 2048;
 export const AI_ANALYSIS_MESSAGE_ROW_LIMIT: 50;
+export const AI_ANALYSIS_MAX_MESSAGE_ROW_LIMIT: 150;
 export const AI_ANALYSIS_MEMORY_ROW_LIMIT: 20;
 export const AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT: 12000;
-export const AI_REPLY_INPUT_CHAR_LIMIT: 40000;
+export const AI_REPLY_INPUT_CHAR_LIMIT: 80000;
 export const AI_REPLY_OUTPUT_TOKEN_LIMIT: 2048;
 export const AI_REPLY_RESPONSE_MODE_CHAR_LIMIT: 80;
 export const AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT: 3000;
@@ -50,6 +51,7 @@ export function buildBoundedFanAnalysisPayload(input: {
   contact?: Record<string, unknown> | null;
   contactKnowledge?: readonly Record<string, unknown>[] | null;
   messages?: readonly Record<string, unknown>[] | null;
+  messageLimit?: unknown;
 }): Readonly<{
   payload: BoundedFanAnalysisPayload;
   inputChars: number;
@@ -64,7 +66,7 @@ export type BoundedReplySuggestionContext = {
   status: string | null;
   tags: string[];
   summary: string | null;
-  pastedChatContext: string;
+  conversationContext: string;
   incomingMessage: string;
   responseMode: string;
   responseInstruction: string | null;
@@ -75,7 +77,7 @@ export type BoundedReplySuggestionContext = {
 };
 
 export function buildBoundedReplySuggestionContext(
-  input: Record<string, unknown>,
+  input: Record<string, unknown> & { messageLimit?: unknown },
 ): Readonly<{
   context: BoundedReplySuggestionContext;
   inputChars: number;

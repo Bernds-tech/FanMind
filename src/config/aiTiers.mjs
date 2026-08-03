@@ -1,4 +1,11 @@
 export const AI_TIER_IDS = Object.freeze(["standard", "plus", "ultra"]);
+export const AI_TIER_CONTEXT_MESSAGE_LIMITS = Object.freeze({
+  standard: 50,
+  plus: 100,
+  ultra: 150,
+});
+export const AI_MAX_CONTEXT_MESSAGE_LIMIT =
+  AI_TIER_CONTEXT_MESSAGE_LIMITS.ultra;
 export const AI_TIER_ENTITLEMENT_STATUSES = Object.freeze([
   "active",
   "pending",
@@ -39,7 +46,7 @@ export const AI_TIER_CONFIG = Object.freeze({
     modelClass: null,
     monthlyRequestLimit: null,
     monthlyTokenLimit: null,
-    contextMessageLimit: null,
+    contextMessageLimit: AI_TIER_CONTEXT_MESSAGE_LIMITS.standard,
     description:
       "Im Starter-Basispaket enthaltene KI für Antwortvorschläge, Kontaktwissen und Follow-ups.",
     features: [
@@ -62,7 +69,7 @@ export const AI_TIER_CONFIG = Object.freeze({
     modelClass: null,
     monthlyRequestLimit: null,
     monthlyTokenLimit: null,
-    contextMessageLimit: null,
+    contextMessageLimit: AI_TIER_CONTEXT_MESSAGE_LIMITS.plus,
     description:
       "Kostenpflichtige Erweiterung mit leistungsstärkerer KI, mehr Nutzung und größerem Gesprächskontext.",
     features: [
@@ -85,7 +92,7 @@ export const AI_TIER_CONFIG = Object.freeze({
     modelClass: null,
     monthlyRequestLimit: null,
     monthlyTokenLimit: null,
-    contextMessageLimit: null,
+    contextMessageLimit: AI_TIER_CONTEXT_MESSAGE_LIMITS.ultra,
     description:
       "Premium-Erweiterung mit der stärksten freigegebenen KI, den höchsten Kontingenten und erweitertem Funktionsumfang.",
     features: [
@@ -425,6 +432,15 @@ export function assertAiTierPolicy() {
   }
   if (plus.monthlyAddOnCents !== 10000 || ultra.monthlyAddOnCents !== 20000) {
     throw new Error("KI Plus/Ultra prices do not match the approved commercial truth");
+  }
+  if (
+    standard.contextMessageLimit !== 50 ||
+    plus.contextMessageLimit !== 100 ||
+    ultra.contextMessageLimit !== 150
+  ) {
+    throw new Error(
+      "AI context message limits must remain Standard 50, Plus 100 and Ultra 150",
+    );
   }
   for (const tier of Object.values(AI_TIER_CONFIG)) {
     if (tier.automaticSendingEnabled) {

@@ -7,7 +7,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
-- Meta Content Intelligence: mandantengetrennte Facebook-/Instagram-Verbindung, eigene Post-/Account-Insights sowie Fan-/Gesprächs-/Nutzer-Schreibstilanalyse sind ausdrücklich beauftragt und als fail-closed Grundlage vorbereitet. Sie bleiben bis Staging, Meta App Review und Rechtsfreigabe je Workspace Beta/inaktiv; Details in `docs/integrations/META_CONTENT_INTELLIGENCE.md`.
+- Meta Content Intelligence: mandantengetrennte Facebook-/Instagram-Verbindung, eigener Post-/Insight-Cache, inkrementell gespeicherte autorisierte Chats/Kommentare sowie Fan-/Nutzer-Schreibstilanalyse sind als fail-closed Grundlage vorbereitet. Beim ersten Facebook-Abgleich werden höchstens 150 aktuelle Nachrichten je Thread geladen, danach nur neue Ereignisse ergänzt; KI Standard/Plus/Ultra verwenden serverseitig 50/100/150 aktuelle Nachrichten. Persönliche fremde Profile/Posts werden nicht gespiegelt oder gescrapt. Bis Staging, Meta App Review und Rechtsfreigabe bleibt alles Beta/inaktiv; Details in `docs/integrations/META_CONTENT_INTELLIGENCE.md`.
 - Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Mobile-Signing-Gate: ein manueller `main`-gebundener Ablauf kann nach
   erfolgreichem Ressourcencheck genau einen credential-frozen internen
@@ -272,6 +272,8 @@ Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und
 | `/api/demo/start` | temporärer Demo-Workspace | aktiv |
 | `/api/stripe/webhook` | Stripe-Lifecycle und Referral-Synchronisierung | aktiv; Referral-Rabattverrechnung per Flag deaktiviert |
 | `/api/webhooks/meta` | Meta-Webhooks | vorbereitet/Beta |
+| `/api/integrations/facebook/start` | Workspace-gebundener Facebook-Login mit ausdrücklicher Seitenauswahl | vorbereitet/Beta; Webhook ergänzt autorisierte Chats inkrementell |
+| `/api/integrations/instagram/start` | Workspace-gebundener Instagram Business Login | vorbereitet/Beta; Webhook-Grundlage für inkrementelle DMs/Kommentare |
 
 ## Pakete und KI-Add-ons
 

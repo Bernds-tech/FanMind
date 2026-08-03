@@ -125,6 +125,8 @@ test("profile offers one localized protected PDF download without legacy mail or
   assert.match(route, /getSupabaseServerUser\(\)/u);
   assert.match(route, /getUserWorkspaceDashboard\(data\.user\)/u);
   assert.match(route, /getAllWorkspaceContactsForDisclosure\(workspace\.id\)/u);
+  assert.match(route, /getWorkspaceMetaDataForDisclosure\(workspace\.id\)/u);
+  assert.match(route, /storedDataSections:\s*buildStoredDataSections/u);
   assert.match(route, /await createDataDisclosurePdf\(/u);
   assert.match(route, /Content-Type": "application\/pdf"/u);
   assert.match(route, /Cache-Control": "private, no-store"/u);
@@ -132,7 +134,7 @@ test("profile offers one localized protected PDF download without legacy mail or
   assert.match(route, /fanmind-data-disclosure\.pdf/u);
   assert.doesNotMatch(
     route,
-    /stripe_customer_id|stripe_subscription_id|stripe_checkout_session_id|test_access_flags|billing_admin_note|SUPABASE_SERVICE_ROLE_KEY/u,
+    /stripe_customer_id|stripe_subscription_id|stripe_checkout_session_id|test_access_flags|billing_admin_note|SUPABASE_SERVICE_ROLE_KEY|page_access_token_encrypted|token_last_four/u,
   );
 });
 
@@ -260,6 +262,63 @@ test("empty exports stay honest and English output uses English section labels",
     assert.match(text, /No contacts are stored in this workspace\./u);
     assert.match(text, new RegExp(`Page 1 / ${pages.length}`, "u"));
     assert.ok(pages.length >= 1);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("PDF includes stored chat, post-cache, metric and profile sections without tokens", async () => {
+  await initNodeDecompression();
+  const { loadedModule: pdfModule, cleanup } = await loadTypeScriptModule(
+    pdfPath,
+    "fanmind-pdf-meta-sections",
+  );
+  try {
+    const pdf = await pdfModule.createDataDisclosurePdf({
+      generatedAt: new Date("2026-08-03T12:00:00.000Z"),
+      locale: "de",
+      user: { id: "user-meta" },
+      workspace: { id: "workspace-meta", name: "Meta Workspace" },
+      contacts: [],
+      storedDataSections: [
+        {
+          title: "Gespeicherte Meta-Chats und Kommentare",
+          countLabel: "Gespeicherte Datensätze",
+          emptyMessage: "Keine Daten",
+          entries: [
+            {
+              title: "Nachricht 1",
+              fields: ["content: Danke für deine Nachricht", "source_platform: facebook"],
+            },
+          ],
+        },
+        {
+          title: "Eigener Post-/Medien-Cache",
+          countLabel: "Gespeicherte Datensätze",
+          emptyMessage: "Keine Daten",
+          entries: [],
+        },
+        {
+          title: "Reichweiten- und Metrik-Snapshots",
+          countLabel: "Gespeicherte Datensätze",
+          emptyMessage: "Keine Daten",
+          entries: [],
+        },
+        {
+          title: "Fan-Analyseberichte",
+          countLabel: "Gespeicherte Datensätze",
+          emptyMessage: "Keine Daten",
+          entries: [],
+        },
+      ],
+    });
+    const text = extractedText(pdf);
+    assert.match(text, /Gespeicherte Meta-Chats und Kommentare/u);
+    assert.match(text, /Danke für deine Nachricht/u);
+    assert.match(text, /Eigener Post-\/Medien-Cache/u);
+    assert.match(text, /Reichweiten- und Metrik-Snapshots/u);
+    assert.match(text, /Fan-Analyseberichte/u);
+    assert.doesNotMatch(text, /page_access_token_encrypted|token_last_four/u);
   } finally {
     await cleanup();
   }

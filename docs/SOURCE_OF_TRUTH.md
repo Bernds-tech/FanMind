@@ -467,7 +467,7 @@ Vorbereitet / Beta / nicht allgemein live verkaufen:
 
 - mandantengetrennte Meta-/Facebook-/Instagram-Grundlagen: jeder Kunde verbindet sein eigenes Geschäftskonto mit seinem eigenen Workspace; verschlüsselte Tokens bleiben serverseitig; eine externe Konto-ID darf nur einem aktiven Workspace gehören;
 - Facebook-Messenger-/Kommentar-Grundlage und Graph API `v25.0`; Instagram-Webhook-Grundlage; Instagram Business Login, explizite Mehrfachkontoauswahl, App Review und reale Ende-zu-Ende-Abnahme bleiben offen;
-- normalisierte Reichweiten-/Posting-Snapshots und vorsichtige Fan-, Gesprächs- und Nutzer-Schreibstilanalyse als fail-closed Datenmodell; alle Analysearten bleiben standardmäßig aus, bis Rechtsgrundlage, Transparenz, AVV/Anbieterprüfung und Aufbewahrung je Workspace bestätigt sind;
+- eigener Post-/Insight-Cache, fortlaufend und inkrementell gespeicherte autorisierte Chats/Kommentare sowie vorsichtige Fan-/Nutzer-Schreibstilanalyse als fail-closed Meta-Datenmodell; der einmalige Facebook-Erstabruf ist auf 150 aktuelle Nachrichten je Thread begrenzt, danach werden nur neue Ereignisse ergänzt. KI Standard/Plus/Ultra erhalten serverseitig ausschließlich die letzten 50/100/150 Nachrichten. Persönliche fremde Profile/Posts werden nicht gespiegelt oder gescrapt. Alle Analysearten bleiben standardmäßig aus, bis Rechtsgrundlage, Transparenz, AVV/Anbieterprüfung, Betroffenenrechte und Aufbewahrung je Workspace bestätigt sind;
 - Meta Pixel als consent-gesteuerte Marketing-Messung ausschließlich mit parameterlosem `PageView` auf freigegebenen öffentlichen Seiten; geschützte und dynamische CRM-Routen sowie unsichere Query-/Fragmentwerte sind fail-closed ausgeschlossen; `CompleteRegistration`, `Lead` und weitere Conversion-Events bleiben vorbereitet und unverknüpft, bis sie einzeln fachlich und datenschutzrechtlich freigegeben sind;
 - Facebook-Reply-Target- und Messenger-Hilfen;
 - Telegram-Webhook- und Bot-Grundlagen;
@@ -519,8 +519,8 @@ Relevante Objekte umfassen unter anderem:
 - `profiles`, `workspaces`, `workspace_members`;
 - `contacts`, `memories`, `followups`;
 - `conversations`, `conversation_messages`, `conversation_summaries`;
-- `contact_ai_profiles`, `workspace_voice_profiles`, `workspace_ai_prompt_settings`, `fan_analysis_reports`, `communication_analysis_reports`, `workspace_analysis_settings`;
-- `content_sources`, `content_metric_snapshots`, `contact_reply_targets`, `social_connections`, `meta_webhook_events`;
+- `contact_ai_profiles`, `workspace_voice_profiles`, `workspace_ai_prompt_settings`, `fan_analysis_reports`, `workspace_analysis_settings`;
+- `content_sources`, `content_metric_snapshots`, `communication_analysis_reports`, `contact_reply_targets`, `social_connections`, `meta_webhook_events`;
 - Billing-, Referral-, Inquiry-, Operations- und Backup-Tabellen laut aktueller Migrationen.
 
 Interne Tabellen- oder Feature-Keys wie `memories`, `memory` oder `pilot` dürfen aus Kompatibilitätsgründen bestehen bleiben, sind aber keine öffentliche Terminologie.

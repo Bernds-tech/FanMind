@@ -7,6 +7,27 @@ Facebook-/Instagram-Verbindungen, Nachrichtenimport, Post-Reichweitenanalyse,
 Fan-Kommunikationsanalyse und Workspace-Schreibstil. Es ist keine anwaltliche
 Freigabe und aktiviert keine externe Verbindung.
 
+## Verbindliche Speicherentscheidung vom 3. August 2026
+
+- Eigene Posts/Reels/Videos des verbundenen Business-/Creator-Kontos und ihre
+  freigegebenen aggregierten Insights werden als Workspace-Cache gespeichert,
+  damit unveränderte Daten nicht wiederholt vollständig abgerufen werden.
+- Autorisierte DMs und Kommentare mit dem verbundenen Konto werden gespeichert.
+  Der erste Facebook-Abgleich lädt höchstens die letzten 150 Nachrichten je
+  Thread. Danach werden neue Ereignisse per Webhook beziehungsweise seit dem
+  letzten Sync und externer Ereignis-ID inkrementell ergänzt; vorhandene ältere
+  Nachrichten werden nicht wegen einer KI-Stufe gelöscht.
+- Persönliche fremde Profile, persönliche Posts eines Fans und vollständige
+  Followerlisten werden weder gespiegelt noch gescrapt. Soweit Meta einzelne
+  Inhalte über eine genehmigte API für einen zulässigen Zweck liefert, dürfen
+  sie nur für diese Analyse verarbeitet werden.
+- Das abgeleitete Fanprofil und Nutzer-Schreibstilprofil speichern nur die für
+  passende Antwortvorschläge nötigen Signale, Quellenzeitraum, Stichprobe und
+  Konfidenz. Sie bleiben korrigier- und löschbar.
+- Automatische Hintergrundanalyse bleibt deaktiviert. Webhooks ergänzen nur
+  autorisierte Chats/Kommentare; sie lösen keine selbständige Profilanalyse
+  und keine automatische Antwort aus.
+
 ## Verbindliche Produktgrenze
 
 - Jeder FanMind-Kunde verbindet in seinem eigenen Workspace sein eigenes
@@ -31,9 +52,9 @@ Freigabe und aktiviert keine externe Verbindung.
 | --- | --- |
 | Facebook OAuth, verschlüsselte Seitentokens, Webhook- und Nachrichten-Grundlage | vorbereitet/Beta |
 | Facebook Graph API | auf stabile `v25.0` festgelegt |
-| Instagram Webhook-Parser | Grundlage vorhanden |
-| Instagram Business Login/OAuth und echte Kontenauswahl | noch zu implementieren und mit Meta zu testen |
-| Post-/Account-Metrikmodell und Formeln | vorbereitet, Migration noch nicht angewendet |
+| Instagram Webhook-Parser und inkrementelle Chat-/Kommentargrundlage | vorbereitet; Staging-Test offen |
+| Instagram Business Login/OAuth und Professional-Kontobindung | implementiert; echter Staging-/Meta-Kontotest noch offen |
+| Post-/Account-Cache, Metrik-Snapshots und Formeln | vorbereitet, Migration noch nicht angewendet |
 | Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | vorbereitet, Migration noch nicht angewendet |
 | Meta App Review, Advanced Access und Business Verification | extern offen |
 | Rechtsgrundlage, Transparenz, AVV und Aufbewahrung | extern beziehungsweise je Kunde offen; Analysen standardmäßig aus |
@@ -45,11 +66,11 @@ Freigabe und aktiviert keine externe Verbindung.
 | --- | --- | --- |
 | Workspace | `workspace_id` | genau ein FanMind-Mandant |
 | Meta-Verbindung | `social_connection_id` | Workspace + Plattform + externes Konto |
-| Post/Reel/Video | `content_source_id` | Verbindung + externe Content-ID |
+| Post/Reel/Video | `content_source_id` | eigenes verbundenes Konto + externe Content-ID |
 | Fan/Kontakt | `contact_id` | ausschließlich im Workspace |
-| Gespräch | `conversation_id` | Kontakt + Plattform-Thread oder Postkontext |
-| Nachricht/Kommentar | `conversation_message.id` | Gespräch + externe Ereignis-ID |
-| Analyse | Report-ID | Workspace + Quelle + Zeitraum + Anzahl + Konfidenz + Reviewstatus |
+| Meta-Gespräch/Nachricht/Kommentar | Conversation-/Message-ID | konkreter Thread/Post + externe Ereignis-ID; fortlaufend inkrementell gespeichert |
+| Abgeleitetes Fanprofil | Profil-ID | Workspace + Kontakt + Zeitraum + Anzahl + Konfidenz + Reviewstatus |
+| Nutzer-Schreibstil | Profil-ID | Workspace + Nutzer + ausschließlich bestätigte manuelle Ausgänge |
 
 Ein Fan-Gespräch bleibt an seinen konkreten Thread beziehungsweise Post
 gebunden. Nachrichten aus zehn oder hundert Posts werden nicht zu einem
@@ -94,7 +115,9 @@ Berechtigungen, App Review und gegebenenfalls Business Verification nötig.
 
 ## Reichweiten- und Postinganalysen
 
-FanMind speichert Snapshots, damit Entwicklung über Zeit vergleichbar bleibt.
+FanMind speichert eigene Posts und Reichweiten-Snapshots des verbundenen
+Kontos, damit Entwicklungen über Zeit vergleichbar bleiben und unveränderte
+Werte nicht bei jeder Ansicht erneut vollständig von Meta geladen werden.
 Originale Meta-Metriknamen werden auf eine kleine interne Allowlist abgebildet;
 unbekannte, negative oder nicht numerische Werte werden verworfen.
 
@@ -132,10 +155,11 @@ Aus tatsächlich vorhandener Kommunikation dürfen vorsichtig abgeleitet werden:
 - bevorzugte Antwortlänge, Formalität und Reaktionsmuster;
 - Antwortzeiten und Verlauf der Beziehung, soweit die Datenbasis dies trägt.
 
-Jeder Bericht enthält Quellenzeitraum, Nachrichtenanzahl, Konfidenz und
-Reviewstatus. Er muss korrigierbar, verwerfbar und löschbar sein. Bei weniger
-als drei relevanten Nachrichten ist ausdrücklich auf geringe Datenlage
-hinzuweisen.
+Das gespeicherte Fanprofil enthält Quellenzeitraum, Nachrichtenanzahl,
+Konfidenz und Reviewstatus. Die autorisierten Chats liegen getrennt im
+konkreten Thread; das Profil selbst dupliziert ihre Rohtexte nicht. Es muss
+korrigierbar, verwerfbar und löschbar sein. Bei weniger als drei relevanten
+Nachrichten ist ausdrücklich auf geringe Datenlage hinzuweisen.
 
 Nicht abgeleitet oder gespeichert werden insbesondere ethnische Herkunft,
 politische Meinung, Religion/Weltanschauung, Gewerkschaftszugehörigkeit,
@@ -155,22 +179,33 @@ Person.
 
 ## Technische Schutzmaßnahmen
 
-- Meta-Webhook-HMAC und Verify-Token fail-closed;
+- Meta-Webhook-HMAC gegen die konfigurierten Facebook-/Instagram-App-Secrets
+  und Verify-Token fail-closed; autorisierte neue Chats/Kommentare werden
+  inkrementell gespeichert;
 - OAuth-State an User und Workspace gebunden;
 - Owner-/Admin-Prüfung vor Start, Callback und Trennung;
 - verschlüsselte Tokens nur über Service Role; Browser erhalten höchstens
   nicht geheime Statusfelder;
 - global eindeutige aktive Bindung von Plattform + externer Konto-ID;
 - idempotente externe Ereignis-IDs und Schutz vor doppelten Webhooks;
-- höchstens 50 Nachrichten pro Analyse beziehungsweise Messenger-Sync-Seite;
-- keine Rohinhalte in technischen Diagnoseprotokollen;
+- erster Facebook-Abruf höchstens 150 aktuelle Nachrichten je Thread; danach
+  nur neue Ereignisse mit fünf Minuten Sicherheitsüberlapp;
+- KI-Kontext ausschließlich serverseitig nach effektiver Stufe: Standard 50,
+  Plus 100, Ultra 150 aktuelle Nachrichten; Browserwerte werden ignoriert;
+- keine Nachrichten-/Kommentar-Rohinhalte in technischen Diagnoseprotokollen;
+- eigene Posts und erlaubte Metrik-Snapshots werden getrennt vom Fanprofil
+  gecacht; fremde persönliche Posts/Profile werden nicht gespiegelt;
 - getrennte Datenbankmigration und Staging-Abnahme vor Production;
 - Trennen löscht den gespeicherten Zugriffstoken und stoppt weitere Abrufe;
-- Datenexport, Korrektur und Löschung müssen die neuen Analysen und
-  Metrik-Snapshots einschließen, bevor sie aktiviert werden.
-- automatisch erzeugte Content-Objekte, Metrik-Snapshots und Analyseprofile
-  werden serverseitig geschrieben; Browserzugriffe sind read-only und
-  zusammengesetzte Fremdschlüssel erzwingen denselben Workspace.
+- Datenexport, Korrektur und Löschung müssen Chats, eigene Post-Caches,
+  Metrik-Snapshots sowie Fan-/Schreibstilprofile einschließen, bevor sie
+  aktiviert werden.
+- Cache-, Chat- und Profilobjekte werden serverseitig geschrieben;
+  Browserzugriffe sind read-only und Workspace-Prüfungen verhindern fremde
+  Zuordnungen.
+- `meta_sync_mode = incremental_cache` und null Tage Aufbewahrung für
+  gespiegelte persönliche Fremdinhalte sind
+  Datenbankbedingungen und Teil des Aktivierungsgates.
 
 ## Rechtliches Aktivierungsgate
 
@@ -186,7 +221,7 @@ gespeichert sind:
    Dienste;
 4. verbindliche Nachrichten- und Analyse-Aufbewahrungsfristen.
 5. funktionsfähiger Datenexport sowie Korrektur-, Widerspruchs- und
-   Löschprozess für Kontakte, Kommunikation, Profile und Metrik-Snapshots.
+   Löschprozess für Kontakte, Chats, Post-Caches, Metrik-Snapshots und Profile.
 
 Vor Drittpersonenbetrieb sind zusätzlich Zweckbindung, Datenminimierung,
 Widerspruch/Korrektur/Löschung, Meta-Datenlösch-Callback, Account-Trennung,
@@ -198,9 +233,12 @@ behaupten.
 
 1. Meta-App-Produkte und Business-Verknüpfungen im Developer Dashboard prüfen.
 2. Facebook- und Instagram-Berechtigungen nur für Testkonten einrichten.
-3. explizite Seiten-/Instagram-Kontenauswahl fertigstellen.
+3. explizite Facebook-Seitenauswahl und Instagram-Professional-Kontobindung
+   mit Testkonten verifizieren.
 4. Migration in isoliertem Staging anwenden und RLS-/Token-Negativtests fahren.
-5. Nachrichten, Kommentare, Medien und Insights mit synthetischen Daten testen.
+5. 150er-Erstabruf, inkrementelle Webhooks, Deduplizierung, vollständige
+   Verlaufserhaltung sowie 50/100/150-KI-Kontexte und Post-/Insight-Cache mit
+   synthetischen Daten testen.
 6. Trennung, Widerruf, Tokenablauf, Datenexport und Löschung testen.
 7. Datenschutzinformation, AVV, Anbieter-/Transferregister und Fristen extern
    freigeben.

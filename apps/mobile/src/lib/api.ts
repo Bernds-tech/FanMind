@@ -7,7 +7,6 @@ export async function requestReplySuggestions(input: {
   accessToken: string;
   contact: Contact;
   incomingMessage: string;
-  pastedChatContext?: string;
   responseMode?: string;
   responseInstruction?: string;
 }): Promise<{ data: ReplySuggestions | null; error: string | null }> {
@@ -29,7 +28,6 @@ export async function requestReplySuggestions(input: {
       body: JSON.stringify({
         contactId: input.contact.id,
         incomingMessage: incomingMessage.slice(0, 4000),
-        pastedChatContext: input.pastedChatContext?.trim().slice(0, 12000) ?? "",
         responseMode: input.responseMode ?? "Freundlich",
         responseInstruction: input.responseInstruction?.trim().slice(0, 1000) ?? "",
       }),

@@ -321,6 +321,11 @@ export type SocialConnectionRow = {
   last_messenger_sync_skipped_count: number | null;
   last_messenger_sync_error: string | null;
   last_messenger_sync_outbound_at: string | null;
+  oauth_login_type: string | null;
+  external_account_type: string | null;
+  token_expires_at: string | null;
+  permissions_verified_at: string | null;
+  analytics_enabled: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -331,12 +336,15 @@ export type WorkspaceAnalysisSettingsRow = {
   conversation_analysis_enabled: boolean;
   user_voice_analysis_enabled: boolean;
   content_insights_enabled: boolean;
+  meta_sync_mode: "incremental_cache";
+  personal_content_retention_days: 0;
   legal_basis_status: string;
   transparency_status: string;
   data_processing_agreement_status: string;
   retention_status: string;
   data_subject_rights_status: string;
   message_retention_days: number | null;
+  content_cache_retention_days: number | null;
   analysis_retention_days: number | null;
   confirmed_by: string | null;
   confirmed_at: string | null;
@@ -429,7 +437,7 @@ type CreateManualConversationMessageInput = {
   messageKind?: string | null;
 };
 
-type UpsertFacebookSocialConnectionInput = {
+type UpsertMetaSocialConnectionInput = {
   workspaceId: string;
   connectedBy: string;
   externalAccountId?: string | null;
@@ -440,6 +448,10 @@ type UpsertFacebookSocialConnectionInput = {
   tokenLastFour?: string | null;
   scopes?: string[];
   webhookSubscribed?: boolean;
+  oauthLoginType?: string | null;
+  externalAccountType?: string | null;
+  tokenExpiresAt?: string | null;
+  permissionsVerifiedAt?: string | null;
 };
 
 type CreateFollowupInput = {
@@ -600,7 +612,7 @@ const SOCIAL_CONNECTION_PUBLIC_COLUMNS =
 const SOCIAL_CONNECTION_SECRET_COLUMNS =
   `${SOCIAL_CONNECTION_PUBLIC_COLUMNS},page_access_token_encrypted`;
 const WORKSPACE_ANALYSIS_SETTINGS_COLUMNS =
-  "workspace_id,fan_analysis_enabled,conversation_analysis_enabled,user_voice_analysis_enabled,content_insights_enabled,legal_basis_status,transparency_status,data_processing_agreement_status,retention_status,data_subject_rights_status,message_retention_days,analysis_retention_days,confirmed_by,confirmed_at,created_at,updated_at";
+  "workspace_id,fan_analysis_enabled,conversation_analysis_enabled,user_voice_analysis_enabled,content_insights_enabled,meta_sync_mode,personal_content_retention_days,legal_basis_status,transparency_status,data_processing_agreement_status,retention_status,data_subject_rights_status,message_retention_days,content_cache_retention_days,analysis_retention_days,confirmed_by,confirmed_at,created_at,updated_at";
 const META_WEBHOOK_EVENT_COLUMNS =
   "id,workspace_id,social_connection_id,platform,source,event_type,page_id,sender_id,recipient_id,text,message_text,raw_payload,status,error_reason,message_id,received_at,created_at";
 const FOLLOWUP_COLUMNS =
@@ -705,7 +717,11 @@ const STARTER_COMMERCIAL_OPTIONS: WorkspaceCommercialOption[] = [
   "starter_no_setup_commitment",
 ];
 
-async function getAccessToken(): Promise<string | undefined> {
+async function getAccessToken(
+  explicitAccessToken?: string,
+): Promise<string | undefined> {
+  const normalizedExplicitAccessToken = explicitAccessToken?.trim();
+  if (normalizedExplicitAccessToken) return normalizedExplicitAccessToken;
   const cookieStore = await cookies();
 
   return cookieStore.get(SUPABASE_ACCESS_TOKEN_COOKIE)?.value;
@@ -1187,7 +1203,7 @@ export async function getWorkspaceAnalysisCapabilityStatus(
   if (result.error) {
     if (isMissingWorkspaceAnalysisSettingsSchema(result.error)) {
       return {
-        enabled: capability !== "content_insights",
+        enabled: false,
         legacySchema: true,
         error: null,
       };
@@ -1199,6 +1215,8 @@ export async function getWorkspaceAnalysisCapabilityStatus(
   if (!settings) return { enabled: false, legacySchema: false, error: null };
 
   const legalGateConfirmed =
+    settings.meta_sync_mode === "incremental_cache" &&
+    settings.personal_content_retention_days === 0 &&
     settings.legal_basis_status === "confirmed" &&
     settings.transparency_status === "confirmed" &&
     settings.data_processing_agreement_status === "confirmed" &&
@@ -1231,12 +1249,81 @@ function isMissingWorkspaceAnalysisSettingsSchema(error: Error): boolean {
 }
 
 export async function upsertFacebookSocialConnection(
-  input: UpsertFacebookSocialConnectionInput,
+  input: UpsertMetaSocialConnectionInput,
+): Promise<SocialConnectionResult> {
+  return upsertMetaSocialConnection("facebook", input);
+}
+
+export async function upsertInstagramSocialConnection(
+  input: UpsertMetaSocialConnectionInput,
+): Promise<SocialConnectionResult> {
+  return upsertMetaSocialConnection("instagram", input);
+}
+
+async function upsertMetaSocialConnection(
+  platform: "facebook" | "instagram",
+  input: UpsertMetaSocialConnectionInput,
 ): Promise<SocialConnectionResult> {
   const serviceAccessToken = getServiceAccessToken();
   if (!serviceAccessToken) {
     return socialConnectionError(
-      "Serverberechtigungen für die Facebook-Verbindung fehlen.",
+      `Serverberechtigungen für die ${platform === "facebook" ? "Facebook" : "Instagram"}-Verbindung fehlen.`,
+    );
+  }
+
+  const externalAccountId =
+    normalizeOptionalText(input.externalAccountId) ?? input.pageId;
+  const activeWorkspaceConnections = await postgrestSelect<
+    SocialConnectionRow[]
+  >(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_SECRET_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["platform", platform],
+      ["status", "connected"],
+    ],
+    2,
+  );
+  if (activeWorkspaceConnections.error) {
+    return socialConnectionError(
+      `Aktive ${platform === "facebook" ? "Facebook" : "Instagram"}-Verbindungen konnten nicht geprüft werden: ${activeWorkspaceConnections.error.message}`,
+    );
+  }
+  if (
+    (activeWorkspaceConnections.data ?? []).some(
+      (connection) => connection.page_id !== input.pageId,
+    )
+  ) {
+    return socialConnectionError(
+      `Dieser Workspace besitzt bereits eine andere aktive ${platform === "facebook" ? "Facebook" : "Instagram"}-Verbindung. Trenne sie vor einer neuen Kontowahl.`,
+    );
+  }
+
+  const activeExternalBindings = await postgrestSelect<SocialConnectionRow[]>(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_SECRET_COLUMNS,
+    [
+      ["platform", platform],
+      ["external_account_id", externalAccountId],
+      ["status", "connected"],
+    ],
+    2,
+  );
+  if (activeExternalBindings.error) {
+    return socialConnectionError(
+      `Die ${platform === "facebook" ? "Facebook" : "Instagram"}-Kontobindung konnte nicht geprüft werden: ${activeExternalBindings.error.message}`,
+    );
+  }
+  if (
+    (activeExternalBindings.data ?? []).some(
+      (connection) => connection.workspace_id !== input.workspaceId,
+    )
+  ) {
+    return socialConnectionError(
+      `Dieses ${platform === "facebook" ? "Facebook" : "Instagram"}-Konto ist bereits mit einem anderen FanMind-Workspace verbunden.`,
     );
   }
 
@@ -1246,7 +1333,7 @@ export async function upsertFacebookSocialConnection(
     SOCIAL_CONNECTION_SECRET_COLUMNS,
     [
       ["workspace_id", input.workspaceId],
-      ["platform", "facebook"],
+      ["platform", platform],
       ["page_id", input.pageId],
     ],
     1,
@@ -1255,17 +1342,16 @@ export async function upsertFacebookSocialConnection(
 
   if (existingResult.error) {
     return socialConnectionError(
-      `Facebook-Verbindung konnte nicht geprüft werden: ${existingResult.error.message}`,
+      `${platform === "facebook" ? "Facebook" : "Instagram"}-Verbindung konnte nicht geprüft werden: ${existingResult.error.message}`,
     );
   }
 
   const values = {
     workspace_id: input.workspaceId,
-    platform: "facebook",
+    platform,
     provider: "meta",
     status: "connected",
-    external_account_id:
-      normalizeOptionalText(input.externalAccountId) ?? input.pageId,
+    external_account_id: externalAccountId,
     external_account_name:
       normalizeOptionalText(input.externalAccountName) ?? input.pageName,
     page_id: input.pageId,
@@ -1283,6 +1369,13 @@ export async function upsertFacebookSocialConnection(
     webhook_subscribed: Boolean(
       existingResult.data?.webhook_subscribed || input.webhookSubscribed,
     ),
+    oauth_login_type: normalizeOptionalText(input.oauthLoginType),
+    external_account_type: normalizeOptionalText(input.externalAccountType),
+    token_expires_at: normalizeIsoTimestamp(input.tokenExpiresAt),
+    permissions_verified_at: normalizeIsoTimestamp(
+      input.permissionsVerifiedAt,
+    ),
+    analytics_enabled: false,
     connected_by: input.connectedBy,
     connected_at: new Date().toISOString(),
     disconnected_at: null,
@@ -1306,12 +1399,35 @@ export async function upsertFacebookSocialConnection(
 
   if (result.error)
     return socialConnectionError(
-      `Facebook-Verbindung konnte nicht gespeichert werden: ${result.error.message}`,
+      `${platform === "facebook" ? "Facebook" : "Instagram"}-Verbindung konnte nicht gespeichert werden: ${result.error.message}`,
     );
   return { connection: result.data, error: null };
 }
 
 export async function updateFacebookWebhookSubscribed(
+  connectionId: string,
+  webhookSubscribed: boolean,
+): Promise<SocialConnectionResult> {
+  return updateMetaWebhookSubscribed(
+    "facebook",
+    connectionId,
+    webhookSubscribed,
+  );
+}
+
+export async function updateInstagramWebhookSubscribed(
+  connectionId: string,
+  webhookSubscribed: boolean,
+): Promise<SocialConnectionResult> {
+  return updateMetaWebhookSubscribed(
+    "instagram",
+    connectionId,
+    webhookSubscribed,
+  );
+}
+
+async function updateMetaWebhookSubscribed(
+  platform: "facebook" | "instagram",
   connectionId: string,
   webhookSubscribed: boolean,
 ): Promise<SocialConnectionResult> {
@@ -1325,14 +1441,14 @@ export async function updateFacebookWebhookSubscribed(
     accessToken,
     [
       ["id", connectionId],
-      ["platform", "facebook"],
+      ["platform", platform],
     ],
     { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
   );
 
   if (result.error)
     return socialConnectionError(
-      `Facebook-Webhook-Status konnte nicht gespeichert werden: ${result.error.message}`,
+      `${platform === "facebook" ? "Facebook" : "Instagram"}-Webhook-Status konnte nicht gespeichert werden: ${result.error.message}`,
     );
   return { connection: result.data, error: null };
 }
@@ -1415,6 +1531,19 @@ export async function updateFacebookMessengerSyncStatus(
 export async function disconnectFacebookSocialConnection(
   workspaceId: string,
 ): Promise<SocialConnectionResult> {
+  return disconnectMetaSocialConnection(workspaceId, "facebook");
+}
+
+export async function disconnectInstagramSocialConnection(
+  workspaceId: string,
+): Promise<SocialConnectionResult> {
+  return disconnectMetaSocialConnection(workspaceId, "instagram");
+}
+
+async function disconnectMetaSocialConnection(
+  workspaceId: string,
+  platform: "facebook" | "instagram",
+): Promise<SocialConnectionResult> {
   const accessToken = getServiceAccessToken();
   if (!accessToken)
     return socialConnectionError("Serverberechtigungen für das Trennen fehlen.");
@@ -1427,11 +1556,12 @@ export async function disconnectFacebookSocialConnection(
       page_access_token_encrypted: null,
       token_last_four: null,
       webhook_subscribed: false,
+      analytics_enabled: false,
     },
     accessToken,
     [
       ["workspace_id", workspaceId],
-      ["platform", "facebook"],
+      ["platform", platform],
       ["status", "connected"],
     ],
     { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
@@ -1439,7 +1569,7 @@ export async function disconnectFacebookSocialConnection(
 
   if (result.error)
     return socialConnectionError(
-      `Facebook-Verbindung konnte nicht getrennt werden: ${result.error.message}`,
+      `${platform === "facebook" ? "Facebook" : "Instagram"}-Verbindung konnte nicht getrennt werden: ${result.error.message}`,
     );
   return { connection: result.data, error: null };
 }
@@ -2907,8 +3037,9 @@ async function updateContactInternalNotesWithToken(
 export async function getFanAnalysisReport(
   workspaceId: string,
   contactId: string,
+  explicitAccessToken?: string,
 ): Promise<FanAnalysisReportResult> {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(explicitAccessToken);
   if (!accessToken)
     return {
       report: null,
@@ -2982,6 +3113,53 @@ export async function upsertFanAnalysisReport(input: {
       ),
     };
   return { report: result.data, error: null };
+}
+
+export async function deleteContactAnalysisProfiles(input: {
+  workspaceId: string;
+  contactId: string;
+}): Promise<{ error: Error | null }> {
+  const accessToken = getServiceAccessToken();
+  if (!accessToken) {
+    return {
+      error: new Error("Serverberechtigungen für die Profillöschung fehlen."),
+    };
+  }
+
+  for (const table of [
+    "communication_analysis_reports",
+    "fan_analysis_reports",
+    "contact_ai_profiles",
+  ]) {
+    const result = await postgrestDelete(table, accessToken, [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+    ]);
+    if (result.error) {
+      const missingOptionalTable =
+        table === "communication_analysis_reports" &&
+        isMissingOptionalTable(result.error, table);
+      if (!missingOptionalTable) {
+        return {
+          error: new Error(
+            `Analyseprofil konnte nicht vollständig gelöscht werden: ${result.error.message}`,
+          ),
+        };
+      }
+    }
+  }
+
+  return { error: null };
+}
+
+function isMissingOptionalTable(error: Error, table: string): boolean {
+  const message = error.message.toLowerCase();
+  return (
+    message.includes(table.toLowerCase()) &&
+    (message.includes("schema cache") ||
+      message.includes("does not exist") ||
+      message.includes("could not find"))
+  );
 }
 
 export async function getContactMemories(
@@ -3167,8 +3345,9 @@ export async function getRecentContactConversationMessages(
   workspaceId: string,
   contactId: string,
   limit: number,
+  explicitAccessToken?: string,
 ): Promise<ConversationMessagesResult> {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(explicitAccessToken);
 
   if (!accessToken) {
     return conversationMessagesError(
@@ -3176,7 +3355,7 @@ export async function getRecentContactConversationMessages(
     );
   }
 
-  const boundedLimit = Math.max(1, Math.min(Math.trunc(limit), 100));
+  const boundedLimit = Math.max(1, Math.min(Math.trunc(limit), 150));
   const result = await postgrestSelect<ConversationMessageRow[]>(
     "conversation_messages",
     accessToken,
@@ -3497,14 +3676,6 @@ export async function createManualConversationMessage(
   if (direction === "outbound")
     updateValues.last_outbound_at = new Date().toISOString();
 
-  if (direction === "inbound") {
-    await updateContactProfileFromInboundMessage({
-      workspaceId: input.workspaceId,
-      contactId: input.contactId,
-      content,
-    });
-  }
-
   if (direction === "outbound" && messageType === "manual") {
     await updateWorkspaceVoiceProfileFromManualOutbound({
       workspaceId: input.workspaceId,
@@ -3604,8 +3775,9 @@ export async function upsertConversationSummary(input: {
 export async function getContactAiProfile(
   workspaceId: string,
   contactId: string,
+  explicitAccessToken?: string,
 ): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(explicitAccessToken);
   if (!accessToken)
     return {
       profile: null,
@@ -3659,8 +3831,9 @@ export async function upsertContactAiProfile(
 export async function getWorkspaceVoiceProfile(
   workspaceId: string,
   userId?: string | null,
+  explicitAccessToken?: string,
 ): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(explicitAccessToken);
   if (!accessToken)
     return {
       profile: null,
@@ -3711,45 +3884,6 @@ export async function upsertWorkspaceVoiceProfile(
     },
   );
   return { profile: result.data, error: result.error };
-}
-
-export async function updateContactProfileFromInboundMessage(input: {
-  workspaceId: string;
-  contactId: string;
-  content: string;
-  language?: string | null;
-}): Promise<void> {
-  const capability = await getWorkspaceAnalysisCapabilityStatus(
-    input.workspaceId,
-    "fan_analysis",
-  );
-  if (!capability.enabled) return;
-  const serviceAccessToken = getServiceAccessToken();
-  if (!serviceAccessToken) return;
-  const existing = await postgrestSelect<ContactAiProfileRow>(
-    "contact_ai_profiles",
-    serviceAccessToken,
-    CONTACT_AI_PROFILE_COLUMNS,
-    [
-      ["workspace_id", input.workspaceId],
-      ["contact_id", input.contactId],
-    ],
-    1,
-    true,
-  );
-  const count = (existing.data?.source_message_count ?? 0) + 1;
-  await upsertContactAiProfile({
-    workspace_id: input.workspaceId,
-    contact_id: input.contactId,
-    language:
-      existing.data?.language ??
-      input.language ??
-      detectLanguage(input.content),
-    tone: existing.data?.tone ?? detectTone(input.content),
-    sentiment: existing.data?.sentiment ?? "im Aufbau",
-    confidence_score: Math.min(30, count * 5),
-    source_message_count: count,
-  });
 }
 
 export async function updateWorkspaceVoiceProfileFromManualOutbound(input: {
