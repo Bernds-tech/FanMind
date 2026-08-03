@@ -302,7 +302,7 @@ export type SocialConnectionRow = {
   external_account_name: string | null;
   page_id: string | null;
   page_name: string | null;
-  page_access_token_encrypted: string | null;
+  page_access_token_encrypted?: string | null;
   token_last_four: string | null;
   scopes: string[] | null;
   webhook_subscribed: boolean;
@@ -324,6 +324,31 @@ export type SocialConnectionRow = {
   created_at: string;
   updated_at: string;
 };
+
+export type WorkspaceAnalysisSettingsRow = {
+  workspace_id: string;
+  fan_analysis_enabled: boolean;
+  conversation_analysis_enabled: boolean;
+  user_voice_analysis_enabled: boolean;
+  content_insights_enabled: boolean;
+  legal_basis_status: string;
+  transparency_status: string;
+  data_processing_agreement_status: string;
+  retention_status: string;
+  data_subject_rights_status: string;
+  message_retention_days: number | null;
+  analysis_retention_days: number | null;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkspaceAnalysisCapability =
+  | "fan_analysis"
+  | "conversation_analysis"
+  | "user_voice_analysis"
+  | "content_insights";
 
 export type MetaWebhookEventRow = {
   id: string;
@@ -570,8 +595,12 @@ const FAN_ANALYSIS_REPORT_COLUMNS =
   "id,workspace_id,contact_id,report_json,summary,model,source_message_count,generated_at,created_at,updated_at";
 const WORKSPACE_VOICE_PROFILE_COLUMNS =
   "id,workspace_id,user_id,owner_label,language,tone,sentence_length,emoji_style,greeting_style,closing_style,common_phrases,avoided_phrases,sales_style,examples_count,confidence_score,updated_at,created_at";
-const SOCIAL_CONNECTION_COLUMNS =
-  "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,page_access_token_encrypted,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,last_comment_fetch_at,last_comment_fetch_count,last_comment_fetch_error,last_messenger_sync_at,last_messenger_sync_checked_count,last_messenger_sync_imported_inbound_count,last_messenger_sync_imported_outbound_count,last_messenger_sync_imported_media_count,last_messenger_sync_skipped_count,last_messenger_sync_error,last_messenger_sync_outbound_at,created_at,updated_at";
+const SOCIAL_CONNECTION_PUBLIC_COLUMNS =
+  "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,last_comment_fetch_at,last_comment_fetch_count,last_comment_fetch_error,last_messenger_sync_at,last_messenger_sync_checked_count,last_messenger_sync_imported_inbound_count,last_messenger_sync_imported_outbound_count,last_messenger_sync_imported_media_count,last_messenger_sync_skipped_count,last_messenger_sync_error,last_messenger_sync_outbound_at,created_at,updated_at";
+const SOCIAL_CONNECTION_SECRET_COLUMNS =
+  `${SOCIAL_CONNECTION_PUBLIC_COLUMNS},page_access_token_encrypted`;
+const WORKSPACE_ANALYSIS_SETTINGS_COLUMNS =
+  "workspace_id,fan_analysis_enabled,conversation_analysis_enabled,user_voice_analysis_enabled,content_insights_enabled,legal_basis_status,transparency_status,data_processing_agreement_status,retention_status,data_subject_rights_status,message_retention_days,analysis_retention_days,confirmed_by,confirmed_at,created_at,updated_at";
 const META_WEBHOOK_EVENT_COLUMNS =
   "id,workspace_id,social_connection_id,platform,source,event_type,page_id,sender_id,recipient_id,text,message_text,raw_payload,status,error_reason,message_id,received_at,created_at";
 const FOLLOWUP_COLUMNS =
@@ -1084,7 +1113,7 @@ export async function getWorkspaceSocialConnections(
   const result = await postgrestSelect<SocialConnectionRow[]>(
     "social_connections",
     accessToken,
-    SOCIAL_CONNECTION_COLUMNS,
+    SOCIAL_CONNECTION_PUBLIC_COLUMNS,
     [["workspace_id", workspaceId]],
     undefined,
     false,
@@ -1100,12 +1129,135 @@ export async function getWorkspaceSocialConnections(
   return { connections: result.data ?? [], error: null };
 }
 
+export async function getWorkspaceSocialConnectionsServer(
+  workspaceId: string,
+): Promise<SocialConnectionsResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return socialConnectionsError(
+      "Serverberechtigungen für externe Kanalverbindungen fehlen.",
+    );
+  }
+
+  const result = await postgrestSelect<SocialConnectionRow[]>(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_SECRET_COLUMNS,
+    [["workspace_id", workspaceId]],
+    undefined,
+    false,
+    "updated_at.desc",
+  );
+
+  if (result.error) {
+    return socialConnectionsError(
+      "Externe Kanalverbindungen konnten serverseitig nicht geladen werden.",
+    );
+  }
+
+  return { connections: result.data ?? [], error: null };
+}
+
+export async function getWorkspaceAnalysisCapabilityStatus(
+  workspaceId: string,
+  capability: WorkspaceAnalysisCapability,
+): Promise<{
+  enabled: boolean;
+  legacySchema: boolean;
+  error: Error | null;
+}> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      enabled: false,
+      legacySchema: false,
+      error: new Error("Serverberechtigungen für Analysefreigaben fehlen."),
+    };
+  }
+
+  const result = await postgrestSelect<WorkspaceAnalysisSettingsRow>(
+    "workspace_analysis_settings",
+    serviceAccessToken,
+    WORKSPACE_ANALYSIS_SETTINGS_COLUMNS,
+    [["workspace_id", workspaceId]],
+    1,
+    true,
+  );
+
+  if (result.error) {
+    if (isMissingWorkspaceAnalysisSettingsSchema(result.error)) {
+      return {
+        enabled: capability !== "content_insights",
+        legacySchema: true,
+        error: null,
+      };
+    }
+    return { enabled: false, legacySchema: false, error: result.error };
+  }
+
+  const settings = result.data;
+  if (!settings) return { enabled: false, legacySchema: false, error: null };
+
+  const legalGateConfirmed =
+    settings.legal_basis_status === "confirmed" &&
+    settings.transparency_status === "confirmed" &&
+    settings.data_processing_agreement_status === "confirmed" &&
+    settings.retention_status === "confirmed" &&
+    settings.data_subject_rights_status === "confirmed" &&
+    Boolean(settings.confirmed_by) &&
+    Boolean(settings.confirmed_at);
+  const enabledByCapability = {
+    fan_analysis: settings.fan_analysis_enabled,
+    conversation_analysis: settings.conversation_analysis_enabled,
+    user_voice_analysis: settings.user_voice_analysis_enabled,
+    content_insights: settings.content_insights_enabled,
+  } satisfies Record<WorkspaceAnalysisCapability, boolean>;
+
+  return {
+    enabled: legalGateConfirmed && enabledByCapability[capability],
+    legacySchema: false,
+    error: null,
+  };
+}
+
+function isMissingWorkspaceAnalysisSettingsSchema(error: Error): boolean {
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("workspace_analysis_settings") &&
+    (message.includes("schema cache") ||
+      message.includes("does not exist") ||
+      message.includes("could not find the table"))
+  );
+}
+
 export async function upsertFacebookSocialConnection(
   input: UpsertFacebookSocialConnectionInput,
 ): Promise<SocialConnectionResult> {
-  const accessToken = await getAccessToken();
-  if (!accessToken)
-    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return socialConnectionError(
+      "Serverberechtigungen für die Facebook-Verbindung fehlen.",
+    );
+  }
+
+  const existingResult = await postgrestSelect<SocialConnectionRow>(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_SECRET_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["platform", "facebook"],
+      ["page_id", input.pageId],
+    ],
+    1,
+    true,
+  );
+
+  if (existingResult.error) {
+    return socialConnectionError(
+      `Facebook-Verbindung konnte nicht geprüft werden: ${existingResult.error.message}`,
+    );
+  }
 
   const values = {
     workspace_id: input.workspaceId,
@@ -1122,46 +1274,34 @@ export async function upsertFacebookSocialConnection(
       input.pageAccessTokenEncrypted,
     ),
     token_last_four: normalizeOptionalText(input.tokenLastFour),
-    scopes: input.scopes ?? [],
-    webhook_subscribed: input.webhookSubscribed ?? false,
+    scopes: [
+      ...new Set([
+        ...(existingResult.data?.scopes ?? []),
+        ...(input.scopes ?? []),
+      ]),
+    ].sort(),
+    webhook_subscribed: Boolean(
+      existingResult.data?.webhook_subscribed || input.webhookSubscribed,
+    ),
     connected_by: input.connectedBy,
     connected_at: new Date().toISOString(),
     disconnected_at: null,
   };
 
-  const existingResult = await postgrestSelect<SocialConnectionRow>(
-    "social_connections",
-    accessToken,
-    SOCIAL_CONNECTION_COLUMNS,
-    [
-      ["workspace_id", input.workspaceId],
-      ["platform", "facebook"],
-      ["page_id", input.pageId],
-    ],
-    1,
-    true,
-  );
-
-  if (existingResult.error) {
-    return socialConnectionError(
-      `Facebook-Verbindung konnte nicht geprüft werden: ${existingResult.error.message}`,
-    );
-  }
-
   const result = existingResult.data
     ? await postgrestUpdate<SocialConnectionRow>(
         "social_connections",
         values,
-        accessToken,
+        serviceAccessToken,
         [["id", existingResult.data.id]],
-        { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+        { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
       )
     : await postgrestRequest<SocialConnectionRow>(
         "social_connections",
         "POST",
         values,
-        accessToken,
-        { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+        serviceAccessToken,
+        { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
       );
 
   if (result.error)
@@ -1175,7 +1315,9 @@ export async function updateFacebookWebhookSubscribed(
   connectionId: string,
   webhookSubscribed: boolean,
 ): Promise<SocialConnectionResult> {
-  const accessToken = (await getAccessToken()) ?? getServiceAccessToken();
+  const accessToken = getServiceAccessToken();
+  if (!accessToken)
+    return socialConnectionError("Serverberechtigungen für den Webhook-Status fehlen.");
 
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
@@ -1185,7 +1327,7 @@ export async function updateFacebookWebhookSubscribed(
       ["id", connectionId],
       ["platform", "facebook"],
     ],
-    { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+    { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
   );
 
   if (result.error)
@@ -1198,9 +1340,9 @@ export async function updateFacebookCommentFetchStatus(
   connectionId: string,
   input: { fetchedAt: string; importedCount: number; error?: string | null },
 ): Promise<SocialConnectionResult> {
-  const accessToken = await getAccessToken();
+  const accessToken = getServiceAccessToken();
   if (!accessToken)
-    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+    return socialConnectionError("Serverberechtigungen für den Kommentarabruf fehlen.");
 
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
@@ -1214,7 +1356,7 @@ export async function updateFacebookCommentFetchStatus(
       ["id", connectionId],
       ["platform", "facebook"],
     ],
-    { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+    { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
   );
 
   if (result.error)
@@ -1237,7 +1379,9 @@ export async function updateFacebookMessengerSyncStatus(
     lastOutboundAt?: string | null;
   },
 ): Promise<SocialConnectionResult> {
-  const accessToken = (await getAccessToken()) ?? getServiceAccessToken();
+  const accessToken = getServiceAccessToken();
+  if (!accessToken)
+    return socialConnectionError("Serverberechtigungen für den Messenger-Sync fehlen.");
 
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
@@ -1258,7 +1402,7 @@ export async function updateFacebookMessengerSyncStatus(
       ["id", connectionId],
       ["platform", "facebook"],
     ],
-    { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+    { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
   );
 
   if (result.error)
@@ -1271,9 +1415,9 @@ export async function updateFacebookMessengerSyncStatus(
 export async function disconnectFacebookSocialConnection(
   workspaceId: string,
 ): Promise<SocialConnectionResult> {
-  const accessToken = await getAccessToken();
+  const accessToken = getServiceAccessToken();
   if (!accessToken)
-    return socialConnectionError("Keine aktive Supabase-Session gefunden.");
+    return socialConnectionError("Serverberechtigungen für das Trennen fehlen.");
 
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
@@ -1290,7 +1434,7 @@ export async function disconnectFacebookSocialConnection(
       ["platform", "facebook"],
       ["status", "connected"],
     ],
-    { select: SOCIAL_CONNECTION_COLUMNS, single: true },
+    { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
   );
 
   if (result.error)
@@ -1314,7 +1458,7 @@ export async function findMetaSocialConnectionByPageId(
   const result = await postgrestSelect<SocialConnectionRow>(
     "social_connections",
     serviceAccessToken,
-    SOCIAL_CONNECTION_COLUMNS,
+    SOCIAL_CONNECTION_SECRET_COLUMNS,
     [
       ["platform", platform],
       ["status", "connected"],
@@ -1344,7 +1488,7 @@ export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
   const connectionResult = await postgrestSelect<SocialConnectionRow>(
     "social_connections",
     serviceAccessToken,
-    SOCIAL_CONNECTION_COLUMNS,
+    SOCIAL_CONNECTION_PUBLIC_COLUMNS,
     [
       ["platform", "facebook"],
       ["status", "connected"],
@@ -2801,12 +2945,12 @@ export async function upsertFanAnalysisReport(input: {
   model: string;
   sourceMessageCount: number;
 }): Promise<FanAnalysisReportResult> {
-  const accessToken = await getAccessToken();
+  const accessToken = getServiceAccessToken();
   if (!accessToken)
     return {
       report: null,
       error: new Error(
-        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+        "Serverberechtigungen für Analyseberichte fehlen.",
       ),
     };
   const result = await postgrestRequest<FanAnalysisReportRow>(
@@ -3489,12 +3633,12 @@ export async function upsertContactAiProfile(
     contact_id: string;
   },
 ): Promise<{ profile: ContactAiProfileRow | null; error: Error | null }> {
-  const accessToken = await getAccessToken();
+  const accessToken = getServiceAccessToken();
   if (!accessToken)
     return {
       profile: null,
       error: new Error(
-        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+        "Serverberechtigungen für Kontaktanalysen fehlen.",
       ),
     };
   const result = await postgrestRequest<ContactAiProfileRow>(
@@ -3546,12 +3690,12 @@ export async function upsertWorkspaceVoiceProfile(
     user_id?: string | null;
   },
 ): Promise<{ profile: WorkspaceVoiceProfileRow | null; error: Error | null }> {
-  const accessToken = await getAccessToken();
+  const accessToken = getServiceAccessToken();
   if (!accessToken)
     return {
       profile: null,
       error: new Error(
-        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+        "Serverberechtigungen für Schreibstilprofile fehlen.",
       ),
     };
   const result = await postgrestRequest<WorkspaceVoiceProfileRow>(
@@ -3575,20 +3719,34 @@ export async function updateContactProfileFromInboundMessage(input: {
   content: string;
   language?: string | null;
 }): Promise<void> {
-  const existing = await getContactAiProfile(
+  const capability = await getWorkspaceAnalysisCapabilityStatus(
     input.workspaceId,
-    input.contactId,
+    "fan_analysis",
   );
-  const count = (existing.profile?.source_message_count ?? 0) + 1;
+  if (!capability.enabled) return;
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) return;
+  const existing = await postgrestSelect<ContactAiProfileRow>(
+    "contact_ai_profiles",
+    serviceAccessToken,
+    CONTACT_AI_PROFILE_COLUMNS,
+    [
+      ["workspace_id", input.workspaceId],
+      ["contact_id", input.contactId],
+    ],
+    1,
+    true,
+  );
+  const count = (existing.data?.source_message_count ?? 0) + 1;
   await upsertContactAiProfile({
     workspace_id: input.workspaceId,
     contact_id: input.contactId,
     language:
-      existing.profile?.language ??
+      existing.data?.language ??
       input.language ??
       detectLanguage(input.content),
-    tone: existing.profile?.tone ?? detectTone(input.content),
-    sentiment: existing.profile?.sentiment ?? "im Aufbau",
+    tone: existing.data?.tone ?? detectTone(input.content),
+    sentiment: existing.data?.sentiment ?? "im Aufbau",
     confidence_score: Math.min(30, count * 5),
     source_message_count: count,
   });
@@ -3600,26 +3758,42 @@ export async function updateWorkspaceVoiceProfileFromManualOutbound(input: {
   ownerLabel?: string | null;
   content: string;
 }): Promise<void> {
-  const existing = await getWorkspaceVoiceProfile(
+  const capability = await getWorkspaceAnalysisCapabilityStatus(
     input.workspaceId,
-    input.userId,
+    "user_voice_analysis",
   );
-  const count = (existing.profile?.examples_count ?? 0) + 1;
+  if (!capability.enabled) return;
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) return;
+  const filters: [string, SupabaseFilterValue][] = [
+    ["workspace_id", input.workspaceId],
+  ];
+  if (input.userId) filters.push(["user_id", input.userId]);
+  const existing = await postgrestSelect<WorkspaceVoiceProfileRow>(
+    "workspace_voice_profiles",
+    serviceAccessToken,
+    WORKSPACE_VOICE_PROFILE_COLUMNS,
+    filters,
+    1,
+    true,
+    "updated_at.desc",
+  );
+  const count = (existing.data?.examples_count ?? 0) + 1;
   await upsertWorkspaceVoiceProfile({
     workspace_id: input.workspaceId,
     user_id: input.userId ?? null,
     owner_label:
       normalizeOptionalText(input.ownerLabel) ??
-      existing.profile?.owner_label ??
+      existing.data?.owner_label ??
       "Team",
-    language: existing.profile?.language ?? detectLanguage(input.content),
-    tone: existing.profile?.tone ?? detectTone(input.content),
+    language: existing.data?.language ?? detectLanguage(input.content),
+    tone: existing.data?.tone ?? detectTone(input.content),
     sentence_length:
-      existing.profile?.sentence_length ?? detectSentenceLength(input.content),
+      existing.data?.sentence_length ?? detectSentenceLength(input.content),
     emoji_style:
-      existing.profile?.emoji_style ?? detectEmojiStyle(input.content),
+      existing.data?.emoji_style ?? detectEmojiStyle(input.content),
     common_phrases:
-      existing.profile?.common_phrases ?? extractCommonPhrases(input.content),
+      existing.data?.common_phrases ?? extractCommonPhrases(input.content),
     examples_count: count,
     confidence_score: Math.min(35, count * 5),
   });

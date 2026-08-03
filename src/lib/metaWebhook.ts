@@ -12,7 +12,10 @@ import {
   type ConversationMessageAttachment,
   type SocialConnectionRow,
 } from "@/lib/supabase/server";
-import { decryptToken } from "@/lib/facebookIntegration";
+import {
+  decryptToken,
+  FACEBOOK_GRAPH_API_VERSION,
+} from "@/lib/facebookIntegration";
 import { syncFacebookMessengerConversationForContact } from "@/app/channels/facebookWebhookActions";
 import { buildMetaWebhookDiagnosticPayload } from "@/lib/webhookSecurityPolicy.mjs";
 
@@ -449,7 +452,7 @@ async function fetchFacebookMessengerProfile(
 
   try {
     const url = new URL(
-      `https://graph.facebook.com/v20.0/${encodeURIComponent(psid)}`,
+      `https://graph.facebook.com/${FACEBOOK_GRAPH_API_VERSION}/${encodeURIComponent(psid)}`,
     );
     url.searchParams.set("fields", "first_name,last_name,name");
     url.searchParams.set("access_token", pageToken);

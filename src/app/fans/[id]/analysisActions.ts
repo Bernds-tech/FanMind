@@ -15,6 +15,7 @@ import { isWorkspaceArchivedAfterSubscriptionEnd } from "@/lib/subscriptionCance
 import {
   getRecentContactConversationMessages,
   getRecentContactMemories,
+  getWorkspaceAnalysisCapabilityStatus,
   upsertFanAnalysisReport,
 } from "@/lib/supabase/server";
 import { requireContactInAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
@@ -275,6 +276,20 @@ export async function analyzeFanCommunication(
         locale === "en"
           ? "This workspace is read-only after the subscription ended."
           : "Dieser Workspace ist nach Vertragsende im Lesemodus.",
+    };
+  }
+
+  const analysisCapability = await getWorkspaceAnalysisCapabilityStatus(
+    workspace.id,
+    "fan_analysis",
+  );
+  if (!analysisCapability.enabled) {
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "Fan analysis is disabled until this workspace's privacy and retention controls are confirmed."
+          : "Die Fan-Analyse ist deaktiviert, bis Datenschutz- und Aufbewahrungskontrollen dieses Workspaces bestätigt sind.",
     };
   }
 

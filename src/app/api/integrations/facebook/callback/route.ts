@@ -10,11 +10,13 @@ import {
   getGrantedFacebookPermissionNames,
   hasRequiredFacebookPagePermissions,
   hasFacebookCommentFeedScopes,
+  hasFacebookInsightsScopes,
   subscribeFacebookPage,
   fetchFacebookTokenDiagnostics,
   tokenLastFour,
   verifyFacebookOAuthState,
 } from "@/lib/facebookIntegration";
+import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
@@ -42,6 +44,9 @@ export async function GET(request: Request) {
   ) {
     return redirectToChannels(appOrigin, "facebook_error=workspace");
   }
+  if (!canManageMetaConnections(workspaceResult.workspace.role)) {
+    return redirectToChannels(appOrigin, "facebook_error=role");
+  }
 
   try {
     const userToken = await exchangeFacebookCode(code);
@@ -49,7 +54,12 @@ export async function GET(request: Request) {
     const userTokenDiagnostics = await fetchFacebookTokenDiagnostics(userToken);
     const grantedPermissionNames = getGrantedFacebookPermissionNames(permissions);
     const isCommentConnection = state.connectionType === "facebook_comments";
-    if (!isCommentConnection && !hasRequiredFacebookPagePermissions(permissions)) {
+    const isInsightsConnection = state.connectionType === "facebook_insights";
+    if (
+      !isCommentConnection &&
+      !isInsightsConnection &&
+      !hasRequiredFacebookPagePermissions(permissions)
+    ) {
       console.warn("Facebook callback missing required Messenger page permissions");
       return redirectToChannels(appOrigin, "facebook_error=page_permissions&type=facebook_messages");
     }
@@ -57,8 +67,27 @@ export async function GET(request: Request) {
       console.warn("Facebook callback missing required comment page permissions");
       return redirectToChannels(appOrigin, "facebook_error=comment_review&type=facebook_comments");
     }
+    if (
+      isInsightsConnection &&
+      !hasFacebookInsightsScopes(grantedPermissionNames)
+    ) {
+      console.warn("Facebook callback missing required insights permissions");
+      return redirectToChannels(
+        appOrigin,
+        "facebook_error=insights_review&type=facebook_insights",
+      );
+    }
 
     const pages = await fetchFacebookPages(userToken);
+    if (pages.length > 1) {
+      console.warn("Facebook callback requires explicit page selection", {
+        pageCount: pages.length,
+      });
+      return redirectToChannels(
+        appOrigin,
+        "facebook_error=page_selection_required",
+      );
+    }
     const page = pages[0];
     if (!page) {
       console.warn("Facebook callback did not receive a manageable page", {
@@ -96,7 +125,7 @@ export async function GET(request: Request) {
       page.scopes,
     );
 
-    const webhookStatus = page.accessToken
+    const webhookStatus = page.accessToken && !isInsightsConnection
       ? await subscribeFacebookPage(page.id, page.accessToken).catch(
           () => null,
         )
@@ -128,7 +157,16 @@ export async function GET(request: Request) {
       return redirectToChannels(appOrigin, "facebook_error=save");
     }
     revalidatePath("/channels");
-    return redirectToChannels(appOrigin, `connected=${isCommentConnection ? "facebook_comments" : "facebook_messages"}`);
+    return redirectToChannels(
+      appOrigin,
+      `connected=${
+        isCommentConnection
+          ? "facebook_comments"
+          : isInsightsConnection
+            ? "facebook_insights"
+            : "facebook_messages"
+      }`,
+    );
   } catch {
     console.error("Facebook OAuth callback failed", {
       code: "facebook_oauth_callback_failed",

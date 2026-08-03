@@ -523,10 +523,13 @@ function BodyPortal({ children }: { children: ReactNode }) {
 }
 
 export function ChannelsGrid({
+  facebookConnection,
+  facebookError,
+  facebookLiveSetupStatus,
   demoConnectionsDisabled = false,
 }: {
   facebookConnection: FacebookConnection | null;
-  facebookError?: boolean;
+  facebookError?: string | null;
   metaWebhookEvents: MetaWebhookEvent[];
   metaWebhookError?: string | null;
   metaWebhookStorageHealth: MetaWebhookStorageHealth;
@@ -545,6 +548,11 @@ export function ChannelsGrid({
   const activeGroup =
     channelGroups.find((group) => group.id === activeGroupId) ??
     channelGroups[0];
+  const facebookOAuthConfigured =
+    facebookLiveSetupStatus.facebookAppIdConfigured &&
+    facebookLiveSetupStatus.facebookAppSecretConfigured &&
+    facebookLiveSetupStatus.webhookVerifyTokenConfigured &&
+    facebookLiveSetupStatus.publicBaseUrlConfigured;
 
   useEffect(() => {
     if (!activeChannel) return;
@@ -727,6 +735,100 @@ export function ChannelsGrid({
               <div ref={modalBodyRef} className={styles.modalBody}>
                 <p className={styles.modalText}>{activeChannel.description}</p>
                 <div className={styles.modalDetailGrid}>
+                  {activeChannel.key === "facebook" ? (
+                    <div
+                      className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
+                    >
+                      <strong>Eigene Facebook-Seite verbinden · Beta</strong>
+                      {facebookError ? (
+                        <p className={styles.modalNotice} role="alert">
+                          {facebookError === "page_selection_required"
+                            ? "Dieses Meta-Konto verwaltet mehrere Seiten. FanMind hat bewusst keine Seite automatisch gewählt. Die ausdrückliche Seitenauswahl wird vor dieser Verbindung benötigt."
+                            : "Die Facebook-Verbindung wurde nicht abgeschlossen. Es wurden keine fremden Kontodaten übernommen."}
+                        </p>
+                      ) : null}
+                      {facebookConnection ? (
+                        <>
+                          <ul className={styles.compactStatusList}>
+                            <li>
+                              Verbundene Seite: {facebookConnection.page_name ?? "Name nicht verfügbar"}
+                            </li>
+                            <li>
+                              Token serverseitig vorhanden: {facebookConnection.has_page_access_token ? "ja" : "nein"}
+                            </li>
+                            <li>
+                              Webhook: {facebookConnection.webhook_subscribed ? "abonniert" : "noch nicht bestätigt"}
+                            </li>
+                            <li>
+                              Berechtigungen: {facebookConnection.scopes?.length ?? 0}
+                            </li>
+                          </ul>
+                          <div className={styles.connectionCardActions}>
+                            <form action="/api/integrations/facebook/start" method="get">
+                              <input type="hidden" name="type" value="facebook_messages" />
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Messenger-Berechtigung prüfen
+                              </button>
+                            </form>
+                            <form action="/api/integrations/facebook/start" method="get">
+                              <input type="hidden" name="type" value="facebook_comments" />
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Kommentare freigeben
+                              </button>
+                            </form>
+                            <form action="/api/integrations/facebook/start" method="get">
+                              <input type="hidden" name="type" value="facebook_insights" />
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Insights freigeben
+                              </button>
+                            </form>
+                            <form action="/api/integrations/facebook/disconnect" method="post">
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Verbindung trennen
+                              </button>
+                            </form>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <ul className={styles.compactStatusList}>
+                            <li>Login erfolgt direkt bei Meta; kein Passwort wird an FanMind übergeben.</li>
+                            <li>Die Verbindung gilt nur für den aktuell angemeldeten FanMind-Workspace.</li>
+                            <li>Mehrere verwaltete Seiten werden nicht automatisch ausgewählt.</li>
+                            <li>
+                              Serverkonfiguration: {facebookOAuthConfigured ? "bereit" : "noch unvollständig"}
+                            </li>
+                          </ul>
+                          <div className={styles.connectionCardActions}>
+                            <form action="/api/integrations/facebook/start" method="get">
+                              <input type="hidden" name="type" value="facebook_messages" />
+                              <button
+                                type="submit"
+                                disabled={demoConnectionsDisabled || !facebookOAuthConfigured}
+                              >
+                                Eigene Facebook-Seite verbinden
+                              </button>
+                            </form>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {activeChannel.key === "instagram" ? (
+                    <div
+                      className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
+                    >
+                      <strong>Eigenes Instagram-Professional-Konto · in Vorbereitung</strong>
+                      <ul className={styles.compactStatusList}>
+                        <li>Mandanten-, Token-, Webhook- und Analysegrenzen sind vorbereitet.</li>
+                        <li>Instagram Business Login und die echte Kontenauswahl sind noch nicht Ende-zu-Ende abgenommen.</li>
+                        <li>Bis dahin gibt es bewusst keinen wirkungslosen oder irreführenden Verbinden-Button.</li>
+                        <li>Consumer-Konten und vollständige Followerlisten werden nicht unterstützt.</li>
+                      </ul>
+                    </div>
+                  ) : null}
+
                   <div className={styles.releaseBox}>
                     <strong>Details</strong>
                     <ul className={styles.compactStatusList}>
@@ -738,8 +840,17 @@ export function ChannelsGrid({
                         Verbindungen: {activeChannel.inputs.length} getrennte
                         Eingänge
                       </li>
-                      <li>Keine OAuth-, Connect- oder Sync-Aktion</li>
-                      <li>Externe Kanalaktionen bleiben deaktiviert</li>
+                      {activeChannel.key === "facebook" ? (
+                        <>
+                          <li>Workspace-gebundener Meta-OAuth-Pilot vorhanden</li>
+                          <li>Automatisches Senden bleibt deaktiviert</li>
+                        </>
+                      ) : (
+                        <>
+                          <li>Keine OAuth-, Connect- oder Sync-Aktion</li>
+                          <li>Externe Kanalaktionen bleiben deaktiviert</li>
+                        </>
+                      )}
                     </ul>
                   </div>
 

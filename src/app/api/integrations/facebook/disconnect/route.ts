@@ -8,6 +8,7 @@ import {
 } from "@/lib/supabase/server";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import { isTrustedFanMindMutationRequest } from "@/lib/httpMutationPolicy.mjs";
+import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,8 @@ export async function POST(request: NextRequest) {
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (!workspaceResult.workspace)
     redirect("/channels?facebook_error=workspace");
+  if (!canManageMetaConnections(workspaceResult.workspace.role))
+    redirect("/channels?facebook_error=role");
   if (areDemoConnectionsDisabled(data.user, workspaceResult.workspace))
     redirect("/channels?facebook_error=demo_disabled");
 

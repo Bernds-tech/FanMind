@@ -7,6 +7,7 @@ FanMind ist ein KI-gestütztes CRM und Copy-&-Open-Kommunikationssystem für Fan
 Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 
 - Aktive Kernfunktionen: Login, Registrierung, geschütztes Dashboard, Kontakte, Kontaktdetail, CSV-Import, KI-Antwortvorschläge, Kontaktwissen, Follow-ups, Roadmap und temporärer Demo-Workspace.
+- Meta Content Intelligence: mandantengetrennte Facebook-/Instagram-Verbindung, eigene Post-/Account-Insights sowie Fan-/Gesprächs-/Nutzer-Schreibstilanalyse sind ausdrücklich beauftragt und als fail-closed Grundlage vorbereitet. Sie bleiben bis Staging, Meta App Review und Rechtsfreigabe je Workspace Beta/inaktiv; Details in `docs/integrations/META_CONTENT_INTELLIGENCE.md`.
 - Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Mobile-Signing-Gate: ein manueller `main`-gebundener Ablauf kann nach
   erfolgreichem Ressourcencheck genau einen credential-frozen internen
@@ -365,7 +366,7 @@ Details zur Promptverwaltung: `docs/AI_PROMPT_PROFILES.md`.
 
 Nicht als aktiv bauen oder verkaufen, sofern nicht ausdrücklich freigegeben und validiert:
 
-- vollständige Instagram-, TikTok-, WhatsApp-, Facebook-, X- oder Discord-Integration;
+- vollständige Instagram-, TikTok-, WhatsApp-, Facebook-, X- oder Discord-Integration außerhalb des ausdrücklich abgegrenzten Meta-Pilots;
 - Scraping;
 - ungeprüftes automatisches Senden;
 - externe Plattform-Login-Daten speichern;
