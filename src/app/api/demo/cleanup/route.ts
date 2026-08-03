@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readBoundedJsonRequest } from "@/lib/httpMutationPolicy.mjs";
 import {
   claimExpiredDemoCleanup,
   completeDemoCleanup,
@@ -21,6 +22,7 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
+const MAX_DEMO_CLEANUP_BODY_BYTES = 2_000;
 
 type CleanupRequestBody = {
   limit?: number;
@@ -226,9 +228,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = (await request.json().catch(() => null)) as
-    | CleanupRequestBody
-    | null;
+  const parsedBody = await readBoundedJsonRequest(
+    request,
+    MAX_DEMO_CLEANUP_BODY_BYTES,
+  );
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      {
+        error: parsedBody.reason === "payload_too_large"
+          ? "Anfrage zu groß."
+          : "Ungültige Anfrage.",
+        code: parsedBody.reason === "payload_too_large" ? "payload_too_large" : "invalid_request",
+      },
+      { status: parsedBody.reason === "payload_too_large" ? 413 : 400 },
+    );
+  }
+  const body = parsedBody.value as CleanupRequestBody | null;
   const limit = normalizeLimit(body?.limit);
   const claim = await claimExpiredDemoCleanup(limit);
   if (claim.error) {

@@ -26,6 +26,12 @@ export type AuthorizedWorkspaceContext = {
   workspace: WorkspaceDashboardRow;
 };
 
+function workspaceUnavailableMessage(error: Error | null | undefined): string {
+  return error?.message === "TEMPORARY_DEMO_DELETED"
+    ? "TEMPORARY_DEMO_DELETED"
+    : "Kein autorisierter Workspace gefunden.";
+}
+
 export function assertWorkspaceId(
   value: string | null | undefined,
   label = "workspace_id",
@@ -78,7 +84,7 @@ export async function requireAuthorizedWorkspace(
   const workspaceResult = await getUserWorkspaceDashboard(data.user, accessToken);
   if (!workspaceResult.workspace) {
     throw new WorkspaceAuthorizationError(
-      workspaceResult.error?.message ?? "Kein autorisierter Workspace gefunden.",
+      workspaceUnavailableMessage(workspaceResult.error),
       "workspace_missing",
     );
   }
@@ -113,9 +119,9 @@ export async function requireAuthorizedWorkspaceMember(
   );
   if (!memberWorkspaceResult.workspace) {
     throw new WorkspaceAuthorizationError(
-      memberWorkspaceResult.error?.message ??
-        ownerWorkspaceResult.error?.message ??
-        "Kein autorisierter Workspace gefunden.",
+      workspaceUnavailableMessage(
+        memberWorkspaceResult.error ?? ownerWorkspaceResult.error,
+      ),
       "workspace_missing",
     );
   }
@@ -134,7 +140,12 @@ export async function requireContactInAuthorizedWorkspace(
     contactId,
     accessToken,
   );
-  if (contactResult.error) throw contactResult.error;
+  if (contactResult.error) {
+    throw new WorkspaceAuthorizationError(
+      "Kontakt konnte nicht autorisiert geladen werden.",
+      "resource_forbidden",
+    );
+  }
   assertResourceInWorkspace(contactResult.contact, context.workspace.id, "Kontakt");
   return { ...context, contact: contactResult.contact as ContactRow };
 }

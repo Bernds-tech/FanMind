@@ -118,14 +118,11 @@ async function fetchWorkspaceUsageEvents(input: {
     }
 
     return { events, truncated: true, error: null };
-  } catch (error) {
+  } catch {
     return {
       events: [],
       truncated: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "KI-Nutzung konnte nicht geladen werden.",
+      error: "KI-Nutzung konnte nicht geladen werden.",
     };
   }
 }

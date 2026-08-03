@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { isPlatformAdminEmail } from "@/lib/admin";
+import { isTrustedFanMindMutationRequest } from "@/lib/httpMutationPolicy.mjs";
 import { reconcileReferralAutomation } from "@/lib/referralAutomation";
 import { getSupabaseServerUser } from "@/lib/supabase/server";
 
@@ -13,7 +14,9 @@ function safeEqual(left: string, right: string): boolean {
   );
 }
 
-async function isAuthorized(request: NextRequest): Promise<boolean> {
+async function authorizationMode(
+  request: NextRequest,
+): Promise<"service" | "admin" | null> {
   const configuredSecret =
     process.env.FANMIND_REFERRAL_RECONCILE_SECRET?.trim() || "";
   const authorization = request.headers.get("authorization") ?? "";
@@ -26,21 +29,29 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
     providedSecret &&
     safeEqual(configuredSecret, providedSecret)
   ) {
-    return true;
+    return "service";
   }
 
   const { data } = await getSupabaseServerUser();
-  return isPlatformAdminEmail(data.user?.email);
+  return isPlatformAdminEmail(data.user?.email) ? "admin" : null;
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await isAuthorized(request))) {
+  const mode = await authorizationMode(request);
+  if (!mode) {
     return NextResponse.json({ error: "Nicht autorisiert." }, { status: 401 });
+  }
+  if (mode === "admin" && !isTrustedFanMindMutationRequest(request)) {
+    return NextResponse.json({ error: "origin_forbidden" }, { status: 403 });
   }
 
   const result = await reconcileReferralAutomation();
-  return NextResponse.json(result, {
+  return NextResponse.json({
+    checked: result.checked,
+    handled: result.handled,
+    errors: result.errors.length ? ["referral_reconciliation_failed"] : [],
+  }, {
     status: result.errors.length ? 207 : 200,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "private, no-store" },
   });
 }

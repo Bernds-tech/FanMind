@@ -11,6 +11,7 @@ import {
   requireAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
+import { readBoundedJsonRequest } from "@/lib/httpMutationPolicy.mjs";
 import {
   getWorkspaceAiPromptSettings,
   saveWorkspaceAiPromptSettings,
@@ -18,6 +19,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const MAX_PROMPT_SETTINGS_BODY_BYTES = 32_000;
 
 function response(payload: Record<string, unknown>, status = 200) {
   return NextResponse.json(payload, {
@@ -171,7 +173,7 @@ export async function GET(request: Request) {
         {
           ok: false,
           code: "ai_prompt_settings_unavailable",
-          error: result.error,
+          error: "KI-Prompt-Einstellungen sind momentan nicht verfügbar.",
         },
         503,
       );
@@ -202,7 +204,27 @@ export async function PUT(request: Request) {
       );
     }
 
-    const payload = (await request.json().catch(() => null)) as unknown;
+    const parsedBody = await readBoundedJsonRequest(
+      request,
+      MAX_PROMPT_SETTINGS_BODY_BYTES,
+    );
+    if (!parsedBody.ok) {
+      return response(
+        {
+          ok: false,
+          code:
+            parsedBody.reason === "payload_too_large"
+              ? "payload_too_large"
+              : "invalid_payload",
+          error:
+            parsedBody.reason === "payload_too_large"
+              ? "Die KI-Prompt-Einstellungen sind zu groß."
+              : "Ungültige Eingabe.",
+        },
+        parsedBody.reason === "payload_too_large" ? 413 : 400,
+      );
+    }
+    const payload = parsedBody.value;
     if (!isPromptSettingsPayload(payload)) {
       return response(
         { ok: false, code: "invalid_payload", error: "Ungültige Eingabe." },
@@ -221,9 +243,7 @@ export async function PUT(request: Request) {
         {
           ok: false,
           code: "save_failed",
-          error:
-            result.error ??
-            "KI-Prompt-Einstellungen konnten nicht gespeichert werden.",
+          error: "KI-Prompt-Einstellungen konnten nicht gespeichert werden.",
         },
         503,
       );

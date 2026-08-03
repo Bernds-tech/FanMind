@@ -320,10 +320,22 @@ export async function analyzeFanCommunication(
   ]);
 
   if (messagesResult.error) {
-    return { ok: false, message: messagesResult.error.message };
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "Messages could not be loaded for the analysis."
+          : "Nachrichten konnten für die Analyse nicht geladen werden.",
+    };
   }
   if (memoriesResult.error) {
-    return { ok: false, message: memoriesResult.error.message };
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "Contact knowledge could not be loaded for the analysis."
+          : "Kontaktwissen konnte für die Analyse nicht geladen werden.",
+    };
   }
 
   let boundedInput: ReturnType<typeof buildBoundedFanAnalysisPayload>;
@@ -514,7 +526,13 @@ export async function analyzeFanCommunication(
   });
 
   if (result.error) {
-    return { ok: false, message: result.error.message };
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "The communication overview could not be saved."
+          : "Die Kommunikationsübersicht konnte nicht gespeichert werden.",
+    };
   }
 
   revalidatePath(`/fans/${contactId}`);

@@ -113,7 +113,7 @@ test("admin asset and optional Telegram paths redact provider errors", async () 
     readFile("src/app/fans/[id]/AiReplySuggestions.tsx", "utf8"),
   ]);
 
-  assert.match(assetRoute, /isTrustedMutationRequest/u);
+  assert.match(assetRoute, /isTrustedFanMindMutationRequest/u);
   assert.doesNotMatch(assetRoute, /uploadResponse\.text\(\)|uploadResponse\.statusText/u);
   assert.doesNotMatch(assetRoute, /SUPABASE_SERVICE_ROLE_KEY ist/u);
   assert.match(assetRoute, /code: "asset_upload_failed"/u);

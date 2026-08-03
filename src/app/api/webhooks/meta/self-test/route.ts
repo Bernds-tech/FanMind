@@ -7,10 +7,17 @@ import {
 } from "@/lib/supabase/server";
 import { processMetaWebhookPayload } from "@/lib/metaWebhook";
 import { normalizeWebhookErrorCode } from "@/lib/webhookSecurityPolicy.mjs";
+import { isTrustedFanMindMutationRequest } from "@/lib/httpMutationPolicy.mjs";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!isTrustedFanMindMutationRequest(request)) {
+    return Response.json(
+      { ok: false, error: "origin_forbidden" },
+      { status: 403 },
+    );
+  }
   const { data } = await getSupabaseServerUser();
   if (!data.user) {
     return Response.json(

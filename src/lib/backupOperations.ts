@@ -1,5 +1,6 @@
 import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 import { isPlatformAdminEmail } from "@/lib/admin";
+import { isTrustedFanMindMutationRequest } from "@/lib/httpMutationPolicy.mjs";
 import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
 import type { SupabaseServerUser } from "@/lib/supabase/server";
 
@@ -20,13 +21,6 @@ const JOB_TITLES: Record<BackupJobType, string> = {
 function serviceKey() { return process.env.SUPABASE_SERVICE_ROLE_KEY; }
 function isAllowedJobType(value: unknown): value is BackupJobType { return typeof value === "string" && (BACKUP_JOB_TYPES as readonly string[]).includes(value); }
 function todayKey(jobType: BackupJobType) { return `manual:${jobType}:${new Date().toISOString().slice(0, 10)}`; }
-function safeOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  const expected = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.FANMIND_SITE_URL ?? "https://fanmind.ch";
-  try { return new URL(origin).origin === new URL(expected).origin; } catch { return false; }
-}
-
 async function rest<T>(table: string, query: string, init?: RequestInit): Promise<{ data:T|null; error:string|null; status:number }> {
   const key = serviceKey();
   if (!key) return { data:null, error:"SUPABASE_SERVICE_ROLE_KEY missing", status:500 };
@@ -37,7 +31,7 @@ async function rest<T>(table: string, query: string, init?: RequestInit): Promis
 
 export async function enqueueBackupJob(request: Request, user: SupabaseServerUser, rawJobType: unknown) {
   if (!isPlatformAdminEmail(user.email)) return { status:403, body:{ error:"forbidden" } };
-  if (!safeOrigin(request)) return { status:403, body:{ error:"origin_forbidden" } };
+  if (!isTrustedFanMindMutationRequest(request)) return { status:403, body:{ error:"origin_forbidden" } };
   if (!isAllowedJobType(rawJobType)) return { status:400, body:{ error:"job_type_not_allowed" } };
 
   let rateLimit;

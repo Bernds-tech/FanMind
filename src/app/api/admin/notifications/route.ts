@@ -8,5 +8,13 @@ export async function GET() {
   if (!data.user) return NextResponse.json({ error: "authentication_required" }, { status: 401 });
   if (!isPlatformAdminEmail(data.user.email)) return NextResponse.json({ error: "platform_admin_required" }, { status: 403 });
   const [notifications, unread] = await Promise.all([getRecentAdminNotifications(8), getUnreadAdminNotificationCount()]);
-  return NextResponse.json({ notifications: notifications.data ?? [], unreadCount: unread.count, error: notifications.error ?? unread.error }, { headers: { "Cache-Control": "no-store" } });
+  const unavailable = Boolean(notifications.error ?? unread.error);
+  return NextResponse.json(
+    {
+      notifications: notifications.data ?? [],
+      unreadCount: unread.count,
+      error: unavailable ? "notifications_unavailable" : null,
+    },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }

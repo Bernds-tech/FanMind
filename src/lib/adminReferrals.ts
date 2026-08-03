@@ -49,8 +49,8 @@ async function fetchRows<T>(table: string, select: string, params: Record<string
     const response = await fetch(url, { headers: getSupabaseHeaders(key), cache: "no-store" });
     if (!response.ok) return { rows: [] as T[], error: `${table} konnte nicht geladen werden (${response.status}). Migration evtl. noch nicht live.` };
     return { rows: await response.json() as T[], error: null };
-  } catch (error) {
-    return { rows: [] as T[], error: error instanceof Error ? error.message : "Unbekannter Fehler" };
+  } catch {
+    return { rows: [] as T[], error: "Referral-Daten konnten nicht geladen werden." };
   }
 }
 

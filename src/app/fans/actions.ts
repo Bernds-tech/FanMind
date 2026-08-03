@@ -118,7 +118,7 @@ export async function importCsvContacts(
   if (existingContacts.error) {
     return {
       ok: false,
-      message: existingContacts.error.message,
+      message: "Bestehende Kontakte konnten nicht geladen werden.",
       importedCount: 0,
       skippedDuplicates: 0,
       skippedInvalid: parsed.errors.length,
@@ -160,7 +160,7 @@ export async function importCsvContacts(
     if (result.error) {
       return {
         ok: false,
-        message: `${importedCount} Kontakte importiert. Import gestoppt: ${result.error.message}`,
+        message: `${importedCount} Kontakte importiert. Der Import konnte nicht vollständig gespeichert werden.`,
         importedCount,
         skippedDuplicates,
         skippedInvalid: parsed.errors.length,
@@ -276,7 +276,7 @@ export async function saveSuggestedMemory(input: {
   });
 
   if (result.error) {
-    return { ok: false, message: result.error.message };
+    return { ok: false, message: "Kontaktwissen konnte nicht gespeichert werden." };
   }
 
   revalidatePath(`/fans/${input.contactId}`);
@@ -303,7 +303,7 @@ export async function saveSuggestedFollowup(input: {
   });
 
   if (result.error) {
-    return { ok: false, message: result.error.message };
+    return { ok: false, message: "Follow-up konnte nicht gespeichert werden." };
   }
 
   revalidatePath(`/fans/${input.contactId}`);
@@ -430,7 +430,7 @@ export async function saveInboundMessage(formData: FormData) {
   });
 
   if (result.error) {
-    throw new Error(result.error.message);
+    throw new Error("inbound_message_save_failed");
   }
 
   revalidatePath(`/fans/${contactId}`);
@@ -473,7 +473,7 @@ export async function saveManualSentReply(formData: FormData) {
   });
 
   if (result.error) {
-    throw new Error(result.error.message);
+    throw new Error("manual_reply_save_failed");
   }
 
   revalidatePath(`/fans/${contactId}`);
@@ -499,7 +499,7 @@ export async function saveReplyDraft(formData: FormData) {
   });
 
   if (result.error) {
-    throw new Error(result.error.message);
+    throw new Error("reply_draft_save_failed");
   }
 
   revalidatePath(`/fans/${contactId}`);
@@ -556,7 +556,7 @@ export async function setConversationPriority(formData: FormData) {
   });
 
   if (result.error) {
-    throw new Error(result.error.message);
+    throw new Error("conversation_priority_update_failed");
   }
 
   revalidatePath(`/fans/${contactId}`);
@@ -579,7 +579,7 @@ export async function createFan(formData: FormData) {
     });
 
     if (result.error) {
-      throw new Error(result.error.message);
+      throw new Error("contact_create_failed");
     }
   }
 
@@ -600,17 +600,11 @@ export async function updateFan(formData: FormData) {
   const baseContact = getContactFormValues(formData);
 
   if (!primaryContactId) {
-    redirectFanUpdateFailed(
-      new Error("Primärer Kontakt der Fan-Gruppe fehlt."),
-    );
+    redirectFanUpdateFailed();
   }
 
   if (!platforms.length) {
-    redirectFanUpdateFailed(
-      new Error(
-        "Mindestens ein aktiver Kanal muss ausgewählt bleiben oder der Kontakt muss archiviert werden.",
-      ),
-    );
+    redirectFanUpdateFailed();
   }
 
   let successRedirect = "/fans?notice=fan_updated#fans-list";
@@ -622,13 +616,13 @@ export async function updateFan(formData: FormData) {
     ]);
 
     if (primaryResult.error) {
-      throw new Error(primaryResult.error.message);
+      throw new Error("primary_contact_load_failed");
     }
     if (!primaryResult.contact) {
       throw new Error("Primärer Kontakt wurde nicht gefunden.");
     }
     if (contactsResult.error) {
-      throw new Error(contactsResult.error.message);
+      throw new Error("contact_list_load_failed");
     }
 
     const primaryContact = primaryResult.contact;
@@ -704,16 +698,13 @@ export async function updateFan(formData: FormData) {
         sourcePlatform: platform,
       });
       if (created.error || !created.contact) {
-        throw new Error(
-          created.error?.message ??
-            `Kanal ${formatPlatformLabel(platform)} konnte nicht erstellt werden.`,
-        );
+        throw new Error(`contact_channel_create_failed_${platform}`);
       }
     }
 
     const verificationResult = await getWorkspaceContacts(workspace.id);
     if (verificationResult.error) {
-      throw new Error(verificationResult.error.message);
+      throw new Error("contact_update_verification_failed");
     }
     const verifyGroup = resolveServerFanGroup(
       { ...primaryContact, ...baseContact },
@@ -736,8 +727,8 @@ export async function updateFan(formData: FormData) {
       revalidatePath(`/fans/${contact.id}`);
     }
     successRedirect = `/fans?notice=fan_updated&active=${encodeURIComponent(activePlatforms.join(","))}&archived=${archivedPlatforms.length}#fans-list`;
-  } catch (error) {
-    redirectFanUpdateFailed(error);
+  } catch {
+    redirectFanUpdateFailed();
   }
 
   redirect(successRedirect);
@@ -752,7 +743,7 @@ export async function archiveFan(formData: FormData) {
     contactId,
     reason: "Kontakt wurde über FanMind archiviert.",
   });
-  if (result.error) throw new Error(result.error.message);
+  if (result.error) throw new Error("contact_archive_failed");
   revalidatePath("/fans");
   revalidatePath("/dashboard");
   revalidatePath("/inbox");
@@ -786,9 +777,9 @@ export async function mergeFanContacts(formData: FormData) {
       getWorkspaceContacts(workspace.id),
     ]);
 
-    if (sourceResult.error) throw new Error(sourceResult.error.message);
-    if (targetResult.error) throw new Error(targetResult.error.message);
-    if (contactsResult.error) throw new Error(contactsResult.error.message);
+    if (sourceResult.error) throw new Error("merge_source_load_failed");
+    if (targetResult.error) throw new Error("merge_target_load_failed");
+    if (contactsResult.error) throw new Error("merge_contact_list_load_failed");
     if (!sourceResult.contact || !targetResult.contact) {
       throw new Error("Quelle oder Ziel wurde nicht gefunden.");
     }
@@ -814,8 +805,8 @@ export async function mergeFanContacts(formData: FormData) {
         `Kontakt ${sourceContact.id} konnte nicht zusammengeführt werden.`,
       );
     }
-  } catch (error) {
-    redirectMergeFailed(error, returnTo);
+  } catch {
+    redirectMergeFailed(returnTo);
   }
 
   revalidatePath("/fans");
@@ -834,7 +825,7 @@ async function getExistingOrNewConversation(
     const conversations = await getWorkspaceConversations(workspaceId);
 
     if (conversations.error) {
-      throw new Error(conversations.error.message);
+      throw new Error("conversation_list_load_failed");
     }
 
     const existing = conversations.conversations.find(
@@ -856,9 +847,7 @@ async function getExistingOrNewConversation(
   });
 
   if (ensured.error || !ensured.conversation) {
-    throw new Error(
-      ensured.error?.message ?? "Conversation konnte nicht geladen werden.",
-    );
+    throw new Error("conversation_load_failed");
   }
 
   return ensured.conversation;
@@ -886,7 +875,7 @@ async function updateConversationStatusAction(
   });
 
   if (result.error) {
-    throw new Error(result.error.message);
+    throw new Error("conversation_status_update_failed");
   }
 
   revalidatePath(`/fans/${contactId}`);
@@ -969,22 +958,23 @@ function assertUpdatedContact(
   fallbackMessage: string,
 ): asserts result is ContactUpdateResult & { contact: ContactRow } {
   if (result.error || !result.contact) {
-    throw new Error(result.error?.message ?? fallbackMessage);
+    throw new Error(fallbackMessage);
   }
 }
 
-function redirectFanUpdateFailed(error: unknown): never {
-  console.error("Fan-Kanal-Bearbeitung fehlgeschlagen.", error);
+function redirectFanUpdateFailed(): never {
+  console.error("Fan-Kanal-Bearbeitung fehlgeschlagen.", {
+    code: "contact_update_failed",
+  });
   redirect(
     "/fans?notice=fan_update_failed&error=contact_update_failed#fans-list",
   );
 }
 
-function redirectMergeFailed(error: unknown, returnTo = "/fans"): never {
-  console.error("Fan-Merge fehlgeschlagen.", error);
-  const message = error instanceof Error ? error.message : "merge_failed";
+function redirectMergeFailed(returnTo = "/fans"): never {
+  console.error("Fan-Merge fehlgeschlagen.", { code: "contact_merge_failed" });
   redirect(
-    `${returnTo}?notice=contacts_merge_failed&error=${encodeURIComponent(message)}#fans-list`,
+    `${returnTo}?notice=contacts_merge_failed&error=contact_merge_failed#fans-list`,
   );
 }
 

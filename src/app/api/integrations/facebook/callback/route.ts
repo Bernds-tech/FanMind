@@ -118,8 +118,7 @@ export async function GET(request: Request) {
 
     if (result.error) {
       console.error("Facebook social connection save failed", {
-        message: result.error.message,
-        name: result.error.name,
+        code: "facebook_connection_save_failed",
         workspaceIdPresent: Boolean(state.workspaceId),
         pageIdPresent: Boolean(page.id),
         pageNamePresent: Boolean(page.name),
@@ -130,10 +129,9 @@ export async function GET(request: Request) {
     }
     revalidatePath("/channels");
     return redirectToChannels(appOrigin, `connected=${isCommentConnection ? "facebook_comments" : "facebook_messages"}`);
-  } catch (error) {
+  } catch {
     console.error("Facebook OAuth callback failed", {
-      message:
-        error instanceof Error ? error.message : "Unknown callback error",
+      code: "facebook_oauth_callback_failed",
     });
     return redirectToChannels(appOrigin, "facebook_error=callback");
   }
