@@ -166,7 +166,7 @@ Vorhandene Profile in `apps/mobile/eas.json`:
 - `preview`: interne signierte Beta-Distribution, Android APK, EAS-Umgebung `preview`;
 - `production`: Store-Build mit automatischer Buildnummer und EAS-Umgebung `production`;
 - alle Profile verwenden Node.js `22.13.1`;
-- EAS CLI mindestens `19.1.0`;
+- EAS CLI exakt `21.2.0`;
 - Build nur aus einem Commit (`requireCommit=true`).
 
 Die öffentliche App-Konfiguration wird in EAS je Umgebung mit exakt diesen
@@ -306,8 +306,8 @@ Nach `eas init` kann zusätzlich das credentialfreie EAS-Profil verwendet werden
 
 ```bash
 cd apps/mobile
-npx eas-cli@latest build --platform android --profile native-validation
-npx eas-cli@latest build --platform ios --profile native-validation
+npx eas-cli@21.2.0 build --platform android --profile native-validation
+npx eas-cli@21.2.0 build --platform ios --profile native-validation
 ```
 
 Das Android-Artefakt ist ein nicht mit Production-/Store-Credentials signierter
@@ -345,7 +345,7 @@ Nach EAS-Einrichtung:
 
 ```bash
 cd apps/mobile
-npx eas-cli@latest build --platform android --profile preview
+npx eas-cli@21.2.0 build --platform android --profile preview
 ```
 
 Das Preview-Profil erzeugt ein direkt installierbares APK für den internen Test. Der Build-Link ist wie ein vertrauliches internes Artefakt zu behandeln.
@@ -356,8 +356,8 @@ Nach Apple-Account und Geräte-Registrierung:
 
 ```bash
 cd apps/mobile
-npx eas-cli@latest device:create
-npx eas-cli@latest build --platform ios --profile preview
+npx eas-cli@21.2.0 device:create
+npx eas-cli@21.2.0 build --platform ios --profile preview
 ```
 
 Bei Ad-hoc-Distribution können nur Geräte installiert werden, deren UDID in der verwendeten Provisioning-Datei enthalten ist.
@@ -368,8 +368,8 @@ Erst nach realen Gerätetests und Store-Voraussetzungen:
 
 ```bash
 cd apps/mobile
-npx eas-cli@latest build --platform ios --profile production
-npx eas-cli@latest build --platform android --profile production
+npx eas-cli@21.2.0 build --platform ios --profile production
+npx eas-cli@21.2.0 build --platform android --profile production
 ```
 
 Die anschließende Übertragung benötigt echte Store-Konten. EAS Submit lädt Binärdateien hoch, ersetzt aber keine Store-Texte, Screenshots, Datenschutzangaben oder Review-Freigaben.
@@ -413,6 +413,12 @@ noch manuell in den Store-Portalen zu bestätigenden Datenschutzangaben stehen i
 Privacy und Google Play Data Safety steht in
 `docs/mobile/STORE_PRIVACY_DECLARATIONS.md`; sie bleibt bis zur Prüfung des
 signierten Builds und zur externen Datenschutz-/Rechtsfreigabe ein Entwurf.
+
+`npm run store:check` prüft die Store-Texte vor jedem Release zusätzlich gegen
+die aktuellen Zeichenlimits, die sechs synthetischen Screenshot-Slots, die
+bestätigte Wortmarke, beide Iconverträge, native App-IDs, exakt EAS CLI
+`21.2.0` sowie eine ausschließlich interne Android-Draft-Konfiguration. Der
+Check führt keinen Build, Submit oder Portalzugriff aus.
 
 Der iOS-Prebuild erzeugt zusätzlich ein eigenes `PrivacyInfo.xcprivacy` mit den
 Required-Reason-APIs der installierten Expo-/React-Native-Bibliotheken, ohne

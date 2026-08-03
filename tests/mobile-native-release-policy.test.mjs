@@ -238,20 +238,39 @@ test("Expo Doctor cannot hide a failed Expo config preflight", () => {
 test("EAS profiles bind every release class to an explicit environment", () => {
   const { development, preview, production } = easConfig.build;
 
+  assert.equal(easConfig.cli.version, "21.2.0");
+  assert.equal(easConfig.cli.requireCommit, true);
+  assert.equal(easConfig.cli.appVersionSource, "remote");
   assert.equal(development.developmentClient, true);
   assert.equal(development.distribution, "internal");
+  assert.equal(development.credentialsSource, "remote");
   assert.equal(development.environment, "development");
   assert.equal(development.node, "22.13.1");
   assert.equal(development.android.buildType, "apk");
 
   assert.equal(preview.distribution, "internal");
+  assert.equal(preview.credentialsSource, "remote");
   assert.equal(preview.environment, "preview");
   assert.equal(preview.node, "22.13.1");
   assert.equal(preview.android.buildType, "apk");
 
+  assert.equal(production.distribution, "store");
+  assert.equal(production.credentialsSource, "remote");
   assert.equal(production.environment, "production");
   assert.equal(production.node, "22.13.1");
   assert.equal(production.autoIncrement, true);
+
+  assert.deepEqual(easConfig.submit.production, {
+    android: {
+      track: "internal",
+      releaseStatus: "draft",
+      changesNotSentForReview: true,
+    },
+    ios: {
+      language: "de-DE",
+      appName: "FanMind",
+    },
+  });
 });
 
 test("credential-free validation profiles cannot be mistaken for signed betas", () => {
@@ -277,7 +296,7 @@ test("credential-free validation profiles cannot be mistaken for signed betas", 
   assert.equal(appConfig.expo.extra?.eas?.projectId, undefined);
   assert.doesNotMatch(
     JSON.stringify(easConfig),
-    /ascAppId|appleTeamId|credentialsSource|EXPO_PUBLIC_|projectId/u,
+    /ascAppId|appleTeamId|serviceAccountKeyPath|EXPO_PUBLIC_|projectId/u,
   );
   assert.match(betaRelease, /kein signierter Beta-Build/iu);
 });

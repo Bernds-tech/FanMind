@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "apps/mobile/**"
+      - "docs/mobile/STORE_LISTING.md"
+      - "docs/mobile/STORE_PRIVACY_DECLARATIONS.md"
       - "src/lib/requestAccessToken.ts"
       - "src/lib/workspaceAuthorization.ts"
       - "src/lib/supabase/server.ts"
@@ -17,6 +19,8 @@ on:
       - "p0/**"
     paths:
       - "apps/mobile/**"
+      - "docs/mobile/STORE_LISTING.md"
+      - "docs/mobile/STORE_PRIVACY_DECLARATIONS.md"
       - "src/lib/requestAccessToken.ts"
       - "src/lib/workspaceAuthorization.ts"
       - "src/lib/supabase/server.ts"
@@ -101,6 +105,23 @@ jobs:
         with:
           name: fanmind-mobile-expo-doctor-report
           path: apps/mobile/expo-doctor-report.txt
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Validate Store metadata, branding and EAS profiles
+        id: store_readiness
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run store:check 2>&1 | tee mobile-store-readiness-report.txt
+
+      - name: Upload Mobile Store readiness report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fanmind-mobile-store-readiness-report
+          path: apps/mobile/mobile-store-readiness-report.txt
           if-no-files-found: error
           retention-days: 5
 
@@ -196,6 +217,10 @@ jobs:
 
       - name: Enforce Expo Doctor result
         if: always() && steps.doctor.outcome != 'success'
+        run: exit 1
+
+      - name: Enforce Mobile Store readiness result
+        if: always() && steps.store_readiness.outcome != 'success'
         run: exit 1
 
       - name: Enforce Android JavaScript export result
