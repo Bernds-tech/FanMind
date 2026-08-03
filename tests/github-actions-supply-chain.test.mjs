@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { scanWorkflowPolicy } from "../scripts/verify-actions-pinned.mjs";
 
-const CODEQL_V4_37_3_SHA = "e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81";
+const CODEQL_V4_37_4_SHA = "f205ea1c3313d32999d8d6a48b4f6530d4437b38";
 const HOSTED_CHECKOUT_V7_0_1_SHA =
   "3d3c42e5aac5ba805825da76410c181273ba90b1";
 const RESTORE_CHECKOUT_V4_SHA =
@@ -94,17 +94,17 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
   );
 });
 
-test("CodeQL init and analyze use the same reviewed v4.37.3 commit and minimal permissions", async () => {
+test("CodeQL init and analyze use the same reviewed v4.37.4 commit and minimal permissions", async () => {
   const source = await readFile(".github/workflows/codeql.yml", "utf8");
   const initMatch = source.match(
-    /github\/codeql-action\/init@([0-9a-f]{40})\s+#\s+v4\.37\.3/u,
+    /github\/codeql-action\/init@([0-9a-f]{40})\s+#\s+v4\.37\.4/u,
   );
   const analyzeMatch = source.match(
-    /github\/codeql-action\/analyze@([0-9a-f]{40})\s+#\s+v4\.37\.3/u,
+    /github\/codeql-action\/analyze@([0-9a-f]{40})\s+#\s+v4\.37\.4/u,
   );
 
-  assert.equal(initMatch?.[1], CODEQL_V4_37_3_SHA);
-  assert.equal(analyzeMatch?.[1], CODEQL_V4_37_3_SHA);
+  assert.equal(initMatch?.[1], CODEQL_V4_37_4_SHA);
+  assert.equal(analyzeMatch?.[1], CODEQL_V4_37_4_SHA);
   assert.equal(initMatch?.[1], analyzeMatch?.[1]);
   assert.match(source, /queries: security-extended/u);
   assert.match(source, /security-events: write/u);
