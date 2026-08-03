@@ -168,13 +168,11 @@ test("bootstrap initializes exactly once, disables automatic events and does not
   );
 });
 
-test("PageView, completed registration and successful inquiries are active while other conversions remain prepared", () => {
-  assert.deepEqual([...META_PIXEL_ACTIVE_EVENTS], [
-    "PageView",
+test("only PageView is active while every conversion remains prepared", () => {
+  assert.deepEqual([...META_PIXEL_ACTIVE_EVENTS], ["PageView"]);
+  assert.deepEqual([...META_PIXEL_PREPARED_EVENTS], [
     "CompleteRegistration",
     "Lead",
-  ]);
-  assert.deepEqual([...META_PIXEL_PREPARED_EVENTS], [
     "ViewContent",
     "Contact",
     "Schedule",
@@ -212,14 +210,13 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   assert.match(manager, /Datenschutz-Einstellungen/u);
   assert.match(
     manager,
-    /PageView[\s\S]*CompleteRegistration[\s\S]*Lead[\s\S]*ohne zusätzliche Eventparameter/u,
+    /Aktiv ist ausschließlich PageView[\s\S]*ohne zusätzliche Eventparameter/u,
   );
   assert.match(
     manager,
-    /PageView[\s\S]*CompleteRegistration[\s\S]*Lead[\s\S]*without additional event parameters/u,
+    /Only PageView on approved public pages is active[\s\S]*no additional event parameters/u,
   );
-  assert.doesNotMatch(manager, /Aktiv ist ausschließlich PageView/u);
-  assert.doesNotMatch(manager, /Only PageView on approved public pages is active/u);
+  assert.doesNotMatch(manager, /CompleteRegistration|Lead/u);
   assert.match(manager, /isMetaPixelEnabled/u);
   assert.match(manager, /isMetaPixelPageViewAllowed/u);
   assert.match(manager, /isMetaPixelReferrerAllowed/u);
@@ -246,7 +243,7 @@ test("consent controls gate loading, protected URLs and later withdrawal", async
   );
 });
 
-test("event helper accepts no arbitrary payload and only approved conversions are wired", async () => {
+test("event helper accepts no arbitrary payload and no conversion is wired", async () => {
   const helper = await source("src/lib/metaPixel.ts");
   const register = await source("src/app/register/RegisterClient.tsx");
   const inquiryForm = await source("src/components/landing/FooterInquiryForm.tsx");
@@ -258,27 +255,15 @@ test("event helper accepts no arbitrary payload and only approved conversions ar
 
   assert.match(
     helper,
-    /trackMetaPixelEvent\(eventName: MetaPixelEventName\): boolean/u,
+    /trackMetaPixelEvent\(eventName: MetaPixelActiveEventName\): boolean/u,
   );
   assert.doesNotMatch(helper, /trackMetaPixelEvent\([^)]*,/u);
   assert.doesNotMatch(helper, /customData|userData/u);
-  assert.equal(
-    (register.match(/trackMetaPixelEvent\("CompleteRegistration"\)/gu) ?? []).length,
-    1,
-  );
-  assert.match(register, /setSuccess\(true\);[\s\S]*trackMetaPixelEvent\("CompleteRegistration"\)/u);
-  assert.equal(
-    (inquiryForm.match(/trackMetaPixelEvent\("Lead"\)/gu) ?? []).length,
-    1,
-  );
-  assert.match(
-    inquiryForm,
-    /if \(!response\?\.ok\)[\s\S]*return;[\s\S]*trackMetaPixelEvent\("Lead"\);[\s\S]*form\.reset\(\)/u,
-  );
   assert.doesNotMatch(
     `${repositorySources.join("\n")}\n${register}\n${inquiryForm}`,
-    /trackMetaPixelEvent\("(?:ViewContent|Contact|Schedule|StartTrial|Purchase)"\)/u,
+    /trackMetaPixelEvent\("(?:CompleteRegistration|Lead|ViewContent|Contact|Schedule|StartTrial|Purchase)"\)/u,
   );
+  assert.match(helper, /!isActiveMetaPixelEvent\(eventName\)/u);
 });
 
 test("environment, privacy and runbook document the inactive-by-default rollout", async () => {
@@ -296,19 +281,18 @@ test("environment, privacy and runbook document the inactive-by-default rollout"
   assert.match(privacy, /ausdrücklichen (?:Marketing-)?Einwilligung/u);
   assert.match(
     privacy,
-    /<code>PageView<\/code>[\s\S]*<code>CompleteRegistration<\/code>[\s\S]*<code>Lead<\/code>/u,
+    /ausschließlich das Standardevent[\s\S]*<code>PageView<\/code>/u,
   );
   assert.match(
     privacy,
-    /Alle drei Events werden ohne zusätzliche FanMind-Eventparameter übermittelt\./u,
+    /<code>PageView<\/code>[\s\S]*ohne zusätzliche[\s\S]*FanMind-Eventparameter/u,
   );
-  assert.doesNotMatch(
-    privacy,
-    /ausschließlich das Standardevent\s*<code>PageView<\/code>/u,
-  );
+  assert.doesNotMatch(privacy, /<code>(?:CompleteRegistration|Lead)<\/code>/u);
   assert.match(runbook, /\| `PageView` \|/u);
-  assert.match(runbook, /\| `CompleteRegistration` \|/u);
-  assert.match(runbook, /\| `Lead` \|/u);
+  assert.match(runbook, /Nur vorbereitet, nicht verdrahtet/u);
+  assert.match(runbook, /- `CompleteRegistration`/u);
+  assert.match(runbook, /- `Lead`/u);
+  assert.match(runbook, /weder `CompleteRegistration` noch `Lead`/u);
   assert.match(runbook, /Öffentliche Routengrenze/u);
   assert.match(runbook, /same-origin/iu);
   assert.match(runbook, /keine Conversions API/iu);

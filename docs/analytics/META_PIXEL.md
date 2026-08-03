@@ -122,18 +122,18 @@ Fail-closed-Verhalten:
 | Event | Auslöser | Parameter |
 | --- | --- | --- |
 | `PageView` | erste freigegebene öffentliche Seite nach Einwilligung und danach genau einmal je neuem sicheren App-Router-Pfad/Queryzustand | keine |
-| `CompleteRegistration` | erfolgreiche FanMind-Konto- und Workspace-Registrierung auf der öffentlichen Registrierungsseite; unabhängig von Checkout oder Zahlung | keine |
-| `Lead` | erfolgreich serverseitig angenommene Beratungsanfrage über das öffentliche Landingpage-Formular | keine |
 
 ### Nur vorbereitet, nicht verdrahtet
 
+- `CompleteRegistration`
+- `Lead`
 - `ViewContent`
 - `Contact`
 - `Schedule`
 - `StartTrial`
 - `Purchase`
 
-Diese Namen sind in einer wiederverwendbaren Event-Hilfsfunktion typisiert und allowlist-basiert. Im aktuellen Stand ruft eine erfolgreich abgeschlossene Registrierung `CompleteRegistration` und eine erfolgreich serverseitig angenommene Beratungsanfrage `Lead` auf. Vor jeder weiteren Verdrahtung müssen Ereignisdefinition, Consent, Datenminimierung, öffentliche Routengrenze und fachliche Wahrheit separat geprüft werden.
+Diese Namen sind in der Policy typisiert, aber nicht für Laufzeitaufrufe freigegeben. Die Event-Hilfe akzeptiert ausschließlich das aktive `PageView`. Vor jeder weiteren Verdrahtung müssen Ereignisdefinition, Consent, Datenminimierung, öffentliche Routengrenze und fachliche Wahrheit separat geprüft und im selben Release synchronisiert werden.
 
 Insbesondere wird `Purchase` nicht allein wegen eines Seitenaufrufs, Checkout-Starts oder internen Testabos gesendet. Ein späteres Purchase-Event benötigt einen bestätigten Zahlungsabschluss und eine eigene Billing-/Datenschutzabnahme.
 
@@ -208,10 +208,9 @@ Nach der kontrollierten Production-Aktivierung:
 5. Marketing-Einwilligung erteilen.
 6. ein `PageView` für den initialen öffentlichen Pfad prüfen.
 7. über eine sichere öffentliche Client-Navigation einen zweiten Pfad öffnen und genau ein weiteres `PageView` prüfen.
-8. Eine neue Testregistrierung ohne Zahlungsabschluss durchführen und genau ein `CompleteRegistration` prüfen.
-9. Eine Test-Beratungsanfrage absenden und erst nach erfolgreicher Annahme genau ein `Lead` prüfen.
-10. Eventdetails auf das Fehlen von E-Mail, Namen, Firma, Nachricht, CRM-, Kontakt-, Billing- und Advanced-Matching-Daten prüfen.
-11. Die Meta Pixel Helper Browser-Erweiterung kann ergänzend verwendet werden, ersetzt aber nicht Netzwerk-, Routengrenz- und Consent-Prüfung.
+8. Eventdetails auf das Fehlen von E-Mail, Namen, Firma, Nachricht, CRM-, Kontakt-, Billing- und Advanced-Matching-Daten prüfen.
+9. Bestätigen, dass weder `CompleteRegistration` noch `Lead` oder ein anderes Conversion-Event erscheint.
+10. Die Meta Pixel Helper Browser-Erweiterung kann ergänzend verwendet werden, ersetzt aber nicht Netzwerk-, Routengrenz- und Consent-Prüfung.
 
 Keine Screenshots oder Tickets dürfen Tokens, Session-Cookies, Kundeninhalte oder vollständige Browser-Netzwerk-Response-Bodies enthalten.
 
@@ -222,6 +221,6 @@ Keine Screenshots oder Tickets dürfen Tokens, Session-Cookies, Kundeninhalte od
 - Production neu bauen und deployen;
 - Consent-/Widerruf-/PageView-/Routengrenz-Abnahme gemäß diesem Runbook;
 - Test-Events-Nachweis im richtigen Meta Dataset;
-- erst danach Issue #710 schließen.
+- erst danach Issue #714 schließen.
 
 Die Codeintegration allein bedeutet nicht, dass der Pixel bereits auf Production aktiv ist.

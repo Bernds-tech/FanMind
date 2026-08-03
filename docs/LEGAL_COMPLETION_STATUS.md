@@ -61,9 +61,8 @@ Dieses Dokument trennt bestätigte öffentliche Fakten von Angaben, die noch dur
   Aufgabenliste nach Zuständigkeit. Sie gibt keine Werte, Pfade,
   Kontokennungen, Beleginhalte oder vorhandenen Hashes aus und verändert das
   Register nicht.
-- Die Datenschutzerklärung nennt die aktuell verdrahteten parameterlosen
-  Meta-Events `PageView`, `CompleteRegistration` und `Lead` konsistent mit
-  Code und Produktwahrheit.
+- Die Datenschutzerklärung nennt das aktuell allein verdrahtete parameterlose
+  Meta-Event `PageView` konsistent mit Code und Produktwahrheit.
 - Die im Repository belegten Demo-, Consent-, Diagnose-, Log-, Mobile-,
   Account-Lösch- und Backup-Grenzen sind transparent zusammengeführt.
 

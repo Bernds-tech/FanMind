@@ -1,10 +1,9 @@
 export type FanMindMarketingConsent = "unset" | "denied" | "granted";
 
-export type MetaPixelActiveEventName =
-  | "PageView"
-  | "CompleteRegistration"
-  | "Lead";
+export type MetaPixelActiveEventName = "PageView";
 export type MetaPixelPreparedEventName =
+  | "CompleteRegistration"
+  | "Lead"
   | "ViewContent"
   | "Contact"
   | "Schedule"
@@ -34,6 +33,9 @@ export function isMetaPixelEnabled(input: {
 export function isSupportedMetaPixelEvent(
   eventName: unknown,
 ): eventName is MetaPixelEventName;
+export function isActiveMetaPixelEvent(
+  eventName: unknown,
+): eventName is MetaPixelActiveEventName;
 export function normalizeMetaPixelRoute(pathname: unknown): string;
 export function isMetaPixelPublicRoute(pathname: unknown): boolean;
 export function isMetaPixelPageViewAllowed(input: {

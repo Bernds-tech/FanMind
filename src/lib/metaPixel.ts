@@ -1,12 +1,12 @@
 import {
   isMetaPixelPageViewAllowed,
   isMetaPixelReferrerAllowed,
-  isSupportedMetaPixelEvent,
+  isActiveMetaPixelEvent,
   normalizeMarketingConsent,
   normalizeMetaPixelId,
   normalizeMetaPixelRoute,
   type FanMindMarketingConsent,
-  type MetaPixelEventName,
+  type MetaPixelActiveEventName,
 } from "@/lib/metaPixelPolicy.mjs";
 
 type MetaPixelQueueFunction = ((...args: unknown[]) => void) & {
@@ -104,13 +104,13 @@ export function revokeMetaPixelConsent(): void {
   expireFirstPartyMetaCookie("_fbc");
 }
 
-export function trackMetaPixelEvent(eventName: MetaPixelEventName): boolean {
+export function trackMetaPixelEvent(eventName: MetaPixelActiveEventName): boolean {
   if (
     !inBrowser() ||
     window.__fanmindMarketingConsent !== "granted" ||
     typeof window.fbq !== "function" ||
     !currentPageIsEligible() ||
-    !isSupportedMetaPixelEvent(eventName)
+    !isActiveMetaPixelEvent(eventName)
   ) {
     return false;
   }

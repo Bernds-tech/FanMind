@@ -98,7 +98,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Legal-Readiness: Eine klar als nicht unterschriftsreif begrenzte
   AVV-Arbeitsfassung und ein technisches Retention-Register bündeln Rollen,
   Datenarten, Personengruppen, TOM, Anbieter sowie im Code belegte Fristen.
-  Die Datenschutzerklärung nennt die aktiven parameterlosen Meta-Events und
+  Die Datenschutzerklärung nennt das aktive parameterlose Meta-Event und die
   technischen Löschkriterien konsistent. Anbieter-DPAs, Regionen,
   Drittlandgrundlagen, steuerliche Fristen und die finale Rechtsfreigabe
   bleiben externe Abschlussnachweise.
@@ -180,8 +180,8 @@ FanMind besitzt eine zentral im Next.js-Root-Layout eingebundene, consent-gesteu
 
 - Konfiguration: `NEXT_PUBLIC_META_PIXEL_ID`;
 - Production-Dataset: `FanMind Dataset`, Pixel-ID `2069553844439892`;
-- aktive Events: `PageView`, dedupliziert je freigegebenem öffentlichen App-Router-Pfad und unsensitivem Queryzustand, parameterloses `CompleteRegistration` nach erfolgreicher Konto-/Workspace-Erstellung sowie parameterloses `Lead` nach erfolgreich angenommener Beratungsanfrage;
-- vorbereitet, aber nicht mit Produktaktionen verbunden: `ViewContent`, `Contact`, `Schedule`, `StartTrial`, `Purchase`;
+- aktives Event: ausschließlich `PageView`, dedupliziert je freigegebenem öffentlichen App-Router-Pfad und unsensitivem Queryzustand;
+- vorbereitet, aber nicht mit Produktaktionen verbunden: `CompleteRegistration`, `Lead`, `ViewContent`, `Contact`, `Schedule`, `StartTrial`, `Purchase`;
 - kein Laden vor ausdrücklicher Marketing-Einwilligung;
 - keine E-Mail, Namen, CRM-, Kontakt-, Nachrichten-, KI- oder Zahlungsdaten; geschützte same-origin Referrer werden blockiert;
 - kein Advanced Matching, keine Conversions API und kein serverseitiges Meta-Tracking.
