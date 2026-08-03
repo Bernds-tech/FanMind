@@ -15,9 +15,9 @@ Aktuell geprüfte Pins:
 | `actions/checkout` auf GitHub-gehosteten Runnern | `3d3c42e5aac5ba805825da76410c181273ba90b1` | `v7.0.1` |
 | `actions/checkout` auf `fanmind-restore` | `11d5960a326750d5838078e36cf38b85af677262` | `v4` |
 | `actions/setup-node` | `820762786026740c76f36085b0efc47a31fe5020` | `v7.0.0` |
-| `actions/setup-java` | `03ad4de0992f5dab5e18fcb136590ce7c4a0ac95` | `v5.6.0` |
+| `actions/setup-java` | `b6effb05e454b25005698d916606bdc6ffcbf961` | `v5.7.0` |
 | `actions/upload-artifact` | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` | `v7.0.1` |
-| `github/codeql-action` | `e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81` | `v4.37.3` |
+| `github/codeql-action` | `f205ea1c3313d32999d8d6a48b4f6530d4437b38` | `v4.37.4` |
 
 `actions/checkout` bleibt absichtlich gemischt gepinnt. Alle Checkout-Schritte
 auf GitHub-gehosteten Runnern verwenden v7.0.1. Der getrennte
@@ -99,7 +99,7 @@ dem Review-Ablauf zulässig.
 
 ## CodeQL / SAST
 
-`.github/workflows/codeql.yml` analysiert JavaScript und TypeScript mit der unveränderlich gepinnten CodeQL-v4-Action `4.37.3` und `security-extended`:
+`.github/workflows/codeql.yml` analysiert JavaScript und TypeScript mit der unveränderlich gepinnten CodeQL-v4-Action `4.37.4` und `security-extended`:
 
 - bei Pull Requests gegen `main`;
 - bei Pushes auf `main`;
