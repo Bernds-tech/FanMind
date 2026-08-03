@@ -5,6 +5,11 @@ import {
   getAllWorkspaceContactsForDisclosure,
 } from "@/lib/dataDisclosureExport";
 import {
+  getWorkspaceMetaDataForDisclosure,
+  type DisclosureMetaDataset,
+  type DisclosureMetaRow,
+} from "@/lib/dataDisclosureMetaExport";
+import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
 } from "@/lib/supabase/server";
@@ -32,11 +37,13 @@ export async function GET(request: Request) {
     return new NextResponse("Workspace nicht gefunden.", { status: 404 });
   }
 
-  let contacts: Awaited<
-    ReturnType<typeof getAllWorkspaceContactsForDisclosure>
-  >;
+  let contacts: Awaited<ReturnType<typeof getAllWorkspaceContactsForDisclosure>>;
+  let storedMetaData: DisclosureMetaDataset[];
   try {
-    contacts = await getAllWorkspaceContactsForDisclosure(workspace.id);
+    [contacts, storedMetaData] = await Promise.all([
+      getAllWorkspaceContactsForDisclosure(workspace.id),
+      getWorkspaceMetaDataForDisclosure(workspace.id),
+    ]);
   } catch (error) {
     const message =
       error instanceof DataDisclosureExportError
@@ -96,6 +103,7 @@ export async function GET(request: Request) {
       createdAt: contact.created_at,
       updatedAt: contact.updated_at,
     })),
+    storedDataSections: buildStoredDataSections(storedMetaData, locale),
   });
 
   const body = new ArrayBuffer(pdf.byteLength);
@@ -111,4 +119,74 @@ export async function GET(request: Request) {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+const SECTION_LABELS: Record<
+  DisclosureMetaDataset["key"],
+  { de: string; en: string }
+> = {
+  connections: { de: "Meta-Verbindungen (ohne Tokens)", en: "Meta connections (without tokens)" },
+  messages: { de: "Gespeicherte Meta-Chats und Kommentare", en: "Stored Meta chats and comments" },
+  content: { de: "Eigener Post-/Medien-Cache", en: "Owned post and media cache" },
+  metrics: { de: "Reichweiten- und Metrik-Snapshots", en: "Reach and metric snapshots" },
+  fan_reports: { de: "Fan-Analyseberichte", en: "Fan analysis reports" },
+  contact_profiles: { de: "Abgeleitete Fanprofile", en: "Derived fan profiles" },
+  voice_profiles: { de: "Nutzer-Schreibstilprofile", en: "User voice profiles" },
+  conversation_reports: { de: "Gesprächsanalysen", en: "Conversation analyses" },
+  analysis_settings: { de: "Analyse- und Aufbewahrungssteuerung", en: "Analysis and retention controls" },
+};
+
+function buildStoredDataSections(
+  datasets: DisclosureMetaDataset[],
+  locale: "de" | "en",
+) {
+  return datasets.map((dataset) => ({
+    title: SECTION_LABELS[dataset.key][locale],
+    countLabel: locale === "en" ? "Stored records" : "Gespeicherte Datensätze",
+    emptyMessage:
+      locale === "en"
+        ? "No records are stored in this category."
+        : "In diesem Bereich sind keine Datensätze gespeichert.",
+    entries: dataset.rows.map((row, index) => ({
+      title: disclosureRowTitle(row, index, locale),
+      fields: Object.entries(row).map(
+        ([key, value]) => `${key}: ${formatDisclosureValue(value, locale)}`,
+      ),
+    })),
+  }));
+}
+
+function disclosureRowTitle(
+  row: DisclosureMetaRow,
+  index: number,
+  locale: "de" | "en",
+): string {
+  for (const key of [
+    "external_account_name",
+    "title",
+    "author_label",
+    "owner_label",
+    "external_content_id",
+    "contact_id",
+    "id",
+  ]) {
+    const value = row[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return `${locale === "en" ? "Record" : "Datensatz"} ${index + 1}`;
+}
+
+function formatDisclosureValue(value: unknown, locale: "de" | "en"): string {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "boolean") {
+    return value ? (locale === "en" ? "yes" : "ja") : locale === "en" ? "no" : "nein";
+  }
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return locale === "en" ? "[not representable]" : "[nicht darstellbar]";
+    }
+  }
+  return String(value);
 }

@@ -18,6 +18,7 @@ import {
 } from "@/lib/facebookIntegration";
 import { syncFacebookMessengerConversationForContact } from "@/app/channels/facebookWebhookActions";
 import { buildMetaWebhookDiagnosticPayload } from "@/lib/webhookSecurityPolicy.mjs";
+import { evaluateMetaDataUse } from "@/lib/metaDataHandlingPolicy.mjs";
 
 export type MetaWebhookEvent = {
   eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
@@ -274,6 +275,38 @@ export async function processMetaWebhookPayload(
       event.eventType === "comments"
     ) {
       if (event.content) {
+        const dataClass =
+          event.eventType === "messages"
+            ? "authorized_chat_message"
+            : "authorized_comment";
+        const storagePolicy = evaluateMetaDataUse({
+          dataClass,
+          persist: true,
+          workspaceBound: true,
+          authorizedConnection: true,
+        });
+        if (!storagePolicy.allowed) {
+          status = "ignored_storage_policy";
+          errorReason = storagePolicy.reason;
+          skipped += 1;
+          const debugResult = await createMetaWebhookDebugEvent({
+            workspaceId: connection.connection.workspace_id,
+            platform: event.sourcePlatform,
+            socialConnectionId: connection.connection.id,
+            eventType: event.eventType,
+            pageId: null,
+            senderId: null,
+            recipientId: null,
+            messageText: null,
+            rawPayload: buildMetaWebhookDiagnosticPayload(event),
+            status,
+            errorReason,
+            messageId: null,
+            receivedAt,
+          });
+          if (debugResult.error) firstErrorCode ??= "diagnostic_persist_failed";
+          continue;
+        }
         const result = await createMetaWebhookConversationMessage({
           workspaceId: connection.connection.workspace_id,
           senderId: event.senderId,

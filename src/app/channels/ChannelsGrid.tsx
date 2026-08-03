@@ -42,6 +42,15 @@ type FacebookConnection = {
   last_messenger_sync_outbound_at: string | null;
 };
 
+type InstagramConnection = {
+  account_name: string | null;
+  account_id: string | null;
+  has_access_token: boolean;
+  scopes: string[] | null;
+  token_expires_at: string | null;
+  webhook_subscribed: boolean;
+};
+
 type MetaWebhookStorageHealth = {
   serviceRoleConfigured: boolean;
   tableReadable: boolean;
@@ -526,10 +535,16 @@ export function ChannelsGrid({
   facebookConnection,
   facebookError,
   facebookLiveSetupStatus,
+  instagramConnection,
+  instagramError,
+  instagramOAuthConfigured,
   demoConnectionsDisabled = false,
 }: {
   facebookConnection: FacebookConnection | null;
   facebookError?: string | null;
+  instagramConnection: InstagramConnection | null;
+  instagramError?: string | null;
+  instagramOAuthConfigured: boolean;
   metaWebhookEvents: MetaWebhookEvent[];
   metaWebhookError?: string | null;
   metaWebhookStorageHealth: MetaWebhookStorageHealth;
@@ -551,7 +566,6 @@ export function ChannelsGrid({
   const facebookOAuthConfigured =
     facebookLiveSetupStatus.facebookAppIdConfigured &&
     facebookLiveSetupStatus.facebookAppSecretConfigured &&
-    facebookLiveSetupStatus.webhookVerifyTokenConfigured &&
     facebookLiveSetupStatus.publicBaseUrlConfigured;
 
   useEffect(() => {
@@ -757,7 +771,7 @@ export function ChannelsGrid({
                               Token serverseitig vorhanden: {facebookConnection.has_page_access_token ? "ja" : "nein"}
                             </li>
                             <li>
-                              Webhook: {facebookConnection.webhook_subscribed ? "abonniert" : "noch nicht bestätigt"}
+                              Automatische Webhook-Synchronisierung: {facebookConnection.webhook_subscribed ? "separat aktiviert" : "aus"}
                             </li>
                             <li>
                               Berechtigungen: {facebookConnection.scopes?.length ?? 0}
@@ -795,6 +809,9 @@ export function ChannelsGrid({
                             <li>Login erfolgt direkt bei Meta; kein Passwort wird an FanMind übergeben.</li>
                             <li>Die Verbindung gilt nur für den aktuell angemeldeten FanMind-Workspace.</li>
                             <li>Mehrere verwaltete Seiten werden nicht automatisch ausgewählt.</li>
+                            <li>Eigene Posts und Insights werden als Workspace-Cache gespeichert.</li>
+                            <li>Beim Erstabgleich werden bis zu 150 aktuelle Nachrichten je Thread geladen; danach ergänzt der Webhook nur neue Ereignisse.</li>
+                            <li>Persönliche fremde Profile und Posts werden nicht gespiegelt oder gescrapt.</li>
                             <li>
                               Serverkonfiguration: {facebookOAuthConfigured ? "bereit" : "noch unvollständig"}
                             </li>
@@ -819,13 +836,72 @@ export function ChannelsGrid({
                     <div
                       className={`${styles.releaseBox} ${styles.fullWidthBlock}`}
                     >
-                      <strong>Eigenes Instagram-Professional-Konto · in Vorbereitung</strong>
-                      <ul className={styles.compactStatusList}>
-                        <li>Mandanten-, Token-, Webhook- und Analysegrenzen sind vorbereitet.</li>
-                        <li>Instagram Business Login und die echte Kontenauswahl sind noch nicht Ende-zu-Ende abgenommen.</li>
-                        <li>Bis dahin gibt es bewusst keinen wirkungslosen oder irreführenden Verbinden-Button.</li>
-                        <li>Consumer-Konten und vollständige Followerlisten werden nicht unterstützt.</li>
-                      </ul>
+                      <strong>Eigenes Instagram-Professional-Konto · Beta</strong>
+                      {instagramError ? (
+                        <p className={styles.modalNotice} role="alert">
+                          Die Instagram-Verbindung wurde nicht abgeschlossen. Es wurden keine fremden Kontodaten oder Meta-Rohinhalte gespeichert.
+                        </p>
+                      ) : null}
+                      {instagramConnection ? (
+                        <>
+                          <ul className={styles.compactStatusList}>
+                            <li>Verbundener Account: @{instagramConnection.account_name ?? "Name nicht verfügbar"}</li>
+                            <li>Verschlüsselter Zugriff serverseitig: {instagramConnection.has_access_token ? "ja" : "nein"}</li>
+                            <li>Berechtigungen: {instagramConnection.scopes?.length ?? 0}</li>
+                            <li>Inkrementeller Webhook: {instagramConnection.webhook_subscribed ? "aktiv" : "noch nicht aktiv"}</li>
+                            <li>Eigene Posts/Insights: als Workspace-Cache vorgesehen</li>
+                            <li>Chats: fortlaufend inkrementell; KI-Kontext je Stufe 50/100/150</li>
+                            <li>Persönliche fremde Posts: keine dauerhafte Kopie</li>
+                          </ul>
+                          <div className={styles.connectionCardActions}>
+                            <form action="/api/integrations/instagram/start" method="get">
+                              <input type="hidden" name="type" value="instagram_messages" />
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                DM-Zugriff prüfen
+                              </button>
+                            </form>
+                            <form action="/api/integrations/instagram/start" method="get">
+                              <input type="hidden" name="type" value="instagram_comments" />
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Kommentare freigeben
+                              </button>
+                            </form>
+                            <form action="/api/integrations/instagram/start" method="get">
+                              <input type="hidden" name="type" value="instagram_insights" />
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Insights freigeben
+                              </button>
+                            </form>
+                            <form action="/api/integrations/instagram/disconnect" method="post">
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Verbindung trennen
+                              </button>
+                            </form>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <ul className={styles.compactStatusList}>
+                            <li>Login erfolgt direkt bei Instagram; kein Passwort wird an FanMind übergeben.</li>
+                            <li>Unterstützt werden nur Professional-Konten.</li>
+                            <li>Eigene Posts/Insights werden gecacht; autorisierte Chats werden inkrementell gespeichert.</li>
+                            <li>Persönliche fremde Posts oder Profile werden nicht gespiegelt oder gescrapt.</li>
+                            <li>Vollständige Followerlisten und Consumer-Konten werden nicht unterstützt.</li>
+                            <li>Serverkonfiguration: {instagramOAuthConfigured ? "bereit" : "noch unvollständig"}</li>
+                          </ul>
+                          <div className={styles.connectionCardActions}>
+                            <form action="/api/integrations/instagram/start" method="get">
+                              <input type="hidden" name="type" value="instagram_messages" />
+                              <button
+                                type="submit"
+                                disabled={demoConnectionsDisabled || !instagramOAuthConfigured}
+                              >
+                                Eigenes Instagram-Konto verbinden
+                              </button>
+                            </form>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ) : null}
 
@@ -840,9 +916,10 @@ export function ChannelsGrid({
                         Verbindungen: {activeChannel.inputs.length} getrennte
                         Eingänge
                       </li>
-                      {activeChannel.key === "facebook" ? (
+                      {activeChannel.key === "facebook" || activeChannel.key === "instagram" ? (
                         <>
                           <li>Workspace-gebundener Meta-OAuth-Pilot vorhanden</li>
+                          <li>Cache und Chat-Sync bleiben bis Staging-/Rechtsabnahme gesperrt</li>
                           <li>Automatisches Senden bleibt deaktiviert</li>
                         </>
                       ) : (

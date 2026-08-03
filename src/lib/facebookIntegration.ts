@@ -8,6 +8,11 @@ import {
 } from "@/lib/facebookScopes";
 import { META_GRAPH_API_VERSION } from "@/lib/metaIntegrationPolicy.mjs";
 import {
+  normalizeFacebookPageSelectionPayload,
+  type FacebookPageSelectionConnectionType,
+  type FacebookPageSelectionPayload,
+} from "@/lib/facebookPageSelectionPolicy.mjs";
+import {
   createCipheriv,
   createDecipheriv,
   createHmac,
@@ -32,10 +37,7 @@ export type FacebookOAuthState = {
   userId: string;
   nonce: string;
   issuedAt: number;
-  connectionType?:
-    | "facebook_messages"
-    | "facebook_comments"
-    | "facebook_insights";
+  connectionType?: FacebookPageSelectionConnectionType;
 };
 
 export type FacebookPage = {
@@ -107,6 +109,36 @@ export function verifyFacebookOAuthState(
       return null;
     if (now - payload.issuedAt > STATE_MAX_AGE_SECONDS) return null;
     return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function createPendingFacebookPageSelection(input: {
+  workspaceId: string;
+  userId: string;
+  userAccessToken: string;
+  connectionType: FacebookPageSelectionConnectionType;
+}): string | null {
+  const payload: FacebookPageSelectionPayload = {
+    version: 1,
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    userAccessToken: input.userAccessToken,
+    connectionType: input.connectionType,
+    issuedAt: Math.floor(Date.now() / 1000),
+  };
+  return encryptToken(JSON.stringify(payload));
+}
+
+export function verifyPendingFacebookPageSelection(
+  encryptedPayload: string | null | undefined,
+): FacebookPageSelectionPayload | null {
+  if (!encryptedPayload) return null;
+  try {
+    const decrypted = decryptToken(encryptedPayload);
+    if (!decrypted) return null;
+    return normalizeFacebookPageSelectionPayload(JSON.parse(decrypted));
   } catch {
     return null;
   }
@@ -830,8 +862,9 @@ export async function fetchFacebookMessengerConversationMessages(
   conversationId: string,
   pageAccessToken: string,
   limit = 50,
+  since?: string | null,
 ): Promise<FacebookMessengerMessage[]> {
-  const targetLimit = Math.max(1, Math.min(limit, 50));
+  const targetLimit = Math.max(1, Math.min(limit, 150));
   const messages: FacebookMessengerMessage[] = [];
   const seenIds = new Set<string>();
   let fieldSetIndex = 0;
@@ -840,6 +873,7 @@ export async function fetchFacebookMessengerConversationMessages(
     pageAccessToken,
     targetLimit,
     FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS[fieldSetIndex],
+    since,
   ).toString();
 
   while (nextUrl && messages.length < targetLimit) {
@@ -870,6 +904,7 @@ export async function fetchFacebookMessengerConversationMessages(
           pageAccessToken,
           targetLimit,
           fallbackFields,
+          since,
         ).toString();
         continue;
       }
@@ -907,12 +942,20 @@ function buildFacebookMessengerMessagesUrl(
   pageAccessToken: string,
   limit: number,
   fields: string,
+  since?: string | null,
 ): URL {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(conversationId)}/messages`,
   );
   url.searchParams.set("fields", fields);
   url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 50))));
+  const sinceTimestamp = since ? Date.parse(since) : Number.NaN;
+  if (Number.isFinite(sinceTimestamp)) {
+    url.searchParams.set(
+      "since",
+      String(Math.max(0, Math.floor(sinceTimestamp / 1_000) - 300)),
+    );
+  }
   url.searchParams.set("access_token", pageAccessToken);
   return url;
 }
@@ -1418,6 +1461,11 @@ export const FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS = [
   "messages",
   "message_echoes",
 ] as const;
+export const FACEBOOK_PAGE_COMMENT_WEBHOOK_FIELDS = ["feed"] as const;
+export type FacebookPageWebhookField =
+  | "feed"
+  | "messages"
+  | "message_echoes";
 
 export type FacebookPageWebhookStatus = {
   ok: boolean;
@@ -1505,13 +1553,27 @@ export async function fetchFacebookPageWebhookStatus(
 export async function subscribeFacebookPage(
   pageId: string,
   pageAccessToken: string,
+  requestedFields: readonly FacebookPageWebhookField[] =
+    FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS,
 ): Promise<FacebookPageWebhookStatus> {
+  const currentStatus = await fetchFacebookPageWebhookStatus(
+    pageId,
+    pageAccessToken,
+  );
+  const subscribedFields = new Set<FacebookPageWebhookField>(requestedFields);
+  for (const field of [
+    "feed",
+    "messages",
+    "message_echoes",
+  ] as const) {
+    if (currentStatus.fields[field] === "active") subscribedFields.add(field);
+  }
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${pageId}/subscribed_apps`,
   );
   url.searchParams.set(
     "subscribed_fields",
-    FACEBOOK_PAGE_MESSENGER_WEBHOOK_FIELDS.join(","),
+    [...subscribedFields].join(","),
   );
   url.searchParams.set("access_token", pageAccessToken);
   const response = await fetch(url, { method: "POST", cache: "no-store" });

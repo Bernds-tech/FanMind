@@ -1,6 +1,6 @@
 # Entscheidungsvorlage für KI Standard, Plus und Ultra
 
-Stand: 2. August 2026
+Stand: 3. August 2026
 
 ## Zweck und Status
 
@@ -36,7 +36,7 @@ serverseitigen Konfiguration hinterlegt.
 | Freigegebene Modellklasse | UNENTSCHIEDEN | UNENTSCHIEDEN | UNENTSCHIEDEN |
 | Vertragskontingent Anfragen/Monat | UNENTSCHIEDEN | UNENTSCHIEDEN | UNENTSCHIEDEN |
 | Vertragskontingent Tokens/Monat | UNENTSCHIEDEN | UNENTSCHIEDEN | UNENTSCHIEDEN |
-| Gesprächskontext in Nachrichten | UNENTSCHIEDEN | UNENTSCHIEDEN | UNENTSCHIEDEN |
+| Gesprächskontext in Nachrichten | 50 | 100 | 150 |
 | Verhalten bei 80 % | UNENTSCHIEDEN | UNENTSCHIEDEN | UNENTSCHIEDEN |
 | Verhalten bei 100 % | UNENTSCHIEDEN | UNENTSCHIEDEN | UNENTSCHIEDEN |
 | Nachberechnung/Overage | UNENTSCHIEDEN | UNENTSCHIEDEN | UNENTSCHIEDEN |
@@ -55,7 +55,7 @@ datierte, rechnerisch prüfbare Arbeitsempfehlung vor. Sie ersetzt keinen
 | Modellklasse | effizient / hohes Volumen | ausgewogen | Frontier |
 | Anfragen/Monat | 750 | 1.500 | 2.000 |
 | Tokens/Monat | 3.000.000 | 6.000.000 | 8.000.000 |
-| Gesprächskontext | 20 Nachrichten | 50 Nachrichten | 100 Nachrichten |
+| Gesprächskontext | 50 Nachrichten | 100 Nachrichten | 150 Nachrichten |
 | Verhalten bei 80 % | Workspace-Hinweis + Admin-Warnung | Workspace-Hinweis + Admin-Warnung | Workspace-Hinweis + Admin-Warnung |
 | Verhalten bei 100 % | fail-closed bis Monatsreset | fail-closed bis Monatsreset | fail-closed bis Monatsreset |
 | Nachberechnung/Overage | keine automatische Nachberechnung | keine automatische Nachberechnung | keine automatische Nachberechnung |
@@ -97,9 +97,11 @@ beschlossen sein:
 3. Reale Kostenmessung aus `ai_usage_events` auswerten.
 4. Die nicht aktivierende Arbeitsmatrix mit realen Median-/P90-/P95-Werten
    und dem repräsentativen, verblindeten Qualitäts-Eval aus
-   `AI_REPLY_QUALITY_EVAL.md` prüfen.
-5. Monatskontingente und Kontextgrenzen mit mindestens 30 Prozent
-   Kostenpuffer beschließen.
+   `AI_REPLY_QUALITY_EVAL.md` prüfen. Die am 3. August 2026 beschlossene
+   50/100/150-Kontextstaffel ist davon ausgenommen und bereits in der zentralen
+   Policy verankert; sie aktiviert Plus oder Ultra nicht.
+5. Monatskontingente mit mindestens 30 Prozent Kostenpuffer beschließen und
+   die bereits festgelegten Kontextgrenzen in Staging belasten.
 6. Verhalten bei 80 % und 100 % sowie Overage festlegen.
 7. Upgrade-, Downgrade-, Kündigungs- und Prorationsregeln beschließen.
 8. Rechtliche, steuerliche und öffentliche Texte prüfen.

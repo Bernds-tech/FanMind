@@ -1,18 +1,27 @@
+import {
+  AI_MAX_CONTEXT_MESSAGE_LIMIT,
+  AI_TIER_CONTEXT_MESSAGE_LIMITS,
+} from "../config/aiTiers.mjs";
+
 export const AI_ANALYSIS_RATE_LIMIT_MAX = 10;
 export const AI_ANALYSIS_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-export const AI_ANALYSIS_INPUT_CHAR_LIMIT = 40_000;
+export const AI_ANALYSIS_INPUT_CHAR_LIMIT = 100_000;
 export const AI_ANALYSIS_OUTPUT_TOKEN_LIMIT = 2_048;
-export const AI_ANALYSIS_MESSAGE_ROW_LIMIT = 50;
+export const AI_ANALYSIS_MESSAGE_ROW_LIMIT =
+  AI_TIER_CONTEXT_MESSAGE_LIMITS.standard;
+export const AI_ANALYSIS_MAX_MESSAGE_ROW_LIMIT =
+  AI_MAX_CONTEXT_MESSAGE_LIMIT;
 export const AI_ANALYSIS_MEMORY_ROW_LIMIT = 20;
 export const AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT = 12_000;
-export const AI_REPLY_INPUT_CHAR_LIMIT = 40_000;
+export const AI_REPLY_INPUT_CHAR_LIMIT = 80_000;
 export const AI_REPLY_OUTPUT_TOKEN_LIMIT = 2_048;
 export const AI_REPLY_RESPONSE_MODE_CHAR_LIMIT = 80;
 export const AI_REPLY_COMPANY_PROMPT_CHAR_LIMIT = 3_000;
 export const AI_REPLY_PROMPT_PROFILE_NAME_CHAR_LIMIT = 80;
 export const AI_REPLY_PROMPT_PROFILE_CHAR_LIMIT = 1_500;
 
-const AI_ANALYSIS_MESSAGE_CONTEXT_CHAR_LIMIT = 21_000;
+const AI_ANALYSIS_MESSAGE_CONTEXT_CHAR_LIMIT_PER_50_MESSAGES = 21_000;
+const AI_REPLY_CONVERSATION_CONTEXT_CHAR_LIMIT_PER_50_MESSAGES = 12_000;
 const AI_ANALYSIS_MEMORY_CONTEXT_CHAR_LIMIT = 7_000;
 const AI_ANALYSIS_CONTACT_CONTEXT_CHAR_LIMIT = 7_000;
 
@@ -180,13 +189,33 @@ function normalizeMemory(memory) {
   };
 }
 
-function fitRecentMessages(messages) {
+function normalizeMessageLimit(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return AI_ANALYSIS_MESSAGE_ROW_LIMIT;
+  return Math.max(
+    1,
+    Math.min(AI_ANALYSIS_MAX_MESSAGE_ROW_LIMIT, Math.trunc(number)),
+  );
+}
+
+function scaledContextCharLimit(baseLimit, messageLimit) {
+  return Math.round(
+    baseLimit * (normalizeMessageLimit(messageLimit) / 50),
+  );
+}
+
+function fitRecentMessages(messages, messageLimit) {
+  const normalizedMessageLimit = normalizeMessageLimit(messageLimit);
   const bounded = (Array.isArray(messages) ? messages : [])
-    .slice(-AI_ANALYSIS_MESSAGE_ROW_LIMIT)
+    .slice(-normalizedMessageLimit)
     .map(normalizeMessage);
 
   while (
-    serializedChars(bounded) > AI_ANALYSIS_MESSAGE_CONTEXT_CHAR_LIMIT &&
+    serializedChars(bounded) >
+      scaledContextCharLimit(
+        AI_ANALYSIS_MESSAGE_CONTEXT_CHAR_LIMIT_PER_50_MESSAGES,
+        normalizedMessageLimit,
+      ) &&
     bounded.length
   ) {
     bounded.shift();
@@ -225,7 +254,7 @@ export function buildBoundedFanAnalysisPayload(input) {
       ),
     contact: fitContactContext(input?.contact),
     contactKnowledge: fitRecentMemories(input?.contactKnowledge),
-    messages: fitRecentMessages(input?.messages),
+    messages: fitRecentMessages(input?.messages, input?.messageLimit),
   };
   const inputChars = serializedChars(payload);
 
@@ -253,10 +282,13 @@ export function buildBoundedReplySuggestionContext(input) {
     status: normalizeNullableText(input?.status, TEXT_LIMITS.status),
     tags: normalizeTags(input?.tags),
     summary: normalizeNullableText(input?.summary, TEXT_LIMITS.summary),
-    pastedChatContext:
-      typeof input?.pastedChatContext === "string"
-        ? input.pastedChatContext
-        : "",
+    conversationContext: normalizeText(
+      input?.conversationContext,
+      scaledContextCharLimit(
+        AI_REPLY_CONVERSATION_CONTEXT_CHAR_LIMIT_PER_50_MESSAGES,
+        input?.messageLimit,
+      ),
+    ),
     incomingMessage:
       typeof input?.incomingMessage === "string" ? input.incomingMessage : "",
     responseMode:

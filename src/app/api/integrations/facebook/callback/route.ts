@@ -1,26 +1,21 @@
 import { revalidatePath } from "next/cache";
+import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
+import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import {
-  encryptToken,
+  createPendingFacebookPageSelection,
   exchangeFacebookCode,
-  isTokenEncryptionConfigured,
-  fetchFacebookGrantedPermissions,
-  getFacebookGrantedScopeNames,
-  fetchFacebookPages,
-  getGrantedFacebookPermissionNames,
-  hasRequiredFacebookPagePermissions,
-  hasFacebookCommentFeedScopes,
-  hasFacebookInsightsScopes,
-  subscribeFacebookPage,
-  fetchFacebookTokenDiagnostics,
-  tokenLastFour,
   verifyFacebookOAuthState,
 } from "@/lib/facebookIntegration";
+import {
+  FACEBOOK_PAGE_SELECTION_COOKIE,
+  FACEBOOK_PAGE_SELECTION_MAX_AGE_SECONDS,
+} from "@/lib/facebookPageSelectionPolicy.mjs";
+import { completeFacebookOAuthConnection } from "@/lib/facebookConnectionFlow";
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
-  upsertFacebookSocialConnection,
 } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -47,125 +42,60 @@ export async function GET(request: Request) {
   if (!canManageMetaConnections(workspaceResult.workspace.role)) {
     return redirectToChannels(appOrigin, "facebook_error=role");
   }
+  if (areDemoConnectionsDisabled(data.user, workspaceResult.workspace)) {
+    return redirectToChannels(appOrigin, "facebook_error=demo_disabled");
+  }
 
   try {
     const userToken = await exchangeFacebookCode(code);
-    const permissions = await fetchFacebookGrantedPermissions(userToken);
-    const userTokenDiagnostics = await fetchFacebookTokenDiagnostics(userToken);
-    const grantedPermissionNames = getGrantedFacebookPermissionNames(permissions);
-    const isCommentConnection = state.connectionType === "facebook_comments";
-    const isInsightsConnection = state.connectionType === "facebook_insights";
-    if (
-      !isCommentConnection &&
-      !isInsightsConnection &&
-      !hasRequiredFacebookPagePermissions(permissions)
-    ) {
-      console.warn("Facebook callback missing required Messenger page permissions");
-      return redirectToChannels(appOrigin, "facebook_error=page_permissions&type=facebook_messages");
-    }
-    if (isCommentConnection && !hasFacebookCommentFeedScopes(grantedPermissionNames)) {
-      console.warn("Facebook callback missing required comment page permissions");
-      return redirectToChannels(appOrigin, "facebook_error=comment_review&type=facebook_comments");
-    }
-    if (
-      isInsightsConnection &&
-      !hasFacebookInsightsScopes(grantedPermissionNames)
-    ) {
-      console.warn("Facebook callback missing required insights permissions");
-      return redirectToChannels(
-        appOrigin,
-        "facebook_error=insights_review&type=facebook_insights",
-      );
-    }
-
-    const pages = await fetchFacebookPages(userToken);
-    if (pages.length > 1) {
-      console.warn("Facebook callback requires explicit page selection", {
-        pageCount: pages.length,
-      });
-      return redirectToChannels(
-        appOrigin,
-        "facebook_error=page_selection_required",
-      );
-    }
-    const page = pages[0];
-    if (!page) {
-      console.warn("Facebook callback did not receive a manageable page", {
-        pageCount: pages.length,
-      });
-      return redirectToChannels(appOrigin, "facebook_error=no_page");
-    }
-
-    if (!page.accessToken) {
-      console.warn(
-        "Facebook callback received a page without page access token",
-      );
-      return redirectToChannels(appOrigin, "facebook_error=no_page_token");
-    }
-
-    if (page.accessToken && !isTokenEncryptionConfigured()) {
-      return redirectToChannels(appOrigin, "facebook_error=encryption");
-    }
-
-    const encryptedToken = page.accessToken
-      ? encryptToken(page.accessToken)
-      : null;
-
-    if (page.accessToken && !encryptedToken) {
-      return redirectToChannels(appOrigin, "facebook_error=encryption");
-    }
-
-    const pageTokenDiagnostics = page.accessToken
-      ? await fetchFacebookTokenDiagnostics(page.accessToken)
-      : null;
-    const grantedScopes = mergeScopes(
-      grantedPermissionNames,
-      getFacebookGrantedScopeNames(userTokenDiagnostics),
-      getFacebookGrantedScopeNames(pageTokenDiagnostics),
-      page.scopes,
-    );
-
-    const webhookStatus = page.accessToken && !isInsightsConnection
-      ? await subscribeFacebookPage(page.id, page.accessToken).catch(
-          () => null,
-        )
-      : null;
-    const webhookSubscribed = Boolean(webhookStatus?.ok);
-
-    const result = await upsertFacebookSocialConnection({
+    const connectionType =
+      state.connectionType ?? "facebook_messages";
+    const result = await completeFacebookOAuthConnection({
       workspaceId: state.workspaceId,
       connectedBy: data.user.id,
-      externalAccountId: page.id,
-      externalAccountName: page.name,
-      pageId: page.id,
-      pageName: page.name,
-      pageAccessTokenEncrypted: encryptedToken,
-      tokenLastFour: encryptedToken ? tokenLastFour(page.accessToken) : null,
-      scopes: grantedScopes,
-      webhookSubscribed,
+      connectionType,
+      userAccessToken: userToken,
     });
 
-    if (result.error) {
-      console.error("Facebook social connection save failed", {
-        code: "facebook_connection_save_failed",
-        workspaceIdPresent: Boolean(state.workspaceId),
-        pageIdPresent: Boolean(page.id),
-        pageNamePresent: Boolean(page.name),
-        hasEncryptedToken: Boolean(encryptedToken),
-        webhookSubscribed,
+    if (!result.ok && result.errorCode === "page_selection_required") {
+      const pendingSelection = createPendingFacebookPageSelection({
+        workspaceId: state.workspaceId,
+        userId: data.user.id,
+        userAccessToken: userToken,
+        connectionType,
       });
-      return redirectToChannels(appOrigin, "facebook_error=save");
+      if (!pendingSelection) {
+        return redirectToChannels(appOrigin, "facebook_error=encryption");
+      }
+      const response = NextResponse.redirect(
+        new URL("/channels/facebook/select", appOrigin),
+        302,
+      );
+      response.cookies.set(
+        FACEBOOK_PAGE_SELECTION_COOKIE,
+        pendingSelection,
+        {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: appOrigin.startsWith("https://"),
+          path: "/",
+          maxAge: FACEBOOK_PAGE_SELECTION_MAX_AGE_SECONDS,
+          priority: "high",
+        },
+      );
+      return response;
     }
+    if (!result.ok) {
+      return redirectToChannels(
+        appOrigin,
+        `facebook_error=${result.errorCode}&type=${connectionType}`,
+      );
+    }
+
     revalidatePath("/channels");
     return redirectToChannels(
       appOrigin,
-      `connected=${
-        isCommentConnection
-          ? "facebook_comments"
-          : isInsightsConnection
-            ? "facebook_insights"
-            : "facebook_messages"
-      }`,
+      `connected=${result.connectedType}`,
     );
   } catch {
     console.error("Facebook OAuth callback failed", {
@@ -173,10 +103,6 @@ export async function GET(request: Request) {
     });
     return redirectToChannels(appOrigin, "facebook_error=callback");
   }
-}
-
-function mergeScopes(...scopeGroups: Array<string[] | null | undefined>): string[] {
-  return [...new Set(scopeGroups.flatMap((scopes) => scopes ?? []))].sort();
 }
 
 function redirectToChannels(appOrigin: string, query: string): Response {

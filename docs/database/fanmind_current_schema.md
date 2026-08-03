@@ -471,12 +471,16 @@ Wichtige Felder:
 - `conversation_analysis_enabled`
 - `user_voice_analysis_enabled`
 - `content_insights_enabled`
+- `meta_sync_mode` (fest `incremental_cache`)
+- `personal_content_retention_days` (fest `0`; keine Spiegelung persönlicher
+  fremder Posts/Profile)
 - `legal_basis_status`
 - `transparency_status`
 - `data_processing_agreement_status`
 - `retention_status`
 - `data_subject_rights_status`
 - `message_retention_days`
+- `content_cache_retention_days`
 - `analysis_retention_days`
 - `confirmed_by`
 - `confirmed_at`
@@ -486,7 +490,9 @@ RLS-/Security-Erwartung:
 - alle Analysearten standardmäßig `false`;
 - Lesen nur im eigenen Workspace, Schreiben ausschließlich serverseitig nach
   Owner-/Admin-Prüfung;
-- Aktivierung nur bei fünf bestätigten Rechts-/Datenschutzkontrollen und
+- Aktivierung nur im inkrementellen Cache-/Chat-Modus ohne gespiegelte
+  persönliche Fremdprofile sowie bei fünf
+  bestätigten Rechts-/Datenschutzkontrollen und
   dokumentierter bestätigender Person samt Zeitpunkt.
 
 ### `communication_analysis_reports` (Migration vorbereitet)
@@ -500,87 +506,73 @@ Wichtige Felder:
 - `conversation_id`
 - `contact_id`
 - `report_json`
-- `source_message_count`
-- `source_from_at`
-- `source_to_at`
-- `confidence_score`
-- `review_status`
-- `reviewed_by`
-- `reviewed_at`
-- `model`
-- `generated_at`
+- `source_message_count` (0 bis 150; abhängig von der serverseitig
+  freigegebenen KI-Stufe)
+- `source_from_at`, `source_to_at`
+- `confidence_score`, `review_status`
+- `reviewed_by`, `reviewed_at`
+- `model`, `generated_at`
 
 RLS-/Security-Erwartung:
 
-- Lesen nur im eigenen Workspace; Mutation serverseitig;
-- keine sensiblen oder diagnostischen Ableitungen;
-- korrigierbar, verwerfbar und löschbar.
+- Lesen nur im eigenen Workspace; Mutation ausschließlich serverseitig.
+- Keine sensiblen oder diagnostischen Ableitungen.
+- Korrigierbar, verwerfbar und löschbar.
 
 ### `content_sources`
 
-Zweck: ein eigener Facebook-/Instagram-Post, Reel oder ein anderes
-unterstütztes Content-Objekt als stabiler Bezug für Gespräche und Metriken.
+Zweck: Workspace-gebundener Cache eigener Posts, Reels und Videos des
+verbundenen Business-/Creator-Kontos.
 
 Wichtige Felder:
 
 - `workspace_id`
-- `social_connection_id`
 - `source_platform`
 - `source_type`
-- `external_account_id`
 - `external_source_id`
 - `external_post_id`
 - `external_video_id`
-- `media_type`
-- `content_format`
-- `campaign_label`
 - `title`
 - `summary`
 - `caption_excerpt`
 - `permalink_url`
 - `published_at`
 - `metadata`
+- `social_connection_id`
+- `external_account_id`
+- `media_type`
+- `content_format`
+- `campaign_label`
 
 RLS-/Security-Erwartung:
 
-- Lesen nur im eigenen Workspace; importierte Content-Objekte werden
-  ausschließlich serverseitig geschrieben;
+- Lesen nur im eigenen Workspace; Schreiben ausschließlich serverseitig;
 - keine Tokens, Login-Daten oder unnötigen privaten Profildaten in `metadata`;
 - jeder Conversation-/Fan-Kontext bleibt am konkreten Post/Thread statt an
   einer vermischten Social-Sammlung.
-- Zusammengesetzte Fremdschlüssel erzwingen denselben Workspace für
-  Verbindung, Content, Kontakt und Conversation.
+- persönliche fremde Posts/Profile werden nicht in dieser Tabelle gespiegelt.
 
 ### `content_metric_snapshots` (Migration vorbereitet)
 
-Zweck: normalisierte, zeitbezogene Snapshots für Reichweiten- und
-Postinganalysen eigener verbundener Meta-Konten.
+Zweck: versionierte, aggregierte Reichweiten- und Interaktionswerte für eigene
+gecachte Inhalte, damit Veränderungen ohne vollständigen Neuabruf vergleichbar
+bleiben.
 
 Wichtige Felder:
 
-- `workspace_id`
-- `social_connection_id`
-- `content_source_id`
-- `platform`
-- `external_account_id`
-- `external_content_id`
-- `measurement_window`
+- `workspace_id`, `social_connection_id`, `content_source_id`
+- `platform`, `external_account_id`, `external_content_id`
 - `reach`, `impressions`, `views`, `plays`
 - `likes`, `comments`, `shares`, `saves`
 - `link_clicks`, `profile_visits`, `follows`
-- `direct_messages`, `new_contacts`
-- `paid_reach`, `paid_impressions`
-- `source_metric_names`
-- `metric_payload_version`
-- `captured_at`
+- `direct_messages`, `new_contacts`, `paid_reach`, `paid_impressions`
+- `source_metric_names`, `metric_payload_version`, `captured_at`
 
 RLS-/Security-Erwartung:
 
-- Lesen nur im eigenen Workspace, Schreiben ausschließlich serverseitig;
-- unbekannte, negative oder nicht numerische Metriken nicht speichern;
-- organische und bezahlte Werte getrennt auswerten;
-- keine vollständige Followerliste oder personenbezogene Reichweitenwerte
-  vortäuschen.
+- Lesen nur im eigenen Workspace; Schreiben ausschließlich serverseitig.
+- Nur erlaubte nicht-negative Metriken; keine Followerlisten oder persönlichen
+  Fremdprofile.
 
 ## 6. Reply Targets / Originalkanal-Kontext
 

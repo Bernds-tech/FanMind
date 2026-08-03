@@ -45,13 +45,13 @@ Kanal-Syncs liefern ein einheitliches Ergebnis:
 - `syncLimit`
 - `lastSyncAt`
 
-Facebook Messenger nutzt 50 Nachrichten je Conversation als Standardlimit. Vorbereitete Kanäle zeigen keine Fake-Zahlen; wenn kein echter Sync existiert, steht im Status „vorbereitet“, „nicht verfügbar“ oder „API-/Freigabe erforderlich“.
+Facebook Messenger lädt beim ersten Abgleich höchstens 150 aktuelle Nachrichten je Conversation. Danach werden nur neue Ereignisse mit kleinem Sicherheitsüberlapp abgerufen und über externe IDs dedupliziert. Vorbereitete Kanäle zeigen keine Fake-Zahlen; wenn kein echter Sync existiert, steht im Status „vorbereitet“, „nicht verfügbar“ oder „API-/Freigabe erforderlich“.
 
 ## Kanalstatus
 
 Die zentrale Konfiguration in `src/lib/channelSources.ts` beschreibt pro Kanal Fähigkeiten und Status. Mindeststand:
 
-- `facebook_messages`: live, inbound/outbound/media/history-sync, 50er Sync-Limit, kein automatisches Senden.
+- `facebook_messages`: live, inbound/outbound/media/history-sync, 150er Erstabruf und danach inkrementell, kein automatisches Senden.
 - `facebook_comments`: geparkt/vorbereitet, kein Live-Test in diesem PR.
 - `instagram_messages` und `instagram_comments`: vorbereitet, API-/Freigabe erforderlich.
 - `whatsapp_messages`: vorbereitet, Cloud-API-Konfiguration später.
@@ -66,7 +66,7 @@ Vor Änderungen an Intake oder UI prüfen:
 1. inbound Text-DM wird gespeichert.
 2. inbound Bild-DM wird mit Attachment sichtbar.
 3. outbound Page-Antwort wird über Messenger-Verlauf-Sync importiert.
-4. Sync liest bis zu 50 Nachrichten je Conversation.
+4. Erster Sync liest bis zu 150 aktuelle Nachrichten je Conversation; Folgesyncs nur neue Ereignisse.
 5. Deduplikation über externe IDs bleibt aktiv.
 6. Dashboard/Fans-Unread zählen nur inbound ungesehen.
 7. Fan-Detail zeigt Richtung, Kanal, Ursprung und Medien korrekt.

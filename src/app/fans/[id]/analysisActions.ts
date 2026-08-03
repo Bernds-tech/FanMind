@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getAiTierConfig } from "@/config/aiTiers.mjs";
 import {
   AI_ANALYSIS_MEMORY_ROW_LIMIT,
   AI_ANALYSIS_MESSAGE_ROW_LIMIT,
@@ -16,9 +17,11 @@ import {
   getRecentContactConversationMessages,
   getRecentContactMemories,
   getWorkspaceAnalysisCapabilityStatus,
+  deleteContactAnalysisProfiles,
   upsertFanAnalysisReport,
 } from "@/lib/supabase/server";
 import { requireContactInAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+import { getResolvedWorkspaceAiTier } from "@/lib/workspaceAiTierEntitlements";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const ANALYSIS_TIMEOUT_MS = 25_000;
@@ -50,6 +53,40 @@ export type FanAnalysisActionState = {
     updated_at?: string | null;
   } | null;
 };
+
+export async function deleteFanCommunicationProfile(
+  _previousState: FanAnalysisActionState,
+  formData: FormData,
+): Promise<FanAnalysisActionState> {
+  const contactId = formValue(formData, "contact_id");
+  const locale = formValue(formData, "locale") === "en" ? "en" : "de";
+  if (!contactId) return { ok: false, message: "Kontakt fehlt." };
+
+  const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const result = await deleteContactAnalysisProfiles({
+    workspaceId: workspace.id,
+    contactId,
+  });
+  if (result.error) {
+    return {
+      ok: false,
+      message:
+        locale === "en"
+          ? "The derived communication profile could not be deleted completely."
+          : "Das abgeleitete Kommunikationsprofil konnte nicht vollständig gelöscht werden.",
+    };
+  }
+
+  revalidatePath(`/fans/${contactId}`);
+  return {
+    ok: true,
+    message:
+      locale === "en"
+        ? "The derived communication profile was deleted. Stored chat history was not changed."
+        : "Das abgeleitete Kommunikationsprofil wurde gelöscht. Der gespeicherte Chatverlauf blieb unverändert.",
+    report: null,
+  };
+}
 
 type OpenAiResponse = {
   output_text?: string;
@@ -321,11 +358,16 @@ export async function analyzeFanCommunication(
     };
   }
 
+  const resolvedTier = await getResolvedWorkspaceAiTier(workspace.id);
+  const contextMessageLimit =
+    getAiTierConfig(resolvedTier.entitlement.effectiveTierId)
+      .contextMessageLimit ?? AI_ANALYSIS_MESSAGE_ROW_LIMIT;
+
   const [messagesResult, memoriesResult] = await Promise.all([
     getRecentContactConversationMessages(
       workspace.id,
       contactId,
-      AI_ANALYSIS_MESSAGE_ROW_LIMIT,
+      contextMessageLimit,
     ),
     getRecentContactMemories(
       workspace.id,
@@ -384,6 +426,7 @@ export async function analyzeFanCommunication(
         mediaPresent: Boolean(message.attachments?.length),
         createdAt: message.created_at,
       })),
+      messageLimit: contextMessageLimit,
     });
   } catch {
     return {

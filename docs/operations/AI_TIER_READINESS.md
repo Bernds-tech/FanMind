@@ -100,6 +100,10 @@ oder nicht automatisch buchbar führt.
 
 Die Prüfung gibt ausschließlich feste Codes aus:
 
+`context_message_limit` bleibt als generischer Fail-closed-Code erhalten. Die
+aktuelle zentrale Policy erfüllt diesen Punkt bereits mit 50/100/150; daraus
+folgt allein keine Plus-/Ultra-Aktivierung.
+
 - `public_status`
 - `billing_status`
 - `booking_flag`

@@ -6,6 +6,7 @@ import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import {
   analyzeFanCommunication,
+  deleteFanCommunicationProfile,
   type FanAnalysisActionState,
 } from "./analysisActions";
 import styles from "./fan-detail.module.css";
@@ -46,6 +47,10 @@ export function FanAnalysisReport({
     analyzeFanCommunication,
     initialState,
   );
+  const [deleteState, deleteAction, deletePending] = useActionState(
+    deleteFanCommunicationProfile,
+    initialState,
+  );
   const report = state.report ?? initialReport;
   const effectiveMessageCount = report?.source_message_count ?? storedMessageCount;
   const reportSections = buildStoredReportSections(report, locale);
@@ -56,6 +61,10 @@ export function FanAnalysisReport({
   useEffect(() => {
     if (state.ok) router.refresh();
   }, [router, state.ok, state.generatedAt]);
+
+  useEffect(() => {
+    if (deleteState.ok) router.refresh();
+  }, [deleteState.ok, router]);
 
   return (
     <article className={styles.card}>
@@ -145,6 +154,36 @@ export function FanAnalysisReport({
           </p>
         ) : null}
       </div>
+
+      {report ? (
+        <form action={deleteAction} className={polishStyles.analysisForm}>
+          <input name="contact_id" type="hidden" value={contactId} />
+          <input name="locale" type="hidden" value={locale} />
+          <p className={styles.reportSafetyNote}>
+            {locale === "en"
+              ? "Delete only the derived profile; the authorized chat history remains available in its thread."
+              : "Löscht nur das abgeleitete Profil; der autorisierte Chatverlauf bleibt im jeweiligen Thread erhalten."}
+          </p>
+          <button
+            className={dashboardStyles.secondaryButton}
+            disabled={deletePending}
+            type="submit"
+          >
+            {deletePending
+              ? locale === "en"
+                ? "Deleting profile…"
+                : "Profil wird gelöscht…"
+              : locale === "en"
+                ? "Delete communication profile"
+                : "Kommunikationsprofil löschen"}
+          </button>
+          {deleteState.message ? (
+            <p className={deleteState.ok ? styles.safeNotice : dashboardStyles.error}>
+              {deleteState.message}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
 
       {loadError ? (
         <p className={dashboardStyles.error}>

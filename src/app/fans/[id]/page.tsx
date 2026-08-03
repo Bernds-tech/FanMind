@@ -2,9 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
-  getContactAiProfile,
   getContactConversationMessages,
-  getConversationSummary,
   getContactFollowups,
   getContactMemories,
   getContactReplyTarget,
@@ -15,20 +13,16 @@ import {
   getWorkspaceSocialConnections,
   getWorkspaceConversations,
   getWorkspaceOpenFollowups,
-  getWorkspaceVoiceProfile,
   markContactInboundMessagesSeen,
   signOutSupabaseServerSession,
-  type ContactAiProfileRow,
   type ContactReplyTargetRow,
   type ContactRow,
-  type ConversationSummaryRow,
   type ConversationMessageRow,
   type ConversationRow,
   type FanAnalysisReportRow,
   type FollowupRow,
   type MemoryRow,
   type WorkspaceDashboardRow,
-  type WorkspaceVoiceProfileRow,
 } from "@/lib/supabase/server";
 import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 import { isOpenFollowupStatus } from "@/lib/followupStatus";
@@ -91,11 +85,8 @@ type FanDetailWorkspaceProps = {
   openFollowupCount: number;
   dueFollowupCount: number;
   notice?: string;
-  conversationSummary: ConversationSummaryRow | null;
-  contactAiProfile: ContactAiProfileRow | null;
   fanAnalysisReport: FanAnalysisReportRow | null;
   fanAnalysisReportError?: string;
-  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
@@ -173,11 +164,8 @@ function FanDetailWorkspace({
   openFollowupCount,
   dueFollowupCount,
   notice,
-  conversationSummary,
-  contactAiProfile,
   fanAnalysisReport,
   fanAnalysisReportError,
-  workspaceVoiceProfile,
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
@@ -246,11 +234,8 @@ function FanDetailWorkspace({
             messagesError={messagesError}
             conversation={conversation}
             conversationsError={conversationsError}
-            conversationSummary={conversationSummary}
-            contactAiProfile={contactAiProfile}
             fanAnalysisReport={fanAnalysisReport}
             fanAnalysisReportError={fanAnalysisReportError}
-            workspaceVoiceProfile={workspaceVoiceProfile}
             activeChannel={activeChannel}
             activeSource={activeSource}
             facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
@@ -279,11 +264,8 @@ function FanDetailContent({
   messagesError,
   conversation,
   conversationsError,
-  conversationSummary,
-  contactAiProfile,
   fanAnalysisReport,
   fanAnalysisReportError,
-  workspaceVoiceProfile,
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
@@ -303,11 +285,8 @@ function FanDetailContent({
   messagesError?: string;
   conversation: ConversationRow | null;
   conversationsError?: string;
-  conversationSummary: ConversationSummaryRow | null;
-  contactAiProfile: ContactAiProfileRow | null;
   fanAnalysisReport: FanAnalysisReportRow | null;
   fanAnalysisReportError?: string;
-  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null;
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
@@ -531,7 +510,7 @@ function FanDetailContent({
                       ? formatDate(facebookMessengerLastSyncedAt)
                       : "noch nicht"}
                   </strong>{" "}
-                  · bis zu 50 Nachrichten je Conversation.
+                  · Erstabgleich bis zu 150, danach nur neue Nachrichten.
                 </p>
                 {demoConnectionsDisabled ? (
                   <button
@@ -624,14 +603,7 @@ function FanDetailContent({
               displayName: contact.display_name,
               handle: contact.handle,
               sourcePlatform: contact.source_platform,
-              storedConversationContext: buildAiMessageContext(
-                messages,
-                conversationSummary,
-                contactAiProfile,
-                workspaceVoiceProfile,
-              ),
               latestInboundMessage: getLatestInboundMessage(messages),
-              analysisReport: stringifyAnalysisReport(fanAnalysisReport),
               language: contact.language,
               status: contact.status,
               tags: contact.tags,
@@ -1465,10 +1437,6 @@ function getLatestInboundMessage(messages: ConversationMessageRow[]): string {
   );
 }
 
-function stringifyAnalysisReport(report: FanAnalysisReportRow | null): string {
-  return report ? JSON.stringify(report.report_json) : "";
-}
-
 function getOriginalChannelButtonLabel(
   action: ReplyTargetAction,
   messages: ConversationMessageRow[],
@@ -1546,49 +1514,6 @@ function getAttachmentIcon(type: string): string {
   );
 }
 
-function formatAiMessageText(message: ConversationMessageRow): string {
-  const text = message.content || message.original_text_excerpt || "";
-  if (!message.attachments?.length) return text;
-  const hasImage = message.attachments.some(
-    (attachment) => attachment.type === "image",
-  );
-  const mediaContext = hasImage
-    ? "Der Fan hat ein Bild gesendet."
-    : `Der Fan hat ${message.attachments.length === 1 ? "einen Anhang" : "Anhänge"} gesendet.`;
-  return text ? `${mediaContext} Begleittext: ${text}` : mediaContext;
-}
-
-function buildAiMessageContext(
-  messages: ConversationMessageRow[],
-  conversationSummary: ConversationSummaryRow | null,
-  contactAiProfile: ContactAiProfileRow | null,
-  workspaceVoiceProfile: WorkspaceVoiceProfileRow | null,
-): string {
-  const profileContext = [
-    conversationSummary?.summary
-      ? `Conversation Summary: ${conversationSummary.summary}`
-      : "",
-    contactAiProfile
-      ? `Fan-Profil: Sprache ${contactAiProfile.language ?? "unbekannt"}, Ton ${contactAiProfile.tone ?? "im Aufbau"}, Quellen ${contactAiProfile.source_message_count ?? 0}.`
-      : "",
-    workspaceVoiceProfile
-      ? `Workspace-Schreibstil: Ton ${workspaceVoiceProfile.tone ?? "im Aufbau"}, Beispiele ${workspaceVoiceProfile.examples_count ?? 0}.`
-      : "",
-    "Sicherheitsgrenze: nichts automatisch senden; Antwort nur als Entwurf oder manuell gesendet dokumentieren.",
-  ]
-    .filter(Boolean)
-    .join("\n");
-  const recentMessages = messages
-    .slice(-50)
-    .map(
-      (message) =>
-        `${formatDate(message.created_at)} · ${formatDirection(message.direction, message.author_label)} · ${formatSource(message.source_platform)} · ${formatMessageType(message.message_type)}: ${formatAiMessageText(message)}`,
-    )
-    .join("\n");
-
-  return [profileContext, recentMessages].filter(Boolean).join("\n\n");
-}
-
 function formatDetailedSource(
   platform: string | null,
   sourceType: string | null,
@@ -1637,12 +1562,6 @@ function formatTimelineDirection(
 
   if (author && !genericAuthors.has(author)) return author;
   return workspaceName || (locale === "en" ? "Workspace team" : "Workspace-Team");
-}
-
-function formatDirection(value: string, authorLabel?: string | null): string {
-  if (value === "outbound") return authorLabel?.trim() || "Team";
-  if (value === "note") return "Notiz";
-  return "Fan";
 }
 
 function formatMessageType(value: string | null): string {
@@ -1829,9 +1748,7 @@ export default async function FanDetailPage({
     conversationsResult,
     openFollowupCountResult,
     workspaceOpenFollowupsResult,
-    contactAiProfileResult,
     fanAnalysisReportResult,
-    workspaceVoiceProfileResult,
     facebookReplyTargetResult,
   ] = workspace
     ? await Promise.all([
@@ -1848,17 +1765,13 @@ export default async function FanDetailPage({
         getOpenFollowupCount(workspace.id),
         getWorkspaceOpenFollowups(workspace.id),
         contact
-          ? getContactAiProfile(workspace.id, contact.id)
-          : Promise.resolve(null),
-        contact
           ? getFanAnalysisReport(workspace.id, contact.id)
           : Promise.resolve(null),
-        getWorkspaceVoiceProfile(workspace.id, user.id),
         contact
           ? getContactReplyTarget(workspace.id, contact.id, "facebook_messages")
           : Promise.resolve(null),
       ])
-    : [null, null, null, null, null, null, null, null, null, null];
+    : [null, null, null, null, null, null, null, null];
 
   let messagesResult = initialMessagesResult;
 
@@ -1904,13 +1817,6 @@ export default async function FanDetailPage({
         )
       : null) ??
     null;
-  const conversationSummaryResult =
-    workspace && conversation
-      ? await getConversationSummary({
-          workspaceId: workspace.id,
-          conversationId: conversation.id,
-        })
-      : null;
   const facebookDirectLinkDiagnosis =
     !areDemoConnectionsDisabled(user, workspace) &&
     workspace &&
@@ -1948,11 +1854,8 @@ export default async function FanDetailPage({
           workspaceOpenFollowupsResult?.followups ?? [],
         )}
         notice={normalizeParam(pageSearchParams?.notice)}
-        conversationSummary={conversationSummaryResult?.summary ?? null}
-        contactAiProfile={contactAiProfileResult?.profile ?? null}
         fanAnalysisReport={fanAnalysisReportResult?.report ?? null}
         fanAnalysisReportError={fanAnalysisReportResult?.error?.message}
-        workspaceVoiceProfile={workspaceVoiceProfileResult?.profile ?? null}
         activeChannel={activeChannel}
         activeSource={activeSource}
         facebookMessengerLastSyncedAt={

@@ -46,7 +46,6 @@ export default function ContactDetailScreen() {
   const [contact, setContact] = useState<Contact | null>(null);
   const [memories, setMemories] = useState<ContactMemory[]>([]);
   const [incomingMessage, setIncomingMessage] = useState("");
-  const [chatContext, setChatContext] = useState("");
   const [instruction, setInstruction] = useState("");
   const [suggestions, setSuggestions] = useState<ReplySuggestions | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,7 +99,6 @@ export default function ContactDetailScreen() {
       accessToken: session.access_token,
       contact,
       incomingMessage,
-      pastedChatContext: chatContext,
       responseInstruction: instruction,
     });
     setSuggestions(result.data);
@@ -275,16 +273,10 @@ export default function ContactDetailScreen() {
           style={[mobileStyles.input, mobileStyles.textArea]}
           accessibilityLabel="Neue eingehende Nachricht"
         />
-        <TextInput
-          value={chatContext}
-          onChangeText={setChatContext}
-          placeholder="Optional: letzter Gesprächskontext"
-          placeholderTextColor={colors.textMuted}
-          multiline
-          maxLength={12000}
-          style={[mobileStyles.input, styles.contextInput]}
-          accessibilityLabel="Optionaler Gesprächskontext"
-        />
+        <Text style={mobileStyles.muted}>
+          Der gespeicherte Gesprächsverlauf wird serverseitig automatisch und
+          passend zur freigegebenen KI-Stufe berücksichtigt.
+        </Text>
         <TextInput
           value={instruction}
           onChangeText={setInstruction}
@@ -373,7 +365,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: colors.cyan,
   },
-  contextInput: { minHeight: 90, textAlignVertical: "top" },
   safety: {
     color: colors.amber,
     fontSize: typography.micro,

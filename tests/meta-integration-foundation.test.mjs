@@ -10,6 +10,19 @@ import {
   evaluateAnalysisActivation,
   evaluateExternalAccountBinding,
 } from "../src/lib/metaIntegrationPolicy.mjs";
+import {
+  FACEBOOK_PAGE_SELECTION_MAX_AGE_SECONDS,
+  normalizeFacebookPageSelectionId,
+  normalizeFacebookPageSelectionPayload,
+} from "../src/lib/facebookPageSelectionPolicy.mjs";
+import {
+  META_INCREMENTAL_CHAT_FETCH_LIMIT,
+  META_INITIAL_CHAT_BACKFILL_LIMIT,
+  META_PERSONAL_CONTENT_RETENTION_DAYS,
+  META_SYNC_MODE,
+  buildMinimalFanProfile,
+  evaluateMetaDataUse,
+} from "../src/lib/metaDataHandlingPolicy.mjs";
 
 async function source(path) {
   return readFile(path, "utf8");
@@ -100,15 +113,104 @@ test("sensitive fan traits remain prohibited analysis targets", () => {
   assert.ok(PROHIBITED_SENSITIVE_INFERENCES.includes("psychological_diagnosis"));
 });
 
-test("OAuth flow cannot silently select among multiple Facebook pages", async () => {
-  const callback = await source(
-    "src/app/api/integrations/facebook/callback/route.ts",
+test("OAuth flow requires an explicit server-validated Facebook page selection", async () => {
+  const [callback, flow, selectionRoute, selectionPage] = await Promise.all([
+    source("src/app/api/integrations/facebook/callback/route.ts"),
+    source("src/lib/facebookConnectionFlow.ts"),
+    source("src/app/api/integrations/facebook/select/route.ts"),
+    source("src/app/channels/facebook/select/page.tsx"),
+  ]);
+
+  assert.match(callback, /createPendingFacebookPageSelection/u);
+  assert.match(callback, /httpOnly:\s*true/u);
+  assert.match(callback, /sameSite:\s*"lax"/u);
+  assert.match(callback, /FACEBOOK_PAGE_SELECTION_MAX_AGE_SECONDS/u);
+  assert.match(callback, /areDemoConnectionsDisabled/u);
+  assert.match(
+    flow,
+    /pages\.length > 1 && !input\.selectedPageId[\s\S]*page_selection_required/u,
   );
-  const multiPageGuard = callback.indexOf("if (pages.length > 1)");
-  const pageSelection = callback.indexOf("const page = pages[0]");
-  assert.ok(multiPageGuard >= 0);
-  assert.ok(pageSelection > multiPageGuard);
-  assert.match(callback, /facebook_error=page_selection_required/u);
+  assert.match(
+    flow,
+    /pages\.find\(\(candidate\) => candidate\.id === input\.selectedPageId\)/u,
+  );
+  assert.match(selectionRoute, /isTrustedFanMindMutationRequest/u);
+  assert.match(
+    selectionRoute,
+    /pending\.userId !== data\.user\.id[\s\S]*pending\.workspaceId !== workspace\.id/u,
+  );
+  assert.match(selectionRoute, /selectedPageId/u);
+  assert.match(selectionPage, /name="page_id"/u);
+  assert.doesNotMatch(
+    selectionPage,
+    /name="userAccessToken"|value=\{pending\.userAccessToken\}/u,
+  );
+});
+
+test("pending Facebook page selection expires and accepts only bounded identifiers", () => {
+  const now = 2_000_000_000;
+  const valid = {
+    version: 1,
+    workspaceId: "workspace_123",
+    userId: "user_123456",
+    userAccessToken: "token_12345678901234567890",
+    connectionType: "facebook_messages",
+    issuedAt: now - 30,
+  };
+  assert.deepEqual(normalizeFacebookPageSelectionPayload(valid, now), valid);
+  assert.equal(
+    normalizeFacebookPageSelectionPayload(
+      {
+        ...valid,
+        issuedAt: now - FACEBOOK_PAGE_SELECTION_MAX_AGE_SECONDS - 1,
+      },
+      now,
+    ),
+    null,
+  );
+  assert.equal(
+    normalizeFacebookPageSelectionPayload(
+      { ...valid, connectionType: "facebook_everything" },
+      now,
+    ),
+    null,
+  );
+  assert.equal(normalizeFacebookPageSelectionId(" page:123 "), "page:123");
+  assert.equal(normalizeFacebookPageSelectionId("../page"), null);
+});
+
+test("Instagram Business Login is workspace-bound and subscribes only authorized incremental channels", async () => {
+  const [integration, start, callback, disconnect, channels, webhook] =
+    await Promise.all([
+      source("src/lib/instagramIntegration.ts"),
+      source("src/app/api/integrations/instagram/start/route.ts"),
+      source("src/app/api/integrations/instagram/callback/route.ts"),
+      source("src/app/api/integrations/instagram/disconnect/route.ts"),
+      source("src/app/channels/ChannelsGrid.tsx"),
+      source("src/app/api/webhooks/meta/route.ts"),
+    ]);
+
+  assert.match(integration, /https:\/\/www\.instagram\.com\/oauth\/authorize/u);
+  assert.match(integration, /enable_fb_login", "0"/u);
+  assert.match(integration, /force_authentication", "1"/u);
+  assert.match(integration, /https:\/\/api\.instagram\.com\/oauth\/access_token/u);
+  assert.match(integration, /grant_type", "ig_exchange_token"/u);
+  assert.match(integration, /graph\.instagram\.com\/\$\{META_GRAPH_API_VERSION\}\/me/u);
+  assert.match(start, /workspaceId: workspaceResult\.workspace\.id/u);
+  assert.match(start, /userId: data\.user\.id/u);
+  assert.match(start, /canManageMetaConnections/u);
+  assert.match(callback, /state\.userId !== data\.user\.id/u);
+  assert.match(callback, /workspaceResult\.workspace\.id !== state\.workspaceId/u);
+  assert.match(callback, /areDemoConnectionsDisabled/u);
+  assert.match(callback, /encryptToken\(token\.accessToken\)/u);
+  assert.match(callback, /webhookSubscribed:\s*false/u);
+  assert.match(callback, /subscribeInstagramAccount/u);
+  assert.match(callback, /updateInstagramWebhookSubscribed/u);
+  assert.match(disconnect, /isTrustedFanMindMutationRequest/u);
+  assert.match(channels, /Inkrementeller Webhook/u);
+  assert.match(channels, /KI-Kontext je Stufe 50\/100\/150/u);
+  assert.match(channels, /Persönliche fremde Posts/u);
+  assert.match(webhook, /process\.env\.INSTAGRAM_APP_SECRET/u);
 });
 
 test("tokens are server-only and active account bindings are globally unique", async () => {
@@ -132,6 +234,14 @@ test("tokens are server-only and active account bindings are globally unique", a
     /upsertFacebookSocialConnection[\s\S]*getServiceAccessToken\(\)/u,
   );
   assert.match(
+    server,
+    /upsertFacebookSocialConnection[\s\S]*activeWorkspaceConnections[\s\S]*connection\.page_id !== input\.pageId/u,
+  );
+  assert.match(
+    server,
+    /activeExternalBindings[\s\S]*connection\.workspace_id !== input\.workspaceId/u,
+  );
+  assert.match(
     migration,
     /social_connections_active_external_account_unique_idx[\s\S]*platform, external_account_id[\s\S]*status = 'connected'/u,
   );
@@ -150,10 +260,15 @@ test("tokens are server-only and active account bindings are globally unique", a
   assert.doesNotMatch(socialGrant[1], /page_access_token_encrypted/u);
 });
 
-test("database analysis settings and generated reports are fail-closed", async () => {
-  const migration = await source(
-    "supabase/migrations/20260803120000_meta_content_intelligence_foundation.sql",
-  );
+test("database settings cache owned content while AI context is capped separately", async () => {
+  const [migration, incrementalMigration] = await Promise.all([
+    source(
+      "supabase/migrations/20260803120000_meta_content_intelligence_foundation.sql",
+    ),
+    source(
+      "supabase/migrations/20260803210000_preserve_incremental_conversation_history.sql",
+    ),
+  ]);
   assert.match(
     migration,
     /fan_analysis_enabled boolean not null default false/u,
@@ -163,12 +278,23 @@ test("database analysis settings and generated reports are fail-closed", async (
     /content_insights_enabled boolean not null default false/u,
   );
   assert.match(
+    incrementalMigration,
+    /meta_sync_mode text not null default 'incremental_cache'[\s\S]*meta_sync_mode = 'incremental_cache'/u,
+  );
+  assert.doesNotMatch(migration, /message_history_limit_per_thread/u);
+  assert.match(
     migration,
     /legal_basis_status = 'confirmed'[\s\S]*transparency_status = 'confirmed'[\s\S]*data_processing_agreement_status = 'confirmed'[\s\S]*retention_status = 'confirmed'[\s\S]*data_subject_rights_status = 'confirmed'/u,
   );
   assert.match(
-    migration,
-    /communication_analysis_reports_select_workspace_member/u,
+    incrementalMigration,
+    /personal_content_retention_days integer not null default 0[\s\S]*personal_content_retention_days = 0/u,
+  );
+  assert.match(migration, /create table if not exists public\.content_metric_snapshots/u);
+  assert.match(migration, /create table if not exists public\.communication_analysis_reports/u);
+  assert.match(
+    incrementalMigration,
+    /communication_analysis_reports_source_message_count_check[\s\S]*source_message_count between 0 and 150/u,
   );
   assert.match(
     migration,
@@ -185,14 +311,6 @@ test("database analysis settings and generated reports are fail-closed", async (
   assert.match(migration, /workspaces_create_analysis_settings/u);
   assert.match(
     migration,
-    /foreign key \(content_source_id, workspace_id\)[\s\S]*references public\.content_sources \(id, workspace_id\)/u,
-  );
-  assert.match(
-    migration,
-    /foreign key \(conversation_id, workspace_id\)[\s\S]*references public\.conversations \(id, workspace_id\)/u,
-  );
-  assert.match(
-    migration,
     /revoke all on table public\.fan_analysis_reports from anon, authenticated/u,
   );
   assert.match(
@@ -205,15 +323,95 @@ test("database analysis settings and generated reports are fail-closed", async (
   );
 });
 
-test("existing analysis paths enforce the workspace activation gate", async () => {
-  const [server, analysisAction] = await Promise.all([
+test("owned content and authorized chats are cached while personal profiles remain transient", () => {
+  assert.equal(META_SYNC_MODE, "incremental_cache");
+  assert.equal(META_INITIAL_CHAT_BACKFILL_LIMIT, 150);
+  assert.equal(META_INCREMENTAL_CHAT_FETCH_LIMIT, 50);
+  assert.equal(META_PERSONAL_CONTENT_RETENTION_DAYS, 0);
+  assert.deepEqual(
+    evaluateMetaDataUse({
+      dataClass: "authorized_chat_message",
+      persist: true,
+      workspaceBound: false,
+      authorizedConnection: true,
+    }),
+    { allowed: false, reason: "authorized_workspace_connection_required" },
+  );
+  assert.deepEqual(
+    evaluateMetaDataUse({
+      dataClass: "owned_account_post_metrics",
+      persist: true,
+      workspaceBound: true,
+      authorizedConnection: true,
+    }),
+    { allowed: true, reason: "incremental_cache_allowed" },
+  );
+  assert.deepEqual(
+    evaluateMetaDataUse({
+      dataClass: "third_party_personal_post",
+      userRequested: true,
+      persist: false,
+    }),
+    { allowed: true, reason: "transient_use_only" },
+  );
+  assert.deepEqual(
+    evaluateMetaDataUse({
+      dataClass: "third_party_profile_data",
+      userRequested: true,
+      persist: true,
+    }),
+    { allowed: false, reason: "personal_meta_persistence_forbidden" },
+  );
+  assert.equal(
+    evaluateMetaDataUse({
+      dataClass: "minimal_fan_profile",
+      persist: true,
+    }).allowed,
+    true,
+  );
+});
+
+test("minimal fan profiles retain no raw source content", () => {
+  const profile = buildMinimalFanProfile({
+    language: "de",
+    communicationTone: "freundlich",
+    explicitTopics: ["Training", "Training"],
+    sourceMessageCount: 9,
+    confidenceScore: 68,
+    rawMessages: ["should never survive"],
+    sourceFromAt: "2026-08-01T00:00:00.000Z",
+    sourceToAt: "2026-08-03T00:00:00.000Z",
+  });
+  assert.equal(profile.language, "de");
+  assert.deepEqual(profile.explicit_topics, ["Training"]);
+  assert.equal(profile.source_message_count, 9);
+  assert.equal(profile.raw_source_retained, false);
+  assert.equal("rawMessages" in profile, false);
+});
+
+test("profiles are server-owned while authorized webhooks preserve chats without auto-analysis", async () => {
+  const [server, analysisAction, webhook, syncAction, oldRetention, newRetention] = await Promise.all([
     source("src/lib/supabase/server.ts"),
     source("src/app/fans/[id]/analysisActions.ts"),
+    source("src/lib/metaWebhook.ts"),
+    source("src/app/channels/facebookWebhookActions.ts"),
+    source("supabase/migrations/20260614120000_conversation_message_retention.sql"),
+    source("supabase/migrations/20260803210000_preserve_incremental_conversation_history.sql"),
   ]);
+  assert.doesNotMatch(server, /updateContactProfileFromInboundMessage/u);
+  assert.match(webhook, /"authorized_chat_message"/u);
   assert.match(
-    server,
-    /updateContactProfileFromInboundMessage[\s\S]*getWorkspaceAnalysisCapabilityStatus[\s\S]*"fan_analysis"/u,
+    webhook,
+    /evaluateMetaDataUse\(\{[\s\S]*persist:\s*true[\s\S]*workspaceBound:\s*true[\s\S]*authorizedConnection:\s*true/u,
   );
+  assert.match(webhook, /createMetaWebhookConversationMessage/u);
+  assert.doesNotMatch(webhook, /ignored_on_demand_mode/u);
+  assert.match(syncAction, /connection\.last_messenger_sync_at/u);
+  assert.match(syncAction, /META_INITIAL_CHAT_BACKFILL_LIMIT/u);
+  assert.match(syncAction, /META_INCREMENTAL_CHAT_FETCH_LIMIT/u);
+  assert.match(oldRetention, /ranked\.rn > 50/u);
+  assert.match(newRetention, /drop trigger if exists conversation_messages_trim_to_latest_50/u);
+  assert.match(newRetention, /drop function if exists public\.trim_conversation_messages_to_latest_50/u);
   assert.match(
     server,
     /updateWorkspaceVoiceProfileFromManualOutbound[\s\S]*getWorkspaceAnalysisCapabilityStatus[\s\S]*"user_voice_analysis"/u,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAiTierConfig } from "@/config/aiTiers.mjs";
 import {
-  AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT,
   AI_REPLY_OUTPUT_TOKEN_LIMIT,
   AI_REPLY_RESPONSE_MODE_CHAR_LIMIT,
   buildBoundedReplySuggestionContext,
@@ -15,6 +15,15 @@ import { getClientIp } from "@/lib/rateLimit";
 import { consumeSharedRateLimit } from "@/lib/sharedRateLimit";
 import { isWorkspaceArchivedAfterSubscriptionEnd } from "@/lib/subscriptionCancellation";
 import {
+  getContactAiProfile,
+  getFanAnalysisReport,
+  getRecentContactConversationMessages,
+  getWorkspaceVoiceProfile,
+  type ContactAiProfileRow,
+  type ConversationMessageRow,
+  type WorkspaceVoiceProfileRow,
+} from "@/lib/supabase/server";
+import {
   BearerAccessTokenError,
   getOptionalBearerAccessToken,
 } from "@/lib/requestAccessToken";
@@ -22,10 +31,10 @@ import {
   requireContactInAuthorizedWorkspace,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
+import { getResolvedWorkspaceAiTier } from "@/lib/workspaceAiTierEntitlements";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const MAX_INCOMING_MESSAGE_LENGTH = 4000;
-const MAX_PASTED_CHAT_CONTEXT_LENGTH = 12000;
 const MAX_RESPONSE_INSTRUCTION_LENGTH = 1000;
 const AI_RATE_LIMIT_MAX = 20;
 const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -36,19 +45,10 @@ const SAFETY_NOTE =
 
 type ReplySuggestionRequest = {
   contactId?: unknown;
-  displayName?: unknown;
-  handle?: unknown;
-  sourcePlatform?: unknown;
-  language?: unknown;
-  status?: unknown;
-  tags?: unknown;
-  summary?: unknown;
-  pastedChatContext?: unknown;
   incomingMessage?: unknown;
   responseMode?: unknown;
   responseInstruction?: unknown;
   promptProfileId?: unknown;
-  analysisReport?: unknown;
 };
 
 type ReplyOption = {
@@ -242,26 +242,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const incomingMessage = normalizeString(payload.incomingMessage);
-  const pastedChatContext = normalizeString(payload.pastedChatContext);
   const responseInstruction = normalizeString(payload.responseInstruction);
   const responseMode = normalizeString(payload.responseMode);
-  const analysisReport = normalizeOptionalString(payload.analysisReport);
+  const manuallyEnteredIncomingMessage = normalizeString(
+    payload.incomingMessage,
+  );
 
-  if (!incomingMessage) {
-    return jsonError("incomingMessage ist Pflicht.", 400);
-  }
-
-  if (incomingMessage.length > MAX_INCOMING_MESSAGE_LENGTH) {
+  if (
+    manuallyEnteredIncomingMessage.length > MAX_INCOMING_MESSAGE_LENGTH
+  ) {
     return jsonError(
       `incomingMessage darf maximal ${MAX_INCOMING_MESSAGE_LENGTH} Zeichen enthalten.`,
-      400,
-    );
-  }
-
-  if (pastedChatContext.length > MAX_PASTED_CHAT_CONTEXT_LENGTH) {
-    return jsonError(
-      `pastedChatContext darf maximal ${MAX_PASTED_CHAT_CONTEXT_LENGTH} Zeichen enthalten.`,
       400,
     );
   }
@@ -280,20 +271,50 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (
-    analysisReport &&
-    analysisReport.length > AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT
-  ) {
+  const [workspacePromptContext, resolvedTier] = await Promise.all([
+    getWorkspaceAiPromptContext(workspace.id, payload.promptProfileId),
+    getResolvedWorkspaceAiTier(workspace.id),
+  ]);
+  const contextMessageLimit =
+    getAiTierConfig(resolvedTier.entitlement.effectiveTierId)
+      .contextMessageLimit ?? 50;
+  const [messagesResult, analysisResult, fanProfileResult, voiceProfileResult] =
+    await Promise.all([
+      getRecentContactConversationMessages(
+        workspace.id,
+        contact.id,
+        contextMessageLimit,
+        accessToken,
+      ),
+      getFanAnalysisReport(workspace.id, contact.id, accessToken),
+      getContactAiProfile(workspace.id, contact.id, accessToken),
+      getWorkspaceVoiceProfile(workspace.id, user.id, accessToken),
+    ]);
+
+  if (messagesResult.error) {
     return jsonError(
-      `analysisReport darf maximal ${AI_REPLY_ANALYSIS_REPORT_CHAR_LIMIT} Zeichen enthalten.`,
-      400,
+      "Der gespeicherte Gesprächsverlauf konnte nicht sicher geladen werden.",
+      503,
     );
   }
 
-  const workspacePromptContext = await getWorkspaceAiPromptContext(
-    workspace.id,
-    payload.promptProfileId,
-  );
+  const incomingMessage =
+    manuallyEnteredIncomingMessage ||
+    getLatestStoredInboundMessage(messagesResult.messages);
+  if (!incomingMessage) {
+    return jsonError(
+      "Keine gespeicherte eingehende Nachricht als Kontext vorhanden.",
+      400,
+    );
+  }
+  const conversationContext = buildStoredConversationContext({
+    messages: messagesResult.messages,
+    fanProfile: fanProfileResult.profile,
+    voiceProfile: voiceProfileResult.profile,
+  });
+  const analysisReport = analysisResult.report
+    ? JSON.stringify(analysisResult.report.report_json)
+    : null;
 
   let boundedContext: ReturnType<typeof buildBoundedReplySuggestionContext>;
   try {
@@ -306,8 +327,9 @@ export async function POST(request: NextRequest) {
       status: contact.status,
       tags: contact.tags ?? [],
       summary: contact.summary,
-      pastedChatContext,
+      conversationContext,
       incomingMessage,
+      messageLimit: contextMessageLimit,
       responseMode,
       responseInstruction,
       companyPrompt: workspacePromptContext.companyPrompt,
@@ -539,9 +561,47 @@ function normalizeString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeOptionalString(value: unknown): string | null {
-  const normalized = normalizeString(value);
-  return normalized || null;
+function getLatestStoredInboundMessage(
+  messages: ConversationMessageRow[],
+): string {
+  const message = [...messages]
+    .reverse()
+    .find((entry) => entry.direction === "inbound");
+  return (message?.content || message?.original_text_excerpt || "").trim();
+}
+
+function buildStoredConversationContext(input: {
+  messages: ConversationMessageRow[];
+  fanProfile: ContactAiProfileRow | null;
+  voiceProfile: WorkspaceVoiceProfileRow | null;
+}): string {
+  const profileContext = [
+    input.fanProfile
+      ? `Fan-Profil: Sprache ${input.fanProfile.language ?? "unbekannt"}, Ton ${input.fanProfile.tone ?? "im Aufbau"}, Quellen ${input.fanProfile.source_message_count ?? 0}.`
+      : "",
+    input.voiceProfile
+      ? `Nutzer-Schreibstil: Ton ${input.voiceProfile.tone ?? "im Aufbau"}, bestätigte Beispiele ${input.voiceProfile.examples_count ?? 0}.`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const messageContext = input.messages
+    .map((message) => {
+      const text = (
+        message.content ||
+        message.original_text_excerpt ||
+        (message.attachments?.length ? "[Medienanhang ohne Text]" : "")
+      ).trim();
+      if (!text) return "";
+      const timestamp = message.created_at ?? "Zeit unbekannt";
+      const direction =
+        message.direction === "outbound" ? "Nutzer" : "Fan";
+      const channel = message.source_platform ?? "manuell";
+      return `${timestamp} · ${direction} · ${channel}: ${text}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+  return [profileContext, messageContext].filter(Boolean).join("\n\n");
 }
 
 function jsonError(message: string, status: number) {
