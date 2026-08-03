@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 2. August 2026
+Stand: 3. August 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -50,7 +50,7 @@ Aktiv beziehungsweise produktnah:
   - Self-Service-Kündigung für Starter-Abos zum serverseitig erzwungenen Vertragsende mit separatem Account-/DSGVO-Löschprozess;
 - Admin-only Asset-Upload in den Supabase-Storage-Bucket `fanmind-assets`;
 - Legal-Seiten, Zahlungsbedingungen und AVV-Anforderungsseite;
-- consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: `PageView`, `CompleteRegistration` nach erfolgreicher Konto-/Workspace-Erstellung sowie `Lead` nach erfolgreich angenommener Beratungsanfrage, jeweils ohne Eventparameter; keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-/Billing-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
+- consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: ausschließlich `PageView` ohne Eventparameter; keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-/Billing-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; vorbereitete Conversion-Events bleiben ohne separate fachliche und datenschutzrechtliche Freigabe unverdrahtet; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag ausschließlich für klar markierte interne Test-Workspaces; kein Referral-Rabatt.
 
 Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-Checkout bleibt gesperrt. Die kostenlose Demo ist kein entgeltliches Paket.
@@ -372,9 +372,9 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - `docs/legal/RETENTION_REGISTER.md` trennt implementierte technische
   Grenzen von noch offenen rechtlichen, steuerlichen und geschäftlichen
   Endfristen.
-- Die öffentliche Datenschutzerklärung nennt die aktiven, consent-gesteuerten
-  und parameterlosen Meta-Events `PageView`, `CompleteRegistration` und
-  `Lead` sowie die im Code belegten Demo-, Consent-, Diagnose-, Log-, Mobile-,
+- Die öffentliche Datenschutzerklärung nennt das aktive, consent-gesteuerte
+  und parameterlose Meta-Event `PageView` sowie die im Code belegten Demo-,
+  Consent-, Diagnose-, Log-, Mobile-,
   Account-Lösch- und Backup-Kriterien.
 - Eine öffentliche Anbieter-DPA ist nur Prüfeinstieg. Wirksame Annahme,
   kontobezogene Unterauftragsliste, Region und Transfergrundlage müssen je
@@ -461,7 +461,7 @@ Aktiv im Standardprodukt:
 Vorbereitet / Beta / nicht allgemein live verkaufen:
 
 - Meta-, Facebook- und Instagram-Grundlagen;
-- Meta Pixel als consent-gesteuerte Marketing-Messung mit `PageView`, einem parameterlosen `CompleteRegistration` erst nach erfolgreicher Konto-/Workspace-Erstellung sowie einem parameterlosen `Lead` erst nach erfolgreich angenommener Beratungsanfrage auf freigegebenen öffentlichen Seiten; geschützte und dynamische CRM-Routen sowie unsichere Query-/Fragmentwerte sind fail-closed ausgeschlossen; weitere Conversion-Events bleiben vorbereitet und unverknüpft, bis sie einzeln freigegeben sind;
+- Meta Pixel als consent-gesteuerte Marketing-Messung ausschließlich mit parameterlosem `PageView` auf freigegebenen öffentlichen Seiten; geschützte und dynamische CRM-Routen sowie unsichere Query-/Fragmentwerte sind fail-closed ausgeschlossen; `CompleteRegistration`, `Lead` und weitere Conversion-Events bleiben vorbereitet und unverknüpft, bis sie einzeln fachlich und datenschutzrechtlich freigegeben sind;
 - Facebook-Reply-Target- und Messenger-Hilfen;
 - Telegram-Webhook- und Bot-Grundlagen;
 - Stripe Checkout für Starter.

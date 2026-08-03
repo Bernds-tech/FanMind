@@ -35,29 +35,24 @@ test("public legal pages contain no internal placeholders and use current produc
   assert.match(privacy, /Copy-&-Open-Assistent/u);
 });
 
-test("privacy copy stays aligned with the active consent-gated Meta events", async () => {
-  const [privacy, policy, register, inquiry] = await Promise.all([
+test("privacy copy stays aligned with the PageView-only Meta scope", async () => {
+  const [privacy, policy, helper, register, inquiry] = await Promise.all([
     source("src/app/datenschutz/page.tsx"),
     source("src/lib/metaPixelPolicy.mjs"),
+    source("src/lib/metaPixel.ts"),
     source("src/app/register/RegisterClient.tsx"),
     source("src/components/landing/FooterInquiryForm.tsx"),
   ]);
 
-  for (const eventName of ["PageView", "CompleteRegistration", "Lead"]) {
-    assert.match(policy, new RegExp(`"${eventName}"`, "u"));
-    assert.match(privacy, new RegExp(`<code>${eventName}</code>`, "u"));
-  }
-
-  assert.match(register, /trackMetaPixelEvent\("CompleteRegistration"\)/u);
-  assert.match(inquiry, /trackMetaPixelEvent\("Lead"\)/u);
+  assert.match(policy, /META_PIXEL_ACTIVE_EVENTS = Object\.freeze\(\["PageView"\]\)/u);
+  assert.match(helper, /MetaPixelActiveEventName/u);
   assert.match(
-    privacy,
-    /Alle drei Events werden ohne zusätzliche FanMind-Eventparameter übermittelt\./u,
-  );
-  assert.doesNotMatch(
     privacy,
     /ausschließlich das Standardevent\s*<code>PageView<\/code>/u,
   );
+  assert.doesNotMatch(privacy, /<code>(?:CompleteRegistration|Lead)<\/code>/u);
+  assert.doesNotMatch(register, /trackMetaPixelEvent/u);
+  assert.doesNotMatch(inquiry, /trackMetaPixelEvent/u);
 });
 
 test("public retention statements map to implemented technical boundaries", async () => {

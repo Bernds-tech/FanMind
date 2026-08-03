@@ -81,6 +81,10 @@ const checkedFiles = [
   "src/app/admin/settings/page.tsx",
   "src/app/api/admin/settings/daily-test-plan/route.ts",
   "src/app/register/RegisterClient.tsx",
+  "src/components/landing/FooterInquiryForm.tsx",
+  "src/components/marketing/MarketingConsentManager.tsx",
+  "src/lib/metaPixel.ts",
+  "src/lib/metaPixelPolicy.mjs",
   "src/app/login/page.tsx",
   "src/app/landing-v2/page.tsx",
   "src/app/landing-v2/FaqAccordion.tsx",
@@ -110,6 +114,7 @@ const checkedFiles = [
   "tests/demo-turnstile-policy.test.mjs",
   "docs/SOURCE_OF_TRUTH.md",
   "docs/LEGAL_COMPLETION_STATUS.md",
+  "docs/analytics/META_PIXEL.md",
   "docs/legal/AVV_WORKING_DRAFT.md",
   "docs/legal/RETENTION_REGISTER.md",
   "docs/legal/EXTERNAL_APPROVAL_REGISTER.md",
@@ -1085,10 +1090,20 @@ forbidIn(
   /Ein Projekt von Gerhard Novy|Vertreten durch Gerhard Novy|Beteiligungsverhältnisse|50&nbsp;%|TODO:|\[BITTE FINAL EINTRAGEN/iu,
   "Die Datenschutzerklärung enthält alte Betreiberangaben oder interne Platzhalter.",
 );
+requireText(
+  "src/lib/metaPixelPolicy.mjs",
+  'export const META_PIXEL_ACTIVE_EVENTS = Object.freeze(["PageView"]);',
+  "Nur PageView darf in der aktiven Meta-Event-Allowlist stehen.",
+);
 forbidIn(
-  "src/app/datenschutz/page.tsx",
-  /ausschließlich das Standardevent\s*<code>PageView<\/code>/iu,
-  "Die Datenschutzerklärung darf die aktiven Meta-Events nicht auf PageView verkürzen.",
+  "src/app/register/RegisterClient.tsx",
+  /trackMetaPixelEvent\s*\(/u,
+  "Die Registrierung darf ohne separate Freigabe kein Meta-Conversion-Event auslösen.",
+);
+forbidIn(
+  "src/components/landing/FooterInquiryForm.tsx",
+  /trackMetaPixelEvent\s*\(/u,
+  "Die Beratungsanfrage darf ohne separate Freigabe kein Meta-Conversion-Event auslösen.",
 );
 forbidIn(
   "src/app/datenschutz/page.tsx",
@@ -1097,18 +1112,13 @@ forbidIn(
 );
 requireText(
   "src/app/datenschutz/page.tsx",
-  "<code>CompleteRegistration</code> erst nach erfolgreicher Konto- und Workspace-Erstellung",
-  "Die Datenschutzerklärung muss das aktive parameterlose Registrierungsereignis korrekt erklären.",
+  "Im aktuell freigegebenen Stand wird ausschließlich das Standardevent",
+  "Die Datenschutzerklärung muss den PageView-only-Scope nennen.",
 );
-requireText(
+forbidIn(
   "src/app/datenschutz/page.tsx",
-  "<code>Lead</code> erst nach serverseitig angenommener Beratungsanfrage",
-  "Die Datenschutzerklärung muss das aktive parameterlose Lead-Ereignis korrekt erklären.",
-);
-requireText(
-  "src/app/datenschutz/page.tsx",
-  "Alle drei Events werden ohne zusätzliche FanMind-Eventparameter übermittelt.",
-  "Die Datenschutzerklärung muss die Datenminimierung aller aktiven Meta-Events nennen.",
+  /<code>(?:CompleteRegistration|Lead)<\/code>/u,
+  "Die Datenschutzerklärung darf vorbereitete Conversion-Events nicht als aktiv darstellen.",
 );
 requireText(
   "src/app/datenschutz/page.tsx",

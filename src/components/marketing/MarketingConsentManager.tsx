@@ -44,7 +44,7 @@ const COPY: Record<FanMindLocale, ConsentCopy> = {
     description:
       "FanMind lädt den Meta Pixel erst, wenn du Marketing ausdrücklich erlaubst. Ohne Zustimmung wird keine Verbindung zu Meta aufgebaut.",
     limitation:
-      "Aktiv sind PageView auf freigegebenen öffentlichen Seiten, CompleteRegistration nach erfolgreicher Registrierung und Lead nach einer erfolgreich angenommenen Beratungsanfrage – jeweils ohne zusätzliche Eventparameter. FanMind sendet keine E-Mail-Adressen, Namen, CRM-, Kontakt- oder Nachrichteninhalte und verwendet kein erweitertes Matching.",
+      "Aktiv ist ausschließlich PageView auf freigegebenen öffentlichen Seiten und ohne zusätzliche Eventparameter. FanMind sendet keine E-Mail-Adressen, Namen, CRM-, Kontakt- oder Nachrichteninhalte und verwendet kein erweitertes Matching.",
     privacy: "Details in der Datenschutzerklärung",
     reject: "Nur notwendige",
     accept: "Marketing erlauben",
@@ -59,7 +59,7 @@ const COPY: Record<FanMindLocale, ConsentCopy> = {
     description:
       "FanMind loads Meta Pixel only after you explicitly allow marketing. Without consent, no connection to Meta is established.",
     limitation:
-      "Active events are PageView on approved public pages, CompleteRegistration after successful registration and Lead after a successfully accepted consultation request – all without additional event parameters. FanMind does not send email addresses, names, CRM, contact or message content and does not use advanced matching.",
+      "Only PageView on approved public pages is active and it uses no additional event parameters. FanMind does not send email addresses, names, CRM, contact or message content and does not use advanced matching.",
     privacy: "Details in the privacy policy",
     reject: "Necessary only",
     accept: "Allow marketing",

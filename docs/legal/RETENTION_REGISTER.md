@@ -28,7 +28,7 @@ identifizierbar zu halten. Maßgebliche Prüfeinstiege sind insbesondere
 | Datenbereich | Technische Grenze oder Kriterium | Status | Quelle |
 | --- | --- | --- | --- |
 | Marketing-Einwilligung | Consent-Cookie höchstens 180 Tage; jederzeit änderbar | umgesetzt | `src/lib/metaPixelPolicy.mjs` |
-| Meta-Pixel-Ereignisse | nur nach Einwilligung; parameterlose `PageView`, `CompleteRegistration` und `Lead`; keine FanMind-seitige Event-Payload-Retention | umgesetzt | `src/lib/metaPixelPolicy.mjs`, `src/lib/metaPixel.ts` |
+| Meta-Pixel-Ereignisse | nur nach Einwilligung; ausschließlich parameterloses `PageView`; vorbereitete Conversion-Events unverdrahtet; keine FanMind-seitige Event-Payload-Retention | umgesetzt | `src/lib/metaPixelPolicy.mjs`, `src/lib/metaPixel.ts` |
 | Auth-Session | Access-Cookie höchstens Provider-Ablauf beziehungsweise 1 Stunde; Refresh-Cookie 30 Tage | umgesetzt | `src/app/api/auth/session/route.ts` |
 | öffentlicher Demo-Zugang | Zugang 1 Stunde; danach Cleanup-Queue; pseudonymer Browser-Schutz-Cookie höchstens 30 Tage | umgesetzt | `src/app/api/demo/start/route.ts`, `src/lib/demoProtection.ts` |
 | Mobile Offline-Kontaktübersicht | höchstens 50 Einträge, 24 Stunden, verschlüsselt, account-/workspacegebunden und nur bei Transportfehlern | umgesetzt | `apps/mobile/src/lib/offlineContactCache.ts`, `apps/mobile/README.md` |

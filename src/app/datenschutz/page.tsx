@@ -155,11 +155,9 @@ const sections: PrivacySection[] = [
           ausdrücklicher Marketing-Einwilligung Vorgänge auf freigegebenen öffentlichen Seiten
           von <code>fanmind.ch</code> zu messen.
           Dafür wird das Script <code>connect.facebook.net/en_US/fbevents.js</code> erst nach der
-          Einwilligung geladen. Im aktuell freigegebenen Stand werden das Standardevent
-          <code>PageView</code> für zulässige öffentliche Seitenaufrufe,
-          <code>CompleteRegistration</code> erst nach erfolgreicher Konto- und Workspace-Erstellung
-          und <code>Lead</code> erst nach serverseitig angenommener Beratungsanfrage ausgelöst.
-          Alle drei Events werden ohne zusätzliche FanMind-Eventparameter übermittelt.
+          Einwilligung geladen. Im aktuell freigegebenen Stand wird ausschließlich das Standardevent
+          <code>PageView</code> für zulässige öffentliche Seitenaufrufe und ohne zusätzliche
+          FanMind-Eventparameter ausgelöst.
         </p>
         <p>
           Zweck ist die grundlegende Messung der Wirksamkeit von FanMind-Marketing. Rechtsgrundlage

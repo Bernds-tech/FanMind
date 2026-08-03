@@ -7,12 +7,10 @@ export const META_PIXEL_SCRIPT_URL =
   "https://connect.facebook.net/en_US/fbevents.js";
 export const META_PIXEL_READY_EVENT = "fanmind:meta-pixel-ready";
 
-export const META_PIXEL_ACTIVE_EVENTS = Object.freeze([
-  "PageView",
+export const META_PIXEL_ACTIVE_EVENTS = Object.freeze(["PageView"]);
+export const META_PIXEL_PREPARED_EVENTS = Object.freeze([
   "CompleteRegistration",
   "Lead",
-]);
-export const META_PIXEL_PREPARED_EVENTS = Object.freeze([
   "ViewContent",
   "Contact",
   "Schedule",
@@ -99,6 +97,10 @@ export function isMetaPixelEnabled({ pixelId, consent }) {
 
 export function isSupportedMetaPixelEvent(eventName) {
   return META_PIXEL_STANDARD_EVENTS.includes(String(eventName));
+}
+
+export function isActiveMetaPixelEvent(eventName) {
+  return META_PIXEL_ACTIVE_EVENTS.includes(String(eventName));
 }
 
 export function normalizeMetaPixelRoute(pathname) {
