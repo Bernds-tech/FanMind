@@ -22,6 +22,13 @@ const nativeVerifier = await readFile(
   new URL("scripts/check-native-prebuild.mjs", mobileRoot),
   "utf8",
 );
+const expoDoctorVerifier = await readFile(
+  new URL("scripts/check-expo-doctor.mjs", mobileRoot),
+  "utf8",
+);
+const { runExpoDoctorGate } = await import(
+  "../apps/mobile/scripts/check-expo-doctor.mjs"
+);
 const mobileCi = await readFile(
   new URL("../.github/workflows/ci-mobile.yml", import.meta.url),
   "utf8",
@@ -187,8 +194,45 @@ test("Mobile has an explicit SDK-compatible development-client workflow", () => 
   assert.equal(packageJson.scripts["start:go"], "expo start --go");
   assert.equal(packageJson.scripts.android, "expo run:android");
   assert.equal(packageJson.scripts.ios, "expo run:ios");
+  assert.equal(
+    packageJson.scripts.doctor,
+    "node scripts/check-expo-doctor.mjs",
+  );
   assert.match(packageJson.scripts.check, /native:prebuild:check/u);
   assert.equal(appConfig.expo.ios.supportsTablet, false);
+});
+
+test("Expo Doctor cannot hide a failed Expo config preflight", () => {
+  let doctorCalled = false;
+  const failedConfig = runExpoDoctorGate({
+    runConfig: () => ({ status: 7, signal: null, error: undefined }),
+    runDoctor: () => {
+      doctorCalled = true;
+      return { status: 0, signal: null, error: undefined };
+    },
+  });
+
+  assert.deepEqual(failedConfig, { ok: false, code: "expo_config_failed" });
+  assert.equal(doctorCalled, false);
+
+  const failedDoctor = runExpoDoctorGate({
+    runConfig: () => ({ status: 0, signal: null, error: undefined }),
+    runDoctor: () => ({ status: 1, signal: null, error: undefined }),
+  });
+  assert.deepEqual(failedDoctor, { ok: false, code: "expo_doctor_failed" });
+
+  const success = runExpoDoctorGate({
+    runConfig: () => ({ status: 0, signal: null, error: undefined }),
+    runDoctor: () => ({ status: 0, signal: null, error: undefined }),
+  });
+  assert.deepEqual(success, { ok: true, code: "success" });
+
+  assert.match(expoDoctorVerifier, /EXPO_NO_TELEMETRY: "1"/u);
+  assert.match(expoDoctorVerifier, /"config", "--json", "--full"/u);
+  assert.match(
+    expoDoctorVerifier,
+    /stdio: \["ignore", "ignore", "ignore"\]/u,
+  );
 });
 
 test("EAS profiles bind every release class to an explicit environment", () => {
