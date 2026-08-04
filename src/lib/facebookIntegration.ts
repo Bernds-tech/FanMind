@@ -2,7 +2,6 @@ import {
   FACEBOOK_COMMENT_FEED_SCOPES,
   FACEBOOK_INSIGHTS_OAUTH_SCOPES,
   FACEBOOK_MESSAGES_OAUTH_SCOPES,
-  FACEBOOK_PAGES_MANAGE_ENGAGEMENT_SCOPE,
   FACEBOOK_PAGES_MESSAGING_SCOPE,
   FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE,
 } from "@/lib/facebookScopes";
@@ -247,12 +246,6 @@ export function hasFacebookPagesReadUserContentScope(
   scopes: string[] | null | undefined,
 ): boolean {
   return Boolean(scopes?.includes(FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE));
-}
-
-export function hasFacebookPagesManageEngagementScope(
-  scopes: string[] | null | undefined,
-): boolean {
-  return Boolean(scopes?.includes(FACEBOOK_PAGES_MANAGE_ENGAGEMENT_SCOPE));
 }
 
 export function hasFacebookCommentFeedScopes(

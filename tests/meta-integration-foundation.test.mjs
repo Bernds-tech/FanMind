@@ -37,6 +37,12 @@ test("Meta connections use the supported stable Graph API and owner/admin contro
 });
 
 test("Facebook and Instagram capabilities request only bounded scopes", () => {
+  assert.deepEqual([...META_CONNECTION_CAPABILITIES.facebook.comments], [
+    "pages_show_list",
+    "pages_read_engagement",
+    "pages_manage_metadata",
+    "pages_read_user_content",
+  ]);
   assert.deepEqual([...META_CONNECTION_CAPABILITIES.facebook.insights], [
     "pages_show_list",
     "pages_read_engagement",

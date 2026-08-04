@@ -56,6 +56,7 @@ Freigabe und aktiviert keine externe Verbindung.
 | Instagram Business Login/OAuth und Professional-Kontobindung | implementiert; echter Staging-/Meta-Kontotest noch offen |
 | Post-/Account-Cache, Metrik-Snapshots und Formeln | vorbereitet, Migration noch nicht angewendet |
 | Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | vorbereitet, Migration noch nicht angewendet |
+| Isolierter Staging-Migrationspfad | checksum-, commit-, TLS- und Production-Ziel-gebunden vorbereitet; noch nicht ausgeführt |
 | Meta App Review, Advanced Access und Business Verification | extern offen |
 | Rechtsgrundlage, Transparenz, AVV und Aufbewahrung | extern beziehungsweise je Kunde offen; Analysen standardmäßig aus |
 | Produktive Drittpersonenfreigabe | blockiert bis Technik-, Staging- und Rechtsabnahme |
@@ -103,7 +104,7 @@ Meta-Konfiguration geprüft.
 | Plattform/Funktion | Vorbereitete Scopes |
 | --- | --- |
 | Facebook Messenger | `pages_show_list`, `pages_manage_metadata`, `pages_messaging` |
-| Facebook Kommentare | `pages_show_list`, `pages_read_engagement`, `pages_manage_metadata` |
+| Facebook Kommentare | `pages_show_list`, `pages_read_engagement`, `pages_manage_metadata`, `pages_read_user_content` |
 | Facebook Insights | `pages_show_list`, `pages_read_engagement`, `read_insights` |
 | Instagram DMs | `instagram_business_basic`, `instagram_business_manage_messages` |
 | Instagram Kommentare | `instagram_business_basic`, `instagram_business_manage_comments` |
@@ -245,6 +246,10 @@ behaupten.
 8. Meta App Review/Advanced Access abschließen.
 9. Erst danach begrenzten Pilot je Workspace aktivieren; kein globaler
    Standardschalter.
+
+Der kontrollierte, noch nicht ausgeführte Schritt 4 ist in
+`docs/operations/META_CONTENT_STAGING_MIGRATION.md` beschrieben. Der Workflow
+wendet kein Production-Schema an und aktiviert keine Verbindung oder Analyse.
 
 Offizielle Prüfeinstiege:
 

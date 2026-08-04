@@ -146,6 +146,19 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
 - [ ] `fan_analysis_reports`
 - [ ] `communication_analysis_reports`
 - [ ] `workspace_analysis_settings`
+- [ ] Meta-Content-Migration nur über
+  `docs/operations/META_CONTENT_STAGING_MIGRATION.md`:
+  - beide SQL-Dateien müssen die festgeschriebenen SHA-256-Prüfsummen erfüllen;
+  - Workflow nur auf `main`, exakter geprüfter Commit, geschütztes `staging`;
+  - Staging-Origin, Supabase-Projekt und direkter DB-Host müssen von Production
+    abweichen; TLS ausschließlich `verify-full` mit absolutem CA-Pfad;
+  - Passwort nur über absolutes reguläres `PGPASSFILE` mit `0600`, keine
+    Connection-URL oder libpq-Zielumleitung;
+  - nur `META_CONTENT_MIGRATION_POSTFLIGHT=PASS` zusammen mit
+    `META_CONTENT_ANALYSIS_ACTIVATION=disabled` akzeptieren;
+  - partielle/driftende Schemata niemals automatisch reparieren oder erneut
+    anwenden; keine Meta-Verbindung, Analyse, App-Review- oder Production-
+    Aktivierung aus diesem Workflow.
 - [ ] `content_sources`
 - [ ] `content_metric_snapshots`
 - [ ] `contact_reply_targets`

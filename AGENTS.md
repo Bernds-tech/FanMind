@@ -222,6 +222,14 @@ Do not build or present as active unless explicitly requested, tested and legall
 - No fake live integrations, fake customers, fake testimonials or fake production numbers
 
 Social integrations, analytics, campaign logic, referral automation and automation must remain clearly marked as Roadmap, Coming Soon, Beta / in preparation, or later pilot-feedback work unless the user explicitly changes scope. The user explicitly expanded the Meta scope on 3 August 2026 to per-workspace Facebook/Instagram messaging, own-content insights and communication analysis. The canonical boundary is `docs/integrations/META_CONTENT_INTELLIGENCE.md`: implementation may be prepared, but no Meta channel or analysis may be presented as generally live until tenant isolation, Staging, Meta review and the legal activation gate are complete.
+- The two Meta content migrations have a checksum-pinned, Staging-only control
+  path in `docs/operations/META_CONTENT_STAGING_MIGRATION.md`. A normal Web
+  deploy must never call it. Keep the workflow `main`-, exact-commit-,
+  protected-environment-, Production-target-difference- and TLS-bound. A
+  repeated apply may skip only after the complete read-only RLS/privilege
+  postflight passes; partial or drifted schemas must fail closed. Applying the
+  schema must not connect Meta, enable analysis, submit App Review or imply a
+  Production activation.
 - Every Meta customer connects their own external business account to their own workspace. Never reuse a FanMind operator account, silently select the first managed page, expose an encrypted token to the browser, or allow one active external resource to bind to two workspaces.
 - Do not scrape or imply access to full follower lists. Only use own-account content/insights and people who actually interact through an authorized message, comment or other supported contact point.
 - User voice learning may use only confirmed manual outbound messages, never AI drafts, notes or inbound fan messages. Fan analysis must exclude protected/sensitive inferences and carry source period, sample size, confidence and review state.

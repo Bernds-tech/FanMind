@@ -26,7 +26,6 @@ import {
   fetchFacebookPageWebhookStatus,
   fetchFacebookTokenDiagnostics,
   hasFacebookCommentFeedScopes,
-  hasFacebookPagesManageEngagementScope,
   hasFacebookPagesMessagingScope,
   hasFacebookPagesReadUserContentScope,
   subscribeFacebookPage,
@@ -82,7 +81,6 @@ export type FacebookPageWebhookActionResult = FacebookPageWebhookStatus & {
   pagesMessagingGranted?: boolean;
   commentFeedScopesGranted?: boolean;
   pagesReadUserContentGranted?: boolean;
-  pagesManageEngagementGranted?: boolean;
 };
 
 export type MetaPermissionDiagnosis = {
@@ -214,7 +212,7 @@ function requiredMetaPermissionNames(): string[] {
       "pages_messaging",
       "pages_read_engagement",
       "pages_read_user_content",
-      "pages_manage_engagement",
+      "read_insights",
     ]),
   );
 }
@@ -890,8 +888,6 @@ async function getTokenScopeDiagnostics(token: string | null) {
     commentFeedScopesGranted: hasFacebookCommentFeedScopes(tokenScopes),
     pagesReadUserContentGranted:
       hasFacebookPagesReadUserContentScope(tokenScopes),
-    pagesManageEngagementGranted:
-      hasFacebookPagesManageEngagementScope(tokenScopes),
   };
 }
 
