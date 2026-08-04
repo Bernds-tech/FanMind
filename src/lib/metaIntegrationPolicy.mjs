@@ -16,6 +16,7 @@ export const META_CONNECTION_CAPABILITIES = Object.freeze({
       "pages_show_list",
       "pages_read_engagement",
       "pages_manage_metadata",
+      "pages_read_user_content",
     ]),
     insights: Object.freeze([
       "pages_show_list",

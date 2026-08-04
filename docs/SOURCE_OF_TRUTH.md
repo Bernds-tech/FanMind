@@ -244,6 +244,20 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   service-role CRUD vollständig transaktional aus und verlangt danach einen
   leeren Cleanup-Nachweis. Kein normaler Deploy kann den Runner aufrufen; reale
   Push-Registrierung, Serverkey und Delivery bleiben extern deaktiviert.
+- Meta-Content-Staging: Die zwei vorbereiteten Migrationen
+  `20260803120000_meta_content_intelligence_foundation.sql` und
+  `20260803210000_preserve_incremental_conversation_history.sql` sind
+  checksum-festgeschrieben. Ihr manueller Apply läuft ausschließlich auf
+  `main`, für den exakt geprüften Commit und gegen ein per Origin,
+  Supabase-Projektreferenz und Datenbankhost von Production getrenntes,
+  TLS-verifiziertes Staging. Der read-only Postflight prüft RLS, nur lesende
+  Browser-Policies und -Spaltenrechte, Tokenausschluss, Service-Role-Zugriff,
+  Indizes, Kontextbedingungen und die Entfernung des alten 50er-Löschtriggers.
+  Ein Wiederholungslauf überspringt SQL nur nach vollständigem Postflight;
+  partielle oder abweichende Schemata bleiben fail-closed. Web-Deploy,
+  Meta-Kontoverbindung, Analyse, App-Review-Einreichung und Production-
+  Migration bleiben davon getrennt und deaktiviert. Runbook:
+  `docs/operations/META_CONTENT_STAGING_MIGRATION.md`.
 - Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
 
 Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.

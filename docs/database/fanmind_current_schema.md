@@ -481,6 +481,15 @@ Wichtige Felder:
 - `data_subject_rights_status`
 - `message_retention_days`
 - `content_cache_retention_days`
+
+Die zwei Meta-Content-Migrationen bleiben auf Production unangewendet. Der
+einzige vorbereitete Apply-/Postflight-Pfad ist
+`docs/operations/META_CONTENT_STAGING_MIGRATION.md`: checksum-gebunden,
+`main`- und commit-genau, TLS-verifiziert und ausschließlich für ein von
+Production getrenntes Staging. Der Postflight prüft RLS, Select-only-
+Browserzugriff, Spaltenrechte einschließlich Tokenausschluss, Service-Role-
+Zugriff, Indizes und den entfernten 50er-Löschtrigger. Ein bestandener
+Schema-Apply aktiviert weder Meta noch Analyse.
 - `analysis_retention_days`
 - `confirmed_by`
 - `confirmed_at`

@@ -11,6 +11,7 @@ const checkedFiles = [
   ".github/workflows/deploy-fanmind.yml",
   ".github/workflows/ai-tier-staging-migration.yml",
   ".github/workflows/ai-tier-staging-acceptance.yml",
+  ".github/workflows/meta-content-staging-migration.yml",
   ".github/workflows/mobile-release-resource-readiness.yml",
   ".github/workflows/mobile-signed-internal-build.yml",
   ".github/workflows/ci-mobile.yml",
@@ -29,6 +30,8 @@ const checkedFiles = [
   "docs/operations/RESTORE_DRILL.md",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
+  "scripts/operations/meta-content-migration-runner.mjs",
+  "src/lib/metaContentStagingMigrationPolicy.mjs",
   "scripts/operations/mobile-release-resource-readiness.mjs",
   "scripts/operations/mobile-signed-build-completion.mjs",
   "apps/mobile/scripts/check-store-readiness.mjs",
@@ -52,6 +55,7 @@ const checkedFiles = [
   "tests/ai-tier-entitlement-migration-policy.test.mjs",
   "tests/ai-tier-stripe-lifecycle.test.mjs",
   "tests/ai-tier-staging-acceptance.test.mjs",
+  "tests/meta-content-staging-migration.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
   "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
@@ -134,6 +138,7 @@ const checkedFiles = [
   "docs/operations/AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md",
   "docs/operations/AI_REPLY_QUALITY_EVAL.md",
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
+  "docs/operations/META_CONTENT_STAGING_MIGRATION.md",
 ];
 
 const documentationFiles = new Set([
@@ -774,6 +779,46 @@ requireText(
   "docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md",
   "keine automatische Production-Migration",
   "Das Runbook muss automatische Production-Migrationen ausdrücklich ausschließen.",
+);
+requireText(
+  "package.json",
+  '"db:meta-content:check": "node scripts/operations/meta-content-migration-runner.mjs --check"',
+  "Die Offline-Prüfung der Meta-Content-Migrationen muss fest verfügbar sein.",
+);
+requireText(
+  ".github/workflows/meta-content-staging-migration.yml",
+  "inputs.reviewed_commit == github.sha",
+  "Der Meta-Migrationsworkflow muss den exakten geprüften main-Commit binden.",
+);
+requireText(
+  ".github/workflows/meta-content-staging-migration.yml",
+  "PGSSLMODE: verify-full",
+  "Der Meta-Migrationsworkflow muss den Staging-Datenbankhost vollständig per TLS prüfen.",
+);
+requireText(
+  ".github/workflows/meta-content-staging-migration.yml",
+  "npm run db:meta-content:apply",
+  "Der Meta-Migrationsworkflow muss ausschließlich den checksum-gebundenen Runner verwenden.",
+);
+forbidIn(
+  ".github/workflows/meta-content-staging-migration.yml",
+  /FANMIND_RUNTIME_ENVIRONMENT: production|db:meta-content:verify|Meta App Review|analysis.*enabled/iu,
+  "Der Meta-Migrationsworkflow darf Production, Review oder Analyse nicht aktivieren.",
+);
+requireText(
+  "scripts/operations/meta-content-migration-runner.mjs",
+  "META_CONTENT_MIGRATION_APPLY=already_current",
+  "Der Meta-Runner muss sichere, postflight-gebundene Wiederholungsläufe unterstützen.",
+);
+requireText(
+  "scripts/operations/meta-content-migration-runner.mjs",
+  "META_CONTENT_ANALYSIS_ACTIVATION=disabled",
+  "Der Meta-Runner muss die unveränderte Analysesperre ausweisen.",
+);
+requireText(
+  "docs/operations/META_CONTENT_STAGING_MIGRATION.md",
+  "teilweise vorhandenes",
+  "Das Meta-Runbook muss Drift und Teilzustände fail-closed behandeln.",
 );
 requireText(
   "docs/SOURCE_OF_TRUTH.md",
