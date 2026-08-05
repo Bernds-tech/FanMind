@@ -1,32 +1,32 @@
-name: FanMind Meta Content Staging Migration
+name: FanMind Meta Content Staging Resource Readiness
 
 on:
   workflow_dispatch:
     inputs:
       reviewed_commit:
-        description: 'Exact reviewed main commit containing the pinned Meta migrations'
+        description: 'Exact reviewed main commit to bind to this read-only check'
         required: true
         type: string
       confirmation:
-        description: 'Type apply-meta-content-intelligence-migrations to apply only to isolated Staging'
+        description: 'Type verify-meta-content-staging-resources to run the read-only isolated staging resource check'
         required: true
         type: string
 
 concurrency:
-  group: fanmind-meta-content-staging-write
+  group: fanmind-meta-content-staging-resource-readiness
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  apply-meta-content-staging-migration:
-    name: Apply pinned Meta content schema only to isolated Staging
+  verify-meta-content-staging-resources:
+    name: Verify isolated Meta content resources without schema or data writes
     if: >-
       ${{
         github.ref == 'refs/heads/main' &&
         inputs.reviewed_commit == github.sha &&
-        inputs.confirmation == 'apply-meta-content-intelligence-migrations'
+        inputs.confirmation == 'verify-meta-content-staging-resources'
       }}
     runs-on: ubuntu-24.04
     environment: staging
@@ -38,10 +38,10 @@ jobs:
       FANMIND_PRODUCTION_API_ORIGIN: https://fanmind.ch
       FANMIND_TARGET_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_STAGING_SUPABASE_PROJECT_REF }}
       FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF }}
-      FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'
-      FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
+      FANMIND_NON_PRODUCTION_WRITE_ACK: ''
       FANMIND_META_CONTENT_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
-      FANMIND_META_CONTENT_STAGING_MIGRATION_CONFIRM: apply-meta-content-intelligence-migrations
+      FANMIND_META_CONTENT_STAGING_RESOURCE_CONFIRM: verify-meta-content-staging-resources
       PGHOST: ${{ secrets.FANMIND_STAGING_DB_HOST }}
       FANMIND_TARGET_DB_HOST: ${{ secrets.FANMIND_STAGING_DB_HOST }}
       FANMIND_PRODUCTION_DB_HOST: ${{ secrets.FANMIND_PRODUCTION_DB_HOST }}
@@ -66,7 +66,7 @@ jobs:
       - name: Prepare dedicated private database password file
         env:
           FANMIND_STAGING_DB_PASSWORD: ${{ secrets.FANMIND_STAGING_DB_PASSWORD }}
-          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-migration.pgpass
+          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-resource-readiness.pgpass
         run: |
           set -euo pipefail
           umask 077
@@ -83,13 +83,13 @@ jobs:
             "$ESCAPED_DB_PASSWORD" > "$PGPASSFILE"
           chmod 600 "$PGPASSFILE"
 
-      - name: Apply pinned migrations and run the read-only RLS postflight
+      - name: Verify target, connectivity and schema state without writes
         env:
-          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-migration.pgpass
-        run: npm run db:meta-content:apply
+          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-resource-readiness.pgpass
+        run: npm run db:meta-content:readiness
 
       - name: Remove dedicated private database password file
         if: ${{ always() }}
         env:
-          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-migration.pgpass
+          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-resource-readiness.pgpass
         run: rm -f "$PGPASSFILE"

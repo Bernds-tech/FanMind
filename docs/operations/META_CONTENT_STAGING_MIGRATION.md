@@ -2,7 +2,9 @@
 
 ## Zweck und harte Grenze
 
-Dieser Pfad wendet ausschließlich die beiden festgeschriebenen Migrationen
+Dieser Kontrollpfad prüft zuerst die getrennten Staging-Ressourcen strikt
+read-only und wendet erst in einem zweiten, separat bestätigten Workflow
+ausschließlich die beiden festgeschriebenen Migrationen
 
 - `20260803120000_meta_content_intelligence_foundation.sql`
 - `20260803210000_preserve_incremental_conversation_history.sql`
@@ -21,6 +23,11 @@ Der Runner arbeitet fail-closed und verlangt gleichzeitig:
   Referenz eindeutig von Production abweicht;
 - direkten libpq-Zugriff auf den bestätigten Staging-Host; Connection-URLs,
   `PGHOSTADDR`, Services und andere Zielumleitungen sind gesperrt;
+- den IPv4-kompatiblen Supabase-Supavisor-Session-Pooler auf Port `5432`;
+  direkte `db.<project-ref>.supabase.co`-Verbindungen und der
+  Transaction-Pooler-Port `6543` sind für diesen GitHub-Hosted-Lauf gesperrt;
+- den Datenbankbenutzer `postgres.<staging-project-ref>`, der im Workflow
+  ausschließlich aus der getrennten Staging-Projektreferenz abgeleitet wird;
 - TLS mit `PGSSLMODE=verify-full` und absolutem CA-Pfad;
 - ein absolutes, reguläres, eigentümergeführtes `PGPASSFILE` mit Modus `0600`;
 - die getrennten Bestätigungen
@@ -50,13 +57,17 @@ sein:
 | Secret | `FANMIND_STAGING_SUPABASE_URL` |
 | Secret | `FANMIND_STAGING_DB_HOST` |
 | Secret | `FANMIND_PRODUCTION_DB_HOST` |
-| Secret | `FANMIND_STAGING_DB_USER` |
 | Secret | `FANMIND_STAGING_DB_PASSWORD` |
 
-Die Staging-Datenbankidentität muss die vorgesehenen DDL-Rechte besitzen. Sie
-darf nicht dieselbe Identität, derselbe Host oder dasselbe Projekt wie
-Production sein. Repository-Secrets und Secretwerte dürfen nicht in Logs oder
-Screenshots übernommen werden.
+`FANMIND_STAGING_DB_HOST` muss der Supabase-Supavisor-Session-Pooler sein,
+`FANMIND_STAGING_DB_PORT` muss `5432` enthalten. `PGUSER` wird nicht als Secret
+übernommen, sondern fest als `postgres.<FANMIND_STAGING_SUPABASE_PROJECT_REF>`
+gebildet. Diese Staging-Datenbankidentität muss für den späteren Apply die
+vorgesehenen DDL-Rechte besitzen. Sie darf nicht dieselbe Projektidentität wie
+Production sein. Ein regionaler Supavisor-Pooler-Hostname kann zwischen
+Projekten geteilt sein; deshalb sind die getrennte Projektreferenz und der
+projektqualifizierte Benutzer die verbindliche Zielgrenze. Repository-Secrets
+und Secretwerte dürfen nicht in Logs oder Screenshots übernommen werden.
 
 ## Ablauf
 
@@ -68,12 +79,23 @@ Screenshots übernommen werden.
    npm run db:meta-content:check
    ```
 
-3. Den manuellen Workflow `FanMind Meta Content Staging Migration` auf
-   `main` starten.
-4. Als `reviewed_commit` exakt die SHA aus Schritt 1 eintragen.
-5. Als Bestätigung exakt
+3. Den manuellen Workflow `FanMind Meta Content Staging Resource Readiness`
+   auf `main` starten.
+4. Als `reviewed_commit` exakt die SHA aus Schritt 1 und als Bestätigung exakt
+   `verify-meta-content-staging-resources` eintragen.
+5. Nur einen read-only Lauf akzeptieren, der gemeinsam
+   `META_CONTENT_STAGING_RESOURCES=PASS`,
+   `META_CONTENT_MIGRATION_APPLY=not_requested` und
+   `META_CONTENT_ANALYSIS_ACTIVATION=disabled` meldet. Ein vollständig
+   fehlendes Schema wird als `META_CONTENT_STAGING_SCHEMA=absent`, ein bereits
+   vollständig gültiges Schema als `current` gemeldet; partielle oder
+   driftende Zustände schlagen fehl.
+6. Erst danach den manuellen Workflow `FanMind Meta Content Staging Migration`
+   auf `main` starten.
+7. Als `reviewed_commit` erneut exakt dieselbe SHA eintragen.
+8. Als Bestätigung exakt
    `apply-meta-content-intelligence-migrations` eintragen.
-6. Nur einen Lauf akzeptieren, dessen redigierte Ausgabe gemeinsam zeigt:
+9. Nur einen Lauf akzeptieren, dessen redigierte Ausgabe gemeinsam zeigt:
 
    - zweimal `META_CONTENT_MIGRATION_CHECKSUM=verified`;
    - `META_CONTENT_MIGRATION_APPLY=completed` oder bei belegtem

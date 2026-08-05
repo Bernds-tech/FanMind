@@ -56,9 +56,12 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
    - Variablen `FANMIND_STAGING_STRIPE_PRICE_AI_PLUS` und
      `FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA` für aktive EUR-Monatspreise im
      Stripe Test Mode;
-   - Variablen `FANMIND_STAGING_DB_PORT` und `FANMIND_STAGING_DB_NAME`;
-   - Secrets `FANMIND_STAGING_DB_HOST`, `FANMIND_STAGING_DB_USER` und
-     `FANMIND_STAGING_DB_PASSWORD`; niemals eine Production-Verbindung.
+   - Variablen `FANMIND_STAGING_DB_PORT` (`5432`) und
+     `FANMIND_STAGING_DB_NAME`;
+   - Secrets `FANMIND_STAGING_DB_HOST` (IPv4-kompatibler Supabase-Supavisor-
+     Session-Pooler) und `FANMIND_STAGING_DB_PASSWORD`; der DB-Benutzer wird
+     als `postgres.<staging-project-ref>` abgeleitet und nie frei gesetzt;
+     niemals eine Production-Verbindung.
 
 ## Sichere Reihenfolge
 

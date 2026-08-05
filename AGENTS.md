@@ -230,6 +230,11 @@ Social integrations, analytics, campaign logic, referral automation and automati
   postflight passes; partial or drifted schemas must fail closed. Applying the
   schema must not connect Meta, enable analysis, submit App Review or imply a
   Production activation.
+- Meta content resource readiness is a separate read-only workflow that may
+  run before the schema exists. Keep writes and apply commands disabled, bind
+  the database user to `postgres.<staging-project-ref>`, require the IPv4-
+  compatible Supabase session pooler on port 5432, accept only an absent or a
+  fully valid current schema and fail closed on partial or drifting state.
 - Every Meta customer connects their own external business account to their own workspace. Never reuse a FanMind operator account, silently select the first managed page, expose an encrypted token to the browser, or allow one active external resource to bind to two workspaces.
 - Do not scrape or imply access to full follower lists. Only use own-account content/insights and people who actually interact through an authorized message, comment or other supported contact point.
 - User voice learning may use only confirmed manual outbound messages, never AI drafts, notes or inbound fan messages. Fan analysis must exclude protected/sensitive inferences and carry source period, sample size, confidence and review state.

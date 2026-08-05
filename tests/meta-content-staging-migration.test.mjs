@@ -35,20 +35,24 @@ function baseEnvironment(mode = "apply") {
     FANMIND_TARGET_SUPABASE_PROJECT_REF: "stagingref123",
     FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: "productionref123",
     FANMIND_ENABLE_NON_PRODUCTION_WRITES: apply ? "true" : "false",
-    FANMIND_NON_PRODUCTION_WRITE_ACK: "I_UNDERSTAND_NON_PRODUCTION_ONLY",
+    FANMIND_NON_PRODUCTION_WRITE_ACK: apply
+      ? "I_UNDERSTAND_NON_PRODUCTION_ONLY"
+      : "",
     FANMIND_META_CONTENT_REVIEWED_COMMIT: "a".repeat(40),
     FANMIND_META_CONTENT_STAGING_MIGRATION_CONFIRM:
       "apply-meta-content-intelligence-migrations",
     FANMIND_META_CONTENT_STAGING_VERIFY_CONFIRM:
       "verify-meta-content-intelligence-schema",
+    FANMIND_META_CONTENT_STAGING_RESOURCE_CONFIRM:
+      "verify-meta-content-staging-resources",
     GITHUB_REF: "refs/heads/main",
     GITHUB_SHA: "a".repeat(40),
-    PGHOST: "db.staging.example",
-    FANMIND_TARGET_DB_HOST: "db.staging.example",
-    FANMIND_PRODUCTION_DB_HOST: "db.production.example",
+    PGHOST: "aws-0-eu-central-1.pooler.supabase.com",
+    FANMIND_TARGET_DB_HOST: "aws-0-eu-central-1.pooler.supabase.com",
+    FANMIND_PRODUCTION_DB_HOST: "aws-0-eu-central-1.pooler.supabase.com",
     PGPORT: "5432",
     PGDATABASE: "postgres",
-    PGUSER: "postgres",
+    PGUSER: "postgres.stagingref123",
     PGSSLMODE: "verify-full",
     PGSSLROOTCERT: "/etc/ssl/certs/ca-certificates.crt",
   };
@@ -98,16 +102,24 @@ exit 1
     );
     await writeFile(
       passfile,
-      "db.staging.example:5432:postgres:postgres:private-password\n",
+      "aws-0-eu-central-1.pooler.supabase.com:5432:postgres:postgres.stagingref123:private-password\n",
       { mode: 0o600 },
     );
     await chmod(passfile, 0o600);
 
+    const mode = state === "verify"
+      ? "verify"
+      : state.startsWith("readiness-")
+        ? "readiness"
+        : "apply";
+    const databaseState = state === "verify"
+      ? "installed"
+      : state.replace(/^readiness-/u, "");
     const environment = {
-      ...baseEnvironment(state === "verify" ? "verify" : "apply"),
+      ...baseEnvironment(mode),
       PATH: `${root}:${process.env.PATH}`,
       PGPASSFILE: passfile,
-      FANMIND_TEST_META_STATE: state === "verify" ? "installed" : state,
+      FANMIND_TEST_META_STATE: databaseState,
       FANMIND_TEST_APPLIED_MARKER: appliedMarker,
       FANMIND_TEST_PSQL_CALL_LOG: callLog,
     };
@@ -163,10 +175,14 @@ test("environment policy blocks wrong commits, Production targets and weak TLS",
       NEXT_PUBLIC_SUPABASE_URL: "https://productionref123.supabase.co",
       FANMIND_TARGET_SUPABASE_PROJECT_REF: "productionref123",
     },
+    { FANMIND_PRODUCTION_DB_HOST: "" },
     {
-      PGHOST: "db.production.example",
-      FANMIND_TARGET_DB_HOST: "db.production.example",
+      PGHOST: "db.stagingref123.supabase.co",
+      FANMIND_TARGET_DB_HOST: "db.stagingref123.supabase.co",
     },
+    { PGPORT: "6543" },
+    { PGUSER: "postgres" },
+    { PGUSER: "postgres.productionref123" },
     { PGHOSTADDR: "127.0.0.1" },
     { PGSSLMODE: "require" },
     { PGSSLROOTCERT: "relative-ca.pem" },
@@ -177,6 +193,74 @@ test("environment policy blocks wrong commits, Production targets and weak TLS",
     );
     assert.equal(result.ok, false, JSON.stringify(mutation));
   }
+});
+
+test("resource readiness is read-only before or after a complete schema", async () => {
+  for (const [state, expectedState, expectedCalls] of [
+    ["readiness-absent", "absent", 1],
+    ["readiness-installed", "current", 2],
+  ]) {
+    await withFakeDatabase(state, async ({ environment, callLog }) => {
+      const { stdout, stderr } = await execFileAsync(
+        process.execPath,
+        [runnerPath, "--readiness"],
+        { env: environment },
+      );
+      const output = `${stdout}\n${stderr}`;
+      const calls = await readFile(callLog, "utf8");
+      assert.match(output, /META_CONTENT_MIGRATION_MODE=readiness/u);
+      assert.match(
+        output,
+        new RegExp(`META_CONTENT_STAGING_SCHEMA=${expectedState}`, "u"),
+      );
+      assert.match(output, /META_CONTENT_MIGRATION_APPLY=not_requested/u);
+      assert.match(output, /META_CONTENT_STAGING_RESOURCES=PASS/u);
+      assert.match(output, /META_CONTENT_ANALYSIS_ACTIVATION=disabled/u);
+      assert.equal(calls.trim().split("\n").length, expectedCalls);
+      assert.doesNotMatch(output, /private-password|stagingref123|pooler/u);
+    });
+  }
+});
+
+test("resource readiness blocks a partial schema without applying SQL", async () => {
+  await withFakeDatabase(
+    "readiness-partial",
+    async ({ environment, callLog }) => {
+      let rejection;
+      try {
+        await execFileAsync(process.execPath, [runnerPath, "--readiness"], {
+          env: environment,
+        });
+      } catch (error) {
+        rejection = error;
+      }
+      assert.ok(rejection);
+      const output = `${rejection.stdout ?? ""}\n${rejection.stderr ?? ""}`;
+      const calls = await readFile(callLog, "utf8");
+      assert.match(
+        output,
+        /META_CONTENT_MIGRATION_ERROR=existing_schema_invalid/u,
+      );
+      assert.equal(calls.trim().split("\n").length, 1);
+      assert.doesNotMatch(output, /private-password|stagingref123|pooler/u);
+    },
+  );
+});
+
+test("resource workflow cannot invoke the Meta migration apply mode", async () => {
+  const workflow = await readFile(
+    ".github/workflows/meta-content-staging-resource-readiness.yml",
+    "utf8",
+  );
+  assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u);
+  assert.match(workflow, /db:meta-content:readiness/u);
+  assert.match(workflow, /verify-meta-content-staging-resources/u);
+  assert.match(
+    workflow,
+    /format\('postgres\.\{0\}', vars\.FANMIND_STAGING_SUPABASE_PROJECT_REF\)/u,
+  );
+  assert.doesNotMatch(workflow, /db:meta-content:apply/u);
+  assert.doesNotMatch(workflow, /I_UNDERSTAND_NON_PRODUCTION_ONLY/u);
 });
 
 test("verify runs only the read-only metadata, RLS and column postflight", async () => {
@@ -198,7 +282,7 @@ test("verify runs only the read-only metadata, RLS and column postflight", async
     assert.match(POSTFLIGHT_SQL, /service_role_privilege_invalid/iu);
     assert.match(POSTFLIGHT_SQL, /obsolete_retention_trigger_present/iu);
     assert.match(STATE_SQL, /META_CONTENT_MIGRATION_STATE=/u);
-    assert.doesNotMatch(output, /private-password|stagingref123|db\.staging/u);
+    assert.doesNotMatch(output, /private-password|stagingref123|pooler/u);
   });
 });
 
@@ -214,7 +298,7 @@ test("apply is atomic, postflight-bound and safely repeatable", async () => {
     assert.match(output, /META_CONTENT_MIGRATION_APPLY=completed/u);
     assert.match(output, /META_CONTENT_MIGRATION_POSTFLIGHT=PASS/u);
     assert.equal(calls.trim().split("\n").length, 4);
-    assert.doesNotMatch(output, /private-password|stagingref123|db\.staging/u);
+    assert.doesNotMatch(output, /private-password|stagingref123|pooler/u);
   });
 
   await withFakeDatabase("installed", async ({ environment, callLog }) => {
@@ -244,7 +328,7 @@ test("partial schemas and unsafe password files fail closed without details", as
         );
         assert.doesNotMatch(
           output,
-          /private-password|stagingref123|db\.staging/u,
+          /private-password|stagingref123|pooler/u,
         );
         return true;
       },

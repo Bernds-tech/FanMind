@@ -9,6 +9,8 @@ export const META_CONTENT_STAGING_MIGRATION_CONFIRMATION =
   "apply-meta-content-intelligence-migrations";
 export const META_CONTENT_STAGING_VERIFY_CONFIRMATION =
   "verify-meta-content-intelligence-schema";
+export const META_CONTENT_STAGING_RESOURCE_CONFIRMATION =
+  "verify-meta-content-staging-resources";
 
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/u;
 const DB_IDENTITY_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/u;
@@ -88,11 +90,19 @@ function evaluateTargetBinding(environment, errors) {
   if (!pgHost || !expectedHost || pgHost !== expectedHost) {
     errors.push("database_host_binding");
   }
-  if (!productionHost || (pgHost && pgHost === productionHost)) {
+  // Supabase session-pooler hostnames are regional shared infrastructure.
+  // Project separation is therefore bound by the independently checked
+  // project refs plus the project-qualified database user, not by requiring
+  // two different shared pooler hostnames.
+  if (!productionHost) {
     errors.push("production_database_target");
   }
 
   const pgPort = clean(environment.PGPORT);
+  const targetProjectRef = clean(
+    environment.FANMIND_TARGET_SUPABASE_PROJECT_REF,
+  ).toLowerCase();
+  const pgUser = clean(environment.PGUSER).toLowerCase();
   if (
     !/^[0-9]{1,5}$/u.test(pgPort) ||
     Number(pgPort) < 1 ||
@@ -101,6 +111,12 @@ function evaluateTargetBinding(environment, errors) {
     !DB_IDENTITY_PATTERN.test(clean(environment.PGUSER))
   ) {
     errors.push("database_identity");
+  }
+  if (!pgHost.endsWith(".pooler.supabase.com") || pgPort !== "5432") {
+    errors.push("database_session_pooler");
+  }
+  if (!targetProjectRef || pgUser !== `postgres.${targetProjectRef}`) {
+    errors.push("database_user_project_binding");
   }
 
   for (const redirect of [
@@ -140,7 +156,7 @@ export function evaluateMetaContentStagingMigrationEnvironment(
   { mode = "verify" } = {},
 ) {
   const errors = [];
-  if (mode !== "verify" && mode !== "apply") {
+  if (mode !== "verify" && mode !== "apply" && mode !== "readiness") {
     return Object.freeze({ ok: false, mode, errors: ["mode"] });
   }
 
@@ -167,11 +183,15 @@ export function evaluateMetaContentStagingMigrationEnvironment(
   const expectedConfirmation =
     mode === "apply"
       ? META_CONTENT_STAGING_MIGRATION_CONFIRMATION
-      : META_CONTENT_STAGING_VERIFY_CONFIRMATION;
+      : mode === "readiness"
+        ? META_CONTENT_STAGING_RESOURCE_CONFIRMATION
+        : META_CONTENT_STAGING_VERIFY_CONFIRMATION;
   const confirmationKey =
     mode === "apply"
       ? "FANMIND_META_CONTENT_STAGING_MIGRATION_CONFIRM"
-      : "FANMIND_META_CONTENT_STAGING_VERIFY_CONFIRM";
+      : mode === "readiness"
+        ? "FANMIND_META_CONTENT_STAGING_RESOURCE_CONFIRM"
+        : "FANMIND_META_CONTENT_STAGING_VERIFY_CONFIRM";
   if (clean(environment[confirmationKey]) !== expectedConfirmation) {
     errors.push("confirmation");
   }

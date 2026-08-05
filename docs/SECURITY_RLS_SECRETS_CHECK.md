@@ -149,9 +149,16 @@ RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sei
 - [ ] Meta-Content-Migration nur über
   `docs/operations/META_CONTENT_STAGING_MIGRATION.md`:
   - beide SQL-Dateien müssen die festgeschriebenen SHA-256-Prüfsummen erfüllen;
+  - zuerst `FanMind Meta Content Staging Resource Readiness` read-only
+    ausführen; der Workflow besitzt keinen Apply-Befehl und keine
+    Nicht-Production-Schreibfreigabe;
   - Workflow nur auf `main`, exakter geprüfter Commit, geschütztes `staging`;
-  - Staging-Origin, Supabase-Projekt und direkter DB-Host müssen von Production
-    abweichen; TLS ausschließlich `verify-full` mit absolutem CA-Pfad;
+  - Staging-Origin und Supabase-Projektidentität müssen von Production
+    abweichen; GitHub Hosted verwendet ausschließlich den IPv4-kompatiblen
+    Supavisor-Session-Pooler auf Port `5432`, der Nutzer ist fest
+    `postgres.<staging-project-ref>`; ein regional geteilter Pooler-Hostname
+    ersetzt niemals diese Projektbindung; TLS ausschließlich `verify-full` mit
+    absolutem CA-Pfad;
   - Passwort nur über absolutes reguläres `PGPASSFILE` mit `0600`, keine
     Connection-URL oder libpq-Zielumleitung;
   - nur `META_CONTENT_MIGRATION_POSTFLIGHT=PASS` zusammen mit
