@@ -6,6 +6,8 @@ import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import styles from "./channels.module.css";
 import { type TelegramWebhookStatus } from "@/lib/telegramStatus";
+import { syncFacebookMessengerHistoryFromChannelPage } from "./facebookWebhookActions";
+import { syncInstagramMessengerHistoryFromChannelPage } from "./instagramWebhookActions";
 
 type ChannelStatus =
   | "Live / manuell nutzbar"
@@ -49,6 +51,12 @@ type InstagramConnection = {
   scopes: string[] | null;
   token_expires_at: string | null;
   webhook_subscribed: boolean;
+  last_messenger_sync_at: string | null;
+  last_messenger_sync_checked_count: number | null;
+  last_messenger_sync_imported_inbound_count: number | null;
+  last_messenger_sync_imported_outbound_count: number | null;
+  last_messenger_sync_skipped_count: number | null;
+  last_messenger_sync_error: string | null;
 };
 
 type MetaWebhookStorageHealth = {
@@ -776,8 +784,22 @@ export function ChannelsGrid({
                             <li>
                               Berechtigungen: {facebookConnection.scopes?.length ?? 0}
                             </li>
+                            <li>
+                              Messenger-Abgleich: {formatSyncTimestamp(facebookConnection.last_messenger_sync_at)}
+                            </li>
+                            <li>
+                              Letzter Lauf: {facebookConnection.last_messenger_sync_imported_inbound_count ?? 0} inbound · {facebookConnection.last_messenger_sync_imported_outbound_count ?? 0} outbound · {facebookConnection.last_messenger_sync_skipped_count ?? 0} bereits vorhanden
+                            </li>
+                            {facebookConnection.last_messenger_sync_error ? (
+                              <li>Letzter Sync-Fehler: {facebookConnection.last_messenger_sync_error}</li>
+                            ) : null}
                           </ul>
                           <div className={styles.connectionCardActions}>
+                            <form action={syncFacebookMessengerHistoryFromChannelPage}>
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Facebook-DMs jetzt synchronisieren
+                              </button>
+                            </form>
                             <form action="/api/integrations/facebook/start" method="get">
                               <input type="hidden" name="type" value="facebook_messages" />
                               <button type="submit" disabled={demoConnectionsDisabled}>
@@ -850,10 +872,20 @@ export function ChannelsGrid({
                             <li>Berechtigungen: {instagramConnection.scopes?.length ?? 0}</li>
                             <li>Inkrementeller Webhook: {instagramConnection.webhook_subscribed ? "aktiv" : "noch nicht aktiv"}</li>
                             <li>Eigene Posts/Insights: als Workspace-Cache vorgesehen</li>
-                            <li>Chats: fortlaufend inkrementell; KI-Kontext je Stufe 50/100/150</li>
+                            <li>Chats: Erstabgleich bis 150 je Thread, danach inkrementell; KI-Kontext je Stufe 50/100/150</li>
+                            <li>DM-Abgleich: {formatSyncTimestamp(instagramConnection.last_messenger_sync_at)}</li>
+                            <li>Letzter Lauf: {instagramConnection.last_messenger_sync_imported_inbound_count ?? 0} inbound · {instagramConnection.last_messenger_sync_imported_outbound_count ?? 0} outbound · {instagramConnection.last_messenger_sync_skipped_count ?? 0} bereits vorhanden</li>
+                            {instagramConnection.last_messenger_sync_error ? (
+                              <li>Letzter Sync-Fehler: {instagramConnection.last_messenger_sync_error}</li>
+                            ) : null}
                             <li>Persönliche fremde Posts: keine dauerhafte Kopie</li>
                           </ul>
                           <div className={styles.connectionCardActions}>
+                            <form action={syncInstagramMessengerHistoryFromChannelPage}>
+                              <button type="submit" disabled={demoConnectionsDisabled}>
+                                Instagram-DMs jetzt synchronisieren
+                              </button>
+                            </form>
                             <form action="/api/integrations/instagram/start" method="get">
                               <input type="hidden" name="type" value="instagram_messages" />
                               <button type="submit" disabled={demoConnectionsDisabled}>
@@ -1034,4 +1066,14 @@ export function ChannelsGrid({
       ) : null}
     </section>
   );
+}
+
+function formatSyncTimestamp(value: string | null): string {
+  if (!value) return "noch nicht ausgeführt";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Zeitpunkt nicht verfügbar";
+  return new Intl.DateTimeFormat("de-CH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }

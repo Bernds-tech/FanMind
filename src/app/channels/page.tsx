@@ -40,6 +40,12 @@ type SafeInstagramConnection = {
   scopes: string[] | null;
   token_expires_at: string | null;
   webhook_subscribed: boolean;
+  last_messenger_sync_at: string | null;
+  last_messenger_sync_checked_count: number | null;
+  last_messenger_sync_imported_inbound_count: number | null;
+  last_messenger_sync_imported_outbound_count: number | null;
+  last_messenger_sync_skipped_count: number | null;
+  last_messenger_sync_error: string | null;
 };
 
 type FacebookLiveSetupStatus = {
@@ -264,6 +270,12 @@ export default async function ChannelsPage({
             scopes: instagramConnection.scopes ?? [],
             token_expires_at: instagramConnection.token_expires_at,
             webhook_subscribed: instagramConnection.webhook_subscribed,
+            last_messenger_sync_at: instagramConnection.last_messenger_sync_at,
+            last_messenger_sync_checked_count: instagramConnection.last_messenger_sync_checked_count,
+            last_messenger_sync_imported_inbound_count: instagramConnection.last_messenger_sync_imported_inbound_count,
+            last_messenger_sync_imported_outbound_count: instagramConnection.last_messenger_sync_imported_outbound_count,
+            last_messenger_sync_skipped_count: instagramConnection.last_messenger_sync_skipped_count,
+            last_messenger_sync_error: instagramConnection.last_messenger_sync_error,
           } : null}
           instagramError={singleSearchParam(params.instagram_error)}
           instagramOAuthConfigured={isInstagramOAuthConfigured() && isTokenEncryptionConfigured()}

@@ -202,6 +202,17 @@ test("Instagram Business Login is workspace-bound and subscribes only authorized
   assert.match(integration, /https:\/\/api\.instagram\.com\/oauth\/access_token/u);
   assert.match(integration, /grant_type", "ig_exchange_token"/u);
   assert.match(integration, /graph\.instagram\.com\/\$\{META_GRAPH_API_VERSION\}\/me/u);
+  assert.match(
+    integration,
+    /\$\{META_GRAPH_API_VERSION\}\/\$\{encodeURIComponent\(profileId\)\}\/conversations/u,
+  );
+  assert.match(integration, /platform", "instagram"/u);
+  assert.match(
+    integration,
+    /messages\.limit\(\$\{pageLimit\}\)\{id,created_time,from,to,message\}/u,
+  );
+  assert.match(integration, /Authorization: `Bearer \$\{accessToken\}`/u);
+  assert.match(integration, /url\.hostname !== "graph\.instagram\.com"/u);
   assert.match(start, /workspaceId: workspaceResult\.workspace\.id/u);
   assert.match(start, /userId: data\.user\.id/u);
   assert.match(start, /canManageMetaConnections/u);
@@ -214,6 +225,7 @@ test("Instagram Business Login is workspace-bound and subscribes only authorized
   assert.match(callback, /updateInstagramWebhookSubscribed/u);
   assert.match(disconnect, /isTrustedFanMindMutationRequest/u);
   assert.match(channels, /Inkrementeller Webhook/u);
+  assert.match(channels, /Instagram-DMs jetzt synchronisieren/u);
   assert.match(channels, /KI-Kontext je Stufe 50\/100\/150/u);
   assert.match(channels, /Persönliche fremde Posts/u);
   assert.match(webhook, /process\.env\.INSTAGRAM_APP_SECRET/u);
@@ -396,11 +408,12 @@ test("minimal fan profiles retain no raw source content", () => {
 });
 
 test("profiles are server-owned while authorized webhooks preserve chats without auto-analysis", async () => {
-  const [server, analysisAction, webhook, syncAction, oldRetention, newRetention] = await Promise.all([
+  const [server, analysisAction, webhook, syncAction, instagramSyncAction, oldRetention, newRetention] = await Promise.all([
     source("src/lib/supabase/server.ts"),
     source("src/app/fans/[id]/analysisActions.ts"),
     source("src/lib/metaWebhook.ts"),
     source("src/app/channels/facebookWebhookActions.ts"),
+    source("src/app/channels/instagramWebhookActions.ts"),
     source("supabase/migrations/20260614120000_conversation_message_retention.sql"),
     source("supabase/migrations/20260803210000_preserve_incremental_conversation_history.sql"),
   ]);
@@ -415,6 +428,14 @@ test("profiles are server-owned while authorized webhooks preserve chats without
   assert.match(syncAction, /connection\.last_messenger_sync_at/u);
   assert.match(syncAction, /META_INITIAL_CHAT_BACKFILL_LIMIT/u);
   assert.match(syncAction, /META_INCREMENTAL_CHAT_FETCH_LIMIT/u);
+  assert.match(instagramSyncAction, /fetchInstagramConversations/u);
+  assert.match(instagramSyncAction, /fetchInstagramConversationMessages/u);
+  assert.match(instagramSyncAction, /META_INITIAL_CHAT_BACKFILL_LIMIT/u);
+  assert.match(instagramSyncAction, /META_INCREMENTAL_CHAT_FETCH_LIMIT/u);
+  assert.match(instagramSyncAction, /sourcePlatform:\s*"instagram"/u);
+  assert.match(instagramSyncAction, /sourceType:\s*"instagram_messages"/u);
+  assert.match(instagramSyncAction, /updateInstagramMessengerSyncStatus/u);
+  assert.match(webhook, /syncInstagramMessengerConversationForContact/u);
   assert.match(oldRetention, /ranked\.rn > 50/u);
   assert.match(newRetention, /drop trigger if exists conversation_messages_trim_to_latest_50/u);
   assert.match(newRetention, /drop function if exists public\.trim_conversation_messages_to_latest_50/u);
@@ -425,6 +446,14 @@ test("profiles are server-owned while authorized webhooks preserve chats without
   assert.match(
     analysisAction,
     /getWorkspaceAnalysisCapabilityStatus\([\s\S]*"fan_analysis"[\s\S]*if \(!analysisCapability\.enabled\)/u,
+  );
+  assert.match(
+    analysisAction,
+    /channel:\s*message\.source_platform\s*\?\?\s*"manual"/u,
+  );
+  assert.doesNotMatch(
+    analysisAction,
+    /message\.source_platform\s*===\s*"facebook"/u,
   );
   assert.match(
     server,

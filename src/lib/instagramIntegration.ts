@@ -38,6 +38,20 @@ export type InstagramProfile = {
   profilePictureUrl: string | null;
 };
 
+export type InstagramConversation = {
+  id: string;
+  updatedTime: string | null;
+};
+
+export type InstagramConversationMessage = {
+  id: string;
+  createdTime: string | null;
+  message: string | null;
+  from: { id: string; username: string | null } | null;
+  to: Array<{ id: string; username: string | null }>;
+  unsupported: boolean;
+};
+
 export function getInstagramOAuthScopes(
   connectionType: InstagramConnectionType,
 ): readonly string[] {
@@ -206,6 +220,92 @@ export async function fetchInstagramProfile(
   };
 }
 
+export async function fetchInstagramConversations(
+  profileId: string,
+  accessToken: string,
+  limit = 10,
+): Promise<InstagramConversation[]> {
+  const url = new URL(
+    `https://graph.instagram.com/${META_GRAPH_API_VERSION}/${encodeURIComponent(profileId)}/conversations`,
+  );
+  url.searchParams.set("platform", "instagram");
+  url.searchParams.set("fields", "id,updated_time");
+  url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 25))));
+
+  const payload = await fetchInstagramGraph(url, accessToken, {
+    errorContext: "Instagram conversations fetch failed",
+    userMessage: "Instagram-Unterhaltungen konnten nicht abgerufen werden.",
+  });
+  return (Array.isArray(payload.data) ? payload.data : [])
+    .filter(isRecord)
+    .map((conversation) => ({
+      id: stringValue(conversation.id) ?? "",
+      updatedTime: stringValue(conversation.updated_time),
+    }))
+    .filter((conversation) => conversation.id);
+}
+
+export async function fetchInstagramConversationMessages(
+  conversationId: string,
+  accessToken: string,
+  limit = 50,
+  since?: string | null,
+): Promise<InstagramConversationMessage[]> {
+  const targetLimit = Math.max(1, Math.min(limit, 150));
+  const pageLimit = Math.min(targetLimit, 50);
+  const fields =
+    `messages.limit(${pageLimit}){id,created_time,from,to,message}`;
+  const firstUrl = new URL(
+    `https://graph.instagram.com/${META_GRAPH_API_VERSION}/${encodeURIComponent(conversationId)}`,
+  );
+  firstUrl.searchParams.set("fields", fields);
+
+  const messages: InstagramConversationMessage[] = [];
+  const seenIds = new Set<string>();
+  let nextUrl: URL | null = firstUrl;
+  let firstPage = true;
+
+  while (nextUrl && messages.length < targetLimit) {
+    const payload = await fetchInstagramGraph(nextUrl, accessToken, {
+      errorContext: "Instagram conversation messages fetch failed",
+      userMessage: "Instagram-Nachrichten konnten nicht abgerufen werden.",
+    });
+    const messageContainer = firstPage && isRecord(payload.messages)
+      ? payload.messages
+      : payload;
+    const rows = Array.isArray(messageContainer.data)
+      ? messageContainer.data
+      : [];
+
+    for (const message of rows
+      .filter(isRecord)
+      .map(normalizeInstagramConversationMessage)
+      .filter((message) => message.id)) {
+      if (seenIds.has(message.id)) continue;
+      messages.push(message);
+      seenIds.add(message.id);
+      if (messages.length >= targetLimit) break;
+    }
+
+    const paging = isRecord(messageContainer.paging)
+      ? messageContainer.paging
+      : null;
+    nextUrl =
+      messages.length < targetLimit
+        ? validInstagramGraphUrl(stringValue(paging?.next))
+        : null;
+    firstPage = false;
+  }
+
+  const sinceTimestamp = since ? Date.parse(since) : Number.NaN;
+  if (!Number.isFinite(sinceTimestamp)) return messages;
+  const overlapStart = sinceTimestamp - 5 * 60 * 1_000;
+  return messages.filter((message) => {
+    const createdAt = Date.parse(message.createdTime ?? "");
+    return !Number.isFinite(createdAt) || createdAt >= overlapStart;
+  });
+}
+
 export async function subscribeInstagramAccount(
   profileId: string,
   accessToken: string,
@@ -340,6 +440,94 @@ function validHttpsUrl(value: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function normalizeInstagramConversationMessage(
+  value: Record<string, unknown>,
+): InstagramConversationMessage {
+  return {
+    id: stringValue(value.id) ?? "",
+    createdTime: stringValue(value.created_time),
+    message: stringValue(value.message),
+    from: normalizeInstagramActor(value.from),
+    to: normalizeInstagramActorArray(value.to),
+    unsupported: value.is_unsupported === true,
+  };
+}
+
+function normalizeInstagramActor(
+  value: unknown,
+): { id: string; username: string | null } | null {
+  if (!isRecord(value)) return null;
+  const id = stringValue(value.id);
+  if (!id) return null;
+  return { id, username: stringValue(value.username) };
+}
+
+function normalizeInstagramActorArray(
+  value: unknown,
+): Array<{ id: string; username: string | null }> {
+  const rows = Array.isArray(value)
+    ? value
+    : isRecord(value) && Array.isArray(value.data)
+      ? value.data
+      : [];
+  return rows
+    .map(normalizeInstagramActor)
+    .filter(
+      (actor): actor is { id: string; username: string | null } =>
+        actor !== null,
+    );
+}
+
+async function fetchInstagramGraph(
+  inputUrl: URL,
+  accessToken: string,
+  error: { errorContext: string; userMessage: string },
+): Promise<Record<string, unknown>> {
+  const url = validInstagramGraphUrl(inputUrl.toString());
+  if (!url) throw new Error("Ungültige Instagram-API-Weiterleitung blockiert.");
+  url.searchParams.delete("access_token");
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | Record<string, unknown>
+    | null;
+  if (!response.ok || !payload) {
+    logInstagramApiError(
+      error.errorContext,
+      payload as {
+        error_message?: string;
+        error?: { message?: string; code?: number; type?: string };
+      } | null,
+    );
+    throw new Error(error.userMessage);
+  }
+  return payload;
+}
+
+function validInstagramGraphUrl(value: string | null): URL | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "graph.instagram.com" ||
+      !url.pathname.startsWith(`/${META_GRAPH_API_VERSION}/`)
+    ) {
+      return null;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function logInstagramApiError(

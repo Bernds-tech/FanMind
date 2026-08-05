@@ -351,6 +351,10 @@ export async function syncFacebookMessengerHistory(input?: {
   });
 }
 
+export async function syncFacebookMessengerHistoryFromChannelPage(): Promise<void> {
+  await syncFacebookMessengerHistory({ revalidate: true });
+}
+
 export async function syncFacebookMessengerConversationForContact(input: {
   connection: SocialConnectionRow;
   contactId?: string | null;

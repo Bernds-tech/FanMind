@@ -1114,3 +1114,26 @@ export async function syncFacebookChatForContact(contactId: string) {
   revalidatePath(`/fans/${contactId}`);
   redirect(`/fans/${contactId}?${params.toString()}`);
 }
+
+export async function syncInstagramChatForContact(contactId: string) {
+  const { user, workspace } =
+    await requireContactInAuthorizedWorkspace(contactId);
+  if (areDemoConnectionsDisabled(user, workspace)) {
+    redirect(`/fans/${contactId}?notice=demo_external_actions_disabled`);
+  }
+  const { syncInstagramMessengerHistory } =
+    await import("@/app/channels/instagramWebhookActions");
+  const result = await syncInstagramMessengerHistory({
+    contactId,
+    markInboundSeen: true,
+  });
+  const params = new URLSearchParams();
+  params.set(
+    "notice",
+    result.ok
+      ? `Instagram-Chat synchronisiert: ${result.importedInbound} inbound, ${result.importedOutbound} outbound neu.`
+      : "Instagram-Verlauf konnte nicht abgerufen werden. Prüfe DM-Berechtigung und Professional-Konto.",
+  );
+  revalidatePath(`/fans/${contactId}`);
+  redirect(`/fans/${contactId}?${params.toString()}`);
+}
