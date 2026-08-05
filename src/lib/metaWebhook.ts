@@ -17,6 +17,7 @@ import {
   FACEBOOK_GRAPH_API_VERSION,
 } from "@/lib/facebookIntegration";
 import { syncFacebookMessengerConversationForContact } from "@/app/channels/facebookWebhookActions";
+import { syncInstagramMessengerConversationForContact } from "@/app/channels/instagramWebhookActions";
 import { buildMetaWebhookDiagnosticPayload } from "@/lib/webhookSecurityPolicy.mjs";
 import { evaluateMetaDataUse } from "@/lib/metaDataHandlingPolicy.mjs";
 
@@ -350,16 +351,21 @@ export async function processMetaWebhookPayload(
 
           if (
             event.eventType === "messages" &&
-            event.sourcePlatform === "facebook" &&
             event.direction === "inbound" &&
             event.senderId
           ) {
             const syncResult =
-              await syncFacebookMessengerConversationForContact({
-                connection: connection.connection,
-                contactId: result.message?.contact_id ?? null,
-                fanSenderId: event.senderId,
-              });
+              event.sourcePlatform === "facebook"
+                ? await syncFacebookMessengerConversationForContact({
+                    connection: connection.connection,
+                    contactId: result.message?.contact_id ?? null,
+                    fanSenderId: event.senderId,
+                  })
+                : await syncInstagramMessengerConversationForContact({
+                    connection: connection.connection,
+                    contactId: result.message?.contact_id ?? null,
+                    fanSenderId: event.senderId,
+                  });
             if (!syncResult.ok && syncResult.error)
               firstErrorCode ??= "conversation_sync_failed";
           }

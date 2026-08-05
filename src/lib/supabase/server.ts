@@ -1495,9 +1495,44 @@ export async function updateFacebookMessengerSyncStatus(
     lastOutboundAt?: string | null;
   },
 ): Promise<SocialConnectionResult> {
+  return updateMetaMessengerSyncStatus("facebook", connectionId, input);
+}
+
+export async function updateInstagramMessengerSyncStatus(
+  connectionId: string,
+  input: {
+    syncedAt: string;
+    checkedConversations: number;
+    importedInbound: number;
+    importedOutbound: number;
+    importedMedia?: number;
+    skippedDuplicates: number;
+    error?: string | null;
+    lastOutboundAt?: string | null;
+  },
+): Promise<SocialConnectionResult> {
+  return updateMetaMessengerSyncStatus("instagram", connectionId, input);
+}
+
+async function updateMetaMessengerSyncStatus(
+  platform: "facebook" | "instagram",
+  connectionId: string,
+  input: {
+    syncedAt: string;
+    checkedConversations: number;
+    importedInbound: number;
+    importedOutbound: number;
+    importedMedia?: number;
+    skippedDuplicates: number;
+    error?: string | null;
+    lastOutboundAt?: string | null;
+  },
+): Promise<SocialConnectionResult> {
   const accessToken = getServiceAccessToken();
   if (!accessToken)
-    return socialConnectionError("Serverberechtigungen für den Messenger-Sync fehlen.");
+    return socialConnectionError(
+      "Serverberechtigungen für den Nachrichten-Sync fehlen.",
+    );
 
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
@@ -1516,14 +1551,14 @@ export async function updateFacebookMessengerSyncStatus(
     accessToken,
     [
       ["id", connectionId],
-      ["platform", "facebook"],
+      ["platform", platform],
     ],
     { select: SOCIAL_CONNECTION_SECRET_COLUMNS, single: true },
   );
 
   if (result.error)
     return socialConnectionError(
-      `Facebook-Messenger-Sync konnte nicht aktualisiert werden: ${result.error.message}`,
+      `${platform === "facebook" ? "Facebook-Messenger" : "Instagram-DM"}-Sync konnte nicht aktualisiert werden: ${result.error.message}`,
     );
   return { connection: result.data, error: null };
 }

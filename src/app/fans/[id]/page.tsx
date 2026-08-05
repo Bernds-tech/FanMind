@@ -52,6 +52,7 @@ import { TopFanToggleForm } from "../TopFanToggleForm";
 import {
   saveFacebookReplyTarget,
   syncFacebookChatForContact,
+  syncInstagramChatForContact,
 } from "../actions";
 import {
   diagnoseFacebookDirectLinkSource,
@@ -90,6 +91,7 @@ type FanDetailWorkspaceProps = {
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  instagramMessengerLastSyncedAt?: string | null;
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
@@ -169,6 +171,7 @@ function FanDetailWorkspace({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  instagramMessengerLastSyncedAt,
   facebookReplyTarget,
   facebookReplyTargetError,
   facebookDirectLinkDiagnosis,
@@ -239,6 +242,7 @@ function FanDetailWorkspace({
             activeChannel={activeChannel}
             activeSource={activeSource}
             facebookMessengerLastSyncedAt={facebookMessengerLastSyncedAt}
+            instagramMessengerLastSyncedAt={instagramMessengerLastSyncedAt}
             facebookReplyTarget={facebookReplyTarget}
             facebookReplyTargetError={facebookReplyTargetError}
             facebookDirectLinkDiagnosis={facebookDirectLinkDiagnosis}
@@ -269,6 +273,7 @@ function FanDetailContent({
   activeChannel,
   activeSource,
   facebookMessengerLastSyncedAt,
+  instagramMessengerLastSyncedAt,
   facebookReplyTarget,
   facebookReplyTargetError,
   facebookDirectLinkDiagnosis,
@@ -290,6 +295,7 @@ function FanDetailContent({
   activeChannel: ConversationChannelKey;
   activeSource: string;
   facebookMessengerLastSyncedAt?: string | null;
+  instagramMessengerLastSyncedAt?: string | null;
   facebookReplyTarget: ContactReplyTargetRow | null;
   facebookReplyTargetError?: string;
   facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null;
@@ -534,6 +540,30 @@ function FanDetailContent({
                 )}
               </div>
             ) : null}
+            {shouldShowInstagramHelpers(effectiveChannel, filteredMessages) &&
+            !demoConnectionsDisabled ? (
+              <div className={styles.syncBox}>
+                <p className={styles.syncHint}>
+                  Instagram-Chat zuletzt synchronisiert:{" "}
+                  <strong>
+                    {instagramMessengerLastSyncedAt
+                      ? formatDate(instagramMessengerLastSyncedAt)
+                      : "noch nicht"}
+                  </strong>{" "}
+                  · Erstabgleich bis zu 150, danach nur neue Nachrichten.
+                </p>
+                <form
+                  action={syncInstagramChatForContact.bind(null, contact.id)}
+                >
+                  <button
+                    className={dashboardStyles.secondaryButton}
+                    type="submit"
+                  >
+                    Instagram-Chat aktualisieren
+                  </button>
+                </form>
+              </div>
+            ) : null}
             {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) &&
             !demoConnectionsDisabled ? (
               <FacebookReplyTargetCard
@@ -666,6 +696,19 @@ function shouldShowFacebookHelpers(
     activeChannel !== "telegram" &&
     (activeChannel === "all" || activeChannel === "facebook") &&
     hasFacebookMessages(visibleMessages)
+  );
+}
+
+function shouldShowInstagramHelpers(
+  activeChannel: ConversationChannelKey,
+  visibleMessages: ConversationMessageRow[],
+): boolean {
+  return (
+    activeChannel !== "telegram" &&
+    (activeChannel === "all" || activeChannel === "instagram") &&
+    visibleMessages.some((message) =>
+      isMessageInChannel(message, "instagram"),
+    )
   );
 }
 
@@ -1740,6 +1783,12 @@ export default async function FanDetailPage({
       (connection) =>
         connection.platform === "facebook" && connection.status === "connected",
     ) ?? null;
+  const instagramConnection =
+    socialConnectionsResult?.connections.find(
+      (connection) =>
+        connection.platform === "instagram" &&
+        connection.status === "connected",
+    ) ?? null;
 
   const [
     memoriesResult,
@@ -1860,6 +1909,9 @@ export default async function FanDetailPage({
         activeSource={activeSource}
         facebookMessengerLastSyncedAt={
           facebookConnection?.last_messenger_sync_at ?? null
+        }
+        instagramMessengerLastSyncedAt={
+          instagramConnection?.last_messenger_sync_at ?? null
         }
         facebookReplyTarget={facebookReplyTargetResult?.target ?? null}
         facebookReplyTargetError={facebookReplyTargetResult?.error?.message}

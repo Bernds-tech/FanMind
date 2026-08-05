@@ -45,7 +45,7 @@ Kanal-Syncs liefern ein einheitliches Ergebnis:
 - `syncLimit`
 - `lastSyncAt`
 
-Facebook Messenger lädt beim ersten Abgleich höchstens 150 aktuelle Nachrichten je Conversation. Danach werden nur neue Ereignisse mit kleinem Sicherheitsüberlapp abgerufen und über externe IDs dedupliziert. Vorbereitete Kanäle zeigen keine Fake-Zahlen; wenn kein echter Sync existiert, steht im Status „vorbereitet“, „nicht verfügbar“ oder „API-/Freigabe erforderlich“.
+Facebook Messenger und Instagram Professional DMs laden beim ersten Abgleich höchstens 150 aktuelle Nachrichten je Conversation. Danach werden nur neue Ereignisse mit kleinem Sicherheitsüberlapp abgerufen und über externe IDs dedupliziert. Vorbereitete Kanäle zeigen keine Fake-Zahlen; wenn kein echter Sync existiert, steht im Status „vorbereitet“, „nicht verfügbar“ oder „API-/Freigabe erforderlich“.
 
 ## Kanalstatus
 
@@ -53,7 +53,8 @@ Die zentrale Konfiguration in `src/lib/channelSources.ts` beschreibt pro Kanal F
 
 - `facebook_messages`: live, inbound/outbound/media/history-sync, 150er Erstabruf und danach inkrementell, kein automatisches Senden.
 - `facebook_comments`: geparkt/vorbereitet, kein Live-Test in diesem PR.
-- `instagram_messages` und `instagram_comments`: vorbereitet, API-/Freigabe erforderlich.
+- `instagram_messages`: Beta, inbound/outbound/history-sync, 150er Erstabruf und danach inkrementell, echter Staging-/Meta-Test und Freigabe erforderlich; kein automatisches Senden.
+- `instagram_comments`: vorbereitet, API-/Freigabe erforderlich.
 - `whatsapp_messages`: vorbereitet, Cloud-API-Konfiguration später.
 - `tiktok_comments`: vorbereitet, offizielle Freigabe erforderlich, kein Scraping.
 - `tiktok_messages`: nicht-live, Export/Data-Portability-Importpfad.

@@ -1,6 +1,6 @@
 # Meta-Kanäle und Content Intelligence
 
-Stand: 3. August 2026
+Stand: 5. August 2026
 
 Dieses Dokument ist die technische und rechtliche Arbeitsgrundlage für
 Facebook-/Instagram-Verbindungen, Nachrichtenimport, Post-Reichweitenanalyse,
@@ -13,8 +13,8 @@ Freigabe und aktiviert keine externe Verbindung.
   freigegebenen aggregierten Insights werden als Workspace-Cache gespeichert,
   damit unveränderte Daten nicht wiederholt vollständig abgerufen werden.
 - Autorisierte DMs und Kommentare mit dem verbundenen Konto werden gespeichert.
-  Der erste Facebook-Abgleich lädt höchstens die letzten 150 Nachrichten je
-  Thread. Danach werden neue Ereignisse per Webhook beziehungsweise seit dem
+  Der erste Facebook- oder Instagram-DM-Abgleich lädt höchstens die letzten
+  150 Nachrichten je Thread. Danach werden neue Ereignisse per Webhook beziehungsweise seit dem
   letzten Sync und externer Ereignis-ID inkrementell ergänzt; vorhandene ältere
   Nachrichten werden nicht wegen einer KI-Stufe gelöscht.
 - Persönliche fremde Profile, persönliche Posts eines Fans und vollständige
@@ -52,7 +52,7 @@ Freigabe und aktiviert keine externe Verbindung.
 | --- | --- |
 | Facebook OAuth, verschlüsselte Seitentokens, Webhook- und Nachrichten-Grundlage | vorbereitet/Beta |
 | Facebook Graph API | auf stabile `v25.0` festgelegt |
-| Instagram Webhook-Parser und inkrementelle Chat-/Kommentargrundlage | vorbereitet; Staging-Test offen |
+| Instagram Webhook-Parser, begrenzter DM-Erstabgleich und inkrementelle Chat-/Kommentargrundlage | implementiert; echter Staging-/Meta-Kontotest offen |
 | Instagram Business Login/OAuth und Professional-Kontobindung | implementiert; echter Staging-/Meta-Kontotest noch offen |
 | Post-/Account-Cache, Metrik-Snapshots und Formeln | vorbereitet, Migration noch nicht angewendet |
 | Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | vorbereitet, Migration noch nicht angewendet |
@@ -189,7 +189,7 @@ Person.
   nicht geheime Statusfelder;
 - global eindeutige aktive Bindung von Plattform + externer Konto-ID;
 - idempotente externe Ereignis-IDs und Schutz vor doppelten Webhooks;
-- erster Facebook-Abruf höchstens 150 aktuelle Nachrichten je Thread; danach
+- erster Facebook- oder Instagram-DM-Abruf höchstens 150 aktuelle Nachrichten je Thread; danach
   nur neue Ereignisse mit fünf Minuten Sicherheitsüberlapp;
 - KI-Kontext ausschließlich serverseitig nach effektiver Stufe: Standard 50,
   Plus 100, Ultra 150 aktuelle Nachrichten; Browserwerte werden ignoriert;
@@ -237,7 +237,7 @@ behaupten.
 3. explizite Facebook-Seitenauswahl und Instagram-Professional-Kontobindung
    mit Testkonten verifizieren.
 4. Migration in isoliertem Staging anwenden und RLS-/Token-Negativtests fahren.
-5. 150er-Erstabruf, inkrementelle Webhooks, Deduplizierung, vollständige
+5. 150er-Erstabruf für Facebook und Instagram-DMs, inkrementelle Webhooks, Deduplizierung, vollständige
    Verlaufserhaltung sowie 50/100/150-KI-Kontexte und Post-/Insight-Cache mit
    synthetischen Daten testen.
 6. Trennung, Widerruf, Tokenablauf, Datenexport und Löschung testen.
