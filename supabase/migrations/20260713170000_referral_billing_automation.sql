@@ -200,7 +200,7 @@ begin
       when 'cancelled' then v_new_status := 'inactive';
       when 'expired' then v_new_status := 'inactive';
       when 'refunded' then v_new_status := 'inactive';
-      otherwise v_new_status := v_referral.status;
+      else v_new_status := v_referral.status;
     end case;
   end if;
 
