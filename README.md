@@ -10,8 +10,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Meta Content Intelligence: mandantengetrennte Facebook-/Instagram-Verbindung, eigener Post-/Insight-Cache, inkrementell gespeicherte autorisierte Chats/Kommentare sowie Fan-/Nutzer-Schreibstilanalyse sind als fail-closed Grundlage vorbereitet. Beim ersten Facebook- oder Instagram-DM-Abgleich werden höchstens 150 aktuelle Nachrichten je Thread geladen, danach nur neue Ereignisse ergänzt; KI Standard/Plus/Ultra verwenden serverseitig 50/100/150 aktuelle Nachrichten. Persönliche fremde Profile/Posts werden nicht gespiegelt oder gescrapt. Bis Staging, Meta App Review und Rechtsfreigabe bleibt alles Beta/inaktiv; Details in `docs/integrations/META_CONTENT_INTELLIGENCE.md`.
 - Meta-Staging-Migration: `npm run db:meta-content:check` prüft die beiden
   unveränderten SQL-Dateien offline. Der manuelle Workflow `FanMind Meta
-  Content Staging Migration` ist ausschließlich an `main`, den exakten
-  geprüften Commit, ein geschütztes isoliertes Staging, getrennte
+  Content Staging Resource Readiness` prüft davor ohne Schreibfreigabe die
+  getrennte Zielbindung, den IPv4-kompatiblen Supabase-Session-Pooler und den
+  Schema-Zustand; partielle oder driftende Schemata werden gesperrt. Erst der
+  getrennte Workflow `FanMind Meta Content Staging Migration` ist an `main`,
+  den exakten geprüften Commit, ein geschütztes isoliertes Staging, getrennte
   Production-Zielwerte und TLS gebunden. Apply und RLS-/Spaltenrechte-
   Postflight sind getrennt vom Web-Deploy; Meta-Verbindungen und Analysen
   bleiben deaktiviert. Ablauf:

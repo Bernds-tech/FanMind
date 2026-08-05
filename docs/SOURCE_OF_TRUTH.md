@@ -247,10 +247,16 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 - Meta-Content-Staging: Die zwei vorbereiteten Migrationen
   `20260803120000_meta_content_intelligence_foundation.sql` und
   `20260803210000_preserve_incremental_conversation_history.sql` sind
-  checksum-festgeschrieben. Ihr manueller Apply läuft ausschließlich auf
+  checksum-festgeschrieben. Ein vorgelagerter manueller Read-only-
+  Ressourcencheck bindet ohne Schreibfreigabe den exakten `main`-Commit, das
+  getrennte Ziel, den IPv4-kompatiblen Supabase-Supavisor-Session-Pooler auf
+  Port `5432`, den aus der Staging-Projektreferenz abgeleiteten DB-Benutzer und
+  den Schema-Zustand; partielle oder driftende Zustände werden gesperrt. Der
+  getrennte manuelle Apply läuft ausschließlich auf
   `main`, für den exakt geprüften Commit und gegen ein per Origin,
-  Supabase-Projektreferenz und Datenbankhost von Production getrenntes,
-  TLS-verifiziertes Staging. Der read-only Postflight prüft RLS, nur lesende
+  Supabase-Projektreferenz und projektqualifizierter Datenbankidentität von
+  Production getrenntes, TLS-verifiziertes Staging. Der read-only Postflight
+  prüft RLS, nur lesende
   Browser-Policies und -Spaltenrechte, Tokenausschluss, Service-Role-Zugriff,
   Indizes, Kontextbedingungen und die Entfernung des alten 50er-Löschtriggers.
   Ein Wiederholungslauf überspringt SQL nur nach vollständigem Postflight;

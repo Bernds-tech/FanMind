@@ -360,7 +360,7 @@ function fail(code) {
 }
 
 function modeFromArguments(argumentsList) {
-  const known = new Set(["--check", "--verify", "--apply"]);
+  const known = new Set(["--check", "--readiness", "--verify", "--apply"]);
   if (argumentsList.some((argument) => !known.has(argument))) {
     fail("argument_invalid");
   }
@@ -580,7 +580,11 @@ function applySql(migrationSql) {
 }
 
 function runDatabaseMode(mode, migrationSql, environment) {
-  const policyMode = mode === "--apply" ? "apply" : "verify";
+  const policyMode = mode === "--apply"
+    ? "apply"
+    : mode === "--readiness"
+      ? "readiness"
+      : "verify";
   const evaluation = evaluateMetaContentStagingMigrationEnvironment(
     environment,
     { mode: policyMode },
@@ -591,6 +595,26 @@ function runDatabaseMode(mode, migrationSql, environment) {
   const { snapshotDirectory, snapshotPath } =
     privatePassfileSnapshot(environment);
   try {
+    if (mode === "--readiness") {
+      const state = migrationState(environment, snapshotPath);
+      if (state === "partial") fail("existing_schema_invalid");
+      if (state === "installed") {
+        if (!postflightPasses(environment, snapshotPath)) {
+          fail("postflight_failed");
+        }
+        console.log("META_CONTENT_STAGING_SCHEMA=current");
+        console.log("META_CONTENT_MIGRATION_POSTFLIGHT=PASS");
+      } else {
+        console.log("META_CONTENT_STAGING_SCHEMA=absent");
+        console.log("META_CONTENT_MIGRATION_POSTFLIGHT=not_applicable");
+      }
+      console.log("META_CONTENT_MIGRATION_APPLY=not_requested");
+      console.log("META_CONTENT_STAGING_RESOURCES=PASS");
+      console.log("META_CONTENT_ANALYSIS_ACTIVATION=disabled");
+      console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");
+      return;
+    }
+
     if (mode === "--apply") {
       if (postflightPasses(environment, snapshotPath)) {
         console.log("META_CONTENT_MIGRATION_APPLY=already_current");
@@ -628,9 +652,7 @@ async function main() {
     console.log("META_CONTENT_MIGRATION_READY=YES");
     return;
   }
-  console.log(
-    `META_CONTENT_MIGRATION_MODE=${mode === "--apply" ? "apply" : "verify"}`,
-  );
+  console.log(`META_CONTENT_MIGRATION_MODE=${mode.replace(/^--/u, "")}`);
   runDatabaseMode(mode, migrationSql, process.env);
   console.log("META_CONTENT_MIGRATION_READY=YES");
 }
