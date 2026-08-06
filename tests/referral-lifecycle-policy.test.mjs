@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -6,6 +7,22 @@ import {
   billingStatusFromStripeSubscriptionStatus,
   referralBillingStatusFromStripeEvent,
 } from "../src/lib/referralLifecyclePolicy.mjs";
+
+const referralBillingMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260713170000_referral_billing_automation.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
+test("referral billing migration uses valid PostgreSQL CASE syntax", () => {
+  assert.doesNotMatch(referralBillingMigration, /\botherwise\b/iu);
+  assert.match(
+    referralBillingMigration,
+    /when 'refunded' then v_new_status := 'inactive';\s+else v_new_status := v_referral\.status;\s+end case;/u,
+  );
+});
 
 test("subscription lifecycle maps only eligible paid states to active", () => {
   assert.equal(billingStatusFromStripeSubscriptionStatus("active"), "active");
