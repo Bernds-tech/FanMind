@@ -17,6 +17,7 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   const workflow = await read(workflowPath);
 
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /inputs\.confirmation == 'deploy-staging-only'/);
   assert.match(workflow, /environment: staging/);
   assert.match(workflow, /runs-on: \[self-hosted, fanmind-staging, exoscale, linux, x64\]/);

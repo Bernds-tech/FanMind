@@ -11,7 +11,7 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 - sichere Vorlage `.env.staging.example`;
 - zusätzlicher Baseline-Check `npm run staging:preflight`;
 - manueller GitHub-Workflow `FanMind Staging Readiness`;
-- manueller, commit-genauer Deploy-Workflow `Deploy FanMind Staging` für einen ausschließlich mit `fanmind-staging` gekennzeichneten Self-Hosted Runner;
+- manueller, `main`-gebundener und commit-genauer Deploy-Workflow `Deploy FanMind Staging` für einen ausschließlich mit `fanmind-staging` gekennzeichneten Self-Hosted Runner;
 - manueller, `main`-gebundener Workflow `Provision FanMind Staging Host`, der
   auf dem bestehenden Exoscale-Host ausschließlich den getrennten Linux-Nutzer,
   Release-Pfad, privaten ENV-Pfad, nginx-vHost und zweiten Runner-Dienst anlegt;

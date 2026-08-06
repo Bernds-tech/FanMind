@@ -18,7 +18,9 @@ permissions:
 jobs:
   deploy-staging:
     name: Deploy exact main commit to isolated staging
-    if: ${{ inputs.confirmation == 'deploy-staging-only' }}
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'deploy-staging-only'
     environment: staging
     runs-on: [self-hosted, fanmind-staging, exoscale, linux, x64]
 
