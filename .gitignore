@@ -36,6 +36,7 @@
 *.pem
 /docs/legal/private-evidence/
 /docs/operations/private-ai-evals/
+/docs/mobile/private-device-evidence/
 
 # debug
 npm-debug.log*

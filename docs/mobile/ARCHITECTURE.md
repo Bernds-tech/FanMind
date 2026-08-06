@@ -165,6 +165,11 @@ A Web merge can modify shared API contracts but cannot publish a mobile binary. 
 8. main-only read-only EAS resource verification before any signed build;
 9. explicit internal-device test before EAS distribution.
 
+Ein SHA-gebundener Geräte-Abnahmevalidator in
+`docs/mobile/DEVICE_ACCEPTANCE.md` verbindet Android und iOS jeweils getrennt
+mit dem redigierten Receipt des exakten signierten Preview-Builds. Er ersetzt
+keinen echten Gerätetest und läuft ausschließlich mit privaten Nachweisen.
+
 ## Implementation phases
 
 ### Phase B — repository implementation

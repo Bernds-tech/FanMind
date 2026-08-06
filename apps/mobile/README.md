@@ -213,6 +213,12 @@ Queue-Aufruf, die Statusprüfung oder ihre Antwort unklar, wird der Lauf ausdrü
 geschützten EAS-Projekts erneut gestartet werden. Installation, Push, Recovery,
 Android Internal Testing und TestFlight bleiben gesondert abzunehmen.
 
+Nach einem erfolgreichen Build erzeugt der Workflow ausschließlich einen
+redigierten Receipt ohne Build-ID oder Artefakt-URL. Die Abnahme verwendet den
+privaten Geräte-Abnahmevalidator aus `docs/mobile/DEVICE_ACCEPTANCE.md` und
+bindet daran die separaten realen Android-/iOS-Nachweise; er führt selbst
+keinen Build, Upload oder externen Schreibzugriff aus.
+
 ## EAS-Profile
 
 Die Profile binden ihre öffentlichen Werte ausdrücklich an getrennte

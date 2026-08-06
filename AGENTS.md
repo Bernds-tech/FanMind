@@ -136,6 +136,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   request starts, an invalid or missing queue/completion response is
   indeterminate and must not be presented as safely retryable before the
   protected EAS project is inspected.
+- A successful signed internal Mobile build may export only a short-lived,
+  redacted private receipt without build ID or artifact URL. Real Android/iOS
+  device evidence stays local, mode-`0600`, exact-main-commit- and
+  receipt-SHA-bound; its validator may output only fixed counters and the
+  evidence SHA. Push device checks remain optional until the separate Staging
+  resource, migration and rollback-only acceptance gates have passed.
 - Mobile push registration has a separate checksum-pinned Staging control
   path. Keep resource readiness read-only and separate from the explicitly
   confirmed migration apply. Every workflow must remain `main`-, reviewed

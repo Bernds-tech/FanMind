@@ -234,6 +234,13 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
   ausgewiesen und muss zuerst direkt im geschützten EAS-Projekt geprüft werden;
   auch ein bestätigtes internes Artefakt ist noch kein Geräte-, Push-, Recovery-
   oder Store-Nachweis.
+- Mobile-Geräteabnahme: Der erfolgreiche signierte Build erzeugt nur einen
+  kurzlebigen redigierten Receipt ohne Build-ID oder Artefakt-URL. Der private
+  Android-/iOS-Gerätenachweis wird an dessen SHA sowie den exakten geprüften
+  `main`-Commit gebunden und umfasst Login, Recovery-Negativgrenzen, Neustart,
+  Offline-Fail-closed-Grenzen, Logout-Purge, Branding und Account-Löschanfrage
+  samt Widerruf. Push bleibt darin optional und bis zu den getrennten
+  Staging-Gates gesperrt.
 - Mobile-Push-Staging: Die Migration
   `20260729120000_mobile_push_registrations.sql` ist mit ihrer SHA-256-Prüfsumme
   festgeschrieben. Der getrennte Ressourcenworkflow liest nur Staging-Ziel und
