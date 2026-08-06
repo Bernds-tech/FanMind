@@ -26,15 +26,7 @@ export type Reference = {
   visible: boolean;
 };
 
-export const references: Reference[] = [
-  {
-    label: "Erste Pilotmarke",
-    name: "WellFit Wellness",
-    logoSrc: "/brands/Logo.png",
-    logoAlt: "WellFit Wellness Logo",
-    visible: true,
-  },
-];
+export const references: Reference[] = [];
 
 export const referenceSources: ReferenceSource[] = [
   {
