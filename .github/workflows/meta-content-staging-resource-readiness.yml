@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Verify both pinned migrations offline
+      - name: Verify all pinned Meta schema steps offline
         run: npm run db:meta-content:check
 
       - name: Prepare dedicated private database password file
