@@ -3,6 +3,9 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const workflowPath = ".github/workflows/deploy-staging.yml";
+const provisioningWorkflowPath = ".github/workflows/provision-staging-host.yml";
+const tlsWorkflowPath = ".github/workflows/enable-staging-tls.yml";
+const nginxPath = "ops/nginx/fanmind-staging.http.conf";
 const runbookPath = "docs/operations/STAGING_PROVISIONING.md";
 const separationPath = "docs/operations/ENVIRONMENT_SEPARATION.md";
 
@@ -16,15 +19,19 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /inputs\.confirmation == 'deploy-staging-only'/);
   assert.match(workflow, /environment: staging/);
-  assert.match(workflow, /- fanmind-staging/);
+  assert.match(workflow, /runs-on: \[self-hosted, fanmind-staging, exoscale, linux, x64\]/);
+  assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
+  assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /SOURCE_DIR="\/var\/www\/fanmind-staging"/);
   assert.match(workflow, /ENV_FILE="\$SOURCE_DIR\/\.env\.production"/);
   assert.match(workflow, /EXPECTED_RELEASE_COMMIT: \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /\[ -L "\$ENV_FILE" \]/);
   assert.match(workflow, /stat -c '%a'.*!= "600"/);
-  assert.match(workflow, /git merge-base --is-ancestor "\$EXPECTED_RELEASE_COMMIT" origin\/main/);
-  assert.match(workflow, /git reset --hard "\$EXPECTED_RELEASE_COMMIT"/);
-  assert.match(workflow, /git clean -fdx -e \.env\.production/);
+  assert.match(workflow, /git -C "\$GITHUB_WORKSPACE" rev-parse HEAD/);
+  assert.match(workflow, /rsync --archive --delete/);
+  assert.match(workflow, /--exclude '\.git\/'/);
+  assert.match(workflow, /--exclude '\.env\.production'/);
+  assert.match(workflow, /Git metadata must not persist/);
   assert.match(
     workflow,
     /NEXT_DEPLOYMENT_ID="\$EXPECTED_RELEASE_COMMIT" npm run build/u,
@@ -44,7 +51,8 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.doesNotMatch(workflow, /--name fanmind(?:\s|")/);
   assert.doesNotMatch(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES=true/);
   assert.doesNotMatch(workflow, /https:\/\/fanmind\.ch/);
-  assert.doesNotMatch(workflow, /git reset --hard origin\/main/);
+  assert.doesNotMatch(workflow, /persist-credentials: true/);
+  assert.doesNotMatch(workflow, /git fetch|git reset --hard|git clean/);
 });
 
 test("staging documentation keeps external provisioning and deployment boundaries honest", async () => {
@@ -60,4 +68,53 @@ test("staging documentation keeps external provisioning and deployment boundarie
   assert.match(runbook, /ersetzt nicht die externen Ressourcen/);
   assert.match(separation, /\.github\/workflows\/deploy-staging\.yml/);
   assert.match(separation, /niemals auf dem Production-Runner/);
+});
+
+test("staging host provisioning creates a separate user, path, vhost and runner", async () => {
+  const [workflow, nginx] = await Promise.all([
+    read(provisioningWorkflowPath),
+    read(nginxPath),
+  ]);
+
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /inputs\.confirmation == 'provision-fanmind-staging-host'/);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /environment: staging/);
+  assert.match(workflow, /RUNNER_NAME:-.*fanmind-prod-01-exoscale/);
+  assert.match(workflow, /STAGING_USER="fanmind-staging"/);
+  assert.match(workflow, /SOURCE_DIR="\/var\/www\/fanmind-staging"/);
+  assert.doesNotMatch(workflow, /git clone/);
+  assert.match(workflow, /PORT", "3001"/);
+  assert.match(workflow, /fanmind-staging:fanmind-staging:600/);
+  assert.match(workflow, /fanmind-staging-01-exoscale/);
+  assert.match(workflow, /--labels fanmind-staging,exoscale/);
+  assert.match(workflow, /actions-runner-linux-x64-2\.336\.0\.tar\.gz/);
+  assert.match(
+    workflow,
+    /04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d/,
+  );
+  assert.match(workflow, /STAGING_SECRETS_OUTPUT=false/);
+  assert.doesNotMatch(workflow, /\.env\.production.*\/var\/www\/fanmind(?:["'\s]|$)/);
+  assert.doesNotMatch(workflow, /pm2 (?:delete|restart|reload|start).*fanmind(?:["'\s]|$)/);
+  assert.doesNotMatch(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES", "true"/);
+
+  assert.match(nginx, /server_name staging\.fanmind\.ch;/);
+  assert.match(nginx, /proxy_pass http:\/\/127\.0\.0\.1:3001;/);
+  assert.doesNotMatch(nginx, /server_name (?:www\.)?fanmind\.ch;/);
+});
+
+test("staging TLS is manual, DNS-bound and reuses the existing certbot account", async () => {
+  const workflow = await read(tlsWorkflowPath);
+
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /inputs\.confirmation == 'enable-fanmind-staging-tls'/);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /environment: staging/);
+  assert.match(workflow, /getent ahostsv4 staging\.fanmind\.ch/);
+  assert.match(workflow, /\[ "\$DNS_IPV4" != "\$SERVER_IPV4" \]/);
+  assert.match(workflow, /sudo test -d \/etc\/letsencrypt\/accounts/);
+  assert.match(workflow, /--domain staging\.fanmind\.ch/);
+  assert.match(workflow, /--keep-until-expiring/);
+  assert.doesNotMatch(workflow, /--agree-tos|register-unsafely-without-email/);
+  assert.doesNotMatch(workflow, /https:\/\/fanmind\.ch\//);
 });
