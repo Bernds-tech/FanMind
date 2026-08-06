@@ -117,8 +117,15 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   workspace and must not inspect entitlement rows or apply SQL.
 - Restore resource readiness is also strictly read-only. Keep it main-only,
   bound to the separate `restore-drill` environment and exclusive
-  `fanmind-restore` runner, checksum-only and write-disabled. It must never
-  connect to PostgreSQL, decrypt a backup or invoke the restore runner.
+  `fanmind-restore` runner. Its first checksum-only phase must never connect
+  to PostgreSQL, decrypt a backup or invoke the restore runner. Only after
+  that phase passes, the separate `restore:target:compatibility` step may make
+  one connection to the explicitly confirmed isolated target with a private
+  mode-`0600` passfile snapshot and `sslmode=verify-full`. That exception is
+  limited to fixed `pg_catalog` queries for PostgreSQL major version and the
+  migration-required role/extension counts, with a server-enforced read-only
+  session and redacted count-only output. Both restore write gates stay off;
+  the step must never create roles/extensions, decrypt or restore anything.
 - Mobile release resource readiness is strictly read-only. Keep it main-only,
   bound to the selected protected `mobile-development`, `mobile-preview` or
   `mobile-production` environment and pinned to the reviewed EAS CLI version.

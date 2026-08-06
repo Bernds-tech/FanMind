@@ -6,6 +6,7 @@ import {
   chmod,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   writeFile,
@@ -23,11 +24,19 @@ import {
   normalizeHost,
   normalizePort,
 } from "../src/lib/restoreTargetPolicy.mjs";
+import {
+  REQUIRED_RESTORE_EXTENSIONS,
+  REQUIRED_RESTORE_ROLES,
+  RESTORE_TARGET_COMPATIBILITY_CONFIRMATION,
+  RESTORE_TARGET_COMPATIBILITY_SQL,
+} from "../scripts/operations/restore-target-compatibility.mjs";
 
 const execFileAsync = promisify(execFile);
 const scriptPath = "scripts/operations/restore-target-preflight.mjs";
 const readinessScriptPath =
   "scripts/operations/restore-drill-resource-readiness.mjs";
+const compatibilityScriptPath =
+  "scripts/operations/restore-target-compatibility.mjs";
 const readinessWorkflowPath =
   ".github/workflows/restore-drill-resource-readiness.yml";
 const runnerPath = "scripts/operations/run-database-restore-drill.sh";
@@ -80,6 +89,71 @@ function safeReadinessEnvironment(overrides = {}) {
     PGPASSFILE: "",
     ...overrides,
   });
+}
+
+async function restoreCompatibilityFixture(
+  root,
+  catalogResult = "170006|3|1",
+  overrides = {},
+) {
+  const passfilePath = join(root, "restore-compatibility.pgpass");
+  const caCertificatePath = join(root, "restore-compatibility-ca.pem");
+  const fakePsqlPath = join(root, "restore-compatibility-psql.sh");
+  const capturePath = join(root, "restore-compatibility-capture.txt");
+  await writeFile(
+    passfilePath,
+    "restore-db.internal:5432:fanmind_restore:restore_operator:private-compatibility-password\n",
+    { mode: 0o600 },
+  );
+  await writeFile(
+    caCertificatePath,
+    "synthetic-private-compatibility-ca\n",
+    { mode: 0o644 },
+  );
+  await writeFile(
+    fakePsqlPath,
+    [
+      "#!/bin/sh",
+      "set -eu",
+      "{",
+      "  printf 'ARGS='",
+      "  printf '%s ' \"$@\"",
+      "  printf '\\nPGSSLMODE=%s\\n' \"$PGSSLMODE\"",
+      "  printf 'PGGSSENCMODE=%s\\n' \"$PGGSSENCMODE\"",
+      "  printf 'PGOPTIONS=%s\\n' \"$PGOPTIONS\"",
+      "  printf 'PASSFILE_PRIVATE=%s\\n' \"$(stat -c %a \"$PGPASSFILE\")\"",
+      "  printf 'PASSFILE_SNAPSHOT=%s\\n' \"$([ \"$PGPASSFILE\" != \"$FANMIND_TEST_SOURCE_PASSFILE\" ] && echo yes || echo no)\"",
+      "  printf 'CA_PRIVATE=%s\\n' \"$(stat -c %a \"$PGSSLROOTCERT\")\"",
+      "  printf 'CA_SNAPSHOT=%s\\n' \"$([ \"$PGSSLROOTCERT\" != \"$FANMIND_TEST_SOURCE_CA\" ] && echo yes || echo no)\"",
+      "  printf 'PASSFILE_PATH=%s\\n' \"$PGPASSFILE\"",
+      "  printf 'CA_PATH=%s\\n' \"$PGSSLROOTCERT\"",
+      "} > \"$FANMIND_TEST_COMPATIBILITY_CAPTURE\"",
+      "printf '%s\\n' \"$FANMIND_TEST_COMPATIBILITY_RESULT\"",
+      "",
+    ].join("\n"),
+    { mode: 0o700 },
+  );
+
+  return {
+    environment: {
+      ...process.env,
+      ...safeReadinessEnvironment(),
+      FANMIND_RESTORE_TARGET_COMPATIBILITY_CONFIRM:
+        RESTORE_TARGET_COMPATIBILITY_CONFIRMATION,
+      FANMIND_RESTORE_TARGET_PGPASSFILE_PATH: passfilePath,
+      FANMIND_RESTORE_TARGET_CA_CERT_PATH: caCertificatePath,
+      FANMIND_OPERATIONAL_TEST_MODE: "restore-target-compatibility-test",
+      FANMIND_PSQL_BIN: fakePsqlPath,
+      FANMIND_TEST_COMPATIBILITY_CAPTURE: capturePath,
+      FANMIND_TEST_COMPATIBILITY_RESULT: catalogResult,
+      FANMIND_TEST_SOURCE_PASSFILE: passfilePath,
+      FANMIND_TEST_SOURCE_CA: caCertificatePath,
+      ...overrides,
+    },
+    passfilePath,
+    caCertificatePath,
+    capturePath,
+  };
 }
 
 async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
@@ -251,6 +325,17 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/);
   assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'false'/);
   assert.match(workflow, /npm run restore:resources:preflight/);
+  assert.match(workflow, /npm run restore:target:compatibility/);
+  assert.ok(
+    workflow.indexOf("npm run restore:resources:preflight")
+      < workflow.indexOf("npm run restore:target:compatibility"),
+  );
+  assert.match(
+    workflow,
+    /FANMIND_RESTORE_TARGET_COMPATIBILITY_CONFIRM: verify-read-only-restore-target/,
+  );
+  assert.match(workflow, /FANMIND_RESTORE_TARGET_PGPASSFILE_PATH:/);
+  assert.match(workflow, /FANMIND_RESTORE_TARGET_CA_CERT_PATH:/);
   assert.doesNotMatch(
     workflow,
     /restore:database:drill|pg_restore|--identity|FANMIND_BACKUP_AGE_IDENTITY/,
@@ -259,8 +344,146 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
     packageJson.scripts["restore:resources:preflight"],
     "node scripts/operations/restore-drill-resource-readiness.mjs",
   );
+  assert.equal(
+    packageJson.scripts["restore:target:compatibility"],
+    "node scripts/operations/restore-target-compatibility.mjs",
+  );
   assert.match(runbook, /FanMind Restore Drill Resource Readiness/);
   assert.match(runbook, /RESTORE_DRILL_RESOURCE_READINESS=PASS/);
+  assert.match(runbook, /RESTORE_TARGET_COMPATIBILITY=PASS/);
+  assert.match(runbook, /sslmode=verify-full/);
+});
+
+test("restore target compatibility uses one redacted read-only catalog query", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-compatibility-"));
+  try {
+    const fixture = await restoreCompatibilityFixture(root);
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [compatibilityScriptPath],
+      { env: fixture.environment },
+    );
+    const output = `${stdout}\n${stderr}`;
+    const capture = await readFile(fixture.capturePath, "utf8");
+
+    assert.match(output, /RESTORE_TARGET_COMPATIBILITY_SERVER_MAJOR=17/);
+    assert.match(output, /RESTORE_TARGET_COMPATIBILITY_REQUIRED_ROLES=3/);
+    assert.match(output, /RESTORE_TARGET_COMPATIBILITY_PRESENT_ROLES=3/);
+    assert.match(
+      output,
+      /RESTORE_TARGET_COMPATIBILITY_REQUIRED_EXTENSIONS=1/,
+    );
+    assert.match(
+      output,
+      /RESTORE_TARGET_COMPATIBILITY_INSTALLED_EXTENSIONS=1/,
+    );
+    assert.match(output, /DATABASE_CONNECTION=read_only_catalog/);
+    assert.match(output, /RESTORE_TARGET_COMPATIBILITY_TLS=verify-full/);
+    assert.match(output, /RESTORE_TARGET_COMPATIBILITY_WRITES=disabled/);
+    assert.match(output, /RESTORE_TARGET_COMPATIBILITY=PASS/);
+    assert.match(output, /SECRETS_WURDEN_NICHT_AUSGEGEBEN=true/);
+
+    assert.match(capture, /--host restore-db\.internal/);
+    assert.match(capture, /--port 5432/);
+    assert.match(capture, /--dbname fanmind_restore/);
+    assert.match(capture, /--username restore_operator/);
+    assert.match(capture, /PGSSLMODE=verify-full/);
+    assert.match(capture, /PGGSSENCMODE=disable/);
+    assert.match(capture, /PGOPTIONS=-c default_transaction_read_only=on/);
+    assert.match(capture, /PASSFILE_PRIVATE=600/);
+    assert.match(capture, /PASSFILE_SNAPSHOT=yes/);
+    assert.match(capture, /CA_PRIVATE=600/);
+    assert.match(capture, /CA_SNAPSHOT=yes/);
+    assert.match(capture, /pg_catalog\.pg_settings/);
+    assert.match(capture, /pg_catalog\.pg_roles/);
+    assert.match(capture, /pg_catalog\.pg_extension/);
+    assert.doesNotMatch(
+      RESTORE_TARGET_COMPATIBILITY_SQL,
+      /\b(?:insert|update|delete|create|alter|drop|grant|revoke|copy|call)\b/iu,
+    );
+
+    for (const sensitive of [
+      "restore-db.internal",
+      "fanmind_restore",
+      "restore_operator",
+      "private-compatibility-password",
+      "synthetic-private-compatibility-ca",
+      fixture.passfilePath,
+      fixture.caCertificatePath,
+    ]) {
+      assert.doesNotMatch(output, new RegExp(sensitive.replaceAll("/", "\\/")));
+    }
+
+    const snapshotPassfile = capture.match(/^PASSFILE_PATH=(.+)$/mu)?.[1];
+    const snapshotCa = capture.match(/^CA_PATH=(.+)$/mu)?.[1];
+    await assert.rejects(access(snapshotPassfile));
+    await assert.rejects(access(snapshotCa));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore target compatibility fails closed on version, role, extension or format mismatch", async () => {
+  const cases = [
+    ["160009|3|1", "server_major_incompatible"],
+    ["180001|3|1", "server_major_incompatible"],
+    ["170006|2|1", "required_roles_missing"],
+    ["170006|3|0", "required_extensions_missing"],
+    ["restore-db.internal|3|1", "catalog_result_invalid"],
+  ];
+
+  for (const [catalogResult, expectedCode] of cases) {
+    const root = await mkdtemp(join(tmpdir(), "fanmind-restore-compatibility-"));
+    try {
+      const fixture = await restoreCompatibilityFixture(root, catalogResult);
+      await assert.rejects(
+        execFileAsync(process.execPath, [compatibilityScriptPath], {
+          env: fixture.environment,
+        }),
+        (error) => {
+          const output = `${String(error.stdout)}\n${String(error.stderr)}`;
+          assert.match(
+            output,
+            new RegExp(`RESTORE_TARGET_COMPATIBILITY_ERROR=${expectedCode}`),
+          );
+          assert.match(output, /RESTORE_TARGET_COMPATIBILITY=FAIL/);
+          assert.match(output, /SECRETS_WURDEN_NICHT_AUSGEGEBEN=true/);
+          assert.doesNotMatch(output, /restore-db\.internal|private-compatibility/);
+          return true;
+        },
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test("restore compatibility prerequisites stay bound to FanMind migrations", async () => {
+  const migrationDirectory = "supabase/migrations";
+  const migrationFiles = (await readdir(migrationDirectory))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+  const migrationSql = (
+    await Promise.all(
+      migrationFiles.map((name) => readFile(join(migrationDirectory, name), "utf8")),
+    )
+  ).join("\n");
+  const extensions = [...migrationSql.matchAll(
+    /\bcreate\s+extension\s+if\s+not\s+exists\s+([a-z0-9_]+)/giu,
+  )].map((match) => match[1].toLowerCase());
+
+  assert.deepEqual([...new Set(extensions)].sort(), REQUIRED_RESTORE_EXTENSIONS);
+  assert.deepEqual(REQUIRED_RESTORE_ROLES, [
+    "anon",
+    "authenticated",
+    "service_role",
+  ]);
+  for (const role of REQUIRED_RESTORE_ROLES) {
+    assert.match(
+      migrationSql,
+      new RegExp(`\\b(?:grant|revoke)\\b[^;]{0,500}\\b${role}\\b`, "iu"),
+    );
+  }
 });
 
 test("isolated restore target passes only with both boundaries and exact target binding", () => {
