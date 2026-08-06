@@ -98,7 +98,12 @@ Zusätzlich dürfen reine Triggerfunktionen nicht als öffentliche RPC-Endpunkte
 ausführbar sein. Ihr `search_path` muss fest auf vertrauenswürdige Schemata
 gebunden sein. Der frühere `SECURITY DEFINER`-Retention-Trigger bleibt bis zu
 seiner kontrollierten Entfernung für `public`, `anon` und `authenticated`
-gesperrt.
+gesperrt. Die vorbereitete Härtung liegt deshalb ausschließlich unter
+`supabase/controlled/` und darf weder durch den Web-Deploy noch durch ein
+generisches `supabase db push` angewendet werden. Offline-Prüfung, read-only
+Staging-Verify, expliziter Apply und Postflight stehen in
+`docs/operations/TRIGGER_FUNCTION_HARDENING_STAGING.md`; der echte
+Staging-Lauf steht noch aus.
 
 ### Auth-/Workspace-Kern
 

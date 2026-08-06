@@ -26,6 +26,10 @@ begin
     'public.trim_conversation_messages_to_latest_50()'
   ) is not null then
     execute $sql$
+      alter function public.trim_conversation_messages_to_latest_50()
+        set search_path = pg_catalog, pg_temp
+    $sql$;
+    execute $sql$
       revoke all on function public.trim_conversation_messages_to_latest_50()
       from public, anon, authenticated
     $sql$;
