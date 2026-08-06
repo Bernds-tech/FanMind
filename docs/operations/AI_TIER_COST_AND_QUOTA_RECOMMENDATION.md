@@ -39,9 +39,9 @@ Preise, Modellqualität und Datenschutz erneut geprüft werden.
 
 | Stufe | Modellklasse | Anfragen / Monat | Tokens / Monat | Kontextnachrichten |
 | --- | --- | ---: | ---: | ---: |
-| KI Standard | effizient / hohes Volumen | 750 | 3.000.000 | 20 |
-| KI Plus | ausgewogen | 1.500 | 6.000.000 | 50 |
-| KI Ultra | Frontier | 2.000 | 8.000.000 | 100 |
+| KI Standard | effizient / hohes Volumen | 750 | 3.000.000 | 50 |
+| KI Plus | ausgewogen | 1.500 | 6.000.000 | 100 |
+| KI Ultra | Frontier | 2.000 | 8.000.000 | 150 |
 
 Es gilt jeweils die zuerst erreichte Grenze. Der Token-Cap ist der primäre
 Kostenschutz; die Anfragegrenze begrenzt zusätzlich Missbrauch und extrem
