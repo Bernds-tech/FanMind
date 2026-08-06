@@ -82,7 +82,8 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 Der manuelle Workflow `FanMind AI Tier Staging Acceptance` ist vorbereitet,
 führt aber keine Migration aus. Vor seinem ersten Lauf muss die
 checksum-gebundene Entitlement-Migration separat und bewusst auf Staging
-angewendet worden sein.
+verifiziert oder separat und bewusst auf Staging angewendet worden sein. Eine
+gemeldete Migrationsanzahl ersetzt diesen Nachweis nicht.
 
 1. Einen synthetischen Staging-Workspace mit einem Owner und mindestens einem
    weiteren Mitglied anlegen. Er darf noch keinen KI-Stufeneintrag besitzen.
@@ -90,21 +91,23 @@ angewendet worden sein.
    bereitstellen: Plus exakt 100 Euro, Ultra exakt 200 Euro.
 3. Die oben genannten Staging-Variablen und -Secrets im GitHub Environment
    hinterlegen.
-4. Den manuellen Workflow `FanMind AI Tier Staging Migration` auf `main` mit
-   der Bestätigung `apply-workspace-ai-tier-entitlements` starten. Er prüft
-   die festgeschriebene Checksumme, bindet Supabase-Projektreferenz und
-   Datenbankhost unabhängig, wendet die Migration genau einmal an und verlangt
-   danach den read-only Metadaten-Postflight.
-5. Erst nach
-   `AI_TIER_ENTITLEMENT_MIGRATION_APPLY=completed` und
-   `AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS` den manuellen
+4. Zuerst `FanMind Staging Database Rollout State` auf demselben exakten
+   `main`-Commit ausführen. Bei `verify` darf kein Apply gestartet werden; bei
+   `skip` muss die Ledger-/Objektabweichung erhalten und ein generischer Push
+   unterbleiben; bei `block` wird gestoppt.
+5. Nur bei `apply` den manuellen Workflow `FanMind AI Tier Staging Migration`
+   auf `main` mit der Bestätigung
+   `apply-workspace-ai-tier-entitlements` starten. Er prüft die
+   festgeschriebene Checksumme, bindet das Staging-Ziel und verlangt danach
+   den read-only Metadaten-Postflight.
+6. Erst nach einem grünen Objekt-Postflight den manuellen
    Abnahmeworkflow mit der Bestätigung
    `run-ai-tier-staging-acceptance` starten.
-6. Der Abnahmerunner prüft den Stripe-Testkatalog read-only, simuliert doppelte,
+7. Der Abnahmerunner prüft den Stripe-Testkatalog read-only, simuliert doppelte,
    verspätete und kollidierende Lifecycle-Ereignisse und testet für Owner und
    Mitglied `SELECT`, `INSERT`, `UPDATE` und `DELETE` als verbotene
    Browserzugriffe.
-7. Der erlaubte Service-Role-Insert-/Read-/Update-/Delete-Nachweis läuft
+8. Der erlaubte Service-Role-Insert-/Read-/Update-/Delete-Nachweis läuft
    ausschließlich in einer Datenbanktransaktion, die am Ende zurückgerollt
    wird. Workspace-, Nutzer-, Price-, Subscription- und Event-IDs werden
    nicht ausgegeben.

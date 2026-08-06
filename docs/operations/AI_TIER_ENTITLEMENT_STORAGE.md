@@ -10,8 +10,12 @@ bedeutet immer KI Standard.
 
 Die additive Migration
 `supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql` ist
-vorbereitet, aber mit diesem Code-Release noch nicht auf Staging oder
-Production angewendet. Der Speicher ist noch nicht mit Stripe-Webhooks,
+vorbereitet. Ein extern gemeldeter Staging-Stand von 45 Migrationen ist mit
+ihrer Anwendung vereinbar, beweist aber weder den exakten Ledger-Eintrag noch
+den vollständigen Objektvertrag. Vor einem Apply entscheidet deshalb der
+read-only Ablauf in `STAGING_DATABASE_ROLLOUT_STATE.md` zwischen
+`verify`, `skip`, `apply` und `block`. Für Production liegt weiterhin kein
+Anwendungsnachweis vor. Der Speicher ist noch nicht mit Stripe-Webhooks,
 Checkout oder produktiven KI-Endpunkten verdrahtet. Plus und Ultra bleiben
 dadurch weiterhin blockiert.
 

@@ -230,6 +230,13 @@ Social integrations, analytics, campaign logic, referral automation and automati
   postflight passes; partial or drifted schemas must fail closed. Applying the
   schema must not connect Meta, enable analysis, submit App Review or imply a
   Production activation.
+- Before any AI-tier, Mobile-push, Meta-content or optional trigger-hardening
+  Staging database action, use the shared read-only rollout-state workflow.
+  It must compare the exact Supabase migration timestamps with the reused
+  object postflights and may output only verify, skip, apply or block. Never
+  infer an apply from a reported migration/table count, repair the ledger,
+  invoke a generic migration push or repeat a direct-psql migration from this
+  read-only path.
 - Meta content resource readiness is a separate read-only workflow that may
   run before the schema exists. Keep writes and apply commands disabled, bind
   the database user to `postgres.<staging-project-ref>`, require the IPv4-
