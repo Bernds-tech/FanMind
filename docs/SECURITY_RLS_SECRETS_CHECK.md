@@ -94,6 +94,12 @@ Jede geschützte Route muss User -> Workspace -> Ressource prüfen.
 
 RLS muss auf allen workspace- oder userbezogenen Tabellen aktiv und getestet sein.
 
+Zusätzlich dürfen reine Triggerfunktionen nicht als öffentliche RPC-Endpunkte
+ausführbar sein. Ihr `search_path` muss fest auf vertrauenswürdige Schemata
+gebunden sein. Der frühere `SECURITY DEFINER`-Retention-Trigger bleibt bis zu
+seiner kontrollierten Entfernung für `public`, `anon` und `authenticated`
+gesperrt.
+
 ### Auth-/Workspace-Kern
 
 - [ ] `profiles`
