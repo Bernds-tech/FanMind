@@ -82,24 +82,41 @@ function evaluateDatabaseTarget(environment, errors) {
   if (!pgHost || !targetHost || pgHost !== targetHost) {
     errors.push("database_host_binding");
   }
-  if (!productionHost || (pgHost && pgHost === productionHost)) {
+  if (!productionHost) {
     errors.push("production_database_target");
   }
 
-  const projectRef = clean(
+  const targetProjectRef = clean(
     environment.FANMIND_TARGET_SUPABASE_PROJECT_REF,
   ).toLowerCase();
-  const expectedPoolerUser = projectRef ? `postgres.${projectRef}` : "";
+  const productionProjectRef = clean(
+    environment.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF,
+  ).toLowerCase();
   const pgPort = clean(environment.PGPORT);
   const pgDatabase = clean(environment.PGDATABASE);
-  const pgUser = clean(environment.PGUSER);
+  const pgUser = clean(environment.PGUSER).toLowerCase();
   if (
     pgPort !== "5432" ||
     !DB_IDENTITY_PATTERN.test(pgDatabase) ||
-    !DB_IDENTITY_PATTERN.test(pgUser) ||
-    pgUser !== expectedPoolerUser
+    !DB_IDENTITY_PATTERN.test(clean(environment.PGUSER))
   ) {
     errors.push("database_identity");
+  }
+  if (!pgHost.endsWith(".pooler.supabase.com")) {
+    errors.push("database_session_pooler");
+  }
+  if (
+    !targetProjectRef ||
+    !productionProjectRef ||
+    targetProjectRef === productionProjectRef
+  ) {
+    errors.push("production_database_target");
+  }
+  if (
+    pgUser !== `postgres.${targetProjectRef}` ||
+    pgUser === `postgres.${productionProjectRef}`
+  ) {
+    errors.push("database_user_project_binding");
   }
   if (
     clean(environment.PGSSLMODE).toLowerCase() !== "verify-full" ||
@@ -133,7 +150,11 @@ export function evaluateTriggerFunctionHardeningStagingEnvironment(
   if (boundary.runtimeEnvironment !== "staging") {
     errors.push("runtime_environment");
   }
-  if (boundary.appProduction || boundary.supabaseProductionMatch) {
+  if (
+    boundary.appProduction ||
+    !boundary.productionProjectIdentified ||
+    boundary.supabaseProductionMatch
+  ) {
     errors.push("production_target");
   }
   if (

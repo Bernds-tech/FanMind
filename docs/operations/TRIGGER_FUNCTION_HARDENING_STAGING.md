@@ -128,16 +128,23 @@ Beide Workflows laufen ausschließlich, wenn:
   nicht `https://fanmind.ch` sind;
 - Supabase-URL und Staging-Projektreferenz dasselbe Projekt benennen;
 - Staging- und Production-Projektreferenz verschieden sind;
-- `PGHOST` dem bestätigten Staging-DB-Host entspricht und vom bestätigten
-  Production-DB-Host abweicht;
+- `PGHOST` dem bestätigten Staging-DB-Host entspricht; ein regionaler
+  Supabase-Session-Pooler darf für Staging und Production denselben Hostnamen
+  besitzen, weil er geteilte Infrastruktur ist;
 - der IPv4-kompatible Supabase-Session-Pooler auf Port `5432` mit
   `postgres.<staging-project-ref>` verwendet wird;
+- die Staging-Projektreferenz von der bestätigten Production-Projektreferenz
+  abweicht und `PGUSER` weder unqualifiziert noch an die Production-Referenz
+  gebunden ist;
 - `PGSSLMODE=verify-full` und ein absolutes CA-Bundle gesetzt sind;
 - keine libpq-Umleitung über `PGHOSTADDR`, `PGSERVICE` oder eine alternative
   Connection-URL aktiv ist.
 
-Der Production-DB-Host ist nur ein Vergleichswert. Production-Zugangsdaten
-werden in diesem Ablauf weder benötigt noch verwendet.
+Der Production-DB-Host und die Production-Projektreferenz sind nur
+Vergleichswerte. Die Zieltrennung wird beim geteilten Supavisor-Host durch die
+unabhängig geprüften Projektreferenzen und den projektqualifizierten
+Staging-Benutzer erzwungen. Production-Zugangsdaten werden in diesem Ablauf
+weder benötigt noch verwendet.
 
 ## Private Passwortdatei und redigierte Ausgabe
 

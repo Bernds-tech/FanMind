@@ -57,7 +57,7 @@ function baseEnvironment() {
     PGHOST: "aws-0-eu-central-1.pooler.supabase.com",
     FANMIND_TARGET_DB_HOST: "aws-0-eu-central-1.pooler.supabase.com",
     FANMIND_PRODUCTION_DB_HOST:
-      "aws-1-eu-central-1.pooler.supabase.com",
+      "aws-0-eu-central-1.pooler.supabase.com",
     PGPORT: "5432",
     PGDATABASE: "postgres",
     PGUSER: `postgres.${STAGING_REF}`,
@@ -173,6 +173,32 @@ test("read-only verify and apply require separate explicit gates", () => {
   assert.ok(crossed.errors.includes("confirmation"));
 });
 
+test("shared regional Supavisor host stays project-ref and PGUSER bound", () => {
+  const sharedPooler = evaluateTriggerFunctionHardeningStagingEnvironment(
+    baseEnvironment(),
+    { mode: "verify" },
+  );
+  assert.equal(sharedPooler.ok, true);
+
+  for (const mutation of [
+    { FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: "" },
+    { FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: STAGING_REF },
+    { PGUSER: `postgres.${PRODUCTION_REF}` },
+    { PGUSER: `postgres.${STAGING_REF}.extra` },
+    {
+      PGHOST: "shared-database.internal",
+      FANMIND_TARGET_DB_HOST: "shared-database.internal",
+      FANMIND_PRODUCTION_DB_HOST: "shared-database.internal",
+    },
+  ]) {
+    const result = evaluateTriggerFunctionHardeningStagingEnvironment(
+      { ...baseEnvironment(), ...mutation },
+      { mode: "verify" },
+    );
+    assert.equal(result.ok, false, JSON.stringify(mutation));
+  }
+});
+
 test("control policy rejects Production, target drift and libpq redirects", () => {
   const mutations = [
     {
@@ -185,8 +211,9 @@ test("control policy rejects Production, target drift and libpq redirects", () =
       PGUSER: `postgres.${PRODUCTION_REF}`,
     },
     {
-      PGHOST: "aws-1-eu-central-1.pooler.supabase.com",
-      FANMIND_TARGET_DB_HOST: "aws-1-eu-central-1.pooler.supabase.com",
+      PGHOST: "production-db.internal",
+      FANMIND_TARGET_DB_HOST: "production-db.internal",
+      FANMIND_PRODUCTION_DB_HOST: "production-db.internal",
     },
     { FANMIND_PRODUCTION_DB_HOST: "" },
     { GITHUB_REF: "refs/heads/agent/security" },
