@@ -232,7 +232,7 @@ test("framework and eslint configuration must stay on the reviewed patch", () =>
   );
 });
 
-test("reviewed overrides stay narrow and resolve to the patched production tree", async () => {
+test("reviewed overrides stay narrow and resolve to the patched root tree", async () => {
   const manifest = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8"),
   );
@@ -241,9 +241,9 @@ test("reviewed overrides stay narrow and resolve to the patched production tree"
   );
 
   assert.deepEqual(manifest.overrides, {
-    "brace-expansion@>=1.0.0 <1.1.17": "1.1.17",
-    "brace-expansion@>=5.0.0 <5.0.8": "5.0.8",
-    "js-yaml@>=4.0.0 <4.3.0": "4.3.0",
+    "brace-expansion@>=1.0.0 <1.1.18": "1.1.18",
+    "brace-expansion@>=5.0.0 <5.0.9": "5.0.9",
+    "js-yaml@>=4.0.0 <4.3.1": "4.3.1",
     "next@16.2.12": {
       postcss: "8.5.23",
       sharp: "0.35.3",
@@ -254,16 +254,16 @@ test("reviewed overrides stay narrow and resolve to the patched production tree"
   assert.equal(lock.packages["node_modules/next"].version, "16.2.12");
   assert.equal(lock.packages["node_modules/postcss"].version, "8.5.23");
   assert.equal(lock.packages["node_modules/sharp"].version, "0.35.3");
-  assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.8");
+  assert.equal(lock.packages["node_modules/brace-expansion"].version, "5.0.9");
   for (const dependencyPath of [
     "node_modules/@eslint/config-array/node_modules/brace-expansion",
     "node_modules/@eslint/eslintrc/node_modules/brace-expansion",
     "node_modules/eslint-config-next/node_modules/brace-expansion",
     "node_modules/eslint/node_modules/brace-expansion",
   ]) {
-    assert.equal(lock.packages[dependencyPath].version, "1.1.17");
+    assert.equal(lock.packages[dependencyPath].version, "1.1.18");
   }
-  assert.equal(lock.packages["node_modules/js-yaml"].version, "4.3.0");
+  assert.equal(lock.packages["node_modules/js-yaml"].version, "4.3.1");
 });
 
 test("legacy ESLint brace expansion enforces the reviewed output bound", () => {
