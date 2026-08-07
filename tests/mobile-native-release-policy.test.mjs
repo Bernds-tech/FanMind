@@ -738,7 +738,16 @@ test("manual signed Mobile workflow is internal-only, credential-frozen and neve
   assert.match(signedBuildWorkflow, /timeout 10m npx --yes eas-cli@21\.2\.0 build/u);
   assert.match(signedBuildWorkflow, /timeout 10s npx --yes eas-cli@21\.2\.0 build:view/u);
   assert.match(signedBuildWorkflow, /sleep 30/u);
-  assert.equal((signedBuildWorkflow.match(/umask 077/gu) ?? []).length, 3);
+  assert.equal((signedBuildWorkflow.match(/umask 077/gu) ?? []).length, 4);
+  assert.match(
+    signedBuildWorkflow,
+    /scripts\/operations\/write-mobile-signed-build-receipt\.mjs/u,
+  );
+  assert.match(
+    signedBuildWorkflow,
+    /fanmind-mobile-signed-build-receipt-\$\{\{ inputs\.build_environment \}\}-\$\{\{ inputs\.platform \}\}/u,
+  );
+  assert.match(signedBuildWorkflow, /retention-days: 5/u);
   assert.doesNotMatch(
     signedBuildWorkflow,
     /eas(?:-cli@[\d.]+)?\s+(?:submit|update|credentials|build:submit)\b/u,

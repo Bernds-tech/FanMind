@@ -76,6 +76,11 @@ Diese Einstellung darf nicht geraten und nicht im Repository als erledigt markie
 
 ### Realer Gerätetest
 
+Die verbindliche, private und SHA-gebundene Android-/iOS-Abnahme ist in
+[`DEVICE_ACCEPTANCE.md`](./DEVICE_ACCEPTANCE.md) definiert. Sie verbindet jeden
+Gerätenachweis mit dem redigierten Receipt des exakten signierten Builds; die
+folgenden Schritte bleiben die Recovery-Teilmenge dieses Gesamtbelegs.
+
 1. internen signierten Build auf einem Testgerät installieren;
 2. in der App eine ausschließlich für Tests vorgesehene E-Mail-Adresse eingeben;
 3. Recovery-Mail auf demselben Gerät öffnen;
