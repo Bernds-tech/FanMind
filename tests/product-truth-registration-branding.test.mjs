@@ -117,7 +117,7 @@ test("FanMind contains no tracked foreign branding or obsolete brand asset path"
   assert.equal(text.includes(obsoleteBrandAssetPath.replace(/^public/u, "")), false);
 });
 
-test("phase 7 stays on the public roadmap but outside the current completion scope", async () => {
+test("phase 7 excludes LinkedIn and additional channels and stays outside the current completion scope", async () => {
   const [roadmap, sourceOfTruth, readme, tracker] = await Promise.all([
     source("src/config/roadmap.ts"),
     source("docs/SOURCE_OF_TRUTH.md"),
@@ -125,7 +125,7 @@ test("phase 7 stays on the public roadmap but outside the current completion sco
     source("docs/operations/P0_COMPLETION_TRACKER.md"),
   ]);
 
-  assert.match(roadmap, /phase: "Phase 7"[\s\S]*LinkedIn & weitere Kanäle/u);
+  assert.match(roadmap, /phase: "Phase 7"[\s\S]*TikTok[\s\S]*X \/ Twitter[\s\S]*Discord/u);\n  assert.doesNotMatch(roadmap, /LinkedIn & weitere Kanäle/u);\n  assert.doesNotMatch(readme, /LinkedIn und weiteren Kanälen/u);
   for (const document of [sourceOfTruth, readme, tracker]) {
     assert.match(document, /Roadmap-Phase 7/u);
     assert.match(document, /nicht Teil des aktuellen\s+Abschlussumfangs|nicht zum aktuellen Abschlussumfang|vom aktuellen Abschlussumfang[^\n]*ausgenommen/iu);
