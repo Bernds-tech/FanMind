@@ -4,7 +4,12 @@
 
 Dieser Ablauf kontrolliert ausschließlich die vorbereitete Tabelle für eine
 verschlüsselte Mobile-Push-Registrierung in einem getrennten FanMind-Staging.
-Er ist im Repository vorbereitet, aber noch nicht extern ausgeführt.
+Ein extern gemeldeter Stand von 45 Migrationen und 33 öffentlichen Tabellen
+ist mit einer bereits vorhandenen Tabelle vereinbar, beweist aber weder den
+exakten Ledger-Eintrag noch den vollständigen Objektvertrag. Vor einem Apply
+muss deshalb der read-only Ablauf in
+`STAGING_DATABASE_ROLLOUT_STATE.md` die Aktion `verify`, `skip`, `apply` oder
+`block` ableiten. Eine echte Staging-Acceptance ist damit noch nicht belegt.
 
 Die festgeschriebene Migration ist:
 
