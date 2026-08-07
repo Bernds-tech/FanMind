@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { AI_TIER_CONFIG } from "../src/config/aiTiers.mjs";
@@ -10,6 +11,9 @@ import {
   estimateProviderCostCents,
   getRecommendedProviderCostScenario,
 } from "../src/config/aiTierRecommendation.mjs";
+
+const recommendationDocumentPath =
+  "docs/operations/AI_TIER_COST_AND_QUOTA_RECOMMENDATION.md";
 
 test("AI tier recommendation is advisory and cannot activate paid tiers", () => {
   assert.equal(AI_TIER_RECOMMENDATION_STATUS, "advisory");
@@ -47,6 +51,24 @@ test("recommended quotas increase while every tier remains fail-closed at 100 pe
     assert.equal(tier.usagePolicy.warningPercent, 80);
     assert.equal(tier.usagePolicy.hardStopPercent, 100);
     assert.equal(tier.usagePolicy.automaticOverageEnabled, false);
+  }
+});
+
+test("published context recommendation matches the approved 50/100/150 policy", async () => {
+  const document = await readFile(recommendationDocumentPath, "utf8");
+
+  for (const [tierName, expectedContext] of [
+    ["KI Standard", AI_TIER_RECOMMENDATION.standard.contextMessageLimit],
+    ["KI Plus", AI_TIER_RECOMMENDATION.plus.contextMessageLimit],
+    ["KI Ultra", AI_TIER_RECOMMENDATION.ultra.contextMessageLimit],
+  ]) {
+    assert.match(
+      document,
+      new RegExp(
+        `\\| ${tierName} \\|[^\\n]+\\| ${expectedContext} \\|`,
+        "u",
+      ),
+    );
   }
 });
 

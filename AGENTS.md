@@ -146,6 +146,15 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   transaction and must prove cleanup. Never send a push, use a real Expo token,
   enable delivery, expose SQL diagnostics or secrets, or let a normal Web
   deploy invoke the migration runner.
+- Database trigger-function hardening has its own checksum-pinned,
+  Staging-only control path under `supabase/controlled/`. A normal Web deploy
+  and generic `supabase db push` must never apply it. Keep offline check,
+  read-only verify and explicitly confirmed apply separate; bind both manual
+  database workflows to `main`, the exact reviewed commit, the protected
+  `staging` environment, TLS and targets proven distinct from Production.
+  Postflight must prove the fixed `search_path` and absence of `EXECUTE` for
+  `PUBLIC`, `anon` and `authenticated`, including the retired optional
+  retention trigger when it still exists. Output only fixed redacted codes.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

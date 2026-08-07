@@ -8,7 +8,6 @@ import {
   createMetaWebhookConversationMessage,
   createMetaWebhookDebugEvent,
   findMetaSocialConnectionByPageId,
-  findMetaWebhookFallbackWorkspaceId,
   type ConversationMessageAttachment,
   type SocialConnectionRow,
 } from "@/lib/supabase/server";
@@ -226,12 +225,8 @@ export async function processMetaWebhookPayload(
     if (connection.error) firstErrorCode ??= "connection_lookup_failed";
 
     if (!connection.connection) {
-      const fallbackWorkspace = await findMetaWebhookFallbackWorkspaceId();
-      if (fallbackWorkspace.error)
-        firstErrorCode ??= "fallback_workspace_failed";
-
       const debugResult = await createMetaWebhookDebugEvent({
-        workspaceId: fallbackWorkspace.workspaceId,
+        workspaceId: null,
         platform: event.sourcePlatform,
         eventType: event.eventType,
         pageId: null,

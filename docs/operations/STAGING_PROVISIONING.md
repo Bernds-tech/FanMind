@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, Referral-, Restore-, Migrations- und Integrationsprüfungen bereitstellen. Production-Daten, Production-Schlüssel und echte Kundendaten dürfen dabei nicht verwendet werden.
+Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referral-, Restore-, Migrations- und Integrationsprüfungen bereitstellen. Der Webhost nutzt aus Kostengründen denselben Exoscale-Server wie Production, ist dort aber durch einen eigenen Linux-Nutzer, Release-Pfad, Prozess, nginx-vHost, ENV-Datei und Runner-Dienst getrennt. Diese Betriebsgrenze ist keine Infrastrukturtrennung durch einen zweiten Server. Supabase- und Stripe-Staging-Ressourcen müssen dagegen vollständig von Production getrennt bleiben. Production-Daten, Production-Schlüssel und echte Kundendaten dürfen nicht verwendet werden.
 
 ## Bereits technisch vorhanden
 
@@ -11,15 +11,22 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 - sichere Vorlage `.env.staging.example`;
 - zusätzlicher Baseline-Check `npm run staging:preflight`;
 - manueller GitHub-Workflow `FanMind Staging Readiness`;
-- manueller, commit-genauer Deploy-Workflow `Deploy FanMind Staging` für einen ausschließlich mit `fanmind-staging` gekennzeichneten Self-Hosted Runner;
+- manueller, `main`-gebundener und commit-genauer Deploy-Workflow `Deploy FanMind Staging` für einen ausschließlich mit `fanmind-staging` gekennzeichneten Self-Hosted Runner;
+- manueller, `main`-gebundener Workflow `Provision FanMind Staging Host`, der
+  auf dem bestehenden Exoscale-Host ausschließlich den getrennten Linux-Nutzer,
+  Release-Pfad, privaten ENV-Pfad, nginx-vHost und zweiten Runner-Dienst anlegt;
+- separater manueller Workflow `Enable FanMind Staging TLS`, der erst nach
+  erfolgreicher DNS-Bindung das vorhandene Certbot-Konto für
+  `staging.fanmind.ch` verwendet;
 - Policy-Tests, die Production-Ziele und unvollständige Freigaben blockieren.
 
 ## Extern einmalig einzurichten
 
-1. **Staging-Host**
-   - eigener HTTPS-Host, empfohlen `staging.fanmind.ch`;
-   - getrennte Runtime und getrennte ENV-Datei;
-   - kein Alias auf die Production-Anwendung.
+1. **Staging-Webgrenze auf dem bestehenden Exoscale-Server**
+   - eigener HTTPS-Host `staging.fanmind.ch`;
+   - eigener Linux-Nutzer, eigener Prozess, eigener Release-Pfad und getrennte ENV-Datei;
+   - kein Alias auf die Production-Anwendung und keine gemeinsame Runtime;
+   - kein zweiter Server: ein Ausfall oder eine Fehlkonfiguration des gemeinsamen Hosts bleibt ein geteiltes Infrastrukturrisiko.
 
 2. **Supabase Staging**
    - neues eigenes Supabase-Projekt;
@@ -37,9 +44,21 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 
 4. **Staging-Runtime und Runner**
    - eigener Self-Hosted Runner mit dem exklusiven Label `fanmind-staging`, niemals der Production-Runner;
-   - eigener Checkout unter `/var/www/fanmind-staging`;
+   - eigener Release-Pfad unter `/var/www/fanmind-staging`;
    - eigene, nicht versionierte `/var/www/fanmind-staging/.env.production` mit Dateimodus `0600` und ausschließlich Staging-Werten;
    - eigener PM2-Prozess `fanmind-staging` und eigener nginx-vHost;
+   - die einmalige Host-Provisionierung läuft mit der Bestätigung
+     `provision-fanmind-staging-host`; sie deployt keine Anwendung und ändert
+     weder den Production-Checkout noch den Production-PM2-Prozess;
+   - der eigentliche Deploy synchronisiert einen kurzlebig authentifizierten,
+     commit-genauen Checkout mit `persist-credentials: false` ohne `.git` in
+     den Release-Pfad; der Staging-Nutzer erhält keine dauerhaften
+     Repository-Zugangsdaten;
+   - der dafür kurzzeitig benötigte Secret
+     `FANMIND_STAGING_RUNNER_REGISTRATION_TOKEN` wird nach erfolgreicher
+     Registrierung des zweiten Runners aus dem GitHub Environment gelöscht;
+   - dadurch entsteht kein zweiter Exoscale-Server und kein zusätzlicher
+     monatlicher Infrastrukturpreis.
 
 5. **GitHub Environment `staging`**
    - Variable `FANMIND_STAGING_APP_URL`;
@@ -62,20 +81,30 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
      Session-Pooler) und `FANMIND_STAGING_DB_PASSWORD`; der DB-Benutzer wird
      als `postgres.<staging-project-ref>` abgeleitet und nie frei gesetzt;
      niemals eine Production-Verbindung.
+   - temporärer Secret `FANMIND_STAGING_RUNNER_REGISTRATION_TOKEN` nur für
+     die erste Runner-Registrierung; niemals in Runtime-ENV oder Git schreiben.
 
 ## Sichere Reihenfolge
 
 1. externe Ressourcen erstellen;
-2. `.env.staging.example` außerhalb von Git befüllen;
-3. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
-4. alle Schreibschalter auf `false` lassen;
-5. `npm run staging:preflight` ausführen;
-6. den manuellen Workflow `Deploy FanMind Staging` auf dem ausgewählten, von `main` erreichbaren Commit mit der Bestätigung `deploy-staging-only` starten;
-7. der Workflow muss Preflight, Product Truth, Lint, Operations-Tests, Build, separaten PM2-Start, Health und commit-genauen Public Smoke erfolgreich abschließen;
-8. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell starten;
-9. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
-10. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
-11. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
+2. den kurzlebigen Runner-Registrierungstoken ausschließlich als geschützten
+   Environment-Secret hinterlegen und `Provision FanMind Staging Host` auf
+   `main` mit `provision-fanmind-staging-host` starten;
+3. den im Workflow-Summary ausgewiesenen IPv4-Wert als A-Record für
+   `staging.fanmind.ch` setzen;
+4. nach nachgewiesener DNS-Auflösung `Enable FanMind Staging TLS` mit
+   `enable-fanmind-staging-tls` starten;
+5. den kurzlebigen Runner-Registrierungstoken anschließend löschen;
+6. `.env.staging.example` außerhalb von Git befüllen;
+7. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
+8. alle Schreibschalter auf `false` lassen;
+9. `npm run staging:preflight` ausführen;
+10. den manuellen Workflow `Deploy FanMind Staging` auf dem ausgewählten, von `main` erreichbaren Commit mit der Bestätigung `deploy-staging-only` starten;
+11. der Workflow muss Preflight, Product Truth, Lint, Operations-Tests, Build, separaten PM2-Start, Health und commit-genauen Public Smoke erfolgreich abschließen;
+12. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell starten;
+13. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
+14. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
+15. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
 
 ## Kontrollierte KI-Stufen-Abnahme
 

@@ -1,32 +1,32 @@
-name: FanMind Meta Content Staging Resource Readiness
+name: FanMind Trigger Function Hardening Staging Apply
 
 on:
   workflow_dispatch:
     inputs:
       reviewed_commit:
-        description: 'Exact reviewed main commit to bind to this read-only check'
+        description: 'Exact reviewed main commit containing the pinned controlled SQL'
         required: true
         type: string
       confirmation:
-        description: 'Type verify-meta-content-staging-resources to run the read-only isolated staging resource check'
+        description: 'Type apply-trigger-function-hardening to apply only to isolated Staging'
         required: true
         type: string
 
 concurrency:
-  group: fanmind-meta-content-staging-resource-readiness
+  group: fanmind-trigger-function-hardening-staging-write
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  verify-meta-content-staging-resources:
-    name: Verify isolated Meta content resources without schema or data writes
+  apply-trigger-function-hardening:
+    name: Apply pinned trigger hardening only to isolated Staging
     if: >-
       ${{
         github.ref == 'refs/heads/main' &&
         inputs.reviewed_commit == github.sha &&
-        inputs.confirmation == 'verify-meta-content-staging-resources'
+        inputs.confirmation == 'apply-trigger-function-hardening'
       }}
     runs-on: ubuntu-24.04
     environment: staging
@@ -38,14 +38,14 @@ jobs:
       FANMIND_PRODUCTION_API_ORIGIN: https://fanmind.ch
       FANMIND_TARGET_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_STAGING_SUPABASE_PROJECT_REF }}
       FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF }}
-      FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
-      FANMIND_NON_PRODUCTION_WRITE_ACK: ''
-      FANMIND_META_CONTENT_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
-      FANMIND_META_CONTENT_STAGING_RESOURCE_CONFIRM: verify-meta-content-staging-resources
+      FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'
+      FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY
+      FANMIND_TRIGGER_FUNCTION_HARDENING_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+      FANMIND_TRIGGER_FUNCTION_HARDENING_APPLY_CONFIRM: apply-trigger-function-hardening
       PGHOST: ${{ secrets.FANMIND_STAGING_DB_HOST }}
       FANMIND_TARGET_DB_HOST: ${{ secrets.FANMIND_STAGING_DB_HOST }}
       FANMIND_PRODUCTION_DB_HOST: ${{ secrets.FANMIND_PRODUCTION_DB_HOST }}
-      PGPORT: ${{ vars.FANMIND_STAGING_DB_PORT }}
+      PGPORT: '5432'
       PGDATABASE: ${{ vars.FANMIND_STAGING_DB_NAME }}
       PGUSER: ${{ format('postgres.{0}', vars.FANMIND_STAGING_SUPABASE_PROJECT_REF) }}
       PGSSLMODE: verify-full
@@ -60,19 +60,19 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Verify all pinned Meta schema steps offline
-        run: npm run db:meta-content:check
+      - name: Verify pinned controlled SQL offline
+        run: npm run db:trigger-function-hardening:check
 
       - name: Prepare dedicated private database password file
         env:
           FANMIND_STAGING_DB_PASSWORD: ${{ secrets.FANMIND_STAGING_DB_PASSWORD }}
-          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-resource-readiness.pgpass
+          PGPASSFILE: ${{ runner.temp }}/fanmind-trigger-function-hardening-apply.pgpass
         run: |
           set -euo pipefail
           umask 077
           case "$FANMIND_STAGING_DB_PASSWORD" in
-            *$'\n'*|*$'\r'*)
-              echo "Staging database password contains an unsupported line break." >&2
+            ''|*$'\n'*|*$'\r'*)
+              echo "Staging database password is missing or contains an unsupported line break." >&2
               exit 1
               ;;
           esac
@@ -83,13 +83,13 @@ jobs:
             "$ESCAPED_DB_PASSWORD" > "$PGPASSFILE"
           chmod 600 "$PGPASSFILE"
 
-      - name: Verify target, connectivity and schema state without writes
+      - name: Apply pinned hardening and run read-only postflight
         env:
-          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-resource-readiness.pgpass
-        run: npm run db:meta-content:readiness
+          PGPASSFILE: ${{ runner.temp }}/fanmind-trigger-function-hardening-apply.pgpass
+        run: npm run db:trigger-function-hardening:apply
 
       - name: Remove dedicated private database password file
         if: ${{ always() }}
         env:
-          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-content-resource-readiness.pgpass
+          PGPASSFILE: ${{ runner.temp }}/fanmind-trigger-function-hardening-apply.pgpass
         run: rm -f "$PGPASSFILE"

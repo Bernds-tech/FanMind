@@ -6,6 +6,7 @@ import {
   FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE,
 } from "@/lib/facebookScopes";
 import { META_GRAPH_API_VERSION } from "@/lib/metaIntegrationPolicy.mjs";
+import { validateFacebookGraphPagingUrl } from "@/lib/facebookGraphPagingPolicy.mjs";
 import {
   normalizeFacebookPageSelectionPayload,
   type FacebookPageSelectionConnectionType,
@@ -923,7 +924,7 @@ export async function fetchFacebookMessengerConversationMessages(
 
     nextUrl =
       messages.length < targetLimit
-        ? validUrl(payload?.paging?.next ?? null)
+        ? validateFacebookGraphPagingUrl(payload?.paging?.next ?? null)
         : null;
   }
 
@@ -1952,7 +1953,7 @@ async function fetchGraphCollection<T extends { id?: string }>(
     }
 
     items.push(...(payload?.data ?? []).filter((item) => Boolean(item.id)));
-    nextUrl = payload?.paging?.next ?? null;
+    nextUrl = validateFacebookGraphPagingUrl(payload?.paging?.next ?? null);
   }
 
   return items;

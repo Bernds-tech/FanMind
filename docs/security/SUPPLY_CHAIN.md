@@ -49,7 +49,7 @@ Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:
 - exakte Next.js-/ESLint-Config-Patchstände;
 - einen vollständig sauberen Root-Production-Baum ohne Review-Ausnahme.
 
-### Aktueller geprüfter Zustand vom 25. Juli 2026
+### Aktueller geprüfter Zustand vom 7. August 2026
 
 Am 25. Juli wurde Next.js `16.2.12` mit passendem `eslint-config-next`
 verfügbar. Gleichzeitig standen korrigierte Versionen für die beiden
@@ -66,11 +66,20 @@ Die beiden Production-Korrekturen werden ausschließlich unter
 der aufgelösten Sharp-Version ein echtes Bild, zusätzlich zum vollständigen
 Next.js-Production-Build.
 
-Im reinen Entwickler-Werkzeugbaum wurden außerdem die innerhalb ihrer
-Parent-Ranges verfügbaren Korrekturen `brace-expansion` `5.0.8` und `js-yaml`
-`4.3.0` eingezogen. Der weiterhin von npm gemeldete
-`brace-expansion`-1.x-Werkzeugbefund ist nicht Bestandteil des
-Root-Production-Baums und wird nicht als behoben dargestellt.
+Im reinen Entwickler-Werkzeugbaum werden außerdem die innerhalb ihrer
+bestehenden Parent-Ranges verfügbaren Korrekturen `brace-expansion` `1.1.18`
+und `5.0.9` sowie `js-yaml` `4.3.1` eng begrenzt erzwungen. Damit sind auch
+die am 30. Juli beziehungsweise 5. August 2026 veröffentlichten
+High-Advisories `GHSA-rgw5-rvv9-x895` und `GHSA-5p4m-2wfm-xmqj` behoben,
+ohne ESLint, Next.js oder einen Parent auf eine neue Major-Version zu heben.
+Ein dauerhafter Policy-Test bindet sowohl die drei Range-selektiven Overrides
+als auch alle aufgelösten 1.x-, 5.x- und 4.x-Lockfile-Knoten an diese
+Patchstände.
+
+Der vollständige Root-Audit einschließlich Entwicklerabhängigkeiten meldet
+auf diesem Lockfile keine hohen oder kritischen Befunde. Der Production-Audit
+bleibt davon unabhängig strenger und verlangt weiterhin einen vollständig
+sauberen Root-Production-Baum ohne Review-Ausnahme.
 
 Der reproduzierte Root-Production-Audit meldet danach:
 

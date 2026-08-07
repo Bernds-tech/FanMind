@@ -22,13 +22,24 @@ import { evaluateMetaContentStagingMigrationEnvironment } from "../../src/lib/me
 const MIGRATIONS = Object.freeze([
   Object.freeze({
     id: "20260803120000_meta_content_intelligence_foundation",
+    path: "supabase/migrations/20260803120000_meta_content_intelligence_foundation.sql",
+    stage: "foundation",
     sha256:
       "3936aeddf0c6b2ed2e3628c169eb52ed64264a3cf97c53c9c91a2063da7c55af",
   }),
   Object.freeze({
     id: "20260803210000_preserve_incremental_conversation_history",
+    path: "supabase/migrations/20260803210000_preserve_incremental_conversation_history.sql",
+    stage: "foundation",
     sha256:
       "79c81cdd204fc2fc45f4fa16ab381ce2278e16f13950914e125e22cfdca924f1",
+  }),
+  Object.freeze({
+    id: "20260806160000_meta_webhook_external_id_idempotency",
+    path: "supabase/controlled/20260806160000_meta_webhook_external_id_idempotency.sql",
+    stage: "idempotency",
+    sha256:
+      "378f04578a70ff18891482a4f2d8b3df6ebde7fd7a28a3f0c103385d52dcf2f9",
   }),
 ]);
 const MAX_PASSFILE_BYTES = 64 * 1024;
@@ -38,7 +49,7 @@ const STATE_SQL = String.raw`
 begin;
 set transaction read only;
 
-with markers(present) as (
+with foundation_markers(present) as (
   values
     (to_regclass('public.workspace_analysis_settings') is not null),
     (to_regclass('public.content_metric_snapshots') is not null),
@@ -78,19 +89,58 @@ with markers(present) as (
          and attnum > 0
          and not attisdropped
     ))
+),
+idempotency_markers(present) as (
+  values
+    (exists (
+      select 1
+        from pg_index as index_definition
+        join pg_class as index_relation
+          on index_relation.oid = index_definition.indexrelid
+       where index_definition.indrelid =
+         to_regclass('public.conversation_messages')
+         and index_relation.relname =
+           'conversation_messages_meta_external_message_unique_idx'
+         and index_definition.indisunique
+         and index_definition.indisvalid
+         and index_definition.indisready
+         and index_definition.indpred is not null
+    )),
+    (exists (
+      select 1
+        from pg_index as index_definition
+        join pg_class as index_relation
+          on index_relation.oid = index_definition.indexrelid
+       where index_definition.indrelid =
+         to_regclass('public.conversation_messages')
+         and index_relation.relname =
+           'conversation_messages_meta_external_comment_unique_idx'
+         and index_definition.indisunique
+         and index_definition.indisvalid
+         and index_definition.indisready
+         and index_definition.indpred is not null
+    ))
+),
+state as (
+  select
+    (select bool_and(present) from foundation_markers) as foundation_all,
+    (select bool_or(present) from foundation_markers) as foundation_any,
+    (select bool_and(present) from idempotency_markers) as idempotency_all,
+    (select bool_or(present) from idempotency_markers) as idempotency_any
 )
 select 'META_CONTENT_MIGRATION_STATE=' ||
   case
-    when bool_and(present) then 'installed'
-    when not bool_or(present) then 'absent'
+    when foundation_all and idempotency_all then 'installed'
+    when foundation_all and not idempotency_any then 'foundation'
+    when not foundation_any and not idempotency_any then 'absent'
     else 'partial'
   end
-from markers;
+from state;
 
 rollback;
 `;
 
-const POSTFLIGHT_SQL = String.raw`
+const FOUNDATION_POSTFLIGHT_SQL = String.raw`
 \set ON_ERROR_STOP on
 begin;
 set transaction read only;
@@ -351,9 +401,50 @@ begin
 end
 $verify$;
 
-select 'META_CONTENT_MIGRATION_POSTFLIGHT=PASS';
+select 'META_CONTENT_FOUNDATION_POSTFLIGHT=PASS';
 rollback;
 `;
+
+const IDEMPOTENCY_INDEX_POSTFLIGHT_SQL = String.raw`
+  if not exists (
+    select 1
+      from pg_index as index_definition
+      join pg_class as index_relation
+        on index_relation.oid = index_definition.indexrelid
+     where index_definition.indrelid =
+       to_regclass('public.conversation_messages')
+       and index_relation.relname =
+         'conversation_messages_meta_external_message_unique_idx'
+       and index_definition.indisunique
+       and index_definition.indisvalid
+       and index_definition.indisready
+       and index_definition.indpred is not null
+  )
+     or not exists (
+       select 1
+         from pg_index as index_definition
+         join pg_class as index_relation
+           on index_relation.oid = index_definition.indexrelid
+        where index_definition.indrelid =
+          to_regclass('public.conversation_messages')
+          and index_relation.relname =
+            'conversation_messages_meta_external_comment_unique_idx'
+          and index_definition.indisunique
+          and index_definition.indisvalid
+          and index_definition.indisready
+          and index_definition.indpred is not null
+     ) then
+    raise exception 'meta_external_id_index_contract_invalid';
+  end if;
+`;
+
+const POSTFLIGHT_SQL = FOUNDATION_POSTFLIGHT_SQL.replace(
+  "end\n$verify$;",
+  `${IDEMPOTENCY_INDEX_POSTFLIGHT_SQL}end\n$verify$;`,
+).replace(
+  "META_CONTENT_FOUNDATION_POSTFLIGHT=PASS",
+  "META_CONTENT_MIGRATION_POSTFLIGHT=PASS",
+);
 
 function fail(code) {
   throw new Error(`META_CONTENT_MIGRATION_ERROR=${code}`);
@@ -394,6 +485,15 @@ export function evaluateMetaContentMigrationSql(id, sql) {
       /drop function if exists public\.trim_conversation_messages_to_latest_50\(\)/iu,
       /conversation_messages_workspace_contact_created_desc_idx/iu,
     ],
+    "20260806160000_meta_webhook_external_id_idempotency": [
+      /duplicate_meta_external_message_id/iu,
+      /duplicate_meta_external_comment_id/iu,
+      /conversation_messages_meta_external_message_unique_idx/iu,
+      /conversation_messages_meta_external_comment_unique_idx/iu,
+      /workspace_id,\s*source_platform,\s*external_message_id/iu,
+      /workspace_id,\s*source_platform,\s*external_comment_id/iu,
+      /where source_platform in \('facebook', 'instagram'\)/iu,
+    ],
   };
   const forbidden = [
     /\bdrop\s+(?:table|schema|database)\b/iu,
@@ -412,10 +512,7 @@ export function evaluateMetaContentMigrationSql(id, sql) {
 
 function readAndVerifyMigrations() {
   return MIGRATIONS.map((migration) => {
-    const migrationPath = resolve(
-      process.cwd(),
-      `supabase/migrations/${migration.id}.sql`,
-    );
+    const migrationPath = resolve(process.cwd(), migration.path);
     let sql;
     try {
       sql = readFileSync(migrationPath, "utf8");
@@ -426,7 +523,7 @@ function readAndVerifyMigrations() {
     console.log(`META_CONTENT_MIGRATION_ID=${migration.id}`);
     console.log("META_CONTENT_MIGRATION_CHECKSUM=verified");
     console.log("META_CONTENT_MIGRATION_CONTRACT=verified");
-    return sql;
+    return Object.freeze({ ...migration, sql });
   });
 }
 
@@ -550,21 +647,36 @@ function ensurePsqlAvailable() {
   console.log("META_CONTENT_MIGRATION_PSQL=available");
 }
 
-function postflightPasses(environment, passfilePath) {
-  const result = runPsql(POSTFLIGHT_SQL, environment, passfilePath);
+function postflightPasses(
+  environment,
+  passfilePath,
+  sql = POSTFLIGHT_SQL,
+  marker = "META_CONTENT_MIGRATION_POSTFLIGHT=PASS",
+) {
+  const result = runPsql(sql, environment, passfilePath);
   return Boolean(
     !result.error &&
       result.status === 0 &&
-      result.stdout.includes("META_CONTENT_MIGRATION_POSTFLIGHT=PASS"),
+      result.stdout.includes(marker),
+  );
+}
+
+function foundationPostflightPasses(environment, passfilePath) {
+  return postflightPasses(
+    environment,
+    passfilePath,
+    FOUNDATION_POSTFLIGHT_SQL,
+    "META_CONTENT_FOUNDATION_POSTFLIGHT=PASS",
   );
 }
 
 function migrationState(environment, passfilePath) {
   const result = runPsql(STATE_SQL, environment, passfilePath);
   if (result.error || result.status !== 0) fail("state_probe_failed");
-  const match = /META_CONTENT_MIGRATION_STATE=(absent|installed|partial)/u.exec(
-    result.stdout,
-  );
+  const match =
+    /META_CONTENT_MIGRATION_STATE=(absent|foundation|installed|partial)/u.exec(
+      result.stdout,
+    );
   if (!match) fail("state_probe_invalid");
   return match[1];
 }
@@ -579,7 +691,7 @@ function applySql(migrationSql) {
   ].join("\n");
 }
 
-function runDatabaseMode(mode, migrationSql, environment) {
+function runDatabaseMode(mode, migrations, environment) {
   const policyMode = mode === "--apply"
     ? "apply"
     : mode === "--readiness"
@@ -604,6 +716,12 @@ function runDatabaseMode(mode, migrationSql, environment) {
         }
         console.log("META_CONTENT_STAGING_SCHEMA=current");
         console.log("META_CONTENT_MIGRATION_POSTFLIGHT=PASS");
+      } else if (state === "foundation") {
+        if (!foundationPostflightPasses(environment, snapshotPath)) {
+          fail("existing_schema_invalid");
+        }
+        console.log("META_CONTENT_STAGING_SCHEMA=upgrade_required");
+        console.log("META_CONTENT_MIGRATION_POSTFLIGHT=upgrade_required");
       } else {
         console.log("META_CONTENT_STAGING_SCHEMA=absent");
         console.log("META_CONTENT_MIGRATION_POSTFLIGHT=not_applicable");
@@ -620,9 +738,20 @@ function runDatabaseMode(mode, migrationSql, environment) {
         console.log("META_CONTENT_MIGRATION_APPLY=already_current");
       } else {
         const state = migrationState(environment, snapshotPath);
-        if (state !== "absent") fail("existing_schema_invalid");
+        if (state === "partial" || state === "installed") {
+          fail("existing_schema_invalid");
+        }
+        if (
+          state === "foundation" &&
+          !foundationPostflightPasses(environment, snapshotPath)
+        ) {
+          fail("existing_schema_invalid");
+        }
+        const selectedMigrations = state === "foundation"
+          ? migrations.filter((migration) => migration.stage === "idempotency")
+          : migrations;
         const apply = runPsql(
-          applySql(migrationSql),
+          applySql(selectedMigrations.map((migration) => migration.sql)),
           environment,
           snapshotPath,
         );
@@ -646,14 +775,14 @@ function runDatabaseMode(mode, migrationSql, environment) {
 
 async function main() {
   const mode = modeFromArguments(process.argv.slice(2));
-  const migrationSql = readAndVerifyMigrations();
+  const migrations = readAndVerifyMigrations();
   if (mode === "--check") {
     console.log("META_CONTENT_MIGRATION_MODE=check");
     console.log("META_CONTENT_MIGRATION_READY=YES");
     return;
   }
   console.log(`META_CONTENT_MIGRATION_MODE=${mode.replace(/^--/u, "")}`);
-  runDatabaseMode(mode, migrationSql, process.env);
+  runDatabaseMode(mode, migrations, process.env);
   console.log("META_CONTENT_MIGRATION_READY=YES");
 }
 
@@ -675,4 +804,9 @@ if (
   });
 }
 
-export { MIGRATIONS, POSTFLIGHT_SQL, STATE_SQL };
+export {
+  FOUNDATION_POSTFLIGHT_SQL,
+  MIGRATIONS,
+  POSTFLIGHT_SQL,
+  STATE_SQL,
+};
