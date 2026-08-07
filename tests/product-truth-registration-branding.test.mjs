@@ -125,7 +125,8 @@ test("phase 7 excludes LinkedIn and additional channels and stays outside the cu
     source("docs/operations/P0_COMPLETION_TRACKER.md"),
   ]);
 
-  assert.match(roadmap, /phase: "Phase 7"[\s\S]*TikTok[\s\S]*X \/ Twitter[\s\S]*Discord[\s\S]*OnlyFans/u);\n  assert.match(roadmap, /label: "OnlyFans", state: "later", status: "Prüfung"/u);\n  assert.doesNotMatch(roadmap, /LinkedIn & weitere Kanäle/u);\n  assert.doesNotMatch(readme, /LinkedIn und weiteren Kanälen/u);
+  assert.match(roadmap, /phase: "Phase 7"[\s\S]*TikTok[\s\S]*X \/ Twitter[\s\S]*Discord[\s\S]*OnlyFans/u);\n  assert.match(roadmap, /label: "OnlyFans", state: "later", status: "Roadmap"/u);
+  assert.doesNotMatch(roadmap, /LinkedIn & weitere Kanäle/u);\n  assert.doesNotMatch(readme, /LinkedIn und weiteren Kanälen/u);
   for (const document of [sourceOfTruth, readme, tracker]) {
     assert.match(document, /Roadmap-Phase 7/u);
     assert.match(document, /nicht Teil des aktuellen\s+Abschlussumfangs|nicht zum aktuellen Abschlussumfang|vom aktuellen Abschlussumfang[^\n]*ausgenommen/iu);
