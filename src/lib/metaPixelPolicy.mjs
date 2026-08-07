@@ -43,16 +43,18 @@ const SAFE_QUERY_VALUES = Object.freeze({
   lang: new Set(["de", "en"]),
   plan: new Set([
     "starter",
-    "starter_paid_setup",
-    "starter_no_setup_commitment",
     "growth",
     "agency",
+  ]),
+  option: new Set([
+    "starter_paid_setup",
+    "starter_no_setup_commitment",
   ]),
 });
 const ROUTE_QUERY_KEYS = Object.freeze({
   "/": new Set(["lang"]),
   "/login": new Set(["lang"]),
-  "/register": new Set(["lang", "plan"]),
+  "/register": new Set(["lang", "plan", "option"]),
   "/forgot-password": new Set(["lang"]),
   "/roadmap": new Set(["lang"]),
   "/landing-v2": new Set(["lang"]),

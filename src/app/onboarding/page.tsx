@@ -328,14 +328,10 @@ function OnboardingWorkspace({
             </div>
           ) : null}
           <div className={styles.emptyState}>
-            <strong>Pilot / Setup</strong>
-            <p>990 € einmalig · 1 Monat testen · persönlich begleitet</p>
-            <strong>Starter</strong>
+            <strong>Starter Flex</strong>
             <p>990 € Einrichtung + 312 €/Monat · monatlich kündbar</p>
-            <p>
-              Wenn du nach dem Pilot weitermachst, wird die Setup-Gebühr
-              angerechnet.
-            </p>
+            <strong>Starter 12 Monate</strong>
+            <p>0 € Einrichtung + 312 €/Monat · 12 Monate Mindestlaufzeit</p>
           </div>
           <div className={styles.emptyActions}>
             <Link className={styles.primaryButton} href="/fans#fans-list">

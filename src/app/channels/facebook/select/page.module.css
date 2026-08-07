@@ -20,10 +20,7 @@
 }
 
 .logo {
-  display: block;
-  width: min(240px, 68vw);
-  height: auto;
-  object-fit: contain;
+  font-size: clamp(24px, 5vw, 34px);
 }
 
 .eyebrow {
