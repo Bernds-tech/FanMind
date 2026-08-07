@@ -135,7 +135,8 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   assert.doesNotMatch(registerPageSource, /enablePublicDailyTestPlan=\{false\}/);
   assert.match(
     registerClientSource,
-    /enablePublicDailyTestPlan && selectedPlanId === "pilot" && requestedTestPlan === "daily"/,
+    /isDailyTestRegistration\(\{[\s\S]*enabled: enablePublicDailyTestPlan,[\s\S]*planId: resolvedPlanId,[\s\S]*testPlan: requestedTestPlan/u,
   );
+  assert.match(registerClientSource, /isRetiredPilotRequested \? "starter" : resolvedPlanId/u);
   assert.match(registerClientSource, /commercialOption = isDailyTestPlanSelected \? "internal_daily_test"/);
 });
