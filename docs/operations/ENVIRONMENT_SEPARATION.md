@@ -176,6 +176,28 @@ ignorierte oder unversionierte Build-Dateien mit Ausnahme der geschützten
 `.env.production`, bindet den Next.js Deployment-Identifier an diesen Commit
 und führt vor dem separaten PM2-Start den Staging-Preflight aus.
 
+Die einmalige Host-Vorbereitung liegt getrennt davon in
+`.github/workflows/provision-staging-host.yml`. Nur dieser manuelle,
+`main`-gebundene Bootstrap darf den bestehenden Exoscale-Production-Runner
+verwenden, um den separaten Betriebssystemnutzer `fanmind-staging`, den
+Release-Pfad `/var/www/fanmind-staging`, die private ENV-Datei, den nginx-vHost
+und einen zweiten Runner-Dienst mit exklusivem Label `fanmind-staging`
+anzulegen. Er führt keinen Staging- oder Production-Deploy aus und darf den
+Production-Checkout, die Production-ENV sowie den PM2-Prozess `fanmind` nicht
+verändern. Der kurzlebige Runner-Registrierungstoken lebt ausschließlich als
+GitHub-Environment-Secret und wird nach der Registrierung gelöscht.
+
+Der spätere Staging-Deploy verwendet einen kurzlebig authentifizierten
+`actions/checkout` mit `persist-credentials: false` und synchronisiert nur den
+exakten Release-Baum ohne `.git` in den Staging-Pfad. Damit benötigt der
+getrennte Linux-Nutzer keine dauerhaften Repository-Zugangsdaten.
+
+`.github/workflows/enable-staging-tls.yml` darf erst laufen, wenn
+`staging.fanmind.ch` auf die öffentliche IPv4-Adresse desselben
+Exoscale-Hosts zeigt. Der Workflow vergleicht DNS und Hostadresse vor Certbot
+und verwendet ausschließlich das bereits registrierte Certbot-Konto; er nimmt
+keine neue Vertrags- oder Kontoregistrierung vor.
+
 Der bestehende Production-Deploy darf niemals setzen:
 
 ```text

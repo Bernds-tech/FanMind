@@ -5,6 +5,7 @@ type RegisterPageProps = {
   searchParams: Promise<{
     lang?: string | string[];
     plan?: string | string[];
+    option?: string | string[];
     ref?: string | string[];
     referral_code?: string | string[];
     test_plan?: string | string[];

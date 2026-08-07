@@ -16,13 +16,19 @@ import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
 import { ComingSoonMark } from "@/components/ComingSoonMark";
+import {
+  buildRegistrationHref,
+  isDailyTestRegistration,
+  isProductiveRegistrationEntry,
+  normalizeStarterOfferOption,
+} from "@/lib/registrationEntryPolicy.mjs";
 import styles from "./register.module.css";
 
 type RegisterPlanId = PlanId;
-type StarterOfferOptionId = "starter_paid_setup" | "starter_no_setup_commitment" | "internal_daily_test";
+type StarterOfferOptionId = "starter_paid_setup" | "starter_no_setup_commitment";
 
 type RegisterPageProps = {
-  searchParams: Promise<{ lang?: string | string[]; plan?: string | string[]; ref?: string | string[]; referral_code?: string | string[]; test_plan?: string | string[] }> | { lang?: string | string[]; plan?: string | string[]; ref?: string | string[]; referral_code?: string | string[]; test_plan?: string | string[] };
+  searchParams: Promise<{ lang?: string | string[]; plan?: string | string[]; option?: string | string[]; ref?: string | string[]; referral_code?: string | string[]; test_plan?: string | string[] }> | { lang?: string | string[]; plan?: string | string[]; option?: string | string[]; ref?: string | string[]; referral_code?: string | string[]; test_plan?: string | string[] };
   enablePublicDailyTestPlan: boolean;
 };
 
@@ -58,10 +64,6 @@ function firstParamValue(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function registerPlanHref(planId: RegisterPlanId, language: FanMindLanguage) {
-  return language === "en" ? `/register?plan=${planId}&lang=en` : `/register?plan=${planId}`;
-}
-
 function planCommercialOption(planId: RegisterPlanId, starterOption: StarterOfferOptionId): CommercialOption | StarterOfferOptionId {
   if (planId === "pilot") return "pilot_only";
   if (planId === "starter") return starterOption;
@@ -69,12 +71,24 @@ function planCommercialOption(planId: RegisterPlanId, starterOption: StarterOffe
   return "agency_preview";
 }
 
-function LanguageSwitch({ language, planId }: { language: FanMindLanguage; planId: RegisterPlanId }) {
+function LanguageSwitch({
+  language,
+  planId,
+  starterOption,
+  referralCode,
+  testPlan,
+}: {
+  language: FanMindLanguage;
+  planId: RegisterPlanId;
+  starterOption: StarterOfferOptionId;
+  referralCode: string;
+  testPlan?: "daily";
+}) {
   return (
     <div className={styles.languageSwitch} aria-label={language === "en" ? "Language selection" : "Sprachauswahl"}>
-      <a className={language === "de" ? styles.languageActive : undefined} href={`/register?plan=${planId}`} aria-current={language === "de" ? "true" : undefined}>DE</a>
+      <a className={language === "de" ? styles.languageActive : undefined} href={buildRegistrationHref({ language: "de", planId, starterOption, referralCode, testPlan })} aria-current={language === "de" ? "true" : undefined}>DE</a>
       <span>|</span>
-      <a className={language === "en" ? styles.languageActive : undefined} href={`/register?plan=${planId}&lang=en`} aria-current={language === "en" ? "true" : undefined}>EN</a>
+      <a className={language === "en" ? styles.languageActive : undefined} href={buildRegistrationHref({ language: "en", planId, starterOption, referralCode, testPlan })} aria-current={language === "en" ? "true" : undefined}>EN</a>
     </div>
   );
 }
@@ -89,7 +103,12 @@ function showPlanStatusBadge(planId: RegisterPlanId) {
 }
 
 
-function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPlan: boolean): PlanSelectionCopy[] {
+function getPlanSelectionCopy(
+  language: FanMindLanguage,
+  enablePublicDailyTestPlan: boolean,
+  starterOption: StarterOfferOptionId,
+  referralCode: string,
+): PlanSelectionCopy[] {
   if (language === "en") {
     return [
       {
@@ -99,7 +118,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
         price: "€312/month",
         description: "Two options for your productive start.",
         bullets: ["Starter Flex: €990 setup", "Starter 12 months: €0 setup"],
-        href: registerPlanHref("starter", language),
+        href: buildRegistrationHref({ language, planId: "starter", starterOption, referralCode }),
         cta: "Choose Starter",
       },
       ...(enablePublicDailyTestPlan ? [{
@@ -109,7 +128,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
         price: "1 €/day",
         description: "Interner/Beta-Testplan, täglich kündbar, 1 € pro Tag.",
         bullets: ["daily cancellable", "beta/internal test"],
-        href: `${registerPlanHref("pilot", language)}&test_plan=daily`,
+        href: buildRegistrationHref({ language, planId: "pilot", referralCode, testPlan: "daily" }),
         cta: "Choose beta test",
       }] : []),
       {
@@ -119,7 +138,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
         price: "Coming Soon",
         description: "Roadmap preview.",
         bullets: ["Roadmap"],
-        href: registerPlanHref("growth", language),
+        href: buildRegistrationHref({ language, planId: "growth", referralCode }),
         cta: "Learn more",
       },
       {
@@ -129,7 +148,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
         price: "Coming Soon",
         description: "Roadmap preview.",
         bullets: ["Roadmap"],
-        href: registerPlanHref("agency", language),
+        href: buildRegistrationHref({ language, planId: "agency", referralCode }),
         cta: "Learn more",
       },
     ];
@@ -143,7 +162,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
       price: "312 €/Monat",
       description: "Zwei Optionen für deinen Produktivstart.",
       bullets: ["Starter Flex: 990 € Setup", "Starter 12 Monate: 0 € Setup"],
-      href: registerPlanHref("starter", language),
+      href: buildRegistrationHref({ language, planId: "starter", starterOption, referralCode }),
       cta: "Starter wählen",
     },
     ...(enablePublicDailyTestPlan ? [{
@@ -153,7 +172,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
       price: "1 €/Tag",
       description: "Interner/Beta-Testplan, täglich kündbar, 1 € pro Tag.",
       bullets: ["täglich kündbar", "Beta-/interner Test"],
-      href: `${registerPlanHref("pilot", language)}&test_plan=daily`,
+      href: buildRegistrationHref({ language, planId: "pilot", referralCode, testPlan: "daily" }),
       cta: "Beta-Test wählen",
     }] : []),
     {
@@ -163,7 +182,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
       price: "Coming Soon",
       description: "Roadmap-Vorschau.",
       bullets: ["Roadmap"],
-      href: registerPlanHref("growth", language),
+      href: buildRegistrationHref({ language, planId: "growth", referralCode }),
       cta: "Mehr erfahren",
     },
     {
@@ -173,7 +192,7 @@ function getPlanSelectionCopy(language: FanMindLanguage, enablePublicDailyTestPl
       price: "Coming Soon",
       description: "Roadmap-Vorschau.",
       bullets: ["Roadmap"],
-      href: registerPlanHref("agency", language),
+      href: buildRegistrationHref({ language, planId: "agency", referralCode }),
       cta: "Mehr erfahren",
     },
   ];
@@ -422,17 +441,35 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
   const rawPlan = firstParamValue(params.plan);
   const referralCodeFromUrl = firstParamValue(params.ref) ?? firstParamValue(params.referral_code) ?? "";
   const requestedTestPlan = firstParamValue(params.test_plan);
+  const requestedStarterOption = normalizeStarterOfferOption(firstParamValue(params.option));
   const hasInvalidPlan = Boolean(rawPlan && !isPlanId(rawPlan));
-  const selectedPlanId = resolvePlanId(rawPlan, "starter");
-  const isDailyTestPlanSelected = enablePublicDailyTestPlan && selectedPlanId === "pilot" && requestedTestPlan === "daily";
-  const isProductiveRegistration = ACTIVE_REGISTER_PLANS.includes(selectedPlanId);
+  const resolvedPlanId = resolvePlanId(rawPlan, "starter");
+  const isDailyTestPlanSelected = isDailyTestRegistration({
+    enabled: enablePublicDailyTestPlan,
+    planId: resolvedPlanId,
+    testPlan: requestedTestPlan,
+  });
+  const isRetiredPilotRequested = resolvedPlanId === "pilot" && !isDailyTestPlanSelected;
+  const selectedPlanId = isRetiredPilotRequested ? "starter" : resolvedPlanId;
+  const isProductiveRegistration =
+    ACTIVE_REGISTER_PLANS.includes(selectedPlanId) ||
+    isProductiveRegistrationEntry({
+      enabled: enablePublicDailyTestPlan,
+      planId: selectedPlanId,
+      testPlan: requestedTestPlan,
+    });
   const copy = fanmindCopy[language].register;
   const loginHref = localizedPath("/login", language);
   const billingStartHref = "/billing/start";
   const paymentTermsHref = language === "en" ? "/zahlungsbedingungen?lang=en" : "/zahlungsbedingungen";
-  const planSelectionCopy = getPlanSelectionCopy(language, enablePublicDailyTestPlan);
   const starterOptionsCopy = getStarterOptionsCopy(language);
-  const [starterOption, setStarterOption] = useState<StarterOfferOptionId>("starter_paid_setup");
+  const [starterOption, setStarterOption] = useState<StarterOfferOptionId>(requestedStarterOption);
+  const planSelectionCopy = getPlanSelectionCopy(
+    language,
+    enablePublicDailyTestPlan,
+    starterOption,
+    referralCodeFromUrl,
+  );
   const [success, setSuccess] = useState(false);
   const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -462,7 +499,7 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
     const role = String(formData.get("rolle") ?? "").trim();
     const message = String(formData.get("nachricht") ?? "").trim();
     const commercialOptionValue = String(formData.get("commercialOption") ?? starterOption);
-    const selectedCommercialOption: ProductiveCommercialOption | StarterOfferOptionId = enablePublicDailyTestPlan && selectedPlanId === "pilot" && commercialOptionValue === "internal_daily_test"
+    const selectedCommercialOption: ProductiveCommercialOption | StarterOfferOptionId = isDailyTestPlanSelected && commercialOptionValue === "internal_daily_test"
       ? "internal_daily_test"
       : selectedPlanId === "starter" && (commercialOptionValue === "starter_paid_setup" || commercialOptionValue === "starter_no_setup_commitment")
         ? commercialOptionValue
@@ -470,7 +507,7 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
     const paymentTermsAccepted = formData.get("paymentTermsAccepted") === "on";
     const referralCode = String(formData.get("referralCode") ?? referralCodeFromUrl).trim();
 
-    if (requiresPaymentTermsAcceptance(selectedPlanId) && !paymentTermsAccepted) {
+    if (requiresPaymentTermsAcceptance(selectedPlanId, selectedCommercialOption) && !paymentTermsAccepted) {
       setError(language === "en" ? "Please accept the payment terms before continuing." : "Bitte akzeptiere die Zahlungsbedingungen, bevor du fortfährst.");
       setIsSubmitting(false);
       return;
@@ -564,7 +601,13 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
         <header className={styles.header}>
           <FanMindLogo className={styles.logo} compact href={landingPath(language)} ariaLabel={language === "en" ? "Open FanMind homepage" : "FanMind Startseite öffnen"} />
           <nav className={styles.topLinks} aria-label="Registrierung Navigation">
-            <LanguageSwitch language={language} planId={selectedPlanId} />
+            <LanguageSwitch
+              language={language}
+              planId={selectedPlanId}
+              starterOption={starterOption}
+              referralCode={referralCodeFromUrl}
+              testPlan={isDailyTestPlanSelected ? "daily" : undefined}
+            />
             <span>{copy.loginPrompt}</span>
             <a href={loginHref}>{copy.loginLink}</a>
           </nav>
@@ -581,6 +624,11 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
             {hasInvalidPlan && (
               <p className={styles.warning} role="status">
                 {language === "en" ? `Unknown package “${rawPlan}”. Starter is shown instead.` : `Unbekanntes Paket „${rawPlan}“. Starter wird stattdessen angezeigt.`}
+              </p>
+            )}
+            {isRetiredPilotRequested && (
+              <p className={styles.warning} role="status">
+                {language === "en" ? "The former paid pilot offer is closed. Starter is shown instead." : "Das frühere entgeltliche Pilotangebot ist geschlossen. Stattdessen wird Starter angezeigt."}
               </p>
             )}
 
@@ -618,9 +666,9 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
           {isProductiveRegistration ? (
             <form className={styles.formCard} onSubmit={handleRegister}>
               <div className={styles.formHeader}>
-                <p className={styles.eyebrow}>{isDailyTestPlanSelected ? "Beta-Test" : selectedPlanId === "pilot" ? "Interne Demo" : "Starter-Paket"}</p>
-                <h1>{isDailyTestPlanSelected ? "Beta-Test · 1 €/Tag" : selectedPlanId === "pilot" ? (language === "en" ? "Start internal demo" : "Interne Demo starten") : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
-                <p>{isDailyTestPlanSelected ? "Interner/Beta-Testplan, täglich kündbar, 1 € pro Tag." : selectedPlanId === "pilot" ? (language === "en" ? "€990 one-time · 1 test month. No automatic renewal; if you do not continue, the pilot ends." : "990 € einmalig · 1 Testmonat. Keine automatische Verlängerung; wenn du nicht weitermachst, endet der Pilot.") : (language === "en" ? "Choose your Starter option. No payment is triggered here." : "Wähle deine Starter-Variante. Hier wird noch keine Zahlung ausgelöst.")}</p>
+                <p className={styles.eyebrow}>{isDailyTestPlanSelected ? "Beta-Test" : "Starter-Paket"}</p>
+                <h1>{isDailyTestPlanSelected ? "Beta-Test · 1 €/Tag" : (language === "en" ? "Start Starter" : "Starter starten")}</h1>
+                <p>{isDailyTestPlanSelected ? "Interner/Beta-Testplan, täglich kündbar, 1 € pro Tag." : (language === "en" ? "Choose your Starter option. No payment is triggered here." : "Wähle deine Starter-Variante. Hier wird noch keine Zahlung ausgelöst.")}</p>
               </div>
 
               {selectedPlanId === "starter" && (
@@ -737,7 +785,7 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
 
 
               <label className={styles.termsCheckbox}>
-                <input type="checkbox" name="paymentTermsAccepted" required={requiresPaymentTermsAcceptance(selectedPlanId)} />
+                <input type="checkbox" name="paymentTermsAccepted" required={requiresPaymentTermsAcceptance(selectedPlanId, commercialOption)} />
                 <span>
                   {language === "en"
                     ? "I accept the payment terms and understand that no payment is collected here."
@@ -760,8 +808,8 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
                 <p className={styles.success} role="status">
                   {copy.success} {awaitingEmailConfirmation
                     ? (EMAIL_CONFIRMATION_WORKSPACE_MESSAGES[language])
-                    : selectedPlanId === "pilot"
-                      ? (language === "en" ? "Pilot / Setup stays without commitment. Your access has been created. Start payment now to unlock FanMind." : "Pilot / Setup bleibt ohne Bindung. Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.")
+                    : isDailyTestPlanSelected
+                      ? (language === "en" ? "Your beta test access is prepared. Open payment to activate the daily test subscription." : "Dein Beta-Testzugang ist vorbereitet. Öffne die Zahlung, um das tägliche Testabo zu aktivieren.")
                       : (language === "en" ? "Profile, workspace and Starter option are prepared. You will be forwarded to onboarding." : "Profil, Workspace und Starter-Option sind vorbereitet. Dein Zugang wurde erstellt. Starte jetzt die Zahlung, um FanMind freizuschalten.")} <a href={billingStartHref}>{language === "en" ? "Open payment" : "Zahlung öffnen"}</a>
                 </p>
               )}
@@ -786,7 +834,7 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
                 <span>{language === "en" ? "Growth and Agency remain Coming Soon / roadmap previews and are not productively activated here." : "Growth und Agency bleiben Coming Soon / Roadmap-Vorschau und werden hier nicht produktiv freigeschaltet."}</span>
               </div>
               <div className={styles.previewActions}>
-                <a className={styles.primaryLink} href={registerPlanHref("starter", language)}>{language === "en" ? "Start with Starter" : "Mit Starter starten"}</a>
+                <a className={styles.primaryLink} href={buildRegistrationHref({ language, planId: "starter", starterOption, referralCode: referralCodeFromUrl })}>{language === "en" ? "Start with Starter" : "Mit Starter starten"}</a>
                 <a className={styles.secondaryLink} href="mailto:kontakt@fanmind.ch?subject=FanMind%20Demo%20anfragen">{language === "en" ? "Request demo" : "Zugang anfragen"}</a>
               </div>
               {error && <p className={styles.error} role="alert">{error}</p>}

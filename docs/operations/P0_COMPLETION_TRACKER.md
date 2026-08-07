@@ -80,6 +80,9 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
 ### Zentrale Produktdokumentation
 
 - Mobile wird in `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und der Roadmap als eigener aktiver Produktstream geführt;
+- Roadmap-Phase 7 bleibt als öffentliche Zukunftsplanung erhalten, gehört aber
+  nicht zum aktuellen Abschlussumfang der acht Fertigstellungsblöcke und wird
+  in deren Fortschritt nicht mitgezählt;
 - signierte Builds, Store-Konten, TestFlight und Google-Play-Internal-Testing bleiben klar von bereits vorhandenem Code getrennt;
 - der ursprüngliche MVP-Arbeitsauftrag bleibt als historische Scope-Grundlage erhalten, während aktuelle Preise, Terminologie und Produktfreigaben aus `docs/SOURCE_OF_TRUTH.md` gelten.
 - eine nicht unterschriftsreife AVV-Arbeitsfassung und ein technisches

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -13,6 +12,7 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
 } from "@/lib/supabase/server";
+import { FanMindLogo } from "@/components/FanMindLogo";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -57,13 +57,10 @@ export default async function FacebookPageSelectionPage({
   return (
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="page-title">
-        <Image
-          src="/brands/Logo.png"
-          alt="FanMind"
-          width={320}
-          height={92}
-          priority
+        <FanMindLogo
           className={styles.logo}
+          href="/channels"
+          ariaLabel="Zurück zu den FanMind Kanälen"
         />
         <p className={styles.eyebrow}>Facebook · sichere Kontowahl</p>
         <h1 id="page-title">Welche Seite gehört zu diesem Workspace?</h1>
