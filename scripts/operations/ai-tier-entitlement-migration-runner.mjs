@@ -15,6 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const MIGRATION_ID = "20260727090000_workspace_ai_tier_entitlements";
 const MIGRATION_PATH = resolve(
@@ -511,29 +512,44 @@ function runDatabaseMode(mode, migrationSql) {
   }
 }
 
-try {
-  const mode = modeFromArguments(process.argv.slice(2));
-  const migrationSql = readAndVerifyMigration();
-  if (mode === "--check") {
-    console.log("AI_TIER_ENTITLEMENT_MIGRATION_MODE=check");
-    console.log("AI_TIER_ENTITLEMENT_MIGRATION_READY=YES");
-  } else {
-    console.log(
-      `AI_TIER_ENTITLEMENT_MIGRATION_MODE=${
-        mode === "--apply" ? "apply" : "verify"
-      }`,
-    );
-    runDatabaseMode(mode, migrationSql);
-    console.log("AI_TIER_ENTITLEMENT_MIGRATION_READY=YES");
+function main() {
+  try {
+    const mode = modeFromArguments(process.argv.slice(2));
+    const migrationSql = readAndVerifyMigration();
+    if (mode === "--check") {
+      console.log("AI_TIER_ENTITLEMENT_MIGRATION_MODE=check");
+      console.log("AI_TIER_ENTITLEMENT_MIGRATION_READY=YES");
+    } else {
+      console.log(
+        `AI_TIER_ENTITLEMENT_MIGRATION_MODE=${
+          mode === "--apply" ? "apply" : "verify"
+        }`,
+      );
+      runDatabaseMode(mode, migrationSql);
+      console.log("AI_TIER_ENTITLEMENT_MIGRATION_READY=YES");
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /^AI_TIER_ENTITLEMENT_MIGRATION_ERROR=[a-z0-9_]+$/u.test(error.message)
+    ) {
+      console.error(error.message);
+    } else {
+      console.error("AI_TIER_ENTITLEMENT_MIGRATION_ERROR=unexpected_failure");
+    }
+    process.exitCode = 1;
   }
-} catch (error) {
-  if (
-    error instanceof Error &&
-    /^AI_TIER_ENTITLEMENT_MIGRATION_ERROR=[a-z0-9_]+$/u.test(error.message)
-  ) {
-    console.error(error.message);
-  } else {
-    console.error("AI_TIER_ENTITLEMENT_MIGRATION_ERROR=unexpected_failure");
-  }
-  process.exitCode = 1;
 }
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
+) {
+  main();
+}
+
+export {
+  EXPECTED_MIGRATION_SHA256,
+  MIGRATION_ID,
+  POSTFLIGHT_SQL,
+};

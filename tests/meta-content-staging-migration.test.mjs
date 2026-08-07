@@ -80,6 +80,15 @@ if grep -q 'META_CONTENT_MIGRATION_STATE=' "$input"; then
   rm -f "$input"
   exit 0
 fi
+if grep -q 'META_CONTENT_FOUNDATION_POSTFLIGHT=PASS' "$input"; then
+  if [ "$FANMIND_TEST_META_STATE" = "foundation" ] || [ "$FANMIND_TEST_META_STATE" = "installed" ]; then
+    echo "META_CONTENT_FOUNDATION_POSTFLIGHT=PASS"
+    rm -f "$input"
+    exit 0
+  fi
+  rm -f "$input"
+  exit 1
+fi
 if grep -q 'META_CONTENT_MIGRATION_POSTFLIGHT=PASS' "$input"; then
   if [ "$FANMIND_TEST_META_STATE" = "installed" ] || [ -f "$FANMIND_TEST_APPLIED_MARKER" ]; then
     echo "META_CONTENT_MIGRATION_POSTFLIGHT=PASS"
@@ -89,8 +98,9 @@ if grep -q 'META_CONTENT_MIGRATION_POSTFLIGHT=PASS' "$input"; then
   rm -f "$input"
   exit 1
 fi
-if grep -q 'create table if not exists public.workspace_analysis_settings' "$input" &&
-   grep -q 'drop trigger if exists conversation_messages_trim_to_latest_50' "$input"; then
+if { grep -q 'create table if not exists public.workspace_analysis_settings' "$input" &&
+     grep -q 'drop trigger if exists conversation_messages_trim_to_latest_50' "$input"; } ||
+   grep -q 'conversation_messages_meta_external_message_unique_idx' "$input"; then
   touch "$FANMIND_TEST_APPLIED_MARKER"
   rm -f "$input"
   exit 0
@@ -129,7 +139,7 @@ exit 1
   }
 }
 
-test("offline check pins both Meta migrations and their inactive boundary", async () => {
+test("offline check pins all controlled Meta migrations and their inactive boundary", async () => {
   const { stdout, stderr } = await execFileAsync(process.execPath, [
     runnerPath,
     "--check",
@@ -137,17 +147,17 @@ test("offline check pins both Meta migrations and their inactive boundary", asyn
   const output = `${stdout}\n${stderr}`;
   assert.equal(
     output.match(/META_CONTENT_MIGRATION_CHECKSUM=verified/gu)?.length,
-    2,
+    3,
   );
   assert.equal(
     output.match(/META_CONTENT_MIGRATION_CONTRACT=verified/gu)?.length,
-    2,
+    3,
   );
   assert.match(output, /META_CONTENT_MIGRATION_READY=YES/u);
 
   for (const migration of MIGRATIONS) {
     const sql = await readFile(
-      `supabase/migrations/${migration.id}.sql`,
+      migration.path,
       "utf8",
     );
     assert.equal(
@@ -198,6 +208,7 @@ test("environment policy blocks wrong commits, Production targets and weak TLS",
 test("resource readiness is read-only before or after a complete schema", async () => {
   for (const [state, expectedState, expectedCalls] of [
     ["readiness-absent", "absent", 1],
+    ["readiness-foundation", "upgrade_required", 2],
     ["readiness-installed", "current", 2],
   ]) {
     await withFakeDatabase(state, async ({ environment, callLog }) => {
@@ -281,7 +292,16 @@ test("verify runs only the read-only metadata, RLS and column postflight", async
     assert.match(POSTFLIGHT_SQL, /browser_write_policy_invalid/iu);
     assert.match(POSTFLIGHT_SQL, /service_role_privilege_invalid/iu);
     assert.match(POSTFLIGHT_SQL, /obsolete_retention_trigger_present/iu);
+    assert.match(
+      POSTFLIGHT_SQL,
+      /conversation_messages_meta_external_message_unique_idx/iu,
+    );
+    assert.match(
+      POSTFLIGHT_SQL,
+      /conversation_messages_meta_external_comment_unique_idx/iu,
+    );
     assert.match(STATE_SQL, /META_CONTENT_MIGRATION_STATE=/u);
+    assert.match(STATE_SQL, /foundation_all and not idempotency_any/iu);
     assert.doesNotMatch(output, /private-password|stagingref123|pooler/u);
   });
 });
@@ -298,6 +318,20 @@ test("apply is atomic, postflight-bound and safely repeatable", async () => {
     assert.match(output, /META_CONTENT_MIGRATION_APPLY=completed/u);
     assert.match(output, /META_CONTENT_MIGRATION_POSTFLIGHT=PASS/u);
     assert.equal(calls.trim().split("\n").length, 4);
+    assert.doesNotMatch(output, /private-password|stagingref123|pooler/u);
+  });
+
+  await withFakeDatabase("foundation", async ({ environment, callLog }) => {
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [runnerPath, "--apply"],
+      { env: environment },
+    );
+    const output = `${stdout}\n${stderr}`;
+    const calls = await readFile(callLog, "utf8");
+    assert.match(output, /META_CONTENT_MIGRATION_APPLY=completed/u);
+    assert.match(output, /META_CONTENT_MIGRATION_POSTFLIGHT=PASS/u);
+    assert.equal(calls.trim().split("\n").length, 5);
     assert.doesNotMatch(output, /private-password|stagingref123|pooler/u);
   });
 

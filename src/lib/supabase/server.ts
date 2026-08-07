@@ -1636,49 +1636,6 @@ export async function findMetaSocialConnectionByPageId(
   return { connection: result.data, error: null };
 }
 
-export async function findMetaWebhookFallbackWorkspaceId(): Promise<{
-  workspaceId: string | null;
-  error: Error | null;
-}> {
-  const serviceAccessToken = getServiceAccessToken();
-  if (!serviceAccessToken) {
-    return {
-      workspaceId: null,
-      error: new Error(
-        "SUPABASE_SERVICE_ROLE_KEY ist für Webhook-Diagnose nicht konfiguriert.",
-      ),
-    };
-  }
-
-  const connectionResult = await postgrestSelect<SocialConnectionRow>(
-    "social_connections",
-    serviceAccessToken,
-    SOCIAL_CONNECTION_PUBLIC_COLUMNS,
-    [
-      ["platform", "facebook"],
-      ["status", "connected"],
-    ],
-    1,
-    true,
-    "connected_at.desc",
-  );
-
-  if (connectionResult.error) {
-    return { workspaceId: null, error: connectionResult.error };
-  }
-
-  if (connectionResult.data?.workspace_id) {
-    return { workspaceId: connectionResult.data.workspace_id, error: null };
-  }
-
-  return {
-    workspaceId: null,
-    error: new Error(
-      "Kein verbundener Facebook/Instagram-Workspace für diesen Webhook gefunden.",
-    ),
-  };
-}
-
 export async function findTelegramWebhookWorkspaceId(): Promise<{
   workspaceId: string | null;
   error: Error | null;
@@ -4316,51 +4273,20 @@ export async function createMetaTestConversationMessage(input: {
   }
 
   const externalMessageId = normalizeOptionalText(input.externalMessageId);
-  if (externalMessageId) {
-    const existingMessage = await postgrestSelect<ConversationMessageRow>(
-      "conversation_messages",
-      getServiceAccessToken(),
-      CONVERSATION_MESSAGE_COLUMNS,
-      [
-        ["workspace_id", input.workspaceId],
-        ["source_platform", input.sourcePlatform ?? "facebook"],
-        ["external_message_id", externalMessageId],
-      ],
-      1,
-      true,
-    );
-    if (existingMessage.error) {
-      return conversationMessageCreateError(
-        `Nachricht konnte nicht auf Duplikate geprüft werden: ${withOptionalSchemaHint(existingMessage.error.message, "conversation_messages")}`,
-      );
-    }
-    if (existingMessage.data) {
-      return { message: existingMessage.data, conversation: null, error: null };
-    }
-  }
-
   const externalCommentId = normalizeOptionalText(input.externalCommentId);
-  if (externalCommentId) {
-    const existingComment = await postgrestSelect<ConversationMessageRow>(
-      "conversation_messages",
-      getServiceAccessToken(),
-      CONVERSATION_MESSAGE_COLUMNS,
-      [
-        ["workspace_id", input.workspaceId],
-        ["source_platform", input.sourcePlatform ?? "facebook"],
-        ["external_comment_id", externalCommentId],
-      ],
-      1,
-      true,
+  const existing = await findExistingMetaConversationMessage({
+    workspaceId: input.workspaceId,
+    sourcePlatform: input.sourcePlatform ?? "facebook",
+    externalMessageId,
+    externalCommentId,
+  });
+  if (existing.error) {
+    return conversationMessageCreateError(
+      `Nachricht konnte nicht auf Duplikate geprüft werden: ${withOptionalSchemaHint(existing.error.message, "conversation_messages")}`,
     );
-    if (existingComment.error) {
-      return conversationMessageCreateError(
-        `Kommentar konnte nicht auf Duplikate geprüft werden: ${withOptionalSchemaHint(existingComment.error.message, "conversation_messages")}`,
-      );
-    }
-    if (existingComment.data) {
-      return { message: existingComment.data, conversation: null, error: null };
-    }
+  }
+  if (existing.message) {
+    return { message: existing.message, conversation: null, error: null };
   }
 
   const receivedAt =
@@ -4435,6 +4361,19 @@ export async function createMetaTestConversationMessage(input: {
   );
 
   if (messageResult.error) {
+    const concurrentDuplicate = await findExistingMetaConversationMessage({
+      workspaceId: input.workspaceId,
+      sourcePlatform: input.sourcePlatform ?? "facebook",
+      externalMessageId,
+      externalCommentId,
+    });
+    if (!concurrentDuplicate.error && concurrentDuplicate.message) {
+      return {
+        message: concurrentDuplicate.message,
+        conversation: null,
+        error: null,
+      };
+    }
     return conversationMessageCreateError(
       `Nachricht konnte nicht gespeichert werden: ${withOptionalSchemaHint(messageResult.error.message, "conversation_messages")}`,
     );
@@ -4487,6 +4426,35 @@ export async function createMetaTestConversationMessage(input: {
     conversation: updatedConversation.data ?? conversationResult.conversation,
     error: updatedConversation.error,
   };
+}
+
+async function findExistingMetaConversationMessage(input: {
+  workspaceId: string;
+  sourcePlatform: "facebook" | "instagram" | "whatsapp" | "tiktok" | "telegram";
+  externalMessageId: string | null;
+  externalCommentId: string | null;
+}): Promise<{ message: ConversationMessageRow | null; error: Error | null }> {
+  for (const [column, externalId] of [
+    ["external_message_id", input.externalMessageId],
+    ["external_comment_id", input.externalCommentId],
+  ] as const) {
+    if (!externalId) continue;
+    const result = await postgrestSelect<ConversationMessageRow>(
+      "conversation_messages",
+      getServiceAccessToken(),
+      CONVERSATION_MESSAGE_COLUMNS,
+      [
+        ["workspace_id", input.workspaceId],
+        ["source_platform", input.sourcePlatform],
+        [column, externalId],
+      ],
+      1,
+      true,
+    );
+    if (result.error) return { message: null, error: result.error };
+    if (result.data) return { message: result.data, error: null };
+  }
+  return { message: null, error: null };
 }
 
 async function ensureMetaTestConversation(input: {

@@ -74,7 +74,8 @@ Ausdrücklich ausgeschlossen sind unter anderem:
 Querystrings sind standardmäßig blockiert. Zulässig sind ausschließlich:
 
 - `lang=de|en` auf der jeweiligen öffentlichen Route;
-- `plan=starter|starter_paid_setup|starter_no_setup_commitment|growth|agency` auf `/register`.
+- `plan=starter|growth|agency` und bei Starter zusätzlich
+  `option=starter_paid_setup|starter_no_setup_commitment` auf `/register`.
 
 Parameter wie E-Mail, Referral-Code, `returnTo`, Kontakt-/Workspace-ID, Session-/Recovery-Wert oder freie Kampagnenparameter verhindern das Laden und Tracking vollständig. Damit gelangen keine CRM-IDs oder sensiblen Callback-URLs allein durch einen `PageView` an Meta. Ein same-origin Referrer aus einer solchen geschützten oder unsicheren FanMind-URL blockiert den Pixel ebenfalls; externe Referrer bleiben für die normale Marketing-Attribution zulässig.
 

@@ -72,6 +72,13 @@ test("Meta Pixel is limited to explicit public routes and harmless URL values", 
   );
   assert.equal(
     isMetaPixelPageViewAllowed({
+      pathname: "/register",
+      search: "plan=starter&option=starter_no_setup_commitment&lang=en",
+    }),
+    true,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({
       pathname: "/datenschutz",
       hash: "#marketing-messung",
     }),
@@ -102,6 +109,13 @@ test("Meta Pixel is limited to explicit public routes and harmless URL values", 
     isMetaPixelPageViewAllowed({
       pathname: "/register",
       search: "plan=custom-person",
+    }),
+    false,
+  );
+  assert.equal(
+    isMetaPixelPageViewAllowed({
+      pathname: "/register",
+      search: "plan=starter&option=starter-12",
     }),
     false,
   );

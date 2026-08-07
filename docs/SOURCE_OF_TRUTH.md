@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 3. August 2026
+Stand: 6. August 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -136,6 +136,11 @@ Noch nicht als ausgelieferte Store-App freigegeben:
 Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-Ingestion, externe Kanal-Credentials oder automatische Kommunikation aus. Verbindliche Architektur- und Beta-Details stehen in `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.
 
 ## 4. Roadmap- und Go-Live-Stand
+
+Roadmap-Phase 7 bleibt auf den öffentlichen Roadmap-Flächen als spätere
+Zukunftsplanung sichtbar. Sie ist ausdrücklich nicht Teil des aktuellen
+Abschlussumfangs der acht Fertigstellungsblöcke und wird weder gebaut noch in
+deren Fortschritts- oder Fertigbewertung eingerechnet.
 
 ### Phase 4 – Erledigt / Verkaufsstart freigegeben
 
