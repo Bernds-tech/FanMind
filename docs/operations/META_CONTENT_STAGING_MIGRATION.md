@@ -4,10 +4,12 @@
 
 Dieser Kontrollpfad prüft zuerst die getrennten Staging-Ressourcen strikt
 read-only und wendet erst in einem zweiten, separat bestätigten Workflow
-ausschließlich die beiden festgeschriebenen Migrationen
+ausschließlich die drei festgeschriebenen Schema-Schritte
 
 - `20260803120000_meta_content_intelligence_foundation.sql`
 - `20260803210000_preserve_incremental_conversation_history.sql`
+- `20260806160000_meta_webhook_external_id_idempotency.sql` aus
+  `supabase/controlled/`
 
 auf ein getrenntes Supabase-Staging an. Ein normaler Web-Deploy ruft den
 Runner nicht auf. Der Pfad verbindet kein Meta-Konto, startet keine Analyse,
@@ -33,14 +35,16 @@ Der Runner arbeitet fail-closed und verlangt gleichzeitig:
 - die getrennten Bestätigungen
   `I_UNDERSTAND_NON_PRODUCTION_ONLY` und
   `apply-meta-content-intelligence-migrations`;
-- bytegenaue SHA-256-Prüfung beider unveränderter SQL-Dateien.
+- bytegenaue SHA-256-Prüfung aller drei unveränderten SQL-Dateien.
 
 Der Apply läuft als eine Datenbanktransaktion. Wenn der vollständige
 Read-only-Postflight bereits besteht, meldet ein Wiederholungslauf
 `META_CONTENT_MIGRATION_APPLY=already_current` und wendet die nicht vollständig
 idempotenten SQL-Dateien nicht erneut an. Ein teilweise vorhandenes oder
 abweichendes Schema wird nicht repariert oder überschrieben, sondern mit
-`existing_schema_invalid` blockiert.
+`existing_schema_invalid` blockiert. Ein vollständig gültiger Stand der ersten
+beiden Schritte wird als `foundation` erkannt und darf ausschließlich um den
+dritten, kontrollierten Idempotenzschritt ergänzt werden.
 
 ## GitHub-Environment `staging`
 
@@ -88,8 +92,9 @@ und Secretwerte dürfen nicht in Logs oder Screenshots übernommen werden.
    `META_CONTENT_MIGRATION_APPLY=not_requested` und
    `META_CONTENT_ANALYSIS_ACTIVATION=disabled` meldet. Ein vollständig
    fehlendes Schema wird als `META_CONTENT_STAGING_SCHEMA=absent`, ein bereits
-   vollständig gültiges Schema als `current` gemeldet; partielle oder
-   driftende Zustände schlagen fehl.
+   vollständig gültiges Schema als `current` gemeldet. Eine gültige Basis ohne
+   die beiden Meta-ID-Indizes wird als `upgrade_required` gemeldet; partielle
+   oder driftende Zustände schlagen fehl.
 6. Erst danach den manuellen Workflow `FanMind Meta Content Staging Migration`
    auf `main` starten.
 7. Als `reviewed_commit` erneut exakt dieselbe SHA eintragen.
@@ -97,7 +102,7 @@ und Secretwerte dürfen nicht in Logs oder Screenshots übernommen werden.
    `apply-meta-content-intelligence-migrations` eintragen.
 9. Nur einen Lauf akzeptieren, dessen redigierte Ausgabe gemeinsam zeigt:
 
-   - zweimal `META_CONTENT_MIGRATION_CHECKSUM=verified`;
+   - dreimal `META_CONTENT_MIGRATION_CHECKSUM=verified`;
    - `META_CONTENT_MIGRATION_APPLY=completed` oder bei belegtem
      Wiederholungslauf `META_CONTENT_MIGRATION_APPLY=already_current`;
    - `META_CONTENT_MIGRATION_POSTFLIGHT=PASS`;
@@ -107,6 +112,7 @@ und Secretwerte dürfen nicht in Logs oder Screenshots übernommen werden.
 Der Postflight liest nur Metadaten. Er prüft unter anderem Tabellen, RLS,
 Select-only-Browser-Policies, Tabellen- und Spaltenrechte, den Ausschluss des
 verschlüsselten Page-Tokens, Service-Role-Zugriff, eindeutige Kontoindizes,
+workspace- und plattformgebundene eindeutige Meta-Message-/Comment-IDs,
 50/100/150-Kontextbedingungen und die Entfernung des alten 50-Nachrichten-
 Löschtriggers.
 
