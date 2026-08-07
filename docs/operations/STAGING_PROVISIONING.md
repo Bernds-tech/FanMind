@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, Referral-, Restore-, Migrations- und Integrationsprüfungen bereitstellen. Production-Daten, Production-Schlüssel und echte Kundendaten dürfen dabei nicht verwendet werden.
+Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referral-, Restore-, Migrations- und Integrationsprüfungen bereitstellen. Der Webhost nutzt aus Kostengründen denselben Exoscale-Server wie Production, ist dort aber durch einen eigenen Linux-Nutzer, Release-Pfad, Prozess, nginx-vHost, ENV-Datei und Runner-Dienst getrennt. Diese Betriebsgrenze ist keine Infrastrukturtrennung durch einen zweiten Server. Supabase- und Stripe-Staging-Ressourcen müssen dagegen vollständig von Production getrennt bleiben. Production-Daten, Production-Schlüssel und echte Kundendaten dürfen nicht verwendet werden.
 
 ## Bereits technisch vorhanden
 
@@ -22,10 +22,11 @@ Eine vollständig getrennte Nicht-Production-Umgebung für schreibende Stripe-, 
 
 ## Extern einmalig einzurichten
 
-1. **Staging-Host**
-   - eigener HTTPS-Host, empfohlen `staging.fanmind.ch`;
-   - getrennte Runtime und getrennte ENV-Datei;
-   - kein Alias auf die Production-Anwendung.
+1. **Staging-Webgrenze auf dem bestehenden Exoscale-Server**
+   - eigener HTTPS-Host `staging.fanmind.ch`;
+   - eigener Linux-Nutzer, eigener Prozess, eigener Release-Pfad und getrennte ENV-Datei;
+   - kein Alias auf die Production-Anwendung und keine gemeinsame Runtime;
+   - kein zweiter Server: ein Ausfall oder eine Fehlkonfiguration des gemeinsamen Hosts bleibt ein geteiltes Infrastrukturrisiko.
 
 2. **Supabase Staging**
    - neues eigenes Supabase-Projekt;
