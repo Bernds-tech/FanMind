@@ -142,7 +142,6 @@ export const roadmapPhases: RoadmapPhase[] = [
       { label: "TikTok", state: "later", status: "Roadmap" },
       { label: "X / Twitter", state: "later", status: "Roadmap" },
       { label: "Discord", state: "later", status: "Roadmap" },
-      { label: "LinkedIn & weitere Kanäle", state: "later", status: "Roadmap" },
     ],
   },
 
