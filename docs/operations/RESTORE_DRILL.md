@@ -144,7 +144,10 @@ GitHub Environment `restore-drill` and an isolated self-hosted runner carrying
 the exclusive label `fanmind-restore`.
 
 The workflow requires the confirmation
-`verify-isolated-restore-resources`. It verifies only:
+`verify-isolated-restore-resources` and runs two strictly ordered read-only
+phases.
+
+The first phase, `restore:resources:preflight`, is checksum-only. It verifies:
 
 - the Staging/Test application and Supabase project are distinct from
   Production;
@@ -156,12 +159,42 @@ The workflow requires the confirmation
 - the selected encrypted `fanmind-full-*.tar.gz.age` artifact and its adjacent
   checksum are regular, non-symlink files with a matching SHA-256.
 
-It does not connect to PostgreSQL, decrypt the backup, inspect customer data,
-enable `FANMIND_ENABLE_NON_PRODUCTION_WRITES`, enable
+This first phase does not connect to PostgreSQL, decrypt the backup, inspect
+customer data, enable `FANMIND_ENABLE_NON_PRODUCTION_WRITES`, enable
 `FANMIND_ENABLE_RESTORE_DRILL`, or invoke `pg_restore`. Required final line:
 
 ```text
 RESTORE_DRILL_RESOURCE_READINESS=PASS
+```
+
+Only after that line passes, the separate
+`restore:target:compatibility` phase makes one read-only connection to the
+explicitly confirmed isolated target. It uses the fixed PostgreSQL 17 `psql`
+client, a private mode-`0600` passfile snapshot, a private CA snapshot,
+`sslmode=verify-full`, and a server-enforced read-only session. Use the target's
+canonical DNS hostname covered by its certificate; do not substitute an IP
+address or alias.
+
+Its one fixed query reads only `pg_catalog.pg_settings`,
+`pg_catalog.pg_roles`, and `pg_catalog.pg_extension`. It fails closed unless:
+
+- the target server major is exactly PostgreSQL 17;
+- the pre-existing roles `anon`, `authenticated`, and `service_role` are all
+  present, because FanMind migrations grant or revoke privileges for them;
+- the pre-installed `pgcrypto` extension is present, because five FanMind
+  migrations declare `create extension if not exists pgcrypto`.
+
+The compatibility phase never creates a role or extension, applies a
+migration, decrypts a backup, invokes `pg_restore`, or enables either write
+gate. Its output contains only the server major and bounded counts, never host,
+database, user, file path, catalog name, password, certificate, or query error.
+Required final lines:
+
+```text
+RESTORE_TARGET_COMPATIBILITY_DATABASE_CONNECTION=read_only_catalog
+RESTORE_TARGET_COMPATIBILITY_TLS=verify-full
+RESTORE_TARGET_COMPATIBILITY_WRITES=disabled
+RESTORE_TARGET_COMPATIBILITY=PASS
 ```
 
 One-time external setup for the GitHub Environment `restore-drill`:
@@ -175,17 +208,26 @@ One-time external setup for the GitHub Environment `restore-drill`:
   `FANMIND_RESTORE_TARGET_DB_HOST`, `FANMIND_RESTORE_TARGET_DB_USER`,
   `FANMIND_PRODUCTION_DB_HOST`, `FANMIND_PRODUCTION_DB_USER` and
   `FANMIND_RESTORE_ARTIFACT_PATH`;
+- secrets `FANMIND_RESTORE_TARGET_PGPASSFILE_PATH` and
+  `FANMIND_RESTORE_TARGET_CA_CERT_PATH`, each containing an absolute path on
+  the isolated runner. The passfile must already exist as an operator-owned,
+  regular, non-symlink mode-`0600` file. The CA bundle must already exist as a
+  regular, non-symlink file and must not be group- or world-writable;
 - an isolated host with a checked-out repository, Node.js and read-only access
-  to the transferred encrypted artifact pair, registered only as
-  `fanmind-restore`.
+  to the transferred encrypted artifact pair, PostgreSQL 17 client tools at
+  `/usr/lib/postgresql/17/bin`, and network access only to the isolated target,
+  registered only as `fanmind-restore`.
 
-This readiness result does not count as a restore drill. Content verification,
-the transactional database restore, RLS checks, Storage sample, server-config
+Neither readiness result counts as a restore drill. Content verification, the
+transactional database restore, RLS checks, Storage sample, server-config
 inspection and cleanup evidence remain mandatory.
 
 ### Preconditions
 
 - isolated PostgreSQL instance or separate Supabase test project;
+- PostgreSQL major 17 plus the pre-existing roles `anon`, `authenticated` and
+  `service_role` and the pre-installed extension `pgcrypto`, as proven by the
+  compatibility phase;
 - empty disposable target database;
 - no DNS, webhook or application configuration pointing at Production;
 - written target identifier in the drill record.

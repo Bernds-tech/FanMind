@@ -45,6 +45,7 @@
     "referral:sandbox:preflight": "node scripts/referral-sandbox-preflight.mjs",
     "backup:verify": "node scripts/operations/verify-backup-artifact.mjs",
     "restore:resources:preflight": "node scripts/operations/restore-drill-resource-readiness.mjs",
+    "restore:target:compatibility": "node scripts/operations/restore-target-compatibility.mjs",
     "restore:preflight": "node scripts/operations/restore-target-preflight.mjs",
     "restore:database:drill": "bash scripts/operations/run-database-restore-drill.sh",
     "restore:database:postcheck": "node scripts/operations/restore-database-postcheck-receipt.mjs",
