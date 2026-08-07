@@ -18,16 +18,19 @@ permissions:
 jobs:
   deploy-staging:
     name: Deploy exact main commit to isolated staging
-    if: ${{ inputs.confirmation == 'deploy-staging-only' }}
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.confirmation == 'deploy-staging-only'
     environment: staging
-    runs-on:
-      - self-hosted
-      - fanmind-staging
-      - exoscale
-      - linux
-      - x64
+    runs-on: [self-hosted, fanmind-staging, exoscale, linux, x64]
 
     steps:
+      - name: Checkout exact reviewed staging release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
       - name: Deploy on isolated staging host
         env:
           EXPECTED_RELEASE_COMMIT: ${{ github.sha }}
@@ -37,8 +40,8 @@ jobs:
           SOURCE_DIR="/var/www/fanmind-staging"
           ENV_FILE="$SOURCE_DIR/.env.production"
 
-          if [ ! -d "$SOURCE_DIR/.git" ]; then
-            echo "Staging source checkout is missing." >&2
+          if [ ! -d "$SOURCE_DIR" ]; then
+            echo "Staging source directory is missing." >&2
             exit 1
           fi
           if [ ! -f "$ENV_FILE" ] || [ -L "$ENV_FILE" ]; then
@@ -54,34 +57,29 @@ jobs:
             exit 1
           fi
 
+          if [ "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" != "$EXPECTED_RELEASE_COMMIT" ]; then
+            echo "Authenticated staging checkout does not match the triggering commit." >&2
+            exit 1
+          fi
+          if ! git -C "$GITHUB_WORKSPACE" diff --quiet -- || ! git -C "$GITHUB_WORKSPACE" diff --cached --quiet --; then
+            echo "Authenticated staging checkout is not clean." >&2
+            exit 1
+          fi
+
+          if ! command -v rsync >/dev/null 2>&1; then
+            echo "rsync is required for an isolated credential-free release copy." >&2
+            exit 1
+          fi
+          rsync --archive --delete \
+            --exclude '.git/' \
+            --exclude '.env.production' \
+            "$GITHUB_WORKSPACE/" "$SOURCE_DIR/"
+          if [ -e "$SOURCE_DIR/.git" ]; then
+            echo "Git metadata must not persist in the staging runtime path." >&2
+            exit 1
+          fi
+
           cd "$SOURCE_DIR"
-          case "$(git remote get-url origin)" in
-            git@github.com:Bernds-tech/FanMind.git|https://github.com/Bernds-tech/FanMind.git) ;;
-            *)
-              echo "Unexpected staging repository origin." >&2
-              exit 1
-              ;;
-          esac
-
-          git fetch --prune origin main
-          if ! git cat-file -e "$EXPECTED_RELEASE_COMMIT^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$EXPECTED_RELEASE_COMMIT"
-          fi
-          if ! git merge-base --is-ancestor "$EXPECTED_RELEASE_COMMIT" origin/main; then
-            echo "Staging accepts only commits reachable from origin/main." >&2
-            exit 1
-          fi
-
-          git reset --hard "$EXPECTED_RELEASE_COMMIT"
-          git clean -fdx -e .env.production
-          if [ "$(git rev-parse HEAD)" != "$EXPECTED_RELEASE_COMMIT" ]; then
-            echo "Staging checkout does not match the triggering commit." >&2
-            exit 1
-          fi
-          if ! git diff --quiet -- || ! git diff --cached --quiet --; then
-            echo "Staging tracked tree is not clean after synchronization." >&2
-            exit 1
-          fi
 
           set -a
           # The staging host deliberately uses Next.js production mode with
@@ -140,7 +138,4 @@ jobs:
             FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=staging \
             npm run smoke:public
 
-          if [ "$(git rev-parse HEAD)" != "$EXPECTED_RELEASE_COMMIT" ]; then
-            echo "Staging checkout is not synchronized after deployment." >&2
-            exit 1
-          fi
+          echo "STAGING_RELEASE_COMMIT=$EXPECTED_RELEASE_COMMIT"

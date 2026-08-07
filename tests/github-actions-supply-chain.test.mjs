@@ -11,7 +11,9 @@ const HOSTED_CHECKOUT_V7_0_1_SHA =
   "3d3c42e5aac5ba805825da76410c181273ba90b1";
 const RESTORE_CHECKOUT_V4_SHA =
   "11d5960a326750d5838078e36cf38b85af677262";
+const STAGING_DEPLOY_WORKFLOW = "deploy-staging.yml";
 const RESTORE_WORKFLOW = "restore-drill-resource-readiness.yml";
+const STAGING_PROVISION_WORKFLOW = "provision-staging-host.yml";
 
 async function exists(path) {
   try {
@@ -65,26 +67,49 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
   );
   assert.deepEqual(
     selfHostedWorkflows.map((workflow) => workflow.file),
-    [RESTORE_WORKFLOW],
+    [STAGING_DEPLOY_WORKFLOW, STAGING_PROVISION_WORKFLOW, RESTORE_WORKFLOW],
   );
-  assert.deepEqual(selfHostedWorkflows[0]?.checkoutShas, [
+  const restoreWorkflow = selfHostedWorkflows.find(
+    (workflow) => workflow.file === RESTORE_WORKFLOW,
+  );
+  const stagingProvisionWorkflow = selfHostedWorkflows.find(
+    (workflow) => workflow.file === STAGING_PROVISION_WORKFLOW,
+  );
+  const stagingDeployWorkflow = selfHostedWorkflows.find(
+    (workflow) => workflow.file === STAGING_DEPLOY_WORKFLOW,
+  );
+  assert.deepEqual(restoreWorkflow?.checkoutShas, [
     RESTORE_CHECKOUT_V4_SHA,
   ]);
+  assert.deepEqual(stagingProvisionWorkflow?.checkoutShas, [
+    HOSTED_CHECKOUT_V7_0_1_SHA,
+  ]);
+  assert.deepEqual(stagingDeployWorkflow?.checkoutShas, [
+    HOSTED_CHECKOUT_V7_0_1_SHA,
+  ]);
   assert.match(
-    selfHostedWorkflows[0]?.source ?? "",
+    restoreWorkflow?.source ?? "",
     /runs-on:\s*\[self-hosted, fanmind-restore, linux, x64\]/u,
+  );
+  assert.match(
+    stagingProvisionWorkflow?.source ?? "",
+    /runs-on:\s*\[self-hosted, fanmind-prod, exoscale, linux, x64\]/u,
+  );
+  assert.match(
+    stagingDeployWorkflow?.source ?? "",
+    /runs-on:\s*\[self-hosted, fanmind-staging, exoscale, linux, x64\]/u,
   );
 
   const hostedWorkflows = checkoutWorkflows.filter(
     (workflow) => !workflow.selfHosted,
   );
-  assert.equal(hostedWorkflows.length, 21);
+  assert.equal(hostedWorkflows.length, 23);
   assert.equal(
     hostedWorkflows.reduce(
       (count, workflow) => count + workflow.checkoutShas.length,
       0,
     ),
-    22,
+    24,
   );
   assert.equal(
     hostedWorkflows.every((workflow) =>

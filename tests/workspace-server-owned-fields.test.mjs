@@ -18,6 +18,8 @@ const rpcMigrationPath =
   "supabase/migrations/20260726120000_workspace_provisioning_rpc.sql";
 const privilegeMigrationPath =
   "supabase/controlled/20260726121000_workspace_server_owned_columns.sql";
+const triggerFunctionSecurityMigrationPath =
+  "supabase/controlled/20260806203023_harden_trigger_function_privileges.sql";
 const registerPath = "src/app/register/RegisterClient.tsx";
 const serverPath = "src/lib/supabase/server.ts";
 const clientPath = "src/lib/supabase/client.ts";
@@ -788,5 +790,52 @@ test("the contract step cannot be applied by a generic migration push", async ()
   assert.match(
     runbook,
     /supabase db push[\s\S]*(?:nicht|never)[\s\S]*Schritt B/iu,
+  );
+});
+
+test("trigger helpers are search-path pinned and unavailable as browser RPCs", async () => {
+  const migration = await readFile(triggerFunctionSecurityMigrationPath, "utf8");
+
+  assert.match(migration, /^begin;/u);
+  assert.match(migration, /commit;\s*$/u);
+
+  for (const functionName of [
+    "set_social_connections_updated_at",
+    "set_referral_updated_at",
+    "set_demo_start_session_updated_at",
+  ]) {
+    assert.match(
+      migration,
+      new RegExp(
+        `alter function public\\.${functionName}\\(\\)[\\s\\S]*` +
+          "set search_path = pg_catalog, pg_temp",
+        "u",
+      ),
+    );
+    assert.match(
+      migration,
+      new RegExp(
+        `revoke all on function public\\.${functionName}\\(\\)[\\s\\S]*` +
+          "from public, anon, authenticated",
+        "u",
+      ),
+    );
+  }
+
+  assert.match(
+    migration,
+    /to_regprocedure\([\s\S]*'public\.trim_conversation_messages_to_latest_50\(\)'[\s\S]*\) is not null/u,
+  );
+  assert.match(
+    migration,
+    /alter function public\.trim_conversation_messages_to_latest_50\(\)[\s\S]*set search_path = pg_catalog, pg_temp/u,
+  );
+  assert.match(
+    migration,
+    /revoke all on function public\.trim_conversation_messages_to_latest_50\(\)[\s\S]*from public, anon, authenticated/u,
+  );
+  assert.doesNotMatch(
+    migration,
+    /grant execute[\s\S]*to (?:public|anon|authenticated)/u,
   );
 });

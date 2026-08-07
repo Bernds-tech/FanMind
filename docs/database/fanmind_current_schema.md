@@ -21,6 +21,12 @@ Alle produktiven Daten sind workspace-scoped oder user-scoped.
 - Supabase Service Role ist nur serverseitig erlaubt.
 - Browser-Code nutzt nur Supabase URL und Anon Key.
 - RLS muss für workspace- und userbezogene Tabellen aktiv sein.
+- Reine Triggerfunktionen sind keine Browser-RPCs. Die kontrollierte,
+  checksum-gebundene Härtung ihrer Suchpfade und `EXECUTE`-Rechte liegt unter
+  `supabase/controlled/20260806203023_harden_trigger_function_privileges.sql`.
+  Sie wird ausschließlich über den Staging-Pfad in
+  `docs/operations/TRIGGER_FUNCTION_HARDENING_STAGING.md` angewendet; ein
+  generisches `supabase db push` und der Web-Deploy dürfen sie nicht ausführen.
 
 ## 2. Auth-/Workspace-Kern
 
