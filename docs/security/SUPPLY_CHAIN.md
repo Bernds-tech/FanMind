@@ -49,7 +49,7 @@ Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:
 - exakte Next.js-/ESLint-Config-Patchstände;
 - einen vollständig sauberen Root-Production-Baum ohne Review-Ausnahme.
 
-### Aktueller geprüfter Zustand vom 6. August 2026
+### Aktueller geprüfter Zustand vom 7. August 2026
 
 Am 25. Juli wurde Next.js `16.2.12` mit passendem `eslint-config-next`
 verfügbar. Gleichzeitig standen korrigierte Versionen für die beiden
