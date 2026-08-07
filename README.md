@@ -104,7 +104,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
-- Roadmap-Phase 7 mit TikTok, X, Discord, LinkedIn und weiteren Kanälen bleibt öffentlich als spätere Zukunftsplanung sichtbar, ist aber ausdrücklich vom aktuellen Abschlussumfang der acht Fertigstellungsblöcke ausgenommen und zählt nicht in dessen Fortschritt.
+- Roadmap-Phase 7 mit TikTok, X und Discord bleibt öffentlich als spätere Zukunftsplanung sichtbar, ist aber ausdrücklich vom aktuellen Abschlussumfang der acht Fertigstellungsblöcke ausgenommen und zählt nicht in dessen Fortschritt.
 - FanMind ist kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert und sendet final selbst.
 - FanMind garantiert keine fehlerfreien KI-Antworten.
 - Externe Integrationen dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
