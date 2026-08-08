@@ -165,7 +165,7 @@
 .queueRowLink {
   display: grid;
   grid-template-columns:
-    64px 180px 112px minmax(210px, 1.5fr)
+    180px 112px minmax(210px, 1.5fr)
     84px 88px 96px 86px 104px 112px 132px 126px;
   gap: 10px;
   align-items: center;
@@ -182,7 +182,7 @@
 
 .queueRowWrap {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) 126px;
+  grid-template-columns: minmax(0, 1fr) 126px;
   border: 1px solid rgba(148, 163, 184, 0.1);
   border-radius: 16px;
   margin-bottom: 8px;
@@ -197,17 +197,6 @@
   border-color: rgba(103, 232, 249, 0.32);
   background: rgba(30, 41, 59, 0.68);
   transform: translateY(-1px);
-}
-
-.selectCell {
-  display: grid;
-  place-items: center;
-}
-
-.selectCell input {
-  width: 16px;
-  height: 16px;
-  accent-color: #22d3ee;
 }
 
 .queueRowLink {
