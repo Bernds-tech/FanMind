@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import {
   getSupabaseServerUser,
   getWorkspaceConversations,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceOpenFollowups,
   signOutSupabaseServerSession,
@@ -29,9 +28,15 @@ import {
 import styles from "./inbox.module.css";
 import { InboxSearchForm } from "./InboxSearchForm";
 import { buildUnifiedInboxQueue } from "@/lib/inboxQueuePolicy.mjs";
+import { claimConversation, releaseConversation } from "./actions";
+import { requireAuthorizedWorkspaceMember } from "@/lib/workspaceAuthorization";
 
 type InboxPageProps = {
-  searchParams?: Promise<{ filter?: string | string[]; q?: string | string[] }>;
+  searchParams?: Promise<{
+    filter?: string | string[];
+    q?: string | string[];
+    notice?: string | string[];
+  }>;
 };
 
 type InboxWorkspaceProps = {
@@ -46,6 +51,8 @@ type InboxWorkspaceProps = {
   activeFilter: InboxFilter;
   searchQuery: string;
   userEmail: string | null | undefined;
+  userId: string;
+  notice: string;
 };
 
 type InboxFilter = "all" | "open" | "waiting" | "due" | "high" | "ai" | "done";
@@ -67,6 +74,7 @@ type InboxQueueItem = {
   status: "Offen" | "Wartet" | "Erledigt" | "Archiviert";
   statusValue: string;
   conversationId?: string;
+  assignedUserId?: string;
   priority: "Hoch" | "Mittel" | "Warm" | "Normal" | "Niedrig";
   priorityScore: number;
   waitingSince: string;
@@ -110,6 +118,8 @@ function InboxWorkspace({
   activeFilter,
   searchQuery,
   userEmail,
+  userId,
+  notice,
 }: InboxWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
     getWorkspaceNavigationForUser("inbox", userEmail);
@@ -174,6 +184,12 @@ function InboxWorkspace({
           />
         </section>
 
+        {getNoticeMessage(notice) ? (
+          <p className={styles.noticeCard} role="status">
+            {getNoticeMessage(notice)}
+          </p>
+        ) : null}
+
         <section className={styles.kpiGrid} aria-label="Inbox Kennzahlen">
           {kpis.map((kpi) => (
             <article className={styles.kpiCard} key={kpi.label}>
@@ -234,7 +250,7 @@ function InboxWorkspace({
             </nav>
 
             {visibleItems.length ? (
-              <QueueList items={visibleItems} />
+              <QueueList items={visibleItems} userId={userId} />
             ) : (
               <EmptyState hasSearch={Boolean(searchQuery)} />
             )}
@@ -273,7 +289,7 @@ function ErrorBox({ title, message }: { title: string; message: string }) {
   );
 }
 
-function QueueList({ items }: { items: InboxQueueItem[] }) {
+function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string }) {
   return (
     <div
       className={styles.queueTable}
@@ -372,6 +388,30 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
               </small>
             ) : null}
             <div className={styles.rowActions}>
+              {item.conversationId && !item.assignedUserId ? (
+                <form
+                  action={claimConversation}
+                >
+                  <input
+                    name="conversation_id"
+                    type="hidden"
+                    value={item.conversationId}
+                  />
+                  <button type="submit">
+                    Übernehmen
+                  </button>
+                </form>
+              ) : null}
+              {item.conversationId && item.assignedUserId === userId ? (
+                <form action={releaseConversation}>
+                  <input
+                    name="conversation_id"
+                    type="hidden"
+                    value={item.conversationId}
+                  />
+                  <button type="submit">Freigeben</button>
+                </form>
+              ) : null}
               <Link href={`/fans/${item.contactId}?focus=reply`}>
                 Antwort vorbereiten
               </Link>
@@ -452,6 +492,7 @@ function buildConversationInboxQueue(
         key: conversation.id,
         dedupeKey: getFanGroupKey(contact),
         conversationId: conversation.id,
+        assignedUserId: conversation.assigned_user_id ?? undefined,
         contactId: contact.id,
         fanName: contact.display_name || contact.handle || "Unbenannter Fan",
         handle: contact.handle || "Kein Handle hinterlegt",
@@ -968,12 +1009,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     redirect("/login");
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
-    redirect("/login?demo_deleted=1");
-  }
-
-  const workspace = workspaceResult.workspace;
+  const { user, workspace } = await requireAuthorizedWorkspaceMember();
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
@@ -990,7 +1026,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
         <InboxWorkspace
           workspace={workspace}
           userDisplayName={getUserDisplayName(
-            data.user.user_metadata,
+            user.user_metadata,
             workspace.name,
           )}
           contacts={contactsResult?.contacts ?? []}
@@ -1002,22 +1038,23 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           activeFilter={normalizeFilter(normalizeParam(params?.filter))}
           searchQuery={normalizeParam(params?.q)}
           userEmail={data.user.email}
+          userId={user.id}
+          notice={normalizeParam(params?.notice)}
         />
-      ) : (
-        <section
-          className={dashboardStyles.fallbackCard}
-          aria-label="FanMind Inbox"
-        >
-          <h1>Inbox</h1>
-          <p>Workspace konnte noch nicht geladen werden.</p>
-          {workspaceResult.error ? (
-            <p className={dashboardStyles.error}>
-              <strong>Workspace-Daten konnten nicht geladen werden.</strong>
-              <span>{workspaceResult.error.message}</span>
-            </p>
-          ) : null}
-        </section>
-      )}
+      ) : null}
     </main>
   );
+}
+
+function getNoticeMessage(notice: string): string | null {
+  const messages: Record<string, string> = {
+    conversation_claimed: "Conversation wurde dir zugewiesen.",
+    conversation_released: "Conversation wurde für das Team freigegeben.",
+    conversation_missing: "Conversation konnte nicht eindeutig bestimmt werden.",
+    conversation_forbidden: "Conversation ist in diesem Workspace nicht verfügbar.",
+    assignment_failed:
+      "Zuweisung wurde nicht geändert. Bitte aktualisiere die Inbox und versuche es erneut.",
+  };
+
+  return messages[notice] ?? null;
 }
