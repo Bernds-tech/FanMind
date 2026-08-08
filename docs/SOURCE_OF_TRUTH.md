@@ -264,9 +264,13 @@ deren Fortschritts- oder Fertigbewertung eingerechnet.
   Besuchersitzungen verwenden. `public`, `anon` und `authenticated` erhalten
   keinen direkten Tabellenzugriff. Der öffentliche Session-Endpunkt muss
   bounded, atomar rate-limitiert, fail-closed und CORS-exakt bleiben. Ein
-  öffentlicher Installationswert ist kein Geheimnis. Vor einem getrennten
-  Nachrichten-/Widget-Block gibt es keinen OpenAI-Aufruf, keine automatische
-  Antwort und keinen Outbound-Versand.
+  öffentlicher Installationswert ist kein Geheimnis. Die getrennte
+  Nachrichteningestion akzeptiert nur ein gültiges Sitzungstoken derselben
+  Installation und Origin, verarbeitet Client-UUIDs idempotent und erzeugt
+  ausschließlich einen workspace-gebundenen Kontakt, eine Conversation und
+  eine eingehende Inbox-Nachricht. Receipt-Daten enthalten keinen
+  Nachrichtentext. Widget und Besucher-KI bleiben unverdrahtet; es gibt keine
+  automatische Antwort und keinen Outbound-Versand.
 - Meta-Content-Staging: Die zwei Migrationen
   `20260803120000_meta_content_intelligence_foundation.sql` und
   `20260803210000_preserve_incremental_conversation_history.sql` sind

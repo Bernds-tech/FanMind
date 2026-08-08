@@ -1,6 +1,6 @@
 # Website Chat Security Foundation
 
-Status: vorbereitet, nicht produktiv aktiviert.
+Status: Session- und Nachrichteningestion vorbereitet, nicht produktiv aktiviert.
 
 Dieser Block schafft die sichere Grundlage für Website-Chat und Website-KI,
 ohne ein öffentliches Widget, KI-Antworten oder automatisches Senden zu
@@ -26,8 +26,17 @@ aktivieren.
 - Der öffentliche Session-Endpunkt begrenzt Bodygröße und Anfragerate über den
   bestehenden atomaren Shared Rate Limiter. Bei Ausfall bleibt er geschlossen.
 - CORS wird nur für die zuvor serverseitig verifizierte Origin ausgegeben.
-- Es gibt in diesem Block keinen OpenAI-Aufruf, keine Antwort an den Besucher,
-  keinen Outbound-Transport und kein automatisches Senden.
+- Der getrennte Nachrichtenendpunkt akzeptiert nur ein gültiges Bearer-
+  Sitzungstoken derselben Installation und Origin. Ein clientseitiger UUID-
+  Schlüssel macht Wiederholungen idempotent.
+- Die transaktionale, als `SECURITY INVOKER` laufende Datenbankfunktion ist nur
+  für `service_role` ausführbar. Sie erzeugt pro Besuchersitzung einen
+  workspace-gebundenen Kontakt und eine Conversation und schreibt ausschließlich
+  eingehende Nachrichten in die bestehende Admin-Inbox.
+- Der idempotente Receipt speichert keinen Nachrichtentext. Rohes Sitzungstoken
+  und rohe IP-Adresse werden weiterhin nicht persistiert.
+- Es gibt keinen OpenAI-Aufruf, keine Antwort an den Besucher, keinen Outbound-
+  Transport und kein automatisches Senden.
 
 ## Aktivierungsreihenfolge
 
@@ -38,7 +47,9 @@ aktivieren.
 4. `FANMIND_WEBSITE_CHAT_SESSION_SECRET` als getrenntes Staging-Secret setzen;
 5. erlaubte und verbotene Origins sowie Consent, Rate Limit und Ablauf im
    Browser testen;
-6. erst danach Nachrichteningestion, Inbox-Zuordnung und Widget in getrennten
-   PRs ergänzen.
+6. Ingestion-Migration im isolierten Staging anwenden und mit synthetischer
+   Sitzung auf Kontakt-, Conversation-, Nachrichten- und Inbox-Zuordnung sowie
+   Idempotenz prüfen;
+7. erst danach das sichtbare Widget in einem getrennten PR ergänzen.
 
 Production bleibt bis zur Staging-, Rechts- und Datenschutzabnahme deaktiviert.

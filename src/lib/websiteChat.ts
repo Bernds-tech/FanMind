@@ -3,10 +3,12 @@ import "server-only";
 import {
   createWebsiteChatSessionToken,
   hashWebsiteChatSessionToken,
+  normalizeWebsiteChatMessage,
   normalizeSessionTtlMinutes,
   requireAllowedWebsiteChatOrigin,
   requireConsent,
   requirePublicInstallationId,
+  requireWebsiteChatClientMessageId,
 } from "@/lib/websiteChatPolicy.mjs";
 import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 
@@ -26,6 +28,8 @@ export class WebsiteChatServiceError extends Error {
     | "installation_unavailable"
     | "origin_forbidden"
     | "consent_required"
+    | "session_unavailable"
+    | "message_invalid"
     | "persistence_unavailable";
 
   constructor(code: WebsiteChatServiceError["code"]) {
@@ -33,6 +37,72 @@ export class WebsiteChatServiceError extends Error {
     this.name = "WebsiteChatServiceError";
     this.code = code;
   }
+}
+
+type IngestedMessageRow = {
+  accepted: boolean;
+  duplicate: boolean;
+  conversation_id: string | null;
+  message_id: string | null;
+};
+
+export async function ingestWebsiteChatMessage(input: {
+  publicInstallationId: unknown;
+  origin: unknown;
+  sessionToken: unknown;
+  clientMessageId: unknown;
+  message: unknown;
+}) {
+  const { serviceKey, sessionSecret } = serviceConfiguration();
+  const { origin } = await resolveWebsiteChatInstallation(input);
+
+  let visitorSubjectHash: string;
+  let clientMessageId: string;
+  let content: string;
+  try {
+    visitorSubjectHash = hashWebsiteChatSessionToken({
+      token: input.sessionToken,
+      secret: sessionSecret,
+    });
+    clientMessageId = requireWebsiteChatClientMessageId(input.clientMessageId);
+    content = normalizeWebsiteChatMessage(input.message);
+  } catch {
+    throw new WebsiteChatServiceError("message_invalid");
+  }
+
+  const result = await fetch(getSupabaseRestUrl("rpc/ingest_website_chat_message"), {
+    method: "POST",
+    headers: { ...getSupabaseHeaders(serviceKey), Prefer: "return=representation" },
+    body: JSON.stringify({
+      p_public_installation_id: input.publicInstallationId,
+      p_origin: origin,
+      p_visitor_subject_hash: visitorSubjectHash,
+      p_client_message_id: clientMessageId,
+      p_content: content,
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => null);
+  if (!result?.ok) {
+    if (result?.status === 404) {
+      throw new WebsiteChatServiceError("session_unavailable");
+    }
+    throw new WebsiteChatServiceError("persistence_unavailable");
+  }
+  const rows = await result.json() as IngestedMessageRow[];
+  const row = rows[0];
+  if (row && !row.accepted) {
+    throw new WebsiteChatServiceError("session_unavailable");
+  }
+  if (!row?.accepted || !row.conversation_id || !row.message_id) {
+    throw new WebsiteChatServiceError("persistence_unavailable");
+  }
+  return {
+    accepted: true as const,
+    duplicate: row.duplicate === true,
+    conversationId: row.conversation_id,
+    messageId: row.message_id,
+  };
 }
 
 function serviceConfiguration() {

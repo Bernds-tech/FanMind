@@ -10,6 +10,7 @@ import {
   requireAllowedWebsiteChatOrigin,
   requireConsent,
   requirePublicInstallationId,
+  requireWebsiteChatClientMessageId,
   SESSION_TOKEN_PATTERN,
   WebsiteChatPolicyError,
 } from "../src/lib/websiteChatPolicy.mjs";
@@ -43,6 +44,14 @@ test("installation IDs and session tokens are bounded", () => {
   assert.notEqual(hash, token);
   expectCode(() => hashWebsiteChatSessionToken({ token: "short", secret: "s".repeat(32) }), "session_invalid");
   expectCode(() => hashWebsiteChatSessionToken({ token, secret: "short" }), "session_secret_unavailable");
+});
+
+test("client message IDs are canonical UUIDs", () => {
+  assert.equal(
+    requireWebsiteChatClientMessageId("123E4567-E89B-42D3-A456-426614174000"),
+    "123e4567-e89b-42d3-a456-426614174000",
+  );
+  expectCode(() => requireWebsiteChatClientMessageId("retry-1"), "client_message_id_invalid");
 });
 
 test("consent, message and session TTL fail closed", () => {

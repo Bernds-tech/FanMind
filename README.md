@@ -115,8 +115,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Installationen, exakt verifizierte HTTPS-Origins und kurzlebige,
   consent-gebundene Besuchersitzungen sind als service-role-only Grundlage
   vorbereitet. Im Browser bleibt nur ein zufälliges Sitzungstoken; gespeichert
-  wird ausschließlich dessen HMAC-SHA256-Bezug. Nachrichteningestion, Widget,
-  Besucher-KI und Outbound-Versand sind noch nicht aktiviert.
+  wird ausschließlich dessen HMAC-SHA256-Bezug. Eine getrennte, idempotente
+  server-only Ingestion kann gültige Besuchernachrichten als Kontakt,
+  Conversation und eingehende Nachricht in die vorhandene Admin-Inbox
+  übernehmen. Widget, Besucher-KI und Outbound-Versand sind noch nicht
+  aktiviert.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind nicht rabattfähig; Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.

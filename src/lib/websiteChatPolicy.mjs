@@ -4,6 +4,8 @@ const PUBLIC_INSTALLATION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const SUBJECT_HASH_PATTERN = /^[0-9a-f]{64}$/;
+const CLIENT_MESSAGE_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_MESSAGE_LENGTH = 4000;
 const MAX_BODY_BYTES = 12_000;
 const MIN_SESSION_TTL_MINUTES = 5;
@@ -101,6 +103,14 @@ export function normalizeWebsiteChatMessage(value) {
   return normalized;
 }
 
+export function requireWebsiteChatClientMessageId(value) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  if (!CLIENT_MESSAGE_ID_PATTERN.test(normalized)) {
+    throw new WebsiteChatPolicyError("client_message_id_invalid");
+  }
+  return normalized.toLowerCase();
+}
+
 export function requireConsent(input, expectedVersion) {
   const version = typeof input?.version === "string" ? input.version.trim() : "";
   if (input?.granted !== true || !version || version !== expectedVersion) {
@@ -122,6 +132,7 @@ export function normalizeSessionTtlMinutes(value) {
 }
 
 export {
+  CLIENT_MESSAGE_ID_PATTERN,
   MAX_BODY_BYTES,
   MAX_MESSAGE_LENGTH,
   MAX_SESSION_TTL_MINUTES,
