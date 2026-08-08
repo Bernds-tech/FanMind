@@ -194,6 +194,7 @@ export type ConversationRow = {
   last_outbound_at: string | null;
   last_message_preview: string | null;
   assigned_owner: string | null;
+  assigned_user_id: string | null;
   ai_status: string;
   next_step: string | null;
   created_at: string | null;
@@ -602,7 +603,7 @@ const MEMORY_COLUMNS =
 const CONTACT_REPLY_TARGET_COLUMNS =
   "id,workspace_id,contact_id,source_platform,source_type,label,url,quality,created_at,updated_at";
 const CONVERSATION_COLUMNS =
-  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
+  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,assigned_user_id,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_MESSAGE_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,attachments,message_kind,created_at,seen_at";
 const CONVERSATION_SUMMARY_COLUMNS =
@@ -4866,6 +4867,110 @@ export async function updateConversationPriority(input: {
   if (result.error) {
     return conversationUpdateError(
       `Conversation-Priorität konnte nicht gespeichert werden: ${withOptionalSchemaHint(result.error.message, "conversations")}`,
+    );
+  }
+
+  return { conversation: result.data, error: null };
+}
+
+export async function claimConversationAssignment(input: {
+  workspaceId: string;
+  conversationId: string;
+  assignedUserId: string;
+  assignedOwner: string;
+}): Promise<ConversationUpdateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const assignedOwner = normalizeOptionalText(input.assignedOwner);
+  const assignedUserId = normalizeOptionalText(input.assignedUserId);
+  if (!assignedOwner || !assignedUserId) {
+    return conversationUpdateError("Conversation-Zuweisung ist unvollständig.");
+  }
+  const result = await postgrestUpdate<ConversationRow>(
+    "conversations",
+    {
+      assigned_owner: assignedOwner,
+      assigned_user_id: assignedUserId,
+      status: "open",
+      next_step: "Manuell übernehmen und antworten",
+      updated_at: new Date().toISOString(),
+    },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.conversationId],
+      ["assigned_user_id", null],
+      ["assigned_owner", null],
+    ],
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return conversationUpdateError(
+      `Conversation-Zuweisung konnte nicht gespeichert werden: ${withOptionalSchemaHint(result.error.message, "conversations")}`,
+    );
+  }
+
+  if (!result.data) {
+    return conversationUpdateError(
+      "Conversation wurde zwischenzeitlich bereits übernommen.",
+    );
+  }
+
+  return { conversation: result.data, error: null };
+}
+
+export async function releaseConversationAssignment(input: {
+  workspaceId: string;
+  conversationId: string;
+  assignedUserId: string;
+}): Promise<ConversationUpdateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return conversationUpdateError(
+      "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+    );
+  }
+
+  const assignedUserId = normalizeOptionalText(input.assignedUserId);
+  if (!assignedUserId) {
+    return conversationUpdateError("Conversation-Zuweisung ist unvollständig.");
+  }
+
+  const result = await postgrestUpdate<ConversationRow>(
+    "conversations",
+    {
+      assigned_owner: null,
+      assigned_user_id: null,
+      status: "open",
+      next_step: "Antwort vorbereiten",
+      updated_at: new Date().toISOString(),
+    },
+    accessToken,
+    [
+      ["workspace_id", input.workspaceId],
+      ["id", input.conversationId],
+      ["assigned_user_id", assignedUserId],
+    ],
+    { select: CONVERSATION_COLUMNS, single: true },
+  );
+
+  if (result.error) {
+    return conversationUpdateError(
+      `Conversation-Zuweisung konnte nicht freigegeben werden: ${withOptionalSchemaHint(result.error.message, "conversations")}`,
+    );
+  }
+
+  if (!result.data) {
+    return conversationUpdateError(
+      "Nur die aktuell zugewiesene Person darf diese Conversation freigeben.",
     );
   }
 

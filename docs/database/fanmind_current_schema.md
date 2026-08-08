@@ -230,6 +230,7 @@ Wichtige Felder:
 - `last_outbound_at`
 - `last_message_preview`
 - `assigned_owner`
+- `assigned_user_id` (stabile Auth-Identität für atomare Übernahme/Freigabe)
 - `ai_status`
 - `next_step`
 - `created_at`
