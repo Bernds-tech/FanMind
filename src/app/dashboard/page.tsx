@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import {
-  getOpenFollowupCount,
+  getFollowupCompletionCounts,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceContacts,
@@ -21,7 +21,11 @@ import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
-import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
+import {
+  calculateFollowupCompletionRate,
+  getWorkspaceKpiStatsFromContacts,
+  type FollowupCompletionRate,
+} from "@/lib/workspaceKpiStats";
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import styles from "./dashboard.module.css";
@@ -37,6 +41,7 @@ type WorkspaceDetailsProps = {
   unseenMessages: ConversationMessageRow[];
   unseenMessagesError?: string;
   openFollowupCount: number;
+  followupCompletionRate: FollowupCompletionRate | null;
   showAdminArea: boolean;
 };
 
@@ -375,6 +380,7 @@ function WorkspaceDetails({
   unseenMessages,
   unseenMessagesError,
   openFollowupCount,
+  followupCompletionRate,
   locale,
   showAdminArea,
 }: WorkspaceDetailsProps & { locale: FanMindLanguage }) {
@@ -421,6 +427,7 @@ function WorkspaceDetails({
       }}
       contactCount={workspaceKpis.totalFans}
       openFollowupCount={openFollowupCount}
+      followupCompletionRate={followupCompletionRate}
       logoutAction={logout}
       locale={locale}
     >
@@ -598,8 +605,8 @@ export default async function DashboardPage({
   const followupsResult = workspace
     ? await getWorkspaceOpenFollowups(workspace.id)
     : null;
-  const openFollowupCountResult = workspace
-    ? await getOpenFollowupCount(workspace.id)
+  const followupCompletionCountsResult = workspace
+    ? await getFollowupCompletionCounts(workspace.id)
     : null;
   const unseenMessagesResult = workspace
     ? await getWorkspaceUnseenInboundMessages(workspace.id)
@@ -620,7 +627,21 @@ export default async function DashboardPage({
           followupsError={followupsResult?.error?.message}
           unseenMessages={unseenMessagesResult?.messages ?? []}
           unseenMessagesError={unseenMessagesResult?.error?.message}
-          openFollowupCount={openFollowupCountResult?.count ?? 0}
+          openFollowupCount={
+            followupCompletionCountsResult &&
+            !followupCompletionCountsResult.error
+              ? followupCompletionCountsResult.open
+              : 0
+          }
+          followupCompletionRate={
+            followupCompletionCountsResult &&
+            !followupCompletionCountsResult.error
+              ? calculateFollowupCompletionRate(
+                  followupCompletionCountsResult.open,
+                  followupCompletionCountsResult.completed,
+                )
+              : null
+          }
           locale={locale}
           showAdminArea={isPlatformAdminEmail(data.user.email)}
         />
