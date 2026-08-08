@@ -248,7 +248,8 @@ deren Fortschritts- oder Fertigbewertung eingerechnet.
   Staging-Gates gesperrt.
 - Mobile-Push-Staging: Die Migration
   `20260729120000_mobile_push_registrations.sql` ist mit ihrer SHA-256-Prüfsumme
-  festgeschrieben. Der getrennte Ressourcenworkflow liest nur Staging-Ziel und
+  festgeschrieben und auf dem getrennten Supabase-Staging mit aktivem RLS
+  angewendet. Der getrennte Ressourcenworkflow liest nur Staging-Ziel und
   synthetische Nicht-Demo-Principals und kann vor dem Apply laufen. Migration
   und rollback-only Acceptance besitzen unterschiedliche Freigaben und einen
   gemeinsamen exklusiven Staging-Schreib-Lock. Die Acceptance prüft `anon`,
@@ -256,10 +257,14 @@ deren Fortschritts- oder Fertigbewertung eingerechnet.
   service-role CRUD vollständig transaktional aus und verlangt danach einen
   leeren Cleanup-Nachweis. Kein normaler Deploy kann den Runner aufrufen; reale
   Push-Registrierung, Serverkey und Delivery bleiben extern deaktiviert.
-- Meta-Content-Staging: Die zwei vorbereiteten Migrationen
+- Meta-Content-Staging: Die zwei Migrationen
   `20260803120000_meta_content_intelligence_foundation.sql` und
   `20260803210000_preserve_incremental_conversation_history.sql` sind
-  checksum-festgeschrieben. Ein vorgelagerter manueller Read-only-
+  sind checksum-festgeschrieben und auf dem getrennten Supabase-Staging
+  angewendet. RLS, die neuen Analyseobjekte und Indizes, die fortlaufende
+  Historie, das Entfernen des alten 50er-Löschtriggers und die
+  tenant-spezifischen Meta-Idempotenzindizes wurden katalogseitig
+  nachgeprüft. Ein vorgelagerter manueller Read-only-
   Ressourcencheck bindet ohne Schreibfreigabe den exakten `main`-Commit, das
   getrennte Ziel, den IPv4-kompatiblen Supabase-Supavisor-Session-Pooler auf
   Port `5432`, den aus der Staging-Projektreferenz abgeleiteten DB-Benutzer und
@@ -276,9 +281,14 @@ deren Fortschritts- oder Fertigbewertung eingerechnet.
   Meta-Kontoverbindung, Analyse, App-Review-Einreichung und Production-
   Migration bleiben davon getrennt und deaktiviert. Runbook:
   `docs/operations/META_CONTENT_STAGING_MIGRATION.md`.
-- Extern noch einzurichten: eigener Staging-Host, separates Supabase-Projekt, Stripe Test Mode, eigene Webhooks und synthetische Testdaten.
+- Das separate Supabase-Staging-Projekt ist vorhanden. Extern noch
+  einzurichten beziehungsweise nachzuweisen sind eine eigene Web-Staging-VM,
+  Stripe Test Mode, eigene Webhooks und vollständig synthetische Testdaten.
 
-Das fehlende externe Staging blockiert nicht den read-only Produktions-Smoke-Test. Es bleibt Voraussetzung für Referral-Lifecycle-, Restore- und andere schreibende Nicht-Production-Tests.
+Die noch fehlende Web- und Stripe-Staging-Abnahme blockiert nicht den read-only
+Produktions-Smoke-Test. Sie bleibt Voraussetzung für Referral-Lifecycle- und
+andere schreibende Nicht-Production-Tests. Der Restore-Drill verwendet niemals
+die bereits migrierte Staging-Datenbank, sondern ein eigenes leeres Wegwerfziel.
 
 ## 5. Kommerzielle Wahrheit
 
@@ -354,9 +364,10 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   zurück.
 - Die server-only Tabelle `workspace_ai_tier_entitlements` und ihr redigierender
   Loader sind als deploy-before-migrate-Brücke vorbereitet. Die Migration ist
-  noch nicht auf Staging oder Production angewendet und weder Stripe-Webhooks
-  noch produktive KI-Routen verwenden sie; Plus/Ultra bleiben deshalb
-  blockiert.
+  auf dem getrennten Supabase-Staging angewendet und mit RLS, fehlenden
+  Browser-Policies sowie server-only Zugriff nachgeprüft; auf Production ist
+  sie nicht angewendet. Weder Stripe-Webhooks noch produktive KI-Routen
+  verwenden sie; Plus/Ultra bleiben deshalb blockiert.
 - Der checksum-gebundene Entitlement-Migrationsrunner besitzt getrennte
   Offline-Check-, Read-only-Verify- und explizite Apply-Modi. Merge und
   Web-Deploy wenden die Migration nicht automatisch an; Staging-Abnahme bleibt
@@ -379,7 +390,7 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Stripe-Testpreise, Owner-/Member-Sperren, Service-Role-CRUD sowie
   Duplikat-/Reihenfolgeverhalten, gibt keine internen IDs aus und wendet
   selbst keine Migration an. Der echte Lauf bleibt bis zur Bereitstellung der
-  externen Staging-Ressourcen offen.
+  Stripe-Testpreise und synthetischen Owner-/Member-Ressourcen offen.
 - Davor steht ein eigener manueller, strikt read-only Ressourcencheck auf
   `main` und im GitHub-Environment `staging`. Er bestätigt die getrennte
   Supabase-/Datenbankbindung, zwei aktive Stripe-Testpreise zu 100/200 Euro
@@ -463,7 +474,8 @@ Die technische Policy ist vorbereitet, die produktive automatische Verrechnung b
 
 Vor Aktivierung erforderlich:
 
-- separates Supabase-/Stripe-Staging;
+- vorhandenes separates Supabase-Staging plus vollständig getrenntes
+  Stripe-Test-Staging;
 - vollständige Lifecycle-Tests;
 - Missbrauchsschutz;
 - Rechts- und Steuerfreigabe der Teilnahmebedingungen.
