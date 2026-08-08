@@ -63,7 +63,10 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Output- und Gesamttokens je Feature als nicht aktivierende
   Kontingent-Entscheidungsgrundlage.
 - Serverseitiger Entitlement-Vertrag: fehlende, unbekannte, client-kontrollierte, pausierte, nicht gestartete, abgelaufene oder unvollständig freigegebene Plus-/Ultra-Zustände fallen immer auf KI Standard zurück.
-- Persistenter Entitlement-Speicher: server-only Tabelle und redigierender Loader sind als deploy-before-migrate-Brücke vorbereitet; Migration, Stripe-Lifecycle und produktive KI-Verdrahtung sind noch nicht freigegeben, daher bleiben Plus/Ultra blockiert.
+- Persistenter Entitlement-Speicher: server-only Tabelle und redigierender
+  Loader sind auf dem getrennten Supabase-Staging migriert und nachgeprüft;
+  Production-Migration, Stripe-Lifecycle und produktive KI-Verdrahtung sind
+  nicht freigegeben, daher bleiben Plus/Ultra blockiert.
 - Kontrollierter Entitlement-Migrationspfad: `npm run db:ai-tier-entitlements:check` prüft die festgeschriebene Migration offline; `verify` und `apply` sind explizit zielgebunden und führen niemals automatisch durch einen Web-Deploy aus. Der manuelle, ausschließlich auf `main` und das GitHub-Environment `staging` begrenzte Workflow `FanMind AI Tier Staging Migration` bereitet den echten Staging-Apply samt Postflight vor.
 - KI-Stufen-Staging-Abnahme: manueller rollback-only Workflow für getrennte
   Staging-Datenbank, synthetischen Owner-/Member-Workspace und Stripe-Testpreise
@@ -95,12 +98,14 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Plattform, Profil, interne Distribution, erfolgreichen EAS-Endstatus und
   das vorhandene HTTPS-Artefakt. Build-ID und URL bleiben privat; Submit,
   Update, Gerätetest und Store-Verteilung werden dadurch nicht ausgeführt.
-- Mobile-Push-Staging-Kontrolle: Die vorbereitete Registrierungstabelle besitzt
+- Mobile-Push-Staging-Kontrolle: Die Registrierungstabelle ist auf dem
+  getrennten Supabase-Staging mit RLS angewendet und besitzt
   jetzt getrennte manuelle Pfade für read-only Ressourcenprüfung,
   checksum-gebundenen Staging-Apply und rollback-only Acceptance. Alle sind an
   `main`, den manuell geprüften exakten Commit und das geschützte
   `staging`-Environment gebunden; Production-Ziele, echte Push-Tokens und
-  Zustellung bleiben ausgeschlossen. Externe Läufe stehen noch aus.
+  Zustellung bleiben ausgeschlossen. Die rollback-only Acceptance steht noch
+  aus.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
