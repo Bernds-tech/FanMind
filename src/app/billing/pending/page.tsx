@@ -52,6 +52,9 @@ export default async function BillingPendingPage() {
 
         <div className={styles.emptyActions}>
           <Link className={styles.primaryButton} href={continuationHref}>Status aktualisieren</Link>
+          {workspace?.billing_status === "pending_sepa_mandate" && workspace.stripe_subscription_id ? (
+            <Link className={styles.secondaryButton} href="/settings/package">Paket und Kündigung verwalten</Link>
+          ) : null}
           <form action={logout}><button className={styles.secondaryButton} type="submit">Abmelden</button></form>
         </div>
       </section>

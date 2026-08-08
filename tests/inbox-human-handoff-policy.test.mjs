@@ -31,9 +31,26 @@ test("assignment mutations are identity-bound and cannot send a message", async 
   assert.match(assignment, /assigned_user_id/u);
   assert.match(assignment, /workspace_id/u);
   assert.match(assignment, /\["assigned_user_id", null\]/u);
-  assert.match(assignment, /\["assigned_owner", null\]/u);
   assert.match(assignment, /\["assigned_user_id", assignedUserId\]/u);
+  assert.doesNotMatch(assignment, /status: "open"|next_step:/u);
   assert.doesNotMatch(assignment, /conversation_messages|send|webhook/iu);
+});
+
+test("assignment rollout is backward-compatible and avoids email labels", async () => {
+  const [actions, page, server] = await Promise.all([
+    readFile(actionsPath, "utf8"),
+    readFile(pagePath, "utf8"),
+    readFile(serverPath, "utf8"),
+  ]);
+
+  assert.match(server, /CONVERSATION_ASSIGNMENT_COLUMNS/u);
+  assert.match(server, /isMissingAssignedUserIdentity/u);
+  assert.match(server, /assigned_user_id[\s\S]*CONVERSATION_COLUMNS/u);
+  assert.doesNotMatch(actions, /user\.email/u);
+  assert.match(actions, /return "Workspace-Team"/u);
+  assert.doesNotMatch(page, /getSupabaseServerUser/u);
+  assert.match(page, /WorkspaceAuthorizationError/u);
+  assert.match(page, /redirect\("\/onboarding"\)/u);
 });
 
 test("inbox exposes explicit claim and release controls", async () => {

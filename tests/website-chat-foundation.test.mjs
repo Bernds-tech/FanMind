@@ -32,7 +32,16 @@ test("public session route is origin-, consent-, body- and rate-limit guarded", 
   assert.match(route, /resolveWebsiteChatInstallation/u);
   assert.match(route, /readBoundedJsonRequest/u);
   assert.match(route, /consumeSharedRateLimit/u);
+  assert.match(route, /website_chat_session_coarse_ip/u);
   assert.match(route, /website_chat_session_ip/u);
+  const postStart = route.indexOf("export async function POST");
+  const coarseCheck = route.indexOf("consumeCoarseIpRateLimit(request)", postStart);
+  const installationLookup = route.indexOf("resolveWebsiteChatInstallation", postStart);
+  assert.ok(postStart >= 0 && coarseCheck > postStart && coarseCheck < installationLookup);
+  const optionsStart = route.indexOf("export async function OPTIONS");
+  const optionsCoarseCheck = route.indexOf("consumeCoarseIpRateLimit(request)", optionsStart);
+  const optionsInstallationLookup = route.indexOf("resolveWebsiteChatInstallation", optionsStart);
+  assert.ok(optionsStart >= 0 && optionsCoarseCheck > optionsStart && optionsCoarseCheck < optionsInstallationLookup);
   assert.match(route, /Vary: "Origin"/u);
   assert.match(route, /Cache-Control": "private, no-store"/u);
   assert.match(service, /requireConsent/u);

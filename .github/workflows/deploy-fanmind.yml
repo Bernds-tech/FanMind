@@ -45,12 +45,12 @@ jobs:
               ;;
           esac
 
-          # Seed the approved pre-sales beta once. The admin switch owns the
-          # value afterwards, so deploys never overwrite an explicit admin choice.
+          # Seed fail-closed runtime settings once. An admin may later open a
+          # bounded 24-hour beta window; deploys never overwrite that choice.
           RUNTIME_SETTINGS_FILE="$SOURCE_DIR/.fanmind-runtime-settings.json"
           if [ ! -e "$RUNTIME_SETTINGS_FILE" ]; then
             RUNTIME_SETTINGS_TMP="$(mktemp "$SOURCE_DIR/.fanmind-runtime-settings.XXXXXX")"
-            printf '{"publicDailyTestPlanEnabled":true}\n' > "$RUNTIME_SETTINGS_TMP"
+            printf '{"publicDailyTestPlanEnabled":false,"publicDailyTestPlanEnabledUntil":null}\n' > "$RUNTIME_SETTINGS_TMP"
             chmod 0600 "$RUNTIME_SETTINGS_TMP"
             mv "$RUNTIME_SETTINGS_TMP" "$RUNTIME_SETTINGS_FILE"
           fi
@@ -91,6 +91,7 @@ jobs:
             npm run verify:truth
             npm run lint
             npm run test:operations
+            npm run test:release-integrations
             npm run build
 
             pm2 delete fanmind >/dev/null 2>&1 || true

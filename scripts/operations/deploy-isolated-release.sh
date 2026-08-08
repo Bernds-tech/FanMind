@@ -360,6 +360,7 @@ if [[ ! -d "$RELEASE_DIR" ]]; then
   npm run verify:truth
   npm run lint
   npm run test:operations
+  npm run test:release-integrations
   NEXT_DEPLOYMENT_ID="$RELEASE_COMMIT" npm run build
   [[ -f ".next/required-server-files.json" ]] || fail "required Next.js build metadata missing"
   [[ -f "$PM2_CONFIG_RELATIVE_PATH" ]] || fail "PM2 production configuration missing"

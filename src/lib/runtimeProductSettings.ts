@@ -3,9 +3,14 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { chmod, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  createTemporaryPublicDailyTestPlanSettings,
+  getTemporaryPublicDailyTestPlanStatus,
+} from "@/lib/publicDailyTestPlanPolicy.mjs";
 
 type RuntimeProductSettings = {
   publicDailyTestPlanEnabled: boolean;
+  publicDailyTestPlanEnabledUntil?: string | null;
   updatedAt?: string;
   updatedBy?: string;
 };
@@ -21,10 +26,6 @@ function getSettingsPath(): string {
       );
 }
 
-function environmentFallback(): boolean {
-  return process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN === "true";
-}
-
 export async function getPublicDailyTestPlanEnabled(): Promise<boolean> {
   try {
     const payload = JSON.parse(
@@ -33,9 +34,9 @@ export async function getPublicDailyTestPlanEnabled(): Promise<boolean> {
         "utf8",
       ),
     ) as Partial<RuntimeProductSettings>;
-    return payload.publicDailyTestPlanEnabled === true;
+    return getTemporaryPublicDailyTestPlanStatus(payload).enabled;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return environmentFallback();
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
     return false;
   }
 }
@@ -46,11 +47,10 @@ export async function setPublicDailyTestPlanEnabled(
 ): Promise<void> {
   const settingsPath = getSettingsPath();
   const temporaryPath = `${settingsPath}.${randomUUID()}.tmp`;
-  const payload: RuntimeProductSettings = {
-    publicDailyTestPlanEnabled: enabled,
-    updatedAt: new Date().toISOString(),
+  const payload: RuntimeProductSettings = createTemporaryPublicDailyTestPlanSettings(
+    enabled,
     updatedBy,
-  };
+  );
 
   await writeFile(temporaryPath, `${JSON.stringify(payload)}\n`, {
     encoding: "utf8",

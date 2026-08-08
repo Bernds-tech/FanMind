@@ -113,8 +113,8 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
   assert.match(stripeBillingSource, /process\.env\.STRIPE_PRICE_INTERNAL_DAILY_TEST/);
   assert.match(stripeBillingSource, /planId: "pilot"/);
   assert.match(stripeBillingSource, /mode: "subscription"/);
-  assert.doesNotMatch(stripeBillingSource, /commercialOption,[\s\S]{0,160}paymentMethodTypes: \["card"\]/);
-  assert.match(stripeBillingSource, /paymentCollectionMethod: "card"/);
+  assert.match(stripeBillingSource, /if \(commercialOption === "internal_daily_test"\)[\s\S]*?paymentMethodTypes: \["card"\]/u);
+  assert.match(stripeBillingSource, /commercialOption,[\s\S]*paymentCollectionMethod: "card"/u);
 });
 
 
@@ -123,6 +123,7 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   const registerClientSource = fs.readFileSync("src/app/register/RegisterClient.tsx", "utf8");
 
   const runtimeSettingsSource = fs.readFileSync("src/lib/runtimeProductSettings.ts", "utf8");
+  const publicDailyTestPolicySource = fs.readFileSync("src/lib/publicDailyTestPlanPolicy.mjs", "utf8");
   const adminRouteSource = fs.readFileSync("src/app/api/admin/settings/daily-test-plan/route.ts", "utf8");
   const deploySource = fs.readFileSync(".github/workflows/deploy-fanmind.yml", "utf8");
 
@@ -130,6 +131,10 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   const checkoutRouteSource = fs.readFileSync("src/app/api/billing/checkout/route.ts", "utf8");
   assert.match(checkoutRouteSource, /await getPublicDailyTestPlanEnabled\(\)/);
   assert.match(runtimeSettingsSource, /publicDailyTestPlanEnabled/);
+  assert.match(runtimeSettingsSource, /getTemporaryPublicDailyTestPlanStatus/);
+  assert.match(publicDailyTestPolicySource, /PUBLIC_DAILY_TEST_PLAN_WINDOW_MS = 24 \* 60 \* 60 \* 1000/);
+  assert.match(publicDailyTestPolicySource, /enabledUntilMs - updatedAtMs <= PUBLIC_DAILY_TEST_PLAN_WINDOW_MS/);
+  assert.doesNotMatch(runtimeSettingsSource, /FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN/);
   assert.match(runtimeSettingsSource, /rename\(temporaryPath, settingsPath\)/);
   assert.match(adminRouteSource, /requirePlatformAdmin/);
   assert.match(deploySource, /if \[ ! -e "\$RUNTIME_SETTINGS_FILE" \]/);
@@ -148,5 +153,8 @@ test("daily beta admin checkout targets the workspace owner and cancels at paid-
   assert.match(adminBillingSource, /userId: workspace\.owner_user_id/);
   assert.match(adminBillingSource, /userEmail: workspace\.owner_email/);
   assert.match(adminBillingSource, /cancel_at_period_end: "true"/);
+  assert.match(adminBillingSource, /const persisted = await updateAdminBillingWorkspace/u);
+  assert.match(adminBillingSource, /if \(!persisted\.ok\)[\s\S]*expireStripeCheckoutSession\(session\.id\)[\s\S]*ok: false/u);
+  assert.match(adminBillingSource, /!workspace\.stripe_subscription_id[\s\S]*billing_status: "demo_free"[\s\S]*stripe_checkout_session_id: null[\s\S]*stripe_live_daily_test: false/u);
   assert.doesNotMatch(adminBillingSource, /subscriptions\/\$\{encodeURIComponent\(workspace\.stripe_subscription_id\)\}`, \{ method: "DELETE"/);
 });

@@ -11,6 +11,7 @@ import {
   requireConsent,
   requirePublicInstallationId,
   requireWebsiteChatClientMessageId,
+  requireWebsiteChatPreflight,
   SESSION_TOKEN_PATTERN,
   WebsiteChatPolicyError,
 } from "../src/lib/websiteChatPolicy.mjs";
@@ -29,6 +30,30 @@ test("website chat accepts only normalized exact HTTPS origins", () => {
   for (const invalid of [null, "null", "http://example.com", "https://example.com/path", "https://example.com?q=1", "*.example.com"]) {
     expectCode(() => normalizeWebsiteChatOrigin(invalid), invalid === null ? "origin_required" : "origin_invalid");
   }
+});
+
+test("CORS preflights accept only POST and the route-specific header allowlist", () => {
+  assert.deepEqual(
+    requireWebsiteChatPreflight(
+      { method: "POST", requestedHeaders: "Content-Type, X-FanMind-Installation" },
+      ["content-type", "x-fanmind-installation"],
+    ),
+    ["content-type", "x-fanmind-installation"],
+  );
+  expectCode(
+    () => requireWebsiteChatPreflight(
+      { method: "GET", requestedHeaders: "content-type" },
+      ["content-type"],
+    ),
+    "preflight_method_forbidden",
+  );
+  expectCode(
+    () => requireWebsiteChatPreflight(
+      { method: "POST", requestedHeaders: "content-type,x-unknown" },
+      ["content-type"],
+    ),
+    "preflight_headers_forbidden",
+  );
 });
 
 test("installation IDs and session tokens are bounded", () => {

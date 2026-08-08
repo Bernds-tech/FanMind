@@ -37,6 +37,10 @@ Aktiv beziehungsweise produktnah:
 - Kontakte, Kontaktdetail und Suche;
 - CSV-Import und manuelle Kontaktpflege;
 - gespeicherter Nachrichten- und Gesprächskontext;
+- manuelles Inbox-Handoff: autorisierte Workspace-Mitglieder können eine
+  Conversation exklusiv übernehmen und nur ihre eigene Zuweisung wieder
+  freigeben; Status, nächster Schritt und Nachrichtentext bleiben dabei
+  unverändert und es wird nichts automatisch versendet;
 - Kontaktwissen mit Bearbeiten und Löschen;
 - Follow-ups;
 - serverseitige KI-Antwortvorschläge;
@@ -52,7 +56,7 @@ Aktiv beziehungsweise produktnah:
 - Admin-only Asset-Upload in den Supabase-Storage-Bucket `fanmind-assets`;
 - Legal-Seiten, Zahlungsbedingungen und AVV-Anforderungsseite;
 - consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: ausschließlich `PageView` ohne Eventparameter; keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-/Billing-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; vorbereitete Conversion-Events bleiben ohne separate fachliche und datenschutzrechtliche Freigabe unverdrahtet; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
-- aktives Live-Testabo `internal_daily_test` mit 1 € pro Tag als kontrollierter echter End-to-End-Billing-Test; gleicher Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Lifecycle wie Starter; kein Referral-Rabatt.
+- internes Live-Testabo `internal_daily_test` mit 1 € pro Tag als kontrollierter echter End-to-End-Billing-Test; gleicher Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Lifecycle wie Starter; kein Referral-Rabatt, kein dauerhaftes öffentliches Paket; eine temporäre Registrierungsfreigabe läuft spätestens nach 24 Stunden ab.
 
 Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-Checkout bleibt gesperrt. Die kostenlose Demo ist kein entgeltliches Paket.
 
@@ -137,10 +141,14 @@ Mobile führt kein Billing, Referral-Reconciliation, Admin-Operationen, Webhook-
 
 ## 4. Roadmap- und Go-Live-Stand
 
-Roadmap-Phase 7 bleibt auf den öffentlichen Roadmap-Flächen als spätere
-Zukunftsplanung sichtbar. Sie ist ausdrücklich nicht Teil des aktuellen
-Abschlussumfangs der acht Fertigstellungsblöcke und wird weder gebaut noch in
-deren Fortschritts- oder Fertigbewertung eingerechnet.
+Die Kanalzuordnung ist verbindlich und darf nicht zwischen Phasen verschoben
+oder doppelt geführt werden: Phase 3 umfasst Facebook, Instagram und WhatsApp.
+Phase 7 umfasst TikTok, X/Twitter, Discord und OnlyFans. Phase 8 bündelt
+LinkedIn sowie alle weiteren noch zu verbindenden Medien-, Creator-, Review-,
+Shop- und internationalen Plattformen. Phase 8 ist noch nicht begonnen, wird
+im aktuellen Arbeitsumfang nicht gebaut und nicht als Fortschritt eingerechnet.
+OnlyFans bleibt auch in Phase 7 eine unverbindliche, vor Umsetzung technisch
+und rechtlich zu prüfende Plattform.
 
 ### Phase 4 – Erledigt / Verkaufsstart freigegeben
 
@@ -318,7 +326,7 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 | Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat; 12 Monate Mindestlaufzeit, danach monatliche Verlängerung |
 
 Starter-Abos können unter `/settings/package` sicher zum Vertragsende gekündigt werden. Starter Flex endet frühestens zum bezahlten Periodenende; Starter 12 Monate frühestens zum Ende der Mindestlaufzeit. Nach Vertragsende bleiben Account, Login, CRM-Historie, Rechnungen und Export sichtbar; neue Nachrichten, Channel-Sync, externe Ingress-Webhooks, KI-Vorschläge, KI-Analysen und kostenpflichtige Hintergrundverarbeitung sind fail-closed zu deaktivieren.
-| Internes Live-Testabo | aktiver kontrollierter End-to-End-Beta-Test | 1 € pro Tag; täglich kündbar; identischer Billing-Lifecycle wie Starter; keine Referral-Automation; öffentliche Sichtbarkeit weiterhin ausschließlich über den Plattform-Admin-Schalter unter `/admin/settings`; der Tarif und bestehende Abos bleiben aktiv |
+| Internes Live-Testabo | kontrollierter interner End-to-End-Beta-Test | 1 € pro Tag; täglich kündbar; identischer Billing-Lifecycle wie Starter; keine Referral-Automation; kein dauerhaftes öffentliches Katalogangebot; eine ausdrückliche Admin-Freigabe endet automatisch nach spätestens 24 Stunden; bestehende Abos bleiben davon unberührt |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht als Vollversion freigeschaltet |
 | Enterprise / Custom | später | individuelle Prüfung |

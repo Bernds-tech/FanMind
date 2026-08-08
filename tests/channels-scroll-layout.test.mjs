@@ -58,3 +58,13 @@ test("all channels groups and the 16 global main channels remain rendered", asyn
     "global main channels must keep all 16 cards reachable",
   );
 });
+
+test("channel catalog keeps phase 7 complete and phase 8 visibly unstarted", async () => {
+  const source = await readFile(channelsGridPath, "utf8");
+
+  assert.match(source, /phase3ChannelKeys = new Set\(\["facebook", "instagram", "whatsapp"\]\)/u);
+  assert.match(source, /phase7ChannelKeys = new Set\(\["tiktok", "twitter", "discord", "discord-server", "onlyfans"\]\)/u);
+  assert.match(source, /"onlyfans",\s*"OnlyFans"/u);
+  assert.match(source, /Phase 8 \/ noch nicht begonnen/u);
+  assert.match(source, /Noch keine Eingänge umgesetzt/u);
+});

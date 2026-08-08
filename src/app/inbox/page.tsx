@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  getSupabaseServerUser,
   getWorkspaceConversations,
   getWorkspaceContacts,
   getWorkspaceOpenFollowups,
@@ -29,7 +28,10 @@ import styles from "./inbox.module.css";
 import { InboxSearchForm } from "./InboxSearchForm";
 import { buildUnifiedInboxQueue } from "@/lib/inboxQueuePolicy.mjs";
 import { claimConversation, releaseConversation } from "./actions";
-import { requireAuthorizedWorkspaceMember } from "@/lib/workspaceAuthorization";
+import {
+  requireAuthorizedWorkspaceMember,
+  WorkspaceAuthorizationError,
+} from "@/lib/workspaceAuthorization";
 
 type InboxPageProps = {
   searchParams?: Promise<{
@@ -1003,13 +1005,20 @@ function normalizeFilter(value: string): InboxFilter {
 
 export default async function InboxPage({ searchParams }: InboxPageProps) {
   const params = await searchParams;
-  const { data } = await getSupabaseServerUser();
-
-  if (!data.user) {
-    redirect("/login");
+  let authorized;
+  try {
+    authorized = await requireAuthorizedWorkspaceMember();
+  } catch (error) {
+    if (error instanceof WorkspaceAuthorizationError) {
+      if (error.code === "unauthenticated") redirect("/login");
+      if (error.message === "TEMPORARY_DEMO_DELETED") {
+        redirect("/login?demo_deleted=1");
+      }
+      redirect("/onboarding");
+    }
+    throw error;
   }
-
-  const { user, workspace } = await requireAuthorizedWorkspaceMember();
+  const { user, workspace } = authorized;
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
@@ -1037,7 +1046,7 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           conversationsError={conversationsResult?.error?.message}
           activeFilter={normalizeFilter(normalizeParam(params?.filter))}
           searchQuery={normalizeParam(params?.q)}
-          userEmail={data.user.email}
+          userEmail={user.email}
           userId={user.id}
           notice={normalizeParam(params?.notice)}
         />

@@ -10,6 +10,8 @@ const MAX_MESSAGE_LENGTH = 4000;
 const MAX_BODY_BYTES = 12_000;
 const MIN_SESSION_TTL_MINUTES = 5;
 const MAX_SESSION_TTL_MINUTES = 1440;
+const WEBSITE_CHAT_INSTALLATION_HEADER = "x-fanmind-installation";
+const WEBSITE_CHAT_INSTALLATION_QUERY = "installation";
 
 export class WebsiteChatPolicyError extends Error {
   constructor(code) {
@@ -131,6 +133,25 @@ export function normalizeSessionTtlMinutes(value) {
   return parsed;
 }
 
+export function requireWebsiteChatPreflight(input, allowedHeaders) {
+  const method = typeof input?.method === "string" ? input.method.trim().toUpperCase() : "";
+  if (method !== "POST") {
+    throw new WebsiteChatPolicyError("preflight_method_forbidden");
+  }
+  const allowed = new Set(
+    Array.isArray(allowedHeaders)
+      ? allowedHeaders.map((header) => String(header).trim().toLowerCase()).filter(Boolean)
+      : [],
+  );
+  const requested = typeof input?.requestedHeaders === "string"
+    ? input.requestedHeaders.split(",").map((header) => header.trim().toLowerCase()).filter(Boolean)
+    : [];
+  if (!requested.length || requested.some((header) => !allowed.has(header))) {
+    throw new WebsiteChatPolicyError("preflight_headers_forbidden");
+  }
+  return requested;
+}
+
 export {
   CLIENT_MESSAGE_ID_PATTERN,
   MAX_BODY_BYTES,
@@ -140,4 +161,6 @@ export {
   PUBLIC_INSTALLATION_ID_PATTERN,
   SESSION_TOKEN_PATTERN,
   SUBJECT_HASH_PATTERN,
+  WEBSITE_CHAT_INSTALLATION_HEADER,
+  WEBSITE_CHAT_INSTALLATION_QUERY,
 };

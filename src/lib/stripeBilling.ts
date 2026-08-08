@@ -197,6 +197,9 @@ export function resolveCheckoutPlan(
           commercialOption,
           mode: "subscription",
           priceIds: [dailyPrice],
+          // The daily internal beta records `card`; never offer SEPA here and
+          // then persist a payment method that was not actually selected.
+          paymentMethodTypes: ["card"],
           setupFeeCents: 0,
           monthlyFeeCents: 0,
           commitmentMonths: 0,
@@ -305,6 +308,21 @@ export async function createStripeCheckoutSession(input: {
   } catch {
     return { error: "Stripe Checkout konnte nicht gestartet werden." };
   }
+}
+
+export async function expireStripeCheckoutSession(sessionId: unknown): Promise<boolean> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const normalizedId = typeof sessionId === "string" ? sessionId.trim() : "";
+  if (!secretKey || !/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(normalizedId)) return false;
+  const response = await fetch(
+    `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(normalizedId)}/expire`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secretKey}` },
+      cache: "no-store",
+    },
+  ).catch(() => null);
+  return response?.ok === true;
 }
 
 export function verifyStripeSignature(

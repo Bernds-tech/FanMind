@@ -1,4 +1,4 @@
-export const CANCELLATION_STATUSES = ["active", "past_due", "payment_failed"];
+export const CANCELLATION_STATUSES = ["active", "pending_sepa_mandate", "past_due", "payment_failed"];
 
 function asDate(value) {
   if (!value) return null;

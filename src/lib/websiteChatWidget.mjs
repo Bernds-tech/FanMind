@@ -1,4 +1,9 @@
-export const WEBSITE_CHAT_WIDGET_VERSION = "1.0.0";
+import {
+  WEBSITE_CHAT_INSTALLATION_HEADER,
+  WEBSITE_CHAT_INSTALLATION_QUERY,
+} from "./websiteChatPolicy.mjs";
+
+export const WEBSITE_CHAT_WIDGET_VERSION = "1.0.1";
 
 export function buildWebsiteChatWidgetScript() {
   return `(() => {
@@ -10,7 +15,10 @@ export function buildWebsiteChatWidgetScript() {
   const consentVersion = (script.dataset.consentVersion || "").trim();
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(installationId) || !consentVersion || consentVersion.length > 80) return;
   const baseUrl = new URL(script.src, document.baseURI).origin;
+  const endpoint = (path) => baseUrl + path + "?${WEBSITE_CHAT_INSTALLATION_QUERY}=" + encodeURIComponent(installationId);
   let sessionToken = null;
+  let pendingClientMessageId = null;
+  let pendingMessage = null;
   let sending = false;
   const host = document.createElement("div");
   host.setAttribute("data-fanmind-widget", "${WEBSITE_CHAT_WIDGET_VERSION}");
@@ -30,10 +38,10 @@ export function buildWebsiteChatWidgetScript() {
   toggle.addEventListener("click", () => { const open = !panel.classList.contains("open"); panel.classList.toggle("open", open); toggle.setAttribute("aria-expanded", String(open)); if (open) textarea.focus(); });
   async function ensureSession() {
     if (sessionToken) return sessionToken;
-    const response = await fetch(baseUrl + "/api/website-chat/session", { method:"POST", headers:{"content-type":"application/json","x-fanmind-installation-id":installationId}, body:JSON.stringify({ consent:{ granted:true, version:consentVersion } }), credentials:"omit", cache:"no-store" });
+    const response = await fetch(endpoint("/api/website-chat/session"), { method:"POST", headers:{"content-type":"application/json","${WEBSITE_CHAT_INSTALLATION_HEADER}":installationId}, body:JSON.stringify({ consent:{ granted:true, version:consentVersion } }), credentials:"omit", cache:"no-store" });
     const payload = await response.json();
-    if (!response.ok || typeof payload.token !== "string") throw new Error("session");
-    sessionToken = payload.token;
+    if (!response.ok || payload?.ok !== true || typeof payload?.session?.token !== "string") throw new Error("session");
+    sessionToken = payload.session.token;
     return sessionToken;
   }
   send.addEventListener("click", async () => {
@@ -44,10 +52,14 @@ export function buildWebsiteChatWidgetScript() {
     sending = true; send.disabled = true; status.textContent = "Nachricht wird übermittelt …";
     try {
       const token = await ensureSession();
-      const response = await fetch(baseUrl + "/api/website-chat/message", { method:"POST", headers:{"content-type":"application/json","authorization":"Bearer " + token,"x-fanmind-installation-id":installationId}, body:JSON.stringify({ clientMessageId:crypto.randomUUID(), message }), credentials:"omit", cache:"no-store" });
+      if (!pendingClientMessageId || pendingMessage !== message) {
+        pendingClientMessageId = crypto.randomUUID(); pendingMessage = message;
+      }
+      const response = await fetch(endpoint("/api/website-chat/message"), { method:"POST", headers:{"content-type":"application/json","authorization":"Bearer " + token,"${WEBSITE_CHAT_INSTALLATION_HEADER}":installationId}, body:JSON.stringify({ clientMessageId:pendingClientMessageId, message }), credentials:"omit", cache:"no-store" });
+      if (response.status === 401) sessionToken = null;
       if (!response.ok) throw new Error("message");
-      textarea.value = ""; status.textContent = "Danke. Ihre Nachricht wurde übermittelt.";
-    } catch { sessionToken = null; status.textContent = "Die Nachricht konnte gerade nicht übermittelt werden. Bitte versuchen Sie es erneut."; }
+      textarea.value = ""; pendingClientMessageId = null; pendingMessage = null; status.textContent = "Danke. Ihre Nachricht wurde übermittelt.";
+    } catch { status.textContent = "Die Nachricht konnte gerade nicht übermittelt werden. Bitte versuchen Sie es erneut."; }
     finally { sending = false; send.disabled = false; }
   });
   (document.body || document.documentElement).appendChild(host);

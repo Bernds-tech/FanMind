@@ -56,7 +56,6 @@ async function updateAssignment(formData: FormData, mode: "claim" | "release") {
 }
 
 function getUserLabel(user: {
-  email?: string;
   user_metadata?: Record<string, unknown>;
 }): string {
   const metadataLabel =
@@ -68,7 +67,7 @@ function getUserLabel(user: {
     return metadataLabel.trim().slice(0, 120);
   }
 
-  return (user.email ?? "Workspace-Team").trim().slice(0, 120);
+  return "Workspace-Team";
 }
 
 function formValue(formData: FormData, key: string): string {

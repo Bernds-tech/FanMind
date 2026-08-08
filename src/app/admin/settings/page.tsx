@@ -35,7 +35,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               <span className={styles.eyebrow}>Beta-Freigabe</span>
               <h2>1-€/Tag-Beta-Abo</h2>
               <p className={styles.cardSubtitle}>
-                Steuert ausschließlich, ob neue Testnutzer den Beta-Tarif in der Registrierung sehen.
+                Öffnet ausschließlich ein zeitlich begrenztes 24-Stunden-Fenster für neue Beta-Testnutzer.
               </p>
             </div>
             <span className={enabled ? styles.badgeOk : styles.badgeWarn}>
@@ -55,8 +55,8 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
           </div>
           <p className={styles.muted}>
             Ausschalten entfernt nur die Auswahl für neue Registrierungen. Bestehende Stripe-Abos,
-            Workspaces und Zahlungen werden nicht gekündigt oder verändert. Zum echten Verkaufsstart
-            nach Abschluss aller acht Blöcke bitte hier deaktivieren.
+            Workspaces und Zahlungen werden nicht gekündigt oder verändert. Eine Aktivierung läuft
+            automatisch nach spätestens 24 Stunden ab und wird nie zum dauerhaften öffentlichen Paket.
           </p>
           <form action="/api/admin/settings/daily-test-plan" method="post">
             <input type="hidden" name="enabled" value={enabled ? "false" : "true"} />

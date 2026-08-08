@@ -603,7 +603,9 @@ const MEMORY_COLUMNS =
 const CONTACT_REPLY_TARGET_COLUMNS =
   "id,workspace_id,contact_id,source_platform,source_type,label,url,quality,created_at,updated_at";
 const CONVERSATION_COLUMNS =
-  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,assigned_user_id,ai_status,next_step,created_at,updated_at";
+  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
+const CONVERSATION_ASSIGNMENT_COLUMNS =
+  `${CONVERSATION_COLUMNS},assigned_user_id`;
 const CONVERSATION_MESSAGE_COLUMNS =
   "id,workspace_id,conversation_id,contact_id,direction,message_type,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,author_label,content,attachments,message_kind,created_at,seen_at";
 const CONVERSATION_SUMMARY_COLUMNS =
@@ -3282,15 +3284,27 @@ export async function getWorkspaceConversations(
     );
   }
 
-  const result = await postgrestSelect<ConversationRow[]>(
+  let result = await postgrestSelect<ConversationRow[]>(
     "conversations",
     accessToken,
-    CONVERSATION_COLUMNS,
+    CONVERSATION_ASSIGNMENT_COLUMNS,
     [["workspace_id", workspaceId]],
     undefined,
     false,
     "updated_at.desc",
   );
+
+  if (isMissingAssignedUserIdentity(result.error)) {
+    result = await postgrestSelect<ConversationRow[]>(
+      "conversations",
+      accessToken,
+      CONVERSATION_COLUMNS,
+      [["workspace_id", workspaceId]],
+      undefined,
+      false,
+      "updated_at.desc",
+    );
+  }
 
   if (result.error) {
     return conversationsError(
@@ -4897,8 +4911,6 @@ export async function claimConversationAssignment(input: {
     {
       assigned_owner: assignedOwner,
       assigned_user_id: assignedUserId,
-      status: "open",
-      next_step: "Manuell übernehmen und antworten",
       updated_at: new Date().toISOString(),
     },
     accessToken,
@@ -4906,7 +4918,6 @@ export async function claimConversationAssignment(input: {
       ["workspace_id", input.workspaceId],
       ["id", input.conversationId],
       ["assigned_user_id", null],
-      ["assigned_owner", null],
     ],
     { select: CONVERSATION_COLUMNS, single: true },
   );
@@ -4949,8 +4960,6 @@ export async function releaseConversationAssignment(input: {
     {
       assigned_owner: null,
       assigned_user_id: null,
-      status: "open",
-      next_step: "Antwort vorbereiten",
       updated_at: new Date().toISOString(),
     },
     accessToken,
@@ -6756,6 +6765,16 @@ function withOptionalSchemaHint(
   }
 
   return message;
+}
+
+function isMissingAssignedUserIdentity(error: Error | null): boolean {
+  if (!error) return false;
+  const message = error.message.toLowerCase();
+  return message.includes("assigned_user_id") && (
+    message.includes("column")
+    || message.includes("schema cache")
+    || message.includes("does not exist")
+  );
 }
 
 function normalizeMessageType(value: string | null | undefined): string {

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { isWorkspaceArchivedAfterSubscriptionEnd, resolveSubscriptionCancellation } from "../src/lib/subscriptionCancellationPolicy.mjs";
+import { readFile } from "node:fs/promises";
 
 const base = {
   id: "ws_1",
@@ -37,6 +38,25 @@ test("1 EUR daily beta uses the same self-service period-end cancellation engine
   assert.equal(policy.canSelfService, true);
   assert.equal(policy.stripeCancelAtPeriodEnd, true);
   assert.equal(policy.effectiveEndAt, "2026-08-09T00:00:00.000Z");
+});
+
+test("pending SEPA daily beta can be cancelled before asynchronous confirmation", () => {
+  const policy = resolveSubscriptionCancellation({
+    ...base,
+    plan_id: "pilot",
+    commercial_option: "internal_daily_test",
+    billing_status: "pending_sepa_mandate",
+  });
+  assert.equal(policy.canSelfService, true);
+});
+
+test("pending SEPA users retain a visible route to package cancellation", async () => {
+  const [accountPagesSource, pendingPageSource] = await Promise.all([
+    readFile("src/app/settings/accountPages.tsx", "utf8"),
+    readFile("src/app/billing/pending/page.tsx", "utf8"),
+  ]);
+  assert.match(accountPagesSource, /activePage === "package"[\s\S]*billing_status === "pending_sepa_mandate"[\s\S]*!pendingSepaPackageAccess/u);
+  assert.match(pendingPageSource, /billing_status === "pending_sepa_mandate"[\s\S]*href="\/settings\/package"[\s\S]*Paket und Kündigung verwalten/u);
 });
 
 test("revoked or foreign/unpaid workspaces cannot self-service mutate subscriptions", () => {

@@ -305,7 +305,7 @@ const sixStepBenefits = [
 ];
 
 
-const integrationChannels = [
+const baseIntegrationChannels = [
   { platform: "instagram", title: "Instagram", text: "DM- und Profilkontext vorbereitet, noch keine Live-Anbindung.", status: "Beta / in Vorbereitung", tone: "pink" },
   { platform: "tiktok", title: "TikTok", text: "Kommentare und Handles als geprüfter Roadmap-Kanal.", status: "Coming Soon", tone: "purple" },
   { platform: "youtube", title: "YouTube", text: "Community- und Kommentar-Kontext für spätere Workflows.", status: "Roadmap", tone: "pink" },
@@ -316,6 +316,7 @@ const integrationChannels = [
   { platform: "linkedin", title: "LinkedIn", text: "Business-Kontakte und Nachrichten für spätere Prüfung.", status: "Roadmap", tone: "blue" },
   { platform: "discord", title: "Discord", text: "Server- und Profilkontext vorbereitet, keine Live-Integration.", status: "Coming Soon", tone: "violet" },
   { platform: "x", title: "X / Twitter", text: "Handles und Aktivität für spätere Einordnung.", status: "Coming Soon", tone: "white" },
+  { platform: "onlyfans", title: "OnlyFans", text: "Unverbindliche Phase-7-Prüfung ohne Anbindung oder Zusage.", status: "Phase 7 · Roadmap", tone: "blue" },
   { platform: "threads", title: "Threads", text: "Social-Kontext als Roadmap-Erweiterung.", status: "Roadmap", tone: "white" },
   { platform: "reddit", title: "Reddit", text: "Communities und Erwähnungen für spätere Pilotphasen.", status: "Roadmap", tone: "orange" },
   { platform: "email", title: "E-Mail", text: "Anfragen manuell bündeln; Synchronisation bleibt vorbereitet.", status: "Coming Soon", tone: "blue" },
@@ -355,6 +356,24 @@ const integrationChannels = [
   { platform: "moj", title: "Moj", text: "Kurzvideo-Community als Roadmap-Kanal.", status: "Roadmap", tone: "pink" },
   { platform: "josh", title: "Josh", text: "Creator-Community für spätere Marktprüfung.", status: "Roadmap", tone: "pink" },
 ];
+
+const phase3IntegrationPlatforms = new Set(["facebook", "instagram", "whatsapp"]);
+const phase7IntegrationPlatforms = new Set(["tiktok", "x", "discord", "discord-server", "onlyfans"]);
+const currentIntegrationPlatforms = new Set(["email", "website-chat", "webform", "manual"]);
+
+const integrationChannels = baseIntegrationChannels.map((channel) => {
+  if (phase3IntegrationPlatforms.has(channel.platform) || currentIntegrationPlatforms.has(channel.platform)) {
+    return channel;
+  }
+  if (phase7IntegrationPlatforms.has(channel.platform)) {
+    return { ...channel, status: "Phase 7 · Roadmap" };
+  }
+  return {
+    ...channel,
+    status: "Phase 8 · noch nicht begonnen",
+    text: `${channel.title} ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen.`,
+  };
+});
 
 const integrationMarqueeRows = [
   integrationChannels.filter((_, index) => index % 2 === 0),
