@@ -95,12 +95,15 @@ vollständig sauberen Audit und exakt Next.js sowie `eslint-config-next`
 `16.2.12`. Jeder neue Production-Paketname oder Befund lässt die Prüfung
 fail-closed fehlschlagen.
 
-Der Mobile-Baum meldet am 2. August 2026 weiterhin 38 moderate, vollständig
-transitive Befunde aus dem festgeschriebenen Expo-SDK-57-Werkzeug- und
-Runtime-Baum, aber keine niedrigen, hohen oder kritischen Befunde. Dieser Stand
-ist kein unbegrenzter Freipass mehr: Das Gate enthält eine exakte Allowlist der
-38 aktuell betroffenen Paketnamen, ein Maximum von 38 moderaten Befunden,
-`0` niedrige/hohe/kritische Befunde und einen Ablaufzeitpunkt am
+Der Mobile-Baum enthält seit 8. August 2026 zusätzlich den noch ungepatchten
+`image-size`-DoS-Hinweis GHSA-w3rx-r6r6-pgpr/GHSA-5p2g-fcmc-qvqq. npm zählt
+diesen einen transitiven Befund je nach Clientversion über bis zu 52 abhängige
+Expo-/Metro-/React-Native-Pakete als hohe Befunde. Das Mobile-Produkt verarbeitet
+keine nicht vertrauenswürdigen ICNS-, JXL- oder HEIF-Dateien; ein gefahrloses
+Upstream-Fixrelease existiert derzeit nicht. Deshalb bleibt der Befund nur
+zeitlich und namentlich begrenzt geprüft. Das Gate enthält eine exakte Allowlist
+der betroffenen Paketnamen, Maxima von 52 hohen und 38 moderaten Befunden,
+`0` niedrige/kritische Befunde und einen Ablaufzeitpunkt am
 2. September 2026. Ein neuer Paketname, ein zusätzlicher Befund oder ein
 abgelaufener Review lässt die Supply-Chain-Prüfung fail-closed scheitern. Ein
 vollständig sauberer Mobile-Audit benötigt keine Ausnahme und bleibt auch nach
