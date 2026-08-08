@@ -155,6 +155,7 @@ test("daily beta admin checkout targets the workspace owner and cancels at paid-
   assert.match(adminBillingSource, /cancel_at_period_end: "true"/);
   assert.match(adminBillingSource, /const persisted = await updateAdminBillingWorkspace/u);
   assert.match(adminBillingSource, /if \(!persisted\.ok\)[\s\S]*expireStripeCheckoutSession\(session\.id\)[\s\S]*ok: false/u);
+  assert.match(adminBillingSource, /!workspace\.stripe_subscription_id[\s\S]*!workspace\.stripe_checkout_session_id[\s\S]*ok: false[\s\S]*await expireStripeCheckoutSession\(workspace\.stripe_checkout_session_id\)[\s\S]*if \(!checkoutExpired\)[\s\S]*ok: false[\s\S]*updateAdminBillingWorkspace/u);
   assert.match(adminBillingSource, /!workspace\.stripe_subscription_id[\s\S]*billing_status: "demo_free"[\s\S]*stripe_checkout_session_id: null[\s\S]*stripe_live_daily_test: false/u);
   assert.doesNotMatch(adminBillingSource, /subscriptions\/\$\{encodeURIComponent\(workspace\.stripe_subscription_id\)\}`, \{ method: "DELETE"/);
 });

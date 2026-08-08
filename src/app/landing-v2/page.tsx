@@ -893,8 +893,8 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
           status: language === "en" ? "Phase 8 · not started" : "Phase 8 · noch nicht begonnen",
           text:
             language === "en"
-              ? `${channel.title} is assigned to Phase 8. Implementation has not started.`
-              : `${channel.title} ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen.`,
+              ? `${localizedChannel.title} is assigned to Phase 8. Implementation has not started.`
+              : `${localizedChannel.title} ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen.`,
         };
       }
 

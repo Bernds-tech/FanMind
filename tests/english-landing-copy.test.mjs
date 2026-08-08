@@ -85,6 +85,14 @@ test("remaining static landing copy is passed through the translator", async () 
   assert.match(page, /t\("ein nächster Schritt\."\)/);
   assert.match(
     page,
+    /`\$\{localizedChannel\.title\} is assigned to Phase 8\. Implementation has not started\.`/,
+  );
+  assert.doesNotMatch(
+    page,
+    /`\$\{channel\.title\} is assigned to Phase 8\. Implementation has not started\.`/,
+  );
+  assert.match(
+    page,
     /t\("Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden\."\)/,
   );
   assert.match(page, /<FooterInquiryForm language=\{language\} \/>/);

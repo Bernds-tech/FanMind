@@ -24,8 +24,9 @@ export function resolveSubscriptionCancellation(workspace, stripeSubscription = 
   const minimumEnd = option === "starter_no_setup_commitment" ? asDate(workspace?.billing_minimum_term_ends_at) ?? asDate(addMonthsIso(created?.toISOString(), 12)) : null;
   const effective = new Date(Math.max(currentPeriodEnd?.getTime() ?? 0, minimumEnd?.getTime() ?? 0, Date.now()));
   const requiresSchedule = Boolean(minimumEnd && minimumEnd.getTime() > (currentPeriodEnd?.getTime() ?? 0));
+  const hasKnownFuturePeriodEnd = Boolean(currentPeriodEnd && currentPeriodEnd.getTime() > Date.now());
   return {
-    canSelfService: ((workspace?.plan_id === "starter" && ["starter_paid_setup", "starter_no_setup_commitment"].includes(option)) || (workspace?.plan_id === "pilot" && isDailyBeta)) && CANCELLATION_STATUSES.includes(workspace?.billing_status) && Boolean(workspace?.stripe_subscription_id),
+    canSelfService: ((workspace?.plan_id === "starter" && ["starter_paid_setup", "starter_no_setup_commitment"].includes(option)) || (workspace?.plan_id === "pilot" && isDailyBeta)) && CANCELLATION_STATUSES.includes(workspace?.billing_status) && Boolean(workspace?.stripe_subscription_id) && hasKnownFuturePeriodEnd,
     currentPackage: option === "starter_no_setup_commitment" ? "Starter 12 Monate" : option === "starter_paid_setup" ? "Starter Flex" : isDailyBeta ? "Beta · 1 € pro Tag" : "—",
     minimumTermEndsAt: minimumEnd?.toISOString() ?? null,
     nextBillingAt: currentPeriodEnd?.toISOString() ?? null,

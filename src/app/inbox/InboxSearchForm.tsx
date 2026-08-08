@@ -2,20 +2,23 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import styles from "./inbox.module.css";
 
 type InboxSearchFormProps = {
   activeFilter: string;
   initialQuery: string;
+  locale: FanMindLanguage;
 };
 
-export function InboxSearchForm({ activeFilter, initialQuery }: InboxSearchFormProps) {
+export function InboxSearchForm({ activeFilter, initialQuery, locale }: InboxSearchFormProps) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const params = new URLSearchParams();
+    if (locale === "en") params.set("lang", "en");
     if (activeFilter && activeFilter !== "all") params.set("filter", activeFilter);
     if (query.trim()) params.set("q", query.trim());
     const nextUrl = params.toString() ? `/inbox?${params.toString()}` : "/inbox";
@@ -25,17 +28,17 @@ export function InboxSearchForm({ activeFilter, initialQuery }: InboxSearchFormP
   return (
     <form className={styles.searchForm} onSubmit={handleSubmit} role="search">
       <label className={styles.searchLabel} htmlFor="inbox-search">
-        Suche
+        {locale === "en" ? "Search" : "Suche"}
       </label>
       <input
         id="inbox-search"
         name="q"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Suche nach Fan, Kanal, Nachricht, Segment …"
+        placeholder={locale === "en" ? "Search fan, channel, message, segment …" : "Suche nach Fan, Kanal, Nachricht, Segment …"}
       />
       <button type="submit" className={styles.searchSubmit}>
-        Suchen
+        {locale === "en" ? "Search" : "Suchen"}
       </button>
     </form>
   );

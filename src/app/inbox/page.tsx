@@ -28,6 +28,9 @@ import styles from "./inbox.module.css";
 import { InboxSearchForm } from "./InboxSearchForm";
 import { buildUnifiedInboxQueue } from "@/lib/inboxQueuePolicy.mjs";
 import { claimConversation, releaseConversation } from "./actions";
+import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { wt } from "@/lib/workspaceCopy";
 import {
   requireAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
@@ -38,6 +41,7 @@ type InboxPageProps = {
     filter?: string | string[];
     q?: string | string[];
     notice?: string | string[];
+    lang?: string | string[];
   }>;
 };
 
@@ -55,9 +59,112 @@ type InboxWorkspaceProps = {
   userEmail: string | null | undefined;
   userId: string;
   notice: string;
+  locale: FanMindLanguage;
 };
 
 type InboxFilter = "all" | "open" | "waiting" | "due" | "high" | "ai" | "done";
+
+const inboxTranslations: Record<string, string> = {
+  Nutzer: "User",
+  Aktiv: "Active",
+  "Priorisierte Arbeitsliste für eingehende Nachrichten, Follow-ups und KI-vorbereitete Antworten.":
+    "Prioritized work queue for incoming messages, follow-ups, and AI-prepared replies.",
+  "Suche nach Fan, Kanal, Nachricht, Segment …": "Search fan, channel, message, segment …",
+  "Manuelle Arbeitsliste": "Manual work queue",
+  "Workspace-Daten und verbundene Messenger-Eingänge": "Workspace data and connected messenger inboxes",
+  "Die Queue nutzt echte gespeicherte Conversations und ergänzt offene Follow-ups, die noch durch keine Conversation desselben Fans abgedeckt sind.":
+    "The queue uses stored conversations and adds open follow-ups that are not yet covered by a conversation for the same fan.",
+  "Inbox Suche": "Inbox search",
+  "Inbox Kennzahlen": "Inbox metrics",
+  "Offene Konversationen": "Open conversations",
+  "Kontakte konnten nicht geladen werden.": "Contacts could not be loaded.",
+  "Follow-ups konnten nicht geladen werden.": "Follow-ups could not be loaded.",
+  "Conversations konnten nicht geladen werden.": "Conversations could not be loaded.",
+  "Inbox Filter": "Inbox filters",
+  "Inbox Regeln": "Inbox rules",
+  "Queue-Regeln": "Queue rules",
+  "VIP zuerst": "VIP first",
+  "Käufer priorisieren": "Prioritize buyers",
+  "Negative Stimmung markieren": "Flag negative sentiment",
+  "Antworten nie automatisch senden": "Never send replies automatically",
+  Hinweis: "Note",
+  "FanMind zentralisiert Eingänge. Antworten werden manuell geprüft und erst nach Freigabe gesendet.":
+    "FanMind centralizes incoming messages. Replies are reviewed manually and sent only after approval.",
+  "Lokale Conversation Queue": "Local conversation queue",
+  Kanal: "Channel",
+  "Letzte Nachricht": "Latest message",
+  Typ: "Type",
+  Priorität: "Priority",
+  "Wartet seit": "Waiting since",
+  "KI-Status": "AI status",
+  "Nächster Schritt": "Next step",
+  "Workspace-Daten": "Workspace data",
+  "Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert.":
+    "No original chat link is stored for this contact yet.",
+  "Original-Link noch nicht verfügbar": "Original link not available yet",
+  "Spätere Echt-Events können hier den Kommentar- oder Chat-Link liefern.":
+    "Future real events can provide the comment or chat link here.",
+  Übernehmen: "Claim",
+  Freigeben: "Release",
+  "Antwort vorbereiten": "Prepare reply",
+  "Follow-up planen": "Plan follow-up",
+  "Keine passenden Nachrichten gefunden.": "No matching messages found.",
+  "Keine Queue-Einträge für diesen Filter.": "No queue entries for this filter.",
+  "Passe den Suchbegriff an oder lösche die Suche, um alle passenden Inbox-Einträge zu sehen.":
+    "Change the search term or clear the search to see all matching inbox entries.",
+  "Lege Fans oder offene Follow-ups an, um die manuelle Arbeitsliste zu füllen. Verbundene Messenger-Eingänge erscheinen hier, ohne dass Antworten automatisch gesendet werden.":
+    "Add fans or open follow-ups to fill the manual work queue. Connected messenger messages appear here without sending replies automatically.",
+  Alle: "All",
+  Offen: "Open",
+  Wartet: "Waiting",
+  "Antwort fällig": "Reply due",
+  "Hohe Priorität": "High priority",
+  "Mit KI vorbereitet": "AI prepared",
+  Erledigt: "Done",
+  Archiviert: "Archived",
+  Hoch: "High",
+  Mittel: "Medium",
+  Niedrig: "Low",
+  Teilweise: "Partial",
+  "Nicht bereit": "Not ready",
+  "KI-ready": "AI ready",
+  Käufer: "Buyer",
+  Kommentar: "Comment",
+  "Post-Kommentar": "Post comment",
+  Formular: "Form",
+  Notiz: "Note",
+  Manuell: "Manual",
+  Webformular: "Web form",
+  "Kommentar öffnen": "Open comment",
+  "Beitrag öffnen": "Open post",
+  "Chat öffnen": "Open chat",
+  "Original öffnen": "Open original",
+  "Unbenannter Fan": "Unnamed fan",
+  "Kein Handle hinterlegt": "No handle stored",
+  "Conversation ohne gespeicherte Vorschau.": "Conversation without a stored preview.",
+  "Noch keine gespeicherte Eingangsnachricht. Kontext manuell einfügen.":
+    "No stored incoming message yet. Add context manually.",
+  "Vorschlag laden": "Load suggestion",
+  "Info bereitstellen": "Provide information",
+  "pro Fan dedupliziert": "deduplicated per fan",
+  "auf Fan-Antwort": "waiting for fan reply",
+  "Antwort fällig heute": "Reply due today",
+  "aus Fälligkeitsdatum": "from due date",
+  "Status, Tags, Follow-ups": "Status, tags, follow-ups",
+  "Kontext + Tags vorhanden": "Context and tags available",
+  "lokal abgeleitet": "derived locally",
+  "Conversation wurde dir zugewiesen.": "Conversation assigned to you.",
+  "Conversation wurde für das Team freigegeben.": "Conversation released to the team.",
+  "Conversation konnte nicht eindeutig bestimmt werden.": "Conversation could not be identified unambiguously.",
+  "Conversation ist in diesem Workspace nicht verfügbar.": "Conversation is not available in this workspace.",
+  "Zuweisung wurde nicht geändert. Bitte aktualisiere die Inbox und versuche es erneut.":
+    "Assignment was not changed. Refresh the inbox and try again.",
+};
+
+function inboxText(locale: FanMindLanguage, text: string): string {
+  if (locale !== "en") return text;
+  return inboxTranslations[text] ?? wt(locale, text);
+}
 
 type InboxQueueItem = {
   key: string;
@@ -122,9 +229,10 @@ function InboxWorkspace({
   userEmail,
   userId,
   notice,
+  locale,
 }: InboxWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("inbox", userEmail);
+    getWorkspaceNavigationForUser("inbox", userEmail, locale);
   const activeContactIds = new Set(contacts.map((contact) => contact.id));
   const activeFollowups = followups.filter((followup) =>
     activeContactIds.has(followup.contact_id),
@@ -150,54 +258,53 @@ function InboxWorkspace({
   return (
     <WorkspaceShell
       workspaceName={workspace.name}
-      userLabel={userDisplayName || workspace.name || "Nutzer"}
+      userLabel={userDisplayName || workspace.name || inboxText(locale, "Nutzer")}
       planLabel={workspace.plan_id}
       planMeta={workspace.role}
-      planStatus="Aktiv"
+      planStatus={inboxText(locale, "Aktiv")}
       mainNavigation={mainNavigation}
       settingsNavigation={settingsNavigation}
       savedViews={savedViews}
       header={{
         title: "Inbox",
-        subtitle:
-          "Priorisierte Arbeitsliste für eingehende Nachrichten, Follow-ups und KI-vorbereitete Antworten.",
-        searchPlaceholder: "Suche nach Fan, Kanal, Nachricht, Segment …",
-        primaryActionLabel: "Zur Fanliste",
+        subtitle: inboxText(locale, "Priorisierte Arbeitsliste für eingehende Nachrichten, Follow-ups und KI-vorbereitete Antworten."),
+        searchPlaceholder: inboxText(locale, "Suche nach Fan, Kanal, Nachricht, Segment …"),
+        primaryActionLabel: inboxText(locale, "Zur Fanliste"),
         primaryActionHref: "/fans#fans-list",
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       openFollowupCount={activeFollowups.length}
       logoutAction={logout}
+      locale={locale}
     >
       <div className={styles.inboxStack}>
-        <section className={styles.introBar} aria-label="Inbox Suche">
+        <section className={styles.introBar} aria-label={inboxText(locale, "Inbox Suche")}>
           <div>
-            <p className={dashboardStyles.eyebrow}>Manuelle Arbeitsliste</p>
-            <h2>Workspace-Daten und verbundene Messenger-Eingänge</h2>
+            <p className={dashboardStyles.eyebrow}>{inboxText(locale, "Manuelle Arbeitsliste")}</p>
+            <h2>{inboxText(locale, "Workspace-Daten und verbundene Messenger-Eingänge")}</h2>
             <p>
-              Die Queue nutzt echte gespeicherte Conversations und ergänzt
-              offene Follow-ups, die noch durch keine Conversation desselben
-              Fans abgedeckt sind.
+              {inboxText(locale, "Die Queue nutzt echte gespeicherte Conversations und ergänzt offene Follow-ups, die noch durch keine Conversation desselben Fans abgedeckt sind.")}
             </p>
           </div>
           <InboxSearchForm
             activeFilter={activeFilter}
             initialQuery={searchQuery}
+            locale={locale}
           />
         </section>
 
-        {getNoticeMessage(notice) ? (
+        {getNoticeMessage(notice, locale) ? (
           <p className={styles.noticeCard} role="status">
-            {getNoticeMessage(notice)}
+            {getNoticeMessage(notice, locale)}
           </p>
         ) : null}
 
-        <section className={styles.kpiGrid} aria-label="Inbox Kennzahlen">
+        <section className={styles.kpiGrid} aria-label={inboxText(locale, "Inbox Kennzahlen")}>
           {kpis.map((kpi) => (
             <article className={styles.kpiCard} key={kpi.label}>
-              <span>{kpi.label}</span>
+              <span>{inboxText(locale, kpi.label)}</span>
               <strong>{kpi.value}</strong>
-              <small>{kpi.meta}</small>
+              <small>{inboxText(locale, kpi.meta)}</small>
             </article>
           ))}
         </section>
@@ -207,33 +314,33 @@ function InboxWorkspace({
             <div className={styles.queueHeader}>
               <div>
                 <p className={dashboardStyles.eyebrow}>Conversation Queue</p>
-                <h2 id="queue-title">Offene Konversationen</h2>
+                <h2 id="queue-title">{inboxText(locale, "Offene Konversationen")}</h2>
               </div>
               <Link className={styles.secondaryLink} href="/fans#fans-list">
-                Zur Fanliste
+                {inboxText(locale, "Zur Fanliste")}
               </Link>
             </div>
 
             {contactsError ? (
               <ErrorBox
-                title="Kontakte konnten nicht geladen werden."
+                title={inboxText(locale, "Kontakte konnten nicht geladen werden.")}
                 message={contactsError}
               />
             ) : null}
             {followupsError ? (
               <ErrorBox
-                title="Follow-ups konnten nicht geladen werden."
+                title={inboxText(locale, "Follow-ups konnten nicht geladen werden.")}
                 message={followupsError}
               />
             ) : null}
             {conversationsError ? (
               <ErrorBox
-                title="Conversations konnten nicht geladen werden."
+                title={inboxText(locale, "Conversations konnten nicht geladen werden.")}
                 message={conversationsError}
               />
             ) : null}
 
-            <nav className={styles.filterBar} aria-label="Inbox Filter">
+            <nav className={styles.filterBar} aria-label={inboxText(locale, "Inbox Filter")}>
               {filterChips.map((chip) => (
                 <Link
                   className={
@@ -241,38 +348,37 @@ function InboxWorkspace({
                       ? styles.filterChipActive
                       : styles.filterChip
                   }
-                  href={`/inbox?filter=${chip.value}${
+                  href={`/inbox?${locale === "en" ? "lang=en&" : ""}filter=${chip.value}${
                     searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : ""
                   }`}
                   key={chip.value}
                 >
-                  {chip.label}
+                  {inboxText(locale, chip.label)}
                 </Link>
               ))}
             </nav>
 
             {visibleItems.length ? (
-              <QueueList items={visibleItems} userId={userId} />
+              <QueueList items={visibleItems} userId={userId} locale={locale} />
             ) : (
-              <EmptyState hasSearch={Boolean(searchQuery)} />
+              <EmptyState hasSearch={Boolean(searchQuery)} locale={locale} />
             )}
           </section>
 
-          <aside className={styles.sideRail} aria-label="Inbox Regeln">
+          <aside className={styles.sideRail} aria-label={inboxText(locale, "Inbox Regeln")}>
             <InfoCard
-              title="Queue-Regeln"
+              title={inboxText(locale, "Queue-Regeln")}
               items={[
-                "VIP zuerst",
-                "Käufer priorisieren",
-                "Negative Stimmung markieren",
-                "Antworten nie automatisch senden",
+                inboxText(locale, "VIP zuerst"),
+                inboxText(locale, "Käufer priorisieren"),
+                inboxText(locale, "Negative Stimmung markieren"),
+                inboxText(locale, "Antworten nie automatisch senden"),
               ]}
             />
             <div className={styles.noticeCard}>
-              <h3>Hinweis</h3>
+              <h3>{inboxText(locale, "Hinweis")}</h3>
               <p>
-                FanMind zentralisiert Eingänge. Antworten werden manuell geprüft
-                und erst nach Freigabe gesendet.
+                {inboxText(locale, "FanMind zentralisiert Eingänge. Antworten werden manuell geprüft und erst nach Freigabe gesendet.")}
               </p>
             </div>
           </aside>
@@ -291,24 +397,24 @@ function ErrorBox({ title, message }: { title: string; message: string }) {
   );
 }
 
-function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string }) {
+function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId: string; locale: FanMindLanguage }) {
   return (
     <div
       className={styles.queueTable}
       role="table"
-      aria-label="Lokale Conversation Queue"
+      aria-label={inboxText(locale, "Lokale Conversation Queue")}
     >
       <div className={`${styles.queueRow} ${styles.queueHead}`} role="row">
         <span>Fan</span>
-        <span>Kanal</span>
-        <span>Letzte Nachricht</span>
-        <span>Typ</span>
+        <span>{inboxText(locale, "Kanal")}</span>
+        <span>{inboxText(locale, "Letzte Nachricht")}</span>
+        <span>{inboxText(locale, "Typ")}</span>
         <span>Status</span>
-        <span>Priorität</span>
-        <span>Wartet seit</span>
+        <span>{inboxText(locale, "Priorität")}</span>
+        <span>{inboxText(locale, "Wartet seit")}</span>
         <span>Owner</span>
-        <span>KI-Status</span>
-        <span>Nächster Schritt</span>
+        <span>{inboxText(locale, "KI-Status")}</span>
+        <span>{inboxText(locale, "Nächster Schritt")}</span>
         <span>Original</span>
       </div>
       {items.map((item) => (
@@ -323,7 +429,7 @@ function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string 
                 <strong>{item.fanName}</strong>
                 <small>{item.handle}</small>
                 <em>
-                  {item.tags.slice(0, 2).join(" · ") || "Workspace-Daten"}
+                  {item.tags.slice(0, 2).join(" · ") || inboxText(locale, "Workspace-Daten")}
                 </em>
               </span>
             </span>
@@ -341,23 +447,23 @@ function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string 
                 <small>{item.originalPreview}</small>
               ) : null}
             </span>
-            <span>{item.conversationType}</span>
-            <span>{item.status}</span>
+            <span>{inboxText(locale, item.conversationType)}</span>
+            <span>{inboxText(locale, item.status)}</span>
             <span>
               <b
                 className={`${styles.priorityBadge} ${
                   styles[`priority${item.priority}`]
                 }`}
               >
-                {item.priority}
+                {inboxText(locale, item.priority)}
               </b>
             </span>
             <span>{item.waitingSince}</span>
             <span>{item.owner}</span>
             <span>
-              <b className={styles.aiBadge}>{item.aiStatus}</b>
+              <b className={styles.aiBadge}>{inboxText(locale, item.aiStatus)}</b>
             </span>
-            <span className={styles.nextStep}>{item.nextStep}</span>
+            <span className={styles.nextStep}>{inboxText(locale, item.nextStep)}</span>
           </Link>
           <div className={styles.originalCell}>
             {item.replyTargetUrl ? (
@@ -367,26 +473,25 @@ function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string 
                 rel="noreferrer"
                 target="_blank"
               >
-                {getOriginalActionLabel(
+                {inboxText(locale, getOriginalActionLabel(
                   item.sourceType,
                   item.replyTargetUrl,
                   item.sourcePlatformLabel,
-                )}
+                ))}
               </a>
             ) : (
               <button
                 className={styles.originalLinkDisabled}
-                title="Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert."
+                title={inboxText(locale, "Für diesen Kontakt ist noch kein Original-Chat-Link gespeichert.")}
                 type="button"
                 disabled
               >
-                {ORIGINAL_LINK_FALLBACK}
+                {inboxText(locale, ORIGINAL_LINK_FALLBACK)}
               </button>
             )}
             {!item.replyTargetUrl ? (
               <small>
-                {ORIGINAL_LINK_FALLBACK}. Spätere Echt-Events können hier den
-                Kommentar- oder Chat-Link liefern.
+                {inboxText(locale, ORIGINAL_LINK_FALLBACK)}. {inboxText(locale, "Spätere Echt-Events können hier den Kommentar- oder Chat-Link liefern.")}
               </small>
             ) : null}
             <div className={styles.rowActions}>
@@ -400,7 +505,7 @@ function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string 
                     value={item.conversationId}
                   />
                   <button type="submit">
-                    Übernehmen
+                    {inboxText(locale, "Übernehmen")}
                   </button>
                 </form>
               ) : null}
@@ -411,14 +516,14 @@ function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string 
                     type="hidden"
                     value={item.conversationId}
                   />
-                  <button type="submit">Freigeben</button>
+                  <button type="submit">{inboxText(locale, "Freigeben")}</button>
                 </form>
               ) : null}
               <Link href={`/fans/${item.contactId}?focus=reply`}>
-                Antwort vorbereiten
+                {inboxText(locale, "Antwort vorbereiten")}
               </Link>
               <Link href={`/fans/${item.contactId}?focus=followup`}>
-                Follow-up planen
+                {inboxText(locale, "Follow-up planen")}
               </Link>
             </div>
           </div>
@@ -428,18 +533,18 @@ function QueueList({ items, userId }: { items: InboxQueueItem[]; userId: string 
   );
 }
 
-function EmptyState({ hasSearch }: { hasSearch: boolean }) {
+function EmptyState({ hasSearch, locale }: { hasSearch: boolean; locale: FanMindLanguage }) {
   return (
     <div className={dashboardStyles.emptyState}>
       <strong>
         {hasSearch
-          ? "Keine passenden Nachrichten gefunden."
-          : "Keine Queue-Einträge für diesen Filter."}
+          ? inboxText(locale, "Keine passenden Nachrichten gefunden.")
+          : inboxText(locale, "Keine Queue-Einträge für diesen Filter.")}
       </strong>
       <p>
         {hasSearch
-          ? "Passe den Suchbegriff an oder lösche die Suche, um alle passenden Inbox-Einträge zu sehen."
-          : "Lege Fans oder offene Follow-ups an, um die manuelle Arbeitsliste zu füllen. Verbundene Messenger-Eingänge erscheinen hier, ohne dass Antworten automatisch gesendet werden."}
+          ? inboxText(locale, "Passe den Suchbegriff an oder lösche die Suche, um alle passenden Inbox-Einträge zu sehen.")
+          : inboxText(locale, "Lege Fans oder offene Follow-ups an, um die manuelle Arbeitsliste zu füllen. Verbundene Messenger-Eingänge erscheinen hier, ohne dass Antworten automatisch gesendet werden.")}
       </p>
     </div>
   );
@@ -1019,6 +1124,10 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     throw error;
   }
   const { user, workspace } = authorized;
+  const locale = await resolveWorkspaceLocale({
+    lang: params?.lang,
+    user,
+  });
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;
@@ -1049,13 +1158,14 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
           userEmail={user.email}
           userId={user.id}
           notice={normalizeParam(params?.notice)}
+          locale={locale}
         />
       ) : null}
     </main>
   );
 }
 
-function getNoticeMessage(notice: string): string | null {
+function getNoticeMessage(notice: string, locale: FanMindLanguage): string | null {
   const messages: Record<string, string> = {
     conversation_claimed: "Conversation wurde dir zugewiesen.",
     conversation_released: "Conversation wurde für das Team freigegeben.",
@@ -1065,5 +1175,6 @@ function getNoticeMessage(notice: string): string | null {
       "Zuweisung wurde nicht geändert. Bitte aktualisiere die Inbox und versuche es erneut.",
   };
 
-  return messages[notice] ?? null;
+  const message = messages[notice];
+  return message ? inboxText(locale, message) : null;
 }

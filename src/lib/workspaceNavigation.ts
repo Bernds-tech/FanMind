@@ -59,7 +59,7 @@ export function getWorkspaceNavigation(
       },
       {
         label: locale === "en" ? "Inbox" : "Posteingang",
-        href: "/inbox",
+        href: locale === "en" ? "/inbox?lang=en" : "/inbox",
         icon: "channels",
         active: activeRoute === "inbox",
       },

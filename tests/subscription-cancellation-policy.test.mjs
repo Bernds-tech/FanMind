@@ -50,6 +50,17 @@ test("pending SEPA daily beta can be cancelled before asynchronous confirmation"
   assert.equal(policy.canSelfService, true);
 });
 
+test("pending SEPA cancellation fails closed until a future Stripe period end is known", () => {
+  const policy = resolveSubscriptionCancellation({
+    ...base,
+    plan_id: "pilot",
+    commercial_option: "internal_daily_test",
+    billing_status: "pending_sepa_mandate",
+    billing_current_period_end_at: null,
+  });
+  assert.equal(policy.canSelfService, false);
+});
+
 test("pending SEPA users retain a visible route to package cancellation", async () => {
   const [accountPagesSource, pendingPageSource] = await Promise.all([
     readFile("src/app/settings/accountPages.tsx", "utf8"),

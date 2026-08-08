@@ -140,6 +140,21 @@ export async function cancelInternalDailyTestSubscription(workspaceId: string, a
     }
   }
   if (!workspace.stripe_subscription_id) {
+    if (!workspace.stripe_checkout_session_id) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Der offene Stripe-Checkout kann nicht eindeutig bestätigt und deaktiviert werden.",
+      };
+    }
+    const checkoutExpired = await expireStripeCheckoutSession(workspace.stripe_checkout_session_id);
+    if (!checkoutExpired) {
+      return {
+        ok: false,
+        status: 502,
+        error: "Stripe konnte das offene Checkout nicht bestätigt deaktivieren.",
+      };
+    }
     return updateAdminBillingWorkspace(workspaceId, admin, {
       billing_status: "demo_free",
       payment_collection_method: "none",

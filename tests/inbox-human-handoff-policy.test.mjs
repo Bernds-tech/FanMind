@@ -5,6 +5,8 @@ import test from "node:test";
 const actionsPath = new URL("../src/app/inbox/actions.ts", import.meta.url);
 const pagePath = new URL("../src/app/inbox/page.tsx", import.meta.url);
 const serverPath = new URL("../src/lib/supabase/server.ts", import.meta.url);
+const navigationPath = new URL("../src/lib/workspaceNavigation.ts", import.meta.url);
+const searchFormPath = new URL("../src/app/inbox/InboxSearchForm.tsx", import.meta.url);
 const migrationPath = new URL(
   "../supabase/migrations/20260808140000_add_conversation_assignment_identity.sql",
   import.meta.url,
@@ -58,10 +60,27 @@ test("inbox exposes explicit claim and release controls", async () => {
 
   assert.match(page, /claimConversation/u);
   assert.match(page, /releaseConversation/u);
-  assert.match(page, />\s*Übernehmen/u);
-  assert.match(page, />Freigeben</u);
+  assert.match(page, /inboxText\(locale, "Übernehmen"\)/u);
+  assert.match(page, /inboxText\(locale, "Freigeben"\)/u);
   assert.match(page, /item\.assignedUserId === userId/u);
-  assert.match(page, /getNoticeMessage\(notice\)/u);
+  assert.match(page, /getNoticeMessage\(notice, locale\)/u);
+});
+
+test("English inbox navigation preserves locale and renders localized workspace copy", async () => {
+  const [page, navigation, searchForm] = await Promise.all([
+    readFile(pagePath, "utf8"),
+    readFile(navigationPath, "utf8"),
+    readFile(searchFormPath, "utf8"),
+  ]);
+
+  assert.match(navigation, /locale === "en" \? "\/inbox\?lang=en" : "\/inbox"/u);
+  assert.match(page, /resolveWorkspaceLocale\(\{[\s\S]*lang: params\?\.lang,[\s\S]*user,/u);
+  assert.match(page, /getWorkspaceNavigationForUser\("inbox", userEmail, locale\)/u);
+  assert.match(page, /locale=\{locale\}/u);
+  assert.match(page, /Prioritized work queue for incoming messages/u);
+  assert.match(page, /Never send replies automatically/u);
+  assert.match(searchForm, /if \(locale === "en"\) params\.set\("lang", "en"\)/u);
+  assert.match(searchForm, /locale === "en" \? "Search" : "Suche"/u);
 });
 
 test("assignment schema stores a stable authenticated identity", async () => {
