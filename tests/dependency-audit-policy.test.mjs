@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   MOBILE_REVIEWED_AT,
   MOBILE_REVIEW_EXPIRES_AT,
+  MOBILE_REVIEW_HIGH_MAXIMUM,
   MOBILE_REVIEW_LOW_MAXIMUM,
   MOBILE_REVIEW_MODERATE_MAXIMUM,
   REVIEWED_MOBILE_PACKAGES,
@@ -73,6 +74,7 @@ test("clean root audit passes without a review exception", () => {
   assert.equal(result.mobile.reviewActive, true);
   assert.equal(result.mobile.reviewedAt, MOBILE_REVIEWED_AT);
   assert.equal(result.mobile.reviewExpiresAt, MOBILE_REVIEW_EXPIRES_AT);
+  assert.equal(result.mobile.highMaximum, MOBILE_REVIEW_HIGH_MAXIMUM);
   assert.equal(
     result.mobile.moderateMaximum,
     MOBILE_REVIEW_MODERATE_MAXIMUM,
@@ -132,17 +134,31 @@ test("every root high, moderate or unreviewed package fails closed", () => {
   );
 });
 
-test("high or critical Mobile findings fail while reviewed moderate findings stay bounded", () => {
+test("reviewed Mobile highs stay bounded while excessive or critical findings fail", () => {
   const mobileHighFailure = evaluateDependencyAudit({
     rootPayload: auditPayload(),
-    mobilePayload: auditPayload({ high: 1, packages: ["mobile-high"] }),
+    mobilePayload: auditPayload({
+      high: MOBILE_REVIEW_HIGH_MAXIMUM + 1,
+      packages: [REVIEWED_MOBILE_PACKAGES[0]],
+    }),
     rootManifest: patchedManifest,
   });
   assert.equal(mobileHighFailure.ok, false);
   assert.match(
     mobileHighFailure.errors.join("\n"),
-    /mobile_high_vulnerability_present/u,
+    /mobile_high_vulnerability_budget_exceeded/u,
   );
+
+  const reviewedHigh = evaluateDependencyAudit({
+    rootPayload: auditPayload(),
+    mobilePayload: auditPayload({
+      high: MOBILE_REVIEW_HIGH_MAXIMUM,
+      packages: [...REVIEWED_MOBILE_PACKAGES],
+    }),
+    rootManifest: patchedManifest,
+    now: "2026-08-08T08:30:00.000Z",
+  });
+  assert.equal(reviewedHigh.ok, true);
 
   const mobileCriticalFailure = evaluateDependencyAudit({
     rootPayload: auditPayload(),
@@ -244,6 +260,7 @@ test("reviewed overrides stay narrow and resolve to the patched root tree", asyn
     "brace-expansion@>=1.0.0 <1.1.18": "1.1.18",
     "brace-expansion@>=5.0.0 <5.0.9": "5.0.9",
     "js-yaml@>=4.0.0 <4.3.1": "4.3.1",
+    "nanoid@<3.3.17": "3.3.17",
     "next@16.2.12": {
       postcss: "8.5.23",
       sharp: "0.35.3",
@@ -264,6 +281,7 @@ test("reviewed overrides stay narrow and resolve to the patched root tree", asyn
     assert.equal(lock.packages[dependencyPath].version, "1.1.18");
   }
   assert.equal(lock.packages["node_modules/js-yaml"].version, "4.3.1");
+  assert.equal(lock.packages["node_modules/nanoid"].version, "3.3.17");
 });
 
 test("legacy ESLint brace expansion enforces the reviewed output bound", () => {

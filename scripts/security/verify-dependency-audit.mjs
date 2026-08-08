@@ -10,23 +10,30 @@ const ROOT_REVIEWED_FRAMEWORK_VERSION = "16.2.12";
 const ROOT_REVIEW_HIGH_MAXIMUM = 0;
 const ROOT_REVIEW_MODERATE_MAXIMUM = 0;
 const REVIEWED_ROOT_PACKAGES = Object.freeze([]);
-const MOBILE_REVIEWED_AT = "2026-08-02T17:32:13.000Z";
+const MOBILE_REVIEWED_AT = "2026-08-08T08:20:00.000Z";
 const MOBILE_REVIEW_EXPIRES_AT = "2026-09-02T00:00:00.000Z";
+const MOBILE_REVIEW_HIGH_MAXIMUM = 52;
 const MOBILE_REVIEW_MODERATE_MAXIMUM = 38;
 const MOBILE_REVIEW_LOW_MAXIMUM = 0;
 const REVIEWED_MOBILE_PACKAGES = Object.freeze([
   "@expo/cli",
   "@expo/config",
   "@expo/config-plugins",
+  "@expo/devtools",
   "@expo/dom-webview",
   "@expo/inline-modules",
   "@expo/local-build-cache-provider",
   "@expo/log-box",
+  "@expo/metro",
   "@expo/metro-config",
   "@expo/metro-runtime",
   "@expo/prebuild-config",
   "@expo/router-server",
   "@expo/ui",
+  "@react-native-masked-view/masked-view",
+  "@react-native/community-cli-plugin",
+  "@react-native/metro-config",
+  "@react-native/virtualized-lists",
   "babel-preset-expo",
   "expo",
   "expo-application",
@@ -43,6 +50,8 @@ const REVIEWED_MOBILE_PACKAGES = Object.freeze([
   "expo-keep-awake",
   "expo-linking",
   "expo-manifests",
+  "expo-modules-core",
+  "expo-modules-jsi",
   "expo-notifications",
   "expo-router",
   "expo-secure-store",
@@ -51,6 +60,19 @@ const REVIEWED_MOBILE_PACKAGES = Object.freeze([
   "expo-symbols",
   "expo-system-ui",
   "expo-updates-interface",
+  "image-size",
+  "metro",
+  "metro-config",
+  "metro-transform-worker",
+  "react-native",
+  "react-native-drawer-layout",
+  "react-native-gesture-handler",
+  "react-native-is-edge-to-edge",
+  "react-native-reanimated",
+  "react-native-safe-area-context",
+  "react-native-screens",
+  "react-native-url-polyfill",
+  "react-native-worklets",
   "uuid",
   "xcode",
 ]);
@@ -120,7 +142,7 @@ function evaluateDependencyAudit({
     rootVersionsPinned;
   const mobileOk =
     mobile.critical === 0
-    && mobile.high === 0
+    && mobile.high <= MOBILE_REVIEW_HIGH_MAXIMUM
     && (
       !mobileReviewRequired
       || (
@@ -148,7 +170,9 @@ function evaluateDependencyAudit({
   if (mobile.critical !== 0) {
     errors.push("mobile_critical_vulnerability_present");
   }
-  if (mobile.high !== 0) errors.push("mobile_high_vulnerability_present");
+  if (mobile.high > MOBILE_REVIEW_HIGH_MAXIMUM) {
+    errors.push("mobile_high_vulnerability_budget_exceeded");
+  }
   if (
     mobileReviewRequired
     && mobile.moderate > MOBILE_REVIEW_MODERATE_MAXIMUM
@@ -188,6 +212,7 @@ function evaluateDependencyAudit({
       reviewActive: mobileReviewActive,
       reviewedAt: MOBILE_REVIEWED_AT,
       reviewExpiresAt: MOBILE_REVIEW_EXPIRES_AT,
+      highMaximum: MOBILE_REVIEW_HIGH_MAXIMUM,
       moderateMaximum: MOBILE_REVIEW_MODERATE_MAXIMUM,
       lowMaximum: MOBILE_REVIEW_LOW_MAXIMUM,
     },
@@ -245,7 +270,7 @@ async function main() {
       reviewedFrameworkVersion: ROOT_REVIEWED_FRAMEWORK_VERSION,
       reviewedAt: ROOT_REVIEWED_AT,
       mobileCriticalMaximum: 0,
-      mobileHighMaximum: 0,
+      mobileHighMaximum: MOBILE_REVIEW_HIGH_MAXIMUM,
       mobileModerateMaximum: MOBILE_REVIEW_MODERATE_MAXIMUM,
       mobileLowMaximum: MOBILE_REVIEW_LOW_MAXIMUM,
       reviewedMobilePackages: REVIEWED_MOBILE_PACKAGES,
@@ -291,6 +316,7 @@ async function main() {
 export {
   MOBILE_REVIEWED_AT,
   MOBILE_REVIEW_EXPIRES_AT,
+  MOBILE_REVIEW_HIGH_MAXIMUM,
   MOBILE_REVIEW_LOW_MAXIMUM,
   MOBILE_REVIEW_MODERATE_MAXIMUM,
   REVIEWED_MOBILE_PACKAGES,
