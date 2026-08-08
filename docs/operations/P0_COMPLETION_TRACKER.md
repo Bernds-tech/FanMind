@@ -1,6 +1,6 @@
 # FanMind P0-Abschluss-Tracker
 
-Stand: 28. Juli 2026
+Stand: 8. August 2026
 
 GitHub-Issue [#640](https://github.com/Bernds-tech/FanMind/issues/640) ist der laufende, verbindliche Arbeits- und Nachweis-Tracker. Dieses Dokument hält die dauerhafte Repository-Zusammenfassung fest, damit bereits erledigte Arbeit nicht erneut umgesetzt wird.
 
@@ -16,13 +16,68 @@ Ein Punkt gilt erst dann als vollständig abgeschlossen, wenn alle zutreffenden 
 
 Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser Tracker trennt bewusst zwischen **umgesetzt**, **gemergt**, **deployed** und **extern abgenommen**.
 
+## Kanonischer Fortschrittsstand
+
+Die Prozentwerte sind konservative Managementwerte. Sie ersetzen keinen der
+oben definierten technischen oder externen Nachweise.
+
+| Abschlussblock | Vorher | Jetzt | Nächstes Abschluss-Gate |
+| --- | ---: | ---: | --- |
+| Echtes Staging | 76 % | **80 %** | eigene Web-Staging-VM mit Runner, DNS/TLS, Deploy, E2E und Stripe-Testbindung |
+| Restore-Drill | 82 % | **82 %** | echter Restore auf ein leeres, wegwerfbares PostgreSQL-17-Ziel samt Postcheck und Cleanup |
+| Mobile Signing/TestFlight | 68 % | **68 %** | signierte Android-/iOS-Preview-Builds und Realgeräteabnahme |
+| Offline/Push/Stores | 88 % | **89 %** | Push-Staging-Acceptance, private Gerätetests und Store-Abnahme |
+| Security/Dependencies | 99 % | **99 %** | finale Live- und externe Prüfung |
+| Recht/Steuer/AVV | 56 % | **56 %** | externe Rechts-, Steuer-, AVV- und Providerbelege |
+| Meta Events Manager | 92 % | **94 %** | synthetischer Meta-E2E, App Review und Rechtsfreigabe |
+| KI Standard/Plus/Ultra | 87 % | **89 %** | Stripe-Testpreise, Lifecycle- sowie Qualitäts-/Kostenabnahme |
+
+- Produkt-/MVP-Stand: **ca. 89 %**
+- Abschlussreife der acht Blöcke: **ca. 82 %**
+- Repository-technische Vorbereitung: **ca. 86 %**
+
+### Arbeits- und Umsatzsystem als eigener Produktquerschnitt
+
+Die acht Abschlussblöcke messen vor allem technische und externe Abschlussreife.
+Das Zielsystem wird deshalb zusätzlich eigenständig geführt:
+
+| Produktfähigkeit | Stand | Offene Grenze |
+| --- | --- | --- |
+| Kontaktwissen / Fan-Gedächtnis | MVP gebaut | automatische Analyse bleibt bis Staging-, Meta- und Rechtsfreigabe aus |
+| KI-Antwortvorschläge | KI Standard gebaut | Plus/Ultra bleiben bis vollständiger Readiness und Stripe-Abnahme fail-closed |
+| Kontakte | gebaut | keine bekannte P0-Kernlücke |
+| Follow-ups | gebaut | keine automatische Nachrichtenzustellung |
+| Kanalübergreifende Organisation | teilgebaut | gemeinsame Inbox und Meta-Beta vorhanden; weitere Kanäle bleiben Roadmap |
+| Teamarbeit | Basis teilgebaut | Einladungen, differenzierte Rollen und Agency-/Multi-Client-Steuerung offen |
+| Erfolgsmessung | teilgebaut | operative KPIs und KI-Kosten vorhanden; vollständige Umsatz-/Kampagnenanalyse offen |
+
+FanMind bleibt dabei ein spezialisiertes Arbeits- und Umsatzsystem, in dem der
+Mensch jede externe Nachricht selbst prüft und sendet. Phase 7 zählt nicht in
+die acht Abschlussblöcke; OnlyFans bleibt ausschließlich eine unverbindliche
+spätere Prüfung.
+
+### Offene Arbeits- und Nachweiszeilen
+
+| Arbeitszeile | Aktueller Stand |
+| --- | --- |
+| Migration und checksum-only Prüfung | Staging-Schemata angewendet und nachgeprüft; Ledger-Alias-Guard noch zu mergen |
+| Echtes Staging und Restore-Drill | separates Supabase-Staging vorhanden; Web-Staging-VM und echter Restore offen |
+| KI Plus/Ultra und Stripe-Abnahme | Entitlement-Schema auf Staging; Stripe-Testkatalog und rollback-only Acceptance offen |
+| Meta-Abschluss | Foundation, History und Tenant-Idempotenz auf Staging; E2E, App Review und Recht offen |
+| Mobile Signing, Android-Beta und TestFlight | kontrollierte Workflows vorhanden; signierte Binaries und Verteilung offen |
+| Push, Gerätetests und Store-Unterlagen | Push-Schema auf Staging und Unterlagen vorbereitet; Acceptance und externe Nachweise offen |
+| Technische Rechts-/AVV-Unterlagen | Arbeitsfassungen, Register und Validatoren vorhanden |
+| Externe Rechts-/Steuerfreigaben | Rechts-, Steuer-, AVV- und Providerbelege weiterhin extern offen |
+
 ## Ausgangsstand
 
 - Ausgangs-`main`: `c40ff79a6ffa2393cf70c9a4a71a6a5ea0e79201`.
 - PR #637 enthält bereits die sichere Self-Service-Kündigung und den Archiv-/Lesemodus.
 - Der ältere konfliktbehaftete PR #636 wurde deshalb ohne Merge geschlossen; die Kündigungslogik wird nicht doppelt gebaut.
 - Die native Mobile-App unter `apps/mobile` ist bereits ein eigenständiger React-Native-/Expo-Kern und keine WebView-Hülle.
-- Der aktuelle P0-Branch lautet `p0/completion-20260722`; zusammengeführt wird ausschließlich über PR #641 nach vollständiger Prüfung.
+- Der historische P0-Branch `p0/completion-20260722` und PR #641 sind
+  abgeschlossen; der aktuelle Stand wird ausschließlich aus `main`, dem
+  Production-Commit und den externen Nachweisen abgeleitet.
 
 ## P0-Änderungsblöcke
 
@@ -116,7 +171,8 @@ Diese Punkte benötigen einen eigenen externen oder produktiven Nachweis und dü
 - tatsächlicher Production-Commit und Live-HTML nach dem Merge;
 - signierter Android-Build und iOS-TestFlight-Build;
 - Apple-/Google-Store-Konten und Signing Credentials;
-- separates Staging mit eigenem Supabase-Projekt und Stripe Test Mode;
+- eigener Web-Staging-Host und Stripe Test Mode; das separate
+  Supabase-Staging-Projekt ist vorhanden und darf nicht als Restore-Ziel dienen;
 - externe Rechts- und Steuerfreigabe;
 - isolierter Restore-Drill und belegte Offsite-Retention.
 
