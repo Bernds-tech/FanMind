@@ -564,6 +564,12 @@ type FollowupCountResult = {
   error: Error | null;
 };
 
+export type FollowupCompletionCountsResult = {
+  open: number;
+  completed: number;
+  error: Error | null;
+};
+
 type WorkspaceBackfillResult = {
   workspace: WorkspaceBackfillRow | null;
   error: Error | null;
@@ -5037,6 +5043,55 @@ export async function getOpenFollowupCount(
   }
 
   return { count: countResult.count, error: null };
+}
+
+export async function getFollowupCompletionCounts(
+  workspaceId: string,
+): Promise<FollowupCompletionCountsResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return {
+      open: 0,
+      completed: 0,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  }
+
+  const [openResult, completedResult, legacyDoneResult] = await Promise.all([
+    postgrestCount("followups", accessToken, [
+      ["workspace_id", workspaceId],
+      ["status", "open"],
+    ]),
+    postgrestCount("followups", accessToken, [
+      ["workspace_id", workspaceId],
+      ["status", "completed"],
+    ]),
+    postgrestCount("followups", accessToken, [
+      ["workspace_id", workspaceId],
+      ["status", "done"],
+    ]),
+  ]);
+  const error =
+    openResult.error ?? completedResult.error ?? legacyDoneResult.error;
+
+  if (error) {
+    return {
+      open: 0,
+      completed: 0,
+      error: new Error(
+        `Follow-up-Abschlussquote konnte nicht geladen werden: ${withOptionalSchemaHint(error.message, "followups")}`,
+      ),
+    };
+  }
+
+  return {
+    open: openResult.count,
+    completed: completedResult.count + legacyDoneResult.count,
+    error: null,
+  };
 }
 
 export async function getWorkspaceOpenFollowups(
