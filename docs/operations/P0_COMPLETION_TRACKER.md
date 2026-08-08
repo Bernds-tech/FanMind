@@ -44,6 +44,7 @@ gibt. Die stabilen IDs werden durch einen Regressionstest geschützt.
 | W-06 | Arbeitszeile | Push, Gerätetests und Store-Unterlagen | – | Push-Schema auf Staging und Unterlagen vorbereitet | Acceptance und externe Nachweise abschließen |
 | W-07 | Arbeitszeile | Technische Rechts-/AVV-Unterlagen | – | Arbeitsfassungen, Register und Validatoren vorhanden | technische Belege final mit externen Entscheidungen synchronisieren |
 | W-08 | Arbeitszeile | Externe Rechts-/Steuerfreigaben | – | weiterhin extern offen | Rechts-, Steuer-, AVV- und Providerbelege einholen |
+| W-09 | Arbeitszeile | Roadmap Phase 1–7 und Umsatzmodell | – | MVP-Auftrag und Roadmap abgeglichen; Core-, KI-, Connection-, Referral- und Agency-Regeln zentral testbar | Stripe-Testpreise, Rechts-/Steuerfreigabe und Agency-Aktivierung separat abnehmen |
 
 - Produkt-/MVP-Stand: **ca. 89 %**
 - Abschlussreife der acht Blöcke: **ca. 82 %**
@@ -68,6 +69,14 @@ FanMind bleibt dabei ein spezialisiertes Arbeits- und Umsatzsystem, in dem der
 Mensch jede externe Nachricht selbst prüft und sendet. Phase 7 zählt nicht in
 die acht Abschlussblöcke; OnlyFans bleibt ausschließlich eine unverbindliche
 spätere Prüfung.
+
+Das verbindliche Umsatzmodell besteht aus 312 € Core pro Monat mit einem
+Creator/Workspace, KI Standard und zehn Connections inklusive. Je weitere fünf
+Connections sind 49 € pro Monat vorgesehen; KI Plus kostet 100 € und KI Ultra
+200 € zusätzlich. Referral reduziert ausschließlich die Core-Gebühr. Agency
+bleibt Coming Soon: selbstzahlende Creator werden nicht doppelt verrechnet;
+bei Agenturzahlung gelten Hub plus Creator-Lizenzen mit 0/5/10/15 % Staffel.
+Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 
 ## Ausgangsstand
 

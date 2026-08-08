@@ -21,7 +21,7 @@ const ruleCards = [
   },
   {
     title: "Nur die Grundgebühr",
-    text: "Rabattfähig ist ausschließlich die Starter-Grundgebühr von 312 Euro pro Monat. Einrichtung und KI-Add-ons sind ausgeschlossen.",
+    text: "Rabattfähig ist ausschließlich die Starter-Grundgebühr von 312 Euro pro Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind ausgeschlossen.",
   },
 ];
 
@@ -95,7 +95,8 @@ const sections: ReferralSection[] = [
           <li>5 % je aktivem, zahlendem geworbenem Workspace</li>
           <li>maximal 20 aktive Empfehlungen beziehungsweise 100 %</li>
           <li>Rabatt ausschließlich auf die Starter-Grundgebühr von 312 €/Monat</li>
-          <li>kein Rabatt auf Einrichtung, KI Plus, KI Ultra oder andere Add-ons</li>
+          <li>kein Rabatt auf Einrichtung, KI Plus, KI Ultra, Connections oder Agency-Erweiterungen</li>
+          <li>Referral und Agency-Mengenrabatt sind nicht kombinierbar</li>
           <li>keine Barauszahlung, keine Übertragung und kein negativer Betrag</li>
         </ul>
         <p>

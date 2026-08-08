@@ -18,6 +18,7 @@ const checkedFiles = [
   "package.json",
   "apps/mobile/package.json",
   "src/config/aiTiers.mjs",
+  "src/config/commercialModel.mjs",
   "src/config/aiTierRecommendation.mjs",
   "scripts/operations/verify-ai-tier-readiness.mjs",
   "scripts/operations/verify-ai-tier-recommendation.mjs",
@@ -117,6 +118,7 @@ const checkedFiles = [
   "src/app/referral-bedingungen/page.tsx",
   "src/app/settings/referral/page.tsx",
   "tests/referral-policy.test.mjs",
+  "tests/commercial-model.test.mjs",
   "tests/ai-usage-policy.test.mjs",
   "tests/ai-usage-cost-metrics.test.mjs",
   "tests/ai-usage-dashboard-metrics.test.mjs",
@@ -400,6 +402,26 @@ requireText(
 );
 
 // KI-Stufen und Referral-Grenzen.
+requireText(
+  "src/config/commercialModel.mjs",
+  "CORE_MONTHLY_FEE_CENTS = 31_200",
+  "Das Umsatzmodell muss die Core-Grundgebühr zentral führen.",
+);
+requireText(
+  "src/config/commercialModel.mjs",
+  "CORE_INCLUDED_CONNECTIONS = 10",
+  "Das Umsatzmodell muss zehn Connections im Core enthalten.",
+);
+requireText(
+  "src/config/commercialModel.mjs",
+  "CONNECTION_PACK_MONTHLY_FEE_CENTS = 4_900",
+  "Das Umsatzmodell muss weitere fünf Connections mit 49 Euro bepreisen.",
+);
+requireText(
+  "src/config/commercialModel.mjs",
+  "Referral discount and agency volume discount cannot be combined",
+  "Referral und Agency-Mengenrabatt müssen technisch ausgeschlossen sein.",
+);
 requireText(
   "src/config/aiTiers.mjs",
   'monthlyAddOnCents: 10000',
@@ -868,8 +890,8 @@ requireText(
 );
 requireText(
   "src/app/referral-bedingungen/page.tsx",
-  "kein Rabatt auf Einrichtung, KI Plus, KI Ultra oder andere Add-ons",
-  "Die Referral-Bedingungen müssen Einrichtung und KI-Add-ons ausschließen.",
+  "kein Rabatt auf Einrichtung, KI Plus, KI Ultra, Connections oder Agency-Erweiterungen",
+  "Die Referral-Bedingungen müssen alle nicht rabattfähigen Add-ons ausschließen.",
 );
 requireText(
   "src/app/referral-bedingungen/page.tsx",

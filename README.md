@@ -38,6 +38,11 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - KI Standard: in der Starter-Grundgebühr enthalten.
 - KI Plus: zusätzlich `100 €/Monat`.
 - KI Ultra: zusätzlich `200 €/Monat`.
+- Im Core sind `10` Social-/Kommunikations-Connections enthalten; je weitere
+  fünf Connections sind als Add-on für `49 €/Monat` vorgesehen.
+- Agency bleibt Coming Soon: selbstzahlende Creator können kostenlos durch
+  eine Agentur verwaltet werden. Zahlt die Agentur, gelten ein Agency Hub zu
+  `312 €/Monat` plus Creator-Lizenzen mit `0/5/10/15 %` Mengenrabatt.
 - Zentrale KI-Stufen-Policy: `src/config/aiTiers.mjs` führt Standard, Plus und Ultra; Plus/Ultra bleiben bis zur Modell-/Fallback-, Kontingent-, Runtime-, Stripe-/Staging-, Qualitäts-/Kosten-, Rechts-/Steuer- und ausdrücklichen Production-Freigabe nicht automatisch buchbar.
 - Redigierte KI-Stufen-Prüfung: `npm run ai:tiers:readiness` bestätigt aktuell Standard als bereit sowie Plus/Ultra als blockiert. Stufenspezifische externe und technische Nachweise werden nur als feste Blocker-Codes ausgewertet; konkrete Stripe-IDs, Modelle, Limits, Beleg-IDs oder Secrets werden nicht ausgegeben.
 - Nicht aktivierende KI-Stufen-Arbeitsempfehlung:
@@ -107,7 +112,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Zustellung bleiben ausgeschlossen. Die rollback-only Acceptance steht noch
   aus.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
-- Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung und KI-Add-ons sind nicht rabattfähig.
+- Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind nicht rabattfähig; Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
 - Roadmap-Phase 7 mit TikTok, X, Discord und einer ausdrücklich unverbindlichen OnlyFans-Prüfung bleibt öffentlich als spätere Zukunftsplanung sichtbar, ist aber ausdrücklich vom aktuellen Abschlussumfang der acht Fertigstellungsblöcke ausgenommen und zählt nicht in dessen Fortschritt.
 - FanMind ist kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert und sendet final selbst.

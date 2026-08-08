@@ -136,6 +136,7 @@ test("completion tracker keeps every weighted block and supporting work line", a
     ["W-06", "Push, Gerätetests und Store-Unterlagen"],
     ["W-07", "Technische Rechts-/AVV-Unterlagen"],
     ["W-08", "Externe Rechts-/Steuerfreigaben"],
+    ["W-09", "Roadmap Phase 1–7 und Umsatzmodell"],
   ];
 
   for (const [id, label] of requiredRows) {
