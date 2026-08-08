@@ -141,16 +141,21 @@ RLS-Erwartung:
 
 ### Website-Chat-Sicherheitsgrundlage
 
-`website_chat_installations`, `website_chat_allowed_origins` und
-`website_chat_visitor_sessions` bilden eine deaktivierte, server-only
+`website_chat_installations`, `website_chat_allowed_origins`,
+`website_chat_visitor_sessions` und `website_chat_message_receipts` bilden eine
+deaktivierte, server-only
 Vorstufe für Website-Chat. Installationen und Sitzungen sind vollständig an
 einen Workspace gebunden. Erlaubte Origins müssen exakt als HTTPS-Origin
 vorliegen und separat verifiziert sein. Besuchertokens werden nie im Klartext
 gespeichert, sondern nur als HMAC-SHA256-Subjekt. Alle drei Tabellen haben RLS;
 `public`, `anon` und `authenticated` besitzen keine direkten Tabellenrechte.
-Der Block enthält noch keine Nachrichtenaufnahme, KI-Antwort oder
-Sendefunktion. Aktivierung und Migration sind zuerst im isolierten Staging
-abzunehmen.
+Die ausschließlich für `service_role` ausführbare, transaktionale
+`SECURITY INVOKER`-Funktion `ingest_website_chat_message` prüft Installation,
+Origin, Sessionablauf und Widerruf erneut. Sie erzeugt je Sitzung einen Kontakt
+und eine Conversation und schreibt idempotente eingehende Nachrichten in
+`conversation_messages`; der Receipt enthält keinen Nachrichtentext. Der Block
+enthält keine KI-Antwort und keine Sendefunktion. Aktivierung und Migration
+sind zuerst im isolierten Staging abzunehmen.
 
 ### `contacts`
 
