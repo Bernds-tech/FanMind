@@ -117,6 +117,40 @@ test("FanMind contains no tracked foreign branding or obsolete brand asset path"
   assert.equal(text.includes(obsoleteBrandAssetPath.replace(/^public/u, "")), false);
 });
 
+test("completion tracker keeps every weighted block and supporting work line", async () => {
+  const tracker = await source("docs/operations/P0_COMPLETION_TRACKER.md");
+  const requiredRows = [
+    ["A-01", "Echtes Staging"],
+    ["A-02", "Restore-Drill"],
+    ["A-03", "Mobile Signing/TestFlight"],
+    ["A-04", "Offline/Push/Stores"],
+    ["A-05", "Security/Dependencies"],
+    ["A-06", "Recht/Steuer/AVV"],
+    ["A-07", "Meta Events Manager"],
+    ["A-08", "KI Standard/Plus/Ultra"],
+    ["W-01", "Migration und checksum-only Prüfung"],
+    ["W-02", "Echtes Staging und Restore-Drill"],
+    ["W-03", "KI Plus/Ultra und Stripe-Abnahme"],
+    ["W-04", "Meta-Abschluss"],
+    ["W-05", "Mobile Signing, Android-Beta und TestFlight"],
+    ["W-06", "Push, Gerätetests und Store-Unterlagen"],
+    ["W-07", "Technische Rechts-/AVV-Unterlagen"],
+    ["W-08", "Externe Rechts-/Steuerfreigaben"],
+  ];
+
+  for (const [id, label] of requiredRows) {
+    assert.match(
+      tracker,
+      new RegExp(`\\| ${id} \\|[^\\n]*\\| ${label.replaceAll("/", "\\/")} \\|`, "u"),
+    );
+    assert.equal((tracker.match(new RegExp(`\\| ${id} \\|`, "gu")) ?? []).length, 1);
+  }
+  assert.match(tracker, /W-\*.*nicht nochmals.*Gesamtwert/isu);
+  assert.match(tracker, /Produkt-\/MVP-Stand: \*\*ca\. 89 %\*\*/u);
+  assert.match(tracker, /Abschlussreife der acht Blöcke: \*\*ca\. 82 %\*\*/u);
+  assert.match(tracker, /Repository-technische Vorbereitung: \*\*ca\. 86 %\*\*/u);
+});
+
 test("phase 7 excludes LinkedIn and additional channels and stays outside the current completion scope", async () => {
   const [roadmap, sourceOfTruth, readme, tracker] = await Promise.all([
     source("src/config/roadmap.ts"),
