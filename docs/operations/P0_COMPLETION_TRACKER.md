@@ -21,16 +21,29 @@ Eine Änderung auf dem P0-Branch ist damit noch kein Abschlussnachweis. Dieser T
 Die Prozentwerte sind konservative Managementwerte. Sie ersetzen keinen der
 oben definierten technischen oder externen Nachweise.
 
-| Abschlussblock | Vorher | Jetzt | Nächstes Abschluss-Gate |
-| --- | ---: | ---: | --- |
-| Echtes Staging | 76 % | **80 %** | eigene Web-Staging-VM mit Runner, DNS/TLS, Deploy, E2E und Stripe-Testbindung |
-| Restore-Drill | 82 % | **82 %** | echter Restore auf ein leeres, wegwerfbares PostgreSQL-17-Ziel samt Postcheck und Cleanup |
-| Mobile Signing/TestFlight | 68 % | **68 %** | signierte Android-/iOS-Preview-Builds und Realgeräteabnahme |
-| Offline/Push/Stores | 88 % | **89 %** | Push-Staging-Acceptance, private Gerätetests und Store-Abnahme |
-| Security/Dependencies | 99 % | **99 %** | finale Live- und externe Prüfung |
-| Recht/Steuer/AVV | 56 % | **56 %** | externe Rechts-, Steuer-, AVV- und Providerbelege |
-| Meta Events Manager | 92 % | **94 %** | synthetischer Meta-E2E, App Review und Rechtsfreigabe |
-| KI Standard/Plus/Ultra | 87 % | **89 %** | Stripe-Testpreise, Lifecycle- sowie Qualitäts-/Kostenabnahme |
+Diese eine Tabelle führt sowohl die acht gewichteten Abschlussblöcke als auch
+alle unterstützenden Arbeits- und Nachweiszeilen. `W-*`-Zeilen sind bewusst
+nicht nochmals in den Gesamtwert eingerechnet, damit es keine Doppelzählung
+gibt. Die stabilen IDs werden durch einen Regressionstest geschützt.
+
+| ID | Typ | Fortschrittspunkt | Vorher | Jetzt / Iststand | Nächstes Abschluss-Gate |
+| --- | --- | --- | ---: | --- | --- |
+| A-01 | Abschlussblock | Echtes Staging | 76 % | **80 %** | eigene Web-Staging-VM mit Runner, DNS/TLS, Deploy, E2E und Stripe-Testbindung |
+| A-02 | Abschlussblock | Restore-Drill | 82 % | **82 %** | echter Restore auf ein leeres, wegwerfbares PostgreSQL-17-Ziel samt Postcheck und Cleanup |
+| A-03 | Abschlussblock | Mobile Signing/TestFlight | 68 % | **68 %** | signierte Android-/iOS-Preview-Builds und Realgeräteabnahme |
+| A-04 | Abschlussblock | Offline/Push/Stores | 88 % | **89 %** | Push-Staging-Acceptance, private Gerätetests und Store-Abnahme |
+| A-05 | Abschlussblock | Security/Dependencies | 99 % | **99 %** | finale Live- und externe Prüfung |
+| A-06 | Abschlussblock | Recht/Steuer/AVV | 56 % | **56 %** | externe Rechts-, Steuer-, AVV- und Providerbelege |
+| A-07 | Abschlussblock | Meta Events Manager | 92 % | **94 %** | synthetischer Meta-E2E, App Review und Rechtsfreigabe |
+| A-08 | Abschlussblock | KI Standard/Plus/Ultra | 87 % | **89 %** | Stripe-Testpreise, Lifecycle- sowie Qualitäts-/Kostenabnahme |
+| W-01 | Arbeitszeile | Migration und checksum-only Prüfung | – | Staging-Schemata und Ledger-Alias-Guard angewendet, nachgeprüft, gemergt und deployed | checksum-only Restore-Ressourcencheck auf isoliertem Ziel ausführen |
+| W-02 | Arbeitszeile | Echtes Staging und Restore-Drill | – | separates Supabase-Staging vorhanden | Web-Staging-VM und echter Restore bleiben offen |
+| W-03 | Arbeitszeile | KI Plus/Ultra und Stripe-Abnahme | – | Entitlement-Schema auf Staging | Stripe-Testkatalog und rollback-only Acceptance ausführen |
+| W-04 | Arbeitszeile | Meta-Abschluss | – | Foundation, History und Tenant-Idempotenz auf Staging | E2E, App Review und Rechtsfreigabe abschließen |
+| W-05 | Arbeitszeile | Mobile Signing, Android-Beta und TestFlight | – | kontrollierte Workflows vorhanden | signierte Binaries, Realgeräte und Verteilung nachweisen |
+| W-06 | Arbeitszeile | Push, Gerätetests und Store-Unterlagen | – | Push-Schema auf Staging und Unterlagen vorbereitet | Acceptance und externe Nachweise abschließen |
+| W-07 | Arbeitszeile | Technische Rechts-/AVV-Unterlagen | – | Arbeitsfassungen, Register und Validatoren vorhanden | technische Belege final mit externen Entscheidungen synchronisieren |
+| W-08 | Arbeitszeile | Externe Rechts-/Steuerfreigaben | – | weiterhin extern offen | Rechts-, Steuer-, AVV- und Providerbelege einholen |
 
 - Produkt-/MVP-Stand: **ca. 89 %**
 - Abschlussreife der acht Blöcke: **ca. 82 %**
@@ -55,19 +68,6 @@ FanMind bleibt dabei ein spezialisiertes Arbeits- und Umsatzsystem, in dem der
 Mensch jede externe Nachricht selbst prüft und sendet. Phase 7 zählt nicht in
 die acht Abschlussblöcke; OnlyFans bleibt ausschließlich eine unverbindliche
 spätere Prüfung.
-
-### Offene Arbeits- und Nachweiszeilen
-
-| Arbeitszeile | Aktueller Stand |
-| --- | --- |
-| Migration und checksum-only Prüfung | Staging-Schemata angewendet und nachgeprüft; Ledger-Alias-Guard noch zu mergen |
-| Echtes Staging und Restore-Drill | separates Supabase-Staging vorhanden; Web-Staging-VM und echter Restore offen |
-| KI Plus/Ultra und Stripe-Abnahme | Entitlement-Schema auf Staging; Stripe-Testkatalog und rollback-only Acceptance offen |
-| Meta-Abschluss | Foundation, History und Tenant-Idempotenz auf Staging; E2E, App Review und Recht offen |
-| Mobile Signing, Android-Beta und TestFlight | kontrollierte Workflows vorhanden; signierte Binaries und Verteilung offen |
-| Push, Gerätetests und Store-Unterlagen | Push-Schema auf Staging und Unterlagen vorbereitet; Acceptance und externe Nachweise offen |
-| Technische Rechts-/AVV-Unterlagen | Arbeitsfassungen, Register und Validatoren vorhanden |
-| Externe Rechts-/Steuerfreigaben | Rechts-, Steuer-, AVV- und Providerbelege weiterhin extern offen |
 
 ## Ausgangsstand
 
