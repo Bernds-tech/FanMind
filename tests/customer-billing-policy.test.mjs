@@ -108,6 +108,7 @@ test("real Stripe customer with invoices only shows Stripe invoice data", () => 
 
 test("internal 1 EUR daily Stripe subscription plan remains available", () => {
   const stripeBillingSource = fs.readFileSync("src/lib/stripeBilling.ts", "utf8");
+  const billingStartSource = fs.readFileSync("src/app/billing/start/page.tsx", "utf8");
 
   assert.match(stripeBillingSource, /commercialOption === "internal_daily_test"/);
   assert.match(stripeBillingSource, /process\.env\.STRIPE_PRICE_INTERNAL_DAILY_TEST/);
@@ -115,6 +116,19 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
   assert.match(stripeBillingSource, /mode: "subscription"/);
   assert.match(stripeBillingSource, /if \(commercialOption === "internal_daily_test"\)[\s\S]*?paymentMethodTypes: \["card"\]/u);
   assert.match(stripeBillingSource, /commercialOption,[\s\S]*paymentCollectionMethod: "card"/u);
+  assert.match(billingStartSource, /workspace\?\.commercial_option === "internal_daily_test"/u);
+  assert.match(
+    billingStartSource,
+    /isCardOnlyDailyTestCheckout[\s\S]*\? "Kartenzahlung im nächsten Schritt"[\s\S]*: "Kartenzahlung im nächsten Schritt · SEPA optional, wenn freigeschaltet"/u,
+  );
+  assert.equal(
+    billingStartSource.match(/<dd>\{checkoutPaymentMethodText\}<\/dd>/gu)?.length,
+    1,
+  );
+  assert.equal(
+    billingStartSource.match(/<li>\{checkoutPaymentMethodText\}<\/li>/gu)?.length,
+    1,
+  );
 });
 
 

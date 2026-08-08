@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  formatInboxAverageResponseTime,
+  formatInboxWaitingTime,
+} from "../src/lib/inboxMetricFormatting.mjs";
 
 const actionsPath = new URL("../src/app/inbox/actions.ts", import.meta.url);
 const pagePath = new URL("../src/app/inbox/page.tsx", import.meta.url);
@@ -58,7 +62,7 @@ test("assignment rollout is backward-compatible and avoids email labels", async 
   assert.match(page, /redirect\("\/onboarding"\)/u);
 });
 
-test("inbox exposes explicit claim and release controls", async () => {
+test("inbox exposes claim and release controls only when assignment is supported", async () => {
   const page = await readFile(pagePath, "utf8");
 
   assert.match(page, /claimConversation/u);
@@ -83,12 +87,36 @@ test("English inbox navigation preserves locale and renders localized workspace 
   assert.match(page, /locale=\{locale\}/u);
   assert.match(page, /Prioritized work queue for incoming messages/u);
   assert.match(page, /Never send replies automatically/u);
+  assert.match(page, /"Ø Antwortzeit": "Average response time"/u);
+  assert.match(page, /formatInboxWaitingTime\(item\.waitingMinutes, locale\)/u);
+  assert.match(page, /getInboxKpis\(queueItems, locale\)/u);
+  assert.doesNotMatch(page, /<span>\{item\.waitingSince\}<\/span>/u);
   assert.match(searchForm, /if \(locale === "en"\) params\.set\("lang", "en"\)/u);
   assert.match(searchForm, /locale === "en" \? "Search" : "Suche"/u);
   assert.equal(page.match(/<input name="lang" type="hidden" value=\{locale\} \/>/gu)?.length, 2);
   assert.match(actions, /formValue\(formData, "lang"\) === "en"/u);
   assert.match(actions, /inboxNoticePath\("conversation_claimed", locale\)/u);
   assert.match(actions, /params\.set\("lang", "en"\)/u);
+});
+
+test("English inbox metrics localize duration units and preserve German output", () => {
+  assert.equal(formatInboxWaitingTime(0, "en"), "—");
+  assert.equal(formatInboxWaitingTime(59, "en"), "59 min.");
+  assert.equal(formatInboxWaitingTime(60, "en"), "1 hr.");
+  assert.equal(formatInboxWaitingTime(120, "en"), "2 hrs.");
+  assert.equal(formatInboxWaitingTime(2879, "en"), "47 hrs.");
+  assert.equal(formatInboxWaitingTime(2880, "en"), "2 days");
+  assert.equal(formatInboxAverageResponseTime(0, "en"), "0 hrs.");
+  assert.equal(formatInboxAverageResponseTime(60, "en"), "1 hr.");
+  assert.equal(formatInboxAverageResponseTime(120, "en"), "2 hrs.");
+  assert.equal(formatInboxAverageResponseTime(1439, "en"), "24 hrs.");
+  assert.equal(formatInboxAverageResponseTime(1440, "en"), "1 day");
+  assert.equal(formatInboxAverageResponseTime(4320, "en"), "3 days");
+
+  assert.equal(formatInboxWaitingTime(59, "de"), "59 Min.");
+  assert.equal(formatInboxWaitingTime(60, "de"), "1 Std.");
+  assert.equal(formatInboxAverageResponseTime(1440, "de"), "1 Tag");
+  assert.equal(formatInboxAverageResponseTime(4320, "de"), "3 Tage");
 });
 
 test("assignment schema stores a stable authenticated identity", async () => {

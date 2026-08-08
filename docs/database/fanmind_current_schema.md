@@ -248,7 +248,6 @@ Wichtige Felder:
 - `last_outbound_at`
 - `last_message_preview`
 - `assigned_owner`
-- `assigned_user_id` (stabile Auth-Identität für atomare Übernahme/Freigabe)
 - `ai_status`
 - `next_step`
 - `created_at`
@@ -258,6 +257,17 @@ RLS-Erwartung:
 
 - Nur Conversations des eigenen Workspaces lesen/schreiben.
 - Archivierte Conversations dürfen nicht versehentlich als offene Arbeit erscheinen.
+
+Rollout-Hinweis:
+
+- `assigned_user_id` ist als stabile Auth-Identität für atomare Übernahme und
+  Freigabe vorbereitet, gehört aber noch nicht zum aktuellen Production-
+  Schema. Die Anwendung erkennt die fehlende Spalte und blendet Handoff-
+  Aktionen fail-closed aus.
+- Vor einer Aktivierung müssen Spalte, atomare Mutationsgrenze sowie getrennte
+  RLS- und Spaltenrechte kontrolliert auf Staging angewendet und abgenommen
+  werden. Die bestehende breite Workspace-Member-Policy allein genügt dafür
+  nicht.
 
 ### `conversation_messages`
 

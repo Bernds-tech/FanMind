@@ -32,6 +32,10 @@ import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
 import { wt } from "@/lib/workspaceCopy";
 import {
+  formatInboxAverageResponseTime,
+  formatInboxWaitingTime,
+} from "@/lib/inboxMetricFormatting.mjs";
+import {
   requireAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
@@ -152,6 +156,7 @@ const inboxTranslations: Record<string, string> = {
   "aus Fälligkeitsdatum": "from due date",
   "Status, Tags, Follow-ups": "Status, tags, follow-ups",
   "Kontext + Tags vorhanden": "Context and tags available",
+  "Ø Antwortzeit": "Average response time",
   "lokal abgeleitet": "derived locally",
   "Conversation wurde dir zugewiesen.": "Conversation assigned to you.",
   "Conversation wurde für das Team freigegeben.": "Conversation released to the team.",
@@ -187,7 +192,6 @@ type InboxQueueItem = {
   assignmentSupported?: boolean;
   priority: "Hoch" | "Mittel" | "Warm" | "Normal" | "Niedrig";
   priorityScore: number;
-  waitingSince: string;
   waitingMinutes: number;
   owner: string;
   aiStatus: "KI-ready" | "Teilweise" | "Nicht bereit";
@@ -254,7 +258,7 @@ function InboxWorkspace({
     }),
   );
   const visibleItems = filterQueueItems(queueItems, activeFilter, searchQuery);
-  const kpis = getInboxKpis(queueItems);
+  const kpis = getInboxKpis(queueItems, locale);
 
   return (
     <WorkspaceShell
@@ -459,7 +463,7 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
                 {inboxText(locale, item.priority)}
               </b>
             </span>
-            <span>{item.waitingSince}</span>
+            <span>{formatInboxWaitingTime(item.waitingMinutes, locale)}</span>
             <span>{item.owner}</span>
             <span>
               <b className={styles.aiBadge}>{inboxText(locale, item.aiStatus)}</b>
@@ -624,7 +628,6 @@ function buildConversationInboxQueue(
         statusValue: conversation.status,
         priority,
         priorityScore: getPriorityScore(priority),
-        waitingSince: formatWaitingSince(waitingMinutes),
         waitingMinutes,
         owner: conversation.assigned_owner || "Team Inbox",
         aiStatus: formatAiStatus(conversation.ai_status),
@@ -726,7 +729,6 @@ function createQueueItem(
     statusValue: "open",
     priority,
     priorityScore: getPriorityScore(priority) + (latestFollowup ? 20 : 0),
-    waitingSince: formatWaitingSince(waitingMinutes),
     waitingMinutes,
     owner: "Team Inbox",
     aiStatus:
@@ -963,17 +965,6 @@ function getWaitingMinutes(
   );
 }
 
-function formatWaitingSince(minutes: number): string {
-  if (minutes <= 0) return "—";
-  if (minutes < 60) return `${minutes} Min.`;
-
-  const hours = Math.floor(minutes / 60);
-
-  if (hours < 48) return `${hours} Std.`;
-
-  return `${Math.floor(hours / 24)} Tage`;
-}
-
 function isDueToday(value?: string | null): boolean {
   if (!value) return false;
 
@@ -1028,7 +1019,7 @@ function filterQueueItems(
   });
 }
 
-function getInboxKpis(items: InboxQueueItem[]) {
+function getInboxKpis(items: InboxQueueItem[], locale: FanMindLanguage) {
   const responseReady = items.filter(
     (item) => item.aiStatus === "KI-ready",
   ).length;
@@ -1069,10 +1060,7 @@ function getInboxKpis(items: InboxQueueItem[]) {
     },
     {
       label: "Ø Antwortzeit",
-      value:
-        averageMinutes >= 1440
-          ? `${Math.round(averageMinutes / 1440)} Tage`
-          : `${Math.round(averageMinutes / 60)} Std.`,
+      value: formatInboxAverageResponseTime(averageMinutes, locale),
       meta: "lokal abgeleitet",
     },
   ];

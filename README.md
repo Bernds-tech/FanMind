@@ -122,11 +122,14 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   und nutzt ausschließlich diese Session- und Ingestion-Endpunkte. Es hält das
   Sitzungstoken nur im Speicher und bestätigt lediglich den Empfang;
   Besucher-KI, Rückkanal und Outbound-Versand sind nicht aktiviert.
-- Manuelles Inbox-Handoff: autorisierte Workspace-Mitglieder können eine
-  Conversation exklusiv übernehmen und nur die eigene Zuweisung freigeben.
-  Der Handoff ändert weder Conversation-Status noch nächsten Schritt, erzeugt
-  keine Nachricht und führt keinen Versand aus; die stabile User-ID ist der
-  Eigentumsbezug, der Anzeigename bleibt reine Darstellung.
+- Vorbereitetes Inbox-Handoff: Production besitzt `assigned_user_id` noch
+  nicht; die Anwendung erkennt die fehlende Spalte und blendet Übernehmen und
+  Freigeben fail-closed aus. Der Codepfad darf erst nach einem getrennten, in
+  Staging abgenommenen Datenbank-, RLS- und Spaltenrechte-Rollout aktiviert
+  werden. Danach können autorisierte Workspace-Mitglieder eine Conversation
+  exklusiv übernehmen und nur ihre eigene Zuweisung freigeben; Status,
+  nächster Schritt und Nachrichtentext bleiben unverändert und es wird nichts
+  automatisch versendet.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind nicht rabattfähig; Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.

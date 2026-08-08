@@ -37,10 +37,6 @@ Aktiv beziehungsweise produktnah:
 - Kontakte, Kontaktdetail und Suche;
 - CSV-Import und manuelle Kontaktpflege;
 - gespeicherter Nachrichten- und Gesprächskontext;
-- manuelles Inbox-Handoff: autorisierte Workspace-Mitglieder können eine
-  Conversation exklusiv übernehmen und nur ihre eigene Zuweisung wieder
-  freigeben; Status, nächster Schritt und Nachrichtentext bleiben dabei
-  unverändert und es wird nichts automatisch versendet;
 - Kontaktwissen mit Bearbeiten und Löschen;
 - Follow-ups;
 - serverseitige KI-Antwortvorschläge;
@@ -59,6 +55,17 @@ Aktiv beziehungsweise produktnah:
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag als kontrollierter echter End-to-End-Billing-Test; gleicher Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Lifecycle wie Starter; kein Referral-Rabatt, kein dauerhaftes öffentliches Paket; eine temporäre Registrierungsfreigabe läuft spätestens nach 24 Stunden ab.
 
 Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-Checkout bleibt gesperrt. Die kostenlose Demo ist kein entgeltliches Paket.
+
+Vorbereitet, aber in Production noch nicht aktiviert:
+
+- Inbox-Handoff: Production besitzt `assigned_user_id` noch nicht; die
+  Anwendung erkennt die fehlende Spalte und blendet Übernehmen und Freigeben
+  fail-closed aus. Der Codepfad darf erst nach einem getrennten, in Staging
+  abgenommenen Datenbank-, RLS- und Spaltenrechte-Rollout aktiviert werden.
+  Danach dürfen autorisierte Workspace-Mitglieder eine Conversation exklusiv
+  übernehmen und nur ihre eigene Zuweisung freigeben; Status, nächster Schritt
+  und Nachrichtentext bleiben unverändert und es wird nichts automatisch
+  versendet.
 
 ## 3. Eigenständige Mobile-App
 

@@ -587,8 +587,10 @@ const englishCopy: Record<string, string> = {
   "Roadmap · keine Vollsuite in der aktuellen Version": "Roadmap · no full suite in the current version",
   "Roadmap anzeigen →": "View roadmap →",
   "LinkedIn & weitere Kanäle": "LinkedIn & additional channels",
-  "Später · noch nicht begonnen": "Later · not started",
-  "YouTube, Threads, Reddit & Telegram": "YouTube, Threads, Reddit and Telegram",
+  "Später · Anbindungen noch nicht begonnen": "Later · connections not started",
+  "YouTube, Threads & Reddit": "YouTube, Threads and Reddit",
+  "Bot-/Webhook-Grundlage vorbereitet · inaktiv; Anbindung nicht begonnen":
+    "Bot/webhook groundwork prepared · inactive; connection not started",
   "Weitere Creator- & Membership-Kanäle": "Additional creator and membership channels",
   "Business-, Review- & Shop-Kanäle": "Business, review and shop channels",
   "Internationale Plattformen": "International platforms",
