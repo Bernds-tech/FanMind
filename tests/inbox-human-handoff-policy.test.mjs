@@ -81,7 +81,8 @@ test("English inbox navigation preserves locale and renders localized workspace 
     readFile(actionsPath, "utf8"),
   ]);
 
-  assert.match(navigation, /locale === "en" \? "\/inbox\?lang=en" : "\/inbox"/u);
+  assert.match(navigation, /localizedWorkspaceHref\("\/inbox", locale\)/u);
+  assert.match(navigation, /url\.searchParams\.set\("lang", "en"\)/u);
   assert.match(page, /resolveWorkspaceLocale\(\{[\s\S]*lang: params\?\.lang,[\s\S]*user,/u);
   assert.match(page, /getWorkspaceNavigationForUser\("inbox", userEmail, locale\)/u);
   assert.match(page, /locale=\{locale\}/u);
@@ -91,6 +92,16 @@ test("English inbox navigation preserves locale and renders localized workspace 
   assert.match(page, /formatInboxWaitingTime\(item\.waitingMinutes, locale\)/u);
   assert.match(page, /getInboxKpis\(queueItems, locale\)/u);
   assert.doesNotMatch(page, /<span>\{item\.waitingSince\}<\/span>/u);
+  assert.match(page, /const fanListHref = localizedWorkspaceHref\("\/fans#fans-list", locale\)/u);
+  assert.equal(
+    page.match(/(?:primaryActionHref: fanListHref|href=\{fanListHref\})/gu)?.length,
+    2,
+  );
+  assert.match(page, /localizedWorkspaceHref\(`\/fans\/\$\{item\.contactId\}`, locale\)/u);
+  assert.match(page, /localizedWorkspaceHref\(`\/fans\/\$\{item\.contactId\}\?focus=reply`, locale\)/u);
+  assert.match(page, /localizedWorkspaceHref\(`\/fans\/\$\{item\.contactId\}\?focus=followup`, locale\)/u);
+  assert.doesNotMatch(page, /(?:href|primaryActionHref)=[{]?["`]\/fans#fans-list/u);
+  assert.doesNotMatch(page, /href=\{`\/fans\/\$\{item\.contactId\}(?:\?focus=(?:reply|followup))?`\}/u);
   assert.match(searchForm, /if \(locale === "en"\) params\.set\("lang", "en"\)/u);
   assert.match(searchForm, /locale === "en" \? "Search" : "Suche"/u);
   assert.equal(page.match(/<input name="lang" type="hidden" value=\{locale\} \/>/gu)?.length, 2);

@@ -19,6 +19,17 @@ export type WorkspaceRouteKey =
   | "followups"
   | "admin";
 
+export function localizedWorkspaceHref(
+  path: string,
+  locale: FanMindLanguage,
+): string {
+  if (locale !== "en") return path;
+
+  const url = new URL(path, "https://fanmind.invalid");
+  url.searchParams.set("lang", "en");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function getWorkspaceNavigationForUser(
   activeRoute: WorkspaceRouteKey,
   email: string | null | undefined,
@@ -59,7 +70,7 @@ export function getWorkspaceNavigation(
       },
       {
         label: locale === "en" ? "Inbox" : "Posteingang",
-        href: locale === "en" ? "/inbox?lang=en" : "/inbox",
+        href: localizedWorkspaceHref("/inbox", locale),
         icon: "channels",
         active: activeRoute === "inbox",
       },

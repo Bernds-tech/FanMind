@@ -8,7 +8,8 @@ const navigationPath = new URL("../src/lib/workspaceNavigation.ts", import.meta.
 test("workspace navigation exposes the real inbox", async () => {
   const navigation = await readFile(navigationPath, "utf8");
 
-  assert.match(navigation, /locale === "en" \? "\/inbox\?lang=en" : "\/inbox"/u);
+  assert.match(navigation, /localizedWorkspaceHref\("\/inbox", locale\)/u);
+  assert.match(navigation, /return `\$\{url\.pathname\}\$\{url\.search\}\$\{url\.hash\}`/u);
   assert.match(navigation, /active: activeRoute === "inbox"/u);
 });
 

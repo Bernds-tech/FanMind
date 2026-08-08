@@ -28,6 +28,7 @@ import {
 } from "@/lib/plans";
 import type { PlanId } from "@/config/plans";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
 import {
   DEMO_CLEANUP_DELETE_STEPS,
@@ -46,6 +47,8 @@ import {
   normalizeWebhookErrorCode,
 } from "@/lib/webhookSecurityPolicy.mjs";
 import {
+  INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_READY_RPC,
+  INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_RPC,
   isMissingWorkspaceExpandColumn,
   isMissingWorkspaceProvisioningRpc,
   WORKSPACE_PROVISIONING_RPC,
@@ -66,6 +69,12 @@ type SupabaseServerUserResponse = {
 type WorkspaceCommercialOption =
   | ProductiveCommercialOption
   | "starter_no_setup_commitment";
+
+export const PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR =
+  "public_daily_test_plan_unavailable";
+
+export const PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR =
+  "public_daily_test_provisioning_unavailable";
 
 export type WorkspaceBackfillRow = {
   id: string;
@@ -576,6 +585,10 @@ type WorkspaceBackfillResult = {
   workspace: WorkspaceBackfillRow | null;
   error: Error | null;
   created: boolean;
+};
+
+type InternalDailyTestProvisioningReadyRow = {
+  ready: boolean;
 };
 
 type WorkspaceDashboardResult = {
@@ -6054,15 +6067,47 @@ export async function ensureUserWorkspace(
         user.user_metadata,
         "payment_terms_version",
       ) === PAYMENT_TERMS_VERSION;
+    const isInternalDailyTest =
+      workspaceTerms.commercialOption === "internal_daily_test";
+
+    if (isInternalDailyTest) {
+      if (!(await isInternalDailyTestWorkspaceProvisioningReady())) {
+        return workspaceBackfillError(
+          PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR,
+        );
+      }
+
+      // This direct file read is the admission decision and intentionally runs
+      // last, immediately before the server-owned database mutation.
+      if (!(await getPublicDailyTestPlanEnabled())) {
+        return workspaceBackfillError(
+          PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR,
+        );
+      }
+    }
+
+    const provisioningAccessToken = isInternalDailyTest
+      ? getServiceAccessToken()
+      : accessToken;
     const rpcResult = await postgrestRequest<WorkspaceProvisioningRpcRow>(
-      `rpc/${WORKSPACE_PROVISIONING_RPC}`,
+      `rpc/${
+        isInternalDailyTest
+          ? INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_RPC
+          : WORKSPACE_PROVISIONING_RPC
+      }`,
       "POST",
-      {
-        p_workspace_name: workspaceName,
-        p_commercial_option: workspaceTerms.commercialOption,
-        p_payment_terms_accepted: paymentTermsAccepted,
-      },
-      accessToken,
+      isInternalDailyTest
+        ? {
+            p_user_id: user.id,
+            p_workspace_name: workspaceName,
+            p_payment_terms_accepted: paymentTermsAccepted,
+          }
+        : {
+            p_workspace_name: workspaceName,
+            p_commercial_option: workspaceTerms.commercialOption,
+            p_payment_terms_accepted: paymentTermsAccepted,
+          },
+      provisioningAccessToken,
       {
         select: "workspace_id,created",
         single: true,
@@ -6071,7 +6116,8 @@ export async function ensureUserWorkspace(
 
     if (
       rpcResult.error &&
-      !isMissingWorkspaceProvisioningRpc(rpcResult.error)
+      (isInternalDailyTest ||
+        !isMissingWorkspaceProvisioningRpc(rpcResult.error))
     ) {
       return workspaceBackfillError(
         `Workspace konnte nicht sicher angelegt werden: ${rpcResult.error.message}`,
@@ -6110,7 +6156,7 @@ export async function ensureUserWorkspace(
 
     // Compatibility bridge for the deploy-before-migrate rollout. Only an
     // exact missing-RPC/schema-cache result reaches this legacy path.
-    if (!workspace) {
+    if (!workspace && !isInternalDailyTest) {
       const fullInsertWorkspaceResult =
         await postgrestRequest<WorkspaceBackfillRow>(
           "workspaces",
@@ -6246,6 +6292,22 @@ export async function ensureUserWorkspace(
   }
 
   return { workspace, error: null, created };
+}
+
+export async function isInternalDailyTestWorkspaceProvisioningReady(): Promise<boolean> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) return false;
+
+  const result =
+    await postgrestRequest<InternalDailyTestProvisioningReadyRow>(
+      `rpc/${INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_READY_RPC}`,
+      "POST",
+      {},
+      serviceAccessToken,
+      { select: "ready", single: true },
+    );
+
+  return !result.error && result.data?.ready === true;
 }
 
 
@@ -6863,6 +6925,13 @@ function resolveWorkspaceTerms(metadata: Record<string, unknown> | undefined) {
     return { planId, ...getRegistrationCommercialTerms("pilot")! };
   }
 
+  if (planId === "pilot" && commercialOption === "internal_daily_test") {
+    return {
+      planId,
+      ...getRegistrationCommercialTerms("pilot", "internal_daily_test")!,
+    };
+  }
+
   if (
     planId === "starter" &&
     commercialOption === "starter_no_setup_commitment"
@@ -6903,6 +6972,7 @@ function isProductiveCommercialOption(
 ): value is WorkspaceCommercialOption {
   return (
     value === "pilot_only" ||
+    value === "internal_daily_test" ||
     value === "starter_paid_setup" ||
     value === "starter_no_setup_commitment"
   );

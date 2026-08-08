@@ -13,7 +13,10 @@ import {
 import { getFanGroupKey } from "@/lib/fanIdentity";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
-import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
+import {
+  getWorkspaceNavigationForUser,
+  localizedWorkspaceHref,
+} from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
 import dashboardStyles from "../dashboard/dashboard.module.css";
 import {
@@ -259,6 +262,7 @@ function InboxWorkspace({
   );
   const visibleItems = filterQueueItems(queueItems, activeFilter, searchQuery);
   const kpis = getInboxKpis(queueItems, locale);
+  const fanListHref = localizedWorkspaceHref("/fans#fans-list", locale);
 
   return (
     <WorkspaceShell
@@ -275,7 +279,7 @@ function InboxWorkspace({
         subtitle: inboxText(locale, "Priorisierte Arbeitsliste für eingehende Nachrichten, Follow-ups und KI-vorbereitete Antworten."),
         searchPlaceholder: inboxText(locale, "Suche nach Fan, Kanal, Nachricht, Segment …"),
         primaryActionLabel: inboxText(locale, "Zur Fanliste"),
-        primaryActionHref: "/fans#fans-list",
+        primaryActionHref: fanListHref,
       }}
       contactCount={getWorkspaceKpiStatsFromContacts(contacts).totalFans}
       openFollowupCount={activeFollowups.length}
@@ -321,7 +325,7 @@ function InboxWorkspace({
                 <p className={dashboardStyles.eyebrow}>Conversation Queue</p>
                 <h2 id="queue-title">{inboxText(locale, "Offene Konversationen")}</h2>
               </div>
-              <Link className={styles.secondaryLink} href="/fans#fans-list">
+              <Link className={styles.secondaryLink} href={fanListHref}>
                 {inboxText(locale, "Zur Fanliste")}
               </Link>
             </div>
@@ -426,7 +430,7 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
         <div className={styles.queueRowWrap} key={item.key}>
           <Link
             className={styles.queueRowLink}
-            href={`/fans/${item.contactId}`}
+            href={localizedWorkspaceHref(`/fans/${item.contactId}`, locale)}
           >
             <span className={styles.fanCell}>
               <span className={styles.avatar}>{item.initials}</span>
@@ -526,10 +530,10 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
                   <button type="submit">{inboxText(locale, "Freigeben")}</button>
                 </form>
               ) : null}
-              <Link href={`/fans/${item.contactId}?focus=reply`}>
+              <Link href={localizedWorkspaceHref(`/fans/${item.contactId}?focus=reply`, locale)}>
                 {inboxText(locale, "Antwort vorbereiten")}
               </Link>
-              <Link href={`/fans/${item.contactId}?focus=followup`}>
+              <Link href={localizedWorkspaceHref(`/fans/${item.contactId}?focus=followup`, locale)}>
                 {inboxText(locale, "Follow-up planen")}
               </Link>
             </div>

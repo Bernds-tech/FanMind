@@ -135,13 +135,19 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
 test("daily test registration is controlled by an explicit fail-closed server flag", () => {
   const registerPageSource = fs.readFileSync("src/app/register/page.tsx", "utf8");
   const registerClientSource = fs.readFileSync("src/app/register/RegisterClient.tsx", "utf8");
+  const registrationWindowRouteSource = fs.readFileSync("src/app/api/register/daily-test-window/route.ts", "utf8");
+  const registrationWorkspaceRouteSource = fs.readFileSync("src/app/api/register/workspace/route.ts", "utf8");
+  const supabaseServerSource = fs.readFileSync("src/lib/supabase/server.ts", "utf8");
 
   const runtimeSettingsSource = fs.readFileSync("src/lib/runtimeProductSettings.ts", "utf8");
   const publicDailyTestPolicySource = fs.readFileSync("src/lib/publicDailyTestPlanPolicy.mjs", "utf8");
   const adminRouteSource = fs.readFileSync("src/app/api/admin/settings/daily-test-plan/route.ts", "utf8");
+  const adminSettingsSource = fs.readFileSync("src/app/admin/settings/page.tsx", "utf8");
+  const workspaceSetupSource = fs.readFileSync("src/app/workspace/setup/page.tsx", "utf8");
   const deploySource = fs.readFileSync(".github/workflows/deploy-fanmind.yml", "utf8");
 
   assert.match(registerPageSource, /getPublicDailyTestPlanEnabled/);
+  assert.match(registerPageSource, /isInternalDailyTestWorkspaceProvisioningReady/);
   const checkoutRouteSource = fs.readFileSync("src/app/api/billing/checkout/route.ts", "utf8");
   assert.match(checkoutRouteSource, /await getPublicDailyTestPlanEnabled\(\)/);
   assert.match(runtimeSettingsSource, /publicDailyTestPlanEnabled/);
@@ -151,6 +157,14 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   assert.doesNotMatch(runtimeSettingsSource, /FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN/);
   assert.match(runtimeSettingsSource, /rename\(temporaryPath, settingsPath\)/);
   assert.match(adminRouteSource, /requirePlatformAdmin/);
+  assert.match(
+    adminRouteSource,
+    /enabled && !\(await isInternalDailyTestWorkspaceProvisioningReady\(\)\)[\s\S]*daily_test_plan", "not_ready"[\s\S]*setPublicDailyTestPlanEnabled/u,
+  );
+  assert.match(
+    adminSettingsSource,
+    /windowEnabled && provisioningReady[\s\S]*Sichere Registrierung[\s\S]*Rollout ausstehend/u,
+  );
   assert.match(deploySource, /if \[ ! -e "\$RUNTIME_SETTINGS_FILE" \]/);
   assert.doesNotMatch(deploySource, /sed -i.*FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN/);
   assert.doesNotMatch(registerPageSource, /enablePublicDailyTestPlan=\{false\}/);
@@ -160,6 +174,47 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   );
   assert.match(registerClientSource, /isRetiredPilotRequested \? "starter" : resolvedPlanId/u);
   assert.match(registerClientSource, /commercialOption = isDailyTestPlanSelected \? "internal_daily_test"/);
+  assert.match(registerClientSource, /fanmind_locale: language/u);
+  assert.match(registrationWindowRouteSource, /export const dynamic = "force-dynamic"/u);
+  assert.match(registrationWindowRouteSource, /isTrustedFanMindMutationRequest\(request\)/u);
+  assert.match(registrationWindowRouteSource, /readBoundedJsonRequest\([\s\S]*MAX_DAILY_TEST_WINDOW_BODY_BYTES/u);
+  assert.match(registrationWindowRouteSource, /Object\.keys\(payload\)\.length !== 1/u);
+  assert.match(registrationWindowRouteSource, /getPublicDailyTestPlanEnabled\(\)[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)/u);
+  assert.match(registrationWindowRouteSource, /daily_test_window_closed/u);
+  assert.match(registrationWindowRouteSource, /"Cache-Control": "no-store"/u);
+  assert.doesNotMatch(registrationWindowRouteSource, /Stripe|createStripeCheckoutSession/u);
+  const windowCheckIndex = registerClientSource.indexOf('fetch("/api/register/daily-test-window"');
+  const signUpIndex = registerClientSource.indexOf("supabase.auth.signUp");
+  assert.ok(windowCheckIndex >= 0 && signUpIndex > windowCheckIndex);
+  assert.match(registerClientSource, /selectedCommercialOption === "internal_daily_test"[\s\S]*fetch\("\/api\/register\/daily-test-window"/u);
+  assert.match(registerClientSource, /windowResponse\.json\(\)\.catch\(\(\) => null\)[\s\S]*!windowResponse\.ok \|\| windowPayload\?\.ok !== true[\s\S]*setError\(DAILY_TEST_WINDOW_CLOSED_MESSAGES\[language\]\)[\s\S]*return;/u);
+  assert.doesNotMatch(registerClientSource, /DAILY_TEST_WINDOW_CLOSED_MESSAGES[\s\S]*selectedCommercialOption\s*=\s*"starter/u);
+  const sessionSyncIndex = registerClientSource.indexOf("await syncSupabaseSessionForServer(data.session)");
+  const workspaceMutationIndex = registerClientSource.indexOf('fetch("/api/register/workspace"');
+  assert.ok(sessionSyncIndex > signUpIndex && workspaceMutationIndex > sessionSyncIndex);
+  assert.doesNotMatch(registerClientSource, /supabase\.rpc|\.from\("workspaces"\)|\.from\("workspace_members"\)/u);
+  assert.match(registrationWorkspaceRouteSource, /getSupabaseServerUser\(\)[\s\S]*ensureUserWorkspace\(data\.user\)/u);
+  assert.match(registrationWorkspaceRouteSource, /daily_test_window_closed/u);
+  assert.match(registrationWorkspaceRouteSource, /"Cache-Control": "no-store"/u);
+  const dailyGateIndex = supabaseServerSource.indexOf('workspaceTerms.commercialOption === "internal_daily_test"');
+  const provisioningRpcIndex = supabaseServerSource.indexOf("INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_RPC", dailyGateIndex);
+  const legacyBridgeIndex = supabaseServerSource.indexOf("// Compatibility bridge for the deploy-before-migrate rollout.", dailyGateIndex);
+  assert.ok(dailyGateIndex >= 0 && provisioningRpcIndex > dailyGateIndex && legacyBridgeIndex > provisioningRpcIndex);
+  assert.match(supabaseServerSource, /isInternalDailyTest[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)[\s\S]*getPublicDailyTestPlanEnabled\(\)[\s\S]*getServiceAccessToken\(\)/u);
+  assert.match(supabaseServerSource, /if \(!workspace && !isInternalDailyTest\)/u);
+  assert.match(supabaseServerSource, /planId === "pilot" && commercialOption === "internal_daily_test"[\s\S]*getRegistrationCommercialTerms\("pilot", "internal_daily_test"\)/u);
+  assert.match(
+    workspaceSetupSource,
+    /resolveWorkspaceLocale\([\s\S]*lang: params\?\.lang,[\s\S]*user: data\.user[\s\S]*PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR[\s\S]*No workspace was created[\s\S]*Es wurde kein Workspace angelegt/u,
+  );
+  assert.doesNotMatch(
+    workspaceSetupSource,
+    /\{setupResult\.error\.message\}/u,
+  );
+  assert.match(
+    registerClientSource,
+    /DAILY_TEST_WORKSPACE_RECOVERY_MESSAGES[\s\S]*Do not register again[\s\S]*workspacePayload\?\.code === "daily_test_window_closed"[\s\S]*DAILY_TEST_WORKSPACE_RECOVERY_MESSAGES\[language\]/u,
+  );
 });
 
 test("daily beta admin checkout targets the workspace owner and cancels at paid-day end", () => {

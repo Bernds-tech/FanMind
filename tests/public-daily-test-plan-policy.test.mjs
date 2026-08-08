@@ -18,6 +18,20 @@ test("public daily test access is a bounded 24-hour window, never a permanent ca
   assert.equal(
     getTemporaryPublicDailyTestPlanStatus(
       settings,
+      new Date(now.getTime() + PUBLIC_DAILY_TEST_PLAN_WINDOW_MS - 1),
+    ).enabled,
+    true,
+  );
+  assert.equal(
+    getTemporaryPublicDailyTestPlanStatus(
+      settings,
+      new Date(now.getTime() + PUBLIC_DAILY_TEST_PLAN_WINDOW_MS),
+    ).enabled,
+    false,
+  );
+  assert.equal(
+    getTemporaryPublicDailyTestPlanStatus(
+      settings,
       new Date(now.getTime() + PUBLIC_DAILY_TEST_PLAN_WINDOW_MS + 1),
     ).enabled,
     false,

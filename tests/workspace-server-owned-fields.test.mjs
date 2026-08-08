@@ -16,11 +16,14 @@ import {
 
 const rpcMigrationPath =
   "supabase/migrations/20260726120000_workspace_provisioning_rpc.sql";
+const dailyRpcMigrationPath =
+  "supabase/migrations/20260808230102_internal_daily_test_workspace_provisioning.sql";
 const privilegeMigrationPath =
   "supabase/controlled/20260726121000_workspace_server_owned_columns.sql";
 const triggerFunctionSecurityMigrationPath =
   "supabase/controlled/20260806203023_harden_trigger_function_privileges.sql";
 const registerPath = "src/app/register/RegisterClient.tsx";
+const registerWorkspaceRoutePath = "src/app/api/register/workspace/route.ts";
 const serverPath = "src/lib/supabase/server.ts";
 const clientPath = "src/lib/supabase/client.ts";
 const provisioningPolicyPath = "src/lib/workspaceProvisioning.ts";
@@ -280,6 +283,98 @@ test("provisioning RPC derives identity and Starter commercial values server-sid
   );
 });
 
+test("Daily provisioning is fixed, atomic and service-role-only", async () => {
+  const migration = await readFile(dailyRpcMigrationPath, "utf8");
+  const dailyFunctionStart = migration.indexOf(
+    "create or replace function public.ensure_internal_daily_test_workspace",
+  );
+  const dailyFunctionEnd = migration.indexOf(
+    "revoke all on function public.ensure_internal_daily_test_workspace",
+    dailyFunctionStart,
+  );
+  const dailyFunction = migration.slice(dailyFunctionStart, dailyFunctionEnd);
+
+  assert.match(migration, /^begin;/mu);
+  assert.match(migration, /^commit;/mu);
+  assert.match(
+    migration,
+    /add constraint workspaces_commercial_option_daily_check[\s\S]*internal_daily_test[\s\S]*not valid[\s\S]*validate constraint workspaces_commercial_option_daily_check[\s\S]*drop constraint if exists workspaces_commercial_option_check[\s\S]*rename constraint workspaces_commercial_option_daily_check[\s\S]*to workspaces_commercial_option_check/u,
+  );
+  assert.match(
+    migration,
+    /add constraint workspaces_payment_collection_method_daily_check[\s\S]*sepa_direct_debit[\s\S]*'card'[\s\S]*not valid[\s\S]*validate constraint workspaces_payment_collection_method_daily_check[\s\S]*drop constraint if exists workspaces_payment_collection_method_check[\s\S]*rename constraint workspaces_payment_collection_method_daily_check[\s\S]*to workspaces_payment_collection_method_check/u,
+  );
+  assert.match(
+    migration,
+    /create or replace function public\.ensure_internal_daily_test_workspace\(\s*p_user_id uuid,\s*p_workspace_name text,\s*p_payment_terms_accepted boolean\s*\)/u,
+  );
+  assert.match(migration, /security definer[\s\S]*set search_path = pg_catalog, public, pg_temp/u);
+  assert.match(migration, /auth\.role\(\) is distinct from 'service_role'/u);
+  assert.match(migration, /from auth\.users[\s\S]*auth_user\.id = p_user_id/u);
+  assert.match(migration, /pg_advisory_xact_lock\(hashtextextended\(p_user_id::text, 0\)\)/u);
+  assert.match(
+    migration,
+    /'pilot',[\s\S]*'internal_daily_test',[\s\S]*0,[\s\S]*0,[\s\S]*0,[\s\S]*'pending_payment_setup',[\s\S]*'stripe',[\s\S]*'card',[\s\S]*false,[\s\S]*'2026-06-v1'/u,
+  );
+  assert.match(
+    migration,
+    /insert into public\.workspace_members[\s\S]*on conflict \(workspace_id, user_id\)[\s\S]*role = excluded\.role/u,
+  );
+  assert.doesNotMatch(
+    dailyFunction,
+    /p_(?:commercial_option|plan_id|setup_fee|monthly_fee|commitment|billing|payment_collection|test_access)/u,
+  );
+  assert.match(
+    migration,
+    /revoke all on function public\.ensure_internal_daily_test_workspace\([\s\S]*from public, anon, authenticated/u,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.ensure_internal_daily_test_workspace\([\s\S]*to service_role/u,
+  );
+  assert.doesNotMatch(
+    migration,
+    /grant execute on function public\.ensure_internal_daily_test_workspace\([\s\S]*to (?:public|anon|authenticated)/u,
+  );
+});
+
+test("Daily readiness requires the RPC and denies every browser INSERT capability", async () => {
+  const migration = await readFile(dailyRpcMigrationPath, "utf8");
+
+  assert.match(
+    migration,
+    /create or replace function public\.internal_daily_test_workspace_provisioning_ready\(\)[\s\S]*returns table \(ready boolean\)/u,
+  );
+  assert.match(migration, /auth\.role\(\) = 'service_role'/u);
+  assert.match(migration, /to_regprocedure\([\s\S]*ensure_internal_daily_test_workspace\(uuid,text,boolean\)/u);
+  assert.match(
+    migration,
+    /has_function_privilege\(\s*'service_role',[\s\S]*ensure_internal_daily_test_workspace\(uuid,text,boolean\)[\s\S]*'EXECUTE'/u,
+  );
+  assert.match(
+    migration,
+    /workspaces_commercial_option_check[\s\S]*convalidated[\s\S]*internal_daily_test[\s\S]*workspaces_payment_collection_method_check[\s\S]*convalidated[\s\S]*'''card'''/u,
+  );
+  assert.match(
+    migration,
+    /workspaces_owner_user_id_uidx[\s\S]*indrelid = 'public\.workspaces'::regclass[\s\S]*indisunique[\s\S]*indisvalid[\s\S]*indisready[\s\S]*indislive[\s\S]*indimmediate[\s\S]*array\['owner_user_id'\][\s\S]*workspace_members_workspace_user_uidx[\s\S]*indrelid = 'public\.workspace_members'::regclass[\s\S]*array\['workspace_id', 'user_id'\]/u,
+  );
+  for (const role of ["anon", "authenticated"]) {
+    assert.match(
+      migration,
+      new RegExp(`not has_table_privilege\\(\\s*'${role}',[\\s\\S]*?'INSERT'`, "u"),
+    );
+    assert.match(
+      migration,
+      new RegExp(`not has_any_column_privilege\\(\\s*'${role}',[\\s\\S]*?'INSERT'`, "u"),
+    );
+  }
+  assert.match(
+    migration,
+    /revoke all on function public\.internal_daily_test_workspace_provisioning_ready\(\)[\s\S]*from public, anon, authenticated[\s\S]*grant execute[\s\S]*to service_role/u,
+  );
+});
+
 test("provisioning is atomic, idempotent and fail-closed for ambiguous owners", async () => {
   const migration = await readFile(rpcMigrationPath, "utf8");
 
@@ -485,25 +580,29 @@ test("workspace privileges expose exactly ten owner-editable columns", async () 
   );
 });
 
-test("registration and login provisioning prefer the RPC and only bridge an exact missing RPC", async () => {
-  const [register, server, client, policy] = await Promise.all([
+test("registration and login provisioning are server-owned and only bridge an exact missing RPC", async () => {
+  const [register, registerWorkspaceRoute, server, client, policy] = await Promise.all([
     readFile(registerPath, "utf8"),
+    readFile(registerWorkspaceRoutePath, "utf8"),
     readFile(serverPath, "utf8"),
     readFile(clientPath, "utf8"),
     readFile(provisioningPolicyPath, "utf8"),
   ]);
 
   assert.match(client, /rpc\/\$\{functionName\}/u);
-  assert.match(register, /supabase\.rpc<WorkspaceProvisioningRpcRow>/u);
-  assert.match(register, /p_payment_terms_accepted: true/u);
-  assert.ok(
-    register.indexOf("supabase.rpc<WorkspaceProvisioningRpcRow>") <
-      register.indexOf('.from("workspaces")\n        .insert'),
-  );
+  assert.match(register, /await syncSupabaseSessionForServer\(data\.session\)[\s\S]*fetch\("\/api\/register\/workspace"/u);
+  assert.doesNotMatch(register, /supabase\.rpc|\.from\("workspaces"\)|\.from\("workspace_members"\)/u);
+  assert.match(registerWorkspaceRoute, /getSupabaseServerUser\(\)[\s\S]*ensureUserWorkspace\(data\.user\)/u);
+  assert.match(registerWorkspaceRoute, /isTrustedFanMindMutationRequest\(request\)/u);
+  assert.match(registerWorkspaceRoute, /readBoundedJsonRequest\([\s\S]*MAX_REGISTER_WORKSPACE_BODY_BYTES/u);
 
   assert.match(
     server,
-    /`rpc\/\$\{WORKSPACE_PROVISIONING_RPC\}`[\s\S]*p_payment_terms_accepted: paymentTermsAccepted/u,
+    /INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_RPC[\s\S]*WORKSPACE_PROVISIONING_RPC[\s\S]*p_user_id: user\.id[\s\S]*p_commercial_option: workspaceTerms\.commercialOption/u,
+  );
+  assert.match(
+    server,
+    /isInternalDailyTest[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)[\s\S]*getPublicDailyTestPlanEnabled\(\)[\s\S]*getServiceAccessToken\(\)/u,
   );
   assert.doesNotMatch(server, /const repairValues/u);
   assert.match(
@@ -519,13 +618,6 @@ test("registration and login provisioning prefer the RPC and only bridge an exac
     /permission|forbidden|unauthorized|invalid_commercial_option/u,
   );
 
-  const registerBridgeStart = register.indexOf(
-    "// Compatibility bridge for deployments where the additive RPC migration",
-  );
-  const registerBridgeEnd = register.indexOf(
-    "\n  if (!workspace?.id)",
-    registerBridgeStart,
-  );
   const serverBridgeStart = server.indexOf(
     "// Compatibility bridge for the deploy-before-migrate rollout.",
   );
@@ -534,32 +626,20 @@ test("registration and login provisioning prefer the RPC and only bridge an exac
     serverBridgeStart,
   );
   assert.ok(
-    registerBridgeStart >= 0 &&
-      registerBridgeEnd > registerBridgeStart &&
-      serverBridgeStart >= 0 &&
+    serverBridgeStart >= 0 &&
       serverBridgeEnd > serverBridgeStart,
     "compatibility bridge boundaries are missing",
   );
-  const registerBridge = register.slice(
-    registerBridgeStart,
-    registerBridgeEnd,
-  );
   const serverBridge = server.slice(serverBridgeStart, serverBridgeEnd);
-  assert.match(
-    registerBridge,
-    /isMissingWorkspaceExpandColumn\(workspaceError\)[\s\S]*coreWorkspace[\s\S]*billing_status[\s\S]*billing_provider[\s\S]*payment_collection_method[\s\S]*billing_updated_by_user_id/u,
-  );
+  assert.match(serverBridge, /if \(!workspace && !isInternalDailyTest\)/u);
   assert.match(
     serverBridge,
     /isMissingWorkspaceExpandColumn\(fullInsertWorkspaceResult\.error\)[\s\S]*coreInsertWorkspaceResult[\s\S]*billing_status[\s\S]*billing_provider[\s\S]*payment_collection_method[\s\S]*billing_updated_by_user_id/u,
   );
-  const registerCoreBridge = registerBridge.slice(
-    registerBridge.indexOf("const { data: coreWorkspace"),
-  );
   const serverCoreBridge = serverBridge.slice(
     serverBridge.indexOf("const coreInsertWorkspaceResult"),
   );
-  for (const bridgeSource of [registerCoreBridge, serverCoreBridge]) {
+  for (const bridgeSource of [serverCoreBridge]) {
     for (const migrationOnlyColumn of [
       "payment_terms_version",
       "payment_terms_accepted_at",

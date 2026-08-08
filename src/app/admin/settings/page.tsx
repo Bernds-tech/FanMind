@@ -1,5 +1,6 @@
 import { requirePlatformAdmin } from "@/lib/admin";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
+import { isInternalDailyTestWorkspaceProvisioningReady } from "@/lib/supabase/server";
 import { AdminBillingShell } from "@/app/admin/billing/AdminBillingShell";
 import { AdminTabs } from "@/app/admin/billing/AdminTabs";
 import styles from "@/app/admin/billing/adminBilling.module.css";
@@ -10,7 +11,11 @@ type AdminSettingsPageProps = {
 
 export default async function AdminSettingsPage({ searchParams }: AdminSettingsPageProps) {
   const user = await requirePlatformAdmin();
-  const enabled = await getPublicDailyTestPlanEnabled();
+  const [windowEnabled, provisioningReady] = await Promise.all([
+    getPublicDailyTestPlanEnabled(),
+    isInternalDailyTestWorkspaceProvisioningReady(),
+  ]);
+  const enabled = windowEnabled && provisioningReady;
   const params = await searchParams;
   const result = Array.isArray(params.daily_test_plan)
     ? params.daily_test_plan[0]
@@ -26,7 +31,9 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
         <AdminTabs activeTab="settings" />
         {result ? (
           <p className={result === "enabled" ? styles.badgeOk : styles.badgeWarn}>
-            1-€/Tag-Beta-Abo wurde {result === "enabled" ? "aktiviert" : "deaktiviert"}.
+            {result === "not_ready"
+              ? "Freigabe blockiert: Der getrennte Daily-Provisioning-Rollout ist noch nicht abgenommen."
+              : `1-€/Tag-Beta-Abo wurde ${result === "enabled" ? "aktiviert" : "deaktiviert"}.`}
           </p>
         ) : null}
         <section className={styles.card}>
@@ -39,7 +46,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               </p>
             </div>
             <span className={enabled ? styles.badgeOk : styles.badgeWarn}>
-              {enabled ? "Aktiv" : "Aus"}
+              {enabled ? "Aktiv" : windowEnabled ? "Sicher blockiert" : "Aus"}
             </span>
           </div>
           <div className={styles.statusList}>
@@ -52,6 +59,9 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
             <div className={styles.statusItem}>
               <span>Referral</span><strong>Ausgeschlossen</strong>
             </div>
+            <div className={styles.statusItem}>
+              <span>Sichere Registrierung</span><strong>{provisioningReady ? "Bereit" : "Rollout ausstehend"}</strong>
+            </div>
           </div>
           <p className={styles.muted}>
             Ausschalten entfernt nur die Auswahl für neue Registrierungen. Bestehende Stripe-Abos,
@@ -59,9 +69,13 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
             automatisch nach spätestens 24 Stunden ab und wird nie zum dauerhaften öffentlichen Paket.
           </p>
           <form action="/api/admin/settings/daily-test-plan" method="post">
-            <input type="hidden" name="enabled" value={enabled ? "false" : "true"} />
-            <button className={enabled ? styles.buttonDanger : styles.buttonPrimary} type="submit">
-              {enabled ? "1-€/Tag-Abo ausschalten" : "1-€/Tag-Abo einschalten"}
+            <input type="hidden" name="enabled" value={windowEnabled ? "false" : "true"} />
+            <button
+              className={windowEnabled ? styles.buttonDanger : styles.buttonPrimary}
+              type="submit"
+              disabled={!windowEnabled && !provisioningReady}
+            >
+              {windowEnabled ? "1-€/Tag-Abo ausschalten" : "1-€/Tag-Abo einschalten"}
             </button>
           </form>
         </section>
