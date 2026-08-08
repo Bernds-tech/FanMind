@@ -14,6 +14,9 @@ const strip = await readFile(
   new URL("../src/components/WorkspaceKpiStrip.tsx", import.meta.url),
   "utf8",
 );
+const manifest = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+);
 
 test("follow-up completion KPI uses workspace-scoped count-only queries", () => {
   const start = server.indexOf(
@@ -54,4 +57,8 @@ test("completion rate fails closed for errors, invalid counts and an empty denom
   assert.match(strip, /wt\(locale, "Nicht verfügbar"\)/u);
   assert.doesNotMatch(strip, /label: wt\(locale, "Conversion Rate"\)/u);
   assert.match(strip, /Keine Conversion- oder Umsatzkennzahl\./u);
+  assert.match(
+    manifest.scripts["test:operations"],
+    /tests\/followup-completion-kpi\.test\.mjs/u,
+  );
 });
