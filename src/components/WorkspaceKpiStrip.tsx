@@ -2,6 +2,7 @@ import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { wt } from "@/lib/workspaceCopy";
 import Image from "next/image";
 import styles from "../app/dashboard/dashboard.module.css";
+import type { FollowupCompletionRate } from "@/lib/workspaceKpiStats";
 
 type KpiIconName =
   | "users"
@@ -28,12 +29,14 @@ type WorkspaceKpiStripProps = {
   contactCount: number;
   openFollowupCount?: number;
   locale?: FanMindLanguage;
+  followupCompletionRate?: FollowupCompletionRate | null;
 };
 
 function getKpiCards(
   contactCount: number,
   openFollowupCount: number,
   locale: FanMindLanguage,
+  followupCompletionRate?: FollowupCompletionRate | null,
 ): KpiCardData[] {
   return [
     {
@@ -93,16 +96,19 @@ function getKpiCards(
       comingSoon: true,
     },
     {
-      label: wt(locale, "Conversion Rate"),
-      value: "0 %",
-      meta: wt(locale, "Conversion-Logik noch nicht aktiv"),
+      label: wt(locale, "Follow-up-Abschlussquote"),
+      value: followupCompletionRate
+        ? `${followupCompletionRate.percentage} %`
+        : wt(locale, "Nicht verfügbar"),
+      meta: followupCompletionRate
+        ? wt(locale, "Alle Zeiten · erledigt / gesamt")
+        : wt(locale, "Noch keine auswertbaren Follow-ups"),
       icon: "percent",
       tone: "cyan",
       sparklinePoints:
         "M2 12.5 C14 12 22 11.5 32 12 S48 13 58 11 S73 9 83 9.5 S98 10 108 7.5 S119 6 124 4.75",
       infoLabel:
-        "Künftige Kennzahl für erfolgreiche Antworten/Konversionen.",
-      comingSoon: true,
+        "All-time-Anteil erledigter Follow-ups: completed und historisches done geteilt durch open, completed und done im aktuellen Workspace. Keine Conversion- oder Umsatzkennzahl.",
     },
   ];
 }
@@ -217,8 +223,14 @@ export function WorkspaceKpiStrip({
   contactCount,
   openFollowupCount = 0,
   locale = "de",
+  followupCompletionRate,
 }: WorkspaceKpiStripProps) {
-  const kpiCards = getKpiCards(contactCount, openFollowupCount, locale);
+  const kpiCards = getKpiCards(
+    contactCount,
+    openFollowupCount,
+    locale,
+    followupCompletionRate,
+  );
 
   return (
     <section className={styles.kpiGrid} aria-label="KPI-Karten">
