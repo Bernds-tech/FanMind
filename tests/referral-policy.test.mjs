@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import "./commercial-model.test.mjs";
+
 import {
   REFERRAL_DISCOUNT_STEP_PERCENT,
   REFERRAL_GROWTH_WINDOW_CAP,

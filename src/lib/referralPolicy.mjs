@@ -1,3 +1,5 @@
+import { CORE_MONTHLY_FEE_CENTS } from "../config/commercialModel.mjs";
+
 export const REFERRAL_DISCOUNT_STEP_PERCENT = 5;
 export const REFERRAL_MAX_ACTIVE_COUNT = 20;
 export const REFERRAL_GROWTH_WINDOW_CAP = 2000;
@@ -64,7 +66,7 @@ export function calculateReferralPercent(
 }
 
 /**
- * @param {number} monthlyFeeCents
+ * @param {number} coreMonthlyFeeCents
  * @param {number} activeReferralCount
  * @param {number | null | undefined} overrideDiscountPercent
  * @returns {{
@@ -77,13 +79,16 @@ export function calculateReferralPercent(
  * }}
  */
 export function calculateReferralMonthlyAmounts(
-  monthlyFeeCents,
+  coreMonthlyFeeCents,
   activeReferralCount,
   overrideDiscountPercent = null,
 ) {
-  const monthlyFeeCentsBeforeDiscount = Math.max(
-    0,
-    finiteInteger(monthlyFeeCents),
+  const monthlyFeeCentsBeforeDiscount = Math.min(
+    CORE_MONTHLY_FEE_CENTS,
+    Math.max(
+      0,
+      finiteInteger(coreMonthlyFeeCents),
+    ),
   );
   const referral = calculateReferralPercent(
     activeReferralCount,

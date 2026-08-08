@@ -313,6 +313,13 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - **KI Standard** ist im Starter-Basispaket enthalten.
 - **KI Plus** kostet zusätzlich 100 €/Monat und bleibt bis zur Freigabe der Modelle, Kontingente und Billing-Items Coming Soon.
 - **KI Ultra** kostet zusätzlich 200 €/Monat und bleibt bis zur Freigabe der Modelle, Kontingente und Billing-Items Coming Soon.
+- FanMind Core umfasst einen Creator/Workspace, KI Standard und zehn
+  Social-/Kommunikations-Connections. Je weitere fünf Connections sind als
+  getrenntes Add-on für 49 €/Monat vorgesehen.
+- Agency bleibt Coming Soon. Selbstzahlende Creator werden der Agentur nicht
+  nochmals verrechnet. Bei Agenturzahlung gelten ein Hub zu 312 €/Monat plus
+  Creator-Lizenzen mit 0 % für 1-4, 5 % für 5-9, 10 % für 10-19 und 15 % ab
+  20 Creator.
 - `src/config/aiTiers.mjs` ist die technische Source of Truth.
 - `npm run ai:tiers:readiness` gleicht Status, Modell-/Fallback-Zuordnung,
   Kontingente, Stripe-Items, Workspace-Contract, serverseitige
@@ -467,7 +474,10 @@ Die technische Policy ist vorbereitet, die produktive automatische Verrechnung b
 - maximal 20 aktive Referrals beziehungsweise 100 % auf die Starter-Grundgebühr;
 - globales Growth Window bis 2.000 aktive zahlende Workspaces;
 - Rabatt nur auf 312 €/Monat Grundgebühr;
-- kein Rabatt auf Einrichtung oder KI-Add-ons;
+- kein Rabatt auf Einrichtung, KI-Add-ons, Connection-Pakete oder
+  Agency-Erweiterungen;
+- ein Creator ist entweder Referral oder rabattierte Agency-Lizenz, niemals
+  beides gleichzeitig;
 - Demo- und interne Test-Workspaces ausgeschlossen;
 - Kündigung, Zahlungsausfall oder Inaktivität entfernt den betreffenden Rabatt;
 - keine Barauszahlung und kein negativer Rechnungsbetrag.
