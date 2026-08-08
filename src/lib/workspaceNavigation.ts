@@ -58,6 +58,12 @@ export function getWorkspaceNavigation(
         active: activeRoute === "fans",
       },
       {
+        label: locale === "en" ? "Inbox" : "Posteingang",
+        href: "/inbox",
+        icon: "channels",
+        active: activeRoute === "inbox",
+      },
+      {
         label: "Follow-ups",
         href: "/followups",
         icon: "followups",

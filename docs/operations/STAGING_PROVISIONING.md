@@ -69,6 +69,9 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Secret `FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY`;
    - Secret `FANMIND_STAGING_STRIPE_SECRET_KEY`;
    - Secret `FANMIND_STAGING_STRIPE_WEBHOOK_SECRET`;
+   - Variablen `FANMIND_STAGING_STRIPE_PRICE_STARTER_SETUP` und
+     `FANMIND_STAGING_STRIPE_PRICE_STARTER_MONTHLY` für den aktiven
+     Starter-Testkatalog mit 990 Euro einmalig und 312 Euro monatlich;
    - optionaler begrenzter Secret `FANMIND_STAGING_OPENAI_API_KEY`.
    - Variable `FANMIND_AI_TIER_STAGING_WORKSPACE_ID` für einen ausschließlich
      synthetischen Workspace mit einem Owner und mindestens einem Mitglied;
@@ -78,9 +81,19 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Variablen `FANMIND_STAGING_DB_PORT` (`5432`) und
      `FANMIND_STAGING_DB_NAME`;
    - Secrets `FANMIND_STAGING_DB_HOST` (IPv4-kompatibler Supabase-Supavisor-
-     Session-Pooler) und `FANMIND_STAGING_DB_PASSWORD`; der DB-Benutzer wird
-     als `postgres.<staging-project-ref>` abgeleitet und nie frei gesetzt;
-     niemals eine Production-Verbindung.
+     Session-Pooler), `FANMIND_STAGING_DB_USER` (für Supabase üblicherweise
+     `postgres.<staging-project-ref>`) und `FANMIND_STAGING_DB_PASSWORD`;
+     niemals eine Production-Verbindung;
+   - Variablen `FANMIND_STAGING_E2E_WORKSPACE_ID`,
+     `FANMIND_STAGING_E2E_CONTACT_ID`,
+     `FANMIND_STAGING_E2E_SECONDARY_WORKSPACE_ID` und
+     `FANMIND_STAGING_E2E_SECONDARY_CONTACT_ID` für zwei vollständig getrennte
+     synthetische Workspaces und Kontakte;
+   - Secrets `FANMIND_STAGING_E2E_EMAIL`,
+     `FANMIND_STAGING_E2E_PASSWORD`,
+     `FANMIND_STAGING_E2E_SECONDARY_EMAIL` und
+     `FANMIND_STAGING_E2E_SECONDARY_PASSWORD`; die vollständigen
+     Fail-closed-Anforderungen stehen in `docs/testing/BROWSER_E2E.md`;
    - temporärer Secret `FANMIND_STAGING_RUNNER_REGISTRATION_TOKEN` nur für
      die erste Runner-Registrierung; niemals in Runtime-ENV oder Git schreiben.
 
@@ -116,8 +129,9 @@ gemeldete Migrationsanzahl ersetzt diesen Nachweis nicht.
 
 1. Einen synthetischen Staging-Workspace mit einem Owner und mindestens einem
    weiteren Mitglied anlegen. Er darf noch keinen KI-Stufeneintrag besitzen.
-2. Zwei aktive Stripe-Testprodukte mit wiederkehrenden EUR-Monatspreisen
-   bereitstellen: Plus exakt 100 Euro, Ultra exakt 200 Euro.
+2. Vier aktive Stripe-Testpreise bereitstellen: Starter-Setup exakt 990 Euro
+   einmalig, Starter exakt 312 Euro monatlich, Plus exakt 100 Euro monatlich
+   und Ultra exakt 200 Euro monatlich.
 3. Die oben genannten Staging-Variablen und -Secrets im GitHub Environment
    hinterlegen.
 4. Zuerst `FanMind Staging Database Rollout State` auf demselben exakten

@@ -23,6 +23,8 @@
 
 # production
 /build
+/.fanmind-runtime-settings.json
+/dependency-audit-report.json
 
 # Expo local state and generated bundles
 /apps/mobile/.expo/
