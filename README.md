@@ -29,7 +29,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Store-Verteilung bleiben externe Nachweise.
 - Öffentliche Registrierung: Starter Flex und Starter 12 Monate; während der Fertigstellungsphase zusätzlich der klar als Beta markierte 1-€/Tag-Test, solange der geschützte Admin-Schalter unter `/admin/settings` aktiv ist.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
-- Beta-/Testzugang: Das Stripe-Testabo `internal_daily_test` ist während der Fertigstellungsphase gezielt im Registrierungsflow sichtbar, kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es wird im Adminbereich zum Verkaufsstart nach Abschluss der acht Abschlussblöcke wieder geschlossen; bestehende Abos bleiben davon unberührt.
+- Beta-/Testzugang: Das aktive Stripe-Live-Testabo `internal_daily_test` kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es bleibt dauerhaft als günstiger echter End-to-End-Billing-Test verfügbar und nutzt dieselbe Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Engine wie der Starter-Tarif; nur Preis, Intervall, öffentliche Sichtbarkeit und Referral-Berechtigung unterscheiden sich.
 - Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist der aktuelle Default. Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung müssen dieselbe steuerliche Behandlung zeigen.
 - Kommerzielle Wahrheit: Starter-Grundgebühr `312 €/Monat`.
 - Starter Flex: `990 € einmalige Einrichtung + 312 €/Monat`; jederzeit zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats kündbar.
@@ -118,8 +118,10 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   wird ausschließlich dessen HMAC-SHA256-Bezug. Eine getrennte, idempotente
   server-only Ingestion kann gültige Besuchernachrichten als Kontakt,
   Conversation und eingehende Nachricht in die vorhandene Admin-Inbox
-  übernehmen. Widget, Besucher-KI und Outbound-Versand sind noch nicht
-  aktiviert.
+  übernehmen. Ein cookie-freies, consent-first Einweg-Widget ist vorbereitet
+  und nutzt ausschließlich diese Session- und Ingestion-Endpunkte. Es hält das
+  Sitzungstoken nur im Speicher und bestätigt lediglich den Empfang;
+  Besucher-KI, Rückkanal und Outbound-Versand sind nicht aktiviert.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind nicht rabattfähig; Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
@@ -316,7 +318,7 @@ Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und
 | KI Standard | aktiv | in 312 €/Monat enthalten |
 | KI Plus | freigegebener Preis, technische Add-on-Aktivierung separat | +100 €/Monat |
 | KI Ultra | freigegebener Preis, technische Add-on-Aktivierung separat | +200 €/Monat |
-| Internes Live-Testabo | temporär als Beta-Test verfügbar | 1 €/Tag; täglich kündbar; nur während der Fertigstellungsphase, zum Verkaufsstart wieder deaktivieren |
+| Internes Live-Testabo | aktiv als kontrollierter Beta-Test | 1 €/Tag; täglich kündbar; bleibt als echter End-to-End-Test aktiv; gleicher Billing-Lifecycle wie Starter, keine Referral-Verrechnung |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht produktiv buchbar |
 | Enterprise / Custom | später | individuelle Prüfung |

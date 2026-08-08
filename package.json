@@ -73,7 +73,7 @@
     "db:trigger-function-hardening:verify": "node scripts/operations/trigger-function-hardening-migration-runner.mjs --verify",
     "db:trigger-function-hardening:apply": "node scripts/operations/trigger-function-hardening-migration-runner.mjs --apply",
     "test:inbox": "node --test tests/inbox-queue-policy.test.mjs tests/inbox-queue-ui-policy.test.mjs",
-    "test:website-chat": "node --test tests/website-chat-policy.test.mjs tests/website-chat-foundation.test.mjs tests/website-chat-ingestion.test.mjs"
+    "test:website-chat": "node --test tests/website-chat-policy.test.mjs tests/website-chat-foundation.test.mjs tests/website-chat-ingestion.test.mjs tests/website-chat-widget.test.mjs"
   },
   "dependencies": {
     "next": "16.2.12",

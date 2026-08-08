@@ -1,10 +1,10 @@
 # Website Chat Security Foundation
 
-Status: Session- und Nachrichteningestion vorbereitet, nicht produktiv aktiviert.
+Status: Session, Nachrichteningestion und cookie-freies Einweg-Widget
+vorbereitet, nicht produktiv aktiviert.
 
 Dieser Block schafft die sichere Grundlage für Website-Chat und Website-KI,
-ohne ein öffentliches Widget, KI-Antworten oder automatisches Senden zu
-aktivieren.
+ohne KI-Antworten, Rückkanal oder automatisches Senden zu aktivieren.
 
 ## Schutzgrenzen
 
@@ -37,6 +37,13 @@ aktivieren.
   und rohe IP-Adresse werden weiterhin nicht persistiert.
 - Es gibt keinen OpenAI-Aufruf, keine Antwort an den Besucher, keinen Outbound-
   Transport und kein automatisches Senden.
+- Das vorbereitete Script `/website-chat/widget.js` arbeitet in einem Shadow
+  DOM, setzt keine Cookies und nutzt weder Local Storage noch Session Storage.
+  Installations-ID und Consent-Version kommen aus begrenzten Embed-Attributen;
+  der Consent ist nie vorangekreuzt. Das Sitzungstoken bleibt nur im Speicher.
+  Jede Nachricht erhält eine neue Client-UUID. Das Widget bestätigt nur den
+  Eingang und bezeichnet sich deshalb ehrlich als Nachricht/Anfrage, nicht als
+  Zweiweg-Chat.
 
 ## Aktivierungsreihenfolge
 
@@ -50,6 +57,9 @@ aktivieren.
 6. Ingestion-Migration im isolierten Staging anwenden und mit synthetischer
    Sitzung auf Kontakt-, Conversation-, Nachrichten- und Inbox-Zuordnung sowie
    Idempotenz prüfen;
-7. erst danach das sichtbare Widget in einem getrennten PR ergänzen.
+7. das sichtbare Einweg-Widget mit gültiger Installation, Consent, Retry und
+   verbotener Origin im Browser prüfen;
+8. erst nach Rechts- und Datenschutzabnahme die konkrete Installation
+   aktivieren.
 
 Production bleibt bis zur Staging-, Rechts- und Datenschutzabnahme deaktiviert.

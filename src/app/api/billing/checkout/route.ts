@@ -5,6 +5,7 @@ import {
   readBoundedJsonRequest,
 } from "@/lib/httpMutationPolicy.mjs";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
+import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 
 const MAX_CHECKOUT_BODY_BYTES = 4096;
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   const payload = parsedBody.value as { planId?: string; commercialOption?: string } | null;
   if (!payload?.planId || !payload.commercialOption) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
 
-  if (payload.commercialOption === "internal_daily_test" && process.env.FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN !== "true") {
+  if (payload.commercialOption === "internal_daily_test" && !(await getPublicDailyTestPlanEnabled())) {
     return NextResponse.json({ error: "Das interne Live-Testabo kann nur im Adminbereich gestartet werden." }, { status: 403 });
   }
 

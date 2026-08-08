@@ -197,7 +197,6 @@ export function resolveCheckoutPlan(
           commercialOption,
           mode: "subscription",
           priceIds: [dailyPrice],
-          paymentMethodTypes: ["card"],
           setupFeeCents: 0,
           monthlyFeeCents: 0,
           commitmentMonths: 0,

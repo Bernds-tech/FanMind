@@ -52,7 +52,7 @@ Aktiv beziehungsweise produktnah:
 - Admin-only Asset-Upload in den Supabase-Storage-Bucket `fanmind-assets`;
 - Legal-Seiten, Zahlungsbedingungen und AVV-Anforderungsseite;
 - consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: ausschließlich `PageView` ohne Eventparameter; keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-/Billing-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; vorbereitete Conversion-Events bleiben ohne separate fachliche und datenschutzrechtliche Freigabe unverdrahtet; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
-- internes Live-Testabo `internal_daily_test` mit 1 € pro Tag ausschließlich für klar markierte interne Test-Workspaces; kein Referral-Rabatt.
+- aktives Live-Testabo `internal_daily_test` mit 1 € pro Tag als kontrollierter echter End-to-End-Billing-Test; gleicher Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Lifecycle wie Starter; kein Referral-Rabatt.
 
 Das entgeltliche öffentliche Pilot-/Setup-Paket ist eingestellt. Legacy-Pilot-Checkout bleibt gesperrt. Die kostenlose Demo ist kein entgeltliches Paket.
 
@@ -269,8 +269,11 @@ deren Fortschritts- oder Fertigbewertung eingerechnet.
   Installation und Origin, verarbeitet Client-UUIDs idempotent und erzeugt
   ausschließlich einen workspace-gebundenen Kontakt, eine Conversation und
   eine eingehende Inbox-Nachricht. Receipt-Daten enthalten keinen
-  Nachrichtentext. Widget und Besucher-KI bleiben unverdrahtet; es gibt keine
-  automatische Antwort und keinen Outbound-Versand.
+  Nachrichtentext. Das vorbereitete cookie-freie Einweg-Widget verlangt aktiv
+  bestätigten Consent, hält sein Sitzungstoken ausschließlich im Speicher und
+  sendet je Nachricht eine Client-UUID. Es stellt keinen Zweiweg-Chat dar;
+  Besucher-KI, automatische Antworten und Outbound-Versand bleiben
+  unverdrahtet.
 - Meta-Content-Staging: Die zwei Migrationen
   `20260803120000_meta_content_intelligence_foundation.sql` und
   `20260803210000_preserve_incremental_conversation_history.sql` sind
@@ -315,7 +318,7 @@ Alte Preise wie `299 €/Monat`, `499 €/Monat` oder `Agency ab 990 €/Monat` 
 | Starter 12 Monate | aktiv | 0 € Setup + 312 €/Monat; 12 Monate Mindestlaufzeit, danach monatliche Verlängerung |
 
 Starter-Abos können unter `/settings/package` sicher zum Vertragsende gekündigt werden. Starter Flex endet frühestens zum bezahlten Periodenende; Starter 12 Monate frühestens zum Ende der Mindestlaufzeit. Nach Vertragsende bleiben Account, Login, CRM-Historie, Rechnungen und Export sichtbar; neue Nachrichten, Channel-Sync, externe Ingress-Webhooks, KI-Vorschläge, KI-Analysen und kostenpflichtige Hintergrundverarbeitung sind fail-closed zu deaktivieren.
-| Internes Live-Testabo | temporärer Beta-Test während der Fertigstellungsphase | 1 € pro Tag; klar markierter Test-Workspace; täglich kündbar; keine Referral-Automation; über den ausschließlich für Plattform-Admins erreichbaren Schalter unter `/admin/settings` im Registrierungsflow sichtbar; zum Verkaufsstart nach Abschluss aller acht Abschlussblöcke dort wieder deaktivieren; bestehende Abos bleiben unberührt |
+| Internes Live-Testabo | aktiver kontrollierter End-to-End-Beta-Test | 1 € pro Tag; täglich kündbar; identischer Billing-Lifecycle wie Starter; keine Referral-Automation; öffentliche Sichtbarkeit weiterhin ausschließlich über den Plattform-Admin-Schalter unter `/admin/settings`; der Tarif und bestehende Abos bleiben aktiv |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht als Vollversion freigeschaltet |
 | Enterprise / Custom | später | individuelle Prüfung |
