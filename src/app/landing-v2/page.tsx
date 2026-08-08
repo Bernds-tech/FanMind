@@ -879,7 +879,28 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
   const localizedFunctionCards = localizeFanMindValue(functionCards, t).map((card) => ({ ...card, href: card.href === LANDING_ROADMAP_HREF ? roadmapHref : card.href }));
   const localizedSixStepCards = localizeFanMindValue(sixStepCards, t).map((card) => ({ ...card, href: card.href === LANDING_ROADMAP_HREF ? roadmapHref : card.href }));
   const localizedSixStepBenefits = localizeFanMindValue(sixStepBenefits, t);
-  const localizedIntegrationMarqueeRows = localizeFanMindValue(integrationMarqueeRows, t);
+  const localizedIntegrationMarqueeRows = integrationMarqueeRows.map((row) =>
+    row.map((channel) => {
+      const localizedChannel = localizeFanMindValue(channel, t);
+
+      if (
+        !phase3IntegrationPlatforms.has(channel.platform) &&
+        !phase7IntegrationPlatforms.has(channel.platform) &&
+        !currentIntegrationPlatforms.has(channel.platform)
+      ) {
+        return {
+          ...localizedChannel,
+          status: language === "en" ? "Phase 8 · not started" : "Phase 8 · noch nicht begonnen",
+          text:
+            language === "en"
+              ? `${channel.title} is assigned to Phase 8. Implementation has not started.`
+              : `${channel.title} ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen.`,
+        };
+      }
+
+      return localizedChannel;
+    }),
+  );
   const localizedIntegrationSources = localizeFanMindValue(integrationSources, t);
   const localizedIntegrationActions = localizeFanMindValue(integrationActions, t);
   const localizedIntegrationBenefits = localizeFanMindValue(integrationBenefits, t);
