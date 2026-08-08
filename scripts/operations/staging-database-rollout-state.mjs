@@ -123,17 +123,24 @@ function ledgerSql({
   metaMigrations = metaContentMigrationControl.MIGRATIONS,
 } = {}) {
   const ledgerMetaMigrations = ledgerManagedMetaMigrations(metaMigrations);
-  const versions = [
-    migrationVersion(AI_TIER_MIGRATION_ID),
-    migrationVersion(MOBILE_PUSH_MIGRATION_ID),
-    ...ledgerMetaMigrations.map((migration) => migrationVersion(migration.id)),
+  const migrationIds = [
+    AI_TIER_MIGRATION_ID,
+    MOBILE_PUSH_MIGRATION_ID,
+    ...ledgerMetaMigrations.map((migration) => migration.id),
   ];
+  const versions = migrationIds.map((migrationId) =>
+    migrationVersion(migrationId),
+  );
   if (versions.length !== 4 || new Set(versions).size !== 4) {
     fail("migration_manifest_invalid");
   }
-  const flags = versions.map(
-    (version) => String.raw`case when count(*) filter (
-      where version = '${version}'
+  const flags = migrationIds.map(
+    (migrationId, index) => String.raw`case when count(*) filter (
+      where version = '${versions[index]}'
+        or name in (
+          '${migrationId}',
+          '${migrationId.replace(/^\d{14}_/u, "")}'
+        )
     ) = 1 then '1' else '0' end`,
   );
   return String.raw`
