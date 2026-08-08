@@ -1,0 +1,123 @@
+import "server-only";
+
+import {
+  createWebsiteChatSessionToken,
+  hashWebsiteChatSessionToken,
+  normalizeSessionTtlMinutes,
+  requireAllowedWebsiteChatOrigin,
+  requireConsent,
+  requirePublicInstallationId,
+} from "@/lib/websiteChatPolicy.mjs";
+import { getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
+
+type InstallationRow = {
+  id: string;
+  workspace_id: string;
+  enabled: boolean;
+  consent_version: string;
+  session_ttl_minutes: number;
+};
+
+type OriginRow = { origin: string; verified_at: string | null };
+
+export class WebsiteChatServiceError extends Error {
+  readonly code:
+    | "configuration"
+    | "installation_unavailable"
+    | "origin_forbidden"
+    | "consent_required"
+    | "persistence_unavailable";
+
+  constructor(code: WebsiteChatServiceError["code"]) {
+    super("Website Chat is unavailable.");
+    this.name = "WebsiteChatServiceError";
+    this.code = code;
+  }
+}
+
+function serviceConfiguration() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  const sessionSecret = process.env.FANMIND_WEBSITE_CHAT_SESSION_SECRET?.trim() ?? "";
+  if (!serviceKey || sessionSecret.length < 32) {
+    throw new WebsiteChatServiceError("configuration");
+  }
+  return { serviceKey, sessionSecret };
+}
+
+async function fetchRows<T>(path: string, serviceKey: string): Promise<T[]> {
+  const response = await fetch(`${getSupabaseRestUrl(path)}`, {
+    headers: getSupabaseHeaders(serviceKey),
+    cache: "no-store",
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => null);
+  if (!response?.ok) throw new WebsiteChatServiceError("persistence_unavailable");
+  return response.json() as Promise<T[]>;
+}
+
+export async function resolveWebsiteChatInstallation(input: {
+  publicInstallationId: unknown;
+  origin: unknown;
+}) {
+  const { serviceKey } = serviceConfiguration();
+  const publicId = requirePublicInstallationId(input.publicInstallationId);
+  const installations = await fetchRows<InstallationRow>(
+    `website_chat_installations?select=id,workspace_id,enabled,consent_version,session_ttl_minutes&public_installation_id=eq.${encodeURIComponent(publicId)}&limit=1`,
+    serviceKey,
+  );
+  const installation = installations[0];
+  if (!installation?.enabled) {
+    throw new WebsiteChatServiceError("installation_unavailable");
+  }
+
+  const origins = await fetchRows<OriginRow>(
+    `website_chat_allowed_origins?select=origin,verified_at&installation_id=eq.${encodeURIComponent(installation.id)}`,
+    serviceKey,
+  );
+  const verifiedOrigins = origins.filter((row) => row.verified_at).map((row) => row.origin);
+  let origin: string;
+  try {
+    origin = requireAllowedWebsiteChatOrigin(input.origin, verifiedOrigins);
+  } catch {
+    throw new WebsiteChatServiceError("origin_forbidden");
+  }
+  return { installation, origin };
+}
+
+export async function createWebsiteChatVisitorSession(input: {
+  publicInstallationId: unknown;
+  origin: unknown;
+  consent: unknown;
+}) {
+  const { serviceKey, sessionSecret } = serviceConfiguration();
+  const { installation, origin } = await resolveWebsiteChatInstallation(input);
+  try {
+    requireConsent(input.consent, installation.consent_version);
+  } catch {
+    throw new WebsiteChatServiceError("consent_required");
+  }
+
+  const token = createWebsiteChatSessionToken();
+  const subjectHash = hashWebsiteChatSessionToken({ token, secret: sessionSecret });
+  const consentGrantedAt = new Date();
+  const ttlMinutes = normalizeSessionTtlMinutes(installation.session_ttl_minutes);
+  const expiresAt = new Date(consentGrantedAt.getTime() + ttlMinutes * 60_000);
+  const response = await fetch(getSupabaseRestUrl("website_chat_visitor_sessions"), {
+    method: "POST",
+    headers: { ...getSupabaseHeaders(serviceKey), Prefer: "return=minimal" },
+    body: JSON.stringify({
+      installation_id: installation.id,
+      workspace_id: installation.workspace_id,
+      origin,
+      visitor_subject_hash: subjectHash,
+      consent_version: installation.consent_version,
+      consent_granted_at: consentGrantedAt.toISOString(),
+      expires_at: expiresAt.toISOString(),
+      last_seen_at: consentGrantedAt.toISOString(),
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => null);
+  if (!response?.ok) throw new WebsiteChatServiceError("persistence_unavailable");
+
+  return { token, expiresAt: expiresAt.toISOString(), consentVersion: installation.consent_version };
+}

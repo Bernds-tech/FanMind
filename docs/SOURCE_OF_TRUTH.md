@@ -257,6 +257,16 @@ deren Fortschritts- oder Fertigbewertung eingerechnet.
   service-role CRUD vollständig transaktional aus und verlangt danach einen
   leeren Cleanup-Nachweis. Kein normaler Deploy kann den Runner aufrufen; reale
   Push-Registrierung, Serverkey und Delivery bleiben extern deaktiviert.
+- Website-Chat bleibt bis zur getrennten Staging- und Rechtsabnahme
+  deaktiviert. Seine Sicherheitsgrundlage darf nur workspace-gebundene,
+  standardmäßig deaktivierte Installationen, exakt verifizierte HTTPS-Origins,
+  ausdrücklichen versionsgebundenen Consent und kurzlebige HMAC-referenzierte
+  Besuchersitzungen verwenden. `public`, `anon` und `authenticated` erhalten
+  keinen direkten Tabellenzugriff. Der öffentliche Session-Endpunkt muss
+  bounded, atomar rate-limitiert, fail-closed und CORS-exakt bleiben. Ein
+  öffentlicher Installationswert ist kein Geheimnis. Vor einem getrennten
+  Nachrichten-/Widget-Block gibt es keinen OpenAI-Aufruf, keine automatische
+  Antwort und keinen Outbound-Versand.
 - Meta-Content-Staging: Die zwei Migrationen
   `20260803120000_meta_content_intelligence_foundation.sql` und
   `20260803210000_preserve_incremental_conversation_history.sql` sind
