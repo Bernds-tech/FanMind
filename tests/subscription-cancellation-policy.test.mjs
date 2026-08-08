@@ -26,6 +26,19 @@ test("12 month cancellation waits until commitment end", () => {
   assert.equal(policy.requiresCancelAtTimestamp, true);
 });
 
+test("1 EUR daily beta uses the same self-service period-end cancellation engine", () => {
+  const policy = resolveSubscriptionCancellation({
+    ...base,
+    plan_id: "pilot",
+    commercial_option: "internal_daily_test",
+    billing_current_period_end_at: "2026-08-09T00:00:00.000Z",
+  });
+  assert.equal(policy.currentPackage, "Beta · 1 € pro Tag");
+  assert.equal(policy.canSelfService, true);
+  assert.equal(policy.stripeCancelAtPeriodEnd, true);
+  assert.equal(policy.effectiveEndAt, "2026-08-09T00:00:00.000Z");
+});
+
 test("revoked or foreign/unpaid workspaces cannot self-service mutate subscriptions", () => {
   assert.equal(resolveSubscriptionCancellation({ ...base, owner_user_id: "other", commercial_option: "growth" }).canSelfService, false);
   assert.equal(resolveSubscriptionCancellation({ ...base, commercial_option: "starter_paid_setup", stripe_subscription_id: null }).canSelfService, false);

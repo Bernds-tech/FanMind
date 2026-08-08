@@ -58,7 +58,21 @@ export async function getAdminBillingWorkspace(workspaceId: string): Promise<{ w
     const response = await fetch(url, { headers: getSupabaseHeaders(key), cache: "no-store" });
     if (!response.ok) return { workspace: null, error: `Workspace konnte nicht geladen werden (${response.status}).` };
     const rows = await response.json() as AdminBillingWorkspace[];
-    return { workspace: rows[0] ?? null, error: null };
+    const workspace = rows[0];
+    if (!workspace) return { workspace: null, error: null };
+    let ownerEmail: string | null = null;
+    if (workspace.owner_user_id && validUuid(workspace.owner_user_id)) {
+      const ownerResponse = await fetch(getSupabaseAuthUrl(`/admin/users/${encodeURIComponent(workspace.owner_user_id)}`), {
+        headers: getSupabaseHeaders(key),
+        cache: "no-store",
+      }).catch(() => null);
+      if (ownerResponse?.ok) {
+        const ownerPayload = await ownerResponse.json().catch(() => null) as { user?: { email?: unknown }; email?: unknown } | null;
+        const candidate = ownerPayload?.user?.email ?? ownerPayload?.email;
+        ownerEmail = typeof candidate === "string" && candidate.trim() ? candidate.trim() : null;
+      }
+    }
+    return { workspace: { ...workspace, owner_email: ownerEmail }, error: null };
   } catch { return { workspace: null, error: "Workspace konnte nicht geladen werden." }; }
 }
 
@@ -82,7 +96,8 @@ export async function startInternalDailyTestCheckout(workspaceId: string, admin:
   if (!isInternalTestWorkspace(workspace)) return { ok: false, status: 403, error: "Das 1-€-Live-Testabo ist nur für klar markierte interne Test-Workspaces erlaubt." };
   const plan = resolveCheckoutPlan("pilot", INTERNAL_DAILY_TEST_OPTION);
   if (!plan) return { ok: false, status: 503, error: "STRIPE_PRICE_INTERNAL_DAILY_TEST ist nicht konfiguriert." };
-  const session = await createStripeCheckoutSession({ plan, userId: admin.id, workspaceId, userEmail: admin.email ?? undefined });
+  if (!workspace.owner_user_id || !workspace.owner_email) return { ok: false, status: 409, error: "Der Workspace-Owner und seine E-Mail müssen vor dem Stripe-Test eindeutig aufgelöst werden." };
+  const session = await createStripeCheckoutSession({ plan, userId: workspace.owner_user_id, workspaceId, userEmail: workspace.owner_email });
   if (!session.url) return { ok: false, status: 502, error: session.error ?? "Stripe Checkout konnte nicht gestartet werden." };
   await updateAdminBillingWorkspace(workspaceId, admin, {
     plan_id: "pilot",
@@ -105,17 +120,17 @@ export async function cancelInternalDailyTestSubscription(workspaceId: string, a
   const { workspace, error } = await getAdminBillingWorkspace(workspaceId);
   if (!workspace) return { ok: false, status: 404, error: error ?? "Workspace wurde nicht gefunden." };
   if (workspace.commercial_option !== INTERNAL_DAILY_TEST_OPTION) return { ok: false, status: 403, error: "Nur interne Live-Testabos können über diese Aktion deaktiviert werden." };
+  if (workspace.stripe_subscription_id && !secretKey) return { ok: false, status: 503, error: "Stripe ist für die Kündigung nicht konfiguriert." };
   if (secretKey && workspace.stripe_subscription_id) {
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(workspace.stripe_subscription_id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${secretKey}` }, cache: "no-store" });
+    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(workspace.stripe_subscription_id)}`, { method: "POST", headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ cancel_at_period_end: "true" }), cache: "no-store" });
     if (!response.ok) {
       return { ok: false, status: response.status, error: "Stripe-Subscription konnte nicht deaktiviert werden." };
     }
   }
   return updateAdminBillingWorkspace(workspaceId, admin, {
-    billing_status: "cancelled",
-    billing_manual_override: true,
-    test_access_flags: { ...normalizeInternalTestAccessFlags(workspace.test_access_flags), billing_disabled: true, stripe_live_daily_test: false },
-    billing_admin_note: `${INTERNAL_TEST_ACCESS_NOTE} · ${INTERNAL_DAILY_TEST_NOTE} · deaktiviert/gekündigt · ${new Date().toISOString()}`,
+    subscription_cancel_requested_at: new Date().toISOString(),
+    subscription_cancel_at_period_end: true,
+    billing_admin_note: `${INTERNAL_TEST_ACCESS_NOTE} · ${INTERNAL_DAILY_TEST_NOTE} · Kündigung zum Ende des bezahlten Tages vorgemerkt · ${new Date().toISOString()}`,
   });
 }
 

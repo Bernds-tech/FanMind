@@ -113,7 +113,7 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
   assert.match(stripeBillingSource, /process\.env\.STRIPE_PRICE_INTERNAL_DAILY_TEST/);
   assert.match(stripeBillingSource, /planId: "pilot"/);
   assert.match(stripeBillingSource, /mode: "subscription"/);
-  assert.match(stripeBillingSource, /paymentMethodTypes: \["card"\]/);
+  assert.doesNotMatch(stripeBillingSource, /commercialOption,[\s\S]{0,160}paymentMethodTypes: \["card"\]/);
   assert.match(stripeBillingSource, /paymentCollectionMethod: "card"/);
 });
 
@@ -127,6 +127,8 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   const deploySource = fs.readFileSync(".github/workflows/deploy-fanmind.yml", "utf8");
 
   assert.match(registerPageSource, /getPublicDailyTestPlanEnabled/);
+  const checkoutRouteSource = fs.readFileSync("src/app/api/billing/checkout/route.ts", "utf8");
+  assert.match(checkoutRouteSource, /await getPublicDailyTestPlanEnabled\(\)/);
   assert.match(runtimeSettingsSource, /publicDailyTestPlanEnabled/);
   assert.match(runtimeSettingsSource, /rename\(temporaryPath, settingsPath\)/);
   assert.match(adminRouteSource, /requirePlatformAdmin/);
@@ -139,4 +141,12 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   );
   assert.match(registerClientSource, /isRetiredPilotRequested \? "starter" : resolvedPlanId/u);
   assert.match(registerClientSource, /commercialOption = isDailyTestPlanSelected \? "internal_daily_test"/);
+});
+
+test("daily beta admin checkout targets the workspace owner and cancels at paid-day end", () => {
+  const adminBillingSource = fs.readFileSync("src/lib/adminBilling.ts", "utf8");
+  assert.match(adminBillingSource, /userId: workspace\.owner_user_id/);
+  assert.match(adminBillingSource, /userEmail: workspace\.owner_email/);
+  assert.match(adminBillingSource, /cancel_at_period_end: "true"/);
+  assert.doesNotMatch(adminBillingSource, /subscriptions\/\$\{encodeURIComponent\(workspace\.stripe_subscription_id\)\}`, \{ method: "DELETE"/);
 });

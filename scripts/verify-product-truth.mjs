@@ -387,7 +387,7 @@ requireText(
 );
 requireText(
   "README.md",
-  "zum Verkaufsstart nach Abschluss der acht Abschlussblöcke",
+  "bleibt dauerhaft als günstiger echter End-to-End-Billing-Test verfügbar",
   "README muss den verbindlichen Abschaltzeitpunkt des 1-€/Tag-Beta-Testabos dokumentieren.",
 );
 requireText(
