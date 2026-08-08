@@ -13,12 +13,19 @@ wirksam sind:
   serverseitig verifizierten Supabase-Session;
 - das Laufzeitfenster wird unmittelbar vor der Mutation frisch und
   fail-closed gelesen;
+- `updatedAt` ist gültig und liegt nicht in der Zukunft; bereits ein um eine
+  Millisekunde zukünftiger Startzeitpunkt schließt das Fenster fail-closed;
 - `public.ensure_internal_daily_test_workspace(uuid,text,boolean)` ist
   installiert und ausschließlich für `service_role` ausführbar;
-- die validierten Workspace-CHECKs erlauben `internal_daily_test` und `card`;
+- die validierten Workspace-CHECKs bilden exakt den kanonischen Wertvertrag
+  einschließlich `internal_daily_test` und `card` ab;
 - direkte Tabellen- und Spalten-`INSERT`-Rechte auf `public.workspaces` sind
   für `PUBLIC`, `anon` und `authenticated` entzogen;
-- der Readiness-RPC bestätigt diesen kombinierten Zustand.
+- der Readiness-RPC bestätigt diesen kombinierten Zustand;
+- `STRIPE_PRICE_INTERNAL_DAILY_TEST`, `STRIPE_SECRET_KEY`, eine App-URL und
+  `STRIPE_WEBHOOK_SECRET` sind gemeinsam konfiguriert. Fehlt nur einer dieser
+  Werte, bleiben Admin-Freigabe, öffentliche Auswahl, Pre-Sign-up-Admission
+  und Daily-Workspace-Mutation fail-closed.
 
 Die Anwendung nimmt keine User-ID, Tarifoption, Preise, Billing-Felder oder
 Testflags aus dem Registrierungs-Request an. Der bestehende authentifizierte
@@ -29,6 +36,8 @@ die Migration nicht an und aktiviert das Fenster nicht.
 
 - App-Grenze: `src/app/api/register/workspace/route.ts`
 - frischer Zeitfensterstatus: `src/lib/runtimeProductSettings.ts`
+- gemeinsame Stripe-/Webhook-Admission:
+  `src/lib/internalDailyTestReadinessPolicy.mjs`
 - serverseitige Provisionierung: `src/lib/supabase/server.ts`
 - additive Migration:
   `supabase/migrations/20260808230102_internal_daily_test_workspace_provisioning.sql`
@@ -58,7 +67,10 @@ die Migration nicht an und aktiviert das Fenster nicht.
 7. Erst nach dokumentiertem Staging-Go denselben read-only Preflight gegen
    Production ausführen, Backup/Restore-Bereitschaft bestätigen und die
    Migration getrennt freigeben.
-8. Production-Postflight ausführen. Das öffentliche Fenster bleibt weiterhin
+8. Daily-Preis, Stripe-Secret, kanonische App-URL und Webhook-Secret im
+   exakten Ziel prüfen; die Prüfung darf nur Statuswerte und keine Secrets
+   ausgeben.
+9. Production-Postflight ausführen. Das öffentliche Fenster bleibt weiterhin
    aus und darf erst durch eine separate Admin-Entscheidung geöffnet werden.
 
 ## Read-only Preflight und Postflight
@@ -106,12 +118,15 @@ from public.workspaces;
 select
   conname,
   convalidated,
-  position(
-    'internal_daily_test' in pg_get_constraintdef(oid, true)
-  ) > 0 as allows_daily,
-  position(
-    '''card''' in pg_get_constraintdef(oid, true)
-  ) > 0 as allows_card
+  case conname
+    when 'workspaces_commercial_option_check' then
+      pg_get_constraintdef(oid, true) =
+        $commercial_option_contract$CHECK (commercial_option = ANY (ARRAY['pilot_only'::text, 'starter_paid_setup'::text, 'starter_no_setup_commitment'::text, 'internal_daily_test'::text]))$commercial_option_contract$
+    when 'workspaces_payment_collection_method_check' then
+      pg_get_constraintdef(oid, true) =
+        $payment_collection_contract$CHECK (payment_collection_method IS NULL OR (payment_collection_method = ANY (ARRAY['none'::text, 'manual_invoice'::text, 'sepa_direct_debit'::text, 'card'::text])))$payment_collection_contract$
+    else false
+  end as exact_value_contract
 from pg_constraint
 where conrelid = 'public.workspaces'::regclass
   and conname in (
@@ -121,11 +136,19 @@ where conrelid = 'public.workspaces'::regclass
 order by conname;
 ```
 
+Der Repository-Policytest sichert den erwarteten Migrationstext ab; maßgeblich
+für den Rollout ist zusätzlich dieser Katalog-Postflight im tatsächlichen
+Staging- beziehungsweise Production-Ziel. Falls ein PostgreSQL-Major-Upgrade
+die kanonische Ausgabe ändert, bleibt Readiness absichtlich `false`, bis der
+unveränderte Wertvertrag erneut geprüft und die erwartete Definition bewusst
+aktualisiert wurde.
+
 Vor der Anwendung müssen beide `incompatible_*`-Zähler `0` sein. Nach der
 Anwendung müssen beide Constraint-Zeilen vorhanden und validiert sein; der
-Commercial-Check muss `allows_daily=true`, der Zahlungsweg-Check
-`allows_card=true` melden. Auch alle übrigen booleschen Werte müssen `true`
-sein. Zusätzlich mit der
+Wert `exact_value_contract` muss für beide Zeilen `true` sein. Damit reichen
+weder ein bloßes Vorkommen von `internal_daily_test` beziehungsweise `card`
+noch ein CHECK mit zusätzlichen erlaubten Werten aus. Auch alle übrigen
+booleschen Werte müssen `true` sein. Zusätzlich mit der
 serverseitigen Staging-Service-Role über PostgREST prüfen:
 
 ```text
@@ -141,6 +164,10 @@ beide Browserrollen ebenfalls verweigert werden.
 
 - Fenster geschlossen: Registrierung endet vor der DB-Mutation; keine
   Workspace- und keine Membership-Zeile entsteht.
+- Fehlender Daily-Preis, Stripe-Secret, App-URL oder Webhook-Secret: Die
+  Pre-Sign-up-Admission antwortet fail-closed und der Registrierungsablauf
+  ruft Supabase Sign-up nicht auf; die Workspace-Mutation bleibt ebenfalls
+  gesperrt. Der Checkout startet nicht, solange der Webhook nicht bereit ist.
 - Fenster offen und Readiness `true`: genau ein Daily-Workspace mit
   `pilot`, `internal_daily_test`, `0/0/0`, `pending_payment_setup`,
   `stripe`, `card`, Zahlungsbedingung `2026-06-v1` und genau eine

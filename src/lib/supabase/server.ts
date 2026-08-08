@@ -29,6 +29,8 @@ import {
 import type { PlanId } from "@/config/plans";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
+import { getStripeConfigStatus } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
 import {
   DEMO_CLEANUP_DELETE_STEPS,
@@ -75,6 +77,9 @@ export const PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR =
 
 export const PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR =
   "public_daily_test_provisioning_unavailable";
+
+export const PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR =
+  "public_daily_test_billing_unavailable";
 
 export type WorkspaceBackfillRow = {
   id: string;
@@ -6074,6 +6079,12 @@ export async function ensureUserWorkspace(
       if (!(await isInternalDailyTestWorkspaceProvisioningReady())) {
         return workspaceBackfillError(
           PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR,
+        );
+      }
+
+      if (!isInternalDailyTestStripeReady(getStripeConfigStatus())) {
+        return workspaceBackfillError(
+          PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR,
         );
       }
 

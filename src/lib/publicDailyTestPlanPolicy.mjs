@@ -11,6 +11,7 @@ export function getTemporaryPublicDailyTestPlanStatus(settings, now = new Date()
   const validWindow = Number.isFinite(nowMs)
     && Number.isFinite(updatedAtMs)
     && Number.isFinite(enabledUntilMs)
+    && updatedAtMs <= nowMs
     && enabledUntilMs > nowMs
     && enabledUntilMs > updatedAtMs
     && enabledUntilMs - updatedAtMs <= PUBLIC_DAILY_TEST_PLAN_WINDOW_MS;

@@ -338,8 +338,19 @@ test("Daily provisioning is fixed, atomic and service-role-only", async () => {
   );
 });
 
-test("Daily readiness requires the RPC and denies every browser INSERT capability", async () => {
+test("Daily readiness source contract matches exact CHECK values and denies browser INSERT", async () => {
   const migration = await readFile(dailyRpcMigrationPath, "utf8");
+  const readinessFunctionStart = migration.indexOf(
+    "create or replace function public.internal_daily_test_workspace_provisioning_ready",
+  );
+  const readinessFunctionEnd = migration.indexOf(
+    "revoke all on function public.internal_daily_test_workspace_provisioning_ready",
+    readinessFunctionStart,
+  );
+  const readinessFunction = migration.slice(
+    readinessFunctionStart,
+    readinessFunctionEnd,
+  );
 
   assert.match(
     migration,
@@ -352,8 +363,16 @@ test("Daily readiness requires the RPC and denies every browser INSERT capabilit
     /has_function_privilege\(\s*'service_role',[\s\S]*ensure_internal_daily_test_workspace\(uuid,text,boolean\)[\s\S]*'EXECUTE'/u,
   );
   assert.match(
-    migration,
-    /workspaces_commercial_option_check[\s\S]*convalidated[\s\S]*internal_daily_test[\s\S]*workspaces_payment_collection_method_check[\s\S]*convalidated[\s\S]*'''card'''/u,
+    readinessFunction,
+    /workspaces_commercial_option_check[\s\S]*convalidated[\s\S]*pg_get_constraintdef\(constraint_record\.oid, true\)\s*=\s*\$commercial_option_contract\$CHECK \(commercial_option = ANY \(ARRAY\['pilot_only'::text, 'starter_paid_setup'::text, 'starter_no_setup_commitment'::text, 'internal_daily_test'::text\]\)\)\$commercial_option_contract\$/u,
+  );
+  assert.match(
+    readinessFunction,
+    /workspaces_payment_collection_method_check[\s\S]*convalidated[\s\S]*pg_get_constraintdef\(constraint_record\.oid, true\)\s*=\s*\$payment_collection_contract\$CHECK \(payment_collection_method IS NULL OR \(payment_collection_method = ANY \(ARRAY\['none'::text, 'manual_invoice'::text, 'sepa_direct_debit'::text, 'card'::text\]\)\)\)\$payment_collection_contract\$/u,
+  );
+  assert.doesNotMatch(
+    readinessFunction,
+    /position\(|internal_daily_test'\s+in\s+pg_get_constraintdef|'''card'''\s+in\s+pg_get_constraintdef/u,
   );
   assert.match(
     migration,

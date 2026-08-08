@@ -6,6 +6,7 @@ import {
 import {
   ensureUserWorkspace,
   getSupabaseServerUser,
+  PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR,
   PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR,
   PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR,
 } from "@/lib/supabase/server";
@@ -59,15 +60,21 @@ export async function POST(request: NextRequest) {
     const dailyProvisioningUnavailable =
       result.error?.message ===
       PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR;
+    const dailyBillingUnavailable =
+      result.error?.message === PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR;
     return jsonNoStore(
       {
         ok: false,
         code:
-          dailyWindowClosed || dailyProvisioningUnavailable
+          dailyWindowClosed ||
+          dailyProvisioningUnavailable ||
+          dailyBillingUnavailable
             ? "daily_test_window_closed"
             : "workspace_setup_failed",
       },
-      dailyWindowClosed || dailyProvisioningUnavailable ? 409 : 503,
+      dailyWindowClosed || dailyProvisioningUnavailable || dailyBillingUnavailable
+        ? 409
+        : 503,
     );
   }
 

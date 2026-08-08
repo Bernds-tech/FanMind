@@ -20,6 +20,7 @@
 - `STRIPE_WEBHOOK_SECRET`
 - `STRIPE_PRICE_STARTER_SETUP`
 - `STRIPE_PRICE_STARTER_MONTHLY`
+- `STRIPE_PRICE_INTERNAL_DAILY_TEST`
 - `STRIPE_PRICE_AI_PLUS`
 - `STRIPE_PRICE_AI_ULTRA`
 - `NEXT_PUBLIC_APP_URL`
@@ -33,6 +34,9 @@
   veralteten Pilot-Produkt abgeleitet.
 - KI Plus und KI Ultra verwenden getrennte monatliche Testpreise von 100 Euro
   beziehungsweise 200 Euro und bleiben außerhalb der Referral-Rabattbasis.
+- Die öffentliche Daily-Admission bleibt vor Supabase Sign-up geschlossen,
+  solange Daily-Preis, Stripe-Secret, App-URL oder Webhook-Secret fehlen; auch
+  ein Daily-Checkout darf ohne vollständige Webhook-Konfiguration nicht starten.
 - Checkout-Sessions tragen die Workspace-ID in `client_reference_id` und Metadata.
 - Einmalige Starter-Setup-Zahlungen tragen dieselbe Metadata zusätzlich am
   Payment Intent.

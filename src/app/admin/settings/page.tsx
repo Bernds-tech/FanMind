@@ -1,6 +1,8 @@
 import { requirePlatformAdmin } from "@/lib/admin";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import { isInternalDailyTestWorkspaceProvisioningReady } from "@/lib/supabase/server";
+import { getStripeConfigStatus } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { AdminBillingShell } from "@/app/admin/billing/AdminBillingShell";
 import { AdminTabs } from "@/app/admin/billing/AdminTabs";
 import styles from "@/app/admin/billing/adminBilling.module.css";
@@ -15,7 +17,8 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
     getPublicDailyTestPlanEnabled(),
     isInternalDailyTestWorkspaceProvisioningReady(),
   ]);
-  const enabled = windowEnabled && provisioningReady;
+  const stripeReady = isInternalDailyTestStripeReady(getStripeConfigStatus());
+  const enabled = windowEnabled && provisioningReady && stripeReady;
   const params = await searchParams;
   const result = Array.isArray(params.daily_test_plan)
     ? params.daily_test_plan[0]
@@ -32,7 +35,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
         {result ? (
           <p className={result === "enabled" ? styles.badgeOk : styles.badgeWarn}>
             {result === "not_ready"
-              ? "Freigabe blockiert: Der getrennte Daily-Provisioning-Rollout ist noch nicht abgenommen."
+              ? "Freigabe blockiert: Daily-Provisioning oder Stripe-/Webhook-Konfiguration ist noch nicht vollständig bereit."
               : `1-€/Tag-Beta-Abo wurde ${result === "enabled" ? "aktiviert" : "deaktiviert"}.`}
           </p>
         ) : null}
@@ -62,6 +65,9 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
             <div className={styles.statusItem}>
               <span>Sichere Registrierung</span><strong>{provisioningReady ? "Bereit" : "Rollout ausstehend"}</strong>
             </div>
+            <div className={styles.statusItem}>
+              <span>Stripe &amp; Webhook</span><strong>{stripeReady ? "Bereit" : "Konfiguration unvollständig"}</strong>
+            </div>
           </div>
           <p className={styles.muted}>
             Ausschalten entfernt nur die Auswahl für neue Registrierungen. Bestehende Stripe-Abos,
@@ -73,7 +79,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
             <button
               className={windowEnabled ? styles.buttonDanger : styles.buttonPrimary}
               type="submit"
-              disabled={!windowEnabled && !provisioningReady}
+              disabled={!windowEnabled && (!provisioningReady || !stripeReady)}
             >
               {windowEnabled ? "1-€/Tag-Abo ausschalten" : "1-€/Tag-Abo einschalten"}
             </button>

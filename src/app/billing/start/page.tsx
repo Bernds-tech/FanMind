@@ -8,6 +8,7 @@ import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import styles from "./billingStart.module.css";
 
 export const dynamic = "force-dynamic";
@@ -98,7 +99,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
 
   const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
   const checkoutReady = workspace?.commercial_option === "internal_daily_test"
-    ? stripe.hasSecretKey && stripe.hasAppUrl && stripe.hasInternalDailyTestPrice
+    ? isInternalDailyTestStripeReady(stripe)
     : stripe.readyForCheckout;
   const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && checkoutReady && !isDemo && resolvedCheckoutPlan);
   let checkoutUrl: string | undefined;

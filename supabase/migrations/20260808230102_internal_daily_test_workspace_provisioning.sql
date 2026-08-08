@@ -227,6 +227,9 @@ as $function$
       'public.ensure_internal_daily_test_workspace(uuid,text,boolean)',
       'EXECUTE'
     )
+    -- Full-definition equality is intentionally fail-closed: merely finding
+    -- the Daily literal would also accept a widened or otherwise weakened
+    -- CHECK contract.
     and exists (
       select 1
         from pg_constraint as constraint_record
@@ -235,12 +238,8 @@ as $function$
                'workspaces_commercial_option_check'
          and constraint_record.contype = 'c'
          and constraint_record.convalidated
-         and position(
-           'internal_daily_test' in pg_get_constraintdef(
-             constraint_record.oid,
-             true
-           )
-         ) > 0
+         and pg_get_constraintdef(constraint_record.oid, true) =
+           $commercial_option_contract$CHECK (commercial_option = ANY (ARRAY['pilot_only'::text, 'starter_paid_setup'::text, 'starter_no_setup_commitment'::text, 'internal_daily_test'::text]))$commercial_option_contract$
     )
     and exists (
       select 1
@@ -250,12 +249,8 @@ as $function$
                'workspaces_payment_collection_method_check'
          and constraint_record.contype = 'c'
          and constraint_record.convalidated
-         and position(
-           '''card''' in pg_get_constraintdef(
-             constraint_record.oid,
-             true
-           )
-         ) > 0
+         and pg_get_constraintdef(constraint_record.oid, true) =
+           $payment_collection_contract$CHECK (payment_collection_method IS NULL OR (payment_collection_method = ANY (ARRAY['none'::text, 'manual_invoice'::text, 'sepa_direct_debit'::text, 'card'::text])))$payment_collection_contract$
     )
     and exists (
       select 1

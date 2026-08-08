@@ -5,6 +5,7 @@ import {
   readBoundedJsonRequest,
 } from "@/lib/httpMutationPolicy.mjs";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
   const config = getStripeConfigStatus();
   const plan = resolveCheckoutPlan(payload.planId, payload.commercialOption);
   const checkoutReady = payload.commercialOption === "internal_daily_test"
-    ? config.hasSecretKey && config.hasAppUrl && config.hasInternalDailyTestPrice
+    ? isInternalDailyTestStripeReady(config)
     : config.readyForCheckout;
   if (!checkoutReady) return NextResponse.json({ error: "Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind." }, { status: 503 });
 

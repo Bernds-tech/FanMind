@@ -1,8 +1,10 @@
 import {
   createStripeCheckoutSession,
   expireStripeCheckoutSession,
+  getStripeConfigStatus,
   resolveCheckoutPlan,
 } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { getSupabaseAuthUrl, getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 import type { SupabaseServerUser } from "@/lib/supabase/server";
 
@@ -98,6 +100,9 @@ export async function startInternalDailyTestCheckout(workspaceId: string, admin:
   const { workspace, error } = await getAdminBillingWorkspace(workspaceId);
   if (!workspace) return { ok: false, status: 404, error: error ?? "Workspace wurde nicht gefunden." };
   if (!isInternalTestWorkspace(workspace)) return { ok: false, status: 403, error: "Das 1-€-Live-Testabo ist nur für klar markierte interne Test-Workspaces erlaubt." };
+  if (!isInternalDailyTestStripeReady(getStripeConfigStatus())) {
+    return { ok: false, status: 503, error: "Stripe Checkout und Webhook sind für das 1-€-Live-Testabo nicht vollständig konfiguriert." };
+  }
   const plan = resolveCheckoutPlan("pilot", INTERNAL_DAILY_TEST_OPTION);
   if (!plan) return { ok: false, status: 503, error: "STRIPE_PRICE_INTERNAL_DAILY_TEST ist nicht konfiguriert." };
   if (!workspace.owner_user_id || !workspace.owner_email) return { ok: false, status: 409, error: "Der Workspace-Owner und seine E-Mail müssen vor dem Stripe-Test eindeutig aufgelöst werden." };

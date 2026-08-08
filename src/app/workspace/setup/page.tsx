@@ -6,6 +6,7 @@ import {
   ensureUserWorkspace,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
+  PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR,
   PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR,
   PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR,
   signOutSupabaseServerSession,
@@ -50,6 +51,7 @@ export default async function WorkspaceSetupPage({
   if (setupResult.workspace) redirect("/billing/start");
   const dailyTestUnavailable =
     setupResult.error?.message === PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR ||
+    setupResult.error?.message === PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR ||
     setupResult.error?.message ===
       PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR;
   const setupErrorMessage = dailyTestUnavailable

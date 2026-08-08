@@ -121,6 +121,10 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
     billingStartSource,
     /isCardOnlyDailyTestCheckout[\s\S]*\? "Kartenzahlung im nächsten Schritt"[\s\S]*: "Kartenzahlung im nächsten Schritt · SEPA optional, wenn freigeschaltet"/u,
   );
+  assert.match(
+    billingStartSource,
+    /commercial_option === "internal_daily_test"[\s\S]*isInternalDailyTestStripeReady\(stripe\)/u,
+  );
   assert.equal(
     billingStartSource.match(/<dd>\{checkoutPaymentMethodText\}<\/dd>/gu)?.length,
     1,
@@ -148,8 +152,13 @@ test("daily test registration is controlled by an explicit fail-closed server fl
 
   assert.match(registerPageSource, /getPublicDailyTestPlanEnabled/);
   assert.match(registerPageSource, /isInternalDailyTestWorkspaceProvisioningReady/);
+  assert.match(registerPageSource, /isInternalDailyTestAdmissionReady\(\{[\s\S]*stripeConfig: getStripeConfigStatus\(\)/u);
   const checkoutRouteSource = fs.readFileSync("src/app/api/billing/checkout/route.ts", "utf8");
   assert.match(checkoutRouteSource, /await getPublicDailyTestPlanEnabled\(\)/);
+  assert.match(
+    checkoutRouteSource,
+    /commercialOption === "internal_daily_test"[\s\S]*isInternalDailyTestStripeReady\(config\)/u,
+  );
   assert.match(runtimeSettingsSource, /publicDailyTestPlanEnabled/);
   assert.match(runtimeSettingsSource, /getTemporaryPublicDailyTestPlanStatus/);
   assert.match(publicDailyTestPolicySource, /PUBLIC_DAILY_TEST_PLAN_WINDOW_MS = 24 \* 60 \* 60 \* 1000/);
@@ -159,11 +168,11 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   assert.match(adminRouteSource, /requirePlatformAdmin/);
   assert.match(
     adminRouteSource,
-    /enabled && !\(await isInternalDailyTestWorkspaceProvisioningReady\(\)\)[\s\S]*daily_test_plan", "not_ready"[\s\S]*setPublicDailyTestPlanEnabled/u,
+    /enabled &&[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)[\s\S]*isInternalDailyTestStripeReady\(getStripeConfigStatus\(\)\)[\s\S]*daily_test_plan", "not_ready"[\s\S]*setPublicDailyTestPlanEnabled/u,
   );
   assert.match(
     adminSettingsSource,
-    /windowEnabled && provisioningReady[\s\S]*Sichere Registrierung[\s\S]*Rollout ausstehend/u,
+    /windowEnabled && provisioningReady && stripeReady[\s\S]*Sichere Registrierung[\s\S]*Stripe &amp; Webhook/u,
   );
   assert.match(deploySource, /if \[ ! -e "\$RUNTIME_SETTINGS_FILE" \]/);
   assert.doesNotMatch(deploySource, /sed -i.*FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN/);
@@ -179,10 +188,10 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   assert.match(registrationWindowRouteSource, /isTrustedFanMindMutationRequest\(request\)/u);
   assert.match(registrationWindowRouteSource, /readBoundedJsonRequest\([\s\S]*MAX_DAILY_TEST_WINDOW_BODY_BYTES/u);
   assert.match(registrationWindowRouteSource, /Object\.keys\(payload\)\.length !== 1/u);
-  assert.match(registrationWindowRouteSource, /getPublicDailyTestPlanEnabled\(\)[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)/u);
+  assert.match(registrationWindowRouteSource, /getPublicDailyTestPlanEnabled\(\)[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)[\s\S]*isInternalDailyTestAdmissionReady\(\{[\s\S]*stripeConfig: getStripeConfigStatus\(\)/u);
   assert.match(registrationWindowRouteSource, /daily_test_window_closed/u);
   assert.match(registrationWindowRouteSource, /"Cache-Control": "no-store"/u);
-  assert.doesNotMatch(registrationWindowRouteSource, /Stripe|createStripeCheckoutSession/u);
+  assert.doesNotMatch(registrationWindowRouteSource, /createStripeCheckoutSession/u);
   const windowCheckIndex = registerClientSource.indexOf('fetch("/api/register/daily-test-window"');
   const signUpIndex = registerClientSource.indexOf("supabase.auth.signUp");
   assert.ok(windowCheckIndex >= 0 && signUpIndex > windowCheckIndex);
@@ -200,12 +209,12 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   const provisioningRpcIndex = supabaseServerSource.indexOf("INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_RPC", dailyGateIndex);
   const legacyBridgeIndex = supabaseServerSource.indexOf("// Compatibility bridge for the deploy-before-migrate rollout.", dailyGateIndex);
   assert.ok(dailyGateIndex >= 0 && provisioningRpcIndex > dailyGateIndex && legacyBridgeIndex > provisioningRpcIndex);
-  assert.match(supabaseServerSource, /isInternalDailyTest[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)[\s\S]*getPublicDailyTestPlanEnabled\(\)[\s\S]*getServiceAccessToken\(\)/u);
+  assert.match(supabaseServerSource, /isInternalDailyTest[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)[\s\S]*isInternalDailyTestStripeReady\(getStripeConfigStatus\(\)\)[\s\S]*getPublicDailyTestPlanEnabled\(\)[\s\S]*getServiceAccessToken\(\)/u);
   assert.match(supabaseServerSource, /if \(!workspace && !isInternalDailyTest\)/u);
   assert.match(supabaseServerSource, /planId === "pilot" && commercialOption === "internal_daily_test"[\s\S]*getRegistrationCommercialTerms\("pilot", "internal_daily_test"\)/u);
   assert.match(
     workspaceSetupSource,
-    /resolveWorkspaceLocale\([\s\S]*lang: params\?\.lang,[\s\S]*user: data\.user[\s\S]*PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR[\s\S]*No workspace was created[\s\S]*Es wurde kein Workspace angelegt/u,
+    /resolveWorkspaceLocale\([\s\S]*lang: params\?\.lang,[\s\S]*user: data\.user[\s\S]*PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR[\s\S]*No workspace was created[\s\S]*Es wurde kein Workspace angelegt/u,
   );
   assert.doesNotMatch(
     workspaceSetupSource,
@@ -225,8 +234,14 @@ test("daily beta admin checkout targets the workspace owner and cancels at paid-
   assert.match(adminBillingSource, /const persisted = await updateAdminBillingWorkspace/u);
   assert.match(adminBillingSource, /if \(!persisted\.ok\)[\s\S]*expireStripeCheckoutSession\(session\.id\)[\s\S]*ok: false/u);
   assert.match(adminBillingSource, /!workspace\.stripe_subscription_id[\s\S]*!workspace\.stripe_checkout_session_id[\s\S]*ok: false[\s\S]*await expireStripeCheckoutSession\(workspace\.stripe_checkout_session_id\)[\s\S]*if \(!checkoutExpired\)[\s\S]*ok: false[\s\S]*updateAdminBillingWorkspace/u);
+  assert.match(
+    adminBillingSource,
+    /startInternalDailyTestCheckout[\s\S]*isInternalDailyTestStripeReady\(getStripeConfigStatus\(\)\)[\s\S]*createStripeCheckoutSession/u,
+  );
   assert.match(adminBillingSource, /!workspace\.stripe_subscription_id[\s\S]*billing_status: "demo_free"[\s\S]*stripe_checkout_session_id: null[\s\S]*stripe_live_daily_test: false/u);
   const stripeBillingSource = fs.readFileSync("src/lib/stripeBilling.ts", "utf8");
-  assert.match(stripeBillingSource, /checkout\/sessions\/\$\{encodeURIComponent\(normalizedId\)\}\/expire[\s\S]*signal: AbortSignal\.timeout\(12_000\)/u);
+  assert.match(stripeBillingSource, /const sessionUrl = `https:\/\/api\.stripe\.com\/v1\/checkout\/sessions\/\$\{encodeURIComponent\(normalizedId\)\}`[\s\S]*`\$\{sessionUrl\}\/expire`[\s\S]*signal: AbortSignal\.timeout\(12_000\)/u);
+  assert.match(stripeBillingSource, /if \(response\?\.ok === true\) return true;[\s\S]*fetch\(sessionUrl, \{[\s\S]*method: "GET"[\s\S]*statusPayload\?\.status === "expired"/u);
+  assert.match(stripeBillingSource, /fetch\(sessionUrl, \{[\s\S]*signal: AbortSignal\.timeout\(12_000\)/u);
   assert.doesNotMatch(adminBillingSource, /subscriptions\/\$\{encodeURIComponent\(workspace\.stripe_subscription_id\)\}`, \{ method: "DELETE"/);
 });

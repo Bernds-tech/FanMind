@@ -5,6 +5,8 @@ import {
 } from "@/lib/httpMutationPolicy.mjs";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import { isInternalDailyTestWorkspaceProvisioningReady } from "@/lib/supabase/server";
+import { getStripeConfigStatus } from "@/lib/stripeBilling";
+import { isInternalDailyTestAdmissionReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +55,11 @@ export async function POST(request: NextRequest) {
     getPublicDailyTestPlanEnabled(),
     isInternalDailyTestWorkspaceProvisioningReady(),
   ]);
-  if (!windowEnabled || !provisioningReady) {
+  if (!isInternalDailyTestAdmissionReady({
+    windowEnabled,
+    workspaceProvisioningReady: provisioningReady,
+    stripeConfig: getStripeConfigStatus(),
+  })) {
     return jsonNoStore({ ok: false, code: "daily_test_window_closed" }, 409);
   }
 
