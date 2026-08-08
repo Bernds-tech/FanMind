@@ -15,6 +15,7 @@ import { WorkspaceHeader, type WorkspaceHeaderProps } from "./WorkspaceHeader";
 import { WorkspaceKpiStrip } from "./WorkspaceKpiStrip";
 import { wt } from "@/lib/workspaceCopy";
 import type { FanMindLanguage } from "@/lib/fanmindCopy";
+import type { FollowupCompletionRate } from "@/lib/workspaceKpiStats";
 
 export type WorkspaceNavLink = {
   label: string;
@@ -37,6 +38,7 @@ type WorkspaceShellProps = {
   header: WorkspaceHeaderProps;
   contactCount: number;
   openFollowupCount?: number;
+  followupCompletionRate?: FollowupCompletionRate | null;
   showStats?: boolean;
   logoutAction: () => Promise<void>;
   profileHref?: string;
@@ -141,6 +143,7 @@ export function WorkspaceShell({
   header,
   contactCount,
   openFollowupCount = 0,
+  followupCompletionRate,
   showStats = true,
   logoutAction,
   profileHref = "/settings/profile",
@@ -342,6 +345,7 @@ export function WorkspaceShell({
             <WorkspaceKpiStrip
               contactCount={contactCount}
               openFollowupCount={openFollowupCount}
+              followupCompletionRate={followupCompletionRate}
               locale={locale}
             />
           ) : null}
