@@ -67,4 +67,7 @@ test("channel catalog keeps phase 7 complete and phase 8 visibly unstarted", asy
   assert.match(source, /"onlyfans",\s*"OnlyFans"/u);
   assert.match(source, /Phase 8 \/ noch nicht begonnen/u);
   assert.match(source, /Noch keine Eingänge umgesetzt/u);
+  assert.match(source, /preparedPhase8ChannelKeys = new Set\(\["telegram"\]\)/u);
+  assert.match(source, /preparedPhase8Groundwork[\s\S]*Coming Soon \/ geplant \/ vorbereitet/u);
+  assert.match(source, /"Bot-\/Account-Struktur vorbereitet"/u);
 });

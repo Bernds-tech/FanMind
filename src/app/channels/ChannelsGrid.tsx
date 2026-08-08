@@ -135,6 +135,7 @@ const demoNotice =
 const phase3ChannelKeys = new Set(["facebook", "instagram", "whatsapp"]);
 const phase7ChannelKeys = new Set(["tiktok", "twitter", "discord", "discord-server", "onlyfans"]);
 const currentChannelKeys = new Set(["email", "website-chat", "webform", "manual"]);
+const preparedPhase8ChannelKeys = new Set(["telegram"]);
 
 function roadmapPhaseForChannel(key: string) {
   if (phase3ChannelKeys.has(key)) return 3;
@@ -179,10 +180,11 @@ const makeChannel = (
   inputs?: ChannelInput[],
 ): Channel => {
   const phase = roadmapPhaseForChannel(key);
+  const preparedPhase8Groundwork = phase === 8 && preparedPhase8ChannelKeys.has(key);
   const rawInputs = inputs ?? [
     makeInput(key, name, purpose, description, technology),
   ];
-  const channelInputs = phase === 8
+  const channelInputs = phase === 8 && !preparedPhase8Groundwork
     ? rawInputs.map((input) => ({
         ...input,
         description: "Diese Verbindung ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen.",
@@ -191,7 +193,11 @@ const makeChannel = (
       }))
     : rawInputs.map((input) => ({
         ...input,
-        status: input.live ? input.status : roadmapStatusForPhase(phase),
+        status: input.live
+          ? input.status
+          : preparedPhase8Groundwork
+            ? "Coming Soon / geplant / vorbereitet"
+            : roadmapStatusForPhase(phase),
       }));
   const live = channelInputs.every((input) => input.live);
 
@@ -200,14 +206,16 @@ const makeChannel = (
     logoKey: key,
     name,
     category: group,
-    description: phase === 8
+    description: phase === 8 && !preparedPhase8Groundwork
       ? "Diese Plattform ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen."
       : description,
     status: live
       ? "Live / manuell nutzbar"
-      : roadmapStatusForPhase(phase),
+      : preparedPhase8Groundwork
+        ? "Coming Soon / geplant / vorbereitet"
+        : roadmapStatusForPhase(phase),
     purpose,
-    technology: phase === 8 ? "Phase 8 · noch nicht begonnen" : technology,
+    technology: phase === 8 && !preparedPhase8Groundwork ? "Phase 8 · noch nicht begonnen" : technology,
     live,
     inputs: channelInputs,
   };

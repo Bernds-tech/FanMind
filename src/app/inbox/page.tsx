@@ -184,6 +184,7 @@ type InboxQueueItem = {
   statusValue: string;
   conversationId?: string;
   assignedUserId?: string;
+  assignmentSupported?: boolean;
   priority: "Hoch" | "Mittel" | "Warm" | "Normal" | "Niedrig";
   priorityScore: number;
   waitingSince: string;
@@ -495,7 +496,7 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
               </small>
             ) : null}
             <div className={styles.rowActions}>
-              {item.conversationId && !item.assignedUserId ? (
+              {item.conversationId && item.assignmentSupported && !item.assignedUserId ? (
                 <form
                   action={claimConversation}
                 >
@@ -504,18 +505,20 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
                     type="hidden"
                     value={item.conversationId}
                   />
+                  <input name="lang" type="hidden" value={locale} />
                   <button type="submit">
                     {inboxText(locale, "Übernehmen")}
                   </button>
                 </form>
               ) : null}
-              {item.conversationId && item.assignedUserId === userId ? (
+              {item.conversationId && item.assignmentSupported && item.assignedUserId === userId ? (
                 <form action={releaseConversation}>
                   <input
                     name="conversation_id"
                     type="hidden"
                     value={item.conversationId}
                   />
+                  <input name="lang" type="hidden" value={locale} />
                   <button type="submit">{inboxText(locale, "Freigeben")}</button>
                 </form>
               ) : null}
@@ -600,6 +603,7 @@ function buildConversationInboxQueue(
         dedupeKey: getFanGroupKey(contact),
         conversationId: conversation.id,
         assignedUserId: conversation.assigned_user_id ?? undefined,
+        assignmentSupported: conversation.assignment_supported === true,
         contactId: contact.id,
         fanName: contact.display_name || contact.handle || "Unbenannter Fan",
         handle: contact.handle || "Kein Handle hinterlegt",

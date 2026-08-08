@@ -48,6 +48,9 @@ test("assignment rollout is backward-compatible and avoids email labels", async 
   assert.match(server, /CONVERSATION_ASSIGNMENT_COLUMNS/u);
   assert.match(server, /isMissingAssignedUserIdentity/u);
   assert.match(server, /assigned_user_id[\s\S]*CONVERSATION_COLUMNS/u);
+  assert.match(server, /assignmentSupported = false[\s\S]*assignment_supported: assignmentSupported/u);
+  assert.match(page, /item\.assignmentSupported && !item\.assignedUserId/u);
+  assert.match(page, /item\.assignmentSupported && item\.assignedUserId === userId/u);
   assert.doesNotMatch(actions, /user\.email/u);
   assert.match(actions, /return "Workspace-Team"/u);
   assert.doesNotMatch(page, /getSupabaseServerUser/u);
@@ -67,10 +70,11 @@ test("inbox exposes explicit claim and release controls", async () => {
 });
 
 test("English inbox navigation preserves locale and renders localized workspace copy", async () => {
-  const [page, navigation, searchForm] = await Promise.all([
+  const [page, navigation, searchForm, actions] = await Promise.all([
     readFile(pagePath, "utf8"),
     readFile(navigationPath, "utf8"),
     readFile(searchFormPath, "utf8"),
+    readFile(actionsPath, "utf8"),
   ]);
 
   assert.match(navigation, /locale === "en" \? "\/inbox\?lang=en" : "\/inbox"/u);
@@ -81,6 +85,10 @@ test("English inbox navigation preserves locale and renders localized workspace 
   assert.match(page, /Never send replies automatically/u);
   assert.match(searchForm, /if \(locale === "en"\) params\.set\("lang", "en"\)/u);
   assert.match(searchForm, /locale === "en" \? "Search" : "Suche"/u);
+  assert.equal(page.match(/<input name="lang" type="hidden" value=\{locale\} \/>/gu)?.length, 2);
+  assert.match(actions, /formValue\(formData, "lang"\) === "en"/u);
+  assert.match(actions, /inboxNoticePath\("conversation_claimed", locale\)/u);
+  assert.match(actions, /params\.set\("lang", "en"\)/u);
 });
 
 test("assignment schema stores a stable authenticated identity", async () => {

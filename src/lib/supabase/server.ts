@@ -195,6 +195,7 @@ export type ConversationRow = {
   last_message_preview: string | null;
   assigned_owner: string | null;
   assigned_user_id: string | null;
+  assignment_supported?: boolean;
   ai_status: string;
   next_step: string | null;
   created_at: string | null;
@@ -3284,6 +3285,7 @@ export async function getWorkspaceConversations(
     );
   }
 
+  let assignmentSupported = true;
   let result = await postgrestSelect<ConversationRow[]>(
     "conversations",
     accessToken,
@@ -3295,6 +3297,7 @@ export async function getWorkspaceConversations(
   );
 
   if (isMissingAssignedUserIdentity(result.error)) {
+    assignmentSupported = false;
     result = await postgrestSelect<ConversationRow[]>(
       "conversations",
       accessToken,
@@ -3313,9 +3316,12 @@ export async function getWorkspaceConversations(
   }
 
   return {
-    conversations: (result.data ?? []).filter(
-      (conversation) => conversation.status !== "archived",
-    ),
+    conversations: (result.data ?? [])
+      .filter((conversation) => conversation.status !== "archived")
+      .map((conversation) => ({
+        ...conversation,
+        assignment_supported: assignmentSupported,
+      })),
     error: null,
   };
 }

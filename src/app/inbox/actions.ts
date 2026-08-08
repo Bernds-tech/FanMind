@@ -18,8 +18,9 @@ export async function releaseConversation(formData: FormData) {
 }
 
 async function updateAssignment(formData: FormData, mode: "claim" | "release") {
+  const locale = formValue(formData, "lang") === "en" ? "en" : "de";
   const conversationId = formValue(formData, "conversation_id");
-  if (!conversationId) redirect("/inbox?notice=conversation_missing");
+  if (!conversationId) redirect(inboxNoticePath("conversation_missing", locale));
 
   const { user, workspace } = await requireAuthorizedWorkspaceMember();
   const conversations = await getWorkspaceConversations(workspace.id);
@@ -28,7 +29,10 @@ async function updateAssignment(formData: FormData, mode: "claim" | "release") {
   );
 
   if (conversations.error || !conversation) {
-    redirect("/inbox?notice=conversation_forbidden");
+    redirect(inboxNoticePath("conversation_forbidden", locale));
+  }
+  if (conversation.assignment_supported !== true) {
+    redirect(inboxNoticePath("assignment_failed", locale));
   }
 
   const result =
@@ -45,14 +49,20 @@ async function updateAssignment(formData: FormData, mode: "claim" | "release") {
           assignedUserId: user.id,
         });
 
-  if (result.error) redirect("/inbox?notice=assignment_failed");
+  if (result.error) redirect(inboxNoticePath("assignment_failed", locale));
 
   revalidatePath("/inbox");
   redirect(
     mode === "claim"
-      ? "/inbox?notice=conversation_claimed"
-      : "/inbox?notice=conversation_released",
+      ? inboxNoticePath("conversation_claimed", locale)
+      : inboxNoticePath("conversation_released", locale),
   );
+}
+
+function inboxNoticePath(notice: string, locale: "de" | "en"): string {
+  const params = new URLSearchParams({ notice });
+  if (locale === "en") params.set("lang", "en");
+  return `/inbox?${params.toString()}`;
 }
 
 function getUserLabel(user: {
