@@ -86,6 +86,10 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
   assert.match(workflow, /SOURCE_DIR="\/var\/www\/fanmind-staging"/);
   assert.doesNotMatch(workflow, /git clone/);
   assert.match(workflow, /PORT", "3001"/);
+  assert.match(workflow, /STRIPE_PRICE_STARTER_SETUP/);
+  assert.match(workflow, /STRIPE_PRICE_STARTER_MONTHLY/);
+  assert.match(workflow, /STRIPE_PRICE_AI_PLUS/);
+  assert.match(workflow, /STRIPE_PRICE_AI_ULTRA/);
   assert.match(workflow, /fanmind-staging:fanmind-staging:600/);
   assert.match(workflow, /fanmind-staging-01-exoscale/);
   assert.match(workflow, /--labels fanmind-staging,exoscale/);

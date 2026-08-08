@@ -3,6 +3,14 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const pagePath = new URL("../src/app/inbox/page.tsx", import.meta.url);
+const navigationPath = new URL("../src/lib/workspaceNavigation.ts", import.meta.url);
+
+test("workspace navigation exposes the real inbox", async () => {
+  const navigation = await readFile(navigationPath, "utf8");
+
+  assert.match(navigation, /href: "\/inbox"/u);
+  assert.match(navigation, /active: activeRoute === "inbox"/u);
+});
 
 test("inbox uses one unified queue instead of replacing follow-ups", async () => {
   const page = await readFile(pagePath, "utf8");
