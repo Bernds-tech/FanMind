@@ -28,6 +28,7 @@ import {
 } from "@/lib/channelSources";
 import styles from "./inbox.module.css";
 import { InboxSearchForm } from "./InboxSearchForm";
+import { buildUnifiedInboxQueue } from "@/lib/inboxQueuePolicy.mjs";
 
 type InboxPageProps = {
   searchParams?: Promise<{ filter?: string | string[]; q?: string | string[] }>;
@@ -51,6 +52,7 @@ type InboxFilter = "all" | "open" | "waiting" | "due" | "high" | "ai" | "done";
 
 type InboxQueueItem = {
   key: string;
+  dedupeKey: string;
   contactId: string;
   fanName: string;
   handle: string;
@@ -118,9 +120,18 @@ function InboxWorkspace({
   const activeConversations = conversations.filter((conversation) =>
     activeContactIds.has(conversation.contact_id),
   );
-  const queueItems = activeConversations.length
-    ? buildConversationInboxQueue(activeConversations, contacts)
-    : buildInboxQueue(contacts, activeFollowups);
+  const queueItems = buildUnifiedInboxQueue(
+    {
+      conversations: buildConversationInboxQueue(activeConversations, contacts),
+      followups: buildInboxQueue(contacts, activeFollowups),
+    },
+    (item) => ({
+      dedupeKey: item.dedupeKey,
+      priorityScore: item.priorityScore,
+      waitingMinutes: item.waitingMinutes,
+      stableKey: item.key,
+    }),
+  );
   const visibleItems = filterQueueItems(queueItems, activeFilter, searchQuery);
   const kpis = getInboxKpis(queueItems);
 
@@ -152,9 +163,9 @@ function InboxWorkspace({
             <p className={dashboardStyles.eyebrow}>Manuelle Arbeitsliste</p>
             <h2>Workspace-Daten und verbundene Messenger-Eingänge</h2>
             <p>
-              Die Queue nutzt echte gespeicherte Conversations. Wenn noch keine
-              Conversation existiert, bleibt der vorhandene
-              Kontakte-/Follow-up-Fallback aktiv.
+              Die Queue nutzt echte gespeicherte Conversations und ergänzt
+              offene Follow-ups, die noch durch keine Conversation desselben
+              Fans abgedeckt sind.
             </p>
           </div>
           <InboxSearchForm
@@ -270,7 +281,6 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
       aria-label="Lokale Conversation Queue"
     >
       <div className={`${styles.queueRow} ${styles.queueHead}`} role="row">
-        <span>Auswahl</span>
         <span>Fan</span>
         <span>Kanal</span>
         <span>Letzte Nachricht</span>
@@ -285,9 +295,6 @@ function QueueList({ items }: { items: InboxQueueItem[] }) {
       </div>
       {items.map((item) => (
         <div className={styles.queueRowWrap} key={item.key}>
-          <div className={styles.selectCell}>
-            <input aria-label={`${item.fanName} auswählen`} type="checkbox" />
-          </div>
           <Link
             className={styles.queueRowLink}
             href={`/fans/${item.contactId}`}
@@ -443,6 +450,7 @@ function buildConversationInboxQueue(
 
       return {
         key: conversation.id,
+        dedupeKey: getFanGroupKey(contact),
         conversationId: conversation.id,
         contactId: contact.id,
         fanName: contact.display_name || contact.handle || "Unbenannter Fan",
@@ -506,6 +514,7 @@ function buildInboxQueue(
 
   for (const contact of contacts) {
     const contactFollowups = followupsByContact.get(contact.id) ?? [];
+    if (!contactFollowups.length) continue;
     const item = createQueueItem(contact, contactFollowups);
     const existing = itemsByFan.get(item.key);
 
@@ -544,6 +553,7 @@ function createQueueItem(
 
   return {
     key: getFanGroupKey(contact),
+    dedupeKey: getFanGroupKey(contact),
     contactId: contact.id,
     fanName: contact.display_name || contact.handle || "Unbenannter Fan",
     handle: contact.handle || "Kein Handle hinterlegt",
