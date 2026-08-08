@@ -201,14 +201,17 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
 
 test("ledger and object probes are transactionally read-only and exact", () => {
   const ledger = ledgerSql();
-  for (const timestamp of [
-    "20260727090000",
-    "20260729120000",
-    "20260803120000",
-    "20260803210000",
+  for (const migrationId of [
+    "20260727090000_workspace_ai_tier_entitlements",
+    "20260729120000_mobile_push_registrations",
+    "20260803120000_meta_content_intelligence_foundation",
+    "20260803210000_preserve_incremental_conversation_history",
   ]) {
-    assert.match(ledger, new RegExp(timestamp, "u"));
+    const migrationName = migrationId.replace(/^\d{14}_/u, "");
+    assert.match(ledger, new RegExp(migrationId, "u"));
+    assert.match(ledger, new RegExp(migrationName, "u"));
   }
+  assert.match(ledger, /where version = '[0-9]{14}'[\s\S]*or name in/iu);
   for (const sql of [
     ledger,
     AI_TIER_STATE_SQL,

@@ -371,7 +371,7 @@ RLS-Erwartung:
 - Lernquelle sind ausschließlich bestätigte manuelle ausgehende Nachrichten;
   niemals KI-Entwürfe, Notizen oder eingehende Fan-Nachrichten.
 
-### `workspace_ai_tier_entitlements` (Migration vorbereitet)
+### `workspace_ai_tier_entitlements` (auf Staging angewendet)
 
 Zweck: serververwaltete Source of Truth für genau ein optionales KI-Add-on
 eines Workspaces. Eine fehlende Zeile bedeutet KI Standard.
@@ -402,8 +402,9 @@ RLS-/Privilege-Erwartung:
 - Stripe-Referenzen werden niemals an Browser oder den KI-Resolver
   weitergegeben.
 - Fehlende, mehrdeutige oder ungültige Daten fallen auf KI Standard zurück.
-- Die Migration `20260727090000_workspace_ai_tier_entitlements.sql` ist noch
-  nicht auf Staging oder Production angewendet.
+- Die Migration `20260727090000_workspace_ai_tier_entitlements.sql` ist auf
+  dem getrennten Supabase-Staging angewendet und katalogseitig nachgeprüft;
+  auf Production ist sie nicht angewendet.
 - Offline-Checksum-Prüfung sowie zielgebundener Read-only-Postflight und
   expliziter Apply stehen über
   `scripts/operations/ai-tier-entitlement-migration-runner.mjs` bereit; ein
