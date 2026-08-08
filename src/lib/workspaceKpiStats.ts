@@ -10,6 +10,36 @@ export type WorkspaceKpiStats = {
   openFollowups: number;
 };
 
+export type FollowupCompletionRate = {
+  completed: number;
+  total: number;
+  percentage: number;
+};
+
+export function calculateFollowupCompletionRate(
+  open: number,
+  completed: number,
+): FollowupCompletionRate | null {
+  if (
+    !Number.isInteger(open) ||
+    open < 0 ||
+    !Number.isInteger(completed) ||
+    completed < 0
+  ) {
+    return null;
+  }
+
+  const total = open + completed;
+
+  if (total === 0) return null;
+
+  return {
+    completed,
+    total,
+    percentage: Math.round((completed / total) * 100),
+  };
+}
+
 export function getWorkspaceKpiStatsFromContacts(
   contacts: ContactRow[],
   openFollowups = 0,
