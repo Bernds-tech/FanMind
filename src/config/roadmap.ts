@@ -268,6 +268,23 @@ export const roadmapPhases: RoadmapPhase[] = [
       { label: "EU-Datenfokus", state: "later", status: "Produktprinzip" },
     ],
   },
+
+  {
+    number: "15",
+    phase: "Phase 15",
+    icon: "campaign",
+    title: "Segmente & Listen",
+    status: "In Arbeit",
+    statusIcon: "◷",
+    tone: "purple",
+    availability: "upcoming",
+    items: [
+      { label: "Segment-Ansichten", state: "planned", status: "Vorbereitet" },
+      { label: "Listenlogik", state: "planned", status: "In Arbeit" },
+      { label: "Filter & Tags", state: "planned", status: "In Arbeit" },
+      { label: "CSV-Import für Segmente nutzen", state: "planned", status: "Nächster Schritt" },
+    ],
+  },
 ] satisfies RoadmapPhase[];
 
 export const roadmapNotes = [

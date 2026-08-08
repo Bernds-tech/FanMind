@@ -360,6 +360,7 @@ const baseIntegrationChannels = [
 const phase3IntegrationPlatforms = new Set(["facebook", "instagram", "whatsapp"]);
 const phase7IntegrationPlatforms = new Set(["tiktok", "x", "discord", "discord-server", "onlyfans"]);
 const currentIntegrationPlatforms = new Set(["email", "website-chat", "webform", "manual"]);
+const preparedPhase8IntegrationPlatforms = new Set(["telegram"]);
 
 const integrationChannels = baseIntegrationChannels.map((channel) => {
   if (phase3IntegrationPlatforms.has(channel.platform) || currentIntegrationPlatforms.has(channel.platform)) {
@@ -367,6 +368,9 @@ const integrationChannels = baseIntegrationChannels.map((channel) => {
   }
   if (phase7IntegrationPlatforms.has(channel.platform)) {
     return { ...channel, status: "Phase 7 · Roadmap" };
+  }
+  if (preparedPhase8IntegrationPlatforms.has(channel.platform)) {
+    return { ...channel, status: "Phase 8 · vorbereitet / inaktiv" };
   }
   return {
     ...channel,
@@ -886,7 +890,8 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
       if (
         !phase3IntegrationPlatforms.has(channel.platform) &&
         !phase7IntegrationPlatforms.has(channel.platform) &&
-        !currentIntegrationPlatforms.has(channel.platform)
+        !currentIntegrationPlatforms.has(channel.platform) &&
+        !preparedPhase8IntegrationPlatforms.has(channel.platform)
       ) {
         return {
           ...localizedChannel,

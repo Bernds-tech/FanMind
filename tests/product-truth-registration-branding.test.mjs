@@ -165,6 +165,7 @@ test("channel phases stay unique and phase 8 remains unstarted", async () => {
   const phase3 = roadmap.split('phase: "Phase 3"')[1]?.split('phase: "Phase 4"')[0] ?? "";
   const phase7 = roadmap.split('phase: "Phase 7"')[1]?.split('phase: "Phase 8"')[0] ?? "";
   const phase8 = roadmap.split('phase: "Phase 8"')[1]?.split('phase: "Phase 9"')[0] ?? "";
+  const phase15 = roadmap.split('phase: "Phase 15"')[1] ?? "";
 
   assert.match(phase3, /Facebook[\s\S]*Instagram[\s\S]*WhatsApp/u);
   assert.doesNotMatch(phase3, /TikTok|X \/ Twitter|Discord|OnlyFans|LinkedIn/u);
@@ -176,6 +177,7 @@ test("channel phases stay unique and phase 8 remains unstarted", async () => {
   assert.match(phase8, /availability: "later"/u);
   assert.doesNotMatch(phase8, /state: "done"|state: "progress"|state: "partial"|state: "planned"/u);
   assert.doesNotMatch(phase8, /Facebook|Instagram|WhatsApp|TikTok|X \/ Twitter|Discord|OnlyFans/u);
+  assert.match(phase15, /Segmente & Listen[\s\S]*Segment-Ansichten[\s\S]*Listenlogik[\s\S]*Filter & Tags[\s\S]*CSV-Import für Segmente nutzen/u);
   assert.match(publicRoadmap, /import \{ roadmapPhases, type RoadmapPhase \} from "@\/config\/roadmap"/u);
   assert.doesNotMatch(publicRoadmap, /const available:|const inProgress:|const comingSoon:/u);
   assert.match(adminRoadmap, /Alle Phasen sind fortlaufend nummeriert/u);

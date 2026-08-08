@@ -320,6 +320,7 @@ export async function expireStripeCheckoutSession(sessionId: unknown): Promise<b
       method: "POST",
       headers: { Authorization: `Bearer ${secretKey}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(12_000),
     },
   ).catch(() => null);
   return response?.ok === true;

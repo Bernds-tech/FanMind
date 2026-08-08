@@ -91,6 +91,8 @@ test("remaining static landing copy is passed through the translator", async () 
     page,
     /`\$\{channel\.title\} is assigned to Phase 8\. Implementation has not started\.`/,
   );
+  assert.match(page, /preparedPhase8IntegrationPlatforms = new Set\(\["telegram"\]\)/u);
+  assert.match(page, /Phase 8 · vorbereitet \/ inaktiv/u);
   assert.match(
     page,
     /t\("Beispieldaten zeigen den manuellen Workflow: Antwort vorbereiten, Follow-up planen und final selbst senden\."\)/,
