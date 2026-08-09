@@ -4,10 +4,8 @@ import {
   isTrustedMutationRequest,
   readBoundedJsonRequest,
 } from "@/lib/httpMutationPolicy.mjs";
-import {
-  hasCurrentPaymentTermsUserEvidence,
-  PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
-} from "@/lib/paymentTermsActivationPolicy.mjs";
+import { PAYMENT_TERMS_ACTIVATION_BLOCK_CODE } from "@/lib/paymentTermsActivationPolicy.mjs";
+import { hasCurrentWorkspacePaymentTermsEvidence } from "@/lib/paymentTermsServerEvidence";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
@@ -47,16 +45,6 @@ export async function POST(request: NextRequest) {
   const payload = parsedBody.value as { planId?: string; commercialOption?: string } | null;
   if (!payload?.planId || !payload.commercialOption) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
 
-  if (!hasCurrentPaymentTermsUserEvidence(data.user.user_metadata)) {
-    return NextResponse.json(
-      {
-        error: "Die verbindliche Version der Zahlungsbedingungen ist noch nicht freigegeben. Die Zahlung bleibt bis dahin gesperrt.",
-        code: PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
-      },
-      { status: 409 },
-    );
-  }
-
   if (payload.commercialOption === "internal_daily_test" && !(await getPublicDailyTestPlanEnabled())) {
     return NextResponse.json({ error: "Das interne Live-Testabo kann nur im Adminbereich gestartet werden." }, { status: 403 });
   }
@@ -75,6 +63,16 @@ export async function POST(request: NextRequest) {
   if (isDemoWorkspace(workspaceResult.workspace)) return NextResponse.json({ error: "Demo-Workspaces können keinen Checkout starten." }, { status: 403 });
   if (workspaceResult.workspace.plan_id !== plan.planId || workspaceResult.workspace.commercial_option !== plan.commercialOption) {
     return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
+  }
+
+  if (!(await hasCurrentWorkspacePaymentTermsEvidence(workspaceResult.workspace.id, data.user.id))) {
+    return NextResponse.json(
+      {
+        error: "Die verbindliche Version der Zahlungsbedingungen ist noch nicht serverseitig bestätigt. Die Zahlung bleibt bis dahin gesperrt.",
+        code: PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
+      },
+      { status: 409 },
+    );
   }
 
   const session = await createStripeCheckoutSession({ plan, userId: data.user.id, workspaceId: workspaceResult.workspace.id, userEmail: data.user.email });

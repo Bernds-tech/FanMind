@@ -27,9 +27,18 @@ wirksam sind:
   Werte, bleiben Admin-Freigabe, öffentliche Auswahl, Pre-Sign-up-Admission
   und Daily-Workspace-Mutation fail-closed.
 
-Die Anwendung nimmt keine User-ID, Tarifoption, Preise, Billing-Felder oder
-Testflags aus dem Registrierungs-Request an. Der bestehende authentifizierte
-Starter-RPC bleibt absichtlich Starter-only. Der Daily-SQL-Schritt liegt
+Die Anwendung nimmt keine User-ID, Preise, Billing-Felder oder Testflags aus
+dem Registrierungs-Request an. Ein authentifizierter Same-Origin-Request darf
+ausschließlich eine exakt allowlistete Starter- oder Daily-Tarifkombination
+und die ausdrückliche aktuelle Zahlungsbedingungen-Annahme übergeben. Der
+Server leitet die Nutzeridentität aus der verifizierten Session ab,
+überschreibt die sicherheitsrelevante Auswahl nur für den unmittelbaren
+Provisionierungsaufruf und vertraut dafür keinen persistenten
+Auth-`user_metadata`. Nach einer E-Mail-Bestätigung bietet `/workspace/setup`
+den Daily-Test nur dann erneut an, wenn Zeitfenster, RPC-Readiness und der
+vollständige Stripe-Testvertrag frisch serverseitig bereit sind; die Mutation
+prüft diese Grenzen unmittelbar vor dem RPC nochmals. Der bestehende
+authentifizierte Starter-RPC bleibt absichtlich Starter-only. Der Daily-SQL-Schritt liegt
 außerhalb `supabase/migrations/`; ein normaler Web-Deploy und ein generisches
 `supabase db push` dürfen ihn weder entdecken noch anwenden und aktivieren das
 Fenster nicht.

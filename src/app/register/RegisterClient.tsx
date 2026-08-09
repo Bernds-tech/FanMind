@@ -87,7 +87,6 @@ function LanguageSwitch({
   );
 }
 
-
 function isPreviewPlan(planId: RegisterPlanId) {
   return planId === "growth" || planId === "agency";
 }
@@ -95,7 +94,6 @@ function isPreviewPlan(planId: RegisterPlanId) {
 function showPlanStatusBadge(planId: RegisterPlanId) {
   return !isPreviewPlan(planId);
 }
-
 
 function getPlanSelectionCopy(
   language: FanMindLanguage,
@@ -278,7 +276,8 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
   const billingStartHref = "/billing/start";
   const paymentTermsHref = language === "en" ? "/zahlungsbedingungen?lang=en" : "/zahlungsbedingungen";
   const starterOptionsCopy = getStarterOptionsCopy(language);
-  const [starterOption, setStarterOption] = useState<StarterOfferOptionId>(requestedStarterOption);
+  const [starterOption, setStarterOption] =
+    useState<StarterOfferOptionId>(requestedStarterOption);
   const planSelectionCopy = getPlanSelectionCopy(
     language,
     enablePublicDailyTestPlan,
@@ -386,7 +385,11 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
         const workspaceResponse = await fetch("/api/register/workspace", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: "{}",
+          body: JSON.stringify({
+            planId: selectedPlanId,
+            commercialOption: selectedCommercialOption,
+            paymentTermsAccepted,
+          }),
           cache: "no-store",
         });
         const workspacePayload = await workspaceResponse.json().catch(() => null) as
@@ -414,7 +417,6 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
             return;
           }
         }
-
       }
 
       if (authError) {
@@ -624,7 +626,6 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
                   <textarea name="nachricht" placeholder={language === "en" ? "What would you like to improve first with FanMind?" : "Was möchtest du mit FanMind zuerst verbessern?"} rows={1} />
                 </div>
               </label>
-
 
               <label className={styles.termsCheckbox}>
                 <input type="checkbox" name="paymentTermsAccepted" required={requiresPaymentTermsAcceptance(selectedPlanId, commercialOption)} />

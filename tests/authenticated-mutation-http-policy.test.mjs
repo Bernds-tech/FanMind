@@ -225,55 +225,86 @@ test("selected browser and admin boundaries never forward provider error text", 
   );
 });
 
-test("paid activation stays fail-closed while the binding terms version is unresolved", async () => {
+test("paid activation stays fail-closed and checkout uses only server-owned workspace evidence", async () => {
   assert.equal(CURRENT_PAYMENT_TERMS_VERSION, "2026-06-v1");
   assert.equal(PAYMENT_TERMS_ACTIVATION_ENABLED, false);
   assert.equal(isPaymentTermsActivationEnabled(), false);
   assert.equal(PAYMENT_TERMS_ACTIVATION_BLOCK_CODE, "payment_terms_version_unresolved");
 
-  const validEvidence = {
+  const validMetadataShape = {
     payment_terms_accepted: true,
     payment_terms_version: CURRENT_PAYMENT_TERMS_VERSION,
     payment_terms_accepted_at: "2026-08-09T12:00:00.000Z",
   };
   assert.deepEqual(
-    evaluateCurrentPaymentTermsUserEvidence(validEvidence, {
+    evaluateCurrentPaymentTermsUserEvidence(validMetadataShape, {
       now: Date.parse("2026-08-09T12:01:00.000Z"),
     }).blockers,
     ["version_unresolved"],
   );
-  assert.equal(
-    evaluateCurrentPaymentTermsUserEvidence(validEvidence, {
-      activationEnabled: true,
-      now: Date.parse("2026-08-09T12:01:00.000Z"),
-    }).ready,
-    true,
-  );
-  assert.equal(
+  assert.deepEqual(
     evaluateCurrentPaymentTermsUserEvidence(
-      { ...validEvidence, payment_terms_version: "2026-07-v1" },
       {
-        activationEnabled: true,
-        now: Date.parse("2026-08-09T12:01:00.000Z"),
+        ...validMetadataShape,
+        payment_terms_accepted_at: "2026-05-31T23:59:59.999Z",
       },
-    ).ready,
-    false,
+      {
+        now: Date.parse("2026-08-09T12:01:00.000Z"),
+        activationEnabled: true,
+      },
+    ).blockers,
+    ["accepted_at_before_window"],
   );
 
-  const [registerPage, registrationRoute, checkoutApi, checkoutDirect, provisioning] =
-    await Promise.all([
-      readFile("src/app/register/page.tsx", "utf8"),
-      readFile("src/app/api/register/workspace/route.ts", "utf8"),
-      readFile("src/app/api/billing/checkout/route.ts", "utf8"),
-      readFile("src/app/billing/checkout/route.ts", "utf8"),
-      readFile("src/lib/workspaceProvisioning.ts", "utf8"),
-    ]);
+  const [
+    registerPage,
+    registerClient,
+    registrationRoute,
+    workspaceSetup,
+    checkoutApi,
+    checkoutDirect,
+    billingStart,
+    serverEvidence,
+    provisioning,
+  ] = await Promise.all([
+    readFile("src/app/register/page.tsx", "utf8"),
+    readFile("src/app/register/RegisterClient.tsx", "utf8"),
+    readFile("src/app/api/register/workspace/route.ts", "utf8"),
+    readFile("src/app/workspace/setup/page.tsx", "utf8"),
+    readFile("src/app/api/billing/checkout/route.ts", "utf8"),
+    readFile("src/app/billing/checkout/route.ts", "utf8"),
+    readFile("src/app/billing/start/page.tsx", "utf8"),
+    readFile("src/lib/paymentTermsServerEvidence.ts", "utf8"),
+    readFile("src/lib/workspaceProvisioning.ts", "utf8"),
+  ]);
 
   assert.match(registerPage, /!isPaymentTermsActivationEnabled\(\)/u);
   assert.match(registerPage, /Kostenlose Demo starten/u);
-  assert.match(registrationRoute, /!isPaymentTermsActivationEnabled\(\)[\s\S]*PAYMENT_TERMS_ACTIVATION_BLOCK_CODE/u);
-  assert.match(checkoutApi, /hasCurrentPaymentTermsUserEvidence\(data\.user\.user_metadata\)/u);
-  assert.match(checkoutDirect, /hasCurrentPaymentTermsUserEvidence\(data\.user\.user_metadata\)/u);
+  assert.match(
+    registerClient,
+    /body: JSON\.stringify\(\{[\s\S]*planId: selectedPlanId[\s\S]*commercialOption: selectedCommercialOption[\s\S]*paymentTermsAccepted/u,
+  );
+  assert.match(registrationRoute, /parseTrustedProvisioningSelection/u);
+  assert.match(registrationRoute, /buildTrustedProvisioningUser/u);
+  assert.doesNotMatch(registrationRoute, /ensureUserWorkspace\(data\.user\)/u);
+  assert.doesNotMatch(workspaceSetup, /ensureUserWorkspace\(data\.user\)/u);
+  assert.match(workspaceSetup, /paymentTermsAccepted/u);
+
+  for (const checkoutSource of [checkoutApi, checkoutDirect, billingStart]) {
+    assert.match(checkoutSource, /hasCurrentWorkspacePaymentTermsEvidence/u);
+    assert.doesNotMatch(checkoutSource, /hasCurrentPaymentTermsUserEvidence/u);
+  }
+  assert.match(serverEvidence, /SUPABASE_SERVICE_ROLE_KEY/u);
+  assert.match(serverEvidence, /payment_terms_accepted_by_user_id/u);
+  assert.match(serverEvidence, /owner_user_id/u);
+  assert.match(serverEvidence, /CURRENT_PAYMENT_TERMS_VERSION/u);
+  assert.match(serverEvidence, /PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS/u);
+  assert.match(
+    serverEvidence,
+    /acceptedAt < PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS[\s\S]*accepted_at_before_window/u,
+  );
+  assert.doesNotMatch(serverEvidence, /user_metadata/u);
+
   assert.match(provisioning, /WORKSPACE_DIRECT_INSERT_COMPATIBILITY_ENABLED = false/u);
   assert.match(
     provisioning,
@@ -281,7 +312,7 @@ test("paid activation stays fail-closed while the binding terms version is unres
   );
 });
 
-test("staging host provisioning validates a runner prerequisite before host mutation", async () => {
+test("staging host provisioning validates a repeatable runner prerequisite before host mutation", async () => {
   const workflow = await readFile(
     ".github/workflows/provision-staging-host.yml",
     "utf8",
@@ -295,7 +326,13 @@ test("staging host provisioning validates a runner prerequisite before host muta
   assert.ok(prerequisite >= 0 && firstMutation > prerequisite);
   assert.match(
     workflow,
-    /\[ ! -f "\$RUNNER_DIR\/\.runner" \] && \[ -z "\$STAGING_RUNNER_REGISTRATION_TOKEN" \]/u,
+    /if ! sudo test -f "\$RUNNER_DIR\/\.runner" && \[ -z "\$STAGING_RUNNER_REGISTRATION_TOKEN" \]/u,
+  );
+  assert.match(
+    workflow,
+    /if ! sudo test -f "\$RUNNER_DIR\/\.runner"; then/u,
   );
   assert.match(workflow, /STAGING_RUNNER_PREREQUISITE=ready/u);
+  assert.match(workflow, /FANMIND_STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST/u);
+  assert.match(workflow, /STRIPE_PRICE_INTERNAL_DAILY_TEST/u);
 });

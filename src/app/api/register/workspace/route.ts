@@ -8,6 +8,10 @@ import {
   PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
 } from "@/lib/paymentTermsActivationPolicy.mjs";
 import {
+  buildTrustedProvisioningUser,
+  parseTrustedProvisioningSelection,
+} from "@/lib/trustedWorkspaceProvisioning";
+import {
   ensureUserWorkspace,
   getSupabaseServerUser,
   PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR,
@@ -17,7 +21,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const MAX_REGISTER_WORKSPACE_BODY_BYTES = 32;
+const MAX_REGISTER_WORKSPACE_BODY_BYTES = 512;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 
 function jsonNoStore(body: Record<string, unknown>, status: number) {
@@ -37,8 +41,7 @@ export async function POST(request: NextRequest) {
     !parsedBody.ok ||
     !parsedBody.value ||
     typeof parsedBody.value !== "object" ||
-    Array.isArray(parsedBody.value) ||
-    Object.keys(parsedBody.value).length !== 0
+    Array.isArray(parsedBody.value)
   ) {
     return jsonNoStore(
       {
@@ -52,14 +55,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const payload = parsedBody.value as {
+    planId?: unknown;
+    commercialOption?: unknown;
+    paymentTermsAccepted?: unknown;
+  };
+  if (
+    Object.keys(payload).some(
+      (key) =>
+        !["planId", "commercialOption", "paymentTermsAccepted"].includes(key),
+    )
+  ) {
+    return jsonNoStore({ ok: false, code: "invalid_request" }, 400);
+  }
+
+  const selection = parseTrustedProvisioningSelection(payload);
+  if (!selection || payload.paymentTermsAccepted !== true) {
+    return jsonNoStore({ ok: false, code: "payment_terms_required" }, 400);
+  }
+
   const { data } = await getSupabaseServerUser();
   if (!data.user) {
     return jsonNoStore({ ok: false, code: "authentication_required" }, 401);
   }
 
   // New paid Starter/Daily provisioning remains closed while the binding
-  // payment-terms version is unresolved. This server gate is independent of
-  // the browser UI and therefore cannot be bypassed by a crafted request.
+  // payment-terms version is unresolved. The accepted plan and consent are
+  // taken from this authenticated, same-origin request, never from mutable
+  // persistent Auth user_metadata.
   if (!isPaymentTermsActivationEnabled()) {
     return jsonNoStore(
       { ok: false, code: PAYMENT_TERMS_ACTIVATION_BLOCK_CODE },
@@ -67,7 +90,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await ensureUserWorkspace(data.user);
+  const trustedUser = buildTrustedProvisioningUser(
+    data.user,
+    selection,
+    true,
+  );
+  if (!trustedUser) {
+    return jsonNoStore(
+      { ok: false, code: PAYMENT_TERMS_ACTIVATION_BLOCK_CODE },
+      409,
+    );
+  }
+
+  const result = await ensureUserWorkspace(trustedUser);
   if (result.error || !result.workspace) {
     const dailyWindowClosed =
       result.error?.message === PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR;
