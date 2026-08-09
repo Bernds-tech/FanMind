@@ -58,8 +58,14 @@ Der kontrollierte SQL-Stand ist ausschließlich mit folgendem SHA-256
 freigegeben:
 
 ```text
-0f16bdff24d7f3f0f69d7a60644476457311519617d1e290f8d785d9be6818bd
+235b1f7e57cd2c6ecfdc9d68b6412c3649aee776b7bb1bc8688d74ac0da5ed4a
 ```
+
+Der Stand vom 9. August 2026 verwendet für die Owner-Membership bewusst den
+benannten Unique-Constraint `workspace_members_workspace_id_user_id_key` als
+`ON CONFLICT`-Ziel. Dadurch kollidiert das PL/pgSQL-Rückgabefeld
+`workspace_id` nicht mit einem unqualifizierten Conflict-Target. Der reale
+Staging-Funktionstest muss Erstaufruf, Wiederholung und Cleanup bestätigen.
 
 Jede Abweichung blockiert bereits den Offline-Check. Der Runner stellt drei
 getrennte Modi bereit:

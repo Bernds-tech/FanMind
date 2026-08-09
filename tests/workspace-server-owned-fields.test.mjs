@@ -322,7 +322,11 @@ test("Daily provisioning is fixed, atomic and service-role-only", async () => {
   );
   assert.match(
     migration,
-    /insert into public\.workspace_members[\s\S]*on conflict \(workspace_id, user_id\)[\s\S]*role = excluded\.role/u,
+    /insert into public\.workspace_members[\s\S]*on conflict on constraint workspace_members_workspace_id_user_id_key[\s\S]*role = excluded\.role/u,
+  );
+  assert.doesNotMatch(
+    dailyFunction,
+    /on conflict \(workspace_id, user_id\)/u,
   );
   assert.doesNotMatch(
     dailyFunction,

@@ -25,7 +25,7 @@ const CONTROLLED_SQL_PATH = resolve(
   `supabase/controlled/${CONTROL_ID}.sql`,
 );
 const EXPECTED_CONTROLLED_SQL_SHA256 =
-  "0f16bdff24d7f3f0f69d7a60644476457311519617d1e290f8d785d9be6818bd";
+  "235b1f7e57cd2c6ecfdc9d68b6412c3649aee776b7bb1bc8688d74ac0da5ed4a";
 const MAX_PASSFILE_BYTES = 64 * 1024;
 
 const PRECHECK_SQL = String.raw`

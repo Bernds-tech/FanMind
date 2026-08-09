@@ -189,7 +189,7 @@ begin
     p_user_id,
     'owner'
   )
-  on conflict (workspace_id, user_id)
+  on conflict on constraint workspace_members_workspace_id_user_id_key
   do update
     set role = excluded.role
   where workspace_member.role is distinct from excluded.role;
