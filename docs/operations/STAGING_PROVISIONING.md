@@ -38,8 +38,14 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
 
 3. **Stripe Test Mode**
    - ausschließlich `sk_test_...`;
-   - eigener Test-Webhook auf den Staging-Host;
-   - Stripe-Testkarten und Testprodukte;
+   - eigener Test-Webhook auf `https://staging.fanmind.ch/api/stripe/webhook`;
+   - fünf getrennte aktive Testpreise für den aktuellen vollständigen Staging-Lifecycle:
+     - Starter Setup: exakt 990 Euro einmalig;
+     - Starter: exakt 312 Euro monatlich;
+     - Internal Daily Test: exakt 1 Euro täglich;
+     - KI Plus: exakt 100 Euro monatlich;
+     - KI Ultra: exakt 200 Euro monatlich;
+   - Stripe-Testkarten und ausschließlich synthetische Testkunden/-subscriptions;
    - keine Live-Kunden, Live-Zahlungsmittel oder Live-Subscription-IDs.
 
 4. **Staging-Runtime und Runner**
@@ -57,6 +63,9 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - der dafür kurzzeitig benötigte Secret
      `FANMIND_STAGING_RUNNER_REGISTRATION_TOKEN` wird nach erfolgreicher
      Registrierung des zweiten Runners aus dem GitHub Environment gelöscht;
+   - Wiederholungsläufe prüfen die bestehende private `.runner`-Datei über einen
+     privilegierten read-only `sudo test -f`; nach erfolgreicher Erstregistrierung
+     ist daher kein neuer Registrierungstoken für normale Re-Provisionierung nötig;
    - dadurch entsteht kein zweiter Exoscale-Server und kein zusätzlicher
      monatlicher Infrastrukturpreis.
 
@@ -69,15 +78,15 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Secret `FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY`;
    - Secret `FANMIND_STAGING_STRIPE_SECRET_KEY`;
    - Secret `FANMIND_STAGING_STRIPE_WEBHOOK_SECRET`;
-   - Variablen `FANMIND_STAGING_STRIPE_PRICE_STARTER_SETUP` und
-     `FANMIND_STAGING_STRIPE_PRICE_STARTER_MONTHLY` für den aktiven
-     Starter-Testkatalog mit 990 Euro einmalig und 312 Euro monatlich;
+   - Variable `FANMIND_STAGING_STRIPE_PRICE_STARTER_SETUP` für 990 Euro einmalig;
+   - Variable `FANMIND_STAGING_STRIPE_PRICE_STARTER_MONTHLY` für 312 Euro monatlich;
+   - Variable `FANMIND_STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST` für 1 Euro täglich;
+   - Variablen `FANMIND_STAGING_STRIPE_PRICE_AI_PLUS` und
+     `FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA` für aktive EUR-Monatspreise zu
+     exakt 100 beziehungsweise 200 Euro im Stripe Test Mode;
    - optionaler begrenzter Secret `FANMIND_STAGING_OPENAI_API_KEY`.
    - Variable `FANMIND_AI_TIER_STAGING_WORKSPACE_ID` für einen ausschließlich
      synthetischen Workspace mit einem Owner und mindestens einem Mitglied;
-   - Variablen `FANMIND_STAGING_STRIPE_PRICE_AI_PLUS` und
-     `FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA` für aktive EUR-Monatspreise im
-     Stripe Test Mode;
    - Variablen `FANMIND_STAGING_DB_PORT` (`5432`) und
      `FANMIND_STAGING_DB_NAME`;
    - Secrets `FANMIND_STAGING_DB_HOST` (IPv4-kompatibler Supabase-Supavisor-
@@ -129,9 +138,11 @@ gemeldete Migrationsanzahl ersetzt diesen Nachweis nicht.
 
 1. Einen synthetischen Staging-Workspace mit einem Owner und mindestens einem
    weiteren Mitglied anlegen. Er darf noch keinen KI-Stufeneintrag besitzen.
-2. Vier aktive Stripe-Testpreise bereitstellen: Starter-Setup exakt 990 Euro
-   einmalig, Starter exakt 312 Euro monatlich, Plus exakt 100 Euro monatlich
-   und Ultra exakt 200 Euro monatlich.
+2. Vier für diese KI-Abnahme relevante aktive Stripe-Testpreise bereitstellen:
+   Starter-Setup exakt 990 Euro einmalig, Starter exakt 312 Euro monatlich,
+   Plus exakt 100 Euro monatlich und Ultra exakt 200 Euro monatlich. Der
+   zusätzliche 1-Euro-Daily-Testpreis gehört zum vollständigen Billing-Lifecycle,
+   wird aber von diesem KI-spezifischen Acceptance-Workflow nicht verwendet.
 3. Die oben genannten Staging-Variablen und -Secrets im GitHub Environment
    hinterlegen.
 4. Zuerst `FanMind Staging Database Rollout State` auf demselben exakten
@@ -168,12 +179,13 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 - Supabase-Projekt nachweislich von Production getrennt ist;
 - URL-Projektreferenz und explizite Staging-Zielreferenz exakt übereinstimmen;
 - Stripe Test Mode verwendet wird;
+- alle fünf aktuell erforderlichen Stripe-Testpreise korrekt gebunden sind;
 - GitHub-Workflow vollständig grün ist;
 - `/api/version` exakt den Commit ausliefert, auf dem der Readiness-Workflow gestartet wurde;
 - `/api/version` zusätzlich `runtimeEnvironment=staging` ausliefert und damit die aktive Staging-Runtime bestätigt;
 - keine realen Kundendaten vorhanden sind;
 - Read-only- und Write-Preflight wie vorgesehen fail-closed reagieren;
-- ein Test-Webhook erfolgreich verarbeitet wurde.
+- ein Test-Webhook erfolgreich verarbeitet wurde;
 - die KI-Stufen-Abnahme bei angewendeter Staging-Migration vollständig grün
   ist, bevor der Entitlement-Speicher mit Webhook oder produktiver KI
   verdrahtet wird.
