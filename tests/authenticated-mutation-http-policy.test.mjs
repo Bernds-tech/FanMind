@@ -242,6 +242,19 @@ test("paid activation stays fail-closed and checkout uses only server-owned work
     }).blockers,
     ["version_unresolved"],
   );
+  assert.deepEqual(
+    evaluateCurrentPaymentTermsUserEvidence(
+      {
+        ...validMetadataShape,
+        payment_terms_accepted_at: "2026-05-31T23:59:59.999Z",
+      },
+      {
+        now: Date.parse("2026-08-09T12:01:00.000Z"),
+        activationEnabled: true,
+      },
+    ).blockers,
+    ["accepted_at_before_window"],
+  );
 
   const [
     registerPage,
@@ -285,6 +298,11 @@ test("paid activation stays fail-closed and checkout uses only server-owned work
   assert.match(serverEvidence, /payment_terms_accepted_by_user_id/u);
   assert.match(serverEvidence, /owner_user_id/u);
   assert.match(serverEvidence, /CURRENT_PAYMENT_TERMS_VERSION/u);
+  assert.match(serverEvidence, /PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS/u);
+  assert.match(
+    serverEvidence,
+    /acceptedAt < PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS[\s\S]*accepted_at_before_window/u,
+  );
   assert.doesNotMatch(serverEvidence, /user_metadata/u);
 
   assert.match(provisioning, /WORKSPACE_DIRECT_INSERT_COMPATIBILITY_ENABLED = false/u);

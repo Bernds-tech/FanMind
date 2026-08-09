@@ -649,7 +649,10 @@ test("registration and login provisioning are server-owned and only bridge an ex
   assert.match(client, /rpc\/\$\{functionName\}/u);
   assert.match(register, /await syncSupabaseSessionForServer\(data\.session\)[\s\S]*fetch\("\/api\/register\/workspace"/u);
   assert.doesNotMatch(register, /supabase\.rpc|\.from\("workspaces"\)|\.from\("workspace_members"\)/u);
-  assert.match(registerWorkspaceRoute, /getSupabaseServerUser\(\)[\s\S]*ensureUserWorkspace\(data\.user\)/u);
+  assert.match(
+    registerWorkspaceRoute,
+    /getSupabaseServerUser\(\)[\s\S]*buildTrustedProvisioningUser\([\s\S]*data\.user[\s\S]*ensureUserWorkspace\(trustedUser\)/u,
+  );
   assert.match(registerWorkspaceRoute, /isTrustedFanMindMutationRequest\(request\)/u);
   assert.match(registerWorkspaceRoute, /readBoundedJsonRequest\([\s\S]*MAX_REGISTER_WORKSPACE_BODY_BYTES/u);
 

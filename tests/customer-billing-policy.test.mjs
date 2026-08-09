@@ -202,7 +202,10 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   const workspaceMutationIndex = registerClientSource.indexOf('fetch("/api/register/workspace"');
   assert.ok(sessionSyncIndex > signUpIndex && workspaceMutationIndex > sessionSyncIndex);
   assert.doesNotMatch(registerClientSource, /supabase\.rpc|\.from\("workspaces"\)|\.from\("workspace_members"\)/u);
-  assert.match(registrationWorkspaceRouteSource, /getSupabaseServerUser\(\)[\s\S]*ensureUserWorkspace\(data\.user\)/u);
+  assert.match(
+    registrationWorkspaceRouteSource,
+    /getSupabaseServerUser\(\)[\s\S]*buildTrustedProvisioningUser\([\s\S]*data\.user[\s\S]*ensureUserWorkspace\(trustedUser\)/u,
+  );
   assert.match(registrationWorkspaceRouteSource, /daily_test_window_closed/u);
   assert.match(registrationWorkspaceRouteSource, /"Cache-Control": "no-store"/u);
   const dailyGateIndex = supabaseServerSource.indexOf('workspaceTerms.commercialOption === "internal_daily_test"');
@@ -214,7 +217,15 @@ test("daily test registration is controlled by an explicit fail-closed server fl
   assert.match(supabaseServerSource, /planId === "pilot" && commercialOption === "internal_daily_test"[\s\S]*getRegistrationCommercialTerms\("pilot", "internal_daily_test"\)/u);
   assert.match(
     workspaceSetupSource,
-    /resolveWorkspaceLocale\([\s\S]*lang: params\?\.lang,[\s\S]*user: data\.user[\s\S]*PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR[\s\S]*No workspace was created[\s\S]*Es wurde kein Workspace angelegt/u,
+    /resolveWorkspaceLocale\([\s\S]*lang: params\?\.lang,[\s\S]*user: data\.user/u,
+  );
+  assert.match(
+    workspaceSetupSource,
+    /PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR[\s\S]*PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR/u,
+  );
+  assert.match(
+    workspaceSetupSource,
+    /dailyTestAvailable[\s\S]*getPublicDailyTestPlanEnabled\(\)[\s\S]*isInternalDailyTestWorkspaceProvisioningReady\(\)[\s\S]*getStripeConfigStatus\(\)[\s\S]*internal_daily_test[\s\S]*No workspace was created[\s\S]*Es wurde kein Workspace angelegt/u,
   );
   assert.doesNotMatch(
     workspaceSetupSource,

@@ -276,7 +276,8 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
   const billingStartHref = "/billing/start";
   const paymentTermsHref = language === "en" ? "/zahlungsbedingungen?lang=en" : "/zahlungsbedingungen";
   const starterOptionsCopy = getStarterOptionsCopy(language);
-  const [starterOption, setStarterOption] = useState<StarterOptionId>(requestedStarterOption);
+  const [starterOption, setStarterOption] =
+    useState<StarterOfferOptionId>(requestedStarterOption);
   const planSelectionCopy = getPlanSelectionCopy(
     language,
     enablePublicDailyTestPlan,

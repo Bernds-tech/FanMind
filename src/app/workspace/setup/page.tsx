@@ -2,10 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBillingContinuationHref } from "@/lib/preActivation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
+import { isInternalDailyTestAdmissionReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import {
   isPaymentTermsActivationEnabled,
   PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
 } from "@/lib/paymentTermsActivationPolicy.mjs";
+import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
+import { getStripeConfigStatus } from "@/lib/stripeBilling";
 import {
   buildTrustedProvisioningUser,
   parseTrustedProvisioningSelection,
@@ -14,6 +17,10 @@ import {
   ensureUserWorkspace,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
+  isInternalDailyTestWorkspaceProvisioningReady,
+  PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR,
+  PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR,
+  PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR,
   signOutSupabaseServerSession,
 } from "@/lib/supabase/server";
 import styles from "../../dashboard/dashboard.module.css";
@@ -26,7 +33,7 @@ async function logout() {
   redirect("/");
 }
 
-async function provisionStarterWorkspace(formData: FormData) {
+async function provisionWorkspace(formData: FormData) {
   "use server";
 
   if (!isPaymentTermsActivationEnabled()) {
@@ -41,11 +48,7 @@ async function provisionStarterWorkspace(formData: FormData) {
     commercialOption: formData.get("commercialOption"),
   });
   const paymentTermsAccepted = formData.get("paymentTermsAccepted") === "on";
-  if (
-    !selection ||
-    selection.planId !== "starter" ||
-    paymentTermsAccepted !== true
-  ) {
+  if (!selection || paymentTermsAccepted !== true) {
     redirect("/workspace/setup?error=payment_terms_required");
   }
 
@@ -59,7 +62,18 @@ async function provisionStarterWorkspace(formData: FormData) {
   }
 
   const result = await ensureUserWorkspace(trustedUser);
-  if (!result.workspace) redirect("/workspace/setup?error=workspace_setup_failed");
+  if (!result.workspace) {
+    const dailyUnavailable =
+      result.error?.message === PUBLIC_DAILY_TEST_PLAN_UNAVAILABLE_ERROR ||
+      result.error?.message === PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR ||
+      result.error?.message ===
+        PUBLIC_DAILY_TEST_PROVISIONING_UNAVAILABLE_ERROR;
+    redirect(
+      `/workspace/setup?error=${
+        dailyUnavailable ? "daily_test_window_closed" : "workspace_setup_failed"
+      }`,
+    );
+  }
   redirect(getBillingContinuationHref(result.workspace));
 }
 
@@ -90,6 +104,14 @@ export default async function WorkspaceSetupPage({
   if (existingWorkspaceResult.workspace) redirect(getBillingContinuationHref(existingWorkspaceResult.workspace));
 
   const activationEnabled = isPaymentTermsActivationEnabled();
+  const dailyTestAvailable = activationEnabled
+    ? isInternalDailyTestAdmissionReady({
+        windowEnabled: await getPublicDailyTestPlanEnabled(),
+        workspaceProvisioningReady:
+          await isInternalDailyTestWorkspaceProvisioningReady(),
+        stripeConfig: getStripeConfigStatus(),
+      })
+    : false;
   const errorCode = Array.isArray(params?.error) ? params.error[0] : params?.error;
   const paymentTermsHref = locale === "en"
     ? "/zahlungsbedingungen?lang=en"
@@ -106,8 +128,8 @@ export default async function WorkspaceSetupPage({
           <h1>
             {activationEnabled
               ? locale === "en"
-                ? "Confirm your Starter option"
-                : "Bestätige deine Starter-Option"
+                ? "Confirm your package option"
+                : "Bestätige deine Paketoption"
               : locale === "en"
                 ? "Paid activation is currently paused"
                 : "Entgeltliche Aktivierung ist aktuell pausiert"}
@@ -115,8 +137,8 @@ export default async function WorkspaceSetupPage({
           <p>
             {activationEnabled
               ? locale === "en"
-                ? "For security, an account without a workspace is never provisioned from editable profile metadata. Choose the Starter option again and explicitly accept the current payment terms."
-                : "Aus Sicherheitsgründen wird ein Konto ohne Workspace niemals aus bearbeitbaren Profildaten automatisch provisioniert. Wähle die Starter-Option erneut und akzeptiere die aktuellen Zahlungsbedingungen ausdrücklich."
+                ? "For security, an account without a workspace is never provisioned from editable profile metadata. Choose an available package again and explicitly accept the current payment terms."
+                : "Aus Sicherheitsgründen wird ein Konto ohne Workspace niemals aus bearbeitbaren Profildaten automatisch provisioniert. Wähle eine verfügbare Paketoption erneut und akzeptiere die aktuellen Zahlungsbedingungen ausdrücklich."
               : locale === "en"
                 ? "The binding payment-terms version has not yet been released. No paid workspace or Stripe checkout can be created until that version is confirmed."
                 : "Die verbindliche Version der Zahlungsbedingungen ist noch nicht freigegeben. Bis zur Bestätigung wird weder ein entgeltlicher Workspace noch ein Stripe-Checkout erzeugt."}
@@ -125,7 +147,7 @@ export default async function WorkspaceSetupPage({
 
         {activationEnabled ? (
           <div className={styles.emptyState}>
-            <form action={provisionStarterWorkspace}>
+            <form action={provisionWorkspace}>
               <input type="hidden" name="planId" value="starter" />
               <input type="hidden" name="commercialOption" value="starter_paid_setup" />
               <label>
@@ -139,7 +161,7 @@ export default async function WorkspaceSetupPage({
               </button>
             </form>
 
-            <form action={provisionStarterWorkspace}>
+            <form action={provisionWorkspace}>
               <input type="hidden" name="planId" value="starter" />
               <input type="hidden" name="commercialOption" value="starter_no_setup_commitment" />
               <label>
@@ -152,6 +174,36 @@ export default async function WorkspaceSetupPage({
                 {locale === "en" ? "Starter 12 months · €0 setup + €312/month" : "Starter 12 Monate · 0 € Setup + 312 €/Monat"}
               </button>
             </form>
+
+            {dailyTestAvailable ? (
+              <form action={provisionWorkspace}>
+                <input type="hidden" name="planId" value="pilot" />
+                <input
+                  type="hidden"
+                  name="commercialOption"
+                  value="internal_daily_test"
+                />
+                <label>
+                  <input type="checkbox" name="paymentTermsAccepted" required />
+                  {" "}
+                  {locale === "en"
+                    ? "I accept the current payment terms."
+                    : "Ich akzeptiere die aktuellen Zahlungsbedingungen."}
+                </label>
+                <p>
+                  <Link href={paymentTermsHref}>
+                    {locale === "en"
+                      ? "Open payment terms"
+                      : "Zahlungsbedingungen öffnen"}
+                  </Link>
+                </p>
+                <button className={styles.primaryButton} type="submit">
+                  {locale === "en"
+                    ? "Daily Test · €1/day"
+                    : "Daily-Test · 1 €/Tag"}
+                </button>
+              </form>
+            ) : null}
           </div>
         ) : (
           <div className={styles.emptyState}>
@@ -165,9 +217,13 @@ export default async function WorkspaceSetupPage({
 
         {errorCode ? (
           <p className={styles.error} role="alert">
-            {locale === "en"
-              ? `Workspace provisioning is still blocked (${errorCode}).`
-              : `Die Workspace-Einrichtung ist weiterhin gesperrt (${errorCode}).`}
+            {errorCode === "daily_test_window_closed"
+              ? locale === "en"
+                ? "The Daily Test window is closed or no longer ready. No workspace was created. Choose Starter or try again only after the beta window is reopened."
+                : "Das Daily-Test-Fenster ist geschlossen oder nicht mehr bereit. Es wurde kein Workspace angelegt. Wähle Starter oder versuche es erst nach einer erneuten Beta-Freigabe."
+              : locale === "en"
+                ? `Workspace provisioning is still blocked (${errorCode}).`
+                : `Die Workspace-Einrichtung ist weiterhin gesperrt (${errorCode}).`}
           </p>
         ) : null}
 

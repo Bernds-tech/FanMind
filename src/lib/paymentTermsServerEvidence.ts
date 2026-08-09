@@ -3,6 +3,7 @@ import "server-only";
 import {
   CURRENT_PAYMENT_TERMS_VERSION,
   isPaymentTermsActivationEnabled,
+  PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS,
 } from "@/lib/paymentTermsActivationPolicy.mjs";
 
 const MAX_ACCEPTANCE_CLOCK_SKEW_MS = 5 * 60 * 1000;
@@ -27,6 +28,7 @@ export type WorkspacePaymentTermsEvidenceDecision = {
     | "owner_mismatch"
     | "version_mismatch"
     | "accepted_at_invalid"
+    | "accepted_at_before_window"
     | "accepted_at_future"
     | "accepted_by_mismatch";
 };
@@ -81,6 +83,9 @@ export function evaluateWorkspacePaymentTermsEvidence(
   const nowTimestamp = now instanceof Date ? now.getTime() : Number(now);
   if (!Number.isFinite(acceptedAt) || !Number.isFinite(nowTimestamp)) {
     return decision(false, "accepted_at_invalid");
+  }
+  if (acceptedAt < PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS) {
+    return decision(false, "accepted_at_before_window");
   }
   if (acceptedAt > nowTimestamp + MAX_ACCEPTANCE_CLOCK_SKEW_MS) {
     return decision(false, "accepted_at_future");

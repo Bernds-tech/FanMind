@@ -1,4 +1,9 @@
 export const CURRENT_PAYMENT_TERMS_VERSION = "2026-06-v1";
+export const PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_ISO =
+  "2026-06-01T00:00:00.000Z";
+export const PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS = Date.parse(
+  PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_ISO,
+);
 
 // Fail closed until Legal confirms whether the materially changed July 2026
 // public payment terms may still be represented by 2026-06-v1 or publishes a
@@ -44,6 +49,8 @@ export function evaluateCurrentPaymentTermsUserEvidence(
     blockers.push("accepted_at_invalid");
   } else if (!Number.isFinite(nowTimestamp)) {
     blockers.push("now_invalid");
+  } else if (acceptedAt < PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS) {
+    blockers.push("accepted_at_before_window");
   } else if (acceptedAt > nowTimestamp + 5 * 60 * 1000) {
     blockers.push("accepted_at_future");
   }
