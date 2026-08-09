@@ -7,6 +7,13 @@ import {
   readBoundedFormDataRequest,
   readBoundedJsonRequest,
 } from "../src/lib/httpMutationPolicy.mjs";
+import {
+  CURRENT_PAYMENT_TERMS_VERSION,
+  PAYMENT_TERMS_ACTIVATION_ENABLED,
+  PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
+  evaluateCurrentPaymentTermsUserEvidence,
+  isPaymentTermsActivationEnabled,
+} from "../src/lib/paymentTermsActivationPolicy.mjs";
 
 function mutationRequest({
   url = "https://fanmind.ch/api/test",
@@ -216,4 +223,79 @@ test("selected browser and admin boundaries never forward provider error text", 
     combined,
     /error instanceof Error \? error\.message : "Unbekannter Fehler"/u,
   );
+});
+
+test("paid activation stays fail-closed while the binding terms version is unresolved", async () => {
+  assert.equal(CURRENT_PAYMENT_TERMS_VERSION, "2026-06-v1");
+  assert.equal(PAYMENT_TERMS_ACTIVATION_ENABLED, false);
+  assert.equal(isPaymentTermsActivationEnabled(), false);
+  assert.equal(PAYMENT_TERMS_ACTIVATION_BLOCK_CODE, "payment_terms_version_unresolved");
+
+  const validEvidence = {
+    payment_terms_accepted: true,
+    payment_terms_version: CURRENT_PAYMENT_TERMS_VERSION,
+    payment_terms_accepted_at: "2026-08-09T12:00:00.000Z",
+  };
+  assert.deepEqual(
+    evaluateCurrentPaymentTermsUserEvidence(validEvidence, {
+      now: Date.parse("2026-08-09T12:01:00.000Z"),
+    }).blockers,
+    ["version_unresolved"],
+  );
+  assert.equal(
+    evaluateCurrentPaymentTermsUserEvidence(validEvidence, {
+      activationEnabled: true,
+      now: Date.parse("2026-08-09T12:01:00.000Z"),
+    }).ready,
+    true,
+  );
+  assert.equal(
+    evaluateCurrentPaymentTermsUserEvidence(
+      { ...validEvidence, payment_terms_version: "2026-07-v1" },
+      {
+        activationEnabled: true,
+        now: Date.parse("2026-08-09T12:01:00.000Z"),
+      },
+    ).ready,
+    false,
+  );
+
+  const [registerPage, registrationRoute, checkoutApi, checkoutDirect, provisioning] =
+    await Promise.all([
+      readFile("src/app/register/page.tsx", "utf8"),
+      readFile("src/app/api/register/workspace/route.ts", "utf8"),
+      readFile("src/app/api/billing/checkout/route.ts", "utf8"),
+      readFile("src/app/billing/checkout/route.ts", "utf8"),
+      readFile("src/lib/workspaceProvisioning.ts", "utf8"),
+    ]);
+
+  assert.match(registerPage, /!isPaymentTermsActivationEnabled\(\)/u);
+  assert.match(registerPage, /Kostenlose Demo starten/u);
+  assert.match(registrationRoute, /!isPaymentTermsActivationEnabled\(\)[\s\S]*PAYMENT_TERMS_ACTIVATION_BLOCK_CODE/u);
+  assert.match(checkoutApi, /hasCurrentPaymentTermsUserEvidence\(data\.user\.user_metadata\)/u);
+  assert.match(checkoutDirect, /hasCurrentPaymentTermsUserEvidence\(data\.user\.user_metadata\)/u);
+  assert.match(provisioning, /WORKSPACE_DIRECT_INSERT_COMPATIBILITY_ENABLED = false/u);
+  assert.match(
+    provisioning,
+    /isMissingWorkspaceProvisioningRpc[\s\S]*!WORKSPACE_DIRECT_INSERT_COMPATIBILITY_ENABLED\) return false/u,
+  );
+});
+
+test("staging host provisioning validates a runner prerequisite before host mutation", async () => {
+  const workflow = await readFile(
+    ".github/workflows/provision-staging-host.yml",
+    "utf8",
+  );
+  const prerequisite = workflow.indexOf(
+    "Fresh staging runner registration token is required before any host mutation.",
+  );
+  const firstMutation = workflow.indexOf(
+    "Provision isolated operating-system boundary",
+  );
+  assert.ok(prerequisite >= 0 && firstMutation > prerequisite);
+  assert.match(
+    workflow,
+    /\[ ! -f "\$RUNNER_DIR\/\.runner" \] && \[ -z "\$STAGING_RUNNER_REGISTRATION_TOKEN" \]/u,
+  );
+  assert.match(workflow, /STAGING_RUNNER_PREREQUISITE=ready/u);
 });
