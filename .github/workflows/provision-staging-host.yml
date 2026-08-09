@@ -43,7 +43,7 @@ jobs:
       - name: Checkout reviewed provisioning files
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Validate isolated targets without outputting values
+      - name: Validate isolated targets and runner prerequisite without mutations
         shell: bash
         run: |
           set -euo pipefail
@@ -94,8 +94,15 @@ jobs:
             esac
           fi
 
+          RUNNER_DIR="/opt/actions-runner-fanmind-staging"
+          if [ ! -f "$RUNNER_DIR/.runner" ] && [ -z "$STAGING_RUNNER_REGISTRATION_TOKEN" ]; then
+            echo "Fresh staging runner registration token is required before any host mutation." >&2
+            exit 1
+          fi
+
           echo "STAGING_HOST_TARGET=isolated"
           echo "STAGING_SUPABASE_TARGET=separate"
+          echo "STAGING_RUNNER_PREREQUISITE=ready"
           echo "STAGING_SECRETS_OUTPUT=false"
 
       - name: Provision isolated operating-system boundary
