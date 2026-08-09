@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 6. August 2026
+Stand: 9. August 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -157,7 +157,15 @@ im aktuellen Arbeitsumfang nicht gebaut und nicht als Fortschritt eingerechnet.
 OnlyFans bleibt auch in Phase 7 eine unverbindliche, vor Umsetzung technisch
 und rechtlich zu prüfende Plattform.
 
-### Phase 4 – Erledigt / Verkaufsstart freigegeben
+Die technische Verkaufsübergabe erfolgt erst nach realer technischer Abnahme
+der erforderlichen Phase-3- und Phase-7-Kanäle. Phase 4 ist deshalb keine
+Verkaufsfreigabe mehr, sondern ausschließlich die abgeschlossene technische
+Produktions- und Billing-Basis. Nach der technischen Übergabe können
+Verkaufsansprache und die separat dokumentierte Rechts-/Steuer-/AVV-Arbeit
+parallel laufen; entgeltliche Aktivierung bleibt dort fail-closed, wo eine
+zwingende externe Freigabe noch fehlt.
+
+### Phase 4 – Produktions- & Billing-Basis technisch abgeschlossen
 
 - Stripe-Live-Schritte: erledigt.
 - Abrechnung & Admin-Basis: erledigt.
@@ -231,6 +239,18 @@ und rechtlich zu prüfende Plattform.
   den Rolling-Rollback aus. Die einmalige Fork-zu-Cluster-Umstellung bleibt
   ein kontrollierter Übergang.
 - Produktions- und Testdaten-Trennung: Fail-closed-Policy, Preflight, Staging-Vorlage und ein ausschließlich manuell auslösbarer, commit-genauer Deploy-Workflow für einen getrennten `fanmind-staging`-Runner sind implementiert.
+- Staging-Workspace-Vertrag: Der Browser-INSERT für `anon` und `authenticated`
+  ist im getrennten Supabase-Staging gesperrt; Owner-UPDATE ist auf die
+  definierte zehnspaltige Allowlist begrenzt. Zwei synthetische Nutzer in zwei
+  getrennten Workspaces wurden transaktional auf bidirektionale
+  Mandantentrennung/RLS geprüft und vollständig zurückgerollt.
+- Staging-Daily-Provisioning: Der service-role-only RPC wurde real gegen das
+  getrennte Supabase-Staging ausgeführt. Ein dabei gefundener mehrdeutiger
+  PL/pgSQL-Conflict-Target wurde auf den kanonischen benannten Unique
+  Constraint korrigiert. Erstaufruf, idempotenter Wiederholungsaufruf und genau
+  eine Owner-Membership sind nachgewiesen; die Readiness-Funktion liefert
+  unter dem vorgesehenen `service_role`-Claim `ready=true`. Production wurde
+  dafür nicht verändert.
 - Umgebungs-Governance: schreibende Remote-Tests sind außerhalb eindeutig identifizierter Staging- oder Testumgebungen blockiert.
 - Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert. Ein eigener manueller `main`-gebundener Read-only-Ressourcencheck prüft auf einem getrennten `fanmind-restore`-Runner den isolierten Zielhost und die Prüfsumme eines verschlüsselten Full-Backups, ohne Datenbankverbindung, Entschlüsselung oder Schreibfreigabe. Nach einem echten isolierten Restore erzeugt der Runner nur bei 5/5 vorhandenen Kerntabellen, 5/5 aktivierter RLS und 5/5 Policy-Abdeckung einen separaten privaten, SHA-gebundenen Datenbank-Postcheck-Beleg; manuelle Schema-/RLS-Freigaben akzeptiert Evidence-Schema 5 nicht mehr. Der tatsächliche Restore-, Storage-, Server-Konfigurations- und Cleanup-Nachweis bleibt bis zum externen Lauf offen.
 - Mobile-Release: Ein eigener manueller `main`-gebundener
@@ -314,8 +334,10 @@ und rechtlich zu prüfende Plattform.
   Migration bleiben davon getrennt und deaktiviert. Runbook:
   `docs/operations/META_CONTENT_STAGING_MIGRATION.md`.
 - Das separate Supabase-Staging-Projekt ist vorhanden. Extern noch
-  einzurichten beziehungsweise nachzuweisen sind eine eigene Web-Staging-VM,
-  Stripe Test Mode, eigene Webhooks und vollständig synthetische Testdaten.
+  einzurichten beziehungsweise nachzuweisen sind die getrennte
+  Web-Staging-Runtime mit eigenem `fanmind-staging`-Runner auf dem bestehenden
+  Exoscale-Host, Stripe Test Mode mit eigenen Preisen/Webhooks sowie die
+  dauerhaften synthetischen E2E-Identitäten für Browser-/Billing-Abnahmen.
 
 Die noch fehlende Web- und Stripe-Staging-Abnahme blockiert nicht den read-only
 Produktions-Smoke-Test. Sie bleibt Voraussetzung für Referral-Lifecycle- und
@@ -648,7 +670,9 @@ Details: `docs/AI_COST_MONITORING.md` und `docs/AI_PROMPT_PROFILES.md`.
 - permanenter Workflow `FanMind Final Go-Live Readiness` nach erfolgreichem Production-Deploy;
 - vollständiges Runbook: `docs/operations/FINAL_GO_LIVE_SMOKE_TEST.md`;
 - Sales-One-Pager, Demo-Skript und Einwandbehandlung: `docs/sales/`;
-- technische Freigabe und externe Steuer-/Rechtsfreigabe werden getrennt dokumentiert;
+- die technische Production-Basis ist nicht mit der Verkaufsübergabe gleichzusetzen; die Verkaufsübergabe erfolgt erst nach technischer Abnahme der erforderlichen Phase-3- und Phase-7-Kanäle;
+- technische Freigabe und externe Steuer-/Rechtsfreigabe werden getrennt dokumentiert und können nach der technischen Verkaufsübergabe parallel zur Verkaufsansprache weiterlaufen;
+- entgeltliche Aktivierung bleibt dort fail-closed, wo eine zwingende externe Rechts-/Vertragsfreigabe noch fehlt;
 - Referral-Billing, KI Plus/Ultra Auto-Buchung und schreibende Staging-Tests bleiben bis zur separaten Freigabe deaktiviert.
 
 ## 14. Reader-Synchronisierung

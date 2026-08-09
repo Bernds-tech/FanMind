@@ -74,7 +74,8 @@ export const landingEnglishCopySupplement: Record<string, string> = {
   "Beta / in Vorbereitung": "Beta / in preparation",
   Pflicht: "Required",
   "Verkaufsstart vorbereitet": "Sales launch prepared",
-  "Erledigt / Verkaufsstart freigegeben": "Done / sales launch approved",
+  "Produktions- & Billing-Basis": "Production & billing foundation",
+  "Technisch abgeschlossen": "Technically complete",
   "Finaler Smoke-Test": "Final smoke test",
   "Stripe-Live-Schritte": "Stripe live steps",
   Erledigt: "Done",
@@ -120,6 +121,12 @@ export const landingEnglishCopySupplement: Record<string, string> = {
   "Nächste Mobile-Phase": "Next mobile phase",
   "Konfiguration und Routing fertig · Zustellung offen":
     "Configuration and routing ready · Delivery pending",
+  "Weitere Social-Kanäle": "Additional social channels",
+  "Finaler Technikblock vor Verkaufsübergabe":
+    "Final technical block before sales handoff",
+  Verkaufsübergabe: "Sales handoff",
+  "Nach technischer Abnahme Phase 3 + Phase 7":
+    "After technical acceptance of Phase 3 + Phase 7",
   "Segmente & Listen": "Segments & lists",
   "Segment-Ansichten": "Segment views",
   Vorbereitet: "Prepared",

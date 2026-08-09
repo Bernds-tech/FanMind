@@ -7,6 +7,7 @@ import {
 } from "../scripts/public-health-policy.mjs";
 
 const roadmapPath = "src/config/roadmap.ts";
+const sourceTruthPath = "docs/SOURCE_OF_TRUTH.md";
 const smokeScriptPath = "scripts/final-go-live-preflight.mjs";
 const deploySmokePath = "scripts/smoke-public-routes.mjs";
 const truthPolicyPath = "scripts/public-product-truth.mjs";
@@ -153,13 +154,40 @@ test("sales and final smoke documents preserve product guardrails", async () => 
   assert.match(combined, /Stripe-Webhook 200/u);
 });
 
-test("phase 4 is marked done for sales launch and no longer waits for tax advisor confirmation", async () => {
-  const roadmap = await read(roadmapPath);
+test("phase 4 stays technically complete while sales handoff waits for phase 7", async () => {
+  const [roadmap, sourceTruth] = await Promise.all([
+    read(roadmapPath),
+    read(sourceTruthPath),
+  ]);
 
-  assert.match(roadmap, /title: "Erledigt \/ Verkaufsstart freigegeben"/u);
-  assert.match(roadmap, /status: "Erledigt \/ Verkaufsstart freigegeben"/u);
+  assert.match(roadmap, /title: "Produktions- & Billing-Basis"/u);
+  assert.match(roadmap, /status: "Technisch abgeschlossen"/u);
   assert.match(roadmap, /availability: "done"/u);
   assert.match(roadmap, /label: "Produktionsfreigabe", state: "done", status: "Erledigt"/u);
   assert.match(roadmap, /label: "Finaler Go-Live-Smoke-Test", state: "done", status: "Erledigt"/u);
+  assert.doesNotMatch(roadmap, /Verkaufsstart freigegeben/u);
+  assert.match(
+    roadmap,
+    /number: "07"[\s\S]*status: "Finaler Technikblock vor Verkaufsübergabe"[\s\S]*availability: "later"[\s\S]*label: "Verkaufsübergabe", state: "later", status: "Nach technischer Abnahme Phase 3 \+ Phase 7"/u,
+  );
+  assert.match(
+    roadmap,
+    /number: "08"[\s\S]*status: "Später · Anbindungen noch nicht begonnen"[\s\S]*label: "Start nach Abschluss von Phase 7", state: "later", status: "Noch nicht begonnen"/u,
+  );
   assert.doesNotMatch(roadmap, /Steuerberater-Bestätigung/u);
+
+  assert.match(sourceTruth, /Stand: 9\. August 2026/u);
+  assert.match(
+    sourceTruth,
+    /Die technische Verkaufsübergabe erfolgt erst nach realer technischer Abnahme[\s\S]*Phase-3- und Phase-7-Kanäle/u,
+  );
+  assert.match(
+    sourceTruth,
+    /Phase 4 ist deshalb keine[\s\S]*Verkaufsfreigabe mehr[\s\S]*Produktions- und Billing-Basis/u,
+  );
+  assert.match(
+    sourceTruth,
+    /Web-Staging-Runtime mit eigenem `fanmind-staging`-Runner auf dem bestehenden[\s\S]*Exoscale-Host/u,
+  );
+  assert.doesNotMatch(sourceTruth, /Phase 4 – Erledigt \/ Verkaufsstart freigegeben/u);
 });
