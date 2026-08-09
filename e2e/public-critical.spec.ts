@@ -317,43 +317,30 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Starter-Registrierung zeigt echte Optionen und grenzt Roadmap-Pakete ab", async ({
+  test("entgeltliche Registrierung bleibt bis zur bestätigten Zahlungsbedingungen-Version geschlossen", async ({
     page,
   }) => {
     await page.goto("/register");
 
-    await expect(page.getByText("Starter Flex", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("990 € Setup + 312 €/Monat", { exact: true })).toBeVisible();
-    await expect(page.getByText("Starter 12 Monate", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("0 € Setup + 312 €/Monat", { exact: true })).toBeVisible();
-    await expect(page.getByText(/1 €\/Tag/u)).toHaveCount(0);
-
-    const yearly = page.locator(
-      'input[type="radio"][value="starter_no_setup_commitment"]',
-    );
-    await page.locator("label").filter({ has: yearly }).click();
-    await expect(yearly).toBeChecked();
-
-    const terms = page.locator('input[name="paymentTermsAccepted"]');
-    await expect(terms).toHaveAttribute("required", "");
-    await expect(page.getByText("Keine Zahlung auf dieser Seite.")).toBeVisible();
-
-    await page.locator('a[href*="plan=growth"]').first().click();
-    await expect(page).toHaveURL(/\/register\?plan=growth/u);
-    const growthPreview = page.locator(
-      'section[aria-label="Growth Vorschau"]',
-    );
-    await expect(growthPreview).toBeVisible();
     await expect(
-      growthPreview.getByRole("heading", { name: "Growth", exact: true }),
+      page.getByRole("heading", {
+        name: "Entgeltliche Aktivierung ist vorübergehend nicht verfügbar",
+      }),
     ).toBeVisible();
-    await expect(growthPreview).toContainText(
-      "nicht direkt produktiv registrierbar",
-    );
     await expect(
-      growthPreview.getByRole("link", { name: "Mit Starter starten" }),
+      page.getByText(/verbindliche Version der Zahlungsbedingungen/u),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Kostenlose Demo starten" }),
+    ).toHaveAttribute("href", "/login?demo=1");
+    await expect(
+      page.getByRole("link", { name: "Bestehenden Zugang öffnen" }),
+    ).toHaveAttribute("href", "/login");
+    await expect(
+      page.getByText("payment_terms_version_unresolved", { exact: true }),
     ).toBeVisible();
     await expect(page.locator("form")).toHaveCount(0);
+    await expect(page.getByText("Starter Flex", { exact: true })).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
 
