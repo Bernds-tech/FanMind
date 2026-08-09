@@ -7,6 +7,11 @@ export const INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_RPC =
 export const INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_READY_RPC =
   "internal_daily_test_workspace_provisioning_ready";
 
+// The deploy-before-migrate browser INSERT compatibility bridge is retired.
+// Missing provisioning RPCs must fail closed instead of falling back to direct
+// workspaces/workspace_members writes from an authenticated browser session.
+export const WORKSPACE_DIRECT_INSERT_COMPATIBILITY_ENABLED = false;
+
 export type WorkspaceProvisioningRpcRow = {
   workspace_id: string;
   created: boolean;
@@ -34,6 +39,8 @@ export function withoutWorkspaceExpandColumns<T>(
 export function isMissingWorkspaceProvisioningRpc(
   error: Error | null | undefined,
 ): boolean {
+  if (!WORKSPACE_DIRECT_INSERT_COMPATIBILITY_ENABLED) return false;
+
   const message = error?.message.toLowerCase() ?? "";
 
   return (
