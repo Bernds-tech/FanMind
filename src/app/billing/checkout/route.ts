@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { shouldShowBillingCheckoutAction, isWorkspaceBillingSuspended } from "@/lib/billing";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
+import {
+  hasCurrentPaymentTermsUserEvidence,
+  PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
+} from "@/lib/paymentTermsActivationPolicy.mjs";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { createStripeCheckoutSession, getAppUrl, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
@@ -36,6 +40,12 @@ async function startCheckout() {
   if (!data.user) return redirectTo("/login?returnTo=/billing/start");
   if (isPlatformAdminEmail(data.user.email)) return redirectTo("/dashboard");
   if (isTemporaryDemoUser(data.user)) return redirectTo("/dashboard");
+
+  if (!hasCurrentPaymentTermsUserEvidence(data.user.user_metadata)) {
+    return redirectTo(
+      `/billing/start?error=${encodeURIComponent(PAYMENT_TERMS_ACTIVATION_BLOCK_CODE)}`,
+    );
+  }
 
   const workspaceResult = await getUserWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") return redirectTo("/login?demo_deleted=1");
