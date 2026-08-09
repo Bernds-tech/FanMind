@@ -61,12 +61,24 @@ test("English landing uses the complete translation wrapper", async () => {
     '"Verschlüsselte Offline-Kontaktübersicht": "Encrypted offline contact overview"',
     '"24 h · maximal 50 · nur lesen": "24 h · up to 50 · read-only"',
     '"Push für Follow-up-Erinnerungen": "Push for follow-up reminders"',
+    '"Produktions- & Billing-Basis": "Production & billing foundation"',
+    '"Technisch abgeschlossen": "Technically complete"',
+    '"Finaler Technikblock vor Verkaufsübergabe":',
+    '"Final technical block before sales handoff"',
+    'Verkaufsübergabe: "Sales handoff"',
+    '"Nach technischer Abnahme Phase 3 + Phase 7":',
+    '"After technical acceptance of Phase 3 + Phase 7"',
   ]) {
     assert.ok(
       supplement.includes(roadmapTranslation),
       `Missing roadmap translation: ${roadmapTranslation}`,
     );
   }
+  assert.doesNotMatch(
+    supplement,
+    /Erledigt \/ Verkaufsstart freigegeben/u,
+    "The obsolete sales-launch approval wording must not remain in landing translations",
+  );
   assert.doesNotMatch(
     supplement,
     /AI Plus \+€100\/month · AI Ultra \+€200\/month/,
