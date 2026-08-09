@@ -1,6 +1,7 @@
 import type { PlanId } from "@/config/plans";
 import type { CommercialOption, ProductiveCommercialOption } from "@/lib/plans";
 import { isDemoWorkspace } from "@/lib/demoMode";
+import { CURRENT_PAYMENT_TERMS_VERSION } from "@/lib/paymentTermsActivationPolicy.mjs";
 
 export type BillingStatus =
   | "demo_free"
@@ -22,7 +23,7 @@ export type PaymentCollectionMethod =
   | "sepa_direct_debit"
   | "card";
 
-export const PAYMENT_TERMS_VERSION = "2026-06-v1";
+export const PAYMENT_TERMS_VERSION = CURRENT_PAYMENT_TERMS_VERSION;
 
 export function isPaidPlan(planId: PlanId): boolean {
   return planId === "starter";

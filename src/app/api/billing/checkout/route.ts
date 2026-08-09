@@ -4,6 +4,10 @@ import {
   isTrustedMutationRequest,
   readBoundedJsonRequest,
 } from "@/lib/httpMutationPolicy.mjs";
+import {
+  hasCurrentPaymentTermsUserEvidence,
+  PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
+} from "@/lib/paymentTermsActivationPolicy.mjs";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
 import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
@@ -42,6 +46,16 @@ export async function POST(request: NextRequest) {
   }
   const payload = parsedBody.value as { planId?: string; commercialOption?: string } | null;
   if (!payload?.planId || !payload.commercialOption) return NextResponse.json({ error: "Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind." }, { status: 400 });
+
+  if (!hasCurrentPaymentTermsUserEvidence(data.user.user_metadata)) {
+    return NextResponse.json(
+      {
+        error: "Die verbindliche Version der Zahlungsbedingungen ist noch nicht freigegeben. Die Zahlung bleibt bis dahin gesperrt.",
+        code: PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
+      },
+      { status: 409 },
+    );
+  }
 
   if (payload.commercialOption === "internal_daily_test" && !(await getPublicDailyTestPlanEnabled())) {
     return NextResponse.json({ error: "Das interne Live-Testabo kann nur im Adminbereich gestartet werden." }, { status: 403 });

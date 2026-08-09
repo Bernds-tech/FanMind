@@ -4,6 +4,10 @@ import {
   readBoundedJsonRequest,
 } from "@/lib/httpMutationPolicy.mjs";
 import {
+  isPaymentTermsActivationEnabled,
+  PAYMENT_TERMS_ACTIVATION_BLOCK_CODE,
+} from "@/lib/paymentTermsActivationPolicy.mjs";
+import {
   ensureUserWorkspace,
   getSupabaseServerUser,
   PUBLIC_DAILY_TEST_BILLING_UNAVAILABLE_ERROR,
@@ -51,6 +55,16 @@ export async function POST(request: NextRequest) {
   const { data } = await getSupabaseServerUser();
   if (!data.user) {
     return jsonNoStore({ ok: false, code: "authentication_required" }, 401);
+  }
+
+  // New paid Starter/Daily provisioning remains closed while the binding
+  // payment-terms version is unresolved. This server gate is independent of
+  // the browser UI and therefore cannot be bypassed by a crafted request.
+  if (!isPaymentTermsActivationEnabled()) {
+    return jsonNoStore(
+      { ok: false, code: PAYMENT_TERMS_ACTIVATION_BLOCK_CODE },
+      409,
+    );
   }
 
   const result = await ensureUserWorkspace(data.user);
