@@ -111,6 +111,30 @@ RLS-Erwartung:
 - Neue öffentliche Starter-Workspaces und die Owner-Membership entstehen
   atomar über `ensure_current_user_workspace(...)`; Plan, Preis, Billing und
   Zahlungsannahme werden dort serverseitig abgeleitet.
+- Vorbereiteter Daily-Provisioning-Rollout (noch nicht als Production-Stand
+  abgenommen): Der außergewöhnliche öffentliche Daily-Test nutzt separat
+  `ensure_internal_daily_test_workspace(...)`. Dieser atomare RPC nimmt nur
+  die serververifizierte Auth-ID, den Anzeigenamen und die bestätigte
+  Zahlungsbedingung an; Tarif, Nullbeträge, Stripe/Card und Billing-Status sind
+  fest verdrahtet. `PUBLIC`, `anon` und `authenticated` besitzen kein
+  `EXECUTE`; ausschließlich `service_role` darf ihn nach einer frischen
+  Zeitfensterprüfung aufrufen. Derselbe einzeln freizugebende SQL-Schritt unter
+  `supabase/controlled/` erweitert und validiert die kanonischen CHECKs für
+  `commercial_option = internal_daily_test` und
+  `payment_collection_method = card`, bevor er den RPC freigibt; generische
+  Migration Discovery darf ihn nicht sehen.
+- `internal_daily_test_workspace_provisioning_ready()` ist ebenfalls
+  `service_role`-only und liefert nur dann `true`, wenn der Daily-RPC vorhanden
+  ist, beide validierten Workspace-CHECKs exakt den kanonischen erweiterten
+  Wertvertrag abbilden und weder `anon` noch `authenticated` direkte Tabellen-
+  oder Spaltenrechte für Workspace-`INSERT` besitzen. Ohne diesen Postflight
+  wird die öffentliche Daily-Auswahl in Anwendung und Adminoberfläche
+  fail-closed verborgen beziehungsweise blockiert. Erst Migration,
+  Staging-Abnahme und Production-Postflight nach
+  `docs/operations/INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING.md` machen diesen
+  vorbereiteten Vertrag zum produktiven Schema. Die App öffnet die Admission
+  zusätzlich nur bei vollständig konfiguriertem Daily-Preis, Stripe-Secret,
+  App-URL und Stripe-Webhook-Secret.
 - Direkter `INSERT` sowie table-level `UPDATE` für `authenticated` werden mit
   `supabase/controlled/20260726121000_workspace_server_owned_columns.sql`
   entzogen. Nur zehn
@@ -248,7 +272,6 @@ Wichtige Felder:
 - `last_outbound_at`
 - `last_message_preview`
 - `assigned_owner`
-- `assigned_user_id` (stabile Auth-Identität für atomare Übernahme/Freigabe)
 - `ai_status`
 - `next_step`
 - `created_at`
@@ -258,6 +281,17 @@ RLS-Erwartung:
 
 - Nur Conversations des eigenen Workspaces lesen/schreiben.
 - Archivierte Conversations dürfen nicht versehentlich als offene Arbeit erscheinen.
+
+Rollout-Hinweis:
+
+- `assigned_user_id` ist als stabile Auth-Identität für atomare Übernahme und
+  Freigabe vorbereitet, gehört aber noch nicht zum aktuellen Production-
+  Schema. Die Anwendung erkennt die fehlende Spalte und blendet Handoff-
+  Aktionen fail-closed aus.
+- Vor einer Aktivierung müssen Spalte, atomare Mutationsgrenze sowie getrennte
+  RLS- und Spaltenrechte kontrolliert auf Staging angewendet und abgenommen
+  werden. Die bestehende breite Workspace-Member-Policy allein genügt dafür
+  nicht.
 
 ### `conversation_messages`
 
@@ -739,7 +773,7 @@ RLS-/Security-Erwartung:
 - Normale User dürfen Billing-Felder nicht beliebig ändern.
 - Admin-Änderungen nur über admin-only Routen.
 - Kostenfreie interne Testzugänge nutzen eine admin-only Markierung auf `workspaces` (`billing_status = demo_free`, `billing_manual_override = true`, `billing_admin_note` enthält „Interner Testzugang“) und serverseitige `test_access_flags` (`admin`, `demo`, `internal`, `test`, `billing_disabled`, `mail_confirmed`, `no_expiry`, `ai_maintenance`). Normale Kunden behalten den Default `{}` und werden davon nicht beeinflusst.
-- Das interne Stripe-Live-Testabo nutzt dieselben Billing-Felder mit `commercial_option = internal_daily_test`, `test_access_flags.stripe_live_daily_test = true`, `STRIPE_PRICE_INTERNAL_DAILY_TEST` und Stripe-Webhook-Updates für Checkout-Session, Subscription, letzte Zahlung und Rechnungsstatus. Es ist admin-only, kostet 1 € pro Tag, ist kündbar/deaktivierbar und löst keine Referral- oder Rabatt-Automation aus.
+- Das interne Stripe-Live-Testabo nutzt dieselben Billing-Felder mit `commercial_option = internal_daily_test`, `STRIPE_PRICE_INTERNAL_DAILY_TEST` und Stripe-Webhook-Updates für Checkout-Session, Subscription, letzte Zahlung und Rechnungsstatus. Ein im Adminbereich gestarteter Lauf setzt zusätzlich `test_access_flags.stripe_live_daily_test = true`. Das Abo ist im Normalbetrieb admin-only; ausnahmsweise ist die öffentliche Registrierung ausschließlich innerhalb einer serverseitig erzwungenen, vom Admin gestarteten Freigabe von höchstens 24 Stunden, nach dem getrennt abgenommenen Daily-Provisioning-Rollout und bei vollständiger Stripe-/Webhook-Konfiguration möglich. Der Tarif kostet 1 € pro Tag, ist kündbar/deaktivierbar und löst keine Referral- oder Rabatt-Automation aus.
 - Stripe-Webhooks müssen Signatur prüfen.
 - Vor jedem Stripe-Billing-PATCH wird das Workspace-Ziel per Service Role
   gegen eine temporäre Demo-Session und die feste Sandra-Auth-Identität

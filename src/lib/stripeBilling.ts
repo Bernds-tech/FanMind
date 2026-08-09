@@ -197,6 +197,9 @@ export function resolveCheckoutPlan(
           commercialOption,
           mode: "subscription",
           priceIds: [dailyPrice],
+          // The daily internal beta records `card`; never offer SEPA here and
+          // then persist a payment method that was not actually selected.
+          paymentMethodTypes: ["card"],
           setupFeeCents: 0,
           monthlyFeeCents: 0,
           commitmentMonths: 0,
@@ -305,6 +308,38 @@ export async function createStripeCheckoutSession(input: {
   } catch {
     return { error: "Stripe Checkout konnte nicht gestartet werden." };
   }
+}
+
+export async function expireStripeCheckoutSession(sessionId: unknown): Promise<boolean> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const normalizedId = typeof sessionId === "string" ? sessionId.trim() : "";
+  if (!secretKey || !/^cs_(?:test|live)_[A-Za-z0-9]+$/.test(normalizedId)) return false;
+  const sessionUrl = `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(normalizedId)}`;
+  const response = await fetch(
+    `${sessionUrl}/expire`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secretKey}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(12_000),
+    },
+  ).catch(() => null);
+  if (response?.ok === true) return true;
+
+  // Stripe expiration is irreversible. If it succeeded but our following
+  // local workspace update failed, a retry must reconcile the already-expired
+  // session instead of remaining permanently stuck on the POST error.
+  const statusResponse = await fetch(sessionUrl, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${secretKey}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(12_000),
+  }).catch(() => null);
+  if (!statusResponse?.ok) return false;
+  const statusPayload = (await statusResponse.json().catch(() => null)) as {
+    status?: unknown;
+  } | null;
+  return statusPayload?.status === "expired";
 }
 
 export function verifyStripeSignature(

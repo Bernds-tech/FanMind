@@ -92,7 +92,7 @@
 .grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .column,
@@ -135,6 +135,40 @@
 .integrationNotice p {
   color: #a8b3c7;
   line-height: 1.55;
+}
+
+.phaseLabel {
+  color: #93c5fd !important;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin: 0 0 0.25rem;
+  text-transform: uppercase;
+}
+
+.phaseStatus {
+  margin: 0;
+}
+
+.phaseItems {
+  display: grid;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.phaseItems li {
+  align-items: start;
+  color: #dbeafe;
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.phaseItems small {
+  color: #94a3b8;
+  grid-column: 2;
 }
 
 .integrationNotice {

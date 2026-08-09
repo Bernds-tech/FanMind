@@ -1,6 +1,12 @@
 export const WORKSPACE_PROVISIONING_RPC =
   "ensure_current_user_workspace";
 
+export const INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_RPC =
+  "ensure_internal_daily_test_workspace";
+
+export const INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING_READY_RPC =
+  "internal_daily_test_workspace_provisioning_ready";
+
 export type WorkspaceProvisioningRpcRow = {
   workspace_id: string;
   created: boolean;

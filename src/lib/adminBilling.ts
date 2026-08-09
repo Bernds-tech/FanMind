@@ -1,4 +1,10 @@
-import { createStripeCheckoutSession, resolveCheckoutPlan } from "@/lib/stripeBilling";
+import {
+  createStripeCheckoutSession,
+  expireStripeCheckoutSession,
+  getStripeConfigStatus,
+  resolveCheckoutPlan,
+} from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { getSupabaseAuthUrl, getSupabaseHeaders, getSupabaseRestUrl } from "@/lib/supabase/config";
 import type { SupabaseServerUser } from "@/lib/supabase/server";
 
@@ -94,12 +100,15 @@ export async function startInternalDailyTestCheckout(workspaceId: string, admin:
   const { workspace, error } = await getAdminBillingWorkspace(workspaceId);
   if (!workspace) return { ok: false, status: 404, error: error ?? "Workspace wurde nicht gefunden." };
   if (!isInternalTestWorkspace(workspace)) return { ok: false, status: 403, error: "Das 1-€-Live-Testabo ist nur für klar markierte interne Test-Workspaces erlaubt." };
+  if (!isInternalDailyTestStripeReady(getStripeConfigStatus())) {
+    return { ok: false, status: 503, error: "Stripe Checkout und Webhook sind für das 1-€-Live-Testabo nicht vollständig konfiguriert." };
+  }
   const plan = resolveCheckoutPlan("pilot", INTERNAL_DAILY_TEST_OPTION);
   if (!plan) return { ok: false, status: 503, error: "STRIPE_PRICE_INTERNAL_DAILY_TEST ist nicht konfiguriert." };
   if (!workspace.owner_user_id || !workspace.owner_email) return { ok: false, status: 409, error: "Der Workspace-Owner und seine E-Mail müssen vor dem Stripe-Test eindeutig aufgelöst werden." };
   const session = await createStripeCheckoutSession({ plan, userId: workspace.owner_user_id, workspaceId, userEmail: workspace.owner_email });
   if (!session.url) return { ok: false, status: 502, error: session.error ?? "Stripe Checkout konnte nicht gestartet werden." };
-  await updateAdminBillingWorkspace(workspaceId, admin, {
+  const persisted = await updateAdminBillingWorkspace(workspaceId, admin, {
     plan_id: "pilot",
     commercial_option: INTERNAL_DAILY_TEST_OPTION,
     setup_fee_cents: 0,
@@ -112,6 +121,14 @@ export async function startInternalDailyTestCheckout(workspaceId: string, admin:
     stripe_checkout_session_id: session.id ?? null,
     test_access_flags: { ...normalizeInternalTestAccessFlags(workspace.test_access_flags), internal: true, test: true, billing_disabled: false, stripe_live_daily_test: true },
   });
+  if (!persisted.ok) {
+    if (session.id) await expireStripeCheckoutSession(session.id);
+    return {
+      ok: false,
+      status: persisted.status,
+      error: persisted.error ?? "Der Stripe-Checkout konnte dem Workspace nicht sicher zugeordnet werden.",
+    };
+  }
   return { ok: true, status: 200, error: null, url: session.url, sessionId: session.id };
 }
 
@@ -126,6 +143,36 @@ export async function cancelInternalDailyTestSubscription(workspaceId: string, a
     if (!response.ok) {
       return { ok: false, status: response.status, error: "Stripe-Subscription konnte nicht deaktiviert werden." };
     }
+  }
+  if (!workspace.stripe_subscription_id) {
+    if (!workspace.stripe_checkout_session_id) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Der offene Stripe-Checkout kann nicht eindeutig bestätigt und deaktiviert werden.",
+      };
+    }
+    const checkoutExpired = await expireStripeCheckoutSession(workspace.stripe_checkout_session_id);
+    if (!checkoutExpired) {
+      return {
+        ok: false,
+        status: 502,
+        error: "Stripe konnte das offene Checkout nicht bestätigt deaktivieren.",
+      };
+    }
+    return updateAdminBillingWorkspace(workspaceId, admin, {
+      billing_status: "demo_free",
+      payment_collection_method: "none",
+      stripe_checkout_session_id: null,
+      subscription_cancel_requested_at: new Date().toISOString(),
+      subscription_cancel_at_period_end: false,
+      billing_admin_note: `${INTERNAL_TEST_ACCESS_NOTE} · ${INTERNAL_DAILY_TEST_NOTE} · Nicht abgeschlossenes Checkout deaktiviert · ${new Date().toISOString()}`,
+      test_access_flags: {
+        ...normalizeInternalTestAccessFlags(workspace.test_access_flags),
+        billing_disabled: true,
+        stripe_live_daily_test: false,
+      },
+    });
   }
   return updateAdminBillingWorkspace(workspaceId, admin, {
     subscription_cancel_requested_at: new Date().toISOString(),

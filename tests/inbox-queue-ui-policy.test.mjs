@@ -8,7 +8,8 @@ const navigationPath = new URL("../src/lib/workspaceNavigation.ts", import.meta.
 test("workspace navigation exposes the real inbox", async () => {
   const navigation = await readFile(navigationPath, "utf8");
 
-  assert.match(navigation, /href: "\/inbox"/u);
+  assert.match(navigation, /localizedWorkspaceHref\("\/inbox", locale\)/u);
+  assert.match(navigation, /return `\$\{url\.pathname\}\$\{url\.search\}\$\{url\.hash\}`/u);
   assert.match(navigation, /active: activeRoute === "inbox"/u);
 });
 
@@ -25,5 +26,5 @@ test("queue has no inactive selection controls and one waiting label", async () 
 
   assert.doesNotMatch(page, /type="checkbox"/u);
   assert.doesNotMatch(page, />Auswahl</u);
-  assert.equal(page.match(/<span>Wartet seit<\/span>/gu)?.length, 1);
+  assert.equal(page.match(/inboxText\(locale, "Wartet seit"\)/gu)?.length, 1);
 });

@@ -8,6 +8,7 @@ import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import styles from "./billingStart.module.css";
 
 export const dynamic = "force-dynamic";
@@ -90,10 +91,15 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
   if (redirectTarget === "/billing/pending") redirect("/billing/pending");
   if (redirectTarget === "/billing/suspended") redirect("/billing/suspended");
   const resolvedCheckoutPlan = workspace ? resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option) : null;
+  const isCardOnlyDailyTestCheckout =
+    workspace?.commercial_option === "internal_daily_test";
+  const checkoutPaymentMethodText = isCardOnlyDailyTestCheckout
+    ? "Kartenzahlung im nächsten Schritt"
+    : "Kartenzahlung im nächsten Schritt · SEPA optional, wenn freigeschaltet";
 
   const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
   const checkoutReady = workspace?.commercial_option === "internal_daily_test"
-    ? stripe.hasSecretKey && stripe.hasAppUrl && stripe.hasInternalDailyTestPrice
+    ? isInternalDailyTestStripeReady(stripe)
     : stripe.readyForCheckout;
   const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && checkoutReady && !isDemo && resolvedCheckoutPlan);
   let checkoutUrl: string | undefined;
@@ -160,7 +166,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
               <dl className={styles.facts}>
                 <div><dt>Workspace</dt><dd>{workspace.name}</dd></div>
                 <div><dt>Zahlungsabwicklung</dt><dd>Sichere Zahlung</dd></div>
-                <div><dt>Zahlart</dt><dd>{"Kartenzahlung im nächsten Schritt · SEPA optional, wenn freigeschaltet"}</dd></div>
+                <div><dt>Zahlart</dt><dd>{checkoutPaymentMethodText}</dd></div>
                 <div><dt>Datenerfassung</dt><dd>Stripe kümmert sich um die Abbuchungen.</dd></div>
               </dl>
             </section>
@@ -172,7 +178,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
         <div className={styles.checkoutFooter}>
           <ul className={styles.trustList} aria-label="Sicherheit und Vertrauen">
             <li>Sichere Zahlung</li>
-            <li>Kartenzahlung im nächsten Schritt · SEPA optional</li>
+            <li>{checkoutPaymentMethodText}</li>
             <li>Keine Bankdaten in FanMind</li>
             <li>Rechnungs- und Zahlungsdaten werden von FanMind nicht gespeichert</li>
           </ul>

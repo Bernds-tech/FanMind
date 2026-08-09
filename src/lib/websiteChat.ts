@@ -84,9 +84,6 @@ export async function ingestWebsiteChatMessage(input: {
     signal: AbortSignal.timeout(5000),
   }).catch(() => null);
   if (!result?.ok) {
-    if (result?.status === 404) {
-      throw new WebsiteChatServiceError("session_unavailable");
-    }
     throw new WebsiteChatServiceError("persistence_unavailable");
   }
   const rows = await result.json() as IngestedMessageRow[];

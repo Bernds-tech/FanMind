@@ -88,6 +88,7 @@ const checkedFiles = [
   "src/app/register/page.tsx",
   "src/app/fans/[id]/analysisActions.ts",
   "src/lib/runtimeProductSettings.ts",
+  "src/lib/publicDailyTestPlanPolicy.mjs",
   "src/app/admin/settings/page.tsx",
   "src/app/api/admin/settings/daily-test-plan/route.ts",
   "src/app/register/RegisterClient.tsx",
@@ -376,19 +377,19 @@ requireText(
   "Der Adminbereich muss den 1-€/Tag-Schalter sichtbar anbieten.",
 );
 requireText(
-  ".env.example",
-  "FANMIND_ENABLE_PUBLIC_DAILY_TEST_PLAN=false",
-  "Die Beispielkonfiguration muss das 1-€/Tag-Beta-Testabo standardmäßig geschlossen halten.",
+  "src/lib/publicDailyTestPlanPolicy.mjs",
+  "PUBLIC_DAILY_TEST_PLAN_WINDOW_MS = 24 * 60 * 60 * 1000",
+  "Die öffentliche 1-€/Tag-Beta-Ausnahme muss auf höchstens 24 Stunden begrenzt sein.",
 );
 requireText(
   ".github/workflows/deploy-fanmind.yml",
   "publicDailyTestPlanEnabled",
-  "Der Production-Deploy muss den initial aktiven Beta-Zustand einmalig und ohne Überschreiben späterer Admin-Entscheidungen anlegen.",
+  "Der Production-Deploy muss den Beta-Zustand initial fail-closed anlegen, ohne spätere Admin-Entscheidungen zu überschreiben.",
 );
 requireText(
   "README.md",
-  "bleibt dauerhaft als günstiger echter End-to-End-Billing-Test verfügbar",
-  "README muss den verbindlichen Abschaltzeitpunkt des 1-€/Tag-Beta-Testabos dokumentieren.",
+  "kein drittes dauerhaftes öffentliches Paket",
+  "README muss das 1-€/Tag-Beta-Testabo vom dauerhaften öffentlichen Katalog trennen.",
 );
 requireText(
   "src/lib/stripeBilling.ts",

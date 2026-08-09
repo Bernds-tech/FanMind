@@ -123,4 +123,6 @@ test("public landing keeps follow-ups active and WhatsApp coming soon", async ()
     translations,
     /WhatsApp, TikTok, X, Discord, campaigns, analytics and reach, and roles and permissions remain on the roadmap/u,
   );
+  assert.match(landing, /platform: "onlyfans", title: "OnlyFans"/u);
+  assert.match(landing, /Phase 8 · noch nicht begonnen/u);
 });

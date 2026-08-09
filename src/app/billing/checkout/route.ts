@@ -4,6 +4,7 @@ import { isPlatformAdminEmail } from "@/lib/admin";
 import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { createStripeCheckoutSession, getAppUrl, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,10 @@ async function startCheckout() {
   if (!plan) return redirectTo("/billing/start?error=payment-option");
 
   const config = getStripeConfigStatus();
-  if (!config.readyForCheckout) return redirectTo("/billing/start?error=payment-start");
+  const checkoutReady = workspace.commercial_option === "internal_daily_test"
+    ? isInternalDailyTestStripeReady(config)
+    : config.readyForCheckout;
+  if (!checkoutReady) return redirectTo("/billing/start?error=payment-start");
 
   const session = await createStripeCheckoutSession({ plan, userId: data.user.id, workspaceId: workspace.id, userEmail: data.user.email });
   if (!session.url) return redirectTo("/billing/start?error=payment-start");

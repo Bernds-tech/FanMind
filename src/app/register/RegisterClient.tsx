@@ -3,15 +3,9 @@
 import { FormEvent, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient, syncSupabaseSessionForServer } from "@/lib/supabase/client";
-import { getRegistrationCommercialTerms, isPlanId, resolvePlanId, type CommercialOption, type ProductiveCommercialOption } from "@/lib/plans";
+import { isPlanId, resolvePlanId, type CommercialOption, type ProductiveCommercialOption } from "@/lib/plans";
 import { PAYMENT_TERMS_VERSION, getBillingProvider, getInitialBillingStatus, getPaymentCollectionMethod, requiresPaymentTermsAcceptance } from "@/lib/billing";
 import type { PlanId } from "@/config/plans";
-import {
-  isMissingWorkspaceExpandColumn,
-  isMissingWorkspaceProvisioningRpc,
-  WORKSPACE_PROVISIONING_RPC,
-  type WorkspaceProvisioningRpcRow,
-} from "@/lib/workspaceProvisioning";
 import FeatureStatusLabel, { type FeatureStatusLabelVariant } from "@/components/FeatureStatusLabel";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import { fanmindCopy, getFanMindLanguage, landingPath, localizedPath, type FanMindLanguage } from "@/lib/fanmindCopy";
@@ -236,204 +230,25 @@ function getStarterOptionsCopy(language: FanMindLanguage): StarterOptionCopy[] {
   ];
 }
 
-type WorkspaceRow = {
-  id: string;
-};
-
-type WorkspaceSetupError = {
-  message: string;
-};
-
 const EMAIL_CONFIRMATION_WORKSPACE_MESSAGES: Record<FanMindLanguage, string> = {
   de: "Registrierung angelegt. Bitte bestätige deine E-Mail-Adresse oder melde dich nach Freischaltung an.",
   en: "Registration created. Please confirm your email address or sign in after activation.",
 };
 
-function workspaceSetupError(message: string): WorkspaceSetupError {
-  return { message };
-}
+const DAILY_TEST_WINDOW_CLOSED_MESSAGES: Record<FanMindLanguage, string> = {
+  de: "Das Beta-Zeitfenster ist abgelaufen oder aktuell nicht verfügbar. Bitte aktualisiere die Seite oder wähle Starter.",
+  en: "The beta window has expired or is currently unavailable. Refresh the page or choose Starter.",
+};
 
-function invalidWorkspaceTermsMessage(language: FanMindLanguage): string {
-  return language === "en"
-    ? "The selected package/commercial option is not enabled for productive workspace setup."
-    : "Die gewählte Paket-/Commercial-Option ist für produktive Workspace-Erstellung nicht freigegeben.";
-}
+const DAILY_TEST_WORKSPACE_RECOVERY_MESSAGES: Record<FanMindLanguage, string> = {
+  de: "Dein Konto wurde erstellt, aber es wurde kein Daily-Test-Workspace angelegt. Bitte registriere dich nicht erneut, sondern kontaktiere FanMind für einen kontrollierten Wechsel zu Starter.",
+  en: "Your account was created, but no Daily Test workspace was provisioned. Do not register again; contact FanMind for a controlled switch to Starter.",
+};
 
-async function prepareUserWorkspace(
-  supabase: ReturnType<typeof createSupabaseBrowserClient>,
-  userId: string,
-  email: string,
-  displayName: string,
-  workspaceName: string,
-  planId: Extract<RegisterPlanId, "pilot" | "starter">,
-  commercialOption: ProductiveCommercialOption | StarterOfferOptionId,
-  language: FanMindLanguage,
-): Promise<WorkspaceSetupError | null> {
-  const commercialTerms = commercialOption === "internal_daily_test"
-    ? getRegistrationCommercialTerms(planId, "internal_daily_test")
-    : planId === "starter"
-      ? getRegistrationCommercialTerms(planId, commercialOption === "starter_no_setup_commitment" ? "starter_no_setup_commitment" : "starter_paid_setup")
-      : getRegistrationCommercialTerms(planId);
-
-  if (!commercialTerms || commercialTerms.commercialOption !== commercialOption) {
-    return workspaceSetupError(invalidWorkspaceTermsMessage(language));
-  }
-
-  const { error: profileError } = await supabase.from("profiles").upsert({
-    id: userId,
-    email,
-    display_name: displayName || null,
-  });
-
-  if (profileError) {
-    return workspaceSetupError(profileError.message);
-  }
-
-  const { data: existingWorkspace, error: existingWorkspaceError } = await supabase
-    .from("workspaces")
-    .select<WorkspaceRow>("id")
-    .eq("owner_user_id", userId)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingWorkspaceError) {
-    return workspaceSetupError(existingWorkspaceError.message);
-  }
-
-  let workspace = existingWorkspace;
-
-  if (!workspace) {
-    const rpcResult = await supabase.rpc<WorkspaceProvisioningRpcRow>(
-      WORKSPACE_PROVISIONING_RPC,
-      {
-        p_workspace_name:
-          workspaceName || displayName || "FanMind Workspace",
-        p_commercial_option: commercialTerms.commercialOption,
-        p_payment_terms_accepted: true,
-      },
-    );
-
-    if (rpcResult.error && !isMissingWorkspaceProvisioningRpc(rpcResult.error)) {
-      return workspaceSetupError(rpcResult.error.message);
-    }
-
-    if (!rpcResult.error) {
-      if (!rpcResult.data?.workspace_id) {
-        return workspaceSetupError(
-          language === "en"
-            ? "Workspace provisioning returned no workspace."
-            : "Die Workspace-Einrichtung hat keinen Workspace zurückgegeben.",
-        );
-      }
-
-      workspace = { id: rpcResult.data.workspace_id };
-    }
-
-    // Compatibility bridge for deployments where the additive RPC migration
-    // has not been applied yet. Once the RPC exists, every other error remains
-    // fail-closed and this direct legacy path is unreachable.
-    if (!workspace) {
-      const { data: insertedWorkspace, error: workspaceError } =
-        await supabase
-        .from("workspaces")
-        .insert({
-          name: workspaceName || displayName || "FanMind Workspace",
-          owner_user_id: userId,
-          plan_id: planId,
-          commercial_option: commercialTerms.commercialOption,
-          setup_fee_cents: commercialTerms.setupFeeCents,
-          monthly_fee_cents: commercialTerms.monthlyFeeCents,
-          commitment_months: commercialTerms.commitmentMonths,
-          billing_status: getInitialBillingStatus(
-            planId,
-            commercialTerms.commercialOption,
-          ),
-          billing_provider: getBillingProvider(),
-          payment_collection_method: getPaymentCollectionMethod(
-            planId,
-            commercialTerms.commercialOption,
-          ),
-          payment_terms_version: PAYMENT_TERMS_VERSION,
-          payment_terms_accepted_at: new Date().toISOString(),
-          payment_terms_accepted_by_user_id: userId,
-          billing_updated_at: new Date().toISOString(),
-          billing_updated_by_user_id: userId,
-        })
-        .select<WorkspaceRow>("id")
-        .single();
-
-      if (workspaceError) {
-        if (!isMissingWorkspaceExpandColumn(workspaceError)) {
-          return workspaceSetupError(workspaceError.message);
-        }
-
-        const { data: coreWorkspace, error: coreWorkspaceError } =
-          await supabase
-            .from("workspaces")
-            .insert({
-              name: workspaceName || displayName || "FanMind Workspace",
-              owner_user_id: userId,
-              plan_id: planId,
-              commercial_option: commercialTerms.commercialOption,
-              setup_fee_cents: commercialTerms.setupFeeCents,
-              monthly_fee_cents: commercialTerms.monthlyFeeCents,
-              commitment_months: commercialTerms.commitmentMonths,
-              billing_status: getInitialBillingStatus(
-                planId,
-                commercialTerms.commercialOption,
-              ),
-              billing_provider: getBillingProvider(),
-              payment_collection_method: getPaymentCollectionMethod(
-                planId,
-                commercialTerms.commercialOption,
-              ),
-              billing_updated_at: new Date().toISOString(),
-              billing_updated_by_user_id: userId,
-            })
-            .select<WorkspaceRow>("id")
-            .single();
-
-        if (coreWorkspaceError) {
-          return workspaceSetupError(coreWorkspaceError.message);
-        }
-
-        workspace = coreWorkspace;
-      } else {
-        workspace = insertedWorkspace;
-      }
-    }
-  }
-
-  if (!workspace?.id) {
-    return workspaceSetupError(language === "en" ? "Workspace could not be created or loaded." : "Workspace konnte nicht erstellt oder geladen werden.");
-  }
-
-  const { data: existingMember, error: existingMemberError } = await supabase
-    .from("workspace_members")
-    .select<{ id: string }>("id")
-    .eq("workspace_id", workspace.id)
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingMemberError) {
-    return workspaceSetupError(existingMemberError.message);
-  }
-
-  if (existingMember) {
-    return null;
-  }
-
-  const { error: memberError } = await supabase.from("workspace_members").insert({
-    workspace_id: workspace.id,
-    user_id: userId,
-    role: "owner",
-  });
-
-  if (memberError) return workspaceSetupError(memberError.message);
-
-  return null;
-}
+const WORKSPACE_RECOVERY_MESSAGES: Record<FanMindLanguage, string> = {
+  de: "Dein Konto wurde erstellt, aber der Workspace konnte noch nicht sicher eingerichtet werden. Bitte registriere dich nicht erneut; versuche es später erneut oder kontaktiere FanMind.",
+  en: "Your account was created, but the workspace could not yet be provisioned securely. Do not register again; retry later or contact FanMind.",
+};
 
 export default function RegisterClient({ searchParams, enablePublicDailyTestPlan }: RegisterPageProps) {
   const params = searchParams instanceof Promise ? use(searchParams) : searchParams;
@@ -514,6 +329,30 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
     }
 
     try {
+      if (selectedCommercialOption === "internal_daily_test") {
+        let windowResponse: Response;
+        let windowPayload: { ok?: boolean } | null;
+        try {
+          windowResponse = await fetch("/api/register/daily-test-window", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ commercialOption: "internal_daily_test" }),
+            cache: "no-store",
+          });
+          windowPayload = await windowResponse.json().catch(() => null) as
+            | { ok?: boolean }
+            | null;
+        } catch {
+          setError(DAILY_TEST_WINDOW_CLOSED_MESSAGES[language]);
+          return;
+        }
+
+        if (!windowResponse.ok || windowPayload?.ok !== true) {
+          setError(DAILY_TEST_WINDOW_CLOSED_MESSAGES[language]);
+          return;
+        }
+      }
+
       const supabase = createSupabaseBrowserClient();
       const { data, error: authError } = await supabase.auth.signUp({
         email,
@@ -525,6 +364,7 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
             organization: organization || undefined,
             role: role || undefined,
             message: message || undefined,
+            fanmind_locale: language,
             plan_id: selectedPlanId,
             commercial_option: selectedCommercialOption,
             payment_terms_version: PAYMENT_TERMS_VERSION,
@@ -543,18 +383,26 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
       }
 
       if (!authError && data.session?.user) {
-        const workspaceError = await prepareUserWorkspace(
-          supabase,
-          data.session.user.id,
-          data.session.user.email ?? email,
-          name,
-          organization,
-          selectedPlanId,
-          selectedCommercialOption,
-          language,
-        );
+        const workspaceResponse = await fetch("/api/register/workspace", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+          cache: "no-store",
+        });
+        const workspacePayload = await workspaceResponse.json().catch(() => null) as
+          | { ok?: boolean; code?: string }
+          | null;
 
-        if (!workspaceError && referralCode) {
+        if (!workspaceResponse.ok || workspacePayload?.ok !== true) {
+          setError(
+            workspacePayload?.code === "daily_test_window_closed"
+              ? DAILY_TEST_WORKSPACE_RECOVERY_MESSAGES[language]
+              : WORKSPACE_RECOVERY_MESSAGES[language],
+          );
+          return;
+        }
+
+        if (referralCode) {
           const referralResponse = await fetch("/api/referrals/attribution", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -567,12 +415,6 @@ export default function RegisterClient({ searchParams, enablePublicDailyTestPlan
           }
         }
 
-        if (workspaceError) {
-          setError(language === "en"
-            ? `Registration succeeded, but profile/workspace setup failed: ${workspaceError.message}. Please check the current workspace provisioning rollout.`
-            : `Registrierung erfolgreich, aber Profil/Workspace konnte noch nicht angelegt werden: ${workspaceError.message}. Bitte prüfe den aktuellen Workspace-Provisioning-Rollout.`);
-          return;
-        }
       }
 
       if (authError) {

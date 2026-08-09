@@ -88,6 +88,23 @@ jobs:
           set -o pipefail
           npm run test:operations 2>&1 | tee operations-test-report.txt
 
+      - name: Website Chat and Inbox integration policies
+        id: release_integrations
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:release-integrations 2>&1 | tee release-integration-report.txt
+
+      - name: Upload release integration report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fanmind-release-integration-report
+          path: release-integration-report.txt
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload operations test report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -130,6 +147,12 @@ jobs:
         if: always() && steps.operations.outcome != 'success'
         run: |
           echo "Operations tests failed. See fanmind-operations-test-report artifact." >&2
+          exit 1
+
+      - name: Enforce release integration result
+        if: always() && steps.release_integrations.outcome != 'success'
+        run: |
+          echo "Release integration policies failed. See fanmind-release-integration-report artifact." >&2
           exit 1
 
       - name: Enforce build result

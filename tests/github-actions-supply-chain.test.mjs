@@ -24,6 +24,14 @@ async function exists(path) {
   }
 }
 
+test("release integration failures retain reports and still allow the build diagnostic", async () => {
+  const workflow = await readFile(".github/workflows/ci-fanmind.yml", "utf8");
+  assert.match(workflow, /id: release_integrations[\s\S]*continue-on-error: true[\s\S]*release-integration-report\.txt/u);
+  assert.match(workflow, /name: fanmind-release-integration-report[\s\S]*if-no-files-found: error/u);
+  assert.match(workflow, /id: build[\s\S]*build-report\.txt/u);
+  assert.match(workflow, /steps\.release_integrations\.outcome != 'success'[\s\S]*fanmind-release-integration-report artifact/u);
+});
+
 test("all GitHub workflows use immutable external Action references and explicit permissions", async () => {
   const result = await scanWorkflowPolicy();
 
@@ -103,13 +111,13 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
   const hostedWorkflows = checkoutWorkflows.filter(
     (workflow) => !workflow.selfHosted,
   );
-  assert.equal(hostedWorkflows.length, 24);
+  assert.equal(hostedWorkflows.length, 26);
   assert.equal(
     hostedWorkflows.reduce(
       (count, workflow) => count + workflow.checkoutShas.length,
       0,
     ),
-    25,
+    27,
   );
   assert.equal(
     hostedWorkflows.every((workflow) =>

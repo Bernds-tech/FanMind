@@ -133,7 +133,9 @@ export async function renderSettingsAccountPage(activePage: SettingsAccountPage,
 
   const workspace = workspaceResult.workspace;
   const preActivationRedirect = getPreActivationRedirect(workspace, data.user.email);
-  if (preActivationRedirect) redirect(preActivationRedirect);
+  const pendingSepaPackageAccess = activePage === "package"
+    && workspace?.billing_status === "pending_sepa_mandate";
+  if (preActivationRedirect && !pendingSepaPackageAccess) redirect(preActivationRedirect);
   if (isWorkspaceBillingSuspended(workspace)) redirect("/billing/suspended");
 
   const contactsResult = workspace ? await getWorkspaceContacts(workspace.id) : null;

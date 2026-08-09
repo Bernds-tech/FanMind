@@ -56,6 +56,9 @@ jobs:
       - name: Operations tests
         run: npm run test:operations
 
+      - name: Website Chat and Inbox integration policies
+        run: npm run test:release-integrations
+
       - name: Production-compatible build
         run: npm run build
 

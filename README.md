@@ -27,9 +27,9 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Abschlussantwort darf nicht automatisch wiederholt werden, sondern muss
   zuerst direkt im geschützten EAS-Projekt geprüft werden; Gerätetest und
   Store-Verteilung bleiben externe Nachweise.
-- Öffentliche Registrierung: Starter Flex und Starter 12 Monate; während der Fertigstellungsphase zusätzlich der klar als Beta markierte 1-€/Tag-Test, solange der geschützte Admin-Schalter unter `/admin/settings` aktiv ist.
+- Öffentliche Registrierung: dauerhaft ausschließlich Starter Flex und Starter 12 Monate; der 1-€/Tag-Test ist kein öffentliches Katalogangebot und kann nur für ein ausdrücklich gestartetes, maximal 24 Stunden offenes Beta-Fenster sichtbar werden. Die Freigabe bleibt fail-closed, bis der getrennte `service_role`-Provisioning-RPC, der Entzug direkter Browser-Inserts sowie Daily-Preis, Stripe-Secret, App-URL und Webhook-Konfiguration gemeinsam bereit sind.
 - Kostenlose Demo: temporärer, geschützter Demo-Workspace; kein entgeltliches Pilot-Paket.
-- Beta-/Testzugang: Das aktive Stripe-Live-Testabo `internal_daily_test` kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es bleibt dauerhaft als günstiger echter End-to-End-Billing-Test verfügbar und nutzt dieselbe Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Engine wie der Starter-Tarif; nur Preis, Intervall, öffentliche Sichtbarkeit und Referral-Berechtigung unterscheiden sich.
+- Beta-/Testzugang: Das interne Stripe-Live-Testabo `internal_daily_test` kostet 1 €/Tag, ist täglich kündbar und bleibt von Referral ausgeschlossen. Es nutzt dieselbe Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Engine wie der Starter-Tarif, ist aber kein drittes dauerhaftes öffentliches Paket. Eine ausnahmsweise Registrierungsfreigabe läuft spätestens nach 24 Stunden automatisch ab; ihr sicherer Datenbank-Rollout folgt `docs/operations/INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING.md`.
 - Billing-Steuermodus: `FANMIND_TAX_MODE=small_business` ist der aktuelle Default. Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung müssen dieselbe steuerliche Behandlung zeigen.
 - Kommerzielle Wahrheit: Starter-Grundgebühr `312 €/Monat`.
 - Starter Flex: `990 € einmalige Einrichtung + 312 €/Monat`; jederzeit zum Ende des laufenden, vollständig zu bezahlenden Abrechnungsmonats kündbar.
@@ -122,10 +122,18 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   und nutzt ausschließlich diese Session- und Ingestion-Endpunkte. Es hält das
   Sitzungstoken nur im Speicher und bestätigt lediglich den Empfang;
   Besucher-KI, Rückkanal und Outbound-Versand sind nicht aktiviert.
+- Vorbereitetes Inbox-Handoff: Production besitzt `assigned_user_id` noch
+  nicht; die Anwendung erkennt die fehlende Spalte und blendet Übernehmen und
+  Freigeben fail-closed aus. Der Codepfad darf erst nach einem getrennten, in
+  Staging abgenommenen Datenbank-, RLS- und Spaltenrechte-Rollout aktiviert
+  werden. Danach können autorisierte Workspace-Mitglieder eine Conversation
+  exklusiv übernehmen und nur ihre eigene Zuweisung freigeben; Status,
+  nächster Schritt und Nachrichtentext bleiben unverändert und es wird nichts
+  automatisch versendet.
 - Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind nicht rabattfähig; Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
-- Roadmap-Phase 7 mit TikTok, X, Discord und einer ausdrücklich unverbindlichen OnlyFans-Prüfung bleibt öffentlich als spätere Zukunftsplanung sichtbar, ist aber ausdrücklich vom aktuellen Abschlussumfang der acht Fertigstellungsblöcke ausgenommen und zählt nicht in dessen Fortschritt.
+- Verbindliche Kanal-Roadmap: Phase 3 = Facebook, Instagram und WhatsApp; Phase 7 = TikTok, X/Twitter, Discord und die unverbindliche OnlyFans-Prüfung; Phase 8 = LinkedIn und alle übrigen späteren Plattformanbindungen. Phase 8 ist noch nicht begonnen, wird aktuell nicht gebaut und zählt nicht als Fortschritt.
 - FanMind ist kein Bot: KI bereitet Antworten vor; der Mensch prüft, kopiert und sendet final selbst.
 - FanMind garantiert keine fehlerfreien KI-Antworten.
 - Externe Integrationen dürfen nicht als allgemein aktive Vollfunktion dargestellt werden, solange sie nicht technisch und rechtlich validiert sind.
@@ -318,7 +326,7 @@ Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und
 | KI Standard | aktiv | in 312 €/Monat enthalten |
 | KI Plus | freigegebener Preis, technische Add-on-Aktivierung separat | +100 €/Monat |
 | KI Ultra | freigegebener Preis, technische Add-on-Aktivierung separat | +200 €/Monat |
-| Internes Live-Testabo | aktiv als kontrollierter Beta-Test | 1 €/Tag; täglich kündbar; bleibt als echter End-to-End-Test aktiv; gleicher Billing-Lifecycle wie Starter, keine Referral-Verrechnung |
+| Internes Live-Testabo | kontrollierter interner Beta-Test | 1 €/Tag; täglich kündbar; gleicher Billing-Lifecycle wie Starter, keine Referral-Verrechnung; kein dauerhaftes öffentliches Paket, temporäre Registrierungsfreigabe höchstens 24 Stunden |
 | Growth | Coming Soon | nicht produktiv buchbar |
 | Agency | Coming Soon / auf Anfrage | nicht produktiv buchbar |
 | Enterprise / Custom | später | individuelle Prüfung |

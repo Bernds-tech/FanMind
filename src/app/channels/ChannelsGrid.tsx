@@ -11,6 +11,9 @@ import { syncInstagramMessengerHistoryFromChannelPage } from "./instagramWebhook
 
 type ChannelStatus =
   | "Live / manuell nutzbar"
+  | "Phase 3 / Beta oder Roadmap"
+  | "Phase 7 / Roadmap"
+  | "Phase 8 / noch nicht begonnen"
   | "Coming Soon / geplant / vorbereitet";
 type ChannelPurpose =
   | "Nachrichten"
@@ -129,6 +132,25 @@ const safetyNotice =
 const demoNotice =
   "Dieser Demo-Workspace ist öffentlich. Echte Kanalverbindungen und externe Tests sind deaktiviert.";
 
+const phase3ChannelKeys = new Set(["facebook", "instagram", "whatsapp"]);
+const phase7ChannelKeys = new Set(["tiktok", "twitter", "discord", "discord-server", "onlyfans"]);
+const currentChannelKeys = new Set(["email", "website-chat", "webform", "manual"]);
+const preparedPhase8ChannelKeys = new Set(["telegram"]);
+
+function roadmapPhaseForChannel(key: string) {
+  if (phase3ChannelKeys.has(key)) return 3;
+  if (phase7ChannelKeys.has(key)) return 7;
+  if (currentChannelKeys.has(key)) return null;
+  return 8;
+}
+
+function roadmapStatusForPhase(phase: number | null): ChannelStatus {
+  if (phase === 3) return "Phase 3 / Beta oder Roadmap";
+  if (phase === 7) return "Phase 7 / Roadmap";
+  if (phase === 8) return "Phase 8 / noch nicht begonnen";
+  return "Coming Soon / geplant / vorbereitet";
+}
+
 const makeInput = (
   key: string,
   name: string,
@@ -157,9 +179,26 @@ const makeChannel = (
   technology = "Roadmap-Eingang vorbereitet",
   inputs?: ChannelInput[],
 ): Channel => {
-  const channelInputs = inputs ?? [
+  const phase = roadmapPhaseForChannel(key);
+  const preparedPhase8Groundwork = phase === 8 && preparedPhase8ChannelKeys.has(key);
+  const rawInputs = inputs ?? [
     makeInput(key, name, purpose, description, technology),
   ];
+  const channelInputs = phase === 8 && !preparedPhase8Groundwork
+    ? rawInputs.map((input) => ({
+        ...input,
+        description: "Diese Verbindung ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen.",
+        status: roadmapStatusForPhase(8),
+        technology: "Phase 8 · noch nicht begonnen",
+      }))
+    : rawInputs.map((input) => ({
+        ...input,
+        status: input.live
+          ? input.status
+          : preparedPhase8Groundwork
+            ? "Coming Soon / geplant / vorbereitet"
+            : roadmapStatusForPhase(phase),
+      }));
   const live = channelInputs.every((input) => input.live);
 
   return {
@@ -167,12 +206,16 @@ const makeChannel = (
     logoKey: key,
     name,
     category: group,
-    description,
+    description: phase === 8 && !preparedPhase8Groundwork
+      ? "Diese Plattform ist Phase 8 zugeordnet. Die Umsetzung hat noch nicht begonnen."
+      : description,
     status: live
       ? "Live / manuell nutzbar"
-      : "Coming Soon / geplant / vorbereitet",
+      : preparedPhase8Groundwork
+        ? "Coming Soon / geplant / vorbereitet"
+        : roadmapStatusForPhase(phase),
     purpose,
-    technology,
+    technology: phase === 8 && !preparedPhase8Groundwork ? "Phase 8 · noch nicht begonnen" : technology,
     live,
     inputs: channelInputs,
   };
@@ -416,6 +459,14 @@ const channelGroups: ChannelGroup[] = [
     id: "creator",
     label: "Creator & Community",
     channels: [
+      makeChannel(
+        "Creator & Community",
+        "onlyfans",
+        "OnlyFans",
+        "Community",
+        "Unverbindliche Phase-7-Prüfung; keine Anbindung oder Zusage.",
+        "Phase 7 · technische und rechtliche Prüfung erforderlich",
+      ),
       makeChannel(
         "Creator & Community",
         "twitch",
@@ -684,9 +735,11 @@ export function ChannelsGrid({
 
               <span className={styles.cardSummary}>
                 <span className={styles.inputCountBadge}>
-                  {channel.inputs.length === 1
-                    ? "1 Eingang vorbereitet"
-                    : `${channel.inputs.length} Eingänge vorbereitet`}
+                  {channel.status === "Phase 8 / noch nicht begonnen"
+                    ? "Noch keine Eingänge umgesetzt"
+                    : channel.inputs.length === 1
+                      ? "1 Eingang vorbereitet"
+                      : `${channel.inputs.length} Eingänge vorbereitet`}
                 </span>
                 <span className={styles.inputTypeHint}>
                   {channel.inputs.map((input) => input.purpose).join(" · ")}

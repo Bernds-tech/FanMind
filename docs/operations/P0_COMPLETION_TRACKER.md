@@ -66,9 +66,11 @@ Das Zielsystem wird deshalb zusätzlich eigenständig geführt:
 | Erfolgsmessung | teilgebaut | operative KPIs und KI-Kosten vorhanden; vollständige Umsatz-/Kampagnenanalyse offen |
 
 FanMind bleibt dabei ein spezialisiertes Arbeits- und Umsatzsystem, in dem der
-Mensch jede externe Nachricht selbst prüft und sendet. Phase 7 zählt nicht in
-die acht Abschlussblöcke; OnlyFans bleibt ausschließlich eine unverbindliche
-spätere Prüfung.
+Mensch jede externe Nachricht selbst prüft und sendet. Phase 3 enthält
+Facebook, Instagram und WhatsApp; Phase 7 enthält TikTok, X/Twitter, Discord
+und die unverbindliche OnlyFans-Prüfung. Phase 8 mit LinkedIn und allen
+übrigen späteren Plattformanbindungen ist noch nicht begonnen und zählt nicht
+in die acht Abschlussblöcke.
 
 Das verbindliche Umsatzmodell besteht aus 312 € Core pro Monat mit einem
 Creator/Workspace, KI Standard und zehn Connections inklusive. Je weitere fünf
@@ -144,7 +146,7 @@ Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 ### Zentrale Produktdokumentation
 
 - Mobile wird in `docs/SOURCE_OF_TRUTH.md`, `README.md`, `AGENTS.md` und der Roadmap als eigener aktiver Produktstream geführt;
-- Roadmap-Phase 7 bleibt als öffentliche Zukunftsplanung erhalten, gehört aber
+- Roadmap-Phase 8 bleibt als öffentliche Zukunftsplanung erhalten, gehört aber
   nicht zum aktuellen Abschlussumfang der acht Fertigstellungsblöcke und wird
   in deren Fortschritt nicht mitgezählt;
 - signierte Builds, Store-Konten, TestFlight und Google-Play-Internal-Testing bleiben klar von bereits vorhandenem Code getrennt;

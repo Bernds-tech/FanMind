@@ -152,20 +152,67 @@ test("completion tracker keeps every weighted block and supporting work line", a
   assert.match(tracker, /Repository-technische Vorbereitung: \*\*ca\. 86 %\*\*/u);
 });
 
-test("phase 7 excludes LinkedIn and additional channels and stays outside the current completion scope", async () => {
-  const [roadmap, sourceOfTruth, readme, tracker] = await Promise.all([
+test("channel phases stay unique and phase 8 remains unstarted", async () => {
+  const [roadmap, publicRoadmap, adminRoadmap, sourceOfTruth, readme, tracker, databaseSchema] = await Promise.all([
     source("src/config/roadmap.ts"),
+    source("src/app/roadmap/page.tsx"),
+    source("src/app/admin/roadmap/page.tsx"),
     source("docs/SOURCE_OF_TRUTH.md"),
     source("README.md"),
     source("docs/operations/P0_COMPLETION_TRACKER.md"),
+    source("docs/database/fanmind_current_schema.md"),
   ]);
 
-  assert.match(roadmap, /phase: "Phase 7"[\s\S]*TikTok[\s\S]*X \/ Twitter[\s\S]*Discord[\s\S]*OnlyFans/u);
-  assert.match(roadmap, /label: "OnlyFans", state: "later", status: "Roadmap"/u);
-  assert.doesNotMatch(roadmap, /LinkedIn & weitere Kanäle/u);
-  assert.doesNotMatch(readme, /LinkedIn und weiteren Kanälen/u);
+  const phase3 = roadmap.split('phase: "Phase 3"')[1]?.split('phase: "Phase 4"')[0] ?? "";
+  const phase7 = roadmap.split('phase: "Phase 7"')[1]?.split('phase: "Phase 8"')[0] ?? "";
+  const phase8 = roadmap.split('phase: "Phase 8"')[1]?.split('phase: "Phase 9"')[0] ?? "";
+  const phase15 = roadmap.split('phase: "Phase 15"')[1] ?? "";
+
+  assert.match(phase3, /Facebook[\s\S]*Instagram[\s\S]*WhatsApp/u);
+  assert.doesNotMatch(phase3, /TikTok|X \/ Twitter|Discord|OnlyFans|LinkedIn/u);
+  assert.match(phase7, /TikTok[\s\S]*X \/ Twitter[\s\S]*Discord[\s\S]*OnlyFans/u);
+  assert.match(phase7, /label: "OnlyFans", state: "later", status: "Roadmap"/u);
+  assert.doesNotMatch(phase7, /Facebook|Instagram|WhatsApp|LinkedIn/u);
+  assert.match(phase8, /LinkedIn & weitere Kanäle[\s\S]*LinkedIn[\s\S]*Internationale Plattformen/u);
+  assert.match(phase8, /label: "Telegram"[\s\S]*state: "later"[\s\S]*status: "Bot-\/Webhook-Grundlage vorbereitet · inaktiv; Anbindung nicht begonnen"/u);
+  assert.doesNotMatch(phase8, /YouTube, Threads, Reddit & Telegram/u);
+  assert.match(roadmap, /"YouTube, Threads & Reddit"/u);
+  assert.match(roadmap, /"Bot-\/Webhook-Grundlage vorbereitet · inaktiv; Anbindung nicht begonnen"/u);
+  assert.match(phase8, /status: "Später · Anbindungen noch nicht begonnen"/u);
+  assert.match(phase8, /availability: "later"/u);
+  assert.doesNotMatch(phase8, /state: "done"|state: "progress"|state: "partial"|state: "planned"/u);
+  assert.doesNotMatch(phase8, /Facebook|Instagram|WhatsApp|TikTok|X \/ Twitter|Discord|OnlyFans/u);
+  assert.match(phase15, /Segmente & Listen[\s\S]*Segment-Ansichten[\s\S]*Listenlogik[\s\S]*Filter & Tags[\s\S]*CSV-Import für Segmente nutzen/u);
+  assert.match(publicRoadmap, /import \{ roadmapPhases, type RoadmapPhase \} from "@\/config\/roadmap"/u);
+  assert.doesNotMatch(publicRoadmap, /const available:|const inProgress:|const comingSoon:/u);
+  assert.match(adminRoadmap, /Alle Phasen sind fortlaufend nummeriert/u);
+  assert.doesNotMatch(adminRoadmap, /01 bis 13/u);
   for (const document of [sourceOfTruth, readme, tracker]) {
-    assert.match(document, /Roadmap-Phase 7/u);
-    assert.match(document, /nicht Teil des aktuellen\s+Abschlussumfangs|nicht zum aktuellen Abschlussumfang|vom aktuellen Abschlussumfang[^\n]*ausgenommen/iu);
+    assert.match(document, /Phase 3[\s\S]{0,120}(?:Facebook|Meta)/u);
+    assert.match(document, /Phase 7[\s\S]{0,120}TikTok/u);
+    assert.match(document, /Phase 8[\s\S]{0,120}LinkedIn/u);
+    assert.match(document, /noch nicht begonnen/u);
   }
+  for (const document of [sourceOfTruth, readme]) {
+    assert.match(document, /vorbereitet(?:es|,)[\s\S]{0,100}Inbox-Handoff/iu);
+    assert.match(
+      document,
+      /Production besitzt `assigned_user_id` noch\s+nicht;[\s\S]{0,180}fehlende Spalte[\s\S]{0,180}fail-closed/u,
+    );
+    assert.match(
+      document,
+      /erst nach einem getrennten, in[\s\S]{0,30}Staging\s+abgenommenen Datenbank-, RLS- und Spaltenrechte-Rollout aktiviert/u,
+    );
+    assert.doesNotMatch(
+      document,
+      /Manuelles Inbox-Handoff: autorisierte Workspace-Mitglieder können/u,
+    );
+  }
+  const conversationsSchema = databaseSchema
+    .split("### `conversations`")[1]
+    ?.split("### `conversation_messages`")[0] ?? "";
+  const currentConversationFields = conversationsSchema.split("Rollout-Hinweis:")[0] ?? "";
+  assert.doesNotMatch(currentConversationFields, /assigned_user_id/u);
+  assert.match(conversationsSchema, /assigned_user_id[\s\S]*noch nicht zum aktuellen Production-[\s\S]*Schema/u);
+  assert.match(conversationsSchema, /RLS- und Spaltenrechte[\s\S]*Staging/u);
 });

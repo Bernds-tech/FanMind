@@ -5,6 +5,9 @@ import {
   readBoundedFormDataRequest,
 } from "@/lib/httpMutationPolicy.mjs";
 import { setPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
+import { isInternalDailyTestWorkspaceProvisioningReady } from "@/lib/supabase/server";
+import { getStripeConfigStatus } from "@/lib/stripeBilling";
+import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 
 const MAX_DAILY_TEST_PLAN_BODY_BYTES = 1_000;
 
@@ -25,6 +28,18 @@ export async function POST(request: NextRequest) {
   }
   const formData = parsedBody.value;
   const enabled = formData.get("enabled") === "true";
+
+  if (
+    enabled &&
+    (
+      !(await isInternalDailyTestWorkspaceProvisioningReady()) ||
+      !isInternalDailyTestStripeReady(getStripeConfigStatus())
+    )
+  ) {
+    const destination = new URL("/admin/settings", request.url);
+    destination.searchParams.set("daily_test_plan", "not_ready");
+    return NextResponse.redirect(destination, { status: 303 });
+  }
 
   await setPublicDailyTestPlanEnabled(enabled, admin.email ?? admin.id);
 
