@@ -118,9 +118,11 @@ RLS-Erwartung:
   Zahlungsbedingung an; Tarif, Nullbeträge, Stripe/Card und Billing-Status sind
   fest verdrahtet. `PUBLIC`, `anon` und `authenticated` besitzen kein
   `EXECUTE`; ausschließlich `service_role` darf ihn nach einer frischen
-  Zeitfensterprüfung aufrufen. Dieselbe Migration erweitert und validiert die
-  kanonischen CHECKs für `commercial_option = internal_daily_test` und
-  `payment_collection_method = card`, bevor sie den RPC freigibt.
+  Zeitfensterprüfung aufrufen. Derselbe einzeln freizugebende SQL-Schritt unter
+  `supabase/controlled/` erweitert und validiert die kanonischen CHECKs für
+  `commercial_option = internal_daily_test` und
+  `payment_collection_method = card`, bevor er den RPC freigibt; generische
+  Migration Discovery darf ihn nicht sehen.
 - `internal_daily_test_workspace_provisioning_ready()` ist ebenfalls
   `service_role`-only und liefert nur dann `true`, wenn der Daily-RPC vorhanden
   ist, beide validierten Workspace-CHECKs exakt den kanonischen erweiterten

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import {
   FIXED_DEMO_EMAIL,
@@ -16,8 +16,8 @@ import {
 
 const rpcMigrationPath =
   "supabase/migrations/20260726120000_workspace_provisioning_rpc.sql";
-const dailyRpcMigrationPath =
-  "supabase/migrations/20260808230102_internal_daily_test_workspace_provisioning.sql";
+const dailyControlledMigrationPath =
+  "supabase/controlled/20260808230102_internal_daily_test_workspace_provisioning.sql";
 const privilegeMigrationPath =
   "supabase/controlled/20260726121000_workspace_server_owned_columns.sql";
 const triggerFunctionSecurityMigrationPath =
@@ -284,7 +284,11 @@ test("provisioning RPC derives identity and Starter commercial values server-sid
 });
 
 test("Daily provisioning is fixed, atomic and service-role-only", async () => {
-  const migration = await readFile(dailyRpcMigrationPath, "utf8");
+  const migration = await readFile(dailyControlledMigrationPath, "utf8");
+  assert.match(
+    migration,
+    /lock table supabase_migrations\.schema_migrations in share mode[\s\S]*version = '20260808230102'/u,
+  );
   const dailyFunctionStart = migration.indexOf(
     "create or replace function public.ensure_internal_daily_test_workspace",
   );
@@ -339,7 +343,7 @@ test("Daily provisioning is fixed, atomic and service-role-only", async () => {
 });
 
 test("Daily readiness source contract matches exact CHECK values and denies browser INSERT", async () => {
-  const migration = await readFile(dailyRpcMigrationPath, "utf8");
+  const migration = await readFile(dailyControlledMigrationPath, "utf8");
   const readinessFunctionStart = migration.indexOf(
     "create or replace function public.internal_daily_test_workspace_provisioning_ready",
   );
@@ -391,6 +395,36 @@ test("Daily readiness source contract matches exact CHECK values and denies brow
   assert.match(
     migration,
     /revoke all on function public\.internal_daily_test_workspace_provisioning_ready\(\)[\s\S]*from public, anon, authenticated[\s\S]*grant execute[\s\S]*to service_role/u,
+  );
+});
+
+test("Daily provisioning SQL stays outside generic migration discovery", async () => {
+  const genericMigrations = await readdir("supabase/migrations");
+  const dailyFilename =
+    "20260808230102_internal_daily_test_workspace_provisioning.sql";
+  const genericSql = (
+    await Promise.all(
+      genericMigrations
+        .filter((filename) => filename.endsWith(".sql"))
+        .map((filename) =>
+          readFile(`supabase/migrations/${filename}`, "utf8"),
+        ),
+    )
+  ).join("\n");
+  const runbook = await readFile(
+    "docs/operations/INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING.md",
+    "utf8",
+  );
+
+  assert.match(dailyControlledMigrationPath, /^supabase\/controlled\//u);
+  assert.equal(genericMigrations.includes(dailyFilename), false);
+  assert.doesNotMatch(
+    genericSql,
+    /ensure_internal_daily_test_workspace|internal_daily_test_workspace_provisioning_ready|workspaces_(?:commercial_option|payment_collection_method)_daily_check/u,
+  );
+  assert.match(
+    runbook,
+    /außerhalb `supabase\/migrations\/`[\s\S]*generisches\s+`supabase db push`/u,
   );
 });
 

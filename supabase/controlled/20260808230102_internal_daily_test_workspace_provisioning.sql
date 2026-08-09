@@ -1,9 +1,30 @@
--- Add the server-owned provisioning boundary for the exceptional public
+-- Controlled server-owned provisioning boundary for the exceptional public
 -- internal_daily_test registration window. The authenticated Starter RPC
 -- deliberately remains Starter-only: only FanMind's service role may bind a
 -- verified Auth user to the fixed Daily terms below.
 
 begin;
+
+-- Keep generic Supabase migration discovery/history separate from this
+-- controlled transaction, including while the SQL is being applied.
+do $control$
+begin
+  if to_regclass('supabase_migrations.schema_migrations') is null then
+    raise exception 'controlled_migration_ledger_missing';
+  end if;
+
+  execute
+    'lock table supabase_migrations.schema_migrations in share mode';
+
+  if exists (
+    select 1
+      from supabase_migrations.schema_migrations
+     where version = '20260808230102'
+  ) then
+    raise exception 'controlled_sql_found_in_generic_ledger';
+  end if;
+end
+$control$;
 
 -- Expand the two canonical Workspace checks before the RPC can write its
 -- fixed values. NOT VALID starts enforcing the wider contract for new writes

@@ -29,8 +29,10 @@ wirksam sind:
 
 Die Anwendung nimmt keine User-ID, Tarifoption, Preise, Billing-Felder oder
 Testflags aus dem Registrierungs-Request an. Der bestehende authentifizierte
-Starter-RPC bleibt absichtlich Starter-only. Ein normaler Web-Deploy wendet
-die Migration nicht an und aktiviert das Fenster nicht.
+Starter-RPC bleibt absichtlich Starter-only. Der Daily-SQL-Schritt liegt
+außerhalb `supabase/migrations/`; ein normaler Web-Deploy und ein generisches
+`supabase db push` dürfen ihn weder entdecken noch anwenden und aktivieren das
+Fenster nicht.
 
 ## Artefakte
 
@@ -39,10 +41,73 @@ die Migration nicht an und aktiviert das Fenster nicht.
 - gemeinsame Stripe-/Webhook-Admission:
   `src/lib/internalDailyTestReadinessPolicy.mjs`
 - serverseitige Provisionierung: `src/lib/supabase/server.ts`
-- additive Migration:
-  `supabase/migrations/20260808230102_internal_daily_test_workspace_provisioning.sql`
+- einzeln freizugebender kontrollierter SQL-Schritt:
+  `supabase/controlled/20260808230102_internal_daily_test_workspace_provisioning.sql`
+- checksum- und zielgebundener Runner:
+  `scripts/operations/internal-daily-test-provisioning-migration-runner.mjs`
+- getrennte manuelle Staging-Workflows:
+  `.github/workflows/internal-daily-test-workspace-provisioning-staging-verify.yml`
+  und
+  `.github/workflows/internal-daily-test-workspace-provisioning-staging-apply.yml`
 - Browser-INSERT-Contract:
   `supabase/controlled/20260726121000_workspace_server_owned_columns.sql`
+
+## Gepinnter Staging-Kontrollpfad
+
+Der kontrollierte SQL-Stand ist ausschließlich mit folgendem SHA-256
+freigegeben:
+
+```text
+0f16bdff24d7f3f0f69d7a60644476457311519617d1e290f8d785d9be6818bd
+```
+
+Jede Abweichung blockiert bereits den Offline-Check. Der Runner stellt drei
+getrennte Modi bereit:
+
+```bash
+npm run db:daily-workspace-provisioning:check
+npm run db:daily-workspace-provisioning:verify
+npm run db:daily-workspace-provisioning:apply
+```
+
+- `check` liest weder Datenbank noch Secrets und prüft SHA-256 sowie den engen
+  SQL-Vertrag.
+- `verify` führt genau einen read-only, zurückgerollten Katalog-Postflight aus.
+- `apply` führt zuerst einen read-only, zurückgerollten Preflight aus, übergibt
+  danach ausschließlich den gepinnten SQL-Inhalt an `psql` und führt zuletzt
+  denselben read-only Postflight aus. Schlägt einer der drei Schritte fehl,
+  endet der Lauf mit einem festen, redigierten Fehlercode.
+
+Der Postflight vertraut nicht allein dem Readiness-RPC: Er bindet beide
+Funktionen zusätzlich an Owner `postgres`, SECURITY-DEFINER, exakten
+`search_path`, Sprache, Volatilität, Tabellen-Rückgabevertrag und den
+bytegenauen Funktionskörper aus dem zuvor SHA-256-geprüften SQL-Artefakt.
+
+Der Apply ist ausschließlich über den manuellen, geschützten Staging-Workflow
+erlaubt. Er verlangt `refs/heads/main`, den exakten 40-stelligen aktuellen
+Commit als Workflow-Eingabe; der Workflow reicht ihn im geschützten
+`staging`-Environment an den Runner weiter, und Workflow sowie Runner
+vergleichen ihn mit `github.sha` beziehungsweise `GITHUB_SHA`. Hinzu kommen
+die Bestätigung
+`apply-internal-daily-test-workspace-provisioning`, das Schreib-Acknowledge
+`I_UNDERSTAND_NON_PRODUCTION_ONLY`, eine exakte Staging-Projektbindung und
+TLS `verify-full` mit absolutem CA-Pfad. Der Verify-Workflow verlangt getrennt
+`verify-internal-daily-test-workspace-provisioning`, setzt Writes ausdrücklich
+auf `false` und besitzt keinen Apply-Schritt. Beide verwenden nur eine eigene
+private `0600`-Passwortdatei; URL-, Passwort- und libpq-Umleitungen werden
+fail-closed abgewiesen beziehungsweise vor `psql` entfernt.
+
+Der Preflight blockiert, wenn der Supabase-Migrationsledger fehlt oder Version
+`20260808230102` bereits in `supabase_migrations.schema_migrations` steht. Ein
+solcher Eintrag deutet auf
+eine frühere generische Anwendung hin und muss als History-Drift separat
+geklärt werden; der kontrollierte Apply darf ihn nicht übergehen. Das gepinnte
+SQL wiederholt diese Prüfung innerhalb seiner Transaktion und hält den Ledger
+dabei im `SHARE`-Modus gesperrt, sodass ein paralleler generischer Push die
+Preflight-Entscheidung nicht überholen kann. Es existiert absichtlich kein
+Production-Apply-Workflow. Production benötigt nach einem dokumentierten
+Staging-Receipt einen eigenen, später freizugebenden und erneut geprüften
+Kontrollpfad.
 
 ## Verbindliche Reihenfolge
 
@@ -55,23 +120,25 @@ die Migration nicht an und aktiviert das Fenster nicht.
    `commercial_option`- und `payment_collection_method`-Werte im unten
    dokumentierten erweiterten Vertrag liegen. Jeder Fremdwert blockiert den
    Rollout und muss anhand der Billing-Auditdaten getrennt geklärt werden.
-4. Die neue additive Expand-/Contract-Migration ausschließlich gegen dieses
-   bestätigte Staging-Ziel anwenden. Ihre neuen CHECKs werden zuerst erweitert
-   und validiert; erst danach ersetzt sie die bisherigen engeren CHECKs.
+4. Den neuen kontrollierten Expand-/Contract-SQL-Schritt ausschließlich mit
+   dem manuellen Staging-Apply-Workflow gegen dieses bestätigte Ziel anwenden.
+   Seine neuen CHECKs werden zuerst erweitert und validiert; erst danach
+   ersetzt er die bisherigen engeren CHECKs.
 5. PostgREST-Schema-Cache aktualisieren und die unten stehenden Privileg- und
    Readiness-Prüfungen ausführen.
 6. Mit einem dedizierten synthetischen Staging-Auth-Nutzer den positiven,
    negativen und parallelen Provisioning-Fall prüfen. Transaktionale
    Testdaten anschließend kontrolliert entfernen; keine Production-Nutzer
    verwenden.
-7. Erst nach dokumentiertem Staging-Go denselben read-only Preflight gegen
-   Production ausführen, Backup/Restore-Bereitschaft bestätigen und die
-   Migration getrennt freigeben.
+7. Das Staging-Ergebnis mit Commit, Workflow-Run, Zielidentität ohne Secret,
+   SHA-256 und allen DB-/PostgREST-/Parallelitätsnachweisen dokumentieren.
+   Production bleibt bis zu einem getrennt geprüften Kontrollpfad gesperrt.
 8. Daily-Preis, Stripe-Secret, kanonische App-URL und Webhook-Secret im
    exakten Ziel prüfen; die Prüfung darf nur Statuswerte und keine Secrets
    ausgeben.
-9. Production-Postflight ausführen. Das öffentliche Fenster bleibt weiterhin
-   aus und darf erst durch eine separate Admin-Entscheidung geöffnet werden.
+9. Das öffentliche Fenster auch nach erfolgreicher Staging-Abnahme aus lassen.
+   Seine Öffnung und jeder spätere Production-Rollout benötigen getrennte
+   Freigaben.
 
 ## Read-only Preflight und Postflight
 
@@ -137,8 +204,8 @@ order by conname;
 ```
 
 Der Repository-Policytest sichert den erwarteten Migrationstext ab; maßgeblich
-für den Rollout ist zusätzlich dieser Katalog-Postflight im tatsächlichen
-Staging- beziehungsweise Production-Ziel. Falls ein PostgreSQL-Major-Upgrade
+für den Staging-Rollout ist zusätzlich der Runner-Katalog-Postflight im
+tatsächlichen Ziel. Falls ein PostgreSQL-Major-Upgrade
 die kanonische Ausgabe ändert, bleibt Readiness absichtlich `false`, bis der
 unveränderte Wertvertrag erneut geprüft und die erwartete Definition bewusst
 aktualisiert wurde.
@@ -158,7 +225,9 @@ POST /rest/v1/rpc/internal_daily_test_workspace_provisioning_ready
 
 Erwartung: exakt eine Zeile mit `ready=true`. Derselbe Aufruf mit `anon` oder
 `authenticated` muss verweigert werden. Der Daily-Provisioning-RPC muss für
-beide Browserrollen ebenfalls verweigert werden.
+beide Browserrollen ebenfalls verweigert werden. Dieser PostgREST-Nachweis und
+der nachfolgende synthetische Parallelitätstest sind separate externe
+Staging-Abnahmen; ein grüner Runner-DB-Postflight behauptet sie nicht mit.
 
 ## Funktionsabnahme
 
