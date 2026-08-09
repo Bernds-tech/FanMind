@@ -340,7 +340,21 @@ test.describe("öffentliche kritische FanMind-Flows", () => {
       page.getByText("payment_terms_version_unresolved", { exact: true }),
     ).toBeVisible();
     await expect(page.locator("form")).toHaveCount(0);
-    await expect(page.getByText("Starter Flex", { exact: true })).toHaveCount(0);
+    const pausedPrices = page.locator(
+      '[aria-label="Preise der Starter-Pakete"]',
+    );
+    await expect(
+      pausedPrices.getByText("Starter Flex", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      pausedPrices.getByText("990 € Setup + 312 €/Monat", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      pausedPrices.getByText("Starter 12", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      pausedPrices.getByText("0 € Setup + 312 €/Monat", { exact: true }),
+    ).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
