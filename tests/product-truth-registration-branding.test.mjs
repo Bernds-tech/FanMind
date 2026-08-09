@@ -67,6 +67,17 @@ test("daily registration is productive only behind the flag and exact daily sele
   assert.equal(isProductiveRegistrationEntry({ planId: "starter" }), true);
 });
 
+test("paused registration keeps Starter pricing visible without enabling paid activation", async () => {
+  const registerPage = await source("src/app/register/page.tsx");
+
+  assert.match(
+    registerPage,
+    /if \(!isPaymentTermsActivationEnabled\(\)\)[\s\S]*Starter Flex[\s\S]*990 € Setup \+ 312 €\/Monat[\s\S]*Starter 12[\s\S]*0 € Setup \+ 312 €\/Monat/u,
+  );
+  assert.match(registerPage, /PAYMENT_TERMS_ACTIVATION_BLOCK_CODE/u);
+  assert.match(registerPage, /Kostenlose Demo starten/u);
+});
+
 test("active product surfaces no longer route to retired Pilot registration", async () => {
   const [landing, register, onboarding, dashboard, admin] = await Promise.all([
     source("src/app/landing-v2/page.tsx"),

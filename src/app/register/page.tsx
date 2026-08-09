@@ -78,6 +78,31 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
                   : "Die kostenlose 60-Minuten-Demo bleibt verfügbar und löst keine Zahlung aus."}
               </p>
 
+              <div className={styles.pausedPlanSummary} aria-label={
+                language === "en"
+                  ? "Starter package prices"
+                  : "Preise der Starter-Pakete"
+              }>
+                <p>
+                  <strong>Starter Flex</strong>
+                  <span>
+                    {language === "en"
+                      ? "€990 setup + €312/month"
+                      : "990 € Setup + 312 €/Monat"}
+                  </span>
+                </p>
+                <p>
+                  <strong>
+                    {language === "en" ? "Starter 12 months" : "Starter 12"}
+                  </strong>
+                  <span>
+                    {language === "en"
+                      ? "€0 setup + €312/month"
+                      : "0 € Setup + 312 €/Monat"}
+                  </span>
+                </p>
+              </div>
+
               <div className={styles.previewActions}>
                 <a className={styles.primaryLink} href={demoHref}>
                   {language === "en" ? "Start free demo" : "Kostenlose Demo starten"}
