@@ -5,6 +5,8 @@ import { FanMindLogo } from "@/components/FanMindLogo";
 import { shouldShowBillingCheckoutAction } from "@/lib/billing";
 import { isPlatformAdminEmail } from "@/lib/admin";
 import { isDemoWorkspace, isTemporaryDemoUser } from "@/lib/demoMode";
+import { PAYMENT_TERMS_ACTIVATION_BLOCK_CODE } from "@/lib/paymentTermsActivationPolicy.mjs";
+import { hasCurrentWorkspacePaymentTermsEvidence } from "@/lib/paymentTermsServerEvidence";
 import { getPreActivationRedirect } from "@/lib/preActivation";
 import { getSupabaseServerUser, getUserWorkspaceDashboard } from "@/lib/supabase/server";
 import { createStripeCheckoutSession, getStripeConfigStatus, resolveCheckoutPlan } from "@/lib/stripeBilling";
@@ -71,7 +73,6 @@ function getBillingPlanSummary(planId?: string | null, commercialOption?: string
 
 const checkoutSteps = ["Konto erstellt", "Zahlung", "Freischaltung"];
 
-
 export default async function BillingStartPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
   const params = await searchParams;
   const { data } = await getSupabaseServerUser();
@@ -90,6 +91,10 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
   if (workspace?.billing_status === "active" || redirectTarget === "/dashboard") redirect("/dashboard");
   if (redirectTarget === "/billing/pending") redirect("/billing/pending");
   if (redirectTarget === "/billing/suspended") redirect("/billing/suspended");
+
+  const paymentTermsReady = workspace
+    ? await hasCurrentWorkspacePaymentTermsEvidence(workspace.id, data.user.id)
+    : false;
   const resolvedCheckoutPlan = workspace ? resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option) : null;
   const isCardOnlyDailyTestCheckout =
     workspace?.commercial_option === "internal_daily_test";
@@ -101,7 +106,14 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
   const checkoutReady = workspace?.commercial_option === "internal_daily_test"
     ? isInternalDailyTestStripeReady(stripe)
     : stripe.readyForCheckout;
-  const canStartCheckout = Boolean(workspace && shouldShowBillingCheckoutAction(workspace) && checkoutReady && !isDemo && resolvedCheckoutPlan);
+  const canStartCheckout = Boolean(
+    workspace &&
+      paymentTermsReady &&
+      shouldShowBillingCheckoutAction(workspace) &&
+      checkoutReady &&
+      !isDemo &&
+      resolvedCheckoutPlan,
+  );
   let checkoutUrl: string | undefined;
   let checkoutPreparationFailed = false;
 
@@ -122,6 +134,8 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
   }
 
   const plan = workspace ? getBillingPlanSummary(workspace.plan_id, workspace.commercial_option) : null;
+  const paymentTermsBlocked =
+    !paymentTermsReady || params?.error === PAYMENT_TERMS_ACTIVATION_BLOCK_CODE;
 
   return (
     <main className={styles.shell}>
@@ -183,7 +197,9 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
             <li>Rechnungs- und Zahlungsdaten werden von FanMind nicht gespeichert</li>
           </ul>
           <div className={styles.actions}>
-            {!checkoutReady && !isDemo ? (
+            {paymentTermsBlocked ? (
+              <div className={styles.infoBox}>Die verbindliche Version der Zahlungsbedingungen ist noch nicht serverseitig bestätigt. Bis dahin wird keine Stripe-Zahlungssitzung erzeugt.</div>
+            ) : !checkoutReady && !isDemo ? (
               <div className={styles.infoBox}>Die Zahlung ist aktuell noch nicht vollständig konfiguriert. Bitte kontaktiere FanMind.</div>
             ) : hasUnclearPaymentOption || params?.error === "payment-option" ? (
               <div className={styles.infoBox}>Deine Zahlungsoption konnte nicht eindeutig zugeordnet werden. Bitte kontaktiere FanMind.</div>
