@@ -81,7 +81,10 @@ npm run db:daily-workspace-provisioning:apply
 Der Postflight vertraut nicht allein dem Readiness-RPC: Er bindet beide
 Funktionen zusätzlich an Owner `postgres`, SECURITY-DEFINER, exakten
 `search_path`, Sprache, Volatilität, Tabellen-Rückgabevertrag und den
-bytegenauen Funktionskörper aus dem zuvor SHA-256-geprüften SQL-Artefakt.
+bytegenauen Funktionskörper aus dem zuvor SHA-256-geprüften SQL-Artefakt. Die
+vollständige `EXECUTE`-ACL darf je Funktion ausschließlich aus dem Owner und
+einem nicht weiterdelegierbaren, vom Owner gewährten `service_role`-Eintrag
+bestehen; jede zusätzliche Rolle blockiert den Postflight.
 
 Der Apply ist ausschließlich über den manuellen, geschützten Staging-Workflow
 erlaubt. Er verlangt `refs/heads/main`, den exakten 40-stelligen aktuellen

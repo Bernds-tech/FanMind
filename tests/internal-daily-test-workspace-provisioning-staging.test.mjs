@@ -360,7 +360,23 @@ test("postflight independently verifies functions, ACL, constraints and indexes"
     POSTFLIGHT_SQL,
     /prosrc = convert_from\([\s\S]*__FANMIND_READINESS_RPC_BODY_HEX__/u,
   );
-  assert.match(POSTFLIGHT_SQL, /function_acl\.grantee = 0/u);
+  assert.match(
+    POSTFLIGHT_SQL,
+    /select count\(\*\) = 2[\s\S]*function_acl\.privilege_type = 'EXECUTE'/u,
+  );
+  assert.match(POSTFLIGHT_SQL, /bool_and\(not function_acl\.is_grantable\)/u);
+  assert.match(
+    POSTFLIGHT_SQL,
+    /function_acl\.grantor = function_definition\.proowner/u,
+  );
+  assert.match(
+    POSTFLIGHT_SQL,
+    /function_acl\.grantee = function_definition\.proowner/u,
+  );
+  assert.match(
+    POSTFLIGHT_SQL,
+    /function_acl\.grantee = to_regrole\('service_role'\)/u,
+  );
   assert.match(POSTFLIGHT_SQL, /workspaces_commercial_option_check/u);
   assert.match(POSTFLIGHT_SQL, /pg_get_constraintdef/u);
   assert.match(POSTFLIGHT_SQL, /workspaces_owner_user_id_uidx/u);

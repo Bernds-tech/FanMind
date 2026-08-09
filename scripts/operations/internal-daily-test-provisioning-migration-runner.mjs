@@ -271,15 +271,27 @@ begin
      or exists (
        select 1
          from pg_proc as function_definition
-         cross join lateral aclexplode(
-           coalesce(
-             function_definition.proacl,
-             acldefault('f', function_definition.proowner)
-           )
-         ) as function_acl
         where function_definition.oid in (daily_rpc, readiness_rpc)
-          and function_acl.grantee = 0
-          and function_acl.privilege_type = 'EXECUTE'
+          and not coalesce((
+            select count(*) = 2
+               and bool_and(function_acl.privilege_type = 'EXECUTE')
+               and bool_and(not function_acl.is_grantable)
+               and bool_and(
+                 function_acl.grantor = function_definition.proowner
+               )
+               and count(*) filter (
+                 where function_acl.grantee = function_definition.proowner
+               ) = 1
+               and count(*) filter (
+                 where function_acl.grantee = to_regrole('service_role')
+               ) = 1
+              from aclexplode(
+                coalesce(
+                  function_definition.proacl,
+                  acldefault('f', function_definition.proowner)
+                )
+              ) as function_acl
+          ), false)
      ) then
     raise exception 'controlled_rpc_privilege_invalid';
   end if;
