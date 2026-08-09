@@ -34,6 +34,7 @@ jobs:
       STAGING_STRIPE_WEBHOOK_SECRET: ${{ secrets.FANMIND_STAGING_STRIPE_WEBHOOK_SECRET }}
       STAGING_STRIPE_PRICE_STARTER_SETUP: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_STARTER_SETUP }}
       STAGING_STRIPE_PRICE_STARTER_MONTHLY: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_STARTER_MONTHLY }}
+      STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST }}
       STAGING_STRIPE_PRICE_AI_PLUS: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_AI_PLUS }}
       STAGING_STRIPE_PRICE_AI_ULTRA: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA }}
       STAGING_OPENAI_API_KEY: ${{ secrets.FANMIND_STAGING_OPENAI_API_KEY }}
@@ -95,7 +96,7 @@ jobs:
           fi
 
           RUNNER_DIR="/opt/actions-runner-fanmind-staging"
-          if [ ! -f "$RUNNER_DIR/.runner" ] && [ -z "$STAGING_RUNNER_REGISTRATION_TOKEN" ]; then
+          if ! sudo test -f "$RUNNER_DIR/.runner" && [ -z "$STAGING_RUNNER_REGISTRATION_TOKEN" ]; then
             echo "Fresh staging runner registration token is required before any host mutation." >&2
             exit 1
           fi
@@ -174,6 +175,7 @@ jobs:
             ["STRIPE_WEBHOOK_SECRET", optional("STAGING_STRIPE_WEBHOOK_SECRET")],
             ["STRIPE_PRICE_STARTER_SETUP", optional("STAGING_STRIPE_PRICE_STARTER_SETUP")],
             ["STRIPE_PRICE_STARTER_MONTHLY", optional("STAGING_STRIPE_PRICE_STARTER_MONTHLY")],
+            ["STRIPE_PRICE_INTERNAL_DAILY_TEST", optional("STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST")],
             ["STRIPE_PRICE_AI_PLUS", optional("STAGING_STRIPE_PRICE_AI_PLUS")],
             ["STRIPE_PRICE_AI_ULTRA", optional("STAGING_STRIPE_PRICE_AI_ULTRA")],
             ["OPENAI_API_KEY", optional("STAGING_OPENAI_API_KEY")],
@@ -238,7 +240,7 @@ jobs:
             rm -f "$ARCHIVE_PATH"
           fi
 
-          if [ ! -f "$RUNNER_DIR/.runner" ]; then
+          if ! sudo test -f "$RUNNER_DIR/.runner"; then
             if [ -z "$STAGING_RUNNER_REGISTRATION_TOKEN" ]; then
               echo "Fresh runner registration token is required for first setup." >&2
               exit 1
@@ -250,7 +252,7 @@ jobs:
             )
           fi
 
-          SERVICE_NAME="$(cat "$RUNNER_DIR/.service")"
+          SERVICE_NAME="$(sudo cat "$RUNNER_DIR/.service")"
           case "$SERVICE_NAME" in
             actions.runner.Bernds-tech-FanMind.fanmind-staging-01-exoscale.service) ;;
             *)
