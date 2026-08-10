@@ -1,5 +1,5 @@
 import { isExplicitDemoWorkspace } from "@/lib/demoMode";
-import { getTaxMode, SMALL_BUSINESS_INVOICE_NOTE } from "@/lib/stripeBilling";
+import { getStripeConfigStatus, STRIPE_TAX_INVOICE_NOTE } from "@/lib/stripeBilling";
 import type { WorkspaceDashboardRow } from "@/lib/supabase/server";
 
 export type CustomerInvoiceSummary = {
@@ -46,7 +46,7 @@ function taxAmount(source: Record<string, unknown>): number | null {
 }
 
 export function getCustomerBillingTaxNote(): string | null {
-  return getTaxMode() === "small_business" ? SMALL_BUSINESS_INVOICE_NOTE : null;
+  return getStripeConfigStatus().readyForTax ? STRIPE_TAX_INVOICE_NOTE : null;
 }
 
 function sortInvoicesNewestFirst(

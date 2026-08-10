@@ -3,6 +3,7 @@ import {
   evaluateEnvironmentBoundary,
   normalizeHostname,
 } from "./environmentBoundaryPolicy.mjs";
+import { getStripeSecretKeyMode } from "./stripeKeyPolicy.mjs";
 
 const WRITE_ACKNOWLEDGEMENT = "I_UNDERSTAND_TEST_MODE_ONLY";
 
@@ -21,21 +22,13 @@ function hostnameFromUrl(value) {
   }
 }
 
-function stripeKeyMode(value) {
-  const key = clean(value);
-  if (!key) return "missing";
-  if (key.startsWith("sk_test_")) return "test";
-  if (key.startsWith("sk_live_")) return "live";
-  return "unknown";
-}
-
 export function evaluateReferralSandboxConfiguration(
   environment = {},
   { allowWrite = false } = {},
 ) {
   const errors = [];
   const warnings = [];
-  const keyMode = stripeKeyMode(environment.STRIPE_SECRET_KEY);
+  const keyMode = getStripeSecretKeyMode(environment.STRIPE_SECRET_KEY);
   const webhookConfigured = clean(environment.STRIPE_WEBHOOK_SECRET).startsWith(
     "whsec_",
   );

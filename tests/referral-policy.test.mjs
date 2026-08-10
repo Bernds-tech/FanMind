@@ -12,6 +12,7 @@ import {
   evaluateReferralWorkspaceEligibility,
   isReferralGrowthWindowOpen,
 } from "../src/lib/referralPolicy.mjs";
+import { referralCouponMatchesContract } from "../src/lib/referralStripeCouponPolicy.mjs";
 
 test("referral constants match the approved 5/20/2000 policy", () => {
   assert.equal(REFERRAL_DISCOUNT_STEP_PERCENT, 5);
@@ -59,6 +60,39 @@ test("monthly referral amounts never become negative and do not include setup fe
     Object.hasOwn(freeMonth, "setupFeeCents"),
     false,
     "Setup fees must stay outside the recurring referral calculation.",
+  );
+});
+
+test("Stripe referral coupons are valid only for the Starter Core product", () => {
+  const valid = {
+    valid: true,
+    duration: "forever",
+    percent_off: 5,
+    applies_to: { products: ["prod_starter_core"] },
+  };
+  assert.equal(
+    referralCouponMatchesContract(valid, 5, "prod_starter_core"),
+    true,
+  );
+  assert.equal(
+    referralCouponMatchesContract(
+      { ...valid, applies_to: { products: [] } },
+      5,
+      "prod_starter_core",
+    ),
+    false,
+  );
+  assert.equal(
+    referralCouponMatchesContract(
+      { ...valid, applies_to: { products: ["prod_starter_core", "prod_ai_plus"] } },
+      5,
+      "prod_starter_core",
+    ),
+    false,
+  );
+  assert.equal(
+    referralCouponMatchesContract(valid, 10, "prod_starter_core"),
+    false,
   );
 });
 

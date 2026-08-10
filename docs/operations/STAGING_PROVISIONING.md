@@ -37,7 +37,9 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Production-Projektreferenz nur als Vergleichswert, niemals Production-Schlüssel hinterlegen.
 
 3. **Stripe Test Mode**
-   - ausschließlich `sk_test_...`;
+   - bevorzugt ein eingeschränkter `rk_test_...`-Schlüssel mit den minimal
+     benötigten Lese-/Schreibrechten; `sk_test_...` bleibt nur als kompatibler
+     Übergang erlaubt;
    - eigener Test-Webhook auf `https://staging.fanmind.ch/api/stripe/webhook`;
    - fünf getrennte aktive Testpreise für den aktuellen vollständigen Staging-Lifecycle:
      - Starter Setup: exakt 990 Euro einmalig;
@@ -81,6 +83,8 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Variable `FANMIND_STAGING_STRIPE_PRICE_STARTER_SETUP` für 990 Euro einmalig;
    - Variable `FANMIND_STAGING_STRIPE_PRICE_STARTER_MONTHLY` für 312 Euro monatlich;
    - Variable `FANMIND_STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST` für 1 Euro täglich;
+   - Variable `FANMIND_STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED`, erst nach
+     tatsächlich eingerichteter Stripe-Tax-Testregistrierung exakt auf `true`;
    - Variablen `FANMIND_STAGING_STRIPE_PRICE_AI_PLUS` und
      `FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA` für aktive EUR-Monatspreise zu
      exakt 100 beziehungsweise 200 Euro im Stripe Test Mode;
@@ -192,4 +196,9 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 
 ## Nicht als erledigt markieren
 
-Das Vorhandensein der Policy, Vorlage, Deploy-Automation und dieses Runbooks ersetzt nicht die externen Ressourcen. Der Roadmap-Punkt `Produktions- und Testdaten trennen` bleibt deshalb teilweise offen, bis Host, Supabase und Stripe Test Mode tatsächlich bereitstehen.
+Das Vorhandensein der Policy, Vorlage, Deploy-Automation und dieses Runbooks
+ersetzt nicht die vollständige externe Laufzeitabnahme. Stripe-Testkatalog und
+Test-Webhook sind vorbereitet; Runtime-Secret-Bindung, isolierter Host,
+Supabase-Staging und der reale End-to-End-Nachweis müssen weiterhin gemeinsam
+grün belegt sein. Der Roadmap-Punkt `Produktions- und Testdaten trennen` bleibt
+deshalb bis zu diesem Nachweis teilweise offen.

@@ -2,6 +2,7 @@ import {
   getSupabaseHeaders,
   getSupabaseRestUrl,
 } from "@/lib/supabase/config";
+import { referralCouponMatchesContract } from "@/lib/referralStripeCouponPolicy.mjs";
 
 export type ReferralAutomationResult = {
   handled: boolean;
@@ -129,6 +130,20 @@ function couponId(percent: number): string {
   return `fanmind-referral-${Math.max(0, Math.min(percent, 100))}`;
 }
 
+function stripeResourceId(value: unknown, prefix: string): string | null {
+  if (typeof value === "string" && value.startsWith(prefix)) return value;
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as { id?: unknown }).id === "string" &&
+    (value as { id: string }).id.startsWith(prefix)
+  ) {
+    return (value as { id: string }).id;
+  }
+  return null;
+}
+
 async function stripeRequest(
   path: string,
   init: { method?: "GET" | "POST"; body?: URLSearchParams } = {},
@@ -180,9 +195,35 @@ async function ensureStripeCoupon(percent: number): Promise<{
   couponId?: string;
   error?: string;
 }> {
+  const starterMonthlyPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
+  if (!starterMonthlyPrice) {
+    return { error: "STRIPE_PRICE_STARTER_MONTHLY ist nicht konfiguriert." };
+  }
+  const price = await stripeRequest(
+    `/prices/${encodeURIComponent(starterMonthlyPrice)}`,
+  );
+  if (!price.ok) {
+    return {
+      error:
+        price.error ??
+        `Stripe Core-Preis konnte nicht geprüft werden (${price.status}).`,
+    };
+  }
+  const coreProductId = stripeResourceId(price.data.product, "prod_");
+  if (!coreProductId) {
+    return { error: "Stripe Core-Produkt konnte nicht eindeutig bestimmt werden." };
+  }
+
   const id = couponId(percent);
   const existing = await stripeRequest(`/coupons/${encodeURIComponent(id)}`);
-  if (existing.ok) return { couponId: id };
+  if (existing.ok) {
+    return referralCouponMatchesContract(existing.data, percent, coreProductId)
+      ? { couponId: id }
+      : {
+          error:
+            "Vorhandener Referral-Coupon ist nicht ausschließlich auf das Starter-Core-Produkt begrenzt.",
+        };
+  }
   if (existing.status !== 404) {
     return { error: existing.error ?? `Stripe Coupon-Prüfung fehlgeschlagen (${existing.status}).` };
   }
@@ -192,6 +233,7 @@ async function ensureStripeCoupon(percent: number): Promise<{
   params.set("duration", "forever");
   params.set("percent_off", String(percent));
   params.set("name", `FanMind Empfehlung ${percent} %`);
+  params.append("applies_to[products][]", coreProductId);
   params.set("metadata[fanmind_feature]", "referral_growth_window");
   params.set("metadata[discount_percent]", String(percent));
   const created = await stripeRequest("/coupons", {

@@ -232,7 +232,11 @@ const sections: TermsSection[] = [
         <p>
           Es gelten die auf der Website oder im Angebot angegebenen Preise und Pakete. Ergänzende
           Informationen stehen unter <Link href="/zahlungsbedingungen">/zahlungsbedingungen</Link>.
-          Derzeit wird keine Umsatzsteuer ausgewiesen. Die jeweilige steuerliche Behandlung wird auf Angebot, Checkout und Rechnung transparent ausgewiesen.
+          Alle veröffentlichten Beträge sind Nettopreise. Bei steuerpflichtigen
+          Umsätzen in Österreich werden 20 % Umsatzsteuer berechnet. Bei
+          internationalen Verkäufen bestimmt der Zahlungsprozess den
+          anwendbaren Steuersatz oder eine Reverse-Charge-Behandlung anhand der
+          Rechnungsadresse und des steuerlichen Kundenstatus.
         </p>
         <ul>
           <li><strong>Starter Flex:</strong> 990 € einmalige Einrichtung + 312 €/Monat; jederzeit zum Ende des laufenden, bereits bezahlten Abrechnungsmonats kündbar.</li>

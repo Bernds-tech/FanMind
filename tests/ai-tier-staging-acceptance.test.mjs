@@ -109,6 +109,14 @@ test("staging acceptance environment requires all independent gates", () => {
   assert.doesNotMatch(JSON.stringify(unsafe), /DO_NOT_PRINT/u);
 });
 
+test("AI tier Staging accepts a restricted Stripe test key", () => {
+  const result = evaluateAiTierStagingAcceptanceEnvironment(
+    stagingEnvironment({ STRIPE_SECRET_KEY: "rk_test_DO_NOT_PRINT" }),
+  );
+  assert.equal(result.ok, true);
+  assert.doesNotMatch(JSON.stringify(result), /DO_NOT_PRINT/u);
+});
+
 test("resource preflight requires staging identity without write gates", () => {
   assert.deepEqual(
     evaluateAiTierStagingResourceEnvironment(

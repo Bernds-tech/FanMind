@@ -6,7 +6,64 @@ import {
   mapStripeInvoiceToCustomerInvoice,
   listPolicyInvoiceResult,
 } from "../src/lib/customerBillingPolicy.mjs";
+import {
+  AUSTRIAN_STANDARD_VAT_PERCENT,
+  STRIPE_TAX_MODE,
+  evaluateStripeTaxConfiguration,
+} from "../src/lib/stripeTaxPolicy.mjs";
 import fs from "node:fs";
+
+test("Stripe Tax readiness is fail-closed until mode and registration are confirmed", () => {
+  assert.equal(evaluateStripeTaxConfiguration({}).ready, false);
+  assert.equal(
+    evaluateStripeTaxConfiguration({ FANMIND_TAX_MODE: STRIPE_TAX_MODE }).ready,
+    false,
+  );
+  const ready = evaluateStripeTaxConfiguration({
+    FANMIND_TAX_MODE: STRIPE_TAX_MODE,
+    FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED: "true",
+  });
+  assert.equal(ready.ready, true);
+  assert.equal(ready.austrianStandardVatPercent, 20);
+  assert.equal(AUSTRIAN_STANDARD_VAT_PERCENT, 20);
+});
+
+test("Starter checkout delegates methods to Stripe and enables tax collection", () => {
+  const stripeBillingSource = fs.readFileSync("src/lib/stripeBilling.ts", "utf8");
+  const billingSource = fs.readFileSync("src/lib/billing.ts", "utf8");
+
+  assert.match(
+    stripeBillingSource,
+    /export function getCheckoutPaymentMethodTypes\(\): string\[\] \{[\s\S]*return \[\];/u,
+  );
+  assert.match(stripeBillingSource, /billing_address_collection", "required"/u);
+  assert.match(stripeBillingSource, /tax_id_collection\[enabled\]", "true"/u);
+  assert.match(stripeBillingSource, /automatic_tax\[enabled\]", "true"/u);
+  assert.match(
+    stripeBillingSource,
+    /commercialOption === "internal_daily_test"[\s\S]*paymentMethodTypes: \["card"\]/u,
+  );
+  assert.match(billingSource, /planId === "starter"[\s\S]*return "card"/u);
+  assert.doesNotMatch(stripeBillingSource, /small_business|Kleinunternehmer/iu);
+});
+
+test("Stripe webhook covers tax-ID lifecycle and waits for completed refunds", () => {
+  const webhookSource = fs.readFileSync(
+    "src/app/api/stripe/webhook/route.ts",
+    "utf8",
+  );
+
+  for (const eventType of [
+    "customer.tax_id.created",
+    "customer.tax_id.updated",
+    "customer.tax_id.deleted",
+    "refund.updated",
+    "refund.failed",
+  ]) {
+    assert.match(webhookSource, new RegExp(eventType.replaceAll(".", "\\."), "u"));
+  }
+  assert.match(webhookSource, /refundSucceeded \? "refunded" : null/u);
+});
 
 test("real account without Stripe customer ID shows an empty invoice state", () => {
   const workspace = {
@@ -119,7 +176,7 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
   assert.match(billingStartSource, /workspace\?\.commercial_option === "internal_daily_test"/u);
   assert.match(
     billingStartSource,
-    /isCardOnlyDailyTestCheckout[\s\S]*\? "Kartenzahlung im nächsten Schritt"[\s\S]*: "Kartenzahlung im nächsten Schritt · SEPA optional, wenn freigeschaltet"/u,
+    /isCardOnlyDailyTestCheckout[\s\S]*\? "Kartenzahlung im nächsten Schritt"[\s\S]*: "Stripe zeigt passende internationale Karten-, Wallet- und Bankzahlarten"/u,
   );
   assert.match(
     billingStartSource,

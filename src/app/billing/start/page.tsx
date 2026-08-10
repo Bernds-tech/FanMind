@@ -100,7 +100,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
     workspace?.commercial_option === "internal_daily_test";
   const checkoutPaymentMethodText = isCardOnlyDailyTestCheckout
     ? "Kartenzahlung im nächsten Schritt"
-    : "Kartenzahlung im nächsten Schritt · SEPA optional, wenn freigeschaltet";
+    : "Stripe zeigt passende internationale Karten-, Wallet- und Bankzahlarten";
 
   const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
   const checkoutReady = workspace?.commercial_option === "internal_daily_test"
@@ -182,6 +182,7 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
                 <div><dt>Zahlungsabwicklung</dt><dd>Sichere Zahlung</dd></div>
                 <div><dt>Zahlart</dt><dd>{checkoutPaymentMethodText}</dd></div>
                 <div><dt>Datenerfassung</dt><dd>Stripe kümmert sich um die Abbuchungen.</dd></div>
+                <div><dt>Steuer</dt><dd>Nettopreis · Stripe Tax berechnet den anwendbaren Steuersatz oder Reverse Charge.</dd></div>
               </dl>
             </section>
           </div>

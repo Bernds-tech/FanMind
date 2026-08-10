@@ -20,6 +20,7 @@ import {
   type StripeBillingUpdateDecision,
   type StripeBillingWorkspaceDecision,
 } from "@/lib/stripeWorkspacePolicy.mjs";
+import { evaluateStripeTaxConfiguration } from "@/lib/stripeTaxPolicy.mjs";
 
 export type CheckoutCommercialOption =
   | "pilot_only"
@@ -27,14 +28,16 @@ export type CheckoutCommercialOption =
   | "starter_no_setup_commitment"
   | "internal_daily_test";
 
-export type TaxMode = "small_business" | "stripe_tax";
+export type TaxMode = "unconfigured" | "stripe_tax";
 
-export const SMALL_BUSINESS_INVOICE_NOTE =
-  "Umsatzsteuerfrei aufgrund Kleinunternehmerregelung gemäß § 6 Abs. 1 Z 27 UStG.";
+export const STRIPE_TAX_INVOICE_NOTE =
+  "Nettopreise. Die anwendbare Umsatzsteuer oder Reverse-Charge-Behandlung wird anhand der Rechnungsadresse und des steuerlichen Kundenstatus ermittelt.";
 
 export type StripeConfigStatus = {
   taxMode: TaxMode;
   stripeTaxEnabled: boolean;
+  taxRegistrationConfirmed: boolean;
+  readyForTax: boolean;
   taxModeLabel: string;
   invoiceNote: string | null;
   hasSecretKey: boolean;
@@ -75,19 +78,18 @@ export type StripeWorkspaceResolution =
   | { status: "retryable_error" };
 
 export function getTaxMode(): TaxMode {
-  return process.env.FANMIND_TAX_MODE === "stripe_tax"
-    ? "stripe_tax"
-    : "small_business";
+  return evaluateStripeTaxConfiguration().taxMode;
 }
 
 export function getTaxModeLabel(mode: TaxMode = getTaxMode()): string {
   return mode === "stripe_tax"
-    ? "Stripe Tax"
-    : "Kleinunternehmer / keine USt ausgewiesen";
+    ? "Stripe Tax · Nettopreise"
+    : "Steuerkonfiguration nicht freigegeben";
 }
 
 export function getStripeConfigStatus(): StripeConfigStatus {
-  const taxMode = getTaxMode();
+  const tax = evaluateStripeTaxConfiguration();
+  const taxMode = tax.taxMode;
   const hasSecretKey = Boolean(process.env.STRIPE_SECRET_KEY);
   const hasWebhookSecret = Boolean(process.env.STRIPE_WEBHOOK_SECRET);
   const hasPilotPrice = Boolean(process.env.STRIPE_PRICE_PILOT_SETUP);
@@ -104,10 +106,11 @@ export function getStripeConfigStatus(): StripeConfigStatus {
 
   return {
     taxMode,
-    stripeTaxEnabled: taxMode === "stripe_tax",
+    stripeTaxEnabled: tax.stripeTaxEnabled,
+    taxRegistrationConfirmed: tax.taxRegistrationConfirmed,
+    readyForTax: tax.ready,
     taxModeLabel: getTaxModeLabel(taxMode),
-    invoiceNote:
-      taxMode === "small_business" ? SMALL_BUSINESS_INVOICE_NOTE : null,
+    invoiceNote: tax.ready ? STRIPE_TAX_INVOICE_NOTE : null,
     hasSecretKey,
     hasWebhookSecret,
     hasPilotPrice,
@@ -122,9 +125,11 @@ export function getStripeConfigStatus(): StripeConfigStatus {
     // Checkout-Bereitschaft. Aktiv sind nur die beiden Starter-Varianten.
     readyForCheckout:
       hasSecretKey &&
+      hasWebhookSecret &&
       hasAppUrl &&
       hasStarterSetupPrice &&
-      hasStarterMonthlyPrice,
+      hasStarterMonthlyPrice &&
+      tax.ready,
     readyForWebhook: hasSecretKey && hasWebhookSecret,
   };
 }
@@ -138,11 +143,10 @@ export function getAppUrl(): string {
 }
 
 export function getCheckoutPaymentMethodTypes(): string[] {
-  const types = ["card"];
-  if (process.env.FANMIND_ENABLE_SEPA_CHECKOUT === "true") {
-    types.push("sepa_debit");
-  }
-  return types;
+  // An empty list intentionally delegates the compatible international
+  // payment-method selection to Stripe's Dashboard configuration. The
+  // internal Daily test overrides this with an explicit card-only allowlist.
+  return [];
 }
 
 export function resolveCheckoutPlan(
@@ -219,7 +223,13 @@ export async function createStripeCheckoutSession(input: {
 }): Promise<{ url?: string; id?: string; error?: string }> {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const appUrl = getAppUrl();
-  if (!secretKey || !appUrl) {
+  const stripeConfig = getStripeConfigStatus();
+  if (
+    !secretKey ||
+    !appUrl ||
+    !stripeConfig.readyForWebhook ||
+    !stripeConfig.readyForTax
+  ) {
     return {
       error:
         "Zahlung ist noch nicht aktiv konfiguriert. Bitte FanMind kontaktieren.",
@@ -242,22 +252,7 @@ export async function createStripeCheckoutSession(input: {
   if (input.userEmail) params.set("customer_email", input.userEmail);
   params.set("billing_address_collection", "required");
   params.set("tax_id_collection[enabled]", "true");
-  const taxMode = getTaxMode();
-  if (taxMode === "stripe_tax") {
-    params.set("automatic_tax[enabled]", "true");
-  } else {
-    params.set("custom_text[submit][message]", SMALL_BUSINESS_INVOICE_NOTE);
-    if (input.plan.mode === "payment") {
-      params.set("invoice_creation[enabled]", "true");
-      params.set(
-        "invoice_creation[invoice_data][footer]",
-        SMALL_BUSINESS_INVOICE_NOTE,
-      );
-    }
-    if (input.plan.mode === "subscription") {
-      params.set("subscription_data[description]", SMALL_BUSINESS_INVOICE_NOTE);
-    }
-  }
+  params.set("automatic_tax[enabled]", "true");
   input.plan.priceIds.forEach((price, index) => {
     params.set(`line_items[${index}][price]`, price);
     params.set(`line_items[${index}][quantity]`, "1");

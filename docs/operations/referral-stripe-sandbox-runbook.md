@@ -20,7 +20,7 @@ Abzunehmen sind:
 
 ## Harte Sicherheitsgrenzen
 
-1. **Nie einen `sk_live_`-Schlüssel verwenden.**
+1. **Nie einen `sk_live_`- oder `rk_live_`-Schlüssel verwenden.**
 2. **Nie gegen `https://fanmind.ch` schreibend testen.**
 3. Production behält:
 
@@ -37,7 +37,8 @@ Abzunehmen sind:
 Erforderlich sind:
 
 - Stripe CLI im Sandbox-Modus;
-- `STRIPE_SECRET_KEY=sk_test_...`;
+- bevorzugt `STRIPE_SECRET_KEY=rk_test_...` mit minimalen Rechten; ein
+  `sk_test_...`-Schlüssel ist nur als kompatibler Übergang erlaubt;
 - ein Stripe-Webhook-Secret `whsec_...` aus dem lokalen Listener;
 - separate Supabase-Sandbox mit angewendeten Referral-Migrationen;
 - nicht-produktive App-URL, zum Beispiel `http://localhost:3000` oder eine Staging-Domain;
@@ -103,7 +104,7 @@ Die Anwendung lokal oder in Staging starten. Danach mit Stripe CLI nur die relev
 
 ```bash
 stripe listen \
-  --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,payment_intent.processing,payment_intent.succeeded,payment_intent.payment_failed,invoice.paid,invoice.updated,invoice.payment_failed,customer.subscription.created,customer.subscription.updated,customer.subscription.resumed,customer.subscription.paused,customer.subscription.deleted,charge.refunded,refund.created,charge.dispute.created \
+  --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,payment_intent.processing,payment_intent.succeeded,payment_intent.payment_failed,invoice.paid,invoice.updated,invoice.payment_failed,customer.subscription.created,customer.subscription.updated,customer.subscription.resumed,customer.subscription.paused,customer.subscription.deleted,charge.refunded,refund.created,refund.updated,refund.failed,charge.dispute.created,customer.tax_id.created,customer.tax_id.updated,customer.tax_id.deleted \
   --forward-to http://localhost:3000/api/stripe/webhook
 ```
 

@@ -4,6 +4,7 @@ export type InternalDailyTestStripeConfig = {
   hasAppUrl?: boolean;
   hasInternalDailyTestPrice?: boolean;
   readyForWebhook?: boolean;
+  readyForTax?: boolean;
 };
 
 export function isInternalDailyTestStripeReady(

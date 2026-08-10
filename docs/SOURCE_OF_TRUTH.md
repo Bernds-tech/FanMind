@@ -1,6 +1,6 @@
 # FanMind Source of Truth
 
-Stand: 9. August 2026
+Stand: 10. August 2026
 
 Dieses Dokument ist die fachliche Source of Truth für FanMind. README, AGENTS.md, Landingpage, Pricing, Legal-Texte, Datenbank-Dokumentation, Roadmap und Codex-Tasks müssen mit diesem Stand synchron bleiben.
 
@@ -471,7 +471,9 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
 - Kontakt: kontakt@fanmind.ch, +43 676 5367236.
 - Angebot ausschließlich für B2B-Unternehmer.
 - `FanMind e.U.` darf erst nach bestätigter Firmenbucheintragung verwendet werden.
-- Derzeit wird keine Umsatzsteuer ausgewiesen; Checkout, Angebot und Rechnung folgen dem dokumentierten Kleinunternehmer-Steuermodus.
+- Die veröffentlichten Beträge sind Nettopreise. Für steuerpflichtige Umsätze in Österreich gilt die technische Vorgabe von 20 % Umsatzsteuer; international bestimmt Stripe Tax anhand Rechnungsadresse und steuerlichem Kundenstatus den anwendbaren Satz oder Reverse Charge.
+- Checkout ist fail-closed an `FANMIND_TAX_MODE=stripe_tax` und die getrennte Bestätigung der tatsächlich eingerichteten Stripe-Tax-Registrierung gebunden. Eine fehlende oder alte Kleinunternehmer-Konfiguration erzeugt keinen steuerfreien Checkout.
+- Die technische Entscheidung ersetzt nicht die im externen Freigaberegister weiterhin offene steuerliche Prüfung von UID, internationalen Fällen, Pflichtangaben und Aufbewahrungsfristen.
 
 ### Datenschutz- und AVV-Readiness
 

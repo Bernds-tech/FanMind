@@ -225,6 +225,8 @@ async function updateOrWarn(input: {
       ? input.fields.billing_status
       : undefined);
 
+  if (!billingStatus) return;
+
   const referralResult = await syncReferralAutomationForWorkspace({
     workspaceId,
     billingStatus,
@@ -259,6 +261,12 @@ export async function POST(request: NextRequest) {
     eventType: event.type,
     paymentStatus: stringField(object, "payment_status"),
     subscriptionStatus: stringField(object, "status"),
+    refundStatus:
+      event.type === "refund.created" ||
+      event.type === "refund.updated" ||
+      event.type === "refund.failed"
+        ? stringField(object, "status")
+        : undefined,
     attemptCount: numberField(object, "attempt_count"),
     graceExpired:
       event.type === "invoice.payment_failed"
@@ -441,8 +449,15 @@ export async function POST(request: NextRequest) {
   if (
     event.type === "charge.refunded" ||
     event.type === "refund.created" ||
+    event.type === "refund.updated" ||
+    event.type === "refund.failed" ||
     event.type === "charge.dispute.created"
   ) {
+    const refundStatus = stringField(object, "status");
+    const refundSucceeded =
+      event.type === "charge.refunded" ||
+      event.type === "charge.dispute.created" ||
+      refundStatus === "succeeded";
     await update(
       {
         stripe_customer_id: stringField(object, "customer"),
@@ -450,10 +465,31 @@ export async function POST(request: NextRequest) {
         billing_note:
           event.type === "charge.dispute.created"
             ? "Stripe-Zahlung wurde beanstandet; Referral wird geprüft."
-            : "Stripe-Zahlung wurde rückerstattet; Referral wird deaktiviert.",
+            : refundSucceeded
+              ? "Stripe-Zahlung wurde rückerstattet; Referral wird deaktiviert."
+              : refundStatus === "failed" || refundStatus === "canceled"
+                ? "Stripe-Rückerstattung wurde nicht abgeschlossen; Referral bleibt unverändert."
+                : "Stripe-Rückerstattung wird verarbeitet; Referral bleibt bis zur Bestätigung unverändert.",
       },
-      "refunded",
+      refundSucceeded ? "refunded" : null,
     );
+  }
+
+  if (
+    event.type === "customer.tax_id.created" ||
+    event.type === "customer.tax_id.updated" ||
+    event.type === "customer.tax_id.deleted"
+  ) {
+    const verification = objectField(object, "verification");
+    const verificationStatus = stringField(verification, "status");
+    const billingNote = event.type === "customer.tax_id.deleted"
+      ? "Stripe-Steuer-ID wurde entfernt."
+      : verificationStatus === "verified"
+        ? "Stripe-Steuer-ID wurde verifiziert."
+        : verificationStatus === "pending"
+          ? "Stripe-Steuer-ID-Prüfung ist ausstehend."
+          : "Stripe-Steuer-ID ist noch nicht verifiziert.";
+    await update({ billing_note: billingNote }, null);
   }
 
   return NextResponse.json({ received: true });

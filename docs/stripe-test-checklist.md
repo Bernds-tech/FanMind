@@ -1,4 +1,4 @@
-# Stripe-Test-Checkliste für SEPA-Zahlungen
+# Stripe-Test-Checkliste für internationale wiederkehrende Zahlungen
 
 ## Benötigte Stripe Webhook Events
 
@@ -13,6 +13,13 @@
 - `invoice.payment_failed`
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
+- `charge.refunded`
+- `refund.created`
+- `refund.updated`
+- `charge.dispute.created`
+- `customer.tax_id.created`
+- `customer.tax_id.updated`
+- `customer.tax_id.deleted`
 
 ## Benötigte Sandbox-ENV
 
@@ -25,6 +32,8 @@
 - `STRIPE_PRICE_AI_ULTRA`
 - `NEXT_PUBLIC_APP_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `FANMIND_TAX_MODE=stripe_tax`
+- `FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED=true`
 
 ## Erwarteter Testablauf
 
@@ -45,3 +54,9 @@
 - `payment_intent.succeeded`, `checkout.session.async_payment_succeeded` und `invoice.paid` dürfen auf `active` setzen, aber keine `manual_suspended`-Sperre überschreiben.
 - Fehlgeschlagene asynchrone SEPA-Zahlungen setzen `payment_failed` und dokumentieren Retry-/Grace-Signale.
 - FanMind speichert keine IBANs oder Bankdaten; diese bleiben ausschließlich bei Stripe.
+- Starter übergibt keine feste Zahlungsmethodenliste. Stripe zeigt nur die im Dashboard aktivierten und für Land, Gerät, Währung sowie Abo kompatiblen Methoden (Karten, Wallets und geeignete Bankzahlarten).
+- Das interne 1-Euro-Daily-Testabo bleibt ausdrücklich nur Karte.
+- Der bevorzugte Testschlüssel beginnt mit `rk_test_` und besitzt nur Checkout-Sessions/Subscriptions/Coupons Schreiben sowie Prices/Invoices Lesen. `sk_test_` bleibt nur als kompatibler Übergang erlaubt; `sk_live_` und `rk_live_` sind in Staging gesperrt.
+- Alle Preise sind in Stripe exklusive Steuer. Automatic Tax und UID-Erfassung sind aktiv; ohne bestätigte Testregistrierung startet kein Checkout.
+- Eine ausstehende Rückerstattung deaktiviert Referral nicht. Erst `succeeded`, `charge.refunded` oder ein Dispute gilt als endgültige Deaktivierung.
+- Automatisch erzeugte Referral-Coupons müssen über `applies_to.products` ausschließlich auf das Produkt des 312-Euro-Starter-Core-Preises begrenzt sein. Setup, KI Plus, KI Ultra und spätere Add-ons bleiben ungekürzt.

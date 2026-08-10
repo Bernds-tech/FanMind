@@ -8,6 +8,7 @@ import {
   decideAiTierStripeLifecycleEvent,
   getAiTierStripePriceAllowlistStatus,
 } from "./aiTierStripeLifecycle.mjs";
+import { isStripeTestSecretKey } from "./stripeKeyPolicy.mjs";
 
 export const AI_TIER_STAGING_ACCEPTANCE_CONFIRMATION =
   "run-ai-tier-staging-acceptance";
@@ -16,7 +17,6 @@ export const AI_TIER_STAGING_RESOURCE_CONFIRMATION =
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
-const STRIPE_SECRET_PATTERN = /^sk_test_[A-Za-z0-9_]+$/u;
 const STRIPE_ID_PATTERN = /^(?:evt|sub|si|price)_[A-Za-z0-9_]+$/u;
 
 function clean(value) {
@@ -67,7 +67,7 @@ export function evaluateAiTierStagingAcceptanceEnvironment(
   ) {
     errors.push("synthetic_workspace");
   }
-  if (!STRIPE_SECRET_PATTERN.test(clean(environment.STRIPE_SECRET_KEY))) {
+  if (!isStripeTestSecretKey(environment.STRIPE_SECRET_KEY)) {
     errors.push("stripe_test_mode");
   }
 
@@ -117,7 +117,7 @@ export function evaluateAiTierStagingResourceEnvironment(
   ) {
     errors.push("synthetic_workspace");
   }
-  if (!STRIPE_SECRET_PATTERN.test(clean(environment.STRIPE_SECRET_KEY))) {
+  if (!isStripeTestSecretKey(environment.STRIPE_SECRET_KEY)) {
     errors.push("stripe_test_mode");
   }
 

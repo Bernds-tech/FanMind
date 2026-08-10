@@ -33,7 +33,7 @@
     },
     "taxMode": {
       "status": "pending",
-      "value": "small_business",
+      "value": "stripe_tax_net_prices_at_20_percent_austria",
       "confirmedAt": null,
       "evidenceRef": null
     }
