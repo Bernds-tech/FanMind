@@ -98,6 +98,10 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
     workflow,
     /FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED", confirmed\("STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED"\)/u,
   );
+  assert.match(
+    workflow,
+    /sudo stat -c '%U:%G:%a' \/var\/www\/fanmind-staging\/\.env\.production/u,
+  );
   assert.match(workflow, /fanmind-staging:fanmind-staging:600/);
   assert.match(workflow, /fanmind-staging-01-exoscale/);
   assert.match(workflow, /--labels fanmind-staging,exoscale/);

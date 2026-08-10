@@ -215,7 +215,7 @@ jobs:
           rm -f "$ENV_TMP"
           trap - EXIT
 
-          test "$(stat -c '%U:%G:%a' /var/www/fanmind-staging/.env.production)" = "fanmind-staging:fanmind-staging:600"
+          test "$(sudo stat -c '%U:%G:%a' /var/www/fanmind-staging/.env.production)" = "fanmind-staging:fanmind-staging:600"
           echo "STAGING_ENV_FILE=private"
 
       - name: Install isolated HTTP virtual host
