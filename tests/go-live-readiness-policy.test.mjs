@@ -187,7 +187,11 @@ test("phase 4 stays technically complete while sales handoff waits for phase 7",
   );
   assert.match(
     sourceTruth,
-    /Web-Staging-Runtime mit eigenem `fanmind-staging`-Runner auf dem bestehenden[\s\S]*Exoscale-Host/u,
+    /Web-Staging-[\s\S]*Runtime mit eigenem `fanmind-staging`-Runner[\s\S]*DNS-\/TLS-Bindung[\s\S]*Exoscale-Ziel sind vorhanden/u,
+  );
+  assert.match(
+    sourceTruth,
+    /Extern noch einzurichten beziehungsweise[\s\S]*Stripe Sandbox mit eigenen Preisen\/Webhooks/u,
   );
   assert.doesNotMatch(sourceTruth, /Phase 4 – Erledigt \/ Verkaufsstart freigegeben/u);
 });

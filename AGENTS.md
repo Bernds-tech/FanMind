@@ -159,15 +159,20 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   transaction and must prove cleanup. Never send a push, use a real Expo token,
   enable delivery, expose SQL diagnostics or secrets, or let a normal Web
   deploy invoke the migration runner.
-- Database trigger-function hardening has its own checksum-pinned,
-  Staging-only control path under `supabase/controlled/`. A normal Web deploy
-  and generic `supabase db push` must never apply it. Keep offline check,
-  read-only verify and explicitly confirmed apply separate; bind both manual
-  database workflows to `main`, the exact reviewed commit, the protected
-  `staging` environment, TLS and targets proven distinct from Production.
-  Postflight must prove the fixed `search_path` and absence of `EXECUTE` for
-  `PUBLIC`, `anon` and `authenticated`, including the retired optional
-  retention trigger when it still exists. Output only fixed redacted codes.
+- Database trigger-function hardening has its own checksum-pinned controlled
+  SQL under `supabase/controlled/`. A normal Web deploy and generic
+  `supabase db push` must never apply it. Keep the proven Staging control and
+  any Production control fully separate. The Production Web deploy may only
+  install root-owned, non-enabled control artifacts; it must never start a
+  verify or apply. Bind a Production action to `main`, the exact live reviewed
+  commit, the protected `production` environment, the Production runner and
+  explicit action-specific confirmation. Require the full read-only Production
+  audit before and after it. Postflight must prove the fixed `search_path` and
+  absence of `EXECUTE` for `PUBLIC`, `anon` and `authenticated`, including the
+  retired optional retention trigger when it still exists. Output only fixed
+  redacted codes. A Production apply remains a separate database mutation and
+  requires renewed explicit approval; preparing, merging or deploying its
+  control path is not approval to execute it.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 

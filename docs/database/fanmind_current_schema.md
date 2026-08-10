@@ -24,9 +24,14 @@ Alle produktiven Daten sind workspace-scoped oder user-scoped.
 - Reine Triggerfunktionen sind keine Browser-RPCs. Die kontrollierte,
   checksum-gebundene Härtung ihrer Suchpfade und `EXECUTE`-Rechte liegt unter
   `supabase/controlled/20260806203023_harden_trigger_function_privileges.sql`.
-  Sie wird ausschließlich über den Staging-Pfad in
-  `docs/operations/TRIGGER_FUNCTION_HARDENING_STAGING.md` angewendet; ein
-  generisches `supabase db push` und der Web-Deploy dürfen sie nicht ausführen.
+  Sie wurde über den getrennten Staging-Pfad in
+  `docs/operations/TRIGGER_FUNCTION_HARDENING_STAGING.md` abgenommen. Der
+  separate Production-Kontrollweg steht in
+  `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`; ein normaler
+  Deploy installiert dort nur nicht aktivierte Kontrollartefakte. Ein
+  generisches `supabase db push`, der Web-Deploy selbst und ein Merge dürfen
+  die SQL nicht ausführen. Der Production-Apply bleibt bis zu einer erneuten
+  ausdrücklichen Freigabe offen.
 
 ## 2. Auth-/Workspace-Kern
 

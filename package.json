@@ -72,12 +72,14 @@
     "db:trigger-function-hardening:check": "node scripts/operations/trigger-function-hardening-migration-runner.mjs --check",
     "db:trigger-function-hardening:verify": "node scripts/operations/trigger-function-hardening-migration-runner.mjs --verify",
     "db:trigger-function-hardening:apply": "node scripts/operations/trigger-function-hardening-migration-runner.mjs --apply",
+    "db:trigger-function-hardening:production:check": "node scripts/operations/trigger-function-hardening-production-runner.mjs --check",
     "db:daily-workspace-provisioning:check": "node scripts/operations/internal-daily-test-provisioning-migration-runner.mjs --check",
     "db:daily-workspace-provisioning:verify": "node scripts/operations/internal-daily-test-provisioning-migration-runner.mjs --verify",
     "db:daily-workspace-provisioning:apply": "node scripts/operations/internal-daily-test-provisioning-migration-runner.mjs --apply",
     "test:inbox": "node --test tests/inbox-queue-policy.test.mjs tests/inbox-queue-ui-policy.test.mjs tests/inbox-human-handoff-policy.test.mjs",
     "test:website-chat": "node --test tests/website-chat-policy.test.mjs tests/website-chat-foundation.test.mjs tests/website-chat-ingestion.test.mjs tests/website-chat-widget.test.mjs",
-    "test:release-integrations": "npm run test:website-chat && npm run test:inbox"
+    "test:production-controls": "node --test tests/trigger-function-hardening-production.test.mjs",
+    "test:release-integrations": "npm run test:website-chat && npm run test:inbox && npm run test:production-controls"
   },
   "dependencies": {
     "next": "16.3.0",
