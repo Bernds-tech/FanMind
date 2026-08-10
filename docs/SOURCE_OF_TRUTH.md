@@ -251,6 +251,17 @@ zwingende externe Freigabe noch fehlt.
   eine Owner-Membership sind nachgewiesen; die Readiness-Funktion liefert
   unter dem vorgesehenen `service_role`-Claim `ready=true`. Production wurde
   dafür nicht verändert.
+- Triggerfunktions-Härtung: Der checksum-gebundene Staging-Pfad ist abgenommen.
+  Der getrennte Production-Kontrollpfad ist vorbereitet: Der normale Deploy
+  installiert ausschließlich root-eigene, nicht aktivierte Artefakte. Verify
+  und Apply sind manuell, aktionsspezifisch bestätigt, an `main`, den exakten
+  Live-Commit, den Production-Runner und das geschützte `production`-
+  Environment gebunden; davor und danach muss der vollständige read-only
+  Production-Audit grün sein. In Production sind derzeit drei veränderliche
+  Triggerfunktions-Suchpfade und beim optionalen alten Retention-Trigger zwei
+  Browser-`EXECUTE`-Warnungen offen. Production-DDL wurde nicht ausgeführt und
+  bleibt bis zu einer erneuten ausdrücklichen Freigabe gesperrt. Runbook:
+  `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`.
 - Umgebungs-Governance: schreibende Remote-Tests sind außerhalb eindeutig identifizierter Staging- oder Testumgebungen blockiert.
 - Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert. Ein eigener manueller `main`-gebundener Read-only-Ressourcencheck prüft auf einem getrennten `fanmind-restore`-Runner den isolierten Zielhost und die Prüfsumme eines verschlüsselten Full-Backups, ohne Datenbankverbindung, Entschlüsselung oder Schreibfreigabe. Nach einem echten isolierten Restore erzeugt der Runner nur bei 5/5 vorhandenen Kerntabellen, 5/5 aktivierter RLS und 5/5 Policy-Abdeckung einen separaten privaten, SHA-gebundenen Datenbank-Postcheck-Beleg; manuelle Schema-/RLS-Freigaben akzeptiert Evidence-Schema 5 nicht mehr. Der tatsächliche Restore-, Storage-, Server-Konfigurations- und Cleanup-Nachweis bleibt bis zum externen Lauf offen.
 - Mobile-Release: Ein eigener manueller `main`-gebundener
@@ -333,13 +344,13 @@ zwingende externe Freigabe noch fehlt.
   Meta-Kontoverbindung, Analyse, App-Review-Einreichung und Production-
   Migration bleiben davon getrennt und deaktiviert. Runbook:
   `docs/operations/META_CONTENT_STAGING_MIGRATION.md`.
-- Das separate Supabase-Staging-Projekt ist vorhanden. Extern noch
-  einzurichten beziehungsweise nachzuweisen sind die getrennte
-  Web-Staging-Runtime mit eigenem `fanmind-staging`-Runner auf dem bestehenden
-  Exoscale-Host, Stripe Test Mode mit eigenen Preisen/Webhooks sowie die
+- Das separate Supabase-Staging-Projekt sowie die getrennte Web-Staging-
+  Runtime mit eigenem `fanmind-staging`-Runner, eigener DNS-/TLS-Bindung und
+  eigenem Exoscale-Ziel sind vorhanden. Extern noch einzurichten beziehungsweise
+  nachzuweisen sind Stripe Sandbox mit eigenen Preisen/Webhooks sowie die
   dauerhaften synthetischen E2E-Identitäten für Browser-/Billing-Abnahmen.
 
-Die noch fehlende Web- und Stripe-Staging-Abnahme blockiert nicht den read-only
+Die noch fehlende Stripe-Staging-Abnahme blockiert nicht den read-only
 Produktions-Smoke-Test. Sie bleibt Voraussetzung für Referral-Lifecycle- und
 andere schreibende Nicht-Production-Tests. Der Restore-Drill verwendet niemals
 die bereits migrierte Staging-Datenbank, sondern ein eigenes leeres Wegwerfziel.

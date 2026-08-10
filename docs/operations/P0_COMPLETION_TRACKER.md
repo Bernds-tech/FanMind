@@ -182,8 +182,10 @@ Diese Punkte benötigen einen eigenen externen oder produktiven Nachweis und dü
 - tatsächlicher Production-Commit und Live-HTML nach dem Merge;
 - signierter Android-Build und iOS-TestFlight-Build;
 - Apple-/Google-Store-Konten und Signing Credentials;
-- eigener Web-Staging-Host und Stripe Test Mode; das separate
-  Supabase-Staging-Projekt ist vorhanden und darf nicht als Restore-Ziel dienen;
+- Stripe Sandbox mit eigenen Preisen/Webhooks und dauerhafte synthetische
+  Billing-Identitäten; Web-Staging-Host, eigener Runner, DNS/TLS und das
+  separate Supabase-Staging-Projekt sind vorhanden. Die Staging-Datenbank darf
+  nicht als Restore-Ziel dienen;
 - externe Rechts- und Steuerfreigabe;
 - isolierter Restore-Drill und belegte Offsite-Retention.
 

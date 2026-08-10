@@ -20,15 +20,15 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
   `staging.fanmind.ch` verwendet;
 - Policy-Tests, die Production-Ziele und unvollständige Freigaben blockieren.
 
-## Extern einmalig einzurichten
+## Externer Ressourcenstand
 
-1. **Staging-Webgrenze auf dem bestehenden Exoscale-Server**
+1. **Staging-Webgrenze auf dem bestehenden Exoscale-Server – erledigt**
    - eigener HTTPS-Host `staging.fanmind.ch`;
    - eigener Linux-Nutzer, eigener Prozess, eigener Release-Pfad und getrennte ENV-Datei;
    - kein Alias auf die Production-Anwendung und keine gemeinsame Runtime;
    - kein zweiter Server: ein Ausfall oder eine Fehlkonfiguration des gemeinsamen Hosts bleibt ein geteiltes Infrastrukturrisiko.
 
-2. **Supabase Staging**
+2. **Supabase Staging – erledigt**
    - neues eigenes Supabase-Projekt;
    - eigenes Auth, Datenbank, Storage und Service-Role-Key;
    - `FANMIND_TARGET_SUPABASE_PROJECT_REF` muss exakt der Projektreferenz in der Supabase-URL entsprechen;
@@ -36,7 +36,7 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - ausschließlich synthetische Kontakte, Nachrichten und Dateien;
    - Production-Projektreferenz nur als Vergleichswert, niemals Production-Schlüssel hinterlegen.
 
-3. **Stripe Test Mode**
+3. **Stripe Sandbox – offen**
    - bevorzugt ein eingeschränkter `rk_test_...`-Schlüssel mit den minimal
      benötigten Lese-/Schreibrechten; `sk_test_...` bleibt nur als kompatibler
      Übergang erlaubt;
@@ -50,7 +50,7 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Stripe-Testkarten und ausschließlich synthetische Testkunden/-subscriptions;
    - keine Live-Kunden, Live-Zahlungsmittel oder Live-Subscription-IDs.
 
-4. **Staging-Runtime und Runner**
+4. **Staging-Runtime und Runner – erledigt**
    - eigener Self-Hosted Runner mit dem exklusiven Label `fanmind-staging`, niemals der Production-Runner;
    - eigener Release-Pfad unter `/var/www/fanmind-staging`;
    - eigene, nicht versionierte `/var/www/fanmind-staging/.env.production` mit Dateimodus `0600` und ausschließlich Staging-Werten;

@@ -37,10 +37,10 @@ Betriebswahrheit steht in `docs/SOURCE_OF_TRUTH.md`.
 - Externe Alarmierung per E-Mail ist noch nicht produktiv aktiviert. Der
   technische Notification-Lifecycle ist vorhanden; Aktivierung benötigt
   bestätigte Empfänger-, Datenschutz- und Betriebsregeln.
-- Eigenständige Staging-Ressourcen müssen real bereitgestellt und abgenommen
-  werden: separater HTTPS-Host, separates Supabase-Projekt, Stripe Test Mode,
-  synthetische Testdaten und getrennte Identitäten. Die vorhandene Policy und
-  Automation ersetzen diese Ressourcen nicht.
+- Separater HTTPS-Host, separates Supabase-Projekt, Staging-Runner sowie DNS
+  und TLS sind real bereitgestellt. Offen bleiben Stripe Sandbox mit eigenen
+  Preisen/Webhooks, synthetische Testdaten und getrennte Billing-Identitäten.
+  Die vorhandene Policy und Automation ersetzen diese Ressourcen nicht.
 - Der tatsächliche isolierte Restore muss gegen die geschützte
   `restore-drill`-Umgebung ausgeführt werden. Datenbank-, Storage-,
   Server-Konfigurations- und Cleanup-Nachweise bleiben bis zu diesem externen

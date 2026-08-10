@@ -18,9 +18,12 @@ Die Datei liegt absichtlich nicht unter `supabase/migrations/`. Deshalb darf
 ein generisches `supabase db push` sie niemals anwenden. Auch der normale Web-
 Deploy ruft weder den Runner noch einen der beiden Staging-Workflows auf.
 
-Es gibt keinen Production-Apply in diesem Pfad. Ein späterer Production-
-Schritt benötigt einen getrennten, ausdrücklich freigegebenen und erneut
-geprüften Kontrollweg.
+Es gibt keinen Production-Apply in diesem Pfad. Der getrennte Production-
+Kontrollweg ist unter
+`docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md` dokumentiert. Sein
+normaler Deploy installiert nur nicht aktivierte Kontrollartefakte; ein
+Production-Apply bleibt eine eigene, erneut ausdrücklich freizugebende
+Datenbankmutation.
 
 ## Kontrollierte Objekte
 
