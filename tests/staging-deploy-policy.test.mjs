@@ -110,6 +110,18 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
     workflow,
     /04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d/,
   );
+  assert.match(
+    workflow,
+    /sudo install -o "\$RUNNER_USER" -g "\$RUNNER_USER" -m 0600 "\$DOWNLOAD_PATH" "\$PRIVATE_ARCHIVE_PATH"/u,
+  );
+  assert.match(
+    workflow,
+    /sudo -u "\$RUNNER_USER" -H tar -xzf "\$PRIVATE_ARCHIVE_PATH" -C "\$RUNNER_DIR"/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /sudo -u "\$RUNNER_USER" -H tar -xzf "\$RUNNER_TEMP/u,
+  );
   assert.match(workflow, /STAGING_SECRETS_OUTPUT=false/);
   assert.doesNotMatch(workflow, /\.env\.production.*\/var\/www\/fanmind(?:["'\s]|$)/);
   assert.doesNotMatch(workflow, /pm2 (?:delete|restart|reload|start).*fanmind(?:["'\s]|$)/);

@@ -244,11 +244,14 @@ jobs:
           sudo install -d -o "$RUNNER_USER" -g "$RUNNER_USER" -m 0750 "$RUNNER_DIR"
 
           if [ ! -x "$RUNNER_DIR/config.sh" ]; then
-            ARCHIVE_PATH="$RUNNER_TEMP/$RUNNER_ARCHIVE"
-            curl --fail --silent --show-error --location --output "$ARCHIVE_PATH" "$RUNNER_URL"
-            printf '%s  %s\n' "$RUNNER_SHA256" "$ARCHIVE_PATH" | sha256sum --check --status
-            sudo -u "$RUNNER_USER" -H tar -xzf "$ARCHIVE_PATH" -C "$RUNNER_DIR"
-            rm -f "$ARCHIVE_PATH"
+            DOWNLOAD_PATH="$RUNNER_TEMP/$RUNNER_ARCHIVE"
+            PRIVATE_ARCHIVE_PATH="$RUNNER_DIR/$RUNNER_ARCHIVE"
+            curl --fail --silent --show-error --location --output "$DOWNLOAD_PATH" "$RUNNER_URL"
+            printf '%s  %s\n' "$RUNNER_SHA256" "$DOWNLOAD_PATH" | sha256sum --check --status
+            sudo install -o "$RUNNER_USER" -g "$RUNNER_USER" -m 0600 "$DOWNLOAD_PATH" "$PRIVATE_ARCHIVE_PATH"
+            rm -f "$DOWNLOAD_PATH"
+            sudo -u "$RUNNER_USER" -H tar -xzf "$PRIVATE_ARCHIVE_PATH" -C "$RUNNER_DIR"
+            sudo -u "$RUNNER_USER" -H rm -f "$PRIVATE_ARCHIVE_PATH"
           fi
 
           if ! sudo test -f "$RUNNER_DIR/.runner"; then
