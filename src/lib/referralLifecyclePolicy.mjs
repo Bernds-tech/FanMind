@@ -55,6 +55,7 @@ export function billingStatusFromInvoiceFailure({
  *   eventType?: string | null,
  *   paymentStatus?: string | null,
  *   subscriptionStatus?: string | null,
+ *   refundStatus?: string | null,
  *   attemptCount?: number | null,
  *   graceExpired?: boolean
  * }} [input]
@@ -64,6 +65,7 @@ export function referralBillingStatusFromStripeEvent({
   eventType,
   paymentStatus,
   subscriptionStatus,
+  refundStatus,
   attemptCount,
   graceExpired = false,
 } = {}) {
@@ -111,12 +113,16 @@ export function referralBillingStatusFromStripeEvent({
 
   if (type === "customer.subscription.deleted") return "cancelled";
 
-  if (
-    type === "charge.refunded" ||
-    type === "refund.created" ||
-    type === "charge.dispute.created"
-  ) {
+  if (type === "charge.refunded" || type === "charge.dispute.created") {
     return "refunded";
+  }
+
+  if (
+    type === "refund.created" ||
+    type === "refund.updated" ||
+    type === "refund.failed"
+  ) {
+    return clean(refundStatus) === "succeeded" ? "refunded" : null;
   }
 
   return null;

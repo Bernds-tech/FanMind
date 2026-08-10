@@ -3,7 +3,8 @@ export function isInternalDailyTestStripeReady(config) {
     && config?.hasWebhookSecret === true
     && config?.hasAppUrl === true
     && config?.hasInternalDailyTestPrice === true
-    && config?.readyForWebhook === true;
+    && config?.readyForWebhook === true
+    && config?.readyForTax === true;
 }
 
 export function isInternalDailyTestAdmissionReady(input) {

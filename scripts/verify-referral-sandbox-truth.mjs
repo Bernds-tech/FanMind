@@ -10,6 +10,7 @@ const files = [
   "src/lib/environmentBoundaryPolicy.mjs",
   "src/lib/referralLifecyclePolicy.mjs",
   "src/lib/referralSandboxPolicy.mjs",
+  "src/lib/stripeKeyPolicy.mjs",
   "src/app/api/stripe/webhook/route.ts",
   "scripts/environment-boundary-preflight.mjs",
   "scripts/referral-sandbox-preflight.mjs",
@@ -100,8 +101,8 @@ requireText(
   "Der Stripe-Webhook muss das getestete Lifecycle-Mapping verwenden.",
 );
 requireText(
-  "src/lib/referralSandboxPolicy.mjs",
-  'key.startsWith("sk_live_")',
+  "src/lib/stripeKeyPolicy.mjs",
+  'key.startsWith("sk_live_") || key.startsWith("rk_live_")',
   "Der Preflight muss Live-Stripe-Schlüssel erkennen und blockieren.",
 );
 requireText(

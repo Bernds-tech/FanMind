@@ -34,6 +34,8 @@ function stagingEnvironment(overrides = {}) {
     FANMIND_NON_PRODUCTION_WRITE_ACK: "",
     STRIPE_SECRET_KEY: stagingSecrets.stripe,
     STRIPE_WEBHOOK_SECRET: stagingSecrets.webhook,
+    FANMIND_TAX_MODE: "stripe_tax",
+    FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED: "true",
     OPENAI_API_KEY: "",
     FANMIND_ENABLE_REFERRAL_BILLING: "false",
     FANMIND_PUBLIC_DEMO_ENABLED: "false",
@@ -57,7 +59,7 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   ]);
 
   assert.match(script, /FANMIND_RUNTIME_ENVIRONMENT muss staging sein/);
-  assert.match(script, /sk_test_/);
+  assert.match(script, /isStripeTestSecretKey/);
   assert.match(script, /FANMIND_ENABLE_NON_PRODUCTION_WRITES/);
   assert.match(script, /FANMIND_ENABLE_REFERRAL_BILLING/);
   assert.match(script, /FANMIND_TARGET_SUPABASE_PROJECT_REF/);
@@ -69,6 +71,10 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/u);
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/);
   assert.match(workflow, /FANMIND_ENABLE_REFERRAL_BILLING: 'false'/);
+  assert.match(
+    workflow,
+    /FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED: \$\{\{ vars\.FANMIND_STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED \}\}/u,
+  );
   assert.match(workflow, /npm run staging:preflight/);
   assert.match(
     workflow,
@@ -81,6 +87,19 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   assert.match(versionRoute, /runtimeEnvironment/);
   assert.match(smoke, /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT/);
   assert.match(smoke, /validateVersionPayload/);
+});
+
+test("staging readiness accepts a restricted Stripe test key", async () => {
+  const { stdout, stderr } = await execFileAsync(
+    process.execPath,
+    [scriptPath],
+    {
+      env: stagingEnvironment({
+        STRIPE_SECRET_KEY: "rk_test_SyntheticRestricted1234567890",
+      }),
+    },
+  );
+  assert.match(`${stdout}\n${stderr}`, /STAGING_STRIPE_MODE=test/);
 });
 
 test("staging readiness accepts an exact URL-to-target binding without exposing values", async () => {
@@ -96,6 +115,7 @@ test("staging readiness accepts an exact URL-to-target binding without exposing 
   assert.match(output, /STAGING_SUPABASE_TARGET=separate/);
   assert.match(output, /STAGING_SUPABASE_REF_BINDING=matching/);
   assert.match(output, /STAGING_STRIPE_MODE=test/);
+  assert.match(output, /STAGING_STRIPE_TAX=ready/);
   assert.match(output, /SECRETS_WURDEN_NICHT_AUSGEGEBEN=true/);
   assert.match(output, /STAGING_READINESS=OK/);
 
@@ -136,7 +156,7 @@ test("staging runbook forbids production data and documents external dependencie
   assert.match(runbook, /keine Live-Kunden/);
   assert.match(runbook, /exakt der Projektreferenz in der Supabase-URL entsprechen/);
   assert.match(runbook, /runtimeEnvironment.*staging/);
-  assert.match(runbook, /ersetzt nicht die externen Ressourcen/);
+  assert.match(runbook, /ersetzt nicht die vollständige externe Laufzeitabnahme/);
   assert.match(runbook, /Produktions- und Testdaten trennen/);
 });
 

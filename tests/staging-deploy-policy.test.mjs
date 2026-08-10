@@ -66,7 +66,7 @@ test("staging documentation keeps external provisioning and deployment boundarie
   assert.match(runbook, /fanmind-staging/);
   assert.match(runbook, /\/var\/www\/fanmind-staging\/\.env\.production/);
   assert.match(runbook, /deploy-staging-only/);
-  assert.match(runbook, /ersetzt nicht die externen Ressourcen/);
+  assert.match(runbook, /ersetzt nicht die vollständige externe Laufzeitabnahme/);
   assert.match(separation, /\.github\/workflows\/deploy-staging\.yml/);
   assert.match(separation, /niemals auf dem Production-Runner/);
 });
@@ -90,6 +90,14 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
   assert.match(workflow, /STRIPE_PRICE_STARTER_MONTHLY/);
   assert.match(workflow, /STRIPE_PRICE_AI_PLUS/);
   assert.match(workflow, /STRIPE_PRICE_AI_ULTRA/);
+  assert.match(
+    workflow,
+    /STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED: \$\{\{ vars\.FANMIND_STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED", confirmed\("STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED"\)/u,
+  );
   assert.match(workflow, /fanmind-staging:fanmind-staging:600/);
   assert.match(workflow, /fanmind-staging-01-exoscale/);
   assert.match(workflow, /--labels fanmind-staging,exoscale/);

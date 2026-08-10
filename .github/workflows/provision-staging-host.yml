@@ -37,6 +37,7 @@ jobs:
       STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST }}
       STAGING_STRIPE_PRICE_AI_PLUS: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_AI_PLUS }}
       STAGING_STRIPE_PRICE_AI_ULTRA: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA }}
+      STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED: ${{ vars.FANMIND_STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED }}
       STAGING_OPENAI_API_KEY: ${{ secrets.FANMIND_STAGING_OPENAI_API_KEY }}
       STAGING_RUNNER_REGISTRATION_TOKEN: ${{ secrets.FANMIND_STAGING_RUNNER_REGISTRATION_TOKEN }}
 
@@ -78,7 +79,7 @@ jobs:
           esac
           if [ -n "$STAGING_STRIPE_SECRET_KEY" ]; then
             case "$STAGING_STRIPE_SECRET_KEY" in
-              sk_test_*) ;;
+              sk_test_*|rk_test_*) ;;
               *)
                 echo "Only Stripe Test Mode is permitted in staging." >&2
                 exit 1
@@ -94,6 +95,13 @@ jobs:
                 ;;
             esac
           fi
+          case "$STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED" in
+            ""|true|false) ;;
+            *)
+              echo "Unexpected staging Stripe Tax registration confirmation." >&2
+              exit 1
+              ;;
+          esac
 
           RUNNER_DIR="/opt/actions-runner-fanmind-staging"
           if ! sudo test -f "$RUNNER_DIR/.runner" && [ -z "$STAGING_RUNNER_REGISTRATION_TOKEN" ]; then
@@ -158,6 +166,7 @@ jobs:
             }
             return value;
           };
+          const confirmed = (name) => optional(name) === "true" ? "true" : "false";
 
           const values = [
             ["FANMIND_RUNTIME_ENVIRONMENT", "staging"],
@@ -173,6 +182,8 @@ jobs:
             ["FANMIND_NON_PRODUCTION_WRITE_ACK", ""],
             ["STRIPE_SECRET_KEY", optional("STAGING_STRIPE_SECRET_KEY")],
             ["STRIPE_WEBHOOK_SECRET", optional("STAGING_STRIPE_WEBHOOK_SECRET")],
+            ["FANMIND_TAX_MODE", "stripe_tax"],
+            ["FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED", confirmed("STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED")],
             ["STRIPE_PRICE_STARTER_SETUP", optional("STAGING_STRIPE_PRICE_STARTER_SETUP")],
             ["STRIPE_PRICE_STARTER_MONTHLY", optional("STAGING_STRIPE_PRICE_STARTER_MONTHLY")],
             ["STRIPE_PRICE_INTERNAL_DAILY_TEST", optional("STAGING_STRIPE_PRICE_INTERNAL_DAILY_TEST")],

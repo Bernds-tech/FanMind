@@ -103,6 +103,12 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
                 </p>
               </div>
 
+              <p className={styles.notice}>
+                {language === "en"
+                  ? "Net prices. The applicable VAT or reverse-charge treatment is calculated in checkout."
+                  : "Nettopreise. Die anwendbare Umsatzsteuer oder Reverse-Charge-Behandlung wird im Checkout berechnet."}
+              </p>
+
               <div className={styles.previewActions}>
                 <a className={styles.primaryLink} href={demoHref}>
                   {language === "en" ? "Start free demo" : "Kostenlose Demo starten"}

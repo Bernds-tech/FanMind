@@ -99,7 +99,7 @@ Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - der Deployment-Smoke prüft zusätzlich `/api/version`, Production-Environment und `/api/health`;
 - Pflichtkomponenten wie Anwendung, Supabase, Stripe und OpenAI blockieren bei einem ungesunden Zustand;
 - optionale E-Mail-Konfiguration wird als Warnung behandelt und verursacht ohne produktive Pflicht keinen falschen Rollback;
-- alte Preise, aktives Pilot-Angebot, `zzgl. USt.`, MVP-/Memory-Terminologie und andere bekannte Drift werden als Deployment-Fehler behandelt;
+- alte Preise, aktives Pilot-Angebot, eine pauschale oder als Kleinunternehmer dargestellte Steuerbehandlung, MVP-/Memory-Terminologie und andere bekannte Drift werden als Deployment-Fehler behandelt;
 - ein einmaliger read-only Production-Runtime-Audit hat Node, npm, PM2, Server-HEAD, `origin/main`, Live-Commit, Environment und Health geprüft; der temporäre Audit-Workflow wurde danach wieder entfernt.
 
 ### Mobile

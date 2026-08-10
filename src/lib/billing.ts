@@ -69,7 +69,10 @@ export function getPaymentCollectionMethod(
     commercialOption === "starter_paid_setup" ||
     commercialOption === "starter_no_setup_commitment"
   ) {
-    return "sepa_direct_debit";
+    // The current schema has no dedicated Stripe-hosted/dynamic marker. Card
+    // is the neutral Stripe collection value until the finalized Stripe
+    // invoice records the actually selected compatible method.
+    return "card";
   }
 
   // Das frühere entgeltliche Pilot-/Setup-Paket ist nicht mehr buchbar.

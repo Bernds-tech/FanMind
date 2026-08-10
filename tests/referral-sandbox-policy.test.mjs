@@ -43,6 +43,22 @@ test("read-only preflight accepts test credentials only with a valid shared boun
   assert.equal(result.environmentBoundaryOk, true);
 });
 
+test("restricted Stripe test keys are accepted and restricted live keys are blocked", () => {
+  const restrictedTest = evaluateReferralSandboxConfiguration({
+    ...completeReadOnlyEnvironment,
+    STRIPE_SECRET_KEY: "rk_test_restricted_example",
+  });
+  assert.equal(restrictedTest.ok, true);
+  assert.equal(restrictedTest.stripeKeyMode, "test");
+
+  const restrictedLive = evaluateReferralSandboxConfiguration({
+    ...completeReadOnlyEnvironment,
+    STRIPE_SECRET_KEY: "rk_live_forbidden",
+  });
+  assert.equal(restrictedLive.ok, false);
+  assert.equal(restrictedLive.stripeKeyMode, "live");
+});
+
 test("read-only referral preflight rejects a stale global write gate", () => {
   const result = evaluateReferralSandboxConfiguration({
     ...completeReadOnlyEnvironment,

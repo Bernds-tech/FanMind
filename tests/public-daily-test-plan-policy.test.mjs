@@ -89,6 +89,7 @@ test("Daily admission requires complete checkout and webhook configuration", () 
     hasAppUrl: true,
     hasInternalDailyTestPrice: true,
     readyForWebhook: true,
+    readyForTax: true,
   };
 
   assert.equal(isInternalDailyTestStripeReady(stripeConfig), true);

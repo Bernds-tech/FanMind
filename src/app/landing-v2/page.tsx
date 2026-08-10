@@ -803,7 +803,7 @@ const pricingProofs = [
   {
     icon: "▣",
     title: "Sicherer Zahlungsprozess",
-    text: "Starter-Preise, Laufzeiten und die derzeitige umsatzsteuerfreie Abrechnung werden transparent dargestellt.",
+    text: "Starter-Nettopreise, Laufzeiten sowie Steuer- oder Reverse-Charge-Behandlung werden transparent dargestellt.",
     tone: "green",
   },
 ];
@@ -1789,6 +1789,9 @@ export default async function LandingV2({ searchParams }: LandingV2Props) {
         </div>
 
         <p className={styles.pricingTermsLink}>
+          {language === "en"
+            ? "Net prices. Stripe Tax determines the applicable VAT or reverse-charge treatment. "
+            : "Nettopreise. Stripe Tax ermittelt die anwendbare Umsatzsteuer oder Reverse-Charge-Behandlung. "}
           <a href="/zahlungsbedingungen">{t("Zahlungsbedingungen")}</a>
         </p>
 

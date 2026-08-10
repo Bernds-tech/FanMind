@@ -83,7 +83,7 @@ const sections: PaymentSection[] = [
     title: "Preise und Umsatzsteuer",
     content: (
       <>
-        <p>Derzeit wird keine Umsatzsteuer ausgewiesen. Die steuerliche Behandlung wird auf Angebot, Checkout und Rechnung transparent ausgewiesen. Preisangaben auf der Website können durch individuelle Angebote ersetzt werden.</p>
+        <p>Die veröffentlichten Beträge sind Nettopreise. Für steuerpflichtige Umsätze in Österreich werden 20 % Umsatzsteuer hinzugerechnet. Bei internationalen Verkäufen wird der anwendbare Steuersatz oder eine Reverse-Charge-Behandlung anhand der Rechnungsadresse und des steuerlichen Kundenstatus ermittelt und in Checkout sowie Rechnung ausgewiesen.</p>
         <p>Growth und Agency sind derzeit Coming Soon oder auf Anfrage und begründen kein verbindliches Leistungs- oder Preisversprechen.</p>
       </>
     ),
@@ -109,8 +109,8 @@ const sections: PaymentSection[] = [
     content: <p>Die Registrierung selbst löst keine Zahlung aus. Bei Starter wird ein Workspace vorbereitet. Der Zahlungsprozess startet erst, wenn Nutzerinnen und Nutzer den Zahlungsprozess aktiv fortsetzen oder eine individuelle Zahlungsvereinbarung getroffen wurde. Bei Starter müssen Zahlungsbedingungen akzeptiert werden. Demo-User und temporäre Demo-Workspaces können keinen Checkout starten.</p>,
   },
   {
-    title: "Zahlungsabwicklung über Stripe / SEPA",
-    content: <p>Soweit der Zahlungsprozess produktiv aktiviert ist, kann FanMind Stripe für die Zahlungsabwicklung einsetzen. Die Zahlung erfolgt im Checkout über den Zahlungsdienstleister. Für Starter wird ein Subscription-Modell verwendet; Starter Flex enthält zusätzlich eine einmalige Einrichtungsgebühr. SEPA-Lastschrift kann als Zahlungsmethode verwendet werden. Bei SEPA-Lastschrift kann die endgültige Bestätigung einige Geschäftstage dauern. FanMind speichert keine vollständigen Bankdaten und keine IBAN in der Anwendung. Zahlungsdaten werden durch den Zahlungsdienstleister verarbeitet. Der Checkout ist nur verfügbar, wenn die technische Zahlungs-Konfiguration vollständig aktiv ist.</p>,
+    title: "Zahlungsabwicklung über Stripe",
+    content: <p>Soweit der Zahlungsprozess produktiv aktiviert ist, setzt FanMind Stripe für die Zahlungsabwicklung ein. Stripe zeigt im Checkout nur die für Land, Währung, Gerät und wiederkehrende Zahlung kompatiblen aktivierten Karten-, Wallet- und Bankzahlarten. Für Starter wird ein Subscription-Modell verwendet; Starter Flex enthält zusätzlich eine einmalige Einrichtungsgebühr. Bei asynchronen Bankzahlarten kann die endgültige Bestätigung mehrere Geschäftstage dauern. FanMind speichert keine vollständigen Karten- oder Bankdaten und keine IBAN in der Anwendung. Der Checkout ist nur verfügbar, wenn Schlüssel, Webhook, Preise und Stripe Tax vollständig bestätigt sind.</p>,
   },
   {
     title: "Freischaltung und Zahlungsstatus",

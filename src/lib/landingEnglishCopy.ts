@@ -135,7 +135,7 @@ export const landingEnglishCopy: Record<string, string> = {
   "Keine Bankdaten in FanMind": "No bank details in FanMind",
   "Zahlungen laufen sicher über den Zahlungsanbieter; FanMind speichert keine Bankdaten.": "Payments are processed securely by the payment provider; FanMind stores no bank details.",
   "Antwortvorschläge sind Hilfen, keine Pflichtantworten und kein Autopilot.": "Reply suggestions are aids, not mandatory replies and not an autopilot.",
-  "Starter-Preise, Laufzeiten und die derzeitige umsatzsteuerfreie Abrechnung werden transparent dargestellt.": "Starter prices, terms and the current VAT-exempt billing are shown transparently.",
+  "Starter-Nettopreise, Laufzeiten sowie Steuer- oder Reverse-Charge-Behandlung werden transparent dargestellt.": "Starter net prices, terms, and the applicable tax or reverse-charge treatment are shown transparently.",
   "Einwilligungen und Opt-outs sollen transparent dokumentiert und für dein Team nachvollziehbar bleiben.": "Consents and opt-outs should be documented transparently and remain traceable for your team.",
   "Team-Zugriffe werden bewusst geplant – mit klaren Zuständigkeiten statt ungeprüfter Vollzugriffe.": "Team access is deliberately planned – with clear responsibilities instead of unchecked full access.",
   "Änderungen, Freigaben und sensible Aktionen sind als nachvollziehbare Protokollierung vorgesehen.": "Changes, approvals and sensitive actions are intended to be logged transparently.",

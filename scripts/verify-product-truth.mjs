@@ -956,25 +956,25 @@ requireText(
   "FanMind garantiert keine fehlerfreien KI-Antworten",
   "Die AGB müssen die KI-Haftungsgrenze klar nennen.",
 );
-forbidIn(
+requireText(
   "src/app/landing-v2/page.tsx",
-  /zzgl\. USt\./iu,
-  "Die Landingpage darf aktuell keine zusätzliche Umsatzsteuer behaupten.",
+  "Nettopreise. Stripe Tax ermittelt die anwendbare Umsatzsteuer oder Reverse-Charge-Behandlung.",
+  "Die Landingpage muss Nettopreise und die Stripe-Tax-/Reverse-Charge-Behandlung offenlegen.",
 );
-forbidIn(
+requireText(
   "src/app/billing/start/page.tsx",
-  /zzgl\. USt\./iu,
-  "Der Checkout darf aktuell keine zusätzliche Umsatzsteuer behaupten.",
+  "Nettopreis · Stripe Tax berechnet den anwendbaren Steuersatz oder Reverse Charge.",
+  "Der Checkout muss Nettopreis und die dynamische Steuerbehandlung offenlegen.",
 );
-forbidIn(
+requireText(
   "src/app/agb/page.tsx",
-  /zzgl\. USt\.|zuzüglich gesetzlicher Umsatzsteuer/iu,
-  "Die AGB müssen die aktuelle steuerliche Darstellung verwenden.",
+  "Umsätzen in Österreich werden 20 % Umsatzsteuer berechnet",
+  "Die AGB müssen die österreichische 20-Prozent-Vorgabe nennen.",
 );
-forbidIn(
+requireText(
   "src/app/zahlungsbedingungen/page.tsx",
-  /zzgl\. USt\.|Preise zzgl\. USt\./iu,
-  "Die Zahlungsbedingungen müssen die aktuelle steuerliche Darstellung verwenden.",
+  "Bei internationalen Verkäufen wird der anwendbare Steuersatz oder eine Reverse-Charge-Behandlung",
+  "Die Zahlungsbedingungen müssen die internationale Steuerbehandlung nennen.",
 );
 
 // README und Source of Truth müssen synchron sein.

@@ -81,7 +81,7 @@ Noch mit Steuerberatung beziehungsweise amtlichem Nachweis zu klären:
 | Firmenbuchnummer | nicht mitgeteilt | aktueller Firmenbuchauszug oder Bestätigung „nicht eingetragen“ |
 | Firmenbuchgericht | nicht mitgeteilt | Firmenbuchauszug oder Bestätigung „nicht anwendbar“ |
 | GISA-Zahl | nicht mitgeteilt | GISA-Auszug oder fachliche Bestätigung, ob und wie sie anzugeben ist |
-| Kleinunternehmer-Steuermodus | technisch aktuell aktiv | schriftliche Steuerfreigabe für Checkout, Angebot, Rechnung und Rechnungshinweis |
+| Stripe Tax / Nettopreise | technisch auf 20 % für steuerpflichtige Österreich-Umsätze entschieden; externe Prüfung offen | schriftliche Steuerfreigabe für Checkout, internationale Behandlung, Angebot, Rechnung und Rechnungshinweis |
 
 Der Zusatz `e.U.` darf nur verwendet werden, wenn die Eintragung samt
 Firmenbuchnummer und Firmenbuchgericht bestätigt ist. Eine Steuernummer gehört
@@ -95,7 +95,7 @@ entscheidet die Steuerberatung.
 Die Steuerberatung soll schriftlich und versionsbezogen bestätigen:
 
 1. UID-Status, Firmenbuch-/Registerstatus und gegebenenfalls GISA-Angabe;
-2. Kleinunternehmerregelung, Rechnungspflichtangaben und Stripe-Steuermodus;
+2. Nettopreis-/Stripe-Tax-Regel, österreichische 20 %, internationale Umsatzsteuer beziehungsweise Reverse Charge und Rechnungspflichtangaben;
 3. steuerliche Aufbewahrungsfrist und deren Fristbeginn;
 4. Trennung zwischen aufzubewahrenden Rechnungsnachweisen und löschbaren
    CRM-, Support- oder KI-Nutzungsdaten.

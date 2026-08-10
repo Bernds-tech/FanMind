@@ -146,10 +146,9 @@ test("invoice retries and subscription changes drive deterministic deactivation"
   );
 });
 
-test("refunds and disputes deactivate referral eligibility", () => {
+test("completed refunds and disputes deactivate referral eligibility", () => {
   for (const eventType of [
     "charge.refunded",
-    "refund.created",
     "charge.dispute.created",
   ]) {
     assert.equal(
@@ -157,6 +156,35 @@ test("refunds and disputes deactivate referral eligibility", () => {
       "refunded",
     );
   }
+
+  for (const eventType of ["refund.created", "refund.updated"]) {
+    assert.equal(
+      referralBillingStatusFromStripeEvent({
+        eventType,
+        refundStatus: "succeeded",
+      }),
+      "refunded",
+    );
+  }
+});
+
+test("pending or failed refunds keep referral eligibility unchanged", () => {
+  for (const eventType of ["refund.created", "refund.updated"]) {
+    for (const refundStatus of ["pending", "requires_action", "failed", "canceled", undefined]) {
+      assert.equal(
+        referralBillingStatusFromStripeEvent({ eventType, refundStatus }),
+        null,
+      );
+    }
+  }
+
+  assert.equal(
+    referralBillingStatusFromStripeEvent({
+      eventType: "refund.failed",
+      refundStatus: "failed",
+    }),
+    null,
+  );
 });
 
 test("unrelated Stripe events do not invent a referral billing status", () => {

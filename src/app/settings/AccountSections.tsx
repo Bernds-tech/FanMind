@@ -709,13 +709,7 @@ export function InvoicesSettingsSection({
                   <td>{formatMoney(invoice.amountDue)}</td>
                   <td>{formatMoney(invoice.amountPaid)}</td>
                   <td>
-                    {taxNote ? (
-                      <span className={profileStyles.mutedBadge}>
-                        keine USt
-                      </span>
-                    ) : (
-                      formatMoney(invoice.tax)
-                    )}
+                    {formatMoney(invoice.tax)}
                   </td>
                   <td>
                     <div className={profileStyles.invoiceTableActions}>

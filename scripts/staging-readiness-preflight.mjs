@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { evaluateEnvironmentBoundary } from "../src/lib/environmentBoundaryPolicy.mjs";
+import { isStripeTestSecretKey } from "../src/lib/stripeKeyPolicy.mjs";
 
 const env = process.env;
 const errors = [];
@@ -71,9 +72,19 @@ configured("FANMIND_TARGET_SUPABASE_PROJECT_REF");
 configured("FANMIND_PRODUCTION_SUPABASE_PROJECT_REF");
 configured("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 configured("SUPABASE_SERVICE_ROLE_KEY");
-configured("STRIPE_SECRET_KEY", { prefix: "sk_test_" });
+configured("STRIPE_SECRET_KEY");
+if (!isStripeTestSecretKey(value("STRIPE_SECRET_KEY"))) {
+  errors.push("STRIPE_SECRET_KEY muss ein eingeschränkter oder Standard-Stripe-Testschlüssel sein.");
+}
 configured("STRIPE_WEBHOOK_SECRET", { prefix: "whsec_" });
 configured("OPENAI_API_KEY", { prefix: "sk-", optional: true });
+
+if (value("FANMIND_TAX_MODE") !== "stripe_tax") {
+  errors.push("FANMIND_TAX_MODE muss in Staging exakt stripe_tax sein.");
+}
+if (value("FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED") !== "true") {
+  errors.push("Die Stripe-Tax-Testregistrierung muss für Staging ausdrücklich bestätigt sein.");
+}
 
 requireFalse("FANMIND_ENABLE_NON_PRODUCTION_WRITES");
 requireFalse("FANMIND_ENABLE_REFERRAL_BILLING");
@@ -96,7 +107,8 @@ console.log(
       : "invalid"
   }`,
 );
-console.log(`STAGING_STRIPE_MODE=${value("STRIPE_SECRET_KEY").startsWith("sk_test_") ? "test" : "invalid"}`);
+console.log(`STAGING_STRIPE_MODE=${isStripeTestSecretKey(value("STRIPE_SECRET_KEY")) ? "test" : "invalid"}`);
+console.log(`STAGING_STRIPE_TAX=${value("FANMIND_TAX_MODE") === "stripe_tax" && value("FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED") === "true" ? "ready" : "blocked"}`);
 console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");
 
 for (const warning of warnings) console.warn(`STAGING_WARNING=${warning}`);
