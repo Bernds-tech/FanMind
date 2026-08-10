@@ -49,20 +49,18 @@ Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:
 - exakte Next.js-/ESLint-Config-Patchstände;
 - einen vollständig sauberen Root-Production-Baum ohne Review-Ausnahme.
 
-### Aktueller geprüfter Zustand vom 7. August 2026
+### Aktueller geprüfter Zustand vom 10. August 2026
 
-Am 25. Juli wurde Next.js `16.2.12` mit passendem `eslint-config-next`
-verfügbar. Gleichzeitig standen korrigierte Versionen für die beiden
-Production-Transitivabhängigkeiten `postcss` und `sharp` bereit. FanMind
-verwendet jetzt:
+Am 10. August wurde Next.js `16.3.0` zusammen mit dem passenden
+`eslint-config-next` erneut gegen den vollständigen Release- und
+Production-Audit geprüft. FanMind verwendet jetzt:
 
-- Next.js und `eslint-config-next` exakt `16.2.12`;
+- Next.js und `eslint-config-next` exakt `16.3.0`;
 - `postcss` `8.5.23`;
 - `sharp` `0.35.3`.
 
 Die beiden Production-Korrekturen werden ausschließlich unter
-`next@16.2.12` als npm-Overrides erzwungen, weil Next.js selbst weiterhin
-ältere Abhängigkeitsbereiche deklariert. Ein dauerhafter Test verarbeitet mit
+`next@16.3.0` als npm-Overrides exakt festgeschrieben. Ein dauerhafter Test verarbeitet mit
 der aufgelösten Sharp-Version ein echtes Bild, zusätzlich zum vollständigen
 Next.js-Production-Build.
 
@@ -92,7 +90,7 @@ Der reproduzierte Root-Production-Audit meldet danach:
 Der vorherige, bis 7. August befristete Production-Reviewvertrag ist entfernt.
 Das Gate akzeptiert im Root-Production-Baum jetzt ausschließlich einen
 vollständig sauberen Audit und exakt Next.js sowie `eslint-config-next`
-`16.2.12`. Jeder neue Production-Paketname oder Befund lässt die Prüfung
+`16.3.0`. Jeder neue Production-Paketname oder Befund lässt die Prüfung
 fail-closed fehlschlagen.
 
 Der Mobile-Baum enthält seit 8. August 2026 zusätzlich den noch ungepatchten

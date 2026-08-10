@@ -191,7 +191,7 @@ Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markie
 
 ## Technik
 
-- Framework: Next.js `16.2.12`
+- Framework: Next.js `16.3.0`
 - UI: React `19.2.8`
 - Mobile: React Native / Expo unter `apps/mobile` mit eigener Navigation, CI und Releasegrenze
 - Sprache: TypeScript
