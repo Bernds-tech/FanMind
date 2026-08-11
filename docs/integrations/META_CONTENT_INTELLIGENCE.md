@@ -1,6 +1,6 @@
 # Meta-Kanäle und Content Intelligence
 
-Stand: 5. August 2026
+Stand: 11. August 2026
 
 Dieses Dokument ist die technische und rechtliche Arbeitsgrundlage für
 Facebook-/Instagram-Verbindungen, Nachrichtenimport, Post-Reichweitenanalyse,
@@ -50,13 +50,13 @@ Freigabe und aktiviert keine externe Verbindung.
 
 | Bereich | Stand |
 | --- | --- |
-| Facebook OAuth, verschlüsselte Seitentokens, Webhook- und Nachrichten-Grundlage | vorbereitet/Beta |
+| Facebook OAuth, verschlüsselte Seitentokens, Webhook- und Nachrichten-Grundlage | implementiert/Beta; Meta-Kontotest und Freigaben offen |
 | Facebook Graph API | auf stabile `v25.0` festgelegt |
 | Instagram Webhook-Parser, begrenzter DM-Erstabgleich und inkrementelle Chat-/Kommentargrundlage | implementiert; echter Staging-/Meta-Kontotest offen |
 | Instagram Business Login/OAuth und Professional-Kontobindung | implementiert; echter Staging-/Meta-Kontotest noch offen |
-| Post-/Account-Cache, Metrik-Snapshots und Formeln | vorbereitet, Migration noch nicht angewendet |
-| Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | vorbereitet, Migration noch nicht angewendet |
-| Isolierter Staging-Migrationspfad | checksum-, commit-, TLS- und Production-Ziel-gebunden vorbereitet; noch nicht ausgeführt |
+| Post-/Account-Cache, Metrik-Snapshots und Formeln | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; echter Meta-Datentest offen |
+| Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; Analyse-Aktivierung bleibt gesperrt |
+| Isolierter Staging-Migrationspfad | beide Meta-Content-Migrationen im getrennten Supabase-Staging angewendet und read-only nachgeprüft; Production unverändert |
 | Meta App Review, Advanced Access und Business Verification | extern offen |
 | Rechtsgrundlage, Transparenz, AVV und Aufbewahrung | extern beziehungsweise je Kunde offen; Analysen standardmäßig aus |
 | Produktive Drittpersonenfreigabe | blockiert bis Technik-, Staging- und Rechtsabnahme |
@@ -236,7 +236,7 @@ behaupten.
 2. Facebook- und Instagram-Berechtigungen nur für Testkonten einrichten.
 3. explizite Facebook-Seitenauswahl und Instagram-Professional-Kontobindung
    mit Testkonten verifizieren.
-4. Migration in isoliertem Staging anwenden und RLS-/Token-Negativtests fahren.
+4. Bereits angewendetes isoliertes Staging-Schema für den jeweils geprüften Commit read-only nachweisen und die RLS-/Token-Negativtests wiederholen; bei Drift fail-closed stoppen.
 5. 150er-Erstabruf für Facebook und Instagram-DMs, inkrementelle Webhooks, Deduplizierung, vollständige
    Verlaufserhaltung sowie 50/100/150-KI-Kontexte und Post-/Insight-Cache mit
    synthetischen Daten testen.
@@ -247,9 +247,11 @@ behaupten.
 9. Erst danach begrenzten Pilot je Workspace aktivieren; kein globaler
    Standardschalter.
 
-Der kontrollierte, noch nicht ausgeführte Schritt 4 ist in
-`docs/operations/META_CONTENT_STAGING_MIGRATION.md` beschrieben. Der Workflow
-wendet kein Production-Schema an und aktiviert keine Verbindung oder Analyse.
+Der kontrollierte Schritt 4 ist in
+`docs/operations/META_CONTENT_STAGING_MIGRATION.md` beschrieben. Die beiden
+Meta-Content-Migrationen wurden im getrennten Supabase-Staging angewendet und
+read-only nachgeprüft. Ein normaler Web-Deploy wendet sie weiterhin nicht an;
+Production blieb unverändert und weder Verbindung noch Analyse wurden aktiviert.
 
 Offizielle Prüfeinstiege:
 
