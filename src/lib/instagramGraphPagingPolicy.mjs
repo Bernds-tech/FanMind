@@ -1,13 +1,17 @@
-import { META_GRAPH_API_VERSION } from "./metaIntegrationPolicy.mjs";
-import { normalizeMetaPagingCursor } from "./metaConversationPaginationPolicy.mjs";
+import {
+  META_GRAPH_API_VERSION,
+} from "./metaIntegrationPolicy.mjs";
+import {
+  normalizeMetaPagingCursor,
+} from "./metaConversationPaginationPolicy.mjs";
 
-export function validateFacebookGraphPagingUrl(value) {
+export function validateInstagramGraphPagingUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
   try {
     const url = new URL(value);
     if (
       url.protocol !== "https:" ||
-      url.host !== "graph.facebook.com" ||
+      url.host !== "graph.instagram.com" ||
       url.username ||
       url.password ||
       !url.pathname.startsWith(`/${META_GRAPH_API_VERSION}/`)
@@ -20,17 +24,17 @@ export function validateFacebookGraphPagingUrl(value) {
   }
 }
 
-export function resolveFacebookGraphPagingCursor(value) {
+export function resolveInstagramGraphPagingCursor(value) {
   if (value == null) return null;
-  const validatedUrl = validateFacebookGraphPagingUrl(value);
+  const validatedUrl = validateInstagramGraphPagingUrl(value);
   if (!validatedUrl) {
-    throw new Error("Ungültige Facebook-Paging-Weiterleitung blockiert.");
+    throw new Error("Ungültige Instagram-Paging-Weiterleitung blockiert.");
   }
   const cursor = normalizeMetaPagingCursor(
     new URL(validatedUrl).searchParams.get("after"),
   );
   if (!cursor) {
-    throw new Error("Ungültiger Facebook-Paging-Cursor blockiert.");
+    throw new Error("Ungültiger Instagram-Paging-Cursor blockiert.");
   }
   return cursor;
 }

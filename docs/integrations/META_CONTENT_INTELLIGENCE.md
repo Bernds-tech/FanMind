@@ -56,6 +56,7 @@ Freigabe und aktiviert keine externe Verbindung.
 | Instagram Business Login/OAuth und Professional-Kontobindung | implementiert; echter Staging-/Meta-Kontotest noch offen |
 | Post-/Account-Cache, Metrik-Snapshots und Formeln | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; echter Meta-Datentest offen |
 | Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; Analyse-Aktivierung bleibt gesperrt |
+| Begrenzte Conversation-Pagination | Implementierung und server-only Migration vorbereitet; Migration und realer Meta-Test im isolierten Staging vor Aktivierung offen |
 | Isolierter Staging-Migrationspfad | beide Meta-Content-Migrationen im getrennten Supabase-Staging angewendet und read-only nachgeprüft; Production unverändert |
 | Meta App Review, Advanced Access und Business Verification | extern offen |
 | Rechtsgrundlage, Transparenz, AVV und Aufbewahrung | extern beziehungsweise je Kunde offen; Analysen standardmäßig aus |
@@ -191,6 +192,14 @@ Person.
 - idempotente externe Ereignis-IDs und Schutz vor doppelten Webhooks;
 - erster Facebook- oder Instagram-DM-Abruf höchstens 150 aktuelle Nachrichten je Thread; danach
   nur neue Ereignisse mit fünf Minuten Sicherheitsüberlapp;
+- pro verbindungsweitem Lauf innerhalb eines festen 45-Sekunden-Zeitbudgets
+  höchstens eine auf 25 Conversations begrenzte Provider-Seite; ein strikt
+  validierter `after`-Cursor und der ursprüngliche
+  Intervallstart bleiben ausschließlich serverseitig gespeichert, bis Meta
+  keine Folgeseite mehr liefert. Erst dann darf `last_messenger_sync_at` auf
+  den ursprünglichen Intervallstart vorrücken; Fehler bewahren die bestehende
+  Fortsetzung und Wiederholungen bleiben über externe Nachrichten-IDs
+  idempotent;
 - KI-Kontext ausschließlich serverseitig nach effektiver Stufe: Standard 50,
   Plus 100, Ultra 150 aktuelle Nachrichten; Browserwerte werden ignoriert;
 - keine Nachrichten-/Kommentar-Rohinhalte in technischen Diagnoseprotokollen;

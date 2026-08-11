@@ -5,6 +5,14 @@ import {
 } from "node:crypto";
 import { META_GRAPH_API_VERSION } from "@/lib/metaIntegrationPolicy.mjs";
 import {
+  resolveInstagramGraphPagingCursor,
+  validateInstagramGraphPagingUrl,
+} from "@/lib/instagramGraphPagingPolicy.mjs";
+import {
+  createMetaConversationSyncAbortSignal,
+  normalizeMetaPagingCursor,
+} from "@/lib/metaConversationPaginationPolicy.mjs";
+import {
   INSTAGRAM_COMMENTS_OAUTH_SCOPES,
   INSTAGRAM_INSIGHTS_OAUTH_SCOPES,
   INSTAGRAM_MESSAGES_OAUTH_SCOPES,
@@ -41,6 +49,11 @@ export type InstagramProfile = {
 export type InstagramConversation = {
   id: string;
   updatedTime: string | null;
+};
+
+export type InstagramConversationPage = {
+  conversations: InstagramConversation[];
+  nextAfter: string | null;
 };
 
 export type InstagramConversationMessage = {
@@ -225,24 +238,56 @@ export async function fetchInstagramConversations(
   accessToken: string,
   limit = 10,
 ): Promise<InstagramConversation[]> {
+  const page = await fetchInstagramConversationPage(
+    profileId,
+    accessToken,
+    limit,
+  );
+  return page.conversations;
+}
+
+export async function fetchInstagramConversationPage(
+  profileId: string,
+  accessToken: string,
+  limit = 25,
+  after?: string | null,
+  deadlineMs?: number,
+): Promise<InstagramConversationPage> {
+  const normalizedAfter = after == null
+    ? null
+    : normalizeMetaPagingCursor(after);
+  if (after != null && !normalizedAfter) {
+    throw new Error("Ungültiger Instagram-Paging-Cursor blockiert.");
+  }
+
   const url = new URL(
     `https://graph.instagram.com/${META_GRAPH_API_VERSION}/${encodeURIComponent(profileId)}/conversations`,
   );
   url.searchParams.set("platform", "instagram");
   url.searchParams.set("fields", "id,updated_time");
   url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 25))));
+  if (normalizedAfter) url.searchParams.set("after", normalizedAfter);
 
   const payload = await fetchInstagramGraph(url, accessToken, {
     errorContext: "Instagram conversations fetch failed",
     userMessage: "Instagram-Unterhaltungen konnten nicht abgerufen werden.",
+    deadlineMs,
   });
-  return (Array.isArray(payload.data) ? payload.data : [])
+  const conversations = (Array.isArray(payload.data) ? payload.data : [])
     .filter(isRecord)
     .map((conversation) => ({
       id: stringValue(conversation.id) ?? "",
       updatedTime: stringValue(conversation.updated_time),
     }))
     .filter((conversation) => conversation.id);
+
+  const paging = isRecord(payload.paging) ? payload.paging : null;
+  return {
+    conversations,
+    nextAfter: resolveInstagramGraphPagingCursor(
+      stringValue(paging?.next),
+    ),
+  };
 }
 
 export async function fetchInstagramConversationMessages(
@@ -250,6 +295,7 @@ export async function fetchInstagramConversationMessages(
   accessToken: string,
   limit = 50,
   since?: string | null,
+  deadlineMs?: number,
 ): Promise<InstagramConversationMessage[]> {
   const targetLimit = Math.max(1, Math.min(limit, 150));
   const pageLimit = Math.min(targetLimit, 50);
@@ -269,6 +315,7 @@ export async function fetchInstagramConversationMessages(
     const payload = await fetchInstagramGraph(nextUrl, accessToken, {
       errorContext: "Instagram conversation messages fetch failed",
       userMessage: "Instagram-Nachrichten konnten nicht abgerufen werden.",
+      deadlineMs,
     });
     const messageContainer = firstPage && isRecord(payload.messages)
       ? payload.messages
@@ -483,7 +530,11 @@ function normalizeInstagramActorArray(
 async function fetchInstagramGraph(
   inputUrl: URL,
   accessToken: string,
-  error: { errorContext: string; userMessage: string },
+  error: {
+    errorContext: string;
+    userMessage: string;
+    deadlineMs?: number;
+  },
 ): Promise<Record<string, unknown>> {
   const url = validInstagramGraphUrl(inputUrl.toString());
   if (!url) throw new Error("Ungültige Instagram-API-Weiterleitung blockiert.");
@@ -492,6 +543,9 @@ async function fetchInstagramGraph(
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
+    signal: error.deadlineMs == null
+      ? undefined
+      : createMetaConversationSyncAbortSignal(error.deadlineMs),
   });
   const payload = (await response.json().catch(() => null)) as
     | Record<string, unknown>
@@ -510,20 +564,8 @@ async function fetchInstagramGraph(
 }
 
 function validInstagramGraphUrl(value: string | null): URL | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    if (
-      url.protocol !== "https:" ||
-      url.hostname !== "graph.instagram.com" ||
-      !url.pathname.startsWith(`/${META_GRAPH_API_VERSION}/`)
-    ) {
-      return null;
-    }
-    return url;
-  } catch {
-    return null;
-  }
+  const validated = validateInstagramGraphPagingUrl(value);
+  return validated ? new URL(validated) : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -359,6 +359,18 @@ export type SocialConnectionRow = {
   updated_at: string;
 };
 
+type MetaMessengerSyncContinuationRow = {
+  messenger_sync_continuation_after: string | null;
+  messenger_sync_continuation_started_at: string | null;
+};
+
+export type MetaMessengerSyncContinuationResult = {
+  schemaReady: boolean;
+  continuationAfter: string | null;
+  continuationStartedAt: string | null;
+  error: Error | null;
+};
+
 export type WorkspaceAnalysisSettingsRow = {
   workspace_id: string;
   fan_analysis_enabled: boolean;
@@ -660,6 +672,8 @@ const SOCIAL_CONNECTION_PUBLIC_COLUMNS =
   "id,workspace_id,platform,provider,status,external_account_id,external_account_name,page_id,page_name,token_last_four,scopes,webhook_subscribed,connected_by,connected_at,disconnected_at,last_event_at,last_comment_fetch_at,last_comment_fetch_count,last_comment_fetch_error,last_messenger_sync_at,last_messenger_sync_checked_count,last_messenger_sync_imported_inbound_count,last_messenger_sync_imported_outbound_count,last_messenger_sync_imported_media_count,last_messenger_sync_skipped_count,last_messenger_sync_error,last_messenger_sync_outbound_at,created_at,updated_at";
 const SOCIAL_CONNECTION_SECRET_COLUMNS =
   `${SOCIAL_CONNECTION_PUBLIC_COLUMNS},page_access_token_encrypted`;
+const META_MESSENGER_SYNC_CONTINUATION_COLUMNS =
+  "messenger_sync_continuation_after,messenger_sync_continuation_started_at";
 const WORKSPACE_ANALYSIS_SETTINGS_COLUMNS =
   "workspace_id,fan_analysis_enabled,conversation_analysis_enabled,user_voice_analysis_enabled,content_insights_enabled,meta_sync_mode,personal_content_retention_days,legal_basis_status,transparency_status,data_processing_agreement_status,retention_status,data_subject_rights_status,message_retention_days,content_cache_retention_days,analysis_retention_days,confirmed_by,confirmed_at,created_at,updated_at";
 const META_WEBHOOK_EVENT_COLUMNS =
@@ -1223,6 +1237,72 @@ export async function getWorkspaceSocialConnectionsServer(
   return { connections: result.data ?? [], error: null };
 }
 
+export async function getMetaMessengerSyncContinuation(
+  connectionId: string,
+  platform: "facebook" | "instagram",
+): Promise<MetaMessengerSyncContinuationResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      schemaReady: false,
+      continuationAfter: null,
+      continuationStartedAt: null,
+      error: new Error(
+        "Serverberechtigungen für den Nachrichten-Sync fehlen.",
+      ),
+    };
+  }
+
+  const result = await postgrestSelect<MetaMessengerSyncContinuationRow>(
+    "social_connections",
+    serviceAccessToken,
+    META_MESSENGER_SYNC_CONTINUATION_COLUMNS,
+    [
+      ["id", connectionId],
+      ["platform", platform],
+      ["status", "connected"],
+    ],
+    1,
+    true,
+  );
+
+  if (result.error) {
+    if (isMissingMetaMessengerSyncContinuationSchema(result.error)) {
+      return {
+        schemaReady: false,
+        continuationAfter: null,
+        continuationStartedAt: null,
+        error: null,
+      };
+    }
+    return {
+      schemaReady: false,
+      continuationAfter: null,
+      continuationStartedAt: null,
+      error: new Error(
+        "Meta-Sync-Fortsetzung konnte nicht sicher geladen werden.",
+      ),
+    };
+  }
+
+  if (!result.data) {
+    return {
+      schemaReady: true,
+      continuationAfter: null,
+      continuationStartedAt: null,
+      error: new Error("Aktive Meta-Verbindung wurde nicht gefunden."),
+    };
+  }
+
+  return {
+    schemaReady: true,
+    continuationAfter: result.data.messenger_sync_continuation_after,
+    continuationStartedAt:
+      result.data.messenger_sync_continuation_started_at,
+    error: null,
+  };
+}
+
 export async function getWorkspaceAnalysisCapabilityStatus(
   workspaceId: string,
   capability: WorkspaceAnalysisCapability,
@@ -1533,49 +1613,43 @@ export async function updateFacebookCommentFetchStatus(
 
 export async function updateFacebookMessengerSyncStatus(
   connectionId: string,
-  input: {
-    syncedAt: string;
-    checkedConversations: number;
-    importedInbound: number;
-    importedOutbound: number;
-    importedMedia?: number;
-    skippedDuplicates: number;
-    error?: string | null;
-    lastOutboundAt?: string | null;
-  },
+  input: MetaMessengerSyncStatusInput,
 ): Promise<SocialConnectionResult> {
   return updateMetaMessengerSyncStatus("facebook", connectionId, input);
 }
 
 export async function updateInstagramMessengerSyncStatus(
   connectionId: string,
-  input: {
-    syncedAt: string;
-    checkedConversations: number;
-    importedInbound: number;
-    importedOutbound: number;
-    importedMedia?: number;
-    skippedDuplicates: number;
-    error?: string | null;
-    lastOutboundAt?: string | null;
-  },
+  input: MetaMessengerSyncStatusInput,
 ): Promise<SocialConnectionResult> {
   return updateMetaMessengerSyncStatus("instagram", connectionId, input);
 }
 
+type MetaMessengerSyncCursorUpdate =
+  | { kind: "preserve" }
+  | {
+      kind: "partial";
+      continuationAfter: string;
+      continuationStartedAt: string;
+    }
+  | { kind: "complete"; completedSyncAt: string };
+
+type MetaMessengerSyncStatusInput = {
+  syncedAt: string;
+  checkedConversations: number;
+  importedInbound: number;
+  importedOutbound: number;
+  importedMedia?: number;
+  skippedDuplicates: number;
+  error?: string | null;
+  lastOutboundAt?: string | null;
+  cursorUpdate?: MetaMessengerSyncCursorUpdate;
+};
+
 async function updateMetaMessengerSyncStatus(
   platform: "facebook" | "instagram",
   connectionId: string,
-  input: {
-    syncedAt: string;
-    checkedConversations: number;
-    importedInbound: number;
-    importedOutbound: number;
-    importedMedia?: number;
-    skippedDuplicates: number;
-    error?: string | null;
-    lastOutboundAt?: string | null;
-  },
+  input: MetaMessengerSyncStatusInput,
 ): Promise<SocialConnectionResult> {
   const accessToken = getServiceAccessToken();
   if (!accessToken)
@@ -1583,20 +1657,36 @@ async function updateMetaMessengerSyncStatus(
       "Serverberechtigungen für den Nachrichten-Sync fehlen.",
     );
 
+  const values: Record<string, unknown> = {
+    last_messenger_sync_checked_count: input.checkedConversations,
+    last_messenger_sync_imported_inbound_count: input.importedInbound,
+    last_messenger_sync_imported_outbound_count: input.importedOutbound,
+    last_messenger_sync_imported_media_count: input.importedMedia ?? 0,
+    last_messenger_sync_skipped_count: input.skippedDuplicates,
+    last_messenger_sync_error: normalizeOptionalText(input.error),
+  };
+  if (input.lastOutboundAt !== undefined) {
+    values.last_messenger_sync_outbound_at = normalizeIsoTimestamp(
+      input.lastOutboundAt,
+    );
+  }
+
+  if (!input.cursorUpdate) {
+    values.last_messenger_sync_at = input.syncedAt;
+  } else if (input.cursorUpdate.kind === "partial") {
+    values.messenger_sync_continuation_after =
+      input.cursorUpdate.continuationAfter;
+    values.messenger_sync_continuation_started_at =
+      input.cursorUpdate.continuationStartedAt;
+  } else if (input.cursorUpdate.kind === "complete") {
+    values.last_messenger_sync_at = input.cursorUpdate.completedSyncAt;
+    values.messenger_sync_continuation_after = null;
+    values.messenger_sync_continuation_started_at = null;
+  }
+
   const result = await postgrestUpdate<SocialConnectionRow>(
     "social_connections",
-    {
-      last_messenger_sync_at: input.syncedAt,
-      last_messenger_sync_checked_count: input.checkedConversations,
-      last_messenger_sync_imported_inbound_count: input.importedInbound,
-      last_messenger_sync_imported_outbound_count: input.importedOutbound,
-      last_messenger_sync_imported_media_count: input.importedMedia ?? 0,
-      last_messenger_sync_skipped_count: input.skippedDuplicates,
-      last_messenger_sync_error: normalizeOptionalText(input.error),
-      last_messenger_sync_outbound_at: normalizeIsoTimestamp(
-        input.lastOutboundAt,
-      ),
-    },
+    values,
     accessToken,
     [
       ["id", connectionId],
@@ -6922,6 +7012,18 @@ function isMissingAssignedUserIdentity(error: Error | null): boolean {
     message.includes("column")
     || message.includes("schema cache")
     || message.includes("does not exist")
+  );
+}
+
+function isMissingMetaMessengerSyncContinuationSchema(error: Error): boolean {
+  const message = error.message.toLowerCase();
+  const namesContinuationColumn =
+    message.includes("messenger_sync_continuation_after") ||
+    message.includes("messenger_sync_continuation_started_at");
+  return namesContinuationColumn && (
+    message.includes("column") ||
+    message.includes("schema cache") ||
+    message.includes("does not exist")
   );
 }
 

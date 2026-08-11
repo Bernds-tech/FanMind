@@ -323,7 +323,7 @@ zwingende externe Freigabe noch fehlt.
 - Meta-Content-Staging: Die zwei Migrationen
   `20260803120000_meta_content_intelligence_foundation.sql` und
   `20260803210000_preserve_incremental_conversation_history.sql` sind
-  sind checksum-festgeschrieben und auf dem getrennten Supabase-Staging
+  checksum-festgeschrieben und auf dem getrennten Supabase-Staging
   angewendet. RLS, die neuen Analyseobjekte und Indizes, die fortlaufende
   Historie, das Entfernen des alten 50er-Löschtriggers und die
   tenant-spezifischen Meta-Idempotenzindizes wurden katalogseitig
@@ -344,6 +344,18 @@ zwingende externe Freigabe noch fehlt.
   Meta-Kontoverbindung, Analyse, App-Review-Einreichung und Production-
   Migration bleiben davon getrennt und deaktiviert. Runbook:
   `docs/operations/META_CONTENT_STAGING_MIGRATION.md`.
+- Die begrenzte Facebook-/Instagram-Conversation-Pagination und ihre
+  server-only Fortsetzungsfelder sind mit
+  `20260811220000_meta_conversation_sync_continuation.sql` vorbereitet. Pro
+  Ausführung wird innerhalb eines festen 45-Sekunden-Zeitbudgets höchstens eine
+  Provider-Seite mit bis zu 25 Conversations verarbeitet. Solange Meta eine
+  Folgeseite liefert, bleibt
+  `last_messenger_sync_at` unverändert; erst nach vollständiger Erschöpfung
+  rückt der globale Abschlusszeitpunkt auf den Start des ursprünglichen
+  Intervalls vor. Fehler bewahren den Cursor und Wiederholungen bleiben über
+  externe Nachrichten-IDs idempotent. Die neue Migration ist noch nicht in
+  Staging oder Production angewendet; Anwendung, Rechte-Postflight und echter
+  Meta-Kontotest bleiben vor Aktivierung getrennt abzunehmen.
 - Das separate Supabase-Staging-Projekt sowie die getrennte Web-Staging-
   Runtime mit eigenem `fanmind-staging`-Runner, eigener DNS-/TLS-Bindung und
   eigenem Exoscale-Ziel sind vorhanden. Extern noch einzurichten beziehungsweise
@@ -588,7 +600,7 @@ Vorbereitet / Beta / nicht allgemein live verkaufen:
 
 - mandantengetrennte Meta-/Facebook-/Instagram-Grundlagen: jeder Kunde verbindet sein eigenes Geschäftskonto mit seinem eigenen Workspace; verschlüsselte Tokens bleiben serverseitig; eine externe Konto-ID darf nur einem aktiven Workspace gehören;
 - Facebook-Messenger-/Kommentar-Grundlage und Graph API `v25.0`; Instagram-Webhook- und begrenzte DM-Verlaufsgrundlage; Instagram Business Login, explizite Mehrfachkontoauswahl, App Review und reale Ende-zu-Ende-Abnahme bleiben offen;
-- eigener Post-/Insight-Cache, fortlaufend und inkrementell gespeicherte autorisierte Chats/Kommentare sowie vorsichtige Fan-/Nutzer-Schreibstilanalyse als fail-closed Meta-Datenmodell; der einmalige Facebook- oder Instagram-DM-Erstabruf ist auf 150 aktuelle Nachrichten je Thread begrenzt, danach werden nur neue Ereignisse ergänzt. KI Standard/Plus/Ultra erhalten serverseitig ausschließlich die letzten 50/100/150 Nachrichten. Persönliche fremde Profile/Posts werden nicht gespiegelt oder gescrapt. Alle Analysearten bleiben standardmäßig aus, bis Rechtsgrundlage, Transparenz, AVV/Anbieterprüfung, Betroffenenrechte und Aufbewahrung je Workspace bestätigt sind;
+- eigener Post-/Insight-Cache, fortlaufend und inkrementell gespeicherte autorisierte Chats/Kommentare sowie vorsichtige Fan-/Nutzer-Schreibstilanalyse als fail-closed Meta-Datenmodell; der einmalige Facebook- oder Instagram-DM-Erstabruf ist auf 150 aktuelle Nachrichten je Thread begrenzt, danach werden nur neue Ereignisse ergänzt. Verbindungsweite Conversation-Seiten bleiben auf 25 Einträge je Ausführung begrenzt und dürfen den globalen Abschlusszeitpunkt erst nach vollständiger Provider-Pagination fortschreiben. KI Standard/Plus/Ultra erhalten serverseitig ausschließlich die letzten 50/100/150 Nachrichten. Persönliche fremde Profile/Posts werden nicht gespiegelt oder gescrapt. Alle Analysearten bleiben standardmäßig aus, bis Rechtsgrundlage, Transparenz, AVV/Anbieterprüfung, Betroffenenrechte und Aufbewahrung je Workspace bestätigt sind;
 - Meta Pixel als consent-gesteuerte Marketing-Messung ausschließlich mit parameterlosem `PageView` auf freigegebenen öffentlichen Seiten; geschützte und dynamische CRM-Routen sowie unsichere Query-/Fragmentwerte sind fail-closed ausgeschlossen; `CompleteRegistration`, `Lead` und weitere Conversion-Events bleiben vorbereitet und unverknüpft, bis sie einzeln fachlich und datenschutzrechtlich freigegeben sind;
 - Facebook-Reply-Target- und Messenger-Hilfen;
 - Telegram-Webhook- und Bot-Grundlagen;

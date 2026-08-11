@@ -710,6 +710,8 @@ Wichtige Felder:
 - `last_messenger_sync_skipped_count`
 - `last_messenger_sync_error`
 - `last_messenger_sync_outbound_at`
+- `messenger_sync_continuation_after`
+- `messenger_sync_continuation_started_at`
 - `oauth_login_type`
 - `external_account_type`
 - `token_expires_at`
@@ -723,6 +725,12 @@ RLS-Erwartung:
 - Nur eigener Workspace oder Admin; normale Browserzugriffe sind read-only.
 - `page_access_token_encrypted` ist verschlüsselt und nur über Service Role
   les-/schreibbar; Browser erhalten ausschließlich sichere Statusspalten.
+- `messenger_sync_continuation_after` und
+  `messenger_sync_continuation_started_at` bilden einen server-only
+  Fortsetzungszustand: beide sind gemeinsam leer oder gesetzt und besitzen
+  keine Browser-Spaltenrechte. Die vorbereitete Migration
+  `20260811220000_meta_conversation_sync_continuation.sql` muss vor Aktivierung
+  kontrolliert im jeweiligen Ziel angewendet und nachgeprüft werden.
 - Aktive `(platform, external_account_id)`-Bindungen sind global eindeutig,
   damit ein externes Konto nicht zwei Workspaces zugeordnet werden kann.
 - OAuth, Callback und Trennung verlangen Owner-/Admin-Rolle; bei mehreren
