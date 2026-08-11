@@ -72,8 +72,15 @@ test("Facebook and Instagram gate all connection-wide sync status writes", async
     facebook.match(
       /if \(shouldPersistConnectionStatus\) \{\s*await updateFacebookMessengerSyncStatus\(/gu,
     ) ?? [];
+  const guardedFacebookResultWrites =
+    facebook.match(
+      /if \(shouldPersistConnectionStatus\) \{\s*const statusResult = await updateFacebookMessengerSyncStatus\(/gu,
+    ) ?? [];
   assert.equal(facebookWrites.length, 3);
-  assert.equal(guardedFacebookWrites.length, facebookWrites.length);
+  assert.equal(
+    guardedFacebookWrites.length + guardedFacebookResultWrites.length,
+    facebookWrites.length,
+  );
 
   const instagramErrorWrites =
     instagram.match(/await persistSyncStatus\(/gu) ?? [];
@@ -89,6 +96,6 @@ test("Facebook and Instagram gate all connection-wide sync status writes", async
 
   assert.match(
     instagram,
-    /if \(shouldPersistConnectionStatus\) \{\s*await updateInstagramMessengerSyncStatus\(/u,
+    /if \(shouldPersistConnectionStatus\) \{\s*const statusResult = await updateInstagramMessengerSyncStatus\(/u,
   );
 });

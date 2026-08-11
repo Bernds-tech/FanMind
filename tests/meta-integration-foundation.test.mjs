@@ -186,9 +186,10 @@ test("pending Facebook page selection expires and accepts only bounded identifie
 });
 
 test("Instagram Business Login is workspace-bound and subscribes only authorized incremental channels", async () => {
-  const [integration, start, callback, disconnect, channels, webhook] =
+  const [integration, pagingPolicy, start, callback, disconnect, channels, webhook] =
     await Promise.all([
       source("src/lib/instagramIntegration.ts"),
+      source("src/lib/instagramGraphPagingPolicy.mjs"),
       source("src/app/api/integrations/instagram/start/route.ts"),
       source("src/app/api/integrations/instagram/callback/route.ts"),
       source("src/app/api/integrations/instagram/disconnect/route.ts"),
@@ -212,7 +213,7 @@ test("Instagram Business Login is workspace-bound and subscribes only authorized
     /messages\.limit\(\$\{pageLimit\}\)\{id,created_time,from,to,message\}/u,
   );
   assert.match(integration, /Authorization: `Bearer \$\{accessToken\}`/u);
-  assert.match(integration, /url\.hostname !== "graph\.instagram\.com"/u);
+  assert.match(pagingPolicy, /url\.host !== "graph\.instagram\.com"/u);
   assert.match(start, /workspaceId: workspaceResult\.workspace\.id/u);
   assert.match(start, /userId: data\.user\.id/u);
   assert.match(start, /canManageMetaConnections/u);
@@ -428,7 +429,7 @@ test("profiles are server-owned while authorized webhooks preserve chats without
   assert.match(syncAction, /connection\.last_messenger_sync_at/u);
   assert.match(syncAction, /META_INITIAL_CHAT_BACKFILL_LIMIT/u);
   assert.match(syncAction, /META_INCREMENTAL_CHAT_FETCH_LIMIT/u);
-  assert.match(instagramSyncAction, /fetchInstagramConversations/u);
+  assert.match(instagramSyncAction, /fetchInstagramConversationPage/u);
   assert.match(instagramSyncAction, /fetchInstagramConversationMessages/u);
   assert.match(instagramSyncAction, /META_INITIAL_CHAT_BACKFILL_LIMIT/u);
   assert.match(instagramSyncAction, /META_INCREMENTAL_CHAT_FETCH_LIMIT/u);

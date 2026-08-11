@@ -47,6 +47,17 @@ Kanal-Syncs liefern ein einheitliches Ergebnis:
 
 Facebook Messenger und Instagram Professional DMs laden beim ersten Abgleich höchstens 150 aktuelle Nachrichten je Conversation. Danach werden nur neue Ereignisse mit kleinem Sicherheitsüberlapp abgerufen und über externe IDs dedupliziert. Vorbereitete Kanäle zeigen keine Fake-Zahlen; wenn kein echter Sync existiert, steht im Status „vorbereitet“, „nicht verfügbar“ oder „API-/Freigabe erforderlich“.
 
+Der verbindungsweite Abgleich verarbeitet pro Ausführung innerhalb eines festen
+45-Sekunden-Zeitbudgets höchstens eine auf 25 Conversations begrenzte
+Provider-Seite. Liefert Meta eine Folgeseite, speichert
+FanMind ausschließlich serverseitig den validierten `after`-Cursor und den
+Start des ursprünglichen Intervalls. `last_messenger_sync_at` bleibt bis zur
+vollständigen Erschöpfung aller Seiten unverändert und wird erst dann auf den
+ursprünglichen Intervallstart gesetzt. Fehler erhalten die bestehende
+Fortsetzung unverändert; ein Wiederholungslauf darf dieselbe Seite dank
+externer Nachrichten-ID idempotent erneut verarbeiten. Provider-URLs, Tokens,
+Conversation-IDs und Nachrichteninhalte gehören nicht in Diagnoseprotokolle.
+
 Ein gezielter Catch-up aus einem Webhook darf nur den betroffenen Fan-Thread ergänzen. Er schreibt weder den verbindungsweiten Erfolgs-/Fehlerstatus noch `last_messenger_sync_at`; nur ein vollständig verbindungsweiter Sync darf diesen globalen Cursor fortschreiben.
 
 Vor jedem Meta-Webhook-Ingress und vor jedem manuellen Facebook-/Instagram-Sync prüft ein ausschließlich serverseitiger Service-Role-Resolver den Verarbeitungsanspruch des Workspaces. Archivierte oder vertraglich beendete Workspaces, abgelaufene Zahlungsfristen sowie unbekannte oder fehlerhafte Zustände werden fail-closed blockiert; bestehende CRM-Historie bleibt unverändert lesbar. Zeitlich begrenzte Verarbeitungsfreigaben benötigen ein explizites Ablaufdatum.
@@ -72,6 +83,7 @@ Vor Änderungen an Intake oder UI prüfen:
 2. inbound Bild-DM wird mit Attachment sichtbar.
 3. outbound Page-Antwort wird über Messenger-Verlauf-Sync importiert.
 4. Erster Sync liest bis zu 150 aktuelle Nachrichten je Conversation; Folgesyncs nur neue Ereignisse.
-5. Deduplikation über externe IDs bleibt aktiv.
-6. Dashboard/Fans-Unread zählen nur inbound ungesehen.
-7. Fan-Detail zeigt Richtung, Kanal, Ursprung und Medien korrekt.
+5. 26 oder mehr Conversations werden über begrenzte Fortsetzungsläufe ohne vorzeitiges Fortschreiben von `last_messenger_sync_at` vollständig erreicht.
+6. Deduplikation über externe IDs bleibt bei Wiederholung einer unvollständigen Seite aktiv.
+7. Dashboard/Fans-Unread zählen nur inbound ungesehen.
+8. Fan-Detail zeigt Richtung, Kanal, Ursprung und Medien korrekt.

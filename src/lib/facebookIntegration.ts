@@ -6,7 +6,14 @@ import {
   FACEBOOK_PAGES_READ_USER_CONTENT_SCOPE,
 } from "@/lib/facebookScopes";
 import { META_GRAPH_API_VERSION } from "@/lib/metaIntegrationPolicy.mjs";
-import { validateFacebookGraphPagingUrl } from "@/lib/facebookGraphPagingPolicy.mjs";
+import {
+  resolveFacebookGraphPagingCursor,
+  validateFacebookGraphPagingUrl,
+} from "@/lib/facebookGraphPagingPolicy.mjs";
+import {
+  createMetaConversationSyncAbortSignal,
+  normalizeMetaPagingCursor,
+} from "@/lib/metaConversationPaginationPolicy.mjs";
 import {
   normalizeFacebookPageSelectionPayload,
   type FacebookPageSelectionConnectionType,
@@ -345,6 +352,11 @@ export type FacebookMessengerConversation = {
   messageCount: number | null;
 };
 
+export type FacebookMessengerConversationPage = {
+  conversations: FacebookMessengerConversation[];
+  nextAfter: string | null;
+};
+
 export type FacebookMessengerMessage = {
   id: string;
   createdTime: string | null;
@@ -423,6 +435,28 @@ export async function fetchFacebookMessengerConversations(
   pageAccessToken: string,
   limit = 10,
 ): Promise<FacebookMessengerConversation[]> {
+  const page = await fetchFacebookMessengerConversationPage(
+    pageId,
+    pageAccessToken,
+    limit,
+  );
+  return page.conversations;
+}
+
+export async function fetchFacebookMessengerConversationPage(
+  pageId: string,
+  pageAccessToken: string,
+  limit = 25,
+  after?: string | null,
+  deadlineMs?: number,
+): Promise<FacebookMessengerConversationPage> {
+  const normalizedAfter = after == null
+    ? null
+    : normalizeMetaPagingCursor(after);
+  if (after != null && !normalizedAfter) {
+    throw new Error("Ungültiger Facebook-Paging-Cursor blockiert.");
+  }
+
   for (let index = 0; index < FACEBOOK_MESSENGER_CONVERSATION_FIELD_SETS.length; index += 1) {
     const fields = FACEBOOK_MESSENGER_CONVERSATION_FIELD_SETS[index];
     const fallbackActive = index > 0;
@@ -432,6 +466,8 @@ export async function fetchFacebookMessengerConversations(
         pageAccessToken,
         limit,
         fields,
+        normalizedAfter,
+        deadlineMs,
       );
     } catch (error) {
       if (!(error instanceof FacebookFieldFetchError) || !error.retryable) {
@@ -673,18 +709,27 @@ async function fetchFacebookMessengerConversationsWithFields(
   pageAccessToken: string,
   limit: number,
   fields: string,
-): Promise<FacebookMessengerConversation[]> {
+  after: string | null,
+  deadlineMs?: number,
+): Promise<FacebookMessengerConversationPage> {
   const url = new URL(
     `https://graph.facebook.com/${OAUTH_VERSION}/${encodeURIComponent(pageId)}/conversations`,
   );
   url.searchParams.set("platform", "messenger");
   url.searchParams.set("fields", fields);
   url.searchParams.set("limit", String(Math.max(1, Math.min(limit, 25))));
+  if (after) url.searchParams.set("after", after);
   url.searchParams.set("access_token", pageAccessToken);
 
-  const response = await fetch(url, { cache: "no-store" });
+  const response = await fetch(url, {
+    cache: "no-store",
+    signal: deadlineMs == null
+      ? undefined
+      : createMetaConversationSyncAbortSignal(deadlineMs),
+  });
   const payload = (await response.json().catch(() => null)) as {
     data?: unknown[];
+    paging?: { next?: string };
     error?: { message?: string; code?: number; type?: string };
   } | null;
   if (!response.ok) {
@@ -706,7 +751,7 @@ async function fetchFacebookMessengerConversationsWithFields(
     );
   }
 
-  return (payload?.data ?? [])
+  const conversations = (payload?.data ?? [])
     .filter(isRecord)
     .map((conversation) => ({
       id: stringValue(conversation.id) ?? "",
@@ -736,6 +781,13 @@ async function fetchFacebookMessengerConversationsWithFields(
       messageCount: numberValue(conversation.message_count),
     }))
     .filter((conversation) => conversation.id);
+
+  return {
+    conversations,
+    nextAfter: resolveFacebookGraphPagingCursor(
+      payload?.paging?.next ?? null,
+    ),
+  };
 }
 
 async function probeFacebookMessengerConversationFieldSet(input: {
@@ -857,6 +909,7 @@ export async function fetchFacebookMessengerConversationMessages(
   pageAccessToken: string,
   limit = 50,
   since?: string | null,
+  deadlineMs?: number,
 ): Promise<FacebookMessengerMessage[]> {
   const targetLimit = Math.max(1, Math.min(limit, 150));
   const messages: FacebookMessengerMessage[] = [];
@@ -871,7 +924,12 @@ export async function fetchFacebookMessengerConversationMessages(
   ).toString();
 
   while (nextUrl && messages.length < targetLimit) {
-    const response = await fetch(nextUrl, { cache: "no-store" });
+    const response = await fetch(nextUrl, {
+      cache: "no-store",
+      signal: deadlineMs == null
+        ? undefined
+        : createMetaConversationSyncAbortSignal(deadlineMs),
+    });
     const payload = (await response.json().catch(() => null)) as {
       data?: unknown[];
       paging?: { next?: string };
@@ -887,7 +945,6 @@ export async function fetchFacebookMessengerConversationMessages(
         fieldSetIndex += 1;
         const fallbackFields = FACEBOOK_MESSENGER_MESSAGE_FIELD_SETS[fieldSetIndex];
         console.info("Facebook Messenger message field fallback active", {
-          conversationId,
           fallbackFrom: previousFields,
           fallbackTo: fallbackFields,
           errorCode: payload?.error?.code,

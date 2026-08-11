@@ -19,6 +19,7 @@ import {
   getFacebookGrantedScopeNames,
   fetchFacebookPagePostsWithComments,
   fetchFacebookMessengerConversationMessages,
+  fetchFacebookMessengerConversationPage,
   fetchFacebookMessengerConversations,
   probeFacebookMessengerConversationFieldSets,
   probeFacebookMessengerMessageFieldSet,
@@ -35,6 +36,7 @@ import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
   getWorkspaceProcessingEntitlement,
+  getMetaMessengerSyncContinuation,
   getWorkspaceSocialConnectionsServer,
   createMetaWebhookConversationMessage,
   updateFacebookCommentFetchStatus,
@@ -55,6 +57,11 @@ import {
   META_INITIAL_CHAT_BACKFILL_LIMIT,
 } from "@/lib/metaDataHandlingPolicy.mjs";
 import { shouldPersistMetaConnectionSyncStatus } from "@/lib/metaSyncScopePolicy.mjs";
+import {
+  assertMetaConversationSyncBudget,
+  META_CONVERSATION_SYNC_EXECUTION_BUDGET_MS,
+  resolveMetaConversationSyncCheckpoint,
+} from "@/lib/metaConversationPaginationPolicy.mjs";
 
 export type FacebookCommentFetchResult = {
   ok: boolean;
@@ -74,6 +81,7 @@ const FACEBOOK_MESSENGER_INITIAL_CONVERSATION_LIMIT = 25;
 export type FacebookMessengerSyncResult = SocialSyncResult & {
   syncedAt: string;
   conversationsChecked: number;
+  continuationPending?: boolean;
   error?: string | null;
 };
 
@@ -481,6 +489,8 @@ async function syncFacebookMessengerHistoryForConnection(
   },
 ): Promise<FacebookMessengerSyncResult> {
   const { syncedAt } = input;
+  const executionDeadlineMs =
+    Date.now() + META_CONVERSATION_SYNC_EXECUTION_BUDGET_MS;
   const shouldPersistConnectionStatus =
     shouldPersistMetaConnectionSyncStatus(input);
   const token = connection.page_access_token_encrypted
@@ -498,6 +508,7 @@ async function syncFacebookMessengerHistoryForConnection(
         importedOutbound: 0,
         skippedDuplicates: 0,
         error: message,
+        cursorUpdate: { kind: "preserve" },
       });
     }
     if (input.revalidate) revalidatePath("/channels");
@@ -505,6 +516,16 @@ async function syncFacebookMessengerHistoryForConnection(
   }
 
   try {
+    const continuation = shouldPersistConnectionStatus
+      ? await getMetaMessengerSyncContinuation(connection.id, "facebook")
+      : null;
+    if (continuation?.error) throw continuation.error;
+    if (continuation && !continuation.schemaReady) {
+      throw new Error(
+        "Meta-Sync-Fortsetzung ist in dieser Umgebung noch nicht bereit.",
+      );
+    }
+
     const workspaceContacts =
       input.contactId || input.fanSenderId
         ? (await getWorkspaceContacts(connection.workspace_id)).contacts
@@ -520,11 +541,25 @@ async function syncFacebookMessengerHistoryForConnection(
     const conversationFetchLimit = initialSync
       ? FACEBOOK_MESSENGER_INITIAL_CONVERSATION_LIMIT
       : FACEBOOK_MESSENGER_INCREMENTAL_CONVERSATION_LIMIT;
-    const conversations = await fetchFacebookMessengerConversations(
+    assertMetaConversationSyncBudget(executionDeadlineMs);
+    const conversationPage = await fetchFacebookMessengerConversationPage(
       connection.page_id,
       token,
       conversationFetchLimit,
+      continuation?.continuationAfter ?? null,
+      executionDeadlineMs,
     );
+    const conversations = conversationPage.conversations;
+    const checkpoint = shouldPersistConnectionStatus
+      ? resolveMetaConversationSyncCheckpoint({
+          runStartedAt: syncedAt,
+          existingContinuationAfter:
+            continuation?.continuationAfter ?? null,
+          existingContinuationStartedAt:
+            continuation?.continuationStartedAt ?? null,
+          nextAfter: conversationPage.nextAfter,
+        })
+      : null;
     let conversationsChecked = 0;
     let importedInbound = 0;
     let importedOutbound = 0;
@@ -534,6 +569,7 @@ async function syncFacebookMessengerHistoryForConnection(
     let lastOutboundAt: string | null = null;
 
     for (const conversation of conversations) {
+      assertMetaConversationSyncBudget(executionDeadlineMs);
       const fanParticipant = conversation.participants.find(
         (participant) => participant.id !== connection.page_id,
       );
@@ -554,6 +590,7 @@ async function syncFacebookMessengerHistoryForConnection(
         token,
         messageFetchLimit,
         connection.last_messenger_sync_at,
+        executionDeadlineMs,
       );
       const chronologicalMessages = [...messages].sort(
         (a, b) =>
@@ -561,6 +598,7 @@ async function syncFacebookMessengerHistoryForConnection(
           (Date.parse(b.createdTime ?? "") || 0),
       );
       for (const message of chronologicalMessages) {
+        assertMetaConversationSyncBudget(executionDeadlineMs);
         checkedMessages += 1;
         const senderId = message.from?.id ?? fanParticipant?.id ?? null;
         const direction =
@@ -641,16 +679,30 @@ async function syncFacebookMessengerHistoryForConnection(
     }
 
     if (shouldPersistConnectionStatus) {
-      await updateFacebookMessengerSyncStatus(connection.id, {
-        syncedAt,
-        checkedConversations: conversationsChecked,
-        importedInbound,
-        importedOutbound,
-        skippedDuplicates,
-        importedMedia,
-        error: null,
-        lastOutboundAt,
-      });
+      const statusResult = await updateFacebookMessengerSyncStatus(
+        connection.id,
+        {
+          syncedAt,
+          checkedConversations: conversationsChecked,
+          importedInbound,
+          importedOutbound,
+          skippedDuplicates,
+          importedMedia,
+          error: null,
+          lastOutboundAt,
+          cursorUpdate: checkpoint?.completedSyncAt
+            ? {
+                kind: "complete",
+                completedSyncAt: checkpoint.completedSyncAt,
+              }
+            : {
+                kind: "partial",
+                continuationAfter: checkpoint!.continuationAfter!,
+                continuationStartedAt: checkpoint!.continuationStartedAt!,
+              },
+        },
+      );
+      if (statusResult.error) throw statusResult.error;
     }
     if (input.contactId && input.markInboundSeen)
       await markContactInboundMessagesSeen({
@@ -674,7 +726,12 @@ async function syncFacebookMessengerHistoryForConnection(
       skippedDuplicates,
       errors: [],
       syncLimit: messageFetchLimit,
-      lastSyncAt: syncedAt,
+      lastSyncAt:
+        checkpoint?.completedSyncAt ??
+        connection.last_messenger_sync_at ??
+        checkpoint?.intervalStartedAt ??
+        syncedAt,
+      continuationPending: Boolean(checkpoint?.continuationAfter),
       error: null,
     };
   } catch (syncErrorValue) {
@@ -690,6 +747,7 @@ async function syncFacebookMessengerHistoryForConnection(
         importedOutbound: 0,
         skippedDuplicates: 0,
         error: message,
+        cursorUpdate: { kind: "preserve" },
       });
     }
     if (input.revalidate) revalidatePath("/channels");

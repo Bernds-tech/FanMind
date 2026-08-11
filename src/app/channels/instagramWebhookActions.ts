@@ -5,13 +5,18 @@ import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import { decryptToken } from "@/lib/facebookIntegration";
 import {
   fetchInstagramConversationMessages,
-  fetchInstagramConversations,
+  fetchInstagramConversationPage,
 } from "@/lib/instagramIntegration";
 import {
   META_INCREMENTAL_CHAT_FETCH_LIMIT,
   META_INITIAL_CHAT_BACKFILL_LIMIT,
 } from "@/lib/metaDataHandlingPolicy.mjs";
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
+import {
+  assertMetaConversationSyncBudget,
+  META_CONVERSATION_SYNC_EXECUTION_BUDGET_MS,
+  resolveMetaConversationSyncCheckpoint,
+} from "@/lib/metaConversationPaginationPolicy.mjs";
 import { shouldPersistMetaConnectionSyncStatus } from "@/lib/metaSyncScopePolicy.mjs";
 import {
   createEmptySocialSyncResult,
@@ -21,6 +26,7 @@ import {
   createMetaWebhookConversationMessage,
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
+  getMetaMessengerSyncContinuation,
   getWorkspaceProcessingEntitlement,
   getWorkspaceContacts,
   getWorkspaceSocialConnectionsServer,
@@ -37,6 +43,7 @@ const INSTAGRAM_UNSUPPORTED_MESSAGE =
 export type InstagramMessengerSyncResult = SocialSyncResult & {
   syncedAt: string;
   conversationsChecked: number;
+  continuationPending?: boolean;
   error?: string | null;
 };
 
@@ -87,6 +94,8 @@ async function syncInstagramMessengerHistoryForConnection(
   },
 ): Promise<InstagramMessengerSyncResult> {
   const { syncedAt } = input;
+  const executionDeadlineMs =
+    Date.now() + META_CONVERSATION_SYNC_EXECUTION_BUDGET_MS;
   const shouldPersistConnectionStatus =
     shouldPersistMetaConnectionSyncStatus(input);
   const token = connection.page_access_token_encrypted
@@ -97,13 +106,23 @@ async function syncInstagramMessengerHistoryForConnection(
     const message =
       "Instagram-Zugriffstoken fehlt oder konnte nicht entschlüsselt werden.";
     if (shouldPersistConnectionStatus) {
-      await persistSyncStatus(connection.id, syncedAt, message);
+      await persistSyncStatus(connection.id, syncedAt, message, true);
     }
     if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
   }
 
   try {
+    const continuation = shouldPersistConnectionStatus
+      ? await getMetaMessengerSyncContinuation(connection.id, "instagram")
+      : null;
+    if (continuation?.error) throw continuation.error;
+    if (continuation && !continuation.schemaReady) {
+      throw new Error(
+        "Meta-Sync-Fortsetzung ist in dieser Umgebung noch nicht bereit.",
+      );
+    }
+
     const workspaceContacts =
       input.contactId || input.fanSenderId
         ? (await getWorkspaceContacts(connection.workspace_id)).contacts
@@ -119,11 +138,25 @@ async function syncInstagramMessengerHistoryForConnection(
     const conversationFetchLimit = initialSync
       ? INSTAGRAM_INITIAL_CONVERSATION_LIMIT
       : INSTAGRAM_INCREMENTAL_CONVERSATION_LIMIT;
-    const conversations = await fetchInstagramConversations(
+    assertMetaConversationSyncBudget(executionDeadlineMs);
+    const conversationPage = await fetchInstagramConversationPage(
       connection.page_id,
       token,
       conversationFetchLimit,
+      continuation?.continuationAfter ?? null,
+      executionDeadlineMs,
     );
+    const conversations = conversationPage.conversations;
+    const checkpoint = shouldPersistConnectionStatus
+      ? resolveMetaConversationSyncCheckpoint({
+          runStartedAt: syncedAt,
+          existingContinuationAfter:
+            continuation?.continuationAfter ?? null,
+          existingContinuationStartedAt:
+            continuation?.continuationStartedAt ?? null,
+          nextAfter: conversationPage.nextAfter,
+        })
+      : null;
 
     let conversationsChecked = 0;
     let checkedMessages = 0;
@@ -133,6 +166,7 @@ async function syncInstagramMessengerHistoryForConnection(
     let lastOutboundAt: string | null = null;
 
     for (const conversation of conversations) {
+      assertMetaConversationSyncBudget(executionDeadlineMs);
       if (
         connection.last_messenger_sync_at &&
         conversation.updatedTime &&
@@ -147,6 +181,7 @@ async function syncInstagramMessengerHistoryForConnection(
         token,
         messageFetchLimit,
         connection.last_messenger_sync_at,
+        executionDeadlineMs,
       );
       const chronologicalMessages = [...messages].sort(
         (left, right) =>
@@ -156,6 +191,7 @@ async function syncInstagramMessengerHistoryForConnection(
       let conversationMatched = false;
 
       for (const message of chronologicalMessages) {
+        assertMetaConversationSyncBudget(executionDeadlineMs);
         const direction =
           message.from?.id === connection.page_id ? "outbound" : "inbound";
         const fanActor =
@@ -209,16 +245,30 @@ async function syncInstagramMessengerHistoryForConnection(
     }
 
     if (shouldPersistConnectionStatus) {
-      await updateInstagramMessengerSyncStatus(connection.id, {
-        syncedAt,
-        checkedConversations: conversationsChecked,
-        importedInbound,
-        importedOutbound,
-        skippedDuplicates,
-        importedMedia: 0,
-        error: null,
-        lastOutboundAt,
-      });
+      const statusResult = await updateInstagramMessengerSyncStatus(
+        connection.id,
+        {
+          syncedAt,
+          checkedConversations: conversationsChecked,
+          importedInbound,
+          importedOutbound,
+          skippedDuplicates,
+          importedMedia: 0,
+          error: null,
+          lastOutboundAt,
+          cursorUpdate: checkpoint?.completedSyncAt
+            ? {
+                kind: "complete",
+                completedSyncAt: checkpoint.completedSyncAt,
+              }
+            : {
+                kind: "partial",
+                continuationAfter: checkpoint!.continuationAfter!,
+                continuationStartedAt: checkpoint!.continuationStartedAt!,
+              },
+        },
+      );
+      if (statusResult.error) throw statusResult.error;
     }
     if (input.contactId && input.markInboundSeen) {
       await markContactInboundMessagesSeen({
@@ -244,7 +294,12 @@ async function syncInstagramMessengerHistoryForConnection(
       skippedDuplicates,
       errors: [],
       syncLimit: messageFetchLimit,
-      lastSyncAt: syncedAt,
+      lastSyncAt:
+        checkpoint?.completedSyncAt ??
+        connection.last_messenger_sync_at ??
+        checkpoint?.intervalStartedAt ??
+        syncedAt,
+      continuationPending: Boolean(checkpoint?.continuationAfter),
       error: null,
     };
   } catch (error) {
@@ -253,7 +308,7 @@ async function syncInstagramMessengerHistoryForConnection(
         ? error.message
         : "Instagram-Verlauf konnte nicht abgerufen werden. Prüfe DM-Berechtigung und Professional-Konto.";
     if (shouldPersistConnectionStatus) {
-      await persistSyncStatus(connection.id, syncedAt, message);
+      await persistSyncStatus(connection.id, syncedAt, message, true);
     }
     if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
@@ -264,6 +319,7 @@ async function persistSyncStatus(
   connectionId: string,
   syncedAt: string,
   error: string,
+  preserveCursor = false,
 ): Promise<void> {
   await updateInstagramMessengerSyncStatus(connectionId, {
     syncedAt,
@@ -273,6 +329,7 @@ async function persistSyncStatus(
     skippedDuplicates: 0,
     importedMedia: 0,
     error,
+    cursorUpdate: preserveCursor ? { kind: "preserve" } : undefined,
   });
 }
 
