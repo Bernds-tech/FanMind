@@ -371,6 +371,17 @@ zwingende externe Freigabe noch fehlt.
   Worker-Aktivierung noch Staging-/Production-Deploy werden durch den normalen
   Web-Deploy ausgeführt. Der getrennte Staging-Ablauf steht in
   `docs/operations/META_CATCHUP_QUEUE.md` und ist noch nicht extern ausgeführt.
+- Die gemeinsame Workspace-Verarbeitungsgrenze besitzt zusätzlich einen
+  getrennten rollback-only Staging-Acceptance-Pfad. Er ist an `main`, den
+  exakten geprüften Commit, das geschützte Staging, den gemeinsamen read-only
+  Rollout-State und einen speziell markierten synthetischen Workspace
+  gebunden. Innerhalb einer vollständig zurückgerollten Transaktion werden
+  aktives Billing, Archivierung, Vertragsende, Suspendierung, Grace, manueller
+  Override, temporärer Testzugang, Ablauf und Reaktivierung gegen die
+  kanonische Policy geprüft. Der Pfad ruft weder Meta noch Stripe auf,
+  aktiviert keinen Worker und ersetzt nicht den späteren Webhook-/Cursor-E2E-
+  Test. Runbook:
+  `docs/operations/WORKSPACE_PROCESSING_STAGING_ACCEPTANCE.md`.
 - Das separate Supabase-Staging-Projekt sowie die getrennte Web-Staging-
   Runtime mit eigenem `fanmind-staging`-Runner, eigener DNS-/TLS-Bindung und
   eigenem Exoscale-Ziel sind vorhanden. Extern noch einzurichten beziehungsweise
