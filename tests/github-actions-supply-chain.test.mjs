@@ -111,13 +111,13 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
   const hostedWorkflows = checkoutWorkflows.filter(
     (workflow) => !workflow.selfHosted,
   );
-  assert.equal(hostedWorkflows.length, 26);
+  assert.equal(hostedWorkflows.length, 28);
   assert.equal(
     hostedWorkflows.reduce(
       (count, workflow) => count + workflow.checkoutShas.length,
       0,
     ),
-    27,
+    29,
   );
   assert.equal(
     hostedWorkflows.every((workflow) =>

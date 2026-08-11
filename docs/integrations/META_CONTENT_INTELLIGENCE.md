@@ -57,6 +57,7 @@ Freigabe und aktiviert keine externe Verbindung.
 | Post-/Account-Cache, Metrik-Snapshots und Formeln | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; echter Meta-Datentest offen |
 | Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; Analyse-Aktivierung bleibt gesperrt |
 | Begrenzte Conversation-Pagination | Implementierung und server-only Migration vorbereitet; Migration und realer Meta-Test im isolierten Staging vor Aktivierung offen |
+| Langlebige Webhook-Catch-up-Queue | Implementierung, checksum-gebundene Controlled Migration und inaktiver Worker vorbereitet; Staging-Apply, Lease-/RLS-Abnahme und Aktivierung offen |
 | Isolierter Staging-Migrationspfad | beide Meta-Content-Migrationen im getrennten Supabase-Staging angewendet und read-only nachgeprüft; Production unverändert |
 | Meta App Review, Advanced Access und Business Verification | extern offen |
 | Rechtsgrundlage, Transparenz, AVV und Aufbewahrung | extern beziehungsweise je Kunde offen; Analysen standardmäßig aus |
@@ -190,6 +191,13 @@ Person.
   nicht geheime Statusfelder;
 - global eindeutige aktive Bindung von Plattform + externer Konto-ID;
 - idempotente externe Ereignis-IDs und Schutz vor doppelten Webhooks;
+- keine Graph-Profil- oder Conversation-Historienabfrage im Webhook-Request;
+  gezielte Nachholarbeit wird bei ausdrücklicher Aktivierung atomar nach
+  Workspace, Connection, Plattform und Fan-Thread gebündelt. Ausschließlich
+  ein service-role-Worker darf per Lease arbeiten; fünf begrenzte Versuche,
+  Backoff, Dead Letter und Generationszähler verhindern Doppelarbeit und den
+  Verlust neuer Webhook-Impulse. Worker-Ausgaben enthalten keine IDs, Tokens,
+  Payloads, Profile oder Paging-URLs;
 - erster Facebook- oder Instagram-DM-Abruf höchstens 150 aktuelle Nachrichten je Thread; danach
   nur neue Ereignisse mit fünf Minuten Sicherheitsüberlapp;
 - pro verbindungsweitem Lauf innerhalb eines festen 45-Sekunden-Zeitbudgets
@@ -246,14 +254,19 @@ behaupten.
 3. explizite Facebook-Seitenauswahl und Instagram-Professional-Kontobindung
    mit Testkonten verifizieren.
 4. Bereits angewendetes isoliertes Staging-Schema für den jeweils geprüften Commit read-only nachweisen und die RLS-/Token-Negativtests wiederholen; bei Drift fail-closed stoppen.
-5. 150er-Erstabruf für Facebook und Instagram-DMs, inkrementelle Webhooks, Deduplizierung, vollständige
+5. Die Controlled Migration der Meta-Catch-up-Queue getrennt anwenden und
+   RLS, service-role-only RPCs, Duplikat-Coalescing, exklusive Leases,
+   Restart-Übernahme, Backoff/Dead Letter sowie Entitlement-/Disconnect-
+   Abbruch mit synthetischen Staging-Daten prüfen. Worker und Flag bleiben bis
+   zum vollständigen Nachweis aus.
+6. 150er-Erstabruf für Facebook und Instagram-DMs, inkrementelle Webhooks, Deduplizierung, vollständige
    Verlaufserhaltung sowie 50/100/150-KI-Kontexte und Post-/Insight-Cache mit
    synthetischen Daten testen.
-6. Trennung, Widerruf, Tokenablauf, Datenexport und Löschung testen.
-7. Datenschutzinformation, AVV, Anbieter-/Transferregister und Fristen extern
+7. Trennung, Widerruf, Tokenablauf, Datenexport und Löschung testen.
+8. Datenschutzinformation, AVV, Anbieter-/Transferregister und Fristen extern
    freigeben.
-8. Meta App Review/Advanced Access abschließen.
-9. Erst danach begrenzten Pilot je Workspace aktivieren; kein globaler
+9. Meta App Review/Advanced Access abschließen.
+10. Erst danach begrenzten Pilot je Workspace aktivieren; kein globaler
    Standardschalter.
 
 Der kontrollierte Schritt 4 ist in

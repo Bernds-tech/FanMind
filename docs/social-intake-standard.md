@@ -58,7 +58,7 @@ Fortsetzung unverändert; ein Wiederholungslauf darf dieselbe Seite dank
 externer Nachrichten-ID idempotent erneut verarbeiten. Provider-URLs, Tokens,
 Conversation-IDs und Nachrichteninhalte gehören nicht in Diagnoseprotokolle.
 
-Ein gezielter Catch-up aus einem Webhook darf nur den betroffenen Fan-Thread ergänzen. Er schreibt weder den verbindungsweiten Erfolgs-/Fehlerstatus noch `last_messenger_sync_at`; nur ein vollständig verbindungsweiter Sync darf diesen globalen Cursor fortschreiben.
+Ein gezielter Catch-up aus einem Webhook darf nur den betroffenen Fan-Thread ergänzen. Der Webhook-Request selbst ruft weder das Meta-Profil noch die Conversation-Historie ab. Nach idempotenter Nachrichtenspeicherung darf er bei ausdrücklich aktiviertem Queue-Flag nur einen workspace-, connection-, plattform- und thread-gebundenen Auftrag atomar anlegen oder mit einem offenen Auftrag bündeln. Ein getrenner service-role-Worker beansprucht genau einen Auftrag per Lease, wiederholt höchstens fünfmal mit Backoff und setzt danach `dead_letter`; eine während der Verarbeitung neu eingetroffene Generation wird nicht verloren. Bei Trennung oder abgelaufenem Verarbeitungsanspruch wird fail-closed beendet, bestehende Daten bleiben lesbar. Queue und Worker schreiben weder den verbindungsweiten Erfolgs-/Fehlerstatus noch `last_messenger_sync_at`; nur ein vollständig verbindungsweiter Sync darf diesen globalen Cursor fortschreiben. Tokens, Body, Profile, Paging-URLs, Provider- oder Thread-IDs werden nicht protokolliert.
 
 Vor jedem Meta-Webhook-Ingress und vor jedem manuellen Facebook-/Instagram-Sync prüft ein ausschließlich serverseitiger Service-Role-Resolver den Verarbeitungsanspruch des Workspaces. Archivierte oder vertraglich beendete Workspaces, abgelaufene Zahlungsfristen sowie unbekannte oder fehlerhafte Zustände werden fail-closed blockiert; bestehende CRM-Historie bleibt unverändert lesbar. Zeitlich begrenzte Verarbeitungsfreigaben benötigen ein explizites Ablaufdatum.
 
@@ -85,5 +85,8 @@ Vor Änderungen an Intake oder UI prüfen:
 4. Erster Sync liest bis zu 150 aktuelle Nachrichten je Conversation; Folgesyncs nur neue Ereignisse.
 5. 26 oder mehr Conversations werden über begrenzte Fortsetzungsläufe ohne vorzeitiges Fortschreiben von `last_messenger_sync_at` vollständig erreicht.
 6. Deduplikation über externe IDs bleibt bei Wiederholung einer unvollständigen Seite aktiv.
-7. Dashboard/Fans-Unread zählen nur inbound ungesehen.
-8. Fan-Detail zeigt Richtung, Kanal, Ursprung und Medien korrekt.
+7. Der Webhook antwortet ohne Graph-Historienaufruf; doppelte Ereignisse ergeben höchstens einen offenen Catch-up-Auftrag.
+8. Gleichzeitige Worker erhalten unterschiedliche Leases; Fehler landen nach fünf Versuchen im Dead Letter, und ein Neustart übernimmt abgelaufene Leases.
+9. Vertragsende/Archivierung verhindert den Hintergrundabruf, ohne die bestehende Historie zu löschen.
+10. Dashboard/Fans-Unread zählen nur inbound ungesehen.
+11. Fan-Detail zeigt Richtung, Kanal, Ursprung und Medien korrekt.

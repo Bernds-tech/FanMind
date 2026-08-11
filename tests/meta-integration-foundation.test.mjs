@@ -436,7 +436,9 @@ test("profiles are server-owned while authorized webhooks preserve chats without
   assert.match(instagramSyncAction, /sourcePlatform:\s*"instagram"/u);
   assert.match(instagramSyncAction, /sourceType:\s*"instagram_messages"/u);
   assert.match(instagramSyncAction, /updateInstagramMessengerSyncStatus/u);
-  assert.match(webhook, /syncInstagramMessengerConversationForContact/u);
+  assert.match(webhook, /enqueueMetaConversationCatchup/u);
+  assert.doesNotMatch(webhook, /syncInstagramMessengerConversationForContact/u);
+  assert.doesNotMatch(webhook, /syncFacebookMessengerConversationForContact/u);
   assert.match(oldRetention, /ranked\.rn > 50/u);
   assert.match(newRetention, /drop trigger if exists conversation_messages_trim_to_latest_50/u);
   assert.match(newRetention, /drop function if exists public\.trim_conversation_messages_to_latest_50/u);
