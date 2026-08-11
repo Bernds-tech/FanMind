@@ -49,6 +49,8 @@ Facebook Messenger und Instagram Professional DMs laden beim ersten Abgleich hö
 
 Ein gezielter Catch-up aus einem Webhook darf nur den betroffenen Fan-Thread ergänzen. Er schreibt weder den verbindungsweiten Erfolgs-/Fehlerstatus noch `last_messenger_sync_at`; nur ein vollständig verbindungsweiter Sync darf diesen globalen Cursor fortschreiben.
 
+Vor jedem Meta-Webhook-Ingress und vor jedem manuellen Facebook-/Instagram-Sync prüft ein ausschließlich serverseitiger Service-Role-Resolver den Verarbeitungsanspruch des Workspaces. Archivierte oder vertraglich beendete Workspaces, abgelaufene Zahlungsfristen sowie unbekannte oder fehlerhafte Zustände werden fail-closed blockiert; bestehende CRM-Historie bleibt unverändert lesbar. Zeitlich begrenzte Verarbeitungsfreigaben benötigen ein explizites Ablaufdatum.
+
 ## Kanalstatus
 
 Die zentrale Konfiguration in `src/lib/channelSources.ts` beschreibt pro Kanal Fähigkeiten und Status. Mindeststand:
