@@ -2,7 +2,7 @@
 
 ## Referenz
 
-Facebook Messenger ist der Referenzstandard für den Social Intake. Der aktuelle Stand bleibt: inbound Text-DMs, inbound Bild-DMs und outbound Page-Antworten aus dem Messenger-Verlauf-Sync werden importiert. Es gibt keine automatische Sendefunktion und keine automatische Antwort.
+Facebook Messenger ist der Referenzstandard für den Social Intake. Der implementierte Beta-Stand importiert inbound Text-DMs, inbound Bild-DMs und outbound Page-Antworten aus dem Messenger-Verlauf-Sync. Kein Social-Kanal ist allgemein live, solange reale Staging-/Meta-Kontotests, Provider-Freigaben und die rechtliche Aktivierung fehlen. Es gibt keine automatische Sendefunktion und keine automatische Antwort.
 
 ## Standardfelder für Nachrichten
 
@@ -51,9 +51,9 @@ Facebook Messenger und Instagram Professional DMs laden beim ersten Abgleich hö
 
 Die zentrale Konfiguration in `src/lib/channelSources.ts` beschreibt pro Kanal Fähigkeiten und Status. Mindeststand:
 
-- `facebook_messages`: live, inbound/outbound/media/history-sync, 150er Erstabruf und danach inkrementell, kein automatisches Senden.
+- `facebook_messages`: implementiert/Beta, inbound/outbound/media/history-sync, 150er Erstabruf und danach inkrementell; isoliertes Schema angewendet, realer Staging-/Meta-Kontotest und Provider-Freigaben offen; nicht allgemein live und kein automatisches Senden.
 - `facebook_comments`: geparkt/vorbereitet, kein Live-Test in diesem PR.
-- `instagram_messages`: Beta, inbound/outbound/history-sync, 150er Erstabruf und danach inkrementell, echter Staging-/Meta-Test und Freigabe erforderlich; kein automatisches Senden.
+- `instagram_messages`: implementiert/Beta, inbound/outbound/history-sync, 150er Erstabruf und danach inkrementell; isoliertes Schema angewendet, echter Staging-/Meta-Kontotest und Provider-Freigaben offen; nicht allgemein live und kein automatisches Senden.
 - `instagram_comments`: vorbereitet, API-/Freigabe erforderlich.
 - `whatsapp_messages`: vorbereitet, Cloud-API-Konfiguration später.
 - `tiktok_comments`: vorbereitet, offizielle Freigabe erforderlich, kein Scraping.

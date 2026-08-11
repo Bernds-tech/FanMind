@@ -468,3 +468,37 @@ test("profiles are server-owned while authorized webhooks preserve chats without
     /upsertWorkspaceVoiceProfile[\s\S]*getServiceAccessToken\(\)/u,
   );
 });
+
+
+test("Meta reader docs reflect applied Staging schema without claiming generally live channels", async () => {
+  const [sourceOfTruth, metaContent, socialIntake] = await Promise.all([
+    source("docs/SOURCE_OF_TRUTH.md"),
+    source("docs/integrations/META_CONTENT_INTELLIGENCE.md"),
+    source("docs/social-intake-standard.md"),
+  ]);
+
+  assert.match(
+    sourceOfTruth,
+    /Meta-Content-Staging:[\s\S]{0,600}auf dem getrennten Supabase-Staging\s+angewendet/u,
+  );
+  assert.match(
+    metaContent,
+    /beide Meta-Content-Migrationen im getrennten Supabase-Staging angewendet und read-only nachgeprüft/u,
+  );
+  assert.doesNotMatch(
+    metaContent,
+    /Migration noch nicht angewendet|noch nicht ausgeführt/u,
+  );
+  assert.match(
+    socialIntake,
+    /`facebook_messages`: implementiert\/Beta/u,
+  );
+  assert.match(
+    socialIntake,
+    /Kein Social-Kanal ist allgemein live/u,
+  );
+  assert.doesNotMatch(
+    socialIntake,
+    /`facebook_messages`: live/u,
+  );
+});
