@@ -19,6 +19,7 @@ import {
 } from "../src/lib/stagingDatabaseRolloutStatePolicy.mjs";
 import {
   AI_TIER_STATE_SQL,
+  META_CATCHUP_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
   ledgerManagedMetaMigrations,
@@ -108,6 +109,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         aiTier: "current",
         mobilePush: "current",
         metaContent: "absent",
+        metaCatchup: "absent",
         triggerHardening: "unavailable",
       },
     }),
@@ -116,6 +118,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         aiTier: "verify",
         mobilePush: "verify",
         metaContent: "apply",
+        metaCatchup: "apply",
         triggerHardening: "skip",
       },
       blocked: false,
@@ -134,6 +137,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         aiTier: "current",
         mobilePush: "current",
         metaContent: "current",
+        metaCatchup: "current",
         triggerHardening: "current",
       },
     }).actions,
@@ -141,6 +145,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
       aiTier: "skip",
       mobilePush: "skip",
       metaContent: "skip",
+      metaCatchup: "verify",
       triggerHardening: "verify",
     },
   );
@@ -157,6 +162,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         aiTier: "current",
         mobilePush: "current",
         metaContent: "foundation",
+        metaCatchup: "current",
         triggerHardening: "unavailable",
       },
     }).actions.metaContent,
@@ -177,6 +183,7 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         aiTier: "absent",
         mobilePush: "absent",
         metaContent: "absent",
+        metaCatchup: "absent",
         triggerHardening: "unavailable",
       },
     },
@@ -191,6 +198,7 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         aiTier: "current",
         mobilePush: "current",
         metaContent: "invalid",
+        metaCatchup: "current",
         triggerHardening: "invalid",
       },
     },
@@ -215,6 +223,7 @@ test("ledger and object probes are transactionally read-only and exact", () => {
   for (const sql of [
     ledger,
     AI_TIER_STATE_SQL,
+    META_CATCHUP_STATE_SQL,
     MOBILE_PUSH_STATE_SQL,
     TRIGGER_HARDENING_STATE_SQL,
   ]) {
@@ -265,6 +274,7 @@ test("three-step Meta manifest keeps the controlled idempotency step out of the 
         aiTier: "current",
         mobilePush: "current",
         metaContent: "foundation",
+        metaCatchup: "current",
         triggerHardening: "unavailable",
       },
     }).actions.metaContent,
@@ -326,6 +336,7 @@ case "$input" in
   *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=present' ;;
   *MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS*) echo 'MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS' ;;
   *META_CONTENT_MIGRATION_STATE=*) echo 'META_CONTENT_MIGRATION_STATE=absent' ;;
+  *STAGING_DATABASE_META_CATCHUP_OBJECT=*) echo 'STAGING_DATABASE_META_CATCHUP_OBJECT=absent' ;;
   *STAGING_DATABASE_TRIGGER_OBJECT=*) echo 'STAGING_DATABASE_TRIGGER_OBJECT=pending' ;;
   *) exit 1 ;;
 esac
@@ -361,6 +372,7 @@ esac
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=verify/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=verify/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
     assert.match(
       result.stdout,
       new RegExp(

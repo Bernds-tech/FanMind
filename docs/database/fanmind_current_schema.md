@@ -1,6 +1,6 @@
 # FanMind aktueller Datenbank- und RLS-Stand
 
-Stand: Juli 2026
+Stand: August 2026
 
 Dieses Dokument ersetzt die alte Lesart von `docs/database/fanmind_mvp_schema.sql` als vollständiges Schema. Die Datei `fanmind_mvp_schema.sql` bleibt nur als historischer Auth-/Workspace-Basisstand erhalten.
 
@@ -767,6 +767,37 @@ RLS-Erwartung:
 - Webhook-Inserts serverseitig.
 - Lesen nur eigener Workspace/Admin.
 - `raw_payload` kann sensible Kontextdaten enthalten und darf nicht öffentlich sichtbar sein.
+
+### `meta_conversation_catchup_jobs` (vorbereitet, nicht angewendet)
+
+Zweck: langlebige, gezielte Facebook-/Instagram-Conversation-Nachholarbeit
+außerhalb des Webhook-Requests.
+
+Wichtige Felder:
+
+- `workspace_id`, `social_connection_id`, `platform`, `fan_sender_id`
+- `contact_id`
+- `status` (`pending`, `claimed`, `retry`, `succeeded`, `dead_letter`, `cancelled`)
+- `attempt_count`, `generation`, `claimed_generation`
+- `available_at`, `worker_id`, `lease_token`, `lease_until`
+- `last_error_code`, `created_at`, `updated_at`, `finished_at`
+
+RLS-/Privilege-Erwartung:
+
+- Workspace und Connection sowie optionaler Kontakt sind über zusammengesetzte
+  Fremdschlüssel mandantengebunden.
+- RLS und `FORCE ROW LEVEL SECURITY` sind aktiv; Browserrollen besitzen keine
+  Tabellen- oder RPC-Rechte.
+- `service_role` darf die Tabelle direkt nur lesen und ausschließlich die drei
+  `SECURITY DEFINER`-RPCs zum Enqueue/Coalescing, Claim und Finish ausführen.
+- Ein partieller eindeutiger Index erlaubt je Workspace/Connection/Plattform/
+  Thread höchstens einen offenen Auftrag. `FOR UPDATE SKIP LOCKED`, Lease-Token
+  und Worker-ID verhindern gleichzeitige Claims derselben Zeile.
+- Der Schritt liegt checksum-gebunden unter
+  `supabase/controlled/20260811230000_meta_conversation_catchup_queue.sql`.
+  Er ist noch weder auf Staging noch auf Production angewendet und wird von
+  keinem normalen Web-Deploy entdeckt. Aktivierung und Rollback folgen
+  `docs/operations/META_CATCHUP_QUEUE.md`.
 
 ## 8. Billing-Grundlagen
 

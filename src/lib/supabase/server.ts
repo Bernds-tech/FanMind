@@ -371,6 +371,38 @@ export type MetaMessengerSyncContinuationResult = {
   error: Error | null;
 };
 
+export type MetaConversationCatchupJobRow = {
+  id: string;
+  workspace_id: string;
+  social_connection_id: string;
+  platform: "facebook" | "instagram";
+  fan_sender_id: string;
+  contact_id: string | null;
+  status:
+    | "pending"
+    | "claimed"
+    | "retry"
+    | "succeeded"
+    | "dead_letter"
+    | "cancelled";
+  attempt_count: number;
+  generation: number;
+  claimed_generation: number | null;
+  available_at: string;
+  worker_id: string | null;
+  lease_token: string | null;
+  lease_until: string | null;
+  last_error_code: string | null;
+  created_at: string;
+  updated_at: string;
+  finished_at: string | null;
+};
+
+export type MetaConversationCatchupJobResult = {
+  job: MetaConversationCatchupJobRow | null;
+  error: Error | null;
+};
+
 export type WorkspaceAnalysisSettingsRow = {
   workspace_id: string;
   fan_analysis_enabled: boolean;
@@ -674,6 +706,8 @@ const SOCIAL_CONNECTION_SECRET_COLUMNS =
   `${SOCIAL_CONNECTION_PUBLIC_COLUMNS},page_access_token_encrypted`;
 const META_MESSENGER_SYNC_CONTINUATION_COLUMNS =
   "messenger_sync_continuation_after,messenger_sync_continuation_started_at";
+const META_CONVERSATION_CATCHUP_JOB_COLUMNS =
+  "id,workspace_id,social_connection_id,platform,fan_sender_id,contact_id,status,attempt_count,generation,claimed_generation,available_at,worker_id,lease_token,lease_until,last_error_code,created_at,updated_at,finished_at";
 const WORKSPACE_ANALYSIS_SETTINGS_COLUMNS =
   "workspace_id,fan_analysis_enabled,conversation_analysis_enabled,user_voice_analysis_enabled,content_insights_enabled,meta_sync_mode,personal_content_retention_days,legal_basis_status,transparency_status,data_processing_agreement_status,retention_status,data_subject_rights_status,message_retention_days,content_cache_retention_days,analysis_retention_days,confirmed_by,confirmed_at,created_at,updated_at";
 const META_WEBHOOK_EVENT_COLUMNS =
@@ -1235,6 +1269,83 @@ export async function getWorkspaceSocialConnectionsServer(
   }
 
   return { connections: result.data ?? [], error: null };
+}
+
+export async function enqueueMetaConversationCatchup(input: {
+  workspaceId: string;
+  socialConnectionId: string;
+  platform: "facebook" | "instagram";
+  fanSenderId: string;
+  contactId?: string | null;
+}): Promise<MetaConversationCatchupJobResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      job: null,
+      error: new Error("Serverberechtigungen für die Meta-Nachholqueue fehlen."),
+    };
+  }
+
+  const result = await postgrestRequest<MetaConversationCatchupJobRow>(
+    "rpc/enqueue_meta_conversation_catchup",
+    "POST",
+    {
+      p_workspace_id: input.workspaceId,
+      p_social_connection_id: input.socialConnectionId,
+      p_platform: input.platform,
+      p_fan_sender_id: input.fanSenderId,
+      p_contact_id: input.contactId ?? null,
+    },
+    serviceAccessToken,
+    { select: META_CONVERSATION_CATCHUP_JOB_COLUMNS, single: true },
+  );
+
+  return {
+    job: result.data,
+    error: result.error
+      ? new Error("Meta-Nachholauftrag konnte nicht gespeichert werden.")
+      : null,
+  };
+}
+
+export async function getClaimedMetaConversationCatchupJob(input: {
+  jobId: string;
+  workerId: string;
+  leaseToken: string;
+}): Promise<MetaConversationCatchupJobResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      job: null,
+      error: new Error("Serverberechtigungen für die Meta-Nachholqueue fehlen."),
+    };
+  }
+
+  const result = await postgrestSelect<MetaConversationCatchupJobRow>(
+    "meta_conversation_catchup_jobs",
+    serviceAccessToken,
+    META_CONVERSATION_CATCHUP_JOB_COLUMNS,
+    [
+      ["id", input.jobId],
+      ["worker_id", input.workerId],
+      ["lease_token", input.leaseToken],
+      ["status", "claimed"],
+    ],
+    1,
+    true,
+  );
+  if (result.error) {
+    return {
+      job: null,
+      error: new Error("Meta-Nachholauftrag konnte nicht geladen werden."),
+    };
+  }
+
+  const leaseUntil = Date.parse(result.data?.lease_until ?? "");
+  if (!result.data || !Number.isFinite(leaseUntil) || leaseUntil < Date.now()) {
+    return { job: null, error: null };
+  }
+  return { job: result.data, error: null };
 }
 
 export async function getMetaMessengerSyncContinuation(

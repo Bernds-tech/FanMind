@@ -29,6 +29,7 @@ const WEBHOOK_ERROR_CODES = Object.freeze([
   "workspace_not_configured",
   "workspace_lookup_failed",
   "connection_lookup_failed",
+  "catchup_enqueue_failed",
   "fallback_workspace_failed",
   "message_persist_failed",
   "conversation_sync_failed",

@@ -9,6 +9,7 @@ nächste Zustand für die bereits vorhandenen Kontrollpfade sicher ist:
 - KI-Stufen-Entitlements;
 - Mobile-Push-Registrierungen;
 - Meta Content Intelligence plus inkrementelle Conversation-Historie;
+- die kontrollierte Meta Conversation Catch-up Queue;
 - Triggerfunktions-Härtung, sobald ihr kontrollierter Pfad auf `main`
   vorhanden ist.
 
@@ -43,6 +44,11 @@ Aktion `apply` für den separaten Meta-Spezialrunner.
 Dateiname, Inhalt und SHA-256 werden zusätzlich offline durch die vorhandenen
 Runner festgeschrieben. Ein Tabellenname allein gilt niemals als gültiger
 Migrationsnachweis.
+
+Auch die Catch-up Queue liegt unter `supabase/controlled/` und besitzt keinen
+Ledger-Eintrag. Ihr vollständiger Queue-Postflight entscheidet deshalb direkt:
+`absent` ergibt `apply`, ein vollständig gültiger Zustand `verify` und jeder
+partielle oder abweichende Zustand `block`.
 
 ## Ausschließlich mögliche Aktionen
 
@@ -116,7 +122,8 @@ ausreichender Projektidentifikator.
    dieses Workflows.
 4. Für `apply` zuerst den zugehörigen Resource-Readiness-Workflow abnehmen und
    danach ausschließlich den getrennten checksum- und commitgebundenen
-   Migrationsworkflow freigeben.
+   Migrationsworkflow freigeben. Der Queue-Apply verlangt zusätzlich aus
+   demselben Lauf exakt `STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply`.
 5. Datenbank-Schreibworkflows nie parallel ausführen.
 6. Meta Foundation und History immer gemeinsam und atomar anwenden.
 7. Trigger-Hardening vorzugsweise nach Meta ausführen; dann ist die alte
@@ -128,6 +135,7 @@ Erlaubte Ergebniszeilen:
 STAGING_DATABASE_ROLLOUT_AI_TIER=verify|skip|apply|block
 STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=verify|skip|apply|block
 STAGING_DATABASE_ROLLOUT_META_CONTENT=verify|skip|apply|block
+STAGING_DATABASE_ROLLOUT_META_CATCHUP=verify|apply|block
 STAGING_DATABASE_ROLLOUT_TRIGGER_HARDENING=verify|skip|apply|block
 STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION=disabled
 STAGING_DATABASE_ROLLOUT_STATE=PASS|BLOCKED

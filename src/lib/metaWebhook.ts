@@ -7,18 +7,13 @@ import {
 import {
   createMetaWebhookConversationMessage,
   createMetaWebhookDebugEvent,
+  enqueueMetaConversationCatchup,
   findMetaSocialConnectionByPageId,
   type ConversationMessageAttachment,
-  type SocialConnectionRow,
 } from "@/lib/supabase/server";
-import {
-  decryptToken,
-  FACEBOOK_GRAPH_API_VERSION,
-} from "@/lib/facebookIntegration";
-import { syncFacebookMessengerConversationForContact } from "@/app/channels/facebookWebhookActions";
-import { syncInstagramMessengerConversationForContact } from "@/app/channels/instagramWebhookActions";
 import { buildMetaWebhookDiagnosticPayload } from "@/lib/webhookSecurityPolicy.mjs";
 import { evaluateMetaDataUse } from "@/lib/metaDataHandlingPolicy.mjs";
+import { isMetaCatchupQueueEnabled } from "@/lib/metaCatchupQueuePolicy.mjs";
 
 export type MetaWebhookEvent = {
   eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
@@ -116,11 +111,7 @@ export function extractMetaWebhookEvents(payload: unknown): MetaWebhookEvent[] {
           : ((isRecord(item.sender)
               ? stringValue(item.sender.username)
               : null) ??
-            (senderId
-              ? `${isInstagram ? "Instagram Nutzer" : "Facebook Nutzer"} ${senderId}`
-              : isInstagram
-                ? "Instagram Nutzer"
-                : "Facebook Nutzer")),
+            (isInstagram ? "Instagram Nutzer" : "Facebook Nutzer")),
         pageId,
         senderId,
         recipientId: isEcho ? rawSenderId : pageId,
@@ -244,20 +235,6 @@ export async function processMetaWebhookPayload(
       continue;
     }
 
-    if (
-      connection.connection &&
-      event.eventType === "messages" &&
-      event.sourcePlatform === "facebook" &&
-      event.direction === "inbound" &&
-      event.senderId
-    ) {
-      const profile = await fetchFacebookMessengerProfile(
-        event.senderId,
-        connection.connection,
-      );
-      if (profile.displayName) event.authorLabel = profile.displayName;
-    }
-
     let status =
       event.eventType === "feed" || event.eventType === "feed_comment"
         ? "stored"
@@ -347,22 +324,23 @@ export async function processMetaWebhookPayload(
           if (
             event.eventType === "messages" &&
             event.direction === "inbound" &&
-            event.senderId
+            event.senderId &&
+            isMetaCatchupQueueEnabled()
           ) {
-            const syncResult =
-              event.sourcePlatform === "facebook"
-                ? await syncFacebookMessengerConversationForContact({
-                    connection: connection.connection,
-                    contactId: result.message?.contact_id ?? null,
-                    fanSenderId: event.senderId,
-                  })
-                : await syncInstagramMessengerConversationForContact({
-                    connection: connection.connection,
-                    contactId: result.message?.contact_id ?? null,
-                    fanSenderId: event.senderId,
-                  });
-            if (!syncResult.ok && syncResult.error)
-              firstErrorCode ??= "conversation_sync_failed";
+            const catchup = await enqueueMetaConversationCatchup({
+              workspaceId: connection.connection.workspace_id,
+              socialConnectionId: connection.connection.id,
+              platform: event.sourcePlatform,
+              fanSenderId: event.senderId,
+              contactId: result.message?.contact_id ?? null,
+            });
+            if (catchup.error || !catchup.job) {
+              status = "error";
+              errorReason = "catchup_enqueue_failed";
+              firstErrorCode ??= "catchup_enqueue_failed";
+            } else {
+              status = "stored_catchup_queued";
+            }
           }
         }
       } else {
@@ -469,41 +447,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-type FacebookMessengerProfile = {
-  displayName: string | null;
-};
-
-async function fetchFacebookMessengerProfile(
-  psid: string,
-  connection: SocialConnectionRow,
-): Promise<FacebookMessengerProfile> {
-  const encryptedToken = connection.page_access_token_encrypted;
-  const pageToken = encryptedToken ? decryptToken(encryptedToken) : null;
-
-  if (!pageToken) return { displayName: null };
-
-  try {
-    const url = new URL(
-      `https://graph.facebook.com/${FACEBOOK_GRAPH_API_VERSION}/${encodeURIComponent(psid)}`,
-    );
-    url.searchParams.set("fields", "first_name,last_name,name");
-    url.searchParams.set("access_token", pageToken);
-
-    const response = await fetch(url.toString(), { cache: "no-store" });
-    if (!response.ok) return { displayName: null };
-
-    const profile = await response.json();
-    if (!isRecord(profile)) return { displayName: null };
-
-    const firstName = stringValue(profile.first_name);
-    const lastName = stringValue(profile.last_name);
-    const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
-    return { displayName: fullName || stringValue(profile.name) };
-  } catch {
-    return { displayName: null };
-  }
 }
 
 function extractMessengerAttachments(
