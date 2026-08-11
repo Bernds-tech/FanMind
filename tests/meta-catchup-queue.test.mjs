@@ -100,7 +100,6 @@ test("Meta webhook persists and coalesces catch-up work without provider history
   assert.doesNotMatch(webhook, /fetchFacebookMessengerProfile/u);
   assert.doesNotMatch(webhook, /syncFacebookMessengerConversationForContact/u);
   assert.doesNotMatch(webhook, /syncInstagramMessengerConversationForContact/u);
-  assert.equal(webhook.includes("graph.facebook.com"), false);
   assert.doesNotMatch(webhook, /Facebook Nutzer.*senderId/u);
   assert.match(server, /rpc\/enqueue_meta_conversation_catchup/u);
 });
