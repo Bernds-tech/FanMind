@@ -479,7 +479,7 @@ test("Meta reader docs reflect applied Staging schema without claiming generally
 
   assert.match(
     sourceOfTruth,
-    /beiden Meta-Content-Migrationen[\s\S]*getrennten Supabase-Staging[\s\S]*angewendet/u,
+    /Meta-Content-Staging:[\s\S]{0,600}auf dem getrennten Supabase-Staging\s+angewendet/u,
   );
   assert.match(
     metaContent,
