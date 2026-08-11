@@ -47,6 +47,8 @@ Kanal-Syncs liefern ein einheitliches Ergebnis:
 
 Facebook Messenger und Instagram Professional DMs laden beim ersten Abgleich höchstens 150 aktuelle Nachrichten je Conversation. Danach werden nur neue Ereignisse mit kleinem Sicherheitsüberlapp abgerufen und über externe IDs dedupliziert. Vorbereitete Kanäle zeigen keine Fake-Zahlen; wenn kein echter Sync existiert, steht im Status „vorbereitet“, „nicht verfügbar“ oder „API-/Freigabe erforderlich“.
 
+Ein gezielter Catch-up aus einem Webhook darf nur den betroffenen Fan-Thread ergänzen. Er schreibt weder den verbindungsweiten Erfolgs-/Fehlerstatus noch `last_messenger_sync_at`; nur ein vollständig verbindungsweiter Sync darf diesen globalen Cursor fortschreiben.
+
 ## Kanalstatus
 
 Die zentrale Konfiguration in `src/lib/channelSources.ts` beschreibt pro Kanal Fähigkeiten und Status. Mindeststand:
