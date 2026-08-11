@@ -25,6 +25,7 @@ import {
   MIGRATION_ID as MOBILE_PUSH_MIGRATION_ID,
   POSTFLIGHT_SQL as MOBILE_PUSH_POSTFLIGHT_SQL,
 } from "./mobile-push-registration-migration-runner.mjs";
+import { POSTFLIGHT_SQL as META_CATCHUP_POSTFLIGHT_SQL } from "./meta-catchup-queue-migration-runner.mjs";
 import {
   deriveStagingDatabaseRolloutActions,
   evaluateStagingDatabaseRolloutStateEnvironment,
@@ -55,6 +56,13 @@ const OFFLINE_CONTROLS = Object.freeze([
     path: resolve(
       process.cwd(),
       "scripts/operations/meta-content-migration-runner.mjs",
+    ),
+    arguments: ["--check"],
+  }),
+  Object.freeze({
+    path: resolve(
+      process.cwd(),
+      "scripts/operations/meta-catchup-queue-migration-runner.mjs",
     ),
     arguments: ["--check"],
   }),
@@ -172,6 +180,16 @@ begin;
 set transaction read only;
 select 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=' ||
   case when to_regclass('public.mobile_push_registrations') is null
+    then 'absent' else 'present' end;
+rollback;
+`;
+
+const META_CATCHUP_STATE_SQL = String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+select 'STAGING_DATABASE_META_CATCHUP_OBJECT=' ||
+  case when to_regclass('public.meta_conversation_catchup_jobs') is null
     then 'absent' else 'present' end;
 rollback;
 `;
@@ -470,6 +488,14 @@ async function inspectDatabase(environment) {
         passfilePath: snapshotPath,
       }),
       metaContent: metaObjectState(environment, snapshotPath),
+      metaCatchup: tableObjectState({
+        stateSql: META_CATCHUP_STATE_SQL,
+        stateMarker: "STAGING_DATABASE_META_CATCHUP_OBJECT",
+        postflightSql: META_CATCHUP_POSTFLIGHT_SQL,
+        postflightMarker: "META_CATCHUP_QUEUE_POSTFLIGHT=PASS",
+        environment,
+        passfilePath: snapshotPath,
+      }),
       triggerHardening: await triggerObjectState(environment, snapshotPath),
     });
     return deriveStagingDatabaseRolloutActions({ ledger, objects });
@@ -495,6 +521,9 @@ async function main() {
   );
   console.log(
     `STAGING_DATABASE_ROLLOUT_META_CONTENT=${result.actions.metaContent}`,
+  );
+  console.log(
+    `STAGING_DATABASE_ROLLOUT_META_CATCHUP=${result.actions.metaCatchup}`,
   );
   console.log(
     `STAGING_DATABASE_ROLLOUT_TRIGGER_HARDENING=${result.actions.triggerHardening}`,
@@ -529,6 +558,7 @@ if (
 
 export {
   AI_TIER_STATE_SQL,
+  META_CATCHUP_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
   ledgerManagedMetaMigrations,

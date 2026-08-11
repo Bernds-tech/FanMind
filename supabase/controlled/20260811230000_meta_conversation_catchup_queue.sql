@@ -142,10 +142,7 @@ begin
       when job.status in ('pending', 'retry') then 'pending'
       else job.status
     end,
-    attempt_count = case
-      when job.status in ('pending', 'retry') then 0
-      else job.attempt_count
-    end,
+    attempt_count = job.attempt_count,
     generation = job.generation + 1,
     available_at = case
       when job.status in ('pending', 'retry') then least(job.available_at, now())
@@ -182,13 +179,30 @@ begin
   end if;
 
   update public.meta_conversation_catchup_jobs as job
-     set status = 'dead_letter',
+     set status = case
+           when job.generation > job.claimed_generation then 'pending'
+           else 'dead_letter'
+         end,
+         attempt_count = case
+           when job.generation > job.claimed_generation then 0
+           else job.attempt_count
+         end,
          claimed_generation = null,
          worker_id = null,
          lease_token = null,
          lease_until = null,
-         last_error_code = 'catchup_request_failed',
-         finished_at = now(),
+         available_at = case
+           when job.generation > job.claimed_generation then now()
+           else job.available_at
+         end,
+         last_error_code = case
+           when job.generation > job.claimed_generation then null
+           else 'catchup_request_failed'
+         end,
+         finished_at = case
+           when job.generation > job.claimed_generation then null
+           else now()
+         end,
          updated_at = now()
    where job.status = 'claimed'
      and job.lease_until < now()
@@ -283,6 +297,8 @@ begin
       and claimed_job.generation > claimed_job.claimed_generation then 'pending'
     when p_outcome = 'success' then 'succeeded'
     when p_outcome = 'retry' and claimed_job.attempt_count < 5 then 'retry'
+    when p_outcome = 'retry'
+      and claimed_job.generation > claimed_job.claimed_generation then 'pending'
     when p_outcome = 'cancelled' then 'cancelled'
     else 'dead_letter'
   end;

@@ -96,6 +96,13 @@ function deriveTriggerAction(triggerState) {
   return "block";
 }
 
+function deriveControlledObjectAction(objectState) {
+  if (!OBJECT_STATES.has(objectState) || objectState === "invalid") {
+    return "block";
+  }
+  return objectState === "absent" ? "apply" : "verify";
+}
+
 export function deriveStagingDatabaseRolloutActions({
   ledger = {},
   objects = {},
@@ -114,6 +121,7 @@ export function deriveStagingDatabaseRolloutActions({
       historyApplied: ledger.metaHistory,
       objectState: objects.metaContent,
     }),
+    metaCatchup: deriveControlledObjectAction(objects.metaCatchup),
     triggerHardening: deriveTriggerAction(objects.triggerHardening),
   });
 

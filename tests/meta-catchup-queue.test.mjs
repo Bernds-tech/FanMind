@@ -110,11 +110,14 @@ test("controlled SQL scopes, coalesces, leases, retries, and dead-letters jobs",
   assert.match(sql, /force row level security/u);
   assert.match(sql, /where status in \('pending', 'claimed', 'retry'\)/u);
   assert.match(sql, /on conflict[\s\S]*generation = job\.generation \+ 1/u);
+  assert.match(sql, /attempt_count = job\.attempt_count,[\s\S]*generation = job\.generation \+ 1/u);
   assert.match(sql, /for update skip locked/u);
   assert.match(sql, /attempt_count < 5/u);
   assert.match(sql, /when p_outcome = 'retry' and claimed_job\.attempt_count < 5 then 'retry'/u);
   assert.match(sql, /else 'dead_letter'/u);
   assert.match(sql, /claimed_job\.generation > claimed_job\.claimed_generation then 'pending'/u);
+  assert.match(sql, /job\.generation > job\.claimed_generation then 'pending'[\s\S]*job\.attempt_count >= 5/u);
+  assert.match(sql, /p_outcome = 'retry'[\s\S]*claimed_job\.generation > claimed_job\.claimed_generation then 'pending'/u);
   assert.match(sql, /auth\.role\(\) is distinct from 'service_role'/u);
   assert.match(sql, /grant select on table public\.meta_conversation_catchup_jobs to service_role/u);
   assert.doesNotMatch(sql, /admin_operation_jobs|backup_runs/u);
@@ -126,6 +129,10 @@ test("controlled migration is checksum-pinned and postflight is read-only with r
   assert.match(POSTFLIGHT_SQL, /set transaction read only/u);
   assert.match(POSTFLIGHT_SQL, /relrowsecurity[\s\S]*relforcerowsecurity/u);
   assert.match(POSTFLIGHT_SQL, /queue_coalescing_index_invalid/u);
+  assert.match(POSTFLIGHT_SQL, /confrelid =[\s\S]*'public\.social_connections'::regclass/u);
+  assert.match(POSTFLIGHT_SQL, /conkey = array\[[\s\S]*social_connection_id[\s\S]*workspace_id/u);
+  assert.match(POSTFLIGHT_SQL, /confkey = array\[[\s\S]*'public\.contacts'::regclass[\s\S]*workspace_id/u);
+  assert.match(POSTFLIGHT_SQL, /confdeltype = 'c'[\s\S]*confdeltype = 'a'/u);
   assert.match(POSTFLIGHT_SQL, /has_function_privilege\('service_role'/u);
   assert.match(POSTFLIGHT_SQL, /rollback;/u);
 });
@@ -201,6 +208,7 @@ test("worker accepts one exact lease and logs no job or provider identifiers", (
     null,
   );
   assert.match(worker, /finish_meta_conversation_catchup_job/u);
+  assert.doesNotMatch(worker, /\.\.\/\.\.\/src\//u);
   assert.doesNotMatch(worker, /safe\.(?:job|workspace|connection|sender|thread)/u);
   assert.match(worker, /safe\.attempt_count/u);
   assert.match(worker, /safe\.error_code/u);
@@ -251,5 +259,9 @@ test("Staging verify/apply controls are main-commit bound and production rejecti
   assert.match(applyWorkflow, /workflow_dispatch/u);
   assert.match(applyWorkflow, /inputs\.reviewed_commit == github\.sha/u);
   assert.match(applyWorkflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
+  assert.match(applyWorkflow, /npm run db:staging-rollout-state:run/u);
+  assert.match(applyWorkflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u);
+  assert.match(applyWorkflow, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
+  assert.match(applyWorkflow, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
   assert.doesNotMatch(applyWorkflow, /FANMIND_META_CATCHUP_QUEUE_ENABLED/u);
 });

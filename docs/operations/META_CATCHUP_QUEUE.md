@@ -31,13 +31,21 @@ gegen eine explizit von Production abweichende Supabase-Projektreferenz.
 
 1. Nach Review und Merge den Workflow
    `FanMind Meta Catch-up Queue Staging Apply` mit dem exakten Main-Commit und
-   der Bestätigung `apply-meta-catchup-queue` starten.
+   der Bestätigung `apply-meta-catchup-queue` starten. Vor dem schreibenden
+   Schritt führt er den gemeinsamen Staging-Rollout-Zustand read-only aus und
+   verlangt exakt `STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply` sowie
+   `STAGING_DATABASE_ROLLOUT_STATE=PASS`.
 2. Nur `META_CATCHUP_QUEUE_APPLY=completed`,
    `META_CATCHUP_QUEUE_POSTFLIGHT=PASS`,
    `META_CATCHUP_QUEUE_POSTFLIGHT_TRANSACTION=ROLLED_BACK` und
    `SECRETS_WURDEN_NICHT_AUSGEGEBEN=true` akzeptieren.
 3. Anschließend `FanMind Meta Catch-up Queue Staging Verify` mit demselben
    Commit und `verify-meta-catchup-queue` ausführen. Dieser Lauf ist read-only.
+
+Meldet der gemeinsame Zustand für die Queue `verify`, ist sie bereits
+vollständig vorhanden und darf nicht erneut angewendet werden. `block` oder
+eine fehlende/exakt abweichende Ergebniszeile stoppt vor dem ersten
+schreibenden `psql`-Aufruf.
 
 Der Postflight prüft Metadaten, RLS/`FORCE RLS`, zusammengesetzte
 Workspace-Fremdschlüssel, den partiellen Coalescing-Index, fehlende

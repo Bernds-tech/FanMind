@@ -22,7 +22,7 @@ import { evaluateMetaCatchupQueueStagingEnvironment } from "../../src/lib/metaCa
 const MIGRATION_ID = "20260811230000_meta_conversation_catchup_queue";
 const MIGRATION_PATH = resolve(process.cwd(), `supabase/controlled/${MIGRATION_ID}.sql`);
 const EXPECTED_MIGRATION_SHA256 =
-  "48ca2cb3a683f539e8e29ac52631b0dbdf8bace2d2e5253528c1837deef4828a";
+  "05b86ce53cb27a1516125fddad00fcf1614ac524a04de1b8c56adee264ba1c4a";
 const MAX_PASSFILE_BYTES = 64 * 1024;
 
 const POSTFLIGHT_SQL = String.raw`
@@ -73,16 +73,63 @@ begin
   end if;
   if not exists (
     select 1
-      from pg_constraint
-     where conrelid = queue_table
-       and conname = 'meta_conversation_catchup_connection_workspace_fk'
-       and contype = 'f'
+      from pg_constraint as constraint_definition
+     where constraint_definition.conrelid = queue_table
+       and constraint_definition.conname =
+         'meta_conversation_catchup_connection_workspace_fk'
+       and constraint_definition.contype = 'f'
+       and constraint_definition.confrelid =
+         'public.social_connections'::regclass
+       and constraint_definition.conkey = array[
+         (select attnum from pg_attribute
+           where attrelid = queue_table
+             and attname = 'social_connection_id'
+             and not attisdropped),
+         (select attnum from pg_attribute
+           where attrelid = queue_table
+             and attname = 'workspace_id'
+             and not attisdropped)
+       ]::smallint[]
+       and constraint_definition.confkey = array[
+         (select attnum from pg_attribute
+           where attrelid = 'public.social_connections'::regclass
+             and attname = 'id'
+             and not attisdropped),
+         (select attnum from pg_attribute
+           where attrelid = 'public.social_connections'::regclass
+             and attname = 'workspace_id'
+             and not attisdropped)
+       ]::smallint[]
+       and constraint_definition.confdeltype = 'c'
   ) or not exists (
     select 1
-      from pg_constraint
-     where conrelid = queue_table
-       and conname = 'meta_conversation_catchup_contact_workspace_fk'
-       and contype = 'f'
+      from pg_constraint as constraint_definition
+     where constraint_definition.conrelid = queue_table
+       and constraint_definition.conname =
+         'meta_conversation_catchup_contact_workspace_fk'
+       and constraint_definition.contype = 'f'
+       and constraint_definition.confrelid = 'public.contacts'::regclass
+       and constraint_definition.conkey = array[
+         (select attnum from pg_attribute
+           where attrelid = queue_table
+             and attname = 'contact_id'
+             and not attisdropped),
+         (select attnum from pg_attribute
+           where attrelid = queue_table
+             and attname = 'workspace_id'
+             and not attisdropped)
+       ]::smallint[]
+       and constraint_definition.confkey = array[
+         (select attnum from pg_attribute
+           where attrelid = 'public.contacts'::regclass
+             and attname = 'id'
+             and not attisdropped),
+         (select attnum from pg_attribute
+           where attrelid = 'public.contacts'::regclass
+             and attname = 'workspace_id'
+             and not attisdropped)
+       ]::smallint[]
+       and constraint_definition.confdeltype = 'a'
   ) then
     raise exception 'queue_workspace_scope_invalid';
   end if;
