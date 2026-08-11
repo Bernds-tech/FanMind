@@ -31,6 +31,7 @@ import type { FanMindLanguage } from "@/lib/fanmindCopy";
 import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import { getStripeConfigStatus } from "@/lib/stripeBilling";
 import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
+import { evaluateWorkspaceProcessingEntitlement } from "@/lib/workspaceProcessingPolicy.mjs";
 import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
 import {
   DEMO_CLEANUP_DELETE_STEPS,
@@ -137,6 +138,18 @@ export type WorkspaceBackfillRow = {
   company_register_number?: string | null;
   company_register_court?: string | null;
 };
+
+type WorkspaceProcessingRow = Pick<
+  WorkspaceBackfillRow,
+  | "id"
+  | "billing_status"
+  | "billing_suspended_at"
+  | "billing_manual_override"
+  | "billing_grace_until"
+  | "subscription_effective_end_at"
+  | "workspace_access_mode"
+  | "test_access_flags"
+>;
 
 export type WorkspaceDashboardRow = WorkspaceBackfillRow & {
   role: string;
@@ -550,6 +563,12 @@ type SocialConnectionResult = {
   error: Error | null;
 };
 
+export type WorkspaceProcessingEntitlementResult = {
+  allowed: boolean;
+  reason: string;
+  error: Error | null;
+};
+
 type SocialConnectionsResult = {
   connections: SocialConnectionRow[];
   error: Error | null;
@@ -615,6 +634,8 @@ type SupabaseFilterValue = string | number | boolean | null;
 
 const WORKSPACE_COLUMNS =
   "id,name,owner_user_id,plan_id,commercial_option,setup_fee_cents,monthly_fee_cents,commitment_months,billing_status,billing_provider,payment_collection_method,billing_suspended_at,billing_suspended_reason,billing_manual_override,billing_last_payment_failed_at,billing_last_payment_at,billing_retry_count,billing_next_retry_at,billing_grace_until,billing_admin_note,billing_contract_started_at,billing_current_period_end_at,billing_next_invoice_at,billing_minimum_term_ends_at,subscription_cancel_requested_at,subscription_cancel_requested_by_user_id,subscription_cancel_at_period_end,subscription_effective_end_at,subscription_cancellation_revoked_at,workspace_access_mode,billing_updated_at,billing_updated_by_user_id,stripe_customer_id,stripe_subscription_id,last_invoice_id,last_invoice_status,last_invoice_amount_due_cents,last_invoice_amount_paid_cents,last_invoice_hosted_url,last_invoice_pdf_url,test_access_flags,organization_name,street_address,postal_code,city,country,vat_id,tax_number,company_register_number,company_register_court";
+const WORKSPACE_PROCESSING_COLUMNS =
+  "id,billing_status,billing_suspended_at,billing_manual_override,billing_grace_until,subscription_effective_end_at,workspace_access_mode,test_access_flags";
 const CONTACT_COLUMNS =
   "id,workspace_id,display_name,handle,source_platform,language,status,tags,summary,internal_notes,is_top_fan,created_at,updated_at";
 const MEMORY_COLUMNS =
@@ -1637,6 +1658,42 @@ async function disconnectMetaSocialConnection(
   return { connection: result.data, error: null };
 }
 
+export async function getWorkspaceProcessingEntitlement(
+  workspaceId: string,
+): Promise<WorkspaceProcessingEntitlementResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      allowed: false,
+      reason: "processing_configuration_unavailable",
+      error: new Error(
+        "Serverberechtigungen für die Workspace-Verarbeitung fehlen.",
+      ),
+    };
+  }
+
+  const workspaceResult = await postgrestSelect<WorkspaceProcessingRow>(
+    "workspaces",
+    serviceAccessToken,
+    WORKSPACE_PROCESSING_COLUMNS,
+    [["id", workspaceId]],
+    1,
+    true,
+  );
+  if (workspaceResult.error) {
+    return {
+      allowed: false,
+      reason: "processing_lookup_failed",
+      error: new Error("Workspace-Verarbeitung konnte nicht geprüft werden."),
+    };
+  }
+
+  const decision = evaluateWorkspaceProcessingEntitlement(
+    workspaceResult.data,
+  );
+  return { ...decision, error: null };
+}
+
 export async function findMetaSocialConnectionByPageId(
   platform: "facebook" | "instagram",
   pageId: string,
@@ -1661,6 +1718,18 @@ export async function findMetaSocialConnectionByPageId(
     true,
   );
   if (result.error) return socialConnectionError(result.error.message);
+  if (!result.data) return { connection: null, error: null };
+
+  const entitlement = await getWorkspaceProcessingEntitlement(
+    result.data.workspace_id,
+  );
+  if (entitlement.error) {
+    return socialConnectionError(
+      "Workspace-Verarbeitung konnte nicht geprüft werden.",
+    );
+  }
+  if (!entitlement.allowed) return { connection: null, error: null };
+
   return { connection: result.data, error: null };
 }
 

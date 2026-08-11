@@ -34,6 +34,7 @@ import {
 import {
   getSupabaseServerUser,
   getUserWorkspaceDashboard,
+  getWorkspaceProcessingEntitlement,
   getWorkspaceSocialConnectionsServer,
   createMetaWebhookConversationMessage,
   updateFacebookCommentFetchStatus,
@@ -935,6 +936,15 @@ async function getCurrentFacebookConnection() {
     return {
       connection: null,
       error: "Nur Workspace-Owner oder -Admins dürfen externe Konten verwalten.",
+    };
+  }
+  const entitlement = await getWorkspaceProcessingEntitlement(
+    workspaceResult.workspace.id,
+  );
+  if (entitlement.error || !entitlement.allowed) {
+    return {
+      connection: null,
+      error: "Workspace-Verarbeitung ist nicht freigegeben.",
     };
   }
   const connectionsResult = await getWorkspaceSocialConnectionsServer(
