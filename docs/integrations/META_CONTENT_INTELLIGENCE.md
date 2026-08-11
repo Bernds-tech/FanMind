@@ -58,6 +58,7 @@ Freigabe und aktiviert keine externe Verbindung.
 | Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; Analyse-Aktivierung bleibt gesperrt |
 | Begrenzte Conversation-Pagination | Implementierung und server-only Migration vorbereitet; Migration und realer Meta-Test im isolierten Staging vor Aktivierung offen |
 | Langlebige Webhook-Catch-up-Queue | Implementierung, checksum-gebundene Controlled Migration und inaktiver Worker vorbereitet; Staging-Apply, Lease-/RLS-Abnahme und Aktivierung offen |
+| Workspace-Verarbeitung nach Vertragsende | gemeinsame fail-closed Policy in Meta-Ingress, manuellem Sync und Queue-Worker umgesetzt; rollback-only Staging-Abnahmepfad vorbereitet, externer Lauf und Meta-E2E offen |
 | Isolierter Staging-Migrationspfad | beide Meta-Content-Migrationen im getrennten Supabase-Staging angewendet und read-only nachgeprüft; Production unverändert |
 | Meta App Review, Advanced Access und Business Verification | extern offen |
 | Rechtsgrundlage, Transparenz, AVV und Aufbewahrung | extern beziehungsweise je Kunde offen; Analysen standardmäßig aus |
