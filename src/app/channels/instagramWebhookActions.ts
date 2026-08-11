@@ -12,6 +12,7 @@ import {
   META_INITIAL_CHAT_BACKFILL_LIMIT,
 } from "@/lib/metaDataHandlingPolicy.mjs";
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
+import { shouldPersistMetaConnectionSyncStatus } from "@/lib/metaSyncScopePolicy.mjs";
 import {
   createEmptySocialSyncResult,
   type SocialSyncResult,
@@ -85,6 +86,8 @@ async function syncInstagramMessengerHistoryForConnection(
   },
 ): Promise<InstagramMessengerSyncResult> {
   const { syncedAt } = input;
+  const shouldPersistConnectionStatus =
+    shouldPersistMetaConnectionSyncStatus(input);
   const token = connection.page_access_token_encrypted
     ? decryptToken(connection.page_access_token_encrypted)
     : null;
@@ -92,7 +95,9 @@ async function syncInstagramMessengerHistoryForConnection(
   if (!connection.page_id || !token) {
     const message =
       "Instagram-Zugriffstoken fehlt oder konnte nicht entschlüsselt werden.";
-    await persistSyncStatus(connection.id, syncedAt, message);
+    if (shouldPersistConnectionStatus) {
+      await persistSyncStatus(connection.id, syncedAt, message);
+    }
     if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
   }
@@ -202,16 +207,18 @@ async function syncInstagramMessengerHistoryForConnection(
       if (conversationMatched) conversationsChecked += 1;
     }
 
-    await updateInstagramMessengerSyncStatus(connection.id, {
-      syncedAt,
-      checkedConversations: conversationsChecked,
-      importedInbound,
-      importedOutbound,
-      skippedDuplicates,
-      importedMedia: 0,
-      error: null,
-      lastOutboundAt,
-    });
+    if (shouldPersistConnectionStatus) {
+      await updateInstagramMessengerSyncStatus(connection.id, {
+        syncedAt,
+        checkedConversations: conversationsChecked,
+        importedInbound,
+        importedOutbound,
+        skippedDuplicates,
+        importedMedia: 0,
+        error: null,
+        lastOutboundAt,
+      });
+    }
     if (input.contactId && input.markInboundSeen) {
       await markContactInboundMessagesSeen({
         workspaceId: connection.workspace_id,
@@ -244,7 +251,9 @@ async function syncInstagramMessengerHistoryForConnection(
       error instanceof Error
         ? error.message
         : "Instagram-Verlauf konnte nicht abgerufen werden. Prüfe DM-Berechtigung und Professional-Konto.";
-    await persistSyncStatus(connection.id, syncedAt, message);
+    if (shouldPersistConnectionStatus) {
+      await persistSyncStatus(connection.id, syncedAt, message);
+    }
     if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
   }
