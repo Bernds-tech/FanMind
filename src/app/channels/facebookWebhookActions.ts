@@ -53,6 +53,7 @@ import {
   META_INCREMENTAL_CHAT_FETCH_LIMIT,
   META_INITIAL_CHAT_BACKFILL_LIMIT,
 } from "@/lib/metaDataHandlingPolicy.mjs";
+import { shouldPersistMetaConnectionSyncStatus } from "@/lib/metaSyncScopePolicy.mjs";
 
 export type FacebookCommentFetchResult = {
   ok: boolean;
@@ -479,6 +480,8 @@ async function syncFacebookMessengerHistoryForConnection(
   },
 ): Promise<FacebookMessengerSyncResult> {
   const { syncedAt } = input;
+  const shouldPersistConnectionStatus =
+    shouldPersistMetaConnectionSyncStatus(input);
   const token = connection.page_access_token_encrypted
     ? decryptToken(connection.page_access_token_encrypted)
     : null;
@@ -486,14 +489,16 @@ async function syncFacebookMessengerHistoryForConnection(
   if (!connection.page_id || !token) {
     const message =
       "Page Access Token fehlt oder konnte nicht entschlüsselt werden.";
-    await updateFacebookMessengerSyncStatus(connection.id, {
-      syncedAt,
-      checkedConversations: 0,
-      importedInbound: 0,
-      importedOutbound: 0,
-      skippedDuplicates: 0,
-      error: message,
-    });
+    if (shouldPersistConnectionStatus) {
+      await updateFacebookMessengerSyncStatus(connection.id, {
+        syncedAt,
+        checkedConversations: 0,
+        importedInbound: 0,
+        importedOutbound: 0,
+        skippedDuplicates: 0,
+        error: message,
+      });
+    }
     if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
   }
@@ -634,16 +639,18 @@ async function syncFacebookMessengerHistoryForConnection(
       }
     }
 
-    await updateFacebookMessengerSyncStatus(connection.id, {
-      syncedAt,
-      checkedConversations: conversationsChecked,
-      importedInbound,
-      importedOutbound,
-      skippedDuplicates,
-      importedMedia,
-      error: null,
-      lastOutboundAt,
-    });
+    if (shouldPersistConnectionStatus) {
+      await updateFacebookMessengerSyncStatus(connection.id, {
+        syncedAt,
+        checkedConversations: conversationsChecked,
+        importedInbound,
+        importedOutbound,
+        skippedDuplicates,
+        importedMedia,
+        error: null,
+        lastOutboundAt,
+      });
+    }
     if (input.contactId && input.markInboundSeen)
       await markContactInboundMessagesSeen({
         workspaceId: connection.workspace_id,
@@ -674,14 +681,16 @@ async function syncFacebookMessengerHistoryForConnection(
       syncErrorValue instanceof Error
         ? syncErrorValue.message
         : "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.";
-    await updateFacebookMessengerSyncStatus(connection.id, {
-      syncedAt,
-      checkedConversations: 0,
-      importedInbound: 0,
-      importedOutbound: 0,
-      skippedDuplicates: 0,
-      error: message,
-    });
+    if (shouldPersistConnectionStatus) {
+      await updateFacebookMessengerSyncStatus(connection.id, {
+        syncedAt,
+        checkedConversations: 0,
+        importedInbound: 0,
+        importedOutbound: 0,
+        skippedDuplicates: 0,
+        error: message,
+      });
+    }
     if (input.revalidate) revalidatePath("/channels");
     return syncError(syncedAt, message);
   }
