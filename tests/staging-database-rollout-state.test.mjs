@@ -19,6 +19,7 @@ import {
 } from "../src/lib/stagingDatabaseRolloutStatePolicy.mjs";
 import {
   AI_TIER_STATE_SQL,
+  LEDGER_STATE_SQL,
   META_CATCHUP_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
@@ -236,6 +237,7 @@ test("ledger and object probes are transactionally read-only and exact", () => {
   }
   assert.match(ledger, /where version = '[0-9]{14}'[\s\S]*or name in/iu);
   for (const sql of [
+    LEDGER_STATE_SQL,
     ledger,
     AI_TIER_STATE_SQL,
     META_CATCHUP_STATE_SQL,
@@ -362,6 +364,7 @@ if [ "\${1:-}" = "--version" ]; then
 fi
 input="$(cat)"
 case "$input" in
+  *STAGING_DATABASE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_LEDGER_OBJECT=present' ;;
   *STAGING_DATABASE_LEDGER=*) echo 'STAGING_DATABASE_LEDGER=1:1:0:0' ;;
   *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=present' ;;
   *AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS*) echo 'AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS' ;;
@@ -414,6 +417,68 @@ esac
     );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
     assert.doesNotMatch(result.stdout, /stagingprojectref|20260|host:|password/u);
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+});
+
+test("read-only CLI handles an absent migration ledger through object state", () => {
+  const temporaryDirectory = mkdtempSync(join(tmpdir(), "fanmind-rollout-no-ledger-"));
+  try {
+    const fakePsql = resolve(temporaryDirectory, "psql");
+    const passfile = resolve(temporaryDirectory, "pgpass");
+    writeFileSync(
+      fakePsql,
+      `#!/bin/sh
+if [ "\${1:-}" = "--version" ]; then
+  exit 0
+fi
+input="$(cat)"
+case "$input" in
+  *STAGING_DATABASE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_LEDGER_OBJECT=absent' ;;
+  *STAGING_DATABASE_LEDGER=*) exit 91 ;;
+  *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=absent' ;;
+  *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=absent' ;;
+  *META_CONTENT_MIGRATION_STATE=*) echo 'META_CONTENT_MIGRATION_STATE=absent' ;;
+  *STAGING_DATABASE_META_CATCHUP_OBJECT=*) echo 'STAGING_DATABASE_META_CATCHUP_OBJECT=absent' ;;
+  *STAGING_DATABASE_TRIGGER_OBJECT=*) echo 'STAGING_DATABASE_TRIGGER_OBJECT=pending' ;;
+  *) exit 1 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(fakePsql, 0o700);
+    writeFileSync(passfile, "host:5432:postgres:user:password\n", {
+      mode: 0o600,
+    });
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        resolve(
+          repositoryRoot,
+          "scripts/operations/staging-database-rollout-state.mjs",
+        ),
+        "--run",
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          ...validEnvironment(),
+          PATH: `${temporaryDirectory}:${process.env.PATH}`,
+          PGPASSFILE: passfile,
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=apply/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=apply/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
+    assert.doesNotMatch(result.stdout, /stagingprojectref|host:|password/u);
   } finally {
     rmSync(temporaryDirectory, { recursive: true, force: true });
   }

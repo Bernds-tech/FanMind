@@ -164,6 +164,16 @@ rollback;
 `;
 }
 
+const LEDGER_STATE_SQL = String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+select 'STAGING_DATABASE_LEDGER_OBJECT=' ||
+  case when to_regclass('supabase_migrations.schema_migrations') is null
+    then 'absent' else 'present' end;
+rollback;
+`;
+
 const AI_TIER_STATE_SQL = String.raw`
 \set ON_ERROR_STOP on
 begin;
@@ -466,9 +476,21 @@ async function inspectDatabase(environment) {
   const { snapshotDirectory, snapshotPath } =
     privatePassfileSnapshot(environment);
   try {
-    const ledger = parseLedger(
-      requiredProbe(ledgerSql(), environment, snapshotPath),
+    const ledgerState = requiredProbe(
+      LEDGER_STATE_SQL,
+      environment,
+      snapshotPath,
     );
+    const ledger = ledgerState.includes("STAGING_DATABASE_LEDGER_OBJECT=absent")
+      ? Object.freeze({
+          aiTier: false,
+          mobilePush: false,
+          metaFoundation: false,
+          metaHistory: false,
+        })
+      : ledgerState.includes("STAGING_DATABASE_LEDGER_OBJECT=present")
+        ? parseLedger(requiredProbe(ledgerSql(), environment, snapshotPath))
+        : fail("ledger_probe_invalid");
     const objects = Object.freeze({
       aiTier: tableObjectState({
         stateSql: AI_TIER_STATE_SQL,
@@ -558,6 +580,7 @@ if (
 
 export {
   AI_TIER_STATE_SQL,
+  LEDGER_STATE_SQL,
   META_CATCHUP_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
