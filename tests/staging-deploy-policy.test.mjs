@@ -105,6 +105,23 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
   assert.match(workflow, /fanmind-staging:fanmind-staging:600/);
   assert.match(workflow, /fanmind-staging-01-exoscale/);
   assert.match(workflow, /--labels fanmind-staging,exoscale/);
+  assert.match(
+    workflow,
+    /STAGING_CERTIFICATE="\/etc\/letsencrypt\/live\/staging\.fanmind\.ch\/fullchain\.pem"/u,
+  );
+  assert.match(
+    workflow,
+    /STAGING_CERTIFICATE_KEY="\/etc\/letsencrypt\/live\/staging\.fanmind\.ch\/privkey\.pem"/u,
+  );
+  assert.match(workflow, /STAGING_NGINX_TLS=preserved/u);
+  assert.match(
+    workflow,
+    /grep --fixed-strings --quiet -- "\$required_line" "\$STAGING_NGINX_CONFIG"/u,
+  );
+  assert.ok(
+    workflow.indexOf('if sudo test -e "$STAGING_CERTIFICATE"')
+      < workflow.indexOf("ops/nginx/fanmind-staging.http.conf"),
+  );
   assert.match(workflow, /actions-runner-linux-x64-2\.336\.0\.tar\.gz/);
   assert.match(
     workflow,

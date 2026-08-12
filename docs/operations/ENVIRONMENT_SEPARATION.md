@@ -197,6 +197,11 @@ getrennte Linux-Nutzer keine dauerhaften Repository-Zugangsdaten.
 Exoscale-Hosts zeigt. Der Workflow vergleicht DNS und Hostadresse vor Certbot
 und verwendet ausschließlich das bereits registrierte Certbot-Konto; er nimmt
 keine neue Vertrags- oder Kontoregistrierung vor.
+Ein wiederholter Host-Provisionierungslauf bewahrt eine bestehende
+Staging-TLS-Konfiguration nur dann, wenn Zertifikat, privater Schlüssel,
+exakter Hostname und der isolierte Upstream auf Port `3001` gemeinsam belegt
+sind. Er überschreibt sie nicht mit dem HTTP-Bootstrap-vHost; partielle oder
+abweichende TLS-Zustände stoppen vor dem nginx-Reload.
 
 Der bestehende Production-Deploy darf niemals setzen:
 

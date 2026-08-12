@@ -120,6 +120,12 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    `staging.fanmind.ch` setzen;
 4. nach nachgewiesener DNS-Auflösung `Enable FanMind Staging TLS` mit
    `enable-fanmind-staging-tls` starten;
+   Ein späterer wiederholter Provisionierungslauf darf die bereits verifizierte
+   Certbot-Konfiguration nicht mehr durch den HTTP-Bootstrap-vHost ersetzen.
+   Er erhält ausschließlich eine vollständige, exakt auf
+   `staging.fanmind.ch`, Port `3001` und dessen Zertifikat gebundene
+   TLS-Konfiguration; unvollständige oder abweichende Zustände stoppen
+   fail-closed und verlangen danach erneut den getrennten TLS-Workflow.
 5. den kurzlebigen Runner-Registrierungstoken anschließend löschen;
 6. `.env.staging.example` außerhalb von Git befüllen;
 7. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
