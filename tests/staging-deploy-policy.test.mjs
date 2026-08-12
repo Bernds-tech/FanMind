@@ -46,6 +46,7 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.match(workflow, /npm run verify:truth/);
   assert.match(workflow, /npm run test:operations/);
   assert.match(workflow, /RUNTIME_SECRET_FILE="\/etc\/fanmind-staging\/runtime-secrets\.env"/);
+  assert.match(workflow, /sudo systemctl enable fanmind-staging\.service/);
   assert.match(workflow, /sudo systemctl restart fanmind-staging\.service/);
   assert.match(workflow, /sudo systemctl is-active --quiet fanmind-staging\.service/);
   assert.match(workflow, /STAGING_HEALTH_COMPONENT=/);

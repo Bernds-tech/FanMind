@@ -130,7 +130,7 @@ jobs:
 
           SUDOERS_TMP="$(mktemp "$RUNNER_TEMP/fanmind-staging-sudoers.XXXXXX")"
           trap 'rm -f "$SUDOERS_TMP"' EXIT
-          printf '%s ALL=(root) NOPASSWD: /usr/sbin/nginx -t, /usr/bin/systemctl restart fanmind-staging.service, /usr/bin/systemctl is-active --quiet fanmind-staging.service\n' "$STAGING_USER" > "$SUDOERS_TMP"
+          printf '%s ALL=(root) NOPASSWD: /usr/sbin/nginx -t, /usr/bin/systemctl enable fanmind-staging.service, /usr/bin/systemctl restart fanmind-staging.service, /usr/bin/systemctl is-active --quiet fanmind-staging.service\n' "$STAGING_USER" > "$SUDOERS_TMP"
           chmod 0440 "$SUDOERS_TMP"
           sudo visudo --check --file "$SUDOERS_TMP"
           sudo install -o root -g root -m 0440 "$SUDOERS_TMP" /etc/sudoers.d/fanmind-staging-nginx-check
@@ -269,7 +269,6 @@ jobs:
             ops/systemd/fanmind-staging.service \
             /etc/systemd/system/fanmind-staging.service
           sudo systemctl daemon-reload
-          sudo systemctl enable fanmind-staging.service
           echo "STAGING_APPLICATION_SERVICE=installed"
 
       - name: Install or preserve isolated virtual host

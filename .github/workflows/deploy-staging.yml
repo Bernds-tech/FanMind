@@ -131,6 +131,7 @@ jobs:
           trap - EXIT
 
           pm2 delete fanmind-staging >/dev/null 2>&1 || true
+          sudo systemctl enable fanmind-staging.service
           sudo systemctl restart fanmind-staging.service
           sudo systemctl is-active --quiet fanmind-staging.service
           sudo nginx -t
