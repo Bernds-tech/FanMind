@@ -25,6 +25,7 @@ import {
   TRIGGER_HARDENING_STATE_SQL,
   ledgerManagedMetaMigrations,
   ledgerSql,
+  psqlFailureCategory,
 } from "../scripts/operations/staging-database-rollout-state.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
@@ -250,6 +251,31 @@ test("ledger and object probes are transactionally read-only and exact", () => {
       /\b(?:insert|update|delete|alter|create|drop|truncate|grant|revoke)\b/iu,
     );
   }
+});
+
+test("database failures are reduced to stable non-secret diagnostics", () => {
+  for (const [stderr, expected] of [
+    ["FATAL: Tenant or user not found", "tenant_or_user_not_found"],
+    [
+      "FATAL: password authentication failed for user private-user",
+      "password_authentication_failed",
+    ],
+    ["could not translate host name private-host", "dns_resolution_failed"],
+    [
+      "ERROR:  42501: permission denied for schema private-schema",
+      "permission_denied",
+    ],
+    ["ERROR:  42P01: relation private-table does not exist", "object_absent"],
+    ["ERROR:  XX999: raw-private-database-error", "sqlstate_xx999"],
+  ]) {
+    assert.equal(psqlFailureCategory({ status: 2, stderr }), expected);
+  }
+  assert.equal(
+    psqlFailureCategory({
+      error: Object.assign(new Error("missing"), { code: "ENOENT" }),
+    }),
+    "client_unavailable",
+  );
 });
 
 test("three-step Meta manifest keeps the controlled idempotency step out of the ledger", () => {
@@ -479,6 +505,64 @@ esac
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
     assert.doesNotMatch(result.stdout, /stagingprojectref|host:|password/u);
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+});
+
+test("read-only CLI reports only a safe probe failure category", () => {
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "fanmind-rollout-diagnostic-"),
+  );
+  try {
+    const fakePsql = resolve(temporaryDirectory, "psql");
+    const passfile = resolve(temporaryDirectory, "pgpass");
+    writeFileSync(
+      fakePsql,
+      `#!/bin/sh
+if [ "\${1:-}" = "--version" ]; then
+  exit 0
+fi
+cat >/dev/null
+echo 'psql: error: connection to server at "private-host" failed: FATAL: Tenant or user not found raw-private-db-error' >&2
+exit 2
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(fakePsql, 0o700);
+    writeFileSync(passfile, "host:5432:postgres:user:password\n", {
+      mode: 0o600,
+    });
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        resolve(
+          repositoryRoot,
+          "scripts/operations/staging-database-rollout-state.mjs",
+        ),
+        "--run",
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          ...validEnvironment(),
+          PATH: `${temporaryDirectory}:${process.env.PATH}`,
+          PGPASSFILE: passfile,
+        },
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /STAGING_DATABASE_ROLLOUT_STATE_PROBE_FAILURE=ledger_object:tenant_or_user_not_found/u,
+    );
+    assert.doesNotMatch(
+      `${result.stdout}\n${result.stderr}`,
+      /private-host|raw-private-db-error|stagingprojectref|password/u,
+    );
   } finally {
     rmSync(temporaryDirectory, { recursive: true, force: true });
   }

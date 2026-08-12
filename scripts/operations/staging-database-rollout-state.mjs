@@ -343,6 +343,8 @@ function runPsql(sql, environment, passfilePath) {
       "--tuples-only",
       "--no-align",
       "--set=ON_ERROR_STOP=1",
+      "--set=VERBOSITY=verbose",
+      "--set=SHOW_CONTEXT=never",
     ],
     {
       env: psqlEnvironment(environment, passfilePath),
@@ -351,6 +353,39 @@ function runPsql(sql, environment, passfilePath) {
       stdio: ["pipe", "pipe", "pipe"],
     },
   );
+}
+
+function psqlFailureCategory(result) {
+  if (result?.error?.code === "ENOENT") return "client_unavailable";
+  if (result?.error) return "client_execution_failed";
+
+  const diagnostic = String(result?.stderr ?? "").toLowerCase();
+  const patterns = [
+    ["tenant_or_user_not_found", /tenant or user not found/u],
+    ["password_authentication_failed", /password authentication failed/u],
+    ["password_unavailable", /no password supplied/u],
+    ["access_rule_rejected", /no pg_hba\.conf entry/u],
+    ["tls_verification_failed", /certificate verify failed|root certificate file/u],
+    ["dns_resolution_failed", /could not translate host name|name or service not known/u],
+    ["connection_timeout", /connection timed out|timeout expired/u],
+    ["network_unreachable", /network is unreachable|no route to host/u],
+    ["connection_refused", /connection refused/u],
+    ["connection_closed", /server closed the connection unexpectedly/u],
+    ["permission_denied", /permission denied/u],
+    ["object_absent", /does not exist/u],
+    ["sql_syntax_invalid", /syntax error/u],
+    ["transaction_aborted", /current transaction is aborted/u],
+    ["write_blocked", /read-only transaction/u],
+    ["tls_transport_failed", /ssl syscall error|ssl error/u],
+  ];
+  for (const [category, pattern] of patterns) {
+    if (pattern.test(diagnostic)) return category;
+  }
+
+  const sqlState = /\b(?:error|fatal):\s+([0-9a-z]{5}):/u.exec(
+    diagnostic,
+  )?.[1];
+  return sqlState ? `sqlstate_${sqlState}` : "unclassified";
 }
 
 function ensurePsqlAvailable() {
@@ -368,9 +403,14 @@ function successfulProbe(sql, environment, passfilePath, marker) {
   );
 }
 
-function requiredProbe(sql, environment, passfilePath) {
+function requiredProbe(sql, environment, passfilePath, probeName) {
   const result = runPsql(sql, environment, passfilePath);
-  if (result.error || result.status !== 0) fail("database_probe_failed");
+  if (result.error || result.status !== 0) {
+    console.error(
+      `STAGING_DATABASE_ROLLOUT_STATE_PROBE_FAILURE=${probeName}:${psqlFailureCategory(result)}`,
+    );
+    fail("database_probe_failed");
+  }
   return result.stdout.trim();
 }
 
@@ -395,7 +435,12 @@ function tableObjectState({
   environment,
   passfilePath,
 }) {
-  const state = requiredProbe(stateSql, environment, passfilePath);
+  const state = requiredProbe(
+    stateSql,
+    environment,
+    passfilePath,
+    `${stateMarker.toLowerCase()}_state`,
+  );
   if (state.includes(`${stateMarker}=absent`)) return "absent";
   if (!state.includes(`${stateMarker}=present`)) return "invalid";
   return successfulProbe(
@@ -413,6 +458,7 @@ function metaObjectState(environment, passfilePath) {
     metaContentMigrationControl.STATE_SQL,
     environment,
     passfilePath,
+    "meta_content_state",
   );
   if (state.includes("META_CONTENT_MIGRATION_STATE=absent")) return "absent";
   if (state.includes("META_CONTENT_MIGRATION_STATE=foundation")) {
@@ -451,6 +497,7 @@ async function triggerObjectState(environment, passfilePath) {
     TRIGGER_HARDENING_STATE_SQL,
     environment,
     passfilePath,
+    "trigger_hardening_state",
   );
   if (state.includes("STAGING_DATABASE_TRIGGER_OBJECT=invalid")) {
     return "invalid";
@@ -480,6 +527,7 @@ async function inspectDatabase(environment) {
       LEDGER_STATE_SQL,
       environment,
       snapshotPath,
+      "ledger_object",
     );
     const ledger = ledgerState.includes("STAGING_DATABASE_LEDGER_OBJECT=absent")
       ? Object.freeze({
@@ -489,7 +537,14 @@ async function inspectDatabase(environment) {
           metaHistory: false,
         })
       : ledgerState.includes("STAGING_DATABASE_LEDGER_OBJECT=present")
-        ? parseLedger(requiredProbe(ledgerSql(), environment, snapshotPath))
+        ? parseLedger(
+            requiredProbe(
+              ledgerSql(),
+              environment,
+              snapshotPath,
+              "ledger_rows",
+            ),
+          )
         : fail("ledger_probe_invalid");
     const objects = Object.freeze({
       aiTier: tableObjectState({
@@ -586,4 +641,5 @@ export {
   TRIGGER_HARDENING_STATE_SQL,
   ledgerManagedMetaMigrations,
   ledgerSql,
+  psqlFailureCategory,
 };
