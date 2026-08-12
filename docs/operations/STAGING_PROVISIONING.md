@@ -82,7 +82,10 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Variable `FANMIND_PRODUCTION_SUPABASE_PROJECT_REF`;
    - Secret `FANMIND_STAGING_SUPABASE_URL`;
    - Secret `FANMIND_STAGING_SUPABASE_ANON_KEY`;
-   - Secret `FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY`;
+   - Secret `FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY`; sowohl der aktuelle
+     serverseitige `sb_secret_...`-Key als auch ein Legacy-Service-Role-JWT
+     werden unterstützt. Opaque Keys werden ausschließlich im `apikey`-Header
+     transportiert und niemals als Bearer-Token ausgegeben;
    - Secret `FANMIND_STAGING_STRIPE_SECRET_KEY`;
    - Secret `FANMIND_STAGING_STRIPE_WEBHOOK_SECRET`;
    - Variable `FANMIND_STAGING_STRIPE_PRICE_STARTER_SETUP` für 990 Euro einmalig;

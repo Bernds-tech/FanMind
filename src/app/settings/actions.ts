@@ -10,7 +10,10 @@ import {
   updateTaxMasterDataSettings,
   updateWorkspaceMasterDataSettings,
 } from "@/lib/supabase/server";
-import { getSupabaseRestUrl } from "@/lib/supabase/config";
+import {
+  getSupabaseApiKeyHeaders,
+  getSupabaseRestUrl,
+} from "@/lib/supabase/config";
 import { resolveSubscriptionCancellation } from "@/lib/subscriptionCancellation";
 import { updateStripeSubscriptionCancellation } from "@/lib/stripeBilling";
 import { FANMIND_LOCALE_COOKIE, localeCookieOptions } from "@/lib/workspaceLocale";
@@ -158,7 +161,7 @@ async function servicePatch(table: string, id: string, body: Record<string, unkn
   try {
     const response = await fetch(`${getSupabaseRestUrl(table)}?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      headers: { ...getSupabaseApiKeyHeaders(serviceKey), Prefer: "return=minimal" },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(12_000),
     });
@@ -173,7 +176,7 @@ async function auditSubscriptionChange(input: { userId: string; email?: string; 
   if (!serviceKey) return;
   await fetch(getSupabaseRestUrl("operations_audit_log"), {
     method: "POST",
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    headers: { ...getSupabaseApiKeyHeaders(serviceKey), Prefer: "return=minimal" },
     body: JSON.stringify({ actor_user_id: input.userId, actor_email: input.email ?? null, action: input.action, target_table: "workspaces", target_id: input.workspaceId, severity: "info", outcome: input.outcome, metadata: input.metadata }),
   }).catch(() => undefined);
 }

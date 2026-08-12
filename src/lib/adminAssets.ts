@@ -1,4 +1,7 @@
-import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import {
+  getSupabaseApiKeyHeaders,
+  getSupabasePublicConfig,
+} from "@/lib/supabase/config";
 
 export const ADMIN_ASSET_BUCKET = "fanmind-assets";
 export const ADMIN_ASSET_MAX_BYTES = 5 * 1024 * 1024;
@@ -96,12 +99,8 @@ export function getAdminAssetPublicUrl(path: string): string | null {
 }
 
 function getStorageHeaders(serviceToken: string, contentType = "application/json"): HeadersInit {
-  const config = getSupabasePublicConfig();
-  if (!config) throw new Error("Supabase ist noch nicht konfiguriert.");
-
   return {
-    apikey: config.anonKey,
-    Authorization: `Bearer ${serviceToken}`,
+    ...getSupabaseApiKeyHeaders(serviceToken),
     "Content-Type": contentType,
   };
 }

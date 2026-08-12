@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import {
+  buildSupabaseApiKeyHeaders as getSupabaseApiKeyHeaders,
+} from "@/lib/supabase/apiKeyPolicy.mjs";
 
 export type ServerErrorRequest = {
   path?: string;
@@ -155,11 +158,7 @@ async function recordError(record: ServerErrorRecord, env: NodeJS.ProcessEnv) {
   const cooldown = positiveInt(env.FANMIND_SERVER_ERROR_ALERT_COOLDOWN_MINUTES, 30, 5, 1440);
   const response = await fetch(`${config.url}/rest/v1/rpc/record_server_error_event`, {
     method: "POST",
-    headers: {
-      apikey: config.key,
-      Authorization: `Bearer ${config.key}`,
-      "Content-Type": "application/json",
-    },
+    headers: getSupabaseApiKeyHeaders(config.key),
     body: JSON.stringify({
       p_fingerprint: record.fingerprint,
       p_digest: record.digest,

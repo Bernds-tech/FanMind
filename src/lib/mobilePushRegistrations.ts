@@ -7,7 +7,10 @@ import {
   hashMobilePushToken,
   MobilePushTokenCryptoError,
 } from "@/lib/mobilePushTokenCrypto.mjs";
-import { getSupabaseRestUrl } from "@/lib/supabase/config";
+import {
+  getSupabaseApiKeyHeaders,
+  getSupabaseRestUrl,
+} from "@/lib/supabase/config";
 
 type MobilePushRegistrationRow = {
   id: string;
@@ -44,10 +47,8 @@ function serviceKey() {
 function serviceHeaders(prefer?: string): HeadersInit {
   const key = serviceKey();
   return {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
+    ...getSupabaseApiKeyHeaders(key),
     Accept: "application/json",
-    "Content-Type": "application/json",
     ...(prefer ? { Prefer: prefer } : {}),
   };
 }

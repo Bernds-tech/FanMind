@@ -27,7 +27,7 @@ export async function runOperationsHealthChecks(admin = false) {
   if (config && key) {
     const db = await timed(async () => fetch(`${getSupabaseRestUrl("workspaces")}?select=id&limit=1`, { headers: getSupabaseHeaders(key), cache: "no-store", signal: timeoutSignal() }));
     checks.push(publicCheck("supabase_database", db.value ? statusFromResponse(db.value.ok, db.value.status) : "unavailable", db.value?.ok ? "Database reachable" : "Database check did not complete cleanly", db.latencyMs, admin ? `status=${db.value?.status ?? "request_failed"}` : undefined));
-    const storage = await timed(async () => fetch(`${config.url}/storage/v1/bucket`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "no-store", signal: timeoutSignal() }));
+    const storage = await timed(async () => fetch(`${config.url}/storage/v1/bucket`, { headers: getSupabaseHeaders(key), cache: "no-store", signal: timeoutSignal() }));
     checks.push(publicCheck("supabase_storage", storage.value ? statusFromResponse(storage.value.ok, storage.value.status) : "unavailable", storage.value?.ok ? "Storage API reachable" : "Storage check did not complete cleanly", storage.latencyMs, admin ? `status=${storage.value?.status ?? "request_failed"}` : undefined));
   } else {
     checks.push(publicCheck("supabase_database", "unknown", "Database not checked because configuration is incomplete"));

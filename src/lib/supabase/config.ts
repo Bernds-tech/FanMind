@@ -1,3 +1,5 @@
+import { buildSupabaseApiKeyHeaders } from "@/lib/supabase/apiKeyPolicy.mjs";
+
 export type SupabasePublicConfig = {
   url: string;
   anonKey: string;
@@ -43,14 +45,16 @@ export function getSupabaseAuthUrl(path: string): string {
   return `${url}/auth/v1${path}`;
 }
 
+export function getSupabaseApiKeyHeaders(
+  apiKey: string,
+  accessToken?: string,
+): HeadersInit {
+  return buildSupabaseApiKeyHeaders(apiKey, accessToken);
+}
+
 export function getSupabaseHeaders(accessToken?: string): HeadersInit {
   const { anonKey } = requireSupabasePublicConfig();
-
-  return {
-    apikey: anonKey,
-    Authorization: `Bearer ${accessToken ?? anonKey}`,
-    "Content-Type": "application/json",
-  };
+  return getSupabaseApiKeyHeaders(anonKey, accessToken);
 }
 
 export function getSupabaseRestUrl(table: string): string {
