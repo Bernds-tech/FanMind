@@ -145,7 +145,13 @@ jobs:
                 --output "$HEALTH_BODY" --write-out '%{http_code}' \
                 "$STAGING_BASE_URL/api/health" || true
             )"
-            if [ "$HEALTH_STATUS" = "200" ]; then
+            if [[ "$HEALTH_STATUS" =~ ^2[0-9]{2}$ ]] \
+              && node --input-type=module -e '
+                import { readFileSync } from "node:fs";
+                import { evaluatePublicHealth } from "./scripts/public-health-policy.mjs";
+                const payload = JSON.parse(readFileSync(process.argv[1], "utf8"));
+                process.exit(evaluatePublicHealth(payload).ok ? 0 : 1);
+              ' "$HEALTH_BODY"; then
               break
             fi
             if [ "$attempt" = "10" ]; then

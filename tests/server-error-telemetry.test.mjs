@@ -8,6 +8,10 @@ import ts from "typescript";
 
 const telemetryPath = new URL("../src/lib/serverErrorTelemetry.ts", import.meta.url);
 const telemetrySource = await readFile(telemetryPath, "utf8");
+const apiKeyPolicySource = await readFile(
+  new URL("../src/lib/supabase/apiKeyPolicy.mjs", import.meta.url),
+  "utf8",
+);
 const instrumentation = await readFile(new URL("../src/instrumentation.ts", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20260718203000_privacy_server_error_tracking.sql", import.meta.url), "utf8");
 const errorBoundary = await readFile(new URL("../src/app/error.tsx", import.meta.url), "utf8");
@@ -23,7 +27,11 @@ const enableScript = await readFile(new URL("../scripts/operations/enable-server
 const deployment = await readFile(new URL("../.github/workflows/deploy-fanmind.yml", import.meta.url), "utf8");
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 
-const transpiled = ts.transpileModule(telemetrySource, {
+const executableTelemetrySource = telemetrySource.replace(
+  "@/lib/supabase/apiKeyPolicy.mjs",
+  "./apiKeyPolicy.mjs",
+);
+const transpiled = ts.transpileModule(executableTelemetrySource, {
   compilerOptions: {
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ES2022,
@@ -32,6 +40,7 @@ const transpiled = ts.transpileModule(telemetrySource, {
 const temp = await mkdtemp(join(tmpdir(), "fanmind-server-error-telemetry-"));
 const modulePath = join(temp, "serverErrorTelemetry.mjs");
 await writeFile(modulePath, transpiled);
+await writeFile(join(temp, "apiKeyPolicy.mjs"), apiKeyPolicySource);
 const telemetry = await import(`${pathToFileURL(modulePath).href}?v=${Date.now()}`);
 
 test("server error tracking is disabled unless explicitly enabled", () => {

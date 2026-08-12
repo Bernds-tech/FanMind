@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import {
+  getSupabaseApiKeyHeaders,
   getSupabaseAuthUrl,
   getSupabaseRestUrl,
 } from "@/lib/supabase/config";
@@ -378,10 +379,7 @@ export async function findWorkspaceIdByStripeReferences(
     try {
       const url = `${getSupabaseRestUrl("workspaces")}?select=id&${column}=eq.${encodeURIComponent(value)}&limit=2`;
       const response = await fetch(url, {
-        headers: {
-          apikey: serviceKey,
-          Authorization: `Bearer ${serviceKey}`,
-        },
+        headers: getSupabaseApiKeyHeaders(serviceKey),
         cache: "no-store",
         signal: AbortSignal.timeout(12000),
       });
@@ -437,9 +435,7 @@ async function isStripeBillingTargetAllowed(
 ): Promise<StripeBillingWorkspaceDecision> {
   try {
     const serviceHeaders = {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-      "Content-Type": "application/json",
+      ...getSupabaseApiKeyHeaders(serviceKey),
     };
     const workspaceUrl = new URL(getSupabaseRestUrl("workspaces"));
     workspaceUrl.searchParams.set("select", "id,owner_user_id");
@@ -563,10 +559,7 @@ async function verifyManualSuspendedBillingState(
     statusUrl.searchParams.set("id", `eq.${workspaceId}`);
     statusUrl.searchParams.set("limit", "1");
     const response = await fetch(statusUrl, {
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-      },
+      headers: getSupabaseApiKeyHeaders(serviceKey),
       cache: "no-store",
       signal: AbortSignal.timeout(12000),
     });
@@ -634,9 +627,7 @@ export async function updateWorkspaceBillingDefensively(
       const response = await fetch(updateUrl, {
         method: "PATCH",
         headers: {
-          apikey: serviceKey,
-          Authorization: `Bearer ${serviceKey}`,
-          "Content-Type": "application/json",
+          ...getSupabaseApiKeyHeaders(serviceKey),
           Prefer: "return=representation",
         },
         body: JSON.stringify(patchBody),

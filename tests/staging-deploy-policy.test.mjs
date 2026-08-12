@@ -49,6 +49,7 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.match(workflow, /sudo systemctl enable fanmind-staging\.service/);
   assert.match(workflow, /sudo systemctl restart fanmind-staging\.service/);
   assert.match(workflow, /sudo systemctl is-active --quiet fanmind-staging\.service/);
+  assert.match(workflow, /evaluatePublicHealth/);
   assert.match(workflow, /STAGING_HEALTH_COMPONENT=/);
   assert.match(workflow, /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=staging/);
   assert.match(workflow, /npm run smoke:public/);
@@ -56,6 +57,7 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.doesNotMatch(workflow, /SOURCE_DIR="\/var\/www\/fanmind"/);
   assert.doesNotMatch(workflow, /--name fanmind(?:\s|")/);
   assert.doesNotMatch(workflow, /pm2 start/);
+  assert.doesNotMatch(workflow, /\[ "\$HEALTH_STATUS" = "200" \]/);
   assert.doesNotMatch(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES=true/);
   assert.doesNotMatch(workflow, /https:\/\/fanmind\.ch/);
   assert.doesNotMatch(workflow, /persist-credentials: true/);

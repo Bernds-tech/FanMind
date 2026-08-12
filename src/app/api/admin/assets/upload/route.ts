@@ -10,7 +10,10 @@ import {
   isAdminAssetCategory,
   sanitizeAdminAssetFileName,
 } from "@/lib/adminAssets";
-import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import {
+  getSupabaseApiKeyHeaders,
+  getSupabasePublicConfig,
+} from "@/lib/supabase/config";
 import { getSupabaseServerUser } from "@/lib/supabase/server";
 import {
   isTrustedFanMindMutationRequest,
@@ -70,8 +73,7 @@ export async function POST(request: NextRequest) {
   const uploadResponse = await fetch(`${config.url}/storage/v1/object/${ADMIN_ASSET_BUCKET}/${encodeURI(path).replace(/%2F/g, "/")}`, {
     method: "POST",
     headers: {
-      apikey: config.anonKey,
-      Authorization: `Bearer ${serviceToken}`,
+      ...getSupabaseApiKeyHeaders(serviceToken),
       "Content-Type": contentType,
       "Cache-Control": "public, max-age=31536000, immutable",
       "x-upsert": "false",

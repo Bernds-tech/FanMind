@@ -5,6 +5,7 @@ import {
   isPaymentTermsActivationEnabled,
   PAYMENT_TERMS_ACCEPTED_NOT_BEFORE_MS,
 } from "@/lib/paymentTermsActivationPolicy.mjs";
+import { getSupabaseApiKeyHeaders } from "@/lib/supabase/config";
 
 const MAX_ACCEPTANCE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
@@ -122,8 +123,7 @@ export async function getWorkspacePaymentTermsEvidence(
     const response = await fetch(`${supabaseUrl}/rest/v1/workspaces?${query}`, {
       method: "GET",
       headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+        ...getSupabaseApiKeyHeaders(serviceRoleKey),
         Accept: "application/json",
       },
       cache: "no-store",

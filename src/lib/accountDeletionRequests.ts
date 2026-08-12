@@ -8,7 +8,10 @@ import {
   sendAccountDeletionAcknowledgement,
   sendAccountDeletionOperationsNotice,
 } from "@/lib/accountDeletionNotifications";
-import { getSupabaseRestUrl } from "@/lib/supabase/config";
+import {
+  getSupabaseApiKeyHeaders,
+  getSupabaseRestUrl,
+} from "@/lib/supabase/config";
 import type {
   SupabaseServerUser,
   WorkspaceDashboardRow,
@@ -70,9 +73,7 @@ function serviceKey(): string {
 function serviceHeaders(prefer?: string): HeadersInit {
   const key = serviceKey();
   return {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
+    ...getSupabaseApiKeyHeaders(key),
     ...(prefer ? { Prefer: prefer } : {}),
   };
 }
