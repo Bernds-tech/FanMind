@@ -36,6 +36,14 @@ async function main() {
 
   const result = await verifyStagingStripeCatalog(process.env);
   if (!result.ok) {
+    if (
+      typeof result.slot === "string" &&
+      /^(?:starter_setup|starter_monthly|internal_daily_test|ai_plus|ai_ultra)$/u.test(
+        result.slot,
+      )
+    ) {
+      console.error(`STAGING_STRIPE_CATALOG_SLOT=${result.slot}`);
+    }
     fail(result.error ?? "unexpected_failure");
     return;
   }
