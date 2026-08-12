@@ -105,6 +105,12 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
      Session-Pooler), `FANMIND_STAGING_DB_USER` (für Supabase üblicherweise
      `postgres.<staging-project-ref>`) und `FANMIND_STAGING_DB_PASSWORD`;
      niemals eine Production-Verbindung;
+     die kontrollierten Staging-DB-Workflows leiten den nicht geheimen,
+     kanonischen Production-Vergleichshost automatisch als
+     `db.<production-project-ref>.supabase.co` aus der Production-Projektreferenz
+     ab. Ein Production-DB-Host-Secret oder Production-Zugangsdaten werden dafür
+     nicht benötigt; der isolierte Restore-Drill besitzt davon getrennte,
+     strengere Zielvergleichsregeln;
    - Variablen `FANMIND_STAGING_E2E_WORKSPACE_ID`,
      `FANMIND_STAGING_E2E_CONTACT_ID`,
      `FANMIND_STAGING_E2E_SECONDARY_WORKSPACE_ID` und

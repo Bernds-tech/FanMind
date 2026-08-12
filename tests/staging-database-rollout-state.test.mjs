@@ -41,6 +41,21 @@ const runner = readFileSync(
   ),
   "utf8",
 );
+const controlledStagingDatabaseWorkflowPaths = [
+  "internal-daily-test-workspace-provisioning-staging-apply.yml",
+  "internal-daily-test-workspace-provisioning-staging-verify.yml",
+  "meta-catchup-queue-staging-apply.yml",
+  "meta-catchup-queue-staging-verify.yml",
+  "meta-content-staging-migration.yml",
+  "meta-content-staging-resource-readiness.yml",
+  "mobile-push-staging-acceptance.yml",
+  "mobile-push-staging-migration.yml",
+  "mobile-push-staging-resource-readiness.yml",
+  "staging-database-rollout-state.yml",
+  "trigger-function-hardening-staging-apply.yml",
+  "trigger-function-hardening-staging-verify.yml",
+  "workspace-processing-staging-acceptance.yml",
+];
 
 function validEnvironment() {
   const stagingRef = "stagingprojectref1234";
@@ -293,6 +308,23 @@ test("manual workflow is commit-exact, protected Staging and write-disabled", ()
   assert.match(workflow, /permissions:\s+contents: read/u);
   assert.doesNotMatch(workflow, /supabase db push|:apply|--apply/iu);
   assert.doesNotMatch(runner, /supabase\s+db\s+push/iu);
+});
+
+test("controlled Staging database workflows derive the non-secret Production host anchor", () => {
+  const expected =
+    "FANMIND_PRODUCTION_DB_HOST: ${{ format('db.{0}.supabase.co', vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF) }}";
+  for (const path of controlledStagingDatabaseWorkflowPaths) {
+    const source = readFileSync(
+      resolve(repositoryRoot, ".github/workflows", path),
+      "utf8",
+    );
+    assert.ok(source.includes(expected), path);
+    assert.doesNotMatch(
+      source,
+      /secrets\.FANMIND_PRODUCTION_DB_HOST/u,
+      path,
+    );
+  }
 });
 
 test("offline CLI reuses and verifies every currently available control", () => {
