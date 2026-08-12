@@ -130,7 +130,7 @@ jobs:
 
           SUDOERS_TMP="$(mktemp "$RUNNER_TEMP/fanmind-staging-sudoers.XXXXXX")"
           trap 'rm -f "$SUDOERS_TMP"' EXIT
-          printf '%s ALL=(root) NOPASSWD: /usr/sbin/nginx -t\n' "$STAGING_USER" > "$SUDOERS_TMP"
+          printf '%s ALL=(root) NOPASSWD: /usr/sbin/nginx -t, /usr/bin/systemctl enable fanmind-staging.service, /usr/bin/systemctl restart fanmind-staging.service, /usr/bin/systemctl is-active --quiet fanmind-staging.service\n' "$STAGING_USER" > "$SUDOERS_TMP"
           chmod 0440 "$SUDOERS_TMP"
           sudo visudo --check --file "$SUDOERS_TMP"
           sudo install -o root -g root -m 0440 "$SUDOERS_TMP" /etc/sudoers.d/fanmind-staging-nginx-check
@@ -145,6 +145,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          RUNTIME_SECRET_DIR="/etc/fanmind-staging"
+          RUNTIME_SECRET_FILE="$RUNTIME_SECRET_DIR/runtime-secrets.env"
           ENV_TMP="$(mktemp "$RUNNER_TEMP/fanmind-staging-env.XXXXXX")"
           export ENV_TMP
           trap 'rm -f "$ENV_TMP"' EXIT
@@ -216,7 +218,58 @@ jobs:
           trap - EXIT
 
           test "$(sudo stat -c '%U:%G:%a' /var/www/fanmind-staging/.env.production)" = "fanmind-staging:fanmind-staging:600"
+
+          sudo install -d -o root -g fanmind-staging -m 0750 "$RUNTIME_SECRET_DIR"
+          if sudo test -e "$RUNTIME_SECRET_FILE"; then
+            if sudo test -L "$RUNTIME_SECRET_FILE" \
+              || ! sudo test -f "$RUNTIME_SECRET_FILE" \
+              || [ "$(sudo stat -c '%U:%G:%a' "$RUNTIME_SECRET_FILE")" != "root:fanmind-staging:640" ] \
+              || ! sudo -u fanmind-staging -H grep -Eq '^FANMIND_SHARED_RATE_LIMIT_SECRET="[0-9a-f]{64}"$' "$RUNTIME_SECRET_FILE"; then
+              echo "Existing staging runtime secret file is incomplete or unsafe." >&2
+              exit 1
+            fi
+            echo "STAGING_RUNTIME_SECRET=preserved"
+          else
+            RUNTIME_SECRET_TMP="$(mktemp "$RUNNER_TEMP/fanmind-staging-runtime-secret.XXXXXX")"
+            export RUNTIME_SECRET_TMP
+            trap 'rm -f "$ENV_TMP" "$RUNTIME_SECRET_TMP"' EXIT
+            node -e '
+              const { randomBytes } = require("node:crypto");
+              const { writeFileSync } = require("node:fs");
+              const secret = randomBytes(32).toString("hex");
+              writeFileSync(
+                process.env.RUNTIME_SECRET_TMP,
+                `FANMIND_SHARED_RATE_LIMIT_SECRET=${JSON.stringify(secret)}\n`,
+                { encoding: "utf8", mode: 0o600 },
+              );
+            '
+            sudo install -o root -g fanmind-staging -m 0640 "$RUNTIME_SECRET_TMP" "$RUNTIME_SECRET_FILE"
+            rm -f "$RUNTIME_SECRET_TMP"
+            trap 'rm -f "$ENV_TMP"' EXIT
+            echo "STAGING_RUNTIME_SECRET=created"
+          fi
+
           echo "STAGING_ENV_FILE=private"
+
+      - name: Install isolated staging application service
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$(command -v systemctl)" != "/usr/bin/systemctl" ]; then
+            echo "Unexpected systemctl path." >&2
+            exit 1
+          fi
+          if [ "$(command -v npm)" != "/usr/bin/npm" ]; then
+            echo "Unexpected npm path for the staging service." >&2
+            exit 1
+          fi
+
+          sudo install -o root -g root -m 0644 \
+            ops/systemd/fanmind-staging.service \
+            /etc/systemd/system/fanmind-staging.service
+          sudo systemctl daemon-reload
+          echo "STAGING_APPLICATION_SERVICE=installed"
 
       - name: Install or preserve isolated virtual host
         shell: bash

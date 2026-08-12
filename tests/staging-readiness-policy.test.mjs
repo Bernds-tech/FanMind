@@ -17,6 +17,7 @@ const stagingSecrets = {
   service: "service_value_1234567890",
   stripe: "sk_test_SyntheticOnly1234567890",
   webhook: "whsec_SyntheticOnly1234567890",
+  sharedRateLimit: "synthetic_shared_rate_limit_secret_1234567890",
 };
 
 function stagingEnvironment(overrides = {}) {
@@ -37,6 +38,7 @@ function stagingEnvironment(overrides = {}) {
     FANMIND_TAX_MODE: "stripe_tax",
     FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED: "true",
     OPENAI_API_KEY: "",
+    FANMIND_SHARED_RATE_LIMIT_SECRET: stagingSecrets.sharedRateLimit,
     FANMIND_ENABLE_REFERRAL_BILLING: "false",
     FANMIND_PUBLIC_DEMO_ENABLED: "false",
     FANMIND_ENABLE_TELEGRAM_SEND: "false",
@@ -66,6 +68,7 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   assert.match(script, /Supabase-URL und explizite Staging-Zielreferenz müssen exakt übereinstimmen/);
   assert.match(script, /STAGING_SUPABASE_REF_BINDING/);
   assert.match(script, /STAGING_READINESS=OK/);
+  assert.match(script, /FANMIND_SHARED_RATE_LIMIT_SECRET muss mindestens 32 Zeichen lang sein/);
 
   assert.match(workflow, /environment: staging/);
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/u);
@@ -116,6 +119,7 @@ test("staging readiness accepts an exact URL-to-target binding without exposing 
   assert.match(output, /STAGING_SUPABASE_REF_BINDING=matching/);
   assert.match(output, /STAGING_STRIPE_MODE=test/);
   assert.match(output, /STAGING_STRIPE_TAX=ready/);
+  assert.match(output, /STAGING_SHARED_RATE_LIMIT=ready/);
   assert.match(output, /SECRETS_WURDEN_NICHT_AUSGEGEBEN=true/);
   assert.match(output, /STAGING_READINESS=OK/);
 
@@ -123,6 +127,24 @@ test("staging readiness accepts an exact URL-to-target binding without exposing 
     assert.doesNotMatch(output, new RegExp(value));
   }
   assert.doesNotMatch(output, /stagingref12345|productionref123/);
+});
+
+test("staging readiness rejects a missing shared rate-limit secret", async () => {
+  await assert.rejects(
+    execFileAsync(
+      process.execPath,
+      [scriptPath],
+      {
+        env: stagingEnvironment({ FANMIND_SHARED_RATE_LIMIT_SECRET: "" }),
+      },
+    ),
+    (error) => {
+      const output = `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
+      assert.match(output, /STAGING_SHARED_RATE_LIMIT=blocked/);
+      assert.match(output, /FANMIND_SHARED_RATE_LIMIT_SECRET muss mindestens 32 Zeichen lang sein/);
+      return true;
+    },
+  );
 });
 
 test("staging readiness rejects a mismatched explicit target without exposing values", async () => {

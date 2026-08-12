@@ -14,7 +14,8 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
 - manueller, `main`-gebundener und commit-genauer Deploy-Workflow `Deploy FanMind Staging` für einen ausschließlich mit `fanmind-staging` gekennzeichneten Self-Hosted Runner;
 - manueller, `main`-gebundener Workflow `Provision FanMind Staging Host`, der
   auf dem bestehenden Exoscale-Host ausschließlich den getrennten Linux-Nutzer,
-  Release-Pfad, privaten ENV-Pfad, nginx-vHost und zweiten Runner-Dienst anlegt;
+  Release-Pfad, private Runtime-Dateien, systemd-Anwendungsdienst, nginx-vHost
+  und zweiten Runner-Dienst anlegt;
 - separater manueller Workflow `Enable FanMind Staging TLS`, der erst nach
   erfolgreicher DNS-Bindung das vorhandene Certbot-Konto für
   `staging.fanmind.ch` verwendet;
@@ -54,7 +55,11 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - eigener Self-Hosted Runner mit dem exklusiven Label `fanmind-staging`, niemals der Production-Runner;
    - eigener Release-Pfad unter `/var/www/fanmind-staging`;
    - eigene, nicht versionierte `/var/www/fanmind-staging/.env.production` mit Dateimodus `0600` und ausschließlich Staging-Werten;
-   - eigener PM2-Prozess `fanmind-staging` und eigener nginx-vHost;
+   - eigener, vom GitHub-Runner unabhängiger systemd-Dienst
+     `fanmind-staging.service` und eigener nginx-vHost;
+   - eigener root-verwalteter Shared-Rate-Limit-Secret unter
+     `/etc/fanmind-staging/runtime-secrets.env`; er wird lokal kryptografisch
+     erzeugt, nie ausgegeben und bei Re-Provisionierung unverändert bewahrt;
    - die einmalige Host-Provisionierung läuft mit der Bestätigung
      `provision-fanmind-staging-host`; sie deployt keine Anwendung und ändert
      weder den Production-Checkout noch den Production-PM2-Prozess;
@@ -132,7 +137,10 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
 8. alle Schreibschalter auf `false` lassen;
 9. `npm run staging:preflight` ausführen;
 10. den manuellen Workflow `Deploy FanMind Staging` auf dem ausgewählten, von `main` erreichbaren Commit mit der Bestätigung `deploy-staging-only` starten;
-11. der Workflow muss Preflight, Product Truth, Lint, Operations-Tests, Build, separaten PM2-Start, Health und commit-genauen Public Smoke erfolgreich abschließen;
+11. der Workflow muss Preflight, Product Truth, Lint, Operations-Tests, Build,
+    den getrennten systemd-Neustart, Health und commit-genauen Public Smoke
+    erfolgreich abschließen; der Healthcheck meldet bei einem Fehler nur
+    validierte Komponentennamen und Zustände, niemals Secret-Werte;
 12. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell starten;
 13. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
 14. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
