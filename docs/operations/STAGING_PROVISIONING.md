@@ -144,7 +144,12 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
     den getrennten systemd-Neustart, Health und commit-genauen Public Smoke
     erfolgreich abschließen; der Healthcheck meldet bei einem Fehler nur
     validierte Komponentennamen und Zustände, niemals Secret-Werte;
-12. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell starten;
+12. Workflow `FanMind Staging Readiness` exakt auf diesem Git-Commit manuell
+    starten. Der read-only Hosted Runner erzeugt dafür je Lauf einen maskierten,
+    kurzlebigen Rate-Limit-Prüfwert und erhält niemals das root-verwaltete
+    Laufzeit-Secret des Staging-Hosts. Der abschließende Public Smoke prüft
+    separat, dass der echte Staging-Dienst seine Shared-Rate-Limit-Komponente
+    gesund meldet;
 13. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
 14. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
 15. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
