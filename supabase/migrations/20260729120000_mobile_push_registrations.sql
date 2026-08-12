@@ -54,7 +54,7 @@ for each row execute function public.set_mobile_push_registration_updated_at();
 alter table public.mobile_push_registrations enable row level security;
 
 revoke all on table public.mobile_push_registrations
-  from public, anon, authenticated;
+  from public, anon, authenticated, service_role;
 grant select, insert, update, delete
   on table public.mobile_push_registrations
   to service_role;

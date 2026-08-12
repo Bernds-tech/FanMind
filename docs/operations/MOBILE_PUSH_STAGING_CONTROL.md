@@ -15,7 +15,7 @@ Die festgeschriebene Migration ist:
 
 ```text
 supabase/migrations/20260729120000_mobile_push_registrations.sql
-SHA-256: 8e3a6c1f2541925862cfff25e207424b98e47dd0ea22aa48b7e92581d2b04496
+SHA-256: 1a22d71a09427bbf0093dfc12f6fbcaf76256d61728048390b1299c526bfd0d7
 ```
 
 Der Ablauf:

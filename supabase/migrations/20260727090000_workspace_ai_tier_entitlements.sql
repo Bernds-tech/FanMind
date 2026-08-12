@@ -52,7 +52,7 @@ alter table public.workspace_ai_tier_entitlements force row level security;
 -- The service role is the only data path. Do not add an authenticated policy:
 -- settings pages and AI routes must receive a redacted server response.
 revoke all on table public.workspace_ai_tier_entitlements
-  from public, anon, authenticated;
+  from public, anon, authenticated, service_role;
 
 -- Table-level REVOKE does not clear a pre-existing column grant. The migration
 -- is new, but remove column privileges explicitly so restored/drifted schemas
@@ -215,6 +215,21 @@ begin
        'service_role',
        'public.workspace_ai_tier_entitlements',
        'DELETE'
+     )
+     or has_table_privilege(
+       'service_role',
+       'public.workspace_ai_tier_entitlements',
+       'TRUNCATE'
+     )
+     or has_table_privilege(
+       'service_role',
+       'public.workspace_ai_tier_entitlements',
+       'REFERENCES'
+     )
+     or has_table_privilege(
+       'service_role',
+       'public.workspace_ai_tier_entitlements',
+       'TRIGGER'
      ) then
     raise exception
       using
