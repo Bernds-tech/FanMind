@@ -8,6 +8,7 @@ const tlsWorkflowPath = ".github/workflows/enable-staging-tls.yml";
 const nginxPath = "ops/nginx/fanmind-staging.http.conf";
 const runbookPath = "docs/operations/STAGING_PROVISIONING.md";
 const separationPath = "docs/operations/ENVIRONMENT_SEPARATION.md";
+const stagingServicePath = "ops/systemd/fanmind-staging.service";
 
 async function read(path) {
   return readFile(path, "utf8");
@@ -44,12 +45,16 @@ test("staging deploy is manual, isolated and fail-closed", async () => {
   assert.match(workflow, /npm run staging:preflight/);
   assert.match(workflow, /npm run verify:truth/);
   assert.match(workflow, /npm run test:operations/);
-  assert.match(workflow, /pm2 start npm --name fanmind-staging/);
+  assert.match(workflow, /RUNTIME_SECRET_FILE="\/etc\/fanmind-staging\/runtime-secrets\.env"/);
+  assert.match(workflow, /sudo systemctl restart fanmind-staging\.service/);
+  assert.match(workflow, /sudo systemctl is-active --quiet fanmind-staging\.service/);
+  assert.match(workflow, /STAGING_HEALTH_COMPONENT=/);
   assert.match(workflow, /FANMIND_EXPECTED_RUNTIME_ENVIRONMENT=staging/);
   assert.match(workflow, /npm run smoke:public/);
 
   assert.doesNotMatch(workflow, /SOURCE_DIR="\/var\/www\/fanmind"/);
   assert.doesNotMatch(workflow, /--name fanmind(?:\s|")/);
+  assert.doesNotMatch(workflow, /pm2 start/);
   assert.doesNotMatch(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES=true/);
   assert.doesNotMatch(workflow, /https:\/\/fanmind\.ch/);
   assert.doesNotMatch(workflow, /persist-credentials: true/);
@@ -103,6 +108,11 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
     /sudo stat -c '%U:%G:%a' \/var\/www\/fanmind-staging\/\.env\.production/u,
   );
   assert.match(workflow, /fanmind-staging:fanmind-staging:600/);
+  assert.match(workflow, /RUNTIME_SECRET_FILE="\$RUNTIME_SECRET_DIR\/runtime-secrets\.env"/);
+  assert.match(workflow, /FANMIND_SHARED_RATE_LIMIT_SECRET/);
+  assert.match(workflow, /STAGING_RUNTIME_SECRET=preserved/);
+  assert.match(workflow, /randomBytes\(32\)/);
+  assert.match(workflow, /ops\/systemd\/fanmind-staging\.service/);
   assert.match(workflow, /fanmind-staging-01-exoscale/);
   assert.match(workflow, /--labels fanmind-staging,exoscale/);
   assert.match(
@@ -147,6 +157,22 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
   assert.match(nginx, /server_name staging\.fanmind\.ch;/);
   assert.match(nginx, /proxy_pass http:\/\/127\.0\.0\.1:3001;/);
   assert.doesNotMatch(nginx, /server_name (?:www\.)?fanmind\.ch;/);
+});
+
+test("staging application is owned by a hardened system service", async () => {
+  const service = await read(stagingServicePath);
+
+  assert.match(service, /^User=fanmind-staging$/mu);
+  assert.match(service, /^Group=fanmind-staging$/mu);
+  assert.match(service, /^WorkingDirectory=\/var\/www\/fanmind-staging$/mu);
+  assert.match(service, /^EnvironmentFile=\/var\/www\/fanmind-staging\/\.env\.production$/mu);
+  assert.match(service, /^EnvironmentFile=\/etc\/fanmind-staging\/runtime-secrets\.env$/mu);
+  assert.match(service, /^EnvironmentFile=\/var\/www\/fanmind-staging\/\.release\.env$/mu);
+  assert.match(service, /^ExecStart=\/usr\/bin\/npm start$/mu);
+  assert.match(service, /^NoNewPrivileges=true$/mu);
+  assert.match(service, /^ProtectSystem=strict$/mu);
+  assert.match(service, /^ReadWritePaths=\/var\/www\/fanmind-staging$/mu);
+  assert.doesNotMatch(service, /fanmind(?:\.ch|\/var\/www\/fanmind$)/u);
 });
 
 test("staging TLS is manual, DNS-bound and reuses the existing certbot account", async () => {

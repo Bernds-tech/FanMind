@@ -174,14 +174,20 @@ deployt den unveränderlichen Commit, der den Workflow ausgelöst hat, sofern er
 von `origin/main` erreichbar ist. Vor Installation und Build entfernt er alte
 ignorierte oder unversionierte Build-Dateien mit Ausnahme der geschützten
 `.env.production`, bindet den Next.js Deployment-Identifier an diesen Commit
-und führt vor dem separaten PM2-Start den Staging-Preflight aus.
+und führt vor dem separaten systemd-Neustart den Staging-Preflight aus. Der
+Anwendungsprozess wird vom Host-Service-Manager mit sauberen Runtime-Dateien
+gestartet und ist deshalb nicht an die Lebensdauer des Self-Hosted-Runner-Jobs
+gebunden. Der serverseitige Shared-Rate-Limit-Secret liegt getrennt vom
+Release-Baum unter `/etc/fanmind-staging/runtime-secrets.env`, wird lokal
+erzeugt und bei Re-Provisionierung bewahrt.
 
 Die einmalige Host-Vorbereitung liegt getrennt davon in
 `.github/workflows/provision-staging-host.yml`. Nur dieser manuelle,
 `main`-gebundene Bootstrap darf den bestehenden Exoscale-Production-Runner
 verwenden, um den separaten Betriebssystemnutzer `fanmind-staging`, den
-Release-Pfad `/var/www/fanmind-staging`, die private ENV-Datei, den nginx-vHost
-und einen zweiten Runner-Dienst mit exklusivem Label `fanmind-staging`
+Release-Pfad `/var/www/fanmind-staging`, die privaten Runtime-Dateien, den
+systemd-Dienst `fanmind-staging.service`, den nginx-vHost und einen zweiten
+Runner-Dienst mit exklusivem Label `fanmind-staging`
 anzulegen. Er führt keinen Staging- oder Production-Deploy aus und darf den
 Production-Checkout, die Production-ENV sowie den PM2-Prozess `fanmind` nicht
 verändern. Der kurzlebige Runner-Registrierungstoken lebt ausschließlich als

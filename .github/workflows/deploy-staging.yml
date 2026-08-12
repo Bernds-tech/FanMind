@@ -39,6 +39,7 @@ jobs:
 
           SOURCE_DIR="/var/www/fanmind-staging"
           ENV_FILE="$SOURCE_DIR/.env.production"
+          RUNTIME_SECRET_FILE="/etc/fanmind-staging/runtime-secrets.env"
 
           if [ ! -d "$SOURCE_DIR" ]; then
             echo "Staging source directory is missing." >&2
@@ -50,6 +51,12 @@ jobs:
           fi
           if [ "$(stat -c '%a' "$ENV_FILE")" != "600" ]; then
             echo "Staging environment file must have mode 600." >&2
+            exit 1
+          fi
+          if [ ! -f "$RUNTIME_SECRET_FILE" ] \
+            || [ -L "$RUNTIME_SECRET_FILE" ] \
+            || [ "$(stat -c '%U:%G:%a' "$RUNTIME_SECRET_FILE")" != "root:fanmind-staging:640" ]; then
+            echo "Staging runtime secret file is missing or unsafe." >&2
             exit 1
           fi
           if [[ ! "$EXPECTED_RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
@@ -85,6 +92,7 @@ jobs:
           # The staging host deliberately uses Next.js production mode with
           # staging-only values in this untracked, mode-0600 file.
           . "$ENV_FILE"
+          . "$RUNTIME_SECRET_FILE"
           set +a
 
           npm ci --no-audit --no-fund
@@ -114,25 +122,57 @@ jobs:
               );
             '
 
+          RELEASE_ENV_TMP="$(mktemp "$SOURCE_DIR/.release.env.XXXXXX")"
+          trap 'rm -f "$RELEASE_ENV_TMP"' EXIT
+          chmod 0600 "$RELEASE_ENV_TMP"
+          printf 'FANMIND_RELEASE_COMMIT=%s\nFANMIND_RUNTIME_ENVIRONMENT=staging\nNODE_ENV=production\n' \
+            "$EXPECTED_RELEASE_COMMIT" > "$RELEASE_ENV_TMP"
+          mv "$RELEASE_ENV_TMP" "$SOURCE_DIR/.release.env"
+          trap - EXIT
+
           pm2 delete fanmind-staging >/dev/null 2>&1 || true
-          FANMIND_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT" \
-            FANMIND_RUNTIME_ENVIRONMENT=staging \
-            NODE_ENV=production \
-            pm2 start npm --name fanmind-staging --cwd "$SOURCE_DIR" -- start
-          pm2 save
+          sudo systemctl restart fanmind-staging.service
+          sudo systemctl is-active --quiet fanmind-staging.service
           sudo nginx -t
 
           STAGING_BASE_URL="${NEXT_PUBLIC_APP_URL%/}"
+          HEALTH_BODY="$(mktemp "$RUNNER_TEMP/fanmind-staging-health.XXXXXX")"
+          trap 'rm -f "$HEALTH_BODY"' EXIT
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsSL --max-time 15 "$STAGING_BASE_URL/api/health" -o /dev/null; then
+            HEALTH_STATUS="$(
+              curl --silent --show-error --location --max-time 15 \
+                --output "$HEALTH_BODY" --write-out '%{http_code}' \
+                "$STAGING_BASE_URL/api/health" || true
+            )"
+            if [ "$HEALTH_STATUS" = "200" ]; then
               break
             fi
             if [ "$attempt" = "10" ]; then
               echo "Staging health check failed after 10 attempts." >&2
+              node -e '
+                const { readFileSync } = require("node:fs");
+                try {
+                  const payload = JSON.parse(readFileSync(process.argv[1], "utf8"));
+                  const statuses = new Set(["healthy", "degraded", "unavailable", "unknown"]);
+                  for (const check of Array.isArray(payload?.checks) ? payload.checks : []) {
+                    if (
+                      typeof check?.component === "string"
+                      && /^[a-z0-9_]{1,64}$/u.test(check.component)
+                      && statuses.has(check?.status)
+                    ) {
+                      console.error(`STAGING_HEALTH_COMPONENT=${check.component}:${check.status}`);
+                    }
+                  }
+                } catch {
+                  console.error("STAGING_HEALTH_RESPONSE=unparseable");
+                }
+              ' "$HEALTH_BODY"
               exit 1
             fi
             sleep 3
           done
+          rm -f "$HEALTH_BODY"
+          trap - EXIT
 
           FANMIND_SMOKE_BASE_URL="$STAGING_BASE_URL" \
             FANMIND_EXPECTED_RELEASE_COMMIT="$EXPECTED_RELEASE_COMMIT" \

@@ -78,6 +78,10 @@ if (!isStripeTestSecretKey(value("STRIPE_SECRET_KEY"))) {
 }
 configured("STRIPE_WEBHOOK_SECRET", { prefix: "whsec_" });
 configured("OPENAI_API_KEY", { prefix: "sk-", optional: true });
+const sharedRateLimitSecret = value("FANMIND_SHARED_RATE_LIMIT_SECRET");
+if (sharedRateLimitSecret.length < 32) {
+  errors.push("FANMIND_SHARED_RATE_LIMIT_SECRET muss mindestens 32 Zeichen lang sein.");
+}
 
 if (value("FANMIND_TAX_MODE") !== "stripe_tax") {
   errors.push("FANMIND_TAX_MODE muss in Staging exakt stripe_tax sein.");
@@ -109,6 +113,7 @@ console.log(
 );
 console.log(`STAGING_STRIPE_MODE=${isStripeTestSecretKey(value("STRIPE_SECRET_KEY")) ? "test" : "invalid"}`);
 console.log(`STAGING_STRIPE_TAX=${value("FANMIND_TAX_MODE") === "stripe_tax" && value("FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED") === "true" ? "ready" : "blocked"}`);
+console.log(`STAGING_SHARED_RATE_LIMIT=${sharedRateLimitSecret.length >= 32 ? "ready" : "blocked"}`);
 console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");
 
 for (const warning of warnings) console.warn(`STAGING_WARNING=${warning}`);
