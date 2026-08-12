@@ -176,11 +176,12 @@ FANMIND_STAGING_SUPABASE_URL
 FANMIND_STAGING_DB_HOST
 FANMIND_STAGING_DB_USER
 FANMIND_STAGING_DB_PASSWORD
-FANMIND_PRODUCTION_DB_HOST
 ```
 
-Der Production-DB-Host ist ausschließlich ein Vergleichswert. Es werden keine
-Production-DB-Zugangsdaten in Staging benötigt oder verwendet.
+Der nicht geheime Production-Vergleichshost wird aus der bereits gebundenen
+Production-Projektreferenz als `db.<production-project-ref>.supabase.co`
+abgeleitet. Es werden keine Production-DB-Zugangsdaten und kein separates
+Production-DB-Host-Secret in Staging benötigt oder verwendet.
 
 Jeder Workflow erzeugt eine eigene PGPASS-Datei im privaten Runner-Tempordner,
 verlangt Modus `0600`, erstellt intern einen gegen Symlink- und Austauschangriffe

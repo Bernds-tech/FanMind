@@ -60,7 +60,6 @@ sein:
 | Variable | `FANMIND_STAGING_DB_NAME` |
 | Secret | `FANMIND_STAGING_SUPABASE_URL` |
 | Secret | `FANMIND_STAGING_DB_HOST` |
-| Secret | `FANMIND_PRODUCTION_DB_HOST` |
 | Secret | `FANMIND_STAGING_DB_PASSWORD` |
 
 `FANMIND_STAGING_DB_HOST` muss der Supabase-Supavisor-Session-Pooler sein,
@@ -72,6 +71,10 @@ Production sein. Ein regionaler Supavisor-Pooler-Hostname kann zwischen
 Projekten geteilt sein; deshalb sind die getrennte Projektreferenz und der
 projektqualifizierte Benutzer die verbindliche Zielgrenze. Repository-Secrets
 und Secretwerte dürfen nicht in Logs oder Screenshots übernommen werden.
+Der nicht geheime Production-Vergleichshost wird im Workflow aus
+`FANMIND_PRODUCTION_SUPABASE_PROJECT_REF` als kanonischer direkter Host
+`db.<production-project-ref>.supabase.co` abgeleitet. Dafür werden weder ein
+Production-DB-Host-Secret noch Production-Zugangsdaten benötigt.
 
 ## Ablauf
 
