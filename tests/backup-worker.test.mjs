@@ -1,28 +1,34 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, stat, readdir, access } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, stat, readdir, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
+const fixtureRoot = await mkdtemp(join(tmpdir(), 'fanmind-backup-worker-fixture-'));
+
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://supabase.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
-process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE = '/tmp/fanmind-test-recipient.txt';
-process.env.FANMIND_AGE_BIN = '/tmp/fanmind-test-age.sh';
-process.env.FANMIND_PG_DUMP_BIN = '/tmp/fanmind-test-pgdump.sh';
-process.env.FANMIND_PG_RESTORE_BIN = '/tmp/fanmind-test-pgrestore.sh';
-process.env.FANMIND_BACKUP_PGPASSFILE = '/tmp/fanmind-test-pgpass';
+process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE = join(fixtureRoot, 'recipient.txt');
+process.env.FANMIND_AGE_BIN = join(fixtureRoot, 'age.sh');
+process.env.FANMIND_PG_DUMP_BIN = join(fixtureRoot, 'pgdump.sh');
+process.env.FANMIND_PG_RESTORE_BIN = join(fixtureRoot, 'pgrestore.sh');
+process.env.FANMIND_BACKUP_PGPASSFILE = join(fixtureRoot, 'pgpass');
 process.env.FANMIND_BACKUP_DB_HOST = 'db.test';
 process.env.FANMIND_BACKUP_DB_USER = 'postgres';
 process.env.FANMIND_BACKUP_DB_NAME = 'postgres';
 process.env.FANMIND_STORAGE_BACKUP_PAGE_SIZE = '2';
 
-await writeFile('/tmp/fanmind-test-recipient.txt', 'age1test');
-await writeFile('/tmp/fanmind-test-pgpass', 'localhost:*:*:*:x');
-await writeFile('/tmp/fanmind-test-age.sh', '#!/usr/bin/env bash\nout=""\nwhile [[ $# -gt 0 ]]; do if [[ "$1" == "-o" ]]; then out="$2"; shift 2; else last="$1"; shift; fi; done\nprintf "AGE-ENCRYPTED\\n" > "$out"\ncat "$last" >> "$out"\n', { mode:0o755 });
-await writeFile('/tmp/fanmind-test-pgdump.sh', '#!/usr/bin/env bash\nfor ((i=1;i<=$#;i++)); do if [[ "${!i}" == "--file" ]]; then j=$((i+1)); printf "PGDUMP" > "${!j}"; fi; done\n', { mode:0o755 });
-await writeFile('/tmp/fanmind-test-pgrestore.sh', '#!/usr/bin/env bash\nexit 0\n', { mode:0o755 });
+await writeFile(process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE, 'age1test');
+await writeFile(process.env.FANMIND_BACKUP_PGPASSFILE, 'localhost:*:*:*:x');
+await writeFile(process.env.FANMIND_AGE_BIN, '#!/usr/bin/env bash\nout=""\nwhile [[ $# -gt 0 ]]; do if [[ "$1" == "-o" ]]; then out="$2"; shift 2; else last="$1"; shift; fi; done\nprintf "AGE-ENCRYPTED\\n" > "$out"\ncat "$last" >> "$out"\n', { mode:0o755 });
+await writeFile(process.env.FANMIND_PG_DUMP_BIN, '#!/usr/bin/env bash\nfor ((i=1;i<=$#;i++)); do if [[ "${!i}" == "--file" ]]; then j=$((i+1)); printf "PGDUMP" > "${!j}"; fi; done\n', { mode:0o755 });
+await writeFile(process.env.FANMIND_PG_RESTORE_BIN, '#!/usr/bin/env bash\nexit 0\n', { mode:0o755 });
+
+after(async () => {
+  await rm(fixtureRoot, { recursive:true, force:true });
+});
 
 const execFileAsync = promisify(execFile);
 
