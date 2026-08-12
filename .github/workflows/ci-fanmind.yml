@@ -88,6 +88,11 @@ jobs:
           set -o pipefail
           npm run test:operations 2>&1 | tee operations-test-report.txt
 
+      - name: Staging Stripe catalog policy tests
+        id: staging_stripe_catalog
+        continue-on-error: true
+        run: npm run test:staging-stripe-catalog
+
       - name: Website Chat and Inbox integration policies
         id: release_integrations
         continue-on-error: true
@@ -147,6 +152,12 @@ jobs:
         if: always() && steps.operations.outcome != 'success'
         run: |
           echo "Operations tests failed. See fanmind-operations-test-report artifact." >&2
+          exit 1
+
+      - name: Enforce Staging Stripe catalog policy result
+        if: always() && steps.staging_stripe_catalog.outcome != 'success'
+        run: |
+          echo "Staging Stripe catalog policy tests failed." >&2
           exit 1
 
       - name: Enforce release integration result
