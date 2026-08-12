@@ -145,6 +145,11 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
 7. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
 8. alle Schreibschalter auf `false` lassen;
 9. `npm run staging:preflight` ausführen;
+   Die spätere read-only Rollout-State-Prüfung bewertet einen in einem frisch
+   kontrolliert aufgebauten Projekt noch fehlenden
+   `supabase_migrations.schema_migrations`-Ledger als leeren Ledger und prüft
+   anschließend weiterhin jedes reale Zielobjekt. Ein partieller, widersprüchlicher
+   oder ungültiger Objektstand bleibt blockierend;
 10. den manuellen Workflow `Deploy FanMind Staging` auf dem ausgewählten, von `main` erreichbaren Commit mit der Bestätigung `deploy-staging-only` starten;
 11. der Workflow muss Preflight, Product Truth, Lint, Operations-Tests, Build,
     den getrennten systemd-Neustart, Health und commit-genauen Public Smoke
