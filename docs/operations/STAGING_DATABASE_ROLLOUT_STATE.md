@@ -100,7 +100,9 @@ Erforderlich sind:
 - der IPv4-kompatible Session-Pooler auf Port `5432`;
 - der aus der Staging-Projektreferenz abgeleitete Benutzer
   `postgres.<staging-project-ref>`;
-- `PGSSLMODE=verify-full` mit absolutem CA-Pfad;
+- `PGSSLMODE=verify-full` mit dem review- und fingerprint-gebundenen
+  `config/certificates/supabase-root-2021-ca.crt` statt nur dem
+  Betriebssystem-CA-Speicher;
 - eine private, eigentümergeführte `PGPASSFILE` mit Modus `0600`;
 - `FANMIND_ENABLE_NON_PRODUCTION_WRITES=false` und ein leerer Write-Acknowledge;
 - keine Connection-URL, kein `PGHOSTADDR`, kein libpq-Service und keine

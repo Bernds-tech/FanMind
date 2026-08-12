@@ -51,7 +51,7 @@ jobs:
       PGDATABASE: ${{ vars.FANMIND_STAGING_DB_NAME }}
       PGUSER: ${{ format('postgres.{0}', vars.FANMIND_STAGING_SUPABASE_PROJECT_REF) }}
       PGSSLMODE: verify-full
-      PGSSLROOTCERT: /etc/ssl/certs/ca-certificates.crt
+      PGSSLROOTCERT: ${{ github.workspace }}/config/certificates/supabase-root-2021-ca.crt
 
     steps:
       - name: Checkout reviewed main commit
