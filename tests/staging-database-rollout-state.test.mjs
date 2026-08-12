@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
+import { X509Certificate } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -53,6 +54,18 @@ const controlledStagingDatabaseWorkflowPaths = [
   "mobile-push-staging-acceptance.yml",
   "mobile-push-staging-migration.yml",
   "mobile-push-staging-resource-readiness.yml",
+  "staging-database-rollout-state.yml",
+  "trigger-function-hardening-staging-apply.yml",
+  "trigger-function-hardening-staging-verify.yml",
+  "workspace-processing-staging-acceptance.yml",
+];
+const tlsStagingDatabaseWorkflowPaths = [
+  "internal-daily-test-workspace-provisioning-staging-apply.yml",
+  "internal-daily-test-workspace-provisioning-staging-verify.yml",
+  "meta-catchup-queue-staging-apply.yml",
+  "meta-catchup-queue-staging-verify.yml",
+  "meta-content-staging-migration.yml",
+  "meta-content-staging-resource-readiness.yml",
   "staging-database-rollout-state.yml",
   "trigger-function-hardening-staging-apply.yml",
   "trigger-function-hardening-staging-verify.yml",
@@ -352,6 +365,37 @@ test("controlled Staging database workflows derive the non-secret Production hos
       /secrets\.FANMIND_PRODUCTION_DB_HOST/u,
       path,
     );
+  }
+});
+
+test("controlled Staging database workflows pin the reviewed Supabase root CA", () => {
+  const certificatePath = resolve(
+    repositoryRoot,
+    "config/certificates/supabase-root-2021-ca.crt",
+  );
+  const certificate = new X509Certificate(readFileSync(certificatePath));
+  assert.match(certificate.subject, /CN=Supabase Root 2021 CA/u);
+  assert.match(certificate.issuer, /CN=Supabase Root 2021 CA/u);
+  assert.equal(certificate.ca, true);
+  assert.equal(
+    certificate.fingerprint256,
+    "80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA",
+  );
+  assert.ok(Date.parse(certificate.validFrom) <= Date.now());
+  assert.ok(
+    Date.parse(certificate.validTo) >
+      Date.now() + 180 * 24 * 60 * 60 * 1000,
+  );
+
+  const expected =
+    "PGSSLROOTCERT: ${{ github.workspace }}/config/certificates/supabase-root-2021-ca.crt";
+  for (const path of tlsStagingDatabaseWorkflowPaths) {
+    const source = readFileSync(
+      resolve(repositoryRoot, ".github/workflows", path),
+      "utf8",
+    );
+    assert.ok(source.includes(expected), path);
+    assert.doesNotMatch(source, /PGSSLROOTCERT: \/etc\/ssl\/certs/u, path);
   }
 });
 

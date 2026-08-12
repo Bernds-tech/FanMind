@@ -75,6 +75,10 @@ Der nicht geheime Production-Vergleichshost wird im Workflow aus
 `FANMIND_PRODUCTION_SUPABASE_PROJECT_REF` als kanonischer direkter Host
 `db.<production-project-ref>.supabase.co` abgeleitet. Dafür werden weder ein
 Production-DB-Host-Secret noch Production-Zugangsdaten benötigt.
+Für `PGSSLMODE=verify-full` wird die review- und fingerprint-gebundene
+öffentliche Provider-CA aus
+`config/certificates/supabase-root-2021-ca.crt` verwendet. Der allgemeine
+Ubuntu-CA-Speicher allein reicht für die private Supabase-Root-CA nicht aus.
 
 ## Ablauf
 

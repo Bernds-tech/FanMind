@@ -111,6 +111,10 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
      ab. Ein Production-DB-Host-Secret oder Production-Zugangsdaten werden dafür
      nicht benötigt; der isolierte Restore-Drill besitzt davon getrennte,
      strengere Zielvergleichsregeln;
+   - die kontrollierten DB-Workflows verwenden für `verify-full` ausschließlich
+     die review- und fingerprint-gebundene öffentliche Supabase-Root-CA unter
+     `config/certificates/supabase-root-2021-ca.crt`; der Ubuntu-Systemspeicher
+     allein vertraut dieser privaten Provider-CA nicht;
    - Variablen `FANMIND_STAGING_E2E_WORKSPACE_ID`,
      `FANMIND_STAGING_E2E_CONTACT_ID`,
      `FANMIND_STAGING_E2E_SECONDARY_WORKSPACE_ID` und
