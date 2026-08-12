@@ -46,6 +46,14 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Prepare ephemeral read-only rate-limit probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          value="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          echo "::add-mask::$value"
+          printf 'FANMIND_SHARED_RATE_LIMIT_SECRET=%s\n' "$value" >> "$GITHUB_ENV"
+
       - name: Verify staging boundary and secrets
         run: npm run staging:preflight
 

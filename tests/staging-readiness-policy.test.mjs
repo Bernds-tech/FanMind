@@ -74,6 +74,17 @@ test("staging readiness remains fail-closed and test-mode only", async () => {
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/u);
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/);
   assert.match(workflow, /FANMIND_ENABLE_REFERRAL_BILLING: 'false'/);
+  assert.match(workflow, /Prepare ephemeral read-only rate-limit probe/);
+  assert.match(workflow, /randomBytes\(32\)/);
+  assert.match(workflow, /::add-mask::\$value/);
+  assert.match(
+    workflow,
+    /printf 'FANMIND_SHARED_RATE_LIMIT_SECRET=%s\\n' "\$value" >> "\$GITHUB_ENV"/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /FANMIND_SHARED_RATE_LIMIT_SECRET:\s*\$\{\{\s*secrets\./u,
+  );
   assert.match(
     workflow,
     /FANMIND_STRIPE_TAX_REGISTRATION_CONFIRMED: \$\{\{ vars\.FANMIND_STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED \}\}/u,
@@ -178,6 +189,9 @@ test("staging runbook forbids production data and documents external dependencie
   assert.match(runbook, /keine Live-Kunden/);
   assert.match(runbook, /exakt der Projektreferenz in der Supabase-URL entsprechen/);
   assert.match(runbook, /runtimeEnvironment.*staging/);
+  assert.match(runbook, /maskierten,\s+kurzlebigen Rate-Limit-Prüfwert/u);
+  assert.match(runbook, /niemals das root-verwaltete\s+Laufzeit-Secret/u);
+  assert.match(runbook, /Shared-Rate-Limit-Komponente\s+gesund meldet/u);
   assert.match(runbook, /ersetzt nicht die vollständige externe Laufzeitabnahme/);
   assert.match(runbook, /Produktions- und Testdaten trennen/);
 });
