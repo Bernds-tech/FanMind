@@ -1,18 +1,24 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import test, { after } from "node:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+const fixtureRoot = await mkdtemp(join(tmpdir(), "fanmind-verification-fixture-"));
+
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test";
-process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE = "/tmp/fanmind-verification-recipient.txt";
-process.env.FANMIND_BACKUP_PGPASSFILE = "/tmp/fanmind-verification-pgpass";
+process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE = join(fixtureRoot, "recipient.txt");
+process.env.FANMIND_BACKUP_PGPASSFILE = join(fixtureRoot, "pgpass");
 process.env.FANMIND_BACKUP_DB_HOST = "db.test";
 process.env.FANMIND_BACKUP_DB_USER = "postgres";
 process.env.FANMIND_BACKUP_DB_NAME = "postgres";
 await writeFile(process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE, "age1test");
 await writeFile(process.env.FANMIND_BACKUP_PGPASSFILE, "localhost:*:*:*:x");
+
+after(async () => {
+  await rm(fixtureRoot, { recursive:true, force:true });
+});
 
 const worker = await import("../scripts/operations/backup-worker.mjs");
 const workerSource = await readFile(new URL("../scripts/operations/backup-worker.mjs", import.meta.url), "utf8");
