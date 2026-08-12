@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import {
   STAGING_STRIPE_CATALOG_CONFIRMATION,
   STAGING_STRIPE_PRICE_CONTRACTS,
+  classifyStripePriceResponseStatus,
   evaluateStagingStripeCatalogEnvironment,
   validateStripeTestPrice,
   verifyStagingStripeCatalog,
@@ -99,6 +100,41 @@ test("catalog validation rejects live, inactive, wrong amount and wrong interval
     mutation(payload);
     assert.equal(validateStripeTestPrice(payload, expected), false);
   }
+});
+
+test("Stripe response failures collapse to stable actionable categories", () => {
+  assert.equal(
+    classifyStripePriceResponseStatus(401),
+    "stripe_catalog_auth_or_permission",
+  );
+  assert.equal(
+    classifyStripePriceResponseStatus(403),
+    "stripe_catalog_auth_or_permission",
+  );
+  assert.equal(classifyStripePriceResponseStatus(404), "stripe_catalog_missing");
+  assert.equal(
+    classifyStripePriceResponseStatus(429),
+    "stripe_catalog_unavailable",
+  );
+  assert.equal(
+    classifyStripePriceResponseStatus(503),
+    "stripe_catalog_unavailable",
+  );
+  assert.equal(
+    classifyStripePriceResponseStatus(400),
+    "stripe_catalog_rejected",
+  );
+});
+
+test("catalog verification preserves the fixed response category", async () => {
+  const result = await verifyStagingStripeCatalog(environment(), {
+    fetchImplementation: async () => ({ ok: false, status: 403 }),
+  });
+  assert.deepEqual(result, {
+    ok: false,
+    error: "stripe_catalog_auth_or_permission",
+    priceCount: 0,
+  });
 });
 
 test("read-only verification fetches exactly the five configured prices", async () => {

@@ -111,6 +111,17 @@ export function validateStripeTestPrice(payload, expected) {
   );
 }
 
+export function classifyStripePriceResponseStatus(status) {
+  if (status === 401 || status === 403) {
+    return "stripe_catalog_auth_or_permission";
+  }
+  if (status === 404) return "stripe_catalog_missing";
+  if (status === 429 || (status >= 500 && status <= 599)) {
+    return "stripe_catalog_unavailable";
+  }
+  return "stripe_catalog_rejected";
+}
+
 async function fetchStripePrice(environment, expected, fetchImplementation) {
   const url = new URL(
     `https://api.stripe.com/v1/prices/${encodeURIComponent(expected.id)}`,
@@ -128,7 +139,9 @@ async function fetchStripePrice(environment, expected, fetchImplementation) {
   } catch {
     return "stripe_catalog_unavailable";
   }
-  if (!response?.ok) return "stripe_catalog_unavailable";
+  if (!response?.ok) {
+    return classifyStripePriceResponseStatus(response?.status);
+  }
 
   let payload;
   try {
@@ -166,10 +179,15 @@ export async function verifyStagingStripeCatalog(
       fetchStripePrice(environment, expected, fetchImplementation),
     ),
   );
+  const errorPriority = [
+    "stripe_catalog_auth_or_permission",
+    "stripe_catalog_missing",
+    "stripe_catalog_invalid",
+    "stripe_catalog_rejected",
+    "stripe_catalog_unavailable",
+  ];
   const error =
-    results.find((result) => result === "stripe_catalog_unavailable") ??
-    results.find(Boolean) ??
-    null;
+    errorPriority.find((candidate) => results.includes(candidate)) ?? null;
 
   return Object.freeze({
     ok: error === null,
