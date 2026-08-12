@@ -134,6 +134,36 @@ test("catalog verification preserves the fixed response category", async () => {
     ok: false,
     error: "stripe_catalog_auth_or_permission",
     priceCount: 0,
+    slot: null,
+  });
+});
+
+test("a missing price reports only its fixed catalog slot", async () => {
+  const currentEnvironment = environment();
+  const evaluation =
+    evaluateStagingStripeCatalogEnvironment(currentEnvironment);
+  const missingSlot = "internal_daily_test";
+  const result = await verifyStagingStripeCatalog(currentEnvironment, {
+    fetchImplementation: async (url) => {
+      const expected = evaluation.prices.find((price) =>
+        String(url).includes(encodeURIComponent(price.id)),
+      );
+      if (expected.slot === missingSlot) {
+        return { ok: false, status: 404 };
+      }
+      return {
+        ok: true,
+        async json() {
+          return stripePayload(expected);
+        },
+      };
+    },
+  });
+  assert.deepEqual(result, {
+    ok: false,
+    error: "stripe_catalog_missing",
+    priceCount: 0,
+    slot: missingSlot,
   });
 });
 
@@ -160,7 +190,12 @@ test("read-only verification fetches exactly the five configured prices", async 
     },
   });
 
-  assert.deepEqual(result, { ok: true, error: null, priceCount: 5 });
+  assert.deepEqual(result, {
+    ok: true,
+    error: null,
+    priceCount: 5,
+    slot: null,
+  });
   assert.equal(seen.length, 5);
   assert.ok(
     seen.every((request) =>
