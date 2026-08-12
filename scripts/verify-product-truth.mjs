@@ -720,7 +720,7 @@ requireText(
 );
 requireText(
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
-  "06c83aacd98eebc1655023ed40132322eb4c38c2d10b46ef626c339ab5b076b9",
+  "4cd8dce37b9c96cdaf218c3426bdc477c7db6bd2d7df0385ac7e415c509cc7e2",
   "Die KI-Stufen-Speichermigration muss an den geprüften SHA-256 gebunden sein.",
 );
 requireText(

@@ -25,7 +25,7 @@ const MIGRATION_PATH = resolve(
   `supabase/migrations/${MIGRATION_ID}.sql`,
 );
 const EXPECTED_MIGRATION_SHA256 =
-  "8e3a6c1f2541925862cfff25e207424b98e47dd0ea22aa48b7e92581d2b04496";
+  "1a22d71a09427bbf0093dfc12f6fbcaf76256d61728048390b1299c526bfd0d7";
 const MAX_PASSFILE_BYTES = 64 * 1024;
 
 const POSTFLIGHT_SQL = String.raw`

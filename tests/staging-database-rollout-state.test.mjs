@@ -44,6 +44,13 @@ const runner = readFileSync(
   ),
   "utf8",
 );
+const serviceRolePrivilegeRepair = readFileSync(
+  resolve(
+    repositoryRoot,
+    "supabase/migrations/20260812162000_restrict_service_role_table_privileges.sql",
+  ),
+  "utf8",
+);
 const controlledStagingDatabaseWorkflowPaths = [
   "internal-daily-test-workspace-provisioning-staging-apply.yml",
   "internal-daily-test-workspace-provisioning-staging-verify.yml",
@@ -288,6 +295,29 @@ test("database failures are reduced to stable non-secret diagnostics", () => {
       error: Object.assign(new Error("missing"), { code: "ENOENT" }),
     }),
     "client_unavailable",
+  );
+});
+
+test("service-role privilege repair preserves CRUD and removes unsafe table capabilities", () => {
+  assert.match(serviceRolePrivilegeRepair, /^begin;[\s\S]*commit;\s*$/u);
+  for (const table of [
+    "workspace_ai_tier_entitlements",
+    "mobile_push_registrations",
+  ]) {
+    assert.match(
+      serviceRolePrivilegeRepair,
+      new RegExp(
+        `to_regclass\\('public\\.${table}'\\)[\\s\\S]*revoke all on table public\\.${table}[\\s\\S]*from service_role;[\\s\\S]*grant select, insert, update, delete[\\s\\S]*on table public\\.${table}[\\s\\S]*to service_role;`,
+        "u",
+      ),
+    );
+  }
+  assert.match(serviceRolePrivilegeRepair, /'TRUNCATE'/u);
+  assert.match(serviceRolePrivilegeRepair, /'REFERENCES'/u);
+  assert.match(serviceRolePrivilegeRepair, /'TRIGGER'/u);
+  assert.doesNotMatch(
+    serviceRolePrivilegeRepair,
+    /\b(?:insert\s+into|update\s+public\.|delete\s+from|truncate\s+table|drop\s+table)\b/iu,
   );
 });
 

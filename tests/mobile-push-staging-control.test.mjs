@@ -347,7 +347,7 @@ test("canonical Mobile, source and security readers expose the same inactive bou
     assert.match(reader, /(?:Delivery|Zustellung|Versand)/iu);
   }
   const runbook = readers.at(-1);
-  assert.match(runbook, /8e3a6c1f2541925862cfff25e207424b98e47dd0ea22aa48b7e92581d2b04496/u);
+  assert.match(runbook, /1a22d71a09427bbf0093dfc12f6fbcaf76256d61728048390b1299c526bfd0d7/u);
   assert.match(runbook, /verify-mobile-push-staging-resources/u);
   assert.match(runbook, /apply-mobile-push-registration-migration/u);
   assert.match(runbook, /run-mobile-push-staging-acceptance/u);

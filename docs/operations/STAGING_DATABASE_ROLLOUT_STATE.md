@@ -63,6 +63,13 @@ Für Meta müssen Foundation und History im Ledger beide vorhanden oder beide
 abwesend sein. Ein einzelner Eintrag, ein partielles Schema oder ein roter
 Postflight ergibt immer `block`.
 
+Für bereits angelegte KI-Stufen- oder Mobile-Push-Tabellen entfernt die
+Migration
+`20260812162000_restrict_service_role_table_privileges.sql` ausschließlich die
+durch Supabase-Default-Privileges zusätzlich entstandenen Rechte `TRUNCATE`,
+`REFERENCES` und `TRIGGER`. Die benötigten CRUD-Rechte bleiben erhalten; die
+Migration verändert keine Zeile und überspringt noch nicht vorhandene Tabellen.
+
 ## Gemeldeter 45er-Staging-Stand
 
 Am 6. August 2026 wurde extern ein read-only Stand von 45 Migrationen und 33

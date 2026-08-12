@@ -23,7 +23,7 @@ const MIGRATION_PATH = resolve(
   `supabase/migrations/${MIGRATION_ID}.sql`,
 );
 const EXPECTED_MIGRATION_SHA256 =
-  "06c83aacd98eebc1655023ed40132322eb4c38c2d10b46ef626c339ab5b076b9";
+  "4cd8dce37b9c96cdaf218c3426bdc477c7db6bd2d7df0385ac7e415c509cc7e2";
 const APPLY_CONFIRMATION = "apply-workspace-ai-tier-entitlements";
 const NON_PRODUCTION_WRITE_ACKNOWLEDGEMENT =
   "I_UNDERSTAND_NON_PRODUCTION_ONLY";
