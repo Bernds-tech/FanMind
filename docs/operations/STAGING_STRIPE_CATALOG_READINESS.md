@@ -37,3 +37,10 @@ Der Nachweis prüft den Katalog und die gebundene Serverkonfiguration. Ein
 signierter Stripe-Testwebhook sowie Checkout, Kündigung, Fehlzahlung und
 Entitlement-Übergänge bleiben Teil der getrennten synthetischen
 Billing-Lifecycle-Abnahme.
+
+Fehler werden ausschließlich als feste Kategorien ausgegeben. Insbesondere
+unterscheidet der Lauf fehlende Lese-Berechtigung des Testschlüssels, fehlende
+Preise, ungültige Katalogwerte und vorübergehend nicht erreichbare Stripe-APIs,
+ohne HTTP-Antworten, Billing-Daten oder Secrets zu protokollieren. Stripe-
+Preis-IDs sind im GitHub-Environment nicht geheim; der Prüfcode gibt sie nicht
+zusätzlich aus.
