@@ -112,6 +112,12 @@ expliziter Projektreferenz und projektqualifiziertem Datenbankbenutzer. Der
 Production-DB-Host muss als Vergleichswert vorhanden sein, ist aber kein
 ausreichender Projektidentifikator.
 
+Scheitert eine Pflichtabfrage, nennt
+`STAGING_DATABASE_ROLLOUT_STATE_PROBE_FAILURE` nur den festen Prüfschritt und
+eine allowlist-basierte Fehlerkategorie. Der rohe `psql`-Fehler bleibt
+unterdrückt; Host, Nutzer, Projekt-Referenz und Passwort gelangen nicht ins
+Workflow-Log.
+
 ## Sichere Reihenfolge nach der Ausgabe
 
 1. Bei irgendeinem `block` stoppen und Drift separat untersuchen.
