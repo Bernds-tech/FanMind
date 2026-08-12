@@ -218,16 +218,42 @@ jobs:
           test "$(sudo stat -c '%U:%G:%a' /var/www/fanmind-staging/.env.production)" = "fanmind-staging:fanmind-staging:600"
           echo "STAGING_ENV_FILE=private"
 
-      - name: Install isolated HTTP virtual host
+      - name: Install or preserve isolated virtual host
         shell: bash
         run: |
           set -euo pipefail
 
-          sudo install -o root -g root -m 0644 ops/nginx/fanmind-staging.http.conf /etc/nginx/sites-available/fanmind-staging
-          sudo ln -sfn /etc/nginx/sites-available/fanmind-staging /etc/nginx/sites-enabled/fanmind-staging
+          STAGING_NGINX_CONFIG="/etc/nginx/sites-available/fanmind-staging"
+          STAGING_CERTIFICATE="/etc/letsencrypt/live/staging.fanmind.ch/fullchain.pem"
+          STAGING_CERTIFICATE_KEY="/etc/letsencrypt/live/staging.fanmind.ch/privkey.pem"
+
+          if sudo test -e "$STAGING_CERTIFICATE" || sudo test -e "$STAGING_CERTIFICATE_KEY"; then
+            if ! sudo test -r "$STAGING_CERTIFICATE" \
+              || ! sudo test -r "$STAGING_CERTIFICATE_KEY" \
+              || ! sudo test -f "$STAGING_NGINX_CONFIG"; then
+              echo "Existing staging TLS state is incomplete or unsafe." >&2
+              exit 1
+            fi
+            for required_line in \
+              "server_name staging.fanmind.ch" \
+              "proxy_pass http://127.0.0.1:3001" \
+              "ssl_certificate $STAGING_CERTIFICATE" \
+              "ssl_certificate_key $STAGING_CERTIFICATE_KEY"; do
+              if ! sudo grep --fixed-strings --quiet -- "$required_line" "$STAGING_NGINX_CONFIG"; then
+                echo "Existing staging TLS virtual host does not match the isolated target." >&2
+                exit 1
+              fi
+            done
+            echo "STAGING_NGINX_TLS=preserved"
+          else
+            sudo install -o root -g root -m 0644 \
+              ops/nginx/fanmind-staging.http.conf "$STAGING_NGINX_CONFIG"
+            echo "STAGING_NGINX_HTTP=ready"
+          fi
+
+          sudo ln -sfn "$STAGING_NGINX_CONFIG" /etc/nginx/sites-enabled/fanmind-staging
           sudo nginx -t
           sudo systemctl reload nginx
-          echo "STAGING_NGINX_HTTP=ready"
 
       - name: Install isolated GitHub Actions runner
         shell: bash
