@@ -126,6 +126,8 @@ test("authenticated staging spec allows only session exchange, logout and exact-
 
   assert.match(source, /isAuthSessionExchange/u);
   assert.match(source, /url\.pathname === "\/auth\/v1\/token"/u);
+  assert.match(source, /isAppSessionSync/u);
+  assert.match(source, /sameApp[\s\S]*method === "POST"[\s\S]*url\.pathname === "\/api\/auth\/session"/u);
   assert.match(source, /isExplicitLogout/u);
   assert.match(source, /url\.pathname === "\/auth\/v1\/logout"/u);
   assert.match(source, /closeAndClearBrowserSession/u);
