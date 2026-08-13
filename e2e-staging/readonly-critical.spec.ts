@@ -237,7 +237,7 @@ test("normaler synthetischer Nutzer bleibt aus Admin gesperrt und nach Logout oh
   await expect(page).not.toHaveURL(/\/admin(?:\/|\?|$)/u);
 
   await page.goto("/logout");
-  await expect(page).toHaveURL(/\/login(?:\?|$)/u);
+  await expect(page).toHaveURL(`${appOrigin}/`);
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login(?:\?|$)/u);
 
