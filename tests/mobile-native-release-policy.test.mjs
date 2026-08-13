@@ -4,8 +4,6 @@ import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import "./mobile-android-preview-apk-handoff.test.mjs";
-
 const mobileRoot = new URL("../apps/mobile/", import.meta.url);
 const require = createRequire(import.meta.url);
 const packageJson = JSON.parse(
@@ -82,13 +80,6 @@ const signedBuildScript = await readFile(
 const signedBuildCompletionScript = await readFile(
   new URL(
     "../scripts/operations/mobile-signed-build-completion.mjs",
-    import.meta.url,
-  ),
-  "utf8",
-);
-const androidPreviewApkScript = await readFile(
-  new URL(
-    "../scripts/operations/download-mobile-android-preview-apk.mjs",
     import.meta.url,
   ),
   "utf8",
@@ -757,21 +748,13 @@ test("manual signed Mobile workflow is internal-only, credential-frozen and neve
     /fanmind-mobile-signed-build-receipt-\$\{\{ inputs\.build_environment \}\}-\$\{\{ inputs\.platform \}\}/u,
   );
   assert.match(signedBuildWorkflow, /retention-days: 5/u);
-  assert.match(
-    signedBuildWorkflow,
-    /scripts\/operations\/download-mobile-android-preview-apk\.mjs/u,
+  assert.equal(
+    (signedBuildWorkflow.match(/actions\/upload-artifact@/gu) ?? []).length,
+    1,
   );
-  assert.match(
+  assert.doesNotMatch(
     signedBuildWorkflow,
-    /fanmind-android-preview-apk-\$\{\{ github\.sha \}\}/u,
-  );
-  assert.match(
-    signedBuildWorkflow,
-    /inputs\.platform == 'android'[\s\S]*inputs\.build_environment == 'preview'/u,
-  );
-  assert.match(
-    signedBuildWorkflow,
-    /rm -f "\$MOBILE_ANDROID_PREVIEW_APK_PATH"/u,
+    /android_preview_apk|MOBILE_ANDROID_PREVIEW_APK|fanmind-preview\.apk|fanmind-android-preview-apk/u,
   );
   assert.doesNotMatch(
     signedBuildWorkflow,
@@ -790,9 +773,5 @@ test("manual signed Mobile workflow is internal-only, credential-frozen and neve
   assert.doesNotMatch(
     signedBuildWorkflow,
     /\bcat\s+"\$(?:JSON|LOG|COMPLETION|VERIFICATION)_PATH"|\becho\s+"\$(?:cat|<)/u,
-  );
-  assert.doesNotMatch(
-    androidPreviewApkScript,
-    /console\.(?:log|error)\([^)]*(?:applicationArchiveUrl|artifactUrl|queueOutput|completionOutput|sha256)/u,
   );
 });

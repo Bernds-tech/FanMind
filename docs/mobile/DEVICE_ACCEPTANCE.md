@@ -34,14 +34,13 @@ The receipt must use `preview`, `internal`, `available`, and disabled Submit and
 Update boundaries. A development, simulator, debug or unsigned build is not an
 acceptable substitute.
 
-For an Android `preview` run, the same successful workflow also exposes the
-protected artifact `fanmind-android-preview-apk-<main-commit>` for five days.
-Open the completed GitHub Actions run, download that artifact from its
-**Artifacts** section, extract the ZIP and transfer `fanmind-preview.apk` to the
-test device. Open the APK on Android and approve that download source once if
-the device asks. Keep the ZIP and APK private, do not re-upload them, and delete
-local copies after acceptance. This handoff is an internal installable build,
-not a Play Store release.
+The workflow never copies the signed APK or IPA into GitHub artifact storage.
+Open the protected EAS project as an authorized operator, select the exact
+successful `preview` build for the receipt-bound `main` commit and platform,
+and transfer its internal install artifact directly to the test device. Keep
+the downloaded binary private, do not re-upload it, and delete the local copy
+after acceptance. This handoff is an internal installable build, not a Play or
+App Store release.
 
 ## Mandatory real-device checks
 

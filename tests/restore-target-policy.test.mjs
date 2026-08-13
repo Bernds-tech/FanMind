@@ -541,6 +541,21 @@ test("restore compatibility prerequisites stay bound to FanMind migrations", asy
     runner,
     /e\.extname NOT IN \('plpgsql', 'pgcrypto'\)/u,
   );
+  assert.match(runner, /WITH allowed_extension_objects AS/u);
+  assert.match(
+    runner,
+    /d\.refclassid = 'pg_catalog\.pg_extension'::pg_catalog\.regclass/u,
+  );
+  assert.match(runner, /d\.deptype = 'e'/u);
+  for (const catalog of ["pg_class", "pg_proc", "pg_type", "pg_namespace"]) {
+    assert.match(
+      runner,
+      new RegExp(
+        `allowed\\.classid = 'pg_catalog\\.${catalog}'::pg_catalog\\.regclass`,
+        "u",
+      ),
+    );
+  }
 });
 
 test("isolated restore target passes only with both boundaries and exact target binding", () => {
@@ -1425,6 +1440,11 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runner, /pg_catalog\.pg_policy/u);
   assert.match(runner, /FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH/u);
   assert.match(runner, /restore_target_not_empty/);
+  assert.match(runner, /allowed_extension_objects AS/u);
+  assert.equal(
+    (runner.match(/FROM allowed_extension_objects AS allowed/gu) ?? []).length,
+    4,
+  );
   assert.match(runner, /FANMIND_OPERATIONAL_TEST_MODE/);
   assert.match(runner, /--single-transaction/);
   assert.match(runner, /-u PGHOSTADDR/);

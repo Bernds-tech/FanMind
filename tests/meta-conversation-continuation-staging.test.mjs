@@ -359,6 +359,9 @@ test("manual workflows are commit-exact, TLS-pinned, and never activate Meta", a
     assert.match(workflow, /PGSSLMODE: verify-full/u);
     assert.match(workflow, /supabase-root-2021-ca\.crt/u);
     assert.match(workflow, /PGUSER:.*postgres\.\{0\}/u);
+    assert.match(workflow, /npm run db:staging-rollout-state:run/u);
+    assert.match(workflow, /STAGING_DATABASE_ROLLOUT_META_CONTENT=verify/u);
+    assert.match(workflow, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
     assert.doesNotMatch(
       workflow,
       /FANMIND_META_(?:CATCHUP_QUEUE_)?ENABLED|provider_token|provider_secret/iu,
@@ -369,6 +372,7 @@ test("manual workflows are commit-exact, TLS-pinned, and never activate Meta", a
   assert.match(applyWorkflow, /STAGING_DATABASE_ROLLOUT_META_CONTINUATION=apply/u);
   assert.match(applyWorkflow, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
   assert.match(verifyWorkflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u);
+  assert.match(verifyWorkflow, /STAGING_DATABASE_ROLLOUT_META_CONTINUATION=verify/u);
   assert.doesNotMatch(verifyWorkflow, /:apply|--apply/iu);
 });
 

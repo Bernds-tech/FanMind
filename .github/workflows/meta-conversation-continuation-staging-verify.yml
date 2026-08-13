@@ -83,6 +83,21 @@ jobs:
             "$ESCAPED_DB_PASSWORD" > "$PGPASSFILE"
           chmod 600 "$PGPASSFILE"
 
+      - name: Require shared read-only rollout state
+        env:
+          PGPASSFILE: ${{ runner.temp }}/fanmind-meta-continuation-verify.pgpass
+          FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
+          FANMIND_NON_PRODUCTION_WRITE_ACK: ''
+          FANMIND_STAGING_DATABASE_ROLLOUT_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+          FANMIND_STAGING_DATABASE_ROLLOUT_STATE_CONFIRM: verify-staging-database-rollout-state
+        run: |
+          set -euo pipefail
+          ROLLOUT_STATE="$(npm run db:staging-rollout-state:run)"
+          printf '%s\n' "$ROLLOUT_STATE"
+          grep -Fxq 'STAGING_DATABASE_ROLLOUT_META_CONTENT=verify' <<< "$ROLLOUT_STATE"
+          grep -Fxq 'STAGING_DATABASE_ROLLOUT_META_CONTINUATION=verify' <<< "$ROLLOUT_STATE"
+          grep -Fxq 'STAGING_DATABASE_ROLLOUT_STATE=PASS' <<< "$ROLLOUT_STATE"
+
       - name: Run read-only continuation metadata postflight
         env:
           PGPASSFILE: ${{ runner.temp }}/fanmind-meta-continuation-verify.pgpass

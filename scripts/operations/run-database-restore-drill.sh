@@ -303,19 +303,39 @@ then
 fi
 
 empty_target_sql="
-WITH user_objects AS (
+WITH allowed_extension_objects AS (
+  SELECT d.classid, d.objid
+    FROM pg_catalog.pg_depend AS d
+    JOIN pg_catalog.pg_extension AS e ON e.oid = d.refobjid
+   WHERE d.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+     AND d.deptype = 'e'
+     AND e.extname IN ('plpgsql', 'pgcrypto')
+),
+user_objects AS (
   SELECT c.oid
     FROM pg_catalog.pg_class AS c
     JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
    WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
      AND n.nspname !~ '^pg_toast'
      AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+     AND NOT EXISTS (
+       SELECT 1
+         FROM allowed_extension_objects AS allowed
+        WHERE allowed.classid = 'pg_catalog.pg_class'::pg_catalog.regclass
+          AND allowed.objid = c.oid
+     )
   UNION ALL
   SELECT p.oid
     FROM pg_catalog.pg_proc AS p
     JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
    WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
      AND n.nspname !~ '^pg_toast'
+     AND NOT EXISTS (
+       SELECT 1
+         FROM allowed_extension_objects AS allowed
+        WHERE allowed.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass
+          AND allowed.objid = p.oid
+     )
   UNION ALL
   SELECT t.oid
     FROM pg_catalog.pg_type AS t
@@ -323,6 +343,12 @@ WITH user_objects AS (
    WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
      AND n.nspname !~ '^pg_toast'
      AND t.typtype IN ('d', 'e', 'r')
+     AND NOT EXISTS (
+       SELECT 1
+         FROM allowed_extension_objects AS allowed
+        WHERE allowed.classid = 'pg_catalog.pg_type'::pg_catalog.regclass
+          AND allowed.objid = t.oid
+     )
   UNION ALL
   SELECT e.oid
     FROM pg_catalog.pg_extension AS e
@@ -332,6 +358,12 @@ WITH user_objects AS (
     FROM pg_catalog.pg_namespace AS n
    WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'public')
      AND n.nspname !~ '^pg_toast'
+     AND NOT EXISTS (
+       SELECT 1
+         FROM allowed_extension_objects AS allowed
+        WHERE allowed.classid = 'pg_catalog.pg_namespace'::pg_catalog.regclass
+          AND allowed.objid = n.oid
+     )
 )
 SELECT COUNT(*)::text FROM user_objects;
 "
