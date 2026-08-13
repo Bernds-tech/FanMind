@@ -397,14 +397,22 @@ zwingende externe Freigabe noch fehlt.
   `docs/operations/WORKSPACE_PROCESSING_STAGING_ACCEPTANCE.md`.
 - Das separate Supabase-Staging-Projekt sowie die getrennte Web-Staging-
   Runtime mit eigenem `fanmind-staging`-Runner, eigener DNS-/TLS-Bindung und
-  eigenem Exoscale-Ziel sind vorhanden. Extern noch einzurichten beziehungsweise
-  nachzuweisen sind Stripe Sandbox mit eigenen Preisen/Webhooks sowie die
-  dauerhaften synthetischen E2E-Identitäten für Browser-/Billing-Abnahmen.
+  eigenem Exoscale-Ziel sind vorhanden. Der isolierte Stripe-Testkatalog mit
+  fünf Testpreisen einschließlich KI Plus/Ultra ist read-only nachgewiesen;
+  Webhook-Smoke und Billing-Lifecycle bleiben getrennt offen. Für die
+  dauerhaften synthetischen E2E-Identitäten ist ein kontrollierter,
+  commit-genauer Staging-Provisionierungspfad vorbereitet. Er verwendet die
+  vorhandene Workspace-Provisionierungs-RPC, erzeugt zwei getrennte Workspaces
+  und einen zusätzlichen AI-Member und gibt nur die sechs nicht geheimen
+  UUID-Zuordnungen aus. Der reale Lauf und die anschließenden Browser-/Billing-
+  Abnahmen sind noch nicht erfolgt. Runbook:
+  `docs/operations/STAGING_SYNTHETIC_FIXTURES.md`.
 
-Die noch fehlende Stripe-Staging-Abnahme blockiert nicht den read-only
-Produktions-Smoke-Test. Sie bleibt Voraussetzung für Referral-Lifecycle- und
-andere schreibende Nicht-Production-Tests. Der Restore-Drill verwendet niemals
-die bereits migrierte Staging-Datenbank, sondern ein eigenes leeres Wegwerfziel.
+Die noch fehlenden Stripe-Webhook-/Lifecycle-Abnahmen blockieren nicht den
+read-only Produktions-Smoke-Test. Sie bleiben Voraussetzung für Referral-
+Lifecycle- und andere schreibende Nicht-Production-Tests. Der Restore-Drill
+verwendet niemals die bereits migrierte Staging-Datenbank, sondern ein eigenes
+leeres Wegwerfziel.
 
 ## 5. Kommerzielle Wahrheit
 

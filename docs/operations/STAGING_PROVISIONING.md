@@ -103,6 +103,8 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - optionaler begrenzter Secret `FANMIND_STAGING_OPENAI_API_KEY`.
    - Variable `FANMIND_AI_TIER_STAGING_WORKSPACE_ID` für einen ausschließlich
      synthetischen Workspace mit einem Owner und mindestens einem Mitglied;
+   - Variable `FANMIND_WORKSPACE_PROCESSING_STAGING_WORKSPACE_ID` für den
+     markierten primären synthetischen Acceptance-Workspace;
    - Variablen `FANMIND_STAGING_DB_PORT` (`5432`) und
      `FANMIND_STAGING_DB_NAME`;
    - Secrets `FANMIND_STAGING_DB_HOST` (IPv4-kompatibler Supabase-Supavisor-
@@ -129,6 +131,9 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
      `FANMIND_STAGING_E2E_SECONDARY_EMAIL` und
      `FANMIND_STAGING_E2E_SECONDARY_PASSWORD`; die vollständigen
      Fail-closed-Anforderungen stehen in `docs/testing/BROWSER_E2E.md`;
+   - die einmalige kontrollierte Erstellung und die gemeinsame UUID-Zuordnung
+     dieser Ressourcen steht in
+     `docs/operations/STAGING_SYNTHETIC_FIXTURES.md`;
    - temporärer Secret `FANMIND_STAGING_RUNNER_REGISTRATION_TOKEN` nur für
      die erste Runner-Registrierung; niemals in Runtime-ENV oder Git schreiben.
 
