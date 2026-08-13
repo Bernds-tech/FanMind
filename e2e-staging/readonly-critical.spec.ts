@@ -100,21 +100,26 @@ async function installReadOnlyNetworkGuard(page: Page) {
 }
 
 async function login(page: Page, fixture: SyntheticFixture): Promise<AuthSession> {
-  const authResponse = page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return (
-      url.origin === supabaseOrigin &&
-      url.pathname === "/auth/v1/token" &&
-      url.searchParams.get("grant_type") === "password"
-    );
-  });
-
   await page.goto("/login");
-  await page.getByLabel("E-Mail", { exact: true }).fill(fixture.email);
-  await page.getByLabel("Passwort", { exact: true }).fill(fixture.password);
-  await page.getByRole("button", { name: /Einloggen/u }).click();
 
-  const response = await authResponse;
+  const emailField = page.getByLabel("E-Mail", { exact: true });
+  const passwordField = page.getByLabel("Passwort", { exact: true });
+  await expect(emailField).toBeVisible();
+  await expect(passwordField).toBeVisible();
+  await emailField.fill(fixture.email);
+  await passwordField.fill(fixture.password);
+
+  const [response] = await Promise.all([
+    page.waitForResponse((candidate) => {
+      const url = new URL(candidate.url());
+      return (
+        url.origin === supabaseOrigin &&
+        url.pathname === "/auth/v1/token" &&
+        url.searchParams.get("grant_type") === "password"
+      );
+    }),
+    page.getByRole("button", { name: /Einloggen/u }).click(),
+  ]);
   expect(response.ok()).toBe(true);
   expect(new URL(response.url()).origin).toBe(supabaseOrigin);
   const payload = (await response.json()) as { access_token?: unknown };
