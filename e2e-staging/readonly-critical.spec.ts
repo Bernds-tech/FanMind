@@ -78,6 +78,10 @@ async function installReadOnlyNetworkGuard(page: Page) {
       method === "POST" &&
       url.pathname === "/auth/v1/token" &&
       url.searchParams.get("grant_type") === "password";
+    const isAppSessionSync =
+      sameApp &&
+      method === "POST" &&
+      url.pathname === "/api/auth/session";
     const isExplicitLogout =
       sameSupabase &&
       method === "POST" &&
@@ -86,6 +90,7 @@ async function installReadOnlyNetworkGuard(page: Page) {
     if (
       (isRead && (sameApp || sameSupabase)) ||
       isAuthSessionExchange ||
+      isAppSessionSync ||
       isExplicitLogout
     ) {
       await route.continue();
