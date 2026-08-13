@@ -260,7 +260,7 @@ test("reviewed overrides stay narrow and resolve to the patched root tree", asyn
     "brace-expansion@>=1.0.0 <1.1.18": "1.1.18",
     "brace-expansion@>=5.0.0 <5.0.9": "5.0.9",
     "js-yaml@>=4.0.0 <4.3.1": "4.3.1",
-    "nanoid@<3.3.17": "3.3.17",
+    "nanoid@<3.3.18": "3.3.18",
     "next@16.3.0": {
       postcss: "8.5.23",
       sharp: "0.35.3",
@@ -281,7 +281,7 @@ test("reviewed overrides stay narrow and resolve to the patched root tree", asyn
     assert.equal(lock.packages[dependencyPath].version, "1.1.18");
   }
   assert.equal(lock.packages["node_modules/js-yaml"].version, "4.3.1");
-  assert.equal(lock.packages["node_modules/nanoid"].version, "3.3.17");
+  assert.equal(lock.packages["node_modules/nanoid"].version, "3.3.18");
 });
 
 test("legacy ESLint brace expansion enforces the reviewed output bound", () => {
