@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import "./workspace-authorization-policy.test.mjs";
+
 import { evaluateWorkspaceProcessingEntitlement } from "../src/lib/workspaceProcessingPolicy.mjs";
 
 const NOW = new Date("2026-08-11T18:00:00.000Z");
