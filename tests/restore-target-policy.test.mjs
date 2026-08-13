@@ -364,6 +364,9 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
 
 test("manual database restore workflow is exact-commit-bound and receipt-only", async () => {
   const workflow = await readFile(databaseRestoreWorkflowPath, "utf8");
+  const jobEnvironment = workflow.match(
+    /    env:\n[\s\S]*?\n\n    steps:/u,
+  )?.[0] ?? "";
 
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /inputs\.reviewed_commit == github\.sha/u);
@@ -391,6 +394,11 @@ test("manual database restore workflow is exact-commit-bound and receipt-only", 
   assert.match(workflow, /PGSSLMODE: verify-full/u);
   assert.match(workflow, /PGGSSENCMODE: disable/u);
   assert.match(workflow, /FANMIND_RESTORE_AGE_IDENTITY_PATH/u);
+  assert.doesNotMatch(jobEnvironment, /runner\.temp/u);
+  assert.match(
+    workflow,
+    /Decrypt privately and restore[\s\S]*?FANMIND_RESTORE_PRIVATE_ROOT: \$\{\{ runner\.temp \}\}/u,
+  );
   assert.match(workflow, /\/receipts\n/u);
   assert.match(workflow, /retention-days: 3/u);
   assert.match(workflow, /RESTORE_DISPOSABLE_TARGET_CLEANUP=required/u);
