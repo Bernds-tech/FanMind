@@ -7,19 +7,17 @@ import {
   type SupabaseServerUser,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import {
+  assertResourceInWorkspace,
+  assertWorkspaceId,
+  WorkspaceAuthorizationError,
+} from "@/lib/workspaceAuthorizationPolicy.mjs";
 
-export class WorkspaceAuthorizationError extends Error {
-  constructor(
-    message: string,
-    public readonly code:
-      | "unauthenticated"
-      | "workspace_missing"
-      | "resource_forbidden",
-  ) {
-    super(message);
-    this.name = "WorkspaceAuthorizationError";
-  }
-}
+export {
+  assertResourceInWorkspace,
+  assertWorkspaceId,
+  WorkspaceAuthorizationError,
+} from "@/lib/workspaceAuthorizationPolicy.mjs";
 
 export type AuthorizedWorkspaceContext = {
   user: SupabaseServerUser;
@@ -30,32 +28,6 @@ function workspaceUnavailableMessage(error: Error | null | undefined): string {
   return error?.message === "TEMPORARY_DEMO_DELETED"
     ? "TEMPORARY_DEMO_DELETED"
     : "Kein autorisierter Workspace gefunden.";
-}
-
-export function assertWorkspaceId(
-  value: string | null | undefined,
-  label = "workspace_id",
-): asserts value is string {
-  if (!value?.trim()) {
-    throw new WorkspaceAuthorizationError(
-      `${label} fehlt; workspace-gescopter Zugriff wurde abgebrochen.`,
-      "workspace_missing",
-    );
-  }
-}
-
-export function assertResourceInWorkspace(
-  resource: { workspace_id?: string | null } | null | undefined,
-  workspaceId: string,
-  resourceLabel = "Ressource",
-) {
-  assertWorkspaceId(workspaceId);
-  if (!resource || resource.workspace_id !== workspaceId) {
-    throw new WorkspaceAuthorizationError(
-      `${resourceLabel} wurde im autorisierten Workspace nicht gefunden.`,
-      "resource_forbidden",
-    );
-  }
 }
 
 export async function getAuthorizedWorkspaceForCurrentUser(
