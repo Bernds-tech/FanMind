@@ -49,7 +49,6 @@ jobs:
       FANMIND_PRODUCTION_DB_NAME: ${{ vars.FANMIND_PRODUCTION_DB_NAME }}
       FANMIND_PRODUCTION_DB_USER: ${{ secrets.FANMIND_PRODUCTION_DB_USER }}
       FANMIND_RESTORE_ARTIFACT_PATH: ${{ secrets.FANMIND_RESTORE_ARTIFACT_PATH }}
-      FANMIND_RESTORE_PRIVATE_ROOT: ${{ runner.temp }}/fanmind-restore-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Checkout exact reviewed main commit
@@ -101,6 +100,7 @@ jobs:
 
       - name: Decrypt privately and restore the exact database dump
         env:
+          FANMIND_RESTORE_PRIVATE_ROOT: ${{ runner.temp }}/fanmind-restore-${{ github.run_id }}-${{ github.run_attempt }}
           FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'
           FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY
           FANMIND_ENABLE_RESTORE_DRILL: 'true'
@@ -161,12 +161,14 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: fanmind-restore-database-receipts-${{ github.sha }}
-          path: ${{ env.FANMIND_RESTORE_PRIVATE_ROOT }}/receipts
+          path: ${{ runner.temp }}/fanmind-restore-${{ github.run_id }}-${{ github.run_attempt }}/receipts
           if-no-files-found: error
           retention-days: 3
 
       - name: Remove plaintext dump and private receipts from the runner
         if: ${{ always() }}
+        env:
+          FANMIND_RESTORE_PRIVATE_ROOT: ${{ runner.temp }}/fanmind-restore-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
           if [[ ! -d "$FANMIND_RESTORE_PRIVATE_ROOT" || -L "$FANMIND_RESTORE_PRIVATE_ROOT" ]]; then
