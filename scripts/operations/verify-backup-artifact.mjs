@@ -30,6 +30,7 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const GIT_SHA_PATTERN = /^(?:[a-f0-9]{40}|unknown)$/;
 const FULL_BACKUP_BASENAME = /^fanmind-full-\d{13}\.tar\.gz\.age$/u;
 const BACKUP_TYPES = new Set(["database", "storage", "server_config", "full"]);
+const MAX_AGE_IDENTITY_BYTES = 64 * 1024;
 
 function verifierError(code, details = {}) {
   const error = new Error(code);
@@ -159,6 +160,174 @@ async function readStableRegularFile(file, maxBytes) {
   } finally {
     await handle.close();
   }
+}
+
+async function snapshotPrivateAgeIdentity(sourcePath, outputPath) {
+  let sourceHandle;
+  let outputHandle;
+  let bytes;
+  try {
+    sourceHandle = await open(
+      sourcePath,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    const before = await sourceHandle.stat({ bigint: true });
+    if (!before.isFile() || before.nlink !== 1n) {
+      throw verifierError("identity_file_not_private_regular");
+    }
+    if (before.uid !== BigInt(process.getuid()) || (before.mode & 0o077n) !== 0n) {
+      throw verifierError("identity_file_permissions_invalid");
+    }
+    if (
+      before.size <= 0n
+      || before.size > BigInt(MAX_AGE_IDENTITY_BYTES)
+    ) {
+      throw verifierError("identity_file_size_invalid");
+    }
+
+    bytes = await sourceHandle.readFile();
+    const after = await sourceHandle.stat({ bigint: true });
+    if (
+      after.dev !== before.dev
+      || after.ino !== before.ino
+      || after.size !== before.size
+      || after.mtimeNs !== before.mtimeNs
+      || after.ctimeNs !== before.ctimeNs
+      || BigInt(bytes.length) !== before.size
+    ) {
+      throw verifierError("identity_file_changed_during_read");
+    }
+
+    outputHandle = await open(
+      outputPath,
+      constants.O_WRONLY
+        | constants.O_CREAT
+        | constants.O_EXCL
+        | constants.O_NOFOLLOW,
+      0o600,
+    );
+    await outputHandle.writeFile(bytes);
+    await outputHandle.sync();
+    await chmod(outputPath, 0o600);
+  } catch (error) {
+    if (error?.code === "ELOOP") {
+      throw verifierError("identity_file_not_private_regular");
+    }
+    throw error;
+  } finally {
+    bytes?.fill(0);
+    await outputHandle?.close();
+    await sourceHandle?.close();
+  }
+}
+
+async function snapshotStableRegularFile(sourcePath, outputPath) {
+  let sourceHandle;
+  let outputHandle;
+  const buffer = Buffer.allocUnsafe(1024 * 1024);
+  const hash = createHash("sha256");
+  let outputPublished = false;
+  try {
+    sourceHandle = await open(
+      sourcePath,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    const before = await sourceHandle.stat({ bigint: true });
+    if (!before.isFile() || before.nlink !== 1n || before.size <= 0n) {
+      throw verifierError("file_not_regular");
+    }
+    if (before.size > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw verifierError("file_size_invalid");
+    }
+
+    outputHandle = await open(
+      outputPath,
+      constants.O_WRONLY
+        | constants.O_CREAT
+        | constants.O_EXCL
+        | constants.O_NOFOLLOW,
+      0o600,
+    );
+    let offset = 0;
+    const expectedSize = Number(before.size);
+    while (offset < expectedSize) {
+      const requested = Math.min(buffer.length, expectedSize - offset);
+      const { bytesRead } = await sourceHandle.read(
+        buffer,
+        0,
+        requested,
+        offset,
+      );
+      if (bytesRead <= 0) throw verifierError("file_read_failed");
+      const { bytesWritten } = await outputHandle.write(
+        buffer,
+        0,
+        bytesRead,
+        offset,
+      );
+      if (bytesWritten !== bytesRead) throw verifierError("file_write_failed");
+      hash.update(buffer.subarray(0, bytesRead));
+      offset += bytesRead;
+    }
+
+    const after = await sourceHandle.stat({ bigint: true });
+    if (
+      after.dev !== before.dev
+      || after.ino !== before.ino
+      || after.size !== before.size
+      || after.mtimeNs !== before.mtimeNs
+      || after.ctimeNs !== before.ctimeNs
+      || BigInt(offset) !== before.size
+    ) {
+      throw verifierError("file_changed_during_read");
+    }
+    await outputHandle.sync();
+    await chmod(outputPath, 0o600);
+    outputPublished = true;
+    return {
+      checksum: hash.digest("hex"),
+      sizeBytes: expectedSize,
+    };
+  } catch (error) {
+    if (error?.code === "ELOOP") throw verifierError("file_not_regular");
+    throw error;
+  } finally {
+    buffer.fill(0);
+    await outputHandle?.close();
+    await sourceHandle?.close();
+    if (!outputPublished) await unlink(outputPath).catch(() => {});
+  }
+}
+
+async function snapshotVerifiedChecksumPair(
+  artifactPath,
+  checksumPath,
+  snapshotPath,
+) {
+  const checksumBytes = await readStableRegularFile(checksumPath, 4096);
+  let checksum;
+  try {
+    checksum = parseChecksumLine(
+      new TextDecoder("utf-8", { fatal: true }).decode(checksumBytes),
+    );
+  } catch (error) {
+    if (error?.code) throw error;
+    throw verifierError("invalid_checksum_file");
+  } finally {
+    checksumBytes.fill(0);
+  }
+  if (checksum.fileName !== basename(artifactPath)) {
+    throw verifierError("checksum_filename_mismatch");
+  }
+
+  const snapshot = await snapshotStableRegularFile(artifactPath, snapshotPath);
+  if (snapshot.checksum !== checksum.sha256) {
+    throw verifierError("checksum_mismatch");
+  }
+  return {
+    artifact: basename(artifactPath),
+    ...snapshot,
+  };
 }
 
 function run(command, args, options = {}) {
@@ -699,34 +868,56 @@ export async function verifyBackupArtifact(input) {
       throw verifierError("restore_output_paths_must_differ");
     }
   }
-  const checksumResult = await verifyChecksumPair(
-    artifactPath,
-    input.checksumPath ? resolve(input.checksumPath) : `${artifactPath}.sha256`,
-  );
-  const result = {
-    ok: true,
-    mode: input.identityPath ? "decrypted" : "checksum_only",
-    backupType: type,
-    ...checksumResult,
-    contentValidation: null,
-  };
-  if (!input.identityPath) return result;
+  const checksumPath = input.checksumPath
+    ? resolve(input.checksumPath)
+    : `${artifactPath}.sha256`;
+  if (!input.identityPath) {
+    const checksumResult = await verifyChecksumPair(artifactPath, checksumPath);
+    return {
+      ok: true,
+      mode: "checksum_only",
+      backupType: type,
+      ...checksumResult,
+      contentValidation: null,
+    };
+  }
 
   const workRoot = await mkdtemp(join(tmpdir(), "fanmind-backup-verify-"));
-  const clearFile = join(workRoot, basename(artifactPath).replace(/\.age$/, ""));
+  const artifactSnapshotPath = join(workRoot, basename(artifactPath));
+  const clearFile = join(
+    workRoot,
+    basename(artifactPath).replace(/\.age$/, ""),
+  );
+  const identitySnapshotPath = join(workRoot, ".age-identity");
   try {
-    await assertReadable(resolve(input.identityPath));
+    const checksumResult = await snapshotVerifiedChecksumPair(
+      artifactPath,
+      checksumPath,
+      artifactSnapshotPath,
+    );
+    const result = {
+      ok: true,
+      mode: "decrypted",
+      backupType: type,
+      ...checksumResult,
+      contentValidation: null,
+    };
+    const identityPath = resolve(input.identityPath);
+    if (input.identityPath !== identityPath) {
+      throw verifierError("identity_path_not_absolute");
+    }
+    await snapshotPrivateAgeIdentity(identityPath, identitySnapshotPath);
     await run(input.ageBin ?? "age", [
       "--decrypt",
       "--identity",
-      resolve(input.identityPath),
+      identitySnapshotPath,
       "--output",
       clearFile,
-      artifactPath,
+      artifactSnapshotPath,
     ]);
     result.contentValidation = await validateDecryptedArtifact(clearFile, type, {
       ageBin: input.ageBin ?? "age",
-      identityPath: resolve(input.identityPath),
+      identityPath: identitySnapshotPath,
       pgRestoreBin: input.pgRestoreBin ?? "/usr/lib/postgresql/17/bin/pg_restore",
       tarBin: input.tarBin ?? "tar",
       restoreOutputs,

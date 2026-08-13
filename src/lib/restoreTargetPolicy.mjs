@@ -267,6 +267,16 @@ export function evaluateRestoreTarget(environment = {}) {
   const passfileConfigured = Boolean(passfilePath);
   const passfileAbsolute = passfileConfigured && isAbsolute(passfilePath);
   const passwordInEnvironment = Boolean(clean(environment.PGPASSWORD));
+  const sslMode = clean(environment.PGSSLMODE).toLowerCase();
+  const sslRootCertificatePath = clean(environment.PGSSLROOTCERT);
+  const sslRootCertificateConfigured = Boolean(sslRootCertificatePath);
+  const sslRootCertificateAbsolute =
+    sslRootCertificateConfigured && isAbsolute(sslRootCertificatePath);
+  const gssEncryptionMode = clean(environment.PGGSSENCMODE).toLowerCase();
+  const tlsVerified =
+    sslMode === "verify-full"
+    && sslRootCertificateAbsolute
+    && gssEncryptionMode === "disable";
   const targetSupabaseProjectRef = clean(
     environment.FANMIND_TARGET_SUPABASE_PROJECT_REF,
   ).toLowerCase();
@@ -364,6 +374,17 @@ export function evaluateRestoreTarget(environment = {}) {
   if (passwordInEnvironment) {
     errors.push("PGPASSWORD ist beim Restore-Drill verboten; PGPASSFILE verwenden.");
   }
+  if (sslMode !== "verify-full") {
+    errors.push("Restore-Drill verlangt PGSSLMODE=verify-full.");
+  }
+  if (!sslRootCertificateConfigured) {
+    errors.push("Restore-Drill verlangt einen geschützten PGSSLROOTCERT-Pfad.");
+  } else if (!sslRootCertificateAbsolute) {
+    errors.push("PGSSLROOTCERT muss ein absoluter Pfad sein.");
+  }
+  if (gssEncryptionMode !== "disable") {
+    errors.push("Restore-Drill verlangt PGGSSENCMODE=disable.");
+  }
 
   return {
     ok: errors.length === 0,
@@ -390,6 +411,9 @@ export function evaluateRestoreTarget(environment = {}) {
     passfileConfigured,
     passfileAbsolute,
     passwordInEnvironment,
+    sslRootCertificateConfigured,
+    sslRootCertificateAbsolute,
+    tlsVerified,
     errors,
     warnings,
   };

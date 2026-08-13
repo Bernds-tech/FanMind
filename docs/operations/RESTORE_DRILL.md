@@ -122,7 +122,11 @@ database part selected by the validated central manifest, validates it with
 plus receipt as new mode-`0600` files without overwriting. The receipt binds
 the exact outer artifact SHA-256, 40-character Production commit, encrypted
 database-part SHA-256 and plaintext database-dump SHA-256. If any validation
-or publication fails, no receipt is accepted.
+or publication fails, no receipt is accepted. The age identity must be an
+absolute, operator-owned, single-link regular file with no group or world
+permissions. The verifier reads it without following symlinks, freezes the
+stable bytes into its private temporary directory and removes that snapshot
+with all other temporary plaintext.
 
 For a standalone database backup, content verification runs:
 
@@ -213,6 +217,10 @@ One-time external setup for the GitHub Environment `restore-drill`:
   the isolated runner. The passfile must already exist as an operator-owned,
   regular, non-symlink mode-`0600` file. The CA bundle must already exist as a
   regular, non-symlink file and must not be group- or world-writable;
+- secret `FANMIND_RESTORE_AGE_IDENTITY_PATH`, containing the absolute path to
+  the operator-owned, regular, non-symlink age identity on the isolated
+  runner. It must have exact private permissions and must never be copied into
+  GitHub secrets, logs or artifacts;
 - an isolated host with a checked-out repository, Node.js and read-only access
   to the transferred encrypted artifact pair, PostgreSQL 17 client tools at
   `/usr/lib/postgresql/17/bin`, and network access only to the isolated target,
@@ -221,6 +229,35 @@ One-time external setup for the GitHub Environment `restore-drill`:
 Neither readiness result counts as a restore drill. Content verification, the
 transactional database restore, RLS checks, Storage sample, server-config
 inspection and cleanup evidence remain mandatory.
+
+### Controlled database restore workflow
+
+After the read-only phases pass, the manual workflow
+`FanMind Isolated Database Restore Drill` provides the controlled bridge for
+the database portion. It accepts only `main`, requires
+`reviewed_commit == github.sha`, binds the exact Production commit recorded in
+the selected full backup and requires the confirmation
+`run-isolated-database-restore`. It re-runs resource readiness and target
+compatibility before either write gate is enabled.
+
+The write step then:
+
+1. proves the restore boundary again;
+2. snapshots the private age identity, decrypts and validates the full backup;
+3. restores only the receipt-bound database dump into the confirmed empty
+   disposable target with `sslmode=verify-full`, the frozen CA and one
+   transaction;
+4. creates the private full-backup, runner and 5/5/5 database-postcheck
+   receipts;
+5. uploads only those three redacted receipts as a private three-day artifact;
+6. removes the plaintext dump and receipt files from the runner in the final
+   cleanup step.
+
+The workflow deliberately does not upload a dump, an age identity, a passfile
+or a CA file. It also does not claim final drill completion: the disposable
+database still has to be destroyed by the operator, and the Storage sample,
+server-config inspection, final evidence record and cleanup proof remain
+separate mandatory steps.
 
 ### Preconditions
 
@@ -232,14 +269,20 @@ inspection and cleanup evidence remain mandatory.
 - no DNS, webhook or application configuration pointing at Production;
 - written target identifier in the drill record.
 
+For the empty-target proof, the two required bootstrap extensions `plpgsql`
+and `pgcrypto` are allowed; every other non-system schema, relation, routine,
+type or extension blocks the restore before `pg_restore`.
+
 Decrypt and verify the full backup on the isolated host. The content verifier
 must create a private full-backup receipt that binds the encrypted database
 part and the exact decrypted database dump by SHA-256. A free environment
 variable or a manually copied expected dump hash is not accepted. Both
 receipts, the dump and the passfile must be regular, non-symlink files owned by
-the operator with exact private permissions. Use a dedicated TCP endpoint and
-an absolute path to the protected `PGPASSFILE`; do not put the database
-password in `PGPASSWORD`.
+the operator with exact private permissions. The CA must be a stable regular
+non-symlink file that is not group- or world-writable. Use a dedicated TCP
+endpoint, `sslmode=verify-full`, the canonical certificate-covered DNS
+hostname and absolute paths to the protected `PGPASSFILE` and CA; do not put
+the database password in `PGPASSWORD`.
 
 Set the actual libpq target and independently confirmed comparison metadata in the same protected shell:
 
@@ -249,6 +292,9 @@ export PGPORT=<isolated-target-port>
 export PGDATABASE=<isolated-target-database>
 export PGUSER=<isolated-target-user>
 export PGPASSFILE=<protected-passfile-path>
+export PGSSLMODE=verify-full
+export PGSSLROOTCERT=<protected-ca-certificate-path>
+export PGGSSENCMODE=disable
 
 export FANMIND_RESTORE_TARGET_DB_HOST=<same-isolated-target-host>
 export FANMIND_RESTORE_TARGET_DB_PORT=<same-isolated-target-port>
@@ -283,7 +329,8 @@ The command is read-only and does not decrypt or restore anything. It fails unle
 - no `PGHOSTADDR`, `PGSERVICE` or `PGSERVICEFILE` can silently redirect libpq;
 - `PGDATABASE` is a plain database name, not a URI or libpq Connection-String;
 - shared Supabase-Pooler are blocked, while a direct `db.<project-ref>.supabase.co` host must match the confirmed non-Production project;
-- an absolute protected `PGPASSFILE` path is configured and `PGPASSWORD` is absent.
+- absolute protected `PGPASSFILE` and CA paths are configured,
+  `PGSSLMODE=verify-full`, `PGGSSENCMODE=disable` and `PGPASSWORD` is absent.
 
 Required final line:
 
@@ -300,10 +347,10 @@ npm run restore:database:drill -- \
   /secure/work/fanmind-database-<timestamp>.dump
 ```
 
-The runner opens the protected non-symlink dump, full-backup receipt and
-passfile once, verifies their ownership and permissions, and copies the dump
-receipt and passfile file objects into a new operator-private snapshot
-directory. The supplied paths are not trusted again afterwards. It verifies
+The runner opens the protected non-symlink dump, full-backup receipt, passfile
+and CA once, verifies their type and permissions, and copies those exact file
+objects into a new operator-private snapshot directory. The supplied paths are
+not trusted again afterwards. It verifies
 that the private dump hash equals the hash bound into the full-backup receipt
 and that the receipt names the exact Production commit. A separately supplied
 free expected hash is forbidden.
@@ -319,7 +366,9 @@ The restore then uses that exact same snapshot with
 `--single-transaction`. A failed archive check stops the runner before any
 write, and a restore error rolls back the single transaction. Host, port, user
 and database are supplied as explicit arguments while hidden libpq target
-overrides are removed. Only after the successful restore does the
+overrides are removed. Every database connection uses `verify-full` with the
+frozen CA snapshot and disables GSS encryption fallback. Only after the
+successful restore does the
 commit-bound runner create a new private, atomic runner receipt. It binds the
 drill ID, opaque disposable-target UUID, empty-target observation, exact
 full-backup receipt bytes, database hashes, timestamps and successful

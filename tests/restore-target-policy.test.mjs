@@ -39,6 +39,8 @@ const compatibilityScriptPath =
   "scripts/operations/restore-target-compatibility.mjs";
 const readinessWorkflowPath =
   ".github/workflows/restore-drill-resource-readiness.yml";
+const databaseRestoreWorkflowPath =
+  ".github/workflows/restore-drill-database.yml";
 const runnerPath = "scripts/operations/run-database-restore-drill.sh";
 const runbookPath = "docs/operations/RESTORE_DRILL.md";
 const packagePath = "package.json";
@@ -59,6 +61,9 @@ function safeEnvironment(overrides = {}) {
     PGDATABASE: "fanmind_restore",
     PGUSER: "restore_operator",
     PGPASSFILE: "/secure/keys/restore.pgpass",
+    PGSSLMODE: "verify-full",
+    PGSSLROOTCERT: "/secure/keys/restore-ca.pem",
+    PGGSSENCMODE: "disable",
     PGPASSWORD: "",
     PGHOSTADDR: "",
     PGSERVICE: "",
@@ -164,6 +169,7 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
     "database-postcheck-receipt.json",
   );
   const fakePsqlPath = join(root, "fake-psql.sh");
+  const caCertificatePath = join(root, "restore-ca.pem");
   const dumpBytes = await readFile(dumpPath);
   const dumpSha256 = createHash("sha256").update(dumpBytes).digest("hex");
   const fullReceipt = {
@@ -178,6 +184,7 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
   };
   await writeFile(receiptPath, `${JSON.stringify(fullReceipt)}\n`);
   await chmod(receiptPath, 0o600);
+  await writeFile(caCertificatePath, "synthetic-restore-ca\n", { mode: 0o644 });
   await writeFile(
     fakePsqlPath,
     [
@@ -218,6 +225,7 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
       "workspace_members|1|1|2",
       "workspaces|1|1|2",
     ].join("\n"),
+    PGSSLROOTCERT: caCertificatePath,
     ...overrides,
   };
 }
@@ -354,6 +362,42 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
   assert.match(runbook, /sslmode=verify-full/);
 });
 
+test("manual database restore workflow is exact-commit-bound and receipt-only", async () => {
+  const workflow = await readFile(databaseRestoreWorkflowPath, "utf8");
+
+  assert.match(workflow, /workflow_dispatch:/u);
+  assert.match(workflow, /inputs\.reviewed_commit == github\.sha/u);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/u);
+  assert.match(workflow, /run-isolated-database-restore/u);
+  assert.match(workflow, /runs-on: \[self-hosted, fanmind-restore, linux, x64\]/u);
+  assert.match(workflow, /environment: restore-drill/u);
+  assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u);
+  assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'false'/u);
+  assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
+  assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'true'/u);
+  assert.match(workflow, /npm run restore:resources:preflight/u);
+  assert.match(workflow, /npm run restore:target:compatibility/u);
+  assert.match(workflow, /npm run restore:preflight/u);
+  assert.match(workflow, /verify-backup-artifact\.mjs/u);
+  assert.match(workflow, /npm run restore:database:drill/u);
+  assert.ok(
+    workflow.indexOf("npm run restore:resources:preflight")
+      < workflow.indexOf("npm run restore:target:compatibility"),
+  );
+  assert.ok(
+    workflow.indexOf("npm run restore:target:compatibility")
+      < workflow.indexOf("npm run restore:database:drill"),
+  );
+  assert.match(workflow, /PGSSLMODE: verify-full/u);
+  assert.match(workflow, /PGGSSENCMODE: disable/u);
+  assert.match(workflow, /FANMIND_RESTORE_AGE_IDENTITY_PATH/u);
+  assert.match(workflow, /\/receipts\n/u);
+  assert.match(workflow, /retention-days: 3/u);
+  assert.match(workflow, /RESTORE_DISPOSABLE_TARGET_CLEANUP=required/u);
+  assert.doesNotMatch(workflow, /path:.*verified-database\.dump/u);
+  assert.doesNotMatch(workflow, /rm -rf/u);
+});
+
 test("restore target compatibility uses one redacted read-only catalog query", async () => {
   const root = await mkdtemp(join(tmpdir(), "fanmind-restore-compatibility-"));
   try {
@@ -484,6 +528,11 @@ test("restore compatibility prerequisites stay bound to FanMind migrations", asy
       new RegExp(`\\b(?:grant|revoke)\\b[^;]{0,500}\\b${role}\\b`, "iu"),
     );
   }
+  const runner = await readFile(runnerPath, "utf8");
+  assert.match(
+    runner,
+    /e\.extname NOT IN \('plpgsql', 'pgcrypto'\)/u,
+  );
 });
 
 test("isolated restore target passes only with both boundaries and exact target binding", () => {
@@ -718,6 +767,20 @@ test("Production comparison and protected passfile are mandatory without PGPASSW
   assert.match(relativePassfile.errors.join("\n"), /absoluter Pfad/);
 });
 
+test("restore target requires certificate-verified TLS without GSS fallback", () => {
+  const cases = [
+    ["PGSSLMODE", "require"],
+    ["PGSSLROOTCERT", "relative/restore-ca.pem"],
+    ["PGGSSENCMODE", "prefer"],
+  ];
+
+  for (const [name, value] of cases) {
+    const result = evaluateRestoreTarget(safeEnvironment({ [name]: value }));
+    assert.equal(result.ok, false, name);
+    assert.equal(result.tlsVerified, false, name);
+  }
+});
+
 test("CLI reports only redacted gate state", async () => {
   const environment = {
     ...process.env,
@@ -736,6 +799,7 @@ test("CLI reports only redacted gate state", async () => {
   assert.match(output, /PRODUCTION_TARGET=separate/);
   assert.match(output, /LIBPQ_TARGET_OVERRIDES=clear/);
   assert.match(output, /DATABASE_PASSWORD_SOURCE=passfile/);
+  assert.match(output, /DATABASE_TLS=verify-full/);
   assert.match(output, /SECRETS_WURDEN_NICHT_AUSGEGEBEN=true/);
   assert.match(output, /RESTORE_TARGET_BOUNDARY=OK/);
 
@@ -827,6 +891,9 @@ test("restore runner freezes the checked target and passes only explicit connect
         "  printf 'PGSERVICEFILE_SET=%s\\n' \"${PGSERVICEFILE+x}\"",
         "  printf 'PGPASSWORD_SET=%s\\n' \"${PGPASSWORD+x}\"",
         "  printf 'PGPASSFILE=%s\\n' \"$PGPASSFILE\"",
+        "  printf 'PGSSLMODE=%s\\n' \"$PGSSLMODE\"",
+        "  printf 'PGGSSENCMODE=%s\\n' \"$PGGSSENCMODE\"",
+        "  printf 'PGSSLROOTCERT=%s\\n' \"$PGSSLROOTCERT\"",
         "} > \"$FANMIND_TEST_CAPTURE_PATH\"",
         "",
       ].join("\n"),
@@ -873,6 +940,16 @@ test("restore runner freezes the checked target and passes only explicit connect
     assert.match(snapshotPassfilePath, /fanmind-restore\.[^/]+\/restore\.pgpass$/u);
     assert.notEqual(snapshotPassfilePath, passfilePath);
     assert.equal(dirname(snapshotPassfilePath), dirname(validatedSnapshotPath));
+    assert.match(capture, /PGSSLMODE=verify-full/u);
+    assert.match(capture, /PGGSSENCMODE=disable/u);
+    const snapshotCaMatch = capture.match(/^PGSSLROOTCERT=(.+)$/mu);
+    assert.ok(snapshotCaMatch);
+    assert.match(
+      snapshotCaMatch[1],
+      /fanmind-restore\.[^/]+\/restore-ca\.pem$/u,
+    );
+    assert.notEqual(snapshotCaMatch[1], runnerEnvironment.PGSSLROOTCERT);
+    assert.equal(dirname(snapshotCaMatch[1]), dirname(validatedSnapshotPath));
     for (const name of [
       "PGHOST",
       "PGPORT",
@@ -1321,7 +1398,7 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.ok(runner.indexOf("restore-target-preflight.mjs") < runner.indexOf("--list"));
   assert.ok(runner.indexOf("--list") < runner.indexOf("empty_target_sql"));
   assert.ok(runner.indexOf("empty_target_sql") < runner.indexOf("--single-transaction"));
-  assert.match(runner, /readonly PGHOST PGPORT PGDATABASE PGUSER/);
+  assert.match(runner, /readonly[\s\\]+PGHOST[\s\\]+PGPORT[\s\\]+PGDATABASE[\s\\]+PGUSER/u);
   assert.match(runner, /owner_uid/);
   assert.match(runner, /path_changed_during_open/);
   assert.match(runner, /source_label}_permissions_too_open/);
@@ -1330,6 +1407,9 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runner, /snapshot_dump/);
   assert.match(runner, /snapshot_passfile/);
   assert.match(runner, /snapshot_full_receipt/);
+  assert.match(runner, /snapshot_ca_certificate/);
+  assert.match(runner, /PGSSLMODE="verify-full"/u);
+  assert.match(runner, /PGGSSENCMODE="disable"/u);
   assert.match(runner, /verify-full-backup-restore-receipt\.mjs/);
   assert.match(runner, /restore-runner-receipt\.mjs/);
   assert.match(runner, /restore-database-postcheck-receipt\.mjs/);

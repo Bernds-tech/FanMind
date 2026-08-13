@@ -22,6 +22,7 @@ import {
   AI_TIER_STATE_SQL,
   LEDGER_STATE_SQL,
   META_CATCHUP_STATE_SQL,
+  META_CONTINUATION_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
   ledgerManagedMetaMigrations,
@@ -56,6 +57,8 @@ const controlledStagingDatabaseWorkflowPaths = [
   "internal-daily-test-workspace-provisioning-staging-verify.yml",
   "meta-catchup-queue-staging-apply.yml",
   "meta-catchup-queue-staging-verify.yml",
+  "meta-conversation-continuation-staging-apply.yml",
+  "meta-conversation-continuation-staging-verify.yml",
   "meta-content-staging-migration.yml",
   "meta-content-staging-resource-readiness.yml",
   "mobile-push-staging-acceptance.yml",
@@ -71,6 +74,8 @@ const tlsStagingDatabaseWorkflowPaths = [
   "internal-daily-test-workspace-provisioning-staging-verify.yml",
   "meta-catchup-queue-staging-apply.yml",
   "meta-catchup-queue-staging-verify.yml",
+  "meta-conversation-continuation-staging-apply.yml",
+  "meta-conversation-continuation-staging-verify.yml",
   "meta-content-staging-migration.yml",
   "meta-content-staging-resource-readiness.yml",
   "staging-database-rollout-state.yml",
@@ -147,6 +152,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         mobilePush: "current",
         metaContent: "absent",
         metaCatchup: "absent",
+        metaContinuation: "absent",
         triggerHardening: "unavailable",
       },
     }),
@@ -156,6 +162,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         mobilePush: "verify",
         metaContent: "apply",
         metaCatchup: "apply",
+        metaContinuation: "apply",
         triggerHardening: "skip",
       },
       blocked: false,
@@ -175,6 +182,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         mobilePush: "current",
         metaContent: "current",
         metaCatchup: "current",
+        metaContinuation: "current",
         triggerHardening: "current",
       },
     }).actions,
@@ -183,6 +191,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
       mobilePush: "skip",
       metaContent: "skip",
       metaCatchup: "verify",
+      metaContinuation: "verify",
       triggerHardening: "verify",
     },
   );
@@ -200,6 +209,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
         mobilePush: "current",
         metaContent: "foundation",
         metaCatchup: "current",
+        metaContinuation: "current",
         triggerHardening: "unavailable",
       },
     }).actions.metaContent,
@@ -221,6 +231,7 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         mobilePush: "absent",
         metaContent: "absent",
         metaCatchup: "absent",
+        metaContinuation: "absent",
         triggerHardening: "unavailable",
       },
     },
@@ -236,6 +247,7 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         mobilePush: "current",
         metaContent: "invalid",
         metaCatchup: "current",
+        metaContinuation: "invalid",
         triggerHardening: "invalid",
       },
     },
@@ -262,6 +274,7 @@ test("ledger and object probes are transactionally read-only and exact", () => {
     ledger,
     AI_TIER_STATE_SQL,
     META_CATCHUP_STATE_SQL,
+    META_CONTINUATION_STATE_SQL,
     MOBILE_PUSH_STATE_SQL,
     TRIGGER_HARDENING_STATE_SQL,
   ]) {
@@ -361,6 +374,7 @@ test("three-step Meta manifest keeps the controlled idempotency step out of the 
         mobilePush: "current",
         metaContent: "foundation",
         metaCatchup: "current",
+        metaContinuation: "current",
         triggerHardening: "unavailable",
       },
     }).actions.metaContent,
@@ -445,7 +459,7 @@ test("offline CLI reuses and verifies every currently available control", () => 
   assert.match(output, /STAGING_DATABASE_ROLLOUT_STATE_READY=YES/u);
 });
 
-test("read-only CLI derives the reported 45-state plan without leaking IDs", () => {
+test("read-only CLI derives the expanded state plan without leaking IDs", () => {
   const temporaryDirectory = mkdtempSync(join(tmpdir(), "fanmind-rollout-test-"));
   const triggerRunnerAvailable = existsSync(
     resolve(
@@ -472,6 +486,7 @@ case "$input" in
   *MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS*) echo 'MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS' ;;
   *META_CONTENT_MIGRATION_STATE=*) echo 'META_CONTENT_MIGRATION_STATE=absent' ;;
   *STAGING_DATABASE_META_CATCHUP_OBJECT=*) echo 'STAGING_DATABASE_META_CATCHUP_OBJECT=absent' ;;
+  *META_CONVERSATION_CONTINUATION_STATE=*) echo 'META_CONVERSATION_CONTINUATION_STATE=absent' ;;
   *STAGING_DATABASE_TRIGGER_OBJECT=*) echo 'STAGING_DATABASE_TRIGGER_OBJECT=pending' ;;
   *) exit 1 ;;
 esac
@@ -508,6 +523,7 @@ esac
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=verify/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTINUATION=apply/u);
     assert.match(
       result.stdout,
       new RegExp(
@@ -541,6 +557,7 @@ case "$input" in
   *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=absent' ;;
   *META_CONTENT_MIGRATION_STATE=*) echo 'META_CONTENT_MIGRATION_STATE=absent' ;;
   *STAGING_DATABASE_META_CATCHUP_OBJECT=*) echo 'STAGING_DATABASE_META_CATCHUP_OBJECT=absent' ;;
+  *META_CONVERSATION_CONTINUATION_STATE=*) echo 'META_CONVERSATION_CONTINUATION_STATE=absent' ;;
   *STAGING_DATABASE_TRIGGER_OBJECT=*) echo 'STAGING_DATABASE_TRIGGER_OBJECT=pending' ;;
   *) exit 1 ;;
 esac
@@ -577,6 +594,7 @@ esac
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTINUATION=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
     assert.doesNotMatch(result.stdout, /stagingprojectref|host:|password/u);
   } finally {

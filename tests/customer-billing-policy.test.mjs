@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 
 import {
@@ -11,7 +12,17 @@ import {
   STRIPE_TAX_MODE,
   evaluateStripeTaxConfiguration,
 } from "../src/lib/stripeTaxPolicy.mjs";
+import {
+  STRIPE_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS,
+  verifyStripeWebhookSignature,
+} from "../src/lib/stripeWebhookSignaturePolicy.mjs";
 import fs from "node:fs";
+
+function stripeSignature(body, secret, timestamp) {
+  return createHmac("sha256", secret)
+    .update(`${timestamp}.${body}`)
+    .digest("hex");
+}
 
 test("Stripe Tax readiness is fail-closed until mode and registration are confirmed", () => {
   assert.equal(evaluateStripeTaxConfiguration({}).ready, false);
@@ -63,6 +74,67 @@ test("Stripe webhook covers tax-ID lifecycle and waits for completed refunds", (
     assert.match(webhookSource, new RegExp(eventType.replaceAll(".", "\\."), "u"));
   }
   assert.match(webhookSource, /refundSucceeded \? "refunded" : null/u);
+});
+
+test("Stripe webhook signatures are replay-safe, rotation-safe and malformed-input safe", () => {
+  const body = JSON.stringify({
+    id: "evt_SyntheticSignaturePolicy",
+    type: "invoice.paid",
+  });
+  const secret = "whsec_SyntheticSignaturePolicySecret";
+  const now = 1_787_000_000;
+  const valid = stripeSignature(body, secret, now);
+  const verify = (signatureHeader, overrides = {}) =>
+    verifyStripeWebhookSignature({
+      rawBody: body,
+      signatureHeader,
+      configuredSecret: secret,
+      nowSeconds: now,
+      ...overrides,
+    });
+
+  assert.equal(STRIPE_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS, 300);
+  assert.equal(verify(`t=${now},v1=${valid}`), true);
+  assert.equal(
+    verify(`t=${now},v1=${"0".repeat(64)},v0=fake,v1=${valid}`),
+    true,
+  );
+  assert.equal(
+    verify(
+      `t=${now - STRIPE_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS},v1=${stripeSignature(
+        body,
+        secret,
+        now - STRIPE_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS,
+      )}`,
+    ),
+    true,
+  );
+
+  for (const timestamp of [now - 301, now + 301]) {
+    assert.equal(
+      verify(
+        `t=${timestamp},v1=${stripeSignature(body, secret, timestamp)}`,
+      ),
+      false,
+    );
+  }
+  for (const signatureHeader of [
+    null,
+    "",
+    `t=${now}`,
+    `t=${now},t=${now},v1=${valid}`,
+    `t=${now},v1=short`,
+    `t=not-a-time,v1=${valid}`,
+    `t=${now},v1=${"z".repeat(64)}`,
+    `t=${now},v0=${valid}`,
+  ]) {
+    assert.doesNotThrow(() => verify(signatureHeader));
+    assert.equal(verify(signatureHeader), false);
+  }
+  assert.equal(
+    verify(`t=${now},v1=${valid}`, { rawBody: `${body}changed` }),
+    false,
+  );
 });
 
 test("real account without Stripe customer ID shows an empty invoice state", () => {

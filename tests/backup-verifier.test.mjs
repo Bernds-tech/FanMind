@@ -203,6 +203,46 @@ test("sha256 helper returns the exact file digest", async () => {
   }
 });
 
+test("content verification snapshots only a private regular age identity", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-identity-test-"));
+  try {
+    const artifact = join(
+      root,
+      "fanmind-database-1785398400000.dump.age",
+    );
+    const encrypted = Buffer.from("synthetic-encrypted-database");
+    await writeFile(artifact, encrypted);
+    await writeFile(
+      `${artifact}.sha256`,
+      `${hash(encrypted)}  ${basename(artifact)}\n`,
+    );
+
+    const permissiveIdentity = join(root, "permissive.agekey");
+    await writeFile(permissiveIdentity, "synthetic-identity", { mode: 0o644 });
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath: permissiveIdentity,
+      }),
+      /identity_file_permissions_invalid/u,
+    );
+
+    const privateIdentity = join(root, "private.agekey");
+    const linkedIdentity = join(root, "linked.agekey");
+    await writeFile(privateIdentity, "synthetic-identity", { mode: 0o600 });
+    await symlink(privateIdentity, linkedIdentity);
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath: linkedIdentity,
+      }),
+      /identity_file_not_private_regular/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("full verification creates an exact private dump and cryptographic receipt", async () => {
   const root = await mkdtemp(join(tmpdir(), "fanmind-full-receipt-test-"));
   try {
@@ -261,6 +301,7 @@ test("full verification creates an exact private dump and cryptographic receipt"
     const identityPath = join(root, "identity.agekey");
     const fakeAgePath = join(root, "fake-age.sh");
     const fakePgRestorePath = join(root, "fake-pg-restore.sh");
+    const outerInputCapturePath = join(root, "outer-input.txt");
     const dumpOutputPath = join(root, "verified-database.dump");
     const receiptOutputPath = join(root, "full-backup-receipt.json");
     await writeFile(identityPath, "synthetic-test-identity", { mode: 0o600 });
@@ -278,7 +319,7 @@ test("full verification creates an exact private dump and cryptographic receipt"
       "  esac",
       "done",
       "case \"$(basename -- \"$input\")\" in",
-      "  fanmind-full-*) cp -- \"${input}.clear\" \"$output\" ;;",
+      `  fanmind-full-*) printf '%s' "$input" > '${outerInputCapturePath}'; cp -- '${clearFullArchive}' "$output" ;;`,
       `  fanmind-database-*) printf '%s' '${databaseClear}' > "$output" ;;`,
       "  *) exit 9 ;;",
       "esac",
@@ -301,6 +342,12 @@ test("full verification creates an exact private dump and cryptographic receipt"
     });
     assert.equal(result.contentValidation.restoreDump, "created");
     assert.equal(result.contentValidation.restoreReceipt, "created");
+    const snapshottedOuterInput = await readFile(outerInputCapturePath, "utf8");
+    assert.notEqual(snapshottedOuterInput, artifact);
+    assert.match(
+      snapshottedOuterInput,
+      /fanmind-backup-verify-[^/]+\/fanmind-full-1785398400000\.tar\.gz\.age$/u,
+    );
     const [dumpFile, receiptFile] = await Promise.all([
       readPrivateRegularFile(dumpOutputPath, "utf8"),
       readPrivateRegularFile(receiptOutputPath, "utf8"),
@@ -388,7 +435,7 @@ test("content verification rejects symbolic-link archive members before extracti
       "    *) input=\"$1\"; shift ;;",
       "  esac",
       "done",
-      "cp -- \"${input}.clear\" \"$output\"",
+      `cp -- '${artifact}.clear' "$output"`,
     ]);
 
     await assert.rejects(

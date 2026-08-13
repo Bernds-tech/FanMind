@@ -20,6 +20,10 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
   erfolgreicher DNS-Bindung das vorhandene Certbot-Konto für
   `staging.fanmind.ch` verwendet;
 - Policy-Tests, die Production-Ziele und unvollständige Freigaben blockieren.
+- ein getrennter, commit-genauer und read-only Workflow
+  `FanMind Staging Stripe Webhook Readiness`, der URL, Testmodus, Aktivstatus,
+  explizite API-Version und die exakte minimale Eventmenge des Stripe-
+  Testwebhooks prüft, ohne Endpoint- oder Billing-Ressourcen zu verändern.
 
 ## Externer Ressourcenstand
 
@@ -165,9 +169,16 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
     Laufzeit-Secret des Staging-Hosts. Der abschließende Public Smoke prüft
     separat, dass der echte Staging-Dienst seine Shared-Rate-Limit-Komponente
     gesund meldet;
-13. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
-14. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
-15. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
+13. den vollständigen Stripe-Testkatalog mit
+    `FanMind Staging Stripe Catalog Readiness` und danach den aktivierten,
+    minimalen Testwebhook mit `FanMind Staging Stripe Webhook Readiness`
+    commit-genau und read-only nachweisen; anschließend mit
+    `FanMind Staging Stripe Webhook Signed Smoke` mutationsfrei bestätigen,
+    dass der exakt ausgelieferte Staging-Handler das gebundene Signing-Secret
+    akzeptiert;
+14. erst für einen ausdrücklich beschriebenen Testfall `FANMIND_ENABLE_NON_PRODUCTION_WRITES=true` und die exakte Bestätigung setzen;
+15. nach dem Test Schreibfreigabe sofort wieder deaktivieren;
+16. synthetische Testdaten und temporäre Artefakte kontrolliert löschen.
 
 ## Kontrollierte KI-Stufen-Abnahme
 
@@ -227,6 +238,10 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 - keine realen Kundendaten vorhanden sind;
 - Read-only- und Write-Preflight wie vorgesehen fail-closed reagieren;
 - ein Test-Webhook erfolgreich verarbeitet wurde;
+- die Stripe-seitige Webhook-Bindung zuvor read-only exakt auf URL,
+  Testmodus, Aktivstatus, API-Version und minimale Eventmenge geprüft wurde;
+- der signierte, mutationsfreie Staging-Smoke für exakt den ausgelieferten
+  Commit HTTP 200 bestätigt hat;
 - die KI-Stufen-Abnahme bei angewendeter Staging-Migration vollständig grün
   ist, bevor der Entitlement-Speicher mit Webhook oder produktiver KI
   verdrahtet wird.
