@@ -45,6 +45,7 @@ console.log(
       : "invalid"
   }`,
 );
+console.log(`DATABASE_TLS=${result.tlsVerified ? "verify-full" : "invalid"}`);
 console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");
 
 for (const warning of result.warnings) {

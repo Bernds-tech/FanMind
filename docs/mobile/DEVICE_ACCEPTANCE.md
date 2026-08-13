@@ -34,6 +34,15 @@ The receipt must use `preview`, `internal`, `available`, and disabled Submit and
 Update boundaries. A development, simulator, debug or unsigned build is not an
 acceptable substitute.
 
+For an Android `preview` run, the same successful workflow also exposes the
+protected artifact `fanmind-android-preview-apk-<main-commit>` for five days.
+Open the completed GitHub Actions run, download that artifact from its
+**Artifacts** section, extract the ZIP and transfer `fanmind-preview.apk` to the
+test device. Open the APK on Android and approve that download source once if
+the device asks. Keep the ZIP and APK private, do not re-upload them, and delete
+local copies after acceptance. This handoff is an internal installable build,
+not a Play Store release.
+
 ## Mandatory real-device checks
 
 Use the signed Android build on one real Android device and the signed iOS build

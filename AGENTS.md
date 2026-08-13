@@ -126,6 +126,16 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   migration-required role/extension counts, with a server-enforced read-only
   session and redacted count-only output. Both restore write gates stay off;
   the step must never create roles/extensions, decrypt or restore anything.
+- The separate isolated database restore workflow is the only GitHub path that
+  may enable the two restore write gates. Keep it exact-reviewed-commit-bound,
+  on the protected `restore-drill` environment and exclusive
+  `fanmind-restore` runner. It must re-run checksum readiness and PostgreSQL 17
+  compatibility first, freeze the private age identity, passfile and CA
+  without following symlinks, require TLS `verify-full`, restore the
+  receipt-bound dump in one transaction and upload only the three redacted
+  receipts with short retention. Never upload plaintext, automatically claim
+  disposable-target cleanup, or count database-only success as the complete
+  Restore-Drill.
 - Mobile release resource readiness is strictly read-only. Keep it main-only,
   bound to the selected protected `mobile-development`, `mobile-preview` or
   `mobile-production` environment and pinned to the reviewed EAS CLI version.
@@ -258,13 +268,22 @@ Social integrations, analytics, campaign logic, referral automation and automati
   postflight passes; partial or drifted schemas must fail closed. Applying the
   schema must not connect Meta, enable analysis, submit App Review or imply a
   Production activation.
-- Before any AI-tier, Mobile-push, Meta-content or optional trigger-hardening
+- Before any AI-tier, Mobile-push, Meta-content, Meta-continuation or optional
+  trigger-hardening
   Staging database action, use the shared read-only rollout-state workflow.
   It must compare the exact Supabase migration timestamps with the reused
   object postflights and may output only verify, skip, apply or block. Never
   infer an apply from a reported migration/table count, repair the ledger,
   invoke a generic migration push or repeat a direct-psql migration from this
   read-only path.
+- The Meta conversation continuation columns have a separate checksum-pinned
+  Staging control in
+  docs/operations/META_CONVERSATION_CONTINUATION_STAGING.md. Keep its normal
+  deploy path disabled, require the shared read-only rollout decision before
+  apply, reject partial schemas, and verify the exact pair constraint plus
+  browser-denied column privileges in a rollback-only postflight. Applying
+  these columns must not activate Meta, analysis, the catch-up worker or any
+  provider request.
 - Meta content resource readiness is a separate read-only workflow that may
   run before the schema exists. Keep writes and apply commands disabled, bind
   the database user to `postgres.<staging-project-ref>`, require the IPv4-

@@ -7,11 +7,15 @@ export const META_CATCHUP_QUEUE_VERIFY_CONFIRMATION =
   "verify-meta-catchup-queue";
 export const META_CATCHUP_QUEUE_APPLY_CONFIRMATION =
   "apply-meta-catchup-queue";
+export const META_CATCHUP_QUEUE_ACCEPTANCE_CONFIRMATION =
+  "run-meta-catchup-queue-staging-acceptance";
 
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/u;
 const DB_IDENTITY_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/u;
 const HOST_PATTERN = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/u;
-const MODES = new Set(["verify", "apply"]);
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
+const MODES = new Set(["verify", "apply", "acceptance"]);
 
 function clean(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -118,7 +122,7 @@ export function evaluateMetaCatchupQueueStagingEnvironment(
   if (!MODES.has(mode)) {
     return Object.freeze({ ok: false, mode, writeEnabled: false, errors: ["mode"] });
   }
-  const allowWrite = mode === "apply";
+  const allowWrite = mode === "apply" || mode === "acceptance";
   const errors = [];
   const boundary = evaluateEnvironmentBoundary(environment, { allowWrite });
   if (!boundary.ok) errors.push("environment_boundary");
@@ -136,13 +140,27 @@ export function evaluateMetaCatchupQueueStagingEnvironment(
   evaluateCommitBinding(environment, errors);
   evaluateTargets(environment, errors);
 
-  const confirmation = allowWrite
-    ? clean(environment.FANMIND_META_CATCHUP_QUEUE_APPLY_CONFIRM)
-    : clean(environment.FANMIND_META_CATCHUP_QUEUE_VERIFY_CONFIRM);
-  const expected = allowWrite
-    ? META_CATCHUP_QUEUE_APPLY_CONFIRMATION
-    : META_CATCHUP_QUEUE_VERIFY_CONFIRMATION;
+  const confirmation =
+    mode === "acceptance"
+      ? clean(environment.FANMIND_META_CATCHUP_QUEUE_ACCEPTANCE_CONFIRM)
+      : mode === "apply"
+        ? clean(environment.FANMIND_META_CATCHUP_QUEUE_APPLY_CONFIRM)
+        : clean(environment.FANMIND_META_CATCHUP_QUEUE_VERIFY_CONFIRM);
+  const expected =
+    mode === "acceptance"
+      ? META_CATCHUP_QUEUE_ACCEPTANCE_CONFIRMATION
+      : mode === "apply"
+        ? META_CATCHUP_QUEUE_APPLY_CONFIRMATION
+        : META_CATCHUP_QUEUE_VERIFY_CONFIRMATION;
   if (confirmation !== expected) errors.push("confirmation");
+  if (
+    mode === "acceptance" &&
+    !UUID_PATTERN.test(
+      clean(environment.FANMIND_META_CATCHUP_QUEUE_STAGING_WORKSPACE_ID),
+    )
+  ) {
+    errors.push("synthetic_workspace");
+  }
   if (
     allowWrite &&
     clean(environment.FANMIND_NON_PRODUCTION_WRITE_ACK) !==

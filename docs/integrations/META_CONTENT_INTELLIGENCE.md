@@ -1,6 +1,6 @@
 # Meta-Kanäle und Content Intelligence
 
-Stand: 11. August 2026
+Stand: 13. August 2026
 
 Dieses Dokument ist die technische und rechtliche Arbeitsgrundlage für
 Facebook-/Instagram-Verbindungen, Nachrichtenimport, Post-Reichweitenanalyse,
@@ -56,8 +56,8 @@ Freigabe und aktiviert keine externe Verbindung.
 | Instagram Business Login/OAuth und Professional-Kontobindung | implementiert; echter Staging-/Meta-Kontotest noch offen |
 | Post-/Account-Cache, Metrik-Snapshots und Formeln | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; echter Meta-Datentest offen |
 | Fan-/Gesprächs-/Schreibstil-Provenienz und Reviewstatus | implementiert; Schema im isolierten Staging angewendet und read-only nachgeprüft; Analyse-Aktivierung bleibt gesperrt |
-| Begrenzte Conversation-Pagination | Implementierung und server-only Migration vorbereitet; Migration und realer Meta-Test im isolierten Staging vor Aktivierung offen |
-| Langlebige Webhook-Catch-up-Queue | Implementierung, checksum-gebundene Controlled Migration und inaktiver Worker vorbereitet; Staging-Apply, Lease-/RLS-Abnahme und Aktivierung offen |
+| Begrenzte Conversation-Pagination | Implementierung sowie checksum-gebundener, exakter-Commit-/TLS-/Staging-Apply- und read-only Verify-Pfad vorbereitet; externer Lauf und realer Meta-Test vor Aktivierung offen |
+| Langlebige Webhook-Catch-up-Queue | Implementierung, checksum-gebundene Controlled Migration, inaktiver Worker und rollback-only synthetischer Staging-Acceptance-Pfad vorbereitet; externer Apply-/Acceptance-Lauf, Worker-/Webhook-E2E und Aktivierung offen |
 | Workspace-Verarbeitung nach Vertragsende | gemeinsame fail-closed Policy in Meta-Ingress, manuellem Sync und Queue-Worker umgesetzt; rollback-only Staging-Abnahmepfad vorbereitet, externer Lauf und Meta-E2E offen |
 | Isolierter Staging-Migrationspfad | beide Meta-Content-Migrationen im getrennten Supabase-Staging angewendet und read-only nachgeprüft; Production unverändert |
 | Meta App Review, Advanced Access und Business Verification | extern offen |
@@ -186,6 +186,10 @@ Person.
 - Meta-Webhook-HMAC gegen die konfigurierten Facebook-/Instagram-App-Secrets
   und Verify-Token fail-closed; autorisierte neue Chats/Kommentare werden
   inkrementell gespeichert;
+- Meta-Providerfehler dürfen weder Nachrichtentext, Token-, Konto- noch
+  Objektangaben in Logs, UI oder gespeicherte Sync-Status übernehmen. Nur ein
+  begrenzter numerischer Providercode und ein formatgeprüfter Fehlertyp bleiben
+  als technische Diagnose erhalten; Nutzertexte sind feste FanMind-Meldungen;
 - OAuth-State an User und Workspace gebunden;
 - Owner-/Admin-Prüfung vor Start, Callback und Trennung;
 - verschlüsselte Tokens nur über Service Role; Browser erhalten höchstens
@@ -255,19 +259,26 @@ behaupten.
 3. explizite Facebook-Seitenauswahl und Instagram-Professional-Kontobindung
    mit Testkonten verifizieren.
 4. Bereits angewendetes isoliertes Staging-Schema für den jeweils geprüften Commit read-only nachweisen und die RLS-/Token-Negativtests wiederholen; bei Drift fail-closed stoppen.
-5. Die Controlled Migration der Meta-Catch-up-Queue getrennt anwenden und
-   RLS, service-role-only RPCs, Duplikat-Coalescing, exklusive Leases,
-   Restart-Übernahme, Backoff/Dead Letter sowie Entitlement-/Disconnect-
-   Abbruch mit synthetischen Staging-Daten prüfen. Worker und Flag bleiben bis
-   zum vollständigen Nachweis aus.
-6. 150er-Erstabruf für Facebook und Instagram-DMs, inkrementelle Webhooks, Deduplizierung, vollständige
+5. Die server-only Conversation-Continuation-Migration über den getrennten
+   exakter-Commit- und Staging-gebundenen Apply-Pfad anwenden und mit dem
+   read-only Workflow nachprüfen. Paar-/Cursor-Constraint und Browser-Sperren
+   müssen vollständig bestehen; Meta-Abruf und Analyse bleiben aus.
+6. Die Controlled Migration der Meta-Catch-up-Queue getrennt anwenden und
+   read-only nachprüfen. Danach den vorbereiteten rollback-only Workflow für
+   Browser-Sperren, service-role-only RPCs, Scope, Duplikat-Coalescing,
+   exklusive Leases, Restart-Übernahme und fünf Retries bis Dead Letter mit dem
+   markierten synthetischen Workspace ausführen. Entitlement-/Disconnect-
+   Abbruch und gleichzeitige Mehrprozess-Claims anschließend im getrennten
+   Worker-/Webhook-E2E prüfen. Worker und Flag bleiben bis zum vollständigen
+   Nachweis aus.
+7. 150er-Erstabruf für Facebook und Instagram-DMs, inkrementelle Webhooks, Deduplizierung, vollständige
    Verlaufserhaltung sowie 50/100/150-KI-Kontexte und Post-/Insight-Cache mit
    synthetischen Daten testen.
-7. Trennung, Widerruf, Tokenablauf, Datenexport und Löschung testen.
-8. Datenschutzinformation, AVV, Anbieter-/Transferregister und Fristen extern
+8. Trennung, Widerruf, Tokenablauf, Datenexport und Löschung testen.
+9. Datenschutzinformation, AVV, Anbieter-/Transferregister und Fristen extern
    freigeben.
-9. Meta App Review/Advanced Access abschließen.
-10. Erst danach begrenzten Pilot je Workspace aktivieren; kein globaler
+10. Meta App Review/Advanced Access abschließen.
+11. Erst danach begrenzten Pilot je Workspace aktivieren; kein globaler
    Standardschalter.
 
 Der kontrollierte Schritt 4 ist in
@@ -275,6 +286,10 @@ Der kontrollierte Schritt 4 ist in
 Meta-Content-Migrationen wurden im getrennten Supabase-Staging angewendet und
 read-only nachgeprüft. Ein normaler Web-Deploy wendet sie weiterhin nicht an;
 Production blieb unverändert und weder Verbindung noch Analyse wurden aktiviert.
+Der separate Continuation-Pfad ist in
+docs/operations/META_CONVERSATION_CONTINUATION_STAGING.md beschrieben; sein
+externer Apply-/Verify-Lauf ist noch offen und wird nicht vom normalen
+Web-Deploy ausgeführt.
 
 Offizielle Prüfeinstiege:
 

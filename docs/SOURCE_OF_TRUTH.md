@@ -263,7 +263,7 @@ zwingende externe Freigabe noch fehlt.
   bleibt bis zu einer erneuten ausdrücklichen Freigabe gesperrt. Runbook:
   `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`.
 - Umgebungs-Governance: schreibende Remote-Tests sind außerhalb eindeutig identifizierter Staging- oder Testumgebungen blockiert.
-- Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert. Ein eigener manueller `main`-gebundener Read-only-Ressourcencheck prüft auf einem getrennten `fanmind-restore`-Runner den isolierten Zielhost und die Prüfsumme eines verschlüsselten Full-Backups, ohne Datenbankverbindung, Entschlüsselung oder Schreibfreigabe. Nach einem echten isolierten Restore erzeugt der Runner nur bei 5/5 vorhandenen Kerntabellen, 5/5 aktivierter RLS und 5/5 Policy-Abdeckung einen separaten privaten, SHA-gebundenen Datenbank-Postcheck-Beleg; manuelle Schema-/RLS-Freigaben akzeptiert Evidence-Schema 5 nicht mehr. Der tatsächliche Restore-, Storage-, Server-Konfigurations- und Cleanup-Nachweis bleibt bis zum externen Lauf offen.
+- Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert. Ein eigener manueller `main`-gebundener Read-only-Ressourcencheck prüft auf einem getrennten `fanmind-restore`-Runner den isolierten Zielhost und die Prüfsumme eines verschlüsselten Full-Backups, ohne Datenbankverbindung, Entschlüsselung oder Schreibfreigabe. Der getrennte commit-genaue Datenbank-Workflow wiederholt diese Gates, friert age-Identity, Passfile und CA symlink-sicher ein, erzwingt TLS `verify-full` und stellt nach dem Restore ausschließlich drei kurzlebige private Receipts bereit. Der Runner akzeptiert das verpflichtend vorinstallierte `pgcrypto` beim Leernachweis und erzeugt nur bei 5/5 vorhandenen Kerntabellen, 5/5 aktivierter RLS und 5/5 Policy-Abdeckung einen separaten privaten, SHA-gebundenen Datenbank-Postcheck-Beleg; manuelle Schema-/RLS-Freigaben akzeptiert Evidence-Schema 5 nicht mehr. Der tatsächliche externe Lauf sowie Storage-, Server-Konfigurations-, Wegwerfziel-Cleanup- und finale Evidenznachweise bleiben offen.
 - Mobile-Release: Ein eigener manueller `main`-gebundener
   Read-only-Ressourcencheck ist vorbereitet. Er prüft pro geschützter
   `mobile-development`-, `mobile-preview`- oder `mobile-production`-Umgebung
@@ -353,9 +353,14 @@ zwingende externe Freigabe noch fehlt.
   `last_messenger_sync_at` unverändert; erst nach vollständiger Erschöpfung
   rückt der globale Abschlusszeitpunkt auf den Start des ursprünglichen
   Intervalls vor. Fehler bewahren den Cursor und Wiederholungen bleiben über
-  externe Nachrichten-IDs idempotent. Die neue Migration ist noch nicht in
-  Staging oder Production angewendet; Anwendung, Rechte-Postflight und echter
-  Meta-Kontotest bleiben vor Aktivierung getrennt abzunehmen.
+  externe Nachrichten-IDs idempotent. Für die weiterhin weder in Staging noch
+  Production angewendete Migration ist jetzt ein checksum-gebundener,
+  exakter-Commit-, TLS- und Staging-gebundener Apply-/Verify-Pfad vorbereitet.
+  Er verlangt vor dem Apply den gemeinsamen read-only Rollout-Entscheid,
+  blockiert partielle Schemata und prüft Paar-/Cursor-Constraint sowie
+  Browser-Sperren rollback-only. Der externe Apply-/Verify-Lauf und der echte
+  Meta-Kontotest bleiben vor Aktivierung getrennt offen. Runbook:
+  docs/operations/META_CONVERSATION_CONTINUATION_STAGING.md.
 - Inbound-Meta-Webhooks führen keine Graph-Historien- oder Profilabfrage mehr
   innerhalb des HTTP-Requests aus. Die vorbereitete
   `meta_conversation_catchup_jobs`-Queue ist strikt an Workspace,
@@ -369,8 +374,16 @@ zwingende externe Freigabe noch fehlt.
   Controlled SQL, Worker und Systemd-Vorlage sind nur vorbereitet;
   `FANMIND_META_CATCHUP_QUEUE_ENABLED` ist standardmäßig aus. Weder Migration,
   Worker-Aktivierung noch Staging-/Production-Deploy werden durch den normalen
-  Web-Deploy ausgeführt. Der getrennte Staging-Ablauf steht in
-  `docs/operations/META_CATCHUP_QUEUE.md` und ist noch nicht extern ausgeführt.
+  Web-Deploy ausgeführt. Zusätzlich ist ein exakter-Commit-gebundener,
+  rollback-only Staging-Acceptance-Pfad vorbereitet. Er akzeptiert nur den
+  markierten synthetischen Workspace, verlangt eine bereits vollständig
+  verifizierte Queue-Migration und prüft ohne Meta-, Analyse- oder Versandaufruf
+  Browser-Sperren, Workspace-/Connection-/Kontakt-Scope, Coalescing,
+  Generationserhalt, Lease-Exklusivität und -Übernahme sowie fünf Retries bis
+  `dead_letter`; danach müssen alle synthetischen Zeilen verschwunden sein. Der
+  getrennte Ablauf steht in `docs/operations/META_CATCHUP_QUEUE.md` und ist
+  noch nicht extern ausgeführt. Worker-/Webhook-E2E und Meta-Testkonto bleiben
+  eigene offene Gates.
 - Die gemeinsame Workspace-Verarbeitungsgrenze besitzt zusätzlich einen
   getrennten rollback-only Staging-Acceptance-Pfad. Er ist an `main`, den
   exakten geprüften Commit, das geschützte Staging, den gemeinsamen read-only

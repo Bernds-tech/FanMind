@@ -13,6 +13,7 @@ const RESTORE_CHECKOUT_V4_SHA =
   "11d5960a326750d5838078e36cf38b85af677262";
 const STAGING_DEPLOY_WORKFLOW = "deploy-staging.yml";
 const RESTORE_WORKFLOW = "restore-drill-resource-readiness.yml";
+const RESTORE_DATABASE_WORKFLOW = "restore-drill-database.yml";
 const STAGING_PROVISION_WORKFLOW = "provision-staging-host.yml";
 
 async function exists(path) {
@@ -75,10 +76,15 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
   );
   assert.deepEqual(
     selfHostedWorkflows.map((workflow) => workflow.file),
-    [STAGING_DEPLOY_WORKFLOW, STAGING_PROVISION_WORKFLOW, RESTORE_WORKFLOW],
+    [
+      STAGING_DEPLOY_WORKFLOW,
+      STAGING_PROVISION_WORKFLOW,
+      RESTORE_DATABASE_WORKFLOW,
+      RESTORE_WORKFLOW,
+    ],
   );
-  const restoreWorkflow = selfHostedWorkflows.find(
-    (workflow) => workflow.file === RESTORE_WORKFLOW,
+  const restoreWorkflows = selfHostedWorkflows.filter((workflow) =>
+    [RESTORE_DATABASE_WORKFLOW, RESTORE_WORKFLOW].includes(workflow.file)
   );
   const stagingProvisionWorkflow = selfHostedWorkflows.find(
     (workflow) => workflow.file === STAGING_PROVISION_WORKFLOW,
@@ -86,19 +92,22 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
   const stagingDeployWorkflow = selfHostedWorkflows.find(
     (workflow) => workflow.file === STAGING_DEPLOY_WORKFLOW,
   );
-  assert.deepEqual(restoreWorkflow?.checkoutShas, [
-    RESTORE_CHECKOUT_V4_SHA,
-  ]);
+  assert.equal(restoreWorkflows.length, 2);
+  for (const restoreWorkflow of restoreWorkflows) {
+    assert.deepEqual(restoreWorkflow.checkoutShas, [RESTORE_CHECKOUT_V4_SHA]);
+  }
   assert.deepEqual(stagingProvisionWorkflow?.checkoutShas, [
     HOSTED_CHECKOUT_V7_0_1_SHA,
   ]);
   assert.deepEqual(stagingDeployWorkflow?.checkoutShas, [
     HOSTED_CHECKOUT_V7_0_1_SHA,
   ]);
-  assert.match(
-    restoreWorkflow?.source ?? "",
-    /runs-on:\s*\[self-hosted, fanmind-restore, linux, x64\]/u,
-  );
+  for (const restoreWorkflow of restoreWorkflows) {
+    assert.match(
+      restoreWorkflow.source,
+      /runs-on:\s*\[self-hosted, fanmind-restore, linux, x64\]/u,
+    );
+  }
   assert.match(
     stagingProvisionWorkflow?.source ?? "",
     /runs-on:\s*\[self-hosted, fanmind-prod, exoscale, linux, x64\]/u,
@@ -111,13 +120,13 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
   const hostedWorkflows = checkoutWorkflows.filter(
     (workflow) => !workflow.selfHosted,
   );
-  assert.equal(hostedWorkflows.length, 30);
+  assert.equal(hostedWorkflows.length, 35);
   assert.equal(
     hostedWorkflows.reduce(
       (count, workflow) => count + workflow.checkoutShas.length,
       0,
     ),
-    31,
+    36,
   );
   assert.equal(
     hostedWorkflows.every((workflow) =>

@@ -27,6 +27,10 @@ import {
 } from "./mobile-push-registration-migration-runner.mjs";
 import { POSTFLIGHT_SQL as META_CATCHUP_POSTFLIGHT_SQL } from "./meta-catchup-queue-migration-runner.mjs";
 import {
+  POSTFLIGHT_SQL as META_CONTINUATION_POSTFLIGHT_SQL,
+  STATE_SQL as META_CONTINUATION_STATE_SQL,
+} from "./meta-conversation-continuation-migration-runner.mjs";
+import {
   deriveStagingDatabaseRolloutActions,
   evaluateStagingDatabaseRolloutStateEnvironment,
 } from "../../src/lib/stagingDatabaseRolloutStatePolicy.mjs";
@@ -63,6 +67,13 @@ const OFFLINE_CONTROLS = Object.freeze([
     path: resolve(
       process.cwd(),
       "scripts/operations/meta-catchup-queue-migration-runner.mjs",
+    ),
+    arguments: ["--check"],
+  }),
+  Object.freeze({
+    path: resolve(
+      process.cwd(),
+      "scripts/operations/meta-conversation-continuation-migration-runner.mjs",
     ),
     arguments: ["--check"],
   }),
@@ -573,6 +584,14 @@ async function inspectDatabase(environment) {
         environment,
         passfilePath: snapshotPath,
       }),
+      metaContinuation: tableObjectState({
+        stateSql: META_CONTINUATION_STATE_SQL,
+        stateMarker: "META_CONVERSATION_CONTINUATION_STATE",
+        postflightSql: META_CONTINUATION_POSTFLIGHT_SQL,
+        postflightMarker: "META_CONVERSATION_CONTINUATION_POSTFLIGHT=PASS",
+        environment,
+        passfilePath: snapshotPath,
+      }),
       triggerHardening: await triggerObjectState(environment, snapshotPath),
     });
     return deriveStagingDatabaseRolloutActions({ ledger, objects });
@@ -601,6 +620,9 @@ async function main() {
   );
   console.log(
     `STAGING_DATABASE_ROLLOUT_META_CATCHUP=${result.actions.metaCatchup}`,
+  );
+  console.log(
+    `STAGING_DATABASE_ROLLOUT_META_CONTINUATION=${result.actions.metaContinuation}`,
   );
   console.log(
     `STAGING_DATABASE_ROLLOUT_TRIGGER_HARDENING=${result.actions.triggerHardening}`,
@@ -637,6 +659,7 @@ export {
   AI_TIER_STATE_SQL,
   LEDGER_STATE_SQL,
   META_CATCHUP_STATE_SQL,
+  META_CONTINUATION_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
   ledgerManagedMetaMigrations,

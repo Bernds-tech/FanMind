@@ -131,7 +131,7 @@ test("FanMind contains no tracked foreign branding or obsolete brand asset path"
 test("completion tracker keeps every weighted block and supporting work line", async () => {
   const tracker = await source("docs/operations/P0_COMPLETION_TRACKER.md");
   const requiredRows = [
-    ["A-01", "Echtes Staging"],
+    ["A-01", "Isoliertes Staging – Infrastruktur/Deploy/Readiness"],
     ["A-02", "Restore-Drill"],
     ["A-03", "Mobile Signing/TestFlight"],
     ["A-04", "Offline/Push/Stores"],
@@ -139,8 +139,8 @@ test("completion tracker keeps every weighted block and supporting work line", a
     ["A-06", "Recht/Steuer/AVV"],
     ["A-07", "Meta Events Manager"],
     ["A-08", "KI Standard/Plus/Ultra"],
-    ["W-01", "Migration und checksum-only Prüfung"],
-    ["W-02", "Echtes Staging und Restore-Drill"],
+    ["W-01", "Restore-Datenbankkontrolle und checksum-only Prüfung"],
+    ["W-02", "Isolierter Restore-Drill"],
     ["W-03", "KI Plus/Ultra und Stripe-Abnahme"],
     ["W-04", "Meta-Abschluss"],
     ["W-05", "Mobile Signing, Android-Beta und TestFlight"],
@@ -159,8 +159,12 @@ test("completion tracker keeps every weighted block and supporting work line", a
   }
   assert.match(tracker, /W-\*.*nicht nochmals.*Gesamtwert/isu);
   assert.match(tracker, /Produkt-\/MVP-Stand: \*\*ca\. 89 %\*\*/u);
-  assert.match(tracker, /Abschlussreife der acht Blöcke: \*\*ca\. 82 %\*\*/u);
-  assert.match(tracker, /Repository-technische Vorbereitung: \*\*ca\. 86 %\*\*/u);
+  assert.match(tracker, /Abschlussreife der acht Blöcke: \*\*ca\. 85 %\*\*/u);
+  assert.match(tracker, /Repository-technische Vorbereitung: \*\*ca\. 89 %\*\*/u);
+  assert.match(
+    tracker,
+    /echte isolierte Staging[\s\S]*ist abgeschlossen[\s\S]*keine offene Staging-Infrastruktur/iu,
+  );
 });
 
 test("channel phases stay unique and phase 8 remains unstarted", async () => {

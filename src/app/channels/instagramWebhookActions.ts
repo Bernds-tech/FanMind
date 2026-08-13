@@ -302,11 +302,9 @@ async function syncInstagramMessengerHistoryForConnection(
       continuationPending: Boolean(checkpoint?.continuationAfter),
       error: null,
     };
-  } catch (error) {
+  } catch {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Instagram-Verlauf konnte nicht abgerufen werden. Prüfe DM-Berechtigung und Professional-Konto.";
+      "Instagram-Verlauf konnte nicht abgerufen werden. Prüfe DM-Berechtigung und Professional-Konto.";
     if (shouldPersistConnectionStatus) {
       await persistSyncStatus(connection.id, syncedAt, message, true);
     }

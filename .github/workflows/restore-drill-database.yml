@@ -1,0 +1,193 @@
+name: FanMind Isolated Database Restore Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      reviewed_commit:
+        description: 'Exact reviewed main commit containing the restore controls'
+        required: true
+        type: string
+      source_production_commit:
+        description: 'Exact Production commit recorded inside the selected full backup'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type run-isolated-database-restore to restore only to the disposable target'
+        required: true
+        type: string
+
+concurrency:
+  group: fanmind-restore-drill-write
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  restore-isolated-database:
+    name: Restore verified full backup to the empty disposable database
+    if: >-
+      ${{
+        github.ref == 'refs/heads/main' &&
+        inputs.reviewed_commit == github.sha &&
+        inputs.confirmation == 'run-isolated-database-restore'
+      }}
+    runs-on: [self-hosted, fanmind-restore, linux, x64]
+    environment: restore-drill
+    env:
+      FANMIND_RUNTIME_ENVIRONMENT: staging
+      NEXT_PUBLIC_APP_URL: ${{ vars.FANMIND_RESTORE_APP_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FANMIND_RESTORE_SUPABASE_URL }}
+      FANMIND_TARGET_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_RESTORE_SUPABASE_PROJECT_REF }}
+      FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF }}
+      FANMIND_RESTORE_TARGET_DB_HOST: ${{ secrets.FANMIND_RESTORE_TARGET_DB_HOST }}
+      FANMIND_RESTORE_TARGET_DB_PORT: ${{ vars.FANMIND_RESTORE_TARGET_DB_PORT }}
+      FANMIND_RESTORE_TARGET_DB_NAME: ${{ vars.FANMIND_RESTORE_TARGET_DB_NAME }}
+      FANMIND_RESTORE_TARGET_DB_USER: ${{ secrets.FANMIND_RESTORE_TARGET_DB_USER }}
+      FANMIND_PRODUCTION_DB_HOST: ${{ secrets.FANMIND_PRODUCTION_DB_HOST }}
+      FANMIND_PRODUCTION_DB_PORT: ${{ vars.FANMIND_PRODUCTION_DB_PORT }}
+      FANMIND_PRODUCTION_DB_NAME: ${{ vars.FANMIND_PRODUCTION_DB_NAME }}
+      FANMIND_PRODUCTION_DB_USER: ${{ secrets.FANMIND_PRODUCTION_DB_USER }}
+      FANMIND_RESTORE_ARTIFACT_PATH: ${{ secrets.FANMIND_RESTORE_ARTIFACT_PATH }}
+      FANMIND_RESTORE_PRIVATE_ROOT: ${{ runner.temp }}/fanmind-restore-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout exact reviewed main commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: Verify isolated resources without writes
+        env:
+          FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
+          FANMIND_NON_PRODUCTION_WRITE_ACK: ''
+          FANMIND_ENABLE_RESTORE_DRILL: 'false'
+          FANMIND_RESTORE_TARGET_ACK: ''
+          FANMIND_RESTORE_READINESS_CONFIRM: verify-isolated-restore-resources
+          PGHOST: ''
+          PGPORT: ''
+          PGDATABASE: ''
+          PGUSER: ''
+          PGPASSWORD: ''
+          PGPASSFILE: ''
+          PGHOSTADDR: ''
+          PGSERVICE: ''
+          PGSERVICEFILE: ''
+        run: npm run restore:resources:preflight
+
+      - name: Verify isolated PostgreSQL 17 target read-only
+        env:
+          FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
+          FANMIND_NON_PRODUCTION_WRITE_ACK: ''
+          FANMIND_ENABLE_RESTORE_DRILL: 'false'
+          FANMIND_RESTORE_TARGET_ACK: ''
+          FANMIND_RESTORE_READINESS_CONFIRM: verify-isolated-restore-resources
+          FANMIND_RESTORE_TARGET_COMPATIBILITY_CONFIRM: verify-read-only-restore-target
+          FANMIND_RESTORE_TARGET_PGPASSFILE_PATH: ${{ secrets.FANMIND_RESTORE_TARGET_PGPASSFILE_PATH }}
+          FANMIND_RESTORE_TARGET_CA_CERT_PATH: ${{ secrets.FANMIND_RESTORE_TARGET_CA_CERT_PATH }}
+          PGHOST: ''
+          PGPORT: ''
+          PGDATABASE: ''
+          PGUSER: ''
+          PGPASSWORD: ''
+          PGPASSFILE: ''
+          PGHOSTADDR: ''
+          PGSERVICE: ''
+          PGSERVICEFILE: ''
+        run: npm run restore:target:compatibility
+
+      - name: Decrypt privately and restore the exact database dump
+        env:
+          FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'
+          FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY
+          FANMIND_ENABLE_RESTORE_DRILL: 'true'
+          FANMIND_RESTORE_TARGET_ACK: I_UNDERSTAND_EMPTY_DISPOSABLE_DATABASE_ONLY
+          FANMIND_RESTORE_PRODUCTION_COMMIT: ${{ inputs.source_production_commit }}
+          FANMIND_RESTORE_AGE_IDENTITY_PATH: ${{ secrets.FANMIND_RESTORE_AGE_IDENTITY_PATH }}
+          PGHOST: ${{ secrets.FANMIND_RESTORE_TARGET_DB_HOST }}
+          PGPORT: ${{ vars.FANMIND_RESTORE_TARGET_DB_PORT }}
+          PGDATABASE: ${{ vars.FANMIND_RESTORE_TARGET_DB_NAME }}
+          PGUSER: ${{ secrets.FANMIND_RESTORE_TARGET_DB_USER }}
+          PGPASSFILE: ${{ secrets.FANMIND_RESTORE_TARGET_PGPASSFILE_PATH }}
+          PGPASSWORD: ''
+          PGHOSTADDR: ''
+          PGSERVICE: ''
+          PGSERVICEFILE: ''
+          PGSSLMODE: verify-full
+          PGSSLROOTCERT: ${{ secrets.FANMIND_RESTORE_TARGET_CA_CERT_PATH }}
+          PGGSSENCMODE: disable
+        run: |
+          set -Eeuo pipefail
+          umask 077
+
+          [[ "$FANMIND_RESTORE_PRODUCTION_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ ! -e "$FANMIND_RESTORE_PRIVATE_ROOT" && ! -L "$FANMIND_RESTORE_PRIVATE_ROOT" ]]
+          mkdir -m 0700 -- "$FANMIND_RESTORE_PRIVATE_ROOT"
+          mkdir -m 0700 -- \
+            "$FANMIND_RESTORE_PRIVATE_ROOT/work" \
+            "$FANMIND_RESTORE_PRIVATE_ROOT/receipts"
+
+          FANMIND_RESTORE_DRILL_ID="$(date -u +'%Y-%m-%d')-github-${GITHUB_RUN_ID}"
+          FANMIND_RESTORE_DISPOSABLE_TARGET_ID="$(node -e 'process.stdout.write(require("node:crypto").randomUUID())')"
+          FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH="$FANMIND_RESTORE_PRIVATE_ROOT/receipts/full-backup-receipt.json"
+          FANMIND_RESTORE_RUNNER_RECEIPT_PATH="$FANMIND_RESTORE_PRIVATE_ROOT/receipts/restore-runner-receipt.json"
+          FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH="$FANMIND_RESTORE_PRIVATE_ROOT/receipts/database-postcheck-receipt.json"
+          RESTORE_DUMP_PATH="$FANMIND_RESTORE_PRIVATE_ROOT/work/verified-database.dump"
+          export \
+            FANMIND_RESTORE_DRILL_ID \
+            FANMIND_RESTORE_DISPOSABLE_TARGET_ID \
+            FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH \
+            FANMIND_RESTORE_RUNNER_RECEIPT_PATH \
+            FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH
+
+          npm run restore:preflight >/dev/null
+          node scripts/operations/verify-backup-artifact.mjs \
+            --artifact "$FANMIND_RESTORE_ARTIFACT_PATH" \
+            --identity "$FANMIND_RESTORE_AGE_IDENTITY_PATH" \
+            --restore-dump-output "$RESTORE_DUMP_PATH" \
+            --restore-receipt-output "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" \
+            >/dev/null
+          npm run restore:database:drill -- "$RESTORE_DUMP_PATH"
+
+          printf 'RESTORE_DATABASE_DRILL=PASS\n'
+          printf 'RESTORE_DATABASE_RECEIPTS=private_short_lived_artifact\n'
+          printf 'RESTORE_DISPOSABLE_TARGET_CLEANUP=required\n'
+          printf 'SECRETS_WURDEN_NICHT_AUSGEGEBEN=true\n'
+
+      - name: Upload private database restore receipts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fanmind-restore-database-receipts-${{ github.sha }}
+          path: ${{ env.FANMIND_RESTORE_PRIVATE_ROOT }}/receipts
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Remove plaintext dump and private receipts from the runner
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          if [[ ! -d "$FANMIND_RESTORE_PRIVATE_ROOT" || -L "$FANMIND_RESTORE_PRIVATE_ROOT" ]]; then
+            exit 0
+          fi
+          PRIVATE_ROOT_CANONICAL="$(realpath -- "$FANMIND_RESTORE_PRIVATE_ROOT")"
+          PRIVATE_ROOT_METADATA="$(stat -Lc '%u %a' -- "$FANMIND_RESTORE_PRIVATE_ROOT")"
+          read -r PRIVATE_ROOT_OWNER PRIVATE_ROOT_MODE <<< "$PRIVATE_ROOT_METADATA"
+          [[ "$PRIVATE_ROOT_CANONICAL" == "$FANMIND_RESTORE_PRIVATE_ROOT" ]]
+          [[ "$PRIVATE_ROOT_OWNER" == "$(id -u)" ]]
+          (( (8#$PRIVATE_ROOT_MODE & 077) == 0 ))
+          for candidate in \
+            "$FANMIND_RESTORE_PRIVATE_ROOT/work/verified-database.dump" \
+            "$FANMIND_RESTORE_PRIVATE_ROOT/receipts/full-backup-receipt.json" \
+            "$FANMIND_RESTORE_PRIVATE_ROOT/receipts/restore-runner-receipt.json" \
+            "$FANMIND_RESTORE_PRIVATE_ROOT/receipts/database-postcheck-receipt.json"
+          do
+            if [[ -f "$candidate" || -L "$candidate" ]]; then
+              unlink -- "$candidate"
+            fi
+          done
+          rmdir -- "$FANMIND_RESTORE_PRIVATE_ROOT/work" 2>/dev/null || true
+          rmdir -- "$FANMIND_RESTORE_PRIVATE_ROOT/receipts" 2>/dev/null || true
+          rmdir -- "$FANMIND_RESTORE_PRIVATE_ROOT" 2>/dev/null || true

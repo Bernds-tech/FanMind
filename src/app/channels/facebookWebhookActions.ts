@@ -315,10 +315,7 @@ export async function fetchFacebookCommentsNow(): Promise<FacebookCommentFetchRe
     };
   } catch (fetchError) {
     const tokenScopes = await getSafeTokenScopeNames(token);
-    const message =
-      fetchError instanceof Error
-        ? fetchError.message
-        : "Facebook-Kommentarabruf fehlgeschlagen.";
+    const message = "Facebook-Kommentarabruf fehlgeschlagen.";
     await updateFacebookCommentFetchStatus(connection.id, {
       fetchedAt,
       importedCount: 0,
@@ -734,11 +731,9 @@ async function syncFacebookMessengerHistoryForConnection(
       continuationPending: Boolean(checkpoint?.continuationAfter),
       error: null,
     };
-  } catch (syncErrorValue) {
+  } catch {
     const message =
-      syncErrorValue instanceof Error
-        ? syncErrorValue.message
-        : "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.";
+      "Facebook-Verlauf konnte nicht abgerufen werden. Prüfe Page Access Token und Messenger-Berechtigungen.";
     if (shouldPersistConnectionStatus) {
       await updateFacebookMessengerSyncStatus(connection.id, {
         syncedAt,

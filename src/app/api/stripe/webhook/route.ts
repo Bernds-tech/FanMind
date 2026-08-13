@@ -16,6 +16,7 @@ import {
   STRIPE_BILLING_RETRYABLE_ERROR,
   STRIPE_BILLING_UPDATED,
 } from "@/lib/stripeWorkspacePolicy.mjs";
+import { isHandledStripeWebhookEventType } from "@/lib/stripeWebhookEventPolicy.mjs";
 
 type StripeObject = Record<string, unknown>;
 type StripeEvent = {
@@ -255,6 +256,9 @@ export async function POST(request: NextRequest) {
   }
 
   const event = JSON.parse(rawBody) as StripeEvent;
+  if (!isHandledStripeWebhookEventType(event.type)) {
+    return NextResponse.json({ received: true });
+  }
   const object = event.data?.object ?? {};
   const now = new Date().toISOString();
   const defaultReferralBillingStatus = referralBillingStatusFromStripeEvent({

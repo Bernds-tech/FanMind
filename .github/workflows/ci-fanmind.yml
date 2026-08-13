@@ -93,6 +93,11 @@ jobs:
         continue-on-error: true
         run: npm run test:staging-stripe-catalog
 
+      - name: Staging Stripe webhook policy tests
+        id: staging_stripe_webhook
+        continue-on-error: true
+        run: npm run test:staging-stripe-webhook
+
       - name: Website Chat and Inbox integration policies
         id: release_integrations
         continue-on-error: true
@@ -158,6 +163,12 @@ jobs:
         if: always() && steps.staging_stripe_catalog.outcome != 'success'
         run: |
           echo "Staging Stripe catalog policy tests failed." >&2
+          exit 1
+
+      - name: Enforce Staging Stripe webhook policy result
+        if: always() && steps.staging_stripe_webhook.outcome != 'success'
+        run: |
+          echo "Staging Stripe webhook policy tests failed." >&2
           exit 1
 
       - name: Enforce release integration result

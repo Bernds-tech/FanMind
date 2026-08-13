@@ -17,6 +17,7 @@ import {
   INSTAGRAM_INSIGHTS_OAUTH_SCOPES,
   INSTAGRAM_MESSAGES_OAUTH_SCOPES,
 } from "@/lib/instagramScopes";
+import { sanitizeMetaProviderError } from "@/lib/metaProviderErrorPolicy.mjs";
 
 const STATE_MAX_AGE_SECONDS = 10 * 60;
 
@@ -581,9 +582,14 @@ function logInstagramApiError(
       }
     | null,
 ) {
+  const providerError =
+    payload?.error ??
+    (payload?.error_message
+      ? { type: "instagram_provider_error" }
+      : undefined);
+  const diagnostic = sanitizeMetaProviderError(providerError);
   console.error(message, {
-    code: payload?.error?.code,
-    type: payload?.error?.type,
-    message: payload?.error?.message ?? payload?.error_message,
+    code: diagnostic.code,
+    type: diagnostic.type,
   });
 }

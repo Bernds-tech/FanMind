@@ -10,6 +10,7 @@ snapshot_dir=""
 snapshot_dump=""
 snapshot_passfile=""
 snapshot_full_receipt=""
+snapshot_ca_certificate=""
 
 cleanup_snapshot() {
   set +e
@@ -19,8 +20,48 @@ cleanup_snapshot() {
     || unlink -- "$snapshot_passfile"
   [[ -z "$snapshot_full_receipt" || ! -e "$snapshot_full_receipt" ]] \
     || unlink -- "$snapshot_full_receipt"
+  [[ -z "$snapshot_ca_certificate" || ! -e "$snapshot_ca_certificate" ]] \
+    || unlink -- "$snapshot_ca_certificate"
   [[ -z "$snapshot_dir" || ! -d "$snapshot_dir" ]] \
     || rmdir -- "$snapshot_dir"
+}
+
+validate_open_ca_certificate() {
+  local source_path="$1"
+  local source_fd_path="$2"
+  local descriptor_metadata descriptor_device descriptor_inode owner_uid
+  local permissions descriptor_mode descriptor_mode_value permission_value
+  local path_metadata path_device path_inode path_mode path_mode_value
+
+  descriptor_metadata="$(stat -Lc '%d %i %u %a %f' -- "$source_fd_path")" \
+    || fail "ca_certificate_metadata_unavailable"
+  read -r descriptor_device descriptor_inode owner_uid permissions descriptor_mode \
+    <<< "$descriptor_metadata"
+  [[ "$descriptor_device" =~ ^[0-9]+$ && "$descriptor_inode" =~ ^[0-9]+$ ]] \
+    || fail "ca_certificate_identity_invalid"
+  [[ "$owner_uid" =~ ^[0-9]+$ && "$permissions" =~ ^[0-7]{3,4}$ ]] \
+    || fail "ca_certificate_metadata_invalid"
+  [[ "$descriptor_mode" =~ ^[0-9a-fA-F]+$ ]] \
+    || fail "ca_certificate_type_invalid"
+  descriptor_mode_value=$((16#$descriptor_mode))
+  (( (descriptor_mode_value & 0170000) == 0100000 )) \
+    || fail "ca_certificate_not_regular"
+  permission_value=$((8#$permissions))
+  (( (permission_value & 022) == 0 )) \
+    || fail "ca_certificate_permissions_invalid"
+
+  path_metadata="$(stat -c '%d %i %f' -- "$source_path")" \
+    || fail "ca_certificate_path_changed_during_open"
+  read -r path_device path_inode path_mode <<< "$path_metadata"
+  [[ "$path_device" =~ ^[0-9]+$ && "$path_inode" =~ ^[0-9]+$ ]] \
+    || fail "ca_certificate_path_identity_invalid"
+  [[ "$path_mode" =~ ^[0-9a-fA-F]+$ ]] \
+    || fail "ca_certificate_path_type_invalid"
+  path_mode_value=$((16#$path_mode))
+  (( (path_mode_value & 0170000) == 0100000 )) \
+    || fail "ca_certificate_symlink_forbidden"
+  [[ "$path_device" == "$descriptor_device" && "$path_inode" == "$descriptor_inode" ]] \
+    || fail "ca_certificate_path_changed_during_open"
 }
 
 validate_open_source() {
@@ -106,6 +147,9 @@ dump_path="$1"
 : "${PGDATABASE:?PGDATABASE is required}"
 : "${PGUSER:?PGUSER is required}"
 : "${PGPASSFILE:?PGPASSFILE is required}"
+: "${PGSSLMODE:?PGSSLMODE is required}"
+: "${PGSSLROOTCERT:?PGSSLROOTCERT is required}"
+: "${PGGSSENCMODE:?PGGSSENCMODE is required}"
 : "${FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH:?FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH is required}"
 : "${FANMIND_RESTORE_RUNNER_RECEIPT_PATH:?FANMIND_RESTORE_RUNNER_RECEIPT_PATH is required}"
 : "${FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH:?FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH is required}"
@@ -116,6 +160,12 @@ dump_path="$1"
 [[ "$PGPASSFILE" = /* ]] || fail "passfile_path_must_be_absolute"
 [[ ! -L "$PGPASSFILE" ]] || fail "passfile_symlink_forbidden"
 [[ -f "$PGPASSFILE" && -r "$PGPASSFILE" ]] || fail "passfile_not_readable"
+[[ "$PGSSLMODE" == "verify-full" ]] || fail "sslmode_must_be_verify_full"
+[[ "$PGGSSENCMODE" == "disable" ]] || fail "gss_encryption_must_be_disabled"
+[[ "$PGSSLROOTCERT" = /* ]] || fail "ca_certificate_path_must_be_absolute"
+[[ ! -L "$PGSSLROOTCERT" ]] || fail "ca_certificate_symlink_forbidden"
+[[ -f "$PGSSLROOTCERT" && -r "$PGSSLROOTCERT" ]] \
+  || fail "ca_certificate_not_readable"
 [[ "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" = /* ]] \
   || fail "full_backup_receipt_path_must_be_absolute"
 [[ ! -L "$FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH" ]] \
@@ -157,6 +207,11 @@ exec {passfile_fd}<"$PGPASSFILE" || fail "passfile_open_failed"
 passfile_fd_path="/proc/self/fd/$passfile_fd"
 validate_open_source "passfile" "$PGPASSFILE" "$passfile_fd_path"
 
+exec {ca_certificate_fd}<"$PGSSLROOTCERT" \
+  || fail "ca_certificate_open_failed"
+ca_certificate_fd_path="/proc/self/fd/$ca_certificate_fd"
+validate_open_ca_certificate "$PGSSLROOTCERT" "$ca_certificate_fd_path"
+
 exec {dump_fd}<"$dump_path" || fail "dump_open_failed"
 dump_fd_path="/proc/self/fd/$dump_fd"
 validate_open_source "dump" "$dump_path" "$dump_fd_path"
@@ -176,20 +231,38 @@ trap cleanup_snapshot EXIT
 snapshot_dump="$snapshot_dir/database.dump"
 snapshot_passfile="$snapshot_dir/restore.pgpass"
 snapshot_full_receipt="$snapshot_dir/full-backup-receipt.json"
+snapshot_ca_certificate="$snapshot_dir/restore-ca.pem"
 
 cp -- "$dump_fd_path" "$snapshot_dump" || fail "dump_snapshot_failed"
 cp -- "$passfile_fd_path" "$snapshot_passfile" || fail "passfile_snapshot_failed"
 cp -- "$full_receipt_fd_path" "$snapshot_full_receipt" \
   || fail "full_backup_receipt_snapshot_failed"
-chmod 0600 "$snapshot_dump" "$snapshot_passfile" "$snapshot_full_receipt" \
+cp -- "$ca_certificate_fd_path" "$snapshot_ca_certificate" \
+  || fail "ca_certificate_snapshot_failed"
+chmod 0600 \
+  "$snapshot_dump" \
+  "$snapshot_passfile" \
+  "$snapshot_full_receipt" \
+  "$snapshot_ca_certificate" \
   || fail "snapshot_permissions_failed"
 exec {dump_fd}<&-
 exec {passfile_fd}<&-
 exec {full_receipt_fd}<&-
+exec {ca_certificate_fd}<&-
 
 PGPASSFILE="$snapshot_passfile"
+PGSSLROOTCERT="$snapshot_ca_certificate"
 export PGPASSFILE
-readonly PGHOST PGPORT PGDATABASE PGUSER PGPASSFILE
+export PGSSLROOTCERT
+readonly \
+  PGHOST \
+  PGPORT \
+  PGDATABASE \
+  PGUSER \
+  PGPASSFILE \
+  PGSSLMODE \
+  PGSSLROOTCERT \
+  PGGSSENCMODE
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "$script_dir/../.." && pwd)"
@@ -217,6 +290,9 @@ if ! env \
   -u PGSERVICEFILE \
   -u PGPASSWORD \
   -u PGPASSFILE \
+  -u PGSSLMODE \
+  -u PGSSLROOTCERT \
+  -u PGGSSENCMODE \
   -u PGOPTIONS \
   "$pg_restore_bin" \
   --list \
@@ -250,7 +326,7 @@ WITH user_objects AS (
   UNION ALL
   SELECT e.oid
     FROM pg_catalog.pg_extension AS e
-   WHERE e.extname <> 'plpgsql'
+   WHERE e.extname NOT IN ('plpgsql', 'pgcrypto')
   UNION ALL
   SELECT n.oid
     FROM pg_catalog.pg_namespace AS n
@@ -270,8 +346,14 @@ if ! empty_target_result="$(
     -u PGSERVICE \
     -u PGSERVICEFILE \
     -u PGPASSWORD \
+    -u PGSSLMODE \
+    -u PGSSLROOTCERT \
+    -u PGGSSENCMODE \
     -u PGOPTIONS \
     PGPASSFILE="$snapshot_passfile" \
+    PGSSLMODE="verify-full" \
+    PGSSLROOTCERT="$snapshot_ca_certificate" \
+    PGGSSENCMODE="disable" \
     "$psql_bin" \
     --no-psqlrc \
     --no-align \
@@ -306,8 +388,14 @@ if ! env \
   -u PGSERVICE \
   -u PGSERVICEFILE \
   -u PGPASSWORD \
+  -u PGSSLMODE \
+  -u PGSSLROOTCERT \
+  -u PGGSSENCMODE \
   -u PGOPTIONS \
   PGPASSFILE="$snapshot_passfile" \
+  PGSSLMODE="verify-full" \
+  PGSSLROOTCERT="$snapshot_ca_certificate" \
+  PGGSSENCMODE="disable" \
   "$pg_restore_bin" \
   --no-owner \
   --no-privileges \
@@ -373,8 +461,14 @@ if ! postcheck_result="$(
     -u PGSERVICE \
     -u PGSERVICEFILE \
     -u PGPASSWORD \
+    -u PGSSLMODE \
+    -u PGSSLROOTCERT \
+    -u PGGSSENCMODE \
     -u PGOPTIONS \
     PGPASSFILE="$snapshot_passfile" \
+    PGSSLMODE="verify-full" \
+    PGSSLROOTCERT="$snapshot_ca_certificate" \
+    PGGSSENCMODE="disable" \
     "$psql_bin" \
     --no-psqlrc \
     --no-align \

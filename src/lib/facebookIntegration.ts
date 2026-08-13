@@ -19,6 +19,7 @@ import {
   type FacebookPageSelectionConnectionType,
   type FacebookPageSelectionPayload,
 } from "@/lib/facebookPageSelectionPolicy.mjs";
+import { sanitizeMetaProviderError } from "@/lib/metaProviderErrorPolicy.mjs";
 import {
   createCipheriv,
   createDecipheriv,
@@ -176,10 +177,7 @@ export async function exchangeFacebookCode(code: string): Promise<string> {
   } | null;
   if (!response.ok || !payload?.access_token) {
     logFacebookApiError("Facebook OAuth code exchange failed", payload?.error);
-    throw new Error(
-      payload?.error?.message ??
-        "Facebook OAuth-Code konnte nicht getauscht werden.",
-    );
+    throw new Error("Facebook OAuth-Code konnte nicht getauscht werden.");
   }
   return payload.access_token;
 }
@@ -296,7 +294,6 @@ export async function fetchFacebookPages(
     hasMetaError: Boolean(primary.error),
     errorCode: primary.error?.code,
     errorType: primary.error?.type,
-    errorMessage: primary.error?.message,
   });
 
   const fallback = await fetchFacebookPagesFromMeAccountsField(userAccessToken);
@@ -315,14 +312,12 @@ export async function fetchFacebookPages(
       ? {
           code: primary.error.code,
           type: primary.error.type,
-          message: primary.error.message,
         }
       : null,
     fallbackMetaError: fallback.error
       ? {
           code: fallback.error.code,
           type: fallback.error.type,
-          message: fallback.error.message,
         }
       : null,
   });
@@ -565,9 +560,7 @@ export async function probeFacebookMessengerMessageFieldSet(input: {
       break;
     }
 
-    lastErrorMessage =
-      payload?.error?.message ??
-      "Messages-Endpunkt lieferte keine nutzbare Antwort.";
+    lastErrorMessage = "Messages-Endpunkt lieferte keine nutzbare Antwort.";
     if (!isFacebookFieldError(payload?.error)) {
       return {
         label: "Messages Probe",
@@ -735,7 +728,7 @@ async function fetchFacebookMessengerConversationsWithFields(
   if (!response.ok) {
     if (isFacebookFieldError(payload?.error)) {
       throw new FacebookFieldFetchError(
-        payload?.error?.message ?? "Facebook-Feldset wurde abgelehnt.",
+        "Facebook-Feldset wurde abgelehnt.",
         payload?.error?.code,
         payload?.error?.type,
         true,
@@ -746,8 +739,7 @@ async function fetchFacebookMessengerConversationsWithFields(
       payload?.error,
     );
     throw new Error(
-      payload?.error?.message ??
-        "Facebook Messenger Conversations konnten nicht abgerufen werden.",
+      "Facebook Messenger Conversations konnten nicht abgerufen werden.",
     );
   }
 
@@ -833,9 +825,7 @@ async function probeFacebookMessengerConversationFieldSet(input: {
       sendersPresent: false,
       messageCountFieldPresent: false,
       observedKeys: [],
-      note:
-        payload?.error?.message ??
-        "Conversation-Endpunkt lieferte keine nutzbare Antwort.",
+      note: "Conversation-Endpunkt lieferte keine nutzbare Antwort.",
     };
   }
 
@@ -964,8 +954,7 @@ export async function fetchFacebookMessengerConversationMessages(
         payload?.error,
       );
       throw new Error(
-        payload?.error?.message ??
-          "Facebook Messenger Nachrichten konnten nicht abgerufen werden.",
+        "Facebook Messenger Nachrichten konnten nicht abgerufen werden.",
       );
     }
 
@@ -1255,7 +1244,6 @@ export async function fetchFacebookTokenDiagnostics(
     })),
     errorCode: error?.code,
     errorType: error?.type,
-    errorMessage: error?.message,
   });
 
   if (!response.ok) {
@@ -1332,7 +1320,6 @@ async function fetchFacebookPageById(
   console.warn("Facebook direct page fetch without access_token fallback", {
     errorCode: withToken.error?.code,
     errorType: withToken.error?.type,
-    errorMessage: withToken.error?.message,
   });
 
   const withoutToken = await fetchFacebookPageByIdWithFields(
@@ -1371,7 +1358,6 @@ async function fetchFacebookPageByIdWithFields(
     hasAccessToken: Boolean(payload?.access_token),
     errorCode: payload?.error?.code,
     errorType: payload?.error?.type,
-    errorMessage: payload?.error?.message,
   });
 
   if (!response.ok) {
@@ -1434,13 +1420,10 @@ async function fetchFacebookPagesFromAccountsEdge(
     pagesMissingAccessToken: result.pagesMissingAccessToken,
     errorCode: result.error?.code,
     errorType: result.error?.type,
-    errorMessage: result.error?.message,
   });
 
   if (!response.ok) {
-    throw new Error(
-      payload?.error?.message ?? "Facebook Pages konnten nicht geladen werden.",
-    );
+    throw new Error("Facebook Pages konnten nicht geladen werden.");
   }
 
   return result;
@@ -1471,7 +1454,6 @@ async function fetchFacebookPagesFromMeAccountsField(
     pagesMissingAccessToken: result.pagesMissingAccessToken,
     errorCode: result.error?.code,
     errorType: result.error?.type,
-    errorMessage: result.error?.message,
   });
 
   if (!response.ok) {
@@ -1528,7 +1510,7 @@ export type FacebookPageWebhookStatus = {
     FacebookPageWebhookFieldStatus
   >;
   error: string | null;
-  metaError?: { message?: string; code?: number; type?: string };
+  metaError?: { code: number | null; type: string | null };
 };
 
 type FacebookSubscribedApp = {
@@ -1581,10 +1563,9 @@ export async function fetchFacebookPageWebhookStatus(
         true,
         "error",
         [],
-        payload?.error?.message ??
-          "Meta subscribed_apps konnte nicht geprüft werden.",
+        "Meta subscribed_apps konnte nicht geprüft werden.",
       ),
-      metaError: payload?.error,
+      metaError: sanitizeMetaProviderError(payload?.error),
     };
   }
 
@@ -1641,10 +1622,9 @@ export async function subscribeFacebookPage(
         true,
         "error",
         [],
-        payload?.error?.message ??
-          "Meta hat die Page-Webhook-Aktivierung abgelehnt.",
+        "Meta hat die Page-Webhook-Aktivierung abgelehnt.",
       ),
-      metaError: payload?.error,
+      metaError: sanitizeMetaProviderError(payload?.error),
     };
   }
 
@@ -1754,10 +1734,10 @@ function logFacebookApiError(
   message: string,
   error: { message?: string; code?: number; type?: string } | undefined,
 ) {
+  const diagnostic = sanitizeMetaProviderError(error);
   console.error(message, {
-    code: error?.code,
-    type: error?.type,
-    message: error?.message,
+    code: diagnostic.code,
+    type: diagnostic.type,
   });
 }
 
@@ -1925,7 +1905,7 @@ export async function fetchFacebookPagePostsWithComments(
       Omit<FacebookPageComment, "postId" | "postPermalinkUrl">
     >(
       commentsUrl,
-      `Facebook-Kommentare für Post ${post.id} konnten nicht geladen werden.`,
+      "Facebook-Kommentare konnten nicht geladen werden.",
     ).catch((error) => {
       throw withCommentFetchEndpoint(error, "post-comments-fallback");
     });
@@ -1958,21 +1938,21 @@ function withCommentFetchEndpoint(
 ): Error {
   if (error instanceof FacebookCommentFetchError) return error;
   if (error instanceof GraphApiError) {
-    return new FacebookCommentFetchError(error.message, {
-      endpointType,
-      usedPageAccessToken: true,
-      graphErrorCode: error.code,
-    });
-  }
-  if (error instanceof Error) {
-    return new FacebookCommentFetchError(error.message, {
-      endpointType,
-      usedPageAccessToken: true,
-    });
+    return new FacebookCommentFetchError(
+      "Facebook-Kommentarabruf fehlgeschlagen.",
+      {
+        endpointType,
+        usedPageAccessToken: true,
+        graphErrorCode: error.code,
+      },
+    );
   }
   return new FacebookCommentFetchError(
     "Facebook-Kommentarabruf fehlgeschlagen.",
-    { endpointType, usedPageAccessToken: true },
+    {
+      endpointType,
+      usedPageAccessToken: true,
+    },
   );
 }
 
@@ -2004,7 +1984,7 @@ async function fetchGraphCollection<T extends { id?: string }>(
     if (!response.ok) {
       logFacebookApiError(errorFallback, payload?.error);
       throw new GraphApiError(
-        payload?.error?.message ?? errorFallback,
+        errorFallback,
         payload?.error?.code,
       );
     }

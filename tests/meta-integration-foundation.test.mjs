@@ -23,6 +23,7 @@ import {
   buildMinimalFanProfile,
   evaluateMetaDataUse,
 } from "../src/lib/metaDataHandlingPolicy.mjs";
+import { sanitizeMetaProviderError } from "../src/lib/metaProviderErrorPolicy.mjs";
 
 async function source(path) {
   return readFile(path, "utf8");
@@ -117,6 +118,50 @@ test("sensitive fan traits remain prohibited analysis targets", () => {
   assert.ok(PROHIBITED_SENSITIVE_INFERENCES.includes("political_opinions"));
   assert.ok(PROHIBITED_SENSITIVE_INFERENCES.includes("sexual_orientation"));
   assert.ok(PROHIBITED_SENSITIVE_INFERENCES.includes("psychological_diagnosis"));
+});
+
+test("Meta provider failures retain bounded diagnostics without message content", async () => {
+  assert.deepEqual(
+    sanitizeMetaProviderError({
+      code: 190,
+      type: "OAuthException",
+      message: "token and account details must never cross the boundary",
+    }),
+    { code: 190, type: "OAuthException" },
+  );
+  assert.deepEqual(
+    sanitizeMetaProviderError({
+      code: -1,
+      type: "invalid type with spaces",
+      message: "private provider response",
+    }),
+    { code: null, type: null },
+  );
+
+  const [facebook, instagram, facebookActions, instagramActions] =
+    await Promise.all([
+      source("src/lib/facebookIntegration.ts"),
+      source("src/lib/instagramIntegration.ts"),
+      source("src/app/channels/facebookWebhookActions.ts"),
+      source("src/app/channels/instagramWebhookActions.ts"),
+    ]);
+  assert.doesNotMatch(facebook, /errorMessage:/u);
+  assert.doesNotMatch(
+    facebook,
+    /metaError\?:\s*\{[^}]*message|message:\s*error\?\.message/u,
+  );
+  assert.doesNotMatch(
+    instagram,
+    /message:\s*payload\?\.(?:error\?\.message|error_message)/u,
+  );
+  assert.doesNotMatch(
+    facebookActions,
+    /(?:fetchError|syncErrorValue) instanceof Error[\s\S]{0,80}\.message/u,
+  );
+  assert.doesNotMatch(
+    instagramActions,
+    /error instanceof Error[\s\S]{0,80}error\.message/u,
+  );
 });
 
 test("OAuth flow requires an explicit server-validated Facebook page selection", async () => {

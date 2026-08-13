@@ -1,6 +1,6 @@
 # FanMind P0-Abschluss-Tracker
 
-Stand: 8. August 2026
+Stand: 13. August 2026
 
 GitHub-Issue [#640](https://github.com/Bernds-tech/FanMind/issues/640) ist der laufende, verbindliche Arbeits- und Nachweis-Tracker. Dieses Dokument hält die dauerhafte Repository-Zusammenfassung fest, damit bereits erledigte Arbeit nicht erneut umgesetzt wird.
 
@@ -28,27 +28,33 @@ gibt. Die stabilen IDs werden durch einen Regressionstest geschützt.
 
 | ID | Typ | Fortschrittspunkt | Vorher | Jetzt / Iststand | Nächstes Abschluss-Gate |
 | --- | --- | --- | ---: | --- | --- |
-| A-01 | Abschlussblock | Echtes Staging | 76 % | **80 %** | eigene Web-Staging-VM mit Runner, DNS/TLS, Deploy, E2E und Stripe-Testbindung |
-| A-02 | Abschlussblock | Restore-Drill | 82 % | **82 %** | echter Restore auf ein leeres, wegwerfbares PostgreSQL-17-Ziel samt Postcheck und Cleanup |
+| A-01 | Abschlussblock | Isoliertes Staging – Infrastruktur/Deploy/Readiness | 83 % | **100 %** | abgeschlossen; Stripe-/Billing-Abnahme wird getrennt in A-08 und W-03 geführt |
+| A-02 | Abschlussblock | Restore-Drill | 82 % | **88 %** | commit-genauen Datenbank-Workflow extern ausführen, Wegwerfziel löschen sowie Storage-, Konfigurations- und Evidenznachweis abschließen |
 | A-03 | Abschlussblock | Mobile Signing/TestFlight | 68 % | **68 %** | signierte Android-/iOS-Preview-Builds und Realgeräteabnahme |
 | A-04 | Abschlussblock | Offline/Push/Stores | 88 % | **89 %** | Push-Staging-Acceptance, private Gerätetests und Store-Abnahme |
 | A-05 | Abschlussblock | Security/Dependencies | 99 % | **99 %** | finale Live- und externe Prüfung |
 | A-06 | Abschlussblock | Recht/Steuer/AVV | 56 % | **56 %** | externe Rechts-, Steuer-, AVV- und Providerbelege |
 | A-07 | Abschlussblock | Meta Events Manager | 92 % | **94 %** | synthetischer Meta-E2E, App Review und Rechtsfreigabe |
 | A-08 | Abschlussblock | KI Standard/Plus/Ultra | 87 % | **89 %** | Stripe-Testpreise, Lifecycle- sowie Qualitäts-/Kostenabnahme |
-| W-01 | Arbeitszeile | Migration und checksum-only Prüfung | – | Staging-Schemata und Ledger-Alias-Guard angewendet, nachgeprüft, gemergt und deployed | checksum-only Restore-Ressourcencheck auf isoliertem Ziel ausführen |
-| W-02 | Arbeitszeile | Echtes Staging und Restore-Drill | – | separates Supabase-Staging vorhanden | Web-Staging-VM und echter Restore bleiben offen |
-| W-03 | Arbeitszeile | KI Plus/Ultra und Stripe-Abnahme | – | Entitlement-Schema auf Staging | Stripe-Testkatalog und rollback-only Acceptance ausführen |
-| W-04 | Arbeitszeile | Meta-Abschluss | – | Foundation, History und Tenant-Idempotenz auf Staging | E2E, App Review und Rechtsfreigabe abschließen |
-| W-05 | Arbeitszeile | Mobile Signing, Android-Beta und TestFlight | – | kontrollierte Workflows vorhanden | signierte Binaries, Realgeräte und Verteilung nachweisen |
+| W-01 | Arbeitszeile | Restore-Datenbankkontrolle und checksum-only Prüfung | – | checksum-only Readiness, PostgreSQL-17-Kompatibilität und commit-genauer TLS-`verify-full`-Datenbankworkflow vorbereitet | kontrollierten externen Lauf samt drei privaten Receipts ausführen |
+| W-02 | Arbeitszeile | Isolierter Restore-Drill | – | exklusiver Restore-Runner, verschlüsseltes Full-Backup und receipt-gebundener Transaktions-/5-5-5-Postcheck-Pfad vorhanden | Wegwerfziel löschen sowie Storage-, Server-Konfigurations- und finalen Evidenznachweis abschließen |
+| W-03 | Arbeitszeile | KI Plus/Ultra und Stripe-Abnahme | – | Entitlement-Schema auf Staging; read-only Katalog-/Webhook-Abnahmen und signierter mutationsfreier Bindungs-Smoke vorbereitet | Stripe-Testkatalog, minimalen Testwebhook, Bindungs-Smoke und rollback-only Acceptance extern ausführen |
+| W-04 | Arbeitszeile | Meta-Abschluss | – | Foundation, History und Tenant-Idempotenz auf Staging; Providerfehlergrenzen gehärtet | E2E, App Review und Rechtsfreigabe abschließen |
+| W-05 | Arbeitszeile | Mobile Signing, Android-Beta und TestFlight | – | kontrollierte Workflows und geschützter Android-APK-Handoff vorbereitet | signierte Binaries, Realgeräte und Verteilung extern nachweisen |
 | W-06 | Arbeitszeile | Push, Gerätetests und Store-Unterlagen | – | Push-Schema auf Staging und Unterlagen vorbereitet | Acceptance und externe Nachweise abschließen |
 | W-07 | Arbeitszeile | Technische Rechts-/AVV-Unterlagen | – | Arbeitsfassungen, Register und Validatoren vorhanden | technische Belege final mit externen Entscheidungen synchronisieren |
 | W-08 | Arbeitszeile | Externe Rechts-/Steuerfreigaben | – | weiterhin extern offen | Rechts-, Steuer-, AVV- und Providerbelege einholen |
 | W-09 | Arbeitszeile | Roadmap Phase 1–7 und Umsatzmodell | – | MVP-Auftrag und Roadmap abgeglichen; Core-, KI-, Connection-, Referral- und Agency-Regeln zentral testbar | Stripe-Testpreise, Rechts-/Steuerfreigabe und Agency-Aktivierung separat abnehmen |
 
 - Produkt-/MVP-Stand: **ca. 89 %**
-- Abschlussreife der acht Blöcke: **ca. 82 %**
-- Repository-technische Vorbereitung: **ca. 86 %**
+- Abschlussreife der acht Blöcke: **ca. 85 %**
+- Repository-technische Vorbereitung: **ca. 89 %**
+
+Das echte isolierte Staging mit eigenem Host/Runner, DNS/TLS, separatem
+Supabase-Projekt, commit-genauem Deploy und grüner Readiness ist abgeschlossen.
+Fehlende Stripe-Testpreise, Webhook-/Billing-E2E und KI-Lifecycle-Nachweise sind
+keine offene Staging-Infrastruktur und werden ausschließlich unter A-08/W-03
+gezählt.
 
 ### Arbeits- und Umsatzsystem als eigener Produktquerschnitt
 
@@ -174,6 +180,13 @@ Referral und Agency-Mengenrabatt sind nicht kombinierbar.
   nichts und aktiviert keine Schreibfreigabe;
 - der tatsächliche Restore-, RLS-, Storage-, Server-Konfigurations- und
   Cleanup-Nachweis bleibt ausdrücklich extern offen.
+- ein getrennter `main`-, reviewed-commit-, Environment- und Runner-gebundener
+  Datenbankworkflow wiederholt beide read-only Gates, friert age-Identity,
+  Passfile und CA symlink-sicher ein, erzwingt TLS `verify-full`, führt den
+  receipt-gebundenen Transaktionsrestore samt 5/5/5-Postcheck aus und stellt
+  ausschließlich drei redigierte Receipts drei Tage geschützt bereit;
+- der Workflow lädt keinen Dump und kein Secret hoch und behauptet weder
+  Wegwerfziel-Cleanup noch den vollständigen Restore-Drill.
 
 ## Noch nicht als P0-Codeabschluss auszugeben
 

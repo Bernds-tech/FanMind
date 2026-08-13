@@ -28,6 +28,10 @@ service-role-only-Vertrag.
 Beide Workflows laufen ausschließlich per `workflow_dispatch`, auf `main`, für
 den exakten `reviewed_commit`, im GitHub-Environment `staging`, über TLS und
 gegen eine explizit von Production abweichende Supabase-Projektreferenz.
+Die getrennte Conversation-Continuation-Migration ist keine Nebenwirkung
+dieses Queue-Schritts. Sie muss zuvor über
+docs/operations/META_CONVERSATION_CONTINUATION_STAGING.md angewendet und
+read-only nachgeprüft sein.
 
 1. Nach Review und Merge den Workflow
    `FanMind Meta Catch-up Queue Staging Apply` mit dem exakten Main-Commit und
@@ -53,29 +57,49 @@ Browserrechte, die nur lesende direkte Service-Role-Berechtigung und die drei
 ausschließlich für `service_role` ausführbaren Funktionen. Die Prüfung läuft
 in einer zurückgerollten Transaktion.
 
-## Noch erforderliche synthetische Acceptance
+## Rollback-only Queue-Acceptance
 
-Vor Worker-Aktivierung muss das isolierte Staging zusätzlich mit einem
-synthetischen Workspace und einer synthetischen Meta-Connection belegen:
+Der manuelle Workflow `FanMind Meta Catch-up Queue Staging Acceptance` ist
+vorbereitet. Er darf erst nach dem Apply und dem read-only Postflight mit dem
+exakten Main-Commit sowie der Bestätigung
+`run-meta-catchup-queue-staging-acceptance` gestartet werden. Der gemeinsame
+Rollout-State muss exakt `STAGING_DATABASE_ROLLOUT_META_CATCHUP=verify` und
+`STAGING_DATABASE_ROLLOUT_STATE=PASS` liefern.
+
+Der Lauf akzeptiert ausschließlich den speziell markierten synthetischen
+Workspace der Workspace-Processing-Acceptance. Er sperrt die Queue während des
+Tests, stoppt bei bereits offenen Staging-Aufträgen und führt in einer einzigen
+vollständig zurückgerollten Transaktion folgende Nachweise aus:
 
 - doppelte Enqueues ergeben genau einen offenen Auftrag und erhöhen die
   Generation;
-- parallele Claims liefern dieselbe Zeile nie an zwei Worker;
-- Retry-Backoff endet nach fünf Versuchen in `dead_letter`;
-- ein Worker-Neustart übernimmt erst nach Lease-Ablauf;
-- neue Generationen während eines Claims bleiben als `pending` erhalten;
-- falscher Workspace, falsche Connection, getrennte Connection und ungültiger
-  Kontakt scheitern fail-closed;
-- archivierter, abgelaufener oder nicht freigegebener Workspace wird
-  `cancelled`, vorhandene CRM-Daten bleiben erhalten;
-- der Webhook-Request führt keinen Graph-Historienaufruf aus;
-- es wird weder Analyse noch automatischer Versand ausgelöst;
-- Logs enthalten nur feste Ereignis-/Fehlercodes, Disposition und
-  Versuchszähler, niemals IDs, Tokens, Body, Profil, Text oder Paging-URL.
+- ein zweiter Worker erhält während einer aktiven Lease keinen Auftrag;
+- neue Generationen während eines Claims bleiben nach erfolgreichem Abschluss
+  als `pending` erhalten;
+- eine abgelaufene Lease wird von einem anderen Worker übernommen;
+- fünf begrenzte Retry-Abschlüsse enden mit allowlist-festem Fehlercode in
+  `dead_letter`;
+- falscher Workspace, getrennte Connection, ungültiger Kontakt und ungültige
+  Plattform scheitern fail-closed;
+- `anon` und `authenticated` können weder die Queue-Tabelle lesen noch die
+  Enqueue-Funktion ausführen;
+- synthetischer Kontakt, Connections und Queuezeilen sind nach `rollback`
+  vollständig verschwunden.
 
-Diese Acceptance darf keine realen Kunden-, Meta- oder Production-Daten
-verwenden. Reale Meta-Testkonten und rechtliche Freigaben bleiben ein späteres,
-eigenes Gate.
+Der Runner ruft keine Meta-API auf, erzeugt keine Analyse, versendet nichts und
+gibt weder synthetische IDs noch Credentials aus. Offline lässt sich sein
+Vertrag ohne Datenbankzugriff prüfen:
+
+```bash
+npm run meta:catchup-queue:staging:check
+```
+
+Der echte externe Workflow-Lauf ist weiterhin offen und darf keine realen
+Kunden-, Meta- oder Production-Daten verwenden. Die gleichzeitige
+Mehrprozess-Abnahme mit laufendem Worker, Entitlement-/Disconnect-Abbruch über
+den internen Endpunkt und der Webhook-/Meta-Testkonto-E2E bleiben getrennte
+Gates. Reale Meta-Testkonten und rechtliche Freigaben werden von dieser
+synthetischen Datenbank-Acceptance ausdrücklich nicht ersetzt.
 
 ## Worker-Vorbereitung und Aktivierung
 

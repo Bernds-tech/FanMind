@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import {
   getSupabaseApiKeyHeaders,
   getSupabaseAuthUrl,
@@ -22,6 +21,7 @@ import {
   type StripeBillingWorkspaceDecision,
 } from "@/lib/stripeWorkspacePolicy.mjs";
 import { evaluateStripeTaxConfiguration } from "@/lib/stripeTaxPolicy.mjs";
+import { verifyStripeWebhookSignature } from "@/lib/stripeWebhookSignaturePolicy.mjs";
 
 export type CheckoutCommercialOption =
   | "pilot_only"
@@ -342,21 +342,11 @@ export function verifyStripeSignature(
   rawBody: string,
   signatureHeader: string | null,
 ): boolean {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret || !signatureHeader) return false;
-  const parts = Object.fromEntries(
-    signatureHeader.split(",").map((part) => {
-      const [key, value] = part.split("=", 2);
-      return [key, value];
-    }),
-  );
-  if (!parts.t || !parts.v1) return false;
-  const signedPayload = `${parts.t}.${rawBody}`;
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(signedPayload)
-    .digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1));
+  return verifyStripeWebhookSignature({
+    rawBody,
+    signatureHeader,
+    configuredSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  });
 }
 
 export async function findWorkspaceIdByStripeReferences(
