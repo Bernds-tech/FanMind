@@ -214,15 +214,11 @@ geschützten EAS-Projekts erneut gestartet werden. Installation, Push, Recovery,
 Android Internal Testing und TestFlight bleiben gesondert abzunehmen.
 
 Nach einem erfolgreichen Build erzeugt der Workflow einen redigierten Receipt
-ohne Build-ID oder Artefakt-URL. Bei der Kombination `preview` + `android` lädt
-er zusätzlich genau das verifizierte interne APK in ein geschütztes
-GitHub-Artefakt `fanmind-android-preview-apk-<main-commit>`. Es wird nach fünf
-Tagen automatisch gelöscht. Im abgeschlossenen Actions-Lauf kann die ZIP-Datei
-unter **Artifacts** heruntergeladen, entpackt und die enthaltene
-`fanmind-preview.apk` auf ein Android-Gerät übertragen beziehungsweise dort
-geöffnet werden. Android kann dafür einmalig die Installation aus dieser
-Downloadquelle freigeben müssen. Das APK nicht öffentlich weitergeben oder
-erneut hochladen; es ist ein interner Testbuild und keine Play-Store-Freigabe.
+ohne Build-ID oder Artefakt-URL. Der signierte APK-/IPA-Inhalt wird nicht als
+GitHub-Artefakt gespeichert. Ein berechtigter Operator übernimmt das interne
+Installationsartefakt direkt aus dem geschützten, bereits verifizierten EAS-
+Build, hält es privat und löscht die lokale Kopie nach der Geräteabnahme. Es
+ist ein interner Testbuild und keine Play-/App-Store-Freigabe.
 
 Die Abnahme verwendet anschließend den privaten Geräte-Abnahmevalidator aus
 `docs/mobile/DEVICE_ACCEPTANCE.md` und bindet daran die separaten realen

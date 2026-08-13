@@ -55,6 +55,14 @@ Anschließend den Workflow
 FanMind Meta Conversation Continuation Staging Verify mit demselben exakten
 Commit und verify-meta-conversation-continuation starten.
 
+Auch dieser reine Verify-Lauf muss zuerst den gemeinsamen read-only Rollout-
+Zustand ausführen und exakt
+STAGING_DATABASE_ROLLOUT_META_CONTENT=verify,
+STAGING_DATABASE_ROLLOUT_META_CONTINUATION=verify sowie
+STAGING_DATABASE_ROLLOUT_STATE=PASS bestätigen. Ein partieller oder driftender
+Ledger-/Objektzustand blockiert damit den Einzel-Postflight, selbst wenn die
+beiden Fortsetzungsfelder für sich betrachtet gültig aussehen.
+
 Der Postflight prüft:
 
 - social_connections existiert mit aktivem RLS;

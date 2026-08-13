@@ -356,7 +356,7 @@ zwingende externe Freigabe noch fehlt.
   externe Nachrichten-IDs idempotent. Für die weiterhin weder in Staging noch
   Production angewendete Migration ist jetzt ein checksum-gebundener,
   exakter-Commit-, TLS- und Staging-gebundener Apply-/Verify-Pfad vorbereitet.
-  Er verlangt vor dem Apply den gemeinsamen read-only Rollout-Entscheid,
+  Er verlangt vor Apply und Verify den gemeinsamen read-only Rollout-Entscheid,
   blockiert partielle Schemata und prüft Paar-/Cursor-Constraint sowie
   Browser-Sperren rollback-only. Der externe Apply-/Verify-Lauf und der echte
   Meta-Kontotest bleiben vor Aktivierung getrennt offen. Runbook:

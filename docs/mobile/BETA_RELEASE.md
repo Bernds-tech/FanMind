@@ -285,12 +285,13 @@ HTTPS-Artefakt ergeben den redigierten Abschlussnachweis. Scheitert der
 Queue-Aufruf, bleibt die Abschlussprüfung unklar oder ist eine Antwort
 ungültig, wird der Lauf als `indeterminate-do-not-retry` ausgewiesen und darf
 nicht wiederholt werden, bevor das geschützte EAS-Projekt direkt geprüft wurde.
-Die Installation auf einem realen Gerät bleibt ein eigener Nachweis. Für einen
-erfolgreichen Android-`preview`-Lauf wird das verifizierte APK zusätzlich als
-geschütztes GitHub-Artefakt `fanmind-android-preview-apk-<main-commit>` mit fünf
-Tagen Aufbewahrung ausgegeben. Der Download steht nur berechtigten
-Repository-Nutzern im abgeschlossenen Actions-Lauf zur Verfügung und ist keine
-Play-Store-Veröffentlichung.
+Die Installation auf einem realen Gerät bleibt ein eigener Nachweis. Der
+Workflow lädt das signierte APK/IPA ausdrücklich nicht in GitHub-Artefakte;
+dort wird ausschließlich der kurzlebige redigierte Receipt gespeichert. Das
+interne Installationsartefakt bleibt im geschützten EAS-Projekt und wird für
+den Gerätetest von einem berechtigten Operator direkt aus dem überprüften EAS-
+Build übernommen, privat behandelt und nach der Abnahme lokal gelöscht. Das
+ist keine Play- oder App-Store-Veröffentlichung.
 
 ### Native-Prüfung ohne Release-/Store-Credentials
 

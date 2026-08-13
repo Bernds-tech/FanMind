@@ -270,8 +270,11 @@ separate mandatory steps.
 - written target identifier in the drill record.
 
 For the empty-target proof, the two required bootstrap extensions `plpgsql`
-and `pgcrypto` are allowed; every other non-system schema, relation, routine,
-type or extension blocks the restore before `pg_restore`.
+and `pgcrypto` are allowed. The catalog proof excludes only objects that
+PostgreSQL binds to those two extensions through extension-membership
+dependencies; unrelated or manually created objects remain visible. Every
+other non-system schema, relation, routine, type or extension blocks the
+restore before `pg_restore`.
 
 Decrypt and verify the full backup on the isolated host. The content verifier
 must create a private full-backup receipt that binds the encrypted database

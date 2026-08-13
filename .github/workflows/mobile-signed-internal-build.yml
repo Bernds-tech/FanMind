@@ -122,14 +122,12 @@ jobs:
           RECEIPT_DIRECTORY="$(mktemp -d "$RUNNER_TEMP/fanmind-mobile-signed-receipt.XXXXXX")"
           chmod 700 "$RECEIPT_DIRECTORY"
           echo "path=$RECEIPT_DIRECTORY/receipt.json" >> "$GITHUB_OUTPUT"
-          echo "android_preview_apk_path=$RECEIPT_DIRECTORY/fanmind-preview.apk" >> "$GITHUB_OUTPUT"
 
       - name: Queue signed internal build without submit or update
         working-directory: apps/mobile
         env:
           FANMIND_ENABLE_MOBILE_EAS_BUILD: 'true'
           MOBILE_SIGNED_BUILD_RECEIPT_PATH: ${{ steps.signed-build-receipt.outputs.path }}
-          MOBILE_ANDROID_PREVIEW_APK_PATH: ${{ steps.signed-build-receipt.outputs.android_preview_apk_path }}
         run: |
           set -euo pipefail
           umask 077
@@ -212,13 +210,6 @@ jobs:
                   --queue "$JSON_PATH" \
                   --completion "$COMPLETION_PATH" \
                   --output "$MOBILE_SIGNED_BUILD_RECEIPT_PATH"
-                if [[ "${{ inputs.platform }}" == "android" && \
-                  "${{ inputs.build_environment }}" == "preview" ]]; then
-                  node ../../scripts/operations/download-mobile-android-preview-apk.mjs \
-                    --queue "$JSON_PATH" \
-                    --completion "$COMPLETION_PATH" \
-                    --output "$MOBILE_ANDROID_PREVIEW_APK_PATH"
-                fi
                 echo "MOBILE_SIGNED_BUILD_COMPLETION=verified"
                 echo "MOBILE_SIGNED_BUILD_ARTIFACT=available"
                 echo "MOBILE_SIGNED_BUILD_SUBMIT=disabled"
@@ -261,30 +252,14 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-      - name: Store protected Android preview APK
-        if: >-
-          ${{
-            success() &&
-            inputs.platform == 'android' &&
-            inputs.build_environment == 'preview'
-          }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: fanmind-android-preview-apk-${{ github.sha }}
-          path: ${{ steps.signed-build-receipt.outputs.android_preview_apk_path }}
-          if-no-files-found: error
-          retention-days: 5
-
       - name: Purge signed-build receipt from runner
         if: always()
         shell: bash
         env:
           MOBILE_SIGNED_BUILD_RECEIPT_PATH: ${{ steps.signed-build-receipt.outputs.path }}
-          MOBILE_ANDROID_PREVIEW_APK_PATH: ${{ steps.signed-build-receipt.outputs.android_preview_apk_path }}
         run: |
           set -euo pipefail
           if [[ -n "$MOBILE_SIGNED_BUILD_RECEIPT_PATH" ]]; then
             rm -f "$MOBILE_SIGNED_BUILD_RECEIPT_PATH"
-            rm -f "$MOBILE_ANDROID_PREVIEW_APK_PATH"
             rmdir "$(dirname "$MOBILE_SIGNED_BUILD_RECEIPT_PATH")" 2>/dev/null || true
           fi
