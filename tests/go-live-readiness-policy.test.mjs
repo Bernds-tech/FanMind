@@ -191,7 +191,7 @@ test("phase 4 stays technically complete while sales handoff waits for phase 7",
   );
   assert.match(
     sourceTruth,
-    /Extern noch einzurichten beziehungsweise[\s\S]*Stripe Sandbox mit eigenen Preisen\/Webhooks/u,
+    /isolierte Stripe-Testkatalog[\s\S]*read-only nachgewiesen[\s\S]*Webhook-Smoke und Billing-Lifecycle bleiben getrennt offen/u,
   );
   assert.doesNotMatch(sourceTruth, /Phase 4 – Erledigt \/ Verkaufsstart freigegeben/u);
 });

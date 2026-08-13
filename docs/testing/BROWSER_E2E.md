@@ -139,6 +139,9 @@ synthetische Testdaten sein. Beide E-Mail-Adressen müssen im Namen `staging`,
 `synthetic` oder `test` enthalten. Die vier UUIDs sind Pflichtwerte und dürfen
 sich nicht wiederholen. Der erwartete Supabase-Ursprung muss exakt zum
 Staging-Projekt gehören und vom dokumentierten Production-Projekt abweichen.
+Die kontrollierte einmalige Erstellung und die Übernahme der sechs
+wiederverwendeten Staging-UUIDs ist in
+`docs/operations/STAGING_SYNTHETIC_FIXTURES.md` beschrieben.
 
 ### Fail-closed Zielgrenze
 

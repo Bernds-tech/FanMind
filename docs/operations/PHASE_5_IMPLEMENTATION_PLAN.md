@@ -38,9 +38,10 @@ Betriebswahrheit steht in `docs/SOURCE_OF_TRUTH.md`.
   technische Notification-Lifecycle ist vorhanden; Aktivierung benötigt
   bestätigte Empfänger-, Datenschutz- und Betriebsregeln.
 - Separater HTTPS-Host, separates Supabase-Projekt, Staging-Runner sowie DNS
-  und TLS sind real bereitgestellt. Offen bleiben Stripe Sandbox mit eigenen
-  Preisen/Webhooks, synthetische Testdaten und getrennte Billing-Identitäten.
-  Die vorhandene Policy und Automation ersetzen diese Ressourcen nicht.
+  und TLS sind real bereitgestellt. Der Stripe-Testkatalog ist read-only
+  nachgewiesen. Offen bleiben Webhook-/Billing-Lifecycle sowie der reale Lauf
+  der vorbereiteten synthetischen E2E-/Billing-Fixtures. Die vorhandene Policy
+  und Automation ersetzen den externen Abnahmenachweis nicht.
 - Der tatsächliche isolierte Restore muss gegen die geschützte
   `restore-drill`-Umgebung ausgeführt werden. Datenbank-, Storage-,
   Server-Konfigurations- und Cleanup-Nachweise bleiben bis zu diesem externen
