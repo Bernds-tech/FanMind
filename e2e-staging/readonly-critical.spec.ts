@@ -102,8 +102,11 @@ async function installReadOnlyNetworkGuard(page: Page) {
 async function login(page: Page, fixture: SyntheticFixture): Promise<AuthSession> {
   await page.goto("/login");
 
-  const emailField = page.getByLabel("E-Mail", { exact: true });
-  const passwordField = page.getByLabel("Passwort", { exact: true });
+  const emailField = page.getByRole("textbox", {
+    name: "E-Mail",
+    exact: true,
+  });
+  const passwordField = page.locator('input[name="password"]');
   await expect(emailField).toBeVisible();
   await expect(passwordField).toBeVisible();
   await emailField.fill(fixture.email);

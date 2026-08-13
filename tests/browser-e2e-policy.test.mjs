@@ -170,6 +170,17 @@ test("browser E2E runbook preserves existing test layers and external staging tr
   assert.match(source, /niemals auf Production ausweichen/u);
 });
 
+test("staging login targets the rendered accessible email field and stable password name", async () => {
+  const source = await read("e2e-staging/readonly-critical.spec.ts");
+
+  assert.match(
+    source,
+    /getByRole\("textbox", \{[\s\S]*name: "E-Mail",[\s\S]*exact: true,[\s\S]*\}\)/u,
+  );
+  assert.match(source, /locator\('input\[name="password"\]'\)/u);
+  assert.doesNotMatch(source, /getByLabel\("(?:E-Mail|Passwort)"/u);
+});
+
 test("staging login arms its response waiter only after the form is ready", async () => {
   const source = await read("e2e-staging/readonly-critical.spec.ts");
   const loginStart = source.indexOf("async function login(");
