@@ -154,7 +154,7 @@ test("authenticated staging spec proves bidirectional contact RLS, admin denial 
   assert.match(source, /page\.goto\("\/admin"\)/u);
   assert.match(source, /not\.toHaveURL\(\/\\\/admin/u);
   assert.match(source, /page\.goto\("\/logout"\)/u);
-  assert.match(source, /toHaveURL\(\/\^https:\\\/\\\/staging\\\.fanmind\\\.ch\\\/$\/u);
+  assert.match(source, /toHaveURL\(`\$\{appOrigin\}\/`\)/u);
   assert.match(source, /page\.goto\("\/dashboard"\)/u);
   assert.doesNotMatch(source, /service.role|SERVICE_ROLE/iu);
 });
