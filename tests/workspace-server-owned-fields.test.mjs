@@ -979,3 +979,36 @@ test("trigger helpers are search-path pinned and unavailable as browser RPCs", a
     /grant execute[\s\S]*to (?:public|anon|authenticated)/u,
   );
 });
+
+test("workspace provisioning conflict target stays unambiguous", async () => {
+  const migration = await readFile(
+    "supabase/migrations/20260813210000_fix_workspace_provisioning_conflict_ambiguity.sql",
+    "utf8",
+  );
+  const functionStart = migration.indexOf(
+    "create or replace function public.ensure_current_user_workspace",
+  );
+  const functionEnd = migration.indexOf(
+    "revoke all on function public.ensure_current_user_workspace",
+    functionStart,
+  );
+  const functionSql = migration.slice(functionStart, functionEnd);
+
+  assert.ok(functionStart >= 0 && functionEnd > functionStart);
+  assert.match(
+    functionSql,
+    /insert into public\.workspace_members as workspace_member[\s\S]*on conflict on constraint workspace_members_workspace_id_user_id_key[\s\S]*set role = excluded\.role/u,
+  );
+  assert.doesNotMatch(
+    functionSql,
+    /on conflict \(workspace_id, user_id\)/u,
+  );
+  assert.match(
+    migration,
+    /revoke all on function public\.ensure_current_user_workspace\(text, text, boolean\)[\s\S]*from public, anon, authenticated/u,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.ensure_current_user_workspace\(text, text, boolean\)[\s\S]*to authenticated/u,
+  );
+});
