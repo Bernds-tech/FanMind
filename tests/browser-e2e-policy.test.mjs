@@ -169,3 +169,26 @@ test("browser E2E runbook preserves existing test layers and external staging tr
   );
   assert.match(source, /niemals auf Production ausweichen/u);
 });
+
+test("staging login arms its response waiter only after the form is ready", async () => {
+  const source = await read("e2e-staging/readonly-critical.spec.ts");
+  const loginStart = source.indexOf("async function login(");
+  const loginEnd = source.indexOf("async function readContacts(", loginStart);
+  const loginSource = source.slice(loginStart, loginEnd);
+  const navigation = loginSource.indexOf('await page.goto("/login")');
+  const emailReady = loginSource.indexOf("await expect(emailField).toBeVisible()");
+  const responseWait = loginSource.indexOf("page.waitForResponse(");
+  const submit = loginSource.indexOf(
+    'page.getByRole("button", { name: /Einloggen/u }).click()',
+  );
+
+  assert.ok(loginStart >= 0 && loginEnd > loginStart);
+  assert.ok(navigation >= 0);
+  assert.ok(emailReady > navigation);
+  assert.ok(responseWait > emailReady);
+  assert.ok(submit > responseWait);
+  assert.match(
+    loginSource,
+    /const \[response\] = await Promise\.all\(\[[\s\S]*page\.waitForResponse\([\s\S]*\.click\(\)[\s\S]*\]\);/u,
+  );
+});
