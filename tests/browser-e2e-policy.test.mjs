@@ -121,7 +121,7 @@ test("manual staging workflow uses the staging environment and never uploads ses
   assert.match(source, /npm run test:e2e:staging/u);
 });
 
-test("authenticated staging spec allows only session exchange, logout and exact-origin reads", async () => {
+test("authenticated staging spec allows only auth session operations and exact-origin reads", async () => {
   const source = await read("e2e-staging/readonly-critical.spec.ts");
 
   assert.match(source, /isAuthSessionExchange/u);
