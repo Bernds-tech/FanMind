@@ -39,6 +39,34 @@ const secondary: SyntheticFixture = {
     process.env.FANMIND_E2E_STAGING_SECONDARY_CONTACT_ID?.trim() || "",
 };
 
+const admin = {
+  email: process.env.FANMIND_E2E_STAGING_ADMIN_EMAIL?.trim() || "",
+  password: process.env.FANMIND_E2E_STAGING_ADMIN_PASSWORD || "",
+};
+
+const configuredAdminEmails = (
+  process.env.FANMIND_E2E_STAGING_ADMIN_EMAILS || ""
+)
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
+function requireAdminFixture() {
+  const normalizedAdminEmail = admin.email.toLowerCase();
+
+  if (!admin.email || !admin.password) {
+    throw new Error("staging_admin_e2e_credentials_missing");
+  }
+  if (
+    !configuredAdminEmails.includes(normalizedAdminEmail) ||
+    [primary.email, secondary.email]
+      .map((email) => email.toLowerCase())
+      .includes(normalizedAdminEmail)
+  ) {
+    throw new Error("staging_admin_e2e_boundary_rejected");
+  }
+}
+
 function requireSyntheticFixtures() {
   const fixtures = [primary, secondary];
   const identifiers = fixtures.flatMap(({ workspaceId, contactId }) => [
@@ -104,7 +132,10 @@ async function installReadOnlyNetworkGuard(page: Page) {
   return blockedWrites;
 }
 
-async function login(page: Page, fixture: SyntheticFixture): Promise<AuthSession> {
+async function login(
+  page: Page,
+  fixture: Pick<SyntheticFixture, "email" | "password">,
+): Promise<AuthSession> {
   await page.goto("/login");
 
   const emailField = page.getByRole("textbox", {
@@ -241,5 +272,33 @@ test("normaler synthetischer Nutzer bleibt aus Admin gesperrt und nach Logout oh
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login(?:\?|$)/u);
 
+  expect(blockedWrites).toEqual([]);
+});
+
+test("freigegebener Staging-Admin erreicht Billing und Operations ausschließlich lesend", async ({
+  page,
+}) => {
+  test.skip(
+    !admin.email || !admin.password,
+    "dedicated_staging_admin_credentials_not_configured",
+  );
+  requireAdminFixture();
+
+  const blockedWrites = await installReadOnlyNetworkGuard(page);
+  const session = await login(page, admin);
+
+  await page.goto("/admin/billing");
+  await expect(page).toHaveURL(`${appOrigin}/admin/billing`);
+  await expect(
+    page.getByText("Adminbereich", { exact: true }).first(),
+  ).toBeVisible();
+
+  await page.goto("/admin/operations");
+  await expect(page).toHaveURL(`${appOrigin}/admin/operations`);
+  await expect(
+    page.getByRole("heading", { name: "Admin Operations Center" }),
+  ).toBeVisible();
+
+  await closeAndClearBrowserSession(page, session);
   expect(blockedWrites).toEqual([]);
 });
