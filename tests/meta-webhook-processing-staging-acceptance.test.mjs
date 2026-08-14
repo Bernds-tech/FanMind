@@ -137,6 +137,11 @@ test("Staging proof exercises the real login and webhook route with complete cle
   assert.ok(suspendAt >= 0 && suspendAt < selfTestAt);
   assert.ok(selfTestAt < restoreAt && restoreAt < activeAt);
   assert.match(source, /\/api\/webhooks\/meta\/self-test/u);
+  assert.match(source, /emailField\.waitFor\(\{ state: "visible" \}\)/u);
+  assert.match(source, /page\.waitForResponse/u);
+  assert.match(source, /url\.pathname === "\/auth\/v1\/token"/u);
+  assert.match(source, /url\.searchParams\.get\("grant_type"\) === "password"/u);
+  assert.match(source, /staging_login_rejected/u);
   assert.match(source, /page\.waitForURL\(\/\\\/dashboard/u);
   assert.match(source, /blocked_write_detected/u);
   assert.match(source, /reactivated_write_proof_invalid/u);
