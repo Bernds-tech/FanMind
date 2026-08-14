@@ -108,6 +108,17 @@ test("staging host provisioning creates a separate user, path, vhost and runner"
   );
   assert.match(
     workflow,
+    /STAGING_ADMIN_EMAILS: \$\{\{ vars\.FANMIND_STAGING_ADMIN_EMAILS \}\}/u,
+  );
+  assert.match(workflow, /const adminEmails = \(name\) =>/u);
+  assert.match(workflow, /return \[\.\.\.new Set\(emails\)\]\.join\(","\)/u);
+  assert.match(
+    workflow,
+    /\["FANMIND_ADMIN_EMAILS", adminEmails\("STAGING_ADMIN_EMAILS"\)\]/u,
+  );
+  assert.doesNotMatch(workflow, /staging-admin@example\.com/u);
+  assert.match(
+    workflow,
     /sudo stat -c '%U:%G:%a' \/var\/www\/fanmind-staging\/\.env\.production/u,
   );
   assert.match(workflow, /fanmind-staging:fanmind-staging:600/);
