@@ -161,7 +161,7 @@ begin
   if not exists (
     select 1
       from public.workspaces as workspace
-      join auth.users as owner on owner.id = workspace.owner_id
+      join auth.users as owner on owner.id = workspace.owner_user_id
      where workspace.id = ${workspace}
        and workspace.name = ${fixtureName}
        and workspace.workspace_access_mode = 'active'
