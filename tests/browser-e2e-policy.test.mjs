@@ -206,3 +206,43 @@ test("staging login arms its response waiter only after the form is ready", asyn
     /const \[response\] = await Promise\.all\(\[[\s\S]*page\.waitForResponse\([\s\S]*\.click\(\)[\s\S]*\]\);/u,
   );
 });
+
+test("dedicated Staging admin workflow is manual, commit-bound and read-only", async () => {
+  const source = await read(".github/workflows/admin-e2e-staging.yml");
+
+  assert.match(source, /workflow_dispatch:/u);
+  assert.doesNotMatch(source, /pull_request:|push:/u);
+  assert.match(source, /inputs\.reviewed_commit == github\.sha/u);
+  assert.match(source, /verify-staging-admin-readonly/u);
+  assert.match(source, /environment: staging/u);
+  assert.match(source, /FANMIND_STAGING_ADMIN_EMAILS/u);
+  assert.match(source, /FANMIND_STAGING_ADMIN_E2E_EMAIL/u);
+  assert.match(source, /FANMIND_STAGING_ADMIN_E2E_PASSWORD/u);
+  assert.match(source, /FANMIND_STAGING_E2E_EMAIL/u);
+  assert.match(source, /FANMIND_STAGING_E2E_SECONDARY_EMAIL/u);
+  assert.match(source, /adminEmails\.includes\(normalizedAdmin\)/u);
+  assert.match(source, /npm run test:e2e:staging/u);
+  assert.match(source, /permissions:\s*\n\s*contents: read/u);
+  assert.doesNotMatch(source, /upload-artifact/u);
+  assert.doesNotMatch(source, /contents: write|write-all/u);
+});
+
+test("authenticated Staging spec separates admin credentials and proves both admin pages without writes", async () => {
+  const source = await read("e2e-staging/readonly-critical.spec.ts");
+
+  assert.match(source, /FANMIND_E2E_STAGING_ADMIN_EMAIL/u);
+  assert.match(source, /FANMIND_E2E_STAGING_ADMIN_PASSWORD/u);
+  assert.match(source, /configuredAdminEmails\.includes\(normalizedAdminEmail\)/u);
+  assert.match(source, /page\.goto\("\/admin\/billing"\)/u);
+  assert.match(source, /page\.goto\("\/admin\/operations"\)/u);
+  assert.match(source, /Admin Operations Center/u);
+  assert.match(source, /closeAndClearBrowserSession\(page, session\)/u);
+  assert.match(
+    source,
+    /freigegebener Staging-Admin[\s\S]*blockedWrites[\s\S]*toEqual\(\[\]\)/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/u,
+  );
+});
