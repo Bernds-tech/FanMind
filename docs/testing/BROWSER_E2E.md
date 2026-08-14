@@ -171,6 +171,48 @@ Jede andere POST-, PATCH-, PUT- oder DELETE-Anfrage wird browserseitig blockiert
 
 Traces, Screenshots und Videos sind für den authentifizierten Staging-Lauf deaktiviert, damit keine Sitzung oder Kundendarstellung in Artefakten landet.
 
+## Positive read-only Admin-Abnahme in Staging
+
+Der vorhandene Browser-Lauf beweist bereits, dass ein normaler synthetischer
+Nutzer nicht in den Adminbereich gelangt. Der separate Workflow
+
+```text
+.github/workflows/admin-e2e-staging.yml
+```
+
+ergänzt die positive Gegenseite: Eine ausdrücklich in
+`FANMIND_STAGING_ADMIN_EMAILS` freigegebene, von beiden synthetischen
+Standardnutzern getrennte Admin-Identität muss `/admin/billing` und
+`/admin/operations` erreichen.
+
+Der Lauf bleibt manuell, auf den exakten geprüften `main`-Commit und das
+GitHub Environment `staging` gebunden. Er verwendet denselben
+Origin-/Produktions-Ausschluss, dieselben zwei normalen Staging-Fixtures und
+denselben Browser-Schreibschutz wie die bestehende read-only Abnahme. Er
+klickt keine Admin-Aktion an, führt keine Billing-, Restore- oder
+Datenbankmutation aus und erzeugt keine Browserartefakte.
+
+Zusätzlich erforderlich sind zwei geschützte Environment-Secrets:
+
+```text
+FANMIND_STAGING_ADMIN_E2E_EMAIL
+FANMIND_STAGING_ADMIN_E2E_PASSWORD
+```
+
+Die E-Mail muss bereits als bestätigter Nutzer im isolierten
+Staging-Supabase-Projekt existieren, in der kommagetrennten Variable
+`FANMIND_STAGING_ADMIN_EMAILS` stehen und einen regulären
+Staging-Operator-Workspace besitzen. Das Passwort wird nur als GitHub Secret
+gespeichert und weder im Workflow noch in der Dokumentation ausgegeben.
+
+Kontrollierter Start:
+
+1. geprüften PR nach `main` mergen;
+2. den exakten aktuellen `main`-Commit eintragen;
+3. `verify-staging-admin-readonly` bestätigen;
+4. nur einen Lauf mit `STAGING_ADMIN_E2E_BOUNDARY=accepted`, getrennten
+   Identitäten und vollständig grüner Playwright-Suite akzeptieren.
+
 ## Noch externe Abnahme
 
 Der Code für den read-only Staging-Lauf kann unabhängig von den externen Ressourcen geprüft und gemergt werden. Nicht als erledigt gelten bis zur tatsächlichen Bereitstellung:
