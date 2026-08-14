@@ -211,9 +211,14 @@ export async function processMetaWebhookPayload(
           event.sourcePlatform,
           event.pageId,
         )
-      : { connection: null, error: null };
+      : { connection: null, error: null, processingBlocked: false };
 
     if (connection.error) firstErrorCode ??= "connection_lookup_failed";
+
+    if (connection.processingBlocked) {
+      skipped += 1;
+      continue;
+    }
 
     if (!connection.connection) {
       const debugResult = await createMetaWebhookDebugEvent({
