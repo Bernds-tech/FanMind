@@ -18,6 +18,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/u;
 const SNAPSHOT_PREFIX = "META_WEBHOOK_PROCESSING_STAGING_SNAPSHOT=";
 const COUNTS_PREFIX = "META_WEBHOOK_PROCESSING_STAGING_COUNTS=";
+const DIAGNOSTIC_PREFIX = "META_WEBHOOK_PROCESSING_STAGING_DIAGNOSTIC=";
 
 function fail(code) {
   throw new Error(`META_WEBHOOK_PROCESSING_STAGING_ERROR=${code}`);
@@ -266,6 +267,23 @@ select '${COUNTS_PREFIX}' || jsonb_build_object(
 `;
 }
 
+function diagnosticSql({ workspaceId, connectionId, startedAt }) {
+  const workspace = sqlUuid(workspaceId, "workspace_invalid");
+  const connection = sqlUuid(connectionId, "connection_invalid");
+  const start = `${sqlText(startedAt)}::timestamptz`;
+  return String.raw`
+select '${DIAGNOSTIC_PREFIX}' || jsonb_build_object(
+  'contacts', (select count(*) from public.contacts where workspace_id = ${workspace} and handle like 'fanmind-self-test-sender-%' and created_at >= ${start}),
+  'conversations', (select count(*) from public.conversations where workspace_id = ${workspace} and created_at >= ${start}),
+  'messages', (select count(*) from public.conversation_messages where workspace_id = ${workspace} and external_message_id like 'fanmind-self-test-%' and created_at >= ${start}),
+  'events', (select count(*) from public.meta_webhook_events where social_connection_id = ${connection} and created_at >= ${start}),
+  'jobs', (select count(*) from public.meta_conversation_catchup_jobs where social_connection_id = ${connection} and created_at >= ${start}),
+  'latest_status', (select status from public.meta_webhook_events where social_connection_id = ${connection} and created_at >= ${start} order by created_at desc limit 1),
+  'latest_error_reason', (select error_reason from public.meta_webhook_events where social_connection_id = ${connection} and created_at >= ${start} order by created_at desc limit 1)
+)::text;
+`;
+}
+
 function cleanupSql({ workspaceId, connectionId, startedAt, snapshot }) {
   const workspace = sqlUuid(workspaceId, "workspace_invalid");
   const connection = sqlUuid(connectionId, "connection_invalid");
@@ -452,12 +470,25 @@ export async function runMetaWebhookProcessingStagingAcceptance(
 
     runSql(stateSql(workspaceId, snapshot), environment);
     const activeResult = await invokeSelfTest(page);
-    requireSelfTest(activeResult, {
-      saved: true,
-      skipped: false,
-      pageId,
-      workspaceId,
-    });
+    try {
+      requireSelfTest(activeResult, {
+        saved: true,
+        skipped: false,
+        pageId,
+        workspaceId,
+      });
+    } catch (error) {
+      const diagnostic = parsePrefixedJson(
+        runSql(
+          diagnosticSql({ workspaceId, connectionId, startedAt }),
+          environment,
+        ),
+        DIAGNOSTIC_PREFIX,
+        "active_diagnostic_invalid",
+      );
+      console.error(`${DIAGNOSTIC_PREFIX}${JSON.stringify(diagnostic)}`);
+      throw error;
+    }
     const activeCounts = parsePrefixedJson(
       runSql(
         countsSql({
