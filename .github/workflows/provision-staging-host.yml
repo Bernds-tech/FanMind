@@ -38,6 +38,7 @@ jobs:
       STAGING_STRIPE_PRICE_AI_PLUS: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_AI_PLUS }}
       STAGING_STRIPE_PRICE_AI_ULTRA: ${{ vars.FANMIND_STAGING_STRIPE_PRICE_AI_ULTRA }}
       STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED: ${{ vars.FANMIND_STAGING_STRIPE_TAX_REGISTRATION_CONFIRMED }}
+      STAGING_ADMIN_EMAILS: ${{ vars.FANMIND_STAGING_ADMIN_EMAILS }}
       STAGING_OPENAI_API_KEY: ${{ secrets.FANMIND_STAGING_OPENAI_API_KEY }}
       STAGING_RUNNER_REGISTRATION_TOKEN: ${{ secrets.FANMIND_STAGING_RUNNER_REGISTRATION_TOKEN }}
 
@@ -161,6 +162,21 @@ jobs:
             }
             return value;
           };
+          const adminEmails = (name) => {
+            const emails = required(name)
+              .split(",")
+              .map((value) => value.trim().toLowerCase());
+            if (
+              emails.some(
+                (value) =>
+                  !value || !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/u.test(value),
+              )
+            ) {
+              throw new Error(`invalid admin email list: ${name}`);
+            }
+            return [...new Set(emails)].join(",");
+          };
+
           const optional = (name) => {
             const value = String(process.env[name] ?? "");
             if (/[\r\n\0]/u.test(value)) {
@@ -199,7 +215,7 @@ jobs:
             ["FANMIND_OPERATIONS_EMAIL_ENABLED", "false"],
             ["FANMIND_SERVER_ERROR_TRACKING_ENABLED", "false"],
             ["FANMIND_SERVER_ERROR_EMAIL_ENABLED", "false"],
-            ["FANMIND_ADMIN_EMAILS", "staging-admin@example.com"],
+            ["FANMIND_ADMIN_EMAILS", adminEmails("STAGING_ADMIN_EMAILS")],
             ["NEXT_PUBLIC_META_PIXEL_ID", ""],
             ["FANMIND_ENABLE_ISOLATED_RELEASE_DEPLOY", "false"],
           ];

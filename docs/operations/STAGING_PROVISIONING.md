@@ -84,6 +84,9 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    - Variable `FANMIND_STAGING_APP_URL`;
    - Variable `FANMIND_STAGING_SUPABASE_PROJECT_REF`;
    - Variable `FANMIND_PRODUCTION_SUPABASE_PROJECT_REF`;
+   - Variable `FANMIND_STAGING_ADMIN_EMAILS` als kommagetrennte Liste der
+     Staging-Administratoren; reale Adressen gehören nur in dieses geschützte
+     Environment und nicht in versionierte Dateien;
    - Secret `FANMIND_STAGING_SUPABASE_URL`;
    - Secret `FANMIND_STAGING_SUPABASE_ANON_KEY`;
    - Secret `FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY`; sowohl der aktuelle
