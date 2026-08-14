@@ -151,6 +151,15 @@ test("Staging proof exercises the real login and webhook route with complete cle
   assert.match(source, /staging_login_not_redirected/u);
   assert.match(source, /blocked_write_detected/u);
   assert.match(source, /reactivated_write_proof_invalid/u);
+  assert.match(source, /META_WEBHOOK_PROCESSING_STAGING_DIAGNOSTIC=/u);
+  assert.match(source, /latest_status/u);
+  assert.match(source, /latest_error_reason/u);
+  assert.match(source, /active_diagnostic_invalid/u);
+  assert.match(source, /diagnosticSql\(\{ workspaceId, connectionId, startedAt \}\)/u);
+  assert.ok(
+    source.indexOf("diagnosticSql({ workspaceId, connectionId, startedAt })") <
+      source.indexOf("cleanupSql({ workspaceId, connectionId, startedAt, snapshot })"),
+  );
   assert.match(source, /messenger_sync_continuation_after/u);
   assert.match(source, /delete from public\.meta_conversation_catchup_jobs/u);
   assert.match(source, /delete from public\.meta_webhook_events/u);
