@@ -61,6 +61,20 @@ test("Meta message persistence rechecks processing entitlement before reads or w
   );
 });
 
+test("Meta thread lookups request only deployed conversation columns", async () => {
+  const server = await readFile("src/lib/supabase/server.ts", "utf8");
+  const columns = server.match(
+    /const CONVERSATION_COLUMNS =\n\s+"([^"]+)";/u,
+  );
+
+  assert.ok(columns);
+  assert.equal(columns[1].split(",").includes("external_video_id"), false);
+  assert.match(
+    server,
+    /const CONVERSATION_MESSAGE_COLUMNS =\n\s+"[^"]*external_video_id[^"]*";/u,
+  );
+});
+
 test("parallel identical Meta inserts converge on the database-owned row", async () => {
   const [server, migration] = await Promise.all([
     readFile("src/lib/supabase/server.ts", "utf8"),

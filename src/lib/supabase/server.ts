@@ -213,7 +213,6 @@ export type ConversationRow = {
   external_thread_id: string | null;
   external_message_id: string | null;
   external_post_id: string | null;
-  external_video_id: string | null;
   external_comment_id: string | null;
   original_author_label: string | null;
   original_text_excerpt: string | null;
@@ -688,7 +687,7 @@ const MEMORY_COLUMNS =
 const CONTACT_REPLY_TARGET_COLUMNS =
   "id,workspace_id,contact_id,source_platform,source_type,label,url,quality,created_at,updated_at";
 const CONVERSATION_COLUMNS =
-  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_video_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
+  "id,workspace_id,contact_id,status,priority,source_platform,source_type,source_url,reply_target_url,external_thread_id,external_message_id,external_post_id,external_comment_id,original_author_label,original_text_excerpt,last_inbound_at,last_outbound_at,last_message_preview,assigned_owner,ai_status,next_step,created_at,updated_at";
 const CONVERSATION_ASSIGNMENT_COLUMNS =
   `${CONVERSATION_COLUMNS},assigned_user_id`;
 const CONVERSATION_MESSAGE_COLUMNS =
