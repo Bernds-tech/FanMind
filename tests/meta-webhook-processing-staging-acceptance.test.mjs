@@ -105,6 +105,8 @@ test("preflight is pinned to the dedicated non-customer fixture", () => {
   });
   assert.match(sql, new RegExp(WORKSPACE_PROCESSING_STAGING_WORKSPACE_NAME, "u"));
   assert.match(sql, /workspace_processing_acceptance/u);
+  assert.match(sql, /owner\.id = workspace\.owner_user_id/u);
+  assert.doesNotMatch(sql, /workspace\.owner_id/u);
   assert.match(sql, /stripe_customer_id is null/u);
   assert.match(sql, /stripe_subscription_id is null/u);
   assert.match(sql, /existing_connected_facebook_fixture/u);
