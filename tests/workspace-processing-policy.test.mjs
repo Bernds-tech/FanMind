@@ -166,7 +166,7 @@ test("Meta ingress and manual syncs share the workspace processing gate", async 
   assert.match(ingress, /getWorkspaceProcessingEntitlement\(/u);
   assert.match(
     ingress,
-    /if \(!entitlement\.allowed\) return \{ connection: null, error: null \}/u,
+    /if \(!entitlement\.allowed\) \{[\s\S]*return \{ connection: null, error: null, processingBlocked: true \}/u,
   );
 
   for (const [label, source, marker] of [

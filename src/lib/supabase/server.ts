@@ -605,6 +605,7 @@ type ConversationUpdateResult = {
 type SocialConnectionResult = {
   connection: SocialConnectionRow | null;
   error: Error | null;
+  processingBlocked?: boolean;
 };
 
 export type WorkspaceProcessingEntitlementResult = {
@@ -1929,7 +1930,9 @@ export async function findMetaSocialConnectionByPageId(
       "Workspace-Verarbeitung konnte nicht geprüft werden.",
     );
   }
-  if (!entitlement.allowed) return { connection: null, error: null };
+  if (!entitlement.allowed) {
+    return { connection: null, error: null, processingBlocked: true };
+  }
 
   return { connection: result.data, error: null };
 }
@@ -4312,6 +4315,15 @@ export async function createMetaWebhookConversationMessage(input: {
   receivedAt?: string | null;
   direction?: "inbound" | "outbound";
 }): Promise<ConversationMessageCreateResult> {
+  const entitlement = await getWorkspaceProcessingEntitlement(
+    input.workspaceId,
+  );
+  if (entitlement.error || !entitlement.allowed) {
+    return conversationMessageCreateError(
+      "Workspace-Verarbeitung ist nicht zulässig.",
+    );
+  }
+
   const normalizedSourceType = normalizeMessageType(
     input.sourceType ??
       getDefaultWebhookSourceType(input.sourcePlatform, input.messageType),

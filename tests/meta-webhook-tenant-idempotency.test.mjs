@@ -25,6 +25,42 @@ test("unknown Meta pages fail closed without borrowing a tenant", async () => {
   );
 });
 
+test("blocked Meta tenants are skipped without tenantless diagnostics", async () => {
+  const [webhook, server] = await Promise.all([
+    readFile("src/lib/metaWebhook.ts", "utf8"),
+    readFile("src/lib/supabase/server.ts", "utf8"),
+  ]);
+
+  assert.match(
+    server,
+    /if \(!entitlement\.allowed\) \{[\s\S]*processingBlocked: true/u,
+  );
+  assert.match(
+    webhook,
+    /if \(connection\.processingBlocked\) \{[\s\S]*skipped \+= 1;[\s\S]*continue;[\s\S]*if \(!connection\.connection\)/u,
+  );
+});
+
+test("Meta message persistence rechecks processing entitlement before reads or writes", async () => {
+  const server = await readFile("src/lib/supabase/server.ts", "utf8");
+  const methodStart = server.indexOf(
+    "export async function createMetaWebhookConversationMessage",
+  );
+  const method = server.slice(
+    methodStart,
+    methodStart + 5_000,
+  );
+
+  const entitlementCheck = method.indexOf("getWorkspaceProcessingEntitlement(");
+  const firstContactLookup = method.indexOf("findContactByThreadIdentifiers(");
+  assert.ok(entitlementCheck > 0);
+  assert.ok(firstContactLookup > entitlementCheck);
+  assert.match(
+    method,
+    /if \(entitlement\.error \|\| !entitlement\.allowed\) \{[\s\S]*Workspace-Verarbeitung ist nicht zulässig/u,
+  );
+});
+
 test("parallel identical Meta inserts converge on the database-owned row", async () => {
   const [server, migration] = await Promise.all([
     readFile("src/lib/supabase/server.ts", "utf8"),
