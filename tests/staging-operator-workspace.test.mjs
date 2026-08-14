@@ -145,6 +145,15 @@ test("manual workflow is protected, commit-exact and isolated from Production", 
   assert.match(workflow, /FANMIND_STAGING_ADMIN_EMAILS/u);
   assert.match(workflow, /FANMIND_STAGING_OPERATOR_EMAIL: \$\{\{ inputs\.operator_email \}\}/u);
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
+  assert.match(
+    workflow,
+    /NEXT_PUBLIC_SUPABASE_URL: \$\{\{ secrets\.FANMIND_STAGING_SUPABASE_URL \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /FANMIND_TARGET_API_ORIGIN: \$\{\{ vars\.FANMIND_STAGING_APP_URL \}\}/u,
+  );
+  assert.match(workflow, /FANMIND_PRODUCTION_API_ORIGIN: https:\/\/fanmind\.ch/u);
   assert.match(workflow, /FANMIND_PRODUCTION_SUPABASE_PROJECT_REF/u);
   assert.match(workflow, /FANMIND_PRODUCTION_DB_HOST/u);
   assert.match(workflow, /db:staging-rollout-state:run/u);
