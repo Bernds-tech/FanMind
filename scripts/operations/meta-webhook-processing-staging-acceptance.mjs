@@ -298,7 +298,7 @@ select 'META_WEBHOOK_PROCESSING_STAGING_CLEANUP=' || jsonb_build_object(
 `;
 }
 
-async function login(page, appOrigin, supabaseOrigin, email, password) {
+async function login(page, appOrigin, email, password) {
   await page.goto(`${appOrigin}/login`, { waitUntil: "domcontentloaded" });
   const emailField = page.getByRole("textbox", { name: "E-Mail", exact: true });
   const passwordField = page.locator('input[name="password"]');
@@ -307,19 +307,14 @@ async function login(page, appOrigin, supabaseOrigin, email, password) {
   await emailField.fill(email);
   await passwordField.fill(password);
 
-  const [response] = await Promise.all([
-    page.waitForResponse((candidate) => {
-      const url = new URL(candidate.url());
-      return (
-        url.origin === supabaseOrigin &&
-        url.pathname === "/auth/v1/token" &&
-        url.searchParams.get("grant_type") === "password"
-      );
-    }),
-    page.getByRole("button", { name: /Einloggen/u }).click(),
-  ]);
-  if (!response.ok()) fail("staging_login_rejected");
-  await page.waitForURL(/\/dashboard(?:\?|$)/u, { timeout: 30_000 });
+  try {
+    await Promise.all([
+      page.waitForURL(/\/dashboard(?:\?|$)/u, { timeout: 30_000 }),
+      page.getByRole("button", { name: /Einloggen/u }).click(),
+    ]);
+  } catch {
+    fail("staging_login_not_redirected");
+  }
 }
 
 async function invokeSelfTest(page) {
@@ -386,9 +381,6 @@ export async function runMetaWebhookProcessingStagingAcceptance(
   const ownerEmail = clean(environment.FANMIND_STAGING_E2E_EMAIL).toLowerCase();
   const password = environment.FANMIND_STAGING_E2E_PASSWORD;
   const appOrigin = new URL(clean(environment.NEXT_PUBLIC_APP_URL)).origin;
-  const supabaseOrigin = new URL(
-    clean(environment.NEXT_PUBLIC_SUPABASE_URL),
-  ).origin;
   const connectionId = randomUUID();
   const pageId = `fanmind-meta-processing-${randomUUID()}`;
   const startedAt = new Date().toISOString();
@@ -410,7 +402,7 @@ export async function runMetaWebhookProcessingStagingAcceptance(
     const { chromium } = await import("playwright");
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    await login(page, appOrigin, supabaseOrigin, ownerEmail, password);
+    await login(page, appOrigin, ownerEmail, password);
 
     runSql(suspendSql(workspaceId), environment);
     const blockedResult = await invokeSelfTest(page);
