@@ -423,23 +423,33 @@ with recursive selected_extension as (
     identified.schema,
     identified.name,
     identified.identity,
-    (
-      select owner_role.rolname
-      from pg_catalog.pg_shdepend as owner_dependency
-      join pg_catalog.pg_roles as owner_role
-        on owner_role.oid = owner_dependency.refobjid
-      where owner_dependency.dbid = (
-              select database_definition.oid
-              from pg_catalog.pg_database as database_definition
-              where database_definition.datname = pg_catalog.current_database()
-            )
-        and owner_dependency.classid = member.classid
-        and owner_dependency.objid = member.objid
-        and owner_dependency.objsubid = member.objsubid
-        and owner_dependency.refclassid =
-            'pg_catalog.pg_authid'::pg_catalog.regclass
-        and owner_dependency.deptype = 'o'
-    ) as owner_name
+    case
+      when member.classid =
+           'pg_catalog.pg_class'::pg_catalog.regclass then (
+        select pg_catalog.pg_get_userbyid(object.relowner)
+        from pg_catalog.pg_class as object
+        where object.oid = member.objid
+      )
+      when member.classid =
+           'pg_catalog.pg_proc'::pg_catalog.regclass then (
+        select pg_catalog.pg_get_userbyid(object.proowner)
+        from pg_catalog.pg_proc as object
+        where object.oid = member.objid
+      )
+      when member.classid =
+           'pg_catalog.pg_type'::pg_catalog.regclass then (
+        select pg_catalog.pg_get_userbyid(object.typowner)
+        from pg_catalog.pg_type as object
+        where object.oid = member.objid
+      )
+      when member.classid =
+           'pg_catalog.pg_language'::pg_catalog.regclass then (
+        select pg_catalog.pg_get_userbyid(object.lanowner)
+        from pg_catalog.pg_language as object
+        where object.oid = member.objid
+      )
+      else null
+    end as owner_name
   from dependency_closure as member
   cross join lateral pg_catalog.pg_identify_object(
     member.classid,
