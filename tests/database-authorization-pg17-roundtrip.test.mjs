@@ -371,8 +371,10 @@ join pg_catalog.pg_roles as owner_role
   on owner_role.oid = function_definition.proowner
 where namespace.nspname = 'extensions'
   and function_definition.proname = 'fanmind_ci_fixture_echo'
-  and pg_catalog.pg_get_function_identity_arguments(function_definition.oid)
-      = 'text';
+  and function_definition.oid =
+      pg_catalog.to_regprocedure(
+        'extensions.fanmind_ci_fixture_echo(text)'
+      );
 `;
 
 const FIXTURE_EXTENSION_INVENTORY_SQL = String.raw`
