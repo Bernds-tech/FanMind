@@ -1,0 +1,54 @@
+# Phase-7-Kanalbereitschaft
+
+## Zweck und Grenze
+
+Roadmap-Phase 7 umfasst ausschließlich TikTok, X/Twitter, Discord und eine
+unverbindliche OnlyFans-Evaluation. Diese Datei dokumentiert die technische
+Vorbereitungsgrenze; sie aktiviert keinen Kanal. LinkedIn und weitere Kanäle
+aus Phase 8 oder später sind ausdrücklich nicht Teil dieses Pakets.
+
+`src/lib/phase7ChannelReadiness.ts` hält den maschinenlesbaren, providerfreien
+Fail-closed-Vertrag. Für alle vier Einträge bleiben Inbound, Outbound,
+automatisches Senden, Scraping und Production-Nutzung ausgeschaltet. Der
+Vertrag enthält keine Provider-Endpunkte, keine Zugangsdaten, keine Webhooks
+und keine Tokenverarbeitung.
+
+OnlyFans ist ausschließlich eine unverbindliche Evaluation und keine
+zugesagte Integration. FanMind speichert dafür keine Zugangsdaten, baut keinen
+Connector und verwendet kein Scraping.
+
+## Abschlussklassen
+
+### 1. Vollständig durch Code abschließbar
+
+- Providerneutrale Kanal- und Capability-Verträge.
+- Fail-closed Readiness mit festen, redigierten Blocker-Codes.
+- Tests gegen automatisches Senden, Scraping, voreilige Production-Aktivierung
+  und versehentliche Aufnahme von Phase-8-Kanälen.
+- Für einen späteren Connector: workspacegebundene Autorisierung,
+  Idempotenz, begrenzte Request-/Payloadgrößen, redigierte Diagnostik und
+  Copy-&-Open als verbindlicher Outbound-Modus.
+
+### 2. Staging-/Infrastrukturarbeit erforderlich
+
+Für TikTok, X/Twitter oder Discord ist nach einer separat geprüften offiziellen
+API-Implementierung jeweils ein isolierter Staging-Nachweis erforderlich. Er
+muss Tenant-Isolation, RLS, Tokenverschlüsselung, Disconnect/Cleanup,
+Rate-Limits und den ausgeschalteten Sendepfad beweisen. Bis dahin meldet der
+Readiness-Vertrag `staging_acceptance_missing`.
+
+### 3. Externe Freigabe oder Zugangsdaten erforderlich
+
+Offizielle Provider-Apps, API-Produkte, Testkonten, Zugriffsfreigaben,
+Vertragsbedingungen und rechtliche/Datenschutzfreigaben sind externe Gates.
+Sie dürfen weder durch Fixtures ersetzt noch allein aufgrund vorhandenen Codes
+als erledigt gelten. OnlyFans verbleibt unabhängig davon bei
+`evaluation_only`.
+
+### 4. Production-Aktivierung erforderlich
+
+Nach Code-, Staging- und externem Abschluss bleibt eine getrennte,
+workspacebezogene und auditierte Production-Aktivierung erforderlich. Der
+vorliegende Vertrag kann diese Aktivierung absichtlich nie erteilen. Ein
+späterer Aktivierungspfad benötigt einen Kill Switch und darf weder Scraping
+noch automatisches Senden freischalten.
