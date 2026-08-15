@@ -204,8 +204,10 @@ create table app_acl.explicit_default_acl (
   id bigint primary key,
   payload text
 );
-revoke all privileges on table app_acl.explicit_default_acl from ci_owner;
-grant all privileges on table app_acl.explicit_default_acl to ci_owner;
+-- Materialize an explicit ACL without rebuilding PostgreSQL 17's complete
+-- owner-default privilege set (which includes MAINTAIN).
+revoke select on table app_acl.explicit_default_acl from ci_owner;
+grant select on table app_acl.explicit_default_acl to ci_owner;
 
 create table app_acl.column_acl (
   id bigint primary key,
