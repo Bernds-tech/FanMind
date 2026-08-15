@@ -180,12 +180,14 @@ canonical DNS hostname covered by its certificate; do not substitute an IP
 address or alias.
 
 Its one fixed query reads only `pg_catalog.pg_settings`,
-`pg_catalog.pg_roles`, and `pg_catalog.pg_extension`. It fails closed unless:
+`pg_catalog.pg_roles`, `pg_catalog.pg_extension`, and
+`pg_catalog.pg_namespace`. It fails closed unless:
 
 - the target server major is exactly PostgreSQL 17;
 - the pre-existing roles `anon`, `authenticated`, and `service_role` are all
   present, because FanMind migrations grant or revoke privileges for them;
-- the pre-installed `pgcrypto` extension is present, because five FanMind
+- the pre-installed, relocatable `pgcrypto` extension is exactly version 1.3
+  in the fixed FanMind Production schema `extensions`, because five FanMind
   migrations declare `create extension if not exists pgcrypto`.
 
 The compatibility phase never creates a role or extension, applies a
@@ -277,6 +279,12 @@ For the empty-target proof, only the exact PostgreSQL 17 member inventories of
 functions and its language object, plus the 36 schema-qualified `pgcrypto`
 functions with their expected signatures, result types, execution attributes,
 C entry points and library bindings.
+The namespaces are part of the fixed FanMind Production recovery contract:
+`plpgsql` must be in `pg_catalog` and `pgcrypto` 1.3 must be in `extensions`.
+Production and Staging use that layout. A target with `pgcrypto` installed in
+any other schema is rejected before decryption and again before `pg_restore`;
+`CREATE EXTENSION IF NOT EXISTS` would otherwise leave the pre-installed
+extension in the wrong schema instead of relocating it.
 The proof compares that independent allowlist with PostgreSQL's extension
 membership catalog in both directions, so an object attached later with
 `ALTER EXTENSION ... ADD` still blocks the restore. The concrete schema object

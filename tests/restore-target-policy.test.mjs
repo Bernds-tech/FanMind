@@ -449,6 +449,11 @@ test("restore target compatibility uses one redacted read-only catalog query", a
     assert.match(capture, /pg_catalog\.pg_settings/);
     assert.match(capture, /pg_catalog\.pg_roles/);
     assert.match(capture, /pg_catalog\.pg_extension/);
+    assert.match(capture, /pg_catalog\.pg_namespace/);
+    assert.match(capture, /extension\.extversion = '1\.3'/u);
+    assert.match(capture, /namespace\.nspname = 'extensions'/u);
+    assert.match(capture, /extension\.extconfig is null/u);
+    assert.match(capture, /extension\.extcondition is null/u);
     assert.doesNotMatch(
       RESTORE_TARGET_COMPATIBILITY_SQL,
       /\b(?:insert|update|delete|create|alter|drop|grant|revoke|copy|call)\b/iu,
@@ -539,12 +544,14 @@ test("restore compatibility prerequisites stay bound to FanMind migrations", asy
   const runner = await readFile(runnerPath, "utf8");
   assert.match(
     runner,
-    /expected_extension_versions\(extname, extversion, relocatable\) AS/u,
+    /expected_extension_versions\([\s\S]+?schema_name[\s\S]+?\) AS/u,
   );
-  assert.match(runner, /\('plpgsql', '1\.0', false\)/u);
-  assert.match(runner, /\('pgcrypto', '1\.3', true\)/u);
+  assert.match(runner, /\('plpgsql', '1\.0', false, 'pg_catalog'\)/u);
+  assert.match(runner, /\('pgcrypto', '1\.3', true, 'extensions'\)/u);
   assert.match(runner, /expected\.relocatable = e\.extrelocatable/u);
-  assert.match(runner, /AND e\.extconfig IS NULL/u);
+  assert.match(runner, /n\.nspname = expected\.schema_name/u);
+  assert.doesNotMatch(runner, /FANMIND_[A-Z0-9_]*PGCRYPTO[A-Z0-9_]*SCHEMA/u);
+  assert.match(runner, /WHERE e\.extconfig IS NULL/u);
   assert.match(runner, /AND e\.extcondition IS NULL/u);
   assert.match(
     runner,
@@ -569,6 +576,7 @@ test("restore compatibility prerequisites stay bound to FanMind migrations", asy
   }
   assert.match(runner, /resolved_extension_functions AS/u);
   assert.match(runner, /p\.pronamespace = e\.extnamespace/u);
+  assert.match(runner, /AND l\.lanname = 'c'/u);
   assert.match(
     runner,
     /pg_catalog\.pg_get_function_identity_arguments\(p\.oid\)[\s\n]+\s*= expected\.identity_arguments/u,
@@ -1570,6 +1578,10 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   );
   assert.doesNotMatch(runner, /allowed_extension_objects/u);
   assert.match(runbook, /newly provisioned Supabase[\s\S]+not considered empty/u);
+  assert.match(
+    runbook,
+    /fixed FanMind Production recovery contract[\s\S]+pgcrypto` 1\.3 must be in `extensions`/u,
+  );
   assert.match(runner, /FANMIND_OPERATIONAL_TEST_MODE/);
   assert.match(runner, /--single-transaction/);
   assert.match(runner, /-u PGHOSTADDR/);

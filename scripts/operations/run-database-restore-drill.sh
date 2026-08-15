@@ -303,10 +303,15 @@ then
 fi
 
 empty_target_sql="
-WITH expected_extension_versions(extname, extversion, relocatable) AS (
+WITH expected_extension_versions(
+  extname,
+  extversion,
+  relocatable,
+  schema_name
+) AS (
   VALUES
-    ('plpgsql', '1.0', false),
-    ('pgcrypto', '1.3', true)
+    ('plpgsql', '1.0', false, 'pg_catalog'),
+    ('pgcrypto', '1.3', true, 'extensions')
 ),
 allowed_extensions AS (
   SELECT e.oid, e.extname, e.extowner, e.extnamespace
@@ -315,11 +320,10 @@ allowed_extensions AS (
       ON expected.extname = e.extname
      AND expected.extversion = e.extversion
      AND expected.relocatable = e.extrelocatable
-   WHERE (
-         e.extname <> 'plpgsql'
-         OR e.extnamespace = 'pg_catalog'::pg_catalog.regnamespace
-       )
-     AND e.extconfig IS NULL
+    JOIN pg_catalog.pg_namespace AS n
+      ON n.oid = e.extnamespace
+     AND n.nspname = expected.schema_name
+   WHERE e.extconfig IS NULL
      AND e.extcondition IS NULL
 ),
 expected_extension_functions(
@@ -348,6 +352,8 @@ expected_extension_functions(
     ('pgcrypto', 'encrypt_iv', 'bytea, bytea, bytea, text', 'pg_encrypt_iv', 'bytea', true, 'i', 's'),
     ('pgcrypto', 'decrypt_iv', 'bytea, bytea, bytea, text', 'pg_decrypt_iv', 'bytea', true, 'i', 's'),
     ('pgcrypto', 'gen_random_bytes', 'integer', 'pg_random_bytes', 'bytea', true, 'v', 's'),
+    -- This is the pgcrypto C wrapper in extensions, not pg_catalog's
+    -- separate internal-language function with the same name.
     ('pgcrypto', 'gen_random_uuid', '', 'pg_random_uuid', 'uuid', false, 'v', 's'),
     ('pgcrypto', 'pgp_sym_encrypt', 'text, text', 'pgp_sym_encrypt_text', 'bytea', true, 'v', 's'),
     ('pgcrypto', 'pgp_sym_encrypt_bytea', 'bytea, text', 'pgp_sym_encrypt_bytea', 'bytea', true, 'v', 's'),
@@ -371,6 +377,8 @@ expected_extension_functions(
     ('pgcrypto', 'armor', 'bytea', 'pg_armor', 'text', true, 'i', 's'),
     ('pgcrypto', 'armor', 'bytea, text[], text[]', 'pg_armor', 'text', true, 'i', 's'),
     ('pgcrypto', 'dearmor', 'text', 'pg_dearmor', 'bytea', true, 'i', 's'),
+    -- PostgreSQL 17 includes the OUT columns in this function's rendered
+    -- identity arguments; keep them exact as well as the SETOF result.
     ('pgcrypto', 'pgp_armor_headers', 'text, OUT key text, OUT value text', 'pgp_armor_headers', 'SETOF record', true, 'i', 's')
 ),
 resolved_extension_functions AS (

@@ -28,7 +28,16 @@ export const RESTORE_TARGET_COMPATIBILITY_SQL = String.raw`
 select
   settings.setting::integer,
   (select count(*) from pg_catalog.pg_roles where rolname in ('anon', 'authenticated', 'service_role')),
-  (select count(*) from pg_catalog.pg_extension where extname in ('pgcrypto'))
+  (select count(*)
+     from pg_catalog.pg_extension as extension
+     join pg_catalog.pg_namespace as namespace
+       on namespace.oid = extension.extnamespace
+    where extension.extname = 'pgcrypto'
+      and extension.extversion = '1.3'
+      and extension.extrelocatable
+      and namespace.nspname = 'extensions'
+      and extension.extconfig is null
+      and extension.extcondition is null)
 from pg_catalog.pg_settings as settings
 where settings.name = 'server_version_num';
 `.trim();
