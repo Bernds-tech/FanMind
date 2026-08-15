@@ -391,6 +391,30 @@ Danach:
 - Secrets rotieren, falls sie versehentlich sichtbar wurden;
 - Production nicht verändern.
 
+## Rollback-only Staging-Vorabnahme
+
+Vor echten Stripe-Testevents zuerst den bestehenden manuellen Workflow
+`FanMind Referral Lifecycle Staging Acceptance` ausführen. Er verwendet
+ausschließlich die beiden geschützten synthetischen Staging-Workspaces,
+ruft Stripe nicht auf und setzt `FANMIND_ENABLE_REFERRAL_BILLING=false`.
+
+Eingaben:
+
+- `reviewed_commit`: vollständiger, zuvor geprüfter SHA von `main`;
+- `confirmation`: `run-referral-lifecycle-staging-acceptance`.
+
+Der Workflow bricht ab, wenn Ziel, Supabase-Projekt, Datenbank, TLS,
+synthetische IDs oder Commit-Bindung nicht exakt dem Staging-Vertrag
+entsprechen. Innerhalb einer einzigen Datenbanktransaktion werden Attribution,
+Self-Referral-Sperre, First-valid-click, Unveränderlichkeit, Aktivierung,
+Zahlungsausfall, Kündigung, Refund, Reaktivierung, Event-Idempotenz,
+5-Prozent-Schritte, 100-Prozent-Obergrenze und das Growth Window geprüft.
+Anschließend erfolgt immer `rollback` und ein Digest-Vergleich mit dem
+Ausgangszustand.
+
+Diese Vorabnahme ersetzt **nicht** die folgenden Stripe-Testevents und schließt
+die vollständige Lifecycle-Abnahme daher nicht allein ab.
+
 ## Definition of Done
 
 - [ ] Testmodus und nicht-produktives Ziel durch Preflight bestätigt

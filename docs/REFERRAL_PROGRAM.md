@@ -157,22 +157,16 @@ Beispiel:
 
 ## 10. Attribution-Regeln
 
-Empfohlen:
+Verbindliche Regel: `first_valid_click_wins`.
 
 - Referral-Link setzt `referral_code`.
-- Attribution gilt z. B. 90 Tage.
+- Die erste gültige Zuordnung eines Workspaces zu einem Referrer ist technisch eindeutig und danach unveränderlich.
 - Ein Workspace kann nur einem Referrer zugeordnet werden.
+- Nullsetzung der optionalen User-Bezüge bei einer rechtmäßigen Kontolöschung bleibt möglich; eine nachträgliche Neuzuordnung ist gesperrt.
 - Keine Multi-Level-Logik.
 - Keine Provision auf Referrals von Referrals.
-- Admin kann bei Streitfällen manuell korrigieren.
-
-Offene Entscheidung:
-
-- `first_valid_click_wins` oder `last_valid_click_wins`.
-
-Empfehlung:
-
-- `first_valid_click_wins`, weil es frühe echte Empfehlung schützt.
+- Self-Referral wird sowohl auf Workspace- als auch auf User-Ebene blockiert.
+- Admin kann Status und Notizen bei Streitfällen korrigieren, aber keine bestehende Attribution auf einen anderen Referrer umhängen.
 
 ## 11. Missbrauchsschutz
 
