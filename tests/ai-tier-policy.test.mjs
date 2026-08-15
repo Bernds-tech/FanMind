@@ -289,6 +289,49 @@ test("paid entitlement lifecycle and time boundaries fail closed", () => {
   }
 });
 
+test("paid entitlement boundaries require explicit ISO-8601 timezone instants", () => {
+  const runtime = {
+    stripePriceConfigured: true,
+    workspaceContractConfirmed: true,
+  };
+  const base = {
+    tierId: "plus",
+    status: "active",
+    source: "stripe",
+    effectiveAt: "2026-07-01T00:00:00.000Z",
+    expiresAt: null,
+    stripeSubscriptionItemLinked: true,
+    serverOwned: true,
+  };
+  const now = new Date("2026-07-26T12:00:00.000Z");
+
+  for (const [override, reason] of [
+    [{ effectiveAt: "2026-07-01" }, "effective_at"],
+    [{ effectiveAt: "2026-07-01T00:00:00" }, "effective_at"],
+    [{ expiresAt: "07/31/2026 12:00:00" }, "expires_at"],
+  ]) {
+    const entitlement = resolveWorkspaceAiTierEntitlement(
+      { ...base, ...override },
+      runtime,
+      now,
+    );
+    assert.equal(entitlement.effectiveTierId, "standard");
+    assert.ok(entitlement.fallbackReasons.includes(reason));
+  }
+
+  const explicitOffset = resolveWorkspaceAiTierEntitlement(
+    {
+      ...base,
+      effectiveAt: "2026-07-01T02:00:00+02:00",
+      expiresAt: "2026-08-01T02:00:00+02:00",
+    },
+    runtime,
+    now,
+  );
+  assert.ok(!explicitOffset.fallbackReasons.includes("effective_at"));
+  assert.ok(!explicitOffset.fallbackReasons.includes("expires_at"));
+});
+
 test("current Plus and Ultra entitlements remain blocked by canonical readiness", () => {
   const environment = {
     STRIPE_PRICE_AI_PLUS: "price_plus_DO_NOT_PRINT",

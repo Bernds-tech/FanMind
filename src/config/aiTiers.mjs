@@ -145,6 +145,16 @@ function isExplicitlyConfirmed(value) {
 function normalizedInstant(value) {
   if (typeof value !== "string" || value.trim() === "") return null;
   const normalized = value.trim();
+  // Entitlement boundaries are security-relevant instants. Reject date-only and
+  // locale-dependent values instead of letting Date.parse apply the host's
+  // timezone or implementation-specific parsing rules.
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/u.test(
+      normalized,
+    )
+  ) {
+    return null;
+  }
   const timestamp = Date.parse(normalized);
   return Number.isFinite(timestamp) ? timestamp : null;
 }
