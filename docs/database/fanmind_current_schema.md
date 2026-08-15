@@ -951,6 +951,15 @@ RLS/Scope:
 
 Die Migration `20260707120000_referral_growth_window_phase_2.sql` ergänzt eindeutige Workspace-/Referred-Workspace-Indizes für Referral-Mitglieder und Attributionen sowie Update-Trigger/Kommentare. Die App nutzt serverseitige Service-Role-Zugriffe, um berechtigten Workspaces den eigenen Referral-Code/Link anzuzeigen und Signup-Attributionen zu speichern. Normale Nutzer erhalten weiterhin keinen Zugriff auf fremde Referral-Ökonomie; Rabattwerte sind vorbereitete Statuswerte und werden nicht automatisch mit Billing verrechnet.
 
+Die additive Integritätsmigration
+`20260814230000_referral_attribution_integrity.sql` macht die erste gültige
+Workspace-Attribution über einen regulären, PostgREST-inferierbaren
+Unique-Index eindeutig, validiert den User-Self-Referral-Check und sperrt die
+nachträgliche Änderung der Attributionsidentitäten über eine gehärtete
+Triggerfunktion. Ihr Staging-Apply ist kein Web-Deploy-Schritt, sondern folgt
+dem getrennten checksum- und commitgebundenen Pfad in
+`docs/operations/REFERRAL_ATTRIBUTION_STAGING.md`. Billing bleibt dabei aus.
+
 
 ## 13. Datenschutzsparsame Serverfehler-Telemetrie
 

@@ -2,6 +2,8 @@
 -- First valid workspace attribution wins; self-referrals stay fail-closed.
 -- This migration does not activate referral billing or perform Stripe writes.
 
+begin;
+
 do $duplicates$
 begin
   if exists (
@@ -40,7 +42,7 @@ alter table public.referrals
 create or replace function public.protect_referral_attribution()
 returns trigger
 language plpgsql
-set search_path = public
+set search_path = pg_catalog, pg_temp
 as $$
 begin
   if new.referrer_workspace_id is distinct from old.referrer_workspace_id
@@ -81,3 +83,5 @@ execute function public.protect_referral_attribution();
 revoke all on function public.protect_referral_attribution() from public;
 revoke all on function public.protect_referral_attribution() from anon;
 revoke all on function public.protect_referral_attribution() from authenticated;
+
+commit;

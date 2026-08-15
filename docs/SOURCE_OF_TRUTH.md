@@ -745,6 +745,10 @@ Details: `docs/AI_COST_MONITORING.md` und `docs/AI_PROMPT_PROFILES.md`.
 - die technische Production-Basis ist nicht mit der Verkaufsübergabe gleichzusetzen; die Verkaufsübergabe erfolgt erst nach technischer Abnahme der erforderlichen Phase-3- und Phase-7-Kanäle;
 - technische Freigabe und externe Steuer-/Rechtsfreigabe werden getrennt dokumentiert und können nach der technischen Verkaufsübergabe parallel zur Verkaufsansprache weiterlaufen;
 - entgeltliche Aktivierung bleibt dort fail-closed, wo eine zwingende externe Rechts-/Vertragsfreigabe noch fehlt;
+- Referral-Attribution wird vor der rollback-only Lifecycle-Acceptance über
+  einen getrennten checksum-, commit- und Staging-gebundenen
+  Integritäts-Verify/Apply-Pfad abgenommen; dieser Pfad aktiviert weder
+  Billing noch Stripe;
 - Referral-Billing, KI Plus/Ultra Auto-Buchung und schreibende Staging-Tests bleiben bis zur separaten Freigabe deaktiviert.
 
 ## 14. Reader-Synchronisierung

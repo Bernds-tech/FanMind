@@ -168,6 +168,12 @@ Verbindliche Regel: `first_valid_click_wins`.
 - Self-Referral wird sowohl auf Workspace- als auch auf User-Ebene blockiert.
 - Admin kann Status und Notizen bei Streitfällen korrigieren, aber keine bestehende Attribution auf einen anderen Referrer umhängen.
 
+Die technische Staging-Abnahme dieser Regeln folgt dem getrennten,
+checksum- und commitgebundenen Verify/Apply-Pfad in
+`docs/operations/REFERRAL_ATTRIBUTION_STAGING.md`. Erst ein grüner read-only
+Postflight darf die vollständig zurückgerollte Lifecycle-Acceptance starten;
+beide Schritte lassen Billing und Stripe deaktiviert.
+
 ## 11. Missbrauchsschutz
 
 Nicht erlaubt:
