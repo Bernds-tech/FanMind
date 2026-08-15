@@ -261,20 +261,34 @@ separate mandatory steps.
 
 ### Preconditions
 
-- isolated PostgreSQL instance or separate Supabase test project;
+- isolated PostgreSQL instance or another dedicated PostgreSQL 17 target that
+  passes the catalog-level empty-target proof; a newly provisioned Supabase
+  project is not considered empty merely because it has no FanMind rows, since
+  its platform schemas and objects remain present;
 - PostgreSQL major 17 plus the pre-existing roles `anon`, `authenticated` and
-  `service_role` and the pre-installed extension `pgcrypto`, as proven by the
-  compatibility phase;
+  `service_role`, `plpgsql` 1.0 and the pre-installed `pgcrypto` 1.3 extension,
+  as proven by the compatibility and empty-target phases;
 - empty disposable target database;
 - no DNS, webhook or application configuration pointing at Production;
 - written target identifier in the drill record.
 
-For the empty-target proof, the two required bootstrap extensions `plpgsql`
-and `pgcrypto` are allowed. The catalog proof excludes only objects that
-PostgreSQL binds to those two extensions through extension-membership
-dependencies; unrelated or manually created objects remain visible. Every
-other non-system schema, relation, routine, type or extension blocks the
-restore before `pg_restore`.
+For the empty-target proof, only the exact PostgreSQL 17 member inventories of
+`plpgsql` 1.0 and `pgcrypto` 1.3 are allowed: the three `plpgsql` handler
+functions and its language object, plus the 36 schema-qualified `pgcrypto`
+functions with their expected signatures, result types, execution attributes,
+C entry points and library bindings.
+The proof compares that independent allowlist with PostgreSQL's extension
+membership catalog in both directions, so an object attached later with
+`ALTER EXTENSION ... ADD` still blocks the restore. The concrete schema object
+hosting an allowed extension is exempt, including Supabase's `extensions`
+schema, while every unrelated schema-scoped object inside it remains visible.
+That includes relations, routines, types, collations, conversions, operators,
+operator classes and families, extended statistics and text-search objects.
+Schema-less database objects such as non-core languages, casts, access methods,
+transforms, FDWs, foreign servers, user mappings, default ACLs, event triggers,
+large objects, publications and current-database subscriptions also block the
+restore. Every other non-system schema or extension blocks it before
+`pg_restore` as well.
 
 Decrypt and verify the full backup on the isolated host. The content verifier
 must create a private full-backup receipt that binds the encrypted database

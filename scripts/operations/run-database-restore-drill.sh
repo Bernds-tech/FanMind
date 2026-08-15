@@ -303,67 +303,379 @@ then
 fi
 
 empty_target_sql="
-WITH allowed_extension_objects AS (
-  SELECT d.classid, d.objid
-    FROM pg_catalog.pg_depend AS d
-    JOIN pg_catalog.pg_extension AS e ON e.oid = d.refobjid
-   WHERE d.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+WITH expected_extension_versions(extname, extversion, relocatable) AS (
+  VALUES
+    ('plpgsql', '1.0', false),
+    ('pgcrypto', '1.3', true)
+),
+allowed_extensions AS (
+  SELECT e.oid, e.extname, e.extowner, e.extnamespace
+    FROM pg_catalog.pg_extension AS e
+    JOIN expected_extension_versions AS expected
+      ON expected.extname = e.extname
+     AND expected.extversion = e.extversion
+     AND expected.relocatable = e.extrelocatable
+   WHERE (
+         e.extname <> 'plpgsql'
+         OR e.extnamespace = 'pg_catalog'::pg_catalog.regnamespace
+       )
+     AND e.extconfig IS NULL
+     AND e.extcondition IS NULL
+),
+expected_extension_functions(
+  extname,
+  proname,
+  identity_arguments,
+  c_symbol,
+  result_type,
+  is_strict,
+  volatility,
+  parallel_safety
+) AS (
+  VALUES
+    ('plpgsql', 'plpgsql_call_handler', '', 'plpgsql_call_handler', 'language_handler', false, 'v', 'u'),
+    ('plpgsql', 'plpgsql_inline_handler', 'internal', 'plpgsql_inline_handler', 'void', true, 'v', 'u'),
+    ('plpgsql', 'plpgsql_validator', 'oid', 'plpgsql_validator', 'void', true, 'v', 'u'),
+    ('pgcrypto', 'digest', 'text, text', 'pg_digest', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'digest', 'bytea, text', 'pg_digest', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'hmac', 'text, text, text', 'pg_hmac', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'hmac', 'bytea, bytea, text', 'pg_hmac', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'crypt', 'text, text', 'pg_crypt', 'text', true, 'i', 's'),
+    ('pgcrypto', 'gen_salt', 'text', 'pg_gen_salt', 'text', true, 'v', 's'),
+    ('pgcrypto', 'gen_salt', 'text, integer', 'pg_gen_salt_rounds', 'text', true, 'v', 's'),
+    ('pgcrypto', 'encrypt', 'bytea, bytea, text', 'pg_encrypt', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'decrypt', 'bytea, bytea, text', 'pg_decrypt', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'encrypt_iv', 'bytea, bytea, bytea, text', 'pg_encrypt_iv', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'decrypt_iv', 'bytea, bytea, bytea, text', 'pg_decrypt_iv', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'gen_random_bytes', 'integer', 'pg_random_bytes', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'gen_random_uuid', '', 'pg_random_uuid', 'uuid', false, 'v', 's'),
+    ('pgcrypto', 'pgp_sym_encrypt', 'text, text', 'pgp_sym_encrypt_text', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_sym_encrypt_bytea', 'bytea, text', 'pgp_sym_encrypt_bytea', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_sym_encrypt', 'text, text, text', 'pgp_sym_encrypt_text', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_sym_encrypt_bytea', 'bytea, text, text', 'pgp_sym_encrypt_bytea', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_sym_decrypt', 'bytea, text', 'pgp_sym_decrypt_text', 'text', true, 'i', 's'),
+    ('pgcrypto', 'pgp_sym_decrypt_bytea', 'bytea, text', 'pgp_sym_decrypt_bytea', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'pgp_sym_decrypt', 'bytea, text, text', 'pgp_sym_decrypt_text', 'text', true, 'i', 's'),
+    ('pgcrypto', 'pgp_sym_decrypt_bytea', 'bytea, text, text', 'pgp_sym_decrypt_bytea', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'pgp_pub_encrypt', 'text, bytea', 'pgp_pub_encrypt_text', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_pub_encrypt_bytea', 'bytea, bytea', 'pgp_pub_encrypt_bytea', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_pub_encrypt', 'text, bytea, text', 'pgp_pub_encrypt_text', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_pub_encrypt_bytea', 'bytea, bytea, text', 'pgp_pub_encrypt_bytea', 'bytea', true, 'v', 's'),
+    ('pgcrypto', 'pgp_pub_decrypt', 'bytea, bytea', 'pgp_pub_decrypt_text', 'text', true, 'i', 's'),
+    ('pgcrypto', 'pgp_pub_decrypt_bytea', 'bytea, bytea', 'pgp_pub_decrypt_bytea', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'pgp_pub_decrypt', 'bytea, bytea, text', 'pgp_pub_decrypt_text', 'text', true, 'i', 's'),
+    ('pgcrypto', 'pgp_pub_decrypt_bytea', 'bytea, bytea, text', 'pgp_pub_decrypt_bytea', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'pgp_pub_decrypt', 'bytea, bytea, text, text', 'pgp_pub_decrypt_text', 'text', true, 'i', 's'),
+    ('pgcrypto', 'pgp_pub_decrypt_bytea', 'bytea, bytea, text, text', 'pgp_pub_decrypt_bytea', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'pgp_key_id', 'bytea', 'pgp_key_id_w', 'text', true, 'i', 's'),
+    ('pgcrypto', 'armor', 'bytea', 'pg_armor', 'text', true, 'i', 's'),
+    ('pgcrypto', 'armor', 'bytea, text[], text[]', 'pg_armor', 'text', true, 'i', 's'),
+    ('pgcrypto', 'dearmor', 'text', 'pg_dearmor', 'bytea', true, 'i', 's'),
+    ('pgcrypto', 'pgp_armor_headers', 'text, OUT key text, OUT value text', 'pgp_armor_headers', 'SETOF record', true, 'i', 's')
+),
+resolved_extension_functions AS (
+  SELECT expected.extname,
+         expected.proname,
+         expected.identity_arguments,
+         expected.c_symbol,
+         expected.result_type,
+         expected.is_strict,
+         expected.volatility,
+         expected.parallel_safety,
+         p.oid
+    FROM expected_extension_functions AS expected
+    JOIN allowed_extensions AS e ON e.extname = expected.extname
+    JOIN pg_catalog.pg_proc AS p
+      ON p.pronamespace = e.extnamespace
+     AND p.proname = expected.proname
+     AND pg_catalog.pg_get_function_identity_arguments(p.oid)
+       = expected.identity_arguments
+    JOIN pg_catalog.pg_language AS l ON l.oid = p.prolang
+   WHERE p.prokind = 'f'
+     AND l.lanname = 'c'
+     AND p.probin = '\$libdir/' || expected.extname
+     AND p.prosrc = expected.c_symbol
+     -- Trusted extension scripts may create objects as the bootstrap superuser.
+     AND p.proowner IN (e.extowner, 10::pg_catalog.oid)
+     AND pg_catalog.pg_get_function_result(p.oid) = expected.result_type
+     AND p.proisstrict = expected.is_strict
+     AND p.provolatile = expected.volatility
+     AND p.proparallel = expected.parallel_safety
+     AND NOT p.prosecdef
+     AND NOT p.proleakproof
+     AND p.proconfig IS NULL
+     AND p.protrftypes IS NULL
+     AND p.prosupport = 0
+     AND p.provariadic = 0
+     AND p.pronargdefaults = 0
+     AND p.proargdefaults IS NULL
+     AND p.procost = 1
+     AND p.prorows = CASE
+       WHEN expected.result_type LIKE 'SETOF %' THEN 1000
+       ELSE 0
+     END
+),
+resolved_extension_languages AS (
+  SELECT e.extname, l.oid
+    FROM allowed_extensions AS e
+    JOIN pg_catalog.pg_language AS l ON l.lanname = 'plpgsql'
+    JOIN resolved_extension_functions AS call_handler
+      ON call_handler.extname = 'plpgsql'
+     AND call_handler.proname = 'plpgsql_call_handler'
+     AND call_handler.identity_arguments = ''
+    JOIN resolved_extension_functions AS inline_handler
+      ON inline_handler.extname = 'plpgsql'
+     AND inline_handler.proname = 'plpgsql_inline_handler'
+     AND inline_handler.identity_arguments = 'internal'
+    JOIN resolved_extension_functions AS validator
+      ON validator.extname = 'plpgsql'
+     AND validator.proname = 'plpgsql_validator'
+     AND validator.identity_arguments = 'oid'
+   WHERE e.extname = 'plpgsql'
+     AND l.lanispl
+     AND l.lanpltrusted
+     AND l.lanplcallfoid = call_handler.oid
+     AND l.laninline = inline_handler.oid
+     AND l.lanvalidator = validator.oid
+     AND l.lanowner = e.extowner
+     AND l.lanacl IS NULL
+),
+expected_extension_addresses AS (
+  SELECT functions.extname,
+         'pg_catalog.pg_proc'::pg_catalog.regclass AS classid,
+         functions.oid AS objid,
+         0 AS objsubid
+    FROM resolved_extension_functions AS functions
+  UNION ALL
+  SELECT languages.extname,
+         'pg_catalog.pg_language'::pg_catalog.regclass AS classid,
+         languages.oid AS objid,
+         0 AS objsubid
+    FROM resolved_extension_languages AS languages
+),
+actual_extension_addresses AS (
+  SELECT e.extname, d.classid, d.objid, d.objsubid
+    FROM allowed_extensions AS e
+    JOIN pg_catalog.pg_depend AS d
+      ON d.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+     AND d.refobjid = e.oid
      AND d.deptype = 'e'
-     AND e.extname IN ('plpgsql', 'pgcrypto')
+),
+extension_inventory_violations AS (
+  SELECT 1 AS violation
+    FROM expected_extension_versions AS expected
+   WHERE NOT EXISTS (
+     SELECT 1
+       FROM allowed_extensions AS allowed
+      WHERE allowed.extname = expected.extname
+   )
+  UNION ALL
+  SELECT 1
+    FROM expected_extension_functions AS expected
+   WHERE NOT EXISTS (
+     SELECT 1
+       FROM resolved_extension_functions AS resolved
+      WHERE resolved.extname = expected.extname
+        AND resolved.proname = expected.proname
+        AND resolved.identity_arguments = expected.identity_arguments
+        AND resolved.c_symbol = expected.c_symbol
+        AND resolved.result_type = expected.result_type
+        AND resolved.is_strict = expected.is_strict
+        AND resolved.volatility = expected.volatility
+        AND resolved.parallel_safety = expected.parallel_safety
+   )
+  UNION ALL
+  SELECT 1
+   WHERE NOT EXISTS (
+     SELECT 1 FROM resolved_extension_languages
+   )
+  UNION ALL
+  SELECT 1
+    FROM actual_extension_addresses AS actual
+   WHERE NOT EXISTS (
+     SELECT 1
+       FROM expected_extension_addresses AS expected
+      WHERE expected.extname = actual.extname
+        AND expected.classid = actual.classid
+        AND expected.objid = actual.objid
+        AND expected.objsubid = actual.objsubid
+   )
+  UNION ALL
+  SELECT 1
+    FROM expected_extension_addresses AS expected
+   WHERE NOT EXISTS (
+     SELECT 1
+       FROM actual_extension_addresses AS actual
+      WHERE actual.extname = expected.extname
+        AND actual.classid = expected.classid
+        AND actual.objid = expected.objid
+        AND actual.objsubid = expected.objsubid
+   )
+),
+allowed_extension_schemas AS (
+  SELECT DISTINCT e.extnamespace AS oid
+    FROM allowed_extensions AS e
+),
+schema_objects(classid, objid, nspoid) AS (
+  SELECT 'pg_catalog.pg_class'::pg_catalog.regclass,
+         c.oid,
+         c.relnamespace
+    FROM pg_catalog.pg_class AS c
+  UNION ALL
+  SELECT 'pg_catalog.pg_proc'::pg_catalog.regclass,
+         p.oid,
+         p.pronamespace
+    FROM pg_catalog.pg_proc AS p
+  UNION ALL
+  SELECT 'pg_catalog.pg_type'::pg_catalog.regclass,
+         t.oid,
+         t.typnamespace
+    FROM pg_catalog.pg_type AS t
+  UNION ALL
+  SELECT 'pg_catalog.pg_collation'::pg_catalog.regclass,
+         c.oid,
+         c.collnamespace
+    FROM pg_catalog.pg_collation AS c
+  UNION ALL
+  SELECT 'pg_catalog.pg_conversion'::pg_catalog.regclass,
+         c.oid,
+         c.connamespace
+    FROM pg_catalog.pg_conversion AS c
+  UNION ALL
+  SELECT 'pg_catalog.pg_operator'::pg_catalog.regclass,
+         o.oid,
+         o.oprnamespace
+    FROM pg_catalog.pg_operator AS o
+  UNION ALL
+  SELECT 'pg_catalog.pg_opclass'::pg_catalog.regclass,
+         o.oid,
+         o.opcnamespace
+    FROM pg_catalog.pg_opclass AS o
+  UNION ALL
+  SELECT 'pg_catalog.pg_opfamily'::pg_catalog.regclass,
+         o.oid,
+         o.opfnamespace
+    FROM pg_catalog.pg_opfamily AS o
+  UNION ALL
+  SELECT 'pg_catalog.pg_statistic_ext'::pg_catalog.regclass,
+         s.oid,
+         s.stxnamespace
+    FROM pg_catalog.pg_statistic_ext AS s
+  UNION ALL
+  SELECT 'pg_catalog.pg_ts_parser'::pg_catalog.regclass,
+         p.oid,
+         p.prsnamespace
+    FROM pg_catalog.pg_ts_parser AS p
+  UNION ALL
+  SELECT 'pg_catalog.pg_ts_dict'::pg_catalog.regclass,
+         d.oid,
+         d.dictnamespace
+    FROM pg_catalog.pg_ts_dict AS d
+  UNION ALL
+  SELECT 'pg_catalog.pg_ts_template'::pg_catalog.regclass,
+         t.oid,
+         t.tmplnamespace
+    FROM pg_catalog.pg_ts_template AS t
+  UNION ALL
+  SELECT 'pg_catalog.pg_ts_config'::pg_catalog.regclass,
+         c.oid,
+         c.cfgnamespace
+    FROM pg_catalog.pg_ts_config AS c
+  UNION ALL
+  SELECT 'pg_catalog.pg_constraint'::pg_catalog.regclass,
+         c.oid,
+         c.connamespace
+    FROM pg_catalog.pg_constraint AS c
+   WHERE c.connamespace <> 0
+),
+schema_object_violations AS (
+  SELECT 1 AS violation
+    FROM schema_objects AS object
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = object.nspoid
+   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+     AND n.nspname !~ '^pg_toast'
+     AND NOT EXISTS (
+       SELECT 1
+         FROM expected_extension_addresses AS allowed
+        WHERE allowed.classid = object.classid
+          AND allowed.objid = object.objid
+          AND allowed.objsubid = 0
+     )
+),
+top_level_object_violations AS (
+  SELECT 1 AS violation
+    FROM pg_catalog.pg_language AS l
+   WHERE l.oid NOT IN (
+     12::pg_catalog.oid,
+     13::pg_catalog.oid,
+     14::pg_catalog.oid
+   )
+     AND NOT EXISTS (
+       SELECT 1
+         FROM resolved_extension_languages AS allowed
+        WHERE allowed.oid = l.oid
+     )
+  UNION ALL
+  SELECT 1
+    FROM pg_catalog.pg_cast AS c
+   WHERE c.oid >= 16384::pg_catalog.oid
+  UNION ALL
+  SELECT 1
+    FROM pg_catalog.pg_am AS a
+   WHERE a.oid >= 16384::pg_catalog.oid
+  UNION ALL
+  SELECT 1
+    FROM pg_catalog.pg_transform AS t
+   WHERE t.oid >= 16384::pg_catalog.oid
+  UNION ALL
+  SELECT 1
+    FROM pg_catalog.pg_foreign_data_wrapper AS f
+   WHERE f.oid >= 16384::pg_catalog.oid
+  UNION ALL
+  SELECT 1 FROM pg_catalog.pg_foreign_server
+  UNION ALL
+  SELECT 1 FROM pg_catalog.pg_user_mapping
+  UNION ALL
+  SELECT 1 FROM pg_catalog.pg_default_acl
+  UNION ALL
+  SELECT 1 FROM pg_catalog.pg_event_trigger
+  UNION ALL
+  SELECT 1 FROM pg_catalog.pg_largeobject_metadata
+  UNION ALL
+  SELECT 1 FROM pg_catalog.pg_publication
+  UNION ALL
+  SELECT 1
+    FROM pg_catalog.pg_subscription AS s
+   WHERE s.subdbid = (
+     SELECT d.oid
+       FROM pg_catalog.pg_database AS d
+      WHERE d.datname = pg_catalog.current_database()
+   )
 ),
 user_objects AS (
-  SELECT c.oid
-    FROM pg_catalog.pg_class AS c
-    JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
-   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
-     AND n.nspname !~ '^pg_toast'
-     AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
-     AND NOT EXISTS (
-       SELECT 1
-         FROM allowed_extension_objects AS allowed
-        WHERE allowed.classid = 'pg_catalog.pg_class'::pg_catalog.regclass
-          AND allowed.objid = c.oid
-     )
+  SELECT violation FROM schema_object_violations
   UNION ALL
-  SELECT p.oid
-    FROM pg_catalog.pg_proc AS p
-    JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
-   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
-     AND n.nspname !~ '^pg_toast'
-     AND NOT EXISTS (
-       SELECT 1
-         FROM allowed_extension_objects AS allowed
-        WHERE allowed.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass
-          AND allowed.objid = p.oid
-     )
-  UNION ALL
-  SELECT t.oid
-    FROM pg_catalog.pg_type AS t
-    JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace
-   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
-     AND n.nspname !~ '^pg_toast'
-     AND t.typtype IN ('d', 'e', 'r')
-     AND NOT EXISTS (
-       SELECT 1
-         FROM allowed_extension_objects AS allowed
-        WHERE allowed.classid = 'pg_catalog.pg_type'::pg_catalog.regclass
-          AND allowed.objid = t.oid
-     )
-  UNION ALL
-  SELECT e.oid
+  SELECT 1
     FROM pg_catalog.pg_extension AS e
-   WHERE e.extname NOT IN ('plpgsql', 'pgcrypto')
+   WHERE NOT EXISTS (
+     SELECT 1
+       FROM allowed_extensions AS allowed
+      WHERE allowed.oid = e.oid
+   )
   UNION ALL
-  SELECT n.oid
+  SELECT 1
     FROM pg_catalog.pg_namespace AS n
    WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'public')
      AND n.nspname !~ '^pg_toast'
      AND NOT EXISTS (
        SELECT 1
-         FROM allowed_extension_objects AS allowed
-        WHERE allowed.classid = 'pg_catalog.pg_namespace'::pg_catalog.regclass
-          AND allowed.objid = n.oid
+         FROM allowed_extension_schemas AS allowed
+        WHERE allowed.oid = n.oid
      )
+  UNION ALL
+  SELECT violation FROM top_level_object_violations
+  UNION ALL
+  SELECT violation FROM extension_inventory_violations
 )
 SELECT COUNT(*)::text FROM user_objects;
 "
@@ -386,6 +698,7 @@ if ! empty_target_result="$(
     PGSSLMODE="verify-full" \
     PGSSLROOTCERT="$snapshot_ca_certificate" \
     PGGSSENCMODE="disable" \
+    PGOPTIONS="-c default_transaction_read_only=on -c search_path=pg_catalog,pg_temp" \
     "$psql_bin" \
     --no-psqlrc \
     --no-align \

@@ -539,23 +539,142 @@ test("restore compatibility prerequisites stay bound to FanMind migrations", asy
   const runner = await readFile(runnerPath, "utf8");
   assert.match(
     runner,
-    /e\.extname NOT IN \('plpgsql', 'pgcrypto'\)/u,
+    /expected_extension_versions\(extname, extversion, relocatable\) AS/u,
   );
-  assert.match(runner, /WITH allowed_extension_objects AS/u);
+  assert.match(runner, /\('plpgsql', '1\.0', false\)/u);
+  assert.match(runner, /\('pgcrypto', '1\.3', true\)/u);
+  assert.match(runner, /expected\.relocatable = e\.extrelocatable/u);
+  assert.match(runner, /AND e\.extconfig IS NULL/u);
+  assert.match(runner, /AND e\.extcondition IS NULL/u);
+  assert.match(
+    runner,
+    /expected_extension_functions\([\s\S]+?identity_arguments,[\s\S]+?parallel_safety/u,
+  );
+  const manifestMatch = runner.match(
+    /expected_extension_functions\([\s\S]+?\) AS \(\n  VALUES\n([\s\S]+?)\n\),\nresolved_extension_functions AS/u,
+  );
+  assert.ok(manifestMatch);
+  assert.equal(
+    (manifestMatch[1].match(/^    \('(plpgsql|pgcrypto)',/gmu) ?? []).length,
+    39,
+  );
+  for (const row of [
+    "('plpgsql', 'plpgsql_call_handler', '', 'plpgsql_call_handler', 'language_handler', false, 'v', 'u')",
+    "('pgcrypto', 'digest', 'text, text', 'pg_digest', 'bytea', true, 'i', 's')",
+    "('pgcrypto', 'gen_random_uuid', '', 'pg_random_uuid', 'uuid', false, 'v', 's')",
+    "('pgcrypto', 'armor', 'bytea, text[], text[]', 'pg_armor', 'text', true, 'i', 's')",
+    "('pgcrypto', 'pgp_armor_headers', 'text, OUT key text, OUT value text', 'pgp_armor_headers', 'SETOF record', true, 'i', 's')",
+  ]) {
+    assert.ok(runner.includes(row));
+  }
+  assert.match(runner, /resolved_extension_functions AS/u);
+  assert.match(runner, /p\.pronamespace = e\.extnamespace/u);
+  assert.match(
+    runner,
+    /pg_catalog\.pg_get_function_identity_arguments\(p\.oid\)[\s\n]+\s*= expected\.identity_arguments/u,
+  );
+  assert.match(runner, /p\.probin = '\\\$libdir\/' \|\| expected\.extname/u);
+  assert.match(runner, /p\.prosrc = expected\.c_symbol/u);
+  assert.match(
+    runner,
+    /p\.proowner IN \(e\.extowner, 10::pg_catalog\.oid\)/u,
+  );
+  assert.match(
+    runner,
+    /pg_catalog\.pg_get_function_result\(p\.oid\) = expected\.result_type/u,
+  );
+  assert.match(runner, /p\.proisstrict = expected\.is_strict/u);
+  assert.match(runner, /p\.provolatile = expected\.volatility/u);
+  assert.match(runner, /p\.proparallel = expected\.parallel_safety/u);
+  assert.match(runner, /AND NOT p\.prosecdef/u);
+  assert.match(runner, /AND NOT p\.proleakproof/u);
+  assert.match(runner, /AND p\.proconfig IS NULL/u);
+  assert.match(runner, /AND p\.protrftypes IS NULL/u);
+  assert.match(runner, /AND p\.prosupport = 0/u);
+  assert.match(runner, /resolved_extension_languages AS/u);
+  assert.match(runner, /AND l\.lanispl/u);
+  assert.match(runner, /AND l\.lanpltrusted/u);
+  assert.match(runner, /l\.lanplcallfoid = call_handler\.oid/u);
+  assert.match(runner, /l\.laninline = inline_handler\.oid/u);
+  assert.match(runner, /l\.lanvalidator = validator\.oid/u);
+  assert.match(runner, /l\.lanowner = e\.extowner/u);
+  assert.match(runner, /AND l\.lanacl IS NULL/u);
+  assert.match(
+    runner,
+    /PGOPTIONS="-c default_transaction_read_only=on -c search_path=pg_catalog,pg_temp"/u,
+  );
+  assert.match(runner, /actual_extension_addresses AS/u);
+  assert.match(runner, /expected_extension_addresses AS/u);
+  assert.match(runner, /extension_inventory_violations AS/u);
+  assert.equal(
+    (runner.match(/FROM actual_extension_addresses AS actual/gu) ?? []).length,
+    2,
+  );
+  assert.equal(
+    (runner.match(/FROM expected_extension_addresses AS expected/gu) ?? []).length,
+    2,
+  );
   assert.match(
     runner,
     /d\.refclassid = 'pg_catalog\.pg_extension'::pg_catalog\.regclass/u,
   );
   assert.match(runner, /d\.deptype = 'e'/u);
-  for (const catalog of ["pg_class", "pg_proc", "pg_type", "pg_namespace"]) {
+  assert.match(runner, /d\.objsubid/u);
+  assert.match(runner, /allowed_extension_schemas AS/u);
+  assert.match(runner, /SELECT DISTINCT e\.extnamespace AS oid/u);
+  assert.match(runner, /schema_objects\(classid, objid, nspoid\) AS/u);
+  for (const catalog of [
+    "pg_class",
+    "pg_proc",
+    "pg_type",
+    "pg_collation",
+    "pg_conversion",
+    "pg_operator",
+    "pg_opclass",
+    "pg_opfamily",
+    "pg_statistic_ext",
+    "pg_ts_parser",
+    "pg_ts_dict",
+    "pg_ts_template",
+    "pg_ts_config",
+    "pg_constraint",
+  ]) {
     assert.match(
       runner,
-      new RegExp(
-        `allowed\\.classid = 'pg_catalog\\.${catalog}'::pg_catalog\\.regclass`,
-        "u",
-      ),
+      new RegExp(`'pg_catalog\\.${catalog}'::pg_catalog\\.regclass`, "u"),
     );
   }
+  assert.match(runner, /schema_object_violations AS/u);
+  assert.match(runner, /allowed\.classid = object\.classid/u);
+  assert.match(runner, /allowed\.objid = object\.objid/u);
+  assert.match(runner, /allowed\.objsubid = 0/u);
+  assert.match(runner, /top_level_object_violations AS/u);
+  for (const catalog of [
+    "pg_language",
+    "pg_cast",
+    "pg_am",
+    "pg_transform",
+    "pg_foreign_data_wrapper",
+    "pg_foreign_server",
+    "pg_user_mapping",
+    "pg_default_acl",
+    "pg_event_trigger",
+    "pg_largeobject_metadata",
+    "pg_publication",
+    "pg_subscription",
+  ]) {
+    assert.match(runner, new RegExp(`pg_catalog\\.${catalog}`, "u"));
+  }
+  assert.match(runner, /l\.oid NOT IN \([\s\S]+?12::pg_catalog\.oid/u);
+  assert.equal(
+    (runner.match(/oid >= 16384::pg_catalog\.oid/gu) ?? []).length,
+    4,
+  );
+  assert.match(runner, /s\.subdbid = \([\s\S]+?pg_catalog\.current_database\(\)/u);
+  assert.doesNotMatch(runner, /pg_replication_origin/u);
+  assert.doesNotMatch(runner, /allowed_extension_objects/u);
+  assert.doesNotMatch(runner, /SELECT d\.classid, d\.objid/u);
+  assert.doesNotMatch(runner, /t\.typtype IN \('d', 'e', 'r'\)/u);
 });
 
 test("isolated restore target passes only with both boundaries and exact target binding", () => {
@@ -1440,11 +1559,17 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runner, /pg_catalog\.pg_policy/u);
   assert.match(runner, /FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH/u);
   assert.match(runner, /restore_target_not_empty/);
-  assert.match(runner, /allowed_extension_objects AS/u);
+  assert.match(runner, /expected_extension_functions\(/u);
   assert.equal(
-    (runner.match(/FROM allowed_extension_objects AS allowed/gu) ?? []).length,
-    4,
+    (runner.match(/FROM expected_extension_addresses AS allowed/gu) ?? []).length,
+    1,
   );
+  assert.equal(
+    (runner.match(/FROM allowed_extension_schemas AS allowed/gu) ?? []).length,
+    1,
+  );
+  assert.doesNotMatch(runner, /allowed_extension_objects/u);
+  assert.match(runbook, /newly provisioned Supabase[\s\S]+not considered empty/u);
   assert.match(runner, /FANMIND_OPERATIONAL_TEST_MODE/);
   assert.match(runner, /--single-transaction/);
   assert.match(runner, /-u PGHOSTADDR/);
