@@ -46,17 +46,15 @@ begin
   if new.referrer_workspace_id is distinct from old.referrer_workspace_id
     or lower(new.referral_code) is distinct from lower(old.referral_code)
     or (
-      old.referred_workspace_id is not null
+      new.referred_workspace_id is not null
       and new.referred_workspace_id is distinct from old.referred_workspace_id
     )
     or (
-      old.referrer_user_id is not null
-      and new.referrer_user_id is not null
+      new.referrer_user_id is not null
       and new.referrer_user_id is distinct from old.referrer_user_id
     )
     or (
-      old.referred_user_id is not null
-      and new.referred_user_id is not null
+      new.referred_user_id is not null
       and new.referred_user_id is distinct from old.referred_user_id
     ) then
     raise exception 'referral_attribution_immutable';
