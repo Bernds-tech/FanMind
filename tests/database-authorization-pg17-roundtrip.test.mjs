@@ -422,9 +422,28 @@ with recursive selected_extension as (
     member.objid,
     member.objsubid,
     identified.type,
-    identified.schema,
-    identified.name,
-    identified.identity,
+    case
+      when toast_parent.oid is not null then toast_parent_namespace.nspname
+      when toast_index_parent.oid is not null
+        then toast_index_parent_namespace.nspname
+      else identified.schema
+    end as schema,
+    case
+      when toast_parent.oid is not null then '<toast-table>'
+      when toast_index_parent.oid is not null then '<toast-index>'
+      else identified.name
+    end as name,
+    case
+      when toast_parent.oid is not null then
+        'toast table for ' ||
+        pg_catalog.quote_ident(toast_parent_namespace.nspname) || '.' ||
+        pg_catalog.quote_ident(toast_parent.relname)
+      when toast_index_parent.oid is not null then
+        'toast index for ' ||
+        pg_catalog.quote_ident(toast_index_parent_namespace.nspname) || '.' ||
+        pg_catalog.quote_ident(toast_index_parent.relname)
+      else identified.identity
+    end as identity,
     case
       when member.classid =
            'pg_catalog.pg_class'::pg_catalog.regclass then (
@@ -453,6 +472,24 @@ with recursive selected_extension as (
       else null
     end as owner_name
   from dependency_closure as member
+  left join pg_catalog.pg_class as member_relation
+    on member.classid = 'pg_catalog.pg_class'::pg_catalog.regclass
+   and member_relation.oid = member.objid
+  left join pg_catalog.pg_class as toast_parent
+    on member_relation.relkind = 't'
+   and toast_parent.reltoastrelid = member_relation.oid
+  left join pg_catalog.pg_namespace as toast_parent_namespace
+    on toast_parent_namespace.oid = toast_parent.relnamespace
+  left join pg_catalog.pg_index as toast_index
+    on member_relation.relkind in ('i', 'I')
+   and toast_index.indexrelid = member_relation.oid
+  left join pg_catalog.pg_class as toast_relation
+    on toast_relation.oid = toast_index.indrelid
+   and toast_relation.relkind = 't'
+  left join pg_catalog.pg_class as toast_index_parent
+    on toast_index_parent.reltoastrelid = toast_relation.oid
+  left join pg_catalog.pg_namespace as toast_index_parent_namespace
+    on toast_index_parent_namespace.oid = toast_index_parent.relnamespace
   cross join lateral pg_catalog.pg_identify_object(
     member.classid,
     member.objid,
