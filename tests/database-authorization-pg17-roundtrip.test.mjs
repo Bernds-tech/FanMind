@@ -603,6 +603,11 @@ with relation as (
 )
 select pg_catalog.jsonb_build_object(
   'raw_acl_is_explicit', (select relacl is not null from relation),
+  'raw_acl', (select relacl::text from relation),
+  'hard_default_acl', (
+    select pg_catalog.acldefault('r'::"char", relowner)::text
+    from relation
+  ),
   'semantically_default',
     not exists (
       select * from current_acl
@@ -1947,11 +1952,23 @@ create index fanmind_ci_unexpected_idx
         EXPLICIT_DEFAULT_ACL_SQL,
       ),
     ]);
-    assert.deepEqual(JSON.parse(sourceExplicitAcl), {
-      raw_acl_is_explicit: true,
-      semantically_default: true,
-    });
-    assert.equal(JSON.parse(targetExplicitAcl).semantically_default, true);
+    const sourceExplicitAclState = JSON.parse(sourceExplicitAcl);
+    const targetExplicitAclState = JSON.parse(targetExplicitAcl);
+    assert.equal(sourceExplicitAclState.raw_acl_is_explicit, true);
+    assert.equal(
+      sourceExplicitAclState.semantically_default,
+      true,
+      `source explicit-default ACL differs: ${JSON.stringify(
+        sourceExplicitAclState,
+      )}`,
+    );
+    assert.equal(
+      targetExplicitAclState.semantically_default,
+      true,
+      `target explicit-default ACL differs: ${JSON.stringify(
+        targetExplicitAclState,
+      )}`,
+    );
 
     const targetColumnAcl = JSON.parse(
       await dockerPsqlScalar(TARGET_CONTAINER_ID, password, COLUMN_ACL_SQL),
