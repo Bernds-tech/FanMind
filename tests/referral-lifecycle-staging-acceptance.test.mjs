@@ -174,7 +174,12 @@ test("migration enforces first attribution and blocks identity mutation", async 
     migration,
     /create unique index referrals_referred_workspace_unique_idx[\s\S]*where referred_workspace_id is not null/iu,
   );
+  assert.match(migration, /new\.referred_workspace_id is not null/u);
   assert.match(migration, /new\.referrer_user_id is not null/u);
   assert.match(migration, /new\.referred_user_id is not null/u);
+  assert.doesNotMatch(
+    migration,
+    /old\.(?:referred_workspace_id|referrer_user_id|referred_user_id) is not null\s+and new\./u,
+  );
   assert.doesNotMatch(migration, /grant execute.*authenticated/iu);
 });
