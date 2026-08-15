@@ -202,6 +202,7 @@ export function evaluateRestoreReadiness(environment = {}) {
     errors.push("production_database_target");
   }
   if (sharedSupabasePooler) errors.push("shared_supabase_pooler");
+  if (directSupabaseMatch) errors.push("managed_supabase_target_unsupported");
   if (
     directSupabaseMatch
     && directSupabaseMatch[1] !== targetSupabaseProjectRef
@@ -223,6 +224,7 @@ export function evaluateRestoreReadiness(environment = {}) {
       !directSupabaseMatch
       || directSupabaseMatch[1] === targetSupabaseProjectRef,
     ),
+    managedSupabaseTarget: Boolean(directSupabaseMatch),
     sharedSupabasePooler,
     hiddenTargetOverridesClear,
     errors: Object.freeze([...new Set(errors)]),
@@ -349,7 +351,12 @@ export function evaluateRestoreTarget(environment = {}) {
   }
   if (sharedSupabasePooler) {
     errors.push(
-      "Shared Supabase-Pooler sind für den Restore-Drill gesperrt; einen projektspezifischen direkten DB-Host verwenden.",
+      "Shared Supabase-Pooler sind für den Restore-Drill gesperrt.",
+    );
+  }
+  if (directSupabaseMatch) {
+    errors.push(
+      "Gehostete Supabase-Datenbanken sind kein gültiges Restore-Ziel; der exakte Eigentümer- und ACL-Roundtrip verlangt ein isoliertes, selbst kontrolliertes PostgreSQL-17-Ziel mit Bootstrap-Superuser.",
     );
   }
   if (
@@ -406,6 +413,7 @@ export function evaluateRestoreTarget(environment = {}) {
       !directSupabaseMatch
       || directSupabaseMatch[1] === targetSupabaseProjectRef,
     ),
+    managedSupabaseTarget: Boolean(directSupabaseMatch),
     sharedSupabasePooler,
     hiddenTargetOverridesClear: hiddenTargetOverrides.length === 0,
     passfileConfigured,

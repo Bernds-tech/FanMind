@@ -37,7 +37,11 @@ select
       and extension.extrelocatable
       and namespace.nspname = 'extensions'
       and extension.extconfig is null
-      and extension.extcondition is null)
+      and extension.extcondition is null),
+  (select count(*)
+     from pg_catalog.pg_roles as restore_role
+    where restore_role.rolname = current_user
+      and restore_role.rolsuper)
 from pg_catalog.pg_settings as settings
 where settings.name = 'server_version_num';
 `.trim();
@@ -130,16 +134,22 @@ function parseCompatibilityOutput(stdout) {
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter(Boolean);
-  if (lines.length !== 1 || !/^\d+\|\d+\|\d+$/u.test(lines[0])) {
+  if (lines.length !== 1 || !/^\d+\|\d+\|\d+\|\d+$/u.test(lines[0])) {
     fail("catalog_result_invalid");
   }
-  const [serverVersion, presentRoles, installedExtensions] = lines[0]
+  const [
+    serverVersion,
+    presentRoles,
+    installedExtensions,
+    restoreUserSuperuser,
+  ] = lines[0]
     .split("|")
     .map(Number);
   if (
     !Number.isSafeInteger(serverVersion)
     || !Number.isSafeInteger(presentRoles)
     || !Number.isSafeInteger(installedExtensions)
+    || !Number.isSafeInteger(restoreUserSuperuser)
   ) {
     fail("catalog_result_invalid");
   }
@@ -152,10 +162,14 @@ function parseCompatibilityOutput(stdout) {
   if (installedExtensions !== REQUIRED_RESTORE_EXTENSIONS.length) {
     fail("required_extensions_missing");
   }
+  if (restoreUserSuperuser !== 1) {
+    fail("restore_user_not_superuser");
+  }
   return Object.freeze({
     serverMajor: 17,
     presentRoles,
     installedExtensions,
+    restoreUserSuperuser: true,
   });
 }
 
@@ -262,6 +276,9 @@ async function main() {
   );
   console.log(
     `RESTORE_TARGET_COMPATIBILITY_INSTALLED_EXTENSIONS=${result.installedExtensions}`,
+  );
+  console.log(
+    `RESTORE_TARGET_COMPATIBILITY_RESTORE_USER_SUPERUSER=${result.restoreUserSuperuser}`,
   );
   console.log("RESTORE_TARGET_COMPATIBILITY_DATABASE_CONNECTION=read_only_catalog");
   console.log("RESTORE_TARGET_COMPATIBILITY_TLS=verify-full");

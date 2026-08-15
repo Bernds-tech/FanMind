@@ -27,7 +27,10 @@ Der Job-Poll bleibt über `FANMIND_BACKUP_POLL_MS` kurzfristig steuerbar. Heartb
 
 ## Serverpfade, Eigentümer und Rechte
 
-- `/usr/local/lib/fanmind-ops/backup-worker.mjs`: `root:root`, `0755`
+- `/usr/local/lib/fanmind-ops/backup-worker.mjs`: `root:root`, `0750`
+- `/usr/local/lib/fanmind-ops/database-authorization-contract.mjs`: `root:root`, `0750`
+- `/usr/local/lib/fanmind-ops/verify-backup-artifact.mjs`: `root:root`, `0750`
+- `/usr/local/lib/fanmind-ops/supabase-root-2021-ca.crt`: `root:root`, `0644`
 - `/usr/local/sbin/fanmind-backup-worker` optionaler Wrapper: `root:root`, `0755`
 - `/etc/fanmind-backup/worker.env`: `root:root`, `0600`
 - `/etc/fanmind-backup/pgpass`: `root:root`, `0600`
@@ -44,9 +47,17 @@ Siehe `ops/systemd/fanmind-backup-worker.env.example`. Echte Werte werden nur au
 Installieren:
 
 ```bash
-sudo install -o root -g root -m 0755 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs
+sudo install -d -o root -g root -m 0700 /usr/local/lib/fanmind-ops
+sudo install -o root -g root -m 0644 config/certificates/supabase-root-2021-ca.crt /usr/local/lib/fanmind-ops/supabase-root-2021-ca.crt
+sudo install -o root -g root -m 0750 scripts/operations/database-authorization-contract.mjs /usr/local/lib/fanmind-ops/database-authorization-contract.mjs
+sudo install -o root -g root -m 0750 scripts/operations/verify-backup-artifact.mjs /usr/local/lib/fanmind-ops/verify-backup-artifact.mjs
+sudo install -o root -g root -m 0750 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs
 sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service
 sudo install -o root -g root -m 0600 ops/systemd/fanmind-backup-worker.env.example /etc/fanmind-backup/worker.env
+sudo node --check /usr/local/lib/fanmind-ops/database-authorization-contract.mjs
+sudo node --check /usr/local/lib/fanmind-ops/verify-backup-artifact.mjs
+sudo node --check /usr/local/lib/fanmind-ops/backup-worker.mjs
+sudo systemd-analyze verify /etc/systemd/system/fanmind-backup-worker.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now fanmind-backup-worker.service
 ```
@@ -93,6 +104,63 @@ Nach erfolgreichem Deployment wird ein bereits aktiver `fanmind-backup-worker.se
 ## Sicherheit
 
 Der Worker nutzt `spawn(..., { shell:false })`, feste Jobtypen und feste Backup-Pfade. Browserdaten werden nicht als Shell-Argumente oder Dateipfade verwendet. Logs sind strukturiert und redigieren Key-/Secret-/Token-Felder. Zusätzlich werden Exception-Texte niemals direkt in Journal, `admin_operation_jobs` oder `operations_audit_log` übernommen: bekannte interne Fehler werden auf eine feste Allowlist reduziert, Prozess-, Supabase-, Konfigurations- und Dateisystemfehler erhalten generische Codes und jeder unbekannte Wert wird `backup_worker_failed`. Auch eine ungültige konfigurierte Worker-ID fällt auf eine lokal abgeleitete, feste Kennung zurück. Restore ist nicht implementiert.
+
+## Datenbank-Authorization-Contract
+
+Ab Worker-Version `phase5-backup-worker-6` werden PostgreSQL-Eigentümer,
+normale ACLs, Spalten-ACLs und Default ACLs als Teil des
+Wiederherstellungsvertrags gesichert. Der Worker öffnet dafür eine
+`REPEATABLE READ`, `READ ONLY` Source-Transaktion, erzeugt den kanonischen
+Authorization Contract und hält den exportierten Snapshot offen, bis
+`pg_dump --format=custom --snapshot=<snapshot-id>` abgeschlossen ist. Der Dump
+verwendet weder `--no-owner` noch `--no-privileges`.
+
+Die Source-Verbindung erhält eine vollständig neu aufgebaute libpq-Umgebung:
+`PGHOSTADDR`, Service-Dateien, `PGPASSWORD` und sonstige geerbte `PG*`-Werte
+werden nicht übernommen. Passfile und CA-Pfad stammen ausschließlich aus
+`FANMIND_BACKUP_PGPASSFILE` und `FANMIND_BACKUP_DB_CA_CERT_PATH`; TLS ist fest
+auf `verify-full`, GSS-Fallback auf `disable` gesetzt. Das Deployment
+installiert das reviewte Supabase-CA-Bundle read-only neben dem Worker. Der
+Worker öffnet beide Dateien ohne Symlink-Folge, verlangt einen einzelnen,
+root-eigenen regulären Inode, prüft Größe, Rechte und stabile Metadaten und
+friert die gelesenen Bytes anschließend als mode-`0600`-Kopien im privaten
+Job-Verzeichnis ein. Snapshot-Export, `pg_dump` und die TOC-Prüfung verwenden
+nur diese Kopien; eine Pfadrotation während des Backups kann die Verbindungen
+damit nicht auf unterschiedliche Credentials oder CAs umlenken.
+
+`pg_restore --list` muss anschließend aktive `ACL`- und `DEFAULT ACL`-
+Einträge enthalten. Das Datenbank-Teilmanifest hat `format_version: 2`, setzt
+`privileges_archived` und `ownership_archived` auf `true` und bindet unter
+`authorization_contract` Fingerprint, Datensatz- und Grant-Tupelzahlen,
+Required-Roles-Hash, den separaten Rollen-Fingerprint
+`role_fingerprint_sha256` samt positiver `role_record_count` sowie Anzahl und
+SHA256 der Archiv-ACL-TOC-Einträge. Zusätzlich bindet
+`database_container_fingerprint_sha256` mit positiver
+`database_container_record_count` Eigentümer, effektive Datenbank-ACL,
+datenbankspezifische Rolleneinstellungen und das PostgreSQL-17-Profil der
+Source-Datenbank einschließlich gespeicherter und tatsächlich verfügbarer
+Collation-Version. Stimmen diese beiden Versionen nicht überein, wird kein
+Backup veröffentlicht. Der Klartext-Dump wird erst danach mit age verschlüsselt.
+
+Der Authorization Contract hat Schema 2 und die Kanonisierung
+`postgresql-17-acl-json-array-hex-v2`. Er bindet zusätzlich die vollständige,
+sortierte Extension-Descriptorliste mit exakter Version, Hostschema,
+Extension- und Schema-Owner sowie Relokalisierbarkeit, ferner Listen-Hash,
+Extension-Fingerprint und positive Record-Anzahl. Der Fingerprint erfasst die
+Definitionen der direkten Production-Member und die rekursive
+Internal-/Auto-/Partition-Closure (`pg_depend` `i/a/P/S`), einschließlich
+portablem TOAST-Bezug, Ownern und initialen ACLs. Unterstützt werden bewusst
+die in Production belegten direkten Klassen `pg_proc`, `pg_class`, `pg_type`
+und `pg_language` sowie die abgeleiteten Klassen `pg_attrdef`,
+`pg_constraint`, `pg_rewrite` und `pg_trigger`. Jede andere Memberklasse
+bricht mit `authorization_extension_class_unsupported` ab; sie wird niemals
+stillschweigend unvollständig attestiert.
+
+Historische Datenbank-Manifeste bleiben checksum-verifizierbar. Der Verifier
+darf für sie jedoch keine privaten Restore-Ausgaben oder ein
+Full-Backup-Restore-Receipt erstellen. Ein neuer Full Backup nach Installation
+dieser Worker-Version ist deshalb Voraussetzung für den isolierten
+Restore-Drill.
 
 ## Scheduling
 

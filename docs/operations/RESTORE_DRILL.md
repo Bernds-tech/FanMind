@@ -10,6 +10,13 @@ This runbook proves that encrypted FanMind backups can be read and validated wit
 
 The verifier is deliberately read-only. It never restores a database, uploads Storage objects, edits Production configuration or writes into the backup directory.
 
+The drill has two separate isolation boundaries. The application and Storage
+boundary is a distinct non-Production Supabase project. The database recovery
+boundary is a different resource: an isolated, self-controlled bare PostgreSQL
+17 cluster and empty disposable database. A hosted Supabase database is not a
+supported restore target, even when it belongs to the confirmed non-Production
+project.
+
 ## Hard safety rules
 
 - Never pass a Production database target to a restore command.
@@ -39,7 +46,12 @@ FANMIND_TARGET_SUPABASE_PROJECT_REF=<isolated target>
 FANMIND_PRODUCTION_SUPABASE_PROJECT_REF=<comparison only>
 ```
 
-The restore drill stops unless `ENVIRONMENT_BOUNDARY=OK`. This shared boundary is the first gate. Immediately before `pg_restore`, the restore-specific target preflight below repeats it and additionally binds the actual PostgreSQL host, port, database and user to an explicit isolated target.
+The restore drill stops unless `ENVIRONMENT_BOUNDARY=OK`. This shared boundary
+is the first gate for the non-Production application and Storage resources; it
+does not authorize a database endpoint. Immediately before `pg_restore`, the
+restore-specific target preflight below repeats it and additionally binds the
+actual PostgreSQL host, port, database and bootstrap restore user to the
+separate isolated database target.
 
 ## 1. Production checksum-only verification
 
@@ -128,6 +140,20 @@ permissions. The verifier reads it without following symlinks, freezes the
 stable bytes into its private temporary directory and removes that snapshot
 with all other temporary plaintext.
 
+A restore output is created only from a database-part manifest with
+`format_version: 2`, authorization contract schema 2 and canonicalization
+`postgresql-17-acl-json-array-hex-v2`. The nested
+database manifest must prove that privileges and
+ownership were archived, bind a PostgreSQL-17 authorization fingerprint from
+the same exported read-only snapshot as the dump, bind its complete sorted
+owner/grantor/grantee role set, bind the source database container profile,
+effective database ACL and current-database role settings, and match the active
+`ACL` and `DEFAULT ACL` entries in the decrypted archive TOC. Historical
+artifacts created with
+`--no-privileges` remain eligible for checksum and structural verification,
+but they cannot create a restore dump or restore receipt and cannot be used as
+Gate-2 recovery evidence.
+
 For a standalone database backup, content verification runs:
 
 ```text
@@ -157,7 +183,9 @@ The first phase, `restore:resources:preflight`, is checksum-only. It verifies:
   Production;
 - the independently recorded restore database target uses a host distinct from
   the Production database host;
-- direct Supabase database hosts match the confirmed isolated project;
+- the database endpoint is not a shared Supabase pooler or a hosted direct
+  `db.<project-ref>.supabase.co` database, both of which are unsupported restore
+  targets;
 - no active `PG*` connection target, password or passfile can redirect the
   check;
 - the selected encrypted `fanmind-full-*.tar.gz.age` artifact and its adjacent
@@ -184,11 +212,18 @@ Its one fixed query reads only `pg_catalog.pg_settings`,
 `pg_catalog.pg_namespace`. It fails closed unless:
 
 - the target server major is exactly PostgreSQL 17;
+- `current_user` is a PostgreSQL superuser, as required to preserve the archived
+  ownership and privileges;
 - the pre-existing roles `anon`, `authenticated`, and `service_role` are all
   present, because FanMind migrations grant or revoke privileges for them;
 - the pre-installed, relocatable `pgcrypto` extension is exactly version 1.3
   in the fixed FanMind Production schema `extensions`, because five FanMind
   migrations declare `create extension if not exists pgcrypto`.
+
+The configured login must additionally be the dedicated bootstrap restore
+login outside the receipt-bound source role component. The compatibility query
+proves its superuser attribute; the receipt-bound role preflight later proves
+the source role component before any write.
 
 The compatibility phase never creates a role or extension, applies a
 migration, decrypts a backup, invokes `pg_restore`, or enables either write
@@ -200,6 +235,7 @@ Required final lines:
 RESTORE_TARGET_COMPATIBILITY_DATABASE_CONNECTION=read_only_catalog
 RESTORE_TARGET_COMPATIBILITY_TLS=verify-full
 RESTORE_TARGET_COMPATIBILITY_WRITES=disabled
+RESTORE_TARGET_COMPATIBILITY_RESTORE_USER_SUPERUSER=true
 RESTORE_TARGET_COMPATIBILITY=PASS
 ```
 
@@ -213,7 +249,8 @@ One-time external setup for the GitHub Environment `restore-drill`:
 - secrets `FANMIND_RESTORE_SUPABASE_URL`,
   `FANMIND_RESTORE_TARGET_DB_HOST`, `FANMIND_RESTORE_TARGET_DB_USER`,
   `FANMIND_PRODUCTION_DB_HOST`, `FANMIND_PRODUCTION_DB_USER` and
-  `FANMIND_RESTORE_ARTIFACT_PATH`;
+  `FANMIND_RESTORE_ARTIFACT_PATH`. The target database user must be a dedicated
+  bootstrap superuser outside the receipt-bound source role component;
 - secrets `FANMIND_RESTORE_TARGET_PGPASSFILE_PATH` and
   `FANMIND_RESTORE_TARGET_CA_CERT_PATH`, each containing an absolute path on
   the isolated runner. The passfile must already exist as an operator-owned,
@@ -249,10 +286,12 @@ The write step then:
 3. restores only the receipt-bound database dump into the confirmed empty
    disposable target with `sslmode=verify-full`, the frozen CA and one
    transaction;
-4. creates the private full-backup, runner and 5/5/5 database-postcheck
-   receipts;
-5. uploads only those three redacted receipts as a private three-day artifact;
-6. removes the plaintext dump and receipt files from the runner in the final
+4. proves that every receipt-bound owner, grantor and grantee role exists with
+   the exact source attributes and memberships, and that the separate
+   bootstrap superuser can preserve archived ownership;
+5. creates the private full-backup, runner and database-postcheck receipts;
+6. uploads only those three private receipts as a three-day artifact;
+7. removes the plaintext dump and receipt files from the runner in the final
    cleanup step.
 
 The workflow deliberately does not upload a dump, an age identity, a passfile
@@ -263,48 +302,108 @@ separate mandatory steps.
 
 ### Preconditions
 
-- isolated PostgreSQL instance or another dedicated PostgreSQL 17 target that
-  passes the catalog-level empty-target proof; a newly provisioned Supabase
-  project is not considered empty merely because it has no FanMind rows, since
-  its platform schemas and objects remain present;
+- an isolated, self-controlled bare PostgreSQL 17 cluster and disposable
+  database that pass the catalog-level empty-target proof. Hosted direct
+  Supabase databases and shared Supabase poolers are unsupported. A newly
+  provisioned Supabase project is not considered empty merely because it has
+  no FanMind rows, since its platform schemas and objects remain present;
 - PostgreSQL major 17 plus the pre-existing roles `anon`, `authenticated` and
-  `service_role`, `plpgsql` 1.0 and the pre-installed `pgcrypto` 1.3 extension,
-  as proven by the compatibility and empty-target phases;
+  `service_role`. The compatibility phase proves the migration-required
+  `pgcrypto` 1.3 minimum; after decryption, the receipt-bound authorization
+  preflight requires the complete Production extension set to be pre-installed
+  with exact name, version, host schema, extension owner, schema owner,
+  relocatability and member inventory before any restore write;
+- every owner, grantor and grantee role in the authorization contract of
+  the selected Full Backup Receipt schema 2, provisioned with the exact source
+  attributes and bidirectional memberships before any restore write;
+- an exact match for the receipt-bound source database container: database
+  owner, encoding, locale provider and locale values, stored and actual
+  collation versions, default tablespace, connection limit, effective database
+  ACL and current-database role settings. A stored/actual collation-version
+  mismatch fails before any restore write;
+- a dedicated bootstrap superuser login outside that receipt-bound source role
+  component. Do not reuse the target `postgres` login as both bootstrap and a
+  source role when doing so would change the receipt-bound `postgres`
+  attributes or membership fingerprint. It must be the only additional LOGIN
+  and the only additional SUPERUSER outside the source component. Password
+  hashes are deliberately not backed up or fingerprinted; keep the one-time
+  bootstrap credential separate and destroy it with the target;
+- the pre-existing `extensions` and `public` schema containers with their
+  fixed Production owners and ACLs, plus every receipt-bound extension host
+  schema. For each host schema whose definition is archived, the receipt also
+  binds its exact schema owner because the filtered archive deliberately does
+  not replay that `CREATE SCHEMA`/owner definition;
 - empty disposable target database;
+- exclusive administrative control of the disposable cluster for the complete
+  preflight, empty-target check and restore transaction. Do not allow another
+  administrator or automation to change roles, database settings or catalogs
+  during that interval;
 - no DNS, webhook or application configuration pointing at Production;
 - written target identifier in the drill record.
 
-For the empty-target proof, only the exact PostgreSQL 17 member inventories of
-`plpgsql` 1.0 and `pgcrypto` 1.3 are allowed: the three `plpgsql` handler
-functions and its language object, plus the 36 schema-qualified `pgcrypto`
-functions with their expected signatures, result types, execution attributes,
-C entry points and library bindings.
-The namespaces are part of the fixed FanMind Production recovery contract:
+For the empty-target proof, the fixed PostgreSQL 17 member inventories of
+`plpgsql` 1.0 and `pgcrypto` 1.3 remain independently checked. In addition,
+the private Full Backup Receipt binds the complete sorted Production extension
+descriptor list and a canonical fingerprint over every extension's metadata,
+configuration, initial privileges and portable member identities. The target
+must match that list, fingerprint and record count exactly: missing, additional
+or differently versioned extensions, a different host schema or owner, or any
+changed member blocks the run before the first write.
+The current Production descriptor set contains `pg_stat_statements` 1.11,
+`pgcrypto` 1.3, `plpgsql` 1.0, `supabase_vault` 0.3.1 and `uuid-ossp` 1.1.
+That list is operational guidance only; the selected private receipt, not this
+paragraph or an environment variable, is authoritative for a particular dump.
+The core namespaces remain part of the fixed FanMind recovery contract:
 `plpgsql` must be in `pg_catalog` and `pgcrypto` 1.3 must be in `extensions`.
-Production and Staging use that layout. A target with `pgcrypto` installed in
-any other schema is rejected before decryption and again before `pg_restore`;
-`CREATE EXTENSION IF NOT EXISTS` would otherwise leave the pre-installed
-extension in the wrong schema instead of relocating it.
-The proof compares that independent allowlist with PostgreSQL's extension
-membership catalog in both directions, so an object attached later with
-`ALTER EXTENSION ... ADD` still blocks the restore. The concrete schema object
-hosting an allowed extension is exempt, including Supabase's `extensions`
-schema, while every unrelated schema-scoped object inside it remains visible.
+A target with `pgcrypto` installed in any other schema is rejected before
+`pg_restore`; `CREATE EXTENSION IF NOT EXISTS` would otherwise leave the
+pre-installed extension in the wrong schema instead of relocating it.
+The container proof also pins `extensions` to owner `postgres` and the five
+Production ACL principals `postgres`, `anon`, `authenticated`, `service_role`
+and `dashboard_user`; it pins `public` to owner `pg_database_owner` and the
+six Production ACL principals including `PUBLIC`. The comparisons are
+order-independent exact ACL-set checks. A missing or additional entry fails
+before restore because the excluded schema definition cannot repair container
+ownership or safely remove unknown grants.
+The proof compares the receipt-bound extension contract with PostgreSQL's
+extension membership catalog in both directions, so an object attached later
+with `ALTER EXTENSION ... ADD` still blocks the restore. Its portable member
+inventory starts at direct `pg_depend` extension members and follows only the
+reverse internal, automatic, partition and sequence dependency closure
+(`deptype` `i`, `a`, `P` and `S`). Definitions are fingerprinted for the
+Production-bounded classes `pg_proc`, `pg_class`, `pg_type` and `pg_language`
+plus derived `pg_attrdef`, `pg_constraint`, `pg_rewrite` and `pg_trigger`
+records. Any other class fails closed with
+`authorization_extension_class_unsupported`; TOAST identity is expressed
+relative to its owning relation rather than by target-local OID or generated
+name. The exact host-schema containers and this exact fingerprinted closure
+are the only extension baseline exempted from the empty-target object count;
+every unrelated object inside those schemas remains visible.
 That includes relations, routines, types, collations, conversions, operators,
 operator classes and families, extended statistics and text-search objects.
 Schema-less database objects such as non-core languages, casts, access methods,
 transforms, FDWs, foreign servers, user mappings, default ACLs, event triggers,
 large objects, publications and current-database subscriptions also block the
-restore. Every other non-system schema or extension blocks it before
-`pg_restore` as well.
+restore unless their exact address is a member of a receipt-verified
+extension. Every other non-system schema or object blocks it before
+`pg_restore`.
+
+All receipt-bound extensions and their PostgreSQL-17 packages must therefore
+be installed on the isolated target before the run. The dump's active
+`CREATE EXTENSION IF NOT EXISTS` entries are not a provisioning mechanism:
+after the exact preflight they are verified no-ops, while the rest of each TOC
+entry remains active. No extension is silently omitted or accepted merely
+because its package happens to exist on the host.
 
 Decrypt and verify the full backup on the isolated host. The content verifier
 must create a private full-backup receipt that binds the encrypted database
 part and the exact decrypted database dump by SHA-256. A free environment
-variable or a manually copied expected dump hash is not accepted. Both
-receipts, the dump and the passfile must be regular, non-symlink files owned by
-the operator with exact private permissions. The CA must be a stable regular
-non-symlink file that is not group- or world-writable. Use a dedicated TCP
+variable or a manually copied expected dump hash is not accepted. The
+full-backup receipt, dump and passfile must be regular, non-symlink files owned
+by the operator with exact private permissions. The runner- and
+database-postcheck-receipt output paths must still be absent inside private,
+operator-owned directories. The CA must be a stable regular non-symlink file
+that is not group- or world-writable. Use a dedicated TCP
 endpoint, `sslmode=verify-full`, the canonical certificate-covered DNS
 hostname and absolute paths to the protected `PGPASSFILE` and CA; do not put
 the database password in `PGPASSWORD`.
@@ -315,7 +414,7 @@ Set the actual libpq target and independently confirmed comparison metadata in t
 export PGHOST=<isolated-target-host>
 export PGPORT=<isolated-target-port>
 export PGDATABASE=<isolated-target-database>
-export PGUSER=<isolated-target-user>
+export PGUSER=<isolated-bootstrap-superuser>
 export PGPASSFILE=<protected-passfile-path>
 export PGSSLMODE=verify-full
 export PGSSLROOTCERT=<protected-ca-certificate-path>
@@ -324,7 +423,7 @@ export PGGSSENCMODE=disable
 export FANMIND_RESTORE_TARGET_DB_HOST=<same-isolated-target-host>
 export FANMIND_RESTORE_TARGET_DB_PORT=<same-isolated-target-port>
 export FANMIND_RESTORE_TARGET_DB_NAME=<same-isolated-target-database>
-export FANMIND_RESTORE_TARGET_DB_USER=<same-isolated-target-user>
+export FANMIND_RESTORE_TARGET_DB_USER=<same-isolated-bootstrap-superuser>
 
 export FANMIND_PRODUCTION_DB_HOST=<production-comparison-host>
 export FANMIND_PRODUCTION_DB_PORT=<production-comparison-port>
@@ -353,7 +452,9 @@ The command is read-only and does not decrypt or restore anything. It fails unle
 - canonical IPv4/IPv6 spellings are enforced; legacy numeric IPv4 forms are rejected;
 - no `PGHOSTADDR`, `PGSERVICE` or `PGSERVICEFILE` can silently redirect libpq;
 - `PGDATABASE` is a plain database name, not a URI or libpq Connection-String;
-- shared Supabase-Pooler are blocked, while a direct `db.<project-ref>.supabase.co` host must match the confirmed non-Production project;
+- shared Supabase poolers and hosted direct
+  `db.<project-ref>.supabase.co` databases are blocked; the restore endpoint
+  must identify the isolated self-controlled PostgreSQL 17 target;
 - absolute protected `PGPASSFILE` and CA paths are configured,
   `PGSSLMODE=verify-full`, `PGGSSENCMODE=disable` and `PGPASSWORD` is absent.
 
@@ -388,41 +489,80 @@ target with `psql` to prove that no non-system objects exist. A nonzero,
 ambiguous or unreadable result stops the runner before `pg_restore`.
 
 The target-free archive listing is held only inside the private snapshot
-directory. The fixed Production archive contract requires exactly one active
-PostgreSQL 17 TOC line for `SCHEMA - extensions postgres`, bound to the
-`pg_namespace` catalog class. The runner copies every TOC entry in its original
-order and disables only that one schema-definition line before using the list
-with `pg_restore --use-list`. This avoids replaying `CREATE SCHEMA extensions`
-against the required pre-installed pgcrypto host schema. Missing, duplicated,
-malformed, differently owned or ambiguous entries stop before even the
-empty-target query. The `EXTENSION - pgcrypto` entry, schema or extension
-comments and security labels, and every table, function or other object inside
-`extensions` remain active. A broad `--exclude-schema=extensions` is forbidden
-because it would omit restored Production objects. The filtered list is opened
-and validated once, its path is removed, and the inherited private descriptor
-is passed to `pg_restore`. The raw TOC path and filtered TOC pathname are
-unlinked before the target query; the filtered bytes remain reachable only
-through that private descriptor until `pg_restore` returns. The snapshot trap
-also removes either path if preparation fails earlier.
+directory. The Full Backup Receipt declares every unique non-system,
+non-`public` extension host schema whose definition pg_dump archived, together
+with its exact schema owner. For the current Production set those filter
+targets are `SCHEMA - extensions postgres` and
+`SCHEMA - vault supabase_admin`. The runner requires exactly one active
+PostgreSQL 17 `pg_namespace` TOC entry for every declared target, copies every
+TOC entry in its original order and disables only those exact schema-definition
+lines before using the list with `pg_restore --use-list`. A descriptor marked
+as not archived must have no active schema-definition line. Missing,
+duplicated, malformed, differently owned, receipt-unbound or ambiguous schema
+and extension entries stop before the empty-target query.
 
-The restore then uses that exact same snapshot with
-`--single-transaction`. A failed archive check stops the runner before any
-write, and a restore error rolls back the single transaction. Host, port, user
-and database are supplied as explicit arguments while hidden libpq target
+Every receipt-required extension except PostgreSQL 17's built-in `plpgsql`
+must have exactly one active `EXTENSION` entry. `plpgsql` is the only permitted
+missing built-in entry and an unexpected active `plpgsql` entry fails closed.
+Every active entry must name a receipt-bound extension and remains byte-for-byte
+active. The following read-only authorization preflight requires the complete
+version/schema/owner/member fingerprint before the first target write, so
+those `CREATE EXTENSION IF NOT EXISTS` statements are checked no-ops. Schema
+and extension comments and security labels, and every non-extension Production
+object inside an extension host schema, remain active. Broad
+`--exclude-schema` filtering is forbidden because it would omit restored
+Production objects. The filtered list is opened and validated once, its path
+is removed, and the inherited private descriptor is passed to `pg_restore`.
+The raw TOC path and filtered TOC pathname are unlinked before the target query;
+the filtered bytes remain reachable only through that private descriptor until
+`pg_restore` returns. The snapshot trap also removes either path if preparation
+fails earlier.
+
+Before querying target contents, the runner reads the authorization role and
+extension sets only from the exact private Full Backup Receipt. One read-only
+catalog check requires every role to exist, rebuilds the receipt-bound
+bidirectional membership component, and matches its role attributes,
+memberships, membership options and grantors, connection limits, validity
+timestamps, per-role settings, fingerprint and record count before the first
+database write. The same query independently recomputes the complete installed
+extension descriptor list and extension/member fingerprint, so an extra,
+missing, differently owned or modified extension cannot become an empty-target
+exemption. It also compares the receipt-bound database-container fingerprint
+and record count, including the owner, effective database ACL,
+current-database role settings and stored/actual collation versions. This
+detects both additional privilege parents and an unexpected login role that
+can assume a receipt-bound role. The separate restore login must be the sole
+additional LOGIN and SUPERUSER outside that component so archived ownership
+can be preserved without changing a source role's attributes or memberships.
+In particular, do not make a receipt-bound target `postgres` role serve both
+purposes if that changes its source fingerprint. Role password hashes are out
+of scope and no role or extension is created or altered by the drill. The
+archive's `ACL` and `DEFAULT ACL` entries stay active in the filtered list.
+
+The restore then uses that exact same snapshot with `--single-transaction`
+and restores both ownership and privileges. `--no-owner` and
+`--no-privileges` are forbidden. A failed archive check stops the runner before
+any write, and any restore error rolls back atomically. Host, port, user and
+database are supplied as explicit arguments while hidden libpq target
 overrides are removed. Every database connection uses `verify-full` with the
-frozen CA snapshot and disables GSS encryption fallback. Only after the
-successful restore does the
-commit-bound runner create a new private, atomic runner receipt. It binds the
-drill ID, opaque disposable-target UUID, empty-target observation, exact
-full-backup receipt bytes, database hashes, timestamps and successful
-single-transaction result. A pre-existing output or symlink fails closed.
+frozen CA snapshot and disables GSS encryption fallback.
 
-Immediately after that receipt is written, the same frozen target and private
-passfile snapshot are used for a catalog-only post-restore query. It checks
+Immediately after the restore, the same frozen target and private passfile
+snapshot are used for catalog-only post-restore queries. The first checks
 exactly `workspaces`, `workspace_members`, `contacts`, `memories` and
 `followups`: every table must exist in `public`, have RLS enabled and have at
-least one PostgreSQL policy. Only a 5/5/5 result creates the separate private
-`database-postcheck-receipt.json`. The receipt binds its timestamp, drill ID,
+least one PostgreSQL policy. The shared authorization-contract query then
+recomputes the target's deterministic object/ACL fingerprint and requires the
+source-bound record and grant counts, the exact role and database-container
+fingerprints, all 120 app-role grant tuples on the five core tables, and the
+same 12 restricted non-trigger
+`SECURITY DEFINER` functions. The remaining executable SECURITY DEFINER is a
+trigger-returning function and is still fingerprint-bound. Only after both
+queries pass does the commit-bound runner create a new private, atomic runner
+receipt and then the separate private `database-postcheck-receipt.json`. The
+runner receipt binds the drill ID, opaque disposable-target UUID, empty-target
+observation, exact full-backup receipt bytes, database hashes, timestamps and
+successful single-transaction result. The postcheck receipt binds its timestamp, drill ID,
 opaque disposable-target UUID and Production commit to the exact runner
 receipt SHA-256. A missing table, disabled RLS, missing policy, changed
 identity, pre-existing output or unsafe output directory fails closed.
@@ -438,9 +578,10 @@ export FANMIND_ENABLE_NON_PRODUCTION_WRITES=false
 unset FANMIND_NON_PRODUCTION_WRITE_ACK
 ```
 
-The runner now records the core database postcheck automatically. Do not copy
+The runner now records the core database and authorization postcheck
+automatically. Do not copy
 `coreSchemaChecks: "passed"` or `rlsVerification: "passed"` into the final
-evidence manually; schema 5 rejects both fields. Additionally verify:
+evidence manually; schema 6 rejects both fields. Additionally verify:
 
 - no Production webhook or secret values were restored into application runtime configuration;
 - test logins and test data access remain isolated.
@@ -497,7 +638,7 @@ Use this exact schema and replace only the bounded placeholder values:
 
 ```json
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "drillId": "2026-07-30-restore-001",
   "startedAt": "2026-07-30T08:00:00Z",
   "completedAt": "2026-07-30T08:30:00Z",
@@ -510,11 +651,26 @@ Use this exact schema and replace only the bounded placeholder values:
   "databasePostcheckReceiptSha256": "9999999999999999999999999999999999999999999999999999999999999999",
   "databasePartEncryptedSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "databaseDumpSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "databaseAuthorizationFingerprintSha256": "abababababababababababababababababababababababababababababababab",
+  "databaseAuthorizationRecordCount": 500,
+  "databaseAuthorizationGrantTupleCount": 1000,
+  "databaseAuthorizationRequiredRolesSha256": "1212121212121212121212121212121212121212121212121212121212121212",
+  "databaseAuthorizationRoleFingerprintSha256": "3434343434343434343434343434343434343434343434343434343434343434",
+  "databaseAuthorizationRoleRecordCount": 42,
+  "databaseAuthorizationContainerFingerprintSha256": "5656565656565656565656565656565656565656565656565656565656565656",
+  "databaseAuthorizationContainerRecordCount": 12,
+  "databaseCoreTableAppGrantTupleCount": 120,
+  "databaseRestrictedSecurityDefinerFunctionCount": 12,
   "disposableTargetId": "123e4567-e89b-42d3-a456-426614174000",
   "verifier": "passed",
   "storageSample": "passed",
   "serverConfigInspection": "passed",
   "cleanup": "passed",
+  "databasePrivilegesRestore": "passed",
+  "databaseOwnershipRestore": "passed",
+  "databaseAuthorizationPostcheck": "passed",
+  "coreTableAppPrivileges": "passed",
+  "securityDefinerExecutionBoundary": "passed",
   "productionModified": false,
   "customerDataRecordedInEvidence": false,
   "secretsRecorded": false,
@@ -534,7 +690,7 @@ receipt bytes. The verifier requires all three hashes, `drillId`,
 match the runner and postcheck receipts. It accepts database restore and
 empty-target success only from the machine-generated runner receipt and core
 schema/RLS/policy success only from the machine-generated postcheck receipt.
-Schema v4, a manually asserted `databaseRestore: "passed"`, manual
+Schema v5, a manually asserted `databaseRestore: "passed"`, manual
 `coreSchemaChecks: "passed"` or manual `rlsVerification: "passed"` fail
 closed.
 
@@ -546,15 +702,20 @@ disposable restore target; the narrower
 `customerDataRecordedInEvidence: false` assertion means that none of those
 contents or identifiers were copied into the redacted evidence.
 
-The evidence file and all three receipts contain keine Hostnamen, Datenbanknamen,
-Benutzernamen, Passwörter, Schlüssel, Kundendaten oder freie Notizfelder. The
-verifier accepts only the documented evidence and receipt keys, reads stable
-private regular files, binds the artifact basename, outer SHA-256, Production
-commit, database-part SHA-256, restored-dump SHA-256, empty-target observation
-and transactional restore result, prints status codes only and never echoes
-record values. The database postcheck receipt exposes only the fixed counts
-5/5/5 and the hashes and opaque identities required for binding; it records no
-table contents or policy expressions.
+The evidence file, runner receipt and database-postcheck receipt contain no
+host names, database names, user names, passwords, keys, customer data or
+free-form notes. The private Full Backup Receipt additionally contains the
+bounded, sorted database role names required for the prewrite role check; it
+must therefore remain confidential and may appear only in the private,
+short-lived workflow artifact. None of the three receipts contains passwords,
+keys or customer rows. The verifier accepts only the documented evidence and
+receipt keys, reads stable private regular files, binds the artifact basename,
+outer SHA-256, Production commit, database-part SHA-256, restored-dump SHA-256,
+empty-target observation and transactional restore result, prints status codes
+only and never echoes record values. The database postcheck receipt exposes
+only the fixed counts 5/5/5, the authorization fingerprint and bounded counts,
+and the hashes and opaque identities required for binding; it records no table
+contents or policy expressions.
 
 On success the verifier also prints:
 
@@ -576,6 +737,10 @@ A restore drill passes when:
 - a database dump restores into an isolated empty target without errors;
 - the machine-bound database postcheck proves 5/5 required tables, 5/5 RLS
   enablement and 5/5 policy coverage;
+- the receipt-bound authorization fingerprint matches after restore, including
+  archived owners, grants, grantors, grant options, default ACLs, 120 core
+  app-role table grants, the exact role graph and database-container contract,
+  and the restricted SECURITY DEFINER boundary;
 - representative Storage objects validate after upload/download in a test bucket;
 - server-config archive contents are present and readable in isolation;
 - all plaintext temporary files and disposable targets are removed;

@@ -249,8 +249,8 @@ requireText(
 );
 requireText(
   "scripts/operations/verify-restore-drill-evidence.mjs",
-  "evidence.schemaVersion !== 5",
-  "Der Restore-Evidence-Validator muss ausschließlich Schema 5 akzeptieren.",
+  "evidence.schemaVersion !== 6",
+  "Der Restore-Evidence-Validator muss ausschließlich Schema 6 akzeptieren.",
 );
 requireText(
   "scripts/operations/verify-restore-drill-evidence.mjs",

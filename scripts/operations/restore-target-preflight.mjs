@@ -25,10 +25,10 @@ console.log(
   `PRODUCTION_TARGET=${result.productionSeparated ? "separate" : "blocked"}`,
 );
 console.log(
-  `SUPABASE_DIRECT_TARGET=${
-    result.sharedSupabasePooler || !result.directSupabaseProjectBound
-      ? "blocked"
-      : "safe"
+  `DATABASE_TARGET_CLASS=${
+    result.managedSupabaseTarget || result.sharedSupabasePooler
+      ? "hosted-supabase-blocked"
+      : "self-controlled"
   }`,
 );
 console.log(

@@ -7,6 +7,48 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const fixtureRoot = await mkdtemp(join(tmpdir(), 'fanmind-backup-worker-fixture-'));
+const requiredExtensions = [
+  {
+    name:'pgcrypto', version:'1.3', schema:'extensions', owner:'postgres',
+    relocatable:true, schemaOwner:'postgres', schemaDefinitionArchived:true,
+  },
+  {
+    name:'plpgsql', version:'1.0', schema:'pg_catalog', owner:'postgres',
+    relocatable:false, schemaOwner:'postgres', schemaDefinitionArchived:false,
+  },
+];
+const authorizationContractFrame = Buffer.from(JSON.stringify({
+  server_version_num: 170006,
+  fingerprint_sha256: 'a'.repeat(64),
+  record_count: 500,
+  grant_tuple_count: 420,
+  required_roles: ['anon', 'authenticated', 'postgres', 'service_role'],
+  role_fingerprint_sha256: 'c'.repeat(64),
+  role_record_count: 5,
+  database_container_fingerprint_sha256: 'd'.repeat(64),
+  database_container_record_count: 11,
+  required_extensions: requiredExtensions,
+  extension_fingerprint_sha256: 'e'.repeat(64),
+  extension_record_count: 84,
+  extension_contract_invariant_violation_count: 0,
+  extension_contract_unsupported_class_count: 0,
+  core_table_app_grant_tuple_count: 120,
+  core_table_app_grant_option_count: 0,
+  core_table_app_grant_row_count: 120,
+  container_recovery_invariant_violation_count: 0,
+  extension_recovery_invariant_violation_count: 0,
+  public_security_definer_function_count: 13,
+  restricted_security_definer_function_count: 12,
+  exposed_security_definer_exception_count: 1,
+  unsupported_default_acl_type_count: 0,
+  unresolved_role_oid_count: 0,
+}), 'utf8').toString('hex');
+const authorizationToc = `${[
+  '; Archive created by PostgreSQL 17',
+  '10; 0 0 ACL public TABLE contacts postgres',
+  '11; 826 20000 DEFAULT ACL public DEFAULT PRIVILEGES FOR TABLES postgres',
+].join('\n')}\n`;
+const snapshotCloseMarkerPath = join(fixtureRoot, 'snapshot-close.txt');
 
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://supabase.test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
@@ -14,17 +56,55 @@ process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE = join(fixtureRoot, 'recipient.txt');
 process.env.FANMIND_AGE_BIN = join(fixtureRoot, 'age.sh');
 process.env.FANMIND_PG_DUMP_BIN = join(fixtureRoot, 'pgdump.sh');
 process.env.FANMIND_PG_RESTORE_BIN = join(fixtureRoot, 'pgrestore.sh');
+process.env.FANMIND_PSQL_BIN = join(fixtureRoot, 'psql.sh');
 process.env.FANMIND_BACKUP_PGPASSFILE = join(fixtureRoot, 'pgpass');
+process.env.FANMIND_BACKUP_DB_CA_CERT_PATH = join(fixtureRoot, 'database-ca.pem');
+process.env.FANMIND_TEST_EXPECTED_CA = process.env.FANMIND_BACKUP_DB_CA_CERT_PATH;
+process.env.FANMIND_TEST_EXPECTED_PASSFILE = process.env.FANMIND_BACKUP_PGPASSFILE;
 process.env.FANMIND_BACKUP_DB_HOST = 'db.test';
 process.env.FANMIND_BACKUP_DB_USER = 'postgres';
 process.env.FANMIND_BACKUP_DB_NAME = 'postgres';
 process.env.FANMIND_STORAGE_BACKUP_PAGE_SIZE = '2';
 
 await writeFile(process.env.FANMIND_BACKUP_PUBLIC_KEY_FILE, 'age1test');
-await writeFile(process.env.FANMIND_BACKUP_PGPASSFILE, 'localhost:*:*:*:x');
+await writeFile(process.env.FANMIND_BACKUP_PGPASSFILE, 'localhost:*:*:*:x', { mode:0o600 });
+await writeFile(process.env.FANMIND_BACKUP_DB_CA_CERT_PATH, 'synthetic-ca\n', { mode:0o644 });
 await writeFile(process.env.FANMIND_AGE_BIN, '#!/usr/bin/env bash\nout=""\nwhile [[ $# -gt 0 ]]; do if [[ "$1" == "-o" ]]; then out="$2"; shift 2; else last="$1"; shift; fi; done\nprintf "AGE-ENCRYPTED\\n" > "$out"\ncat "$last" >> "$out"\n', { mode:0o755 });
-await writeFile(process.env.FANMIND_PG_DUMP_BIN, '#!/usr/bin/env bash\nfor ((i=1;i<=$#;i++)); do if [[ "${!i}" == "--file" ]]; then j=$((i+1)); printf "PGDUMP" > "${!j}"; fi; done\n', { mode:0o755 });
-await writeFile(process.env.FANMIND_PG_RESTORE_BIN, '#!/usr/bin/env bash\nexit 0\n', { mode:0o755 });
+await writeFile(process.env.FANMIND_PG_DUMP_BIN, '#!/usr/bin/env bash\nset -Eeuo pipefail\n[[ "${PGSSLMODE:-}" == "verify-full" ]]\n[[ "${PGGSSENCMODE:-}" == "disable" ]]\n[[ "${PGSSLROOTCERT:-}" != "${FANMIND_TEST_EXPECTED_CA:-}" ]]\n[[ "${PGPASSFILE:-}" != "${FANMIND_TEST_EXPECTED_PASSFILE:-}" ]]\n[[ "$(stat -c %a "$PGSSLROOTCERT")" == "600" ]]\n[[ "$(stat -c %a "$PGPASSFILE")" == "600" ]]\ncmp -s "$PGSSLROOTCERT" "$FANMIND_TEST_EXPECTED_CA"\ncmp -s "$PGPASSFILE" "$FANMIND_TEST_EXPECTED_PASSFILE"\n[[ -z "${PGHOSTADDR+x}" && -z "${PGSERVICE+x}" && -z "${PGPASSWORD+x}" ]]\nif [[ -n "${FANMIND_TEST_PG_DUMP_CAPTURE:-}" ]]; then printf "%q " "$@" > "$FANMIND_TEST_PG_DUMP_CAPTURE"; fi\nfor ((i=1;i<=$#;i++)); do if [[ "${!i}" == "--file" ]]; then j=$((i+1)); printf "PGDUMP" > "${!j}"; fi; done\n', { mode:0o755 });
+await writeFile(process.env.FANMIND_PG_RESTORE_BIN, `#!/usr/bin/env bash
+set -Eeuo pipefail
+[[ "\${1:-}" == "--list" ]]
+[[ "\${PGSSLROOTCERT:-}" != "\${FANMIND_TEST_EXPECTED_CA:-}" ]]
+[[ "\${PGPASSFILE:-}" != "\${FANMIND_TEST_EXPECTED_PASSFILE:-}" ]]
+cmp -s "\$PGSSLROOTCERT" "\$FANMIND_TEST_EXPECTED_CA"
+cmp -s "\$PGPASSFILE" "\$FANMIND_TEST_EXPECTED_PASSFILE"
+if [[ "\${FANMIND_TEST_AUTHORIZATION_TOC_MODE:-}" == "missing" ]]; then
+  printf '; Archive created by PostgreSQL 17\\n'
+  exit 0
+fi
+cat <<'FANMIND_AUTHORIZATION_TOC'
+${authorizationToc}FANMIND_AUTHORIZATION_TOC
+`, { mode:0o755 });
+await writeFile(process.env.FANMIND_PSQL_BIN, `#!/usr/bin/env bash
+set -Eeuo pipefail
+[[ "\${PGSSLMODE:-}" == "verify-full" ]]
+[[ "\${PGGSSENCMODE:-}" == "disable" ]]
+[[ "\${PGSSLROOTCERT:-}" != "\${FANMIND_TEST_EXPECTED_CA:-}" ]]
+[[ "\${PGPASSFILE:-}" != "\${FANMIND_TEST_EXPECTED_PASSFILE:-}" ]]
+[[ "$(stat -c %a "\$PGSSLROOTCERT")" == "600" ]]
+[[ "$(stat -c %a "\$PGPASSFILE")" == "600" ]]
+cmp -s "\$PGSSLROOTCERT" "\$FANMIND_TEST_EXPECTED_CA"
+cmp -s "\$PGPASSFILE" "\$FANMIND_TEST_EXPECTED_PASSFILE"
+[[ -z "\${PGHOSTADDR+x}" && -z "\${PGSERVICE+x}" && -z "\${PGPASSWORD+x}" ]]
+while IFS= read -r line; do
+  case "$line" in
+    *pg_export_snapshot*) printf 'FANMIND_SNAPSHOT|00000001-00000002-1\\n' ;;
+    *FANMIND_AUTHORIZATION_FRAME*) printf 'FANMIND_AUTHORIZATION|${authorizationContractFrame}\\n' ;;
+    *FANMIND_READY*) printf 'FANMIND_READY\\n' ;;
+    *[Rr][Oo][Ll][Ll][Bb][Aa][Cc][Kk]*) printf 'closed\\n' >> '${snapshotCloseMarkerPath}'; exit 0 ;;
+  esac
+done
+`, { mode:0o755 });
 
 after(async () => {
   await rm(fixtureRoot, { recursive:true, force:true });
@@ -61,6 +141,109 @@ const migration = await readFile(new URL('../supabase/migrations/20260711161500_
 const serviceRoleGrantMigration = await readFile(new URL('../supabase/migrations/20260711170000_grant_backup_worker_rpc_service_role.sql', import.meta.url), 'utf8');
 const enableVerificationMigration = await readFile(new URL('../supabase/migrations/20260718173000_enable_safe_backup_verification.sql', import.meta.url), 'utf8');
 const rpcPermissionProof = await readFile(new URL('./backup-worker-rpc-permissions.sql', import.meta.url), 'utf8');
+
+test('database backup archives ownership and privileges from one frozen snapshot', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-database-contract-'));
+  const capturePath = join(tmp, 'pg-dump-args.txt');
+  const previousCapture = process.env.FANMIND_TEST_PG_DUMP_CAPTURE;
+  const inheritedLibpq = new Map([
+    ['PGHOSTADDR', process.env.PGHOSTADDR],
+    ['PGSERVICE', process.env.PGSERVICE],
+    ['PGPASSWORD', process.env.PGPASSWORD],
+    ['PGSSLMODE', process.env.PGSSLMODE],
+  ]);
+  process.env.FANMIND_TEST_PG_DUMP_CAPTURE = capturePath;
+  process.env.PGHOSTADDR = '203.0.113.77';
+  process.env.PGSERVICE = 'redirected-source';
+  process.env.PGPASSWORD = 'must-not-reach-libpq';
+  process.env.PGSSLMODE = 'disable';
+  await writeFile(snapshotCloseMarkerPath, '');
+  try {
+    const result = await worker.createDatabase(tmp);
+    const args = await readFile(capturePath, 'utf8');
+    assert.match(args, /--format=custom/u);
+    assert.match(args, /--snapshot=00000001-00000002-1/u);
+    assert.match(args, /--no-password/u);
+    assert.doesNotMatch(args, /--no-owner|--no-privileges/u);
+    assert.equal(result.manifest.format_version, 2);
+    assert.equal(result.manifest.worker_version, 'phase5-backup-worker-6');
+    assert.equal(result.manifest.privileges_archived, true);
+    assert.equal(result.manifest.ownership_archived, true);
+    assert.deepEqual(result.manifest.authorization_contract, {
+      schema_version: 2,
+      canonicalization: 'postgresql-17-acl-json-array-hex-v2',
+      fingerprint_sha256: 'a'.repeat(64),
+      record_count: 500,
+      grant_tuple_count: 420,
+      required_roles: ['anon', 'authenticated', 'postgres', 'service_role'],
+      required_roles_sha256:
+        result.manifest.authorization_contract.required_roles_sha256,
+      role_fingerprint_sha256: 'c'.repeat(64),
+      role_record_count: 5,
+      database_container_fingerprint_sha256: 'd'.repeat(64),
+      database_container_record_count: 11,
+      required_extensions: requiredExtensions,
+      required_extensions_sha256:
+        result.manifest.authorization_contract.required_extensions_sha256,
+      extension_fingerprint_sha256: 'e'.repeat(64),
+      extension_record_count: 84,
+      core_table_app_grant_tuple_count: 120,
+      restricted_security_definer_function_count: 12,
+      archive_acl_toc_entry_count: 1,
+      archive_default_acl_toc_entry_count: 1,
+      archive_acl_toc_sha256:
+        result.manifest.authorization_contract.archive_acl_toc_sha256,
+    });
+    assert.match(
+      result.manifest.authorization_contract.required_roles_sha256,
+      /^[0-9a-f]{64}$/u,
+    );
+    assert.match(
+      result.manifest.authorization_contract.archive_acl_toc_sha256,
+      /^[0-9a-f]{64}$/u,
+    );
+    assert.match(
+      result.manifest.authorization_contract.role_fingerprint_sha256,
+      /^[0-9a-f]{64}$/u,
+    );
+    assert.equal(await readFile(snapshotCloseMarkerPath, 'utf8'), 'closed\n');
+  } finally {
+    if (previousCapture === undefined) delete process.env.FANMIND_TEST_PG_DUMP_CAPTURE;
+    else process.env.FANMIND_TEST_PG_DUMP_CAPTURE = previousCapture;
+    for (const [name, value] of inheritedLibpq) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    await rm(tmp, { recursive:true, force:true });
+  }
+});
+
+test('database backup source contains no privilege or ownership omission flags', () => {
+  assert.doesNotMatch(
+    workerSource.match(/async function createDatabase[\s\S]*?async function listStorage/u)?.[0] ?? '',
+    /--no-owner|--no-privileges/u,
+  );
+});
+
+test('database backup fails before encryption without ACL and default-ACL TOC evidence', async () => {
+  const tmp = await mkdtemp(join(tmpdir(), 'fanmind-database-no-acl-'));
+  const previousMode = process.env.FANMIND_TEST_AUTHORIZATION_TOC_MODE;
+  process.env.FANMIND_TEST_AUTHORIZATION_TOC_MODE = 'missing';
+  try {
+    await assert.rejects(
+      () => worker.createDatabase(tmp),
+      /database_authorization_toc_missing/u,
+    );
+    assert.deepEqual(
+      (await readdir(tmp)).filter(name => name.endsWith('.age')),
+      [],
+    );
+  } finally {
+    if (previousMode === undefined) delete process.env.FANMIND_TEST_AUTHORIZATION_TOC_MODE;
+    else process.env.FANMIND_TEST_AUTHORIZATION_TOC_MODE = previousMode;
+    await rm(tmp, { recursive:true, force:true });
+  }
+});
 
 test('backup worker persists and logs only fixed error codes', () => {
   assert.equal(
@@ -183,6 +366,9 @@ test('deployment workflow records a verified release only after either deploymen
   const healthcheckIndex = indexOfRequired('Health check passed.');
   const sourceSyncCheckIndex = indexOfRequired('Source checkout is not synchronized after deployment.');
   const helperInstallIndex = indexOfRequired('sudo install -o root -g root -m 0755 scripts/operations/write-backup-release-env.sh /usr/local/lib/fanmind-ops/write-backup-release-env.sh');
+  const caInstallIndex = indexOfRequired('sudo install -o root -g root -m 0644 config/certificates/supabase-root-2021-ca.crt /usr/local/lib/fanmind-ops/supabase-root-2021-ca.crt');
+  const authorizationHelperInstallIndex = indexOfRequired('sudo install -o root -g root -m 0750 scripts/operations/database-authorization-contract.mjs /usr/local/lib/fanmind-ops/database-authorization-contract.mjs');
+  const backupWorkerInstallIndex = indexOfRequired('sudo install -o root -g root -m 0750 scripts/operations/backup-worker.mjs /usr/local/lib/fanmind-ops/backup-worker.mjs');
   const unitInstallIndex = indexOfRequired('sudo install -o root -g root -m 0644 ops/systemd/fanmind-backup-worker.service /etc/systemd/system/fanmind-backup-worker.service');
   const daemonReloadIndex = indexOfRequired('sudo systemctl daemon-reload');
   const releaseWriteIndex = indexOfRequired('sudo /usr/local/lib/fanmind-ops/write-backup-release-env.sh "$RELEASE_COMMIT"');
@@ -205,7 +391,10 @@ test('deployment workflow records a verified release only after either deploymen
   assert.ok(isolatedDeployIndex < sourceSyncCheckIndex, 'the isolated script must return successfully before common post-deploy work');
   assert.ok(healthcheckIndex < sourceSyncCheckIndex, 'legacy healthcheck must pass before common post-deploy work');
   assert.ok(sourceSyncCheckIndex < helperInstallIndex);
-  assert.ok(helperInstallIndex < unitInstallIndex);
+  assert.ok(helperInstallIndex < caInstallIndex);
+  assert.ok(caInstallIndex < authorizationHelperInstallIndex);
+  assert.ok(authorizationHelperInstallIndex < backupWorkerInstallIndex);
+  assert.ok(backupWorkerInstallIndex < unitInstallIndex);
   assert.ok(unitInstallIndex < daemonReloadIndex);
   assert.ok(daemonReloadIndex < releaseWriteIndex);
   assert.ok(releaseWriteIndex < workerActiveCheckIndex, 'release.env is written before an active worker is restarted');

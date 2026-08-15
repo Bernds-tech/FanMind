@@ -3,7 +3,9 @@
 ## Backup-Typen
 
 - Server-Konfiguration: `.env.production`, PM2-Dump, nginx, relevante systemd-Units und öffentliche Backup-Konfiguration.
-- Datenbank: PostgreSQL Custom Format mit `pg_dump` 17, `--no-owner`, `--no-privileges`; Validierung mit `pg_restore --list`.
+- Datenbank: PostgreSQL-17-Custom-Format mit Eigentums- und
+  Berechtigungsinformationen; Validierung mit `pg_restore --list` und dem
+  receipt-fähigen Authorization Contract.
 - Storage: rekursive Sicherung des Buckets `fanmind-assets` mit Manifest je Objekt.
 - Vollbackup: kombiniert erfolgreiche Teilbackups plus zentrales Manifest.
 
@@ -58,7 +60,41 @@ Bei der Validierung eines Vollbackups muss das zentrale Manifest `production_com
 ## Validierung
 
 - Server-/Storage-Archive: `tar -tzf` vor Verschlüsselung.
-- Datenbank: `pg_restore --list` vor Verschlüsselung.
+- Datenbank: `pg_dump` und der kanonische Authorization Contract verwenden
+  denselben offenen `REPEATABLE READ`, `READ ONLY` Snapshot. Der Custom Dump
+  wird ohne `--no-owner` und ohne `--no-privileges` erzeugt. Vor der
+  Verschlüsselung muss `pg_restore --list` mindestens je einen aktiven `ACL`-
+  und `DEFAULT ACL`-TOC-Eintrag nachweisen. Anzahl und SHA256 der
+  Berechtigungs-TOC-Einträge sowie der separate Rollen-Fingerprint
+  `role_fingerprint_sha256` und seine positive `role_record_count` werden in
+  `manifest.authorization_contract` gebunden. Dasselbe gilt für
+  `database_container_fingerprint_sha256` und
+  `database_container_record_count`: Sie binden Datenbank-Owner, effektive
+  Datenbank-ACL, current-database-Rolleneinstellungen, Encoding/Locale,
+  gespeicherte und tatsächliche Collation-Version, Tablespace und weitere
+  wiederherstellungsrelevante Containerattribute. Ein Collation-Drift stoppt
+  die Veröffentlichung.
+- Der Authorization Contract verwendet Schema 2 und
+  `postgresql-17-acl-json-array-hex-v2`. Das Manifest bindet außerdem die
+  vollständige sortierte `required_extensions`-Descriptorliste, deren SHA256
+  sowie `extension_fingerprint_sha256` und `extension_record_count`. Der
+  Extension-Fingerprint umfasst portable Definitionen der direkten
+  Production-Member und ihrer rekursiven internen/automatischen
+  `pg_depend`-Closure. Eine nicht unterstützte Extension-Objektklasse stoppt
+  die Backup-Veröffentlichung fail-closed.
+- Die Source-Verbindung verwendet ausschließlich das private
+  `FANMIND_BACKUP_PGPASSFILE`, das reviewte absolute
+  `FANMIND_BACKUP_DB_CA_CERT_PATH`, `sslmode=verify-full` und deaktiviertes
+  GSS-Fallback. Geerbte libpq-Routing-, Service- und Passwortvariablen werden
+  verworfen. Passfile und CA werden ohne Symlink-Folge stabil gelesen und als
+  private mode-`0600`-Dateien je Backup-Job eingefroren; alle Datenbankprozesse
+  verwenden nur diese Snapshots.
+- Nur Datenbank-Teilmanifeste mit `format_version=2`,
+  `privileges_archived=true`, `ownership_archived=true` und einem vollständig
+  validen Authorization Contract sind als Restore-Quelle zulässig. Ältere
+  verschlüsselte Backups bleiben für die allgemeine Prüfsummen- und
+  Inhaltsprüfung erhalten, dürfen aber kein Full-Backup-Restore-Receipt
+  erzeugen und sind kein vollständiger Wiederherstellungsnachweis.
 - Verschlüsselte Datei: SHA256-Datei neben dem `.age`-Artefakt.
 - Offsite: rclone beendet erfolgreich, bevor `offsite_status=uploaded` gesetzt wird.
 

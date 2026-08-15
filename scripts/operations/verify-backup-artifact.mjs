@@ -25,18 +25,69 @@ import {
 } from "node:path";
 import { spawn } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import {
+  analyzeAuthorizationToc,
+  validateAuthorizationContract,
+} from "./database-authorization-contract.mjs";
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const GIT_SHA_PATTERN = /^(?:[a-f0-9]{40}|unknown)$/;
 const FULL_BACKUP_BASENAME = /^fanmind-full-\d{13}\.tar\.gz\.age$/u;
 const BACKUP_TYPES = new Set(["database", "storage", "server_config", "full"]);
 const MAX_AGE_IDENTITY_BYTES = 64 * 1024;
+const DATABASE_AUTHORIZATION_CONTRACT_KEYS = Object.freeze([
+  "archive_acl_toc_entry_count",
+  "archive_acl_toc_sha256",
+  "archive_default_acl_toc_entry_count",
+  "canonicalization",
+  "core_table_app_grant_tuple_count",
+  "database_container_fingerprint_sha256",
+  "database_container_record_count",
+  "extension_fingerprint_sha256",
+  "extension_record_count",
+  "fingerprint_sha256",
+  "grant_tuple_count",
+  "record_count",
+  "required_roles",
+  "required_roles_sha256",
+  "required_extensions",
+  "required_extensions_sha256",
+  "role_fingerprint_sha256",
+  "role_record_count",
+  "restricted_security_definer_function_count",
+  "schema_version",
+]);
 
 function verifierError(code, details = {}) {
   const error = new Error(code);
   error.code = code;
   error.details = details;
   return error;
+}
+
+function validateDatabaseAuthorizationManifest(value) {
+  if (
+    !value
+    || typeof value !== "object"
+    || Array.isArray(value)
+    || Object.keys(value).length !== DATABASE_AUTHORIZATION_CONTRACT_KEYS.length
+    || !DATABASE_AUTHORIZATION_CONTRACT_KEYS.every((key) =>
+      Object.hasOwn(value, key),
+    )
+    || !Number.isSafeInteger(value.archive_acl_toc_entry_count)
+    || value.archive_acl_toc_entry_count <= 0
+    || !Number.isSafeInteger(value.archive_default_acl_toc_entry_count)
+    || value.archive_default_acl_toc_entry_count <= 0
+    || typeof value.archive_acl_toc_sha256 !== "string"
+    || !SHA256_PATTERN.test(value.archive_acl_toc_sha256)
+  ) {
+    throw verifierError("restore_database_authorization_contract_invalid");
+  }
+  try {
+    return validateAuthorizationContract(value);
+  } catch {
+    throw verifierError("restore_database_authorization_contract_invalid");
+  }
 }
 
 export function parseChecksumLine(line) {
@@ -715,6 +766,7 @@ export async function verifyFullManifest(root, manifest) {
       databasePart = {
         file: part.file,
         encryptedSha256: part.sha256,
+        manifest: part.manifest,
       };
     }
   }
@@ -776,6 +828,19 @@ async function validateDecryptedArtifact(clearFile, type, options) {
       if (!/^[a-f0-9]{40}$/u.test(validation.productionCommit)) {
         throw verifierError("restore_receipt_production_commit_invalid");
       }
+      const databaseManifest = validation.databasePart.manifest;
+      if (databaseManifest.format_version !== 2) {
+        throw verifierError("restore_database_manifest_version_invalid");
+      }
+      if (
+        databaseManifest.privileges_archived !== true
+        || databaseManifest.ownership_archived !== true
+      ) {
+        throw verifierError("restore_database_authorization_flags_invalid");
+      }
+      const authorizationContract = validateDatabaseAuthorizationManifest(
+        databaseManifest.authorization_contract,
+      );
 
       const databasePartPath = safeManifestPath(
         extractRoot,
@@ -796,10 +861,31 @@ async function validateDecryptedArtifact(clearFile, type, options) {
       if (!databaseMetadata.isFile() || databaseMetadata.nlink !== 1) {
         throw verifierError("decrypted_database_not_regular");
       }
-      await run(options.pgRestoreBin, ["--list", clearDatabasePath]);
+      const tocResult = await run(options.pgRestoreBin, [
+        "--list",
+        clearDatabasePath,
+      ]);
+      let authorizationToc;
+      try {
+        authorizationToc = analyzeAuthorizationToc(tocResult.stdout);
+      } catch {
+        throw verifierError("restore_database_authorization_toc_invalid");
+      }
+      if (
+        authorizationToc.aclEntryCount <= 0
+        || authorizationToc.defaultAclEntryCount <= 0
+        || authorizationToc.aclEntryCount
+          !== databaseManifest.authorization_contract.archive_acl_toc_entry_count
+        || authorizationToc.defaultAclEntryCount
+          !== databaseManifest.authorization_contract.archive_default_acl_toc_entry_count
+        || authorizationToc.sha256
+          !== databaseManifest.authorization_contract.archive_acl_toc_sha256
+      ) {
+        throw verifierError("restore_database_authorization_toc_mismatch");
+      }
       const databaseDumpSha256 = await sha256File(clearDatabasePath);
       const receipt = {
-        schemaVersion: 1,
+        schemaVersion: 2,
         createdAt: new Date().toISOString(),
         sourceArtifactBasename: options.sourceArtifactBasename,
         outerSha256: options.outerSha256,
@@ -807,6 +893,44 @@ async function validateDecryptedArtifact(clearFile, type, options) {
         databasePartEncryptedSha256:
           validation.databasePart.encryptedSha256,
         databaseDumpSha256,
+        databaseAuthorizationContractVersion:
+          authorizationContract.schemaVersion,
+        databaseAuthorizationFingerprintSha256:
+          authorizationContract.fingerprintSha256,
+        databaseAuthorizationRecordCount:
+          authorizationContract.recordCount,
+        databaseAuthorizationGrantTupleCount:
+          authorizationContract.grantTupleCount,
+        databaseAuthorizationRequiredRoles:
+          authorizationContract.requiredRoles,
+        databaseAuthorizationRequiredRolesSha256:
+          authorizationContract.requiredRolesSha256,
+        databaseAuthorizationRoleFingerprintSha256:
+          authorizationContract.roleFingerprintSha256,
+        databaseAuthorizationRoleRecordCount:
+          authorizationContract.roleRecordCount,
+        databaseAuthorizationContainerFingerprintSha256:
+          authorizationContract.databaseContainerFingerprintSha256,
+        databaseAuthorizationContainerRecordCount:
+          authorizationContract.databaseContainerRecordCount,
+        databaseAuthorizationRequiredExtensions:
+          authorizationContract.requiredExtensions,
+        databaseAuthorizationRequiredExtensionsSha256:
+          authorizationContract.requiredExtensionsSha256,
+        databaseAuthorizationExtensionFingerprintSha256:
+          authorizationContract.extensionFingerprintSha256,
+        databaseAuthorizationExtensionRecordCount:
+          authorizationContract.extensionRecordCount,
+        databaseCoreTableAppGrantTupleCount:
+          authorizationContract.coreTableAppGrantTupleCount,
+        databaseRestrictedSecurityDefinerFunctionCount:
+          authorizationContract.restrictedSecurityDefinerFunctionCount,
+        databaseAclTocEntryCount: authorizationToc.aclEntryCount,
+        databaseDefaultAclTocEntryCount:
+          authorizationToc.defaultAclEntryCount,
+        databaseAclTocSha256: authorizationToc.sha256,
+        databasePrivilegesArchived: true,
+        databaseOwnershipArchived: true,
         verifier: "passed",
       };
       await publishRestoreOutputs({

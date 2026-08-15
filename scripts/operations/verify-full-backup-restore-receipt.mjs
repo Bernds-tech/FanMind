@@ -5,6 +5,7 @@ import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { validateAuthorizationContract } from "./database-authorization-contract.mjs";
 
 const MAX_RECEIPT_BYTES = 16 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -18,6 +19,27 @@ const REQUIRED_KEYS = [
   "productionCommit",
   "databasePartEncryptedSha256",
   "databaseDumpSha256",
+  "databaseAuthorizationContractVersion",
+  "databaseAuthorizationFingerprintSha256",
+  "databaseAuthorizationRecordCount",
+  "databaseAuthorizationGrantTupleCount",
+  "databaseAuthorizationRequiredRoles",
+  "databaseAuthorizationRequiredRolesSha256",
+  "databaseAuthorizationRoleFingerprintSha256",
+  "databaseAuthorizationRoleRecordCount",
+  "databaseAuthorizationContainerFingerprintSha256",
+  "databaseAuthorizationContainerRecordCount",
+  "databaseAuthorizationRequiredExtensions",
+  "databaseAuthorizationRequiredExtensionsSha256",
+  "databaseAuthorizationExtensionFingerprintSha256",
+  "databaseAuthorizationExtensionRecordCount",
+  "databaseCoreTableAppGrantTupleCount",
+  "databaseRestrictedSecurityDefinerFunctionCount",
+  "databaseAclTocEntryCount",
+  "databaseDefaultAclTocEntryCount",
+  "databaseAclTocSha256",
+  "databasePrivilegesArchived",
+  "databaseOwnershipArchived",
   "verifier",
 ].sort();
 
@@ -28,17 +50,45 @@ function fixedError(code) {
 }
 
 function assertNoDuplicateMembers(text) {
-  const seen = new Set();
-  const member = /"((?:\\.|[^"\\])*)"\s*:/gu;
-  for (const match of text.matchAll(member)) {
+  const stack = [];
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === "{") {
+      stack.push({ type: "object", keys: new Set() });
+      continue;
+    }
+    if (character === "[") {
+      stack.push({ type: "array" });
+      continue;
+    }
+    if (character === "}" || character === "]") {
+      stack.pop();
+      continue;
+    }
+    if (character !== '"') continue;
+    const start = index;
+    let escaped = false;
+    for (index += 1; index < text.length; index += 1) {
+      if (escaped) {
+        escaped = false;
+      } else if (text[index] === "\\") {
+        escaped = true;
+      } else if (text[index] === '"') {
+        break;
+      }
+    }
+    let lookahead = index + 1;
+    while (/\s/u.test(text[lookahead] ?? "")) lookahead += 1;
+    const frame = stack.at(-1);
+    if (text[lookahead] !== ":" || frame?.type !== "object") continue;
     let key;
     try {
-      key = JSON.parse(`"${match[1]}"`);
+      key = JSON.parse(text.slice(start, index + 1));
     } catch {
       throw fixedError("receipt_json_invalid");
     }
-    if (seen.has(key)) throw fixedError("receipt_duplicate_member");
-    seen.add(key);
+    if (frame.keys.has(key)) throw fixedError("receipt_duplicate_member");
+    frame.keys.add(key);
   }
 }
 
@@ -48,6 +98,41 @@ function isIsoUtc(value) {
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/u.test(value) &&
     Number.isFinite(Date.parse(value))
   );
+}
+
+function isPositiveInteger(value) {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+function validateRequiredRoles(receipt) {
+  const roles = receipt.databaseAuthorizationRequiredRoles;
+  if (
+    !Array.isArray(roles) ||
+    roles.length === 0 ||
+    roles.some((role) =>
+      typeof role !== "string" ||
+      role.length === 0 ||
+      Buffer.byteLength(role, "utf8") > 63 ||
+      /[\u0000-\u001f\u007f]/u.test(role)
+    )
+  ) {
+    throw fixedError("receipt_authorization_roles_invalid");
+  }
+  const sortedRoles = [...roles].sort((left, right) =>
+    Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")),
+  );
+  if (
+    roles.some((role, index) => role !== sortedRoles[index]) ||
+    new Set(roles).size !== roles.length
+  ) {
+    throw fixedError("receipt_authorization_roles_invalid");
+  }
+  const rolesSha256 = sha256Bytes(
+    Buffer.from(JSON.stringify(roles), "utf8"),
+  );
+  if (receipt.databaseAuthorizationRequiredRolesSha256 !== rolesSha256) {
+    throw fixedError("receipt_authorization_roles_sha_invalid");
+  }
 }
 
 export async function readStablePrivateFile(path, label, maxBytes = MAX_RECEIPT_BYTES) {
@@ -116,7 +201,7 @@ export function parseFullBackupRestoreReceipt(bytes) {
   ) {
     throw fixedError("receipt_keys_invalid");
   }
-  if (receipt.schemaVersion !== 1) {
+  if (receipt.schemaVersion !== 2) {
     throw fixedError("receipt_schema_invalid");
   }
   if (!isIsoUtc(receipt.createdAt)) {
@@ -136,6 +221,60 @@ export function parseFullBackupRestoreReceipt(bytes) {
   }
   if (!SHA256.test(receipt.databaseDumpSha256)) {
     throw fixedError("receipt_database_dump_sha_invalid");
+  }
+  if (receipt.databaseAuthorizationContractVersion !== 2) {
+    throw fixedError("receipt_authorization_contract_invalid");
+  }
+  if (!SHA256.test(receipt.databaseAuthorizationFingerprintSha256)) {
+    throw fixedError("receipt_authorization_fingerprint_invalid");
+  }
+  if (
+    !isPositiveInteger(receipt.databaseAuthorizationRecordCount) ||
+    !isPositiveInteger(receipt.databaseAuthorizationGrantTupleCount)
+  ) {
+    throw fixedError("receipt_authorization_counts_invalid");
+  }
+  if (!SHA256.test(receipt.databaseAuthorizationRequiredRolesSha256)) {
+    throw fixedError("receipt_authorization_roles_sha_invalid");
+  }
+  validateRequiredRoles(receipt);
+  if (!SHA256.test(receipt.databaseAuthorizationRoleFingerprintSha256)) {
+    throw fixedError("receipt_authorization_role_fingerprint_invalid");
+  }
+  if (!isPositiveInteger(receipt.databaseAuthorizationRoleRecordCount)) {
+    throw fixedError("receipt_authorization_role_count_invalid");
+  }
+  if (!SHA256.test(receipt.databaseAuthorizationContainerFingerprintSha256)) {
+    throw fixedError("receipt_authorization_container_fingerprint_invalid");
+  }
+  if (!isPositiveInteger(receipt.databaseAuthorizationContainerRecordCount)) {
+    throw fixedError("receipt_authorization_container_count_invalid");
+  }
+  if (receipt.databaseCoreTableAppGrantTupleCount !== 120) {
+    throw fixedError("receipt_core_table_grant_count_invalid");
+  }
+  if (receipt.databaseRestrictedSecurityDefinerFunctionCount !== 12) {
+    throw fixedError("receipt_security_definer_count_invalid");
+  }
+  try {
+    validateAuthorizationContract(receipt);
+  } catch {
+    throw fixedError("receipt_authorization_extension_contract_invalid");
+  }
+  if (
+    !isPositiveInteger(receipt.databaseAclTocEntryCount) ||
+    !isPositiveInteger(receipt.databaseDefaultAclTocEntryCount)
+  ) {
+    throw fixedError("receipt_acl_toc_counts_invalid");
+  }
+  if (!SHA256.test(receipt.databaseAclTocSha256)) {
+    throw fixedError("receipt_acl_toc_sha_invalid");
+  }
+  if (
+    receipt.databasePrivilegesArchived !== true ||
+    receipt.databaseOwnershipArchived !== true
+  ) {
+    throw fixedError("receipt_database_authorization_archive_invalid");
   }
   if (receipt.verifier !== "passed") {
     throw fixedError("receipt_verifier_not_passed");

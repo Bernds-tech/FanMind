@@ -312,51 +312,16 @@ fi
 chmod 0600 "$snapshot_archive_toc" \
   || fail "dump_archive_toc_permissions_failed"
 
-# PostgreSQL 17 writes the user-defined Production host schema as exactly one
-# pg_namespace TOC entry. The target must already contain that schema because
-# pgcrypto is pre-installed there, so only its CREATE SCHEMA definition is
-# disabled. Every other archive ID remains active and in its original order.
-if LC_ALL=C awk '
-  BEGIN {
-    candidate_count = 0
-    exact_count = 0
-    fatal_status = 0
-  }
-  {
-    if ($0 == "" || substr($0, 1, 1) == ";") {
-      print
-      next
-    }
-    if ($1 !~ /^[1-9][0-9]*;$/ ||
-        $2 !~ /^[0-9]+$/ ||
-        $3 !~ /^[0-9]+$/) {
-      fatal_status = 43
-      exit
-    }
-    dump_id = $1
-    sub(/;$/, "", dump_id)
-    if (seen_dump_ids[dump_id]++) {
-      fatal_status = 44
-      exit
-    }
-    if ($4 == "SCHEMA" && $5 == "-" && $6 == "extensions") {
-      candidate_count++
-      if ($0 ~ /^[1-9][0-9]*; 2615 [1-9][0-9]* SCHEMA - extensions postgres$/) {
-        exact_count++
-        print ";" $0
-      } else {
-        print
-      }
-      next
-    }
-    print
-  }
-  END {
-    if (fatal_status != 0) exit fatal_status
-    if (candidate_count == 0) exit 41
-    if (candidate_count != 1 || exact_count != 1) exit 42
-  }
-' "$snapshot_archive_toc" >"$snapshot_restore_toc"
+# The private Full Receipt binds the complete extension descriptor set and
+# says exactly which non-system host-schema definitions pg_dump archived.
+# Disable only those exact CREATE SCHEMA entries with their receipt-bound
+# owners. All EXTENSION entries stay active: the authorization preflight below
+# proves the exact version/schema/owner/member inventory first, so pg_restore's
+# CREATE EXTENSION IF NOT EXISTS statements are checked no-ops.
+if node scripts/operations/restore-extension-toc-policy.mjs \
+  --receipt "$snapshot_full_receipt" \
+  --archive-toc "$snapshot_archive_toc" \
+  --output "$snapshot_restore_toc"
 then
   restore_toc_status=0
 else
@@ -364,10 +329,15 @@ else
 fi
 case "$restore_toc_status" in
   0) ;;
-  41) fail "dump_extensions_schema_entry_missing" ;;
-  42) fail "dump_extensions_schema_entry_ambiguous" ;;
+  41) fail "dump_extension_schema_entry_missing" ;;
+  42) fail "dump_extension_schema_entry_ambiguous" ;;
   43) fail "dump_archive_toc_entry_invalid" ;;
   44) fail "dump_archive_toc_duplicate_id" ;;
+  45) fail "dump_extension_entry_unbound" ;;
+  46) fail "dump_extension_entry_ambiguous" ;;
+  47) fail "dump_extension_receipt_policy_invalid" ;;
+  49) fail "dump_extension_entry_missing" ;;
+  50) fail "dump_extension_builtin_entry_unexpected" ;;
   *) fail "dump_restore_toc_filter_failed" ;;
 esac
 chmod 0400 "$snapshot_restore_toc" \
@@ -386,8 +356,62 @@ unlink -- "$snapshot_restore_toc" \
   || fail "dump_restore_toc_unlink_failed"
 snapshot_restore_toc=""
 
+# The full-backup receipt is the only source of the authorization role graph,
+# pre-installed extension descriptor set/fingerprint and non-archived
+# database-container profile for this exact dump. Prove the bound roles,
+# membership grantors, exact extension version/schema/owner/member inventory,
+# database owner/effective ACL/settings, locale/tablespace profile and the
+# isolated bootstrap-principal boundary before the first target write.
+if ! env \
+  -u PGHOSTADDR \
+  -u PGSERVICE \
+  -u PGSERVICEFILE \
+  -u PGPASSWORD \
+  -u PGOPTIONS \
+  PGPASSFILE="$snapshot_passfile" \
+  PGSSLMODE="verify-full" \
+  PGSSLROOTCERT="$snapshot_ca_certificate" \
+  PGGSSENCMODE="disable" \
+  node scripts/operations/database-authorization-contract.mjs \
+    verify-target-roles \
+    --receipt "$snapshot_full_receipt" \
+    --psql-bin "$psql_bin" \
+    --host "$PGHOST" \
+    --port "$PGPORT" \
+    --username "$PGUSER" \
+    --dbname "$PGDATABASE" \
+    >/dev/null
+then
+  fail "database_authorization_preflight_failed"
+fi
+
 empty_target_sql="
-WITH expected_extension_versions(
+WITH RECURSIVE preinstalled_extensions AS (
+  SELECT e.oid, e.extnamespace
+    FROM pg_catalog.pg_extension AS e
+),
+preinstalled_extension_addresses(classid, objid, objsubid) AS (
+  SELECT d.classid, d.objid, d.objsubid
+    FROM preinstalled_extensions AS e
+    JOIN pg_catalog.pg_depend AS d
+     ON d.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+     AND d.refobjid = e.oid
+     AND d.deptype = 'e'
+
+  UNION
+
+  SELECT d.classid, d.objid, d.objsubid
+    FROM preinstalled_extension_addresses AS parent
+    JOIN pg_catalog.pg_depend AS d
+      ON d.refclassid = parent.classid
+     AND d.refobjid = parent.objid
+     AND (
+       parent.objsubid = 0
+       OR d.refobjsubid = parent.objsubid
+     )
+     AND d.deptype IN ('i', 'a', 'P', 'S')
+),
+expected_extension_versions(
   extname,
   extversion,
   relocatable,
@@ -604,9 +628,49 @@ extension_inventory_violations AS (
         AND actual.objsubid = expected.objsubid
    )
 ),
-allowed_extension_schemas AS (
-  SELECT DISTINCT e.extnamespace AS oid
-    FROM allowed_extensions AS e
+allowed_container_schemas AS (
+  SELECT n.oid
+    FROM pg_catalog.pg_namespace AS n
+   WHERE (
+     n.nspname = 'extensions'
+     AND n.nspowner = 'postgres'::pg_catalog.regrole
+     AND pg_catalog.cardinality(n.nspacl) = 5
+     AND n.nspacl @> ARRAY[
+       'postgres=UC/postgres'::pg_catalog.aclitem,
+       'anon=U/postgres'::pg_catalog.aclitem,
+       'authenticated=U/postgres'::pg_catalog.aclitem,
+       'service_role=U/postgres'::pg_catalog.aclitem,
+       'dashboard_user=UC/postgres'::pg_catalog.aclitem
+     ]
+   ) OR (
+     n.nspname = 'public'
+     AND n.nspowner = 'pg_database_owner'::pg_catalog.regrole
+     AND pg_catalog.cardinality(n.nspacl) = 6
+     AND n.nspacl @> ARRAY[
+       'pg_database_owner=UC/pg_database_owner'::pg_catalog.aclitem,
+       '=U/pg_database_owner'::pg_catalog.aclitem,
+       'postgres=U/pg_database_owner'::pg_catalog.aclitem,
+       'anon=U/pg_database_owner'::pg_catalog.aclitem,
+       'authenticated=U/pg_database_owner'::pg_catalog.aclitem,
+       'service_role=U/pg_database_owner'::pg_catalog.aclitem
+     ]
+   ) OR (
+     n.nspname NOT IN ('public', 'extensions')
+     AND (
+       n.oid IN (
+         SELECT e.extnamespace
+           FROM preinstalled_extensions AS e
+       )
+       OR EXISTS (
+         SELECT 1
+           FROM preinstalled_extension_addresses AS allowed
+          WHERE allowed.classid =
+                'pg_catalog.pg_namespace'::pg_catalog.regclass
+            AND allowed.objid = n.oid
+            AND allowed.objsubid = 0
+       )
+     )
+   )
 ),
 schema_objects(classid, objid, nspoid) AS (
   SELECT 'pg_catalog.pg_class'::pg_catalog.regclass,
@@ -679,6 +743,30 @@ schema_objects(classid, objid, nspoid) AS (
          c.connamespace
     FROM pg_catalog.pg_constraint AS c
    WHERE c.connamespace <> 0
+  UNION ALL
+  SELECT 'pg_catalog.pg_attrdef'::pg_catalog.regclass,
+         a.oid,
+         relation.relnamespace
+    FROM pg_catalog.pg_attrdef AS a
+    JOIN pg_catalog.pg_class AS relation ON relation.oid = a.adrelid
+  UNION ALL
+  SELECT 'pg_catalog.pg_rewrite'::pg_catalog.regclass,
+         r.oid,
+         relation.relnamespace
+    FROM pg_catalog.pg_rewrite AS r
+    JOIN pg_catalog.pg_class AS relation ON relation.oid = r.ev_class
+  UNION ALL
+  SELECT 'pg_catalog.pg_trigger'::pg_catalog.regclass,
+         t.oid,
+         relation.relnamespace
+    FROM pg_catalog.pg_trigger AS t
+    JOIN pg_catalog.pg_class AS relation ON relation.oid = t.tgrelid
+  UNION ALL
+  SELECT 'pg_catalog.pg_policy'::pg_catalog.regclass,
+         p.oid,
+         relation.relnamespace
+    FROM pg_catalog.pg_policy AS p
+    JOIN pg_catalog.pg_class AS relation ON relation.oid = p.polrelid
 ),
 schema_object_violations AS (
   SELECT 1 AS violation
@@ -688,7 +776,7 @@ schema_object_violations AS (
      AND n.nspname !~ '^pg_toast'
      AND NOT EXISTS (
        SELECT 1
-         FROM expected_extension_addresses AS allowed
+         FROM preinstalled_extension_addresses AS allowed
         WHERE allowed.classid = object.classid
           AND allowed.objid = object.objid
           AND allowed.objsubid = 0
@@ -704,37 +792,136 @@ top_level_object_violations AS (
    )
      AND NOT EXISTS (
        SELECT 1
-         FROM resolved_extension_languages AS allowed
-        WHERE allowed.oid = l.oid
+         FROM preinstalled_extension_addresses AS allowed
+        WHERE allowed.classid =
+              'pg_catalog.pg_language'::pg_catalog.regclass
+          AND allowed.objid = l.oid
+          AND allowed.objsubid = 0
      )
   UNION ALL
   SELECT 1
     FROM pg_catalog.pg_cast AS c
    WHERE c.oid >= 16384::pg_catalog.oid
+     AND NOT EXISTS (
+       SELECT 1 FROM preinstalled_extension_addresses AS allowed
+        WHERE allowed.classid = 'pg_catalog.pg_cast'::pg_catalog.regclass
+          AND allowed.objid = c.oid
+          AND allowed.objsubid = 0
+     )
   UNION ALL
   SELECT 1
     FROM pg_catalog.pg_am AS a
    WHERE a.oid >= 16384::pg_catalog.oid
+     AND NOT EXISTS (
+       SELECT 1 FROM preinstalled_extension_addresses AS allowed
+        WHERE allowed.classid = 'pg_catalog.pg_am'::pg_catalog.regclass
+          AND allowed.objid = a.oid
+          AND allowed.objsubid = 0
+     )
   UNION ALL
   SELECT 1
     FROM pg_catalog.pg_transform AS t
    WHERE t.oid >= 16384::pg_catalog.oid
+     AND NOT EXISTS (
+       SELECT 1 FROM preinstalled_extension_addresses AS allowed
+        WHERE allowed.classid =
+              'pg_catalog.pg_transform'::pg_catalog.regclass
+          AND allowed.objid = t.oid
+          AND allowed.objsubid = 0
+     )
   UNION ALL
   SELECT 1
     FROM pg_catalog.pg_foreign_data_wrapper AS f
    WHERE f.oid >= 16384::pg_catalog.oid
+     AND NOT EXISTS (
+       SELECT 1 FROM preinstalled_extension_addresses AS allowed
+        WHERE allowed.classid =
+              'pg_catalog.pg_foreign_data_wrapper'::pg_catalog.regclass
+          AND allowed.objid = f.oid
+          AND allowed.objsubid = 0
+     )
   UNION ALL
-  SELECT 1 FROM pg_catalog.pg_foreign_server
+  SELECT 1
+    FROM pg_catalog.pg_foreign_server AS f
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid =
+            'pg_catalog.pg_foreign_server'::pg_catalog.regclass
+        AND allowed.objid = f.oid
+        AND allowed.objsubid = 0
+   )
   UNION ALL
-  SELECT 1 FROM pg_catalog.pg_user_mapping
+  SELECT 1
+    FROM pg_catalog.pg_user_mapping AS m
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid =
+            'pg_catalog.pg_user_mapping'::pg_catalog.regclass
+        AND allowed.objid = m.oid
+        AND allowed.objsubid = 0
+   )
   UNION ALL
-  SELECT 1 FROM pg_catalog.pg_default_acl
+  SELECT 1
+    FROM pg_catalog.pg_default_acl AS d
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid =
+            'pg_catalog.pg_default_acl'::pg_catalog.regclass
+        AND allowed.objid = d.oid
+        AND allowed.objsubid = 0
+   )
   UNION ALL
-  SELECT 1 FROM pg_catalog.pg_event_trigger
+  SELECT 1
+    FROM pg_catalog.pg_event_trigger AS e
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid =
+            'pg_catalog.pg_event_trigger'::pg_catalog.regclass
+        AND allowed.objid = e.oid
+        AND allowed.objsubid = 0
+  )
   UNION ALL
-  SELECT 1 FROM pg_catalog.pg_largeobject_metadata
+  SELECT 1
+    FROM pg_catalog.pg_largeobject_metadata AS l
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid IN (
+              'pg_catalog.pg_largeobject'::pg_catalog.regclass,
+              'pg_catalog.pg_largeobject_metadata'::pg_catalog.regclass
+            )
+        AND allowed.objid = l.oid
+        AND allowed.objsubid = 0
+   )
   UNION ALL
-  SELECT 1 FROM pg_catalog.pg_publication
+  SELECT 1
+    FROM pg_catalog.pg_publication AS p
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid =
+            'pg_catalog.pg_publication'::pg_catalog.regclass
+        AND allowed.objid = p.oid
+        AND allowed.objsubid = 0
+   )
+  UNION ALL
+  SELECT 1
+    FROM pg_catalog.pg_publication_rel AS p
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid =
+            'pg_catalog.pg_publication_rel'::pg_catalog.regclass
+        AND allowed.objid = p.oid
+        AND allowed.objsubid = 0
+   )
+  UNION ALL
+  SELECT 1
+    FROM pg_catalog.pg_publication_namespace AS p
+   WHERE NOT EXISTS (
+     SELECT 1 FROM preinstalled_extension_addresses AS allowed
+      WHERE allowed.classid =
+            'pg_catalog.pg_publication_namespace'::pg_catalog.regclass
+        AND allowed.objid = p.oid
+        AND allowed.objsubid = 0
+   )
   UNION ALL
   SELECT 1
     FROM pg_catalog.pg_subscription AS s
@@ -743,25 +930,43 @@ top_level_object_violations AS (
        FROM pg_catalog.pg_database AS d
       WHERE d.datname = pg_catalog.current_database()
    )
-),
-user_objects AS (
-  SELECT violation FROM schema_object_violations
+     AND NOT EXISTS (
+       SELECT 1 FROM preinstalled_extension_addresses AS allowed
+        WHERE allowed.classid =
+              'pg_catalog.pg_subscription'::pg_catalog.regclass
+          AND allowed.objid = s.oid
+          AND allowed.objsubid = 0
+     )
   UNION ALL
   SELECT 1
-    FROM pg_catalog.pg_extension AS e
+    FROM pg_catalog.pg_subscription_rel
+),
+user_objects AS (
+  SELECT 1
    WHERE NOT EXISTS (
      SELECT 1
-       FROM allowed_extensions AS allowed
-      WHERE allowed.oid = e.oid
+       FROM allowed_container_schemas AS allowed
+       JOIN pg_catalog.pg_namespace AS n ON n.oid = allowed.oid
+      WHERE n.nspname = 'extensions'
    )
   UNION ALL
   SELECT 1
+   WHERE NOT EXISTS (
+     SELECT 1
+       FROM allowed_container_schemas AS allowed
+       JOIN pg_catalog.pg_namespace AS n ON n.oid = allowed.oid
+      WHERE n.nspname = 'public'
+   )
+  UNION ALL
+  SELECT violation FROM schema_object_violations
+  UNION ALL
+  SELECT 1
     FROM pg_catalog.pg_namespace AS n
-   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'public')
+   WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
      AND n.nspname !~ '^pg_toast'
      AND NOT EXISTS (
        SELECT 1
-         FROM allowed_extension_schemas AS allowed
+         FROM allowed_container_schemas AS allowed
         WHERE allowed.oid = n.oid
      )
   UNION ALL
@@ -834,8 +1039,6 @@ if ! env \
   PGSSLROOTCERT="$snapshot_ca_certificate" \
   PGGSSENCMODE="disable" \
   "$pg_restore_bin" \
-  --no-owner \
-  --no-privileges \
   --exit-on-error \
   --single-transaction \
   --use-list "$restore_toc_fd_path" \
@@ -854,11 +1057,6 @@ exec {restore_toc_fd}<&-
 FANMIND_RESTORE_COMPLETED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
   || fail "completed_timestamp_failed"
 export FANMIND_RESTORE_COMPLETED_AT
-
-node scripts/operations/restore-runner-receipt.mjs \
-  --full-receipt "$snapshot_full_receipt" \
-  --dump "$snapshot_dump" \
-  --output "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH"
 
 postcheck_sql="
 WITH fanmind_required_restore_tables(table_name) AS (
@@ -927,11 +1125,44 @@ then
   fail "database_postcheck_query_failed"
 fi
 
+if ! authorization_postcheck_result="$(
+  env \
+    -u PGHOSTADDR \
+    -u PGSERVICE \
+    -u PGSERVICEFILE \
+    -u PGPASSWORD \
+    -u PGOPTIONS \
+    PGPASSFILE="$snapshot_passfile" \
+    PGSSLMODE="verify-full" \
+    PGSSLROOTCERT="$snapshot_ca_certificate" \
+    PGGSSENCMODE="disable" \
+    node scripts/operations/database-authorization-contract.mjs \
+      snapshot-target \
+      --receipt "$snapshot_full_receipt" \
+      --psql-bin "$psql_bin" \
+      --host "$PGHOST" \
+      --port "$PGPORT" \
+      --username "$PGUSER" \
+      --dbname "$PGDATABASE" \
+      2>/dev/null
+)"
+then
+  fail "database_authorization_postcheck_query_failed"
+fi
+[[ "$authorization_postcheck_result" =~ ^authorization\|[0-9a-f]{64}\|[1-9][0-9]*\|[1-9][0-9]*\|120\|12\|[0-9a-f]{64}\|[1-9][0-9]*\|[0-9a-f]{64}\|[1-9][0-9]*$ ]] \
+  || fail "database_authorization_postcheck_result_invalid"
+
 FANMIND_RESTORE_POSTCHECKED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
   || fail "postcheck_timestamp_failed"
 export FANMIND_RESTORE_POSTCHECKED_AT
 
-printf '%s\n' "$postcheck_result" \
+node scripts/operations/restore-runner-receipt.mjs \
+  --full-receipt "$snapshot_full_receipt" \
+  --dump "$snapshot_dump" \
+  --output "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH" \
+  || fail "restore_runner_receipt_failed"
+
+printf '%s\n%s\n' "$postcheck_result" "$authorization_postcheck_result" \
   | node scripts/operations/restore-database-postcheck-receipt.mjs \
       --runner-receipt "$FANMIND_RESTORE_RUNNER_RECEIPT_PATH" \
       --output "$FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH" \

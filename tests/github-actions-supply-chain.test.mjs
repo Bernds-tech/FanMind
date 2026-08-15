@@ -9,6 +9,9 @@ const SETUP_JAVA_V5_7_0_SHA =
   "b6effb05e454b25005698d916606bdc6ffcbf961";
 const HOSTED_CHECKOUT_V7_0_1_SHA =
   "3d3c42e5aac5ba805825da76410c181273ba90b1";
+const PG17_SERVICE_IMAGE =
+  "postgres:17.10-trixie@sha256:" +
+  "a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d";
 const RESTORE_CHECKOUT_V4_SHA =
   "11d5960a326750d5838078e36cf38b85af677262";
 const STAGING_DEPLOY_WORKFLOW = "deploy-staging.yml";
@@ -31,6 +34,40 @@ test("release integration failures retain reports and still allow the build diag
   assert.match(workflow, /name: fanmind-release-integration-report[\s\S]*if-no-files-found: error/u);
   assert.match(workflow, /id: build[\s\S]*build-report\.txt/u);
   assert.match(workflow, /steps\.release_integrations\.outcome != 'success'[\s\S]*fanmind-release-integration-report artifact/u);
+});
+
+test("authorization roundtrip uses two independent digest-pinned PG17 services", async () => {
+  const [workflow, manifest] = await Promise.all([
+    readFile(".github/workflows/ci-fanmind.yml", "utf8"),
+    readFile("package.json", "utf8"),
+  ]);
+  const job = workflow.match(
+    /\n  pg17_authorization_roundtrip:\n[\s\S]*$/u,
+  )?.[0] ?? "";
+  const images = [...job.matchAll(/^\s+image:\s+(\S+)$/gmu)]
+    .map((match) => match[1]);
+
+  assert.deepEqual(images, [PG17_SERVICE_IMAGE, PG17_SERVICE_IMAGE]);
+  assert.match(job, /services:\n\s+pg17_source:/u);
+  assert.match(job, /\n\s+pg17_target:/u);
+  assert.equal([...job.matchAll(/POSTGRES_INITDB_ARGS:/gu)].length, 2);
+  assert.equal([...job.matchAll(/--locale-provider=icu/gu)].length, 2);
+  assert.match(
+    job,
+    /FANMIND_PG17_SOURCE_CONTAINER_ID: \$\{\{ job\.services\.pg17_source\.id \}\}/u,
+  );
+  assert.match(
+    job,
+    /FANMIND_PG17_TARGET_CONTAINER_ID: \$\{\{ job\.services\.pg17_target\.id \}\}/u,
+  );
+  assert.match(
+    job,
+    /FANMIND_PG17_REQUIRE_SERVICE_CONTAINERS: "true"/u,
+  );
+  assert.equal(
+    JSON.parse(manifest).scripts["test:database-authorization:pg17"],
+    "node --test tests/database-authorization-pg17-roundtrip.test.mjs",
+  );
 });
 
 test("all GitHub workflows use immutable external Action references and explicit permissions", async () => {
@@ -126,7 +163,7 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
       (count, workflow) => count + workflow.checkoutShas.length,
       0,
     ),
-    43,
+    44,
   );
   assert.equal(
     hostedWorkflows.every((workflow) =>
