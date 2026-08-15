@@ -44,6 +44,27 @@ const databaseRestoreWorkflowPath =
 const runnerPath = "scripts/operations/run-database-restore-drill.sh";
 const runbookPath = "docs/operations/RESTORE_DRILL.md";
 const packagePath = "package.json";
+const EXTENSIONS_SCHEMA_TOC_ENTRY =
+  "10; 2615 16392 SCHEMA - extensions postgres";
+const SYNTHETIC_ARCHIVE_TOC = `${[
+  ";",
+  "; Archive created by PostgreSQL 17",
+  "; Selected TOC Entries:",
+  "1; 0 0 ENCODING - ENCODING ",
+  "2; 0 0 STDSTRINGS - STDSTRINGS ",
+  "3; 0 0 SEARCHPATH - SEARCHPATH ",
+  EXTENSIONS_SCHEMA_TOC_ENTRY,
+  "11; 3079 16447 EXTENSION - pgcrypto ",
+  "12; 0 16392 COMMENT - SCHEMA extensions postgres",
+  "13; 0 16392 SECURITY LABEL - SCHEMA extensions postgres",
+  "14; 1259 20000 TABLE extensions fanmind_table postgres",
+  "15; 1255 20001 FUNCTION extensions fanmind_fn() postgres",
+  "16; 1259 20002 TABLE public contacts postgres",
+].join("\n")}\n`;
+const SYNTHETIC_RESTORE_TOC = SYNTHETIC_ARCHIVE_TOC.replace(
+  `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+  `;${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+);
 
 function safeEnvironment(overrides = {}) {
   return {
@@ -225,6 +246,7 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
       "workspace_members|1|1|2",
       "workspaces|1|1|2",
     ].join("\n"),
+    FANMIND_TEST_ARCHIVE_TOC: SYNTHETIC_ARCHIVE_TOC,
     PGSSLROOTCERT: caCertificatePath,
     ...overrides,
   };
@@ -1010,6 +1032,8 @@ test("restore runner freezes the checked target and passes only explicit connect
     const capturePath = join(root, "capture.txt");
     const passfilePath = join(root, "restore.pgpass");
     const listMarkerPath = join(root, "list-validated.txt");
+    const tocCapturePath = join(root, "restore-toc.txt");
+    const tocMetadataPath = join(root, "restore-toc-metadata.txt");
     const emptyQueryMarkerPath = join(root, "empty-query.txt");
     await writeFile(dumpPath, "synthetic-dump");
     await chmod(dumpPath, 0o600);
@@ -1022,12 +1046,26 @@ test("restore runner freezes the checked target and passes only explicit connect
         "set -Eeuo pipefail",
         "if [[ \"${1:-}\" == \"--list\" ]]; then",
         "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
         "  exit 0",
         "fi",
         "[[ -s \"$FANMIND_TEST_EMPTY_QUERY_MARKER_PATH\" ]]",
         "write_dump_path=\"${@: -1}\"",
         "list_dump_path=\"$(cat \"$FANMIND_TEST_LIST_MARKER_PATH\")\"",
         "[[ \"$list_dump_path\" == \"$write_dump_path\" ]]",
+        "restore_toc_path=''",
+        "for ((argument_index = 1; argument_index <= $#; argument_index++)); do",
+        "  if [[ \"${!argument_index}\" == \"--use-list\" ]]; then",
+        "    value_index=$((argument_index + 1))",
+        "    restore_toc_path=\"${!value_index}\"",
+        "  fi",
+        "done",
+        "[[ \"$restore_toc_path\" == /proc/self/fd/* ]]",
+        "cat \"$restore_toc_path\" > \"$FANMIND_TEST_TOC_CAPTURE_PATH\"",
+        "{",
+        "  printf 'MODE=%s\\n' \"$(stat -Lc '%a' \"$restore_toc_path\")\"",
+        "  printf 'TARGET=%s\\n' \"$(readlink \"$restore_toc_path\")\"",
+        "} > \"$FANMIND_TEST_TOC_METADATA_PATH\"",
         "{",
         "  printf 'ARGS='",
         "  printf '%q ' \"$@\"",
@@ -1062,12 +1100,16 @@ test("restore runner freezes the checked target and passes only explicit connect
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_CAPTURE_PATH: capturePath,
           FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
+          FANMIND_TEST_TOC_CAPTURE_PATH: tocCapturePath,
+          FANMIND_TEST_TOC_METADATA_PATH: tocMetadataPath,
           FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: emptyQueryMarkerPath,
         },
       },
     );
     const output = `${stdout}\n${stderr}`;
     const capture = await readFile(capturePath, "utf8");
+    const tocCapture = await readFile(tocCapturePath, "utf8");
+    const tocMetadata = await readFile(tocMetadataPath, "utf8");
     const emptyQueryCapture = await readFile(emptyQueryMarkerPath, "utf8");
 
     assert.match(output, /RESTORE_TARGET_BOUNDARY=OK/);
@@ -1076,8 +1118,15 @@ test("restore runner freezes the checked target and passes only explicit connect
     assert.doesNotMatch(validatedSnapshotPath, new RegExp(dumpPath.replaceAll(".", "\\.")));
     assert.match(
       capture,
-      /ARGS=--no-owner --no-privileges --exit-on-error --single-transaction --no-password --host restore-db\.internal --port 5432 --username restore_operator --dbname fanmind_restore /,
+      /ARGS=--no-owner --no-privileges --exit-on-error --single-transaction --use-list \/proc\/self\/fd\/[0-9]+ --no-password --host restore-db\.internal --port 5432 --username restore_operator --dbname fanmind_restore /,
     );
+    assert.equal(tocCapture, SYNTHETIC_RESTORE_TOC);
+    assert.match(tocMetadata, /^MODE=400$/mu);
+    assert.match(
+      tocMetadata,
+      /TARGET=\/[^\n]*fanmind-restore\.[^/]+\/database\.restore\.toc \(deleted\)/u,
+    );
+    assert.equal((capture.match(/--use-list/gu) ?? []).length, 1);
     assert.doesNotMatch(capture, new RegExp(`${dumpPath.replaceAll(".", "\\.")}\\s`));
     assert.match(capture, /fanmind-restore\.[^/]+\/database\.dump\s/u);
     assert.match(
@@ -1153,7 +1202,10 @@ test("restore runner proves an empty target before writing or creating a receipt
       [
         "#!/usr/bin/env bash",
         "set -Eeuo pipefail",
-        "if [[ \"${1:-}\" == \"--list\" ]]; then exit 0; fi",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+        "  exit 0",
+        "fi",
         "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_INVOKED_PATH\"",
         "",
       ].join("\n"),
@@ -1191,6 +1243,145 @@ test("restore runner proves an empty target before writing or creating a receipt
   }
 });
 
+test("restore runner rejects an absent, ambiguous or malformed extensions schema TOC before querying or writing", async () => {
+  const cases = [
+    {
+      name: "missing",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+        "",
+      ),
+      errorCode: "dump_extensions_schema_entry_missing",
+    },
+    {
+      name: "duplicate",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+        `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n17; 2615 16392 SCHEMA - extensions postgres\n`,
+      ),
+      errorCode: "dump_extensions_schema_entry_ambiguous",
+    },
+    {
+      name: "wrong-owner",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "10; 2615 16392 SCHEMA - extensions restore_owner",
+      ),
+      errorCode: "dump_extensions_schema_entry_ambiguous",
+    },
+    {
+      name: "wrong-catalog",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "10; 1259 16392 SCHEMA - extensions postgres",
+      ),
+      errorCode: "dump_extensions_schema_entry_ambiguous",
+    },
+    {
+      name: "commented",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        `;${EXTENSIONS_SCHEMA_TOC_ENTRY}`,
+      ),
+      errorCode: "dump_extensions_schema_entry_missing",
+    },
+    {
+      name: "near-name",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "10; 2615 16392 SCHEMA - extensions_backup postgres",
+      ),
+      errorCode: "dump_extensions_schema_entry_missing",
+    },
+    {
+      name: "malformed-entry",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "not-a-toc-entry",
+      ),
+      errorCode: "dump_archive_toc_entry_invalid",
+    },
+    {
+      name: "duplicate-id",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        "16; 1259 20002 TABLE public contacts postgres",
+        "14; 1259 20002 TABLE public contacts postgres",
+      ),
+      errorCode: "dump_archive_toc_duplicate_id",
+    },
+  ];
+
+  for (const fixture of cases) {
+    const root = await mkdtemp(
+      join(tmpdir(), `fanmind-restore-toc-${fixture.name}-`),
+    );
+    try {
+      const dumpPath = join(root, "fanmind-database-test.dump");
+      const fakeRestorePath = join(root, "fake-pg-restore.sh");
+      const passfilePath = join(root, "restore.pgpass");
+      const listMarkerPath = join(root, "list-attempted.txt");
+      const queryMarkerPath = join(root, "query-invoked.txt");
+      const writeMarkerPath = join(root, "write-invoked.txt");
+      await writeFile(dumpPath, "synthetic-dump");
+      await chmod(dumpPath, 0o600);
+      await writeFile(passfilePath, "synthetic-password-file");
+      await chmod(passfilePath, 0o600);
+      await writeFile(
+        fakeRestorePath,
+        [
+          "#!/usr/bin/env bash",
+          "set -Eeuo pipefail",
+          "if [[ \"${1:-}\" == \"--list\" ]]; then",
+          "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+          "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+          "  exit 0",
+          "fi",
+          "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_MARKER_PATH\"",
+          "",
+        ].join("\n"),
+      );
+      await chmod(fakeRestorePath, 0o755);
+      const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+        FANMIND_TEST_ARCHIVE_TOC: fixture.toc,
+      });
+
+      await assert.rejects(
+        execFileAsync("bash", [runnerPath, dumpPath], {
+          env: {
+            ...process.env,
+            ...safeEnvironment({ PGPASSFILE: passfilePath }),
+            ...runnerEnvironment,
+            FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+            FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
+            FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: queryMarkerPath,
+            FANMIND_TEST_WRITE_MARKER_PATH: writeMarkerPath,
+          },
+        }),
+        (error) => {
+          const output = `${String(error.stdout)}\n${String(error.stderr)}`;
+          assert.match(output, new RegExp(fixture.errorCode, "u"));
+          assert.doesNotMatch(output, /restore_owner|extensions_backup/u);
+          return true;
+        },
+        fixture.name,
+      );
+      await assert.rejects(readFile(queryMarkerPath, "utf8"), /ENOENT/u);
+      await assert.rejects(readFile(writeMarkerPath, "utf8"), /ENOENT/u);
+      await assert.rejects(
+        readFile(
+          runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH,
+          "utf8",
+        ),
+        /ENOENT/u,
+      );
+      const failedSnapshotPath = (await readFile(listMarkerPath, "utf8")).trim();
+      await assert.rejects(access(dirname(failedSnapshotPath)), /ENOENT/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+});
+
 test("restore runner fails closed when a required table has no policy", async () => {
   const root = await mkdtemp(join(tmpdir(), "fanmind-restore-postcheck-test-"));
   try {
@@ -1203,7 +1394,15 @@ test("restore runner fails closed when a required table has no policy", async ()
     await chmod(passfilePath, 0o600);
     await writeFile(
       fakeRestorePath,
-      "#!/usr/bin/env bash\nset -Eeuo pipefail\nexit 0\n",
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+        "fi",
+        "exit 0",
+        "",
+      ].join("\n"),
     );
     await chmod(fakeRestorePath, 0o755);
     const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
@@ -1478,6 +1677,7 @@ test("restore runner validates the dump archive before any write invocation", as
         "set -Eeuo pipefail",
         "if [[ \"${1:-}\" == \"--list\" ]]; then",
         "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
         "  exit 1",
         "fi",
         "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_INVOKED_PATH\"",
@@ -1548,6 +1748,15 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.ok(runner.indexOf("restore-target-preflight.mjs") < runner.indexOf("--list"));
   assert.ok(runner.indexOf("--list") < runner.indexOf("empty_target_sql"));
   assert.ok(runner.indexOf("empty_target_sql") < runner.indexOf("--single-transaction"));
+  assert.match(runner, /snapshot_archive_toc/u);
+  assert.match(runner, /snapshot_restore_toc/u);
+  assert.match(
+    runner,
+    /\^\[1-9\]\[0-9\]\*; 2615 \[1-9\]\[0-9\]\* SCHEMA - extensions postgres\$/u,
+  );
+  assert.match(runner, /--use-list "\$restore_toc_fd_path"/u);
+  assert.match(runner, /restore_toc_fd_path="\/proc\/self\/fd\/\$restore_toc_fd"/u);
+  assert.doesNotMatch(runner, /--exclude-schema(?:=|\s)/u);
   assert.match(runner, /readonly[\s\\]+PGHOST[\s\\]+PGPORT[\s\\]+PGDATABASE[\s\\]+PGUSER/u);
   assert.match(runner, /owner_uid/);
   assert.match(runner, /path_changed_during_open/);
@@ -1581,6 +1790,10 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(
     runbook,
     /fixed FanMind Production recovery contract[\s\S]+pgcrypto` 1\.3 must be in `extensions`/u,
+  );
+  assert.match(
+    runbook,
+    /TOC[\s\S]+SCHEMA - extensions postgres[\s\S]+--use-list/u,
   );
   assert.match(runner, /FANMIND_OPERATIONAL_TEST_MODE/);
   assert.match(runner, /--single-transaction/);

@@ -387,6 +387,24 @@ private dump snapshot with a target-free `pg_restore --list` and queries the
 target with `psql` to prove that no non-system objects exist. A nonzero,
 ambiguous or unreadable result stops the runner before `pg_restore`.
 
+The target-free archive listing is held only inside the private snapshot
+directory. The fixed Production archive contract requires exactly one active
+PostgreSQL 17 TOC line for `SCHEMA - extensions postgres`, bound to the
+`pg_namespace` catalog class. The runner copies every TOC entry in its original
+order and disables only that one schema-definition line before using the list
+with `pg_restore --use-list`. This avoids replaying `CREATE SCHEMA extensions`
+against the required pre-installed pgcrypto host schema. Missing, duplicated,
+malformed, differently owned or ambiguous entries stop before even the
+empty-target query. The `EXTENSION - pgcrypto` entry, schema or extension
+comments and security labels, and every table, function or other object inside
+`extensions` remain active. A broad `--exclude-schema=extensions` is forbidden
+because it would omit restored Production objects. The filtered list is opened
+and validated once, its path is removed, and the inherited private descriptor
+is passed to `pg_restore`. The raw TOC path and filtered TOC pathname are
+unlinked before the target query; the filtered bytes remain reachable only
+through that private descriptor until `pg_restore` returns. The snapshot trap
+also removes either path if preparation fails earlier.
+
 The restore then uses that exact same snapshot with
 `--single-transaction`. A failed archive check stops the runner before any
 write, and a restore error rolls back the single transaction. Host, port, user

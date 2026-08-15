@@ -11,6 +11,8 @@ snapshot_dump=""
 snapshot_passfile=""
 snapshot_full_receipt=""
 snapshot_ca_certificate=""
+snapshot_archive_toc=""
+snapshot_restore_toc=""
 
 cleanup_snapshot() {
   set +e
@@ -22,6 +24,10 @@ cleanup_snapshot() {
     || unlink -- "$snapshot_full_receipt"
   [[ -z "$snapshot_ca_certificate" || ! -e "$snapshot_ca_certificate" ]] \
     || unlink -- "$snapshot_ca_certificate"
+  [[ -z "$snapshot_archive_toc" || ! -e "$snapshot_archive_toc" ]] \
+    || unlink -- "$snapshot_archive_toc"
+  [[ -z "$snapshot_restore_toc" || ! -e "$snapshot_restore_toc" ]] \
+    || unlink -- "$snapshot_restore_toc"
   [[ -z "$snapshot_dir" || ! -d "$snapshot_dir" ]] \
     || rmdir -- "$snapshot_dir"
 }
@@ -232,6 +238,8 @@ snapshot_dump="$snapshot_dir/database.dump"
 snapshot_passfile="$snapshot_dir/restore.pgpass"
 snapshot_full_receipt="$snapshot_dir/full-backup-receipt.json"
 snapshot_ca_certificate="$snapshot_dir/restore-ca.pem"
+snapshot_archive_toc="$snapshot_dir/database.toc"
+snapshot_restore_toc="$snapshot_dir/database.restore.toc"
 
 cp -- "$dump_fd_path" "$snapshot_dump" || fail "dump_snapshot_failed"
 cp -- "$passfile_fd_path" "$snapshot_passfile" || fail "passfile_snapshot_failed"
@@ -297,10 +305,86 @@ if ! env \
   "$pg_restore_bin" \
   --list \
   "$snapshot_dump" \
-  >/dev/null 2>&1
+  >"$snapshot_archive_toc" 2>/dev/null
 then
   fail "dump_archive_validation_failed"
 fi
+chmod 0600 "$snapshot_archive_toc" \
+  || fail "dump_archive_toc_permissions_failed"
+
+# PostgreSQL 17 writes the user-defined Production host schema as exactly one
+# pg_namespace TOC entry. The target must already contain that schema because
+# pgcrypto is pre-installed there, so only its CREATE SCHEMA definition is
+# disabled. Every other archive ID remains active and in its original order.
+if LC_ALL=C awk '
+  BEGIN {
+    candidate_count = 0
+    exact_count = 0
+    fatal_status = 0
+  }
+  {
+    if ($0 == "" || substr($0, 1, 1) == ";") {
+      print
+      next
+    }
+    if ($1 !~ /^[1-9][0-9]*;$/ ||
+        $2 !~ /^[0-9]+$/ ||
+        $3 !~ /^[0-9]+$/) {
+      fatal_status = 43
+      exit
+    }
+    dump_id = $1
+    sub(/;$/, "", dump_id)
+    if (seen_dump_ids[dump_id]++) {
+      fatal_status = 44
+      exit
+    }
+    if ($4 == "SCHEMA" && $5 == "-" && $6 == "extensions") {
+      candidate_count++
+      if ($0 ~ /^[1-9][0-9]*; 2615 [1-9][0-9]* SCHEMA - extensions postgres$/) {
+        exact_count++
+        print ";" $0
+      } else {
+        print
+      }
+      next
+    }
+    print
+  }
+  END {
+    if (fatal_status != 0) exit fatal_status
+    if (candidate_count == 0) exit 41
+    if (candidate_count != 1 || exact_count != 1) exit 42
+  }
+' "$snapshot_archive_toc" >"$snapshot_restore_toc"
+then
+  restore_toc_status=0
+else
+  restore_toc_status=$?
+fi
+case "$restore_toc_status" in
+  0) ;;
+  41) fail "dump_extensions_schema_entry_missing" ;;
+  42) fail "dump_extensions_schema_entry_ambiguous" ;;
+  43) fail "dump_archive_toc_entry_invalid" ;;
+  44) fail "dump_archive_toc_duplicate_id" ;;
+  *) fail "dump_restore_toc_filter_failed" ;;
+esac
+chmod 0400 "$snapshot_restore_toc" \
+  || fail "dump_restore_toc_permissions_failed"
+exec {restore_toc_fd}<"$snapshot_restore_toc" \
+  || fail "restore_toc_open_failed"
+restore_toc_fd_path="/proc/self/fd/$restore_toc_fd"
+validate_open_source \
+  "restore_toc" \
+  "$snapshot_restore_toc" \
+  "$restore_toc_fd_path"
+unlink -- "$snapshot_archive_toc" \
+  || fail "dump_archive_toc_cleanup_failed"
+snapshot_archive_toc=""
+unlink -- "$snapshot_restore_toc" \
+  || fail "dump_restore_toc_unlink_failed"
+snapshot_restore_toc=""
 
 empty_target_sql="
 WITH expected_extension_versions(
@@ -754,6 +838,7 @@ if ! env \
   --no-privileges \
   --exit-on-error \
   --single-transaction \
+  --use-list "$restore_toc_fd_path" \
   --no-password \
   --host "$PGHOST" \
   --port "$PGPORT" \
@@ -764,6 +849,7 @@ if ! env \
 then
   fail "database_restore_failed"
 fi
+exec {restore_toc_fd}<&-
 
 FANMIND_RESTORE_COMPLETED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
   || fail "completed_timestamp_failed"
