@@ -1957,10 +1957,13 @@ create index fanmind_ci_unexpected_idx
     assert.equal(sourceExplicitAclState.raw_acl_is_explicit, true);
     assert.equal(
       sourceExplicitAclState.semantically_default,
-      true,
-      `source explicit-default ACL differs: ${JSON.stringify(
-        sourceExplicitAclState,
-      )}`,
+      false,
+      "the live source contains the deliberately injected post-snapshot grant",
+    );
+    assert.match(
+      sourceExplicitAclState.raw_acl,
+      /ci_late=r\/ci_owner/u,
+      "the live source exposes the post-snapshot grant",
     );
     assert.equal(
       targetExplicitAclState.semantically_default,
@@ -1968,6 +1971,11 @@ create index fanmind_ci_unexpected_idx
       `target explicit-default ACL differs: ${JSON.stringify(
         targetExplicitAclState,
       )}`,
+    );
+    assert.doesNotMatch(
+      targetExplicitAclState.raw_acl ?? "",
+      /ci_late/u,
+      "the frozen snapshot excludes the later source grant",
     );
 
     const targetColumnAcl = JSON.parse(
