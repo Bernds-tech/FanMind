@@ -503,7 +503,7 @@ extension_contract_members as (
                   when attribute.attcollation = 0 then null
                   else pg_catalog.concat_ws('.',
                     pg_catalog.quote_ident(collation_namespace.nspname),
-                    pg_catalog.quote_ident(collation.collname)
+                    pg_catalog.quote_ident(collation_definition.collname)
                   )
                 end,
                 'storage', attribute.attstorage::text,
@@ -515,11 +515,12 @@ extension_contract_members as (
               order by attribute.attnum
             )
             from pg_catalog.pg_attribute as attribute
-            left join pg_catalog.pg_collation as collation
-              on collation.oid = attribute.attcollation
+            left join pg_catalog.pg_collation as collation_definition
+              on collation_definition.oid = attribute.attcollation
              and attribute.attcollation <> 0
             left join pg_catalog.pg_namespace as collation_namespace
-              on collation_namespace.oid = collation.collnamespace
+              on collation_namespace.oid =
+                 collation_definition.collnamespace
             where attribute.attrelid = object.oid
               and attribute.attnum > 0
               and not attribute.attisdropped
