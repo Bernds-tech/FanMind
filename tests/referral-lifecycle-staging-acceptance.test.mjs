@@ -4,8 +4,10 @@ import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import test from "node:test";
 
-import { buildReferralStagingAcceptanceSql } from
-  "../scripts/operations/referral-lifecycle-staging-acceptance.mjs";
+import {
+  buildReferralStagingAcceptanceSql,
+  referralAcceptanceFailureCode,
+} from "../scripts/operations/referral-lifecycle-staging-acceptance.mjs";
 import {
   REFERRAL_STAGING_ACCEPTANCE_CONFIRMATION,
   evaluateReferralStagingAcceptanceEnvironment,
@@ -138,6 +140,19 @@ test("offline check needs no database or provider credentials", async () => {
   assert.doesNotMatch(output, /11111111|postgres|supabase|stripe/iu);
 });
 
+test("database failure classification emits only allowlisted Referral codes", () => {
+  assert.equal(
+    referralAcceptanceFailureCode(
+      "private context referral_attribution_guard_missing password=hidden",
+    ),
+    "referral_attribution_guard_missing",
+  );
+  assert.equal(
+    referralAcceptanceFailureCode("host=private password=secret"),
+    "database_acceptance_failed",
+  );
+});
+
 test("workflow is exact-main Staging-only, rollback-only and provider-free", async () => {
   const [workflow, script] = await Promise.all([
     readFile(workflowPath, "utf8"),
@@ -155,6 +170,7 @@ test("workflow is exact-main Staging-only, rollback-only and provider-free", asy
   assert.match(workflow, /FANMIND_ENABLE_REFERRAL_BILLING: 'false'/u);
   assert.match(workflow, /npm run db:staging-rollout-state:run/u);
   assert.match(workflow, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
+  assert.match(workflow, /npm run db:referral-attribution:verify/u);
   assert.match(workflow, /npm run referral:lifecycle:staging:run/u);
   assert.doesNotMatch(workflow, /STRIPE_SECRET|STRIPE_WEBHOOK|META_ACCESS|OPENAI_API/u);
   assert.doesNotMatch(script, /fetch\(|https?:\/\//u);

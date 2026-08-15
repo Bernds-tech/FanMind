@@ -184,6 +184,14 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   requires renewed explicit approval; preparing, merging or deploying its
   control path is not approval to execute it.
 - Referral Growth Window requirements live in `docs/REFERRAL_PROGRAM.md`.
+- Referral attribution integrity has a separate checksum-pinned Staging
+  verify/apply path documented in
+  `docs/operations/REFERRAL_ATTRIBUTION_STAGING.md`. A normal Web deploy must
+  never apply it. Keep read-only verify, explicit Staging apply and the
+  rollback-only lifecycle acceptance separate, exact-main-commit-bound and
+  protected by the `staging` environment. The lifecycle acceptance must
+  require the attribution postflight first. Never enable Referral Billing,
+  call Stripe, expose SQL diagnostics or target Production from this path.
 - When updating pricing, scope, demo flow, integrations, referral logic, billing or AI model behavior, update all relevant reader files in the same PR.
 
 ## Current product truth

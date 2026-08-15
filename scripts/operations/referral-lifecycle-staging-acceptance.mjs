@@ -21,6 +21,28 @@ import {
 } from "../../src/lib/referralStagingAcceptancePolicy.mjs";
 
 const MAX_PASSFILE_BYTES = 64 * 1024;
+const SAFE_DATABASE_FAILURES = new Set([
+  "active_referral_snapshot_invalid",
+  "cancellation_transition_invalid",
+  "dedicated_synthetic_workspaces_invalid",
+  "first_valid_click_guard_missing",
+  "growth_window_auto_reopened",
+  "growth_window_close_invalid",
+  "immutable_attribution_guard_missing",
+  "payment_failure_transition_invalid",
+  "reactivation_transition_invalid",
+  "referral_attribution_guard_missing",
+  "referral_discount_cap_invalid",
+  "referral_discount_intermediate_invalid",
+  "referral_event_idempotency_invalid",
+  "referral_setup_fee_changed",
+  "referral_sync_rpc_missing",
+  "refund_transition_invalid",
+  "rollback_state_mismatch",
+  "self_referral_guard_missing",
+  "synthetic_workspace_overlap",
+  "synthetic_workspace_owner_missing",
+]);
 
 function fail(code) {
   throw new Error(`REFERRAL_STAGING_ACCEPTANCE_ERROR=${code}`);
@@ -565,6 +587,14 @@ function runPsql(sql, environment, passfilePath) {
   );
 }
 
+export function referralAcceptanceFailureCode(stderr) {
+  const output = typeof stderr === "string" ? stderr : "";
+  for (const code of SAFE_DATABASE_FAILURES) {
+    if (output.includes(code)) return code;
+  }
+  return "database_acceptance_failed";
+}
+
 function runAcceptance(environment) {
   const policy = evaluateReferralStagingAcceptanceEnvironment(environment);
   if (!policy.ok) fail("environment_invalid");
@@ -591,7 +621,7 @@ function runAcceptance(environment) {
       result.status !== 0 ||
       markers.some((marker) => !result.stdout.includes(marker))
     ) {
-      fail("database_acceptance_failed");
+      fail(referralAcceptanceFailureCode(result.stderr));
     }
     for (const marker of markers) console.log(marker);
     console.log("SECRETS_WURDEN_NICHT_AUSGEGEBEN=true");

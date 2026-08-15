@@ -362,6 +362,9 @@ Das Empfehlungsprogramm ist bis zum globalen Ziel von 2.000 aktiven zahlenden Wo
 - kein negativer Rechnungsbetrag und keine Barauszahlung;
 - bei Kündigung, Nichtzahlung, Refund oder Chargeback entfällt der jeweilige Rabatt;
 - Referral-Live-Billing bleibt bis zur kontrollierten Freigabe mit `FANMIND_ENABLE_REFERRAL_BILLING=false` deaktiviert.
+- Attribution-Integrität und Lifecycle werden in Staging über getrennte,
+  commitgebundene Verify/Apply/Acceptance-Workflows abgenommen; Details stehen
+  in `docs/operations/REFERRAL_ATTRIBUTION_STAGING.md`.
 
 Details: `docs/REFERRAL_PROGRAM.md` und `docs/operations/referral-stripe-sandbox-runbook.md`.
 
