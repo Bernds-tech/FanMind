@@ -69,8 +69,11 @@ nicht als ausgeführte Abnahme.
   werden bewusst nicht simuliert.
 - **Staging/Infrastruktur:** regulären Owner und getrennten Member mit
   synthetischem Kontakt durch den vollständigen Flow führen.
-- **Extern:** produktive E-Mail- und OpenAI-Konfiguration sowie fachliche
-  Antwortqualitätsprüfung.
+- **Extern:** Der isolierte, noch nicht ausgeführte Resend-Provider-Control ist
+  vorbereitet; Domain, eingeschränkter Schlüssel und geschütztes Environment
+  bleiben offen. Die reale Signup-/Reset-/App-E-Mail-Abnahme, produktive
+  E-Mail- und OpenAI-Konfiguration sowie fachliche Antwortqualitätsprüfung
+  bleiben externe Gates.
 - **Production-Aktivierung:** commitgenauer Deploy sowie Health-, Version- und
   Kernflow-Smoke.
 
