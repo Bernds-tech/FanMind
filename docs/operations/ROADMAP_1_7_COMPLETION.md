@@ -45,6 +45,13 @@ ausschließlich lokale Provider-Fixture aus. Nur die KI-Antwort wird
 synthetisch erfüllt. Die isolierte Staging-, echte Provider- und
 Production-Abnahme bleiben dadurch unverändert offen.
 
+Der commitgenaue manuelle Workflow `FanMind Staging Core and CSV Acceptance`
+ist als nächster echter Staging-Nachweis vorbereitet. Er prüft Owner und
+Member, reale KI Standard, Kontaktwissen, Follow-ups, CSV-Duplikate,
+ungültige Zeilen, Zwei-Workspace-RLS und vollständiges Cleanup. Solange dieser
+Workflow auf dem exakt deployten Staging-Commit nicht tatsächlich grün lief,
+bleiben die Staging-Spalten der Roadmaps 1 und 2 offen.
+
 ## Roadmap 1 – Produktkern
 
 - **Code:** Login, Registrierung, Workspace, Dashboard, Kontakte, CSV-Import,

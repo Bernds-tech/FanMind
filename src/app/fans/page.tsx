@@ -4,7 +4,6 @@ import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceConversationMessages,
   getWorkspaceOpenFollowups,
@@ -15,6 +14,7 @@ import {
   type ConversationMessageRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getUserAuthorizedWorkspaceDashboard } from "@/lib/workspaceAuthorization";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
@@ -1194,7 +1194,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   }
 
   const locale = await resolveWorkspaceLocale({ lang: resolvedSearchParams?.lang, user: data.user });
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }

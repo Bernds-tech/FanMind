@@ -11,8 +11,8 @@ Die Fixture besteht aus:
 
 - zwei bestätigten, ausdrücklich synthetischen Login-Identitäten;
 - zwei vollständig getrennten Workspaces mit je einem synthetischen Kontakt;
-- einer dritten, nicht für Browser-Login verwendeten synthetischen Auth-
-  Identität als `member` des primären Workspace;
+- einer dritten synthetischen Login-Identität als `member` des primären
+  Workspace;
 - dem Marker `staging_synthetic_fixture = true`;
 - dem zusätzlichen Marker `workspace_processing_acceptance = true` nur am
   primären Workspace.
@@ -59,7 +59,8 @@ Der Workflow verlangt gleichzeitig:
 - die Bestätigung `provision-staging-synthetic-fixtures`;
 - den gemeinsamen read-only Datenbank-Rollout-State `PASS`;
 - Supavisor Session-Pooler, Port `5432` und TLS `verify-full`;
-- zwei unterschiedliche synthetische E-Mail-Adressen und unterschiedliche
+- zwei unterschiedliche synthetische Owner-E-Mail-Adressen, die fest gebundene
+  synthetische Member-Adresse und drei untereinander unterschiedliche
   Passwörter mit mindestens 20 Zeichen, Groß-/Kleinbuchstaben, Zahl und
   Sonderzeichen.
 
@@ -74,19 +75,22 @@ nicht gelöscht.
 ## Einmalige GitHub-Konfiguration
 
 Im Environment `staging` müssen vor dem Lauf zusätzlich zu den vorhandenen
-Supabase-/DB-Werten diese vier Secrets gesetzt sein:
+Supabase-/DB-Werten diese fünf Secrets gesetzt sein:
 
 ```text
 FANMIND_STAGING_E2E_EMAIL
 FANMIND_STAGING_E2E_PASSWORD
 FANMIND_STAGING_E2E_SECONDARY_EMAIL
 FANMIND_STAGING_E2E_SECONDARY_PASSWORD
+FANMIND_STAGING_E2E_MEMBER_PASSWORD
 ```
 
 Beide E-Mail-Adressen müssen `staging`, `synthetic` oder `test` enthalten.
 Die E-Mail-Adressen sind rein synthetisch; der Admin-Pfad bestätigt sie ohne
-Versand einer Nachricht. Die Passwörter dürfen nicht in Issue, PR, Log oder
-Chat kopiert werden.
+Versand einer Nachricht. Das Member-Konto verwendet die fest gebundene Adresse
+`fanmind-ai-member-staging@example.invalid`. Alle drei Passwörter müssen
+unterschiedlich sein und dürfen nicht in Issue, PR, Log oder Chat kopiert
+werden.
 
 ## Kontrollierter Lauf
 
@@ -128,9 +132,10 @@ Erst nach gesetzten UUID-Variablen werden die vorhandenen Workflows in dieser
 Reihenfolge ausgeführt:
 
 1. `FanMind Browser E2E Staging Read-only`;
-2. `FanMind Workspace Processing Staging Acceptance`;
-3. `FanMind AI Tier Staging Resource Readiness`;
-4. `FanMind AI Tier Staging Acceptance`.
+2. `FanMind Staging Core and CSV Acceptance`;
+3. `FanMind Workspace Processing Staging Acceptance`;
+4. `FanMind AI Tier Staging Resource Readiness`;
+5. `FanMind AI Tier Staging Acceptance`.
 
 Jeder dieser Läufe behält seinen eigenen Bestätigungs-, Commit- und
 Write-/Rollback-Vertrag. Die Fixture-Provisionierung selbst aktiviert weder

@@ -24,7 +24,7 @@ import {
   type MemoryRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+import { requireAuthorizedWorkspaceMember } from "@/lib/workspaceAuthorization";
 import { isOpenFollowupStatus } from "@/lib/followupStatus";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
@@ -1733,7 +1733,7 @@ export default async function FanDetailPage({
   const activeSource = normalizeParam(pageSearchParams?.source) || "all";
   let authorized;
   try {
-    authorized = await requireAuthorizedWorkspace();
+    authorized = await requireAuthorizedWorkspaceMember();
   } catch (error) {
     if (error instanceof Error && error.message === "TEMPORARY_DEMO_DELETED") {
       redirect("/login?demo_deleted=1");

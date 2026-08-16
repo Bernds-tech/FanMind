@@ -28,7 +28,7 @@ import {
   getOptionalBearerAccessToken,
 } from "@/lib/requestAccessToken";
 import {
-  requireContactInAuthorizedWorkspace,
+  requireContactInActiveAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
 import { getResolvedWorkspaceAiTier } from "@/lib/workspaceAiTierEntitlements";
@@ -210,10 +210,10 @@ export async function POST(request: NextRequest) {
   }
 
   let authorizationContext: Awaited<
-    ReturnType<typeof requireContactInAuthorizedWorkspace>
+    ReturnType<typeof requireContactInActiveAuthorizedWorkspaceMember>
   >;
   try {
-    authorizationContext = await requireContactInAuthorizedWorkspace(
+    authorizationContext = await requireContactInActiveAuthorizedWorkspaceMember(
       contactId,
       accessToken,
     );

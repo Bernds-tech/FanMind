@@ -73,8 +73,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Serverseitiger Entitlement-Vertrag: fehlende, unbekannte, client-kontrollierte, pausierte, nicht gestartete, abgelaufene oder unvollständig freigegebene Plus-/Ultra-Zustände fallen immer auf KI Standard zurück.
 - Persistenter Entitlement-Speicher: server-only Tabelle und redigierender
   Loader sind auf dem getrennten Supabase-Staging migriert und nachgeprüft;
-  Production-Migration, Stripe-Lifecycle und produktive KI-Verdrahtung sind
-  nicht freigegeben, daher bleiben Plus/Ultra blockiert.
+  der echte Stripe-Webhook enthält nun eine standardmäßig inaktive,
+  optimistisch gesperrte Lifecycle-Brücke. Sie arbeitet erst bei eigenem
+  Persistence-Gate, bestätigtem Workspace-Vertrag und zwei unterschiedlichen
+  serverseitigen KI-Price-IDs.
+  Production-Migration und produktive KI-Nutzung sind nicht freigegeben,
+  daher bleiben Plus/Ultra blockiert.
 - Kontrollierter Entitlement-Migrationspfad: `npm run db:ai-tier-entitlements:check` prüft die festgeschriebene Migration offline; `verify` und `apply` sind explizit zielgebunden und führen niemals automatisch durch einen Web-Deploy aus. Der manuelle, ausschließlich auf `main` und das GitHub-Environment `staging` begrenzte Workflow `FanMind AI Tier Staging Migration` bereitet den echten Staging-Apply samt Postflight vor.
 - KI-Stufen-Staging-Abnahme: manueller rollback-only Workflow für getrennte
   Staging-Datenbank, synthetischen Owner-/Member-Workspace und Stripe-Testpreise
@@ -151,7 +155,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   exklusiv übernehmen und nur ihre eigene Zuweisung freigeben; Status,
   nächster Schritt und Nachrichtentext bleiben unverändert und es wird nichts
   automatisch versendet.
-- Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
+- Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie
+  fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte,
+  verspätete und gleichzeitige Stripe-Events. Der echte Webhook enthält die
+  standardmäßig inaktive, zielgebundene Persistenzbrücke; der Speicher ist nur
+  auf dem getrennten Staging angewendet. Production-Datenbank, produktive
+  KI-Routen und Plus-/Ultra-Aktivierung bleiben gesperrt.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind nicht rabattfähig; Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
 - Verbindliche Kanal-Roadmap: Phase 3 = Facebook, Instagram und WhatsApp; Phase 7 = TikTok, X/Twitter, Discord und die unverbindliche OnlyFans-Prüfung; Phase 8 = LinkedIn und alle übrigen späteren Plattformanbindungen. Phase 8 ist noch nicht begonnen, wird aktuell nicht gebaut und zählt nicht als Fortschritt.
@@ -216,6 +225,13 @@ FanMind-Routen und Server-Actions gegen eine ausschließlich lokale
 Auth-/PostgREST-Fixture; nur die KI-Antwort wird synthetisch erfüllt. Dieser
 Nachweis ersetzt weder die isolierte Staging-, Provider- noch
 Production-Abnahme.
+
+Der manuelle Workflow `FanMind Staging Core and CSV Acceptance` ist für den
+darauffolgenden realen Nachweis vorbereitet. Er bindet sich an den exakt auf
+dem isolierten Staging deployten `main`-Commit, führt den Owner-/Member-
+Kernfluss mit echter KI Standard und einer kontrollierten CSV aus und beweist
+anschließend das vollständige Cleanup. Er ist noch nicht ausgeführt und gilt
+deshalb nicht als abgeschlossene Staging-Abnahme.
 
 ## Technik
 

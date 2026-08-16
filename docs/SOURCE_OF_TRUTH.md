@@ -58,6 +58,11 @@ Aktiv beziehungsweise produktnah:
   Server-Actions gegen eine ausschließlich lokale In-Memory-Provider-Fixture;
   nur die KI-Antwort ist synthetisch. Der Nachweis ersetzt keine isolierte
   Staging-, Provider- oder Production-Abnahme;
+- commitgenauer manueller Staging-Kern-/CSV-Abnahmepfad: Der vorbereitete
+  Workflow bindet den tatsächlich deployten `main`-Commit, den markierten
+  synthetischen Owner-/Member-Workspace, reale KI Standard, CSV-Duplikat- und
+  Fehlerzeilen, Zwei-Workspace-RLS sowie ein `always()`-Cleanup. Bis zu seinem
+  tatsächlichen grünen Lauf bleibt die externe Staging-Abnahme offen;
 - consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: ausschließlich `PageView` ohne Eventparameter; keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-/Billing-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; vorbereitete Conversion-Events bleiben ohne separate fachliche und datenschutzrechtliche Freigabe unverdrahtet; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag als kontrollierter echter End-to-End-Billing-Test; gleicher Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Lifecycle wie Starter; kein Referral-Rabatt, kein dauerhaftes öffentliches Paket; eine temporäre Registrierungsfreigabe läuft spätestens nach 24 Stunden ab, lehnt fehlende, ungültige oder in der Zukunft liegende Startzeitpunkte fail-closed ab und bleibt bis zum abgenommenen `service_role`-Provisioning- und Browser-INSERT-Contract sowie vollständiger Daily-Stripe-/Webhook-Konfiguration geschlossen. Nach einer erforderlichen E-Mail-Bestätigung kann ein noch workspace-loses Konto den Daily-Test auf `/workspace/setup` erneut ausdrücklich auswählen, aber nur solange Zeitfenster, RPC-Readiness und Stripe-Vertrag frisch serverseitig bereit sind; persistente Auth-Metadaten gelten weder als Tarif- noch als Zustimmungsnachweis. Der zugehörige SQL-Schritt liegt einzeln freizugebend unter `supabase/controlled/` und bleibt außerhalb generischer Migration Discovery (`docs/operations/INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING.md`).
 
@@ -504,8 +509,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Loader sind als deploy-before-migrate-Brücke vorbereitet. Die Migration ist
   auf dem getrennten Supabase-Staging angewendet und mit RLS, fehlenden
   Browser-Policies sowie server-only Zugriff nachgeprüft; auf Production ist
-  sie nicht angewendet. Weder Stripe-Webhooks noch produktive KI-Routen
-  verwenden sie; Plus/Ultra bleiben deshalb blockiert.
+  sie nicht angewendet. Der echte Stripe-Webhook ruft die serverseitige
+  Lifecycle-Brücke nur auf, wenn ihr eigenes Persistence-Gate, der
+  Workspace-Vertrag und beide unterschiedlichen KI-Price-IDs explizit
+  konfiguriert sind. Produktive KI-Routen verwenden den Speicher weiterhin
+  nicht; Plus/Ultra bleiben zusätzlich durch ihre zentrale Readiness
+  blockiert.
 - Der checksum-gebundene Entitlement-Migrationsrunner besitzt getrennte
   Offline-Check-, Read-only-Verify- und explizite Apply-Modi. Merge und
   Web-Deploy wenden die Migration nicht automatisch an; Staging-Abnahme bleibt
@@ -516,13 +525,22 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Supabase-Projekt-/Datenbankziele und eine private Passwortdatei. Er endet
   mit dem read-only Metadaten-Postflight und startet weder die rollback-only
   Abnahme noch einen Production-Schritt automatisch.
-- Der vorbereitete serverseitige Stripe-Lifecycle-Vertrag akzeptiert nur
-  zwei vollständige, unterschiedliche Price-IDs, genau ein passendes
-  Subscription-Item und ein zuvor verifiziertes Workspace-Ziel. Doppelte und
+- Der serverseitige Stripe-Lifecycle-Vertrag akzeptiert nur
+  zwei vollständige, unterschiedliche Price-IDs, eine explizit vollständige
+  Item-Liste, genau ein passendes Subscription-Item und ein zuvor verifiziertes
+  Workspace-Ziel. Alle direkten Workspace-IDs müssen gültig und untereinander
+  sowie mit vorhandenen Stripe-Referenzen identisch sein. Subscription-Events
+  dürfen vor jedem Billing-Write nur die exakt gespeicherte Customer- und
+  Basis-Subscription-Bindung verwenden; ein separates KI-Abo darf die
+  Basis-Subscription nicht überschreiben. Doppelte und
   ältere Events werden nicht erneut angewendet; Zeitkollisionen,
-  Subscription-Wechsel und beschädigte Perioden stoppen fail-closed. Die
-  produktive Webhook-/Datenbank-Verdrahtung bleibt bis zur Staging-Abnahme
-  aus.
+  Subscription-Wechsel, unvollständige Item-Listen und beschädigte Perioden
+  stoppen fail-closed. Entfernt ein neueres Subscription-Event das zuvor
+  gespeicherte Plus-/Ultra-Item, wird der Datensatz `canceled` statt stale
+  aktiv belassen. Insert und Update verwenden ohne Upsert eine persistente
+  Event-Grenze beziehungsweise einen Compare-and-swap-Filter; ein
+  Parallelkonflikt verlangt Stripe-Retry. Die Brücke aktiviert keine
+  KI-Stufe und bleibt ohne ihr dediziertes Persistence-Gate inaktiv.
 - Ein manueller, rollback-only Staging-Abnahmeworkflow ist vorbereitet. Er
   prüft bei bereits angewendeter Staging-Migration beide aktiven
   Stripe-Testpreise, Owner-/Member-Sperren, Service-Role-CRUD sowie

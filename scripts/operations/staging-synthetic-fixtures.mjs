@@ -162,6 +162,11 @@ update public.workspaces
        billing_suspended_at = null,
        billing_suspended_reason = null,
        billing_grace_until = null,
+       subscription_cancel_requested_at = null,
+       subscription_cancel_requested_by_user_id = null,
+       subscription_cancel_at_period_end = false,
+       subscription_effective_end_at = null,
+       subscription_cancellation_revoked_at = null,
        workspace_access_mode = 'active',
        test_access_flags = coalesce(test_access_flags, '{}'::jsonb)
          || '{"staging_synthetic_fixture":true,"workspace_processing_acceptance":true}'::jsonb,
@@ -179,6 +184,11 @@ update public.workspaces
        billing_suspended_at = null,
        billing_suspended_reason = null,
        billing_grace_until = null,
+       subscription_cancel_requested_at = null,
+       subscription_cancel_requested_by_user_id = null,
+       subscription_cancel_at_period_end = false,
+       subscription_effective_end_at = null,
+       subscription_cancellation_revoked_at = null,
        workspace_access_mode = 'active',
        test_access_flags = coalesce(test_access_flags, '{}'::jsonb)
          || '{"staging_synthetic_fixture":true}'::jsonb,
@@ -409,6 +419,7 @@ function psqlEnvironment(environment, passfilePath) {
     "PGSYSCONFDIR",
     "FANMIND_STAGING_E2E_PASSWORD",
     "FANMIND_STAGING_E2E_SECONDARY_PASSWORD",
+    "FANMIND_STAGING_E2E_MEMBER_PASSWORD",
     "FANMIND_STAGING_SUPABASE_ANON_KEY",
     "FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY",
   ]) {
@@ -688,7 +699,7 @@ async function runProvisioning(environment) {
       users,
       "ai_member",
       STAGING_SYNTHETIC_MEMBER_EMAIL,
-      "",
+      environment.FANMIND_STAGING_E2E_MEMBER_PASSWORD,
     );
     if (member.created) createdUsers.push(member.user.id);
     if (
@@ -708,6 +719,12 @@ async function runProvisioning(environment) {
       environment.FANMIND_STAGING_E2E_SECONDARY_EMAIL,
       environment.FANMIND_STAGING_E2E_SECONDARY_PASSWORD,
       secondary.user.id,
+    );
+    await signInSyntheticUser(
+      environment,
+      STAGING_SYNTHETIC_MEMBER_EMAIL,
+      environment.FANMIND_STAGING_E2E_MEMBER_PASSWORD,
+      member.user.id,
     );
     const primaryWorkspace = await ensureWorkspace(
       environment,

@@ -45,6 +45,8 @@ function acceptedEnvironment(overrides = {}) {
       "secondary-staging@example.invalid",
     FANMIND_STAGING_E2E_SECONDARY_PASSWORD:
       "Secondary-Staging-Password-456!",
+    FANMIND_STAGING_E2E_MEMBER_PASSWORD:
+      "Member-Staging-Password-789!",
     FANMIND_ENABLE_NON_PRODUCTION_WRITES: "true",
     FANMIND_NON_PRODUCTION_WRITE_ACK: "I_UNDERSTAND_NON_PRODUCTION_ONLY",
     FANMIND_STAGING_FIXTURE_REVIEWED_COMMIT: "a".repeat(40),
@@ -81,6 +83,14 @@ test("persistent fixture environment accepts only reviewed isolated staging writ
     [{ FANMIND_STAGING_FIXTURE_CONFIRM: "yes" }, "fixture_confirmation"],
     [{ FANMIND_STAGING_E2E_EMAIL: "customer@example.com" }, "synthetic_emails"],
     [{ FANMIND_STAGING_E2E_PASSWORD: "short" }, "synthetic_passwords"],
+    [{ FANMIND_STAGING_E2E_MEMBER_PASSWORD: "short" }, "synthetic_passwords"],
+    [
+      {
+        FANMIND_STAGING_E2E_MEMBER_PASSWORD:
+          "Primary-Staging-Password-123!",
+      },
+      "synthetic_passwords",
+    ],
     [{ FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY: "sb_publishable_wrong" }, "supabase_keys"],
     [{ PGHOST: "db.production.invalid" }, "database_host_binding"],
     [{ DATABASE_URL: "postgres://redirect.invalid" }, "database_redirect"],
@@ -140,6 +150,14 @@ test("database apply reuses workspace provisioning and creates only marked reusa
   assert.match(sql, /insert into public\.contacts/u);
   assert.match(sql, /synthetic_fixture_cross_membership/u);
   assert.match(sql, /synthetic_fixture_stripe_state_not_empty/u);
+  assert.equal(
+    (sql.match(/subscription_effective_end_at = null/gu) ?? []).length,
+    2,
+  );
+  assert.equal(
+    (sql.match(/subscription_cancel_at_period_end = false/gu) ?? []).length,
+    2,
+  );
   assert.doesNotMatch(sql, /insert into auth\.users|delete from|truncate/iu);
   assert.doesNotMatch(sql, /rollback;/iu);
 });
@@ -155,6 +173,10 @@ test("server-side provisioning uses Admin Auth, user RPC and secret-safe header 
   assert.match(source, /ensure_current_user_workspace/u);
   assert.match(source, /starter_paid_setup/u);
   assert.match(source, /STAGING_SYNTHETIC_MEMBER_EMAIL/u);
+  assert.match(
+    source,
+    /"FANMIND_STAGING_E2E_MEMBER_PASSWORD"[\s\S]*delete safeEnvironment\[key\]/u,
+  );
   assert.equal(STAGING_SYNTHETIC_MEMBER_EMAIL.endsWith("@example.invalid"), true);
   assert.match(source, /STAGING_SYNTHETIC_FIXTURE_SECRETS_OUTPUT=0/u);
   assert.doesNotMatch(source, /console\.log\([^\n]*(?:password|serviceKey|accessToken)/iu);
@@ -174,6 +196,7 @@ test("manual workflow is protected, commit-exact and isolated from Production", 
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
   assert.match(workflow, /FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY/u);
   assert.match(workflow, /FANMIND_STAGING_E2E_SECONDARY_PASSWORD/u);
+  assert.match(workflow, /FANMIND_STAGING_E2E_MEMBER_PASSWORD/u);
   assert.match(
     workflow,
     /NEXT_PUBLIC_SUPABASE_URL: \$\{\{ secrets\.FANMIND_STAGING_SUPABASE_URL \}\}/u,

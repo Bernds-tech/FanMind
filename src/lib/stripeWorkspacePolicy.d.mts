@@ -31,6 +31,26 @@ export type StripeBillingPatchDecision =
   | typeof STRIPE_BILLING_UPDATED
   | typeof STRIPE_BILLING_ZERO_ROWS;
 
+export type StripeWorkspaceResolution =
+  | { status: "found"; workspaceId: string }
+  | { status: "not_found" }
+  | { status: "retryable_error" };
+
+export function resolveStripeWebhookWorkspaceCandidates(input: {
+  directCandidates: readonly unknown[];
+  referenceResolution: StripeWorkspaceResolution;
+  allowDirectBootstrap?: boolean;
+}): StripeWorkspaceResolution;
+
+export function stripeSubscriptionWorkspaceBindingDecision(input: {
+  responseOk: boolean;
+  bodyParsed: boolean;
+  rows: unknown;
+  workspaceId: string;
+  customerId?: string;
+  subscriptionId?: string;
+}): StripeBillingWorkspaceDecision;
+
 export function stripeBillingWorkspaceDecision(
   input: StripeBillingWorkspacePolicyInput,
 ): StripeBillingWorkspaceDecision;

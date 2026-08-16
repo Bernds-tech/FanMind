@@ -3,14 +3,15 @@ import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getUserAuthorizedWorkspaceDashboard } from "@/lib/workspaceAuthorization";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { CsvImportClient } from "./CsvImportClient";
 
@@ -95,12 +96,17 @@ export default async function CsvImportPage() {
     redirect("/login");
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }
 
   const workspace = workspaceResult.workspace;
+  const preActivationRedirect = getPreActivationRedirect(
+    workspace,
+    data.user.email,
+  );
+  if (preActivationRedirect) redirect(preActivationRedirect);
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;

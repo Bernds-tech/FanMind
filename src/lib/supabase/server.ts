@@ -472,6 +472,11 @@ type CreateContactInput = {
   summary?: string | null;
 };
 
+type CreateContactBatchInput = {
+  workspaceId: string;
+  contacts: Array<Omit<CreateContactInput, "workspaceId">>;
+};
+
 type UpdateContactInput = CreateContactInput & {
   contactId: string;
 };
@@ -542,6 +547,11 @@ type ContactsResult = {
 
 type ContactCreateResult = {
   contact: ContactRow | null;
+  error: Error | null;
+};
+
+type ContactBatchCreateResult = {
+  createdCount: number;
   error: Error | null;
 };
 
@@ -1167,13 +1177,13 @@ export async function getUserWorkspaceMembershipDashboard(
     );
   }
 
-  const membershipResult = await postgrestSelect<WorkspaceMemberRow>(
+  const membershipResult = await postgrestSelect<WorkspaceMemberRow[]>(
     "workspace_members",
     accessToken,
     "id,workspace_id,role",
     [["user_id", user.id]],
-    1,
-    true,
+    2,
+    false,
     "id.asc",
   );
 
@@ -1182,17 +1192,23 @@ export async function getUserWorkspaceMembershipDashboard(
       "Workspace-Mitgliedschaft konnte nicht geprüft werden.",
     );
   }
-  if (!membershipResult.data) {
+  if (!membershipResult.data?.length) {
     return workspaceDashboardError(
       "Keine Workspace-Mitgliedschaft gefunden.",
     );
   }
+  if (membershipResult.data.length !== 1) {
+    return workspaceDashboardError(
+      "Mehrere Workspace-Mitgliedschaften müssen zuerst eindeutig ausgewählt werden.",
+    );
+  }
+  const [membership] = membershipResult.data;
 
   const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
     "workspaces",
     accessToken,
     WORKSPACE_COLUMNS,
-    [["id", membershipResult.data.workspace_id]],
+    [["id", membership.workspace_id]],
     1,
     true,
   );
@@ -1206,7 +1222,7 @@ export async function getUserWorkspaceMembershipDashboard(
   return {
     workspace: {
       ...workspaceResult.data,
-      role: membershipResult.data.role,
+      role: membership.role,
     },
     error: null,
   };
@@ -2661,6 +2677,78 @@ export async function createWorkspaceContact(
   }
 
   return { contact: contactResult.data, error: null };
+}
+
+export async function createWorkspaceContactsBatch(
+  input: CreateContactBatchInput,
+): Promise<ContactBatchCreateResult> {
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return {
+      createdCount: 0,
+      error: new Error(
+        "Keine aktive Supabase-Session gefunden. Bitte melde dich erneut an.",
+      ),
+    };
+  }
+
+  if (!input.workspaceId) {
+    return {
+      createdCount: 0,
+      error: new Error("Kontaktimport ohne workspace_id ist nicht erlaubt."),
+    };
+  }
+
+  if (input.contacts.length === 0) {
+    return { createdCount: 0, error: null };
+  }
+
+  if (input.contacts.length > 1_000) {
+    return {
+      createdCount: 0,
+      error: new Error("Kontaktimport überschreitet maximal 1.000 Kontakte."),
+    };
+  }
+
+  const rows = input.contacts.map((contact) => ({
+    workspace_id: input.workspaceId,
+    display_name: contact.displayName.trim(),
+    handle: normalizeOptionalText(contact.handle),
+    source_platform: normalizeOptionalText(contact.sourcePlatform) ?? "manual",
+    language: normalizeOptionalText(contact.language) ?? "de",
+    status: normalizeOptionalText(contact.status) ?? "new",
+    tags: contact.tags ?? [],
+    summary: normalizeOptionalText(contact.summary),
+  }));
+
+  if (rows.some((row) => !row.display_name)) {
+    return {
+      createdCount: 0,
+      error: new Error("Jeder Kontakt benötigt einen Namen."),
+    };
+  }
+
+  // PostgREST turns one array POST into one PostgreSQL statement/transaction.
+  // A rejected row therefore rejects the entire batch instead of leaving a
+  // successfully written prefix behind.
+  const result = await postgrestRequest(
+    "contacts",
+    "POST",
+    rows,
+    accessToken,
+  );
+
+  if (result.error) {
+    return {
+      createdCount: 0,
+      error: new Error(
+        `Kontakte konnten nicht atomar gespeichert werden: ${result.error.message}`,
+      ),
+    };
+  }
+
+  return { createdCount: rows.length, error: null };
 }
 
 export async function createWorkspaceContactServer(

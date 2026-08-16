@@ -87,7 +87,7 @@ test("workspace members can read prompt settings without receiving mutation righ
   );
   assert.match(
     source.supabaseServer,
-    /postgrestSelect<WorkspaceBackfillRow>\(\s*"workspaces"[\s\S]*\[\["id", membershipResult\.data\.workspace_id\]\]/u,
+    /membershipResult\.data\.length !== 1[\s\S]*const \[membership\] = membershipResult\.data[\s\S]*postgrestSelect<WorkspaceBackfillRow>\(\s*"workspaces"[\s\S]*\[\["id", membership\.workspace_id\]\]/u,
   );
   assert.match(
     source.settingsRoute,

@@ -16,6 +16,12 @@ import {
   STRIPE_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS,
   verifyStripeWebhookSignature,
 } from "../src/lib/stripeWebhookSignaturePolicy.mjs";
+import {
+  STRIPE_BILLING_ALLOWED,
+  STRIPE_BILLING_RETRYABLE_ERROR,
+  resolveStripeWebhookWorkspaceCandidates,
+  stripeSubscriptionWorkspaceBindingDecision,
+} from "../src/lib/stripeWorkspacePolicy.mjs";
 import fs from "node:fs";
 
 function stripeSignature(body, secret, timestamp) {
@@ -43,17 +49,14 @@ test("Starter checkout delegates methods to Stripe and enables tax collection", 
   const stripeBillingSource = fs.readFileSync("src/lib/stripeBilling.ts", "utf8");
   const billingSource = fs.readFileSync("src/lib/billing.ts", "utf8");
 
-  assert.match(
+  assert.doesNotMatch(
     stripeBillingSource,
-    /export function getCheckoutPaymentMethodTypes\(\): string\[\] \{[\s\S]*return \[\];/u,
+    /payment_method_types|paymentMethodTypes/u,
   );
   assert.match(stripeBillingSource, /billing_address_collection", "required"/u);
   assert.match(stripeBillingSource, /tax_id_collection\[enabled\]", "true"/u);
   assert.match(stripeBillingSource, /automatic_tax\[enabled\]", "true"/u);
-  assert.match(
-    stripeBillingSource,
-    /commercialOption === "internal_daily_test"[\s\S]*paymentMethodTypes: \["card"\]/u,
-  );
+  assert.doesNotMatch(stripeBillingSource, /integration_identifier/u);
   assert.match(billingSource, /planId === "starter"[\s\S]*return "card"/u);
   assert.doesNotMatch(stripeBillingSource, /small_business|Kleinunternehmer/iu);
 });
@@ -74,6 +77,105 @@ test("Stripe webhook covers tax-ID lifecycle and waits for completed refunds", (
     assert.match(webhookSource, new RegExp(eventType.replaceAll(".", "\\."), "u"));
   }
   assert.match(webhookSource, /refundSucceeded \? "refunded" : null/u);
+});
+
+test("Stripe webhook Workspace candidates must be UUID-valid and agree with stored references", () => {
+  const workspaceA = "11111111-1111-4111-8111-111111111111";
+  const workspaceB = "22222222-2222-4222-8222-222222222222";
+  const referencedA = { status: "found", workspaceId: workspaceA };
+
+  assert.deepEqual(
+    resolveStripeWebhookWorkspaceCandidates({
+      directCandidates: [workspaceA, undefined, workspaceA],
+      referenceResolution: referencedA,
+    }),
+    referencedA,
+  );
+  for (const directCandidates of [
+    [workspaceA, workspaceB],
+    ["not-a-uuid"],
+    [workspaceB],
+  ]) {
+    assert.deepEqual(
+      resolveStripeWebhookWorkspaceCandidates({
+        directCandidates,
+        referenceResolution: referencedA,
+      }),
+      { status: STRIPE_BILLING_RETRYABLE_ERROR },
+    );
+  }
+  assert.deepEqual(
+    resolveStripeWebhookWorkspaceCandidates({
+      directCandidates: [workspaceA],
+      referenceResolution: { status: "not_found" },
+    }),
+    { status: STRIPE_BILLING_RETRYABLE_ERROR },
+  );
+  assert.deepEqual(
+    resolveStripeWebhookWorkspaceCandidates({
+      directCandidates: [workspaceA],
+      referenceResolution: { status: "not_found" },
+      allowDirectBootstrap: true,
+    }),
+    { status: "found", workspaceId: workspaceA },
+  );
+});
+
+test("subscription events require the exact stored customer and base subscription", () => {
+  const workspaceId = "11111111-1111-4111-8111-111111111111";
+  const input = {
+    responseOk: true,
+    bodyParsed: true,
+    workspaceId,
+    customerId: "cus_current_DO_NOT_PRINT",
+    subscriptionId: "sub_base_DO_NOT_PRINT",
+  };
+  const exactRow = {
+    id: workspaceId,
+    stripe_customer_id: input.customerId,
+    stripe_subscription_id: input.subscriptionId,
+  };
+
+  assert.equal(
+    stripeSubscriptionWorkspaceBindingDecision({
+      ...input,
+      rows: [exactRow],
+    }),
+    STRIPE_BILLING_ALLOWED,
+  );
+  for (const rows of [
+    [],
+    [{ ...exactRow, stripe_customer_id: "cus_other_DO_NOT_PRINT" }],
+    [{ ...exactRow, stripe_subscription_id: "sub_ai_DO_NOT_PRINT" }],
+  ]) {
+    assert.equal(
+      stripeSubscriptionWorkspaceBindingDecision({ ...input, rows }),
+      STRIPE_BILLING_RETRYABLE_ERROR,
+    );
+  }
+});
+
+test("subscription binding is checked before any Workspace billing mutation", () => {
+  const webhookSource = fs.readFileSync(
+    "src/app/api/stripe/webhook/route.ts",
+    "utf8",
+  );
+  const binding = webhookSource.indexOf(
+    "await verifyStripeSubscriptionWorkspaceBinding(",
+  );
+  const billingWrite = webhookSource.indexOf(
+    "await updateWorkspaceBillingDefensively(",
+  );
+
+  assert.ok(binding >= 0 && billingWrite > binding);
+  assert.match(
+    webhookSource,
+    /workspaceIdCandidatesFromObject\(object\)[\s\S]*allowDirectBootstrap: eventType\?\.startsWith\("checkout\.session\."\) === true/u,
+  );
+  assert.match(
+    webhookSource,
+    /eventType\?\.startsWith\("customer\.subscription\."\) === true[\s\S]*customerId: stripeId\(input\.object\.customer\)[\s\S]*subscriptionId: objectIdWithPrefix\(input\.object, "sub_"\)/u,
+  );
 });
 
 test("Stripe webhook signatures are replay-safe, rotation-safe and malformed-input safe", () => {
@@ -243,12 +345,11 @@ test("internal 1 EUR daily Stripe subscription plan remains available", () => {
   assert.match(stripeBillingSource, /process\.env\.STRIPE_PRICE_INTERNAL_DAILY_TEST/);
   assert.match(stripeBillingSource, /planId: "pilot"/);
   assert.match(stripeBillingSource, /mode: "subscription"/);
-  assert.match(stripeBillingSource, /if \(commercialOption === "internal_daily_test"\)[\s\S]*?paymentMethodTypes: \["card"\]/u);
   assert.match(stripeBillingSource, /commercialOption,[\s\S]*paymentCollectionMethod: "card"/u);
   assert.match(billingStartSource, /workspace\?\.commercial_option === "internal_daily_test"/u);
   assert.match(
     billingStartSource,
-    /isCardOnlyDailyTestCheckout[\s\S]*\? "Kartenzahlung im nächsten Schritt"[\s\S]*: "Stripe zeigt passende internationale Karten-, Wallet- und Bankzahlarten"/u,
+    /const checkoutPaymentMethodText =\s*"Stripe zeigt die für diese Zahlung verfügbaren Zahlarten"/u,
   );
   assert.match(
     billingStartSource,

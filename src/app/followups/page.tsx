@@ -4,7 +4,6 @@ import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceFollowups,
   getWorkspaceOpenFollowups,
@@ -13,6 +12,7 @@ import {
   type FollowupRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getUserAuthorizedWorkspaceDashboard } from "@/lib/workspaceAuthorization";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
@@ -40,7 +40,7 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
 
   if (!data.user) redirect("/login");
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }

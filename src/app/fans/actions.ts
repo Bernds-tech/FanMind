@@ -10,7 +10,7 @@ import {
   saveReplyDraftAsNote,
   updateConversationPriority,
   updateConversationStatus,
-  createWorkspaceContact,
+  createWorkspaceContactsBatch,
   createWorkspaceContactServer,
   archiveWorkspaceContact,
   archiveWorkspaceContactServer,
@@ -28,6 +28,8 @@ import {
 import {
   requireAuthorizedWorkspace,
   requireContactInAuthorizedWorkspace,
+  requireActiveAuthorizedWorkspaceMember,
+  requireContactInActiveAuthorizedWorkspaceMember,
 } from "@/lib/workspaceAuthorization";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import {
@@ -67,7 +69,8 @@ export async function updateTopFanMark(formData: FormData) {
 
   let workspaceId: string;
   try {
-    const { workspace, contact } = await requireContactInAuthorizedWorkspace(contactId);
+    const { workspace, contact } =
+      await requireContactInActiveAuthorizedWorkspaceMember(contactId);
     workspaceId = workspace.id;
     if (contact.workspace_id !== workspace.id) {
       redirect(`${returnTo}?notice=top_fan_forbidden`);
@@ -132,8 +135,8 @@ export async function importCsvContacts(
       )
       .filter((key): key is string => Boolean(key)),
   );
-  let importedCount = 0;
   let skippedDuplicates = 0;
+  const contactsToCreate: typeof parsed.contacts = [];
 
   for (const contact of parsed.contacts) {
     const duplicateKey = getDuplicateKey(
@@ -146,8 +149,7 @@ export async function importCsvContacts(
       continue;
     }
 
-    const result = await createWorkspaceContact({
-      workspaceId: workspace.id,
+    contactsToCreate.push({
       displayName: contact.displayName,
       handle: contact.handle,
       sourcePlatform: contact.sourcePlatform,
@@ -157,22 +159,28 @@ export async function importCsvContacts(
       summary: contact.summary,
     });
 
-    if (result.error) {
-      return {
-        ok: false,
-        message: `${importedCount} Kontakte importiert. Der Import konnte nicht vollständig gespeichert werden.`,
-        importedCount,
-        skippedDuplicates,
-        skippedInvalid: parsed.errors.length,
-      };
-    }
-
-    importedCount += 1;
-
     if (duplicateKey) {
       knownDuplicateKeys.add(duplicateKey);
     }
   }
+
+  const result = await createWorkspaceContactsBatch({
+    workspaceId: workspace.id,
+    contacts: contactsToCreate,
+  });
+
+  if (result.error) {
+    return {
+      ok: false,
+      message:
+        "Kein Kontakt wurde importiert. Der gesamte Import wurde atomar abgebrochen.",
+      importedCount: 0,
+      skippedDuplicates,
+      skippedInvalid: parsed.errors.length,
+    };
+  }
+
+  const importedCount = result.createdCount;
 
   revalidatePath("/fans");
   revalidatePath("/fans/import");
@@ -439,7 +447,7 @@ export async function saveInboundMessage(formData: FormData) {
 }
 
 export async function saveManualSentReply(formData: FormData) {
-  const { workspace, user } = await requireAuthorizedWorkspace();
+  const { workspace, user } = await requireActiveAuthorizedWorkspaceMember();
   const contactId = formValue(formData, "contact_id");
   await ensureContactInWorkspace(workspace.id, contactId);
   const conversation = await getExistingOrNewConversation(
@@ -1061,7 +1069,7 @@ function parseTags(value: string): string[] {
 
 async function getCurrentWorkspaceOrThrow() {
   try {
-    const { workspace } = await requireAuthorizedWorkspace();
+    const { workspace } = await requireActiveAuthorizedWorkspaceMember();
     return workspace;
   } catch (error) {
     if (error instanceof Error && error.message.includes("User-Session")) {
@@ -1075,7 +1083,8 @@ async function ensureContactInWorkspace(
   workspaceId: string,
   contactId: string,
 ) {
-  const authorized = await requireContactInAuthorizedWorkspace(contactId);
+  const authorized =
+    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
   if (authorized.workspace.id !== workspaceId) {
     throw new Error("Kontakt wurde im aktuellen Workspace nicht gefunden.");
   }

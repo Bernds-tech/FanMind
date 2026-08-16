@@ -1,6 +1,6 @@
 # Persistenter Workspace-KI-Stufenspeicher
 
-Stand: 27. Juli 2026
+Stand: 16. August 2026
 
 ## Ziel und Grenze
 
@@ -15,9 +15,13 @@ ihrer Anwendung vereinbar, beweist aber weder den exakten Ledger-Eintrag noch
 den vollständigen Objektvertrag. Vor einem Apply entscheidet deshalb der
 read-only Ablauf in `STAGING_DATABASE_ROLLOUT_STATE.md` zwischen
 `verify`, `skip`, `apply` und `block`. Für Production liegt weiterhin kein
-Anwendungsnachweis vor. Der Speicher ist noch nicht mit Stripe-Webhooks,
-Checkout oder produktiven KI-Endpunkten verdrahtet. Plus und Ultra bleiben
-dadurch weiterhin blockiert.
+Anwendungsnachweis vor. Der echte Stripe-Webhook ist mit einer standardmäßig
+inaktiven Server-Brücke verdrahtet. Sie liest und schreibt den Speicher erst,
+wenn `FANMIND_AI_TIER_STRIPE_PERSISTENCE_ENABLED=true`,
+`FANMIND_AI_TIER_WORKSPACE_CONTRACT_CONFIRMED=true` und zwei vollständige,
+unterschiedliche KI-Price-IDs vorliegen. Checkout und produktive KI-Endpunkte
+verwenden den Speicher weiterhin nicht. Plus und Ultra bleiben dadurch und
+durch die zentrale Readiness blockiert.
 
 Der checksum-gebundene Runner bereitet ausschließlich einen kontrollierten
 manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatische Production-Migration.
@@ -41,8 +45,9 @@ manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatisch
 
 ## Verbindliche Rollout-Reihenfolge
 
-1. Diesen App-Brückenstand deployen. Der Loader ist noch an keinen
-   produktiven KI-Pfad angeschlossen.
+1. Diesen App-Brückenstand deployen. Ohne das dedizierte Persistence-Gate und
+   den bestätigten Workspace-Vertrag bleibt die Stripe-Brücke vollständig
+   inaktiv; der Loader ist noch an keinen produktiven KI-Pfad angeschlossen.
 2. Migration in einer isolierten Staging-Datenbank anwenden.
 3. Katalog, Constraints, RLS, Policies sowie Tabellen- und Spaltenrechte
    prüfen.
@@ -53,11 +58,15 @@ manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatisch
 6. Nachweisen, dass null Zeilen KI Standard ergeben, exakt eine gültige Zeile
    redigiert wird und zwei beziehungsweise beschädigte Zeilen fail-closed
    sind.
-7. Der vorbereitete Stripe-Lifecycle-Vertrag in
-   `src/lib/aiTierStripeLifecycle.mjs` muss mit synthetischen Stripe-Events
-   abgenommen werden. Er prüft Workspace-Ziel, Price-Allowlist,
-   Item-Zuordnung, Ereignisreihenfolge und idempotente Wiederholungen. Er ist
-   noch nicht mit dem produktiven Webhook oder der Datenbank verdrahtet.
+7. Den Stripe-Lifecycle-Vertrag in `src/lib/aiTierStripeLifecycle.mjs` und die
+   Webhook-Brücke in `src/lib/aiTierStripeEntitlementSync.mjs` mit
+   synthetischen Stripe-Testevents abnehmen. Sie prüfen Workspace-Ziel,
+   Übereinstimmung aller direkten Workspace-IDs, gespeicherte Customer- und
+   Basis-Subscription-Bindung, Price-Allowlist, vollständige Item-Zuordnung,
+   Entfernen des Add-ons,
+   Ereignisreihenfolge, idempotente Wiederholungen und optimistische
+   Schreibkonflikte. Starter-only Subscriptions müssen ein schreibfreies No-op
+   bleiben.
 8. Erst nach grüner Staging-Abnahme darf die Migration kontrolliert auf
    Production angewendet werden.
 9. Produktive KI-Endpunkte werden erst in einem weiteren PR auf den Speicher
@@ -228,9 +237,22 @@ Erwartet:
 
 - kontrollierte Ausführung und Abnahme zuerst auf echtem Staging;
 - echte Staging-Datenbank und Stripe-Testprodukt;
-- atomare Datenbankanwendung des vorbereiteten Price-Allowlist- und
-  Stripe-Lifecycle-Vertrags;
-- produktive Webhook-Verdrahtung nach Stripe-Testmode-Abnahme;
+- echter Stripe-Testmode-Lauf der nun verdrahteten Lifecycle-Brücke;
+- Production-Migration und erst danach zielgebundene Aktivierung des
+  Workspace-Vertrags;
 - konkrete Modelle und Monatskontingente;
 - Verdrahtung mit Antwortvorschlägen und Nutzungsgrenzen;
-- Production-Migration und Abnahme.
+- abschließende Production-Abnahme.
+
+Die bestehende Tabelle kann die letzte Event-ID und -Zeit dauerhaft speichern
+und per Compare-and-swap gegen paralleles Überschreiben schützen. Sie besitzt
+aber kein vollständiges Event-Ledger. Zwei verschiedene Stripe-Events mit
+derselben Sekunden-Zeit bleiben deshalb bewusst `retry`, statt willkürlich
+geordnet zu werden. Der sichere Folgeschritt ist eine getrennt freizugebende,
+service-role-only Event-Tabelle mit eindeutiger Event-ID sowie eine
+transaktionale Datenbankfunktion, die Event-Insert, Subscription-Lock und
+Entitlement-Mutation gemeinsam ausführt. Bei gleicher Zeit oder einem
+Subscription-Wechsel muss der Worker zusätzlich den kanonischen aktuellen
+Subscription-Stand von Stripe abrufen und abgleichen. Diese Migration wird
+erst nach Testmode-Design, RLS-/Rechteprüfung, Rollback-Abnahme und eigener
+Production-Freigabe erstellt.

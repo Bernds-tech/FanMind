@@ -16,6 +16,7 @@ import {
   STRIPE_BILLING_ZERO_ROWS,
   stripeBillingManualSuspensionDecision,
   stripeBillingPatchDecision,
+  stripeSubscriptionWorkspaceBindingDecision,
   stripeBillingWorkspaceDecision,
   type StripeBillingUpdateDecision,
   type StripeBillingWorkspaceDecision,
@@ -60,7 +61,6 @@ export type CheckoutPlan = {
   commercialOption: CheckoutCommercialOption;
   mode: "payment" | "subscription";
   priceIds: string[];
-  paymentMethodTypes?: string[];
   setupFeeCents: number;
   monthlyFeeCents: number;
   commitmentMonths: 0 | 12;
@@ -143,13 +143,6 @@ export function getAppUrl(): string {
   ).replace(/\/$/, "");
 }
 
-export function getCheckoutPaymentMethodTypes(): string[] {
-  // An empty list intentionally delegates the compatible international
-  // payment-method selection to Stripe's Dashboard configuration. The
-  // internal Daily test overrides this with an explicit card-only allowlist.
-  return [];
-}
-
 export function resolveCheckoutPlan(
   planId: unknown,
   commercialOption: unknown,
@@ -202,9 +195,6 @@ export function resolveCheckoutPlan(
           commercialOption,
           mode: "subscription",
           priceIds: [dailyPrice],
-          // The daily internal beta records `card`; never offer SEPA here and
-          // then persist a payment method that was not actually selected.
-          paymentMethodTypes: ["card"],
           setupFeeCents: 0,
           monthlyFeeCents: 0,
           commitmentMonths: 0,
@@ -244,9 +234,8 @@ export async function createStripeCheckoutSession(input: {
     `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
   );
   params.set("cancel_url", `${appUrl}/billing/cancel`);
-  (input.plan.paymentMethodTypes ?? getCheckoutPaymentMethodTypes()).forEach(
-    (type) => params.append("payment_method_types[]", type),
-  );
+  // Stripe's Dashboard configuration dynamically selects the eligible
+  // payment methods for every Checkout Session.
   if (input.workspaceId) {
     params.set("client_reference_id", input.workspaceId);
   }
@@ -412,6 +401,52 @@ export async function findWorkspaceIdByStripeReferences(
     return { status: "found", workspaceId };
   }
   return { status: "not_found" };
+}
+
+export async function verifyStripeSubscriptionWorkspaceBinding(input: {
+  workspaceId: string;
+  customerId?: string;
+  subscriptionId?: string;
+}): Promise<StripeBillingWorkspaceDecision> {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return STRIPE_BILLING_RETRYABLE_ERROR;
+
+  try {
+    const url = new URL(getSupabaseRestUrl("workspaces"));
+    url.searchParams.set(
+      "select",
+      "id,stripe_customer_id,stripe_subscription_id",
+    );
+    url.searchParams.set("id", `eq.${input.workspaceId}`);
+    url.searchParams.set("limit", "2");
+    const response = await fetch(url, {
+      headers: getSupabaseApiKeyHeaders(serviceKey),
+      cache: "no-store",
+      signal: AbortSignal.timeout(12000),
+    });
+    let rows: unknown;
+    let bodyParsed = true;
+    try {
+      rows = await response.json();
+    } catch {
+      rows = null;
+      bodyParsed = false;
+    }
+    return stripeSubscriptionWorkspaceBindingDecision({
+      responseOk: response.ok,
+      bodyParsed,
+      rows,
+      workspaceId: input.workspaceId,
+      customerId: input.customerId,
+      subscriptionId: input.subscriptionId,
+    });
+  } catch {
+    console.warn(
+      "Stripe subscription workspace binding unavailable",
+      "request_failed",
+    );
+    return STRIPE_BILLING_RETRYABLE_ERROR;
+  }
 }
 
 type StripeBillingWorkspaceRow = {

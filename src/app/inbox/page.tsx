@@ -42,6 +42,7 @@ import {
   requireAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 
 type InboxPageProps = {
   searchParams?: Promise<{
@@ -1120,6 +1121,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     throw error;
   }
   const { user, workspace } = authorized;
+  const preActivationRedirect = getPreActivationRedirect(workspace, user.email);
+  if (preActivationRedirect) redirect(preActivationRedirect);
   const locale = await resolveWorkspaceLocale({
     lang: params?.lang,
     user,

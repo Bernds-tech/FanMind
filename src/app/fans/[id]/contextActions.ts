@@ -6,7 +6,7 @@ import {
   getSupabaseHeaders,
   getSupabaseRestUrl,
 } from "@/lib/supabase/config";
-import { requireContactInAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+import { requireContactInActiveAuthorizedWorkspaceMember } from "@/lib/workspaceAuthorization";
 
 const MEMORY_TYPES = new Set(["note", "preference", "promise"]);
 const IMPORTANCE_LEVELS = new Set(["low", "normal", "high"]);
@@ -126,7 +126,8 @@ export async function updateManualMemory(formData: FormData) {
     redirect(contactPath(contactId, locale, "knowledge_update_invalid"));
   }
 
-  const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const { workspace } =
+    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
   const importance = IMPORTANCE_LEVELS.has(rawImportance)
     ? rawImportance
     : "normal";
@@ -159,7 +160,8 @@ export async function deleteManualMemory(formData: FormData) {
     redirect(contactPath(contactId, locale, "knowledge_delete_invalid"));
   }
 
-  const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const { workspace } =
+    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
   const result = await mutateWorkspaceScopedEntry({
     table: "memories",
     entryId: memoryId,
@@ -207,7 +209,8 @@ export async function updateManualFollowupStatus(formData: FormData) {
     redirectFailure("followup_status_invalid");
   }
 
-  const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const { workspace } =
+    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
   const result = await mutateWorkspaceScopedEntry({
     table: "followups",
     entryId: followupId,
@@ -239,7 +242,8 @@ export async function deleteManualFollowup(formData: FormData) {
     );
   }
 
-  const { workspace } = await requireContactInAuthorizedWorkspace(contactId);
+  const { workspace } =
+    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
   const result = await mutateWorkspaceScopedEntry({
     table: "followups",
     entryId: followupId,

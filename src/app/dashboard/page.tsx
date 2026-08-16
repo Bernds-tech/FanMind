@@ -5,7 +5,6 @@ import { isPlatformAdminEmail } from "@/lib/admin";
 import {
   getFollowupCompletionCounts,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceOpenFollowups,
   getWorkspaceUnseenInboundMessages,
@@ -15,6 +14,7 @@ import {
   type ConversationMessageRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getUserAuthorizedWorkspaceDashboard } from "@/lib/workspaceAuthorization";
 import { getCommercialOptionLabel } from "@/lib/dashboardFeatures";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigation } from "@/lib/workspaceNavigation";
@@ -588,7 +588,7 @@ export default async function DashboardPage({
     lang: resolvedSearchParams?.lang,
     user: data.user,
   });
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }

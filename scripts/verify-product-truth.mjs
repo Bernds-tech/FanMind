@@ -16,17 +16,32 @@ const checkedFiles = [
   ".github/workflows/mobile-signed-internal-build.yml",
   ".github/workflows/ci-mobile.yml",
   ".github/workflows/browser-e2e.yml",
+  ".github/workflows/browser-e2e-staging-write.yml",
+  ".github/workflows/staging-synthetic-fixture-provisioning.yml",
   ".github/workflows/restore-drill-host-readiness.yml",
   ".github/workflows/restore-drill-resource-readiness.yml",
   ".github/workflows/restore-drill-database.yml",
   "package.json",
   "playwright.core-flow.config.mts",
+  "playwright.staging-write.config.mts",
   "e2e-core-flow/regular-user-core-flow.spec.ts",
+  "e2e-staging-write/core-csv.spec.ts",
   "scripts/testing/regular-user-core-flow-fixture.mjs",
   "tests/regular-user-core-flow-fixture.test.mjs",
+  "tests/staging-core-csv-acceptance.test.mjs",
+  "tests/workspace-member-core-flow.test.mjs",
+  "tests/csv-import-parser.test.mjs",
+  "tests/csv-import-atomicity.test.mjs",
   "tests/test-suite-coverage.test.mjs",
   "docs/testing/BROWSER_E2E.md",
   "docs/operations/ROADMAP_1_7_COMPLETION.md",
+  "docs/operations/STAGING_SYNTHETIC_FIXTURES.md",
+  "scripts/operations/staging-core-csv-acceptance.mjs",
+  "scripts/operations/staging-synthetic-fixtures.mjs",
+  "src/lib/stagingCoreCsvAcceptancePolicy.mjs",
+  "src/lib/stagingSyntheticFixturePolicy.mjs",
+  "src/app/fans/import/csv.ts",
+  "src/app/workspace/access-paused/page.tsx",
   "apps/mobile/package.json",
   "src/config/aiTiers.mjs",
   "src/config/commercialModel.mjs",
@@ -56,6 +71,7 @@ const checkedFiles = [
   "src/lib/workspaceAiTierStorage.mjs",
   "src/lib/workspaceAiTierEntitlements.ts",
   "src/lib/aiTierStripeLifecycle.mjs",
+  "src/lib/aiTierStripeEntitlementSync.mjs",
   "src/lib/aiTierStagingAcceptancePolicy.mjs",
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
   "src/lib/aiPromptPolicy.mjs",
@@ -68,6 +84,7 @@ const checkedFiles = [
   "tests/ai-tier-entitlement-storage.test.mjs",
   "tests/ai-tier-entitlement-migration-policy.test.mjs",
   "tests/ai-tier-stripe-lifecycle.test.mjs",
+  "tests/ai-tier-stripe-entitlement-sync.test.mjs",
   "tests/ai-tier-staging-acceptance.test.mjs",
   "tests/meta-content-staging-migration.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
@@ -83,6 +100,7 @@ const checkedFiles = [
   "src/lib/plans.ts",
   "src/lib/billing.ts",
   "src/lib/stripeBilling.ts",
+  "src/app/api/stripe/webhook/route.ts",
   "src/lib/referrals.ts",
   "src/lib/referralPolicy.mjs",
   "src/lib/aiUsagePolicy.mjs",
@@ -223,6 +241,26 @@ requireText(
   "docs/operations/ROADMAP_1_7_COMPLETION.md",
   "Die isolierte Staging-, echte Provider- und",
   "Die Roadmap muss lokalen Code-Nachweis und externe Abnahme trennen.",
+);
+requireText(
+  ".github/workflows/browser-e2e-staging-write.yml",
+  "run-staging-core-csv-acceptance",
+  "Die reale Staging-Kernabnahme muss explizit und commitgebunden bestätigt werden.",
+);
+requireText(
+  "e2e-staging-write/core-csv.spec.ts",
+  'page.goto("/fans/import")',
+  "Die reale Staging-Kernabnahme muss den CSV-Import über die echte Route prüfen.",
+);
+requireText(
+  "docs/testing/BROWSER_E2E.md",
+  "Ein grüner Repositorytest oder Merge ersetzt den tatsächlichen",
+  "Die Dokumentation darf die vorbereitete Staging-Abnahme nicht als ausgeführt darstellen.",
+);
+forbidIn(
+  ".github/workflows/browser-e2e-staging-write.yml",
+  /https:\/\/(?:www\.)?fanmind\.ch|FANMIND_RUNTIME_ENVIRONMENT:\s*production/iu,
+  "Die schreibende Browser-Abnahme darf kein Production-Ziel enthalten.",
 );
 
 // Alte oder widersprüchliche öffentliche Wahrheit.
@@ -710,6 +748,26 @@ requireText(
   "Das Runbook muss den aktuellen Standard-/Plus-/Ultra-Vertrag dokumentieren.",
 );
 requireText(
+  "docs/operations/AI_TIER_READINESS.md",
+  "auf dem getrennten Supabase-Staging angewendet und",
+  "Das Runbook muss den nachgewiesenen Staging-Speicherstand nennen.",
+);
+requireText(
+  "docs/operations/AI_TIER_READINESS.md",
+  "Stripe-Webhook enthält eine standardmäßig inaktive Persistenzbrücke",
+  "Das Runbook muss die vorhandene, aber weiterhin gesperrte Webhook-Brücke nennen.",
+);
+forbidIn(
+  "docs/operations/AI_TIER_READINESS.md",
+  /noch nicht auf Staging oder Production angewendet|noch nicht mit\s+Stripe-Webhooks/iu,
+  "Das Runbook darf den belegten Staging-/Webhook-Stand nicht als fehlend bezeichnen.",
+);
+forbidIn(
+  "README.md",
+  /noch ohne produktive Webhook- oder Datenbank-Verdrahtung/iu,
+  "Der Reader darf die vorhandene gesperrte Webhook-Brücke nicht verneinen.",
+);
+requireText(
   "src/config/aiTiers.mjs",
   "resolveWorkspaceAiTierEntitlement",
   "Die zentrale KI-Tier-Policy muss den fail-closed Workspace-Entitlement-Vertrag besitzen.",
@@ -793,6 +851,21 @@ requireText(
   "tests/ai-tier-stripe-lifecycle.test.mjs",
   "duplicate and stale events cannot overwrite newer entitlement state",
   "Doppelte und verspätete KI-Add-on-Events müssen automatisiert geprüft werden.",
+);
+requireText(
+  "tests/ai-tier-stripe-lifecycle.test.mjs",
+  "removing the paid item cancels the stored entitlement",
+  "Ein entferntes KI-Add-on-Item darf kein stale aktives Entitlement hinterlassen.",
+);
+requireText(
+  "src/lib/aiTierStripeEntitlementSync.mjs",
+  "Concurrent deliveries therefore cannot silently",
+  "Die KI-Add-on-Persistenz muss parallele Stripe-Events optimistisch begrenzen.",
+);
+requireText(
+  "src/app/api/stripe/webhook/route.ts",
+  "syncWorkspaceAiTierStripeEntitlement",
+  "Der echte Stripe-Webhook muss die fail-closed KI-Add-on-Brücke aufrufen.",
 );
 requireText(
   "package.json",

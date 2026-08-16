@@ -229,6 +229,62 @@ Jede andere POST-, PATCH-, PUT- oder DELETE-Anfrage wird browserseitig blockiert
 
 Traces, Screenshots und Videos sind für den authentifizierten Staging-Lauf deaktiviert, damit keine Sitzung oder Kundendarstellung in Artefakten landet.
 
+## Manuelle schreibende Staging-Kern- und CSV-Abnahme
+
+Der Workflow
+
+```text
+.github/workflows/browser-e2e-staging-write.yml
+```
+
+schließt die lokale Gerhard-Strecke auf dem echten isolierten Staging. Er ist
+nur manuell auf dem exakten bereits deployten `main`-Commit ausführbar und
+verlangt die Bestätigung `run-staging-core-csv-acceptance`. Production und das
+Production-Supabase-Projekt sind als Ziele ausgeschlossen.
+
+Der Lauf erstellt ausschließlich zwei deterministisch markierte, kurzlebige
+Kontakte samt einer eingehenden Conversation im bereits markierten
+synthetischen Staging-Workspace. Danach prüft er zusammenhängend:
+
+- Owner-Login, Dashboard, Inbox und Kontaktansicht;
+- eine reale KI-Standard-Antwort über die Staging-Providerkonfiguration;
+- menschliches Kopieren ohne automatische Sendefunktion;
+- genau einen Kontaktwissen- und einen offenen Follow-up-Eintrag;
+- CSV-Import mit genau einer gültigen, einer doppelten und einer ungültigen
+  Zeile;
+- Member-Zugriff auf CRM-Flächen und den vollständigen
+  Follow-up-Abschluss-/Wiedereröffnungszyklus;
+- bidirektionale RLS-Isolation zum sekundären Workspace;
+- exakte Datenbankeffekte vor und vollständige Entfernung aller kurzlebigen
+  Abnahmedaten danach.
+
+Vor dem Browserlauf prüft der Workflow `/api/version`, den gemeinsamen
+read-only Datenbank-Rollout-State, TLS und das private Passwortfile. Ein
+`always()`-Cleanup läuft auch nach Browser- oder Verifikationsfehlern. Es gibt
+keine Screenshots, Videos, Traces oder hochgeladenen Browserartefakte.
+
+Zusätzlich zu den Werten des read-only Laufs benötigt das Environment
+`staging`:
+
+```text
+FANMIND_STAGING_SUPABASE_PROJECT_REF
+FANMIND_STAGING_DB_NAME
+```
+
+und diese Secrets:
+
+```text
+FANMIND_STAGING_E2E_MEMBER_PASSWORD
+FANMIND_STAGING_DB_HOST
+FANMIND_STAGING_DB_PASSWORD
+```
+
+Der Member verwendet ausschließlich die fest gebundene synthetische Adresse
+`fanmind-ai-member-staging@example.invalid`. Die Abnahme darf erst nach dem
+Fixture-Provisioning und nach Deploy des exakten geprüften Commits gestartet
+werden. Ein grüner Repositorytest oder Merge ersetzt den tatsächlichen
+manuellen Lauf nicht.
+
 ## Positive read-only Admin-Abnahme in Staging
 
 Der vorhandene Browser-Lauf beweist bereits, dass ein normaler synthetischer
