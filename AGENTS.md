@@ -116,9 +116,17 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   it may verify only the Stripe Test catalog plus the synthetic owner/member
   workspace and must not inspect entitlement rows or apply SQL.
 - Restore resource readiness is also strictly read-only. Keep it main-only,
-  bound to the separate `restore-drill` environment and the dedicated runner
-  group `fanmind-restore-drill` with the exact five-label
-  `fanmind-restore-01` contract. A secret-free prerequisite job must execute
+  bound to the separate `restore-drill` environment, organization runner group
+  `fanmind-restore-drill` and exact five-label `fanmind-restore-01` routing
+  contract. Labels are scheduler selectors, not an authorization or
+  host-readiness boundary. Every dispatch must fail in the GitHub-hosted
+  validation job unless `FANMIND_RESTORE_RUNNER_SCOPE` equals
+  `organization-workflow-allowlist`. The required organization policy is not
+  currently present: do not set the variable or register a Restore runner
+  until the repository is organization-owned and the group restriction to the
+  three reviewed `main` Restore workflows has been independently verified.
+  The variable is only the operator assertion of that external fact, not an
+  API proof. A secret-free prerequisite job must execute
   the root-owned, SHA-bound host gate before the protected job; both jobs need
   separate fresh one-job JIT runners. Its first checksum-only phase must never connect
   to PostgreSQL, decrypt a backup or invoke the restore runner. Only after
@@ -132,10 +140,11 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   unsupported database targets; the database boundary must be an isolated,
   self-controlled PostgreSQL 17 cluster. Both restore write gates stay off;
   the step must never create roles/extensions, decrypt or restore anything.
-- The separate isolated database restore workflow is the only GitHub path that
-  may enable the two restore write gates. Keep it exact-reviewed-commit-bound,
-  on the protected `restore-drill` environment and the same dedicated runner
-  group, exact runner identity and two-JIT-runner host-attestation contract.
+- Once that external runner-group prerequisite is proven, the separate isolated
+  database restore workflow is the only reviewed GitHub path that may enable
+  the two restore write gates. Keep it exact-reviewed-commit-bound, on the
+  protected `restore-drill` environment and the same group, exact five labels,
+  runner-identity and two-JIT-runner host-readiness contract.
   It must re-run checksum readiness and PostgreSQL 17
   compatibility first, freeze the private age identity, passfile and CA
   without following symlinks, require TLS `verify-full`, restore the

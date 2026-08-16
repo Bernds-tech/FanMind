@@ -14,6 +14,12 @@ concurrency:
 
 permissions: {}
 
+env:
+  all_proxy: ''
+  http_proxy: ''
+  https_proxy: ''
+  no_proxy: ''
+
 jobs:
   validate-dispatch:
     name: Reject an invalid resource-readiness dispatch
@@ -24,9 +30,11 @@ jobs:
         shell: /usr/bin/bash --noprofile --norc -p -euo pipefail {0}
         env:
           REQUESTED_CONFIRMATION: ${{ inputs.confirmation }}
+          RESTORE_RUNNER_SCOPE: ${{ vars.FANMIND_RESTORE_RUNNER_SCOPE }}
         run: |
           [[ "$GITHUB_REF" == 'refs/heads/main' ]]
           [[ "$REQUESTED_CONFIRMATION" == 'verify-isolated-restore-resources' ]]
+          [[ "$RESTORE_RUNNER_SCOPE" == 'organization-workflow-allowlist' ]]
 
   verify-restore-host:
     name: Verify the isolated restore host before loading the environment
@@ -38,8 +46,7 @@ jobs:
     env:
       ALL_PROXY: ''
       PATH: /opt/fanmind-restore/node-v24.19.0-linux-x64/bin:/usr/lib/postgresql/17/bin:/usr/bin:/bin
-      RESTORE_HOST_GATE_SHA256: c60f0ec5278de5ec30fba44c9568e343dc0c0277500f824a1dd73993d1c8e117
-      TMPDIR: ${{ runner.temp }}
+      RESTORE_HOST_GATE_SHA256: 0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b
       BASH_ENV: ''
       BASHOPTS: ''
       BASH_XTRACEFD: ''
@@ -101,10 +108,6 @@ jobs:
       SHELLOPTS: ''
       SSL_CERT_DIR: ''
       SSL_CERT_FILE: ''
-      all_proxy: ''
-      http_proxy: ''
-      https_proxy: ''
-      no_proxy: ''
     steps:
       - name: Verify the preinstalled isolated restore host gate without Restore secrets
         shell: /usr/bin/bash --noprofile --norc -p -euo pipefail {0}
@@ -172,6 +175,7 @@ jobs:
             GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
             GITHUB_REF="$GITHUB_REF" \
             GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
+            GITHUB_REPOSITORY_ID="$GITHUB_REPOSITORY_ID" \
             GITHUB_WORKSPACE="$GITHUB_WORKSPACE" \
             RUNNER_ARCH="$RUNNER_ARCH" \
             RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
@@ -186,6 +190,7 @@ jobs:
             FANMIND_RESTORE_HOST_CONFIRMATION=verify-isolated-restore-host \
             "$NODE_PATH" \
             "$GATE_PATH"
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
 
   verify-isolated-restore-resources:
     name: Verify isolated restore target and encrypted backup without writes
@@ -199,8 +204,7 @@ jobs:
     env:
       ALL_PROXY: ''
       PATH: /opt/fanmind-restore/node-v24.19.0-linux-x64/bin:/usr/lib/postgresql/17/bin:/usr/bin:/bin
-      RESTORE_HOST_GATE_SHA256: c60f0ec5278de5ec30fba44c9568e343dc0c0277500f824a1dd73993d1c8e117
-      TMPDIR: ${{ runner.temp }}
+      RESTORE_HOST_GATE_SHA256: 0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b
       BASH_ENV: ''
       BASHOPTS: ''
       BASH_XTRACEFD: ''
@@ -262,10 +266,6 @@ jobs:
       SHELLOPTS: ''
       SSL_CERT_DIR: ''
       SSL_CERT_FILE: ''
-      all_proxy: ''
-      http_proxy: ''
-      https_proxy: ''
-      no_proxy: ''
     steps:
       - name: Re-attest the preinstalled gate before checkout or environment-secret use
         shell: /usr/bin/bash --noprofile --norc -p -euo pipefail {0}
@@ -333,6 +333,7 @@ jobs:
             GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
             GITHUB_REF="$GITHUB_REF" \
             GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
+            GITHUB_REPOSITORY_ID="$GITHUB_REPOSITORY_ID" \
             GITHUB_WORKSPACE="$GITHUB_WORKSPACE" \
             RUNNER_ARCH="$RUNNER_ARCH" \
             RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
@@ -347,6 +348,7 @@ jobs:
             FANMIND_RESTORE_HOST_CONFIRMATION=verify-isolated-restore-host \
             "$NODE_PATH" \
             "$GATE_PATH"
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
 
       - name: Checkout reviewed main commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

@@ -178,10 +178,14 @@ Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 
 - Zielgrenze, transaktionaler Datenbank-Runner und redigierter Evidence-Validator sind implementiert;
 - ein root-owned, SHA-gebundenes Host-Gate prüft vor den geschützten Phasen
-  einen secretfreien JIT-Runner in der dedizierten Gruppe
-  `fanmind-restore-drill`; Ressourcen- und Datenbankworkflow benötigen jeweils
-  einen zweiten frischen One-Job-JIT-Runner mit der exakten Identität
-  `fanmind-restore-01`;
+  einen secretfreien JIT-Runner mit der exakten Identität
+  `fanmind-restore-01`; Ressourcen- und Datenbankworkflow benötigen jeweils
+  einen zweiten frischen One-Job-JIT-Runner. Vor jeder Runner-Registrierung
+  fehlen noch Organisations-Transfer und die auf die drei `main`-Workflows
+  beschränkte Gruppe `fanmind-restore-drill`; die Scope-Variable muss bis zur
+  unabhängigen Prüfung dieses externen Vertrags unset bleiben und blockiert
+  dann standardmäßig fail-closed. Sie ist selbst kein API-Nachweis. Die fünf Labels dienen nur der Route und
+  ersetzen keine Hostprüfung oder Autorisierung;
 - ein manueller, `main`-gebundener Ressourcencheck prüft danach nur die
   isolierte Zielidentität und die Prüfsumme eines verschlüsselten Full-Backups;
 - der Ressourcencheck verbindet sich nicht mit PostgreSQL, entschlüsselt

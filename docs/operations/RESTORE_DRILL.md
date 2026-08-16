@@ -175,14 +175,38 @@ Before an isolated restore runner is allowed to load the protected
 restore drill: it has no checkout, no GitHub Environment, no Restore secrets,
 no database target, no encrypted backup and no restore dispatch.
 
-The job is routed only through runner group `fanmind-restore-drill` and all five
-labels `self-hosted`, `fanmind-restore`, `fanmind-restore-01`, `linux` and
-`x64`. The externally administered runner must be a fresh one-job JIT runner;
+The job is routed through organization runner group `fanmind-restore-drill`
+and all five labels `self-hosted`, `fanmind-restore`, `fanmind-restore-01`,
+`linux` and `x64`. The labels are routing selectors, not an authorization or
+host-readiness boundary. This public, user-owned repository cannot currently
+provide that organization group. Every dispatch therefore checks the unset
+repository variable `FANMIND_RESTORE_RUNNER_SCOPE` in its GitHub-hosted first
+job and must stop before any Self-hosted job. Do not set the value or register
+a Restore runner until the repository is organization-owned and the group is
+allowlisted to exactly the three reviewed Restore workflow paths on
+`refs/heads/main`:
+
+- `<future-org>/FanMind/.github/workflows/restore-drill-host-readiness.yml@refs/heads/main`;
+- `<future-org>/FanMind/.github/workflows/restore-drill-resource-readiness.yml@refs/heads/main`;
+- `<future-org>/FanMind/.github/workflows/restore-drill-database.yml@refs/heads/main`.
+
+Before setting the scope variable, verify and retain a private administrator
+receipt showing `visibility=selected`, selected repositories exactly
+`[1259448985]`,
+`restricted_to_workflows=true` and `selected_workflows` exactly the three workflow/ref entries
+above. If the transferred repository remains public, the same receipt must
+show `allows_public_repositories=true`; alternatively make the repository
+private before any Runner registration. `FANMIND_RESTORE_RUNNER_SCOPE` is only the operator assertion of
+that independently verified policy; it does not query the GitHub Admin API.
+Only then may the value be set to `organization-workflow-allowlist`. The
+externally administered runner must be a fresh one-job JIT runner;
 it is removed after that single job. The workflow starts only the fixed
 root-owned Node executable
 `/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node` and the fixed root-owned
 gate `/opt/fanmind-restore/restore-host-readiness.mjs`. The installed gate must
-match SHA-256 `c60f0ec5278de5ec30fba44c9568e343dc0c0277500f824a1dd73993d1c8e117` before it is executed.
+match SHA-256 `0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b` before it is executed.
+The gate binds the stable GitHub repository ID `1259448985`, which survives an
+owner transfer; it does not bind the current `Bernds-tech/FanMind` name.
 
 The gate fails closed unless all of these facts hold:
 
@@ -211,7 +235,7 @@ The protected resource-readiness and database-restore workflows repeat this
 design as two sequential fresh JIT runners. Job one performs the same
 secret-free gate without the GitHub Environment. Only after it passes may a
 second, independently registered one-job JIT runner enter the protected
-environment; that second job re-attests the installed gate before checkout or
+environment; that second job re-checks the installed gate before checkout or
 use of step-scoped Restore values. GitHub cannot enforce one-job JIT lifecycle
 or outbound firewall policy, so the external runner controller and host
 firewall are mandatory parts of this boundary.
@@ -222,8 +246,8 @@ Before enabling either restore write gate, run the manual GitHub workflow
 `FanMind Restore Drill Resource Readiness` from `main`. Its first job is the
 secret-free host gate above. Its protected second job is bound to the GitHub
 Environment `restore-drill`, runner group `fanmind-restore-drill` and the exact
-five-label set `self-hosted`, `fanmind-restore`, `fanmind-restore-01`, `linux`,
-`x64`.
+five-label route `self-hosted`, `fanmind-restore`, `fanmind-restore-01`,
+`linux`, `x64`.
 
 The workflow requires the confirmation
 `verify-isolated-restore-resources` and runs two strictly ordered read-only
@@ -314,8 +338,9 @@ One-time external setup for the GitHub Environment `restore-drill`:
   GitHub secrets, logs or artifacts;
 - an externally managed JIT controller that registers exactly one fresh
   one-job runner for the secret-free host job and a second fresh one-job runner
-  for the protected job, both only in group `fanmind-restore-drill` with the
-  exact five labels. Neither registration token nor runner credential may be
+  for the protected job, both in `fanmind-restore-drill` with the exact five
+  labels. Neither registration
+  token nor runner credential may be
   reused;
 - an isolated host image with the gate and Node path above, PostgreSQL 17.10
   clients at `/usr/lib/postgresql/17/bin`, age 1.1.1, GNU tar 1.35, gzip 1.12,
@@ -339,7 +364,7 @@ the database portion. It accepts only `main`, requires
 `reviewed_commit == github.sha`, binds the exact Production commit recorded in
 the selected full backup and requires the confirmation
 `run-isolated-database-restore`. It first runs the secret-free fixed host gate
-on one JIT runner, then re-attests that gate on a second environment-bound JIT
+on one JIT runner, then re-checks that gate on a second environment-bound JIT
 runner before checkout. It re-runs resource readiness and target compatibility
 before either write gate is enabled.
 
