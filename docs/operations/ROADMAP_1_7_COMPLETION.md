@@ -1,6 +1,6 @@
 # Roadmap 1–7: technischer Abschlussvertrag
 
-Stand: 15. August 2026
+Stand: 16. August 2026
 
 Dieses Dokument begrenzt den aktuellen Abschlussauftrag auf die FanMind-
 Roadmap-Punkte 1 bis einschließlich 7. Punkt 8 und alle späteren Punkte bleiben
@@ -37,12 +37,21 @@ erledigt markiert werden.
 Der reguläre Kernflow hat Vorrang vor neuen Integrationsflächen. Ein Kanal darf
 den Flow nicht blockieren und FanMind sendet keine Nachricht automatisch.
 
+Der deterministische lokale Browser-Code-Nachweis ist mit
+`npm run test:e2e:core-flow` geschlossen: Er führt Login, Dashboard, Inbox,
+Fan-Detail, KI-Vorschläge, Kopieren, Kontaktwissen und den vollständigen
+Follow-up-Lifecycle über echte FanMind-Routen und Server-Actions gegen eine
+ausschließlich lokale Provider-Fixture aus. Nur die KI-Antwort wird
+synthetisch erfüllt. Die isolierte Staging-, echte Provider- und
+Production-Abnahme bleiben dadurch unverändert offen.
+
 ## Roadmap 1 – Produktkern
 
 - **Code:** Login, Registrierung, Workspace, Dashboard, Kontakte, CSV-Import,
-  Kontaktwissen, KI Standard, Follow-ups und Inbox sind vorhanden. Die noch
-  fehlende zusammenhängende deterministische Browser-Abnahme ist als eigener
-  Codeblock zu schließen.
+  Kontaktwissen, KI Standard, Follow-ups und Inbox sind vorhanden. Die
+  zusammenhängende deterministische lokale Browser-Abnahme schützt den
+  regulären Gerhard-Fluss über echte App-Routen; Provider- und Stagingbelege
+  werden bewusst nicht simuliert.
 - **Staging/Infrastruktur:** regulären Owner und getrennten Member mit
   synthetischem Kontakt durch den vollständigen Flow führen.
 - **Extern:** produktive E-Mail- und OpenAI-Konfiguration sowie fachliche

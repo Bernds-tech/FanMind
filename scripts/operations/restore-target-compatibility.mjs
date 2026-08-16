@@ -98,9 +98,16 @@ async function readStableCaCertificate(path) {
 
 function resolvePsqlBinary(environment) {
   const override = clean(environment.FANMIND_PSQL_BIN);
+  const operationalTestMode = clean(environment.FANMIND_OPERATIONAL_TEST_MODE);
+  if (
+    clean(environment.GITHUB_ACTIONS) === "true"
+    && (override || operationalTestMode)
+  ) {
+    fail("psql_override_forbidden");
+  }
   if (!override) return PSQL_BIN;
   if (
-    clean(environment.FANMIND_OPERATIONAL_TEST_MODE) !== TEST_MODE
+    operationalTestMode !== TEST_MODE
     || !isAbsolute(override)
   ) {
     fail("psql_override_forbidden");

@@ -17,7 +17,7 @@ Sie schützt die kritischen öffentlichen FanMind-Flows auf echter Browser-Ebene
 - Desktop- und Mobile-Viewport ohne horizontales Überlaufen;
 - consent-gesteuerten Meta Pixel: ohne Consent kein Script, gleichwertiges Ablehnen/Akzeptieren, genau eine Initialisierung, deduplizierte `PageView`-Events bei Client-Navigation sowie fail-closed blockierte geschützte Routen, unsichere Querywerte und geschützte same-origin Referrer.
 
-Der Gerhard-Demo-Kern bleibt unverändert: Login, Dashboard, Kontakte, Kontaktdetail, serverseitige KI-Vorschläge, Kontaktwissen, Follow-ups und ehrliche Roadmap. Browser-E2E erweitert FanMind nicht um Social-Vollintegrationen, Scraping oder automatisches Senden.
+Der Gerhard-Demo-Kern bleibt unverändert: Login, Dashboard, Kontakte, Kontaktdetail, serverseitige KI-Vorschläge, Kontaktwissen, Follow-ups und klar abgegrenzte Roadmap. Browser-E2E erweitert FanMind nicht um Social-Vollintegrationen, Scraping oder automatisches Senden.
 
 ## Automatisches no-write Gate
 
@@ -84,6 +84,64 @@ npm run test:e2e
 ```
 
 In diesem Fall muss der gebaute FanMind-Server bereits selbst auf dem angegebenen Port laufen.
+
+## Deterministischer lokaler Gerhard-Kernablauf
+
+Der zweite automatische Browser-Job schützt den gefrorenen regulären
+Gerhard-Ablauf auf echten FanMind-Routen: Landingpage, Login, Dashboard,
+Inbox, Fans, Kontaktdetail, KI-Vorschläge, Kopieren, Kontaktwissen,
+Follow-up-Erstellung, Abschluss/Wiedereröffnung und Roadmap.
+
+Dieser Lauf verwendet keine externe Umgebung und keine Provider-Zugangsdaten.
+Eine strikt bestätigungspflichtige Node-Fixture bindet ausschließlich an
+`127.0.0.1`, stellt genau einen synthetischen Nutzer, Workspace, Kontakt und
+eine eingehende Nachricht bereit und implementiert nur die für diese Strecke
+benötigten Supabase-Auth-/PostgREST-Verträge. Unbekannte Tabellen, Spalten,
+Filter, Methoden, Origins, Rollen oder Mutationen schlagen fehl. Die einzigen
+zulässigen Datenänderungen sind:
+
+- die eingehende Nachricht als gesehen markieren;
+- genau einen Kontaktwissen-Eintrag anlegen;
+- genau ein Follow-up anlegen;
+- dieses Follow-up einmal abschließen und einmal wieder öffnen.
+
+Die KI-Route ist die einzige im Browser synthetisch erfüllte FanMind-Antwort.
+Alle anderen App- und Fixture-Anfragen laufen real gegen den lokalen Build
+beziehungsweise die Loopback-Fixture. Fremde Origins werden blockiert; jeder
+lokale HTTP-Fehler ab Status 400 sowie jeder unbehandelte Seitenfehler lässt
+die Abnahme fehlschlagen. Es wird niemals automatisch eine Nachricht
+gesendet.
+
+Der lokale reguläre Kernablauf benötigt zuerst einen Build mit ausschließlich
+synthetischen Loopback-Werten:
+
+```bash
+FANMIND_CORE_FLOW_FIXTURE_ACK=fanmind-local-synthetic-core-flow \
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-core-flow-anon-key \
+NEXT_PUBLIC_APP_URL=http://localhost:3100 \
+NEXT_PUBLIC_SITE_URL=http://localhost:3100 \
+FANMIND_PUBLIC_DEMO_ENABLED=false \
+FANMIND_ENABLE_REFERRAL_BILLING=false \
+FANMIND_ENABLE_TELEGRAM_SEND=false \
+SUPABASE_SERVICE_ROLE_KEY=fanmind-local-core-flow-service-role-key \
+npm run build
+
+FANMIND_CORE_FLOW_FIXTURE_ACK=fanmind-local-synthetic-core-flow \
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-core-flow-anon-key \
+NEXT_PUBLIC_APP_URL=http://localhost:3100 \
+NEXT_PUBLIC_SITE_URL=http://localhost:3100 \
+SUPABASE_SERVICE_ROLE_KEY=fanmind-local-core-flow-service-role-key \
+npm run test:e2e:core-flow
+```
+
+Die Fixture enthält ausschließlich synthetische Werte und lebt nur im
+Prozessspeicher. `__reset` setzt sie vor jedem Browserlauf auf den festen Seed
+zurück; `__state` gibt nur feste Zähler und Mutationscodes aus. Der Job ersetzt
+weder die read-only Staging-Abnahme noch Provider-, RLS- oder Production-
+Nachweise. Fehlerartefakte bleiben auf die synthetische lokale Strecke
+begrenzt und werden sieben Tage aufbewahrt.
 
 ## Manuelle read-only Staging-Abnahme
 

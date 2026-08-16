@@ -52,6 +52,12 @@ test("the regular Gerhard flow remains the first completion priority", () => {
     completion,
     /Registrierung\/Login und regulärer Workspace[\s\S]*Dashboard und Fans\/Kontakte[\s\S]*Conversations\/Nachrichten und Inbox[\s\S]*KI Standard[\s\S]*Memory und Follow-ups/u,
   );
+  assert.match(completion, /`npm run test:e2e:core-flow`/u);
+  assert.match(completion, /echte FanMind-Routen und Server-Actions/u);
+  assert.match(
+    completion,
+    /isolierte Staging-, echte Provider- und\s+Production-Abnahme bleiben dadurch unverändert offen/u,
+  );
 });
 
 test("paid AI tiers stay fail closed across technical and external gates", () => {

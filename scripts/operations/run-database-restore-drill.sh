@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+if [[ "${FANMIND_OPERATIONAL_TEST_MODE:-}" != "restore-runner-test" ]]; then
+  PATH="/opt/fanmind-restore/node-v24.19.0-linux-x64/bin:/usr/lib/postgresql/17/bin:/usr/bin:/bin"
+  export PATH
+  hash -r
+fi
+
 fail() {
   printf 'RESTORE_RUNNER_ERROR=%s\n' "$1" >&2
   exit 1
@@ -15,21 +21,37 @@ snapshot_archive_toc=""
 snapshot_restore_toc=""
 
 cleanup_snapshot() {
+  local cleanup_status=$?
+  local cleanup_failed=0
+  local candidate
+  trap - EXIT
   set +e
-  [[ -z "$snapshot_dump" || ! -e "$snapshot_dump" ]] \
-    || unlink -- "$snapshot_dump"
-  [[ -z "$snapshot_passfile" || ! -e "$snapshot_passfile" ]] \
-    || unlink -- "$snapshot_passfile"
-  [[ -z "$snapshot_full_receipt" || ! -e "$snapshot_full_receipt" ]] \
-    || unlink -- "$snapshot_full_receipt"
-  [[ -z "$snapshot_ca_certificate" || ! -e "$snapshot_ca_certificate" ]] \
-    || unlink -- "$snapshot_ca_certificate"
-  [[ -z "$snapshot_archive_toc" || ! -e "$snapshot_archive_toc" ]] \
-    || unlink -- "$snapshot_archive_toc"
-  [[ -z "$snapshot_restore_toc" || ! -e "$snapshot_restore_toc" ]] \
-    || unlink -- "$snapshot_restore_toc"
-  [[ -z "$snapshot_dir" || ! -d "$snapshot_dir" ]] \
-    || rmdir -- "$snapshot_dir"
+  for candidate in \
+    "$snapshot_dump" \
+    "$snapshot_passfile" \
+    "$snapshot_full_receipt" \
+    "$snapshot_ca_certificate" \
+    "$snapshot_archive_toc" \
+    "$snapshot_restore_toc"
+  do
+    if [[ -n "$candidate" && ( -e "$candidate" || -L "$candidate" ) ]]; then
+      /usr/bin/unlink -- "$candidate" || cleanup_failed=1
+    fi
+  done
+  if [[ -n "$snapshot_dir" && ( -e "$snapshot_dir" || -L "$snapshot_dir" ) ]]; then
+    if [[ -d "$snapshot_dir" && ! -L "$snapshot_dir" ]]; then
+      /usr/bin/rmdir -- "$snapshot_dir" || cleanup_failed=1
+    else
+      /usr/bin/unlink -- "$snapshot_dir" || cleanup_failed=1
+    fi
+  fi
+  if (( cleanup_failed != 0 )); then
+    printf 'RESTORE_RUNNER_ERROR=snapshot_cleanup_failed\n' >&2
+    if (( cleanup_status == 0 )); then
+      cleanup_status=1
+    fi
+  fi
+  exit "$cleanup_status"
 }
 
 validate_open_ca_certificate() {
@@ -195,6 +217,12 @@ validate_output_path \
 operational_test_mode="${FANMIND_OPERATIONAL_TEST_MODE:-}"
 pg_restore_override="${FANMIND_PG_RESTORE_BIN:-}"
 psql_override="${FANMIND_PSQL_BIN:-}"
+if [[ "${GITHUB_ACTIONS:-}" == "true" \
+  && ( -n "$operational_test_mode" \
+    || -n "$pg_restore_override" \
+    || -n "$psql_override" ) ]]; then
+  fail "operational_binary_override_forbidden_in_actions"
+fi
 if [[ -n "$pg_restore_override" || -n "$psql_override" ]]; then
   [[ "$operational_test_mode" == "restore-runner-test" ]] \
     || fail "operational_binary_override_forbidden"

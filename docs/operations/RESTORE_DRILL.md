@@ -166,12 +166,64 @@ For a standalone server-config backup, it validates gzip/tar structure and safe 
 
 ## 4. Database restore drill
 
+### Restore-secret-free host readiness
+
+Before an isolated restore runner is allowed to load the protected
+`restore-drill` environment, run the manual workflow
+`FanMind Restore Host Toolchain Readiness` from `main` with the exact confirmation
+`verify-isolated-restore-host`. This workflow is deliberately narrower than a
+restore drill: it has no checkout, no GitHub Environment, no Restore secrets,
+no database target, no encrypted backup and no restore dispatch.
+
+The job is routed only through runner group `fanmind-restore-drill` and all five
+labels `self-hosted`, `fanmind-restore`, `fanmind-restore-01`, `linux` and
+`x64`. The externally administered runner must be a fresh one-job JIT runner;
+it is removed after that single job. The workflow starts only the fixed
+root-owned Node executable
+`/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node` and the fixed root-owned
+gate `/opt/fanmind-restore/restore-host-readiness.mjs`. The installed gate must
+match SHA-256 `c60f0ec5278de5ec30fba44c9568e343dc0c0277500f824a1dd73993d1c8e117` before it is executed.
+
+The gate fails closed unless all of these facts hold:
+
+- Ubuntu 24.04, Linux x64, Node.js 24.19.0 and the dedicated unprivileged
+  `fanmind-restore` user and group are exact;
+- the runner name is `fanmind-restore-01`, its supplementary-group set contains
+  only `fanmind-restore`, `NoNewPrivs` is set, process capabilities are empty,
+  non-interactive `sudo` cannot succeed and privileged Docker, Podman, LXD,
+  Incus and libvirt sockets are inaccessible;
+- runner temp and workspace are distinct, operator-owned non-symlink
+  directories, and the temp directory is private;
+- the gate, Node executable, PostgreSQL 17.10 tools, age 1.1.1, GNU tar 1.35,
+  gzip 1.12, Bash and GNU coreutils 9.4 are fixed root-owned, non-writable
+  regular files beneath fixed root-owned, non-writable directories;
+- write acknowledgements remain disabled and no libpq target, Restore secret,
+  Production/backup/service value, proxy, TLS override, loader variable,
+  OpenSSL module configuration, Git config/trace override, Node debug/loader
+  option, Python path or unexpected environment value reaches the gate.
+
+The gate receives an explicit allowlist through `env -i`. Its receipt is
+redacted, retained for three days and states that database connection,
+decryption and writes were not attempted. A pass proves only host readiness;
+it is never recovery evidence and never authorizes a restore.
+
+The protected resource-readiness and database-restore workflows repeat this
+design as two sequential fresh JIT runners. Job one performs the same
+secret-free gate without the GitHub Environment. Only after it passes may a
+second, independently registered one-job JIT runner enter the protected
+environment; that second job re-attests the installed gate before checkout or
+use of step-scoped Restore values. GitHub cannot enforce one-job JIT lifecycle
+or outbound firewall policy, so the external runner controller and host
+firewall are mandatory parts of this boundary.
+
 ### Read-only resource readiness before the drill
 
 Before enabling either restore write gate, run the manual GitHub workflow
-`FanMind Restore Drill Resource Readiness` from `main`. It is bound to the
-GitHub Environment `restore-drill` and an isolated self-hosted runner carrying
-the exclusive label `fanmind-restore`.
+`FanMind Restore Drill Resource Readiness` from `main`. Its first job is the
+secret-free host gate above. Its protected second job is bound to the GitHub
+Environment `restore-drill`, runner group `fanmind-restore-drill` and the exact
+five-label set `self-hosted`, `fanmind-restore`, `fanmind-restore-01`, `linux`,
+`x64`.
 
 The workflow requires the confirmation
 `verify-isolated-restore-resources` and runs two strictly ordered read-only
@@ -260,10 +312,20 @@ One-time external setup for the GitHub Environment `restore-drill`:
   the operator-owned, regular, non-symlink age identity on the isolated
   runner. It must have exact private permissions and must never be copied into
   GitHub secrets, logs or artifacts;
-- an isolated host with a checked-out repository, Node.js and read-only access
-  to the transferred encrypted artifact pair, PostgreSQL 17 client tools at
-  `/usr/lib/postgresql/17/bin`, and network access only to the isolated target,
-  registered only as `fanmind-restore`.
+- an externally managed JIT controller that registers exactly one fresh
+  one-job runner for the secret-free host job and a second fresh one-job runner
+  for the protected job, both only in group `fanmind-restore-drill` with the
+  exact five labels. Neither registration token nor runner credential may be
+  reused;
+- an isolated host image with the gate and Node path above, PostgreSQL 17.10
+  clients at `/usr/lib/postgresql/17/bin`, age 1.1.1, GNU tar 1.35, gzip 1.12,
+  Bash and GNU coreutils 9.4 preinstalled as root-owned, non-writable files.
+  Restore jobs do not use `actions/setup-node`, `npm install` or an ambient
+  tool lookup;
+- read-only filesystem access to the transferred encrypted artifact pair and
+  outbound network access only to GitHub endpoints required for the JIT job
+  and the isolated restore target. Production database, Storage, Supabase,
+  cloud metadata and privileged host endpoints must be blocked externally.
 
 Neither readiness result counts as a restore drill. Content verification, the
 transactional database restore, RLS checks, Storage sample, server-config
@@ -276,8 +338,10 @@ After the read-only phases pass, the manual workflow
 the database portion. It accepts only `main`, requires
 `reviewed_commit == github.sha`, binds the exact Production commit recorded in
 the selected full backup and requires the confirmation
-`run-isolated-database-restore`. It re-runs resource readiness and target
-compatibility before either write gate is enabled.
+`run-isolated-database-restore`. It first runs the secret-free fixed host gate
+on one JIT runner, then re-attests that gate on a second environment-bound JIT
+runner before checkout. It re-runs resource readiness and target compatibility
+before either write gate is enabled.
 
 The write step then:
 
@@ -299,6 +363,11 @@ or a CA file. It also does not claim final drill completion: the disposable
 database still has to be destroyed by the operator, and the Storage sample,
 server-config inspection, final evidence record and cleanup proof remain
 separate mandatory steps.
+
+The three uploaded receipts also do not prove external JIT registration,
+runner-image provenance, firewall enforcement, target provisioning or final
+target destruction. Preserve those as separate operator-controlled evidence;
+do not infer them from a successful GitHub job.
 
 ### Preconditions
 

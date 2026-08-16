@@ -176,7 +176,7 @@ test("phase 4 stays technically complete while sales handoff waits for phase 7",
   );
   assert.doesNotMatch(roadmap, /Steuerberater-Bestätigung/u);
 
-  assert.match(sourceTruth, /Stand: 10\. August 2026/u);
+  assert.match(sourceTruth, /Stand: 16\. August 2026/u);
   assert.match(
     sourceTruth,
     /Die technische Verkaufsübergabe erfolgt erst nach realer technischer Abnahme[\s\S]*Phase-3- und Phase-7-Kanäle/u,

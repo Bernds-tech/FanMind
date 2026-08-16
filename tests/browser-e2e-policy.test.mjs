@@ -15,6 +15,10 @@ test("Playwright stays exactly pinned and exposes separate public and staging co
     "playwright test --config=playwright.config.mts",
   );
   assert.equal(
+    manifest.scripts?.["test:e2e:core-flow"],
+    "playwright test --config=playwright.core-flow.config.mts",
+  );
+  assert.equal(
     manifest.scripts?.["test:e2e:staging"],
     "playwright test --config=playwright.staging.config.mts",
   );
@@ -22,6 +26,102 @@ test("Playwright stays exactly pinned and exposes separate public and staging co
     manifest.scripts?.["test:operations"] ?? "",
     /tests\/browser-e2e-policy\.test\.mjs/u,
   );
+});
+
+test("local regular-user config starts only the acknowledged loopback fixture and real app", async () => {
+  const source = await read("playwright.core-flow.config.mts");
+
+  assert.match(source, /fanmind-local-synthetic-core-flow/u);
+  assert.match(source, /http:\/\/localhost:3100/u);
+  assert.match(source, /http:\/\/127\.0\.0\.1:54321/u);
+  assert.match(
+    source,
+    /node scripts\/testing\/regular-user-core-flow-fixture\.mjs/u,
+  );
+  assert.match(source, /npm run start -- -H 127\.0\.0\.1 -p 3100/u);
+  assert.match(source, /reuseExistingServer: false/u);
+  assert.match(source, /workers: 1/u);
+  assert.match(source, /devices\["Desktop Chrome"\]/u);
+  assert.match(source, /serviceWorkers: "block"/u);
+  assert.match(source, /trace: "retain-on-failure"/u);
+  assert.match(source, /screenshot: "only-on-failure"/u);
+  assert.match(source, /video: "off"/u);
+  assert.doesNotMatch(source, /https:\/\/fanmind\.ch|firefox|webkit/iu);
+});
+
+test("local provider fixture is loopback-only, acknowledged and fail-closed", async () => {
+  const source = await read(
+    "scripts/testing/regular-user-core-flow-fixture.mjs",
+  );
+
+  assert.match(source, /FIXTURE_HOST = "127\.0\.0\.1"/u);
+  assert.match(source, /FANMIND_CORE_FLOW_FIXTURE_ACK/u);
+  assert.match(source, /fixture_ack_invalid/u);
+  assert.match(source, /server\.listen\(port, FIXTURE_HOST\)/u);
+  assert.match(source, /fixture_origin_forbidden/u);
+  assert.match(source, /fixture_table_unknown/u);
+  assert.match(source, /query_select_invalid/u);
+  assert.match(source, /mutation_scope_invalid/u);
+  assert.match(source, /fixture_write_role_invalid/u);
+  assert.match(source, /workspace_ai_prompt_settings: new Set/u);
+  assert.match(
+    source,
+    /workspace_ai_prompt_settings: new Set\(\["GET", "HEAD"\]\)/u,
+  );
+  assert.match(source, /followups:PATCH:completed/u);
+  assert.match(source, /followups:PATCH:open/u);
+  assert.doesNotMatch(source, /0\.0\.0\.0|https:\/\//u);
+});
+
+test("regular-user browser proof exercises real routes and permits only a synthetic AI response", async () => {
+  const source = await read("e2e-core-flow/regular-user-core-flow.spec.ts");
+
+  for (const route of [
+    "/inbox",
+    "/fans",
+    "/followups",
+    "/roadmap",
+  ]) {
+    assert.match(source, new RegExp(`page\\.goto\\("${route}"\\)`, "u"));
+  }
+  assert.equal(source.match(/route\.fulfill\(/gu)?.length, 1);
+  assert.match(
+    source,
+    /requestUrl\.pathname === "\/api\/ai\/reply-suggestions"/u,
+  );
+  assert.match(source, /ancestor::article\[1\]/u);
+  assert.match(
+    source,
+    /getByRole\("tabpanel"\)\.locator\("p"\)\.filter\(\{ hasText: MEMORY_CONTENT \}\)/u,
+  );
+  assert.match(source, /failedResponses[\s\S]*toEqual\(\[\]\)/u);
+  assert.match(source, /pageErrors[\s\S]*toEqual\(\[\]\)/u);
+  assert.match(source, /response\.status\(\) >= 400/u);
+  assert.match(source, /unexpectedRequests[\s\S]*toEqual\(\[\]\)/u);
+  assert.match(
+    source,
+    /conversation_messages:PATCH:seen_at[\s\S]*memories:POST[\s\S]*followups:POST[\s\S]*followups:PATCH:completed[\s\S]*followups:PATCH:open/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /https:\/\/fanmind\.ch|OPENAI_API_KEY|STRIPE_SECRET_KEY|\/api\/demo\/start/u,
+  );
+});
+
+test("Browser E2E runs the local core flow without environments, provider secrets or Production", async () => {
+  const workflow = await read(".github/workflows/browser-e2e.yml");
+  const jobStart = workflow.indexOf("  regular-user-core-flow-local:");
+  const jobSource = workflow.slice(jobStart);
+
+  assert.ok(jobStart >= 0);
+  assert.match(jobSource, /Synthetic regular-user core flow on local providers/u);
+  assert.match(jobSource, /NEXT_PUBLIC_SUPABASE_URL: http:\/\/127\.0\.0\.1:54321/u);
+  assert.match(jobSource, /FANMIND_CORE_FLOW_FIXTURE_ACK: fanmind-local-synthetic-core-flow/u);
+  assert.match(jobSource, /npm run test:e2e:core-flow/u);
+  assert.match(jobSource, /npx playwright install --with-deps chromium/u);
+  assert.match(jobSource, /playwright-report-core-flow/u);
+  assert.match(jobSource, /retention-days: 7/u);
+  assert.doesNotMatch(jobSource, /environment:|\$\{\{ secrets\.|OPENAI_API_KEY|STRIPE_SECRET_KEY|https:\/\/fanmind\.ch/u);
 });
 
 test("public browser config runs deterministic desktop and mobile Chromium with failure-only evidence", async () => {

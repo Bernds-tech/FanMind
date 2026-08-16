@@ -15,7 +15,18 @@ const checkedFiles = [
   ".github/workflows/mobile-release-resource-readiness.yml",
   ".github/workflows/mobile-signed-internal-build.yml",
   ".github/workflows/ci-mobile.yml",
+  ".github/workflows/browser-e2e.yml",
+  ".github/workflows/restore-drill-host-readiness.yml",
+  ".github/workflows/restore-drill-resource-readiness.yml",
+  ".github/workflows/restore-drill-database.yml",
   "package.json",
+  "playwright.core-flow.config.mts",
+  "e2e-core-flow/regular-user-core-flow.spec.ts",
+  "scripts/testing/regular-user-core-flow-fixture.mjs",
+  "tests/regular-user-core-flow-fixture.test.mjs",
+  "tests/test-suite-coverage.test.mjs",
+  "docs/testing/BROWSER_E2E.md",
+  "docs/operations/ROADMAP_1_7_COMPLETION.md",
   "apps/mobile/package.json",
   "src/config/aiTiers.mjs",
   "src/config/commercialModel.mjs",
@@ -25,9 +36,11 @@ const checkedFiles = [
   "scripts/operations/ai-reply-quality-eval.mjs",
   "tests/ai-reply-quality-eval.test.mjs",
   "scripts/operations/run-database-restore-drill.sh",
+  "scripts/operations/restore-host-readiness.mjs",
   "scripts/operations/restore-database-postcheck-receipt.mjs",
   "scripts/operations/verify-restore-drill-evidence.mjs",
   "tests/restore-drill-evidence.test.mjs",
+  "tests/restore-host-readiness.test.mjs",
   "docs/operations/RESTORE_DRILL.md",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
@@ -183,6 +196,34 @@ function forbidRuntime(pattern, explanation) {
 function forbidIn(file, pattern, explanation) {
   if (pattern.test(content(file))) errors.push(`${file}: ${explanation}`);
 }
+
+// Der lokale reguläre Benutzerfluss ist ein Code-Nachweis, kein externer Ersatzbeleg.
+for (const file of [
+  "README.md",
+  "docs/SOURCE_OF_TRUTH.md",
+  "docs/testing/BROWSER_E2E.md",
+]) {
+  requireText(
+    file,
+    "npm run test:e2e:core-flow",
+    "Der deterministische lokale Gerhard-Core-Flow muss dokumentiert sein.",
+  );
+}
+requireText(
+  ".github/workflows/browser-e2e.yml",
+  "npm run test:e2e:core-flow",
+  "Browser E2E muss den lokalen regulären Core-Flow in CI ausführen.",
+);
+requireText(
+  "e2e-core-flow/regular-user-core-flow.spec.ts",
+  'page.goto("/inbox")',
+  "Der lokale Core-Flow muss die echte Inbox-Route abnehmen.",
+);
+requireText(
+  "docs/operations/ROADMAP_1_7_COMPLETION.md",
+  "Die isolierte Staging-, echte Provider- und",
+  "Die Roadmap muss lokalen Code-Nachweis und externe Abnahme trennen.",
+);
 
 // Alte oder widersprüchliche öffentliche Wahrheit.
 forbidRuntime(
