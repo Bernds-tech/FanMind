@@ -16,9 +16,6 @@ export const FIXTURE_REFRESH_TOKEN =
   "fanmind-local-core-flow-refresh-token";
 export const FIXTURE_SERVICE_ROLE_KEY =
   "fanmind-local-core-flow-service-role-key";
-export const FIXTURE_CONTROL_HEADER = "x-fanmind-fixture-control";
-export const FIXTURE_CONTROL_TOKEN =
-  "fanmind-local-core-flow-control-token";
 
 export const FIXTURE_IDS = Object.freeze({
   user: "10000000-0000-4000-8000-000000000001",
@@ -465,7 +462,7 @@ function applyCors(request, response) {
   );
   response.setHeader(
     "Access-Control-Allow-Headers",
-    `authorization, apikey, content-type, prefer, range, ${FIXTURE_CONTROL_HEADER}`,
+    "authorization, apikey, content-type, prefer, range",
   );
   response.setHeader("Access-Control-Expose-Headers", "content-range");
   if (origin === FIXTURE_APP_ORIGIN) {
@@ -501,24 +498,6 @@ function methodNotAllowed(request, response, methods) {
   sendError(request, response, 405, "method_not_allowed", {
     Allow: [...methods].join(", "),
   });
-}
-
-function requestBoundaryAllowed(request, url) {
-  const origin = request.headers.origin;
-  const originAllowed = origin === undefined || origin === FIXTURE_APP_ORIGIN;
-
-  if (url.pathname === "/__health") return originAllowed;
-  if (["/__reset", "/__state"].includes(url.pathname)) {
-    return (
-      originAllowed &&
-      request.headers[FIXTURE_CONTROL_HEADER] === FIXTURE_CONTROL_TOKEN
-    );
-  }
-  if (origin === FIXTURE_APP_ORIGIN) return true;
-  if (origin !== undefined) return false;
-
-  const token = bearerToken(request);
-  return token === FIXTURE_ACCESS_TOKEN || token === FIXTURE_SERVICE_ROLE_KEY;
 }
 
 function bearerToken(request) {
@@ -1086,10 +1065,6 @@ function createRequestHandler(state) {
     try {
       const url = new URL(request.url ?? "/", `http://${FIXTURE_HOST}`);
 
-      if (!requestBoundaryAllowed(request, url)) {
-        sendError(request, response, 403, "fixture_origin_forbidden");
-        return;
-      }
       if (request.method === "OPTIONS") {
         sendEmpty(request, response, 204);
         return;
@@ -1111,12 +1086,30 @@ function createRequestHandler(state) {
           methodNotAllowed(request, response, new Set(["GET"]));
           return;
         }
+        if (
+          !requireFixtureToken(
+            request,
+            response,
+            new Set([FIXTURE_SERVICE_ROLE_KEY]),
+          )
+        ) {
+          return;
+        }
         sendJson(request, response, 200, redactedState(state));
         return;
       }
       if (url.pathname === "/__reset") {
         if (request.method !== "POST") {
           methodNotAllowed(request, response, new Set(["POST"]));
+          return;
+        }
+        if (
+          !requireFixtureToken(
+            request,
+            response,
+            new Set([FIXTURE_SERVICE_ROLE_KEY]),
+          )
+        ) {
           return;
         }
         resetFixtureState(state);

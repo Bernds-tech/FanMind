@@ -3,7 +3,7 @@ import { expect, test, type Route } from "@playwright/test";
 const APP_ORIGIN = "http://localhost:3100";
 const FIXTURE_ORIGIN = "http://127.0.0.1:54321";
 const FIXTURE_CONTROL_HEADERS = {
-  "x-fanmind-fixture-control": "fanmind-local-core-flow-control-token",
+  Authorization: "Bearer fanmind-local-core-flow-service-role-key",
 };
 const EMAIL = "gerhard-core-flow@synthetic.invalid";
 const PASSWORD = "FanMind-Local-Core-Flow-2026!";

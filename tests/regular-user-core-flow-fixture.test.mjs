@@ -9,8 +9,6 @@ import {
   FIXTURE_ACCESS_TOKEN,
   FIXTURE_ACKNOWLEDGEMENT,
   FIXTURE_APP_ORIGIN,
-  FIXTURE_CONTROL_HEADER,
-  FIXTURE_CONTROL_TOKEN,
   FIXTURE_EMAIL,
   FIXTURE_HOST,
   FIXTURE_IDS,
@@ -130,10 +128,7 @@ function serviceHeaders(extra = {}) {
 }
 
 function controlHeaders(extra = {}) {
-  return {
-    [FIXTURE_CONTROL_HEADER]: FIXTURE_CONTROL_TOKEN,
-    ...extra,
-  };
+  return serviceHeaders(extra);
 }
 
 before(async () => {
@@ -214,8 +209,11 @@ test("server binds to IPv4 loopback only and exposes bounded CORS health", async
   const forbiddenOrigin = await fixtureFetch("/__health", {
     headers: { Origin: "https://fanmind.ch" },
   });
-  assert.equal(forbiddenOrigin.status, 403);
-  assert.equal((await forbiddenOrigin.json()).code, "fixture_origin_forbidden");
+  assert.equal(forbiddenOrigin.status, 200);
+  assert.equal(
+    forbiddenOrigin.headers.get("access-control-allow-origin"),
+    null,
+  );
 });
 
 test("password auth accepts only Gerhard fixture credentials and validates the bearer", async () => {
@@ -290,7 +288,7 @@ test("PostgREST reads deterministic seed rows and fails closed", async () => {
   const resetWithoutControl = await fixtureFetch("/__reset", {
     method: "POST",
   });
-  assert.equal(resetWithoutControl.status, 403);
+  assert.equal(resetWithoutControl.status, 401);
 
   const reset = await fixtureFetch("/__reset", {
     method: "POST",
