@@ -66,16 +66,16 @@ test("dashboard, contacts, follow-ups and inbox stay workspace-scoped", async ()
     source("src/app/inbox/page.tsx"),
   ]);
 
-  requiresAll(dashboard, [/getUserWorkspaceDashboard\(/u, /getWorkspaceContacts\(/u], "dashboard");
-  requiresAll(fans, [/getUserWorkspaceDashboard\(/u, /getWorkspaceContacts\(/u], "contacts");
+  requiresAll(dashboard, [/getUserAuthorizedWorkspaceDashboard\(/u, /getWorkspaceContacts\(/u], "dashboard");
+  requiresAll(fans, [/getUserAuthorizedWorkspaceDashboard\(/u, /getWorkspaceContacts\(/u], "contacts");
   requiresAll(
     fanDetail,
-    [/requireAuthorizedWorkspace\(/u, /getContactConversationMessages\(/u],
+    [/requireAuthorizedWorkspaceMember\(/u, /getContactConversationMessages\(/u],
     "contact detail",
   );
   requiresAll(
     followups,
-    [/getUserWorkspaceDashboard\(/u, /getWorkspaceFollowups\(/u, /FollowupStatusForm/u],
+    [/getUserAuthorizedWorkspaceDashboard\(/u, /getWorkspaceFollowups\(/u, /FollowupStatusForm/u],
     "follow-ups",
   );
   requiresAll(
@@ -125,7 +125,7 @@ test("AI uses the authorized contact, bounded structured output and human-contro
   requiresAll(
     route,
     [
-      /requireContactInAuthorizedWorkspace\(/u,
+      /requireContactInActiveAuthorizedWorkspace\(/u,
       /readBoundedJsonRequest\(/u,
       /consumeSharedRateLimit\(/u,
       /store: false/u,

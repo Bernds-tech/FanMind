@@ -165,8 +165,13 @@ Konkrete Stripe-IDs werden dem Resolver nur als bereits serverseitig
 bestätigtes Ja/Nein übergeben und weder zurückgegeben noch geloggt.
 
 Der persistente server-only Speicher, die additive Migration und der
-redigierende Loader sind nun als deploy-before-migrate-Brücke vorbereitet.
-Sie sind noch nicht auf Staging oder Production angewendet und noch nicht mit
-Stripe-Webhooks oder produktiven KI-Pfaden verdrahtet. Die verbindliche
-Rollout-Reihenfolge und negative Berechtigungsabnahme stehen in
+redigierende Loader sind auf dem getrennten Supabase-Staging angewendet und
+nachgeprüft; auf Production sind sie nicht angewendet. Der echte
+Stripe-Webhook enthält eine standardmäßig inaktive Persistenzbrücke. Sie wird
+nur bei eigenem Persistence-Gate, bestätigtem Workspace-Vertrag und zwei
+vollständigen unterschiedlichen KI-Price-IDs aufgerufen. Produktive KI-Pfade
+verwenden den Speicher weiterhin nicht. Die fehlende Event-Ledger-
+Transaktion, die Stripe-Testmode-Abnahme und alle weiteren Readiness-Gates
+halten Plus und Ultra gesperrt. Die verbindliche Rollout-Reihenfolge und
+negative Berechtigungsabnahme stehen in
 `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`.

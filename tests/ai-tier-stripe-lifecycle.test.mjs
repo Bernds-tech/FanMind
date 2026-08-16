@@ -23,6 +23,7 @@ function stripeEvent(overrides = {}) {
         status: "active",
         cancel_at_period_end: false,
         items: {
+          has_more: false,
           data: [
             {
               id: "si_current_DO_NOT_PRINT",
@@ -138,6 +139,75 @@ test("unknown prices are ignored while ambiguous paid items retry", () => {
   assert.deepEqual(decide({ event: ambiguous }), {
     decision: "retry",
     reason: "ambiguous_price_items",
+    mutation: null,
+  });
+});
+
+test("removing the paid item cancels the stored entitlement without losing the event boundary", () => {
+  const created = decide();
+  assert.equal(created.decision, "apply");
+
+  const removed = stripeEvent({
+    id: "evt_removed_DO_NOT_PRINT",
+    created: 1_753_056_001,
+  });
+  removed.data.object.items.data = [
+    {
+      id: "si_starter_DO_NOT_PRINT",
+      current_period_start: 1_751_328_000,
+      current_period_end: 1_754_006_400,
+      price: { id: "price_starter_DO_NOT_PRINT" },
+    },
+  ];
+
+  const result = decide({
+    event: removed,
+    current: created.mutation,
+  });
+  assert.deepEqual(result, {
+    decision: "apply",
+    reason: null,
+    mutation: {
+      ...created.mutation,
+      status: "canceled",
+      expiresAt: "2025-07-21T00:00:01.000Z",
+      lastStripeEventId: "evt_removed_DO_NOT_PRINT",
+      lastStripeEventCreatedAt: 1_753_056_001,
+    },
+  });
+  assert.equal(result.mutation.stripeSubscriptionItemId, created.mutation.stripeSubscriptionItemId);
+  assert.equal(result.mutation.stripePriceId, created.mutation.stripePriceId);
+});
+
+test("a partial Stripe item list never proves removal", () => {
+  const created = decide();
+  assert.equal(created.decision, "apply");
+  const partial = stripeEvent({
+    id: "evt_partial_DO_NOT_PRINT",
+    created: 1_753_056_001,
+  });
+  partial.data.object.items = {
+    data: [],
+    has_more: true,
+  };
+
+  assert.deepEqual(
+    decide({ event: partial, current: created.mutation }),
+    {
+      decision: "retry",
+      reason: "items",
+      mutation: null,
+    },
+  );
+});
+
+test("a Stripe item list without an explicit completeness marker retries", () => {
+  const malformed = stripeEvent();
+  delete malformed.data.object.items.has_more;
+
+  assert.deepEqual(decide({ event: malformed }), {
+    decision: "retry",
+    reason: "items",
     mutation: null,
   });
 });

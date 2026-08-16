@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { syncWorkspaceAiTierStripeEntitlement } from "@/lib/aiTierStripeEntitlementSync.mjs";
+import { AI_TIER_STRIPE_EVENT_TYPES } from "@/lib/aiTierStripeLifecycle.mjs";
 import { syncReferralAutomationForWorkspace } from "@/lib/referralAutomation";
 import {
   billingStatusFromInvoiceFailure,
@@ -8,19 +10,24 @@ import {
 import {
   findWorkspaceIdByStripeReferences,
   updateWorkspaceBillingDefensively,
+  verifyStripeSubscriptionWorkspaceBinding,
   verifyStripeSignature,
   type StripeWorkspaceResolution,
 } from "@/lib/stripeBilling";
 import {
+  STRIPE_BILLING_ALLOWED,
   STRIPE_BILLING_BLOCKED,
   STRIPE_BILLING_RETRYABLE_ERROR,
   STRIPE_BILLING_UPDATED,
+  resolveStripeWebhookWorkspaceCandidates,
+  stripeWebhookReferenceLookupValues,
 } from "@/lib/stripeWorkspacePolicy.mjs";
 import { isHandledStripeWebhookEventType } from "@/lib/stripeWebhookEventPolicy.mjs";
 
 type StripeObject = Record<string, unknown>;
 type StripeEvent = {
   id?: string;
+  created?: number;
   type?: string;
   data?: { object?: StripeObject };
 };
@@ -69,8 +76,10 @@ function stripeTs(value?: number): string | null | undefined {
     : value;
 }
 
-function metadataWorkspaceId(object: StripeObject | undefined): string | undefined {
-  return stringField(objectField(object, "metadata"), "workspace_id");
+function metadataWorkspaceIdCandidate(
+  object: StripeObject | undefined,
+): unknown {
+  return objectField(object, "metadata")?.workspace_id;
 }
 
 function subscriptionStatusFields(object: StripeObject) {
@@ -131,6 +140,14 @@ function stripeId(value: unknown): string | undefined {
     : stringField(value as StripeObject | undefined, "id");
 }
 
+function stripeIdWithPrefix(
+  value: unknown,
+  prefix: "cus_" | "sub_" | "pi_",
+): string | undefined {
+  const id = stripeId(value);
+  return id?.startsWith(prefix) ? id : undefined;
+}
+
 function objectIdWithPrefix(
   object: StripeObject,
   prefix: string,
@@ -139,49 +156,86 @@ function objectIdWithPrefix(
   return id?.startsWith(prefix) ? id : undefined;
 }
 
-function lineWorkspaceId(object: StripeObject): string | undefined {
+function lineWorkspaceIdCandidates(object: StripeObject): unknown[] {
   const lines = objectField(object, "lines");
-  return arrayField(lines, "data")
-    ?.map((line) => metadataWorkspaceId(line as StripeObject))
-    .find(Boolean);
+  return (arrayField(lines, "data") ?? []).map((line) =>
+    metadataWorkspaceIdCandidate(line as StripeObject),
+  );
 }
 
-function workspaceIdFromObject(object: StripeObject): string | undefined {
-  return (
-    metadataWorkspaceId(object) ??
-    stringField(object, "client_reference_id") ??
-    metadataWorkspaceId(objectField(object, "subscription_details")) ??
-    metadataWorkspaceId(
+function workspaceIdCandidatesFromObject(object: StripeObject): unknown[] {
+  return [
+    metadataWorkspaceIdCandidate(object),
+    object.client_reference_id,
+    metadataWorkspaceIdCandidate(objectField(object, "subscription_details")),
+    metadataWorkspaceIdCandidate(
       objectField(objectField(object, "parent"), "subscription_details"),
-    ) ??
-    metadataWorkspaceId(objectField(object, "payment_intent_data")) ??
-    lineWorkspaceId(object)
-  );
+    ),
+    metadataWorkspaceIdCandidate(objectField(object, "payment_intent_data")),
+    ...lineWorkspaceIdCandidates(object),
+  ];
 }
 
 async function resolveWorkspaceId(
   object: StripeObject,
+  eventType: string | undefined,
 ): Promise<StripeWorkspaceResolution> {
-  const direct = workspaceIdFromObject(object);
-  if (direct) return { status: "found", workspaceId: direct };
-  return findWorkspaceIdByStripeReferences({
-    customerId:
-      stripeId(object.customer) ?? objectIdWithPrefix(object, "cus_"),
-    subscriptionId:
-      stripeId(object.subscription) ?? objectIdWithPrefix(object, "sub_"),
-    paymentIntentId:
-      stripeId(object.payment_intent) ?? objectIdWithPrefix(object, "pi_"),
+  const customerId =
+    stripeIdWithPrefix(object.customer, "cus_") ??
+    objectIdWithPrefix(object, "cus_");
+  const subscriptionId =
+    stripeIdWithPrefix(object.subscription, "sub_") ??
+    stripeIdWithPrefix(
+      objectField(object, "subscription_details")?.subscription,
+      "sub_",
+    ) ??
+    stripeIdWithPrefix(
+      objectField(objectField(object, "parent"), "subscription_details")
+        ?.subscription,
+      "sub_",
+    ) ??
+    objectIdWithPrefix(object, "sub_");
+  const paymentIntentId =
+    stripeIdWithPrefix(object.payment_intent, "pi_") ??
+    objectIdWithPrefix(object, "pi_");
+  const lookupReferences = stripeWebhookReferenceLookupValues({
+    eventType,
+    customerId,
+    subscriptionId,
+    paymentIntentId,
   });
+  if (!lookupReferences) {
+    return { status: "retryable_error" };
+  }
+  const allowDirectBootstrap =
+    eventType?.startsWith("checkout.session.") === true;
+  const referenceResolution =
+    await findWorkspaceIdByStripeReferences(lookupReferences);
+  const resolution = resolveStripeWebhookWorkspaceCandidates({
+    directCandidates: workspaceIdCandidatesFromObject(object),
+    referenceResolution,
+    allowDirectBootstrap,
+  });
+  // A handled, signed mutation must never be acknowledged merely because an
+  // out-of-order tenant binding is not visible yet. Checkout succeeds through
+  // its immutable server metadata; every unresolved event requests a retry.
+  return resolution.status === "not_found"
+    ? { status: "retryable_error" }
+    : resolution;
 }
 
 async function updateOrWarn(input: {
   eventType: string | undefined;
   eventId: string | undefined;
   object: StripeObject;
+  event: StripeEvent;
   fields: Record<string, string | number | boolean | null | undefined>;
   referralBillingStatus?: string | null;
 }): Promise<void> {
-  const workspaceResolution = await resolveWorkspaceId(input.object);
+  const workspaceResolution = await resolveWorkspaceId(
+    input.object,
+    input.eventType,
+  );
   if (workspaceResolution.status === "retryable_error") {
     console.error("Stripe webhook workspace lookup needs retry", {
       eventType: input.eventType,
@@ -198,6 +252,22 @@ async function updateOrWarn(input: {
     return;
   }
   const workspaceId = workspaceResolution.workspaceId;
+
+  if (input.eventType?.startsWith("customer.subscription.") === true) {
+    const bindingDecision =
+      await verifyStripeSubscriptionWorkspaceBinding({
+        workspaceId,
+        customerId: stripeId(input.object.customer),
+        subscriptionId: objectIdWithPrefix(input.object, "sub_"),
+      });
+    if (bindingDecision !== STRIPE_BILLING_ALLOWED) {
+      console.error("Stripe subscription workspace binding needs retry", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+      });
+      throw new StripeWebhookRetryableError();
+    }
+  }
 
   const billingUpdateDecision = await updateWorkspaceBillingDefensively(
     workspaceId,
@@ -220,6 +290,22 @@ async function updateOrWarn(input: {
   if (billingUpdateDecision !== STRIPE_BILLING_UPDATED) {
     throw new StripeWebhookRetryableError();
   }
+
+  if (AI_TIER_STRIPE_EVENT_TYPES.includes(input.eventType ?? "")) {
+    const aiTierSync = await syncWorkspaceAiTierStripeEntitlement({
+      workspaceId,
+      event: input.event,
+    });
+    if (aiTierSync.status === "retry") {
+      console.error("Stripe webhook AI tier update needs retry", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+        reason: aiTierSync.reason,
+      });
+      throw new StripeWebhookRetryableError();
+    }
+  }
+
   const billingStatus =
     input.referralBillingStatus ??
     (typeof input.fields.billing_status === "string"
@@ -285,6 +371,7 @@ export async function POST(request: NextRequest) {
       eventType: event.type,
       eventId: event.id,
       object,
+      event,
       fields,
       referralBillingStatus:
         referralBillingStatus ?? defaultReferralBillingStatus,

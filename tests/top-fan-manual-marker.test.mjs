@@ -22,7 +22,7 @@ test("top-fan action authenticates and rejects foreign workspace contacts", () =
   const actions = readFileSync(actionsPath, "utf8");
 
   assert.match(actions, /export async function updateTopFanMark\(formData: FormData\)/u);
-  assert.match(actions, /requireContactInAuthorizedWorkspace\(contactId\)/u);
+  assert.match(actions, /requireContactInActiveAuthorizedWorkspace\(contactId\)/u);
   assert.match(actions, /contact\.workspace_id !== workspace\.id/u);
   assert.match(actions, /notice=top_fan_forbidden/u);
 });

@@ -144,7 +144,13 @@ function TopFansWorkspace({
   userEmail,
 }: TopFansWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("top-fans", userEmail);
+    getWorkspaceNavigationForUser(
+      "top-fans",
+      userEmail,
+      "de",
+      0,
+      workspace.role,
+    );
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (

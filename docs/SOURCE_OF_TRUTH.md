@@ -58,6 +58,11 @@ Aktiv beziehungsweise produktnah:
   Server-Actions gegen eine ausschließlich lokale In-Memory-Provider-Fixture;
   nur die KI-Antwort ist synthetisch. Der Nachweis ersetzt keine isolierte
   Staging-, Provider- oder Production-Abnahme;
+- commitgenauer manueller Staging-Kern-/CSV-Abnahmepfad: Der vorbereitete
+  Workflow bindet den tatsächlich deployten `main`-Commit, den markierten
+  synthetischen Owner-/Member-Workspace, reale KI Standard, CSV-Duplikat- und
+  Fehlerzeilen, Zwei-Workspace-RLS sowie ein `always()`-Cleanup. Bis zu seinem
+  tatsächlichen grünen Lauf bleibt die externe Staging-Abnahme offen;
 - consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: ausschließlich `PageView` ohne Eventparameter; keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-/Billing-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; vorbereitete Conversion-Events bleiben ohne separate fachliche und datenschutzrechtliche Freigabe unverdrahtet; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag als kontrollierter echter End-to-End-Billing-Test; gleicher Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Lifecycle wie Starter; kein Referral-Rabatt, kein dauerhaftes öffentliches Paket; eine temporäre Registrierungsfreigabe läuft spätestens nach 24 Stunden ab, lehnt fehlende, ungültige oder in der Zukunft liegende Startzeitpunkte fail-closed ab und bleibt bis zum abgenommenen `service_role`-Provisioning- und Browser-INSERT-Contract sowie vollständiger Daily-Stripe-/Webhook-Konfiguration geschlossen. Nach einer erforderlichen E-Mail-Bestätigung kann ein noch workspace-loses Konto den Daily-Test auf `/workspace/setup` erneut ausdrücklich auswählen, aber nur solange Zeitfenster, RPC-Readiness und Stripe-Vertrag frisch serverseitig bereit sind; persistente Auth-Metadaten gelten weder als Tarif- noch als Zustimmungsnachweis. Der zugehörige SQL-Schritt liegt einzeln freizugebend unter `supabase/controlled/` und bleibt außerhalb generischer Migration Discovery (`docs/operations/INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING.md`).
 
@@ -85,13 +90,13 @@ Aktiv im App-Kern:
 - verschlüsselte Sitzung über `expo-secure-store` und zentralen lokalen Purge beim Abmelden;
 - geschützte Expo-Router-Navigation;
 - Dashboard, Kontaktliste, Suche und Kontaktdetail;
-- Kontakt in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS;
+- Kontakt als Workspace-Owner in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS; Teammitglieder bleiben im CRM-Nur-Lese-Modus;
 - Kontaktwissen;
 - Bearer-authentifizierte serverseitige KI-Antwortvorschläge;
 - Antwort kopieren oder ausschließlich den ausgewählten Antworttext an die
   native Android-/iOS-Teilen-Auswahl übergeben; Zielwahl und finaler Versand
   bleiben beim Menschen;
-- offene Follow-ups anzeigen und mit dem kanonischen Status `completed` abschließen; bestehende `done`-Altdaten bleiben lesekompatibel;
+- offene Follow-ups anzeigen und als Owner mit dem kanonischen Status `completed` abschließen; Teammitglieder lesen nur, bestehende `done`-Altdaten bleiben lesekompatibel;
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit maximal 50 Einträgen, 24-Stunden-Ablauf und Nur-Lesen-Oberfläche;
 - native Push-Grundlage mit validierter Follow-up-Navigation, Auth-Handoff,
   Einmalverarbeitung und ausdrücklichem Opt-in für eine verschlüsselte,
@@ -322,8 +327,11 @@ zwingende externe Freigabe noch fehlt.
   Installation und Origin, verarbeitet Client-UUIDs idempotent und erzeugt
   ausschließlich einen workspace-gebundenen Kontakt, eine Conversation und
   eine eingehende Inbox-Nachricht. Receipt-Daten enthalten keinen
-  Nachrichtentext. Das vorbereitete cookie-freie Einweg-Widget verlangt aktiv
-  bestätigten Consent, hält sein Sitzungstoken ausschließlich im Speicher und
+  Nachrichtentext. Die Ingestion benötigt zusätzlich einen atomaren
+  DB-Processing-Entitlement-Check in derselben Transaktion; ohne diesen Check
+  bleibt jede Installation gesperrt. Das vorbereitete cookie-freie
+  Einweg-Widget verlangt aktiv bestätigten Consent, hält sein Sitzungstoken
+  ausschließlich im Speicher und
   sendet je Nachricht eine Client-UUID. Es stellt keinen Zweiweg-Chat dar;
   Besucher-KI, automatische Antworten und Outbound-Versand bleiben
   unverdrahtet.
@@ -504,8 +512,12 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Loader sind als deploy-before-migrate-Brücke vorbereitet. Die Migration ist
   auf dem getrennten Supabase-Staging angewendet und mit RLS, fehlenden
   Browser-Policies sowie server-only Zugriff nachgeprüft; auf Production ist
-  sie nicht angewendet. Weder Stripe-Webhooks noch produktive KI-Routen
-  verwenden sie; Plus/Ultra bleiben deshalb blockiert.
+  sie nicht angewendet. Der echte Stripe-Webhook ruft die serverseitige
+  Lifecycle-Brücke nur auf, wenn ihr eigenes Persistence-Gate, der
+  Workspace-Vertrag und beide unterschiedlichen KI-Price-IDs explizit
+  konfiguriert sind. Produktive KI-Routen verwenden den Speicher weiterhin
+  nicht; Plus/Ultra bleiben zusätzlich durch ihre zentrale Readiness
+  blockiert.
 - Der checksum-gebundene Entitlement-Migrationsrunner besitzt getrennte
   Offline-Check-, Read-only-Verify- und explizite Apply-Modi. Merge und
   Web-Deploy wenden die Migration nicht automatisch an; Staging-Abnahme bleibt
@@ -516,13 +528,46 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   Supabase-Projekt-/Datenbankziele und eine private Passwortdatei. Er endet
   mit dem read-only Metadaten-Postflight und startet weder die rollback-only
   Abnahme noch einen Production-Schritt automatisch.
-- Der vorbereitete serverseitige Stripe-Lifecycle-Vertrag akzeptiert nur
-  zwei vollständige, unterschiedliche Price-IDs, genau ein passendes
-  Subscription-Item und ein zuvor verifiziertes Workspace-Ziel. Doppelte und
+- Der serverseitige Stripe-Lifecycle-Vertrag akzeptiert nur
+  zwei vollständige, unterschiedliche Price-IDs, eine explizit vollständige
+  Item-Liste, genau ein passendes Subscription-Item und ein zuvor verifiziertes
+  Workspace-Ziel. Alle direkten Workspace-IDs müssen gültig und untereinander
+  sowie mit vorhandenen Stripe-Referenzen identisch sein. Jeder mutierende
+  Eventtyp muss außerdem seine vollständige typisierte Referenzmenge liefern:
+  Invoice und Subscription benötigen Customer plus Basis-Subscription.
+  PaymentIntent-Events müssen Customer plus die neue, typisierte
+  PaymentIntent-ID liefern, werden aber über den stabil gespeicherten Customer
+  aufgelöst, weil wiederkehrende Zahlungen neue PaymentIntent-IDs erzeugen.
+  Refund/Dispute benötigen den PaymentIntent und nutzen den Customer, wenn das
+  Objekt ihn enthält; andernfalls bleibt nur ein bereits gespeicherter
+  PaymentIntent auflösbar. Tax-ID benötigt den Customer. Ein einzelner Treffer
+  neben einer
+  unbekannten oder fremden Referenz innerhalb dieser erforderlichen Menge ist
+  kein Zielnachweis, sondern verlangt Stripe-Retry. Event-lokale Zusatz-IDs,
+  etwa der neue PaymentIntent einer wiederkehrenden Invoice, werden nicht
+  fälschlich als bereits persistierte Tenant-Bindung verlangt. Nur Checkout
+  darf eine noch nicht
+  persistierte Bindung aus übereinstimmender servergesetzter Workspace-
+  Metadatenbindung plus Customer kontrolliert anlegen. Subscription-Events
+  dürfen vor jedem Billing-Write nur die exakt gespeicherte Customer- und
+  Basis-Subscription-Bindung verwenden; ein separates KI-Abo darf die
+  Basis-Subscription nicht überschreiben. Doppelte und
   ältere Events werden nicht erneut angewendet; Zeitkollisionen,
-  Subscription-Wechsel und beschädigte Perioden stoppen fail-closed. Die
-  produktive Webhook-/Datenbank-Verdrahtung bleibt bis zur Staging-Abnahme
-  aus.
+  Subscription-Wechsel, unvollständige Item-Listen und beschädigte Perioden
+  stoppen fail-closed. Entfernt ein neueres Subscription-Event das zuvor
+  gespeicherte Plus-/Ultra-Item, wird der Datensatz `canceled` statt stale
+  aktiv belassen. Insert und Update verwenden ohne Upsert eine persistente
+  Event-Grenze beziehungsweise einen Compare-and-swap-Filter; ein
+  Parallelkonflikt verlangt Stripe-Retry. Die Brücke aktiviert keine
+  KI-Stufe und bleibt ohne ihr dediziertes Persistence-Gate inaktiv.
+- Der allgemeine Billing-Webhook besitzt noch kein gemeinsames
+  transaktionales Event- und Zahlungsledger über Checkout, Invoice,
+  Subscription, PaymentIntent und Refund. Historische Refunds ohne Customer
+  und ohne aktuell gespeicherte PaymentIntent-Bindung bleiben deshalb
+  absichtlich retryable. Ein verspätetes, aber gültiges Basis-Billing-Event
+  darf deshalb vor der echten Stripe-Lifecycle-Abnahme nicht als endgültig
+  geordneter Vertragsnachweis gelten; der persistente Ledger-/RPC-Vertrag
+  bleibt ein Aktivierungsblocker.
 - Ein manueller, rollback-only Staging-Abnahmeworkflow ist vorbereitet. Er
   prüft bei bereits angewendeter Staging-Migration beide aktiven
   Stripe-Testpreise, Owner-/Member-Sperren, Service-Role-CRUD sowie
@@ -685,10 +730,24 @@ Pflichtsatz:
   `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`;
 - `FANMIND_ADMIN_EMAILS` ist die einzige Admin-Quelle;
 - alle workspace-bezogenen Daten benötigen RLS und serverseitige Autorisierung;
+- Der App-/Renderer-Vertrag gibt Membern ausschließlich ein minimales
+  Workspace-Safe-DTO und hält CRM-/AI-/Content-Mutationen sowie Connector-
+  Administration Owner-only und processing-gebunden. Die direkte
+  PostgREST-/JWT-Grenze für volle Workspace-/Legal-Zeilen,
+  Connector-Bindungen, Token-/Syncdaten und zwölf Member-writable Tabellen ist
+  noch nicht als geschlossen belegt: Der checksum-gebundene Control
+  `20260816120000_workspace_member_data_boundary.sql` ist
+  `CHECKED_NOT_APPLIED`. Sein isolierter Apply plus Postflight ist deshalb ein
+  Go-live- und Member-Aktivierungsblocker. Auch ein erfolgreicher RLS-
+  Postflight aktiviert keine Member-Schreibrechte
+  (`docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`).
 - jede Mutation prüft User, Workspace und Ressource;
 - Demo-Workspaces enthalten keine echten Kundendaten;
 - externe Plattform-Login-Daten werden nicht gespeichert;
-- Meta-Zugriffstokens sind verschlüsselt und ausschließlich serverseitig les-/schreibbar; Browser erhalten nur nicht geheime Statusfelder;
+- Meta-Zugriffstokens sind verschlüsselt. Erst nach dem kontrollierten
+  Member-Datengrenzen-Apply ist auch die direkte Browser-ACL nachgewiesen auf
+  nicht geheime Owner-Statusfelder begrenzt; serverseitige Token-Nutzung bleibt
+  davon unabhängig geschützt;
 - schreibende Staging-/Testläufe benötigen alle Bedingungen aus `docs/operations/ENVIRONMENT_SEPARATION.md`;
 - kein Restore gegen Production.
 

@@ -24,7 +24,10 @@ import {
   type MemoryRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
-import { requireAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+import {
+  requireAuthorizedWorkspaceMember,
+  requireContactInActiveAuthorizedWorkspace,
+} from "@/lib/workspaceAuthorization";
 import { isOpenFollowupStatus } from "@/lib/followupStatus";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
@@ -180,8 +183,15 @@ function FanDetailWorkspace({
   locale,
   userEmail,
 }: FanDetailWorkspaceProps) {
+  const memberReadOnly = workspace.role.trim().toLowerCase() !== "owner";
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("fans", userEmail, locale, dueFollowupCount);
+    getWorkspaceNavigationForUser(
+      "fans",
+      userEmail,
+      locale,
+      dueFollowupCount,
+      workspace.role,
+    );
   const userLabel =
     userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const title = contact?.display_name ?? "Fan-Detail";
@@ -218,6 +228,13 @@ function FanDetailWorkspace({
             <strong>{formatNotice(notice, locale)}</strong>
           </p>
         ) : null}
+        {memberReadOnly ? (
+          <p className={styles.safeNotice} role="status">
+            <strong>Teamzugang im Nur-Lese-Modus.</strong> Kontakt- und
+            Nachrichtenkontext bleiben sichtbar; CRM-, KI- und
+            Connector-Aktionen sind dem Workspace-Owner vorbehalten.
+          </p>
+        ) : null}
 
         {contactError ? (
           <p className={dashboardStyles.error}>
@@ -249,6 +266,7 @@ function FanDetailWorkspace({
             allContacts={allContacts}
             demoConnectionsDisabled={demoConnectionsDisabled}
             locale={locale}
+            readOnly={memberReadOnly}
           />
         ) : (
           <FanNotFound />
@@ -280,6 +298,7 @@ function FanDetailContent({
   allContacts,
   demoConnectionsDisabled,
   locale,
+  readOnly,
 }: {
   workspaceName: string;
   contact: ContactRow;
@@ -302,6 +321,7 @@ function FanDetailContent({
   allContacts: ContactRow[];
   demoConnectionsDisabled: boolean;
   locale: FanMindLanguage;
+  readOnly: boolean;
 }) {
   const primaryChannel = formatSource(contact.source_platform);
   const activeFanContacts = getActiveRelatedFanContacts(contact, allContacts);
@@ -374,16 +394,18 @@ function FanDetailContent({
               <small>{wt(locale, "Externe Verbindungen deaktiviert")}</small>
             </span>
           ) : null}
-          <div className={styles.headerActions}>
-            <TopFanToggleForm
-              contactId={contact.id}
-              isTopFan={contact.is_top_fan}
-              returnTo={`/fans/${contact.id}`}
-            />
-            <FanActionMenu
-              fanName={contact.display_name || contact.handle || "Fan"}
-            />
-          </div>
+          {readOnly ? null : (
+            <div className={styles.headerActions}>
+              <TopFanToggleForm
+                contactId={contact.id}
+                isTopFan={contact.is_top_fan}
+                returnTo={`/fans/${contact.id}`}
+              />
+              <FanActionMenu
+                fanName={contact.display_name || contact.handle || "Fan"}
+              />
+            </div>
+          )}
         </div>
         <dl className={styles.headerMetrics}>
           <div className={styles.metric}>
@@ -506,7 +528,7 @@ function FanDetailContent({
                 KI-Vorschläge und interne Bearbeitung können getestet werden.
               </p>
             ) : null}
-            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) &&
+            {!readOnly && shouldShowFacebookHelpers(effectiveChannel, filteredMessages) &&
             !demoConnectionsDisabled ? (
               <div className={styles.syncBox}>
                 <p className={styles.syncHint}>
@@ -540,7 +562,7 @@ function FanDetailContent({
                 )}
               </div>
             ) : null}
-            {shouldShowInstagramHelpers(effectiveChannel, filteredMessages) &&
+            {!readOnly && shouldShowInstagramHelpers(effectiveChannel, filteredMessages) &&
             !demoConnectionsDisabled ? (
               <div className={styles.syncBox}>
                 <p className={styles.syncHint}>
@@ -564,7 +586,7 @@ function FanDetailContent({
                 </form>
               </div>
             ) : null}
-            {shouldShowFacebookHelpers(effectiveChannel, filteredMessages) &&
+            {!readOnly && shouldShowFacebookHelpers(effectiveChannel, filteredMessages) &&
             !demoConnectionsDisabled ? (
               <FacebookReplyTargetCard
                 contact={contact}
@@ -609,7 +631,7 @@ function FanDetailContent({
                       </div>
                       <p>{item.text}</p>
                       <AttachmentPreview attachments={item.attachments} />
-                      {demoConnectionsDisabled ? null : (
+                      {readOnly || demoConnectionsDisabled ? null : (
                         <OriginalChatAction
                           action={item.replyAction}
                           compact
@@ -627,7 +649,8 @@ function FanDetailContent({
               )}
             </div>
           </article>
-          <AiReplySuggestions
+          {readOnly ? null : (
+            <AiReplySuggestions
             contact={{
               contactId: contact.id,
               displayName: contact.display_name,
@@ -653,7 +676,8 @@ function FanDetailContent({
               process.env.FANMIND_ENABLE_TELEGRAM_SEND === "true"
             }
             locale={locale}
-          />
+            />
+          )}
         </main>
 
         <aside
@@ -670,6 +694,7 @@ function FanDetailContent({
             hasNewMessages={hasMessagesAfterReport(messages, fanAnalysisReport)}
             storedMessageCount={messages.length}
             locale={locale}
+            readOnly={readOnly}
           />
         </aside>
       </section>
@@ -1733,7 +1758,7 @@ export default async function FanDetailPage({
   const activeSource = normalizeParam(pageSearchParams?.source) || "all";
   let authorized;
   try {
-    authorized = await requireAuthorizedWorkspace();
+    authorized = await requireAuthorizedWorkspaceMember();
   } catch (error) {
     if (error instanceof Error && error.message === "TEMPORARY_DEMO_DELETED") {
       redirect("/login?demo_deleted=1");
@@ -1748,12 +1773,15 @@ export default async function FanDetailPage({
     lang: pageSearchParams?.lang,
     user,
   });
+  const workspaceOwner = workspace.role.trim().toLowerCase() === "owner";
 
   const [contactsResult, contactResult, socialConnectionsResult] =
     await Promise.all([
       getWorkspaceContacts(workspace.id),
       getWorkspaceContact(workspace.id, id),
-      getWorkspaceSocialConnections(workspace.id),
+      workspaceOwner
+        ? getWorkspaceSocialConnections(workspace.id)
+        : Promise.resolve({ connections: [], error: null }),
     ]);
 
   const contact = contactResult?.contact ?? null;
@@ -1767,7 +1795,7 @@ export default async function FanDetailPage({
         )
       : [];
 
-  if (workspace && contact) {
+  if (workspaceOwner && contact) {
     await Promise.all(
       [contact.id, ...relatedContactIds].map((contactId) =>
         markContactInboundMessagesSeen({
@@ -1816,7 +1844,7 @@ export default async function FanDetailPage({
         contact
           ? getFanAnalysisReport(workspace.id, contact.id)
           : Promise.resolve(null),
-        contact
+        contact && workspaceOwner
           ? getContactReplyTarget(workspace.id, contact.id, "facebook_messages")
           : Promise.resolve(null),
       ])
@@ -1866,17 +1894,25 @@ export default async function FanDetailPage({
         )
       : null) ??
     null;
-  const facebookDirectLinkDiagnosis =
+  let facebookDirectLinkDiagnosis: FacebookDirectLinkSourceDiagnosis | null =
+    null;
+  if (
     !areDemoConnectionsDisabled(user, workspace) &&
-    workspace &&
+    workspaceOwner &&
     contact &&
     facebookConnection
-      ? await diagnoseFacebookDirectLinkSource({
-          connection: facebookConnection,
-          contactHandle: contact.handle,
-          limit: 5,
-        })
-      : null;
+  ) {
+    try {
+      await requireContactInActiveAuthorizedWorkspace(contact.id);
+      facebookDirectLinkDiagnosis = await diagnoseFacebookDirectLinkSource({
+        connection: facebookConnection,
+        contactHandle: contact.handle,
+        limit: 5,
+      });
+    } catch {
+      facebookDirectLinkDiagnosis = null;
+    }
+  }
 
   return (
     <main className={dashboardStyles.page}>

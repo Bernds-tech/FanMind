@@ -100,6 +100,7 @@ export function evaluateStagingSyntheticFixtureEnvironment(environment = {}) {
   const primaryPassword = environment.FANMIND_STAGING_E2E_PASSWORD;
   const secondaryPassword =
     environment.FANMIND_STAGING_E2E_SECONDARY_PASSWORD;
+  const memberPassword = environment.FANMIND_STAGING_E2E_MEMBER_PASSWORD;
   const pgHost = normalizedHost(environment.PGHOST);
   const expectedHost = normalizedHost(environment.FANMIND_TARGET_DB_HOST);
 
@@ -154,7 +155,8 @@ export function evaluateStagingSyntheticFixtureEnvironment(environment = {}) {
   if (
     !validPassword(primaryPassword) ||
     !validPassword(secondaryPassword) ||
-    primaryPassword === secondaryPassword
+    !validPassword(memberPassword) ||
+    new Set([primaryPassword, secondaryPassword, memberPassword]).size !== 3
   ) {
     errors.push("synthetic_passwords");
   }

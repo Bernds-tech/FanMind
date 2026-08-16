@@ -60,6 +60,33 @@ test("workspace processing entitlement allows only explicit active states", () =
     ),
     { allowed: true, reason: "temporary_access" },
   );
+  assert.deepEqual(
+    evaluateWorkspaceProcessingEntitlement(
+      workspace({
+        billing_status: "demo_free",
+        test_access_flags: {
+          fixed_demo_seed_version: "2026-07-26-v1",
+        },
+      }),
+      NOW,
+    ),
+    { allowed: true, reason: "trusted_demo" },
+  );
+  assert.deepEqual(
+    evaluateWorkspaceProcessingEntitlement(
+      workspace({
+        billing_status: "demo_free",
+        test_access_flags: {
+          temporary_demo: true,
+          temporary_processing_access: true,
+          temporary_processing_access_expires_at:
+            "2026-08-11T19:00:00.000Z",
+        },
+      }),
+      NOW,
+    ),
+    { allowed: true, reason: "temporary_access" },
+  );
 });
 
 test("workspace processing entitlement fails closed for ended and blocked states", () => {
@@ -103,6 +130,20 @@ test("workspace processing entitlement fails closed for ended and blocked states
   assert.deepEqual(
     evaluateWorkspaceProcessingEntitlement(
       workspace({
+        billing_status: "refunded",
+        test_access_flags: {
+          temporary_processing_access: true,
+          temporary_processing_access_expires_at:
+            "2026-08-11T19:00:00.000Z",
+        },
+      }),
+      NOW,
+    ),
+    { allowed: false, reason: "billing_ended" },
+  );
+  assert.deepEqual(
+    evaluateWorkspaceProcessingEntitlement(
+      workspace({
         billing_status: "payment_failed",
         billing_grace_until: "2026-08-11T17:59:59.000Z",
       }),
@@ -121,6 +162,16 @@ test("workspace processing entitlement fails closed for ended and blocked states
     evaluateWorkspaceProcessingEntitlement(
       workspace({
         billing_status: "demo_free",
+        test_access_flags: { temporary_demo: true },
+      }),
+      NOW,
+    ),
+    { allowed: false, reason: "billing_ineligible" },
+  );
+  assert.deepEqual(
+    evaluateWorkspaceProcessingEntitlement(
+      workspace({
+        billing_status: "demo_free",
         test_access_flags: {
           temporary_processing_access: true,
           temporary_processing_access_expires_at:
@@ -130,6 +181,36 @@ test("workspace processing entitlement fails closed for ended and blocked states
       NOW,
     ),
     { allowed: false, reason: "temporary_access_expired" },
+  );
+  assert.deepEqual(
+    evaluateWorkspaceProcessingEntitlement(
+      workspace({
+        billing_status: "demo_free",
+        test_access_flags: {
+          temporary_processing_access: true,
+          temporary_processing_access_expires_at: "not-a-timestamp",
+        },
+      }),
+      NOW,
+    ),
+    { allowed: false, reason: "temporary_access_invalid" },
+  );
+  assert.deepEqual(
+    evaluateWorkspaceProcessingEntitlement(
+      workspace({ billing_status: "demo_free" }),
+      NOW,
+    ),
+    { allowed: false, reason: "billing_ineligible" },
+  );
+  assert.deepEqual(
+    evaluateWorkspaceProcessingEntitlement(
+      workspace({
+        billing_status: "demo_free",
+        test_access_flags: { fixed_demo_seed_version: "wrong-version" },
+      }),
+      NOW,
+    ),
+    { allowed: false, reason: "billing_ineligible" },
   );
 });
 

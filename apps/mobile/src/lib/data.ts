@@ -25,6 +25,35 @@ const MEMORY_COLUMNS =
   "id,workspace_id,contact_id,type,content,importance,created_at";
 const FOLLOWUP_COLUMNS =
   "id,workspace_id,contact_id,due_date,priority,reason,status,created_at";
+const MEMBER_SAFE_WORKSPACE_RPC =
+  "get_current_workspace_member_safe_dashboard";
+const MEMBER_MUTATIONS_DISABLED_ERROR =
+  "Teamzugänge sind in der Mobile App derzeit schreibgeschützt.";
+
+type MemberSafeWorkspaceRpcRow = {
+  workspace_id: string;
+  workspace_name: string;
+  plan_id: string;
+  membership_role: string;
+  member_processing_allowed: boolean;
+};
+
+function isOwnerRole(role: Workspace["role"]): boolean {
+  return role === "owner";
+}
+
+function isMissingMemberSafeWorkspaceRpc(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; message?: unknown };
+  const code = String(candidate.code ?? "").trim().toUpperCase();
+  const message = String(candidate.message ?? "").trim().toLowerCase();
+  return (
+    message.includes(MEMBER_SAFE_WORKSPACE_RPC) &&
+    (code === "PGRST202" ||
+      (message.includes("could not find the function") &&
+        message.includes("schema cache")))
+  );
+}
 
 function message(error: unknown, fallback: string): string {
   if (error && typeof error === "object" && "message" in error) {
@@ -65,8 +94,7 @@ export async function loadWorkspace(userId: string): Promise<{
     .from("workspace_members")
     .select("workspace_id,role")
     .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
+    .limit(2);
   if (membershipResult.error) {
     return {
       workspace: null,
@@ -74,32 +102,102 @@ export async function loadWorkspace(userId: string): Promise<{
       offlineEligible: isOfflineEligibleStatus(membershipResult.status),
     };
   }
-  if (!membershipResult.data) {
+  if (!membershipResult.data?.length) {
     return {
       workspace: null,
       error: "Kein FanMind-Workspace gefunden. Bitte schließe zuerst das Onboarding im Web ab.",
       offlineEligible: false,
     };
   }
-
-  const workspaceResult = await supabase
-    .from("workspaces")
-    .select("id,name,owner_user_id,billing_status")
-    .eq("id", membershipResult.data.workspace_id)
-    .limit(1)
-    .maybeSingle();
-  if (workspaceResult.error || !workspaceResult.data) {
+  if (membershipResult.data.length !== 1) {
     return {
       workspace: null,
-      error: "Der zugeordnete Workspace konnte nicht geladen werden.",
+      error: "Mehrere Workspace-Mitgliedschaften müssen zuerst im Web eindeutig ausgewählt werden.",
+      offlineEligible: false,
+    };
+  }
+  const [membership] = membershipResult.data;
+  if (!membership) {
+    return {
+      workspace: null,
+      error: "Die Workspace-Mitgliedschaft konnte nicht eindeutig geladen werden.",
+      offlineEligible: false,
+    };
+  }
+
+  if (String(membership.role).trim().toLowerCase() === "owner") {
+    return {
+      workspace: null,
+      error: "Eine inkonsistente Workspace-Rolle wurde sicher abgelehnt.",
+      offlineEligible: false,
+    };
+  }
+
+  const workspaceResult = await supabase
+    .rpc(MEMBER_SAFE_WORKSPACE_RPC)
+    .select(
+      "workspace_id,workspace_name,plan_id,membership_role,member_processing_allowed",
+    )
+    .maybeSingle();
+  let safeWorkspace = workspaceResult.data as MemberSafeWorkspaceRpcRow | null;
+  if (workspaceResult.error && !isMissingMemberSafeWorkspaceRpc(workspaceResult.error)) {
+    return {
+      workspace: null,
+      error: "Die sichere Workspace-Mitgliederansicht ist noch nicht verifiziert.",
+      offlineEligible: isOfflineEligibleStatus(workspaceResult.status),
+    };
+  }
+  if (workspaceResult.error && isMissingMemberSafeWorkspaceRpc(workspaceResult.error)) {
+    const compatibilityResult = await supabase
+      .from("workspaces")
+      .select("id,name,plan_id")
+      .eq("id", membership.workspace_id)
+      .limit(1)
+      .maybeSingle();
+    if (
+      compatibilityResult.error ||
+      !compatibilityResult.data ||
+      compatibilityResult.data.id !== membership.workspace_id ||
+      typeof compatibilityResult.data.name !== "string" ||
+      typeof compatibilityResult.data.plan_id !== "string"
+    ) {
+      return {
+        workspace: null,
+        error: "Die sichere Workspace-Mitgliederansicht ist noch nicht verifiziert.",
+        offlineEligible: isOfflineEligibleStatus(compatibilityResult.status),
+      };
+    }
+    safeWorkspace = {
+      workspace_id: compatibilityResult.data.id,
+      workspace_name: compatibilityResult.data.name,
+      plan_id: compatibilityResult.data.plan_id,
+      membership_role: "member",
+      member_processing_allowed: false,
+    };
+  }
+  if (
+    !safeWorkspace ||
+    safeWorkspace.workspace_id !== membership.workspace_id ||
+    safeWorkspace.membership_role !== "member" ||
+    typeof safeWorkspace.workspace_name !== "string" ||
+    typeof safeWorkspace.plan_id !== "string" ||
+    typeof safeWorkspace.member_processing_allowed !== "boolean"
+  ) {
+    return {
+      workspace: null,
+      error: "Die sichere Workspace-Mitgliederansicht ist noch nicht verifiziert.",
       offlineEligible: isOfflineEligibleStatus(workspaceResult.status),
     };
   }
   return {
     workspace: {
-      ...workspaceResult.data,
-      role: membershipResult.data.role ?? "member",
-    } as Workspace,
+      id: safeWorkspace.workspace_id,
+      name: safeWorkspace.workspace_name,
+      plan_id: safeWorkspace.plan_id,
+      role: "member",
+      member_safe_projection: true,
+      member_processing_allowed: safeWorkspace.member_processing_allowed,
+    },
     error: null,
     offlineEligible: false,
   };
@@ -205,8 +303,12 @@ function contactValidationMessage(errors: string[]): string {
 
 export async function createContact(input: {
   workspaceId: string;
+  workspaceRole: Workspace["role"];
   draft: ContactDraft;
 }): Promise<{ contact: Contact | null; error: string | null }> {
+  if (!isOwnerRole(input.workspaceRole)) {
+    return { contact: null, error: MEMBER_MUTATIONS_DISABLED_ERROR };
+  }
   const normalized = normalizeContactDraft(input.draft);
   if (!normalized.ok || !normalized.value) {
     return { contact: null, error: contactValidationMessage(normalized.errors) };
@@ -240,9 +342,13 @@ export async function createContact(input: {
 
 export async function updateContact(input: {
   workspaceId: string;
+  workspaceRole: Workspace["role"];
   contactId: string;
   draft: ContactDraft;
 }): Promise<{ contact: Contact | null; error: string | null }> {
+  if (!isOwnerRole(input.workspaceRole)) {
+    return { contact: null, error: MEMBER_MUTATIONS_DISABLED_ERROR };
+  }
   const normalized = normalizeContactDraft(input.draft);
   if (!normalized.ok || !normalized.value) {
     return { contact: null, error: contactValidationMessage(normalized.errors) };
@@ -296,10 +402,12 @@ export async function listContactMemories(
 
 export async function createContactMemory(input: {
   workspaceId: string;
+  workspaceRole: Workspace["role"];
   contactId: string;
   content: string;
   importance?: "low" | "normal" | "high";
 }): Promise<string | null> {
+  if (!isOwnerRole(input.workspaceRole)) return MEMBER_MUTATIONS_DISABLED_ERROR;
   const content = input.content.trim().slice(0, 1200);
   if (!content) return "Kontaktwissen ist leer.";
   const result = await supabase.from("memories").insert({
@@ -330,11 +438,13 @@ export async function listFollowups(
 
 export async function createFollowup(input: {
   workspaceId: string;
+  workspaceRole: Workspace["role"];
   contactId: string;
   dueDate: string;
   reason: string;
   priority?: "low" | "normal" | "high";
 }): Promise<string | null> {
+  if (!isOwnerRole(input.workspaceRole)) return MEMBER_MUTATIONS_DISABLED_ERROR;
   const reason = input.reason.trim().slice(0, 500);
   if (!reason) return "Ein Grund für das Follow-up ist erforderlich.";
   const result = await supabase.from("followups").insert({
@@ -351,7 +461,9 @@ export async function createFollowup(input: {
 export async function completeFollowup(
   workspaceId: string,
   followupId: string,
+  workspaceRole: Workspace["role"],
 ): Promise<string | null> {
+  if (!isOwnerRole(workspaceRole)) return MEMBER_MUTATIONS_DISABLED_ERROR;
   const result = await supabase
     .from("followups")
     .update({ status: CANONICAL_COMPLETED_FOLLOWUP_STATUS })

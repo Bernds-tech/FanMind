@@ -20,7 +20,7 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
   weitergeben; der Share-Payload enthält ausschließlich den ausgewählten
   Antworttext, niemals Kontakt-, Workspace-, Kontext-, Notiz- oder
   Zugangsdaten, und FanMind führt keinen Versand aus;
-- Workspace-Filter plus Supabase RLS bei jeder Kontaktmutation;
+- Owner-Rolle, Workspace-Filter plus Supabase RLS bei jeder Kontaktmutation; Member bleiben read-only;
 - minimale Duplikatprüfung für Handle plus Quelle;
 - verschlüsselte, User-/Workspace-gebundene Offline-Kontaktübersicht mit 24-Stunden-Ablauf, maximal 50 Kontakten und Nur-Lesen-Oberfläche;
 - lokaler Logout-Purge für registrierte FanMind-SecureStore-Schlüssel;
@@ -115,7 +115,7 @@ Keine echten Recovery-URLs, Codes oder Tokens in Screenshots, Tickets oder Chat-
 
 ### Manueller Negativtest im späteren Staging
 
-- Nutzer A darf einen Kontakt in Workspace A anlegen und bearbeiten.
+- Owner A darf einen Kontakt in Workspace A anlegen und bearbeiten; Member A sieht ihn, erhält aber keine Mutationscontrols.
 - Nutzer A darf eine bekannte Kontakt-ID aus Workspace B weder laden noch verändern.
 - Gleicher Handle plus gleiche Quelle wird innerhalb des eigenen Workspaces als mögliches Duplikat abgelehnt.
 - Ein Kontakt aus einem anderen Workspace darf durch die Duplikatprüfung nicht als Information sichtbar werden.

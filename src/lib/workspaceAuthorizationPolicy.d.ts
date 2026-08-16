@@ -1,7 +1,9 @@
 export type WorkspaceAuthorizationErrorCode =
   | "unauthenticated"
   | "workspace_missing"
-  | "resource_forbidden";
+  | "resource_forbidden"
+  | "workspace_inactive"
+  | "workspace_member_mutations_disabled";
 
 export class WorkspaceAuthorizationError extends Error {
   constructor(message: string, code: WorkspaceAuthorizationErrorCode);

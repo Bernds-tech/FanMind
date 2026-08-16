@@ -4,7 +4,6 @@ import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceConversationMessages,
   getWorkspaceOpenFollowups,
@@ -15,6 +14,7 @@ import {
   type ConversationMessageRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getUserAuthorizedWorkspaceDashboard } from "@/lib/workspaceAuthorization";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
@@ -127,9 +127,16 @@ function FansWorkspace({
   locale,
   userEmail,
 }: FansWorkspaceProps) {
+  const memberReadOnly = workspace.role.trim().toLowerCase() !== "owner";
   const dueFollowupCount = countDueOrOverdueOpenFollowups(followups);
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("fans", userEmail, locale, dueFollowupCount);
+    getWorkspaceNavigationForUser(
+      "fans",
+      userEmail,
+      locale,
+      dueFollowupCount,
+      workspace.role,
+    );
   const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
   const fanGroups = groupContactsByFan(
     contacts,
@@ -154,8 +161,12 @@ function FansWorkspace({
         title: wt(locale, "Fans"),
         subtitle: wt(locale, "Willkommen zurück, Pilot Test 👋"),
         searchPlaceholder: wt(locale, "Suche nach Name, Tag, Kanal, Sprache ..."),
-        primaryActionLabel: wt(locale, "+ Neuer Fan"),
-        primaryActionHref: "#new-fan-modal",
+        ...(memberReadOnly
+          ? {}
+          : {
+              primaryActionLabel: wt(locale, "+ Neuer Fan"),
+              primaryActionHref: "#new-fan-modal",
+            }),
         searchAction: "/fans",
         searchValue: searchQuery,
         hiddenSearchParams: {
@@ -174,6 +185,12 @@ function FansWorkspace({
           id="fans-list"
           aria-label="Fans-Liste"
         >
+          {memberReadOnly ? (
+            <p className={styles.successNotice} role="status">
+              Teamzugang im Nur-Lese-Modus: Fans, Nachrichten, Kontaktwissen und
+              Follow-ups können angesehen, aber nicht verändert werden.
+            </p>
+          ) : null}
           {notice ? (
             <p
               className={
@@ -218,12 +235,18 @@ function FansWorkspace({
             <>
               <div className={styles.listToolbar}>
                 <ChannelFilters activeChannel={activeChannel} searchQuery={searchQuery} locale={locale} />
-                <Link className={styles.importLink} href="/fans/import">
-                  {wt(locale, "CSV importieren")}
-                </Link>
+                {memberReadOnly ? null : (
+                  <Link className={styles.importLink} href="/fans/import">
+                    {wt(locale, "CSV importieren")}
+                  </Link>
+                )}
               </div>
               {visibleFanGroups.length ? (
-                <FansTable fanGroups={visibleFanGroups} locale={locale} />
+                <FansTable
+                  fanGroups={visibleFanGroups}
+                  locale={locale}
+                  readOnly={memberReadOnly}
+                />
               ) : (
                 <div className={dashboardStyles.emptyState}>
                   <strong>Keine Fans gefunden.</strong>
@@ -234,17 +257,18 @@ function FansWorkspace({
               )}
             </>
           ) : (
-            <FansEmptyState locale={locale} />
+            <FansEmptyState locale={locale} readOnly={memberReadOnly} />
           )}
         </section>
 
-        <section
-          className={styles.modalOverlay}
-          id="new-fan-modal"
-          aria-labelledby="new-fan-title"
-          role="dialog"
-          aria-modal="true"
-        >
+        {memberReadOnly ? null : (
+          <section
+            className={styles.modalOverlay}
+            id="new-fan-modal"
+            aria-labelledby="new-fan-title"
+            role="dialog"
+            aria-modal="true"
+          >
           <div className={styles.modalCard}>
             <div className={styles.modalHeader}>
               <div>
@@ -332,15 +356,18 @@ function FansWorkspace({
               </div>
             </form>
           </div>
-        </section>
+          </section>
+        )}
 
-        {fanGroups.map((group) => (
-          <EditFanModal
-            allGroups={fanGroups}
-            group={group}
-            key={getEditModalKey(group)}
-          />
-        ))}
+        {memberReadOnly
+          ? null
+          : fanGroups.map((group) => (
+              <EditFanModal
+                allGroups={fanGroups}
+                group={group}
+                key={getEditModalKey(group)}
+              />
+            ))}
       </div>
     </WorkspaceShell>
   );
@@ -400,7 +427,15 @@ function getFansListHref(
   return queryString ? `/fans?${queryString}#fans-list` : "/fans#fans-list";
 }
 
-function FansTable({ fanGroups, locale }: { fanGroups: FanGroup[]; locale: FanMindLanguage }) {
+function FansTable({
+  fanGroups,
+  locale,
+  readOnly,
+}: {
+  fanGroups: FanGroup[];
+  locale: FanMindLanguage;
+  readOnly: boolean;
+}) {
   return (
     <div className={styles.crmTableWrap}>
       <table className={styles.crmTable}>
@@ -444,12 +479,14 @@ function FansTable({ fanGroups, locale }: { fanGroups: FanGroup[]; locale: FanMi
                 <span className={group.isTopFan ? styles.topFanBadge : styles.mutedText}>
                   {group.isTopFan ? "Top Fan" : "—"}
                 </span>
-                <TopFanToggleForm
-                  compact
-                  contactId={group.primaryContact.id}
-                  isTopFan={group.primaryContact.is_top_fan}
-                  returnTo="/fans#fans-list"
-                />
+                {readOnly ? null : (
+                  <TopFanToggleForm
+                    compact
+                    contactId={group.primaryContact.id}
+                    isTopFan={group.primaryContact.is_top_fan}
+                    returnTo="/fans#fans-list"
+                  />
+                )}
               </td>
               <td>{renderPlatformBadges(group.platforms)}</td>
               <td>
@@ -786,26 +823,34 @@ function PlatformCheckboxes({
   );
 }
 
-function FansEmptyState({ locale }: { locale: FanMindLanguage }) {
+function FansEmptyState({
+  locale,
+  readOnly,
+}: {
+  locale: FanMindLanguage;
+  readOnly: boolean;
+}) {
   return (
     <div className={dashboardStyles.emptyState}>
       <strong>Noch keine echten Fans gespeichert</strong>
       <p>
-        Lege den ersten Fan manuell an oder importiere eine vorbereitete
-        Kontaktliste per CSV. FanMind behauptet hier keine aktive Instagram-,
-        TikTok- oder Plattform-Synchronisation.
+        {readOnly
+          ? "Sobald der Workspace-Owner Fans hinzufügt, erscheinen sie hier für Teammitglieder im Nur-Lese-Modus."
+          : "Lege den ersten Fan manuell an oder importiere eine vorbereitete Kontaktliste per CSV. FanMind behauptet hier keine aktive Instagram-, TikTok- oder Plattform-Synchronisation."}
       </p>
-      <div className={dashboardStyles.emptyActions}>
-        <Link
-          className={dashboardStyles.primaryButton}
-          href="/fans#new-fan-modal"
-        >
-          Ersten Fan anlegen
-        </Link>
-        <Link className={dashboardStyles.secondaryButton} href="/fans/import">
-          {wt(locale, "CSV importieren")}
-        </Link>
-      </div>
+      {readOnly ? null : (
+        <div className={dashboardStyles.emptyActions}>
+          <Link
+            className={dashboardStyles.primaryButton}
+            href="/fans#new-fan-modal"
+          >
+            Ersten Fan anlegen
+          </Link>
+          <Link className={dashboardStyles.secondaryButton} href="/fans/import">
+            {wt(locale, "CSV importieren")}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -1194,7 +1239,7 @@ export default async function FansPage({ searchParams }: FansPageProps) {
   }
 
   const locale = await resolveWorkspaceLocale({ lang: resolvedSearchParams?.lang, user: data.user });
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }

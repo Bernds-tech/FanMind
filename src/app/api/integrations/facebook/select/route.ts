@@ -11,8 +11,8 @@ import { isTrustedFanMindMutationRequest } from "@/lib/httpMutationPolicy.mjs";
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
 import {
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
 } from "@/lib/supabase/server";
+import { requireActiveAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +24,17 @@ export async function POST(request: NextRequest) {
   const { data } = await getSupabaseServerUser();
   if (!data.user) return redirectResponse(request, "/login");
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  const workspace = workspaceResult.workspace;
-  if (!workspace)
+  let activeContext;
+  try {
+    activeContext = await requireActiveAuthorizedWorkspace();
+  } catch {
+    return clearAndRedirect(
+      request,
+      "/channels?facebook_error=workspace_inactive",
+    );
+  }
+  const workspace = activeContext.workspace;
+  if (activeContext.user.id !== data.user.id)
     return clearAndRedirect(request, "/channels?facebook_error=workspace");
   if (!canManageMetaConnections(workspace.role))
     return clearAndRedirect(request, "/channels?facebook_error=role");

@@ -52,6 +52,7 @@ export default function EditContactScreen() {
     setError(null);
     const result = await updateContact({
       workspaceId: workspace.id,
+      workspaceRole: workspace.role,
       contactId,
       draft,
     });
@@ -82,6 +83,20 @@ export default function EditContactScreen() {
             workspaceError ??
             "Schließe zuerst das FanMind-Onboarding ab, bevor du Kontakte bearbeitest."
           }
+        />
+      </Screen>
+    );
+  }
+
+  if (workspace.role !== "owner") {
+    return (
+      <Screen
+        title="Kontakt bearbeiten"
+        right={<SecondaryButton onPress={() => router.back()}>Zurück</SecondaryButton>}
+      >
+        <EmptyState
+          title="Teamzugang · nur lesen"
+          description="Kontakte können mit einem Teamzugang derzeit sicher gelesen, aber nicht bearbeitet werden."
         />
       </Screen>
     );

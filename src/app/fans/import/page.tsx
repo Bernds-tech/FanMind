@@ -3,14 +3,15 @@ import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { getWorkspaceKpiStatsFromContacts } from "@/lib/workspaceKpiStats";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   signOutSupabaseServerSession,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getUserAuthorizedWorkspaceDashboard } from "@/lib/workspaceAuthorization";
 import dashboardStyles from "../../dashboard/dashboard.module.css";
 import { CsvImportClient } from "./CsvImportClient";
 
@@ -52,8 +53,9 @@ function CsvImportWorkspace({
   userEmail: string | null | undefined;
   contactsError?: string;
 }) {
+  const memberReadOnly = workspace.role.trim().toLowerCase() !== "owner";
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("fans", userEmail);
+    getWorkspaceNavigationForUser("fans", userEmail, "de", 0, workspace.role);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (
@@ -83,7 +85,19 @@ function CsvImportWorkspace({
           <span>{contactsError}</span>
         </p>
       ) : null}
-      <CsvImportClient />
+      {memberReadOnly ? (
+        <section className={dashboardStyles.moduleCard} role="status">
+          <p className={dashboardStyles.eyebrow}>Nur-Lese-Teamzugang</p>
+          <h2>CSV-Import ist dem Workspace-Owner vorbehalten.</h2>
+          <p>
+            Teammitglieder können vorhandene Fans ansehen. Import und andere
+            CRM-Änderungen bleiben bis zu einem atomaren Datenbankvertrag
+            deaktiviert.
+          </p>
+        </section>
+      ) : (
+        <CsvImportClient />
+      )}
     </WorkspaceShell>
   );
 }
@@ -95,12 +109,17 @@ export default async function CsvImportPage() {
     redirect("/login");
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }
 
   const workspace = workspaceResult.workspace;
+  const preActivationRedirect = getPreActivationRedirect(
+    workspace,
+    data.user.email,
+  );
+  if (preActivationRedirect) redirect(preActivationRedirect);
   const contactsResult = workspace
     ? await getWorkspaceContacts(workspace.id)
     : null;

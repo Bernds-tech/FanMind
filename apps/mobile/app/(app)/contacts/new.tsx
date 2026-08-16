@@ -27,6 +27,7 @@ export default function NewContactScreen() {
     setError(null);
     const result = await createContact({
       workspaceId: workspace.id,
+      workspaceRole: workspace.role,
       draft,
     });
     setBusy(false);
@@ -56,6 +57,20 @@ export default function NewContactScreen() {
             workspaceError ??
             "Schließe zuerst das FanMind-Onboarding ab, bevor du Kontakte anlegst."
           }
+        />
+      </Screen>
+    );
+  }
+
+  if (workspace.role !== "owner") {
+    return (
+      <Screen
+        title="Kontakt anlegen"
+        right={<SecondaryButton onPress={() => router.back()}>Zurück</SecondaryButton>}
+      >
+        <EmptyState
+          title="Teamzugang · nur lesen"
+          description="Kontakte können mit einem Teamzugang derzeit sicher gelesen, aber nicht angelegt werden."
         />
       </Screen>
     );

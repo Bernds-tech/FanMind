@@ -38,6 +38,7 @@ type Props = {
   hasNewMessages: boolean;
   storedMessageCount: number;
   locale: FanMindLanguage;
+  readOnly: boolean;
 };
 
 const tabs: Array<{ id: ContextTab; de: string; en: string }> = [
@@ -57,6 +58,7 @@ export function FanContextPanel({
   hasNewMessages,
   storedMessageCount,
   locale,
+  readOnly,
 }: Props) {
   const [activeTab, setActiveTab] = useState<ContextTab>(() => {
     if (typeof window === "undefined") return "notes";
@@ -127,7 +129,7 @@ export function FanContextPanel({
         >
           <p className={dashboardStyles.eyebrow}>{activeLabel}</p>
           {activeTab === "notes" ? (
-            <FanNotesCard contact={contact} locale={locale} />
+            <FanNotesCard contact={contact} locale={locale} readOnly={readOnly} />
           ) : null}
           {activeTab === "knowledge" ? (
             <ContactKnowledgeCard
@@ -135,6 +137,7 @@ export function FanContextPanel({
               memories={memories}
               memoriesError={memoriesError}
               locale={locale}
+              readOnly={readOnly}
             />
           ) : null}
           {activeTab === "followups" ? (
@@ -142,6 +145,7 @@ export function FanContextPanel({
               contactId={contact.id}
               followups={followups}
               locale={locale}
+              readOnly={readOnly}
             />
           ) : null}
           {activeTab === "analysis" ? (
@@ -153,6 +157,7 @@ export function FanContextPanel({
                 locale={locale}
                 hasNewMessages={hasNewMessages}
                 storedMessageCount={storedMessageCount}
+                readOnly={readOnly}
               />
             </div>
           ) : null}
@@ -187,9 +192,11 @@ function PanelCard({
 function FanNotesCard({
   contact,
   locale,
+  readOnly,
 }: {
   contact: ContactRow;
   locale: FanMindLanguage;
+  readOnly: boolean;
 }) {
   return (
     <PanelCard
@@ -200,7 +207,13 @@ function FanNotesCard({
           : "Interne Team-Notizen zu diesem Kontakt."
       }
     >
-      <form action={saveContactInternalNotes} className={styles.notesForm}>
+      {readOnly ? (
+        <p className={styles.reportIntro} style={{ whiteSpace: "pre-wrap" }}>
+          {contact.internal_notes?.trim() ||
+            (locale === "en" ? "No internal notes saved." : "Keine internen Notizen gespeichert.")}
+        </p>
+      ) : (
+        <form action={saveContactInternalNotes} className={styles.notesForm}>
         <input name="contact_id" type="hidden" value={contact.id} />
         <input name="lang" type="hidden" value={locale} />
         <textarea
@@ -223,7 +236,8 @@ function FanNotesCard({
             {wt(locale, "Notizen speichern")}
           </button>
         </div>
-      </form>
+        </form>
+      )}
     </PanelCard>
   );
 }
@@ -233,11 +247,13 @@ function ContactKnowledgeCard({
   memories,
   memoriesError,
   locale,
+  readOnly,
 }: {
   contactId: string;
   memories: MemoryRow[];
   memoriesError?: string;
   locale: FanMindLanguage;
+  readOnly: boolean;
 }) {
   return (
     <PanelCard
@@ -248,13 +264,14 @@ function ContactKnowledgeCard({
           : "Geprüfte Fakten, Vorlieben und Zusagen, die FanMind bei künftigen Vorschlägen berücksichtigen darf."
       }
     >
-      <DisclosureButton
-        label={
-          locale === "en"
-            ? "+ Add contact knowledge"
-            : "+ Kontaktwissen hinzufügen"
-        }
-      >
+      {readOnly ? null : (
+        <DisclosureButton
+          label={
+            locale === "en"
+              ? "+ Add contact knowledge"
+              : "+ Kontaktwissen hinzufügen"
+          }
+        >
         <form action={saveManualMemory} className={styles.manualActionForm}>
           <input name="contact_id" type="hidden" value={contactId} />
           <input name="lang" type="hidden" value={locale} />
@@ -306,7 +323,8 @@ function ContactKnowledgeCard({
               : "Kontaktwissen speichern"}
           </button>
         </form>
-      </DisclosureButton>
+        </DisclosureButton>
+      )}
       {memoriesError ? (
         <p className={dashboardStyles.error}>
           <strong>
@@ -321,6 +339,7 @@ function ContactKnowledgeCard({
         contactId={contactId}
         memories={memories}
         locale={locale}
+        readOnly={readOnly}
       />
     </PanelCard>
   );
@@ -330,10 +349,12 @@ function ContactKnowledgeList({
   contactId,
   memories,
   locale,
+  readOnly,
 }: {
   contactId: string;
   memories: MemoryRow[];
   locale: FanMindLanguage;
+  readOnly: boolean;
 }) {
   if (!memories.length) {
     return (
@@ -363,7 +384,8 @@ function ContactKnowledgeList({
             </small>
           </div>
           <p className={polishStyles.knowledgeContent}>{memory.content}</p>
-          <div className={polishStyles.itemActions}>
+          {readOnly ? null : (
+            <div className={polishStyles.itemActions}>
             <details className={polishStyles.itemEditor}>
               <summary>
                 {locale === "en" ? "Edit" : "Bearbeiten"}
@@ -441,7 +463,8 @@ function ContactKnowledgeList({
                 {locale === "en" ? "Delete" : "Löschen"}
               </button>
             </form>
-          </div>
+            </div>
+          )}
         </article>
       ))}
     </div>
@@ -452,10 +475,12 @@ function ManualFollowupCard({
   contactId,
   followups,
   locale,
+  readOnly,
 }: {
   contactId: string;
   followups: FollowupRow[];
   locale: FanMindLanguage;
+  readOnly: boolean;
 }) {
   const sortedFollowups = useMemo(
     () =>
@@ -476,9 +501,10 @@ function ManualFollowupCard({
           : "Offene Erinnerungen und nächste Schritte zu diesem Kontakt."
       }
     >
-      <DisclosureButton
-        label={locale === "en" ? "+ Add follow-up" : "+ Follow-up"}
-      >
+      {readOnly ? null : (
+        <DisclosureButton
+          label={locale === "en" ? "+ Add follow-up" : "+ Follow-up"}
+        >
         <form action={saveManualFollowup} className={styles.manualActionForm}>
           <input name="contact_id" type="hidden" value={contactId} />
           <input name="lang" type="hidden" value={locale} />
@@ -509,11 +535,13 @@ function ManualFollowupCard({
             {locale === "en" ? "Save" : "Speichern"}
           </button>
         </form>
-      </DisclosureButton>
+        </DisclosureButton>
+      )}
       <CompactFollowupList
         contactId={contactId}
         followups={sortedFollowups}
         locale={locale}
+        readOnly={readOnly}
       />
     </PanelCard>
   );
@@ -538,10 +566,12 @@ function CompactFollowupList({
   contactId,
   followups,
   locale,
+  readOnly,
 }: {
   contactId: string;
   followups: FollowupRow[];
   locale: FanMindLanguage;
+  readOnly: boolean;
 }) {
   return (
     <div className={polishStyles.knowledgeList}>
@@ -562,28 +592,32 @@ function CompactFollowupList({
                 {locale === "en" ? "Due" : "Fällig"}:{" "}
                 {formatDate(followup.due_date, locale)}
               </small>
-              <FollowupStatusForm
-                contactId={contactId}
-                followup={followup}
-                locale={locale}
-                returnTo="contact"
-              />
-              <form
-                action={deleteManualFollowup}
-                onSubmit={(event: FormEvent<HTMLFormElement>) => {
-                  const confirmed = window.confirm(
-                    "Dieses Follow-up wirklich löschen?",
-                  );
-                  if (!confirmed) event.preventDefault();
-                }}
-              >
-                <input name="contact_id" type="hidden" value={contactId} />
-                <input name="followup_id" type="hidden" value={followup.id} />
-                <input name="lang" type="hidden" value={locale} />
-                <button className={polishStyles.deleteButton} type="submit">
-                  {locale === "en" ? "Delete" : "Löschen"}
-                </button>
-              </form>
+              {readOnly ? null : (
+                <>
+                  <FollowupStatusForm
+                    contactId={contactId}
+                    followup={followup}
+                    locale={locale}
+                    returnTo="contact"
+                  />
+                  <form
+                    action={deleteManualFollowup}
+                    onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                      const confirmed = window.confirm(
+                        "Dieses Follow-up wirklich löschen?",
+                      );
+                      if (!confirmed) event.preventDefault();
+                    }}
+                  >
+                    <input name="contact_id" type="hidden" value={contactId} />
+                    <input name="followup_id" type="hidden" value={followup.id} />
+                    <input name="lang" type="hidden" value={locale} />
+                    <button className={polishStyles.deleteButton} type="submit">
+                      {locale === "en" ? "Delete" : "Löschen"}
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
           </article>
         ))

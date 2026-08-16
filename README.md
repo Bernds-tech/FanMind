@@ -22,7 +22,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Postflight sind getrennt vom Web-Deploy; Meta-Verbindungen und Analysen
   bleiben deaktiviert. Ablauf:
   `docs/operations/META_CONTENT_STAGING_MIGRATION.md`.
-- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
+- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Owner-Kontaktanlage/-bearbeitung, Member-Nur-Lesezugang, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Mobile-Signing-Gate: ein manueller `main`-gebundener Ablauf kann nach
   erfolgreichem Ressourcencheck genau einen credential-frozen internen
   Development-/Preview-Build einreihen und dessen EAS-Endstatus read-only bis
@@ -73,8 +73,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Serverseitiger Entitlement-Vertrag: fehlende, unbekannte, client-kontrollierte, pausierte, nicht gestartete, abgelaufene oder unvollständig freigegebene Plus-/Ultra-Zustände fallen immer auf KI Standard zurück.
 - Persistenter Entitlement-Speicher: server-only Tabelle und redigierender
   Loader sind auf dem getrennten Supabase-Staging migriert und nachgeprüft;
-  Production-Migration, Stripe-Lifecycle und produktive KI-Verdrahtung sind
-  nicht freigegeben, daher bleiben Plus/Ultra blockiert.
+  der echte Stripe-Webhook enthält nun eine standardmäßig inaktive,
+  optimistisch gesperrte Lifecycle-Brücke. Sie arbeitet erst bei eigenem
+  Persistence-Gate, bestätigtem Workspace-Vertrag und zwei unterschiedlichen
+  serverseitigen KI-Price-IDs.
+  Production-Migration und produktive KI-Nutzung sind nicht freigegeben,
+  daher bleiben Plus/Ultra blockiert.
 - Kontrollierter Entitlement-Migrationspfad: `npm run db:ai-tier-entitlements:check` prüft die festgeschriebene Migration offline; `verify` und `apply` sind explizit zielgebunden und führen niemals automatisch durch einen Web-Deploy aus. Der manuelle, ausschließlich auf `main` und das GitHub-Environment `staging` begrenzte Workflow `FanMind AI Tier Staging Migration` bereitet den echten Staging-Apply samt Postflight vor.
 - KI-Stufen-Staging-Abnahme: manueller rollback-only Workflow für getrennte
   Staging-Datenbank, synthetischen Owner-/Member-Workspace und Stripe-Testpreise
@@ -151,7 +155,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   exklusiv übernehmen und nur ihre eigene Zuweisung freigeben; Status,
   nächster Schritt und Nachrichtentext bleiben unverändert und es wird nichts
   automatisch versendet.
-- Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte, verspätete und gleichzeitige Stripe-Events; noch ohne produktive Webhook- oder Datenbank-Verdrahtung.
+- Vorbereiteter KI-Add-on-Lifecycle: eine serverseitige Price-Allowlist sowie
+  fail-closed Regeln für Workspace-Ziel, Subscription-Item, doppelte,
+  verspätete und gleichzeitige Stripe-Events. Der echte Webhook enthält die
+  standardmäßig inaktive, zielgebundene Persistenzbrücke; der Speicher ist nur
+  auf dem getrennten Staging angewendet. Production-Datenbank, produktive
+  KI-Routen und Plus-/Ultra-Aktivierung bleiben gesperrt.
 - Referral-Rabatte gelten nur auf die Starter-Grundgebühr von 312 €/Monat. Einrichtung, KI-Add-ons, Connection-Pakete und Agency-Erweiterungen sind nicht rabattfähig; Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 - Growth, Agency und Enterprise bleiben Roadmap / Coming Soon / Auf Anfrage, bis sie ausdrücklich freigegeben sind.
 - Verbindliche Kanal-Roadmap: Phase 3 = Facebook, Instagram und WhatsApp; Phase 7 = TikTok, X/Twitter, Discord und die unverbindliche OnlyFans-Prüfung; Phase 8 = LinkedIn und alle übrigen späteren Plattformanbindungen. Phase 8 ist noch nicht begonnen, wird aktuell nicht gebaut und zählt nicht als Fortschritt.
@@ -217,6 +226,13 @@ Auth-/PostgREST-Fixture; nur die KI-Antwort wird synthetisch erfüllt. Dieser
 Nachweis ersetzt weder die isolierte Staging-, Provider- noch
 Production-Abnahme.
 
+Der manuelle Workflow `FanMind Staging Core and CSV Acceptance` ist für den
+darauffolgenden realen Nachweis vorbereitet. Er bindet sich an den exakt auf
+dem isolierten Staging deployten `main`-Commit, führt den Owner-/Member-
+Kernfluss mit echter KI Standard und einer kontrollierten CSV aus und beweist
+anschließend das vollständige Cleanup. Er ist noch nicht ausgeführt und gilt
+deshalb nicht als abgeschlossene Staging-Abnahme.
+
 ## Technik
 
 - Framework: Next.js `16.3.0`
@@ -267,12 +283,12 @@ Bereits vorhanden:
 - native E-Mail-/Passwort-Anmeldung und sichere Gerätesitzung;
 - PKCE-basierte Passwort-Recovery über `fanmind://reset-password` mit strikter Callback-Validierung;
 - Dashboard, Kontaktliste, Suche und Kontaktdetail;
-- Kontakte in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS;
+- Kontakte als Workspace-Owner in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS; Teammitglieder bleiben im CRM-Nur-Lese-Modus;
 - Kontaktwissen und serverseitige KI-Antwortvorschläge;
 - Antwort kopieren oder ausschließlich den ausgewählten Antworttext über die
   native Android-/iOS-Teilen-Auswahl weitergeben; FanMind wählt weder Ziel noch
   Empfänger und sendet nicht selbst;
-- offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
+- offene Follow-ups anzeigen und als Owner mit `completed` abschließen; Teammitglieder lesen nur, Altdaten mit `done` bleiben kompatibel;
 - verschlüsselte, höchstens 24 Stunden alte Offline-Übersicht mit maximal 50 Kontakten; nur Name, Handle, Plattform, Status und Änderungszeit, ausschließlich lesbar;
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
 - native Push-Grundlage mit validierter Follow-up-Navigation, sicherem
@@ -404,6 +420,19 @@ Die aktuelle Datenbankwahrheit steht in:
 - `src/lib/supabase/server.ts`
 
 Workspace-scoped Daten müssen per RLS und serverseitiger Autorisierung geschützt sein. Vor echten Kundendaten ist `docs/SECURITY_RLS_SECRETS_CHECK.md` abzuarbeiten.
+
+Die vorbereitete Member-Datengrenze liegt checksum-gebunden unter
+`supabase/controlled/20260816120000_workspace_member_data_boundary.sql` und
+steht auf `CHECKED_NOT_APPLIED`. Der App-/Renderer-Stand gibt Membern nur das
+Safe-DTO und hält Web- und Mobile-Mutationen Owner-only. Die direkte
+PostgREST-/JWT-Grenze ersetzt den Zugriff auf die volle Workspace-Zeile,
+härtet CRM-/AI-/Content-Writes auf aktive Owner und reduziert
+`social_connections` jedoch erst nach dem isoliert nachgewiesenen Control-
+Apply. Bis Apply plus Postflight belegt sind, bleibt diese direkte DB-Grenze
+ein Go-live- und Member-Aktivierungsblocker. Auch danach aktiviert sie keine
+Member-Schreibrechte; dafür wäre ein separat geprüfter atomarer DB-RPC-Vertrag
+nötig. Runbook:
+`docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`.
 
 Die Härtung serververwalteter Workspace-Felder wird deploy-before-migrate als
 Expand-/Contract-Rollout ausgerollt: Der App-Brückenstand fällt ausschließlich

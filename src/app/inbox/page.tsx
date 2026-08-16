@@ -42,6 +42,7 @@ import {
   requireAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
+import { getPreActivationRedirect } from "@/lib/preActivation";
 
 type InboxPageProps = {
   searchParams?: Promise<{
@@ -163,6 +164,8 @@ const inboxTranslations: Record<string, string> = {
   "lokal abgeleitet": "derived locally",
   "Conversation wurde dir zugewiesen.": "Conversation assigned to you.",
   "Conversation wurde für das Team freigegeben.": "Conversation released to the team.",
+  "Teamzugang im Nur-Lese-Modus: Zuweisen, Freigeben, Antworten vorbereiten und Follow-ups planen ist nur für den Workspace-Owner möglich.":
+    "Read-only team access: assigning, releasing, preparing replies, and planning follow-ups is available only to the workspace owner.",
   "Conversation konnte nicht eindeutig bestimmt werden.": "Conversation could not be identified unambiguously.",
   "Conversation ist in diesem Workspace nicht verfügbar.": "Conversation is not available in this workspace.",
   "Zuweisung wurde nicht geändert. Bitte aktualisiere die Inbox und versuche es erneut.":
@@ -239,8 +242,15 @@ function InboxWorkspace({
   notice,
   locale,
 }: InboxWorkspaceProps) {
+  const memberReadOnly = workspace.role.trim().toLowerCase() !== "owner";
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("inbox", userEmail, locale);
+    getWorkspaceNavigationForUser(
+      "inbox",
+      userEmail,
+      locale,
+      0,
+      workspace.role,
+    );
   const activeContactIds = new Set(contacts.map((contact) => contact.id));
   const activeFollowups = followups.filter((followup) =>
     activeContactIds.has(followup.contact_id),
@@ -307,6 +317,11 @@ function InboxWorkspace({
             {getNoticeMessage(notice, locale)}
           </p>
         ) : null}
+        {memberReadOnly ? (
+          <p className={styles.noticeCard} role="status">
+            {inboxText(locale, "Teamzugang im Nur-Lese-Modus: Zuweisen, Freigeben, Antworten vorbereiten und Follow-ups planen ist nur für den Workspace-Owner möglich.")}
+          </p>
+        ) : null}
 
         <section className={styles.kpiGrid} aria-label={inboxText(locale, "Inbox Kennzahlen")}>
           {kpis.map((kpi) => (
@@ -368,7 +383,12 @@ function InboxWorkspace({
             </nav>
 
             {visibleItems.length ? (
-              <QueueList items={visibleItems} userId={userId} locale={locale} />
+              <QueueList
+                items={visibleItems}
+                userId={userId}
+                locale={locale}
+                readOnly={memberReadOnly}
+              />
             ) : (
               <EmptyState hasSearch={Boolean(searchQuery)} locale={locale} />
             )}
@@ -406,7 +426,17 @@ function ErrorBox({ title, message }: { title: string; message: string }) {
   );
 }
 
-function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId: string; locale: FanMindLanguage }) {
+function QueueList({
+  items,
+  userId,
+  locale,
+  readOnly,
+}: {
+  items: InboxQueueItem[];
+  userId: string;
+  locale: FanMindLanguage;
+  readOnly: boolean;
+}) {
   return (
     <div
       className={styles.queueTable}
@@ -504,7 +534,7 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
               </small>
             ) : null}
             <div className={styles.rowActions}>
-              {item.conversationId && item.assignmentSupported && !item.assignedUserId ? (
+              {!readOnly && item.conversationId && item.assignmentSupported && !item.assignedUserId ? (
                 <form
                   action={claimConversation}
                 >
@@ -519,7 +549,7 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
                   </button>
                 </form>
               ) : null}
-              {item.conversationId && item.assignmentSupported && item.assignedUserId === userId ? (
+              {!readOnly && item.conversationId && item.assignmentSupported && item.assignedUserId === userId ? (
                 <form action={releaseConversation}>
                   <input
                     name="conversation_id"
@@ -530,12 +560,16 @@ function QueueList({ items, userId, locale }: { items: InboxQueueItem[]; userId:
                   <button type="submit">{inboxText(locale, "Freigeben")}</button>
                 </form>
               ) : null}
-              <Link href={localizedWorkspaceHref(`/fans/${item.contactId}?focus=reply`, locale)}>
-                {inboxText(locale, "Antwort vorbereiten")}
-              </Link>
-              <Link href={localizedWorkspaceHref(`/fans/${item.contactId}?focus=followup`, locale)}>
-                {inboxText(locale, "Follow-up planen")}
-              </Link>
+              {readOnly ? null : (
+                <>
+                  <Link href={localizedWorkspaceHref(`/fans/${item.contactId}?focus=reply`, locale)}>
+                    {inboxText(locale, "Antwort vorbereiten")}
+                  </Link>
+                  <Link href={localizedWorkspaceHref(`/fans/${item.contactId}?focus=followup`, locale)}>
+                    {inboxText(locale, "Follow-up planen")}
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1120,6 +1154,8 @@ export default async function InboxPage({ searchParams }: InboxPageProps) {
     throw error;
   }
   const { user, workspace } = authorized;
+  const preActivationRedirect = getPreActivationRedirect(workspace, user.email);
+  if (preActivationRedirect) redirect(preActivationRedirect);
   const locale = await resolveWorkspaceLocale({
     lang: params?.lang,
     user,

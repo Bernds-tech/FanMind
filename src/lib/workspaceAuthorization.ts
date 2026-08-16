@@ -12,6 +12,7 @@ import {
   assertWorkspaceId,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorizationPolicy.mjs";
+import { evaluateWorkspaceProcessingEntitlement } from "@/lib/workspaceProcessingPolicy.mjs";
 
 export {
   assertResourceInWorkspace,
@@ -23,6 +24,23 @@ export type AuthorizedWorkspaceContext = {
   user: SupabaseServerUser;
   workspace: WorkspaceDashboardRow;
 };
+
+export async function getUserAuthorizedWorkspaceDashboard(
+  user: SupabaseServerUser,
+  accessToken?: string,
+) {
+  const ownerWorkspaceResult = await getUserWorkspaceDashboard(
+    user,
+    accessToken,
+  );
+  if (
+    ownerWorkspaceResult.workspace ||
+    ownerWorkspaceResult.error?.message === "TEMPORARY_DEMO_DELETED"
+  ) {
+    return ownerWorkspaceResult;
+  }
+  return getUserWorkspaceMembershipDashboard(user, accessToken);
+}
 
 function workspaceUnavailableMessage(error: Error | null | undefined): string {
   return error?.message === "TEMPORARY_DEMO_DELETED"
@@ -36,7 +54,10 @@ export async function getAuthorizedWorkspaceForCurrentUser(
   const { data, error } = await getSupabaseServerUser(accessToken);
   if (error || !data.user) return null;
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user, accessToken);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(
+    data.user,
+    accessToken,
+  );
   if (!workspaceResult.workspace) return null;
 
   return { user: data.user, workspace: workspaceResult.workspace };
@@ -84,6 +105,12 @@ export async function requireAuthorizedWorkspaceMember(
     assertWorkspaceId(ownerWorkspaceResult.workspace.id);
     return { user: data.user, workspace: ownerWorkspaceResult.workspace };
   }
+  if (ownerWorkspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
+    throw new WorkspaceAuthorizationError(
+      "TEMPORARY_DEMO_DELETED",
+      "workspace_missing",
+    );
+  }
 
   const memberWorkspaceResult = await getUserWorkspaceMembershipDashboard(
     data.user,
@@ -102,11 +129,109 @@ export async function requireAuthorizedWorkspaceMember(
   return { user: data.user, workspace: memberWorkspaceResult.workspace };
 }
 
+export async function requireActiveAuthorizedWorkspaceMember(
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext> {
+  const context = await requireAuthorizedWorkspaceMember(accessToken);
+  if (context.workspace.role.trim().toLowerCase() !== "owner") {
+    throw new WorkspaceAuthorizationError(
+      "Schreibaktionen für Teammitglieder bleiben bis zu einem atomaren Datenbankvertrag deaktiviert.",
+      "workspace_member_mutations_disabled",
+    );
+  }
+  const processing = evaluateWorkspaceProcessingEntitlement(
+    context.workspace,
+  );
+  if (!processing.allowed) {
+    throw new WorkspaceAuthorizationError(
+      "Der Workspace ist derzeit nur lesbar oder für Verarbeitung pausiert.",
+      "workspace_inactive",
+    );
+  }
+  return context;
+}
+
+export async function requireActiveAuthorizedWorkspace(
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext> {
+  const context = await requireAuthorizedWorkspace(accessToken);
+  const processing = evaluateWorkspaceProcessingEntitlement(
+    context.workspace,
+  );
+  if (!processing.allowed) {
+    throw new WorkspaceAuthorizationError(
+      "Der Workspace ist derzeit nur lesbar oder für Verarbeitung pausiert.",
+      "workspace_inactive",
+    );
+  }
+  return context;
+}
+
 export async function requireContactInAuthorizedWorkspace(
   contactId: string,
   accessToken?: string,
 ): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
   const context = await requireAuthorizedWorkspace(accessToken);
+  const contactResult = await getWorkspaceContact(
+    context.workspace.id,
+    contactId,
+    accessToken,
+  );
+  if (contactResult.error) {
+    throw new WorkspaceAuthorizationError(
+      "Kontakt konnte nicht autorisiert geladen werden.",
+      "resource_forbidden",
+    );
+  }
+  assertResourceInWorkspace(contactResult.contact, context.workspace.id, "Kontakt");
+  return { ...context, contact: contactResult.contact as ContactRow };
+}
+
+export async function requireContactInActiveAuthorizedWorkspace(
+  contactId: string,
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
+  const context = await requireActiveAuthorizedWorkspace(accessToken);
+  const contactResult = await getWorkspaceContact(
+    context.workspace.id,
+    contactId,
+    accessToken,
+  );
+  if (contactResult.error) {
+    throw new WorkspaceAuthorizationError(
+      "Kontakt konnte nicht autorisiert geladen werden.",
+      "resource_forbidden",
+    );
+  }
+  assertResourceInWorkspace(contactResult.contact, context.workspace.id, "Kontakt");
+  return { ...context, contact: contactResult.contact as ContactRow };
+}
+
+export async function requireContactInAuthorizedWorkspaceMember(
+  contactId: string,
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
+  const context = await requireAuthorizedWorkspaceMember(accessToken);
+  const contactResult = await getWorkspaceContact(
+    context.workspace.id,
+    contactId,
+    accessToken,
+  );
+  if (contactResult.error) {
+    throw new WorkspaceAuthorizationError(
+      "Kontakt konnte nicht autorisiert geladen werden.",
+      "resource_forbidden",
+    );
+  }
+  assertResourceInWorkspace(contactResult.contact, context.workspace.id, "Kontakt");
+  return { ...context, contact: contactResult.contact as ContactRow };
+}
+
+export async function requireContactInActiveAuthorizedWorkspaceMember(
+  contactId: string,
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
+  const context = await requireActiveAuthorizedWorkspaceMember(accessToken);
   const contactResult = await getWorkspaceContact(
     context.workspace.id,
     contactId,

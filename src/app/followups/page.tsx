@@ -4,7 +4,6 @@ import { getPreActivationRedirect } from "@/lib/preActivation";
 import {
   getOpenFollowupCount,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceContacts,
   getWorkspaceFollowups,
   getWorkspaceOpenFollowups,
@@ -13,6 +12,7 @@ import {
   type FollowupRow,
   type WorkspaceDashboardRow,
 } from "@/lib/supabase/server";
+import { getUserAuthorizedWorkspaceDashboard } from "@/lib/workspaceAuthorization";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { getWorkspaceNavigationForUser } from "@/lib/workspaceNavigation";
 import { resolveWorkspaceLocale } from "@/lib/workspaceLocale";
@@ -40,7 +40,7 @@ export default async function FollowupsPage({ searchParams }: FollowupsPageProps
 
   if (!data.user) redirect("/login");
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  const workspaceResult = await getUserAuthorizedWorkspaceDashboard(data.user);
   if (workspaceResult.error?.message === "TEMPORARY_DEMO_DELETED") {
     redirect("/login?demo_deleted=1");
   }
@@ -118,7 +118,15 @@ function FollowupsWorkspace({
   notice?: string;
   userEmail: string | null | undefined;
 }) {
-  const { mainNavigation, settingsNavigation, savedViews } = getWorkspaceNavigationForUser("followups", userEmail, locale, dueFollowupCount);
+  const memberReadOnly = workspace.role.trim().toLowerCase() !== "owner";
+  const { mainNavigation, settingsNavigation, savedViews } =
+    getWorkspaceNavigationForUser(
+      "followups",
+      userEmail,
+      locale,
+      dueFollowupCount,
+      workspace.role,
+    );
   const contactsById = new Map(contacts.map((contact) => [contact.id, contact]));
 
   return (
@@ -155,6 +163,12 @@ function FollowupsWorkspace({
           </div>
         </div>
         {contactsError ? <p className={dashboardStyles.error}><strong>{contactsError}</strong></p> : null}
+        {memberReadOnly ? (
+          <p style={{ border: "1px solid #bae6fd", borderRadius: 12, padding: "10px 12px", color: "#075985", background: "#f0f9ff" }} role="status">
+            <strong>{locale === "en" ? "Read-only team access." : "Teamzugang im Nur-Lese-Modus."}</strong>{" "}
+            {locale === "en" ? "Only the workspace owner can complete or reopen follow-ups." : "Nur der Workspace-Owner kann Follow-ups erledigen oder wieder öffnen."}
+          </p>
+        ) : null}
         {notice ? <p style={{ border: "1px solid #86efac", borderRadius: 12, padding: "10px 12px", color: "#166534", background: "#f0fdf4" }}><strong>{formatFollowupNotice(notice, locale)}</strong></p> : null}
         {followupsError ? <p className={dashboardStyles.error}><strong>{followupsError}</strong></p> : null}
         {followups.length ? (
@@ -182,7 +196,13 @@ function FollowupsWorkspace({
                       <td>{followup.priority ?? "normal"}</td>
                       <td>{followup.status ?? "open"}</td>
                       <td><Link href={`/fans/${followup.contact_id}`}>{locale === "en" ? "Open fan" : "Fan öffnen"}</Link></td>
-                      <td><FollowupStatusForm contactId={followup.contact_id} followup={followup} locale={locale} returnTo="followups" /></td>
+                      <td>
+                        {memberReadOnly ? (
+                          <span>{locale === "en" ? "Read-only" : "Nur Lesen"}</span>
+                        ) : (
+                          <FollowupStatusForm contactId={followup.contact_id} followup={followup} locale={locale} returnTo="followups" />
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

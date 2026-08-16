@@ -8,10 +8,7 @@ import {
 } from "@/lib/facebookIntegration";
 import { FACEBOOK_PAGE_SELECTION_COOKIE } from "@/lib/facebookPageSelectionPolicy.mjs";
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
-import {
-  getSupabaseServerUser,
-  getUserWorkspaceDashboard,
-} from "@/lib/supabase/server";
+import { requireActiveAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 import { FanMindLogo } from "@/components/FanMindLogo";
 import styles from "./page.module.css";
 
@@ -22,15 +19,16 @@ export default async function FacebookPageSelectionPage({
 }: {
   searchParams?: Promise<{ error?: string }>;
 }) {
-  const { data } = await getSupabaseServerUser();
-  if (!data.user) redirect("/login");
-
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  const workspace = workspaceResult.workspace;
-  if (!workspace) redirect("/channels?facebook_error=workspace");
+  let authorization;
+  try {
+    authorization = await requireActiveAuthorizedWorkspace();
+  } catch {
+    redirect("/channels?facebook_error=processing");
+  }
+  const { user, workspace } = authorization;
   if (!canManageMetaConnections(workspace.role))
     redirect("/channels?facebook_error=role");
-  if (areDemoConnectionsDisabled(data.user, workspace))
+  if (areDemoConnectionsDisabled(user, workspace))
     redirect("/channels?facebook_error=demo_disabled");
 
   const pending = verifyPendingFacebookPageSelection(
@@ -38,7 +36,7 @@ export default async function FacebookPageSelectionPage({
   );
   if (
     !pending ||
-    pending.userId !== data.user.id ||
+    pending.userId !== user.id ||
     pending.workspaceId !== workspace.id
   ) {
     redirect("/channels?facebook_error=page_selection_expired");

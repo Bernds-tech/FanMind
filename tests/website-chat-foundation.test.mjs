@@ -8,6 +8,10 @@ const migrationPath = new URL(
 );
 const routePath = new URL("../src/app/api/website-chat/session/route.ts", import.meta.url);
 const servicePath = new URL("../src/lib/websiteChat.ts", import.meta.url);
+const runbookPath = new URL(
+  "../docs/operations/WEBSITE_CHAT_FOUNDATION.md",
+  import.meta.url,
+);
 
 test("website chat storage is RLS-enabled and service-role-only", async () => {
   const sql = await readFile(migrationPath, "utf8");
@@ -48,4 +52,16 @@ test("public session route is origin-, consent-, body- and rate-limit guarded", 
   assert.match(service, /hashWebsiteChatSessionToken/u);
   assert.doesNotMatch(`${route}\n${service}`, /OPENAI_API_KEY|reply-suggestions|copilot\/reply/u);
   assert.doesNotMatch(`${route}\n${service}`, /automatic|auto.?send|outbound/iu);
+});
+
+test("website chat stays disabled until processing is checked atomically", async () => {
+  const runbook = await readFile(runbookPath, "utf8");
+  assert.match(
+    runbook,
+    /noch keinen atomaren[\s\S]*Processing-Entitlement-Check[\s\S]*bleibt jede[\s\S]*Installation[\s\S]*deaktiviert/u,
+  );
+  assert.match(
+    runbook,
+    /Ingestion-RPC[\s\S]*atomaren, DB-verifizierten aktiven[\s\S]*Workspace-Processing-Check/u,
+  );
 });

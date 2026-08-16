@@ -57,22 +57,49 @@ const PLATFORM_ALIAS_MAP: Record<string, PlatformValue> = {
   sonstiges: "manual",
 };
 
+export const CSV_IMPORT_LIMITS = Object.freeze({
+  maxBytes: 1_000_000,
+  maxDataRows: 1_000,
+  maxColumns: 32,
+  maxFieldCharacters: 8_000,
+});
+
+const ALLOWED_LANGUAGES = new Set(["de", "en", "fr"]);
+const ALLOWED_CONTACT_STATUSES = new Set([
+  "new",
+  "active",
+  "warm",
+  "follow_up",
+  "paused",
+  "vip",
+  "buyer",
+  "inactive",
+  "do_not_push",
+]);
+
+function getPlatformKey(value: string | null | undefined): string {
+  return (
+    value
+      ?.trim()
+      .toLowerCase()
+      .replace(/@/g, "email")
+      .replace(/&/g, "and")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") ?? ""
+  );
+}
+
+function normalizeKnownPlatform(
+  value: string | null | undefined,
+): PlatformValue | null {
+  const key = getPlatformKey(value);
+  return key ? (PLATFORM_ALIAS_MAP[key] ?? null) : null;
+}
+
 export function normalizePlatform(
   value: string | null | undefined,
 ): PlatformValue {
-  const key = value
-    ?.trim()
-    .toLowerCase()
-    .replace(/@/g, "email")
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-
-  if (!key) {
-    return "manual";
-  }
-
-  return PLATFORM_ALIAS_MAP[key] ?? "manual";
+  return normalizeKnownPlatform(value) ?? "manual";
 }
 
 export function formatPlatformLabel(value: string | null | undefined): string {
@@ -127,6 +154,16 @@ export function parseCsvContacts(
   csvText: string,
   defaultSourcePlatform: string = "manual",
 ): CsvParseResult {
+  if (exceedsUtf8ByteLimit(csvText, CSV_IMPORT_LIMITS.maxBytes)) {
+    return {
+      contacts: [],
+      errors: [
+        `CSV überschreitet die maximale Größe von ${CSV_IMPORT_LIMITS.maxBytes.toLocaleString("de-DE")} Bytes.`,
+      ],
+      delimiter: ",",
+    };
+  }
+
   const normalizedText = csvText.replace(/^\uFEFF/, "").trim();
   const delimiter = detectDelimiter(normalizedText);
 
@@ -134,7 +171,12 @@ export function parseCsvContacts(
     return { contacts: [], errors: ["CSV-Text ist leer."], delimiter };
   }
 
-  const rows = parseRows(normalizedText, delimiter).filter((row) =>
+  const parsedRows = parseRows(normalizedText, delimiter);
+  if (parsedRows.error) {
+    return { contacts: [], errors: [parsedRows.error], delimiter };
+  }
+
+  const rows = parsedRows.rows.filter((row) =>
     row.some((cell) => cell.trim().length > 0),
   );
 
@@ -152,6 +194,15 @@ export function parseCsvContacts(
 
   if (!mappedHeaders.includes("displayName")) {
     errors.push("Spalte name oder display_name fehlt.");
+  }
+
+  const defaultPlatform = normalizeKnownPlatform(defaultSourcePlatform);
+  if (!mappedHeaders.includes("sourcePlatform") && !defaultPlatform) {
+    return {
+      contacts: [],
+      errors: ["Die Standardplattform wird nicht unterstützt."],
+      delimiter,
+    };
   }
 
   const contacts = rows.slice(1).flatMap((row, rowIndex) => {
@@ -178,15 +229,38 @@ export function parseCsvContacts(
       return [];
     }
 
+    const platformInput = raw.sourcePlatform?.trim() || defaultSourcePlatform;
+    const sourcePlatform = normalizeKnownPlatform(platformInput);
+    if (!sourcePlatform) {
+      errors.push(
+        `Zeile ${rowIndex + 2}: Plattform "${platformInput}" wird nicht unterstützt, Zeile übersprungen.`,
+      );
+      return [];
+    }
+
+    const language = normalizeAllowedValue(raw.language, "de");
+    if (!ALLOWED_LANGUAGES.has(language)) {
+      errors.push(
+        `Zeile ${rowIndex + 2}: Sprache "${language}" wird nicht unterstützt, Zeile übersprungen.`,
+      );
+      return [];
+    }
+
+    const status = normalizeAllowedValue(raw.status, "new");
+    if (!ALLOWED_CONTACT_STATUSES.has(status)) {
+      errors.push(
+        `Zeile ${rowIndex + 2}: Status "${status}" wird nicht unterstützt, Zeile übersprungen.`,
+      );
+      return [];
+    }
+
     return [
       {
         displayName,
         handle: (raw.handle ?? "").trim(),
-        sourcePlatform: normalizePlatform(
-          raw.sourcePlatform || defaultSourcePlatform,
-        ),
-        language: normalizeDefault(raw.language, "de"),
-        status: normalizeDefault(raw.status, "new"),
+        sourcePlatform,
+        language,
+        status,
         tags: raw.tags ?? [],
         summary: (raw.summary ?? "").trim(),
       },
@@ -194,6 +268,14 @@ export function parseCsvContacts(
   });
 
   return { contacts, errors, delimiter };
+}
+
+function exceedsUtf8ByteLimit(value: string, maxBytes: number): boolean {
+  if (value.length > maxBytes) {
+    return true;
+  }
+
+  return new TextEncoder().encode(value).byteLength > maxBytes;
 }
 
 export function getDuplicateKey(
@@ -217,11 +299,41 @@ function detectDelimiter(csvText: string): "," | ";" {
   return semicolonCount > commaCount ? ";" : ",";
 }
 
-function parseRows(csvText: string, delimiter: "," | ";"): string[][] {
+type ParsedRows = { rows: string[][]; error: string | null };
+
+function parseRows(csvText: string, delimiter: "," | ";"): ParsedRows {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
   let inQuotes = false;
+  let quotedFieldClosed = false;
+
+  const appendToCell = (value: string): string | null => {
+    cell += value;
+    return cell.length > CSV_IMPORT_LIMITS.maxFieldCharacters
+      ? `CSV-Feld überschreitet maximal ${CSV_IMPORT_LIMITS.maxFieldCharacters.toLocaleString("de-DE")} Zeichen.`
+      : null;
+  };
+
+  const pushCell = (): string | null => {
+    if (row.length >= CSV_IMPORT_LIMITS.maxColumns) {
+      return `CSV-Zeile überschreitet maximal ${CSV_IMPORT_LIMITS.maxColumns} Spalten.`;
+    }
+    row.push(cell);
+    cell = "";
+    quotedFieldClosed = false;
+    return null;
+  };
+
+  const pushRow = (): string | null => {
+    const cellError = pushCell();
+    if (cellError) return cellError;
+    rows.push(row);
+    row = [];
+    return rows.length > CSV_IMPORT_LIMITS.maxDataRows + 1
+      ? `CSV überschreitet maximal ${CSV_IMPORT_LIMITS.maxDataRows.toLocaleString("de-DE")} Kontaktzeilen.`
+      : null;
+  };
 
   for (let index = 0; index < csvText.length; index += 1) {
     const char = csvText[index];
@@ -229,17 +341,26 @@ function parseRows(csvText: string, delimiter: "," | ";"): string[][] {
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
-        cell += '"';
+        const fieldError = appendToCell('"');
+        if (fieldError) return { rows: [], error: fieldError };
         index += 1;
+      } else if (inQuotes) {
+        inQuotes = false;
+        quotedFieldClosed = true;
+      } else if (cell.length === 0 && !quotedFieldClosed) {
+        inQuotes = true;
       } else {
-        inQuotes = !inQuotes;
+        return {
+          rows: [],
+          error: `CSV enthält ein ungültiges Anführungszeichen an Zeichen ${index + 1}.`,
+        };
       }
       continue;
     }
 
     if (char === delimiter && !inQuotes) {
-      row.push(cell);
-      cell = "";
+      const cellError = pushCell();
+      if (cellError) return { rows: [], error: cellError };
       continue;
     }
 
@@ -247,20 +368,35 @@ function parseRows(csvText: string, delimiter: "," | ";"): string[][] {
       if (char === "\r" && nextChar === "\n") {
         index += 1;
       }
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
+      const rowError = pushRow();
+      if (rowError) return { rows: [], error: rowError };
       continue;
     }
 
-    cell += char;
+    if (quotedFieldClosed) {
+      return {
+        rows: [],
+        error: `CSV enthält unerwartete Zeichen nach einem geschlossenen Feld an Zeichen ${index + 1}.`,
+      };
+    }
+
+    const fieldError = appendToCell(char);
+    if (fieldError) return { rows: [], error: fieldError };
   }
 
-  row.push(cell);
-  rows.push(row);
+  if (inQuotes) {
+    return {
+      rows: [],
+      error: "CSV enthält ein nicht geschlossenes Anführungszeichen.",
+    };
+  }
 
-  return rows;
+  if (cell.length > 0 || row.length > 0 || rows.length === 0) {
+    const rowError = pushRow();
+    if (rowError) return { rows: [], error: rowError };
+  }
+
+  return { rows, error: null };
 }
 
 function normalizeHeader(value: string): string {
@@ -270,11 +406,11 @@ function normalizeHeader(value: string): string {
     .replace(/[\s-]+/g, "_");
 }
 
-function normalizeDefault(
+function normalizeAllowedValue(
   value: string | null | undefined,
   fallback: string,
 ): string {
-  const normalized = value?.trim();
+  const normalized = value?.trim().toLowerCase();
 
   return normalized ? normalized : fallback;
 }
@@ -320,7 +456,11 @@ export function csvHasPlatformColumn(csvText: string): boolean {
   }
 
   const delimiter = detectDelimiter(normalizedText);
-  const [headerRow] = parseRows(normalizedText, delimiter);
+  const parsedRows = parseRows(normalizedText, delimiter);
+  if (parsedRows.error) {
+    return false;
+  }
+  const [headerRow] = parsedRows.rows;
 
   return headerRow
     .map((header) => normalizeHeader(header))
@@ -338,7 +478,11 @@ export function withDefaultSourcePlatform(
   }
 
   const delimiter = detectDelimiter(normalizedText);
-  const rows = parseRows(normalizedText, delimiter);
+  const parsedRows = parseRows(normalizedText, delimiter);
+  if (parsedRows.error) {
+    return csvText;
+  }
+  const rows = parsedRows.rows;
   const normalizedPlatform = normalizePlatform(defaultSourcePlatform);
   const serializedRows = rows.map((row, index) => [
     ...row,

@@ -1,9 +1,12 @@
 export type Workspace = {
   id: string;
   name: string;
-  owner_user_id: string;
-  billing_status: string | null;
-  role: string;
+  role: "owner" | "member";
+  owner_user_id?: string;
+  billing_status?: string | null;
+  plan_id?: string;
+  member_safe_projection?: true;
+  member_processing_allowed?: boolean;
 };
 
 export type Contact = {

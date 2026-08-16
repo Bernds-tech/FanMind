@@ -19,6 +19,7 @@ const STATUS_MAP = Object.freeze({
   canceled: "canceled",
   incomplete_expired: "expired",
 });
+const STORED_LIFECYCLE_STATUSES = new Set(Object.values(STATUS_MAP));
 const DIAGNOSTIC_REASONS = new Set([
   "workspace_target",
   "price_configuration",
@@ -123,6 +124,43 @@ function currentEventState(current) {
   };
 }
 
+function currentEntitlementState(current, allowlist) {
+  const value = record(current);
+  if (!value) return null;
+
+  const tierId = string(value.tierId);
+  const status = string(value.status);
+  const source = string(value.source);
+  const stripeSubscriptionId = string(value.stripeSubscriptionId);
+  const stripeSubscriptionItemId = string(value.stripeSubscriptionItemId);
+  const stripePriceId = string(value.stripePriceId);
+  const effectiveAt = string(value.effectiveAt);
+
+  if (
+    (tierId !== "plus" && tierId !== "ultra") ||
+    !STORED_LIFECYCLE_STATUSES.has(status) ||
+    source !== "stripe" ||
+    !STRIPE_SUBSCRIPTION_PATTERN.test(stripeSubscriptionId ?? "") ||
+    !STRIPE_ITEM_PATTERN.test(stripeSubscriptionItemId ?? "") ||
+    !STRIPE_PRICE_PATTERN.test(stripePriceId ?? "") ||
+    allowlist.get(stripePriceId) !== tierId ||
+    !effectiveAt ||
+    !Number.isFinite(Date.parse(effectiveAt))
+  ) {
+    return null;
+  }
+
+  return {
+    tierId,
+    status,
+    source,
+    stripeSubscriptionId,
+    stripeSubscriptionItemId,
+    stripePriceId,
+    effectiveAt,
+  };
+}
+
 function lifecycleStatus(eventType, subscriptionStatus) {
   if (eventType === "customer.subscription.deleted") return "canceled";
   return STATUS_MAP[subscriptionStatus] ?? null;
@@ -178,15 +216,61 @@ export function decideAiTierStripeLifecycleEvent({
     }
   }
 
-  const items = record(subscription?.items)?.data;
+  const itemCollection = record(subscription?.items);
+  const items = itemCollection?.data;
   if (!Array.isArray(items)) return retry("items");
+  // Embedded Stripe lists can be truncated. Treating a partial list as proof
+  // that the paid add-on disappeared could revoke the wrong entitlement. The
+  // explicit false also prevents a malformed/changed provider payload from
+  // silently becoming proof of a complete list.
+  if (itemCollection?.has_more !== false) return retry("items");
   const matches = items.flatMap((candidate) => {
     const item = record(candidate);
     const priceId = string(record(item?.price)?.id);
     const tierId = priceId ? allowlist.get(priceId) : null;
     return tierId ? [{ item, priceId, tierId }] : [];
   });
-  if (matches.length === 0) return ignore("unrelated_price");
+  if (matches.length === 0) {
+    if (existing.status !== "valid") return ignore("unrelated_price");
+    if (
+      eventType !== "customer.subscription.updated" &&
+      eventType !== "customer.subscription.deleted"
+    ) {
+      return retry("current_state");
+    }
+
+    // A newer event for the same subscription with no allowlisted item means
+    // the previously stored add-on was removed. Preserve its identifiers and
+    // the latest Stripe event boundary, but make it immediately ineligible.
+    // Keeping the row (rather than deleting it) makes replay/stale-event
+    // protection durable with the existing schema.
+    const currentEntitlement = currentEntitlementState(current, allowlist);
+    if (!currentEntitlement) return retry("current_state");
+    const removedAt = isoFromStripeTimestamp(eventCreatedAt);
+    const expiresAt =
+      removedAt &&
+      Date.parse(removedAt) > Date.parse(currentEntitlement.effectiveAt)
+        ? removedAt
+        : null;
+
+    return Object.freeze({
+      decision: "apply",
+      reason: null,
+      mutation: Object.freeze({
+        tierId: currentEntitlement.tierId,
+        status: "canceled",
+        source: "stripe",
+        stripeSubscriptionId: currentEntitlement.stripeSubscriptionId,
+        stripeSubscriptionItemId:
+          currentEntitlement.stripeSubscriptionItemId,
+        stripePriceId: currentEntitlement.stripePriceId,
+        effectiveAt: currentEntitlement.effectiveAt,
+        expiresAt,
+        lastStripeEventId: eventId,
+        lastStripeEventCreatedAt: eventCreatedAt,
+      }),
+    });
+  }
   if (matches.length !== 1) return retry("ambiguous_price_items");
 
   const { item, priceId, tierId } = matches[0];

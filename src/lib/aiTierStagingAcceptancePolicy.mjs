@@ -183,6 +183,7 @@ function syntheticStripeEvent({
         status: "active",
         cancel_at_period_end: false,
         items: {
+          has_more: false,
           data: [
             {
               id: subscriptionItemId,

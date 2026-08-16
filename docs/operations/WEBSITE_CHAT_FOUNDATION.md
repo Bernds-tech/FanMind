@@ -37,6 +37,10 @@ ohne KI-Antworten, Rückkanal oder automatisches Senden zu aktivieren.
   und rohe IP-Adresse werden weiterhin nicht persistiert.
 - Es gibt keinen OpenAI-Aufruf, keine Antwort an den Besucher, keinen Outbound-
   Transport und kein automatisches Senden.
+- Die vorbereitete Ingestion besitzt noch keinen atomaren
+  Processing-Entitlement-Check im Datenbank-RPC. Deshalb bleibt jede
+  Installation unabhängig von den übrigen Nachweisen deaktiviert, bis der RPC
+  aktive Verarbeitung und Mutation in derselben Transaktion fail-closed bindet.
 - Das vorbereitete Script `/website-chat/widget.js` arbeitet in einem Shadow
   DOM, setzt keine Cookies und nutzt weder Local Storage noch Session Storage.
   Installations-ID und Consent-Version kommen aus begrenzten Embed-Attributen;
@@ -59,7 +63,9 @@ ohne KI-Antworten, Rückkanal oder automatisches Senden zu aktivieren.
    Idempotenz prüfen;
 7. das sichtbare Einweg-Widget mit gültiger Installation, Consent, Retry und
    verbotener Origin im Browser prüfen;
-8. erst nach Rechts- und Datenschutzabnahme die konkrete Installation
+8. den Ingestion-RPC um einen atomaren, DB-verifizierten aktiven
+   Workspace-Processing-Check erweitern und in Staging abnehmen;
+9. erst nach Rechts- und Datenschutzabnahme die konkrete Installation
    aktivieren.
 
 Production bleibt bis zur Staging-, Rechts- und Datenschutzabnahme deaktiviert.

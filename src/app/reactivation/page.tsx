@@ -47,7 +47,13 @@ function ReactivationWorkspace({
   userEmail,
 }: ReactivationWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("reactivation", userEmail);
+    getWorkspaceNavigationForUser(
+      "reactivation",
+      userEmail,
+      "de",
+      0,
+      workspace.role,
+    );
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (

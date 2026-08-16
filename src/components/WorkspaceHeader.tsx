@@ -7,8 +7,8 @@ export type WorkspaceHeaderProps = {
   title: string;
   subtitle: string;
   searchPlaceholder: string;
-  primaryActionLabel: string;
-  primaryActionHref: string;
+  primaryActionLabel?: string;
+  primaryActionHref?: string;
   locale?: FanMindLanguage;
   searchAction?: string;
   searchName?: string;
@@ -69,9 +69,11 @@ export function WorkspaceHeader({
         >
           {wt(locale, "Filter · bald")}
         </button>
-        <a className={styles.primaryButton} href={primaryActionHref}>
-          {primaryActionLabel}
-        </a>
+        {primaryActionLabel && primaryActionHref ? (
+          <a className={styles.primaryButton} href={primaryActionHref}>
+            {primaryActionLabel}
+          </a>
+        ) : null}
       </div>
     </header>
   );

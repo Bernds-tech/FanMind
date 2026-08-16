@@ -114,7 +114,13 @@ function ChannelsWorkspace({
   userEmail,
 }: ChannelsWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("channels", userEmail, locale);
+    getWorkspaceNavigationForUser(
+      "channels",
+      userEmail,
+      locale,
+      0,
+      workspace.role,
+    );
   const userLabel = userDisplayName || workspace.name || (locale === "en" ? "User" : "Nutzer");
 
   return (

@@ -11,9 +11,9 @@ import {
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
 import {
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
 } from "@/lib/supabase/server";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
+import { requireActiveAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 
 export const dynamic = "force-dynamic";
 
@@ -28,17 +28,23 @@ export async function GET(request: Request) {
   const { data } = await getSupabaseServerUser();
   if (!data.user) redirect("/login");
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  if (!workspaceResult.workspace)
+  let activeContext;
+  try {
+    activeContext = await requireActiveAuthorizedWorkspace();
+  } catch {
+    redirect("/channels?facebook_error=workspace_inactive");
+  }
+  const workspace = activeContext.workspace;
+  if (activeContext.user.id !== data.user.id)
     redirect("/channels?facebook_error=workspace");
-  if (!canManageMetaConnections(workspaceResult.workspace.role))
+  if (!canManageMetaConnections(workspace.role))
     redirect("/channels?facebook_error=role");
-  if (areDemoConnectionsDisabled(data.user, workspaceResult.workspace))
+  if (areDemoConnectionsDisabled(data.user, workspace))
     redirect("/channels?facebook_error=demo_disabled");
 
   try {
     const state = createFacebookOAuthState({
-      workspaceId: workspaceResult.workspace.id,
+      workspaceId: workspace.id,
       userId: data.user.id,
       connectionType,
     });

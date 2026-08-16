@@ -96,11 +96,8 @@ export default async function BillingStartPage({ searchParams }: { searchParams?
     ? await hasCurrentWorkspacePaymentTermsEvidence(workspace.id, data.user.id)
     : false;
   const resolvedCheckoutPlan = workspace ? resolveCheckoutPlan(workspace.plan_id, workspace.commercial_option) : null;
-  const isCardOnlyDailyTestCheckout =
-    workspace?.commercial_option === "internal_daily_test";
-  const checkoutPaymentMethodText = isCardOnlyDailyTestCheckout
-    ? "Kartenzahlung im nächsten Schritt"
-    : "Stripe zeigt passende internationale Karten-, Wallet- und Bankzahlarten";
+  const checkoutPaymentMethodText =
+    "Stripe zeigt die für diese Zahlung verfügbaren Zahlarten";
 
   const hasUnclearPaymentOption = Boolean(workspace && !resolvedCheckoutPlan && !isDemo);
   const checkoutReady = workspace?.commercial_option === "internal_daily_test"

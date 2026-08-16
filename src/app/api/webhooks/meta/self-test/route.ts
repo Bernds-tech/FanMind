@@ -2,12 +2,12 @@ import { revalidatePath } from "next/cache";
 import {
   checkMetaWebhookStorageHealth,
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   getWorkspaceSocialConnections,
 } from "@/lib/supabase/server";
 import { processMetaWebhookPayload } from "@/lib/metaWebhook";
 import { normalizeWebhookErrorCode } from "@/lib/webhookSecurityPolicy.mjs";
 import { isTrustedFanMindMutationRequest } from "@/lib/httpMutationPolicy.mjs";
+import { requireActiveAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +26,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
-  const workspace = workspaceResult.workspace;
-  if (!workspace) {
+  let activeContext;
+  try {
+    activeContext = await requireActiveAuthorizedWorkspace();
+  } catch {
+    return Response.json(
+      { ok: false, error: "Workspace ist nicht aktiv." },
+      { status: 403 },
+    );
+  }
+  const workspace = activeContext.workspace;
+  if (activeContext.user.id !== data.user.id) {
     return Response.json(
       { ok: false, error: "Kein Workspace gefunden." },
       { status: 403 },
