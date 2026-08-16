@@ -102,12 +102,15 @@ Production-Abnahme bleiben dadurch unverändert offen.
 ## Roadmap 5 – Produktion und Testumgebung
 
 - **Code:** Environment-Governance, isolierter Releasepfad, Backups,
-  Monitoring, Audit und Restore-Runner sind vorbereitet. Der sichere
-  Releasepfad muss der verbindliche Normalfall bleiben.
+  Monitoring, Audit und Restore-Runner sind vorbereitet. Self-hosted
+  Restore-Jobs bleiben bis zum externen Runner-Scope-Nachweis fail-closed. Der
+  sichere Releasepfad muss der verbindliche Normalfall bleiben.
 - **Staging/Infrastruktur:** echten Restore-Drill einschließlich 5/5/5-
   Postcheck, Storage-/Serverprüfung und Wegwerfziel-Cleanup abschließen.
-- **Extern:** geschützte Runner-/Environment-Verwaltung und gegebenenfalls
-  Offsite-Providerzugang.
+- **Extern:** Repository in eine GitHub-Organisation übertragen, die Gruppe
+  `fanmind-restore-drill` auf die drei `main`-Restore-Workflows beschränken,
+  danach erst Scope-Variable, geschützte Runner-/Environment-Verwaltung und
+  gegebenenfalls Offsite-Providerzugang freigeben.
 - **Production-Aktivierung:** Trigger-Hardening und weitere kontrollierte DDL
   ausschließlich nach read-only Vor-/Nachprüfung und erneuter Bestätigung.
 

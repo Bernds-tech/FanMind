@@ -23,7 +23,7 @@ Aktuell geprüfte Pins:
 auf GitHub-gehosteten Runnern verwenden v7.0.1. Die geschützten Restore-Jobs
 verwenden den getrennten v4-Pin mit `persist-credentials: false` und
 `set-safe-directory: false`; vor diesem Checkout läuft bereits die erneute
-Attestierung des vorinstallierten Host-Gates. Restore-Jobs verwenden weder
+Readiness-Prüfung des vorinstallierten Host-Gates. Restore-Jobs verwenden weder
 `actions/setup-node` noch `npm install`.
 
 ### Fester Restore-Host vor Checkout und Secrets
@@ -35,9 +35,21 @@ Backup-Verbindung. Die beiden geschützten Restore-Workflows führen denselben
 Gate zuerst in einem secret-freien Job und anschließend erneut in einem
 separaten environment-gebundenen Job vor Checkout aus.
 
-Alle diese Jobs benötigen die Runner-Gruppe `fanmind-restore-drill` und exakt
-die fünf Labels `self-hosted`, `fanmind-restore`, `fanmind-restore-01`, `linux`
-und `x64`. Der externe Controller muss für die beiden Jobs nacheinander zwei
+Alle diese Jobs benötigen die Organisations-Runner-Gruppe
+`fanmind-restore-drill` und exakt die fünf Routing-Labels `self-hosted`,
+`fanmind-restore`, `fanmind-restore-01`, `linux` und `x64`. Labels sind keine
+Autorisierungs- oder Hostprüfgrenze. Das derzeit öffentliche, persönlich
+gehaltene Repository kann die Gruppe noch nicht bereitstellen; deshalb muss
+`FANMIND_RESTORE_RUNNER_SCOPE` unset bleiben und jeder Dispatch vor dem
+Self-hosted-Job stoppen. Erst nach Organisations-Transfer und einer auf die
+drei `main`-Restore-Workflows begrenzten Gruppen-Allowlist darf der Wert
+`organization-workflow-allowlist` gesetzt werden. Die Variable ist nur die
+Operatorbestätigung einer unabhängig geprüften Gruppen-Allowlist und kein
+GitHub-Admin-API-Nachweis. Der private Admin-Beleg muss
+`visibility=selected`, Repository-ID `1259448985`,
+`restricted_to_workflows=true`, exakt drei Workflow-/`main`-Einträge und bei
+weiterhin öffentlichem Repository `allows_public_repositories=true` zeigen.
+Der externe Controller muss für die beiden Jobs nacheinander zwei
 frische Ein-Job-JIT-Runner registrieren und danach entfernen. Eine persistente
 Runner-Registrierung, Credential-Wiederverwendung oder parallele Nutzung ist
 nicht zulässig; GitHub-Workflow-YAML allein kann diese externe Lebensdauer
@@ -47,7 +59,8 @@ Der Bootstrap verwendet ausschließlich den root-eigenen, nicht schreibbaren
 Node-Pfad `/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node` und den
 root-eigenen, nicht schreibbaren Gate-Pfad
 `/opt/fanmind-restore/restore-host-readiness.mjs`. Der aktuell gebundene
-Gate-SHA-256 ist `c60f0ec5278de5ec30fba44c9568e343dc0c0277500f824a1dd73993d1c8e117`. Die Workflows prüfen vor der
+Gate-SHA-256 ist `0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b`. Das Gate bindet die bei einem Owner-Transfer stabile
+GitHub-Repository-ID `1259448985`. Die Workflows prüfen vor der
 Ausführung zusätzlich Eigentümer, Modus, kanonischen Pfad, Parent-Verzeichnisse
 und die Node-Version 24.19.0.
 
@@ -64,7 +77,7 @@ libpq-Ziele, Backup-/Production-/Supabase-Werte und alle Restore-Secrets außen.
 `GIT_TRACE_REDACT=true` und `NODE_TLS_REJECT_UNAUTHORIZED=1` werden zusätzlich
 explizit erzwungen; alle anderen Trace- und Debug-Ziele bleiben leer.
 
-Die Host-Attestierung verbindet sich nicht mit PostgreSQL, entschlüsselt kein
+Die Host-Readiness-Prüfung verbindet sich nicht mit PostgreSQL, entschlüsselt kein
 Artefakt und aktiviert keine Schreibgrenze. Der einzige Upload ist ein
 redigierter, drei Tage aufbewahrter Host-Receipt. Outbound-Firewall-Regeln
 müssen extern GitHub nur für die JIT-Auftragsabwicklung und im geschützten

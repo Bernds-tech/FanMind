@@ -8,6 +8,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const RESTORE_HOST_CONFIRMATION = "verify-isolated-restore-host";
+export const RESTORE_HOST_REPOSITORY_ID = "1259448985";
 export const RESTORE_HOST_RUNNER_NAME = "fanmind-restore-01";
 export const RESTORE_HOST_RUNNER_USER = "fanmind-restore";
 export const RESTORE_HOST_NODE_PATH =
@@ -29,6 +30,7 @@ const ALLOWED_HOST_ENVIRONMENT = new Set([
   "GITHUB_EVENT_NAME",
   "GITHUB_REF",
   "GITHUB_REPOSITORY",
+  "GITHUB_REPOSITORY_ID",
   "GITHUB_WORKSPACE",
   "LANG",
   "LC_ALL",
@@ -291,7 +293,8 @@ function assertEnvironment(environment) {
     clean(environment.GITHUB_ACTIONS) !== "true"
     || clean(environment.GITHUB_EVENT_NAME) !== "workflow_dispatch"
     || clean(environment.GITHUB_REF) !== "refs/heads/main"
-    || clean(environment.GITHUB_REPOSITORY) !== "Bernds-tech/FanMind"
+    || !clean(environment.GITHUB_REPOSITORY)
+    || clean(environment.GITHUB_REPOSITORY_ID) !== RESTORE_HOST_REPOSITORY_ID
   ) {
     fail("github_boundary_invalid");
   }

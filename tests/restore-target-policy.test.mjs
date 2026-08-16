@@ -561,11 +561,15 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
   assert.match(workflow, /REQUESTED_CONFIRMATION: \$\{\{ inputs\.confirmation \}\}/);
   assert.match(workflow, /GITHUB_REF" == 'refs\/heads\/main'/);
   assert.match(workflow, /REQUESTED_CONFIRMATION" == 'verify-isolated-restore-resources'/);
-  assert.equal((workflow.match(/group: fanmind-restore-drill\n/gu) ?? []).length, 2);
+  assert.equal(
+    (workflow.match(/group: fanmind-restore-drill\n/gu) ?? []).length,
+    2,
+  );
   assert.equal(
     (workflow.match(/labels: \[self-hosted, fanmind-restore, fanmind-restore-01, linux, x64\]/gu) ?? []).length,
     2,
   );
+  assert.match(workflow, /RESTORE_RUNNER_SCOPE" == 'organization-workflow-allowlist'/u);
   assert.match(workflow, /environment: restore-drill/);
   assert.match(workflow, /needs: validate-dispatch/u);
   assert.match(workflow, /needs: verify-restore-host/u);
@@ -617,11 +621,15 @@ test("manual database restore workflow is exact-commit-bound and receipt-only", 
   assert.match(workflow, /REVIEWED_COMMIT" == "\$GITHUB_SHA"/u);
   assert.match(workflow, /GITHUB_REF" == 'refs\/heads\/main'/u);
   assert.match(workflow, /run-isolated-database-restore/u);
-  assert.equal((workflow.match(/group: fanmind-restore-drill\n/gu) ?? []).length, 2);
+  assert.equal(
+    (workflow.match(/group: fanmind-restore-drill\n/gu) ?? []).length,
+    2,
+  );
   assert.equal(
     (workflow.match(/labels: \[self-hosted, fanmind-restore, fanmind-restore-01, linux, x64\]/gu) ?? []).length,
     2,
   );
+  assert.match(workflow, /RESTORE_RUNNER_SCOPE" == 'organization-workflow-allowlist'/u);
   assert.match(workflow, /environment: restore-drill/u);
   assert.doesNotMatch(secretFreeHostJob, /secrets\.|environment: restore-drill|actions\/checkout/u);
   assert.ok(

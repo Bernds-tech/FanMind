@@ -29,6 +29,52 @@ async function exists(path) {
   }
 }
 
+function workflowEnvBlocks(source) {
+  const lines = source.split("\n");
+  const blocks = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^(\s*)env:\s*$/u.exec(lines[index]);
+    if (!match) continue;
+
+    const indent = match[1].length;
+    const keys = [];
+    let cursor = index + 1;
+    for (; cursor < lines.length; cursor += 1) {
+      const line = lines[cursor];
+      if (line.trim() === "") continue;
+      const childIndent = /^\s*/u.exec(line)?.[0].length ?? 0;
+      if (childIndent <= indent) break;
+      if (childIndent !== indent + 2) continue;
+      const key = /^\s*([A-Za-z_][A-Za-z0-9_]*):/u.exec(line)?.[1];
+      if (key) keys.push({ key, line: cursor + 1, value: line.slice(line.indexOf(":") + 1) });
+    }
+    blocks.push({ indent, keys });
+  }
+
+  return blocks;
+}
+
+function workflowEnvironmentRegistrationErrors(source, file) {
+  const errors = [];
+
+  for (const block of workflowEnvBlocks(source)) {
+    const seen = new Map();
+    for (const { key, line, value } of block.keys) {
+      const normalized = key.toLocaleLowerCase("en-US");
+      if (seen.has(normalized)) {
+        errors.push(`${file}:${line} duplicates environment key ${key} case-insensitively`);
+      }
+      seen.set(normalized, line);
+      if (block.indent <= 4 && /\$\{\{\s*runner\./u.test(value)) {
+        errors.push(`${file}:${line} uses runner context before a step starts`);
+      }
+    }
+  }
+
+  return errors;
+}
+
 test("release integration failures retain reports and still allow the build diagnostic", async () => {
   const workflow = await readFile(".github/workflows/ci-fanmind.yml", "utf8");
   assert.match(workflow, /id: release_integrations[\s\S]*continue-on-error: true[\s\S]*release-integration-report\.txt/u);
@@ -83,6 +129,38 @@ test("all GitHub workflows use immutable external Action references and explicit
       .every((reference) => /^[0-9a-f]{40}$/u.test(reference.ref)),
     true,
   );
+});
+
+test("workflow environment maps avoid the known GitHub registration hazards", async () => {
+  const workflowFiles = (await readdir(".github/workflows"))
+    .filter((file) => /\.ya?ml$/u.test(file))
+    .sort();
+
+  for (const file of workflowFiles) {
+    const source = await readFile(`.github/workflows/${file}`, "utf8");
+    assert.deepEqual(workflowEnvironmentRegistrationErrors(source, file), []);
+  }
+});
+
+test("workflow registration guard detects case-folded env duplicates and early runner context", () => {
+  const fixture = `env:
+  CACHE_ROOT: \${{ runner.temp }}
+jobs:
+  invalid:
+    runs-on: ubuntu-24.04
+    env:
+      ALL_PROXY: ''
+      all_proxy: ''
+      TMPDIR: \${{ runner.temp }}
+    steps:
+      - run: 'true'
+`;
+
+  assert.deepEqual(workflowEnvironmentRegistrationErrors(fixture, "fixture.yml"), [
+    "fixture.yml:2 uses runner context before a step starts",
+    "fixture.yml:8 duplicates environment key all_proxy case-insensitively",
+    "fixture.yml:9 uses runner context before a step starts",
+  ]);
 });
 
 test("hosted checkout uses v7 while the isolated restore runner stays on v4", async () => {
@@ -163,6 +241,10 @@ test("hosted checkout uses v7 while the isolated restore runner stays on v4", as
     assert.match(
       restoreWorkflow.source,
       /runs-on:\s*\n\s+group:\s*fanmind-restore-drill\s*\n\s+labels:\s*\[self-hosted, fanmind-restore, fanmind-restore-01, linux, x64\]/u,
+    );
+    assert.match(
+      restoreWorkflow.source,
+      /RESTORE_RUNNER_SCOPE: \$\{\{ vars\.FANMIND_RESTORE_RUNNER_SCOPE \}\}[\s\S]*organization-workflow-allowlist/u,
     );
   }
   assert.match(

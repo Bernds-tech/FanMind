@@ -9,6 +9,7 @@ import {
   PROCESS_INJECTION_ENVIRONMENT,
   RESTORE_HOST_GATE_PATH,
   RESTORE_HOST_NODE_PATH,
+  RESTORE_HOST_REPOSITORY_ID,
   TOOL_CONTRACT,
   verifyRestoreHostReadiness,
 } from "../scripts/operations/restore-host-readiness.mjs";
@@ -41,6 +42,7 @@ function hostEnvironment(overrides = {}) {
     GITHUB_EVENT_NAME: "workflow_dispatch",
     GITHUB_REF: "refs/heads/main",
     GITHUB_REPOSITORY: "Bernds-tech/FanMind",
+    GITHUB_REPOSITORY_ID: RESTORE_HOST_REPOSITORY_ID,
     GITHUB_WORKSPACE: WORKSPACE,
     LANG: "C",
     LC_ALL: "C",
@@ -178,8 +180,17 @@ test("the isolated fixed host contract passes without Restore data access", asyn
   });
 });
 
+test("the stable repository id keeps the boundary exact across an owner transfer", async () => {
+  const result = await verifyRestoreHostReadiness(
+    hostEnvironment({ GITHUB_REPOSITORY: "future-org/FanMind" }),
+    hostRuntime(),
+  );
+  assert.equal(result.nodeVersion, "24.19.0");
+});
+
 for (const [name, value, code] of [
   ["GITHUB_REF", "refs/heads/feature", "github_boundary_invalid"],
+  ["GITHUB_REPOSITORY_ID", "1", "github_boundary_invalid"],
   ["RUNNER_NAME", "fanmind-restore-02", "runner_identity_invalid"],
   ["PGHOST", "production.internal", "libpq_environment_present"],
   ["FANMIND_BACKUP_BUCKET", "production-backups", "service_environment_present"],
@@ -206,7 +217,8 @@ test("all process-injection names remain represented by the workflows", async ()
   ].map((path) => readFile(resolve(ROOT, path), "utf8")));
   for (const workflow of workflows) {
     for (const name of PROCESS_INJECTION_ENVIRONMENT) {
-      assert.match(workflow, new RegExp(`^ {6}${name}: `, "m"), name);
+      const indent = name === name.toLowerCase() ? 2 : 6;
+      assert.match(workflow, new RegExp(`^ {${indent}}${name}: `, "m"), name);
     }
     assert.match(workflow, /^ {6}GIT_TRACE_REDACT: 'true'$/m);
     assert.match(workflow, /^ {6}NODE_TLS_REJECT_UNAUTHORIZED: '1'$/m);
@@ -250,23 +262,35 @@ test("the fixed versions and tool paths cover the restore toolchain", () => {
   assert.equal(RESTORE_HOST_NODE_PATH.startsWith("/opt/fanmind-restore/"), true);
 });
 
-test("all Restore workflows bind the installed gate digest and five labels", async () => {
+test("all Restore workflows require the future organization scope, gate digest and five labels", async () => {
   const gate = await readFile(
     resolve(ROOT, "scripts/operations/restore-host-readiness.mjs"),
   );
   const digest = createHash("sha256").update(gate).digest("hex");
-  for (const path of [
-    ".github/workflows/restore-drill-host-readiness.yml",
-    ".github/workflows/restore-drill-resource-readiness.yml",
-    ".github/workflows/restore-drill-database.yml",
+  for (const [path, selfHostedJobCount] of [
+    [".github/workflows/restore-drill-host-readiness.yml", 1],
+    [".github/workflows/restore-drill-resource-readiness.yml", 2],
+    [".github/workflows/restore-drill-database.yml", 2],
   ]) {
     const workflow = await readFile(resolve(ROOT, path), "utf8");
     assert.doesNotMatch(workflow, /__RESTORE_HOST_GATE_SHA256__/u);
     assert.match(workflow, new RegExp(`RESTORE_HOST_GATE_SHA256: ${digest}`, "u"));
-    assert.match(workflow, /group: fanmind-restore-drill/u);
     assert.match(
       workflow,
-      /labels: \[self-hosted, fanmind-restore, fanmind-restore-01, linux, x64\]/u,
+      /runs-on:\s*\n\s+group: fanmind-restore-drill\s*\n\s+labels: \[self-hosted, fanmind-restore, fanmind-restore-01, linux, x64\]/u,
+    );
+    assert.match(workflow, /RESTORE_RUNNER_SCOPE: \$\{\{ vars\.FANMIND_RESTORE_RUNNER_SCOPE \}\}/u);
+    assert.match(workflow, /RESTORE_RUNNER_SCOPE" == 'organization-workflow-allowlist'/u);
+    assert.match(workflow, /^env:\n  all_proxy: ''\n  http_proxy: ''\n  https_proxy: ''\n  no_proxy: ''$/mu);
+    assert.doesNotMatch(workflow, /^\s{6}(?:all|http|https|no)_proxy:/mu);
+    assert.doesNotMatch(workflow, /^\s{6}TMPDIR: \$\{\{ runner\.temp \}\}$/mu);
+    assert.equal(
+      (workflow.match(/printf 'TMPDIR=%s\\n' "\$RUNNER_TEMP" >> "\$GITHUB_ENV"/gu) ?? []).length,
+      selfHostedJobCount,
+    );
+    assert.equal(
+      (workflow.match(/GITHUB_REPOSITORY_ID="\$GITHUB_REPOSITORY_ID"/gu) ?? []).length,
+      selfHostedJobCount,
     );
     assert.doesNotMatch(workflow, /actions\/setup-node|\bnpm (?:ci|run)\b/u);
   }

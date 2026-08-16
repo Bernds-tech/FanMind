@@ -87,8 +87,13 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   liest keine Entitlement-Daten und wendet keine Migration an.
 - Restore-Host- und Ressourcencheck: Vor jedem geschützten Restore-Job prüft
   ein eigener secretfreier Workflow das root-owned Host-Gate auf der
-  dedizierten Runner-Gruppe `fanmind-restore-drill` und der exakten
-  Runner-Identität `fanmind-restore-01`. Ressourcen- und Datenbankworkflow
+  exakten Fünf-Label-Route und der erwarteten Runner-Identität
+  `fanmind-restore-01`. Die Labels sind nur Scheduler-Selektoren. Im derzeit
+  öffentlichen, persönlich gehaltenen Repository bleiben alle drei Workflows
+  vor dem Self-hosted-Job gesperrt. Erst ein Organisations-Transfer, die auf
+  diese drei `main`-Workflows beschränkte Gruppe `fanmind-restore-drill` und die
+  danach gesetzte Scope-Bestätigung erlauben eine Runner-Registrierung.
+  Ressourcen- und Datenbankworkflow
   benötigen anschließend jeweils einen zweiten frischen One-Job-JIT-Runner;
   kein persistenter oder nur gleich gelabelter Runner genügt. Der manuelle,
   nur auf `main` ausführbare checksum-only Ressourcenworkflow prüft danach das
@@ -98,7 +103,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   einem echten isolierten Restore zusätzlich nur bei 5/5 vorhandenen
   Kerntabellen, 5/5 aktivierter RLS und 5/5 Policy-Abdeckung einen privaten,
   SHA-gebundenen Datenbank-Postcheck-Beleg. Ein getrennter commit-genauer
-  Workflow führt die Datenbankphase kontrolliert auf dem exklusiven Runner
+  Workflow führt die Datenbankphase nach dieser externen Freigabe kontrolliert auf dem isolierten Runner
   aus: private age-Identity, Passfile und CA werden symlink-sicher eingefroren,
   jede Verbindung nutzt TLS `verify-full`, und nur die drei privaten
   Receipts werden drei Tage geschützt bereitgestellt. Das Full-Backup-Receipt
