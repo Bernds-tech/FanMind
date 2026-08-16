@@ -16,6 +16,8 @@ const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const SHA256 = /^[0-9a-f]{64}$/u;
+const CORE_TABLE_APP_GRANT_TUPLE_COUNT = 120;
+const RESTRICTED_SECURITY_DEFINER_FUNCTION_COUNT = 12;
 const REQUIRED_TABLES = [
   "contacts",
   "followups",
@@ -34,11 +36,28 @@ const RUNNER_KEYS = [
   "fullBackupReceiptSha256",
   "databasePartEncryptedSha256",
   "databaseDumpSha256",
+  "databaseAuthorizationContractVersion",
+  "databaseAuthorizationFingerprintSha256",
+  "databaseAuthorizationRecordCount",
+  "databaseAuthorizationGrantTupleCount",
+  "databaseAuthorizationRequiredRolesSha256",
+  "databaseAuthorizationRoleFingerprintSha256",
+  "databaseAuthorizationRoleRecordCount",
+  "databaseAuthorizationContainerFingerprintSha256",
+  "databaseAuthorizationContainerRecordCount",
+  "databaseAuthorizationRequiredExtensionsSha256",
+  "databaseAuthorizationRequiredExtensionCount",
+  "databaseAuthorizationExtensionFingerprintSha256",
+  "databaseAuthorizationExtensionRecordCount",
+  "databaseCoreTableAppGrantTupleCount",
+  "databaseRestrictedSecurityDefinerFunctionCount",
   "disposableTargetId",
   "emptyTargetObservedAt",
   "emptyTargetObjectCount",
   "databaseRestore",
   "singleTransaction",
+  "databasePrivilegesRestore",
+  "databaseOwnershipRestore",
 ].sort();
 
 function fail(code) {
@@ -103,7 +122,7 @@ function parseRunnerReceipt(bytes) {
     fail("runner_receipt_record_invalid");
   }
   exactKeys(receipt, RUNNER_KEYS, "runner_receipt");
-  if (receipt.schemaVersion !== 1) fail("runner_receipt_schema_invalid");
+  if (receipt.schemaVersion !== 2) fail("runner_receipt_schema_invalid");
   if (!DRILL_ID.test(receipt.drillId)) fail("runner_receipt_drill_id_invalid");
   if (!UUID_V4.test(receipt.disposableTargetId)) {
     fail("runner_receipt_target_id_invalid");
@@ -129,13 +148,44 @@ function parseRunnerReceipt(bytes) {
     "fullBackupReceiptSha256",
     "databasePartEncryptedSha256",
     "databaseDumpSha256",
+    "databaseAuthorizationFingerprintSha256",
+    "databaseAuthorizationRequiredRolesSha256",
+    "databaseAuthorizationRoleFingerprintSha256",
+    "databaseAuthorizationContainerFingerprintSha256",
+    "databaseAuthorizationRequiredExtensionsSha256",
+    "databaseAuthorizationExtensionFingerprintSha256",
   ]) {
     if (!SHA256.test(receipt[field])) fail("runner_receipt_hash_invalid");
+  }
+  if (receipt.databaseAuthorizationContractVersion !== 2) {
+    fail("runner_receipt_authorization_contract_invalid");
+  }
+  if (
+    !Number.isSafeInteger(receipt.databaseAuthorizationRecordCount) ||
+    receipt.databaseAuthorizationRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationGrantTupleCount) ||
+    receipt.databaseAuthorizationGrantTupleCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationRoleRecordCount) ||
+    receipt.databaseAuthorizationRoleRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationContainerRecordCount) ||
+    receipt.databaseAuthorizationContainerRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationRequiredExtensionCount) ||
+    receipt.databaseAuthorizationRequiredExtensionCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationExtensionRecordCount) ||
+    receipt.databaseAuthorizationExtensionRecordCount <= 0 ||
+    receipt.databaseCoreTableAppGrantTupleCount !==
+      CORE_TABLE_APP_GRANT_TUPLE_COUNT ||
+    receipt.databaseRestrictedSecurityDefinerFunctionCount !==
+      RESTRICTED_SECURITY_DEFINER_FUNCTION_COUNT
+  ) {
+    fail("runner_receipt_authorization_counts_invalid");
   }
   if (
     receipt.emptyTargetObjectCount !== 0 ||
     receipt.databaseRestore !== "passed" ||
-    receipt.singleTransaction !== true
+    receipt.singleTransaction !== true ||
+    receipt.databasePrivilegesRestore !== "passed" ||
+    receipt.databaseOwnershipRestore !== "passed"
   ) {
     fail("runner_receipt_restore_invalid");
   }
@@ -187,7 +237,7 @@ async function readBoundedStdin() {
   return Buffer.concat(chunks, size);
 }
 
-function parsePostcheck(bytes) {
+function parsePostcheck(bytes, runner) {
   let text;
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -195,7 +245,9 @@ function parsePostcheck(bytes) {
     fail("postcheck_encoding_invalid");
   }
   const lines = text.trimEnd().split("\n");
-  if (lines.length !== REQUIRED_TABLES.length) fail("postcheck_rows_invalid");
+  if (lines.length !== REQUIRED_TABLES.length + 1) {
+    fail("postcheck_rows_invalid");
+  }
 
   for (let index = 0; index < REQUIRED_TABLES.length; index += 1) {
     const fields = lines[index].split("|");
@@ -206,6 +258,65 @@ function parsePostcheck(bytes) {
     if (fields[2] !== "1") fail("postcheck_rls_disabled");
     if (!/^[1-9]\d{0,3}$/u.test(fields[3])) fail("postcheck_policy_missing");
   }
+
+  const authorization = lines[REQUIRED_TABLES.length].split("|");
+  if (
+    authorization.length !== 10 ||
+    authorization[0] !== "authorization" ||
+    !SHA256.test(authorization[1]) ||
+    !/^[1-9]\d{0,15}$/u.test(authorization[2]) ||
+    !/^[1-9]\d{0,15}$/u.test(authorization[3]) ||
+    !/^[1-9]\d{0,15}$/u.test(authorization[4]) ||
+    !/^[1-9]\d{0,15}$/u.test(authorization[5])
+    || !SHA256.test(authorization[6])
+    || !/^[1-9]\d{0,15}$/u.test(authorization[7])
+    || !SHA256.test(authorization[8])
+    || !/^[1-9]\d{0,15}$/u.test(authorization[9])
+  ) {
+    fail("postcheck_authorization_invalid");
+  }
+  const recordCount = Number(authorization[2]);
+  const grantTupleCount = Number(authorization[3]);
+  const coreTableAppGrantTupleCount = Number(authorization[4]);
+  const restrictedSecurityDefinerFunctionCount = Number(authorization[5]);
+  const requiredExtensionCount = Number(authorization[7]);
+  const extensionRecordCount = Number(authorization[9]);
+  if (
+    !Number.isSafeInteger(recordCount) ||
+    !Number.isSafeInteger(grantTupleCount) ||
+    !Number.isSafeInteger(coreTableAppGrantTupleCount) ||
+    !Number.isSafeInteger(restrictedSecurityDefinerFunctionCount) ||
+    !Number.isSafeInteger(requiredExtensionCount) ||
+    !Number.isSafeInteger(extensionRecordCount) ||
+    authorization[1] !== runner.databaseAuthorizationFingerprintSha256 ||
+    recordCount !== runner.databaseAuthorizationRecordCount ||
+    grantTupleCount !== runner.databaseAuthorizationGrantTupleCount ||
+    coreTableAppGrantTupleCount !==
+      runner.databaseCoreTableAppGrantTupleCount ||
+    restrictedSecurityDefinerFunctionCount !==
+      runner.databaseRestrictedSecurityDefinerFunctionCount ||
+    authorization[6] !==
+      runner.databaseAuthorizationRequiredExtensionsSha256 ||
+    requiredExtensionCount !==
+      runner.databaseAuthorizationRequiredExtensionCount ||
+    authorization[8] !==
+      runner.databaseAuthorizationExtensionFingerprintSha256 ||
+    extensionRecordCount !==
+      runner.databaseAuthorizationExtensionRecordCount
+  ) {
+    fail("postcheck_authorization_mismatch");
+  }
+  return {
+    fingerprintSha256: authorization[1],
+    recordCount,
+    grantTupleCount,
+    coreTableAppGrantTupleCount,
+    restrictedSecurityDefinerFunctionCount,
+    requiredExtensionsSha256: authorization[6],
+    requiredExtensionCount,
+    extensionFingerprintSha256: authorization[8],
+    extensionRecordCount,
+  };
 }
 
 async function assertPrivateOutputDirectory(outputPath) {
@@ -281,10 +392,10 @@ async function main() {
     if (Date.parse(checkedAt) < Date.parse(runner.completedAt)) {
       fail("postcheck_timestamp_order_invalid");
     }
-    parsePostcheck(postcheckBytes);
+    const authorization = parsePostcheck(postcheckBytes, runner);
 
     const record = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       drillId,
       checkedAt,
       productionCommit,
@@ -295,6 +406,34 @@ async function main() {
       rlsEnabledTableCount: REQUIRED_TABLES.length,
       policyCoveredTableCount: REQUIRED_TABLES.length,
       databasePostcheck: "passed",
+      databaseAuthorizationFingerprintSha256:
+        authorization.fingerprintSha256,
+      databaseAuthorizationRecordCount: authorization.recordCount,
+      databaseAuthorizationGrantTupleCount:
+        authorization.grantTupleCount,
+      databaseAuthorizationRoleFingerprintSha256:
+        runner.databaseAuthorizationRoleFingerprintSha256,
+      databaseAuthorizationRoleRecordCount:
+        runner.databaseAuthorizationRoleRecordCount,
+      databaseAuthorizationContainerFingerprintSha256:
+        runner.databaseAuthorizationContainerFingerprintSha256,
+      databaseAuthorizationContainerRecordCount:
+        runner.databaseAuthorizationContainerRecordCount,
+      databaseAuthorizationRequiredExtensionsSha256:
+        authorization.requiredExtensionsSha256,
+      databaseAuthorizationRequiredExtensionCount:
+        authorization.requiredExtensionCount,
+      databaseAuthorizationExtensionFingerprintSha256:
+        authorization.extensionFingerprintSha256,
+      databaseAuthorizationExtensionRecordCount:
+        authorization.extensionRecordCount,
+      databaseCoreTableAppGrantTupleCount:
+        authorization.coreTableAppGrantTupleCount,
+      databaseRestrictedSecurityDefinerFunctionCount:
+        authorization.restrictedSecurityDefinerFunctionCount,
+      databaseAuthorizationPostcheck: "passed",
+      coreTableAppPrivileges: "passed",
+      securityDefinerExecutionBoundary: "passed",
     };
     await writePrivateAtomic(
       args.outputPath,

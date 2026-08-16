@@ -123,8 +123,11 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   one connection to the explicitly confirmed isolated target with a private
   mode-`0600` passfile snapshot and `sslmode=verify-full`. That exception is
   limited to fixed `pg_catalog` queries for PostgreSQL major version and the
-  migration-required role/extension counts, with a server-enforced read-only
-  session and redacted count-only output. Both restore write gates stay off;
+  migration-required role/extension counts and dedicated restore-user
+  superuser status, with a server-enforced read-only session and redacted
+  count-only output. Hosted direct Supabase databases and shared poolers are
+  unsupported database targets; the database boundary must be an isolated,
+  self-controlled PostgreSQL 17 cluster. Both restore write gates stay off;
   the step must never create roles/extensions, decrypt or restore anything.
 - The separate isolated database restore workflow is the only GitHub path that
   may enable the two restore write gates. Keep it exact-reviewed-commit-bound,
@@ -132,8 +135,14 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   `fanmind-restore` runner. It must re-run checksum readiness and PostgreSQL 17
   compatibility first, freeze the private age identity, passfile and CA
   without following symlinks, require TLS `verify-full`, restore the
-  receipt-bound dump in one transaction and upload only the three redacted
-  receipts with short retention. Never upload plaintext, automatically claim
+  receipt-bound dump in one transaction, preserve the exact ACL/ownership
+  contract, require a receipt-bound role and database-container match before
+  writing, and upload only the three private receipts with short retention.
+  The Full Backup Receipt contains the bounded required database role names
+  for prewrite verification and must never be treated as a public/redacted
+  artifact; runner, postcheck and final evidence remain name-free.
+  The bootstrap restore login must be the sole additional LOGIN/SUPERUSER
+  outside the source role component. Never upload plaintext, automatically claim
   disposable-target cleanup, or count database-only success as the complete
   Restore-Drill.
 - Mobile release resource readiness is strictly read-only. Keep it main-only,

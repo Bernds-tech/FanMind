@@ -137,7 +137,7 @@ async function main() {
     });
 
   const record = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     drillId,
     startedAt,
     completedAt,
@@ -148,11 +148,43 @@ async function main() {
     databasePartEncryptedSha256:
       receipt.databasePartEncryptedSha256,
     databaseDumpSha256: receipt.databaseDumpSha256,
+    databaseAuthorizationContractVersion:
+      receipt.databaseAuthorizationContractVersion,
+    databaseAuthorizationFingerprintSha256:
+      receipt.databaseAuthorizationFingerprintSha256,
+    databaseAuthorizationRecordCount:
+      receipt.databaseAuthorizationRecordCount,
+    databaseAuthorizationGrantTupleCount:
+      receipt.databaseAuthorizationGrantTupleCount,
+    databaseAuthorizationRequiredRolesSha256:
+      receipt.databaseAuthorizationRequiredRolesSha256,
+    databaseAuthorizationRoleFingerprintSha256:
+      receipt.databaseAuthorizationRoleFingerprintSha256,
+    databaseAuthorizationRoleRecordCount:
+      receipt.databaseAuthorizationRoleRecordCount,
+    databaseAuthorizationContainerFingerprintSha256:
+      receipt.databaseAuthorizationContainerFingerprintSha256,
+    databaseAuthorizationContainerRecordCount:
+      receipt.databaseAuthorizationContainerRecordCount,
+    databaseAuthorizationRequiredExtensionsSha256:
+      receipt.databaseAuthorizationRequiredExtensionsSha256,
+    databaseAuthorizationRequiredExtensionCount:
+      receipt.databaseAuthorizationRequiredExtensions.length,
+    databaseAuthorizationExtensionFingerprintSha256:
+      receipt.databaseAuthorizationExtensionFingerprintSha256,
+    databaseAuthorizationExtensionRecordCount:
+      receipt.databaseAuthorizationExtensionRecordCount,
+    databaseCoreTableAppGrantTupleCount:
+      receipt.databaseCoreTableAppGrantTupleCount,
+    databaseRestrictedSecurityDefinerFunctionCount:
+      receipt.databaseRestrictedSecurityDefinerFunctionCount,
     disposableTargetId,
     emptyTargetObservedAt,
     emptyTargetObjectCount: 0,
     databaseRestore: "passed",
     singleTransaction: true,
+    databasePrivilegesRestore: "passed",
+    databaseOwnershipRestore: "passed",
   };
   await writePrivateAtomic(
     args.outputPath,

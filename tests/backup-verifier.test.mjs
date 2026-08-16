@@ -30,8 +30,67 @@ import {
 import {
   verifyFullBackupRestoreReceipt,
 } from "../scripts/operations/verify-full-backup-restore-receipt.mjs";
+import {
+  analyzeAuthorizationToc,
+} from "../scripts/operations/database-authorization-contract.mjs";
 
 const execFileAsync = promisify(execFile);
+
+const AUTHORIZATION_TOC = `${[
+  "; Archive created by PostgreSQL 17",
+  "10; 0 0 ACL public TABLE contacts postgres",
+  "11; 826 20000 DEFAULT ACL public DEFAULT PRIVILEGES FOR TABLES postgres",
+].join("\n")}\n`;
+const REQUIRED_EXTENSIONS = [
+  {
+    name: "pgcrypto",
+    version: "1.3",
+    schema: "extensions",
+    owner: "postgres",
+    relocatable: true,
+    schemaOwner: "postgres",
+    schemaDefinitionArchived: true,
+  },
+  {
+    name: "plpgsql",
+    version: "1.0",
+    schema: "pg_catalog",
+    owner: "postgres",
+    relocatable: false,
+    schemaOwner: "postgres",
+    schemaDefinitionArchived: false,
+  },
+];
+const REQUIRED_EXTENSIONS_SHA256 = createHash("sha256")
+  .update(JSON.stringify(REQUIRED_EXTENSIONS), "utf8")
+  .digest("hex");
+
+function authorizationContractManifest() {
+  const toc = analyzeAuthorizationToc(AUTHORIZATION_TOC);
+  return {
+    schema_version: 2,
+    canonicalization: "postgresql-17-acl-json-array-hex-v2",
+    fingerprint_sha256: "1".repeat(64),
+    record_count: 500,
+    grant_tuple_count: 420,
+    required_roles: ["anon", "authenticated", "postgres", "service_role"],
+    required_roles_sha256:
+      "e98e2327a4ff9c027369a56bd63609b349edd5628d2a21d5cad9eecbcc7d0226",
+    role_fingerprint_sha256: "c".repeat(64),
+    role_record_count: 5,
+    database_container_fingerprint_sha256: "d".repeat(64),
+    database_container_record_count: 11,
+    required_extensions: REQUIRED_EXTENSIONS,
+    required_extensions_sha256: REQUIRED_EXTENSIONS_SHA256,
+    extension_fingerprint_sha256: "e".repeat(64),
+    extension_record_count: 84,
+    core_table_app_grant_tuple_count: 120,
+    restricted_security_definer_function_count: 12,
+    archive_acl_toc_entry_count: toc.aclEntryCount,
+    archive_default_acl_toc_entry_count: toc.defaultAclEntryCount,
+    archive_acl_toc_sha256: toc.sha256,
+  };
+}
 
 function hash(content) {
   return createHash("sha256").update(content).digest("hex");
@@ -268,7 +327,16 @@ test("full verification creates an exact private dump and cryptographic receipt"
         checksum_file: `${file}.sha256`,
         sha256: digest,
         size_bytes: encrypted.length,
-        manifest: { backup_type: backupType },
+        manifest:
+          backupType === "database"
+            ? {
+                backup_type: backupType,
+                format_version: 2,
+                privileges_archived: true,
+                ownership_archived: true,
+                authorization_contract: authorizationContractManifest(),
+              }
+            : { backup_type: backupType },
       });
     }
     await writeFile(
@@ -330,6 +398,9 @@ test("full verification creates an exact private dump and cryptographic receipt"
       "set -Eeuo pipefail",
       "[[ \"${1:-}\" == \"--list\" ]]",
       "[[ -s \"${2:-}\" ]]",
+      "cat <<'FANMIND_AUTHORIZATION_TOC'",
+      ...AUTHORIZATION_TOC.trimEnd().split("\n"),
+      "FANMIND_AUTHORIZATION_TOC",
     ]);
 
     const result = await verifyBackupArtifact({
@@ -363,8 +434,30 @@ test("full verification creates an exact private dump and cryptographic receipt"
       "productionCommit",
       "databasePartEncryptedSha256",
       "databaseDumpSha256",
+      "databaseAuthorizationContractVersion",
+      "databaseAuthorizationFingerprintSha256",
+      "databaseAuthorizationRecordCount",
+      "databaseAuthorizationGrantTupleCount",
+      "databaseAuthorizationRequiredRoles",
+      "databaseAuthorizationRequiredRolesSha256",
+      "databaseAuthorizationRoleFingerprintSha256",
+      "databaseAuthorizationRoleRecordCount",
+      "databaseAuthorizationContainerFingerprintSha256",
+      "databaseAuthorizationContainerRecordCount",
+      "databaseAuthorizationRequiredExtensions",
+      "databaseAuthorizationRequiredExtensionsSha256",
+      "databaseAuthorizationExtensionFingerprintSha256",
+      "databaseAuthorizationExtensionRecordCount",
+      "databaseCoreTableAppGrantTupleCount",
+      "databaseRestrictedSecurityDefinerFunctionCount",
+      "databaseAclTocEntryCount",
+      "databaseDefaultAclTocEntryCount",
+      "databaseAclTocSha256",
+      "databasePrivilegesArchived",
+      "databaseOwnershipArchived",
       "verifier",
     ]);
+    assert.equal(receipt.schemaVersion, 2);
     assert.equal(receipt.sourceArtifactBasename, basename(artifact));
     assert.equal(receipt.outerSha256, hash(outerEncrypted));
     assert.equal(receipt.productionCommit, "b".repeat(40));
@@ -373,6 +466,56 @@ test("full verification creates an exact private dump and cryptographic receipt"
       parts.find((part) => part.manifest.backup_type === "database").sha256,
     );
     assert.equal(receipt.databaseDumpSha256, hash(databaseClear));
+    assert.equal(receipt.databaseAuthorizationContractVersion, 2);
+    assert.equal(
+      receipt.databaseAuthorizationFingerprintSha256,
+      "1".repeat(64),
+    );
+    assert.equal(receipt.databaseAuthorizationRecordCount, 500);
+    assert.equal(receipt.databaseAuthorizationGrantTupleCount, 420);
+    assert.deepEqual(receipt.databaseAuthorizationRequiredRoles, [
+      "anon",
+      "authenticated",
+      "postgres",
+      "service_role",
+    ]);
+    assert.equal(
+      receipt.databaseAuthorizationRequiredRolesSha256,
+      "e98e2327a4ff9c027369a56bd63609b349edd5628d2a21d5cad9eecbcc7d0226",
+    );
+    assert.equal(
+      receipt.databaseAuthorizationRoleFingerprintSha256,
+      "c".repeat(64),
+    );
+    assert.equal(receipt.databaseAuthorizationRoleRecordCount, 5);
+    assert.equal(
+      receipt.databaseAuthorizationContainerFingerprintSha256,
+      "d".repeat(64),
+    );
+    assert.equal(receipt.databaseAuthorizationContainerRecordCount, 11);
+    assert.deepEqual(
+      receipt.databaseAuthorizationRequiredExtensions,
+      REQUIRED_EXTENSIONS,
+    );
+    assert.equal(
+      receipt.databaseAuthorizationRequiredExtensionsSha256,
+      REQUIRED_EXTENSIONS_SHA256,
+    );
+    assert.equal(
+      receipt.databaseAuthorizationExtensionFingerprintSha256,
+      "e".repeat(64),
+    );
+    assert.equal(receipt.databaseAuthorizationExtensionRecordCount, 84);
+    assert.equal(receipt.databaseCoreTableAppGrantTupleCount, 120);
+    assert.equal(receipt.databaseRestrictedSecurityDefinerFunctionCount, 12);
+    assert.equal(receipt.databaseAclTocEntryCount, 1);
+    assert.equal(receipt.databaseDefaultAclTocEntryCount, 1);
+    assert.equal(
+      receipt.databaseAclTocSha256,
+      analyzeAuthorizationToc(AUTHORIZATION_TOC).sha256,
+    );
+    assert.equal(receipt.databasePrivilegesArchived, true);
+    assert.equal(receipt.databaseOwnershipArchived, true);
     await verifyFullBackupRestoreReceipt({
       receiptPath: receiptOutputPath,
       dumpPath: dumpOutputPath,
@@ -390,6 +533,188 @@ test("full verification creates an exact private dump and cryptographic receipt"
       }),
       /restore_output_already_exists/u,
     );
+
+    const databasePart = parts.find(
+      (part) => part.manifest.backup_type === "database",
+    );
+    databasePart.manifest.authorization_contract.unexpected = true;
+    await writeFile(
+      join(fullRoot, "manifest.json"),
+      `${JSON.stringify({
+        production_commit: "b".repeat(40),
+        parts,
+      })}\n`,
+    );
+    await execFileAsync("tar", [
+      "-czf",
+      clearFullArchive,
+      "-C",
+      fullRoot,
+      ".",
+    ]);
+    const unexpectedDumpOutputPath = join(root, "unexpected-database.dump");
+    const unexpectedReceiptOutputPath = join(root, "unexpected-receipt.json");
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath,
+        ageBin: fakeAgePath,
+        pgRestoreBin: fakePgRestorePath,
+        restoreDumpOutputPath: unexpectedDumpOutputPath,
+        restoreReceiptOutputPath: unexpectedReceiptOutputPath,
+      }),
+      /restore_database_authorization_contract_invalid/u,
+    );
+    await assert.rejects(readFile(unexpectedDumpOutputPath), /ENOENT/u);
+    await assert.rejects(readFile(unexpectedReceiptOutputPath), /ENOENT/u);
+
+    delete databasePart.manifest.authorization_contract.unexpected;
+    const roleFingerprint =
+      databasePart.manifest.authorization_contract.role_fingerprint_sha256;
+    delete databasePart.manifest.authorization_contract.role_fingerprint_sha256;
+    await writeFile(
+      join(fullRoot, "manifest.json"),
+      `${JSON.stringify({
+        production_commit: "b".repeat(40),
+        parts,
+      })}\n`,
+    );
+    await execFileAsync("tar", [
+      "-czf",
+      clearFullArchive,
+      "-C",
+      fullRoot,
+      ".",
+    ]);
+    const missingRoleDumpOutputPath = join(
+      root,
+      "missing-role-database.dump",
+    );
+    const missingRoleReceiptOutputPath = join(
+      root,
+      "missing-role-receipt.json",
+    );
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath,
+        ageBin: fakeAgePath,
+        pgRestoreBin: fakePgRestorePath,
+        restoreDumpOutputPath: missingRoleDumpOutputPath,
+        restoreReceiptOutputPath: missingRoleReceiptOutputPath,
+      }),
+      /restore_database_authorization_contract_invalid/u,
+    );
+    await assert.rejects(readFile(missingRoleDumpOutputPath), /ENOENT/u);
+    await assert.rejects(readFile(missingRoleReceiptOutputPath), /ENOENT/u);
+
+    databasePart.manifest.authorization_contract.role_fingerprint_sha256 =
+      roleFingerprint;
+    databasePart.manifest.authorization_contract.role_record_count = 0;
+    await writeFile(
+      join(fullRoot, "manifest.json"),
+      `${JSON.stringify({
+        production_commit: "b".repeat(40),
+        parts,
+      })}\n`,
+    );
+    await execFileAsync("tar", [
+      "-czf",
+      clearFullArchive,
+      "-C",
+      fullRoot,
+      ".",
+    ]);
+    const invalidRoleCountDumpOutputPath = join(
+      root,
+      "invalid-role-count-database.dump",
+    );
+    const invalidRoleCountReceiptOutputPath = join(
+      root,
+      "invalid-role-count-receipt.json",
+    );
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath,
+        ageBin: fakeAgePath,
+        pgRestoreBin: fakePgRestorePath,
+        restoreDumpOutputPath: invalidRoleCountDumpOutputPath,
+        restoreReceiptOutputPath: invalidRoleCountReceiptOutputPath,
+      }),
+      /restore_database_authorization_contract_invalid/u,
+    );
+    await assert.rejects(readFile(invalidRoleCountDumpOutputPath), /ENOENT/u);
+    await assert.rejects(
+      readFile(invalidRoleCountReceiptOutputPath),
+      /ENOENT/u,
+    );
+
+    databasePart.manifest.authorization_contract.role_record_count = 5;
+    databasePart.manifest.authorization_contract.archive_acl_toc_entry_count = 2;
+    await writeFile(
+      join(fullRoot, "manifest.json"),
+      `${JSON.stringify({
+        production_commit: "b".repeat(40),
+        parts,
+      })}\n`,
+    );
+    await execFileAsync("tar", [
+      "-czf",
+      clearFullArchive,
+      "-C",
+      fullRoot,
+      ".",
+    ]);
+    const mismatchDumpOutputPath = join(root, "mismatch-database.dump");
+    const mismatchReceiptOutputPath = join(root, "mismatch-receipt.json");
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath,
+        ageBin: fakeAgePath,
+        pgRestoreBin: fakePgRestorePath,
+        restoreDumpOutputPath: mismatchDumpOutputPath,
+        restoreReceiptOutputPath: mismatchReceiptOutputPath,
+      }),
+      /restore_database_authorization_toc_mismatch/u,
+    );
+    await assert.rejects(readFile(mismatchDumpOutputPath), /ENOENT/u);
+    await assert.rejects(readFile(mismatchReceiptOutputPath), /ENOENT/u);
+
+    databasePart.manifest = { backup_type: "database", format_version: 1 };
+    await writeFile(
+      join(fullRoot, "manifest.json"),
+      `${JSON.stringify({
+        production_commit: "b".repeat(40),
+        parts,
+      })}\n`,
+    );
+    await execFileAsync("tar", [
+      "-czf",
+      clearFullArchive,
+      "-C",
+      fullRoot,
+      ".",
+    ]);
+    const legacyDumpOutputPath = join(root, "legacy-database.dump");
+    const legacyReceiptOutputPath = join(root, "legacy-receipt.json");
+    await assert.rejects(
+      verifyBackupArtifact({
+        artifactPath: artifact,
+        identityPath,
+        ageBin: fakeAgePath,
+        pgRestoreBin: fakePgRestorePath,
+        restoreDumpOutputPath: legacyDumpOutputPath,
+        restoreReceiptOutputPath: legacyReceiptOutputPath,
+      }),
+      /restore_database_manifest_version_invalid/u,
+    );
+    await assert.rejects(readFile(legacyDumpOutputPath), /ENOENT/u);
+    await assert.rejects(readFile(legacyReceiptOutputPath), /ENOENT/u);
+    const legacyChecksumOnly = await verifyBackupArtifact({ artifactPath: artifact });
+    assert.equal(legacyChecksumOnly.ok, true);
+    assert.equal(legacyChecksumOnly.mode, "checksum_only");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

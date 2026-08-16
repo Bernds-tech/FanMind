@@ -182,3 +182,50 @@ jobs:
         run: |
           echo "Production build failed. See fanmind-build-report artifact." >&2
           exit 1
+
+  pg17_authorization_roundtrip:
+    name: PostgreSQL 17 authorization roundtrip
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      pg17_source:
+        image: postgres:17.10-trixie@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d
+        env:
+          POSTGRES_PASSWORD: fanmind-ci-only-pg17
+          POSTGRES_INITDB_ARGS: >-
+            --encoding=UTF8 --locale-provider=icu
+            --icu-locale=en-US --locale=en_US.UTF-8
+        options: >-
+          --health-cmd "pg_isready --username=postgres --dbname=postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+      pg17_target:
+        image: postgres:17.10-trixie@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d
+        env:
+          POSTGRES_PASSWORD: fanmind-ci-only-pg17
+          POSTGRES_INITDB_ARGS: >-
+            --encoding=UTF8 --locale-provider=icu
+            --icu-locale=en-US --locale=en_US.UTF-8
+        options: >-
+          --health-cmd "pg_isready --username=postgres --dbname=postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.13.1
+
+      - name: Prove PostgreSQL 17 authorization backup and restore
+        env:
+          FANMIND_PG17_SOURCE_CONTAINER_ID: ${{ job.services.pg17_source.id }}
+          FANMIND_PG17_TARGET_CONTAINER_ID: ${{ job.services.pg17_target.id }}
+          FANMIND_PG17_PASSWORD: fanmind-ci-only-pg17
+          FANMIND_PG17_REQUIRE_SERVICE_CONTAINERS: "true"
+        run: npm run test:database-authorization:pg17

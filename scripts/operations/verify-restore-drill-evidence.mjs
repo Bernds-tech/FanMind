@@ -18,6 +18,11 @@ const PASS_FIELDS = [
   "storageSample",
   "serverConfigInspection",
   "cleanup",
+  "databasePrivilegesRestore",
+  "databaseOwnershipRestore",
+  "databaseAuthorizationPostcheck",
+  "coreTableAppPrivileges",
+  "securityDefinerExecutionBoundary",
 ];
 const BOOLEAN_FALSE_FIELDS = [
   "productionModified",
@@ -38,6 +43,20 @@ const EVIDENCE_KEYS = [
   "databasePostcheckReceiptSha256",
   "databasePartEncryptedSha256",
   "databaseDumpSha256",
+  "databaseAuthorizationFingerprintSha256",
+  "databaseAuthorizationRecordCount",
+  "databaseAuthorizationGrantTupleCount",
+  "databaseAuthorizationRequiredRolesSha256",
+  "databaseAuthorizationRoleFingerprintSha256",
+  "databaseAuthorizationRoleRecordCount",
+  "databaseAuthorizationContainerFingerprintSha256",
+  "databaseAuthorizationContainerRecordCount",
+  "databaseAuthorizationRequiredExtensionsSha256",
+  "databaseAuthorizationRequiredExtensionCount",
+  "databaseAuthorizationExtensionFingerprintSha256",
+  "databaseAuthorizationExtensionRecordCount",
+  "databaseCoreTableAppGrantTupleCount",
+  "databaseRestrictedSecurityDefinerFunctionCount",
   "disposableTargetId",
   ...PASS_FIELDS,
   ...BOOLEAN_FALSE_FIELDS,
@@ -54,11 +73,28 @@ const RUNNER_KEYS = [
   "fullBackupReceiptSha256",
   "databasePartEncryptedSha256",
   "databaseDumpSha256",
+  "databaseAuthorizationContractVersion",
+  "databaseAuthorizationFingerprintSha256",
+  "databaseAuthorizationRecordCount",
+  "databaseAuthorizationGrantTupleCount",
+  "databaseAuthorizationRequiredRolesSha256",
+  "databaseAuthorizationRoleFingerprintSha256",
+  "databaseAuthorizationRoleRecordCount",
+  "databaseAuthorizationContainerFingerprintSha256",
+  "databaseAuthorizationContainerRecordCount",
+  "databaseAuthorizationRequiredExtensionsSha256",
+  "databaseAuthorizationRequiredExtensionCount",
+  "databaseAuthorizationExtensionFingerprintSha256",
+  "databaseAuthorizationExtensionRecordCount",
+  "databaseCoreTableAppGrantTupleCount",
+  "databaseRestrictedSecurityDefinerFunctionCount",
   "disposableTargetId",
   "emptyTargetObservedAt",
   "emptyTargetObjectCount",
   "databaseRestore",
   "singleTransaction",
+  "databasePrivilegesRestore",
+  "databaseOwnershipRestore",
 ].sort();
 const DATABASE_POSTCHECK_KEYS = [
   "schemaVersion",
@@ -72,6 +108,22 @@ const DATABASE_POSTCHECK_KEYS = [
   "rlsEnabledTableCount",
   "policyCoveredTableCount",
   "databasePostcheck",
+  "databaseAuthorizationFingerprintSha256",
+  "databaseAuthorizationRecordCount",
+  "databaseAuthorizationGrantTupleCount",
+  "databaseAuthorizationRoleFingerprintSha256",
+  "databaseAuthorizationRoleRecordCount",
+  "databaseAuthorizationContainerFingerprintSha256",
+  "databaseAuthorizationContainerRecordCount",
+  "databaseAuthorizationRequiredExtensionsSha256",
+  "databaseAuthorizationRequiredExtensionCount",
+  "databaseAuthorizationExtensionFingerprintSha256",
+  "databaseAuthorizationExtensionRecordCount",
+  "databaseCoreTableAppGrantTupleCount",
+  "databaseRestrictedSecurityDefinerFunctionCount",
+  "databaseAuthorizationPostcheck",
+  "coreTableAppPrivileges",
+  "securityDefinerExecutionBoundary",
 ].sort();
 
 function fixedError(code) {
@@ -139,7 +191,7 @@ function isIsoUtc(value) {
 function parseRunnerReceipt(bytes) {
   const receipt = parseFlatRecord(bytes, "runner_receipt");
   exactKeys(receipt, RUNNER_KEYS, "runner_receipt");
-  if (receipt.schemaVersion !== 1) {
+  if (receipt.schemaVersion !== 2) {
     throw fixedError("runner_receipt_schema_invalid");
   }
   if (
@@ -170,6 +222,12 @@ function parseRunnerReceipt(bytes) {
     "fullBackupReceiptSha256",
     "databasePartEncryptedSha256",
     "databaseDumpSha256",
+    "databaseAuthorizationFingerprintSha256",
+    "databaseAuthorizationRequiredRolesSha256",
+    "databaseAuthorizationRoleFingerprintSha256",
+    "databaseAuthorizationContainerFingerprintSha256",
+    "databaseAuthorizationRequiredExtensionsSha256",
+    "databaseAuthorizationExtensionFingerprintSha256",
   ]) {
     if (!SHA256.test(receipt[field])) {
       throw fixedError(`runner_receipt_${fieldCode(field)}_invalid`);
@@ -177,6 +235,27 @@ function parseRunnerReceipt(bytes) {
   }
   if (!UUID_V4.test(receipt.disposableTargetId)) {
     throw fixedError("runner_receipt_target_id_invalid");
+  }
+  if (receipt.databaseAuthorizationContractVersion !== 2) {
+    throw fixedError("runner_receipt_authorization_contract_invalid");
+  }
+  if (
+    !Number.isSafeInteger(receipt.databaseAuthorizationRecordCount) ||
+    receipt.databaseAuthorizationRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationGrantTupleCount) ||
+    receipt.databaseAuthorizationGrantTupleCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationRoleRecordCount) ||
+    receipt.databaseAuthorizationRoleRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationContainerRecordCount) ||
+    receipt.databaseAuthorizationContainerRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationRequiredExtensionCount) ||
+    receipt.databaseAuthorizationRequiredExtensionCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationExtensionRecordCount) ||
+    receipt.databaseAuthorizationExtensionRecordCount <= 0 ||
+    receipt.databaseCoreTableAppGrantTupleCount !== 120 ||
+    receipt.databaseRestrictedSecurityDefinerFunctionCount !== 12
+  ) {
+    throw fixedError("runner_receipt_authorization_counts_invalid");
   }
   if (receipt.emptyTargetObjectCount !== 0) {
     throw fixedError("runner_receipt_target_not_empty");
@@ -187,13 +266,19 @@ function parseRunnerReceipt(bytes) {
   if (receipt.singleTransaction !== true) {
     throw fixedError("runner_receipt_transaction_invalid");
   }
+  if (receipt.databasePrivilegesRestore !== "passed") {
+    throw fixedError("runner_receipt_privileges_restore_not_passed");
+  }
+  if (receipt.databaseOwnershipRestore !== "passed") {
+    throw fixedError("runner_receipt_ownership_restore_not_passed");
+  }
   return receipt;
 }
 
 function parseDatabasePostcheckReceipt(bytes) {
   const receipt = parseFlatRecord(bytes, "database_postcheck_receipt");
   exactKeys(receipt, DATABASE_POSTCHECK_KEYS, "database_postcheck_receipt");
-  if (receipt.schemaVersion !== 1) {
+  if (receipt.schemaVersion !== 2) {
     throw fixedError("database_postcheck_receipt_schema_invalid");
   }
   if (
@@ -214,6 +299,29 @@ function parseDatabasePostcheckReceipt(bytes) {
   if (!SHA256.test(receipt.restoreRunnerReceiptSha256)) {
     throw fixedError("database_postcheck_receipt_runner_sha_invalid");
   }
+  if (!SHA256.test(receipt.databaseAuthorizationFingerprintSha256)) {
+    throw fixedError(
+      "database_postcheck_receipt_authorization_fingerprint_invalid",
+    );
+  }
+  if (!SHA256.test(receipt.databaseAuthorizationRoleFingerprintSha256)) {
+    throw fixedError(
+      "database_postcheck_receipt_authorization_role_fingerprint_invalid",
+    );
+  }
+  if (!SHA256.test(receipt.databaseAuthorizationContainerFingerprintSha256)) {
+    throw fixedError(
+      "database_postcheck_receipt_authorization_container_fingerprint_invalid",
+    );
+  }
+  if (
+    !SHA256.test(receipt.databaseAuthorizationRequiredExtensionsSha256) ||
+    !SHA256.test(receipt.databaseAuthorizationExtensionFingerprintSha256)
+  ) {
+    throw fixedError(
+      "database_postcheck_receipt_authorization_extension_fingerprint_invalid",
+    );
+  }
   for (const field of [
     "requiredTableCount",
     "existingTableCount",
@@ -229,12 +337,43 @@ function parseDatabasePostcheckReceipt(bytes) {
   if (receipt.databasePostcheck !== "passed") {
     throw fixedError("database_postcheck_receipt_not_passed");
   }
+  if (
+    !Number.isSafeInteger(receipt.databaseAuthorizationRecordCount) ||
+    receipt.databaseAuthorizationRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationGrantTupleCount) ||
+    receipt.databaseAuthorizationGrantTupleCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationRoleRecordCount) ||
+    receipt.databaseAuthorizationRoleRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationContainerRecordCount) ||
+    receipt.databaseAuthorizationContainerRecordCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationRequiredExtensionCount) ||
+    receipt.databaseAuthorizationRequiredExtensionCount <= 0 ||
+    !Number.isSafeInteger(receipt.databaseAuthorizationExtensionRecordCount) ||
+    receipt.databaseAuthorizationExtensionRecordCount <= 0 ||
+    receipt.databaseCoreTableAppGrantTupleCount !== 120 ||
+    receipt.databaseRestrictedSecurityDefinerFunctionCount !== 12
+  ) {
+    throw fixedError(
+      "database_postcheck_receipt_authorization_counts_invalid",
+    );
+  }
+  for (const field of [
+    "databaseAuthorizationPostcheck",
+    "coreTableAppPrivileges",
+    "securityDefinerExecutionBoundary",
+  ]) {
+    if (receipt[field] !== "passed") {
+      throw fixedError(
+        `database_postcheck_receipt_${fieldCode(field)}_not_passed`,
+      );
+    }
+  }
   return receipt;
 }
 
 function validateEvidence(evidence) {
   exactKeys(evidence, EVIDENCE_KEYS, "evidence");
-  if (evidence.schemaVersion !== 5) {
+  if (evidence.schemaVersion !== 6) {
     throw fixedError("evidence_schema_invalid");
   }
   if (
@@ -265,6 +404,12 @@ function validateEvidence(evidence) {
     "databasePostcheckReceiptSha256",
     "databasePartEncryptedSha256",
     "databaseDumpSha256",
+    "databaseAuthorizationFingerprintSha256",
+    "databaseAuthorizationRequiredRolesSha256",
+    "databaseAuthorizationRoleFingerprintSha256",
+    "databaseAuthorizationContainerFingerprintSha256",
+    "databaseAuthorizationRequiredExtensionsSha256",
+    "databaseAuthorizationExtensionFingerprintSha256",
   ]) {
     if (!SHA256.test(evidence[field])) {
       throw fixedError(`evidence_${fieldCode(field)}_invalid`);
@@ -272,6 +417,24 @@ function validateEvidence(evidence) {
   }
   if (!UUID_V4.test(evidence.disposableTargetId)) {
     throw fixedError("evidence_target_id_invalid");
+  }
+  if (
+    !Number.isSafeInteger(evidence.databaseAuthorizationRecordCount) ||
+    evidence.databaseAuthorizationRecordCount <= 0 ||
+    !Number.isSafeInteger(evidence.databaseAuthorizationGrantTupleCount) ||
+    evidence.databaseAuthorizationGrantTupleCount <= 0 ||
+    !Number.isSafeInteger(evidence.databaseAuthorizationRoleRecordCount) ||
+    evidence.databaseAuthorizationRoleRecordCount <= 0 ||
+    !Number.isSafeInteger(evidence.databaseAuthorizationContainerRecordCount) ||
+    evidence.databaseAuthorizationContainerRecordCount <= 0 ||
+    !Number.isSafeInteger(evidence.databaseAuthorizationRequiredExtensionCount) ||
+    evidence.databaseAuthorizationRequiredExtensionCount <= 0 ||
+    !Number.isSafeInteger(evidence.databaseAuthorizationExtensionRecordCount) ||
+    evidence.databaseAuthorizationExtensionRecordCount <= 0 ||
+    evidence.databaseCoreTableAppGrantTupleCount !== 120 ||
+    evidence.databaseRestrictedSecurityDefinerFunctionCount !== 12
+  ) {
+    throw fixedError("evidence_authorization_counts_invalid");
   }
   for (const field of PASS_FIELDS) {
     if (evidence[field] !== "passed") {
@@ -295,6 +458,19 @@ function bindReceipts(evidence, fullReceipt, fullDigest, runner, runnerDigest) {
     "productionCommit",
     "databasePartEncryptedSha256",
     "databaseDumpSha256",
+    "databaseAuthorizationFingerprintSha256",
+    "databaseAuthorizationRecordCount",
+    "databaseAuthorizationGrantTupleCount",
+    "databaseAuthorizationRequiredRolesSha256",
+    "databaseAuthorizationRoleFingerprintSha256",
+    "databaseAuthorizationRoleRecordCount",
+    "databaseAuthorizationContainerFingerprintSha256",
+    "databaseAuthorizationContainerRecordCount",
+    "databaseAuthorizationRequiredExtensionsSha256",
+    "databaseAuthorizationExtensionFingerprintSha256",
+    "databaseAuthorizationExtensionRecordCount",
+    "databaseCoreTableAppGrantTupleCount",
+    "databaseRestrictedSecurityDefinerFunctionCount",
   ];
   for (const field of shared) {
     if (
@@ -303,6 +479,14 @@ function bindReceipts(evidence, fullReceipt, fullDigest, runner, runnerDigest) {
     ) {
       throw fixedError(`receipt_binding_${fieldCode(field)}_mismatch`);
     }
+  }
+  if (
+    evidence.databaseAuthorizationRequiredExtensionCount !==
+      runner.databaseAuthorizationRequiredExtensionCount ||
+    evidence.databaseAuthorizationRequiredExtensionCount !==
+      fullReceipt.databaseAuthorizationRequiredExtensions.length
+  ) {
+    throw fixedError("receipt_binding_required_extension_count_mismatch");
   }
   if (
     evidence.fullBackupReceiptSha256 !== fullDigest ||
@@ -324,6 +508,13 @@ function bindReceipts(evidence, fullReceipt, fullDigest, runner, runnerDigest) {
     Date.parse(evidence.completedAt) < Date.parse(runner.completedAt)
   ) {
     throw fixedError("runner_timestamp_envelope_mismatch");
+  }
+  if (
+    evidence.databasePrivilegesRestore !==
+      runner.databasePrivilegesRestore ||
+    evidence.databaseOwnershipRestore !== runner.databaseOwnershipRestore
+  ) {
+    throw fixedError("runner_authorization_restore_binding_mismatch");
   }
 }
 
@@ -352,6 +543,38 @@ function bindDatabasePostcheck(
     Date.parse(evidence.completedAt) < Date.parse(postcheck.checkedAt)
   ) {
     throw fixedError("database_postcheck_timestamp_envelope_mismatch");
+  }
+  for (const field of [
+    "databaseAuthorizationFingerprintSha256",
+    "databaseAuthorizationRecordCount",
+    "databaseAuthorizationGrantTupleCount",
+    "databaseAuthorizationRoleFingerprintSha256",
+    "databaseAuthorizationRoleRecordCount",
+    "databaseAuthorizationContainerFingerprintSha256",
+    "databaseAuthorizationContainerRecordCount",
+    "databaseAuthorizationRequiredExtensionsSha256",
+    "databaseAuthorizationRequiredExtensionCount",
+    "databaseAuthorizationExtensionFingerprintSha256",
+    "databaseAuthorizationExtensionRecordCount",
+    "databaseCoreTableAppGrantTupleCount",
+    "databaseRestrictedSecurityDefinerFunctionCount",
+  ]) {
+    if (postcheck[field] !== runner[field] || postcheck[field] !== evidence[field]) {
+      throw fixedError(
+        `database_postcheck_authorization_${fieldCode(field)}_mismatch`,
+      );
+    }
+  }
+  for (const field of [
+    "databaseAuthorizationPostcheck",
+    "coreTableAppPrivileges",
+    "securityDefinerExecutionBoundary",
+  ]) {
+    if (postcheck[field] !== evidence[field]) {
+      throw fixedError(
+        `database_postcheck_authorization_${fieldCode(field)}_mismatch`,
+      );
+    }
   }
 }
 

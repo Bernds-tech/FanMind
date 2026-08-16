@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 import { createHash, randomBytes } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { access, constants, mkdir, mkdtemp, readFile, realpath, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { access, constants, mkdir, mkdtemp, open, readFile, realpath, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { hostname, tmpdir } from 'node:os';
-import { join, basename, dirname, relative, resolve } from 'node:path';
+import { join, basename, dirname, isAbsolute, relative, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { pipeline } from 'node:stream/promises';
 import { pathToFileURL } from 'node:url';
 import { verifyBackupArtifact } from './verify-backup-artifact.mjs';
+import {
+  analyzeAuthorizationToc,
+  openDatabaseAuthorizationSnapshot,
+  validateAuthorizationContract,
+} from './database-authorization-contract.mjs';
 
-const VERSION = 'phase5-backup-worker-5';
+const VERSION = 'phase5-backup-worker-6';
 const JOBS = new Set(['backup_server_config','backup_database','backup_storage','backup_full','verify_backup']);
 const SAFE_BACKUP_WORKER_ERROR_CODES = new Set([
   'archive_entry_escape_after_extract',
@@ -75,6 +80,10 @@ const SAFE_BACKUP_WORKER_FALLBACK_CODES = new Set([
   'notification_persist_failed',
 ]);
 const STORAGE_PAGE_SIZE = Math.min(Math.max(Number(process.env.FANMIND_STORAGE_BACKUP_PAGE_SIZE || 1000), 1), 1000);
+const MAX_CAPTURED_COMMAND_STDOUT_BYTES = 32 * 1024 * 1024;
+const MAX_BACKUP_DATABASE_PASSFILE_BYTES = 64 * 1024;
+const MAX_BACKUP_DATABASE_CA_BYTES = 1024 * 1024;
+const DEFAULT_BACKUP_DB_CA_CERT_PATH = '/usr/local/lib/fanmind-ops/supabase-root-2021-ca.crt';
 function normalizeWorkerId(value) {
   const candidate = typeof value === 'string' ? value.trim() : '';
   if (/^fanmind-[a-z0-9-]{1,64}-backup-worker$/u.test(candidate)) return candidate;
@@ -111,7 +120,56 @@ function restUrl(table, query='') { return `${requireSupabaseUrl()}/rest/v1/${ta
 function headers(extra={}) { const key = requireServiceKey(); return { apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation', ...extra }; }
 async function api(path, init={}) { const r = await fetch(path, { ...init, headers: headers(init.headers || {}) }); if (!r.ok) throw new Error(`supabase_${r.status}`); return r.status === 204 ? null : r.json(); }
 async function rpc(name, body) { return api(`${requireSupabaseUrl()}/rest/v1/rpc/${name}`, { method:'POST', body:JSON.stringify(body) }); }
-function run(bin, args, opts={}) { return new Promise((resolvePromise, reject) => { const p = spawn(bin, args, { shell:false, stdio:['ignore','pipe','pipe'], env:{...process.env, ...(opts.env || {})}, cwd:opts.cwd }); p.stderr.on('data', () => {}); p.on('close', code => code === 0 ? resolvePromise() : reject(new Error(`${basename(bin)}_exit_${code}`))); }); }
+function run(bin, args, opts={}) {
+  return new Promise((resolvePromise, reject) => {
+    const p = spawn(bin, args, {
+      shell:false,
+      stdio:['ignore','pipe','pipe'],
+      env:opts.replaceEnv ? opts.env : {...process.env, ...(opts.env || {})},
+      cwd:opts.cwd,
+    });
+    const stdoutChunks=[];
+    let stdoutBytes=0;
+    let settled=false;
+    const finish=(error, value) => {
+      if (settled) return;
+      settled=true;
+      if (error) reject(error);
+      else resolvePromise(value);
+    };
+    p.stdout.on('data', chunk => {
+      if (!opts.captureStdout || settled) return;
+      stdoutBytes += chunk.length;
+      if (stdoutBytes > MAX_CAPTURED_COMMAND_STDOUT_BYTES) {
+        finish(new Error(`${basename(bin)}_stdout_too_large`));
+        p.kill('SIGTERM');
+        return;
+      }
+      stdoutChunks.push(Buffer.from(chunk));
+    });
+    p.stderr.on('data', () => {});
+    p.once('error', error => finish(error));
+    p.once('close', code => {
+      if (settled) return;
+      if (code !== 0) {
+        finish(new Error(`${basename(bin)}_exit_${code}`));
+        return;
+      }
+      if (!opts.captureStdout) {
+        finish(null, { stdout:'' });
+        return;
+      }
+      try {
+        const bytes=Buffer.concat(stdoutChunks, stdoutBytes);
+        const stdout=new TextDecoder('utf-8', { fatal:true }).decode(bytes);
+        bytes.fill(0);
+        finish(null, { stdout });
+      } catch {
+        finish(new Error(`${basename(bin)}_stdout_invalid`));
+      }
+    });
+  });
+}
 async function sha256(file) { const h = createHash('sha256'); await new Promise((res, rej) => createReadStream(file).on('data', d=>h.update(d)).on('error', rej).on('end', res)); return h.digest('hex'); }
 async function size(file) { return (await stat(file)).size; }
 function backupRoot() { return process.env.FANMIND_BACKUP_ROOT || '/var/backups/fanmind'; }
@@ -139,10 +197,177 @@ function firstClaimResponseRow(response) { return Array.isArray(response) ? resp
 function normalizeClaimedJob(response) { const job = firstClaimResponseRow(response); if (!job || typeof job !== 'object') return null; if (typeof job.id !== 'string' || job.id.trim() === '') return null; if (typeof job.job_type !== 'string') return null; if (!JOBS.has(job.job_type)) return null; return job; }
 function isUnsupportedClaimedJob(response) { const job = firstClaimResponseRow(response); return Boolean(job && typeof job === 'object' && typeof job.id === 'string' && job.id.trim() !== '' && typeof job.job_type === 'string' && !JOBS.has(job.job_type)); }
 
-async function encryptedFinalize(clearFile, type, manifest) { const recipientFile = required('FANMIND_BACKUP_PUBLIC_KEY_FILE'); const encrypted = `${clearFile}.age`; await run(process.env.FANMIND_AGE_BIN || 'age', ['-R', recipientFile, '-o', encrypted, clearFile]); await rm(clearFile, { force:true }); const checksum = await sha256(encrypted); const checksumFile = `${encrypted}.sha256`; await writeFile(checksumFile, `${checksum}  ${basename(encrypted)}\n`, { mode:0o600 }); const s = await size(encrypted); return { path:encrypted, checksum_path:checksumFile, sha256:checksum, size_bytes:s, manifest:{...manifest, encrypted:true, format_version:1, worker_version:VERSION, backup_type:type} }; }
+async function encryptedFinalize(clearFile, type, manifest) { const recipientFile = required('FANMIND_BACKUP_PUBLIC_KEY_FILE'); const encrypted = `${clearFile}.age`; await run(process.env.FANMIND_AGE_BIN || 'age', ['-R', recipientFile, '-o', encrypted, clearFile]); await rm(clearFile, { force:true }); const checksum = await sha256(encrypted); const checksumFile = `${encrypted}.sha256`; await writeFile(checksumFile, `${checksum}  ${basename(encrypted)}\n`, { mode:0o600 }); const s = await size(encrypted); const formatVersion = manifest.format_version ?? 1; return { path:encrypted, checksum_path:checksumFile, sha256:checksum, size_bytes:s, manifest:{...manifest, encrypted:true, format_version:formatVersion, worker_version:VERSION, backup_type:type} }; }
 async function tarValidate(file) { await run('tar', ['-tzf', file]); }
 async function createServerConfig(tmp) { const out = join(tmp, `fanmind-server-config-${Date.now()}.tar.gz`); const pm2Dump = process.env.FANMIND_PM2_DUMP_FILE || '/home/ubuntu/.pm2/dump.pm2'; try { await existsReadable(pm2Dump); } catch { throw new Error('pm2_dump_file_unreadable'); } const paths = ['/var/www/fanmind/.env.production', pm2Dump, '/etc/nginx','/etc/systemd/system','/etc/fanmind-backup']; await run('tar', ['--ignore-failed-read','--warning=no-file-changed','-czf', out, ...paths]); await tarValidate(out); return encryptedFinalize(out, 'server_config', { included:['env_production','pm2_dump','nginx','systemd_units','sensitive_encrypted_config'], sensitive_encrypted_config:true }); }
-async function createDatabase(tmp) { const out = join(tmp, `fanmind-database-${Date.now()}.dump`); const env = { PGPASSFILE: required('FANMIND_BACKUP_PGPASSFILE') }; const args = ['--format=custom','--no-owner','--no-privileges','--file',out,'--host',required('FANMIND_BACKUP_DB_HOST'),'--port',process.env.FANMIND_BACKUP_DB_PORT || '5432','--username',required('FANMIND_BACKUP_DB_USER'),required('FANMIND_BACKUP_DB_NAME')]; await run(process.env.FANMIND_PG_DUMP_BIN || '/usr/lib/postgresql/17/bin/pg_dump', args, { env }); await run(process.env.FANMIND_PG_RESTORE_BIN || '/usr/lib/postgresql/17/bin/pg_restore', ['--list', out], { env }); return encryptedFinalize(out, 'database', { pg_format:'custom', validated_with:'pg_restore --list' }); }
+async function readStableDatabaseConnectionFile(path, kind) {
+  let handle;
+  try {
+    handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    throw new Error(`backup_database_${kind}_read_failed`);
+  }
+  try {
+    const before = await handle.stat({ bigint:true });
+    const currentUid = typeof process.getuid === 'function'
+      ? BigInt(process.getuid())
+      : -1n;
+    const maximumBytes = kind === 'passfile'
+      ? MAX_BACKUP_DATABASE_PASSFILE_BYTES
+      : MAX_BACKUP_DATABASE_CA_BYTES;
+    if (
+      !before.isFile() ||
+      before.nlink !== 1n ||
+      before.uid !== currentUid ||
+      before.size <= 0n ||
+      before.size > BigInt(maximumBytes) ||
+      (kind === 'passfile'
+        ? (before.mode & 0o777n) !== 0o600n
+        : (before.mode & 0o022n) !== 0n)
+    ) {
+      throw new Error(`backup_database_${kind}_invalid`);
+    }
+    const bytes = await handle.readFile();
+    const after = await handle.stat({ bigint:true });
+    if (
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.mode !== after.mode ||
+      before.nlink !== after.nlink ||
+      before.uid !== after.uid ||
+      before.size !== after.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs ||
+      BigInt(bytes.length) !== before.size
+    ) {
+      bytes.fill(0);
+      throw new Error(`backup_database_${kind}_changed_during_read`);
+    }
+    return bytes;
+  } finally {
+    await handle.close();
+  }
+}
+async function databaseConnectionEnvironment(tmp) {
+  const passfile = required('FANMIND_BACKUP_PGPASSFILE').trim();
+  const caCertificate = (
+    process.env.FANMIND_BACKUP_DB_CA_CERT_PATH ||
+    DEFAULT_BACKUP_DB_CA_CERT_PATH
+  ).trim();
+  if (!isAbsolute(passfile)) throw new Error('backup_database_passfile_path_invalid');
+  if (!isAbsolute(caCertificate)) throw new Error('backup_database_ca_path_invalid');
+  const [passfileBytes, caBytes] = await Promise.all([
+    readStableDatabaseConnectionFile(passfile, 'passfile'),
+    readStableDatabaseConnectionFile(caCertificate, 'ca'),
+  ]);
+  const snapshotPassfile = join(tmp, '.fanmind-backup-database.pgpass');
+  const snapshotCaCertificate = join(tmp, '.fanmind-backup-database-ca.pem');
+  try {
+    await Promise.all([
+      writeFile(snapshotPassfile, passfileBytes, { flag:'wx', mode:0o600 }),
+      writeFile(snapshotCaCertificate, caBytes, { flag:'wx', mode:0o600 }),
+    ]);
+  } finally {
+    passfileBytes.fill(0);
+    caBytes.fill(0);
+  }
+  const environment = {
+    PATH: process.env.PATH || '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+    LANG: 'C',
+    LC_ALL: 'C',
+    PGAPPNAME: 'fanmind-backup-database',
+    PGCONNECT_TIMEOUT: '10',
+    PGGSSENCMODE: 'disable',
+    PGPASSFILE: snapshotPassfile,
+    PGSSLMODE: 'verify-full',
+    PGSSLROOTCERT: snapshotCaCertificate,
+  };
+  for (const [name, value] of Object.entries(process.env)) {
+    if (name.startsWith('FANMIND_TEST_')) environment[name] = value;
+  }
+  return environment;
+}
+async function createDatabase(tmp) {
+  const out = join(tmp, `fanmind-database-${Date.now()}.dump`);
+  const env = await databaseConnectionEnvironment(tmp);
+  const host = required('FANMIND_BACKUP_DB_HOST');
+  const port = process.env.FANMIND_BACKUP_DB_PORT || '5432';
+  const username = required('FANMIND_BACKUP_DB_USER');
+  const database = required('FANMIND_BACKUP_DB_NAME');
+  const authorizationSnapshot = await openDatabaseAuthorizationSnapshot({
+    psqlBin: process.env.FANMIND_PSQL_BIN || '/usr/lib/postgresql/17/bin/psql',
+    host,
+    port,
+    username,
+    database,
+    env,
+  });
+  try {
+    await run(
+      process.env.FANMIND_PG_DUMP_BIN || '/usr/lib/postgresql/17/bin/pg_dump',
+      [
+        '--format=custom',
+        `--snapshot=${authorizationSnapshot.snapshotId}`,
+        '--no-password',
+        '--file',
+        out,
+        '--host',
+        host,
+        '--port',
+        port,
+        '--username',
+        username,
+        database,
+      ],
+      { env, replaceEnv:true },
+    );
+  } finally {
+    await authorizationSnapshot.close();
+  }
+
+  const tocResult = await run(
+    process.env.FANMIND_PG_RESTORE_BIN || '/usr/lib/postgresql/17/bin/pg_restore',
+    ['--list', out],
+    { env, captureStdout:true, replaceEnv:true },
+  );
+  const toc = analyzeAuthorizationToc(tocResult.stdout);
+  if (toc.aclEntryCount <= 0 || toc.defaultAclEntryCount <= 0) {
+    throw new Error('database_authorization_toc_missing');
+  }
+  const contract = validateAuthorizationContract(authorizationSnapshot.contract);
+  const authorizationContract = {
+    schema_version: contract.schemaVersion,
+    canonicalization: contract.canonicalization,
+    fingerprint_sha256: contract.fingerprintSha256,
+    record_count: contract.recordCount,
+    grant_tuple_count: contract.grantTupleCount,
+    required_roles: contract.requiredRoles,
+    required_roles_sha256: contract.requiredRolesSha256,
+    role_fingerprint_sha256: contract.roleFingerprintSha256,
+    role_record_count: contract.roleRecordCount,
+    database_container_fingerprint_sha256:
+      contract.databaseContainerFingerprintSha256,
+    database_container_record_count: contract.databaseContainerRecordCount,
+    required_extensions: contract.requiredExtensions,
+    required_extensions_sha256: contract.requiredExtensionsSha256,
+    extension_fingerprint_sha256: contract.extensionFingerprintSha256,
+    extension_record_count: contract.extensionRecordCount,
+    core_table_app_grant_tuple_count: contract.coreTableAppGrantTupleCount,
+    restricted_security_definer_function_count:
+      contract.restrictedSecurityDefinerFunctionCount,
+    archive_acl_toc_entry_count: toc.aclEntryCount,
+    archive_default_acl_toc_entry_count: toc.defaultAclEntryCount,
+    archive_acl_toc_sha256: toc.sha256,
+  };
+  return encryptedFinalize(out, 'database', {
+    pg_format:'custom',
+    validated_with:'pg_restore --list',
+    format_version:2,
+    privileges_archived:true,
+    ownership_archived:true,
+    authorization_contract:authorizationContract,
+  });
+}
 async function listStorage(prefix='', offset=0) { const body = { prefix, limit:STORAGE_PAGE_SIZE, offset, sortBy:{ column:'name', order:'asc' } }; const rows = await api(`${requireSupabaseUrl()}/storage/v1/object/list/fanmind-assets`, { method:'POST', body:JSON.stringify(body), headers:{ Authorization:`Bearer ${requireServiceKey()}`, apikey:requireServiceKey() } }); return rows || []; }
 async function walkStorage(prefix='', acc=[], seen=new Set()) { for (let offset=0, guard=0;; offset += STORAGE_PAGE_SIZE, guard++) { if (guard > 10000) throw new Error('storage_pagination_guard_exceeded'); const page = (await listStorage(prefix, offset)).filter(item => item.name !== '.emptyFolderPlaceholder'); for (const item of page) { const path = prefix ? `${prefix}/${item.name}` : item.name; const isFolder = !item.id && !item.metadata?.size; if (isFolder) await walkStorage(path, acc, seen); else { if (seen.has(path)) throw new Error('storage_duplicate_object_path'); seen.add(path); acc.push({ path, ...item }); } } if (page.length < STORAGE_PAGE_SIZE) break; } return acc; }
 async function createStorage(tmp) { const root = join(tmp, 'storage'); await mkdir(root, { recursive:true, mode:0o700 }); const objects = await walkStorage(); const files=[]; for (const obj of objects) { const r = await fetch(`${requireSupabaseUrl()}/storage/v1/object/fanmind-assets/${encodeURI(obj.path)}`, { headers:{ Authorization:`Bearer ${requireServiceKey()}`, apikey:requireServiceKey() } }); if (!r.ok) throw new Error('storage_download_failed'); const target = join(root, obj.path); await mkdir(dirname(target), { recursive:true, mode:0o700 }); await new Promise((res, rej) => { const w = createWriteStream(target, { mode:0o600 }); if (!r.body?.pipeTo) { rej(new Error('stream_unavailable')); return; } r.body.pipeTo(new WritableStream({ write(c){ w.write(Buffer.from(c)); }, close(){ w.end(); res(); }, abort:rej })).catch(rej); }); files.push({ path:obj.path, size:await size(target), content_type:obj.metadata?.mimetype || null, created_at:obj.created_at, updated_at:obj.updated_at, sha256:await sha256(target) }); }
@@ -266,5 +491,5 @@ async function offsite(file) {
 }
 async function handle(job) { if (!JOBS.has(job.job_type)) throw new Error('job_type_not_allowed'); await patch('admin_operation_jobs', job.id, { status:'running', started_at:new Date().toISOString(), lease_until:new Date(Date.now()+900000).toISOString() }); if (job.job_type === 'verify_backup') { await verifyLatestBackup(job); return; } const tmp = await mkdtemp(join(tmpdir(), 'fanmind-backup-')); try { const start = Date.now(); let result; if (job.job_type === 'backup_server_config') result = await createServerConfig(tmp); else if (job.job_type === 'backup_database') result = await createDatabase(tmp); else if (job.job_type === 'backup_storage') result = await createStorage(tmp); else result = await createFull(tmp); const { final, checksumFinal } = await moveAndValidate(result); const off = await offsite(final).catch(() => ({ status:'failed' })); const status = off.status === 'not_configured' ? 'offsite_pending' : off.status === 'failed' ? 'degraded' : 'succeeded'; const runRow = await insert('backup_runs', { backup_type: result.manifest.backup_type, status, severity: status === 'succeeded' ? 'info':'warning', finished_at:new Date().toISOString(), storage_reference:final, checksum_reference:checksumFinal, sha256:result.sha256, size_bytes:result.size_bytes, validation_status:'passed', offsite_status:off.status, offsite_reference:off.reference || null, job_id:job.id, worker_id:WORKER_ID, duration_ms:Date.now()-start, manifest:{...result.manifest, checksum_reference:checksumFinal, offsite_checksum_reference:off.checksum_reference || null} }); await patch('admin_operation_jobs', job.id, { status:'succeeded', finished_at:new Date().toISOString(), result_reference:runRow.id, lease_until:null }); await notify(status === 'succeeded' ? 'info':'warning', status === 'succeeded' ? 'Backup erfolgreich' : 'Backup lokal erfolgreich, Offsite ausstehend', `${job.job_type} wurde verarbeitet.`, 'backup_worker', runRow.id); await audit(job.job_type, 'success', { backup_run_id:runRow.id, offsite_status:off.status }); } finally { await rm(tmp, { recursive:true, force:true }); } }
 async function loop() { log('info','worker_start',{version:VERSION}); let lastHeartbeatAt = 0; while (!stopping) { const now = Date.now(); if (now - lastHeartbeatAt >= backupHeartbeatMs()) { await heartbeat(); lastHeartbeatAt = now; } const claimResponse = await rpc('claim_admin_backup_job', { p_worker_id:WORKER_ID, p_lease_seconds:900 }).catch(e => { log('warn','claim_failed',{error_code:backupWorkerErrorCode(e, 'backup_claim_failed')}); return null; }); const job = normalizeClaimedJob(claimResponse); if (!job) { if (isUnsupportedClaimedJob(claimResponse)) { const unsupportedJob = firstClaimResponseRow(claimResponse); const msg = 'job_type_not_allowed'; await patch('admin_operation_jobs', unsupportedJob.id, { status:'failed', finished_at:new Date().toISOString(), error_code:msg, error_message:msg, lease_until:null }).catch(()=>{}); log('warn','job_rejected',{job_id:unsupportedJob.id,error_code:msg}); } await sleep(backupPollMs()); continue; } log('info','job_claimed',{job_id:job.id, job_type:job.job_type}); try { await handle(job); } catch(e) { const errorCode = backupWorkerErrorCode(e); await patch('admin_operation_jobs', job.id, { status:'failed', finished_at:new Date().toISOString(), error_code:errorCode, error_message:errorCode, lease_until:null }).catch(()=>{}); await notify('critical','Backup fehlgeschlagen', `${job.job_type} ist fehlgeschlagen.`, 'backup_worker', job.id); await audit(job.job_type, 'failure', { error_code:errorCode }); log('error','job_failed',{job_id:job.id,error_code:errorCode}); } } log('info','worker_stop'); }
-export { encryptedFinalize, createFull, createStorage, walkStorage, listStorage, placeBackupPair, moveAndValidate, offsite, createServerConfig, normalizeClaimedJob, normalizeWorkerId, backupPollMs, backupHeartbeatMs, backupWorkerErrorCode, validatedLocalBackupPair, verifyLatestBackup, __setBackupWorkerTestHooks, JOBS };
+export { encryptedFinalize, createDatabase, createFull, createStorage, walkStorage, listStorage, placeBackupPair, moveAndValidate, offsite, createServerConfig, normalizeClaimedJob, normalizeWorkerId, backupPollMs, backupHeartbeatMs, backupWorkerErrorCode, validatedLocalBackupPair, verifyLatestBackup, __setBackupWorkerTestHooks, JOBS };
 if (import.meta.url === pathToFileURL(process.argv[1]).href) loop().catch(e => { log('error','fatal',{error_code:backupWorkerErrorCode(e)}); process.exit(2); });

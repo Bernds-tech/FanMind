@@ -41,16 +41,92 @@ const runbookPath = "docs/operations/RESTORE_DRILL.md";
 
 const sha = (value) =>
   createHash("sha256").update(value).digest("hex");
+const AUTHORIZATION_FINGERPRINT = "e".repeat(64);
+const AUTHORIZATION_RECORD_COUNT = 256;
+const AUTHORIZATION_GRANT_TUPLE_COUNT = 512;
+const AUTHORIZATION_REQUIRED_ROLES = [
+  "anon",
+  "authenticated",
+  "postgres",
+  "service_role",
+];
+const AUTHORIZATION_REQUIRED_ROLES_SHA256 = sha(
+  JSON.stringify(AUTHORIZATION_REQUIRED_ROLES),
+);
+const AUTHORIZATION_ROLE_FINGERPRINT = "c".repeat(64);
+const AUTHORIZATION_ROLE_RECORD_COUNT = 5;
+const AUTHORIZATION_CONTAINER_FINGERPRINT = "7".repeat(64);
+const AUTHORIZATION_CONTAINER_RECORD_COUNT = 11;
+const AUTHORIZATION_REQUIRED_EXTENSIONS = [
+  {
+    name: "pgcrypto",
+    version: "1.3",
+    schema: "extensions",
+    owner: "postgres",
+    relocatable: true,
+    schemaOwner: "postgres",
+    schemaDefinitionArchived: true,
+  },
+  {
+    name: "plpgsql",
+    version: "1.0",
+    schema: "pg_catalog",
+    owner: "postgres",
+    relocatable: false,
+    schemaOwner: "postgres",
+    schemaDefinitionArchived: false,
+  },
+];
+const AUTHORIZATION_REQUIRED_EXTENSIONS_SHA256 = sha(
+  JSON.stringify(AUTHORIZATION_REQUIRED_EXTENSIONS),
+);
+const AUTHORIZATION_EXTENSION_FINGERPRINT = "8".repeat(64);
+const AUTHORIZATION_EXTENSION_RECORD_COUNT = 84;
+const CORE_TABLE_APP_GRANT_TUPLE_COUNT = 120;
+const RESTRICTED_SECURITY_DEFINER_FUNCTION_COUNT = 12;
 
 function fullReceipt(overrides = {}) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     createdAt: "2026-07-30T07:55:00Z",
     sourceArtifactBasename: "fanmind-full-1785398400000.tar.gz.age",
     outerSha256: "a".repeat(64),
     productionCommit: "b".repeat(40),
     databasePartEncryptedSha256: "d".repeat(64),
     databaseDumpSha256: sha("synthetic-database-dump"),
+    databaseAuthorizationContractVersion: 2,
+    databaseAuthorizationFingerprintSha256: AUTHORIZATION_FINGERPRINT,
+    databaseAuthorizationRecordCount: AUTHORIZATION_RECORD_COUNT,
+    databaseAuthorizationGrantTupleCount:
+      AUTHORIZATION_GRANT_TUPLE_COUNT,
+    databaseAuthorizationRequiredRoles: AUTHORIZATION_REQUIRED_ROLES,
+    databaseAuthorizationRequiredRolesSha256:
+      AUTHORIZATION_REQUIRED_ROLES_SHA256,
+    databaseAuthorizationRoleFingerprintSha256:
+      AUTHORIZATION_ROLE_FINGERPRINT,
+    databaseAuthorizationRoleRecordCount:
+      AUTHORIZATION_ROLE_RECORD_COUNT,
+    databaseAuthorizationContainerFingerprintSha256:
+      AUTHORIZATION_CONTAINER_FINGERPRINT,
+    databaseAuthorizationContainerRecordCount:
+      AUTHORIZATION_CONTAINER_RECORD_COUNT,
+    databaseAuthorizationRequiredExtensions:
+      AUTHORIZATION_REQUIRED_EXTENSIONS,
+    databaseAuthorizationRequiredExtensionsSha256:
+      AUTHORIZATION_REQUIRED_EXTENSIONS_SHA256,
+    databaseAuthorizationExtensionFingerprintSha256:
+      AUTHORIZATION_EXTENSION_FINGERPRINT,
+    databaseAuthorizationExtensionRecordCount:
+      AUTHORIZATION_EXTENSION_RECORD_COUNT,
+    databaseCoreTableAppGrantTupleCount:
+      CORE_TABLE_APP_GRANT_TUPLE_COUNT,
+    databaseRestrictedSecurityDefinerFunctionCount:
+      RESTRICTED_SECURITY_DEFINER_FUNCTION_COUNT,
+    databaseAclTocEntryCount: 31,
+    databaseDefaultAclTocEntryCount: 6,
+    databaseAclTocSha256: "f".repeat(64),
+    databasePrivilegesArchived: true,
+    databaseOwnershipArchived: true,
     verifier: "passed",
     ...overrides,
   };
@@ -59,7 +135,7 @@ function fullReceipt(overrides = {}) {
 function runnerReceipt(fullBytes, targetId, overrides = {}) {
   const full = JSON.parse(fullBytes);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     drillId: "2026-07-30-restore-001",
     startedAt: "2026-07-30T08:00:00Z",
     completedAt: "2026-07-30T08:20:00Z",
@@ -70,11 +146,43 @@ function runnerReceipt(fullBytes, targetId, overrides = {}) {
     databasePartEncryptedSha256:
       full.databasePartEncryptedSha256,
     databaseDumpSha256: full.databaseDumpSha256,
+    databaseAuthorizationContractVersion:
+      full.databaseAuthorizationContractVersion,
+    databaseAuthorizationFingerprintSha256:
+      full.databaseAuthorizationFingerprintSha256,
+    databaseAuthorizationRecordCount:
+      full.databaseAuthorizationRecordCount,
+    databaseAuthorizationGrantTupleCount:
+      full.databaseAuthorizationGrantTupleCount,
+    databaseAuthorizationRequiredRolesSha256:
+      full.databaseAuthorizationRequiredRolesSha256,
+    databaseAuthorizationRoleFingerprintSha256:
+      full.databaseAuthorizationRoleFingerprintSha256,
+    databaseAuthorizationRoleRecordCount:
+      full.databaseAuthorizationRoleRecordCount,
+    databaseAuthorizationContainerFingerprintSha256:
+      full.databaseAuthorizationContainerFingerprintSha256,
+    databaseAuthorizationContainerRecordCount:
+      full.databaseAuthorizationContainerRecordCount,
+    databaseAuthorizationRequiredExtensionsSha256:
+      full.databaseAuthorizationRequiredExtensionsSha256,
+    databaseAuthorizationRequiredExtensionCount:
+      full.databaseAuthorizationRequiredExtensions.length,
+    databaseAuthorizationExtensionFingerprintSha256:
+      full.databaseAuthorizationExtensionFingerprintSha256,
+    databaseAuthorizationExtensionRecordCount:
+      full.databaseAuthorizationExtensionRecordCount,
+    databaseCoreTableAppGrantTupleCount:
+      full.databaseCoreTableAppGrantTupleCount,
+    databaseRestrictedSecurityDefinerFunctionCount:
+      full.databaseRestrictedSecurityDefinerFunctionCount,
     disposableTargetId: targetId,
     emptyTargetObservedAt: "2026-07-30T08:02:00Z",
     emptyTargetObjectCount: 0,
     databaseRestore: "passed",
     singleTransaction: true,
+    databasePrivilegesRestore: "passed",
+    databaseOwnershipRestore: "passed",
     ...overrides,
   };
 }
@@ -82,7 +190,7 @@ function runnerReceipt(fullBytes, targetId, overrides = {}) {
 function databasePostcheckReceipt(runnerBytes, targetId, overrides = {}) {
   const runner = JSON.parse(runnerBytes);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     drillId: runner.drillId,
     checkedAt: "2026-07-30T08:25:00Z",
     productionCommit: runner.productionCommit,
@@ -93,6 +201,35 @@ function databasePostcheckReceipt(runnerBytes, targetId, overrides = {}) {
     rlsEnabledTableCount: 5,
     policyCoveredTableCount: 5,
     databasePostcheck: "passed",
+    databaseAuthorizationFingerprintSha256:
+      runner.databaseAuthorizationFingerprintSha256,
+    databaseAuthorizationRecordCount:
+      runner.databaseAuthorizationRecordCount,
+    databaseAuthorizationGrantTupleCount:
+      runner.databaseAuthorizationGrantTupleCount,
+    databaseAuthorizationRoleFingerprintSha256:
+      runner.databaseAuthorizationRoleFingerprintSha256,
+    databaseAuthorizationRoleRecordCount:
+      runner.databaseAuthorizationRoleRecordCount,
+    databaseAuthorizationContainerFingerprintSha256:
+      runner.databaseAuthorizationContainerFingerprintSha256,
+    databaseAuthorizationContainerRecordCount:
+      runner.databaseAuthorizationContainerRecordCount,
+    databaseAuthorizationRequiredExtensionsSha256:
+      runner.databaseAuthorizationRequiredExtensionsSha256,
+    databaseAuthorizationRequiredExtensionCount:
+      runner.databaseAuthorizationRequiredExtensionCount,
+    databaseAuthorizationExtensionFingerprintSha256:
+      runner.databaseAuthorizationExtensionFingerprintSha256,
+    databaseAuthorizationExtensionRecordCount:
+      runner.databaseAuthorizationExtensionRecordCount,
+    databaseCoreTableAppGrantTupleCount:
+      runner.databaseCoreTableAppGrantTupleCount,
+    databaseRestrictedSecurityDefinerFunctionCount:
+      runner.databaseRestrictedSecurityDefinerFunctionCount,
+    databaseAuthorizationPostcheck: "passed",
+    coreTableAppPrivileges: "passed",
+    securityDefinerExecutionBoundary: "passed",
     ...overrides,
   };
 }
@@ -106,7 +243,7 @@ function evidence(
 ) {
   const full = JSON.parse(fullBytes);
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     drillId: "2026-07-30-restore-001",
     startedAt: "2026-07-30T08:00:00Z",
     completedAt: "2026-07-30T08:30:00Z",
@@ -120,11 +257,44 @@ function evidence(
     databasePartEncryptedSha256:
       full.databasePartEncryptedSha256,
     databaseDumpSha256: full.databaseDumpSha256,
+    databaseAuthorizationFingerprintSha256:
+      full.databaseAuthorizationFingerprintSha256,
+    databaseAuthorizationRecordCount:
+      full.databaseAuthorizationRecordCount,
+    databaseAuthorizationGrantTupleCount:
+      full.databaseAuthorizationGrantTupleCount,
+    databaseAuthorizationRequiredRolesSha256:
+      full.databaseAuthorizationRequiredRolesSha256,
+    databaseAuthorizationRoleFingerprintSha256:
+      full.databaseAuthorizationRoleFingerprintSha256,
+    databaseAuthorizationRoleRecordCount:
+      full.databaseAuthorizationRoleRecordCount,
+    databaseAuthorizationContainerFingerprintSha256:
+      full.databaseAuthorizationContainerFingerprintSha256,
+    databaseAuthorizationContainerRecordCount:
+      full.databaseAuthorizationContainerRecordCount,
+    databaseAuthorizationRequiredExtensionsSha256:
+      full.databaseAuthorizationRequiredExtensionsSha256,
+    databaseAuthorizationRequiredExtensionCount:
+      full.databaseAuthorizationRequiredExtensions.length,
+    databaseAuthorizationExtensionFingerprintSha256:
+      full.databaseAuthorizationExtensionFingerprintSha256,
+    databaseAuthorizationExtensionRecordCount:
+      full.databaseAuthorizationExtensionRecordCount,
+    databaseCoreTableAppGrantTupleCount:
+      full.databaseCoreTableAppGrantTupleCount,
+    databaseRestrictedSecurityDefinerFunctionCount:
+      full.databaseRestrictedSecurityDefinerFunctionCount,
     disposableTargetId: targetId,
     verifier: "passed",
     storageSample: "passed",
     serverConfigInspection: "passed",
     cleanup: "passed",
+    databasePrivilegesRestore: "passed",
+    databaseOwnershipRestore: "passed",
+    databaseAuthorizationPostcheck: "passed",
+    coreTableAppPrivileges: "passed",
+    securityDefinerExecutionBoundary: "passed",
     productionModified: false,
     customerDataRecordedInEvidence: false,
     secretsRecorded: false,
@@ -246,6 +416,93 @@ test("full-backup receipt binds the exact private database dump", async () => {
   });
 });
 
+test("full-backup receipt requires the exact authorization contract", async () => {
+  const cases = [
+    [
+      { schemaVersion: 1 },
+      "receipt_schema_invalid",
+    ],
+    [
+      { databaseAuthorizationContractVersion: 1 },
+      "receipt_authorization_contract_invalid",
+    ],
+    [
+      {
+        databaseAuthorizationRequiredRoles: [
+          "authenticated",
+          "anon",
+          "postgres",
+          "service_role",
+        ],
+      },
+      "receipt_authorization_roles_invalid",
+    ],
+    [
+      { databaseAuthorizationRequiredRolesSha256: "0".repeat(64) },
+      "receipt_authorization_roles_sha_invalid",
+    ],
+    [
+      { databaseAuthorizationRoleFingerprintSha256: "not-a-sha256" },
+      "receipt_authorization_role_fingerprint_invalid",
+    ],
+    [
+      { databaseAuthorizationRoleRecordCount: 0 },
+      "receipt_authorization_role_count_invalid",
+    ],
+    [
+      { databaseAuthorizationContainerFingerprintSha256: "not-a-sha256" },
+      "receipt_authorization_container_fingerprint_invalid",
+    ],
+    [
+      { databaseAuthorizationContainerRecordCount: 0 },
+      "receipt_authorization_container_count_invalid",
+    ],
+    [
+      {
+        databaseAuthorizationRequiredExtensions:
+          AUTHORIZATION_REQUIRED_EXTENSIONS.map((extension, index) =>
+            index === 0 ? { ...extension, owner: "attacker" } : extension,
+          ),
+      },
+      "receipt_authorization_extension_contract_invalid",
+    ],
+    [
+      { databaseAuthorizationExtensionFingerprintSha256: "not-a-sha256" },
+      "receipt_authorization_extension_contract_invalid",
+    ],
+    [
+      { databaseAuthorizationExtensionRecordCount: 0 },
+      "receipt_authorization_extension_contract_invalid",
+    ],
+    [
+      { databaseDefaultAclTocEntryCount: 0 },
+      "receipt_acl_toc_counts_invalid",
+    ],
+    [
+      { databasePrivilegesArchived: false },
+      "receipt_database_authorization_archive_invalid",
+    ],
+  ];
+  for (const [overrides, code] of cases) {
+    await withReceiptSet(async ({ paths }) => {
+      await privateFile(
+        paths.full,
+        `${JSON.stringify(fullReceipt(overrides))}\n`,
+      );
+      await assert.rejects(
+        execFileAsync(process.execPath, [
+          receiptVerifierPath,
+          "--receipt",
+          paths.full,
+          "--dump",
+          paths.dump,
+        ]),
+        new RegExp(code, "u"),
+      );
+    });
+  }
+});
+
 test("atomic writer creates one exact private runner receipt", async () => {
   await withReceiptSet(async ({ paths, targetId, fullBytes }) => {
     const outputPath = join(paths.root, "new-runner-receipt.json");
@@ -279,6 +536,33 @@ test("atomic writer creates one exact private runner receipt", async () => {
     assert.equal(record.fullBackupReceiptSha256, sha(fullBytes));
     assert.equal(record.emptyTargetObjectCount, 0);
     assert.equal(record.singleTransaction, true);
+    assert.equal(record.schemaVersion, 2);
+    assert.equal(
+      record.databaseAuthorizationFingerprintSha256,
+      AUTHORIZATION_FINGERPRINT,
+    );
+    assert.equal(
+      record.databaseAuthorizationRequiredRolesSha256,
+      AUTHORIZATION_REQUIRED_ROLES_SHA256,
+    );
+    assert.equal(
+      record.databaseAuthorizationRoleFingerprintSha256,
+      AUTHORIZATION_ROLE_FINGERPRINT,
+    );
+    assert.equal(
+      record.databaseAuthorizationRoleRecordCount,
+      AUTHORIZATION_ROLE_RECORD_COUNT,
+    );
+    assert.equal(
+      record.databaseAuthorizationContainerFingerprintSha256,
+      AUTHORIZATION_CONTAINER_FINGERPRINT,
+    );
+    assert.equal(
+      record.databaseAuthorizationContainerRecordCount,
+      AUTHORIZATION_CONTAINER_RECORD_COUNT,
+    );
+    assert.equal(record.databasePrivilegesRestore, "passed");
+    assert.equal(record.databaseOwnershipRestore, "passed");
 
     await assert.rejects(
       execFileAsync(
@@ -308,6 +592,7 @@ test("database postcheck writer requires five tables with RLS and policies", asy
       "memories|1|1|3",
       "workspace_members|1|1|2",
       "workspaces|1|1|2",
+      `authorization|${AUTHORIZATION_FINGERPRINT}|${AUTHORIZATION_RECORD_COUNT}|${AUTHORIZATION_GRANT_TUPLE_COUNT}|${CORE_TABLE_APP_GRANT_TUPLE_COUNT}|${RESTRICTED_SECURITY_DEFINER_FUNCTION_COUNT}|${AUTHORIZATION_REQUIRED_EXTENSIONS_SHA256}|${AUTHORIZATION_REQUIRED_EXTENSIONS.length}|${AUTHORIZATION_EXTENSION_FINGERPRINT}|${AUTHORIZATION_EXTENSION_RECORD_COUNT}`,
       "",
     ].join("\n");
     const environment = {
@@ -336,6 +621,29 @@ test("database postcheck writer requires five tables with RLS and policies", asy
     assert.equal(record.existingTableCount, 5);
     assert.equal(record.rlsEnabledTableCount, 5);
     assert.equal(record.policyCoveredTableCount, 5);
+    assert.equal(
+      record.databaseAuthorizationFingerprintSha256,
+      AUTHORIZATION_FINGERPRINT,
+    );
+    assert.equal(
+      record.databaseAuthorizationRoleFingerprintSha256,
+      AUTHORIZATION_ROLE_FINGERPRINT,
+    );
+    assert.equal(
+      record.databaseAuthorizationRoleRecordCount,
+      AUTHORIZATION_ROLE_RECORD_COUNT,
+    );
+    assert.equal(
+      record.databaseAuthorizationContainerFingerprintSha256,
+      AUTHORIZATION_CONTAINER_FINGERPRINT,
+    );
+    assert.equal(
+      record.databaseAuthorizationContainerRecordCount,
+      AUTHORIZATION_CONTAINER_RECORD_COUNT,
+    );
+    assert.equal(record.databaseAuthorizationPostcheck, "passed");
+    assert.equal(record.coreTableAppPrivileges, "passed");
+    assert.equal(record.securityDefinerExecutionBoundary, "passed");
 
     for (const [line, code] of [
       ["contacts|0|0|0", "postcheck_table_missing"],
@@ -359,10 +667,33 @@ test("database postcheck writer requires five tables with RLS and policies", asy
         new RegExp(code, "u"),
       );
     }
+
+    const authorizationMismatchOutput = join(
+      paths.root,
+      "authorization-mismatch.json",
+    );
+    await assert.rejects(
+      execFileWithInput(
+        process.execPath,
+        [
+          databasePostcheckWriterPath,
+          "--runner-receipt",
+          paths.runner,
+          "--output",
+          authorizationMismatchOutput,
+        ],
+        { env: environment },
+        validPostcheck.replace(
+          AUTHORIZATION_FINGERPRINT,
+          "0".repeat(64),
+        ),
+      ),
+      /postcheck_authorization_mismatch/u,
+    );
   });
 });
 
-test("valid schema v5 binds all receipts without echoing identifiers", async () => {
+test("valid schema v6 binds all receipts without echoing identifiers", async () => {
   await withReceiptSet(async ({ paths, evidenceBytes }) => {
     const { stdout, stderr } = await execFileAsync(
       process.execPath,
@@ -405,14 +736,14 @@ test("runner and database postcheck receipts are mandatory at the evidence CLI b
   });
 });
 
-test("schema v4 and manual database assertions fail closed", async () => {
+test("schema v5 and manual database assertions fail closed", async () => {
   await withReceiptSet(
     async ({ paths, fullBytes, runnerBytes, postcheckBytes, targetId }) => {
       await privateFile(
         paths.evidence,
         `${JSON.stringify(
           evidence(fullBytes, runnerBytes, postcheckBytes, targetId, {
-            schemaVersion: 4,
+            schemaVersion: 5,
           }),
         )}\n`,
       );
@@ -444,6 +775,41 @@ test("runner receipt SHA, IDs, backup hashes and timestamp envelope are bound", 
     ["restoreRunnerReceiptSha256", "0".repeat(64), "runner_receipt_sha_mismatch"],
     ["drillId", "2026-07-30-other-001", "runner_identity_binding_mismatch"],
     ["databaseDumpSha256", "0".repeat(64), "receipt_binding_database_dump_sha256_mismatch"],
+    [
+      "databaseAuthorizationFingerprintSha256",
+      "0".repeat(64),
+      "receipt_binding_database_authorization_fingerprint_sha256_mismatch",
+    ],
+    [
+      "databaseAuthorizationRequiredRolesSha256",
+      "0".repeat(64),
+      "receipt_binding_database_authorization_required_roles_sha256_mismatch",
+    ],
+    [
+      "databaseAuthorizationRoleFingerprintSha256",
+      "0".repeat(64),
+      "receipt_binding_database_authorization_role_fingerprint_sha256_mismatch",
+    ],
+    [
+      "databaseAuthorizationRoleRecordCount",
+      AUTHORIZATION_ROLE_RECORD_COUNT + 1,
+      "receipt_binding_database_authorization_role_record_count_mismatch",
+    ],
+    [
+      "databaseAuthorizationContainerFingerprintSha256",
+      "0".repeat(64),
+      "receipt_binding_database_authorization_container_fingerprint_sha256_mismatch",
+    ],
+    [
+      "databaseAuthorizationContainerRecordCount",
+      AUTHORIZATION_CONTAINER_RECORD_COUNT + 1,
+      "receipt_binding_database_authorization_container_record_count_mismatch",
+    ],
+    [
+      "databaseAuthorizationGrantTupleCount",
+      AUTHORIZATION_GRANT_TUPLE_COUNT + 1,
+      "receipt_binding_database_authorization_grant_tuple_count_mismatch",
+    ],
     ["startedAt", "2026-07-30T08:05:00Z", "runner_timestamp_envelope_mismatch"],
   ];
   for (const [field, value, code] of cases) {
@@ -487,6 +853,41 @@ test("database postcheck hash, identity, counts and timestamps are bound", async
       "checkedAt",
       "2026-07-30T08:19:00Z",
       "database_postcheck_timestamp_envelope_mismatch",
+    ],
+    [
+      "databaseAuthorizationFingerprintSha256",
+      "0".repeat(64),
+      "database_postcheck_authorization_database_authorization_fingerprint_sha256_mismatch",
+    ],
+    [
+      "databaseAuthorizationRecordCount",
+      AUTHORIZATION_RECORD_COUNT + 1,
+      "database_postcheck_authorization_database_authorization_record_count_mismatch",
+    ],
+    [
+      "databaseAuthorizationRoleFingerprintSha256",
+      "0".repeat(64),
+      "database_postcheck_authorization_database_authorization_role_fingerprint_sha256_mismatch",
+    ],
+    [
+      "databaseAuthorizationRoleRecordCount",
+      AUTHORIZATION_ROLE_RECORD_COUNT + 1,
+      "database_postcheck_authorization_database_authorization_role_record_count_mismatch",
+    ],
+    [
+      "databaseAuthorizationContainerFingerprintSha256",
+      "0".repeat(64),
+      "database_postcheck_authorization_database_authorization_container_fingerprint_sha256_mismatch",
+    ],
+    [
+      "databaseAuthorizationContainerRecordCount",
+      AUTHORIZATION_CONTAINER_RECORD_COUNT + 1,
+      "database_postcheck_authorization_database_authorization_container_record_count_mismatch",
+    ],
+    [
+      "databaseAuthorizationPostcheck",
+      "failed",
+      "database_postcheck_receipt_database_authorization_postcheck_not_passed",
     ],
   ];
   for (const [field, value, code] of cases) {
@@ -535,6 +936,16 @@ test("nonzero empty target and non-transactional restore receipts fail", async (
     ["emptyTargetObjectCount", 1, "runner_receipt_target_not_empty"],
     ["singleTransaction", false, "runner_receipt_transaction_invalid"],
     ["databaseRestore", "failed", "runner_receipt_restore_not_passed"],
+    [
+      "databasePrivilegesRestore",
+      "failed",
+      "runner_receipt_privileges_restore_not_passed",
+    ],
+    [
+      "databaseOwnershipRestore",
+      "failed",
+      "runner_receipt_ownership_restore_not_passed",
+    ],
   ]) {
     await withReceiptSet(
       async ({ paths, fullBytes, targetId, runnerBytes, postcheckBytes }) => {
@@ -566,7 +977,7 @@ test("duplicate and unexpected receipt or evidence members stay redacted", async
       const secret = "never-print-this-secret-value";
       await privateFile(
         paths.evidence,
-        `{"schemaVersion":5,"schemaVersion":5,"secret":"${secret}"}\n`,
+        `{"schemaVersion":6,"schemaVersion":6,"secret":"${secret}"}\n`,
       );
       await assert.rejects(
         execFileAsync(process.execPath, verifierArguments(paths)),
@@ -630,9 +1041,9 @@ test("evidence and all three receipts require private regular files", async () =
   });
 });
 
-test("restore runbook requires receipt-bound schema v5 evidence", async () => {
+test("restore runbook requires receipt-bound schema v6 evidence", async () => {
   const source = await readFile(runbookPath, "utf8");
-  assert.match(source, /schemaVersion.*5/su);
+  assert.match(source, /schemaVersion.*6/su);
   assert.match(source, /restoreRunnerReceiptSha256/u);
   assert.match(source, /databasePostcheckReceiptSha256/u);
   assert.match(source, /database-postcheck-receipt/u);

@@ -30,6 +30,12 @@ import {
   RESTORE_TARGET_COMPATIBILITY_CONFIRMATION,
   RESTORE_TARGET_COMPATIBILITY_SQL,
 } from "../scripts/operations/restore-target-compatibility.mjs";
+import {
+  analyzeAuthorizationToc,
+} from "../scripts/operations/database-authorization-contract.mjs";
+import {
+  filterExtensionHostSchemaToc,
+} from "../scripts/operations/restore-extension-toc-policy.mjs";
 
 const execFileAsync = promisify(execFile);
 const scriptPath = "scripts/operations/restore-target-preflight.mjs";
@@ -42,8 +48,147 @@ const readinessWorkflowPath =
 const databaseRestoreWorkflowPath =
   ".github/workflows/restore-drill-database.yml";
 const runnerPath = "scripts/operations/run-database-restore-drill.sh";
+const extensionTocPolicyPath =
+  "scripts/operations/restore-extension-toc-policy.mjs";
 const runbookPath = "docs/operations/RESTORE_DRILL.md";
 const packagePath = "package.json";
+const EXTENSIONS_SCHEMA_TOC_ENTRY =
+  "10; 2615 16392 SCHEMA - extensions postgres";
+const VAULT_SCHEMA_TOC_ENTRY =
+  "20; 2615 16490 SCHEMA - vault supabase_admin";
+const SYNTHETIC_ARCHIVE_TOC = `${[
+  ";",
+  "; Archive created by PostgreSQL 17",
+  "; Selected TOC Entries:",
+  "1; 0 0 ENCODING - ENCODING ",
+  "2; 0 0 STDSTRINGS - STDSTRINGS ",
+  "3; 0 0 SEARCHPATH - SEARCHPATH ",
+  EXTENSIONS_SCHEMA_TOC_ENTRY,
+  VAULT_SCHEMA_TOC_ENTRY,
+  "21; 3079 16440 EXTENSION - pg_stat_statements ",
+  "11; 3079 16447 EXTENSION - pgcrypto ",
+  "22; 3079 16491 EXTENSION - supabase_vault ",
+  "23; 3079 16510 EXTENSION - uuid-ossp ",
+  "12; 0 16392 COMMENT - SCHEMA extensions postgres",
+  "13; 0 16392 SECURITY LABEL - SCHEMA extensions postgres",
+  "14; 1259 20000 TABLE extensions fanmind_table postgres",
+  "15; 1255 20001 FUNCTION extensions fanmind_fn() postgres",
+  "16; 1259 20002 TABLE public contacts postgres",
+  "17; 0 0 ACL - SCHEMA extensions postgres",
+  "18; 0 0 ACL public TABLE contacts postgres",
+  "19; 0 0 DEFAULT ACL - DEFAULT PRIVILEGES FOR TABLES postgres",
+].join("\n")}\n`;
+const SYNTHETIC_RESTORE_TOC = SYNTHETIC_ARCHIVE_TOC.replace(
+  `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+  `;${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+).replace(`${VAULT_SCHEMA_TOC_ENTRY}\n`, `;${VAULT_SCHEMA_TOC_ENTRY}\n`);
+const SYNTHETIC_AUTHORIZATION_FINGERPRINT = "f".repeat(64);
+const SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT = "e".repeat(64);
+const SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT = 12;
+const SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT = "7".repeat(64);
+const SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT = 12;
+const SYNTHETIC_AUTHORIZATION_EXTENSION_FINGERPRINT = "6".repeat(64);
+const SYNTHETIC_AUTHORIZATION_EXTENSION_RECORD_COUNT = 85;
+const SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS = [
+  {
+    name: "pg_stat_statements",
+    version: "1.11",
+    schema: "extensions",
+    owner: "postgres",
+    relocatable: true,
+    schemaOwner: "postgres",
+    schemaDefinitionArchived: true,
+  },
+  {
+    name: "pgcrypto",
+    version: "1.3",
+    schema: "extensions",
+    owner: "postgres",
+    relocatable: true,
+    schemaOwner: "postgres",
+    schemaDefinitionArchived: true,
+  },
+  {
+    name: "plpgsql",
+    version: "1.0",
+    schema: "pg_catalog",
+    owner: "supabase_admin",
+    relocatable: false,
+    schemaOwner: "supabase_admin",
+    schemaDefinitionArchived: false,
+  },
+  {
+    name: "supabase_vault",
+    version: "0.3.1",
+    schema: "vault",
+    owner: "supabase_admin",
+    relocatable: false,
+    schemaOwner: "supabase_admin",
+    schemaDefinitionArchived: true,
+  },
+  {
+    name: "uuid-ossp",
+    version: "1.1",
+    schema: "extensions",
+    owner: "postgres",
+    relocatable: true,
+    schemaOwner: "postgres",
+    schemaDefinitionArchived: true,
+  },
+];
+const SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS_SHA256 = createHash("sha256")
+  .update(JSON.stringify(SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS), "utf8")
+  .digest("hex");
+const SYNTHETIC_AUTHORIZATION_RECORD_COUNT = 500;
+const SYNTHETIC_AUTHORIZATION_GRANT_TUPLE_COUNT = 1000;
+const SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES = [
+  "anon",
+  "authenticated",
+  "dashboard_user",
+  "pg_database_owner",
+  "postgres",
+  "service_role",
+  "supabase_etl_admin",
+  "supabase_storage_admin",
+];
+const SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES_SHA256 = createHash("sha256")
+  .update(JSON.stringify(SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES), "utf8")
+  .digest("hex");
+const SYNTHETIC_AUTHORIZATION_TOC = analyzeAuthorizationToc(
+  SYNTHETIC_ARCHIVE_TOC,
+);
+
+function hexJson(value) {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("hex");
+}
+
+function syntheticAuthorizationRoleCheck(overrides = {}) {
+  return {
+    server_version_num: 170006,
+    required_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+    present_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+    component_roles: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES,
+    role_fingerprint_sha256: SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT,
+    role_record_count: SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT,
+    database_container_fingerprint_sha256:
+      SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT,
+    database_container_record_count:
+      SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT,
+    database_container_invariant_violation_count: 0,
+    extension_fingerprint_sha256:
+      SYNTHETIC_AUTHORIZATION_EXTENSION_FINGERPRINT,
+    extension_record_count: SYNTHETIC_AUTHORIZATION_EXTENSION_RECORD_COUNT,
+    required_extensions: SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS,
+    extension_contract_invariant_violation_count: 0,
+    extension_contract_unsupported_class_count: 0,
+    restore_user_superuser: true,
+    restore_user_login: true,
+    restore_user_outside_component: true,
+    outside_component_login_role_count: 1,
+    outside_component_superuser_role_count: 1,
+    ...overrides,
+  };
+}
 
 function safeEnvironment(overrides = {}) {
   return {
@@ -98,7 +243,7 @@ function safeReadinessEnvironment(overrides = {}) {
 
 async function restoreCompatibilityFixture(
   root,
-  catalogResult = "170006|3|1",
+  catalogResult = "170006|3|1|1",
   overrides = {},
 ) {
   const passfilePath = join(root, "restore-compatibility.pgpass");
@@ -173,13 +318,47 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
   const dumpBytes = await readFile(dumpPath);
   const dumpSha256 = createHash("sha256").update(dumpBytes).digest("hex");
   const fullReceipt = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     createdAt: "2026-07-30T07:55:00Z",
     sourceArtifactBasename: "fanmind-full-1785398400000.tar.gz.age",
     outerSha256: "a".repeat(64),
     productionCommit: "b".repeat(40),
     databasePartEncryptedSha256: "d".repeat(64),
     databaseDumpSha256: dumpSha256,
+    databaseAuthorizationContractVersion: 2,
+    databaseAuthorizationFingerprintSha256:
+      SYNTHETIC_AUTHORIZATION_FINGERPRINT,
+    databaseAuthorizationRecordCount: SYNTHETIC_AUTHORIZATION_RECORD_COUNT,
+    databaseAuthorizationGrantTupleCount:
+      SYNTHETIC_AUTHORIZATION_GRANT_TUPLE_COUNT,
+    databaseAuthorizationRequiredRoles:
+      SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES,
+    databaseAuthorizationRequiredRolesSha256:
+      SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES_SHA256,
+    databaseAuthorizationRoleFingerprintSha256:
+      SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT,
+    databaseAuthorizationRoleRecordCount:
+      SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT,
+    databaseAuthorizationContainerFingerprintSha256:
+      SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT,
+    databaseAuthorizationContainerRecordCount:
+      SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT,
+    databaseAuthorizationRequiredExtensions:
+      SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS,
+    databaseAuthorizationRequiredExtensionsSha256:
+      SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS_SHA256,
+    databaseAuthorizationExtensionFingerprintSha256:
+      SYNTHETIC_AUTHORIZATION_EXTENSION_FINGERPRINT,
+    databaseAuthorizationExtensionRecordCount:
+      SYNTHETIC_AUTHORIZATION_EXTENSION_RECORD_COUNT,
+    databaseCoreTableAppGrantTupleCount: 120,
+    databaseRestrictedSecurityDefinerFunctionCount: 12,
+    databaseAclTocEntryCount: SYNTHETIC_AUTHORIZATION_TOC.aclEntryCount,
+    databaseDefaultAclTocEntryCount:
+      SYNTHETIC_AUTHORIZATION_TOC.defaultAclEntryCount,
+    databaseAclTocSha256: SYNTHETIC_AUTHORIZATION_TOC.sha256,
+    databasePrivilegesArchived: true,
+    databaseOwnershipArchived: true,
     verifier: "passed",
   };
   await writeFile(receiptPath, `${JSON.stringify(fullReceipt)}\n`);
@@ -190,6 +369,18 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
     [
       "#!/usr/bin/env bash",
       "set -Eeuo pipefail",
+      "if [[ \"$*\" != *--command* ]]; then",
+      "  sql_input=\"$(cat)\"",
+      "  if [[ \"$sql_input\" == *FANMIND_ROLE_CHECK* ]]; then",
+      "    printf 'FANMIND_ROLE_CHECK|%s\\n' \"$FANMIND_TEST_ROLE_CHECK_HEX\"",
+      "    exit 0",
+      "  fi",
+      "  if [[ \"$sql_input\" == *FANMIND_AUTHORIZATION* ]]; then",
+      "    printf 'FANMIND_AUTHORIZATION|%s\\n' \"$FANMIND_TEST_AUTHORIZATION_HEX\"",
+      "    exit 0",
+      "  fi",
+      "  exit 91",
+      "fi",
       "if [[ \"$*\" == *fanmind_required_restore_tables* ]]; then",
       "  printf '%s\\n' \"$FANMIND_TEST_POSTCHECK_RESULT\"",
       "  exit 0",
@@ -225,6 +416,37 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
       "workspace_members|1|1|2",
       "workspaces|1|1|2",
     ].join("\n"),
+    FANMIND_TEST_ARCHIVE_TOC: SYNTHETIC_ARCHIVE_TOC,
+    FANMIND_TEST_ROLE_CHECK_HEX: hexJson(syntheticAuthorizationRoleCheck()),
+    FANMIND_TEST_AUTHORIZATION_HEX: hexJson({
+      server_version_num: 170006,
+      fingerprint_sha256: SYNTHETIC_AUTHORIZATION_FINGERPRINT,
+      record_count: SYNTHETIC_AUTHORIZATION_RECORD_COUNT,
+      grant_tuple_count: SYNTHETIC_AUTHORIZATION_GRANT_TUPLE_COUNT,
+      required_roles: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES,
+      role_fingerprint_sha256: SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT,
+      role_record_count: SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT,
+      database_container_fingerprint_sha256:
+        SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT,
+      database_container_record_count:
+        SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT,
+      core_table_app_grant_tuple_count: 120,
+      core_table_app_grant_option_count: 0,
+      core_table_app_grant_row_count: 120,
+      container_recovery_invariant_violation_count: 0,
+      extension_recovery_invariant_violation_count: 0,
+      extension_fingerprint_sha256:
+        SYNTHETIC_AUTHORIZATION_EXTENSION_FINGERPRINT,
+      extension_record_count: SYNTHETIC_AUTHORIZATION_EXTENSION_RECORD_COUNT,
+      required_extensions: SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS,
+      extension_contract_invariant_violation_count: 0,
+      extension_contract_unsupported_class_count: 0,
+      public_security_definer_function_count: 13,
+      restricted_security_definer_function_count: 12,
+      exposed_security_definer_exception_count: 1,
+      unsupported_default_acl_type_count: 0,
+      unresolved_role_oid_count: 0,
+    }),
     PGSSLROOTCERT: caCertificatePath,
     ...overrides,
   };
@@ -267,6 +489,17 @@ test("read-only restore readiness confirms isolation without enabling a restore"
   assert.equal(incomplete.ok, false);
   assert.ok(incomplete.errors.includes("production_boundary"));
   assert.ok(incomplete.errors.includes("non_production_write_gate"));
+
+  const hostedDatabase = evaluateRestoreReadiness(
+    safeReadinessEnvironment({
+      FANMIND_RESTORE_TARGET_DB_HOST: "db.restoretestref1.supabase.co",
+    }),
+  );
+  assert.equal(hostedDatabase.ok, false);
+  assert.equal(hostedDatabase.managedSupabaseTarget, true);
+  assert.ok(
+    hostedDatabase.errors.includes("managed_supabase_target_unsupported"),
+  );
 });
 
 test("restore resource runner verifies only the encrypted full-backup checksum", async () => {
@@ -429,6 +662,10 @@ test("restore target compatibility uses one redacted read-only catalog query", a
       output,
       /RESTORE_TARGET_COMPATIBILITY_INSTALLED_EXTENSIONS=1/,
     );
+    assert.match(
+      output,
+      /RESTORE_TARGET_COMPATIBILITY_RESTORE_USER_SUPERUSER=true/,
+    );
     assert.match(output, /DATABASE_CONNECTION=read_only_catalog/);
     assert.match(output, /RESTORE_TARGET_COMPATIBILITY_TLS=verify-full/);
     assert.match(output, /RESTORE_TARGET_COMPATIBILITY_WRITES=disabled/);
@@ -449,6 +686,12 @@ test("restore target compatibility uses one redacted read-only catalog query", a
     assert.match(capture, /pg_catalog\.pg_settings/);
     assert.match(capture, /pg_catalog\.pg_roles/);
     assert.match(capture, /pg_catalog\.pg_extension/);
+    assert.match(capture, /pg_catalog\.pg_namespace/);
+    assert.match(capture, /restore_role\.rolsuper/u);
+    assert.match(capture, /extension\.extversion = '1\.3'/u);
+    assert.match(capture, /namespace\.nspname = 'extensions'/u);
+    assert.match(capture, /extension\.extconfig is null/u);
+    assert.match(capture, /extension\.extcondition is null/u);
     assert.doesNotMatch(
       RESTORE_TARGET_COMPATIBILITY_SQL,
       /\b(?:insert|update|delete|create|alter|drop|grant|revoke|copy|call)\b/iu,
@@ -477,11 +720,12 @@ test("restore target compatibility uses one redacted read-only catalog query", a
 
 test("restore target compatibility fails closed on version, role, extension or format mismatch", async () => {
   const cases = [
-    ["160009|3|1", "server_major_incompatible"],
-    ["180001|3|1", "server_major_incompatible"],
-    ["170006|2|1", "required_roles_missing"],
-    ["170006|3|0", "required_extensions_missing"],
-    ["restore-db.internal|3|1", "catalog_result_invalid"],
+    ["160009|3|1|1", "server_major_incompatible"],
+    ["180001|3|1|1", "server_major_incompatible"],
+    ["170006|2|1|1", "required_roles_missing"],
+    ["170006|3|0|1", "required_extensions_missing"],
+    ["170006|3|1|0", "restore_user_not_superuser"],
+    ["restore-db.internal|3|1|1", "catalog_result_invalid"],
   ];
 
   for (const [catalogResult, expectedCode] of cases) {
@@ -539,23 +783,254 @@ test("restore compatibility prerequisites stay bound to FanMind migrations", asy
   const runner = await readFile(runnerPath, "utf8");
   assert.match(
     runner,
-    /e\.extname NOT IN \('plpgsql', 'pgcrypto'\)/u,
+    /expected_extension_versions\([\s\S]+?schema_name[\s\S]+?\) AS/u,
   );
-  assert.match(runner, /WITH allowed_extension_objects AS/u);
+  assert.match(
+    runner,
+    /\('plpgsql', '1\.0', false, 'pg_catalog'\)/u,
+  );
+  assert.match(
+    runner,
+    /\('pgcrypto', '1\.3', true, 'extensions'\)/u,
+  );
+  assert.match(runner, /expected\.relocatable = e\.extrelocatable/u);
+  assert.match(runner, /n\.nspname = expected\.schema_name/u);
+  assert.match(runner, /exact extension version\/schema\/owner\/member inventory/u);
+  assert.doesNotMatch(runner, /FANMIND_[A-Z0-9_]*PGCRYPTO[A-Z0-9_]*SCHEMA/u);
+  assert.match(runner, /WHERE e\.extconfig IS NULL/u);
+  assert.match(runner, /AND e\.extcondition IS NULL/u);
+  assert.match(
+    runner,
+    /expected_extension_functions\([\s\S]+?identity_arguments,[\s\S]+?parallel_safety/u,
+  );
+  const manifestMatch = runner.match(
+    /expected_extension_functions\([\s\S]+?\) AS \(\n  VALUES\n([\s\S]+?)\n\),\nresolved_extension_functions AS/u,
+  );
+  assert.ok(manifestMatch);
+  assert.equal(
+    (manifestMatch[1].match(/^    \('(plpgsql|pgcrypto)',/gmu) ?? []).length,
+    39,
+  );
+  for (const row of [
+    "('plpgsql', 'plpgsql_call_handler', '', 'plpgsql_call_handler', 'language_handler', false, 'v', 'u')",
+    "('pgcrypto', 'digest', 'text, text', 'pg_digest', 'bytea', true, 'i', 's')",
+    "('pgcrypto', 'gen_random_uuid', '', 'pg_random_uuid', 'uuid', false, 'v', 's')",
+    "('pgcrypto', 'armor', 'bytea, text[], text[]', 'pg_armor', 'text', true, 'i', 's')",
+    "('pgcrypto', 'pgp_armor_headers', 'text, OUT key text, OUT value text', 'pgp_armor_headers', 'SETOF record', true, 'i', 's')",
+  ]) {
+    assert.ok(runner.includes(row));
+  }
+  assert.match(runner, /resolved_extension_functions AS/u);
+  assert.match(runner, /p\.pronamespace = e\.extnamespace/u);
+  assert.match(runner, /AND l\.lanname = 'c'/u);
+  assert.match(
+    runner,
+    /pg_catalog\.pg_get_function_identity_arguments\(p\.oid\)[\s\n]+\s*= expected\.identity_arguments/u,
+  );
+  assert.match(runner, /p\.probin = '\\\$libdir\/' \|\| expected\.extname/u);
+  assert.match(runner, /p\.prosrc = expected\.c_symbol/u);
+  assert.match(
+    runner,
+    /p\.proowner IN \(e\.extowner, 10::pg_catalog\.oid\)/u,
+  );
+  assert.match(
+    runner,
+    /pg_catalog\.pg_get_function_result\(p\.oid\) = expected\.result_type/u,
+  );
+  assert.match(runner, /p\.proisstrict = expected\.is_strict/u);
+  assert.match(runner, /p\.provolatile = expected\.volatility/u);
+  assert.match(runner, /p\.proparallel = expected\.parallel_safety/u);
+  assert.match(runner, /AND NOT p\.prosecdef/u);
+  assert.match(runner, /AND NOT p\.proleakproof/u);
+  assert.match(runner, /AND p\.proconfig IS NULL/u);
+  assert.match(runner, /AND p\.protrftypes IS NULL/u);
+  assert.match(runner, /AND p\.prosupport = 0/u);
+  assert.match(runner, /resolved_extension_languages AS/u);
+  assert.match(runner, /AND l\.lanispl/u);
+  assert.match(runner, /AND l\.lanpltrusted/u);
+  assert.match(runner, /l\.lanplcallfoid = call_handler\.oid/u);
+  assert.match(runner, /l\.laninline = inline_handler\.oid/u);
+  assert.match(runner, /l\.lanvalidator = validator\.oid/u);
+  assert.match(runner, /l\.lanowner = e\.extowner/u);
+  assert.match(runner, /AND l\.lanacl IS NULL/u);
+  assert.match(
+    runner,
+    /PGOPTIONS="-c default_transaction_read_only=on -c search_path=pg_catalog,pg_temp"/u,
+  );
+  assert.match(runner, /actual_extension_addresses AS/u);
+  assert.match(runner, /expected_extension_addresses AS/u);
+  assert.match(runner, /extension_inventory_violations AS/u);
+  assert.equal(
+    (runner.match(/FROM actual_extension_addresses AS actual/gu) ?? []).length,
+    2,
+  );
+  assert.equal(
+    (runner.match(/FROM expected_extension_addresses AS expected/gu) ?? []).length,
+    2,
+  );
   assert.match(
     runner,
     /d\.refclassid = 'pg_catalog\.pg_extension'::pg_catalog\.regclass/u,
   );
   assert.match(runner, /d\.deptype = 'e'/u);
-  for (const catalog of ["pg_class", "pg_proc", "pg_type", "pg_namespace"]) {
+  assert.match(runner, /d\.objsubid/u);
+  assert.match(runner, /allowed_container_schemas AS/u);
+  assert.match(runner, /n\.nspname = 'extensions'/u);
+  assert.match(runner, /n\.nspname = 'public'/u);
+  assert.match(runner, /n\.nspowner = 'postgres'::pg_catalog\.regrole/u);
+  assert.match(
+    runner,
+    /n\.nspowner = 'pg_database_owner'::pg_catalog\.regrole/u,
+  );
+  assert.match(runner, /schema_objects\(classid, objid, nspoid\) AS/u);
+  for (const catalog of [
+    "pg_class",
+    "pg_proc",
+    "pg_type",
+    "pg_collation",
+    "pg_conversion",
+    "pg_operator",
+    "pg_opclass",
+    "pg_opfamily",
+    "pg_statistic_ext",
+    "pg_ts_parser",
+    "pg_ts_dict",
+    "pg_ts_template",
+    "pg_ts_config",
+    "pg_constraint",
+    "pg_attrdef",
+    "pg_rewrite",
+    "pg_trigger",
+    "pg_policy",
+  ]) {
     assert.match(
       runner,
-      new RegExp(
-        `allowed\\.classid = 'pg_catalog\\.${catalog}'::pg_catalog\\.regclass`,
-        "u",
-      ),
+      new RegExp(`'pg_catalog\\.${catalog}'::pg_catalog\\.regclass`, "u"),
     );
   }
+  assert.match(runner, /schema_object_violations AS/u);
+  assert.match(runner, /allowed\.classid = object\.classid/u);
+  assert.match(runner, /allowed\.objid = object\.objid/u);
+  assert.match(runner, /allowed\.objsubid = 0/u);
+  assert.match(runner, /top_level_object_violations AS/u);
+  for (const catalog of [
+    "pg_language",
+    "pg_cast",
+    "pg_am",
+    "pg_transform",
+    "pg_foreign_data_wrapper",
+    "pg_foreign_server",
+    "pg_user_mapping",
+    "pg_default_acl",
+    "pg_event_trigger",
+    "pg_largeobject_metadata",
+    "pg_publication",
+    "pg_publication_rel",
+    "pg_publication_namespace",
+    "pg_subscription",
+    "pg_subscription_rel",
+  ]) {
+    assert.match(runner, new RegExp(`pg_catalog\\.${catalog}`, "u"));
+  }
+  assert.match(runner, /l\.oid NOT IN \([\s\S]+?12::pg_catalog\.oid/u);
+  assert.equal(
+    (runner.match(/oid >= 16384::pg_catalog\.oid/gu) ?? []).length,
+    4,
+  );
+  assert.match(runner, /s\.subdbid = \([\s\S]+?pg_catalog\.current_database\(\)/u);
+  assert.doesNotMatch(runner, /pg_replication_origin/u);
+  assert.doesNotMatch(runner, /allowed_extension_objects/u);
+  assert.match(runner, /WITH RECURSIVE preinstalled_extensions AS/u);
+  assert.match(runner, /preinstalled_extension_addresses\(classid, objid, objsubid\) AS/u);
+  assert.match(runner, /d\.deptype IN \('i', 'a', 'P', 'S'\)/u);
+  assert.doesNotMatch(runner, /t\.typtype IN \('d', 'e', 'r'\)/u);
+});
+
+test("extension TOC policy disables only receipt-archived host schemas and keeps CREATE EXTENSION active", () => {
+  const filtered = filterExtensionHostSchemaToc(
+    SYNTHETIC_ARCHIVE_TOC,
+    SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS,
+  );
+
+  assert.equal(filtered, SYNTHETIC_RESTORE_TOC);
+  assert.match(filtered, /^;10; 2615 16392 SCHEMA - extensions postgres$/mu);
+  assert.match(filtered, /^;20; 2615 16490 SCHEMA - vault supabase_admin$/mu);
+  for (const extensionName of [
+    "pg_stat_statements",
+    "pgcrypto",
+    "supabase_vault",
+    "uuid-ossp",
+  ]) {
+    assert.match(
+      filtered,
+      new RegExp(`^[1-9][0-9]*; 3079 [1-9][0-9]* EXTENSION - ${extensionName} `, "mu"),
+    );
+    assert.doesNotMatch(
+      filtered,
+      new RegExp(`^;[1-9][0-9]*; 3079 [1-9][0-9]* EXTENSION - ${extensionName}`, "mu"),
+    );
+  }
+
+  assert.throws(
+    () => filterExtensionHostSchemaToc(
+      SYNTHETIC_ARCHIVE_TOC,
+      SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS.map((descriptor, index) =>
+        index === 0 ? { ...descriptor, unexpected: true } : descriptor
+      ),
+    ),
+    /extension_receipt_policy_invalid/u,
+  );
+  assert.throws(
+    () => filterExtensionHostSchemaToc(
+      SYNTHETIC_ARCHIVE_TOC.replace(
+        VAULT_SCHEMA_TOC_ENTRY,
+        "20; 2615 16490 SCHEMA - vault postgres",
+      ),
+      SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS,
+    ),
+    /dump_extension_schema_entry_ambiguous/u,
+  );
+  for (const invalidDescriptor of [
+    { version: "" },
+    { relocatable: "true" },
+  ]) {
+    assert.throws(
+      () => filterExtensionHostSchemaToc(
+        SYNTHETIC_ARCHIVE_TOC,
+        SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS.map(
+          (descriptor, index) => index === 0
+            ? { ...descriptor, ...invalidDescriptor }
+            : descriptor,
+        ),
+      ),
+      /extension_receipt_policy_invalid/u,
+    );
+  }
+  for (const requiredExtension of ["pgcrypto", "uuid-ossp"]) {
+    assert.throws(
+      () => filterExtensionHostSchemaToc(
+        SYNTHETIC_ARCHIVE_TOC.replace(
+          new RegExp(
+            `^[1-9][0-9]*; 3079 [1-9][0-9]* EXTENSION - ${requiredExtension} *\\n`,
+            "mu",
+          ),
+          "",
+        ),
+        SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS,
+      ),
+      /dump_extension_entry_missing/u,
+    );
+  }
+  assert.throws(
+    () => filterExtensionHostSchemaToc(
+      SYNTHETIC_ARCHIVE_TOC.replace(
+        "23; 3079 16510 EXTENSION - uuid-ossp ",
+        "23; 3079 16510 EXTENSION - uuid-ossp \n24; 3079 13563 EXTENSION - plpgsql ",
+      ),
+      SYNTHETIC_AUTHORIZATION_REQUIRED_EXTENSIONS,
+    ),
+    /dump_extension_builtin_entry_unexpected/u,
+  );
 });
 
 test("isolated restore target passes only with both boundaries and exact target binding", () => {
@@ -739,7 +1214,7 @@ test("connection strings, multi-host routing and hidden libpq target overrides f
   assert.match(sharedPooler.errors.join("\n"), /Shared Supabase-Pooler/);
 });
 
-test("direct Supabase restore hosts must belong to the confirmed target project", () => {
+test("hosted Supabase databases are rejected even when the app project matches", () => {
   const matching = evaluateRestoreTarget(
     safeEnvironment({
       PGHOST: "db.restoretestref1.supabase.co",
@@ -747,8 +1222,10 @@ test("direct Supabase restore hosts must belong to the confirmed target project"
         "db.restoretestref1.supabase.co",
     }),
   );
-  assert.equal(matching.ok, true);
+  assert.equal(matching.ok, false);
   assert.equal(matching.directSupabaseProjectBound, true);
+  assert.equal(matching.managedSupabaseTarget, true);
+  assert.match(matching.errors.join("\n"), /Gehostete Supabase-Datenbanken/u);
 
   const mismatched = evaluateRestoreTarget(
     safeEnvironment({
@@ -759,6 +1236,7 @@ test("direct Supabase restore hosts must belong to the confirmed target project"
   );
   assert.equal(mismatched.ok, false);
   assert.equal(mismatched.directSupabaseProjectBound, false);
+  assert.equal(mismatched.managedSupabaseTarget, true);
   assert.match(mismatched.errors.join("\n"), /Zielprojektreferenz/);
 });
 
@@ -883,6 +1361,8 @@ test("restore runner freezes the checked target and passes only explicit connect
     const capturePath = join(root, "capture.txt");
     const passfilePath = join(root, "restore.pgpass");
     const listMarkerPath = join(root, "list-validated.txt");
+    const tocCapturePath = join(root, "restore-toc.txt");
+    const tocMetadataPath = join(root, "restore-toc-metadata.txt");
     const emptyQueryMarkerPath = join(root, "empty-query.txt");
     await writeFile(dumpPath, "synthetic-dump");
     await chmod(dumpPath, 0o600);
@@ -895,12 +1375,26 @@ test("restore runner freezes the checked target and passes only explicit connect
         "set -Eeuo pipefail",
         "if [[ \"${1:-}\" == \"--list\" ]]; then",
         "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
         "  exit 0",
         "fi",
         "[[ -s \"$FANMIND_TEST_EMPTY_QUERY_MARKER_PATH\" ]]",
         "write_dump_path=\"${@: -1}\"",
         "list_dump_path=\"$(cat \"$FANMIND_TEST_LIST_MARKER_PATH\")\"",
         "[[ \"$list_dump_path\" == \"$write_dump_path\" ]]",
+        "restore_toc_path=''",
+        "for ((argument_index = 1; argument_index <= $#; argument_index++)); do",
+        "  if [[ \"${!argument_index}\" == \"--use-list\" ]]; then",
+        "    value_index=$((argument_index + 1))",
+        "    restore_toc_path=\"${!value_index}\"",
+        "  fi",
+        "done",
+        "[[ \"$restore_toc_path\" == /proc/self/fd/* ]]",
+        "cat \"$restore_toc_path\" > \"$FANMIND_TEST_TOC_CAPTURE_PATH\"",
+        "{",
+        "  printf 'MODE=%s\\n' \"$(stat -Lc '%a' \"$restore_toc_path\")\"",
+        "  printf 'TARGET=%s\\n' \"$(readlink \"$restore_toc_path\")\"",
+        "} > \"$FANMIND_TEST_TOC_METADATA_PATH\"",
         "{",
         "  printf 'ARGS='",
         "  printf '%q ' \"$@\"",
@@ -935,12 +1429,16 @@ test("restore runner freezes the checked target and passes only explicit connect
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
           FANMIND_TEST_CAPTURE_PATH: capturePath,
           FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
+          FANMIND_TEST_TOC_CAPTURE_PATH: tocCapturePath,
+          FANMIND_TEST_TOC_METADATA_PATH: tocMetadataPath,
           FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: emptyQueryMarkerPath,
         },
       },
     );
     const output = `${stdout}\n${stderr}`;
     const capture = await readFile(capturePath, "utf8");
+    const tocCapture = await readFile(tocCapturePath, "utf8");
+    const tocMetadata = await readFile(tocMetadataPath, "utf8");
     const emptyQueryCapture = await readFile(emptyQueryMarkerPath, "utf8");
 
     assert.match(output, /RESTORE_TARGET_BOUNDARY=OK/);
@@ -949,8 +1447,16 @@ test("restore runner freezes the checked target and passes only explicit connect
     assert.doesNotMatch(validatedSnapshotPath, new RegExp(dumpPath.replaceAll(".", "\\.")));
     assert.match(
       capture,
-      /ARGS=--no-owner --no-privileges --exit-on-error --single-transaction --no-password --host restore-db\.internal --port 5432 --username restore_operator --dbname fanmind_restore /,
+      /ARGS=--exit-on-error --single-transaction --use-list \/proc\/self\/fd\/[0-9]+ --no-password --host restore-db\.internal --port 5432 --username restore_operator --dbname fanmind_restore /,
     );
+    assert.doesNotMatch(capture, /--no-owner|--no-privileges/u);
+    assert.equal(tocCapture, SYNTHETIC_RESTORE_TOC);
+    assert.match(tocMetadata, /^MODE=400$/mu);
+    assert.match(
+      tocMetadata,
+      /TARGET=\/[^\n]*fanmind-restore\.[^/]+\/database\.restore\.toc \(deleted\)/u,
+    );
+    assert.equal((capture.match(/--use-list/gu) ?? []).length, 1);
     assert.doesNotMatch(capture, new RegExp(`${dumpPath.replaceAll(".", "\\.")}\\s`));
     assert.match(capture, /fanmind-restore\.[^/]+\/database\.dump\s/u);
     assert.match(
@@ -994,6 +1500,28 @@ test("restore runner freezes the checked target and passes only explicit connect
     assert.equal(runnerReceipt.databaseRestore, "passed");
     assert.equal(runnerReceipt.emptyTargetObjectCount, 0);
     assert.equal(runnerReceipt.singleTransaction, true);
+    assert.equal(runnerReceipt.databasePrivilegesRestore, "passed");
+    assert.equal(runnerReceipt.databaseOwnershipRestore, "passed");
+    assert.equal(
+      runnerReceipt.databaseAuthorizationFingerprintSha256,
+      SYNTHETIC_AUTHORIZATION_FINGERPRINT,
+    );
+    assert.equal(
+      runnerReceipt.databaseAuthorizationRoleFingerprintSha256,
+      SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT,
+    );
+    assert.equal(
+      runnerReceipt.databaseAuthorizationRoleRecordCount,
+      SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT,
+    );
+    assert.equal(
+      runnerReceipt.databaseAuthorizationContainerFingerprintSha256,
+      SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT,
+    );
+    assert.equal(
+      runnerReceipt.databaseAuthorizationContainerRecordCount,
+      SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT,
+    );
     const databasePostcheckReceipt = JSON.parse(
       await readFile(
         runnerEnvironment.FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH,
@@ -1004,6 +1532,23 @@ test("restore runner freezes the checked target and passes only explicit connect
     assert.equal(databasePostcheckReceipt.existingTableCount, 5);
     assert.equal(databasePostcheckReceipt.rlsEnabledTableCount, 5);
     assert.equal(databasePostcheckReceipt.policyCoveredTableCount, 5);
+    assert.equal(
+      databasePostcheckReceipt.databaseAuthorizationPostcheck,
+      "passed",
+    );
+    assert.equal(databasePostcheckReceipt.coreTableAppPrivileges, "passed");
+    assert.equal(
+      databasePostcheckReceipt.securityDefinerExecutionBoundary,
+      "passed",
+    );
+    assert.equal(
+      databasePostcheckReceipt.databaseAuthorizationRoleFingerprintSha256,
+      SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT,
+    );
+    assert.equal(
+      databasePostcheckReceipt.databaseAuthorizationContainerFingerprintSha256,
+      SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT,
+    );
     await assert.rejects(access(dirname(validatedSnapshotPath)), /ENOENT/);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -1026,7 +1571,10 @@ test("restore runner proves an empty target before writing or creating a receipt
       [
         "#!/usr/bin/env bash",
         "set -Eeuo pipefail",
-        "if [[ \"${1:-}\" == \"--list\" ]]; then exit 0; fi",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+        "  exit 0",
+        "fi",
         "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_INVOKED_PATH\"",
         "",
       ].join("\n"),
@@ -1064,6 +1612,450 @@ test("restore runner proves an empty target before writing or creating a receipt
   }
 });
 
+test("restore runner rejects a mismatched role graph before the target query or write", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-role-graph-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const queryMarkerPath = join(root, "query-invoked.txt");
+    const writeMarkerPath = join(root, "write-invoked.txt");
+    await writeFile(dumpPath, "synthetic-dump", { mode: 0o600 });
+    await writeFile(passfilePath, "synthetic-password-file", { mode: 0o600 });
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+        "  exit 0",
+        "fi",
+        "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_MARKER_PATH\"",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+      FANMIND_TEST_ROLE_CHECK_HEX: hexJson({
+        server_version_num: 170006,
+        required_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+        present_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+        component_roles: [
+          ...SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES,
+          "unexpected_login_role",
+        ],
+        role_fingerprint_sha256: "9".repeat(64),
+        role_record_count: SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT + 2,
+        database_container_fingerprint_sha256:
+          SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT,
+        database_container_record_count:
+          SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT,
+        restore_user_superuser: true,
+        restore_user_login: true,
+        restore_user_outside_component: true,
+        outside_component_login_role_count: 1,
+        outside_component_superuser_role_count: 1,
+      }),
+    });
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: queryMarkerPath,
+          FANMIND_TEST_WRITE_MARKER_PATH: writeMarkerPath,
+        },
+      }),
+      (error) => {
+        assert.match(
+          `${String(error.stdout)}\n${String(error.stderr)}`,
+          /database_authorization_preflight_failed/u,
+        );
+        return true;
+      },
+    );
+    await assert.rejects(readFile(queryMarkerPath, "utf8"), /ENOENT/u);
+    await assert.rejects(readFile(writeMarkerPath, "utf8"), /ENOENT/u);
+    await assert.rejects(
+      readFile(runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH, "utf8"),
+      /ENOENT/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner rejects a receipt-mismatched extension inventory before the empty-target query or write", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-extension-contract-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const queryMarkerPath = join(root, "query-invoked.txt");
+    const writeMarkerPath = join(root, "write-invoked.txt");
+    await writeFile(dumpPath, "synthetic-dump", { mode: 0o600 });
+    await writeFile(passfilePath, "synthetic-password-file", { mode: 0o600 });
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+        "  exit 0",
+        "fi",
+        "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_MARKER_PATH\"",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+      FANMIND_TEST_ROLE_CHECK_HEX: hexJson(
+        syntheticAuthorizationRoleCheck({
+          extension_fingerprint_sha256: "5".repeat(64),
+        }),
+      ),
+    });
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: queryMarkerPath,
+          FANMIND_TEST_WRITE_MARKER_PATH: writeMarkerPath,
+        },
+      }),
+      (error) => {
+        const output = `${String(error.stdout)}\n${String(error.stderr)}`;
+        assert.match(output, /database_authorization_preflight_failed/u);
+        assert.doesNotMatch(output, /supabase_vault|pg_stat_statements|555555/u);
+        return true;
+      },
+    );
+    await assert.rejects(readFile(queryMarkerPath, "utf8"), /ENOENT/u);
+    await assert.rejects(readFile(writeMarkerPath, "utf8"), /ENOENT/u);
+    await assert.rejects(
+      readFile(runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH, "utf8"),
+      /ENOENT/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner rejects a mismatched database container or principal boundary before writes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-restore-db-container-test-"));
+  try {
+    const dumpPath = join(root, "fanmind-database-test.dump");
+    const fakeRestorePath = join(root, "fake-pg-restore.sh");
+    const passfilePath = join(root, "restore.pgpass");
+    const queryMarkerPath = join(root, "query-invoked.txt");
+    const writeMarkerPath = join(root, "write-invoked.txt");
+    await writeFile(dumpPath, "synthetic-dump", { mode: 0o600 });
+    await writeFile(passfilePath, "synthetic-password-file", { mode: 0o600 });
+    await writeFile(
+      fakeRestorePath,
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+        "  exit 0",
+        "fi",
+        "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_MARKER_PATH\"",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+      FANMIND_TEST_ROLE_CHECK_HEX: hexJson({
+        server_version_num: 170006,
+        required_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+        present_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+        component_roles: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES,
+        role_fingerprint_sha256: SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT,
+        role_record_count: SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT,
+        database_container_fingerprint_sha256: "8".repeat(64),
+        database_container_record_count:
+          SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT,
+        database_container_invariant_violation_count: 0,
+        restore_user_superuser: true,
+        restore_user_login: true,
+        restore_user_outside_component: true,
+        outside_component_login_role_count: 1,
+        outside_component_superuser_role_count: 1,
+      }),
+    });
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: queryMarkerPath,
+          FANMIND_TEST_WRITE_MARKER_PATH: writeMarkerPath,
+        },
+      }),
+      (error) => {
+        assert.match(
+          `${String(error.stdout)}\n${String(error.stderr)}`,
+          /database_authorization_preflight_failed/u,
+        );
+        return true;
+      },
+    );
+    await assert.rejects(readFile(queryMarkerPath, "utf8"), /ENOENT/u);
+    await assert.rejects(readFile(writeMarkerPath, "utf8"), /ENOENT/u);
+    await assert.rejects(
+      readFile(runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH, "utf8"),
+      /ENOENT/u,
+    );
+
+    runnerEnvironment.FANMIND_TEST_ROLE_CHECK_HEX = hexJson({
+      server_version_num: 170006,
+      required_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+      present_role_count: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES.length,
+      component_roles: SYNTHETIC_AUTHORIZATION_REQUIRED_ROLES,
+      role_fingerprint_sha256: SYNTHETIC_AUTHORIZATION_ROLE_FINGERPRINT,
+      role_record_count: SYNTHETIC_AUTHORIZATION_ROLE_RECORD_COUNT,
+      database_container_fingerprint_sha256:
+        SYNTHETIC_AUTHORIZATION_CONTAINER_FINGERPRINT,
+      database_container_record_count:
+        SYNTHETIC_AUTHORIZATION_CONTAINER_RECORD_COUNT,
+      database_container_invariant_violation_count: 0,
+      restore_user_superuser: true,
+      restore_user_login: true,
+      restore_user_outside_component: true,
+      outside_component_login_role_count: 2,
+      outside_component_superuser_role_count: 1,
+    });
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+          FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: queryMarkerPath,
+          FANMIND_TEST_WRITE_MARKER_PATH: writeMarkerPath,
+        },
+      }),
+      (error) => {
+        assert.match(
+          `${String(error.stdout)}\n${String(error.stderr)}`,
+          /database_authorization_preflight_failed/u,
+        );
+        return true;
+      },
+    );
+    await assert.rejects(readFile(queryMarkerPath, "utf8"), /ENOENT/u);
+    await assert.rejects(readFile(writeMarkerPath, "utf8"), /ENOENT/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restore runner rejects receipt-unbound, absent, ambiguous or malformed extension TOC entries before querying or writing", async () => {
+  const cases = [
+    {
+      name: "missing",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+        "",
+      ),
+      errorCode: "dump_extension_schema_entry_missing",
+    },
+    {
+      name: "duplicate",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n`,
+        `${EXTENSIONS_SCHEMA_TOC_ENTRY}\n30; 2615 16392 SCHEMA - extensions postgres\n`,
+      ),
+      errorCode: "dump_extension_schema_entry_ambiguous",
+    },
+    {
+      name: "wrong-owner",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "10; 2615 16392 SCHEMA - extensions restore_owner",
+      ),
+      errorCode: "dump_extension_schema_entry_ambiguous",
+    },
+    {
+      name: "wrong-catalog",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "10; 1259 16392 SCHEMA - extensions postgres",
+      ),
+      errorCode: "dump_extension_schema_entry_ambiguous",
+    },
+    {
+      name: "commented",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        `;${EXTENSIONS_SCHEMA_TOC_ENTRY}`,
+      ),
+      errorCode: "dump_extension_schema_entry_missing",
+    },
+    {
+      name: "near-name",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "10; 2615 16392 SCHEMA - extensions_backup postgres",
+      ),
+      errorCode: "dump_extension_schema_entry_missing",
+    },
+    {
+      name: "vault-missing",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(`${VAULT_SCHEMA_TOC_ENTRY}\n`, ""),
+      errorCode: "dump_extension_schema_entry_missing",
+    },
+    {
+      name: "vault-wrong-owner",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        VAULT_SCHEMA_TOC_ENTRY,
+        "20; 2615 16490 SCHEMA - vault postgres",
+      ),
+      errorCode: "dump_extension_schema_entry_ambiguous",
+    },
+    {
+      name: "unbound-extension",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        "23; 3079 16510 EXTENSION - uuid-ossp ",
+        "23; 3079 16510 EXTENSION - hstore ",
+      ),
+      errorCode: "dump_extension_entry_unbound",
+    },
+    {
+      name: "missing-pgcrypto",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        "11; 3079 16447 EXTENSION - pgcrypto \n",
+        "",
+      ),
+      errorCode: "dump_extension_entry_missing",
+    },
+    {
+      name: "missing-uuid",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        "23; 3079 16510 EXTENSION - uuid-ossp \n",
+        "",
+      ),
+      errorCode: "dump_extension_entry_missing",
+    },
+    {
+      name: "unexpected-plpgsql",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        "23; 3079 16510 EXTENSION - uuid-ossp ",
+        "23; 3079 16510 EXTENSION - uuid-ossp \n24; 3079 13563 EXTENSION - plpgsql ",
+      ),
+      errorCode: "dump_extension_builtin_entry_unexpected",
+    },
+    {
+      name: "duplicate-extension",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        "23; 3079 16510 EXTENSION - uuid-ossp ",
+        "23; 3079 16510 EXTENSION - pgcrypto ",
+      ),
+      errorCode: "dump_extension_entry_ambiguous",
+    },
+    {
+      name: "malformed-entry",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        EXTENSIONS_SCHEMA_TOC_ENTRY,
+        "not-a-toc-entry",
+      ),
+      errorCode: "dump_archive_toc_entry_invalid",
+    },
+    {
+      name: "duplicate-id",
+      toc: SYNTHETIC_ARCHIVE_TOC.replace(
+        "16; 1259 20002 TABLE public contacts postgres",
+        "14; 1259 20002 TABLE public contacts postgres",
+      ),
+      errorCode: "dump_archive_toc_duplicate_id",
+    },
+  ];
+
+  for (const fixture of cases) {
+    const root = await mkdtemp(
+      join(tmpdir(), `fanmind-restore-toc-${fixture.name}-`),
+    );
+    try {
+      const dumpPath = join(root, "fanmind-database-test.dump");
+      const fakeRestorePath = join(root, "fake-pg-restore.sh");
+      const passfilePath = join(root, "restore.pgpass");
+      const listMarkerPath = join(root, "list-attempted.txt");
+      const queryMarkerPath = join(root, "query-invoked.txt");
+      const writeMarkerPath = join(root, "write-invoked.txt");
+      await writeFile(dumpPath, "synthetic-dump");
+      await chmod(dumpPath, 0o600);
+      await writeFile(passfilePath, "synthetic-password-file");
+      await chmod(passfilePath, 0o600);
+      await writeFile(
+        fakeRestorePath,
+        [
+          "#!/usr/bin/env bash",
+          "set -Eeuo pipefail",
+          "if [[ \"${1:-}\" == \"--list\" ]]; then",
+          "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+          "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+          "  exit 0",
+          "fi",
+          "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_MARKER_PATH\"",
+          "",
+        ].join("\n"),
+      );
+      await chmod(fakeRestorePath, 0o755);
+      const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
+        FANMIND_TEST_ARCHIVE_TOC: fixture.toc,
+      });
+
+      await assert.rejects(
+        execFileAsync("bash", [runnerPath, dumpPath], {
+          env: {
+            ...process.env,
+            ...safeEnvironment({ PGPASSFILE: passfilePath }),
+            ...runnerEnvironment,
+            FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+            FANMIND_TEST_LIST_MARKER_PATH: listMarkerPath,
+            FANMIND_TEST_EMPTY_QUERY_MARKER_PATH: queryMarkerPath,
+            FANMIND_TEST_WRITE_MARKER_PATH: writeMarkerPath,
+          },
+        }),
+        (error) => {
+          const output = `${String(error.stdout)}\n${String(error.stderr)}`;
+          assert.match(output, new RegExp(fixture.errorCode, "u"));
+          assert.doesNotMatch(output, /restore_owner|extensions_backup/u);
+          return true;
+        },
+        fixture.name,
+      );
+      await assert.rejects(readFile(queryMarkerPath, "utf8"), /ENOENT/u);
+      await assert.rejects(readFile(writeMarkerPath, "utf8"), /ENOENT/u);
+      await assert.rejects(
+        readFile(
+          runnerEnvironment.FANMIND_RESTORE_RUNNER_RECEIPT_PATH,
+          "utf8",
+        ),
+        /ENOENT/u,
+      );
+      const failedSnapshotPath = (await readFile(listMarkerPath, "utf8")).trim();
+      await assert.rejects(access(dirname(failedSnapshotPath)), /ENOENT/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+});
+
 test("restore runner fails closed when a required table has no policy", async () => {
   const root = await mkdtemp(join(tmpdir(), "fanmind-restore-postcheck-test-"));
   try {
@@ -1076,7 +2068,15 @@ test("restore runner fails closed when a required table has no policy", async ()
     await chmod(passfilePath, 0o600);
     await writeFile(
       fakeRestorePath,
-      "#!/usr/bin/env bash\nset -Eeuo pipefail\nexit 0\n",
+      [
+        "#!/usr/bin/env bash",
+        "set -Eeuo pipefail",
+        "if [[ \"${1:-}\" == \"--list\" ]]; then",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
+        "fi",
+        "exit 0",
+        "",
+      ].join("\n"),
     );
     await chmod(fakeRestorePath, 0o755);
     const runnerEnvironment = await restoreRunnerEnvironment(root, dumpPath, {
@@ -1351,6 +2351,7 @@ test("restore runner validates the dump archive before any write invocation", as
         "set -Eeuo pipefail",
         "if [[ \"${1:-}\" == \"--list\" ]]; then",
         "  printf '%s\\n' \"${2:-}\" > \"$FANMIND_TEST_LIST_MARKER_PATH\"",
+        "  printf '%s' \"$FANMIND_TEST_ARCHIVE_TOC\"",
         "  exit 1",
         "fi",
         "printf 'write-invoked\\n' > \"$FANMIND_TEST_WRITE_INVOKED_PATH\"",
@@ -1385,10 +2386,11 @@ test("restore runner validates the dump archive before any write invocation", as
 });
 
 test("runbook and package scripts require the gated runner for pg_restore", async () => {
-  const [runbook, packageSource, runner] = await Promise.all([
+  const [runbook, packageSource, runner, extensionTocPolicy] = await Promise.all([
     readFile(runbookPath, "utf8"),
     readFile(packagePath, "utf8"),
     readFile(runnerPath, "utf8"),
+    readFile(extensionTocPolicyPath, "utf8"),
   ]);
   const packageJson = JSON.parse(packageSource);
   const preflightPosition = runbook.indexOf("npm run restore:preflight");
@@ -1415,12 +2417,27 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runbook, /target host differs from the Production database host/);
   assert.match(
     runbook,
-    /receipts, the dump and the passfile must be regular, non-symlink files owned by\s+the operator/u,
+    /full-backup receipt, dump and passfile must be regular, non-symlink files owned\s+by the operator/u,
   );
   assert.match(runbook, /pg_restore --list/);
   assert.ok(runner.indexOf("restore-target-preflight.mjs") < runner.indexOf("--list"));
   assert.ok(runner.indexOf("--list") < runner.indexOf("empty_target_sql"));
+  assert.ok(runner.indexOf("verify-target-roles") < runner.indexOf("empty_target_sql"));
   assert.ok(runner.indexOf("empty_target_sql") < runner.indexOf("--single-transaction"));
+  assert.match(runner, /snapshot_archive_toc/u);
+  assert.match(runner, /snapshot_restore_toc/u);
+  assert.match(runner, /restore-extension-toc-policy\.mjs/u);
+  assert.match(runner, /--archive-toc "\$snapshot_archive_toc"/u);
+  assert.match(runner, /--output "\$snapshot_restore_toc"/u);
+  assert.match(runner, /--use-list "\$restore_toc_fd_path"/u);
+  assert.match(runner, /restore_toc_fd_path="\/proc\/self\/fd\/\$restore_toc_fd"/u);
+  assert.doesNotMatch(runner, /--exclude-schema(?:=|\s)/u);
+  assert.match(extensionTocPolicy, /before\.nlink !== 1n/u);
+  assert.match(extensionTocPolicy, /before\.uid !== BigInt\(process\.getuid\(\)\)/u);
+  assert.match(extensionTocPolicy, /\(before\.mode & 0o777n\) !== 0o600n/u);
+  assert.match(extensionTocPolicy, /\(parent\.mode & 0o777\) !== 0o700/u);
+  assert.match(extensionTocPolicy, /constants\.O_EXCL \| constants\.O_NOFOLLOW/u);
+  assert.match(extensionTocPolicy, /\n      0o600,\n/u);
   assert.match(runner, /readonly[\s\\]+PGHOST[\s\\]+PGPORT[\s\\]+PGDATABASE[\s\\]+PGUSER/u);
   assert.match(runner, /owner_uid/);
   assert.match(runner, /path_changed_during_open/);
@@ -1436,17 +2453,44 @@ test("runbook and package scripts require the gated runner for pg_restore", asyn
   assert.match(runner, /verify-full-backup-restore-receipt\.mjs/);
   assert.match(runner, /restore-runner-receipt\.mjs/);
   assert.match(runner, /restore-database-postcheck-receipt\.mjs/);
+  assert.match(runner, /database-authorization-contract\.mjs/u);
+  assert.match(runner, /verify-target-roles/u);
+  assert.match(runner, /extension descriptor set\/fingerprint/u);
+  assert.match(runner, /non-archived[\s#]+database-container profile/u);
+  assert.match(runner, /membership grantors/u);
+  assert.match(runner, /bootstrap-principal boundary/u);
+  assert.match(runner, /snapshot-target/u);
+  assert.match(
+    runner,
+    /authorization\\\|\[0-9a-f\]\{64\}[\s\S]+?120\\\|12\\\|\[0-9a-f\]\{64\}[\s\S]+?\[0-9a-f\]\{64\}/u,
+  );
   assert.match(runner, /fanmind_required_restore_tables/u);
   assert.match(runner, /pg_catalog\.pg_policy/u);
   assert.match(runner, /FANMIND_RESTORE_DATABASE_POSTCHECK_RECEIPT_PATH/u);
   assert.match(runner, /restore_target_not_empty/);
-  assert.match(runner, /allowed_extension_objects AS/u);
+  assert.match(runner, /expected_extension_functions\(/u);
   assert.equal(
-    (runner.match(/FROM allowed_extension_objects AS allowed/gu) ?? []).length,
-    4,
+    (runner.match(/FROM expected_extension_addresses AS expected/gu) ?? []).length,
+    2,
+  );
+  assert.equal(
+    (runner.match(/FROM allowed_container_schemas AS allowed/gu) ?? []).length,
+    3,
+  );
+  assert.match(runner, /FROM preinstalled_extension_addresses AS allowed/u);
+  assert.doesNotMatch(runner, /allowed_extension_objects/u);
+  assert.match(
+    runbook,
+    /[Aa] newly\s+provisioned Supabase[\s\S]+not considered empty/u,
+  );
+  assert.match(runbook, /complete sorted Production extension[\s\S]+member identities/u);
+  assert.match(
+    runbook,
+    /TOC[\s\S]+SCHEMA - extensions postgres[\s\S]+SCHEMA - vault supabase_admin[\s\S]+--use-list/u,
   );
   assert.match(runner, /FANMIND_OPERATIONAL_TEST_MODE/);
   assert.match(runner, /--single-transaction/);
+  assert.doesNotMatch(runner, /--no-owner|--no-privileges/u);
   assert.match(runner, /-u PGHOSTADDR/);
   assert.match(runner, /-u PGSERVICE/);
   assert.match(runner, /-u PGSERVICEFILE/);
