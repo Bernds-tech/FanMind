@@ -115,6 +115,24 @@ bleibt bis zu einer erneuten ausdrücklichen Freigabe ungestartet. Runbooks:
 - [ ] `profiles`
 - [ ] `workspaces`
 - [ ] `workspace_members`
+- [ ] Workspace-Member-Datengrenze nach
+      `docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md` abnehmen:
+  - zuerst den exakt geprüften `main`-Commit auf isoliertes Staging deployen
+    und `/api/version` auf Commit plus `runtimeEnvironment=staging` prüfen;
+  - read-only Rollout-State darf für den Boundary nur `apply` oder bei bereits
+    vollständig gültigem Stand `verify`, niemals `block`, melden;
+  - Apply ausschließlich über
+    `FanMind Workspace Member Data Boundary Staging Apply` mit
+    `apply-workspace-member-data-boundary`;
+  - danach getrennten read-only Workflow
+    `FanMind Workspace Member Data Boundary Staging Verify` mit
+    `verify-workspace-member-data-boundary` ausführen;
+  - nur vollständigen Preflight, `APPLY=completed`, Postflight und
+    `READY=APPLIED_AND_VERIFIED` gemeinsam akzeptieren;
+  - danach reale Chromium-/CSV-Abnahme mit synthetischem Owner und Member,
+    Cleanup, abschließendem Boundary-Postflight und finalem separatem Verify;
+  - kein Apply gegen Production, Restore, generische Migration oder einen
+    nicht exakt release-gebundenen Staging-Stand.
 
 ### CRM-Kern
 

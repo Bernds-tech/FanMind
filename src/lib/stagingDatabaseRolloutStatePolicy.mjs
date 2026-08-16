@@ -103,11 +103,27 @@ function deriveControlledObjectAction(objectState) {
   return objectState === "absent" ? "apply" : "verify";
 }
 
+function deriveWorkspaceMemberBoundaryAction({
+  prerequisiteApplied,
+  inGenericLedger,
+  objectState,
+}) {
+  if (prerequisiteApplied !== true || inGenericLedger !== false) {
+    return "block";
+  }
+  return deriveControlledObjectAction(objectState);
+}
+
 export function deriveStagingDatabaseRolloutActions({
   ledger = {},
   objects = {},
 } = {}) {
   const actions = Object.freeze({
+    workspaceMemberBoundary: deriveWorkspaceMemberBoundaryAction({
+      prerequisiteApplied: ledger.workspaceMemberPrerequisite,
+      inGenericLedger: ledger.workspaceMemberInGenericLedger,
+      objectState: objects.workspaceMemberBoundary,
+    }),
     aiTier: deriveMigrationBlockAction({
       ledgerApplied: ledger.aiTier,
       objectState: objects.aiTier,

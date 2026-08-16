@@ -737,9 +737,11 @@ Pflichtsatz:
   Connector-Bindungen, Token-/Syncdaten und zwölf Member-writable Tabellen ist
   noch nicht als geschlossen belegt: Der checksum-gebundene Control
   `20260816120000_workspace_member_data_boundary.sql` ist
-  `CHECKED_NOT_APPLIED`. Sein isolierter Apply plus Postflight ist deshalb ein
-  Go-live- und Member-Aktivierungsblocker. Auch ein erfolgreicher RLS-
-  Postflight aktiviert keine Member-Schreibrechte
+  `CHECKED_NOT_APPLIED`. Der geschützte, getrennte Staging-Apply-/Verify-Pfad
+  ist vorbereitet, aber noch nicht extern ausgeführt. App-first-Deploy,
+  isolierter Apply, unabhängiger Postflight, reale Chromium-Abnahme und finaler
+  Verify sind deshalb ein Go-live- und Member-Aktivierungsblocker. Auch ein
+  erfolgreicher RLS-Postflight aktiviert keine Member-Schreibrechte
   (`docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`).
 - jede Mutation prüft User, Workspace und Ressource;
 - Demo-Workspaces enthalten keine echten Kundendaten;

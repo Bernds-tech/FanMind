@@ -341,7 +341,9 @@ Social integrations, analytics, campaign logic, referral automation and automati
   `social_connections` secrets. Keep the parameterless member-safe Workspace
   RPC, exact safe DTO and Owner-only active-processing mutation boundary in
   `docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`. A successful RLS
-  postflight alone must never enable Member writes.
+  postflight alone must never enable Member writes. Roll out app-first, then
+  use only the separate protected Staging Apply and Verify workflows, real
+  Chromium acceptance and final Verify; never use a generic migration push.
 - Normal Workspace-Owner may directly update only the ten documented
   organization/address/tax master-data columns. Workspace creation and
   commercial fields must follow the two-phase RPC/privilege rollout in

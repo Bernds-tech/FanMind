@@ -25,7 +25,7 @@ function quotedSqlArray(block) {
   return [...match[1].matchAll(/'([^']+)'/gu)].map((entry) => entry[1]);
 }
 
-test("offline control is checksum-pinned and cannot apply a database change", async () => {
+test("offline control is checksum-pinned and never applies without an explicit database mode", async () => {
   const { stdout, stderr } = await execFileAsync(process.execPath, [
     runnerPath,
     "--check",
@@ -50,10 +50,6 @@ test("offline control is checksum-pinned and cannot apply a database change", as
     /control_checksum_mismatch/u,
   );
   await assert.rejects(stat(genericMigrationPath), /ENOENT/u);
-  await assert.rejects(
-    execFileAsync(process.execPath, [runnerPath, "--apply"]),
-    /WORKSPACE_MEMBER_DATA_BOUNDARY_ERROR=argument_invalid/u,
-  );
 });
 
 test("member workspace access is a minimal no-argument database projection", async () => {

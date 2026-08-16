@@ -17,6 +17,8 @@ const checkedFiles = [
   ".github/workflows/ci-mobile.yml",
   ".github/workflows/browser-e2e.yml",
   ".github/workflows/browser-e2e-staging-write.yml",
+  ".github/workflows/workspace-member-data-boundary-staging-apply.yml",
+  ".github/workflows/workspace-member-data-boundary-staging-verify.yml",
   ".github/workflows/staging-synthetic-fixture-provisioning.yml",
   ".github/workflows/restore-drill-host-readiness.yml",
   ".github/workflows/restore-drill-resource-readiness.yml",
@@ -31,7 +33,9 @@ const checkedFiles = [
   "tests/staging-core-csv-acceptance.test.mjs",
   "tests/workspace-member-core-flow.test.mjs",
   "tests/workspace-member-data-boundary.test.mjs",
+  "tests/workspace-member-data-boundary-staging.test.mjs",
   "scripts/operations/workspace-member-data-boundary-runner.mjs",
+  "src/lib/workspaceMemberDataBoundaryStagingPolicy.mjs",
   "supabase/controlled/20260816120000_workspace_member_data_boundary.sql",
   "docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md",
   "docs/operations/WEBSITE_CHAT_FOUNDATION.md",
@@ -58,6 +62,7 @@ const checkedFiles = [
   "tests/test-suite-coverage.test.mjs",
   "docs/testing/BROWSER_E2E.md",
   "docs/operations/ROADMAP_1_7_COMPLETION.md",
+  "docs/operations/STAGING_DATABASE_ROLLOUT_STATE.md",
   "docs/operations/STAGING_SYNTHETIC_FIXTURES.md",
   "scripts/operations/staging-core-csv-acceptance.mjs",
   "scripts/operations/canonicalize-staging-rollout-evidence.mjs",
@@ -283,6 +288,7 @@ requireText(
   "Die reale Staging-Kernabnahme muss explizit und commitgebunden bestätigt werden.",
 );
 for (const field of [
+  "STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY",
   "STAGING_DATABASE_ROLLOUT_AI_TIER",
   "STAGING_DATABASE_ROLLOUT_MOBILE_PUSH",
   "STAGING_DATABASE_ROLLOUT_META_CONTENT",
@@ -314,6 +320,11 @@ requireText(
   "Die reale Staging-Kernabnahme muss Release und Runtime nach Cleanup erneut binden.",
 );
 requireText(
+  ".github/workflows/browser-e2e-staging-write.yml",
+  "STAGING_CORE_CSV_MEMBER_BOUNDARY_POSTFLIGHT=PASS",
+  "Die reale Staging-Kernabnahme muss die Member-Datengrenze nach Cleanup erneut nachweisen.",
+);
+requireText(
   "e2e-staging-write/core-csv.spec.ts",
   'page.goto("/fans/import")',
   "Die reale Staging-Kernabnahme muss den CSV-Import über die echte Route prüfen.",
@@ -329,11 +340,21 @@ forbidIn(
   "Die schreibende Browser-Abnahme darf kein Production-Ziel enthalten.",
 );
 
-// Member data boundary is check-only until the isolated controlled rollout.
+// Member data boundary stays externally unapplied until the controlled Staging evidence exists.
 requireText(
   "package.json",
   '"db:workspace-member-data-boundary:check": "node scripts/operations/workspace-member-data-boundary-runner.mjs --check"',
-  "Die Member-Datengrenze muss einen checksum-gebundenen Check-only-Befehl besitzen.",
+  "Die Member-Datengrenze muss einen checksum-gebundenen Offline-Check besitzen.",
+);
+requireText(
+  "package.json",
+  '"db:workspace-member-data-boundary:verify": "node scripts/operations/workspace-member-data-boundary-runner.mjs --verify"',
+  "Die Member-Datengrenze muss einen getrennten read-only Verify besitzen.",
+);
+requireText(
+  "package.json",
+  '"db:workspace-member-data-boundary:apply": "node scripts/operations/workspace-member-data-boundary-runner.mjs --apply"',
+  "Die Member-Datengrenze muss einen getrennten kontrollierten Apply besitzen.",
 );
 requireText(
   "docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md",
@@ -350,8 +371,33 @@ for (const file of ["README.md", "docs/SOURCE_OF_TRUTH.md"]) {
 requireText(
   "scripts/operations/workspace-member-data-boundary-runner.mjs",
   "WORKSPACE_MEMBER_DATA_BOUNDARY_DATABASE_WRITE=not_performed",
-  "Der Offline-Runner muss ausdrücklich bestätigen, dass er keine Datenbank schreibt.",
+  "Der Offline-Modus muss ausdrücklich bestätigen, dass er keine Datenbank schreibt.",
 );
+for (const file of [
+  "scripts/operations/workspace-member-data-boundary-runner.mjs",
+  "supabase/controlled/20260816120000_workspace_member_data_boundary.sql",
+]) {
+  requireText(
+    file,
+    "20260809141141",
+    `${file} muss den realen kontrollierten server-owned-Ledgerbeleg exakt binden.`,
+  );
+}
+for (const [file, confirmation] of [
+  [
+    ".github/workflows/workspace-member-data-boundary-staging-apply.yml",
+    "apply-workspace-member-data-boundary",
+  ],
+  [
+    ".github/workflows/workspace-member-data-boundary-staging-verify.yml",
+    "verify-workspace-member-data-boundary",
+  ],
+]) {
+  requireText(file, "environment: staging", `${file} muss Staging-geschützt sein.`);
+  requireText(file, confirmation, `${file} muss eine eigene exakte Bestätigung verlangen.`);
+  requireText(file, "/api/version", `${file} muss den deployten App-Commit zuerst binden.`);
+  requireText(file, "/api/health", `${file} muss den deployten App-Zustand vor DB-Zugriff prüfen.`);
+}
 for (const table of [
   "contacts",
   "memories",

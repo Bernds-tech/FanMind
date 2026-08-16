@@ -431,7 +431,11 @@ härtet CRM-/AI-/Content-Writes auf aktive Owner und reduziert
 Apply. Bis Apply plus Postflight belegt sind, bleibt diese direkte DB-Grenze
 ein Go-live- und Member-Aktivierungsblocker. Auch danach aktiviert sie keine
 Member-Schreibrechte; dafür wäre ein separat geprüfter atomarer DB-RPC-Vertrag
-nötig. Runbook:
+nötig. Der getrennte, geschützte Staging-Pfad ist vorbereitet: exakten
+App-Commit zuerst deployen, kontrollierten Apply ausführen, unabhängig
+read-only verifizieren und erst dann die reale Chromium-/CSV-Abnahme mit
+abschließendem Postflight starten. Kein normaler Deploy und keine generische
+Migration wenden den Control an. Runbook:
 `docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`.
 
 Die Härtung serververwalteter Workspace-Felder wird deploy-before-migrate als

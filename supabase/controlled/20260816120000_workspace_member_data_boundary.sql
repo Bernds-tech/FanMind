@@ -1,5 +1,8 @@
 begin;
 
+set local lock_timeout = '5s';
+set local statement_timeout = '90s';
+
 -- This control narrows existing RLS. It never silently enables a missing
 -- boundary because that would hide rollout-order drift.
 do $rls_precondition$
@@ -35,6 +38,304 @@ begin
   end loop;
 end
 $rls_precondition$;
+
+-- The member boundary depends on the already-controlled server-owned
+-- Workspace column boundary and on the existing member read contract. Prove
+-- those facts before changing any policy or function. The same assertions are
+-- repeated by the external read-only preflight, but keeping them inside this
+-- transaction closes the preflight/apply gap for reviewed executions.
+do $boundary_precondition$
+declare
+  protected_table text;
+  workspace_column record;
+  owner_editable_columns constant text[] := array[
+    'name',
+    'organization_name',
+    'street_address',
+    'postal_code',
+    'city',
+    'country',
+    'vat_id',
+    'tax_number',
+    'company_register_number',
+    'company_register_court'
+  ];
+  required_workspace_columns constant text[] := array[
+    'id',
+    'owner_user_id',
+    'name',
+    'plan_id',
+    'workspace_access_mode',
+    'subscription_effective_end_at',
+    'billing_status',
+    'billing_manual_override',
+    'billing_grace_until',
+    'billing_suspended_at',
+    'test_access_flags'
+  ];
+  existing_control_function_count integer;
+  existing_control_policy_count integer;
+begin
+  if to_regclass('supabase_migrations.schema_migrations') is null then
+    raise exception 'workspace_member_boundary_migration_ledger_missing';
+  end if;
+  if exists (
+    select 1
+      from supabase_migrations.schema_migrations
+     where version = '20260816120000'
+        or name in (
+          '20260816120000_workspace_member_data_boundary',
+          'workspace_member_data_boundary'
+        )
+  ) then
+    raise exception 'workspace_member_boundary_in_generic_ledger';
+  end if;
+  if not exists (
+    select 1
+      from supabase_migrations.schema_migrations
+     where version = '20260809141141'
+       and name = 'workspace_server_owned_columns_controlled'
+  ) then
+    raise exception 'workspace_member_boundary_server_owned_ledger_missing';
+  end if;
+
+  if current_user <> 'postgres'
+     or to_regrole('authenticated') is null
+     or to_regrole('anon') is null
+     or to_regrole('service_role') is null then
+    raise exception 'workspace_member_boundary_database_role_invalid';
+  end if;
+  if has_schema_privilege('anon', 'public', 'CREATE')
+     or has_schema_privilege('authenticated', 'public', 'CREATE') then
+    raise exception 'workspace_member_boundary_public_schema_create_exposed';
+  end if;
+
+  if (
+    select count(*)
+      from pg_attribute as attribute
+     where attribute.attrelid = 'public.workspaces'::regclass
+       and attribute.attname = any(required_workspace_columns)
+       and attribute.attnum > 0
+       and not attribute.attisdropped
+  ) <> cardinality(required_workspace_columns) then
+    raise exception 'workspace_member_boundary_workspace_columns_missing';
+  end if;
+
+  if has_table_privilege('anon', 'public.workspaces', 'INSERT')
+     or has_table_privilege('authenticated', 'public.workspaces', 'INSERT')
+     or has_any_column_privilege('anon', 'public.workspaces', 'INSERT')
+     or has_any_column_privilege(
+       'authenticated', 'public.workspaces', 'INSERT'
+     )
+     or not has_table_privilege(
+       'service_role', 'public.workspaces', 'INSERT'
+     )
+     or not has_table_privilege(
+       'service_role', 'public.workspaces', 'UPDATE'
+     ) then
+    raise exception 'workspace_member_boundary_server_owned_acl_invalid';
+  end if;
+
+  for workspace_column in
+    select attribute.attname::text as column_name
+      from pg_attribute as attribute
+     where attribute.attrelid = 'public.workspaces'::regclass
+       and attribute.attnum > 0
+       and not attribute.attisdropped
+  loop
+    if has_column_privilege(
+         'anon', 'public.workspaces', workspace_column.column_name, 'UPDATE'
+       )
+       or has_column_privilege(
+         'authenticated',
+         'public.workspaces',
+         workspace_column.column_name,
+         'UPDATE'
+       ) is distinct from
+          (workspace_column.column_name = any(owner_editable_columns)) then
+      raise exception 'workspace_member_boundary_server_owned_columns_invalid';
+    end if;
+  end loop;
+
+  if (
+    select count(*)
+      from pg_policies as policy
+     where policy.schemaname = 'public'
+       and policy.tablename = 'workspaces'
+       and policy.policyname = 'workspaces_update_owner_boundary'
+       and policy.cmd = 'UPDATE'
+       and policy.permissive = 'RESTRICTIVE'
+       and 'authenticated' = any(policy.roles)
+       and coalesce(policy.qual, '') like '%owner_user_id%auth.uid()%'
+       and coalesce(policy.with_check, '') like '%owner_user_id%auth.uid()%'
+  ) <> 1
+     or exists (
+       select 1
+         from pg_policies as policy
+        where policy.schemaname = 'public'
+          and policy.tablename = 'workspaces'
+          and policy.policyname = 'workspaces_insert_owner'
+     ) then
+    raise exception 'workspace_member_boundary_server_owned_policy_invalid';
+  end if;
+
+  if not exists (
+    select 1
+      from pg_policies as policy
+     where policy.schemaname = 'public'
+       and policy.tablename = 'workspace_members'
+       and policy.cmd in ('SELECT', 'ALL')
+       and policy.permissive = 'PERMISSIVE'
+       and policy.roles && array['public', 'authenticated']::name[]
+       and coalesce(policy.qual, '') like '%auth.uid()%'
+  ) then
+    raise exception 'workspace_member_boundary_membership_read_missing';
+  end if;
+
+  foreach protected_table in array array[
+    'contacts',
+    'memories',
+    'followups',
+    'conversations',
+    'conversation_messages',
+    'conversation_summaries',
+    'contact_reply_targets',
+    'ai_usage_events',
+    'content_sources',
+    'fan_analysis_reports',
+    'contact_ai_profiles',
+    'workspace_voice_profiles'
+  ]
+  loop
+    if not exists (
+      select 1
+        from pg_attribute as attribute
+       where attribute.attrelid = to_regclass(
+               format('public.%I', protected_table)
+             )
+         and attribute.attname = 'workspace_id'
+         and attribute.atttypid = 'uuid'::regtype
+         and attribute.attnum > 0
+         and not attribute.attisdropped
+    )
+       or not (
+         has_table_privilege(
+           'authenticated', format('public.%I', protected_table), 'SELECT'
+         )
+         or has_any_column_privilege(
+           'authenticated', format('public.%I', protected_table), 'SELECT'
+         )
+       )
+       or not exists (
+         select 1
+           from pg_policies as policy
+          where policy.schemaname = 'public'
+            and policy.tablename = protected_table
+            and policy.cmd in ('SELECT', 'ALL')
+            and policy.permissive = 'PERMISSIVE'
+            and policy.roles && array['public', 'authenticated']::name[]
+            and coalesce(policy.qual, '') like '%workspace_members%'
+            and coalesce(policy.qual, '') like '%auth.uid()%'
+       ) then
+      raise exception 'workspace_member_boundary_member_read_invalid';
+    end if;
+  end loop;
+
+  select count(*)
+    into existing_control_function_count
+    from pg_proc as function_definition
+   where function_definition.oid in (
+     to_regprocedure(
+       'public.workspace_processing_allowed_contract(text,text,text,boolean,text,text,jsonb,timestamp with time zone)'
+     ),
+     to_regprocedure(
+       'public.workspace_owner_active_mutation_allowed(uuid)'
+     ),
+     to_regprocedure(
+       'public.get_current_workspace_member_safe_dashboard()'
+     )
+   );
+  if existing_control_function_count not in (0, 3) then
+    raise exception 'workspace_member_boundary_partial_function_state';
+  end if;
+  if exists (
+    select 1
+      from pg_proc as function_definition
+     where function_definition.oid in (
+       to_regprocedure(
+         'public.workspace_processing_allowed_contract(text,text,text,boolean,text,text,jsonb,timestamp with time zone)'
+       ),
+       to_regprocedure(
+         'public.workspace_owner_active_mutation_allowed(uuid)'
+       ),
+       to_regprocedure(
+         'public.get_current_workspace_member_safe_dashboard()'
+       )
+     )
+       and function_definition.proowner <> to_regrole('postgres')
+  ) then
+    raise exception 'workspace_member_boundary_function_owner_invalid';
+  end if;
+
+  select count(*)
+    into existing_control_policy_count
+    from pg_policies as policy
+   where policy.schemaname = 'public'
+     and (
+       (
+         policy.tablename = 'workspaces'
+         and policy.policyname = 'workspaces_select_requires_owner'
+       )
+       or (
+         policy.tablename = 'workspace_analysis_settings'
+         and policy.policyname =
+             'workspace_analysis_settings_select_requires_workspace_owner'
+       )
+       or (
+         policy.tablename = 'social_connections'
+         and policy.policyname in (
+           'social_connections_select_requires_workspace_owner',
+           'social_connections_insert_requires_workspace_owner',
+           'social_connections_update_requires_workspace_owner',
+           'social_connections_delete_requires_workspace_owner'
+         )
+       )
+       or (
+         policy.tablename = any(array[
+           'contacts',
+           'memories',
+           'followups',
+           'conversations',
+           'conversation_messages',
+           'conversation_summaries',
+           'contact_reply_targets',
+           'ai_usage_events',
+           'content_sources',
+           'fan_analysis_reports',
+           'contact_ai_profiles',
+           'workspace_voice_profiles'
+         ]::text[])
+         and policy.policyname in (
+           policy.tablename || '_insert_requires_workspace_owner',
+           policy.tablename || '_update_requires_workspace_owner',
+           policy.tablename || '_delete_requires_workspace_owner'
+         )
+       )
+     );
+  if not (
+    (
+      existing_control_function_count = 0
+      and existing_control_policy_count = 0
+    )
+    or (
+      existing_control_function_count = 3
+      and existing_control_policy_count = 42
+    )
+  ) then
+    raise exception 'workspace_member_boundary_partial_control_state';
+  end if;
+end
+$boundary_precondition$;
 
 -- Team members must never read the base workspace row. That row contains
 -- billing, Stripe, invoice, legal/tax, address and server-owned test fields.
@@ -566,7 +867,7 @@ create policy social_connections_insert_requires_workspace_owner
   to authenticated
   with check (
     public.workspace_owner_active_mutation_allowed(
-      social_connections.workspace_id
+      workspace_id
     )
   );
 
@@ -579,12 +880,12 @@ create policy social_connections_update_requires_workspace_owner
   to authenticated
   using (
     public.workspace_owner_active_mutation_allowed(
-      social_connections.workspace_id
+      workspace_id
     )
   )
   with check (
     public.workspace_owner_active_mutation_allowed(
-      social_connections.workspace_id
+      workspace_id
     )
   );
 
@@ -597,7 +898,7 @@ create policy social_connections_delete_requires_workspace_owner
   to authenticated
   using (
     public.workspace_owner_active_mutation_allowed(
-      social_connections.workspace_id
+      workspace_id
     )
   );
 
@@ -825,5 +1126,288 @@ begin
   end if;
 end
 $social_privilege_postflight$;
+
+-- Complete the transaction-local proof. CREATE OR REPLACE deliberately keeps
+-- an existing function owner and ACL, so those facts must be checked rather
+-- than inferred from the reviewed source text.
+do $control_postflight$
+declare
+  processing_oid oid := to_regprocedure(
+    'public.workspace_processing_allowed_contract(text,text,text,boolean,text,text,jsonb,timestamp with time zone)'
+  );
+  mutation_oid oid := to_regprocedure(
+    'public.workspace_owner_active_mutation_allowed(uuid)'
+  );
+  dashboard_oid oid := to_regprocedure(
+    'public.get_current_workspace_member_safe_dashboard()'
+  );
+  function_record record;
+  relation_name text;
+begin
+  if current_user <> 'postgres'
+     or to_regclass('supabase_migrations.schema_migrations') is null
+     or not exists (
+       select 1
+         from supabase_migrations.schema_migrations
+        where version = '20260809141141'
+          and name = 'workspace_server_owned_columns_controlled'
+     )
+     or has_schema_privilege('anon', 'public', 'CREATE')
+     or has_schema_privilege('authenticated', 'public', 'CREATE') then
+    raise exception 'workspace_member_boundary_foundation_postflight_failed';
+  end if;
+
+  if exists (
+    select 1
+      from supabase_migrations.schema_migrations
+     where version = '20260816120000'
+        or name in (
+          '20260816120000_workspace_member_data_boundary',
+          'workspace_member_data_boundary'
+        )
+  ) then
+    raise exception 'workspace_member_boundary_generic_ledger_postflight_failed';
+  end if;
+
+  foreach relation_name in array array[
+    'workspaces',
+    'workspace_members',
+    'workspace_analysis_settings',
+    'contacts',
+    'memories',
+    'followups',
+    'conversations',
+    'conversation_messages',
+    'conversation_summaries',
+    'contact_reply_targets',
+    'ai_usage_events',
+    'content_sources',
+    'fan_analysis_reports',
+    'contact_ai_profiles',
+    'workspace_voice_profiles',
+    'social_connections'
+  ]
+  loop
+    if not coalesce((
+      select relation.relrowsecurity
+        from pg_class as relation
+       where relation.oid = to_regclass(format('public.%I', relation_name))
+         and relation.relkind in ('r', 'p')
+    ), false) then
+      raise exception 'workspace_member_boundary_rls_postflight_failed';
+    end if;
+  end loop;
+
+  if (
+    select count(*)
+      from pg_policies as policy
+     where policy.schemaname = 'public'
+       and policy.tablename = 'workspaces'
+       and policy.policyname = 'workspaces_select_requires_owner'
+       and policy.cmd = 'SELECT'
+       and policy.permissive = 'RESTRICTIVE'
+       and policy.roles = array['authenticated']::name[]
+       and coalesce(policy.qual, '') like '%owner_user_id%auth.uid()%'
+  ) <> 1 then
+    raise exception 'workspace_member_boundary_workspace_select_postflight_failed';
+  end if;
+
+  if (
+    select count(*)
+      from pg_policies as policy
+     where policy.schemaname = 'public'
+       and policy.tablename = 'social_connections'
+       and policy.policyname =
+           'social_connections_select_requires_workspace_owner'
+       and policy.cmd = 'SELECT'
+       and policy.permissive = 'RESTRICTIVE'
+       and policy.roles = array['authenticated']::name[]
+       and coalesce(policy.qual, '') like
+           '%workspace_owner_boundary.owner_user_id%auth.uid()%'
+  ) <> 1
+     or (
+       select count(*)
+         from pg_policies as policy
+        where policy.schemaname = 'public'
+          and policy.tablename = 'social_connections'
+          and policy.policyname =
+              'social_connections_insert_requires_workspace_owner'
+          and policy.cmd = 'INSERT'
+          and policy.permissive = 'RESTRICTIVE'
+          and policy.roles = array['authenticated']::name[]
+          and coalesce(policy.with_check, '') like
+              '%workspace_owner_active_mutation_allowed(workspace_id)%'
+     ) <> 1
+     or (
+       select count(*)
+         from pg_policies as policy
+        where policy.schemaname = 'public'
+          and policy.tablename = 'social_connections'
+          and policy.policyname =
+              'social_connections_update_requires_workspace_owner'
+          and policy.cmd = 'UPDATE'
+          and policy.permissive = 'RESTRICTIVE'
+          and policy.roles = array['authenticated']::name[]
+          and coalesce(policy.qual, '') like
+              '%workspace_owner_active_mutation_allowed(workspace_id)%'
+          and coalesce(policy.with_check, '') like
+              '%workspace_owner_active_mutation_allowed(workspace_id)%'
+     ) <> 1
+     or (
+       select count(*)
+         from pg_policies as policy
+        where policy.schemaname = 'public'
+          and policy.tablename = 'social_connections'
+          and policy.policyname =
+              'social_connections_delete_requires_workspace_owner'
+          and policy.cmd = 'DELETE'
+          and policy.permissive = 'RESTRICTIVE'
+          and policy.roles = array['authenticated']::name[]
+          and coalesce(policy.qual, '') like
+              '%workspace_owner_active_mutation_allowed(workspace_id)%'
+     ) <> 1 then
+    raise exception 'workspace_member_boundary_social_policy_postflight_failed';
+  end if;
+
+  if processing_oid is null
+     or mutation_oid is null
+     or dashboard_oid is null then
+    raise exception 'workspace_member_boundary_function_missing';
+  end if;
+
+  if not exists (
+    select 1
+      from pg_proc as function_definition
+      join pg_language as function_language
+        on function_language.oid = function_definition.prolang
+     where function_definition.oid = processing_oid
+       and function_definition.proowner = to_regrole('postgres')
+       and function_language.lanname = 'plpgsql'
+       and function_definition.prokind = 'f'
+       and function_definition.provolatile = 's'
+       and not function_definition.prosecdef
+       and not function_definition.proretset
+       and function_definition.prorettype = 'boolean'::regtype
+       and function_definition.proargtypes =
+           '25 25 25 16 25 25 3802 1184'::oidvector
+       and function_definition.proconfig =
+           array['search_path=pg_catalog, public, pg_temp']::text[]
+       and position(
+         'normalized_billing_status in (''cancelled'', ''expired'', ''refunded'')'
+         in function_definition.prosrc
+       ) > 0
+       and position(
+         'temporary_processing_access_expires_at'
+         in function_definition.prosrc
+       ) > 0
+  ) then
+    raise exception 'workspace_member_boundary_processing_function_invalid';
+  end if;
+
+  if not exists (
+    select 1
+      from pg_proc as function_definition
+      join pg_language as function_language
+        on function_language.oid = function_definition.prolang
+     where function_definition.oid = mutation_oid
+       and function_definition.proowner = to_regrole('postgres')
+       and function_language.lanname = 'sql'
+       and function_definition.prokind = 'f'
+       and function_definition.provolatile = 's'
+       and not function_definition.prosecdef
+       and not function_definition.proretset
+       and function_definition.prorettype = 'boolean'::regtype
+       and function_definition.proargtypes = '2950'::oidvector
+       and function_definition.proconfig = array[
+         'search_path=pg_catalog, public, pg_temp',
+         'row_security=on'
+       ]::text[]
+       and position('owned_workspace.owner_user_id' in function_definition.prosrc) > 0
+       and position(
+         'workspace_processing_allowed_contract'
+         in function_definition.prosrc
+       ) > 0
+  ) then
+    raise exception 'workspace_member_boundary_mutation_function_invalid';
+  end if;
+
+  if not exists (
+    select 1
+      from pg_proc as function_definition
+      join pg_language as function_language
+        on function_language.oid = function_definition.prolang
+     where function_definition.oid = dashboard_oid
+       and function_definition.proowner = to_regrole('postgres')
+       and function_language.lanname = 'plpgsql'
+       and function_definition.prokind = 'f'
+       and function_definition.provolatile = 's'
+       and function_definition.prosecdef
+       and function_definition.proretset
+       and function_definition.prorettype = 'record'::regtype
+       and function_definition.pronargs = 0
+       and function_definition.proallargtypes = array[
+         'uuid'::regtype,
+         'text'::regtype,
+         'text'::regtype,
+         'text'::regtype,
+         'boolean'::regtype
+       ]::oid[]
+       and function_definition.proargmodes =
+           array['t', 't', 't', 't', 't']::"char"[]
+       and function_definition.proargnames = array[
+         'workspace_id',
+         'workspace_name',
+         'plan_id',
+         'membership_role',
+         'member_processing_allowed'
+       ]::text[]
+       and function_definition.proconfig = array[
+         'search_path=pg_catalog, public, pg_temp',
+         'row_security=on'
+       ]::text[]
+       and position('current_user_id uuid := auth.uid()' in function_definition.prosrc) > 0
+       and position('membership_count <> 1' in function_definition.prosrc) > 0
+  ) then
+    raise exception 'workspace_member_boundary_dashboard_function_invalid';
+  end if;
+
+  for function_record in
+    select function_definition.oid, function_definition.proowner
+      from pg_proc as function_definition
+     where function_definition.oid in (
+       processing_oid,
+       mutation_oid,
+       dashboard_oid
+     )
+  loop
+    if has_function_privilege('anon', function_record.oid, 'EXECUTE')
+       or not has_function_privilege(
+         'authenticated', function_record.oid, 'EXECUTE'
+       )
+       or not coalesce((
+         select count(*) = 2
+            and bool_and(function_acl.privilege_type = 'EXECUTE')
+            and bool_and(not function_acl.is_grantable)
+            and bool_and(function_acl.grantor = function_record.proowner)
+            and count(*) filter (
+              where function_acl.grantee = function_record.proowner
+            ) = 1
+            and count(*) filter (
+              where function_acl.grantee = to_regrole('authenticated')
+            ) = 1
+           from aclexplode(
+             coalesce(
+               (select checked_function.proacl
+                  from pg_proc as checked_function
+                 where checked_function.oid = function_record.oid),
+               acldefault('f', function_record.proowner)
+             )
+           ) as function_acl
+       ), false) then
+      raise exception 'workspace_member_boundary_function_acl_invalid';
+    end if;
+  end loop;
+end
+$control_postflight$;
 
 commit;

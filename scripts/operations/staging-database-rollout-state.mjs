@@ -8,6 +8,7 @@ import {
   fstatSync,
   mkdtempSync,
   openSync,
+  readFileSync,
   readSync,
   rmSync,
   writeFileSync,
@@ -34,6 +35,11 @@ import {
   deriveStagingDatabaseRolloutActions,
   evaluateStagingDatabaseRolloutStateEnvironment,
 } from "../../src/lib/stagingDatabaseRolloutStatePolicy.mjs";
+import {
+  CONTROL_PATH as WORKSPACE_MEMBER_BOUNDARY_CONTROL_PATH,
+  PROTECTED_MEMBER_WRITABLE_TABLES,
+  materializeWorkspaceMemberDataBoundaryPostflight,
+} from "./workspace-member-data-boundary-runner.mjs";
 
 const MAX_PASSFILE_BYTES = 64 * 1024;
 const OPTIONAL_TRIGGER_RUNNER = resolve(
@@ -42,6 +48,13 @@ const OPTIONAL_TRIGGER_RUNNER = resolve(
 );
 
 const OFFLINE_CONTROLS = Object.freeze([
+  Object.freeze({
+    path: resolve(
+      process.cwd(),
+      "scripts/operations/workspace-member-data-boundary-runner.mjs",
+    ),
+    arguments: ["--check"],
+  }),
   Object.freeze({
     path: resolve(
       process.cwd(),
@@ -162,6 +175,17 @@ function ledgerSql({
         )
     ) = 1 then '1' else '0' end`,
   );
+  flags.push(String.raw`case when count(*) filter (
+      where version = '20260809141141'
+        and name = 'workspace_server_owned_columns_controlled'
+    ) = 1 then '1' else '0' end`);
+  flags.push(String.raw`case when count(*) filter (
+      where version = '20260816120000'
+        or name in (
+          '20260816120000_workspace_member_data_boundary',
+          'workspace_member_data_boundary'
+        )
+    ) = 0 then '0' else '1' end`);
   return String.raw`
 \set ON_ERROR_STOP on
 begin;
@@ -247,6 +271,73 @@ select 'STAGING_DATABASE_TRIGGER_OBJECT=' ||
       ) then 'invalid'
     else 'pending'
   end;
+rollback;
+`;
+
+const WORKSPACE_MEMBER_BOUNDARY_STATE_SQL = String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+with control_state as (
+  select
+    (
+      select count(*)
+        from unnest(array[
+          to_regprocedure(
+            'public.workspace_processing_allowed_contract(text,text,text,boolean,text,text,jsonb,timestamp with time zone)'
+          ),
+          to_regprocedure(
+            'public.workspace_owner_active_mutation_allowed(uuid)'
+          ),
+          to_regprocedure(
+            'public.get_current_workspace_member_safe_dashboard()'
+          )
+        ]::oid[]) as function_oid
+       where function_oid is not null
+    ) as function_count,
+    (
+      select count(*)
+        from pg_policies as policy
+       where policy.schemaname = 'public'
+         and (
+           (
+             policy.tablename = 'workspaces'
+             and policy.policyname = 'workspaces_select_requires_owner'
+           )
+           or (
+             policy.tablename = 'workspace_analysis_settings'
+             and policy.policyname =
+                 'workspace_analysis_settings_select_requires_workspace_owner'
+           )
+           or (
+             policy.tablename = 'social_connections'
+             and policy.policyname in (
+               'social_connections_select_requires_workspace_owner',
+               'social_connections_insert_requires_workspace_owner',
+               'social_connections_update_requires_workspace_owner',
+               'social_connections_delete_requires_workspace_owner'
+             )
+           )
+           or (
+             policy.tablename = any(array[
+               ${PROTECTED_MEMBER_WRITABLE_TABLES.map((table) => `'${table}'`).join(",\n               ")}
+             ]::text[])
+             and policy.policyname in (
+               policy.tablename || '_insert_requires_workspace_owner',
+               policy.tablename || '_update_requires_workspace_owner',
+               policy.tablename || '_delete_requires_workspace_owner'
+             )
+           )
+         )
+    ) as policy_count
+)
+select 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=' ||
+  case
+    when function_count = 0 and policy_count = 0 then 'absent'
+    when function_count = 3 and policy_count = 42 then 'present'
+    else 'invalid'
+  end
+  from control_state;
 rollback;
 `;
 
@@ -426,15 +517,18 @@ function requiredProbe(sql, environment, passfilePath, probeName) {
 }
 
 function parseLedger(output) {
-  const match = /STAGING_DATABASE_LEDGER=([01]):([01]):([01]):([01])/u.exec(
-    output,
-  );
+  const match =
+    /STAGING_DATABASE_LEDGER=([01]):([01]):([01]):([01]):([01]):([01])/u.exec(
+      output,
+    );
   if (!match) fail("ledger_probe_invalid");
   return Object.freeze({
     aiTier: match[1] === "1",
     mobilePush: match[2] === "1",
     metaFoundation: match[3] === "1",
     metaHistory: match[4] === "1",
+    workspaceMemberPrerequisite: match[5] === "1",
+    workspaceMemberInGenericLedger: match[6] === "1",
   });
 }
 
@@ -546,6 +640,8 @@ async function inspectDatabase(environment) {
           mobilePush: false,
           metaFoundation: false,
           metaHistory: false,
+          workspaceMemberPrerequisite: false,
+          workspaceMemberInGenericLedger: false,
         })
       : ledgerState.includes("STAGING_DATABASE_LEDGER_OBJECT=present")
         ? parseLedger(
@@ -558,6 +654,16 @@ async function inspectDatabase(environment) {
           )
         : fail("ledger_probe_invalid");
     const objects = Object.freeze({
+      workspaceMemberBoundary: tableObjectState({
+        stateSql: WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
+        stateMarker: "STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT",
+        postflightSql: materializeWorkspaceMemberDataBoundaryPostflight(
+          readFileSync(WORKSPACE_MEMBER_BOUNDARY_CONTROL_PATH, "utf8"),
+        ),
+        postflightMarker: "WORKSPACE_MEMBER_DATA_BOUNDARY_POSTFLIGHT=PASS",
+        environment,
+        passfilePath: snapshotPath,
+      }),
       aiTier: tableObjectState({
         stateSql: AI_TIER_STATE_SQL,
         stateMarker: "STAGING_DATABASE_AI_TIER_OBJECT",
@@ -611,6 +717,9 @@ async function main() {
 
   const result = await inspectDatabase(process.env);
   console.log("STAGING_DATABASE_ROLLOUT_STATE_MODE=read_only");
+  console.log(
+    `STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=${result.actions.workspaceMemberBoundary}`,
+  );
   console.log(`STAGING_DATABASE_ROLLOUT_AI_TIER=${result.actions.aiTier}`);
   console.log(
     `STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=${result.actions.mobilePush}`,
@@ -662,6 +771,7 @@ export {
   META_CONTINUATION_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
+  WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
   ledgerManagedMetaMigrations,
   ledgerSql,
   psqlFailureCategory,
