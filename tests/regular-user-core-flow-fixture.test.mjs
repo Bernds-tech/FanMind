@@ -8,6 +8,9 @@ import { after, before, test } from "node:test";
 import {
   FIXTURE_ACCESS_TOKEN,
   FIXTURE_ACKNOWLEDGEMENT,
+  FIXTURE_APP_ORIGIN,
+  FIXTURE_CONTROL_HEADER,
+  FIXTURE_CONTROL_TOKEN,
   FIXTURE_EMAIL,
   FIXTURE_HOST,
   FIXTURE_IDS,
@@ -105,7 +108,9 @@ async function stopChild(child) {
 }
 
 async function fixtureFetch(path, options = {}) {
-  return fetch(`${fixtureBaseUrl}${path}`, options);
+  const headers = new Headers(options.headers);
+  if (!headers.has("Origin")) headers.set("Origin", FIXTURE_APP_ORIGIN);
+  return fetch(`${fixtureBaseUrl}${path}`, { ...options, headers });
 }
 
 function accessHeaders(extra = {}) {
@@ -120,6 +125,13 @@ function serviceHeaders(extra = {}) {
   return {
     Authorization: `Bearer ${FIXTURE_SERVICE_ROLE_KEY}`,
     apikey: "synthetic-local-anon-key",
+    ...extra,
+  };
+}
+
+function controlHeaders(extra = {}) {
+  return {
+    [FIXTURE_CONTROL_HEADER]: FIXTURE_CONTROL_TOKEN,
     ...extra,
   };
 }
@@ -256,6 +268,11 @@ test("password auth accepts only Gerhard fixture credentials and validates the b
   const userWithoutBearer = await fixtureFetch("/auth/v1/user");
   assert.equal(userWithoutBearer.status, 401);
 
+  const malformedBearer = await fixtureFetch("/auth/v1/user", {
+    headers: { Authorization: `Bearer\t\t${FIXTURE_ACCESS_TOKEN}` },
+  });
+  assert.equal(malformedBearer.status, 401);
+
   const userResponse = await fixtureFetch("/auth/v1/user", {
     headers: accessHeaders(),
   });
@@ -270,7 +287,15 @@ test("password auth accepts only Gerhard fixture credentials and validates the b
 });
 
 test("PostgREST reads deterministic seed rows and fails closed", async () => {
-  const reset = await fixtureFetch("/__reset", { method: "POST" });
+  const resetWithoutControl = await fixtureFetch("/__reset", {
+    method: "POST",
+  });
+  assert.equal(resetWithoutControl.status, 403);
+
+  const reset = await fixtureFetch("/__reset", {
+    method: "POST",
+    headers: controlHeaders(),
+  });
   assert.equal(reset.status, 200);
 
   const unauthorized = await fixtureFetch("/rest/v1/workspaces");
@@ -289,6 +314,12 @@ test("PostgREST reads deterministic seed rows and fails closed", async () => {
       billing_status: "active",
     },
   ]);
+
+  const serverSideRead = await fetch(
+    `${fixtureBaseUrl}/rest/v1/contacts?select=id&limit=1`,
+    { headers: accessHeaders() },
+  );
+  assert.equal(serverSideRead.status, 200);
 
   const messageResponse = await fixtureFetch(
     `/rest/v1/conversation_messages?select=id,workspace_id,contact_id,direction,content,seen_at&workspace_id=eq.${FIXTURE_IDS.workspace}&contact_id=eq.${FIXTURE_IDS.contact}&order=created_at.asc`,
@@ -332,7 +363,10 @@ test("PostgREST reads deterministic seed rows and fails closed", async () => {
 });
 
 test("state records only allowed Memory, Follow-up, seen_at and status mutations, then reset restores the seed", async () => {
-  const reset = await fixtureFetch("/__reset", { method: "POST" });
+  const reset = await fixtureFetch("/__reset", {
+    method: "POST",
+    headers: controlHeaders(),
+  });
   assert.equal(reset.status, 200);
 
   const seenResponse = await fixtureFetch(
@@ -431,7 +465,9 @@ test("state records only allowed Memory, Follow-up, seen_at and status mutations
   assert.equal(reopenResponse.status, 200);
   assert.deepEqual(await reopenResponse.json(), [{ id: FIXTURE_IDS.followup }]);
 
-  const stateResponse = await fixtureFetch("/__state");
+  const stateResponse = await fixtureFetch("/__state", {
+    headers: controlHeaders(),
+  });
   assert.equal(stateResponse.status, 200);
   const state = await stateResponse.json();
   assert.deepEqual(state.counts, {
@@ -466,7 +502,10 @@ test("state records only allowed Memory, Follow-up, seen_at and status mutations
   });
   assert.equal(duplicateMemory.status, 409);
 
-  const resetAgain = await fixtureFetch("/__reset", { method: "POST" });
+  const resetAgain = await fixtureFetch("/__reset", {
+    method: "POST",
+    headers: controlHeaders(),
+  });
   assert.equal(resetAgain.status, 200);
   const resetState = (await resetAgain.json()).state;
   assert.equal(resetState.counts.memories, 0);

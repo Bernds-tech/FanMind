@@ -59,6 +59,10 @@ test("local provider fixture is loopback-only, acknowledged and fail-closed", as
   assert.match(source, /fixture_ack_invalid/u);
   assert.match(source, /server\.listen\(port, FIXTURE_HOST\)/u);
   assert.match(source, /fixture_origin_forbidden/u);
+  assert.match(source, /FIXTURE_CONTROL_HEADER/u);
+  assert.match(source, /FIXTURE_CONTROL_TOKEN/u);
+  assert.match(source, /requestBoundaryAllowed/u);
+  assert.doesNotMatch(source, /\^Bearer\\s\+/u);
   assert.match(source, /fixture_table_unknown/u);
   assert.match(source, /query_select_invalid/u);
   assert.match(source, /mutation_scope_invalid/u);
@@ -98,6 +102,7 @@ test("regular-user browser proof exercises real routes and permits only a synthe
   assert.match(source, /pageErrors[\s\S]*toEqual\(\[\]\)/u);
   assert.match(source, /response\.status\(\) >= 400/u);
   assert.match(source, /unexpectedRequests[\s\S]*toEqual\(\[\]\)/u);
+  assert.match(source, /x-fanmind-fixture-control/u);
   assert.match(
     source,
     /conversation_messages:PATCH:seen_at[\s\S]*memories:POST[\s\S]*followups:POST[\s\S]*followups:PATCH:completed[\s\S]*followups:PATCH:open/u,

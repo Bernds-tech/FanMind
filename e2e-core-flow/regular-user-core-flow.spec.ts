@@ -2,6 +2,9 @@ import { expect, test, type Route } from "@playwright/test";
 
 const APP_ORIGIN = "http://localhost:3100";
 const FIXTURE_ORIGIN = "http://127.0.0.1:54321";
+const FIXTURE_CONTROL_HEADERS = {
+  "x-fanmind-fixture-control": "fanmind-local-core-flow-control-token",
+};
 const EMAIL = "gerhard-core-flow@synthetic.invalid";
 const PASSWORD = "FanMind-Local-Core-Flow-2026!";
 const CONTACT_ID = "30000000-0000-4000-8000-000000000001";
@@ -84,7 +87,9 @@ test("regular Gerhard journey stays workspace-scoped and human controlled", asyn
   page,
   request,
 }) => {
-  const resetResponse = await request.post(`${FIXTURE_ORIGIN}/__reset`);
+  const resetResponse = await request.post(`${FIXTURE_ORIGIN}/__reset`, {
+    headers: FIXTURE_CONTROL_HEADERS,
+  });
   expect(resetResponse.ok()).toBe(true);
 
   await context.addCookies([
@@ -272,7 +277,9 @@ test("regular Gerhard journey stays workspace-scoped and human controlled", asyn
     integrationNotice.getByText(/keine Nachrichten automatisch/u),
   ).toBeVisible();
 
-  const stateResponse = await request.get(`${FIXTURE_ORIGIN}/__state`);
+  const stateResponse = await request.get(`${FIXTURE_ORIGIN}/__state`, {
+    headers: FIXTURE_CONTROL_HEADERS,
+  });
   expect(stateResponse.ok()).toBe(true);
   const state = (await stateResponse.json()) as FixtureState;
   expect(state.counts).toEqual(

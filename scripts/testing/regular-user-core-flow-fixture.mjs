@@ -16,6 +16,9 @@ export const FIXTURE_REFRESH_TOKEN =
   "fanmind-local-core-flow-refresh-token";
 export const FIXTURE_SERVICE_ROLE_KEY =
   "fanmind-local-core-flow-service-role-key";
+export const FIXTURE_CONTROL_HEADER = "x-fanmind-fixture-control";
+export const FIXTURE_CONTROL_TOKEN =
+  "fanmind-local-core-flow-control-token";
 
 export const FIXTURE_IDS = Object.freeze({
   user: "10000000-0000-4000-8000-000000000001",
@@ -29,7 +32,7 @@ export const FIXTURE_IDS = Object.freeze({
 
 const FIXTURE_NAME = "fanmind_regular_user_core_flow";
 const FIXTURE_SEED_VERSION = "2026-08-16-v1";
-const FIXTURE_APP_ORIGIN = "http://localhost:3100";
+export const FIXTURE_APP_ORIGIN = "http://localhost:3100";
 const FIXTURE_CREATED_AT = "2026-08-10T08:00:00.000Z";
 const FIXTURE_UPDATED_AT = "2026-08-10T08:15:00.000Z";
 const FIXTURE_MUTATION_CREATED_AT = "2026-08-16T12:00:00.000Z";
@@ -462,7 +465,7 @@ function applyCors(request, response) {
   );
   response.setHeader(
     "Access-Control-Allow-Headers",
-    "authorization, apikey, content-type, prefer, range",
+    `authorization, apikey, content-type, prefer, range, ${FIXTURE_CONTROL_HEADER}`,
   );
   response.setHeader("Access-Control-Expose-Headers", "content-range");
   if (origin === FIXTURE_APP_ORIGIN) {
@@ -500,15 +503,38 @@ function methodNotAllowed(request, response, methods) {
   });
 }
 
-function requestOriginAllowed(request) {
+function requestBoundaryAllowed(request, url) {
   const origin = request.headers.origin;
-  return origin === undefined || origin === FIXTURE_APP_ORIGIN;
+  const originAllowed = origin === undefined || origin === FIXTURE_APP_ORIGIN;
+
+  if (url.pathname === "/__health") return originAllowed;
+  if (["/__reset", "/__state"].includes(url.pathname)) {
+    return (
+      originAllowed &&
+      request.headers[FIXTURE_CONTROL_HEADER] === FIXTURE_CONTROL_TOKEN
+    );
+  }
+  if (origin === FIXTURE_APP_ORIGIN) return true;
+  if (origin !== undefined) return false;
+
+  const token = bearerToken(request);
+  return token === FIXTURE_ACCESS_TOKEN || token === FIXTURE_SERVICE_ROLE_KEY;
 }
 
 function bearerToken(request) {
-  const header = String(request.headers.authorization ?? "").trim();
-  const match = /^Bearer\s+(.+)$/iu.exec(header);
-  return match?.[1] ?? null;
+  const header = String(request.headers.authorization ?? "");
+  const prefix = "bearer ";
+  if (
+    header.length <= prefix.length ||
+    header.slice(0, prefix.length).toLowerCase() !== prefix
+  ) {
+    return null;
+  }
+  const token = header.slice(prefix.length);
+  for (const character of token) {
+    if (character.trim() === "") return null;
+  }
+  return token;
 }
 
 function requireFixtureToken(request, response, allowedTokens) {
@@ -1060,7 +1086,7 @@ function createRequestHandler(state) {
     try {
       const url = new URL(request.url ?? "/", `http://${FIXTURE_HOST}`);
 
-      if (!requestOriginAllowed(request)) {
+      if (!requestBoundaryAllowed(request, url)) {
         sendError(request, response, 403, "fixture_origin_forbidden");
         return;
       }
